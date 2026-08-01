@@ -15788,6 +15788,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "BillableUsageJournalRequiredProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/BillableUsageJournalRequiredProblem",
+              "declarationKind": "class"
+            },
+            {
               "name": "clearMeteringService",
               "exportKind": "named",
               "source": "./libs/decorators/Metered",
@@ -15839,6 +15845,12 @@
               "name": "IdempotencyManager",
               "exportKind": "named",
               "source": "./libs/IdempotencyManager",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InMemoryBillableUsageJournal",
+              "exportKind": "named",
+              "source": "./libs/BillableUsageJournal",
               "declarationKind": "class"
             },
             {
@@ -15932,6 +15944,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "RedisBillableUsageJournal",
+              "exportKind": "named",
+              "source": "./libs/RedisBillableUsageJournal",
+              "declarationKind": "class"
+            },
+            {
               "name": "RedisProblem",
               "exportKind": "named",
               "source": "./libs/problems/RedisProblem",
@@ -15983,6 +16001,51 @@
               "name": "AtomicQuotaCheckResult",
               "exportKind": "named",
               "source": "./libs/UsageStorage"
+            },
+            {
+              "name": "BillableUsageAppendResult",
+              "exportKind": "named",
+              "source": "./libs/BillableUsageJournal"
+            },
+            {
+              "name": "BillableUsageClaim",
+              "exportKind": "named",
+              "source": "./libs/BillableUsageJournal"
+            },
+            {
+              "name": "BillableUsageClaimOptions",
+              "exportKind": "named",
+              "source": "./libs/BillableUsageJournal"
+            },
+            {
+              "name": "BillableUsageDeliveryState",
+              "exportKind": "named",
+              "source": "./libs/BillableUsageJournal"
+            },
+            {
+              "name": "BillableUsageEvent",
+              "exportKind": "named",
+              "source": "./libs/BillableUsageJournal"
+            },
+            {
+              "name": "BillableUsageFailure",
+              "exportKind": "named",
+              "source": "./libs/BillableUsageJournal"
+            },
+            {
+              "name": "BillableUsageJournal",
+              "exportKind": "named",
+              "source": "./libs/BillableUsageJournal"
+            },
+            {
+              "name": "BillableUsageJournalDiagnostics",
+              "exportKind": "named",
+              "source": "./libs/BillableUsageJournal"
+            },
+            {
+              "name": "BillableUsageJournalEntry",
+              "exportKind": "named",
+              "source": "./libs/BillableUsageJournal"
             },
             {
               "name": "CountMeterRef",

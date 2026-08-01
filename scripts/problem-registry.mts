@@ -1903,6 +1903,17 @@ const recoveryMetadataByCode = {
     redactionPolicy: "public",
     severity: "error",
   }),
+  "metering/billable-usage-journal-required": recovery({
+    cause:
+      "A meter declares billing as required, but MeterRegistry validation cannot find a persistent BillableUsageJournal.",
+    userAction:
+      "Do not retry with the same configuration; connect a persistent journal or change the meter billing contract first.",
+    operatorAction:
+      "Configure a persistent BillableUsageJournal before loadAll, lazy meter lookup, or registration validates a billing-required meter.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "retry-core/success-hook-failed": recovery({
     cause:
       "The business callback completed successfully, but its onSuccess observation hook failed afterward.",

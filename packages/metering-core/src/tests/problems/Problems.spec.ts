@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { AtomicQuotaNotSupportedProblem } from "../../libs/problems/AtomicQuotaNotSupportedProblem";
+import { BillableUsageJournalRequiredProblem } from "../../libs/problems/BillableUsageJournalRequiredProblem";
 import { DuplicateRecordProblem } from "../../libs/problems/DuplicateRecordProblem";
 import { InvalidMeterProblem } from "../../libs/problems/InvalidMeterProblem";
 import { InvalidUsageQueryProblem } from "../../libs/problems/InvalidUsageQueryProblem";
@@ -8,6 +9,14 @@ import { QuotaExceededProblem } from "../../libs/problems/QuotaExceededProblem";
 import { RedisProblem } from "../../libs/problems/RedisProblem";
 
 describe("Problems", () => {
+  it("should expose a stable missing billable journal diagnostic", () => {
+    const problem = new BillableUsageJournalRequiredProblem("ai.tokens");
+
+    expect(problem).toMatchObject({
+      code: "metering/billable-usage-journal-required",
+      extensions: { meterId: "ai.tokens" },
+    });
+  });
   describe("QuotaExceededProblem", () => {
     it("should create with correct properties", () => {
       const problem = new QuotaExceededProblem("api_calls", 150, 100);

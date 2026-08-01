@@ -11,6 +11,7 @@ export const METERED_METADATA_KEY = Symbol("meter:metered");
 /** 문자열 meter ID를 사용하는 기존 `@Metered` 데코레이터 옵션입니다. */
 export type MeteredOptions = {
   meterId: string;
+  billing?: "local" | "required";
   valueExtractor?: (args: unknown[], result: unknown) => number;
   idempotencyKeyExtractor?: (args: unknown[]) => string | undefined;
   metadataExtractor?: (args: unknown[], result: unknown) => Record<string, unknown> | undefined;
@@ -45,6 +46,7 @@ export type MeteredRefOptions<Meter extends CountMeterRef> = {
 export type MeteredMetadata = {
   meterId: string;
   meter?: CountMeterRef;
+  billing?: "local" | "required";
   valueExtractor: (args: unknown[], result: unknown) => number;
   idempotencyKeyExtractor?: (args: unknown[]) => string | undefined;
   eventIdExtractor?: (args: unknown[]) => string | undefined;
@@ -158,6 +160,7 @@ export function Metered(
           }
         : {
             meterId: options.meterId,
+            billing: options.billing,
             valueExtractor: options.valueExtractor ?? (() => 1),
             idempotencyKeyExtractor: options.idempotencyKeyExtractor,
             metadataExtractor: options.metadataExtractor,
@@ -168,29 +171,54 @@ export function Metered(
 
     descriptor.value = async function (...args: unknown[]): Promise<unknown> {
       const service = resolveMeteringService();
-      if (!service && metadata.meter?.billing === "required") {
+      const tenantId = (this as { tenantId?: string }).tenantId ?? "default";
+      let billingRequirement =
+        service && typeof service.getBillableUsageRequirement === "function"
+          ? service.getBillableUsageRequirement(tenantId, metadata.meterId)
+          : undefined;
+      const declaredBillingRequired =
+        metadata.meter?.billing === "required" || metadata.billing === "required";
+      if (
+        service &&
+        billingRequirement === "unknown" &&
+        typeof service.resolveBillableUsageRequirement === "function"
+      ) {
+        billingRequirement = await service.resolveBillableUsageRequirement(
+          tenantId,
+          metadata.meterId,
+        );
+      }
+      if (service && billingRequirement === "unknown" && !declaredBillingRequired) {
         throw new InvalidUsageEnvelopeProblem(
-          metadata.meter.key,
+          metadata.meterId,
+          "meter billing contract must be loaded before @Metered execution",
+        );
+      }
+      const billingRequired = declaredBillingRequired || billingRequirement === "required";
+      if (!service && billingRequired) {
+        throw new InvalidUsageEnvelopeProblem(
+          metadata.meterId,
           "MeteringService is required for billable meters",
         );
       }
       let eventId: string | undefined;
-      if (metadata.meter?.billing === "required") {
+      let idempotencyKey: string | undefined;
+      if (billingRequired && metadata.meter) {
         eventId = metadata.eventIdExtractor?.(args);
-        if (!eventId?.trim()) {
-          throw new InvalidUsageEnvelopeProblem(
-            metadata.meter.key,
-            "billing-required meters require a non-empty eventId",
-          );
-        }
+      } else if (billingRequired) {
+        idempotencyKey = metadata.idempotencyKeyExtractor?.(args);
+      }
+      if (billingRequired && !(eventId ?? idempotencyKey)?.trim()) {
+        throw new InvalidUsageEnvelopeProblem(
+          metadata.meterId,
+          "billing-required meters require a non-empty eventId or idempotencyKey",
+        );
       }
       // 원본 메서드 실행
       const result = await originalMethod.apply(this, args);
 
       // MeteringService가 설정되어 있으면 기록
       if (service) {
-        const tenantId = (this as { tenantId?: string }).tenantId ?? "default";
-
         try {
           if (metadata.meter) {
             const input = {
@@ -206,12 +234,12 @@ export function Metered(
               tenantId,
               meterId: metadata.meterId,
               value: metadata.valueExtractor(args, result),
-              idempotencyKey: metadata.idempotencyKeyExtractor?.(args),
+              idempotencyKey: idempotencyKey ?? metadata.idempotencyKeyExtractor?.(args),
               metadata: metadata.metadataExtractor?.(args, result),
             });
           }
         } catch (error) {
-          if (metadata.meter?.billing === "required") {
+          if (billingRequired) {
             throw error;
           }
 

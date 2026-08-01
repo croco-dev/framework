@@ -31,6 +31,36 @@ Usage Metering 핵심 서비스
 
 ## Methods
 
+### getBillableUsageDiagnostics()
+
+> **getBillableUsageDiagnostics**(): `Promise`\<[`BillableUsageJournalDiagnostics`](/api/metering-core/src/type-aliases/billableusagejournaldiagnostics/) \| `null`\>
+
+#### Returns
+
+`Promise`\<[`BillableUsageJournalDiagnostics`](/api/metering-core/src/type-aliases/billableusagejournaldiagnostics/) \| `null`\>
+
+---
+
+### getBillableUsageRequirement()
+
+> **getBillableUsageRequirement**(`tenantId`, `meterId`): `"unknown"` \| `"local"` \| `"required"`
+
+#### Parameters
+
+##### tenantId
+
+`string`
+
+##### meterId
+
+`string`
+
+#### Returns
+
+`"unknown"` \| `"local"` \| `"required"`
+
+---
+
 ### getUsage()
 
 > **getUsage**(`options`): `Promise`\<`number`\>
@@ -47,7 +77,7 @@ Usage Metering 핵심 서비스
 
 `Promise`\<`number`\>
 
-***
+---
 
 ### record()
 
@@ -61,7 +91,7 @@ Usage Metering 핵심 서비스
 
 ###### Meter
 
-`Meter` *extends* [`MeterRef`](/api/metering-core/src/type-aliases/meterref/)
+`Meter` _extends_ [`MeterRef`](/api/metering-core/src/type-aliases/meterref/)
 
 ##### Parameters
 
@@ -120,3 +150,23 @@ DuplicateRecordProblem 중복 idempotencyKey 시
 ##### Throws
 
 InvalidMeterProblem meter 없을 시
+
+---
+
+### resolveBillableUsageRequirement()
+
+> **resolveBillableUsageRequirement**(`tenantId`, `meterId`): `Promise`\<`"local"` \| `"required"`\>
+
+#### Parameters
+
+##### tenantId
+
+`string`
+
+##### meterId
+
+`string`
+
+#### Returns
+
+`Promise`\<`"local"` \| `"required"`\>

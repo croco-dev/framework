@@ -1,7 +1,9 @@
 // Constructor dependencies must remain runtime values for emitted design:paramtypes metadata.
 /* oxlint-disable typescript/consistent-type-imports */
 import { Component } from "@croco/framework-context";
+import type { BillableUsageJournal } from "./BillableUsageJournal";
 import { MeterRepository } from "./MeterRepository";
+import { BillableUsageJournalRequiredProblem } from "./problems/BillableUsageJournalRequiredProblem";
 import { InvalidMeterProblem } from "./problems/InvalidMeterProblem";
 import type { MeterDefinition, MeterRegistrationOptions } from "./types";
 
@@ -27,6 +29,7 @@ export class MeterRegistry {
   constructor(
     private readonly repository: MeterRepository,
     private readonly cacheTtlMs: number = MeterRegistry.DEFAULT_CACHE_TTL_MS,
+    readonly billableUsageJournal?: BillableUsageJournal,
   ) {}
 
   /**
@@ -34,6 +37,9 @@ export class MeterRegistry {
    */
   async loadAll(): Promise<void> {
     const meters = await this.repository.findAll();
+    for (const meter of meters) {
+      this.assertJournalConfigured(meter);
+    }
     this.cache.clear();
 
     for (const meter of meters) {
@@ -59,6 +65,7 @@ export class MeterRegistry {
     // 캐시에 없으면 DB 조회
     const meter = await this.repository.findByMeterIdAndTenant(meterId, tenantId);
     if (meter) {
+      this.assertJournalConfigured(meter);
       this.addToCache(meter);
     }
 
@@ -81,7 +88,9 @@ export class MeterRegistry {
    * 새 Meter 등록
    */
   async register(options: MeterRegistrationOptions): Promise<MeterDefinition> {
+    this.assertJournalConfigured(options);
     const meter = await this.repository.save(options);
+    this.assertJournalConfigured(meter);
     this.addToCache(meter);
     return meter;
   }
@@ -106,6 +115,17 @@ export class MeterRegistry {
     this.cacheUpdatedAt.clear();
   }
 
+  getCachedBillingRequirement(tenantId: string, meterId: string): "local" | "required" | "unknown" {
+    if (this.isCacheStale(tenantId)) {
+      return "unknown";
+    }
+    const meter = this.getFromCache(tenantId, meterId);
+    if (!meter) {
+      return "unknown";
+    }
+    return meter.billing === "required" ? "required" : "local";
+  }
+
   private addToCache(meter: MeterDefinition): void {
     let tenantCache = this.cache.get(meter.tenantId);
     if (!tenantCache) {
@@ -125,6 +145,7 @@ export class MeterRegistry {
     const tenantCache = new Map<string, MeterDefinition>();
 
     for (const meter of meters) {
+      this.assertJournalConfigured(meter);
       tenantCache.set(meter.meterId, meter);
     }
 
@@ -141,5 +162,11 @@ export class MeterRegistry {
     }
 
     return Date.now() - updatedAt >= this.cacheTtlMs;
+  }
+
+  private assertJournalConfigured(meter: Pick<MeterDefinition, "billing" | "meterId">): void {
+    if (meter.billing === "required" && this.billableUsageJournal?.durability !== "persistent") {
+      throw new BillableUsageJournalRequiredProblem(meter.meterId);
+    }
   }
 }

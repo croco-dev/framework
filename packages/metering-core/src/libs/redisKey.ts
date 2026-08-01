@@ -1,4 +1,4 @@
-export type MeteringRedisKeyNamespace = "idem2" | "usage2";
+export type MeteringRedisKeyNamespace = "billable-journal" | "idem2" | "usage2";
 
 export function encodeRedisKeySegment(value: string): string {
   let encoded = "";

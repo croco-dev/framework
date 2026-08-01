@@ -86,6 +86,7 @@ type DecoratorMetadataSmokeContract = {
   }[];
   readonly metadataTypes?: readonly {
     readonly className: string;
+    readonly optional?: boolean;
     readonly packageName?: string;
   }[];
   readonly serviceClass: string;
@@ -1283,6 +1284,7 @@ function decoratorMetadataContractFor(
       metadataTypes: [
         { className: "MeterRepository", packageName: "@croco/metering-core" },
         { className: "Number" },
+        { className: "Object", optional: true },
       ],
       serviceClass: "MeterRegistry",
       servicePackage: "@croco/metering-core",
@@ -1365,9 +1367,11 @@ function decoratorMetadataVerificationSource(): string {
     "  const expectedParamTypes = contract.metadataTypes?.map(resolveType);",
     "  if (expectedParamTypes) {",
     '    const paramTypes = Reflect.getMetadata?.("design:paramtypes", Service);',
-    "    if (!Array.isArray(paramTypes) || paramTypes.length !== expectedParamTypes.length || paramTypes.some((value, index) => value !== expectedParamTypes[index])) {",
+    "    const requiredParamTypeCount = contract.metadataTypes.findIndex((type) => type.optional);",
+    "    const minimumParamTypeCount = requiredParamTypeCount === -1 ? expectedParamTypes.length : requiredParamTypeCount;",
+    "    if (!Array.isArray(paramTypes) || paramTypes.length < minimumParamTypeCount || paramTypes.length > expectedParamTypes.length || paramTypes.some((value, index) => value !== expectedParamTypes[index])) {",
     '      const actual = Array.isArray(paramTypes) ? paramTypes.map((value) => value?.name ?? typeof value).join(", ") : "missing";',
-    '      const expected = contract.metadataTypes.map((type) => type.className).join(", ");',
+    '      const expected = contract.metadataTypes.map((type) => `${type.className}${type.optional ? "?" : ""}`).join(", ");',
     "      throw new Error(`[${format}] ${contract.serviceClass} design:paramtypes expected [${expected}], received [${actual}]`);",
     "    }",
     "  }",

@@ -10,6 +10,7 @@ Meter 정의 레지스트리
 ## Description
 
 DB에서 Meter 정의를 로드하고 메모리 캐싱합니다.
+
 - 앱 시작 시 모든 Meter 로드
 - 런타임에 새 Meter 등록 가능
 - 테넌트별 격리된 조회
@@ -18,7 +19,7 @@ DB에서 Meter 정의를 로드하고 메모리 캐싱합니다.
 
 ### Constructor
 
-> **new MeterRegistry**(`repository`, `cacheTtlMs?`): `MeterRegistry`
+> **new MeterRegistry**(`repository`, `cacheTtlMs?`, `billableUsageJournal?`): `MeterRegistry`
 
 #### Parameters
 
@@ -30,9 +31,19 @@ DB에서 Meter 정의를 로드하고 메모리 캐싱합니다.
 
 `number` = `MeterRegistry.DEFAULT_CACHE_TTL_MS`
 
+##### billableUsageJournal?
+
+[`BillableUsageJournal`](/api/metering-core/src/interfaces/billableusagejournal/)
+
 #### Returns
 
 `MeterRegistry`
+
+## Properties
+
+### billableUsageJournal?
+
+> `readonly` `optional` **billableUsageJournal?**: [`BillableUsageJournal`](/api/metering-core/src/interfaces/billableusagejournal/)
 
 ## Methods
 
@@ -46,7 +57,7 @@ DB에서 Meter 정의를 로드하고 메모리 캐싱합니다.
 
 `void`
 
-***
+---
 
 ### get()
 
@@ -70,7 +81,7 @@ Meter 조회 (캐시 우선)
 
 MeterDefinition 또는 null
 
-***
+---
 
 ### getByTenant()
 
@@ -88,7 +99,27 @@ MeterDefinition 또는 null
 
 `Promise`\<[`MeterDefinition`](/api/metering-core/src/type-aliases/meterdefinition/)[]\>
 
-***
+---
+
+### getCachedBillingRequirement()
+
+> **getCachedBillingRequirement**(`tenantId`, `meterId`): `"unknown"` \| `"local"` \| `"required"`
+
+#### Parameters
+
+##### tenantId
+
+`string`
+
+##### meterId
+
+`string`
+
+#### Returns
+
+`"unknown"` \| `"local"` \| `"required"`
+
+---
 
 ### getOrThrow()
 
@@ -114,7 +145,7 @@ Meter 조회 (없으면 throw)
 
 InvalidMeterProblem
 
-***
+---
 
 ### loadAll()
 
@@ -126,7 +157,7 @@ InvalidMeterProblem
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### register()
 

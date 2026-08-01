@@ -43,6 +43,40 @@ await meteringService.record(aiTokens, {
 key와 enum 값만 허용되며 provider billing dimension과 자유 형식 application `metadata`는 별도 필드로
 유지됩니다. `defineMeter()`가 반환하는 descriptor는 함수 값을 포함하지 않고 결정적으로 직렬화됩니다.
 
+## Durable billable usage delivery
+
+`billing: "required"` meter를 등록하거나 기록하려면 `durability: "persistent"`를 선언하는
+`BillableUsageJournal` 구현을 `MeterRegistry`에 제공해야 합니다. `MeteringService`도 같은 registry가 소유한 journal만
+사용하므로 bootstrap 검증과 worker backlog가 서로 다른 저장소를 가리킬 수 없습니다. journal은 provider 호출보다
+먼저 stable `eventId`의 intent를 append하므로 request 경로와 provider 가용성이 분리됩니다. 같은 `eventId`와 같은
+envelope를 다시 append하면 duplicate success이고, 다른 envelope는 transition conflict입니다.
+Append된 pending intent는 local usage commit이 성공해 `markDeliverable()`이 저장되기 전에는 worker가 claim할 수
+없습니다. commit 이후 중단된 호출은 같은 `eventId`를 replay해 activation을 idempotent하게 완료할 수 있습니다.
+
+```ts
+declare const journal: BillableUsageJournal;
+
+const registry = new MeterRegistry(repository, 60_000, journal);
+await registry.loadAll();
+
+const metering = new MeteringService({
+  meterRegistry: registry,
+  usageStorage,
+  idempotencyManager,
+  eventBus,
+});
+```
+
+Provider delivery worker는 `claimNext()`로 lease를 얻고, 반환된 owner와 fencing token을 그대로 사용해
+`markAccepted()`, `markRetryableFailed()`, `markTerminalFailed()` 중 하나로 종료해야 합니다. lease가 만료되면 다른
+worker가 더 큰 fencing token으로 replay할 수 있으며 이전 owner의 갱신은 거부됩니다. accepted 상태가 journal에
+저장된 뒤에만 backlog에서 제거됩니다. `getDiagnostics()`는 backlog count, oldest pending age, 누적 retry count,
+terminal failure count를 반환합니다. Redis adapter의 lease와 fence 검증은 worker 시계가 아니라 Redis server time을
+사용하고, 진단은 전체 event history를 scan하지 않는 backlog index와 누적 counter로 계산됩니다.
+
+`InMemoryBillableUsageJournal`은 상태 머신 검증과 로컬 테스트용 volatile reference adapter입니다. production에서
+사용하면 bootstrap이 거부되며, 영속 저장소 adapter는 각 append와 claim transition을 원자적으로 구현해야 합니다.
+
 기존 string 기반 API는 호환성 경로로 계속 지원됩니다.
 
 ```ts
