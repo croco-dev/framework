@@ -1328,13 +1328,21 @@ function getSourceFiles(rootDir: string): readonly string[] {
 
 function isProductionTypeScriptFile(file: string): boolean {
   const normalizedFile = toPosixPath(file);
-  const isTypeScript = file.endsWith(".ts") || file.endsWith(".tsx");
-  const isDeclarationFile = file.endsWith(".d.ts");
+  const isTypeScript = [".ts", ".tsx", ".mts", ".cts"].some((extension) =>
+    file.endsWith(extension),
+  );
+  const isDeclarationFile = [".d.ts", ".d.mts", ".d.cts"].some((extension) =>
+    file.endsWith(extension),
+  );
   const isTestFile =
     file.endsWith(".spec.ts") ||
     file.endsWith(".spec.tsx") ||
+    file.endsWith(".spec.mts") ||
+    file.endsWith(".spec.cts") ||
     file.endsWith(".test.ts") ||
-    file.endsWith(".test.tsx");
+    file.endsWith(".test.tsx") ||
+    file.endsWith(".test.mts") ||
+    file.endsWith(".test.cts");
 
   return (
     isTypeScript &&
@@ -1503,8 +1511,12 @@ function resolveImportedSourceFile(
     importedPath,
     `${sourcePath}.ts`,
     `${sourcePath}.tsx`,
+    `${sourcePath}.mts`,
+    `${sourcePath}.cts`,
     join(sourcePath, "index.ts"),
     join(sourcePath, "index.tsx"),
+    join(sourcePath, "index.mts"),
+    join(sourcePath, "index.cts"),
   ];
   const sourceFilePath = candidates.find((candidate) => {
     const normalizedCandidate = resolve(candidate);

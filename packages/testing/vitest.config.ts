@@ -3,6 +3,20 @@ import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
 const currentDir = dirname(fileURLToPath(import.meta.url));
+const evidenceReporter = process.env.CROCO_TEST_EVIDENCE_DIR
+  ? ([
+      resolve(currentDir, "src/vitest-reporter.ts"),
+      {
+        fidelity: {
+          boot: "isolated",
+          dependency: "fake",
+          isolation: "fake",
+          runtime: "node",
+          validation: "isolated",
+        },
+      },
+    ] as const)
+  : undefined;
 
 export default defineConfig({
   resolve: {
@@ -29,6 +43,7 @@ export default defineConfig({
     },
   },
   test: {
+    reporters: evidenceReporter ? ["default", evidenceReporter] : ["default"],
     globals: true,
     environment: "node",
     include: ["src/**/*.test.ts", "src/**/*.spec.ts"],

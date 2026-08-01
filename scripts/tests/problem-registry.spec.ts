@@ -614,8 +614,31 @@ describe("problem-registry.mts", () => {
         "",
       ].join("\n"),
     );
+    writeFile(
+      repo,
+      "packages/alpha/src/problems.mts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        "export class AlphaConflictProblem extends Problem {",
+        "  constructor() {",
+        '    super("alpha/conflict", ProblemCategory.Conflict, "conflict");',
+        "  }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+    writeFile(
+      repo,
+      "packages/alpha/src/tests/problems.spec.mts",
+      [
+        'import { ProblemFactory } from "@croco/problems-core";',
+        'ProblemFactory.badRequest("fixture/mts-test-only");',
+        "",
+      ].join("\n"),
+    );
 
     expect(discoverProblemCodes(repo).map((discovery) => discovery.code)).toEqual([
+      "alpha/conflict",
       "alpha/not-found",
     ]);
   });

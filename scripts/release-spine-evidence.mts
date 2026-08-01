@@ -22,6 +22,7 @@ import {
   assertGeneratedSmokeJourneyReport,
   renderGeneratedSmokeJourneyReport,
 } from "./create-croco-app-generated-smoke-journey-report.mts";
+import { assertTestEvidenceBundle } from "./test-evidence-runtime.mts";
 import { createVerificationManifest } from "./verification-manifest.mts";
 import { formatVerificationProblem, VerificationProblem } from "./verification-problem.mts";
 import type { ChildProcess } from "node:child_process";
@@ -70,6 +71,7 @@ export type EvidenceArtifactReference = EvidenceArtifactExpectation & {
   readonly exists: boolean;
   readonly fresh: boolean;
   readonly modifiedAt: string | null;
+  readonly reusedEvidenceRecordId?: string;
   readonly sourcePath: string;
 };
 
@@ -81,6 +83,10 @@ export type EvidenceCommand = {
   readonly timeoutMs: number;
   readonly applicable?: boolean;
   readonly artifacts?: readonly EvidenceArtifactExpectation[];
+  readonly reusedEvidence?: {
+    readonly path: string;
+    readonly recordId: string;
+  };
 };
 
 export type EvidenceCheckResult = Omit<EvidenceCommand, "artifacts"> & {
@@ -170,6 +176,7 @@ type Options = {
   readonly profile?: VerificationProfile;
   readonly base?: string;
   readonly head?: string;
+  readonly testEvidencePath?: string;
 };
 
 type RunOptions = Options & {
@@ -375,6 +382,12 @@ function updateCheck(
     ...report,
     checks: report.checks.map((check, checkIndex) => (checkIndex === index ? nextCheck : check)),
   });
+}
+
+function clearReusedEvidence(check: EvidenceCheckResult): EvidenceCheckResult {
+  const next = { ...check };
+  delete next.reusedEvidence;
+  return next;
 }
 
 function finishReport(
@@ -783,6 +796,28 @@ function collectArtifactReferences(
   return references;
 }
 
+function collectReusedArtifactReferences(
+  check: EvidenceCommand,
+  rootDir: string,
+  recordId: string,
+): readonly EvidenceArtifactReference[] {
+  return (check.artifacts ?? []).map((artifact) => {
+    const sourcePath = resolve(rootDir, artifact.path);
+    const exists = existsSync(sourcePath);
+    const modifiedAtMs = exists ? statSync(sourcePath).mtimeMs : null;
+    return {
+      ...artifact,
+      copiedPath: null,
+      copyError: null,
+      exists,
+      fresh: false,
+      modifiedAt: modifiedAtMs === null ? null : new Date(modifiedAtMs).toISOString(),
+      reusedEvidenceRecordId: recordId,
+      sourcePath: artifact.path,
+    };
+  });
+}
+
 function persistFailedCommandOutput(
   checkId: string,
   result: CommandRunResult,
@@ -982,7 +1017,7 @@ export async function runReleaseSpineEvidence(
   const clock = options.clock ?? systemClock;
   const profile = options.profile ?? "spine";
   const rootDir = resolve(options.rootDir);
-  const commands =
+  const unresolvedCommands =
     options.commands ??
     createVerificationManifest(profile, {
       allowPendingReleaseMetadata: options.allowPendingReleaseMetadata,
@@ -990,12 +1025,22 @@ export async function runReleaseSpineEvidence(
       changedFiles: options.changedFiles ?? readChangedFiles(rootDir, options.base, options.head),
       head: options.head,
     });
+  const commitSha = process.env.GITHUB_SHA ?? readCurrentCommitOrUnknown(rootDir);
+  const commands = options.testEvidencePath
+    ? reuseTestEvidence(
+        unresolvedCommands,
+        resolve(rootDir, options.testEvidencePath),
+        commitSha,
+        profile,
+        rootDir,
+      )
+    : unresolvedCommands;
   const runner = options.runner ?? defaultCommandRunner;
   const maxOutputExcerptLength = options.maxOutputExcerptLength ?? DEFAULT_OUTPUT_EXCERPT_LENGTH;
   const outputDir = resolve(rootDir, options.outputDir);
   const generatedAt = clock.nowIso();
   const provenance = {
-    commitSha: process.env.GITHUB_SHA ?? readCurrentCommitOrUnknown(rootDir),
+    commitSha,
     runAttempt: process.env.GITHUB_RUN_ATTEMPT ?? "1",
     runId: process.env.GITHUB_RUN_ID ?? generatedAt,
   };
@@ -1040,6 +1085,30 @@ export async function runReleaseSpineEvidence(
       });
       checkpoint();
       continue;
+    }
+    if (check.reusedEvidence) {
+      const artifacts = collectReusedArtifactReferences(
+        check,
+        rootDir,
+        check.reusedEvidence.recordId,
+      );
+      if (artifacts.every((artifact) => !artifact.required || artifact.exists)) {
+        report = updateCheck(report, index, {
+          ...report.checks[index],
+          artifacts,
+          completedAt: clock.nowIso(),
+          durationMs: 0,
+          effectiveTimeoutMs: 0,
+          exitCode: 0,
+          status: "passed",
+          stdoutExcerpt: `Reused ${check.reusedEvidence.recordId} from ${check.reusedEvidence.path} for commit ${commitSha}.`,
+        });
+        checkpoint();
+        continue;
+      }
+      report = updateCheck(report, index, {
+        ...clearReusedEvidence(report.checks[index]),
+      });
     }
     const elapsedMs = clock.nowMs() - runStartedAtMs;
     const remainingTotalTimeoutMs = options.totalTimeoutMs - elapsedMs;
@@ -1160,6 +1229,60 @@ export async function runReleaseSpineEvidence(
   report = finishReport(report, clock.nowIso());
   checkpoint();
   return report;
+}
+
+export function reuseTestEvidence(
+  commands: readonly EvidenceCommand[],
+  inputPath: string,
+  commitSha: string,
+  profile = "spine",
+  rootDir = process.cwd(),
+): readonly EvidenceCommand[] {
+  let value: unknown;
+  try {
+    value = JSON.parse(readFileSync(inputPath, "utf8")) as unknown;
+    assertTestEvidenceBundle(value);
+  } catch (error) {
+    throw new VerificationProblem(
+      "INVALID_TEST_EVIDENCE_INPUT",
+      "input",
+      `Unable to read a valid croco.test-evidence/v1 bundle from ${inputPath}. Cause: ${errorMessage(error)}`,
+    );
+  }
+  if (value.status !== "passed" || value.missingArtifacts.length > 0) {
+    throw new VerificationProblem(
+      "INVALID_TEST_EVIDENCE_INPUT",
+      "input",
+      `--test-evidence requires a passed croco.test-evidence/v1 bundle without missing artifacts: ${inputPath}`,
+    );
+  }
+  const records = value.records;
+  return commands.map((command) => {
+    const requiredArtifacts = (command.artifacts ?? [])
+      .filter(({ required }) => required)
+      .map(({ path }) => path);
+    const record = records.find(
+      (candidate) =>
+        candidate.runner === "croco-verification" &&
+        candidate.outcome === "passed" &&
+        candidate.observed.contractIds.includes(command.id) &&
+        candidate.metadata?.commitSha === commitSha &&
+        candidate.metadata?.profile === profile &&
+        candidate.replay.command === command.command.join(" ") &&
+        requiredArtifacts.every(
+          (path) =>
+            candidate.attachments.some((attachment) => attachment.path === path) &&
+            existsSync(resolve(rootDir, path)),
+        ),
+    );
+    return record
+      ? { ...command, reusedEvidence: { path: inputPath, recordId: record.id } }
+      : command;
+  });
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function formatDuration(ms: number | null): string {
@@ -1341,6 +1464,7 @@ export function parseArgs(args: readonly string[] = argv.slice(2)): Options {
   let base: string | undefined;
   let head: string | undefined;
   let allowPendingReleaseMetadata = false;
+  let testEvidencePath: string | undefined;
 
   for (let index = 0; index < args.length; index++) {
     const arg = args[index];
@@ -1350,6 +1474,20 @@ export function parseArgs(args: readonly string[] = argv.slice(2)): Options {
 
     if (arg === "--allow-pending-release-metadata") {
       allowPendingReleaseMetadata = true;
+      continue;
+    }
+
+    if (arg === "--test-evidence") {
+      const value = args[index + 1];
+      if (!value) {
+        throw new VerificationProblem(
+          "MISSING_TEST_EVIDENCE_PATH",
+          "input",
+          "--test-evidence requires a path",
+        );
+      }
+      testEvidencePath = value;
+      index++;
       continue;
     }
 
@@ -1449,6 +1587,7 @@ export function parseArgs(args: readonly string[] = argv.slice(2)): Options {
     profile,
     base,
     head,
+    testEvidencePath,
   };
 }
 

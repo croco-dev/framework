@@ -96,6 +96,7 @@ export const RELEASE_GATE_SUPPORT_PATHS = [
   "scripts/release-gate-maintenance.mts",
   "scripts/release-spine-evidence.mts",
   "scripts/security-gitleaks-smoke.mts",
+  "scripts/test-evidence-runtime.mts",
   "scripts/verification-change-classifier.mts",
   "scripts/verification-command.mts",
   "scripts/verification-dispatcher.mts",

@@ -110,6 +110,37 @@ describe("public-api-surface.mts", () => {
     ]);
   });
 
+  it.each([
+    [".mjs", ".mts"],
+    [".cjs", ".cts"],
+  ])(
+    "resolves NodeNext %s re-exports to %s source declarations",
+    (exportExtension, sourceExtension) => {
+      const repo = createTempRepo();
+      writePackage(
+        repo,
+        "alpha",
+        "@croco/alpha",
+        `export { assertContract } from "./contract${exportExtension}";\n`,
+      );
+      writeFile(
+        repo,
+        `packages/alpha/src/contract${sourceExtension}`,
+        "export function assertContract(): void {}\n",
+      );
+
+      expect(
+        getCodeEntrypoint(createPublicApiSnapshot(repo).packages[0]).runtimeExports,
+      ).toContainEqual(
+        expect.objectContaining({
+          declarationKind: "function",
+          name: "assertContract",
+          source: `./contract${exportExtension}`,
+        }),
+      );
+    },
+  );
+
   it("fails closed when a public package has no published root mapping", () => {
     const repo = createTempRepo();
     writeFile(

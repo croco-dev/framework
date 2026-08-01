@@ -60,6 +60,10 @@ expect(test.fidelity).toEqual({
 | `createQStashTriggerConformanceSuite(config)`         | Reusable QStash trigger cases for schedule sync, webhook verification, dispatch, upstream diagnostics, and live-smoke gating.              |
 | `createDrizzleProviderConformanceSuite(config)`       | Builds reusable Drizzle provider cases for schema, transaction, tenant, and error contracts.                                               |
 | `assertDrizzleProblem(operation, expected)`           | Verifies Drizzle provider failures surface stable Croco Problem codes, categories, or status.                                              |
+| `createTestEvidenceRecord(input)`                     | Builds validated `croco.test-evidence/v1` records and derives flaky outcomes from retained attempts.                                       |
+| `createTestEvidenceBundle(records, artifactExists)`   | Deterministically aggregates runner-neutral evidence and reports every missing required attachment.                                        |
+| `CrocoVitestEvidenceReporter`                         | Adapts Vitest results and retries into the common evidence model without replacing Vitest.                                                 |
+| `CrocoPlaywrightEvidenceReporter`                     | Adapts Playwright attempts, traces, screenshots, and reports without replacing Playwright.                                                 |
 
 ## Isolation Contract
 
@@ -96,6 +100,42 @@ events, status, and recorded exceptions in memory.
 Call it before initializing a real telemetry SDK in the same test process. Repeated calls are
 supported for isolated captures, including overlapping `capture.run()` blocks, but OpenTelemetry
 does not expose a safe provider reset API after a different provider has already been installed.
+
+## Executable Test Evidence
+
+`croco.test-evidence/v1` is the stable, runner-neutral envelope for Vitest, Playwright, generated-app,
+provider-conformance, failure-drill, resource, and runtime-smoke results. The record schema is available from
+`@croco/testing/schemas/test-evidence-v1.json`, the aggregate schema from
+`@croco/testing/schemas/test-evidence-bundle-v1.json`, and the root entrypoint exports the matching TypeScript
+types and validation helpers.
+
+Every record keeps declared `intent.contractIds` separate from runtime `observed.contractIds`, route IDs,
+Problem codes, and event IDs. Declaring a contract never marks it observed. `attempts` is the source of truth
+for outcome classification: a failed attempt followed by a pass is always `flaky`, and the bundle is not
+successful until that flakiness is addressed. Seed, virtual time, and a replay command remain explicit.
+
+Fidelity records boot boundary, dependency fidelity, runtime, isolation, and validation independently.
+`assertTestEvidenceFidelity()` compares actual evidence with a required profile and rejects relabeling, so an
+isolated fake or rollback run cannot satisfy application, local-real, or commit evidence. Existing versioned
+provider and failure-drill reports remain intact as attachments with their original `schemaVersion` instead of
+being flattened into a lossy replacement format.
+
+Both reporter adapters accept optional context mappers for runtime observations, diagnostics, resources, and
+replay metadata. Import their directly loadable defaults from `@croco/testing/vitest-reporter` and
+`@croco/testing/playwright-reporter`. A custom `write(record)` callback may select another artifact layout;
+without one, reporters write deterministic JSON fragments to `ci-reports/test-evidence/records` (or the
+configured `outputDirectory`). `pnpm test-evidence:bundle --input <report.json>` consumes already-executed
+unified records or Croco verification reports, writes
+`ci-reports/test-evidence/bundle.json` and `summary.md`, and fails with explicit missing-artifact evidence.
+Verification profiles can pass that exact-head bundle back through `--test-evidence <bundle.json>`; only passed
+`croco-verification` records are reused only when the bundle is passed and complete, the record is passed, its
+observed contract ID matches the check ID, `metadata.commitSha` matches the exact current head,
+`metadata.profile` matches the selected verification profile, `replay.command` exactly matches the command,
+and every required artifact is both attached to the record and still present. Stale, flaky, declared-only,
+unrelated, command-mismatched, wrong-profile, or incomplete records cause the command to execute normally.
+Sensitive keys used by the logger security policy (`authorization`, cookies, credentials, passwords, secrets,
+and tokens) and secret-like values are redacted before records are emitted; `assertNoTestEvidenceSecrets()`
+supports policy-owned secret samples for validation.
 
 ## Failure Drills
 

@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { getVerificationCommand } from "../verification-manifest.mts";
+import { createVerificationManifest, getVerificationCommand } from "../verification-manifest.mts";
 import { ensureSarif, GITLEAKS_CORE_ARGS } from "../security-gitleaks-smoke.mts";
 import {
   findTrustedGitleaksImageViolations,
@@ -406,6 +406,50 @@ describe("CI verification profile contract", () => {
     expect(WORKFLOW).toContain("name: package-quality-dashboard");
     expect(WORKFLOW).toContain("name: generated-app-smoke-ecosystem-advisory");
     expect(WORKFLOW).toContain("name: core-coverage-warning-report");
+  });
+
+  it("publishes unified JSON and Markdown evidence even when aggregation fails closed", () => {
+    const ensureNativeStart = VALIDATE_JOB.indexOf("      - name: Ensure native Vitest evidence");
+    const aggregateStart = VALIDATE_JOB.indexOf("      - name: Aggregate executable test evidence");
+
+    expect(ensureNativeStart).toBeGreaterThan(-1);
+    expect(ensureNativeStart).toBeLessThan(aggregateStart);
+    expect(VALIDATE_JOB.slice(ensureNativeStart, aggregateStart)).toContain(
+      "pnpm --filter @croco/testing test",
+    );
+    expect(VALIDATE_JOB.slice(ensureNativeStart, aggregateStart)).toContain(
+      "find ci-reports/test-evidence/records -type f -name 'vitest-*.json' -print -quit",
+    );
+    expect(VALIDATE_JOB).toContain(
+      'node --experimental-strip-types scripts/test-evidence-bundle.mts "${evidence_args[@]}" || evidence_status=$?',
+    );
+    expect(VALIDATE_JOB).toContain(
+      "find ci-reports/test-evidence/records -type f -name '*.json' -print | sort",
+    );
+    expect(VALIDATE_JOB).toContain(
+      "CROCO_TEST_EVIDENCE_DIR: ${{ github.workspace }}/ci-reports/test-evidence/records",
+    );
+    expect(VALIDATE_JOB).toContain("vitest_record_count=0");
+    expect(VALIDATE_JOB).toContain('if [[ "$evidence_record" == */vitest-*.json ]]; then');
+    expect(VALIDATE_JOB).toContain(
+      "evidence_args+=(--input ci-reports/test-evidence/records/required-vitest-record.json)",
+    );
+    expect(VALIDATE_JOB).toContain("if [ -f ci-reports/test-evidence/summary.md ]; then");
+    expect(VALIDATE_JOB).toContain('exit "$evidence_status"');
+    expect(VALIDATE_JOB).toContain("ci-reports/test-evidence");
+  });
+
+  it("produces native evidence for profiles whose affected graph schedules no reporter", () => {
+    expect(createVerificationManifest("repo").some(({ id }) => id === "test")).toBe(false);
+    const unrelatedSpine = createVerificationManifest("spine", {
+      base: "origin/trunk",
+      changedFiles: ["packages/retry-core/src/libs/Retry.ts"],
+      head: "HEAD",
+    });
+    expect(unrelatedSpine.find(({ id }) => id === "test")?.command).toContain(
+      "--filter=...[origin/trunk]",
+    );
+    expect(VALIDATE_JOB).toContain("pnpm --filter @croco/testing test");
   });
 
   it("reports whether the publish-only audit policy was selected", () => {

@@ -29,7 +29,7 @@ title: "UnknownWebhookEventProblem"
 
 ###### policy
 
-`"fail"` \| `"ignore"` \| `"report"`
+`"fail"` \| `"report"` \| `"ignore"`
 
 ###### provider
 

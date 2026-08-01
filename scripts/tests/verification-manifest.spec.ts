@@ -189,6 +189,7 @@ describe("verification manifest", () => {
     expect(byId.get("typecheck")?.command).toContain("--filter=!@croco/docs");
     expect(byId.get("test")?.command).toContain("--filter=...[origin/trunk]");
     expect(byId.get("test")?.command).toContain("--filter=!@croco/docs");
+    expect(byId.get("test")?.command).toContain("--force");
     expect(manifest.findIndex(({ id }) => id === "build")).toBeLessThan(
       manifest.findIndex(({ id }) => id === "typecheck"),
     );

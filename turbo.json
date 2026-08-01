@@ -1,6 +1,7 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local"],
+  "globalPassThroughEnv": ["CROCO_TEST_EVIDENCE_DIR"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
