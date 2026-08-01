@@ -1,6 +1,12 @@
 import "reflect-metadata";
 import type { AddressInfo } from "node:net";
-import type { Guard } from "@croco/framework-context";
+import {
+  Container,
+  DEV_INSPECTOR_TOKEN,
+  type Guard,
+  type RuntimeInspector,
+  type RuntimeInspectorRecorderEventInput,
+} from "@croco/framework-context";
 import { Problem, ProblemCategory, ProblemFactory } from "@croco/problems-core";
 import {
   type CallHandler,
@@ -113,6 +119,18 @@ class MethodFilter implements ExceptionFilter<unknown, ExecutionContext> {
   }
 }
 
+class InvalidReturnFilter implements ExceptionFilter<unknown, ExecutionContext> {
+  catch(): HttpExceptionFilterResponse {
+    return { status: 200, headers: {}, body: {} };
+  }
+}
+
+class ThrowingFilter implements ExceptionFilter<unknown, ExecutionContext> {
+  catch(): never {
+    throw new Error("filter failure");
+  }
+}
+
 class PrivateProblem extends Problem {
   readonly code = "protocols-trpc/private-problem";
   readonly category = ProblemCategory.InternalServerError;
@@ -178,6 +196,21 @@ class TrpcProblemController {
   }
 }
 
+@Controller("/trpc/filter-diagnostics")
+class TrpcFilterDiagnosticsController {
+  @Get("/invalid-return")
+  @UseFilters(InvalidReturnFilter)
+  invalidReturn(): never {
+    throw new PrivateProblem();
+  }
+
+  @Get("/throwing")
+  @UseFilters(ThrowingFilter)
+  throwing(): never {
+    throw new PrivateProblem();
+  }
+}
+
 @Controller("/trpc/di")
 class TrpcDiController {
   @Get("/")
@@ -187,8 +220,19 @@ class TrpcDiController {
   }
 }
 
+@Controller("/trpc/required-dependency")
+class TrpcRequiredDependencyController {
+  constructor(_dependency: GuardDependency) {}
+
+  @Get("/")
+  handler(): string {
+    return "unreachable";
+  }
+}
+
 describe("tRPC Croco execution pipeline", () => {
   afterEach(() => {
+    Container.reset();
     events.length = 0;
     observedTrpcContext = undefined;
   });
@@ -199,7 +243,9 @@ describe("tRPC Croco execution pipeline", () => {
       trpcDeny: { denied: () => Promise<unknown> };
     };
 
-    await expect(caller.trpcDeny.denied()).rejects.toMatchObject({
+    const denied = caller.trpcDeny.denied();
+    await expect(denied).rejects.toThrow();
+    await expect(denied).rejects.toMatchObject({
       code: "FORBIDDEN",
       cause: expect.objectContaining({
         code: "TRPC_ACCESS_DENIED",
@@ -216,7 +262,9 @@ describe("tRPC Croco execution pipeline", () => {
       trpcDeny: { invalidInput: (input: unknown) => Promise<unknown> };
     };
 
-    await expect(caller.trpcDeny.invalidInput({ name: "" })).rejects.toMatchObject({
+    const denied = caller.trpcDeny.invalidInput({ name: "" });
+    await expect(denied).rejects.toThrow();
+    await expect(denied).rejects.toMatchObject({
       code: "FORBIDDEN",
       cause: expect.objectContaining({ code: "TRPC_ACCESS_DENIED" }),
     });
@@ -229,7 +277,9 @@ describe("tRPC Croco execution pipeline", () => {
       trpcPipeline: { fails: () => Promise<unknown> };
     };
 
-    await expect(caller.trpcPipeline.fails()).rejects.toMatchObject({
+    const failure = caller.trpcPipeline.fails();
+    await expect(failure).rejects.toThrow();
+    await expect(failure).rejects.toMatchObject({
       code: "UNPROCESSABLE_CONTENT",
       cause: expect.objectContaining({
         code: "protocols-trpc/filter-handled",
@@ -318,6 +368,100 @@ describe("tRPC Croco execution pipeline", () => {
 
     await expect(caller.trpcDi.protected()).resolves.toBe("protected");
     expect(events).toEqual(["dependency-guard"]);
+  });
+
+  it("requires a container for providers with constructor dependencies", () => {
+    expect(() => createTrpcRouter([TrpcRequiredDependencyController])).toThrow(
+      expect.objectContaining({ code: "protocols-trpc/provider-container-required" }),
+    );
+  });
+
+  it("preserves the original failure and records invalid filter results", async () => {
+    const diagnosticEvents: RuntimeInspectorRecorderEventInput[] = [];
+    const recorder = {
+      recordEvent(event: RuntimeInspectorRecorderEventInput): void {
+        diagnosticEvents.push(event);
+      },
+    };
+    Container.set(DEV_INSPECTOR_TOKEN, recorder as RuntimeInspector);
+    const router = createTrpcRouter([TrpcFilterDiagnosticsController]);
+    const caller = router.createCaller({}) as unknown as {
+      trpcFilterDiagnostics: { invalidReturn: () => Promise<unknown> };
+    };
+
+    await expect(caller.trpcFilterDiagnostics.invalidReturn()).rejects.toMatchObject({
+      code: "INTERNAL_SERVER_ERROR",
+      cause: expect.objectContaining({ code: "protocols-trpc/private-problem" }),
+    });
+    expect(diagnosticEvents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: "CROCO_TRPC_FILTER_001",
+          details: expect.objectContaining({ reason: "invalid-return" }),
+        }),
+      ]),
+    );
+  });
+
+  it("preserves the original failure and records throwing filters", async () => {
+    const diagnosticEvents: RuntimeInspectorRecorderEventInput[] = [];
+    const recorder = {
+      recordEvent(event: RuntimeInspectorRecorderEventInput): void {
+        diagnosticEvents.push(event);
+      },
+    };
+    Container.set(DEV_INSPECTOR_TOKEN, recorder as RuntimeInspector);
+    const router = createTrpcRouter([TrpcFilterDiagnosticsController]);
+    const caller = router.createCaller({}) as unknown as {
+      trpcFilterDiagnostics: { throwing: () => Promise<unknown> };
+    };
+
+    await expect(caller.trpcFilterDiagnostics.throwing()).rejects.toMatchObject({
+      code: "INTERNAL_SERVER_ERROR",
+      cause: expect.objectContaining({ code: "protocols-trpc/private-problem" }),
+    });
+    expect(diagnosticEvents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: "CROCO_TRPC_FILTER_001",
+          details: expect.objectContaining({ reason: "thrown", filterErrorName: "Error" }),
+        }),
+      ]),
+    );
+  });
+
+  it("keeps typed contexts and safely normalizes HTTP requests", () => {
+    const context = new TrpcExecutionContext<{
+      readonly request: Request;
+      readonly identity: string;
+    }>(
+      { request: new Request("https://example.test/trpc"), identity: "caller-1" },
+      TrpcDenyController,
+      "denied",
+      "/trpc/deny",
+      "GET",
+    );
+    const nodeRequestContext = new TrpcExecutionContext(
+      { req: { url: "/trpc/node", method: "GET", headers: { host: "example.test" } } },
+      TrpcDenyController,
+      "denied",
+      "/trpc/deny",
+      "GET",
+    );
+    const missingRequestContext = new TrpcExecutionContext(
+      {},
+      TrpcDenyController,
+      "denied",
+      "/trpc/deny",
+      "GET",
+    );
+
+    expect(context.getTrpcContext().identity).toBe("caller-1");
+    expect(context.getRequest()).toBeInstanceOf(Request);
+    expect(nodeRequestContext.getRequest().url).toBe("http://example.test/trpc/node");
+    expect(() => missingRequestContext.getRequest()).toThrow(
+      expect.objectContaining({ code: "protocols-trpc/request-unavailable" }),
+    );
   });
 });
 

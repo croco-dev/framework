@@ -39,6 +39,10 @@ export function createTrpcFilterProblem(
   body: Record<string, unknown>,
   status: number,
 ): Problem | undefined {
+  if (status < 400 || status > 599) {
+    return undefined;
+  }
+
   try {
     const details = ProblemSerializer.fromJson(body);
 

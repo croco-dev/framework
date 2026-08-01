@@ -403,6 +403,8 @@ This cookbook documents 566 public Croco Problem codes. The deterministic JSON r
 | [`protocols-rest/response-validation-failed`](#protocols-rest-response-validation-failed)                                             | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`protocols-rest/validation-failed`](#protocols-rest-validation-failed)                                                               | ValidationError       |    422 | not-retryable | public        | active    |       1 |
 | [`protocols-trpc/duplicate-parameter-index`](#protocols-trpc-duplicate-parameter-index)                                               | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
+| [`protocols-trpc/provider-container-required`](#protocols-trpc-provider-container-required)                                           | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
+| [`protocols-trpc/request-unavailable`](#protocols-trpc-request-unavailable)                                                           | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`protocols-trpc/route-handler-not-callable`](#protocols-trpc-route-handler-not-callable)                                             | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`PUBLIC_EMAIL_DOMAIN_NOT_ALLOWED`](#public-email-domain-not-allowed)                                                                 | BadRequest            |    400 | not-retryable | public        | active    |       1 |
 | [`RATE_LIMIT_EXCEEDED`](#rate-limit-exceeded)                                                                                         | TooManyRequests       |    429 | retryable     | safe-message  | active    |       1 |
@@ -7601,6 +7603,42 @@ Sources:
 Sources:
 
 - `packages/protocols-trpc/src/libs/TrpcParamResolver.ts:71:13` (problem-factory)
+
+<a id="protocols-trpc-provider-container-required"></a>
+
+## `protocols-trpc/provider-container-required`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/protocols-trpc/src/libs/createTrpcRouter.ts:65:3` (problem-class)
+
+<a id="protocols-trpc-request-unavailable"></a>
+
+## `protocols-trpc/request-unavailable`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/protocols-trpc/src/libs/TrpcExecutionContext.ts:42:3` (problem-class)
 
 <a id="protocols-trpc-route-handler-not-callable"></a>
 

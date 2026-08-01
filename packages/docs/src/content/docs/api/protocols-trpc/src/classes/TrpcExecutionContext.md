@@ -7,6 +7,12 @@ title: "TrpcExecutionContext"
 
 Adapts a tRPC procedure invocation to Croco's controller execution context.
 
+## Type Parameters
+
+### TContext
+
+`TContext` = `unknown`
+
 ## Implements
 
 - [`ExecutionContext`](/api/protocols-rest/src/interfaces/executioncontext/)
@@ -15,13 +21,13 @@ Adapts a tRPC procedure invocation to Croco's controller execution context.
 
 ### Constructor
 
-> **new TrpcExecutionContext**(`trpcContext`, `controllerClass`, `handlerName`, `path`, `method`): `TrpcExecutionContext`
+> **new TrpcExecutionContext**\<`TContext`\>(`trpcContext`, `controllerClass`, `handlerName`, `path`, `method`): `TrpcExecutionContext`\<`TContext`\>
 
 #### Parameters
 
 ##### trpcContext
 
-`unknown`
+`TContext`
 
 ##### controllerClass
 
@@ -41,7 +47,7 @@ Adapts a tRPC procedure invocation to Croco's controller execution context.
 
 #### Returns
 
-`TrpcExecutionContext`
+`TrpcExecutionContext`\<`TContext`\>
 
 ## Methods
 
@@ -127,8 +133,8 @@ HTTP 메서드 (GET, POST 등)
 
 ### getTrpcContext()
 
-> **getTrpcContext**(): `unknown`
+> **getTrpcContext**(): `TContext`
 
 #### Returns
 
-`unknown`
+`TContext`

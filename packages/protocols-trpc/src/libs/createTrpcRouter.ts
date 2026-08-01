@@ -61,6 +61,22 @@ export class TrpcRouteHandlerError extends Problem {
   }
 }
 
+class TrpcProviderContainerProblem extends Problem {
+  readonly code = "protocols-trpc/provider-container-required";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(providerName: string) {
+    super(
+      undefined,
+      undefined,
+      `Provider '${providerName}' requires a container for constructor injection`,
+      {
+        extensions: { providerName },
+      },
+    );
+  }
+}
+
 /**
  * Creates a tRPC router whose procedures run Croco guards before input parsing, then interceptors around handlers.
  *
@@ -107,18 +123,15 @@ function createProcedure(
 ): AnyProcedure {
   const createExecutionContext = (ctx: Record<string, unknown>) =>
     new TrpcExecutionContext(ctx, controller, route.methodName, route.path, route.httpMethod);
+  const guardProviders = getGuards(controller, route.methodName);
+  const filterProviders = getFilters(controller, route.methodName);
+  const interceptorProviders = getInterceptors(controller, route.methodName);
   const createGuardAndFilterConfig = (): Pick<TrpcPipelineConfig, "guards" | "filters"> => ({
-    guards: getGuards(controller, route.methodName).map((provider) =>
-      instantiateProvider(provider, options),
-    ),
-    filters: getFilters(controller, route.methodName).map((provider) =>
-      instantiateProvider(provider, options),
-    ),
+    guards: guardProviders.map((provider) => instantiateProvider(provider, options)),
+    filters: filterProviders.map((provider) => instantiateProvider(provider, options)),
   });
   const createInterceptors = (): TrpcPipelineConfig["interceptors"] =>
-    getInterceptors(controller, route.methodName).map((provider) =>
-      instantiateProvider(provider, options),
-    );
+    interceptorProviders.map((provider) => instantiateProvider(provider, options));
   const inputSchema = createTrpcInputSchema(route);
   const lifecycleProcedure = t.procedure.use(async ({ ctx, next }) => {
     const context = createExecutionContext(ctx);
@@ -191,7 +204,15 @@ function instantiateProvider<T>(provider: Constructor<T>, options: TrpcRouterOpt
     return options.container.get(provider);
   }
 
+  if (provider.length > 0) {
+    throw new TrpcProviderContainerProblem(getProviderName(provider));
+  }
+
   const Provider = provider as new () => T;
 
   return new Provider();
+}
+
+function getProviderName(provider: Constructor): string {
+  return provider.name || "anonymous provider";
 }
