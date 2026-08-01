@@ -1,8 +1,21 @@
 import { describe, expect, it } from "vitest";
 
-import { fieldMatchesPath } from "../package-manifest-contracts.mjs";
+import { effectivePublishManifest, fieldMatchesPath } from "../package-manifest-contracts.mjs";
 
 describe("package-manifest-contracts", () => {
+  it("applies publishConfig overrides to the effective publish manifest", () => {
+    expect(
+      effectivePublishManifest({
+        bin: { source: "./src/cli.ts" },
+        name: "@croco/example",
+        publishConfig: { bin: { published: "./dist/cli.js" } },
+      }),
+    ).toEqual({
+      bin: { published: "./dist/cli.js" },
+      name: "@croco/example",
+    });
+  });
+
   it("compares root and publish fields without object key order sensitivity", () => {
     const source = {
       exports: {

@@ -55,6 +55,14 @@ const CORE_COVERAGE_PACKAGE_DIRECTORIES = CORE_COVERAGE_PACKAGES.map((packageNam
   packageName.startsWith("@croco/") ? packageName.slice("@croco/".length) : packageName,
 );
 
+const PACKAGE_BIN_BUILD_FILTERS = [
+  "@croco/cli",
+  "create-croco-app",
+  "@croco/openapi-spec",
+  "@croco/migration-runner",
+  "@croco/rpc-codegen",
+] as const;
+
 function isApplicableToChangedFiles(
   context: VerificationContext,
   predicate: (path: string) => boolean,
@@ -88,7 +96,9 @@ function affectsPackageEntrypoints(path: string): boolean {
 function affectsPackageBins(path: string): boolean {
   return (
     /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|turbo\.json|\.nvmrc)$/.test(path) ||
-    /^packages\/(?:cli|create-croco-app)\/(?:package\.json|src\/)/.test(path) ||
+    /^packages\/(?:cli|create-croco-app|migration-runner|openapi-spec|rpc-codegen)\/(?:package\.json|src\/)/.test(
+      path,
+    ) ||
     path === "scripts/package-bin-smoke.mts"
   );
 }
@@ -406,8 +416,10 @@ const spineOnly = (context: VerificationContext): readonly EvidenceCommand[] => 
     changeScoped && scaffoldApplicable ? ["--filter=create-croco-app"] : [];
   const entrypointsApplicable = isApplicableToChangedFiles(context, affectsPackageEntrypoints);
   const binsApplicable = isApplicableToChangedFiles(context, affectsPackageBins);
-  const binBuildArguments =
-    changeScoped && binsApplicable ? ["--filter=@croco/cli", "--filter=create-croco-app"] : [];
+  const packageBinBuildArguments =
+    changeScoped && binsApplicable
+      ? PACKAGE_BIN_BUILD_FILTERS.map((packageName) => `--filter=${packageName}`)
+      : [];
   const cliApplicable = isApplicableToChangedFiles(context, affectsCli);
   const coreCoverageApplicable = isApplicableToChangedFiles(context, affectsCoreCoverage);
   const packageGraphApplicable = isApplicableToChangedFiles(context, affectsPackageGraph);
@@ -424,7 +436,7 @@ const spineOnly = (context: VerificationContext): readonly EvidenceCommand[] => 
         "build",
         ...affectedArguments,
         ...scaffoldBuildArguments,
-        ...binBuildArguments,
+        ...packageBinBuildArguments,
         "--summarize",
         "--continue=always",
       ],
