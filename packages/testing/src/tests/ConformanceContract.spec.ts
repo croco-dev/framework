@@ -433,6 +433,102 @@ describe("@croco/testing conformance public contract", () => {
           },
         ],
       },
+      usage: {
+        createGateway: unexecuted,
+        fixtures: {
+          emptyCustomerMeterStateQuery: {
+            billingAccountId: "account_empty",
+            meterId: "api_calls",
+          },
+          events: [
+            {
+              billingAccountId: "account_123",
+              eventId: "usage_123",
+              meterId: "api_calls",
+              occurredAt: new Date("2026-01-31T00:00:00.000Z"),
+              value: 1,
+            },
+          ],
+          partialBatch: {
+            events: [
+              {
+                billingAccountId: "account_123",
+                eventId: "usage_123",
+                meterId: "api_calls",
+                occurredAt: new Date("2026-01-31T00:00:00.000Z"),
+                value: 1,
+              },
+            ],
+            expectedReceipts: { usage_123: "duplicate" },
+            maxEvents: 1,
+          },
+          customerMeterState: {
+            billingAccountId: "account_123",
+            meterId: "api_calls",
+            value: 1,
+          },
+        },
+        failureScenarios: {
+          http429: {
+            createGateway: unexecuted,
+            forbiddenValues: ["raw-provider-response"],
+            fixture: {
+              events: [],
+              expectedProblemCode: "provider/retryable",
+              kind: "http-429",
+              rawResponse: "raw-provider-response",
+              status: 429,
+            },
+            run: async () => unexecuted(),
+          },
+          http5xx: {
+            createGateway: unexecuted,
+            forbiddenValues: ["raw-provider-response"],
+            fixture: {
+              events: [],
+              expectedProblemCode: "provider/retryable",
+              kind: "http-5xx",
+              rawResponse: "raw-provider-response",
+              status: 500,
+            },
+            run: async () => unexecuted(),
+          },
+          timeout: {
+            createGateway: unexecuted,
+            forbiddenValues: ["raw-provider-response"],
+            fixture: {
+              events: [],
+              kind: "timeout",
+              expectedProblemCode: "provider/retryable",
+              rawResponse: "raw-provider-response",
+              upstreamCode: "RequestTimeoutError",
+            },
+            run: async () => unexecuted(),
+          },
+          invalidMeter: {
+            createGateway: unexecuted,
+            forbiddenValues: ["raw-provider-response"],
+            fixture: {
+              events: [],
+              expectedProblemCode: "provider/terminal",
+              kind: "invalid-meter",
+              rawResponse: "raw-provider-response",
+            },
+            run: async () => unexecuted(),
+          },
+          invalidSchema: {
+            createGateway: unexecuted,
+            forbiddenValues: ["raw-provider-response"],
+            fixture: {
+              events: [],
+              expectedProblemCode: "provider/terminal",
+              kind: "invalid-schema",
+              rawResponse: "raw-provider-response",
+            },
+            run: async () => unexecuted(),
+          },
+        },
+      },
       webhook: {
         createHandler: unexecuted,
         fixtures: {
@@ -477,12 +573,76 @@ describe("@croco/testing conformance public contract", () => {
       "ensures customers before creating customer portal URLs",
       "supports deferred cancel, resume, and immediate cancel subscription lifecycle calls",
       "surfaces gateway failures as Croco Problems",
+      "inserts deterministic usage events with one receipt per event",
+      "acknowledges logical usage event replays without a second billed increment",
+      "maps bounded partial usage batches to individual delivery receipts",
+      "distinguishes empty customer meter state from a populated state",
+      "classifies HTTP 429 usage delivery failures as retryable",
+      "classifies HTTP 5xx usage delivery failures as retryable",
+      "classifies timeout usage delivery failures as retryable",
+      "classifies invalid meter usage failures as terminal",
+      "classifies invalid schema usage failures as terminal",
       "accepts signed subscription lifecycle webhooks with deterministic event ids",
       "accepts signed order webhooks with deterministic event ids",
       "treats duplicate webhook deliveries as idempotent successes",
       "rejects invalid webhook signatures with Croco Problems",
       "rejects structurally invalid webhook payloads with Croco Problems",
     ]);
+    expect(suite.manifest).toEqual({
+      capabilityEvidence: [
+        {
+          capability: "usage",
+          caseNames: [
+            "inserts deterministic usage events with one receipt per event",
+            "acknowledges logical usage event replays without a second billed increment",
+            "maps bounded partial usage batches to individual delivery receipts",
+            "distinguishes empty customer meter state from a populated state",
+            "classifies HTTP 429 usage delivery failures as retryable",
+            "classifies HTTP 5xx usage delivery failures as retryable",
+            "classifies timeout usage delivery failures as retryable",
+            "classifies invalid meter usage failures as terminal",
+            "classifies invalid schema usage failures as terminal",
+          ],
+          status: "supported",
+        },
+      ],
+      caseNames: caseNames(suite),
+      providerName: "Contract Billing",
+      version: "croco.billing-provider-conformance.v1",
+    });
+    expect(Object.isFrozen(suite.manifest)).toBe(true);
+    expect(Object.isFrozen(suite.manifest.caseNames)).toBe(true);
+    expect(Object.isFrozen(suite.manifest.capabilityEvidence)).toBe(true);
+    for (const evidence of suite.manifest.capabilityEvidence) {
+      expect(Object.isFrozen(evidence)).toBe(true);
+      expect(Object.isFrozen(evidence.caseNames)).toBe(true);
+    }
+  });
+
+  it("records unavailable usage capability evidence separately", () => {
+    const suite = createBillingProviderConformanceSuite({
+      providerName: "Unavailable Usage Billing",
+      unavailableUsage: {
+        createProvider: unexecuted,
+      },
+    });
+
+    expect(suite.manifest).toEqual({
+      capabilityEvidence: [
+        {
+          capability: "usage",
+          caseNames: [
+            "rejects unavailable usage billing capability with the public capability Problem",
+          ],
+          status: "unavailable",
+        },
+      ],
+      caseNames: [
+        "rejects unavailable usage billing capability with the public capability Problem",
+      ],
+      providerName: "Unavailable Usage Billing",
+      version: "croco.billing-provider-conformance.v1",
+    });
   });
 
   it("locks serverless provider helper case names", () => {

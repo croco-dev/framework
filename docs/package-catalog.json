@@ -1281,7 +1281,8 @@
           "conformance": {
             "status": "present",
             "command": "pnpm --filter @croco/billing-polar test",
-            "description": "Polar SDK-backed webhook conformance covers replayed signed delivery, duplicate event idempotency, stale timestamp/clock-skew rejection mapping, and stable invalid-signature Problem code/status."
+            "artifact": "packages/billing-polar/src/tests/PolarBillingGateway.spec.ts",
+            "description": "Polar SDK-backed conformance covers checkout and webhook replay behavior plus the explicit public Problem for its unavailable usage-billing capability; the shared suite also provides deterministic fake-adapter delivery, partial-batch, retry/terminal, meter-state, redaction, and opt-in real-provider coverage."
           },
           "noCredentialSmoke": {
             "status": "present",
@@ -1305,7 +1306,7 @@
         },
         "knownGaps": [
           "Recorded real Polar liveSmoke evidence is required before certified state.",
-          "Polar does not expose the @croco/billing-core licensed-quantity capability."
+          "Polar does not expose the @croco/billing-core licensed-quantity or usage-billing capability."
         ]
       },
       {
