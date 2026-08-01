@@ -17,6 +17,12 @@ Versioned, JSON-safe contract graph used as the stable source for strict generat
 
 ***
 
+### monetization?
+
+> `readonly` `optional` **monetization?**: [`ContractMonetizationGraph`](/api/protocols-core/src/type-aliases/contractmonetizationgraph/)
+
+***
+
 ### routes
 
 > `readonly` **routes**: readonly [`ContractGraphV1Route`](/api/protocols-core/src/type-aliases/contractgraphv1route/)[]

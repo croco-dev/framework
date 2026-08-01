@@ -96,6 +96,46 @@ describe("loadRoutes", () => {
   );
 
   it(
+    "discovers executable monetization definitions beside controllers",
+    async () => {
+      fs.writeFileSync(
+        path.join(sourceDir, "UsersController.ts"),
+        `${getMixedControllerSource()}\nexport const monetization = { kind: "croco.contract-monetization.v1", input: { meters: [{ key: "api.calls", aggregation: "COUNT", unit: "request", billing: "required" }] } };`,
+      );
+
+      const graph = await loadContractGraph(path.join(sourceDir, "*.ts"));
+
+      expect(graph.monetization?.nodes).toContainEqual(
+        expect.objectContaining({ kind: "meter", key: "api.calls" }),
+      );
+      expect(graph.diagnostics).toContainEqual(
+        expect.objectContaining({ code: "CROCO_BILLING_METER_UNBOUND" }),
+      );
+    },
+    LOAD_ROUTES_TIMEOUT_MS,
+  );
+
+  it(
+    "reports malformed executable monetization definitions without crashing verification",
+    async () => {
+      fs.writeFileSync(
+        path.join(sourceDir, "UsersController.ts"),
+        `${getMixedControllerSource()}\nexport const monetization = { kind: "croco.contract-monetization.v1", input: { meters: 42 } };`,
+      );
+
+      const graph = await loadContractGraph(path.join(sourceDir, "*.ts"));
+
+      expect(graph.diagnostics).toContainEqual(
+        expect.objectContaining({
+          code: "CROCO_BILLING_DESCRIPTOR_INVALID",
+          recoveryAction: expect.any(String),
+        }),
+      );
+    },
+    LOAD_ROUTES_TIMEOUT_MS,
+  );
+
+  it(
     "maps emitted decorator source locations back to the original controller file",
     async () => {
       const controllerPath = path.join(sourceDir, "WeakSchemaController.ts");
@@ -109,7 +149,7 @@ describe("loadRoutes", () => {
         (diagnostic) => diagnostic.code === "contract-route-missing-named-param-schema",
       );
 
-      expect(paramDiagnostic?.sourceLocation?.path).toBe(controllerPath);
+      expect(paramDiagnostic?.sourceLocation?.path).toBe("WeakSchemaController.ts");
       expect(paramDiagnostic?.sourceLocation?.path).not.toContain(".croco-rpc-codegen-");
       expect(paramDiagnostic?.sourceLocation?.line).toEqual(expect.any(Number));
       expect(paramDiagnostic?.sourceLocation?.column).toEqual(expect.any(Number));
@@ -135,8 +175,8 @@ describe("loadRoutes", () => {
         routes.map((route) => [route.path, route.sourceLocation?.path]),
       );
 
-      expect(sourceLocationByPath.get("/first")).toBe(firstControllerPath);
-      expect(sourceLocationByPath.get("/second")).toBe(secondControllerPath);
+      expect(sourceLocationByPath.get("/first")).toBe("first/DuplicateController.ts");
+      expect(sourceLocationByPath.get("/second")).toBe("second/DuplicateController.ts");
     },
     LOAD_ROUTES_TIMEOUT_MS,
   );

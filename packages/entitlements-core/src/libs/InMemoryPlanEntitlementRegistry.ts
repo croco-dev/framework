@@ -1,36 +1,44 @@
 import { Component } from "@croco/framework-context";
 import type { PlanVersionRef } from "@croco/billing-core";
-import { assertPlanVersionMatches, legacyPlanVersionRef } from "./EntitlementDefinition";
+import { legacyPlanVersionRef } from "./EntitlementDefinition";
 import { getLegacyPlanId } from "./EntitlementDefinition";
 import { PlanEntitlementRegistry } from "./interfaces";
 import {
   EntitlementDefinitionProblem,
   EntitlementPlanVersionAlreadyRegisteredProblem,
+  EntitlementPlanVersionMismatchProblem,
   EntitlementPlanVersionNotFoundProblem,
 } from "./problems/EntitlementProblems";
 import type { EntitlementRule, PlanEntitlements } from "./types";
 
+type StoredPlanEntitlements = {
+  readonly planId: string;
+  readonly planVersionRef: PlanVersionRef;
+  readonly entitlements: readonly EntitlementRule[];
+};
+
 @Component()
 export class InMemoryPlanEntitlementRegistry extends PlanEntitlementRegistry {
-  private readonly registry = new Map<PlanVersionRef, PlanEntitlements>();
+  private readonly registry = new Map<PlanVersionRef, StoredPlanEntitlements>();
 
   register(definition: PlanEntitlements): void;
   register(planId: string, rules: EntitlementRule[]): void;
   register(definitionOrPlanId: PlanEntitlements | string, rules?: EntitlementRule[]): void {
-    const definition =
-      typeof definitionOrPlanId === "string"
-        ? {
-            planId: definitionOrPlanId,
-            planVersionRef: legacyPlanVersionRef(definitionOrPlanId),
-            entitlements: rules ?? [],
-          }
-        : definitionOrPlanId;
+    if (typeof definitionOrPlanId === "string") {
+      const ref = legacyPlanVersionRef(definitionOrPlanId);
+      if (this.registry.has(ref)) throw new EntitlementPlanVersionAlreadyRegisteredProblem(ref);
+      this.registry.set(ref, {
+        planId: definitionOrPlanId,
+        planVersionRef: ref,
+        entitlements: Object.freeze((rules ?? []).map((rule) => Object.freeze({ ...rule }))),
+      });
+      return;
+    }
+    const definition = definitionOrPlanId;
     if (this.registry.has(definition.planVersionRef)) {
       throw new EntitlementPlanVersionAlreadyRegisteredProblem(definition.planVersionRef);
     }
-    if (getLegacyPlanId(definition.planVersionRef) === null) {
-      assertVersionBoundRules(definition);
-    }
+    if (getLegacyPlanId(definition.planVersionRef) === null) assertVersionBoundRules(definition);
 
     this.registry.set(definition.planVersionRef, {
       planId: definition.planId,
@@ -68,7 +76,9 @@ export class InMemoryPlanEntitlementRegistry extends PlanEntitlementRegistry {
       throw new EntitlementPlanVersionNotFoundProblem(ref);
     }
     if (expectedPlanId !== undefined) {
-      assertPlanVersionMatches(expectedPlanId, definition);
+      if (definition.planId !== expectedPlanId) {
+        throw new EntitlementPlanVersionMismatchProblem(ref, expectedPlanId, definition.planId);
+      }
     }
 
     return [...definition.entitlements];
@@ -93,6 +103,7 @@ function assertVersionBoundRules(definition: PlanEntitlements): void {
       );
     }
     if (
+      rule.type === "metered" &&
       rule.overagePolicy === "ALLOW_WITH_OVERAGE" &&
       (rule.meterId === undefined || rule.meterBilling !== "required")
     ) {

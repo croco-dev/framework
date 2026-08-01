@@ -818,6 +818,35 @@ describe("buildContractGraph", () => {
     });
   });
 
+  it("should remove checkout-root prefixes from persisted source locations", () => {
+    @Controller("/reports")
+    class ReportsController {
+      @Get("/")
+      listReports(): void {}
+    }
+    const attachAtRoot = (root: string) => {
+      attachRouteContract(ReportsController, "listReports", {
+        method: "GET",
+        path: "/reports",
+        sourceLocation: {
+          path: `${root}/apps/api-server/src/controllers/ReportsController.ts`,
+          line: 10,
+        },
+      });
+      return stringifyContractGraphV1(
+        createContractGraphV1(buildContractGraph([ReportsController])),
+      );
+    };
+
+    const first = attachAtRoot("/private/tmp/checkout-a");
+    const second = attachAtRoot("/workspace/checkout-b");
+
+    expect(first).toBe(second);
+    expect(JSON.parse(first).routes[0].source.path).toBe(
+      "apps/api-server/src/controllers/ReportsController.ts",
+    );
+  });
+
   it("should expose ContractGraph v1 as a deterministic JSON-safe route schema", () => {
     const AuditGuard = class AuditGuard {};
     const createReportBody = z.object({ title: z.string() });

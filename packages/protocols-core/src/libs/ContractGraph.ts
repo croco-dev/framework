@@ -11,6 +11,13 @@ import type { z } from "zod";
 import { extractRouteIR } from "./extractRouteIR";
 import type { ProblemRegistryReferenceIR, ProblemResponseIR, RouteIR } from "./RouteIR";
 import {
+  buildContractMonetizationGraph,
+  CONTRACT_METERED_METADATA_KEY,
+  type ContractMeteredMetadata,
+  type ContractMonetizationGraph,
+  type ContractMonetizationInput,
+} from "./ContractGraphMonetization";
+import {
   describeZodSchema,
   getSchemaDescriptorDiagnostics,
   getZodObjectShape,
@@ -34,7 +41,8 @@ export type ContractDiagnosticTarget =
   | "route"
   | "param"
   | "schema"
-  | "problem";
+  | "problem"
+  | "monetization";
 
 export type ContractDiagnostic = {
   readonly code: string;
@@ -47,6 +55,7 @@ export type ContractDiagnostic = {
   readonly methodName?: string;
   readonly path?: string;
   readonly sourceLocation?: ContractDiagnosticSourceLocation;
+  readonly recoveryAction?: string;
 };
 
 export type ContractDiagnosticSourceLocation = {
@@ -114,18 +123,27 @@ export type ContractGraphRoute = RouteIR & {
   readonly controllerPath: string;
   readonly access: ContractAccessMetadata;
   readonly entitlements: readonly ContractEntitlementRequirement[];
+  readonly meter?: {
+    readonly key: string;
+    readonly descriptor?: ContractMeteredMetadata["meter"];
+  };
 };
 
 export type BuildContractGraphOptions = {
   readonly strictProblemResponses?: boolean;
   readonly strictSchemas?: boolean;
   readonly problemRegistries?: readonly PackageProblemRegistry[];
+  readonly monetization?: ContractMonetizationInput;
+  /** Stable discovery diagnostics supplied by contract loaders before graph construction. */
+  readonly monetizationDiagnostics?: readonly ContractDiagnostic[];
 };
 
 export type ContractGraph = {
   readonly version: ContractGraphVersion;
   readonly controllers: readonly ContractGraphController[];
   readonly routes: readonly ContractGraphRoute[];
+  /** Present on graphs built by current Croco versions. Optional for source compatibility with legacy graph literals. */
+  readonly monetization?: ContractMonetizationGraph;
   readonly diagnostics: readonly ContractDiagnostic[];
 };
 
@@ -159,6 +177,7 @@ export function buildContractGraph(
   const problemRegistryIndex = createProblemRegistryIndex(options.problemRegistries);
 
   diagnostics.push(...problemRegistryIndex.diagnostics);
+  diagnostics.push(...(options.monetizationDiagnostics ?? []));
 
   for (const controller of controllers) {
     const controllerMeta = Reflect.getMetadata(REST_CONTROLLER_KEY, controller) as
@@ -196,11 +215,14 @@ export function buildContractGraph(
   diagnostics.push(...validateUniqueControllerNames(graphControllers));
   diagnostics.push(...validateUniqueRouteIds(graphRoutes));
   diagnostics.push(...validateUniqueOperationIds(graphRoutes));
+  const monetization = buildContractMonetizationGraph(graphRoutes, options.monetization);
+  diagnostics.push(...monetization.diagnostics);
 
   return {
     version: "croco.contract-graph.v1",
     controllers: graphControllers,
     routes: graphRoutes,
+    monetization: monetization.graph,
     diagnostics,
   };
 }
@@ -227,7 +249,9 @@ export function formatContractDiagnostic(diagnostic: ContractDiagnostic): string
     ? ` ${formatContractDiagnosticSourceLocation(diagnostic.sourceLocation)}`
     : "";
 
-  return `${diagnostic.severity.toUpperCase()} ${diagnostic.code}${route}${location}: ${diagnostic.message}`;
+  const recovery = diagnostic.recoveryAction ? ` Recovery: ${diagnostic.recoveryAction}` : "";
+
+  return `${diagnostic.severity.toUpperCase()} ${diagnostic.code}${route}${location}: ${diagnostic.message}${recovery}`;
 }
 
 export function getContractPathParamNames(path: string): string[] {
@@ -344,7 +368,22 @@ function toContractGraphRoute(
       ...getEntitlementRequirements(controllerCtor, route.methodName),
       ...getEntitlementRequirements(controllerCtor.prototype, route.methodName),
     ],
+    ...getMeteredRouteMetadata(controllerCtor, route.methodName),
   };
+}
+
+function getMeteredRouteMetadata(
+  controllerCtor: Constructor,
+  methodName: string,
+): Pick<ContractGraphRoute, "meter"> {
+  const metadata = Reflect.getMetadata(
+    CONTRACT_METERED_METADATA_KEY,
+    controllerCtor.prototype,
+    methodName,
+  ) as ContractMeteredMetadata | undefined;
+  const key = metadata?.meter?.key ?? metadata?.meterId;
+
+  return key ? { meter: { key, ...(metadata?.meter ? { descriptor: metadata.meter } : {}) } } : {};
 }
 
 function attachProblemRegistryReferences(

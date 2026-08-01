@@ -39,6 +39,12 @@ title: "ContractGraphSnapshot"
 
 ***
 
+### monetization?
+
+> `readonly` `optional` **monetization?**: [`ContractMonetizationGraph`](/api/protocols-core/src/type-aliases/contractmonetizationgraph/)
+
+***
+
 ### operationIds
 
 > `readonly` **operationIds**: readonly `string`[]

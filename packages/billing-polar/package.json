@@ -50,6 +50,7 @@
     "zod": "^4.0.0"
   },
   "devDependencies": {
+    "@croco/protocols-core": "workspace:*",
     "@croco/testing": "workspace:*",
     "tsup": "^8.0.0",
     "typescript": "^5.7.0",

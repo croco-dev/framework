@@ -278,7 +278,17 @@ POLAR_ENVIRONMENT=sandbox \
 pnpm --filter @croco/billing-polar test -- src/tests/PolarLiveSmoke.spec.ts
 ```
 
-이 smoke는 configured organization을 읽는 read-only readiness check만 수행합니다.
+이 smoke는 configured organization을 읽는 read-only readiness check만 수행합니다. ContractGraph에서
+추출한 product/price mapping drift도 명시적으로 확인하려면 다음 변수를 추가합니다. 이 preflight도
+product 조회만 수행하며 생성이나 수정 API는 호출하지 않습니다.
+
+```bash
+POLAR_ACCESS_TOKEN=... \
+POLAR_PRODUCT_ID=... \
+POLAR_PRICE_IDS=price_monthly,price_overage \
+POLAR_ENVIRONMENT=sandbox \
+pnpm --filter @croco/billing-polar test -- src/tests/PolarLiveSmoke.spec.ts
+```
 
 ## 의존성
 

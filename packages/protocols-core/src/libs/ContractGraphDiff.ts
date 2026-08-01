@@ -43,6 +43,7 @@ export function diffContractGraphSnapshots(
     ...diffControllers(baseline, current),
     ...diffRoutes(baseline, current),
     ...diffOperationIds(baseline, current),
+    ...diffMonetization(baseline, current),
   ].sort(compareChanges);
   const breakingChanges = changes.filter((change) => change.severity === "breaking");
   const nonBreakingChanges = changes.filter((change) => change.severity === "non-breaking");
@@ -57,6 +58,33 @@ export function diffContractGraphSnapshots(
     breakingChanges,
     nonBreakingChanges,
   };
+}
+
+function diffMonetization(
+  baseline: ContractGraphSnapshot,
+  current: ContractGraphSnapshot,
+): ContractGraphDiffChange[] {
+  if (!baseline.monetization && !current.monetization) return [];
+  if (!baseline.monetization || !current.monetization) {
+    const present = baseline.monetization ?? current.monetization;
+    if (!present || (present.nodes.length === 0 && present.edges.length === 0)) return [];
+    return [
+      {
+        code: "contract-monetization-changed",
+        severity: "breaking",
+        message: "Monetization bindings changed from the reviewed contract snapshot.",
+      },
+    ];
+  }
+  if (JSON.stringify(baseline.monetization) === JSON.stringify(current.monetization)) return [];
+
+  return [
+    {
+      code: "contract-monetization-changed",
+      severity: "breaking",
+      message: "Monetization bindings changed from the reviewed contract snapshot.",
+    },
+  ];
 }
 
 function diffControllers(

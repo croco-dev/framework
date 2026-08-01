@@ -1,5 +1,6 @@
 import { planVersionRef } from "@croco/billing-core";
 import { defineMeter } from "@croco/metering-core";
+import { defineContractMonetization } from "@croco/protocols-core";
 import { describe, expectTypeOf, it } from "vitest";
 import {
   defineFeature,
@@ -38,6 +39,7 @@ describe("entitlement definition types", () => {
       ],
     });
     expectTypeOf(definition.planVersionRef).toEqualTypeOf<ReturnType<typeof planVersionRef>>();
+    expectTypeOf(defineContractMonetization({ entitlementSets: [definition] })).not.toBeNever();
   });
 });
 

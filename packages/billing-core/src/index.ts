@@ -248,6 +248,7 @@ export type {
   PlanVersionRef,
   ProcessedWebhook,
   ProviderPlanBinding,
+  ProviderMeterBinding,
   ProviderPlanLookup,
   Subscription,
   SubscriptionStatus,

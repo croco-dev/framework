@@ -103,7 +103,16 @@ describe("InMemoryPlanRegistry", () => {
 
   it("copies and freezes published versions so callers cannot overwrite them", async () => {
     const registry = new InMemoryPlanRegistry();
-    const input = createVersion();
+    const input = createVersion({
+      providerBindings: [
+        {
+          provider: "polar",
+          productId: "polar-pro-2026",
+          priceIds: ["polar-price-2026"],
+          meterBindings: [{ meterKey: "api.calls", meterId: "polar-api-calls" }],
+        },
+      ],
+    });
     await registry.publishPlanVersion(input);
 
     Object.defineProperty(input, "name", { value: "Mutated" });
@@ -119,6 +128,8 @@ describe("InMemoryPlanRegistry", () => {
     expect(Object.isFrozen(published)).toBe(true);
     expect(Object.isFrozen(published?.providerBindings)).toBe(true);
     expect(Object.isFrozen(published?.providerBindings[0]?.priceIds)).toBe(true);
+    expect(Object.isFrozen(published?.providerBindings[0]?.meterBindings)).toBe(true);
+    expect(Object.isFrozen(published?.providerBindings[0]?.meterBindings?.[0])).toBe(true);
     expect(JSON.parse(JSON.stringify(published))).toMatchObject({
       ref: "pro@2026-01",
       effectiveAt: "2026-01-01T00:00:00.000Z",
@@ -128,6 +139,38 @@ describe("InMemoryPlanRegistry", () => {
     await expect(registry.publishPlanVersion(createVersion())).rejects.toBeInstanceOf(
       PlanVersionAlreadyPublishedProblem,
     );
+  });
+
+  it("rejects invalid or ambiguous provider meter bindings", async () => {
+    const registry = new InMemoryPlanRegistry();
+    const invalidBindings = [
+      [{ meterKey: "", meterId: "provider-meter" }],
+      [
+        { meterKey: "api.calls", meterId: "provider-meter-a" },
+        { meterKey: "api.calls", meterId: "provider-meter-b" },
+      ],
+      [
+        { meterKey: "api.calls", meterId: "provider-meter" },
+        { meterKey: "storage.bytes", meterId: "provider-meter" },
+      ],
+    ];
+
+    for (const meterBindings of invalidBindings) {
+      await expect(
+        registry.publishPlanVersion(
+          createVersion({
+            providerBindings: [
+              {
+                provider: "polar",
+                productId: "polar-pro-2026",
+                priceIds: ["polar-price-2026"],
+                meterBindings,
+              },
+            ],
+          }),
+        ),
+      ).rejects.toBeInstanceOf(InvalidPlanVersionDefinitionProblem);
+    }
   });
 
   it("resolves a provider product and price set to exactly one version", async () => {

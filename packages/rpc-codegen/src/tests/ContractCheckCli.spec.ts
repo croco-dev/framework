@@ -44,7 +44,7 @@ describe("rpc-codegen contract check CLI", () => {
 
       expect(exitCode).toBe(1);
       expect(stdout[0]).toContain(
-        `ERROR contract-route-multiple-body-params UsersController.createUser ${controllerPath}:`,
+        "ERROR contract-route-multiple-body-params UsersController.createUser UsersController.ts:",
       );
       expect(stdout[0]).toContain(
         "Generated contracts support one request body per route, but 2 @Body() parameters were found.",
@@ -104,7 +104,7 @@ describe("rpc-codegen contract check CLI", () => {
 
       expect(exitCode).toBe(0);
       expect(stdout[0]).toContain(
-        `WARNING contract-route-missing-problem-response-contract AssetsController.getAsset ${controllerPath}:`,
+        "WARNING contract-route-missing-problem-response-contract AssetsController.getAsset AssetsController.ts:",
       );
       expect(stdout[0]).toContain(
         "Strict Problem contract mode could not find declared route failures.",
@@ -140,7 +140,7 @@ describe("rpc-codegen contract check CLI", () => {
 
       expect(exitCode).toBe(1);
       expect(stdout[0]).toContain(
-        `WARNING contract-route-missing-problem-response-contract AssetsController.getAsset ${controllerPath}:`,
+        "WARNING contract-route-missing-problem-response-contract AssetsController.getAsset AssetsController.ts:",
       );
       expect(stdout[0]).toContain(
         "Strict Problem contract mode could not find declared route failures.",
@@ -175,10 +175,10 @@ describe("rpc-codegen contract check CLI", () => {
       expect(stdout).toEqual(
         expect.arrayContaining([
           expect.stringContaining(
-            `ERROR contract-route-missing-response-schema AssetsController.getAsset ${controllerPath}:`,
+            "ERROR contract-route-missing-response-schema AssetsController.getAsset AssetsController.ts:",
           ),
           expect.stringContaining(
-            `ERROR contract-route-missing-named-param-schema AssetsController.getAsset ${controllerPath}:`,
+            "ERROR contract-route-missing-named-param-schema AssetsController.getAsset AssetsController.ts:",
           ),
         ]),
       );
@@ -224,7 +224,7 @@ describe("rpc-codegen contract check CLI", () => {
       expect(stdout).toContain(
         "Contract graph contains 2 error(s); fix them before generating clients.",
       );
-      expect(stdout.join("\n")).toContain(controllerPath);
+      expect(stdout.join("\n")).toContain("AssetsController.ts:");
       expect(stdout.join("\n")).not.toContain(".croco-rpc-codegen-");
       expect(fs.existsSync(outDir)).toBe(false);
     },

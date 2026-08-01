@@ -7082,7 +7082,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-core/src/libs/ContractGraph.ts:142:5` (problem-constructor)
+- `packages/protocols-core/src/libs/ContractGraph.ts:160:5` (problem-constructor)
 
 <a id="protocols-graphql-auth-invalid-header-format"></a>
 
@@ -7712,7 +7712,7 @@ Sources:
 
 Sources:
 
-- `packages/rpc-codegen/src/libs/loadRoutes.ts:72:5` (problem-constructor)
+- `packages/rpc-codegen/src/libs/loadRoutes.ts:75:5` (problem-constructor)
 
 <a id="rpc-codegen-invalid-contract"></a>
 
@@ -7748,7 +7748,7 @@ Sources:
 
 Sources:
 
-- `packages/rpc-codegen/src/libs/loadRoutes.ts:33:5` (problem-constructor)
+- `packages/rpc-codegen/src/libs/loadRoutes.ts:36:5` (problem-constructor)
 
 <a id="rpc-codegen-unsupported-form-schema"></a>
 

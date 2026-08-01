@@ -5,7 +5,12 @@ import {
   EntitlementDefinitionProblem,
   EntitlementPlanVersionMismatchProblem,
 } from "./problems/EntitlementProblems";
-import type { EntitlementRule, OveragePolicy, PlanEntitlements } from "./types";
+import type {
+  EntitlementRule,
+  OveragePolicy,
+  PlanEntitlements,
+  VersionBoundEntitlementRule,
+} from "./types";
 
 declare const FEATURE_REF_BRAND: unique symbol;
 
@@ -172,7 +177,9 @@ export function assertPlanVersionMatches(
   }
 }
 
-function normalizeEntitlementDefinition(definition: EntitlementDefinition): EntitlementRule {
+function normalizeEntitlementDefinition(
+  definition: EntitlementDefinition,
+): VersionBoundEntitlementRule {
   const normalizedFeatureKey = featureKey(definition.feature);
   assertNonEmpty("Feature key", normalizedFeatureKey);
 
@@ -219,7 +226,7 @@ function normalizeEntitlementDefinition(definition: EntitlementDefinition): Enti
         type: definition.type,
         ...(normalizedMeterId === undefined ? {} : { meterId: normalizedMeterId }),
         ...(typeof definition.meter === "object" ? { meterBilling: definition.meter.billing } : {}),
-        ...(definition.quota === undefined ? {} : { quota: definition.quota }),
+        quota: definition.quota,
         ...(definition.overagePolicy === undefined
           ? {}
           : { overagePolicy: definition.overagePolicy }),
@@ -230,12 +237,34 @@ function normalizeEntitlementDefinition(definition: EntitlementDefinition): Enti
   }
 }
 
-function normalizeLegacyRule(rule: EntitlementRule): EntitlementRule {
+function normalizeLegacyRule(rule: EntitlementRule): VersionBoundEntitlementRule {
   assertNonEmpty("Feature key", rule.featureKey);
-  if (rule.meterId !== undefined) {
-    assertNonEmpty("Meter key", rule.meterId);
+  if (rule.type === "boolean")
+    return Object.freeze({ featureKey: rule.featureKey, type: "boolean" });
+  if (rule.type === "static") {
+    if (rule.value === undefined) {
+      throw new EntitlementDefinitionProblem(
+        `Version-bound static entitlement '${rule.featureKey}' requires an inline value.`,
+      );
+    }
+    assertFiniteNonNegative("Static entitlement value", rule.value);
+    return Object.freeze({ featureKey: rule.featureKey, type: "static", value: rule.value });
   }
-  return Object.freeze({ ...rule });
+  if (rule.quota === undefined) {
+    throw new EntitlementDefinitionProblem(
+      `Version-bound metered entitlement '${rule.featureKey}' requires an inline quota.`,
+    );
+  }
+  if (rule.meterId !== undefined) assertNonEmpty("Meter key", rule.meterId);
+  assertFiniteNonNegative("Entitlement quota", rule.quota);
+  return Object.freeze({
+    featureKey: rule.featureKey,
+    type: "metered",
+    quota: rule.quota,
+    ...(rule.meterId === undefined ? {} : { meterId: rule.meterId }),
+    ...(rule.meterBilling === undefined ? {} : { meterBilling: rule.meterBilling }),
+    ...(rule.overagePolicy === undefined ? {} : { overagePolicy: rule.overagePolicy }),
+  });
 }
 
 function assertUniqueFeatures(entitlements: readonly EntitlementRule[]): void {

@@ -9,6 +9,11 @@ import type {
   ContractMetadataOwner,
   ContractMetadataReference,
 } from "./ContractGraph";
+import type {
+  ContractMonetizationEdge,
+  ContractMonetizationGraph,
+  ContractMonetizationNode,
+} from "./ContractGraphMonetization";
 import {
   createContractGraphConsumerCoverage,
   type ContractGraphConsumerCoverageReport,
@@ -93,6 +98,7 @@ export type ContractGraphSnapshot = {
   readonly consumerCoverage?: ContractGraphConsumerCoverageReport;
   readonly controllers: readonly ContractGraphSnapshotController[];
   readonly routes: readonly ContractGraphSnapshotRoute[];
+  readonly monetization?: ContractMonetizationGraph;
   readonly diagnostics: readonly ContractDiagnostic[];
 };
 
@@ -147,6 +153,7 @@ type LegacyContractGraphSnapshot = Omit<ContractGraphSnapshot, "routes"> & {
 export type ContractGraphV1 = {
   readonly version: ContractGraphVersion;
   readonly routes: readonly ContractGraphV1Route[];
+  readonly monetization?: ContractMonetizationGraph;
   readonly diagnostics: readonly ContractDiagnostic[];
 };
 
@@ -224,7 +231,8 @@ export function createContractGraphSnapshot(graph: ContractGraph): ContractGraph
     consumerCoverage: createContractGraphConsumerCoverage(graph),
     controllers,
     routes,
-    diagnostics: [...graph.diagnostics].sort(compareDiagnostics),
+    ...(graph.monetization ? { monetization: graph.monetization } : {}),
+    diagnostics: graph.diagnostics.map(normalizeArtifactDiagnostic).sort(compareDiagnostics),
   };
 }
 
@@ -237,6 +245,7 @@ export function createContractGraphV1(graph: ContractGraph): ContractGraphV1 {
   return {
     version: snapshot.graphVersion,
     routes: snapshot.routes.map(toContractGraphV1Route).sort(compareContractGraphV1Routes),
+    ...(snapshot.monetization ? { monetization: snapshot.monetization } : {}),
     diagnostics: [...snapshot.diagnostics],
   };
 }
@@ -269,6 +278,7 @@ export function isContractGraphSnapshot(value: unknown): value is ContractGraphS
     value["controllers"].every(isContractGraphSnapshotController) &&
     Array.isArray(value["routes"]) &&
     value["routes"].every(isContractGraphSnapshotRoute) &&
+    (value["monetization"] === undefined || isContractMonetizationGraph(value["monetization"])) &&
     Array.isArray(value["diagnostics"]) &&
     value["diagnostics"].every(isContractDiagnosticSnapshot)
   );
@@ -314,6 +324,7 @@ export function isContractGraphV1(value: unknown): value is ContractGraphV1 {
     value["version"] === "croco.contract-graph.v1" &&
     Array.isArray(value["routes"]) &&
     value["routes"].every(isContractGraphV1Route) &&
+    (value["monetization"] === undefined || isContractMonetizationGraph(value["monetization"])) &&
     Array.isArray(value["diagnostics"]) &&
     value["diagnostics"].every(isContractDiagnosticSnapshot)
   );
@@ -394,7 +405,9 @@ function toSnapshotRoute(route: ContractGraphRoute): ContractGraphSnapshotRoute 
             ? { operationId: route.routeContract.operationId }
             : {}),
           ...(route.routeContract.sourceLocation
-            ? { sourceLocation: route.routeContract.sourceLocation }
+            ? {
+                sourceLocation: normalizeArtifactSourceLocation(route.routeContract.sourceLocation),
+              }
             : {}),
         }
       : null,
@@ -427,6 +440,34 @@ function toSnapshotRoute(route: ContractGraphRoute): ContractGraphSnapshotRoute 
       }))
       .sort(compareProblemResponses),
   };
+}
+
+function normalizeArtifactSourceLocation(
+  source: NonNullable<ContractGraphSnapshotRouteContract["sourceLocation"]>,
+): NonNullable<ContractGraphSnapshotRouteContract["sourceLocation"]> {
+  const normalizedPath = source.path.split("\\").join("/");
+  const stableMarkers = ["/packages/", "/apps/", "/libs/", "/src/"];
+  const marker = stableMarkers
+    .map((candidate) => ({ candidate, index: normalizedPath.indexOf(candidate) }))
+    .filter(({ index }) => index >= 0)
+    .sort((left, right) => left.index - right.index)[0];
+  const path = marker
+    ? normalizedPath.slice(marker.index + 1)
+    : normalizedPath.startsWith("/") || /^[A-Za-z]:\//.test(normalizedPath)
+      ? normalizedPath.slice(normalizedPath.lastIndexOf("/") + 1) || normalizedPath
+      : normalizedPath;
+
+  return {
+    path,
+    ...(source.line ? { line: source.line } : {}),
+    ...(source.column ? { column: source.column } : {}),
+  };
+}
+
+function normalizeArtifactDiagnostic(diagnostic: ContractDiagnostic): ContractDiagnostic {
+  return diagnostic.sourceLocation
+    ? { ...diagnostic, sourceLocation: normalizeArtifactSourceLocation(diagnostic.sourceLocation) }
+    : diagnostic;
 }
 
 function compareProblemResponses(
@@ -1191,6 +1232,7 @@ function isContractDiagnosticSnapshot(value: unknown): value is ContractDiagnost
     isOptionalString(value["controllerName"]) &&
     isOptionalString(value["methodName"]) &&
     isOptionalString(value["path"]) &&
+    isOptionalString(value["recoveryAction"]) &&
     (value["sourceLocation"] === undefined || isContractSourceLocation(value["sourceLocation"]))
   );
 }
@@ -1202,7 +1244,164 @@ function isContractDiagnosticTarget(value: unknown): boolean {
     value === "route" ||
     value === "param" ||
     value === "schema" ||
-    value === "problem"
+    value === "problem" ||
+    value === "monetization"
+  );
+}
+
+function isContractMonetizationGraph(value: unknown): value is ContractMonetizationGraph {
+  if (!isRecord(value) || !isRecord(value["verification"])) {
+    return false;
+  }
+
+  return (
+    value["verification"]["mode"] === "credential-free-structural" &&
+    value["verification"]["remoteProviderConfigurationInspected"] === false &&
+    Array.isArray(value["nodes"]) &&
+    value["nodes"].every(isContractMonetizationNode) &&
+    Array.isArray(value["edges"]) &&
+    value["edges"].every(isContractMonetizationEdge)
+  );
+}
+
+function isContractMonetizationNode(value: unknown): value is ContractMonetizationNode {
+  if (!isRecord(value) || typeof value["id"] !== "string" || typeof value["kind"] !== "string") {
+    return false;
+  }
+
+  switch (value["kind"]) {
+    case "meter":
+      return (
+        typeof value["key"] === "string" &&
+        (value["aggregation"] === "COUNT" || value["aggregation"] === "SUM") &&
+        typeof value["unit"] === "string" &&
+        (value["billing"] === "local" || value["billing"] === "required") &&
+        (value["dimensions"] === undefined || isContractMeterDimensions(value["dimensions"]))
+      );
+    case "plan-version":
+      return (
+        typeof value["ref"] === "string" &&
+        typeof value["planId"] === "string" &&
+        typeof value["versionId"] === "string" &&
+        isContractPlanRating(value["rating"]) &&
+        Array.isArray(value["providerBindings"]) &&
+        value["providerBindings"].every(isContractProviderPlanBinding)
+      );
+    case "entitlement-set":
+      return (
+        typeof value["planId"] === "string" &&
+        typeof value["planVersionRef"] === "string" &&
+        Array.isArray(value["entitlements"]) &&
+        value["entitlements"].every(isContractEntitlementRule)
+      );
+    case "provider":
+      return (
+        typeof value["providerName"] === "string" &&
+        isRecord(value["capabilities"]) &&
+        isContractProviderCapability(value["capabilities"]["checkout"]) &&
+        isContractProviderCapability(value["capabilities"]["usage"])
+      );
+    case "subscription-mapping":
+      return (
+        typeof value["subscriptionId"] === "string" &&
+        typeof value["entitlementPlanVersionRef"] === "string" &&
+        typeof value["providerPlanVersionRef"] === "string"
+      );
+    default:
+      return false;
+  }
+}
+
+function isContractMeterDimensions(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    Object.values(value).every(
+      (descriptor) =>
+        isRecord(descriptor) &&
+        descriptor["kind"] === "enum" &&
+        Array.isArray(descriptor["values"]) &&
+        descriptor["values"].every(
+          (entry) =>
+            typeof entry === "string" ||
+            typeof entry === "boolean" ||
+            (typeof entry === "number" && Number.isFinite(entry)),
+        ),
+    )
+  );
+}
+
+function isContractProviderPlanBinding(value: unknown): boolean {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    typeof value["provider"] === "string" &&
+    typeof value["productId"] === "string" &&
+    isStringArray(value["priceIds"]) &&
+    (value["meterBindings"] === undefined ||
+      (Array.isArray(value["meterBindings"]) &&
+        value["meterBindings"].every(
+          (binding) =>
+            isRecord(binding) &&
+            typeof binding["meterKey"] === "string" &&
+            typeof binding["meterId"] === "string",
+        )))
+  );
+}
+
+function isContractEntitlementRule(value: unknown): boolean {
+  if (!isRecord(value) || typeof value["featureKey"] !== "string") return false;
+  if (value["type"] === "boolean") return true;
+  if (value["type"] === "static") return isFiniteNonNegativeNumber(value["value"]);
+  return (
+    value["type"] === "metered" &&
+    isFiniteNonNegativeNumber(value["quota"]) &&
+    isOptionalString(value["meterId"]) &&
+    (value["meterBilling"] === undefined ||
+      value["meterBilling"] === "local" ||
+      value["meterBilling"] === "required") &&
+    (value["overagePolicy"] === undefined ||
+      value["overagePolicy"] === "BLOCK" ||
+      value["overagePolicy"] === "WARN" ||
+      value["overagePolicy"] === "ALLOW_WITH_OVERAGE")
+  );
+}
+
+function isFiniteNonNegativeNumber(value: unknown): boolean {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0;
+}
+
+function isContractProviderCapability(value: unknown): boolean {
+  return (
+    isRecord(value) && typeof value["supported"] === "boolean" && isOptionalString(value["reason"])
+  );
+}
+
+function isContractPlanRating(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    (value["mode"] === "croco" ||
+      (value["mode"] === "provider" && typeof value["provider"] === "string"))
+  );
+}
+
+function isContractMonetizationEdge(value: unknown): value is ContractMonetizationEdge {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    (value["kind"] === "operation-records-meter" ||
+      value["kind"] === "plan-version-bills-meter" ||
+      value["kind"] === "plan-version-grants-entitlement" ||
+      value["kind"] === "plan-version-uses-provider" ||
+      value["kind"] === "subscription-resolves-plan-version") &&
+    typeof value["from"] === "string" &&
+    typeof value["to"] === "string" &&
+    (value["metadata"] === undefined ||
+      (isRecord(value["metadata"]) &&
+        Object.values(value["metadata"]).every((entry) => typeof entry === "string")))
   );
 }
 

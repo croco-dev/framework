@@ -25,6 +25,28 @@ export {
   getContractPathParamNames,
   getContractPathParams,
 } from "./libs/ContractGraph";
+export type {
+  ContractBillingProviderDescriptor,
+  ContractEntitlementRuleDescriptor,
+  ContractMeterDescriptor,
+  ContractMonetizationEdge,
+  ContractMonetizationGraph,
+  ContractMonetizationInput,
+  ContractMonetizationDefinition,
+  ContractMonetizationNode,
+  ContractPlanEntitlementDescriptor,
+  ContractPlanVersionDescriptor,
+  ContractProviderMeterBinding,
+  ContractProviderPlanBinding,
+  ContractProviderMappingDriftInput,
+  ContractSubscriptionMappingDescriptor,
+} from "./libs/ContractGraphMonetization";
+export {
+  CONTRACT_METERED_METADATA_KEY,
+  defineContractMonetization,
+  getContractProviderMappingDriftInput,
+  isContractMonetizationDefinition,
+} from "./libs/ContractGraphMonetization";
 export type { ContractGraphBlockingDiagnostics } from "./libs/ContractGraphCli";
 export {
   parseContractGraphStrictModeFlag,

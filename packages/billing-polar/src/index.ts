@@ -49,6 +49,13 @@
  */
 export { PolarBillingGateway } from "./libs/PolarBillingGateway";
 export { POLAR_BILLING_PROVIDER_PROFILE } from "./libs/PolarBillingProviderProfile";
+export { inspectPolarContractMappingDrift } from "./libs/PolarContractMappingPreflight";
+export type {
+  PolarContractMappingDrift,
+  PolarContractMappingInput,
+  PolarContractMappingReader,
+  PolarRemoteProductMapping,
+} from "./libs/PolarContractMappingPreflight";
 
 // Event Mapper
 /**

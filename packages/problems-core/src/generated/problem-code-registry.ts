@@ -11292,7 +11292,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/protocols-core/src/libs/ContractGraph.ts",
-          line: 142,
+          line: 160,
           column: 5,
           kind: "problem-constructor",
         },
@@ -12400,7 +12400,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/rpc-codegen/src/libs/loadRoutes.ts",
-          line: 72,
+          line: 75,
           column: 5,
           kind: "problem-constructor",
         },
@@ -12461,7 +12461,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/rpc-codegen/src/libs/loadRoutes.ts",
-          line: 33,
+          line: 36,
           column: 5,
           kind: "problem-constructor",
         },
