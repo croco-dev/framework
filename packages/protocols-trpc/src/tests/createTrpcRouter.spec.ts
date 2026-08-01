@@ -104,7 +104,7 @@ describe("createTrpcRouter", () => {
         httpMethod: "POST",
         path: "/users",
         routeContract: null,
-        params: [{ kind: "body", name: "", schema: createUserSchema }],
+        params: [{ index: 0, kind: "body", name: "", schema: createUserSchema }],
         inputSchema: createUserSchema,
         inputSchemas: { body: createUserSchema, path: null, query: null, headers: null },
         outputSchema: userSchema,
@@ -120,6 +120,128 @@ describe("createTrpcRouter", () => {
       name: "Grace",
     });
     await expect(caller.user.createUser({ name: "" })).rejects.toThrow();
+  });
+
+  it("should resolve body, path, query, header, and context parameters at their declared positions", async () => {
+    const bodySchema = z.object({ name: z.string() });
+    const pathSchema = z.object({ id: z.string().uuid() });
+    const querySchema = z.object({ includeArchived: z.boolean() });
+    const headersSchema = z.object({ "x-tenant-id": z.string().min(1) });
+    const context = { requestId: "request-1" };
+
+    class UserController {
+      resolve(
+        body: z.infer<typeof bodySchema>,
+        skipped: undefined,
+        id: string,
+        includeArchived: boolean,
+        tenantId: string,
+        receivedContext: unknown,
+      ) {
+        return { body, skipped, id, includeArchived, tenantId, receivedContext };
+      }
+    }
+
+    mocked.extractRouteIR = () => [
+      {
+        controllerName: "UserController",
+        methodName: "resolve",
+        httpMethod: "POST",
+        path: "/users/:id",
+        routeContract: null,
+        params: [
+          { index: 0, kind: "body", name: "", schema: bodySchema },
+          { index: 2, kind: "path", name: "id", schema: pathSchema.shape.id },
+          {
+            index: 3,
+            kind: "query",
+            name: "includeArchived",
+            schema: querySchema.shape.includeArchived,
+          },
+          {
+            index: 4,
+            kind: "header",
+            name: "x-tenant-id",
+            schema: headersSchema.shape["x-tenant-id"],
+          },
+          { index: 5, kind: "ctx", name: "", schema: null },
+        ],
+        inputSchema: bodySchema,
+        inputSchemas: {
+          body: bodySchema,
+          path: pathSchema,
+          query: querySchema,
+          headers: headersSchema,
+        },
+        outputSchema: null,
+        domain: null,
+      },
+    ];
+
+    const router = createTrpcRouter([UserController]);
+    const caller = createCaller(router, context);
+    const input = {
+      body: { name: "Grace" },
+      path: { id: "123e4567-e89b-12d3-a456-426614174000" },
+      query: { includeArchived: true },
+      headers: { "x-tenant-id": "tenant-1" },
+    };
+
+    await expect(caller.user.resolve(input)).resolves.toEqual({
+      body: { name: "Grace" },
+      id: "123e4567-e89b-12d3-a456-426614174000",
+      includeArchived: true,
+      receivedContext: context,
+      tenantId: "tenant-1",
+    });
+    await expect(
+      caller.user.resolve({ ...input, path: { id: "not-a-uuid" } }),
+    ).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+    });
+  });
+
+  it("should preserve schema-less bodies and normalize omitted optional locations", async () => {
+    const querySchema = z.object({ page: z.coerce.number().catch(1) });
+
+    class UserController {
+      list(body: unknown, page: number) {
+        return { body, page };
+      }
+    }
+
+    mocked.extractRouteIR = () => [
+      {
+        controllerName: "UserController",
+        methodName: "list",
+        httpMethod: "POST",
+        path: "/users",
+        routeContract: null,
+        params: [
+          { index: 0, kind: "body", name: "", schema: null },
+          { index: 1, kind: "query", name: "page", schema: querySchema.shape.page },
+        ],
+        inputSchema: null,
+        inputSchemas: { body: null, path: null, query: querySchema, headers: null },
+        outputSchema: null,
+        domain: null,
+      },
+    ];
+
+    const router = createTrpcRouter([UserController]);
+    const caller = createCaller(router);
+
+    await expect(caller.user.list({ body: { name: "Grace" } })).resolves.toEqual({
+      body: { name: "Grace" },
+      page: 1,
+    });
+    await expect(caller.user.list()).resolves.toEqual({ body: undefined, page: 1 });
+    await expect(
+      caller.user.list({ body: { name: "Grace" }, query: { page: "2" } }),
+    ).resolves.toEqual({
+      body: { name: "Grace" },
+      page: 2,
+    });
   });
 
   it("should group controllers by domain namespace", () => {
@@ -192,8 +314,8 @@ describe("createTrpcRouter", () => {
   });
 });
 
-function createCaller(router: AnyRouter): TrpcCaller {
-  return router.createCaller({}) as TrpcCaller;
+function createCaller(router: AnyRouter, context: unknown = {}): TrpcCaller {
+  return router.createCaller(context) as TrpcCaller;
 }
 
 function getProcedureType(router: AnyRouter, domain: string, procedureName: string): string {

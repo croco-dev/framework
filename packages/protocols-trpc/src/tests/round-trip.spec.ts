@@ -16,6 +16,9 @@ type User = {
 type UserRouterClient = {
   readonly user: {
     readonly list: { query: () => Promise<User[]> };
+    readonly getById: {
+      query: (input: { readonly path: { readonly id: string } }) => Promise<User | undefined>;
+    };
     readonly create: { mutate: (input: { readonly name: string }) => Promise<User> };
   };
 };
@@ -88,6 +91,13 @@ describe("tRPC round trip", () => {
     await expect(client.user.create.mutate({ name: "Carol" })).resolves.toEqual({
       id: "3",
       name: "Carol",
+    });
+  });
+
+  it("should resolve path parameters through the tRPC input envelope", async () => {
+    await expect(client.user.getById.query({ path: { id: "1" } })).resolves.toEqual({
+      id: "1",
+      name: "Alice",
     });
   });
 

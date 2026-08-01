@@ -234,6 +234,7 @@ function extractParams(paramsMeta: ParamMetadata[]): ParamIR[] {
     .filter((paramMeta) => paramMeta.type !== ParamType.RAW)
     .sort((left, right) => left.index - right.index)
     .map((paramMeta) => ({
+      index: paramMeta.index,
       kind: mapParamKind(paramMeta.type),
       name: paramMeta.name ?? "",
       schema: extractSchema(paramMeta),

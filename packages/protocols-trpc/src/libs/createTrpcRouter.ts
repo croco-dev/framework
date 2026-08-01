@@ -7,9 +7,10 @@ import {
   initTRPC,
   type TRPCCreateRouterOptions,
 } from "@trpc/server";
+import { createTrpcInputSchema, resolveTrpcRouteParams } from "./TrpcParamResolver";
 
 type ControllerConstructor = (new () => object) & Function;
-type RouteHandler = (input?: unknown) => unknown;
+type RouteHandler = (...args: unknown[]) => unknown;
 
 const t = initTRPC.create();
 
@@ -53,12 +54,13 @@ export function createTrpcRouter(controllers: Function[]): AnyRouter {
 }
 
 function createProcedure(controllerInstance: object, route: RouteIR): AnyProcedure {
-  const procedureWithInput = route.inputSchema ? t.procedure.input(route.inputSchema) : t.procedure;
+  const inputSchema = createTrpcInputSchema(route);
+  const procedureWithInput = inputSchema ? t.procedure.input(inputSchema) : t.procedure;
   const procedure = route.outputSchema
     ? procedureWithInput.output(route.outputSchema)
     : procedureWithInput;
-  const resolver = ({ input }: { readonly input: unknown }) =>
-    callRoute(controllerInstance, route.methodName, input);
+  const resolver = ({ input, ctx }: { readonly input: unknown; readonly ctx: unknown }) =>
+    callRoute(controllerInstance, route, input, ctx);
 
   if (route.httpMethod === "GET") {
     return procedure.query(resolver);
@@ -67,14 +69,19 @@ function createProcedure(controllerInstance: object, route: RouteIR): AnyProcedu
   return procedure.mutation(resolver);
 }
 
-function callRoute(controllerInstance: object, methodName: string, input: unknown): unknown {
-  const handler = Reflect.get(controllerInstance, methodName);
+function callRoute(
+  controllerInstance: object,
+  route: RouteIR,
+  input: unknown,
+  context: unknown,
+): unknown {
+  const handler = Reflect.get(controllerInstance, route.methodName);
 
   if (!isRouteHandler(handler)) {
-    throw new TrpcRouteHandlerError(methodName);
+    throw new TrpcRouteHandlerError(route.methodName);
   }
 
-  return handler.call(controllerInstance, input);
+  return handler.apply(controllerInstance, resolveTrpcRouteParams(route, input, context));
 }
 
 function getDomainName(route: RouteIR): string {
