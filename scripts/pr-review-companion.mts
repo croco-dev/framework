@@ -1,10 +1,21 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
-import { argv, env, exit, stdout } from "node:process";
+import { argv, env, execPath, exit, stdout } from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
+
+import type { ContractGraphDiff, ContractGraphDiffChange } from "@croco/protocols-core";
 
 type CompanionStatus = "pass" | "needs-checks" | "fail";
 type CheckStatus = "not-applicable" | "not-run" | "pass" | "fail";
@@ -67,6 +78,11 @@ type Annotation = {
   readonly title: string;
 };
 
+type ContractDiffAnalysis =
+  | { readonly kind: "not-applicable" }
+  | { readonly kind: "unavailable"; readonly reason: string }
+  | { readonly diff: ContractGraphDiff; readonly kind: "available" };
+
 type CompanionReport = {
   readonly annotations: readonly Annotation[];
   readonly baseRef: string;
@@ -118,6 +134,8 @@ const packageScriptCommands = ["test", "typecheck", "build"] as const;
 const defaultWorkspacePackagePatterns = ["packages/**/*", "apps/*", "libs/*"] as const;
 const releaseChangesetPattern = /^\.changeset\/[^/]+\.md$/;
 const testFilePattern = /(?:^|[.-])(spec|test)\.[cm]?[jt]sx?$/;
+const canonicalContractSnapshot = "contract-graph.snapshot.json";
+const contractDiffArtifact = "contract-diff.json";
 
 function toGitPath(path: string): string {
   return path.split(sep).join("/");
@@ -150,6 +168,181 @@ function runGit(rootDir: string, args: readonly string[]): string {
   }
 
   return result.stdout.trim();
+}
+
+function readGitFile(rootDir: string, ref: string, path: string): string | null {
+  const result = spawnSync("git", ["show", `${ref}:${path}`], {
+    cwd: rootDir,
+    encoding: "utf-8",
+  });
+
+  return result.status === 0 ? result.stdout : null;
+}
+
+function parseContractGraphDiff(value: unknown): ContractGraphDiff | null {
+  if (
+    !isRecord(value) ||
+    !Array.isArray(value.changes) ||
+    !Array.isArray(value.breakingChanges) ||
+    !Array.isArray(value.nonBreakingChanges)
+  ) {
+    return null;
+  }
+
+  const numericKeys = [
+    "baselineRouteCount",
+    "currentRouteCount",
+    "breakingChangeCount",
+    "nonBreakingChangeCount",
+  ] as const;
+  if (
+    numericKeys.some((key) => !Number.isInteger(value[key]) || (value[key] as number) < 0) ||
+    typeof value.hasBreakingChanges !== "boolean"
+  ) {
+    return null;
+  }
+
+  const parseChanges = (rows: readonly unknown[]): ContractGraphDiffChange[] | null => {
+    const changes: ContractGraphDiffChange[] = [];
+    for (const change of rows) {
+      if (
+        !isRecord(change) ||
+        (change.severity !== "breaking" && change.severity !== "non-breaking") ||
+        typeof change.code !== "string" ||
+        typeof change.message !== "string"
+      ) {
+        return null;
+      }
+
+      changes.push(change as ContractGraphDiffChange);
+    }
+    return changes;
+  };
+  const changes = parseChanges(value.changes);
+  const breakingChanges = parseChanges(value.breakingChanges);
+  const nonBreakingChanges = parseChanges(value.nonBreakingChanges);
+  if (!changes || !breakingChanges || !nonBreakingChanges) {
+    return null;
+  }
+
+  if (
+    breakingChanges.some((change) => change.severity !== "breaking") ||
+    nonBreakingChanges.some((change) => change.severity !== "non-breaking") ||
+    breakingChanges.length !== value.breakingChangeCount ||
+    nonBreakingChanges.length !== value.nonBreakingChangeCount ||
+    changes.filter((change) => change.severity === "breaking").length !==
+      value.breakingChangeCount ||
+    changes.filter((change) => change.severity === "non-breaking").length !==
+      value.nonBreakingChangeCount ||
+    value.hasBreakingChanges !== breakingChanges.length > 0
+  ) {
+    return null;
+  }
+
+  return {
+    baselineRouteCount: value.baselineRouteCount as number,
+    breakingChangeCount: value.breakingChangeCount as number,
+    breakingChanges,
+    changes,
+    currentRouteCount: value.currentRouteCount as number,
+    hasBreakingChanges: value.hasBreakingChanges,
+    nonBreakingChangeCount: value.nonBreakingChangeCount as number,
+    nonBreakingChanges,
+  };
+}
+
+function contractDiffFailureReason(result: ReturnType<typeof spawnSync>): string {
+  const output = [result.stderr, result.stdout]
+    .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+    .join("\n")
+    .trim()
+    .split(/\r?\n/)
+    .find((line) => line.trim().length > 0);
+
+  return output
+    ? `contract diff command failed: ${output.trim()}`
+    : "contract diff command failed without output";
+}
+
+function createContractDiffAnalysis(
+  options: Options,
+  changedFiles: readonly string[],
+): ContractDiffAnalysis {
+  if (!changedFiles.includes(canonicalContractSnapshot)) {
+    return { kind: "not-applicable" };
+  }
+
+  const baseline = readGitFile(options.rootDir, options.baseRef, canonicalContractSnapshot);
+  if (baseline === null) {
+    return { kind: "unavailable", reason: "baseline snapshot missing" };
+  }
+
+  const current = readGitFile(options.rootDir, options.headRef, canonicalContractSnapshot);
+  if (current === null) {
+    return { kind: "unavailable", reason: "current snapshot missing" };
+  }
+
+  const cliPath = join(options.rootDir, "packages", "cli", "dist", "bin", "croco.js");
+  if (!existsSync(cliPath)) {
+    return { kind: "unavailable", reason: "contract diff CLI is not built" };
+  }
+
+  const tempRoot = mkdtempSync(join(tmpdir(), "croco-contract-diff-"));
+  const baselinePath = join(tempRoot, "baseline.json");
+  const currentPath = join(tempRoot, "current.json");
+  const diffPath = join(tempRoot, contractDiffArtifact);
+
+  try {
+    writeFileSync(baselinePath, baseline);
+    writeFileSync(currentPath, current);
+    const result = spawnSync(
+      execPath,
+      [
+        cliPath,
+        "contracts",
+        "diff",
+        "--baseline",
+        baselinePath,
+        "--current-snapshot",
+        currentPath,
+        "--json",
+        "--out",
+        diffPath,
+      ],
+      { cwd: options.rootDir, encoding: "utf-8" },
+    );
+
+    if (!existsSync(diffPath)) {
+      return { kind: "unavailable", reason: contractDiffFailureReason(result) };
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = readJson(diffPath);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      return { kind: "unavailable", reason: `contract diff output is invalid JSON: ${reason}` };
+    }
+
+    const diff = parseContractGraphDiff(parsed);
+    if (!diff) {
+      return { kind: "unavailable", reason: "contract diff output has an invalid shape" };
+    }
+
+    const expectedStatus = diff.hasBreakingChanges ? 1 : 0;
+    if (result.status !== expectedStatus) {
+      const actualStatus =
+        result.status === null ? "signal termination" : `status ${result.status}`;
+      return {
+        kind: "unavailable",
+        reason: `${contractDiffFailureReason(result)}; returned ${actualStatus}, expected status ${expectedStatus} for ${diff.hasBreakingChanges ? "a breaking result" : "a non-breaking result"}`,
+      };
+    }
+
+    return { diff, kind: "available" };
+  } finally {
+    rmSync(tempRoot, { force: true, recursive: true });
+  }
 }
 
 function readJson(path: string): unknown {
@@ -864,6 +1057,7 @@ function createSuggestedCommands(
 function createAnnotations(
   checks: readonly RequiredCheck[],
   artifacts: readonly GeneratedArtifactSignal[],
+  contractDiff: ContractDiffAnalysis,
 ): Annotation[] {
   const annotations: Annotation[] = [];
   for (const check of checks) {
@@ -900,6 +1094,22 @@ function createAnnotations(
     });
   }
 
+  if (contractDiff.kind === "unavailable") {
+    annotations.push({
+      file: canonicalContractSnapshot,
+      level: "warning",
+      message: `ContractGraph semantic diff is unavailable: ${contractDiff.reason}.`,
+      title: "ContractGraph semantic diff unavailable",
+    });
+  } else if (contractDiff.kind === "available" && contractDiff.diff.hasBreakingChanges) {
+    annotations.push({
+      file: canonicalContractSnapshot,
+      level: "warning",
+      message: `ContractGraph semantic diff found ${contractDiff.diff.breakingChangeCount} breaking change(s). Review ${defaultOutputDir}/${contractDiffArtifact}.`,
+      title: "Breaking ContractGraph changes",
+    });
+  }
+
   return annotations.sort((left, right) =>
     compareText(`${left.level}:${left.title}`, `${right.level}:${right.title}`),
   );
@@ -917,7 +1127,56 @@ function resolveStatus(checks: readonly RequiredCheck[]): CompanionStatus {
   return "pass";
 }
 
-function buildMarkdown(report: CompanionReport): string {
+function escapeMarkdownTableCell(value: string): string {
+  return value.replace(/\|/g, "\\|").replace(/\r?\n/g, " ");
+}
+
+function contractChangeTarget(change: ContractGraphDiffChange): string {
+  return (
+    change.routeId ?? change.operationId ?? change.controllerName ?? change.fieldPath ?? "graph"
+  );
+}
+
+function appendContractChanges(lines: string[], contractDiff: ContractDiffAnalysis): void {
+  if (contractDiff.kind === "not-applicable") {
+    return;
+  }
+
+  lines.push("", "## Contract Changes", "", `- Snapshot: \`${canonicalContractSnapshot}\``);
+  if (contractDiff.kind === "unavailable") {
+    lines.push(`- Status: unavailable: ${contractDiff.reason}`);
+    return;
+  }
+
+  const { diff } = contractDiff;
+  lines.push(
+    `- Routes: ${diff.baselineRouteCount} → ${diff.currentRouteCount}`,
+    `- Breaking changes: ${diff.breakingChangeCount}`,
+    `- Non-breaking changes: ${diff.nonBreakingChangeCount}`,
+  );
+
+  if (diff.changes.length === 0) {
+    return;
+  }
+
+  lines.push("", "| Severity | Code | Target | Change |", "| --- | --- | --- | --- |");
+  const changes = [...diff.changes].sort((left, right) =>
+    compareText(
+      `${left.severity}:${left.code}:${contractChangeTarget(left)}:${left.message}`,
+      `${right.severity}:${right.code}:${contractChangeTarget(right)}:${right.message}`,
+    ),
+  );
+  for (const change of changes) {
+    lines.push(
+      `| ${change.severity} | ${escapeMarkdownTableCell(change.code)} | ${escapeMarkdownTableCell(contractChangeTarget(change))} | ${escapeMarkdownTableCell(change.message)} |`,
+    );
+  }
+}
+
+function buildMarkdown(
+  report: CompanionReport,
+  contractDiff: ContractDiffAnalysis = { kind: "not-applicable" },
+): string {
   const lines = [
     "# Croco PR Review Companion",
     "",
@@ -969,6 +1228,8 @@ function buildMarkdown(report: CompanionReport): string {
     );
   }
 
+  appendContractChanges(lines, contractDiff);
+
   lines.push("", "## Suggested Commands");
   if (report.suggestedCommands.length === 0) {
     lines.push("- none");
@@ -997,8 +1258,12 @@ function buildMarkdown(report: CompanionReport): string {
   return `${lines.join("\n")}`;
 }
 
-function createReport(options: Options): CompanionReport {
+function createCompanionOutput(options: Options): {
+  readonly contractDiff: ContractDiffAnalysis;
+  readonly report: CompanionReport;
+} {
   const changedFiles = getChangedFiles(options);
+  const contractDiff = createContractDiffAnalysis(options, changedFiles);
   const rootScripts = readRootScriptNames(options.rootDir);
   const packages = readWorkspacePackages(options.rootDir);
   const changedPackages = createChangedPackages(changedFiles, packages);
@@ -1015,10 +1280,10 @@ function createReport(options: Options): CompanionReport {
     ? runRequiredChecks(options.rootDir, discoveredChecks)
     : discoveredChecks;
   const generatedArtifacts = createGeneratedArtifactSignals(changedFiles, requiredChecks);
-  const annotations = createAnnotations(requiredChecks, generatedArtifacts);
+  const annotations = createAnnotations(requiredChecks, generatedArtifacts, contractDiff);
   const outputDir = resolve(options.rootDir, options.outputDir);
 
-  return {
+  const report: CompanionReport = {
     annotations,
     baseRef: options.baseRef,
     changedFiles,
@@ -1034,13 +1299,30 @@ function createReport(options: Options): CompanionReport {
     status: resolveStatus(requiredChecks),
     suggestedCommands: createSuggestedCommands(changedPackages, requiredChecks),
   };
+
+  return { contractDiff, report };
 }
 
-function writeReport(rootDir: string, outputDir: string, report: CompanionReport): void {
+function createReport(options: Options): CompanionReport {
+  return createCompanionOutput(options).report;
+}
+
+function writeReport(
+  rootDir: string,
+  outputDir: string,
+  report: CompanionReport,
+  contractDiff: ContractDiffAnalysis = { kind: "not-applicable" },
+): void {
   const resolvedOutputDir = resolve(rootDir, outputDir);
   mkdirSync(resolvedOutputDir, { recursive: true });
   writeFileSync(join(resolvedOutputDir, "report.json"), `${JSON.stringify(report, null, 2)}\n`);
-  writeFileSync(join(resolvedOutputDir, "report.md"), buildMarkdown(report));
+  writeFileSync(join(resolvedOutputDir, "report.md"), buildMarkdown(report, contractDiff));
+  const contractDiffPath = join(resolvedOutputDir, contractDiffArtifact);
+  if (contractDiff.kind === "available") {
+    writeFileSync(contractDiffPath, `${JSON.stringify(contractDiff.diff, null, 2)}\n`);
+  } else if (existsSync(contractDiffPath)) {
+    rmSync(contractDiffPath);
+  }
 }
 
 function escapeGithubValue(value: string): string {
@@ -1154,8 +1436,8 @@ function parseArgs(args: readonly string[]): Options {
 function main(): void {
   try {
     const options = parseArgs(argv.slice(2));
-    const report = createReport(options);
-    writeReport(options.rootDir, options.outputDir, report);
+    const { contractDiff, report } = createCompanionOutput(options);
+    writeReport(options.rootDir, options.outputDir, report, contractDiff);
 
     stdout.write(`pr-review-companion: ${report.status}\n`);
     stdout.write(`pr-review-companion: markdown ${report.output.markdownPath}\n`);

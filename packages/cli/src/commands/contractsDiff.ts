@@ -31,7 +31,8 @@ type ContractGraphLoader = (
 
 type ContractsDiffOptions = {
   readonly baseline: string;
-  readonly controllers: string;
+  readonly controllers: string | null;
+  readonly currentSnapshot: string | null;
   readonly json: boolean;
   readonly out: string | null;
   readonly strictSchemas: boolean;
@@ -54,10 +55,39 @@ const defaultIo: ContractsDiffIo = {
 export const contractsDiff = defineCommand({
   meta: {
     name: "diff",
-    description: "Compare a ContractGraph snapshot with current controller metadata",
+    description: "Compare a ContractGraph baseline with a current snapshot or controller metadata",
   },
   args: {
     ...GLOBAL_OPTIONS,
+    baseline: {
+      type: "string",
+      description: "Stable ContractGraph snapshot JSON to compare against",
+    },
+    "current-snapshot": {
+      type: "string",
+      description: "Current snapshot input; mutually exclusive with controller input",
+    },
+    controllers: {
+      type: "string",
+      description: "Current controller glob; mutually exclusive with --current-snapshot",
+    },
+    controllerGlob: {
+      type: "positional",
+      required: false,
+      description: "Positional alternative to --controllers",
+    },
+    json: {
+      type: "boolean",
+      description: "Print a machine-readable diff report",
+    },
+    out: {
+      type: "string",
+      description: "Write the diff report JSON to a file",
+    },
+    "strict-schemas": {
+      type: "boolean",
+      description: "Require response, body, and named parameter schemas in controller mode",
+    },
   },
   async run({ rawArgs }) {
     process.exitCode = await runContractsDiff(rawArgs);
@@ -86,18 +116,13 @@ export async function runContractsDiff(
   }
 
   const baseline = readSnapshot(parsed.options.baseline, io);
-  const loadContractGraph = options.loadContractGraph ?? loadContractGraphFromRpcCodegen;
-  const graph = await loadContractGraph(parsed.options.controllers, {
-    strictSchemas: parsed.options.strictSchemas,
-  });
-  const errors = getContractGraphErrors(graph);
+  const current = parsed.options.currentSnapshot
+    ? readSnapshot(parsed.options.currentSnapshot, io)
+    : await loadCurrentControllerSnapshot(parsed.options, options.loadContractGraph, io);
 
-  if (errors.length > 0) {
-    reportCurrentGraphErrors(errors, parsed.options.json, io);
+  if (!current) {
     return 1;
   }
-
-  const current = createContractGraphSnapshot(graph);
   const diff = diffContractGraphSnapshots(baseline, current);
   const diffJson = `${JSON.stringify(diff, null, 2)}\n`;
 
@@ -122,6 +147,7 @@ export function parseContractsDiffArgs(args: readonly string[]): ContractsDiffPa
 
   const baseline = getFlagValue(args, "--baseline");
   const controllers = getFlagValue(args, "--controllers") ?? getFirstPosition(args);
+  const currentSnapshot = getFlagValue(args, "--current-snapshot");
   const out = getFlagValue(args, "--out");
 
   if (!baseline) {
@@ -131,11 +157,19 @@ export function parseContractsDiffArgs(args: readonly string[]): ContractsDiffPa
     };
   }
 
-  if (!controllers) {
+  if (controllers && currentSnapshot) {
     return {
       kind: "invalid",
       message:
-        "Missing controller glob. Pass --controllers <glob> or a positional controller glob.",
+        "Current inputs are mutually exclusive. Pass either --current-snapshot <path> or --controllers <glob>/a positional controller glob, not both.",
+    };
+  }
+
+  if (!controllers && !currentSnapshot) {
+    return {
+      kind: "invalid",
+      message:
+        "Missing current input. Pass --current-snapshot <path>, --controllers <glob>, or a positional controller glob.",
     };
   }
 
@@ -144,6 +178,7 @@ export function parseContractsDiffArgs(args: readonly string[]): ContractsDiffPa
     options: {
       baseline,
       controllers,
+      currentSnapshot,
       out,
       json: args.includes("--json") || out !== null,
       strictSchemas: args.includes("--strict-schemas"),
@@ -152,10 +187,12 @@ export function parseContractsDiffArgs(args: readonly string[]): ContractsDiffPa
 }
 
 function printContractsDiffHelp(io: ContractsDiffIo): void {
-  io.stdout(`Usage: croco contracts diff --baseline <snapshot.json> --controllers <glob> [--json] [--out <path>]
+  io.stdout(`Usage: croco contracts diff --baseline <snapshot.json> (--current-snapshot <snapshot.json> | --controllers <glob>) [--json] [--out <path>]
 
 Options:
   --baseline <path>     Stable ContractGraph snapshot JSON to compare against
+  --current-snapshot <path>
+                        Current ContractGraph snapshot JSON to compare
   --controllers <glob>  Current controller files to load
   --json                Print a machine-readable diff report
   --out <path>          Write the diff report JSON to a file
@@ -215,6 +252,29 @@ function readSnapshot(path: string, io: ContractsDiffIo): ContractGraphSnapshot 
   return snapshot;
 }
 
+async function loadCurrentControllerSnapshot(
+  options: ContractsDiffOptions,
+  loader: ContractGraphLoader | undefined,
+  io: ContractsDiffIo,
+): Promise<ContractGraphSnapshot | null> {
+  if (!options.controllers) {
+    return null;
+  }
+
+  const loadContractGraph = loader ?? loadContractGraphFromRpcCodegen;
+  const graph = await loadContractGraph(options.controllers, {
+    strictSchemas: options.strictSchemas,
+  });
+  const errors = getContractGraphErrors(graph);
+
+  if (errors.length > 0) {
+    reportCurrentGraphErrors(errors, options.json, io);
+    return null;
+  }
+
+  return createContractGraphSnapshot(graph);
+}
+
 async function loadContractGraphFromRpcCodegen(
   glob: string,
   options: BuildContractGraphOptions,
@@ -242,7 +302,7 @@ function getFlagValue(args: readonly string[], flag: string): string | null {
 }
 
 function getFirstPosition(args: readonly string[]): string | null {
-  const valueFlags = new Set(["--baseline", "--controllers", "--out"]);
+  const valueFlags = new Set(["--baseline", "--controllers", "--current-snapshot", "--out"]);
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];

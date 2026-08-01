@@ -47,6 +47,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build contract diff CLI
+        run: pnpm --filter @croco/cli... build
+
       - name: Generate companion report
         run: |
           base_ref="${GITHUB_BASE_REF:-trunk}"

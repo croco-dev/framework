@@ -1,16 +1,29 @@
+import { renderUsage } from "citty";
+import { Container } from "typedi";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
 import {
   type ContractDiagnostic,
   createContractGraphSnapshot,
   stringifyContractGraphSnapshot,
   type ContractGraph,
 } from "@croco/protocols-core";
-import { Container } from "typedi";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { runContractsDiff } from "../commands/contractsDiff.js";
+
+import { contractsDiff, runContractsDiff } from "../commands/contractsDiff.js";
 
 describe("contractsDiff", () => {
   beforeEach(() => {
     Container.reset();
+  });
+
+  it("should describe both current input modes in executable help", async () => {
+    const usage = await renderUsage(contractsDiff);
+
+    expect(usage).toContain("current snapshot or controller metadata");
+    expect(usage).toContain("--current-snapshot");
+    expect(usage).toContain("--controllers");
+    expect(usage).toContain("mutually exclusive");
+    expect(usage).toContain("CONTROLLERGLOB");
   });
 
   it("should pass with non-breaking additive route changes", async () => {
@@ -47,6 +60,141 @@ describe("contractsDiff", () => {
       "NON-BREAKING contract-route-added UsersController.createUser: Route 'UsersController.createUser' was added to the contract graph.",
       "Contract graph diff found 0 breaking change(s) and 1 non-breaking change(s).",
     ]);
+  });
+
+  it("should compare snapshots without loading controllers", async () => {
+    const stdout: string[] = [];
+    const loadContractGraph = vi.fn<() => Promise<ContractGraph>>();
+    const baseline = stringifyContractGraphSnapshot(
+      createContractGraphSnapshot(createGraph(["UsersController.listUsers"])),
+    );
+    const current = stringifyContractGraphSnapshot(
+      createContractGraphSnapshot(
+        createGraph(["UsersController.listUsers", "UsersController.createUser"]),
+      ),
+    );
+
+    const exitCode = await runContractsDiff(
+      ["--baseline", "baseline.json", "--current-snapshot", "current.json"],
+      {
+        loadContractGraph,
+        io: {
+          cwd: "/workspace/app",
+          readFile: (path) => (path.endsWith("baseline.json") ? baseline : current),
+          stdout: (message) => stdout.push(message),
+        },
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(loadContractGraph).not.toHaveBeenCalled();
+    expect(stdout).toEqual([
+      "NON-BREAKING contract-route-added UsersController.createUser: Route 'UsersController.createUser' was added to the contract graph.",
+      "Contract graph diff found 0 breaking change(s) and 1 non-breaking change(s).",
+    ]);
+  });
+
+  it("should preserve the breaking exit code for snapshot comparisons", async () => {
+    const baseline = stringifyContractGraphSnapshot(
+      createContractGraphSnapshot(createGraph(["UsersController.listUsers"])),
+    );
+    const current = stringifyContractGraphSnapshot(createContractGraphSnapshot(createGraph([])));
+
+    const exitCode = await runContractsDiff(
+      ["--baseline", "baseline.json", "--current-snapshot", "current.json"],
+      {
+        io: {
+          cwd: "/workspace/app",
+          readFile: (path) => (path.endsWith("baseline.json") ? baseline : current),
+        },
+      },
+    );
+
+    expect(exitCode).toBe(1);
+  });
+
+  it("should write the existing JSON diff shape for snapshot comparisons", async () => {
+    const writes = new Map<string, string>();
+    const baseline = stringifyContractGraphSnapshot(
+      createContractGraphSnapshot(createGraph(["UsersController.listUsers"])),
+    );
+    const current = stringifyContractGraphSnapshot(
+      createContractGraphSnapshot(
+        createGraph(["UsersController.listUsers", "UsersController.createUser"]),
+      ),
+    );
+
+    const exitCode = await runContractsDiff(
+      [
+        "--baseline",
+        "baseline.json",
+        "--current-snapshot",
+        "current.json",
+        "--json",
+        "--out",
+        "artifacts/diff.json",
+      ],
+      {
+        io: {
+          cwd: "/workspace/app",
+          mkdir: () => {},
+          readFile: (path) => (path.endsWith("baseline.json") ? baseline : current),
+          writeFile: (path, content) => writes.set(path, content),
+        },
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(JSON.parse(writes.get("/workspace/app/artifacts/diff.json") ?? "{}")).toMatchObject({
+      baselineRouteCount: 1,
+      currentRouteCount: 2,
+      breakingChangeCount: 0,
+      nonBreakingChangeCount: 1,
+      hasBreakingChanges: false,
+    });
+  });
+
+  it("should reject multiple or missing current inputs", async () => {
+    const stderr: string[] = [];
+    const io = {
+      stderr: (message: string) => stderr.push(message),
+      stdout: () => {},
+    };
+
+    await expect(
+      runContractsDiff(
+        [
+          "--baseline",
+          "baseline.json",
+          "--current-snapshot",
+          "current.json",
+          "--controllers",
+          "src/**/*.ts",
+        ],
+        { io },
+      ),
+    ).resolves.toBe(1);
+    await expect(runContractsDiff(["--baseline", "baseline.json"], { io })).resolves.toBe(1);
+
+    expect(stderr).toEqual([
+      "Current inputs are mutually exclusive. Pass either --current-snapshot <path> or --controllers <glob>/a positional controller glob, not both.",
+      "Missing current input. Pass --current-snapshot <path>, --controllers <glob>, or a positional controller glob.",
+    ]);
+  });
+
+  it("should reject an invalid current snapshot with its path in the error", async () => {
+    const baseline = stringifyContractGraphSnapshot(
+      createContractGraphSnapshot(createGraph(["UsersController.listUsers"])),
+    );
+
+    await expect(
+      runContractsDiff(["--baseline", "baseline.json", "--current-snapshot", "current.json"], {
+        io: {
+          cwd: "/workspace/app",
+          readFile: (path) => (path.endsWith("baseline.json") ? baseline : "{}"),
+        },
+      }),
+    ).rejects.toThrow("current.json is not a croco.contract-graph.snapshot.v1 JSON snapshot.");
   });
 
   it("should fail with breaking route drift", async () => {
