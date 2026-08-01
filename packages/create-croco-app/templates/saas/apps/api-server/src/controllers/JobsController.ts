@@ -1,4 +1,3 @@
-import { Component } from "@croco/framework-context";
 import type { ExecutionStatus } from "@croco/execution-core";
 import {
   Body,
@@ -66,7 +65,6 @@ async function parseOptionalJobsInteger(
   return parsed;
 }
 
-@Component()
 @Controller("/ops/jobs")
 export class JobsController {
   @Get(listJobsRoute)

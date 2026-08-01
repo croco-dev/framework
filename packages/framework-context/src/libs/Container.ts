@@ -298,6 +298,7 @@ export class Container {
       return;
     }
 
+    TypeDIContainer.of().reset({ strategy: "resetServices" });
     TypeDIContainer.reset();
     // reset은 요청 처리가 없는 idle 시점에만 호출한다.
     MetadataStorage.clear();

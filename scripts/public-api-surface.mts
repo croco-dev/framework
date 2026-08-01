@@ -257,7 +257,7 @@ const frameworkContextCompatibilityContract = {
         },
         {
           source: "./libs/decorators/Component",
-          names: ["Component"],
+          names: ["Component", "getDeclaredComponentScope"],
         },
         {
           source: "./libs/decorators/Inject",

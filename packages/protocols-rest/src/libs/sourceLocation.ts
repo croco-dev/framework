@@ -46,6 +46,8 @@ function isInternalRestDecoratorFrame(path: string): boolean {
     normalizedPath.includes("/node_modules/") ||
     normalizedPath.endsWith("/sourceLocation.ts") ||
     normalizedPath.endsWith("/sourceLocation.js") ||
+    normalizedPath.endsWith("/libs/decorators/Controller.ts") ||
+    normalizedPath.endsWith("/libs/decorators/Controller.js") ||
     normalizedPath.endsWith("/Params.ts") ||
     normalizedPath.endsWith("/Params.js") ||
     normalizedPath.endsWith("/HttpMethod.ts") ||

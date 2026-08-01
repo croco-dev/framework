@@ -11,7 +11,13 @@ title: "ControllerMetadata"
 
 > **path**: `string`
 
-***
+---
+
+### sourceLocation?
+
+> `optional` **sourceLocation?**: [`RouteContractSourceLocation`](/api/protocols-rest/src/type-aliases/routecontractsourcelocation/)
+
+---
 
 ### target
 

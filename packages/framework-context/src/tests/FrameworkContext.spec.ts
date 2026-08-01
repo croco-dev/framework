@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import "reflect-metadata";
 import { Component, Container, Context, Inject, MetadataStorage, Token } from "../index";
 import type { RuntimeContext } from "../index";
-import { getComponentScope } from "../libs/decorators/Component";
+import { getComponentScope, getDeclaredComponentScope } from "../libs/decorators/Component";
 
 class SimpleService {
   getValue(): string {
@@ -552,5 +552,15 @@ describe("Component decorator", () => {
     const metadata = Container.getComponentMetadata(MetadataService);
     expect(metadata?.scope).toBe("transient");
     expect(metadata?.target).toBe(MetadataService);
+  });
+
+  it("should preserve the declared scope after the container is reset", () => {
+    @Component({ scope: "request" })
+    class RequestService {}
+
+    Container.reset();
+
+    expect(Container.getComponentMetadata(RequestService)).toBeUndefined();
+    expect(getDeclaredComponentScope(RequestService)).toBe("request");
   });
 });

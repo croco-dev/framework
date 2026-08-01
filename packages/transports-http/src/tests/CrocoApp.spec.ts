@@ -321,6 +321,8 @@ describe("CrocoApp", () => {
     }
   }
 
+  class UnregisteredController {}
+
   const lambdaContext: LambdaContext = {
     callbackWaitsForEmptyEventLoop: false,
     functionName: "test-function",
@@ -1154,9 +1156,9 @@ describe("CrocoApp", () => {
     expect(response.status).toBe(200);
   });
 
-  it("should fail bootstrap when diValidation is enforce and a controller is not registered", () => {
+  it("should fail bootstrap when diValidation is enforce and a controller is not decorated", () => {
     const app = createApp({
-      controllers: [TestController],
+      controllers: [TestController, UnregisteredController],
       diValidation: "enforce",
     });
 
@@ -1171,7 +1173,7 @@ describe("CrocoApp", () => {
       code: "transports-http/di-bootstrap-validation",
     });
     expect(error).toBeInstanceOf(Error);
-    expect((error as Error).message).toContain("Provider TestController is not registered");
+    expect((error as Error).message).toContain("Provider UnregisteredController is not registered");
   });
 
   it("should enforce DI validation by default in production", () => {
@@ -1182,10 +1184,12 @@ describe("CrocoApp", () => {
 
     try {
       const app = createApp({
-        controllers: [TestController],
+        controllers: [TestController, UnregisteredController],
       });
 
-      expect(() => app.lambdaHandler()).toThrow(/Provider TestController is not registered/);
+      expect(() => app.lambdaHandler()).toThrow(
+        /Provider UnregisteredController is not registered/,
+      );
     } finally {
       process.env.NODE_ENV = previousNodeEnv;
       if (previousDiValidation === undefined) {
@@ -1208,7 +1212,7 @@ describe("CrocoApp", () => {
     Container.set(LOGGER_TOKEN, logger);
 
     const app = createApp({
-      controllers: [TestController],
+      controllers: [TestController, UnregisteredController],
       diValidation: "warn",
     });
 
@@ -1216,7 +1220,7 @@ describe("CrocoApp", () => {
 
     expect(response.status).toBe(200);
     expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining("Provider TestController is not registered"),
+      expect.stringContaining("Provider UnregisteredController is not registered"),
     );
   });
 
@@ -1275,6 +1279,43 @@ describe("CrocoApp", () => {
     const response = await app.fetch(new Request("http://localhost/api/hello"));
 
     expect(response.status).toBe(200);
+  });
+
+  it("should restore module-scope controller registration after Container.reset", async () => {
+    expect(Container.getComponentMetadata(TestController)).toBeUndefined();
+
+    const app = createApp({
+      controllers: [TestController],
+      diValidation: "enforce",
+    });
+
+    const response = await app.fetch(new Request("http://localhost/api/hello"));
+    const manifest = Container.createDependencyGraphManifest({ roots: [TestController] });
+    const provider = manifest.providers.find((entry) => entry.token === "TestController");
+
+    expect(response.status).toBe(200);
+    expect(provider?.sourceLocation?.file).toContain("CrocoApp.spec.ts");
+    expect(provider?.sourceLocation?.file).not.toContain("libs/decorators/Controller");
+  });
+
+  it("should bootstrap in diValidation enforce with only @Controller registration", async () => {
+    @Controller("/controller-only")
+    class ControllerOnly {
+      @Get()
+      get() {
+        return { registered: true };
+      }
+    }
+
+    const app = createApp({
+      controllers: [ControllerOnly],
+      diValidation: "enforce",
+    });
+
+    const response = await app.fetch(new Request("http://localhost/controller-only"));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ registered: true });
   });
 
   it("should fail bootstrap for circular DI graphs when diValidation is enforce", () => {

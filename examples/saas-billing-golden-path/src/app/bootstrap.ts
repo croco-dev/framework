@@ -71,7 +71,6 @@ export async function createGoldenPathRuntime(): Promise<GoldenPathRuntime> {
   TxManagerRegistry.register(txManager);
   Container.set(OrderPaidProjection, new OrderPaidProjection());
   Container.set(CheckoutService, new CheckoutService());
-  Container.set(BillingController, new BillingController());
 
   eventBusConfig.subscribe({
     eventName: OrderPaidEvent.eventName,

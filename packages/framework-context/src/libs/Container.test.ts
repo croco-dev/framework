@@ -189,6 +189,19 @@ describe("Container.toTypeDIServiceIdentifier", () => {
   });
 });
 
+describe("Container.reset", () => {
+  it("removes explicitly registered class values", () => {
+    class Service {}
+
+    Container.set(Service, new Service());
+    expect(Container.has(Service)).toBe(true);
+
+    Container.reset();
+
+    expect(Container.has(Service)).toBe(false);
+  });
+});
+
 describe("ContainerScope", () => {
   beforeEach(() => Container.reset());
 

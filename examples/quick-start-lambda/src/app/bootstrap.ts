@@ -111,8 +111,6 @@ function registerDemoRuntime(): void {
   Container.set(LOGGER_TOKEN, demoLogger);
   Container.set(AUTH_PROVIDER_TOKEN, new TestAuthProvider());
   Container.set(AuthGuard, new AuthGuard());
-  Container.set(HealthController, new HealthController());
-  Container.set(UserController, new UserController());
 }
 
 function parseLocalPort(rawPort: string | undefined): number | undefined {
