@@ -43,6 +43,8 @@ src/
 
 `TestAuthProvider` can be replaced with Clerk, Auth0, or custom auth without changing `UserController` or `UserService`. The in-memory metering setup can be replaced with provider-backed storage without changing the controller or domain service. `createApp().lambdaHandler()` is the transport boundary for Lambda; the protocol and domain code remain transport-neutral.
 
+The HTTP bootstrap uses security headers, an explicit CORS origin, a 1 MB body limit, and an in-memory sliding-window rate limiter. These middlewares satisfy Croco's default security validation without cloud credentials. Disabling security validation is reserved for temporary local migration or test fixtures, not the normal example path.
+
 ## Run Locally
 
 ```bash

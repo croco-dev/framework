@@ -130,6 +130,9 @@ importers:
       '@croco/protocols-rest':
         specifier: workspace:*
         version: link:../../packages/protocols-rest
+      '@croco/ratelimit-core':
+        specifier: workspace:*
+        version: link:../../packages/ratelimit-core
       '@croco/telemetry-sdk-node':
         specifier: workspace:*
         version: link:../../packages/telemetry-sdk-node
@@ -173,6 +176,9 @@ importers:
       '@croco/protocols-rest':
         specifier: workspace:*
         version: link:../../packages/protocols-rest
+      '@croco/ratelimit-core':
+        specifier: workspace:*
+        version: link:../../packages/ratelimit-core
       '@croco/retry-core':
         specifier: workspace:*
         version: link:../../packages/retry-core

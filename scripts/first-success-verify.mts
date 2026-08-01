@@ -8,9 +8,9 @@
  * Exit: 0 = all contracts pass, 1 = any contract fails
  */
 
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, extname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type * as CreateCrocoAppVerification from "../packages/create-croco-app/src/verification.ts";
 import { validateGeneratedSaasDocsContract } from "./first-success-generated-contract.mts";
@@ -146,6 +146,34 @@ function runsVerificationScript(
   return resolvesVerificationDispatcherToScript(rootScript, commandId, scriptPath, {
     exact: true,
   });
+}
+
+function hasCredentialFreeWiredRateLimiter(bootstrap: string): boolean {
+  const constructorMatch = bootstrap.match(
+    /\bconst\s+([A-Za-z_$][\w$]*)\s*=\s*new\s+RateLimiter\s*\(\s*new\s+SlidingWindowInMemoryStore\s*\(\s*\)\s*,/,
+  );
+  if (!constructorMatch) {
+    return false;
+  }
+
+  const variableName = constructorMatch[1];
+  const middlewareMatch = bootstrap.match(/\brateLimitHttpMiddleware\s*\(\s*\{([\s\S]*?)\}\s*\)/);
+  if (!variableName || !middlewareMatch) {
+    return false;
+  }
+
+  const middlewareOptions = middlewareMatch[1] ?? "";
+  if (
+    variableName === "rateLimiter" &&
+    /(?:^|,)\s*rateLimiter\s*(?:,|$)/m.test(middlewareOptions)
+  ) {
+    return true;
+  }
+
+  const escapedVariableName = variableName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?:^|,)\\s*rateLimiter\\s*:\\s*${escapedVariableName}\\s*(?:,|$)`, "m").test(
+    middlewareOptions,
+  );
 }
 
 function readRootArg(): string {
@@ -631,6 +659,55 @@ function formatSpineStatusSummary(status: SpineStatusCounts): string {
 const ROOT = readRootArg();
 const QUICK_START_DIR = join(ROOT, "examples", "quick-start-lambda");
 const SAAS_BILLING_DIR = join(ROOT, "examples", "saas-billing-golden-path");
+const REQUIRED_SECURITY_MIDDLEWARES = [
+  "securityHeadersMiddleware",
+  "corsMiddleware",
+  "bodyLimitMiddleware",
+  "rateLimitHttpMiddleware",
+] as const;
+const REQUIRED_SECURITY_DOC_SNIPPETS = [
+  "security headers",
+  "CORS",
+  "body limit",
+  "rate limiter",
+  "credentials",
+  "Disabling security validation",
+] as const;
+const SECURITY_VALIDATION_SCAN_FILE_EXTENSIONS = new Set([
+  ".js",
+  ".jsx",
+  ".mjs",
+  ".cjs",
+  ".ts",
+  ".tsx",
+  ".mts",
+  ".cts",
+  ".json",
+  ".toml",
+  ".yaml",
+  ".yml",
+]);
+const SECURITY_VALIDATION_SCAN_FILE_NAMES = new Set([
+  ".env",
+  ".env.example",
+  ".env.local",
+  ".env.development",
+  ".env.production",
+]);
+const SECURITY_VALIDATION_SCAN_IGNORED_DIRECTORIES = new Set([
+  ".git",
+  ".output",
+  ".turbo",
+  ".wrangler",
+  "coverage",
+  "dist",
+  "node_modules",
+]);
+const UNSAFE_SECURITY_VALIDATION_PATTERNS = [
+  /\bsecurityValidation\b/,
+  /unsafeSkipSecurityValidation\s*:\s*true/,
+  /\bCROCO_HTTP_SECURITY_VALIDATION\b/,
+];
 
 const paths = {
   rootReadme: join(ROOT, "README.md"),
@@ -638,9 +715,11 @@ const paths = {
   healthController: join(QUICK_START_DIR, "src", "protocols", "HealthController.ts"),
   userController: join(QUICK_START_DIR, "src", "protocols", "UserController.ts"),
   authProvider: join(QUICK_START_DIR, "src", "integrations", "TestAuthProvider.ts"),
+  quickStartBootstrap: join(QUICK_START_DIR, "src", "app", "bootstrap.ts"),
   examplePkg: join(QUICK_START_DIR, "package.json"),
   saasReadme: join(SAAS_BILLING_DIR, "README.md"),
   saasPkg: join(SAAS_BILLING_DIR, "package.json"),
+  saasBootstrap: join(SAAS_BILLING_DIR, "src", "app", "bootstrap.ts"),
   saasBillingController: join(SAAS_BILLING_DIR, "src", "protocols", "BillingController.ts"),
   saasCheckoutService: join(SAAS_BILLING_DIR, "src", "domain", "CheckoutService.ts"),
   saasGoldenPathSpec: join(SAAS_BILLING_DIR, "src", "tests", "golden-path.spec.ts"),
@@ -671,6 +750,7 @@ console.log("\n📋 A. Quick-start-lambda endpoint contract\n");
 {
   const readme = read(paths.readme);
   const examplePkg = read(paths.examplePkg);
+  const bootstrap = read(paths.quickStartBootstrap);
   const rootPkg = read(join(ROOT, "package.json"));
 
   // README documents pnpm install + pnpm dev
@@ -714,6 +794,7 @@ console.log("\n📋 A. Quick-start-lambda endpoint contract\n");
   }
 
   const rootPackageJson = parsePackageJson(rootPkg);
+  const examplePackageJson = parsePackageJson(examplePkg);
   const smokeScript: string | undefined = rootPackageJson.scripts?.["quick-start-lambda:smoke"];
   if (!smokeScript) {
     fail("A1e", "root package.json missing `quick-start-lambda:smoke` script");
@@ -727,6 +808,52 @@ console.log("\n📋 A. Quick-start-lambda endpoint contract\n");
     fail("A1e", `quick-start-lambda:smoke="${smokeScript}" does not run the smoke script`);
   } else {
     pass("A1e", "root package.json exposes `quick-start-lambda:smoke`");
+  }
+
+  const unsafeSecurityValidationFiles = findUnsafeSecurityValidationFiles(QUICK_START_DIR);
+  if (unsafeSecurityValidationFiles.length > 0) {
+    fail(
+      "A1g",
+      `quick-start-lambda must not bypass default security validation: ${unsafeSecurityValidationFiles.join(", ")}`,
+    );
+  } else {
+    pass("A1g", "quick-start-lambda uses default security validation");
+  }
+
+  for (const middleware of REQUIRED_SECURITY_MIDDLEWARES) {
+    if (!bootstrap.includes(`${middleware}(`)) {
+      fail("A1h", `quick-start-lambda bootstrap missing ${middleware}`);
+    }
+  }
+  if (REQUIRED_SECURITY_MIDDLEWARES.every((middleware) => bootstrap.includes(`${middleware}(`))) {
+    pass("A1h", "quick-start-lambda configures all required security middleware capabilities");
+  }
+
+  if (examplePackageJson.dependencies?.["@croco/ratelimit-core"] !== "workspace:*") {
+    fail("A1i", "quick-start-lambda must declare @croco/ratelimit-core as a workspace dependency");
+  } else {
+    pass("A1i", "quick-start-lambda declares its rate-limit dependency");
+  }
+
+  if (!hasCredentialFreeWiredRateLimiter(bootstrap)) {
+    fail(
+      "A1k",
+      "quick-start-lambda rate limiter must use SlidingWindowInMemoryStore and pass it to rateLimitHttpMiddleware",
+    );
+  } else {
+    pass("A1k", "quick-start-lambda rate limiter is credential-free and wired to HTTP middleware");
+  }
+
+  const missingSecurityDocSnippets = REQUIRED_SECURITY_DOC_SNIPPETS.filter(
+    (snippet) => !readme.includes(snippet),
+  );
+  if (missingSecurityDocSnippets.length > 0) {
+    fail(
+      "A1j",
+      `quick-start-lambda README missing secure bootstrap rationale: ${missingSecurityDocSnippets.join(", ")}`,
+    );
+  } else {
+    pass("A1j", "quick-start-lambda README documents the secure bootstrap posture");
   }
 }
 
@@ -885,6 +1012,7 @@ console.log("\n📋 D. SaaS billing golden-path contract\n");
   const examplePkg = read(paths.saasPkg);
   const rootPkg = read(join(ROOT, "package.json"));
   const billingController = read(paths.saasBillingController);
+  const bootstrap = read(paths.saasBootstrap);
   const checkoutService = read(paths.saasCheckoutService);
   const goldenPathSpec = read(paths.saasGoldenPathSpec);
   const gettingStarted = read(paths.gettingStarted);
@@ -1011,6 +1139,80 @@ console.log("\n📋 D. SaaS billing golden-path contract\n");
   } else {
     pass("S7b", "Getting started docs document SaaS billing golden-path smoke command");
   }
+
+  const unsafeSecurityValidationFiles = findUnsafeSecurityValidationFiles(SAAS_BILLING_DIR);
+  if (unsafeSecurityValidationFiles.length > 0) {
+    fail(
+      "S8a",
+      `SaaS billing example must not bypass default security validation: ${unsafeSecurityValidationFiles.join(", ")}`,
+    );
+  } else {
+    pass("S8a", "SaaS billing example uses default security validation");
+  }
+
+  for (const middleware of REQUIRED_SECURITY_MIDDLEWARES) {
+    if (!bootstrap.includes(`${middleware}(`)) {
+      fail("S8b", `SaaS billing bootstrap missing ${middleware}`);
+    }
+  }
+  if (REQUIRED_SECURITY_MIDDLEWARES.every((middleware) => bootstrap.includes(`${middleware}(`))) {
+    pass("S8b", "SaaS billing example configures all required security middleware capabilities");
+  }
+
+  if (pkg.dependencies?.["@croco/ratelimit-core"] !== "workspace:*") {
+    fail(
+      "S8c",
+      "SaaS billing example must declare @croco/ratelimit-core as a workspace dependency",
+    );
+  } else {
+    pass("S8c", "SaaS billing example declares its rate-limit dependency");
+  }
+
+  if (!hasCredentialFreeWiredRateLimiter(bootstrap)) {
+    fail(
+      "S8e",
+      "SaaS billing rate limiter must use SlidingWindowInMemoryStore and pass it to rateLimitHttpMiddleware",
+    );
+  } else {
+    pass("S8e", "SaaS billing rate limiter is credential-free and wired to HTTP middleware");
+  }
+
+  const missingSecurityDocSnippets = REQUIRED_SECURITY_DOC_SNIPPETS.filter(
+    (snippet) => !readme.includes(snippet),
+  );
+  if (missingSecurityDocSnippets.length > 0) {
+    fail(
+      "S8d",
+      `SaaS billing README missing secure bootstrap rationale: ${missingSecurityDocSnippets.join(", ")}`,
+    );
+  } else {
+    pass("S8d", "SaaS billing README documents the secure bootstrap posture");
+  }
+}
+
+function findUnsafeSecurityValidationFiles(directory: string): string[] {
+  return collectSecurityValidationScanFiles(directory).filter((filePath) => {
+    const content = read(filePath);
+    return UNSAFE_SECURITY_VALIDATION_PATTERNS.some((pattern) => pattern.test(content));
+  });
+}
+
+function collectSecurityValidationScanFiles(directory: string): string[] {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const entryPath = join(directory, entry.name);
+
+    if (entry.isDirectory()) {
+      return SECURITY_VALIDATION_SCAN_IGNORED_DIRECTORIES.has(entry.name)
+        ? []
+        : collectSecurityValidationScanFiles(entryPath);
+    }
+
+    return SECURITY_VALIDATION_SCAN_FILE_EXTENSIONS.has(extname(entry.name)) ||
+      SECURITY_VALIDATION_SCAN_FILE_NAMES.has(entry.name) ||
+      entry.name.startsWith(".env.")
+      ? [entryPath]
+      : [];
+  });
 }
 
 // ── E. Docs contract ────────────────────────────────────────────────────────

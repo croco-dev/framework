@@ -17,6 +17,7 @@
     "@croco/membership-core": "workspace:*",
     "@croco/problems-core": "workspace:*",
     "@croco/protocols-rest": "workspace:*",
+    "@croco/ratelimit-core": "workspace:*",
     "@croco/retry-core": "workspace:*",
     "@croco/telemetry-api": "workspace:*",
     "@croco/transports-http": "workspace:*",

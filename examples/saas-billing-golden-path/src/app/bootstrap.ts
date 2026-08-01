@@ -1,7 +1,21 @@
 import { EventBusConfig } from "@croco/events-core";
 import { InMemoryEventBus } from "@croco/events-inmemory";
-import { Container, type ILogger, LOGGER_TOKEN } from "@croco/framework-context";
-import { createApp, type CrocoApp } from "@croco/transports-http";
+import { Container, LOGGER_TOKEN } from "@croco/framework-context";
+import {
+  createSlidingWindowPolicy,
+  RateLimiter,
+  RateLimitKeyBuilder,
+  SlidingWindowInMemoryStore,
+} from "@croco/ratelimit-core";
+import {
+  bodyLimitMiddleware,
+  corsMiddleware,
+  createApp,
+  createRuntimeAwareRateLimitClientIdentityPolicy,
+  mb,
+  rateLimitHttpMiddleware,
+  securityHeadersMiddleware,
+} from "@croco/transports-http";
 import { TxManager, TxManagerRegistry } from "@croco/tx-core";
 import { CheckoutService } from "../domain/CheckoutService";
 import { InMemoryOrderRepository, ORDER_REPOSITORY_TOKEN } from "../domain/InMemoryOrderRepository";
@@ -14,6 +28,8 @@ import {
   ScriptedPaymentGateway,
 } from "../integrations/ScriptedPaymentGateway";
 import { BillingController } from "../protocols/BillingController";
+import type { ILogger } from "@croco/framework-context";
+import type { CrocoApp, MiddlewareFunction } from "@croco/transports-http";
 
 export type GoldenPathRuntime = {
   readonly app: CrocoApp;
@@ -65,7 +81,12 @@ export async function createGoldenPathRuntime(): Promise<GoldenPathRuntime> {
 
   const app = createApp({
     controllers: [BillingController],
-    securityValidation: "off",
+    middlewares: [
+      securityHeadersMiddleware(),
+      corsMiddleware({ origins: [process.env.WEB_ORIGIN ?? "http://localhost:5173"] }),
+      bodyLimitMiddleware({ limit: mb(1) }),
+      createApiRateLimitMiddleware(),
+    ],
   });
 
   return {
@@ -80,6 +101,19 @@ export async function createGoldenPathRuntime(): Promise<GoldenPathRuntime> {
     repository,
     txManager,
   };
+}
+
+function createApiRateLimitMiddleware(): MiddlewareFunction {
+  const rateLimiter = new RateLimiter(
+    new SlidingWindowInMemoryStore(),
+    new RateLimitKeyBuilder(["ip"]),
+  );
+
+  return rateLimitHttpMiddleware({
+    rateLimiter,
+    policy: createSlidingWindowPolicy("api", 100, 60_000),
+    clientIdentity: createRuntimeAwareRateLimitClientIdentityPolicy(),
+  });
 }
 
 export function startLocalServer(app: CrocoApp): void {

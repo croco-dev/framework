@@ -225,6 +225,99 @@ describe("first-success-verify.mts", () => {
     expect(result.stdout).toContain("SaaS README missing root smoke command");
   });
 
+  it("fails when the quick-start bootstrap bypasses security validation", () => {
+    const root = createFixture();
+    writeFile(
+      root,
+      "examples/quick-start-lambda/src/app/bootstrap.ts",
+      secureBootstrapFixture('securityValidation: "off",'),
+    );
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("A1g");
+    expect(result.stdout).toContain("must not bypass default security validation");
+  });
+
+  it("fails when a non-bootstrap example file uses the alternate security bypass", () => {
+    const root = createFixture();
+    writeFile(
+      root,
+      "examples/quick-start-lambda/src/local-demo.ts",
+      "createApp({ unsafeSkipSecurityValidation: true });\n",
+    );
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("A1g");
+    expect(result.stdout).toContain("local-demo.ts");
+  });
+
+  it("fails when an example environment file overrides security validation", () => {
+    const root = createFixture();
+    writeFile(
+      root,
+      "examples/saas-billing-golden-path/.env.staging",
+      "CROCO_HTTP_SECURITY_VALIDATION: off\n",
+    );
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("S8a");
+    expect(result.stdout).toContain(".env.staging");
+  });
+
+  it("fails when the SaaS bootstrap omits a required security capability", () => {
+    const root = createFixture();
+    writeFile(
+      root,
+      "examples/saas-billing-golden-path/src/app/bootstrap.ts",
+      secureBootstrapFixture().replace("rateLimitHttpMiddleware({ rateLimiter }),", ""),
+    );
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("S8b");
+    expect(result.stdout).toContain("missing rateLimitHttpMiddleware");
+  });
+
+  it("fails when an example rate limiter does not use the credential-free store", () => {
+    const root = createFixture();
+    writeFile(
+      root,
+      "examples/saas-billing-golden-path/src/app/bootstrap.ts",
+      secureBootstrapFixture().replace("SlidingWindowInMemoryStore", "ExternalRateLimitStore"),
+    );
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("S8e");
+    expect(result.stdout).toContain("must use SlidingWindowInMemoryStore");
+  });
+
+  it("fails when an example does not pass its credential-free rate limiter to HTTP middleware", () => {
+    const root = createFixture();
+    writeFile(
+      root,
+      "examples/saas-billing-golden-path/src/app/bootstrap.ts",
+      secureBootstrapFixture().replace(
+        "rateLimitHttpMiddleware({ rateLimiter })",
+        "rateLimitHttpMiddleware({ rateLimiter: anotherRateLimiter })",
+      ),
+    );
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("S8e");
+    expect(result.stdout).toContain("pass it to rateLimitHttpMiddleware");
+  });
+
   it("fails when the root SaaS smoke script no longer builds workspace dependencies before tests", () => {
     const root = createFixture({
       rootSaasSmokeScript: `pnpm --filter ${saasPackageName} test`,
@@ -494,13 +587,21 @@ function createFixture(options: FixtureOptions = {}): string {
       "x-api-key: test-key",
       "401",
       "api_user_create",
+      "The HTTP bootstrap uses security headers, CORS, a body limit, and an in-memory rate limiter without credentials. Disabling security validation is reserved for temporary local migration or test fixtures.",
       "",
     ].join("\n"),
   );
   writeFile(
     root,
     "examples/quick-start-lambda/package.json",
-    JSON.stringify({ scripts: { dev: "tsx src/index.ts" } }, null, 2),
+    JSON.stringify(
+      {
+        dependencies: { "@croco/ratelimit-core": "workspace:*" },
+        scripts: { dev: "tsx src/index.ts" },
+      },
+      null,
+      2,
+    ),
   );
   writeFile(
     root,
@@ -515,6 +616,7 @@ function createFixture(options: FixtureOptions = {}): string {
       "```bash",
       ...saasReadmeCommands,
       "```",
+      "The HTTP bootstrap uses security headers, CORS, a body limit, and an in-memory rate limiter without credentials. Disabling security validation is reserved for temporary local migration or test fixtures.",
       "",
     ].join("\n"),
   );
@@ -523,6 +625,7 @@ function createFixture(options: FixtureOptions = {}): string {
     "examples/saas-billing-golden-path/package.json",
     JSON.stringify(
       {
+        dependencies: { "@croco/ratelimit-core": "workspace:*" },
         scripts: {
           build: "tsc --noEmit",
           dev: "tsx src/index.ts",
@@ -579,6 +682,12 @@ function createFixture(options: FixtureOptions = {}): string {
       "expect(problem.code).toBe('golden-path/order-not-found');",
       "",
     ].join("\n"),
+  );
+  writeFile(root, "examples/quick-start-lambda/src/app/bootstrap.ts", secureBootstrapFixture());
+  writeFile(
+    root,
+    "examples/saas-billing-golden-path/src/app/bootstrap.ts",
+    secureBootstrapFixture(),
   );
   writeFile(
     root,
@@ -743,6 +852,25 @@ function createFixture(options: FixtureOptions = {}): string {
   );
 
   return root;
+}
+
+function secureBootstrapFixture(extraConfig = ""): string {
+  return [
+    "const rateLimiter = new RateLimiter(",
+    "new SlidingWindowInMemoryStore(),",
+    'new RateLimitKeyBuilder(["ip"]),',
+    ");",
+    "createApp({",
+    extraConfig,
+    "middlewares: [",
+    "securityHeadersMiddleware(),",
+    "corsMiddleware(),",
+    "bodyLimitMiddleware(),",
+    "rateLimitHttpMiddleware({ rateLimiter }),",
+    "],",
+    "});",
+    "",
+  ].join("\n");
 }
 
 function writeFile(root: string, relativePath: string, content: string): void {
