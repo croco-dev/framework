@@ -112,6 +112,42 @@ describe("architecture policy engine", () => {
     ]);
   });
 
+  it("rejects desktop runtime source imports and package-manifest dependencies", () => {
+    const repo = createTempRepo();
+    writePackage(repo, "packages/protocols-desktop", "@croco/protocols-desktop", {
+      dependencies: {
+        electron: "^37.0.0",
+      },
+    });
+    writeFile(
+      repo,
+      "packages/protocols-desktop/src/index.ts",
+      'import { app } from "electron";\nexport const desktop = app;\n',
+    );
+
+    const report = checkArchitecturePolicy({
+      rootDir: repo,
+      manifest: desktopContractManifest(),
+    });
+
+    expect(report.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "architecture-policy/disallowed-dependency-edge",
+        ruleId: "desktop-contract-package-dependencies",
+        file: "packages/protocols-desktop/package.json",
+        sourceKind: "package-manifest",
+        importSpecifier: "electron",
+      }),
+      expect.objectContaining({
+        code: "architecture-policy/forbidden-import",
+        ruleId: "desktop-contract-runtime-imports",
+        file: "packages/protocols-desktop/src/index.ts",
+        sourceKind: "source",
+        importSpecifier: "electron",
+      }),
+    ]);
+  });
+
   it("enforces allowed group dependency edges for generated apps", () => {
     const repo = createTempRepo();
     writePackage(repo, "apps/api-server", "@test/api-server");
@@ -544,6 +580,56 @@ function generatedAppManifest(): ArchitecturePolicyManifest {
         id: "generated-app-public-entrypoints",
         includePackages: ["@croco/*", "@test/*"],
       },
+    },
+  };
+}
+
+function desktopContractManifest(): ArchitecturePolicyManifest {
+  return {
+    schemaVersion: ARCHITECTURE_POLICY_SCHEMA_VERSION,
+    packageRoots: ["packages"],
+    include: ["packages/*/src/**/*.ts"],
+    packageGroups: {
+      "desktop-contracts": {
+        packages: ["@croco/protocols-desktop"],
+      },
+      framework: {
+        packages: ["@croco/problems-core"],
+      },
+      protocols: {
+        packages: ["@croco/protocols-core"],
+      },
+    },
+    rules: {
+      forbiddenImports: [
+        {
+          id: "desktop-contract-runtime-imports",
+          from: {
+            groups: ["desktop-contracts"],
+          },
+          to: {
+            specifiers: [
+              "electron",
+              "electron/*",
+              "node:*",
+              "@croco/transports-electron",
+              "@croco/transports-electron/*",
+            ],
+          },
+          appliesTo: ["source"],
+        },
+      ],
+      allowedGroupImports: [
+        {
+          id: "desktop-contract-package-dependencies",
+          fromGroups: ["desktop-contracts"],
+          allowGroups: ["framework", "protocols"],
+          allowSpecifiers: ["vitest", "zod"],
+          allowSameGroup: false,
+          allowExternal: false,
+          appliesTo: ["package-manifest"],
+        },
+      ],
     },
   };
 }

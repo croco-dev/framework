@@ -78,9 +78,16 @@
       "packages": [
         "@croco/admin-generated",
         "@croco/openapi-spec",
-        "@croco/protocols-*",
+        "@croco/protocols-core",
+        "@croco/protocols-graphql",
+        "@croco/protocols-rest",
+        "@croco/protocols-trpc",
         "@croco/rpc-codegen"
       ]
+    },
+    "desktop-contracts": {
+      "description": "Browser-safe desktop contract declarations and schema compiler inputs.",
+      "packages": ["@croco/protocols-desktop"]
     },
     "transports": {
       "description": "Runtime adapters that execute protocol routes.",
@@ -152,6 +159,12 @@
       "catalogGroup": "Core",
       "policyGroup": "integrations",
       "reason": "tx-drizzle is the Drizzle transaction implementation even though the package catalog keeps transaction packages in Core."
+    },
+    {
+      "package": "@croco/protocols-desktop",
+      "catalogGroup": "Protocol",
+      "policyGroup": "desktop-contracts",
+      "reason": "protocols-desktop is a browser-safe contract/compiler boundary with stricter runtime and dependency limits than general protocol packages."
     }
   ],
   "rules": {
@@ -211,6 +224,51 @@
         },
         "message": "Framework/core packages cannot import provider or runtime implementation SDKs.",
         "recovery": "Move provider/runtime implementation code behind an adapter package and keep the framework/core package on an explicit contract."
+      },
+      {
+        "id": "desktop-contract-runtime-imports",
+        "description": "Desktop protocol contracts must remain independent of Electron, Node, and Electron transport runtimes.",
+        "from": {
+          "groups": ["desktop-contracts"]
+        },
+        "to": {
+          "specifiers": [
+            "electron",
+            "electron/*",
+            "node:*",
+            "@croco/transports-electron",
+            "@croco/transports-electron/*"
+          ]
+        },
+        "appliesTo": ["source"],
+        "message": "Desktop protocol contracts cannot import Electron, Node runtime APIs, or Electron transports.",
+        "recovery": "Move runtime integration behind an Electron transport package and keep protocols-desktop browser-safe."
+      },
+      {
+        "id": "desktop-contract-application-imports",
+        "description": "Desktop protocol contracts must not import application bootstrap packages.",
+        "from": {
+          "groups": ["desktop-contracts"]
+        },
+        "to": {
+          "groups": ["app"]
+        },
+        "appliesTo": ["source"],
+        "message": "Desktop protocol contracts cannot import application bootstrap packages.",
+        "recovery": "Keep application composition outside protocols-desktop and depend only on declared contract packages."
+      }
+    ],
+    "allowedGroupImports": [
+      {
+        "id": "desktop-contract-package-dependencies",
+        "fromGroups": ["desktop-contracts"],
+        "allowGroups": ["framework", "protocols"],
+        "allowSpecifiers": ["vitest", "zod"],
+        "allowSameGroup": false,
+        "allowExternal": false,
+        "appliesTo": ["package-manifest"],
+        "message": "Desktop protocol package manifests may depend only on contract libraries and declared test/schema tooling.",
+        "recovery": "Keep protocols-desktop dependencies limited to @croco/problems-core, @croco/protocols-core, vitest, and zod."
       }
     ],
     "publicEntrypoints": {
