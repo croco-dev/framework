@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 553,
+  problemCount: 560,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -2214,6 +2214,68 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "billing/invalid-plan-release-schedule",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#billing-invalid-plan-release-schedule",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/billing-core/src/libs/problems/PlanReleaseProblems.ts",
+          line: 60,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "billing/invalid-plan-release-transition",
+      category: "BusinessRuleViolation",
+      status: 422,
+      title: "Business Rule Violation",
+      cookbookPath: "/reference/problem-recovery-cookbook/#billing-invalid-plan-release-transition",
+      recovery: {
+        cause: "The request is syntactically valid but violates a domain rule.",
+        userAction:
+          "Change the workflow state or request values so the business rule is satisfied.",
+        operatorAction: "Review domain policy, entitlement, quota, and lifecycle rule evidence.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/billing-core/src/libs/problems/PlanReleaseProblems.ts",
+          line: 16,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "billing/invalid-plan-version-definition",
       category: "BadRequest",
       status: 400,
@@ -2460,6 +2522,128 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "billing/overlapping-plan-effective-period",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#billing-overlapping-plan-effective-period",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/billing-core/src/libs/problems/PlanReleaseProblems.ts",
+          line: 28,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "billing/plan-release-provider-capability-failed",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#billing-plan-release-provider-capability-failed",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/billing-core/src/libs/problems/PlanReleaseProblems.ts",
+          line: 50,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "billing/plan-release-publish-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#billing-plan-release-publish-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/billing-core/src/libs/problems/PlanReleaseProblems.ts",
+          line: 68,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "billing/plan-release-validation-failed",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#billing-plan-release-validation-failed",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/billing-core/src/libs/problems/PlanReleaseProblems.ts",
+          line: 40,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "billing/plan-version-already-published",
       category: "Conflict",
       status: 409,
@@ -2545,6 +2729,36 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
           line: 6,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "billing/stale-plan-release-revision",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#billing-stale-plan-release-revision",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/billing-core/src/libs/problems/PlanReleaseProblems.ts",
+          line: 4,
           column: 3,
           kind: "problem-class",
         },

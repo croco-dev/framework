@@ -18,6 +18,7 @@ title: "DomainEvent"
 - [`SubscriptionCanceledEvent`](/api/billing-core/src/classes/subscriptioncanceledevent/)
 - [`SubscriptionPastDueEvent`](/api/billing-core/src/classes/subscriptionpastdueevent/)
 - [`SubscriptionRevokedEvent`](/api/billing-core/src/classes/subscriptionrevokedevent/)
+- [`PlanReleaseTransitionedEvent`](/api/billing-core/src/classes/planreleasetransitionedevent/)
 - [`SubscriptionQuantityDriftDetectedEvent`](/api/billing-core/src/classes/subscriptionquantitydriftdetectedevent/)
 - [`SubscriptionQuantityDriftRecoveredEvent`](/api/billing-core/src/classes/subscriptionquantitydriftrecoveredevent/)
 - [`SubscriptionQuantityReconciliationFailedEvent`](/api/billing-core/src/classes/subscriptionquantityreconciliationfailedevent/)

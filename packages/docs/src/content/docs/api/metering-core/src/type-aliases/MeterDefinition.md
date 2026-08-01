@@ -15,67 +15,67 @@ Meter 정의 (DB 저장)
 
 > `optional` **aggregation?**: [`MeterAggregation`](/api/metering-core/src/type-aliases/meteraggregation/)
 
----
+***
 
 ### allowOverQuota?
 
 > `optional` **allowOverQuota?**: `boolean`
 
----
+***
 
 ### billing?
 
 > `optional` **billing?**: `"local"` \| `"required"`
 
----
+***
 
 ### createdAt
 
 > **createdAt**: `Date`
 
----
+***
 
 ### id
 
 > **id**: `string`
 
----
+***
 
 ### metadata?
 
 > `optional` **metadata?**: `Record`\<`string`, `unknown`\>
 
----
+***
 
 ### meterId
 
 > **meterId**: `string`
 
----
+***
 
 ### quota?
 
 > `optional` **quota?**: `number`
 
----
+***
 
 ### tenantId
 
 > **tenantId**: `string`
 
----
+***
 
 ### type
 
 > **type**: [`MeterType`](/api/metering-core/src/type-aliases/metertype/)
 
----
+***
 
 ### unit?
 
 > `optional` **unit?**: `string`
 
----
+***
 
 ### updatedAt
 

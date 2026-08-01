@@ -13,13 +13,13 @@ title: "DesktopWireObjectDescriptor"
 
 > `readonly` **fields**: readonly `object`[]
 
----
+***
 
 ### kind
 
 > `readonly` **kind**: `"object"`
 
----
+***
 
 ### unknownKeys
 

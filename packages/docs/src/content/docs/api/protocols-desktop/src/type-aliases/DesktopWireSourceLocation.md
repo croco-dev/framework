@@ -13,13 +13,13 @@ title: "DesktopWireSourceLocation"
 
 > `readonly` `optional` **column?**: `number`
 
----
+***
 
 ### line?
 
 > `readonly` `optional` **line?**: `number`
 
----
+***
 
 ### path
 

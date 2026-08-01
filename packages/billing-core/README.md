@@ -192,6 +192,75 @@ product/price 또는 배포 이력을 사용해 정확한 `PlanVersionRef`를 �
 `migrateSubscriptionPlanVersion(legacySubscription, explicitRef, registry)`로 plan family 일치 여부를
 검증한 뒤 `planVersionRef` 컬럼을 `NOT NULL`로 전환해야 합니다.
 
+## 플랜 버전 릴리스
+
+`PlanReleaseService`는 편집 가능한 draft와 불변 published 버전을 분리합니다. 모든 draft 변경과 상태
+전환은 `expectedRevision`을 요구하며, `draft → in_review → scheduled|published` 흐름 외의 전환은 안정적인
+Problem으로 거절됩니다. 검토자는 `PlanReleaseValidator`를 통해 이미 생성된 ContractGraph 검증 snapshot을
+전달합니다. billing-core는 이 evidence를 다시 계산하지 않으며, review snapshot과 게시 command에 그대로
+고정합니다. evidence의 `definitionFingerprint`와 `draftRevision`은 현재 draft와 일치해야 하므로 같은 ref의
+이전 ContractGraph snapshot을 재사용할 수 없습니다.
+
+```ts
+import {
+  DeterministicPlanReleaseImpactAnalyzer,
+  InMemoryPlanRegistry,
+  InMemoryPlanReleaseStore,
+  PlanReleaseService,
+} from "@croco/billing-core";
+
+const releases = new PlanReleaseService({
+  store: new InMemoryPlanReleaseStore(),
+  planRegistry: new InMemoryPlanRegistry(),
+  validator: contractGraphValidationAdapter,
+  impactAnalyzer: new DeterministicPlanReleaseImpactAnalyzer(),
+  eventPublisher,
+});
+
+const draft = await releases.createDraft({
+  definition: pro2027,
+  actor: { id: "operator-123" },
+  reason: "2027 pricing review",
+});
+
+const review = await releases.submitReview({
+  ref: draft.ref,
+  expectedRevision: draft.revision,
+  actor: { id: "reviewer-456" },
+  reason: "contract evidence accepted",
+  audience: "new_subscriptions",
+});
+
+await releases.publishNow({
+  ref: review.ref,
+  expectedRevision: review.revision,
+  actor: { id: "reviewer-456" },
+  reason: "approved for publication",
+  idempotencyKey: "publish:pro@2027-01",
+});
+```
+
+검토 evidence에는 recurring price, seat price/inclusion, usage tier, entitlement, quota, trial, provider binding,
+effective date의 정규화된 semantic diff가 포함됩니다. impact preview는 계산된 사실,
+provider-preflight 사실, 추정치를 서로 다른 배열로 유지하고 new subscription, grandfathered subscription,
+명시적 migration cohort를 구분합니다. 같은 publish command를 재시도하면 기존 publication evidence를
+반환하며, 다른 command가 같은 draft를 동시에 게시하려 하면 하나만 성공합니다.
+
+게시는 먼저 durable `publicationIntent`를 CAS로 예약한 뒤 registry write를 수행합니다. registry write 뒤
+release store가 일시적으로 실패해도 같은 command가 intent와 이미 게시된 불변 definition을 대조해
+publication evidence를 복구합니다. 종료 시점이 없는 기존 published version은 다음 version의
+`effectiveAt`에서 암시적으로 닫히므로, 기존 version을 수정하지 않고 successor를 게시할 수 있습니다.
+Registry가 deterministic validation/conflict Problem을 반환하면 intent는 audit failure로 전환되어 draft가
+복구됩니다. 결과가 불명확한 외부 registry failure는 intent를 유지하며, 운영자가 no-write를 확인한 뒤
+`cancelPublish()`로 명시적으로 해제할 수 있습니다.
+
+`InMemoryPlanReleaseStore`는 테스트와 로컬 composition용입니다. 운영 adapter는 revision CAS, 동일 plan
+family의 effective-period 제약, transition과 event outbox append를 하나의 원자적 저장으로 구현해야 하며,
+transition history, publication intent/evidence, pending event를 audit record로 보존해야 합니다. 상태 변경은
+결정적인 event ID를 가진 `PlanReleaseTransitionedEvent`를 outbox에 먼저 기록하며,
+`deliverPendingEvents()`로 실패한 delivery를 재시도할 수 있습니다. `PlanReleaseEventPublisher` 구현은 동시
+worker와 retry가 같은 event ID를 전달해도 한 번만 적용하는 `publishIdempotently()` 계약을 지켜야 합니다.
+
 ## Licensed subscription quantity reconciliation
 
 플랜 버전은 `quantityPolicy`로 최소 provider quantity, 포함 좌석, entitlement 좌석 한도,
