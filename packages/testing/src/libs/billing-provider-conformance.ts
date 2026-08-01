@@ -10,6 +10,8 @@ import {
   type CreateCheckoutParams,
   type LicensedQuantityGateway,
   type UsageBillingEvent,
+  type UsageBillingBatchReceipt,
+  type UsageBillingEventReceipt,
   type UsageBillingGateway,
 } from "@croco/billing-core";
 import { Problem } from "@croco/problems-core";
@@ -168,43 +170,43 @@ export type UsageBillingConformanceFixtures = {
   readonly events: readonly UsageBillingEvent[];
   readonly partialBatch: {
     readonly events: readonly UsageBillingEvent[];
-    readonly expectedReceipts: Readonly<Record<string, "inserted" | "duplicate">>;
+    readonly expectedReceipts: Readonly<Record<string, UsageBillingEventReceipt["status"]>>;
     readonly maxEvents: number;
   };
-  readonly customerMeterState: CustomerMeterState;
+  readonly customerMeterState: Omit<CustomerMeterState, "updatedAt">;
 };
 
-export type UsageBillingRetryableFailureFixture =
-  | {
-      readonly expectedProblemCode: string;
-      readonly kind: "http-429";
-      readonly rawResponse: string;
-      readonly status: 429;
-    }
-  | {
-      readonly expectedProblemCode: string;
-      readonly kind: "http-5xx";
-      readonly rawResponse: string;
-      readonly status: 500 | 502 | 503 | 504;
-    }
-  | {
-      readonly expectedProblemCode: string;
-      readonly kind: "timeout";
-      readonly rawResponse: string;
-      readonly upstreamCode: "RequestTimeoutError";
-    };
+type UsageBillingFailureFixtureBase = {
+  readonly events: readonly UsageBillingEvent[];
+  readonly expectedProblemCode: string;
+  readonly rawResponse: string;
+};
 
-export type UsageBillingTerminalFailureFixture =
-  | {
-      readonly expectedProblemCode: string;
-      readonly kind: "invalid-meter";
-      readonly rawResponse: string;
-    }
-  | {
-      readonly expectedProblemCode: string;
-      readonly kind: "invalid-schema";
-      readonly rawResponse: string;
-    };
+export type UsageBillingRetryableFailureFixture = UsageBillingFailureFixtureBase &
+  (
+    | {
+        readonly kind: "http-429";
+        readonly status: 429;
+      }
+    | {
+        readonly kind: "http-5xx";
+        readonly status: 500 | 502 | 503 | 504;
+      }
+    | {
+        readonly kind: "timeout";
+        readonly upstreamCode: "RequestTimeoutError";
+      }
+  );
+
+export type UsageBillingTerminalFailureFixture = UsageBillingFailureFixtureBase &
+  (
+    | {
+        readonly kind: "invalid-meter";
+      }
+    | {
+        readonly kind: "invalid-schema";
+      }
+  );
 
 export type UsageBillingFailureScenario<
   TFixture extends UsageBillingRetryableFailureFixture | UsageBillingTerminalFailureFixture,
@@ -249,6 +251,14 @@ export type UsageBillingGatewayConformanceOptions<
     >;
   };
   readonly fixtures: UsageBillingConformanceFixtures;
+  readonly assertCustomerMeterStateUpdatedAt?: (
+    updatedAt: Date,
+    context: {
+      readonly expected: Omit<CustomerMeterState, "updatedAt">;
+      readonly previousUpdatedAt?: Date;
+      readonly providerName: string;
+    },
+  ) => void | Promise<void>;
   readonly liveSmoke?: UsageBillingLiveSmokeGate;
 };
 
@@ -269,7 +279,7 @@ export type BillingProviderConformanceManifest = {
 };
 
 export type BillingProviderConformanceCapabilityEvidence = {
-  readonly capability: "usage";
+  readonly capability: BillingProviderCapability;
   readonly caseNames: readonly string[];
   readonly status: "supported" | "unavailable";
 };
@@ -540,15 +550,18 @@ function createUsageBillingGatewayConformanceCases(
           Object.fromEntries(events.map(({ eventId }) => [eventId, "duplicate"])),
           `${providerName} must acknowledge replayed usage events as duplicates`,
         );
-        assert.deepEqual(
+        const beforeUpdatedAt = await assertUsageCustomerMeterState(
           beforeReplay,
           customerMeterState,
-          `${providerName} must expose meter state after the initial usage delivery`,
+          options,
+          providerName,
         );
-        assert.deepEqual(
+        await assertUsageCustomerMeterState(
           afterReplay,
-          beforeReplay,
-          `${providerName} must not increment customer meter state for a replayed logical event`,
+          customerMeterState,
+          options,
+          providerName,
+          beforeUpdatedAt,
         );
       },
     },
@@ -594,11 +607,7 @@ function createUsageBillingGatewayConformanceCases(
           billingAccountId: customerMeterState.billingAccountId,
           meterId: customerMeterState.meterId,
         });
-        assert.deepEqual(
-          state,
-          customerMeterState,
-          `${providerName} must return the provider-observed customer meter state`,
-        );
+        await assertUsageCustomerMeterState(state, customerMeterState, options, providerName);
       },
     },
   ];
@@ -683,7 +692,7 @@ function createUnavailableUsageBillingCapabilityConformanceCase(
     name: "rejects unavailable usage billing capability with the public capability Problem",
     run: async () => {
       const provider = await options.createProvider();
-      const problem = await assertThrowsProblem(() => provider.requireCapability("usage"));
+      const problem = await assertRejectsWithProblem(() => provider.requireCapability("usage"));
 
       assert.equal(
         problem.code,
@@ -708,7 +717,7 @@ function createOptionalUsageBillingLiveSmokeCase(
       );
       const enabled = gate.isEnabled
         ? gate.isEnabled()
-        : gate.requiredEnv.every((name) => process.env[name] !== undefined);
+        : gate.requiredEnv.every((name) => (process.env[name]?.length ?? 0) > 0);
       if (!enabled) {
         return;
       }
@@ -990,7 +999,7 @@ function assertSuccessfulWebhookResult(
   assert.equal(result.eventId, expectedEventId, `${providerName} webhook eventId must be stable.`);
 }
 
-async function assertRejectsWithProblem(run: () => Promise<unknown>): Promise<Problem> {
+async function assertRejectsWithProblem(run: () => unknown | Promise<unknown>): Promise<Problem> {
   try {
     await run();
   } catch (error) {
@@ -1001,24 +1010,10 @@ async function assertRejectsWithProblem(run: () => Promise<unknown>): Promise<Pr
   assert.fail("Expected webhook failure to reject.");
 }
 
-async function assertThrowsProblem(run: () => unknown): Promise<Problem> {
-  try {
-    await run();
-  } catch (error) {
-    assert.ok(
-      error instanceof Problem,
-      "Expected billing capability failure to be a Croco Problem.",
-    );
-    return error;
-  }
-
-  assert.fail("Expected billing capability failure to throw.");
-}
-
 function assertUsageReceipts(
-  receipts: readonly { readonly eventId: string; readonly status: "inserted" | "duplicate" }[],
+  receipts: UsageBillingBatchReceipt["receipts"],
   events: readonly UsageBillingEvent[],
-  expected: Readonly<Record<string, "inserted" | "duplicate">>,
+  expected: Readonly<Record<string, UsageBillingEventReceipt["status"]>>,
   message: string,
 ): void {
   const eventIds = events.map(({ eventId }) => eventId);
@@ -1043,6 +1038,37 @@ function assertUsageReceipts(
     expected,
     message,
   );
+}
+
+async function assertUsageCustomerMeterState(
+  state: CustomerMeterState | null,
+  expected: Omit<CustomerMeterState, "updatedAt">,
+  options: UsageBillingGatewayConformanceOptions,
+  providerName: string,
+  previousUpdatedAt?: Date,
+): Promise<Date> {
+  assert.ok(state, `${providerName} must expose customer meter state after usage delivery.`);
+  assert.deepEqual(
+    {
+      billingAccountId: state.billingAccountId,
+      meterId: state.meterId,
+      value: state.value,
+    },
+    expected,
+    `${providerName} must return the provider-observed customer meter state`,
+  );
+  if (previousUpdatedAt) {
+    assert.ok(
+      state.updatedAt >= previousUpdatedAt,
+      `${providerName} must not move customer meter state updatedAt backwards for a replayed event.`,
+    );
+  }
+  await options.assertCustomerMeterStateUpdatedAt?.(state.updatedAt, {
+    expected,
+    ...(previousUpdatedAt === undefined ? {} : { previousUpdatedAt }),
+    providerName,
+  });
+  return state.updatedAt;
 }
 
 function assertProblemDoesNotExpose(problem: Problem, forbiddenValues: readonly string[]): void {

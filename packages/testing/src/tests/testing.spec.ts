@@ -65,6 +65,8 @@ import {
   TestingTransactionContext,
   type TestLogger,
   type UpstashRedisRateLimitConformanceScenario,
+  type UsageBillingRetryableFailureFixture,
+  type UsageBillingTerminalFailureFixture,
 } from "../index";
 import { createTestingRequest } from "../libs/testing";
 
@@ -240,23 +242,24 @@ class InMemoryUsageBillingGateway implements UsageBillingGateway {
   }
 }
 
-class FailingUsageBillingGateway extends InMemoryUsageBillingGateway {
-  constructor(
-    private readonly fixture: {
-      readonly kind: string;
-      readonly rawResponse: string;
-      readonly status?: number;
-      readonly upstreamCode?: string;
-    },
-  ) {
-    super();
-  }
+type FailingUsageBillingFixture =
+  | UsageBillingRetryableFailureFixture
+  | UsageBillingTerminalFailureFixture;
 
-  override async ingest(_events: readonly UsageBillingEvent[]): Promise<UsageBillingBatchReceipt> {
+const RETRYABLE_USAGE_BILLING_FAILURE_KINDS = new Set<FailingUsageBillingFixture["kind"]>([
+  "http-429",
+  "http-5xx",
+  "timeout",
+]);
+
+class FailingUsageBillingGateway implements UsageBillingGateway {
+  constructor(private readonly fixture: FailingUsageBillingFixture) {}
+
+  async ingest(_events: readonly UsageBillingEvent[]): Promise<UsageBillingBatchReceipt> {
     throw this.createProblem();
   }
 
-  override async getCustomerMeterState(_query: {
+  async getCustomerMeterState(_query: {
     readonly billingAccountId: string;
     readonly meterId: string;
   }): Promise<CustomerMeterState | null> {
@@ -265,11 +268,12 @@ class FailingUsageBillingGateway extends InMemoryUsageBillingGateway {
 
   private createProblem(): TestingUsageBillingProblem {
     return new TestingUsageBillingProblem(
-      this.fixture.kind === "http-429" ||
-        this.fixture.kind === "http-5xx" ||
-        this.fixture.kind === "timeout",
+      RETRYABLE_USAGE_BILLING_FAILURE_KINDS.has(this.fixture.kind),
       this.fixture.rawResponse,
-      this.fixture,
+      {
+        ...("status" in this.fixture ? { status: this.fixture.status } : {}),
+        ...("upstreamCode" in this.fixture ? { upstreamCode: this.fixture.upstreamCode } : {}),
+      },
     );
   }
 }
@@ -1839,7 +1843,6 @@ describe("@croco/testing", () => {
             customerMeterState: {
               billingAccountId: "tenant-conformance",
               meterId: "api-calls",
-              updatedAt: new Date("2026-01-31T00:00:00.000Z"),
               value: 8,
             },
           },
@@ -1847,39 +1850,75 @@ describe("@croco/testing", () => {
             http429: {
               createGateway: (fixture) => new FailingUsageBillingGateway(fixture),
               fixture: {
+                events: [
+                  {
+                    billingAccountId: "tenant-conformance",
+                    eventId: "usage-failure-429",
+                    meterId: "api-calls",
+                    occurredAt: new Date("2026-01-30T00:03:00.000Z"),
+                    value: 1,
+                  },
+                ],
                 expectedProblemCode: "testing/usage-billing-upstream-failed",
                 kind: "http-429",
                 rawResponse: "provider-response-429-should-not-leak",
                 status: 429,
               },
               forbiddenValues: ["provider-response-429-should-not-leak"],
-              run: (gateway) => gateway.ingest([]),
+              run: (gateway, fixture) => gateway.ingest(fixture.events),
             },
             http5xx: {
               createGateway: (fixture) => new FailingUsageBillingGateway(fixture),
               fixture: {
+                events: [
+                  {
+                    billingAccountId: "tenant-conformance",
+                    eventId: "usage-failure-5xx",
+                    meterId: "api-calls",
+                    occurredAt: new Date("2026-01-30T00:04:00.000Z"),
+                    value: 1,
+                  },
+                ],
                 expectedProblemCode: "testing/usage-billing-upstream-failed",
                 kind: "http-5xx",
                 rawResponse: "provider-response-5xx-should-not-leak",
                 status: 503,
               },
               forbiddenValues: ["provider-response-5xx-should-not-leak"],
-              run: (gateway) => gateway.ingest([]),
+              run: (gateway, fixture) => gateway.ingest(fixture.events),
             },
             timeout: {
               createGateway: (fixture) => new FailingUsageBillingGateway(fixture),
               fixture: {
+                events: [
+                  {
+                    billingAccountId: "tenant-conformance",
+                    eventId: "usage-failure-timeout",
+                    meterId: "api-calls",
+                    occurredAt: new Date("2026-01-30T00:05:00.000Z"),
+                    value: 1,
+                  },
+                ],
                 expectedProblemCode: "testing/usage-billing-upstream-failed",
                 kind: "timeout",
                 rawResponse: "provider-timeout-response-should-not-leak",
                 upstreamCode: "RequestTimeoutError",
               },
               forbiddenValues: ["provider-timeout-response-should-not-leak"],
-              run: (gateway) => gateway.ingest([]),
+              run: (gateway, fixture) => gateway.ingest(fixture.events),
             },
             invalidMeter: {
               createGateway: (fixture) => new FailingUsageBillingGateway(fixture),
               fixture: {
+                events: [
+                  {
+                    billingAccountId: "tenant-conformance",
+                    eventId: "usage-failure-invalid-meter",
+                    meterId: "invalid-meter",
+                    occurredAt: new Date("2026-01-30T00:06:00.000Z"),
+                    value: 1,
+                  },
+                ],
                 expectedProblemCode: "testing/usage-billing-upstream-failed",
                 kind: "invalid-meter",
                 rawResponse: "provider-invalid-meter-response-should-not-leak",
@@ -1894,6 +1933,15 @@ describe("@croco/testing", () => {
             invalidSchema: {
               createGateway: (fixture) => new FailingUsageBillingGateway(fixture),
               fixture: {
+                events: [
+                  {
+                    billingAccountId: "tenant-conformance",
+                    eventId: "usage-failure-invalid-schema",
+                    meterId: "api-calls",
+                    occurredAt: new Date("2026-01-30T00:07:00.000Z"),
+                    value: 1,
+                  },
+                ],
                 expectedProblemCode: "testing/usage-billing-upstream-failed",
                 kind: "invalid-schema",
                 rawResponse: "provider-invalid-schema-response-should-not-leak",

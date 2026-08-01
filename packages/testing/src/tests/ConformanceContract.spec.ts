@@ -465,7 +465,6 @@ describe("@croco/testing conformance public contract", () => {
           customerMeterState: {
             billingAccountId: "account_123",
             meterId: "api_calls",
-            updatedAt: new Date("2026-01-31T00:00:00.000Z"),
             value: 1,
           },
         },
@@ -474,6 +473,7 @@ describe("@croco/testing conformance public contract", () => {
             createGateway: unexecuted,
             forbiddenValues: ["raw-provider-response"],
             fixture: {
+              events: [],
               expectedProblemCode: "provider/retryable",
               kind: "http-429",
               rawResponse: "raw-provider-response",
@@ -485,6 +485,7 @@ describe("@croco/testing conformance public contract", () => {
             createGateway: unexecuted,
             forbiddenValues: ["raw-provider-response"],
             fixture: {
+              events: [],
               expectedProblemCode: "provider/retryable",
               kind: "http-5xx",
               rawResponse: "raw-provider-response",
@@ -496,6 +497,7 @@ describe("@croco/testing conformance public contract", () => {
             createGateway: unexecuted,
             forbiddenValues: ["raw-provider-response"],
             fixture: {
+              events: [],
               kind: "timeout",
               expectedProblemCode: "provider/retryable",
               rawResponse: "raw-provider-response",
@@ -507,6 +509,7 @@ describe("@croco/testing conformance public contract", () => {
             createGateway: unexecuted,
             forbiddenValues: ["raw-provider-response"],
             fixture: {
+              events: [],
               expectedProblemCode: "provider/terminal",
               kind: "invalid-meter",
               rawResponse: "raw-provider-response",
@@ -517,6 +520,7 @@ describe("@croco/testing conformance public contract", () => {
             createGateway: unexecuted,
             forbiddenValues: ["raw-provider-response"],
             fixture: {
+              events: [],
               expectedProblemCode: "provider/terminal",
               kind: "invalid-schema",
               rawResponse: "raw-provider-response",
@@ -609,6 +613,10 @@ describe("@croco/testing conformance public contract", () => {
     expect(Object.isFrozen(suite.manifest)).toBe(true);
     expect(Object.isFrozen(suite.manifest.caseNames)).toBe(true);
     expect(Object.isFrozen(suite.manifest.capabilityEvidence)).toBe(true);
+    for (const evidence of suite.manifest.capabilityEvidence) {
+      expect(Object.isFrozen(evidence)).toBe(true);
+      expect(Object.isFrozen(evidence.caseNames)).toBe(true);
+    }
   });
 
   it("records unavailable usage capability evidence separately", () => {
