@@ -1267,6 +1267,31 @@ describe.each(["spa-be-split", "saas", "ai-saas", "admin-console"])(
   },
 );
 
+describe("Generated application DI bootstrap validation", () => {
+  it("does not disable DI validation in shipped templates", () => {
+    const files = readdirSync(TEMPLATES_DIR, { recursive: true, withFileTypes: true }).filter(
+      (entry) => entry.isFile(),
+    );
+
+    for (const file of files) {
+      const fullPath = join(file.parentPath, file.name);
+      const content = readFileSync(fullPath, "utf-8");
+
+      expect(content, `DI validation disabled in ${fullPath}`).not.toMatch(
+        /diValidation\s*:\s*["']off["']/,
+      );
+    }
+  });
+
+  it("keeps a deterministic missing-provider diagnostic fixture", () => {
+    checkFileContains(
+      "spa-be-split",
+      ["apps", "api-server", "src", "tests", "app.spec.ts"],
+      /code:\s*"transports-http\/di-missing-provider"/,
+    );
+  });
+});
+
 describe.each(["ssr-lambda", "container-fullstack"])("Compatibility fixture: %s", (template) => {
   it("should have required structure", () => {
     if (template === "ssr-lambda") {

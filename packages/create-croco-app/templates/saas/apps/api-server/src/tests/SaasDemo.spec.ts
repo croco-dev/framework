@@ -1,13 +1,12 @@
-import type { CheckoutResult } from "@croco/billing-core";
-import { InMemoryIdempotencyStore } from "@croco/idempotency-core";
-import {
-  DuplicateRecordProblem,
-  IdempotencyManager,
-  type PendingMeteringDelivery,
-} from "@croco/metering-core";
-import { createTestKernel } from "@croco/testing";
 import { Container } from "typedi";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import type { CheckoutResult } from "@croco/billing-core";
+import { Container as CrocoContainer, LOGGER_TOKEN } from "@croco/framework-context";
+import type { ILogger } from "@croco/framework-context";
+import { InMemoryIdempotencyStore } from "@croco/idempotency-core";
+import { DuplicateRecordProblem, IdempotencyManager } from "@croco/metering-core";
+import type { PendingMeteringDelivery } from "@croco/metering-core";
 import { createCrocoApp } from "../app";
 import { JobsController } from "../controllers/JobsController";
 import { assertDemoEndpointsEnabled, SaasController } from "../controllers/SaasController";
@@ -115,23 +114,47 @@ describe("SaaS golden path demo", () => {
     expect(distinct.checkoutUrl).not.toBe(first.checkoutUrl);
   });
 
-  it("boots application-fidelity tests through the exported production bootstrap", async () => {
-    await using kernel = await createTestKernel({
-      bootstrap: createCrocoApp,
-      fidelity: "application",
-      // The template production bootstrap intentionally configures diValidation: "off".
-      validation: { di: "off" },
-    });
+  it("boots through the exported production bootstrap with documented DI validation", async () => {
+    const previousNodeEnv = process.env.NODE_ENV;
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    process.env.NODE_ENV = "production";
 
-    const response = await kernel.http.get("/health");
+    try {
+      const app = createCrocoApp();
+      const response = await app.fetch(new Request("http://localhost/health"));
 
-    expect(response.status).toBe(200);
-    expect(kernel.app).toBeDefined();
-    expect(kernel.fidelity).toEqual({
-      boot: "application",
-      runtime: "node",
-      validation: "overridden",
-    });
+      expect(response.status).toBe(200);
+      expect(app.describeBootstrapValidationPolicy()).toEqual({
+        di: "warn",
+        security: "enforce",
+      });
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining("DI bootstrap validation failed"));
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining("Register the missing provider(s)"),
+      );
+    } finally {
+      if (previousNodeEnv === undefined) {
+        delete process.env.NODE_ENV;
+      } else {
+        process.env.NODE_ENV = previousNodeEnv;
+      }
+      warn.mockRestore();
+    }
+  });
+
+  it("preserves a caller-provided bootstrap logger", () => {
+    const logger: ILogger = {
+      child: () => logger,
+      debug: vi.fn(),
+      error: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+    };
+    CrocoContainer.set(LOGGER_TOKEN, logger);
+
+    createCrocoApp();
+
+    expect(CrocoContainer.get(LOGGER_TOKEN)).toBe(logger);
   });
 
   it("creates tenant and owner membership", async () => {

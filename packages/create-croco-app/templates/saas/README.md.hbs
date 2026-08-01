@@ -25,6 +25,8 @@ pnpm failure-drill:smoke
 `ops:smoke`는 diagnostics를 token mode로 켜고 unauthenticated 요청이 `403`으로 거부되는지 확인한 뒤, `croco ops check` contract로 `/health`, `/ready`, `/diagnostics`를 검증합니다.
 `failure-drill:smoke`는 기존 credential-free failure catalog와 함께 provider 환경 누락, telemetry exporter 장애, DI provider/scope 오류, route validation, rate limit, auth verifier 장애, webhook signature 오류를 실제 public boundary에서 실행합니다. 각 drill은 안정적인 Problem/diagnostic code, response shape, provenance, recovery action이 없으면 실패하며 deterministic 결과를 `ci-reports/failure-drills/operational.json`, `ci-reports/failure-drills/operational.md`에 기록합니다.
 
+API bootstrap은 DI validation을 `warn`으로 켭니다. 이 preset은 선택한 provider profile을 수동 조립하지만 domain package barrel이 선택되지 않은 optional `@Component`도 등록하므로 전체-container `enforce`는 해당 optional provider까지 요구합니다. 부팅 경고와 `pnpm di:verify`의 root 기반 manifest를 함께 확인하고, production composition이 모든 등록 component를 제공하는 경우 `apps/api-server/src/app.ts`에서 `enforce`로 올리세요.
+
 ## Usage Dashboard
 
 ```bash

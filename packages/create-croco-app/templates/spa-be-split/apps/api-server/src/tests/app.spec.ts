@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import { Component } from "@croco/framework-context";
 import type { Guard } from "@croco/framework-context";
 import { Controller, Get, UseGuards } from "@croco/protocols-rest";
 import type { ExecutionContext } from "@croco/protocols-rest";
@@ -7,16 +8,26 @@ import { getUserAuditEntries, resetUserRuntimeForTests } from "../users";
 
 const protectedRouteToken = "generated-smoke-token";
 
+@Component()
 class ProtectedRouteGuard implements Guard<ExecutionContext> {
   canActivate(context: ExecutionContext): boolean {
     return context.getRequest().headers.get("authorization") === `Bearer ${protectedRouteToken}`;
   }
 }
 
+@Component()
 @Controller("/protected-smoke")
 class ProtectedSmokeController {
   @Get()
   @UseGuards(ProtectedRouteGuard)
+  read() {
+    return { ok: true };
+  }
+}
+
+@Controller("/missing-provider-smoke")
+class MissingProviderController {
+  @Get()
   read() {
     return { ok: true };
   }
@@ -101,5 +112,40 @@ describe("API server", () => {
     );
     expect(allowed.status).toBe(200);
     expect(allowedBody).toEqual({ ok: true });
+  });
+
+  it("reports an unregistered template provider during bootstrap", () => {
+    const previousDiValidation = process.env.CROCO_HTTP_DI_VALIDATION;
+    process.env.CROCO_HTTP_DI_VALIDATION = "enforce";
+
+    try {
+      const app = createCrocoApp({ extraControllers: [MissingProviderController] });
+
+      let error: unknown;
+      try {
+        app.lambdaHandler();
+      } catch (caught) {
+        error = caught;
+      }
+
+      expect(error).toMatchObject({
+        code: "transports-http/di-bootstrap-validation",
+        extensions: {
+          diagnostics: expect.arrayContaining([
+            expect.objectContaining({
+              code: "transports-http/di-missing-provider",
+              provider: "MissingProviderController",
+              usages: ["controller MissingProviderController"],
+            }),
+          ]),
+        },
+      });
+    } finally {
+      if (previousDiValidation === undefined) {
+        delete process.env.CROCO_HTTP_DI_VALIDATION;
+      } else {
+        process.env.CROCO_HTTP_DI_VALIDATION = previousDiValidation;
+      }
+    }
   });
 });

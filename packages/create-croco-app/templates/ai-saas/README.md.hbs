@@ -88,6 +88,8 @@ pnpm demo:smoke
 
 `pnpm demo:smoke` runs the base SaaS demo, operational smoke checks, and the AI SaaS smoke flow. `pnpm ai:smoke` runs only the AI portion.
 
+The API bootstrap keeps DI validation enabled in `warn` mode. This preset manually composes the selected provider profile, while domain package barrels also register optional `@Component` classes that are not part of that runtime. Review bootstrap diagnostics and the root-based `pnpm di:verify` manifest together; switch `apps/api-server/src/app.ts` to `enforce` once the production composition supplies every registered component.
+
 Intentional API contract changes should update `contract-graph.snapshot.json` with `pnpm contract:snapshot`, then update and commit the Project Map, manifest bundle, `openapi.json`, and provider-rpc client with `pnpm codegen`. CI should run `pnpm contract:verify` or `pnpm ci:contracts`; it checks these committed artifacts without rewriting them. Commit `contract-graph.coverage.json` only when audit artifacts need it.
 Run `pnpm di:graph` when intentionally regenerating the DI graph. `pnpm di:verify` validates the existing DI graph and Project Map artifacts without rewriting them, asserts required manifest fields, and runs `croco doctor --json`.
 
