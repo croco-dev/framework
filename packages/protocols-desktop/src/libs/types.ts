@@ -1,5 +1,80 @@
 export type DesktopCommandKind = "query" | "mutation";
 
+declare const DESKTOP_GRANT_REFERENCE: unique symbol;
+
+export type DesktopGrantResourceKind = "file" | "directory";
+export type DesktopGrantAccess = "read" | "write";
+export type DesktopGrantScope = "exact" | "descendant";
+export type DesktopGrantLifetime = "command" | "window" | "session";
+type DesktopGrantScopeFor<TResource extends DesktopGrantResourceKind> = TResource extends "file"
+  ? "exact"
+  : DesktopGrantScope;
+
+/**
+ * A renderer-visible reference to a resource authorized by the desktop runtime.
+ *
+ * This intentionally brands a token rather than a filesystem path. Token issuance,
+ * redemption, and path validation belong to the desktop runtime.
+ */
+export type DesktopGrantReference<
+  TResource extends DesktopGrantResourceKind = DesktopGrantResourceKind,
+  TAccess extends DesktopGrantAccess = DesktopGrantAccess,
+  TScope extends DesktopGrantScopeFor<TResource> = DesktopGrantScopeFor<TResource>,
+  TLifetime extends DesktopGrantLifetime = DesktopGrantLifetime,
+> = string & {
+  readonly [DESKTOP_GRANT_REFERENCE]: {
+    readonly resource: TResource;
+    readonly access: TAccess;
+    readonly scope: TScope;
+    readonly lifetime: TLifetime;
+  };
+};
+
+export type DesktopGrantDefinition<
+  TResource extends DesktopGrantResourceKind = DesktopGrantResourceKind,
+  TAccess extends DesktopGrantAccess = DesktopGrantAccess,
+  TScope extends DesktopGrantScopeFor<TResource> = DesktopGrantScopeFor<TResource>,
+  TLifetime extends DesktopGrantLifetime = DesktopGrantLifetime,
+> = {
+  readonly definitionType: "grant";
+  readonly resource: TResource;
+  readonly access: TAccess;
+  readonly scope: TScope;
+  readonly lifetime: TLifetime;
+  readonly "~standard": {
+    readonly version: 1;
+    readonly vendor: "@croco/protocols-desktop";
+    readonly validate: (
+      value: unknown,
+    ) =>
+      | { readonly value: DesktopGrantReference<TResource, TAccess, TScope, TLifetime> }
+      | { readonly issues: readonly { readonly message: string }[] };
+    readonly types?: {
+      readonly input: DesktopGrantReference<TResource, TAccess, TScope, TLifetime>;
+      readonly output: DesktopGrantReference<TResource, TAccess, TScope, TLifetime>;
+    };
+  };
+};
+
+export type DesktopFileGrantOptions<
+  TAccess extends DesktopGrantAccess,
+  TLifetime extends DesktopGrantLifetime,
+> = {
+  readonly access: TAccess;
+  readonly scope: "exact";
+  readonly lifetime: TLifetime;
+};
+
+export type DesktopDirectoryGrantOptions<
+  TAccess extends DesktopGrantAccess,
+  TScope extends DesktopGrantScope,
+  TLifetime extends DesktopGrantLifetime,
+> = {
+  readonly access: TAccess;
+  readonly scope: TScope;
+  readonly lifetime: TLifetime;
+};
+
 export type DesktopQueryDefinition<TInputSchema = unknown, TOutputSchema = unknown> = {
   readonly definitionType: "command";
   readonly kind: "query";
@@ -26,32 +101,46 @@ export type DesktopEventDefinition<TPayloadSchema = unknown> = {
 
 export type AnyDesktopCommand = DesktopCommandDefinition<unknown, unknown>;
 export type AnyDesktopEvent = DesktopEventDefinition<unknown>;
+export type AnyDesktopGrant = DesktopGrantDefinition;
 export type DesktopCommandRecord = Readonly<Record<string, AnyDesktopCommand>>;
 export type DesktopEventRecord = Readonly<Record<string, AnyDesktopEvent>>;
+export type DesktopGrantRecord = Readonly<Record<string, AnyDesktopGrant>>;
 
 export type DesktopContractMemberMetadata = {
   readonly key: string;
-  readonly kind: DesktopCommandKind | "event";
+  readonly kind: DesktopCommandKind | "event" | "grant";
+};
+
+export type DesktopGrantMetadata = {
+  readonly key: string;
+  readonly resource: DesktopGrantResourceKind;
+  readonly access: DesktopGrantAccess;
+  readonly scope: DesktopGrantScope;
+  readonly lifetime: DesktopGrantLifetime;
 };
 
 export type DesktopContractMetadata = {
   readonly schema: "croco.desktop-contract-definition.v1";
   readonly members: readonly DesktopContractMemberMetadata[];
+  readonly grants: readonly DesktopGrantMetadata[];
 };
 
 export type DesktopContractDefinition<
   TCommands extends DesktopCommandRecord = DesktopCommandRecord,
   TEvents extends DesktopEventRecord = DesktopEventRecord,
+  TGrants extends DesktopGrantRecord = DesktopGrantRecord,
 > = {
   readonly definitionType: "contract";
   readonly commands: KeyedDesktopCommands<TCommands>;
   readonly events: KeyedDesktopEvents<TEvents>;
+  readonly grants: KeyedDesktopGrants<TGrants>;
   readonly metadata: DesktopContractMetadata;
 };
 
 export type AnyDesktopContract = DesktopContractDefinition<
   DesktopCommandRecord,
-  DesktopEventRecord
+  DesktopEventRecord,
+  DesktopGrantRecord
 >;
 export type DesktopContractRecord = Readonly<Record<string, AnyDesktopContract>>;
 
@@ -91,8 +180,9 @@ export type DesktopAppContractMetadata = {
   readonly members: readonly {
     readonly id: string;
     readonly key: string;
-    readonly kind: DesktopCommandKind | "event";
+    readonly kind: DesktopCommandKind | "event" | "grant";
   }[];
+  readonly grants: readonly (DesktopGrantMetadata & { readonly id: string })[];
 };
 
 export type DesktopLocalWindowMetadata = {
@@ -157,13 +247,30 @@ export type InferDesktopEventPayload<TEvent> =
     : never;
 
 export type InferDesktopContractCommands<TContract> =
-  TContract extends DesktopContractDefinition<infer TCommands, DesktopEventRecord>
+  TContract extends DesktopContractDefinition<
+    infer TCommands,
+    DesktopEventRecord,
+    DesktopGrantRecord
+  >
     ? KeyedDesktopCommands<TCommands>
     : never;
 
 export type InferDesktopContractEvents<TContract> =
-  TContract extends DesktopContractDefinition<DesktopCommandRecord, infer TEvents>
+  TContract extends DesktopContractDefinition<
+    DesktopCommandRecord,
+    infer TEvents,
+    DesktopGrantRecord
+  >
     ? KeyedDesktopEvents<TEvents>
+    : never;
+
+export type InferDesktopContractGrants<TContract> =
+  TContract extends DesktopContractDefinition<
+    DesktopCommandRecord,
+    DesktopEventRecord,
+    infer TGrants
+  >
+    ? KeyedDesktopGrants<TGrants>
     : never;
 
 export type InferDesktopAppContracts<TApp> = TApp extends {
@@ -237,6 +344,13 @@ export type KeyedDesktopEvent<
   readonly memberKey: TKey;
 };
 
+export type KeyedDesktopGrant<
+  TGrant extends AnyDesktopGrant = AnyDesktopGrant,
+  TKey extends string = string,
+> = TGrant & {
+  readonly memberKey: TKey;
+};
+
 export type BoundDesktopCommand<
   TCommand extends KeyedDesktopCommand = KeyedDesktopCommand,
   TContractKey extends string = string,
@@ -251,6 +365,15 @@ export type BoundDesktopEvent<
   TContractKey extends string = string,
   TMemberKey extends string = TEvent["memberKey"],
 > = TEvent & {
+  readonly contractKey: TContractKey;
+  readonly id: `${TContractKey}.${TMemberKey}`;
+};
+
+export type BoundDesktopGrant<
+  TGrant extends KeyedDesktopGrant = KeyedDesktopGrant,
+  TContractKey extends string = string,
+  TMemberKey extends string = TGrant["memberKey"],
+> = TGrant & {
   readonly contractKey: TContractKey;
   readonly id: `${TContractKey}.${TMemberKey}`;
 };
@@ -271,6 +394,13 @@ export type BoundDesktopContract<
   readonly events: {
     readonly [TMemberKey in keyof TContract["events"] & string]: BoundDesktopEvent<
       TContract["events"][TMemberKey],
+      TContractKey,
+      TMemberKey
+    >;
+  };
+  readonly grants: {
+    readonly [TMemberKey in keyof TContract["grants"] & string]: BoundDesktopGrant<
+      TContract["grants"][TMemberKey],
       TContractKey,
       TMemberKey
     >;
@@ -358,12 +488,18 @@ type KeyedDesktopEvents<TEvents extends DesktopEventRecord> = {
   readonly [TKey in keyof TEvents & string]: KeyedDesktopEvent<TEvents[TKey], TKey>;
 };
 
+type KeyedDesktopGrants<TGrants extends DesktopGrantRecord> = {
+  readonly [TKey in keyof TGrants & string]: KeyedDesktopGrant<TGrants[TKey], TKey>;
+};
+
 export type DesktopContractOptions<
   TCommands extends DesktopCommandRecord,
   TEvents extends DesktopEventRecord,
+  TGrants extends DesktopGrantRecord,
 > = {
   readonly commands?: TCommands;
   readonly events?: TEvents;
+  readonly grants?: TGrants;
 };
 
 export type DesktopAppOptions<

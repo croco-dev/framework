@@ -20080,6 +20080,11 @@
               "source": "./libs/types"
             },
             {
+              "name": "AnyDesktopGrant",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
               "name": "AnyDesktopWindow",
               "exportKind": "named",
               "source": "./libs/types"
@@ -20101,6 +20106,11 @@
             },
             {
               "name": "BoundDesktopEvent",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "BoundDesktopGrant",
               "exportKind": "named",
               "source": "./libs/types"
             },
@@ -20195,6 +20205,11 @@
               "source": "./libs/DesktopDefinitionProblem"
             },
             {
+              "name": "DesktopDirectoryGrantOptions",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
               "name": "DesktopEventDefinition",
               "exportKind": "named",
               "source": "./libs/types"
@@ -20206,6 +20221,51 @@
             },
             {
               "name": "DesktopEventRecord",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopFileGrantOptions",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopGrantAccess",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopGrantDefinition",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopGrantLifetime",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopGrantMetadata",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopGrantRecord",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopGrantReference",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopGrantResourceKind",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopGrantScope",
               "exportKind": "named",
               "source": "./libs/types"
             },
@@ -20345,6 +20405,11 @@
               "source": "./libs/types"
             },
             {
+              "name": "InferDesktopContractGrants",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
               "name": "InferDesktopEventPayload",
               "exportKind": "named",
               "source": "./libs/types"
@@ -20361,6 +20426,11 @@
             },
             {
               "name": "KeyedDesktopEvent",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "KeyedDesktopGrant",
               "exportKind": "named",
               "source": "./libs/types"
             },

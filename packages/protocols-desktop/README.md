@@ -81,6 +81,42 @@ Every mounted contract and command needs a handler. Unknown contract, command, a
 typecheck, and each handler must return the declared output (or a promise of it). The API derives IDs from the app
 definition, so no handler string ID or IPC channel is supplied.
 
+## Declare opaque resource grants
+
+Resource grants model authority without placing a filesystem path in a renderer-facing command type. A grant is a
+Standard Schema-compatible input declaration: its inferred value is an opaque branded token, and its definition
+records the permitted resource kind, access, scope, and lifetime. File grants are exact-resource only; directory
+grants may use exact or descendant scope.
+
+```typescript
+const selectedFile = desktop.grant.file({
+  access: "read",
+  scope: "exact",
+  lifetime: "command",
+});
+const workspace = desktop.grant.directory({
+  access: "write",
+  scope: "descendant",
+  lifetime: "session",
+});
+
+const project = desktop.contract({
+  grants: { selectedFile, workspace },
+  commands: {
+    read: desktop.query({ input: selectedFile, output: z.object({ contents: z.string() }) }),
+    save: desktop.mutation({ input: workspace, output: z.object({ saved: z.boolean() }) }),
+  },
+});
+
+const app = desktop.app({ contracts: { project }, windows: {} });
+
+app.contracts.project.grants.selectedFile.id; // "project.selectedFile"
+```
+
+Grant IDs are derived from the mounted contract and grant member keys, never supplied by the renderer. The
+deterministic contract and app metadata preserve the serialized grant policy for the future compiler and runtime;
+this package does not issue, redeem, or validate tokens and never accepts a filesystem path as a grant reference.
+
 ## Compile and validate DesktopWire schemas
 
 `compileDesktopWireSchema(schema, context)` compiles strict objects, strings, finite numbers, booleans, null,

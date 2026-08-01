@@ -4,6 +4,7 @@ import type {
   AnyDesktopCommand,
   AnyDesktopContract,
   AnyDesktopEvent,
+  AnyDesktopGrant,
   AnyDesktopWindow,
   BoundDesktopContract,
   DesktopAppContractMetadata,
@@ -17,6 +18,14 @@ import type {
   DesktopEventDefinition,
   DesktopEventOptions,
   DesktopEventRecord,
+  DesktopFileGrantOptions,
+  DesktopGrantAccess,
+  DesktopGrantDefinition,
+  DesktopGrantLifetime,
+  DesktopGrantMetadata,
+  DesktopGrantRecord,
+  DesktopGrantScope,
+  DesktopDirectoryGrantOptions,
   DesktopLocalWindowDefinition,
   DesktopLocalWindowMetadata,
   DesktopLocalWindowOptions,
@@ -31,6 +40,7 @@ import type {
   DesktopWindowRecord,
   KeyedDesktopCommand,
   KeyedDesktopEvent,
+  KeyedDesktopGrant,
   ReservedDesktopKey,
 } from "./types";
 
@@ -55,17 +65,27 @@ type NoInvalidKeys<TRecord> =
 type NoDuplicateMembers<
   TCommands extends DesktopCommandRecord,
   TEvents extends DesktopEventRecord,
+  TGrants extends DesktopGrantRecord,
 > =
-  Extract<keyof TCommands, keyof TEvents> extends never
-    ? unknown
-    : {
-        readonly __duplicateDesktopMembers__: Extract<keyof TCommands, keyof TEvents>;
-      };
+  | Extract<keyof TCommands, keyof TEvents>
+  | Extract<keyof TCommands, keyof TGrants>
+  | Extract<keyof TEvents, keyof TGrants> extends never
+  ? unknown
+  : {
+      readonly __duplicateDesktopMembers__:
+        | Extract<keyof TCommands, keyof TEvents>
+        | Extract<keyof TCommands, keyof TGrants>
+        | Extract<keyof TEvents, keyof TGrants>;
+    };
 
 type ValidContractOptions<
   TCommands extends DesktopCommandRecord,
   TEvents extends DesktopEventRecord,
-> = NoInvalidKeys<TCommands> & NoInvalidKeys<TEvents> & NoDuplicateMembers<TCommands, TEvents>;
+  TGrants extends DesktopGrantRecord,
+> = NoInvalidKeys<TCommands> &
+  NoInvalidKeys<TEvents> &
+  NoInvalidKeys<TGrants> &
+  NoDuplicateMembers<TCommands, TEvents, TGrants>;
 
 type ValidAppOptions<
   TContracts extends Readonly<Record<string, AnyDesktopContract>>,
@@ -104,17 +124,73 @@ function event<const TPayloadSchema>(
   };
 }
 
+function file<
+  const TAccess extends DesktopGrantAccess,
+  const TLifetime extends DesktopGrantLifetime,
+>(
+  options: DesktopFileGrantOptions<TAccess, TLifetime>,
+): DesktopGrantDefinition<"file", TAccess, "exact", TLifetime> {
+  return createGrantDefinition("file", options);
+}
+
+function directory<
+  const TAccess extends DesktopGrantAccess,
+  const TScope extends DesktopGrantScope,
+  const TLifetime extends DesktopGrantLifetime,
+>(
+  options: DesktopDirectoryGrantOptions<TAccess, TScope, TLifetime>,
+): DesktopGrantDefinition<"directory", TAccess, TScope, TLifetime> {
+  return createGrantDefinition("directory", options);
+}
+
+function createGrantDefinition<
+  const TResource extends "file" | "directory",
+  const TAccess extends DesktopGrantAccess,
+  const TScope extends TResource extends "file" ? "exact" : DesktopGrantScope,
+  const TLifetime extends DesktopGrantLifetime,
+>(
+  resource: TResource,
+  options: {
+    readonly access: TAccess;
+    readonly scope: TScope;
+    readonly lifetime: TLifetime;
+  },
+): DesktopGrantDefinition<TResource, TAccess, TScope, TLifetime> {
+  return {
+    definitionType: "grant",
+    resource,
+    access: options.access,
+    scope: options.scope,
+    lifetime: options.lifetime,
+    "~standard": {
+      version: 1,
+      vendor: "@croco/protocols-desktop",
+      validate: () => ({
+        issues: [
+          {
+            message: "Desktop resource grant references must be validated by the desktop runtime.",
+          },
+        ],
+      }),
+    },
+  };
+}
+
 function contract<
   const TCommands extends DesktopCommandRecord = Record<never, never>,
   const TEvents extends DesktopEventRecord = Record<never, never>,
+  const TGrants extends DesktopGrantRecord = Record<never, never>,
 >(
-  options: DesktopContractOptions<TCommands, TEvents> & ValidContractOptions<TCommands, TEvents>,
-): DesktopContractDefinition<TCommands, TEvents> {
+  options: DesktopContractOptions<TCommands, TEvents, TGrants> &
+    ValidContractOptions<TCommands, TEvents, TGrants>,
+): DesktopContractDefinition<TCommands, TEvents, TGrants> {
   assertValidKeys(options.commands ?? {});
   assertValidKeys(options.events ?? {});
-  assertNoDuplicateMembers(options.commands ?? {}, options.events ?? {});
+  assertValidKeys(options.grants ?? {});
+  assertNoDuplicateMembers(options.commands ?? {}, options.events ?? {}, options.grants ?? {});
   const commands = mapMembers(options.commands ?? {}, "command");
   const events = mapMembers(options.events ?? {}, "event");
+  const grants = mapGrants(options.grants ?? {});
   const members = [
     ...Object.values(commands).map((command) => ({
       key: command.memberKey,
@@ -124,17 +200,22 @@ function contract<
       key: definedEvent.memberKey,
       kind: definedEvent.kind,
     })),
+    ...Object.values(grants).map((grant) => ({ key: grant.memberKey, kind: "grant" as const })),
   ].sort(compareMemberMetadata);
 
   return {
     definitionType: "contract",
     commands,
     events,
+    grants,
     metadata: {
       schema: "croco.desktop-contract-definition.v1",
       members,
+      grants: Object.values(grants)
+        .map((grant) => createGrantMetadata(grant))
+        .sort((left, right) => compareCodeUnits(left.key, right.key)),
     },
-  } as unknown as DesktopContractDefinition<TCommands, TEvents>;
+  } as unknown as DesktopContractDefinition<TCommands, TEvents, TGrants>;
 }
 
 function local<
@@ -215,6 +296,17 @@ function mapMembers(
   );
 }
 
+function mapGrants(
+  grants: Readonly<Record<string, AnyDesktopGrant>>,
+): Record<string, KeyedDesktopGrant> {
+  return Object.fromEntries(
+    Object.entries(grants).map(([memberKey, definition]) => [
+      memberKey,
+      { ...definition, memberKey },
+    ]),
+  );
+}
+
 function assertValidKeys(record: Readonly<Record<string, unknown>>): void {
   for (const key of Object.keys(record)) {
     if (key.length === 0 || key.includes(".") || isReservedDesktopKey(key)) {
@@ -229,13 +321,18 @@ function assertValidKeys(record: Readonly<Record<string, unknown>>): void {
 function assertNoDuplicateMembers(
   commands: Readonly<Record<string, unknown>>,
   events: Readonly<Record<string, unknown>>,
+  grants: Readonly<Record<string, unknown>>,
 ): void {
-  for (const key of Object.keys(commands)) {
-    if (Object.prototype.hasOwnProperty.call(events, key)) {
-      throw new DesktopDefinitionProblem(
-        "DESKTOP_DUPLICATE_MEMBER_KEY",
-        `Desktop member key "${key}" cannot be both a command and an event.`,
-      );
+  const seen = new Set<string>();
+  for (const members of [commands, events, grants]) {
+    for (const key of Object.keys(members)) {
+      if (seen.has(key)) {
+        throw new DesktopDefinitionProblem(
+          "DESKTOP_DUPLICATE_MEMBER_KEY",
+          `Desktop member key "${key}" cannot be defined more than once.`,
+        );
+      }
+      seen.add(key);
     }
   }
 }
@@ -289,12 +386,23 @@ function bindContract(
       return [memberKey, boundDefinition];
     }),
   );
+  const grants = Object.fromEntries(
+    Object.entries(contractDefinition.grants).map(([memberKey, definition]) => [
+      memberKey,
+      {
+        ...definition,
+        contractKey,
+        id: `${contractKey}.${memberKey}`,
+      },
+    ]),
+  );
 
   return {
     definitionType: "contract",
     contractKey,
     commands,
     events,
+    grants,
     metadata: contractDefinition.metadata,
   } as BoundDesktopContract<AnyDesktopContract, string>;
 }
@@ -385,7 +493,29 @@ function createContractMetadata(
         key: definedEvent.memberKey,
         kind: definedEvent.kind,
       })),
+      ...Object.values(definition.grants).map((grant) => ({
+        id: grant.id,
+        key: grant.memberKey,
+        kind: "grant" as const,
+      })),
     ].sort(compareMemberMetadata),
+    grants: Object.values(definition.grants)
+      .map((grant) => ({ ...createGrantMetadata(grant), id: grant.id }))
+      .sort((left, right) => compareCodeUnits(left.key, right.key)),
+  };
+}
+
+function createGrantMetadata(
+  grant: Pick<DesktopGrantDefinition, "resource" | "access" | "scope" | "lifetime"> & {
+    readonly memberKey: string;
+  },
+): DesktopGrantMetadata {
+  return {
+    key: grant.memberKey,
+    resource: grant.resource,
+    access: grant.access,
+    scope: grant.scope,
+    lifetime: grant.lifetime,
   };
 }
 
@@ -431,6 +561,10 @@ export const desktop = {
   app,
   contract,
   event,
+  grant: {
+    directory,
+    file,
+  },
   mutation,
   query,
   window: {

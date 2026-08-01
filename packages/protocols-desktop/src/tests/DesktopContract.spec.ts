@@ -95,6 +95,7 @@ describe("desktop contract DSL", () => {
         {
           key: "project",
           members: [{ id: "project.open", key: "open", kind: "mutation" }],
+          grants: [],
         },
         {
           key: "system",
@@ -102,6 +103,7 @@ describe("desktop contract DSL", () => {
             { id: "system.ready", key: "ready", kind: "event" },
             { id: "system.status", key: "status", kind: "query" },
           ],
+          grants: [],
         },
       ],
       windows: [
@@ -175,6 +177,79 @@ describe("desktop contract DSL", () => {
     expect("id" in main.expose[0]).toBe(false);
     expect(first.contracts.project.commands.read.id).toBe("project.read");
     expect(second.contracts.workspace.commands.read.id).toBe("workspace.read");
+  });
+
+  it("binds opaque resource grants with deterministic metadata", () => {
+    const selectedFile = desktop.grant.file({
+      access: "read",
+      scope: "exact",
+      lifetime: "command",
+    });
+    const workspace = desktop.grant.directory({
+      access: "write",
+      scope: "descendant",
+      lifetime: "session",
+    });
+    const project = desktop.contract({
+      grants: { workspace, selectedFile },
+      commands: {
+        read: desktop.query({ input: selectedFile, output: z.object({ contents: z.string() }) }),
+        save: desktop.mutation({ input: workspace, output: z.object({ saved: z.boolean() }) }),
+      },
+    });
+
+    const definition = desktop.app({
+      contracts: { project },
+      windows: {},
+    });
+
+    expect(definition.contracts.project.grants.selectedFile.id).toBe("project.selectedFile");
+    expect(definition.contracts.project.grants.workspace.id).toBe("project.workspace");
+    expect(definition.metadata.contracts).toEqual([
+      {
+        key: "project",
+        members: [
+          { id: "project.read", key: "read", kind: "query" },
+          { id: "project.save", key: "save", kind: "mutation" },
+          { id: "project.selectedFile", key: "selectedFile", kind: "grant" },
+          { id: "project.workspace", key: "workspace", kind: "grant" },
+        ],
+        grants: [
+          {
+            id: "project.selectedFile",
+            key: "selectedFile",
+            resource: "file",
+            access: "read",
+            scope: "exact",
+            lifetime: "command",
+          },
+          {
+            id: "project.workspace",
+            key: "workspace",
+            resource: "directory",
+            access: "write",
+            scope: "descendant",
+            lifetime: "session",
+          },
+        ],
+      },
+    ]);
+    expect(project.metadata.grants).toEqual([
+      {
+        key: "selectedFile",
+        resource: "file",
+        access: "read",
+        scope: "exact",
+        lifetime: "command",
+      },
+      {
+        key: "workspace",
+        resource: "directory",
+        access: "write",
+        scope: "descendant",
+        lifetime: "session",
+      },
+    ]);
   });
 
   it("rejects ambiguous references when one contract is mounted under multiple keys", () => {
@@ -306,6 +381,27 @@ describe("desktop contract DSL", () => {
         },
         events: {
           duplicate: desktop.event({ payload: z.string() }),
+        },
+      } as never),
+    ).toThrowError(
+      expect.objectContaining({
+        code: "DESKTOP_DUPLICATE_MEMBER_KEY",
+      }),
+    );
+  });
+
+  it("rejects duplicate grant keys across the contract member namespace", () => {
+    expect(() =>
+      desktop.contract({
+        commands: {
+          selectedFile: desktop.query({ input: z.string(), output: z.string() }),
+        },
+        grants: {
+          selectedFile: desktop.grant.file({
+            access: "read",
+            scope: "exact",
+            lifetime: "command",
+          }),
         },
       } as never),
     ).toThrowError(
