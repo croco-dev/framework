@@ -1,0 +1,92 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`DesktopWireSchema > compiles every supported category into one deterministic descriptor 1`] = `
+{
+  "fields": [
+    {
+      "name": "literal",
+      "required": true,
+      "schema": {
+        "kind": "literal",
+        "value": null,
+      },
+    },
+    {
+      "name": "nested",
+      "required": true,
+      "schema": {
+        "fields": [
+          {
+            "name": "count",
+            "required": true,
+            "schema": {
+              "kind": "number",
+            },
+          },
+          {
+            "name": "enabled",
+            "required": true,
+            "schema": {
+              "kind": "boolean",
+            },
+          },
+        ],
+        "kind": "object",
+        "unknownKeys": "reject",
+      },
+    },
+    {
+      "name": "nullable",
+      "required": true,
+      "schema": {
+        "inner": {
+          "kind": "boolean",
+        },
+        "kind": "nullable",
+      },
+    },
+    {
+      "name": "status",
+      "required": true,
+      "schema": {
+        "kind": "enum",
+        "values": [
+          "pending",
+          "ready",
+        ],
+      },
+    },
+    {
+      "name": "tags",
+      "required": false,
+      "schema": {
+        "inner": {
+          "element": {
+            "kind": "string",
+          },
+          "kind": "array",
+        },
+        "kind": "optional",
+      },
+    },
+    {
+      "name": "union",
+      "required": true,
+      "schema": {
+        "kind": "union",
+        "options": [
+          {
+            "kind": "literal",
+            "value": "open",
+          },
+          {
+            "kind": "number",
+          },
+        ],
+      },
+    },
+  ],
+  "kind": "object",
+  "unknownKeys": "reject",
+}
+`;

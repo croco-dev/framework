@@ -19638,6 +19638,12 @@
           "sourceEntrypoint": "packages/protocols-desktop/src/index.ts",
           "runtimeExports": [
             {
+              "name": "compileDesktopWireSchema",
+              "exportKind": "named",
+              "source": "./libs/DesktopWireSchema",
+              "declarationKind": "function"
+            },
+            {
               "name": "desktop",
               "exportKind": "named",
               "source": "./libs/desktop",
@@ -19648,6 +19654,30 @@
               "exportKind": "named",
               "source": "./libs/DesktopDefinitionProblem",
               "declarationKind": "class"
+            },
+            {
+              "name": "DesktopWireSchemaProblem",
+              "exportKind": "named",
+              "source": "./libs/DesktopWireSchema",
+              "declarationKind": "class"
+            },
+            {
+              "name": "formatDesktopWireSchemaDiagnostic",
+              "exportKind": "named",
+              "source": "./libs/DesktopWireSchema",
+              "declarationKind": "function"
+            },
+            {
+              "name": "parseDesktopWireValue",
+              "exportKind": "named",
+              "source": "./libs/DesktopWireSchema",
+              "declarationKind": "function"
+            },
+            {
+              "name": "stringifyDesktopWireSchemaDescriptor",
+              "exportKind": "named",
+              "source": "./libs/DesktopWireSchema",
+              "declarationKind": "function"
             }
           ],
           "typeExports": [
@@ -19835,6 +19865,51 @@
               "name": "DesktopWindowRecord",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "DesktopWireEnumDescriptor",
+              "exportKind": "named",
+              "source": "./libs/DesktopWireSchema"
+            },
+            {
+              "name": "DesktopWireLiteralDescriptor",
+              "exportKind": "named",
+              "source": "./libs/DesktopWireSchema"
+            },
+            {
+              "name": "DesktopWireObjectDescriptor",
+              "exportKind": "named",
+              "source": "./libs/DesktopWireSchema"
+            },
+            {
+              "name": "DesktopWirePrimitiveDescriptor",
+              "exportKind": "named",
+              "source": "./libs/DesktopWireSchema"
+            },
+            {
+              "name": "DesktopWireSchemaContext",
+              "exportKind": "named",
+              "source": "./libs/DesktopWireSchema"
+            },
+            {
+              "name": "DesktopWireSchemaDescriptor",
+              "exportKind": "named",
+              "source": "./libs/DesktopWireSchema"
+            },
+            {
+              "name": "DesktopWireSchemaDiagnostic",
+              "exportKind": "named",
+              "source": "./libs/DesktopWireSchema"
+            },
+            {
+              "name": "DesktopWireSchemaDiagnosticCode",
+              "exportKind": "named",
+              "source": "./libs/DesktopWireSchema"
+            },
+            {
+              "name": "DesktopWireSourceLocation",
+              "exportKind": "named",
+              "source": "./libs/DesktopWireSchema"
             },
             {
               "name": "InferDesktopAppContracts",

@@ -2723,6 +2723,9 @@ importers:
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
+      '@croco/protocols-core':
+        specifier: workspace:*
+        version: link:../protocols-core
     devDependencies:
       vitest:
         specifier: 4.0.16
