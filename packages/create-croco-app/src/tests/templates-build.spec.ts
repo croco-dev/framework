@@ -339,6 +339,15 @@ function checkAdminConsoleStructure() {
   checkFileExists("admin-console", "apps", "api-server", "src", "controllers", "adminSchemas.ts");
   checkFileExists("admin-console", "apps", "api-server", "src", "tests", "AdminConsole.spec.ts");
   checkFileExists("admin-console", "apps", "console-web", "src", "App.tsx.hbs");
+  checkFileExists("admin-console", "apps", "console-web", "src", "CreditOperationsDemo.tsx");
+  checkFileExists(
+    "admin-console",
+    "apps",
+    "api-server",
+    "src",
+    "tests",
+    "CreditOperations.spec.ts",
+  );
   checkFileExists("admin-console", "apps", "console-web", "src", "LifecycleAutomationDemo.tsx");
   checkFileExists("admin-console", "apps", "console-web", "src", "TenantWorkspaceDemo.tsx");
   checkFileExists("admin-console", "apps", "console-web", "src", "WebhookReliabilityDemo.tsx");
@@ -385,11 +394,13 @@ function checkAdminConsoleStructure() {
   expect(apiPackageJson).toMatchObject({
     dependencies: expect.objectContaining({
       "@croco/admin-core": "workspace:*",
+      "@croco/credits-core": "workspace:*",
       "@croco/webhooks-core": "workspace:*",
     }),
     scripts: expect.objectContaining({
       "di:graph": GENERATED_API_DI_GRAPH_SCRIPT,
-      "admin:smoke": "tsx src/dev-smoke.ts && tsx src/webhook-smoke.ts",
+      "admin:smoke":
+        "tsx src/dev-smoke.ts && tsx src/webhook-smoke.ts && vitest run src/tests/CreditOperations.spec.ts",
     }),
     devDependencies: expect.objectContaining({
       "cross-env": "^10.1.0",
@@ -408,8 +419,46 @@ function checkAdminConsoleStructure() {
       "@croco/admin-react": "workspace:*",
       "@croco/events-core": "workspace:*",
     }),
+    scripts: expect.objectContaining({
+      "admin:smoke": "pnpm dev:smoke",
+    }),
   });
 
+  checkFileContains(
+    "admin-console",
+    ["apps", "api-server", "src", "creditOperations.ts"],
+    /InMemoryCreditLedgerStore/,
+  );
+  checkFileContains(
+    "admin-console",
+    ["apps", "api-server", "src", "creditOperations.ts"],
+    /reserveCredits/,
+  );
+  checkFileContains(
+    "admin-console",
+    ["apps", "api-server", "src", "creditOperations.ts"],
+    /commitCredits/,
+  );
+  checkFileContains(
+    "admin-console",
+    ["apps", "api-server", "src", "creditOperations.ts"],
+    /refundCredits/,
+  );
+  checkFileContains(
+    "admin-console",
+    ["apps", "api-server", "src", "creditOperations.ts"],
+    /eventPublicationFailed[\s\S]*retry-event-publication[\s\S]*change-input/,
+  );
+  checkFileContains(
+    "admin-console",
+    ["apps", "console-web", "src", "CreditOperationsDemo.tsx"],
+    /createCreditOperationsActionRequest\(pendingAction,[\s\S]*actorId,[\s\S]*reason,/,
+  );
+  checkFileContains(
+    "admin-console",
+    ["apps", "api-server", "src", "tests", "CreditOperations.spec.ts"],
+    /duplicate-conflict[\s\S]*change-input[\s\S]*stale-ledger-position[\s\S]*refresh-ledger/,
+  );
   checkFileContains(
     "admin-console",
     ["apps", "api-server", "src", "controllers", "AdminController.ts"],

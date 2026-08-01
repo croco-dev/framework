@@ -319,9 +319,39 @@
               "declarationKind": "function"
             },
             {
+              "name": "assertCreditOperationsActionRequest",
+              "exportKind": "named",
+              "source": "./libs/CreditOperations",
+              "declarationKind": "function"
+            },
+            {
               "name": "assertWebhookOperationsActionRequest",
               "exportKind": "named",
               "source": "./libs/WebhookOperations",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createCreditOperationsActionRequest",
+              "exportKind": "named",
+              "source": "./libs/CreditOperations",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createCreditOperationsActions",
+              "exportKind": "named",
+              "source": "./libs/CreditOperations",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createCreditOperationsLoadingState",
+              "exportKind": "named",
+              "source": "./libs/CreditOperations",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createCreditOperationsTenantExtension",
+              "exportKind": "named",
+              "source": "./libs/CreditOperations",
               "declarationKind": "function"
             },
             {
@@ -361,6 +391,18 @@
               "declarationKind": "function"
             },
             {
+              "name": "CREDIT_OPERATIONS_READ_PERMISSION",
+              "exportKind": "named",
+              "source": "./libs/CreditOperations",
+              "declarationKind": "const"
+            },
+            {
+              "name": "CreditOperationsValidationProblem",
+              "exportKind": "named",
+              "source": "./libs/CreditOperations",
+              "declarationKind": "class"
+            },
+            {
               "name": "defineAdminResource",
               "exportKind": "named",
               "source": "./libs/AdminResource",
@@ -373,15 +415,33 @@
               "declarationKind": "function"
             },
             {
+              "name": "executeCreditOperationsAction",
+              "exportKind": "named",
+              "source": "./libs/CreditOperations",
+              "declarationKind": "function"
+            },
+            {
               "name": "executeWebhookOperationsAction",
               "exportKind": "named",
               "source": "./libs/WebhookOperations",
               "declarationKind": "function"
             },
             {
+              "name": "filterCreditOperationsTransactions",
+              "exportKind": "named",
+              "source": "./libs/CreditOperations",
+              "declarationKind": "function"
+            },
+            {
               "name": "filterWebhookDeliveries",
               "exportKind": "named",
               "source": "./libs/WebhookOperations",
+              "declarationKind": "function"
+            },
+            {
+              "name": "loadCreditOperations",
+              "exportKind": "named",
+              "source": "./libs/CreditOperations",
               "declarationKind": "function"
             },
             {
@@ -400,6 +460,12 @@
               "name": "redactWebhookOperationsText",
               "exportKind": "named",
               "source": "./libs/WebhookOperations",
+              "declarationKind": "function"
+            },
+            {
+              "name": "resolveCreditOperationsReference",
+              "exportKind": "named",
+              "source": "./libs/CreditOperations",
               "declarationKind": "function"
             },
             {
@@ -541,6 +607,111 @@
               "name": "AdminSortDirection",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "CreditOperationsAction",
+              "exportKind": "named",
+              "source": "./libs/CreditOperations"
+            },
+            {
+              "name": "CreditOperationsActionKind",
+              "exportKind": "named",
+              "source": "./libs/CreditOperations"
+            },
+            {
+              "name": "CreditOperationsActionRequest",
+              "exportKind": "named",
+              "source": "./libs/CreditOperations"
+            },
+            {
+              "name": "CreditOperationsActionResult",
+              "exportKind": "named",
+              "source": "./libs/CreditOperations"
+            },
+            {
+              "name": "CreditOperationsAllocation",
+              "exportKind": "named",
+              "source": "./libs/CreditOperations"
+            },
+            {
+              "name": "CreditOperationsBalance",
+              "exportKind": "named",
+              "source": "./libs/CreditOperations"
+            },
+            {
+              "name": "CreditOperationsFilter",
+              "exportKind": "named",
+              "source": "./libs/CreditOperations"
+            },
+            {
+              "name": "CreditOperationsGrantLot",
+              "exportKind": "named",
+              "source": "./libs/CreditOperations"
+            },
+            {
+              "name": "CreditOperationsHistoryCompleteness",
+              "exportKind": "named",
+              "source": "./libs/CreditOperations"
+            },
+            {
+              "name": "CreditOperationsMutationExecutor",
+              "exportKind": "named",
+              "source": "./libs/CreditOperations"
+            },
+            {
+              "name": "CreditOperationsReadyState",
+              "exportKind": "named",
+              "source": "./libs/CreditOperations"
+            },
+            {
+              "name": "CreditOperationsReference",
+              "exportKind": "named",
+              "source": "./libs/CreditOperations"
+            },
+            {
+              "name": "CreditOperationsReservation",
+              "exportKind": "named",
+              "source": "./libs/CreditOperations"
+            },
+            {
+              "name": "CreditOperationsSnapshot",
+              "exportKind": "named",
+              "source": "./libs/CreditOperations"
+            },
+            {
+              "name": "CreditOperationsSource",
+              "exportKind": "named",
+              "source": "./libs/CreditOperations"
+            },
+            {
+              "name": "CreditOperationsSourceResult",
+              "exportKind": "named",
+              "source": "./libs/CreditOperations"
+            },
+            {
+              "name": "CreditOperationsState",
+              "exportKind": "named",
+              "source": "./libs/CreditOperations"
+            },
+            {
+              "name": "CreditOperationsTransaction",
+              "exportKind": "named",
+              "source": "./libs/CreditOperations"
+            },
+            {
+              "name": "CreditOperationsTransactionKind",
+              "exportKind": "named",
+              "source": "./libs/CreditOperations"
+            },
+            {
+              "name": "CreditOperationsWriteEvidence",
+              "exportKind": "named",
+              "source": "./libs/CreditOperations"
+            },
+            {
+              "name": "LoadCreditOperationsInput",
+              "exportKind": "named",
+              "source": "./libs/CreditOperations"
             },
             {
               "name": "LoadTenantWorkspaceInput",
@@ -1491,6 +1662,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "CreditOperationsConsole",
+              "exportKind": "named",
+              "source": "./libs/CreditOperationsConsole",
+              "declarationKind": "function"
+            },
+            {
               "name": "diffLifecycleRuleDescriptors",
               "exportKind": "named",
               "source": "./libs/lifecycleAutomation",
@@ -2132,6 +2309,11 @@
               "name": "BillingProviderStatus",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "CreditOperationsConsoleProps",
+              "exportKind": "named",
+              "source": "./libs/CreditOperationsConsole"
             },
             {
               "name": "LifecycleAutomationConsoleProps",

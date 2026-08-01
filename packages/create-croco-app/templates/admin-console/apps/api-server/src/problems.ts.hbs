@@ -26,3 +26,12 @@ export class AdminUserNotFoundProblem extends Problem {
     super(undefined, undefined, `Admin user ${id} was not found. Refresh the resource table or invite the user again.`);
   }
 }
+
+export class AdminCreditOperationsPermissionDeniedProblem extends Problem {
+  readonly code = "admin-core/credit-operations-permission-denied";
+  readonly category = ProblemCategory.Forbidden;
+
+  constructor(detail: string) {
+    super(undefined, undefined, detail);
+  }
+}

@@ -4,6 +4,47 @@ Provider-neutral React contracts and primitives for SaaS billing, entitlement,
 tenant switching, impersonation, and permission inspection administration.
 Also includes contract-aware admin resource tables.
 
+## Tenant credit operations
+
+`CreditOperationsConsole` renders the React-independent `CreditOperationsState`
+from `@croco/admin-core`. The balance summary is bound to one ledger position and
+keeps available, reserved, consumed, expired, and expiring-soon credits separate.
+Grant lots, reservations, transactions, allocation evidence, related consumption
+and refund links, actor, correlation, meter, and permission-safe references remain
+inspectable without exposing a mutable balance editor.
+
+```tsx
+import { loadCreditOperations } from "@croco/admin-core";
+import { CreditOperationsConsole } from "@croco/admin-react";
+
+const state = await loadCreditOperations({
+  tenantId: "tenant-1",
+  source: creditOperationsSource,
+  grantedPermissions: ["credits:read", "credits:write", "credits:refund"],
+});
+
+export function TenantCredits() {
+  return (
+    <CreditOperationsConsole
+      state={state}
+      onAction={(action) => openAuditedCreditConfirmation(action)}
+      onRefresh={() => refreshCreditLedger()}
+    />
+  );
+}
+```
+
+Grant, refund, release, and compensating adjustment requests require explicit
+permission, actor, reason, idempotency key, semantic reference, and expected
+ledger position. Refund and release actions exist only when the source declares
+the underlying consumption or reservation eligible. Duplicate-conflict,
+stale-position, committed-event-publication, and other possible Problems remain
+declared on the action. Sensitive references resolve to visible, masked, or
+denied values according to field permission evidence. Loading, empty, partial
+history, permission-denied, stale, and provider/store failure states are distinct.
+`createCreditOperationsTenantExtension()` mounts the same state through the
+`credits/tenant-operations` Tenant 360 extension contract.
+
 ## Lifecycle automation operations
 
 `LifecycleAutomationConsole` renders React-independent operation state derived

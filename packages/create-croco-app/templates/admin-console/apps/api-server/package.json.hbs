@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "dev:smoke": "tsx src/dev-smoke.ts",
-    "admin:smoke": "tsx src/dev-smoke.ts && tsx src/webhook-smoke.ts",
+    "admin:smoke": "tsx src/dev-smoke.ts && tsx src/webhook-smoke.ts && vitest run src/tests/CreditOperations.spec.ts",
     "di:graph": "cross-env NODE_OPTIONS=--import=tsx croco di graph --module src/app.ts --bootstrap createCrocoApp --roots createCrocoDiGraphRoots --write ../../.croco/build/di-graph.manifest.json",
     "build": "tsup src/index.ts src/lambda.ts --format cjs --clean",
     "test": "vitest run",
@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@croco/admin-core": "workspace:*",
+    "@croco/credits-core": "workspace:*",
     "@croco/events-core": "workspace:*",
     "@croco/events-inmemory": "workspace:*",
     "@croco/framework-context": "workspace:*",

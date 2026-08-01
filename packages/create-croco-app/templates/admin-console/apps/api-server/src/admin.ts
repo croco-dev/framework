@@ -1,4 +1,6 @@
 import { recordEvent, withSpan } from "@croco/telemetry-api";
+
+import { resetCreditOperationsServiceForTests } from "./creditOperations";
 import type {
   AdminConsoleSnapshot,
   AdminOperation,
@@ -167,6 +169,7 @@ export function getAdminConsoleService(): AdminConsoleService {
 
 export function resetAdminRuntimeForTests(): void {
   adminRuntime = createAdminRuntime();
+  resetCreditOperationsServiceForTests();
 }
 
 function createAdminRuntime(): AdminRuntime {

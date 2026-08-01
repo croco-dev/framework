@@ -60,6 +60,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`InvalidSearchRowProblem`](/api/search-drizzle/src/classes/invalidsearchrowproblem/)
 - [`BadRequestProblem`](/api/access-core/src/classes/badrequestproblem/)
 - [`ForbiddenProblem`](/api/access-core/src/classes/forbiddenproblem/)
+- [`CreditOperationsValidationProblem`](/api/admin-core/src/classes/creditoperationsvalidationproblem/)
 - [`AdminResourceValidationProblem`](/api/admin-core/src/classes/adminresourcevalidationproblem/)
 - [`WebhookOperationsActionValidationProblem`](/api/admin-core/src/classes/webhookoperationsactionvalidationproblem/)
 - [`AdminGeneratedContractProblem`](/api/admin-generated/src/classes/admingeneratedcontractproblem/)

@@ -23,6 +23,7 @@ const grantedPermissions = [
   "usage:read",
   "entitlements:read",
   "members:read",
+  "credits:read",
   "entitlements:write",
 ] as const;
 
@@ -261,6 +262,27 @@ function createFakeSources(
         },
       },
       section: "operations",
+    }),
+    createInMemoryTenantBusinessSource({
+      id: "credits",
+      label: "Credits",
+      requiredPermissions: ["credits:read"],
+      result: {
+        kind: "ready",
+        loadedAt,
+        state: {
+          contractId: "credits/tenant-operations",
+          extensionId: "credits",
+          kind: "extension",
+          label: "Credit balance and adjustments",
+          slot: "tab",
+          state: {
+            available: globex ? "35" : "61",
+            ledgerPosition: globex ? 12 : 9,
+          },
+        },
+      },
+      section: "credits",
     }),
     createInMemoryTenantBusinessSource({
       id: "engagement",

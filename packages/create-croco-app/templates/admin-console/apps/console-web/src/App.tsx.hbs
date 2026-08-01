@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useState, type CSSProperties, type FormEvent } from 'react';
 import { adminClient, type adminRpc } from '{{scope}}/provider-rpc';
+import type {
+  CreditOperationsAction,
+  CreditOperationsActionRequest,
+  CreditOperationsSnapshot,
+} from '@croco/admin-core';
 import { LifecycleAutomationDemo } from './LifecycleAutomationDemo';
+import { CreditOperationsDemo } from './CreditOperationsDemo';
 import { TenantWorkspaceDemo } from './TenantWorkspaceDemo';
 import { WebhookReliabilityDemo } from './WebhookReliabilityDemo';
 
@@ -233,6 +239,20 @@ export default function App() {
     }
   }, []);
 
+  const loadCreditOperationsSnapshot = useCallback(
+    async (tenantId: string): Promise<CreditOperationsSnapshot> =>
+      hydrateCreditOperationsSnapshot(
+        await adminClient.creditOperations({ query: { tenantId } }),
+      ),
+    [],
+  );
+
+  const executeCreditOperation = useCallback(
+    async (action: CreditOperationsAction, request: CreditOperationsActionRequest) =>
+      await adminClient.executeCreditOperation(toCreditOperationsCommand(action, request)),
+    [],
+  );
+
   useEffect(() => {
     void refresh(selectedTenantId);
   }, [refresh, selectedTenantId]);
@@ -318,6 +338,12 @@ export default function App() {
         </header>
 
         <TenantWorkspaceDemo key={selectedTenantId} tenantId={selectedTenantId} />
+        <CreditOperationsDemo
+          executeAction={executeCreditOperation}
+          key={`credits:${selectedTenantId}`}
+          loadSnapshot={loadCreditOperationsSnapshot}
+          tenantId={selectedTenantId}
+        />
         <WebhookReliabilityDemo key={`webhooks:${selectedTenantId}`} tenantId={selectedTenantId} />
         <LifecycleAutomationDemo key={selectedTenantId} tenantId={selectedTenantId} />
 
@@ -414,4 +440,69 @@ export default function App() {
       </div>
     </main>
   );
+}
+
+function hydrateCreditOperationsSnapshot(
+  snapshot: adminRpc.CreditOperationsOutput,
+): CreditOperationsSnapshot {
+  return {
+    ...snapshot,
+    generatedAt: new Date(snapshot.generatedAt),
+    balance: {
+      ...snapshot.balance,
+      expiringSoonBefore: new Date(snapshot.balance.expiringSoonBefore),
+    },
+    grantLots: snapshot.grantLots.map((lot) => ({
+      ...lot,
+      expiresAt: lot.expiresAt ? new Date(lot.expiresAt) : undefined,
+    })),
+    reservations: snapshot.reservations.map((reservation) => ({
+      ...reservation,
+      createdAt: new Date(reservation.createdAt),
+      settledAt: reservation.settledAt ? new Date(reservation.settledAt) : undefined,
+    })),
+    transactions: snapshot.transactions.map((transaction) => ({
+      ...transaction,
+      occurredAt: new Date(transaction.occurredAt),
+    })),
+  };
+}
+
+function toCreditOperationsCommand(
+  action: CreditOperationsAction,
+  request: CreditOperationsActionRequest,
+): adminRpc.ExecuteCreditOperationInput {
+  return {
+    accountId: action.accountId,
+    actionKind: action.kind,
+    actorId: request.actorId,
+    amount: request.input.kind === 'release-reservation' ? undefined : request.input.amount,
+    auditReason: request.reason,
+    consumptionTransactionId:
+      request.input.kind === 'refund' ? request.input.consumptionTransactionId : undefined,
+    direction: request.input.kind === 'adjustment' ? request.input.direction : undefined,
+    expectedPosition: request.expectedPosition,
+    expiresAt:
+      request.input.kind === 'grant' || request.input.kind === 'adjustment'
+        ? request.input.expiresAt?.toISOString()
+        : undefined,
+    idempotencyKey: request.idempotencyKey,
+    inputKind: request.input.kind,
+    meterKeys:
+      request.input.kind === 'grant' || request.input.kind === 'adjustment'
+        ? request.input.meterKeys
+          ? [...request.input.meterKeys]
+          : undefined
+        : undefined,
+    referenceId: request.reference.id,
+    referenceType: request.reference.type,
+    reservationId:
+      request.input.kind === 'release-reservation' ? request.input.reservationId : undefined,
+    source:
+      request.input.kind === 'grant' || request.input.kind === 'adjustment'
+        ? request.input.source
+        : undefined,
+    targetId: action.targetId,
+    tenantId: action.tenantId,
+  };
 }

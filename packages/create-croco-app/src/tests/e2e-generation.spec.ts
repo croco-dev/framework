@@ -1135,7 +1135,8 @@ describe("E2E: generate()", () => {
       expect(rootPackageJson.scripts?.["contract:client"]).toContain("--strict-schemas");
       expect(apiPackageJson.scripts).toMatchObject({
         "di:graph": GENERATED_API_DI_GRAPH_SCRIPT,
-        "admin:smoke": "tsx src/dev-smoke.ts && tsx src/webhook-smoke.ts",
+        "admin:smoke":
+          "tsx src/dev-smoke.ts && tsx src/webhook-smoke.ts && vitest run src/tests/CreditOperations.spec.ts",
       });
       expect(apiPackageJson.devDependencies?.["cross-env"]).toBe("^10.1.0");
       expect(consolePackageJson.dependencies).toMatchObject({
@@ -1146,9 +1147,11 @@ describe("E2E: generate()", () => {
       });
       expect(apiPackageJson.dependencies).toMatchObject({
         "@croco/admin-core": externalCrocoRange("@croco/admin-core"),
+        "@croco/credits-core": externalCrocoRange("@croco/credits-core"),
         "@croco/webhooks-core": externalCrocoRange("@croco/webhooks-core"),
       });
       expect(consolePackageJson.scripts).toMatchObject({
+        "admin:smoke": "pnpm dev:smoke",
         test: "pnpm test:component",
         "test:browser:install": "playwright install chromium",
         "test:component": "vitest run --config vitest.config.ts",
@@ -1156,6 +1159,7 @@ describe("E2E: generate()", () => {
       for (const relativePath of [
         "apps/console-web/vitest.config.ts",
         "apps/console-web/public/mockServiceWorker.js",
+        "apps/api-server/src/tests/CreditOperations.spec.ts",
         "apps/console-web/src/tests/ProblemNotice.spec.tsx",
         "apps/console-web/src/test/browser.ts",
         "apps/console-web/src/test/server.ts",
@@ -1192,12 +1196,35 @@ describe("E2E: generate()", () => {
       expect(webSource).toContain("Probe Missing User");
       expect(webSource).toContain("Operations");
       expect(webSource).toContain("TenantWorkspaceDemo");
+      expect(webSource).toContain("CreditOperationsDemo");
       expect(webSource).toContain("LifecycleAutomationDemo");
       expect(webSource).toContain("key={selectedTenantId}");
       const lifecycleAutomationSource = readFileSync(
         join(testDir, "apps", "console-web", "src", "LifecycleAutomationDemo.tsx"),
         "utf8",
       );
+      const creditOperationsSource = readFileSync(
+        join(testDir, "apps", "api-server", "src", "creditOperations.ts"),
+        "utf8",
+      );
+      const creditOperationsSmokeSource = readFileSync(
+        join(testDir, "apps", "api-server", "src", "tests", "CreditOperations.spec.ts"),
+        "utf8",
+      );
+      expect(creditOperationsSource).toContain("InMemoryCreditLedgerStore");
+      expect(creditOperationsSource).toContain("reserveCredits");
+      expect(creditOperationsSource).toContain("commitCredits");
+      expect(creditOperationsSource).toContain("refresh-ledger");
+      expect(creditOperationsSource).toContain("retry-event-publication");
+      expect(creditOperationsSource).toContain('"change-input"');
+      expect(creditOperationsSource).toContain("new URLSearchParams");
+      expect(creditOperationsSource).toContain("expireCredits");
+      expect(creditOperationsSource).toContain("refundCredits");
+      expect(creditOperationsSource).toContain("executeCreditOperationsAction");
+      expect(creditOperationsSmokeSource).toContain("replayed: true");
+      expect(creditOperationsSmokeSource).toContain("credits-core/duplicate-conflict");
+      expect(creditOperationsSmokeSource).toContain("credits-core/stale-ledger-position");
+      expect(creditOperationsSmokeSource).toContain("credits-core/event-publication-failed");
       expect(lifecycleAutomationSource).toContain("demo-activate-customer-risk");
       expect(lifecycleAutomationSource).toContain("cooldown-suppression");
       expect(lifecycleAutomationSource).toContain("demo-pause-customer-risk");
