@@ -11,7 +11,7 @@ title: "PlanEntitlements"
 
 ### entitlements
 
-> `readonly` **entitlements**: readonly [`EntitlementRule`](/api/entitlements-core/src/type-aliases/entitlementrule/)[]
+> `readonly` **entitlements**: readonly [`VersionBoundEntitlementRule`](/api/entitlements-core/src/type-aliases/versionboundentitlementrule/)[]
 
 ***
 

@@ -159,10 +159,13 @@ function validatePlanVersion(planVersion: PlanVersionDefinition): void {
 
   if (
     planVersion.providerBindings.some(
-      ({ provider, productId, priceIds }) =>
+      ({ provider, productId, priceIds, meterBindings }) =>
         !isNonEmpty(provider) ||
         !isNonEmpty(productId) ||
-        priceIds.some((priceId) => !isNonEmpty(priceId)),
+        priceIds.some((priceId) => !isNonEmpty(priceId)) ||
+        meterBindings?.some(
+          ({ meterKey, meterId }) => !isNonEmpty(meterKey) || !isNonEmpty(meterId),
+        ),
     )
   ) {
     throw new InvalidPlanVersionDefinitionProblem(
@@ -173,6 +176,19 @@ function validatePlanVersion(planVersion: PlanVersionDefinition): void {
   const bindingKeys = planVersion.providerBindings.map(providerBindingKey);
   if (new Set(bindingKeys).size !== bindingKeys.length) {
     throw new InvalidPlanVersionDefinitionProblem("provider bindings must be unique");
+  }
+
+  for (const binding of planVersion.providerBindings) {
+    const meterKeys = (binding.meterBindings ?? []).map(({ meterKey }) => meterKey);
+    const meterIds = (binding.meterBindings ?? []).map(({ meterId }) => meterId);
+    if (
+      new Set(meterKeys).size !== meterKeys.length ||
+      new Set(meterIds).size !== meterIds.length
+    ) {
+      throw new InvalidPlanVersionDefinitionProblem(
+        "provider meter bindings must use unique meter keys and provider meter identifiers",
+      );
+    }
   }
 }
 
@@ -208,6 +224,15 @@ function freezePlanVersion(planVersion: PlanVersionDefinition): PlanVersionDefin
     Object.freeze({
       ...binding,
       priceIds: Object.freeze([...new Set(binding.priceIds)].sort()),
+      ...(binding.meterBindings
+        ? {
+            meterBindings: Object.freeze(
+              [...binding.meterBindings]
+                .sort((left, right) => left.meterKey.localeCompare(right.meterKey))
+                .map((meterBinding) => Object.freeze({ ...meterBinding })),
+            ),
+          }
+        : {}),
     }),
   );
 

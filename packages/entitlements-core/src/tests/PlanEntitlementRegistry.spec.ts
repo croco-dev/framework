@@ -2,7 +2,7 @@ import { Container } from "@croco/framework-context";
 import { planVersionRef } from "@croco/billing-core";
 import { beforeEach, describe, expect, it } from "vitest";
 import { InMemoryPlanEntitlementRegistry } from "../libs/InMemoryPlanEntitlementRegistry";
-import type { EntitlementRule } from "../libs/types";
+import type { EntitlementRule, PlanEntitlements } from "../libs/types";
 
 describe("InMemoryPlanEntitlementRegistry", () => {
   let registry!: InMemoryPlanEntitlementRegistry;
@@ -118,7 +118,7 @@ describe("InMemoryPlanEntitlementRegistry", () => {
             meterId: "reports.generated",
           },
         ],
-      }),
+      } as unknown as PlanEntitlements),
     ).toThrow("requires an inline quota");
   });
 });

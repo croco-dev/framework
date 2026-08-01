@@ -21,6 +21,14 @@ title: "ContractGraph"
 
 ***
 
+### monetization?
+
+> `readonly` `optional` **monetization?**: [`ContractMonetizationGraph`](/api/protocols-core/src/type-aliases/contractmonetizationgraph/)
+
+Present on graphs built by current Croco versions. Optional for source compatibility with legacy graph literals.
+
+***
+
 ### routes
 
 > `readonly` **routes**: readonly [`ContractGraphRoute`](/api/protocols-core/src/type-aliases/contractgraphroute/)[]

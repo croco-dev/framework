@@ -7,7 +7,10 @@ import {
   buildContractGraph,
   type Constructor,
   type ContractGraph,
+  type ContractDiagnostic,
+  type ContractMonetizationInput,
   discoverControllerConstructors,
+  isContractMonetizationDefinition,
   type RouteContractSourceLocation,
   type RouteIR,
 } from "@croco/protocols-core";
@@ -112,8 +115,8 @@ export async function loadContractGraph(
     throw new NoRestControllersFoundProblem(glob);
   }
 
-  const sourceLocations = collectControllerSourceLocations(sourceFiles);
   const rootDir = getCommonSourceDir(getProgramEmitSourceFilePaths(project, sourceFiles));
+  const sourceLocations = collectControllerSourceLocations(sourceFiles, rootDir);
   const emitDir = fs.mkdtempSync(
     path.join(getModuleResolutionRoot(rootDir), ".croco-rpc-codegen-"),
   );
@@ -124,6 +127,8 @@ export async function loadContractGraph(
     assertNoControllerTypeScriptErrors(project, sourceFiles, glob);
     project.emitSync();
     const controllerConstructors: Constructor[] = [];
+    const monetizationInputs: ContractMonetizationInput[] = [];
+    const monetizationDiagnostics: ContractDiagnostic[] = [];
     let controllerCount = 0;
 
     for (const sourceFile of sourceFiles) {
@@ -131,6 +136,27 @@ export async function loadContractGraph(
         getEmittedFilePath(rootDir, emitDir, sourceFile),
       );
       const controllers = discoverControllerConstructors(moduleExports);
+      monetizationInputs.push(
+        ...Object.values(moduleExports)
+          .filter(isContractMonetizationDefinition)
+          .map((definition) => definition.input),
+      );
+      for (const exported of Object.values(moduleExports)) {
+        if (
+          isMonetizationDefinitionCandidate(exported) &&
+          !isContractMonetizationDefinition(exported)
+        ) {
+          monetizationDiagnostics.push({
+            code: "CROCO_BILLING_DESCRIPTOR_INVALID",
+            severity: "error",
+            target: "monetization",
+            message:
+              "An exported croco.contract-monetization.v1 definition has an invalid typed input shape.",
+            recoveryAction:
+              "Create the executable artifact with defineContractMonetization() and valid typed descriptors.",
+          });
+        }
+      }
 
       controllerCount += controllers.length;
       const sourceFileLocations = sourceLocations.get(sourceFile.getFilePath());
@@ -145,14 +171,45 @@ export async function loadContractGraph(
       throw new NoRestControllersFoundProblem(glob);
     }
 
-    return buildContractGraph(controllerConstructors, options);
+    const monetization = mergeMonetizationInputs(
+      ...(options.monetization ? [options.monetization] : []),
+      ...monetizationInputs,
+    );
+    return buildContractGraph(controllerConstructors, {
+      ...options,
+      ...(monetization ? { monetization } : {}),
+      ...(monetizationDiagnostics.length > 0 ? { monetizationDiagnostics } : {}),
+    });
   } finally {
     fs.rmSync(emitDir, { recursive: true, force: true });
   }
 }
 
+function isMonetizationDefinitionCandidate(value: unknown): boolean {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "kind" in value &&
+    value.kind === "croco.contract-monetization.v1"
+  );
+}
+
+function mergeMonetizationInputs(
+  ...inputs: readonly ContractMonetizationInput[]
+): ContractMonetizationInput | undefined {
+  if (inputs.length === 0) return undefined;
+  return {
+    meters: inputs.flatMap((input) => input.meters ?? []),
+    planVersions: inputs.flatMap((input) => input.planVersions ?? []),
+    entitlementSets: inputs.flatMap((input) => input.entitlementSets ?? []),
+    providers: inputs.flatMap((input) => input.providers ?? []),
+    subscriptionMappings: inputs.flatMap((input) => input.subscriptionMappings ?? []),
+  };
+}
+
 function collectControllerSourceLocations(
   sourceFiles: readonly SourceFile[],
+  sourceRoot: string,
 ): ReadonlyMap<string, SourceFileControllerSourceLocations> {
   const sourceFileLocations = new Map<string, SourceFileControllerSourceLocations>();
 
@@ -176,7 +233,7 @@ function collectControllerSourceLocations(
           const paramDecorator = parameter.getDecorators().find(isParamDecorator);
 
           if (paramDecorator) {
-            params.set(index, toSourceLocation(paramDecorator));
+            params.set(index, toSourceLocation(paramDecorator, sourceRoot));
           }
         });
 
@@ -185,7 +242,7 @@ function collectControllerSourceLocations(
         }
 
         routes.set(method.getName(), {
-          ...(routeDecorator ? { route: toSourceLocation(routeDecorator) } : {}),
+          ...(routeDecorator ? { route: toSourceLocation(routeDecorator, sourceRoot) } : {}),
           params,
         });
       }
@@ -287,12 +344,12 @@ function getDecoratorName(decorator: Decorator): string {
   return parts[parts.length - 1] ?? text;
 }
 
-function toSourceLocation(decorator: Decorator): RouteContractSourceLocation {
+function toSourceLocation(decorator: Decorator, sourceRoot: string): RouteContractSourceLocation {
   const sourceFile = decorator.getSourceFile();
   const location = sourceFile.compilerNode.getLineAndCharacterOfPosition(decorator.getStart());
 
   return {
-    path: sourceFile.getFilePath(),
+    path: path.relative(sourceRoot, sourceFile.getFilePath()).split(path.sep).join("/"),
     line: location.line + 1,
     column: location.character + 1,
   };

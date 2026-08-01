@@ -45,6 +45,12 @@ title: "ContractDiagnostic"
 
 ***
 
+### recoveryAction?
+
+> `readonly` `optional` **recoveryAction?**: `string`
+
+***
+
 ### routeId?
 
 > `readonly` `optional` **routeId?**: `string`

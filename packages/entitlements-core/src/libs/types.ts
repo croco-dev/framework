@@ -49,10 +49,22 @@ export type EntitlementRule = {
   overagePolicy?: OveragePolicy;
 };
 
+export type VersionBoundEntitlementRule =
+  | { readonly featureKey: string; readonly type: "boolean" }
+  | { readonly featureKey: string; readonly type: "static"; readonly value: number }
+  | {
+      readonly featureKey: string;
+      readonly type: "metered";
+      readonly quota: number;
+      readonly meterId?: string;
+      readonly meterBilling?: "local" | "required";
+      readonly overagePolicy?: OveragePolicy;
+    };
+
 export type PlanEntitlements = {
   readonly planId: string;
   readonly planVersionRef: PlanVersionRef;
-  readonly entitlements: readonly EntitlementRule[];
+  readonly entitlements: readonly VersionBoundEntitlementRule[];
 };
 
 export type LegacyPlanEntitlements = {

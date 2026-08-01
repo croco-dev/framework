@@ -115,6 +115,12 @@ export type ProviderPlanBinding = {
   readonly provider: string;
   readonly productId: string;
   readonly priceIds: readonly string[];
+  readonly meterBindings?: readonly ProviderMeterBinding[];
+};
+
+export type ProviderMeterBinding = {
+  readonly meterKey: string;
+  readonly meterId: string;
 };
 
 export type PlanRatingDefinition =
