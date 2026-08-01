@@ -148,6 +148,34 @@ function runsVerificationScript(
   });
 }
 
+function hasCredentialFreeWiredRateLimiter(bootstrap: string): boolean {
+  const constructorMatch = bootstrap.match(
+    /\bconst\s+([A-Za-z_$][\w$]*)\s*=\s*new\s+RateLimiter\s*\(\s*new\s+SlidingWindowInMemoryStore\s*\(\s*\)\s*,/,
+  );
+  if (!constructorMatch) {
+    return false;
+  }
+
+  const variableName = constructorMatch[1];
+  const middlewareMatch = bootstrap.match(/\brateLimitHttpMiddleware\s*\(\s*\{([\s\S]*?)\}\s*\)/);
+  if (!variableName || !middlewareMatch) {
+    return false;
+  }
+
+  const middlewareOptions = middlewareMatch[1] ?? "";
+  if (
+    variableName === "rateLimiter" &&
+    /(?:^|,)\s*rateLimiter\s*(?:,|$)/m.test(middlewareOptions)
+  ) {
+    return true;
+  }
+
+  const escapedVariableName = variableName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?:^|,)\\s*rateLimiter\\s*:\\s*${escapedVariableName}\\s*(?:,|$)`, "m").test(
+    middlewareOptions,
+  );
+}
+
 function readRootArg(): string {
   const rootIndex = process.argv.indexOf("--root");
 
@@ -807,10 +835,13 @@ console.log("\n📋 A. Quick-start-lambda endpoint contract\n");
     pass("A1i", "quick-start-lambda declares its rate-limit dependency");
   }
 
-  if (!bootstrap.includes("new SlidingWindowInMemoryStore()")) {
-    fail("A1k", "quick-start-lambda rate limiter must use SlidingWindowInMemoryStore");
+  if (!hasCredentialFreeWiredRateLimiter(bootstrap)) {
+    fail(
+      "A1k",
+      "quick-start-lambda rate limiter must use SlidingWindowInMemoryStore and pass it to rateLimitHttpMiddleware",
+    );
   } else {
-    pass("A1k", "quick-start-lambda rate limiter is credential-free");
+    pass("A1k", "quick-start-lambda rate limiter is credential-free and wired to HTTP middleware");
   }
 
   const missingSecurityDocSnippets = REQUIRED_SECURITY_DOC_SNIPPETS.filter(
@@ -1137,10 +1168,13 @@ console.log("\n📋 D. SaaS billing golden-path contract\n");
     pass("S8c", "SaaS billing example declares its rate-limit dependency");
   }
 
-  if (!bootstrap.includes("new SlidingWindowInMemoryStore()")) {
-    fail("S8e", "SaaS billing rate limiter must use SlidingWindowInMemoryStore");
+  if (!hasCredentialFreeWiredRateLimiter(bootstrap)) {
+    fail(
+      "S8e",
+      "SaaS billing rate limiter must use SlidingWindowInMemoryStore and pass it to rateLimitHttpMiddleware",
+    );
   } else {
-    pass("S8e", "SaaS billing rate limiter is credential-free");
+    pass("S8e", "SaaS billing rate limiter is credential-free and wired to HTTP middleware");
   }
 
   const missingSecurityDocSnippets = REQUIRED_SECURITY_DOC_SNIPPETS.filter(

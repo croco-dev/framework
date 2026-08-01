@@ -275,7 +275,7 @@ describe("first-success-verify.mts", () => {
     writeFile(
       root,
       "examples/saas-billing-golden-path/src/app/bootstrap.ts",
-      secureBootstrapFixture().replace("rateLimitHttpMiddleware(),", ""),
+      secureBootstrapFixture().replace("rateLimitHttpMiddleware({ rateLimiter }),", ""),
     );
 
     const result = runScript(root);
@@ -298,6 +298,24 @@ describe("first-success-verify.mts", () => {
     expect(result.status).toBe(1);
     expect(result.stdout).toContain("S8e");
     expect(result.stdout).toContain("must use SlidingWindowInMemoryStore");
+  });
+
+  it("fails when an example does not pass its credential-free rate limiter to HTTP middleware", () => {
+    const root = createFixture();
+    writeFile(
+      root,
+      "examples/saas-billing-golden-path/src/app/bootstrap.ts",
+      secureBootstrapFixture().replace(
+        "rateLimitHttpMiddleware({ rateLimiter })",
+        "rateLimitHttpMiddleware({ rateLimiter: anotherRateLimiter })",
+      ),
+    );
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("S8e");
+    expect(result.stdout).toContain("pass it to rateLimitHttpMiddleware");
   });
 
   it("fails when the root SaaS smoke script no longer builds workspace dependencies before tests", () => {
@@ -838,14 +856,17 @@ function createFixture(options: FixtureOptions = {}): string {
 
 function secureBootstrapFixture(extraConfig = ""): string {
   return [
+    "const rateLimiter = new RateLimiter(",
+    "new SlidingWindowInMemoryStore(),",
+    'new RateLimitKeyBuilder(["ip"]),',
+    ");",
     "createApp({",
     extraConfig,
     "middlewares: [",
     "securityHeadersMiddleware(),",
     "corsMiddleware(),",
     "bodyLimitMiddleware(),",
-    "new SlidingWindowInMemoryStore(),",
-    "rateLimitHttpMiddleware(),",
+    "rateLimitHttpMiddleware({ rateLimiter }),",
     "],",
     "});",
     "",
