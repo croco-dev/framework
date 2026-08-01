@@ -129,6 +129,11 @@ export {
   planReleaseCommandFingerprint,
   planVersionDefinitionFingerprint,
 } from "./libs/PlanRelease";
+export {
+  DeterministicPlanReleaseImpactAnalyzer,
+  PlanReleaseService,
+} from "./libs/PlanReleaseService";
+export { PlanReleaseTransitionedEvent } from "./libs/events/PlanReleaseTransitionedEvent";
 export type {
   CreatePlanDraftCommand,
   PlanRelease,
@@ -159,12 +164,7 @@ export type {
   SupersedePlanReleaseCommand,
   UpdatePlanDraftCommand,
 } from "./libs/PlanRelease";
-export {
-  DeterministicPlanReleaseImpactAnalyzer,
-  PlanReleaseService,
-} from "./libs/PlanReleaseService";
 export type { PlanReleaseServiceDependencies } from "./libs/PlanReleaseService";
-export { PlanReleaseTransitionedEvent } from "./libs/events/PlanReleaseTransitionedEvent";
 
 /**
  * 레거시 구독에 검증된 플랜 버전을 명시적으로 고정합니다.

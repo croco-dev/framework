@@ -5,6 +5,8 @@ prev: false
 title: "InMemoryPlanReleaseStore"
 ---
 
+Process-local reference store whose outbox is non-durable and intended for tests and local composition.
+
 ## Implements
 
 - [`PlanReleaseStore`](/api/billing-core/src/interfaces/planreleasestore/)

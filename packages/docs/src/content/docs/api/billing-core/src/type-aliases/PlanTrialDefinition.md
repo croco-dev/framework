@@ -7,7 +7,7 @@ title: "PlanTrialDefinition"
 
 > **PlanTrialDefinition** = `object`
 
-billing account, invoice, order, plan, subscription 도메인 타입입니다.
+Defines the trial duration and whether activation requires a payment method.
 
 ## Properties
 

@@ -1870,7 +1870,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/PlanReleaseProblems.ts:60:3` (problem-class)
+- `packages/billing-core/src/libs/problems/PlanReleaseProblems.ts:69:3` (problem-class)
 
 <a id="billing-invalid-plan-release-transition"></a>
 
@@ -1888,7 +1888,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/PlanReleaseProblems.ts:16:3` (problem-class)
+- `packages/billing-core/src/libs/problems/PlanReleaseProblems.ts:21:3` (problem-class)
 
 <a id="billing-invalid-plan-version-definition"></a>
 
@@ -2050,7 +2050,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/PlanReleaseProblems.ts:28:3` (problem-class)
+- `packages/billing-core/src/libs/problems/PlanReleaseProblems.ts:34:3` (problem-class)
 
 <a id="billing-plan-release-provider-capability-failed"></a>
 
@@ -2068,7 +2068,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/PlanReleaseProblems.ts:50:3` (problem-class)
+- `packages/billing-core/src/libs/problems/PlanReleaseProblems.ts:58:3` (problem-class)
 
 <a id="billing-plan-release-publish-conflict"></a>
 
@@ -2086,7 +2086,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/PlanReleaseProblems.ts:68:3` (problem-class)
+- `packages/billing-core/src/libs/problems/PlanReleaseProblems.ts:78:3` (problem-class)
 
 <a id="billing-plan-release-validation-failed"></a>
 
@@ -2104,7 +2104,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/PlanReleaseProblems.ts:40:3` (problem-class)
+- `packages/billing-core/src/libs/problems/PlanReleaseProblems.ts:47:3` (problem-class)
 
 <a id="billing-plan-version-already-published"></a>
 
@@ -2176,7 +2176,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/PlanReleaseProblems.ts:4:3` (problem-class)
+- `packages/billing-core/src/libs/problems/PlanReleaseProblems.ts:7:3` (problem-class)
 
 <a id="billing-subscription-not-found"></a>
 

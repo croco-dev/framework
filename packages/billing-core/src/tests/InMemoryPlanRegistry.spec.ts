@@ -259,7 +259,7 @@ describe("InMemoryPlanRegistry", () => {
           ],
         }),
       ),
-    ).rejects.toBeInstanceOf(InvalidPlanVersionDefinitionProblem);
+    ).rejects.toThrow(InvalidPlanVersionDefinitionProblem);
   });
 
   it("rejects invalid provider-rated definitions", async () => {
@@ -271,7 +271,7 @@ describe("InMemoryPlanRegistry", () => {
           rating: { mode: "provider", provider: "stripe" },
         }),
       ),
-    ).rejects.toBeInstanceOf(InvalidPlanVersionDefinitionProblem);
+    ).rejects.toThrow(InvalidPlanVersionDefinitionProblem);
   });
 
   it("rejects empty provider binding identifiers", async () => {

@@ -17,6 +17,7 @@ import {
   PlanReleaseValidationFailedProblem,
   PlanVersionAlreadyPublishedProblem,
   StalePlanReleaseRevisionProblem,
+  planReleaseCommandFingerprint,
   planVersionRef,
 } from "../index";
 import type {
@@ -318,6 +319,28 @@ describe("PlanReleaseService", () => {
         reason: "mutate published",
       }),
     ).rejects.toBeInstanceOf(PlanVersionAlreadyPublishedProblem);
+    await expect(
+      service.abandon({
+        ref: first.ref,
+        expectedRevision: first.revision,
+        actor: ACTOR,
+        reason: "abandon published",
+      }),
+    ).rejects.toBeInstanceOf(InvalidPlanReleaseTransitionProblem);
+  });
+
+  it("rejects an empty publish idempotency key as invalid input", async () => {
+    const { service } = createHarness();
+    const reviewed = await reviewDraft(service);
+    await expect(
+      service.publishNow({
+        ref: reviewed.ref,
+        expectedRevision: reviewed.revision,
+        actor: ACTOR,
+        reason: "approved",
+        idempotencyKey: " ",
+      }),
+    ).rejects.toThrow(InvalidPlanVersionDefinitionProblem);
   });
 
   it("allows only one of two conflicting concurrent publish identities to win", async () => {
@@ -436,7 +459,10 @@ describe("PlanReleaseService", () => {
         reason: "review",
         audience: "new_subscriptions",
       }),
-    ).rejects.toBeInstanceOf(PlanReleaseValidationFailedProblem);
+    ).rejects.toMatchObject({
+      code: "billing/plan-release-validation-failed",
+      extensions: { diagnosticCodes: ["CROCO_BILLING_METER_UNBOUND"] },
+    });
 
     const provider = createHarness({
       validation: validation([
@@ -462,7 +488,10 @@ describe("PlanReleaseService", () => {
         reason: "review",
         audience: "new_subscriptions",
       }),
-    ).rejects.toBeInstanceOf(PlanReleaseProviderCapabilityProblem);
+    ).rejects.toMatchObject({
+      code: "billing/plan-release-provider-capability-failed",
+      extensions: { factCodes: ["polar/meter-missing"] },
+    });
   });
 
   it("binds ContractGraph validation evidence to the exact draft revision and definition", async () => {
@@ -546,7 +575,49 @@ describe("PlanReleaseService", () => {
         reason: "stale evidence",
         audience: "new_subscriptions",
       }),
-    ).rejects.toBeInstanceOf(PlanReleaseValidationFailedProblem);
+    ).rejects.toMatchObject({
+      extensions: { diagnosticCodes: ["validation-definition-fingerprint-mismatch"] },
+    });
+  });
+
+  it("reports every invalid validation-evidence binding deterministically", async () => {
+    const harness = createHarness({
+      preserveValidationBinding: true,
+      validation: {
+        ...validation(),
+        graphVersion: " ",
+        snapshotId: " ",
+        planVersionRef: planVersionRef("other@1"),
+        definitionFingerprint: "sha256:other",
+        draftRevision: 99,
+        checkedAt: "not-an-instant",
+      },
+    });
+    const draft = await harness.service.createDraft({
+      definition: createDefinition(),
+      actor: ACTOR,
+      reason: "create",
+    });
+    await expect(
+      harness.service.submitReview({
+        ref: draft.ref,
+        expectedRevision: draft.revision,
+        actor: ACTOR,
+        reason: "review",
+        audience: "new_subscriptions",
+      }),
+    ).rejects.toMatchObject({
+      extensions: {
+        diagnosticCodes: [
+          "validation-checked-at-invalid",
+          "validation-definition-fingerprint-mismatch",
+          "validation-draft-revision-mismatch",
+          "validation-graph-version-empty",
+          "validation-plan-version-ref-mismatch",
+          "validation-snapshot-id-empty",
+        ],
+      },
+    });
   });
 
   it("rejects provider errors even when a custom impact analyzer omits provider facts", async () => {
@@ -825,13 +896,35 @@ describe("PlanReleaseService", () => {
     ).resolves.toMatchObject({ state: "draft", definition: { amount: 9_900 } });
   });
 
+  it("preserves the registry Problem when deterministic-failure compensation loses a race", async () => {
+    class FailCompensationStore extends InMemoryPlanReleaseStore {
+      override async save(...args: Parameters<InMemoryPlanReleaseStore["save"]>): Promise<void> {
+        if (args[0].publicationFailures?.length) throw new Error("compensation lost race");
+        return super.save(...args);
+      }
+    }
+    const { service } = createHarness({ store: new FailCompensationStore() });
+    const invalid = await reviewDraft(service, createDefinition({ amount: -1 }));
+    await expect(
+      service.publishNow({
+        ref: invalid.ref,
+        expectedRevision: invalid.revision,
+        actor: ACTOR,
+        reason: "invalid registry publish",
+        idempotencyKey: "invalid-publish",
+      }),
+    ).rejects.toThrow(InvalidPlanVersionDefinitionProblem);
+  });
+
   it("allows an operator to cancel an ambiguous publication reservation", async () => {
     class AmbiguousPlanRegistry extends InMemoryPlanRegistry {
       override async publishPlanVersion(): Promise<void> {
         throw new Error("ambiguous registry failure");
       }
     }
-    const { service, store } = createHarness({ planRegistry: new AmbiguousPlanRegistry() });
+    const { events, service, store } = createHarness({
+      planRegistry: new AmbiguousPlanRegistry(),
+    });
     const reviewed = await reviewDraft(service);
     await expect(
       service.publishNow({
@@ -845,6 +938,14 @@ describe("PlanReleaseService", () => {
     const reserved = await store.get(reviewed.ref);
     expect(reserved?.publicationIntent).toMatchObject({ idempotencyKey: "ambiguous-publish" });
     if (!reserved) throw new Error("expected reserved release");
+    await expect(
+      service.updateDraft({
+        definition: createDefinition({ amount: 12_900 }),
+        expectedRevision: reserved.revision,
+        actor: ACTOR,
+        reason: "edit during publication",
+      }),
+    ).rejects.toBeInstanceOf(PlanReleasePublishConflictProblem);
     const cancelled = await service.cancelPublish({
       ref: reserved.ref,
       expectedRevision: reserved.revision,
@@ -858,6 +959,12 @@ describe("PlanReleaseService", () => {
         expect.objectContaining({ code: "billing/plan-release-publication-cancelled" }),
       ],
     });
+    expect(cancelled.history.at(-1)).toMatchObject({
+      from: "in_review",
+      to: "in_review",
+      reason: "registry confirmed no write",
+    });
+    expect(events.at(-1)).toMatchObject({ from: "in_review", to: "in_review" });
   });
 
   it("keeps failed lifecycle events in the outbox and redelivers them idempotently", async () => {
@@ -874,6 +981,17 @@ describe("PlanReleaseService", () => {
       definition: createDefinition(),
       actor: ACTOR,
       reason: "create",
+    });
+    await expect(service.deliverPendingEvents(draft.ref)).resolves.toEqual({
+      attempted: 1,
+      published: 0,
+      pending: 1,
+      failures: [
+        {
+          eventId: `plan-release:${draft.ref}:1`,
+          detail: "publisher unavailable",
+        },
+      ],
     });
     await expect(store.listPendingEvents(draft.ref)).resolves.toHaveLength(1);
     shouldFail = false;
@@ -915,6 +1033,51 @@ describe("PlanReleaseService", () => {
     expect(revisions).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
   });
 
+  it("stops after a release event fails while continuing independent releases", async () => {
+    let failAll = true;
+    const attempted: string[] = [];
+    const eventPublisher: PlanReleaseEventPublisher = {
+      async publishIdempotently(event) {
+        attempted.push(event.eventId);
+        if (failAll || event.planVersionRef === planVersionRef("a@1")) {
+          throw new Error("publisher unavailable");
+        }
+      },
+    };
+    const { service } = createHarness({ eventPublisher });
+    const first = await service.createDraft({
+      definition: createDefinition({ ref: planVersionRef("a@1"), planId: "a", versionId: "1" }),
+      actor: ACTOR,
+      reason: "create a",
+    });
+    await service.updateDraft({
+      definition: createDefinition({
+        ref: first.ref,
+        planId: "a",
+        versionId: "1",
+        amount: 10_000,
+      }),
+      expectedRevision: first.revision,
+      actor: ACTOR,
+      reason: "update a",
+    });
+    await service.createDraft({
+      definition: createDefinition({ ref: planVersionRef("b@1"), planId: "b", versionId: "1" }),
+      actor: ACTOR,
+      reason: "create b",
+    });
+
+    attempted.length = 0;
+    failAll = false;
+    await expect(service.deliverPendingEvents()).resolves.toMatchObject({
+      attempted: 2,
+      published: 1,
+      pending: 2,
+      failures: [{ eventId: "plan-release:a@1:1" }],
+    });
+    expect(attempted).toEqual(["plan-release:a@1:1", "plan-release:b@1:1"]);
+  });
+
   it("allows an immutable open-ended published version to gain a future successor", async () => {
     const planRegistry = new InMemoryPlanRegistry();
     await planRegistry.publishPlanVersion(
@@ -954,6 +1117,36 @@ describe("PlanReleaseService", () => {
 });
 
 describe("createPlanVersionSemanticDiff", () => {
+  it("hashes publish command identity without retaining actor or reason text", () => {
+    const fingerprint = planReleaseCommandFingerprint({
+      ref: planVersionRef("pro@1"),
+      expectedRevision: 2,
+      actor: { id: "operator", displayName: "Private Name" },
+      reason: "private approval reason",
+      idempotencyKey: "publish-1",
+    });
+    expect(fingerprint).toMatch(/^sha256:[a-f0-9]{64}$/);
+    expect(fingerprint).not.toContain("Private Name");
+    expect(fingerprint).not.toContain("private approval reason");
+    expect(
+      planReleaseCommandFingerprint({
+        ref: planVersionRef("pro@1"),
+        expectedRevision: 2,
+        actor: { id: "operator", displayName: undefined },
+        reason: "approved",
+        idempotencyKey: "publish-1",
+      }),
+    ).toBe(
+      planReleaseCommandFingerprint({
+        ref: planVersionRef("pro@1"),
+        expectedRevision: 2,
+        actor: { id: "operator" },
+        reason: "approved",
+        idempotencyKey: "publish-1",
+      }),
+    );
+  });
+
   it("is stable across declaration order and excludes presentation metadata", () => {
     const before = createDefinition();
     const reordered = createDefinition({
@@ -1027,6 +1220,17 @@ describe("createPlanVersionSemanticDiff", () => {
     const reordered = createDefinition({
       providerBindings: [...before.providerBindings].reverse(),
     });
+    expect(createPlanVersionSemanticDiff(before, reordered)).toEqual([]);
+  });
+
+  it("orders unbounded usage tiers by unit amount after meter and upper bound", () => {
+    const before = createDefinition({
+      usageTiers: [
+        { meterKey: "api.calls", upTo: null, unitAmount: 2 },
+        { meterKey: "api.calls", upTo: null, unitAmount: 1 },
+      ],
+    });
+    const reordered = createDefinition({ usageTiers: [...(before.usageTiers ?? [])].reverse() });
     expect(createPlanVersionSemanticDiff(before, reordered)).toEqual([]);
   });
 });

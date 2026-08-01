@@ -7,7 +7,8 @@ title: "PlanReleaseValidationEvidence"
 
 > **PlanReleaseValidationEvidence** = `object`
 
-A caller-supplied snapshot produced by ContractGraph validation; this package never re-verifies it.
+ContractGraph evidence whose planVersionRef, definitionFingerprint, draftRevision, graphVersion,
+snapshotId, and checkedAt bindings are verified locally without re-running validation.
 
 ## Properties
 

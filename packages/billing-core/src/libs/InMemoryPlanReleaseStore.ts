@@ -5,11 +5,13 @@ import type {
   PlanReleaseStoreSaveOptions,
 } from "./PlanRelease";
 import type { PlanVersionRef } from "../types";
+import { effectivePeriodsConflict } from "./PlanRelease";
 import {
   OverlappingPlanEffectivePeriodProblem,
   StalePlanReleaseRevisionProblem,
 } from "./problems/PlanReleaseProblems";
 
+/** Process-local reference store whose outbox is non-durable and intended for tests and local composition. */
 export class InMemoryPlanReleaseStore implements PlanReleaseStore {
   private readonly releases = new Map<PlanVersionRef, PlanRelease>();
   private readonly pendingEvents = new Map<string, PlanReleaseLifecycleEvent>();
@@ -88,21 +90,4 @@ export class InMemoryPlanReleaseStore implements PlanReleaseStore {
 
 function clonePlanRelease(release: PlanRelease): PlanRelease {
   return structuredClone(release);
-}
-
-function effectivePeriodsConflict(
-  left: PlanRelease["definition"],
-  right: PlanRelease["definition"],
-): boolean {
-  const leftStart = Date.parse(left.effectiveAt);
-  const rightStart = Date.parse(right.effectiveAt);
-  if (leftStart === rightStart) return true;
-  if (leftStart < rightStart && left.effectiveUntil === undefined) return false;
-  if (rightStart < leftStart && right.effectiveUntil === undefined) return false;
-
-  const leftEnd = left.effectiveUntil ? Date.parse(left.effectiveUntil) : Number.POSITIVE_INFINITY;
-  const rightEnd = right.effectiveUntil
-    ? Date.parse(right.effectiveUntil)
-    : Number.POSITIVE_INFINITY;
-  return leftStart < rightEnd && rightStart < leftEnd;
 }

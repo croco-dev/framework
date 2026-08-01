@@ -5,7 +5,7 @@ prev: false
 title: "PlanReleaseTransitionedEvent"
 ---
 
-모든 도메인 이벤트가 상속해야 하는 기본 추상 클래스입니다.
+Records one durable, revision-addressed plan release lifecycle transition.
 
 ## Extends
 
@@ -15,37 +15,39 @@ title: "PlanReleaseTransitionedEvent"
 
 ### Constructor
 
-> **new PlanReleaseTransitionedEvent**(`planVersionRef`, `from`, `to`, `revision`, `actorId`, `reason`, `eventId?`): `PlanReleaseTransitionedEvent`
+> **new PlanReleaseTransitionedEvent**(`input`): `PlanReleaseTransitionedEvent`
 
 #### Parameters
 
-##### planVersionRef
+##### input
 
-[`PlanVersionRef`](/api/billing-core/src/type-aliases/planversionref/)
+###### actorId
 
-##### from
+`string`
+
+###### eventId?
+
+`string`
+
+###### from
 
 [`PlanReleaseState`](/api/billing-core/src/type-aliases/planreleasestate/) \| `null`
 
-##### to
+###### planVersionRef
 
-[`PlanReleaseState`](/api/billing-core/src/type-aliases/planreleasestate/)
+[`PlanVersionRef`](/api/billing-core/src/type-aliases/planversionref/)
 
-##### revision
+###### reason
+
+`string`
+
+###### revision
 
 `number`
 
-##### actorId
+###### to
 
-`string`
-
-##### reason
-
-`string`
-
-##### eventId?
-
-`string`
+[`PlanReleaseState`](/api/billing-core/src/type-aliases/planreleasestate/)
 
 #### Returns
 

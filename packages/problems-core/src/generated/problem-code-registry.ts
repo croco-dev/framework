@@ -2238,7 +2238,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/PlanReleaseProblems.ts",
-          line: 60,
+          line: 69,
           column: 3,
           kind: "problem-class",
         },
@@ -2269,7 +2269,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/PlanReleaseProblems.ts",
-          line: 16,
+          line: 21,
           column: 3,
           kind: "problem-class",
         },
@@ -2546,7 +2546,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/PlanReleaseProblems.ts",
-          line: 28,
+          line: 34,
           column: 3,
           kind: "problem-class",
         },
@@ -2577,7 +2577,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/PlanReleaseProblems.ts",
-          line: 50,
+          line: 58,
           column: 3,
           kind: "problem-class",
         },
@@ -2607,7 +2607,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/PlanReleaseProblems.ts",
-          line: 68,
+          line: 78,
           column: 3,
           kind: "problem-class",
         },
@@ -2637,7 +2637,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/PlanReleaseProblems.ts",
-          line: 40,
+          line: 47,
           column: 3,
           kind: "problem-class",
         },
@@ -2758,7 +2758,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/PlanReleaseProblems.ts",
-          line: 4,
+          line: 7,
           column: 3,
           kind: "problem-class",
         },

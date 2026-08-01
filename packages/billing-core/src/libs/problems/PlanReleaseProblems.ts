@@ -1,5 +1,8 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
 
+import type { PlanReleaseState } from "../PlanRelease";
+
+/** Reports that a release write lost its optimistic-concurrency race. */
 export class StalePlanReleaseRevisionProblem extends Problem {
   readonly code = "billing/stale-plan-release-revision";
   readonly category = ProblemCategory.Conflict;
@@ -8,14 +11,16 @@ export class StalePlanReleaseRevisionProblem extends Problem {
       undefined,
       undefined,
       `Plan release '${ref}' revision ${actual} does not match expected revision ${expected}`,
+      { extensions: { expectedRevision: expected, actualRevision: actual } },
     );
   }
 }
 
+/** Reports a lifecycle edge that is not allowed from the release's current state. */
 export class InvalidPlanReleaseTransitionProblem extends Problem {
   readonly code = "billing/invalid-plan-release-transition";
   readonly category = ProblemCategory.BusinessRuleViolation;
-  constructor(ref: string, from: string, to: string) {
+  constructor(ref: string, from: PlanReleaseState | null, to: PlanReleaseState) {
     super(
       undefined,
       undefined,
@@ -24,6 +29,7 @@ export class InvalidPlanReleaseTransitionProblem extends Problem {
   }
 }
 
+/** Reports that two versions in one plan family claim overlapping effective periods. */
 export class OverlappingPlanEffectivePeriodProblem extends Problem {
   readonly code = "billing/overlapping-plan-effective-period";
   readonly category = ProblemCategory.Conflict;
@@ -36,6 +42,7 @@ export class OverlappingPlanEffectivePeriodProblem extends Problem {
   }
 }
 
+/** Carries deterministic structural-validation diagnostic codes for a rejected review. */
 export class PlanReleaseValidationFailedProblem extends Problem {
   readonly code = "billing/plan-release-validation-failed";
   readonly category = ProblemCategory.ValidationError;
@@ -46,6 +53,7 @@ export class PlanReleaseValidationFailedProblem extends Problem {
   }
 }
 
+/** Carries provider-preflight fact codes that prevent publication. */
 export class PlanReleaseProviderCapabilityProblem extends Problem {
   readonly code = "billing/plan-release-provider-capability-failed";
   readonly category = ProblemCategory.ValidationError;
@@ -56,6 +64,7 @@ export class PlanReleaseProviderCapabilityProblem extends Problem {
   }
 }
 
+/** Reports a schedule whose effective instant cannot be used for the requested transition. */
 export class InvalidPlanReleaseScheduleProblem extends Problem {
   readonly code = "billing/invalid-plan-release-schedule";
   readonly category = ProblemCategory.BadRequest;
@@ -64,6 +73,7 @@ export class InvalidPlanReleaseScheduleProblem extends Problem {
   }
 }
 
+/** Reports reuse of a publish key for a different command or recorded publication. */
 export class PlanReleasePublishConflictProblem extends Problem {
   readonly code = "billing/plan-release-publish-conflict";
   readonly category = ProblemCategory.Conflict;

@@ -5,7 +5,7 @@ prev: false
 title: "InvalidPlanReleaseTransitionProblem"
 ---
 
-RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다.
+Reports a lifecycle edge that is not allowed from the release's current state.
 
 ## Extends
 
@@ -25,11 +25,11 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 ##### from
 
-`string`
+[`PlanReleaseState`](/api/billing-core/src/type-aliases/planreleasestate/) \| `null`
 
 ##### to
 
-`string`
+[`PlanReleaseState`](/api/billing-core/src/type-aliases/planreleasestate/)
 
 #### Returns
 

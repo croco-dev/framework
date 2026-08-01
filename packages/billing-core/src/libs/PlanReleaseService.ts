@@ -19,6 +19,7 @@ import type {
 } from "./PlanRelease";
 import {
   createPlanVersionSemanticDiff,
+  effectivePeriodsConflict,
   planReleaseCommandFingerprint,
   planVersionDefinitionFingerprint,
 } from "./PlanRelease";
@@ -102,17 +103,18 @@ export class PlanReleaseService {
       definitionFingerprint,
       draftRevision: current.revision,
     });
-    if (
-      validation.planVersionRef !== current.ref ||
-      validation.definitionFingerprint !== definitionFingerprint ||
-      validation.draftRevision !== current.revision ||
-      validation.graphVersion.trim().length === 0 ||
-      validation.snapshotId.trim().length === 0 ||
-      !isCanonicalInstant(validation.checkedAt)
-    ) {
-      throw new PlanReleaseValidationFailedProblem(current.ref, [
-        "validation-snapshot-definition-mismatch",
-      ]);
+    const bindingErrors = [
+      validation.planVersionRef !== current.ref ? "validation-plan-version-ref-mismatch" : null,
+      validation.definitionFingerprint !== definitionFingerprint
+        ? "validation-definition-fingerprint-mismatch"
+        : null,
+      validation.draftRevision !== current.revision ? "validation-draft-revision-mismatch" : null,
+      validation.graphVersion.trim().length === 0 ? "validation-graph-version-empty" : null,
+      validation.snapshotId.trim().length === 0 ? "validation-snapshot-id-empty" : null,
+      !isCanonicalInstant(validation.checkedAt) ? "validation-checked-at-invalid" : null,
+    ].filter((code): code is string => code !== null);
+    if (bindingErrors.length > 0) {
+      throw new PlanReleaseValidationFailedProblem(current.ref, bindingErrors.sort());
     }
     const errors = validation.diagnostics.filter(
       (diagnostic) =>
@@ -196,7 +198,7 @@ export class PlanReleaseService {
   async publishNow(command: PublishPlanReleaseCommand): Promise<PlanRelease> {
     validateCommandContext(command.actor, command.reason);
     if (command.idempotencyKey.trim().length === 0) {
-      throw new PlanReleasePublishConflictProblem(command.ref, command.idempotencyKey);
+      throw new InvalidPlanVersionDefinitionProblem("publish idempotency key must not be empty");
     }
     const fingerprint = planReleaseCommandFingerprint(command);
     let current = await this.requireRelease(command.ref);
@@ -354,9 +356,7 @@ export class PlanReleaseService {
     if (!intent) {
       throw new InvalidPlanReleaseTransitionProblem(current.ref, current.state, current.state);
     }
-    const cancelled: PlanRelease = {
-      ...current,
-      revision: current.revision + 1,
+    return this.saveTransition(current, current.state, command.actor, command.reason, {
       publicationIntent: undefined,
       publicationFailures: [
         ...(current.publicationFailures ?? []),
@@ -370,9 +370,7 @@ export class PlanReleaseService {
           reason: command.reason,
         },
       ],
-    };
-    await this.dependencies.store.save(cancelled, current.revision);
-    return cancelled;
+    });
   }
 
   async supersede(command: SupersedePlanReleaseCommand): Promise<PlanRelease> {
@@ -491,26 +489,31 @@ export class PlanReleaseService {
   ): Promise<void> {
     const intent = current.publicationIntent;
     if (!intent) return;
-    await this.dependencies.store.save(
-      {
-        ...current,
-        revision: current.revision + 1,
-        publicationIntent: undefined,
-        publicationFailures: [
-          ...(current.publicationFailures ?? []),
-          {
-            idempotencyKey: intent.idempotencyKey,
-            commandFingerprint: intent.commandFingerprint,
-            code,
-            detail,
-            failedAt: this.now(),
-            actor: structuredClone(intent.actor),
-            reason: intent.reason,
-          },
-        ],
-      },
-      current.revision,
-    );
+    try {
+      await this.dependencies.store.save(
+        {
+          ...current,
+          revision: current.revision + 1,
+          publicationIntent: undefined,
+          publicationFailures: [
+            ...(current.publicationFailures ?? []),
+            {
+              idempotencyKey: intent.idempotencyKey,
+              commandFingerprint: intent.commandFingerprint,
+              code,
+              detail,
+              failedAt: this.now(),
+              actor: structuredClone(intent.actor),
+              reason: intent.reason,
+            },
+          ],
+        },
+        current.revision,
+      );
+    } catch {
+      // Preserve the registry's deterministic Problem when compensating storage races.
+      return;
+    }
   }
 
   private createEvent(
@@ -519,27 +522,32 @@ export class PlanReleaseService {
     actor: PlanReleaseActor,
     reason: string,
   ): PlanReleaseTransitionedEvent {
-    return new PlanReleaseTransitionedEvent(
-      release.ref,
+    return new PlanReleaseTransitionedEvent({
+      planVersionRef: release.ref,
       from,
-      release.state,
-      release.revision,
-      actor.id,
+      to: release.state,
+      revision: release.revision,
+      actorId: actor.id,
       reason,
-      `plan-release:${release.ref}:${release.revision}`,
-    );
+      eventId: `plan-release:${release.ref}:${release.revision}`,
+    });
   }
 
   async deliverPendingEvents(ref?: PlanVersionRef): Promise<PlanReleaseEventDeliveryResult> {
     const pending = await this.dependencies.store.listPendingEvents(ref);
+    let attempted = 0;
     let published = 0;
+    const blockedRefs = new Set<PlanVersionRef>();
     const failures: PlanReleaseEventDeliveryResult["failures"][number][] = [];
     for (const event of pending) {
+      if (blockedRefs.has(event.planVersionRef)) continue;
+      attempted += 1;
       try {
         await this.dependencies.eventPublisher.publishIdempotently(event);
         await this.dependencies.store.markEventPublished(event.eventId);
         published += 1;
       } catch (error) {
+        blockedRefs.add(event.planVersionRef);
         failures.push({
           eventId: event.eventId,
           detail: error instanceof Error ? error.message : "Unknown event publication failure",
@@ -547,7 +555,7 @@ export class PlanReleaseService {
       }
     }
     return {
-      attempted: pending.length,
+      attempted,
       published,
       pending: pending.length - published,
       failures,
@@ -651,23 +659,6 @@ function validateEffectivePeriod(definition: PlanVersionDefinition): void {
 function isCanonicalInstant(value: string): boolean {
   const instant = new Date(value);
   return !Number.isNaN(instant.getTime()) && instant.toISOString() === value;
-}
-
-function effectivePeriodsConflict(
-  left: PlanVersionDefinition,
-  right: PlanVersionDefinition,
-): boolean {
-  const leftStart = Date.parse(left.effectiveAt);
-  const rightStart = Date.parse(right.effectiveAt);
-  if (leftStart === rightStart) return true;
-  if (leftStart < rightStart && left.effectiveUntil === undefined) return false;
-  if (rightStart < leftStart && right.effectiveUntil === undefined) return false;
-
-  const leftEnd = left.effectiveUntil ? Date.parse(left.effectiveUntil) : Number.POSITIVE_INFINITY;
-  const rightEnd = right.effectiveUntil
-    ? Date.parse(right.effectiveUntil)
-    : Number.POSITIVE_INFINITY;
-  return leftStart < rightEnd && rightStart < leftEnd;
 }
 
 function cloneDefinition(definition: PlanVersionDefinition): PlanVersionDefinition {

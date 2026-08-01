@@ -24,7 +24,10 @@ export type PlanReleaseValidationDiagnostic = {
   readonly source: "credential-free-structural" | "remote-provider-preflight";
 };
 
-/** A caller-supplied snapshot produced by ContractGraph validation; this package never re-verifies it. */
+/**
+ * ContractGraph evidence whose planVersionRef, definitionFingerprint, draftRevision, graphVersion,
+ * snapshotId, and checkedAt bindings are verified locally without re-running validation.
+ */
 export type PlanReleaseValidationEvidence = {
   readonly graphVersion: string;
   readonly snapshotId: string;
@@ -250,12 +253,30 @@ export function createPlanVersionSemanticDiff(
 }
 
 export function planReleaseCommandFingerprint(command: PublishPlanReleaseCommand): string {
-  return stableStringify({
+  const canonical = stableStringify({
     ref: command.ref,
     expectedRevision: command.expectedRevision,
     actor: command.actor,
     reason: command.reason,
   });
+  return `sha256:${createHash("sha256").update(canonical).digest("hex")}`;
+}
+
+export function effectivePeriodsConflict(
+  left: PlanVersionDefinition,
+  right: PlanVersionDefinition,
+): boolean {
+  const leftStart = Date.parse(left.effectiveAt);
+  const rightStart = Date.parse(right.effectiveAt);
+  if (leftStart === rightStart) return true;
+  if (leftStart < rightStart && left.effectiveUntil === undefined) return false;
+  if (rightStart < leftStart && right.effectiveUntil === undefined) return false;
+
+  const leftEnd = left.effectiveUntil ? Date.parse(left.effectiveUntil) : Number.POSITIVE_INFINITY;
+  const rightEnd = right.effectiveUntil
+    ? Date.parse(right.effectiveUntil)
+    : Number.POSITIVE_INFINITY;
+  return leftStart < rightEnd && rightStart < leftEnd;
 }
 
 /** Stable digest binding validation evidence to the exact reviewed draft definition. */
@@ -281,11 +302,14 @@ function semanticFields(
     },
     usage_tiers: [...(definition.usageTiers ?? [])]
       .map((tier) => ({ ...tier }))
-      .sort((left, right) =>
-        left.meterKey === right.meterKey
-          ? (left.upTo ?? Number.POSITIVE_INFINITY) - (right.upTo ?? Number.POSITIVE_INFINITY)
-          : left.meterKey.localeCompare(right.meterKey),
-      ),
+      .sort((left, right) => {
+        const meterDifference = left.meterKey.localeCompare(right.meterKey);
+        if (meterDifference !== 0) return meterDifference;
+        const leftUpTo = left.upTo ?? Number.POSITIVE_INFINITY;
+        const rightUpTo = right.upTo ?? Number.POSITIVE_INFINITY;
+        if (leftUpTo !== rightUpTo) return leftUpTo - rightUpTo;
+        return left.unitAmount - right.unitAmount;
+      }),
     entitlements: [...(definition.entitlements ?? [])]
       .map((entitlement) => ({ ...entitlement }))
       .sort((left, right) => left.featureKey.localeCompare(right.featureKey)),
@@ -318,6 +342,7 @@ function stableStringify(value: unknown): string {
   if (value && typeof value === "object") {
     const record = value as Record<string, unknown>;
     return `{${Object.keys(record)
+      .filter((key) => record[key] !== undefined)
       .sort()
       .map((key) => `${JSON.stringify(key)}:${stableStringify(record[key])}`)
       .join(",")}}`;

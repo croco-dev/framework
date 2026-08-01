@@ -5,7 +5,7 @@ prev: false
 title: "PlanReleaseValidationFailedProblem"
 ---
 
-RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다.
+Carries deterministic structural-validation diagnostic codes for a rejected review.
 
 ## Extends
 

@@ -5,7 +5,7 @@ prev: false
 title: "PlanReleasePublishConflictProblem"
 ---
 
-RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다.
+Reports reuse of a publish key for a different command or recorded publication.
 
 ## Extends
 
