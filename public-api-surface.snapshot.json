@@ -20120,6 +20120,16 @@
               "source": "./libs/types"
             },
             {
+              "name": "DesktopAppImplementation",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopAppImplementer",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
               "name": "DesktopAppMetadata",
               "exportKind": "named",
               "source": "./libs/types"
@@ -20135,6 +20145,11 @@
               "source": "./libs/types"
             },
             {
+              "name": "DesktopCommandHandler",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
               "name": "DesktopCommandKind",
               "exportKind": "named",
               "source": "./libs/types"
@@ -20146,6 +20161,11 @@
             },
             {
               "name": "DesktopContractDefinition",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopContractImplementation",
               "exportKind": "named",
               "source": "./libs/types"
             },

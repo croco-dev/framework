@@ -55,6 +55,32 @@ derived IDs, command kinds, window trust, and local capability references for th
 keys, unresolved local-window references, and references made ambiguous by mounting one contract under multiple
 keys are rejected with stable `DesktopDefinitionProblem` codes.
 
+## Declare exact handlers
+
+`app.implement()` derives every handler key, input, and result from the mounted contracts. It has no runtime
+registration behavior; later desktop runtime layers consume the implementation after this type-only boundary has
+proven complete coverage.
+
+```typescript
+app.implement({
+  contracts: {
+    project: {
+      commands: {
+        readFile: async ({ path }) => ({ contents: await readFile(path, "utf8") }),
+        saveFile: async ({ path, contents }) => {
+          await writeFile(path, contents);
+          return { saved: true };
+        },
+      },
+    },
+  },
+});
+```
+
+Every mounted contract and command needs a handler. Unknown contract, command, and nested keys are rejected at
+typecheck, and each handler must return the declared output (or a promise of it). The API derives IDs from the app
+definition, so no handler string ID or IPC channel is supplied.
+
 ## Compile and validate DesktopWire schemas
 
 `compileDesktopWireSchema(schema, context)` compiles strict objects, strings, finite numbers, booleans, null,
@@ -88,7 +114,8 @@ const input = parseDesktopWireValue(
 
 The package exports `InferDesktopCommandInput`, `InferDesktopCommandOutput`, `InferDesktopEventPayload`,
 `InferDesktopContractCommands`, `InferDesktopContractEvents`, `InferDesktopAppContracts`, and
-`InferDesktopAppWindows`. Schema inference supports Standard Schema output metadata, Zod-compatible `_output`
+`InferDesktopAppWindows`, `DesktopAppImplementation`, `DesktopContractImplementation`, and
+`DesktopCommandHandler`. Schema inference supports Standard Schema output metadata, Zod-compatible `_output`
 metadata, and structural `parse()` return types without making a schema library a runtime dependency.
 
 ## Verification
