@@ -3314,6 +3314,9 @@ importers:
       '@croco/ratelimit-core':
         specifier: workspace:*
         version: link:../ratelimit-core
+      '@croco/retry-core':
+        specifier: workspace:*
+        version: link:../retry-core
       '@croco/storage-core':
         specifier: workspace:*
         version: link:../storage-core

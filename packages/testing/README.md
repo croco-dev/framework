@@ -12,7 +12,7 @@ const response = await app.get("/users");
 Production-parity tests pass the same bootstrap export used by the deployed application:
 
 ```typescript
-import { createTestKernel } from "@croco/testing";
+import { createTestKernel, fixedClock, seededIds } from "@croco/testing";
 import { createCrocoApp } from "../app";
 
 await using test = await createTestKernel({
@@ -28,12 +28,29 @@ expect(test.fidelity).toEqual({
 });
 ```
 
+Deterministic scenarios opt into kernel-owned controls instead of patching process globals:
+
+```typescript
+await using test = await createTestKernel({
+  bootstrap: createCrocoApp,
+  clock: fixedClock("2026-01-01T00:00:00Z"),
+  fidelity: "application",
+  ids: seededIds("invitation-retry"),
+  network: "deny",
+  scenarioId: "invitation-retry",
+});
+
+await test.clock.advanceBy("30s");
+test.expectClean();
+```
+
 ## API
 
 | Helper                                                | Purpose                                                                                                                                    |
 | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | `createTestingApp(config)`                            | Creates an isolated `CrocoApp` with seeded test defaults and HTTP request helpers.                                                         |
 | `createTestKernel(config)`                            | Boots the real application bootstrap inside an isolated runtime scope and reports application or adapter fidelity as structured evidence.  |
+| `fixedClock(initial)` / `seededIds(seed)`             | Creates virtual time and deterministic IDs/random values for TestKernel-controlled retry, timeout, rate-limit, task, and provider fixtures. |
 | `createTestingHarness(app)`                           | Wraps an existing `CrocoApp` with the same request and contract helpers.                                                                   |
 | `createEventTestingHarness(config)`                   | Creates an isolated in-memory event bus and dispatches decorated handlers.                                                                 |
 | `createTestingRequestContext(config)`                 | Builds a deterministic request/runtime context for service tests.                                                                          |
@@ -83,6 +100,32 @@ responsible for registering its real transaction provider. `dispose()` and `Symb
 cleanup once; cleanup failures reject with `TestKernelDisposalProblem`. A bootstrap that acquires
 resources before it can return an app can call `context.onCleanup()` so failure-path cleanup is also
 guaranteed.
+
+## Deterministic Runtime Controls
+
+Each `TestKernel` owns a `clock`, `ids`, `random`, `environment`, `network`, and `replay` record.
+The bootstrap callback receives the same controls, so production code can consume existing explicit
+dependency seams instead of requiring a test-only branch. For example, pass `context.retry` to
+retry backoff dependencies, `() => context.clock.now` to an
+`InMemoryIdempotencyStore`, and `() => context.clock.now.getTime()` plus `context.random.next` to
+an in-memory rate-limit store. Task timeout runners accept the same clock through
+`now: () => context.clock.now.getTime()` and schedule timeouts with
+`(callback, delayMs) => context.clock.schedule(callback, delayMs, "task-timeout")`.
+`TestClock.schedule()` is for Croco-owned scheduler boundaries; `advanceBy()` and `drain()` run
+only that queued work deterministically.
+
+Environment overrides are immutable per-kernel snapshots. They do not mutate `process.env`, which
+makes concurrent kernels safe and leaves the ambient environment unchanged. `network: "deny"` is
+the default and rejects calls made through `context.network.fetch()` with a stable host and recovery
+diagnostic. It intentionally does not intercept arbitrary `globalThis.fetch` calls. Use explicit
+runtime dependencies for provider calls rather than global monkey patches.
+
+`test.expectClean()` reports pending virtual scheduled work, explicit `test.track()` operations, and
+pending after-commit hooks with category and source evidence. Use `test.waitUntil()`,
+`test.trackEventHandler()`, `test.trackSpan()`, or `test.trackResource()` at the matching adapter
+boundary so those outstanding operations are included too. `test.replay` records the scenario ID,
+seed, and virtual time needed to reproduce a failing deterministic scenario. User-owned timers,
+promises, and network calls outside these explicit boundaries remain outside the virtual scheduler.
 
 `createTestingApp`, `createEventTestingHarness`, and `resetCrocoTestingContext` reset the root Croco DI
 container, install a silent logger, replace the health/error defaults, and seed an inactive

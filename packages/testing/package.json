@@ -60,6 +60,7 @@
     "@croco/openapi-spec": "workspace:*",
     "@croco/problems-core": "workspace:*",
     "@croco/ratelimit-core": "workspace:*",
+    "@croco/retry-core": "workspace:*",
     "@croco/storage-core": "workspace:*",
     "@croco/telemetry-api": "workspace:*",
     "@croco/transports-http": "workspace:*",

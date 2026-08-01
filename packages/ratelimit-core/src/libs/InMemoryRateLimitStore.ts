@@ -11,7 +11,9 @@ import type {
 import { RateLimitRefundUnsupportedProblem } from "./problems/RateLimitConfigProblems";
 
 export type InMemoryRateLimitStoreOptions = {
-  pruneIntervalMs?: number;
+  readonly now?: () => number;
+  readonly pruneIntervalMs?: number;
+  readonly random?: () => number;
 };
 
 const DEFAULT_PRUNE_INTERVAL_MS = 60000;
@@ -36,7 +38,7 @@ export class FixedWindowInMemoryStore extends FixedWindowStore {
   private readonly pruneTimer?: ReturnType<typeof setInterval>;
 
   constructor(options: InMemoryRateLimitStoreOptions = {}) {
-    super();
+    super(options.now, options.random);
 
     const pruneIntervalMs = options.pruneIntervalMs ?? DEFAULT_PRUNE_INTERVAL_MS;
     if (pruneIntervalMs > 0) {
@@ -89,7 +91,7 @@ export class FixedWindowInMemoryStore extends FixedWindowStore {
     const entry = this.windows.get(key);
     if (!entry) return null;
 
-    const windowStart = Math.floor(Date.now() / policy.windowMs) * policy.windowMs;
+    const windowStart = Math.floor(this.now() / policy.windowMs) * policy.windowMs;
     if (entry.windowStart !== windowStart) {
       return null;
     }
@@ -127,7 +129,7 @@ export class FixedWindowInMemoryStore extends FixedWindowStore {
   }
 
   async pruneExpired(): Promise<number> {
-    const now = Date.now();
+    const now = this.now();
     let deletedCount = 0;
 
     for (const [key, entry] of this.windows.entries()) {
@@ -157,7 +159,7 @@ export class SlidingWindowInMemoryStore extends SlidingWindowStore {
   private readonly pruneTimer?: ReturnType<typeof setInterval>;
 
   constructor(options: InMemoryRateLimitStoreOptions = {}) {
-    super();
+    super(options.now, options.random);
 
     const pruneIntervalMs = options.pruneIntervalMs ?? DEFAULT_PRUNE_INTERVAL_MS;
     if (pruneIntervalMs > 0) {
@@ -205,7 +207,7 @@ export class SlidingWindowInMemoryStore extends SlidingWindowStore {
       throw new RateLimitRefundUnsupportedProblem();
     }
 
-    const now = Date.now();
+    const now = this.now();
     const windowStart = now - policy.windowMs;
 
     await this.removeTimestamps(key, windowStart);
@@ -307,7 +309,7 @@ export class SlidingWindowInMemoryStore extends SlidingWindowStore {
   }
 
   async pruneExpired(): Promise<number> {
-    const now = Date.now();
+    const now = this.now();
     let deletedCount = 0;
 
     for (const [key, entry] of this.windows.entries()) {
@@ -341,7 +343,7 @@ export class TokenBucketInMemoryStore extends TokenBucketStore {
   private readonly pruneTimer?: ReturnType<typeof setInterval>;
 
   constructor(options: InMemoryRateLimitStoreOptions = {}) {
-    super();
+    super(options.now, options.random);
 
     const pruneIntervalMs = options.pruneIntervalMs ?? DEFAULT_PRUNE_INTERVAL_MS;
     if (pruneIntervalMs > 0) {
@@ -418,7 +420,7 @@ export class TokenBucketInMemoryStore extends TokenBucketStore {
   }
 
   async pruneExpired(): Promise<number> {
-    const now = Date.now();
+    const now = this.now();
     let deletedCount = 0;
 
     for (const [key, entry] of this.buckets.entries()) {

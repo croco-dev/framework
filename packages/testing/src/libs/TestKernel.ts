@@ -20,6 +20,19 @@ import {
   type TestingRequestOptions,
   type TestingTransactionContext,
 } from "./testing";
+import { TestRuntime } from "./TestRuntime";
+import type {
+  TestClock,
+  TestEnvironment,
+  TestIdSource,
+  TestNetwork,
+  TestRandomSource,
+  TestEnvironmentOverrides,
+  TestReplayMetadata,
+  TestRetryDependencies,
+  TestRuntimeOptions,
+  TestScheduledWork,
+} from "./TestRuntime";
 
 export type TestKernelBootstrapResult =
   | CrocoApp
@@ -45,9 +58,30 @@ export type TestKernelEvidence = {
   readonly status: number;
 };
 
+export type TestKernelLeak = {
+  readonly category:
+    | "after-commit"
+    | "event-handler"
+    | "operation"
+    | "resource"
+    | "scheduled-work"
+    | "span"
+    | "wait-until";
+  readonly source: string;
+};
+
+export type TestKernelTrackedWork = Pick<TestKernelLeak, "category" | "source">;
+
 export type TestKernelBootstrapContext = {
+  readonly clock: TestClock;
+  readonly environment: TestEnvironment;
   readonly fidelity: TestKernelBootFidelity;
+  readonly ids: TestIdSource;
+  readonly network: TestNetwork;
   readonly onCleanup: (cleanup: () => Promise<void> | void) => void;
+  readonly random: TestRandomSource;
+  readonly replay: TestReplayMetadata;
+  readonly retry: TestRetryDependencies;
   readonly runtime: TestKernelRuntime;
 };
 
@@ -105,9 +139,15 @@ type TestKernelCommonOptions = {
     context: TestKernelBootstrapContext,
   ) => Promise<TestKernelBootstrapResult> | TestKernelBootstrapResult;
   readonly dispose?: (app: CrocoApp) => Promise<void> | void;
+  readonly clock?: TestRuntimeOptions["clock"];
+  readonly environment?: TestEnvironmentOverrides;
+  readonly ids?: TestRuntimeOptions["ids"];
+  readonly network?: TestRuntimeOptions["network"];
   readonly obligations?: readonly TestKernelResourceObligation[];
   readonly resources?: readonly TestResource<unknown>[];
+  readonly scenarioId?: string;
   readonly testId?: string;
+  readonly transactionContext?: TestingTransactionContext;
   readonly validation?: Partial<BootstrapValidationPolicy>;
   readonly workerId?: string;
 };
@@ -173,6 +213,17 @@ export class TestKernelDisposedProblem extends Problem {
       "testing/test-kernel-disposed",
       ProblemCategory.InternalServerError,
       "TestKernel cannot be used after disposal has started.",
+    );
+  }
+}
+
+export class TestKernelLeakProblem extends Problem {
+  constructor(leaks: readonly TestKernelLeak[], replay: TestReplayMetadata) {
+    super(
+      "testing/test-kernel-leak",
+      ProblemCategory.InternalServerError,
+      `TestKernel detected ${leaks.length} pending work item(s). Drain the TestClock, await the operation, or flush after-commit hooks before cleanup.`,
+      { extensions: { leaks, replay } },
     );
   }
 }
@@ -254,16 +305,23 @@ export class TestKernelHttp {
 }
 
 export class TestKernel implements AsyncDisposable {
+  readonly clock: TestClock;
+  readonly environment: TestEnvironment;
   readonly http: TestKernelHttp;
+  readonly ids: TestIdSource;
+  readonly network: TestNetwork;
+  readonly random: TestRandomSource;
+  readonly retry: TestRetryDependencies;
   readonly transactionContext: TestingTransactionContext;
   private disposal: Promise<void> | undefined;
   private disposed = false;
   private readonly evidenceBuffer: TestKernelEvidence[] = [];
-  private readonly inFlight = new Set<Promise<unknown>>();
+  private readonly inFlight = new Map<Promise<unknown>, TestKernelTrackedWork>();
 
   constructor(
     readonly app: CrocoApp,
     readonly fidelity: TestKernelFidelity,
+    private readonly controls: TestRuntime,
     private readonly scope: ContainerScope,
     transactionContext: TestingTransactionContext,
     private readonly baseUrl: string,
@@ -273,12 +331,22 @@ export class TestKernel implements AsyncDisposable {
     private readonly resourceConnections: ReadonlyMap<TestResource<unknown>, unknown>,
     private readonly resourceEvidenceBuffer: readonly TestKernelResourceEvidence[],
   ) {
+    this.clock = controls.clock;
+    this.environment = controls.environment;
     this.http = new TestKernelHttp(this);
+    this.ids = controls.ids;
+    this.network = controls.network;
+    this.random = controls.random;
+    this.retry = controls.retry;
     this.transactionContext = transactionContext;
   }
 
   get evidence(): readonly TestKernelEvidence[] {
     return [...this.evidenceBuffer];
+  }
+
+  get replay(): TestReplayMetadata {
+    return this.controls.replay;
   }
 
   get resourceEvidence(): readonly TestKernelResourceEvidence[] {
@@ -290,7 +358,9 @@ export class TestKernel implements AsyncDisposable {
   run<T>(fn: () => Promise<T> | T): Promise<T> | T {
     this.assertActive();
     const result = this.scope.run(fn);
-    return result instanceof Promise ? this.track(result) : result;
+    return result instanceof Promise
+      ? this.track(result, { category: "operation", source: "run" })
+      : result;
   }
 
   get<T>(token: TokenIdentifier<T>): T {
@@ -308,7 +378,38 @@ export class TestKernel implements AsyncDisposable {
 
   request(path: string | URL | Request, options: TestingRequestOptions = {}): Promise<Response> {
     this.assertActive();
-    return this.track(this.dispatchRequest(path, options));
+    return this.track(this.dispatchRequest(path, options), {
+      category: "operation",
+      source: "request",
+    });
+  }
+
+  track<T>(operation: Promise<T>, work: TestKernelTrackedWork): Promise<T> {
+    this.assertActive();
+    return this.trackInFlight(operation, work);
+  }
+
+  waitUntil<T>(operation: Promise<T>, source = "wait-until"): Promise<T> {
+    return this.track(operation, { category: "wait-until", source });
+  }
+
+  trackEventHandler<T>(operation: Promise<T>, source: string): Promise<T> {
+    return this.track(operation, { category: "event-handler", source });
+  }
+
+  trackResource<T>(operation: Promise<T>, source: string): Promise<T> {
+    return this.track(operation, { category: "resource", source });
+  }
+
+  trackSpan<T>(operation: Promise<T>, source: string): Promise<T> {
+    return this.track(operation, { category: "span", source });
+  }
+
+  expectClean(): void {
+    const leaks = this.collectLeaks();
+    if (leaks.length > 0) {
+      throw new TestKernelLeakProblem(leaks, this.replay);
+    }
   }
 
   private async dispatchRequest(
@@ -318,7 +419,7 @@ export class TestKernel implements AsyncDisposable {
     const request = toRequest(path, options, this.baseUrl);
     const response = await this.scope.run(async () =>
       this.lambdaHandler
-        ? dispatchLambdaRequest(this.lambdaHandler, request)
+        ? dispatchLambdaRequest(this.lambdaHandler, request, this)
         : this.nodeHandler
           ? this.nodeHandler(request)
           : this.app.fetch(request, { platform: "node" }),
@@ -345,8 +446,12 @@ export class TestKernel implements AsyncDisposable {
   }
 
   private async disposeOnce(): Promise<void> {
-    await Promise.allSettled(this.inFlight);
     const failures = await runCleanupSequence(this.scope, this.cleanupOperations);
+
+    const leaks = this.collectLeaks();
+    if (leaks.length > 0) {
+      failures.unshift(new TestKernelLeakProblem(leaks, this.replay));
+    }
 
     if (failures.length > 0) {
       throw new TestKernelDisposalProblem(failures);
@@ -363,8 +468,22 @@ export class TestKernel implements AsyncDisposable {
     }
   }
 
-  private track<T>(operation: Promise<T>): Promise<T> {
-    this.inFlight.add(operation);
+  private collectLeaks(): TestKernelLeak[] {
+    const operationLeaks = [...this.inFlight.values()];
+    const scheduledLeaks = this.clock.pendingWork.map((work: TestScheduledWork) => ({
+      category: "scheduled-work" as const,
+      source: work.source,
+    }));
+    const afterCommitCount = this.transactionContext.getPendingAfterCommitHookCount();
+    const afterCommitLeaks = Array.from({ length: afterCommitCount }, () => ({
+      category: "after-commit" as const,
+      source: "transaction-context",
+    }));
+    return [...operationLeaks, ...scheduledLeaks, ...afterCommitLeaks];
+  }
+
+  private trackInFlight<T>(operation: Promise<T>, work: TestKernelTrackedWork): Promise<T> {
+    this.inFlight.set(operation, work);
     void operation.then(
       () => this.inFlight.delete(operation),
       () => this.inFlight.delete(operation),
@@ -376,19 +495,33 @@ export class TestKernel implements AsyncDisposable {
 export async function createTestKernel(options: TestKernelOptions): Promise<TestKernel> {
   const scope = Container.createScope();
   const runtime = options.fidelity === "adapter" ? (options.adapter ?? "node") : "node";
+  const controls = new TestRuntime({
+    clock: options.clock,
+    environment: options.environment,
+    ids: options.ids,
+    network: options.network,
+    scenarioId: options.scenarioId,
+  });
   const registeredCleanups: Array<() => Promise<void> | void> = [];
   const resourceCleanups: Array<() => Promise<void> | void> = [];
-  const testId = options.testId ?? `test-${crypto.randomUUID()}`;
+  const testId = options.testId ?? controls.ids.next("test");
   const workerId =
     options.workerId ??
     process.env["VITEST_POOL_ID"] ??
     process.env["CI_NODE_INDEX"] ??
     `process-${process.pid}`;
   const fidelityContext: TestKernelBootstrapContext = {
+    clock: controls.clock,
+    environment: controls.environment,
     fidelity: options.fidelity,
+    ids: controls.ids,
+    network: controls.network,
     onCleanup(cleanup) {
       registeredCleanups.push(cleanup);
     },
+    random: controls.random,
+    replay: controls.replay,
+    retry: controls.retry,
     runtime,
   };
   let app: CrocoApp | undefined;
@@ -408,7 +541,7 @@ export async function createTestKernel(options: TestKernelOptions): Promise<Test
     return await scope.run(async () => {
       EventBusConfig.setInstance(new EventBusConfig());
       ShutdownManager.getInstance();
-      const transactionContext = createTestingTransactionContext();
+      const transactionContext = options.transactionContext ?? createTestingTransactionContext();
       const resources = options.resources ?? [];
       const resourceIds = new Set<string>();
 
@@ -489,6 +622,7 @@ export async function createTestKernel(options: TestKernelOptions): Promise<Test
       return new TestKernel(
         app,
         fidelity,
+        controls,
         scope,
         transactionContext,
         options.baseUrl ?? "http://localhost",
@@ -566,7 +700,11 @@ async function runCleanupSequence(
   return failures;
 }
 
-async function dispatchLambdaRequest(handler: LambdaHandler, request: Request): Promise<Response> {
+async function dispatchLambdaRequest(
+  handler: LambdaHandler,
+  request: Request,
+  controls: Pick<TestRuntime, "clock" | "ids">,
+): Promise<Response> {
   const url = new URL(request.url);
   const headers = Object.fromEntries(request.headers.entries());
   const body =
@@ -589,16 +727,16 @@ async function dispatchLambdaRequest(handler: LambdaHandler, request: Request): 
         sourceIp: "127.0.0.1",
         userAgent: headers["user-agent"] ?? "croco-test-kernel",
       },
-      requestId: `test-kernel-${crypto.randomUUID()}`,
+      requestId: controls.ids.next("lambda-request"),
       routeKey: `${request.method} ${url.pathname}`,
       stage: "$default",
-      time: new Date(0).toUTCString(),
-      timeEpoch: 0,
+      time: controls.clock.now.toUTCString(),
+      timeEpoch: controls.clock.now.getTime(),
     },
     isBase64Encoded: false,
     ...(body === undefined ? {} : { body }),
   };
-  const lambdaResponse = await handler(event, createLambdaContext());
+  const lambdaResponse = await handler(event, createLambdaContext(controls.ids));
   const responseHeaders = new Headers(lambdaResponse.headers);
   for (const cookie of lambdaResponse.cookies ?? []) {
     responseHeaders.append("set-cookie", cookie);
@@ -615,14 +753,14 @@ async function dispatchLambdaRequest(handler: LambdaHandler, request: Request): 
   });
 }
 
-function createLambdaContext(): LambdaContext {
+function createLambdaContext(ids: TestIdSource): LambdaContext {
   return {
     callbackWaitsForEmptyEventLoop: false,
     functionName: "croco-test-kernel",
     functionVersion: "$LATEST",
     invokedFunctionArn: "arn:aws:lambda:local:0:function:croco-test-kernel",
     memoryLimitInMB: "128",
-    awsRequestId: crypto.randomUUID(),
+    awsRequestId: ids.next("lambda"),
     logGroupName: "/aws/lambda/croco-test-kernel",
     logStreamName: "test",
     getRemainingTimeInMillis: () => 30_000,

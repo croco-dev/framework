@@ -34,6 +34,13 @@ export type DistributedRateLimitStoreOptions = {
 };
 
 export abstract class RateLimitStore {
+  private refundReceiptSequence = 0;
+
+  protected constructor(
+    protected readonly now: () => number = () => Date.now(),
+    protected readonly random: () => number = Math.random,
+  ) {}
+
   abstract check(key: string, policy: RateLimitPolicy): Promise<RateLimitResult>;
   async refund(
     _key: string,
@@ -44,6 +51,12 @@ export abstract class RateLimitStore {
   }
   abstract getStats(key?: string): Promise<RateLimitStats>;
   abstract pruneExpired(): Promise<number>;
+
+  protected createRefundReceiptId(algorithm: string, timestamp: number): string {
+    this.refundReceiptSequence = (this.refundReceiptSequence + 1) % Number.MAX_SAFE_INTEGER;
+    const randomPart = this.random().toString(36).slice(2, 10);
+    return `${algorithm}:${timestamp}:${this.refundReceiptSequence}:${randomPart}`;
+  }
 }
 
 export abstract class DistributedRateLimitStore extends RateLimitStore {
@@ -70,7 +83,7 @@ export abstract class FixedWindowStore extends DistributedRateLimitStore {
   ): Promise<void>;
 
   async checkFixedWindow(key: string, policy: FixedWindowPolicy): Promise<RateLimitResult> {
-    const now = Date.now();
+    const now = this.now();
     const windowStart = Math.floor(now / policy.windowMs) * policy.windowMs;
     const resetAtMs = windowStart + policy.windowMs;
 
@@ -155,7 +168,7 @@ export abstract class FixedWindowStore extends DistributedRateLimitStore {
   ): FixedWindowRefundReceipt {
     const receipt: FixedWindowRefundReceipt = {
       algorithm: "fixed",
-      id: createRefundReceiptId("fixed", windowStart),
+      id: this.createRefundReceiptId("fixed", windowStart),
       windowStart,
     };
     const current = this.refundReceipts.get(key);
@@ -218,7 +231,7 @@ export abstract class SlidingWindowStore extends DistributedRateLimitStore {
   protected abstract removeTimestamps(key: string, before: number): Promise<void>;
 
   async checkSlidingWindow(key: string, policy: SlidingWindowPolicy): Promise<RateLimitResult> {
-    const now = Date.now();
+    const now = this.now();
     const windowStart = now - policy.windowMs;
 
     await this.removeTimestamps(key, windowStart);
@@ -229,7 +242,7 @@ export abstract class SlidingWindowStore extends DistributedRateLimitStore {
     const refundReceipt: SlidingWindowRefundReceipt | undefined = success
       ? {
           algorithm: "sliding",
-          id: createRefundReceiptId("sliding", now),
+          id: this.createRefundReceiptId("sliding", now),
           timestamp: now,
         }
       : undefined;
@@ -266,7 +279,7 @@ export abstract class TokenBucketStore extends DistributedRateLimitStore {
   protected abstract setBucket(key: string, entry: TokenBucketEntry, ttlMs: number): Promise<void>;
 
   async checkTokenBucket(key: string, policy: TokenBucketPolicy): Promise<RateLimitResult> {
-    const now = Date.now();
+    const now = this.now();
     const intervalMs = policy.refillIntervalMs;
 
     let bucket = await this.getBucket(key);
@@ -333,7 +346,7 @@ export abstract class TokenBucketStore extends DistributedRateLimitStore {
       throw new RateLimitRefundUnsupportedProblem();
     }
 
-    const now = Date.now();
+    const now = this.now();
     const intervalMs = policy.refillIntervalMs;
     const ttlMs = (policy.capacity * intervalMs) / policy.refillRate;
     const resetAtMs = now + intervalMs / policy.refillRate;
@@ -391,7 +404,7 @@ export abstract class TokenBucketStore extends DistributedRateLimitStore {
       };
     }
 
-    const now = Date.now();
+    const now = this.now();
     const tokensToAdd = Math.floor(
       ((now - bucket.lastRefill) / policy.refillIntervalMs) * policy.refillRate,
     );
@@ -415,12 +428,12 @@ export abstract class TokenBucketStore extends DistributedRateLimitStore {
     key: string,
     expiresAtMs: number,
   ): TokenBucketRefundReceipt {
-    const now = Date.now();
+    const now = this.now();
     this.pruneTokenBucketRefundReceipts(key, now);
 
     const receipt: TokenBucketRefundReceipt = {
       algorithm: "token-bucket",
-      id: createRefundReceiptId("token-bucket", now),
+      id: this.createRefundReceiptId("token-bucket", now),
       expiresAtMs,
     };
     const receipts = this.refundReceipts.get(key) ?? new Map<string, number>();
@@ -474,12 +487,4 @@ export abstract class TokenBucketStore extends DistributedRateLimitStore {
       this.refundReceipts.delete(key);
     }
   }
-}
-
-let refundReceiptSequence = 0;
-
-function createRefundReceiptId(algorithm: string, timestamp: number): string {
-  refundReceiptSequence = (refundReceiptSequence + 1) % Number.MAX_SAFE_INTEGER;
-  const randomPart = Math.random().toString(36).slice(2, 10);
-  return `${algorithm}:${timestamp}:${refundReceiptSequence}:${randomPart}`;
 }

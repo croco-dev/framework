@@ -502,6 +502,8 @@ This cookbook documents 571 public Croco Problem codes. The deterministic JSON r
 | [`testing/telemetry-provider-already-installed`](#testing-telemetry-provider-already-installed)                                       | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`testing/test-kernel-disposal-failed`](#testing-test-kernel-disposal-failed)                                                         | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`testing/test-kernel-disposed`](#testing-test-kernel-disposed)                                                                       | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
+| [`testing/test-kernel-leak`](#testing-test-kernel-leak)                                                                               | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
+| [`testing/test-kernel-outbound-call`](#testing-test-kernel-outbound-call)                                                             | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`testing/test-kernel-resource-fidelity`](#testing-test-kernel-resource-fidelity)                                                     | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`testing/test-kernel-resource-not-found`](#testing-test-kernel-resource-not-found)                                                   | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`testing/test-kernel-resource-registration`](#testing-test-kernel-resource-registration)                                             | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
@@ -9369,7 +9371,7 @@ Sources:
 
 Sources:
 
-- `packages/testing/src/libs/TestKernel.ts:144:5` (problem-constructor)
+- `packages/testing/src/libs/TestKernel.ts:184:5` (problem-constructor)
 
 <a id="testing-test-kernel-disposed"></a>
 
@@ -9387,7 +9389,43 @@ Sources:
 
 Sources:
 
-- `packages/testing/src/libs/TestKernel.ts:172:5` (problem-constructor)
+- `packages/testing/src/libs/TestKernel.ts:212:5` (problem-constructor)
+
+<a id="testing-test-kernel-leak"></a>
+
+## `testing/test-kernel-leak`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/testing/src/libs/TestKernel.ts:222:5` (problem-constructor)
+
+<a id="testing-test-kernel-outbound-call"></a>
+
+## `testing/test-kernel-outbound-call`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/testing/src/libs/TestRuntime.ts:41:5` (problem-constructor)
 
 <a id="testing-test-kernel-resource-fidelity"></a>
 
@@ -9405,7 +9443,7 @@ Sources:
 
 Sources:
 
-- `packages/testing/src/libs/TestKernel.ts:182:5` (problem-constructor)
+- `packages/testing/src/libs/TestKernel.ts:233:5` (problem-constructor)
 
 <a id="testing-test-kernel-resource-not-found"></a>
 
@@ -9423,7 +9461,7 @@ Sources:
 
 Sources:
 
-- `packages/testing/src/libs/TestKernel.ts:198:5` (problem-constructor)
+- `packages/testing/src/libs/TestKernel.ts:249:5` (problem-constructor)
 
 <a id="testing-test-kernel-resource-registration"></a>
 
@@ -9441,7 +9479,7 @@ Sources:
 
 Sources:
 
-- `packages/testing/src/libs/TestKernel.ts:211:5` (problem-constructor)
+- `packages/testing/src/libs/TestKernel.ts:262:5` (problem-constructor)
 
 <a id="testing-test-kernel-validation-policy"></a>
 
@@ -9459,7 +9497,7 @@ Sources:
 
 Sources:
 
-- `packages/testing/src/libs/TestKernel.ts:131:5` (problem-constructor)
+- `packages/testing/src/libs/TestKernel.ts:171:5` (problem-constructor)
 
 <a id="testing-transaction-context-not-active"></a>
 
