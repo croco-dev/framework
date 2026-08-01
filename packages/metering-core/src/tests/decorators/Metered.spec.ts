@@ -21,6 +21,7 @@ describe("@Metered decorator", () => {
     mockService = {
       record: vi.fn().mockResolvedValue({ id: "usage-123" }),
       getUsage: vi.fn().mockResolvedValue(0),
+      getBillableUsageRequirement: vi.fn().mockReturnValue("local"),
     } as unknown as MeteringService;
 
     setMeteringService(mockService);
@@ -61,6 +62,85 @@ describe("@Metered decorator", () => {
         idempotencyKey: undefined,
         metadata: undefined,
       });
+    });
+
+    it("should reject a registered required legacy meter before business execution without identity", async () => {
+      vi.mocked(mockService.getBillableUsageRequirement).mockReturnValue("required");
+      let executed = false;
+      class TestService {
+        tenantId = "tenant-1";
+
+        @Metered({ meterId: "billable.calls" })
+        async doSomething(): Promise<void> {
+          executed = true;
+        }
+      }
+
+      await expect(new TestService().doSomething()).rejects.toMatchObject({
+        code: "metering/invalid-usage-envelope",
+      });
+      expect(executed).toBe(false);
+      expect(mockService.record).not.toHaveBeenCalled();
+    });
+
+    it("should fail before business execution when the cached billing contract is unknown", async () => {
+      vi.mocked(mockService.getBillableUsageRequirement).mockReturnValue("unknown");
+      let executed = false;
+      class TestService {
+        tenantId = "tenant-1";
+
+        @Metered({ meterId: "billable.calls" })
+        async doSomething(): Promise<void> {
+          executed = true;
+        }
+      }
+
+      await expect(new TestService().doSomething()).rejects.toMatchObject({
+        code: "metering/invalid-usage-envelope",
+        extensions: { reason: "meter billing contract must be loaded before @Metered execution" },
+      });
+      expect(executed).toBe(false);
+      expect(mockService.record).not.toHaveBeenCalled();
+    });
+
+    it("should refresh an unknown cached contract before executing a local meter", async () => {
+      vi.mocked(mockService.getBillableUsageRequirement).mockReturnValue("unknown");
+      mockService.resolveBillableUsageRequirement = vi.fn().mockResolvedValue("local");
+      let executed = false;
+      class TestService {
+        tenantId = "tenant-1";
+
+        @Metered({ meterId: "local.calls" })
+        async doSomething(): Promise<void> {
+          executed = true;
+        }
+      }
+
+      await expect(new TestService().doSomething()).resolves.toBeUndefined();
+      expect(mockService.resolveBillableUsageRequirement).toHaveBeenCalledWith(
+        "tenant-1",
+        "local.calls",
+      );
+      expect(executed).toBe(true);
+      expect(mockService.record).toHaveBeenCalled();
+    });
+
+    it("should propagate recording failures for registered required legacy meters", async () => {
+      vi.mocked(mockService.getBillableUsageRequirement).mockReturnValue("required");
+      vi.mocked(mockService.record).mockRejectedValue(new Error("journal unavailable"));
+      class TestService {
+        tenantId = "tenant-1";
+
+        @Metered({
+          meterId: "billable.calls",
+          idempotencyKeyExtractor: (args) => (args[0] as { requestId: string }).requestId,
+        })
+        async doSomething(_request: { requestId: string }): Promise<void> {}
+      }
+
+      await expect(new TestService().doSomething({ requestId: "request-1" })).rejects.toThrow(
+        "journal unavailable",
+      );
     });
 
     it("should use default value of 1", async () => {

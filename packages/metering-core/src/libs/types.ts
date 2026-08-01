@@ -19,6 +19,9 @@ export type MeterDefinition = {
   tenantId: string;
   meterId: string;
   type: MeterType;
+  billing?: "local" | "required";
+  aggregation?: MeterAggregation;
+  unit?: string;
   quota?: number;
   allowOverQuota?: boolean;
   metadata?: Record<string, unknown>;
@@ -78,3 +81,4 @@ export type MeterRegistrationOptions = Omit<MeterDefinition, "id" | "createdAt" 
 export type FlushResult = {
   recordsFlushed: number;
 };
+import type { MeterAggregation } from "./MeterRef";

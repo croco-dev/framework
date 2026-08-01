@@ -1,5 +1,10 @@
 import type { EventBus } from "@croco/events-core";
 import { Component } from "@croco/framework-context";
+import type {
+  BillableUsageEvent,
+  BillableUsageJournal,
+  BillableUsageJournalDiagnostics,
+} from "./BillableUsageJournal";
 import { QuotaExceededEvent } from "./events/QuotaExceededEvent";
 import { UsageRecordedEvent } from "./events/UsageRecordedEvent";
 import type {
@@ -14,9 +19,10 @@ import type {
   MeterRef,
 } from "./MeterRef";
 import type { MeterRegistry } from "./MeterRegistry";
+import { BillableUsageJournalRequiredProblem } from "./problems/BillableUsageJournalRequiredProblem";
 import { InvalidUsageEnvelopeProblem } from "./problems/InvalidUsageEnvelopeProblem";
 import { QuotaManager } from "./QuotaManager";
-import type { RecordOptions, UsageQueryOptions, UsageRecord } from "./types";
+import type { MeterDefinition, RecordOptions, UsageQueryOptions, UsageRecord } from "./types";
 import type { UsageStorage } from "./UsageStorage";
 
 export type MeteringServiceOptions = {
@@ -25,6 +31,8 @@ export type MeteringServiceOptions = {
   idempotencyManager: IdempotencyManager;
   eventBus?: EventBus;
 };
+
+type BillableMeterDescriptor = Pick<MeterRef, "aggregation" | "billing" | "unit">;
 
 /**
  * Usage Metering 핵심 서비스
@@ -40,6 +48,7 @@ export class MeteringService {
   private readonly usageStorage: UsageStorage;
   private readonly idempotencyManager: IdempotencyManager;
   private readonly eventBus?: EventBus;
+  private readonly billableUsageJournal?: BillableUsageJournal;
   private readonly quotaManager: QuotaManager;
 
   constructor(options: MeteringServiceOptions) {
@@ -47,6 +56,7 @@ export class MeteringService {
     this.usageStorage = options.usageStorage;
     this.idempotencyManager = options.idempotencyManager;
     this.eventBus = options.eventBus;
+    this.billableUsageJournal = options.meterRegistry.billableUsageJournal;
     this.quotaManager = new QuotaManager({
       usageStorage: options.usageStorage,
     });
@@ -79,18 +89,21 @@ export class MeteringService {
     if (input !== undefined) {
       this.validateTypedRecord(optionsOrMeter as Meter, input);
       const normalizedEventId = input.eventId?.trim() || undefined;
-      return this.recordUsage({
-        tenantId: input.tenantId,
-        meterId: (optionsOrMeter as Meter).key,
-        value: input.value,
-        idempotencyKey: normalizedEventId,
-        eventId: normalizedEventId,
-        dimensions:
-          input.dimensions === undefined
-            ? undefined
-            : { ...(input.dimensions as Record<string, MeterDimensionValue>) },
-        metadata: input.metadata,
-      });
+      return this.recordUsage(
+        {
+          tenantId: input.tenantId,
+          meterId: (optionsOrMeter as Meter).key,
+          value: input.value,
+          idempotencyKey: normalizedEventId,
+          eventId: normalizedEventId,
+          dimensions:
+            input.dimensions === undefined
+              ? undefined
+              : { ...(input.dimensions as Record<string, MeterDimensionValue>) },
+          metadata: input.metadata,
+        },
+        optionsOrMeter as Meter,
+      );
     }
 
     return this.recordUsage(optionsOrMeter as RecordOptions);
@@ -101,9 +114,12 @@ export class MeteringService {
       eventId?: string;
       dimensions?: Record<string, MeterDimensionValue>;
     },
+    billableMeter?: BillableMeterDescriptor,
   ): Promise<UsageRecord> {
     const { tenantId, meterId } = options;
-    const idempotencyKey = this.idempotencyManager.ensureIdempotencyKey(options.idempotencyKey);
+    const normalizedProvidedKey = options.idempotencyKey?.trim() || undefined;
+    const normalizedEventId = options.eventId?.trim() || normalizedProvidedKey;
+    const idempotencyKey = this.idempotencyManager.ensureIdempotencyKey(normalizedProvidedKey);
     const claim = await this.idempotencyManager.claimMeteringProcessingOrThrow(
       tenantId,
       meterId,
@@ -116,7 +132,22 @@ export class MeteringService {
     try {
       let delivery = claim.delivery;
       if (!delivery) {
-        delivery = await this.persistUsage(options, idempotencyKey, claim.operationId);
+        const meter = await this.meterRegistry.getOrThrow(tenantId, meterId);
+        const billingRequired = this.isBillingRequired(meter, billableMeter);
+        if (billingRequired && !normalizedEventId) {
+          throw new InvalidUsageEnvelopeProblem(
+            meterId,
+            "billing-required meters require a caller-supplied eventId or idempotencyKey",
+          );
+        }
+        delivery = await this.persistUsage(
+          options,
+          idempotencyKey,
+          claim.operationId,
+          meter,
+          normalizedEventId,
+          billableMeter,
+        );
         persistenceCompleted = true;
         await this.idempotencyManager.markMeteringEventsPublishing(
           tenantId,
@@ -168,9 +199,11 @@ export class MeteringService {
     },
     idempotencyKey: string,
     operationId: string,
+    meter: MeterDefinition,
+    normalizedEventId?: string,
+    billableMeter?: BillableMeterDescriptor,
   ): Promise<PendingMeteringDelivery> {
     const { tenantId, meterId, value = 1, metadata } = options;
-    const meter = await this.meterRegistry.getOrThrow(tenantId, meterId);
     const usageRecord: UsageRecord = {
       id: operationId,
       tenantId,
@@ -187,8 +220,43 @@ export class MeteringService {
       timestamp: usageRecord.timestamp.toISOString(),
     };
 
+    const billing = this.isBillingRequired(meter, billableMeter) ? "required" : "local";
+    let billableEventId: string | undefined;
+    if (billing === "required") {
+      const journal = this.billableUsageJournal;
+      if (journal?.durability !== "persistent") {
+        throw new BillableUsageJournalRequiredProblem(meterId);
+      }
+      if (meter.aggregation && billableMeter && meter.aggregation !== billableMeter.aggregation) {
+        throw new InvalidUsageEnvelopeProblem(
+          meterId,
+          `aggregation '${billableMeter.aggregation}' does not match registered '${meter.aggregation}'`,
+        );
+      }
+      if (meter.unit && billableMeter && meter.unit !== billableMeter.unit) {
+        throw new InvalidUsageEnvelopeProblem(
+          meterId,
+          `unit '${billableMeter.unit}' does not match registered '${meter.unit}'`,
+        );
+      }
+      const event: BillableUsageEvent = {
+        eventId: normalizedEventId ?? idempotencyKey,
+        tenantId,
+        meterId,
+        aggregation: billableMeter?.aggregation ?? meter.aggregation ?? "COUNT",
+        unit: billableMeter?.unit ?? meter.unit ?? "event",
+        value,
+        dimensions: Object.freeze({ ...options.dimensions }),
+      };
+      await journal.append(event);
+      billableEventId = event.eventId;
+    }
+
     if (meter.quota === undefined) {
       await this.usageStorage.record(usageRecord);
+      if (billableEventId) {
+        await this.billableUsageJournal?.markDeliverable(billableEventId);
+      }
       return { usageRecord: serializedUsageRecord };
     }
 
@@ -201,6 +269,16 @@ export class MeteringService {
       allowOverQuota,
       usageRecord,
     });
+    if (billableEventId) {
+      if (quotaResult.exceeded && !allowOverQuota) {
+        await this.billableUsageJournal?.markUndeliverable(billableEventId, {
+          code: "metering/quota-exceeded",
+          message: `Usage for meter '${meterId}' was rejected before provider delivery`,
+        });
+      } else {
+        await this.billableUsageJournal?.markDeliverable(billableEventId);
+      }
+    }
     return {
       usageRecord: serializedUsageRecord,
       quota: {
@@ -335,5 +413,28 @@ export class MeteringService {
    */
   async getUsage(options: UsageQueryOptions): Promise<number> {
     return this.usageStorage.getUsage(options);
+  }
+
+  getBillableUsageRequirement(tenantId: string, meterId: string): "local" | "required" | "unknown" {
+    return this.meterRegistry.getCachedBillingRequirement(tenantId, meterId);
+  }
+
+  async resolveBillableUsageRequirement(
+    tenantId: string,
+    meterId: string,
+  ): Promise<"local" | "required"> {
+    const meter = await this.meterRegistry.getOrThrow(tenantId, meterId);
+    return meter.billing === "required" ? "required" : "local";
+  }
+
+  async getBillableUsageDiagnostics(): Promise<BillableUsageJournalDiagnostics | null> {
+    return this.billableUsageJournal?.getDiagnostics() ?? null;
+  }
+
+  private isBillingRequired(
+    meter: Pick<MeterDefinition, "billing">,
+    billableMeter?: Pick<BillableMeterDescriptor, "billing">,
+  ): boolean {
+    return meter.billing === "required" || billableMeter?.billing === "required";
   }
 }

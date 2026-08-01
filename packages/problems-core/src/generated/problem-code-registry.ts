@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 552,
+  problemCount: 553,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -9132,6 +9132,40 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 4,
           column: 3,
           kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "metering/billable-usage-journal-required",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#metering-billable-usage-journal-required",
+      recovery: {
+        cause:
+          "A meter declares billing as required, but MeterRegistry validation cannot find a persistent BillableUsageJournal.",
+        userAction:
+          "Do not retry with the same configuration; connect a persistent journal or change the meter billing contract first.",
+        operatorAction:
+          "Configure a persistent BillableUsageJournal before loadAll, lazy meter lookup, or registration validates a billing-required meter.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/metering-core/src/libs/problems/BillableUsageJournalRequiredProblem.ts",
+          line: 5,
+          column: 5,
+          kind: "problem-constructor",
         },
       ],
     },

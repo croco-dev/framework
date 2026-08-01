@@ -1,5 +1,9 @@
 import type { EventBus } from "@croco/events-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  InMemoryBillableUsageJournal,
+  type BillableUsageJournal,
+} from "../libs/BillableUsageJournal";
 import { QuotaExceededEvent } from "../libs/events/QuotaExceededEvent";
 import { UsageRecordedEvent } from "../libs/events/UsageRecordedEvent";
 import type {
@@ -18,12 +22,32 @@ import { QuotaExceededProblem } from "../libs/problems/QuotaExceededProblem";
 import type { MeterDefinition } from "../libs/types";
 import type { UsageStorage } from "../libs/UsageStorage";
 
+function asPersistentJournal(
+  journal: InMemoryBillableUsageJournal,
+  overrides: Partial<BillableUsageJournal> = {},
+): BillableUsageJournal {
+  return {
+    durability: "persistent",
+    append: journal.append.bind(journal),
+    markDeliverable: journal.markDeliverable.bind(journal),
+    markUndeliverable: journal.markUndeliverable.bind(journal),
+    claimNext: journal.claimNext.bind(journal),
+    markAccepted: journal.markAccepted.bind(journal),
+    markRetryableFailed: journal.markRetryableFailed.bind(journal),
+    markTerminalFailed: journal.markTerminalFailed.bind(journal),
+    get: journal.get.bind(journal),
+    getDiagnostics: journal.getDiagnostics.bind(journal),
+    ...overrides,
+  };
+}
+
 describe("MeteringService", () => {
   let service!: MeteringService;
   let mockRegistry!: MeterRegistry;
   let mockStorage!: UsageStorage;
   let mockIdempotency!: IdempotencyManager;
   let mockEventBus!: EventBus;
+  let mockJournal!: BillableUsageJournal;
 
   const createMeter = (overrides: Partial<MeterDefinition> = {}): MeterDefinition => ({
     id: "meter-123",
@@ -78,6 +102,34 @@ describe("MeteringService", () => {
       publish: vi.fn().mockResolvedValue(undefined),
       subscribe: vi.fn(),
     } as unknown as EventBus;
+
+    mockJournal = {
+      durability: "persistent",
+      append: vi.fn().mockImplementation(async (event) => ({
+        outcome: "appended",
+        entry: {
+          event,
+          state: "pending",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          retryCount: 0,
+        },
+      })),
+      markDeliverable: vi.fn(),
+      markUndeliverable: vi.fn(),
+      claimNext: vi.fn(),
+      markAccepted: vi.fn(),
+      markRetryableFailed: vi.fn(),
+      markTerminalFailed: vi.fn(),
+      get: vi.fn(),
+      getDiagnostics: vi.fn().mockResolvedValue({
+        backlogCount: 0,
+        oldestPendingAgeMs: null,
+        retryCount: 0,
+        terminalFailureCount: 0,
+      }),
+    } as unknown as BillableUsageJournal;
+    mockRegistry = { ...mockRegistry, billableUsageJournal: mockJournal } as MeterRegistry;
 
     service = new MeteringService({
       meterRegistry: mockRegistry,
@@ -177,6 +229,15 @@ describe("MeteringService", () => {
         }),
       );
       expect(result.dimensions).not.toBe(result.metadata);
+      expect(mockJournal.append).toHaveBeenCalledWith({
+        eventId: "request-1",
+        tenantId: "tenant-1",
+        meterId: "ai.tokens",
+        aggregation: "SUM",
+        unit: "token",
+        value: 42,
+        dimensions: { model: "gpt-5" },
+      });
     });
 
     it("should use the normalized billing event identity consistently", async () => {
@@ -203,6 +264,109 @@ describe("MeteringService", () => {
           eventId: "request-1",
         }),
       );
+    });
+
+    it("should not let a typed local descriptor downgrade a registered required meter", async () => {
+      const meterRef = defineMeter({
+        key: "billable.calls",
+        aggregation: "COUNT",
+        unit: "request",
+      });
+      vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(
+        createMeter({ meterId: "billable.calls", billing: "required", quota: undefined }),
+      );
+
+      await service.record(meterRef, { tenantId: "tenant-1", eventId: "event-1" });
+
+      expect(mockJournal.append).toHaveBeenCalledWith(
+        expect.objectContaining({ eventId: "event-1", meterId: "billable.calls" }),
+      );
+    });
+
+    it("should reject a registered required meter without a caller-stable identity", async () => {
+      vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(
+        createMeter({ meterId: "billable.calls", billing: "required", quota: undefined }),
+      );
+
+      await expect(
+        service.record({ tenantId: "tenant-1", meterId: "billable.calls" }),
+      ).rejects.toMatchObject({
+        code: "metering/invalid-usage-envelope",
+        extensions: {
+          reason: "billing-required meters require a caller-supplied eventId or idempotencyKey",
+        },
+      });
+      expect(mockIdempotency.abortMeteringProcessing).toHaveBeenCalledTimes(1);
+      expect(mockJournal.append).not.toHaveBeenCalled();
+    });
+
+    it("should use a legacy idempotency key as the stable billable event identity", async () => {
+      vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(
+        createMeter({ meterId: "billable.calls", billing: "required", quota: undefined }),
+      );
+      vi.mocked(mockIdempotency.ensureIdempotencyKey).mockReturnValue("request-1");
+
+      await service.record({
+        tenantId: "tenant-1",
+        meterId: "billable.calls",
+        idempotencyKey: "  request-1  ",
+      });
+
+      expect(mockIdempotency.ensureIdempotencyKey).toHaveBeenCalledWith("request-1");
+      expect(mockIdempotency.claimMeteringProcessingOrThrow).toHaveBeenCalledWith(
+        "tenant-1",
+        "billable.calls",
+        "request-1",
+      );
+      expect(mockJournal.append).toHaveBeenCalledWith(
+        expect.objectContaining({ eventId: "request-1", meterId: "billable.calls" }),
+      );
+    });
+
+    it("should ignore a blank legacy eventId when a stable idempotency key is available", async () => {
+      vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(
+        createMeter({ meterId: "billable.calls", billing: "required", quota: undefined }),
+      );
+      vi.mocked(mockIdempotency.ensureIdempotencyKey).mockReturnValue("request-1");
+
+      const options = {
+        tenantId: "tenant-1",
+        meterId: "billable.calls",
+        eventId: "   ",
+        idempotencyKey: " request-1 ",
+      };
+
+      await service.record(options);
+
+      expect(mockJournal.append).toHaveBeenCalledWith(
+        expect.objectContaining({ eventId: "request-1", meterId: "billable.calls" }),
+      );
+    });
+
+    it("should reject typed aggregation or unit drift from the registered contract", async () => {
+      const meterRef = defineMeter({
+        key: "ai.tokens",
+        aggregation: "COUNT",
+        unit: "request",
+        billing: "required",
+      });
+      vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(
+        createMeter({
+          meterId: "ai.tokens",
+          billing: "required",
+          aggregation: "SUM",
+          unit: "token",
+          quota: undefined,
+        }),
+      );
+
+      await expect(
+        service.record(meterRef, { tenantId: "tenant-1", eventId: "event-1" }),
+      ).rejects.toMatchObject({
+        code: "metering/invalid-usage-envelope",
+        extensions: { reason: "aggregation 'COUNT' does not match registered 'SUM'" },
+      });
+      expect(mockJournal.append).not.toHaveBeenCalled();
     });
 
     it("should generate an identity for a blank optional eventId", async () => {
@@ -270,6 +434,121 @@ describe("MeteringService", () => {
         InvalidUsageEnvelopeProblem,
       );
       expect(mockRegistry.getOrThrow).not.toHaveBeenCalled();
+    });
+
+    it("should reject billable usage when no persistent journal is configured", async () => {
+      const meterRef = defineMeter({
+        key: "billable.calls",
+        aggregation: "COUNT",
+        unit: "request",
+        billing: "required",
+      });
+      const serviceWithoutJournal = new MeteringService({
+        meterRegistry: { ...mockRegistry, billableUsageJournal: undefined } as MeterRegistry,
+        usageStorage: mockStorage,
+        idempotencyManager: mockIdempotency,
+      });
+      vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(
+        createMeter({ meterId: "billable.calls", quota: undefined }),
+      );
+
+      await expect(
+        serviceWithoutJournal.record(meterRef, { tenantId: "tenant-1", eventId: "event-1" }),
+      ).rejects.toMatchObject({ code: "metering/billable-usage-journal-required" });
+      expect(mockStorage.record).not.toHaveBeenCalled();
+    });
+
+    it("should leave a replayable intent when local persistence fails after append", async () => {
+      const meterRef = defineMeter({
+        key: "billable.calls",
+        aggregation: "COUNT",
+        unit: "request",
+        billing: "required",
+      });
+      vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(
+        createMeter({ meterId: "billable.calls", quota: undefined }),
+      );
+      vi.mocked(mockStorage.record).mockRejectedValue(new Error("process terminated"));
+
+      await expect(
+        service.record(meterRef, { tenantId: "tenant-1", eventId: "event-1" }),
+      ).rejects.toThrow("process terminated");
+      expect(mockJournal.append).toHaveBeenCalledBefore(vi.mocked(mockStorage.record));
+    });
+
+    it("should retain a pending intent after local commit and process loss", async () => {
+      const memoryJournal = new InMemoryBillableUsageJournal();
+      const persistentJournal = asPersistentJournal(memoryJournal);
+      const meterRef = defineMeter({
+        key: "billable.calls",
+        aggregation: "COUNT",
+        unit: "request",
+        billing: "required",
+      });
+      const processLossService = new MeteringService({
+        meterRegistry: {
+          ...mockRegistry,
+          billableUsageJournal: persistentJournal,
+        } as MeterRegistry,
+        usageStorage: mockStorage,
+        idempotencyManager: mockIdempotency,
+        eventBus: mockEventBus,
+      });
+      vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(
+        createMeter({ meterId: "billable.calls", quota: undefined }),
+      );
+      vi.mocked(mockEventBus.publish).mockRejectedValue(new Error("process terminated"));
+
+      await expect(
+        processLossService.record(meterRef, { tenantId: "tenant-1", eventId: "event-1" }),
+      ).rejects.toThrow("process terminated");
+
+      expect(mockStorage.record).toHaveBeenCalledTimes(1);
+      expect(await persistentJournal.get("event-1")).toMatchObject({ state: "pending" });
+      expect((await persistentJournal.getDiagnostics()).backlogCount).toBe(1);
+    });
+
+    it("should activate an existing intent when replay closes the local-commit gap", async () => {
+      const memoryJournal = new InMemoryBillableUsageJournal();
+      const markDeliverable = vi
+        .fn()
+        .mockRejectedValueOnce(new Error("process terminated before activation"))
+        .mockImplementation(memoryJournal.markDeliverable.bind(memoryJournal));
+      const persistentJournal = asPersistentJournal(memoryJournal, { markDeliverable });
+      const persistedIds = new Set<string>();
+      vi.mocked(mockStorage.record).mockImplementation(async (record) => {
+        persistedIds.add(record.id);
+      });
+      vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(
+        createMeter({ meterId: "billable.calls", billing: "required", quota: undefined }),
+      );
+      const replayService = new MeteringService({
+        meterRegistry: {
+          ...mockRegistry,
+          billableUsageJournal: persistentJournal,
+        } as MeterRegistry,
+        usageStorage: mockStorage,
+        idempotencyManager: mockIdempotency,
+      });
+      const meterRef = defineMeter({
+        key: "billable.calls",
+        aggregation: "COUNT",
+        unit: "request",
+        billing: "required",
+      });
+
+      await expect(
+        replayService.record(meterRef, { tenantId: "tenant-1", eventId: "event-1" }),
+      ).rejects.toThrow("process terminated before activation");
+      await expect(
+        replayService.record(meterRef, { tenantId: "tenant-1", eventId: "event-1" }),
+      ).resolves.toMatchObject({ eventId: "event-1" });
+
+      expect(persistedIds).toEqual(new Set(["operation-id"]));
+      expect(markDeliverable).toHaveBeenCalledTimes(2);
+      await expect(
+        persistentJournal.claimNext({ ownerId: "worker-1", leaseDurationMs: 1_000 }),
+      ).resolves.toMatchObject({ state: "delivering" });
     });
 
     it("should reject non-string event identities as a modeled Problem", async () => {

@@ -1,10 +1,12 @@
 import { redisResource, type RedisTestConnection } from "@croco/testing-resources";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { IdempotencyManager } from "../libs/IdempotencyManager";
+import type { BillableUsageClaim, BillableUsageEvent } from "../libs/BillableUsageJournal";
 import { MeteringService } from "../libs/MeteringService";
 import type { MeterRegistry } from "../libs/MeterRegistry";
 import { DuplicateRecordProblem } from "../libs/problems/DuplicateRecordProblem";
 import type { RedisClient } from "../libs/RedisClient";
+import { RedisBillableUsageJournal } from "../libs/RedisBillableUsageJournal";
 import { RedisUsageStorage } from "../libs/RedisUsageStorage";
 import type { MeterDefinition, UsageRecord } from "../libs/types";
 
@@ -273,5 +275,51 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
 
     expect(await connection.client.zcard(usageKey)).toBe(1);
     expect(await connection.client.exists(dedupeKey)).toBe(1);
+  });
+
+  it("atomically fences concurrent billable delivery claims and replays an expired lease", async () => {
+    if (!connection) {
+      throw new Error("Redis test resource did not start");
+    }
+    const journal = new RedisBillableUsageJournal(createRedisClient(connection));
+    const event: BillableUsageEvent = {
+      eventId: "billable-event-1",
+      tenantId: "tenant-1",
+      meterId: "ai.tokens",
+      aggregation: "SUM",
+      unit: "token",
+      value: 100_000_000_000_001,
+      dimensions: { model: "gpt-5" },
+    };
+    await journal.append(event);
+    await journal.markDeliverable(event.eventId);
+
+    const competing = await Promise.all([
+      journal.claimNext({ ownerId: "worker-1", leaseDurationMs: 100 }),
+      journal.claimNext({ ownerId: "worker-2", leaseDurationMs: 100 }),
+    ]);
+    const first = competing.find((claim) => claim !== null);
+    expect(first).toBeDefined();
+    expect(competing.filter((claim) => claim !== null)).toHaveLength(1);
+
+    let second: BillableUsageClaim | null = null;
+    for (let attempt = 0; attempt < 50 && second === null; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      second = await journal.claimNext({ ownerId: "worker-3", leaseDurationMs: 1_000 });
+    }
+    if (!second) {
+      throw new Error("Expired billable usage lease was not reclaimed within 1 second");
+    }
+    expect(second.fencingToken).toBeGreaterThan(first?.fencingToken ?? 0);
+    await expect(journal.markAccepted(first as BillableUsageClaim)).rejects.toMatchObject({
+      code: "metering/transition-conflict",
+    });
+    await journal.markAccepted(second);
+
+    await expect(journal.get(event.eventId)).resolves.toMatchObject({
+      state: "accepted",
+      event: { value: 100_000_000_000_001 },
+    });
+    await expect(journal.getDiagnostics()).resolves.toMatchObject({ backlogCount: 0 });
   });
 });

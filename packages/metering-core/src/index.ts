@@ -163,6 +163,22 @@ export { QuotaExceededEvent } from "./libs/events/QuotaExceededEvent";
  */
 export { UsageRecordedEvent } from "./libs/events/UsageRecordedEvent";
 
+// ==================== Billable Usage Journal ====================
+
+export { InMemoryBillableUsageJournal } from "./libs/BillableUsageJournal";
+export { RedisBillableUsageJournal } from "./libs/RedisBillableUsageJournal";
+export type {
+  BillableUsageAppendResult,
+  BillableUsageClaim,
+  BillableUsageClaimOptions,
+  BillableUsageDeliveryState,
+  BillableUsageEvent,
+  BillableUsageFailure,
+  BillableUsageJournal,
+  BillableUsageJournalDiagnostics,
+  BillableUsageJournalEntry,
+} from "./libs/BillableUsageJournal";
+
 // ==================== Core Services ====================
 
 /**
@@ -328,6 +344,7 @@ export { MeterRepository } from "./libs/MeterRepository";
 // ==================== Problems ====================
 
 export { AtomicQuotaNotSupportedProblem } from "./libs/problems/AtomicQuotaNotSupportedProblem";
+export { BillableUsageJournalRequiredProblem } from "./libs/problems/BillableUsageJournalRequiredProblem";
 /**
  * 중복 사용량 기록 시 발생하는 문제 타입입니다.
  *

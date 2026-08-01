@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MeterRegistry } from "../libs/MeterRegistry";
 import type { MeterRepository } from "../libs/MeterRepository";
 import { InvalidMeterProblem } from "../libs/problems/InvalidMeterProblem";
+import type { BillableUsageJournal } from "../libs/BillableUsageJournal";
 import type { MeterDefinition, MeterRegistrationOptions } from "../libs/types";
 
 describe("MeterRegistry", () => {
@@ -36,6 +37,32 @@ describe("MeterRegistry", () => {
   });
 
   describe("loadAll", () => {
+    it("should reject a required billing meter without a persistent journal", async () => {
+      vi.mocked(mockRepository.findAll).mockResolvedValue([createMeter({ billing: "required" })]);
+
+      await expect(registry.loadAll()).rejects.toMatchObject({
+        code: "metering/billable-usage-journal-required",
+      });
+    });
+
+    it("should load a required billing meter with a persistent journal", async () => {
+      const journal = { durability: "persistent" } as BillableUsageJournal;
+      registry = new MeterRegistry(mockRepository, 60_000, journal);
+      vi.mocked(mockRepository.findAll).mockResolvedValue([createMeter({ billing: "required" })]);
+
+      await expect(registry.loadAll()).resolves.toBeUndefined();
+    });
+
+    it("should reject a required billing meter with a volatile journal", async () => {
+      const journal = { durability: "volatile" } as BillableUsageJournal;
+      registry = new MeterRegistry(mockRepository, 60_000, journal);
+      vi.mocked(mockRepository.findAll).mockResolvedValue([createMeter({ billing: "required" })]);
+
+      await expect(registry.loadAll()).rejects.toMatchObject({
+        code: "metering/billable-usage-journal-required",
+      });
+    });
+
     it("should load all meters from repository", async () => {
       const meters = [
         createMeter({ tenantId: "tenant-1", meterId: "api_calls" }),
@@ -94,6 +121,16 @@ describe("MeterRegistry", () => {
 
       expect(result).toEqual(meter);
       expect(mockRepository.findByMeterIdAndTenant).toHaveBeenCalledWith("api_calls", "tenant-1");
+    });
+
+    it("should reject a lazily fetched required meter without a persistent journal", async () => {
+      vi.mocked(mockRepository.findByMeterIdAndTenant).mockResolvedValue(
+        createMeter({ billing: "required" }),
+      );
+
+      await expect(registry.get("tenant-1", "api_calls")).rejects.toMatchObject({
+        code: "metering/billable-usage-journal-required",
+      });
     });
 
     it("should cache meter after fetching from repository", async () => {
@@ -198,6 +235,23 @@ describe("MeterRegistry", () => {
       expect(cached).toEqual(savedMeter);
       expect(mockRepository.findByMeterIdAndTenant).not.toHaveBeenCalled();
     });
+
+    it("should validate the billing contract returned by the repository before caching", async () => {
+      const options: MeterRegistrationOptions = {
+        tenantId: "tenant-1",
+        meterId: "new_meter",
+        type: "COUNT",
+      };
+      vi.mocked(mockRepository.save).mockResolvedValue(
+        createMeter({ meterId: "new_meter", billing: "required" }),
+      );
+
+      await expect(registry.register(options)).rejects.toMatchObject({
+        code: "metering/billable-usage-journal-required",
+      });
+      vi.mocked(mockRepository.findByMeterIdAndTenant).mockResolvedValue(null);
+      await expect(registry.get("tenant-1", "new_meter")).resolves.toBeNull();
+    });
   });
 
   describe("getByTenant", () => {
@@ -220,6 +274,16 @@ describe("MeterRegistry", () => {
 
       expect(result).toEqual(meters);
       expect(mockRepository.findByTenant).toHaveBeenCalledWith("tenant-1");
+    });
+
+    it("should reject a required meter discovered during tenant refresh", async () => {
+      vi.mocked(mockRepository.findByTenant).mockResolvedValue([
+        createMeter({ billing: "required" }),
+      ]);
+
+      await expect(registry.getByTenant("tenant-1")).rejects.toMatchObject({
+        code: "metering/billable-usage-journal-required",
+      });
     });
 
     it("should refetch tenant meters when cached data becomes stale", async () => {
@@ -252,6 +316,38 @@ describe("MeterRegistry", () => {
 
       expect(result).toBeNull();
       expect(mockRepository.findByMeterIdAndTenant).toHaveBeenCalled();
+    });
+  });
+
+  describe("cached billing intent", () => {
+    it("should resolve billing intent without repository I/O on the request path", async () => {
+      const journal = { durability: "persistent" } as BillableUsageJournal;
+      registry = new MeterRegistry(mockRepository, 60_000, journal);
+      vi.mocked(mockRepository.findAll).mockResolvedValue([createMeter({ billing: "required" })]);
+      await registry.loadAll();
+      vi.clearAllMocks();
+
+      expect(registry.getCachedBillingRequirement("tenant-1", "api_calls")).toBe("required");
+      expect(mockRepository.findByMeterIdAndTenant).not.toHaveBeenCalled();
+      expect(mockRepository.findByTenant).not.toHaveBeenCalled();
+    });
+
+    it("should distinguish an unknown cold-cache contract from a known local meter", async () => {
+      expect(registry.getCachedBillingRequirement("tenant-1", "api_calls")).toBe("unknown");
+      vi.mocked(mockRepository.findAll).mockResolvedValue([createMeter()]);
+      await registry.loadAll();
+
+      expect(registry.getCachedBillingRequirement("tenant-1", "api_calls")).toBe("local");
+    });
+
+    it("should treat an expired cached local contract as unknown before refresh", async () => {
+      vi.useFakeTimers();
+      vi.mocked(mockRepository.findAll).mockResolvedValue([createMeter()]);
+      await registry.loadAll();
+      vi.setSystemTime(Date.now() + 61_000);
+
+      expect(registry.getCachedBillingRequirement("tenant-1", "api_calls")).toBe("unknown");
+      expect(mockRepository.findByTenant).not.toHaveBeenCalled();
     });
   });
 });
