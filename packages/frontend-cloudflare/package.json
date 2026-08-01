@@ -42,9 +42,8 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250214.0",
     "@croco/frontend-react": "workspace:*",
-    "vitest": "^4.0.16"
+    "vitest": "^4.1.8"
   },
-  "peerDependencies": {},
   "vitest": {
     "include": [
       "src/**/*.spec.ts"

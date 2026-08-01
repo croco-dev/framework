@@ -44,6 +44,6 @@
   },
   "devDependencies": {
     "@opentelemetry/api": "^1.9.0",
-    "vitest": "4.0.16"
+    "vitest": "4.1.8"
   }
 }

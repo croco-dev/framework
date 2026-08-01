@@ -39,6 +39,6 @@
     "@croco/preset-lambda": "workspace:*",
     "@croco/preset-node": "workspace:*",
     "tsup": "8.5.1",
-    "vitest": "4.0.16"
+    "vitest": "4.1.8"
   }
 }

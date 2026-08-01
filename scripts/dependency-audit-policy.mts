@@ -890,10 +890,20 @@ function isBlockingFinding(finding: ClassifiedFinding): boolean {
   if (finding.classification === "unclassified") {
     return isHighRisk(finding.advisory);
   }
+  if (isCriticalTestToolingFinding(finding)) {
+    return true;
+  }
   return (
     blockingClasses.has(finding.classification) &&
     isHighRisk(finding.advisory) &&
     finding.metadataStatus !== "reviewed"
+  );
+}
+
+function isCriticalTestToolingFinding(finding: ClassifiedFinding): boolean {
+  return (
+    (finding.classification === "dev-test" || finding.classification === "peer-dev-test-install") &&
+    (finding.advisory.severity ?? "").toLowerCase() === "critical"
   );
 }
 

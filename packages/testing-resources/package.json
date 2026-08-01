@@ -49,6 +49,6 @@
     "@types/pg": "8.20.0",
     "drizzle-orm": "catalog:",
     "tsup": "8.5.1",
-    "vitest": "4.0.16"
+    "vitest": "4.1.8"
   }
 }

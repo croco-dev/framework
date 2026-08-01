@@ -49,7 +49,7 @@
     "@croco/testing": "workspace:*",
     "tsup": "^8.0.0",
     "typescript": "^5.7.0",
-    "vitest": "4.0.16"
+    "vitest": "4.1.8"
   },
   "peerDependencies": {
     "@upstash/redis": "^1.34.0"
