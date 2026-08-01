@@ -13,7 +13,9 @@ import type {
   InferDesktopCommandOutput,
   InferDesktopContractCommands,
   InferDesktopContractEvents,
+  InferDesktopContractGrants,
   InferDesktopEventPayload,
+  InferDesktopSchema,
 } from "../libs/types";
 
 const project = desktop.contract({
@@ -46,6 +48,28 @@ const definition = desktop.app({
       allowedOrigins: ["https://login.example.com"],
     }),
   },
+});
+
+const selectedFile = desktop.grant.file({
+  access: "read",
+  scope: "exact",
+  lifetime: "command",
+});
+const workspace = desktop.grant.directory({
+  access: "write",
+  scope: "descendant",
+  lifetime: "session",
+});
+const grantProject = desktop.contract({
+  grants: { selectedFile, workspace },
+  commands: {
+    read: desktop.query({ input: selectedFile, output: z.string() }),
+    save: desktop.mutation({ input: workspace, output: z.boolean() }),
+  },
+});
+const grantDefinition = desktop.app({
+  contracts: { project: grantProject },
+  windows: {},
 });
 
 describe("desktop public types", () => {
@@ -110,12 +134,43 @@ describe("desktop public types", () => {
     >();
   });
 
+  it("infers opaque, capability-specific resource references", () => {
+    expectTypeOf<InferDesktopContractGrants<typeof grantProject>>().toEqualTypeOf<
+      typeof grantProject.grants
+    >();
+    expectTypeOf<InferDesktopCommandInput<typeof grantProject.commands.read>>().toEqualTypeOf<
+      InferDesktopSchema<typeof selectedFile>
+    >();
+    expectTypeOf<InferDesktopCommandInput<typeof grantProject.commands.save>>().toEqualTypeOf<
+      InferDesktopSchema<typeof workspace>
+    >();
+    expectTypeOf(
+      grantDefinition.contracts.project.grants.selectedFile.id,
+    ).toEqualTypeOf<"project.selectedFile">();
+  });
+
   it("compiles the negative type fixtures", () => {
     expectTypeOf(negativeTypeFixtures).toBeFunction();
   });
 });
 
 function negativeTypeFixtures(): void {
+  type ReadFileReference = InferDesktopSchema<typeof selectedFile>;
+  const writableFile = desktop.grant.file({ access: "write", scope: "exact", lifetime: "command" });
+  type WriteFileReference = InferDesktopSchema<typeof writableFile>;
+
+  const acceptWriteFile = (_reference: WriteFileReference): void => undefined;
+  const readFileReference = undefined as unknown as ReadFileReference;
+  // @ts-expect-error read-only file grants cannot satisfy write grant inputs
+  acceptWriteFile(readFileReference);
+
+  desktop.grant.file({
+    access: "read",
+    // @ts-expect-error file grants only authorize an exact resource, never descendants
+    scope: "descendant",
+    lifetime: "command",
+  });
+
   // @ts-expect-error command and event keys share the same stable ID namespace
   desktop.contract({
     commands: {
