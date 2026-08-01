@@ -8,6 +8,7 @@ import type {
   BoundDesktopContract,
   DesktopAppContractMetadata,
   DesktopAppDefinition,
+  DesktopAppImplementer,
   DesktopAppMetadata,
   DesktopAppOptions,
   DesktopCommandRecord,
@@ -183,12 +184,14 @@ function app<
       bindWindow(definition, commandBindings, eventBindings),
     ]),
   );
+  const implement: DesktopAppImplementer<TContracts>["implement"] = (_implementation) => {};
 
   return {
     definitionType: "app",
     contracts,
     windows,
     metadata: createAppMetadata(contracts, windows),
+    implement,
   } as DesktopAppDefinition<TContracts, TWindows>;
 }
 

@@ -2,6 +2,9 @@ import { describe, expectTypeOf, it } from "vitest";
 import { z } from "zod";
 import { desktop } from "../libs/desktop";
 import type {
+  DesktopAppImplementation,
+  DesktopCommandHandler,
+  DesktopContractImplementation,
   DesktopLocalWindowDefinition,
   DesktopRemoteWindowDefinition,
   InferDesktopAppContracts,
@@ -81,6 +84,30 @@ describe("desktop public types", () => {
   it("keeps privileged local-window fields absent from remote-window types", () => {
     expectTypeOf(definition.windows.login.expose).toEqualTypeOf<undefined>();
     expectTypeOf(definition.windows.login.receive).toEqualTypeOf<undefined>();
+  });
+
+  it("infers exact command handler inputs and outputs from mounted contracts", () => {
+    const implementation: DesktopAppImplementation<typeof definition.contracts> = {
+      contracts: {
+        project: {
+          commands: {
+            readFile: async (input) => ({ contents: input.path }),
+            saveFile: (input) => ({ saved: input.contents.length > 0 }),
+          },
+        },
+      },
+    };
+
+    definition.implement(implementation);
+    expectTypeOf<typeof implementation>().toMatchTypeOf<
+      DesktopAppImplementation<typeof definition.contracts>
+    >();
+    expectTypeOf<typeof implementation.contracts.project>().toMatchTypeOf<
+      DesktopContractImplementation<typeof definition.contracts.project>
+    >();
+    expectTypeOf<typeof implementation.contracts.project.commands.readFile>().toMatchTypeOf<
+      DesktopCommandHandler<typeof definition.contracts.project.commands.readFile>
+    >();
   });
 
   it("compiles the negative type fixtures", () => {
@@ -238,4 +265,78 @@ function negativeTypeFixtures(): void {
     // @ts-expect-error commands cannot be received as events
     receive: [project.commands.readFile],
   });
+
+  definition.implement({
+    contracts: {
+      project: {
+        // @ts-expect-error every declared command requires a handler
+        commands: {
+          readFile: (input) => ({ contents: input.path }),
+        },
+      },
+    },
+  });
+
+  definition.implement({
+    contracts: {
+      project: {
+        // @ts-expect-error command keys must be declared by the mounted contract
+        commands: {
+          readFile: (input) => ({ contents: input.path }),
+          saveFile: (input) => ({ saved: input.contents.length > 0 }),
+          deleteFile: () => ({ deleted: true }),
+        },
+      },
+    },
+  });
+
+  definition.implement({
+    contracts: {
+      project: {
+        commands: {
+          // @ts-expect-error handler results must match the declared output schema
+          readFile: (input) => ({ contents: input.path.length }),
+          saveFile: (input) => ({ saved: input.contents.length > 0 }),
+        },
+      },
+    },
+  });
+
+  definition.implement({
+    contracts: {
+      // @ts-expect-error contract implementations contain commands only
+      project: {
+        commands: {
+          readFile: (input) => ({ contents: input.path }),
+          saveFile: (input) => ({ saved: input.contents.length > 0 }),
+        },
+        events: {},
+      },
+    },
+  });
+
+  definition.implement({
+    contracts: {
+      // @ts-expect-error implementation contracts must be mounted by the app
+      workspace: {
+        commands: {},
+      },
+    },
+  });
+
+  const implementationWithUnknownCommand = {
+    contracts: {
+      project: {
+        commands: {
+          readFile: (input: { path: string }) => ({ contents: input.path }),
+          saveFile: (input: { path: string; contents: string }) => ({
+            saved: input.contents.length > 0,
+          }),
+          deleteFile: () => ({ deleted: true }),
+        },
+      },
+    },
+  };
+  // @ts-expect-error non-literal implementations cannot hide unknown command handlers
+  definition.implement(implementationWithUnknownCommand);
 }

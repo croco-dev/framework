@@ -123,7 +123,7 @@ export type DesktopAppDefinition<
   readonly contracts: BoundDesktopContracts<TContracts>;
   readonly windows: BoundDesktopWindows<TWindows, TContracts>;
   readonly metadata: DesktopAppMetadata;
-};
+} & DesktopAppImplementer<TContracts>;
 
 export type { ReservedDesktopKey } from "./reservedDesktopKeys";
 
@@ -177,6 +177,51 @@ export type InferDesktopAppWindows<TApp> = TApp extends {
 }
   ? TWindows
   : never;
+
+export type DesktopCommandHandler<TCommand extends AnyDesktopCommand> = (
+  input: InferDesktopCommandInput<TCommand>,
+) => InferDesktopCommandOutput<TCommand> | Promise<InferDesktopCommandOutput<TCommand>>;
+
+export type DesktopContractImplementation<TContract extends AnyDesktopContract> = {
+  readonly commands: {
+    readonly [TCommandKey in keyof TContract["commands"] & string]: DesktopCommandHandler<
+      TContract["commands"][TCommandKey]
+    >;
+  };
+};
+
+export type DesktopAppImplementation<TContracts extends DesktopContractRecord> = {
+  readonly contracts: {
+    readonly [TContractKey in keyof TContracts & string]: DesktopContractImplementation<
+      TContracts[TContractKey]
+    >;
+  };
+};
+
+export type DesktopAppImplementer<TContracts extends DesktopContractRecord> = {
+  readonly implement: <const TImplementation extends DesktopAppImplementation<TContracts>>(
+    implementation: TImplementation & ExactDesktopAppImplementation<TImplementation, TContracts>,
+  ) => void;
+};
+
+type ExactDesktopAppImplementation<
+  TImplementation,
+  TContracts extends DesktopContractRecord,
+> = ExactDesktopShape<TImplementation, DesktopAppImplementation<TContracts>>;
+
+type ExactDesktopShape<TActual, TExpected> = TExpected extends (...args: never[]) => unknown
+  ? TActual extends TExpected
+    ? TActual
+    : never
+  : TActual extends TExpected
+    ? Exclude<keyof TActual, keyof TExpected> extends never
+      ? {
+          readonly [TKey in keyof TActual]: TKey extends keyof TExpected
+            ? ExactDesktopShape<TActual[TKey], TExpected[TKey]>
+            : never;
+        }
+      : never
+    : never;
 
 export type KeyedDesktopCommand<
   TCommand extends AnyDesktopCommand = AnyDesktopCommand,
