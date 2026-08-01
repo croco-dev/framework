@@ -666,7 +666,7 @@ function createUsageBillingFailureConformanceCase<
       const gateway = await scenario.createGateway(scenario.fixture);
       const problem = await assertRejectsWithProblem(() => scenario.run(gateway, scenario.fixture));
       assert.equal(
-        problem.extensions?.retryable,
+        problem.extensions?.["retryable"],
         expectedRetryable,
         `${providerName} usage failure '${label}' must expose retryable=${expectedRetryable}.`,
       );
@@ -699,7 +699,7 @@ function createUnavailableUsageBillingCapabilityConformanceCase(
         "billing/provider-capability-unavailable",
         `${providerName} must not treat unavailable usage billing as empty state or success.`,
       );
-      assert.equal(problem.extensions?.capability, "usage");
+      assert.equal(problem.extensions?.["capability"], "usage");
     },
   };
 }
@@ -1094,7 +1094,7 @@ function assertUsageFailureFixture(
 ): void {
   if (fixture.kind === "http-429" || fixture.kind === "http-5xx") {
     assert.equal(
-      problem.extensions?.status,
+      problem.extensions?.["status"],
       fixture.status,
       `Usage billing Problem must preserve the safe HTTP status for ${fixture.kind} classification.`,
     );
@@ -1102,7 +1102,7 @@ function assertUsageFailureFixture(
 
   if (fixture.kind === "timeout") {
     assert.equal(
-      problem.extensions?.upstreamCode,
+      problem.extensions?.["upstreamCode"],
       fixture.upstreamCode,
       "Usage billing Problem must preserve the safe timeout classification.",
     );
