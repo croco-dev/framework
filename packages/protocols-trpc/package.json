@@ -33,13 +33,14 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@croco/framework-context": "workspace:*",
     "@croco/problems-core": "workspace:*",
     "@croco/protocols-core": "workspace:*",
+    "@croco/protocols-rest": "workspace:*",
     "@trpc/server": "^11.0.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@croco/protocols-rest": "workspace:*",
     "@trpc/client": "11.17.0",
     "reflect-metadata": "^0.2.2"
   }

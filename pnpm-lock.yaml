@@ -2795,12 +2795,18 @@ importers:
 
   packages/protocols-trpc:
     dependencies:
+      '@croco/framework-context':
+        specifier: workspace:*
+        version: link:../framework-context
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
       '@croco/protocols-core':
         specifier: workspace:*
         version: link:../protocols-core
+      '@croco/protocols-rest':
+        specifier: workspace:*
+        version: link:../protocols-rest
       '@trpc/server':
         specifier: ^11.0.0
         version: 11.17.0(typescript@6.0.3)
@@ -2808,9 +2814,6 @@ importers:
         specifier: ^3.23.8
         version: 3.25.76
     devDependencies:
-      '@croco/protocols-rest':
-        specifier: workspace:*
-        version: link:../protocols-rest
       '@trpc/client':
         specifier: 11.17.0
         version: 11.17.0(@trpc/server@11.17.0(typescript@6.0.3))(typescript@6.0.3)

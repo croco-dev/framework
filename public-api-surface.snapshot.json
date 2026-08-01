@@ -22010,13 +22010,25 @@
               "declarationKind": "function"
             },
             {
+              "name": "TrpcExecutionContext",
+              "exportKind": "named",
+              "source": "./libs/TrpcExecutionContext",
+              "declarationKind": "class"
+            },
+            {
               "name": "TrpcRouteHandlerError",
               "exportKind": "named",
               "source": "./libs/createTrpcRouter",
               "declarationKind": "class"
             }
           ],
-          "typeExports": []
+          "typeExports": [
+            {
+              "name": "TrpcRouterOptions",
+              "exportKind": "named",
+              "source": "./libs/createTrpcRouter"
+            }
+          ]
         }
       ]
     },
