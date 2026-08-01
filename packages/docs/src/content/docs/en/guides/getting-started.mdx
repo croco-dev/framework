@@ -74,7 +74,6 @@ Add REST behavior in `apps/api-server/src/controllers/SaasController.ts`, where 
 already keeps route metadata and Problem responses together:
 
 ```typescript no-check
-@Component()
 @Controller("/saas")
 export class SaasController {
   @Post(seedSaasDemoRoute)

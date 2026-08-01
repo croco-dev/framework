@@ -4,6 +4,7 @@ import { extname, join, normalize, resolve, sep } from "node:path";
 import {
   Container,
   type Constructor,
+  getDeclaredComponentScope,
   type ILogger,
   LOGGER_TOKEN,
   type RequestPipelineGraph,
@@ -12,6 +13,7 @@ import { Logger } from "@croco/framework-logger";
 import { Problem, ProblemCategory, ProblemFactory } from "@croco/problems-core";
 import { extractRouteIR } from "@croco/protocols-core";
 import {
+  getControllerMeta,
   getFilters,
   getGuards,
   getInterceptors,
@@ -183,6 +185,7 @@ export class CrocoApp {
     if (this.booted) return;
 
     this.validateSecurityMiddlewareContract();
+    this.restoreControllerRegistrations();
     const diValidationMode = this.validateDiBootstrapContract();
 
     this.registerSystemRoutes();
@@ -219,6 +222,28 @@ export class CrocoApp {
     }
 
     this.booted = true;
+  }
+
+  private restoreControllerRegistrations(): void {
+    for (const controller of this.config.controllers) {
+      const metadata = getControllerMeta(controller);
+      if (metadata === undefined || Container.getComponentMetadata(controller) !== undefined) {
+        continue;
+      }
+
+      Container.register(controller, getDeclaredComponentScope(controller) ?? "singleton");
+      if (metadata.sourceLocation) {
+        Container.setComponentSourceLocation(controller, {
+          file: metadata.sourceLocation.path,
+          ...(metadata.sourceLocation.line === undefined
+            ? {}
+            : { line: metadata.sourceLocation.line }),
+          ...(metadata.sourceLocation.column === undefined
+            ? {}
+            : { column: metadata.sourceLocation.column }),
+        });
+      }
+    }
   }
 
   private validateSecurityMiddlewareContract(): void {

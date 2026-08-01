@@ -77,6 +77,22 @@ describe("strict schema source locations", () => {
       column: 8,
     });
   });
+
+  it("should retain user source files named Controller.ts", () => {
+    const sourceLocation = findRestDecoratorSourceLocation(
+      [
+        "Error",
+        "    at Controller (/repo/packages/protocols-rest/src/libs/decorators/Controller.js:18:28)",
+        "    at Object.<anonymous> (/repo/apps/api/src/Controller.ts:12:4)",
+      ].join("\n"),
+    );
+
+    expect(sourceLocation).toEqual({
+      path: "/repo/apps/api/src/Controller.ts",
+      line: 12,
+      column: 4,
+    });
+  });
 });
 
 function findDiagnostic(

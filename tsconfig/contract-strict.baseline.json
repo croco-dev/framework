@@ -2561,7 +2561,7 @@
     {
       "packageName": "@croco/framework-context",
       "file": "packages/framework-context/src/libs/Container.ts",
-      "line": 426,
+      "line": 427,
       "column": 36,
       "code": "TS4111",
       "message": "Property 'CROCO_DI_VALIDATE' comes from an index signature, so it must be accessed with ['CROCO_DI_VALIDATE']."
@@ -2569,7 +2569,7 @@
     {
       "packageName": "@croco/framework-context",
       "file": "packages/framework-context/src/libs/Container.ts",
-      "line": 431,
+      "line": 432,
       "column": 24,
       "code": "TS4111",
       "message": "Property 'NODE_ENV' comes from an index signature, so it must be accessed with ['NODE_ENV']."
@@ -3553,7 +3553,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/CrocoApp.ts",
-      "line": 194,
+      "line": 197,
       "column": 61,
       "code": "TS2379",
       "message": "Argument of type '{ container: { get<T>(type: Constructor<T>): T; }; globalGuards: unknown[] | undefined; globalInterceptors: unknown[] | undefined; globalFilters: unknown[] | undefined; globalPipes: unknown[] | undefined; }' is not assignable to parameter of type 'CompileOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -3561,7 +3561,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/CrocoApp.ts",
-      "line": 306,
+      "line": 331,
       "column": 33,
       "code": "TS4111",
       "message": "Property 'CROCO_HTTP_DI_VALIDATION' comes from an index signature, so it must be accessed with ['CROCO_HTTP_DI_VALIDATION']."
@@ -3569,7 +3569,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/CrocoApp.ts",
-      "line": 312,
+      "line": 337,
       "column": 24,
       "code": "TS4111",
       "message": "Property 'NODE_ENV' comes from an index signature, so it must be accessed with ['NODE_ENV']."
@@ -3577,7 +3577,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/CrocoApp.ts",
-      "line": 312,
+      "line": 337,
       "column": 66,
       "code": "TS4111",
       "message": "Property 'NODE_ENV' comes from an index signature, so it must be accessed with ['NODE_ENV']."
@@ -3585,7 +3585,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/CrocoApp.ts",
-      "line": 403,
+      "line": 428,
       "column": 33,
       "code": "TS4111",
       "message": "Property 'CROCO_HTTP_SECURITY_VALIDATION' comes from an index signature, so it must be accessed with ['CROCO_HTTP_SECURITY_VALIDATION']."

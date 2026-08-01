@@ -1,3 +1,3 @@
 export type { ComponentOptions } from "../types";
-export { Component } from "./Component";
+export { Component, getDeclaredComponentScope } from "./Component";
 export { OnShutdown } from "./OnShutdown";

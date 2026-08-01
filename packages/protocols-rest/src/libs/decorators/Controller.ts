@@ -1,5 +1,8 @@
 import "reflect-metadata";
+import { Container } from "@croco/framework-context";
 import { REST_CONTROLLER_KEY, REST_ROUTES_KEY } from "../constants";
+import { captureRestDecoratorSourceLocation } from "../sourceLocation";
+import type { Constructor } from "@croco/framework-context";
 import type { ControllerMetadata, RouteMetadata } from "../types";
 
 /**
@@ -7,13 +10,27 @@ import type { ControllerMetadata, RouteMetadata } from "../types";
  */
 export function Controller(path: string = ""): ClassDecorator {
   return (target: Function) => {
+    const controller = target as Constructor;
+    const sourceLocation = captureRestDecoratorSourceLocation();
     const normalizedPath = path.startsWith("/") ? path : `/${path}`;
     const metadata: ControllerMetadata = {
       path: normalizedPath === "/" ? "" : normalizedPath,
       target,
+      ...(sourceLocation ? { sourceLocation } : {}),
     };
     Reflect.defineMetadata(REST_CONTROLLER_KEY, metadata, target);
     normalizeContractRoutePaths(target, metadata.path);
+
+    if (Container.getComponentMetadata(controller) === undefined) {
+      Container.register(controller, "singleton");
+    }
+    if (sourceLocation) {
+      Container.setComponentSourceLocation(controller, {
+        file: sourceLocation.path,
+        ...(sourceLocation.line === undefined ? {} : { line: sourceLocation.line }),
+        ...(sourceLocation.column === undefined ? {} : { column: sourceLocation.column }),
+      });
+    }
   };
 }
 

@@ -9,6 +9,7 @@ import type { RouteContractSourceLocation, RouteContractSpec } from "./types/Rou
 export interface ControllerMetadata {
   path: string;
   target: Function;
+  sourceLocation?: RouteContractSourceLocation;
 }
 
 export interface RouteMetadata {

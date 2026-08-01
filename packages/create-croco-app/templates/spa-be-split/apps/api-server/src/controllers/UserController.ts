@@ -1,4 +1,3 @@
-import { Component } from "@croco/framework-context";
 import {
   Body,
   Controller,
@@ -22,7 +21,6 @@ import {
 } from "./userSchemas";
 import { getUserService } from "../users";
 
-@Component()
 @Controller("/users")
 export class UserController {
   @Get(listUsersRoute)

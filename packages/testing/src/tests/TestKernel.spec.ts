@@ -86,6 +86,8 @@ class KernelController {
   }
 }
 
+class UndecoratedKernelController {}
+
 @Controller("/decorated-kernel")
 class DecoratedKernelController {
   constructor(readonly service: DecoratedKernelService) {}
@@ -385,19 +387,19 @@ describe("TestKernel", () => {
     await Promise.all([first.dispose(), second.dispose()]);
   });
 
-  it("fails application bootstrap when a controller registration is missing", async () => {
+  it("fails application bootstrap when a controller is not decorated", async () => {
     await expect(
       createTestKernel({
         bootstrap: () =>
           createApp({
-            controllers: [KernelController],
+            controllers: [UndecoratedKernelController],
             diValidation: "enforce",
             middlewares: [productionSecurityMiddleware],
             securityValidation: "enforce",
           }),
         fidelity: "application",
       }),
-    ).rejects.toThrow("Provider KernelController is not registered");
+    ).rejects.toThrow("Provider UndecoratedKernelController is not registered");
   });
 
   it("fails application bootstrap for an invalid singleton-to-request scope", async () => {

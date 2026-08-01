@@ -3050,7 +3050,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/CrocoApp.ts:253:11` (problem-factory)
+- `packages/transports-http/src/libs/CrocoApp.ts:278:11` (problem-factory)
 
 <a id="croco-http-security-002"></a>
 
@@ -4184,7 +4184,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/Container.ts:1704:13` (problem-factory)
+- `packages/framework-context/src/libs/Container.ts:1705:13` (problem-factory)
 
 <a id="framework-context-shutdown-configuration-conflict"></a>
 
@@ -9296,7 +9296,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/CrocoApp.ts:290:11` (problem-factory)
+- `packages/transports-http/src/libs/CrocoApp.ts:315:11` (problem-factory)
 
 <a id="transports-http-duplicate-health-check"></a>
 
@@ -9530,7 +9530,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/CrocoApp.ts:86:55` (problem-metadata)
+- `packages/transports-http/src/libs/CrocoApp.ts:88:55` (problem-metadata)
 
 <a id="transports-http-unsupported-route-method"></a>
 

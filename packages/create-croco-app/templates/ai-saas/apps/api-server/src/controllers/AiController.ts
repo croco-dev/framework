@@ -1,4 +1,3 @@
-import { Component } from "@croco/framework-context";
 import {
   Body,
   Controller,
@@ -16,7 +15,6 @@ import {
   OPTIONAL_TENANT_ID_HEADER_SCHEMA,
 } from "./aiSchemas";
 
-@Component()
 @Controller("/ai")
 export class AiController {
   @Post(generateAiRoute)

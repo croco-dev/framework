@@ -1,4 +1,3 @@
-import { Component } from "@croco/framework-context";
 import {
   Body,
   Controller,
@@ -30,7 +29,6 @@ import {
   adminSnapshotRoute,
 } from "./adminSchemas";
 
-@Component()
 @Controller("/admin")
 export class AdminController {
   @Get(adminSnapshotRoute)

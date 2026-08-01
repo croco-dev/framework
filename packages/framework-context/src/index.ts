@@ -121,7 +121,7 @@ export { TRANSACTION_CONTEXT_TOKEN } from "./libs/TransactionContext";
  * class RequestScopedService {}
  * ```
  */
-export { Component } from "./libs/decorators/Component";
+export { Component, getDeclaredComponentScope } from "./libs/decorators/Component";
 
 /**
  * 애플리케이션 종료 시 실행할 shutdown 훅을 등록하는 데코레이터입니다.

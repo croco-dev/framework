@@ -1,4 +1,3 @@
-import { Component } from "@croco/framework-context";
 import {
   Controller,
   Get,
@@ -16,7 +15,6 @@ export async function assertDemoEndpointsEnabled(): Promise<void> {
   }
 }
 
-@Component()
 @Controller("/saas")
 export class SaasController {
   @Post(seedSaasDemoRoute)
