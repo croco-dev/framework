@@ -90,6 +90,11 @@ class ApiController {
 }
 ```
 
+`@Metered` publishes inspectable method metadata through the shared
+`Symbol.for("croco:metering:metered")` key. ContractGraph reads this metadata without importing
+metering-core and emits an `operation-records-meter` edge. The decorator's runtime recording
+behavior is unchanged.
+
 ## API 레퍼런스
 
 ### 핵심 클래스

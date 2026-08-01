@@ -21,6 +21,10 @@ title: "ContractGraphRoute"
 
 > `readonly` **entitlements**: readonly [`ContractEntitlementRequirement`](/api/protocols-core/src/type-aliases/contractentitlementrequirement/)[]
 
+### meters?
+
+> `readonly` `optional` **meters?**: readonly [`ContractRouteMeterRequirement`](/api/protocols-core/src/type-aliases/contractroutemeterrequirement/)[]
+
 ### operationId
 
 > `readonly` **operationId**: `string`

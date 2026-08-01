@@ -387,6 +387,35 @@ describe("installed CLI command integration", () => {
       }
     `);
 
+    const monetizationContracts = runInstalledCommand(
+      harness,
+      "croco",
+      ["contracts", "check", "--controllers", fixtures.monetizationGlob, "--json"],
+      harness.commandRoot,
+      1,
+    );
+    expect(snapshotEnvelope(harness, monetizationContracts)).toMatchInlineSnapshot(`
+      {
+        "jsonSummary": {
+          "diagnosticCodes": [
+            "CROCO_BILLING_METER_UNBOUND",
+          ],
+          "operationIds": [
+            "BillingController_usage",
+          ],
+          "routeCount": 1,
+          "snapshotVersion": "croco.contract-graph.snapshot.v1",
+        },
+        "rerun": {
+          "command": "<consumer-root>/node_modules/.bin/croco contracts check --controllers <consumer-root>/fixtures/controllers/BillingController.ts --json",
+          "cwd": "<consumer-root>/commands",
+        },
+        "status": 1,
+        "stderr": "",
+        "stdout": "<json>",
+      }
+    `);
+
     const openapiOut = join(harness.commandRoot, "generated", "openapi.json");
     mkdirSync(dirname(openapiOut), { recursive: true });
     const openapi = runInstalledCommand(
@@ -1223,6 +1252,7 @@ function writeWorkspacePackage(root: string, name: string, packageName: string):
 }
 
 function writeControllerFixtures(root: string): {
+  readonly monetizationGlob: string;
   readonly validGlob: string;
   readonly weakGlob: string;
 } {
@@ -1230,6 +1260,7 @@ function writeControllerFixtures(root: string): {
   mkdirSync(controllerDir, { recursive: true });
   const validPath = join(controllerDir, "UsersController.ts");
   const weakPath = join(controllerDir, "WeakController.ts");
+  const monetizationPath = join(controllerDir, "BillingController.ts");
 
   writeFileSync(
     validPath,
@@ -1257,8 +1288,27 @@ export class WeakController {
 }
 `,
   );
+  writeFileSync(
+    monetizationPath,
+    `${controllerFixturePrelude()}
+
+@Controller("/billing")
+export class BillingController {
+  @Get("/usage")
+  usage(): readonly string[] {
+    return [];
+  }
+}
+
+export const monetization = {
+  version: "croco.contract-monetization.input.v1",
+  meters: [{ key: "api.calls", aggregation: "COUNT", unit: "request", billing: "required" }],
+};
+`,
+  );
 
   return {
+    monetizationGlob: monetizationPath,
     validGlob: validPath,
     weakGlob: weakPath,
   };

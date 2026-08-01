@@ -16,10 +16,17 @@ import {
   getZodObjectShape,
 } from "./SchemaDescriptor";
 import {
+  buildContractMonetizationGraph,
+  type ContractMonetizationGraph,
+  type ContractMonetizationInput,
+} from "./ContractGraphMonetization";
+import {
   type Constructor,
   type ControllerMetadata,
   ENTITLEMENT_REQUIRED_KEY,
   ENTITLEMENT_REQUIREMENTS_KEY,
+  METERED_METADATA_KEY,
+  type MeteredMetadata,
   type EntitlementRequirementMetadata,
   REST_CONTROLLER_KEY,
   REST_GUARDS_KEY,
@@ -34,7 +41,23 @@ export type ContractDiagnosticTarget =
   | "route"
   | "param"
   | "schema"
-  | "problem";
+  | "problem"
+  | "meter"
+  | "plan-version"
+  | "entitlement"
+  | "provider";
+
+export type ContractDiagnosticSource = "credential-free-structural" | "remote-provider-preflight";
+
+export type ContractDiagnosticEvidence = {
+  readonly kind: string;
+  readonly references: readonly string[];
+};
+
+export type ContractDiagnosticRecovery = {
+  readonly action: string;
+  readonly link?: string;
+};
 
 export type ContractDiagnostic = {
   readonly code: string;
@@ -47,6 +70,9 @@ export type ContractDiagnostic = {
   readonly methodName?: string;
   readonly path?: string;
   readonly sourceLocation?: ContractDiagnosticSourceLocation;
+  readonly source?: ContractDiagnosticSource;
+  readonly evidence?: ContractDiagnosticEvidence;
+  readonly recovery?: ContractDiagnosticRecovery;
 };
 
 export type ContractDiagnosticSourceLocation = {
@@ -114,18 +140,28 @@ export type ContractGraphRoute = RouteIR & {
   readonly controllerPath: string;
   readonly access: ContractAccessMetadata;
   readonly entitlements: readonly ContractEntitlementRequirement[];
+  readonly meters?: readonly ContractRouteMeterRequirement[];
+};
+
+export type ContractRouteMeterRequirement = {
+  readonly key: string;
+  readonly aggregation?: "COUNT" | "SUM";
+  readonly unit?: string;
+  readonly billing: "local" | "required";
 };
 
 export type BuildContractGraphOptions = {
   readonly strictProblemResponses?: boolean;
   readonly strictSchemas?: boolean;
   readonly problemRegistries?: readonly PackageProblemRegistry[];
+  readonly monetization?: ContractMonetizationInput;
 };
 
 export type ContractGraph = {
   readonly version: ContractGraphVersion;
   readonly controllers: readonly ContractGraphController[];
   readonly routes: readonly ContractGraphRoute[];
+  readonly monetization?: ContractMonetizationGraph;
   readonly diagnostics: readonly ContractDiagnostic[];
 };
 
@@ -196,11 +232,17 @@ export function buildContractGraph(
   diagnostics.push(...validateUniqueControllerNames(graphControllers));
   diagnostics.push(...validateUniqueRouteIds(graphRoutes));
   diagnostics.push(...validateUniqueOperationIds(graphRoutes));
+  const monetization = buildContractMonetizationGraph(graphRoutes, options.monetization);
+  const hasMonetization =
+    options.monetization !== undefined ||
+    graphRoutes.some((route) => (route.meters?.length ?? 0) > 0);
+  diagnostics.push(...monetization.diagnostics);
 
   return {
     version: "croco.contract-graph.v1",
     controllers: graphControllers,
     routes: graphRoutes,
+    ...(hasMonetization ? { monetization: monetization.graph } : {}),
     diagnostics,
   };
 }
@@ -227,7 +269,10 @@ export function formatContractDiagnostic(diagnostic: ContractDiagnostic): string
     ? ` ${formatContractDiagnosticSourceLocation(diagnostic.sourceLocation)}`
     : "";
 
-  return `${diagnostic.severity.toUpperCase()} ${diagnostic.code}${route}${location}: ${diagnostic.message}`;
+  const source = diagnostic.source ? ` [${diagnostic.source}]` : "";
+  const recovery = diagnostic.recovery ? ` Recovery: ${diagnostic.recovery.action}` : "";
+
+  return `${diagnostic.severity.toUpperCase()} ${diagnostic.code}${route}${location}${source}: ${diagnostic.message}${recovery}`;
 }
 
 export function getContractPathParamNames(path: string): string[] {
@@ -344,6 +389,7 @@ function toContractGraphRoute(
       ...getEntitlementRequirements(controllerCtor, route.methodName),
       ...getEntitlementRequirements(controllerCtor.prototype, route.methodName),
     ],
+    meters: getMeterRequirements(controllerCtor, route.methodName),
   };
 }
 
@@ -1393,6 +1439,57 @@ function getEntitlementRequirements(
       : Reflect.getMetadata(ENTITLEMENT_REQUIRED_KEY, target, propertyKey);
 
   return typeof legacy === "string" && legacy.length > 0 ? [{ feature: legacy }] : [];
+}
+
+function getMeterRequirements(
+  controller: Constructor,
+  propertyKey: string | symbol,
+): ContractRouteMeterRequirement[] {
+  const metadata = Reflect.getMetadata(METERED_METADATA_KEY, controller.prototype, propertyKey);
+
+  if (!isMeteredMetadata(metadata)) {
+    return [];
+  }
+
+  return [
+    {
+      key: metadata.meter?.key ?? metadata.meterId,
+      ...(metadata.meter?.aggregation ? { aggregation: metadata.meter.aggregation } : {}),
+      ...(metadata.meter?.unit ? { unit: metadata.meter.unit } : {}),
+      billing: metadata.meter?.billing ?? "local",
+    },
+  ];
+}
+
+function isMeteredMetadata(value: unknown): value is MeteredMetadata {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as {
+    readonly meterId?: unknown;
+    readonly meter?: {
+      readonly key?: unknown;
+      readonly aggregation?: unknown;
+      readonly unit?: unknown;
+      readonly billing?: unknown;
+    };
+  };
+
+  if (typeof candidate.meterId !== "string" || candidate.meterId.length === 0) {
+    return false;
+  }
+
+  if (candidate.meter === undefined) {
+    return true;
+  }
+
+  return (
+    typeof candidate.meter.key === "string" &&
+    (candidate.meter.aggregation === "COUNT" || candidate.meter.aggregation === "SUM") &&
+    typeof candidate.meter.unit === "string" &&
+    (candidate.meter.billing === "local" || candidate.meter.billing === "required")
+  );
 }
 
 function normalizeEntitlementRequirements(value: unknown): ContractEntitlementRequirement[] {

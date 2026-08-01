@@ -16,6 +16,10 @@ import {
 import type { ParamIR, ProblemRegistryReferenceIR } from "./RouteIR";
 import { describeZodSchema, JSON_SAFE_ZOD_SCHEMA_SUPPORT_MATRIX } from "./SchemaDescriptor";
 import type { ContractSchemaDescriptor, ContractSchemaFieldDescriptor } from "./SchemaDescriptor";
+import {
+  isContractMonetizationGraph,
+  type ContractMonetizationGraph,
+} from "./ContractGraphMonetization";
 
 export type ContractGraphSnapshotVersion = "croco.contract-graph.snapshot.v1";
 export type ContractSchemaLocation = "body" | "path" | "query" | "headers" | "response" | "problem";
@@ -94,6 +98,7 @@ export type ContractGraphSnapshot = {
   readonly controllers: readonly ContractGraphSnapshotController[];
   readonly routes: readonly ContractGraphSnapshotRoute[];
   readonly diagnostics: readonly ContractDiagnostic[];
+  readonly monetization?: ContractMonetizationGraph;
 };
 
 type LegacyContractSchemaSnapshot = Omit<
@@ -148,6 +153,7 @@ export type ContractGraphV1 = {
   readonly version: ContractGraphVersion;
   readonly routes: readonly ContractGraphV1Route[];
   readonly diagnostics: readonly ContractDiagnostic[];
+  readonly monetization?: ContractMonetizationGraph;
 };
 
 /**
@@ -225,6 +231,7 @@ export function createContractGraphSnapshot(graph: ContractGraph): ContractGraph
     controllers,
     routes,
     diagnostics: [...graph.diagnostics].sort(compareDiagnostics),
+    monetization: graph.monetization,
   };
 }
 
@@ -238,6 +245,7 @@ export function createContractGraphV1(graph: ContractGraph): ContractGraphV1 {
     version: snapshot.graphVersion,
     routes: snapshot.routes.map(toContractGraphV1Route).sort(compareContractGraphV1Routes),
     diagnostics: [...snapshot.diagnostics],
+    monetization: snapshot.monetization,
   };
 }
 
@@ -270,7 +278,8 @@ export function isContractGraphSnapshot(value: unknown): value is ContractGraphS
     Array.isArray(value["routes"]) &&
     value["routes"].every(isContractGraphSnapshotRoute) &&
     Array.isArray(value["diagnostics"]) &&
-    value["diagnostics"].every(isContractDiagnosticSnapshot)
+    value["diagnostics"].every(isContractDiagnosticSnapshot) &&
+    (value["monetization"] === undefined || isContractMonetizationGraph(value["monetization"]))
   );
 }
 
@@ -315,7 +324,8 @@ export function isContractGraphV1(value: unknown): value is ContractGraphV1 {
     Array.isArray(value["routes"]) &&
     value["routes"].every(isContractGraphV1Route) &&
     Array.isArray(value["diagnostics"]) &&
-    value["diagnostics"].every(isContractDiagnosticSnapshot)
+    value["diagnostics"].every(isContractDiagnosticSnapshot) &&
+    (value["monetization"] === undefined || isContractMonetizationGraph(value["monetization"]))
   );
 }
 
@@ -1191,6 +1201,11 @@ function isContractDiagnosticSnapshot(value: unknown): value is ContractDiagnost
     isOptionalString(value["controllerName"]) &&
     isOptionalString(value["methodName"]) &&
     isOptionalString(value["path"]) &&
+    (value["source"] === undefined ||
+      value["source"] === "credential-free-structural" ||
+      value["source"] === "remote-provider-preflight") &&
+    (value["evidence"] === undefined || isContractDiagnosticEvidence(value["evidence"])) &&
+    (value["recovery"] === undefined || isContractDiagnosticRecovery(value["recovery"])) &&
     (value["sourceLocation"] === undefined || isContractSourceLocation(value["sourceLocation"]))
   );
 }
@@ -1202,8 +1217,25 @@ function isContractDiagnosticTarget(value: unknown): boolean {
     value === "route" ||
     value === "param" ||
     value === "schema" ||
-    value === "problem"
+    value === "problem" ||
+    value === "meter" ||
+    value === "plan-version" ||
+    value === "entitlement" ||
+    value === "provider"
   );
+}
+
+function isContractDiagnosticEvidence(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    typeof value["kind"] === "string" &&
+    Array.isArray(value["references"]) &&
+    value["references"].every((reference) => typeof reference === "string")
+  );
+}
+
+function isContractDiagnosticRecovery(value: unknown): boolean {
+  return isRecord(value) && typeof value["action"] === "string" && isOptionalString(value["link"]);
 }
 
 function isContractSourceLocation(

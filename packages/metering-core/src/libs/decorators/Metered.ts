@@ -6,7 +6,8 @@ import type { MeteringService } from "../MeteringService";
 import type { CountMeterRef, MeterRecordInput } from "../MeterRef";
 import { InvalidUsageEnvelopeProblem } from "../problems/InvalidUsageEnvelopeProblem";
 
-export const METERED_METADATA_KEY = Symbol("meter:metered");
+/** Shared metadata key used by ContractGraph without introducing a package dependency. */
+export const METERED_METADATA_KEY = Symbol.for("croco:metering:metered");
 
 /** 문자열 meter ID를 사용하는 기존 `@Metered` 데코레이터 옵션입니다. */
 export type MeteredOptions = {

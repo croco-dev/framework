@@ -15,6 +15,11 @@ React Query contracts without hand-maintained glue code.
 - `loadContractGraph` and `loadRoutes` - load generator inputs.
 - Generator option and Problem-runtime types.
 
+`loadContractGraph` also discovers exported `defineContractMonetization(...)` declarations from
+the matched controller modules and merges them into the canonical graph. This keeps
+`croco contracts check` structural billing verification on the same artifact as routes, schemas,
+Problems, access policies, and runtime requirements.
+
 ## Usage
 
 ```typescript

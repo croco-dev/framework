@@ -3,10 +3,13 @@ import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import {
+  CONTRACT_MONETIZATION_INPUT_VERSION,
   type BuildContractGraphOptions,
   buildContractGraph,
   type Constructor,
   type ContractGraph,
+  isContractMonetizationInput,
+  mergeContractMonetizationInputs,
   discoverControllerConstructors,
   type RouteContractSourceLocation,
   type RouteIR,
@@ -34,6 +37,16 @@ class NoRestControllersFoundProblem extends Problem {
       "rpc-codegen/no-rest-controllers-found",
       ProblemCategory.BadRequest,
       getNoRestControllersFoundMessage(glob),
+    );
+  }
+}
+
+class InvalidContractMonetizationDeclarationProblem extends Problem {
+  constructor(sourceFile: string, exportName: string) {
+    super(
+      "rpc-codegen/invalid-contract-monetization-declaration",
+      ProblemCategory.ValidationError,
+      `Export '${exportName}' in '${sourceFile}' declares monetization contract version '${CONTRACT_MONETIZATION_INPUT_VERSION}' but does not satisfy that version's schema. Use defineContractMonetization() so TypeScript validates the declaration.`,
     );
   }
 }
@@ -124,6 +137,7 @@ export async function loadContractGraph(
     assertNoControllerTypeScriptErrors(project, sourceFiles, glob);
     project.emitSync();
     const controllerConstructors: Constructor[] = [];
+    const monetizationInputs = options.monetization ? [options.monetization] : [];
     let controllerCount = 0;
 
     for (const sourceFile of sourceFiles) {
@@ -131,6 +145,16 @@ export async function loadContractGraph(
         getEmittedFilePath(rootDir, emitDir, sourceFile),
       );
       const controllers = discoverControllerConstructors(moduleExports);
+      for (const [exportName, value] of Object.entries(moduleExports)) {
+        if (isContractMonetizationInput(value)) {
+          monetizationInputs.push(value);
+        } else if (hasContractMonetizationInputVersion(value)) {
+          throw new InvalidContractMonetizationDeclarationProblem(
+            sourceFile.getFilePath(),
+            exportName,
+          );
+        }
+      }
 
       controllerCount += controllers.length;
       const sourceFileLocations = sourceLocations.get(sourceFile.getFilePath());
@@ -145,10 +169,23 @@ export async function loadContractGraph(
       throw new NoRestControllersFoundProblem(glob);
     }
 
-    return buildContractGraph(controllerConstructors, options);
+    return buildContractGraph(controllerConstructors, {
+      ...options,
+      monetization: mergeContractMonetizationInputs(monetizationInputs),
+    });
   } finally {
     fs.rmSync(emitDir, { recursive: true, force: true });
   }
+}
+
+function hasContractMonetizationInputVersion(value: unknown): boolean {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    "version" in value &&
+    value.version === CONTRACT_MONETIZATION_INPUT_VERSION
+  );
 }
 
 function collectControllerSourceLocations(

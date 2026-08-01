@@ -14,6 +14,7 @@ export const REST_ROLES_KEY = Symbol.for("croco:rest:roles");
 export const PROBLEM_RESPONSES_KEY = Symbol.for("croco:rest:problemResponses");
 export const ENTITLEMENT_REQUIRED_KEY = "entitlement:required";
 export const ENTITLEMENT_REQUIREMENTS_KEY = Symbol.for("croco:entitlements:requirements");
+export const METERED_METADATA_KEY = Symbol.for("croco:metering:metered");
 
 export enum ParamType {
   PARAM = "param",
@@ -90,6 +91,16 @@ export type EntitlementRequirementMetadata = {
   readonly feature: string;
   readonly description?: string;
   readonly resource?: EntitlementResourceRequirementMetadata;
+};
+
+export type MeteredMetadata = {
+  readonly meterId: string;
+  readonly meter?: {
+    readonly key: string;
+    readonly aggregation: "COUNT" | "SUM";
+    readonly unit: string;
+    readonly billing: "local" | "required";
+  };
 };
 
 export interface ParamMetadata {

@@ -1,0 +1,8 @@
+---
+editUrl: false
+next: false
+prev: false
+title: "ContractMonetizationNode"
+---
+
+> **ContractMonetizationNode** = `object` & [`ContractMeterDeclaration`](/api/protocols-core/src/type-aliases/contractmeterdeclaration/) \| \{ `id`: `string`; `planId`: `string`; `rating`: [`ContractPlanVersionValue`](/api/protocols-core/src/type-aliases/contractplanversionvalue/)\[`"rating"`\]; `ref`: `string`; `sourceLocation?`: [`ContractDiagnosticSourceLocation`](/api/protocols-core/src/type-aliases/contractdiagnosticsourcelocation/); `type`: `"plan-version"`; \} \| \{ `entitlements`: [`ContractPlanEntitlementDeclaration`](/api/protocols-core/src/type-aliases/contractplanentitlementdeclaration/)\[`"entitlements"`\]; `id`: `string`; `planId`: `string`; `planVersionRef`: `string`; `sourceLocation?`: [`ContractDiagnosticSourceLocation`](/api/protocols-core/src/type-aliases/contractdiagnosticsourcelocation/); `type`: `"entitlement-set"`; \} \| \{ `capabilities`: [`ContractBillingProviderDeclaration`](/api/protocols-core/src/type-aliases/contractbillingproviderdeclaration/)\[`"capabilities"`\]; `id`: `string`; `providerName`: `string`; `sourceLocation?`: [`ContractDiagnosticSourceLocation`](/api/protocols-core/src/type-aliases/contractdiagnosticsourcelocation/); `type`: `"billing-provider"`; \} \| \{ `id`: `string`; `meterBindings`: readonly `object`[]; `planVersionRef`: `string`; `priceIds`: readonly `string`[]; `productId`: `string`; `provider`: `string`; `sourceLocation?`: [`ContractDiagnosticSourceLocation`](/api/protocols-core/src/type-aliases/contractdiagnosticsourcelocation/); `type`: `"provider-plan-mapping"`; \}

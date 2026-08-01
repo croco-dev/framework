@@ -96,6 +96,52 @@ describe("loadRoutes", () => {
   );
 
   it(
+    "loads exported monetization declarations into the canonical graph",
+    async () => {
+      fs.writeFileSync(
+        path.join(sourceDir, "UsersController.ts"),
+        `${getMixedControllerSource()}
+export const monetization = {
+  version: 'croco.contract-monetization.input.v1',
+  meters: [{ key: 'api.calls', aggregation: 'COUNT', unit: 'request', billing: 'required' }],
+};
+`,
+      );
+
+      const graph = await loadContractGraph(path.join(sourceDir, "*.ts"));
+
+      expect(graph.monetization?.nodes).toContainEqual(
+        expect.objectContaining({ type: "meter", key: "api.calls" }),
+      );
+      expect(graph.diagnostics).toContainEqual(
+        expect.objectContaining({ code: "CROCO_BILLING_METER_UNBOUND" }),
+      );
+    },
+    LOAD_ROUTES_TIMEOUT_MS,
+  );
+
+  it(
+    "rejects malformed exports tagged as monetization declarations",
+    async () => {
+      fs.writeFileSync(
+        path.join(sourceDir, "UsersController.ts"),
+        `${getMixedControllerSource()}
+export const monetization = {
+  version: 'croco.contract-monetization.input.v1',
+  meters: [{ key: 'api.calls' }],
+};
+`,
+      );
+
+      await expect(loadContractGraph(path.join(sourceDir, "*.ts"))).rejects.toMatchObject({
+        code: "rpc-codegen/invalid-contract-monetization-declaration",
+        detail: expect.stringContaining("does not satisfy that version's schema"),
+      });
+    },
+    LOAD_ROUTES_TIMEOUT_MS,
+  );
+
+  it(
     "maps emitted decorator source locations back to the original controller file",
     async () => {
       const controllerPath = path.join(sourceDir, "WeakSchemaController.ts");

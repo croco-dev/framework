@@ -19174,6 +19174,18 @@
               "declarationKind": "function"
             },
             {
+              "name": "CONTRACT_MONETIZATION_GRAPH_VERSION",
+              "exportKind": "named",
+              "source": "./libs/ContractGraphMonetization",
+              "declarationKind": "const"
+            },
+            {
+              "name": "CONTRACT_MONETIZATION_INPUT_VERSION",
+              "exportKind": "named",
+              "source": "./libs/ContractGraphMonetization",
+              "declarationKind": "const"
+            },
+            {
               "name": "CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE",
               "exportKind": "named",
               "source": "./libs/SchemaDescriptor",
@@ -19220,6 +19232,12 @@
               "exportKind": "named",
               "source": "./libs/ContractGraphConsumerCoverage",
               "declarationKind": "const"
+            },
+            {
+              "name": "defineContractMonetization",
+              "exportKind": "named",
+              "source": "./libs/ContractGraphMonetization",
+              "declarationKind": "function"
             },
             {
               "name": "defineRouteSchema",
@@ -19360,6 +19378,18 @@
               "declarationKind": "function"
             },
             {
+              "name": "isContractMonetizationGraph",
+              "exportKind": "named",
+              "source": "./libs/ContractGraphMonetization",
+              "declarationKind": "function"
+            },
+            {
+              "name": "isContractMonetizationInput",
+              "exportKind": "named",
+              "source": "./libs/ContractGraphMonetization",
+              "declarationKind": "function"
+            },
+            {
               "name": "isControllerConstructor",
               "exportKind": "named",
               "source": "./libs/controllerDiscovery",
@@ -19388,6 +19418,12 @@
               "exportKind": "named",
               "source": "./libs/SchemaDescriptor",
               "declarationKind": "const"
+            },
+            {
+              "name": "mergeContractMonetizationInputs",
+              "exportKind": "named",
+              "source": "./libs/ContractGraphMonetization",
+              "declarationKind": "function"
             },
             {
               "name": "normalizeProjectManifestBundlePath",
@@ -19423,6 +19459,12 @@
               "name": "resolveContractGraphBlockingDiagnostics",
               "exportKind": "named",
               "source": "./libs/ContractGraphCli",
+              "declarationKind": "function"
+            },
+            {
+              "name": "runContractMonetizationProviderPreflight",
+              "exportKind": "named",
+              "source": "./libs/ContractGraphMonetization",
               "declarationKind": "function"
             },
             {
@@ -19473,12 +19515,32 @@
               "source": "./libs/ContractGraph"
             },
             {
+              "name": "ContractBillingProviderDeclaration",
+              "exportKind": "named",
+              "source": "./libs/ContractGraphMonetization"
+            },
+            {
               "name": "ContractDiagnostic",
               "exportKind": "named",
               "source": "./libs/ContractGraph"
             },
             {
+              "name": "ContractDiagnosticEvidence",
+              "exportKind": "named",
+              "source": "./libs/ContractGraph"
+            },
+            {
+              "name": "ContractDiagnosticRecovery",
+              "exportKind": "named",
+              "source": "./libs/ContractGraph"
+            },
+            {
               "name": "ContractDiagnosticSeverity",
+              "exportKind": "named",
+              "source": "./libs/ContractGraph"
+            },
+            {
+              "name": "ContractDiagnosticSource",
               "exportKind": "named",
               "source": "./libs/ContractGraph"
             },
@@ -19663,7 +19725,82 @@
               "source": "./libs/ContractGraph"
             },
             {
+              "name": "ContractMeterDeclaration",
+              "exportKind": "named",
+              "source": "./libs/ContractGraphMonetization"
+            },
+            {
+              "name": "ContractMeterReference",
+              "exportKind": "named",
+              "source": "./libs/ContractGraphMonetization"
+            },
+            {
+              "name": "ContractMonetizationEdge",
+              "exportKind": "named",
+              "source": "./libs/ContractGraphMonetization"
+            },
+            {
+              "name": "ContractMonetizationGraph",
+              "exportKind": "named",
+              "source": "./libs/ContractGraphMonetization"
+            },
+            {
+              "name": "ContractMonetizationInput",
+              "exportKind": "named",
+              "source": "./libs/ContractGraphMonetization"
+            },
+            {
+              "name": "ContractMonetizationNode",
+              "exportKind": "named",
+              "source": "./libs/ContractGraphMonetization"
+            },
+            {
+              "name": "ContractMonetizationProviderPreflight",
+              "exportKind": "named",
+              "source": "./libs/ContractGraphMonetization"
+            },
+            {
               "name": "ContractPathParam",
+              "exportKind": "named",
+              "source": "./libs/ContractGraph"
+            },
+            {
+              "name": "ContractPlanEntitlementDeclaration",
+              "exportKind": "named",
+              "source": "./libs/ContractGraphMonetization"
+            },
+            {
+              "name": "ContractPlanVersionDeclaration",
+              "exportKind": "named",
+              "source": "./libs/ContractGraphMonetization"
+            },
+            {
+              "name": "ContractPlanVersionValue",
+              "exportKind": "named",
+              "source": "./libs/ContractGraphMonetization"
+            },
+            {
+              "name": "ContractProviderPlanMappingDeclaration",
+              "exportKind": "named",
+              "source": "./libs/ContractGraphMonetization"
+            },
+            {
+              "name": "ContractProviderPreflightFinding",
+              "exportKind": "named",
+              "source": "./libs/ContractGraphMonetization"
+            },
+            {
+              "name": "ContractProviderPreflightReport",
+              "exportKind": "named",
+              "source": "./libs/ContractGraphMonetization"
+            },
+            {
+              "name": "ContractProviderPreflightSignal",
+              "exportKind": "named",
+              "source": "./libs/ContractGraphMonetization"
+            },
+            {
+              "name": "ContractRouteMeterRequirement",
               "exportKind": "named",
               "source": "./libs/ContractGraph"
             },

@@ -104,6 +104,36 @@ describe("contractsCheck", () => {
       "Contract graph check failed with 1 error(s).",
     ]);
   });
+
+  it("renders monetization recovery from the same diagnostic record used by JSON", async () => {
+    const diagnostic: ContractDiagnostic = {
+      code: "CROCO_BILLING_METER_UNBOUND",
+      severity: "error",
+      target: "meter",
+      contractId: "meter:api.calls",
+      message: "Billing-required meter 'api.calls' is not billed by a plan version.",
+      source: "credential-free-structural",
+      evidence: { kind: "meter-binding", references: ["api.calls"] },
+      recovery: { action: "Add 'api.calls' to a plan version's billedMeters declaration." },
+    };
+    const humanOutput: string[] = [];
+    const jsonOutput: string[] = [];
+
+    const humanExitCode = await runContractsCheck(["src/**/*.ts"], {
+      loadContractGraph: async () => createGraph([diagnostic]),
+      io: { stdout: (message) => humanOutput.push(message) },
+    });
+    const jsonExitCode = await runContractsCheck(["src/**/*.ts", "--json"], {
+      loadContractGraph: async () => createGraph([diagnostic]),
+      io: { stdout: (message) => jsonOutput.push(message) },
+    });
+
+    expect(humanExitCode).toBe(1);
+    expect(jsonExitCode).toBe(1);
+    expect(humanOutput[0]).toContain(diagnostic.message);
+    expect(humanOutput[0]).toContain(`Recovery: ${diagnostic.recovery?.action}`);
+    expect(JSON.parse(jsonOutput[0] ?? "{}").diagnostics).toEqual([diagnostic]);
+  });
 });
 
 function createGraph(diagnostics: ContractDiagnostic[] = []): ContractGraph {

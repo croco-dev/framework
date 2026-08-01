@@ -2,7 +2,10 @@ export type {
   BuildContractGraphOptions,
   ContractAccessMetadata,
   ContractDiagnostic,
+  ContractDiagnosticEvidence,
+  ContractDiagnosticRecovery,
   ContractDiagnosticSeverity,
+  ContractDiagnosticSource,
   ContractDiagnosticSourceLocation,
   ContractDiagnosticTarget,
   ContractEntitlementRequirement,
@@ -14,6 +17,7 @@ export type {
   ContractMetadataOwner,
   ContractMetadataReference,
   ContractPathParam,
+  ContractRouteMeterRequirement,
 } from "./libs/ContractGraph";
 export {
   assertContractGraphHasNoErrors,
@@ -30,6 +34,32 @@ export {
   parseContractGraphStrictModeFlag,
   resolveContractGraphBlockingDiagnostics,
 } from "./libs/ContractGraphCli";
+export type {
+  ContractBillingProviderDeclaration,
+  ContractMeterDeclaration,
+  ContractMeterReference,
+  ContractMonetizationEdge,
+  ContractMonetizationGraph,
+  ContractMonetizationInput,
+  ContractMonetizationNode,
+  ContractMonetizationProviderPreflight,
+  ContractPlanEntitlementDeclaration,
+  ContractPlanVersionDeclaration,
+  ContractPlanVersionValue,
+  ContractProviderPlanMappingDeclaration,
+  ContractProviderPreflightFinding,
+  ContractProviderPreflightReport,
+  ContractProviderPreflightSignal,
+} from "./libs/ContractGraphMonetization";
+export {
+  CONTRACT_MONETIZATION_GRAPH_VERSION,
+  CONTRACT_MONETIZATION_INPUT_VERSION,
+  defineContractMonetization,
+  isContractMonetizationGraph,
+  isContractMonetizationInput,
+  mergeContractMonetizationInputs,
+  runContractMonetizationProviderPreflight,
+} from "./libs/ContractGraphMonetization";
 export type {
   ContractGraphConsumerCoverage,
   ContractGraphConsumerCoverageReport,

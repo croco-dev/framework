@@ -6,6 +6,7 @@ import {
   clearMeteringService,
   getMeteredMetadata,
   getMeteringService,
+  METERED_METADATA_KEY,
   Metered,
   runWithMeteringService,
   setMeteringService,
@@ -24,6 +25,10 @@ describe("@Metered decorator", () => {
     } as unknown as MeteringService;
 
     setMeteringService(mockService);
+  });
+
+  it("publishes metadata through the shared ContractGraph key", () => {
+    expect(METERED_METADATA_KEY).toBe(Symbol.for("croco:metering:metered"));
   });
 
   describe("basic usage", () => {
