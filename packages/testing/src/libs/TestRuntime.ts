@@ -190,10 +190,16 @@ export class TestEnvironment {
 export class TestNetwork {
   constructor(private readonly mode: "allow" | "deny") {}
 
-  fetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
+  async fetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
     const url = input instanceof Request ? input.url : input.toString();
     if (this.mode === "deny") {
-      throw new TestKernelOutboundCallProblem(new URL(url).host);
+      let host: string;
+      try {
+        host = new URL(url).host;
+      } catch {
+        throw new TestKernelOutboundCallProblem(url);
+      }
+      throw new TestKernelOutboundCallProblem(host);
     }
     return fetch(input, init);
   }

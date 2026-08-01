@@ -591,8 +591,8 @@ describe("TestKernel", () => {
     const secondDisposal = kernel.dispose();
 
     expect(firstDisposal).toBe(secondDisposal);
-    await expect(firstDisposal).rejects.toBeInstanceOf(TestKernelDisposalProblem);
-    await expect(secondDisposal).rejects.toBeInstanceOf(TestKernelDisposalProblem);
+    await expect(firstDisposal).rejects.toThrow(TestKernelDisposalProblem);
+    await expect(secondDisposal).rejects.toThrow(TestKernelDisposalProblem);
     expect(cleanupCalls).toBe(1);
     expect(fallbackCleanupCalls).toBe(1);
   });
@@ -626,8 +626,37 @@ describe("TestKernel", () => {
 
     kernel.waitUntil(new Promise<void>(() => undefined), "response.flush");
 
-    await expect(kernel.dispose()).rejects.toBeInstanceOf(TestKernelDisposalProblem);
+    await expect(kernel.dispose()).rejects.toThrow(TestKernelDisposalProblem);
     expect(cleanupCalls).toBe(1);
+  });
+
+  it("preserves rejected tracked work as leak evidence", async () => {
+    const kernel = await createTestKernel({
+      bootstrap: () => bootstrapProductionApp("tracked-rejection"),
+      fidelity: "application",
+    });
+
+    kernel.waitUntil(Promise.reject(new Error("response flush failed")), "response.flush");
+    await Promise.resolve();
+
+    let error: unknown;
+    try {
+      kernel.expectClean();
+    } catch (caught) {
+      error = caught;
+    }
+    expect(error).toMatchObject({
+      extensions: {
+        leaks: expect.arrayContaining([
+          {
+            category: "operation-failure",
+            failure: { message: "response flush failed", name: "Error" },
+            source: "response.flush",
+          },
+        ]),
+      },
+    });
+    await expect(kernel.dispose()).rejects.toThrow(TestKernelDisposalProblem);
   });
 
   it("isolates and executes production shutdown hooks for each kernel", async () => {
@@ -680,7 +709,7 @@ describe("TestKernel", () => {
       fidelity: "application",
     });
 
-    await expect(kernel.dispose()).rejects.toBeInstanceOf(TestKernelDisposalProblem);
+    await expect(kernel.dispose()).rejects.toThrow(TestKernelDisposalProblem);
   });
 
   it("injects deterministic runtime controls and reports replay metadata", async () => {
@@ -811,6 +840,6 @@ describe("TestKernel", () => {
         ]),
       },
     });
-    await expect(kernel.dispose()).rejects.toBeInstanceOf(TestKernelDisposalProblem);
+    await expect(kernel.dispose()).rejects.toThrow(TestKernelDisposalProblem);
   });
 });

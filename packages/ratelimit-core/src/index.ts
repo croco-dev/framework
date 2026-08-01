@@ -25,7 +25,6 @@ export {
  */
 export {
   FixedWindowInMemoryStore,
-  type InMemoryRateLimitStoreOptions,
   SlidingWindowInMemoryStore,
   TokenBucketInMemoryStore,
 } from "./libs/InMemoryRateLimitStore";
@@ -112,3 +111,8 @@ export {
   type TokenBucketRefundReceipt,
   type TokenBucketPolicy,
 } from "./libs/types";
+
+export type {
+  InMemoryRateLimitStoreOptions,
+  RateLimitPruneScheduler,
+} from "./libs/InMemoryRateLimitStore";

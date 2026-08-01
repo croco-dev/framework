@@ -639,6 +639,7 @@ describe("TaskRunner", () => {
   it("should use injected time and scheduling boundaries for deterministic timeouts", async () => {
     let now = new Date("2026-01-01T00:00:00.000Z").getTime();
     let scheduledTimeout: (() => void) | undefined;
+    let scheduledDelayMs: number | undefined;
     let receivedContext: TaskExecutionContext | undefined;
 
     @Component()
@@ -668,8 +669,9 @@ describe("TaskRunner", () => {
     );
     const runner = new TaskRunner(mockExecutionManager, registry, undefined, {
       now: () => now,
-      schedule: (callback) => {
+      schedule: (callback, delayMs) => {
         scheduledTimeout = callback;
+        scheduledDelayMs = delayMs;
         return () => {
           scheduledTimeout = undefined;
         };
@@ -678,10 +680,11 @@ describe("TaskRunner", () => {
 
     const result = runner.execute("controlled-timed-task", {});
     await vi.waitFor(() => expect(scheduledTimeout).toBeDefined());
+    expect(scheduledDelayMs).toBe(100);
     now += 100;
     scheduledTimeout?.();
 
-    await expect(result).rejects.toBeInstanceOf(TaskExecutionTimeoutProblem);
+    await expect(result).rejects.toThrow(TaskExecutionTimeoutProblem);
     expect(receivedContext?.signal.aborted).toBe(true);
     expect(mockExecutionManager.timeout).toHaveBeenCalledWith("exec-123");
   });

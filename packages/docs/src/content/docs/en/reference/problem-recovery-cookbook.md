@@ -9372,7 +9372,7 @@ Sources:
 
 Sources:
 
-- `packages/testing/src/libs/TestKernel.ts:184:5` (problem-constructor)
+- `packages/testing/src/libs/TestKernel.ts:190:5` (problem-constructor)
 
 <a id="testing-test-kernel-disposed"></a>
 
@@ -9390,7 +9390,7 @@ Sources:
 
 Sources:
 
-- `packages/testing/src/libs/TestKernel.ts:212:5` (problem-constructor)
+- `packages/testing/src/libs/TestKernel.ts:218:5` (problem-constructor)
 
 <a id="testing-test-kernel-leak"></a>
 
@@ -9408,7 +9408,7 @@ Sources:
 
 Sources:
 
-- `packages/testing/src/libs/TestKernel.ts:222:5` (problem-constructor)
+- `packages/testing/src/libs/TestKernel.ts:228:5` (problem-constructor)
 
 <a id="testing-test-kernel-outbound-call"></a>
 
@@ -9444,7 +9444,7 @@ Sources:
 
 Sources:
 
-- `packages/testing/src/libs/TestKernel.ts:233:5` (problem-constructor)
+- `packages/testing/src/libs/TestKernel.ts:239:5` (problem-constructor)
 
 <a id="testing-test-kernel-resource-not-found"></a>
 
@@ -9462,7 +9462,7 @@ Sources:
 
 Sources:
 
-- `packages/testing/src/libs/TestKernel.ts:249:5` (problem-constructor)
+- `packages/testing/src/libs/TestKernel.ts:255:5` (problem-constructor)
 
 <a id="testing-test-kernel-resource-registration"></a>
 
@@ -9480,7 +9480,7 @@ Sources:
 
 Sources:
 
-- `packages/testing/src/libs/TestKernel.ts:262:5` (problem-constructor)
+- `packages/testing/src/libs/TestKernel.ts:268:5` (problem-constructor)
 
 <a id="testing-test-kernel-validation-policy"></a>
 
@@ -9498,7 +9498,7 @@ Sources:
 
 Sources:
 
-- `packages/testing/src/libs/TestKernel.ts:171:5` (problem-constructor)
+- `packages/testing/src/libs/TestKernel.ts:177:5` (problem-constructor)
 
 <a id="testing-test-runtime-configuration"></a>
 

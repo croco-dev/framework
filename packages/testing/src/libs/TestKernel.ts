@@ -63,10 +63,16 @@ export type TestKernelLeak = {
     | "after-commit"
     | "event-handler"
     | "operation"
+    | "operation-failure"
     | "resource"
     | "scheduled-work"
     | "span"
     | "wait-until";
+  readonly failure?: {
+    readonly code?: string;
+    readonly message: string;
+    readonly name: string;
+  };
   readonly source: string;
 };
 
@@ -317,6 +323,7 @@ export class TestKernel implements AsyncDisposable {
   private disposed = false;
   private readonly evidenceBuffer: TestKernelEvidence[] = [];
   private readonly inFlight = new Map<Promise<unknown>, TestKernelTrackedWork>();
+  private readonly trackedFailures: Array<{ error: Error; work: TestKernelTrackedWork }> = [];
 
   constructor(
     readonly app: CrocoApp,
@@ -470,6 +477,15 @@ export class TestKernel implements AsyncDisposable {
 
   private collectLeaks(): TestKernelLeak[] {
     const operationLeaks = [...this.inFlight.values()];
+    const operationFailures = this.trackedFailures.map(({ error, work }) => ({
+      category: "operation-failure" as const,
+      failure: {
+        ...(error instanceof Problem ? { code: error.code } : {}),
+        message: error.message,
+        name: error.name,
+      },
+      source: work.source,
+    }));
     const scheduledLeaks = this.clock.pendingWork.map((work: TestScheduledWork) => ({
       category: "scheduled-work" as const,
       source: work.source,
@@ -479,14 +495,17 @@ export class TestKernel implements AsyncDisposable {
       category: "after-commit" as const,
       source: "transaction-context",
     }));
-    return [...operationLeaks, ...scheduledLeaks, ...afterCommitLeaks];
+    return [...operationLeaks, ...operationFailures, ...scheduledLeaks, ...afterCommitLeaks];
   }
 
   private trackInFlight<T>(operation: Promise<T>, work: TestKernelTrackedWork): Promise<T> {
     this.inFlight.set(operation, work);
     void operation.then(
       () => this.inFlight.delete(operation),
-      () => this.inFlight.delete(operation),
+      (error: unknown) => {
+        this.inFlight.delete(operation);
+        this.trackedFailures.push({ error: toError(error), work });
+      },
     );
     return operation;
   }

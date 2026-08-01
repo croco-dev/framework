@@ -22359,6 +22359,11 @@
               "source": "./libs/types"
             },
             {
+              "name": "RateLimitPruneScheduler",
+              "exportKind": "named",
+              "source": "./libs/InMemoryRateLimitStore"
+            },
+            {
               "name": "RateLimitRefundReceipt",
               "exportKind": "named",
               "source": "./libs/types"

@@ -15253,7 +15253,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/TestKernel.ts",
-          line: 184,
+          line: 190,
           column: 5,
           kind: "problem-constructor",
         },
@@ -15285,7 +15285,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/TestKernel.ts",
-          line: 212,
+          line: 218,
           column: 5,
           kind: "problem-constructor",
         },
@@ -15317,7 +15317,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/TestKernel.ts",
-          line: 222,
+          line: 228,
           column: 5,
           kind: "problem-constructor",
         },
@@ -15381,7 +15381,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/TestKernel.ts",
-          line: 233,
+          line: 239,
           column: 5,
           kind: "problem-constructor",
         },
@@ -15413,7 +15413,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/TestKernel.ts",
-          line: 249,
+          line: 255,
           column: 5,
           kind: "problem-constructor",
         },
@@ -15446,7 +15446,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/TestKernel.ts",
-          line: 262,
+          line: 268,
           column: 5,
           kind: "problem-constructor",
         },
@@ -15478,7 +15478,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/TestKernel.ts",
-          line: 171,
+          line: 177,
           column: 5,
           kind: "problem-constructor",
         },

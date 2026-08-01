@@ -76,31 +76,31 @@ describe("TestRuntime", () => {
     );
   });
 
-  it("rejects outbound calls by default with a provider-facing diagnostic", () => {
+  it("rejects outbound calls by default with a provider-facing diagnostic", async () => {
     const runtime = new TestRuntime({ network: "deny" });
 
-    expect(() => runtime.network.fetch("https://provider.example.test/v1/send")).toThrow(
-      TestKernelOutboundCallProblem,
-    );
-    try {
-      runtime.network.fetch("https://provider.example.test/v1/send");
-    } catch (error) {
-      expect(error).toMatchObject({
-        code: "testing/test-kernel-outbound-call",
-        extensions: {
-          host: "provider.example.test",
-          recovery: "Register a provider fake or explicitly allow this outbound call.",
-        },
-      });
-    }
+    await expect(
+      runtime.network.fetch("https://provider.example.test/v1/send"),
+    ).rejects.toMatchObject({
+      code: "testing/test-kernel-outbound-call",
+      extensions: {
+        host: "provider.example.test",
+        recovery: "Register a provider fake or explicitly allow this outbound call.",
+      },
+    });
+    await expect(runtime.network.fetch("not a url")).rejects.toThrow(TestKernelOutboundCallProblem);
   });
 
   it("supplies virtual time and seeded entropy to rate-limit boundaries without global timers", async () => {
     const runtime = new TestRuntime({ ids: "rate-limit", network: "deny" });
     const store = new SlidingWindowInMemoryStore({
       now: () => runtime.clock.now.getTime(),
-      pruneIntervalMs: 0,
+      pruneIntervalMs: 30_000,
       random: () => runtime.random.next(),
+      scheduler: {
+        schedule: (callback, delayMs) =>
+          runtime.clock.schedule(callback, delayMs, "rate-limit:prune"),
+      },
     });
     const policy = createSlidingWindowPolicy("test-runtime", 1, 30_000);
 
@@ -112,10 +112,14 @@ describe("TestRuntime", () => {
 
     await runtime.clock.advanceBy(30_001);
 
+    expect(runtime.clock.pendingWork).toMatchObject([{ source: "rate-limit:prune" }]);
+
     await expect(store.check("tenant:one", policy)).resolves.toMatchObject({
       remaining: 0,
       success: true,
     });
+    store.close();
+    expect(runtime.clock.pendingWork).toEqual([]);
   });
 
   it("drains retry-core backoff through kernel-owned virtual time", async () => {
