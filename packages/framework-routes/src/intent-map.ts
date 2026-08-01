@@ -196,7 +196,7 @@ const DEFAULT_GENERATED_ARTIFACTS: readonly Omit<
   },
   {
     kind: "routes-module",
-    path: ".croco/build/routes.js",
+    path: ".croco/build/routes.mjs",
     description: "Generated route registration module for build-time HTTP controller wiring.",
   },
 ];

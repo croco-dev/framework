@@ -26,12 +26,31 @@ type RouteMetadataShape = {
 const CONTROLLER_KEY = Symbol.for("croco:rest:controller");
 const ROUTES_KEY = Symbol.for("croco:rest:routes");
 
+export type ControllerModule = {
+  readonly constructors: readonly Constructor[];
+  readonly exportNames: ReadonlyMap<Constructor, string>;
+};
+
+export async function readControllerModule(controllerPath: string): Promise<ControllerModule> {
+  const mod = (await import(controllerPath)) as Record<string, unknown>;
+  const constructors = discoverControllerConstructors(mod);
+  const exportNames = new Map<Constructor, string>();
+
+  for (const controller of constructors) {
+    const exportName = Object.entries(mod).find(([, value]) => value === controller)?.[0];
+
+    if (exportName !== undefined) {
+      exportNames.set(controller, exportName);
+    }
+  }
+
+  return { constructors, exportNames };
+}
+
 export async function readControllerConstructors(
   controllerPath: string,
 ): Promise<readonly Constructor[]> {
-  const mod = (await import(controllerPath)) as Record<string, unknown>;
-
-  return discoverControllerConstructors(mod);
+  return (await readControllerModule(controllerPath)).constructors;
 }
 
 export async function readControllersMetadata(
