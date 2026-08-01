@@ -25,9 +25,16 @@ class ProtectedSmokeController {
   }
 }
 
+class MissingProviderGuard implements Guard<ExecutionContext> {
+  canActivate(): boolean {
+    return true;
+  }
+}
+
 @Controller("/missing-provider-smoke")
 class MissingProviderController {
   @Get()
+  @UseGuards(MissingProviderGuard)
   read() {
     return { ok: true };
   }
@@ -134,8 +141,8 @@ describe("API server", () => {
           diagnostics: expect.arrayContaining([
             expect.objectContaining({
               code: "transports-http/di-missing-provider",
-              provider: "MissingProviderController",
-              usages: ["controller MissingProviderController"],
+              provider: "MissingProviderGuard",
+              usages: ["guard MissingProviderGuard for GET /missing-provider-smoke"],
             }),
           ]),
         },
