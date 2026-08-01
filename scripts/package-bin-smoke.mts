@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSyn
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { findPackageJsonFiles } from "./package-manifest-contracts.mjs";
+import { effectivePublishManifest, findPackageJsonFiles } from "./package-manifest-contracts.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -147,7 +147,7 @@ function packageIndexFor(packageJsonFiles: readonly string[]): ReadonlyMap<strin
       packageDir: dirname(packagePath),
       packageName,
       packagePath,
-      publishManifest: publishManifestFor(sourceManifest),
+      publishManifest: effectivePublishManifest(sourceManifest) as PackageJson,
       sourceManifest,
     });
   }
@@ -165,16 +165,6 @@ function packageNameFor(pkg: PackageJson, packagePath: string): string {
   }
 
   throw new Error(`${packagePath}: package name is required`);
-}
-
-function publishManifestFor(sourceManifest: PackageJson): PackageJson {
-  const publishManifest = {
-    ...sourceManifest,
-    ...sourceManifest.publishConfig,
-  };
-  delete publishManifest.publishConfig;
-
-  return publishManifest;
 }
 
 function hasBinTargets(pkg: PackageJson): boolean {

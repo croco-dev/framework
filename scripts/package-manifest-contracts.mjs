@@ -55,6 +55,15 @@ export function fieldMatchesPath(source, rootFieldName, publishFieldPath) {
   return valuesMatch(rootValue, publishValue);
 }
 
+export function effectivePublishManifest(sourceManifest) {
+  const publishManifest = {
+    ...sourceManifest,
+    ...sourceManifest.publishConfig,
+  };
+  delete publishManifest.publishConfig;
+  return publishManifest;
+}
+
 function valuesMatch(left, right) {
   if (Object.is(left, right)) {
     return true;

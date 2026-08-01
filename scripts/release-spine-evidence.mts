@@ -8,8 +8,8 @@ import {
   mkdirSync,
   openSync,
   readFileSync,
+  rmSync,
   statSync,
-  unlinkSync,
   writeFileSync,
   writeSync,
 } from "node:fs";
@@ -791,14 +791,21 @@ function persistFailedCommandOutput(
   modifiedAt: string,
 ): readonly EvidenceArtifactReference[] {
   const outputRoot = join(outputDir, RELEASE_ARTIFACT_DIRECTORY, checkId);
-
-  return [
+  const streams: readonly (readonly [
+    label: string,
+    fileName: string,
+    output: string,
+    fileComplete: boolean | undefined,
+  ])[] = [
     ["Command stdout", "stdout.log", result.stdout, result.stdoutFileComplete],
     ["Command stderr", "stderr.log", result.stderr, result.stderrFileComplete],
-  ].map(([label, fileName, output, fileComplete]) => {
+  ];
+
+  return streams.map(([label, fileName, output, fileComplete]) => {
     const outputPath = join(outputRoot, fileName);
     let writeError: string | null = null;
-    let wroteCurrentOutput = fileComplete === true;
+    const usedFallback = fileComplete !== true || !existsSync(outputPath);
+    let wroteCurrentOutput = !usedFallback;
     if (!wroteCurrentOutput) {
       try {
         mkdirSync(outputRoot, { recursive: true });
@@ -812,7 +819,7 @@ function persistFailedCommandOutput(
     const exists = existsSync(outputPath);
 
     return {
-      label,
+      label: usedFallback ? `${label} (bounded fallback; may be truncated)` : label,
       path: artifactPath,
       required: false,
       copiedPath: exists && wroteCurrentOutput ? artifactPath : null,
@@ -825,14 +832,21 @@ function persistFailedCommandOutput(
   });
 }
 
-function discardCommandOutput(outputDir: string, checkId: string): void {
+function discardCommandOutput(outputDir: string, checkId: string): string | null {
   const outputRoot = join(outputDir, RELEASE_ARTIFACT_DIRECTORY, checkId);
+  const cleanupErrors: string[] = [];
   for (const fileName of ["stdout.log", "stderr.log"]) {
     const outputPath = join(outputRoot, fileName);
-    if (existsSync(outputPath)) {
-      unlinkSync(outputPath);
+    try {
+      rmSync(outputPath, { force: true });
+    } catch (error) {
+      cleanupErrors.push(`${fileName}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
+
+  return cleanupErrors.length > 0
+    ? `Command output cleanup failed: ${cleanupErrors.join("; ")}`
+    : null;
 }
 
 function assertCopiedGeneratedSmokeJourneyBundle(bundleRoot: string): void {
@@ -1098,11 +1112,18 @@ export async function runReleaseSpineEvidence(
     const commandArtifacts = collectArtifactReferences(check, rootDir, outputDir, startedMs);
     const artifactReason = artifactFailureReason(commandArtifacts);
     const interruptionSignal = options.getInterruptSignal?.() ?? null;
-    const status = interruptionSignal
+    let status = interruptionSignal
       ? "interrupted"
       : artifactReason && result.status === 0 && !result.timedOut
         ? "failed"
         : resultStatus(result);
+    let cleanupError: string | null = null;
+    if (status !== "failed" && status !== "timed_out" && status !== "interrupted") {
+      cleanupError = discardCommandOutput(outputDir, check.id);
+      if (cleanupError) {
+        status = "failed";
+      }
+    }
     const artifacts =
       status === "failed" || status === "timed_out" || status === "interrupted"
         ? [
@@ -1110,9 +1131,6 @@ export async function runReleaseSpineEvidence(
             ...persistFailedCommandOutput(check.id, result, rootDir, outputDir, completedAt),
           ]
         : commandArtifacts;
-    if (status !== "failed" && status !== "timed_out" && status !== "interrupted") {
-      discardCommandOutput(outputDir, check.id);
-    }
 
     report = updateCheck(report, index, {
       ...report.checks[index],
@@ -1120,12 +1138,12 @@ export async function runReleaseSpineEvidence(
       completedAt,
       durationMs,
       effectiveTimeoutMs,
-      errorCode: result.errorCode,
-      errorMessage: result.errorMessage,
+      errorCode: cleanupError ? "COMMAND_OUTPUT_CLEANUP_FAILED" : result.errorCode,
+      errorMessage: cleanupError ?? result.errorMessage,
       exitCode: result.status,
       failureReason: interruptionSignal
         ? `Release spine evidence was interrupted by ${interruptionSignal}.`
-        : failureReason(result, artifactReason),
+        : (cleanupError ?? failureReason(result, artifactReason)),
       signal: interruptionSignal ?? result.signal,
       status,
       stderrExcerpt: outputExcerpt(result.stderr, maxOutputExcerptLength),

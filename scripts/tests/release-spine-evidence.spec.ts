@@ -474,6 +474,35 @@ describe("release-spine-evidence.mts", () => {
     expect(existsSync(join(outputDir, "artifacts", "real-success", "stderr.log"))).toBe(false);
   });
 
+  it("records command-output cleanup failures without aborting the final report", async () => {
+    const repo = createTempRepo();
+    const outputDir = join(repo, "ci-reports", "release");
+    const report = await runReleaseSpineEvidence({
+      rootDir: repo,
+      outputDir,
+      totalTimeoutMs: 1_000,
+      commands: [createCommand("cleanup-failure")],
+      runner: (_check, context) => {
+        if (!context.stdoutPath) {
+          throw new Error("stdout path is required");
+        }
+        mkdirSync(context.stdoutPath, { recursive: true });
+        writeFileSync(join(context.stdoutPath, "retained.log"), "cleanup blocked");
+        return okResult("ok");
+      },
+    });
+
+    expect(report.status).toBe("failed");
+    expect(report.checks[0]?.status).toBe("failed");
+    expect(report.checks[0]?.errorCode).toBe("COMMAND_OUTPUT_CLEANUP_FAILED");
+    expect(report.checks[0]?.failureReason).toContain("stdout.log");
+    expect(report.checks[0]?.artifacts.map(({ label }) => label)).toEqual([
+      "Command stdout (bounded fallback; may be truncated)",
+      "Command stderr (bounded fallback; may be truncated)",
+    ]);
+    expect(existsSync(join(outputDir, "spine-evidence.json"))).toBe(true);
+  });
+
   it("finalizes real command evidence before reporting an interruption", async () => {
     const repo = createTempRepo();
     const outputDir = join(repo, "ci-reports", "release");
@@ -735,6 +764,7 @@ describe("release-spine-evidence.mts", () => {
   it("keeps the complete sibling stream when one output stream fails", async () => {
     const repo = createTempRepo();
     const outputDir = join(repo, "ci-reports", "release");
+    const stdout = "o".repeat(100);
     const stderr = "s".repeat(100);
     const report = await runReleaseSpineEvidence({
       rootDir: repo,
@@ -745,7 +775,7 @@ describe("release-spine-evidence.mts", () => {
           command: [
             process.execPath,
             "-e",
-            `process.stderr.write(${JSON.stringify(stderr)}); process.stdout.write("stdout diagnostics")`,
+            `process.stderr.write(${JSON.stringify(stderr)}); process.stdout.write(${JSON.stringify(stdout)})`,
           ],
           timeoutMs: 2_000,
         }),
@@ -754,7 +784,7 @@ describe("release-spine-evidence.mts", () => {
         const text = Buffer.from(output)
           .subarray(offset, offset + length)
           .toString("utf8");
-        if (text.includes("stdout diagnostics")) {
+        if (/^o+$/.test(text)) {
           throw Object.assign(new Error("stdout disk full"), { code: "ENOSPC" });
         }
         return writeSync(descriptor, output, offset, length);
@@ -765,11 +795,15 @@ describe("release-spine-evidence.mts", () => {
     expect(report.status).toBe("failed");
     expect(
       readFileSync(join(outputDir, "artifacts", "partial-output-failure", "stdout.log"), "utf8"),
-    ).toBe("gnostics");
+    ).toBe(stdout.slice(-8));
     expect(
       readFileSync(join(outputDir, "artifacts", "partial-output-failure", "stderr.log"), "utf8"),
     ).toBe(stderr);
     expect(report.checks[0]?.artifacts.map(({ fresh }) => fresh)).toEqual([true, true]);
+    expect(report.checks[0]?.artifacts.map(({ label }) => label)).toEqual([
+      "Command stdout (bounded fallback; may be truncated)",
+      "Command stderr",
+    ]);
   });
 
   it("retries short command-output writes until the full buffer is persisted", async () => {

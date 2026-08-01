@@ -96,7 +96,9 @@ function affectsPackageEntrypoints(path: string): boolean {
 function affectsPackageBins(path: string): boolean {
   return (
     /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|turbo\.json|\.nvmrc)$/.test(path) ||
-    /^packages\/(?:cli|create-croco-app)\/(?:package\.json|src\/)/.test(path) ||
+    /^packages\/(?:cli|create-croco-app|migration-runner|openapi-spec|rpc-codegen)\/(?:package\.json|src\/)/.test(
+      path,
+    ) ||
     path === "scripts/package-bin-smoke.mts"
   );
 }
