@@ -231,7 +231,7 @@ export function createContractGraphSnapshot(graph: ContractGraph): ContractGraph
     controllers,
     routes,
     diagnostics: [...graph.diagnostics].sort(compareDiagnostics),
-    monetization: graph.monetization,
+    ...(graph.monetization ? { monetization: graph.monetization } : {}),
   };
 }
 
@@ -245,7 +245,7 @@ export function createContractGraphV1(graph: ContractGraph): ContractGraphV1 {
     version: snapshot.graphVersion,
     routes: snapshot.routes.map(toContractGraphV1Route).sort(compareContractGraphV1Routes),
     diagnostics: [...snapshot.diagnostics],
-    monetization: snapshot.monetization,
+    ...(snapshot.monetization ? { monetization: snapshot.monetization } : {}),
   };
 }
 

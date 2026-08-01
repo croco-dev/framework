@@ -3,8 +3,20 @@ import type {
   ContractDiagnosticEvidence,
   ContractDiagnosticRecovery,
   ContractDiagnosticSourceLocation,
-  ContractGraphRoute,
-} from "./ContractGraph";
+} from "./ContractDiagnostic";
+
+type MonetizationContractRoute = {
+  readonly operationId: string;
+  readonly meters?: readonly {
+    readonly key: string;
+    readonly aggregation?: "COUNT" | "SUM";
+    readonly unit?: string;
+    readonly billing: "local" | "required";
+  }[];
+  readonly routeContract: {
+    readonly sourceLocation?: ContractDiagnosticSourceLocation;
+  } | null;
+};
 
 export const CONTRACT_MONETIZATION_INPUT_VERSION = "croco.contract-monetization.input.v1";
 export const CONTRACT_MONETIZATION_GRAPH_VERSION = "croco.contract-monetization.v1";
@@ -222,7 +234,7 @@ export function mergeContractMonetizationInputs(
 }
 
 export function buildContractMonetizationGraph(
-  routes: readonly ContractGraphRoute[],
+  routes: readonly MonetizationContractRoute[],
   input: ContractMonetizationInput | undefined,
 ): {
   readonly graph: ContractMonetizationGraph;
@@ -299,7 +311,7 @@ export async function runContractMonetizationProviderPreflight(
 }
 
 function collectMeterDeclarations(
-  routes: readonly ContractGraphRoute[],
+  routes: readonly MonetizationContractRoute[],
   declared: readonly ContractMeterDeclaration[],
 ): readonly ContractMeterDeclaration[] {
   const declaredKeys = new Set(declared.map((meter) => meter.key));
@@ -488,7 +500,7 @@ function createNodes(
 }
 
 function createEdges(
-  routes: readonly ContractGraphRoute[],
+  routes: readonly MonetizationContractRoute[],
   plans: readonly ContractPlanVersionDeclaration[],
   entitlementSets: readonly ContractPlanEntitlementDeclaration[],
   mappings: readonly ContractProviderPlanMappingDeclaration[],

@@ -169,9 +169,11 @@ export async function loadContractGraph(
       throw new NoRestControllersFoundProblem(glob);
     }
 
+    const monetization = mergeContractMonetizationInputs(monetizationInputs);
+
     return buildContractGraph(controllerConstructors, {
       ...options,
-      monetization: mergeContractMonetizationInputs(monetizationInputs),
+      ...(monetization ? { monetization } : {}),
     });
   } finally {
     fs.rmSync(emitDir, { recursive: true, force: true });

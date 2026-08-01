@@ -10,6 +10,12 @@ import {
 import type { z } from "zod";
 import { extractRouteIR } from "./extractRouteIR";
 import type { ProblemRegistryReferenceIR, ProblemResponseIR, RouteIR } from "./RouteIR";
+import type {
+  ContractDiagnostic,
+  ContractDiagnosticSeverity,
+  ContractDiagnosticSourceLocation,
+  ContractDiagnosticTarget,
+} from "./ContractDiagnostic";
 import {
   describeZodSchema,
   getSchemaDescriptorDiagnostics,
@@ -34,52 +40,15 @@ import {
 } from "./sharedTypes";
 
 export type ContractGraphVersion = "croco.contract-graph.v1";
-export type ContractDiagnosticSeverity = "error" | "warning";
-export type ContractDiagnosticTarget =
-  | "graph"
-  | "controller"
-  | "route"
-  | "param"
-  | "schema"
-  | "problem"
-  | "meter"
-  | "plan-version"
-  | "entitlement"
-  | "provider";
-
-export type ContractDiagnosticSource = "credential-free-structural" | "remote-provider-preflight";
-
-export type ContractDiagnosticEvidence = {
-  readonly kind: string;
-  readonly references: readonly string[];
-};
-
-export type ContractDiagnosticRecovery = {
-  readonly action: string;
-  readonly link?: string;
-};
-
-export type ContractDiagnostic = {
-  readonly code: string;
-  readonly severity: ContractDiagnosticSeverity;
-  readonly target: ContractDiagnosticTarget;
-  readonly message: string;
-  readonly routeId?: string;
-  readonly contractId?: string;
-  readonly controllerName?: string;
-  readonly methodName?: string;
-  readonly path?: string;
-  readonly sourceLocation?: ContractDiagnosticSourceLocation;
-  readonly source?: ContractDiagnosticSource;
-  readonly evidence?: ContractDiagnosticEvidence;
-  readonly recovery?: ContractDiagnosticRecovery;
-};
-
-export type ContractDiagnosticSourceLocation = {
-  readonly path: string;
-  readonly line?: number;
-  readonly column?: number;
-};
+export type {
+  ContractDiagnostic,
+  ContractDiagnosticEvidence,
+  ContractDiagnosticRecovery,
+  ContractDiagnosticSeverity,
+  ContractDiagnosticSource,
+  ContractDiagnosticSourceLocation,
+  ContractDiagnosticTarget,
+} from "./ContractDiagnostic";
 
 export type ContractGraphController = {
   readonly name: string;
