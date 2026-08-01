@@ -202,7 +202,7 @@ describe("tRPC Croco execution pipeline", () => {
     await expect(caller.trpcDeny.denied()).rejects.toMatchObject({
       code: "FORBIDDEN",
       cause: expect.objectContaining({
-        code: "ACCESS_DENIED",
+        code: "TRPC_ACCESS_DENIED",
         status: 403,
       }),
     });
@@ -218,7 +218,7 @@ describe("tRPC Croco execution pipeline", () => {
 
     await expect(caller.trpcDeny.invalidInput({ name: "" })).rejects.toMatchObject({
       code: "FORBIDDEN",
-      cause: expect.objectContaining({ code: "ACCESS_DENIED" }),
+      cause: expect.objectContaining({ code: "TRPC_ACCESS_DENIED" }),
     });
     expect(events).toEqual(["invalid-input-guard"]);
   });

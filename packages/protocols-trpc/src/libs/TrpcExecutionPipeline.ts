@@ -37,7 +37,7 @@ export class TrpcExecutionPipeline {
   ): Promise<void> {
     for (const guard of guards) {
       if (!(await guard.canActivate(context))) {
-        throw ProblemFactory.forbidden("ACCESS_DENIED", "Access denied");
+        throw ProblemFactory.forbidden("TRPC_ACCESS_DENIED", "Access denied");
       }
     }
   }

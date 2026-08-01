@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 565,
+  problemCount: 566,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -12198,7 +12198,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/protocols-trpc/src/libs/createTrpcRouter.ts",
-          line: 21,
+          line: 52,
           column: 3,
           kind: "problem-class",
         },
@@ -16207,6 +16207,36 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 254,
           column: 15,
           kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "TRPC_ACCESS_DENIED",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#trpc-access-denied",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/protocols-trpc/src/libs/TrpcExecutionPipeline.ts",
+          line: 40,
+          column: 15,
+          kind: "problem-factory",
         },
       ],
     },
