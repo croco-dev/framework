@@ -26,7 +26,7 @@ import {
 import { createTRPCClient, httpBatchLink } from "@trpc/client";
 import type { AnyRouter } from "@trpc/server";
 import { createHTTPServer } from "@trpc/server/adapters/standalone";
-import { afterEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { createTrpcRouter } from "../libs/createTrpcRouter";
 import { TrpcExecutionContext } from "../libs/TrpcExecutionContext";
@@ -230,8 +230,18 @@ class TrpcRequiredDependencyController {
   }
 }
 
+@Controller("/trpc/guard-provider")
+class TrpcGuardProviderFailureController {
+  @Get("/")
+  @UseFilters(MethodFilter)
+  @UseGuards(DependencyBackedGuard as unknown as Constructor<Guard>)
+  protected(): string {
+    return "unreachable";
+  }
+}
+
 describe("tRPC Croco execution pipeline", () => {
-  afterEach(() => {
+  beforeEach(() => {
     Container.reset();
     events.length = 0;
     observedTrpcContext = undefined;
@@ -376,6 +386,24 @@ describe("tRPC Croco execution pipeline", () => {
     );
   });
 
+  it("lets filters handle guard provider instantiation failures", async () => {
+    const router = createTrpcRouter([TrpcGuardProviderFailureController]);
+    const caller = router.createCaller({}) as unknown as {
+      trpcGuardProviderFailure: { protected: () => Promise<unknown> };
+    };
+
+    const failure = caller.trpcGuardProviderFailure.protected();
+    await expect(failure).rejects.toThrow();
+    await expect(failure).rejects.toMatchObject({
+      code: "UNPROCESSABLE_CONTENT",
+      cause: expect.objectContaining({
+        code: "protocols-trpc/filter-handled",
+        status: 422,
+      }),
+    });
+    expect(events).toEqual(["method-filter"]);
+  });
+
   it("preserves the original failure and records invalid filter results", async () => {
     const diagnosticEvents: RuntimeInspectorRecorderEventInput[] = [];
     const recorder = {
@@ -459,6 +487,13 @@ describe("tRPC Croco execution pipeline", () => {
       "/trpc/deny",
       "GET",
     );
+    const invalidNodeRequestContext = new TrpcExecutionContext(
+      { req: { url: "/trpc/node", method: "GET", headers: { "invalid header": "value" } } },
+      TrpcDenyController,
+      "denied",
+      "/trpc/deny",
+      "GET",
+    );
 
     expect(context.getTrpcContext().identity).toBe("caller-1");
     expect(context.getRequest()).toBeInstanceOf(Request);
@@ -466,6 +501,14 @@ describe("tRPC Croco execution pipeline", () => {
     expect(() => missingRequestContext.getRequest()).toThrow(
       expect.objectContaining({ code: "protocols-trpc/request-unavailable" }),
     );
+    expect(() => invalidNodeRequestContext.getRequest()).toThrow(
+      expect.objectContaining({ code: "protocols-trpc/request-normalization-failed" }),
+    );
+    try {
+      invalidNodeRequestContext.getRequest();
+    } catch (error) {
+      expect(JSON.stringify(error)).not.toContain("invalid header");
+    }
   });
 });
 

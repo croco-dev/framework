@@ -126,26 +126,26 @@ function createProcedure(
   const guardProviders = getGuards(controller, route.methodName);
   const filterProviders = getFilters(controller, route.methodName);
   const interceptorProviders = getInterceptors(controller, route.methodName);
-  const createGuardAndFilterConfig = (): Pick<TrpcPipelineConfig, "guards" | "filters"> => ({
-    guards: guardProviders.map((provider) => instantiateProvider(provider, options)),
-    filters: filterProviders.map((provider) => instantiateProvider(provider, options)),
-  });
+  const createFilters = (): TrpcPipelineConfig["filters"] =>
+    filterProviders.map((provider) => instantiateProvider(provider, options));
+  const createGuards = (): TrpcPipelineConfig["guards"] =>
+    guardProviders.map((provider) => instantiateProvider(provider, options));
   const createInterceptors = (): TrpcPipelineConfig["interceptors"] =>
     interceptorProviders.map((provider) => instantiateProvider(provider, options));
   const inputSchema = createTrpcInputSchema(route);
   const lifecycleProcedure = t.procedure.use(async ({ ctx, next }) => {
     const context = createExecutionContext(ctx);
-    const config = createGuardAndFilterConfig();
+    const filters = createFilters();
 
     try {
-      await executionPipeline.runGuards(context, config.guards);
+      await executionPipeline.runGuards(context, createGuards());
     } catch (error) {
-      return executionPipeline.rethrowFiltered(error, context, config.filters);
+      return executionPipeline.rethrowFiltered(error, context, filters);
     }
 
     const result = await next();
     if (!result.ok) {
-      return executionPipeline.rethrowFiltered(result.error, context, config.filters);
+      return executionPipeline.rethrowFiltered(result.error, context, filters);
     }
 
     return result;

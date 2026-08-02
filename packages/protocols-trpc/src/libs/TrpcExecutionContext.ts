@@ -47,6 +47,15 @@ class TrpcRequestUnavailableProblem extends Problem {
   }
 }
 
+class TrpcRequestNormalizationProblem extends Problem {
+  readonly code = "protocols-trpc/request-normalization-failed";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(cause: Error) {
+    super(undefined, undefined, "The tRPC HTTP request could not be normalized", { cause });
+  }
+}
+
 function readRequest(context: unknown): Request {
   if (context instanceof Request) {
     return context;
@@ -60,8 +69,11 @@ function readRequest(context: unknown): Request {
     }
 
     const normalizedRequest = normalizeNodeRequest(request);
-    if (normalizedRequest) {
+    if (normalizedRequest instanceof Request) {
       return normalizedRequest;
+    }
+    if (normalizedRequest) {
+      throw normalizedRequest;
     }
   }
 
@@ -72,7 +84,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-function normalizeNodeRequest(value: unknown): Request | undefined {
+function normalizeNodeRequest(
+  value: unknown,
+): Request | TrpcRequestNormalizationProblem | undefined {
   if (!isRecord(value) || typeof value.url !== "string" || typeof value.method !== "string") {
     return undefined;
   }
@@ -98,7 +112,11 @@ function normalizeNodeRequest(value: unknown): Request | undefined {
     const url = new URL(value.url, `${encrypted ? "https" : "http"}://${host}`);
 
     return new Request(url, { method: value.method, headers });
-  } catch {
-    return undefined;
+  } catch (error) {
+    return new TrpcRequestNormalizationProblem(toError(error));
   }
+}
+
+function toError(value: unknown): Error {
+  return value instanceof Error ? value : new Error("Unknown request normalization failure");
 }
