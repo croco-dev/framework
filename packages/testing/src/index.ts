@@ -113,6 +113,7 @@ export {
   fixedClock,
   seededIds,
   TestClock,
+  TestRuntimeDrainProblem,
   TestEnvironment,
   TestIdSource,
   TestKernelOutboundCallProblem,

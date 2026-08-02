@@ -20,11 +20,10 @@ import {
   type TestingRequestOptions,
   type TestingTransactionContext,
 } from "./testing";
-import { TestRuntime } from "./TestRuntime";
+import { TestIdSource, TestRuntime } from "./TestRuntime";
 import type {
   TestClock,
   TestEnvironment,
-  TestIdSource,
   TestNetwork,
   TestRandomSource,
   TestEnvironmentOverrides,
@@ -517,7 +516,12 @@ export async function createTestKernel(options: TestKernelOptions): Promise<Test
   const runtimeOptions: TestRuntimeOptions = {
     ...(options.clock === undefined ? {} : { clock: options.clock }),
     ...(options.environment === undefined ? {} : { environment: options.environment }),
-    ...(options.ids === undefined ? {} : { ids: options.ids }),
+    ...(options.ids === undefined
+      ? {}
+      : {
+          ids:
+            options.ids instanceof TestIdSource ? new TestIdSource(options.ids.seed) : options.ids,
+        }),
     ...(options.network === undefined ? {} : { network: options.network }),
     ...(options.scenarioId === undefined ? {} : { scenarioId: options.scenarioId }),
   };

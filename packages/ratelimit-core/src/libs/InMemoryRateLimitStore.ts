@@ -17,9 +17,9 @@ export type InMemoryRateLimitStoreOptions = {
   readonly scheduler?: RateLimitPruneScheduler;
 };
 
-export type RateLimitPruneScheduler = {
+export interface RateLimitPruneScheduler {
   schedule(callback: () => void | Promise<void>, intervalMs: number): () => void;
-};
+}
 
 const DEFAULT_PRUNE_INTERVAL_MS = 60000;
 

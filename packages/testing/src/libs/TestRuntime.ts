@@ -33,8 +33,11 @@ type ScheduledEntry = {
   readonly callback: ScheduledCallback;
   readonly dueAtMs: number;
   readonly id: string;
+  readonly sequence: number;
   readonly source: string;
 };
+
+const MAX_DRAIN_CALLBACKS = 10_000;
 
 export class TestKernelOutboundCallProblem extends Problem {
   constructor(host: string) {
@@ -63,6 +66,23 @@ export class TestRuntimeConfigurationProblem extends Problem {
   }
 }
 
+export class TestRuntimeDrainProblem extends Problem {
+  constructor(limit: number) {
+    super(
+      "testing/test-runtime-drain-limit",
+      ProblemCategory.InternalServerError,
+      `Test runtime drain exceeded ${limit} scheduled callbacks without reaching an idle state.`,
+      {
+        extensions: {
+          limit,
+          recovery:
+            "Cancel the rescheduling callback or schedule its next run after the current virtual time.",
+        },
+      },
+    );
+  }
+}
+
 export class TestClock {
   private currentTimeMs: number;
   private scheduledSequence = 0;
@@ -82,7 +102,7 @@ export class TestClock {
 
   get pendingWork(): readonly TestScheduledWork[] {
     return [...this.scheduled.values()]
-      .sort((left, right) => left.dueAtMs - right.dueAtMs || left.id.localeCompare(right.id))
+      .sort((left, right) => left.dueAtMs - right.dueAtMs || left.sequence - right.sequence)
       .map(({ dueAtMs, id, source }) => ({ dueAt: new Date(dueAtMs).toISOString(), id, source }));
   }
 
@@ -91,11 +111,13 @@ export class TestClock {
     delay: TestDuration,
     source = "scheduled-work",
   ): () => void {
-    const id = `scheduled-${++this.scheduledSequence}`;
+    const sequence = ++this.scheduledSequence;
+    const id = `scheduled-${sequence}`;
     this.scheduled.set(id, {
       callback,
       dueAtMs: this.currentTimeMs + parseDuration(delay),
       id,
+      sequence,
       source,
     });
     return () => this.scheduled.delete(id);
@@ -122,9 +144,15 @@ export class TestClock {
   }
 
   private async drainUntil(targetTime: number): Promise<void> {
+    let callbackCount = 0;
     while (true) {
       const next = this.nextScheduled();
       if (!next || next.dueAtMs > targetTime) return;
+
+      callbackCount += 1;
+      if (callbackCount > MAX_DRAIN_CALLBACKS) {
+        throw new TestRuntimeDrainProblem(MAX_DRAIN_CALLBACKS);
+      }
 
       this.scheduled.delete(next.id);
       this.currentTimeMs = next.dueAtMs;
@@ -134,7 +162,7 @@ export class TestClock {
 
   private nextScheduled(): ScheduledEntry | undefined {
     return [...this.scheduled.values()].sort(
-      (left, right) => left.dueAtMs - right.dueAtMs || left.id.localeCompare(right.id),
+      (left, right) => left.dueAtMs - right.dueAtMs || left.sequence - right.sequence,
     )[0];
   }
 }
@@ -218,7 +246,7 @@ export class TestRuntime {
       typeof options.ids === "string"
         ? new TestIdSource(options.ids)
         : options.ids
-          ? new TestIdSource(options.ids.seed)
+          ? options.ids
           : new TestIdSource(crypto.randomUUID());
     this.clock =
       options.clock instanceof TestClock

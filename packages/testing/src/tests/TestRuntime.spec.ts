@@ -7,6 +7,7 @@ import {
   TestKernelOutboundCallProblem,
   TestRuntime,
   TestRuntimeConfigurationProblem,
+  TestRuntimeDrainProblem,
 } from "../index";
 
 describe("TestRuntime", () => {
@@ -48,9 +49,42 @@ describe("TestRuntime", () => {
     ]);
   });
 
+  it("preserves insertion order for work scheduled at the same virtual time", async () => {
+    const clock = fixedClock("2026-01-01T00:00:00.000Z");
+    const events: string[] = [];
+
+    for (let index = 0; index < 12; index += 1) {
+      clock.schedule(
+        () => {
+          events.push(String(index));
+        },
+        0,
+        "same-time",
+      );
+    }
+
+    await clock.drain();
+
+    expect(events).toEqual(Array.from({ length: 12 }, (_, index) => String(index)));
+  });
+
+  it("reports non-terminating same-time rescheduling with a stable Problem", async () => {
+    const clock = fixedClock("2026-01-01T00:00:00.000Z");
+    const reschedule = () => {
+      clock.schedule(reschedule, 0, "same-time-loop");
+    };
+    clock.schedule(reschedule, 0, "same-time-loop");
+
+    await expect(clock.drain()).rejects.toThrow(TestRuntimeDrainProblem);
+  });
+
   it("replays seeded ids and random values without touching process state", () => {
     const first = seededIds("invitation-retry");
     const second = seededIds("invitation-retry");
+    const advancedIds = seededIds("invitation-retry");
+    advancedIds.next("already-used");
+    const expectedIds = seededIds("invitation-retry");
+    expectedIds.next("already-used");
     const environmentBefore = process.env["CROCO_TEST_RUNTIME_FIXTURE"];
     const runtime = new TestRuntime({
       environment: { CROCO_TEST_RUNTIME_FIXTURE: "scoped" },
@@ -67,6 +101,11 @@ describe("TestRuntime", () => {
       seed: "invitation-retry",
       virtualTime: "2026-01-01T00:00:00.000Z",
     });
+
+    const runtimeWithAdvancedIds = new TestRuntime({ ids: advancedIds });
+
+    expect(runtimeWithAdvancedIds.scenarioId).toBe(expectedIds.next("scenario"));
+    expect(runtimeWithAdvancedIds.ids).toBe(advancedIds);
   });
 
   it("reports invalid time controls with a stable Problem code", () => {

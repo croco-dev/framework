@@ -25756,6 +25756,12 @@
               "exportKind": "named",
               "source": "./libs/TestRuntime",
               "declarationKind": "class"
+            },
+            {
+              "name": "TestRuntimeDrainProblem",
+              "exportKind": "named",
+              "source": "./libs/TestRuntime",
+              "declarationKind": "class"
             }
           ],
           "typeExports": [
