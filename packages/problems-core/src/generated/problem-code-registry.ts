@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 562,
+  problemCount: 563,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -12077,6 +12077,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "protocols-trpc/duplicate-parameter-index",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#protocols-trpc-duplicate-parameter-index",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/protocols-trpc/src/libs/TrpcParamResolver.ts",
+          line: 71,
+          column: 13,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
       code: "protocols-trpc/route-handler-not-callable",
       category: "InternalServerError",
       status: 500,
@@ -12103,7 +12136,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/protocols-trpc/src/libs/createTrpcRouter.ts",
-          line: 20,
+          line: 21,
           column: 3,
           kind: "problem-class",
         },

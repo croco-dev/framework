@@ -47,6 +47,11 @@ export type RouteInputSchemas = {
 };
 
 export interface ParamIR {
+  /**
+   * Original controller method argument position. Optional for compatibility with
+   * pre-existing serialized RouteIR artifacts that only preserve declaration order.
+   */
+  index?: number;
   kind: "body" | "query" | "path" | "header" | "ctx";
   name: string;
   schema: z.ZodType | null;

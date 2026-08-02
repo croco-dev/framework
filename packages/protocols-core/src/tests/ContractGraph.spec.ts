@@ -365,9 +365,9 @@ describe("buildContractGraph", () => {
       (candidate) => candidate.routeId === "UsersController.getUser",
     );
     expect(getUserRoute?.params).toEqual([
-      { kind: "path", name: "id", schema: null },
-      { kind: "query", name: "include", schema: null },
-      { kind: "header", name: "x-request-id", schema: null },
+      { index: 0, kind: "path", name: "id", schema: null },
+      { index: 1, kind: "query", name: "include", schema: null },
+      { index: 2, kind: "header", name: "x-request-id", schema: null },
     ]);
     expect((getUserRoute?.inputSchemas.query as z.AnyZodObject).shape.include.isOptional()).toBe(
       true,

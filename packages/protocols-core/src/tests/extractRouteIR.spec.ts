@@ -51,7 +51,7 @@ describe("extractRouteIR", () => {
       inputSchema: null,
       outputSchema: null,
     });
-    expect(routes[0]?.params).toEqual([{ kind: "path", name: "id", schema: null }]);
+    expect(routes[0]?.params).toEqual([{ index: 0, kind: "path", name: "id", schema: null }]);
   });
 
   it("should extract a POST route with body schema as input schema", () => {
@@ -75,7 +75,9 @@ describe("extractRouteIR", () => {
       outputSchema: null,
     });
     expect(routes[0]?.inputSchema).toBe(createOrderSchema);
-    expect(routes[0]?.params).toEqual([{ kind: "body", name: "", schema: createOrderSchema }]);
+    expect(routes[0]?.params).toEqual([
+      { index: 0, kind: "body", name: "", schema: createOrderSchema },
+    ]);
   });
 
   it("should set inputSchemas.body for a POST route with a body schema", () => {
@@ -112,7 +114,7 @@ describe("extractRouteIR", () => {
     expect((routes[0]?.inputSchemas.path as z.AnyZodObject).shape.id).toBeInstanceOf(z.ZodString);
     expect(routes[0]?.inputSchemas.query).toBeNull();
     expect(routes[0]?.inputSchemas.headers).toBeNull();
-    expect(routes[0]?.params).toEqual([{ kind: "path", name: "id", schema: null }]);
+    expect(routes[0]?.params).toEqual([{ index: 0, kind: "path", name: "id", schema: null }]);
   });
 
   it("should extract path and query params for a route", () => {
@@ -127,8 +129,8 @@ describe("extractRouteIR", () => {
     expect(routes).toHaveLength(1);
     expect(routes[0]?.params).toHaveLength(2);
     expect(routes[0]?.params).toEqual([
-      { kind: "path", name: "id", schema: null },
-      { kind: "query", name: "filter", schema: null },
+      { index: 0, kind: "path", name: "id", schema: null },
+      { index: 1, kind: "query", name: "filter", schema: null },
     ]);
     expect((routes[0]?.inputSchemas.query as z.AnyZodObject).shape.filter.isOptional()).toBe(true);
   });
@@ -176,7 +178,9 @@ describe("extractRouteIR", () => {
     expect(
       (routes[0]?.inputSchemas.headers as z.AnyZodObject).shape["x-tenant-id"].isOptional(),
     ).toBe(true);
-    expect(routes[0]?.params).toEqual([{ kind: "header", name: "x-tenant-id", schema: null }]);
+    expect(routes[0]?.params).toEqual([
+      { index: 0, kind: "header", name: "x-tenant-id", schema: null },
+    ]);
   });
 
   it("should extract outputSchema from response schema metadata", () => {
@@ -245,9 +249,9 @@ describe("extractRouteIR", () => {
     );
     expect(routes[0]?.outputSchema).toBe(userSchema);
     expect(routes[0]?.params).toEqual([
-      { kind: "path", name: "id", schema: userIdSchema },
-      { kind: "query", name: "includePosts", schema: includePostsSchema },
-      { kind: "header", name: "x-tenant-id", schema: tenantIdSchema },
+      { index: 0, kind: "path", name: "id", schema: userIdSchema },
+      { index: 1, kind: "query", name: "includePosts", schema: includePostsSchema },
+      { index: 2, kind: "header", name: "x-tenant-id", schema: tenantIdSchema },
     ]);
   });
 
