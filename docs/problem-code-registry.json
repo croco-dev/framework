@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 566,
+  "problemCount": 567,
   "problems": [
     {
       "code": "ACCESS_DENIED",
