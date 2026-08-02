@@ -425,6 +425,7 @@ jobs:
               - 'packages/customer-health-drizzle/src/**'
               - 'packages/dataloader-core/src/**'
               - 'packages/diagnostics-core/src/**'
+              - 'packages/engagement-core/src/**'
               - 'packages/entitlements-core/src/**'
               - 'packages/entitlements-drizzle/src/**'
               - 'packages/esbuild-plugin/src/**'
