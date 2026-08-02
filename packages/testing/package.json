@@ -60,7 +60,6 @@
     "@croco/openapi-spec": "workspace:*",
     "@croco/problems-core": "workspace:*",
     "@croco/ratelimit-core": "workspace:*",
-    "@croco/retry-core": "workspace:*",
     "@croco/storage-core": "workspace:*",
     "@croco/telemetry-api": "workspace:*",
     "@croco/transports-http": "workspace:*",
@@ -69,6 +68,7 @@
   },
   "devDependencies": {
     "@croco/protocols-rest": "workspace:*",
+    "@croco/retry-core": "workspace:*",
     "tsup": "8.5.1",
     "vitest": "4.0.16"
   }

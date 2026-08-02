@@ -180,14 +180,31 @@ export class TestRandomSource {
     this.state ^= this.state << 5;
     return (this.state >>> 0) / 0x1_0000_0000;
   }
+
+  fork(): TestRandomSource {
+    const fork = new TestRandomSource(this.seed);
+    fork.state = this.state;
+    return fork;
+  }
 }
 
 export class TestIdSource {
   private sequence = 0;
-  readonly random: TestRandomSource;
+  private randomSource: TestRandomSource;
 
   constructor(readonly seed: string) {
-    this.random = new TestRandomSource(seed);
+    this.randomSource = new TestRandomSource(seed);
+  }
+
+  get random(): TestRandomSource {
+    return this.randomSource;
+  }
+
+  fork(): TestIdSource {
+    const fork = new TestIdSource(this.seed);
+    fork.sequence = this.sequence;
+    fork.randomSource = this.random.fork();
+    return fork;
   }
 
   next(prefix = "test"): string {

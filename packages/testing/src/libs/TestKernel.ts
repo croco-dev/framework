@@ -519,8 +519,7 @@ export async function createTestKernel(options: TestKernelOptions): Promise<Test
     ...(options.ids === undefined
       ? {}
       : {
-          ids:
-            options.ids instanceof TestIdSource ? new TestIdSource(options.ids.seed) : options.ids,
+          ids: options.ids instanceof TestIdSource ? options.ids.fork() : options.ids,
         }),
     ...(options.network === undefined ? {} : { network: options.network }),
     ...(options.scenarioId === undefined ? {} : { scenarioId: options.scenarioId }),

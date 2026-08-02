@@ -108,6 +108,14 @@ describe("TestRuntime", () => {
     expect(runtimeWithAdvancedIds.ids).toBe(advancedIds);
   });
 
+  it("forks seeded ID sources without resetting their sequence or entropy", () => {
+    const ids = seededIds("forked-ids");
+    ids.next("already-used");
+    const fork = ids.fork();
+
+    expect(fork.next("next")).toBe(ids.next("next"));
+  });
+
   it("reports invalid time controls with a stable Problem code", () => {
     expect(() => fixedClock("not-a-date")).toThrow(TestRuntimeConfigurationProblem);
     expect(() => fixedClock("2026-01-01T00:00:00.000Z").schedule(() => undefined, -1)).toThrow(

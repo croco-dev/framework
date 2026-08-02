@@ -64,7 +64,7 @@ describe("TaskRunner", () => {
       reconcileTimedOut: vi.fn().mockResolvedValue({ scanned: 0, timedOut: 0 }),
     };
 
-    @Component()
+    @Component({ scope: "singleton" })
     class TestTaskHandler {
       @Task({ name: "test-task" })
       async handle(payload: { data: string }): Promise<string> {

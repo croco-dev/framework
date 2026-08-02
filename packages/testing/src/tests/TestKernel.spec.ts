@@ -746,6 +746,10 @@ describe("TestKernel", () => {
   it("clones caller-provided controls so concurrent kernels do not share time or ID state", async () => {
     const sharedClock = fixedClock("2026-01-01T00:00:00.000Z");
     const sharedIds = seededIds("concurrent-kernels");
+    sharedIds.next("already-used");
+    const expectedIds = sharedIds.fork();
+    expectedIds.next("scenario");
+    expectedIds.next("test");
     const [first, second] = await Promise.all(
       ["first", "second"].map((value) =>
         createTestKernel({
@@ -759,9 +763,11 @@ describe("TestKernel", () => {
 
     await first.clock.advanceBy("30s");
     const firstExtraId = first.ids.next("extra");
+    const expectedExtraId = expectedIds.next("extra");
 
     expect(first.clock.now.toISOString()).toBe("2026-01-01T00:00:30.000Z");
     expect(second.clock.now.toISOString()).toBe("2026-01-01T00:00:00.000Z");
+    expect(firstExtraId).toBe(expectedExtraId);
     expect(second.ids.next("extra")).toBe(firstExtraId);
 
     await Promise.all([first.dispose(), second.dispose()]);

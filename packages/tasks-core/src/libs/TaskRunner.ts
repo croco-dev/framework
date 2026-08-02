@@ -14,10 +14,10 @@ type Constructor<T = object> = new (...args: unknown[]) => T;
 
 const MAX_TIMER_DELAY_MS = 2_147_483_647;
 
-export type TaskRunnerRuntime = {
+export interface TaskRunnerRuntime {
   readonly now?: () => number;
   readonly schedule?: (callback: () => void, delayMs: number) => () => void;
-};
+}
 
 const noopLogger: ILogger = {
   debug: () => {},
