@@ -4,4 +4,4 @@
 "@croco/preset-lambda": patch
 ---
 
-Require the fixed Hono release for HTTP and Lambda consumers so packed packages cannot resolve the affected request-isolation and repeated-header behavior.
+Require the fixed Hono release for HTTP, Node, and Lambda consumers so packed packages cannot resolve the affected request-isolation, repeated-header, and audited CORS-header ReDoS ranges.
