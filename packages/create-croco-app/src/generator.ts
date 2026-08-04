@@ -509,5 +509,9 @@ function installPnpmDependencies(targetDir: string): void {
     );
   }
 
-  execSync("pnpm install", { cwd: targetDir, stdio: "inherit" });
+  execSync("pnpm install --no-frozen-lockfile", { cwd: targetDir, stdio: "inherit" });
+  execSync("pnpm install --lockfile-only --frozen-lockfile", {
+    cwd: targetDir,
+    stdio: "inherit",
+  });
 }

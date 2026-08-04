@@ -1620,6 +1620,15 @@ if (isMainModule()) {
           join(projectDir, "node_modules"),
           `${smokeCase.name} did not install dependencies with pnpm`,
         );
+        runSmokeCaseCommand(
+          smokeReport,
+          caseResult,
+          projectDir,
+          "frozen install",
+          corepackCommand,
+          ["pnpm", "install", "--frozen-lockfile"],
+          projectDir,
+        );
         for (const validation of smokeCase.validations) {
           runValidation(projectDir, smokeCase, validation, smokeReport, caseResult);
         }

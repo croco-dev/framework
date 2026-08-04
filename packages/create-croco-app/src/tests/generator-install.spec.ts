@@ -42,7 +42,11 @@ describe("generate() pnpm install contract", () => {
     });
 
     expect(execSyncMock).toHaveBeenCalledWith("pnpm --version", { stdio: "ignore" });
-    expect(execSyncMock).toHaveBeenCalledWith("pnpm install", {
+    expect(execSyncMock).toHaveBeenCalledWith("pnpm install --no-frozen-lockfile", {
+      cwd: testDir,
+      stdio: "inherit",
+    });
+    expect(execSyncMock).toHaveBeenCalledWith("pnpm install --lockfile-only --frozen-lockfile", {
       cwd: testDir,
       stdio: "inherit",
     });
