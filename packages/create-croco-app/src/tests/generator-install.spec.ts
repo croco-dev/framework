@@ -41,15 +41,11 @@ describe("generate() pnpm install contract", () => {
       installDeps: true,
     });
 
-    expect(execSyncMock).toHaveBeenCalledWith("pnpm --version", { stdio: "ignore" });
-    expect(execSyncMock).toHaveBeenCalledWith("pnpm install --no-frozen-lockfile", {
-      cwd: testDir,
-      stdio: "inherit",
-    });
-    expect(execSyncMock).toHaveBeenCalledWith("pnpm install --lockfile-only --frozen-lockfile", {
-      cwd: testDir,
-      stdio: "inherit",
-    });
+    expect(execSyncMock.mock.calls).toEqual([
+      ["pnpm --version", { stdio: "ignore" }],
+      ["pnpm install --no-frozen-lockfile", { cwd: testDir, stdio: "inherit" }],
+      ["pnpm install --lockfile-only --frozen-lockfile", { cwd: testDir, stdio: "inherit" }],
+    ]);
     expect(existsSync(join(testDir, "pnpm-workspace.yaml"))).toBe(true);
     expect(JSON.parse(readFileSync(join(testDir, "package.json"), "utf8")).packageManager).toBe(
       "pnpm@11.9.0",
