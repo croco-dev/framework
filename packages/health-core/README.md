@@ -8,7 +8,7 @@ Health check monitoring system for Croco applications.
 - **Parallel execution** of all health checks with configurable timeout
 - **AbortController support** for cancellable health checks
 - **Independent readiness indicators** with detailed aggregate results
-- **Zero dependencies** — lightweight and fast
+- **Stable Problems** for invalid timeout configuration
 
 ## Installation
 
@@ -119,6 +119,9 @@ class HealthCheckService {
 Generic health and readiness indicators are separate collections. `check()` evaluates only generic
 indicators, while `checkReadiness()` and `isReady()` evaluate only readiness indicators. An empty
 readiness collection is considered `up`.
+
+Default and per-indicator timeouts must be integer milliseconds between `1` and `2_147_483_647`.
+Invalid values throw `InvalidHealthCheckTimeoutProblem` during setup before any health check runs.
 
 ### ReadinessIndicator
 

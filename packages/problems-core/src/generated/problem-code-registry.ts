@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 569,
+  problemCount: 571,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -4724,7 +4724,37 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/diagnostics-core/src/libs/problems/DiagnosticsProblems.ts",
-          line: 7,
+          line: 25,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "diagnostics-core/invalid-timeout",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#diagnostics-core-invalid-timeout",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/diagnostics-core/src/libs/problems/DiagnosticsProblems.ts",
+          line: 9,
           column: 3,
           kind: "problem-class",
         },
@@ -7233,6 +7263,36 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/customer-health-core/src/libs/problems/HealthProblems.ts",
           line: 4,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "health-core/invalid-timeout",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#health-core-invalid-timeout",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/health-core/src/libs/problems/HealthProblems.ts",
+          line: 9,
           column: 3,
           kind: "problem-class",
         },

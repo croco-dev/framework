@@ -45,7 +45,7 @@
 /**
  * Configuration options for the health check service.
  *
- * @property timeout - Maximum time in milliseconds to wait for each health check. Defaults to 5000ms.
+ * @property timeout - Integer milliseconds from 1 through 2_147_483_647. Defaults to 5000ms. Invalid values throw InvalidHealthCheckTimeoutProblem during setup.
  *
  * @example
  * ```typescript
@@ -75,6 +75,11 @@ export type { HealthCheckResult, HealthCheckServiceOptions } from "./libs/Health
  * ```
  */
 export { HealthCheckService } from "./libs/HealthCheckService";
+export {
+  InvalidHealthCheckTimeoutProblem,
+  MAX_HEALTH_CHECK_TIMEOUT_MS,
+} from "./libs/problems/HealthProblems";
+export type { HealthCheckTimeoutSource } from "./libs/problems/HealthProblems";
 /**
  * Interface for health check indicators.
  *

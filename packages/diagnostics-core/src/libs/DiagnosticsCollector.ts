@@ -7,13 +7,23 @@ import type {
   HealthStatus,
 } from "./types";
 import { ErrorHistoryRingBuffer } from "./ErrorHistoryRingBuffer";
-import { DuplicateDiagnosticsProviderProblem } from "./problems/DiagnosticsProblems";
+import {
+  DuplicateDiagnosticsProviderProblem,
+  InvalidDiagnosticsTimeoutProblem,
+  MAX_DIAGNOSTICS_TIMEOUT_MS,
+} from "./problems/DiagnosticsProblems";
 
 const DEFAULT_PROVIDER_TIMEOUT_MS = 5000;
 
+function assertValidTimeout(timeout: number, source: "default" | "provider"): void {
+  if (!Number.isSafeInteger(timeout) || timeout <= 0 || timeout > MAX_DIAGNOSTICS_TIMEOUT_MS) {
+    throw new InvalidDiagnosticsTimeoutProblem(source, timeout);
+  }
+}
+
 type RegisteredDiagnosticsProvider = {
   readonly provider: DiagnosticsProvider;
-  readonly options: DiagnosticsProviderOptions;
+  readonly timeout?: number;
 };
 
 class DiagnosticsProviderTimeoutError extends Error {
@@ -49,10 +59,16 @@ export class DiagnosticsCollector {
   private readonly timeout: number;
 
   constructor(options: DiagnosticsCollectorOptions = {}) {
-    this.timeout = options.timeout ?? DEFAULT_PROVIDER_TIMEOUT_MS;
+    const timeout = options.timeout ?? DEFAULT_PROVIDER_TIMEOUT_MS;
+    assertValidTimeout(timeout, "default");
+    this.timeout = timeout;
   }
 
   registerProvider(provider: DiagnosticsProvider, options: DiagnosticsProviderOptions = {}): void {
+    const timeout = options.timeout;
+    if (timeout !== undefined) {
+      assertValidTimeout(timeout, "provider");
+    }
     const existingProvider = this.providers.get(provider.name);
 
     if (existingProvider !== undefined) {
@@ -63,7 +79,7 @@ export class DiagnosticsCollector {
       throw new DuplicateDiagnosticsProviderProblem(provider.name);
     }
 
-    this.providers.set(provider.name, { provider, options });
+    this.providers.set(provider.name, { provider, timeout });
   }
 
   getProviders(): readonly DiagnosticsProvider[] {
@@ -113,9 +129,9 @@ export class DiagnosticsCollector {
 
   private async getProviderHealth({
     provider,
-    options,
+    timeout: timeoutOverride,
   }: RegisteredDiagnosticsProvider): Promise<HealthStatus> {
-    const timeoutMs = options.timeout ?? this.timeout;
+    const timeoutMs = timeoutOverride ?? this.timeout;
     const controller = new AbortController();
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
 

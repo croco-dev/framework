@@ -1,3 +1,7 @@
+import {
+  InvalidHealthCheckTimeoutProblem,
+  MAX_HEALTH_CHECK_TIMEOUT_MS,
+} from "./problems/HealthProblems";
 import type {
   HealthIndicator,
   HealthIndicatorResult,
@@ -11,14 +15,24 @@ export type HealthCheckResult = {
 };
 
 export type HealthCheckServiceOptions = {
+  /**
+   * Timeout in milliseconds. Must be an integer from 1 through 2,147,483,647.
+   * Invalid values throw an InvalidHealthCheckTimeoutProblem during setup.
+   */
   timeout?: number;
 };
 
 const DEFAULT_TIMEOUT = 5000;
 
+function assertValidTimeout(timeout: number, source: "default" | "indicator"): void {
+  if (!Number.isSafeInteger(timeout) || timeout <= 0 || timeout > MAX_HEALTH_CHECK_TIMEOUT_MS) {
+    throw new InvalidHealthCheckTimeoutProblem(source, timeout);
+  }
+}
+
 type RegisteredIndicator<TIndicator extends HealthIndicator> = {
   readonly indicator: TIndicator;
-  readonly options: HealthCheckServiceOptions;
+  readonly timeout?: number;
 };
 
 export class HealthCheckService {
@@ -27,15 +41,25 @@ export class HealthCheckService {
   private readonly timeout: number;
 
   constructor(options: HealthCheckServiceOptions = {}) {
-    this.timeout = options.timeout ?? DEFAULT_TIMEOUT;
+    const timeout = options.timeout ?? DEFAULT_TIMEOUT;
+    assertValidTimeout(timeout, "default");
+    this.timeout = timeout;
   }
 
   register(indicator: HealthIndicator, options: HealthCheckServiceOptions = {}): void {
-    this.indicators.push({ indicator, options });
+    const timeout = options.timeout;
+    if (timeout !== undefined) {
+      assertValidTimeout(timeout, "indicator");
+    }
+    this.indicators.push({ indicator, timeout });
   }
 
   registerReadiness(indicator: ReadinessIndicator, options: HealthCheckServiceOptions = {}): void {
-    this.readinessIndicators.push({ indicator, options });
+    const timeout = options.timeout;
+    if (timeout !== undefined) {
+      assertValidTimeout(timeout, "indicator");
+    }
+    this.readinessIndicators.push({ indicator, timeout });
   }
 
   isLive(): boolean {
@@ -60,7 +84,7 @@ export class HealthCheckService {
     method: "check" | "isReady",
   ): Promise<HealthCheckResult> {
     const results = await Promise.all(
-      indicators.map(({ indicator, options }) => this.checkWithTimeout(indicator, method, options)),
+      indicators.map(({ indicator, timeout }) => this.checkWithTimeout(indicator, method, timeout)),
     );
 
     const status = results.every((r) => r.status === "up") ? "up" : "down";
@@ -71,11 +95,11 @@ export class HealthCheckService {
   private async checkWithTimeout(
     indicator: HealthIndicator | ReadinessIndicator,
     method: "check" | "isReady",
-    options: HealthCheckServiceOptions,
+    timeoutOverride?: number,
   ): Promise<HealthIndicatorResult> {
     const controller = new AbortController();
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
-    const timeout = options.timeout ?? this.timeout;
+    const timeout = timeoutOverride ?? this.timeout;
 
     const timeoutPromise = new Promise<HealthIndicatorResult>((_, reject) => {
       timeoutId = setTimeout(() => {
