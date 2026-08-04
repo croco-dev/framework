@@ -51,7 +51,7 @@ overrides:
   svgo: 4.0.2
   archiver@7.0.1>readdir-glob: 3.0.0
   brace-expansion@>=2.0.0 <2.1.2: 2.1.2
-  brace-expansion@>=3.0.0 <5.0.8: 5.0.8
+  brace-expansion@>=3.0.0 <5.0.9: 5.0.9
   typedoc>minimatch: 9.0.7
   validator: 13.15.22
   vitest>vite: 7.3.5
@@ -7559,8 +7559,8 @@ packages:
   brace-expansion@2.1.2:
     resolution: {integrity: sha512-w5JZcKgdhDOgOwm8H+KgbosopHMuGcl6qbulwjtz3SM7I7P3yW1eAjzMPLrIE+NQ9vjgANKHWeMHnrT0OXW1oA==}
 
-  brace-expansion@5.0.8:
-    resolution: {integrity: sha512-JZyDyq3D4AUifKTPOB7DELf6XsB3WdPuNxCtob1vFXPsSXhdAiHBWJ/tJ8HAc9aH84BK+5JFZLNkJKx3G9kzQg==}
+  brace-expansion@5.0.9:
+    resolution: {integrity: sha512-ScQ4IuvIEF1TMlP7Zt+vjJ//9zlPb2SDcxWxM3bk8s6t6GGdJ7KO1dCcTidOPJKePW30LE/2cT7wCyPho9/Wxg==}
     engines: {node: 20 || >=22}
 
   braces@3.0.3:
@@ -15403,7 +15403,7 @@ snapshots:
     dependencies:
       balanced-match: 1.0.2
 
-  brace-expansion@5.0.8:
+  brace-expansion@5.0.9:
     dependencies:
       balanced-match: 4.0.4
 
@@ -17672,7 +17672,7 @@ snapshots:
 
   minimatch@10.2.5:
     dependencies:
-      brace-expansion: 5.0.8
+      brace-expansion: 5.0.9
 
   minimatch@5.1.9:
     dependencies:
@@ -17680,7 +17680,7 @@ snapshots:
 
   minimatch@9.0.7:
     dependencies:
-      brace-expansion: 5.0.8
+      brace-expansion: 5.0.9
 
   minimist@1.2.8: {}
 
