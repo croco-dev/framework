@@ -1,18 +1,20 @@
-import type { ConfigService } from "@croco/framework-config";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import pino from "pino";
+import type { ConfigService } from "@croco/framework-config";
 import { Logger } from "../Logger";
 
 // Mock pino module first, before importing it
 vi.mock("pino", () => {
-  const createMockLogger = () => ({
+  const createMockLogger = (boundContext: Record<string, unknown> = {}) => ({
     debug: vi.fn(),
     info: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),
     fatal: vi.fn(),
-    child: vi.fn(function (this: unknown, bindings: unknown) {
+    bindings: vi.fn(() => boundContext),
+    child: vi.fn(function (this: unknown, bindings: Record<string, unknown>) {
       // Return a new mock logger instance to simulate Pino's child behavior
-      return createMockLogger();
+      return createMockLogger({ ...boundContext, ...bindings });
     }),
   });
 
@@ -51,6 +53,17 @@ describe("Logger.child() - Request-scoped Isolation", () => {
       expect(child1).not.toBe(child2);
       expect(child1).not.toBe(logger);
       expect(child2).not.toBe(logger);
+    });
+
+    it("반복적인 child() 생성이 Pino 루트 팩토리를 다시 호출하지 않아야 함", () => {
+      const mockPino = vi.mocked(pino);
+
+      const children = Array.from({ length: 20 }, (_, index) => logger.child({ index }));
+      const nestedChild = children[0].child({ nested: true });
+
+      expect(children).toHaveLength(20);
+      expect(nestedChild).toBeInstanceOf(Logger);
+      expect(mockPino).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -93,7 +106,7 @@ describe("Logger.child() - Request-scoped Isolation", () => {
       // biome-ignore lint/complexity/useLiteralKeys: private property access for testing
       const child1ChildSpy = vi.spyOn(child1["logger"], "child");
 
-      const _child2 = child1.child({ component: "user" });
+      const child2 = child1.child({ component: "user" });
 
       // 각 logger 인스턴스에서 child가 한 번씩 호출됨
       expect(rootChildSpy).toHaveBeenCalledTimes(1);
@@ -101,6 +114,8 @@ describe("Logger.child() - Request-scoped Isolation", () => {
 
       expect(child1ChildSpy).toHaveBeenCalledTimes(1);
       expect(child1ChildSpy).toHaveBeenCalledWith({ component: "user" });
+      // biome-ignore lint/complexity/useLiteralKeys: private property access for testing
+      expect(child2["logger"].bindings()).toEqual({ layer: "service", component: "user" });
     });
   });
 
