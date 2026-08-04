@@ -17,7 +17,6 @@ export {
   InvalidDiagnosticsTimeoutProblem,
   MAX_DIAGNOSTICS_TIMEOUT_MS,
 } from "./libs/problems/DiagnosticsProblems";
-export type { DiagnosticsTimeoutSource } from "./libs/problems/DiagnosticsProblems";
 export type {
   CreateDiagnosticMessageOptions,
   DiagnosticCategory,
@@ -36,3 +35,4 @@ export type {
   ErrorRecord,
   DiagnosticsReport,
 } from "./libs/types";
+export type { DiagnosticsTimeoutSource } from "./libs/problems/DiagnosticsProblems";

@@ -79,7 +79,6 @@ export {
   InvalidHealthCheckTimeoutProblem,
   MAX_HEALTH_CHECK_TIMEOUT_MS,
 } from "./libs/problems/HealthProblems";
-export type { HealthCheckTimeoutSource } from "./libs/problems/HealthProblems";
 /**
  * Interface for health check indicators.
  *
@@ -180,3 +179,4 @@ export type {
   HealthStatus,
   ReadinessIndicator,
 } from "./libs/HealthIndicator";
+export type { HealthCheckTimeoutSource } from "./libs/problems/HealthProblems";
