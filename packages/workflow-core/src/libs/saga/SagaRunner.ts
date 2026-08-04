@@ -35,9 +35,10 @@ type ExecuteOptions = {
 };
 
 type StepExecutionResult = {
-  readonly record: SagaStepExecutionRecord;
   readonly result: SagaStepResult;
 };
+
+type SagaOutboxPhase = SagaOutboxRecord["phase"];
 
 function toSagaFailure(error: unknown): SagaFailure {
   const candidate = error as { readonly code?: unknown; readonly retryable?: unknown };
@@ -59,6 +60,10 @@ function getMaxAttempts(step: SagaStepDefinition): number {
 
 function isReplayableSagaStatus(status: SagaExecution["status"]): boolean {
   return status === "failed" || status === "compensated";
+}
+
+function isOutboxDispatchableStatus(status: SagaExecution["status"]): boolean {
+  return status === "completed" || status === "failed" || status === "compensated";
 }
 
 function createSagaInvocationId(sagaName: string): string {
@@ -203,28 +208,32 @@ export class SagaRunner {
     return this.runSteps(definition, running, span);
   }
 
-  private reuseExistingExecution(
+  private async reuseExistingExecution(
     definition: SagaDefinition,
     execution: SagaExecution,
     span: SagaTelemetrySpan,
-  ): SagaRunResult {
-    if (execution.status === "failed" || execution.status === "compensated") {
-      this.throwStoredExecutionFailure(definition.name, execution);
+  ): Promise<SagaRunResult> {
+    const recovered = isOutboxDispatchableStatus(execution.status)
+      ? await this.dispatchOutbox(definition, execution.id)
+      : execution;
+
+    if (recovered.status === "failed" || recovered.status === "compensated") {
+      this.throwStoredExecutionFailure(definition.name, recovered);
     }
 
     span.setAttribute("saga.reused", true);
     span.addEvent("saga.execution.reused", {
       "saga.name": definition.name,
-      "saga.execution.id": execution.id,
-      "saga.execution.status": execution.status,
+      "saga.execution.id": recovered.id,
+      "saga.execution.status": recovered.status,
     });
 
     return {
-      executionId: execution.id,
+      executionId: recovered.id,
       definition,
-      execution,
-      steps: this.toStepResults(execution),
-      result: execution.result,
+      execution: recovered,
+      steps: this.toStepResults(recovered),
+      result: recovered.result,
       reused: true,
     };
   }
@@ -236,11 +245,17 @@ export class SagaRunner {
   ): Promise<SagaRunResult> {
     let current = execution;
     const previousResults: SagaStepResult[] = [];
+    const outboxIdentityRoot = await this.resolveOutboxIdentityRoot(execution);
 
     try {
       for (const step of definition.steps) {
-        const executed = await this.runStep(definition, current, step, previousResults);
-        await this.replaceStepRecord(current.id, executed.record);
+        const executed = await this.runStep(
+          definition,
+          current,
+          step,
+          previousResults,
+          outboxIdentityRoot,
+        );
         current = await this.getExecution(current.id);
         previousResults.push(executed.result);
       }
@@ -260,15 +275,22 @@ export class SagaRunner {
         "saga.execution.status": completed.status,
       });
 
+      const dispatched = await this.dispatchOutbox(definition, completed.id);
+
       return {
-        executionId: completed.id,
+        executionId: dispatched.id,
         definition,
-        execution: completed,
+        execution: dispatched,
         steps: previousResults,
         result,
         reused: false,
       };
     } catch (error) {
+      const persisted = await this.getExecution(current.id);
+      if (persisted.status === "completed") {
+        throw error;
+      }
+
       const failure = toSagaFailure(error);
       const compensated = await this.compensateCompletedSteps(definition, current.id, failure);
       const finalStatus =
@@ -301,6 +323,7 @@ export class SagaRunner {
     execution: SagaExecution,
     step: SagaStepDefinition,
     previousResults: readonly SagaStepResult[],
+    outboxIdentityRoot: string,
   ): Promise<StepExecutionResult> {
     const maxAttempts = getMaxAttempts(step);
     let stepInput: unknown;
@@ -364,13 +387,16 @@ export class SagaRunner {
         stepInput,
         attempt,
         ...(idempotencyKey !== undefined ? { idempotencyKey } : {}),
-        enqueueOutbox: (message) => {
-          outboxMessages.push({
-            ...message,
-            stepId: step.id,
-            publishedAt: new Date().toISOString(),
-          });
-        },
+        enqueueOutbox: (message) =>
+          outboxMessages.push(
+            this.createOutboxRecord(
+              message,
+              outboxIdentityRoot,
+              step.id,
+              "step",
+              outboxMessages.length,
+            ),
+          ),
       };
 
       try {
@@ -378,16 +404,15 @@ export class SagaRunner {
           name: `saga:${definition.name}:step:${step.id}`,
           attributes: getStepRecordAttributes(definition, execution.id, step),
         });
-        await this.publishOutboxMessages(definition, execution.id, step, outboxMessages);
-
+        const completedRecord: SagaStepExecutionRecord = {
+          ...record,
+          status: "completed",
+          result,
+          outboxMessages,
+          completedAt: new Date(),
+        };
+        await this.replaceStepRecord(execution.id, completedRecord);
         return {
-          record: {
-            ...record,
-            status: "completed",
-            result,
-            outboxMessages,
-            completedAt: new Date(),
-          },
           result: {
             stepId: step.id,
             result,
@@ -431,6 +456,7 @@ export class SagaRunner {
     failure: SagaFailure,
   ): Promise<{ compensationFailures: SagaFailure[]; compensatedStepCount: number }> {
     const execution = await this.getExecution(executionId);
+    const outboxIdentityRoot = await this.resolveOutboxIdentityRoot(execution);
     const compensationFailures: SagaFailure[] = [];
     let compensatedStepCount = 0;
 
@@ -468,21 +494,22 @@ export class SagaRunner {
               ...(record.idempotencyKey !== undefined
                 ? { idempotencyKey: record.idempotencyKey }
                 : {}),
-              enqueueOutbox: (message) => {
-                outboxMessages.push({
-                  ...message,
-                  stepId: step.id,
-                  publishedAt: new Date().toISOString(),
-                });
-              },
+              enqueueOutbox: (message) =>
+                outboxMessages.push(
+                  this.createOutboxRecord(
+                    message,
+                    outboxIdentityRoot,
+                    step.id,
+                    "compensation",
+                    outboxMessages.length,
+                  ),
+                ),
             }),
           {
             name: `saga:${definition.name}:compensate:${step.id}`,
             attributes: getStepRecordAttributes(definition, executionId, step),
           },
         );
-        await this.publishOutboxMessages(definition, executionId, step, outboxMessages);
-
         await this.replaceStepRecord(executionId, {
           ...record,
           status: "compensated",
@@ -582,24 +609,113 @@ export class SagaRunner {
     });
   }
 
-  private async publishOutboxMessages(
-    definition: SagaDefinition,
-    executionId: string,
-    step: SagaStepDefinition,
-    messages: readonly SagaOutboxRecord[],
-  ): Promise<void> {
+  async dispatchOutbox(definition: SagaDefinition, executionId: string): Promise<SagaExecution> {
+    this.assertValidDefinition(definition);
+    let execution = await this.getExecution(executionId);
+    if (execution.sagaName !== definition.name) {
+      throw new SagaDefinitionProblem(
+        definition.name,
+        `execution '${executionId}' belongs to saga '${execution.sagaName}'`,
+      );
+    }
+    if (!isOutboxDispatchableStatus(execution.status)) {
+      throw new SagaDefinitionProblem(
+        definition.name,
+        `execution '${executionId}' cannot dispatch outbox messages while '${execution.status}'`,
+      );
+    }
     if (!definition.outbox) {
-      return;
+      return execution;
     }
 
-    for (const message of messages) {
-      await definition.outbox.publish(message, {
-        saga: definition,
-        executionId,
-        step,
-        message,
-      });
+    const outboxRecords = [
+      ...execution.steps.map((record) => ({ record, phase: "step" as const })),
+      ...[...execution.steps]
+        .reverse()
+        .map((record) => ({ record, phase: "compensation" as const })),
+    ];
+
+    for (const { record, phase } of outboxRecords) {
+      const step = definition.steps.find((candidate) => candidate.id === record.id);
+      if (!step) {
+        throw new SagaDefinitionProblem(
+          definition.name,
+          `execution '${executionId}' contains unknown step '${record.id}'`,
+        );
+      }
+
+      for (const message of record.outboxMessages) {
+        if (message.phase !== phase || message.status === "published") {
+          continue;
+        }
+
+        await definition.outbox.publish(message, {
+          saga: definition,
+          executionId,
+          step,
+          message,
+        });
+        execution = await this.markOutboxPublished(executionId, record.id, message.deliveryId);
+      }
     }
+
+    return execution;
+  }
+
+  private createOutboxRecord(
+    message: Parameters<SagaStepContext["enqueueOutbox"]>[0],
+    outboxIdentityRoot: string,
+    stepId: string,
+    phase: SagaOutboxPhase,
+    index: number,
+  ): SagaOutboxRecord {
+    return {
+      ...message,
+      deliveryId: `${outboxIdentityRoot}:${stepId}:${phase}:${index}:${message.id}`,
+      stepId,
+      phase,
+      status: "pending",
+      enqueuedAt: new Date().toISOString(),
+    };
+  }
+
+  private async markOutboxPublished(
+    executionId: string,
+    stepId: string,
+    deliveryId: string,
+  ): Promise<SagaExecution> {
+    const execution = await this.getExecution(executionId);
+    const record = execution.steps.find((candidate) => candidate.id === stepId);
+    if (!record) {
+      throw new SagaDefinitionProblem(
+        execution.sagaName,
+        `execution '${executionId}' does not contain step '${stepId}'`,
+      );
+    }
+    const outboxMessages = record.outboxMessages.map((message) =>
+      message.deliveryId === deliveryId
+        ? { ...message, status: "published" as const, publishedAt: new Date().toISOString() }
+        : message,
+    );
+    await this.replaceStepRecord(executionId, { ...record, outboxMessages });
+    return this.getExecution(executionId);
+  }
+
+  private async resolveOutboxIdentityRoot(execution: SagaExecution): Promise<string> {
+    let current = execution;
+    const visited = new Set<string>();
+    while (current.replayOf !== undefined) {
+      if (visited.has(current.id)) {
+        throw new SagaDefinitionProblem(
+          execution.sagaName,
+          `execution '${execution.id}' has a cyclic replay chain`,
+        );
+      }
+      visited.add(current.id);
+      current = await this.getExecution(current.replayOf);
+    }
+
+    return current.id;
   }
 
   private throwStoredExecutionFailure(sagaName: string, execution: SagaExecution): never {

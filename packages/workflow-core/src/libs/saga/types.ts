@@ -88,9 +88,16 @@ export type SagaOutboxMessage = {
   readonly metadata?: Record<string, unknown>;
 };
 
+export type SagaOutboxStatus = "pending" | "published";
+
 export type SagaOutboxRecord = SagaOutboxMessage & {
+  /** Stable across retries and replays. Publishers must use this value to deduplicate delivery. */
+  readonly deliveryId: string;
   readonly stepId: string;
-  readonly publishedAt: string;
+  readonly phase: "step" | "compensation";
+  readonly status: SagaOutboxStatus;
+  readonly enqueuedAt: string;
+  readonly publishedAt?: string;
 };
 
 export type SagaOutboxPublishContext = {
@@ -101,6 +108,7 @@ export type SagaOutboxPublishContext = {
 };
 
 export type SagaOutboxPublisher = {
+  /** Implementations must make repeated calls with the same message.deliveryId idempotent. */
   readonly publish: (
     message: SagaOutboxRecord,
     context: SagaOutboxPublishContext,

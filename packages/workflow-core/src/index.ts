@@ -31,6 +31,7 @@ export type {
   SagaOutboxPublishContext,
   SagaOutboxPublisher,
   SagaOutboxRecord,
+  SagaOutboxStatus,
   SagaRetryContext,
   SagaRetryPolicy,
   SagaRunResult,
