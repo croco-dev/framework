@@ -239,6 +239,23 @@ describe("package-entrypoint-smoke.mts", () => {
     expect(result.stdout).toContain("summary checked=3 exempt=0 skippedPrivate=0");
   });
 
+  it("constructs the packed framework logger in development and production", () => {
+    const root = createTempRoot();
+    writeImportablePackage(root, "framework-logger", {
+      cjsContent: "class Logger {}\nexports.Logger = Logger;\n",
+      declarationContent: "export declare class Logger { constructor(config: unknown); }\n",
+      esmContent:
+        'export class Logger { constructor(config) { if (config.isProduction !== (process.env.NODE_ENV === "production")) throw new Error("environment mismatch"); } }\n',
+      packageName: "@croco/framework-logger",
+    });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("framework logger development startup ok");
+    expect(result.stdout).toContain("framework logger production startup ok");
+  });
+
   it(
     "verifies packed ESM and CJS decorator metadata with implicit DI",
     () => {
