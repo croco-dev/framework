@@ -538,7 +538,7 @@ export class CrocoApp {
     const { serve } = await import("@hono/node-server");
     const handler = this.nodeHandler();
 
-    return serve(
+    const server = serve(
       {
         fetch: (request: Request, env: NodeServerEnv) =>
           handler(request, env as Record<string, unknown> | undefined),
@@ -549,6 +549,14 @@ export class CrocoApp {
         onListen?.();
       },
     );
+
+    const { bindGracefulShutdownServer } =
+      await import("./middleware/GracefulShutdownMiddleware.js");
+    for (const middleware of this.config.middlewares ?? []) {
+      bindGracefulShutdownServer(middleware, server);
+    }
+
+    return server;
   }
 
   async fetch(

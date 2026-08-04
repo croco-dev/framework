@@ -1,18 +1,22 @@
 import "reflect-metadata";
 import { Buffer } from "node:buffer";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
-import { request as sendHttpRequest } from "node:http";
+import { Agent, request as sendHttpRequest } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Container, type ILogger, LOGGER_TOKEN } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
 import { Controller, Get, Post, Raw, RequestValidationProblem } from "@croco/protocols-rest";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp, type CrocoApp } from "../libs/CrocoApp";
 import { startServer } from "../libs/adapters/NodeAdapter";
 import { ErrorHandler } from "../libs/ErrorHandler";
 import { HealthCheckRegistry } from "../libs/HealthCheckRegistry";
 import { bodyLimitMiddleware } from "../libs/middleware/BodyLimitMiddleware";
+import {
+  createGracefulShutdownController,
+  resetShutdownState,
+} from "../libs/middleware/GracefulShutdownMiddleware";
 import type { MiddlewareFunction, NodeServerHandle } from "../libs/types";
 
 const LIFECYCLE_TIMEOUT_MS = 2_500;
@@ -54,6 +58,7 @@ describe("NodeAdapter real server smoke", () => {
   beforeEach(() => {
     Container.reset();
     staticDir = undefined;
+    resetShutdownState();
 
     const logger: ILogger = {
       info: () => {},
@@ -76,6 +81,7 @@ describe("NodeAdapter real server smoke", () => {
     ]);
 
     Container.reset();
+    resetShutdownState();
 
     const cleanupFailures = cleanupResults
       .filter((result): result is PromiseRejectedResult => result.status === "rejected")
@@ -179,7 +185,131 @@ describe("NodeAdapter real server smoke", () => {
       limit: 4,
     });
   });
+
+  it("drains a keep-alive request, closes the listener, then runs the shutdown hook on SIGTERM", async () => {
+    const requestStarted = deferred();
+    const releaseRequest = deferred();
+    const keepAliveAgent = new Agent({ keepAlive: true });
+    let server: NodeServerHandle | undefined;
+    let listenerClosedBeforeHook = false;
+    const graceful = createGracefulShutdownController({
+      signals: ["SIGTERM"],
+      timeoutMs: 1_000,
+      isLambdaEnvironment: false,
+      onShutdown: () => {
+        listenerClosedBeforeHook = server?.listening === false;
+      },
+    });
+    const holdRequest: MiddlewareFunction = async (ctx, next) => {
+      if (ctx.req.path === "/node-smoke/json") {
+        requestStarted.resolve();
+        await releaseRequest.promise;
+      }
+      return next();
+    };
+    const app = createApp({
+      controllers: [NodeSmokeController],
+      middlewares: [graceful.middleware, holdRequest, nodeSmokeHeaderMiddleware],
+      securityValidation: "off",
+      diValidation: "off",
+    });
+    server = await app.listen(0);
+    servers.push(server);
+    await waitForListening(server, "graceful shutdown server");
+    const baseUrl = getBaseUrl(server, "graceful shutdown server");
+    const activeResponse = sendKeepAliveRequest(`${baseUrl}/node-smoke/json`, keepAliveAgent);
+    await requestStarted.promise;
+
+    process.emit("SIGTERM");
+    process.emit("SIGTERM");
+    await vi.waitFor(() => expect(graceful.isShuttingDown()).toBe(true));
+
+    const rejectedResponse = await fetchWithTimeout(
+      `${baseUrl}/node-smoke/problem`,
+      "request received during graceful drain",
+    );
+    expect(rejectedResponse.status).toBe(503);
+
+    const lateServer = await app.listen(0);
+    servers.push(lateServer);
+    await vi.waitFor(() => expect(lateServer.listening).toBe(false));
+    expect(server.listening).toBe(true);
+
+    releaseRequest.resolve();
+    expect((await activeResponse).status).toBe(200);
+    await graceful.shutdown();
+
+    expect(server.listening).toBe(false);
+    expect(listenerClosedBeforeHook).toBe(true);
+    keepAliveAgent.destroy();
+  });
+
+  it("force-closes the listener when active request draining times out", async () => {
+    const requestStarted = deferred();
+    const releaseRequest = deferred();
+    const logger = Container.get(LOGGER_TOKEN) as ILogger;
+    const error = vi.spyOn(logger, "error");
+    const graceful = createGracefulShutdownController({
+      signals: ["SIGTERM"],
+      timeoutMs: 50,
+      isLambdaEnvironment: false,
+      logger,
+    });
+    const holdRequest: MiddlewareFunction = async (ctx, next) => {
+      if (ctx.req.path === "/node-smoke/json") {
+        requestStarted.resolve();
+        await releaseRequest.promise;
+      }
+      return next();
+    };
+    const app = createApp({
+      controllers: [NodeSmokeController],
+      middlewares: [graceful.middleware, holdRequest],
+      securityValidation: "off",
+      diValidation: "off",
+    });
+    const server = await app.listen(0);
+    servers.push(server);
+    await waitForListening(server, "timed shutdown server");
+    const activeResponse = fetchWithTimeout(
+      `${getBaseUrl(server, "timed shutdown server")}/node-smoke/json`,
+      "active request interrupted by shutdown timeout",
+    ).catch(() => undefined);
+    await requestStarted.promise;
+
+    process.emit("SIGTERM");
+    const shutdownResult = graceful.shutdown().catch((failure: unknown) => failure);
+    await vi.waitFor(() => expect(server.listening).toBe(false));
+    const failure = await shutdownResult;
+
+    expect(failure).toMatchObject({ phase: "active-requests" });
+    expect(error).toHaveBeenCalledWith("Graceful shutdown failed", { error: failure });
+    releaseRequest.resolve();
+    await activeResponse;
+  });
 });
+
+function deferred(): { readonly promise: Promise<void>; readonly resolve: () => void } {
+  let resolve!: () => void;
+  const promise = new Promise<void>((promiseResolve) => {
+    resolve = promiseResolve;
+  });
+  return { promise, resolve };
+}
+
+async function sendKeepAliveRequest(url: string, agent: Agent): Promise<{ status: number }> {
+  return withTimeout(
+    new Promise((resolve, reject) => {
+      const request = sendHttpRequest(url, { agent }, (response) => {
+        response.resume();
+        response.on("end", () => resolve({ status: response.statusCode ?? 0 }));
+      });
+      request.on("error", reject);
+      request.end();
+    }),
+    `keep-alive GET ${url} did not complete`,
+  );
+}
 
 function createNodeSmokeApp(): CrocoApp {
   return createApp({

@@ -6,19 +6,24 @@ import { type ILogger, LOGGER_TOKEN } from "../libs/ILogger";
 import {
   OnShutdownDecoratorProblem,
   ShutdownConfigurationConflictProblem,
+  ShutdownHookExecutionProblem,
   ShutdownTimeoutProblem,
 } from "../libs/problems/ShutdownProblems";
 import { ShutdownManager } from "../libs/ShutdownManager";
 import type { ShutdownHook } from "../libs/types";
 
 describe("ShutdownManager", () => {
+  let originalExitCode: typeof process.exitCode;
+
   beforeEach(() => {
+    originalExitCode = process.exitCode;
     Container.reset();
     ShutdownManager.reset();
     Container.reset();
   });
 
   afterEach(() => {
+    process.exitCode = originalExitCode;
     ShutdownManager.reset();
     Container.reset();
   });
@@ -195,6 +200,54 @@ describe("ShutdownManager", () => {
       expect(processOnSpy).toHaveBeenCalledTimes(2);
 
       processOnSpy.mockRestore();
+    });
+
+    it("should observe one repeated signal timeout and set a failing exit code", async () => {
+      vi.useFakeTimers();
+      const logger = { error: vi.fn() } as unknown as ILogger;
+      Container.set(LOGGER_TOKEN, logger);
+      const manager = ShutdownManager.getInstance(100);
+      manager.register({ onShutdown: () => new Promise(() => {}) });
+      manager.listen();
+
+      process.emit("SIGTERM");
+      process.emit("SIGTERM");
+      await vi.advanceTimersByTimeAsync(100);
+
+      expect(logger.error).toHaveBeenCalledWith("[ShutdownManager] Shutdown timeout exceeded.");
+      expect(logger.error).toHaveBeenCalledWith(
+        "[ShutdownManager] Signal shutdown failed:",
+        expect.any(ShutdownTimeoutProblem),
+      );
+      expect(
+        logger.error.mock.calls.filter(
+          ([message]) => message === "[ShutdownManager] Signal shutdown failed:",
+        ),
+      ).toHaveLength(1);
+      expect(process.exitCode).toBe(1);
+    });
+
+    it("should contain signal failure when failure logging throws", async () => {
+      const shutdownFailure = new Error("shutdown failed");
+      const loggingFailure = new Error("logging failed");
+      const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+      const logger = {
+        error: vi.fn(() => {
+          throw loggingFailure;
+        }),
+      } as unknown as ILogger;
+      Container.set(LOGGER_TOKEN, logger);
+      const manager = ShutdownManager.getInstance();
+      manager.register({ onShutdown: () => Promise.reject(shutdownFailure) });
+      manager.listen();
+
+      process.emit("SIGINT");
+      await vi.waitFor(() => expect(process.exitCode).toBe(1));
+
+      expect(consoleError).toHaveBeenCalledWith(
+        "[ShutdownManager] Signal shutdown failure logging failed:",
+        { error: expect.any(ShutdownHookExecutionProblem), loggingError: loggingFailure },
+      );
     });
   });
 

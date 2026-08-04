@@ -490,3 +490,9 @@ depend on the opt-out for normal first-run or production bootstrap.
 - 보안 middleware capability: `declareSecurityMiddlewareCapabilities`, `getSecurityMiddlewareCapabilities`,
   `hasSecurityMiddlewareCapability`
 - 타입: `AppConfig`, `CrocoHttpContext`, `CrocoRequest`, `CrocoResponse`, `LambdaEvent`, `LambdaResponse`
+
+Node apps that pass a middleware from `createGracefulShutdownController()` or
+`gracefulShutdownMiddleware()` to `createApp()` bind every `listen()` server to that lifecycle. A signal
+rejects new work, drains active requests, closes the Node listener, drains the event bus, and then runs the
+configured shutdown hook. Listener or hook timeout failures are logged once by the signal handler.
+Signal failures set `process.exitCode` to `1`, including when no application logger is configured.
