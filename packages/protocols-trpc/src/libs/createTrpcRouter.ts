@@ -150,7 +150,9 @@ function createProcedure(
 
     return result;
   });
-  const procedureWithInput = inputSchema ? lifecycleProcedure.input(inputSchema) : lifecycleProcedure;
+  const procedureWithInput = inputSchema
+    ? lifecycleProcedure.input(inputSchema)
+    : lifecycleProcedure;
   const procedure = route.outputSchema
     ? procedureWithInput.output(route.outputSchema)
     : procedureWithInput;
