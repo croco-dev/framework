@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 565,
+  problemCount: 569,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -12172,6 +12172,104 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "protocols-trpc/provider-container-required",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#protocols-trpc-provider-container-required",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/protocols-trpc/src/libs/createTrpcRouter.ts",
+          line: 65,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "protocols-trpc/request-normalization-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#protocols-trpc-request-normalization-failed",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/protocols-trpc/src/libs/TrpcExecutionContext.ts",
+          line: 51,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "protocols-trpc/request-unavailable",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#protocols-trpc-request-unavailable",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/protocols-trpc/src/libs/TrpcExecutionContext.ts",
+          line: 42,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "protocols-trpc/route-handler-not-callable",
       category: "InternalServerError",
       status: 500,
@@ -12198,7 +12296,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/protocols-trpc/src/libs/createTrpcRouter.ts",
-          line: 21,
+          line: 52,
           column: 3,
           kind: "problem-class",
         },
@@ -16207,6 +16305,36 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 254,
           column: 15,
           kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "TRPC_ACCESS_DENIED",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#trpc-access-denied",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/protocols-trpc/src/libs/TrpcExecutionPipeline.ts",
+          line: 40,
+          column: 15,
+          kind: "problem-factory",
         },
       ],
     },

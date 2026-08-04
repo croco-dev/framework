@@ -1,6 +1,7 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import type { RouteIR } from "@croco/protocols-core";
 import { extractRouteIR } from "@croco/protocols-core";
+import { getFilters, getGuards, getInterceptors, type Constructor } from "@croco/protocols-rest";
 import {
   type AnyProcedure,
   type AnyRouter,
@@ -8,11 +9,41 @@ import {
   type TRPCCreateRouterOptions,
 } from "@trpc/server";
 import { createTrpcInputSchema, resolveTrpcRouteParams } from "./TrpcParamResolver";
+import { createTrpcProblemDetails, getTrpcProblem } from "./TrpcProblemError";
+import { TrpcExecutionContext } from "./TrpcExecutionContext";
+import { TrpcExecutionPipeline, type TrpcPipelineConfig } from "./TrpcExecutionPipeline";
 
 type ControllerConstructor = (new () => object) & Function;
 type RouteHandler = (...args: unknown[]) => unknown;
 
-const t = initTRPC.create();
+export type TrpcRouterOptions = {
+  readonly container?: {
+    get<T>(type: Constructor<T>): T;
+  };
+};
+
+const t = initTRPC.context<Record<string, unknown>>().create({
+  errorFormatter({ error, shape }) {
+    const problem = getTrpcProblem(error);
+
+    if (!problem) {
+      return shape;
+    }
+
+    const details = createTrpcProblemDetails(problem);
+
+    return {
+      ...shape,
+      message: details.detail ?? problem.code,
+      data: {
+        ...shape.data,
+        croco: details,
+      },
+    };
+  },
+});
+
+const executionPipeline = new TrpcExecutionPipeline();
 
 /**
  * Problem thrown when a generated tRPC route resolves to a non-callable controller member.
@@ -30,17 +61,48 @@ export class TrpcRouteHandlerError extends Problem {
   }
 }
 
-export function createTrpcRouter(controllers: Function[]): AnyRouter {
+class TrpcProviderContainerProblem extends Problem {
+  readonly code = "protocols-trpc/provider-container-required";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(providerName: string) {
+    super(
+      undefined,
+      undefined,
+      `Provider '${providerName}' requires a container for constructor injection`,
+      {
+        extensions: { providerName },
+      },
+    );
+  }
+}
+
+/**
+ * Creates a tRPC router whose procedures run Croco guards before input parsing, then interceptors around handlers.
+ *
+ * Class lifecycle metadata runs before method metadata. Filters run in the same order for any guard, validation,
+ * interceptor, or handler failure. A filter must return RFC 7807 Problem Details with a 4xx or 5xx status; other
+ * filter response shapes leave the original failure intact and emit `CROCO_TRPC_FILTER_001` to the runtime inspector.
+ */
+export function createTrpcRouter(
+  controllers: Function[],
+  options: TrpcRouterOptions = {},
+): AnyRouter {
   const domains: Record<string, TRPCCreateRouterOptions> = {};
 
   for (const controller of controllers) {
     const controllerCtor = controller as ControllerConstructor;
-    const controllerInstance = new controllerCtor();
+    const controllerInstance = instantiateProvider(controllerCtor, options);
 
     for (const route of extractRouteIR(controllerCtor)) {
       const domain = getDomainName(route);
       domains[domain] ??= {};
-      domains[domain][route.methodName] = createProcedure(controllerInstance, route);
+      domains[domain][route.methodName] = createProcedure(
+        controllerInstance,
+        controllerCtor,
+        route,
+        options,
+      );
     }
   }
 
@@ -53,14 +115,59 @@ export function createTrpcRouter(controllers: Function[]): AnyRouter {
   return t.router(routerRecord);
 }
 
-function createProcedure(controllerInstance: object, route: RouteIR): AnyProcedure {
+function createProcedure(
+  controllerInstance: object,
+  controller: ControllerConstructor,
+  route: RouteIR,
+  options: TrpcRouterOptions,
+): AnyProcedure {
+  const createExecutionContext = (ctx: Record<string, unknown>) =>
+    new TrpcExecutionContext(ctx, controller, route.methodName, route.path, route.httpMethod);
+  const guardProviders = getGuards(controller, route.methodName);
+  const filterProviders = getFilters(controller, route.methodName);
+  const interceptorProviders = getInterceptors(controller, route.methodName);
+  const createFilters = (): TrpcPipelineConfig["filters"] =>
+    filterProviders.map((provider) => instantiateProvider(provider, options));
+  const createGuards = (): TrpcPipelineConfig["guards"] =>
+    guardProviders.map((provider) => instantiateProvider(provider, options));
+  const createInterceptors = (): TrpcPipelineConfig["interceptors"] =>
+    interceptorProviders.map((provider) => instantiateProvider(provider, options));
   const inputSchema = createTrpcInputSchema(route);
-  const procedureWithInput = inputSchema ? t.procedure.input(inputSchema) : t.procedure;
+  const lifecycleProcedure = t.procedure.use(async ({ ctx, next }) => {
+    const context = createExecutionContext(ctx);
+    const filters = createFilters();
+
+    try {
+      await executionPipeline.runGuards(context, createGuards());
+    } catch (error) {
+      return executionPipeline.rethrowFiltered(error, context, filters);
+    }
+
+    const result = await next();
+    if (!result.ok) {
+      return executionPipeline.rethrowFiltered(result.error, context, filters);
+    }
+
+    return result;
+  });
+  const procedureWithInput = inputSchema
+    ? lifecycleProcedure.input(inputSchema)
+    : lifecycleProcedure;
   const procedure = route.outputSchema
     ? procedureWithInput.output(route.outputSchema)
     : procedureWithInput;
-  const resolver = ({ input, ctx }: { readonly input: unknown; readonly ctx: unknown }) =>
-    callRoute(controllerInstance, route, input, ctx);
+  const resolver = ({
+    ctx,
+    input,
+  }: {
+    readonly ctx: Record<string, unknown>;
+    readonly input: unknown;
+  }) =>
+    executionPipeline.runInterceptors(
+      createExecutionContext(ctx),
+      async () => callRoute(controllerInstance, route, input, ctx),
+      createInterceptors(),
+    );
 
   if (route.httpMethod === "GET") {
     return procedure.query(resolver);
@@ -92,4 +199,22 @@ function getDomainName(route: RouteIR): string {
 
 function isRouteHandler(value: unknown): value is RouteHandler {
   return typeof value === "function";
+}
+
+function instantiateProvider<T>(provider: Constructor<T>, options: TrpcRouterOptions): T {
+  if (options.container) {
+    return options.container.get(provider);
+  }
+
+  if (provider.length > 0) {
+    throw new TrpcProviderContainerProblem(getProviderName(provider));
+  }
+
+  const Provider = provider as new () => T;
+
+  return new Provider();
+}
+
+function getProviderName(provider: Constructor): string {
+  return provider.name || "anonymous provider";
 }
