@@ -45,14 +45,16 @@ export class Logger implements ILogger {
     });
   }
 
+  private static fromPino(config: ConfigService, logger: PinoLogger): Logger {
+    const childLogger = Object.create(Logger.prototype) as Logger;
+    return Object.assign(childLogger, { config, logger });
+  }
+
   /**
    * Create a child logger with bound context
    */
   child(bindings: LogContext): ILogger {
-    const childPino = this.logger.child(bindings);
-    const childLogger = new Logger(this.config);
-    childLogger.logger = childPino;
-    return childLogger;
+    return Logger.fromPino(this.config, this.logger.child(bindings));
   }
 
   private getContext(): LogContext {
