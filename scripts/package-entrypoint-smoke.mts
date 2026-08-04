@@ -520,10 +520,41 @@ function runPackageSmoke(
     runFrontendViteOptionalPeerSmoke(packageSmokeRoot, packageInfo.packageName);
   }
 
+  if (packageInfo.packageName === "@croco/framework-logger") {
+    runFrameworkLoggerStartupSmoke(packageSmokeRoot);
+  }
+
   const decoratorMetadataContract = decoratorMetadataContractFor(packageInfo.packageName);
   if (decoratorMetadataContract) {
     runDecoratorMetadataSmoke(packageSmokeRoot, graphPackages, decoratorMetadataContract);
   }
+}
+
+function runFrameworkLoggerStartupSmoke(packageSmokeRoot: string): void {
+  const smokePath = join(packageSmokeRoot, "logger-startup.mjs");
+  writeFileSync(
+    smokePath,
+    [
+      'import { Logger } from "@croco/framework-logger";',
+      'for (const environment of ["development", "production"]) {',
+      "  process.env.NODE_ENV = environment;",
+      '  const isProduction = environment === "production";',
+      "  const config = {",
+      "    isProduction,",
+      '    get: (key) => key === "LOG_LEVEL" ? "silent" : undefined,',
+      "  };",
+      "  new Logger(config);",
+      "  console.log(`framework logger ${environment} startup ok`);",
+      "}",
+      "",
+    ].join("\n"),
+  );
+
+  run("node", [smokePath], packageSmokeRoot, {
+    label: "@croco/framework-logger: development and production startup",
+  });
+  console.log("framework logger development startup ok");
+  console.log("framework logger production startup ok");
 }
 
 function safeDirectoryName(packageName: string): string {
