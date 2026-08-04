@@ -17,7 +17,8 @@ export type HealthCheckResult = {
 export type HealthCheckServiceOptions = {
   /**
    * Timeout in milliseconds. Must be an integer from 1 through 2,147,483,647.
-   * Invalid values throw an InvalidHealthCheckTimeoutProblem during setup.
+   * Invalid values throw an InvalidHealthCheckTimeoutProblem during service setup or indicator
+   * registration.
    */
   timeout?: number;
 };

@@ -45,7 +45,7 @@
 /**
  * Configuration options for the health check service.
  *
- * @property timeout - Integer milliseconds from 1 through 2_147_483_647. Defaults to 5000ms. Invalid values throw InvalidHealthCheckTimeoutProblem during setup.
+ * @property timeout - Integer milliseconds from 1 through 2_147_483_647. Defaults to 5000ms. Invalid values throw InvalidHealthCheckTimeoutProblem during service setup or indicator registration.
  *
  * @example
  * ```typescript

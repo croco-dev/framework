@@ -28,4 +28,4 @@ const options: HealthCheckServiceOptions = {
 > `optional` **timeout?**: `number`
 
 Integer milliseconds from 1 through 2_147_483_647. Defaults to 5000ms. Invalid values throw
-InvalidHealthCheckTimeoutProblem during setup.
+InvalidHealthCheckTimeoutProblem during service setup or indicator registration.
