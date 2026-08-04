@@ -78,6 +78,16 @@ describe("TestRuntime", () => {
     await expect(clock.drain()).rejects.toThrow(TestRuntimeDrainProblem);
   });
 
+  it("reports non-terminating positive-delay rescheduling with a stable Problem", async () => {
+    const clock = fixedClock("2026-01-01T00:00:00.000Z");
+    const reschedule = () => {
+      clock.schedule(reschedule, 1, "positive-delay-loop");
+    };
+    clock.schedule(reschedule, 1, "positive-delay-loop");
+
+    await expect(clock.drain()).rejects.toThrow(TestRuntimeDrainProblem);
+  });
+
   it("replays seeded ids and random values without touching process state", () => {
     const first = seededIds("invitation-retry");
     const second = seededIds("invitation-retry");
@@ -116,11 +126,17 @@ describe("TestRuntime", () => {
     expect(fork.next("next")).toBe(ids.next("next"));
   });
 
-  it("reports invalid time controls with a stable Problem code", () => {
+  it("reports invalid time controls with a stable Problem code", async () => {
     expect(() => fixedClock("not-a-date")).toThrow(TestRuntimeConfigurationProblem);
     expect(() => fixedClock("2026-01-01T00:00:00.000Z").schedule(() => undefined, -1)).toThrow(
       TestRuntimeConfigurationProblem,
     );
+    expect(() => fixedClock(new Date(8_640_000_000_000_000)).schedule(() => undefined, 1)).toThrow(
+      TestRuntimeConfigurationProblem,
+    );
+    await expect(
+      fixedClock("2026-01-01T00:00:00.000Z").advanceBy(Number.MAX_SAFE_INTEGER),
+    ).rejects.toThrow(TestRuntimeConfigurationProblem);
   });
 
   it("rejects outbound calls by default with a provider-facing diagnostic", async () => {

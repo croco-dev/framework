@@ -22209,6 +22209,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "RateLimitPruneIntervalProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/RateLimitConfigProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "RateLimitRefundUnsupportedProblem",
               "exportKind": "named",
               "source": "./libs/problems/RateLimitConfigProblems",

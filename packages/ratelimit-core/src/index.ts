@@ -47,6 +47,7 @@ export {
  */
 export {
   RateLimitKeyBuilderProblem,
+  RateLimitPruneIntervalProblem,
   RateLimitRefundUnsupportedProblem,
   RateLimitWindowProblem,
 } from "./libs/problems/RateLimitConfigProblems";

@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 573,
+  problemCount: 574,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -12449,7 +12449,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/ratelimit-core/src/libs/problems/RateLimitConfigProblems.ts",
-          line: 4,
+          line: 6,
           column: 3,
           kind: "problem-class",
         },
@@ -12481,7 +12481,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/ratelimit-core/src/libs/problems/RateLimitConfigProblems.ts",
-          line: 25,
+          line: 43,
           column: 5,
           kind: "problem-constructor",
         },
@@ -12512,7 +12512,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/ratelimit-core/src/libs/problems/RateLimitConfigProblems.ts",
-          line: 14,
+          line: 16,
           column: 3,
           kind: "problem-class",
         },
@@ -12579,6 +12579,36 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 21,
           column: 3,
           kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "ratelimit/prune-interval",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#ratelimit-prune-interval",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/ratelimit-core/src/libs/problems/RateLimitConfigProblems.ts",
+          line: 27,
+          column: 5,
+          kind: "problem-constructor",
         },
       ],
     },
@@ -15349,7 +15379,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/TestRuntime.ts",
-          line: 44,
+          line: 49,
           column: 5,
           kind: "problem-constructor",
         },
@@ -15508,7 +15538,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/TestRuntime.ts",
-          line: 60,
+          line: 65,
           column: 5,
           kind: "problem-constructor",
         },
@@ -15540,7 +15570,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/TestRuntime.ts",
-          line: 71,
+          line: 76,
           column: 5,
           kind: "problem-constructor",
         },

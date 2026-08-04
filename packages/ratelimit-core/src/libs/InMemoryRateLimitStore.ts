@@ -8,7 +8,10 @@ import type {
   SlidingWindowPolicy,
   TokenBucketPolicy,
 } from "./types";
-import { RateLimitRefundUnsupportedProblem } from "./problems/RateLimitConfigProblems";
+import {
+  RateLimitPruneIntervalProblem,
+  RateLimitRefundUnsupportedProblem,
+} from "./problems/RateLimitConfigProblems";
 
 export type InMemoryRateLimitStoreOptions = {
   readonly now?: () => number;
@@ -22,6 +25,7 @@ export interface RateLimitPruneScheduler {
 }
 
 const DEFAULT_PRUNE_INTERVAL_MS = 60000;
+const MAX_NATIVE_TIMER_DELAY_MS = 2_147_483_647;
 
 const DEFAULT_PRUNE_SCHEDULER: RateLimitPruneScheduler = {
   schedule(callback, intervalMs) {
@@ -50,6 +54,12 @@ function schedulePruning(
 ): (() => void) | undefined {
   const pruneIntervalMs = options.pruneIntervalMs ?? DEFAULT_PRUNE_INTERVAL_MS;
   if (pruneIntervalMs <= 0) return undefined;
+  if (
+    options.scheduler === undefined &&
+    (!Number.isFinite(pruneIntervalMs) || pruneIntervalMs > MAX_NATIVE_TIMER_DELAY_MS)
+  ) {
+    throw new RateLimitPruneIntervalProblem(pruneIntervalMs);
+  }
   const scheduler = options.scheduler ?? DEFAULT_PRUNE_SCHEDULER;
   let cancelScheduledWork: (() => void) | undefined;
   let closed = false;

@@ -38,6 +38,11 @@ type ScheduledEntry = {
 };
 
 const MAX_DRAIN_CALLBACKS = 10_000;
+const MAX_DATE_TIME_MS = 8_640_000_000_000_000;
+
+type DrainBudget = {
+  callbackCount: number;
+};
 
 export class TestKernelOutboundCallProblem extends Problem {
   constructor(host: string) {
@@ -90,7 +95,7 @@ export class TestClock {
 
   constructor(initial: Date | string = "2026-01-01T00:00:00.000Z") {
     const time = new Date(initial).getTime();
-    if (Number.isNaN(time)) {
+    if (!isValidDateTime(time)) {
       throw new TestRuntimeConfigurationProblem("clock", String(initial), "a valid date");
     }
     this.currentTimeMs = time;
@@ -111,11 +116,12 @@ export class TestClock {
     delay: TestDuration,
     source = "scheduled-work",
   ): () => void {
+    const dueAtMs = nextDateTime(this.currentTimeMs, parseDuration(delay));
     const sequence = ++this.scheduledSequence;
     const id = `scheduled-${sequence}`;
     this.scheduled.set(id, {
       callback,
-      dueAtMs: this.currentTimeMs + parseDuration(delay),
+      dueAtMs,
       id,
       sequence,
       source,
@@ -130,27 +136,30 @@ export class TestClock {
   }
 
   async advanceBy(duration: TestDuration): Promise<void> {
-    const targetTime = this.currentTimeMs + parseDuration(duration);
+    const targetTime = nextDateTime(this.currentTimeMs, parseDuration(duration));
     await this.drainUntil(targetTime);
     this.currentTimeMs = targetTime;
   }
 
   async drain(): Promise<void> {
+    const budget: DrainBudget = { callbackCount: 0 };
     while (this.scheduled.size > 0) {
       const next = this.nextScheduled();
       if (!next) return;
-      await this.drainUntil(next.dueAtMs);
+      await this.drainUntil(next.dueAtMs, budget);
     }
   }
 
-  private async drainUntil(targetTime: number): Promise<void> {
-    let callbackCount = 0;
+  private async drainUntil(
+    targetTime: number,
+    budget: DrainBudget = { callbackCount: 0 },
+  ): Promise<void> {
     while (true) {
       const next = this.nextScheduled();
       if (!next || next.dueAtMs > targetTime) return;
 
-      callbackCount += 1;
-      if (callbackCount > MAX_DRAIN_CALLBACKS) {
+      budget.callbackCount += 1;
+      if (budget.callbackCount > MAX_DRAIN_CALLBACKS) {
         throw new TestRuntimeDrainProblem(MAX_DRAIN_CALLBACKS);
       }
 
@@ -318,7 +327,31 @@ function parseDuration(value: TestDuration): number {
   const amount = Number(match[1]);
   const unit = match[2];
   const multiplier = unit === "m" ? 60_000 : unit === "s" ? 1_000 : 1;
-  return amount * multiplier;
+  const duration = amount * multiplier;
+  if (!Number.isSafeInteger(duration)) {
+    throw new TestRuntimeConfigurationProblem(
+      "duration",
+      String(value),
+      "a non-negative safe integer duration",
+    );
+  }
+  return duration;
+}
+
+function nextDateTime(currentTimeMs: number, duration: number): number {
+  const nextTimeMs = currentTimeMs + duration;
+  if (!isValidDateTime(nextTimeMs)) {
+    throw new TestRuntimeConfigurationProblem(
+      "duration",
+      String(duration),
+      "a duration that keeps virtual time within the valid Date range",
+    );
+  }
+  return nextTimeMs;
+}
+
+function isValidDateTime(value: number): boolean {
+  return Number.isSafeInteger(value) && Math.abs(value) <= MAX_DATE_TIME_MS;
 }
 
 function hashSeed(seed: string): number {

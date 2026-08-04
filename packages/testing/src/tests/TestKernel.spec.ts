@@ -13,7 +13,6 @@ import {
   createTestingTransactionContext,
   fixedClock,
   seededIds,
-  type TestKernel,
   TestKernelDisposalProblem,
   TestKernelDisposedProblem,
   TestKernelLeakProblem,
@@ -23,6 +22,7 @@ import {
   TestKernelValidationProblem,
   type TestResource,
 } from "../index";
+import type { TestKernel } from "../index";
 
 class KernelValueService {
   constructor(readonly value: string) {}
@@ -713,11 +713,13 @@ describe("TestKernel", () => {
   });
 
   it("injects deterministic runtime controls and reports replay metadata", async () => {
-    let bootstrapReplay!: {
-      readonly scenarioId: string;
-      readonly seed: string;
-      readonly virtualTime: string;
-    };
+    let bootstrapReplay:
+      | {
+          readonly scenarioId: string;
+          readonly seed: string;
+          readonly virtualTime: string;
+        }
+      | undefined;
     const kernel = await createTestKernel({
       bootstrap: (context) => {
         bootstrapReplay = context.replay;
@@ -732,6 +734,8 @@ describe("TestKernel", () => {
       scenarioId: "retry-timeout",
     });
 
+    expect(kernel.replay).toBeDefined();
+    expect(bootstrapReplay).toBeDefined();
     expect(bootstrapReplay).toEqual({
       scenarioId: "retry-timeout",
       seed: "retry-scenario",
