@@ -187,6 +187,7 @@ export interface RuntimeInspectorRecorder {
 export interface RuntimeContext {
   platform: RuntimePlatform;
   requestId: string;
+  abortSignal?: AbortSignal;
   env?: Record<string, unknown>;
   logger?: ILogger;
   trace?: RuntimeTraceContext;

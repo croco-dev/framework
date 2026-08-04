@@ -31,6 +31,7 @@ let queuedRuntimeWorkCompleted = false;
 type RuntimeCapabilitySnapshot = {
   readonly platform: KnownRuntimePlatform | null;
   readonly requestId: string | null;
+  readonly abortSignalPresent: boolean;
   readonly capabilities: RuntimeCapabilities | null;
 };
 
@@ -51,6 +52,7 @@ class RuntimeCapabilityConformanceController {
     return {
       platform: (runtime?.platform as KnownRuntimePlatform | undefined) ?? null,
       requestId: runtime?.requestId ?? null,
+      abortSignalPresent: runtime?.abortSignal !== undefined,
       capabilities: runtime?.capabilities ?? null,
     };
   }
@@ -266,6 +268,7 @@ function expectRuntimeSnapshotToMatchManifest(
 ): void {
   expect(snapshot.platform).toBe(platform);
   expect(snapshot.capabilities).toEqual(createRuntimeCapabilityManifest(platform).capabilities);
+  expect(snapshot.abortSignalPresent).toBe(snapshot.capabilities?.abortSignal ?? false);
 }
 
 function createLambdaEvent(requestId: string): LambdaEvent {

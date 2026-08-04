@@ -52,6 +52,33 @@ const unsupportedCustomRuntimeWithoutSupport: RuntimeContextInit<"edge-runtime">
 };
 
 describe("RuntimeContext", () => {
+  it("exposes the concrete abort signal and derives its capability", () => {
+    const controller = new AbortController();
+    const runtime = createRuntimeContext({
+      platform: "node",
+      abortSignal: controller.signal,
+      env: {},
+    });
+    const signal = runtime.abortSignal;
+
+    expect(signal).toBe(controller.signal);
+    expect(runtime.capabilities.abortSignal).toBe(true);
+
+    controller.abort();
+
+    expect(signal?.aborted).toBe(true);
+  });
+
+  it("reports abort signals as unsupported when no implementation is provided", () => {
+    const runtime = createRuntimeContext({
+      platform: "node",
+      env: {},
+    });
+
+    expect(runtime.abortSignal).toBeUndefined();
+    expect(runtime.capabilities.abortSignal).toBe(false);
+  });
+
   it("accepts supported Lambda runtime capabilities", async () => {
     const runtime = createRuntimeContext(validLambdaRuntimeContext);
 
@@ -109,6 +136,17 @@ describe("RuntimeContext", () => {
         capabilities: {
           waitUntil: false,
         },
+      } as unknown as RuntimeContextInit),
+    ).toThrow(RuntimeCapabilityProblem);
+  });
+
+  it("rejects abort signals on unsupported runtimes after type erasure", () => {
+    expect(() =>
+      createRuntimeContext({
+        platform: "lambda",
+        abortSignal: new AbortController().signal,
+        env: {},
+        waitUntil: () => undefined,
       } as unknown as RuntimeContextInit),
     ).toThrow(RuntimeCapabilityProblem);
   });

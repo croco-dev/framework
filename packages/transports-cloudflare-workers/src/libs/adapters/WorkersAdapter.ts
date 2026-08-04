@@ -29,6 +29,7 @@ function createWorkersRuntimeContext(
   return {
     platform: "cloudflare-workers",
     requestId: request.headers.get("x-request-id") ?? undefined,
+    abortSignal: request.signal,
     env,
     native: {
       executionContext: ctx,

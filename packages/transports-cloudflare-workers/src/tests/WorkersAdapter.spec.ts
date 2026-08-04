@@ -11,6 +11,7 @@ import { toWorkersHandler } from "../libs/adapters/WorkersAdapter";
 
 describe("WorkersAdapter", () => {
   let app!: CrocoApp;
+  let observedAbortSignal: AbortSignal | undefined;
 
   type TestExecutionContext = ExecutionContext & {
     TEST_CTX_VALUE?: string;
@@ -100,10 +101,22 @@ describe("WorkersAdapter", () => {
         requestLifecycle: runtime?.capabilities.requestLifecycle ?? null,
       };
     }
+
+    @Get("/abort-signal")
+    getAbortSignal() {
+      const runtime = FrameworkContext.getRuntimeContext();
+      observedAbortSignal = runtime?.abortSignal;
+
+      return {
+        supported: runtime?.capabilities.abortSignal ?? false,
+        present: runtime?.abortSignal !== undefined,
+      };
+    }
   }
 
   beforeEach(() => {
     Container.reset();
+    observedAbortSignal = undefined;
     const logger = {
       info: () => {},
       warn: () => {},
@@ -264,6 +277,23 @@ describe("WorkersAdapter", () => {
         requestLifecycle: true,
       });
       expect(ctx.waitUntil).toHaveBeenCalledWith(expect.any(Promise));
+    });
+
+    it("should propagate the Worker request abort signal through RuntimeContext", async () => {
+      const handler = toWorkersHandler(app);
+      const controller = new AbortController();
+      const request = new Request("http://localhost/api/abort-signal", {
+        signal: controller.signal,
+      });
+
+      const response = await handler.fetch(request, {}, mockExecutionContext);
+
+      await expect(response.json()).resolves.toEqual({ supported: true, present: true });
+      expect(observedAbortSignal).toBe(request.signal);
+
+      controller.abort();
+
+      expect(observedAbortSignal?.aborted).toBe(true);
     });
   });
 });
