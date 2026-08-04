@@ -532,6 +532,7 @@ export class CrocoRouteRegistrar {
     if (executionContext) {
       return {
         platform: "cloudflare-workers",
+        abortSignal: c.req.raw.signal,
         env: this.toRecord(c.env),
         native: { executionContext },
         waitUntil: (promise) => executionContext.waitUntil(promise),
@@ -552,6 +553,7 @@ export class CrocoRouteRegistrar {
 
     return {
       platform: "node",
+      abortSignal: c.req.raw.signal,
       env: process.env,
       capabilities: {
         env: true,

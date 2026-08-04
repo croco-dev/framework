@@ -3604,12 +3604,12 @@
       "line": 533,
       "column": 7,
       "code": "TS2375",
-      "message": "Type '{ platform: \"cloudflare-workers\"; env: Record<string, unknown> | undefined; native: { executionContext: { waitUntil: (promise: Promise<unknown>) => void; }; }; waitUntil: (promise: Promise<unknown>) => void; capabilities: { ...; }; }' is not assignable to type 'RuntimeContextInit' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
+      "message": "Type '{ platform: \"cloudflare-workers\"; abortSignal: AbortSignal; env: Record<string, unknown> | undefined; native: { executionContext: { waitUntil: (promise: Promise<unknown>) => void; }; }; waitUntil: (promise: Promise<...>) => void; capabilities: { ...; }; }' is not assignable to type 'RuntimeContextInit' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
     },
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
-      "line": 721,
+      "line": 723,
       "column": 7,
       "code": "TS2379",
       "message": "Argument of type '{ inspectionId: string | undefined; status: number; outcome: \"failed\" | \"succeeded\"; details: { traceId: unknown; telemetryDegraded: {}; error: { name: string; message: string; } | undefined; }; }' is not assignable to parameter of type 'RuntimeInspectorRequestFinish' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -3785,15 +3785,15 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/runtimeContext.ts",
-      "line": 153,
+      "line": 167,
       "column": 3,
       "code": "TS2375",
-      "message": "Type '{ platform: \"node\" | \"lambda\" | \"cloudflare-workers\" | (string & {}); requestId: string; env: Record<string, unknown> | undefined; logger: ILogger | undefined; trace: RuntimeTraceContext | undefined; ... 4 more ...; shutdown: () => Promise<...>; }' is not assignable to type 'RuntimeContext' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
+      "message": "Type '{ platform: \"node\" | \"lambda\" | \"cloudflare-workers\" | (string & {}); requestId: string; abortSignal: AbortSignal | undefined; env: Record<string, unknown> | undefined; ... 6 more ...; shutdown: () => Promise<...>; }' is not assignable to type 'RuntimeContext' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
     },
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/runtimeContext.ts",
-      "line": 92,
+      "line": 105,
       "column": 41,
       "code": "TS2379",
       "message": "Argument of type '{ extensions: { diagnosticCode: \"CROCO_RUNTIME_CAPABILITY_001\"; platform: RuntimePlatform; capability: keyof RuntimeCapabilities; } | undefined; }' is not assignable to parameter of type 'ProblemOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."

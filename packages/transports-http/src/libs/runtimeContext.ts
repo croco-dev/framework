@@ -28,47 +28,60 @@ type RuntimeCapabilitySupportInput<TPlatform extends RuntimePlatform> =
     ? { capabilitySupport?: never }
     : { capabilitySupport: RuntimeCapabilitySupport };
 
-type RuntimeCapabilityOverridesWithHook<
+type RuntimeCapabilityOverridesWithImplementation<
   TPlatform extends RuntimePlatform,
   TCapability extends RuntimeCapabilityName,
 > = Omit<RuntimeCapabilityOverridesFor<TPlatform>, TCapability> & {
   readonly [TKey in TCapability]?: true;
 };
 
-type RuntimeCapabilityOverridesWithoutHook<
+type RuntimeCapabilityOverridesWithoutImplementation<
   TPlatform extends RuntimePlatform,
   TCapability extends RuntimeCapabilityName,
 > = Omit<RuntimeCapabilityOverridesFor<TPlatform>, TCapability> & {
   readonly [TKey in TCapability]?: false;
 };
 
-type HookBackedRuntimeCapability<
+type ImplementationBackedRuntimeCapability<
   TPlatform extends RuntimePlatform,
   TCapability extends RuntimeCapabilityName,
-  THookName extends string,
-  THook,
+  TPropertyName extends string,
+  TImplementation,
 > = RuntimeCapabilitySupportForPlatform<TPlatform>[TCapability] extends false
-  ? { readonly [TKey in THookName]?: never }
+  ? { readonly [TKey in TPropertyName]?: never }
   :
       | ({
-          readonly [TKey in THookName]: THook;
+          readonly [TKey in TPropertyName]: TImplementation;
         } & {
-          readonly capabilities?: RuntimeCapabilityOverridesWithHook<TPlatform, TCapability>;
+          readonly capabilities?: RuntimeCapabilityOverridesWithImplementation<
+            TPlatform,
+            TCapability
+          >;
         })
       | ({
-          readonly [TKey in THookName]?: never;
+          readonly [TKey in TPropertyName]?: never;
         } & {
-          readonly capabilities?: RuntimeCapabilityOverridesWithoutHook<TPlatform, TCapability>;
+          readonly capabilities?: RuntimeCapabilityOverridesWithoutImplementation<
+            TPlatform,
+            TCapability
+          >;
         });
 
-type RuntimeCapabilityHooks<TPlatform extends RuntimePlatform> = HookBackedRuntimeCapability<
-  TPlatform,
-  "waitUntil",
-  "waitUntil",
-  (promise: Promise<unknown>) => void
-> &
-  HookBackedRuntimeCapability<TPlatform, "flush", "flush", () => Promise<void> | void> &
-  HookBackedRuntimeCapability<TPlatform, "shutdown", "shutdown", () => Promise<void> | void>;
+type RuntimeCapabilityImplementations<TPlatform extends RuntimePlatform> =
+  ImplementationBackedRuntimeCapability<TPlatform, "abortSignal", "abortSignal", AbortSignal> &
+    ImplementationBackedRuntimeCapability<
+      TPlatform,
+      "waitUntil",
+      "waitUntil",
+      (promise: Promise<unknown>) => void
+    > &
+    ImplementationBackedRuntimeCapability<TPlatform, "flush", "flush", () => Promise<void> | void> &
+    ImplementationBackedRuntimeCapability<
+      TPlatform,
+      "shutdown",
+      "shutdown",
+      () => Promise<void> | void
+    >;
 
 type RuntimeContextInitForPlatform<TPlatform extends RuntimePlatform> = {
   platform: TPlatform;
@@ -79,7 +92,7 @@ type RuntimeContextInitForPlatform<TPlatform extends RuntimePlatform> = {
   capabilities?: RuntimeCapabilityOverridesFor<TPlatform>;
   native?: RuntimeNativeContext;
 } & RuntimeCapabilitySupportInput<TPlatform> &
-  RuntimeCapabilityHooks<TPlatform>;
+  RuntimeCapabilityImplementations<TPlatform>;
 
 export type RuntimeContextInit<TPlatform extends RuntimePlatform = RuntimePlatform> =
   TPlatform extends RuntimePlatform ? RuntimeContextInitForPlatform<TPlatform> : never;
@@ -121,6 +134,7 @@ const DEFAULT_CAPABILITIES: RuntimeCapabilities = {
 };
 
 const IMPLEMENTATION_BACKED_RUNTIME_CAPABILITIES: readonly RuntimeCapabilityName[] = [
+  "abortSignal",
   "env",
   "logger",
   "trace",
@@ -138,8 +152,8 @@ export function createRuntimeContext(init: RuntimeContextInit): RuntimeContext {
     requestLifecycle: support.requestLifecycle,
     streamingResponse: support.streamingResponse,
     deadline: support.deadline,
-    abortSignal: support.abortSignal,
     ...init.capabilities,
+    abortSignal: init.capabilities?.abortSignal ?? init.abortSignal !== undefined,
     env: init.capabilities?.env ?? init.env !== undefined,
     logger: init.capabilities?.logger ?? init.logger !== undefined,
     trace: init.capabilities?.trace ?? init.trace !== undefined,
@@ -153,6 +167,7 @@ export function createRuntimeContext(init: RuntimeContextInit): RuntimeContext {
   return {
     platform: init.platform,
     requestId: init.requestId ?? "",
+    abortSignal: init.abortSignal,
     env: init.env,
     logger: init.logger,
     trace: init.trace,
@@ -239,7 +254,7 @@ function hasRuntimeCapabilityImplementation(
     case "deadline":
       return true;
     case "abortSignal":
-      return true;
+      return init.abortSignal !== undefined;
     case "shutdown":
       return init.shutdown !== undefined;
   }
