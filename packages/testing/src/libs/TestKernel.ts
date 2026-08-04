@@ -543,7 +543,9 @@ export async function createTestKernel(options: TestKernelOptions): Promise<Test
       registeredCleanups.push(cleanup);
     },
     random: controls.random,
-    replay: controls.replay,
+    get replay() {
+      return controls.replay;
+    },
     retry: controls.retry,
     runtime,
   };

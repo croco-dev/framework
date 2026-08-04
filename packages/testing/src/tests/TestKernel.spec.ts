@@ -721,7 +721,8 @@ describe("TestKernel", () => {
         }
       | undefined;
     const kernel = await createTestKernel({
-      bootstrap: (context) => {
+      bootstrap: async (context) => {
+        await context.clock.advanceBy("1m");
         bootstrapReplay = context.replay;
         expect(context.environment.get("CROCO_TEST_KERNEL_SCOPE")).toBe("first");
         expect(context.ids.next("bootstrap")).toContain("retry-scenario");
@@ -739,7 +740,7 @@ describe("TestKernel", () => {
     expect(bootstrapReplay).toEqual({
       scenarioId: "retry-timeout",
       seed: "retry-scenario",
-      virtualTime: "2026-02-03T04:05:06.000Z",
+      virtualTime: "2026-02-03T04:06:06.000Z",
     });
     expect(kernel.replay).toEqual(bootstrapReplay);
     expect(process.env["CROCO_TEST_KERNEL_SCOPE"]).not.toBe("first");

@@ -1,8 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { createSlidingWindowPolicy, SlidingWindowInMemoryStore } from "@croco/ratelimit-core";
 import { ExponentialBackoff } from "@croco/retry-core";
 import {
   fixedClock,
+  resetCrocoTestingContext,
   seededIds,
   TestKernelOutboundCallProblem,
   TestRuntime,
@@ -11,6 +12,10 @@ import {
 } from "../index";
 
 describe("TestRuntime", () => {
+  beforeEach(() => {
+    resetCrocoTestingContext();
+  });
+
   it("advances virtual time and drains only Croco-owned scheduled work in order", async () => {
     const clock = fixedClock("2026-01-01T00:00:00.000Z");
     const events: string[] = [];

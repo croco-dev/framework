@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { Container } from "@croco/framework-context";
 import {
   FixedWindowInMemoryStore,
   InMemoryRateLimitStore,
@@ -18,6 +19,7 @@ describe("InMemoryRateLimitStore", () => {
   };
 
   beforeEach(() => {
+    Container.reset();
     store = new InMemoryRateLimitStore({ pruneIntervalMs: 0 });
   });
 
