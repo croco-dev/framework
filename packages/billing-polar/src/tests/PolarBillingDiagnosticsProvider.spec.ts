@@ -22,10 +22,7 @@ describe("PolarBillingDiagnosticsProvider", () => {
             supported: false,
             reason: "Polar licensed quantity updates are not implemented by this package.",
           },
-          usage: {
-            supported: false,
-            reason: "Polar usage delivery is not implemented by this package.",
-          },
+          usage: { supported: true },
         },
         environment: "sandbox",
         hasAccessToken: true,

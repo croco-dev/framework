@@ -79,6 +79,51 @@ await gateway.resumeSubscription("sub-789");
 const portalUrl = await gateway.getCustomerPortalUrl("cust-101");
 ```
 
+### Durable usage delivery
+
+`bindPolarUsageMeter()`는 typed Croco meter를 Polar event name, provider meter id, 그리고 value metadata
+key에 연결합니다. `PolarUsageDeliveryWorker`는 `BillableUsageJournal`에서 bounded claim을 가져와 request
+path 밖에서 전송하므로 `MeteringService.record()`가 Polar availability에 동기적으로 의존하지 않습니다.
+
+```typescript
+import { defineMeter, RedisBillableUsageJournal } from "@croco/metering-core";
+import {
+  bindPolarUsageMeter,
+  PolarUsageBillingGateway,
+  PolarUsageDeliveryWorker,
+} from "@croco/billing-polar";
+
+const tokens = defineMeter({
+  key: "ai.tokens",
+  aggregation: "SUM",
+  unit: "token",
+  billing: "required",
+  dimensions: { model: { kind: "enum", values: ["gpt-5-mini"] } },
+});
+
+const usage = new PolarUsageBillingGateway(config, [
+  bindPolarUsageMeter({
+    meter: tokens,
+    eventName: "ai_tokens_consumed",
+    providerMeterId: process.env.POLAR_METER_ID_TOKENS ?? "",
+    valueMetadataKey: "tokens",
+  }),
+]);
+
+const worker = new PolarUsageDeliveryWorker(new RedisBillableUsageJournal(redis), usage, {
+  ownerId: "usage-dispatcher-1",
+  leaseDurationMs: 60_000,
+  maxBatchSize: 25,
+});
+await worker.deliverNextBatch();
+```
+
+Croco `eventId` is sent as Polar `externalId`, so a replay receives an inserted or duplicate receipt without
+increasing accepted usage twice. Polar exposes only aggregate counts per ingestion request; the gateway sends one
+event per provider request so every journal claim has a deterministic receipt. Retryable rate-limit, 5xx, and
+transport failures retain journal retry metadata; invalid mapping and schema failures remain terminal and inspectable.
+Applications schedule the worker independently and must provide a persistent journal in production.
+
 ### 웹훅 처리
 
 ```typescript
@@ -220,6 +265,7 @@ import {
   PolarRetryableUpstreamProblem,
   PolarSubscriptionNotFoundProblem,
   PolarTerminalUpstreamProblem,
+  PolarUsageCustomerNotFoundProblem,
   PolarValidationProblem,
   WebhookValidationProblem,
   WebhookProcessingProblem,
@@ -227,17 +273,19 @@ import {
 } from "@croco/billing-polar";
 ```
 
-| 에러                               | 코드                                   | 카테고리            | 설명                                 |
-| ---------------------------------- | -------------------------------------- | ------------------- | ------------------------------------ |
-| `PolarMissingConfigProblem`        | `billing-polar/missing-config`         | InternalServerError | 필수 Polar 설정 누락                 |
-| `PolarValidationProblem`           | `billing-polar/validation-failed`      | ValidationError     | Polar 요청 또는 설정 검증 실패       |
-| `PolarCustomerNotFoundProblem`     | `billing-polar/customer-not-found`     | NotFound            | 고객 포털/고객 조회 대상 없음        |
-| `PolarSubscriptionNotFoundProblem` | `billing-polar/subscription-not-found` | NotFound            | 구독 취소/재개 대상 없음             |
-| `PolarRetryableUpstreamProblem`    | `billing-polar/retryable-upstream`     | InternalServerError | 재시도 가능한 Polar upstream 실패    |
-| `PolarTerminalUpstreamProblem`     | `billing-polar/terminal-upstream`      | InternalServerError | 재시도로 복구되지 않는 upstream 실패 |
-| `WebhookValidationProblem`         | `WEBHOOK_VALIDATION_FAILED`            | BadRequest          | 웹훅 서명 또는 payload 검증 실패     |
-| `WebhookProcessingProblem`         | `WEBHOOK_PROCESSING_FAILED`            | InternalServerError | 웹훅 처리 실패                       |
-| `BillingStatusMappingProblem`      | `BILLING_STATUS_MAPPING_FAILED`        | InternalServerError | 알 수 없는 결제 상태                 |
+| 에러                                | 코드                                          | 카테고리            | 설명                                 |
+| ----------------------------------- | --------------------------------------------- | ------------------- | ------------------------------------ |
+| `PolarMissingConfigProblem`         | `billing-polar/missing-config`                | InternalServerError | 필수 Polar 설정 누락                 |
+| `PolarValidationProblem`            | `billing-polar/validation-failed`             | ValidationError     | Polar 요청 또는 설정 검증 실패       |
+| `PolarCustomerNotFoundProblem`      | `billing-polar/customer-not-found`            | NotFound            | 고객 포털/고객 조회 대상 없음        |
+| `PolarSubscriptionNotFoundProblem`  | `billing-polar/subscription-not-found`        | NotFound            | 구독 취소/재개 대상 없음             |
+| `PolarRetryableUpstreamProblem`     | `billing-polar/retryable-upstream`            | InternalServerError | 재시도 가능한 Polar upstream 실패    |
+| `PolarTerminalUpstreamProblem`      | `billing-polar/terminal-upstream`             | InternalServerError | 재시도로 복구되지 않는 upstream 실패 |
+| `PolarUsageCustomerNotFoundProblem` | `billing-polar/usage-customer-not-found`      | NotFound            | usage billing account 없음           |
+| `PolarUsageMeterMappingProblem`     | `billing-polar/usage-meter-mapping-not-found` | ValidationError     | usage meter binding 누락 또는 충돌   |
+| `WebhookValidationProblem`          | `WEBHOOK_VALIDATION_FAILED`                   | BadRequest          | 웹훅 서명 또는 payload 검증 실패     |
+| `WebhookProcessingProblem`          | `WEBHOOK_PROCESSING_FAILED`                   | InternalServerError | 웹훅 처리 실패                       |
+| `BillingStatusMappingProblem`       | `BILLING_STATUS_MAPPING_FAILED`               | InternalServerError | 알 수 없는 결제 상태                 |
 
 Polar SDK 오류는 not-found, validation, retryable upstream, terminal upstream Problem으로
 정규화됩니다. SDK의 원본 token, webhook secret, authorization header는 Problem extensions에
@@ -256,9 +304,9 @@ pnpm --filter @croco/testing test
 subscription lifecycle, webhook 처리, webhook idempotency, invalid signature/payload rejection을
 mocked Polar backend로 검증합니다.
 
-`POLAR_BILLING_PROVIDER_PROFILE`은 checkout capability를 지원하고 usage capability는 아직 지원하지
-않는다는 사실과 이유를 공개합니다. 따라서 runtime discovery와 provider certification은 usage 호출을
-빈 상태나 성공으로 처리하지 않고 명시적인 capability gap으로 판정할 수 있습니다.
+`POLAR_BILLING_PROVIDER_PROFILE`은 checkout과 usage capability를 지원하고, licensed-quantity capability는
+지원하지 않는다는 사실과 이유를 공개합니다. Provider conformance는 두 capability가 독립적으로 구현됐는지
+검증합니다.
 
 `PolarWebhookHandler` 테스트는 credential 없이 real `@polar-sh/sdk` signature verifier를 통과하는
 replayed signed delivery, duplicate event idempotency, stale timestamp/clock-skew rejection mapping,
@@ -290,17 +338,35 @@ POLAR_ENVIRONMENT=sandbox \
 pnpm --filter @croco/billing-polar test -- src/tests/PolarLiveSmoke.spec.ts
 ```
 
+### Opt-in usage certification
+
+실제 Polar usage event를 한 번 전송하는 certification은 아래 값을 **모두** 제공했을 때만 실행됩니다.
+이 경로는 provider usage를 실제로 증가시킬 수 있으므로, 테스트용 customer/meter와 사전에 선택한 고유
+`POLAR_USAGE_EVENT_ID`만 사용하세요. 같은 ID로 재실행하면 Polar duplicate receipt로 안전하게 검증합니다.
+
+```bash
+POLAR_ACCESS_TOKEN=... \
+POLAR_WEBHOOK_SECRET=... \
+POLAR_USAGE_EXTERNAL_CUSTOMER_ID=tenant-certification \
+POLAR_USAGE_EVENT_NAME=ai_tokens_consumed \
+POLAR_USAGE_EVENT_ID=croco-certification-2026-08-02 \
+POLAR_USAGE_METER_ID=... \
+POLAR_ENVIRONMENT=sandbox \
+pnpm --filter @croco/billing-polar test -- src/tests/PolarLiveSmoke.spec.ts
+```
+
 ## 의존성
 
-| 패키지                     | 버전 | 설명                       |
-| -------------------------- | ---- | -------------------------- |
-| `@croco/billing-core`      | -    | 빌링 도메인 모델           |
-| `@croco/diagnostics-core`  | -    | safe readiness diagnostics |
-| `@croco/events-core`       | -    | 이벤트 발행/구독           |
-| `@croco/telemetry-api`     | -    | 분산 추적                  |
-| `@croco/framework-context` | -    | DI 컨테이너                |
-| `@polar-sh/sdk`            | -    | Polar SDK                  |
-| `zod`                      | -    | 스키마 검증                |
+| 패키지                     | 버전 | 설명                           |
+| -------------------------- | ---- | ------------------------------ |
+| `@croco/billing-core`      | -    | 빌링 도메인 모델               |
+| `@croco/diagnostics-core`  | -    | safe readiness diagnostics     |
+| `@croco/events-core`       | -    | 이벤트 발행/구독               |
+| `@croco/telemetry-api`     | -    | 분산 추적                      |
+| `@croco/framework-context` | -    | DI 컨테이너                    |
+| `@croco/metering-core`     | -    | durable billable usage journal |
+| `@polar-sh/sdk`            | -    | Polar SDK                      |
+| `zod`                      | -    | 스키마 검증                    |
 
 ## 라이선스
 

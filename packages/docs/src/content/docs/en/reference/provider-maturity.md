@@ -82,9 +82,9 @@ providers. The suite checks:
 
 The first consumer is:
 
-| Package                | Harness evidence                                                                                                                                                                                   | Promotion result                                                                                                                                                                 |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@croco/billing-polar` | Uses the billing conformance suite with deterministic mocked Polar gateway and webhook behavior, normalizes Polar SDK failures, exposes safe diagnostics, and documents optional live Polar smoke. | Remains beta. It has default conformance and diagnostics evidence, but production-ready still requires recorded env-gated live Polar smoke evidence with real Polar credentials. |
+| Package                | Harness evidence                                                                                                                                                                                         | Promotion result                                                                                                                                                                 |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@croco/billing-polar` | Uses the billing conformance suite with deterministic mocked Polar gateway, durable usage delivery, webhook behavior, normalized Polar SDK failures, safe diagnostics, and an optional live Polar smoke. | Remains beta. It has default conformance and diagnostics evidence, but production-ready still requires recorded env-gated live Polar smoke evidence with real Polar credentials. |
 
 ### Upstash and QStash provider conformance
 

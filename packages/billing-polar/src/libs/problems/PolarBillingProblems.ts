@@ -46,6 +46,41 @@ export class PolarValidationProblem extends Problem {
   }
 }
 
+export class PolarUsageMeterMappingProblem extends Problem {
+  constructor(meterId: string, reason = "No Polar usage meter binding is configured") {
+    super(
+      "billing-polar/usage-meter-mapping-not-found",
+      ProblemCategory.ValidationError,
+      `${reason} for Croco meter '${meterId}'`,
+      {
+        extensions: {
+          provider: "polar",
+          meterId,
+          recovery:
+            "Bind the Croco meter to a Polar event name and provider meter before replaying usage.",
+        },
+      },
+    );
+  }
+}
+
+export class PolarUsageCustomerNotFoundProblem extends Problem {
+  constructor(billingAccountId: string) {
+    super(
+      "billing-polar/usage-customer-not-found",
+      ProblemCategory.NotFound,
+      `Polar usage customer was not found for billing account '${billingAccountId}'`,
+      {
+        extensions: {
+          provider: "polar",
+          recovery:
+            "Create or restore the Polar customer mapped to this billing account before replaying usage.",
+        },
+      },
+    );
+  }
+}
+
 /**
  * Reports that one Polar checkout operation key was reused with different checkout input.
  */
@@ -157,7 +192,11 @@ export function validatePolarConfig(config: Partial<PolarConfig>): PolarConfig {
   };
 }
 
-export function normalizePolarBillingError(error: unknown, operation: string): Problem {
+export function normalizePolarBillingError(
+  error: unknown,
+  operation: string,
+  billingAccountId?: string,
+): Problem {
   if (error instanceof Problem) {
     return error;
   }
@@ -166,6 +205,10 @@ export function normalizePolarBillingError(error: unknown, operation: string): P
 
   if (isNotFoundError(context)) {
     const normalizedOperation = operation.toLowerCase();
+
+    if (normalizedOperation.startsWith("usage")) {
+      return new PolarUsageCustomerNotFoundProblem(billingAccountId ?? "unknown");
+    }
 
     if (normalizedOperation.includes("subscription")) {
       return new PolarSubscriptionNotFoundProblem(context);

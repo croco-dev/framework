@@ -1,10 +1,12 @@
 import { createHash } from "node:crypto";
 import { BillingCheckoutInProgressProblem, defineBillingProvider } from "@croco/billing-core";
 import type { ILogger } from "@croco/framework-context";
+import { defineMeter } from "@croco/metering-core";
 import { createBillingProviderConformanceSuite } from "@croco/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PolarBillingGateway } from "../libs/PolarBillingGateway";
 import { POLAR_BILLING_PROVIDER_PROFILE } from "../libs/PolarBillingProviderProfile";
+import { bindPolarUsageMeter, PolarUsageBillingGateway } from "../libs/PolarUsageBillingGateway";
 import {
   PolarCustomerNotFoundProblem,
   PolarCheckoutIdempotencyConflictProblem,
@@ -67,6 +69,13 @@ const baseConfig: PolarConfig = {
   organizationId: "org-123",
 };
 
+const usageMeter = defineMeter({
+  key: "billing-polar.conformance",
+  aggregation: "COUNT",
+  unit: "event",
+  billing: "required",
+});
+
 const POLAR_RETRY_CONFIG = {
   strategy: "backoff" as const,
   retryConnectionErrors: true,
@@ -82,6 +91,16 @@ const POLAR_RETRY_CODES = ["429", "500", "502", "503", "504"];
 
 function createGateway(config: PolarConfig = baseConfig): PolarBillingGateway {
   return new PolarBillingGateway(config, mockLogger);
+}
+
+function createUsageGateway(config: PolarConfig = baseConfig): PolarUsageBillingGateway {
+  return new PolarUsageBillingGateway(config, [
+    bindPolarUsageMeter({
+      meter: usageMeter,
+      eventName: "billing_polar_conformance",
+      providerMeterId: "polar-meter-conformance",
+    }),
+  ]);
 }
 
 function createNotFoundError(): Error {
@@ -195,14 +214,9 @@ describe("PolarBillingGateway", () => {
           createProvider: () =>
             defineBillingProvider(POLAR_BILLING_PROVIDER_PROFILE, {
               checkout: createGateway(),
+              usage: createUsageGateway(),
             }),
-          required: ["checkout"],
-        },
-        unavailableUsage: {
-          createProvider: () =>
-            defineBillingProvider(POLAR_BILLING_PROVIDER_PROFILE, {
-              checkout: createGateway(),
-            }),
+          required: ["checkout", "usage"],
         },
         gateway: {
           createGateway: () => {

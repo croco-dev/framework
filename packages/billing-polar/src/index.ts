@@ -48,7 +48,14 @@
  * ```
  */
 export { PolarBillingGateway } from "./libs/PolarBillingGateway";
+export { PolarUsageBillingGateway } from "./libs/PolarUsageBillingGateway";
+export { PolarUsageDeliveryWorker } from "./libs/PolarUsageDeliveryWorker";
 export { POLAR_BILLING_PROVIDER_PROFILE } from "./libs/PolarBillingProviderProfile";
+export { bindPolarUsageMeter, type PolarUsageMeterBinding } from "./libs/PolarUsageBillingGateway";
+export type {
+  PolarUsageDeliveryRunResult,
+  PolarUsageDeliveryWorkerOptions,
+} from "./libs/PolarUsageDeliveryWorker";
 export { inspectPolarContractMappingDrift } from "./libs/PolarContractMappingPreflight";
 export type {
   PolarContractMappingDrift,
@@ -121,6 +128,8 @@ export {
   PolarRetryableUpstreamProblem,
   PolarSubscriptionNotFoundProblem,
   PolarTerminalUpstreamProblem,
+  PolarUsageCustomerNotFoundProblem,
+  PolarUsageMeterMappingProblem,
   PolarValidationProblem,
   normalizePolarBillingError,
   validatePolarConfig,

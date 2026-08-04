@@ -5291,6 +5291,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "bindPolarUsageMeter",
+              "exportKind": "named",
+              "source": "./libs/PolarUsageBillingGateway",
+              "declarationKind": "function"
+            },
+            {
               "name": "inspectPolarContractMappingDrift",
               "exportKind": "named",
               "source": "./libs/PolarContractMappingPreflight",
@@ -5358,6 +5364,30 @@
             },
             {
               "name": "PolarTerminalUpstreamProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/PolarBillingProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "PolarUsageBillingGateway",
+              "exportKind": "named",
+              "source": "./libs/PolarUsageBillingGateway",
+              "declarationKind": "class"
+            },
+            {
+              "name": "PolarUsageCustomerNotFoundProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/PolarBillingProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "PolarUsageDeliveryWorker",
+              "exportKind": "named",
+              "source": "./libs/PolarUsageDeliveryWorker",
+              "declarationKind": "class"
+            },
+            {
+              "name": "PolarUsageMeterMappingProblem",
               "exportKind": "named",
               "source": "./libs/problems/PolarBillingProblems",
               "declarationKind": "class"
@@ -5443,6 +5473,21 @@
               "name": "PolarRemoteProductMapping",
               "exportKind": "named",
               "source": "./libs/PolarContractMappingPreflight"
+            },
+            {
+              "name": "PolarUsageDeliveryRunResult",
+              "exportKind": "named",
+              "source": "./libs/PolarUsageDeliveryWorker"
+            },
+            {
+              "name": "PolarUsageDeliveryWorkerOptions",
+              "exportKind": "named",
+              "source": "./libs/PolarUsageDeliveryWorker"
+            },
+            {
+              "name": "PolarUsageMeterBinding",
+              "exportKind": "named",
+              "source": "./libs/PolarUsageBillingGateway"
             },
             {
               "name": "WebhookDependencies",

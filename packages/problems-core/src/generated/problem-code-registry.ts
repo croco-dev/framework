@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 563,
+  problemCount: 565,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -1832,7 +1832,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-polar/src/libs/problems/PolarBillingProblems.ts",
-          line: 54,
+          line: 89,
           column: 5,
           kind: "problem-constructor",
         },
@@ -1863,7 +1863,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-polar/src/libs/problems/PolarBillingProblems.ts",
-          line: 72,
+          line: 107,
           column: 5,
           kind: "problem-constructor",
         },
@@ -1927,7 +1927,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-polar/src/libs/problems/PolarBillingProblems.ts",
-          line: 98,
+          line: 133,
           column: 5,
           kind: "problem-constructor",
         },
@@ -1958,7 +1958,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-polar/src/libs/problems/PolarBillingProblems.ts",
-          line: 85,
+          line: 120,
           column: 5,
           kind: "problem-constructor",
         },
@@ -1990,7 +1990,69 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-polar/src/libs/problems/PolarBillingProblems.ts",
-          line: 114,
+          line: 149,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "billing-polar/usage-customer-not-found",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#billing-polar-usage-customer-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/billing-polar/src/libs/problems/PolarBillingProblems.ts",
+          line: 69,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "billing-polar/usage-meter-mapping-not-found",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#billing-polar-usage-meter-mapping-not-found",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/billing-polar/src/libs/problems/PolarBillingProblems.ts",
+          line: 51,
           column: 5,
           kind: "problem-constructor",
         },
