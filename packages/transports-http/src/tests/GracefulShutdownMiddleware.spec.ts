@@ -57,7 +57,10 @@ function createContext(): Parameters<MiddlewareFunction>[0] {
 }
 
 describe("GracefulShutdownMiddleware", () => {
+  let originalExitCode: typeof process.exitCode;
+
   beforeEach(() => {
+    originalExitCode = process.exitCode;
     Container.reset();
     const logger = {
       info: () => {},
@@ -72,6 +75,7 @@ describe("GracefulShutdownMiddleware", () => {
   });
 
   afterEach(() => {
+    process.exitCode = originalExitCode;
     vi.useRealTimers();
     vi.restoreAllMocks();
     resetShutdownState();
@@ -698,6 +702,25 @@ describe("GracefulShutdownMiddleware", () => {
         loggingError: loggingFailure,
       });
       expect(process.listeners(signal)).toHaveLength(listenerCount);
+    });
+
+    it("should report a signal failure and set a failing exit code without a logger", async () => {
+      const signal = "SIGUSR2";
+      const shutdownFailure = new Error("shutdown failed without logger");
+      const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+      const controller = createGracefulShutdownController({
+        signals: [signal],
+        isLambdaEnvironment: false,
+        onShutdown: () => Promise.reject(shutdownFailure),
+      });
+
+      process.emit(signal, signal);
+      await expect(controller.shutdown()).rejects.toBe(shutdownFailure);
+      await vi.waitFor(() => expect(process.exitCode).toBe(1));
+
+      expect(consoleError).toHaveBeenCalledWith("Graceful shutdown failed", {
+        error: shutdownFailure,
+      });
     });
 
     it("should remove owned listeners when the initial logger call throws", async () => {

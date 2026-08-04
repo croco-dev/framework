@@ -5,7 +5,7 @@ import {
   type GracefulShutdownTimeoutOption,
   GracefulShutdownTimeoutProblem,
 } from "../problems/GracefulShutdownProblems";
-import type { MiddlewareFunction } from "../types";
+import type { MiddlewareFunction, NodeServerHandle } from "../types";
 
 export type GracefulShutdownOptions = {
   timeoutMs?: number;
@@ -22,6 +22,7 @@ type ShutdownState = {
   shutdownPromise: Promise<void> | null;
   signalHandlers: Map<NodeJS.Signals, () => void>;
   signalFailureObserved: boolean;
+  nodeServers: Set<NodeServerHandle>;
 };
 
 export type GracefulShutdownController = {
@@ -37,6 +38,7 @@ const DEFAULT_EVENT_BUS_DRAIN_TIMEOUT_MS = 10000;
 const DEFAULT_SIGNALS: NodeJS.Signals[] = ["SIGTERM", "SIGINT"];
 
 const states = new Set<ShutdownState>();
+const middlewareStates = new WeakMap<MiddlewareFunction, ShutdownState>();
 let legacyState: ShutdownState | null = null;
 
 type NormalizedShutdownTimeouts = {
@@ -45,12 +47,13 @@ type NormalizedShutdownTimeouts = {
 };
 
 function createMiddlewareState(): ShutdownState {
-  const state = {
+  const state: ShutdownState = {
     isShuttingDown: false,
     activeRequests: new Set<string>(),
     shutdownPromise: null,
     signalHandlers: new Map(),
     signalFailureObserved: false,
+    nodeServers: new Set<NodeServerHandle>(),
   };
 
   states.add(state);
@@ -162,7 +165,7 @@ function normalizeShutdownTimeout(option: GracefulShutdownTimeoutOption, value: 
 }
 
 function createMiddlewareForState(state: ShutdownState): MiddlewareFunction {
-  return async (ctx, next): Promise<void> => {
+  const middleware: MiddlewareFunction = async (ctx, next): Promise<void> => {
     if (state.isShuttingDown) {
       ctx.res.status = 503;
       ctx.raw.header("Retry-After", "10");
@@ -184,6 +187,27 @@ function createMiddlewareForState(state: ShutdownState): MiddlewareFunction {
       state.activeRequests.delete(requestId);
     }
   };
+
+  middlewareStates.set(middleware, state);
+  return middleware;
+}
+
+/** @internal Associates a Node listener with the graceful lifecycle of a configured middleware. */
+export function bindGracefulShutdownServer(
+  middleware: MiddlewareFunction,
+  server: NodeServerHandle,
+): boolean {
+  const state = middlewareStates.get(middleware);
+  if (!state) {
+    return false;
+  }
+
+  state.nodeServers.add(server);
+  if (state.isShuttingDown) {
+    forceCloseNodeListener(server);
+    state.nodeServers.delete(server);
+  }
+  return true;
 }
 
 function setupSignalHandlers(
@@ -209,7 +233,12 @@ function setupSignalHandlers(
 
           state.signalFailureObserved = true;
           try {
-            (logger ?? noopLogger()).error("Graceful shutdown failed", { error });
+            if (logger) {
+              logger.error("Graceful shutdown failed", { error });
+            } else {
+              // eslint-disable-next-line no-console
+              console.error("Graceful shutdown failed", { error });
+            }
           } catch (loggingError) {
             try {
               console.error("Graceful shutdown failure logging failed", {
@@ -219,6 +248,8 @@ function setupSignalHandlers(
             } catch {
               return;
             }
+          } finally {
+            process.exitCode = 1;
           }
         },
       );
@@ -360,6 +391,8 @@ async function runShutdownLifecycle(
     );
     log.info("Active requests completed", { elapsedMs: elapsedMs(deadline) });
 
+    await closeNodeListeners(state, deadline);
+
     await drainEventBus(log, deadline, eventBusDrainTimeoutMs);
 
     if (onShutdown) {
@@ -374,7 +407,45 @@ async function runShutdownLifecycle(
 
     log.info("Graceful shutdown completed", { elapsedMs: elapsedMs(deadline) });
   } finally {
+    forceCloseNodeListeners(state);
     removeOwnedSignalHandlers(state);
+  }
+}
+
+async function closeNodeListeners(state: ShutdownState, deadline: ShutdownDeadline): Promise<void> {
+  for (const server of state.nodeServers) {
+    if (!server.listening) {
+      state.nodeServers.delete(server);
+      continue;
+    }
+
+    const closePromise = new Promise<void>((resolve, reject) => {
+      server.close((error?: Error & { code?: string }) => {
+        if (error && error.code !== "ERR_SERVER_NOT_RUNNING") {
+          reject(error);
+          return;
+        }
+        resolve();
+      });
+    });
+    await waitForPromise(closePromise, "on-shutdown", deadline);
+    state.nodeServers.delete(server);
+  }
+}
+
+function forceCloseNodeListeners(state: ShutdownState): void {
+  for (const server of state.nodeServers) {
+    forceCloseNodeListener(server);
+  }
+  state.nodeServers.clear();
+}
+
+function forceCloseNodeListener(server: NodeServerHandle): void {
+  if (server.listening) {
+    server.close(() => {});
+  }
+  if ("closeAllConnections" in server && typeof server.closeAllConnections === "function") {
+    server.closeAllConnections();
   }
 }
 

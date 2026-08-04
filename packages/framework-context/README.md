@@ -71,6 +71,9 @@ class AppLifecycle {
 ShutdownManager.getInstance().listen();
 ```
 
+Signal-triggered shutdown failures are logged once and set `process.exitCode` to `1`; they are never
+surfaced as unhandled promise rejections. Successful shutdown leaves the existing exit code unchanged.
+
 `ShutdownManager`는 프로세스 singleton입니다. `getInstance()`로 암시적 기본 timeout이 생성된 뒤에는
 `getInstance(timeoutMs)` 또는 `configure(timeoutMs)`로 한 번 명시적 timeout을 고정할 수 있습니다.
 서로 다른 명시적 timeout을 다시 전달하면 `ShutdownConfigurationConflictProblem`이 발생합니다.

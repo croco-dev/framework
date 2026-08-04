@@ -21,6 +21,7 @@ export class ShutdownManager {
   private timeoutMs: number;
   private timeoutConfigured: boolean;
   private listenersRegistered = false;
+  private signalShutdownPromise: Promise<void> | undefined;
 
   private constructor(timeoutMs?: number) {
     this.timeoutMs = timeoutMs ?? DEFAULT_TIMEOUT_MS;
@@ -76,6 +77,7 @@ export class ShutdownManager {
       manager.removeAllListeners();
       manager.hooks = [];
       manager.isShuttingDown = false;
+      manager.signalShutdownPromise = undefined;
     }
     for (const scopedManager of ShutdownManager.scopedInstances.values()) {
       scopedManager.removeAllListeners();
@@ -110,8 +112,38 @@ export class ShutdownManager {
     process.on("SIGINT", this.handleSignal);
   }
 
-  private handleSignal = async (): Promise<void> => {
-    await this.shutdown();
+  private handleSignal = (): void => {
+    if (this.signalShutdownPromise) {
+      return;
+    }
+
+    this.signalShutdownPromise = this.shutdown({ throwOnHookError: true });
+    void this.signalShutdownPromise.catch((error: unknown) => {
+      const normalizedError = error instanceof Error ? error : new Error(String(error));
+      try {
+        if (Container.has(LOGGER_TOKEN)) {
+          const logger = Container.get(LOGGER_TOKEN) as ILogger;
+          logger.error("[ShutdownManager] Signal shutdown failed:", normalizedError);
+        } else {
+          // LOGGER_TOKEN is not registered in the DI container yet during early bootstrap.
+          // eslint-disable-next-line no-console
+          console.error("[ShutdownManager] Signal shutdown failed:", normalizedError);
+        }
+      } catch (loggingError) {
+        try {
+          // A failing logger must not turn an already observed shutdown failure into another rejection.
+          // eslint-disable-next-line no-console
+          console.error("[ShutdownManager] Signal shutdown failure logging failed:", {
+            error: normalizedError,
+            loggingError,
+          });
+        } catch {
+          // There is no remaining observable logging channel, so only the process outcome can record failure.
+          process.exitCode = 1;
+        }
+      }
+      process.exitCode = 1;
+    });
   };
 
   async shutdown(options: ShutdownOptions = {}): Promise<void> {
