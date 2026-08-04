@@ -29055,6 +29055,11 @@
               "source": "./libs/saga/types"
             },
             {
+              "name": "SagaOutboxStatus",
+              "exportKind": "named",
+              "source": "./libs/saga/types"
+            },
+            {
               "name": "SagaRetryContext",
               "exportKind": "named",
               "source": "./libs/saga/types"

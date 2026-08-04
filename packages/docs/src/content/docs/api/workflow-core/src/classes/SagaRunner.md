@@ -23,6 +23,26 @@ title: "SagaRunner"
 
 ## Methods
 
+### dispatchOutbox()
+
+> **dispatchOutbox**(`definition`, `executionId`): `Promise`\<[`SagaExecution`](/api/workflow-core/src/type-aliases/sagaexecution/)\>
+
+#### Parameters
+
+##### definition
+
+[`SagaDefinition`](/api/workflow-core/src/type-aliases/sagadefinition/)
+
+##### executionId
+
+`string`
+
+#### Returns
+
+`Promise`\<[`SagaExecution`](/api/workflow-core/src/type-aliases/sagaexecution/)\>
+
+***
+
 ### execute()
 
 > **execute**(`definition`, `payload`): `Promise`\<[`SagaRunResult`](/api/workflow-core/src/type-aliases/sagarunresult/)\>

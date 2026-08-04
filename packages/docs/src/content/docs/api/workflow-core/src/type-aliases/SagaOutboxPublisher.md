@@ -13,6 +13,8 @@ title: "SagaOutboxPublisher"
 
 > `readonly` **publish**: (`message`, `context`) => `void` \| `Promise`\<`void`\>
 
+Implementations must make repeated calls with the same message.deliveryId idempotent.
+
 #### Parameters
 
 ##### message

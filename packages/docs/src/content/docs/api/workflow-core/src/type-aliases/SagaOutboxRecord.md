@@ -9,9 +9,27 @@ title: "SagaOutboxRecord"
 
 ## Type Declaration
 
-### publishedAt
+### deliveryId
 
-> `readonly` **publishedAt**: `string`
+> `readonly` **deliveryId**: `string`
+
+Stable across retries and replays. Publishers must use this value to deduplicate delivery.
+
+### enqueuedAt
+
+> `readonly` **enqueuedAt**: `string`
+
+### phase
+
+> `readonly` **phase**: `"step"` \| `"compensation"`
+
+### publishedAt?
+
+> `readonly` `optional` **publishedAt?**: `string`
+
+### status
+
+> `readonly` **status**: [`SagaOutboxStatus`](/api/workflow-core/src/type-aliases/sagaoutboxstatus/)
 
 ### stepId
 

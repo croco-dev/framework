@@ -5,8 +5,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   SagaDefinitionProblem,
   SagaExecutionFailedProblem,
+  InMemorySagaStore,
   SagaRunner,
   type SagaDefinition,
+  type SagaStore,
 } from "../index";
 
 class ProviderProblem extends Problem {
@@ -121,8 +123,14 @@ describe("SagaRunner", () => {
             events.push("provision-seat");
             return { seatId: "seat_123", orderId: getOrderId(input) };
           },
-          compensate: (input) => {
+          compensate: (input, { enqueueOutbox }) => {
             events.push(`remove-seat:${getOrderId(input)}`);
+            enqueueOutbox({
+              id: "seat-removed",
+              topic: "seats.removed",
+              payload: { orderId: getOrderId(input) },
+              idempotencyKey: `remove-seat:${getOrderId(input)}`,
+            });
             return { removed: getOrderId(input) };
           },
         },
@@ -139,7 +147,15 @@ describe("SagaRunner", () => {
       SagaExecutionFailedProblem,
     );
 
-    const [execution] = await runner.listExecutions({ sagaName: definition.name });
+    const [failedExecution] = await runner.listExecutions({ sagaName: definition.name });
+
+    expect(publishedMessages).toEqual([]);
+    expect(
+      failedExecution.steps.flatMap((step) => step.outboxMessages).map((message) => message.status),
+    ).toEqual(["pending", "pending", "pending"]);
+
+    await runner.dispatchOutbox(definition, failedExecution.id);
+    const execution = await runner.getExecution(failedExecution.id);
     const queried = await runner.getExecution(execution.id);
 
     expect(queried).toBe(execution);
@@ -159,6 +175,7 @@ describe("SagaRunner", () => {
     ]);
     expect(publishedMessages).toEqual([
       "reserve-payment:billing.reserved:outbox:ord_123",
+      "provision-seat:seats.removed:remove-seat:ord_123",
       "reserve-payment:billing.refunded:refund:ord_123",
     ]);
     expect(execution.steps).toEqual([
@@ -173,11 +190,15 @@ describe("SagaRunner", () => {
             topic: "billing.reserved",
             stepId: "reserve-payment",
             idempotencyKey: "outbox:ord_123",
+            phase: "step",
+            status: "published",
           }),
           expect.objectContaining({
             topic: "billing.refunded",
             stepId: "reserve-payment",
             idempotencyKey: "refund:ord_123",
+            phase: "compensation",
+            status: "published",
           }),
         ]),
       }),
@@ -207,6 +228,201 @@ describe("SagaRunner", () => {
       "refund-payment:ord_123",
     ]);
     await expect(runner.listExecutions({ sagaName: definition.name })).resolves.toHaveLength(1);
+  });
+
+  it("persists completed outbox intent before dispatch and recovers an ambiguous publish", async () => {
+    const store = new InMemorySagaStore();
+    const deliveredEffects = new Set<string>();
+    const publishAttempts: string[] = [];
+    let failAfterDelivery = true;
+    const definition: SagaDefinition = {
+      name: "durable-outbox-boundary",
+      idempotencyKey: () => "durable-outbox-boundary:ord_123",
+      outbox: {
+        publish: async (message, context) => {
+          const persisted = await store.findById(context.executionId);
+          const persistedMessage = persisted?.steps
+            .find((step) => step.id === context.step.id)
+            ?.outboxMessages.find((candidate) => candidate.deliveryId === message.deliveryId);
+
+          expect(persisted?.steps.find((step) => step.id === context.step.id)?.status).toBe(
+            "completed",
+          );
+          expect(persistedMessage).toEqual(
+            expect.objectContaining({
+              deliveryId: message.deliveryId,
+              status: "pending",
+            }),
+          );
+
+          publishAttempts.push(message.deliveryId);
+          deliveredEffects.add(message.deliveryId);
+          if (failAfterDelivery) {
+            failAfterDelivery = false;
+            throw new ProviderProblem("publisher acknowledgement was lost");
+          }
+        },
+      },
+      steps: [
+        {
+          id: "reserve-payment",
+          run: (_input, { enqueueOutbox }) => {
+            enqueueOutbox({
+              id: "payment-reserved",
+              topic: "billing.reserved",
+              payload: { orderId: "ord_123" },
+            });
+            return { paymentId: "pay_123" };
+          },
+        },
+      ],
+    };
+    const runner = new SagaRunner(store);
+
+    await expect(runner.execute(definition, { orderId: "ord_123" })).rejects.toThrow(
+      "publisher acknowledgement was lost",
+    );
+    const [persisted] = await runner.listExecutions({ sagaName: definition.name });
+
+    expect(persisted).toEqual(
+      expect.objectContaining({
+        status: "completed",
+        steps: [
+          expect.objectContaining({
+            status: "completed",
+            outboxMessages: [
+              expect.objectContaining({
+                status: "pending",
+              }),
+            ],
+          }),
+        ],
+      }),
+    );
+    expect(persisted.steps[0]?.outboxMessages[0]).not.toHaveProperty("publishedAt");
+
+    const recovered = await runner.execute(definition, { orderId: "ord_123" });
+    const deliveryIds = publishAttempts;
+
+    expect(recovered.reused).toBe(true);
+    expect(deliveryIds).toHaveLength(2);
+    expect(new Set(deliveryIds)).toEqual(new Set([deliveryIds[0]]));
+    expect(deliveredEffects.size).toBe(1);
+    expect(recovered.execution.steps[0]?.outboxMessages[0]).toEqual(
+      expect.objectContaining({
+        deliveryId: deliveryIds[0],
+        status: "published",
+        publishedAt: expect.any(String),
+      }),
+    );
+  });
+
+  it("does not publish or complete a step when completed intent persistence fails", async () => {
+    const delegate = new InMemorySagaStore();
+    let rejectCompletion = true;
+    const store: SagaStore = {
+      create: (params) => delegate.create(params),
+      findById: (id) => delegate.findById(id),
+      findByIdempotencyKey: (sagaName, key) => delegate.findByIdempotencyKey(sagaName, key),
+      list: (options) => delegate.list(options),
+      update: (id, data) => {
+        if (rejectCompletion && data.steps?.some((step) => step.status === "completed")) {
+          rejectCompletion = false;
+          throw new ProviderProblem("completed intent persistence failed");
+        }
+        return delegate.update(id, data);
+      },
+    };
+    const publish = vi.fn();
+    const definition: SagaDefinition = {
+      name: "failed-outbox-persistence",
+      outbox: { publish },
+      steps: [
+        {
+          id: "reserve-payment",
+          run: (_input, { enqueueOutbox }) => {
+            enqueueOutbox({
+              id: "payment-reserved",
+              topic: "billing.reserved",
+              payload: { orderId: "ord_123" },
+            });
+            return { paymentId: "pay_123" };
+          },
+        },
+      ],
+    };
+    const runner = new SagaRunner(store);
+
+    await expect(runner.execute(definition, { orderId: "ord_123" })).rejects.toThrow(
+      SagaExecutionFailedProblem,
+    );
+    const [execution] = await runner.listExecutions({ sagaName: definition.name });
+
+    expect(publish).not.toHaveBeenCalled();
+    expect(execution.status).toBe("failed");
+    expect(execution.steps[0]).toEqual(
+      expect.objectContaining({
+        status: "failed",
+        outboxMessages: [],
+      }),
+    );
+  });
+
+  it("retains deterministic outbox delivery identity across replay", async () => {
+    const deliveryIds: string[] = [];
+    const runner = new SagaRunner();
+    const definition: SagaDefinition = {
+      name: "deterministic-replay-outbox",
+      outbox: {
+        publish: (message) => {
+          deliveryIds.push(message.deliveryId);
+        },
+      },
+      steps: [
+        {
+          id: "reserve-payment",
+          run: (_input, { enqueueOutbox }) => {
+            enqueueOutbox({
+              id: "payment-reserved",
+              topic: "billing.reserved",
+              payload: { orderId: "ord_123" },
+            });
+            return { paymentId: "pay_123" };
+          },
+          compensate: (_input, { enqueueOutbox }) => {
+            enqueueOutbox({
+              id: "payment-refunded",
+              topic: "billing.refunded",
+              payload: { orderId: "ord_123" },
+            });
+            return { refunded: true };
+          },
+        },
+        {
+          id: "provision-seat",
+          run: () => {
+            throw new ProviderProblem("seat provider unavailable");
+          },
+        },
+      ],
+    };
+
+    await expect(runner.execute(definition, { orderId: "ord_123" })).rejects.toThrow(
+      SagaExecutionFailedProblem,
+    );
+    const [failed] = await runner.listExecutions({ sagaName: definition.name });
+    await runner.dispatchOutbox(definition, failed.id);
+
+    await expect(runner.replay(definition, failed.id)).rejects.toThrow(SagaExecutionFailedProblem);
+    const [replayed] = await runner.listExecutions({ replayOf: failed.id });
+    await runner.dispatchOutbox(definition, replayed.id);
+
+    expect(replayed.status).toBe("compensated");
+    expect(deliveryIds).toHaveLength(4);
+    expect(new Set(deliveryIds).size).toBe(2);
+    expect(replayed.steps[0]?.outboxMessages.map((message) => message.deliveryId)).toEqual(
+      failed.steps[0]?.outboxMessages.map((message) => message.deliveryId),
+    );
   });
 
   it("records compensation failures separately from the original step failure", async () => {
@@ -392,6 +608,59 @@ describe("SagaRunner", () => {
     );
     expect(results.map((result) => result.reused).sort()).toEqual([false, true]);
     expect(executions).toHaveLength(1);
+  });
+
+  it("does not dispatch a running execution during concurrent idempotent reuse", async () => {
+    let releaseStep: () => void = () => {
+      throw new ProviderProblem("outbox step gate was not initialized");
+    };
+    const stepGate = new Promise<void>((resolve) => {
+      releaseStep = resolve;
+    });
+    const deliveryIds: string[] = [];
+    const runner = new SagaRunner();
+    const definition: SagaDefinition = {
+      name: "concurrent-outbox-reuse",
+      idempotencyKey: () => "concurrent-outbox-reuse:ord_123",
+      outbox: {
+        publish: (message) => {
+          deliveryIds.push(message.deliveryId);
+        },
+      },
+      steps: [
+        {
+          id: "reserve-payment",
+          run: async (_input, { enqueueOutbox }) => {
+            enqueueOutbox({
+              id: "payment-reserved",
+              topic: "billing.reserved",
+              payload: { orderId: "ord_123" },
+            });
+            await stepGate;
+            return { paymentId: "pay_123" };
+          },
+        },
+      ],
+    };
+
+    const primary = runner.execute(definition, { orderId: "ord_123" });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const reused = await runner.execute(definition, { orderId: "ord_123" });
+    const [running] = await runner.listExecutions({ sagaName: definition.name });
+
+    expect(reused.execution.status).toBe("running");
+    expect(deliveryIds).toEqual([]);
+    await expect(runner.dispatchOutbox(definition, running.id)).rejects.toThrow(
+      "cannot dispatch outbox messages while 'running'",
+    );
+
+    releaseStep();
+    await expect(primary).resolves.toEqual(
+      expect.objectContaining({
+        execution: expect.objectContaining({ status: "completed" }),
+      }),
+    );
+    expect(deliveryIds).toHaveLength(1);
   });
 
   it("reserves empty string saga idempotency keys consistently", async () => {
