@@ -32,6 +32,7 @@ class MissingProviderGuard implements Guard<ExecutionContext> {
 }
 
 @Controller("/missing-provider-smoke")
+@UseGuards(MissingProviderGuard)
 class MissingProviderController {
   @Get()
   @UseGuards(MissingProviderGuard)

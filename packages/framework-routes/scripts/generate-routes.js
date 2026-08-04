@@ -53,10 +53,10 @@ async function main() {
       outputDir: projectRoot,
     });
     console.log(
-      "✓ routes.js, route-registration-table.json, intent-map.json, and framework-manifest.json generated at .croco/build",
+      "✓ routes.mjs, route-registration-table.json, intent-map.json, and framework-manifest.json generated at .croco/build",
     );
   } catch (err) {
-    console.error("Failed to generate routes.js:", err instanceof Error ? err.message : err);
+    console.error("Failed to generate routes.mjs:", err instanceof Error ? err.message : err);
     process.exit(1);
   }
 }

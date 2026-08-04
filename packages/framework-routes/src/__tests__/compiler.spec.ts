@@ -29,6 +29,7 @@ describe("compiler", () => {
     const code = generateModule(mockControllers);
 
     expect(code).toContain("function registerRoutes");
+    expect(code).toContain("additionalControllerBindings = Object.freeze({})");
     expect(code).toContain("routeRegistrationTable");
     expect(code).toContain('"id": "SampleController.hello"');
     expect(code).toContain('"path": "/api/hello"');
@@ -64,7 +65,7 @@ describe("compiler", () => {
 
     const code = generateRouteRegistrationCode(mockControllers);
 
-    expect(code).toContain("route compiled");
+    expect(code).toContain('import * as frameworkContext from "@croco/framework-context";');
     expect(code).toContain('"id": "SampleController.hello"');
     expect(code).toContain('"id": "SampleController.createUser"');
   });
@@ -73,7 +74,7 @@ describe("compiler", () => {
     const code = generateModule([]);
 
     expect(code).toContain("function registerRoutes");
-    expect(code).toContain("app)");
+    expect(code).toContain("additionalControllerBindings = Object.freeze({})");
     expect(code).toContain("Object.freeze([])");
   });
 
@@ -152,7 +153,7 @@ describe("compiler", () => {
     );
   });
 
-  it("writes routes.js and a route registration table artifact", async () => {
+  it("writes an ESM routes module and a route registration table artifact", async () => {
     const outputDir = await mkdtemp(join(tmpdir(), "croco-framework-routes-"));
 
     try {
@@ -165,7 +166,7 @@ describe("compiler", () => {
         outputDir,
       });
 
-      const code = await readFile(join(outputDir, ".croco", "build", "routes.js"), "utf-8");
+      const code = await readFile(join(outputDir, ".croco", "build", "routes.mjs"), "utf-8");
       const table = JSON.parse(
         await readFile(
           join(outputDir, ".croco", "build", "route-registration-table.json"),
@@ -178,10 +179,12 @@ describe("compiler", () => {
       const frameworkManifest = JSON.parse(
         await readFile(join(outputDir, ".croco", "build", "framework-manifest.json"), "utf-8"),
       );
-
-      expect(code).toContain("export function registerRoutes(app)");
+      expect(code).toContain("export function registerRoutes(app, additionalControllerBindings");
       expect(code).toContain("routeRegistrationTable");
-      expect(code).toContain("registerGeneratedRoute(app, route)");
+      expect(code).toContain("registerGeneratedRoute(app, route, additionalControllerBindings)");
+      expect(code).toContain("GeneratedController0");
+      expect(code).toContain('handlerName: "hello"');
+      expect(code).not.toContain('c.text("ok")');
       expect(table).toMatchObject({
         version: "croco.route-registration-table.v1",
         category: "http.controller",

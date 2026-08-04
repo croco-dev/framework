@@ -11407,6 +11407,11 @@
               "source": "./framework-manifest"
             },
             {
+              "name": "GeneratedControllerBinding",
+              "exportKind": "named",
+              "source": "./compiler"
+            },
+            {
               "name": "IntentMapController",
               "exportKind": "named",
               "source": "./intent-map"

@@ -1,4 +1,4 @@
-export type { CompiledController } from "./compiler";
+export type { CompiledController, GeneratedControllerBinding } from "./compiler";
 export {
   assertRouteRegistrationTable,
   compileRoutes,

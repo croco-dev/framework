@@ -5,7 +5,7 @@ prev: false
 title: "generateModuleFromRouteRegistrationTable"
 ---
 
-> **generateModuleFromRouteRegistrationTable**(`table`, `responseText?`): `string`
+> **generateModuleFromRouteRegistrationTable**(`table`, `controllerBindings?`): `string`
 
 ## Parameters
 
@@ -13,9 +13,9 @@ title: "generateModuleFromRouteRegistrationTable"
 
 [`RouteRegistrationTable`](/api/framework-routes/src/type-aliases/routeregistrationtable/)
 
-### responseText?
+### controllerBindings?
 
-`string` = `"ok"`
+readonly [`GeneratedControllerBinding`](/api/framework-routes/src/type-aliases/generatedcontrollerbinding/)[] = `[]`
 
 ## Returns
 

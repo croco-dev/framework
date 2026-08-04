@@ -50,6 +50,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@croco/framework-routes": "workspace:*",
     "vitest": "4.0.16"
   },
   "vitest": {
