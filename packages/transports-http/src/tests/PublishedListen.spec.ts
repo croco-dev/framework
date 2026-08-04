@@ -13,16 +13,33 @@ const spawnTimeoutMs = 60_000;
 
 describe("published HTTP listen contract", () => {
   it(
-    "publishes the Node server adapter as a runtime dependency",
+    "publishes fixed Hono ranges and the Node server adapter as runtime dependencies",
     () => {
       const packRoot = mkdtempSync(join(tmpdir(), "croco-transports-http-pack-"));
 
       try {
-        run(
-          "pnpm",
-          ["--filter", "@croco/transports-http", "pack", "--pack-destination", packRoot],
-          rootDir,
-        );
+        const packages = [
+          { name: "@croco/transports-http", tarballPrefix: "croco-transports-http-" },
+          { name: "@croco/preset-node", tarballPrefix: "croco-preset-node-" },
+          { name: "@croco/preset-lambda", tarballPrefix: "croco-preset-lambda-" },
+        ] as const;
+
+        for (const packageInfo of packages) {
+          run(
+            "pnpm",
+            ["--filter", packageInfo.name, "pack", "--pack-destination", packRoot],
+            rootDir,
+          );
+
+          const tarball = findTarball(packRoot, packageInfo.tarballPrefix);
+          const packedManifest = JSON.parse(
+            run("tar", ["-xOf", tarball, "package/package.json"], rootDir).stdout,
+          ) as {
+            dependencies?: Record<string, string>;
+          };
+
+          expect(packedManifest.dependencies?.hono).toBe("^4.12.34");
+        }
 
         const transportsHttpTarball = findTarball(packRoot, "croco-transports-http-");
         const packedManifest = JSON.parse(

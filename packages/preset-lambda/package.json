@@ -43,7 +43,7 @@
   "dependencies": {
     "@croco/framework-preset": "workspace:*",
     "@croco/transports-http": "workspace:*",
-    "hono": "^4.12.26"
+    "hono": "^4.12.34"
   },
   "devDependencies": {
     "tsup": "8.5.1",

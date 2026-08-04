@@ -31,6 +31,7 @@ overrides:
   flatted: 3.4.2
   glob: 11.1.0
   h3: 1.15.6
+  hono: 4.12.34
   js-yaml@>=3.0.0 <3.15.0: 3.15.0
   js-yaml@>=4.0.0 <4.3.0: 4.3.0
   js-cookie: 3.0.8

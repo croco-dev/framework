@@ -34,6 +34,7 @@ overrides:
   flatted: 3.4.2
   glob: 11.1.0
   h3: 1.15.6
+  hono: 4.12.34
   js-yaml@>=3.0.0 <3.15.0: 3.15.0
   js-yaml@>=4.0.0 <4.3.0: 4.3.0
   js-cookie: 3.0.8
@@ -2680,8 +2681,8 @@ importers:
         specifier: workspace:*
         version: link:../transports-http
       hono:
-        specifier: ^4.12.26
-        version: 4.12.26
+        specifier: 4.12.34
+        version: 4.12.34
     devDependencies:
       tsup:
         specifier: 8.5.1
@@ -2697,10 +2698,10 @@ importers:
         version: link:../framework-preset
       '@hono/node-server':
         specifier: 1.19.10
-        version: 1.19.10(hono@4.12.26)
+        version: 1.19.10(hono@4.12.34)
       hono:
-        specifier: ^4.12.26
-        version: 4.12.26
+        specifier: 4.12.34
+        version: 4.12.34
     devDependencies:
       tsup:
         specifier: 8.5.1
@@ -3469,7 +3470,7 @@ importers:
         version: link:../ratelimit-core
       '@hono/node-server':
         specifier: 1.19.10
-        version: 1.19.10(hono@4.12.26)
+        version: 1.19.10(hono@4.12.34)
       '@opentelemetry/api':
         specifier: ^1.9.0
         version: 1.9.0
@@ -3477,8 +3478,8 @@ importers:
         specifier: ^8.10.0
         version: 8.10.150
       hono:
-        specifier: ^4.12.26
-        version: 4.12.26
+        specifier: 4.12.34
+        version: 4.12.34
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -5243,7 +5244,7 @@ packages:
     resolution: {integrity: sha512-hZ7nOssGqRgyV3FVVQdfi+U4q02uB23bpnYpdvNXkYTRRyWx84b7yf1ans+dnJ/7h41sGL3CeQTfO+ZGxuO+Iw==}
     engines: {node: '>=18.14.1'}
     peerDependencies:
-      hono: ^4
+      hono: 4.12.34
 
   '@humanwhocodes/momoa@2.0.4':
     resolution: {integrity: sha512-RE815I4arJFtt+FVeU1Tgp9/Xvecacji8w/V6XtXsWWH/wz/eNkNbhb+ny/+PlVZjV0rxQpRSQKNKE3lcktHEA==}
@@ -8674,8 +8675,8 @@ packages:
   help-me@5.0.0:
     resolution: {integrity: sha512-7xgomUX6ADmcYzFik0HzAxh/73YlKR9bmFzf51CZwR+b6YtzU2m0u49hQCqV6SvlqIqsaxovfwdvbnsw3b/zpg==}
 
-  hono@4.12.26:
-    resolution: {integrity: sha512-uyZtpnYxM9CmQ7QsQknM4zN8EftNqhON1qYeIKM0Se67CCEe2c44xyGURwB0axX2fBDu1dqHrHAc1hmNT8ITkw==}
+  hono@4.12.34:
+    resolution: {integrity: sha512-GqXJqY/xJkJmuloTrnV1ZEXG3fqte+VjkUqoRNZXcrUidiUOP4fMSIHHY4tsqZBK++kVyWmt/AAfSUuy57/eSA==}
     engines: {node: '>=16.9.0'}
 
   html-escaper@2.0.2:
@@ -12822,9 +12823,9 @@ snapshots:
       protobufjs: 7.6.1
       yargs: 17.7.2
 
-  '@hono/node-server@1.19.10(hono@4.12.26)':
+  '@hono/node-server@1.19.10(hono@4.12.34)':
     dependencies:
-      hono: 4.12.26
+      hono: 4.12.34
 
   '@humanwhocodes/momoa@2.0.4': {}
 
@@ -16722,7 +16723,7 @@ snapshots:
 
   help-me@5.0.0: {}
 
-  hono@4.12.26: {}
+  hono@4.12.34: {}
 
   html-escaper@2.0.2: {}
 
