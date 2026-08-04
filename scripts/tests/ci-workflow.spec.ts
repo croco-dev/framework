@@ -473,6 +473,9 @@ describe("CI verification profile contract", () => {
     );
     expect(WORKFLOW).toContain("actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9");
     expect(WORKFLOW).toContain("path: .turbo");
+    expect(WORKFLOW).toContain(
+      "pnpm --filter @croco/meta-vite exec vitest run src/tests/published-contract.spec.ts",
+    );
     expect(WORKFLOW).not.toContain("pnpm turbo run build --filter=create-croco-app... --force");
   });
 

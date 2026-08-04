@@ -1,5 +1,14 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -28,6 +37,18 @@ type PackageTarballs = {
   readonly problemsCore: string;
 };
 
+type CommandInvocation = {
+  readonly args: readonly string[];
+  readonly command: string;
+};
+
+type CommandResult = {
+  readonly error?: Error;
+  readonly status: number | null;
+  readonly stderr: string | null | undefined;
+  readonly stdout: string | null | undefined;
+};
+
 const buildTargets: readonly BuildTarget[] = [
   libraryBuildTarget("problems-core"),
   libraryBuildTarget("diagnostics-core"),
@@ -52,6 +73,39 @@ const buildTargets: readonly BuildTarget[] = [
 ];
 
 describe("published @croco/meta-vite contract", () => {
+  it("runs the Windows pnpm shim through its JavaScript entrypoint", () => {
+    const root = mkdtempSync(join(tmpdir(), "croco-meta-vite-pnpm-launcher-"));
+    const pnpmHome = join(root, "node_modules", ".bin");
+    const pnpmCli = join(root, "node_modules", "pnpm", "bin", "pnpm.cjs");
+
+    try {
+      mkdirSync(dirname(pnpmCli), { recursive: true });
+      writeFileSync(pnpmCli, "");
+
+      expect(resolveCommandInvocation("pnpm", ["pack"], "win32", pnpmHome)).toEqual({
+        args: [pnpmCli, "pack"],
+        command: process.execPath,
+      });
+      expect(resolveCommandInvocation("node", ["script.mjs"], "win32", pnpmHome)).toEqual({
+        args: ["script.mjs"],
+        command: "node",
+      });
+    } finally {
+      rmSync(root, { force: true, recursive: true });
+    }
+  });
+
+  it("preserves spawn failures without captured output", () => {
+    expect(
+      formatCommandFailure("pnpm", ["pack"], {
+        error: new Error("spawn failed"),
+        status: null,
+        stderr: undefined,
+        stdout: undefined,
+      }),
+    ).toContain("Error: spawn failed");
+  });
+
   it(
     "typechecks root server actions separately from optional Redis ISR adapters",
     () => {
@@ -72,6 +126,7 @@ describe("published @croco/meta-vite contract", () => {
         expect(packedManifest.peerDependencies?.zod).toBe("^3.23.8");
         expect(packedManifest.peerDependencies?.ioredis).toBe("5.10.1");
         expect(packedManifest.peerDependencies?.["react-dom"]).toBe("^19.0.0");
+        expect(packedManifest.peerDependencies?.vite).toBe("^6.4.3");
         expect(packedManifest.peerDependenciesMeta?.ioredis?.optional).toBe(true);
         expect(packedManifest.peerDependenciesMeta?.["react-dom"]).toBeUndefined();
         expect(packedManifest.exports?.["./isr/adapters"]).toEqual({
@@ -85,9 +140,10 @@ describe("published @croco/meta-vite contract", () => {
           "@types/node@^22",
           "@types/react@^19",
           "react@^19.0.0",
-          "vite@^6.0.0",
+          "vite@6.4.3",
           "zod@^3.23.8",
         ]);
+        expect(installedPackageVersion(rootConsumerRoot, "vite")).toBe("6.4.3");
         writeFileSync(
           join(rootConsumerRoot, "index.ts"),
           [
@@ -118,9 +174,10 @@ describe("published @croco/meta-vite contract", () => {
           "@types/react@^19",
           "ioredis@5.10.1",
           "react@^19.0.0",
-          "vite@^6.0.0",
+          "vite@6.4.3",
           "zod@^3.23.8",
         ]);
+        expect(installedPackageVersion(redisConsumerRoot, "vite")).toBe("6.4.3");
         writeFileSync(
           join(redisConsumerRoot, "index.ts"),
           [
@@ -327,6 +384,14 @@ function writeTypeScriptConfig(consumerRoot: string): void {
   );
 }
 
+function installedPackageVersion(consumerRoot: string, packageName: string): string | undefined {
+  const manifest = JSON.parse(
+    readFileSync(join(consumerRoot, "node_modules", packageName, "package.json"), "utf8"),
+  ) as { readonly version?: string };
+
+  return manifest.version;
+}
+
 function findTarball(directory: string, prefix: string): string {
   const filename = readdirSync(directory).find(
     (entry) => entry.startsWith(prefix) && entry.endsWith(".tgz"),
@@ -364,28 +429,69 @@ function run(
   args: readonly string[],
   cwd: string,
 ): { readonly stdout: string; readonly stderr: string } {
-  const result = spawnSync(command, [...args], {
+  const invocation = resolveCommandInvocation(command, args);
+  const result = spawnSync(invocation.command, [...invocation.args], {
     cwd,
     encoding: "utf-8",
     stdio: "pipe",
     timeout: commandTimeoutMs,
   });
+  const stdout = result.stdout ?? "";
+  const stderr = result.stderr ?? "";
 
   if (result.error || result.status !== 0) {
-    throw new Error(
-      [
-        `${command} ${args.join(" ")} failed`,
-        result.error ? `${result.error.name}: ${result.error.message}` : undefined,
-        result.stdout.trim(),
-        result.stderr.trim(),
-      ]
-        .filter(Boolean)
-        .join("\n"),
-    );
+    throw new Error(formatCommandFailure(command, args, result));
   }
 
   return {
-    stdout: result.stdout,
-    stderr: result.stderr,
+    stdout,
+    stderr,
   };
+}
+
+function resolveCommandInvocation(
+  command: string,
+  args: readonly string[],
+  platform: NodeJS.Platform = process.platform,
+  pnpmHome: string | undefined = process.env.PNPM_HOME,
+): CommandInvocation {
+  if (platform !== "win32" || command !== "pnpm") {
+    return { args, command };
+  }
+
+  if (!pnpmHome) {
+    throw new Error("PNPM_HOME is required to run pnpm from the Windows packed-consumer test");
+  }
+
+  const candidates = [
+    join(pnpmHome, "pnpm.cjs"),
+    join(pnpmHome, "bin", "pnpm.cjs"),
+    join(pnpmHome, "node_modules", "pnpm", "bin", "pnpm.cjs"),
+    join(pnpmHome, "..", "pnpm", "bin", "pnpm.cjs"),
+  ];
+  const pnpmCli = candidates.find(existsSync);
+
+  if (!pnpmCli) {
+    throw new Error(`Cannot locate the pnpm JavaScript entrypoint from PNPM_HOME=${pnpmHome}`);
+  }
+
+  return {
+    args: [pnpmCli, ...args],
+    command: process.execPath,
+  };
+}
+
+function formatCommandFailure(
+  command: string,
+  args: readonly string[],
+  result: CommandResult,
+): string {
+  return [
+    `${command} ${args.join(" ")} failed`,
+    result.error ? `${result.error.name}: ${result.error.message}` : undefined,
+    result.stdout?.trim(),
+    result.stderr?.trim(),
+  ]
+    .filter(Boolean)
+    .join("\n");
 }

@@ -702,6 +702,9 @@ jobs:
       - name: Build packaged CLI
         run: pnpm turbo run build --filter=create-croco-app...
 
+      - name: Verify patched Meta-Vite consumer resolution
+        run: pnpm --filter @croco/meta-vite exec vitest run src/tests/published-contract.spec.ts
+
       - name: Run packed CLI from a path containing spaces
         shell: pwsh
         run: |
