@@ -1193,6 +1193,17 @@ describe("Web Meta Vite fullstack addon templates", () => {
   it("keeps the API worker Wrangler build non-recursive", () => {
     checkWebMetaViteFullstackAddonStructure();
   });
+
+  it.each([
+    ["addons/web-meta-vite", ["package.json.hbs"]],
+    ["addons/web-meta-vite-fullstack", ["ssr-worker", "package.json.hbs"]],
+    ["container-fullstack", ["apps", "console-web", "package.json.hbs"]],
+    ["ssr-lambda", ["apps", "console-web", "package.json.hbs"]],
+  ])("requires patched Vite in the %s consumer", (template, manifestPath) => {
+    const manifest = readJsonTemplate(template, ...manifestPath);
+
+    expect(manifest.devDependencies).toMatchObject({ vite: "^6.4.3" });
+  });
 });
 
 describe("Base preset README templates", () => {

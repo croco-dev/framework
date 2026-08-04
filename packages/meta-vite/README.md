@@ -8,7 +8,7 @@ Croco-native Vite SSR/RSC meta-framework. Croco의 유일한 SSR 엔진입니다
 pnpm add @croco/meta-vite
 ```
 
-Requires Vite 6+ and React 19+.
+Requires Vite `>=6.4.3 <7` and React 19+.
 
 Redis-backed ISR is an optional integration:
 
@@ -261,7 +261,7 @@ Recovery diagnostics:
 ## Limitations (v1)
 
 - **React-only**: v1 supports React 19+ only. No Vue/Svelte support.
-- **Vite 6+**: Requires Vite 6 Environment API. Older Vite versions not supported.
+- **Vite >=6.4.3 <7**: Requires the Vite 6 Environment API and the patched Windows filesystem deny behavior.
 - **ISR non-durable by default**: InMemoryCacheStore is local/dev/single-process. Production Redis ISR uses the optional `ioredis` peer and the `@croco/meta-vite/isr/adapters` entrypoint.
 - **Cloudflare streaming**: Cloudflare Workers support streaming Response bodies, but InMemory ISR is not durable across Worker isolates.
 - **RSC dev mode**: RSC routes require full reload during development. HMR-based RSC updates are deferred.

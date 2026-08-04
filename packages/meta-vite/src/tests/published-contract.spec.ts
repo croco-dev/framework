@@ -1,5 +1,13 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -72,6 +80,7 @@ describe("published @croco/meta-vite contract", () => {
         expect(packedManifest.peerDependencies?.zod).toBe("^3.23.8");
         expect(packedManifest.peerDependencies?.ioredis).toBe("5.10.1");
         expect(packedManifest.peerDependencies?.["react-dom"]).toBe("^19.0.0");
+        expect(packedManifest.peerDependencies?.vite).toBe("^6.4.3");
         expect(packedManifest.peerDependenciesMeta?.ioredis?.optional).toBe(true);
         expect(packedManifest.peerDependenciesMeta?.["react-dom"]).toBeUndefined();
         expect(packedManifest.exports?.["./isr/adapters"]).toEqual({
@@ -85,9 +94,10 @@ describe("published @croco/meta-vite contract", () => {
           "@types/node@^22",
           "@types/react@^19",
           "react@^19.0.0",
-          "vite@^6.0.0",
+          "vite@6.4.3",
           "zod@^3.23.8",
         ]);
+        expect(installedPackageVersion(rootConsumerRoot, "vite")).toBe("6.4.3");
         writeFileSync(
           join(rootConsumerRoot, "index.ts"),
           [
@@ -118,9 +128,10 @@ describe("published @croco/meta-vite contract", () => {
           "@types/react@^19",
           "ioredis@5.10.1",
           "react@^19.0.0",
-          "vite@^6.0.0",
+          "vite@6.4.3",
           "zod@^3.23.8",
         ]);
+        expect(installedPackageVersion(redisConsumerRoot, "vite")).toBe("6.4.3");
         writeFileSync(
           join(redisConsumerRoot, "index.ts"),
           [
@@ -327,6 +338,14 @@ function writeTypeScriptConfig(consumerRoot: string): void {
   );
 }
 
+function installedPackageVersion(consumerRoot: string, packageName: string): string | undefined {
+  const manifest = JSON.parse(
+    readFileSync(join(consumerRoot, "node_modules", packageName, "package.json"), "utf8"),
+  ) as { readonly version?: string };
+
+  return manifest.version;
+}
+
 function findTarball(directory: string, prefix: string): string {
   const filename = readdirSync(directory).find(
     (entry) => entry.startsWith(prefix) && entry.endsWith(".tgz"),
@@ -364,7 +383,8 @@ function run(
   args: readonly string[],
   cwd: string,
 ): { readonly stdout: string; readonly stderr: string } {
-  const result = spawnSync(command, [...args], {
+  const executable = process.platform === "win32" && command === "pnpm" ? "pnpm.cmd" : command;
+  const result = spawnSync(executable, [...args], {
     cwd,
     encoding: "utf-8",
     stdio: "pipe",
