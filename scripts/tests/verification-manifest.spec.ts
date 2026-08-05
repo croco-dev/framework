@@ -1,5 +1,6 @@
-import { existsSync, readFileSync } from "node:fs";
-import { basename, dirname, extname, relative, resolve } from "node:path";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { basename, dirname, extname, join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -17,6 +18,17 @@ import {
   RELEASE_GATE_WORKFLOW_PATHS,
 } from "../release-gate-maintenance.mts";
 import { effectivePublishManifest, findPackageJsonFiles } from "../package-manifest-contracts.mjs";
+import {
+  assertGeneratedSmokeCaseDependencyMapping,
+  assertGeneratedSmokeDependencyMapping,
+  selectGeneratedSmokeCasesForChangedFiles,
+} from "../create-croco-app-generated-smoke-dependencies.mts";
+import { getGeneratedSmokeDependencyCaseInputs } from "../create-croco-app-generated-smoke.mts";
+import { generate } from "../../packages/create-croco-app/src/generator.ts";
+import {
+  normalizeNonInteractiveOptions,
+  parseCliOptions,
+} from "../../packages/create-croco-app/src/options.ts";
 import type { EvidenceCommand } from "../release-spine-evidence.mts";
 
 const ROOT_DIR = resolve(__dirname, "../..");
@@ -52,6 +64,30 @@ function discoverReleaseGateScriptPaths(roots: readonly string[]): readonly stri
   }
 
   return [...discovered].sort();
+}
+
+function parseGeneratedSmokeRawOptions(args: readonly string[]): Record<string, string | boolean> {
+  const options: Record<string, string | boolean> = {};
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (!arg?.startsWith("--")) continue;
+    if (arg.startsWith("--no-")) {
+      options[toCamelCase(arg.slice("--no-".length))] = false;
+      continue;
+    }
+    const value = args[index + 1];
+    if (!value || value.startsWith("--")) {
+      options[toCamelCase(arg.slice(2))] = true;
+      continue;
+    }
+    options[toCamelCase(arg.slice(2))] = value;
+    index += 1;
+  }
+  return options;
+}
+
+function toCamelCase(value: string): string {
+  return value.replace(/-([a-z])/g, (_match, letter: string) => letter.toUpperCase());
 }
 
 const repoIds = [
@@ -236,7 +272,14 @@ describe("verification manifest", () => {
       expect(byId.get("test")?.command.includes("--filter=...[origin/trunk]"), path).toBe(
         !isCatalog,
       );
-      expect(byId.get("generated-app-smoke")?.applicable, path).toBe(isCatalog);
+      const affectedGeneratedSmokeCases = selectGeneratedSmokeCasesForChangedFiles([path]);
+      expect(byId.get("generated-app-smoke")?.applicable, path).toBe(
+        isCatalog || affectedGeneratedSmokeCases.length > 0,
+      );
+      if (isCatalog) {
+        expect(byId.get("generated-app-smoke")?.command, path).toContain("--tier");
+        expect(byId.get("generated-app-smoke")?.command, path).toContain("spine-blocking");
+      }
       if (!isCatalog) {
         expect(byId.get("spine-promotion")?.command, path).toContain(path.split("/")[1]);
       }
@@ -279,6 +322,84 @@ describe("verification manifest", () => {
     expect(fullById.get("production-ready")?.applicable).toBe(true);
     expect(fullById.get("spine-promotion")?.applicable).toBe(true);
   });
+
+  it("selects generated smoke cases through template runtime dependency closure", () => {
+    assertGeneratedSmokeDependencyMapping();
+
+    for (const packagePath of [
+      "packages/protocols-rest/src/index.ts",
+      "packages/transports-http/src/index.ts",
+      "packages/telemetry-sdk-node/src/index.ts",
+    ]) {
+      const selectedCases = selectGeneratedSmokeCasesForChangedFiles([packagePath]);
+      const manifest = createVerificationManifest("spine", {
+        base: "origin/trunk",
+        changedFiles: [packagePath],
+        head: "HEAD",
+      });
+      const generatedSmoke = manifest.find(({ id }) => id === "generated-app-smoke");
+
+      expect(selectedCases.length, packagePath).toBeGreaterThan(0);
+      expect(selectedCases.length, packagePath).toBeLessThan(18);
+      expect(generatedSmoke?.applicable, packagePath).toBe(true);
+      expect(generatedSmoke?.command, packagePath).toEqual([
+        "node",
+        "--experimental-strip-types",
+        "scripts/create-croco-app-generated-smoke.mts",
+        ...selectedCases,
+      ]);
+    }
+  });
+
+  it("does not select generated smoke for an unrelated package change", () => {
+    const changedFiles = ["packages/customer-health-core/src/libs/CustomerHealthScore.ts"];
+    expect(selectGeneratedSmokeCasesForChangedFiles(changedFiles)).toEqual([]);
+    expect(
+      createVerificationManifest("spine", {
+        base: "origin/trunk",
+        changedFiles,
+        head: "HEAD",
+      }).find(({ id }) => id === "generated-app-smoke")?.applicable,
+    ).toBe(false);
+  });
+
+  it("selects the exact generated case for a dynamically injected provider dependency", () => {
+    expect(selectGeneratedSmokeCasesForChangedFiles(["packages/storage-r2/src/index.ts"])).toEqual([
+      "saas-cloudflare-profile",
+    ]);
+    expect(
+      selectGeneratedSmokeCasesForChangedFiles(["packages/auth-better-auth/src/index.ts"]),
+    ).toEqual(["goal-saas-api", "saas-golden-path", "ai-saas-golden-path"]);
+  });
+
+  it("selects dynamically injected tenant and UI dependencies", () => {
+    expect(
+      selectGeneratedSmokeCasesForChangedFiles(["packages/tx-drizzle/src/index.ts"]),
+    ).toContain("saas-golden-path");
+    expect(selectGeneratedSmokeCasesForChangedFiles(["packages/ui-astryx/src/index.ts"])).toEqual([
+      "graphql-vite-spa-astryx",
+    ]);
+    expect(
+      selectGeneratedSmokeCasesForChangedFiles(["packages/dataloader-core/src/index.ts"]),
+    ).toEqual([]);
+  });
+
+  it("materializes every generated smoke case independently of dependency selection", async () => {
+    const generatedRoot = mkdtempSync(join(tmpdir(), "croco-smoke-dependency-contract-"));
+    try {
+      for (const smokeCase of getGeneratedSmokeDependencyCaseInputs()) {
+        const projectDir = join(generatedRoot, smokeCase.name);
+        const cliOptions = parseCliOptions(
+          projectDir,
+          parseGeneratedSmokeRawOptions(smokeCase.args),
+        );
+        await generate(projectDir, normalizeNonInteractiveOptions(cliOptions));
+        assertGeneratedSmokeCaseDependencyMapping(smokeCase.name, projectDir);
+      }
+    } finally {
+      rmSync(generatedRoot, { recursive: true, force: true });
+    }
+  }, 60_000);
 
   it("does not require package build artifacts for repository-only CI maintenance", () => {
     const maintenance = createVerificationManifest("publish", {
