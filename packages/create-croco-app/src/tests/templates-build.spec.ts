@@ -153,6 +153,16 @@ function checkSpaBeSplitStructure() {
   );
   checkFileContains(
     "spa-be-split",
+    [".github", "workflows", "browser-tests.yml"],
+    /permissions:\n  contents: read/,
+  );
+  checkFileContains(
+    "spa-be-split",
+    [".github", "workflows", "browser-tests.yml"],
+    /actions\/checkout@[0-9a-f]{40}[\s\S]*persist-credentials: false/,
+  );
+  checkFileContains(
+    "spa-be-split",
     ["apps", "console-web", "src", "api", "client.ts"],
     /handleJsonResponse/,
   );
