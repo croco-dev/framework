@@ -6,11 +6,8 @@ import {
   LOGGER_TOKEN,
 } from "@croco/framework-context";
 import { Problem, type ProblemDetails } from "@croco/problems-core";
+import { createHttpProblemDetails, redactHttpProblemDetailsBody } from "@croco/protocols-rest";
 import { HTTP_CONTEXT_KEYS } from "./contextKeys";
-import {
-  createHttpProblemDetails,
-  redactHttpProblemDetailsBody,
-} from "./problemResponseSerializer";
 import type { CrocoHttpContext } from "./types";
 
 type TelemetryFailureMetadata = {

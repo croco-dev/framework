@@ -1,4 +1,8 @@
 import { Problem, ProblemSerializer } from "@croco/problems-core";
+import {
+  createHttpProblemDetails,
+  redactHttpProblemDetailsBody,
+} from "../problemResponseSerializer";
 import type { ProblemDetails } from "@croco/problems-core";
 import type { ExceptionFilter, HttpExceptionFilterResponse } from "../interfaces/ExceptionFilter";
 import type { ExecutionContext } from "../interfaces/ExecutionContext";
@@ -6,13 +10,14 @@ import type { ExecutionContext } from "../interfaces/ExecutionContext";
 export type ProblemLike = Problem | ProblemDetails;
 export type { HttpExceptionFilterResponse } from "../interfaces/ExceptionFilter";
 
-function parseProblemDetails(exception: unknown): ProblemDetails | undefined {
+function parseProblemDetails(exception: unknown, instance: string): ProblemDetails | undefined {
   if (exception instanceof Problem) {
-    return exception.toJSON();
+    return createHttpProblemDetails(exception, instance);
   }
 
   try {
-    return ProblemSerializer.fromJson(exception);
+    const problem = ProblemSerializer.fromJson(exception);
+    return redactHttpProblemDetailsBody(problem, { instance });
   } catch {
     return undefined;
   }
@@ -22,8 +27,8 @@ function parseProblemDetails(exception: unknown): ProblemDetails | undefined {
  * 예외를 Problem Details 형식의 HTTP 응답으로 변환하는 기본 필터입니다.
  */
 export class HttpExceptionFilter implements ExceptionFilter<unknown, ExecutionContext> {
-  catch(exception: unknown, _context: ExecutionContext): HttpExceptionFilterResponse {
-    const problem = parseProblemDetails(exception);
+  catch(exception: unknown, context: ExecutionContext): HttpExceptionFilterResponse {
+    const problem = parseProblemDetails(exception, context.getRequest().url);
 
     if (problem) {
       return {

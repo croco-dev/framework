@@ -2,14 +2,26 @@ import "reflect-metadata";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { HttpExceptionFilter } from "../libs/filters/HttpExceptionFilter";
+import {
+  createHttpProblemDetails,
+  redactHttpProblemDetailsBody,
+} from "../libs/problemResponseSerializer";
 import type { ExecutionContext } from "../libs/interfaces/ExecutionContext";
+
+const REQUEST_PATH = "/api/resource";
+const SECRET_QUERY = "token=secret-reset-token";
+const PUBLIC_INSTANCE = `https://example.test${REQUEST_PATH}`;
 
 class ResourceNotFoundProblem extends Problem {
   constructor() {
     super("RESOURCE_NOT_FOUND", ProblemCategory.NotFound, "Resource not found", {
       type: "not-found",
       instance: "/api/resource",
-      extensions: { resourceId: "resource-1" },
+      extensions: {
+        issues: [{ resourceId: "resource-1" }],
+        resourceId: "resource-1",
+        token: "secret-token",
+      },
     });
   }
 }
@@ -21,10 +33,10 @@ describe("HttpExceptionFilter", () => {
   beforeEach(() => {
     filter = new HttpExceptionFilter();
     mockContext = {
-      getRequest: vi.fn(),
+      getRequest: vi.fn(() => new Request(`https://example.test${REQUEST_PATH}?${SECRET_QUERY}`)),
       getClass: vi.fn(),
       getHandler: vi.fn(),
-      getPath: vi.fn(),
+      getPath: vi.fn(() => REQUEST_PATH),
       getMethod: vi.fn(),
     } as unknown as ExecutionContext;
   });
@@ -43,10 +55,34 @@ describe("HttpExceptionFilter", () => {
         status: 404,
         code: "RESOURCE_NOT_FOUND",
         detail: "Resource not found",
-        instance: "/api/resource",
-        resourceId: "resource-1",
+        instance: PUBLIC_INSTANCE,
+        issues: [{ resourceId: "resource-1" }],
       },
     });
+    expect(JSON.stringify(result.body)).not.toContain("secret-token");
+    expect(JSON.stringify(result.body)).not.toContain(SECRET_QUERY);
+    expect(result.body).not.toHaveProperty("resourceId");
+  });
+
+  it("should remove query and fragment secrets from source-provided instances", () => {
+    const sourceProblem = new ResourceNotFoundProblem();
+    const problemBody = createHttpProblemDetails(
+      sourceProblem,
+      "/api/resource?token=source-secret#fragment",
+    );
+    const serializedBody = redactHttpProblemDetailsBody({
+      type: "forbidden",
+      title: "Forbidden",
+      status: 403,
+      code: "FORBIDDEN",
+      detail: "Access denied",
+      instance: "/serialized?token=serialized-secret#fragment",
+    });
+
+    expect(problemBody.instance).toBe("/api/resource");
+    expect(serializedBody?.instance).toBe("/serialized");
+    expect(JSON.stringify({ problemBody, serializedBody })).not.toContain("secret");
+    expect(JSON.stringify({ problemBody, serializedBody })).not.toContain("fragment");
   });
 
   it("should handle non-Problem errors with 500 status", () => {
@@ -88,20 +124,66 @@ describe("HttpExceptionFilter", () => {
     expect(result.body.status).toBe(422);
   });
 
-  it("should preserve extension fields from validated serialized Problem details", () => {
+  it("should preserve only public extension fields from validated serialized Problem details", () => {
     const problem = {
       type: "forbidden",
       title: "Forbidden",
       status: 403,
       code: "FORBIDDEN",
       detail: "Access denied",
-      instance: "/api/resource",
+      instance: "/source-instance",
+      issues: [{ field: "role", message: "Access denied" }],
       additionalField: "extra data",
+      token: "secret-token",
     };
 
     const result = filter.catch(problem, mockContext);
 
-    expect(result.body).toEqual(problem);
+    expect(result.body).toEqual({
+      type: "forbidden",
+      title: "Forbidden",
+      status: 403,
+      code: "FORBIDDEN",
+      detail: "Access denied",
+      instance: PUBLIC_INSTANCE,
+      issues: [{ field: "role", message: "Access denied" }],
+    });
+    expect(JSON.stringify(result.body)).not.toContain("secret-token");
+    expect(JSON.stringify(result.body)).not.toContain(SECRET_QUERY);
+    expect(result.body).not.toHaveProperty("additionalField");
+  });
+
+  it("should redact operator-only detail and extensions", () => {
+    const problem = new (class extends Problem {
+      constructor() {
+        super(
+          "transports-http/di-bootstrap-validation",
+          ProblemCategory.InternalServerError,
+          "DI bootstrap failed for tenant secret-tenant",
+          {
+            extensions: {
+              issues: [{ message: "container token missing" }],
+              reason: "di_failure",
+              rawProviderResponse: { token: "secret-provider-token" },
+            },
+          },
+        );
+      }
+    })();
+
+    const result = filter.catch(problem, mockContext);
+
+    expect(result.body).toEqual({
+      type: "about:blank",
+      title: "Internal Server Error",
+      status: 500,
+      code: "transports-http/di-bootstrap-validation",
+      detail: "An internal error occurred",
+      instance: PUBLIC_INSTANCE,
+    });
+    expect(JSON.stringify(result.body)).not.toContain("secret-tenant");
+    expect(JSON.stringify(result.body)).not.toContain("secret-provider-token");
+    expect(JSON.stringify(result.body)).not.toContain(SECRET_QUERY);
   });
 
   it("should handle Error with message", () => {
