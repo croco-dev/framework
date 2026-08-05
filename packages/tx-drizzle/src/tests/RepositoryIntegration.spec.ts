@@ -1,6 +1,6 @@
 import { registerBatchLoaderFactory } from "@croco/dataloader-core";
 import { Container, Context } from "@croco/framework-context";
-import { BatchLoad } from "@croco/repository-core";
+import { BatchLoad, type KeyedRepositoryResult } from "@croco/repository-core";
 import { Transactional, type TxAdapter, TxManager, TxManagerRegistry } from "@croco/tx-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AbstractDrizzleRepository } from "../libs/AbstractDrizzleRepository";
@@ -27,11 +27,13 @@ class IntegrationRepository extends AbstractDrizzleRepository<UserEntity, string
     return { id, txId: this.getClientId() };
   }
 
-  async findByIds(ids: string[]): Promise<UserEntity[]> {
+  async findByIds(
+    ids: readonly string[],
+  ): Promise<ReadonlyArray<KeyedRepositoryResult<string, UserEntity>>> {
     const txId = this.getClientId();
     this.batchCalls.push({ ids: [...ids], txId });
 
-    return ids.map((id) => ({ id, txId }));
+    return ids.map((id) => ({ key: id, value: { id, txId } }));
   }
 
   async save(entity: UserEntity): Promise<UserEntity> {

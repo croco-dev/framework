@@ -1,7 +1,7 @@
 import { DomainEvent, EventBusConfig, EventPublisher, type EventHandler } from "@croco/events-core";
 import { InMemoryEventBus } from "@croco/events-inmemory";
 import { Container } from "@croco/framework-context";
-import type { Repository } from "@croco/repository-core";
+import type { KeyedRepositoryResult, Repository } from "@croco/repository-core";
 import { RetryTemplate } from "@croco/retry-core";
 import { recordEvent, withSpan } from "@croco/telemetry-api";
 import type { CreateUserInput, User } from "./controllers/userSchemas";
@@ -36,11 +36,13 @@ class InMemoryUserRepository implements UserRepository {
     return this.users.get(id) ?? null;
   }
 
-  async findByIds(ids: readonly string[]): Promise<ReadonlyArray<User>> {
+  async findByIds(
+    ids: readonly string[],
+  ): Promise<ReadonlyArray<KeyedRepositoryResult<string, User>>> {
     return ids.flatMap((id) => {
       const user = this.users.get(id);
 
-      return user ? [user] : [];
+      return user ? [{ key: id, value: user }] : [];
     });
   }
 

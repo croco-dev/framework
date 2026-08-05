@@ -7,10 +7,34 @@ title: "InMemoryRateLimitStoreOptions"
 
 > **InMemoryRateLimitStoreOptions** = `object`
 
-메모리 기반 레이트 리밋 저장소 구현체들입니다.
-
 ## Properties
+
+### now?
+
+> `readonly` `optional` **now?**: () => `number`
+
+#### Returns
+
+`number`
+
+---
 
 ### pruneIntervalMs?
 
-> `optional` **pruneIntervalMs?**: `number`
+> `readonly` `optional` **pruneIntervalMs?**: `number`
+
+---
+
+### random?
+
+> `readonly` `optional` **random?**: () => `number`
+
+#### Returns
+
+`number`
+
+---
+
+### scheduler?
+
+> `readonly` `optional` **scheduler?**: [`RateLimitPruneScheduler`](/api/ratelimit-core/src/interfaces/ratelimitprunescheduler/)

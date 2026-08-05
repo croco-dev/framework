@@ -12,3 +12,9 @@ title: "BillingProviderConformanceSuite"
 ### cases
 
 > `readonly` **cases**: readonly [`BillingProviderConformanceCase`](/api/testing/src/type-aliases/billingproviderconformancecase/)[]
+
+---
+
+### manifest
+
+> `readonly` **manifest**: [`BillingProviderConformanceManifest`](/api/testing/src/type-aliases/billingproviderconformancemanifest/)

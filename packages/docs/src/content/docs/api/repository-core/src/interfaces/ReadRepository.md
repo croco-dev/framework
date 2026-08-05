@@ -20,8 +20,11 @@ class UserRepository implements ReadRepository<User, string> {
     // Fetch from database
   }
 
-  async findByIds(ids: readonly string[]): Promise<ReadonlyArray<User>> {
-    // Batch fetch
+  async findByIds(
+    ids: readonly string[],
+  ): Promise<ReadonlyArray<KeyedRepositoryResult<string, User>>> {
+    const users = await this.fetchUsers(ids);
+    return users.map((user) => ({ key: user.id, value: user }));
   }
 }
 ```
@@ -66,11 +69,11 @@ The entity ID
 
 The entity if found, null otherwise
 
-***
+---
 
 ### findByIds()
 
-> **findByIds**(`ids`): `Promise`\<readonly `T`[]\>
+> **findByIds**(`ids`): `Promise`\<readonly [`KeyedRepositoryResult`](/api/repository-core/src/type-aliases/keyedrepositoryresult/)\<`ID`, `T`\>[]\>
 
 Find multiple entities by their IDs.
 
@@ -84,6 +87,7 @@ Array of entity IDs
 
 #### Returns
 
-`Promise`\<readonly `T`[]\>
+`Promise`\<readonly [`KeyedRepositoryResult`](/api/repository-core/src/type-aliases/keyedrepositoryresult/)\<`ID`, `T`\>[]\>
 
-Array of entities (may be empty or contain nulls)
+Keyed results for found entities. Missing IDs are omitted, entries may be returned in
+any order, and every requested ID may appear at most once.

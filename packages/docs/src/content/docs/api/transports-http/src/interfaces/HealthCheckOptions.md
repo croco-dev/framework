@@ -25,7 +25,9 @@ const options: HealthCheckServiceOptions = {
 
 > `optional` **timeout?**: `number`
 
-Maximum time in milliseconds to wait for each health check. Defaults to 5000ms.
+Timeout in milliseconds. Must be an integer from 1 through 2,147,483,647.
+Invalid values throw an InvalidHealthCheckTimeoutProblem during service setup or indicator
+registration.
 
 #### Inherited from
 

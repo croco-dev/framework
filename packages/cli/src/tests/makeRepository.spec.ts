@@ -28,7 +28,9 @@ describe("generateRepository", () => {
 
     expect(result?.status).toBe("created");
     expect(result?.path).toBe(filePath);
-    expect(content).toContain('import type { Repository } from "@croco/repository-core";');
+    expect(content).toContain(
+      'import type { KeyedRepositoryResult, Repository } from "@croco/repository-core";',
+    );
     expect(content).toContain(
       'import type { UserProfileEntity } from "../entities/UserProfileEntity";',
     );
@@ -37,7 +39,7 @@ describe("generateRepository", () => {
     );
     expect(content).toContain("async findById(id: string): Promise<UserProfileEntity | null>");
     expect(content).toContain(
-      "async findByIds(ids: readonly string[]): Promise<ReadonlyArray<UserProfileEntity>>",
+      "Promise<ReadonlyArray<KeyedRepositoryResult<string, UserProfileEntity>>>",
     );
     expect(content).toContain("async save(entity: UserProfileEntity): Promise<UserProfileEntity>");
     expect(content).toContain("async deleteById(id: string): Promise<void>");

@@ -16,20 +16,6 @@ title: "FixedWindowStore"
 - [`FixedWindowInMemoryStore`](/api/ratelimit-core/src/classes/fixedwindowinmemorystore/)
 - [`UpstashFixedWindowStore`](/api/ratelimit-upstash/src/classes/upstashfixedwindowstore/)
 
-## Constructors
-
-### Constructor
-
-> **new FixedWindowStore**(): `FixedWindowStore`
-
-#### Returns
-
-`FixedWindowStore`
-
-#### Inherited from
-
-[`DistributedRateLimitStore`](/api/ratelimit-core/src/classes/distributedratelimitstore/).[`constructor`](/api/ratelimit-core/src/classes/distributedratelimitstore/#constructor)
-
 ## Methods
 
 ### check()
@@ -54,7 +40,7 @@ title: "FixedWindowStore"
 
 [`DistributedRateLimitStore`](/api/ratelimit-core/src/classes/distributedratelimitstore/).[`check`](/api/ratelimit-core/src/classes/distributedratelimitstore/#check)
 
-***
+---
 
 ### checkFixedWindow()
 
@@ -74,7 +60,7 @@ title: "FixedWindowStore"
 
 `Promise`\<[`RateLimitResult`](/api/ratelimit-core/src/type-aliases/ratelimitresult/)\>
 
-***
+---
 
 ### expire()
 
@@ -98,7 +84,7 @@ title: "FixedWindowStore"
 
 [`DistributedRateLimitStore`](/api/ratelimit-core/src/classes/distributedratelimitstore/).[`expire`](/api/ratelimit-core/src/classes/distributedratelimitstore/#expire)
 
-***
+---
 
 ### getCount()
 
@@ -118,7 +104,7 @@ title: "FixedWindowStore"
 
 [`DistributedRateLimitStore`](/api/ratelimit-core/src/classes/distributedratelimitstore/).[`getCount`](/api/ratelimit-core/src/classes/distributedratelimitstore/#getcount)
 
-***
+---
 
 ### getStats()
 
@@ -138,7 +124,7 @@ title: "FixedWindowStore"
 
 [`DistributedRateLimitStore`](/api/ratelimit-core/src/classes/distributedratelimitstore/).[`getStats`](/api/ratelimit-core/src/classes/distributedratelimitstore/#getstats)
 
-***
+---
 
 ### increment()
 
@@ -162,7 +148,7 @@ title: "FixedWindowStore"
 
 [`DistributedRateLimitStore`](/api/ratelimit-core/src/classes/distributedratelimitstore/).[`increment`](/api/ratelimit-core/src/classes/distributedratelimitstore/#increment)
 
-***
+---
 
 ### pruneExpired()
 
@@ -176,7 +162,7 @@ title: "FixedWindowStore"
 
 [`DistributedRateLimitStore`](/api/ratelimit-core/src/classes/distributedratelimitstore/).[`pruneExpired`](/api/ratelimit-core/src/classes/distributedratelimitstore/#pruneexpired)
 
-***
+---
 
 ### refund()
 
@@ -204,7 +190,7 @@ title: "FixedWindowStore"
 
 [`DistributedRateLimitStore`](/api/ratelimit-core/src/classes/distributedratelimitstore/).[`refund`](/api/ratelimit-core/src/classes/distributedratelimitstore/#refund)
 
-***
+---
 
 ### reset()
 

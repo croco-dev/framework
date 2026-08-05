@@ -1,4 +1,5 @@
 import type { TxManager } from "@croco/tx-core";
+import type { KeyedRepositoryResult } from "@croco/repository-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AbstractDrizzleRepository } from "../libs/AbstractDrizzleRepository";
 import type { DrizzleDb } from "../libs/types";
@@ -20,7 +21,9 @@ class TestRepository extends AbstractDrizzleRepository<TestEntity, TestId, MockD
     return null;
   }
 
-  async findByIds(_ids: TestId[]): Promise<TestEntity[]> {
+  async findByIds(
+    _ids: readonly TestId[],
+  ): Promise<ReadonlyArray<KeyedRepositoryResult<TestId, TestEntity>>> {
     return [];
   }
 

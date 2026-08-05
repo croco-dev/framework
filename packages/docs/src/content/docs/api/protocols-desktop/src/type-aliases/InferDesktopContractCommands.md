@@ -5,7 +5,7 @@ prev: false
 title: "InferDesktopContractCommands"
 ---
 
-> **InferDesktopContractCommands**\<`TContract`\> = `TContract` *extends* [`DesktopContractDefinition`](/api/protocols-desktop/src/type-aliases/desktopcontractdefinition/)\<infer TCommands, [`DesktopEventRecord`](/api/protocols-desktop/src/type-aliases/desktopeventrecord/)\> ? `KeyedDesktopCommands`\<`TCommands`\> : `never`
+> **InferDesktopContractCommands**\<`TContract`\> = `TContract` _extends_ [`DesktopContractDefinition`](/api/protocols-desktop/src/type-aliases/desktopcontractdefinition/)\<infer TCommands, [`DesktopEventRecord`](/api/protocols-desktop/src/type-aliases/desktopeventrecord/), [`DesktopGrantRecord`](/api/protocols-desktop/src/type-aliases/desktopgrantrecord/)\> ? `KeyedDesktopCommands`\<`TCommands`\> : `never`
 
 ## Type Parameters
 

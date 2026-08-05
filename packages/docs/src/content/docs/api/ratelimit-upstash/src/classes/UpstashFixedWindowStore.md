@@ -29,7 +29,7 @@ Upstash Redis와 Lua 스크립트로 고정 윈도우 제한을 수행하는 저
 
 #### Overrides
 
-[`FixedWindowStore`](/api/ratelimit-core/src/classes/fixedwindowstore/).[`constructor`](/api/ratelimit-core/src/classes/fixedwindowstore/#constructor)
+`FixedWindowStore.constructor`
 
 ## Methods
 
@@ -55,7 +55,7 @@ Upstash Redis와 Lua 스크립트로 고정 윈도우 제한을 수행하는 저
 
 [`FixedWindowStore`](/api/ratelimit-core/src/classes/fixedwindowstore/).[`check`](/api/ratelimit-core/src/classes/fixedwindowstore/#check)
 
-***
+---
 
 ### checkFixedWindow()
 
@@ -79,7 +79,7 @@ Upstash Redis와 Lua 스크립트로 고정 윈도우 제한을 수행하는 저
 
 [`FixedWindowStore`](/api/ratelimit-core/src/classes/fixedwindowstore/).[`checkFixedWindow`](/api/ratelimit-core/src/classes/fixedwindowstore/#checkfixedwindow)
 
-***
+---
 
 ### expire()
 
@@ -103,7 +103,7 @@ Upstash Redis와 Lua 스크립트로 고정 윈도우 제한을 수행하는 저
 
 [`FixedWindowStore`](/api/ratelimit-core/src/classes/fixedwindowstore/).[`expire`](/api/ratelimit-core/src/classes/fixedwindowstore/#expire)
 
-***
+---
 
 ### getCount()
 
@@ -123,7 +123,7 @@ Upstash Redis와 Lua 스크립트로 고정 윈도우 제한을 수행하는 저
 
 [`FixedWindowStore`](/api/ratelimit-core/src/classes/fixedwindowstore/).[`getCount`](/api/ratelimit-core/src/classes/fixedwindowstore/#getcount)
 
-***
+---
 
 ### getStats()
 
@@ -137,7 +137,7 @@ Upstash Redis와 Lua 스크립트로 고정 윈도우 제한을 수행하는 저
 
 [`FixedWindowStore`](/api/ratelimit-core/src/classes/fixedwindowstore/).[`getStats`](/api/ratelimit-core/src/classes/fixedwindowstore/#getstats)
 
-***
+---
 
 ### increment()
 
@@ -161,7 +161,7 @@ Upstash Redis와 Lua 스크립트로 고정 윈도우 제한을 수행하는 저
 
 [`FixedWindowStore`](/api/ratelimit-core/src/classes/fixedwindowstore/).[`increment`](/api/ratelimit-core/src/classes/fixedwindowstore/#increment)
 
-***
+---
 
 ### pruneExpired()
 
@@ -175,7 +175,7 @@ Upstash Redis와 Lua 스크립트로 고정 윈도우 제한을 수행하는 저
 
 [`FixedWindowStore`](/api/ratelimit-core/src/classes/fixedwindowstore/).[`pruneExpired`](/api/ratelimit-core/src/classes/fixedwindowstore/#pruneexpired)
 
-***
+---
 
 ### refund()
 
@@ -203,7 +203,7 @@ Upstash Redis와 Lua 스크립트로 고정 윈도우 제한을 수행하는 저
 
 [`FixedWindowStore`](/api/ratelimit-core/src/classes/fixedwindowstore/).[`refund`](/api/ratelimit-core/src/classes/fixedwindowstore/#refund)
 
-***
+---
 
 ### reset()
 

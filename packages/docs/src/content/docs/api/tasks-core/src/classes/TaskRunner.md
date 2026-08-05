@@ -11,7 +11,7 @@ title: "TaskRunner"
 
 ### Constructor
 
-> **new TaskRunner**(`executionManager`, `registry?`, `logger?`): `TaskRunner`
+> **new TaskRunner**(`executionManager`, `registry?`, `logger?`, `runtime?`): `TaskRunner`
 
 #### Parameters
 
@@ -26,6 +26,10 @@ title: "TaskRunner"
 ##### logger?
 
 [`ILogger`](/api/framework-context/src/interfaces/ilogger/) = `noopLogger`
+
+##### runtime?
+
+[`TaskRunnerRuntime`](/api/tasks-core/src/interfaces/taskrunnerruntime/) = `{}`
 
 #### Returns
 
@@ -55,7 +59,7 @@ title: "TaskRunner"
 
 `Promise`\<`unknown`\>
 
-***
+---
 
 ### retry()
 

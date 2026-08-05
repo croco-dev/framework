@@ -8,9 +8,14 @@ import type {
 } from "../../libs/IBatchLoaderFactory";
 import { BATCH_LOADER_FACTORY_TOKEN } from "../../libs/IBatchLoaderFactory";
 import {
+  BatchLoadDuplicateResultKeyProblem,
   BatchLoaderFactoryNotRegisteredProblem,
+  BatchLoadResultIdentityMismatchProblem,
   BatchLoaderScopeCollisionProblem,
+  BatchLoadUnexpectedResultKeyProblem,
+  BatchLoadUnkeyedResultProblem,
 } from "../../libs/problems/BatchLoadProblems";
+import type { KeyedRepositoryResult } from "../../libs/ReadRepository";
 
 type Entity = {
   id: string;
@@ -112,8 +117,10 @@ class TestBatchLoaderFactory implements IBatchLoaderFactory {
 }
 
 class TestRepository {
-  findByIds = vi.fn<(ids: string[]) => Promise<ReadonlyArray<Entity>>>(async (ids: string[]) => {
-    return ids.map((id) => ({ id, value: `value-${id}` }));
+  findByIds = vi.fn<
+    (ids: readonly string[]) => Promise<ReadonlyArray<KeyedRepositoryResult<string, Entity>>>
+  >(async (ids: readonly string[]) => {
+    return ids.map((id) => ({ key: id, value: { id, value: `value-${id}` } }));
   });
 
   @BatchLoad({ by: "id" })
@@ -137,12 +144,16 @@ class FallbackRepository {
 }
 
 class StoreRepository {
-  findByIds = vi.fn(async (ids: string[]): Promise<ReadonlyArray<Entity>> => {
-    return ids.flatMap((id) => {
-      const value = this.store.get(id);
-      return value === undefined ? [] : [{ id, value }];
-    });
-  });
+  findByIds = vi.fn(
+    async (
+      ids: readonly string[],
+    ): Promise<ReadonlyArray<KeyedRepositoryResult<string, Entity>>> => {
+      return ids.flatMap((id) => {
+        const value = this.store.get(id);
+        return value === undefined ? [] : [{ key: id, value: { id, value } }];
+      });
+    },
+  );
 
   constructor(private readonly store: ReadonlyMap<string, string>) {}
 
@@ -154,12 +165,16 @@ class StoreRepository {
 }
 
 class ScopedStoreRepository {
-  findByIds = vi.fn(async (ids: string[]): Promise<ReadonlyArray<Entity>> => {
-    return ids.flatMap((id) => {
-      const value = this.store.get(id);
-      return value === undefined ? [] : [{ id, value }];
-    });
-  });
+  findByIds = vi.fn(
+    async (
+      ids: readonly string[],
+    ): Promise<ReadonlyArray<KeyedRepositoryResult<string, Entity>>> => {
+      return ids.flatMap((id) => {
+        const value = this.store.get(id);
+        return value === undefined ? [] : [{ key: id, value: { id, value } }];
+      });
+    },
+  );
 
   constructor(
     readonly scopeToken: BatchLoadScope,
@@ -177,12 +192,16 @@ class ScopedStoreRepository {
 }
 
 class ExplicitlyNamedScopedRepository {
-  findByIds = vi.fn(async (ids: string[]): Promise<ReadonlyArray<Entity>> => {
-    return ids.flatMap((id) => {
-      const value = this.store.get(id);
-      return value === undefined ? [] : [{ id, value }];
-    });
-  });
+  findByIds = vi.fn(
+    async (
+      ids: readonly string[],
+    ): Promise<ReadonlyArray<KeyedRepositoryResult<string, Entity>>> => {
+      return ids.flatMap((id) => {
+        const value = this.store.get(id);
+        return value === undefined ? [] : [{ key: id, value: { id, value } }];
+      });
+    },
+  );
 
   constructor(
     readonly scopeToken: BatchLoadScope,
@@ -202,13 +221,17 @@ class ExplicitlyNamedScopedRepository {
 
 class TransactionScopedRepository {
   readonly stores = new Map<BatchLoadScope, ReadonlyMap<string, string>>();
-  findByIds = vi.fn(async (ids: string[]): Promise<ReadonlyArray<Entity>> => {
-    const store = this.stores.get(this.currentScope);
-    return ids.flatMap((id) => {
-      const value = store?.get(id);
-      return value === undefined ? [] : [{ id, value }];
-    });
-  });
+  findByIds = vi.fn(
+    async (
+      ids: readonly string[],
+    ): Promise<ReadonlyArray<KeyedRepositoryResult<string, Entity>>> => {
+      const store = this.stores.get(this.currentScope);
+      return ids.flatMap((id) => {
+        const value = store?.get(id);
+        return value === undefined ? [] : [{ key: id, value: { id, value } }];
+      });
+    },
+  );
 
   constructor(public currentScope: BatchLoadScope) {}
 
@@ -509,10 +532,10 @@ describe("BatchLoad Decorator", () => {
   it("should handle findByIds returning results in different order", async () => {
     await Context.run({ requestId: "test-3" }, async () => {
       const repository = new TestRepository();
-      repository.findByIds.mockImplementation(async (_ids: string[]) => {
+      repository.findByIds.mockImplementation(async (_ids: readonly string[]) => {
         return [
-          { id: "2", value: "value-2" },
-          { id: "1", value: "value-1" },
+          { key: "2", value: { id: "2", value: "value-2" } },
+          { key: "1", value: { id: "1", value: "value-1" } },
         ];
       });
 
@@ -531,6 +554,70 @@ describe("BatchLoad Decorator", () => {
 
       await expect(repository.findById("1")).rejects.toThrow("DB Error");
       await expect(repository.findById("2")).rejects.toThrow("DB Error");
+    });
+  });
+
+  it("rejects legacy unkeyed findByIds results", async () => {
+    await Context.run({ requestId: "result-unkeyed" }, async () => {
+      const repository = new TestRepository();
+      repository.findByIds.mockResolvedValue([{ id: "1", value: "value-1" }] as never);
+
+      await expect(repository.findById("1")).rejects.toBeInstanceOf(BatchLoadUnkeyedResultProblem);
+    });
+  });
+
+  it("rejects duplicate result keys", async () => {
+    await Context.run({ requestId: "result-duplicate" }, async () => {
+      const repository = new TestRepository();
+      repository.findByIds.mockResolvedValue([
+        { key: "1", value: { id: "1", value: "first" } },
+        { key: "1", value: { id: "1", value: "second" } },
+      ]);
+
+      await expect(repository.findById("1")).rejects.toBeInstanceOf(
+        BatchLoadDuplicateResultKeyProblem,
+      );
+    });
+  });
+
+  it("rejects result keys that were not requested", async () => {
+    await Context.run({ requestId: "result-unexpected" }, async () => {
+      const repository = new TestRepository();
+      repository.findByIds.mockResolvedValue([
+        { key: "other", value: { id: "other", value: "unexpected" } },
+      ]);
+
+      await expect(repository.findById("1")).rejects.toBeInstanceOf(
+        BatchLoadUnexpectedResultKeyProblem,
+      );
+    });
+  });
+
+  it("rejects result values whose identity does not match the explicit key", async () => {
+    await Context.run({ requestId: "result-identity-mismatch" }, async () => {
+      const repository = new TestRepository();
+      repository.findByIds.mockResolvedValue([
+        { key: "1", value: { id: "2", value: "mismatched" } },
+      ]);
+
+      await expect(repository.findById("1")).rejects.toBeInstanceOf(
+        BatchLoadResultIdentityMismatchProblem,
+      );
+    });
+  });
+
+  it("returns null for omitted keyed results", async () => {
+    await Context.run({ requestId: "result-missing" }, async () => {
+      const repository = new TestRepository();
+      repository.findByIds.mockResolvedValue([{ key: "1", value: { id: "1", value: "value-1" } }]);
+
+      const [found, missing] = await Promise.all([
+        repository.findById("1"),
+        repository.findById("missing"),
+      ]);
+
+      expect(found).toEqual({ id: "1", value: "value-1" });
+      expect(missing).toBeNull();
     });
   });
 

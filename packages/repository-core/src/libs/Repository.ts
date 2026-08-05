@@ -1,6 +1,8 @@
 import type { ReadRepository } from "./ReadRepository";
 import type { WriteRepository } from "./WriteRepository";
 
+export type { KeyedRepositoryResult } from "./ReadRepository";
+
 /**
  * Unified repository contract that combines read and write capabilities.
  *
@@ -17,7 +19,9 @@ import type { WriteRepository } from "./WriteRepository";
  * class UserRepository implements Repository<User, string> {
  *   // Read operations
  *   async findById(id: string): Promise<User | null> { /-* ... *-/ }
- *   async findByIds(ids: readonly string[]): Promise<ReadonlyArray<User>> { /-* ... *-/ }
+ *   async findByIds(
+ *     ids: readonly string[],
+ *   ): Promise<ReadonlyArray<KeyedRepositoryResult<string, User>>> { /-* ... *-/ }
  *
  *   // Write operations
  *   async save(entity: User): Promise<User> { /-* ... *-/ }
