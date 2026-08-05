@@ -1,8 +1,16 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { effectivePublishManifest, findPackageJsonFiles } from "./package-manifest-contracts.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -46,7 +54,14 @@ type BinTarget = {
 type SmokeCommand = {
   readonly args: readonly string[];
   readonly expectedExitCode?: number;
+  readonly fixtureFiles?: readonly SmokeFixtureFile[];
+  readonly expectedPaths?: readonly string[];
   readonly expectedOutput: string;
+};
+
+type SmokeFixtureFile = {
+  readonly contents: string;
+  readonly path: string;
 };
 
 type PackageSmokeResult = {
@@ -356,22 +371,33 @@ function runPackageBinSmoke(
 
   run(
     "pnpm",
-    ["add", "--prod", packageInfo.tarballPath, ...internalPeerTarballs, "--ignore-scripts"],
+    [
+      "add",
+      "--prod",
+      packageInfo.tarballPath,
+      ...internalPeerTarballs,
+      "--ignore-scripts",
+      "--offline",
+    ],
     packageSmokeRoot,
     {
       label: `${packageInfo.packageName}: install packed tarball`,
     },
   );
 
+  const networkGuardPath = writeNetworkGuard(packageSmokeRoot);
+
   for (const binTarget of binTargets) {
     for (const smokeCommand of smokeCommandsFor(binTarget, packageInfo)) {
+      writeSmokeFixtureFiles(packageSmokeRoot, smokeCommand.fixtureFiles ?? []);
       const result = run(
-        "pnpm",
-        ["exec", binTarget.commandName, ...smokeCommand.args],
+        installedBinPath(packageSmokeRoot, binTarget.commandName),
+        smokeCommand.args,
         packageSmokeRoot,
         {
           expectedExitCode: smokeCommand.expectedExitCode,
-          label: `${packageInfo.packageName}: pnpm exec ${binTarget.commandName} ${smokeCommand.args.join(" ")}`,
+          env: smokeCommandEnvironment(packageSmokeRoot, networkGuardPath),
+          label: `${packageInfo.packageName}: ${binTarget.commandName} ${smokeCommand.args.join(" ")}`,
         },
       );
       const output = `${result.stdout}\n${result.stderr}`;
@@ -388,11 +414,159 @@ function runPackageBinSmoke(
         );
       }
 
+      for (const expectedPath of smokeCommand.expectedPaths ?? []) {
+        if (!existsSync(join(packageSmokeRoot, expectedPath))) {
+          throw new Error(
+            `${packageInfo.packageName}: ${binTarget.commandName} ${smokeCommand.args.join(" ")} did not create ${expectedPath}`,
+          );
+        }
+      }
+
       console.log(
         `package-bin-smoke: ${packageInfo.packageName} ${binTarget.commandName} ${smokeCommand.args.join(" ")}`,
       );
     }
   }
+}
+
+function installedBinPath(packageSmokeRoot: string, commandName: string): string {
+  return join(
+    packageSmokeRoot,
+    "node_modules",
+    ".bin",
+    process.platform === "win32" ? `${commandName}.CMD` : commandName,
+  );
+}
+
+function writeSmokeFixtureFiles(
+  packageSmokeRoot: string,
+  fixtureFiles: readonly SmokeFixtureFile[],
+): void {
+  for (const fixtureFile of fixtureFiles) {
+    const fixturePath = join(packageSmokeRoot, fixtureFile.path);
+    mkdirSync(dirname(fixturePath), { recursive: true });
+    writeFileSync(fixturePath, fixtureFile.contents);
+  }
+}
+
+function writeNetworkGuard(packageSmokeRoot: string): string {
+  const guardPath = join(packageSmokeRoot, ".croco-bin-smoke-network-guard.mjs");
+  writeFileSync(
+    guardPath,
+    `import childProcess from "node:child_process";
+import dgram from "node:dgram";
+import dns from "node:dns";
+import http from "node:http";
+import http2 from "node:http2";
+import https from "node:https";
+import { syncBuiltinESMExports } from "node:module";
+import net from "node:net";
+import tls from "node:tls";
+import workerThreads from "node:worker_threads";
+
+const diagnostic = "package-bin-smoke/network-disabled";
+const disabled = (operation) => function disabledOperation() {
+  throw new Error(diagnostic + ": " + operation);
+};
+const replace = (target, name, operation) => {
+  Object.defineProperty(target, name, {
+    configurable: true,
+    value: disabled(operation),
+    writable: true,
+  });
+};
+
+replace(globalThis, "fetch", "fetch");
+replace(http, "get", "http.get");
+replace(http, "request", "http.request");
+replace(http2, "connect", "http2.connect");
+replace(https, "get", "https.get");
+replace(https, "request", "https.request");
+replace(net, "connect", "net.connect");
+replace(net, "createConnection", "net.createConnection");
+replace(net.Socket.prototype, "connect", "net.Socket.connect");
+replace(tls, "connect", "tls.connect");
+replace(dgram, "createSocket", "dgram.createSocket");
+replace(dgram, "Socket", "dgram.Socket");
+
+const dnsOperationNames = [
+  "lookup",
+  "lookupService",
+  "resolve",
+  "resolve4",
+  "resolve6",
+  "resolveAny",
+  "resolveCaa",
+  "resolveCname",
+  "resolveMx",
+  "resolveNaptr",
+  "resolveNs",
+  "resolvePtr",
+  "resolveSoa",
+  "resolveSrv",
+  "resolveTxt",
+  "reverse",
+];
+const dnsTargets = [
+  { label: "dns", target: dns },
+  { label: "dns.promises", target: dns.promises },
+  { label: "dns.Resolver", target: dns.Resolver.prototype },
+  { label: "dns.promises.Resolver", target: dns.promises.Resolver.prototype },
+];
+
+for (const { label, target } of dnsTargets) {
+  for (const name of dnsOperationNames) {
+    if (typeof target[name] === "function") {
+      replace(target, name, label + "." + name);
+    }
+  }
+}
+
+for (const name of ["exec", "execFile", "fork", "spawn", "execSync", "execFileSync", "spawnSync"]) {
+  replace(childProcess, name, "child_process." + name);
+}
+replace(workerThreads, "Worker", "worker_threads.Worker");
+
+syncBuiltinESMExports();
+`,
+  );
+  return guardPath;
+}
+
+function smokeCommandEnvironment(
+  packageSmokeRoot: string,
+  networkGuardPath: string,
+): NodeJS.ProcessEnv {
+  const environment: NodeJS.ProcessEnv = {
+    CI: "1",
+    DATABASE_URL: "",
+    HOME: packageSmokeRoot,
+    NODE_OPTIONS: `--import=${pathToFileURL(networkGuardPath).href}`,
+    NO_UPDATE_NOTIFIER: "1",
+    USERPROFILE: packageSmokeRoot,
+    npm_config_offline: "true",
+  };
+
+  for (const name of [
+    "COMSPEC",
+    "LANG",
+    "LC_ALL",
+    "PATH",
+    "Path",
+    "PATHEXT",
+    "SYSTEMROOT",
+    "SystemRoot",
+    "TEMP",
+    "TMP",
+    "TMPDIR",
+  ]) {
+    const value = process.env[name];
+    if (value !== undefined) {
+      environment[name] = value;
+    }
+  }
+
+  return environment;
 }
 
 function writeConsumerPackageJson(
@@ -467,16 +641,59 @@ function smokeCommandsFor(
 ): readonly SmokeCommand[] {
   switch (binTarget.commandName) {
     case "create-croco-app":
-      return [{ args: ["--version"], expectedOutput: packageVersionFor(packageInfo) }];
+      return [
+        {
+          args: [
+            "bin-smoke-app",
+            "--preset",
+            "blank",
+            "--scope",
+            "@croco-smoke",
+            "--no-install",
+            "--no-git",
+            "--json",
+          ],
+          expectedPaths: ["bin-smoke-app/package.json"],
+          expectedOutput: '"code": "create-croco-app/project-created"',
+        },
+      ];
     case "croco":
-      return [{ args: ["--help"], expectedOutput: "Croco framework CLI" }];
+      return [
+        {
+          args: ["doctor", "--json"],
+          expectedOutput: '"version": "croco.doctor.v1"',
+        },
+      ];
     case "croco-openapi-spec":
-      return [{ args: ["--help"], expectedOutput: "Usage: croco-openapi-spec" }];
+      return [
+        {
+          args: [
+            "--controllers",
+            "bin-smoke/SmokeController.ts",
+            "--check",
+            "--compatibility-problems",
+            "--compatibility-schemas",
+          ],
+          fixtureFiles: functionalControllerFixtureFiles(),
+          expectedOutput: "Contract graph check passed for 1 route(s) across 1 controller(s).",
+        },
+      ];
     case "croco-rpc-codegen":
-      return [{ args: ["--help"], expectedOutput: "Usage: croco-rpc-codegen" }];
+      return [
+        {
+          args: [
+            "--controllers",
+            "bin-smoke/SmokeController.ts",
+            "--check",
+            "--compatibility-problems",
+            "--compatibility-schemas",
+          ],
+          fixtureFiles: functionalControllerFixtureFiles(),
+          expectedOutput: "Contract graph check passed for 1 route(s) across 1 controller(s).",
+        },
+      ];
     case "migrate":
       return [
-        { args: ["--help"], expectedOutput: "Drizzle migration runner" },
         {
           args: ["status"],
           expectedExitCode: 1,
@@ -489,21 +706,39 @@ function smokeCommandsFor(
         },
       ];
     default:
-      return [{ args: ["--help"], expectedOutput: binTarget.commandName }];
+      throw new Error(
+        `${packageInfo.packageName}: bin ${binTarget.commandName} is missing a functional smoke command contract`,
+      );
   }
 }
 
-function packageVersionFor(packageInfo: PackedPackageInfo): string {
-  if (
-    typeof packageInfo.packedManifest.version === "string" &&
-    packageInfo.packedManifest.version.length > 0
-  ) {
-    return packageInfo.packedManifest.version;
-  }
+function functionalControllerFixtureFiles(): readonly SmokeFixtureFile[] {
+  return [
+    {
+      path: "bin-smoke/SmokeController.ts",
+      contents: `const metadata = Reflect as typeof Reflect & {
+  defineMetadata(key: symbol, value: unknown, target: object): void;
+};
 
-  throw new Error(
-    `${packageInfo.packageName}: packed manifest version is required for version smoke`,
-  );
+export class SmokeController {
+  ping(): string {
+    return "ok";
+  }
+}
+
+metadata.defineMetadata(
+  Symbol.for("croco:rest:controller"),
+  { path: "/smoke", target: SmokeController },
+  SmokeController,
+);
+metadata.defineMetadata(
+  Symbol.for("croco:rest:routes"),
+  [{ method: "GET", methodName: "ping", path: "/ping" }],
+  SmokeController,
+);
+`,
+    },
+  ];
 }
 
 function safeDirectoryName(packageName: string): string {
@@ -530,13 +765,17 @@ function run(
   command: string,
   args: readonly string[],
   cwd: string,
-  options: { readonly expectedExitCode?: number; readonly label: string },
+  options: {
+    readonly env?: NodeJS.ProcessEnv;
+    readonly expectedExitCode?: number;
+    readonly label: string;
+  },
 ): RunResult {
   const expectedExitCode = options.expectedExitCode ?? 0;
   const result = spawnSync(command, [...args], {
     cwd,
     encoding: "utf-8",
-    env: { ...process.env, DATABASE_URL: "" },
+    env: options.env ?? { ...process.env, DATABASE_URL: "" },
     stdio: "pipe",
     timeout: spawnTimeoutMs,
   });
