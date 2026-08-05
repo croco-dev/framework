@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import {
+  copyFileSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -111,7 +112,7 @@ function main(): void {
         return packedGraphPackage;
       });
 
-      runPackageBinSmoke(consumerRoot, packedPackage, graphTarballs, binTargets);
+      runPackageBinSmoke(rootDir, consumerRoot, packedPackage, graphTarballs, binTargets);
       packageResults.push({
         binCount: binTargets.length,
         packageName: packageInfo.packageName,
@@ -356,6 +357,7 @@ function defaultBinCommandName(packageName: string): string {
 }
 
 function runPackageBinSmoke(
+  rootDir: string,
   consumerRoot: string,
   packageInfo: PackedPackageInfo,
   graphPackages: readonly PackedPackageInfo[],
@@ -364,6 +366,7 @@ function runPackageBinSmoke(
   const packageSmokeRoot = join(consumerRoot, safeDirectoryName(packageInfo.packageName));
   mkdirSync(packageSmokeRoot, { recursive: true });
   writeConsumerPackageJson(packageSmokeRoot, graphPackages);
+  copyWorkspaceLockfile(rootDir, packageSmokeRoot);
 
   const internalPeerTarballs = internalPeerPackagesFor(graphPackages).map(
     (packageInfo) => packageInfo.tarballPath,
@@ -377,7 +380,7 @@ function runPackageBinSmoke(
       packageInfo.tarballPath,
       ...internalPeerTarballs,
       "--ignore-scripts",
-      "--offline",
+      "--prefer-offline",
     ],
     packageSmokeRoot,
     {
@@ -426,6 +429,13 @@ function runPackageBinSmoke(
         `package-bin-smoke: ${packageInfo.packageName} ${binTarget.commandName} ${smokeCommand.args.join(" ")}`,
       );
     }
+  }
+}
+
+function copyWorkspaceLockfile(rootDir: string, consumerRoot: string): void {
+  const lockfilePath = join(rootDir, "pnpm-lock.yaml");
+  if (existsSync(lockfilePath)) {
+    copyFileSync(lockfilePath, join(consumerRoot, "pnpm-lock.yaml"));
   }
 }
 
