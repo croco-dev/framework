@@ -36,6 +36,54 @@ describe("spine-promotion-check.mts", () => {
     expect(buildSpinePromotionMarkdown(report)).toContain("promotion-ready");
   });
 
+  it("limits current-run evidence accountability to explicitly selected packages", () => {
+    const fixture = createPromotionFixture("protocols-core");
+    const report = createSpinePromotionReport({
+      currentCommit: commitSha,
+      evidenceContext: createContext("@croco/protocols-core"),
+      packageNames: ["retry-core"],
+      rootDir: fixture.repo,
+    });
+
+    expect(report.betaSpineRows).toEqual([]);
+    expect(hasSpinePromotionFailures(report)).toBe(false);
+  });
+
+  it("keeps global catalog validation outside the scoped evidence selection", () => {
+    const repo = createTempRepo();
+    writePackage(repo, "protocols-core");
+    writeCatalog(repo, {
+      betaPackages: ["protocols-core", "missing-core"],
+      productionPackages: [],
+      promotionPackages: {
+        "missing-core": metadata(defaultReferences()),
+        "protocols-core": metadata(defaultReferences()),
+      },
+      spinePackages: ["protocols-core", "missing-core"],
+    });
+
+    const report = createSpinePromotionReport({
+      currentCommit: commitSha,
+      evidenceContext: createContext("@croco/protocols-core"),
+      packageNames: ["protocols-core"],
+      rootDir: repo,
+      testInventory: () => ["src/tests/evidence.spec.ts"],
+    });
+
+    expect(report.catalogErrors).toContainEqual(
+      expect.stringContaining(
+        "spine package missing-core is beta but has no public workspace package",
+      ),
+    );
+    expect(hasSpinePromotionFailures(report)).toBe(true);
+  });
+
+  it("parses repeatable scoped package selectors", () => {
+    expect(
+      parseArgs(["--package", "@croco/retry-core", "--package", "protocols-core"]).packageNames,
+    ).toEqual(["protocols-core", "retry-core"]);
+  });
+
   it("rejects arbitrary prose instead of treating it as executable evidence", () => {
     const repo = createTempRepo();
     writePackage(repo, "protocols-core");

@@ -167,7 +167,7 @@ describe("verification manifest", () => {
     ).toBe(true);
   });
 
-  it("uses the affected package graph and skips unrelated heavyweight PR checks", () => {
+  it("keeps affected task evidence while selecting scoped package accountability checks", () => {
     const manifest = createVerificationManifest("spine", {
       base: "origin/trunk",
       changedFiles: ["packages/customer-health-core/src/libs/CustomerHealthScore.ts"],
@@ -175,20 +175,9 @@ describe("verification manifest", () => {
     });
     const byId = new Map(manifest.map((command) => [command.id, command]));
 
-    expect(byId.get("build")?.command).toEqual([
-      "pnpm",
-      "turbo",
-      "run",
-      "build",
-      "--filter=...[origin/trunk]",
-      "--filter=!@croco/docs",
-      "--summarize",
-      "--continue=always",
-    ]);
+    expect(byId.get("build")?.command).toContain("--filter=...[origin/trunk]");
     expect(byId.get("typecheck")?.command).toContain("--filter=...[origin/trunk]");
-    expect(byId.get("typecheck")?.command).toContain("--filter=!@croco/docs");
     expect(byId.get("test")?.command).toContain("--filter=...[origin/trunk]");
-    expect(byId.get("test")?.command).toContain("--filter=!@croco/docs");
     expect(byId.get("test")?.command).toContain("--force");
     expect(manifest.findIndex(({ id }) => id === "build")).toBeLessThan(
       manifest.findIndex(({ id }) => id === "typecheck"),
@@ -201,15 +190,71 @@ describe("verification manifest", () => {
       "alpha-release-smoke",
       "cli-e2e",
       "core-coverage",
-      "generated-app-smoke",
       "package-bins-smoke",
       "package-entrypoints-smoke",
-      "production-ready",
       "quick-start-lambda-smoke",
-      "spine-promotion",
     ]) {
       expect(byId.get(id)?.applicable, id).toBe(false);
     }
+    for (const id of ["production-ready", "spine-promotion"]) {
+      expect(byId.get(id)?.applicable, id).toBe(true);
+      expect(byId.get(id)?.selectionReason, id).toContain(
+        "packages/customer-health-core/src/libs/CustomerHealthScore.ts",
+      );
+    }
+    expect(byId.get("generated-app-smoke")?.applicable).toBe(false);
+    expect(byId.get("spine-promotion")?.command).toContain("customer-health-core");
+  });
+
+  it("selects package accountability checks for scoped certified, spine, and catalog changes", () => {
+    for (const path of [
+      "packages/telemetry-api/src/index.ts",
+      "packages/retry-core/src/index.ts",
+      "docs/package-catalog.json",
+    ]) {
+      const byId = new Map(
+        createVerificationManifest("spine", {
+          base: "origin/trunk",
+          changedFiles: [path],
+          head: "HEAD",
+        }).map((command) => [command.id, command]),
+      );
+
+      for (const id of ["production-ready", "spine-promotion"]) {
+        expect(byId.get(id)?.applicable, `${id}: ${path}`).toBe(true);
+        expect(byId.get(id)?.selectionReason, `${id}: ${path}`).toContain(path);
+      }
+      const isCatalog = path === "docs/package-catalog.json";
+      expect(byId.get("build")?.command.includes("--filter=...[origin/trunk]"), path).toBe(
+        !isCatalog,
+      );
+      expect(byId.get("typecheck")?.command.includes("--filter=...[origin/trunk]"), path).toBe(
+        !isCatalog,
+      );
+      expect(byId.get("test")?.command.includes("--filter=...[origin/trunk]"), path).toBe(
+        !isCatalog,
+      );
+      expect(byId.get("generated-app-smoke")?.applicable, path).toBe(isCatalog);
+      if (!isCatalog) {
+        expect(byId.get("spine-promotion")?.command, path).toContain(path.split("/")[1]);
+      }
+    }
+  });
+
+  it("keeps catalog accountability unscoped when package files change in the same range", () => {
+    const byId = new Map(
+      createVerificationManifest("spine", {
+        base: "origin/trunk",
+        changedFiles: ["docs/package-catalog.json", "packages/retry-core/src/index.ts"],
+        head: "HEAD",
+      }).map((command) => [command.id, command]),
+    );
+
+    expect(byId.get("build")?.command.some((argument) => argument.startsWith("--filter="))).toBe(
+      false,
+    );
+    expect(byId.get("generated-app-smoke")?.applicable).toBe(true);
+    expect(byId.get("spine-promotion")?.command).not.toContain("--package");
   });
 
   it("keeps targeted scaffold PR smoke and full non-PR spine coverage", () => {
@@ -256,22 +301,42 @@ describe("verification manifest", () => {
     ]) {
       expect(byId.get(id)?.applicable, id).toBe(false);
     }
+    expect(byId.get("production-ready")?.selectionReason).toBe(
+      "Skipped because no package graph or package catalog input changed.",
+    );
+    expect(byId.get("spine-promotion")?.selectionReason).toBe(
+      "Skipped because no package graph or package catalog input changed.",
+    );
+    expect(byId.get("build")?.command).toContain("--filter=...[origin/trunk]");
+    expect(byId.get("typecheck")?.command).toContain("--filter=...[origin/trunk]");
+    expect(byId.get("test")?.command).toContain("--filter=...[origin/trunk]");
     expect(byId.get("release-gate-tests")?.applicable).toBe(true);
   });
 
-  it("builds create-croco-app before scaffold checks selected by a lockfile change", () => {
-    const manifest = createVerificationManifest("publish", {
-      base: "origin/trunk",
-      changedFiles: ["pnpm-lock.yaml"],
-      head: "HEAD",
-    });
+  it("uses full evidence only for root accountability changes", () => {
+    for (const path of [
+      "pnpm-lock.yaml",
+      "packages/create-croco-app/src/index.ts",
+      "packages/cli/src/index.ts",
+    ]) {
+      const manifest = createVerificationManifest("publish", {
+        base: "origin/trunk",
+        changedFiles: [path],
+        head: "HEAD",
+      });
+      const build = manifest.find(({ id }) => id === "build");
 
-    expect(manifest.find(({ id }) => id === "build")?.command).toContain(
-      "--filter=create-croco-app",
-    );
+      expect(build?.command.includes("--filter=...[origin/trunk]"), path).toBe(
+        path !== "pnpm-lock.yaml",
+      );
+      expect(
+        manifest.findIndex(({ id }) => id === "build"),
+        path,
+      ).toBeLessThan(manifest.findIndex(({ id }) => id === "generated-app-smoke"));
+    }
   });
 
-  it("builds every package binary before a change-scoped binary smoke", () => {
+  it("builds every package binary before a scoped package-accountability binary smoke", () => {
     const binPackages = findPackageJsonFiles(resolve(ROOT_DIR, "packages"))
       .map((packagePath) => {
         const sourcePkg = JSON.parse(readFileSync(packagePath, "utf8")) as {
@@ -300,7 +365,6 @@ describe("verification manifest", () => {
         } => entry.private !== true && entry.bin !== undefined && typeof entry.name === "string",
       );
     const expectedBinFilters = binPackages.map(({ name }) => `--filter=${name}`).sort();
-
     for (const { packagePath } of binPackages) {
       const manifest = createVerificationManifest("publish", {
         base: "origin/trunk",

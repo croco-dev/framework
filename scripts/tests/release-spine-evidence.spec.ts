@@ -107,6 +107,7 @@ describe("release-spine-evidence.mts", () => {
     const checkpoints: ReleaseSpineEvidenceReport[] = [];
     const commands = [
       createCommand("provider-certification", {
+        selectionReason: "Selected because provider package inputs changed.",
         artifacts: [
           {
             label: "Provider report",
@@ -139,6 +140,9 @@ describe("release-spine-evidence.mts", () => {
     ).toBe("passed");
     expect(readFileSync(join(outputDir, "spine-evidence.md"), "utf-8")).toContain(
       "# Release Spine Evidence",
+    );
+    expect(readFileSync(join(outputDir, "spine-evidence.md"), "utf-8")).toContain(
+      "- Selection reason: Selected because provider package inputs changed.",
     );
     expect(existsSync(join(outputDir, "artifacts", "provider-certification", "provider.md"))).toBe(
       true,
@@ -960,6 +964,7 @@ describe("release-spine-evidence.mts", () => {
     const command = {
       ...createCommand("not-applicable"),
       applicable: false,
+      selectionReason: "Skipped because the changed files are unrelated.",
       reusedEvidence: { path: "bundle.json", recordId: "verification/spine/not-applicable" },
     };
     const runner = vi.fn(() => okResult("must not run"));
@@ -971,7 +976,14 @@ describe("release-spine-evidence.mts", () => {
       runner,
     });
     expect(runner).not.toHaveBeenCalled();
-    expect(report.checks[0]?.status).toBe("not_applicable");
+    expect(report.checks[0]).toMatchObject({
+      failureReason: "Skipped because the changed files are unrelated.",
+      selectionReason: "Skipped because the changed files are unrelated.",
+      status: "not_applicable",
+    });
+    expect(readFileSync(join(repo, "out", "spine-evidence.md"), "utf8")).toContain(
+      "- Selection reason: Skipped because the changed files are unrelated.",
+    );
   });
 
   it("rejects failed bundles and bundles with missing artifacts for command reuse", () => {
@@ -1196,6 +1208,7 @@ function createCommand(
   options: {
     readonly artifacts?: readonly EvidenceArtifactExpectation[];
     readonly command?: readonly string[];
+    readonly selectionReason?: string;
     readonly timeoutMs?: number;
   } = {},
 ): EvidenceCommand {
@@ -1204,6 +1217,7 @@ function createCommand(
     label: id,
     category: "quality",
     command: options.command ?? ["fake", id],
+    selectionReason: options.selectionReason,
     timeoutMs: options.timeoutMs ?? 100,
     artifacts: options.artifacts,
   };

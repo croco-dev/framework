@@ -82,6 +82,7 @@ export type EvidenceCommand = {
   readonly command: readonly string[];
   readonly timeoutMs: number;
   readonly applicable?: boolean;
+  readonly selectionReason?: string;
   readonly artifacts?: readonly EvidenceArtifactExpectation[];
   readonly reusedEvidence?: {
     readonly path: string;
@@ -1080,7 +1081,9 @@ export async function runReleaseSpineEvidence(
       report = updateCheck(report, index, {
         ...report.checks[index],
         completedAt: clock.nowIso(),
-        failureReason: "Not applicable to the changed files in this verification context.",
+        failureReason:
+          check.selectionReason ??
+          "Not applicable to the changed files in this verification context.",
         status: "not_applicable",
       });
       checkpoint();
@@ -1376,6 +1379,7 @@ export function buildReleaseSpineEvidenceMarkdown(report: ReleaseSpineEvidenceRe
       "",
       `- ID: \`${check.id}\``,
       `- Status: ${check.status}`,
+      `- Selection reason: ${check.selectionReason ?? "Always selected by this verification profile."}`,
       `- Command: \`${commandDisplay(check.command)}\``,
       `- Started at: ${check.startedAt ?? "not started"}`,
       `- Completed at: ${check.completedAt ?? "not complete"}`,
