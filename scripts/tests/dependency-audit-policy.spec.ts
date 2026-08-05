@@ -481,7 +481,7 @@ describe("dependency-audit-policy.mts", () => {
     ]);
   });
 
-  it("keeps dev-only findings advisory even when audit JSON marks them as production paths", () => {
+  it("blocks critical dev-test findings even when audit JSON marks them as production paths", () => {
     const repo = createRepo();
     writePackage(repo, "package.json", {
       devDependencies: {
@@ -504,7 +504,13 @@ describe("dependency-audit-policy.mts", () => {
       rootDir: repo,
     });
 
-    expect(result.exitCode).toBe(0);
+    expect(result.exitCode).toBe(1);
+    expect(result.blockingFindings).toEqual([
+      expect.objectContaining({
+        classification: "dev-test",
+        directDependency: "vitest",
+      }),
+    ]);
     expect(result.advisoryFindings[0]).toEqual(
       expect.objectContaining({
         classification: "dev-test",
@@ -514,7 +520,7 @@ describe("dependency-audit-policy.mts", () => {
     );
   });
 
-  it("keeps create-croco-app local Vitest installs advisory", () => {
+  it("blocks critical create-croco-app local Vitest installs", () => {
     const repo = createRepo();
     writePackage(repo, "packages/create-croco-app/package.json", {
       devDependencies: {
@@ -536,13 +542,53 @@ describe("dependency-audit-policy.mts", () => {
       rootDir: repo,
     });
 
-    expect(result.exitCode).toBe(0);
+    expect(result.exitCode).toBe(1);
+    expect(result.blockingFindings).toEqual([
+      expect.objectContaining({
+        classification: "dev-test",
+        directDependency: "vitest",
+      }),
+    ]);
     expect(result.advisoryFindings[0]).toEqual(
       expect.objectContaining({
         classification: "dev-test",
         metadataStatus: "not-required",
       }),
     );
+  });
+
+  it("blocks critical test tooling installed as both a peer and dev dependency", () => {
+    const repo = createRepo();
+    writePackage(repo, "packages/test-plugin/package.json", {
+      devDependencies: {
+        vitest: "4.0.16",
+      },
+      name: "@croco/test-plugin",
+      peerDependencies: {
+        vitest: "4.0.16",
+      },
+      version: "0.1.0",
+    });
+    writeAudit(repo, [
+      advisory({
+        ghsa: "GHSA-2348-2348-2349",
+        path: "packages__test-plugin>vitest>vite",
+        severity: "critical",
+      }),
+    ]);
+
+    const result = runDependencyAuditPolicy({
+      auditJsonPath: "audit.json",
+      rootDir: repo,
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.blockingFindings).toEqual([
+      expect.objectContaining({
+        classification: "peer-dev-test-install",
+        directDependency: "vitest",
+      }),
+    ]);
   });
 
   it("elevates generated app template runtime dependency fixtures", () => {
@@ -898,7 +944,7 @@ describe("dependency-audit-policy.mts", () => {
     );
   });
 
-  it("elevates explicit release evidence tools but not generic Vitest paths", () => {
+  it("elevates explicit release evidence tools and critical Vitest paths", () => {
     const repo = createRepo();
     writePackage(repo, "package.json", {
       devDependencies: {
@@ -928,14 +974,12 @@ describe("dependency-audit-policy.mts", () => {
     });
 
     expect(result.exitCode).toBe(1);
-    expect(result.blockingFindings).toEqual([
-      expect.objectContaining({
-        classification: "release-evidence",
-        directDependency: "@changesets/cli",
-      }),
-    ]);
-    expect(result.advisoryFindings).toEqual(
+    expect(result.blockingFindings).toEqual(
       expect.arrayContaining([
+        expect.objectContaining({
+          classification: "release-evidence",
+          directDependency: "@changesets/cli",
+        }),
         expect.objectContaining({
           classification: "dev-test",
           directDependency: "vitest",

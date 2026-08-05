@@ -38,7 +38,7 @@
     "@croco/protocols-core": "workspace:*"
   },
   "devDependencies": {
-    "vitest": "4.0.16",
+    "vitest": "4.1.8",
     "zod": "^3.23.8"
   },
   "vitest": {

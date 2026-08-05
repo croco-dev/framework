@@ -11,8 +11,7 @@
     "lint": "oxlint .",
     "test": "vitest run"
   },
-  "dependencies": {},
   "devDependencies": {
-    "vitest": "4.0.16"
+    "vitest": "4.1.8"
   }
 }

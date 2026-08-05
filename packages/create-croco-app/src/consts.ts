@@ -2,7 +2,7 @@ export const VERSIONS = {
   node: "22",
   typescript: "^5.8.0",
   tsup: "^8.5.1",
-  vitest: "^4.0.16",
+  vitest: "^4.1.8",
   commander: "^12.0.0",
   clack: "^0.9.0",
   fsExtra: "^11.0.0",

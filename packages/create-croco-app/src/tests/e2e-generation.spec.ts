@@ -1012,10 +1012,10 @@ describe("E2E: generate()", () => {
         "test:component": "vitest run --config vitest.config.ts",
       });
       expect(consolePackageJson.devDependencies).toMatchObject({
-        "@vitest/browser-playwright": "4.0.16",
+        "@vitest/browser-playwright": "4.1.8",
         msw: "2.15.0",
         playwright: "1.62.0",
-        vitest: "4.0.16",
+        vitest: "4.1.8",
         "vitest-browser-react": "2.2.0",
       });
       expect(rpcPackageJson.dependencies).toMatchObject({
