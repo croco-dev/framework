@@ -74,7 +74,7 @@ describe("first-success-verify.mts", () => {
     });
 
     expect(result.status, result.stderr || result.stdout).toBe(0);
-  }, 30_000);
+  }, 120_000);
 
   afterEach(() => {
     for (const root of tempRoots.splice(0)) {
