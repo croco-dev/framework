@@ -18,7 +18,8 @@ export const PR_CI_DESIGN_BUDGETS = {
 
 const HEAVY_ORDINARY_PR_CHECKS = [
   "alpha-release-smoke",
-  "cli-e2e",
+  "cli-packed-e2e",
+  "cli-source-e2e",
   "core-coverage",
   "first-success",
   "generated-app-smoke",
@@ -28,7 +29,8 @@ const HEAVY_ORDINARY_PR_CHECKS = [
 ] as const;
 
 const BUILD_ARTIFACT_MAINTENANCE_CHECKS = [
-  "cli-e2e",
+  "cli-packed-e2e",
+  "cli-source-e2e",
   "first-success",
   "generated-app-smoke",
   "package-bins-smoke",

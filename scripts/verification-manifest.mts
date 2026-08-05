@@ -107,6 +107,10 @@ function affectsCli(path: string): boolean {
   return path.startsWith("packages/cli/");
 }
 
+function affectsCreateCrocoApp(path: string): boolean {
+  return path.startsWith("packages/create-croco-app/");
+}
+
 function affectsPackageGraph(path: string): boolean {
   return (
     /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|turbo\.json|\.nvmrc)$/.test(path) ||
@@ -468,6 +472,10 @@ const spineOnly = (context: VerificationContext): readonly EvidenceCommand[] => 
       ? PACKAGE_BIN_BUILD_FILTERS.map((packageName) => `--filter=${packageName}`)
       : [];
   const cliApplicable = isApplicableToChangedFiles(context, affectsCli);
+  const packedCliApplicable = isApplicableToChangedFiles(
+    context,
+    (path) => affectsCli(path) || affectsCreateCrocoApp(path),
+  );
   const coreCoverageApplicable = isApplicableToChangedFiles(context, affectsCoreCoverage);
 
   return [
@@ -604,12 +612,34 @@ const spineOnly = (context: VerificationContext): readonly EvidenceCommand[] => 
       timeoutMs: minutes(45),
     },
     {
-      id: "cli-e2e",
-      label: "CLI integration tests",
+      id: "cli-source-e2e",
+      label: "CLI source integration tests",
       category: "quality",
-      command: ["pnpm", "--filter", "@croco/cli", "test:e2e"],
+      command: [
+        "pnpm",
+        "--dir=packages/cli",
+        "exec",
+        "vitest",
+        "run",
+        "src/tests/integration/e2e.spec.ts",
+      ],
       timeoutMs: minutes(15),
       applicable: cliApplicable,
+    },
+    {
+      id: "cli-packed-e2e",
+      label: "Packed installed CLI integration tests",
+      category: "quality",
+      command: [
+        "pnpm",
+        "--dir=packages/cli",
+        "exec",
+        "vitest",
+        "run",
+        "src/tests/integration/CliCommandIntegration.spec.ts",
+      ],
+      timeoutMs: minutes(15),
+      applicable: packedCliApplicable,
     },
     {
       id: "provider-certification",
