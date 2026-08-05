@@ -45,12 +45,6 @@ function lambdaPreset(options: LambdaPresetOptions): TelemetryConfig {
       batchSize: 256,
       autoInstrumentation: { enabled: true },
     },
-    metrics: {
-      enabled: false,
-    },
-    logs: {
-      enabled: false,
-    },
   };
 }
 

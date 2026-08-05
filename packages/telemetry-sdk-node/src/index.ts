@@ -1,7 +1,7 @@
 /**
- * 트레이스, 메트릭, 로그, 런타임 초기화에 사용하는 설정 타입입니다.
+ * 트레이스와 런타임 초기화에 사용하는 설정 타입입니다.
  */
-export type { LogsConfig, MetricsConfig, TelemetryConfig, TraceConfig } from "./config";
+export type { TelemetryConfig, TraceConfig } from "./config";
 export type {
   AutoInstrumentationConfig,
   AutoInstrumentationModule,
@@ -15,37 +15,18 @@ export {
   NODE_DEFAULT_MODULES,
   normalizeAutoInstrumentationConfig,
 } from "./libs/instrumentation/AutoInstrumentation";
-export type {
-  Logger,
-  LoggerOptions,
-  LogRecord,
-  LogRecordOptions,
-  LogSeverity,
-  LogsApi,
-} from "./libs/logs/LogsApi";
-export type {
-  Counter,
-  CounterOptions,
-  Gauge,
-  GaugeOptions,
-  Histogram,
-  HistogramOptions,
-  MetricsApi,
-} from "./libs/metrics/MetricsApi";
-
 /**
  * AWS Lambda 환경에 맞는 기본 Telemetry 설정을 생성하는 프리셋입니다.
  */
 export { lambdaPreset } from "./libs/presets/lambda";
 
 /**
- * OTLP, 지원되지 않는 신호, 샘플러 설정 오류를 나타내는 Problem 타입입니다.
+ * OTLP와 샘플러 설정 오류를 나타내는 Problem 타입입니다.
  */
 export {
   OtlpEndpointRequiredProblem,
   SamplerProblem,
   TelemetryForceFlushUnsupportedProblem,
-  UnsupportedTelemetrySignalProblem,
 } from "./libs/problems/TelemetryProblems";
 export { TelemetryAutoInstrumentationProblem } from "./libs/problems/TelemetryAutoInstrumentationProblem";
 

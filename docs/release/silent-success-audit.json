@@ -1151,9 +1151,9 @@
       "coverage": {
         "configuration": {
           "status": "reviewed",
-          "surfaceIds": ["telemetry-config", "telemetry-unsupported-config"],
+          "surfaceIds": ["telemetry-config"],
           "reviewPaths": ["packages/telemetry-sdk-node/src"],
-          "searchTerms": ["TelemetryConfig", "autoInstrumentation", "metrics", "logs"]
+          "searchTerms": ["TelemetryConfig", "autoInstrumentation", "trace"]
         },
         "decoder": {
           "status": "reviewed",
@@ -1187,7 +1187,7 @@
           "disposition": "implemented-tested",
           "status": "unresolved",
           "members": [
-            "TelemetryConfig.serviceName/serviceVersion/environment/enabled/trace/metrics/logs/resourceAttributes",
+            "TelemetryConfig.serviceName/serviceVersion/environment/enabled/trace/resourceAttributes",
             "TraceConfig.enabled/exporterUrl/exporterHeaders/sampler/probability/batchTimeout/batchCount/batchSize/instrumentations/autoInstrumentation",
             "AutoInstrumentationConfig.enabled/modules/excludeModules/customInstrumentations/moduleOptions/exclude/include"
           ],
@@ -1201,31 +1201,6 @@
           },
           "issue": "https://github.com/croco-dev/framework/issues/1325",
           "regressionTest": "Prove autoInstrumentation changes the NodeSDK instrumentation set for enabled and disabled values."
-        },
-        {
-          "id": "telemetry-unsupported-config",
-          "category": "configuration",
-          "disposition": "unsupported-rejected",
-          "status": "unresolved",
-          "members": [
-            "MetricsConfig.enabled/exporterUrl/exporterHeaders/exportIntervalMillis/exportTimeoutMillis",
-            "LogsConfig.enabled/exporterUrl/exporterHeaders/maxQueueSize/maxExportBatchSize",
-            "LogRecordOptions.severity/body/attributes/context",
-            "LoggerOptions.name/version/schemaUrl/attributes",
-            "CounterOptions.name/description/unit",
-            "HistogramOptions.name/description/unit/boundaries",
-            "GaugeOptions.name/description/unit"
-          ],
-          "source": {
-            "path": "packages/telemetry-sdk-node/src/config.ts",
-            "identifier": "metrics"
-          },
-          "test": {
-            "path": "packages/telemetry-sdk-node/src/tests/TelemetryRuntime.spec.ts",
-            "identifier": "TelemetryRuntime"
-          },
-          "issue": "https://github.com/croco-dev/framework/issues/1324",
-          "regressionTest": "Reject enabled metrics/logs until processors exist, covering each signal independently and together."
         },
         {
           "id": "otlp-environment",

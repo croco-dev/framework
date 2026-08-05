@@ -32,48 +32,10 @@ export type TraceConfig = {
 };
 
 /**
- * Configuration for telemetry metrics.
- *
- * Reserved configuration for future metric runtime providers.
- * Setting enabled to true currently rejects TelemetryRuntime initialization.
- */
-export type MetricsConfig = {
-  /** Requests metrics collection. Must remain false until a runtime provider is available. */
-  enabled?: boolean;
-  /** OTLP metrics exporter URL */
-  exporterUrl?: string;
-  /** Additional HTTP headers for the exporter */
-  exporterHeaders?: Record<string, string>;
-  /** Export interval in milliseconds */
-  exportIntervalMillis?: number;
-  /** Export timeout in milliseconds */
-  exportTimeoutMillis?: number;
-};
-
-/**
- * Configuration for telemetry logs.
- *
- * Reserved configuration for future log runtime providers.
- * Setting enabled to true currently rejects TelemetryRuntime initialization.
- */
-export type LogsConfig = {
-  /** Requests log collection. Must remain false until a runtime provider is available. */
-  enabled?: boolean;
-  /** OTLP logs exporter URL */
-  exporterUrl?: string;
-  /** Additional HTTP headers for the exporter */
-  exporterHeaders?: Record<string, string>;
-  /** Maximum queue size for log records */
-  maxQueueSize?: number;
-  /** Maximum batch size for export */
-  maxExportBatchSize?: number;
-};
-
-/**
  * Main configuration for the OpenTelemetry SDK.
  *
  * This is the top-level configuration object passed to TelemetryRuntime.init.
- * It combines service metadata with trace configuration and reserved metrics/logs configuration.
+ * It combines service metadata with executable trace configuration.
  *
  * @example
  * ```typescript
@@ -86,8 +48,6 @@ export type LogsConfig = {
  *     enabled: true,
  *     exporterUrl: 'http://localhost:4318/v1/traces',
  *   },
- *   metrics: { enabled: false },
- *   logs: { enabled: false },
  * };
  * ```
  */
@@ -102,10 +62,6 @@ export type TelemetryConfig = {
   enabled?: boolean;
   /** Trace configuration */
   trace?: TraceConfig;
-  /** Metrics configuration */
-  metrics?: MetricsConfig;
-  /** Logs configuration */
-  logs?: LogsConfig;
   /** Additional resource attributes */
   resourceAttributes?: Record<string, string | number | boolean>;
 };

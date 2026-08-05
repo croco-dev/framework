@@ -1,5 +1,4 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
-import type { UnsupportedTelemetrySignalName } from "../signals/TelemetrySignalSupport";
 
 /**
  * 샘플링 설정값이 유효하지 않을 때 발생하는 Problem입니다.
@@ -29,28 +28,23 @@ export class OtlpEndpointRequiredProblem extends Problem {
   }
 }
 
+type LegacyTelemetrySignalName = "logs" | "metrics";
+
 /**
- * Raised when metrics or logs are requested before TelemetryRuntime has a provider for that signal.
+ * Rejects removed signal configuration passed by untyped or JavaScript consumers.
+ * This migration Problem is intentionally not exported from the package entrypoint.
  */
-export class UnsupportedTelemetrySignalProblem extends Problem {
+export class LegacyTelemetrySignalConfigProblem extends Problem {
   readonly code = "TELEMETRY_SIGNAL_UNSUPPORTED";
   readonly category = ProblemCategory.BadRequest;
-  readonly signal: UnsupportedTelemetrySignalName | undefined;
-  readonly signals: readonly UnsupportedTelemetrySignalName[];
-  readonly supportState = "unsupported-requested" as const;
+  readonly signals: readonly LegacyTelemetrySignalName[];
 
-  constructor(
-    signals: readonly [UnsupportedTelemetrySignalName, ...UnsupportedTelemetrySignalName[]],
-  ) {
-    const signalList = signals.join(", ");
-    const plural = signals.length > 1;
-    const settings = signals.map((signal) => `${signal}.enabled`).join(" and ");
+  constructor(signals: readonly [LegacyTelemetrySignalName, ...LegacyTelemetrySignalName[]]) {
     super(
       "TELEMETRY_SIGNAL_UNSUPPORTED",
       ProblemCategory.BadRequest,
-      `Telemetry signal${plural ? "s" : ""} '${signalList}' ${plural ? "are" : "is"} not supported by TelemetryRuntime; set ${settings} to false or omit ${plural ? "them" : "it"} until runtime provider${plural ? "s are" : " is"} available`,
+      `TelemetryRuntime supports traces only; remove ${signals.join(" and ")} configuration before initialization`,
     );
-    this.signal = signals.length === 1 ? signals[0] : undefined;
     this.signals = [...signals];
   }
 }

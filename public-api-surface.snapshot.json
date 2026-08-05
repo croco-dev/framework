@@ -24540,12 +24540,6 @@
               "exportKind": "named",
               "source": "./runtime",
               "declarationKind": "class"
-            },
-            {
-              "name": "UnsupportedTelemetrySignalProblem",
-              "exportKind": "named",
-              "source": "./libs/problems/TelemetryProblems",
-              "declarationKind": "class"
             }
           ],
           "typeExports": [
@@ -24560,84 +24554,9 @@
               "source": "./libs/instrumentation/AutoInstrumentation"
             },
             {
-              "name": "Counter",
-              "exportKind": "named",
-              "source": "./libs/metrics/MetricsApi"
-            },
-            {
-              "name": "CounterOptions",
-              "exportKind": "named",
-              "source": "./libs/metrics/MetricsApi"
-            },
-            {
               "name": "ForceFlushResult",
               "exportKind": "named",
               "source": "./runtime"
-            },
-            {
-              "name": "Gauge",
-              "exportKind": "named",
-              "source": "./libs/metrics/MetricsApi"
-            },
-            {
-              "name": "GaugeOptions",
-              "exportKind": "named",
-              "source": "./libs/metrics/MetricsApi"
-            },
-            {
-              "name": "Histogram",
-              "exportKind": "named",
-              "source": "./libs/metrics/MetricsApi"
-            },
-            {
-              "name": "HistogramOptions",
-              "exportKind": "named",
-              "source": "./libs/metrics/MetricsApi"
-            },
-            {
-              "name": "Logger",
-              "exportKind": "named",
-              "source": "./libs/logs/LogsApi"
-            },
-            {
-              "name": "LoggerOptions",
-              "exportKind": "named",
-              "source": "./libs/logs/LogsApi"
-            },
-            {
-              "name": "LogRecord",
-              "exportKind": "named",
-              "source": "./libs/logs/LogsApi"
-            },
-            {
-              "name": "LogRecordOptions",
-              "exportKind": "named",
-              "source": "./libs/logs/LogsApi"
-            },
-            {
-              "name": "LogsApi",
-              "exportKind": "named",
-              "source": "./libs/logs/LogsApi"
-            },
-            {
-              "name": "LogsConfig",
-              "exportKind": "named",
-              "source": "./config"
-            },
-            {
-              "name": "LogSeverity",
-              "exportKind": "named",
-              "source": "./libs/logs/LogsApi"
-            },
-            {
-              "name": "MetricsApi",
-              "exportKind": "named",
-              "source": "./libs/metrics/MetricsApi"
-            },
-            {
-              "name": "MetricsConfig",
-              "exportKind": "named",
-              "source": "./config"
             },
             {
               "name": "ShutdownResult",
