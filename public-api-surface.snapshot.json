@@ -22583,6 +22583,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "BatchLoadDuplicateResultKeyProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/BatchLoadProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "BatchLoaderFactoryNotRegisteredProblem",
               "exportKind": "named",
               "source": "./libs/problems/BatchLoadProblems",
@@ -22599,9 +22605,33 @@
               "exportKind": "named",
               "source": "./libs/problems/BatchLoadProblems",
               "declarationKind": "class"
+            },
+            {
+              "name": "BatchLoadResultIdentityMismatchProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/BatchLoadProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "BatchLoadUnexpectedResultKeyProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/BatchLoadProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "BatchLoadUnkeyedResultProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/BatchLoadProblems",
+              "declarationKind": "class"
             }
           ],
           "typeExports": [
+            {
+              "name": "KeyedRepositoryResult",
+              "exportKind": "declaration",
+              "source": "./libs/ReadRepository",
+              "declarationKind": "type"
+            },
             {
               "name": "ReadRepository",
               "exportKind": "declaration",
@@ -22649,6 +22679,16 @@
               "name": "IBatchLoaderFactory",
               "exportKind": "named",
               "source": "./libs/IBatchLoaderFactory"
+            },
+            {
+              "name": "KeyedRepositoryResult",
+              "exportKind": "named",
+              "source": "./libs/ReadRepository"
+            },
+            {
+              "name": "KeyedRepositoryResult",
+              "exportKind": "named",
+              "source": "./ReadRepository"
             }
           ]
         }

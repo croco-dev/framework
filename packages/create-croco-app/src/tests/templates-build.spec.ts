@@ -125,6 +125,11 @@ function checkSpaBeSplitStructure() {
     /ProblemCategory/,
   );
   checkFileContains("spa-be-split", ["apps", "api-server", "src", "users.ts"], /Repository/);
+  checkFileContains(
+    "spa-be-split",
+    ["apps", "api-server", "src", "users.ts"],
+    /KeyedRepositoryResult/,
+  );
   checkFileContains("spa-be-split", ["apps", "api-server", "src", "users.ts"], /RetryTemplate/);
   checkFileContains("spa-be-split", ["apps", "api-server", "src", "users.ts"], /EventPublisher/);
   checkFileContains("spa-be-split", ["apps", "api-server", "src", "users.ts"], /InMemoryEventBus/);

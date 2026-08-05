@@ -11,11 +11,11 @@ title: "BoundDesktopContract"
 
 ### TContract
 
-`TContract` *extends* [`AnyDesktopContract`](/api/protocols-desktop/src/type-aliases/anydesktopcontract/)
+`TContract` _extends_ [`AnyDesktopContract`](/api/protocols-desktop/src/type-aliases/anydesktopcontract/)
 
 ### TContractKey
 
-`TContractKey` *extends* `string`
+`TContractKey` _extends_ `string`
 
 ## Properties
 
@@ -23,25 +23,31 @@ title: "BoundDesktopContract"
 
 > `readonly` **commands**: `{ readonly [TMemberKey in keyof TContract["commands"] & string]: BoundDesktopCommand<TContract["commands"][TMemberKey], TContractKey, TMemberKey> }`
 
-***
+---
 
 ### contractKey
 
 > `readonly` **contractKey**: `TContractKey`
 
-***
+---
 
 ### definitionType
 
 > `readonly` **definitionType**: `"contract"`
 
-***
+---
 
 ### events
 
 > `readonly` **events**: `{ readonly [TMemberKey in keyof TContract["events"] & string]: BoundDesktopEvent<TContract["events"][TMemberKey], TContractKey, TMemberKey> }`
 
-***
+---
+
+### grants
+
+> `readonly` **grants**: `{ readonly [TMemberKey in keyof TContract["grants"] & string]: BoundDesktopGrant<TContract["grants"][TMemberKey], TContractKey, TMemberKey> }`
+
+---
 
 ### metadata
 

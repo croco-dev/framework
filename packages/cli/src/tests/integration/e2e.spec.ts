@@ -373,9 +373,14 @@ declare module '@croco/transports-http' {
 }
 
 declare module '@croco/repository-core' {
+  export type KeyedRepositoryResult<TId, TEntity> = {
+    readonly key: TId;
+    readonly value: TEntity;
+  };
+
   export interface Repository<TEntity, TId> {
     findById(id: TId): Promise<TEntity | null>;
-    findByIds(ids: readonly TId[]): Promise<ReadonlyArray<TEntity>>;
+    findByIds(ids: readonly TId[]): Promise<ReadonlyArray<KeyedRepositoryResult<TId, TEntity>>>;
     save(entity: TEntity): Promise<TEntity>;
     deleteById(id: TId): Promise<void>;
   }

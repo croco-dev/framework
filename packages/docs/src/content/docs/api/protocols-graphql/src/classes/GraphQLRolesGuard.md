@@ -10,7 +10,7 @@ title: "GraphQLRolesGuard"
 ## Example
 
 ```typescript
-import type { Guard } from '@croco/framework-context';
+import type { Guard } from "@croco/framework-context";
 
 const guard: Guard<{ userId: string }> = {
   canActivate(context) {
@@ -27,7 +27,17 @@ const guard: Guard<{ userId: string }> = {
 
 ### Constructor
 
-> **new GraphQLRolesGuard**(): `GraphQLRolesGuard`
+> **new GraphQLRolesGuard**(`resolverTarget?`, `resolverMethodName?`): `GraphQLRolesGuard`
+
+#### Parameters
+
+##### resolverTarget?
+
+`object`
+
+##### resolverMethodName?
+
+`string`
 
 #### Returns
 

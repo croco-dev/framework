@@ -13,8 +13,8 @@ title: "DesktopContractMemberMetadata"
 
 > `readonly` **key**: `string`
 
-***
+---
 
 ### kind
 
-> `readonly` **kind**: [`DesktopCommandKind`](/api/protocols-desktop/src/type-aliases/desktopcommandkind/) \| `"event"`
+> `readonly` **kind**: [`DesktopCommandKind`](/api/protocols-desktop/src/type-aliases/desktopcommandkind/) \| `"event"` \| `"grant"`

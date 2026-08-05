@@ -17,11 +17,11 @@ title: "desktop"
 
 ##### TContracts
 
-`TContracts` *extends* `Readonly`\<`Record`\<`string`, [`AnyDesktopContract`](/api/protocols-desktop/src/type-aliases/anydesktopcontract/)\>\>
+`TContracts` _extends_ `Readonly`\<`Record`\<`string`, [`AnyDesktopContract`](/api/protocols-desktop/src/type-aliases/anydesktopcontract/)\>\>
 
 ##### TWindows
 
-`TWindows` *extends* `Readonly`\<`Record`\<`string`, [`AnyDesktopWindow`](/api/protocols-desktop/src/type-aliases/anydesktopwindow/)\>\>
+`TWindows` _extends_ `Readonly`\<`Record`\<`string`, [`AnyDesktopWindow`](/api/protocols-desktop/src/type-aliases/anydesktopwindow/)\>\>
 
 #### Parameters
 
@@ -35,27 +35,31 @@ title: "desktop"
 
 ### contract
 
-> **contract**: \<`TCommands`, `TEvents`\>(`options`) => [`DesktopContractDefinition`](/api/protocols-desktop/src/type-aliases/desktopcontractdefinition/)\<`TCommands`, `TEvents`\>
+> **contract**: \<`TCommands`, `TEvents`, `TGrants`\>(`options`) => [`DesktopContractDefinition`](/api/protocols-desktop/src/type-aliases/desktopcontractdefinition/)\<`TCommands`, `TEvents`, `TGrants`\>
 
 #### Type Parameters
 
 ##### TCommands
 
-`TCommands` *extends* `Readonly`\<`Record`\<`string`, [`AnyDesktopCommand`](/api/protocols-desktop/src/type-aliases/anydesktopcommand/)\>\> = `Record`\<`never`, `never`\>
+`TCommands` _extends_ `Readonly`\<`Record`\<`string`, [`AnyDesktopCommand`](/api/protocols-desktop/src/type-aliases/anydesktopcommand/)\>\> = `Record`\<`never`, `never`\>
 
 ##### TEvents
 
-`TEvents` *extends* `Readonly`\<`Record`\<`string`, [`AnyDesktopEvent`](/api/protocols-desktop/src/type-aliases/anydesktopevent/)\>\> = `Record`\<`never`, `never`\>
+`TEvents` _extends_ `Readonly`\<`Record`\<`string`, [`AnyDesktopEvent`](/api/protocols-desktop/src/type-aliases/anydesktopevent/)\>\> = `Record`\<`never`, `never`\>
+
+##### TGrants
+
+`TGrants` _extends_ `Readonly`\<`Record`\<`string`, [`AnyDesktopGrant`](/api/protocols-desktop/src/type-aliases/anydesktopgrant/)\>\> = `Record`\<`never`, `never`\>
 
 #### Parameters
 
 ##### options
 
-[`DesktopContractOptions`](/api/protocols-desktop/src/type-aliases/desktopcontractoptions/)\<`TCommands`, `TEvents`\> & `NoInvalidKeys`\<`TCommands`\> & `NoInvalidKeys`\<`TEvents`\> & `NoDuplicateMembers`\<`TCommands`, `TEvents`\>
+[`DesktopContractOptions`](/api/protocols-desktop/src/type-aliases/desktopcontractoptions/)\<`TCommands`, `TEvents`, `TGrants`\> & `NoInvalidKeys`\<`TCommands`\> & `NoInvalidKeys`\<`TEvents`\> & `NoInvalidKeys`\<`TGrants`\> & `NoDuplicateMembers`\<`TCommands`, `TEvents`, `TGrants`\>
 
 #### Returns
 
-[`DesktopContractDefinition`](/api/protocols-desktop/src/type-aliases/desktopcontractdefinition/)\<`TCommands`, `TEvents`\>
+[`DesktopContractDefinition`](/api/protocols-desktop/src/type-aliases/desktopcontractdefinition/)\<`TCommands`, `TEvents`, `TGrants`\>
 
 ### event
 
@@ -76,6 +80,62 @@ title: "desktop"
 #### Returns
 
 [`DesktopEventDefinition`](/api/protocols-desktop/src/type-aliases/desktopeventdefinition/)\<`TPayloadSchema`\>
+
+### grant
+
+> `readonly` **grant**: `object`
+
+#### grant.directory
+
+> **directory**: \<`TAccess`, `TScope`, `TLifetime`\>(`options`) => [`DesktopGrantDefinition`](/api/protocols-desktop/src/type-aliases/desktopgrantdefinition/)\<`"directory"`, `TAccess`, `TScope`, `TLifetime`\>
+
+##### Type Parameters
+
+###### TAccess
+
+`TAccess` _extends_ [`DesktopGrantAccess`](/api/protocols-desktop/src/type-aliases/desktopgrantaccess/)
+
+###### TScope
+
+`TScope` _extends_ [`DesktopGrantScope`](/api/protocols-desktop/src/type-aliases/desktopgrantscope/)
+
+###### TLifetime
+
+`TLifetime` _extends_ [`DesktopGrantLifetime`](/api/protocols-desktop/src/type-aliases/desktopgrantlifetime/)
+
+##### Parameters
+
+###### options
+
+[`DesktopDirectoryGrantOptions`](/api/protocols-desktop/src/type-aliases/desktopdirectorygrantoptions/)\<`TAccess`, `TScope`, `TLifetime`\>
+
+##### Returns
+
+[`DesktopGrantDefinition`](/api/protocols-desktop/src/type-aliases/desktopgrantdefinition/)\<`"directory"`, `TAccess`, `TScope`, `TLifetime`\>
+
+#### grant.file
+
+> **file**: \<`TAccess`, `TLifetime`\>(`options`) => [`DesktopGrantDefinition`](/api/protocols-desktop/src/type-aliases/desktopgrantdefinition/)\<`"file"`, `TAccess`, `"exact"`, `TLifetime`\>
+
+##### Type Parameters
+
+###### TAccess
+
+`TAccess` _extends_ [`DesktopGrantAccess`](/api/protocols-desktop/src/type-aliases/desktopgrantaccess/)
+
+###### TLifetime
+
+`TLifetime` _extends_ [`DesktopGrantLifetime`](/api/protocols-desktop/src/type-aliases/desktopgrantlifetime/)
+
+##### Parameters
+
+###### options
+
+[`DesktopFileGrantOptions`](/api/protocols-desktop/src/type-aliases/desktopfilegrantoptions/)\<`TAccess`, `TLifetime`\>
+
+##### Returns
+
+[`DesktopGrantDefinition`](/api/protocols-desktop/src/type-aliases/desktopgrantdefinition/)\<`"file"`, `TAccess`, `"exact"`, `TLifetime`\>
 
 ### mutation
 
@@ -137,11 +197,11 @@ title: "desktop"
 
 ###### TExpose
 
-`TExpose` *extends* readonly [`KeyedDesktopCommand`](/api/protocols-desktop/src/type-aliases/keyeddesktopcommand/)[] = readonly \[\]
+`TExpose` _extends_ readonly [`KeyedDesktopCommand`](/api/protocols-desktop/src/type-aliases/keyeddesktopcommand/)[] = readonly \[\]
 
 ###### TReceive
 
-`TReceive` *extends* readonly [`KeyedDesktopEvent`](/api/protocols-desktop/src/type-aliases/keyeddesktopevent/)[] = readonly \[\]
+`TReceive` _extends_ readonly [`KeyedDesktopEvent`](/api/protocols-desktop/src/type-aliases/keyeddesktopevent/)[] = readonly \[\]
 
 ##### Parameters
 
@@ -161,11 +221,11 @@ title: "desktop"
 
 ###### TInitialUrl
 
-`TInitialUrl` *extends* `string`
+`TInitialUrl` _extends_ `string`
 
 ###### TAllowedOrigins
 
-`TAllowedOrigins` *extends* readonly `string`[]
+`TAllowedOrigins` _extends_ readonly `string`[]
 
 ##### Parameters
 

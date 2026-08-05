@@ -10,7 +10,7 @@ Drizzle 트랜잭션 관련 타입 유틸리티입니다.
 ## Example
 
 ```typescript
-import { InferTxClient, InferTxOptions } from '@croco/tx-drizzle';
+import { InferTxClient, InferTxOptions } from "@croco/tx-drizzle";
 
 type TxClient = InferTxClient<typeof db>;
 type TxOptions = InferTxOptions<typeof db>;
@@ -28,7 +28,7 @@ type TxOptions = InferTxOptions<typeof db>;
 
 ### TDb
 
-`TDb` *extends* [`DrizzleDb`](/api/tx-drizzle/src/interfaces/drizzledb/)\<`unknown`\> = [`DrizzleDb`](/api/tx-drizzle/src/interfaces/drizzledb/)
+`TDb` _extends_ [`DrizzleDb`](/api/tx-drizzle/src/interfaces/drizzledb/)\<`unknown`\> = [`DrizzleDb`](/api/tx-drizzle/src/interfaces/drizzledb/)
 
 ## Implements
 
@@ -78,7 +78,7 @@ The ID of the entity to delete
 
 [`Repository`](/api/repository-core/src/interfaces/repository/).[`deleteById`](/api/repository-core/src/interfaces/repository/#deletebyid)
 
-***
+---
 
 ### findById()
 
@@ -104,11 +104,11 @@ The entity if found, null otherwise
 
 [`Repository`](/api/repository-core/src/interfaces/repository/).[`findById`](/api/repository-core/src/interfaces/repository/#findbyid)
 
-***
+---
 
 ### findByIds()
 
-> `abstract` **findByIds**(`ids`): `Promise`\<`TEntity`[]\>
+> `abstract` **findByIds**(`ids`): `Promise`\<readonly [`KeyedRepositoryResult`](/api/repository-core/src/type-aliases/keyedrepositoryresult/)\<`TId`, `TEntity`\>[]\>
 
 Find multiple entities by their IDs.
 
@@ -116,21 +116,22 @@ Find multiple entities by their IDs.
 
 ##### ids
 
-`TId`[]
+readonly `TId`[]
 
 Array of entity IDs
 
 #### Returns
 
-`Promise`\<`TEntity`[]\>
+`Promise`\<readonly [`KeyedRepositoryResult`](/api/repository-core/src/type-aliases/keyedrepositoryresult/)\<`TId`, `TEntity`\>[]\>
 
-Array of entities (may be empty or contain nulls)
+Keyed results for found entities. Missing IDs are omitted, entries may be returned in
+any order, and every requested ID may appear at most once.
 
 #### Implementation of
 
 [`Repository`](/api/repository-core/src/interfaces/repository/).[`findByIds`](/api/repository-core/src/interfaces/repository/#findbyids)
 
-***
+---
 
 ### save()
 

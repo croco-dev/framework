@@ -11,16 +11,6 @@ title: "RateLimitStore"
 
 - [`DistributedRateLimitStore`](/api/ratelimit-core/src/classes/distributedratelimitstore/)
 
-## Constructors
-
-### Constructor
-
-> **new RateLimitStore**(): `RateLimitStore`
-
-#### Returns
-
-`RateLimitStore`
-
 ## Methods
 
 ### check()
@@ -41,7 +31,7 @@ title: "RateLimitStore"
 
 `Promise`\<[`RateLimitResult`](/api/ratelimit-core/src/type-aliases/ratelimitresult/)\>
 
-***
+---
 
 ### getStats()
 
@@ -57,7 +47,7 @@ title: "RateLimitStore"
 
 `Promise`\<[`RateLimitStats`](/api/ratelimit-core/src/type-aliases/ratelimitstats/)\>
 
-***
+---
 
 ### pruneExpired()
 
@@ -67,7 +57,7 @@ title: "RateLimitStore"
 
 `Promise`\<`number`\>
 
-***
+---
 
 ### refund()
 

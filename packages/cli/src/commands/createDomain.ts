@@ -190,7 +190,7 @@ export class ${className}Service {
 }
 
 function repositoryTemplate(className: string): string {
-  return `import type { Repository } from "@croco/repository-core";
+  return `import type { KeyedRepositoryResult, Repository } from "@croco/repository-core";
 import type { ${className}Entity } from "./${className}Entity";
 
 export class ${className}Repository implements Repository<${className}Entity, string> {
@@ -199,7 +199,9 @@ export class ${className}Repository implements Repository<${className}Entity, st
     return null;
   }
 
-  async findByIds(ids: readonly string[]): Promise<ReadonlyArray<${className}Entity>> {
+  async findByIds(
+    ids: readonly string[],
+  ): Promise<ReadonlyArray<KeyedRepositoryResult<string, ${className}Entity>>> {
     void ids;
     return [];
   }

@@ -40,7 +40,7 @@ describe("runCreateDomain", () => {
     expect(controllerContent).not.toContain("RouteContext");
     expect(serviceContent).toContain("export class UserService");
     expect(repositoryContent).toContain(
-      'import type { Repository } from "@croco/repository-core";',
+      'import type { KeyedRepositoryResult, Repository } from "@croco/repository-core";',
     );
     expect(repositoryContent).toContain('import type { UserEntity } from "./UserEntity";');
     expect(repositoryContent).toContain(
@@ -48,7 +48,7 @@ describe("runCreateDomain", () => {
     );
     expect(repositoryContent).toContain("async findById(id: string): Promise<UserEntity | null>");
     expect(repositoryContent).toContain(
-      "async findByIds(ids: readonly string[]): Promise<ReadonlyArray<UserEntity>>",
+      "Promise<ReadonlyArray<KeyedRepositoryResult<string, UserEntity>>>",
     );
     expect(repositoryContent).toContain("async save(entity: UserEntity): Promise<UserEntity>");
     expect(repositoryContent).toContain("async deleteById(id: string): Promise<void>");

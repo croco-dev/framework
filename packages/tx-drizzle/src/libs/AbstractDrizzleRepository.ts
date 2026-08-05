@@ -1,4 +1,4 @@
-import type { Repository } from "@croco/repository-core";
+import type { KeyedRepositoryResult, Repository } from "@croco/repository-core";
 import type { TxManager } from "@croco/tx-core";
 import type { DrizzleDb, InferTxClient } from "./types";
 
@@ -17,7 +17,9 @@ export abstract class AbstractDrizzleRepository<
   }
 
   abstract findById(id: TId): Promise<TEntity | null>;
-  abstract findByIds(ids: TId[]): Promise<TEntity[]>;
+  abstract findByIds(
+    ids: readonly TId[],
+  ): Promise<ReadonlyArray<KeyedRepositoryResult<TId, TEntity>>>;
   abstract save(entity: TEntity): Promise<TEntity>;
   abstract deleteById(id: TId): Promise<void>;
 }

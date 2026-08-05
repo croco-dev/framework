@@ -1,15 +1,20 @@
 import { Container, Context } from "@croco/framework-context";
 import { BATCH_LOADER_FACTORY_TOKEN, type IBatchLoaderFactory } from "../IBatchLoaderFactory";
 import {
+  BatchLoadDuplicateResultKeyProblem,
   BatchLoaderFactoryNotRegisteredProblem,
   BatchLoaderFactoryResolutionProblem,
+  BatchLoadResultIdentityMismatchProblem,
   BatchLoaderScopeCollisionProblem,
+  BatchLoadUnexpectedResultKeyProblem,
+  BatchLoadUnkeyedResultProblem,
 } from "../problems/BatchLoadProblems";
+import type { KeyedRepositoryResult } from "../ReadRepository";
 
 type BatchKeyedRecord = Record<string, unknown>;
 
 type BatchLoadableRepository<TKey, TValue extends BatchKeyedRecord> = {
-  findByIds?: (ids: TKey[]) => Promise<ReadonlyArray<TValue>>;
+  findByIds?: (ids: readonly TKey[]) => Promise<ReadonlyArray<KeyedRepositoryResult<TKey, TValue>>>;
 };
 
 type BatchLoadMethod<TKey, TValue> = (this: object, arg: TKey) => Promise<TValue | null>;
@@ -31,6 +36,14 @@ class BatchLoadScopeRegistryCacheKey {}
 
 function hasBatchKey(value: unknown, key: string): value is BatchKeyedRecord {
   return typeof value === "object" && value !== null && key in value;
+}
+
+function isKeyedRepositoryResult(value: unknown): value is KeyedRepositoryResult<unknown, unknown> {
+  return typeof value === "object" && value !== null && "key" in value && "value" in value;
+}
+
+function hasSameKey(first: unknown, second: unknown): boolean {
+  return first === second || (first !== first && second !== second);
 }
 
 /**
@@ -195,12 +208,29 @@ export function BatchLoad<TRepository extends object = object>(
         if (typeof this.findByIds === "function") {
           const results = await this.findByIds([...keys]);
 
-          // Map results by the 'by' key to ensure order matches 'keys'
+          const requestedKeys = new Map(keys.map((key) => [key, true]));
           const resultMap = new Map<unknown, BatchKeyedRecord>();
-          for (const item of results) {
-            if (hasBatchKey(item, options.by)) {
-              resultMap.set(item[options.by], item);
+          for (const [index, result] of results.entries()) {
+            if (!isKeyedRepositoryResult(result)) {
+              throw new BatchLoadUnkeyedResultProblem(index);
             }
+
+            if (!requestedKeys.has(result.key)) {
+              throw new BatchLoadUnexpectedResultKeyProblem();
+            }
+
+            if (resultMap.has(result.key)) {
+              throw new BatchLoadDuplicateResultKeyProblem();
+            }
+
+            if (
+              !hasBatchKey(result.value, options.by) ||
+              !hasSameKey(result.value[options.by], result.key)
+            ) {
+              throw new BatchLoadResultIdentityMismatchProblem(options.by);
+            }
+
+            resultMap.set(result.key, result.value);
           }
 
           // Return results in the same order as keys

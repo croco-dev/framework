@@ -44,7 +44,7 @@ export async function generateRepository(
     "repositories",
     `${className}Repository.ts`,
   );
-  const content = `import type { Repository } from "@croco/repository-core";
+  const content = `import type { KeyedRepositoryResult, Repository } from "@croco/repository-core";
 import type { ${className}Entity } from "../entities/${className}Entity";
 
 export class ${className}Repository implements Repository<${className}Entity, string> {
@@ -53,7 +53,7 @@ export class ${className}Repository implements Repository<${className}Entity, st
     return null;
   }
 
-  async findByIds(ids: readonly string[]): Promise<ReadonlyArray<${className}Entity>> {
+  async findByIds(ids: readonly string[]): Promise<ReadonlyArray<KeyedRepositoryResult<string, ${className}Entity>>> {
     void ids;
     return [];
   }

@@ -17,20 +17,6 @@ title: "DistributedRateLimitStore"
 - [`SlidingWindowStore`](/api/ratelimit-core/src/classes/slidingwindowstore/)
 - [`TokenBucketStore`](/api/ratelimit-core/src/classes/tokenbucketstore/)
 
-## Constructors
-
-### Constructor
-
-> **new DistributedRateLimitStore**(): `DistributedRateLimitStore`
-
-#### Returns
-
-`DistributedRateLimitStore`
-
-#### Inherited from
-
-[`RateLimitStore`](/api/ratelimit-core/src/classes/ratelimitstore/).[`constructor`](/api/ratelimit-core/src/classes/ratelimitstore/#constructor)
-
 ## Methods
 
 ### check()
@@ -55,7 +41,7 @@ title: "DistributedRateLimitStore"
 
 [`RateLimitStore`](/api/ratelimit-core/src/classes/ratelimitstore/).[`check`](/api/ratelimit-core/src/classes/ratelimitstore/#check)
 
-***
+---
 
 ### expire()
 
@@ -75,7 +61,7 @@ title: "DistributedRateLimitStore"
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### getCount()
 
@@ -91,7 +77,7 @@ title: "DistributedRateLimitStore"
 
 `Promise`\<`number`\>
 
-***
+---
 
 ### getStats()
 
@@ -111,7 +97,7 @@ title: "DistributedRateLimitStore"
 
 [`RateLimitStore`](/api/ratelimit-core/src/classes/ratelimitstore/).[`getStats`](/api/ratelimit-core/src/classes/ratelimitstore/#getstats)
 
-***
+---
 
 ### increment()
 
@@ -131,7 +117,7 @@ title: "DistributedRateLimitStore"
 
 `Promise`\<`number`\>
 
-***
+---
 
 ### pruneExpired()
 
@@ -145,7 +131,7 @@ title: "DistributedRateLimitStore"
 
 [`RateLimitStore`](/api/ratelimit-core/src/classes/ratelimitstore/).[`pruneExpired`](/api/ratelimit-core/src/classes/ratelimitstore/#pruneexpired)
 
-***
+---
 
 ### refund()
 
@@ -173,7 +159,7 @@ title: "DistributedRateLimitStore"
 
 [`RateLimitStore`](/api/ratelimit-core/src/classes/ratelimitstore/).[`refund`](/api/ratelimit-core/src/classes/ratelimitstore/#refund)
 
-***
+---
 
 ### reset()
 

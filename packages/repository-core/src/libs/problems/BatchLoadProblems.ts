@@ -37,3 +37,51 @@ export class BatchLoaderScopeCollisionProblem extends Problem {
     );
   }
 }
+
+/** Raised when findByIds returns an entry without an explicit key and value. */
+export class BatchLoadUnkeyedResultProblem extends Problem {
+  readonly code = "repository-core/batch-load-result-unkeyed";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(index: number) {
+    super(
+      undefined,
+      undefined,
+      `BatchLoad findByIds result at index ${index} must contain a key and value`,
+    );
+  }
+}
+
+/** Raised when findByIds returns the same requested key more than once. */
+export class BatchLoadDuplicateResultKeyProblem extends Problem {
+  readonly code = "repository-core/batch-load-result-key-duplicate";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor() {
+    super(undefined, undefined, "BatchLoad findByIds returned the same result key more than once");
+  }
+}
+
+/** Raised when findByIds returns a key that was not included in the batch request. */
+export class BatchLoadUnexpectedResultKeyProblem extends Problem {
+  readonly code = "repository-core/batch-load-result-key-unexpected";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor() {
+    super(undefined, undefined, "BatchLoad findByIds returned a result key that was not requested");
+  }
+}
+
+/** Raised when a result's explicit key disagrees with the configured entity identity field. */
+export class BatchLoadResultIdentityMismatchProblem extends Problem {
+  readonly code = "repository-core/batch-load-result-identity-mismatch";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(identityField: string) {
+    super(
+      undefined,
+      undefined,
+      `BatchLoad findByIds result value must expose '${identityField}' matching its explicit key`,
+    );
+  }
+}

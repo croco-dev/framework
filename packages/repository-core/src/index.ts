@@ -5,9 +5,13 @@
 export { BatchLoad } from "./libs/decorators/BatchLoad";
 export { BATCH_LOADER_FACTORY_TOKEN } from "./libs/IBatchLoaderFactory";
 export {
+  BatchLoadDuplicateResultKeyProblem,
   BatchLoaderFactoryNotRegisteredProblem,
   BatchLoaderFactoryResolutionProblem,
+  BatchLoadResultIdentityMismatchProblem,
   BatchLoaderScopeCollisionProblem,
+  BatchLoadUnexpectedResultKeyProblem,
+  BatchLoadUnkeyedResultProblem,
 } from "./libs/problems/BatchLoadProblems";
 export * from "./libs/ReadRepository";
 /**
@@ -28,3 +32,4 @@ export type {
   BatchLoaderLike,
   IBatchLoaderFactory,
 } from "./libs/IBatchLoaderFactory";
+export type { KeyedRepositoryResult } from "./libs/ReadRepository";
