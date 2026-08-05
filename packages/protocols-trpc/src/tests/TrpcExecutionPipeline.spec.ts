@@ -24,7 +24,7 @@ import {
   UseInterceptors,
 } from "@croco/protocols-rest";
 import { createTRPCClient, httpBatchLink } from "@trpc/client";
-import type { AnyRouter } from "@trpc/server";
+import { TRPCError, type AnyRouter } from "@trpc/server";
 import { createHTTPServer } from "@trpc/server/adapters/standalone";
 import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
@@ -194,6 +194,37 @@ class TrpcProblemController {
   fails(): never {
     throw new PrivateProblem();
   }
+
+  @Get("/validation")
+  validation(): never {
+    throw ProblemFactory.validationError("protocols-trpc/validation-failed", "Email is invalid", {
+      type: "https://croco.dev/problems/validation-failed",
+      extensions: {
+        errors: [{ field: "email", message: "Invalid email" }],
+        secret: "do not expose",
+      },
+    });
+  }
+
+  @Get("/not-found")
+  notFound(): never {
+    throw ProblemFactory.notFound("protocols-trpc/user-not-found", "User was not found", {
+      extensions: { reason: "missing", secret: "do not expose" },
+    });
+  }
+
+  @Get("/unknown")
+  unknown(): never {
+    throw new Error("database password must not cross the wire");
+  }
+
+  @Get("/unknown-trpc")
+  unknownTrpc(): never {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "database password must not cross the wire",
+    });
+  }
 }
 
 @Controller("/trpc/filter-diagnostics")
@@ -309,38 +340,84 @@ describe("tRPC Croco execution pipeline", () => {
     ]);
   });
 
-  it("serializes Problems with stable Croco fields and redacted extensions", async () => {
+  it("preserves declared Problem contracts and redacts private and unknown failures", async () => {
     const router = createTrpcRouter([TrpcProblemController]);
     const server = createHTTPServer({ router });
     await new Promise<void>((resolve) => server.listen(0, resolve));
     const client = createTRPCClient<typeof router>({
       links: [httpBatchLink({ url: `http://127.0.0.1:${getPort(server)}` })],
     }) as unknown as {
-      trpcProblem: { fails: { query: () => Promise<unknown> } };
+      trpcProblem: {
+        fails: { query: () => Promise<unknown> };
+        validation: { query: () => Promise<unknown> };
+        notFound: { query: () => Promise<unknown> };
+        unknown: { query: () => Promise<unknown> };
+        unknownTrpc: { query: () => Promise<unknown> };
+      };
     };
 
     try {
-      const error = await captureRejectedValue(client.trpcProblem.fails.query());
-      const typedError = error as {
-        readonly message: string;
-        readonly data: {
-          readonly code: string;
-          readonly croco: unknown;
-          readonly stack?: string;
-        };
-      };
-      const data = typedError.data;
+      const validationError = toClientError(
+        await captureRejectedValue(client.trpcProblem.validation.query()),
+      );
+      expect(validationError.data.code).toBe("UNPROCESSABLE_CONTENT");
+      expect(validationError.data.croco).toEqual({
+        code: "protocols-trpc/validation-failed",
+        status: 422,
+        title: "Validation Error",
+        type: "https://croco.dev/problems/validation-failed",
+        detail: "Email is invalid",
+        extensions: {
+          errors: [{ field: "email", message: "Invalid email" }],
+        },
+      });
+      expect(validationError.data.croco).not.toHaveProperty("extensions.secret");
+      expect(validationError.data).not.toHaveProperty("stack");
 
-      expect(data.code).toBe("INTERNAL_SERVER_ERROR");
-      expect(data.croco).toMatchObject({
+      const notFoundError = toClientError(
+        await captureRejectedValue(client.trpcProblem.notFound.query()),
+      );
+      expect(notFoundError.data.code).toBe("NOT_FOUND");
+      expect(notFoundError.data.croco).toEqual({
+        code: "protocols-trpc/user-not-found",
+        status: 404,
+        title: "Not Found",
+        type: "about:blank",
+        detail: "User was not found",
+        extensions: { reason: "missing" },
+      });
+      expect(notFoundError.data.croco).not.toHaveProperty("extensions.secret");
+      expect(notFoundError.data).not.toHaveProperty("stack");
+
+      const privateError = toClientError(
+        await captureRejectedValue(client.trpcProblem.fails.query()),
+      );
+      expect(privateError.data.code).toBe("INTERNAL_SERVER_ERROR");
+      expect(privateError.data.croco).toMatchObject({
         code: "protocols-trpc/private-problem",
         status: 500,
         detail: "An internal error occurred",
         extensions: {},
       });
-      expect(data.croco).not.toHaveProperty("extensions.secret");
-      expect(typedError.message).not.toContain("private detail");
-      expect(data.stack ?? "").not.toContain("private detail");
+      expect(privateError.data.croco).not.toHaveProperty("extensions.secret");
+      expect(privateError.message).not.toContain("private detail");
+      expect(privateError.data).not.toHaveProperty("stack");
+
+      const unknownError = toClientError(
+        await captureRejectedValue(client.trpcProblem.unknown.query()),
+      );
+      expect(unknownError.data.code).toBe("INTERNAL_SERVER_ERROR");
+      expect(unknownError.data).not.toHaveProperty("croco");
+      expect(unknownError.message).not.toContain("database password");
+      expect(unknownError.data).not.toHaveProperty("stack");
+
+      const unknownTrpcError = toClientError(
+        await captureRejectedValue(client.trpcProblem.unknownTrpc.query()),
+      );
+      expect(unknownTrpcError.data.code).toBe("INTERNAL_SERVER_ERROR");
+      expect(unknownTrpcError.data).not.toHaveProperty("croco");
+      expect(unknownTrpcError.message).not.toContain("database password");
+      expect(unknownTrpcError.data).not.toHaveProperty("stack");
     } finally {
       await new Promise<void>((resolve, reject) => {
         server.close((error) => {
@@ -530,4 +607,22 @@ async function captureRejectedValue(promise: Promise<unknown>): Promise<unknown>
   }
 
   expect.fail("Expected promise to reject.");
+}
+
+function toClientError(error: unknown): {
+  readonly message: string;
+  readonly data: {
+    readonly code: string;
+    readonly croco?: unknown;
+    readonly stack?: string;
+  };
+} {
+  return error as {
+    readonly message: string;
+    readonly data: {
+      readonly code: string;
+      readonly croco?: unknown;
+      readonly stack?: string;
+    };
+  };
 }
