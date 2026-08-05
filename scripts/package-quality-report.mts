@@ -292,6 +292,15 @@ const DEPENDENCY_BOUNDARY_RULES: readonly DependencyBoundaryRule[] = [
     policy:
       "@croco/repository-core is an interface layer and must not mention Drizzle implementation details in src.",
   },
+  {
+    id: "protocols-desktop-runtime-free",
+    packageName: "@croco/protocols-desktop",
+    sourceDir: "packages/protocols-desktop/src",
+    forbiddenPattern:
+      /(?:from\s+|import\s*\(\s*|require\s*\(\s*)[\"'](?:electron(?:\/[^\"']*)?|node:[^\"']+|@croco\/transports-electron(?:\/[^\"']*)?)[\"']/,
+    policy:
+      "@croco/protocols-desktop is a browser-safe contract boundary and must not import Electron, Node runtime APIs, or Electron transports in src.",
+  },
 ];
 
 function isRecord(value: unknown): value is Record<string, unknown> {

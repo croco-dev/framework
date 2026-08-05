@@ -7,6 +7,11 @@ This package owns declarations and the browser-safe DesktopWire schema boundary.
 runtime APIs, a transport, or application bootstrap code. Handler registration, preload/client generation, and
 Electron process integration are separate layers.
 
+Its public package boundary is intentionally narrow: production code may depend on
+`@croco/problems-core` and `@croco/protocols-core`; `zod` and `vitest` are development-only schema and test tooling.
+Consumers must import from `@croco/protocols-desktop`, not its `src/**` implementation paths. Architecture and
+dependency-boundary gates enforce these constraints for source imports and package manifests.
+
 ## Define an application
 
 ```typescript
