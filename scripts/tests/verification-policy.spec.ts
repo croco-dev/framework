@@ -243,6 +243,32 @@ describe("agent guide verification contract", () => {
   });
 });
 
+describe("contributor setup contract", () => {
+  const contributorGuide = readFileSync(resolve(repositoryRoot, "CONTRIBUTING.md"), "utf-8");
+  const packageJson = JSON.parse(
+    readFileSync(resolve(repositoryRoot, "package.json"), "utf-8"),
+  ) as { readonly scripts: Readonly<Record<string, string>> };
+
+  it("keeps the default setup reproducible and dependency updates explicit", () => {
+    expect(packageJson.scripts.setup).toBe(
+      "pnpm install --frozen-lockfile && pnpm build && pnpm typecheck && pnpm test",
+    );
+    expect(packageJson.scripts["setup:update"]).toBe(
+      "pnpm install --no-frozen-lockfile && pnpm build && pnpm typecheck && pnpm test",
+    );
+  });
+
+  it("documents the default and intentional-update setup commands", () => {
+    expect(contributorGuide).toContain(
+      "`pnpm setup` runs `pnpm install --frozen-lockfile && pnpm build && pnpm typecheck && pnpm test`",
+    );
+    expect(contributorGuide).toContain(
+      "When intentionally changing dependencies, run `pnpm setup:update`.",
+    );
+    expect(contributorGuide).toContain("`pnpm install --no-frozen-lockfile`");
+  });
+});
+
 function rootScripts(): Readonly<Record<string, string>> {
   return Object.fromEntries(Object.keys(ROOT_VERIFICATION_POLICY).map((name) => [name, "true"]));
 }

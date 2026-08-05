@@ -24,8 +24,13 @@ cd framework
 pnpm setup
 ```
 
-`pnpm setup` runs `pnpm install && pnpm build && pnpm typecheck && pnpm test` in sequence.
-If it exits cleanly, your environment is ready.
+`pnpm setup` runs `pnpm install --frozen-lockfile && pnpm build && pnpm typecheck && pnpm test` in
+sequence. It fails instead of updating `pnpm-lock.yaml` when dependency declarations have drifted from
+the committed lockfile. If it exits cleanly, your environment is ready.
+
+When intentionally changing dependencies, run `pnpm setup:update`. It uses
+`pnpm install --no-frozen-lockfile` before the same build, typecheck, and test sequence, so lockfile
+updates remain an explicit workflow.
 
 ### Environment Variables
 
@@ -125,7 +130,8 @@ pnpm test        # Run all tests
 pnpm check       # Repository verification gate
 ```
 
-Or run them all at once with `pnpm setup` (same sequence as initial setup).
+Or run them all at once with `pnpm setup` (the same frozen-lockfile sequence as initial setup). Use
+`pnpm setup:update` only when intentionally updating dependencies and `pnpm-lock.yaml`.
 
 The `pre-push` hook runs auto-changeset, `pnpm test`, and a mutation-guarded `pnpm typecheck`. Run
 `pnpm format`, `pnpm lint`, and `pnpm check` manually before pushing.
