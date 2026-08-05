@@ -143,6 +143,11 @@ function checkSpaBeSplitStructure() {
   checkFileExists("spa-be-split", ".github", "workflows", "browser-tests.yml");
   checkFileContains(
     "spa-be-split",
+    [".github", "workflows", "browser-tests.yml"],
+    /contracts:[\s\S]*pnpm contract:verify[\s\S]*component:[\s\S]*needs: contracts[\s\S]*journey:[\s\S]*needs: contracts/,
+  );
+  checkFileContains(
+    "spa-be-split",
     ["apps", "console-web", "src", "api", "client.ts"],
     /handleJsonResponse/,
   );

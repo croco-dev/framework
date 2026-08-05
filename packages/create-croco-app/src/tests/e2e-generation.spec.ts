@@ -352,6 +352,13 @@ function assertBrowserWorkflowUsesImmutableActions(workflow: string): void {
   }
 }
 
+function assertBrowserWorkflowVerifiesContractsWithoutCodegen(workflow: string): void {
+  expect(workflow).toMatch(
+    /contracts:[\s\S]*pnpm contract:verify[\s\S]*component:[\s\S]*needs: contracts[\s\S]*journey:[\s\S]*needs: contracts/,
+  );
+  expect(workflow).not.toContain("pnpm codegen");
+}
+
 function assertAllSourceBareImportsDeclared(projectDir: string): void {
   const packageDirs = collectFiles(projectDir)
     .filter((filePath) => filePath.endsWith("package.json"))
@@ -1040,6 +1047,7 @@ describe("E2E: generate()", () => {
       expect(browserWorkflow).toContain("shard=${{ matrix.shard }}/2");
       expect(browserWorkflow).toContain("playwright merge-reports");
       assertBrowserWorkflowUsesImmutableActions(browserWorkflow);
+      assertBrowserWorkflowVerifiesContractsWithoutCodegen(browserWorkflow);
       expect(workspaceConfig).toContain("msw: true");
       expect(workspaceConfig).toMatch(/onlyBuiltDependencies:[\s\S]*- msw/);
       for (const relativePath of [
@@ -1188,6 +1196,7 @@ describe("E2E: generate()", () => {
       expect(browserWorkflow).toContain("shard=${{ matrix.shard }}/2");
       expect(browserWorkflow).toContain("playwright merge-reports");
       assertBrowserWorkflowUsesImmutableActions(browserWorkflow);
+      assertBrowserWorkflowVerifiesContractsWithoutCodegen(browserWorkflow);
       expect(webSource).toContain("import { adminClient, type adminRpc }");
       expect(webSource).toContain("adminClient");
       expect(webSource).toContain("adminRpc.ListUsersOutput");
