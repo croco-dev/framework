@@ -129,7 +129,7 @@ title: "LlmService"
 
 ##### params
 
-[`StreamParams`](/api/llm-core/src/type-aliases/streamparams/)
+[`GenerateParams`](/api/llm-core/src/type-aliases/generateparams/)
 
 #### Returns
 

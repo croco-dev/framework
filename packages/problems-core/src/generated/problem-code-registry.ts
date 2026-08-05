@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 583,
+  problemCount: 584,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -8650,7 +8650,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-core/src/libs/problems/LlmProblems.ts",
-          line: 9,
+          line: 26,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8713,7 +8713,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-core/src/libs/problems/LlmProblems.ts",
-          line: 85,
+          line: 102,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8745,7 +8745,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-core/src/libs/problems/LlmProblems.ts",
-          line: 65,
+          line: 82,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8777,7 +8777,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-core/src/libs/problems/LlmProblems.ts",
-          line: 75,
+          line: 92,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "llm-core/operation-aborted",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#llm-core-operation-aborted",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/llm-core/src/libs/problems/LlmProblems.ts",
+          line: 9,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8807,7 +8838,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-core/src/libs/problems/LlmProblems.ts",
-          line: 43,
+          line: 60,
           column: 5,
           kind: "problem-constructor",
         },
@@ -15859,7 +15890,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-core/src/libs/problems/LlmProblems.ts",
-          line: 21,
+          line: 38,
           column: 5,
           kind: "problem-constructor",
         },

@@ -14,6 +14,11 @@ export type LlmOptions = {
   metadata?: Record<string, unknown>;
 };
 
+/** Per-call options accepted as the decorated method's second argument. */
+export type LlmInvocationOptions = {
+  signal?: AbortSignal;
+};
+
 export type LlmMethodMetadata = LlmMetadata;
 
 // LlmService 인스턴스를 저장할 전역 변수 (DI 컨테이너에서 설정)
@@ -44,7 +49,7 @@ export function getLlmService(): LlmService | null {
  * ```typescript
  * class ChatService {
  *   @Llm({ modelId: 'gpt-4' })
- *   async generateResponse(prompt: string): Promise<string> {
+ *   async generateResponse(prompt: string, options?: LlmInvocationOptions): Promise<string> {
  *     // 데코레이터가 LlmService를 호출하여 결과 반환
  *   }
  *
@@ -78,6 +83,7 @@ export function Llm(options: LlmOptions = {}): MethodDecorator {
       if (typeof prompt !== "string") {
         throw new InvalidLlmPromptProblem(prompt === undefined ? "undefined" : typeof prompt);
       }
+      const invocationOptions = args[1] as LlmInvocationOptions | undefined;
 
       // GenerateParams 구성
       const params: GenerateParams = {
@@ -88,6 +94,7 @@ export function Llm(options: LlmOptions = {}): MethodDecorator {
         maxTokens: options.maxTokens,
         stopSequences: options.stopSequences,
         metadata: options.metadata,
+        signal: invocationOptions?.signal,
       };
 
       const result: GenerateResult = await service.generate(params);

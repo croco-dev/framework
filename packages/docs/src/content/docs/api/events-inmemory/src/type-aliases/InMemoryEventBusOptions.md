@@ -15,7 +15,7 @@ title: "InMemoryEventBusOptions"
 
 > `optional` **backpressureStrategy?**: [`BackpressureStrategy`](/api/events-inmemory/src/type-aliases/backpressurestrategy/)
 
----
+***
 
 ### backpressureTimeoutMs?
 
@@ -23,7 +23,7 @@ title: "InMemoryEventBusOptions"
 
 Integer milliseconds from 1 through 2,147,483,647. Defaults to 5000.
 
----
+***
 
 ### maxConcurrency?
 

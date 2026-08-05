@@ -1,7 +1,14 @@
 /**
- * 텍스트 생성 파라미터
+ * LLM 작업의 호출자 취소 옵션
  */
-export type GenerateParams = {
+export type CancellableRequestOptions = {
+  /**
+   * 호출자 취소 신호
+   */
+  signal?: AbortSignal;
+};
+
+export type GenerateParams = CancellableRequestOptions & {
   /**
    * 모델 ID
    */
@@ -61,10 +68,7 @@ export type GenerateResult = {
 /**
  * 스트리밍 파라미터
  */
-export type StreamParams = Omit<GenerateParams, "modelId"> & {
-  modelId?: string;
-  signal?: AbortSignal;
-};
+export type StreamParams = GenerateParams;
 
 /**
  * 스트리밍 청크
@@ -119,7 +123,7 @@ export type ToolDefinition = {
 /**
  * 툴 호출 파라미터
  */
-export type ToolCallParams = {
+export type ToolCallParams = CancellableRequestOptions & {
   /**
    * 모델 ID
    */
@@ -162,7 +166,7 @@ export type ToolCallResult = {
 /**
  * 임베딩 파라미터
  */
-export type EmbedParams = {
+export type EmbedParams = CancellableRequestOptions & {
   /**
    * 임베딩할 텍스트
    */
@@ -192,7 +196,7 @@ export type EmbedResult = {
 /**
  * 배치 임베딩 파라미터
  */
-export type EmbedManyParams = {
+export type EmbedManyParams = CancellableRequestOptions & {
   /**
    * 임베딩할 텍스트 목록
    */

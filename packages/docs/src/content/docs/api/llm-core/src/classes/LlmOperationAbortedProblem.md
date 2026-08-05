@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "BatchLoadResultIdentityMismatchProblem"
+title: "LlmOperationAbortedProblem"
 ---
 
-Raised when a result's explicit key disagrees with the configured entity identity field.
+LLM 호출 전반에서 사용하는 Problem 하위 타입들입니다.
 
 ## Extends
 
@@ -15,17 +15,17 @@ Raised when a result's explicit key disagrees with the configured entity identit
 
 ### Constructor
 
-> **new BatchLoadResultIdentityMismatchProblem**(`identityField`): `BatchLoadResultIdentityMismatchProblem`
+> **new LlmOperationAbortedProblem**(`operation`): `LlmOperationAbortedProblem`
 
 #### Parameters
 
-##### identityField
+##### operation
 
 `string`
 
 #### Returns
 
-`BatchLoadResultIdentityMismatchProblem`
+`LlmOperationAbortedProblem`
 
 #### Overrides
 
@@ -35,9 +35,9 @@ Raised when a result's explicit key disagrees with the configured entity identit
 
 ### category
 
-> `readonly` **category**: [`InternalServerError`](/api/problems-core/src/enumerations/problemcategory/#internalservererror) = `ProblemCategory.InternalServerError`
+> `readonly` **category**: [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
 
-#### Overrides
+#### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`category`](/api/problems-core/src/classes/problem/#category)
 
@@ -55,9 +55,9 @@ Raised when a result's explicit key disagrees with the configured entity identit
 
 ### code
 
-> `readonly` **code**: `"repository-core/batch-load-result-identity-mismatch"` = `"repository-core/batch-load-result-identity-mismatch"`
+> `readonly` **code**: `string`
 
-#### Overrides
+#### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`code`](/api/problems-core/src/classes/problem/#code)
 
@@ -130,6 +130,12 @@ Raised when a result's explicit key disagrees with the configured entity identit
 #### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`type`](/api/problems-core/src/classes/problem/#type)
+
+***
+
+### CODE
+
+> `readonly` `static` **CODE**: `"llm-core/operation-aborted"` = `"llm-core/operation-aborted"`
 
 ***
 

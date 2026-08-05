@@ -23,7 +23,7 @@ Backoff 구현체의 추가 옵션 타입
 
 Backoff 구현체의 추가 옵션 (구현체에 따라 다름)
 
----
+***
 
 ### supportsAbortSignal?
 
@@ -49,7 +49,7 @@ Calculate delay for the given attempt (0-based)
 
 `number`
 
----
+***
 
 ### reset()
 
@@ -61,7 +61,7 @@ Reset internal state if any
 
 `void`
 
----
+***
 
 ### wait()
 

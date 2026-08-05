@@ -35,7 +35,7 @@ title: "InvalidSignedUrlExpiryProblem"
 
 [`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`category`](/api/storage-core/src/classes/storageproblem/#category)
 
----
+***
 
 ### cause?
 
@@ -45,7 +45,7 @@ title: "InvalidSignedUrlExpiryProblem"
 
 [`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`cause`](/api/storage-core/src/classes/storageproblem/#cause)
 
----
+***
 
 ### code
 
@@ -55,7 +55,7 @@ title: "InvalidSignedUrlExpiryProblem"
 
 [`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`code`](/api/storage-core/src/classes/storageproblem/#code)
 
----
+***
 
 ### detail?
 
@@ -65,7 +65,7 @@ title: "InvalidSignedUrlExpiryProblem"
 
 [`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`detail`](/api/storage-core/src/classes/storageproblem/#detail)
 
----
+***
 
 ### extensions?
 
@@ -75,7 +75,7 @@ title: "InvalidSignedUrlExpiryProblem"
 
 [`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`extensions`](/api/storage-core/src/classes/storageproblem/#extensions)
 
----
+***
 
 ### instance?
 
@@ -85,7 +85,7 @@ title: "InvalidSignedUrlExpiryProblem"
 
 [`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`instance`](/api/storage-core/src/classes/storageproblem/#instance)
 
----
+***
 
 ### message
 
@@ -95,7 +95,7 @@ title: "InvalidSignedUrlExpiryProblem"
 
 [`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`message`](/api/storage-core/src/classes/storageproblem/#message)
 
----
+***
 
 ### name
 
@@ -105,7 +105,7 @@ title: "InvalidSignedUrlExpiryProblem"
 
 [`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`name`](/api/storage-core/src/classes/storageproblem/#name)
 
----
+***
 
 ### stack?
 
@@ -115,7 +115,7 @@ title: "InvalidSignedUrlExpiryProblem"
 
 [`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`stack`](/api/storage-core/src/classes/storageproblem/#stack)
 
----
+***
 
 ### type
 
@@ -125,7 +125,7 @@ title: "InvalidSignedUrlExpiryProblem"
 
 [`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`type`](/api/storage-core/src/classes/storageproblem/#type)
 
----
+***
 
 ### stackTraceLimit
 
@@ -161,7 +161,7 @@ not capture any frames.
 
 [`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`status`](/api/storage-core/src/classes/storageproblem/#status)
 
----
+***
 
 ### title
 
@@ -191,7 +191,7 @@ not capture any frames.
 
 [`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`toJSON`](/api/storage-core/src/classes/storageproblem/#tojson)
 
----
+***
 
 ### captureStackTrace()
 
@@ -204,7 +204,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack; // Similar to `new Error().stack`
+myObject.stack;  // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -259,7 +259,7 @@ a();
 
 [`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`captureStackTrace`](/api/storage-core/src/classes/storageproblem/#capturestacktrace)
 
----
+***
 
 ### prepareStackTrace()
 

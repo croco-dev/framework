@@ -5,4 +5,4 @@ prev: false
 title: "SsrFailureCode"
 ---
 
-> **SsrFailureCode** = _typeof_ [`SSR_FAILURE_CODES`](/api/frontend-cloudflare/src/variables/ssr_failure_codes/)\[keyof _typeof_ [`SSR_FAILURE_CODES`](/api/frontend-cloudflare/src/variables/ssr_failure_codes/)\]
+> **SsrFailureCode** = *typeof* [`SSR_FAILURE_CODES`](/api/frontend-cloudflare/src/variables/ssr_failure_codes/)\[keyof *typeof* [`SSR_FAILURE_CODES`](/api/frontend-cloudflare/src/variables/ssr_failure_codes/)\]

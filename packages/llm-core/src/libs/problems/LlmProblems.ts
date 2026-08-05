@@ -2,6 +2,23 @@ import { Problem, ProblemCategory } from "@croco/problems-core";
 
 export class LlmProblem extends Problem {}
 
+export class LlmOperationAbortedProblem extends Problem {
+  static readonly CODE = "llm-core/operation-aborted";
+
+  constructor(operation: string) {
+    super(
+      LlmOperationAbortedProblem.CODE,
+      ProblemCategory.BadRequest,
+      `LLM operation aborted during ${operation}`,
+      {
+        extensions: {
+          operation,
+        },
+      },
+    );
+  }
+}
+
 export class LlmProviderNotFoundProblem extends Problem {
   static readonly CODE = "LLM_PROVIDER_NOT_FOUND";
 

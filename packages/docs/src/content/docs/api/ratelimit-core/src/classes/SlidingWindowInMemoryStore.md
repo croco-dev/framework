@@ -55,7 +55,7 @@ title: "SlidingWindowInMemoryStore"
 
 [`SlidingWindowStore`](/api/ratelimit-core/src/classes/slidingwindowstore/).[`check`](/api/ratelimit-core/src/classes/slidingwindowstore/#check)
 
----
+***
 
 ### checkSlidingWindow()
 
@@ -79,7 +79,7 @@ title: "SlidingWindowInMemoryStore"
 
 [`SlidingWindowStore`](/api/ratelimit-core/src/classes/slidingwindowstore/).[`checkSlidingWindow`](/api/ratelimit-core/src/classes/slidingwindowstore/#checkslidingwindow)
 
----
+***
 
 ### close()
 
@@ -89,7 +89,7 @@ title: "SlidingWindowInMemoryStore"
 
 `void`
 
----
+***
 
 ### destroy()
 
@@ -99,7 +99,7 @@ title: "SlidingWindowInMemoryStore"
 
 `void`
 
----
+***
 
 ### expire()
 
@@ -113,7 +113,7 @@ title: "SlidingWindowInMemoryStore"
 
 [`SlidingWindowStore`](/api/ratelimit-core/src/classes/slidingwindowstore/).[`expire`](/api/ratelimit-core/src/classes/slidingwindowstore/#expire)
 
----
+***
 
 ### getCount()
 
@@ -127,7 +127,7 @@ title: "SlidingWindowInMemoryStore"
 
 [`SlidingWindowStore`](/api/ratelimit-core/src/classes/slidingwindowstore/).[`getCount`](/api/ratelimit-core/src/classes/slidingwindowstore/#getcount)
 
----
+***
 
 ### getStats()
 
@@ -141,7 +141,7 @@ title: "SlidingWindowInMemoryStore"
 
 [`SlidingWindowStore`](/api/ratelimit-core/src/classes/slidingwindowstore/).[`getStats`](/api/ratelimit-core/src/classes/slidingwindowstore/#getstats)
 
----
+***
 
 ### increment()
 
@@ -155,7 +155,7 @@ title: "SlidingWindowInMemoryStore"
 
 [`SlidingWindowStore`](/api/ratelimit-core/src/classes/slidingwindowstore/).[`increment`](/api/ratelimit-core/src/classes/slidingwindowstore/#increment)
 
----
+***
 
 ### pruneExpired()
 
@@ -169,7 +169,7 @@ title: "SlidingWindowInMemoryStore"
 
 [`SlidingWindowStore`](/api/ratelimit-core/src/classes/slidingwindowstore/).[`pruneExpired`](/api/ratelimit-core/src/classes/slidingwindowstore/#pruneexpired)
 
----
+***
 
 ### refund()
 
@@ -197,7 +197,7 @@ title: "SlidingWindowInMemoryStore"
 
 [`SlidingWindowStore`](/api/ratelimit-core/src/classes/slidingwindowstore/).[`refund`](/api/ratelimit-core/src/classes/slidingwindowstore/#refund)
 
----
+***
 
 ### reset()
 

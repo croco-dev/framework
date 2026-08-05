@@ -217,7 +217,7 @@ LLM 기능 플래그
 
 ##### params
 
-[`StreamParams`](/api/llm-core/src/type-aliases/streamparams/)
+[`GenerateParams`](/api/llm-core/src/type-aliases/generateparams/)
 
 스트리밍 파라미터
 

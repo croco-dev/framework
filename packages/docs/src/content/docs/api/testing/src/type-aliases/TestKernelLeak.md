@@ -13,7 +13,7 @@ title: "TestKernelLeak"
 
 > `readonly` **category**: `"after-commit"` \| `"event-handler"` \| `"operation"` \| `"operation-failure"` \| `"resource"` \| `"scheduled-work"` \| `"span"` \| `"wait-until"`
 
----
+***
 
 ### failure?
 
@@ -31,7 +31,7 @@ title: "TestKernelLeak"
 
 > `readonly` **name**: `string`
 
----
+***
 
 ### source
 
