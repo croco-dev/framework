@@ -293,7 +293,9 @@ function readRequestHeader(context: Record<string, unknown>, name: string): stri
     return undefined;
   }
 
-  const value = headers[name] ?? headers[name.toLowerCase()];
+  const value = Object.entries(headers).find(
+    ([headerName]) => headerName.toLowerCase() === name.toLowerCase(),
+  )?.[1];
   return Array.isArray(value) ? readString(value[0]) : readString(value);
 }
 
@@ -305,10 +307,15 @@ function parseTraceparent(value: string | undefined):
     }
   | undefined {
   const match = value?.match(/^(00|01)-([\da-f]{32})-([\da-f]{16})-([\da-f]{2})$/i);
+  const traceId = match?.[2];
+  const spanId = match?.[3];
+  const traceFlags = match?.[4];
 
-  return match?.[2] && match[3] && match[4]
-    ? { traceId: match[2], spanId: match[3], traceFlags: match[4] }
-    : undefined;
+  if (!traceId || !spanId || !traceFlags || /^0{32}$/.test(traceId) || /^0{16}$/.test(spanId)) {
+    return undefined;
+  }
+
+  return { traceId, spanId, traceFlags };
 }
 
 function readString(value: unknown): string | undefined {

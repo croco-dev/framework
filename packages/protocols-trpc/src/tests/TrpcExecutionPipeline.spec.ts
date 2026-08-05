@@ -463,7 +463,9 @@ describe("tRPC Croco execution pipeline", () => {
       trpcRequiredDependency: { handler: () => Promise<unknown> };
     };
 
-    await expect(caller.trpcRequiredDependency.handler()).rejects.toMatchObject({
+    const failure = caller.trpcRequiredDependency.handler();
+    await expect(failure).rejects.toThrow();
+    await expect(failure).rejects.toMatchObject({
       cause: expect.objectContaining({ code: "protocols-trpc/provider-container-required" }),
     });
   });

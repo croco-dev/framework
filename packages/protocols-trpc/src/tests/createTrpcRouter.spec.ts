@@ -540,7 +540,7 @@ describe("createTrpcRouter", () => {
     }
   });
 
-  it("should prefer custom request context mapping and reject unsupported traceparent versions", async () => {
+  it("should map request metadata and reject invalid traceparent values", async () => {
     @Controller("/metadata")
     class MetadataController {
       @Get("/")
@@ -579,6 +579,35 @@ describe("createTrpcRouter", () => {
       requestId: "invalid-traceparent",
       traceId: null,
     });
+
+    const caseInsensitiveHeaderCaller = createCaller(defaultRouter, {
+      req: {
+        headers: {
+          Traceparent: "00-11111111111111111111111111111111-2222222222222222-01",
+          "X-Request-Id": "case-insensitive-request",
+        },
+      },
+    });
+    await expect(caseInsensitiveHeaderCaller.metadata.inspect()).resolves.toEqual({
+      requestId: "case-insensitive-request",
+      traceId: "11111111111111111111111111111111",
+    });
+
+    const invalidIdentifiers = [
+      "00-00000000000000000000000000000000-2222222222222222-01",
+      "00-11111111111111111111111111111111-0000000000000000-01",
+    ];
+    for (const traceparent of invalidIdentifiers) {
+      const caller = createCaller(defaultRouter, {
+        requestId: "all-zero-traceparent",
+        req: { headers: { traceparent } },
+      });
+
+      await expect(caller.metadata.inspect()).resolves.toEqual({
+        requestId: "all-zero-traceparent",
+        traceId: null,
+      });
+    }
     expect(Context.isActive()).toBe(false);
   });
 
