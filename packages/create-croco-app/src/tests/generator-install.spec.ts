@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { PnpmCommandProblem } from "../libs/problems/PnpmCommandProblem.js";
 import type { GeneratorOptions } from "../types.js";
 
 const execSyncMock = vi.hoisted(() => vi.fn());
@@ -61,20 +62,63 @@ describe("generate() pnpm install contract", () => {
     expect(existsSync(join(testDir, "pnpm-workspace.yaml"))).toBe(true);
   });
 
-  it("fails with an actionable pnpm requirement when pnpm is unavailable", async () => {
+  it("reports an actionable Problem when pnpm is unavailable", async () => {
     const { generate } = await import("../generator.js");
 
     execSyncMock.mockImplementationOnce(() => {
       throw new Error("pnpm: command not found");
     });
 
-    await expect(
-      generate(testDir, {
+    const error = await generate(testDir, {
+      ...baseOptions,
+      installDeps: true,
+    }).catch((cause: unknown) => cause);
+
+    expect(error).toBeInstanceOf(PnpmCommandProblem);
+    expect((error as PnpmCommandProblem).toJSON()).toMatchObject({
+      code: "create-croco-app/pnpm-unavailable",
+      stage: "availability-check",
+      command: "pnpm --version",
+      recovery: expect.stringContaining("--no-install"),
+    });
+  });
+
+  it.each([
+    {
+      failedCall: 2,
+      code: "create-croco-app/dependency-install-failed",
+      stage: "dependency-install",
+      command: "pnpm install --no-frozen-lockfile",
+    },
+    {
+      failedCall: 3,
+      code: "create-croco-app/lockfile-validation-failed",
+      stage: "lockfile-validation",
+      command: "pnpm install --lockfile-only --frozen-lockfile",
+    },
+  ])(
+    "reports an actionable Problem when $stage fails",
+    async ({ failedCall, code, stage, command }) => {
+      const { generate } = await import("../generator.js");
+
+      execSyncMock.mockImplementation((..._args: unknown[]) => {
+        if (execSyncMock.mock.calls.length === failedCall) {
+          throw new Error(`${command} failed`);
+        }
+      });
+
+      const error = await generate(testDir, {
         ...baseOptions,
         installDeps: true,
-      }),
-    ).rejects.toThrow(
-      "create-croco-app installs dependencies with pnpm. Install pnpm or rerun with --no-install.",
-    );
-  });
+      }).catch((cause: unknown) => cause);
+
+      expect(error).toBeInstanceOf(PnpmCommandProblem);
+      expect((error as PnpmCommandProblem).toJSON()).toMatchObject({
+        code,
+        stage,
+        command,
+        recovery: expect.stringContaining("--no-install"),
+      });
+    },
+  );
 });

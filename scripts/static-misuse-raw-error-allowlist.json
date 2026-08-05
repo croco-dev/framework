@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "baselineEntryCount": 72,
+  "baselineEntryCount": 71,
   "description": "Reviewed baseline for CROCO_STATIC_RAW_ERROR_RUNTIME_BOUNDARY. New production raw built-in Error throws must be converted or added with owner and unexpired expiresOn metadata.",
   "entries": [
     {
@@ -299,15 +299,6 @@
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
       "owner": "framework-error-handling",
       "expiresOn": "2026-09-15"
-    },
-    {
-      "package": "create-croco-app",
-      "file": "packages/create-croco-app/src/generator.ts",
-      "line": 507,
-      "excerpt": "throw new Error(",
-      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling",
-      "expiresOn": "2026-10-15"
     },
     {
       "package": "create-croco-app",
