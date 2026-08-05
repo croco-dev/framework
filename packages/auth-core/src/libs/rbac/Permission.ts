@@ -13,8 +13,22 @@ export type Permission = {
 
 const VALID_ACTIONS = ["read", "write", "delete", "manage"] as const;
 
-function isPermissionAction(action: string): action is PermissionAction {
+function isPermissionAction(action: unknown): action is PermissionAction {
   return VALID_ACTIONS.some((validAction) => validAction === action);
+}
+
+function isPermissionComponent(component: unknown): component is string {
+  return typeof component === "string" && component.length > 0 && !component.includes(":");
+}
+
+function describePermissionComponent(component: unknown): string {
+  if (typeof component === "string") {
+    return component;
+  }
+  if (component === null) {
+    return "null";
+  }
+  return `<${typeof component}>`;
 }
 
 function parsePermissionParts(
@@ -49,16 +63,27 @@ export function parsePermission(permission: string): Permission {
 }
 
 export function formatPermission(permission: Permission): string {
-  if (permission.resourceId === "") {
-    throw new InvalidPermissionFormatProblem(
-      `${permission.resource}:${permission.action}:${permission.resourceId}`,
-    );
+  const { resource, action, resourceId } = permission;
+  const described =
+    resourceId === undefined
+      ? `${describePermissionComponent(resource)}:${describePermissionComponent(action)}`
+      : `${describePermissionComponent(resource)}:${describePermissionComponent(action)}:${describePermissionComponent(resourceId)}`;
+
+  if (!isPermissionComponent(resource)) {
+    throw new InvalidPermissionFormatProblem(described);
+  }
+  if (resourceId !== undefined && !isPermissionComponent(resourceId)) {
+    throw new InvalidPermissionFormatProblem(described);
   }
 
-  if (permission.resourceId !== undefined) {
-    return `${permission.resource}:${permission.action}:${permission.resourceId}`;
+  if (!isPermissionAction(action)) {
+    throw new InvalidPermissionActionProblem(describePermissionComponent(action));
   }
-  return `${permission.resource}:${permission.action}`;
+
+  const formatted =
+    resourceId === undefined ? `${resource}:${action}` : `${resource}:${action}:${resourceId}`;
+  parsePermission(formatted);
+  return formatted;
 }
 
 export function hasPermission(userPermissions: string[], required: string): boolean {
