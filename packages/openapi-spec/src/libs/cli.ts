@@ -1,3 +1,4 @@
+import { dirname } from "node:path";
 import {
   formatContractDiagnostic,
   parseContractGraphStrictModeFlag,
@@ -107,7 +108,8 @@ export async function runCli(args: readonly string[], io: CliIo = defaultCliIo):
     return 1;
   }
 
-  const { writeFile } = await import("node:fs/promises");
+  const { mkdir, writeFile } = await import("node:fs/promises");
+  await mkdir(dirname(outFile), { recursive: true });
   await writeFile(outFile, content);
 
   return 0;

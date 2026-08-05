@@ -1,9 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const fileSystemImports = vi.hoisted(() => ({
+  mkdir: 0,
+  lastMkdirPath: null as string | null,
   writeFile: 0,
   lastWritePath: null as string | null,
   lastWriteContents: null as string | null,
+  writeFailure: null as Error | null,
 }));
 
 const generationModuleImports = vi.hoisted(() => ({
@@ -32,10 +35,18 @@ const generationModuleImports = vi.hoisted(() => ({
 
 vi.mock("node:fs/promises", () => {
   return {
+    mkdir: async (path: string) => {
+      fileSystemImports.mkdir += 1;
+      fileSystemImports.lastMkdirPath = path;
+    },
     writeFile: async (path: string, contents: string) => {
       fileSystemImports.writeFile += 1;
       fileSystemImports.lastWritePath = path;
       fileSystemImports.lastWriteContents = contents;
+
+      if (fileSystemImports.writeFailure) {
+        throw fileSystemImports.writeFailure;
+      }
     },
   };
 });
@@ -125,9 +136,12 @@ describe("openapi-spec CLI", () => {
     generationModuleImports.lastBuildOptions = null;
     generationModuleImports.lastEmitOptions = null;
     generationModuleImports.outputDrift = null;
+    fileSystemImports.mkdir = 0;
+    fileSystemImports.lastMkdirPath = null;
     fileSystemImports.writeFile = 0;
     fileSystemImports.lastWritePath = null;
     fileSystemImports.lastWriteContents = null;
+    fileSystemImports.writeFailure = null;
     generationModuleImports.graph = {
       version: "croco.contract-graph.v1",
       controllers: [
@@ -388,6 +402,8 @@ describe("openapi-spec CLI", () => {
     expect(generationModuleImports.lastEmitOptions).toMatchObject({
       info: { title: "Croco API", version: "1.0.0" },
     });
+    expect(fileSystemImports.mkdir).toBe(1);
+    expect(fileSystemImports.lastMkdirPath).toBe(".");
     expect(fileSystemImports.writeFile).toBe(1);
     expect(fileSystemImports.lastWritePath).toBe("openapi.json");
     expect(fileSystemImports.lastWriteContents).toContain('"openapi": "3.1.0"');
@@ -461,6 +477,22 @@ describe("openapi-spec CLI", () => {
     expect(fileSystemImports.writeFile).toBe(1);
   });
 
+  it("preserves filesystem diagnostics when writing generated OpenAPI fails", async () => {
+    const writeFailure = Object.assign(new Error("No space left on device"), {
+      code: "ENOSPC",
+    });
+    fileSystemImports.writeFailure = writeFailure;
+
+    await expect(
+      runCli(["--controllers", "src/**/*.ts", "--out", "generated/openapi.json"], {
+        stdout: (message) => stdout.push(message),
+      }),
+    ).rejects.toBe(writeFailure);
+
+    expect(fileSystemImports.lastMkdirPath).toBe("generated");
+    expect(fileSystemImports.lastWritePath).toBe("generated/openapi.json");
+  });
+
   it("passes the Project manifest bundle source to OpenAPI generation", async () => {
     const exitCode = await runCli(
       [
@@ -507,6 +539,7 @@ describe("openapi-spec CLI", () => {
         "OpenAPI output drift detected. Regenerate with: croco-openapi-spec --controllers 'src/controllers/**/*.ts' --out openapi.json --title 'Croco API'",
       ]);
       expect(fileSystemImports.writeFile).toBe(0);
+      expect(fileSystemImports.mkdir).toBe(0);
     },
   );
 });
