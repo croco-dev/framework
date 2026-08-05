@@ -28,17 +28,60 @@ describe("package-bin-smoke.mts", () => {
       writeHelperPackage(root);
       writeBridgePackage(root);
       writeBinPackage(root, {
+        commandName: "croco-openapi-spec",
         dependencies: {
           "@croco/bin-bridge": "0.0.0",
         },
         script: [
           "#!/usr/bin/env node",
+          'import dgram from "node:dgram";',
+          'import dns from "node:dns";',
+          'import { readFileSync } from "node:fs";',
+          'import net from "node:net";',
+          'import { Worker } from "node:worker_threads";',
           'import { message } from "@croco/bin-bridge";',
-          'if (!process.argv.includes("--help")) {',
-          '  console.error("expected --help");',
+          'if (process.argv.slice(2).join(" ") !== "--controllers bin-smoke/SmokeController.ts --check --compatibility-problems --compatibility-schemas") {',
+          '  console.error("unexpected command");',
           "  process.exit(1);",
           "}",
-          "console.log(`Usage: smoke-bin ${message}`);",
+          "if (process.env.CROCO_BIN_SMOKE_SENTINEL_CREDENTIAL !== undefined) process.exit(8);",
+          'if (!readFileSync("bin-smoke/SmokeController.ts", "utf8").includes("SmokeController")) process.exit(7);',
+          "let networkBlocked = false;",
+          "try {",
+          '  net.connect({ host: "127.0.0.1", port: 9 });',
+          "} catch (error) {",
+          '  networkBlocked = String(error).includes("package-bin-smoke/network-disabled");',
+          "}",
+          "if (!networkBlocked) process.exit(6);",
+          "let resolverBlocked = false;",
+          "try {",
+          '  new dns.Resolver().resolve4("example.invalid", () => undefined);',
+          "} catch (error) {",
+          '  resolverBlocked = String(error).includes("package-bin-smoke/network-disabled");',
+          "}",
+          "if (!resolverBlocked) process.exit(5);",
+          "let promiseResolverBlocked = false;",
+          "try {",
+          '  new dns.promises.Resolver().resolve4("example.invalid");',
+          "} catch (error) {",
+          '  promiseResolverBlocked = String(error).includes("package-bin-smoke/network-disabled");',
+          "}",
+          "if (!promiseResolverBlocked) process.exit(4);",
+          "let workerBlocked = false;",
+          "try {",
+          '  new Worker("", { eval: true });',
+          "} catch (error) {",
+          '  workerBlocked = String(error).includes("package-bin-smoke/network-disabled");',
+          "}",
+          "if (!workerBlocked) process.exit(3);",
+          "let datagramBlocked = false;",
+          "try {",
+          '  new dgram.Socket("udp4");',
+          "} catch (error) {",
+          '  datagramBlocked = String(error).includes("package-bin-smoke/network-disabled");',
+          "}",
+          "if (!datagramBlocked) process.exit(2);",
+          "console.log(`Contract graph check passed for 1 route(s) across 1 controller(s). ${message}`);",
           "",
         ].join("\n"),
       });
@@ -46,7 +89,9 @@ describe("package-bin-smoke.mts", () => {
       const result = runScript(root);
 
       expect(result.status).toBe(0);
-      expect(result.stdout).toContain("package-bin-smoke: @croco/bin-tool smoke-bin --help");
+      expect(result.stdout).toContain(
+        "package-bin-smoke: @croco/bin-tool croco-openapi-spec --controllers bin-smoke/SmokeController.ts --check --compatibility-problems --compatibility-schemas",
+      );
       expect(result.stdout).toContain("summary checkedPackages=1 checkedBins=1");
     },
     spawnTimeoutMs,
@@ -75,6 +120,7 @@ describe("package-bin-smoke.mts", () => {
     () => {
       const root = createTempRoot();
       writeBinPackage(root, {
+        commandName: "croco-openapi-spec",
         script: [
           "#!/usr/bin/env node",
           'console.error("startup failed");',
@@ -87,7 +133,7 @@ describe("package-bin-smoke.mts", () => {
 
       expect(result.status).toBe(1);
       expect(`${result.stdout}\n${result.stderr}`).toContain(
-        "@croco/bin-tool: pnpm exec smoke-bin --help",
+        "@croco/bin-tool: croco-openapi-spec --controllers bin-smoke/SmokeController.ts --check --compatibility-problems --compatibility-schemas",
       );
       expect(`${result.stdout}\n${result.stderr}`).toContain("startup failed");
     },
@@ -124,10 +170,87 @@ describe("package-bin-smoke.mts", () => {
       const result = runScript(root);
 
       expect(result.status).toBe(0);
-      expect(result.stdout).toContain("package-bin-smoke: @croco/bin-tool migrate --help");
       expect(result.stdout).toContain("package-bin-smoke: @croco/bin-tool migrate status");
       expect(result.stdout).toContain(
         "package-bin-smoke: @croco/bin-tool migrate down --count abc",
+      );
+    },
+    spawnTimeoutMs,
+  );
+
+  it(
+    "executes explicit functional contracts for create-croco-app, croco, and RPC codegen",
+    () => {
+      const root = createTempRoot();
+      writeBinPackage(root, {
+        commandName: "create-croco-app",
+        directoryName: "create-croco-app",
+        packageName: "create-croco-app",
+        script: [
+          "#!/usr/bin/env node",
+          'import { mkdirSync, writeFileSync } from "node:fs";',
+          'const args = process.argv.slice(2).join(" ");',
+          'if (args !== "bin-smoke-app --preset blank --scope @croco-smoke --no-install --no-git --json") process.exit(9);',
+          'mkdirSync("bin-smoke-app", { recursive: true });',
+          'writeFileSync("bin-smoke-app/package.json", "{}\\n");',
+          'console.log(JSON.stringify({ code: "create-croco-app/project-created" }, null, 2));',
+          "",
+        ].join("\n"),
+      });
+      writeBinPackage(root, {
+        commandName: "croco",
+        directoryName: "cli",
+        packageName: "@croco/cli",
+        script: [
+          "#!/usr/bin/env node",
+          'if (process.argv.slice(2).join(" ") !== "doctor --json") process.exit(9);',
+          'console.log(JSON.stringify({ version: "croco.doctor.v1" }, null, 2));',
+          "",
+        ].join("\n"),
+      });
+      writeBinPackage(root, {
+        commandName: "croco-rpc-codegen",
+        directoryName: "rpc-codegen",
+        packageName: "@croco/rpc-codegen",
+        script: [
+          "#!/usr/bin/env node",
+          'import { readFileSync } from "node:fs";',
+          'if (process.argv.slice(2).join(" ") !== "--controllers bin-smoke/SmokeController.ts --check --compatibility-problems --compatibility-schemas") process.exit(9);',
+          "if (process.env.CROCO_BIN_SMOKE_SENTINEL_CREDENTIAL !== undefined) process.exit(8);",
+          'if (!readFileSync("bin-smoke/SmokeController.ts", "utf8").includes("SmokeController")) process.exit(7);',
+          'console.log("Contract graph check passed for 1 route(s) across 1 controller(s).");',
+          "",
+        ].join("\n"),
+      });
+
+      const result = runScript(root);
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain(
+        "package-bin-smoke: create-croco-app create-croco-app bin-smoke-app --preset blank --scope @croco-smoke --no-install --no-git --json",
+      );
+      expect(result.stdout).toContain("package-bin-smoke: @croco/cli croco doctor --json");
+      expect(result.stdout).toContain(
+        "package-bin-smoke: @croco/rpc-codegen croco-rpc-codegen --controllers bin-smoke/SmokeController.ts --check --compatibility-problems --compatibility-schemas",
+      );
+      expect(result.stdout).toContain("summary checkedPackages=3 checkedBins=3");
+    },
+    spawnTimeoutMs,
+  );
+
+  it(
+    "rejects a published bin without an explicit functional smoke contract",
+    () => {
+      const root = createTempRoot();
+      writeBinPackage(root, {
+        script: ["#!/usr/bin/env node", 'console.log("help-only shim");', ""].join("\n"),
+      });
+
+      const result = runScript(root);
+
+      expect(result.status).toBe(1);
+      expect(`${result.stdout}\n${result.stderr}`).toContain(
+        "@croco/bin-tool: bin smoke-bin is missing a functional smoke command contract",
       );
     },
     spawnTimeoutMs,
@@ -210,17 +333,19 @@ function writeBinPackage(
   options: {
     readonly commandName?: string;
     readonly dependencies?: Record<string, string>;
+    readonly directoryName?: string;
+    readonly packageName?: string;
     readonly script: string;
   },
 ): void {
-  const packageDir = join(root, "packages", "bin-tool");
+  const packageDir = join(root, "packages", options.directoryName ?? "bin-tool");
   mkdirSync(join(packageDir, "dist"), { recursive: true });
   writeFileSync(join(packageDir, "dist", "cli.js"), options.script);
   writeFileSync(
     join(packageDir, "package.json"),
     `${JSON.stringify(
       {
-        name: "@croco/bin-tool",
+        name: options.packageName ?? "@croco/bin-tool",
         version: "0.0.0",
         bin: {
           [options.commandName ?? "smoke-bin"]: "./dist/cli.js",
@@ -238,6 +363,7 @@ function writeBinPackage(
 function runScript(root: string): ScriptResult {
   const result = spawnSync("node", ["--experimental-strip-types", scriptPath, "--root", root], {
     encoding: "utf-8",
+    env: { ...process.env, CROCO_BIN_SMOKE_SENTINEL_CREDENTIAL: "must-not-reach-bin" },
     timeout: spawnTimeoutMs,
   });
 
