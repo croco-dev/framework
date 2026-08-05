@@ -14,6 +14,11 @@ reported without ad hoc strings.
   codes.
 - `DuplicateDiagnosticsProviderProblem` - Problem emitted for duplicate provider
   registration.
+- `InvalidDiagnosticsTimeoutProblem` - Problem emitted when a default or per-provider
+  timeout is outside the safe Node.js timer range.
+
+Default and per-provider timeouts must be integer milliseconds between `1` and
+`2_147_483_647`. Invalid values fail during setup before a provider check runs.
 
 ## Usage
 

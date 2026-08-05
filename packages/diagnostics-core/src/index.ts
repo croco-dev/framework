@@ -12,7 +12,11 @@ export {
   isDiagnosticCode,
 } from "./libs/DiagnosticCodes";
 export { ErrorHistoryRingBuffer } from "./libs/ErrorHistoryRingBuffer";
-export { DuplicateDiagnosticsProviderProblem } from "./libs/problems/DiagnosticsProblems";
+export {
+  DuplicateDiagnosticsProviderProblem,
+  InvalidDiagnosticsTimeoutProblem,
+  MAX_DIAGNOSTICS_TIMEOUT_MS,
+} from "./libs/problems/DiagnosticsProblems";
 export type {
   CreateDiagnosticMessageOptions,
   DiagnosticCategory,
@@ -31,3 +35,4 @@ export type {
   ErrorRecord,
   DiagnosticsReport,
 } from "./libs/types";
+export type { DiagnosticsTimeoutSource } from "./libs/problems/DiagnosticsProblems";

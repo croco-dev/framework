@@ -4,10 +4,18 @@ export interface DiagnosticsProvider {
 }
 
 export type DiagnosticsCollectorOptions = {
+  /**
+   * Default provider timeout in milliseconds. Must be an integer from 1 through 2,147,483,647.
+   * Invalid values throw an InvalidDiagnosticsTimeoutProblem during setup.
+   */
   readonly timeout?: number;
 };
 
 export type DiagnosticsProviderOptions = {
+  /**
+   * Provider timeout in milliseconds. Must be an integer from 1 through 2,147,483,647.
+   * Invalid values throw an InvalidDiagnosticsTimeoutProblem during registration.
+   */
   readonly timeout?: number;
 };
 

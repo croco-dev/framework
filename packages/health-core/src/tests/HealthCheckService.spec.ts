@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { HealthCheckService } from "../libs/HealthCheckService";
+import {
+  InvalidHealthCheckTimeoutProblem,
+  MAX_HEALTH_CHECK_TIMEOUT_MS,
+} from "../libs/problems/HealthProblems";
 import type {
   HealthIndicator,
   HealthIndicatorResult,
@@ -15,6 +19,90 @@ describe("HealthCheckService", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  describe("timeout configuration", () => {
+    const invalidTimeouts = [Number.NaN, Number.POSITIVE_INFINITY, -1, 0, 0.5, 1.5, 2_147_483_648];
+
+    it.each(invalidTimeouts)("rejects invalid default timeout %s at construction", (timeout) => {
+      expect(() => new HealthCheckService({ timeout })).toThrow(InvalidHealthCheckTimeoutProblem);
+
+      try {
+        new HealthCheckService({ timeout });
+      } catch (error) {
+        expect(error).toMatchObject({
+          code: "health-core/invalid-timeout",
+          message: expect.stringContaining(String(timeout)),
+        });
+      }
+    });
+
+    it.each(invalidTimeouts)(
+      "rejects invalid indicator timeout %s at registration",
+      async (timeout) => {
+        const indicator: HealthIndicator = {
+          check: vi.fn().mockResolvedValue({ name: "db", status: "up" }),
+        };
+
+        expect(() => service.register(indicator, { timeout })).toThrow(
+          InvalidHealthCheckTimeoutProblem,
+        );
+        expect(() =>
+          service.registerReadiness({ ...indicator, isReady: indicator.check }, { timeout }),
+        ).toThrow(InvalidHealthCheckTimeoutProblem);
+
+        await expect(service.check()).resolves.toEqual({ status: "up", results: [] });
+        await expect(service.checkReadiness()).resolves.toEqual({ status: "up", results: [] });
+      },
+    );
+
+    it.each([1, MAX_HEALTH_CHECK_TIMEOUT_MS])(
+      "preserves valid default timeout boundary %s",
+      async (timeout) => {
+        const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
+        const boundaryService = new HealthCheckService({ timeout });
+        boundaryService.register({
+          check: vi.fn().mockResolvedValue({ name: "db", status: "up" }),
+        });
+
+        await expect(boundaryService.check()).resolves.toEqual({
+          status: "up",
+          results: [{ name: "db", status: "up" }],
+        });
+        expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), timeout);
+      },
+    );
+
+    it.each([1, MAX_HEALTH_CHECK_TIMEOUT_MS])(
+      "preserves valid indicator timeout boundary %s",
+      async (timeout) => {
+        const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
+        service.register(
+          { check: vi.fn().mockResolvedValue({ name: "db", status: "up" }) },
+          { timeout },
+        );
+
+        await service.check();
+
+        expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), timeout);
+      },
+    );
+
+    it("snapshots a validated indicator timeout before the caller mutates its options", async () => {
+      const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
+      const options = { timeout: 100 };
+      service.register({ check: vi.fn().mockResolvedValue({ name: "db", status: "up" }) }, options);
+
+      options.timeout = Number.POSITIVE_INFINITY;
+      await service.check();
+
+      expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 100);
+      expect(setTimeoutSpy).not.toHaveBeenCalledWith(
+        expect.any(Function),
+        Number.POSITIVE_INFINITY,
+      );
+    });
   });
 
   it("should return up status when all indicators are up", async () => {

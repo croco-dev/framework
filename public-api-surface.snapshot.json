@@ -7709,10 +7709,22 @@
               "declarationKind": "function"
             },
             {
+              "name": "InvalidDiagnosticsTimeoutProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/DiagnosticsProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "isDiagnosticCode",
               "exportKind": "named",
               "source": "./libs/DiagnosticCodes",
               "declarationKind": "function"
+            },
+            {
+              "name": "MAX_DIAGNOSTICS_TIMEOUT_MS",
+              "exportKind": "named",
+              "source": "./libs/problems/DiagnosticsProblems",
+              "declarationKind": "const"
             }
           ],
           "typeExports": [
@@ -7775,6 +7787,11 @@
               "name": "DiagnosticsReport",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "DiagnosticsTimeoutSource",
+              "exportKind": "named",
+              "source": "./libs/problems/DiagnosticsProblems"
             },
             {
               "name": "ErrorRecord",
@@ -12709,6 +12726,18 @@
               "exportKind": "named",
               "source": "./libs/HealthCheckService",
               "declarationKind": "class"
+            },
+            {
+              "name": "InvalidHealthCheckTimeoutProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/HealthProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "MAX_HEALTH_CHECK_TIMEOUT_MS",
+              "exportKind": "named",
+              "source": "./libs/problems/HealthProblems",
+              "declarationKind": "const"
             }
           ],
           "typeExports": [
@@ -12721,6 +12750,11 @@
               "name": "HealthCheckServiceOptions",
               "exportKind": "named",
               "source": "./libs/HealthCheckService"
+            },
+            {
+              "name": "HealthCheckTimeoutSource",
+              "exportKind": "named",
+              "source": "./libs/problems/HealthProblems"
             },
             {
               "name": "HealthIndicator",

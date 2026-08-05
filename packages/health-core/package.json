@@ -31,5 +31,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "@croco/problems-core": "workspace:*"
+  },
   "devDependencies": {}
 }

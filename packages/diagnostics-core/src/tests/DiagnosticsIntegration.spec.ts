@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DiagnosticsCollector } from "../libs/DiagnosticsCollector";
-import { DuplicateDiagnosticsProviderProblem } from "../libs/problems/DiagnosticsProblems";
+import {
+  DuplicateDiagnosticsProviderProblem,
+  InvalidDiagnosticsTimeoutProblem,
+  MAX_DIAGNOSTICS_TIMEOUT_MS,
+} from "../libs/problems/DiagnosticsProblems";
 import type { DiagnosticsProvider, HealthStatus, ErrorRecord } from "../libs/types";
 
 class MockDiagnosticsProvider implements DiagnosticsProvider {
@@ -44,6 +48,99 @@ describe("DiagnosticsCollector Integration", () => {
 
   beforeEach(() => {
     collector = new DiagnosticsCollector();
+  });
+
+  describe("timeout configuration", () => {
+    const invalidTimeouts = [Number.NaN, Number.POSITIVE_INFINITY, -1, 0, 0.5, 1.5, 2_147_483_648];
+
+    it.each(invalidTimeouts)("rejects invalid default timeout %s at construction", (timeout) => {
+      expect(() => new DiagnosticsCollector({ timeout })).toThrow(InvalidDiagnosticsTimeoutProblem);
+
+      try {
+        new DiagnosticsCollector({ timeout });
+      } catch (error) {
+        expect(error).toMatchObject({
+          code: "diagnostics-core/invalid-timeout",
+          message: expect.stringContaining(String(timeout)),
+        });
+      }
+    });
+
+    it.each(invalidTimeouts)("rejects invalid provider timeout %s at registration", (timeout) => {
+      const provider = new MockDiagnosticsProvider("db", {
+        status: "healthy",
+        component: "db",
+        lastChecked: new Date().toISOString(),
+      });
+
+      expect(() => collector.registerProvider(provider, { timeout })).toThrow(
+        InvalidDiagnosticsTimeoutProblem,
+      );
+      expect(collector.getProviders()).toEqual([]);
+    });
+
+    it.each([1, MAX_DIAGNOSTICS_TIMEOUT_MS])(
+      "preserves valid default timeout boundary %s",
+      async (timeout) => {
+        const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
+        const boundaryCollector = new DiagnosticsCollector({ timeout });
+        boundaryCollector.registerProvider(
+          new MockDiagnosticsProvider("db", {
+            status: "healthy",
+            component: "db",
+            lastChecked: new Date().toISOString(),
+          }),
+        );
+
+        await boundaryCollector.getReport();
+
+        expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), timeout);
+        setTimeoutSpy.mockRestore();
+      },
+    );
+
+    it.each([1, MAX_DIAGNOSTICS_TIMEOUT_MS])(
+      "preserves valid provider timeout boundary %s",
+      async (timeout) => {
+        const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
+        collector.registerProvider(
+          new MockDiagnosticsProvider("db", {
+            status: "healthy",
+            component: "db",
+            lastChecked: new Date().toISOString(),
+          }),
+          { timeout },
+        );
+
+        await collector.getReport();
+
+        expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), timeout);
+        setTimeoutSpy.mockRestore();
+      },
+    );
+
+    it("snapshots a validated provider timeout before the caller mutates its options", async () => {
+      const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
+      const options = { timeout: 100 };
+      collector.registerProvider(
+        new MockDiagnosticsProvider("db", {
+          status: "healthy",
+          component: "db",
+          lastChecked: new Date().toISOString(),
+        }),
+        options,
+      );
+
+      options.timeout = Number.POSITIVE_INFINITY;
+      await collector.getReport();
+
+      expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 100);
+      expect(setTimeoutSpy).not.toHaveBeenCalledWith(
+        expect.any(Function),
+        Number.POSITIVE_INFINITY,
+      );
+      setTimeoutSpy.mockRestore();
+    });
   });
 
   it("should return report with summary when no providers registered", async () => {
