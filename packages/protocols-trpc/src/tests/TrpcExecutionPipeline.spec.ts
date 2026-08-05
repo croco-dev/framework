@@ -457,10 +457,15 @@ describe("tRPC Croco execution pipeline", () => {
     expect(events).toEqual(["dependency-guard"]);
   });
 
-  it("requires a container for providers with constructor dependencies", () => {
-    expect(() => createTrpcRouter([TrpcRequiredDependencyController])).toThrow(
-      expect.objectContaining({ code: "protocols-trpc/provider-container-required" }),
-    );
+  it("requires a container for providers with constructor dependencies", async () => {
+    const router = createTrpcRouter([TrpcRequiredDependencyController]);
+    const caller = router.createCaller({}) as unknown as {
+      trpcRequiredDependency: { handler: () => Promise<unknown> };
+    };
+
+    await expect(caller.trpcRequiredDependency.handler()).rejects.toMatchObject({
+      cause: expect.objectContaining({ code: "protocols-trpc/provider-container-required" }),
+    });
   });
 
   it("lets filters handle guard provider instantiation failures", async () => {

@@ -18,6 +18,24 @@ import { createTrpcRouter } from "@croco/protocols-trpc";
 const router = createTrpcRouter(routes);
 ```
 
+Every procedure runs inside an isolated Croco request context. Registered controllers and
+lifecycle providers are resolved from the Croco container inside that boundary, so constructor
+injection and request-scoped components work for concurrent calls. The adapter propagates
+`requestId`, `tenantId`, `user`, trace fields, runtime metadata, and runtime-inspector metadata
+from the tRPC context. It also reads `x-request-id` and `traceparent` from `request` or `req`
+headers when those fields are not provided directly.
+
+Applications with a different tRPC context shape can map it explicitly:
+
+```typescript
+const router = createTrpcRouter(routes, {
+  createRequestContext: (context) => ({
+    requestId: context.correlationId as string,
+    tenantId: context.accountId as string,
+  }),
+});
+```
+
 ## Route inputs
 
 Body-only controller methods keep their existing tRPC input shape. When a controller declares

@@ -9,6 +9,20 @@ title: "TrpcRouterOptions"
 
 ## Properties
 
+### createRequestContext()?
+
+> `readonly` `optional` **createRequestContext?**: (`context`) => [`RequestContext`](/api/framework-context/src/interfaces/requestcontext/)
+
+#### Parameters
+
+##### context
+
+`Record`\<`string`, `unknown`\>
+
+#### Returns
+
+[`RequestContext`](/api/framework-context/src/interfaces/requestcontext/)
+
 ### container?
 
 > `readonly` `optional` **container?**: `object`

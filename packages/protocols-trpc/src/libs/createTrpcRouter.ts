@@ -1,3 +1,5 @@
+import { Container, Context } from "@croco/framework-context";
+import type { RequestContext } from "@croco/framework-context";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import type { RouteIR } from "@croco/protocols-core";
 import { extractRouteIR } from "@croco/protocols-core";
@@ -20,6 +22,7 @@ export type TrpcRouterOptions = {
   readonly container?: {
     get<T>(type: Constructor<T>): T;
   };
+  readonly createRequestContext?: (context: Record<string, unknown>) => RequestContext;
 };
 
 const t = initTRPC.context<Record<string, unknown>>().create({
@@ -94,17 +97,11 @@ export function createTrpcRouter(
 
   for (const controller of controllers) {
     const controllerCtor = controller as ControllerConstructor;
-    const controllerInstance = instantiateProvider(controllerCtor, options);
 
     for (const route of extractRouteIR(controllerCtor)) {
       const domain = getDomainName(route);
       domains[domain] ??= {};
-      domains[domain][route.methodName] = createProcedure(
-        controllerInstance,
-        controllerCtor,
-        route,
-        options,
-      );
+      domains[domain][route.methodName] = createProcedure(controllerCtor, route, options);
     }
   }
 
@@ -118,7 +115,6 @@ export function createTrpcRouter(
 }
 
 function createProcedure(
-  controllerInstance: object,
   controller: ControllerConstructor,
   route: RouteIR,
   options: TrpcRouterOptions,
@@ -135,23 +131,25 @@ function createProcedure(
   const createInterceptors = (): TrpcPipelineConfig["interceptors"] =>
     interceptorProviders.map((provider) => instantiateProvider(provider, options));
   const inputSchema = createTrpcInputSchema(route);
-  const lifecycleProcedure = t.procedure.use(async ({ ctx, next }) => {
-    const context = createExecutionContext(ctx);
-    const filters = createFilters();
+  const lifecycleProcedure = t.procedure.use(async ({ ctx, next }) =>
+    Context.run(createCrocoRequestContext(ctx, options), async () => {
+      const context = createExecutionContext(ctx);
+      const filters = createFilters();
 
-    try {
-      await executionPipeline.runGuards(context, createGuards());
-    } catch (error) {
-      return executionPipeline.rethrowFiltered(error, context, filters);
-    }
+      try {
+        await executionPipeline.runGuards(context, createGuards());
+      } catch (error) {
+        return executionPipeline.rethrowFiltered(error, context, filters);
+      }
 
-    const result = await next();
-    if (!result.ok) {
-      return executionPipeline.rethrowFiltered(result.error, context, filters);
-    }
+      const result = await next();
+      if (!result.ok) {
+        return executionPipeline.rethrowFiltered(result.error, context, filters);
+      }
 
-    return result;
-  });
+      return result;
+    }),
+  );
   const procedureWithInput = inputSchema
     ? lifecycleProcedure.input(inputSchema)
     : lifecycleProcedure;
@@ -164,12 +162,15 @@ function createProcedure(
   }: {
     readonly ctx: Record<string, unknown>;
     readonly input: unknown;
-  }) =>
-    executionPipeline.runInterceptors(
+  }) => {
+    const controllerInstance = instantiateProvider(controller, options);
+
+    return executionPipeline.runInterceptors(
       createExecutionContext(ctx),
       async () => callRoute(controllerInstance, route, input, ctx),
       createInterceptors(),
     );
+  };
 
   if (route.httpMethod === "GET") {
     return procedure.query(resolver);
@@ -208,6 +209,10 @@ function instantiateProvider<T>(provider: Constructor<T>, options: TrpcRouterOpt
     return options.container.get(provider);
   }
 
+  if (Container.getComponentMetadata(provider) !== undefined || Container.has(provider)) {
+    return Container.get(provider);
+  }
+
   if (provider.length > 0) {
     throw new TrpcProviderContainerProblem(getProviderName(provider));
   }
@@ -215,6 +220,111 @@ function instantiateProvider<T>(provider: Constructor<T>, options: TrpcRouterOpt
   const Provider = provider as new () => T;
 
   return new Provider();
+}
+
+function createCrocoRequestContext(context: unknown, options: TrpcRouterOptions): RequestContext {
+  const trpcContext = isRecord(context) ? context : {};
+
+  if (options.createRequestContext) {
+    return options.createRequestContext(trpcContext);
+  }
+
+  const metadata = isRecord(trpcContext.crocoRequestContext)
+    ? trpcContext.crocoRequestContext
+    : trpcContext;
+  const runtime = isRecord(metadata.runtime) ? metadata.runtime : undefined;
+  const runtimeTrace = runtime && isRecord(runtime.trace) ? runtime.trace : undefined;
+  const traceparent = parseTraceparent(readRequestHeader(trpcContext, "traceparent"));
+  const requestId =
+    readString(metadata.requestId) ??
+    (runtime ? readString(runtime.requestId) : undefined) ??
+    readRequestHeader(trpcContext, "x-request-id") ??
+    globalThis.crypto.randomUUID();
+  const traceId =
+    readString(metadata.traceId) ??
+    (runtimeTrace ? readString(runtimeTrace.traceId) : undefined) ??
+    traceparent?.traceId;
+  const spanId =
+    readString(metadata.spanId) ??
+    (runtimeTrace ? readString(runtimeTrace.spanId) : undefined) ??
+    traceparent?.spanId;
+  const traceFlags =
+    readTraceFlags(metadata.traceFlags) ??
+    (runtimeTrace ? readTraceFlags(runtimeTrace.traceFlags) : undefined) ??
+    traceparent?.traceFlags;
+  const user = isUserContext(metadata.user) ? metadata.user : undefined;
+
+  return {
+    requestId,
+    ...(readString(metadata.inspectionId)
+      ? { inspectionId: readString(metadata.inspectionId) }
+      : {}),
+    ...(user ? { user } : {}),
+    ...(readString(metadata.tenantId) ? { tenantId: readString(metadata.tenantId) } : {}),
+    ...(traceId ? { traceId } : {}),
+    ...(spanId ? { spanId } : {}),
+    ...(traceFlags !== undefined ? { traceFlags } : {}),
+    ...(runtime ? { runtime: runtime as unknown as RequestContext["runtime"] } : {}),
+    ...(isRecord(metadata.runtimeInspector)
+      ? {
+          runtimeInspector:
+            metadata.runtimeInspector as unknown as RequestContext["runtimeInspector"],
+        }
+      : {}),
+  };
+}
+
+function readRequestHeader(context: Record<string, unknown>, name: string): string | undefined {
+  const request = context.request ?? context.req;
+
+  if (request instanceof Request) {
+    return request.headers.get(name) ?? undefined;
+  }
+
+  if (!isRecord(request)) {
+    return undefined;
+  }
+
+  const headers = request.headers;
+  if (headers instanceof Headers) {
+    return headers.get(name) ?? undefined;
+  }
+  if (!isRecord(headers)) {
+    return undefined;
+  }
+
+  const value = headers[name] ?? headers[name.toLowerCase()];
+  return Array.isArray(value) ? readString(value[0]) : readString(value);
+}
+
+function parseTraceparent(value: string | undefined):
+  | {
+      readonly traceId: string;
+      readonly spanId: string;
+      readonly traceFlags: string;
+    }
+  | undefined {
+  const match = value?.match(/^(00|01)-([\da-f]{32})-([\da-f]{16})-([\da-f]{2})$/i);
+
+  return match?.[2] && match[3] && match[4]
+    ? { traceId: match[2], spanId: match[3], traceFlags: match[4] }
+    : undefined;
+}
+
+function readString(value: unknown): string | undefined {
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+function readTraceFlags(value: unknown): string | number | undefined {
+  return typeof value === "string" || typeof value === "number" ? value : undefined;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isUserContext(value: unknown): value is NonNullable<RequestContext["user"]> {
+  return isRecord(value) && typeof value.id === "string";
 }
 
 function getProviderName(provider: Constructor): string {
