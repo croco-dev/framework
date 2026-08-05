@@ -94,9 +94,9 @@ describe("generated browser workflow policy", () => {
       "job test permissions must grant only contents: read",
     ],
     [
-      "mixed-case checkout with persistent credentials",
-      `permissions:\n  contents: read\njobs:\n  test:\n    steps:\n      - uses: actions/checkout@0123456789012345678901234567890123456789\n        with:\n          persist-credentials: false\n      - uses: AcTiOnS/ChEcKoUt@0123456789012345678901234567890123456789\n`,
-      "checkout steps must set persist-credentials: false",
+      "mixed-case checkout reference",
+      `permissions:\n  contents: read\njobs:\n  test:\n    steps:\n      - uses: actions/checkout@0123456789012345678901234567890123456789\n        with:\n          persist-credentials: false\n      - uses: AcTiOnS/ChEcKoUt@0123456789012345678901234567890123456789\n        with:\n          persist-credentials: false\n`,
+      "checkout steps must use canonical actions/checkout@ casing",
     ],
   ])("rejects %s", (_label, workflow, expectedMessage) => {
     const root = createTempRoot();

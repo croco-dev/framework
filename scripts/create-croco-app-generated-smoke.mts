@@ -3707,6 +3707,12 @@ export function assertGeneratedBrowserWorkflowLeastPrivilege(path: string): void
   }
 
   for (const checkoutStep of checkoutSteps) {
+    if (
+      typeof checkoutStep.uses !== "string" ||
+      !checkoutStep.uses.startsWith("actions/checkout@")
+    ) {
+      throw new Error(`${path} checkout steps must use canonical actions/checkout@ casing`);
+    }
     if (!isRecord(checkoutStep.with) || checkoutStep.with["persist-credentials"] !== false) {
       throw new Error(`${path} checkout steps must set persist-credentials: false`);
     }

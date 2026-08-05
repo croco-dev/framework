@@ -368,6 +368,7 @@ function assertBrowserWorkflowUsesLeastPrivilege(workflow: string): void {
   }
   expect(checkoutSteps.length).toBeGreaterThan(0);
   for (const checkoutStep of checkoutSteps) {
+    expect(checkoutStep.uses).toMatch(/^actions\/checkout@/);
     expect(checkoutStep.with?.["persist-credentials"]).toBe(false);
   }
 }
