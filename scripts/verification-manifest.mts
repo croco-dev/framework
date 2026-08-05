@@ -110,8 +110,50 @@ function affectsCli(path: string): boolean {
 function affectsPackageGraph(path: string): boolean {
   return (
     /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|turbo\.json|\.nvmrc)$/.test(path) ||
-    /^(?:apps|examples|packages)\//.test(path)
+    /^(?:apps|examples|packages)\//.test(path) ||
+    path === "docs/package-catalog.json"
   );
+}
+
+function packageAccountabilitySelection(context: VerificationContext): {
+  readonly applicable: boolean;
+  readonly fullEvidence: boolean;
+  readonly packages: readonly string[];
+  readonly reason: string;
+} {
+  if (!isChangeScopedVerification(context) || !context.changedFiles) {
+    return {
+      applicable: true,
+      fullEvidence: true,
+      packages: [],
+      reason: "Selected because this is a full verification run.",
+    };
+  }
+
+  const relevantFiles = context.changedFiles.filter(affectsPackageGraph);
+  if (relevantFiles.length > 0) {
+    const packages = [
+      ...new Set(
+        relevantFiles.flatMap((path) => {
+          const match = /^packages\/([^/]+)\//.exec(path);
+          return match?.[1] ? [match[1]] : [];
+        }),
+      ),
+    ].sort();
+    return {
+      applicable: true,
+      fullEvidence: relevantFiles.some((path) => !path.startsWith("packages/")),
+      packages,
+      reason: `Selected because package accountability inputs changed: ${relevantFiles.join(", ")}.`,
+    };
+  }
+
+  return {
+    applicable: false,
+    fullEvidence: false,
+    packages: [],
+    reason: "Skipped because no package graph or package catalog input changed.",
+  };
 }
 
 function affectsCoreCoverage(path: string): boolean {
@@ -410,24 +452,29 @@ const repoOnly = (
 
 const spineOnly = (context: VerificationContext): readonly EvidenceCommand[] => {
   const changeScoped = isChangeScopedVerification(context);
-  const affectedArguments = affectedTurboArguments(context);
+  const packageAccountability = packageAccountabilitySelection(context);
+  const affectedArguments = packageAccountability.fullEvidence
+    ? []
+    : affectedTurboArguments(context);
   const scaffoldApplicable = isApplicableToChangedFiles(context, affectsScaffold);
   const scaffoldBuildArguments =
-    changeScoped && scaffoldApplicable ? ["--filter=create-croco-app"] : [];
+    changeScoped && scaffoldApplicable && !packageAccountability.fullEvidence
+      ? ["--filter=create-croco-app"]
+      : [];
   const entrypointsApplicable = isApplicableToChangedFiles(context, affectsPackageEntrypoints);
   const binsApplicable = isApplicableToChangedFiles(context, affectsPackageBins);
   const packageBinBuildArguments =
-    changeScoped && binsApplicable
+    changeScoped && binsApplicable && !packageAccountability.fullEvidence
       ? PACKAGE_BIN_BUILD_FILTERS.map((packageName) => `--filter=${packageName}`)
       : [];
   const cliApplicable = isApplicableToChangedFiles(context, affectsCli);
   const coreCoverageApplicable = isApplicableToChangedFiles(context, affectsCoreCoverage);
-  const packageGraphApplicable = isApplicableToChangedFiles(context, affectsPackageGraph);
 
   return [
     {
       id: "build",
-      label: changeScoped ? "Affected build" : "Summarized build",
+      label:
+        changeScoped && !packageAccountability.fullEvidence ? "Affected build" : "Summarized build",
       category: "build",
       command: [
         "pnpm",
@@ -490,7 +537,7 @@ const spineOnly = (context: VerificationContext): readonly EvidenceCommand[] => 
         "spine-blocking",
       ),
       timeoutMs: minutes(45),
-      applicable: scaffoldApplicable,
+      applicable: scaffoldApplicable || packageAccountability.fullEvidence,
       artifacts: [
         {
           label: "Spine-blocking generated app smoke matrix markdown",
@@ -593,10 +640,11 @@ const spineOnly = (context: VerificationContext): readonly EvidenceCommand[] => 
       command: guardedNodeScript(
         "Fix the reported production-ready package violations",
         "scripts/production-ready-check.mts",
-        "--require-task-summaries",
+        ...(packageAccountability.fullEvidence ? ["--require-task-summaries"] : []),
       ),
       timeoutMs: minutes(10),
-      applicable: !changeScoped && packageGraphApplicable,
+      applicable: packageAccountability.applicable,
+      selectionReason: packageAccountability.reason,
       artifacts: [
         {
           label: "Production-ready package markdown",
@@ -612,9 +660,13 @@ const spineOnly = (context: VerificationContext): readonly EvidenceCommand[] => 
       command: guardedNodeScript(
         "Fix the reported beta spine promotion violations",
         "scripts/spine-promotion-check.mts",
+        ...(packageAccountability.fullEvidence
+          ? []
+          : packageAccountability.packages.flatMap((packageName) => ["--package", packageName])),
       ),
       timeoutMs: minutes(10),
-      applicable: !changeScoped && packageGraphApplicable,
+      applicable: packageAccountability.applicable,
+      selectionReason: packageAccountability.reason,
       artifacts: [
         {
           label: "Beta spine promotion markdown",

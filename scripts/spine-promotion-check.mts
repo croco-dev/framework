@@ -36,6 +36,7 @@ type Options = {
   readonly contextFile: string | null;
   readonly rootDir: string;
   readonly outputDir: string;
+  readonly packageNames: readonly string[];
 };
 
 export type PromotionEvidenceRole = "behavior" | "compatibility" | "failure-recovery";
@@ -657,6 +658,7 @@ export function createSpinePromotionReport(options: {
   readonly evidenceContext?: PromotionEvidenceContext | null;
   readonly generatedAt?: string;
   readonly rootDir: string;
+  readonly packageNames?: readonly string[];
   readonly testInventory?: (pkg: PackageInfo) => readonly string[];
 }): SpinePromotionReport {
   const catalogErrors: string[] = [];
@@ -680,9 +682,16 @@ export function createSpinePromotionReport(options: {
   const workspaceByShortName = indexWorkspacePackages(readPackages(options.rootDir), catalogErrors);
   const spinePackageSet = new Set(spinePackages);
   const catalogWarnings: string[] = [];
-  const betaSpinePackageSet = new Set(
+  const allBetaSpinePackageSet = new Set(
     spinePackages.filter((packageName) => maturityByPackage.get(packageName) === "beta"),
   );
+  const requestedPackageSet = new Set(options.packageNames ?? []);
+  const betaSpinePackageSet =
+    requestedPackageSet.size === 0
+      ? allBetaSpinePackageSet
+      : new Set(
+          [...allBetaSpinePackageSet].filter((packageName) => requestedPackageSet.has(packageName)),
+        );
 
   for (const packageName of spinePackages) {
     const maturity = maturityByPackage.get(packageName);
@@ -707,7 +716,7 @@ export function createSpinePromotionReport(options: {
     }
   }
 
-  for (const packageName of betaSpinePackageSet) {
+  for (const packageName of allBetaSpinePackageSet) {
     if (!workspaceByShortName.has(packageName)) {
       catalogErrors.push(
         `${catalogMetadataPath}: spine package ${packageName} is beta but has no public workspace package`,
@@ -716,7 +725,7 @@ export function createSpinePromotionReport(options: {
   }
 
   for (const packageName of promotionPackages.keys()) {
-    if (!betaSpinePackageSet.has(packageName)) {
+    if (!allBetaSpinePackageSet.has(packageName)) {
       catalogErrors.push(
         `${catalogMetadataPath}: spine.promotion.packages.${packageName} is outside the current beta spine and must be removed when promotion is complete or out of scope`,
       );
@@ -1203,6 +1212,7 @@ export function parseArgs(args: readonly string[] = argv.slice(2)): Options {
   let contextFile: string | null = null;
   let rootDir = process.cwd();
   let outputDir = reportDirectory;
+  const packageNames: string[] = [];
 
   for (let index = 0; index < normalizedArgs.length; index += 1) {
     const arg = normalizedArgs[index];
@@ -1246,6 +1256,16 @@ export function parseArgs(args: readonly string[] = argv.slice(2)): Options {
       continue;
     }
 
+    if (arg === "--package") {
+      const value = normalizedArgs[index + 1];
+      if (!value) {
+        throw new Error("--package requires a package name");
+      }
+      packageNames.push(value.replace(/^@croco\//, ""));
+      index += 1;
+      continue;
+    }
+
     throw new Error(`Unknown argument: ${arg}`);
   }
 
@@ -1254,6 +1274,7 @@ export function parseArgs(args: readonly string[] = argv.slice(2)): Options {
     contextFile: contextFile ? resolve(rootDir, contextFile) : null,
     rootDir,
     outputDir: resolve(rootDir, outputDir),
+    packageNames: [...new Set(packageNames)].sort(),
   };
 }
 
@@ -1289,6 +1310,7 @@ function main(): void {
   const options = parseArgs();
   const report = createSpinePromotionReport({
     evidenceContext: loadPromotionEvidenceContext(options),
+    packageNames: options.packageNames,
     rootDir: options.rootDir,
   });
   const markdownPath = writeSpinePromotionReport(report, options.outputDir);
