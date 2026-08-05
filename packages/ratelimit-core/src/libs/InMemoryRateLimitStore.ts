@@ -8,13 +8,34 @@ import type {
   SlidingWindowPolicy,
   TokenBucketPolicy,
 } from "./types";
-import { RateLimitRefundUnsupportedProblem } from "./problems/RateLimitConfigProblems";
+import {
+  RateLimitPruneIntervalProblem,
+  RateLimitRefundUnsupportedProblem,
+} from "./problems/RateLimitConfigProblems";
 
 export type InMemoryRateLimitStoreOptions = {
-  pruneIntervalMs?: number;
+  readonly now?: () => number;
+  readonly pruneIntervalMs?: number;
+  readonly random?: () => number;
+  readonly scheduler?: RateLimitPruneScheduler;
 };
 
+export interface RateLimitPruneScheduler {
+  schedule(callback: () => void | Promise<void>, intervalMs: number): () => void;
+}
+
 const DEFAULT_PRUNE_INTERVAL_MS = 60000;
+const MAX_NATIVE_TIMER_DELAY_MS = 2_147_483_647;
+
+const DEFAULT_PRUNE_SCHEDULER: RateLimitPruneScheduler = {
+  schedule(callback, intervalMs) {
+    const timer = setTimeout(() => {
+      void callback();
+    }, intervalMs);
+    timer.unref?.();
+    return () => clearTimeout(timer);
+  },
+};
 
 type MutableRateLimitStats = {
   allowed: number;
@@ -27,30 +48,52 @@ function recordRefund(stats: MutableRateLimitStats): void {
   stats.total = Math.max(0, stats.total - 1);
 }
 
+function schedulePruning(
+  options: InMemoryRateLimitStoreOptions,
+  callback: () => void | Promise<void>,
+): (() => void) | undefined {
+  const pruneIntervalMs = options.pruneIntervalMs ?? DEFAULT_PRUNE_INTERVAL_MS;
+  if (pruneIntervalMs <= 0) return undefined;
+  if (
+    options.scheduler === undefined &&
+    (!Number.isFinite(pruneIntervalMs) || pruneIntervalMs > MAX_NATIVE_TIMER_DELAY_MS)
+  ) {
+    throw new RateLimitPruneIntervalProblem(pruneIntervalMs);
+  }
+  const scheduler = options.scheduler ?? DEFAULT_PRUNE_SCHEDULER;
+  let cancelScheduledWork: (() => void) | undefined;
+  let closed = false;
+  const scheduleNext = () => {
+    cancelScheduledWork = scheduler.schedule(async () => {
+      await callback();
+      if (!closed) scheduleNext();
+    }, pruneIntervalMs);
+  };
+  scheduleNext();
+  return () => {
+    closed = true;
+    cancelScheduledWork?.();
+  };
+}
+
 export class FixedWindowInMemoryStore extends FixedWindowStore {
   private readonly windows = new Map<
     string,
     { count: number; windowStart: number; windowMs: number }
   >();
   private readonly globalStats = { allowed: 0, denied: 0, total: 0 };
-  private readonly pruneTimer?: ReturnType<typeof setInterval>;
+  private readonly cancelPruning?: () => void;
 
   constructor(options: InMemoryRateLimitStoreOptions = {}) {
-    super();
+    super(options.now, options.random);
 
-    const pruneIntervalMs = options.pruneIntervalMs ?? DEFAULT_PRUNE_INTERVAL_MS;
-    if (pruneIntervalMs > 0) {
-      this.pruneTimer = setInterval(() => {
-        void this.pruneExpired();
-      }, pruneIntervalMs);
-      this.pruneTimer.unref?.();
-    }
+    this.cancelPruning = schedulePruning(options, async () => {
+      await this.pruneExpired();
+    });
   }
 
   close(): void {
-    if (this.pruneTimer !== undefined) {
-      clearInterval(this.pruneTimer);
-    }
+    this.cancelPruning?.();
   }
 
   destroy(): void {
@@ -89,7 +132,7 @@ export class FixedWindowInMemoryStore extends FixedWindowStore {
     const entry = this.windows.get(key);
     if (!entry) return null;
 
-    const windowStart = Math.floor(Date.now() / policy.windowMs) * policy.windowMs;
+    const windowStart = Math.floor(this.now() / policy.windowMs) * policy.windowMs;
     if (entry.windowStart !== windowStart) {
       return null;
     }
@@ -127,7 +170,7 @@ export class FixedWindowInMemoryStore extends FixedWindowStore {
   }
 
   async pruneExpired(): Promise<number> {
-    const now = Date.now();
+    const now = this.now();
     let deletedCount = 0;
 
     for (const [key, entry] of this.windows.entries()) {
@@ -154,24 +197,18 @@ export class SlidingWindowInMemoryStore extends SlidingWindowStore {
   >();
   private readonly _windowMsCache = new Map<string, number>();
   private readonly globalStats = { allowed: 0, denied: 0, total: 0 };
-  private readonly pruneTimer?: ReturnType<typeof setInterval>;
+  private readonly cancelPruning?: () => void;
 
   constructor(options: InMemoryRateLimitStoreOptions = {}) {
-    super();
+    super(options.now, options.random);
 
-    const pruneIntervalMs = options.pruneIntervalMs ?? DEFAULT_PRUNE_INTERVAL_MS;
-    if (pruneIntervalMs > 0) {
-      this.pruneTimer = setInterval(() => {
-        void this.pruneExpired();
-      }, pruneIntervalMs);
-      this.pruneTimer.unref?.();
-    }
+    this.cancelPruning = schedulePruning(options, async () => {
+      await this.pruneExpired();
+    });
   }
 
   close(): void {
-    if (this.pruneTimer !== undefined) {
-      clearInterval(this.pruneTimer);
-    }
+    this.cancelPruning?.();
   }
 
   destroy(): void {
@@ -205,7 +242,7 @@ export class SlidingWindowInMemoryStore extends SlidingWindowStore {
       throw new RateLimitRefundUnsupportedProblem();
     }
 
-    const now = Date.now();
+    const now = this.now();
     const windowStart = now - policy.windowMs;
 
     await this.removeTimestamps(key, windowStart);
@@ -307,7 +344,7 @@ export class SlidingWindowInMemoryStore extends SlidingWindowStore {
   }
 
   async pruneExpired(): Promise<number> {
-    const now = Date.now();
+    const now = this.now();
     let deletedCount = 0;
 
     for (const [key, entry] of this.windows.entries()) {
@@ -338,24 +375,18 @@ export class TokenBucketInMemoryStore extends TokenBucketStore {
     { tokens: number; lastRefill: number; ttlMs: number }
   >();
   private readonly globalStats = { allowed: 0, denied: 0, total: 0 };
-  private readonly pruneTimer?: ReturnType<typeof setInterval>;
+  private readonly cancelPruning?: () => void;
 
   constructor(options: InMemoryRateLimitStoreOptions = {}) {
-    super();
+    super(options.now, options.random);
 
-    const pruneIntervalMs = options.pruneIntervalMs ?? DEFAULT_PRUNE_INTERVAL_MS;
-    if (pruneIntervalMs > 0) {
-      this.pruneTimer = setInterval(() => {
-        void this.pruneExpired();
-      }, pruneIntervalMs);
-      this.pruneTimer.unref?.();
-    }
+    this.cancelPruning = schedulePruning(options, async () => {
+      await this.pruneExpired();
+    });
   }
 
   close(): void {
-    if (this.pruneTimer !== undefined) {
-      clearInterval(this.pruneTimer);
-    }
+    this.cancelPruning?.();
   }
 
   destroy(): void {
@@ -418,7 +449,7 @@ export class TokenBucketInMemoryStore extends TokenBucketStore {
   }
 
   async pruneExpired(): Promise<number> {
-    const now = Date.now();
+    const now = this.now();
     let deletedCount = 0;
 
     for (const [key, entry] of this.buckets.entries()) {

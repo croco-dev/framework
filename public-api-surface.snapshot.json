@@ -22209,6 +22209,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "RateLimitPruneIntervalProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/RateLimitConfigProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "RateLimitRefundUnsupportedProblem",
               "exportKind": "named",
               "source": "./libs/problems/RateLimitConfigProblems",
@@ -22357,6 +22363,11 @@
               "name": "RateLimitPolicy",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "RateLimitPruneScheduler",
+              "exportKind": "named",
+              "source": "./libs/InMemoryRateLimitStore"
             },
             {
               "name": "RateLimitRefundReceipt",
@@ -24137,6 +24148,11 @@
               "name": "TaskReference",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "TaskRunnerRuntime",
+              "exportKind": "named",
+              "source": "./libs/TaskRunner"
             }
           ]
         }
@@ -25496,6 +25512,12 @@
               "declarationKind": "const"
             },
             {
+              "name": "fixedClock",
+              "exportKind": "named",
+              "source": "./libs/TestRuntime",
+              "declarationKind": "function"
+            },
+            {
               "name": "installTestingTelemetryCapture",
               "exportKind": "named",
               "source": "./libs/telemetry-testing",
@@ -25586,6 +25608,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "seededIds",
+              "exportKind": "named",
+              "source": "./libs/TestRuntime",
+              "declarationKind": "function"
+            },
+            {
               "name": "serializeOperationalFailureDrillReport",
               "exportKind": "named",
               "source": "./libs/operational-failure-drill",
@@ -25604,6 +25632,18 @@
               "declarationKind": "const"
             },
             {
+              "name": "TestClock",
+              "exportKind": "named",
+              "source": "./libs/TestRuntime",
+              "declarationKind": "class"
+            },
+            {
+              "name": "TestEnvironment",
+              "exportKind": "named",
+              "source": "./libs/TestRuntime",
+              "declarationKind": "class"
+            },
+            {
               "name": "TestEvidenceContractError",
               "exportKind": "named",
               "source": "./libs/test-evidence.mjs",
@@ -25620,6 +25660,12 @@
               "exportKind": "named",
               "source": "./libs/test-evidence.mjs",
               "declarationKind": "function"
+            },
+            {
+              "name": "TestIdSource",
+              "exportKind": "named",
+              "source": "./libs/TestRuntime",
+              "declarationKind": "class"
             },
             {
               "name": "TestingTelemetryCapture",
@@ -25658,6 +25704,18 @@
               "declarationKind": "class"
             },
             {
+              "name": "TestKernelLeakProblem",
+              "exportKind": "named",
+              "source": "./libs/TestKernel",
+              "declarationKind": "class"
+            },
+            {
+              "name": "TestKernelOutboundCallProblem",
+              "exportKind": "named",
+              "source": "./libs/TestRuntime",
+              "declarationKind": "class"
+            },
+            {
               "name": "TestKernelResourceFidelityProblem",
               "exportKind": "named",
               "source": "./libs/TestKernel",
@@ -25679,6 +25737,36 @@
               "name": "TestKernelValidationProblem",
               "exportKind": "named",
               "source": "./libs/TestKernel",
+              "declarationKind": "class"
+            },
+            {
+              "name": "TestNetwork",
+              "exportKind": "named",
+              "source": "./libs/TestRuntime",
+              "declarationKind": "class"
+            },
+            {
+              "name": "TestRandomSource",
+              "exportKind": "named",
+              "source": "./libs/TestRuntime",
+              "declarationKind": "class"
+            },
+            {
+              "name": "TestRuntime",
+              "exportKind": "named",
+              "source": "./libs/TestRuntime",
+              "declarationKind": "class"
+            },
+            {
+              "name": "TestRuntimeConfigurationProblem",
+              "exportKind": "named",
+              "source": "./libs/TestRuntime",
+              "declarationKind": "class"
+            },
+            {
+              "name": "TestRuntimeDrainProblem",
+              "exportKind": "named",
+              "source": "./libs/TestRuntime",
               "declarationKind": "class"
             }
           ],
@@ -26304,6 +26392,16 @@
               "source": "./libs/provider-conformance"
             },
             {
+              "name": "TestDuration",
+              "exportKind": "named",
+              "source": "./libs/TestRuntime"
+            },
+            {
+              "name": "TestEnvironmentOverrides",
+              "exportKind": "named",
+              "source": "./libs/TestRuntime"
+            },
+            {
               "name": "TestEvidenceArtifactProbe",
               "exportKind": "named",
               "source": "./libs/test-evidence.mjs"
@@ -26474,6 +26572,11 @@
               "source": "./libs/TestKernel"
             },
             {
+              "name": "TestKernelLeak",
+              "exportKind": "named",
+              "source": "./libs/TestKernel"
+            },
+            {
               "name": "TestKernelOptions",
               "exportKind": "named",
               "source": "./libs/TestKernel"
@@ -26494,6 +26597,11 @@
               "source": "./libs/TestKernel"
             },
             {
+              "name": "TestKernelTrackedWork",
+              "exportKind": "named",
+              "source": "./libs/TestKernel"
+            },
+            {
               "name": "TestKernelValidationFidelity",
               "exportKind": "named",
               "source": "./libs/TestKernel"
@@ -26502,6 +26610,11 @@
               "name": "TestLogger",
               "exportKind": "named",
               "source": "./libs/testing"
+            },
+            {
+              "name": "TestReplayMetadata",
+              "exportKind": "named",
+              "source": "./libs/TestRuntime"
             },
             {
               "name": "TestResource",
@@ -26537,6 +26650,21 @@
               "name": "TestResourceStartContext",
               "exportKind": "named",
               "source": "./libs/TestKernel"
+            },
+            {
+              "name": "TestRetryDependencies",
+              "exportKind": "named",
+              "source": "./libs/TestRuntime"
+            },
+            {
+              "name": "TestRuntimeOptions",
+              "exportKind": "named",
+              "source": "./libs/TestRuntime"
+            },
+            {
+              "name": "TestScheduledWork",
+              "exportKind": "named",
+              "source": "./libs/TestRuntime"
             },
             {
               "name": "UnavailableUsageBillingCapabilityConformanceOptions",

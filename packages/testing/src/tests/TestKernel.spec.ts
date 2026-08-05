@@ -10,15 +10,19 @@ import {
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   createTestKernel,
-  type TestKernel,
+  createTestingTransactionContext,
+  fixedClock,
+  seededIds,
   TestKernelDisposalProblem,
   TestKernelDisposedProblem,
+  TestKernelLeakProblem,
   type TestKernelOptions,
   TestKernelResourceFidelityProblem,
   TestKernelResourceNotFoundProblem,
   TestKernelValidationProblem,
   type TestResource,
 } from "../index";
+import type { TestKernel } from "../index";
 
 class KernelValueService {
   constructor(readonly value: string) {}
@@ -587,8 +591,8 @@ describe("TestKernel", () => {
     const secondDisposal = kernel.dispose();
 
     expect(firstDisposal).toBe(secondDisposal);
-    await expect(firstDisposal).rejects.toBeInstanceOf(TestKernelDisposalProblem);
-    await expect(secondDisposal).rejects.toBeInstanceOf(TestKernelDisposalProblem);
+    await expect(firstDisposal).rejects.toThrow(TestKernelDisposalProblem);
+    await expect(secondDisposal).rejects.toThrow(TestKernelDisposalProblem);
     expect(cleanupCalls).toBe(1);
     expect(fallbackCleanupCalls).toBe(1);
   });
@@ -610,11 +614,7 @@ describe("TestKernel", () => {
     expect(() => kernelRef.run(() => undefined)).toThrow(TestKernelDisposedProblem);
   });
 
-  it("waits for in-flight kernel work before cleanup", async () => {
-    let resumeOperation!: () => void;
-    const resume = new Promise<void>((resolve) => {
-      resumeOperation = resolve;
-    });
+  it("reports unresolved tracked work without hanging cleanup", async () => {
     let cleanupCalls = 0;
     const kernel = await createTestKernel({
       bootstrap: () => bootstrapProductionApp("in-flight"),
@@ -623,19 +623,40 @@ describe("TestKernel", () => {
       },
       fidelity: "application",
     });
-    const operation = kernel.run(async () => {
-      await resume;
-      return Container.get(KernelValueService).value;
+
+    kernel.waitUntil(new Promise<void>(() => undefined), "response.flush");
+
+    await expect(kernel.dispose()).rejects.toThrow(TestKernelDisposalProblem);
+    expect(cleanupCalls).toBe(1);
+  });
+
+  it("preserves rejected tracked work as leak evidence", async () => {
+    const kernel = await createTestKernel({
+      bootstrap: () => bootstrapProductionApp("tracked-rejection"),
+      fidelity: "application",
     });
 
-    const disposal = kernel.dispose();
+    kernel.waitUntil(Promise.reject(new Error("response flush failed")), "response.flush");
     await Promise.resolve();
-    expect(cleanupCalls).toBe(0);
 
-    resumeOperation();
-    await expect(operation).resolves.toBe("in-flight");
-    await disposal;
-    expect(cleanupCalls).toBe(1);
+    let error: unknown;
+    try {
+      kernel.expectClean();
+    } catch (caught) {
+      error = caught;
+    }
+    expect(error).toMatchObject({
+      extensions: {
+        leaks: expect.arrayContaining([
+          {
+            category: "operation-failure",
+            failure: { message: "response flush failed", name: "Error" },
+            source: "response.flush",
+          },
+        ]),
+      },
+    });
+    await expect(kernel.dispose()).rejects.toThrow(TestKernelDisposalProblem);
   });
 
   it("isolates and executes production shutdown hooks for each kernel", async () => {
@@ -688,6 +709,148 @@ describe("TestKernel", () => {
       fidelity: "application",
     });
 
-    await expect(kernel.dispose()).rejects.toBeInstanceOf(TestKernelDisposalProblem);
+    await expect(kernel.dispose()).rejects.toThrow(TestKernelDisposalProblem);
+  });
+
+  it("injects deterministic runtime controls and reports replay metadata", async () => {
+    let bootstrapReplay:
+      | {
+          readonly scenarioId: string;
+          readonly seed: string;
+          readonly virtualTime: string;
+        }
+      | undefined;
+    const kernel = await createTestKernel({
+      bootstrap: async (context) => {
+        await context.clock.advanceBy("1m");
+        bootstrapReplay = context.replay;
+        expect(context.environment.get("CROCO_TEST_KERNEL_SCOPE")).toBe("first");
+        expect(context.ids.next("bootstrap")).toContain("retry-scenario");
+        return bootstrapProductionApp("controls");
+      },
+      clock: "2026-02-03T04:05:06.000Z",
+      environment: { CROCO_TEST_KERNEL_SCOPE: "first" },
+      fidelity: "application",
+      ids: "retry-scenario",
+      scenarioId: "retry-timeout",
+    });
+
+    expect(kernel.replay).toBeDefined();
+    expect(bootstrapReplay).toBeDefined();
+    expect(bootstrapReplay).toEqual({
+      scenarioId: "retry-timeout",
+      seed: "retry-scenario",
+      virtualTime: "2026-02-03T04:06:06.000Z",
+    });
+    expect(kernel.replay).toEqual(bootstrapReplay);
+    expect(process.env["CROCO_TEST_KERNEL_SCOPE"]).not.toBe("first");
+
+    await kernel.dispose();
+  });
+
+  it("clones caller-provided controls so concurrent kernels do not share time or ID state", async () => {
+    const sharedClock = fixedClock("2026-01-01T00:00:00.000Z");
+    const sharedIds = seededIds("concurrent-kernels");
+    sharedIds.next("already-used");
+    const expectedIds = sharedIds.fork();
+    expectedIds.next("scenario");
+    expectedIds.next("test");
+    const [first, second] = await Promise.all(
+      ["first", "second"].map((value) =>
+        createTestKernel({
+          bootstrap: () => bootstrapProductionApp(value),
+          clock: sharedClock,
+          fidelity: "application",
+          ids: sharedIds,
+        }),
+      ),
+    );
+
+    await first.clock.advanceBy("30s");
+    const firstExtraId = first.ids.next("extra");
+    const expectedExtraId = expectedIds.next("extra");
+
+    expect(first.clock.now.toISOString()).toBe("2026-01-01T00:00:30.000Z");
+    expect(second.clock.now.toISOString()).toBe("2026-01-01T00:00:00.000Z");
+    expect(firstExtraId).toBe(expectedExtraId);
+    expect(second.ids.next("extra")).toBe(firstExtraId);
+
+    await Promise.all([first.dispose(), second.dispose()]);
+  });
+
+  it("reports pending scheduled work and after-commit hooks with stable leak evidence", async () => {
+    const kernel = await createTestKernel({
+      bootstrap: () => bootstrapProductionApp("leaks"),
+      fidelity: "application",
+      transactionContext: createTestingTransactionContext({ inTransaction: true }),
+    });
+
+    kernel.clock.schedule(() => undefined, "30s", "retry:payment");
+    await kernel.transactionContext.runInTransaction(() => {
+      kernel.transactionContext.onAfterCommit(() => undefined);
+    });
+
+    expect(() => kernel.expectClean()).toThrow(TestKernelLeakProblem);
+    try {
+      kernel.expectClean();
+    } catch (error) {
+      expect(error).toMatchObject({
+        code: "testing/test-kernel-leak",
+        extensions: {
+          leaks: expect.arrayContaining([
+            { category: "scheduled-work", source: "retry:payment" },
+            { category: "after-commit", source: "transaction-context" },
+          ]),
+        },
+      });
+    }
+
+    await kernel.clock.advanceBy("30s");
+    let advancedLeak: unknown;
+    try {
+      kernel.expectClean();
+    } catch (error) {
+      advancedLeak = error;
+    }
+    expect(advancedLeak).toMatchObject({
+      extensions: {
+        replay: {
+          scenarioId: expect.any(String),
+          seed: expect.any(String),
+          virtualTime: "2026-01-01T00:00:30.000Z",
+        },
+      },
+    });
+    await kernel.transactionContext.flushAfterCommitHooks();
+    kernel.expectClean();
+    await kernel.dispose();
+  });
+
+  it("reports tracked adapter work by its runtime boundary", async () => {
+    const kernel = await createTestKernel({
+      bootstrap: () => bootstrapProductionApp("tracked-boundaries"),
+      fidelity: "application",
+    });
+
+    kernel.trackEventHandler(new Promise<void>(() => undefined), "events:payment.created");
+    kernel.trackSpan(new Promise<void>(() => undefined), "telemetry:payment.create");
+    kernel.trackResource(new Promise<void>(() => undefined), "postgres:connection");
+
+    let error: unknown;
+    try {
+      kernel.expectClean();
+    } catch (caught) {
+      error = caught;
+    }
+    expect(error).toMatchObject({
+      extensions: {
+        leaks: expect.arrayContaining([
+          { category: "event-handler", source: "events:payment.created" },
+          { category: "span", source: "telemetry:payment.create" },
+          { category: "resource", source: "postgres:connection" },
+        ]),
+      },
+    });
+    await expect(kernel.dispose()).rejects.toThrow(TestKernelDisposalProblem);
   });
 });

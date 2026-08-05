@@ -14,11 +14,6 @@ export {
 } from "./libs/problems/TasksProblems";
 
 /**
- * 레지스트리에 등록된 태스크 엔트리 타입입니다.
- */
-export type { RegisteredTask } from "./libs/TaskRegistry";
-
-/**
  * 태스크 메타데이터를 수집하고 조회하는 전역 레지스트리입니다.
  */
 export { TaskRegistry } from "./libs/TaskRegistry";
@@ -38,3 +33,6 @@ export type {
   TaskOptions,
   TaskReference,
 } from "./libs/types";
+
+export type { RegisteredTask } from "./libs/TaskRegistry";
+export type { TaskRunnerRuntime } from "./libs/TaskRunner";

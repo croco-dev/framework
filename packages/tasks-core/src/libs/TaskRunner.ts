@@ -14,6 +14,11 @@ type Constructor<T = object> = new (...args: unknown[]) => T;
 
 const MAX_TIMER_DELAY_MS = 2_147_483_647;
 
+export interface TaskRunnerRuntime {
+  readonly now?: () => number;
+  readonly schedule?: (callback: () => void, delayMs: number) => () => void;
+}
+
 const noopLogger: ILogger = {
   debug: () => {},
   info: () => {},
@@ -91,11 +96,23 @@ function recordDiagnosticError(error: unknown): void {
 }
 
 export class TaskRunner {
+  private readonly now: () => number;
+  private readonly schedule: (callback: () => void, delayMs: number) => () => void;
+
   constructor(
     private executionManager: ExecutionManager,
     private registry: TaskRegistry = TaskRegistry.fromMetadata(),
     private logger: ILogger = noopLogger,
-  ) {}
+    runtime: TaskRunnerRuntime = {},
+  ) {
+    this.now = runtime.now ?? (() => Date.now());
+    this.schedule =
+      runtime.schedule ??
+      ((callback, delayMs) => {
+        const timeout = setTimeout(callback, delayMs);
+        return () => clearTimeout(timeout);
+      });
+  }
 
   async execute(
     taskId: string,
@@ -166,7 +183,7 @@ export class TaskRunner {
         ? undefined
         : new TaskExecutionTimeoutProblem(startedExecution.id, timeoutMs);
     let timeoutClaimed = false;
-    let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+    let cancelTimeout: (() => void) | undefined;
     let triggerTimeout: (() => void) | undefined;
     const timeoutPromise =
       timeoutProblem === undefined || deadline === undefined
@@ -182,20 +199,23 @@ export class TaskRunner {
               );
             };
             const scheduleTimeout = () => {
-              const remaining = deadline - Date.now();
+              const remaining = deadline - this.now();
               if (remaining <= 0) {
                 triggerTimeout?.();
                 return;
               }
 
-              timeoutHandle = setTimeout(scheduleTimeout, Math.min(remaining, MAX_TIMER_DELAY_MS));
+              cancelTimeout = this.schedule(
+                scheduleTimeout,
+                Math.min(remaining, MAX_TIMER_DELAY_MS),
+              );
             };
             scheduleTimeout();
           });
 
     try {
       const instance = this.createInstance(target) as Record<string | symbol, unknown>;
-      if (deadline !== undefined && Date.now() >= deadline) {
+      if (deadline !== undefined && this.now() >= deadline) {
         triggerTimeout?.();
         return await timeoutPromise;
       }
@@ -211,12 +231,12 @@ export class TaskRunner {
         ? Promise.race([handlerPromise, timeoutPromise])
         : handlerPromise);
 
-      if (deadline !== undefined && Date.now() >= deadline) {
+      if (deadline !== undefined && this.now() >= deadline) {
         triggerTimeout?.();
         return await timeoutPromise;
       }
 
-      if (timeoutHandle !== undefined) clearTimeout(timeoutHandle);
+      cancelTimeout?.();
 
       try {
         await this.executionManager.complete(startedExecution.id, result);
@@ -229,7 +249,7 @@ export class TaskRunner {
       }
       return result;
     } catch (error) {
-      if (timeoutHandle !== undefined) clearTimeout(timeoutHandle);
+      cancelTimeout?.();
       if (timeoutClaimed && timeoutPromise !== undefined) {
         return await timeoutPromise;
       }
@@ -238,7 +258,7 @@ export class TaskRunner {
         throw error;
       }
 
-      if (deadline !== undefined && Date.now() >= deadline && triggerTimeout !== undefined) {
+      if (deadline !== undefined && this.now() >= deadline && triggerTimeout !== undefined) {
         triggerTimeout();
         return await timeoutPromise;
       }

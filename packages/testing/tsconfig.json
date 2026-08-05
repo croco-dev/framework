@@ -16,6 +16,7 @@
       "@croco/protocols-core": ["../protocols-core/src/index.ts"],
       "@croco/protocols-rest": ["../protocols-rest/src/index.ts"],
       "@croco/ratelimit-core": ["../ratelimit-core/src/index.ts"],
+      "@croco/retry-core": ["../retry-core/src/index.ts"],
       "@croco/storage-core": ["../storage-core/src/index.ts"],
       "@croco/telemetry-api": ["../telemetry-api/src/index.ts"],
       "@croco/testing/drizzle": ["./src/drizzle.ts"],

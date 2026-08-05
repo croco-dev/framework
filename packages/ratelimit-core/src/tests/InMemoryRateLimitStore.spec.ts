@@ -1,10 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { Container } from "@croco/framework-context";
 import {
   FixedWindowInMemoryStore,
   InMemoryRateLimitStore,
   SlidingWindowInMemoryStore,
   TokenBucketInMemoryStore,
 } from "../libs/InMemoryRateLimitStore";
+import { RateLimitPruneIntervalProblem } from "../libs/problems/RateLimitConfigProblems";
 import type { FixedWindowPolicy, SlidingWindowPolicy, TokenBucketPolicy } from "../libs/types";
 
 describe("InMemoryRateLimitStore", () => {
@@ -17,12 +19,22 @@ describe("InMemoryRateLimitStore", () => {
   };
 
   beforeEach(() => {
+    Container.reset();
     store = new InMemoryRateLimitStore({ pruneIntervalMs: 0 });
   });
 
   afterEach(() => {
     store.close();
   });
+
+  it.each([Number.NaN, Number.POSITIVE_INFINITY, 2_147_483_648])(
+    "rejects unsupported native prune intervals (%s) with a stable Problem",
+    (pruneIntervalMs) => {
+      expect(() => new InMemoryRateLimitStore({ pruneIntervalMs })).toThrow(
+        RateLimitPruneIntervalProblem,
+      );
+    },
+  );
 
   it("should allow requests within limit", async () => {
     const result1 = await store.check("user:1", policy);

@@ -68,6 +68,7 @@
   },
   "devDependencies": {
     "@croco/protocols-rest": "workspace:*",
+    "@croco/retry-core": "workspace:*",
     "tsup": "8.5.1",
     "vitest": "4.0.16"
   }

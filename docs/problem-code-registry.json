@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 571,
+  "problemCount": 576,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -11966,7 +11966,7 @@
       "sources": [
         {
           "file": "packages/ratelimit-core/src/libs/problems/RateLimitConfigProblems.ts",
-          "line": 4,
+          "line": 6,
           "column": 3,
           "kind": "problem-class"
         }
@@ -11996,7 +11996,7 @@
       "sources": [
         {
           "file": "packages/ratelimit-core/src/libs/problems/RateLimitConfigProblems.ts",
-          "line": 25,
+          "line": 43,
           "column": 5,
           "kind": "problem-constructor"
         }
@@ -12026,7 +12026,7 @@
       "sources": [
         {
           "file": "packages/ratelimit-core/src/libs/problems/RateLimitConfigProblems.ts",
-          "line": 14,
+          "line": 16,
           "column": 3,
           "kind": "problem-class"
         }
@@ -12089,6 +12089,36 @@
           "line": 21,
           "column": 3,
           "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "ratelimit/prune-interval",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#ratelimit-prune-interval",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/ratelimit-core/src/libs/problems/RateLimitConfigProblems.ts",
+          "line": 27,
+          "column": 5,
+          "kind": "problem-constructor"
         }
       ]
     },
@@ -14636,7 +14666,7 @@
       "sources": [
         {
           "file": "packages/testing/src/libs/TestKernel.ts",
-          "line": 144,
+          "line": 189,
           "column": 5,
           "kind": "problem-constructor"
         }
@@ -14666,7 +14696,67 @@
       "sources": [
         {
           "file": "packages/testing/src/libs/TestKernel.ts",
-          "line": 172,
+          "line": 217,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "testing/test-kernel-leak",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#testing-test-kernel-leak",
+      "recovery": {
+        "cause": "Croco or an upstream dependency failed after accepting the request.",
+        "userAction": "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        "operatorAction": "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        "retryability": "conditional",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/testing/src/libs/TestKernel.ts",
+          "line": 227,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "testing/test-kernel-outbound-call",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#testing-test-kernel-outbound-call",
+      "recovery": {
+        "cause": "Croco or an upstream dependency failed after accepting the request.",
+        "userAction": "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        "operatorAction": "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        "retryability": "conditional",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/testing/src/libs/TestRuntime.ts",
+          "line": 49,
           "column": 5,
           "kind": "problem-constructor"
         }
@@ -14696,7 +14786,7 @@
       "sources": [
         {
           "file": "packages/testing/src/libs/TestKernel.ts",
-          "line": 182,
+          "line": 238,
           "column": 5,
           "kind": "problem-constructor"
         }
@@ -14726,7 +14816,7 @@
       "sources": [
         {
           "file": "packages/testing/src/libs/TestKernel.ts",
-          "line": 198,
+          "line": 254,
           "column": 5,
           "kind": "problem-constructor"
         }
@@ -14756,7 +14846,7 @@
       "sources": [
         {
           "file": "packages/testing/src/libs/TestKernel.ts",
-          "line": 211,
+          "line": 267,
           "column": 5,
           "kind": "problem-constructor"
         }
@@ -14786,7 +14876,67 @@
       "sources": [
         {
           "file": "packages/testing/src/libs/TestKernel.ts",
-          "line": 131,
+          "line": 176,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "testing/test-runtime-configuration",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#testing-test-runtime-configuration",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/testing/src/libs/TestRuntime.ts",
+          "line": 65,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "testing/test-runtime-drain-limit",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#testing-test-runtime-drain-limit",
+      "recovery": {
+        "cause": "Croco or an upstream dependency failed after accepting the request.",
+        "userAction": "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        "operatorAction": "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        "retryability": "conditional",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/testing/src/libs/TestRuntime.ts",
+          "line": 76,
           "column": 5,
           "kind": "problem-constructor"
         }

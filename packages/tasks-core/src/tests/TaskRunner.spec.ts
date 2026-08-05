@@ -64,7 +64,7 @@ describe("TaskRunner", () => {
       reconcileTimedOut: vi.fn().mockResolvedValue({ scanned: 0, timedOut: 0 }),
     };
 
-    @Component()
+    @Component({ scope: "singleton" })
     class TestTaskHandler {
       @Task({ name: "test-task" })
       async handle(payload: { data: string }): Promise<string> {
@@ -634,6 +634,59 @@ describe("TaskRunner", () => {
     expect(mockExecutionManager.timeout).toHaveBeenCalledWith("exec-123");
     expect(mockExecutionManager.complete).not.toHaveBeenCalled();
     expect(mockExecutionManager.fail).not.toHaveBeenCalled();
+  });
+
+  it("should use injected time and scheduling boundaries for deterministic timeouts", async () => {
+    let now = new Date("2026-01-01T00:00:00.000Z").getTime();
+    let scheduledTimeout: (() => void) | undefined;
+    let scheduledDelayMs: number | undefined;
+    let receivedContext: TaskExecutionContext | undefined;
+
+    @Component()
+    class ControlledTimedTaskHandler {
+      @Task({ name: "controlled-timed-task", timeout: 100 })
+      async handle(_payload: unknown, context: TaskExecutionContext): Promise<never> {
+        receivedContext = context;
+        return new Promise((_resolve, reject) => {
+          context.signal.addEventListener("abort", () => reject(context.signal.reason), {
+            once: true,
+          });
+        });
+      }
+    }
+
+    Container.set(ControlledTimedTaskHandler, new ControlledTimedTaskHandler());
+    registry.collectFromMetadata();
+    mockExecutionManager.start = vi.fn().mockResolvedValue(
+      execution({
+        type: "controlled-timed-task",
+        payload: {},
+        status: "running",
+        attempts: 1,
+        startedAt: new Date(now),
+        timeout: 100,
+      }),
+    );
+    const runner = new TaskRunner(mockExecutionManager, registry, undefined, {
+      now: () => now,
+      schedule: (callback, delayMs) => {
+        scheduledTimeout = callback;
+        scheduledDelayMs = delayMs;
+        return () => {
+          scheduledTimeout = undefined;
+        };
+      },
+    });
+
+    const result = runner.execute("controlled-timed-task", {});
+    await vi.waitFor(() => expect(scheduledTimeout).toBeDefined());
+    expect(scheduledDelayMs).toBe(100);
+    now += 100;
+    scheduledTimeout?.();
+
+    await expect(result).rejects.toThrow(TaskExecutionTimeoutProblem);
+    expect(receivedContext?.signal.aborted).toBe(true);
+    expect(mockExecutionManager.timeout).toHaveBeenCalledWith("exec-123");
   });
 
   it("should ignore a handler result that arrives after timeout", async () => {
