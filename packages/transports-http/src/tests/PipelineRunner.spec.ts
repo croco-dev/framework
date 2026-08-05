@@ -917,7 +917,7 @@ describe("PipelineRunner", () => {
     },
   );
 
-  it("should describe deterministic middleware, guard, interceptor, handler, and filter order", () => {
+  it("should describe deterministic middleware, guard, interceptor, pipe, handler, and filter order", () => {
     function firstMiddleware() {}
     function secondMiddleware() {}
 
@@ -939,6 +939,12 @@ describe("PipelineRunner", () => {
       }
     }
 
+    class NormalizePipe {
+      transform(value: unknown) {
+        return value;
+      }
+    }
+
     class HttpProblemFilter {
       catch(error: unknown) {
         return error;
@@ -952,6 +958,7 @@ describe("PipelineRunner", () => {
       middlewares: [firstMiddleware, secondMiddleware],
       guards: [new AuthGuard()],
       interceptors: [new EnvelopeInterceptor(), new AuditInterceptor()],
+      pipes: [new NormalizePipe()],
       filters: [new HttpProblemFilter()],
     });
 
@@ -961,6 +968,7 @@ describe("PipelineRunner", () => {
       "guard:0",
       "interceptor:0:before",
       "interceptor:1:before",
+      "pipe:0",
       "handler:OrdersController.get",
       "interceptor:1:after",
       "interceptor:0:after",
@@ -974,6 +982,7 @@ describe("PipelineRunner", () => {
       "guard:0",
       "interceptor:0:before",
       "interceptor:1:before",
+      "pipe:0",
       "handler:OrdersController.get",
       "interceptor:1:after",
       "interceptor:0:after",

@@ -2625,7 +2625,7 @@
     {
       "packageName": "@croco/framework-context",
       "file": "packages/framework-context/src/libs/RequestPipelineGraph.ts",
-      "line": 139,
+      "line": 142,
       "column": 3,
       "code": "TS2322",
       "message": "Type '{ id: string; kind: \"policy\"; phase: \"before\"; label: string; order: number; failurePropagation: PolicyFailurePropagation; policyKind: \"timeout\" | \"retry\" | \"tracing\"; source: PolicySource | undefined; }[]' is not assignable to type 'readonly RequestPipelineNode[]'."
@@ -2633,7 +2633,7 @@
     {
       "packageName": "@croco/framework-context",
       "file": "packages/framework-context/src/libs/RequestPipelineGraph.ts",
-      "line": 186,
+      "line": 189,
       "column": 3,
       "code": "TS2375",
       "message": "Type '{ debugDump: string; target: string | undefined; nodes: readonly ResolvedRequestPipelineNode[]; edges: RequestPipelineGraphEdge[]; successOrder: string[]; errorOrder: string[]; executionOrder: string[]; phaseOrder: RequestPipelinePhaseOrder; }' is not assignable to type 'RequestPipelineGraph' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -2641,7 +2641,7 @@
     {
       "packageName": "@croco/framework-context",
       "file": "packages/framework-context/src/libs/RequestPipelineGraph.ts",
-      "line": 188,
+      "line": 191,
       "column": 41,
       "code": "TS2379",
       "message": "Argument of type '{ target: string | undefined; nodes: readonly ResolvedRequestPipelineNode[]; edges: RequestPipelineGraphEdge[]; successOrder: string[]; errorOrder: string[]; executionOrder: string[]; phaseOrder: RequestPipelinePhaseOrder; debugDump: string; }' is not assignable to parameter of type 'Omit<RequestPipelineGraph, \"debugDump\">' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -2649,15 +2649,15 @@
     {
       "packageName": "@croco/framework-context",
       "file": "packages/framework-context/src/libs/RequestPipelineGraph.ts",
-      "line": 243,
+      "line": 246,
       "column": 3,
       "code": "TS2375",
-      "message": "Type '{ id: string; kind: \"filter\" | \"policy\" | \"middleware\" | \"guard\" | \"interceptor\" | \"handler\"; phase: \"error\" | \"handler\" | \"before\" | \"after\"; label: string; order: number; dependsOn: readonly string[]; failurePropagation: RequestPipelineFailurePropagation; policyKind: \"timeout\" | ... 2 more ... | undefined; source:...' is not assignable to type 'ResolvedRequestPipelineNode' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
+      "message": "Type '{ id: string; kind: \"filter\" | \"policy\" | \"middleware\" | \"guard\" | \"interceptor\" | \"pipe\" | \"handler\"; phase: \"error\" | \"handler\" | \"before\" | \"after\"; label: string; order: number; dependsOn: readonly string[]; failurePropagation: RequestPipelineFailurePropagation; policyKind: \"timeout\" | ... 2 more ... | undefined...' is not assignable to type 'ResolvedRequestPipelineNode' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
     },
     {
       "packageName": "@croco/framework-context",
       "file": "packages/framework-context/src/libs/RequestPipelineGraph.ts",
-      "line": 499,
+      "line": 502,
       "column": 3,
       "code": "TS2322",
       "message": "Type '{ from: string; to: string | undefined; reason: \"success-order\" | \"error-order\"; }[]' is not assignable to type 'readonly RequestPipelineGraphEdge[]'."

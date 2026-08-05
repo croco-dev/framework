@@ -12,10 +12,13 @@ import {
   getFilters,
   getGuards,
   getInterceptors,
+  getParamsMeta,
+  getPipes,
   type Interceptor,
+  type PipeTransform,
 } from "@croco/protocols-rest";
 import { HttpExecutionContext } from "./HttpExecutionContext";
-import { ParamResolver } from "./ParamResolver";
+import { resolveParamsWithRoutePipes } from "./ParamResolver";
 import type { PipelineRunner } from "./PipelineRunner";
 import type {
   CompiledRoute,
@@ -128,7 +131,8 @@ export class RouteCompiler {
     options: CompileOptions,
   ): RouteCompilerEntry {
     const fullPath = this.toRuntimeRoutePath(this.joinPaths("", routeIR.path));
-    const paramResolver = new ParamResolver((pipe) => instantiateProvider(pipe, options.container));
+    const createPipeInstance = (pipe: Constructor<PipeTransform>): PipeTransform =>
+      instantiateProvider(pipe, options.container);
 
     // Instantiate guards/interceptors/filters once at compile time (not per-request)
     const globalGuards = (options.globalGuards || []) as GuardProvider<Guard<ExecutionContext>>[];
@@ -142,6 +146,10 @@ export class RouteCompiler {
     const routeGuards = getGuards(controller, routeIR.methodName);
     const routeInterceptors = getInterceptors(controller, routeIR.methodName);
     const routeFilters = getFilters(controller, routeIR.methodName);
+    const routePipes = getPipes(controller, routeIR.methodName);
+    const routeParams = [...getParamsMeta(controller, routeIR.methodName)].sort(
+      (left, right) => left.index - right.index,
+    );
 
     const handler = async (ctx: CrocoHttpContext): Promise<unknown> => {
       const instance = (
@@ -167,9 +175,19 @@ export class RouteCompiler {
         ...globalFilters.map((filter) => instantiateProvider(filter, options.container)),
         ...routeFilters.map((filter) => instantiateProvider(filter, options.container)),
       ] as ExceptionFilter<unknown, HttpExecutionContext>[];
+      const pipes = [
+        ...(options.globalPipes || []).map((pipe) => instantiateProvider(pipe, options.container)),
+        ...routePipes.map((pipe) => instantiateProvider(pipe, options.container)),
+      ] as PipeTransform[];
 
       const controllerHandler = async (): Promise<unknown> => {
-        const args = await paramResolver.resolveParams(ctx, controller, routeIR.methodName);
+        const args = await resolveParamsWithRoutePipes(
+          ctx,
+          controller,
+          routeIR.methodName,
+          pipes,
+          createPipeInstance,
+        );
         const method = (instance as Record<PropertyKey, unknown>)[routeIR.methodName];
         if (typeof method !== "function") {
           throw ProblemFactory.internalServerError(
@@ -200,6 +218,14 @@ export class RouteCompiler {
         handlerLabel: `${controller.name}.${String(routeIR.methodName)}`,
         guards: [...globalGuards, ...routeGuards],
         interceptors: [...globalInterceptors, ...routeInterceptors],
+        pipes: routeParams.flatMap((param) =>
+          [...(options.globalPipes || []), ...routePipes].map((pipe, pipeIndex) => ({
+            pipe,
+            parameterIndex: param.index,
+            parameterType: param.type,
+            pipeIndex,
+          })),
+        ),
         filters: [...globalFilters, ...routeFilters],
       },
     };

@@ -38,6 +38,13 @@ const BODY_SPECIFIC_RESPONSE_HEADERS = new Set([
 
 type FilterFailureReason = "thrown" | "invalid-return";
 
+type PipeGraphEntry = {
+  readonly pipe: unknown;
+  readonly parameterIndex: number;
+  readonly parameterType: string;
+  readonly pipeIndex: number;
+};
+
 function isFilterResponse(value: unknown): value is HttpExceptionFilterResponse {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return false;
@@ -84,6 +91,7 @@ export function describeHttpPipelineGraph(config: HttpPipelineGraphConfig): Requ
   const middlewares = config.middlewares ?? [];
   const guards = config.guards ?? [];
   const interceptors = config.interceptors ?? [];
+  const pipes = config.pipes ?? [];
   const filters = config.filters ?? [];
   const nodes: RequestPipelineNode[] = [
     ...middlewares.map((middleware, index) =>
@@ -116,6 +124,20 @@ export function describeHttpPipelineGraph(config: HttpPipelineGraphConfig): Requ
         "observe-and-rethrow",
       ),
     ),
+    ...pipes.map((pipe, index) => {
+      const entry = isPipeGraphEntry(pipe) ? pipe : undefined;
+      const provider = entry?.pipe ?? pipe;
+      return toNode(
+        entry ? `pipe:${entry.parameterIndex}:${entry.pipeIndex}` : `pipe:${index}`,
+        "pipe",
+        "before",
+        400 + index,
+        entry
+          ? `${getProviderName(provider, `pipe[${entry.pipeIndex}]`)}.${entry.parameterType}[${entry.parameterIndex}]`
+          : getProviderName(provider, `pipe[${index}]`),
+        "terminal",
+      );
+    }),
     toNode(
       config.handlerId ?? "handler",
       "handler",
@@ -160,6 +182,20 @@ export function describeHttpPipelineGraph(config: HttpPipelineGraphConfig): Requ
     ...(config.target !== undefined ? { target: config.target } : {}),
     ...(config.policyPlan !== undefined ? { policyPlan: config.policyPlan } : {}),
   });
+}
+
+function isPipeGraphEntry(value: unknown): value is PipeGraphEntry {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  const entry = value as Partial<PipeGraphEntry>;
+  return (
+    "pipe" in value &&
+    typeof entry.parameterIndex === "number" &&
+    typeof entry.parameterType === "string" &&
+    typeof entry.pipeIndex === "number"
+  );
 }
 
 /**
