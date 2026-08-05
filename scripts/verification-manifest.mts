@@ -1,9 +1,10 @@
-import type { EvidenceCommand } from "./release-spine-evidence.mts";
+import { selectGeneratedSmokeCasesForChangedFiles } from "./create-croco-app-generated-smoke-dependencies.mts";
 import {
   isReleaseGateMaintenancePath,
   RELEASE_GATE_TEST_PATHS,
 } from "./release-gate-maintenance.mts";
 import { VerificationProblem } from "./verification-problem.mts";
+import type { EvidenceCommand } from "./release-spine-evidence.mts";
 
 export type VerificationProfile = "repo" | "spine" | "publish";
 
@@ -461,6 +462,12 @@ const spineOnly = (context: VerificationContext): readonly EvidenceCommand[] => 
     ? []
     : affectedTurboArguments(context);
   const scaffoldApplicable = isApplicableToChangedFiles(context, affectsScaffold);
+  const affectedGeneratedSmokeCases = context.changedFiles
+    ? selectGeneratedSmokeCasesForChangedFiles(context.changedFiles)
+    : [];
+  const generatedAppSmokeFullTier = scaffoldApplicable || packageAccountability.fullEvidence;
+  const generatedAppSmokeApplicable =
+    generatedAppSmokeFullTier || affectedGeneratedSmokeCases.length > 0;
   const scaffoldBuildArguments =
     changeScoped && scaffoldApplicable && !packageAccountability.fullEvidence
       ? ["--filter=create-croco-app"]
@@ -541,11 +548,10 @@ const spineOnly = (context: VerificationContext): readonly EvidenceCommand[] => 
       category: "generated-app",
       command: nodeScript(
         "scripts/create-croco-app-generated-smoke.mts",
-        "--tier",
-        "spine-blocking",
+        ...(generatedAppSmokeFullTier ? ["--tier", "spine-blocking"] : affectedGeneratedSmokeCases),
       ),
       timeoutMs: minutes(45),
-      applicable: scaffoldApplicable || packageAccountability.fullEvidence,
+      applicable: generatedAppSmokeApplicable,
       artifacts: [
         {
           label: "Spine-blocking generated app smoke matrix markdown",

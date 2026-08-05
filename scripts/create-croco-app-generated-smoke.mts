@@ -62,6 +62,7 @@ import {
   type WorkspacePackage,
   writePnpmWorkspaceOverrides,
 } from "./create-croco-app-generated-smoke-support.mts";
+import { assertGeneratedSmokeCaseDependencyMapping } from "./create-croco-app-generated-smoke-dependencies.mts";
 
 const DEFAULT_TENANT_MODEL = "org";
 const GENERATED_NODE_VERSION = VERSIONS.node;
@@ -1464,6 +1465,13 @@ const smokeCases = selectableSmokeCases.filter(
   (smokeCase) => smokeCase.name !== REST_SPA_CONTRACT_SMOKE_CASE_NAME,
 );
 
+export function getGeneratedSmokeDependencyCaseInputs(): readonly {
+  readonly name: string;
+  readonly args: readonly string[];
+}[] {
+  return smokeCases.map(({ name, args }) => ({ name, args }));
+}
+
 if (isMainModule()) {
   let smokeReport: GeneratedSmokeReport | undefined;
   const activeSmokeRoot = getSmokeRoot();
@@ -1588,6 +1596,7 @@ if (isMainModule()) {
           [cliPath, projectDir, ...smokeCase.args],
           rootDir,
         );
+        assertGeneratedSmokeCaseDependencyMapping(smokeCase.name, projectDir, rootDir);
         const generatedSmokeRangeOverrides = getGeneratedSmokeRangeOverrides(
           projectDir,
           join(activeSmokeRoot, "generated-package-packs"),
@@ -3217,6 +3226,11 @@ function runSpaBeSplitContractSmoke(
       projectName: "rest-spa-contracts",
       scope: "@smoke",
     });
+    assertGeneratedSmokeCaseDependencyMapping(
+      REST_SPA_CONTRACT_SMOKE_CASE_NAME,
+      projectDir,
+      rootDir,
+    );
     removeDependency(
       join(projectDir, "apps", "api-server", "package.json"),
       "devDependencies",

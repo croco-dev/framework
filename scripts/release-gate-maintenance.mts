@@ -84,6 +84,7 @@ export const RELEASE_GATE_ENTRYPOINT_PATHS = [
 
 export const RELEASE_GATE_SUPPORT_PATHS = [
   "scripts/certification-policy.mts",
+  "scripts/create-croco-app-generated-smoke-dependencies.mts",
   "scripts/create-croco-app-generated-smoke-journey-report.mts",
   "scripts/create-croco-app-generated-smoke-matrix.mts",
   "scripts/create-croco-app-generated-smoke-report.mts",
