@@ -415,7 +415,12 @@ export function Retryable(options: RetryableOptions = {}): MethodDecorator {
             methodName,
             args,
             callback,
-            { ...options, maxAttempts, wrapExhausted, signal },
+            {
+              ...options,
+              maxAttempts,
+              wrapExhausted,
+              ...(signal === undefined ? {} : { signal }),
+            },
             additionalHooks,
             recovery,
           );

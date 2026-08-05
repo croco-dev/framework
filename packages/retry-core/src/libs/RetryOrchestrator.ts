@@ -156,7 +156,7 @@ export class RetryOrchestrator {
           retryPolicy,
           backoffPolicy,
           context,
-          signal: options.signal,
+          ...(options.signal === undefined ? {} : { signal: options.signal }),
         },
         hooks,
       );
