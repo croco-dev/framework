@@ -1305,7 +1305,7 @@ describe("Generated application DI bootstrap validation", () => {
 });
 
 describe("Generated workspace dependency policy", () => {
-  it("pins Turbo to the root supported toolchain across every workspace template", () => {
+  it("pins Turbo to the root supported toolchain when workspace scripts use it", () => {
     const rootManifest = JSON.parse(readFileSync(ROOT_PACKAGE_JSON, "utf-8")) as {
       devDependencies: { turbo: string };
     };
@@ -1318,13 +1318,28 @@ describe("Generated workspace dependency policy", () => {
       .map((manifestPath) => ({
         manifestPath,
         manifest: JSON.parse(readFileSync(manifestPath, "utf-8")) as {
+          scripts?: Record<string, string>;
           devDependencies?: { turbo?: string };
         },
-      }))
-      .filter(({ manifest }) => manifest.devDependencies?.turbo !== undefined);
+      }));
 
-    expect(templateManifests).not.toHaveLength(0);
-    for (const { manifestPath, manifest } of templateManifests) {
+    const turboWorkspaceRoots = templateManifests.filter(({ manifest }) =>
+      Object.values(manifest.scripts ?? {}).some((script) => /(?:^|\s)turbo(?:\s|$)/.test(script)),
+    );
+    const manifestsWithoutTurboScripts = templateManifests.filter(
+      ({ manifest }) =>
+        !Object.values(manifest.scripts ?? {}).some((script) =>
+          /(?:^|\s)turbo(?:\s|$)/.test(script),
+        ),
+    );
+
+    expect(turboWorkspaceRoots).not.toHaveLength(0);
+    expect(
+      manifestsWithoutTurboScripts.some(
+        ({ manifest }) => manifest.devDependencies?.turbo === undefined,
+      ),
+    ).toBe(true);
+    for (const { manifestPath, manifest } of turboWorkspaceRoots) {
       expect(manifest.devDependencies?.turbo, manifestPath).toBe(
         rootManifest.devDependencies.turbo,
       );
