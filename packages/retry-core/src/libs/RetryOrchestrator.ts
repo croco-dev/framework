@@ -21,6 +21,7 @@ export type RetryOrchestratorOptions = RetryPolicyOptions & {
   backoffPolicy?: BackoffPolicy;
   wrapExhausted?: boolean;
   listeners?: RetryListener[];
+  signal?: AbortSignal;
 };
 
 /**
@@ -155,6 +156,7 @@ export class RetryOrchestrator {
           retryPolicy,
           backoffPolicy,
           context,
+          signal: options.signal,
         },
         hooks,
       );

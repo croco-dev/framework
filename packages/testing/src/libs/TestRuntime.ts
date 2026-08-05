@@ -295,9 +295,39 @@ export class TestRuntime {
   get retry(): TestRetryDependencies {
     return {
       random: () => this.random.next(),
-      sleep: (delayMs: number) => this.clock.sleep(delayMs, "retry:backoff"),
+      sleep: (delayMs: number, signal?: AbortSignal) => sleepForRetry(this.clock, delayMs, signal),
+      sleepSupportsAbortSignal: true,
     };
   }
+}
+
+function sleepForRetry(clock: TestClock, delayMs: number, signal?: AbortSignal): Promise<void> {
+  if (signal?.aborted) {
+    return Promise.reject(signal.reason);
+  }
+
+  return new Promise((resolve, reject) => {
+    let cancel = (): void => undefined;
+    const cleanup = (): void => signal?.removeEventListener("abort", onAbort);
+    const onAbort = (): void => {
+      cancel();
+      cleanup();
+      reject(signal?.reason);
+    };
+    cancel = clock.schedule(
+      () => {
+        cleanup();
+        resolve();
+      },
+      delayMs,
+      "retry:backoff",
+    );
+
+    signal?.addEventListener("abort", onAbort, { once: true });
+    if (signal?.aborted) {
+      onAbort();
+    }
+  });
 }
 
 export function fixedClock(initial: Date | string): TestClock {

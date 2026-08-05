@@ -8,7 +8,7 @@ title: "ExponentialBackoff"
 Exponential backoff with Full Jitter.
 
 Implements AWS-recommended pattern to prevent Thundering Herd:
-cap = min(maxDelay, delay * multiplier^attempt)
+cap = min(maxDelay, delay \* multiplier^attempt)
 sleep = random(0, cap)
 
 ## See
@@ -39,6 +39,18 @@ https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/
 
 `ExponentialBackoff`
 
+## Properties
+
+### supportsAbortSignal
+
+> `readonly` **supportsAbortSignal**: `boolean`
+
+Whether this policy guarantees that wait stops when its signal aborts.
+
+#### Implementation of
+
+[`BackoffPolicy`](/api/retry-core/src/interfaces/backoffpolicy/).[`supportsAbortSignal`](/api/retry-core/src/interfaces/backoffpolicy/#supportsabortsignal)
+
 ## Methods
 
 ### getDelay()
@@ -47,7 +59,7 @@ https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/
 
 Calculate delay for attempt (0-based index).
 
-Without jitter: min(maxDelay, delay * multiplier^attempt)
+Without jitter: min(maxDelay, delay \* multiplier^attempt)
 With jitter: random(0, cap) - Full Jitter
 
 #### Parameters
@@ -64,7 +76,7 @@ With jitter: random(0, cap) - Full Jitter
 
 [`BackoffPolicy`](/api/retry-core/src/interfaces/backoffpolicy/).[`getDelay`](/api/retry-core/src/interfaces/backoffpolicy/#getdelay)
 
-***
+---
 
 ### reset()
 
@@ -80,11 +92,11 @@ Reset (no-op for stateless implementation).
 
 [`BackoffPolicy`](/api/retry-core/src/interfaces/backoffpolicy/).[`reset`](/api/retry-core/src/interfaces/backoffpolicy/#reset)
 
-***
+---
 
 ### wait()
 
-> **wait**(`attempt`): `Promise`\<`void`\>
+> **wait**(`attempt`, `signal?`): `Promise`\<`void`\>
 
 Wait for the calculated delay.
 
@@ -93,6 +105,10 @@ Wait for the calculated delay.
 ##### attempt
 
 `number`
+
+##### signal?
+
+`AbortSignal`
 
 #### Returns
 

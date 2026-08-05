@@ -31,6 +31,10 @@ title: "RetryOrchestratorOptions"
 
 > `optional` **retryPolicy?**: [`RetryPolicy`](/api/retry-core/src/interfaces/retrypolicy/)
 
+### signal?
+
+> `optional` **signal?**: `AbortSignal`
+
 ### wrapExhausted?
 
 > `optional` **wrapExhausted?**: `boolean`

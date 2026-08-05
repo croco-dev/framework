@@ -66,6 +66,33 @@ describe("FixedBackoff", () => {
     expect(backoff.getDelay(0)).toBe(500);
     expect(backoff.getDelay(5)).toBe(500);
   });
+
+  it("clears the pending timer when its signal aborts", async () => {
+    vi.useFakeTimers();
+
+    try {
+      const controller = new AbortController();
+      const backoff = new FixedBackoff(1000);
+      const wait = backoff.wait(0, controller.signal);
+
+      expect(vi.getTimerCount()).toBe(1);
+      controller.abort();
+
+      await expect(wait).rejects.toBe(controller.signal.reason);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not claim abort support for an injected sleeper without a capability declaration", () => {
+    const sleep = vi.fn().mockResolvedValue(undefined);
+
+    expect(new FixedBackoff(1000, { sleep }).supportsAbortSignal).toBe(false);
+    expect(
+      new FixedBackoff(1000, { sleep, sleepSupportsAbortSignal: true }).supportsAbortSignal,
+    ).toBe(true);
+  });
 });
 
 describe("NoBackoff", () => {

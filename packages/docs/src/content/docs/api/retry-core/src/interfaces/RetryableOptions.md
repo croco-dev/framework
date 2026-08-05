@@ -159,6 +159,32 @@ Custom retry policy
 
 ***
 
+### signal?
+
+> `optional` **signal?**: `AbortSignal`
+
+Caller cancellation signal
+
+***
+
+### signalResolver?
+
+> `optional` **signalResolver?**: (`context`) => `AbortSignal` \| `undefined`
+
+Resolve a caller cancellation signal for each invocation
+
+#### Parameters
+
+##### context
+
+[`RetrySignalResolverContext`](/api/retry-core/src/type-aliases/retrysignalresolvercontext/)
+
+#### Returns
+
+`AbortSignal` \| `undefined`
+
+***
+
 ### trace?
 
 > `optional` **trace?**: `boolean`

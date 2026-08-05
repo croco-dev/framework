@@ -201,4 +201,19 @@ describe("TestRuntime", () => {
 
     await expect(wait).resolves.toBeUndefined();
   });
+
+  it("cancels retry-core backoff without leaving virtual work pending", async () => {
+    const runtime = new TestRuntime({ ids: "retry-abort" });
+    const controller = new AbortController();
+    const retry = new ExponentialBackoff({ delay: 30_000, jitter: false }, runtime.retry);
+    const wait = retry.wait(0, controller.signal);
+
+    expect(runtime.retry.sleepSupportsAbortSignal).toBe(true);
+    expect(runtime.clock.pendingWork).toMatchObject([{ source: "retry:backoff" }]);
+
+    controller.abort();
+
+    await expect(wait).rejects.toBe(controller.signal.reason);
+    expect(runtime.clock.pendingWork).toEqual([]);
+  });
 });

@@ -24,14 +24,34 @@ const template = new RetryTemplate({
 await template.execute(async () => "ok");
 ```
 
+호출자가 취소되면 다음 시도와 진행 중인 백오프를 즉시 중단하도록 `AbortSignal`을 전달할 수 있습니다.
+
+```typescript
+const controller = new AbortController();
+const template = new RetryTemplate({
+  maxAttempts: 3,
+  signal: controller.signal,
+});
+```
+
+사용자 정의 `BackoffPolicy`와 신호를 함께 사용하려면 정책이 `supportsAbortSignal: true`를 선언하고
+`wait(attempt, signal)`에서 신호 중단 시 내부 타이머나 대기를 정리해야 합니다. 미선언 정책은 사용자 콜백을
+실행하기 전에 `RetryCancellationUnsupportedProblem`으로 거부됩니다. 신호를 전달하지 않는 기존 정책 경로는
+변경되지 않습니다. built-in 정책에 사용자 `sleep` 함수를 주입할 때도 같은 보장을 제공하는 경우에만
+`sleepSupportsAbortSignal: true`를 함께 선언해야 합니다.
+
 ### `@Retryable`와 `@Recover`
 
 ```typescript
 import { Recover, Retryable } from "@croco/retry-core";
 
 class PaymentService {
-  @Retryable({ maxAttempts: 3, backoff: { delay: 100 } })
-  async charge(): Promise<string> {
+  @Retryable({
+    maxAttempts: 3,
+    backoff: { delay: 100 },
+    signalResolver: ({ args }) => args[0] as AbortSignal,
+  })
+  async charge(signal: AbortSignal): Promise<string> {
     return "ok";
   }
 

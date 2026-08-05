@@ -22910,6 +22910,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "RetryCancellationUnsupportedProblem",
+              "exportKind": "named",
+              "source": "./libs/errors",
+              "declarationKind": "class"
+            },
+            {
               "name": "RetryContext",
               "exportKind": "named",
               "source": "./libs/RetryContext",
@@ -23062,6 +23068,11 @@
               "name": "RetryPolicyOptions",
               "exportKind": "named",
               "source": "./libs/RetryPolicy"
+            },
+            {
+              "name": "RetrySignalResolverContext",
+              "exportKind": "named",
+              "source": "./libs/Retryable"
             },
             {
               "name": "RetryTemplateOptions",

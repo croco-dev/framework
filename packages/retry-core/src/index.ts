@@ -50,6 +50,7 @@ export {
   InvalidRetryConfigurationProblem,
   LambdaTimeoutProblem,
   RetryAbortedProblem,
+  RetryCancellationUnsupportedProblem,
   RetryExhaustedProblem,
   RetrySuccessHookProblem,
 } from "./libs/errors";
@@ -95,6 +96,7 @@ export type {
   CircuitBreakerConfig,
   CircuitIdResolverContext,
   RetryableOptions,
+  RetrySignalResolverContext,
 } from "./libs/Retryable";
 
 /**

@@ -23,6 +23,9 @@ export interface RetryTemplateOptions extends RetryPolicyOptions {
 
   /** Retry listeners for lifecycle hooks */
   listeners?: RetryListener[];
+
+  /** Caller cancellation signal */
+  signal?: AbortSignal;
 }
 
 /**

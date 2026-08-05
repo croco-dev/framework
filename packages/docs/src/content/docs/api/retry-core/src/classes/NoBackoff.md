@@ -21,6 +21,18 @@ No delay backoff (for testing or immediate retry scenarios).
 
 `NoBackoff`
 
+## Properties
+
+### supportsAbortSignal
+
+> `readonly` **supportsAbortSignal**: `true` = `true`
+
+Whether this policy guarantees that wait stops when its signal aborts.
+
+#### Implementation of
+
+[`BackoffPolicy`](/api/retry-core/src/interfaces/backoffpolicy/).[`supportsAbortSignal`](/api/retry-core/src/interfaces/backoffpolicy/#supportsabortsignal)
+
 ## Methods
 
 ### getDelay()
@@ -63,15 +75,19 @@ Reset internal state if any
 
 ### wait()
 
-> **wait**(`_attempt`): `Promise`\<`void`\>
+> **wait**(`_attempt`, `_signal?`): `Promise`\<`void`\>
 
-Wait for the calculated delay
+Wait for the calculated delay, cancelling promptly when the signal aborts.
 
 #### Parameters
 
 ##### \_attempt
 
 `number`
+
+##### \_signal?
+
+`AbortSignal`
 
 #### Returns
 
