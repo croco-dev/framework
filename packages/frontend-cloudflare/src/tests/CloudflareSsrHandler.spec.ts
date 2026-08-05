@@ -1,7 +1,8 @@
 import type { RenderServer, RuntimeContext } from "@croco/meta-vite";
 import { describe, expect, it, vi } from "vitest";
 import { createSsrHandler, createSsrHandlerAsFetchHandler } from "../libs/CloudflareSsrHandler";
-import type { SsrWorkerEnv } from "../libs/types";
+import { SSR_FAILURE_CODES } from "../libs/types";
+import type { SsrFailureReport, SsrWorkerEnv } from "../libs/types";
 
 function createExecutionContext(): ExecutionContext {
   return {
@@ -134,38 +135,48 @@ describe("createSsrHandler", () => {
   });
 
   it("falls through ASSETS failures to SSR with diagnostic evidence", async () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const reports: SsrFailureReport[] = [];
     const renderResponse = new Response("rendered page");
     const renderServer = {
       handle: vi.fn(async () => renderResponse),
     } as unknown as RenderServer;
-    const handler = createSsrHandler({ renderServer });
+    const handler = createSsrHandler({
+      renderServer,
+      onFailure: (report) => {
+        reports.push(report);
+      },
+    });
     const assets = {
       fetch: vi.fn(async () => {
         throw new Error("asset binding unavailable");
       }),
     } as unknown as Fetcher;
 
-    try {
-      const result = await handler(
-        new Request("https://example.com/dashboard"),
-        { ASSETS: assets },
-        createExecutionContext(),
-      );
+    const result = await handler(
+      new Request("https://example.com/dashboard?secret=redacted", {
+        headers: { "x-croco-correlation-id": "request-asset-1" },
+      }),
+      { ASSETS: assets },
+      createExecutionContext(),
+    );
 
-      expect(result).toBe(renderResponse);
-      expect(renderServer.handle).toHaveBeenCalledTimes(1);
-      expect(warn).toHaveBeenCalledWith(
-        "@croco/frontend-cloudflare ASSETS binding failed; continuing to API or SSR fallback.",
-        "asset binding unavailable",
-      );
-    } finally {
-      warn.mockRestore();
-    }
+    expect(result).toBe(renderResponse);
+    expect(renderServer.handle).toHaveBeenCalledTimes(1);
+    expect(reports).toEqual([
+      {
+        boundary: "asset-binding",
+        code: SSR_FAILURE_CODES.ASSET_BINDING,
+        correlationId: "request-asset-1",
+        error: expect.any(Error),
+        method: "GET",
+        pathname: "/dashboard",
+      },
+    ]);
   });
 
   it("returns a deterministic 500 response when service-binding API routing fails", async () => {
-    const handler = createSsrHandler({ apiBindingName: "MY_API" });
+    const reporter = vi.fn();
+    const handler = createSsrHandler({ apiBindingName: "MY_API", onFailure: reporter });
     const customApi = {
       fetch: vi.fn(async () => {
         throw new Error("api worker unavailable");
@@ -173,13 +184,33 @@ describe("createSsrHandler", () => {
     } as unknown as Fetcher;
 
     const result = await handler(
-      new Request("https://example.com/api/users"),
+      new Request("https://example.com/api/users", {
+        headers: { "x-request-id": "request-api-1" },
+      }),
       { MY_API: customApi } as unknown as SsrWorkerEnv,
       createExecutionContext(),
     );
 
     expect(result.status).toBe(500);
-    await expect(result.text()).resolves.toBe("API request failed");
+    expect(result.headers.get("content-type")).toBe("application/problem+json");
+    expect(result.headers.get("cache-control")).toBe("no-store");
+    expect(result.headers.get("x-croco-diagnostic-code")).toBe(SSR_FAILURE_CODES.API_BINDING);
+    expect(result.headers.get("x-croco-correlation-id")).toBe("request-api-1");
+    await expect(result.json()).resolves.toEqual({
+      type: "about:blank",
+      title: "Worker boundary failure",
+      status: 500,
+      code: SSR_FAILURE_CODES.API_BINDING,
+      correlationId: "request-api-1",
+    });
+    expect(reporter).toHaveBeenCalledWith({
+      boundary: "api-binding",
+      code: SSR_FAILURE_CODES.API_BINDING,
+      correlationId: "request-api-1",
+      error: expect.any(Error),
+      method: "GET",
+      pathname: "/api/users",
+    });
     expect(customApi.fetch).toHaveBeenCalledTimes(1);
   });
 
@@ -212,27 +243,114 @@ describe("createSsrHandler", () => {
   });
 
   it("returns a deterministic 500 response when SSR rendering fails", async () => {
-    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const reporter = vi.fn();
     const renderServer = {
       handle: vi.fn(async () => {
         throw new Error("render failed");
       }),
     } as unknown as RenderServer;
-    const handler = createSsrHandler({ renderServer });
+    const handler = createSsrHandler({ renderServer, onFailure: reporter });
 
-    try {
-      const response = await handler(
+    const response = await handler(
+      new Request("https://example.com/dashboard", { headers: { "cf-ray": "ray-ssr-1" } }),
+      {},
+      createExecutionContext(),
+    );
+
+    expect(response.status).toBe(500);
+    expect(response.headers.get("x-croco-diagnostic-code")).toBe(SSR_FAILURE_CODES.SSR_RENDER);
+    await expect(response.json()).resolves.toEqual({
+      type: "about:blank",
+      title: "Worker boundary failure",
+      status: 500,
+      code: SSR_FAILURE_CODES.SSR_RENDER,
+      correlationId: "ray-ssr-1",
+    });
+    expect(reporter).toHaveBeenCalledWith({
+      boundary: "ssr-render",
+      code: SSR_FAILURE_CODES.SSR_RENDER,
+      correlationId: "ray-ssr-1",
+      error: expect.any(Error),
+      method: "GET",
+      pathname: "/dashboard",
+    });
+  });
+
+  it("preserves the original asset fallback and API failure response when reporters reject", async () => {
+    const renderResponse = new Response("rendered page");
+    const renderServer = {
+      handle: vi.fn(async () => renderResponse),
+    } as unknown as RenderServer;
+    const assets = {
+      fetch: vi.fn(async () => {
+        throw new Error("asset secret");
+      }),
+    } as unknown as Fetcher;
+    const api = {
+      fetch: vi.fn(async () => {
+        throw new Error("api secret");
+      }),
+    } as unknown as Fetcher;
+    const onFailure = vi.fn(async () => {
+      throw new Error("reporter unavailable");
+    });
+    const handler = createSsrHandler({ renderServer, onFailure });
+
+    const pageResponse = await handler(
+      new Request("https://example.com/dashboard"),
+      { ASSETS: assets },
+      createExecutionContext(),
+    );
+    const apiResponse = await handler(
+      new Request("https://example.com/api/users"),
+      { API_WORKER: api },
+      createExecutionContext(),
+    );
+
+    expect(pageResponse).toBe(renderResponse);
+    expect(apiResponse.status).toBe(500);
+    await expect(apiResponse.text()).resolves.not.toContain("api secret");
+    expect(onFailure).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not wait for a non-settling reporter before returning fallback and failure responses", async () => {
+    const renderResponse = new Response("rendered page");
+    const renderServer = {
+      handle: vi.fn(async () => renderResponse),
+    } as unknown as RenderServer;
+    const assets = {
+      fetch: vi.fn(async () => {
+        throw new Error("asset unavailable");
+      }),
+    } as unknown as Fetcher;
+    const api = {
+      fetch: vi.fn(async () => {
+        throw new Error("api unavailable");
+      }),
+    } as unknown as Fetcher;
+    const onFailure = vi.fn(() => new Promise<void>(() => {}));
+    const handler = createSsrHandler({ renderServer, onFailure });
+    const pageExecutionContext = createExecutionContext();
+    const apiExecutionContext = createExecutionContext();
+
+    const [pageResponse, apiResponse] = await Promise.all([
+      handler(
         new Request("https://example.com/dashboard"),
-        {},
-        createExecutionContext(),
-      );
+        { ASSETS: assets },
+        pageExecutionContext,
+      ),
+      handler(
+        new Request("https://example.com/api/users"),
+        { API_WORKER: api },
+        apiExecutionContext,
+      ),
+    ]);
 
-      expect(response.status).toBe(500);
-      await expect(response.text()).resolves.toBe("Internal server error");
-      expect(error).toHaveBeenCalledWith("SSR rendering error:", expect.any(Error));
-    } finally {
-      error.mockRestore();
-    }
+    expect(pageResponse).toBe(renderResponse);
+    expect(apiResponse.status).toBe(500);
+    expect(pageExecutionContext.waitUntil).toHaveBeenCalledTimes(1);
+    expect(apiExecutionContext.waitUntil).toHaveBeenCalledTimes(1);
+    expect(onFailure).toHaveBeenCalledTimes(2);
   });
 
   it("preserves streaming render server responses", async () => {
