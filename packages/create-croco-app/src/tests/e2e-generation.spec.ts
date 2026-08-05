@@ -1225,6 +1225,7 @@ describe("E2E: generate()", () => {
       expect(creditOperationsSmokeSource).toContain("credits-core/duplicate-conflict");
       expect(creditOperationsSmokeSource).toContain("credits-core/stale-ledger-position");
       expect(creditOperationsSmokeSource).toContain("credits-core/event-publication-failed");
+      expect(creditOperationsSmokeSource).toContain("clock: () => now");
       expect(lifecycleAutomationSource).toContain("demo-activate-customer-risk");
       expect(lifecycleAutomationSource).toContain("cooldown-suppression");
       expect(lifecycleAutomationSource).toContain("demo-pause-customer-risk");
