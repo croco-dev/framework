@@ -15,7 +15,14 @@ import * as telemetryApi from "@croco/telemetry-api";
 import * as otelApi from "@opentelemetry/api";
 import { SpanStatusCode } from "@opentelemetry/api";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { EventPublishDroppedProblem, EventPublishFailedError, InMemoryEventBus } from "../index";
+import {
+  EventPublishDroppedProblem,
+  EventPublishFailedError,
+  InMemoryEventBus,
+  InvalidEventBusConfigurationProblem,
+  MAX_EVENT_BUS_CONCURRENCY,
+  MAX_EVENT_BUS_TIMEOUT_MS,
+} from "../index";
 
 class TestEvent extends DomainEvent {
   static readonly eventName = "TestEvent";
@@ -857,20 +864,86 @@ describe("InMemoryEventBus", () => {
   });
 
   describe("backpressure", () => {
-    it("should reject invalid backpressure timeout configuration", () => {
-      expect(
-        () =>
-          new InMemoryEventBus<TestEvent>({
-            backpressureTimeoutMs: 0,
-          }),
-      ).toThrow("backpressureTimeoutMs must be a positive finite number");
+    const invalidConcurrencyValues = [
+      Number.NaN,
+      Number.POSITIVE_INFINITY,
+      null as unknown as number,
+      -1,
+      0,
+      1.5,
+      MAX_EVENT_BUS_CONCURRENCY + 1,
+    ];
+    const invalidTimeoutValues = [
+      Number.NaN,
+      Number.POSITIVE_INFINITY,
+      null as unknown as number,
+      -1,
+      0,
+      1.5,
+      MAX_EVENT_BUS_TIMEOUT_MS + 1,
+    ];
 
+    it.each(invalidConcurrencyValues)(
+      "rejects invalid maxConcurrency %s at construction",
+      (value) => {
+        expect(() => new InMemoryEventBus<TestEvent>({ maxConcurrency: value })).toThrow(
+          InvalidEventBusConfigurationProblem,
+        );
+
+        try {
+          new InMemoryEventBus<TestEvent>({ maxConcurrency: value });
+        } catch (error) {
+          expect(error).toMatchObject({
+            code: "events-inmemory/invalid-configuration",
+            option: "maxConcurrency",
+            value,
+          });
+        }
+      },
+    );
+
+    it.each(invalidTimeoutValues)(
+      "rejects invalid backpressureTimeoutMs %s at construction",
+      (value) => {
+        expect(() => new InMemoryEventBus<TestEvent>({ backpressureTimeoutMs: value })).toThrow(
+          InvalidEventBusConfigurationProblem,
+        );
+
+        try {
+          new InMemoryEventBus<TestEvent>({ backpressureTimeoutMs: value });
+        } catch (error) {
+          expect(error).toMatchObject({
+            code: "events-inmemory/invalid-configuration",
+            option: "backpressureTimeoutMs",
+            value,
+          });
+        }
+      },
+    );
+
+    it.each([1, MAX_EVENT_BUS_CONCURRENCY])(
+      "accepts maxConcurrency boundary %s without rounding",
+      (maxConcurrency) => {
+        expect(() => new InMemoryEventBus<TestEvent>({ maxConcurrency })).not.toThrow();
+      },
+    );
+
+    it.each([1, MAX_EVENT_BUS_TIMEOUT_MS])(
+      "accepts backpressureTimeoutMs boundary %s without timer clamping",
+      (backpressureTimeoutMs) => {
+        expect(() => new InMemoryEventBus<TestEvent>({ backpressureTimeoutMs })).not.toThrow();
+      },
+    );
+
+    it("preserves existing valid tuning combinations", () => {
       expect(
         () =>
           new InMemoryEventBus<TestEvent>({
-            backpressureTimeoutMs: Number.POSITIVE_INFINITY,
+            maxConcurrency: 10,
+            backpressureStrategy: "block",
+            backpressureTimeoutMs: 5000,
           }),
-      ).toThrow("backpressureTimeoutMs must be a positive finite number");
+      ).not.toThrow();
     });
 
     it("should respect maxConcurrency with block strategy", async () => {

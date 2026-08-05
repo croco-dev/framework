@@ -3794,7 +3794,7 @@ Sources:
 
 Sources:
 
-- `packages/events-inmemory/src/libs/problems/EventsInmemoryProblems.ts:7:3` (problem-class)
+- `packages/events-inmemory/src/libs/problems/EventsInmemoryProblems.ts:35:3` (problem-class)
 
 <a id="events-inmemory-backpressure-timeout"></a>
 
@@ -3812,7 +3812,7 @@ Sources:
 
 Sources:
 
-- `packages/events-inmemory/src/libs/problems/EventsInmemoryProblems.ts:23:3` (problem-class)
+- `packages/events-inmemory/src/libs/problems/EventsInmemoryProblems.ts:51:3` (problem-class)
 
 <a id="events-inmemory-invalid-configuration"></a>
 
@@ -3830,7 +3830,7 @@ Sources:
 
 Sources:
 
-- `packages/events-inmemory/src/libs/InmemoryEventBus.ts:72:3` (problem-class)
+- `packages/events-inmemory/src/libs/problems/EventsInmemoryProblems.ts:12:3` (problem-class)
 
 <a id="events-inmemory-publish-dropped"></a>
 
@@ -3848,7 +3848,7 @@ Sources:
 
 Sources:
 
-- `packages/events-inmemory/src/libs/InmemoryEventBus.ts:51:3` (problem-class)
+- `packages/events-inmemory/src/libs/InmemoryEventBus.ts:54:3` (problem-class)
 
 <a id="events-inmemory-publish-failed"></a>
 
@@ -3866,7 +3866,7 @@ Sources:
 
 Sources:
 
-- `packages/events-inmemory/src/libs/InmemoryEventBus.ts:34:3` (problem-class)
+- `packages/events-inmemory/src/libs/InmemoryEventBus.ts:37:3` (problem-class)
 
 <a id="events-tx-configuration-invalid"></a>
 

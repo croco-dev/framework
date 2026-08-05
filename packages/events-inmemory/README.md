@@ -34,11 +34,14 @@ config.setEventBus(
 - `EventPublishDroppedProblem`: `drop` 전략으로 생략된 발행의 전달/누락 수와 선행 핸들러 실패를 제공하는 Problem
 - `BackpressureExceededProblem`: 동시성 한도 초과 시 발생하는 Problem
 - `BackpressureTimeoutProblem`: `block` 전략의 슬롯 대기가 제한 시간을 초과하면 발생하는 Problem
+- `InvalidEventBusConfigurationProblem`: 잘못된 동시성 또는 timeout 설정을 생성 시점에 거부하는 Problem
 
 ## 동작 특징
 
-- 기본 `maxConcurrency`는 `100`
-- `block` 전략은 슬롯이 생길 때까지 대기하되, 기본 `backpressureTimeoutMs` 5000ms를 초과하면 Problem을 발생
+- `maxConcurrency`는 `1`부터 `Number.MAX_SAFE_INTEGER`까지의 정수이며 기본값은 `100`
+- `backpressureTimeoutMs`는 `1`부터 `2_147_483_647`까지의 정수이며 기본값은 `5000`
+- 잘못된 숫자 설정은 이벤트를 발행하기 전에 `InvalidEventBusConfigurationProblem`으로 거부
+- `block` 전략은 슬롯이 생길 때까지 대기하되, `backpressureTimeoutMs`를 초과하면 Problem을 발생
 - `drop` 전략은 일부 또는 전체 구독자를 생략하면 `EventPublishDroppedProblem`으로 발행을 거부
 - `error` 전략은 즉시 Problem을 발생
 - OpenTelemetry 활성 시 발행 Span과 핸들러 Span을 자동 기록

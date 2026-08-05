@@ -45,10 +45,13 @@ export {
   InMemoryEventBus,
 } from "./libs/InmemoryEventBus";
 
-/**
- * 동시 처리 한도를 초과했을 때 발생하는 Problem 타입입니다.
- */
 export {
   BackpressureExceededProblem,
   BackpressureTimeoutProblem,
+  InvalidEventBusConfigurationProblem,
 } from "./libs/problems/EventsInmemoryProblems";
+export {
+  MAX_EVENT_BUS_CONCURRENCY,
+  MAX_EVENT_BUS_TIMEOUT_MS,
+} from "./libs/problems/EventsInmemoryProblems";
+export type { EventBusNumericOption } from "./libs/problems/EventsInmemoryProblems";

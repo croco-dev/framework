@@ -5536,7 +5536,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-inmemory/src/libs/problems/EventsInmemoryProblems.ts",
-          line: 7,
+          line: 35,
           column: 3,
           kind: "problem-class",
         },
@@ -5566,7 +5566,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-inmemory/src/libs/problems/EventsInmemoryProblems.ts",
-          line: 23,
+          line: 51,
           column: 3,
           kind: "problem-class",
         },
@@ -5597,8 +5597,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       },
       sources: [
         {
-          file: "packages/events-inmemory/src/libs/InmemoryEventBus.ts",
-          line: 72,
+          file: "packages/events-inmemory/src/libs/problems/EventsInmemoryProblems.ts",
+          line: 12,
           column: 3,
           kind: "problem-class",
         },
@@ -5630,7 +5630,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-inmemory/src/libs/InmemoryEventBus.ts",
-          line: 51,
+          line: 54,
           column: 3,
           kind: "problem-class",
         },
@@ -5662,7 +5662,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-inmemory/src/libs/InmemoryEventBus.ts",
-          line: 34,
+          line: 37,
           column: 3,
           kind: "problem-class",
         },

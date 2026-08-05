@@ -8731,6 +8731,24 @@
               "exportKind": "named",
               "source": "./libs/InmemoryEventBus",
               "declarationKind": "class"
+            },
+            {
+              "name": "InvalidEventBusConfigurationProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/EventsInmemoryProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "MAX_EVENT_BUS_CONCURRENCY",
+              "exportKind": "named",
+              "source": "./libs/problems/EventsInmemoryProblems",
+              "declarationKind": "const"
+            },
+            {
+              "name": "MAX_EVENT_BUS_TIMEOUT_MS",
+              "exportKind": "named",
+              "source": "./libs/problems/EventsInmemoryProblems",
+              "declarationKind": "const"
             }
           ],
           "typeExports": [
@@ -8738,6 +8756,11 @@
               "name": "BackpressureStrategy",
               "exportKind": "named",
               "source": "./libs/InmemoryEventBus"
+            },
+            {
+              "name": "EventBusNumericOption",
+              "exportKind": "named",
+              "source": "./libs/problems/EventsInmemoryProblems"
             },
             {
               "name": "EventPublishFailure",
