@@ -20,6 +20,9 @@ import { type Context, context, type Span, SpanStatusCode, trace } from "@opente
 import {
   BackpressureExceededProblem,
   BackpressureTimeoutProblem,
+  InvalidEventBusConfigurationProblem,
+  MAX_EVENT_BUS_CONCURRENCY,
+  MAX_EVENT_BUS_TIMEOUT_MS,
 } from "./problems/EventsInmemoryProblems";
 
 export type EventPublishFailure = {
@@ -65,23 +68,13 @@ export class EventPublishDroppedProblem extends Problem {
   }
 }
 
-/**
- * 이벤트 버스 옵션이 유효하지 않을 때 발생하는 구성 오류입니다.
- */
-export class InvalidEventBusConfigurationError extends Problem {
-  readonly code = "events-inmemory/invalid-configuration";
-  readonly category = ProblemCategory.InternalServerError;
-
-  constructor(message: string) {
-    super(undefined, undefined, `Invalid EventBus configuration: ${message}`);
-  }
-}
-
 export type BackpressureStrategy = "drop" | "block" | "error";
 
 export type InMemoryEventBusOptions = {
+  /** Positive safe integer. Defaults to 100. */
   maxConcurrency?: number;
   backpressureStrategy?: BackpressureStrategy;
+  /** Integer milliseconds from 1 through 2,147,483,647. Defaults to 5000. */
   backpressureTimeoutMs?: number;
 };
 
@@ -109,17 +102,24 @@ export class InMemoryEventBus<
   private readonly slotWaiters = new Set<() => void>();
 
   constructor(options: InMemoryEventBusOptions = {}) {
-    const maxConcurrency = options.maxConcurrency ?? 100;
-    if (!Number.isFinite(maxConcurrency) || maxConcurrency <= 0) {
-      throw new InvalidEventBusConfigurationError(
-        `maxConcurrency must be a positive finite number, got ${maxConcurrency}`,
-      );
+    const maxConcurrency = options.maxConcurrency === undefined ? 100 : options.maxConcurrency;
+    if (
+      !Number.isSafeInteger(maxConcurrency) ||
+      maxConcurrency <= 0 ||
+      maxConcurrency > MAX_EVENT_BUS_CONCURRENCY
+    ) {
+      throw new InvalidEventBusConfigurationProblem("maxConcurrency", maxConcurrency);
     }
-    const backpressureTimeoutMs = options.backpressureTimeoutMs ?? DEFAULT_BACKPRESSURE_TIMEOUT_MS;
-    if (!Number.isFinite(backpressureTimeoutMs) || backpressureTimeoutMs <= 0) {
-      throw new InvalidEventBusConfigurationError(
-        `backpressureTimeoutMs must be a positive finite number, got ${backpressureTimeoutMs}`,
-      );
+    const backpressureTimeoutMs =
+      options.backpressureTimeoutMs === undefined
+        ? DEFAULT_BACKPRESSURE_TIMEOUT_MS
+        : options.backpressureTimeoutMs;
+    if (
+      !Number.isSafeInteger(backpressureTimeoutMs) ||
+      backpressureTimeoutMs <= 0 ||
+      backpressureTimeoutMs > MAX_EVENT_BUS_TIMEOUT_MS
+    ) {
+      throw new InvalidEventBusConfigurationProblem("backpressureTimeoutMs", backpressureTimeoutMs);
     }
     this.maxConcurrency = maxConcurrency;
     this.backpressureStrategy = options.backpressureStrategy ?? "block";

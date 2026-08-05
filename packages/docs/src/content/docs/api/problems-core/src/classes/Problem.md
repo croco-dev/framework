@@ -182,6 +182,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`EventPublishFailedError`](/api/events-inmemory/src/classes/eventpublishfailederror/)
 - [`BackpressureExceededProblem`](/api/events-inmemory/src/classes/backpressureexceededproblem/)
 - [`BackpressureTimeoutProblem`](/api/events-inmemory/src/classes/backpressuretimeoutproblem/)
+- [`InvalidEventBusConfigurationProblem`](/api/events-inmemory/src/classes/invalideventbusconfigurationproblem/)
 - [`InboxClaimConflictProblem`](/api/events-tx/src/classes/inboxclaimconflictproblem/)
 - [`InvalidTransactionalEventConfigurationProblem`](/api/events-tx/src/classes/invalidtransactionaleventconfigurationproblem/)
 - [`OutboxIdempotencyConflictProblem`](/api/events-tx/src/classes/outboxidempotencyconflictproblem/)
