@@ -1007,6 +1007,12 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
         paths: ["croco.project-map.json"],
       },
       {
+        label: "Contract verify",
+        readOnly: true,
+        recovery: "pnpm codegen",
+        args: ["contract:verify"],
+      },
+      {
         label: "DI graph generation",
         args: ["di:graph"],
         paths: [".croco/build/di-graph.manifest.json"],
@@ -1623,6 +1629,7 @@ if (isMainModule()) {
         for (const validation of smokeCase.validations) {
           runValidation(projectDir, smokeCase, validation, smokeReport, caseResult);
         }
+        runGeneratedBrowserContractDriftCanaries(projectDir, smokeCase, smokeReport, caseResult);
         runGraphQLContractDriftCanaries(projectDir, smokeCase, smokeReport, caseResult);
         caseResult.status = "passed";
         writeGeneratedSmokeReport(smokeReport);
@@ -2705,6 +2712,62 @@ function ensureGeneratedVerificationBaseline(validationDir: string): void {
   run("git", ["config", "user.name", "Croco Generated Smoke"], validationDir);
   run("git", ["add", "-A", "--", ".", ":(exclude)**/node_modules/**"], validationDir);
   run("git", ["commit", "--quiet", "-m", "generated verification baseline"], validationDir);
+}
+
+function runGeneratedBrowserContractDriftCanaries(
+  projectDir: string,
+  smokeCase: SmokeCase,
+  report: GeneratedSmokeReport,
+  caseResult: SmokeCaseResult,
+): void {
+  const preset = readFlagValue(smokeCase.args, "--preset");
+  if (preset !== "production-app" && preset !== "admin-console") return;
+
+  const clientFile = preset === "admin-console" ? "admin.ts" : "user.ts";
+  const canaries = [
+    {
+      label: "stale Project Map canary",
+      path: "croco.project-map.json",
+      expectedOutput: ["CROCO_CLI_PROJECT_MAP_009", "Regenerate it with croco project map"],
+      mutate: (content: string) => content.replace('"version":', '"staleVersion":'),
+    },
+    {
+      label: "stale OpenAPI canary",
+      path: "openapi.json",
+      expectedOutput: ["CROCO_OPENAPI_OUTPUT_CHANGED", "OpenAPI output drift detected"],
+      mutate: (content: string) => `${content}\n`,
+    },
+    {
+      label: "stale RPC client canary",
+      path: `libs/shared/provider-rpc/src/${clientFile}`,
+      expectedOutput: ["CROCO_RPC_OUTPUT_CHANGED", "RPC output drift detected"],
+      mutate: (content: string) => `${content}\n`,
+    },
+  ] as const;
+
+  for (const canary of canaries) {
+    const artifactPath = join(projectDir, canary.path);
+    const original = readFileSync(artifactPath, "utf8");
+    const stale = canary.mutate(original);
+    if (stale === original) {
+      throw new Error(`${smokeCase.name} ${canary.label} could not mutate ${canary.path}`);
+    }
+    writeFileSync(artifactPath, stale);
+    try {
+      runExpectedSmokeCaseCommand(
+        report,
+        caseResult,
+        projectDir,
+        canary.label,
+        corepackCommand,
+        ["pnpm", "contract:verify"],
+        projectDir,
+        canary.expectedOutput,
+      );
+    } finally {
+      writeFileSync(artifactPath, original);
+    }
+  }
 }
 
 function runGraphQLContractDriftCanaries(
