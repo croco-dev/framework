@@ -8,7 +8,11 @@ import {
   hasResourcePermission,
   parsePermission,
 } from "../libs/rbac/Permission";
-import type { PermissionAction } from "../libs/rbac/Permission";
+import {
+  InvalidPermissionActionProblem,
+  InvalidPermissionFormatProblem,
+} from "../libs/problems/AuthProblems";
+import type { Permission, PermissionAction } from "../libs/rbac/Permission";
 
 const REQUIRED_ACTIONS: PermissionAction[] = ["read", "write", "delete", "manage"];
 
@@ -136,20 +140,57 @@ describe("Permission", () => {
   });
 
   describe("formatPermission", () => {
-    it("should format permission object to string", () => {
-      const permission = { resource: "billing", action: "write" as const };
-      expect(formatPermission(permission)).toBe("billing:write");
-    });
+    it.each([
+      { permission: { resource: "billing", action: "write" } as const },
+      {
+        permission: { resource: "posts", action: "write", resourceId: "123" } as const,
+      },
+    ])("should produce a permission accepted by the parser", ({ permission }) => {
+      const formatted = formatPermission(permission);
 
-    it("should format resource level permission to string", () => {
-      const permission = { resource: "posts", action: "write" as const, resourceId: "123" };
-      expect(formatPermission(permission)).toBe("posts:write:123");
+      expect(parsePermission(formatted)).toEqual(permission);
     });
 
     it("should reject an empty resource id instead of formatting a global permission", () => {
       const permission = { resource: "posts", action: "write" as const, resourceId: "" };
-      expect(() => formatPermission(permission)).toThrow("Invalid permission format");
+      expect(() => formatPermission(permission)).toThrow(InvalidPermissionFormatProblem);
     });
+
+    it("should reject an empty resource with the parser format problem", () => {
+      const permission = { resource: "", action: "read" as const };
+
+      expect(() => formatPermission(permission)).toThrow(InvalidPermissionFormatProblem);
+    });
+
+    it("should reject a runtime invalid action with the parser action problem", () => {
+      const permission = {
+        resource: "billing",
+        action: "archive",
+      } as unknown as Permission;
+
+      expect(() => formatPermission(permission)).toThrow(InvalidPermissionActionProblem);
+    });
+
+    it.each([
+      { resource: "billing:read", action: "write" },
+      { resource: null, action: "read" },
+      { resource: Object.create(null), action: "read" },
+      { resource: "billing", action: "read", resourceId: "document:123" },
+      { resource: "billing", action: "read", resourceId: null },
+    ])("should reject a runtime invalid format component %#", (permission) => {
+      expect(() => formatPermission(permission as unknown as Permission)).toThrow(
+        InvalidPermissionFormatProblem,
+      );
+    });
+
+    it.each(["read:123", null])(
+      "should reject the runtime invalid action %j before it can be reinterpreted",
+      (action) => {
+        const permission = { resource: "billing", action } as unknown as Permission;
+
+        expect(() => formatPermission(permission)).toThrow(InvalidPermissionActionProblem);
+      },
+    );
   });
 
   describe("hasPermission", () => {
