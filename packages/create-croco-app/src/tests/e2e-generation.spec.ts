@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync
 import { basename, extname, join, relative } from "node:path";
 import { preProcessFile } from "typescript";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { parse as parseYaml } from "yaml";
 import { generate } from "../generator.js";
 import { getExternalCrocoPackageRange } from "../helpers/croco-ranges.js";
 import { mergeInto, replaceGithubExpressions } from "../helpers/fs.js";
@@ -349,6 +350,25 @@ function assertBrowserWorkflowUsesImmutableActions(workflow: string): void {
   );
   for (const reference of remoteActions) {
     expect(reference).toMatch(/^[^@\s]+@[0-9a-f]{40}$/i);
+  }
+}
+
+function assertBrowserWorkflowUsesLeastPrivilege(workflow: string): void {
+  const parsedWorkflow = parseYaml(workflow) as {
+    permissions?: Record<string, unknown>;
+    jobs?: Record<string, { steps?: { uses?: string; with?: Record<string, unknown> }[] }>;
+  };
+  const checkoutSteps = Object.values(parsedWorkflow.jobs ?? {}).flatMap((job) =>
+    (job.steps ?? []).filter((step) => step.uses?.toLowerCase().startsWith("actions/checkout@")),
+  );
+
+  expect(parsedWorkflow.permissions).toEqual({ contents: "read" });
+  for (const job of Object.values(parsedWorkflow.jobs ?? {})) {
+    expect(job).not.toHaveProperty("permissions");
+  }
+  expect(checkoutSteps.length).toBeGreaterThan(0);
+  for (const checkoutStep of checkoutSteps) {
+    expect(checkoutStep.with?.["persist-credentials"]).toBe(false);
   }
 }
 
@@ -1047,6 +1067,7 @@ describe("E2E: generate()", () => {
       expect(browserWorkflow).toContain("shard=${{ matrix.shard }}/2");
       expect(browserWorkflow).toContain("playwright merge-reports");
       assertBrowserWorkflowUsesImmutableActions(browserWorkflow);
+      assertBrowserWorkflowUsesLeastPrivilege(browserWorkflow);
       assertBrowserWorkflowVerifiesContractsWithoutCodegen(browserWorkflow);
       expect(workspaceConfig).toContain("msw: true");
       expect(workspaceConfig).toMatch(/onlyBuiltDependencies:[\s\S]*- msw/);
@@ -1196,6 +1217,7 @@ describe("E2E: generate()", () => {
       expect(browserWorkflow).toContain("shard=${{ matrix.shard }}/2");
       expect(browserWorkflow).toContain("playwright merge-reports");
       assertBrowserWorkflowUsesImmutableActions(browserWorkflow);
+      assertBrowserWorkflowUsesLeastPrivilege(browserWorkflow);
       assertBrowserWorkflowVerifiesContractsWithoutCodegen(browserWorkflow);
       expect(webSource).toContain("import { adminClient, type adminRpc }");
       expect(webSource).toContain("adminClient");

@@ -11,6 +11,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  assertGeneratedBrowserWorkflowLeastPrivilege,
   assertGeneratedVerificationValidationsAreReadOnly,
   assertGeneratedPresentationProfileMatchesCatalog,
   readCommandOutputSegment,
@@ -63,6 +64,50 @@ const journeySourceCaseNames = [
   "graphql-lambda-api",
   "rest-spa-contracts",
 ] as const;
+
+describe("generated browser workflow policy", () => {
+  it("accepts read-only permissions with non-persistent checkout credentials", () => {
+    const root = createTempRoot();
+    const workflowPath = join(root, "browser-tests.yml");
+    writeFile(
+      workflowPath,
+      `permissions:\n  contents: read\njobs:\n  test:\n    steps:\n      - uses: actions/checkout@0123456789012345678901234567890123456789\n        with:\n          persist-credentials: false\n`,
+    );
+
+    expect(() => assertGeneratedBrowserWorkflowLeastPrivilege(workflowPath)).not.toThrow();
+  });
+
+  it.each([
+    [
+      "broader token permissions",
+      `permissions:\n  contents: read\n  pull-requests: write\njobs:\n  test:\n    steps:\n      - uses: actions/checkout@0123456789012345678901234567890123456789\n        with:\n          persist-credentials: false\n`,
+      "permissions must grant only contents: read",
+    ],
+    [
+      "persistent checkout credentials",
+      `permissions:\n  contents: read\njobs:\n  test:\n    steps:\n      - uses: actions/checkout@0123456789012345678901234567890123456789\n`,
+      "checkout steps must set persist-credentials: false",
+    ],
+    [
+      "job-level permission escalation",
+      `permissions:\n  contents: read\njobs:\n  test:\n    permissions:\n      contents: write\n    steps:\n      - uses: actions/checkout@0123456789012345678901234567890123456789\n        with:\n          persist-credentials: false\n`,
+      "job test permissions must grant only contents: read",
+    ],
+    [
+      "mixed-case checkout with persistent credentials",
+      `permissions:\n  contents: read\njobs:\n  test:\n    steps:\n      - uses: actions/checkout@0123456789012345678901234567890123456789\n        with:\n          persist-credentials: false\n      - uses: AcTiOnS/ChEcKoUt@0123456789012345678901234567890123456789\n`,
+      "checkout steps must set persist-credentials: false",
+    ],
+  ])("rejects %s", (_label, workflow, expectedMessage) => {
+    const root = createTempRoot();
+    const workflowPath = join(root, "browser-tests.yml");
+    writeFile(workflowPath, workflow);
+
+    expect(() => assertGeneratedBrowserWorkflowLeastPrivilege(workflowPath)).toThrow(
+      expectedMessage,
+    );
+  });
+});
 
 describe("generated smoke command execution", () => {
   it("uses the native Windows command shell only for cmd shims", () => {

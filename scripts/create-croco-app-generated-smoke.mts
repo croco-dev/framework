@@ -16,6 +16,7 @@ import {
 import { tmpdir } from "node:os";
 import { basename, dirname, extname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { parse as parseYaml } from "yaml";
 import {
   readGeneratedTemplateSecretAllowlistsFromMetadata,
   scanGeneratedTemplateSecretText,
@@ -124,6 +125,7 @@ type SmokeValidation = {
   readonly packagePath?: readonly string[];
   readonly args?: readonly string[];
   readonly paths?: readonly string[];
+  readonly browserWorkflowPolicy?: string;
   readonly json?: {
     readonly path: string;
     readonly matches: Record<string, unknown>;
@@ -973,6 +975,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
           "tests/journeys/problem-rendering.spec.ts",
           ".github/workflows/browser-tests.yml",
         ],
+        browserWorkflowPolicy: ".github/workflows/browser-tests.yml",
       },
       { label: "Chromium install", args: ["test:browser:install"] },
       { label: "test", args: ["test"] },
@@ -1057,6 +1060,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
           "tests/journeys/problem-rendering.spec.ts",
           ".github/workflows/browser-tests.yml",
         ],
+        browserWorkflowPolicy: ".github/workflows/browser-tests.yml",
       },
       { label: "Chromium install", args: ["test:browser:install"] },
       { label: "test", args: ["test"] },
@@ -2652,6 +2656,12 @@ function runValidation(
       );
     }
 
+    if (validation.browserWorkflowPolicy) {
+      assertGeneratedBrowserWorkflowLeastPrivilege(
+        join(validationDir, validation.browserWorkflowPolicy),
+      );
+    }
+
     if (validation.presentationProfile) {
       assertGeneratedPresentationProfileMatchesCatalog(
         projectDir,
@@ -2674,6 +2684,7 @@ function runValidation(
       !validation.args &&
       !validation.paths &&
       !validation.json &&
+      !validation.browserWorkflowPolicy &&
       !validation.presentationProfile &&
       !validation.artifacts
     ) {
@@ -3642,6 +3653,63 @@ function assertFileContains(path: string, expected: string): void {
 
   if (!content.includes(expected)) {
     throw new Error(`${path} did not include expected text: ${expected}`);
+  }
+}
+
+export function assertGeneratedBrowserWorkflowLeastPrivilege(path: string): void {
+  const workflow = parseYaml(readFileSync(path, "utf8")) as unknown;
+
+  if (!isRecord(workflow)) {
+    throw new Error(`${path} must contain a YAML workflow object`);
+  }
+
+  const permissions = workflow.permissions;
+  if (
+    !isRecord(permissions) ||
+    permissions.contents !== "read" ||
+    Object.keys(permissions).length !== 1
+  ) {
+    throw new Error(`${path} permissions must grant only contents: read`);
+  }
+
+  const jobs = workflow.jobs;
+  if (!isRecord(jobs)) {
+    throw new Error(`${path} must define workflow jobs`);
+  }
+
+  for (const [jobName, job] of Object.entries(jobs)) {
+    if (!isRecord(job)) continue;
+
+    const jobPermissions = job.permissions;
+    if (
+      jobPermissions !== undefined &&
+      (!isRecord(jobPermissions) ||
+        jobPermissions.contents !== "read" ||
+        Object.keys(jobPermissions).length !== 1)
+    ) {
+      throw new Error(`${path} job ${jobName} permissions must grant only contents: read`);
+    }
+  }
+
+  const checkoutSteps = Object.values(jobs).flatMap((job) => {
+    if (!isRecord(job) || !Array.isArray(job.steps)) return [];
+
+    return job.steps.filter(
+      (step): step is Record<string, unknown> =>
+        isRecord(step) &&
+        typeof step.uses === "string" &&
+        step.uses.toLowerCase().startsWith("actions/checkout@"),
+    );
+  });
+
+  if (checkoutSteps.length === 0) {
+    throw new Error(`${path} must contain at least one actions/checkout step`);
+  }
+
+  for (const checkoutStep of checkoutSteps) {
+    if (!isRecord(checkoutStep.with) || checkoutStep.with["persist-credentials"] !== false) {
+      throw new Error(`${path} checkout steps must set persist-credentials: false`);
+    }
   }
 }
 
