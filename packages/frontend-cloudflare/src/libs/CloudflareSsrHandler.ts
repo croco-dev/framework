@@ -1,9 +1,11 @@
 import type { CrocoFetchHandler, RenderServer, RuntimeContext } from "@croco/meta-vite";
-import type { SsrHandlerOptions, SsrWorkerEnv } from "./types";
+import { SSR_FAILURE_CODES } from "./types";
+import type { SsrFailureReport, SsrHandlerOptions, SsrWorkerEnv } from "./types";
 
 type CloudflareSsrHandlerOptions = SsrHandlerOptions & { renderServer?: RenderServer };
 
 const DEFAULT_API_BINDING_NAME = "API_WORKER";
+const CORRELATION_HEADERS = ["x-croco-correlation-id", "x-request-id", "cf-ray"] as const;
 
 /**
  * Creates a Cloudflare Workers SSR handler using meta-vite's RenderServer.
@@ -57,7 +59,11 @@ async function handleSsrRequest(
         return assetResponse;
       }
     } catch (error) {
-      warnBoundaryFailure("ASSETS binding", error);
+      reportBoundaryFailure(request, options, context.runtimeContext?.executionContext, {
+        boundary: "asset-binding",
+        code: SSR_FAILURE_CODES.ASSET_BINDING,
+        error,
+      });
     }
   }
 
@@ -66,8 +72,18 @@ async function handleSsrRequest(
   if (apiWorker && url.pathname.startsWith("/api/")) {
     try {
       return await apiWorker.fetch(request);
-    } catch {
-      return new Response("API request failed", { status: 500 });
+    } catch (error) {
+      const report = reportBoundaryFailure(
+        request,
+        options,
+        context.runtimeContext?.executionContext,
+        {
+          boundary: "api-binding",
+          code: SSR_FAILURE_CODES.API_BINDING,
+          error,
+        },
+      );
+      return createFailureResponse(report);
     }
   }
 
@@ -75,10 +91,17 @@ async function handleSsrRequest(
     try {
       return await renderServer.handle(request, context.runtimeContext);
     } catch (error) {
-      // frontend-cloudflare has no DI container dependency (it is an edge runtime package).
-      // eslint-disable-next-line no-console
-      console.error("SSR rendering error:", error);
-      return new Response("Internal server error", { status: 500 });
+      const report = reportBoundaryFailure(
+        request,
+        options,
+        context.runtimeContext?.executionContext,
+        {
+          boundary: "ssr-render",
+          code: SSR_FAILURE_CODES.SSR_RENDER,
+          error,
+        },
+      );
+      return createFailureResponse(report);
     }
   }
 
@@ -107,13 +130,89 @@ function isFetcher(value: unknown): value is Fetcher {
   );
 }
 
-function warnBoundaryFailure(boundary: string, error: unknown): void {
-  const message = error instanceof Error ? error.message : String(error);
+function reportBoundaryFailure(
+  request: Request,
+  options: CloudflareSsrHandlerOptions,
+  executionContext: unknown,
+  failure: Pick<SsrFailureReport, "boundary" | "code" | "error">,
+): SsrFailureReport {
+  const url = new URL(request.url);
+  const correlationId = readCorrelationId(request);
+  const report: SsrFailureReport = {
+    ...failure,
+    ...(correlationId ? { correlationId } : {}),
+    method: request.method,
+    pathname: url.pathname,
+  };
+
+  try {
+    if (options.onFailure) {
+      const reporting = Promise.resolve(options.onFailure(report)).catch(() => undefined);
+      if (hasWaitUntil(executionContext)) {
+        executionContext.waitUntil(reporting);
+      }
+    } else {
+      logBoundaryFailure(report);
+    }
+  } catch {
+    // Reporting is best-effort and must never replace the original boundary response or fallback.
+    return report;
+  }
+
+  return report;
+}
+
+function hasWaitUntil(value: unknown): value is Pick<ExecutionContext, "waitUntil"> {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "waitUntil" in value &&
+    typeof (value as { readonly waitUntil?: unknown }).waitUntil === "function"
+  );
+}
+
+function readCorrelationId(request: Request): string | undefined {
+  for (const header of CORRELATION_HEADERS) {
+    const value = request.headers.get(header)?.trim();
+    if (value) {
+      return value;
+    }
+  }
+
+  return undefined;
+}
+
+function createFailureResponse(report: Pick<SsrFailureReport, "code" | "correlationId">): Response {
+  const body = {
+    type: "about:blank",
+    title: "Worker boundary failure",
+    status: 500,
+    code: report.code,
+    ...(report.correlationId ? { correlationId: report.correlationId } : {}),
+  };
+  const headers = new Headers({
+    "cache-control": "no-store",
+    "content-type": "application/problem+json",
+    "x-croco-diagnostic-code": report.code,
+  });
+
+  if (report.correlationId) {
+    headers.set("x-croco-correlation-id", report.correlationId);
+  }
+
+  return new Response(JSON.stringify(body), { status: 500, headers });
+}
+
+function logBoundaryFailure(report: SsrFailureReport): void {
+  const message = report.error instanceof Error ? report.error.message : String(report.error);
 
   // frontend-cloudflare has no DI container dependency (it is an edge runtime package).
   // eslint-disable-next-line no-console
-  console.warn(
-    `@croco/frontend-cloudflare ${boundary} failed; continuing to API or SSR fallback.`,
+  console.error(`@croco/frontend-cloudflare ${report.code}`, {
+    boundary: report.boundary,
+    correlationId: report.correlationId,
+    method: report.method,
+    pathname: report.pathname,
     message,
-  );
+  });
 }

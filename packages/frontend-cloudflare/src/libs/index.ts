@@ -1,2 +1,10 @@
 export { createSsrHandler } from "./CloudflareSsrHandler";
-export type { SsrHandlerOptions, SsrWorkerEnv } from "./types";
+export { SSR_FAILURE_CODES } from "./types";
+export type {
+  SsrFailureBoundary,
+  SsrFailureCode,
+  SsrFailureReport,
+  SsrFailureReporter,
+  SsrHandlerOptions,
+  SsrWorkerEnv,
+} from "./types";

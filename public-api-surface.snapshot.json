@@ -11569,9 +11569,35 @@
               "name": "default",
               "exportKind": "named",
               "source": null
+            },
+            {
+              "name": "SSR_FAILURE_CODES",
+              "exportKind": "named",
+              "source": "./libs/types",
+              "declarationKind": "const"
             }
           ],
           "typeExports": [
+            {
+              "name": "SsrFailureBoundary",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "SsrFailureCode",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "SsrFailureReport",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "SsrFailureReporter",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
             {
               "name": "SsrHandlerOptions",
               "exportKind": "named",
