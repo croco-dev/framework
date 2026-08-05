@@ -91,7 +91,8 @@ const spineOnlyIds = [
   "alpha-release-smoke",
   "typecheck",
   "test",
-  "cli-e2e",
+  "cli-source-e2e",
+  "cli-packed-e2e",
   "provider-certification",
   "production-ready",
   "spine-promotion",
@@ -188,7 +189,8 @@ describe("verification manifest", () => {
     expect(byId.get("package-entrypoints-smoke")?.command).toContain("--build-missing");
     for (const id of [
       "alpha-release-smoke",
-      "cli-e2e",
+      "cli-source-e2e",
+      "cli-packed-e2e",
       "core-coverage",
       "package-bins-smoke",
       "package-entrypoints-smoke",
@@ -269,6 +271,8 @@ describe("verification manifest", () => {
     );
 
     expect(pullRequestById.get("generated-app-smoke")?.applicable).toBe(true);
+    expect(pullRequestById.get("cli-source-e2e")?.applicable).toBe(false);
+    expect(pullRequestById.get("cli-packed-e2e")?.applicable).toBe(true);
     expect(pullRequestById.get("alpha-release-smoke")?.applicable).toBe(false);
     expect(fullById.get("generated-app-smoke")?.applicable).toBe(true);
     expect(fullById.get("alpha-release-smoke")?.applicable).toBe(true);
@@ -290,7 +294,8 @@ describe("verification manifest", () => {
     const byId = new Map(maintenance.map((command) => [command.id, command]));
 
     for (const id of [
-      "cli-e2e",
+      "cli-source-e2e",
+      "cli-packed-e2e",
       "first-success",
       "generated-app-smoke",
       "package-bins-smoke",
@@ -311,6 +316,36 @@ describe("verification manifest", () => {
     expect(byId.get("typecheck")?.command).toContain("--filter=...[origin/trunk]");
     expect(byId.get("test")?.command).toContain("--filter=...[origin/trunk]");
     expect(byId.get("release-gate-tests")?.applicable).toBe(true);
+  });
+
+  it("distinguishes source and packed CLI integration selectors", () => {
+    const cliChange = createVerificationManifest("spine", {
+      base: "origin/trunk",
+      changedFiles: ["packages/cli/src/index.ts"],
+      head: "HEAD",
+    });
+    const generatorChange = createVerificationManifest("spine", {
+      base: "origin/trunk",
+      changedFiles: ["packages/create-croco-app/src/index.ts"],
+      head: "HEAD",
+    });
+
+    expect(cliChange.find(({ id }) => id === "cli-source-e2e")).toMatchObject({
+      applicable: true,
+      command: expect.arrayContaining(["src/tests/integration/e2e.spec.ts"]),
+      label: "CLI source integration tests",
+    });
+    expect(cliChange.find(({ id }) => id === "cli-packed-e2e")).toMatchObject({
+      applicable: true,
+      command: expect.arrayContaining(["src/tests/integration/CliCommandIntegration.spec.ts"]),
+      label: "Packed installed CLI integration tests",
+    });
+    expect(generatorChange.find(({ id }) => id === "cli-source-e2e")?.applicable).toBe(false);
+    expect(generatorChange.find(({ id }) => id === "cli-packed-e2e")).toMatchObject({
+      applicable: true,
+      command: expect.arrayContaining(["src/tests/integration/CliCommandIntegration.spec.ts"]),
+      label: "Packed installed CLI integration tests",
+    });
   });
 
   it("uses full evidence only for root accountability changes", () => {
