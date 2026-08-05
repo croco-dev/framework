@@ -1,5 +1,6 @@
 ---
 "@croco/framework-context": minor
+"@croco/problems-core": patch
 "@croco/transports-http": patch
 ---
 
