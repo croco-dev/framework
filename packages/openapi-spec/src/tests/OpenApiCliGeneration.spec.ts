@@ -91,6 +91,61 @@ describe("openapi-spec CLI generation", () => {
     },
     OPENAPI_CLI_GENERATION_TIMEOUT_MS,
   );
+
+  it(
+    "creates missing parent directories for generated output",
+    async () => {
+      const controllerPath = path.join(sourceDir, "WeakSchemaController.ts");
+      const outFile = path.join(tempRoot, "generated", "contracts", "openapi.json");
+
+      fs.writeFileSync(controllerPath, getWeakSchemaControllerSource());
+
+      const exitCode = await runCli([
+        "--controllers",
+        path.join(sourceDir, "*.ts"),
+        "--out",
+        outFile,
+        "--compatibility-problems",
+        "--compatibility-schemas",
+      ]);
+
+      expect(exitCode).toBe(0);
+      expect(JSON.parse(fs.readFileSync(outFile, "utf8"))).toMatchObject({
+        openapi: "3.1.0",
+      });
+    },
+    OPENAPI_CLI_GENERATION_TIMEOUT_MS,
+  );
+
+  it(
+    "keeps missing output checks read-only",
+    async () => {
+      const controllerPath = path.join(sourceDir, "WeakSchemaController.ts");
+      const outputDirectory = path.join(tempRoot, "generated", "contracts");
+      const outFile = path.join(outputDirectory, "openapi.json");
+      const stdout: string[] = [];
+
+      fs.writeFileSync(controllerPath, getWeakSchemaControllerSource());
+
+      const exitCode = await runCli(
+        [
+          "--controllers",
+          path.join(sourceDir, "*.ts"),
+          "--out",
+          outFile,
+          "--compatibility-problems",
+          "--compatibility-schemas",
+          "--output-check",
+        ],
+        { stdout: (message) => stdout.push(message) },
+      );
+
+      expect(exitCode).toBe(1);
+      expect(stdout[0]).toBe(`[CROCO_OPENAPI_OUTPUT_MISSING] ${outFile}`);
+      expect(fs.existsSync(outputDirectory)).toBe(false);
+    },
+    OPENAPI_CLI_GENERATION_TIMEOUT_MS,
+  );
 });
 
 function getBrokenControllerSource(): string {
