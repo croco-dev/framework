@@ -244,6 +244,7 @@ describe("release-spine-evidence.mts", () => {
       rootDir: repo,
       outputDir: join(repo, "ci-reports", "release"),
       totalTimeoutMs: 1_000,
+      clock: createFakeClock().clock,
       commands: [generatedSmoke],
       runner: () => {
         for (const artifact of generatedSmoke.artifacts ?? []) {
