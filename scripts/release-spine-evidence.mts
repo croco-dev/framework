@@ -777,19 +777,24 @@ function collectArtifactReferences(
     };
   });
 
-  if (check.id === "generated-app-spine-smoke" || check.id === "generated-app-smoke") {
+  const journeyReference = references.find(
+    ({ copyRelativePath }) =>
+      copyRelativePath === "spine-blocking-journeys" ||
+      copyRelativePath === "spine-blocking-journeys/report.json",
+  );
+  if (
+    (check.id === "generated-app-spine-smoke" || check.id === "generated-app-smoke") &&
+    journeyReference &&
+    (journeyReference.required || journeyReference.copiedPath !== null)
+  ) {
     try {
       assertCopiedGeneratedSmokeJourneyBundle(
         join(outputDir, RELEASE_ARTIFACT_DIRECTORY, check.id, "spine-blocking-journeys"),
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      const validationTarget =
-        references.find(
-          ({ copyRelativePath }) => copyRelativePath === "spine-blocking-journeys/report.json",
-        ) ?? references[0];
       references = references.map((reference) =>
-        reference === validationTarget ? { ...reference, copyError: message } : reference,
+        reference === journeyReference ? { ...reference, copyError: message } : reference,
       );
     }
   }

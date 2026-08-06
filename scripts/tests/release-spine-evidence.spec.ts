@@ -230,6 +230,42 @@ describe("release-spine-evidence.mts", () => {
     ]);
   });
 
+  it("allows filtered generated smoke to omit its optional journey bundle", async () => {
+    const repo = createTempRepo();
+    const generatedSmoke = findCheck(
+      createVerificationManifest("publish", {
+        base: "origin/trunk",
+        changedFiles: ["packages/protocols-rest/src/index.ts"],
+        head: "HEAD",
+      }),
+      "generated-app-smoke",
+    );
+    const report = await runReleaseSpineEvidence({
+      rootDir: repo,
+      outputDir: join(repo, "ci-reports", "release"),
+      totalTimeoutMs: 1_000,
+      commands: [generatedSmoke],
+      runner: () => {
+        for (const artifact of generatedSmoke.artifacts ?? []) {
+          if (!artifact.required) continue;
+          const path = join(repo, artifact.path);
+          mkdirSync(dirname(path), { recursive: true });
+          writeFileSync(path, artifact.path.endsWith(".json") ? "{}\n" : "# matrix\n");
+        }
+        return okResult("filtered generated app smoke ok");
+      },
+    });
+
+    expect(report.status).toBe("passed");
+    expect(report.checks[0]).toMatchObject({ status: "passed" });
+    expect(report.checks[0]?.artifacts).toHaveLength(3);
+    expect(report.checks[0]?.artifacts.filter(({ required }) => required)).toHaveLength(2);
+    expect(report.checks[0]?.artifacts.find(({ required }) => !required)).toMatchObject({
+      exists: false,
+      required: false,
+    });
+  });
+
   it("preserves journey report relative links when copying release evidence", async () => {
     const repo = createTempRepo();
     const outputDir = join(repo, "ci-reports", "release");
