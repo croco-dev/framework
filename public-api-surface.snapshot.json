@@ -21366,6 +21366,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "createHttpProblemDetails",
+              "exportKind": "named",
+              "source": "./libs/problemResponseSerializer",
+              "declarationKind": "function"
+            },
+            {
               "name": "createValidationPipe",
               "exportKind": "named",
               "source": "./ValidationPipe",
@@ -21561,6 +21567,12 @@
               "exportKind": "named",
               "source": "./Params",
               "declarationKind": "const"
+            },
+            {
+              "name": "redactHttpProblemDetailsBody",
+              "exportKind": "named",
+              "source": "./libs/problemResponseSerializer",
+              "declarationKind": "function"
             },
             {
               "name": "RequestValidationProblem",

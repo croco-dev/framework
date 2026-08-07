@@ -2,6 +2,7 @@ import "reflect-metadata";
 import { Container, Context as FrameworkContext, LOGGER_TOKEN } from "@croco/framework-context";
 import type { Logger } from "@croco/framework-logger";
 import { Problem, ProblemCategory } from "@croco/problems-core";
+import { HttpExceptionFilter } from "@croco/protocols-rest";
 import { beforeEach, describe, expect, it } from "vitest";
 import { HTTP_CONTEXT_KEYS } from "../libs/contextKeys";
 import { ErrorHandler } from "../libs/ErrorHandler";
@@ -13,6 +14,7 @@ type TestProblemOptions = {
   category?: ProblemCategory;
   detail?: string;
   extensions?: Record<string, unknown>;
+  instance?: string;
 };
 
 class TestProblem extends Problem {
@@ -21,7 +23,9 @@ class TestProblem extends Problem {
       options.code ?? "test/error",
       options.category ?? ProblemCategory.BadRequest,
       options.detail,
-      options.extensions === undefined ? undefined : { extensions: options.extensions },
+      options.extensions === undefined && options.instance === undefined
+        ? undefined
+        : { extensions: options.extensions, instance: options.instance },
     );
   }
 }
@@ -46,6 +50,7 @@ describe("ErrorHandler", () => {
     mockCtx = {
       req: {
         url: "/test",
+        path: "/test",
         method: "GET",
         headers: new Headers(),
       },
@@ -183,6 +188,40 @@ describe("ErrorHandler", () => {
   });
 
   describe("handleProblem", () => {
+    it.each([
+      { name: "divergent source instance", sourceInstance: "/source-instance" },
+      { name: "absent source instance", sourceInstance: undefined },
+    ])("should match the protocol filter public payload with $name", ({ sourceInstance }) => {
+      const requestPath = "/test";
+      const secretQuery = "token=secret-reset-token";
+      const requestUrl = `https://example.test${requestPath}?${secretQuery}`;
+      const problem = new TestProblem({
+        code: "protocols-rest/request-validation-failed",
+        category: ProblemCategory.ValidationError,
+        detail: "body.email is invalid",
+        instance: sourceInstance,
+        extensions: {
+          issues: [{ path: "body.email", message: "must be an email" }],
+          metadata: { token: "secret-token" },
+        },
+      });
+      const transportContext = {
+        ...mockCtx,
+        req: { ...mockCtx.req, url: requestUrl, path: requestPath },
+      } as CrocoHttpContext;
+      const filterContext = {
+        getRequest: () => new Request(requestUrl),
+      } as never;
+
+      const transportBody = errorHandler.createProblemResponseBody(problem, transportContext);
+      const filterBody = new HttpExceptionFilter().catch(problem, filterContext).body;
+
+      expect(transportBody).toEqual(filterBody);
+      expect(transportBody.instance).toBe(`https://example.test${requestPath}`);
+      expect(JSON.stringify(transportBody)).not.toContain("secret-token");
+      expect(JSON.stringify(transportBody)).not.toContain(secretQuery);
+    });
+
     it("should honor an explicit Problem status override in the response and body", async () => {
       const problem = new HttpRequestBodyTooLargeProblem({
         limit: 4,

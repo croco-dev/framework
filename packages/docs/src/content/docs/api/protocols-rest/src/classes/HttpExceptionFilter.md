@@ -25,7 +25,7 @@ title: "HttpExceptionFilter"
 
 ### catch()
 
-> **catch**(`exception`, `_context`): [`HttpExceptionFilterResponse`](/api/protocols-rest/src/type-aliases/httpexceptionfilterresponse/)
+> **catch**(`exception`, `context`): [`HttpExceptionFilterResponse`](/api/protocols-rest/src/type-aliases/httpexceptionfilterresponse/)
 
 #### Parameters
 
@@ -33,7 +33,7 @@ title: "HttpExceptionFilter"
 
 `unknown`
 
-##### \_context
+##### context
 
 [`ExecutionContext`](/api/protocols-rest/src/interfaces/executioncontext/)
 
