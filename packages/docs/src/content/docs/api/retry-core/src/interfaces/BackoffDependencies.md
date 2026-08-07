@@ -19,11 +19,11 @@ Random function (default: Math.random)
 
 `number`
 
-***
+---
 
 ### sleep?
 
-> `optional` **sleep?**: (`ms`) => `Promise`\<`void`\>
+> `optional` **sleep?**: (`ms`, `signal?`) => `Promise`\<`void`\>
 
 Sleep function (default: setTimeout-based)
 
@@ -33,6 +33,18 @@ Sleep function (default: setTimeout-based)
 
 `number`
 
+##### signal?
+
+`AbortSignal`
+
 #### Returns
 
 `Promise`\<`void`\>
+
+---
+
+### sleepSupportsAbortSignal?
+
+> `optional` **sleepSupportsAbortSignal?**: `boolean`
+
+Whether an injected sleep function guarantees cancellation when its signal aborts.

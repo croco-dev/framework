@@ -1,5 +1,10 @@
 import type { BackoffPolicy } from "./BackoffPolicy";
-import { RetryAbortedProblem, RetryExhaustedProblem, RetrySuccessHookProblem } from "./errors";
+import {
+  RetryAbortedProblem,
+  RetryCancellationUnsupportedProblem,
+  RetryExhaustedProblem,
+  RetrySuccessHookProblem,
+} from "./errors";
 import type { RetryContext } from "./RetryContext";
 import type { RetryPolicy } from "./RetryPolicy";
 
@@ -9,6 +14,48 @@ export interface RetryHooks {
   onSuccess?: (context: RetryContext) => void | Promise<void>;
   onExhausted?: (error: Error, context: RetryContext) => void | Promise<void>;
   beforeWait?: (delay: number, context: RetryContext) => boolean | Promise<boolean>;
+}
+
+function createSignalAbortProblem(context: RetryContext): RetryAbortedProblem {
+  return RetryAbortedProblem.fromSignal(context.methodName);
+}
+
+function throwIfAborted(signal: AbortSignal | undefined, context: RetryContext): void {
+  if (signal?.aborted) {
+    throw createSignalAbortProblem(context);
+  }
+}
+
+async function waitForBackoff(
+  backoffPolicy: BackoffPolicy,
+  attempt: number,
+  signal: AbortSignal | undefined,
+  context: RetryContext,
+): Promise<void> {
+  if (!signal) {
+    await backoffPolicy.wait(attempt);
+    return;
+  }
+
+  throwIfAborted(signal, context);
+
+  let abortListener: (() => void) | undefined;
+  const abortPromise = new Promise<never>((_, reject) => {
+    abortListener = () => reject(createSignalAbortProblem(context));
+    signal.addEventListener("abort", abortListener, { once: true });
+    if (signal.aborted) {
+      abortListener();
+    }
+  });
+
+  try {
+    await Promise.race([backoffPolicy.wait(attempt, signal), abortPromise]);
+    throwIfAborted(signal, context);
+  } finally {
+    if (abortListener) {
+      signal.removeEventListener("abort", abortListener);
+    }
+  }
 }
 
 /**
@@ -21,11 +68,17 @@ export async function executeRetryLoop<T>(
     retryPolicy: RetryPolicy;
     backoffPolicy: BackoffPolicy;
     context: RetryContext;
+    signal?: AbortSignal;
   },
   hooks?: RetryHooks,
 ): Promise<T> {
   const retryHooks = hooks ?? {};
-  const { maxAttempts, retryPolicy, backoffPolicy, context } = options;
+  const { maxAttempts, retryPolicy, backoffPolicy, context, signal } = options;
+
+  throwIfAborted(signal, context);
+  if (signal && backoffPolicy.supportsAbortSignal !== true) {
+    throw new RetryCancellationUnsupportedProblem(context.methodName);
+  }
 
   const shouldStart = (await retryHooks.onStart?.(context)) ?? true;
   if (!shouldStart) {
@@ -33,6 +86,7 @@ export async function executeRetryLoop<T>(
   }
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    throwIfAborted(signal, context);
     context.incrementAttempt();
 
     let result: T;
@@ -42,6 +96,8 @@ export async function executeRetryLoop<T>(
       if (error instanceof RetrySuccessHookProblem) {
         throw error;
       }
+
+      throwIfAborted(signal, context);
 
       const retryError = error instanceof Error ? error : new Error(String(error));
       context.setLastError(retryError);
@@ -82,7 +138,7 @@ export async function executeRetryLoop<T>(
       const shouldWait = (await retryHooks.beforeWait?.(delay, context)) ?? true;
 
       if (shouldWait) {
-        await backoffPolicy.wait(retryAttempt);
+        await waitForBackoff(backoffPolicy, retryAttempt, signal, context);
       }
 
       continue;

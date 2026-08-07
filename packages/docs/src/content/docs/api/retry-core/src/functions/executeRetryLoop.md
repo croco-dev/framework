@@ -39,6 +39,10 @@ title: "executeRetryLoop"
 
 [`RetryPolicy`](/api/retry-core/src/interfaces/retrypolicy/)
 
+#### signal?
+
+`AbortSignal`
+
 ### hooks?
 
 [`RetryHooks`](/api/retry-core/src/interfaces/retryhooks/)

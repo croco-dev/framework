@@ -31,6 +31,18 @@ Fixed delay backoff (no exponential growth).
 
 `FixedBackoff`
 
+## Properties
+
+### supportsAbortSignal
+
+> `readonly` **supportsAbortSignal**: `boolean`
+
+Whether this policy guarantees that wait stops when its signal aborts.
+
+#### Implementation of
+
+[`BackoffPolicy`](/api/retry-core/src/interfaces/backoffpolicy/).[`supportsAbortSignal`](/api/retry-core/src/interfaces/backoffpolicy/#supportsabortsignal)
+
 ## Methods
 
 ### getDelay()
@@ -73,15 +85,19 @@ Reset internal state if any
 
 ### wait()
 
-> **wait**(`attempt`): `Promise`\<`void`\>
+> **wait**(`attempt`, `signal?`): `Promise`\<`void`\>
 
-Wait for the calculated delay
+Wait for the calculated delay, cancelling promptly when the signal aborts.
 
 #### Parameters
 
 ##### attempt
 
 `number`
+
+##### signal?
+
+`AbortSignal`
 
 #### Returns
 

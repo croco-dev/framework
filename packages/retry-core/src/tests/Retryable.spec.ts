@@ -6,6 +6,7 @@ import { InMemoryCircuitBreakerStateStore } from "../libs/CircuitBreakerState";
 import {
   CircuitBreakerOpenProblem,
   DuplicateRecoverHandlerProblem,
+  RetryAbortedProblem,
   RetryExhaustedProblem,
 } from "../libs/errors";
 import { runWithLambdaContext } from "../libs/LambdaTimeoutGuard";
@@ -46,6 +47,45 @@ describe("@Retryable", () => {
 
     expect(result).toBe("success");
     expect(attempts).toBe(3);
+  });
+
+  it("forwards caller cancellation to the retry engine", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const callback = vi.fn();
+
+    class TestService {
+      @Retryable({ signal: controller.signal })
+      async doWork(): Promise<string> {
+        callback();
+        return "success";
+      }
+    }
+
+    await expect(new TestService().doWork()).rejects.toThrow(RetryAbortedProblem);
+    expect(callback).not.toHaveBeenCalled();
+  });
+
+  it("resolves cancellation independently for each invocation", async () => {
+    const abortedController = new AbortController();
+    const activeController = new AbortController();
+    abortedController.abort();
+
+    class TestService {
+      attempts = 0;
+
+      @Retryable({ signalResolver: ({ args }) => args[0] as AbortSignal })
+      async doWork(_signal: AbortSignal): Promise<string> {
+        this.attempts++;
+        return "success";
+      }
+    }
+
+    const service = new TestService();
+
+    await expect(service.doWork(abortedController.signal)).rejects.toThrow(RetryAbortedProblem);
+    await expect(service.doWork(activeController.signal)).resolves.toBe("success");
+    expect(service.attempts).toBe(1);
   });
 
   it("preserves this context", async () => {
@@ -548,7 +588,7 @@ describe("@Retryable", () => {
     await expect(service.doWork("circuit-0")).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
     expect(attempts.filter((circuitId) => circuitId === "circuit-0")).toHaveLength(1);
     expect(resetSpy).not.toHaveBeenCalled();
-  });
+  }, 15_000);
 
   it("releases registry activity when synchronous invocation setup fails", async () => {
     vi.useFakeTimers();

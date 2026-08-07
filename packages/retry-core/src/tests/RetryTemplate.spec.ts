@@ -43,6 +43,16 @@ describe("RetryTemplate", () => {
     expect(attempts).toBe(3);
   });
 
+  it("forwards caller cancellation to the retry engine", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const callback = vi.fn().mockResolvedValue("success");
+    const template = new RetryTemplate({ signal: controller.signal });
+
+    await expect(template.execute(callback)).rejects.toThrow(RetryAbortedProblem);
+    expect(callback).not.toHaveBeenCalled();
+  });
+
   it("records retry lifecycle events for the active runtime inspector request", async () => {
     const inspector = new RuntimeInspector();
     inspector.startRequest({ requestId: "retry-req-1" });

@@ -23,11 +23,14 @@ export interface BackoffOptions {
  * @typeParam T - Backoff 구현체의 추가 옵션 타입
  */
 export interface BackoffPolicy<T = unknown> {
+  /** Whether this policy guarantees that wait stops when its signal aborts. */
+  readonly supportsAbortSignal?: boolean;
+
   /** Calculate delay for the given attempt (0-based) */
   getDelay(attempt: number): number;
 
-  /** Wait for the calculated delay */
-  wait(attempt: number): Promise<void>;
+  /** Wait for the calculated delay, cancelling promptly when the signal aborts. */
+  wait(attempt: number, signal?: AbortSignal): Promise<void>;
 
   /** Reset internal state if any */
   reset(): void;
@@ -41,7 +44,10 @@ export interface BackoffPolicy<T = unknown> {
  */
 export interface BackoffDependencies {
   /** Sleep function (default: setTimeout-based) */
-  sleep?: (ms: number) => Promise<void>;
+  sleep?: (ms: number, signal?: AbortSignal) => Promise<void>;
+
+  /** Whether an injected sleep function guarantees cancellation when its signal aborts. */
+  sleepSupportsAbortSignal?: boolean;
 
   /** Random function (default: Math.random) */
   random?: () => number;
@@ -50,6 +56,29 @@ export interface BackoffDependencies {
 const DEFAULT_DELAY = 1000;
 const DEFAULT_MULTIPLIER = 2;
 const DEFAULT_MAX_DELAY = 30000;
+
+function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+  if (signal?.aborted) {
+    return Promise.reject(signal.reason);
+  }
+
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    const onAbort = (): void => {
+      clearTimeout(timeout);
+      signal?.removeEventListener("abort", onAbort);
+      reject(signal?.reason);
+    };
+
+    signal?.addEventListener("abort", onAbort, { once: true });
+    if (signal?.aborted) {
+      onAbort();
+    }
+  });
+}
 
 /**
  * Exponential backoff with Full Jitter.
@@ -61,11 +90,12 @@ const DEFAULT_MAX_DELAY = 30000;
  * @see https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/
  */
 export class ExponentialBackoff implements BackoffPolicy {
+  readonly supportsAbortSignal: boolean;
   private readonly delay: number;
   private readonly multiplier: number;
   private readonly maxDelay: number;
   private readonly jitter: boolean;
-  private readonly sleep: (ms: number) => Promise<void>;
+  private readonly sleep: (ms: number, signal?: AbortSignal) => Promise<void>;
   private readonly random: () => number;
   private readonly computedDelays = new Map<number, number>();
 
@@ -84,7 +114,8 @@ export class ExponentialBackoff implements BackoffPolicy {
     this.jitter = options.jitter ?? true;
 
     // Dependency injection for testing
-    this.sleep = deps.sleep ?? ((ms: number) => new Promise((resolve) => setTimeout(resolve, ms)));
+    this.sleep = deps.sleep ?? sleep;
+    this.supportsAbortSignal = deps.sleep === undefined || deps.sleepSupportsAbortSignal === true;
     this.random = deps.random ?? Math.random;
   }
 
@@ -106,10 +137,14 @@ export class ExponentialBackoff implements BackoffPolicy {
   /**
    * Wait for the calculated delay.
    */
-  async wait(attempt: number): Promise<void> {
+  async wait(attempt: number, signal?: AbortSignal): Promise<void> {
     const delayMs = this.computedDelays.get(attempt) ?? this.getDelay(attempt);
     if (delayMs > 0) {
-      await this.sleep(delayMs);
+      if (signal) {
+        await this.sleep(delayMs, signal);
+      } else {
+        await this.sleep(delayMs);
+      }
     }
   }
 
@@ -125,14 +160,16 @@ export class ExponentialBackoff implements BackoffPolicy {
  * Fixed delay backoff (no exponential growth).
  */
 export class FixedBackoff implements BackoffPolicy {
+  readonly supportsAbortSignal: boolean;
   private readonly delayMs: number;
-  private readonly sleep: (ms: number) => Promise<void>;
+  private readonly sleep: (ms: number, signal?: AbortSignal) => Promise<void>;
   private readonly computedDelays = new Map<number, number>();
 
   constructor(delayMs: number = DEFAULT_DELAY, deps: BackoffDependencies = {}) {
     assertValidRetryNumber("fixedBackoff.delay", delayMs, "non-negative-timer-integer");
     this.delayMs = delayMs;
-    this.sleep = deps.sleep ?? ((ms: number) => new Promise((resolve) => setTimeout(resolve, ms)));
+    this.sleep = deps.sleep ?? sleep;
+    this.supportsAbortSignal = deps.sleep === undefined || deps.sleepSupportsAbortSignal === true;
   }
 
   getDelay(attempt: number): number {
@@ -140,10 +177,14 @@ export class FixedBackoff implements BackoffPolicy {
     return this.delayMs;
   }
 
-  async wait(attempt: number): Promise<void> {
+  async wait(attempt: number, signal?: AbortSignal): Promise<void> {
     const delayMs = this.computedDelays.get(attempt) ?? this.delayMs;
     if (delayMs > 0) {
-      await this.sleep(delayMs);
+      if (signal) {
+        await this.sleep(delayMs, signal);
+      } else {
+        await this.sleep(delayMs);
+      }
     }
   }
 
@@ -156,11 +197,12 @@ export class FixedBackoff implements BackoffPolicy {
  * No delay backoff (for testing or immediate retry scenarios).
  */
 export class NoBackoff implements BackoffPolicy {
+  readonly supportsAbortSignal = true;
   getDelay(_attempt: number): number {
     return 0;
   }
 
-  async wait(_attempt: number): Promise<void> {
+  async wait(_attempt: number, _signal?: AbortSignal): Promise<void> {
     // No delay
   }
 

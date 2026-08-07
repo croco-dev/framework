@@ -175,6 +175,12 @@ export interface RetryableOptions extends RetryPolicyOptions {
   /** Custom retry listeners */
   listeners?: RetryListener[];
 
+  /** Caller cancellation signal */
+  signal?: AbortSignal;
+
+  /** Resolve a caller cancellation signal for each invocation */
+  signalResolver?: (context: RetrySignalResolverContext) => AbortSignal | undefined;
+
   /** CircuitBreaker options */
   circuitBreaker?: CircuitBreakerConfig;
 
@@ -191,6 +197,13 @@ export type CircuitIdResolverContext = {
   methodName: string;
   targetName: string;
   defaultCircuitId: string;
+};
+
+export type RetrySignalResolverContext = {
+  args: unknown[];
+  instance: unknown;
+  methodName: string;
+  targetName: string;
 };
 
 /**
@@ -278,6 +291,9 @@ export function Retryable(options: RetryableOptions = {}): MethodDecorator {
       : undefined;
 
     descriptor.value = async function (this: unknown, ...args: unknown[]): Promise<unknown> {
+      const signal =
+        options.signalResolver?.({ args, instance: this, methodName, targetName }) ??
+        options.signal;
       const circuitId =
         options.circuitIdResolver?.({
           args,
@@ -399,7 +415,12 @@ export function Retryable(options: RetryableOptions = {}): MethodDecorator {
             methodName,
             args,
             callback,
-            { ...options, maxAttempts, wrapExhausted },
+            {
+              ...options,
+              maxAttempts,
+              wrapExhausted,
+              ...(signal === undefined ? {} : { signal }),
+            },
             additionalHooks,
             recovery,
           );

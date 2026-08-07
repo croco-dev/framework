@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { BackoffPolicy } from "../libs/BackoffPolicy";
-import { NoBackoff } from "../libs/BackoffPolicy";
+import { FixedBackoff, NoBackoff } from "../libs/BackoffPolicy";
 import {
   RetryAbortedProblem,
+  RetryCancellationUnsupportedProblem,
   RetryExhaustedProblem,
   RetrySuccessHookProblem,
 } from "../libs/errors";
@@ -10,6 +11,19 @@ import { RetryContext } from "../libs/RetryContext";
 import { executeRetryLoop } from "../libs/RetryEngine";
 import type { RetryPolicy } from "../libs/RetryPolicy";
 import { DefaultRetryPolicy } from "../libs/RetryPolicy";
+
+function createDeferred<T>(): {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+} {
+  let resolve = (_value: T): void => {
+    throw new Error("Deferred resolver was not initialized");
+  };
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}
 
 describe("executeRetryLoop", () => {
   let retryPolicy!: RetryPolicy;
@@ -156,6 +170,155 @@ describe("executeRetryLoop", () => {
     expect(waitSpy).toHaveBeenCalledTimes(1);
   });
 
+  it("should abort before the first attempt", async () => {
+    const controller = new AbortController();
+    const callback = vi.fn().mockResolvedValue("result");
+    controller.abort(new Error("private cancellation reason"));
+
+    const execution = executeRetryLoop(callback, {
+      maxAttempts: 3,
+      retryPolicy,
+      backoffPolicy,
+      context,
+      signal: controller.signal,
+    });
+
+    await expect(execution).rejects.toThrow("Retry cancelled for method 'execute'");
+    await expect(execution).rejects.toMatchObject({
+      code: "RETRY_ABORTED",
+      methodName: "execute",
+      message: "Retry cancelled for method 'execute'",
+    });
+    expect(callback).not.toHaveBeenCalled();
+  });
+
+  it("should abort during backoff, remove its listener, and prevent later attempts", async () => {
+    const controller = new AbortController();
+    const listenerRegistered = createDeferred<void>();
+    const nativeAddEventListener = controller.signal.addEventListener.bind(controller.signal);
+    const addEventListener = vi
+      .spyOn(controller.signal, "addEventListener")
+      .mockImplementation((...args) => {
+        nativeAddEventListener(...args);
+        listenerRegistered.resolve();
+      });
+    const removeEventListener = vi.spyOn(controller.signal, "removeEventListener");
+    const waitStopped = createDeferred<void>();
+    const wait = vi.fn(
+      (_attempt: number, signal?: AbortSignal) =>
+        new Promise<void>((_, reject) => {
+          signal?.addEventListener(
+            "abort",
+            () => {
+              waitStopped.resolve();
+              reject(signal.reason);
+            },
+            { once: true },
+          );
+        }),
+    );
+    const blockingBackoff: BackoffPolicy = {
+      supportsAbortSignal: true,
+      getDelay: vi.fn().mockReturnValue(1000),
+      wait,
+      reset: vi.fn(),
+    };
+    const callback = vi.fn().mockRejectedValue(new Error("retryable"));
+
+    const execution = executeRetryLoop(callback, {
+      maxAttempts: 3,
+      retryPolicy,
+      backoffPolicy: blockingBackoff,
+      context,
+      signal: controller.signal,
+    });
+
+    await listenerRegistered.promise;
+    controller.abort(new Error("private cancellation reason"));
+
+    await expect(execution).rejects.toThrow("Retry cancelled for method 'execute'");
+    await expect(execution).rejects.toBeInstanceOf(RetryAbortedProblem);
+    await waitStopped.promise;
+    expect(callback).toHaveBeenCalledTimes(1);
+    expect(wait).toHaveBeenCalledWith(0, controller.signal);
+    expect(addEventListener).toHaveBeenCalledWith("abort", expect.any(Function), { once: true });
+    const abortListener = addEventListener.mock.calls[0]?.[1];
+    expect(removeEventListener).toHaveBeenCalledWith("abort", abortListener);
+  });
+
+  it("should reject a cancellation signal before running an uncooperative backoff policy", async () => {
+    const controller = new AbortController();
+    const callback = vi.fn().mockResolvedValue("result");
+    const uncooperativeBackoff: BackoffPolicy = {
+      getDelay: vi.fn().mockReturnValue(1000),
+      wait: vi.fn(() => new Promise<void>(() => {})),
+      reset: vi.fn(),
+    };
+
+    const execution = executeRetryLoop(callback, {
+      maxAttempts: 3,
+      retryPolicy,
+      backoffPolicy: uncooperativeBackoff,
+      context,
+      signal: controller.signal,
+    });
+
+    await expect(execution).rejects.toThrow(
+      "Backoff policy for method 'execute' must declare AbortSignal support",
+    );
+    await expect(execution).rejects.toBeInstanceOf(RetryCancellationUnsupportedProblem);
+    expect(callback).not.toHaveBeenCalled();
+    expect(uncooperativeBackoff.wait).not.toHaveBeenCalled();
+  });
+
+  it("should reject an injected sleeper that does not declare cancellation support", async () => {
+    const controller = new AbortController();
+    const callback = vi.fn().mockResolvedValue("result");
+    const sleep = vi.fn(() => new Promise<void>(() => {}));
+
+    const execution = executeRetryLoop(callback, {
+      maxAttempts: 3,
+      retryPolicy,
+      backoffPolicy: new FixedBackoff(1000, { sleep }),
+      context,
+      signal: controller.signal,
+    });
+
+    await expect(execution).rejects.toThrow(
+      "Backoff policy for method 'execute' must declare AbortSignal support",
+    );
+    await expect(execution).rejects.toBeInstanceOf(RetryCancellationUnsupportedProblem);
+    expect(callback).not.toHaveBeenCalled();
+    expect(sleep).not.toHaveBeenCalled();
+  });
+
+  it("should observe cancellation that races with backoff listener registration", async () => {
+    const controller = new AbortController();
+    const addEventListener = controller.signal.addEventListener.bind(controller.signal);
+    vi.spyOn(controller.signal, "addEventListener").mockImplementation((...args) => {
+      addEventListener(...args);
+      controller.abort();
+    });
+    const callback = vi.fn().mockRejectedValue(new Error("retryable"));
+
+    const execution = executeRetryLoop(callback, {
+      maxAttempts: 3,
+      retryPolicy,
+      backoffPolicy: {
+        supportsAbortSignal: true,
+        getDelay: vi.fn().mockReturnValue(1000),
+        wait: vi.fn(() => new Promise<void>(() => {})),
+        reset: vi.fn(),
+      },
+      context,
+      signal: controller.signal,
+    });
+
+    await expect(execution).rejects.toThrow("Retry cancelled for method 'execute'");
+    await expect(execution).rejects.toBeInstanceOf(RetryAbortedProblem);
+    expect(callback).toHaveBeenCalledTimes(1);
+  });
+
   it("should handle hooks correctly", async () => {
     const startContext = new RetryContext("execute", [], 3);
     const startCallback = vi.fn().mockResolvedValue("ok");
@@ -173,7 +336,7 @@ describe("executeRetryLoop", () => {
           onStart: vi.fn().mockResolvedValue(false),
         },
       ),
-    ).rejects.toBeInstanceOf(RetryAbortedProblem);
+    ).rejects.toThrow(RetryAbortedProblem);
     expect(startCallback).not.toHaveBeenCalled();
 
     const waitSpy = vi.fn().mockResolvedValue(undefined);

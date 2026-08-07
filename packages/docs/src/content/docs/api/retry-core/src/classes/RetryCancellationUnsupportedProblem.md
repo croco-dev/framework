@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "RetryAbortedProblem"
+title: "RetryCancellationUnsupportedProblem"
 ---
 
-재시도 루프가 정책에 의해 중단되었을 때 발생하는 Problem입니다.
+취소 신호를 지원하지 않는 사용자 백오프 정책으로 재시도를 구성했을 때 발생하는 Problem입니다.
 
 ## Extends
 
@@ -15,21 +15,17 @@ title: "RetryAbortedProblem"
 
 ### Constructor
 
-> **new RetryAbortedProblem**(`message`, `methodName?`): `RetryAbortedProblem`
+> **new RetryCancellationUnsupportedProblem**(`methodName`): `RetryCancellationUnsupportedProblem`
 
 #### Parameters
 
-##### message
-
-`string`
-
-##### methodName?
+##### methodName
 
 `string`
 
 #### Returns
 
-`RetryAbortedProblem`
+`RetryCancellationUnsupportedProblem`
 
 #### Overrides
 
@@ -39,7 +35,7 @@ title: "RetryAbortedProblem"
 
 ### category
 
-> `readonly` **category**: [`InternalServerError`](/api/problems-core/src/enumerations/problemcategory/#internalservererror) = `ProblemCategory.InternalServerError`
+> `readonly` **category**: [`ValidationError`](/api/problems-core/src/enumerations/problemcategory/#validationerror) = `ProblemCategory.ValidationError`
 
 #### Overrides
 
@@ -59,7 +55,7 @@ title: "RetryAbortedProblem"
 
 ### code
 
-> `readonly` **code**: `"RETRY_ABORTED"` = `"RETRY_ABORTED"`
+> `readonly` **code**: `"retry-core/backoff-cancellation-unsupported"` = `"retry-core/backoff-cancellation-unsupported"`
 
 #### Overrides
 
@@ -104,12 +100,6 @@ title: "RetryAbortedProblem"
 #### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`message`](/api/problems-core/src/classes/problem/#message)
-
----
-
-### methodName?
-
-> `readonly` `optional` **methodName?**: `string`
 
 ---
 
@@ -274,38 +264,6 @@ a();
 #### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`captureStackTrace`](/api/problems-core/src/classes/problem/#capturestacktrace)
-
----
-
-### fromContext()
-
-> `static` **fromContext**(`methodName`): `RetryAbortedProblem`
-
-#### Parameters
-
-##### methodName
-
-`string`
-
-#### Returns
-
-`RetryAbortedProblem`
-
----
-
-### fromSignal()
-
-> `static` **fromSignal**(`methodName`): `RetryAbortedProblem`
-
-#### Parameters
-
-##### methodName
-
-`string`
-
-#### Returns
-
-`RetryAbortedProblem`
 
 ---
 

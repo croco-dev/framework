@@ -20,4 +20,8 @@ export class RetryAbortedProblem extends Problem {
       methodName,
     );
   }
+
+  static fromSignal(methodName: string): RetryAbortedProblem {
+    return new RetryAbortedProblem(`Retry cancelled for method '${methodName}'`, methodName);
+  }
 }

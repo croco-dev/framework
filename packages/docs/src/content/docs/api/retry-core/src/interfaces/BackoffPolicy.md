@@ -23,6 +23,14 @@ Backoff 구현체의 추가 옵션 타입
 
 Backoff 구현체의 추가 옵션 (구현체에 따라 다름)
 
+---
+
+### supportsAbortSignal?
+
+> `readonly` `optional` **supportsAbortSignal?**: `boolean`
+
+Whether this policy guarantees that wait stops when its signal aborts.
+
 ## Methods
 
 ### getDelay()
@@ -41,7 +49,7 @@ Calculate delay for the given attempt (0-based)
 
 `number`
 
-***
+---
 
 ### reset()
 
@@ -53,19 +61,23 @@ Reset internal state if any
 
 `void`
 
-***
+---
 
 ### wait()
 
-> **wait**(`attempt`): `Promise`\<`void`\>
+> **wait**(`attempt`, `signal?`): `Promise`\<`void`\>
 
-Wait for the calculated delay
+Wait for the calculated delay, cancelling promptly when the signal aborts.
 
 #### Parameters
 
 ##### attempt
 
 `number`
+
+##### signal?
+
+`AbortSignal`
 
 #### Returns
 
