@@ -11,6 +11,7 @@ export const REQUEST_PIPELINE_NODE_KINDS = [
   "guard",
   "policy",
   "interceptor",
+  "pipe",
   "handler",
   "filter",
 ] as const;
@@ -113,8 +114,9 @@ const KIND_ORDER: Readonly<Record<RequestPipelineNodeKind, number>> = {
   guard: 20,
   policy: 30,
   interceptor: 40,
-  handler: 50,
-  filter: 60,
+  pipe: 50,
+  handler: 60,
+  filter: 70,
 };
 const DEFAULT_POLICY_NODE_ORDER_OFFSET = 200;
 
@@ -125,6 +127,7 @@ const DEFAULT_FAILURE_PROPAGATION: Readonly<
   guard: "terminal",
   policy: "observe-and-rethrow",
   interceptor: "observe-and-rethrow",
+  pipe: "terminal",
   handler: "terminal",
   filter: "handle-error",
 };

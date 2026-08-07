@@ -39,6 +39,12 @@ title: "CompiledRoutePipelineGraphConfig"
 
 ***
 
+### pipes?
+
+> `readonly` `optional` **pipes?**: readonly `unknown`[]
+
+***
+
 ### policyPlan?
 
 > `readonly` `optional` **policyPlan?**: [`PolicyExecutionPlan`](/api/framework-context/src/type-aliases/policyexecutionplan/)

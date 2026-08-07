@@ -87,6 +87,7 @@ export interface CrocoResponse {
 export type CompiledRoutePipelineGraphConfig = {
   readonly guards?: readonly unknown[];
   readonly interceptors?: readonly unknown[];
+  readonly pipes?: readonly unknown[];
   readonly filters?: readonly unknown[];
   readonly handlerId?: string;
   readonly handlerLabel?: string;

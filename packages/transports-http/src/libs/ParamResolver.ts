@@ -30,22 +30,37 @@ const SCHEMALESS_NAMED_PARAM_PIPES: Partial<Record<ParamType, PipeTransform>> = 
   [ParamType.HEADER]: new ValidationPipe(getHttpParamFallbackSchema("header")),
 };
 
+type PipeInstanceFactory = (pipe: PipeTransformConstructor) => PipeTransform | null | undefined;
+
 /**
  * 컨트롤러 파라미터 메타데이터를 읽어 실제 메서드 인자 배열로 변환합니다.
  */
 export class ParamResolver {
+  private readonly engine: ParamResolverEngine;
+
+  constructor(createPipeInstance: PipeInstanceFactory = () => undefined) {
+    this.engine = new ParamResolverEngine(createPipeInstance);
+  }
+
+  resolveParams(
+    ctx: CrocoHttpContext,
+    controller: Constructor,
+    methodName: string | symbol,
+  ): Promise<unknown[]> {
+    return this.engine.resolveParams(ctx, controller, methodName, []);
+  }
+}
+
+class ParamResolverEngine {
   private static readonly PARSED_BODY_PROMISE_KEY = "@croco/transports-http:parsed-body-promise";
 
-  constructor(
-    private readonly createPipeInstance: (
-      pipe: PipeTransformConstructor,
-    ) => PipeTransform | null | undefined = () => undefined,
-  ) {}
+  constructor(private readonly createPipeInstance: PipeInstanceFactory) {}
 
   async resolveParams(
     ctx: CrocoHttpContext,
     controller: Constructor,
     methodName: string | symbol,
+    routePipes: readonly PipeTransform[],
   ): Promise<unknown[]> {
     const paramsMeta = getParamsMeta(controller, methodName);
 
@@ -60,7 +75,7 @@ export class ParamResolver {
 
     for (const param of sortedParams) {
       const rawValue = await this.resolveParam(ctx, param, cachedBody);
-      args[param.index] = await this.runPipes(rawValue, param);
+      args[param.index] = await this.runPipes(rawValue, param, routePipes);
     }
 
     return args;
@@ -72,13 +87,15 @@ export class ParamResolver {
       return undefined;
     }
 
-    const cachedBodyPromise = ctx.get<Promise<unknown>>(ParamResolver.PARSED_BODY_PROMISE_KEY);
+    const cachedBodyPromise = ctx.get<Promise<unknown>>(
+      ParamResolverEngine.PARSED_BODY_PROMISE_KEY,
+    );
     if (cachedBodyPromise) {
       return cachedBodyPromise;
     }
 
     const bodyPromise = this.parseBody(ctx);
-    ctx.set(ParamResolver.PARSED_BODY_PROMISE_KEY, bodyPromise);
+    ctx.set(ParamResolverEngine.PARSED_BODY_PROMISE_KEY, bodyPromise);
 
     return bodyPromise;
   }
@@ -125,18 +142,26 @@ export class ParamResolver {
     }
   }
 
-  private async runPipes(value: unknown, param: ParamMetadata): Promise<unknown> {
+  private async runPipes(
+    value: unknown,
+    param: ParamMetadata,
+    routePipes: readonly PipeTransform[],
+  ): Promise<unknown> {
     const metadata: ArgumentMetadata = {
       type: PARAM_TYPE_MAP[param.type] ?? "custom",
       ...(param.name ? { name: param.name } : {}),
     };
 
-    if (!param.pipes || param.pipes.length === 0) {
-      const fallbackPipe = param.name ? SCHEMALESS_NAMED_PARAM_PIPES[param.type] : undefined;
-      return fallbackPipe ? fallbackPipe.transform(value, metadata) : value;
+    let result = value;
+    for (const pipe of routePipes) {
+      result = await pipe.transform(result, metadata);
     }
 
-    let result = value;
+    if (!param.pipes || param.pipes.length === 0) {
+      const fallbackPipe = param.name ? SCHEMALESS_NAMED_PARAM_PIPES[param.type] : undefined;
+      return fallbackPipe ? fallbackPipe.transform(result, metadata) : result;
+    }
+
     for (const pipe of param.pipes) {
       const pipeInstance: PipeTransform = this.resolvePipe(pipe);
       result = await pipeInstance.transform(result, metadata);
@@ -164,4 +189,20 @@ export class ParamResolver {
 
     return pipeInstance;
   }
+}
+
+/** @internal RouteCompiler bridge that keeps route-level pipe wiring out of the public ParamResolver API. */
+export function resolveParamsWithRoutePipes(
+  ctx: CrocoHttpContext,
+  controller: Constructor,
+  methodName: string | symbol,
+  routePipes: readonly PipeTransform[],
+  createPipeInstance: PipeInstanceFactory,
+): Promise<unknown[]> {
+  return new ParamResolverEngine(createPipeInstance).resolveParams(
+    ctx,
+    controller,
+    methodName,
+    routePipes,
+  );
 }

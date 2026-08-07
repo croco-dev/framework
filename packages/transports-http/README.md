@@ -280,6 +280,15 @@ transport가 만든 `traceId`, `requestId`, `telemetry` correlation metadata는 
 provider adapter는 사용자가 복구할 수 있는 실패를 transport까지 generic `Error`로 넘기지 말고
 package-specific `Problem`으로 정규화해야 합니다.
 
+### Pipe execution order
+
+HTTP request arguments are resolved inside the interceptor chain immediately before controller
+invocation. For every decorated argument, pipes run in deterministic scope order: application
+`globalPipes`, class `@UsePipes`, method `@UsePipes`, then parameter validation pipes. Guards run
+before interceptors and pipes; interceptor `before` logic wraps pipe execution, while interceptor
+`after` logic runs after the controller returns. A pipe failure skips controller invocation and is
+handled by the route's exception filters or the standard Problem response contract.
+
 ### Request body parse failures
 
 `@Body()` 파라미터가 있는 라우트에서 transport는 Hono `ctx.json()`으로 요청 본문을 한 번 읽고,
