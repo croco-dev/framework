@@ -7668,7 +7668,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-trpc/src/libs/createTrpcRouter.ts:65:3` (problem-class)
+- `packages/protocols-trpc/src/libs/createTrpcRouter.ts:67:3` (problem-class)
 
 <a id="protocols-trpc-request-normalization-failed"></a>
 
@@ -7722,7 +7722,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-trpc/src/libs/createTrpcRouter.ts:52:3` (problem-class)
+- `packages/protocols-trpc/src/libs/createTrpcRouter.ts:54:3` (problem-class)
 
 <a id="public-email-domain-not-allowed"></a>
 

@@ -7,7 +7,7 @@ import {
   type RuntimeInspectorRecorder,
   recordRuntimeInspectionEvent,
 } from "@croco/framework-context";
-import { Problem, ProblemFactory } from "@croco/problems-core";
+import { OPERATOR_ONLY_PROBLEM_DETAIL, Problem, ProblemFactory } from "@croco/problems-core";
 import type {
   CallHandler,
   ExceptionFilter,
@@ -141,6 +141,14 @@ function unwrapTrpcError(error: unknown): unknown {
 
 export function toTrpcError(error: unknown): TRPCError {
   if (error instanceof TRPCError) {
+    if (error.code === "INTERNAL_SERVER_ERROR" && !(error.cause instanceof Problem)) {
+      return new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: OPERATOR_ONLY_PROBLEM_DETAIL,
+        cause: error.cause,
+      });
+    }
+
     return error;
   }
 
@@ -156,6 +164,7 @@ export function toTrpcError(error: unknown): TRPCError {
 
   return new TRPCError({
     code: "INTERNAL_SERVER_ERROR",
+    message: OPERATOR_ONLY_PROBLEM_DETAIL,
     cause: error,
   });
 }

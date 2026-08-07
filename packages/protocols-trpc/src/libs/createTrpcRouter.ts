@@ -24,10 +24,12 @@ export type TrpcRouterOptions = {
 
 const t = initTRPC.context<Record<string, unknown>>().create({
   errorFormatter({ error, shape }) {
+    const data = { ...shape.data };
+    Reflect.deleteProperty(data, "stack");
     const problem = getTrpcProblem(error);
 
     if (!problem) {
-      return shape;
+      return { ...shape, data };
     }
 
     const details = createTrpcProblemDetails(problem);
@@ -36,7 +38,7 @@ const t = initTRPC.context<Record<string, unknown>>().create({
       ...shape,
       message: details.detail ?? problem.code,
       data: {
-        ...shape.data,
+        ...data,
         croco: details,
       },
     };

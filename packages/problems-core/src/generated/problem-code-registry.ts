@@ -12258,7 +12258,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/protocols-trpc/src/libs/createTrpcRouter.ts",
-          line: 65,
+          line: 67,
           column: 3,
           kind: "problem-class",
         },
@@ -12356,7 +12356,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/protocols-trpc/src/libs/createTrpcRouter.ts",
-          line: 52,
+          line: 54,
           column: 3,
           kind: "problem-class",
         },
