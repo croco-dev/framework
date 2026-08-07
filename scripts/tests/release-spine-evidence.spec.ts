@@ -261,7 +261,11 @@ describe("release-spine-evidence.mts", () => {
     expect(report.checks[0]).toMatchObject({ status: "passed" });
     expect(report.checks[0]?.artifacts).toHaveLength(3);
     expect(report.checks[0]?.artifacts.filter(({ required }) => required)).toHaveLength(2);
-    expect(report.checks[0]?.artifacts.find(({ required }) => !required)).toMatchObject({
+    expect(
+      report.checks[0]?.artifacts.find(
+        ({ sourcePath }) => sourcePath === "ci-reports/generated-apps/spine-blocking-journeys",
+      ),
+    ).toMatchObject({
       exists: false,
       required: false,
     });

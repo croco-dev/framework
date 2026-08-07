@@ -361,6 +361,10 @@ describe("verification manifest", () => {
         packagePath,
       ).toBe(false);
       expect(
+        generatedSmoke?.artifacts?.filter(({ path }) => path.includes("spine-blocking-matrix")),
+        packagePath,
+      ).toHaveLength(2);
+      expect(
         generatedSmoke?.artifacts
           ?.filter(({ path }) => path.includes("spine-blocking-matrix"))
           .every(({ required }) => required),
