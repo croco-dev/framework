@@ -115,14 +115,10 @@ SDK가 이미 초기화된 뒤의 추가 `init()` 호출은 기존 런타임을 
 
 ### 지원 신호
 
-현재 런타임 provider가 연결된 신호는 trace뿐입니다. `metrics.enabled: true` 또는 `logs.enabled: true`는 설정이
-조용히 무시되지 않도록 OpenTelemetry SDK를 불러오거나 시작하기 전에
-`UnsupportedTelemetrySignalProblem`(`TELEMETRY_SIGNAL_UNSUPPORTED`)으로 실패합니다. 해당 설정을 생략하거나
-`enabled: false`로 두면 기존 trace 동작을 유지합니다.
-
-`MetricsConfig`와 `LogsConfig`의 exporter 필드는 향후 provider 연결을 위한 예약 계약이며, 현재 export가 활성화된다는
-뜻이 아닙니다. 실패 Problem과 diagnostics에는 신호 이름과 지원 상태, 복구 방법만 포함되고 exporter URL이나 header는
-포함되지 않습니다.
+이 패키지의 실행 가능한 신호 계약은 trace입니다. `TelemetryConfig`에는 `trace`만 존재하며 metrics/logs 설정과
+`MetricsApi`/`LogsApi` façade를 제공하지 않습니다. 애플리케이션 메트릭에는 `@croco/metrics-core` 같은 도메인 계약을
+사용하고, OTLP metrics/logs provider가 필요한 경우에는 해당 OpenTelemetry SDK를 애플리케이션에서 명시적으로
+구성하세요.
 
 ### Degraded mode와 복구
 
@@ -130,9 +126,8 @@ Telemetry 또는 trace가 의도적으로 꺼진 상태는 애플리케이션 �
 `init({ trace: { enabled: false } })`, 또는 `TELEMETRY_ENABLED=false`는 설정을 보존하지만 SDK와 exporter를 시작하지
 않으며,
 `TelemetryDiagnosticsProvider`는 이를 `degraded` 상태와 안전한 metadata(`serviceName`, `enabled`,
-`initialized`, `traceEnabled`, `probability`, `signals`, `autoInstrumentationModules`, `mode`)로 보고합니다. `signals`는 각 신호를
-`supported`, `disabled`, `unsupported-requested`로 구분합니다. exporter URL이나 header 값은 diagnostics에
-노출하지 않습니다.
+`initialized`, `traceEnabled`, `probability`, `signals`, `autoInstrumentationModules`, `mode`)로 보고합니다. `signals`는
+trace가 `supported`인지 `disabled`인지 구분합니다. exporter URL이나 header 값은 diagnostics에 노출하지 않습니다.
 
 Trace export를 켠 상태에서 OTLP endpoint가 없으면 초기화가 fail-closed 됩니다. `trace.enabled: false`로 명시해
 무자격 로컬 실행을 허용하거나, `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`/`OTEL_EXPORTER_OTLP_ENDPOINT` 또는
@@ -144,8 +139,11 @@ Exporter나 SDK 시작 실패는 `TelemetryRuntimeProblem`으로 정규화됩니
 
 Lambda에서는 handler 작업이 끝난 뒤 `forceFlush()` 결과를 확인하세요. Trace export 실패를 요청 성공처럼 숨기면 안
 되는 경로에서는 `failed` 결과의 `error`를 throw 하고, `unsupported`는 초기화 누락으로 처리합니다. Telemetry를
-명시적으로 비활성화한 환경은 `skipped`, 실제 processor가 flush를 마친 경우만 `completed`입니다. `shutdown()`도
-실제 SDK 종료는 `completed`, 명시적 비활성화는 `skipped`, SDK가 없는 pre-init 상태는 `unsupported`로 구분합니다.
+명시적으로 비활성화한 환경은 `skipped`, 실제 processor가 flush를 마친 경우만 `completed`입니다.
+
+프로세스를 종료하거나 같은 런타임 인스턴스를 새 설정으로 다시 초기화하기 전에는 `shutdown()`을 호출합니다. 실제 SDK
+종료는 `completed`, 명시적 비활성화는 `skipped`, SDK가 없는 pre-init 상태는 `unsupported`입니다. `shutdown()`이
+`completed`를 반환한 뒤에는 새 `init()` 호출로 trace runtime을 다시 시작할 수 있습니다.
 
 ## API 레퍼런스
 
@@ -153,11 +151,8 @@ Lambda에서는 handler 작업이 끝난 뒤 `forceFlush()` 결과를 확인하�
 - `lambdaPreset`: Lambda 환경 기본 설정 생성
 - `ProbabilitySampler`: 확률 기반 샘플링 구현체
 - 자동 계측: `normalizeAutoInstrumentationConfig`, `LAMBDA_DEFAULT_MODULES`, `NODE_DEFAULT_MODULES`
-- Problem: `OtlpEndpointRequiredProblem`, `UnsupportedTelemetrySignalProblem`, `SamplerProblem`, `TelemetryAutoInstrumentationProblem`
-- 타입: `TelemetryConfig`, `TraceConfig`, `MetricsConfig`, `LogsConfig`, `ForceFlushResult`, `ShutdownResult`,
-  `TelemetryLifecycleSkipReason`
-- 메트릭 타입: `MetricsApi`, `Counter`, `Histogram`, `Gauge`
-- 로그 타입: `LogsApi`, `Logger`, `LogRecord`, `LogSeverity`
+- Problem: `OtlpEndpointRequiredProblem`, `SamplerProblem`, `TelemetryAutoInstrumentationProblem`
+- 타입: `TelemetryConfig`, `TraceConfig`, `ForceFlushResult`, `ShutdownResult`, `TelemetryLifecycleSkipReason`
 
 ## Lambda 참고
 

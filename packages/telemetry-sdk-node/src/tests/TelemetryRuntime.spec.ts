@@ -1,11 +1,9 @@
 import type { Instrumentation } from "@opentelemetry/instrumentation";
 import { ATTR_DEPLOYMENT_ENVIRONMENT_NAME } from "@opentelemetry/semantic-conventions";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  TelemetryRuntimeProblem,
-  UnsupportedTelemetrySignalProblem,
-} from "../libs/problems/TelemetryProblems";
+import { TelemetryRuntimeProblem } from "../libs/problems/TelemetryProblems";
 import { TelemetryRuntime } from "../runtime";
+import type { TelemetryConfig } from "../config";
 
 describe("TelemetryRuntime", () => {
   let runtime!: TelemetryRuntime;
@@ -123,119 +121,21 @@ describe("TelemetryRuntime", () => {
     });
   });
 
-  it.each([
-    { logs: { enabled: true }, signal: "logs" },
-    { metrics: { enabled: true }, signal: "metrics" },
-  ] as const)("should reject enabled $signal before NodeSDK starts", async (signalConfig) => {
-    const nodeSdkStart = vi.fn();
+  it.each(["metrics", "logs"] as const)(
+    "should reject removed %s configuration before storing it",
+    async (signal) => {
+      const legacyConfig = {
+        serviceName: "legacy-signal-test",
+        [signal]: { enabled: false },
+      } as unknown as TelemetryConfig;
 
-    vi.doMock("@opentelemetry/sdk-node", () => ({
-      NodeSDK: class MockNodeSDK {
-        start(): void {
-          nodeSdkStart();
-        }
-
-        async shutdown(): Promise<void> {}
-      },
-    }));
-
-    const result = runtime.init({
-      serviceName: "unsupported-signal-test",
-      trace: { enabled: false },
-      ...signalConfig,
-    });
-
-    await expect(result).rejects.toBeInstanceOf(UnsupportedTelemetrySignalProblem);
-    await expect(result).rejects.toMatchObject({
-      category: "BadRequest",
-      code: "TELEMETRY_SIGNAL_UNSUPPORTED",
-      signal: signalConfig.signal,
-      supportState: "unsupported-requested",
-    });
-    expect(nodeSdkStart).not.toHaveBeenCalled();
-    expect(runtime.isInitialized()).toBe(false);
-  });
-
-  it("should report both enabled unsupported signals without exposing exporter configuration", async () => {
-    const result = runtime.init({
-      serviceName: "unsupported-signals-test",
-      trace: { enabled: false },
-      metrics: {
-        enabled: true,
-        exporterUrl: "https://metrics.example.test/v1/metrics",
-        exporterHeaders: { Authorization: "Bearer metrics-secret" },
-      },
-      logs: {
-        enabled: true,
-        exporterUrl: "https://logs.example.test/v1/logs",
-        exporterHeaders: { Authorization: "Bearer logs-secret" },
-      },
-    });
-
-    await expect(result).rejects.toMatchObject({
-      code: "TELEMETRY_SIGNAL_UNSUPPORTED",
-      signals: ["metrics", "logs"],
-      supportState: "unsupported-requested",
-    });
-
-    const error = await result.catch((cause: unknown) => cause);
-    const serializedError = JSON.stringify(error);
-    expect(serializedError).not.toContain("metrics-secret");
-    expect(serializedError).not.toContain("logs-secret");
-    expect(serializedError).not.toContain("metrics.example.test");
-    expect(serializedError).not.toContain("logs.example.test");
-  });
-
-  it("should reject an unsupported signal even when telemetry is globally disabled", async () => {
-    await expect(
-      runtime.init({
-        serviceName: "globally-disabled-test",
-        enabled: false,
-        metrics: { enabled: true },
-      }),
-    ).rejects.toMatchObject({
-      code: "TELEMETRY_SIGNAL_UNSUPPORTED",
-      signal: "metrics",
-    });
-  });
-
-  it("should reject an unsupported signal after initialization without replacing active config", async () => {
-    await runtime.init({
-      serviceName: "active-trace-test",
-      trace: {
-        enabled: true,
-        exporterUrl: "http://collector:4318/v1/traces",
-      },
-    });
-
-    await expect(
-      runtime.init({
-        serviceName: "ignored-logs-test",
-        logs: { enabled: true },
-      }),
-    ).rejects.toMatchObject({
-      code: "TELEMETRY_SIGNAL_UNSUPPORTED",
-      signal: "logs",
-    });
-    expect(runtime.getConfig()?.serviceName).toBe("active-trace-test");
-    expect(runtime.isInitialized()).toBe(true);
-  });
-
-  it.each([{}, { logs: { enabled: false }, metrics: { enabled: false } }])(
-    "should retain trace behavior when unsupported signals are omitted or disabled",
-    async (signalConfig) => {
-      await expect(
-        runtime.init({
-          serviceName: "supported-trace-test",
-          trace: {
-            enabled: true,
-            exporterUrl: "http://collector:4318/v1/traces",
-          },
-          ...signalConfig,
-        }),
-      ).resolves.not.toThrow();
-
-      expect(runtime.isInitialized()).toBe(true);
+      await expect(runtime.init(legacyConfig)).rejects.toMatchObject({
+        category: "BadRequest",
+        code: "TELEMETRY_SIGNAL_UNSUPPORTED",
+        signals: [signal],
+      });
+      expect(runtime.getConfig()).toBeNull();
+      expect(runtime.isInitialized()).toBe(false);
     },
   );
 

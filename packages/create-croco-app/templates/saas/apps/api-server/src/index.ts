@@ -12,8 +12,6 @@ const telemetryReady = TelemetryRuntime.getInstance().init({
     enabled: process.env.TELEMETRY_ENABLED === "true" || otlpEndpoint !== undefined,
     exporterUrl: otlpEndpoint,
   },
-  metrics: { enabled: false },
-  logs: { enabled: false },
 });
 
 function parsePort(value: string | undefined): number {

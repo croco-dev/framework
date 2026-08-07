@@ -119,6 +119,11 @@ function checkSpaBeSplitStructure() {
     ["apps", "api-server", "src", "env.ts"],
     /InvalidEnvironmentProblem/,
   );
+  checkFileDoesNotContain(
+    "spa-be-split",
+    ["apps", "api-server", "src", "env.ts"],
+    /\b(?:metrics|logs)\s*:/,
+  );
   checkFileContains(
     "spa-be-split",
     ["apps", "api-server", "src", "problems.ts"],
@@ -855,6 +860,11 @@ function checkSaasStructure() {
     }),
   });
   checkFileContains("saas", ["apps", "api-server", "src", "index.ts"], /TelemetryRuntime/);
+  checkFileDoesNotContain(
+    "saas",
+    ["apps", "api-server", "src", "index.ts"],
+    /\b(?:metrics|logs)\s*:/,
+  );
   checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /runSaasDemoFlow/);
   checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /EntitlementManager/);
   checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /LlmService/);

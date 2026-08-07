@@ -10,7 +10,7 @@ title: "TelemetryConfig"
 Main configuration for the OpenTelemetry SDK.
 
 This is the top-level configuration object passed to TelemetryRuntime.init.
-It combines service metadata with trace configuration and reserved metrics/logs configuration.
+It combines service metadata with executable trace configuration.
 
 ## Example
 
@@ -24,8 +24,6 @@ const config: TelemetryConfig = {
     enabled: true,
     exporterUrl: 'http://localhost:4318/v1/traces',
   },
-  metrics: { enabled: false },
-  logs: { enabled: false },
 };
 ```
 
@@ -44,22 +42,6 @@ Whether telemetry is globally enabled. Default: true
 > `optional` **environment?**: `string`
 
 Deployment environment. Overrides deployment.environment.name in resourceAttributes. Default: 'development'
-
-***
-
-### logs?
-
-> `optional` **logs?**: [`LogsConfig`](/api/telemetry-sdk-node/src/type-aliases/logsconfig/)
-
-Logs configuration
-
-***
-
-### metrics?
-
-> `optional` **metrics?**: [`MetricsConfig`](/api/telemetry-sdk-node/src/type-aliases/metricsconfig/)
-
-Metrics configuration
 
 ***
 

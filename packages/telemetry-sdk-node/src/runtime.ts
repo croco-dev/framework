@@ -9,12 +9,11 @@ import type { TelemetryConfig } from "./config";
 import { resolveAutoInstrumentation } from "./libs/instrumentation/AutoInstrumentation";
 import { TelemetryAutoInstrumentationProblem } from "./libs/problems/TelemetryAutoInstrumentationProblem";
 import {
+  LegacyTelemetrySignalConfigProblem,
   OtlpEndpointRequiredProblem,
   TelemetryRuntimeProblem,
-  UnsupportedTelemetrySignalProblem,
 } from "./libs/problems/TelemetryProblems";
 import { resolveDeploymentEnvironment } from "./libs/resources/DeploymentEnvironment";
-import { getUnsupportedTelemetrySignals } from "./libs/signals/TelemetrySignalSupport";
 
 class TelemetryRuntime {
   private static instance: TelemetryRuntime | null = null;
@@ -59,15 +58,15 @@ class TelemetryRuntime {
   }
 
   async init(config: TelemetryConfig): Promise<void> {
+    const legacySignals = getLegacyTelemetrySignals(config);
+    if (legacySignals) {
+      throw new LegacyTelemetrySignalConfigProblem(legacySignals);
+    }
+
     const requestedConfig = snapshotTelemetryConfig(config);
 
     if (!this.initialized && !this.initPromise) {
       this.config = requestedConfig;
-    }
-
-    const unsupportedSignals = getUnsupportedTelemetrySignals(requestedConfig);
-    if (unsupportedSignals) {
-      throw new UnsupportedTelemetrySignalProblem(unsupportedSignals);
     }
 
     if (this.initialized) {
@@ -313,23 +312,22 @@ class TelemetryRuntime {
   }
 }
 
+function getLegacyTelemetrySignals(
+  config: TelemetryConfig,
+): readonly ["logs" | "metrics", ...("logs" | "metrics")[]] | undefined {
+  const signals: ("logs" | "metrics")[] = [];
+  for (const signal of ["metrics", "logs"] as const) {
+    if (Object.prototype.hasOwnProperty.call(config, signal)) {
+      signals.push(signal);
+    }
+  }
+  const firstSignal = signals[0];
+  return firstSignal ? [firstSignal, ...signals.slice(1)] : undefined;
+}
+
 function snapshotTelemetryConfig(config: TelemetryConfig): TelemetryConfig {
   return {
     ...config,
-    ...(config.logs && {
-      logs: {
-        ...config.logs,
-        ...(config.logs.exporterHeaders && { exporterHeaders: { ...config.logs.exporterHeaders } }),
-      },
-    }),
-    ...(config.metrics && {
-      metrics: {
-        ...config.metrics,
-        ...(config.metrics.exporterHeaders && {
-          exporterHeaders: { ...config.metrics.exporterHeaders },
-        }),
-      },
-    }),
     ...(config.resourceAttributes && { resourceAttributes: { ...config.resourceAttributes } }),
     ...(config.trace && {
       trace: {

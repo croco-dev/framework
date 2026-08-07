@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { TelemetryAutoInstrumentationProblem } from "../libs/problems/TelemetryAutoInstrumentationProblem";
 import {
+  LegacyTelemetrySignalConfigProblem,
   OtlpEndpointRequiredProblem,
   SamplerProblem,
   TelemetryForceFlushUnsupportedProblem,
   TelemetryRuntimeProblem,
-  UnsupportedTelemetrySignalProblem,
 } from "../libs/problems/TelemetryProblems";
 
 describe("SamplerProblem", () => {
@@ -115,17 +115,17 @@ describe("TelemetryForceFlushUnsupportedProblem", () => {
   });
 });
 
-describe("UnsupportedTelemetrySignalProblem", () => {
-  it("should expose stable, actionable signal support evidence without configuration values", () => {
-    const problem = new UnsupportedTelemetrySignalProblem(["metrics", "logs"]);
+describe("LegacyTelemetrySignalConfigProblem", () => {
+  it("should direct legacy JavaScript consumers to the trace-only contract", () => {
+    const problem = new LegacyTelemetrySignalConfigProblem(["metrics", "logs"]);
 
-    expect(problem.code).toBe("TELEMETRY_SIGNAL_UNSUPPORTED");
-    expect(problem.category).toBe("BadRequest");
-    expect(problem.signals).toEqual(["metrics", "logs"]);
-    expect(problem.supportState).toBe("unsupported-requested");
+    expect(problem).toMatchObject({
+      code: "TELEMETRY_SIGNAL_UNSUPPORTED",
+      category: "BadRequest",
+      signals: ["metrics", "logs"],
+    });
     expect(problem.detail).toBe(
-      "Telemetry signals 'metrics, logs' are not supported by TelemetryRuntime; set metrics.enabled and logs.enabled to false or omit them until runtime providers are available",
+      "TelemetryRuntime supports traces only; remove metrics and logs configuration before initialization",
     );
-    expect(JSON.stringify(problem)).not.toContain("exporter");
   });
 });

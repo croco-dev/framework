@@ -41,8 +41,6 @@ export function createTelemetryConfig(env: AppEnv): TelemetryConfig {
       exporterUrl,
       probability: env.NODE_ENV === "production" ? 0.1 : 1,
     },
-    metrics: { enabled: false },
-    logs: { enabled: false },
   };
 }
 
