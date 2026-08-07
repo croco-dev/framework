@@ -312,12 +312,18 @@ describe("verification manifest", () => {
     const fullById = new Map(
       createVerificationManifest("spine").map((command) => [command.id, command]),
     );
+    const journeyArtifact = (command: EvidenceCommand | undefined) =>
+      command?.artifacts?.find(
+        ({ path }) => path === "ci-reports/generated-apps/spine-blocking-journeys",
+      );
 
     expect(pullRequestById.get("generated-app-smoke")?.applicable).toBe(true);
+    expect(journeyArtifact(pullRequestById.get("generated-app-smoke"))?.required).toBe(true);
     expect(pullRequestById.get("cli-source-e2e")?.applicable).toBe(false);
     expect(pullRequestById.get("cli-packed-e2e")?.applicable).toBe(true);
     expect(pullRequestById.get("alpha-release-smoke")?.applicable).toBe(false);
     expect(fullById.get("generated-app-smoke")?.applicable).toBe(true);
+    expect(journeyArtifact(fullById.get("generated-app-smoke"))?.required).toBe(true);
     expect(fullById.get("alpha-release-smoke")?.applicable).toBe(true);
     expect(fullById.get("production-ready")?.applicable).toBe(true);
     expect(fullById.get("spine-promotion")?.applicable).toBe(true);
@@ -348,6 +354,22 @@ describe("verification manifest", () => {
         "scripts/create-croco-app-generated-smoke.mts",
         ...selectedCases,
       ]);
+      expect(
+        generatedSmoke?.artifacts?.find(
+          ({ path }) => path === "ci-reports/generated-apps/spine-blocking-journeys",
+        )?.required,
+        packagePath,
+      ).toBe(false);
+      expect(
+        generatedSmoke?.artifacts?.filter(({ path }) => path.includes("spine-blocking-matrix")),
+        packagePath,
+      ).toHaveLength(2);
+      expect(
+        generatedSmoke?.artifacts
+          ?.filter(({ path }) => path.includes("spine-blocking-matrix"))
+          .every(({ required }) => required),
+        packagePath,
+      ).toBe(true);
     }
   });
 

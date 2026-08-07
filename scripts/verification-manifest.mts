@@ -566,7 +566,7 @@ const spineOnly = (context: VerificationContext): readonly EvidenceCommand[] => 
         {
           label: "Generated app smoke journey bundle",
           path: "ci-reports/generated-apps/spine-blocking-journeys",
-          required: true,
+          required: generatedAppSmokeFullTier,
           copyRelativePath: "spine-blocking-journeys",
         },
       ],
