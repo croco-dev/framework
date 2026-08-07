@@ -33,6 +33,7 @@ export const CORE_COVERAGE_THRESHOLDS = {
   statements: 60,
 };
 
+const repositoryRoot = __dirname;
 const isCoreCoverageRun = process.env.CORE_COVERAGE === "true";
 const coreCoveragePackagePaths = CORE_COVERAGE_PACKAGES.map(
   (packageName) => `packages/${packageName.replace("@croco/", "")}`,
@@ -68,6 +69,11 @@ const txDrizzlePackageAliases = isTxDrizzlePackageRun
 export default defineConfig({
   resolve: {
     alias: {
+      "@croco/problems-core": resolve(repositoryRoot, "packages/problems-core/src/index.ts"),
+      "@croco/tenant-core/tenant-model": resolve(
+        repositoryRoot,
+        "packages/tenant-core/src/tenant-model.ts",
+      ),
       ...frameworkContextPackageAliases,
       ...testingPackageAliases,
       ...txDrizzlePackageAliases,
