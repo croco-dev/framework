@@ -12,6 +12,7 @@ const FIXTURE_TEMPLATES_DIR = join(
 const FIXTURE_TEMPLATE_NAMES = new Set(["container-fullstack", "ssr-lambda"]);
 const GENERATED_API_DI_GRAPH_SCRIPT =
   "cross-env NODE_OPTIONS=--import=tsx croco di graph --module src/app.ts --bootstrap createCrocoApp --roots createCrocoDiGraphRoots --write ../../.croco/build/di-graph.manifest.json";
+const ROOT_PACKAGE_JSON = join(TEMPLATES_DIR, "..", "..", "..", "package.json");
 
 function templatePath(template: string, ...paths: string[]): string {
   const templatesDir = FIXTURE_TEMPLATE_NAMES.has(template) ? FIXTURE_TEMPLATES_DIR : TEMPLATES_DIR;
@@ -1330,6 +1331,50 @@ describe("Generated application DI bootstrap validation", () => {
       ["apps", "api-server", "src", "tests", "app.spec.ts"],
       /code:\s*"transports-http\/di-missing-provider"/,
     );
+  });
+});
+
+describe("Generated workspace dependency policy", () => {
+  it("pins Turbo to the root supported toolchain when workspace scripts use it", () => {
+    const rootManifest = JSON.parse(readFileSync(ROOT_PACKAGE_JSON, "utf-8")) as {
+      devDependencies: { turbo: string };
+    };
+    const templateManifests = [TEMPLATES_DIR, FIXTURE_TEMPLATES_DIR]
+      .flatMap((templatesDir) =>
+        readdirSync(templatesDir, { recursive: true, withFileTypes: true })
+          .filter((entry) => entry.isFile() && entry.name === "package.json.hbs")
+          .map((entry) => join(entry.parentPath, entry.name)),
+      )
+      .map((manifestPath) => ({
+        manifestPath,
+        manifest: JSON.parse(readFileSync(manifestPath, "utf-8")) as {
+          scripts?: Record<string, string>;
+          devDependencies?: { turbo?: string };
+        },
+      }));
+
+    const turboWorkspaceRoots = templateManifests.filter(({ manifest }) =>
+      Object.values(manifest.scripts ?? {}).some((script) => /(?:^|\s)turbo(?:\s|$)/.test(script)),
+    );
+    const manifestsWithoutTurboScripts = templateManifests.filter(
+      ({ manifest }) =>
+        !Object.values(manifest.scripts ?? {}).some((script) =>
+          /(?:^|\s)turbo(?:\s|$)/.test(script),
+        ),
+    );
+
+    expect(turboWorkspaceRoots).not.toHaveLength(0);
+    expect(
+      manifestsWithoutTurboScripts.some(
+        ({ manifest }) => manifest.devDependencies?.turbo === undefined,
+      ),
+    ).toBe(true);
+    for (const { manifestPath, manifest } of turboWorkspaceRoots) {
+      expect(manifest.devDependencies?.turbo, manifestPath).toBe(
+        rootManifest.devDependencies.turbo,
+      );
+      expect(manifest.devDependencies?.turbo, manifestPath).not.toBe("latest");
+    }
   });
 });
 

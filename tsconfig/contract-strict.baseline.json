@@ -3857,7 +3857,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/generator.ts",
-      "line": 161,
+      "line": 162,
       "column": 37,
       "code": "TS2379",
       "message": "Argument of type '{ api: \"graphql\" | \"trpc\" | undefined; frontendDeploy: \"docker\" | \"opennext\" | \"vercel\" | \"cloudflare-meta-vite\" | \"vite-spa\" | undefined; webApps: string[]; projectName: string; scope: string; }' is not assignable to parameter of type 'Pick<GeneratorOptions, \"projectName\" | \"scope\" | \"webApps\" | \"api\" | \"frontendDeploy\">' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -3865,7 +3865,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/generator.ts",
-      "line": 168,
+      "line": 169,
       "column": 37,
       "code": "TS2379",
       "message": "Argument of type '{ api: \"graphql\" | \"trpc\" | undefined; projectName: string; scope: string; }' is not assignable to parameter of type 'Pick<GeneratorOptions, \"projectName\" | \"scope\" | \"api\">' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."

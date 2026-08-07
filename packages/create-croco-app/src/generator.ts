@@ -39,6 +39,7 @@ import {
   installWebTrpc,
 } from "./installers/index.js";
 import { DirectoryNotEmptyProblem } from "./libs/problems/DirectoryNotEmptyProblem.js";
+import { PnpmCommandProblem } from "./libs/problems/PnpmCommandProblem.js";
 import { assertSupportedNodeVersion, writeGeneratedNodeRuntimeContract } from "./node-runtime.js";
 import { validateResolvedOptions } from "./options.js";
 import {
@@ -503,11 +504,26 @@ function resolveRuntimeCapabilityPlatform(options: GeneratorOptions): KnownRunti
 function installPnpmDependencies(targetDir: string): void {
   try {
     execSync("pnpm --version", { stdio: "ignore" });
-  } catch {
-    throw new Error(
-      "create-croco-app installs dependencies with pnpm. Install pnpm or rerun with --no-install.",
-    );
+  } catch (error) {
+    throw new PnpmCommandProblem("availability-check", "pnpm --version", error);
   }
 
-  execSync("pnpm install", { cwd: targetDir, stdio: "inherit" });
+  try {
+    execSync("pnpm install --no-frozen-lockfile", { cwd: targetDir, stdio: "inherit" });
+  } catch (error) {
+    throw new PnpmCommandProblem("dependency-install", "pnpm install --no-frozen-lockfile", error);
+  }
+
+  try {
+    execSync("pnpm install --lockfile-only --frozen-lockfile", {
+      cwd: targetDir,
+      stdio: "inherit",
+    });
+  } catch (error) {
+    throw new PnpmCommandProblem(
+      "lockfile-validation",
+      "pnpm install --lockfile-only --frozen-lockfile",
+      error,
+    );
+  }
 }
