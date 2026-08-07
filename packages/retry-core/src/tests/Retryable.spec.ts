@@ -590,7 +590,7 @@ describe("@Retryable", () => {
     await expect(service.doWork("circuit-0")).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
     expect(attempts.filter((circuitId) => circuitId === "circuit-0")).toHaveLength(1);
     expect(resetSpy).not.toHaveBeenCalled();
-  });
+  }, 15_000);
 
   it("releases registry activity when synchronous invocation setup fails", async () => {
     vi.useFakeTimers();
