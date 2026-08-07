@@ -62,7 +62,7 @@ describe("@Retryable", () => {
       }
     }
 
-    await expect(new TestService().doWork()).rejects.toBeInstanceOf(RetryAbortedProblem);
+    await expect(new TestService().doWork()).rejects.toThrow(RetryAbortedProblem);
     expect(callback).not.toHaveBeenCalled();
   });
 
@@ -83,9 +83,7 @@ describe("@Retryable", () => {
 
     const service = new TestService();
 
-    await expect(service.doWork(abortedController.signal)).rejects.toBeInstanceOf(
-      RetryAbortedProblem,
-    );
+    await expect(service.doWork(abortedController.signal)).rejects.toThrow(RetryAbortedProblem);
     await expect(service.doWork(activeController.signal)).resolves.toBe("success");
     expect(service.attempts).toBe(1);
   });

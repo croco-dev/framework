@@ -16,11 +16,12 @@ function createDeferred<T>(): {
   promise: Promise<T>;
   resolve: (value: T) => void;
 } {
-  let resolve!: (value: T) => void;
+  let resolve = (_value: T): void => {
+    throw new Error("Deferred resolver was not initialized");
+  };
   const promise = new Promise<T>((resolvePromise) => {
     resolve = resolvePromise;
   });
-
   return { promise, resolve };
 }
 
@@ -182,6 +183,7 @@ describe("executeRetryLoop", () => {
       signal: controller.signal,
     });
 
+    await expect(execution).rejects.toThrow("Retry cancelled for method 'execute'");
     await expect(execution).rejects.toMatchObject({
       code: "RETRY_ABORTED",
       methodName: "execute",
@@ -234,6 +236,7 @@ describe("executeRetryLoop", () => {
     await listenerRegistered.promise;
     controller.abort(new Error("private cancellation reason"));
 
+    await expect(execution).rejects.toThrow("Retry cancelled for method 'execute'");
     await expect(execution).rejects.toBeInstanceOf(RetryAbortedProblem);
     await waitStopped.promise;
     expect(callback).toHaveBeenCalledTimes(1);
@@ -260,6 +263,9 @@ describe("executeRetryLoop", () => {
       signal: controller.signal,
     });
 
+    await expect(execution).rejects.toThrow(
+      "Backoff policy for method 'execute' must declare AbortSignal support",
+    );
     await expect(execution).rejects.toBeInstanceOf(RetryCancellationUnsupportedProblem);
     expect(callback).not.toHaveBeenCalled();
     expect(uncooperativeBackoff.wait).not.toHaveBeenCalled();
@@ -278,6 +284,9 @@ describe("executeRetryLoop", () => {
       signal: controller.signal,
     });
 
+    await expect(execution).rejects.toThrow(
+      "Backoff policy for method 'execute' must declare AbortSignal support",
+    );
     await expect(execution).rejects.toBeInstanceOf(RetryCancellationUnsupportedProblem);
     expect(callback).not.toHaveBeenCalled();
     expect(sleep).not.toHaveBeenCalled();
@@ -305,6 +314,7 @@ describe("executeRetryLoop", () => {
       signal: controller.signal,
     });
 
+    await expect(execution).rejects.toThrow("Retry cancelled for method 'execute'");
     await expect(execution).rejects.toBeInstanceOf(RetryAbortedProblem);
     expect(callback).toHaveBeenCalledTimes(1);
   });
@@ -326,7 +336,7 @@ describe("executeRetryLoop", () => {
           onStart: vi.fn().mockResolvedValue(false),
         },
       ),
-    ).rejects.toBeInstanceOf(RetryAbortedProblem);
+    ).rejects.toThrow(RetryAbortedProblem);
     expect(startCallback).not.toHaveBeenCalled();
 
     const waitSpy = vi.fn().mockResolvedValue(undefined);

@@ -49,7 +49,7 @@ describe("RetryTemplate", () => {
     const callback = vi.fn().mockResolvedValue("success");
     const template = new RetryTemplate({ signal: controller.signal });
 
-    await expect(template.execute(callback)).rejects.toBeInstanceOf(RetryAbortedProblem);
+    await expect(template.execute(callback)).rejects.toThrow(RetryAbortedProblem);
     expect(callback).not.toHaveBeenCalled();
   });
 
