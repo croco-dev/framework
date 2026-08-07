@@ -1,7 +1,11 @@
 import "reflect-metadata";
+import type { AddressInfo } from "node:net";
+import { Component, Container, Context, Inject } from "@croco/framework-context";
 import { ProblemCategory } from "@croco/problems-core";
 import type { RouteIR } from "@croco/protocols-core";
+import { createTRPCClient, httpBatchLink } from "@trpc/client";
 import type { AnyRouter } from "@trpc/server";
+import { createHTTPServer } from "@trpc/server/adapters/standalone";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { TrpcRouteHandlerError, createTrpcRouter } from "../libs/createTrpcRouter";
@@ -357,7 +361,294 @@ describe("createTrpcRouter", () => {
       status: 500,
     });
   });
+
+  it("should resolve constructor-injected controllers in isolated concurrent request scopes", async () => {
+    let nextStateId = 0;
+    let enteredCount = 0;
+    let releaseCalls = (): void => undefined;
+    const bothCallsEntered = new Promise<void>((resolve) => {
+      releaseCalls = resolve;
+    });
+
+    @Component({ scope: "request" })
+    class RequestState {
+      readonly id = ++nextStateId;
+    }
+
+    @Component({ scope: "request" })
+    @Controller("/scoped")
+    class ScopedController {
+      constructor(@Inject(() => RequestState) private readonly state: RequestState) {}
+
+      @Get("/")
+      async inspect(): Promise<{
+        readonly requestId: string | null;
+        readonly stateId: number;
+        readonly traceId: string | null;
+        readonly usesInjectedState: boolean;
+      }> {
+        enteredCount += 1;
+        if (enteredCount === 2) {
+          releaseCalls();
+        }
+        await bothCallsEntered;
+
+        return {
+          requestId: Context.getRequestId(),
+          stateId: this.state.id,
+          traceId: Context.getActiveTraceId(),
+          usesInjectedState: Container.get(RequestState) === this.state,
+        };
+      }
+    }
+
+    try {
+      const router = createTrpcRouter([ScopedController]);
+      const firstCaller = createCaller(router, {
+        requestId: "trpc-request-1",
+        traceId: "11111111111111111111111111111111",
+      });
+      const secondCaller = createCaller(router, {
+        requestId: "trpc-request-2",
+        traceId: "22222222222222222222222222222222",
+      });
+      const [first, second] = (await Promise.all([
+        firstCaller.scoped.inspect(),
+        secondCaller.scoped.inspect(),
+      ])) as Array<{
+        readonly requestId: string;
+        readonly stateId: number;
+        readonly traceId: string;
+        readonly usesInjectedState: boolean;
+      }>;
+
+      expect(first).toMatchObject({
+        requestId: "trpc-request-1",
+        traceId: "11111111111111111111111111111111",
+        usesInjectedState: true,
+      });
+      expect(second).toMatchObject({
+        requestId: "trpc-request-2",
+        traceId: "22222222222222222222222222222222",
+        usesInjectedState: true,
+      });
+      expect(first?.stateId).not.toBe(second?.stateId);
+      expect(Context.isActive()).toBe(false);
+    } finally {
+      Container.remove(ScopedController);
+      Container.remove(RequestState);
+    }
+  });
+
+  it("should isolate batched HTTP procedures and propagate request headers", async () => {
+    let nextStateId = 0;
+    let enteredCount = 0;
+    let releaseCalls = (): void => undefined;
+    const bothCallsEntered = new Promise<void>((resolve) => {
+      releaseCalls = resolve;
+    });
+
+    @Component({ scope: "request" })
+    class RequestState {
+      readonly id = ++nextStateId;
+    }
+
+    @Component({ scope: "request" })
+    @Controller("/batched")
+    class BatchedController {
+      constructor(@Inject(() => RequestState) private readonly state: RequestState) {}
+
+      @Get("/first")
+      first(): Promise<RequestSnapshot> {
+        return this.inspect();
+      }
+
+      @Get("/second")
+      second(): Promise<RequestSnapshot> {
+        return this.inspect();
+      }
+
+      private async inspect(): Promise<RequestSnapshot> {
+        enteredCount += 1;
+        if (enteredCount === 2) {
+          releaseCalls();
+        }
+        await bothCallsEntered;
+
+        return {
+          requestId: Context.getRequestId(),
+          stateId: this.state.id,
+          traceId: Context.getActiveTraceId(),
+          usesInjectedState: Container.get(RequestState) === this.state,
+        };
+      }
+    }
+
+    const serverErrors: unknown[] = [];
+    const router = createTrpcRouter([BatchedController]);
+    const server = createHTTPServer({
+      router,
+      createContext: ({ req }) => ({ req }),
+      onError: ({ error }) => serverErrors.push(error),
+    });
+    await new Promise<void>((resolve) => server.listen(0, resolve));
+    const client = createTRPCClient<typeof router>({
+      links: [
+        httpBatchLink({
+          url: `http://127.0.0.1:${getPort(server)}`,
+          headers: {
+            traceparent: "00-11111111111111111111111111111111-2222222222222222-01",
+            "x-request-id": "trpc-batch-request",
+          },
+        }),
+      ],
+    }) as unknown as {
+      batched: {
+        first: { query: () => Promise<RequestSnapshot> };
+        second: { query: () => Promise<RequestSnapshot> };
+      };
+    };
+
+    try {
+      let first: RequestSnapshot;
+      let second: RequestSnapshot;
+      try {
+        [first, second] = await Promise.all([
+          client.batched.first.query(),
+          client.batched.second.query(),
+        ]);
+      } catch (error) {
+        throw serverErrors[0] ?? error;
+      }
+
+      expect(first).toMatchObject({
+        requestId: "trpc-batch-request",
+        traceId: "11111111111111111111111111111111",
+        usesInjectedState: true,
+      });
+      expect(second).toMatchObject({
+        requestId: "trpc-batch-request",
+        traceId: "11111111111111111111111111111111",
+        usesInjectedState: true,
+      });
+      expect(first.stateId).not.toBe(second.stateId);
+      expect(Context.isActive()).toBe(false);
+    } finally {
+      await closeServer(server);
+      Container.remove(BatchedController);
+      Container.remove(RequestState);
+    }
+  });
+
+  it("should map request metadata and reject invalid traceparent values", async () => {
+    @Controller("/metadata")
+    class MetadataController {
+      @Get("/")
+      inspect(): { readonly requestId: string | null; readonly traceId: string | null } {
+        return {
+          requestId: Context.getRequestId(),
+          traceId: Context.getActiveTraceId(),
+        };
+      }
+    }
+
+    const customRouter = createTrpcRouter([MetadataController], {
+      createRequestContext: () => ({ requestId: "custom-request", traceId: "custom-trace" }),
+    });
+    const customCaller = createCaller(customRouter, {
+      requestId: "ignored-request",
+      traceId: "ignored-trace",
+    });
+
+    await expect(customCaller.metadata.inspect()).resolves.toEqual({
+      requestId: "custom-request",
+      traceId: "custom-trace",
+    });
+
+    const defaultRouter = createTrpcRouter([MetadataController]);
+    const defaultCaller = createCaller(defaultRouter, {
+      requestId: "invalid-traceparent",
+      request: new Request("http://localhost", {
+        headers: {
+          traceparent: "ff-11111111111111111111111111111111-2222222222222222-01",
+        },
+      }),
+    });
+
+    await expect(defaultCaller.metadata.inspect()).resolves.toEqual({
+      requestId: "invalid-traceparent",
+      traceId: null,
+    });
+
+    const caseInsensitiveHeaderCaller = createCaller(defaultRouter, {
+      req: {
+        headers: {
+          Traceparent: "00-11111111111111111111111111111111-2222222222222222-01",
+          "X-Request-Id": "case-insensitive-request",
+        },
+      },
+    });
+    await expect(caseInsensitiveHeaderCaller.metadata.inspect()).resolves.toEqual({
+      requestId: "case-insensitive-request",
+      traceId: "11111111111111111111111111111111",
+    });
+
+    const invalidIdentifiers = [
+      "00-00000000000000000000000000000000-2222222222222222-01",
+      "00-11111111111111111111111111111111-0000000000000000-01",
+    ];
+    for (const traceparent of invalidIdentifiers) {
+      const caller = createCaller(defaultRouter, {
+        requestId: "all-zero-traceparent",
+        req: { headers: { traceparent } },
+      });
+
+      await expect(caller.metadata.inspect()).resolves.toEqual({
+        requestId: "all-zero-traceparent",
+        traceId: null,
+      });
+    }
+    expect(Context.isActive()).toBe(false);
+  });
+
+  it("should clean up request context after procedure failure", async () => {
+    let observedRequestId: string | null = null;
+
+    @Component({ scope: "request" })
+    class RequestState {}
+
+    @Component({ scope: "request" })
+    @Controller("/failing-scope")
+    class FailingScopedController {
+      constructor(@Inject(() => RequestState) _state: RequestState) {}
+
+      @Get("/")
+      fail(): never {
+        observedRequestId = Context.getRequestId();
+        throw new Error("request failure");
+      }
+    }
+
+    try {
+      const router = createTrpcRouter([FailingScopedController]);
+      const caller = createCaller(router, { requestId: "trpc-failure" });
+
+      await expect(caller.failingScoped.fail()).rejects.toThrow();
+      expect(observedRequestId).toBe("trpc-failure");
+      expect(Context.isActive()).toBe(false);
+    } finally {
+      Container.remove(FailingScopedController);
+      Container.remove(RequestState);
+    }
+  });
 });
+
+type RequestSnapshot = {
+  readonly requestId: string | null;
+  readonly stateId: number;
+  readonly traceId: string | null;
+  readonly usesInjectedState: boolean;
+};
 
 function createCaller(router: AnyRouter, context: unknown = {}): TrpcCaller {
   return router.createCaller(context) as TrpcCaller;
@@ -381,6 +672,29 @@ async function captureRejectedValue(promise: Promise<unknown>): Promise<unknown>
   }
 
   expect.fail("Expected promise to reject.");
+}
+
+function getPort(server: ReturnType<typeof createHTTPServer>): number {
+  const address = server.address();
+
+  if (!address || typeof address === "string") {
+    throw new TypeError("tRPC test server address is not available");
+  }
+
+  return (address as AddressInfo).port;
+}
+
+async function closeServer(server: ReturnType<typeof createHTTPServer>): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    server.close((error) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+
+      resolve();
+    });
+  });
 }
 
 function extractTestRouteIR(controllerCtor: Function): RouteIR[] {
