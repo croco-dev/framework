@@ -29,15 +29,23 @@ describe("dependency-audit-policy.mts", () => {
       readonly overrides?: Readonly<Record<string, unknown>>;
       readonly packages?: Readonly<Record<string, unknown>>;
       readonly snapshots?: Readonly<
-        Record<string, { readonly dependencies?: Readonly<Record<string, unknown>> }>
+        Record<
+          string,
+          {
+            readonly dependencies?: Readonly<Record<string, unknown>>;
+            readonly optionalDependencies?: Readonly<Record<string, unknown>>;
+          }
+        >
       >;
     };
     const resolvedNanoidVersions = Object.keys(lockfile.packages ?? {})
       .filter((key) => key.startsWith("nanoid@"))
       .map((key) => key.slice("nanoid@".length));
     const transitiveNanoidVersions = Object.values(lockfile.snapshots ?? {}).flatMap((snapshot) => {
-      const version = snapshot.dependencies?.nanoid;
-      return typeof version === "string" ? [version] : [];
+      return [snapshot.dependencies, snapshot.optionalDependencies].flatMap((dependencies) => {
+        const version = dependencies?.nanoid;
+        return typeof version === "string" ? [version] : [];
+      });
     });
 
     expect(workspace.overrides?.nanoid).toBe("3.3.17");
