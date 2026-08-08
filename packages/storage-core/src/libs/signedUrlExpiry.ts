@@ -7,6 +7,8 @@ import {
  * Validates a signed-URL lifetime expressed in seconds.
  *
  * The seven-day upper bound is the narrowest limit shared by Croco's storage providers.
+ *
+ * @throws {InvalidSignedUrlExpiryProblem} When the expiry is not a positive safe integer or exceeds the provider limit.
  */
 export function validateSignedUrlExpiry(expiresIn: number): number {
   if (

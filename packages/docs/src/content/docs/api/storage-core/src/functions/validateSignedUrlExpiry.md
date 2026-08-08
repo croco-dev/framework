@@ -20,3 +20,7 @@ The seven-day upper bound is the narrowest limit shared by Croco's storage provi
 ## Returns
 
 `number`
+
+## Throws
+
+When the expiry is not a positive safe integer or exceeds the provider limit.

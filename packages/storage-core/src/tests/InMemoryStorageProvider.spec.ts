@@ -202,7 +202,7 @@ describe("InMemoryStorageProvider", () => {
       async (expiresIn) => {
         const rejection = provider.getSignedUrl("test/signed.txt", { expiresIn });
 
-        await expect(rejection).rejects.toBeInstanceOf(InvalidSignedUrlExpiryProblem);
+        await expect(rejection).rejects.toThrow(InvalidSignedUrlExpiryProblem);
         await expect(rejection).rejects.toMatchObject({
           code: "STORAGE_INVALID_SIGNED_URL_EXPIRY",
           message: INVALID_SIGNED_URL_EXPIRY_MESSAGE,

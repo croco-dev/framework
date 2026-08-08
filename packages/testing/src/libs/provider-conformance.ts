@@ -42,7 +42,7 @@ const defaultMetadataExpectations = {
   customMetadata: "optional",
 } satisfies Required<NonNullable<StorageProviderConformanceOptions["metadata"]>>;
 
-const invalidSignedUrlExpiryCases = [
+const INVALID_SIGNED_URL_EXPIRY_CASES = [
   -1,
   0,
   1.5,
@@ -53,7 +53,7 @@ const invalidSignedUrlExpiryCases = [
   Number.MAX_SAFE_INTEGER + 1,
 ] as const;
 
-const invalidSignedUrlExpiryMessage = `Signed URL expiry must be a positive safe integer no greater than ${MAX_SIGNED_URL_EXPIRY_SECONDS} seconds`;
+const INVALID_SIGNED_URL_EXPIRY_MESSAGE = `Signed URL expiry must be a positive safe integer no greater than ${MAX_SIGNED_URL_EXPIRY_SECONDS} seconds`;
 
 export function createStorageProviderConformanceSuite(
   options: StorageProviderConformanceOptions,
@@ -174,13 +174,13 @@ export function createStorageProviderConformanceSuite(
 
           await provider.put(key, Buffer.from("signed URL expiry target"));
 
-          for (const expiresIn of invalidSignedUrlExpiryCases) {
+          for (const expiresIn of INVALID_SIGNED_URL_EXPIRY_CASES) {
             await assert.rejects(
               () => provider.getSignedUrl(key, { expiresIn }),
               (error: unknown) => {
                 assert.ok(error instanceof InvalidSignedUrlExpiryProblem);
                 assert.equal(error.code, "STORAGE_INVALID_SIGNED_URL_EXPIRY");
-                assert.equal(error.message, invalidSignedUrlExpiryMessage);
+                assert.equal(error.message, INVALID_SIGNED_URL_EXPIRY_MESSAGE);
                 return true;
               },
             );
