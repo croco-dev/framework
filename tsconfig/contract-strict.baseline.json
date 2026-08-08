@@ -3289,7 +3289,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/provider-conformance.ts",
-      "line": 230,
+      "line": 266,
       "column": 24,
       "code": "TS4111",
       "message": "Property 'conformance' comes from an index signature, so it must be accessed with ['conformance']."

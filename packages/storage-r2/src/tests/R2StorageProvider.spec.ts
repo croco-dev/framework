@@ -1,8 +1,14 @@
 import { Readable } from "node:stream";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import type { ConfigService } from "@croco/framework-config";
 import { Container } from "@croco/framework-context";
 import type { Logger } from "@croco/framework-logger";
-import { DeleteFailedProblem, FileNotFoundProblem, UploadFailedProblem } from "@croco/storage-core";
+import {
+  DeleteFailedProblem,
+  FileNotFoundProblem,
+  MAX_SIGNED_URL_EXPIRY_SECONDS,
+  UploadFailedProblem,
+} from "@croco/storage-core";
 import { createStorageProviderConformanceSuite } from "@croco/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EmptyR2BodyProblem } from "../libs/problems/EmptyR2BodyProblem";
@@ -78,6 +84,7 @@ describe("R2StorageProvider", () => {
   beforeEach(() => {
     Container.reset();
     mockSend.mockReset();
+    vi.mocked(getSignedUrl).mockClear();
 
     configService = {
       get: vi.fn((key: string) => defaultEnvs[key]),
@@ -277,8 +284,13 @@ describe("R2StorageProvider", () => {
 
   describe("getSignedUrl", () => {
     it("should generate signed URL with expiration", async () => {
-      const url = await provider.getSignedUrl("test/file.txt", { expiresIn: 3600 });
+      const url = await provider.getSignedUrl("test/file.txt", {
+        expiresIn: MAX_SIGNED_URL_EXPIRY_SECONDS,
+      });
       expect(url).toBe("https://signed-url.example.com/test/file.txt");
+      expect(vi.mocked(getSignedUrl)).toHaveBeenCalledWith(expect.anything(), expect.anything(), {
+        expiresIn: MAX_SIGNED_URL_EXPIRY_SECONDS,
+      });
     });
   });
 

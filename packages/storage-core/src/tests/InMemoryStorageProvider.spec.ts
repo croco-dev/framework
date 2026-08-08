@@ -1,8 +1,25 @@
 import { Readable } from "node:stream";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  InvalidSignedUrlExpiryProblem,
+  MAX_SIGNED_URL_EXPIRY_SECONDS,
+} from "../libs/problems/InvalidSignedUrlExpiryProblem";
 import { InMemoryStorageProvider } from "../libs/InMemoryStorageProvider";
 import { FileNotFoundProblem } from "../libs/problems/FileNotFoundProblem";
 import { InvalidKeyProblem } from "../libs/problems/InvalidKeyProblem";
+
+const INVALID_SIGNED_URL_EXPIRY_MESSAGE = `Signed URL expiry must be a positive safe integer no greater than ${MAX_SIGNED_URL_EXPIRY_SECONDS} seconds`;
+
+const INVALID_SIGNED_URL_EXPIRIES = [
+  -1,
+  0,
+  1.5,
+  Number.NaN,
+  Number.POSITIVE_INFINITY,
+  Number.NEGATIVE_INFINITY,
+  MAX_SIGNED_URL_EXPIRY_SECONDS + 1,
+  Number.MAX_SAFE_INTEGER + 1,
+] as const;
 
 describe("InMemoryStorageProvider", () => {
   let provider!: InMemoryStorageProvider;
@@ -162,11 +179,16 @@ describe("InMemoryStorageProvider", () => {
   describe("getSignedUrl()", () => {
     it("서명된 URL 생성", async () => {
       await provider.put("test/signed.txt", Buffer.from("Signed content"));
-      const url = await provider.getSignedUrl("test/signed.txt", { expiresIn: 3600 });
+      const now = Date.now();
+      vi.spyOn(Date, "now").mockReturnValue(now);
+      const url = await provider.getSignedUrl("test/signed.txt", {
+        expiresIn: MAX_SIGNED_URL_EXPIRY_SECONDS,
+      });
 
       expect(url).toContain("https://cdn.example.com/test/signed.txt?expires=");
       const expires = parseInt(url.split("expires=")[1], 10);
-      expect(expires).toBeGreaterThan(Date.now());
+      expect(expires).toBe(now + MAX_SIGNED_URL_EXPIRY_SECONDS * 1000);
+      vi.restoreAllMocks();
     });
 
     it("존재하지 않는 파일로 서명된 URL 생성 시도 시 FileNotFoundProblem throw", async () => {
@@ -174,6 +196,19 @@ describe("InMemoryStorageProvider", () => {
         provider.getSignedUrl("nonexistent/file.txt", { expiresIn: 3600 }),
       ).rejects.toThrow(FileNotFoundProblem);
     });
+
+    it.each(INVALID_SIGNED_URL_EXPIRIES)(
+      "잘못된 만료 시간 %s를 안정적인 Problem 계약으로 거부",
+      async (expiresIn) => {
+        const rejection = provider.getSignedUrl("test/signed.txt", { expiresIn });
+
+        await expect(rejection).rejects.toBeInstanceOf(InvalidSignedUrlExpiryProblem);
+        await expect(rejection).rejects.toMatchObject({
+          code: "STORAGE_INVALID_SIGNED_URL_EXPIRY",
+          message: INVALID_SIGNED_URL_EXPIRY_MESSAGE,
+        });
+      },
+    );
 
     it("유효하지 않은 키로 서명된 URL 생성 시도 시 InvalidKeyProblem throw", async () => {
       await expect(provider.getSignedUrl("invalid//key", { expiresIn: 3600 })).rejects.toThrow(

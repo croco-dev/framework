@@ -24,6 +24,21 @@ export { FileNotFoundProblem } from "./libs/problems/FileNotFoundProblem";
 export { InvalidKeyProblem } from "./libs/problems/InvalidKeyProblem";
 
 /**
+ * 유효하지 않은 서명 URL 만료 시간이 전달되었을 때 발생하는 Problem입니다.
+ */
+export { InvalidSignedUrlExpiryProblem } from "./libs/problems/InvalidSignedUrlExpiryProblem";
+
+/**
+ * 모든 스토리지 제공자가 허용하는 서명 URL 만료 시간의 최대값(초)입니다.
+ */
+export { MAX_SIGNED_URL_EXPIRY_SECONDS } from "./libs/problems/InvalidSignedUrlExpiryProblem";
+
+/**
+ * 모든 스토리지 제공자가 공유하는 서명 URL 만료 시간 검증 함수입니다.
+ */
+export { validateSignedUrlExpiry } from "./libs/signedUrlExpiry";
+
+/**
  * 스토리지 도메인 공통 상위 Problem 타입입니다.
  */
 export { StorageProblem } from "./libs/problems/StorageProblem";

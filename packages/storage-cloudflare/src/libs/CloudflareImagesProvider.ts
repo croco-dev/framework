@@ -8,7 +8,7 @@ import type {
   TransformOptions,
   UploadIntent,
 } from "@croco/storage-core";
-import { BaseStorageProvider } from "@croco/storage-core";
+import { BaseStorageProvider, validateSignedUrlExpiry } from "@croco/storage-core";
 import {
   CloudflareImagesValidationProblem,
   createCloudflareImagesResponseProblem,
@@ -223,10 +223,11 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
 
   async getSignedUrl(key: string, options: SignedUrlOptions): Promise<string> {
     this.validateKey(key);
+    const expiresIn = validateSignedUrlExpiry(options.expiresIn);
 
     const url = this.buildImageUrl(key, this.options.defaultVariant ?? "public", "signed-url");
 
-    const expiresAt = Math.floor(Date.now() / 1000) + options.expiresIn;
+    const expiresAt = Math.floor(Date.now() / 1000) + expiresIn;
 
     const signature = await this.generateSignature(key, expiresAt);
 

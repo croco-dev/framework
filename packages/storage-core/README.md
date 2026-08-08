@@ -11,8 +11,10 @@ cloud providers depend on these stable contracts.
 - `StorageProvider` and `ImageProvider` contracts.
 - `BaseStorageProvider` - base class for provider implementations.
 - `InMemoryStorageProvider` - test and local-development implementation.
-- Storage Problems for invalid keys, missing files, upload failures, and delete
-  failures.
+- `validateSignedUrlExpiry` and `MAX_SIGNED_URL_EXPIRY_SECONDS` - the shared signed-URL lifetime
+  contract.
+- Storage Problems for invalid keys, invalid signed-URL expiry, missing files, upload failures, and
+  delete failures.
 
 ## Usage
 
@@ -23,6 +25,12 @@ const storage = new InMemoryStorageProvider();
 await storage.put("avatars/user-1.png", new Uint8Array());
 const object = await storage.get("avatars/user-1.png");
 ```
+
+## Signed URL expiry
+
+`SignedUrlOptions.expiresIn` is always expressed in seconds. Every provider accepts only positive
+safe integers from `1` through `604800` (seven days), inclusive. Invalid values fail before
+provider-specific signing with `STORAGE_INVALID_SIGNED_URL_EXPIRY`.
 
 ## Verification
 

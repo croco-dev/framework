@@ -2,36 +2,38 @@
 editUrl: false
 next: false
 prev: false
-title: "StorageProblem"
+title: "InvalidSignedUrlExpiryProblem"
 ---
 
-Storage 관련 기반 Problem 클래스
+유효하지 않은 서명 URL 만료 시간이 전달되었을 때 발생하는 Problem입니다.
 
 ## Extends
 
-- [`Problem`](/api/problems-core/src/classes/problem/)
+- [`StorageProblem`](/api/storage-core/src/classes/storageproblem/)
 
-## Extended by
+## Constructors
 
-- [`DeleteFailedProblem`](/api/storage-core/src/classes/deletefailedproblem/)
-- [`FileNotFoundProblem`](/api/storage-core/src/classes/filenotfoundproblem/)
-- [`InvalidKeyProblem`](/api/storage-core/src/classes/invalidkeyproblem/)
-- [`InvalidSignedUrlExpiryProblem`](/api/storage-core/src/classes/invalidsignedurlexpiryproblem/)
-- [`UploadFailedProblem`](/api/storage-core/src/classes/uploadfailedproblem/)
-- [`EmptyR2BodyProblem`](/api/storage-r2/src/classes/emptyr2bodyproblem/)
-- [`MissingR2ConfigProblem`](/api/storage-r2/src/classes/missingr2configproblem/)
-- [`R2ReadinessProblem`](/api/storage-r2/src/classes/r2readinessproblem/)
-- [`R2ObjectTooLargeProblem`](/api/storage-r2/src/classes/r2objecttoolargeproblem/)
+### Constructor
+
+> **new InvalidSignedUrlExpiryProblem**(): `InvalidSignedUrlExpiryProblem`
+
+#### Returns
+
+`InvalidSignedUrlExpiryProblem`
+
+#### Overrides
+
+`StorageProblem.constructor`
 
 ## Properties
 
 ### category
 
-> `readonly` **category**: [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
+> `readonly` **category**: [`BadRequest`](/api/problems-core/src/enumerations/problemcategory/#badrequest) = `ProblemCategory.BadRequest`
 
-#### Inherited from
+#### Overrides
 
-[`Problem`](/api/problems-core/src/classes/problem/).[`category`](/api/problems-core/src/classes/problem/#category)
+[`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`category`](/api/storage-core/src/classes/storageproblem/#category)
 
 ---
 
@@ -41,17 +43,17 @@ Storage 관련 기반 Problem 클래스
 
 #### Inherited from
 
-[`Problem`](/api/problems-core/src/classes/problem/).[`cause`](/api/problems-core/src/classes/problem/#cause)
+[`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`cause`](/api/storage-core/src/classes/storageproblem/#cause)
 
 ---
 
 ### code
 
-> `readonly` **code**: `string`
+> `readonly` **code**: `"STORAGE_INVALID_SIGNED_URL_EXPIRY"` = `"STORAGE_INVALID_SIGNED_URL_EXPIRY"`
 
-#### Inherited from
+#### Overrides
 
-[`Problem`](/api/problems-core/src/classes/problem/).[`code`](/api/problems-core/src/classes/problem/#code)
+[`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`code`](/api/storage-core/src/classes/storageproblem/#code)
 
 ---
 
@@ -61,7 +63,7 @@ Storage 관련 기반 Problem 클래스
 
 #### Inherited from
 
-[`Problem`](/api/problems-core/src/classes/problem/).[`detail`](/api/problems-core/src/classes/problem/#detail)
+[`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`detail`](/api/storage-core/src/classes/storageproblem/#detail)
 
 ---
 
@@ -71,7 +73,7 @@ Storage 관련 기반 Problem 클래스
 
 #### Inherited from
 
-[`Problem`](/api/problems-core/src/classes/problem/).[`extensions`](/api/problems-core/src/classes/problem/#extensions)
+[`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`extensions`](/api/storage-core/src/classes/storageproblem/#extensions)
 
 ---
 
@@ -81,7 +83,7 @@ Storage 관련 기반 Problem 클래스
 
 #### Inherited from
 
-[`Problem`](/api/problems-core/src/classes/problem/).[`instance`](/api/problems-core/src/classes/problem/#instance)
+[`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`instance`](/api/storage-core/src/classes/storageproblem/#instance)
 
 ---
 
@@ -91,7 +93,7 @@ Storage 관련 기반 Problem 클래스
 
 #### Inherited from
 
-[`Problem`](/api/problems-core/src/classes/problem/).[`message`](/api/problems-core/src/classes/problem/#message)
+[`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`message`](/api/storage-core/src/classes/storageproblem/#message)
 
 ---
 
@@ -101,7 +103,7 @@ Storage 관련 기반 Problem 클래스
 
 #### Inherited from
 
-[`Problem`](/api/problems-core/src/classes/problem/).[`name`](/api/problems-core/src/classes/problem/#name)
+[`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`name`](/api/storage-core/src/classes/storageproblem/#name)
 
 ---
 
@@ -111,7 +113,7 @@ Storage 관련 기반 Problem 클래스
 
 #### Inherited from
 
-[`Problem`](/api/problems-core/src/classes/problem/).[`stack`](/api/problems-core/src/classes/problem/#stack)
+[`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`stack`](/api/storage-core/src/classes/storageproblem/#stack)
 
 ---
 
@@ -121,7 +123,7 @@ Storage 관련 기반 Problem 클래스
 
 #### Inherited from
 
-[`Problem`](/api/problems-core/src/classes/problem/).[`type`](/api/problems-core/src/classes/problem/#type)
+[`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`type`](/api/storage-core/src/classes/storageproblem/#type)
 
 ---
 
@@ -141,7 +143,7 @@ not capture any frames.
 
 #### Inherited from
 
-[`Problem`](/api/problems-core/src/classes/problem/).[`stackTraceLimit`](/api/problems-core/src/classes/problem/#stacktracelimit)
+[`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`stackTraceLimit`](/api/storage-core/src/classes/storageproblem/#stacktracelimit)
 
 ## Accessors
 
@@ -157,7 +159,7 @@ not capture any frames.
 
 #### Inherited from
 
-[`Problem`](/api/problems-core/src/classes/problem/).[`status`](/api/problems-core/src/classes/problem/#status)
+[`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`status`](/api/storage-core/src/classes/storageproblem/#status)
 
 ---
 
@@ -173,7 +175,7 @@ not capture any frames.
 
 #### Inherited from
 
-[`Problem`](/api/problems-core/src/classes/problem/).[`title`](/api/problems-core/src/classes/problem/#title)
+[`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`title`](/api/storage-core/src/classes/storageproblem/#title)
 
 ## Methods
 
@@ -187,7 +189,7 @@ not capture any frames.
 
 #### Inherited from
 
-[`Problem`](/api/problems-core/src/classes/problem/).[`toJSON`](/api/problems-core/src/classes/problem/#tojson)
+[`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`toJSON`](/api/storage-core/src/classes/storageproblem/#tojson)
 
 ---
 
@@ -255,7 +257,7 @@ a();
 
 #### Inherited from
 
-[`Problem`](/api/problems-core/src/classes/problem/).[`captureStackTrace`](/api/problems-core/src/classes/problem/#capturestacktrace)
+[`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`captureStackTrace`](/api/storage-core/src/classes/storageproblem/#capturestacktrace)
 
 ---
 
@@ -283,4 +285,4 @@ https://v8.dev/docs/stack-trace-api#customizing-stack-traces
 
 #### Inherited from
 
-[`Problem`](/api/problems-core/src/classes/problem/).[`prepareStackTrace`](/api/problems-core/src/classes/problem/#preparestacktrace)
+[`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`prepareStackTrace`](/api/storage-core/src/classes/storageproblem/#preparestacktrace)

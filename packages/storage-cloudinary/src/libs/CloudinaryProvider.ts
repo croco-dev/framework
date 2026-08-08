@@ -11,7 +11,7 @@ import type {
   TransformOptions,
   UploadIntent,
 } from "@croco/storage-core";
-import { BaseStorageProvider } from "@croco/storage-core";
+import { BaseStorageProvider, validateSignedUrlExpiry } from "@croco/storage-core";
 import { v2 as cloudinary } from "cloudinary";
 import {
   CloudinaryTerminalUpstreamProblem,
@@ -262,13 +262,14 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
 
   async getSignedUrl(key: string, options: SignedUrlOptions): Promise<string> {
     this.validateKey(key);
+    const expiresIn = validateSignedUrlExpiry(options.expiresIn);
 
     const url = cloudinary.url(key, {
       cloud_name: this.cloudName,
       api_secret: this.apiSecret,
       secure: this.secure,
       sign_url: true,
-      expiration: Math.floor(Date.now() / 1000) + options.expiresIn,
+      expiration: Math.floor(Date.now() / 1000) + expiresIn,
     });
 
     return url;

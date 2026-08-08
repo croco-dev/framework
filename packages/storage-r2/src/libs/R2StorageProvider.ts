@@ -9,7 +9,7 @@ import { Logger } from "@croco/framework-logger";
 import type { RetryPolicy } from "@croco/retry-core";
 import { RetryTemplate } from "@croco/retry-core";
 import type { ObjectMetadata, PutOptions, SignedUrlOptions } from "@croco/storage-core";
-import { BaseStorageProvider } from "@croco/storage-core";
+import { BaseStorageProvider, validateSignedUrlExpiry } from "@croco/storage-core";
 import { EmptyR2BodyProblem } from "./problems/EmptyR2BodyProblem";
 import { R2ObjectTooLargeProblem } from "./problems/R2ObjectTooLargeProblem";
 import { validateR2Options } from "./R2Config";
@@ -327,6 +327,7 @@ export class R2StorageProvider extends BaseStorageProvider {
 
   async getSignedUrl(key: string, options: SignedUrlOptions): Promise<string> {
     this.validateKey(key);
+    const expiresIn = validateSignedUrlExpiry(options.expiresIn);
 
     const { GetObjectCommand } = await import("@aws-sdk/client-s3");
 
@@ -336,7 +337,7 @@ export class R2StorageProvider extends BaseStorageProvider {
     });
 
     return getSignedUrl(this.client, command, {
-      expiresIn: options.expiresIn,
+      expiresIn,
     });
   }
 
