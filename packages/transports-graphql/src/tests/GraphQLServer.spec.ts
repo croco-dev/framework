@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { ServerResponse } from "node:http";
+import { request as httpRequest, ServerResponse } from "node:http";
 import { connect } from "node:net";
 import { Container } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
@@ -25,6 +25,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { GraphQLServer } from "../libs/GraphQLServer";
 import { SchemaCompiler } from "../libs/SchemaCompiler";
 import {
+  GraphQLBodyLimitConfigurationProblem,
   GraphQLResolversNotConfiguredProblem,
   GraphQLSchemaNotConfiguredProblem,
   GraphQLServerNotInitializedProblem,
@@ -464,6 +465,77 @@ describe("GraphQLServer integration", () => {
     await expect(testServer.initialize()).rejects.toBeInstanceOf(
       GraphQLResolversNotConfiguredProblem,
     );
+  });
+
+  it.each([
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    Number.NEGATIVE_INFINITY,
+    -1,
+    0,
+    0.5,
+    2 ** 53,
+    null as unknown as number,
+  ])(
+    "should reject unsafe maxBodySizeBytes configuration %s during initialization",
+    async (maxBodySizeBytes) => {
+      const testServer = new GraphQLServer({
+        schemaOptions: {
+          resolvers: [UserResolver],
+          autoDiscover: false,
+        },
+        maxBodySizeBytes,
+      });
+
+      await expect(testServer.initialize()).rejects.toMatchObject({
+        code: "transports-graphql/body-limit-invalid-configuration",
+        category: "InternalServerError",
+        detail: "maxBodySizeBytes must be a finite positive safe integer",
+      });
+      await expect(testServer.initialize()).rejects.toBeInstanceOf(
+        GraphQLBodyLimitConfigurationProblem,
+      );
+    },
+  );
+
+  it("should enforce the exact byte boundary for buffered and streamed bodies", async () => {
+    const body = JSON.stringify({ query: "{ hello } # 😀" });
+    const limit = Buffer.byteLength(body);
+    const testServer = new GraphQLServer({
+      schemaOptions: {
+        resolvers: [UserResolver],
+        autoDiscover: false,
+      },
+      maxBodySizeBytes: limit,
+    });
+
+    await testServer.start(4003);
+
+    try {
+      const bufferedAtLimit = await fetch("http://localhost:4003/graphql", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+      });
+      const bufferedOverLimit = await fetch("http://localhost:4003/graphql", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: `${body} `,
+      });
+      const multibyteOffset = body.indexOf("😀");
+      const streamedAtLimit = await sendChunkedRequest(4003, [
+        body.slice(0, multibyteOffset),
+        body.slice(multibyteOffset),
+      ]);
+      const streamedOverLimit = await sendChunkedRequest(4003, [body, " "]);
+
+      expect(bufferedAtLimit.status).toBe(200);
+      expect(bufferedOverLimit.status).toBe(413);
+      expect(streamedAtLimit.status).toBe(200);
+      expect(streamedOverLimit.status).toBe(413);
+    } finally {
+      await testServer.stop();
+    }
   });
 
   it("should reject oversized request bodies with 413", async () => {
@@ -1115,5 +1187,38 @@ function sendRawHttpRequest(port: number, request: string): Promise<string> {
     });
     socket.on("end", () => resolve(response));
     socket.on("error", reject);
+  });
+}
+
+function sendChunkedRequest(
+  port: number,
+  chunks: readonly string[],
+): Promise<{ readonly status: number; readonly body: string }> {
+  return new Promise((resolve, reject) => {
+    const request = httpRequest(
+      {
+        host: "localhost",
+        port,
+        path: "/graphql",
+        method: "POST",
+        headers: { "content-type": "application/json" },
+      },
+      (response) => {
+        const responseChunks: Buffer[] = [];
+        response.on("data", (chunk: Buffer) => responseChunks.push(chunk));
+        response.on("end", () => {
+          resolve({
+            status: response.statusCode ?? 0,
+            body: Buffer.concat(responseChunks).toString(),
+          });
+        });
+      },
+    );
+
+    request.on("error", reject);
+    for (const chunk of chunks) {
+      request.write(chunk);
+    }
+    request.end();
   });
 }

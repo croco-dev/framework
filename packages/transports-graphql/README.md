@@ -23,6 +23,12 @@ const schema = await new SchemaCompiler().compile({ resolvers: [HealthResolver] 
 const server = new GraphQLServer({ schema });
 ```
 
+`maxBodySizeBytes` defaults to 1 MiB and must be a finite positive safe integer. The
+server validates this option during initialization, before opening its listener. Both
+declared `Content-Length` values and actual streamed bytes use an inclusive boundary:
+a request with exactly the configured number of bytes is accepted, while the next byte
+is rejected with `transports-graphql/request-body-too-large`.
+
 Schemas compiled through `SchemaCompiler` execute the `UseGuards`, `Roles`, and
 `UseInterceptors` declarations recorded by `@croco/protocols-graphql`. Request
 headers are available as `context.headers`, custom server context is preserved, and

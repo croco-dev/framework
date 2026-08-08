@@ -2072,6 +2072,15 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "transports-graphql/body-limit-invalid-configuration": recovery({
+    cause: "The GraphQL server was configured with an invalid request body byte boundary.",
+    userAction: "Ask the operator to correct the service configuration before retrying.",
+    operatorAction:
+      "Set maxBodySizeBytes to a finite positive safe integer and restart the service.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   CROCO_HTTP_SECURITY_001: recovery({
     cause:
       "HTTP bootstrap validation found a generated or application app without the required security middleware set.",

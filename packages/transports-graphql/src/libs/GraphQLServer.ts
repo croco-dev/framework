@@ -11,6 +11,7 @@ import {
 import { isProblem, problemToGraphQLError } from "@croco/protocols-graphql";
 import { createYoga, maskError } from "graphql-yoga";
 import {
+  GraphQLBodyLimitConfigurationProblem,
   GraphQLRequestBodyAbortedProblem,
   GraphQLRequestBodyTooLargeProblem,
   GraphQLRequestHandlingFailedProblem,
@@ -53,11 +54,21 @@ export class GraphQLServer {
   private yogaHandler: YogaHandler | null = null;
   private server: Server | null = null;
   private initialized = false;
+  private maxBodySizeBytes = DEFAULT_MAX_BODY_SIZE_BYTES;
 
   constructor(private options: GraphQLServerOptions = {}) {}
 
   async initialize(): Promise<void> {
     if (this.initialized) return;
+
+    const maxBodySizeBytes =
+      this.options.maxBodySizeBytes === undefined
+        ? DEFAULT_MAX_BODY_SIZE_BYTES
+        : this.options.maxBodySizeBytes;
+    if (!Number.isSafeInteger(maxBodySizeBytes) || maxBodySizeBytes <= 0) {
+      throw new GraphQLBodyLimitConfigurationProblem();
+    }
+    this.maxBodySizeBytes = maxBodySizeBytes;
 
     const {
       schema,
@@ -205,7 +216,7 @@ export class GraphQLServer {
 
   private getBody(req: IncomingMessage): Promise<string> {
     return new Promise((resolve, reject) => {
-      const maxBodySizeBytes = this.options.maxBodySizeBytes ?? DEFAULT_MAX_BODY_SIZE_BYTES;
+      const maxBodySizeBytes = this.maxBodySizeBytes;
       const contentLength = req.headers["content-length"];
 
       if (typeof contentLength === "string") {

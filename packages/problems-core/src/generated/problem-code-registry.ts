@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 611,
+  problemCount: 612,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -16727,6 +16727,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "transports-graphql/body-limit-invalid-configuration",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#transports-graphql-body-limit-invalid-configuration",
+      recovery: {
+        cause: "The GraphQL server was configured with an invalid request body byte boundary.",
+        userAction: "Ask the operator to correct the service configuration before retrying.",
+        operatorAction:
+          "Set maxBodySizeBytes to a finite positive safe integer and restart the service.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/transports-graphql/src/libs/problems/GraphQLTransportProblems.ts",
+          line: 8,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
       code: "transports-graphql/request-body-aborted",
       category: "BadRequest",
       status: 400,
@@ -16751,7 +16783,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-graphql/src/libs/problems/GraphQLTransportProblems.ts",
-          line: 47,
+          line: 63,
           column: 3,
           kind: "problem-class",
         },
@@ -16783,7 +16815,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-graphql/src/libs/problems/GraphQLTransportProblems.ts",
-          line: 33,
+          line: 49,
           column: 5,
           kind: "problem-constructor",
         },
@@ -16816,7 +16848,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-graphql/src/libs/problems/GraphQLTransportProblems.ts",
-          line: 55,
+          line: 71,
           column: 3,
           kind: "problem-class",
         },
@@ -16849,7 +16881,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-graphql/src/libs/problems/GraphQLTransportProblems.ts",
-          line: 4,
+          line: 20,
           column: 3,
           kind: "problem-class",
         },
@@ -16882,7 +16914,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-graphql/src/libs/problems/GraphQLTransportProblems.ts",
-          line: 16,
+          line: 32,
           column: 3,
           kind: "problem-class",
         },
@@ -16915,7 +16947,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-graphql/src/libs/problems/GraphQLTransportProblems.ts",
-          line: 24,
+          line: 40,
           column: 3,
           kind: "problem-class",
         },
