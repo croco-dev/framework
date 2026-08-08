@@ -193,15 +193,16 @@ describe("RateLimitMiddleware", () => {
       expect(rateLimitResult?.policyName).toBe("test");
     });
 
-    it("should apply policy-derived degraded headers on the exception path", async () => {
+    it("should reject a store outage when middleware is fail-closed despite a fail-open limiter default", async () => {
       vi.useFakeTimers();
       const now = Date.UTC(2026, 0, 1);
       vi.setSystemTime(now);
+      const recordEvent = vi.fn();
       const rejectingStore = {
         check: vi.fn().mockRejectedValue(new Error("store unavailable")),
       } as unknown as RateLimitStore;
       const degradedRateLimiter = new RateLimiter(rejectingStore, () => "degraded:key", {
-        failOpen: false,
+        failOpen: true,
       });
       const middleware = rateLimitHttpMiddleware({
         rateLimiter: degradedRateLimiter,
@@ -211,14 +212,88 @@ describe("RateLimitMiddleware", () => {
       });
       const { ctx, headers } = createRateLimitTestContext();
 
-      await expect(middleware(ctx, async () => {})).rejects.toBeInstanceOf(
-        RateLimitExceededProblem,
+      await expect(
+        FrameworkContext.run(
+          { requestId: "fail-closed-store", runtimeInspector: { recordEvent } },
+          () => middleware(ctx, async () => {}),
+        ),
+      ).rejects.toBeInstanceOf(RateLimitExceededProblem);
+
+      expect(recordEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          kind: "rate-limit.store-unavailable",
+          outcome: "failed",
+          details: { policy: "degraded", action: "rejected" },
+        }),
       );
 
       expect(headers.get("X-RateLimit-Limit")).toBe("10");
       expect(headers.get("X-RateLimit-Remaining")).toBe("0");
       expect(headers.get("X-RateLimit-Reset")).toBe(String(Math.ceil((now + 1000 / 3) / 1000)));
       expect(headers.get("Retry-After")).toBe("1");
+    });
+
+    it("should allow a store outage with diagnostics when middleware is fail-open despite a fail-closed limiter default", async () => {
+      const recordEvent = vi.fn();
+      const rejectingStore = {
+        check: vi.fn().mockRejectedValue(new Error("store unavailable")),
+      } as unknown as RateLimitStore;
+      const degradedRateLimiter = new RateLimiter(rejectingStore, () => "degraded:key", {
+        failOpen: false,
+      });
+      const middleware = rateLimitHttpMiddleware({
+        rateLimiter: degradedRateLimiter,
+        policy: createSlidingWindowPolicy("degraded-open", 10, 60_000),
+        failOpen: true,
+      });
+      const { ctx } = createRateLimitTestContext();
+      const next = vi.fn().mockResolvedValue(undefined);
+
+      await FrameworkContext.run(
+        { requestId: "fail-open-store", runtimeInspector: { recordEvent } },
+        () => middleware(ctx, next),
+      );
+
+      expect(next).toHaveBeenCalledOnce();
+      expect(ctx.get<RateLimitResult>("rateLimitResult")).toMatchObject({
+        success: true,
+        degraded: true,
+        remaining: 10,
+      });
+      expect(recordEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          kind: "rate-limit.store-unavailable",
+          outcome: "failed",
+          details: { policy: "degraded-open", action: "allowed" },
+        }),
+      );
+    });
+
+    it("should record one store outage diagnostic when an allowed request later fails", async () => {
+      const recordEvent = vi.fn();
+      const rejectingStore = {
+        check: vi.fn().mockRejectedValue(new Error("store unavailable")),
+      } as unknown as RateLimitStore;
+      const middleware = rateLimitHttpMiddleware({
+        rateLimiter: new RateLimiter(rejectingStore, () => "degraded:key"),
+        policy: createSlidingWindowPolicy("degraded-handler-failure", 10, 60_000),
+        failOpen: true,
+      });
+      const { ctx } = createRateLimitTestContext();
+
+      await expect(
+        FrameworkContext.run(
+          { requestId: "fail-open-handler-failure", runtimeInspector: { recordEvent } },
+          () =>
+            middleware(ctx, async () => {
+              throw new Error("handler failed");
+            }),
+        ),
+      ).rejects.toThrow("handler failed");
+
+      expect(
+        recordEvent.mock.calls.filter(([event]) => event.kind === "rate-limit.store-unavailable"),
+      ).toHaveLength(1);
     });
 
     it("should ignore spoofable proxy headers for Node requests", async () => {
@@ -564,6 +639,29 @@ describe("RateLimitMiddleware", () => {
       }
 
       expect(nextCalls).toBe(2);
+    });
+
+    it("should pass the degraded-store policy through the middleware factory", async () => {
+      const rejectingStore = {
+        check: vi.fn().mockRejectedValue(new Error("store unavailable")),
+      } as unknown as RateLimitStore;
+      const factory = createRateLimitMiddlewareFactory({
+        rateLimiter: new RateLimiter(rejectingStore, () => "factory:degraded", {
+          failOpen: false,
+        }),
+        defaultPolicy: createSlidingWindowPolicy("factory-degraded", 10, 60_000),
+        failOpen: true,
+      });
+      const { ctx } = createRateLimitTestContext();
+      const next = vi.fn().mockResolvedValue(undefined);
+
+      await factory()(ctx, next);
+
+      expect(next).toHaveBeenCalledOnce();
+      expect(ctx.get<RateLimitResult>("rateLimitResult")).toMatchObject({
+        success: true,
+        degraded: true,
+      });
     });
 
     it("should pass the client identity policy through the middleware factory", async () => {

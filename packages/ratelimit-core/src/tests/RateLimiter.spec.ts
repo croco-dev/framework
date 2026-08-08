@@ -323,6 +323,19 @@ describe("RateLimiter", () => {
       expect(result.policyName).toBe("test-policy");
     });
 
+    it("should let an explicit check policy override the limiter default during store failure", async () => {
+      vi.mocked(mockStore.check).mockRejectedValue(new Error("Redis timeout"));
+
+      const closedResult = await rateLimiter.checkWithKey("closed:key", policy, {
+        failOpen: false,
+      });
+      const openLimiter = new RateLimiter(mockStore, keyBuilder, { failOpen: false });
+      const openResult = await openLimiter.checkWithKey("open:key", policy, { failOpen: true });
+
+      expect(closedResult).toMatchObject({ success: false, degraded: true, remaining: 0 });
+      expect(openResult).toMatchObject({ success: true, degraded: true, remaining: 10 });
+    });
+
     it("should call onStoreError callback when store fails", async () => {
       const onStoreError = vi.fn();
       rateLimiter = new RateLimiter(mockStore, keyBuilder, { onStoreError });

@@ -47,7 +47,7 @@ title: "RateLimiter"
 
 ### check()
 
-> **check**(`context`, `policy`): `Promise`\<[`RateLimitResult`](/api/ratelimit-core/src/type-aliases/ratelimitresult/)\>
+> **check**(`context`, `policy`, `options?`): `Promise`\<[`RateLimitResult`](/api/ratelimit-core/src/type-aliases/ratelimitresult/)\>
 
 #### Parameters
 
@@ -59,15 +59,19 @@ title: "RateLimiter"
 
 [`RateLimitPolicy`](/api/ratelimit-core/src/type-aliases/ratelimitpolicy/)
 
+##### options?
+
+[`RateLimitCheckOptions`](/api/ratelimit-core/src/type-aliases/ratelimitcheckoptions/)
+
 #### Returns
 
 `Promise`\<[`RateLimitResult`](/api/ratelimit-core/src/type-aliases/ratelimitresult/)\>
 
-***
+---
 
 ### checkWithKey()
 
-> **checkWithKey**(`key`, `policy`): `Promise`\<[`RateLimitResult`](/api/ratelimit-core/src/type-aliases/ratelimitresult/)\>
+> **checkWithKey**(`key`, `policy`, `options?`): `Promise`\<[`RateLimitResult`](/api/ratelimit-core/src/type-aliases/ratelimitresult/)\>
 
 #### Parameters
 
@@ -79,11 +83,15 @@ title: "RateLimiter"
 
 [`RateLimitPolicy`](/api/ratelimit-core/src/type-aliases/ratelimitpolicy/)
 
+##### options?
+
+[`RateLimitCheckOptions`](/api/ratelimit-core/src/type-aliases/ratelimitcheckoptions/)
+
 #### Returns
 
 `Promise`\<[`RateLimitResult`](/api/ratelimit-core/src/type-aliases/ratelimitresult/)\>
 
-***
+---
 
 ### getStats()
 
@@ -99,7 +107,7 @@ title: "RateLimiter"
 
 `Promise`\<[`RateLimitStats`](/api/ratelimit-core/src/type-aliases/ratelimitstats/)\>
 
-***
+---
 
 ### refund()
 
@@ -123,7 +131,7 @@ title: "RateLimiter"
 
 `Promise`\<[`RateLimitRefundResult`](/api/ratelimit-core/src/type-aliases/ratelimitrefundresult/)\>
 
-***
+---
 
 ### refundWithKey()
 

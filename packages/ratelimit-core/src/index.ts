@@ -65,6 +65,7 @@ export {
   createSlidingWindowPolicy,
   createTokenBucketPolicy,
   RateLimiter,
+  type RateLimitCheckOptions,
   type RateLimiterContext,
   type RateLimiterKeyBuilder,
 } from "./libs/RateLimiter";

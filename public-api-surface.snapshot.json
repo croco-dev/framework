@@ -22381,6 +22381,11 @@
               "source": "./libs/types"
             },
             {
+              "name": "RateLimitCheckOptions",
+              "exportKind": "named",
+              "source": "./libs/RateLimiter"
+            },
+            {
               "name": "RateLimitClientIdentityMetadata",
               "exportKind": "named",
               "source": "./libs/middleware/rateLimitMiddleware"
