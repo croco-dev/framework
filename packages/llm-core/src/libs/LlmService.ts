@@ -4,6 +4,7 @@ import { Trace, withSpan } from "@croco/telemetry-api";
 import { LlmGeneratedEvent } from "./events/LlmGeneratedEvent";
 import { LlmStreamCompletedEvent } from "./events/LlmStreamCompletedEvent";
 import type { LlmRegistry } from "./LlmRegistry";
+import { LlmOperationAbortedProblem } from "./problems/LlmProblems";
 import { LlmServiceProblem } from "./problems/LlmServiceProblem";
 import type {
   EmbedManyParams,
@@ -34,10 +35,13 @@ export class LlmService {
   @Trace({ name: "llm.generate" })
   async generate(params: GenerateParams): Promise<GenerateResult> {
     try {
+      assertNotAborted(params.signal, "generate");
       const modelId = params.modelId ?? "default";
       const model = await this.registry.getModel(modelId);
       const result = await model.generate(params);
+      assertNotAborted(params.signal, "generate");
 
+      // Completion publication is the success commit point; it cannot be retracted by a later abort.
       await this.publishCompletionEvent({
         operation: "generate",
         modelId: model.modelId,
@@ -48,7 +52,7 @@ export class LlmService {
 
       return result;
     } catch (error) {
-      throw LlmServiceProblem.fromError(error);
+      throw normalizeOperationError(error, params.signal, "generate");
     }
   }
 
@@ -235,6 +239,10 @@ export class LlmService {
         await waitForProducer();
       }
 
+      removeAbortListener?.();
+      assertNotAborted(params.signal, "stream");
+
+      // Detaching before the synchronous check makes publication the stream's success commit point.
       if (completionEvent && !isCancelled) {
         await this.publishCompletionEvent(completionEvent);
       }
@@ -252,22 +260,28 @@ export class LlmService {
   @Trace({ name: "llm.embed" })
   async embed(params: EmbedParams): Promise<EmbedResult> {
     try {
+      assertNotAborted(params.signal, "embed");
       const model = params.modelId ?? "default";
       const llmModel = await this.registry.getModel(model);
-      return await llmModel.embed(params);
+      const result = await llmModel.embed(params);
+      assertNotAborted(params.signal, "embed");
+      return result;
     } catch (error) {
-      throw LlmServiceProblem.fromError(error);
+      throw normalizeOperationError(error, params.signal, "embed");
     }
   }
 
   @Trace({ name: "llm.embed_many" })
   async embedMany(params: EmbedManyParams): Promise<EmbedManyResult> {
     try {
+      assertNotAborted(params.signal, "embedMany");
       const model = params.modelId ?? "default";
       const llmModel = await this.registry.getModel(model);
-      return await llmModel.embedMany(params);
+      const result = await llmModel.embedMany(params);
+      assertNotAborted(params.signal, "embedMany");
+      return result;
     } catch (error) {
-      throw LlmServiceProblem.fromError(error);
+      throw normalizeOperationError(error, params.signal, "embedMany");
     }
   }
 
@@ -275,12 +289,15 @@ export class LlmService {
     return withSpan(
       async (span) => {
         try {
+          assertNotAborted(params.signal, "generateObject");
           const modelId = params.modelId ?? "default";
           span.setAttribute("llm.model_id", modelId);
           const model = await this.registry.getModel(modelId);
-          return await model.generateObject(params);
+          const result = await model.generateObject(params);
+          assertNotAborted(params.signal, "generateObject");
+          return result;
         } catch (error) {
-          throw LlmServiceProblem.fromError(error);
+          throw normalizeOperationError(error, params.signal, "generateObject");
         }
       },
       { name: "llm.generate_object" },
@@ -290,11 +307,14 @@ export class LlmService {
   @Trace({ name: "llm.call_tool" })
   async callTool(params: ToolCallParams): Promise<ToolCallResult> {
     try {
+      assertNotAborted(params.signal, "callTool");
       const modelId = params.modelId ?? "default";
       const model = await this.registry.getModel(modelId);
-      return await model.callTool(params);
+      const result = await model.callTool(params);
+      assertNotAborted(params.signal, "callTool");
+      return result;
     } catch (error) {
-      throw LlmServiceProblem.fromError(error);
+      throw normalizeOperationError(error, params.signal, "callTool");
     }
   }
 
@@ -337,4 +357,24 @@ export class LlmService {
       accuracy: usage.accuracy,
     };
   }
+}
+
+function assertNotAborted(signal: AbortSignal | undefined, operation: string): void {
+  if (signal?.aborted) {
+    throw new LlmOperationAbortedProblem(operation);
+  }
+}
+
+function normalizeOperationError(
+  error: unknown,
+  signal: AbortSignal | undefined,
+  operation: string,
+): LlmServiceProblem | LlmOperationAbortedProblem {
+  if (error instanceof LlmOperationAbortedProblem || signal?.aborted) {
+    return error instanceof LlmOperationAbortedProblem
+      ? error
+      : new LlmOperationAbortedProblem(operation);
+  }
+
+  return LlmServiceProblem.fromError(error);
 }

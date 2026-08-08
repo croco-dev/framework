@@ -5,6 +5,7 @@ import { LLM_METADATA_KEY, Llm, setLlmService } from "../../libs/decorators/Llm"
 import type { LlmService } from "../../libs/LlmService";
 import { InvalidLlmPromptProblem } from "../../libs/problems/LlmProblems";
 import type { LlmMetadata } from "../../libs/types";
+import type { LlmInvocationOptions } from "../../libs/decorators/Llm";
 
 describe("@Llm Decorator", () => {
   let mockLlmService!: LlmService;
@@ -13,7 +14,7 @@ describe("@Llm Decorator", () => {
   // 테스트용 서비스 클래스
   class TestService {
     @Llm({ modelId: "gpt-4" })
-    async generateText(prompt: string): Promise<string> {
+    async generateText(prompt: string, _options?: LlmInvocationOptions): Promise<string> {
       return prompt; // 데코레이터가 오버라이드함
     }
 
@@ -93,6 +94,16 @@ describe("@Llm Decorator", () => {
       const result = await testService.generateText("Test prompt");
 
       expect(result).toBe("Generated: Test prompt");
+    });
+
+    it("should forward a per-call abort signal", async () => {
+      const controller = new AbortController();
+
+      await testService.generateText("Cancel this", { signal: controller.signal });
+
+      expect(mockLlmService.generate).toHaveBeenCalledWith(
+        expect.objectContaining({ signal: controller.signal }),
+      );
     });
 
     it("should handle multiple parameters", async () => {

@@ -13,13 +13,13 @@ title: "BillingProviderConformanceCapabilityEvidence"
 
 > `readonly` **capability**: [`BillingProviderCapability`](/api/billing-core/src/type-aliases/billingprovidercapability/)
 
----
+***
 
 ### caseNames
 
 > `readonly` **caseNames**: readonly `string`[]
 
----
+***
 
 ### status
 

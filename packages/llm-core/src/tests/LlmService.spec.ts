@@ -4,7 +4,8 @@ import { LlmStreamCompletedEvent } from "../libs/events/LlmStreamCompletedEvent"
 import { InMemoryLlmModel } from "../libs/InMemoryLlmModel";
 import { InMemoryLlmRegistry } from "../libs/InMemoryLlmRegistry";
 import { LlmService } from "../libs/LlmService";
-import type { StreamChunk, StreamParams } from "../libs/types";
+import { LlmOperationAbortedProblem } from "../libs/problems/LlmProblems";
+import type { GenerateParams, GenerateResult, StreamChunk, StreamParams } from "../libs/types";
 
 class FailingStreamModel extends InMemoryLlmModel {
   constructor() {
@@ -53,6 +54,31 @@ class DeltaStreamModel extends InMemoryLlmModel {
 
       yield { delta };
     }
+  }
+}
+
+class IgnoringAbortGenerateModel extends InMemoryLlmModel {
+  observedSignal?: AbortSignal;
+  complete?: () => void;
+
+  constructor() {
+    super("ignoring-abort-generate-model");
+  }
+
+  override async generate(params: GenerateParams): Promise<GenerateResult> {
+    this.observedSignal = params.signal;
+
+    return await new Promise<GenerateResult>((resolve) => {
+      this.complete = () =>
+        resolve({
+          text: "completed after cancellation",
+          usage: {
+            promptTokens: 1,
+            completionTokens: 1,
+            totalTokens: 2,
+          },
+        });
+    });
   }
 }
 
@@ -192,6 +218,66 @@ describe("LlmService", () => {
 
       expect(second.text).toBe("Updated response");
     });
+
+    it("should reject an active abort without publishing a completion event", async () => {
+      const model = new IgnoringAbortGenerateModel();
+      const controller = new AbortController();
+      registry.registerProvider(model.modelId, () => model);
+
+      const generation = service.generate({
+        modelId: model.modelId,
+        prompt: "cancel me",
+        signal: controller.signal,
+      });
+
+      await vi.waitFor(() => expect(model.observedSignal).toBe(controller.signal));
+      controller.abort();
+      model.complete?.();
+
+      await expect(generation).rejects.toBeInstanceOf(LlmOperationAbortedProblem);
+      expect(eventBus.publish).not.toHaveBeenCalled();
+    });
+
+    it("should treat completion publication as the terminal success boundary", async () => {
+      const controller = new AbortController();
+      let releasePublish: (() => void) | undefined;
+      vi.mocked(eventBus.publish).mockImplementationOnce(
+        async () =>
+          await new Promise<void>((resolve) => {
+            releasePublish = resolve;
+          }),
+      );
+
+      const generation = service.generate({
+        modelId: "test-model",
+        prompt: "Hello",
+        signal: controller.signal,
+      });
+
+      await vi.waitFor(() => expect(eventBus.publish).toHaveBeenCalledOnce());
+      controller.abort();
+      releasePublish?.();
+
+      await expect(generation).resolves.toMatchObject({ text: "Hi there!" });
+    });
+  });
+
+  it.each([
+    ["generate", (signal: AbortSignal) => service.generate({ prompt: "x", signal })],
+    ["stream", (signal: AbortSignal) => collectStream(service.stream({ prompt: "x", signal }))],
+    [
+      "generateObject",
+      (signal: AbortSignal) => service.generateObject({ prompt: "x", schema: {}, signal }),
+    ],
+    ["callTool", (signal: AbortSignal) => service.callTool({ prompt: "x", tools: [], signal })],
+    ["embed", (signal: AbortSignal) => service.embed({ text: "x", signal })],
+    ["embedMany", (signal: AbortSignal) => service.embedMany({ texts: ["x"], signal })],
+  ])("should normalize pre-aborted %s operations", async (_operation, invoke) => {
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(invoke(controller.signal)).rejects.toBeInstanceOf(LlmOperationAbortedProblem);
+    expect(eventBus.publish).not.toHaveBeenCalled();
   });
 
   describe("stream", () => {
@@ -425,14 +511,17 @@ describe("LlmService", () => {
       const abortController = new AbortController();
       registry.registerProvider("abortable-stream-model", () => model);
 
-      for await (const _chunk of service.stream({
-        prompt: "Count",
-        modelId: "abortable-stream-model",
-        signal: abortController.signal,
-      })) {
-        abortController.abort();
-      }
+      const consume = async (): Promise<void> => {
+        for await (const _chunk of service.stream({
+          prompt: "Count",
+          modelId: "abortable-stream-model",
+          signal: abortController.signal,
+        })) {
+          abortController.abort();
+        }
+      };
 
+      await expect(consume()).rejects.toBeInstanceOf(LlmOperationAbortedProblem);
       expect(model.observedAbort).toBe(true);
       expect(eventBus.publish).not.toHaveBeenCalledWith(
         expect.objectContaining({
@@ -440,6 +529,31 @@ describe("LlmService", () => {
           modelId: "abortable-stream-model",
         }),
       );
+    });
+
+    it("should treat stream completion publication as the terminal success boundary", async () => {
+      const controller = new AbortController();
+      let releasePublish: (() => void) | undefined;
+      vi.mocked(eventBus.publish).mockImplementationOnce(
+        async () =>
+          await new Promise<void>((resolve) => {
+            releasePublish = resolve;
+          }),
+      );
+
+      const consumption = collectStream(
+        service.stream({
+          prompt: "Stream test",
+          modelId: "stream-model",
+          signal: controller.signal,
+        }),
+      );
+
+      await vi.waitFor(() => expect(eventBus.publish).toHaveBeenCalledOnce());
+      controller.abort();
+      releasePublish?.();
+
+      await expect(consumption).resolves.toEqual(expect.arrayContaining([expect.any(String)]));
     });
   });
 

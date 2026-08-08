@@ -59,7 +59,7 @@ title: "TaskRunner"
 
 `Promise`\<`unknown`\>
 
----
+***
 
 ### retry()
 

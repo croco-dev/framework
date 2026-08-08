@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { withSpan } from "@croco/telemetry-api";
 import { OpenAiLlmModel } from "../libs/OpenAiLlmModel";
 import {
   OpenAiAbortProblem,
@@ -23,9 +24,14 @@ const EMBEDDING_MODEL_ID = "text-embedding-croco-test";
 class MockOpenAiTransport implements OpenAiTransport {
   readonly responseRequests: OpenAiResponseRequest[] = [];
   readonly embeddingRequests: OpenAiEmbeddingRequest[] = [];
+  readonly requestSignals: Array<AbortSignal | undefined> = [];
 
-  async createResponse(request: OpenAiResponseRequest): Promise<OpenAiResponse> {
+  async createResponse(
+    request: OpenAiResponseRequest,
+    options?: OpenAiRequestOptions,
+  ): Promise<OpenAiResponse> {
     this.responseRequests.push(request);
+    this.requestSignals.push(options?.signal);
 
     if (request.text?.format.type === "json_schema") {
       return createTextResponse(JSON.stringify({ label: "conformant", count: 2 }), request.model);
@@ -60,8 +66,12 @@ class MockOpenAiTransport implements OpenAiTransport {
     return createStream(options?.signal);
   }
 
-  async createEmbedding(request: OpenAiEmbeddingRequest): Promise<OpenAiEmbeddingResponse> {
+  async createEmbedding(
+    request: OpenAiEmbeddingRequest,
+    options?: OpenAiRequestOptions,
+  ): Promise<OpenAiEmbeddingResponse> {
     this.embeddingRequests.push(request);
+    this.requestSignals.push(options?.signal);
     const inputs = Array.isArray(request.input) ? request.input : [request.input];
 
     return {
@@ -75,6 +85,26 @@ class MockOpenAiTransport implements OpenAiTransport {
         total_tokens: inputs.reduce((sum, input) => sum + input.length, 0),
       },
     };
+  }
+}
+
+class AbortableOpenAiTransport extends MockOpenAiTransport {
+  override async createResponse(
+    request: OpenAiResponseRequest,
+    options?: OpenAiRequestOptions,
+  ): Promise<OpenAiResponse> {
+    this.responseRequests.push(request);
+    this.requestSignals.push(options?.signal);
+    return await rejectOnAbort(options?.signal);
+  }
+
+  override async createEmbedding(
+    request: OpenAiEmbeddingRequest,
+    options?: OpenAiRequestOptions,
+  ): Promise<OpenAiEmbeddingResponse> {
+    this.embeddingRequests.push(request);
+    this.requestSignals.push(options?.signal);
+    return await rejectOnAbort(options?.signal);
   }
 }
 
@@ -409,6 +439,131 @@ describe("OpenAiLlmModel", () => {
     await iterator.return?.();
   });
 
+  it("does not record stream usage when aborted after the final usage chunk", async () => {
+    const capture = installTestingTelemetryCapture();
+    const controller = new AbortController();
+    const model = new OpenAiLlmModel({
+      modelId: MODEL_ID,
+      transport: new MockOpenAiTransport(),
+    });
+
+    await capture.run(
+      async () =>
+        await withSpan(
+          async () => {
+            const iterator = model
+              .stream({
+                prompt: "Stream deterministic text",
+                signal: controller.signal,
+              })
+              [Symbol.asyncIterator]();
+
+            await iterator.next();
+            await iterator.next();
+            const finalChunk = await iterator.next();
+            expect(finalChunk.value?.usage).toBeDefined();
+
+            controller.abort();
+            await expect(iterator.next()).rejects.toThrow(OpenAiAbortProblem);
+            await iterator.return?.();
+          },
+          { name: "test.openai.stream.abort" },
+        ),
+    );
+
+    expect(capture.spans.flatMap((span) => span.events)).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ name: "llm.openai.usage" })]),
+    );
+  });
+
+  it("records stream usage only after clean iterator completion", async () => {
+    const capture = installTestingTelemetryCapture();
+    const model = new OpenAiLlmModel({
+      modelId: MODEL_ID,
+      transport: new MockOpenAiTransport(),
+    });
+
+    await capture.run(
+      async () =>
+        await withSpan(
+          async () => await collectStream(model.stream({ prompt: "Stream deterministic text" })),
+          { name: "test.openai.stream.complete" },
+        ),
+    );
+
+    expect(capture.spans.flatMap((span) => span.events)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ name: "llm.openai.usage" })]),
+    );
+  });
+
+  it.each([
+    [
+      "generate",
+      (model: OpenAiLlmModel, signal: AbortSignal) => model.generate({ prompt: "x", signal }),
+    ],
+    [
+      "generateObject",
+      (model: OpenAiLlmModel, signal: AbortSignal) =>
+        model.generateObject({ prompt: "x", schema: {}, signal }),
+    ],
+    [
+      "callTool",
+      (model: OpenAiLlmModel, signal: AbortSignal) =>
+        model.callTool({ prompt: "x", tools: [], signal }),
+    ],
+    ["embed", (model: OpenAiLlmModel, signal: AbortSignal) => model.embed({ text: "x", signal })],
+    [
+      "embedMany",
+      (model: OpenAiLlmModel, signal: AbortSignal) => model.embedMany({ texts: ["x"], signal }),
+    ],
+  ])("forwards active aborts for %s without recording usage", async (_operation, invoke) => {
+    const capture = installTestingTelemetryCapture();
+    const transport = new AbortableOpenAiTransport();
+    const controller = new AbortController();
+    const model = new OpenAiLlmModel({ modelId: MODEL_ID, transport });
+
+    const operation = capture.run(async () => await invoke(model, controller.signal));
+    await Promise.resolve();
+    controller.abort();
+
+    await expect(operation).rejects.toBeInstanceOf(OpenAiAbortProblem);
+    expect(transport.requestSignals).toContain(controller.signal);
+    expect(capture.spans.flatMap((span) => span.events)).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ name: "llm.openai.usage" })]),
+    );
+  });
+
+  it.each([
+    [
+      "generate",
+      (model: OpenAiLlmModel, signal: AbortSignal) => model.generate({ prompt: "x", signal }),
+    ],
+    [
+      "generateObject",
+      (model: OpenAiLlmModel, signal: AbortSignal) =>
+        model.generateObject({ prompt: "x", schema: {}, signal }),
+    ],
+    [
+      "callTool",
+      (model: OpenAiLlmModel, signal: AbortSignal) =>
+        model.callTool({ prompt: "x", tools: [], signal }),
+    ],
+    ["embed", (model: OpenAiLlmModel, signal: AbortSignal) => model.embed({ text: "x", signal })],
+    [
+      "embedMany",
+      (model: OpenAiLlmModel, signal: AbortSignal) => model.embedMany({ texts: ["x"], signal }),
+    ],
+  ])("rejects pre-aborted %s before starting transport work", async (_operation, invoke) => {
+    const transport = new MockOpenAiTransport();
+    const controller = new AbortController();
+    const model = new OpenAiLlmModel({ modelId: MODEL_ID, transport });
+    controller.abort();
+
+    await expect(invoke(model, controller.signal)).rejects.toBeInstanceOf(OpenAiAbortProblem);
+    expect(transport.responseRequests).toHaveLength(0);
+    expect(transport.embeddingRequests).toHaveLength(0);
+  });
+
   it("fails deterministically when SDK-backed configuration is missing", () => {
     expect(() => new OpenAiLlmModel({ modelId: MODEL_ID, env: {} })).toThrow(
       OpenAiMissingConfigProblem,
@@ -500,4 +655,19 @@ async function* createStream(signal?: AbortSignal): AsyncIterable<OpenAiStreamEv
 function createEmbedding(input: string): number[] {
   const base = input.length || 1;
   return [base / 10, base / 20, base / 30, base / 40];
+}
+
+async function rejectOnAbort<T>(signal: AbortSignal | undefined): Promise<T> {
+  return await new Promise<T>((_resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new DOMException("The operation was aborted", "AbortError"));
+      return;
+    }
+
+    signal?.addEventListener(
+      "abort",
+      () => reject(new DOMException("The operation was aborted", "AbortError")),
+      { once: true },
+    );
+  });
 }

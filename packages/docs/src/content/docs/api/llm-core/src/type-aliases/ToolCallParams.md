@@ -5,11 +5,11 @@ prev: false
 title: "ToolCallParams"
 ---
 
-> **ToolCallParams** = `object`
+> **ToolCallParams** = [`CancellableRequestOptions`](/api/llm-core/src/type-aliases/cancellablerequestoptions/) & `object`
 
 툴 호출 파라미터
 
-## Properties
+## Type Declaration
 
 ### modelId?
 
@@ -17,23 +17,17 @@ title: "ToolCallParams"
 
 모델 ID
 
-***
-
 ### prompt
 
 > **prompt**: `string`
 
 사용자 프롬프트
 
-***
-
 ### systemPrompt?
 
 > `optional` **systemPrompt?**: `string`
 
 시스템 프롬프트
-
-***
 
 ### tools
 

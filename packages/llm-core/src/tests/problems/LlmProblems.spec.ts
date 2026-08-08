@@ -2,6 +2,7 @@ import { ProblemCategory } from "@croco/problems-core";
 import { describe, expect, it } from "vitest";
 import {
   InvalidLlmResponseProblem,
+  LlmOperationAbortedProblem,
   LlmProblem,
   LlmProviderNotFoundProblem,
   LlmRateLimitProblem,
@@ -16,6 +17,14 @@ class TestLlmProblem extends LlmProblem {
 }
 
 describe("LlmProblems", () => {
+  it("should expose operation context for cancellations", () => {
+    const problem = new LlmOperationAbortedProblem("embedMany");
+
+    expect(problem.code).toBe("llm-core/operation-aborted");
+    expect(problem.category).toBe(ProblemCategory.BadRequest);
+    expect(problem.toJSON()).toMatchObject({ operation: "embedMany" });
+  });
+
   describe("LlmProblem", () => {
     it("should create base problem with correct properties", () => {
       const problem = new TestLlmProblem(

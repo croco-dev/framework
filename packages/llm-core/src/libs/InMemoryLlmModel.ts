@@ -1,5 +1,5 @@
 import { LlmModel } from "./LlmModel";
-import { InvalidLlmResponseProblem } from "./problems/LlmProblems";
+import { InvalidLlmResponseProblem, LlmOperationAbortedProblem } from "./problems/LlmProblems";
 import { LlmToolExecutionProblem } from "./problems/LlmServiceProblem";
 import type {
   EmbedManyParams,
@@ -42,6 +42,7 @@ export class InMemoryLlmModel extends LlmModel {
   }
 
   async generate(params: GenerateParams): Promise<GenerateResult> {
+    assertNotAborted(params.signal, "generate");
     const response = this.responses.get(params.prompt) ?? `Mock response to: ${params.prompt}`;
     const promptTokens = params.prompt.length;
     const completionTokens = response.length;
@@ -61,6 +62,7 @@ export class InMemoryLlmModel extends LlmModel {
   }
 
   async *stream(params: StreamParams): AsyncIterable<StreamChunk> {
+    assertNotAborted(params.signal, "stream");
     const response = this.responses.get(params.prompt) ?? `Mock response to: ${params.prompt}`;
 
     if (!response || response.trim().length === 0) {
@@ -72,7 +74,7 @@ export class InMemoryLlmModel extends LlmModel {
 
     for (let i = 0; i < chunks.length; i++) {
       if (params.signal?.aborted) {
-        return;
+        throw new LlmOperationAbortedProblem("stream");
       }
 
       const chunk = chunks[i];
@@ -94,6 +96,7 @@ export class InMemoryLlmModel extends LlmModel {
   }
 
   async generateObject<T>(params: GenerateObjectParams<T>): Promise<T> {
+    assertNotAborted(params.signal, "generateObject");
     const response = this.responses.get(params.prompt) ?? `Mock response to: ${params.prompt}`;
 
     try {
@@ -104,6 +107,7 @@ export class InMemoryLlmModel extends LlmModel {
   }
 
   async callTool(params: ToolCallParams): Promise<ToolCallResult> {
+    assertNotAborted(params.signal, "callTool");
     const response = this.responses.get(params.prompt) ?? "";
 
     if (!response || !response.includes(":")) {
@@ -155,6 +159,7 @@ export class InMemoryLlmModel extends LlmModel {
   }
 
   async embed(params: EmbedParams): Promise<EmbedResult> {
+    assertNotAborted(params.signal, "embed");
     const embedding = this.getOrCreateEmbedding(params.text);
 
     return {
@@ -169,6 +174,7 @@ export class InMemoryLlmModel extends LlmModel {
   }
 
   async embedMany(params: EmbedManyParams): Promise<EmbedManyResult> {
+    assertNotAborted(params.signal, "embedMany");
     const embeddings = params.texts.map((text) => [...this.getOrCreateEmbedding(text)]);
 
     const totalTokens = params.texts.reduce((sum, text) => sum + text.length, 0);
@@ -216,5 +222,11 @@ export class InMemoryLlmModel extends LlmModel {
       state = Math.imul(state, 1664525) + 1013904223;
       return (state >>> 0) / 4294967296;
     });
+  }
+}
+
+function assertNotAborted(signal: AbortSignal | undefined, operation: string): void {
+  if (signal?.aborted) {
+    throw new LlmOperationAbortedProblem(operation);
   }
 }

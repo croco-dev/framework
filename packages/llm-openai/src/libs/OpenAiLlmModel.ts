@@ -77,6 +77,7 @@ export class OpenAiLlmModel extends LlmModel {
       const response = await this.callResponseApi(
         "generate",
         this.createResponseRequest(model, params),
+        params.signal,
       );
       const text = extractOutputText(response, "generate");
       const usage = mapUsage(response.usage, "generate");
@@ -92,6 +93,7 @@ export class OpenAiLlmModel extends LlmModel {
 
   async *stream(params: StreamParams): AsyncIterable<StreamChunk> {
     const model = this.resolveModelId(params.modelId);
+    let completedUsage: LlmUsage | undefined;
 
     if (params.signal?.aborted) {
       throw new OpenAiAbortProblem("stream");
@@ -113,7 +115,11 @@ export class OpenAiLlmModel extends LlmModel {
           throw new OpenAiAbortProblem("stream");
         }
 
-        const chunk = this.eventToStreamChunk(event, model);
+        if (event.type === "response.completed" && event.response?.usage) {
+          completedUsage = mapUsage(event.response.usage, "stream");
+        }
+
+        const chunk = this.eventToStreamChunk(event);
         if (chunk) {
           yield chunk;
         }
@@ -121,6 +127,10 @@ export class OpenAiLlmModel extends LlmModel {
 
       if (params.signal?.aborted) {
         throw new OpenAiAbortProblem("stream");
+      }
+
+      if (completedUsage) {
+        this.recordUsageEvent("stream", model, completedUsage);
       }
     } catch (error) {
       throw normalizeOpenAiError(error, "stream");
@@ -135,17 +145,21 @@ export class OpenAiLlmModel extends LlmModel {
       model,
       "generateObject",
       async () => {
-        const response = await this.callResponseApi("generateObject", {
-          ...this.createResponseRequest(model, params),
-          text: {
-            format: {
-              type: "json_schema",
-              name: this.structuredOutputName,
-              strict: true,
-              schema: params.schema,
+        const response = await this.callResponseApi(
+          "generateObject",
+          {
+            ...this.createResponseRequest(model, params),
+            text: {
+              format: {
+                type: "json_schema",
+                name: this.structuredOutputName,
+                strict: true,
+                schema: params.schema,
+              },
             },
           },
-        });
+          params.signal,
+        );
 
         const usage = mapUsage(response.usage, "generateObject");
         this.recordUsageEvent("generateObject", model, usage);
@@ -171,11 +185,15 @@ export class OpenAiLlmModel extends LlmModel {
     const model = this.resolveModelId(params.modelId);
 
     return await this.withOpenAiSpan("llm.openai.call_tool", model, "callTool", async () => {
-      const response = await this.callResponseApi("callTool", {
-        ...this.createResponseRequest(model, params),
-        tools: params.tools.map(toOpenAiFunctionTool),
-        tool_choice: "auto",
-      });
+      const response = await this.callResponseApi(
+        "callTool",
+        {
+          ...this.createResponseRequest(model, params),
+          tools: params.tools.map(toOpenAiFunctionTool),
+          tool_choice: "auto",
+        },
+        params.signal,
+      );
       const usage = mapUsage(response.usage, "callTool");
       this.recordUsageEvent("callTool", model, usage);
 
@@ -190,11 +208,15 @@ export class OpenAiLlmModel extends LlmModel {
     const model = this.resolveEmbeddingModelId(params.modelId);
 
     return await this.withOpenAiSpan("llm.openai.embed", model, "embed", async () => {
-      const response = await this.callEmbeddingApi("embed", {
-        model,
-        input: params.text,
-        encoding_format: "float",
-      });
+      const response = await this.callEmbeddingApi(
+        "embed",
+        {
+          model,
+          input: params.text,
+          encoding_format: "float",
+        },
+        params.signal,
+      );
       const embedding = extractEmbedding(response, 0, "embed");
       const usage = mapEmbeddingUsage(response.usage, "embed");
       this.recordUsageEvent("embed", model, usage);
@@ -210,11 +232,15 @@ export class OpenAiLlmModel extends LlmModel {
     const model = this.resolveEmbeddingModelId(params.modelId);
 
     return await this.withOpenAiSpan("llm.openai.embed_many", model, "embedMany", async () => {
-      const response = await this.callEmbeddingApi("embedMany", {
-        model,
-        input: params.texts,
-        encoding_format: "float",
-      });
+      const response = await this.callEmbeddingApi(
+        "embedMany",
+        {
+          model,
+          input: params.texts,
+          encoding_format: "float",
+        },
+        params.signal,
+      );
       const embeddings = params.texts.map((_text, index) =>
         extractEmbedding(response, index, "embedMany"),
       );
@@ -256,9 +282,16 @@ export class OpenAiLlmModel extends LlmModel {
   private async callResponseApi(
     operation: string,
     request: OpenAiResponseRequest,
+    signal?: AbortSignal,
   ): Promise<OpenAiResponse> {
+    this.assertNotAborted(signal, operation);
+
     try {
-      const response = await this.transport.createResponse(request);
+      const response = await this.transport.createResponse(
+        request,
+        signal ? { signal } : undefined,
+      );
+      this.assertNotAborted(signal, operation);
       if (response.error) {
         throw new OpenAiInvalidResponseProblem(operation, "response contained an error payload");
       }
@@ -272,15 +305,23 @@ export class OpenAiLlmModel extends LlmModel {
   private async callEmbeddingApi(
     operation: string,
     request: Parameters<OpenAiTransport["createEmbedding"]>[0],
+    signal?: AbortSignal,
   ): Promise<OpenAiEmbeddingResponse> {
+    this.assertNotAborted(signal, operation);
+
     try {
-      return await this.transport.createEmbedding(request);
+      const response = await this.transport.createEmbedding(
+        request,
+        signal ? { signal } : undefined,
+      );
+      this.assertNotAborted(signal, operation);
+      return response;
     } catch (error) {
       throw normalizeOpenAiError(error, operation);
     }
   }
 
-  private eventToStreamChunk(event: OpenAiStreamEvent, model: string): StreamChunk | null {
+  private eventToStreamChunk(event: OpenAiStreamEvent): StreamChunk | null {
     if (event.type === "error") {
       throw normalizeOpenAiError(event.error ?? event, "stream");
     }
@@ -293,7 +334,6 @@ export class OpenAiLlmModel extends LlmModel {
 
     if (event.type === "response.completed" && event.response?.usage) {
       const usage = mapUsage(event.response.usage, "stream");
-      this.recordUsageEvent("stream", model, usage);
       return {
         delta: "",
         usage,
@@ -341,6 +381,12 @@ export class OpenAiLlmModel extends LlmModel {
       totalTokens: usage.totalTokens,
       accuracy: usage.accuracy ?? "UNKNOWN",
     });
+  }
+
+  private assertNotAborted(signal: AbortSignal | undefined, operation: string): void {
+    if (signal?.aborted) {
+      throw new OpenAiAbortProblem(operation);
+    }
   }
 }
 

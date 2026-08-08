@@ -71,55 +71,55 @@ readonly [`TestKernelResourceEvidence`](/api/testing/src/type-aliases/testkernel
 
 > `readonly` **app**: [`CrocoApp`](/api/transports-http/src/classes/crocoapp/)
 
----
+***
 
 ### clock
 
 > `readonly` **clock**: [`TestClock`](/api/testing/src/classes/testclock/)
 
----
+***
 
 ### environment
 
 > `readonly` **environment**: [`TestEnvironment`](/api/testing/src/classes/testenvironment/)
 
----
+***
 
 ### fidelity
 
 > `readonly` **fidelity**: [`TestKernelFidelity`](/api/testing/src/type-aliases/testkernelfidelity/)
 
----
+***
 
 ### http
 
 > `readonly` **http**: [`TestKernelHttp`](/api/testing/src/classes/testkernelhttp/)
 
----
+***
 
 ### ids
 
 > `readonly` **ids**: [`TestIdSource`](/api/testing/src/classes/testidsource/)
 
----
+***
 
 ### network
 
 > `readonly` **network**: [`TestNetwork`](/api/testing/src/classes/testnetwork/)
 
----
+***
 
 ### random
 
 > `readonly` **random**: [`TestRandomSource`](/api/testing/src/classes/testrandomsource/)
 
----
+***
 
 ### retry
 
 > `readonly` **retry**: [`TestRetryDependencies`](/api/testing/src/type-aliases/testretrydependencies/)
 
----
+***
 
 ### transactionContext
 
@@ -137,7 +137,7 @@ readonly [`TestKernelResourceEvidence`](/api/testing/src/type-aliases/testkernel
 
 readonly [`TestKernelEvidence`](/api/testing/src/type-aliases/testkernelevidence/)[]
 
----
+***
 
 ### replay
 
@@ -149,7 +149,7 @@ readonly [`TestKernelEvidence`](/api/testing/src/type-aliases/testkernelevidence
 
 [`TestReplayMetadata`](/api/testing/src/type-aliases/testreplaymetadata/)
 
----
+***
 
 ### resourceEvidence
 
@@ -175,7 +175,7 @@ readonly [`TestKernelResourceEvidence`](/api/testing/src/type-aliases/testkernel
 
 `AsyncDisposable.[asyncDispose]`
 
----
+***
 
 ### dispose()
 
@@ -185,7 +185,7 @@ readonly [`TestKernelResourceEvidence`](/api/testing/src/type-aliases/testkernel
 
 `Promise`\<`void`\>
 
----
+***
 
 ### expectClean()
 
@@ -195,7 +195,7 @@ readonly [`TestKernelResourceEvidence`](/api/testing/src/type-aliases/testkernel
 
 `void`
 
----
+***
 
 ### get()
 
@@ -217,7 +217,7 @@ readonly [`TestKernelResourceEvidence`](/api/testing/src/type-aliases/testkernel
 
 `T`
 
----
+***
 
 ### request()
 
@@ -237,7 +237,7 @@ readonly [`TestKernelResourceEvidence`](/api/testing/src/type-aliases/testkernel
 
 `Promise`\<`Response`\>
 
----
+***
 
 ### resource()
 
@@ -259,7 +259,7 @@ readonly [`TestKernelResourceEvidence`](/api/testing/src/type-aliases/testkernel
 
 `TConnection`
 
----
+***
 
 ### run()
 
@@ -303,7 +303,7 @@ readonly [`TestKernelResourceEvidence`](/api/testing/src/type-aliases/testkernel
 
 `T`
 
----
+***
 
 ### track()
 
@@ -329,7 +329,7 @@ readonly [`TestKernelResourceEvidence`](/api/testing/src/type-aliases/testkernel
 
 `Promise`\<`T`\>
 
----
+***
 
 ### trackEventHandler()
 
@@ -355,7 +355,7 @@ readonly [`TestKernelResourceEvidence`](/api/testing/src/type-aliases/testkernel
 
 `Promise`\<`T`\>
 
----
+***
 
 ### trackResource()
 
@@ -381,7 +381,7 @@ readonly [`TestKernelResourceEvidence`](/api/testing/src/type-aliases/testkernel
 
 `Promise`\<`T`\>
 
----
+***
 
 ### trackSpan()
 
@@ -407,7 +407,7 @@ readonly [`TestKernelResourceEvidence`](/api/testing/src/type-aliases/testkernel
 
 `Promise`\<`T`\>
 
----
+***
 
 ### waitUntil()
 

@@ -14678,6 +14678,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "LlmOperationAbortedProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/LlmProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "LlmProblem",
               "exportKind": "named",
               "source": "./libs/problems/LlmProblems",
@@ -14770,6 +14776,11 @@
           ],
           "typeExports": [
             {
+              "name": "CancellableRequestOptions",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
               "name": "EmbedManyParams",
               "exportKind": "named",
               "source": "./libs/types"
@@ -14808,6 +14819,11 @@
               "name": "LlmCapabilities",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "LlmInvocationOptions",
+              "exportKind": "named",
+              "source": "./libs/decorators/Llm"
             },
             {
               "name": "LlmMetadata",

@@ -37,7 +37,7 @@ title: "TestRandomSource"
 
 `TestRandomSource`
 
----
+***
 
 ### next()
 

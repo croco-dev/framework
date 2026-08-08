@@ -11,6 +11,7 @@ export {
   getLlmMetadata,
   Llm,
   type LlmMethodMetadata,
+  type LlmInvocationOptions,
   type LlmOptions,
   setLlmService,
 } from "./libs/decorators/Llm";
@@ -66,6 +67,7 @@ export { LlmService } from "./libs/LlmService";
 export {
   InvalidLlmPromptProblem,
   InvalidLlmResponseProblem,
+  LlmOperationAbortedProblem,
   LlmProblem,
   LlmProviderNotFoundProblem,
   LlmRateLimitProblem,
@@ -89,6 +91,7 @@ export {
  * 생성, 임베딩, 스트리밍, 도구 호출에 사용하는 핵심 타입들입니다.
  */
 export type {
+  CancellableRequestOptions,
   EmbedManyParams,
   EmbedManyResult,
   EmbedParams,

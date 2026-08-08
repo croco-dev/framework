@@ -31,7 +31,7 @@ title: "Llm"
 ```typescript
 class ChatService {
   @Llm({ modelId: 'gpt-4' })
-  async generateResponse(prompt: string): Promise<string> {
+  async generateResponse(prompt: string, options?: LlmInvocationOptions): Promise<string> {
     // 데코레이터가 LlmService를 호출하여 결과 반환
   }
 

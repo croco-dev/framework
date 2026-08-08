@@ -5,19 +5,17 @@ prev: false
 title: "EmbedParams"
 ---
 
-> **EmbedParams** = `object`
+> **EmbedParams** = [`CancellableRequestOptions`](/api/llm-core/src/type-aliases/cancellablerequestoptions/) & `object`
 
 임베딩 파라미터
 
-## Properties
+## Type Declaration
 
 ### modelId?
 
 > `optional` **modelId?**: `string`
 
 모델 ID (선택)
-
-***
 
 ### text
 

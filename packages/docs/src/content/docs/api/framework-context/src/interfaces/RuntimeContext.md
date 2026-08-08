@@ -11,43 +11,43 @@ title: "RuntimeContext"
 
 > `optional` **abortSignal?**: `AbortSignal`
 
----
+***
 
 ### capabilities
 
 > **capabilities**: [`RuntimeCapabilities`](/api/framework-context/src/type-aliases/runtimecapabilities/)
 
----
+***
 
 ### env?
 
 > `optional` **env?**: `Record`\<`string`, `unknown`\>
 
----
+***
 
 ### logger?
 
 > `optional` **logger?**: [`ILogger`](/api/framework-context/src/interfaces/ilogger/)
 
----
+***
 
 ### native?
 
 > `optional` **native?**: [`RuntimeNativeContext`](/api/framework-context/src/type-aliases/runtimenativecontext/)
 
----
+***
 
 ### platform
 
 > **platform**: [`RuntimePlatform`](/api/framework-context/src/type-aliases/runtimeplatform/)
 
----
+***
 
 ### requestId
 
 > **requestId**: `string`
 
----
+***
 
 ### trace?
 
@@ -63,7 +63,7 @@ title: "RuntimeContext"
 
 `Promise`\<`void`\>
 
----
+***
 
 ### shutdown()
 
@@ -73,7 +73,7 @@ title: "RuntimeContext"
 
 `Promise`\<`void`\>
 
----
+***
 
 ### waitUntil()
 
