@@ -15345,7 +15345,15 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         },
       },
       lifecycle: {
-        status: "active",
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The telemetry SDK no longer exposes non-executable metrics or logs configuration.",
+          migrationNote:
+            "Stop branching on TELEMETRY_SIGNAL_UNSUPPORTED and remove metrics or logs options from TelemetryConfig consumers.",
+          noReplacementReason:
+            "The trace-only runtime has no unsupported signal configuration path to replace this code.",
+        },
       },
       sources: [
         {
