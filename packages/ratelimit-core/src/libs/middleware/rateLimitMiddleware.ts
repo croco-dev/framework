@@ -64,7 +64,7 @@ export function createRateLimitMiddleware(options: CreateMiddlewareOptions): Mid
 
     ctx.set("rateLimitKey", key);
 
-    const result = await rateLimiter.checkWithKey(key, policy);
+    const result = await rateLimiter.checkWithKey(key, policy, { failOpen });
 
     ctx.set("rateLimitResult", result);
     if (result.refundReceipt) {

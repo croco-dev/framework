@@ -21,6 +21,8 @@ import { markSecurityMiddleware } from "./SecurityMiddlewareMarker";
 
 export type RateLimitSkipPredicate = (ctx: CrocoHttpContext) => boolean | Promise<boolean>;
 
+const RATE_LIMIT_STORE_DIAGNOSTIC_CONTEXT_KEY = "rateLimitStoreDiagnosticRecorded";
+
 export type TrustedRateLimitProxyHeader = "x-forwarded-for" | "x-real-ip" | "cf-connecting-ip";
 
 export type RateLimitClientIdentityPolicy = (
@@ -106,6 +108,8 @@ export function rateLimitHttpMiddleware(options: RateLimitHttpOptions): Middlewa
 
     const adapter = createContextAdapter(ctx as CrocoHttpContextAdapter);
     const wrappedNext = async (): Promise<void> => {
+      recordStoreUnavailable(ctx, createOptions.policy);
+
       try {
         await next();
       } catch (error) {
@@ -134,12 +138,31 @@ export function rateLimitHttpMiddleware(options: RateLimitHttpOptions): Middlewa
     try {
       await baseMiddleware(adapter, wrappedNext);
     } catch (error) {
+      recordStoreUnavailable(ctx, createOptions.policy);
       applyRateLimitHeaders(ctx);
       throw error;
     }
   };
 
   return markSecurityMiddleware(middleware, "rateLimitHttpMiddleware");
+}
+
+function recordStoreUnavailable(ctx: CrocoHttpContext, policy: RateLimitPolicy): void {
+  const result = ctx.get<RateLimitResult>("rateLimitResult");
+  if (!result?.degraded || ctx.get<boolean>(RATE_LIMIT_STORE_DIAGNOSTIC_CONTEXT_KEY)) {
+    return;
+  }
+
+  ctx.set(RATE_LIMIT_STORE_DIAGNOSTIC_CONTEXT_KEY, true);
+
+  recordRuntimeInspectionEvent(FrameworkContext.get()?.runtimeInspector, {
+    kind: "rate-limit.store-unavailable",
+    outcome: "failed",
+    details: {
+      policy: policy.name,
+      action: result.success ? "allowed" : "rejected",
+    },
+  });
 }
 
 async function refundRateLimit(
@@ -168,6 +191,7 @@ export type RateLimitMiddlewareFactoryOptions = {
   skipSuccessfulRequests?: boolean;
   skipFailedRequests?: boolean;
   skip?: RateLimitSkipPredicate;
+  failOpen?: boolean;
 };
 
 /**
@@ -181,6 +205,7 @@ export function createRateLimitMiddlewareFactory(options: RateLimitMiddlewareFac
     skipSuccessfulRequests,
     skipFailedRequests,
     skip,
+    failOpen,
   } = options;
 
   return (policyOverride?: RateLimitPolicy): MiddlewareFunction => {
@@ -191,6 +216,7 @@ export function createRateLimitMiddlewareFactory(options: RateLimitMiddlewareFac
       ...(skipSuccessfulRequests !== undefined ? { skipSuccessfulRequests } : {}),
       ...(skipFailedRequests !== undefined ? { skipFailedRequests } : {}),
       ...(skip ? { skip } : {}),
+      ...(failOpen !== undefined ? { failOpen } : {}),
     });
   };
 }

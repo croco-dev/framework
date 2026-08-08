@@ -106,6 +106,7 @@ describe("createRateLimitMiddleware", () => {
     expect(mockRateLimiter.checkWithKey).toHaveBeenCalledWith(
       'rl2:[["policy","test-global"],["ip","unknown"]]',
       policy,
+      { failOpen: false },
     );
     expect(ctx.get(RATE_LIMIT_CLIENT_IDENTITY_CONTEXT_KEY)).toEqual({
       value: "unknown",
@@ -155,6 +156,7 @@ describe("createRateLimitMiddleware", () => {
     expect(mockRateLimiter.checkWithKey).toHaveBeenCalledWith(
       'rl2:[["policy","test-global"],["ip","203.0.113.7"]]',
       policy,
+      { failOpen: false },
     );
     expect(ctx.get(RATE_LIMIT_CLIENT_IDENTITY_CONTEXT_KEY)).toEqual(metadata);
   });
@@ -279,6 +281,7 @@ describe("createRateLimitMiddleware", () => {
     expect(mockRateLimiter.checkWithKey).toHaveBeenCalledWith(
       'rl2:[["policy","test-global"],["ip","unknown"],["route",[["method","POST"],["path","/api/orders"]]]]',
       policy,
+      { failOpen: false },
     );
   });
 });

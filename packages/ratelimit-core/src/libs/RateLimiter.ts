@@ -14,6 +14,10 @@ import type {
 
 export type RateLimiterKeyBuilder<TContext> = (context: TContext, policyName?: string) => string;
 
+export type RateLimitCheckOptions = {
+  failOpen?: boolean;
+};
+
 export class RateLimiter<TContext = KeyContext> {
   private readonly store: RateLimitStore;
   private readonly keyBuilder: RateLimiterKeyBuilder<TContext>;
@@ -36,23 +40,31 @@ export class RateLimiter<TContext = KeyContext> {
     this.onStoreError = options?.onStoreError;
   }
 
-  async check(context: TContext, policy: RateLimitPolicy): Promise<RateLimitResult> {
+  async check(
+    context: TContext,
+    policy: RateLimitPolicy,
+    options?: RateLimitCheckOptions,
+  ): Promise<RateLimitResult> {
     const key = this.keyBuilder(context, policy.name);
 
     try {
       const result = await this.store.check(key, policy);
       return { ...result, policyName: policy.name };
     } catch (error) {
-      return this.handleStoreError(error, policy);
+      return this.handleStoreError(error, policy, options?.failOpen);
     }
   }
 
-  async checkWithKey(key: string, policy: RateLimitPolicy): Promise<RateLimitResult> {
+  async checkWithKey(
+    key: string,
+    policy: RateLimitPolicy,
+    options?: RateLimitCheckOptions,
+  ): Promise<RateLimitResult> {
     try {
       const result = await this.store.check(key, policy);
       return { ...result, policyName: policy.name };
     } catch (error) {
-      return this.handleStoreError(error, policy);
+      return this.handleStoreError(error, policy, options?.failOpen);
     }
   }
 
@@ -97,7 +109,11 @@ export class RateLimiter<TContext = KeyContext> {
     }
   }
 
-  private handleStoreError(error: unknown, policy: RateLimitPolicy): RateLimitResult {
+  private handleStoreError(
+    error: unknown,
+    policy: RateLimitPolicy,
+    failOpen = this.failOpen,
+  ): RateLimitResult {
     const now = Date.now();
     const storeError = normalizeStoreError(error);
     this.onStoreError?.(storeError);
@@ -106,7 +122,7 @@ export class RateLimiter<TContext = KeyContext> {
       policy.algorithm === "token-bucket" ? (policy as TokenBucketPolicy).capacity : policy.limit;
     const resetAtMs = now + getDegradedResetIntervalMs(policy);
 
-    if (this.failOpen) {
+    if (failOpen) {
       return {
         success: true,
         degraded: true,
