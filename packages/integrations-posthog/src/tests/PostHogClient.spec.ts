@@ -1,9 +1,11 @@
 import "reflect-metadata";
-import { Container, LOGGER_TOKEN } from "@croco/framework-context";
+import { Container, ContainerResolutionProblem, LOGGER_TOKEN } from "@croco/framework-context";
 import type { ILogger } from "@croco/framework-context";
 import { PostHog } from "posthog-node";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PostHogClient } from "../libs/PostHogClient";
+import { POSTHOG_CONFIG_TOKEN, registerPostHogConfig } from "../libs/PostHogConfig";
+import { PostHogConfigProblem } from "../libs/problems/PostHogProblems";
 
 vi.mock("posthog-node", () => {
   const PostHogMock = vi.fn();
@@ -18,6 +20,16 @@ const HOST_REQUIRED_MESSAGE =
   "[PostHogClient] PostHog host is required for data residency compliance. " +
   "Set host in config or POSTHOG_HOST env var. " +
   "Default (app.posthog.com) routes data to US servers.";
+
+function captureError(action: () => void): unknown {
+  try {
+    action();
+  } catch (error) {
+    return error;
+  }
+
+  throw new Error("Expected action to fail");
+}
 
 describe("PostHogClient", () => {
   let client!: PostHogClient;
@@ -50,6 +62,90 @@ describe("PostHogClient", () => {
     await client.shutdown();
 
     expect(shutdownSpy).toHaveBeenCalled();
+  });
+
+  it("should resolve through Container after configuration is registered", () => {
+    Container.reset();
+    Container.register(PostHogClient, "singleton");
+    Container.set(LOGGER_TOKEN, loggerMock as unknown as ILogger);
+    const config = registerPostHogConfig({
+      apiKey: "registered-key",
+      host: "https://registered.posthog.example",
+    });
+
+    const resolved = Container.get(PostHogClient);
+
+    expect(Container.get(POSTHOG_CONFIG_TOKEN)).toBe(config);
+    expect(resolved).toBe(Container.get(PostHogClient));
+    expect(PostHog).toHaveBeenLastCalledWith("registered-key", {
+      host: "https://registered.posthog.example",
+    });
+  });
+
+  it("should freeze the resolved environment host when configuration is registered", () => {
+    Container.reset();
+    Container.register(PostHogClient, "singleton");
+    Container.set(LOGGER_TOKEN, loggerMock as unknown as ILogger);
+    vi.stubEnv("POSTHOG_HOST", "https://registered-env.posthog.example");
+
+    const config = registerPostHogConfig({ apiKey: "registered-key" });
+    vi.unstubAllEnvs();
+    const resolved = Container.get(PostHogClient);
+
+    expect(config).toEqual({
+      apiKey: "registered-key",
+      host: "https://registered-env.posthog.example",
+    });
+    expect(Object.isFrozen(config)).toBe(true);
+    expect(resolved.getClient()).not.toBeUndefined();
+    expect(PostHog).toHaveBeenLastCalledWith("registered-key", {
+      host: "https://registered-env.posthog.example",
+    });
+    expect(loggerMock.warn).toHaveBeenCalledOnce();
+  });
+
+  it("should resolve with an environment host when no logger is registered", () => {
+    Container.reset();
+    Container.register(PostHogClient, "singleton");
+    vi.stubEnv("POSTHOG_HOST", "https://bootstrap.posthog.example");
+
+    registerPostHogConfig({ apiKey: "bootstrap-key" });
+    const resolved = Container.get(PostHogClient);
+
+    expect(resolved.getClient()).not.toBeUndefined();
+    expect(PostHog).toHaveBeenLastCalledWith("bootstrap-key", {
+      host: "https://bootstrap.posthog.example",
+    });
+  });
+
+  it("should fail with a stable DI diagnostic when configuration is not registered", () => {
+    Container.reset();
+    Container.register(PostHogClient, "singleton");
+
+    const error = captureError(() => Container.get(PostHogClient));
+
+    expect(error).toBeInstanceOf(ContainerResolutionProblem);
+    expect(error).toMatchObject({
+      code: "framework-context/di-resolution-failed",
+      reason: "missing-provider",
+    });
+  });
+
+  it.each([
+    ["apiKey", { apiKey: "", host: "https://valid.posthog.example" }],
+    ["host", { apiKey: "valid-key", host: "not-a-url" }],
+  ])("should reject invalid %s configuration before registration", (field, config) => {
+    Container.reset();
+
+    const configError = captureError(() => registerPostHogConfig(config));
+    expect(configError).toBeInstanceOf(PostHogConfigProblem);
+    expect(configError).toMatchObject({
+      code: "integrations-posthog/missing-config",
+      detail: expect.stringContaining(field),
+    });
+
+    const resolutionError = captureError(() => Container.get(POSTHOG_CONFIG_TOKEN));
+    expect(resolutionError).toMatchObject({ code: "framework-context/di-resolution-failed" });
   });
 
   it("should throw error when host is not provided", () => {
