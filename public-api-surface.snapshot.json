@@ -5677,10 +5677,28 @@
               "declarationKind": "function"
             },
             {
+              "name": "InvalidCacheConfigurationProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/CacheStoreProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "InvalidCacheTtlProblem",
               "exportKind": "named",
               "source": "./libs/problems/CacheStoreProblems",
               "declarationKind": "class"
+            },
+            {
+              "name": "MAX_CACHE_ENTRIES",
+              "exportKind": "named",
+              "source": "./libs/problems/CacheStoreProblems",
+              "declarationKind": "const"
+            },
+            {
+              "name": "MAX_CACHE_TIMER_DELAY_MS",
+              "exportKind": "named",
+              "source": "./libs/problems/CacheStoreProblems",
+              "declarationKind": "const"
             },
             {
               "name": "serializeCacheInvalidationManifest",
@@ -5831,6 +5849,11 @@
               "name": "CacheKeyDeclaration",
               "exportKind": "named",
               "source": "./libs/CacheInvalidationGraph"
+            },
+            {
+              "name": "CacheNumericOption",
+              "exportKind": "named",
+              "source": "./libs/problems/CacheStoreProblems"
             },
             {
               "name": "CachePattern",

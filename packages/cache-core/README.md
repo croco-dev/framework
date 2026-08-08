@@ -41,6 +41,10 @@ const value = await cache.get("user:1");
 const stats = cache.getStats();
 ```
 
+`maxEntries`는 1부터 `Number.MAX_SAFE_INTEGER` 사이의 정수여야 합니다. `cleanupIntervalMs`를 지정하면 Node.js가
+clamp하지 않는 1부터 2,147,483,647 사이의 정수 밀리초여야 합니다. 잘못된 값은 정리 타이머를 만들기 전에
+`InvalidCacheConfigurationProblem`으로 거부됩니다.
+
 ### getOrSet으로 singleflight 로딩
 
 ```typescript
