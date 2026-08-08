@@ -2059,6 +2059,16 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "protocols-trpc/duplicate-procedure-name": recovery({
+    cause: "Two controller routes resolve to the same tRPC domain and procedure name.",
+    userAction:
+      "Use an application build where every tRPC procedure has a unique domain and controller method name combination.",
+    operatorAction:
+      "Inspect the duplicate-procedure diagnostic for the existing and conflicting controller routes and their decorator source locations, then change one domain or controller method name.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "metrics-billing/metric-dropped": recovery({
     cause:
       "Billing metrics could not be recorded because the referenced account, subscription, or plan evidence was missing.",

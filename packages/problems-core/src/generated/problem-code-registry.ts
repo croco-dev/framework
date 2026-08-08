@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 582,
+  problemCount: 583,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -12232,6 +12232,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "protocols-trpc/duplicate-procedure-name",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#protocols-trpc-duplicate-procedure-name",
+      recovery: {
+        cause: "Two controller routes resolve to the same tRPC domain and procedure name.",
+        userAction:
+          "Use an application build where every tRPC procedure has a unique domain and controller method name combination.",
+        operatorAction:
+          "Inspect the duplicate-procedure diagnostic for the existing and conflicting controller routes and their decorator source locations, then change one domain or controller method name.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/protocols-trpc/src/libs/createTrpcRouter.ts",
+          line: 93,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "protocols-trpc/provider-container-required",
       category: "InternalServerError",
       status: 500,
@@ -12258,7 +12290,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/protocols-trpc/src/libs/createTrpcRouter.ts",
-          line: 70,
+          line: 77,
           column: 3,
           kind: "problem-class",
         },
@@ -12356,7 +12388,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/protocols-trpc/src/libs/createTrpcRouter.ts",
-          line: 57,
+          line: 64,
           column: 3,
           kind: "problem-class",
         },
@@ -14934,15 +14966,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         },
       },
       lifecycle: {
-        status: "deprecated",
-        deprecation: {
-          reason:
-            "The telemetry SDK no longer exposes non-executable metrics or logs configuration.",
-          migrationNote:
-            "Stop branching on TELEMETRY_SIGNAL_UNSUPPORTED and remove metrics or logs options from TelemetryConfig consumers.",
-          noReplacementReason:
-            "The trace-only runtime has no unsupported signal configuration path to replace this code.",
-        },
+        status: "active",
       },
       sources: [
         {

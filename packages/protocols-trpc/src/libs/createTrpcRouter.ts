@@ -1,7 +1,7 @@
 import { Container, Context } from "@croco/framework-context";
 import type { RequestContext } from "@croco/framework-context";
 import { Problem, ProblemCategory } from "@croco/problems-core";
-import type { RouteIR } from "@croco/protocols-core";
+import type { RouteContractSourceLocation, RouteIR } from "@croco/protocols-core";
 import { extractRouteIR } from "@croco/protocols-core";
 import { getFilters, getGuards, getInterceptors, type Constructor } from "@croco/protocols-rest";
 import {
@@ -17,6 +17,13 @@ import { TrpcExecutionPipeline, type TrpcPipelineConfig } from "./TrpcExecutionP
 
 type ControllerConstructor = (new () => object) & Function;
 type RouteHandler = (...args: unknown[]) => unknown;
+type TrpcRouteDiagnostic = {
+  readonly controllerName: string;
+  readonly methodName: string;
+  readonly httpMethod: string;
+  readonly path: string;
+  readonly sourceLocation?: RouteContractSourceLocation;
+};
 
 export type TrpcRouterOptions = {
   readonly container?: {
@@ -82,6 +89,27 @@ class TrpcProviderContainerProblem extends Problem {
   }
 }
 
+class TrpcDuplicateProcedureProblem extends Problem {
+  readonly code = "protocols-trpc/duplicate-procedure-name";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(
+    domain: string,
+    procedureName: string,
+    existingRoute: TrpcRouteDiagnostic,
+    conflictingRoute: TrpcRouteDiagnostic,
+  ) {
+    super(
+      undefined,
+      undefined,
+      formatDuplicateProcedureDetail(domain, procedureName, existingRoute, conflictingRoute),
+      {
+        extensions: { domain, procedureName, existingRoute, conflictingRoute },
+      },
+    );
+  }
+}
+
 /**
  * Creates a tRPC router whose procedures run Croco guards before input parsing, then interceptors around handlers.
  *
@@ -94,12 +122,28 @@ export function createTrpcRouter(
   options: TrpcRouterOptions = {},
 ): AnyRouter {
   const domains: Record<string, TRPCCreateRouterOptions> = {};
+  const procedureSources = new Map<string, Map<string, TrpcRouteDiagnostic>>();
 
   for (const controller of controllers) {
     const controllerCtor = controller as ControllerConstructor;
 
     for (const route of extractRouteIR(controllerCtor)) {
       const domain = getDomainName(route);
+      const routeDiagnostic = toRouteDiagnostic(route);
+      const domainSources = procedureSources.get(domain) ?? new Map();
+      const existingRoute = domainSources.get(route.methodName);
+
+      if (existingRoute) {
+        throw new TrpcDuplicateProcedureProblem(
+          domain,
+          route.methodName,
+          existingRoute,
+          routeDiagnostic,
+        );
+      }
+
+      domainSources.set(route.methodName, routeDiagnostic);
+      procedureSources.set(domain, domainSources);
       domains[domain] ??= {};
       domains[domain][route.methodName] = createProcedure(controllerCtor, route, options);
     }
@@ -198,6 +242,52 @@ function getDomainName(route: RouteIR): string {
   const domain = route.domain ?? route.controllerName.replace(/Controller$/, "");
 
   return domain.charAt(0).toLowerCase() + domain.slice(1);
+}
+
+function toRouteDiagnostic(route: RouteIR): TrpcRouteDiagnostic {
+  return {
+    controllerName: route.controllerName,
+    methodName: route.methodName,
+    httpMethod: route.httpMethod,
+    path: route.path,
+    ...(route.sourceLocation ? { sourceLocation: route.sourceLocation } : {}),
+  };
+}
+
+function formatDuplicateProcedureDetail(
+  domain: string,
+  procedureName: string,
+  existingRoute: TrpcRouteDiagnostic,
+  conflictingRoute: TrpcRouteDiagnostic,
+): string {
+  return [
+    `Duplicate tRPC procedure detected for ${domain}.${procedureName}.`,
+    `Existing route: ${formatRouteDiagnostic(existingRoute)}.`,
+    `Conflicting route: ${formatRouteDiagnostic(conflictingRoute)}.`,
+    "Recovery: give one route a unique tRPC domain or controller method name before constructing the router.",
+  ].join(" ");
+}
+
+function formatRouteDiagnostic(route: TrpcRouteDiagnostic): string {
+  const routeLabel = `${route.controllerName}.${route.methodName} (${route.httpMethod} ${route.path})`;
+  const sourceLocation = formatSourceLocation(route.sourceLocation);
+
+  return sourceLocation
+    ? `${routeLabel} at ${sourceLocation}`
+    : `${routeLabel} (route decorator source unavailable)`;
+}
+
+function formatSourceLocation(
+  sourceLocation: RouteContractSourceLocation | undefined,
+): string | null {
+  if (!sourceLocation) {
+    return null;
+  }
+
+  const line = sourceLocation.line === undefined ? "" : `:${sourceLocation.line}`;
+  const column = sourceLocation.column === undefined ? "" : `:${sourceLocation.column}`;
+
+  return `${sourceLocation.path}${line}${column}`;
 }
 
 function isRouteHandler(value: unknown): value is RouteHandler {

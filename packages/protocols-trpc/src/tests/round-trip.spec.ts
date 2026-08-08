@@ -106,7 +106,74 @@ describe("tRPC round trip", () => {
       data: expect.objectContaining({ code: "BAD_REQUEST" }),
     } satisfies Partial<TRPCClientError<AnyRouter>>);
   });
+
+  it("should report both decorator locations for duplicate procedures", () => {
+    const ExistingUserController = createExistingUserController();
+    const ConflictingUserController = createConflictingUserController();
+    Object.defineProperty(ExistingUserController, "name", { value: "UserController" });
+    Object.defineProperty(ConflictingUserController, "name", { value: "UserController" });
+    let thrown: unknown;
+
+    try {
+      createTrpcRouter([ExistingUserController, ConflictingUserController]);
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeDefined();
+    const problem = (thrown as { readonly toJSON: () => Record<string, unknown> }).toJSON();
+
+    expect(problem).toMatchObject({
+      code: "protocols-trpc/duplicate-procedure-name",
+      domain: "user",
+      procedureName: "listUsers",
+      existingRoute: {
+        controllerName: "UserController",
+        methodName: "listUsers",
+        path: "/existing-users",
+        sourceLocation: {
+          path: expect.stringContaining("round-trip.spec.ts"),
+          line: expect.any(Number),
+          column: expect.any(Number),
+        },
+      },
+      conflictingRoute: {
+        controllerName: "UserController",
+        methodName: "listUsers",
+        path: "/conflicting-users",
+        sourceLocation: {
+          path: expect.stringContaining("round-trip.spec.ts"),
+          line: expect.any(Number),
+          column: expect.any(Number),
+        },
+      },
+    });
+  });
 });
+
+function createExistingUserController(): Function {
+  @Controller("/existing-users")
+  class UserController {
+    @Get()
+    listUsers(): string[] {
+      return [];
+    }
+  }
+
+  return UserController;
+}
+
+function createConflictingUserController(): Function {
+  @Controller("/conflicting-users")
+  class UserController {
+    @Get()
+    listUsers(): string[] {
+      return [];
+    }
+  }
+
+  return UserController;
+}
 
 function getPort(server: ReturnType<typeof createHTTPServer>): number {
   const address = server.address();

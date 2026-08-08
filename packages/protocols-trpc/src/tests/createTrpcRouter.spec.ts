@@ -316,6 +316,71 @@ describe("createTrpcRouter", () => {
     expect(router._def.record).toHaveProperty("order");
   });
 
+  it("should reject duplicate domain and procedure names with both source routes", () => {
+    class PublicUserController {
+      listUsers(): string[] {
+        return ["public-user"];
+      }
+    }
+
+    class AdminUserController {
+      listUsers(): string[] {
+        return ["admin-user"];
+      }
+    }
+
+    mocked.extractRouteIR = (controller) => [
+      {
+        controllerName: controller.name,
+        methodName: "listUsers",
+        httpMethod: controller === PublicUserController ? "GET" : "POST",
+        path: controller === PublicUserController ? "/public/users" : "/admin/users",
+        sourceLocation:
+          controller === PublicUserController
+            ? { path: "src/PublicUserController.ts", line: 12, column: 3 }
+            : { path: "src/AdminUserController.ts", line: 24, column: 5 },
+        routeContract: null,
+        params: [],
+        inputSchema: null,
+        inputSchemas: { body: null, path: null, query: null, headers: null },
+        outputSchema: null,
+        domain: "user",
+      },
+    ];
+
+    const error = captureThrownValue(() =>
+      createTrpcRouter([PublicUserController, AdminUserController]),
+    ) as { readonly toJSON: () => Record<string, unknown> };
+    const problem = error.toJSON();
+
+    expect(problem).toMatchObject({
+      code: "protocols-trpc/duplicate-procedure-name",
+      status: 500,
+      domain: "user",
+      procedureName: "listUsers",
+      existingRoute: {
+        controllerName: "PublicUserController",
+        methodName: "listUsers",
+        httpMethod: "GET",
+        path: "/public/users",
+        sourceLocation: { path: "src/PublicUserController.ts", line: 12, column: 3 },
+      },
+      conflictingRoute: {
+        controllerName: "AdminUserController",
+        methodName: "listUsers",
+        httpMethod: "POST",
+        path: "/admin/users",
+        sourceLocation: { path: "src/AdminUserController.ts", line: 24, column: 5 },
+      },
+    });
+    expect(problem.detail).toContain(
+      "Existing route: PublicUserController.listUsers (GET /public/users) at src/PublicUserController.ts:12:3.",
+    );
+    expect(problem.detail).toContain(
+      "Conflicting route: AdminUserController.listUsers (POST /admin/users) at src/AdminUserController.ts:24:5.",
+    );
+  });
+
   it("should expose a coded error when route metadata points at a non-callable handler", async () => {
     class UserController {
       readonly listUsers = "not callable";
@@ -695,6 +760,16 @@ async function closeServer(server: ReturnType<typeof createHTTPServer>): Promise
       resolve();
     });
   });
+}
+
+function captureThrownValue(callback: () => unknown): unknown {
+  try {
+    callback();
+  } catch (error) {
+    return error;
+  }
+
+  expect.fail("Expected callback to throw.");
 }
 
 function extractTestRouteIR(controllerCtor: Function): RouteIR[] {
