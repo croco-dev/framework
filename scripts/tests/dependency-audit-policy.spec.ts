@@ -2,21 +2,56 @@ import { spawn } from "node:child_process";
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { gzipSync } from "node:zlib";
 
 import { afterEach, describe, expect, it } from "vitest";
+import { parse } from "yaml";
 
 import { runDependencyAuditPolicy, runPnpmAudit } from "../dependency-audit-policy.mts";
 
 const tempRepos: string[] = [];
 let advisoryId = 0;
+const repositoryRoot = resolve(dirname(import.meta.filename), "..", "..");
 
 describe("dependency-audit-policy.mts", () => {
   afterEach(() => {
     for (const repo of tempRepos.splice(0)) {
       rmSync(repo, { force: true, recursive: true });
     }
+  });
+
+  it("keeps every transitive nanoid resolution on the first patched 3.x release", () => {
+    const workspace = parse(readFileSync(join(repositoryRoot, "pnpm-workspace.yaml"), "utf-8")) as {
+      readonly overrides?: Readonly<Record<string, unknown>>;
+    };
+    const lockfile = parse(readFileSync(join(repositoryRoot, "pnpm-lock.yaml"), "utf-8")) as {
+      readonly overrides?: Readonly<Record<string, unknown>>;
+      readonly packages?: Readonly<Record<string, unknown>>;
+      readonly snapshots?: Readonly<
+        Record<
+          string,
+          {
+            readonly dependencies?: Readonly<Record<string, unknown>>;
+            readonly optionalDependencies?: Readonly<Record<string, unknown>>;
+          }
+        >
+      >;
+    };
+    const resolvedNanoidVersions = Object.keys(lockfile.packages ?? {})
+      .filter((key) => key.startsWith("nanoid@"))
+      .map((key) => key.slice("nanoid@".length));
+    const transitiveNanoidVersions = Object.values(lockfile.snapshots ?? {}).flatMap((snapshot) => {
+      return [snapshot.dependencies, snapshot.optionalDependencies].flatMap((dependencies) => {
+        const version = dependencies?.nanoid;
+        return typeof version === "string" ? [version] : [];
+      });
+    });
+
+    expect(workspace.overrides?.nanoid).toBe("3.3.17");
+    expect(lockfile.overrides?.nanoid).toBe("3.3.17");
+    expect(resolvedNanoidVersions).toEqual(["3.3.17"]);
+    expect([...new Set(transitiveNanoidVersions)]).toEqual(["3.3.17"]);
   });
 
   it("fails high runtime dependency findings without reviewed metadata", () => {
