@@ -7,7 +7,11 @@ import type {
   TransformOptions,
   UploadIntent,
 } from "@croco/storage-core";
-import { FileNotFoundProblem, InvalidKeyProblem } from "@croco/storage-core";
+import {
+  FileNotFoundProblem,
+  InvalidKeyProblem,
+  MAX_SIGNED_URL_EXPIRY_SECONDS,
+} from "@croco/storage-core";
 import { createStorageProviderConformanceSuite } from "@croco/testing";
 import { v2 as cloudinary } from "cloudinary";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -618,7 +622,7 @@ describe("CloudinaryProvider", () => {
         "https://res.cloudinary.com/test-cloud/image/upload/test-key?s=sig",
       );
 
-      const options: SignedUrlOptions = { expiresIn: 3600 };
+      const options: SignedUrlOptions = { expiresIn: MAX_SIGNED_URL_EXPIRY_SECONDS };
       const url = await provider.getSignedUrl("test-key", options);
 
       expect(url).toBe("https://res.cloudinary.com/test-cloud/image/upload/test-key?s=sig");
@@ -629,7 +633,7 @@ describe("CloudinaryProvider", () => {
         api_secret: "test-api-secret",
         secure: true,
         sign_url: true,
-        expiration: Math.floor(now) + 3600,
+        expiration: Math.floor(now) + MAX_SIGNED_URL_EXPIRY_SECONDS,
       });
     });
 

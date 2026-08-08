@@ -30,7 +30,7 @@ export type PutOptions = {
  */
 export type SignedUrlOptions = {
   /**
-   * URL 만료 시간 (초 단위)
+   * URL 만료 시간 (초 단위). 1초 이상 604,800초(7일) 이하의 안전한 정수여야 합니다.
    */
   expiresIn: number;
 };

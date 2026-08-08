@@ -3,6 +3,7 @@ import { Readable as ReadableImpl } from "node:stream";
 import { FileNotFoundProblem } from "./problems/FileNotFoundProblem";
 import { InvalidKeyProblem } from "./problems/InvalidKeyProblem";
 import { UploadFailedProblem } from "./problems/UploadFailedProblem";
+import { validateSignedUrlExpiry } from "./signedUrlExpiry";
 import type { ObjectMetadata, PutOptions, SignedUrlOptions, StorageProvider } from "./types";
 
 type StoredObject = {
@@ -101,12 +102,13 @@ export class InMemoryStorageProvider implements StorageProvider {
 
   async getSignedUrl(key: string, options: SignedUrlOptions): Promise<string> {
     this.validateKey(key);
+    const expiresIn = validateSignedUrlExpiry(options.expiresIn);
 
     if (!this.storage.has(key)) {
       throw new FileNotFoundProblem(key);
     }
 
-    const expiresAt = Date.now() + options.expiresIn * 1000;
+    const expiresAt = Date.now() + expiresIn * 1000;
     return `${this.baseUrl}/${key}?expires=${expiresAt}`;
   }
 

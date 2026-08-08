@@ -1,5 +1,9 @@
 import { Container } from "@croco/framework-context";
-import { FileNotFoundProblem, UploadFailedProblem } from "@croco/storage-core";
+import {
+  FileNotFoundProblem,
+  MAX_SIGNED_URL_EXPIRY_SECONDS,
+  UploadFailedProblem,
+} from "@croco/storage-core";
 import { createStorageProviderConformanceSuite } from "@croco/testing";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CloudflareImagesValidationProblem } from "../libs/CloudflareImagesDiagnosticsProvider";
@@ -578,8 +582,10 @@ describe("CloudflareImagesProvider", () => {
 
       mockCryptoSign.mockResolvedValue(new ArrayBuffer(32));
 
-      const url = await provider.getSignedUrl("test-image-id", { expiresIn: 3600 });
-      const expectedExpires = Math.floor(now / 1000) + 3600;
+      const url = await provider.getSignedUrl("test-image-id", {
+        expiresIn: MAX_SIGNED_URL_EXPIRY_SECONDS,
+      });
+      const expectedExpires = Math.floor(now / 1000) + MAX_SIGNED_URL_EXPIRY_SECONDS;
 
       expect(url).toContain(`expires=${expectedExpires}`);
 

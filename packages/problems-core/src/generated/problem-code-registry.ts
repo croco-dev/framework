@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 581,
+  problemCount: 582,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -3478,7 +3478,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts",
-          line: 277,
+          line: 278,
           column: 13,
           kind: "problem-factory",
         },
@@ -3511,7 +3511,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts",
-          line: 353,
+          line: 354,
           column: 13,
           kind: "problem-factory",
         },
@@ -14030,6 +14030,37 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "STORAGE_INVALID_SIGNED_URL_EXPIRY",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#storage-invalid-signed-url-expiry",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/storage-core/src/libs/problems/InvalidSignedUrlExpiryProblem.ts",
+          line: 9,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "STORAGE_R2_EMPTY_BODY",
       category: "InternalServerError",
       status: 500,
@@ -14341,7 +14372,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/storage-cloudinary/src/libs/CloudinaryProvider.ts",
-          line: 331,
+          line: 332,
           column: 13,
           kind: "problem-factory",
         },
@@ -14498,7 +14529,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts",
-          line: 305,
+          line: 306,
           column: 13,
           kind: "problem-factory",
         },

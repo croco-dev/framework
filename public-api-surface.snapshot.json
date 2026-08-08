@@ -24015,6 +24015,18 @@
               "declarationKind": "class"
             },
             {
+              "name": "InvalidSignedUrlExpiryProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/InvalidSignedUrlExpiryProblem",
+              "declarationKind": "class"
+            },
+            {
+              "name": "MAX_SIGNED_URL_EXPIRY_SECONDS",
+              "exportKind": "named",
+              "source": "./libs/problems/InvalidSignedUrlExpiryProblem",
+              "declarationKind": "const"
+            },
+            {
               "name": "StorageProblem",
               "exportKind": "named",
               "source": "./libs/problems/StorageProblem",
@@ -24025,6 +24037,12 @@
               "exportKind": "named",
               "source": "./libs/problems/UploadFailedProblem",
               "declarationKind": "class"
+            },
+            {
+              "name": "validateSignedUrlExpiry",
+              "exportKind": "named",
+              "source": "./libs/signedUrlExpiry",
+              "declarationKind": "function"
             }
           ],
           "typeExports": [
