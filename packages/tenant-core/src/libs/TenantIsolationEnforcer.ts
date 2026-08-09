@@ -85,11 +85,16 @@ export type TenantIsolationAuditSink = {
   recordTenantIsolation(event: TenantIsolationAuditEvent): void | Promise<void>;
 };
 
+/** Controls whether observability delivery can block an allowed tenant operation. */
+export type TenantIsolationObservabilityFailureMode = "best-effort" | "fail-closed";
+
 export type TenantIsolationEnforcerOptions = {
   readonly contextProvider?: TenantContextProvider;
   readonly defaultTenantIds?: readonly string[];
   readonly auditSink?: TenantIsolationAuditSink;
   readonly policyDecisionTraceSink?: PolicyDecisionTraceSink;
+  /** Defaults to best-effort. Denials always preserve their original Tenant Problem. */
+  readonly observabilityFailureMode?: TenantIsolationObservabilityFailureMode;
 };
 
 export type TenantQueryPredicate = {
@@ -163,12 +168,14 @@ export class TenantIsolationEnforcer {
   private readonly defaultTenantIds: ReadonlySet<string>;
   private readonly auditSink: TenantIsolationAuditSink | undefined;
   private readonly policyDecisionTraceSink: PolicyDecisionTraceSink | undefined;
+  private readonly observabilityFailureMode: TenantIsolationObservabilityFailureMode;
 
   constructor(options: TenantIsolationEnforcerOptions = {}) {
     this.contextProvider = options.contextProvider ?? new TenantManager();
     this.defaultTenantIds = new Set(options.defaultTenantIds ?? ["default"]);
     this.auditSink = options.auditSink;
     this.policyDecisionTraceSink = options.policyDecisionTraceSink;
+    this.observabilityFailureMode = options.observabilityFailureMode ?? "best-effort";
   }
 
   async enforce<TResult>(
@@ -429,16 +436,18 @@ export class TenantIsolationEnforcer {
         trace.decisionId,
       ),
     );
-    await this.auditSink?.recordTenantIsolation({
-      type: eventType,
-      operation: operation.name,
-      kind: operation.kind,
-      tenantId: evidence.tenantId,
-      resource: operation.resource,
-      reason: evidence.bypassReason?.reason,
-      decisionId: trace.decisionId,
-      policyDecisionTrace: trace,
-      metadata: operation.metadata,
+    await this.deliverObservability("tenant-isolation-audit", operation, trace, async () => {
+      await this.auditSink?.recordTenantIsolation({
+        type: eventType,
+        operation: operation.name,
+        kind: operation.kind,
+        tenantId: evidence.tenantId,
+        resource: operation.resource,
+        reason: evidence.bypassReason?.reason,
+        decisionId: trace.decisionId,
+        policyDecisionTrace: trace,
+        metadata: operation.metadata,
+      });
     });
   }
 
@@ -469,17 +478,19 @@ export class TenantIsolationEnforcer {
         trace.decisionId,
       ),
     );
-    await this.auditSink?.recordTenantIsolation({
-      type: "tenant-isolation.denied",
-      operation: operation.name,
-      kind: operation.kind,
-      tenantId,
-      resource: operation.resource,
-      reason: problem.detail ?? problem.message,
-      problemCode: problem.code,
-      decisionId: trace.decisionId,
-      policyDecisionTrace: trace,
-      metadata: operation.metadata,
+    await this.deliverObservability("tenant-isolation-audit", operation, trace, async () => {
+      await this.auditSink?.recordTenantIsolation({
+        type: "tenant-isolation.denied",
+        operation: operation.name,
+        kind: operation.kind,
+        tenantId,
+        resource: operation.resource,
+        reason: problem.detail ?? problem.message,
+        problemCode: problem.code,
+        decisionId: trace.decisionId,
+        policyDecisionTrace: trace,
+        metadata: operation.metadata,
+      });
     });
     throw problem;
   }
@@ -513,9 +524,34 @@ export class TenantIsolationEnforcer {
         ...operation.inputs,
       },
     });
-    await recordPolicyDecisionTrace(trace, { auditSink: this.policyDecisionTraceSink });
+    await this.deliverObservability("policy-decision-trace", operation, trace, async () => {
+      await recordPolicyDecisionTrace(trace, { auditSink: this.policyDecisionTraceSink });
+    });
 
     return trace;
+  }
+
+  private async deliverObservability(
+    sink: "policy-decision-trace" | "tenant-isolation-audit",
+    operation: TenantScopedOperation,
+    trace: PolicyDecisionTrace,
+    deliver: () => Promise<void>,
+  ): Promise<void> {
+    try {
+      await deliver();
+    } catch (error) {
+      recordEvent("tenant-isolation.observability-delivery-failed", {
+        "tenant.operation": operation.name,
+        "tenant.operation.kind": operation.kind,
+        "tenant.policy_result": trace.result,
+        "tenant.observability_sink": sink,
+        "tenant.policy_decision_id": trace.decisionId,
+      });
+
+      if (trace.result === "allow" && this.observabilityFailureMode === "fail-closed") {
+        throw error;
+      }
+    }
   }
 }
 

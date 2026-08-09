@@ -27,6 +27,14 @@ title: "TenantIsolationEnforcerOptions"
 
 ***
 
+### observabilityFailureMode?
+
+> `readonly` `optional` **observabilityFailureMode?**: [`TenantIsolationObservabilityFailureMode`](/api/tenant-core/src/type-aliases/tenantisolationobservabilityfailuremode/)
+
+Defaults to best-effort. Denials always preserve their original Tenant Problem.
+
+***
+
 ### policyDecisionTraceSink?
 
 > `readonly` `optional` **policyDecisionTraceSink?**: [`PolicyDecisionTraceSink`](/api/access-core/src/type-aliases/policydecisiontracesink/)
