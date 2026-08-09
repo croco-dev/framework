@@ -9,6 +9,7 @@
       "@croco/events-inmemory": ["../events-inmemory/src/index.ts"],
       "@croco/framework-context": ["../framework-context/src/index.ts"],
       "@croco/framework-logger": ["../framework-logger/src/index.ts"],
+      "@croco/framework-routes": ["../framework-routes/src/index.ts"],
       "@croco/health-core": ["../health-core/src/index.ts"],
       "@croco/llm-core": ["../llm-core/src/index.ts"],
       "@croco/openapi-spec": ["../openapi-spec/src/index.ts"],

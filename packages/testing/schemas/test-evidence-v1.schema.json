@@ -72,7 +72,10 @@
         "contractIds": { "$ref": "#/$defs/stringIds" },
         "eventIds": { "$ref": "#/$defs/stringIds" },
         "problemCodes": { "$ref": "#/$defs/stringIds" },
-        "routeIds": { "$ref": "#/$defs/stringIds" }
+        "providerIds": { "$ref": "#/$defs/stringIds" },
+        "routeIds": { "$ref": "#/$defs/stringIds" },
+        "spanIds": { "$ref": "#/$defs/stringIds" },
+        "taskIds": { "$ref": "#/$defs/stringIds" }
       }
     },
     "fidelity": {

@@ -59,9 +59,16 @@ describe("croco.test-evidence/v1", () => {
         resolve(import.meta.dirname, "../../schemas/test-evidence-v1.schema.json"),
         "utf8",
       ),
-    ) as { $id: string; properties: { schemaVersion: { const: string } } };
+    ) as {
+      $defs: { observation: { properties: Record<string, { $ref: string }> } };
+      $id: string;
+      properties: { schemaVersion: { const: string } };
+    };
     expect(schema.$id).toBe("https://schemas.croco.dev/testing/test-evidence-v1.schema.json");
     expect(schema.properties.schemaVersion.const).toBe(TEST_EVIDENCE_SCHEMA_VERSION);
+    for (const field of ["providerIds", "spanIds", "taskIds"]) {
+      expect(schema.$defs.observation.properties[field]?.$ref).toBe("#/$defs/stringIds");
+    }
     const bundleSchema = JSON.parse(
       readFileSync(
         resolve(import.meta.dirname, "../../schemas/test-evidence-bundle-v1.schema.json"),
@@ -149,6 +156,18 @@ describe("croco.test-evidence/v1", () => {
     expect(() => createTestEvidenceBundle([malformed as unknown as TestEvidenceRecord])).toThrow(
       TestEvidenceContractError,
     );
+  });
+
+  it("rejects malformed task, span, and provider observation IDs", () => {
+    for (const observed of [
+      { contractIds: [], taskIds: ["task/duplicate", "task/duplicate"] },
+      { contractIds: [], spanIds: [" "] },
+      { contractIds: [], providerIds: "provider/postgres" },
+    ]) {
+      expect(() =>
+        record({ observed: observed as unknown as TestEvidenceRecord["observed"] }),
+      ).toThrow(TestEvidenceContractError);
+    }
   });
 
   it("rejects cyclic metadata with a stable contract Problem at every boundary", () => {
@@ -347,7 +366,13 @@ describe("croco.test-evidence/v1", () => {
       ],
       intent: { contractIds: ["z", "a"], description: "canonical evidence" },
       metadata: { token: "external-secret" },
-      observed: { contractIds: ["z", "a"], routeIds: ["z", "a"] },
+      observed: {
+        contractIds: ["z", "a"],
+        providerIds: ["provider/z", "provider/a"],
+        routeIds: ["z", "a"],
+        spanIds: ["span/z", "span/a"],
+        taskIds: ["task/z", "task/a"],
+      },
     });
     const external = {
       ...first,
@@ -357,7 +382,10 @@ describe("croco.test-evidence/v1", () => {
       observed: {
         ...first.observed,
         contractIds: [...first.observed.contractIds].reverse(),
+        providerIds: [...(first.observed.providerIds ?? [])].reverse(),
         routeIds: [...(first.observed.routeIds ?? [])].reverse(),
+        spanIds: [...(first.observed.spanIds ?? [])].reverse(),
+        taskIds: [...(first.observed.taskIds ?? [])].reverse(),
       },
     };
     const firstBundle = createTestEvidenceBundle([first]);

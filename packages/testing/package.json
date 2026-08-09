@@ -42,7 +42,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsup src/index.ts src/drizzle.ts src/playwright-reporter.ts src/vitest-reporter.ts --format esm,cjs --minify --clean --dts && node scripts/copy-schemas.mjs",
+    "build": "tsup src/index.ts src/drizzle.ts src/executable-assurance.ts src/playwright-reporter.ts src/vitest-reporter.ts --format esm,cjs --minify --clean --dts && node scripts/copy-schemas.mjs",
     "deploy": "pnpm run build && pnpm publish --no-git-checks",
     "lint": "oxlint .",
     "test": "vitest run",
@@ -56,9 +56,11 @@
     "@croco/events-inmemory": "workspace:*",
     "@croco/framework-context": "workspace:*",
     "@croco/framework-logger": "workspace:*",
+    "@croco/framework-routes": "workspace:*",
     "@croco/llm-core": "workspace:*",
     "@croco/openapi-spec": "workspace:*",
     "@croco/problems-core": "workspace:*",
+    "@croco/protocols-core": "workspace:*",
     "@croco/ratelimit-core": "workspace:*",
     "@croco/storage-core": "workspace:*",
     "@croco/telemetry-api": "workspace:*",
