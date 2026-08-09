@@ -198,10 +198,10 @@ export type ResolvedAutoInstrumentation = {
 };
 
 function getInstrumentationName(instrumentation: Instrumentation): string {
-  return instrumentation.instrumentationName;
+  return instrumentation.instrumentationName ?? "";
 }
 
-function mergeCustomInstrumentations(...groups: Instrumentation[][]): Instrumentation[] {
+export function mergeCustomInstrumentations(...groups: Instrumentation[][]): Instrumentation[] {
   const seenNames = new Set<string>();
   const seenInstances = new Set<Instrumentation>();
   const merged: Instrumentation[] = [];
@@ -233,19 +233,36 @@ function resolveModuleName(module: AutoInstrumentationModule): UpstreamInstrumen
   return MODULE_NAMES[module as Exclude<AutoInstrumentationModule, "fastify">];
 }
 
-export async function resolveAutoInstrumentation(
+/** Canonicalizes user-facing module aliases to the effective upstream instrumentation order. */
+export function canonicalizeAutoInstrumentationModuleSelection(
+  modules: readonly AutoInstrumentationModule[],
+): UpstreamInstrumentationName[] {
+  const selectedNames: UpstreamInstrumentationName[] = [];
+  for (const module of modules) {
+    const name = resolveModuleName(module);
+    if (!selectedNames.includes(name)) {
+      selectedNames.push(name);
+    }
+  }
+  return selectedNames;
+}
+
+export type AutoInstrumentationConfigPlan = {
+  normalized: ReturnType<typeof normalizeAutoInstrumentationConfig>;
+  selectedNames: UpstreamInstrumentationName[];
+  optionsByName: Map<UpstreamInstrumentationName, Record<string, unknown>>;
+};
+
+/** Validates configuration and returns the effective upstream plan without loading instrumentations. */
+export function createAutoInstrumentationConfigPlan(
   config: AutoInstrumentationConfig | undefined,
   environment: "lambda" | "node",
-  traceInstrumentations: Instrumentation[],
-): Promise<ResolvedAutoInstrumentation> {
-  if (config === undefined || config.enabled === false) {
-    return {
-      instrumentations: mergeCustomInstrumentations(traceInstrumentations),
-      enabledModules: [],
-    };
+): AutoInstrumentationConfigPlan {
+  const normalized = normalizeAutoInstrumentationConfig(config, environment);
+  if (normalized.enabled === false) {
+    return { normalized, selectedNames: [], optionsByName: new Map() };
   }
 
-  const normalized = normalizeAutoInstrumentationConfig(config, environment);
   if (normalized.include && normalized.include.length > 0) {
     throw new TelemetryAutoInstrumentationProblem(
       "Operation include filters are not supported by Node auto-instrumentation",
@@ -271,13 +288,9 @@ export async function resolveAutoInstrumentation(
   }
 
   const excluded = new Set([...excludedModules].map(resolveModuleName));
-  const selectedNames: UpstreamInstrumentationName[] = [];
-  for (const module of normalized.modules ?? []) {
-    const name = resolveModuleName(module);
-    if (!excluded.has(name) && !selectedNames.includes(name)) {
-      selectedNames.push(name);
-    }
-  }
+  const selectedNames = canonicalizeAutoInstrumentationModuleSelection(
+    normalized.modules ?? [],
+  ).filter((name) => !excluded.has(name));
 
   const optionsByName = new Map<UpstreamInstrumentationName, Record<string, unknown>>();
   for (const [module, options] of Object.entries(normalized.moduleOptions ?? {})) {
@@ -304,6 +317,25 @@ export async function resolveAutoInstrumentation(
       throw new TelemetryAutoInstrumentationProblem(`Unsupported module options for '${module}'`);
     }
     optionsByName.set(name, options);
+  }
+
+  return { normalized, selectedNames, optionsByName };
+}
+
+export async function resolveAutoInstrumentation(
+  config: AutoInstrumentationConfig | undefined,
+  environment: "lambda" | "node",
+  traceInstrumentations: Instrumentation[],
+): Promise<ResolvedAutoInstrumentation> {
+  const { normalized, optionsByName, selectedNames } = createAutoInstrumentationConfigPlan(
+    config,
+    environment,
+  );
+  if (normalized.enabled === false) {
+    return {
+      instrumentations: mergeCustomInstrumentations(traceInstrumentations),
+      enabledModules: [],
+    };
   }
 
   const upstreamConfig = Object.fromEntries(

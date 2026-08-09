@@ -113,10 +113,9 @@ export const handler = app.lambdaHandler({
 ### 초기화 수명주기
 
 `init({ enabled: false })`와 `init({ trace: { enabled: false } })`는 설정만 저장하고 OpenTelemetry SDK를 시작하지
-않습니다. 같은 프로세스에서 나중에 telemetry와 trace를 활성화한 `init()`을 호출하면 SDK를 초기화할 수 있습니다.
-
-SDK가 이미 초기화된 뒤의 추가 `init()` 호출은 기존 런타임을 유지합니다. 설정을 바꾸려면 먼저 `shutdown()`을
-호출한 뒤 다시 `init()`을 호출합니다.
+않습니다. 동일한 설정의 동시 또는 후속 `init()` 호출은 기존 초기화 계약을 공유합니다. 서비스, exporter 또는
+enabled 상태가 다른 설정은 `telemetry-sdk-node/init-configuration-conflict` Problem으로 거부됩니다. 설정을 바꾸려면
+먼저 `shutdown()`을 호출한 뒤 다시 `init()`을 호출합니다.
 
 `isInitialized()`와 `isEnabled()`는 SDK가 실제로 초기화되어 활성화된 경우에만 `true`를 반환합니다.
 

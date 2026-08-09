@@ -110,6 +110,22 @@ export class TelemetryForceFlushUnsupportedProblem extends Problem {
   }
 }
 
+/**
+ * A TelemetryRuntime initialization request conflicts with the configuration already owned by the singleton.
+ */
+export class TelemetryInitializationConflictProblem extends Problem {
+  readonly code = "telemetry-sdk-node/init-configuration-conflict";
+  readonly category = ProblemCategory.Conflict;
+
+  constructor(readonly runtimeState: "disabled" | "initialized" | "initializing") {
+    super(
+      "telemetry-sdk-node/init-configuration-conflict",
+      ProblemCategory.Conflict,
+      `TelemetryRuntime cannot apply a different configuration while the runtime is ${runtimeState}; call shutdown() before reconfiguring.`,
+    );
+  }
+}
+
 export class TelemetryRuntimeProblem extends Problem {
   readonly code = "TELEMETRY_RUNTIME_ERROR";
   readonly category = ProblemCategory.InternalServerError;
