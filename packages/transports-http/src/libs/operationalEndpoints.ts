@@ -27,15 +27,12 @@ export const OPERATIONAL_ENDPOINT_PATHS = [
 
 const DEFAULT_RECENT_ERROR_LIMIT = 100;
 const DEFAULT_MESSAGE_LIMIT = 100;
-const DEFAULT_HEALTH_DETAIL_COLLECTION_LIMIT = 50;
 const OMITTED_DIAGNOSTIC_KEYS = new Set(["cause", "stack"]);
 const SENSITIVE_KEY_PATTERN =
   /authorization|cookie|credential|password|secret|token|api[-_]?key|private[-_]?key|access[-_]?key|database[-_]?url|redis[-_]?url|mongo(?:db)?[-_]?url|postgres(?:ql)?[-_]?url|connection[-_]?string|dsn/i;
 
 type RedactionOptions = {
   readonly messageLimit?: number;
-  readonly stringLimit?: number;
-  readonly collectionLimit?: number;
   readonly omitDiagnosticInternals?: boolean;
 };
 
@@ -214,6 +211,13 @@ export function sanitizeDiagnosticsReport(
   };
 }
 
+const DEFAULT_HEALTH_DETAIL_COLLECTION_LIMIT = 50;
+
+type HealthDetailRedactionOptions = RedactionOptions & {
+  readonly stringLimit?: number;
+  readonly collectionLimit?: number;
+};
+
 export function sanitizeHealthCheckResult(
   result: HealthCheckRegistryResult,
   messageLimit = DEFAULT_MESSAGE_LIMIT,
@@ -268,7 +272,11 @@ function capMessage(message: string, maxLength: number): string {
   return `${message.slice(0, maxLength - 3)}...`;
 }
 
-function redactValue(value: unknown, depth = 0, options: RedactionOptions = {}): unknown {
+function redactValue(
+  value: unknown,
+  depth = 0,
+  options: HealthDetailRedactionOptions = {},
+): unknown {
   if (depth > 5) {
     return "[Truncated]";
   }

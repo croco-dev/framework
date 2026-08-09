@@ -1,5 +1,5 @@
 ---
-"@croco/transports-http": patch
+"@croco/transports-http": minor
 ---
 
 Make the aggregate `/health` endpoint report registered dependency health with sanitized details and
