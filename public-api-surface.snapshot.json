@@ -1644,6 +1644,18 @@
               "declarationKind": "function"
             },
             {
+              "name": "createPlanReleaseConsoleSnapshot",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createPlanReleaseSemanticDiffGroups",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole",
+              "declarationKind": "function"
+            },
+            {
               "name": "createTenantImpersonationConsoleState",
               "exportKind": "named",
               "source": "./libs/snapshot",
@@ -1686,9 +1698,21 @@
               "declarationKind": "function"
             },
             {
+              "name": "getAllowedPlanReleaseActions",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole",
+              "declarationKind": "function"
+            },
+            {
               "name": "ImpersonationBanner",
               "exportKind": "named",
               "source": "./libs/components",
+              "declarationKind": "function"
+            },
+            {
+              "name": "isPlanReleaseReviewCurrent",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole",
               "declarationKind": "function"
             },
             {
@@ -1725,6 +1749,12 @@
               "name": "PermissionInspector",
               "exportKind": "named",
               "source": "./libs/components",
+              "declarationKind": "function"
+            },
+            {
+              "name": "PlanReleaseConsole",
+              "exportKind": "named",
+              "source": "./libs/PlanReleaseConsoleView",
               "declarationKind": "function"
             },
             {
@@ -1776,6 +1806,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "updatePlanReleaseDraftField",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole",
+              "declarationKind": "function"
+            },
+            {
               "name": "UsageQuotaMeter",
               "exportKind": "named",
               "source": "./libs/components",
@@ -1785,6 +1821,12 @@
               "name": "useAdminForm",
               "exportKind": "named",
               "source": "./libs/hooks",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validatePlanReleaseActionRequest",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole",
               "declarationKind": "function"
             },
             {
@@ -2449,6 +2491,186 @@
               "name": "PermissionDeniedAdminPanelState",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "PlanReleaseActionDenialReason",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole"
+            },
+            {
+              "name": "PlanReleaseActionKind",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole"
+            },
+            {
+              "name": "PlanReleaseActionRequest",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole"
+            },
+            {
+              "name": "PlanReleaseActionValidation",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole"
+            },
+            {
+              "name": "PlanReleaseAdminAction",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole"
+            },
+            {
+              "name": "PlanReleaseCatalogName",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole"
+            },
+            {
+              "name": "PlanReleaseCatalogOption",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole"
+            },
+            {
+              "name": "PlanReleaseConsolePhase",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole"
+            },
+            {
+              "name": "PlanReleaseConsoleProps",
+              "exportKind": "named",
+              "source": "./libs/PlanReleaseConsoleView"
+            },
+            {
+              "name": "PlanReleaseConsoleSnapshot",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole"
+            },
+            {
+              "name": "PlanReleaseConsoleState",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole"
+            },
+            {
+              "name": "PlanReleaseDiagnostic",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole"
+            },
+            {
+              "name": "PlanReleaseDraft",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole"
+            },
+            {
+              "name": "PlanReleaseDraftEditingState",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole"
+            },
+            {
+              "name": "PlanReleaseEditor",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole"
+            },
+            {
+              "name": "PlanReleaseEditorCatalog",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole"
+            },
+            {
+              "name": "PlanReleaseEditRequest",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole"
+            },
+            {
+              "name": "PlanReleaseEditResult",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole"
+            },
+            {
+              "name": "PlanReleaseFailureState",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole"
+            },
+            {
+              "name": "PlanReleaseFieldDescriptor",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole"
+            },
+            {
+              "name": "PlanReleaseImpact",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole"
+            },
+            {
+              "name": "PlanReleaseImpactAudience",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole"
+            },
+            {
+              "name": "PlanReleaseImpactItem",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole"
+            },
+            {
+              "name": "PlanReleaseLoadingState",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole"
+            },
+            {
+              "name": "PlanReleaseOperationalState",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole"
+            },
+            {
+              "name": "PlanReleasePublishedReceipt",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole"
+            },
+            {
+              "name": "PlanReleasePublishedState",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole"
+            },
+            {
+              "name": "PlanReleasePublishingState",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole"
+            },
+            {
+              "name": "PlanReleaseReadyState",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole"
+            },
+            {
+              "name": "PlanReleaseReviewState",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole"
+            },
+            {
+              "name": "PlanReleaseSchedulingState",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole"
+            },
+            {
+              "name": "PlanReleaseSemanticDiff",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole"
+            },
+            {
+              "name": "PlanReleaseSemanticDiffGroup",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole"
+            },
+            {
+              "name": "PlanReleaseSemanticDiffGroupName",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole"
+            },
+            {
+              "name": "PlanReleaseStaleConflictState",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole"
+            },
+            {
+              "name": "PlanReleaseValidationState",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole"
             },
             {
               "name": "TenantBusinessWorkspaceProps",
