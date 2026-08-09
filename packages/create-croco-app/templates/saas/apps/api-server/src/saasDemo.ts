@@ -1222,16 +1222,23 @@ async function runUsageRecoveryProcess() {
       "Usage recovery requires npm_execpath from the package manager runtime.",
     );
   }
-  const { stdout } = await execFileAsync(
-    process.execPath,
-    [packageManagerCli, "--silent", "run", "demo:usage-recover"],
-    {
-      cwd: process.cwd(),
-      env: process.env,
-      encoding: "utf8",
-      timeout: 60_000,
-    },
-  );
+  let stdout: string;
+  try {
+    ({ stdout } = await execFileAsync(
+      process.execPath,
+      [packageManagerCli, "run", "demo:usage-recover"],
+      {
+        cwd: process.cwd(),
+        env: process.env,
+        encoding: "utf8",
+        timeout: 60_000,
+      },
+    ));
+  } catch (error) {
+    throw new SaasBillableUsageProblem(
+      `Usage recovery command failed: ${readRecoveryProcessFailure(error)}`,
+    );
+  }
   const lastLine = stdout
     .trim()
     .split("\n")
@@ -1247,6 +1254,23 @@ async function runUsageRecoveryProcess() {
       "Usage recovery process returned an invalid delivery result.",
     );
   }
+}
+
+function readRecoveryProcessFailure(error: unknown): string {
+  if (typeof error === "object" && error !== null) {
+    const processError = error as { stderr?: unknown; stdout?: unknown };
+    for (const outputName of ["stderr", "stdout"] as const) {
+      const output = processError[outputName];
+      const text =
+        typeof output === "string"
+          ? output
+          : output instanceof Uint8Array
+            ? Buffer.from(output).toString("utf8")
+            : "";
+      if (text.trim().length > 0) return text.trim();
+    }
+  }
+  return error instanceof Error ? error.message : String(error);
 }
 
 async function requireBillableUsageEntry(journal: FileBillableUsageJournal, eventId: string) {
