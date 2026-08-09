@@ -2121,6 +2121,17 @@ const recoveryMetadataByCode = {
     redactionPolicy: "safe-message",
     severity: "warning",
   }),
+  "notifications-react-email/render-failed": recovery({
+    cause:
+      "A React Email component failed while producing deterministic HTML or plain text output.",
+    userAction:
+      "Do not retry unchanged message data; report the unavailable message so its email component can be corrected.",
+    operatorAction:
+      "Inspect the component implementation with redacted fixture data, correct the render failure, and redeploy before retrying.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "notifications-resend/missing-config": recovery({
     cause:
       "Required Resend configuration is absent or blank before provider readiness can be proven.",

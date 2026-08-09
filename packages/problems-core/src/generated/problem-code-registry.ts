@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 606,
+  problemCount: 607,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -5068,7 +5068,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/MessageContracts.ts",
-          line: 334,
+          line: 342,
           column: 5,
           kind: "problem-constructor",
         },
@@ -5098,7 +5098,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/MessageContracts.ts",
-          line: 321,
+          line: 329,
           column: 5,
           kind: "problem-constructor",
         },
@@ -5129,7 +5129,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/MessageContracts.ts",
-          line: 313,
+          line: 321,
           column: 5,
           kind: "problem-constructor",
         },
@@ -5160,7 +5160,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/MessageContracts.ts",
-          line: 347,
+          line: 355,
           column: 5,
           kind: "problem-constructor",
         },
@@ -5191,7 +5191,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/MessageContracts.ts",
-          line: 393,
+          line: 401,
           column: 5,
           kind: "problem-constructor",
         },
@@ -5224,7 +5224,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/MessageContracts.ts",
-          line: 382,
+          line: 390,
           column: 5,
           kind: "problem-constructor",
         },
@@ -5255,7 +5255,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/MessageContracts.ts",
-          line: 404,
+          line: 412,
           column: 5,
           kind: "problem-constructor",
         },
@@ -5288,7 +5288,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/MessageContracts.ts",
-          line: 369,
+          line: 377,
           column: 5,
           kind: "problem-constructor",
         },
@@ -5320,7 +5320,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/MessageContracts.ts",
-          line: 358,
+          line: 366,
           column: 5,
           kind: "problem-constructor",
         },
@@ -11537,6 +11537,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
           line: 310,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "notifications-react-email/render-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#notifications-react-email-render-failed",
+      recovery: {
+        cause:
+          "A React Email component failed while producing deterministic HTML or plain text output.",
+        userAction:
+          "Do not retry unchanged message data; report the unavailable message so its email component can be corrected.",
+        operatorAction:
+          "Inspect the component implementation with redacted fixture data, correct the render failure, and redeploy before retrying.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/notifications-react-email/src/libs/ReactEmail.ts",
+          line: 54,
           column: 5,
           kind: "problem-constructor",
         },

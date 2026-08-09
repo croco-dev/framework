@@ -131,6 +131,7 @@ export default defineConfig({
             "../metrics-core/src/index.ts",
             "../migration-runner/src/index.ts",
             "../notifications-core/src/index.ts",
+            "../notifications-react-email/src/index.ts",
             "../notifications-resend/src/index.ts",
             "../onboarding-core/src/index.ts",
             "../onboarding-drizzle/src/index.ts",

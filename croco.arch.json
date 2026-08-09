@@ -122,6 +122,7 @@
         "@croco/admin-react",
         "@croco/frontend-*",
         "@croco/meta-vite",
+        "@croco/notifications-react-email",
         "@croco/presentation-preset",
         "@croco/ui-*"
       ]

@@ -19,6 +19,7 @@ export {
 } from "./libs/MessageContracts";
 export type {
   DefinedMessage,
+  EmailContent,
   MessageChannel,
   MessageContent,
   MessageContentByChannel,

@@ -325,6 +325,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`MissingUpFunctionProblem`](/api/migration-runner/src/classes/missingupfunctionproblem/)
 - [`UnsupportedDialectProblem`](/api/migration-runner/src/classes/unsupporteddialectproblem/)
 - [`UnsupportedMigrationQueryResultProblem`](/api/migration-runner/src/classes/unsupportedmigrationqueryresultproblem/)
+- [`ReactEmailRenderProblem`](/api/notifications-react-email/src/classes/reactemailrenderproblem/)
 - [`ResendIdempotencyConflictProblem`](/api/notifications-resend/src/classes/resendidempotencyconflictproblem/)
 - [`ResendMissingConfigProblem`](/api/notifications-resend/src/classes/resendmissingconfigproblem/)
 - [`ResendNotificationProblem`](/api/notifications-resend/src/classes/resendnotificationproblem/)

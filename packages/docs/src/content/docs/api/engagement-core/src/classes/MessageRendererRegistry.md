@@ -139,7 +139,7 @@ readonly [`MessageRendererConstructor`](/api/engagement-core/src/type-aliases/me
 
 ### render()
 
-> **render**\<`TMessage`, `TChannel`\>(`message`, `renderer`, `channel`, `input`): [`MessageContent`](/api/engagement-core/src/type-aliases/messagecontent/)\<`TChannel`\>
+> **render**\<`TMessage`, `TChannel`\>(`message`, `renderer`, `channel`, `input`): `Promise`\<[`MessageContent`](/api/engagement-core/src/type-aliases/messagecontent/)\<`TChannel`\>\>
 
 Parses untrusted data before invoking an explicitly registered renderer instance.
 
@@ -173,4 +173,4 @@ Parses untrusted data before invoking an explicitly registered renderer instance
 
 #### Returns
 
-[`MessageContent`](/api/engagement-core/src/type-aliases/messagecontent/)\<`TChannel`\>
+`Promise`\<[`MessageContent`](/api/engagement-core/src/type-aliases/messagecontent/)\<`TChannel`\>\>

@@ -468,6 +468,7 @@ jobs:
               - 'packages/metrics-core/src/**'
               - 'packages/migration-runner/src/**'
               - 'packages/notifications-core/src/**'
+              - 'packages/notifications-react-email/src/**'
               - 'packages/notifications-resend/src/**'
               - 'packages/onboarding-core/src/**'
               - 'packages/onboarding-drizzle/src/**'

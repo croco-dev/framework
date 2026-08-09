@@ -468,6 +468,7 @@
         "frontend-react",
         "frontend-vite",
         "meta-vite",
+        "notifications-react-email",
         "presentation-preset",
         "ui-astryx"
       ]
@@ -612,6 +613,7 @@
         "credits-drizzle",
         "frontend-problems",
         "metering-upstash",
+        "notifications-react-email",
         "notifications-resend",
         "protocols-desktop",
         "ratelimit-upstash",
@@ -962,6 +964,19 @@
           "safe diagnostics",
           "redacted upstream Problems",
           "optional live smoke"
+        ]
+      },
+      "notifications-react-email": {
+        "domain": "Notifications",
+        "adapter": "React Email renderer",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["none"],
+        "features": [
+          "typed email content",
+          "HTML rendering",
+          "plain-text fallback",
+          "deterministic fixture previews",
+          "redacted rendering Problems"
         ]
       },
       "onboarding-drizzle": {

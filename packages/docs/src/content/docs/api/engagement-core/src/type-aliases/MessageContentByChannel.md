@@ -11,19 +11,7 @@ title: "MessageContentByChannel"
 
 ### email
 
-> `readonly` **email**: `object`
-
-#### html
-
-> `readonly` **html**: `string`
-
-#### subject
-
-> `readonly` **subject**: `string`
-
-#### text
-
-> `readonly` **text**: `string`
+> `readonly` **email**: [`EmailContent`](/api/engagement-core/src/type-aliases/emailcontent/)
 
 ***
 

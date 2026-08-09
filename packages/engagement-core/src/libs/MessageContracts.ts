@@ -7,12 +7,16 @@ export const MESSAGE_CHANNELS = Object.freeze(["email", "push", "sms", "inApp"] 
 
 export type MessageChannel = (typeof MESSAGE_CHANNELS)[number];
 
+export type EmailContent = {
+  readonly subject: string;
+  readonly html: string;
+  readonly text: string;
+  readonly replyTo?: string;
+  readonly headers?: Readonly<Record<string, string>>;
+};
+
 export type MessageContentByChannel = {
-  readonly email: {
-    readonly subject: string;
-    readonly html: string;
-    readonly text: string;
-  };
+  readonly email: EmailContent;
   readonly push: {
     readonly title: string;
     readonly body: string;
@@ -81,7 +85,7 @@ export type MessageContext<
 
 type RendererMethod<TMessage extends AnyMessage, TChannel extends MessageChannels<TMessage>> = (
   context: MessageContext<TMessage, TChannel>,
-) => MessageContent<TChannel>;
+) => MessageContent<TChannel> | Promise<MessageContent<TChannel>>;
 
 /**
  * A complete renderer for the exact channels declared by a message. The `never` members deliberately make
@@ -225,12 +229,12 @@ export class MessageRendererRegistry {
   }
 
   /** Parses untrusted data before invoking an explicitly registered renderer instance. */
-  render<TMessage extends AnyMessage, TChannel extends MessageChannels<TMessage>>(
+  async render<TMessage extends AnyMessage, TChannel extends MessageChannels<TMessage>>(
     message: TMessage,
     renderer: MessageRenderer<TMessage>,
     channel: TChannel,
     input: unknown,
-  ): MessageContent<TChannel> {
+  ): Promise<MessageContent<TChannel>> {
     const registered = this.renderers.get(message.id);
     if (registered === undefined || registered !== renderer.constructor) {
       throw new MessageRendererMessageMissingProblem(
@@ -253,7 +257,11 @@ export class MessageRendererRegistry {
     const render = (renderer as unknown as Record<TChannel, RendererMethod<TMessage, TChannel>>)[
       channel
     ];
-    return render.call(renderer, { message, channel, data: this.parseData(message, input) });
+    return await render.call(renderer, {
+      message,
+      channel,
+      data: this.parseData(message, input),
+    });
   }
 
   inspect(): MessageRegistryInspection {

@@ -110,7 +110,7 @@ describe("MessageContracts", () => {
     expect(second.inspect()).toEqual(inspection);
   });
 
-  it("parses untrusted data before a renderer consumes it", () => {
+  it("parses untrusted data before a renderer consumes it", async () => {
     let rendered = false;
     @Renders(TrialEnding)
     class TrialEndingRenderer implements MessageRenderer<typeof TrialEnding> {
@@ -148,24 +148,53 @@ describe("MessageContracts", () => {
       expect(error).toBeInstanceOf(MessageDataInvalidProblem);
       expect(error).toMatchObject({ code: "engagement-core/message-data-invalid" });
     }
-    expect(() =>
+    await expect(
       registry.render(TrialEnding, new TrialEndingRenderer(), "email", { tenantName: "Acme" }),
-    ).toThrow(MessageDataInvalidProblem);
+    ).rejects.toThrow(MessageDataInvalidProblem);
     expect(rendered).toBe(false);
-    expect(
+    await expect(
       registry.render(TrialEnding, new TrialEndingRenderer(), "email", {
         tenantName: "Acme",
         upgradeUrl: "https://croco.dev",
       }),
-    ).toEqual({ subject: "trial: Acme", html: "Acme", text: "Acme" });
+    ).resolves.toEqual({ subject: "trial: Acme", html: "Acme", text: "Acme" });
     expect(rendered).toBe(true);
 
-    expect(() =>
+    await expect(
       registry.render(TrialEnding, new TrialEndingRenderer(), "sms" as never, {
         tenantName: "Acme",
         upgradeUrl: "https://croco.dev",
       }),
-    ).toThrow(MessageRendererUndeclaredChannelProblem);
+    ).rejects.toThrow(MessageRendererUndeclaredChannelProblem);
+  });
+
+  it("accepts asynchronous channel renderers", async () => {
+    @Renders(TrialEnding)
+    class AsyncRenderer implements MessageRenderer<typeof TrialEnding> {
+      async email({ data }: MessageContext<typeof TrialEnding, "email">) {
+        return {
+          subject: data.tenantName,
+          html: `<p>${data.tenantName}</p>`,
+          text: data.tenantName,
+        };
+      }
+
+      async push({ data }: MessageContext<typeof TrialEnding, "push">) {
+        return { title: data.tenantName, body: data.tenantName };
+      }
+    }
+
+    const registry = new MessageRendererRegistry();
+    registry.registerMessage(TrialEnding);
+    registry.registerRenderer(AsyncRenderer);
+    registry.bootstrap();
+
+    await expect(
+      registry.render(TrialEnding, new AsyncRenderer(), "email", {
+        tenantName: "Acme",
+        upgradeUrl: "https://croco.dev",
+      }),
+    ).resolves.toEqual({ subject: "Acme", html: "<p>Acme</p>", text: "Acme" });
   });
 
   it("rejects duplicate message IDs and renderer bindings with stable Problems", () => {
@@ -241,7 +270,7 @@ describe("MessageContracts", () => {
     expect(() => undeclaredChannel.bootstrap()).toThrow(MessageRendererUndeclaredChannelProblem);
   });
 
-  it("rejects a renderer bound to a different message definition with the same ID", () => {
+  it("rejects a renderer bound to a different message definition with the same ID", async () => {
     const replacement = defineMessage({
       id: TrialEnding.id,
       topic: "billing-replacement",
@@ -275,10 +304,10 @@ describe("MessageContracts", () => {
     cached.registerMessage(TrialEnding);
     cached.registerRenderer(TrialEndingRenderer);
     cached.bootstrap();
-    expect(() =>
+    await expect(
       cached.render(replacement, new TrialEndingRenderer() as never, "email", {
         replacement: "Replacement",
       }),
-    ).toThrow(MessageRendererBindingMismatchProblem);
+    ).rejects.toThrow(MessageRendererBindingMismatchProblem);
   });
 });
