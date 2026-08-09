@@ -211,17 +211,28 @@ export function sanitizeDiagnosticsReport(
   };
 }
 
+const DEFAULT_HEALTH_DETAIL_STRING_LIMIT = 100;
 const DEFAULT_HEALTH_DETAIL_COLLECTION_LIMIT = 50;
+const DEFAULT_HEALTH_DETAIL_NODE_LIMIT = 500;
+const DEFAULT_HEALTH_DETAIL_CHARACTER_LIMIT = 10_000;
+
+type RedactionBudget = {
+  remainingNodes: number;
+  remainingCharacters: number;
+};
 
 type HealthDetailRedactionOptions = RedactionOptions & {
   readonly stringLimit?: number;
   readonly collectionLimit?: number;
+  readonly budget?: RedactionBudget;
 };
 
 export function sanitizeHealthCheckResult(
   result: HealthCheckRegistryResult,
   messageLimit = DEFAULT_MESSAGE_LIMIT,
 ): HealthCheckRegistryResult {
+  const stringLimit = Math.min(messageLimit, DEFAULT_HEALTH_DETAIL_STRING_LIMIT);
+
   return {
     ...result,
     results: result.results.map((indicator) => ({
@@ -229,10 +240,14 @@ export function sanitizeHealthCheckResult(
       ...(indicator.details
         ? {
             details: redactValue(indicator.details, 0, {
-              messageLimit,
-              stringLimit: messageLimit,
+              messageLimit: stringLimit,
+              stringLimit,
               collectionLimit: DEFAULT_HEALTH_DETAIL_COLLECTION_LIMIT,
               omitDiagnosticInternals: true,
+              budget: {
+                remainingNodes: DEFAULT_HEALTH_DETAIL_NODE_LIMIT,
+                remainingCharacters: DEFAULT_HEALTH_DETAIL_CHARACTER_LIMIT,
+              },
             }) as typeof indicator.details,
           }
         : {}),
@@ -277,49 +292,126 @@ function redactValue(
   depth = 0,
   options: HealthDetailRedactionOptions = {},
 ): unknown {
+  if (!consumeNode(options.budget)) {
+    return undefined;
+  }
+
   if (depth > 5) {
-    return "[Truncated]";
+    return consumeString("[Truncated]", options.budget);
   }
 
   if (Array.isArray(value)) {
-    const items =
-      options.collectionLimit === undefined ? value : value.slice(0, options.collectionLimit);
-    return items.map((item) => redactValue(item, depth + 1, options));
+    const items: unknown[] = [];
+    const limit = options.collectionLimit ?? value.length;
+
+    for (let index = 0; index < value.length && index < limit; index += 1) {
+      if (!hasBudget(options.budget)) {
+        break;
+      }
+      items.push(redactValue(value[index], depth + 1, options));
+    }
+
+    return items;
   }
 
   if (typeof value === "string" && options.stringLimit !== undefined) {
-    return capMessage(value, options.stringLimit);
+    return consumeString(capMessage(value, options.stringLimit), options.budget);
+  }
+
+  if (
+    value === undefined ||
+    typeof value === "function" ||
+    typeof value === "symbol" ||
+    typeof value === "bigint"
+  ) {
+    return undefined;
   }
 
   if (!isRecord(value)) {
     return value;
   }
 
-  const entries = Object.entries(value);
-  const boundedEntries =
-    options.collectionLimit === undefined ? entries : entries.slice(0, options.collectionLimit);
+  const redacted = Object.create(null) as Record<string, unknown>;
+  const limit = options.collectionLimit ?? Number.POSITIVE_INFINITY;
+  let includedEntries = 0;
 
-  return Object.fromEntries(
-    boundedEntries.flatMap(([key, entry]) => {
-      if (options.omitDiagnosticInternals && OMITTED_DIAGNOSTIC_KEYS.has(key.toLowerCase())) {
-        return [];
-      }
+  for (const key in value) {
+    if (!Object.prototype.hasOwnProperty.call(value, key)) {
+      continue;
+    }
+    if (includedEntries >= limit) {
+      break;
+    }
+    if (!hasBudget(options.budget) || !consumeKey(key, options.budget)) {
+      break;
+    }
+    includedEntries += 1;
+    if (options.omitDiagnosticInternals && OMITTED_DIAGNOSTIC_KEYS.has(key.toLowerCase())) {
+      continue;
+    }
 
-      if (SENSITIVE_KEY_PATTERN.test(key)) {
-        return [[key, "[Redacted]"]];
-      }
+    if (SENSITIVE_KEY_PATTERN.test(key)) {
+      redacted[key] = consumeNode(options.budget)
+        ? consumeString("[Redacted]", options.budget)
+        : undefined;
+      continue;
+    }
 
-      if (
-        options.messageLimit !== undefined &&
-        (key === "error" || key === "message") &&
-        typeof entry === "string"
-      ) {
-        return [[key, capMessage(entry, options.messageLimit)]];
-      }
+    const entry = value[key];
 
-      return [[key, redactValue(entry, depth + 1, options)]];
-    }),
-  );
+    if (
+      options.messageLimit !== undefined &&
+      (key === "error" || key === "message") &&
+      typeof entry === "string"
+    ) {
+      redacted[key] = consumeNode(options.budget)
+        ? consumeString(capMessage(entry, options.messageLimit), options.budget)
+        : undefined;
+      continue;
+    }
+
+    redacted[key] = redactValue(entry, depth + 1, options);
+  }
+
+  return redacted;
+}
+
+function hasBudget(budget: RedactionBudget | undefined): boolean {
+  return budget === undefined || (budget.remainingNodes > 0 && budget.remainingCharacters > 0);
+}
+
+function consumeNode(budget: RedactionBudget | undefined): boolean {
+  if (budget === undefined) {
+    return true;
+  }
+  if (budget.remainingNodes <= 0 || budget.remainingCharacters <= 0) {
+    return false;
+  }
+
+  budget.remainingNodes -= 1;
+  return true;
+}
+
+function consumeKey(key: string, budget: RedactionBudget | undefined): boolean {
+  if (budget === undefined) {
+    return true;
+  }
+  if (key.length > budget.remainingCharacters) {
+    return false;
+  }
+
+  budget.remainingCharacters -= key.length;
+  return true;
+}
+
+function consumeString(value: string, budget: RedactionBudget | undefined): string {
+  if (budget === undefined) {
+    return value;
+  }
+
+  const consumed = value.slice(0, budget.remainingCharacters);
+  budget.remainingCharacters -= consumed.length;
+  return consumed;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

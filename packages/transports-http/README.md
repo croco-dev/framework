@@ -225,7 +225,8 @@ readiness 결과에 포함되지 않습니다.
 `{ "name": "...", "status": "down", "details": { "error": "..." } }`로 직렬화되고 전체 응답은
 `503`입니다. 세 aggregate 경로의 HTTP 응답은 민감 key를 재귀적으로 `[Redacted]` 처리하고 모든
 문자열을 100자로, 객체 key와 배열 항목을 각각 50개로 제한하며 `stack`과 `cause`를 노출하지
-않습니다. `/health/live`는 등록된 체크와 독립적인 process liveness로 항상
+않습니다. 각 check의 세부 정보는 전체 500개 node와 10,000개 문자까지만 순회합니다.
+`/health/live`는 등록된 체크와 독립적인 process liveness로 항상
 `200 { "status": "ok" }`를 반환합니다.
 
 ### Diagnostics exposure policy

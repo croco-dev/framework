@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "../libs/CrocoApp";
 import { ErrorHandler } from "../libs/ErrorHandler";
 import { HealthCheckRegistry } from "../libs/HealthCheckRegistry";
+import { sanitizeHealthCheckResult } from "../libs/operationalEndpoints";
 
 describe("HealthCheck", () => {
   let registry!: HealthCheckRegistry;
@@ -82,6 +83,24 @@ describe("HealthCheck", () => {
         status: "down",
         results: [{ name: "database", status: "down" }],
       });
+    });
+
+    it("should keep the health detail string limit independent from a larger message limit", () => {
+      const result = sanitizeHealthCheckResult(
+        {
+          status: "down",
+          results: [
+            {
+              name: "database",
+              status: "down",
+              details: { diagnostic: "x".repeat(200) },
+            },
+          ],
+        },
+        1_000,
+      );
+
+      expect(result.results[0]?.details).toEqual({ diagnostic: `${"x".repeat(97)}...` });
     });
   });
 
@@ -179,6 +198,72 @@ describe("HealthCheck", () => {
           },
         ],
       });
+    });
+
+    it("should stop reading detail objects at the collection limit", async () => {
+      let accessCount = 0;
+      const diagnostic: Record<string, unknown> = {};
+      for (let index = 0; index < 100; index += 1) {
+        Object.defineProperty(diagnostic, `field${index}`, {
+          enumerable: true,
+          get: () => {
+            accessCount += 1;
+            return index;
+          },
+        });
+      }
+      registry.register("bounded", async () => ({ status: "down", diagnostic }));
+
+      const app = createApp({ controllers: [], securityValidation: "off" });
+      const response = await app.fetch(new Request("http://localhost/health"));
+
+      expect(response.status).toBe(503);
+      await response.json();
+      expect(accessCount).toBe(50);
+    });
+
+    it("should share a traversal budget across nested detail collections", async () => {
+      let accessCount = 0;
+      const shared: Record<string, unknown> = {};
+      for (let index = 0; index < 10; index += 1) {
+        Object.defineProperty(shared, `branch${index}`, {
+          enumerable: true,
+          get: () => {
+            accessCount += 1;
+            return shared;
+          },
+        });
+      }
+      registry.register("bounded", async () => ({ status: "down", diagnostic: shared }));
+
+      const app = createApp({ controllers: [], securityValidation: "off" });
+      const response = await app.fetch(new Request("http://localhost/health"));
+
+      expect(response.status).toBe(503);
+      await response.json();
+      expect(accessCount).toBeLessThanOrEqual(500);
+    });
+
+    it("should omit serialization hooks from health check details", async () => {
+      let calls = 0;
+      registry.register("bounded", async () => ({
+        status: "down",
+        safe: true,
+        toJSON: () => {
+          calls += 1;
+          return "x".repeat(100_000);
+        },
+      }));
+
+      const app = createApp({ controllers: [], securityValidation: "off" });
+      const response = await app.fetch(new Request("http://localhost/health"));
+
+      expect(response.status).toBe(503);
+      await expect(response.json()).resolves.toEqual({
+        status: "down",
+        results: [{ name: "bounded", status: "down", details: { safe: true } }],
+      });
+      expect(calls).toBe(0);
     });
   });
 

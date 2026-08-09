@@ -70,7 +70,7 @@ Croco 프레임워크 운영 중 발생하는 내부 상태 불일치, 컴포넌
 - `/health/live`는 등록된 dependency check와 독립적인 process liveness로 항상 `{ "status": "ok" }`와 HTTP `200`을 반환합니다.
 - `/ready`와 `/health/ready`는 같은 readiness contract를 공유하며, 실패 시에도 `{ "status": "down", "results": [...] }` shape를 유지하고 HTTP `503`을 반환합니다.
 - 두 readiness 경로는 `HealthCheckRegistry.registerReadiness(name, fn, options)`로 등록한 indicator만 실행합니다. 기존 `register(name, fn, options)` generic health check는 readiness와 독립적입니다.
-- health와 readiness 세부 정보는 민감 key가 `[Redacted]` 처리되고, 모든 문자열은 100자, 객체 key와 배열 항목은 각각 50개로 제한되며, `stack`과 `cause`는 응답에서 제거됩니다.
+- health와 readiness 세부 정보는 민감 key가 `[Redacted]` 처리되고, 모든 문자열은 100자, 객체 key와 배열 항목은 각각 50개로 제한되며, 각 check당 전체 500개 node와 10,000개 문자까지만 순회합니다. `stack`과 `cause`는 응답에서 제거됩니다.
 - `/diagnostics`와 `/health/diagnostics`는 같은 sanitized diagnostics contract를 공유합니다. 실패 원인 stack trace나 `cause`는 응답에 포함하지 않습니다.
 - 보호된 diagnostics/dev inspector endpoint의 authorization 실패는 `{ "error": "Forbidden" }` shape와 HTTP `403`을 사용합니다.
 - `/diagnostics`, `/health/diagnostics`, `/dev/inspector`의 성공/거부 응답과 `/metrics` 성공 응답은 `Cache-Control: no-store`를 유지해야 합니다.
