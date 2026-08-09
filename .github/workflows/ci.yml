@@ -184,10 +184,6 @@ jobs:
           fi
           node --experimental-strip-types scripts/release-spine-evidence.mts "${args[@]}"
 
-      - name: Verify packed engagement contracts
-        if: needs.changes.outputs.profile == 'publish'
-        run: pnpm --filter @croco/engagement-core test:packed
-
       - name: Publish verification summary
         if: always()
         shell: bash

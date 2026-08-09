@@ -770,6 +770,16 @@ const spineOnly = (context: VerificationContext): readonly EvidenceCommand[] => 
 
 const publishOnly = (context: VerificationContext): readonly EvidenceCommand[] => [
   {
+    id: "engagement-packed-consumer",
+    label: "Packed engagement contract consumer",
+    category: "package-smoke",
+    command: ["pnpm", "--filter", "@croco/engagement-core", "test:packed"],
+    timeoutMs: minutes(10),
+    applicable: isApplicableToChangedFiles(context, (path) =>
+      path.startsWith("packages/engagement-core/"),
+    ),
+  },
+  {
     id: "release-gate-tests",
     label: "Release-gate maintenance tests",
     category: "quality",

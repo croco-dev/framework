@@ -157,6 +157,7 @@ describe("verification manifest", () => {
     expect(createVerificationManifest("publish").map(({ id }) => id)).toEqual([
       ...repoIds,
       ...spineOnlyIds,
+      "engagement-packed-consumer",
       "release-gate-tests",
       "release-metadata",
       "spine-bundle-size",
@@ -167,6 +168,25 @@ describe("verification manifest", () => {
     expect(
       createVerificationManifest("publish").find(({ id }) => id === "spine-bundle-size")?.command,
     ).toEqual(["node", "--experimental-strip-types", "scripts/package-quality-report.mts"]);
+  });
+
+  it("runs the packed engagement consumer only for engagement package changes", () => {
+    const selected = createVerificationManifest("publish", {
+      base: "origin/trunk",
+      changedFiles: ["packages/engagement-core/src/libs/MessageContracts.ts"],
+      head: "HEAD",
+    }).find(({ id }) => id === "engagement-packed-consumer");
+    expect(selected).toMatchObject({
+      applicable: true,
+      command: ["pnpm", "--filter", "@croco/engagement-core", "test:packed"],
+    });
+
+    const unrelated = createVerificationManifest("publish", {
+      base: "origin/trunk",
+      changedFiles: ["packages/retry-core/src/libs/Retry.ts"],
+      head: "HEAD",
+    }).find(({ id }) => id === "engagement-packed-consumer");
+    expect(unrelated?.applicable).toBe(false);
   });
 
   it("runs one authoritative release-gate suite without duplicating contract tests", () => {
