@@ -68,6 +68,7 @@ import { assertGeneratedSmokeCaseDependencyMapping } from "./create-croco-app-ge
 const DEFAULT_TENANT_MODEL = "org";
 const GENERATED_NODE_VERSION = VERSIONS.node;
 const GENERATED_NODE_ENGINE_RANGE = `>=${GENERATED_NODE_VERSION}`;
+const SAAS_GENERATED_NODE_ENGINE_RANGE = ">=22.5";
 const GRAPHQL_CONTRACT_CHECK_LABEL = "GraphQL contract check";
 const GRAPHQL_CONTRACT_SNAPSHOT_LABEL = "GraphQL contract snapshot";
 const GRAPHQL_CONTRACT_SNAPSHOT_PATH = "graphql-contract.snapshot.json";
@@ -2472,10 +2473,13 @@ function assertGeneratedNodeRuntimeContract(projectDir: string, smokeCase: Smoke
   };
   const nvmrc = readFileSync(join(projectDir, ".nvmrc"), "utf8");
   const readme = readFileSync(join(projectDir, "README.md"), "utf8");
+  const expectedEngineRange = smokeCase.matrixTargets.includes("saas")
+    ? SAAS_GENERATED_NODE_ENGINE_RANGE
+    : GENERATED_NODE_ENGINE_RANGE;
 
-  if (packageJson.engines?.node !== GENERATED_NODE_ENGINE_RANGE) {
+  if (packageJson.engines?.node !== expectedEngineRange) {
     throw new Error(
-      `${smokeCase.name} generated package.json engines.node=${String(packageJson.engines?.node)}; expected ${GENERATED_NODE_ENGINE_RANGE}`,
+      `${smokeCase.name} generated package.json engines.node=${String(packageJson.engines?.node)}; expected ${expectedEngineRange}`,
     );
   }
   if (nvmrc !== `${GENERATED_NODE_VERSION}\n`) {
@@ -2483,7 +2487,7 @@ function assertGeneratedNodeRuntimeContract(projectDir: string, smokeCase: Smoke
       `${smokeCase.name} generated .nvmrc=${JSON.stringify(nvmrc)}; expected ${GENERATED_NODE_VERSION}`,
     );
   }
-  if (!readme.includes(`Node.js ${GENERATED_NODE_ENGINE_RANGE}`) || !readme.includes("nvm use")) {
+  if (!readme.includes(`Node.js ${expectedEngineRange}`) || !readme.includes("nvm use")) {
     throw new Error(
       `${smokeCase.name} generated README.md is missing Node version recovery guidance`,
     );
@@ -2500,7 +2504,7 @@ function assertGeneratedNodeRuntimeContract(projectDir: string, smokeCase: Smoke
   }
 
   console.log(
-    `create-croco-app-generated-smoke: ${smokeCase.name} Node runtime contract matches ${GENERATED_NODE_ENGINE_RANGE}`,
+    `create-croco-app-generated-smoke: ${smokeCase.name} Node runtime contract matches ${expectedEngineRange}`,
   );
 }
 
