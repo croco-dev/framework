@@ -1,4 +1,5 @@
 import type { ILogger } from "@croco/framework-context";
+import { assertValidCacheNumericOption } from "./numericValidation";
 import { InvalidCacheTtlProblem } from "./problems/CacheStoreProblems";
 import {
   type CacheGetOrSetOptions,
@@ -21,7 +22,9 @@ type InFlightLoad<V> = {
 };
 
 export type InMemoryCacheStoreOptions = {
+  /** Positive safe integer. Defaults to 1000. */
   maxEntries?: number;
+  /** Integer milliseconds from 1 through 2,147,483,647. Disabled by default. */
   cleanupIntervalMs?: number;
 };
 
@@ -61,12 +64,20 @@ export class InMemoryCacheStore<V = unknown> extends CacheStore<string, V> {
     super();
 
     void logger;
-    this.maxEntries = options.maxEntries ?? DEFAULT_MAX_ENTRIES;
+    const maxEntries = options.maxEntries === undefined ? DEFAULT_MAX_ENTRIES : options.maxEntries;
+    assertValidCacheNumericOption("maxEntries", maxEntries);
 
-    if (options.cleanupIntervalMs !== undefined) {
+    const cleanupIntervalMs = options.cleanupIntervalMs;
+    if (cleanupIntervalMs !== undefined) {
+      assertValidCacheNumericOption("cleanupIntervalMs", cleanupIntervalMs);
+    }
+
+    this.maxEntries = maxEntries;
+
+    if (cleanupIntervalMs !== undefined) {
       this.cleanupTimer = setInterval(() => {
         this.pruneExpiredSync();
-      }, options.cleanupIntervalMs);
+      }, cleanupIntervalMs);
 
       this.cleanupTimer.unref?.();
     }

@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { InMemoryCacheStore } from "../libs/InMemoryCacheStore";
-import { InvalidCacheTtlProblem } from "../libs/problems/CacheStoreProblems";
+import {
+  InvalidCacheConfigurationProblem,
+  InvalidCacheTtlProblem,
+  MAX_CACHE_ENTRIES,
+  MAX_CACHE_TIMER_DELAY_MS,
+} from "../libs/problems/CacheStoreProblems";
 
 describe("InMemoryCacheStore", () => {
   let cache!: InMemoryCacheStore<string>;
@@ -230,6 +235,45 @@ describe("InMemoryCacheStore", () => {
   });
 
   describe("capacity management", () => {
+    it.each([
+      Number.NaN,
+      Number.POSITIVE_INFINITY,
+      Number.NEGATIVE_INFINITY,
+      null as unknown as number,
+      -1,
+      0,
+      1.5,
+      MAX_CACHE_ENTRIES + 1,
+    ])("rejects invalid maxEntries %s before allocating a cleanup timer", (maxEntries) => {
+      vi.useFakeTimers();
+      const setIntervalSpy = vi.spyOn(globalThis, "setInterval");
+
+      try {
+        expect(() => new InMemoryCacheStore({ maxEntries, cleanupIntervalMs: 1 })).toThrow(
+          InvalidCacheConfigurationProblem,
+        );
+
+        try {
+          new InMemoryCacheStore({ maxEntries, cleanupIntervalMs: 1 });
+        } catch (error) {
+          expect(error).toMatchObject({
+            code: "cache-core/invalid-configuration",
+            option: "maxEntries",
+            value: maxEntries,
+          });
+        }
+
+        expect(setIntervalSpy).not.toHaveBeenCalled();
+      } finally {
+        setIntervalSpy.mockRestore();
+        vi.useRealTimers();
+      }
+    });
+
+    it.each([1, MAX_CACHE_ENTRIES])("accepts maxEntries boundary %s", (maxEntries) => {
+      expect(() => new InMemoryCacheStore({ maxEntries })).not.toThrow();
+    });
+
     it("should apply default maxEntries of 1000 when not set", async () => {
       const defaultCache = new InMemoryCacheStore<string>();
 
@@ -735,6 +779,55 @@ describe("InMemoryCacheStore", () => {
   });
 
   describe("periodic cleanup", () => {
+    it.each([
+      Number.NaN,
+      Number.POSITIVE_INFINITY,
+      Number.NEGATIVE_INFINITY,
+      null as unknown as number,
+      -1,
+      0,
+      1.5,
+      MAX_CACHE_TIMER_DELAY_MS + 1,
+    ])("rejects invalid cleanupIntervalMs %s before allocating a timer", (cleanupIntervalMs) => {
+      vi.useFakeTimers();
+      const setIntervalSpy = vi.spyOn(globalThis, "setInterval");
+
+      try {
+        expect(() => new InMemoryCacheStore({ cleanupIntervalMs })).toThrow(
+          InvalidCacheConfigurationProblem,
+        );
+
+        try {
+          new InMemoryCacheStore({ cleanupIntervalMs });
+        } catch (error) {
+          expect(error).toMatchObject({
+            code: "cache-core/invalid-configuration",
+            option: "cleanupIntervalMs",
+            value: cleanupIntervalMs,
+          });
+        }
+
+        expect(setIntervalSpy).not.toHaveBeenCalled();
+      } finally {
+        setIntervalSpy.mockRestore();
+        vi.useRealTimers();
+      }
+    });
+
+    it.each([1, MAX_CACHE_TIMER_DELAY_MS])(
+      "accepts cleanupIntervalMs boundary %s without timer clamping",
+      (cleanupIntervalMs) => {
+        vi.useFakeTimers();
+
+        try {
+          const periodicCache = new InMemoryCacheStore({ cleanupIntervalMs });
+          periodicCache.close();
+        } finally {
+          vi.useRealTimers();
+        }
+      },
+    );
+
     it("removes expired entries on cleanup interval without reads", async () => {
       vi.useFakeTimers();
 

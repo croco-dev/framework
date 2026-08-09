@@ -17,13 +17,17 @@ import {
   invalidateCacheKey,
   invalidateCacheTag,
   InMemoryCacheStore,
+  InvalidCacheConfigurationProblem,
   InvalidCacheTtlProblem,
+  MAX_CACHE_ENTRIES,
+  MAX_CACHE_TIMER_DELAY_MS,
   serializeCacheInvalidationManifest,
 } from "../index";
 import type {
   CacheGetOrSetOptions,
   CacheInvalidationAdapter,
   CacheInvalidationManifest,
+  CacheNumericOption,
   CachePattern,
   CacheStats,
   CacheWarmupEntry,
@@ -92,12 +96,19 @@ class RootCache extends Cache<string, string> {
 describe("cache-core public exports", () => {
   it("exports README-documented cache contracts from the package root", async () => {
     const cache = new RootCache();
+    const numericOption: CacheNumericOption = "maxEntries";
     const distributedLock: DistributedCacheLock | undefined = undefined;
 
     expect(cache).toBeInstanceOf(Cache);
     expect(DistributedCacheStore.prototype).toBeInstanceOf(CacheStore);
     expect(new InMemoryCacheStore<string>()).toBeInstanceOf(CacheStore);
+    expect(new InvalidCacheConfigurationProblem("maxEntries", 0).code).toBe(
+      "cache-core/invalid-configuration",
+    );
     expect(new InvalidCacheTtlProblem(-1).code).toBe("cache-core/invalid-ttl");
+    expect(MAX_CACHE_ENTRIES).toBe(Number.MAX_SAFE_INTEGER);
+    expect(MAX_CACHE_TIMER_DELAY_MS).toBe(2_147_483_647);
+    expect(numericOption).toBe("maxEntries");
     expect(distributedLock).toBeUndefined();
   });
 
