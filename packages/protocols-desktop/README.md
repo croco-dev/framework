@@ -18,21 +18,39 @@ dependency-boundary gates enforce these constraints for source imports and packa
 import { compileDesktopWireSchema, desktop, parseDesktopWireValue } from "@croco/protocols-desktop";
 import { z } from "zod";
 
+const fileChanged = desktop.event({
+  payload: z.object({ path: z.string() }),
+});
+const filesystemRead = desktop.effect({
+  namespace: "filesystem",
+  methods: {
+    readText: desktop.effect.method<[path: string], Promise<string>>(),
+  },
+});
+const filesystemWrite = desktop.effect({
+  namespace: "filesystem",
+  methods: {
+    writeText: desktop.effect.method<[path: string, contents: string], Promise<void>>(),
+  },
+});
+
 const project = desktop.contract({
   commands: {
     readFile: desktop.query({
       input: z.object({ path: z.string() }),
       output: z.object({ contents: z.string() }),
+      effects: [filesystemRead],
+      events: ["fileChanged"],
     }),
     saveFile: desktop.mutation({
       input: z.object({ path: z.string(), contents: z.string() }),
       output: z.object({ saved: z.boolean() }),
+      effects: [filesystemWrite],
+      events: ["fileChanged"],
     }),
   },
   events: {
-    fileChanged: desktop.event({
-      payload: z.object({ path: z.string() }),
-    }),
+    fileChanged,
   },
 });
 
@@ -60,21 +78,27 @@ derived IDs, command kinds, window trust, and local capability references for th
 keys, unresolved local-window references, and references made ambiguous by mounting one contract under multiple
 keys are rejected with stable `DesktopDefinitionProblem` codes.
 
-## Declare exact handlers
+## Declare least-authority handlers
 
-`app.implement()` derives every handler key, input, and result from the mounted contracts. It has no runtime
-registration behavior; later desktop runtime layers consume the implementation after this type-only boundary has
-proven complete coverage.
+`app.implement()` derives every handler key, input, result, event, Problem, cancellation signal, and effect method
+from the mounted contracts. It has no runtime registration or effect implementation behavior; later desktop runtime
+layers consume the implementation after this type-only boundary has proven complete coverage and authority.
 
 ```typescript
 app.implement({
   contracts: {
     project: {
       commands: {
-        readFile: async ({ path }) => ({ contents: await readFile(path, "utf8") }),
-        saveFile: async ({ path, contents }) => {
-          await writeFile(path, contents);
-          return { saved: true };
+        readFile: async ({ path }, ctx) => {
+          const contents = await ctx.filesystem.readText(path);
+          await ctx.emit(project.events.fileChanged, { path });
+          return ctx.ok({ contents });
+        },
+        saveFile: async ({ path, contents }, ctx) => {
+          ctx.signal.throwIfAborted();
+          await ctx.filesystem.writeText(path, contents);
+          await ctx.emit(project.events.fileChanged, { path });
+          return ctx.ok({ saved: true });
         },
       },
     },
@@ -83,8 +107,38 @@ app.implement({
 ```
 
 Every mounted contract and command needs a handler. Unknown contract, command, and nested keys are rejected at
-typecheck, and each handler must return the declared output (or a promise of it). The API derives IDs from the app
-definition, so no handler string ID or IPC channel is supplied.
+typecheck. Undeclared effect namespaces, effect methods, and events are absent from `ctx`; `ctx.ok()` preserves the
+exact output, while `ctx.fail()` accepts only the command's declared Problem constructors. A command with no declared
+Problems cannot call `ctx.fail()`. Handlers return `DesktopResult` directly or through a promise. The API derives IDs
+from the app definition, so no handler string ID or IPC channel is supplied.
+
+Effects are declarations only. `desktop.effect.method()` records a callable signature without accepting an
+implementation, so this package cannot invoke Electron, filesystem, dialog, shell, secret, or process APIs. Runtime
+adapters must provide those capabilities later from the command's exact effect tuple.
+
+Keep `effects`, `events`, and `problems` as literal tuples. Widened arrays, dynamic effect namespaces, open-ended
+method records, and conditional tuple elements are rejected because they would grant more handler authority than one
+runtime declaration proves. Declared Problem classes must expose a literal `code` discriminant:
+
+```typescript
+import { Problem, ProblemCategory } from "@croco/problems-core";
+
+class ProjectReadProblem extends Problem {
+  declare readonly code: "PROJECT_READ_FAILED";
+
+  constructor() {
+    super("PROJECT_READ_FAILED", ProblemCategory.InternalServerError);
+  }
+}
+```
+
+This type declaration must match the stable code passed to the Problem base constructor by the real class
+constructor. Problem Registry validation and renderer-safe serialization remain the responsibility of the later
+desktop compiler layer.
+
+`DesktopHandlerContext` and `DesktopCommandHandler` require both the command and its owning contract as type
+arguments. The contract is the evidence used to resolve declared event keys, so an unbound command cannot acquire
+event authority through a broad default.
 
 ## Declare opaque resource grants
 
@@ -153,10 +207,11 @@ const input = parseDesktopWireValue(
 
 ## Type inference
 
-The package exports `InferDesktopCommandInput`, `InferDesktopCommandOutput`, `InferDesktopEventPayload`,
+The package exports `InferDesktopCommandInput`, `InferDesktopCommandOutput`, `InferDesktopCommandProblem`,
+`InferDesktopEventPayload`,
 `InferDesktopContractCommands`, `InferDesktopContractEvents`, `InferDesktopAppContracts`, and
 `InferDesktopAppWindows`, `DesktopAppImplementation`, `DesktopContractImplementation`, and
-`DesktopCommandHandler`. Schema inference supports Standard Schema output metadata, Zod-compatible `_output`
+`DesktopCommandHandler`, `DesktopHandlerContext`, and `DesktopResult`. Schema inference supports Standard Schema output metadata, Zod-compatible `_output`
 metadata, and structural `parse()` return types without making a schema library a runtime dependency.
 
 ## Verification

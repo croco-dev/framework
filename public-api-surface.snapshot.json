@@ -20911,6 +20911,11 @@
               "source": "./libs/types"
             },
             {
+              "name": "AnyDesktopEffect",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
               "name": "AnyDesktopEvent",
               "exportKind": "named",
               "source": "./libs/types"
@@ -21046,6 +21051,21 @@
               "source": "./libs/types"
             },
             {
+              "name": "DesktopEffectDefinition",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopEffectMethodDefinition",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopEffectOptions",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
               "name": "DesktopEventDefinition",
               "exportKind": "named",
               "source": "./libs/types"
@@ -21057,6 +21077,11 @@
             },
             {
               "name": "DesktopEventRecord",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopFailure",
               "exportKind": "named",
               "source": "./libs/types"
             },
@@ -21106,6 +21131,11 @@
               "source": "./libs/types"
             },
             {
+              "name": "DesktopHandlerContext",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
               "name": "DesktopLocalWindowDefinition",
               "exportKind": "named",
               "source": "./libs/types"
@@ -21136,6 +21166,11 @@
               "source": "./libs/types"
             },
             {
+              "name": "DesktopProblemReference",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
               "name": "DesktopQueryDefinition",
               "exportKind": "named",
               "source": "./libs/types"
@@ -21157,6 +21192,16 @@
             },
             {
               "name": "DesktopRemoteWindowOptions",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopResult",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopSuccess",
               "exportKind": "named",
               "source": "./libs/types"
             },
@@ -21227,6 +21272,11 @@
             },
             {
               "name": "InferDesktopCommandOutput",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "InferDesktopCommandProblem",
               "exportKind": "named",
               "source": "./libs/types"
             },

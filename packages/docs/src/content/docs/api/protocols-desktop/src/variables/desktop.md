@@ -55,11 +55,35 @@ title: "desktop"
 
 ##### options
 
-[`DesktopContractOptions`](/api/protocols-desktop/src/type-aliases/desktopcontractoptions/)\<`TCommands`, `TEvents`, `TGrants`\> & `NoInvalidKeys`\<`TCommands`\> & `NoInvalidKeys`\<`TEvents`\> & `NoInvalidKeys`\<`TGrants`\> & `NoDuplicateMembers`\<`TCommands`, `TEvents`, `TGrants`\>
+[`DesktopContractOptions`](/api/protocols-desktop/src/type-aliases/desktopcontractoptions/)\<`TCommands`, `TEvents`, `TGrants`\> & `NoInvalidKeys`\<`TCommands`\> & `NoInvalidKeys`\<`TEvents`\> & `NoInvalidKeys`\<`TGrants`\> & `NoDuplicateMembers`\<`TCommands`, `TEvents`, `TGrants`\> & `NoUnknownCommandEvents`\<`TCommands`, `TEvents`\>
 
 #### Returns
 
 [`DesktopContractDefinition`](/api/protocols-desktop/src/type-aliases/desktopcontractdefinition/)\<`TCommands`, `TEvents`, `TGrants`\>
+
+### effect
+
+> `readonly` **effect**: \<`TNamespace`, `TMethods`\>(`options`) => [`DesktopEffectDefinition`](/api/protocols-desktop/src/type-aliases/desktopeffectdefinition/)\<`TNamespace`, `TMethods`\> & `object`
+
+#### Type Declaration
+
+##### method
+
+> **method**: \<`TArguments`, `TResult`\>() => [`DesktopEffectMethodDefinition`](/api/protocols-desktop/src/type-aliases/desktopeffectmethoddefinition/)\<`TArguments`, `TResult`\> = `effectMethod`
+
+###### Type Parameters
+
+###### TArguments
+
+`TArguments` *extends* readonly `unknown`[]
+
+###### TResult
+
+`TResult`
+
+###### Returns
+
+[`DesktopEffectMethodDefinition`](/api/protocols-desktop/src/type-aliases/desktopeffectmethoddefinition/)\<`TArguments`, `TResult`\>
 
 ### event
 
@@ -139,51 +163,43 @@ title: "desktop"
 
 ### mutation
 
-> **mutation**: \<`TInputSchema`, `TOutputSchema`\>(`options`) => [`DesktopMutationDefinition`](/api/protocols-desktop/src/type-aliases/desktopmutationdefinition/)\<`TInputSchema`, `TOutputSchema`\>
+> **mutation**: \<`TOptions`\>(`options`) => [`DesktopMutationDefinition`](/api/protocols-desktop/src/type-aliases/desktopmutationdefinition/)\<`TOptions`\[`"input"`\], `TOptions`\[`"output"`\], `DeclaredEffects`\<`TOptions`\>, `DeclaredEvents`\<`TOptions`\>, `DeclaredProblems`\<`TOptions`\>\>
 
 #### Type Parameters
 
-##### TInputSchema
+##### TOptions
 
-`TInputSchema`
-
-##### TOutputSchema
-
-`TOutputSchema`
+`TOptions` *extends* `AnyDesktopMutationOptions`
 
 #### Parameters
 
 ##### options
 
-[`DesktopMutationOptions`](/api/protocols-desktop/src/type-aliases/desktopmutationoptions/)\<`TInputSchema`, `TOutputSchema`\>
+`TOptions` & `ValidateEffects`\<`DeclaredEffects`\<`TOptions`\>\> & `ValidateEvents`\<`DeclaredEvents`\<`TOptions`\>\> & `ValidateProblems`\<`DeclaredProblems`\<`TOptions`\>\>
 
 #### Returns
 
-[`DesktopMutationDefinition`](/api/protocols-desktop/src/type-aliases/desktopmutationdefinition/)\<`TInputSchema`, `TOutputSchema`\>
+[`DesktopMutationDefinition`](/api/protocols-desktop/src/type-aliases/desktopmutationdefinition/)\<`TOptions`\[`"input"`\], `TOptions`\[`"output"`\], `DeclaredEffects`\<`TOptions`\>, `DeclaredEvents`\<`TOptions`\>, `DeclaredProblems`\<`TOptions`\>\>
 
 ### query
 
-> **query**: \<`TInputSchema`, `TOutputSchema`\>(`options`) => [`DesktopQueryDefinition`](/api/protocols-desktop/src/type-aliases/desktopquerydefinition/)\<`TInputSchema`, `TOutputSchema`\>
+> **query**: \<`TOptions`\>(`options`) => [`DesktopQueryDefinition`](/api/protocols-desktop/src/type-aliases/desktopquerydefinition/)\<`TOptions`\[`"input"`\], `TOptions`\[`"output"`\], `DeclaredEffects`\<`TOptions`\>, `DeclaredEvents`\<`TOptions`\>, `DeclaredProblems`\<`TOptions`\>\>
 
 #### Type Parameters
 
-##### TInputSchema
+##### TOptions
 
-`TInputSchema`
-
-##### TOutputSchema
-
-`TOutputSchema`
+`TOptions` *extends* `AnyDesktopQueryOptions`
 
 #### Parameters
 
 ##### options
 
-[`DesktopQueryOptions`](/api/protocols-desktop/src/type-aliases/desktopqueryoptions/)\<`TInputSchema`, `TOutputSchema`\>
+`TOptions` & `ValidateEffects`\<`DeclaredEffects`\<`TOptions`\>\> & `ValidateEvents`\<`DeclaredEvents`\<`TOptions`\>\> & `ValidateProblems`\<`DeclaredProblems`\<`TOptions`\>\>
 
 #### Returns
 
-[`DesktopQueryDefinition`](/api/protocols-desktop/src/type-aliases/desktopquerydefinition/)\<`TInputSchema`, `TOutputSchema`\>
+[`DesktopQueryDefinition`](/api/protocols-desktop/src/type-aliases/desktopquerydefinition/)\<`TOptions`\[`"input"`\], `TOptions`\[`"output"`\], `DeclaredEffects`\<`TOptions`\>, `DeclaredEvents`\<`TOptions`\>, `DeclaredProblems`\<`TOptions`\>\>
 
 ### window
 

@@ -17,4 +17,4 @@ title: "DesktopContractImplementation"
 
 ### commands
 
-> `readonly` **commands**: `{ readonly [TCommandKey in keyof TContract["commands"] & string]: DesktopCommandHandler<TContract["commands"][TCommandKey]> }`
+> `readonly` **commands**: `{ readonly [TCommandKey in keyof TContract["commands"] & string]: DesktopCommandHandler<TContract["commands"][TCommandKey], TContract> }`

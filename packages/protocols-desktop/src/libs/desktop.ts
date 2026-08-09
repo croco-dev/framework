@@ -4,6 +4,7 @@ import type {
   AnyDesktopCommand,
   AnyDesktopContract,
   AnyDesktopEvent,
+  AnyDesktopEffect,
   AnyDesktopGrant,
   AnyDesktopWindow,
   BoundDesktopContract,
@@ -16,6 +17,9 @@ import type {
   DesktopContractDefinition,
   DesktopContractOptions,
   DesktopEventDefinition,
+  DesktopEffectDefinition,
+  DesktopEffectMethodDefinition,
+  DesktopEffectOptions,
   DesktopEventOptions,
   DesktopEventRecord,
   DesktopFileGrantOptions,
@@ -34,6 +38,7 @@ import type {
   DesktopMutationOptions,
   DesktopQueryDefinition,
   DesktopQueryOptions,
+  DesktopProblemReference,
   DesktopRemoteWindowDefinition,
   DesktopRemoteWindowMetadata,
   DesktopRemoteWindowOptions,
@@ -55,12 +60,23 @@ type InvalidDesktopKeys<TRecord> = {
   [TKey in keyof TRecord & string]: InvalidDesktopKey<TKey>;
 }[keyof TRecord & string];
 
+type DesktopHandlerHelperKey = "ok" | "fail" | "emit" | "signal";
+
+type InvalidEffectNamespace<TKey extends string> =
+  | InvalidDesktopKey<TKey>
+  | Extract<TKey, DesktopHandlerHelperKey>;
+
 type NoInvalidKeys<TRecord> =
   InvalidDesktopKeys<TRecord> extends never
     ? unknown
     : {
         readonly __invalidDesktopKeys__: InvalidDesktopKeys<TRecord>;
       };
+
+type NoInvalidEffectNamespace<TNamespace extends string> =
+  InvalidEffectNamespace<TNamespace> extends never
+    ? unknown
+    : { readonly __invalidDesktopEffectNamespace__: InvalidEffectNamespace<TNamespace> };
 
 type NoDuplicateMembers<
   TCommands extends DesktopCommandRecord,
@@ -85,33 +101,218 @@ type ValidContractOptions<
 > = NoInvalidKeys<TCommands> &
   NoInvalidKeys<TEvents> &
   NoInvalidKeys<TGrants> &
-  NoDuplicateMembers<TCommands, TEvents, TGrants>;
+  NoDuplicateMembers<TCommands, TEvents, TGrants> &
+  NoUnknownCommandEvents<TCommands, TEvents>;
+
+type UnknownCommandEvents<
+  TCommands extends DesktopCommandRecord,
+  TEvents extends DesktopEventRecord,
+> = {
+  [TCommandKey in keyof TCommands]: Exclude<
+    DesktopCommandEventKeys<TCommands[TCommandKey]>,
+    keyof TEvents & string
+  >;
+}[keyof TCommands];
+
+type DesktopCommandEventKeys<TCommand extends AnyDesktopCommand> = TCommand extends {
+  readonly events: infer TEvents extends readonly string[];
+}
+  ? TEvents[number]
+  : never;
+
+type NoUnknownCommandEvents<
+  TCommands extends DesktopCommandRecord,
+  TEvents extends DesktopEventRecord,
+> =
+  UnknownCommandEvents<TCommands, TEvents> extends never
+    ? unknown
+    : { readonly __unknownDesktopCommandEvents__: UnknownCommandEvents<TCommands, TEvents> };
 
 type ValidAppOptions<
   TContracts extends Readonly<Record<string, AnyDesktopContract>>,
   TWindows extends DesktopWindowRecord,
 > = NoInvalidKeys<TContracts> & NoInvalidKeys<TWindows>;
 
-function query<const TInputSchema, const TOutputSchema>(
-  options: DesktopQueryOptions<TInputSchema, TOutputSchema>,
-): DesktopQueryDefinition<TInputSchema, TOutputSchema> {
+function query<const TOptions extends AnyDesktopQueryOptions>(
+  options: TOptions & ValidCommandDeclarations<TOptions>,
+): DesktopQueryDefinition<
+  TOptions["input"],
+  TOptions["output"],
+  DeclaredEffects<TOptions>,
+  DeclaredEvents<TOptions>,
+  DeclaredProblems<TOptions>
+> {
   return {
     definitionType: "command",
     kind: "query",
     input: options.input,
     output: options.output,
+    effects: (options.effects ?? []) as DeclaredEffects<TOptions>,
+    events: (options.events ?? []) as DeclaredEvents<TOptions>,
+    problems: (options.problems ?? []) as DeclaredProblems<TOptions>,
   };
 }
 
-function mutation<const TInputSchema, const TOutputSchema>(
-  options: DesktopMutationOptions<TInputSchema, TOutputSchema>,
-): DesktopMutationDefinition<TInputSchema, TOutputSchema> {
+function mutation<const TOptions extends AnyDesktopMutationOptions>(
+  options: TOptions & ValidCommandDeclarations<TOptions>,
+): DesktopMutationDefinition<
+  TOptions["input"],
+  TOptions["output"],
+  DeclaredEffects<TOptions>,
+  DeclaredEvents<TOptions>,
+  DeclaredProblems<TOptions>
+> {
   return {
     definitionType: "command",
     kind: "mutation",
     input: options.input,
     output: options.output,
+    effects: (options.effects ?? []) as DeclaredEffects<TOptions>,
+    events: (options.events ?? []) as DeclaredEvents<TOptions>,
+    problems: (options.problems ?? []) as DeclaredProblems<TOptions>,
   };
+}
+
+type AnyDesktopQueryOptions = DesktopQueryOptions<
+  unknown,
+  unknown,
+  readonly AnyDesktopEffect[] | undefined,
+  readonly string[] | undefined,
+  readonly DesktopProblemReference[] | undefined
+>;
+
+type AnyDesktopMutationOptions = DesktopMutationOptions<
+  unknown,
+  unknown,
+  readonly AnyDesktopEffect[] | undefined,
+  readonly string[] | undefined,
+  readonly DesktopProblemReference[] | undefined
+>;
+
+type DeclaredEffects<TOptions> = TOptions extends {
+  readonly effects: infer TEffects extends readonly AnyDesktopEffect[];
+}
+  ? TEffects
+  : readonly [];
+
+type DeclaredEvents<TOptions> = TOptions extends {
+  readonly events: infer TEvents extends readonly string[];
+}
+  ? TEvents
+  : readonly [];
+
+type DeclaredProblems<TOptions> = TOptions extends {
+  readonly problems: infer TProblems extends readonly DesktopProblemReference[];
+}
+  ? TProblems
+  : readonly [];
+
+type ValidCommandDeclarations<TOptions> = ValidateEffects<DeclaredEffects<TOptions>> &
+  ValidateEvents<DeclaredEvents<TOptions>> &
+  ValidateProblems<DeclaredProblems<TOptions>>;
+
+type ValidateEffects<TEffects extends readonly AnyDesktopEffect[]> =
+  number extends TEffects["length"]
+    ? { readonly __desktopEffectsMustBeTuple__: true }
+    : ValidateEffectTuple<TEffects>;
+
+type ValidateEffectTuple<TEffects extends readonly AnyDesktopEffect[]> = TEffects extends readonly [
+  infer TEffect extends AnyDesktopEffect,
+  ...infer TRest extends readonly AnyDesktopEffect[],
+]
+  ? ValidateEffect<TEffect> & ValidateEffectTuple<TRest>
+  : unknown;
+
+type ValidateEffect<TEffect extends AnyDesktopEffect> =
+  IsUnion<TEffect> extends true
+    ? { readonly __desktopEffectMustBeConcrete__: true }
+    : TEffect extends DesktopEffectDefinition<infer TNamespace, infer TMethods>
+      ? string extends TNamespace
+        ? { readonly __desktopEffectNamespaceMustBeLiteral__: true }
+        : IsUnion<TNamespace> extends true
+          ? { readonly __desktopEffectNamespaceMustBeConcrete__: true }
+          : string extends keyof TMethods
+            ? { readonly __desktopEffectMethodsMustBeExact__: true }
+            : unknown
+      : never;
+
+type ValidateEvents<TEvents extends readonly string[]> = number extends TEvents["length"]
+  ? { readonly __desktopEventsMustBeTuple__: true }
+  : ValidateEventTuple<TEvents>;
+
+type ValidateEventTuple<TEvents extends readonly string[]> = TEvents extends readonly [
+  infer TEvent extends string,
+  ...infer TRest extends readonly string[],
+]
+  ? IsUnion<TEvent> extends true
+    ? { readonly __desktopEventMustBeConcrete__: true }
+    : string extends TEvent
+      ? { readonly __desktopEventMustBeLiteral__: true }
+      : ValidateEventTuple<TRest>
+  : unknown;
+
+type ValidateProblems<TProblems extends readonly DesktopProblemReference[]> =
+  number extends TProblems["length"]
+    ? { readonly __desktopProblemsMustBeTuple__: true }
+    : ValidateProblemTuple<TProblems>;
+
+type ValidateProblemTuple<TProblems extends readonly DesktopProblemReference[]> =
+  TProblems extends readonly [
+    infer TProblem extends DesktopProblemReference,
+    ...infer TRest extends readonly DesktopProblemReference[],
+  ]
+    ? IsUnion<TProblem> extends true
+      ? { readonly __desktopProblemMustBeConcrete__: true }
+      : string extends TProblem["prototype"]["code"]
+        ? { readonly __desktopProblemCodeMustBeLiteral__: true }
+        : ValidateProblemTuple<TRest>
+    : unknown;
+
+type IsUnion<TValue, TCandidate = TValue> = TValue extends TCandidate
+  ? [TCandidate] extends [TValue]
+    ? false
+    : true
+  : never;
+
+function effect<
+  const TNamespace extends string,
+  const TMethods extends Readonly<Record<string, DesktopEffectMethodDefinition>>,
+>(
+  options: DesktopEffectOptions<TNamespace, TMethods> &
+    NoInvalidEffectNamespace<TNamespace> &
+    NoInvalidKeys<TMethods>,
+): DesktopEffectDefinition<TNamespace, TMethods> {
+  assertValidEffectNamespace(options.namespace);
+  assertValidKeys(options.methods);
+  return {
+    definitionType: "effect",
+    namespace: options.namespace,
+    methods: options.methods,
+  };
+}
+
+function assertValidEffectNamespace(namespace: string): void {
+  if (
+    namespace.length === 0 ||
+    namespace.includes(".") ||
+    isReservedDesktopKey(namespace) ||
+    namespace === "ok" ||
+    namespace === "fail" ||
+    namespace === "emit" ||
+    namespace === "signal"
+  ) {
+    throw new DesktopDefinitionProblem(
+      "DESKTOP_INVALID_KEY",
+      `Desktop effect namespace "${namespace}" must be a non-empty, non-reserved segment without dots.`,
+    );
+  }
+}
+
+function effectMethod<
+  TArguments extends readonly unknown[],
+  TResult,
+>(): DesktopEffectMethodDefinition<TArguments, TResult> {
+  return { definitionType: "effect-method" };
 }
 
 function event<const TPayloadSchema>(
@@ -560,6 +761,7 @@ function createMemberReference(
 export const desktop = {
   app,
   contract,
+  effect: Object.assign(effect, { method: effectMethod }),
   event,
   grant: {
     directory,

@@ -59,9 +59,9 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 ### code
 
-> `readonly` **code**: `string`
+> `readonly` **code**: [`DesktopDefinitionProblemCode`](/api/protocols-desktop/src/type-aliases/desktopdefinitionproblemcode/)
 
-#### Inherited from
+#### Overrides
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`code`](/api/problems-core/src/classes/problem/#code)
 
