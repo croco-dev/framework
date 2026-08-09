@@ -1369,6 +1369,7 @@ describe("E2E: generate()", () => {
       "@croco/auth-core": externalCrocoRange("@croco/auth-core"),
       "@croco/access-core": externalCrocoRange("@croco/access-core"),
       "@croco/billing-core": externalCrocoRange("@croco/billing-core"),
+      "@croco/billing-polar": externalCrocoRange("@croco/billing-polar"),
       "@croco/idempotency-core": externalCrocoRange("@croco/idempotency-core"),
       "@croco/metering-core": externalCrocoRange("@croco/metering-core"),
       "@croco/entitlements-core": externalCrocoRange("@croco/entitlements-core"),
@@ -1379,6 +1380,7 @@ describe("E2E: generate()", () => {
       "@croco/llm-core": externalCrocoRange("@croco/llm-core"),
       "@croco/llm-metering": externalCrocoRange("@croco/llm-metering"),
       "@croco/problems-core": externalCrocoRange("@croco/problems-core"),
+      "@croco/protocols-core": externalCrocoRange("@croco/protocols-core"),
       "@croco/ratelimit-core": externalCrocoRange("@croco/ratelimit-core"),
       "@croco/telemetry-api": externalCrocoRange("@croco/telemetry-api"),
       "@croco/telemetry-sdk-node": externalCrocoRange("@croco/telemetry-sdk-node"),
@@ -1399,6 +1401,7 @@ describe("E2E: generate()", () => {
     expect(apiPackageJson.scripts?.["ops:smoke"]).toBe("tsx src/demo/ops-smoke.ts");
     expect(apiPackageJson.scripts?.["jobs:smoke"]).toBe("tsx src/demo/jobs-smoke.ts");
     expect(apiPackageJson.scripts?.["demo:scenario"]).toBe("tsx src/demo/scenario.ts");
+    expect(apiPackageJson.scripts?.["demo:usage-recover"]).toBe("tsx src/demo/usage-recover.ts");
     expect(apiPackageJson.scripts?.["failure-drill:smoke"]).toBe(
       "tsx src/demo/failure-drill-smoke.ts",
     );
@@ -1406,6 +1409,9 @@ describe("E2E: generate()", () => {
       "tsx src/provider-profile-check.ts --mode=real-provider",
     );
     expect(existsSync(join(testDir, "apps", "api-server", "src", "saasDemo.ts"))).toBe(true);
+    expect(
+      existsSync(join(testDir, "apps", "api-server", "src", "controllers", "monetization.ts")),
+    ).toBe(true);
     expect(existsSync(join(testDir, "apps", "api-server", "src", "providerProfiles.ts"))).toBe(
       true,
     );
@@ -1420,6 +1426,9 @@ describe("E2E: generate()", () => {
     expect(scenarioSource).toContain("quotaFailureCode");
     expect(readme).toContain("pnpm demo:scenario");
     expect(readme).toContain("ci-reports/saas-golden-path/scenario.json");
+    expect(readme).toContain("CROCO_BILLING_METER_UNBOUND");
+    expect(readme).toContain("CROCO_BILLING_PROVIDER_CAPABILITY_MISSING");
+    expect(readme).toContain("provider-accepted usage");
     expect(
       existsSync(join(testDir, "apps", "api-server", "src", "generatedSaasProviderProfile.ts")),
     ).toBe(true);
@@ -2485,7 +2494,7 @@ describe("E2E: generate()", () => {
         build: "turbo build",
         test: "turbo test",
         "contract:verify":
-          "pnpm contract:diff && pnpm contract:check && pnpm project-map:check && pnpm contract:openapi:check && pnpm contract:client:check && pnpm --filter @test/provider-rpc typecheck",
+          "pnpm contract:check && pnpm contract:diff && pnpm project-map:check && pnpm contract:openapi:check && pnpm contract:client:check && pnpm --filter @test/provider-rpc typecheck",
         "di:graph": "pnpm --filter @test/api-server di:graph",
         "di:check": "croco di check .croco/build/di-graph.manifest.json",
         "di:assert": "node scripts/assert-di-graph.mjs .croco/build/di-graph.manifest.json",

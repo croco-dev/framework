@@ -67,6 +67,76 @@ export type SaasDemoSnapshot = {
     recordedValue: number;
     currentUsage: number;
   };
+  billableUsage: {
+    planVersionRef: string;
+    journalDurability: "persistent";
+    included: {
+      eventId: string;
+      value: number;
+      recordOutcome: "recorded";
+      deliveryOutcome: "accepted";
+      delivery: {
+        accepted: number;
+        retryableFailed: number;
+        terminalFailed: number;
+      };
+    };
+    overage: {
+      eventId: string;
+      value: number;
+      recordOutcome: "recorded";
+      initialDeliveryOutcome: "retryable-failed";
+      finalDeliveryOutcome: "accepted";
+    };
+    providerOutage: {
+      delivery: {
+        accepted: number;
+        retryableFailed: number;
+        terminalFailed: number;
+      };
+      failureCode: string;
+      backlogCount: number;
+      oldestPendingAgeMs: number | null;
+    };
+    recovery: {
+      command: string;
+      processBoundary: "separate-node-process";
+      delivery: {
+        accepted: number;
+        retryableFailed: number;
+        terminalFailed: number;
+      };
+    };
+    replay: {
+      eventId: string;
+      outcome: "duplicate";
+      providerAcceptedUsageBefore: number;
+      providerAcceptedUsageAfter: number;
+    };
+    providerAcceptedUsage: number;
+    finalConvergence: {
+      delivery: {
+        accepted: number;
+        retryableFailed: number;
+        terminalFailed: number;
+      };
+      backlogCount: number;
+      oldestPendingAgeMs: number | null;
+      retryCount: number;
+      terminalFailureCount: number;
+      converged: boolean;
+    };
+  };
+  usageBillingReadModel: {
+    localUsage: number;
+    providerAcceptedUsage: number;
+    usageDrift: number;
+    backlogCount: number;
+    oldestPendingAgeMs: number | null;
+    retryCount: number;
+    terminalFailureCount: number;
+    recoveryCommand: string;
+  };
   ai: {
     provider: string;
     modelId: string;
@@ -81,7 +151,14 @@ export type SaasDemoSnapshot = {
   };
   entitlement: Pick<
     EntitlementCheckResult,
-    "featureKey" | "granted" | "quota" | "usage" | "remaining" | "planId"
+    | "featureKey"
+    | "granted"
+    | "quota"
+    | "usage"
+    | "remaining"
+    | "planId"
+    | "planVersionRef"
+    | "overagePolicy"
   >;
   operations: {
     healthStatus: "up" | "down";
@@ -148,6 +225,9 @@ export function assertSaasSmokeContract(snapshot: SaasDemoSnapshot): void {
     snapshot.billing.entitlementPlanId !== "team"
       ? "billing subscription did not sync the entitlement plan"
       : undefined,
+    snapshot.billing.mockEvent.planVersionRef !== "team@v1"
+      ? "billing subscription was not pinned to team@v1"
+      : undefined,
     snapshot.billing.mockEvent.eventType !== "billing.subscription_activated"
       ? "billing mock event type was not explicit"
       : undefined,
@@ -158,6 +238,56 @@ export function assertSaasSmokeContract(snapshot: SaasDemoSnapshot): void {
       ? "billing mock event replay failure was not explicit"
       : undefined,
     snapshot.metering.currentUsage !== 3 ? "usage was not recorded" : undefined,
+    snapshot.entitlement.planVersionRef !== snapshot.billing.mockEvent.planVersionRef
+      ? "entitlements did not use the subscription plan version"
+      : undefined,
+    snapshot.billableUsage.planVersionRef !== snapshot.billing.mockEvent.planVersionRef
+      ? "billable usage did not retain the subscription plan version"
+      : undefined,
+    snapshot.billableUsage.journalDurability !== "persistent"
+      ? "billable usage did not require a persistent journal"
+      : undefined,
+    snapshot.billableUsage.included.deliveryOutcome !== "accepted"
+      ? "included usage was not accepted before overage"
+      : undefined,
+    snapshot.billableUsage.overage.initialDeliveryOutcome !== "retryable-failed"
+      ? "provider outage was not retained as retryable pending overage"
+      : undefined,
+    snapshot.billableUsage.overage.finalDeliveryOutcome !== "accepted"
+      ? "metered overage did not recover after provider restoration"
+      : undefined,
+    snapshot.billableUsage.recovery.processBoundary !== "separate-node-process"
+      ? "billable overage recovery did not cross a Node process boundary"
+      : undefined,
+    snapshot.billableUsage.providerOutage.backlogCount !== 1
+      ? "provider outage backlog was not observable"
+      : undefined,
+    snapshot.billableUsage.providerOutage.oldestPendingAgeMs !== 1000
+      ? "provider outage backlog age was not deterministic"
+      : undefined,
+    snapshot.billableUsage.replay.outcome !== "duplicate"
+      ? "accepted usage replay was not acknowledged as a duplicate"
+      : undefined,
+    snapshot.billableUsage.replay.providerAcceptedUsageBefore !==
+    snapshot.billableUsage.replay.providerAcceptedUsageAfter
+      ? "accepted usage replay changed provider usage"
+      : undefined,
+    snapshot.billableUsage.providerAcceptedUsage !== 3
+      ? "provider accepted usage did not converge to included plus overage usage"
+      : undefined,
+    snapshot.usageBillingReadModel.localUsage !== snapshot.metering.currentUsage
+      ? "usage billing read model did not retain local usage"
+      : undefined,
+    snapshot.usageBillingReadModel.providerAcceptedUsage !==
+    snapshot.billableUsage.providerAcceptedUsage
+      ? "usage billing read model did not retain provider accepted usage"
+      : undefined,
+    snapshot.usageBillingReadModel.usageDrift !== 0
+      ? "usage billing read model did not converge local and provider usage"
+      : undefined,
+    !snapshot.billableUsage.finalConvergence.converged
+      ? "billable usage did not converge after recovery"
+      : undefined,
     snapshot.ai.provider !== "in-memory" ? "AI provider was not the demo provider" : undefined,
     snapshot.ai.modelId.length === 0 ? "AI model id was empty" : undefined,
     snapshot.ai.responseText.length === 0 ? "AI response text was empty" : undefined,

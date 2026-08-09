@@ -737,11 +737,14 @@ function checkSaasStructure() {
   checkFileExists("saas", "apps", "api-server", "src", "demo", "saasSmokeContract.ts");
   checkFileExists("saas", "apps", "api-server", "src", "demo", "operational-failure-drills.ts");
   checkFileExists("saas", "apps", "api-server", "src", "demo", "scenario.ts");
+  checkFileExists("saas", "apps", "api-server", "src", "demo", "usage-recover.ts");
+  checkFileExists("saas", "apps", "api-server", "src", "demo", "FileBillableUsageJournal.ts");
   checkFileExists("saas", "apps", "api-server", "src", "inMemoryAdapters.ts");
   checkFileExists("saas", "apps", "api-server", "src", "controllers", "SaasController.ts");
   checkFileExists("saas", "apps", "api-server", "src", "controllers", "OperationsController.ts");
   checkFileExists("saas", "apps", "api-server", "src", "controllers", "JobsController.ts");
   checkFileExists("saas", "apps", "api-server", "src", "tests", "SaasDemo.spec.ts");
+  checkFileExists("saas", "apps", "api-server", "src", "tests", "FileBillableUsageJournal.spec.ts");
   checkFileExists("saas", "apps", "api-server", "src", "demo", "ops-smoke.ts");
   checkFileExists("saas", "libs", "shared", "provider-rpc", "package.json.hbs");
 
@@ -767,7 +770,7 @@ function checkSaasStructure() {
         /^croco project map[\s\S]*--runtime-policy croco-runtime-policy\.manifest\.json[\s\S]*--provider-profile croco-saas-profile\.manifest\.json[\s\S]*--check --manifest croco\.project-map\.json --manifest-bundle \.croco\/manifest$/,
       ),
       "contract:verify": expect.stringMatching(
-        /^pnpm contract:diff && pnpm contract:check && pnpm project-map:check && pnpm contract:openapi:check && pnpm contract:client:check && pnpm --filter \{\{scope\}\}\/provider-rpc typecheck$/,
+        /^pnpm contract:check && pnpm contract:diff && pnpm project-map:check && pnpm contract:openapi:check && pnpm contract:client:check && pnpm --filter \{\{scope\}\}\/provider-rpc typecheck$/,
       ),
       "ci:contracts": "pnpm contract:verify",
       "di:graph": "pnpm --filter {{scope}}/api-server di:graph",
@@ -825,6 +828,7 @@ function checkSaasStructure() {
       "demo:seed": "tsx src/demo/seed.ts",
       "demo:smoke": "tsx src/demo/smoke.ts",
       "demo:scenario": "tsx src/demo/scenario.ts",
+      "demo:usage-recover": "tsx src/demo/usage-recover.ts",
       "ops:smoke": "tsx src/demo/ops-smoke.ts",
       "jobs:smoke": "tsx src/demo/jobs-smoke.ts",
       "failure-drill:smoke": "tsx src/demo/failure-drill-smoke.ts",
@@ -849,6 +853,7 @@ function checkSaasStructure() {
       "@croco/llm-core": "workspace:*",
       "@croco/llm-metering": "workspace:*",
       "@croco/problems-core": "workspace:*",
+      "@croco/protocols-core": "workspace:*",
       "@croco/protocols-rest": "workspace:*",
       "@croco/ratelimit-core": "workspace:*",
       "@croco/telemetry-api": "workspace:*",

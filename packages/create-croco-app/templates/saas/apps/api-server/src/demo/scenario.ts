@@ -44,6 +44,7 @@ const dashboardFeatureSchema = z.object({
 const dashboardSnapshotSchema = z.object({
   tenantId: z.string(),
   planId: z.string().nullable(),
+  planVersionRef: z.string().nullable(),
   subscriptionStatus: z.string(),
   currentPeriodEnd: z.string().nullable(),
   aggregate: z.object({
@@ -54,6 +55,18 @@ const dashboardSnapshotSchema = z.object({
   }),
   meters: z.array(dashboardMeterSchema),
   features: z.array(dashboardFeatureSchema),
+  billingDelivery: z
+    .object({
+      localUsage: z.number(),
+      providerAcceptedUsage: z.number(),
+      usageDrift: z.number(),
+      backlogCount: z.number(),
+      oldestPendingAgeMs: z.number().nullable(),
+      retryCount: z.number(),
+      terminalFailureCount: z.number(),
+      recoveryCommand: z.string(),
+    })
+    .nullable(),
   lastUpdatedAt: z.string(),
 });
 
@@ -76,6 +89,9 @@ type SaasScenarioReport = {
   readonly billingSubscriptionStatus: string;
   readonly dashboardTenantId: string;
   readonly dashboardPlanId: string | null;
+  readonly dashboardPlanVersionRef: string | null;
+  readonly billingDeliveryBacklogCount: number | null;
+  readonly billingUsageDrift: number | null;
   readonly aiQuotaFailureCode: string;
   readonly operationsHealthStatus: string;
   readonly jobsStatus: string;
@@ -92,6 +108,8 @@ type SaasScenarioReport = {
     };
     readonly billing: SaasDemoSnapshot["billing"];
     readonly metering: SaasDemoSnapshot["metering"];
+    readonly billableUsage: SaasDemoSnapshot["billableUsage"];
+    readonly usageBillingReadModel: SaasDemoSnapshot["usageBillingReadModel"];
     readonly ai: SaasDemoSnapshot["ai"];
     readonly operations: SaasDemoSnapshot["operations"];
     readonly jobs: SaasDemoSnapshot["jobs"];
@@ -104,6 +122,7 @@ type SaasScenarioReport = {
   readonly dashboard: {
     readonly tenantId: string;
     readonly planId: string | null;
+    readonly planVersionRef: string | null;
     readonly subscriptionStatus: string;
     readonly currentPeriodEnd: typeof NORMALIZED_CURRENT_PERIOD_END;
     readonly lastUpdatedAt: typeof NORMALIZED_LAST_UPDATED_AT;
@@ -116,6 +135,7 @@ type SaasScenarioReport = {
       DashboardFeature,
       "featureKey" | "granted" | "usage" | "quota" | "remaining" | "overageState"
     >[];
+    readonly billingDelivery: DashboardSnapshot["billingDelivery"];
   };
 };
 
@@ -180,7 +200,28 @@ function assertScenarioState(seed: SaasDemoSnapshot, dashboard: DashboardSnapsho
   );
   assertEquals("dashboard tenant", dashboard.tenantId, seed.tenant.id);
   assertEquals("dashboard plan", dashboard.planId, "team");
+  assertEquals("dashboard plan version", dashboard.planVersionRef, "team@v1");
   assertEquals("dashboard subscription", dashboard.subscriptionStatus, "active");
+  assertEquals("subscription plan version", seed.billing.mockEvent.planVersionRef, "team@v1");
+  assertEquals("entitlement plan version", seed.entitlement.planVersionRef, "team@v1");
+  assertEquals("billable journal durability", seed.billableUsage.journalDurability, "persistent");
+  assertEquals(
+    "billable outage state",
+    seed.billableUsage.overage.initialDeliveryOutcome,
+    "retryable-failed",
+  );
+  assertEquals("billable outage backlog", seed.billableUsage.providerOutage.backlogCount, 1);
+  assertEquals("billable replay acknowledgement", seed.billableUsage.replay.outcome, "duplicate");
+  assertEquals("billable provider usage", seed.billableUsage.providerAcceptedUsage, 3);
+  assertEquals("billable final convergence", seed.billableUsage.finalConvergence.converged, true);
+  assertEquals("usage billing drift", seed.usageBillingReadModel.usageDrift, 0);
+  assertEquals("dashboard usage billing drift", dashboard.billingDelivery?.usageDrift, 0);
+  assertEquals("dashboard billing backlog", dashboard.billingDelivery?.backlogCount, 0);
+  assertEquals(
+    "dashboard billing recovery command",
+    dashboard.billingDelivery?.recoveryCommand,
+    "pnpm --dir apps/api-server demo:usage-recover",
+  );
   assertEquals("AI provider", seed.ai.provider, "in-memory");
   assertEquals("AI quota failure code", seed.ai.quotaFailureCode, "llm-metering/quota-exceeded");
   assertEquals("operations health", seed.operations.healthStatus, "up");
@@ -199,8 +240,8 @@ function assertScenarioState(seed: SaasDemoSnapshot, dashboard: DashboardSnapsho
 
   const apiRequestsMeter = requireMeter(dashboard, API_REQUESTS_METER_ID);
   assertEquals("api_requests usage", apiRequestsMeter.usage, 3);
-  assertEquals("api_requests quota", apiRequestsMeter.quota, 100);
-  assertEquals("api_requests state", apiRequestsMeter.overageState, "within_quota");
+  assertEquals("api_requests quota", apiRequestsMeter.quota, 2);
+  assertEquals("api_requests state", apiRequestsMeter.overageState, "overage_allowed");
 
   const storageMeter = requireMeter(dashboard, STORAGE_GB_METER_ID);
   assertEquals("storage_gb usage", storageMeter.usage, 105);
@@ -223,6 +264,9 @@ function createScenarioReport(
     billingSubscriptionStatus: seed.billing.subscriptionStatus,
     dashboardTenantId: dashboard.tenantId,
     dashboardPlanId: dashboard.planId,
+    dashboardPlanVersionRef: dashboard.planVersionRef,
+    billingDeliveryBacklogCount: dashboard.billingDelivery?.backlogCount ?? null,
+    billingUsageDrift: dashboard.billingDelivery?.usageDrift ?? null,
     aiQuotaFailureCode: seed.ai.quotaFailureCode,
     operationsHealthStatus: seed.operations.healthStatus,
     jobsStatus: seed.jobs.status,
@@ -239,6 +283,8 @@ function createScenarioReport(
       },
       billing: seed.billing,
       metering: seed.metering,
+      billableUsage: seed.billableUsage,
+      usageBillingReadModel: seed.usageBillingReadModel,
       ai: seed.ai,
       operations: seed.operations,
       jobs: seed.jobs,
@@ -261,6 +307,7 @@ function createScenarioReport(
     dashboard: {
       tenantId: dashboard.tenantId,
       planId: dashboard.planId,
+      planVersionRef: dashboard.planVersionRef,
       subscriptionStatus: dashboard.subscriptionStatus,
       currentPeriodEnd: NORMALIZED_CURRENT_PERIOD_END,
       lastUpdatedAt: NORMALIZED_LAST_UPDATED_AT,
@@ -286,6 +333,7 @@ function createScenarioReport(
           remaining: feature.remaining,
           overageState: feature.overageState,
         })),
+      billingDelivery: dashboard.billingDelivery,
     },
   };
 }
@@ -306,6 +354,7 @@ function renderScenarioMarkdown(report: SaasScenarioReport): string {
     `- Tenant: ${report.tenantId}`,
     `- Billing subscription: ${report.billingSubscriptionStatus}`,
     `- Dashboard plan: ${report.dashboardPlanId ?? "none"}`,
+    `- Dashboard plan version: ${report.dashboard.planVersionRef ?? "none"}`,
     "",
     "| Evidence | Value |",
     "| --- | --- |",
@@ -314,6 +363,13 @@ function renderScenarioMarkdown(report: SaasScenarioReport): string {
     `| Members | ${report.seed.membership.memberCount} |`,
     `| Billing event | ${report.seed.billing.mockEvent.processedStatus} (${report.seed.billing.mockEvent.duplicateFailureCode}) |`,
     `| API usage | ${readReportMeter(report, API_REQUESTS_METER_ID).usage}/${readReportMeter(report, API_REQUESTS_METER_ID).quota} |`,
+    `| Billable usage events | ${report.seed.billableUsage.included.eventId}, ${report.seed.billableUsage.overage.eventId} |`,
+    `| Provider outage | ${report.seed.billableUsage.overage.initialDeliveryOutcome}; backlog ${report.seed.billableUsage.providerOutage.backlogCount}, age ${report.seed.billableUsage.providerOutage.oldestPendingAgeMs ?? "none"}ms |`,
+    `| Recovery | ${report.seed.billableUsage.recovery.command}; accepted usage ${report.seed.billableUsage.providerAcceptedUsage} |`,
+    `| Replay | ${report.seed.billableUsage.replay.outcome}; accepted usage ${report.seed.billableUsage.replay.providerAcceptedUsageBefore} -> ${report.seed.billableUsage.replay.providerAcceptedUsageAfter} |`,
+    `| Final convergence | ${report.seed.billableUsage.finalConvergence.converged}; backlog ${report.seed.billableUsage.finalConvergence.backlogCount} |`,
+    `| Dashboard billing drift | ${report.dashboard.billingDelivery?.usageDrift ?? "unavailable"}; backlog ${report.dashboard.billingDelivery?.backlogCount ?? "unavailable"} |`,
+    `| Billing delivery read model | local ${report.seed.usageBillingReadModel.localUsage}, provider ${report.seed.usageBillingReadModel.providerAcceptedUsage}, drift ${report.seed.usageBillingReadModel.usageDrift} |`,
     `| Storage usage | ${readReportMeter(report, STORAGE_GB_METER_ID).usage}/${readReportMeter(report, STORAGE_GB_METER_ID).quota} |`,
     `| Storage feature state | ${readReportFeature(report, STORAGE_GB_FEATURE_KEY).overageState ?? "none"} |`,
     `| AI usage | ${report.seed.ai.totalTokens} tokens (${report.seed.ai.quotaFailureCode}) |`,

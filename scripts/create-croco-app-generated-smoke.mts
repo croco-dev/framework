@@ -1283,6 +1283,9 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
             billingSubscriptionStatus: "active",
             dashboardTenantId: "tenant_acme",
             dashboardPlanId: "team",
+            dashboardPlanVersionRef: "team@v1",
+            billingDeliveryBacklogCount: 0,
+            billingUsageDrift: 0,
             aiQuotaFailureCode: "llm-metering/quota-exceeded",
             operationsHealthStatus: "up",
             jobsStatus: "completed",
@@ -1671,6 +1674,7 @@ if (isMainModule()) {
         for (const validation of smokeCase.validations) {
           runValidation(projectDir, smokeCase, validation, smokeReport, caseResult);
         }
+        runSaasMonetizationContractCanaries(projectDir, smokeCase, smokeReport, caseResult);
         runGeneratedBrowserContractDriftCanaries(projectDir, smokeCase, smokeReport, caseResult);
         runGraphQLContractDriftCanaries(projectDir, smokeCase, smokeReport, caseResult);
         caseResult.status = "passed";
@@ -2815,6 +2819,78 @@ function runGeneratedBrowserContractDriftCanaries(
       );
     } finally {
       writeFileSync(artifactPath, original);
+    }
+  }
+}
+
+type SaasMonetizationCanary = "checkout-only-provider" | "unbound-meter";
+
+export function createSaasMonetizationCanarySource(
+  source: string,
+  canary: SaasMonetizationCanary,
+): string {
+  if (canary === "unbound-meter") {
+    return source.replace(
+      'meterBindings: [{ meterKey: "api_requests", meterId: "polar-api-requests" }]',
+      "meterBindings: []",
+    );
+  }
+
+  return source.replace(
+    "usage: { supported: true }",
+    'usage: { supported: false, reason: "checkout only" }',
+  );
+}
+
+function runSaasMonetizationContractCanaries(
+  projectDir: string,
+  smokeCase: SmokeCase,
+  report: GeneratedSmokeReport,
+  caseResult: SmokeCaseResult,
+): void {
+  if (smokeCase.name !== "saas-golden-path") return;
+
+  const contractPath = join(
+    projectDir,
+    "apps",
+    "api-server",
+    "src",
+    "controllers",
+    "monetization.ts",
+  );
+  const original = readFileSync(contractPath, "utf8");
+  const canaries = [
+    {
+      kind: "unbound-meter" as const,
+      label: "unbound billable meter contract canary",
+      expectedOutput: ["CROCO_BILLING_METER_UNBOUND"],
+    },
+    {
+      kind: "checkout-only-provider" as const,
+      label: "checkout-only usage plan contract canary",
+      expectedOutput: ["CROCO_BILLING_PROVIDER_CAPABILITY_MISSING"],
+    },
+  ];
+
+  for (const canary of canaries) {
+    const invalid = createSaasMonetizationCanarySource(original, canary.kind);
+    if (invalid === original) {
+      throw new Error(`${smokeCase.name} ${canary.label} could not mutate monetization.ts`);
+    }
+    writeFileSync(contractPath, invalid);
+    try {
+      runExpectedSmokeCaseCommand(
+        report,
+        caseResult,
+        projectDir,
+        canary.label,
+        corepackCommand,
+        ["pnpm", "contract:verify"],
+        projectDir,
+        canary.expectedOutput,
+      );
+    } finally {
+      writeFileSync(contractPath, original);
     }
   }
 }

@@ -10,7 +10,7 @@
     "contract:coverage": "croco contracts check --controllers \"apps/api-server/src/controllers/**/*.ts\" --strict-schemas --json --out contract-graph.coverage.json",
     "project-map:write": "croco project map --controllers \"apps/api-server/src/controllers/**/*.ts\" --runtime-policy croco-runtime-policy.manifest.json --provider-profile croco-saas-profile.manifest.json --out croco.project-map.json --manifest-bundle .croco/manifest",
     "project-map:check": "croco project map --controllers \"apps/api-server/src/controllers/**/*.ts\" --runtime-policy croco-runtime-policy.manifest.json --provider-profile croco-saas-profile.manifest.json --check --manifest croco.project-map.json --manifest-bundle .croco/manifest",
-    "contract:verify": "pnpm contract:diff && pnpm contract:check && pnpm project-map:check && pnpm contract:openapi:check && pnpm contract:client:check && pnpm --filter {{scope}}/provider-rpc typecheck",
+    "contract:verify": "pnpm contract:check && pnpm contract:diff && pnpm project-map:check && pnpm contract:openapi:check && pnpm contract:client:check && pnpm --filter {{scope}}/provider-rpc typecheck",
     "ci:contracts": "pnpm contract:verify",
     "di:graph": "pnpm --filter {{scope}}/api-server di:graph",
     "di:check": "croco di check .croco/build/di-graph.manifest.json",

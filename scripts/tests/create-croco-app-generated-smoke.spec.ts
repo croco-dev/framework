@@ -14,6 +14,7 @@ import {
   assertGeneratedBrowserWorkflowLeastPrivilege,
   assertGeneratedVerificationValidationsAreReadOnly,
   assertGeneratedPresentationProfileMatchesCatalog,
+  createSaasMonetizationCanarySource,
   readCommandOutputSegment,
   readGeneratedSmokeAllowlistMetadata,
   requiresCommandShell,
@@ -147,6 +148,17 @@ describe("generated verification mutation coverage", () => {
     expect(() =>
       assertGeneratedVerificationValidationsAreReadOnly([{ args: ["profile:check"] }]),
     ).toThrow("profile:check");
+  });
+
+  it("creates deterministic SaaS monetization contract canaries", () => {
+    const source = `meterBindings: [{ meterKey: "api_requests", meterId: "polar-api-requests" }]\nusage: { supported: true }`;
+
+    expect(createSaasMonetizationCanarySource(source, "unbound-meter")).toContain(
+      "meterBindings: []",
+    );
+    expect(createSaasMonetizationCanarySource(source, "checkout-only-provider")).toContain(
+      'usage: { supported: false, reason: "checkout only" }',
+    );
   });
 });
 

@@ -37,8 +37,10 @@ curl -X POST http://localhost:3000/saas/demo/seed
 curl -H 'x-tenant-id: tenant_acme' http://localhost:3000/ops/usage
 ```
 
-`croco generate usage-dashboard`는 `/ops/usage` API를 생성합니다. 이 SaaS preset은 API-only baseline이므로 `--no-page`를 사용합니다. 로컬 개발 서버에서 `/saas/demo/seed`를 호출하면 같은 in-memory runtime에 `x-tenant-id: tenant_acme` 또는 `?tenantId=tenant_acme`로 조회할 수 있는 tenant, plan, subscription, 정상 quota 사용량, 초과 quota warning 사용량이 준비됩니다.
-`pnpm demo:scenario`는 usage-dashboard API를 생성한 뒤 deterministic seed data와 dashboard read model을 함께 검증하고 `ci-reports/saas-golden-path/scenario.json`, `ci-reports/saas-golden-path/scenario.md`를 씁니다. Scenario는 generated `UsageDashboardRuntime`의 `createUsageDashboardService()` contract를 사용하므로 실행 전에 dashboard를 다시 생성합니다.
+`croco generate usage-dashboard`는 `/ops/usage` API를 생성합니다. 이 SaaS preset은 API-only baseline이므로 `--no-page`를 사용합니다. 로컬 개발 서버에서 `/saas/demo/seed`를 호출하면 같은 runtime에 `x-tenant-id: tenant_acme` 또는 `?tenantId=tenant_acme`로 조회할 수 있는 tenant, immutable plan version, subscription, local usage, provider-accepted usage, delivery backlog, drift 상태가 준비됩니다.
+`pnpm demo:scenario`는 usage-dashboard API를 생성한 뒤 deterministic seed data와 dashboard read model을 함께 검증하고 `ci-reports/saas-golden-path/scenario.json`, `ci-reports/saas-golden-path/scenario.md`를 씁니다. Scenario는 generated `UsageDashboardRuntime`의 `createUsageDashboardService()` contract를 사용하므로 실행 전에 dashboard를 다시 생성합니다. Provider delivery가 pending이면 artifact와 dashboard가 같은 file-backed journal을 여는 recovery command `pnpm --dir apps/api-server demo:usage-recover`를 노출합니다.
+
+File-backed journal/provider는 credential-free recovery 증거를 위한 single-consumer demo fixture입니다. Production provider profile은 `RedisBillableUsageJournal`처럼 fenced claim과 원자적 transition을 제공하는 process-independent adapter를 사용해야 합니다.
 
 ## Demo Flow
 
@@ -54,16 +56,17 @@ seed는 다음 순서로 실행됩니다.
 3. link invitation 생성 및 member 가입
 4. RBAC 권한과 access tuple 확인
 5. checkout/account/subscription baseline 생성
-6. usage 기록
-7. billing subscription 상태를 entitlement plan context로 동기화
-8. seat quota 초과가 명시적으로 실패하는지 확인
-9. in-memory LLM 응답을 생성하고 prompt/completion/cost meter와 quota failure를 확인
-10. entitlement 상태 확인
-11. at-risk health signal을 lifecycle rule로 평가하고 CS follow-up action을 1회 emit
-12. billing-sync background job 실행 및 inspect
-13. health/diagnostics 상태 확인
+6. 포함 사용량을 stable event ID로 기록하고 provider에 전달
+7. overage 사용량을 로컬 commit한 뒤 provider 장애를 발생시켜 pending backlog와 성공한 request 결과를 확인
+8. 별도 Node recovery process에서 같은 file-backed journal을 다시 열어 pending delivery를 replay하고 accepted event의 duplicate acknowledgement가 provider 사용량을 늘리지 않는지 확인
+9. subscription과 entitlement가 같은 immutable `PlanVersionRef`를 해석하는지 확인
+10. seat quota 초과가 명시적으로 실패하는지 확인
+11. in-memory LLM 응답을 생성하고 prompt/completion/cost meter와 quota failure를 확인
+12. at-risk health signal을 lifecycle rule로 평가하고 CS follow-up action을 1회 emit
+13. billing-sync background job 실행 및 inspect
+14. health/diagnostics 상태 확인
 
-`demo:scenario`는 위 seed를 fresh in-memory runtime에 다시 실행하고 generated usage dashboard read model에서 `tenant_acme`, `team` plan, active subscription, `api_requests` 정상 사용량, `storage.gb` warning overage 상태를 확인합니다. 출력 artifact는 timestamp, invitation token 같은 volatile field를 정규화하거나 제외합니다.
+`demo:scenario`는 위 seed를 fresh credential-free runtime에 다시 실행하고 generated usage dashboard read model에서 `tenant_acme`, `team@v1`, active subscription, `api_requests` metered overage, provider accepted usage, zero drift/backlog convergence, `storage.gb` warning overage 상태를 확인합니다. 출력 artifact는 event ID, delivery outcome, backlog age/count, recovery command를 보존하고 timestamp, invitation token 같은 volatile field를 정규화하거나 제외합니다.
 
 ## API Contract
 
@@ -75,6 +78,8 @@ pnpm contract:verify
 컨트롤러 계약은 `apps/api-server/src/controllers/**/*.ts`에서 생성됩니다. 의도적인 계약 변경은 `contract:snapshot`으로 `contract-graph.snapshot.json`을 갱신하고 `codegen`으로 Project Map, `.croco/manifest`, `openapi.json`, `libs/shared/provider-rpc/src` fetch client를 갱신한 뒤 커밋합니다. CI에서는 `contract:verify` 또는 `ci:contracts`를 실행해 이 계약 산출물들의 drift를 쓰기 없이 검사합니다.
 
 Generated OpenAPI/RPC commands run strict ContractGraph schema checks by default and pass `--fail-on-diagnostics`, so strict Problem contract diagnostics block generated artifacts. `--compatibility-schemas` and `--compatibility-problems` are migration-only opt-outs for legacy routes, not generated app CI settings.
+
+`contract:verify`는 billable meter가 published plan의 provider meter에 연결되지 않았거나 usage-priced plan이 checkout-only provider를 선택하면 각각 `CROCO_BILLING_METER_UNBOUND`, `CROCO_BILLING_PROVIDER_CAPABILITY_MISSING` 진단으로 실패합니다.
 
 Artifact 책임은 다음과 같습니다.
 

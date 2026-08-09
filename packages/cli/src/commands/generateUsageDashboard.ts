@@ -441,6 +441,7 @@ export type UsageDashboardFeatureSnapshot = {
 export type UsageDashboardSnapshot = {
   readonly tenantId: string;
   readonly planId: string | null;
+  readonly planVersionRef: string | null;
   readonly subscriptionStatus: Subscription["status"] | "none";
   readonly currentPeriodEnd: string | null;
   readonly aggregate: {
@@ -451,7 +452,19 @@ export type UsageDashboardSnapshot = {
   };
   readonly meters: readonly UsageDashboardMeterSnapshot[];
   readonly features: readonly UsageDashboardFeatureSnapshot[];
+  readonly billingDelivery: UsageDashboardBillingDeliverySnapshot | null;
   readonly lastUpdatedAt: string;
+};
+
+export type UsageDashboardBillingDeliverySnapshot = {
+  readonly localUsage: number;
+  readonly providerAcceptedUsage: number;
+  readonly usageDrift: number;
+  readonly backlogCount: number;
+  readonly oldestPendingAgeMs: number | null;
+  readonly retryCount: number;
+  readonly terminalFailureCount: number;
+  readonly recoveryCommand: string;
 };
 
 export type UsageDashboardSnapshotOptions = {
@@ -465,6 +478,12 @@ export type UsageDashboardDependencies = {
   readonly meterRegistry: Pick<MeterRegistry, "getByTenant">;
   readonly meteringService: Pick<MeteringService, "getUsage">;
   readonly entitlementManager: Pick<EntitlementManager, "check">;
+  readonly usageBillingReadModel?: {
+    getSnapshot(
+      tenantId: string,
+      meterIds: readonly string[],
+    ): Promise<UsageDashboardBillingDeliverySnapshot>;
+  };
 };
 
 const NEAR_QUOTA_RATIO = 0.8;
@@ -499,15 +518,25 @@ export class UsageDashboardService {
     const meterSnapshots = await Promise.all(
       selectedMeters.map((meter) => this.readMeter(tenantId, meter, featureByKey)),
     );
+    const billingDelivery = this.dependencies.usageBillingReadModel
+      ? await this.readBillingDelivery(
+          tenantId,
+          selectedMeters
+            .filter((meter) => meter.billing === "required")
+            .map((meter) => meter.meterId),
+        )
+      : null;
 
     return {
       tenantId,
       planId: subscription?.planId ?? null,
+      planVersionRef: subscription?.planVersionRef ?? null,
       subscriptionStatus: subscription?.status ?? "none",
       currentPeriodEnd: subscription?.currentPeriodEnd.toISOString() ?? null,
       aggregate: aggregateMeters(meterSnapshots),
       meters: meterSnapshots,
       features,
+      billingDelivery,
       lastUpdatedAt: new Date().toISOString(),
     };
   }
@@ -590,6 +619,21 @@ export class UsageDashboardService {
       });
     } catch (error) {
       throw new UsageDashboardProviderUnavailableProblem(formatProviderError("metering service", error));
+    }
+  }
+
+  private async readBillingDelivery(
+    tenantId: string,
+    meterIds: readonly string[],
+  ): Promise<UsageDashboardBillingDeliverySnapshot> {
+    const readModel = this.dependencies.usageBillingReadModel;
+    if (!readModel) {
+      throw new UsageDashboardProviderUnavailableProblem("Usage dashboard billing delivery read model is unavailable.");
+    }
+    try {
+      return await readModel.getSnapshot(tenantId, meterIds);
+    } catch (error) {
+      throw new UsageDashboardProviderUnavailableProblem(formatProviderError("billing delivery read model", error));
     }
   }
 }
@@ -819,6 +863,7 @@ const usageDashboardFeatureSnapshotSchema = z.object({
 const usageDashboardSnapshotSchema = z.object({
   tenantId: z.string(),
   planId: z.string().nullable(),
+  planVersionRef: z.string().nullable(),
   subscriptionStatus: z.string(),
   currentPeriodEnd: z.string().nullable(),
   aggregate: z.object({
@@ -829,6 +874,16 @@ const usageDashboardSnapshotSchema = z.object({
   }),
   meters: z.array(usageDashboardMeterSnapshotSchema),
   features: z.array(usageDashboardFeatureSnapshotSchema),
+  billingDelivery: z.object({
+    localUsage: z.number(),
+    providerAcceptedUsage: z.number(),
+    usageDrift: z.number(),
+    backlogCount: z.number(),
+    oldestPendingAgeMs: z.number().nullable(),
+    retryCount: z.number(),
+    terminalFailureCount: z.number(),
+    recoveryCommand: z.string(),
+  }).nullable(),
   lastUpdatedAt: z.string(),
 });
 
@@ -927,6 +982,7 @@ export { createUsageDashboardService } from "./UsageDashboardRuntime";
 export {
   UsageDashboardService,
   resolveOverageState,
+  type UsageDashboardBillingDeliverySnapshot,
   type UsageDashboardDependencies,
   type UsageDashboardFeatureSnapshot,
   type UsageDashboardMeterSnapshot,
@@ -962,6 +1018,7 @@ type MeterRow = {
 type UsageDashboardSnapshot = {
   readonly tenantId: string;
   readonly planId: string | null;
+  readonly planVersionRef: string | null;
   readonly subscriptionStatus: string;
   readonly currentPeriodEnd: string | null;
   readonly aggregate: {
@@ -971,6 +1028,16 @@ type UsageDashboardSnapshot = {
     readonly percentUsed: number | null;
   };
   readonly meters: readonly MeterRow[];
+  readonly billingDelivery: {
+    readonly localUsage: number;
+    readonly providerAcceptedUsage: number;
+    readonly usageDrift: number;
+    readonly backlogCount: number;
+    readonly oldestPendingAgeMs: number | null;
+    readonly retryCount: number;
+    readonly terminalFailureCount: number;
+    readonly recoveryCommand: string;
+  } | null;
   readonly lastUpdatedAt: string;
 };
 
@@ -1048,12 +1115,30 @@ export default function UsageDashboardPage() {
           <dd>{snapshot.tenantId}</dd>
           <dt>Plan</dt>
           <dd>{snapshot.planId ?? 'none'}</dd>
+          <dt>Plan version</dt>
+          <dd>{snapshot.planVersionRef ?? 'none'}</dd>
           <dt>Status</dt>
           <dd>{snapshot.subscriptionStatus}</dd>
           <dt>Next billing cycle</dt>
           <dd>{formatDate(snapshot.currentPeriodEnd)}</dd>
         </dl>
       </section>
+      {snapshot.billingDelivery ? (
+        <section>
+          <h2>Billing delivery</h2>
+          <p>
+            {formatNumber(snapshot.billingDelivery.providerAcceptedUsage)} provider accepted /{' '}
+            {formatNumber(snapshot.billingDelivery.localUsage)} local usage
+          </p>
+          <p>
+            Drift: {formatNumber(snapshot.billingDelivery.usageDrift)}; pending:{' '}
+            {snapshot.billingDelivery.backlogCount}
+          </p>
+          {snapshot.billingDelivery.backlogCount > 0 ? (
+            <code>{snapshot.billingDelivery.recoveryCommand}</code>
+          ) : null}
+        </section>
+      ) : null}
       <section>
         <h2>Aggregate usage</h2>
         <p>{formatNumber(snapshot.aggregate.usage)} used / {formatNullableNumber(snapshot.aggregate.quota)} quota</p>
