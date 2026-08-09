@@ -208,6 +208,154 @@ describe("TenantIsolationEnforcer", () => {
     ]);
   });
 
+  it("preserves allowed work and reports best-effort sink failures without error details", async () => {
+    const recordEventSpy = vi.spyOn(telemetry, "recordEvent").mockImplementation(() => {});
+    const enforcer = createTenantIsolationEnforcer({
+      contextProvider: {
+        getTenantId: () => activeTenantId,
+      },
+      auditSink: {
+        recordTenantIsolation: async () => {
+          throw new Error("audit secret must not be reported");
+        },
+      },
+      policyDecisionTraceSink: {
+        recordPolicyDecisionTrace: async () => {
+          throw new Error("trace secret must not be reported");
+        },
+      },
+    });
+    const operation = markTenantScopedOperation({
+      name: "orders.list",
+      kind: "repository-read",
+    });
+
+    await expect(enforcer.enforce(operation, () => "allowed")).resolves.toBe("allowed");
+
+    const failureEvents = recordEventSpy.mock.calls.filter(
+      ([eventName]) => eventName === "tenant-isolation.observability-delivery-failed",
+    );
+    expect(failureEvents).toEqual([
+      [
+        "tenant-isolation.observability-delivery-failed",
+        expect.objectContaining({
+          "tenant.operation": "orders.list",
+          "tenant.operation.kind": "repository-read",
+          "tenant.policy_result": "allow",
+          "tenant.observability_sink": "policy-decision-trace",
+          "tenant.policy_decision_id": expect.stringMatching(/^pdt_[a-z0-9]+$/),
+        }),
+      ],
+      [
+        "tenant-isolation.observability-delivery-failed",
+        expect.objectContaining({
+          "tenant.operation": "orders.list",
+          "tenant.operation.kind": "repository-read",
+          "tenant.policy_result": "allow",
+          "tenant.observability_sink": "tenant-isolation-audit",
+          "tenant.policy_decision_id": expect.stringMatching(/^pdt_[a-z0-9]+$/),
+        }),
+      ],
+    ]);
+    expect(JSON.stringify(failureEvents)).not.toContain("secret");
+  });
+
+  it("preserves the original denial Problem even when fail-closed sinks fail", async () => {
+    activeTenantId = null;
+    const recordEventSpy = vi.spyOn(telemetry, "recordEvent").mockImplementation(() => {});
+    const enforcer = createTenantIsolationEnforcer({
+      contextProvider: {
+        getTenantId: () => activeTenantId,
+      },
+      observabilityFailureMode: "fail-closed",
+      auditSink: {
+        recordTenantIsolation: async () => {
+          throw new Error("audit unavailable");
+        },
+      },
+      policyDecisionTraceSink: {
+        recordPolicyDecisionTrace: async () => {
+          throw new Error("trace unavailable");
+        },
+      },
+    });
+    const operation = markTenantScopedOperation({
+      name: "orders.findById",
+      kind: "repository-read",
+    });
+
+    const rejection = await enforcer
+      .enforce(operation, () => "unreachable")
+      .catch((error) => error);
+
+    expect(rejection).toBeInstanceOf(TenantIsolationContextMissingProblem);
+    expect(rejection).toMatchObject({
+      code: "tenant-core/isolation-context-missing",
+      extensions: {
+        decisionId: expect.stringMatching(/^pdt_[a-z0-9]+$/),
+      },
+    });
+    expect(
+      recordEventSpy.mock.calls.filter(
+        ([eventName]) => eventName === "tenant-isolation.observability-delivery-failed",
+      ),
+    ).toHaveLength(2);
+  });
+
+  it("preserves allowed query work when best-effort sinks fail", async () => {
+    const enforcer = createTenantIsolationEnforcer({
+      contextProvider: {
+        getTenantId: () => activeTenantId,
+      },
+      auditSink: {
+        recordTenantIsolation: async () => {
+          throw new Error("audit unavailable");
+        },
+      },
+      policyDecisionTraceSink: {
+        recordPolicyDecisionTrace: async () => {
+          throw new Error("trace unavailable");
+        },
+      },
+    });
+    const boundary = createTenantRepositoryBoundary(enforcer);
+
+    await expect(
+      boundary.query(
+        {
+          operation: markTenantScopedOperation({
+            name: "orders.query",
+            kind: "query",
+          }),
+          predicates: [{ field: "tenantId", operator: "=", value: "tenant-a" }],
+        },
+        () => "allowed",
+      ),
+    ).resolves.toBe("allowed");
+  });
+
+  it("retains explicit fail-closed observability for allowed work", async () => {
+    const enforcer = createTenantIsolationEnforcer({
+      contextProvider: {
+        getTenantId: () => activeTenantId,
+      },
+      observabilityFailureMode: "fail-closed",
+      policyDecisionTraceSink: {
+        recordPolicyDecisionTrace: async () => {
+          throw new Error("trace unavailable");
+        },
+      },
+    });
+    const operation = markTenantScopedOperation({
+      name: "orders.list",
+      kind: "repository-read",
+    });
+    const work = vi.fn(() => "unreachable");
+
+    await expect(enforcer.enforce(operation, work)).rejects.toThrow("trace unavailable");
+    expect(work).not.toHaveBeenCalled();
+  });
+
   it("wraps repository read and write boundaries with tenant evidence", async () => {
     const boundary = createTenantRepositoryBoundary(createEnforcer(), {
       resource: "orders",

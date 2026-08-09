@@ -129,6 +129,7 @@ export type {
   TenantIsolationAuditSink,
   TenantIsolationEnforcerOptions,
   TenantIsolationEvidence,
+  TenantIsolationObservabilityFailureMode,
   TenantOperationIsolation,
   TenantOperationKind,
   TenantQueryBoundary,

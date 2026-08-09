@@ -24988,6 +24988,11 @@
               "source": "./libs/TenantIsolationStrategy"
             },
             {
+              "name": "TenantIsolationObservabilityFailureMode",
+              "exportKind": "named",
+              "source": "./libs/TenantIsolationEnforcer"
+            },
+            {
               "name": "TenantIsolationStrategy",
               "exportKind": "named",
               "source": "./libs/TenantIsolationStrategy"
