@@ -5,7 +5,7 @@ prev: false
 title: "DesktopQueryOptions"
 ---
 
-> **DesktopQueryOptions**\<`TInputSchema`, `TOutputSchema`\> = `object`
+> **DesktopQueryOptions**\<`TInputSchema`, `TOutputSchema`, `TEffects`, `TEvents`, `TProblems`\> = `object`
 
 ## Type Parameters
 
@@ -17,7 +17,31 @@ title: "DesktopQueryOptions"
 
 `TOutputSchema`
 
+### TEffects
+
+`TEffects` *extends* readonly [`AnyDesktopEffect`](/api/protocols-desktop/src/type-aliases/anydesktopeffect/)[] \| `undefined` = `undefined`
+
+### TEvents
+
+`TEvents` *extends* readonly `string`[] \| `undefined` = `undefined`
+
+### TProblems
+
+`TProblems` *extends* readonly [`DesktopProblemReference`](/api/protocols-desktop/src/type-aliases/desktopproblemreference/)[] \| `undefined` = `undefined`
+
 ## Properties
+
+### effects?
+
+> `readonly` `optional` **effects?**: `TEffects`
+
+***
+
+### events?
+
+> `readonly` `optional` **events?**: `TEvents`
+
+***
 
 ### input
 
@@ -28,3 +52,9 @@ title: "DesktopQueryOptions"
 ### output
 
 > `readonly` **output**: `TOutputSchema`
+
+***
+
+### problems?
+
+> `readonly` `optional` **problems?**: `TProblems`

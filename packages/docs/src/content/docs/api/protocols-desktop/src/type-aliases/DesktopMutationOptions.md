@@ -5,7 +5,7 @@ prev: false
 title: "DesktopMutationOptions"
 ---
 
-> **DesktopMutationOptions**\<`TInputSchema`, `TOutputSchema`\> = `object`
+> **DesktopMutationOptions**\<`TInputSchema`, `TOutputSchema`, `TEffects`, `TEvents`, `TProblems`\> = `object`
 
 ## Type Parameters
 
@@ -17,7 +17,31 @@ title: "DesktopMutationOptions"
 
 `TOutputSchema`
 
+### TEffects
+
+`TEffects` *extends* readonly [`AnyDesktopEffect`](/api/protocols-desktop/src/type-aliases/anydesktopeffect/)[] \| `undefined` = `undefined`
+
+### TEvents
+
+`TEvents` *extends* readonly `string`[] \| `undefined` = `undefined`
+
+### TProblems
+
+`TProblems` *extends* readonly [`DesktopProblemReference`](/api/protocols-desktop/src/type-aliases/desktopproblemreference/)[] \| `undefined` = `undefined`
+
 ## Properties
+
+### effects?
+
+> `readonly` `optional` **effects?**: `TEffects`
+
+***
+
+### events?
+
+> `readonly` `optional` **events?**: `TEvents`
+
+***
 
 ### input
 
@@ -28,3 +52,9 @@ title: "DesktopMutationOptions"
 ### output
 
 > `readonly` **output**: `TOutputSchema`
+
+***
+
+### problems?
+
+> `readonly` `optional` **problems?**: `TProblems`

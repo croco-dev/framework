@@ -5,7 +5,7 @@ prev: false
 title: "DesktopCommandHandler"
 ---
 
-> **DesktopCommandHandler**\<`TCommand`\> = (`input`) => [`InferDesktopCommandOutput`](/api/protocols-desktop/src/type-aliases/inferdesktopcommandoutput/)\<`TCommand`\> \| `Promise`\<[`InferDesktopCommandOutput`](/api/protocols-desktop/src/type-aliases/inferdesktopcommandoutput/)\<`TCommand`\>\>
+> **DesktopCommandHandler**\<`TCommand`, `TContract`\> = (`input`, `context`) => [`DesktopResult`](/api/protocols-desktop/src/type-aliases/desktopresult/)\<[`InferDesktopCommandOutput`](/api/protocols-desktop/src/type-aliases/inferdesktopcommandoutput/)\<`TCommand`\>, [`InferDesktopCommandProblem`](/api/protocols-desktop/src/type-aliases/inferdesktopcommandproblem/)\<`TCommand`\>\> \| `Promise`\<[`DesktopResult`](/api/protocols-desktop/src/type-aliases/desktopresult/)\<[`InferDesktopCommandOutput`](/api/protocols-desktop/src/type-aliases/inferdesktopcommandoutput/)\<`TCommand`\>, [`InferDesktopCommandProblem`](/api/protocols-desktop/src/type-aliases/inferdesktopcommandproblem/)\<`TCommand`\>\>\>
 
 ## Type Parameters
 
@@ -13,12 +13,20 @@ title: "DesktopCommandHandler"
 
 `TCommand` *extends* [`AnyDesktopCommand`](/api/protocols-desktop/src/type-aliases/anydesktopcommand/)
 
+### TContract
+
+`TContract` *extends* [`AnyDesktopContract`](/api/protocols-desktop/src/type-aliases/anydesktopcontract/)
+
 ## Parameters
 
 ### input
 
 [`InferDesktopCommandInput`](/api/protocols-desktop/src/type-aliases/inferdesktopcommandinput/)\<`TCommand`\>
 
+### context
+
+[`DesktopHandlerContext`](/api/protocols-desktop/src/type-aliases/desktophandlercontext/)\<`TCommand`, `TContract`\>
+
 ## Returns
 
-[`InferDesktopCommandOutput`](/api/protocols-desktop/src/type-aliases/inferdesktopcommandoutput/)\<`TCommand`\> \| `Promise`\<[`InferDesktopCommandOutput`](/api/protocols-desktop/src/type-aliases/inferdesktopcommandoutput/)\<`TCommand`\>\>
+[`DesktopResult`](/api/protocols-desktop/src/type-aliases/desktopresult/)\<[`InferDesktopCommandOutput`](/api/protocols-desktop/src/type-aliases/inferdesktopcommandoutput/)\<`TCommand`\>, [`InferDesktopCommandProblem`](/api/protocols-desktop/src/type-aliases/inferdesktopcommandproblem/)\<`TCommand`\>\> \| `Promise`\<[`DesktopResult`](/api/protocols-desktop/src/type-aliases/desktopresult/)\<[`InferDesktopCommandOutput`](/api/protocols-desktop/src/type-aliases/inferdesktopcommandoutput/)\<`TCommand`\>, [`InferDesktopCommandProblem`](/api/protocols-desktop/src/type-aliases/inferdesktopcommandproblem/)\<`TCommand`\>\>\>

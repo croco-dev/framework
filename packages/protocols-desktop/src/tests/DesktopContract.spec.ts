@@ -5,6 +5,58 @@ import { desktop } from "../libs/desktop";
 import type { DesktopLocalWindowDefinition, DesktopRemoteWindowDefinition } from "../libs/types";
 
 describe("desktop contract DSL", () => {
+  it("preserves declarative command authority without installing effect implementations", () => {
+    const changed = desktop.event({ payload: z.object({ path: z.string() }) });
+    const filesystem = desktop.effect({
+      namespace: "filesystem",
+      methods: {
+        readText: desktop.effect.method<[path: string], Promise<string>>(),
+      },
+    });
+    const command = desktop.query({
+      input: z.object({ path: z.string() }),
+      output: z.object({ contents: z.string() }),
+      effects: [filesystem],
+      events: ["changed"],
+      problems: [DesktopDefinitionProblem],
+    });
+
+    expect(command.effects).toEqual([
+      {
+        definitionType: "effect",
+        namespace: "filesystem",
+        methods: { readText: { definitionType: "effect-method" } },
+      },
+    ]);
+    expect(command.events).toEqual(["changed"]);
+    expect(command.problems).toEqual([DesktopDefinitionProblem]);
+    expect(command.effects[0]?.methods.readText).not.toHaveProperty("implementation");
+  });
+
+  it.each(["signal", "metadata", "filesystem.read", ""])(
+    "rejects invalid effect namespace %j at runtime",
+    (namespace) => {
+      expect(() =>
+        desktop.effect({
+          namespace,
+          methods: { readText: desktop.effect.method<[string], Promise<string>>() },
+        } as never),
+      ).toThrowError(DesktopDefinitionProblem);
+    },
+  );
+
+  it.each(["constructor", "metadata", "read.text", ""])(
+    "rejects invalid effect method %j at runtime",
+    (method) => {
+      expect(() =>
+        desktop.effect({
+          namespace: "filesystem",
+          methods: { [method]: desktop.effect.method<[string], Promise<string>>() },
+        } as never),
+      ).toThrowError(DesktopDefinitionProblem);
+    },
+  );
+
   it("derives stable command and event IDs from app object keys", () => {
     const project = desktop.contract({
       commands: {

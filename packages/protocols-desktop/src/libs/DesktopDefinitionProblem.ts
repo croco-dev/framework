@@ -7,6 +7,8 @@ export type DesktopDefinitionProblemCode =
   | "DESKTOP_UNMOUNTED_MEMBER_REFERENCE";
 
 export class DesktopDefinitionProblem extends Problem {
+  declare public readonly code: DesktopDefinitionProblemCode;
+
   public constructor(code: DesktopDefinitionProblemCode, detail: string) {
     super(code, ProblemCategory.ValidationError, detail);
   }
