@@ -1083,6 +1083,9 @@ function checkAiSaasStructure() {
     scripts: expect.objectContaining({
       "ai:smoke": "pnpm --filter {{scope}}/api-server ai:smoke",
       "demo:smoke": expect.stringMatching(/api-server ai:smoke$/),
+      "demo:scenario":
+        "pnpm exec croco generate usage-dashboard --no-page && pnpm --filter {{scope}}/api-server demo:scenario",
+      "jobs:smoke": "pnpm --filter {{scope}}/api-server jobs:smoke",
       "failure-drill:smoke": "pnpm --filter {{scope}}/api-server failure-drill:smoke",
       "failure-drill:integration": "pnpm --filter {{scope}}/api-server failure-drill:integration",
       "contract:coverage": expect.stringMatching(
@@ -1125,12 +1128,16 @@ function checkAiSaasStructure() {
     scripts: expect.objectContaining({
       "di:graph": GENERATED_API_DI_GRAPH_SCRIPT,
       "ai:smoke": "tsx src/demo/ai-smoke.ts",
+      "demo:scenario": "tsx src/demo/scenario.ts",
+      "demo:usage-recover": "tsx src/demo/usage-recover.ts",
       "ops:smoke": "tsx src/demo/ops-smoke.ts",
+      "jobs:smoke": "tsx src/demo/jobs-smoke.ts",
       "failure-drill:smoke": "tsx src/demo/failure-drill-smoke.ts",
       "failure-drill:integration": "tsx src/provider-profile-check.ts --mode=real-provider",
       test: "vitest run",
     }),
     dependencies: expect.objectContaining({
+      "@croco/billing-polar": "workspace:*",
       "@croco/framework-context": "workspace:*",
       "@croco/lifecycle-core": "workspace:*",
       "@croco/llm-core": "workspace:*",

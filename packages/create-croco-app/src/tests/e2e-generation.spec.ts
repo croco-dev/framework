@@ -2605,8 +2605,11 @@ describe("E2E: generate()", () => {
 
       expect(rootPackageJson.scripts).toMatchObject({
         "ai:smoke": "pnpm --filter @test/api-server ai:smoke",
+        "demo:scenario":
+          "pnpm exec croco generate usage-dashboard --no-page && pnpm --filter @test/api-server demo:scenario",
         "demo:smoke":
-          "pnpm contract:check && pnpm --filter @test/api-server demo:smoke && pnpm --filter @test/api-server ops:smoke && pnpm --filter @test/api-server ai:smoke",
+          "pnpm profile:check && pnpm architecture-policy:check && pnpm runtime-policy:check && pnpm contract:check && pnpm --filter @test/api-server demo:smoke && pnpm --filter @test/api-server ops:smoke && pnpm --filter @test/api-server jobs:smoke && pnpm --filter @test/api-server ai:smoke",
+        "jobs:smoke": "pnpm --filter @test/api-server jobs:smoke",
         "failure-drill:smoke": "pnpm --filter @test/api-server failure-drill:smoke",
         "failure-drill:integration": "pnpm --filter @test/api-server failure-drill:integration",
         "di:graph": "pnpm --filter @test/api-server di:graph",
@@ -2620,6 +2623,7 @@ describe("E2E: generate()", () => {
       expect(rootPackageJson.scripts?.["contract:client"]).toContain("--strict-schemas");
       expect(rootPackageJson.scripts?.["contract:openapi"]).toContain("--strict-schemas");
       expect(apiPackageJson.dependencies).toMatchObject({
+        "@croco/billing-polar": externalCrocoRange("@croco/billing-polar"),
         "@croco/llm-core": externalCrocoRange("@croco/llm-core"),
         "@croco/llm-metering": externalCrocoRange("@croco/llm-metering"),
         "@croco/framework-context": externalCrocoRange("@croco/framework-context"),
@@ -2633,6 +2637,9 @@ describe("E2E: generate()", () => {
       expect(apiPackageJson.devDependencies?.["@croco/testing"]).toBe("^0.0.1");
       expect(apiPackageJson.devDependencies?.["cross-env"]).toBe("^10.1.0");
       expect(apiPackageJson.scripts?.["ai:smoke"]).toBe("tsx src/demo/ai-smoke.ts");
+      expect(apiPackageJson.scripts?.["demo:scenario"]).toBe("tsx src/demo/scenario.ts");
+      expect(apiPackageJson.scripts?.["demo:usage-recover"]).toBe("tsx src/demo/usage-recover.ts");
+      expect(apiPackageJson.scripts?.["jobs:smoke"]).toBe("tsx src/demo/jobs-smoke.ts");
       expect(apiPackageJson.scripts?.["di:graph"]).toBe(GENERATED_API_DI_GRAPH_SCRIPT);
       expect(apiPackageJson.scripts?.["failure-drill:smoke"]).toBe(
         "tsx src/demo/failure-drill-smoke.ts",
