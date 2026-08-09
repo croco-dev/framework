@@ -150,7 +150,12 @@ export class GraphQLServer {
       const response = await FrameworkContext.run({ requestId: randomUUID() }, () => yoga(request));
 
       res.statusCode = response.status;
+      const setCookieHeaders = getSetCookieHeaders(response.headers);
+      if (setCookieHeaders.length > 0) {
+        res.setHeader("set-cookie", setCookieHeaders);
+      }
       response.headers.forEach((value: string, key: string) => {
+        if (key.toLowerCase() === "set-cookie") return;
         res.setHeader(key, value);
       });
 
@@ -250,6 +255,22 @@ export class GraphQLServer {
       }
     });
   }
+}
+
+function getSetCookieHeaders(headers: Headers): string[] {
+  const getSetCookie = (headers as { getSetCookie?: () => string[] }).getSetCookie;
+
+  if (typeof getSetCookie === "function") {
+    return getSetCookie.call(headers);
+  }
+
+  const setCookieHeaders: string[] = [];
+  headers.forEach((value, key) => {
+    if (key.toLowerCase() === "set-cookie") {
+      setCookieHeaders.push(value);
+    }
+  });
+  return setCookieHeaders;
 }
 
 function maskCrocoProblemError(error: unknown, message: string, isDev?: boolean): Error {

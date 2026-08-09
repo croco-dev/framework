@@ -409,6 +409,36 @@ describe("GraphQLServer integration", () => {
     await testServer.stop();
   });
 
+  it("should preserve every Set-Cookie response header", async () => {
+    const testServer = new GraphQLServer({
+      schemaOptions: {
+        resolvers: [UserResolver],
+        autoDiscover: false,
+      },
+    });
+
+    await testServer.initialize();
+
+    const headers = new Headers({ "x-test-header": "preserved" });
+    headers.append("set-cookie", "session=session-token; HttpOnly; Path=/");
+    headers.append("set-cookie", "csrf=csrf-token; SameSite=Strict; Path=/");
+    Reflect.set(testServer, "yogaHandler", async () => new Response("ok", { headers }));
+
+    await testServer.start(4003);
+
+    try {
+      const response = await fetch("http://localhost:4003/graphql");
+
+      expect(response.headers.getSetCookie()).toEqual([
+        "session=session-token; HttpOnly; Path=/",
+        "csrf=csrf-token; SameSite=Strict; Path=/",
+      ]);
+      expect(response.headers.get("x-test-header")).toBe("preserved");
+    } finally {
+      await testServer.stop();
+    }
+  });
+
   it("should throw a typed problem when no schema is configured", async () => {
     const testServer = new GraphQLServer();
 
