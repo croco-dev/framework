@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 604,
+  problemCount: 606,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -3825,7 +3825,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/src/cli-result.ts",
-          line: 33,
+          line: 34,
           column: 3,
           kind: "problem-class",
         },

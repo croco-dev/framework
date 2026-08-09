@@ -3817,7 +3817,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/cli-result.ts",
-      "line": 161,
+      "line": 162,
       "column": 32,
       "code": "TS4111",
       "message": "Property 'recovery' comes from an index signature, so it must be accessed with ['recovery']."
@@ -3833,7 +3833,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/cli-result.ts",
-      "line": 37,
+      "line": 38,
       "column": 41,
       "code": "TS2379",
       "message": "Argument of type '{ cause: Error | undefined; extensions: { recovery: string; }; }' is not assignable to parameter of type 'ProblemOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."

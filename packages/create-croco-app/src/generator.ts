@@ -46,7 +46,7 @@ import {
   assertSupportedNodeVersion,
   writeGeneratedNodeRuntimeContract,
 } from "./node-runtime.js";
-import { validateResolvedOptions } from "./options.js";
+import { isSaasPreset, validateResolvedOptions } from "./options.js";
 import {
   DEFAULT_SAAS_PROVIDER_PROFILE,
   assertSaasProviderTenantModelCompatibility,
@@ -458,14 +458,11 @@ function writeSaasProviderPackageDependencies(
 
 async function finalize(targetDir: string, options: GeneratorOptions): Promise<void> {
   rewriteExternalCrocoWorkspaceRanges(targetDir);
+  const saasPreset = isSaasPreset(options.preset);
   writeGeneratedNodeRuntimeContract(
     targetDir,
-    options.preset === "saas" || options.preset === "ai-saas"
-      ? SAAS_GENERATED_NODE_ENGINE_RANGE
-      : undefined,
-    options.preset === "saas" || options.preset === "ai-saas"
-      ? SAAS_GENERATED_NODE_VERSION
-      : undefined,
+    saasPreset ? SAAS_GENERATED_NODE_ENGINE_RANGE : undefined,
+    saasPreset ? SAAS_GENERATED_NODE_VERSION : undefined,
   );
   writeGoalManifest(targetDir, options);
   writeRuntimeCapabilityManifest(targetDir, options);

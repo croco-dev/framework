@@ -134,11 +134,7 @@ const recoveryDeliverySchema = z.object({
   retryableFailed: z.number().int().nonnegative(),
   terminalFailed: z.number().int().nonnegative(),
 });
-type RecoveryDeliveryResult = {
-  accepted: number;
-  retryableFailed: number;
-  terminalFailed: number;
-};
+type RecoveryDeliveryResult = Required<z.infer<typeof recoveryDeliverySchema>>;
 
 export class DemoBillingGateway implements BillingGateway {
   private createdCheckoutCount = 0;
@@ -997,7 +993,7 @@ export async function runSaasDemoFlow(
       },
       metering: {
         meterId: API_REQUESTS_METER_ID,
-        recordedValue: billableUsage.providerAcceptedUsage,
+        recordedValue: usageBillingReadModel.localUsage,
         currentUsage,
       },
       billableUsage,
@@ -1215,7 +1211,7 @@ export async function recoverPendingBillableUsage() {
   return delivery;
 }
 
-async function runUsageRecoveryProcess() {
+async function runUsageRecoveryProcess(): Promise<RecoveryDeliveryResult> {
   const packageManagerCli = process.env.npm_execpath;
   if (!packageManagerCli) {
     throw new SaasBillableUsageProblem(

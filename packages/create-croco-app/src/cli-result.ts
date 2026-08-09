@@ -5,6 +5,7 @@ import {
   SAAS_GENERATED_NODE_ENGINE_RANGE,
   SAAS_GENERATED_NODE_VERSION,
 } from "./node-runtime.js";
+import { isSaasPreset } from "./options.js";
 import type { GeneratorOptions } from "./types.js";
 
 export type CreateCrocoAppSuccessResult = {
@@ -54,11 +55,11 @@ export function createSuccessResult(
   targetDir: string,
   options: GeneratorOptions,
 ): CreateCrocoAppSuccessResult {
-  const isSaasPreset = options.preset === "saas" || options.preset === "ai-saas";
-  const nodeRequirement = isSaasPreset
+  const saasPreset = isSaasPreset(options.preset);
+  const nodeRequirement = saasPreset
     ? SAAS_GENERATED_NODE_ENGINE_RANGE
     : GENERATED_NODE_ENGINE_RANGE;
-  const nodeVersion = isSaasPreset ? SAAS_GENERATED_NODE_VERSION : GENERATED_NODE_VERSION;
+  const nodeVersion = saasPreset ? SAAS_GENERATED_NODE_VERSION : GENERATED_NODE_VERSION;
   return {
     ok: true,
     code: "create-croco-app/project-created",

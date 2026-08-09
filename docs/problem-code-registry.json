@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 604,
+  "problemCount": 606,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -3686,7 +3686,7 @@
       "sources": [
         {
           "file": "packages/create-croco-app/src/cli-result.ts",
-          "line": 33,
+          "line": 34,
           "column": 3,
           "kind": "problem-class"
         }

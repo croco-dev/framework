@@ -4,6 +4,7 @@ import { DatabaseSync } from "node:sqlite";
 import { SqliteFixtureStateProblem } from "../problems";
 
 const STATE_KEY = "state";
+const ROLLBACK_FAILURE_CODE = "saas-demo/sqlite-fixture-rollback-failed";
 
 type StateRow = {
   value: string;
@@ -39,7 +40,13 @@ export function updateSqliteFixtureState<T, R>(
     transactionStarted = false;
     return result;
   } catch (error) {
-    if (transactionStarted) database.exec("ROLLBACK");
+    if (transactionStarted) {
+      try {
+        database.exec("ROLLBACK");
+      } catch (rollbackError) {
+        console.warn(ROLLBACK_FAILURE_CODE, rollbackError);
+      }
+    }
     throw error;
   } finally {
     database.close();

@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import type { UsageBillingEvent } from "@croco/billing-core";
+import { PolarRetryableUpstreamProblem } from "@croco/billing-polar";
 import { describe, expect, it } from "vitest";
 import { FileUsageBillingGateway } from "../demo/FileUsageBillingGateway";
 
@@ -27,6 +28,18 @@ describe("FileUsageBillingGateway", () => {
         receipts: [{ eventId: "usage-1", status: "duplicate" }],
       });
       await expect(second.getAcceptedUsage("tenant_acme", "api_requests")).resolves.toBe(3);
+    });
+  });
+
+  it("rejects ingestion while the provider is unavailable", async () => {
+    await withStateDirectory(async (stateDir) => {
+      const gateway = new FileUsageBillingGateway(join(stateDir, "provider.sqlite"));
+      gateway.setAvailable(false);
+
+      await expect(gateway.ingest([providerEvent("usage-1", 1)])).rejects.toThrow(
+        PolarRetryableUpstreamProblem,
+      );
+      await expect(gateway.getAcceptedUsage("tenant_acme", "api_requests")).resolves.toBe(0);
     });
   });
 });

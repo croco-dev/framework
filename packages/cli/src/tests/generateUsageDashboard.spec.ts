@@ -467,6 +467,7 @@ await app.listen(3000);
         terminalFailureCount: 0,
         recoveryCommand: "pnpm demo:scenario",
       };
+      let receivedMeterIds: readonly string[] = [];
       const service = new UsageDashboardService({
         tenantStore: {
           async findById() {
@@ -501,6 +502,14 @@ await app.listen(3000);
                 allowOverQuota: true,
                 metadata: { unit: "request" },
               },
+              {
+                tenantId: "tenant_acme",
+                meterId: "internal_events",
+                type: "COUNT",
+                quota: 1_000,
+                allowOverQuota: true,
+                metadata: { unit: "event" },
+              },
             ];
           },
         },
@@ -515,7 +524,8 @@ await app.listen(3000);
           },
         },
         usageBillingReadModel: {
-          async getSnapshot() {
+          async getSnapshot(_tenantId: string, meterIds: readonly string[]) {
+            receivedMeterIds = meterIds;
             return billingDelivery;
           },
         },
@@ -525,6 +535,7 @@ await app.listen(3000);
         planVersionRef: "team@v1",
         billingDelivery,
       });
+      expect(receivedMeterIds).toEqual(["api_requests"]);
     } finally {
       await fs.rm(cwd, { force: true, recursive: true });
     }
