@@ -14,6 +14,7 @@ import { createApp } from "../libs/CrocoApp";
 import { ErrorHandler } from "../libs/ErrorHandler";
 import { HealthCheckRegistry } from "../libs/HealthCheckRegistry";
 import { createDefaultDiagnosticsCollector } from "../libs/operationalEndpoints";
+import { DiagnosticsConfigurationProblem } from "../libs/problems/DiagnosticsEndpointProblems";
 import type { DiagnosticsEndpointOptions } from "../libs/operationalEndpoints";
 
 class StaticDiagnosticsProvider {
@@ -94,6 +95,75 @@ describe("Operational endpoints", () => {
 
   afterEach(() => {
     vi.unstubAllEnvs();
+  });
+
+  it.each([
+    ["recentErrorLimit", -1],
+    ["recentErrorLimit", Number.NaN],
+    ["recentErrorLimit", Number.POSITIVE_INFINITY],
+    ["recentErrorLimit", Number.NEGATIVE_INFINITY],
+    ["recentErrorLimit", 0.5],
+    ["recentErrorLimit", Number.MAX_SAFE_INTEGER + 1],
+    ["messageLimit", -1],
+    ["messageLimit", 0],
+    ["messageLimit", Number.NaN],
+    ["messageLimit", Number.POSITIVE_INFINITY],
+    ["messageLimit", Number.NEGATIVE_INFINITY],
+    ["messageLimit", 1.5],
+    ["messageLimit", Number.MAX_SAFE_INTEGER + 1],
+  ] as const)(
+    "rejects invalid diagnostics %s configuration %s before endpoint registration",
+    async (option, value) => {
+      const app = createApp({
+        controllers: [],
+        securityValidation: "off",
+        diagnostics: {
+          exposure: "private",
+          [option]: value,
+        },
+      });
+      const request = new Request("http://localhost/health");
+      const error = await app.fetch(request).catch((cause: unknown) => cause);
+
+      expect(error).toBeInstanceOf(DiagnosticsConfigurationProblem);
+      expect(error).toMatchObject(
+        expect.objectContaining({
+          code: "transports-http/diagnostics-invalid-configuration",
+          detail: expect.stringContaining(`diagnostics.${option}`),
+          option,
+          receivedValue: String(value),
+        }),
+      );
+    },
+  );
+
+  it("allows zero recent errors while preserving a positive message boundary", async () => {
+    const collector = new DiagnosticsCollector();
+    collector.registerProvider(new StaticDiagnosticsProvider());
+    collector.recordError({
+      timestamp: "2026-06-15T00:00:01.000Z",
+      component: "static",
+      code: "FIRST",
+      message: "should not be returned",
+    });
+    const app = createApp({
+      controllers: [],
+      securityValidation: "off",
+      diagnostics: {
+        exposure: "private",
+        collector,
+        recentErrorLimit: 0,
+        messageLimit: 1,
+      },
+    });
+
+    const response = await app.fetch(new Request("http://localhost/diagnostics"));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      components: [{ message: "x" }],
+      recentErrors: [],
+    });
   });
 
   it("does not register diagnostics when exposure is off", async () => {

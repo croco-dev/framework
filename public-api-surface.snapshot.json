@@ -27369,6 +27369,12 @@
               "declarationKind": "const"
             },
             {
+              "name": "DiagnosticsConfigurationProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/DiagnosticsEndpointProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "ErrorHandler",
               "exportKind": "named",
               "source": null
@@ -27643,6 +27649,11 @@
               "source": "./libs/operationalEndpoints"
             },
             {
+              "name": "DiagnosticsConfigurationProblemOptions",
+              "exportKind": "named",
+              "source": "./libs/problems/DiagnosticsEndpointProblems"
+            },
+            {
               "name": "DiagnosticsEndpointOptions",
               "exportKind": "named",
               "source": "./libs/operationalEndpoints"
@@ -27656,6 +27667,11 @@
               "name": "DiagnosticsGuard",
               "exportKind": "named",
               "source": "./libs/operationalEndpoints"
+            },
+            {
+              "name": "DiagnosticsLimitOption",
+              "exportKind": "named",
+              "source": "./libs/problems/DiagnosticsEndpointProblems"
             },
             {
               "name": "FilterProvider",

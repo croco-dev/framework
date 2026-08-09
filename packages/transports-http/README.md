@@ -258,7 +258,9 @@ Diagnostics 응답은 `Cache-Control: no-store`를 포함합니다. `recentError
 최신순으로 반환되며 `cause`/stack trace는 노출하지 않습니다. 오류 메시지와 provider message는 기본
 100자로 제한되고, `token`, `secret`, `password`, `authorization`, `cookie`, `credential`,
 `apiKey` 계열 detail key는 `[Redacted]`로 대체됩니다. 필요하면 `recentErrorLimit`과
-`messageLimit`을 조정할 수 있습니다.
+`messageLimit`을 조정할 수 있습니다. `recentErrorLimit`은 0 이상의 안전한 정수이고
+`messageLimit`은 1 이상의 안전한 정수여야 하며, 잘못된 값은 엔드포인트 등록 전에
+`transports-http/diagnostics-invalid-configuration` Problem으로 거절됩니다.
 
 ## Failure response contract
 
