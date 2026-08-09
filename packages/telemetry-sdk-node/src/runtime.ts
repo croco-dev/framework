@@ -11,9 +11,14 @@ import { TelemetryAutoInstrumentationProblem } from "./libs/problems/TelemetryAu
 import {
   LegacyTelemetrySignalConfigProblem,
   OtlpEndpointRequiredProblem,
+  TelemetryBatchConfigurationProblem,
   TelemetryRuntimeProblem,
 } from "./libs/problems/TelemetryProblems";
 import { resolveDeploymentEnvironment } from "./libs/resources/DeploymentEnvironment";
+import type {
+  TelemetryBatchConfigurationConstraint,
+  TelemetryBatchConfigurationField,
+} from "./libs/problems/TelemetryProblems";
 
 class TelemetryRuntime {
   private static instance: TelemetryRuntime | null = null;
@@ -62,6 +67,8 @@ class TelemetryRuntime {
     if (legacySignals) {
       throw new LegacyTelemetrySignalConfigProblem(legacySignals);
     }
+
+    validateBatchSpanProcessorConfig(config);
 
     const requestedConfig = snapshotTelemetryConfig(config);
 
@@ -309,6 +316,48 @@ class TelemetryRuntime {
       return "tracing-disabled";
     }
     return null;
+  }
+}
+
+const MAX_BATCH_PROCESSOR_INTEGER = 2_147_483_647;
+const DEFAULT_BATCH_COUNT = 2048;
+const DEFAULT_BATCH_SIZE = 512;
+
+function validateBatchSpanProcessorConfig(config: TelemetryConfig): void {
+  const traceConfig = config.trace;
+  if (!traceConfig) {
+    return;
+  }
+
+  validateBatchInteger(traceConfig.batchTimeout, "batchTimeout", 0, "non-negative-int32");
+  validateBatchInteger(traceConfig.batchCount, "batchCount", 1, "positive-int32");
+  validateBatchInteger(traceConfig.batchSize, "batchSize", 1, "positive-int32");
+
+  const batchCount = traceConfig.batchCount ?? DEFAULT_BATCH_COUNT;
+  const batchSize = traceConfig.batchSize ?? DEFAULT_BATCH_SIZE;
+  if (batchSize > batchCount) {
+    throw new TelemetryBatchConfigurationProblem(
+      "batchSize",
+      "less-than-or-equal-to-batchCount",
+      batchSize,
+    );
+  }
+}
+
+function validateBatchInteger(
+  value: unknown,
+  field: TelemetryBatchConfigurationField,
+  minimum: 0 | 1,
+  constraint: Exclude<TelemetryBatchConfigurationConstraint, "less-than-or-equal-to-batchCount">,
+): void {
+  if (
+    value !== undefined &&
+    (typeof value !== "number" ||
+      !Number.isInteger(value) ||
+      value < minimum ||
+      value > MAX_BATCH_PROCESSOR_INTEGER)
+  ) {
+    throw new TelemetryBatchConfigurationProblem(field, constraint, value);
   }
 }
 

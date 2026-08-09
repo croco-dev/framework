@@ -1997,6 +1997,17 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "telemetry-sdk-node/batch-configuration-invalid": recovery({
+    cause:
+      "BatchSpanProcessor tuning violates the telemetry timeout, queue-size, or export-batch contract.",
+    userAction:
+      "Ask the operator to correct the telemetry batch configuration before restarting the service.",
+    operatorAction:
+      "Use the reported field and constraint to set batchTimeout within 0..2147483647, batchCount and batchSize within 1..2147483647, and batchSize no greater than batchCount.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   CROCO_HTTP_SECURITY_001: recovery({
     cause:
       "HTTP bootstrap validation found a generated or application app without the required security middleware set.",

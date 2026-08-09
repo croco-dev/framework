@@ -24598,6 +24598,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "TelemetryBatchConfigurationProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/TelemetryProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "TelemetryDiagnosticsProvider",
               "exportKind": "named",
               "source": "./libs/diagnostics/TelemetryDiagnosticsProvider",
@@ -24636,6 +24642,16 @@
               "name": "ShutdownResult",
               "exportKind": "named",
               "source": "./runtime"
+            },
+            {
+              "name": "TelemetryBatchConfigurationConstraint",
+              "exportKind": "named",
+              "source": "./libs/problems/TelemetryProblems"
+            },
+            {
+              "name": "TelemetryBatchConfigurationField",
+              "exportKind": "named",
+              "source": "./libs/problems/TelemetryProblems"
             },
             {
               "name": "TelemetryConfig",
