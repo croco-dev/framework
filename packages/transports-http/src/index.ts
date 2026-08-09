@@ -106,6 +106,12 @@ export type {
   SafeDiagnosticsReport,
 } from "./libs/operationalEndpoints";
 
+export {
+  DiagnosticsConfigurationProblem,
+  type DiagnosticsConfigurationProblemOptions,
+  type DiagnosticsLimitOption,
+} from "./libs/problems/DiagnosticsEndpointProblems";
+
 export type {
   DevInspectorEndpointOptions,
   DevInspectorEndpointPolicy,

@@ -9,6 +9,7 @@ import { EventBusDiagnosticsProvider } from "@croco/events-core";
 import { ContainerDiagnosticsProvider } from "@croco/framework-context";
 import type { Context as HonoContext } from "hono";
 import type { HealthCheckRegistryResult } from "./HealthCheckRegistry";
+import { DiagnosticsConfigurationProblem } from "./problems/DiagnosticsEndpointProblems";
 
 export const DIAGNOSTICS_ENDPOINT_PATH = "/health/diagnostics";
 export const STANDARD_DIAGNOSTICS_ENDPOINT_PATH = "/diagnostics";
@@ -127,6 +128,13 @@ export function resolveDiagnosticsEndpointPolicy(
   const token = options?.token ?? env.CROCO_DIAGNOSTICS_TOKEN;
   const exposure =
     options?.exposure ?? envExposure ?? (legacyEnabled ? (token ? "token" : "private") : "off");
+  const recentErrorLimit =
+    options?.recentErrorLimit === undefined ? DEFAULT_RECENT_ERROR_LIMIT : options.recentErrorLimit;
+  const messageLimit =
+    options?.messageLimit === undefined ? DEFAULT_MESSAGE_LIMIT : options.messageLimit;
+
+  assertDiagnosticsLimit("recentErrorLimit", recentErrorLimit, 0);
+  assertDiagnosticsLimit("messageLimit", messageLimit, 1);
 
   return {
     exposure,
@@ -135,9 +143,22 @@ export function resolveDiagnosticsEndpointPolicy(
     guard: options?.guard,
     collector: options?.collector,
     providers: options?.providers,
-    recentErrorLimit: options?.recentErrorLimit ?? DEFAULT_RECENT_ERROR_LIMIT,
-    messageLimit: options?.messageLimit ?? DEFAULT_MESSAGE_LIMIT,
+    recentErrorLimit,
+    messageLimit,
   };
+}
+
+function assertDiagnosticsLimit(
+  option: "messageLimit" | "recentErrorLimit",
+  value: number,
+  minimum: number,
+): void {
+  if (!Number.isSafeInteger(value) || value < minimum) {
+    throw new DiagnosticsConfigurationProblem({
+      option,
+      receivedValue: String(value),
+    });
+  }
 }
 
 export async function authorizeDiagnosticsRequest(

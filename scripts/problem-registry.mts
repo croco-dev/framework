@@ -1988,6 +1988,16 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "transports-http/diagnostics-invalid-configuration": recovery({
+    cause:
+      "The operational diagnostics endpoint was configured with an invalid response-size limit.",
+    userAction: "Ask the operator to correct the service configuration before retrying.",
+    operatorAction:
+      "Set recentErrorLimit to a finite nonnegative safe integer and messageLimit to a finite positive safe integer, then restart the service.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "transports-http/body-limit-invalid-configuration": recovery({
     cause: "The HTTP body-limit middleware was configured with an invalid byte boundary.",
     userAction: "Ask the operator to correct the service configuration before retrying.",

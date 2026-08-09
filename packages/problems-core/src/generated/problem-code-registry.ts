@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 584,
+  problemCount: 585,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -16151,6 +16151,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 315,
           column: 11,
           kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "transports-http/diagnostics-invalid-configuration",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#transports-http-diagnostics-invalid-configuration",
+      recovery: {
+        cause:
+          "The operational diagnostics endpoint was configured with an invalid response-size limit.",
+        userAction: "Ask the operator to correct the service configuration before retrying.",
+        operatorAction:
+          "Set recentErrorLimit to a finite nonnegative safe integer and messageLimit to a finite positive safe integer, then restart the service.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/transports-http/src/libs/problems/DiagnosticsEndpointProblems.ts",
+          line: 22,
+          column: 5,
+          kind: "problem-constructor",
         },
       ],
     },

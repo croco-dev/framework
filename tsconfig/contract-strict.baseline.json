@@ -3753,7 +3753,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/operationalEndpoints.ts",
-      "line": 125,
+      "line": 126,
       "column": 52,
       "code": "TS4111",
       "message": "Property 'CROCO_DIAGNOSTICS_EXPOSURE' comes from an index signature, so it must be accessed with ['CROCO_DIAGNOSTICS_EXPOSURE']."
@@ -3761,7 +3761,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/operationalEndpoints.ts",
-      "line": 126,
+      "line": 127,
       "column": 29,
       "code": "TS4111",
       "message": "Property 'CROCO_DIAGNOSTICS_ENABLED' comes from an index signature, so it must be accessed with ['CROCO_DIAGNOSTICS_ENABLED']."
@@ -3769,7 +3769,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/operationalEndpoints.ts",
-      "line": 127,
+      "line": 128,
       "column": 39,
       "code": "TS4111",
       "message": "Property 'CROCO_DIAGNOSTICS_TOKEN' comes from an index signature, so it must be accessed with ['CROCO_DIAGNOSTICS_TOKEN']."
@@ -3777,7 +3777,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/operationalEndpoints.ts",
-      "line": 131,
+      "line": 139,
       "column": 3,
       "code": "TS2375",
       "message": "Type '{ exposure: DiagnosticsExposureMode; token: string | undefined; tokenHeader: string; guard: DiagnosticsGuard | undefined; collector: DiagnosticsCollector | undefined; providers: readonly DiagnosticsProvider[] | undefined; recentErrorLimit: number; messageLimit: number; }' is not assignable to type 'DiagnosticsEndpointPolicy' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
