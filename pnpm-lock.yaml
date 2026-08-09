@@ -1168,6 +1168,9 @@ importers:
       '@croco/diagnostics-core':
         specifier: workspace:*
         version: link:../diagnostics-core
+      '@croco/engagement-core':
+        specifier: workspace:*
+        version: link:../engagement-core
       '@croco/entitlements-core':
         specifier: workspace:*
         version: link:../entitlements-core
@@ -1435,6 +1438,28 @@ importers:
       create-croco-app:
         specifier: workspace:*
         version: link:../create-croco-app
+
+  packages/engagement-core:
+    dependencies:
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
+      '@croco/protocols-core':
+        specifier: workspace:*
+        version: link:../protocols-core
+    devDependencies:
+      tsup:
+        specifier: ^8.4.0
+        version: 8.5.1(patch_hash=ce9dbc714c187cea78868f1e68c1a0e5097ddbceb7e976a564d94f2291b5bcb9)(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.18)(tsx@4.21.0)(typescript@6.0.3)(yaml@2.9.0)
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: 4.1.8
+        version: 4.1.8(@opentelemetry/api@1.9.0)(@types/node@26.1.2)(@vitest/coverage-v8@4.1.8)(vite@7.3.5(@types/node@26.1.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
 
   packages/entitlements-core:
     dependencies:
@@ -7773,6 +7798,7 @@ packages:
 
   crypto-js@4.2.0:
     resolution: {integrity: sha512-KALDyEYgpY+Rlob/iriUtjV6d5Eq+Y191A5g4UqLAi8CyGP9N1+FdVbkc1SxKc2r4YAYqG8JzO2KGL+AizD70Q==}
+    deprecated: Active development of CryptoJS has been discontinued. This library is no longer maintained.
 
   css-color-keywords@1.0.0:
     resolution: {integrity: sha512-FyyrDHZKEjXDpNJYvVsV960FiqQyXc/LlYmsxl2BcdMb2WPx0OGRVgTg55rPSyLSNMqP52R9r8geSp7apN3Ofg==}

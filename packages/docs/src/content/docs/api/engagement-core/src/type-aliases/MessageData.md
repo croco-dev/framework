@@ -1,0 +1,14 @@
+---
+editUrl: false
+next: false
+prev: false
+title: "MessageData"
+---
+
+> **MessageData**\<`TMessage`\> = `z.infer`\<`TMessage`\[`"data"`\]\>
+
+## Type Parameters
+
+### TMessage
+
+`TMessage` *extends* `AnyMessage`

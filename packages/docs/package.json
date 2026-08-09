@@ -50,6 +50,7 @@
     "@croco/customer-health-drizzle": "workspace:*",
     "@croco/dataloader-core": "workspace:*",
     "@croco/diagnostics-core": "workspace:*",
+    "@croco/engagement-core": "workspace:*",
     "@croco/entitlements-core": "workspace:*",
     "@croco/entitlements-drizzle": "workspace:*",
     "@croco/esbuild-plugin": "workspace:*",

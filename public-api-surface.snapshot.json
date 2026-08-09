@@ -7831,6 +7831,179 @@
       ]
     },
     {
+      "packageName": "@croco/engagement-core",
+      "relativeDir": "packages/engagement-core",
+      "entrypoints": [
+        {
+          "exportPath": ".",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/index.js"
+            },
+            {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            }
+          ],
+          "sourceEntrypoint": "packages/engagement-core/src/index.ts",
+          "runtimeExports": [
+            {
+              "name": "defineMessage",
+              "exportKind": "named",
+              "source": "./libs/MessageContracts",
+              "declarationKind": "function"
+            },
+            {
+              "name": "getMessageRendererBinding",
+              "exportKind": "named",
+              "source": "./libs/MessageContracts",
+              "declarationKind": "function"
+            },
+            {
+              "name": "MESSAGE_CHANNELS",
+              "exportKind": "named",
+              "source": "./libs/MessageContracts",
+              "declarationKind": "const"
+            },
+            {
+              "name": "MessageAlreadyRegisteredProblem",
+              "exportKind": "named",
+              "source": "./libs/MessageContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "MessageDataInvalidProblem",
+              "exportKind": "named",
+              "source": "./libs/MessageContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "MessageDefinitionInvalidProblem",
+              "exportKind": "named",
+              "source": "./libs/MessageContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "MessageRendererAlreadyRegisteredProblem",
+              "exportKind": "named",
+              "source": "./libs/MessageContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "MessageRendererBindingMismatchProblem",
+              "exportKind": "named",
+              "source": "./libs/MessageContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "MessageRendererChannelMissingProblem",
+              "exportKind": "named",
+              "source": "./libs/MessageContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "MessageRendererMessageMissingProblem",
+              "exportKind": "named",
+              "source": "./libs/MessageContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "MessageRendererMissingProblem",
+              "exportKind": "named",
+              "source": "./libs/MessageContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "MessageRendererRegistry",
+              "exportKind": "named",
+              "source": "./libs/MessageContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "MessageRendererUndeclaredChannelProblem",
+              "exportKind": "named",
+              "source": "./libs/MessageContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "Renders",
+              "exportKind": "named",
+              "source": "./libs/MessageContracts",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "DefinedMessage",
+              "exportKind": "named",
+              "source": "./libs/MessageContracts"
+            },
+            {
+              "name": "MessageChannel",
+              "exportKind": "named",
+              "source": "./libs/MessageContracts"
+            },
+            {
+              "name": "MessageContent",
+              "exportKind": "named",
+              "source": "./libs/MessageContracts"
+            },
+            {
+              "name": "MessageContentByChannel",
+              "exportKind": "named",
+              "source": "./libs/MessageContracts"
+            },
+            {
+              "name": "MessageContext",
+              "exportKind": "named",
+              "source": "./libs/MessageContracts"
+            },
+            {
+              "name": "MessageData",
+              "exportKind": "named",
+              "source": "./libs/MessageContracts"
+            },
+            {
+              "name": "MessageDefinitionInput",
+              "exportKind": "named",
+              "source": "./libs/MessageContracts"
+            },
+            {
+              "name": "MessageDescriptor",
+              "exportKind": "named",
+              "source": "./libs/MessageContracts"
+            },
+            {
+              "name": "MessageRegistryInspection",
+              "exportKind": "named",
+              "source": "./libs/MessageContracts"
+            },
+            {
+              "name": "MessageRenderer",
+              "exportKind": "named",
+              "source": "./libs/MessageContracts"
+            },
+            {
+              "name": "MessageRendererBinding",
+              "exportKind": "named",
+              "source": "./libs/MessageContracts"
+            },
+            {
+              "name": "MessageRendererConstructor",
+              "exportKind": "named",
+              "source": "./libs/MessageContracts"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "packageName": "@croco/entitlements-core",
       "relativeDir": "packages/entitlements-core",
       "entrypoints": [

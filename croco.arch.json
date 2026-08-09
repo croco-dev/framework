@@ -31,6 +31,7 @@
         "@croco/customer-health-core",
         "@croco/dataloader-core",
         "@croco/diagnostics-core",
+        "@croco/engagement-core",
         "@croco/entitlements-core",
         "@croco/events-core",
         "@croco/events-inmemory",
