@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 584,
+  problemCount: 585,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -14908,7 +14908,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts",
-          line: 56,
+          line: 101,
           column: 3,
           kind: "problem-class",
         },
@@ -14940,7 +14940,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts",
-          line: 69,
+          line: 114,
           column: 3,
           kind: "problem-class",
         },
@@ -15002,7 +15002,41 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts",
-          line: 38,
+          line: 83,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "telemetry-sdk-node/batch-configuration-invalid",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#telemetry-sdk-node-batch-configuration-invalid",
+      recovery: {
+        cause:
+          "BatchSpanProcessor tuning violates the telemetry timeout, queue-size, or export-batch contract.",
+        userAction:
+          "Ask the operator to correct the telemetry batch configuration before restarting the service.",
+        operatorAction:
+          "Use the reported field and constraint to set batchTimeout within 0..2147483647, batchCount and batchSize within 1..2147483647, and batchSize no greater than batchCount.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts",
+          line: 42,
           column: 3,
           kind: "problem-class",
         },

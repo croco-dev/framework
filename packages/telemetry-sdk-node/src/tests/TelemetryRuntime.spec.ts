@@ -139,6 +139,150 @@ describe("TelemetryRuntime", () => {
     },
   );
 
+  it.each([
+    { field: "batchTimeout", value: Number.NaN, constraint: "non-negative-int32" },
+    { field: "batchTimeout", value: Number.POSITIVE_INFINITY, constraint: "non-negative-int32" },
+    { field: "batchTimeout", value: -1, constraint: "non-negative-int32" },
+    { field: "batchTimeout", value: 1.5, constraint: "non-negative-int32" },
+    { field: "batchTimeout", value: 2_147_483_648, constraint: "non-negative-int32" },
+    { field: "batchCount", value: Number.NaN, constraint: "positive-int32" },
+    { field: "batchCount", value: Number.POSITIVE_INFINITY, constraint: "positive-int32" },
+    { field: "batchCount", value: 0, constraint: "positive-int32" },
+    { field: "batchCount", value: 1.5, constraint: "positive-int32" },
+    { field: "batchCount", value: 2_147_483_648, constraint: "positive-int32" },
+    { field: "batchSize", value: Number.NaN, constraint: "positive-int32" },
+    { field: "batchSize", value: Number.POSITIVE_INFINITY, constraint: "positive-int32" },
+    { field: "batchSize", value: 0, constraint: "positive-int32" },
+    { field: "batchSize", value: 1.5, constraint: "positive-int32" },
+    { field: "batchSize", value: 2_147_483_648, constraint: "positive-int32" },
+  ] as const)(
+    "should reject invalid $field value $value before initialization",
+    async (testCase) => {
+      await expect(
+        runtime.init({
+          serviceName: "invalid-batch-config",
+          trace: {
+            exporterUrl: "http://collector:4318/v1/traces",
+            [testCase.field]: testCase.value,
+          },
+        }),
+      ).rejects.toMatchObject({
+        category: "InternalServerError",
+        code: "telemetry-sdk-node/batch-configuration-invalid",
+        constraint: testCase.constraint,
+        field: testCase.field,
+        receivedValue: String(testCase.value),
+      });
+      expect(runtime.getConfig()).toBeNull();
+      expect(runtime.isInitialized()).toBe(false);
+    },
+  );
+
+  it("should reject a batch size larger than the effective queue size", async () => {
+    await expect(
+      runtime.init({
+        serviceName: "invalid-batch-relation",
+        trace: {
+          exporterUrl: "http://collector:4318/v1/traces",
+          batchCount: 10,
+          batchSize: 11,
+        },
+      }),
+    ).rejects.toMatchObject({
+      category: "InternalServerError",
+      code: "telemetry-sdk-node/batch-configuration-invalid",
+      constraint: "less-than-or-equal-to-batchCount",
+      field: "batchSize",
+      receivedValue: "11",
+    });
+    expect(runtime.getConfig()).toBeNull();
+    expect(runtime.isInitialized()).toBe(false);
+  });
+
+  it("should reject runtime null batch configuration before initialization", async () => {
+    const config = {
+      serviceName: "null-batch-config",
+      trace: {
+        exporterUrl: "http://collector:4318/v1/traces",
+        batchCount: null,
+      },
+    } as unknown as TelemetryConfig;
+
+    await expect(runtime.init(config)).rejects.toMatchObject({
+      code: "telemetry-sdk-node/batch-configuration-invalid",
+      constraint: "positive-int32",
+      field: "batchCount",
+      receivedValue: "null",
+    });
+    expect(runtime.getConfig()).toBeNull();
+  });
+
+  it("should reject non-numeric batch configuration without invoking user coercion", async () => {
+    const coercion = vi.fn(() => {
+      throw new Error("must not run");
+    });
+    const config = {
+      serviceName: "object-batch-config",
+      trace: {
+        exporterUrl: "http://collector:4318/v1/traces",
+        batchCount: { [Symbol.toPrimitive]: coercion },
+      },
+    } as unknown as TelemetryConfig;
+
+    await expect(runtime.init(config)).rejects.toMatchObject({
+      code: "telemetry-sdk-node/batch-configuration-invalid",
+      constraint: "positive-int32",
+      field: "batchCount",
+      receivedValue: "[non-numeric object]",
+    });
+    expect(coercion).not.toHaveBeenCalled();
+    expect(runtime.getConfig()).toBeNull();
+  });
+
+  it("should pass valid boundary tuning to BatchSpanProcessor unchanged", async () => {
+    const processorConstructor = vi.fn();
+
+    vi.doMock("@opentelemetry/resources", () => ({
+      defaultResource: () => ({ merge: vi.fn() }),
+      resourceFromAttributes: vi.fn(),
+    }));
+    vi.doMock("@opentelemetry/sdk-node", () => ({
+      NodeSDK: class MockNodeSDK {
+        start(): void {}
+        async shutdown(): Promise<void> {}
+      },
+    }));
+    vi.doMock("@opentelemetry/exporter-trace-otlp-http", () => ({
+      OTLPTraceExporter: class MockTraceExporter {},
+    }));
+    vi.doMock("@opentelemetry/sdk-trace-base", () => ({
+      BatchSpanProcessor: class MockBatchSpanProcessor {
+        constructor(exporter: unknown, options: unknown) {
+          processorConstructor(exporter, options);
+        }
+
+        async forceFlush(): Promise<void> {}
+        async shutdown(): Promise<void> {}
+      },
+    }));
+
+    await runtime.init({
+      serviceName: "valid-batch-boundaries",
+      trace: {
+        exporterUrl: "http://collector:4318/v1/traces",
+        batchTimeout: 0,
+        batchCount: 2_147_483_647,
+        batchSize: 2_147_483_647,
+      },
+    });
+
+    expect(processorConstructor).toHaveBeenCalledWith(expect.anything(), {
+      scheduledDelayMillis: 0,
+      maxQueueSize: 2_147_483_647,
+      maxExportBatchSize: 2_147_483_647,
+    });
+  });
+
   it("should not start tracing components when tracing is disabled", async () => {
     const instrumentationEnable = vi.fn();
     const nodeSdkConstructor = vi.fn();

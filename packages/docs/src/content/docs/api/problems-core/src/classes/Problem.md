@@ -391,6 +391,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`StorageProblem`](/api/storage-core/src/classes/storageproblem/)
 - [`OtlpEndpointRequiredProblem`](/api/telemetry-sdk-node/src/classes/otlpendpointrequiredproblem/)
 - [`SamplerProblem`](/api/telemetry-sdk-node/src/classes/samplerproblem/)
+- [`TelemetryBatchConfigurationProblem`](/api/telemetry-sdk-node/src/classes/telemetrybatchconfigurationproblem/)
 - [`TelemetryForceFlushUnsupportedProblem`](/api/telemetry-sdk-node/src/classes/telemetryforceflushunsupportedproblem/)
 - [`TelemetryAutoInstrumentationProblem`](/api/telemetry-sdk-node/src/classes/telemetryautoinstrumentationproblem/)
 - [`TestEvidenceContractError`](/api/testing/src/classes/testevidencecontracterror/)

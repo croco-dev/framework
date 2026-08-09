@@ -4,9 +4,33 @@ import {
   LegacyTelemetrySignalConfigProblem,
   OtlpEndpointRequiredProblem,
   SamplerProblem,
+  TelemetryBatchConfigurationProblem,
   TelemetryForceFlushUnsupportedProblem,
   TelemetryRuntimeProblem,
 } from "../libs/problems/TelemetryProblems";
+
+describe("TelemetryBatchConfigurationProblem", () => {
+  it("exposes stable field context without a non-finite JSON number", () => {
+    const problem = new TelemetryBatchConfigurationProblem(
+      "batchCount",
+      "positive-int32",
+      Number.POSITIVE_INFINITY,
+    );
+
+    expect(problem).toMatchObject({
+      category: "InternalServerError",
+      code: "telemetry-sdk-node/batch-configuration-invalid",
+      constraint: "positive-int32",
+      field: "batchCount",
+      receivedValue: "Infinity",
+    });
+    expect(problem.toJSON()).toMatchObject({
+      constraint: "positive-int32",
+      field: "batchCount",
+      receivedValue: "Infinity",
+    });
+  });
+});
 
 describe("SamplerProblem", () => {
   it("should set detail correctly", () => {

@@ -26,7 +26,7 @@ Auto-instrumentation configuration
 
 > `optional` **batchCount?**: `number`
 
-Maximum queue size. Default: 2048
+Maximum queue size. Integer from 1 through 2_147_483_647. Default: 2048
 
 ***
 
@@ -34,7 +34,7 @@ Maximum queue size. Default: 2048
 
 > `optional` **batchSize?**: `number`
 
-Maximum export batch size. Default: 512
+Maximum export batch size. Must not exceed batchCount. Default: 512
 
 ***
 
@@ -42,7 +42,7 @@ Maximum export batch size. Default: 512
 
 > `optional` **batchTimeout?**: `number`
 
-Batch timeout in milliseconds. Default: 5000
+Batch timeout in milliseconds. Integer from 0 through 2_147_483_647. Default: 5000
 
 ***
 

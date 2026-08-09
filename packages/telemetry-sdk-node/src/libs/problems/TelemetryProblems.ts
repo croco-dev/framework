@@ -30,6 +30,51 @@ export class OtlpEndpointRequiredProblem extends Problem {
 
 type LegacyTelemetrySignalName = "logs" | "metrics";
 
+export type TelemetryBatchConfigurationField = "batchTimeout" | "batchCount" | "batchSize";
+
+export type TelemetryBatchConfigurationConstraint =
+  | "less-than-or-equal-to-batchCount"
+  | "non-negative-int32"
+  | "positive-int32";
+
+/** Raised before SDK construction when BatchSpanProcessor tuning is unsafe. */
+export class TelemetryBatchConfigurationProblem extends Problem {
+  readonly code = "telemetry-sdk-node/batch-configuration-invalid";
+  readonly category = ProblemCategory.InternalServerError;
+  readonly receivedValue: string;
+
+  constructor(
+    readonly field: TelemetryBatchConfigurationField,
+    readonly constraint: TelemetryBatchConfigurationConstraint,
+    receivedValue: unknown,
+  ) {
+    const serializedValue = serializeTelemetryBatchValue(receivedValue);
+    super(
+      undefined,
+      undefined,
+      `Telemetry trace option '${field}' must satisfy '${constraint}'; received ${serializedValue}`,
+      {
+        extensions: {
+          constraint,
+          field,
+          receivedValue: serializedValue,
+        },
+      },
+    );
+    this.receivedValue = serializedValue;
+  }
+}
+
+function serializeTelemetryBatchValue(value: unknown): string {
+  if (typeof value === "number") {
+    return String(value);
+  }
+  if (value === null) {
+    return "null";
+  }
+  return `[non-numeric ${typeof value}]`;
+}
+
 /**
  * Rejects removed signal configuration passed by untyped or JavaScript consumers.
  * This migration Problem is intentionally not exported from the package entrypoint.

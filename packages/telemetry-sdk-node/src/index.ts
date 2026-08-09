@@ -26,7 +26,12 @@ export { lambdaPreset } from "./libs/presets/lambda";
 export {
   OtlpEndpointRequiredProblem,
   SamplerProblem,
+  TelemetryBatchConfigurationProblem,
   TelemetryForceFlushUnsupportedProblem,
+} from "./libs/problems/TelemetryProblems";
+export type {
+  TelemetryBatchConfigurationConstraint,
+  TelemetryBatchConfigurationField,
 } from "./libs/problems/TelemetryProblems";
 export { TelemetryAutoInstrumentationProblem } from "./libs/problems/TelemetryAutoInstrumentationProblem";
 

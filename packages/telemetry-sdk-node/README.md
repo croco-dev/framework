@@ -25,6 +25,13 @@ await telemetry.init({
 });
 ```
 
+### Batch processor 조정
+
+`trace.batchTimeout`은 `0`부터 `2_147_483_647`까지의 정수이며, `trace.batchCount`와
+`trace.batchSize`는 `1`부터 `2_147_483_647`까지의 정수입니다. 유효 기본값을 적용한 뒤에도
+`batchSize`는 `batchCount`보다 클 수 없습니다. 위반하면 OpenTelemetry SDK나 exporter를 만들기 전에
+`TelemetryBatchConfigurationProblem`이 실패한 필드, 제약, 수신값과 함께 발생합니다.
+
 ### 자동 계측
 
 `trace.autoInstrumentation`을 설정하면 Node 환경에서는 HTTP/HTTPS, Express, DNS, Net 계측이 기본으로
@@ -151,8 +158,10 @@ Lambda에서는 handler 작업이 끝난 뒤 `forceFlush()` 결과를 확인하�
 - `lambdaPreset`: Lambda 환경 기본 설정 생성
 - `ProbabilitySampler`: 확률 기반 샘플링 구현체
 - 자동 계측: `normalizeAutoInstrumentationConfig`, `LAMBDA_DEFAULT_MODULES`, `NODE_DEFAULT_MODULES`
-- Problem: `OtlpEndpointRequiredProblem`, `SamplerProblem`, `TelemetryAutoInstrumentationProblem`
-- 타입: `TelemetryConfig`, `TraceConfig`, `ForceFlushResult`, `ShutdownResult`, `TelemetryLifecycleSkipReason`
+- Problem: `OtlpEndpointRequiredProblem`, `SamplerProblem`, `TelemetryAutoInstrumentationProblem`,
+  `TelemetryBatchConfigurationProblem`
+- 타입: `TelemetryConfig`, `TraceConfig`, `ForceFlushResult`, `ShutdownResult`, `TelemetryLifecycleSkipReason`,
+  `TelemetryBatchConfigurationField`, `TelemetryBatchConfigurationConstraint`
 
 ## Lambda 참고
 
