@@ -522,7 +522,7 @@ export class UsageDashboardService {
       ? await this.readBillingDelivery(
           tenantId,
           selectedMeters
-            .filter((meter) => meter.billing === "required")
+            .filter(isRequiredBillingMeter)
             .map((meter) => meter.meterId),
         )
       : null;
@@ -530,7 +530,7 @@ export class UsageDashboardService {
     return {
       tenantId,
       planId: subscription?.planId ?? null,
-      planVersionRef: subscription?.planVersionRef ?? null,
+      planVersionRef: readPlanVersionRef(subscription),
       subscriptionStatus: subscription?.status ?? "none",
       currentPeriodEnd: subscription?.currentPeriodEnd.toISOString() ?? null,
       aggregate: aggregateMeters(meterSnapshots),
@@ -665,6 +665,17 @@ export function resolveOverageState(options: {
 function normalizeTenantId(value: string | null | undefined): string | null {
   const normalized = value?.trim();
   return normalized ? normalized : null;
+}
+
+function isRequiredBillingMeter(meter: MeterDefinition): boolean {
+  return "billing" in meter && meter.billing === "required";
+}
+
+function readPlanVersionRef(subscription: Subscription | null): string | null {
+  if (!subscription || !("planVersionRef" in subscription)) {
+    return null;
+  }
+  return typeof subscription.planVersionRef === "string" ? subscription.planVersionRef : null;
 }
 
 function filterMeters(

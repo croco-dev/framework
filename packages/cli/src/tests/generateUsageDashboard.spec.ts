@@ -101,6 +101,10 @@ describe("runGenerateUsageDashboard", () => {
       "readonly billingDelivery: UsageDashboardBillingDeliverySnapshot | null;",
     );
     expect(serviceContent).toContain("return await readModel.getSnapshot(tenantId, meterIds)");
+    expect(serviceContent).toContain(".filter(isRequiredBillingMeter)");
+    expect(serviceContent).toContain("planVersionRef: readPlanVersionRef(subscription)");
+    expect(serviceContent).toContain('return "billing" in meter && meter.billing === "required";');
+    expect(serviceContent).toContain('!("planVersionRef" in subscription)');
     expect(serviceContent).toContain('"near_quota"');
     expect(serviceContent).toContain("resolveOverageState");
     expect(serviceContent).toContain("return await this.dependencies.meterRegistry.getByTenant");
