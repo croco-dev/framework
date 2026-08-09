@@ -2158,12 +2158,13 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       title: "Internal Server Error",
       cookbookPath: "/reference/problem-recovery-cookbook/#billing-checkout-idempotency-drift",
       recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
+        cause:
+          "The generated billing drill detected more than one committed checkout after response-loss retries completed.",
         userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+          "Do not retry checkout again; report the affected checkout intent for investigation and reconciliation.",
         operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
+          "Inspect the checkout idempotency key, provider attempts, and committed records, then reconcile duplicate checkout state before resuming the flow.",
+        retryability: "not-retryable",
         redactionPolicy: "operator-only",
         telemetry: {
           eventName: "croco.problem.error",
@@ -16043,7 +16044,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/ScenarioRuntime.ts",
-          line: 145,
+          line: 131,
           column: 5,
           kind: "problem-constructor",
         },

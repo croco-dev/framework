@@ -10,10 +10,10 @@ import {
   replayScenarioRuntime,
   retryableFailure,
   SCENARIO_REPORT_SCHEMA_VERSION,
+  ScenarioContractProblem,
   serializeScenarioReport,
   terminalFailure,
   timeout,
-  type ScenarioReplayMetadata,
 } from "../index";
 
 describe("ScenarioRuntime", () => {
@@ -247,6 +247,61 @@ describe("ScenarioRuntime", () => {
     ).rejects.toThrow("before ordered failure point 'transaction.commit'");
   });
 
+  it("rejects repeated runs before scenario state can accumulate", async () => {
+    const scenario = createScenarioRuntime({ scenarioId: "one-shot" });
+
+    await expect(scenario.run(async () => undefined)).resolves.toMatchObject({ status: "passed" });
+    await expect(scenario.run(async () => undefined)).rejects.toMatchObject({
+      code: "testing/scenario-contract-invalid",
+    });
+  });
+
+  it("preserves the original boundary Problem when reporting its details fails", async () => {
+    const original = ProblemFactory.internalServerError("provider/unsafe", "unsafe", {
+      extensions: { unsafe: new Map() },
+    });
+    const scenario = createScenarioRuntime({ scenarioId: "reporting-failure" });
+
+    let received: unknown;
+    try {
+      await scenario.run((runtime) =>
+        runtime.execute("provider.call", "provider", () => {
+          throw original;
+        }),
+      );
+    } catch (error) {
+      received = error;
+    }
+
+    expect(received).toBe(original);
+    expect(original.cause).toBeInstanceOf(ScenarioContractProblem);
+  });
+
+  it("omits undefined object properties while rejecting undefined array entries", async () => {
+    const optional = ProblemFactory.internalServerError("provider/optional", "optional", {
+      extensions: { omitted: undefined },
+    });
+    const scenario = createScenarioRuntime({ scenarioId: "optional-problem-property" })
+      .at("provider.call", "provider", terminalFailure(optional))
+      .expectProblem("provider/optional");
+    const report = await scenario.run((runtime) =>
+      runtime.execute("provider.call", "provider", () => undefined),
+    );
+
+    expect(report.problems[0]).not.toHaveProperty("omitted");
+    expect(() =>
+      createScenarioRuntime({ scenarioId: "invalid-array-entry" }).at(
+        "provider.call",
+        "provider",
+        terminalFailure(
+          ProblemFactory.internalServerError("provider/invalid-array", "invalid", {
+            extensions: { values: [undefined] },
+          }),
+        ),
+      ),
+    ).toThrow("JSON-compatible");
+  });
+
   it("rejects malformed replay steps and non-serializable Problem evidence", async () => {
     const report = await createScenarioRuntime({ scenarioId: "valid-replay" }).run(
       async () => undefined,
@@ -269,7 +324,7 @@ describe("ScenarioRuntime", () => {
       replayScenarioRuntime({
         ...report.replay,
         timeline: [null],
-      } as unknown as ScenarioReplayMetadata),
+      }),
     ).toThrow("timeline steps must be objects");
     expect(() => createScenarioRuntime({ scenarioId: "empty-seed", seed: "" })).toThrow(
       "scenario seed must not be empty",
@@ -301,7 +356,7 @@ describe("ScenarioRuntime", () => {
     });
     const [timedStep] = timedReport.replay.timeline;
     if (!timedStep || timedStep.kind === "duplicate-delivery") {
-      throw new TypeError("Timed replay fixture is invalid.");
+      throw new ScenarioContractProblem("Timed replay fixture is invalid.");
     }
     expect(() =>
       replayScenarioRuntime({
@@ -309,5 +364,32 @@ describe("ScenarioRuntime", () => {
         timeline: [{ ...timedStep, virtualTimeAdvanceMs: -1 }],
       }),
     ).toThrow("non-negative safe integer");
+  });
+
+  it("rejects durations that cannot advance virtual time deterministically", async () => {
+    const problem = ProblemFactory.internalServerError("task/timeout", "timeout");
+
+    for (const duration of [-1, 1.5, Number.NaN]) {
+      expect(() =>
+        createScenarioRuntime({ scenarioId: "invalid-timeout" }).at(
+          "task.publish",
+          "task",
+          timeout(problem, duration),
+        ),
+      ).toThrow("non-negative safe integer");
+    }
+
+    expect(() =>
+      createScenarioRuntime({ scenarioId: "overflowing-timeout" }).at(
+        "task.publish",
+        "task",
+        timeout(problem, "9007199254740991m"),
+      ),
+    ).toThrow("resolve to a non-negative safe integer");
+
+    const scenario = createScenarioRuntime({ scenarioId: "invalid-advance" });
+    await expect(scenario.advanceBy(-1)).rejects.toMatchObject({
+      code: "testing/scenario-contract-invalid",
+    });
   });
 });

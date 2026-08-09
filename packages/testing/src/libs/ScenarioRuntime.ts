@@ -5,7 +5,7 @@ import { TestRuntime, type TestDuration } from "./TestRuntime";
 
 export const SCENARIO_REPORT_SCHEMA_VERSION = "croco.scenario-report/v1" as const;
 
-const SCENARIO_BOUNDARIES: readonly ScenarioBoundary[] = [
+const SCENARIO_BOUNDARIES = [
   "event",
   "provider",
   "retry",
@@ -13,9 +13,9 @@ const SCENARIO_BOUNDARIES: readonly ScenarioBoundary[] = [
   "telemetry",
   "transaction",
   "trigger",
-];
+] as const;
 
-const SCENARIO_FAILURE_KINDS: readonly ScenarioFailureKind[] = [
+const SCENARIO_FAILURE_KINDS = [
   "duplicate-delivery",
   "exporter-failure",
   "lost-response",
@@ -23,16 +23,9 @@ const SCENARIO_FAILURE_KINDS: readonly ScenarioFailureKind[] = [
   "retryable-failure",
   "terminal-failure",
   "timeout",
-];
+] as const;
 
-export type ScenarioBoundary =
-  | "event"
-  | "provider"
-  | "retry"
-  | "task"
-  | "telemetry"
-  | "transaction"
-  | "trigger";
+export type ScenarioBoundary = (typeof SCENARIO_BOUNDARIES)[number];
 
 export type ScenarioEvidenceKind =
   | "audit"
@@ -51,14 +44,7 @@ export type ScenarioExpectation = ScenarioEvidence & {
   readonly count: number;
 };
 
-export type ScenarioFailureKind =
-  | "duplicate-delivery"
-  | "exporter-failure"
-  | "lost-response"
-  | "process-interruption"
-  | "retryable-failure"
-  | "terminal-failure"
-  | "timeout";
+export type ScenarioFailureKind = (typeof SCENARIO_FAILURE_KINDS)[number];
 
 type ScenarioFailureBase = {
   readonly kind: ScenarioFailureKind;
@@ -225,6 +211,7 @@ export class ScenarioRuntime {
   private readonly expectedProblems: { readonly code: string; readonly count: number }[] = [];
   private readonly initialTime: string;
   private executionDepth = 0;
+  private hasRun = false;
   private readonly planned: PlannedFailure[] = [];
   private readonly problems: ProblemDetails[] = [];
   private propagatingInjectedProblem: Problem | undefined;
@@ -332,6 +319,12 @@ export class ScenarioRuntime {
   }
 
   async run(run: (scenario: ScenarioRuntime) => void | Promise<void>): Promise<ScenarioReport> {
+    if (this.hasRun) {
+      throw new ScenarioContractProblem(
+        `Scenario '${this.controls.scenarioId}' has already started a run.`,
+      );
+    }
+    this.hasRun = true;
     try {
       await run(this);
     } catch (error) {
@@ -373,7 +366,11 @@ export class ScenarioRuntime {
         );
       }
       if (error !== this.propagatingInjectedProblem) {
-        this.recordProblem(error);
+        try {
+          this.recordProblem(error);
+        } catch (recordingError) {
+          attachProblemCause(error, recordingError);
+        }
       }
       throw error;
     }
@@ -460,7 +457,7 @@ export class ScenarioRuntime {
   }
 }
 
-export function replayScenarioRuntime(replay: ScenarioReplayMetadata): ScenarioRuntime {
+export function replayScenarioRuntime(replay: unknown): ScenarioRuntime {
   assertReplayMetadata(replay);
   const scenario = createScenarioRuntime({
     initialTime: replay.initialTime,
@@ -537,20 +534,25 @@ function cloneReplayFailure(step: ScenarioReplayFailure): ScenarioReplayFailure 
     : { ...step, problem: normalizeReplayProblemDetails(step.problem) };
 }
 
-function assertReplayMetadata(replay: ScenarioReplayMetadata): void {
+function assertReplayMetadata(replay: unknown): asserts replay is ScenarioReplayMetadata {
   if (!isPlainRecord(replay)) {
     throw new ScenarioContractProblem("Scenario replay metadata must be an object.");
   }
-  assertNonEmpty(replay.scenarioId, "replay scenario ID");
-  assertNonEmpty(replay.seed, "replay seed");
-  assertNonEmpty(replay.initialTime, "replay initial time");
-  assertNonEmpty(replay.virtualTime, "replay virtual time");
-  assertValidTimestamp(replay.initialTime, "replay initial time");
-  assertValidTimestamp(replay.virtualTime, "replay virtual time");
-  if (!Array.isArray(replay.timeline)) {
+  const initialTime = replay["initialTime"];
+  const scenarioId = replay["scenarioId"];
+  const seed = replay["seed"];
+  const timeline = replay["timeline"];
+  const virtualTime = replay["virtualTime"];
+  assertNonEmpty(scenarioId, "replay scenario ID");
+  assertNonEmpty(seed, "replay seed");
+  assertNonEmpty(initialTime, "replay initial time");
+  assertNonEmpty(virtualTime, "replay virtual time");
+  assertValidTimestamp(initialTime, "replay initial time");
+  assertValidTimestamp(virtualTime, "replay virtual time");
+  if (!Array.isArray(timeline)) {
     throw new ScenarioContractProblem("Scenario replay timeline must be an array.");
   }
-  for (const step of replay.timeline as readonly unknown[]) {
+  for (const step of timeline) {
     if (!isPlainRecord(step)) {
       throw new ScenarioContractProblem("Scenario replay timeline steps must be objects.");
     }
@@ -664,7 +666,9 @@ function assertPlainJsonShape(value: unknown, field: string, ancestors: WeakSet<
       if (["__proto__", "constructor", "prototype"].includes(key)) {
         throw new ScenarioContractProblem(`${field} contains forbidden key '${key}'.`);
       }
-      assertPlainJsonShape(entry, field, ancestors);
+      if (entry !== undefined) {
+        assertPlainJsonShape(entry, field, ancestors);
+      }
     }
   } finally {
     ancestors.delete(value);
@@ -681,7 +685,9 @@ function normalizeJsonValue(value: unknown, field: string): unknown {
     if (prototype !== Object.prototype && prototype !== null) {
       throw new ScenarioContractProblem(`${field} must contain only plain JSON objects.`);
     }
-    const keys = Object.keys(record).sort();
+    const keys = Object.keys(record)
+      .filter((key) => record[key] !== undefined)
+      .sort();
     for (const key of keys) {
       if (["__proto__", "constructor", "prototype"].includes(key)) {
         throw new ScenarioContractProblem(`${field} contains forbidden key '${key}'.`);
@@ -692,15 +698,52 @@ function normalizeJsonValue(value: unknown, field: string): unknown {
   throw new ScenarioContractProblem(`${field} must contain only JSON-compatible values.`);
 }
 
+function attachProblemCause(problem: Problem, recordingError: unknown): void {
+  const cause =
+    recordingError instanceof Error
+      ? recordingError
+      : new ScenarioContractProblem(
+          `Scenario '${problem.code}' Problem reporting failed with a non-Error value.`,
+        );
+  const existingCause = problem.cause;
+  if (existingCause && !("cause" in cause)) {
+    Object.defineProperty(cause, "cause", {
+      configurable: true,
+      enumerable: false,
+      value: existingCause,
+      writable: true,
+    });
+  }
+  Object.defineProperty(problem, "cause", {
+    configurable: true,
+    enumerable: false,
+    value: cause,
+    writable: true,
+  });
+}
+
 function durationToMilliseconds(duration: TestDuration): number {
-  if (typeof duration === "number") return duration;
+  if (typeof duration === "number") {
+    if (!Number.isSafeInteger(duration) || duration < 0) {
+      throw new ScenarioContractProblem(
+        `Scenario duration '${duration}' must be a non-negative safe integer.`,
+      );
+    }
+    return duration;
+  }
   const match = /^(\d+)(ms|s|m)$/.exec(duration);
   if (!match) {
     throw new ScenarioContractProblem(`Scenario duration '${duration}' is invalid.`);
   }
   const amount = Number(match[1]);
   const multiplier = match[2] === "m" ? 60_000 : match[2] === "s" ? 1_000 : 1;
-  return amount * multiplier;
+  const milliseconds = amount * multiplier;
+  if (!Number.isSafeInteger(milliseconds)) {
+    throw new ScenarioContractProblem(
+      `Scenario duration '${duration}' must resolve to a non-negative safe integer.`,
+    );
+  }
+  return milliseconds;
 }
 
 function assertNonEmpty(value: unknown, field: string): asserts value is string {

@@ -11,7 +11,7 @@ title: "replayScenarioRuntime"
 
 ### replay
 
-[`ScenarioReplayMetadata`](/api/testing/src/type-aliases/scenarioreplaymetadata/)
+`unknown`
 
 ## Returns
 

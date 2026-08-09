@@ -1896,6 +1896,17 @@ const recoveryMetadataByCategory = {
 } as const satisfies Record<ProblemCategory, ProblemRecoveryMetadata>;
 
 const recoveryMetadataByCode = {
+  "billing/checkout-idempotency-drift": recovery({
+    cause:
+      "The generated billing drill detected more than one committed checkout after response-loss retries completed.",
+    userAction:
+      "Do not retry checkout again; report the affected checkout intent for investigation and reconciliation.",
+    operatorAction:
+      "Inspect the checkout idempotency key, provider attempts, and committed records, then reconcile duplicate checkout state before resuming the flow.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "auth-core/invalid-route-metadata-target": recovery({
     cause:
       "An authentication guard received a route metadata target that was neither an object nor a function.",

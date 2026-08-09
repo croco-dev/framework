@@ -5,4 +5,4 @@ prev: false
 title: "ScenarioFailureKind"
 ---
 
-> **ScenarioFailureKind** = `"duplicate-delivery"` \| `"exporter-failure"` \| `"lost-response"` \| `"process-interruption"` \| `"retryable-failure"` \| `"terminal-failure"` \| `"timeout"`
+> **ScenarioFailureKind** = *typeof* `SCENARIO_FAILURE_KINDS`\[`number`\]

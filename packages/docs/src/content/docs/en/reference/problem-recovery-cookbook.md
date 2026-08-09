@@ -82,7 +82,7 @@ This cookbook documents 604 public Croco Problem codes. The deterministic JSON r
 | [`billing-polar/validation-failed`](#billing-polar-validation-failed)                                                                 | ValidationError       |    422 | not-retryable | public        | active    |       1 |
 | [`billing/account-not-found`](#billing-account-not-found)                                                                             | NotFound              |    404 | not-retryable | public        | active    |       1 |
 | [`billing/checkout-creation-failed`](#billing-checkout-creation-failed)                                                               | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
-| [`billing/checkout-idempotency-drift`](#billing-checkout-idempotency-drift)                                                           | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
+| [`billing/checkout-idempotency-drift`](#billing-checkout-idempotency-drift)                                                           | InternalServerError   |    500 | not-retryable | operator-only | active    |       1 |
 | [`billing/checkout-in-progress`](#billing-checkout-in-progress)                                                                       | Conflict              |    409 | conditional   | safe-message  | active    |       1 |
 | [`billing/checkout-response-lost`](#billing-checkout-response-lost)                                                                   | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`billing/invalid-lifecycle-idempotency-key`](#billing-invalid-lifecycle-idempotency-key)                                             | BadRequest            |    400 | not-retryable | public        | active    |       1 |
@@ -1868,12 +1868,12 @@ Sources:
 
 - Category: `InternalServerError`
 - HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
+- Retryability: `not-retryable`
 - Redaction policy: `operator-only`
 - Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Cause: The generated billing drill detected more than one committed checkout after response-loss retries completed.
+- User action: Do not retry checkout again; report the affected checkout intent for investigation and reconciliation.
+- Operator action: Inspect the checkout idempotency key, provider attempts, and committed records, then reconcile duplicate checkout state before resuming the flow.
 - Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:
@@ -9852,7 +9852,7 @@ Sources:
 
 Sources:
 
-- `packages/testing/src/libs/ScenarioRuntime.ts:145:5` (problem-constructor)
+- `packages/testing/src/libs/ScenarioRuntime.ts:131:5` (problem-constructor)
 
 <a id="testing-telemetry-provider-already-installed"></a>
 

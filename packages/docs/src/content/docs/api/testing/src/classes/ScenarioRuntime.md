@@ -57,7 +57,7 @@ title: "ScenarioRuntime"
 
 ##### boundary
 
-[`ScenarioBoundary`](/api/testing/src/type-aliases/scenarioboundary/)
+`"retry"` \| `"provider"` \| `"task"` \| `"event"` \| `"transaction"` \| `"telemetry"` \| `"trigger"`
 
 ##### failure
 
@@ -87,7 +87,7 @@ title: "ScenarioRuntime"
 
 ##### boundary
 
-[`ScenarioBoundary`](/api/testing/src/type-aliases/scenarioboundary/)
+`"retry"` \| `"provider"` \| `"task"` \| `"event"` \| `"transaction"` \| `"telemetry"` \| `"trigger"`
 
 ##### operation
 

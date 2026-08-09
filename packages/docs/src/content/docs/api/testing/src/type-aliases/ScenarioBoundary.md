@@ -5,4 +5,4 @@ prev: false
 title: "ScenarioBoundary"
 ---
 
-> **ScenarioBoundary** = `"event"` \| `"provider"` \| `"retry"` \| `"task"` \| `"telemetry"` \| `"transaction"` \| `"trigger"`
+> **ScenarioBoundary** = *typeof* `SCENARIO_BOUNDARIES`\[`number`\]
