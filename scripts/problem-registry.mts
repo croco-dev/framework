@@ -1926,6 +1926,49 @@ const recoveryMetadataByCode = {
     redactionPolicy: "public",
     severity: "error",
   }),
+  "testing/contract-generation-unsupported": recovery({
+    cause:
+      "Automatic contract-case generation encountered a schema shape outside its deterministic supported subset.",
+    userAction:
+      "Use supported Zod constructs or provide a caller-owned arbitrary for the unsupported schema.",
+    operatorAction:
+      "Inspect the reported schema path and shape, then replace it with a supported contract or supply an explicit arbitrary.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
+  "testing/contract-invariant-failed": recovery({
+    cause:
+      "A generated or replayed case violated its route classification, response contract, shrink reproduction, or serialization invariant.",
+    userAction:
+      "Reproduce the saved counterexample with its seed and path after the contract runner or route behavior is corrected.",
+    operatorAction:
+      "Inspect the failure artifact, route classification, executor observation, and shrink path to locate the violated invariant.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
+  "testing/contract-runtime-mismatch": recovery({
+    cause:
+      "Runtime observations disagree with each other or with the declared capability and trace-propagation contracts.",
+    userAction:
+      "Use a runtime build whose observed behavior matches the route and capability manifests before retrying the comparison.",
+    operatorAction:
+      "Compare the reported runtime observations, lifecycle capability manifests, stable headers, and trace propagation evidence.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
+  "testing/contract-execution-failed": recovery({
+    cause: "The contract executor threw an unexpected non-Problem failure while exercising a case.",
+    userAction:
+      "Reproduce the saved counterexample only after the executor or underlying runtime failure is diagnosed.",
+    operatorAction:
+      "Inspect the failure artifact and runtime logs, then convert expected failures into declared Problems or repair the executor boundary.",
+    retryability: "conditional",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "metering/billable-usage-journal-required": recovery({
     cause:
       "A meter declares billing as required, but MeterRegistry validation cannot find a persistent BillableUsageJournal.",

@@ -27,11 +27,15 @@ const OPERATIONAL_RATE_LIMIT_BYPASS_PATHS = new Set(["/ops/health", "/ops/diagno
 const controllers = [OperationsController, JobsController, SaasController];
 const diGraphRootControllers: readonly Constructor[] = controllers;
 
+export type CreateCrocoAppOptions = {
+  readonly additionalMiddlewares?: readonly MiddlewareFunction[];
+};
+
 export function createCrocoDiGraphRoots(): readonly Constructor[] {
   return [...diGraphRootControllers];
 }
 
-export function createCrocoApp() {
+export function createCrocoApp(options: CreateCrocoAppOptions = {}) {
   if (!Container.has(LOGGER_TOKEN)) {
     Container.set(LOGGER_TOKEN, new BootstrapLogger());
   }
@@ -53,6 +57,7 @@ export function createCrocoApp() {
       corsMiddleware({ origins: [process.env.WEB_ORIGIN ?? "http://localhost:5173"] }),
       bodyLimitMiddleware({ limit: mb(1) }),
       createApiRateLimitMiddleware(rateLimiter),
+      ...(options.additionalMiddlewares ?? []),
     ],
   });
 }

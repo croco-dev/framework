@@ -25990,6 +25990,12 @@
           "sourceEntrypoint": "packages/testing/src/index.ts",
           "runtimeExports": [
             {
+              "name": "assertContractObservation",
+              "exportKind": "named",
+              "source": "./libs/contract-testing",
+              "declarationKind": "function"
+            },
+            {
               "name": "assertDrizzleProblem",
               "exportKind": "named",
               "source": "./libs/drizzle-provider-conformance",
@@ -26068,6 +26074,42 @@
               "declarationKind": "function"
             },
             {
+              "name": "CONTRACT_RUNTIME_LIFECYCLE_CAPABILITIES",
+              "exportKind": "named",
+              "source": "./libs/contract-testing",
+              "declarationKind": "const"
+            },
+            {
+              "name": "CONTRACT_TEST_PROFILES",
+              "exportKind": "named",
+              "source": "./libs/contract-testing",
+              "declarationKind": "const"
+            },
+            {
+              "name": "CONTRACT_TEST_SUPPORTED_ZOD_TYPES",
+              "exportKind": "named",
+              "source": "./libs/contract-testing",
+              "declarationKind": "const"
+            },
+            {
+              "name": "ContractInvariantProblem",
+              "exportKind": "named",
+              "source": "./libs/contract-testing",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ContractRuntimeMismatchProblem",
+              "exportKind": "named",
+              "source": "./libs/contract-testing",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ContractTestingProblem",
+              "exportKind": "named",
+              "source": "./libs/contract-testing",
+              "declarationKind": "class"
+            },
+            {
               "name": "createAuthProviderConformanceSuite",
               "exportKind": "named",
               "source": "./libs/auth-provider-conformance",
@@ -26077,6 +26119,12 @@
               "name": "createBillingProviderConformanceSuite",
               "exportKind": "named",
               "source": "./libs/billing-provider-conformance",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createContractCaseArbitrary",
+              "exportKind": "named",
+              "source": "./libs/contract-testing",
               "declarationKind": "function"
             },
             {
@@ -26101,6 +26149,12 @@
               "name": "createFailureDrillCatalog",
               "exportKind": "named",
               "source": "./libs/failure-drill",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createFileContractFailureSink",
+              "exportKind": "named",
+              "source": "./libs/contract-testing",
               "declarationKind": "function"
             },
             {
@@ -26398,6 +26452,18 @@
               "declarationKind": "function"
             },
             {
+              "name": "runContractFuzz",
+              "exportKind": "named",
+              "source": "./libs/contract-testing",
+              "declarationKind": "function"
+            },
+            {
+              "name": "runContractRuntimeDifferential",
+              "exportKind": "named",
+              "source": "./libs/contract-testing",
+              "declarationKind": "function"
+            },
+            {
               "name": "runFailureDrills",
               "exportKind": "named",
               "source": "./libs/failure-drill",
@@ -26630,6 +26696,12 @@
               "exportKind": "named",
               "source": "./libs/ScenarioRuntime",
               "declarationKind": "function"
+            },
+            {
+              "name": "UnsupportedContractGenerationProblem",
+              "exportKind": "named",
+              "source": "./libs/contract-testing",
+              "declarationKind": "class"
             }
           ],
           "typeExports": [
@@ -26862,6 +26934,81 @@
               "name": "CapturedSpanException",
               "exportKind": "named",
               "source": "./libs/telemetry-testing"
+            },
+            {
+              "name": "ContractExecutionObservation",
+              "exportKind": "named",
+              "source": "./libs/contract-testing"
+            },
+            {
+              "name": "ContractExecutor",
+              "exportKind": "named",
+              "source": "./libs/contract-testing"
+            },
+            {
+              "name": "ContractFailureArtifact",
+              "exportKind": "named",
+              "source": "./libs/contract-testing"
+            },
+            {
+              "name": "ContractFailureSink",
+              "exportKind": "named",
+              "source": "./libs/contract-testing"
+            },
+            {
+              "name": "ContractFuzzReport",
+              "exportKind": "named",
+              "source": "./libs/contract-testing"
+            },
+            {
+              "name": "ContractGeneratedCase",
+              "exportKind": "named",
+              "source": "./libs/contract-testing"
+            },
+            {
+              "name": "ContractLifecycleObservation",
+              "exportKind": "named",
+              "source": "./libs/contract-testing"
+            },
+            {
+              "name": "ContractLifecycleOutcome",
+              "exportKind": "named",
+              "source": "./libs/contract-testing"
+            },
+            {
+              "name": "ContractReplayOptions",
+              "exportKind": "named",
+              "source": "./libs/contract-testing"
+            },
+            {
+              "name": "ContractRequestInput",
+              "exportKind": "named",
+              "source": "./libs/contract-testing"
+            },
+            {
+              "name": "ContractRuntimeDifferentialOptions",
+              "exportKind": "named",
+              "source": "./libs/contract-testing"
+            },
+            {
+              "name": "ContractRuntimeDifferentialReport",
+              "exportKind": "named",
+              "source": "./libs/contract-testing"
+            },
+            {
+              "name": "ContractRuntimeLifecycleCapability",
+              "exportKind": "named",
+              "source": "./libs/contract-testing"
+            },
+            {
+              "name": "ContractRuntimeTarget",
+              "exportKind": "named",
+              "source": "./libs/contract-testing"
+            },
+            {
+              "name": "ContractTestProfile",
+              "exportKind": "named",
+              "source": "./libs/contract-testing"
             },
             {
               "name": "DrizzleProblemExpectation",
@@ -27312,6 +27459,11 @@
               "name": "ResetCrocoTestingContextOptions",
               "exportKind": "named",
               "source": "./libs/testing"
+            },
+            {
+              "name": "RunContractFuzzOptions",
+              "exportKind": "named",
+              "source": "./libs/contract-testing"
             },
             {
               "name": "ScenarioBoundary",

@@ -1,6 +1,11 @@
 import { z } from "zod";
 import { ProblemCategory } from "@croco/problems-core";
-import { defineRouteContract, defineRouteProblem, HttpMethod } from "@croco/protocols-rest";
+import {
+  defineRouteContract,
+  defineRouteProblem,
+  HttpMethod,
+  RequestValidationProblem,
+} from "@croco/protocols-rest";
 import {
   DemoEndpointDisabledProblem,
   InvalidJobsQueryProblem,
@@ -19,6 +24,11 @@ const invalidJobsQueryProblem = defineRouteProblem(InvalidJobsQueryProblem, {
   code: "saas-demo/invalid-jobs-query",
   category: ProblemCategory.ValidationError,
   description: "A jobs query parameter is invalid.",
+});
+const requestValidationProblem = defineRouteProblem(RequestValidationProblem, {
+  code: "protocols-rest/request-validation-failed",
+  category: ProblemCategory.ValidationError,
+  description: "A request parameter does not satisfy the route contract.",
 });
 const jobNotFoundProblem = defineRouteProblem(JobNotFoundProblem, {
   code: "saas-demo/job-not-found",
@@ -232,7 +242,9 @@ export const jobActionSchema = z.object({
 });
 
 export const JOB_ID_SCHEMA = z.string().min(1);
-export const OPTIONAL_JOB_STATUS_QUERY_SCHEMA = z.string().optional();
+export const OPTIONAL_JOB_STATUS_QUERY_SCHEMA = z
+  .enum(["", "pending", "running", "completed", "failed", "cancelled", "retrying", "timed_out"])
+  .optional();
 export const OPTIONAL_JOB_TYPE_QUERY_SCHEMA = z.string().optional();
 export const OPTIONAL_JOBS_INTEGER_QUERY_SCHEMA = z.string().optional();
 
@@ -278,7 +290,7 @@ export const listJobsRoute = defineRouteContract({
   operationId: "listJobs",
   query: jobsListQuerySchema,
   response: jobListReportSchema,
-  problems: [invalidJobsQueryProblem],
+  problems: [requestValidationProblem, invalidJobsQueryProblem],
 });
 
 export const showJobRoute = defineRouteContract({

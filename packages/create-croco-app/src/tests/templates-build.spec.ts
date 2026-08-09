@@ -870,6 +870,7 @@ function checkSaasStructure() {
     }),
   });
   expect(apiPackageJson.dependencies).not.toHaveProperty("@croco/testing");
+  expect(apiPackageJson.devDependencies).not.toHaveProperty("@croco/protocols-core");
   const rpcPackageJson = readJsonTemplate(
     "saas",
     "libs",
@@ -891,6 +892,51 @@ function checkSaasStructure() {
     /\b(?:metrics|logs)\s*:/,
   );
   checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /runSaasDemoFlow/);
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "tests", "ContractFuzz.spec.ts"],
+    /runContractFuzz/,
+  );
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "tests", "ContractFuzz.spec.ts"],
+    /runContractRuntimeDifferential/,
+  );
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "tests", "ContractFuzz.spec.ts"],
+    /CONTRACT_TEST_PROFILES\[profile\]\.numRuns/,
+  );
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "tests", "ContractFuzz.spec.ts"],
+    /beforeEach\(\(\) => \{\s*Container\.reset\(\);\s*runtimeEvidence\.clear\(\);/,
+  );
+  checkFileDoesNotContain(
+    "saas",
+    ["apps", "api-server", "src", "tests", "ContractFuzz.spec.ts"],
+    /status: "not-a-job-status"/,
+  );
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "tests", "ContractFuzz.spec.ts"],
+    /evidenceKey\(platform, evidenceId\)/,
+  );
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "tests", "ContractFuzz.spec.ts"],
+    /setTimeout\(\(\) => \{\s*evidence\.waitUntilWorkCompleted = true;/,
+  );
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "tests", "ContractFuzz.spec.ts"],
+    /"x-croco-lifecycle-observation": "true"/,
+  );
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "tests", "ContractFuzz.spec.ts"],
+    /evidence\.shutdownOutcome = await observeRuntimeShutdown\(runtime\)/,
+  );
   checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /EntitlementManager/);
   checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /LlmService/);
   checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /LlmMeteringService/);
@@ -1143,6 +1189,7 @@ function checkAiSaasStructure() {
       "@croco/llm-core": "workspace:*",
       "@croco/llm-metering": "workspace:*",
       "@croco/metering-core": "workspace:*",
+      "@croco/protocols-core": "workspace:*",
       "@croco/telemetry-api": "workspace:*",
       "@croco/tenant-core": "workspace:*",
     }),
@@ -1153,6 +1200,7 @@ function checkAiSaasStructure() {
     }),
   });
   expect(apiPackageJson.dependencies).not.toHaveProperty("@croco/testing");
+  expect(apiPackageJson.devDependencies).not.toHaveProperty("@croco/protocols-core");
 
   checkFileContains("ai-saas", ["apps", "api-server", "src", "app.ts.hbs"], /AiController/);
   checkFileContains("ai-saas", ["apps", "api-server", "src", "aiSaas.ts"], /PROMPT_TOKENS/);
