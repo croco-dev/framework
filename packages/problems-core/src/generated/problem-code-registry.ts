@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 612,
+  problemCount: 615,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -12107,6 +12107,98 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/membership-core/src/libs/problems/MembershipProblems.ts",
           line: 65,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "preset-node/invalid-close-timeout",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#preset-node-invalid-close-timeout",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/preset-node/src/problems.ts",
+          line: 6,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "preset-node/lifecycle-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#preset-node-lifecycle-conflict",
+      recovery: {
+        cause: "start() was called on a Node entry that is closing or already closed.",
+        userAction: "Wait for closure to finish, then create a new entry to start another server.",
+        operatorAction:
+          "Inspect Node entry ownership and the ordering of start() and close() calls.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/preset-node/src/problems.ts",
+          line: 20,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "preset-node/lifecycle-io-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#preset-node-lifecycle-io-failed",
+      recovery: {
+        cause: "The Node server failed while starting or closing an entry.",
+        userAction: "Retry only after the server or socket failure has been investigated.",
+        operatorAction: "Inspect the preserved cause and the reported lifecycle operation.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/preset-node/src/problems.ts",
+          line: 34,
           column: 5,
           kind: "problem-constructor",
         },

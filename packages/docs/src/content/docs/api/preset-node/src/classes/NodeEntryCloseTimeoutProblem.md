@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "ContractTestingProblem"
+title: "NodeEntryCloseTimeoutProblem"
 ---
 
-Concrete Problem raised for invalid contract-testing configuration.
+Reports an invalid timeout passed to NodeEntry.close().
 
 ## Extends
 
@@ -15,25 +15,17 @@ Concrete Problem raised for invalid contract-testing configuration.
 
 ### Constructor
 
-> **new ContractTestingProblem**(`code`, `detail`, `extensions?`): `ContractTestingProblem`
+> **new NodeEntryCloseTimeoutProblem**(`timeoutMs`): `NodeEntryCloseTimeoutProblem`
 
 #### Parameters
 
-##### code
+##### timeoutMs
 
-`string`
-
-##### detail
-
-`string`
-
-##### extensions?
-
-`Record`\<`string`, `unknown`\>
+`number`
 
 #### Returns
 
-`ContractTestingProblem`
+`NodeEntryCloseTimeoutProblem`
 
 #### Overrides
 
