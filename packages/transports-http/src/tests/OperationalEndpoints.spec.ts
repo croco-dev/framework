@@ -201,7 +201,13 @@ describe("Operational endpoints", () => {
       [
         {
           "body": {
-            "status": "ok",
+            "results": [
+              {
+                "name": "generic",
+                "status": "up",
+              },
+            ],
+            "status": "up",
           },
           "cacheControl": null,
           "path": "/health",

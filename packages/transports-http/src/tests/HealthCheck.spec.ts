@@ -86,13 +86,99 @@ describe("HealthCheck", () => {
   });
 
   describe("GET /health", () => {
-    it("should return 200 OK", async () => {
+    it("should return the healthy aggregate contract", async () => {
+      registry.register("db", async () => ({ status: "up", latency: 10 }));
+
       const app = createApp({ controllers: [], securityValidation: "off" });
       const response = await app.fetch(new Request("http://localhost/health"));
 
       expect(response.status).toBe(200);
-      const json = await response.json();
-      expect(json).toEqual({ status: "ok" });
+      await expect(response.json()).resolves.toEqual({
+        status: "up",
+        results: [{ name: "db", status: "up", details: { latency: 10 } }],
+      });
+    });
+
+    it("should return 503 when a registered check fails", async () => {
+      registry.register("db", async () => ({ status: "down", error: "unavailable" }));
+
+      const app = createApp({ controllers: [], securityValidation: "off" });
+      const response = await app.fetch(new Request("http://localhost/health"));
+
+      expect(response.status).toBe(503);
+      await expect(response.json()).resolves.toEqual({
+        status: "down",
+        results: [{ name: "db", status: "down", details: { error: "unavailable" } }],
+      });
+    });
+
+    it("should return a stable timeout failure and abort the check", async () => {
+      let didAbort = false;
+      registry.register(
+        "slow",
+        (signal?: AbortSignal) =>
+          new Promise((resolve) => {
+            signal?.addEventListener(
+              "abort",
+              () => {
+                didAbort = true;
+                resolve({ status: "up" });
+              },
+              { once: true },
+            );
+          }),
+        { timeout: 10 },
+      );
+
+      const app = createApp({ controllers: [], securityValidation: "off" });
+      const response = await app.fetch(new Request("http://localhost/health"));
+
+      expect(response.status).toBe(503);
+      await expect(response.json()).resolves.toEqual({
+        status: "down",
+        results: [
+          {
+            name: "slow",
+            status: "down",
+            details: { error: "Health check timeout for slow" },
+          },
+        ],
+      });
+      expect(didAbort).toBe(true);
+    });
+
+    it("should bound and redact health check details", async () => {
+      registry.register("database", async () => ({
+        status: "down",
+        error: "x".repeat(120),
+        diagnostic: "d".repeat(120),
+        samples: Array.from({ length: 60 }, (_, index) => index),
+        apiToken: "secret-token",
+        nested: { password: "hidden", safe: true },
+        stack: "internal stack",
+        cause: { authorization: "Bearer secret" },
+      }));
+
+      const app = createApp({ controllers: [], securityValidation: "off" });
+      const response = await app.fetch(new Request("http://localhost/health"));
+
+      expect(response.status).toBe(503);
+      await expect(response.json()).resolves.toEqual({
+        status: "down",
+        results: [
+          {
+            name: "database",
+            status: "down",
+            details: {
+              error: `${"x".repeat(97)}...`,
+              diagnostic: `${"d".repeat(97)}...`,
+              samples: Array.from({ length: 50 }, (_, index) => index),
+              apiToken: "[Redacted]",
+              nested: { password: "[Redacted]", safe: true },
+            },
+          },
+        ],
+      });
     });
   });
 

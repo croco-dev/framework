@@ -53,7 +53,7 @@ Croco 프레임워크 운영 중 발생하는 내부 상태 불일치, 컴포넌
 
 | Endpoint                  | 등록 조건 | 응답 contract                                                                                             | 상태 코드        |
 | ------------------------- | --------- | --------------------------------------------------------------------------------------------------------- | ---------------- |
-| `GET /health`             | 항상      | `{ "status": "ok" }`                                                                                      | `200`            |
+| `GET /health`             | 항상      | `{ "status": "up" \| "down", "results": HealthIndicatorResult[] }`                                        | `200` 또는 `503` |
 | `GET /health/live`        | 항상      | `{ "status": "ok" }`                                                                                      | `200`            |
 | `GET /ready`              | 항상      | `{ "status": "up" \| "down", "results": HealthIndicatorResult[] }`                                        | `200` 또는 `503` |
 | `GET /health/ready`       | 항상      | `/ready`와 동일                                                                                           | `200` 또는 `503` |
@@ -66,16 +66,17 @@ Croco 프레임워크 운영 중 발생하는 내부 상태 불일치, 컴포넌
 
 위 표의 endpoint 이름, 상태 코드 범위, top-level 응답 필드는 1.0 compatibility surface입니다. 배포 스모크, 로드밸런서, 모니터링, CI 자동화는 이 contract에 의존할 수 있습니다.
 
-- `/health`와 `/health/live`는 항상 `{ "status": "ok" }`를 반환합니다.
+- `/health`는 `HealthCheckRegistry.register(name, fn, options)`로 등록한 generic health check를 집계하며, 실패 시에도 `{ "status": "down", "results": [...] }` shape를 유지하고 HTTP `503`을 반환합니다.
+- `/health/live`는 등록된 dependency check와 독립적인 process liveness로 항상 `{ "status": "ok" }`와 HTTP `200`을 반환합니다.
 - `/ready`와 `/health/ready`는 같은 readiness contract를 공유하며, 실패 시에도 `{ "status": "down", "results": [...] }` shape를 유지하고 HTTP `503`을 반환합니다.
 - 두 readiness 경로는 `HealthCheckRegistry.registerReadiness(name, fn, options)`로 등록한 indicator만 실행합니다. 기존 `register(name, fn, options)` generic health check는 readiness와 독립적입니다.
-- readiness 세부 정보는 민감 key가 `[Redacted]` 처리되고 `error`/`message`가 제한되며 `stack`과 `cause`는 응답에서 제거됩니다.
+- health와 readiness 세부 정보는 민감 key가 `[Redacted]` 처리되고, 모든 문자열은 100자, 객체 key와 배열 항목은 각각 50개로 제한되며, `stack`과 `cause`는 응답에서 제거됩니다.
 - `/diagnostics`와 `/health/diagnostics`는 같은 sanitized diagnostics contract를 공유합니다. 실패 원인 stack trace나 `cause`는 응답에 포함하지 않습니다.
 - 보호된 diagnostics/dev inspector endpoint의 authorization 실패는 `{ "error": "Forbidden" }` shape와 HTTP `403`을 사용합니다.
 - `/diagnostics`, `/health/diagnostics`, `/dev/inspector`의 성공/거부 응답과 `/metrics` 성공 응답은 `Cache-Control: no-store`를 유지해야 합니다.
 - diagnostics 응답은 `details`의 `token`, `secret`, `authorization`, `password`, `api[-_]?key`, connection string 계열 key를 `[Redacted]`로 마스킹해야 합니다. Dev inspector 응답은 headers, query, timeline details의 민감 key/value 패턴을 `[Redacted]`로 마스킹해야 합니다.
 
-Readiness는 `@croco/health-core`의 `HealthCheckService` 실행 semantics를 사용합니다.
+Health와 readiness는 `@croco/health-core`의 `HealthCheckService` 실행 semantics를 사용합니다.
 `@croco/transports-http`의 `HealthCheckRegistry`는 generic health용 `register(name, fn, options)`와
 readiness용 `registerReadiness(name, fn, options)`를 분리하면서 health-core에 체크 실행과
 timeout/abort 처리를 위임합니다. 기존에 generic `register()`를 readiness gate처럼 사용한 앱은

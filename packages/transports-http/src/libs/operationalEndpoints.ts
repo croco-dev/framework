@@ -27,12 +27,15 @@ export const OPERATIONAL_ENDPOINT_PATHS = [
 
 const DEFAULT_RECENT_ERROR_LIMIT = 100;
 const DEFAULT_MESSAGE_LIMIT = 100;
+const DEFAULT_HEALTH_DETAIL_COLLECTION_LIMIT = 50;
 const OMITTED_DIAGNOSTIC_KEYS = new Set(["cause", "stack"]);
 const SENSITIVE_KEY_PATTERN =
   /authorization|cookie|credential|password|secret|token|api[-_]?key|private[-_]?key|access[-_]?key|database[-_]?url|redis[-_]?url|mongo(?:db)?[-_]?url|postgres(?:ql)?[-_]?url|connection[-_]?string|dsn/i;
 
 type RedactionOptions = {
   readonly messageLimit?: number;
+  readonly stringLimit?: number;
+  readonly collectionLimit?: number;
   readonly omitDiagnosticInternals?: boolean;
 };
 
@@ -211,7 +214,7 @@ export function sanitizeDiagnosticsReport(
   };
 }
 
-export function sanitizeReadinessResult(
+export function sanitizeHealthCheckResult(
   result: HealthCheckRegistryResult,
   messageLimit = DEFAULT_MESSAGE_LIMIT,
 ): HealthCheckRegistryResult {
@@ -223,6 +226,8 @@ export function sanitizeReadinessResult(
         ? {
             details: redactValue(indicator.details, 0, {
               messageLimit,
+              stringLimit: messageLimit,
+              collectionLimit: DEFAULT_HEALTH_DETAIL_COLLECTION_LIMIT,
               omitDiagnosticInternals: true,
             }) as typeof indicator.details,
           }
@@ -269,15 +274,25 @@ function redactValue(value: unknown, depth = 0, options: RedactionOptions = {}):
   }
 
   if (Array.isArray(value)) {
-    return value.map((item) => redactValue(item, depth + 1, options));
+    const items =
+      options.collectionLimit === undefined ? value : value.slice(0, options.collectionLimit);
+    return items.map((item) => redactValue(item, depth + 1, options));
+  }
+
+  if (typeof value === "string" && options.stringLimit !== undefined) {
+    return capMessage(value, options.stringLimit);
   }
 
   if (!isRecord(value)) {
     return value;
   }
 
+  const entries = Object.entries(value);
+  const boundedEntries =
+    options.collectionLimit === undefined ? entries : entries.slice(0, options.collectionLimit);
+
   return Object.fromEntries(
-    Object.entries(value).flatMap(([key, entry]) => {
+    boundedEntries.flatMap(([key, entry]) => {
       if (options.omitDiagnosticInternals && OMITTED_DIAGNOSTIC_KEYS.has(key.toLowerCase())) {
         return [];
       }
