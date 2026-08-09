@@ -1035,6 +1035,11 @@ function checkSaasStructure() {
   );
   checkFileContains(
     "saas",
+    ["apps", "api-server", "src", "demo", "failure-drill-smoke.ts"],
+    /createScenarioRuntime[\s\S]*DemoBillingGateway[\s\S]*saas-checkout-response-loss[\s\S]*checkoutCreationCount/,
+  );
+  checkFileContains(
+    "saas",
     ["apps", "api-server", "src", "demo", "operational-failure-drills.ts"],
     /provider-environment-missing[\s\S]*telemetry-exporter-unavailable[\s\S]*di-provider-missing[\s\S]*di-scope-mismatch[\s\S]*route-validation-failure[\s\S]*rate-limit-exhausted[\s\S]*auth-verifier-unavailable[\s\S]*webhook-signature-invalid/,
   );

@@ -108,10 +108,15 @@ const ACTIVE_ENTITLEMENT_SUBSCRIPTION_STATUSES = new Set<SubscriptionStatus>([
 ]);
 
 export class DemoBillingGateway implements BillingGateway {
+  private createdCheckoutCount = 0;
   private readonly checkouts = new Map<
     string,
     { readonly fingerprint: string; readonly result: CheckoutResult }
   >();
+
+  get checkoutCreationCount(): number {
+    return this.createdCheckoutCount;
+  }
 
   async ensureCustomer(billingAccountId: string): Promise<string> {
     return `customer_${billingAccountId}`;
@@ -136,6 +141,7 @@ export class DemoBillingGateway implements BillingGateway {
       checkoutId,
     };
     this.checkouts.set(params.idempotencyKey, { fingerprint, result });
+    this.createdCheckoutCount += 1;
     return result;
   }
 

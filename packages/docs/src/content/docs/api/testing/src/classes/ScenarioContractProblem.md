@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "RuntimeInspectorConfigurationProblem"
+title: "ScenarioContractProblem"
 ---
 
-Runtime inspector limits must preserve finite, bounded collection semantics.
+Concrete Problem for `testing/scenario-contract-invalid` scenario validation failures.
 
 ## Extends
 
@@ -15,21 +15,21 @@ Runtime inspector limits must preserve finite, bounded collection semantics.
 
 ### Constructor
 
-> **new RuntimeInspectorConfigurationProblem**(`option`, `value`): `RuntimeInspectorConfigurationProblem`
+> **new ScenarioContractProblem**(`detail`, `cause?`): `ScenarioContractProblem`
 
 #### Parameters
 
-##### option
+##### detail
 
-[`RuntimeInspectorNumericOption`](/api/framework-context/src/type-aliases/runtimeinspectornumericoption/)
+`string`
 
-##### value
+##### cause?
 
-`number`
+`Error`
 
 #### Returns
 
-`RuntimeInspectorConfigurationProblem`
+`ScenarioContractProblem`
 
 #### Overrides
 
@@ -39,9 +39,9 @@ Runtime inspector limits must preserve finite, bounded collection semantics.
 
 ### category
 
-> `readonly` **category**: [`InternalServerError`](/api/problems-core/src/enumerations/problemcategory/#internalservererror) = `ProblemCategory.InternalServerError`
+> `readonly` **category**: [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
 
-#### Overrides
+#### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`category`](/api/problems-core/src/classes/problem/#category)
 
@@ -59,9 +59,9 @@ Runtime inspector limits must preserve finite, bounded collection semantics.
 
 ### code
 
-> `readonly` **code**: `"framework-context/runtime-inspector-invalid-configuration"` = `"framework-context/runtime-inspector-invalid-configuration"`
+> `readonly` **code**: `string`
 
-#### Overrides
+#### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`code`](/api/problems-core/src/classes/problem/#code)
 
@@ -117,12 +117,6 @@ Runtime inspector limits must preserve finite, bounded collection semantics.
 
 ***
 
-### option
-
-> `readonly` **option**: [`RuntimeInspectorNumericOption`](/api/framework-context/src/type-aliases/runtimeinspectornumericoption/)
-
-***
-
 ### stack?
 
 > `optional` **stack?**: `string`
@@ -140,12 +134,6 @@ Runtime inspector limits must preserve finite, bounded collection semantics.
 #### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`type`](/api/problems-core/src/classes/problem/#type)
-
-***
-
-### value
-
-> `readonly` **value**: `number`
 
 ***
 
