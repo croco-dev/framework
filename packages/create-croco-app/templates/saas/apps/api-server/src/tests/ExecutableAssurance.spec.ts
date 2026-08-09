@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
+import { rm } from "node:fs/promises";
 import { resolve } from "node:path";
 
-import { describe, expect, it, vi } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 
 import {
   createExecutableAssuranceGraph,
@@ -15,7 +16,23 @@ import { createCrocoApp } from "../app";
 import { saasDemoSnapshotSchema } from "../controllers/schemas";
 import { SAAS_DEMO_ENDPOINTS_ENABLED_ENV, SAAS_PROVIDER_PROFILE_ENV } from "../providerProfiles";
 
+const usageStateDirectory = vi.hoisted(() => {
+  const environmentName = "CROCO_DEMO_USAGE_STATE_DIR";
+  const previous = process.env[environmentName];
+  const temporaryRoot = process.env.TEMP ?? process.env.TMP ?? process.env.TMPDIR ?? "/tmp";
+  const directory = `${temporaryRoot}/croco-executable-assurance-${process.pid}-${Date.now()}`;
+  process.env[environmentName] = directory;
+  return { directory, previous };
+});
 const projectRoot = resolve(import.meta.dirname, "../../../..");
+
+afterAll(async () => {
+  try {
+    await rm(usageStateDirectory.directory, { force: true, recursive: true });
+  } finally {
+    restoreEnvironment("CROCO_DEMO_USAGE_STATE_DIR", usageStateDirectory.previous);
+  }
+});
 
 describe("generated SaaS executable assurance", () => {
   it("keeps a passing production bootstrap test below production assurance when validation is overridden", async () => {

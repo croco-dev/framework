@@ -40,8 +40,13 @@ import {
 } from "./installers/index.js";
 import { DirectoryNotEmptyProblem } from "./libs/problems/DirectoryNotEmptyProblem.js";
 import { PnpmCommandProblem } from "./libs/problems/PnpmCommandProblem.js";
-import { assertSupportedNodeVersion, writeGeneratedNodeRuntimeContract } from "./node-runtime.js";
-import { validateResolvedOptions } from "./options.js";
+import {
+  SAAS_GENERATED_NODE_ENGINE_RANGE,
+  SAAS_GENERATED_NODE_VERSION,
+  assertSupportedNodeVersion,
+  writeGeneratedNodeRuntimeContract,
+} from "./node-runtime.js";
+import { isSaasPreset, validateResolvedOptions } from "./options.js";
 import {
   DEFAULT_SAAS_PROVIDER_PROFILE,
   assertSaasProviderTenantModelCompatibility,
@@ -453,7 +458,12 @@ function writeSaasProviderPackageDependencies(
 
 async function finalize(targetDir: string, options: GeneratorOptions): Promise<void> {
   rewriteExternalCrocoWorkspaceRanges(targetDir);
-  writeGeneratedNodeRuntimeContract(targetDir);
+  const saasPreset = isSaasPreset(options.preset);
+  writeGeneratedNodeRuntimeContract(
+    targetDir,
+    saasPreset ? SAAS_GENERATED_NODE_ENGINE_RANGE : undefined,
+    saasPreset ? SAAS_GENERATED_NODE_VERSION : undefined,
+  );
   writeGoalManifest(targetDir, options);
   writeRuntimeCapabilityManifest(targetDir, options);
 

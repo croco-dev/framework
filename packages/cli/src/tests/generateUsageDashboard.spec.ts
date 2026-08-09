@@ -18,6 +18,9 @@ type GeneratedServiceModule = {
     readonly meterRegistry: { getByTenant(tenantId: string): Promise<readonly unknown[]> };
     readonly meteringService: { getUsage(options: unknown): Promise<number> };
     readonly entitlementManager: { check(tenantId: string, featureKey: string): Promise<unknown> };
+    readonly usageBillingReadModel?: {
+      getSnapshot(tenantId: string, meterIds: readonly string[]): Promise<unknown>;
+    };
   }) => GeneratedUsageDashboardService;
 };
 
@@ -92,6 +95,16 @@ describe("runGenerateUsageDashboard", () => {
     expect(controllerContent).toContain("const values = (Array.isArray(value) ? value : [value])");
     assertGeneratedQueryHelpersTypecheck(controllerContent);
     expect(serviceContent).toContain("export type UsageDashboardSnapshot");
+    expect(serviceContent).toContain("export type UsageDashboardBillingDeliverySnapshot");
+    expect(serviceContent).toContain("readonly planVersionRef: string | null;");
+    expect(serviceContent).toContain(
+      "readonly billingDelivery: UsageDashboardBillingDeliverySnapshot | null;",
+    );
+    expect(serviceContent).toContain("return await readModel.getSnapshot(tenantId, meterIds)");
+    expect(serviceContent).toContain(".filter(isRequiredBillingMeter)");
+    expect(serviceContent).toContain("planVersionRef: readPlanVersionRef(subscription)");
+    expect(serviceContent).toContain('return "billing" in meter && meter.billing === "required";');
+    expect(serviceContent).toContain('!("planVersionRef" in subscription)');
     expect(serviceContent).toContain('"near_quota"');
     expect(serviceContent).toContain("resolveOverageState");
     expect(serviceContent).toContain("return await this.dependencies.meterRegistry.getByTenant");
@@ -126,6 +139,11 @@ describe("runGenerateUsageDashboard", () => {
     expect(pageContent).toContain("typeof window === 'undefined'");
     expect(pageContent).toContain("Loading usage");
     expect(pageContent).toContain("meter needs quota attention");
+    expect(pageContent).toContain("<h2>Billing delivery</h2>");
+    expect(pageContent).toContain("snapshot.billingDelivery.retryCount");
+    expect(pageContent).toContain("snapshot.billingDelivery.terminalFailureCount");
+    expect(pageContent).toContain("snapshot.billingDelivery.oldestPendingAgeMs");
+    expect(pageContent).toContain("snapshot.billingDelivery.recoveryCommand");
     expect(routeContent).toContain("path: '/usage'");
   }, 30_000);
 
@@ -422,6 +440,102 @@ await app.listen(3000);
         status: 500,
         legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.usageDashboardProviderUnavailable,
       });
+    } finally {
+      await fs.rm(cwd, { force: true, recursive: true });
+    }
+  });
+
+  it("should expose version-pinned provider delivery drift from an optional read model", async () => {
+    const cwd = await createWorkspace({
+      consoleWeb: false,
+      tempPrefix: path.join(process.cwd(), ".usage-dashboard-delivery-"),
+    });
+
+    try {
+      await runGenerateUsageDashboard({ cwd });
+      const usageDir = path.join(cwd, "apps", "api-server", "src", "usage-dashboard");
+      const { UsageDashboardService } = await importGeneratedModule<GeneratedServiceModule>(
+        path.join(usageDir, "UsageDashboardService.ts"),
+      );
+      const billingDelivery = {
+        localUsage: 110,
+        providerAcceptedUsage: 80,
+        usageDrift: 30,
+        backlogCount: 1,
+        oldestPendingAgeMs: 1_000,
+        retryCount: 1,
+        terminalFailureCount: 0,
+        recoveryCommand: "pnpm demo:scenario",
+      };
+      let receivedMeterIds: readonly string[] = [];
+      const service = new UsageDashboardService({
+        tenantStore: {
+          async findById() {
+            return {
+              id: "tenant_acme",
+              slug: "acme",
+              name: "Acme",
+              status: "trial",
+              settings: { features: [] },
+            };
+          },
+        },
+        billingService: {
+          async getSubscription() {
+            return {
+              planId: "team",
+              planVersionRef: "team@v1",
+              status: "active",
+              currentPeriodEnd: new Date("2030-01-01T00:00:00.000Z"),
+            };
+          },
+        },
+        meterRegistry: {
+          async getByTenant() {
+            return [
+              {
+                tenantId: "tenant_acme",
+                meterId: "api_requests",
+                type: "COUNT",
+                billing: "required",
+                quota: 100,
+                allowOverQuota: true,
+                metadata: { unit: "request" },
+              },
+              {
+                tenantId: "tenant_acme",
+                meterId: "internal_events",
+                type: "COUNT",
+                quota: 1_000,
+                allowOverQuota: true,
+                metadata: { unit: "event" },
+              },
+            ];
+          },
+        },
+        meteringService: {
+          async getUsage() {
+            return 110;
+          },
+        },
+        entitlementManager: {
+          async check(_tenantId: string, featureKey: string) {
+            return { featureKey, granted: false, type: "boolean" };
+          },
+        },
+        usageBillingReadModel: {
+          async getSnapshot(_tenantId: string, meterIds: readonly string[]) {
+            receivedMeterIds = meterIds;
+            return billingDelivery;
+          },
+        },
+      });
+
+      await expect(service.getSnapshot("tenant_acme")).resolves.toMatchObject({
+        planVersionRef: "team@v1",
+        billingDelivery,
+      });
+      expect(receivedMeterIds).toEqual(["api_requests"]);
     } finally {
       await fs.rm(cwd, { force: true, recursive: true });
     }

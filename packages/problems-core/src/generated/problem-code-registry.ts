@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 604,
+  problemCount: 606,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -3825,7 +3825,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/src/cli-result.ts",
-          line: 28,
+          line: 34,
           column: 3,
           kind: "problem-class",
         },
@@ -13790,6 +13790,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "saas-demo/billable-usage-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#saas-demo-billable-usage-failed",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
+          line: 75,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "saas-demo/demo-endpoint-disabled",
       category: "Forbidden",
       status: 403,
@@ -13937,6 +13969,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
           line: 66,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "saas-demo/sqlite-fixture-state-invalid",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#saas-demo-sqlite-fixture-state-invalid",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
+          line: 84,
           column: 3,
           kind: "problem-class",
         },

@@ -422,7 +422,9 @@ function assertBlankOptions(cliOptions: Partial<GeneratorOptions>): void {
   }
 }
 
-function isSaasPreset(preset: GeneratorOptions["preset"] | undefined): preset is SaasPreset {
+export function isSaasPreset(
+  preset: GeneratorOptions["preset"] | undefined,
+): preset is Extract<GeneratorOptions["preset"], "saas" | "ai-saas"> {
   return preset === "saas" || preset === "ai-saas";
 }
 

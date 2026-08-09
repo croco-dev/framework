@@ -235,10 +235,12 @@ describe("SaaS golden path demo", () => {
     expect(snapshot.entitlement).toMatchObject({
       featureKey: "api.requests",
       granted: true,
-      quota: 100,
+      quota: 2,
       usage: 3,
-      remaining: 97,
+      remaining: 0,
       planId: "team",
+      planVersionRef: "team@v1",
+      overagePolicy: "ALLOW_WITH_OVERAGE",
     });
     expect(snapshot.billing.entitlementPlanId).toBe("team");
     expect(snapshot.billing.mockEvent).toMatchObject({
@@ -248,6 +250,54 @@ describe("SaaS golden path demo", () => {
       planVersionRef: "team@v1",
       processedStatus: "completed",
       duplicateFailureCode: "billing/webhook-already-processed",
+    });
+  });
+
+  it("commits billable API usage locally and converges after a retryable provider outage", async () => {
+    const snapshot = await runSaasDemoFlow(createSaasDemoRuntime());
+
+    expect(snapshot.billableUsage).toMatchObject({
+      planVersionRef: "team@v1",
+      journalDurability: "persistent",
+      included: {
+        eventId: "usage:tenant_acme:api_requests:included:v1",
+        value: 2,
+        recordOutcome: "recorded",
+        deliveryOutcome: "accepted",
+        delivery: { accepted: 1, retryableFailed: 0, terminalFailed: 0 },
+      },
+      overage: {
+        eventId: "usage:tenant_acme:api_requests:overage:v1",
+        value: 1,
+        recordOutcome: "recorded",
+        initialDeliveryOutcome: "retryable-failed",
+        finalDeliveryOutcome: "accepted",
+      },
+      providerOutage: {
+        delivery: { accepted: 0, retryableFailed: 1, terminalFailed: 0 },
+        failureCode: "billing-polar/retryable-upstream",
+        backlogCount: 1,
+        oldestPendingAgeMs: 1000,
+      },
+      recovery: {
+        command: "pnpm --dir apps/api-server demo:usage-recover",
+        processBoundary: "separate-node-process",
+        delivery: { accepted: 1, retryableFailed: 0, terminalFailed: 0 },
+      },
+      replay: {
+        eventId: "usage:tenant_acme:api_requests:overage:v1",
+        outcome: "duplicate",
+        providerAcceptedUsageBefore: 3,
+        providerAcceptedUsageAfter: 3,
+      },
+      providerAcceptedUsage: 3,
+      finalConvergence: {
+        backlogCount: 0,
+        oldestPendingAgeMs: null,
+        retryCount: 1,
+        terminalFailureCount: 0,
+        converged: true,
+      },
     });
   });
 
@@ -276,6 +326,13 @@ describe("SaaS golden path demo", () => {
     expect(meters.find((meter) => meter.meterId === "api_requests")?.metadata).toMatchObject({
       featureKey: "api.requests",
       unit: "request",
+    });
+    expect(meters.find((meter) => meter.meterId === "api_requests")).toMatchObject({
+      billing: "required",
+      aggregation: "COUNT",
+      unit: "request",
+      quota: 2,
+      allowOverQuota: true,
     });
     expect(meters.find((meter) => meter.meterId === "storage_gb")?.metadata).toMatchObject({
       featureKey: "storage.gb",

@@ -1,3 +1,6 @@
+import { execFile } from "node:child_process";
+import { resolve } from "node:path";
+import { promisify } from "node:util";
 import { AccessEngine } from "@croco/access-core";
 import { RbacEngine, RoleRegistry } from "@croco/auth-core";
 import type { AuthUser } from "@croco/auth-core";
@@ -14,8 +17,10 @@ import type {
   BillingLifecycleGatewayOptions,
   CheckoutResult,
   CreateCheckoutParams,
+  PlanVersionRef,
   SubscriptionStatus,
 } from "@croco/billing-core";
+import { PolarUsageDeliveryWorker } from "@croco/billing-polar";
 import { DiagnosticsCollector } from "@croco/diagnostics-core";
 import {
   EntitlementManager,
@@ -65,11 +70,15 @@ import { IdempotencyManager, MeteringService, MeterRegistry } from "@croco/meter
 import { NotificationService } from "@croco/notifications-core";
 import { TenantManager } from "@croco/tenant-core";
 import { TxManager } from "@croco/tx-core";
+import { z } from "zod";
 import {
   assertSaasSmokeContract,
   SAAS_SMOKE_CONTRACT_VERSION,
   type SaasDemoSnapshot,
 } from "./demo/saasSmokeContract";
+import { FileBillableUsageJournal } from "./demo/FileBillableUsageJournal";
+import { FileUsageBillingGateway } from "./demo/FileUsageBillingGateway";
+import { SaasBillableUsageProblem } from "./problems";
 import {
   InMemoryAccessProvider,
   InMemoryEventBus,
@@ -83,6 +92,7 @@ import {
 import { getSaasProviderProfile, type SaasProviderProfile } from "./providerProfiles";
 
 const TEAM_PLAN_ID = "team";
+const TEAM_PLAN_VERSION_REF = planVersionRef(`${TEAM_PLAN_ID}@v1`);
 const SEATS_FEATURE_KEY = "seats";
 const API_REQUESTS_METER_ID = "api_requests";
 const API_REQUESTS_FEATURE_KEY = "api.requests";
@@ -106,6 +116,25 @@ const ACTIVE_ENTITLEMENT_SUBSCRIPTION_STATUSES = new Set<SubscriptionStatus>([
   "active",
   "trialing",
 ]);
+const BILLABLE_USAGE_CREATED_AT = new Date("2026-01-02T00:00:00.000Z");
+const BILLABLE_USAGE_OUTAGE_AT = new Date("2026-01-02T00:00:01.000Z");
+const BILLABLE_USAGE_RECOVERY_AT = new Date("2026-01-02T00:00:02.000Z");
+const BILLABLE_USAGE_OVERAGE_AT = new Date("2026-01-02T00:00:03.000Z");
+const INCLUDED_API_USAGE_EVENT_ID = "usage:tenant_acme:api_requests:included:v1";
+const OVERAGE_API_USAGE_EVENT_ID = "usage:tenant_acme:api_requests:overage:v1";
+const BILLABLE_USAGE_RECOVERY_COMMAND = "pnpm --dir apps/api-server demo:usage-recover";
+const BILLABLE_USAGE_STATE_DIR = resolve(
+  process.env.CROCO_DEMO_USAGE_STATE_DIR ?? "../../.croco/demo/saas-billable-usage",
+);
+const BILLABLE_USAGE_JOURNAL_PATH = resolve(BILLABLE_USAGE_STATE_DIR, "journal.sqlite");
+const BILLABLE_USAGE_PROVIDER_PATH = resolve(BILLABLE_USAGE_STATE_DIR, "provider.sqlite");
+const execFileAsync = promisify(execFile);
+const recoveryDeliverySchema = z.object({
+  accepted: z.number().int().nonnegative(),
+  retryableFailed: z.number().int().nonnegative(),
+  terminalFailed: z.number().int().nonnegative(),
+});
+type RecoveryDeliveryResult = Required<z.infer<typeof recoveryDeliverySchema>>;
 
 export class DemoBillingGateway implements BillingGateway {
   private createdCheckoutCount = 0;
@@ -254,6 +283,20 @@ class BillingEntitlementSubscriptionProvider extends SubscriptionProvider {
 
     return subscription.planId;
   }
+
+  override readonly getCurrentPlanVersion = async (
+    tenantId: string,
+  ): Promise<{ planId: string; planVersionRef: PlanVersionRef } | null> => {
+    const subscription = await this.billingService.getSubscription(tenantId);
+    if (!subscription || !ACTIVE_ENTITLEMENT_SUBSCRIPTION_STATUSES.has(subscription.status)) {
+      return null;
+    }
+
+    return {
+      planId: subscription.planId,
+      planVersionRef: subscription.planVersionRef,
+    };
+  };
 }
 
 class EntitlementSeatLimitChecker extends SeatLimitChecker {
@@ -326,6 +369,14 @@ export type SaasRuntime = {
   billingStore: InMemoryBillingStore;
   billingGateway: BillingGateway;
   billingService: BillingService;
+  billableUsageJournal: FileBillableUsageJournal;
+  usageBillingGateway: FileUsageBillingGateway;
+  usageBillingReadModel: {
+    getSnapshot(
+      tenantId: string,
+      meterIds: readonly string[],
+    ): Promise<SaasDemoSnapshot["usageBillingReadModel"]>;
+  };
   meterRegistry: MeterRegistry;
   meteringService: MeteringService;
   llmService: LlmService;
@@ -346,6 +397,8 @@ export type SaasRuntime = {
 export type SaasRuntimeOptions = {
   checkoutIdempotencyStore: IdempotencyStore<CheckoutResult>;
   billingGateway?: BillingGateway;
+  usageBillingGateway?: FileUsageBillingGateway;
+  billableUsageJournal?: FileBillableUsageJournal;
 };
 
 export function createSaasRuntime(options: SaasRuntimeOptions): SaasRuntime {
@@ -374,60 +427,101 @@ export function createSaasRuntime(options: SaasRuntimeOptions): SaasRuntime {
   });
   const meterRepository = new InMemoryMeterRepository();
   const usageStorage = new InMemoryUsageStorage();
-  const meterRegistry = new MeterRegistry(meterRepository);
+  const billableUsageJournal =
+    options.billableUsageJournal ??
+    new FileBillableUsageJournal(BILLABLE_USAGE_JOURNAL_PATH, BILLABLE_USAGE_CREATED_AT);
+  const usageBillingGateway =
+    options.usageBillingGateway ?? new FileUsageBillingGateway(BILLABLE_USAGE_PROVIDER_PATH);
+  const meterRegistry = new MeterRegistry(meterRepository, undefined, billableUsageJournal);
   const meteringService = new MeteringService({
     meterRegistry,
     usageStorage,
     idempotencyManager: new IdempotencyManager(new InMemoryRedisClient()),
   });
+  const usageBillingReadModel = {
+    async getSnapshot(
+      tenantId: string,
+      meterIds: readonly string[],
+    ): Promise<SaasDemoSnapshot["usageBillingReadModel"]> {
+      const localUsage = (
+        await Promise.all(
+          meterIds.map((meterId) =>
+            meteringService.getUsage({ tenantId, meterId, period: "billing_cycle" }),
+          ),
+        )
+      ).reduce((total, usage) => total + usage, 0);
+      const providerAcceptedUsage = (
+        await Promise.all(
+          meterIds.map((meterId) => usageBillingGateway.getAcceptedUsage(tenantId, meterId)),
+        )
+      ).reduce((total, usage) => total + usage, 0);
+      const diagnostics = await billableUsageJournal.getDiagnostics(BILLABLE_USAGE_OVERAGE_AT);
+
+      return {
+        localUsage,
+        providerAcceptedUsage,
+        usageDrift: localUsage - providerAcceptedUsage,
+        backlogCount: diagnostics.backlogCount,
+        oldestPendingAgeMs: diagnostics.oldestPendingAgeMs,
+        retryCount: diagnostics.retryCount,
+        terminalFailureCount: diagnostics.terminalFailureCount,
+        recoveryCommand: BILLABLE_USAGE_RECOVERY_COMMAND,
+      };
+    },
+  };
 
   const entitlementRegistry = new InMemoryPlanEntitlementRegistry();
-  entitlementRegistry.register(TEAM_PLAN_ID, [
-    {
-      featureKey: SEATS_FEATURE_KEY,
-      type: "static",
-      value: 2,
-    },
-    {
-      featureKey: API_REQUESTS_FEATURE_KEY,
-      type: "metered",
-      meterId: API_REQUESTS_METER_ID,
-      quota: 100,
-      overagePolicy: "WARN",
-    },
-    {
-      featureKey: STORAGE_GB_FEATURE_KEY,
-      type: "metered",
-      meterId: STORAGE_GB_METER_ID,
-      quota: 100,
-      overagePolicy: "WARN",
-    },
-    {
-      featureKey: PROMPT_TOKENS,
-      type: "metered",
-      meterId: PROMPT_TOKENS,
-      quota: DEMO_LLM_PROMPT_TOKENS_QUOTA,
-      overagePolicy: "BLOCK",
-    },
-    {
-      featureKey: COMPLETION_TOKENS,
-      type: "metered",
-      meterId: COMPLETION_TOKENS,
-      quota: 100,
-      overagePolicy: "BLOCK",
-    },
-    {
-      featureKey: COST_USD,
-      type: "metered",
-      meterId: COST_USD,
-      quota: 1,
-      overagePolicy: "BLOCK",
-    },
-    {
-      featureKey: "tenant.invites",
-      type: "boolean",
-    },
-  ]);
+  entitlementRegistry.register({
+    planId: TEAM_PLAN_ID,
+    planVersionRef: TEAM_PLAN_VERSION_REF,
+    entitlements: [
+      {
+        featureKey: SEATS_FEATURE_KEY,
+        type: "static",
+        value: 2,
+      },
+      {
+        featureKey: API_REQUESTS_FEATURE_KEY,
+        type: "metered",
+        meterId: API_REQUESTS_METER_ID,
+        meterBilling: "required",
+        quota: 2,
+        overagePolicy: "ALLOW_WITH_OVERAGE",
+      },
+      {
+        featureKey: STORAGE_GB_FEATURE_KEY,
+        type: "metered",
+        meterId: STORAGE_GB_METER_ID,
+        quota: 100,
+        overagePolicy: "WARN",
+      },
+      {
+        featureKey: PROMPT_TOKENS,
+        type: "metered",
+        meterId: PROMPT_TOKENS,
+        quota: DEMO_LLM_PROMPT_TOKENS_QUOTA,
+        overagePolicy: "BLOCK",
+      },
+      {
+        featureKey: COMPLETION_TOKENS,
+        type: "metered",
+        meterId: COMPLETION_TOKENS,
+        quota: 100,
+        overagePolicy: "BLOCK",
+      },
+      {
+        featureKey: COST_USD,
+        type: "metered",
+        meterId: COST_USD,
+        quota: 1,
+        overagePolicy: "BLOCK",
+      },
+      {
+        featureKey: "tenant.invites",
+        type: "boolean",
+      },
+    ],
+  });
   const subscriptionProvider = new BillingEntitlementSubscriptionProvider(billingService);
   const entitlementManager = new EntitlementManager(
     entitlementRegistry,
@@ -556,6 +650,9 @@ export function createSaasRuntime(options: SaasRuntimeOptions): SaasRuntime {
     billingStore,
     billingGateway,
     billingService,
+    billableUsageJournal,
+    usageBillingGateway,
+    usageBillingReadModel,
     meterRegistry,
     meteringService,
     llmService,
@@ -704,17 +801,14 @@ export async function runSaasDemoFlow(
       tenantId: tenant.id,
       meterId: API_REQUESTS_METER_ID,
       type: "COUNT",
-      quota: 100,
-      allowOverQuota: false,
+      billing: "required",
+      aggregation: "COUNT",
+      unit: "request",
+      quota: 2,
+      allowOverQuota: true,
       metadata: { featureKey: API_REQUESTS_FEATURE_KEY, unit: "request" },
     });
-    const usageRecord = await runtime.meteringService.record({
-      tenantId: tenant.id,
-      meterId: API_REQUESTS_METER_ID,
-      value: 3,
-      idempotencyKey: "demo-api-requests",
-      metadata: { source: "demo:seed" },
-    });
+    const billableUsage = await runBillableApiUsageScenario(runtime, tenant.id);
     const currentUsage = await runtime.meteringService.getUsage({
       tenantId: tenant.id,
       meterId: API_REQUESTS_METER_ID,
@@ -850,6 +944,9 @@ export async function runSaasDemoFlow(
 
     const health = await runtime.healthService.check();
     const diagnostics = await runtime.diagnosticsCollector.getReport();
+    const usageBillingReadModel = await runtime.usageBillingReadModel.getSnapshot(tenant.id, [
+      API_REQUESTS_METER_ID,
+    ]);
 
     return {
       contract: {
@@ -895,10 +992,12 @@ export async function runSaasDemoFlow(
         mockEvent: billingMockEvent,
       },
       metering: {
-        meterId: usageRecord.meterId,
-        recordedValue: usageRecord.value,
+        meterId: API_REQUESTS_METER_ID,
+        recordedValue: usageBillingReadModel.localUsage,
         currentUsage,
       },
+      billableUsage,
+      usageBillingReadModel,
       ai: {
         provider: aiUsageRecord.provider,
         modelId: aiUsageRecord.modelId,
@@ -918,6 +1017,8 @@ export async function runSaasDemoFlow(
         usage: entitlement.usage,
         remaining: entitlement.remaining,
         planId: entitlement.planId,
+        planVersionRef: entitlement.planVersionRef,
+        overagePolicy: entitlement.overagePolicy,
       },
       operations: {
         healthStatus: health.status,
@@ -943,6 +1044,239 @@ export async function runSaasDemoFlow(
   });
 }
 
+async function runBillableApiUsageScenario(
+  runtime: SaasRuntime,
+  tenantId: string,
+): Promise<SaasDemoSnapshot["billableUsage"]> {
+  await Promise.all([runtime.billableUsageJournal.reset(), runtime.usageBillingGateway.reset()]);
+  const worker = new PolarUsageDeliveryWorker(
+    runtime.billableUsageJournal,
+    runtime.usageBillingGateway,
+    {
+      ownerId: "saas-demo-usage-worker",
+      leaseDurationMs: 30_000,
+      maxBatchSize: 10,
+      retryBaseDelayMs: 1_000,
+      retryMaxDelayMs: 1_000,
+    },
+  );
+
+  const includedRecord = await runtime.meteringService.record({
+    tenantId,
+    meterId: API_REQUESTS_METER_ID,
+    value: 2,
+    idempotencyKey: INCLUDED_API_USAGE_EVENT_ID,
+    metadata: { source: "demo:billable-included" },
+  });
+  const includedDelivery = await worker.deliverNextBatch(BILLABLE_USAGE_CREATED_AT);
+  const includedEntitlement = await runtime.entitlementManager.check(
+    tenantId,
+    API_REQUESTS_FEATURE_KEY,
+  );
+  if (!includedEntitlement.granted || includedEntitlement.usage !== includedRecord.value) {
+    throw new SaasBillableUsageProblem(
+      "Included billable usage did not retain an allowed entitlement.",
+    );
+  }
+
+  runtime.usageBillingGateway.setAvailable(false);
+  const overageRecord = await runtime.meteringService.record({
+    tenantId,
+    meterId: API_REQUESTS_METER_ID,
+    value: 1,
+    idempotencyKey: OVERAGE_API_USAGE_EVENT_ID,
+    metadata: { source: "demo:billable-overage" },
+  });
+  const unavailableDelivery = await worker.deliverNextBatch(BILLABLE_USAGE_OUTAGE_AT);
+  const retryableEntry = await requireBillableUsageEntry(
+    runtime.billableUsageJournal,
+    OVERAGE_API_USAGE_EVENT_ID,
+  );
+  const outageDiagnostics =
+    await runtime.billableUsageJournal.getDiagnostics(BILLABLE_USAGE_OUTAGE_AT);
+
+  runtime.usageBillingGateway.setAvailable(true);
+  const recoveryDelivery = await runUsageRecoveryProcess();
+
+  const providerAcceptedUsageBeforeReplay = await runtime.usageBillingGateway.getAcceptedUsage(
+    tenantId,
+    API_REQUESTS_METER_ID,
+  );
+  const replayReceipt = await runtime.usageBillingGateway.ingest([
+    {
+      billingAccountId: tenantId,
+      eventId: OVERAGE_API_USAGE_EVENT_ID,
+      meterId: API_REQUESTS_METER_ID,
+      occurredAt: overageRecord.timestamp,
+      value: overageRecord.value,
+    },
+  ]);
+  const providerAcceptedUsage = await runtime.usageBillingGateway.getAcceptedUsage(
+    tenantId,
+    API_REQUESTS_METER_ID,
+  );
+  const includedFinalEntry = await requireBillableUsageEntry(
+    runtime.billableUsageJournal,
+    INCLUDED_API_USAGE_EVENT_ID,
+  );
+  const overageFinalEntry = await requireBillableUsageEntry(
+    runtime.billableUsageJournal,
+    OVERAGE_API_USAGE_EVENT_ID,
+  );
+  const finalDiagnostics =
+    await runtime.billableUsageJournal.getDiagnostics(BILLABLE_USAGE_OVERAGE_AT);
+  const replayOutcome = replayReceipt.receipts[0]?.status;
+  if (
+    runtime.billableUsageJournal.durability !== "persistent" ||
+    retryableEntry.state !== "retryable-failed" ||
+    includedFinalEntry.state !== "accepted" ||
+    overageFinalEntry.state !== "accepted" ||
+    replayOutcome !== "duplicate"
+  ) {
+    throw new SaasBillableUsageProblem(
+      "Billable usage scenario did not produce its required delivery states.",
+    );
+  }
+
+  return {
+    planVersionRef: TEAM_PLAN_VERSION_REF,
+    journalDurability: runtime.billableUsageJournal.durability,
+    included: {
+      eventId: INCLUDED_API_USAGE_EVENT_ID,
+      value: includedRecord.value,
+      recordOutcome: "recorded",
+      deliveryOutcome: includedFinalEntry.state,
+      delivery: includedDelivery,
+    },
+    overage: {
+      eventId: OVERAGE_API_USAGE_EVENT_ID,
+      value: overageRecord.value,
+      recordOutcome: "recorded",
+      initialDeliveryOutcome: retryableEntry.state,
+      finalDeliveryOutcome: overageFinalEntry.state,
+    },
+    providerOutage: {
+      delivery: unavailableDelivery,
+      failureCode: retryableEntry.failure?.code ?? "none",
+      backlogCount: outageDiagnostics.backlogCount,
+      oldestPendingAgeMs: outageDiagnostics.oldestPendingAgeMs,
+    },
+    recovery: {
+      command: BILLABLE_USAGE_RECOVERY_COMMAND,
+      processBoundary: "separate-node-process",
+      delivery: recoveryDelivery,
+    },
+    replay: {
+      eventId: OVERAGE_API_USAGE_EVENT_ID,
+      outcome: replayOutcome,
+      providerAcceptedUsageBefore: providerAcceptedUsageBeforeReplay,
+      providerAcceptedUsageAfter: providerAcceptedUsage,
+    },
+    providerAcceptedUsage,
+    finalConvergence: {
+      delivery: recoveryDelivery,
+      backlogCount: finalDiagnostics.backlogCount,
+      oldestPendingAgeMs: finalDiagnostics.oldestPendingAgeMs,
+      retryCount: finalDiagnostics.retryCount,
+      terminalFailureCount: finalDiagnostics.terminalFailureCount,
+      converged:
+        includedFinalEntry.state === "accepted" &&
+        overageFinalEntry.state === "accepted" &&
+        finalDiagnostics.backlogCount === 0 &&
+        providerAcceptedUsage === includedRecord.value + overageRecord.value,
+    },
+  };
+}
+
+export async function recoverPendingBillableUsage() {
+  const journal = new FileBillableUsageJournal(
+    BILLABLE_USAGE_JOURNAL_PATH,
+    BILLABLE_USAGE_RECOVERY_AT,
+  );
+  const gateway = new FileUsageBillingGateway(BILLABLE_USAGE_PROVIDER_PATH);
+  const worker = new PolarUsageDeliveryWorker(journal, gateway, {
+    ownerId: "saas-demo-usage-recovery-process",
+    leaseDurationMs: 30_000,
+    maxBatchSize: 10,
+    retryBaseDelayMs: 1_000,
+    retryMaxDelayMs: 1_000,
+  });
+  const delivery = await worker.deliverNextBatch(BILLABLE_USAGE_RECOVERY_AT);
+  const entry = await journal.get(OVERAGE_API_USAGE_EVENT_ID);
+  if (entry && entry.state !== "accepted") {
+    throw new SaasBillableUsageProblem(
+      "Usage recovery process did not accept the pending overage event.",
+    );
+  }
+  return delivery;
+}
+
+async function runUsageRecoveryProcess(): Promise<RecoveryDeliveryResult> {
+  const packageManagerCli = process.env.npm_execpath;
+  if (!packageManagerCli) {
+    throw new SaasBillableUsageProblem(
+      "Usage recovery requires npm_execpath from the package manager runtime.",
+    );
+  }
+  let stdout: string;
+  try {
+    ({ stdout } = await execFileAsync(
+      process.execPath,
+      [packageManagerCli, "run", "demo:usage-recover"],
+      {
+        cwd: process.cwd(),
+        env: process.env,
+        encoding: "utf8",
+        timeout: 60_000,
+      },
+    ));
+  } catch (error) {
+    throw new SaasBillableUsageProblem(
+      `Usage recovery command failed: ${readRecoveryProcessFailure(error)}`,
+    );
+  }
+  const lastLine = stdout
+    .trim()
+    .split("\n")
+    .filter((line) => line.length > 0)
+    .at(-1);
+  if (!lastLine) {
+    throw new SaasBillableUsageProblem("Usage recovery process returned no delivery result.");
+  }
+  try {
+    return recoveryDeliverySchema.parse(JSON.parse(lastLine)) as RecoveryDeliveryResult;
+  } catch {
+    throw new SaasBillableUsageProblem(
+      "Usage recovery process returned an invalid delivery result.",
+    );
+  }
+}
+
+function readRecoveryProcessFailure(error: unknown): string {
+  if (typeof error === "object" && error !== null) {
+    const processError = error as { stderr?: unknown; stdout?: unknown };
+    for (const outputName of ["stderr", "stdout"] as const) {
+      const output = processError[outputName];
+      const text =
+        typeof output === "string"
+          ? output
+          : output instanceof Uint8Array
+            ? Buffer.from(output).toString("utf8")
+            : "";
+      if (text.trim().length > 0) return text.trim();
+    }
+  }
+  return error instanceof Error ? error.message : String(error);
+}
+
+async function requireBillableUsageEntry(journal: FileBillableUsageJournal, eventId: string) {
+  const entry = await journal.get(eventId);
+  if (!entry) {
+    throw new SaasBillableUsageProblem(`Billable usage journal entry '${eventId}' was not found.`);
+  }
+  return entry;
+}
+
 async function processBillingMockSubscriptionActivatedEvent(
   runtime: SaasRuntime,
   tenantId: string,
@@ -950,7 +1284,7 @@ async function processBillingMockSubscriptionActivatedEvent(
   const eventType = "billing.subscription_activated";
   const eventId = `${eventType}:${tenantId}:team`;
   const externalSubscriptionId = `external_subscription_${tenantId}`;
-  const pinnedPlanVersionRef = planVersionRef(`${TEAM_PLAN_ID}@v1`);
+  const pinnedPlanVersionRef = TEAM_PLAN_VERSION_REF;
 
   await runtime.billingStore.reserveWebhook(eventId, eventType);
   await runtime.billingStore.saveSubscription({
