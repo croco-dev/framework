@@ -1,6 +1,6 @@
 # {{projectName}}
 
-Croco admin console starter입니다. REST API, Vite React admin app, contract-first generated client, RFC 7807 Problem 상태, tenant-scoped resource table, form action, operations timeline, Tenant 360 workspace, append-only credit operations, lifecycle automation operations, outbound webhook reliability console을 zero-credential workspace로 연결합니다. This is not a marketing landing page.
+Croco admin console starter입니다. REST API, Vite React admin app, contract-first generated client, RFC 7807 Problem 상태, tenant-scoped resource table, form action, operations timeline, Tenant 360 workspace, monetization plan review/publish, append-only credit operations, lifecycle automation operations, outbound webhook reliability console을 zero-credential workspace로 연결합니다. This is not a marketing landing page.
 
 이 preset은 운영 콘솔의 반복 루프를 먼저 보여줍니다: tenant 선택, in-memory source와 fake provider로 Tenant 360 상태 확인, 사용자 초대, 실패한 조회의 Problem 확인, operations timeline으로 복구 상태 추적. Production auth provider, persistent storage migration, provider dashboard embedding, external credentials는 비범위입니다.
 
@@ -30,13 +30,14 @@ pnpm dev:web
 2. Tenant 360 workspace에서 plan version, usage/seat limits, onboarding, health, operations, engagement extension을 확인합니다.
 3. Credit operations console에서 실제 in-memory 원장의 grant, reserve, partial commit, expiry, refund와 grant allocation을 확인하고 actor, reason, idempotency key, ledger position이 필요한 append-only action을 실행합니다.
 4. Lifecycle automation console에서 exact rule version, descriptor evidence, production match, cooldown suppression, audited pause/resume, redacted dry-run evidence를 확인합니다.
-5. Users resource table에서 tenant별 admin 사용자를 확인합니다.
-6. Invite form으로 새 사용자를 생성합니다.
-7. Missing user probe가 `admin-console/user-not-found` Problem 상태를 표시합니다.
-8. Outbound webhook reliability console에서 endpoint secret version, logical event, delivery, attempt, retry classification을 분리해 확인합니다.
-9. `pnpm admin:smoke`의 fake endpoint transport가 success, timeout, 429 retry, permanent 4xx를 분류하고 실제 in-memory core runtime으로 rotation metadata와 idempotent audited replay를 검증합니다.
-10. 같은 smoke가 credit grant → reserve → partial commit/release → expiry → consume/refund를 실행하고, append-only position, allocation evidence, idempotent replay, duplicate conflict, stale refresh, committed event-publication recovery를 검증합니다.
-11. Operations timeline에서 invite와 Problem event가 남았는지 확인합니다.
+5. Plan release console에서 code-declared pricing fields와 catalog keys만 편집하고, structural/provider diagnostics, semantic diff, impact evidence, stale review invalidation, blocked/corrected/scheduled publication을 확인합니다.
+6. Users resource table에서 tenant별 admin 사용자를 확인합니다.
+7. Invite form으로 새 사용자를 생성합니다.
+8. Missing user probe가 `admin-console/user-not-found` Problem 상태를 표시합니다.
+9. Outbound webhook reliability console에서 endpoint secret version, logical event, delivery, attempt, retry classification을 분리해 확인합니다.
+10. `pnpm admin:smoke`의 fake endpoint transport가 success, timeout, 429 retry, permanent 4xx를 분류하고 실제 in-memory core runtime으로 rotation metadata와 idempotent audited replay를 검증합니다.
+11. 같은 smoke가 credit grant → reserve → partial commit/release → expiry → consume/refund를 실행하고, append-only position, allocation evidence, idempotent replay, duplicate conflict, stale refresh, committed event-publication recovery를 검증합니다.
+12. Operations timeline에서 invite와 Problem event가 남았는지 확인합니다.
 
 ## Recovery States
 
@@ -50,6 +51,9 @@ pnpm dev:web
 - Lifecycle cooldown suppression: cooldown 구간의 signal은 `suppressed-cooldown` outcome으로 남고 action은 dispatch되지 않습니다.
 - Lifecycle dry-run failure: 생성 demo의 잘못된 fixture는 `admin-react/lifecycle-dry-run-fixture-not-found`로 표시되며 production action이나 cooldown을 소비하지 않습니다. `admin-react/lifecycle-pasted-context-invalid`는 서버 측 pasted-context validator를 구성한 애플리케이션을 위한 framework-level contract입니다.
 - Lifecycle retryable failure: admin-ops recovery 계약이 retry/replay를 안전하다고 선언한 run에만 복구 컨트롤을 표시합니다.
+- Plan review invalidation: draft revision이 바뀌면 이전 review evidence로 publish하거나 schedule할 수 없습니다. 현재 semantic diff와 structural/provider validation을 다시 검토합니다.
+- Plan validation failure: blocking diagnostics는 warning과 별도 alert로 표시되며 provider/repository Problem은 빈 validation 결과로 대체되지 않습니다.
+- Plan publish confirmation: publish와 schedule은 permission, actor, reason, idempotency key, exact reviewed revision을 요구합니다. stale conflict는 local draft와 latest server evidence를 모두 유지합니다.
 - Contract drift: `pnpm contract:verify`가 snapshot diff, canonical graph, Project Map manifest bundle, OpenAPI/client output drift, generated client typecheck를 쓰기 없이 검사합니다. 의도한 출력 변경은 `pnpm codegen`으로 반영합니다.
 - DI graph drift: 의도적으로 갱신할 때 `pnpm di:graph`를 실행합니다. `pnpm di:verify`는 기존 `.croco/build/di-graph.manifest.json`과 Project Map 산출물을 변경하지 않은 채 검사하고 `croco doctor --json`을 실행합니다.
 
@@ -76,6 +80,7 @@ apps/console-web/src/CreditOperationsDemo.tsx       append-only in-memory credit
 apps/console-web/src/TenantWorkspaceDemo.tsx         in-memory Tenant 360 sources and fake provider fixture
 apps/console-web/src/WebhookReliabilityDemo.tsx      fake outbound webhook operations states
 apps/console-web/src/LifecycleAutomationDemo.tsx      versioned rule operations and dry-run fixture
+apps/console-web/src/PlanReleaseDemo.tsx              fake-provider plan draft/review/publish workflow
 apps/console-web/src/test                           fail-closed MSW browser boundary
 tests/journeys                                     Playwright success and Problem journeys
 libs/shared/provider-rpc/src/admin.ts               generated by pnpm contract:client

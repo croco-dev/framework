@@ -5,7 +5,7 @@
     "paths": {
       "@croco/admin-core": ["../admin-core/src/index.ts"],
       "@croco/admin-ops": ["../admin-ops/src/libs/types.ts"],
-      "@croco/billing-core": ["../billing-core/src/types.ts"],
+      "@croco/billing-core": ["../billing-core/src/index.ts"],
       "@croco/entitlements-core": ["../entitlements-core/src/libs/types.ts"],
       "@croco/impersonation-core": ["../impersonation-core/src/libs/types.ts"],
       "@croco/lifecycle-core": ["../lifecycle-core/src/index.ts"],

@@ -375,6 +375,8 @@ function checkAdminConsoleStructure() {
     "CreditOperations.spec.ts",
   );
   checkFileExists("admin-console", "apps", "console-web", "src", "LifecycleAutomationDemo.tsx");
+  checkFileExists("admin-console", "apps", "console-web", "src", "PlanReleaseDemo.tsx");
+  checkFileExists("admin-console", "tests", "journeys", "plan-release.spec.ts");
   checkFileExists("admin-console", "apps", "console-web", "src", "TenantWorkspaceDemo.tsx");
   checkFileExists("admin-console", "apps", "console-web", "src", "WebhookReliabilityDemo.tsx");
   checkFileExists("admin-console", "apps", "api-server", "src", "webhook-smoke.ts");
@@ -443,6 +445,7 @@ function checkAdminConsoleStructure() {
       "@croco/admin-core": "workspace:*",
       "@croco/admin-ops": "workspace:*",
       "@croco/admin-react": "workspace:*",
+      "@croco/billing-core": "workspace:*",
       "@croco/events-core": "workspace:*",
     }),
     scripts: expect.objectContaining({
@@ -505,6 +508,21 @@ function checkAdminConsoleStructure() {
     "admin-console",
     ["apps", "console-web", "src", "LifecycleAutomationDemo.tsx"],
     /demo-activate-customer-risk/,
+  );
+  checkFileContains(
+    "admin-console",
+    ["apps", "console-web", "src", "PlanReleaseDemo.tsx"],
+    /blocked-publish[\s\S]*corrected-publish[\s\S]*scheduled-publish/,
+  );
+  checkFileContains(
+    "admin-console",
+    ["apps", "console-web", "src", "PlanReleaseDemo.tsx"],
+    /credential-free-structural[\s\S]*remote-provider-preflight/,
+  );
+  checkFileContains(
+    "admin-console",
+    ["tests", "journeys", "plan-release.spec.ts"],
+    /blocked-publish[\s\S]*Fake Stripe[\s\S]*corrected-publish[\s\S]*scheduled-publish/,
   );
   checkFileContains(
     "admin-console",

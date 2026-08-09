@@ -4,6 +4,44 @@ Provider-neutral React contracts and primitives for SaaS billing, entitlement,
 tenant switching, impersonation, and permission inspection administration.
 Also includes contract-aware admin resource tables.
 
+## Monetization plan releases
+
+`PlanReleaseConsole` renders the React-independent `PlanReleaseConsoleState` contract for editing,
+validating, reviewing, scheduling, and publishing immutable billing plan versions. The editor renders
+only code-declared fields and catalog options, so browser operators cannot invent meter, entitlement,
+pricing-component, or provider-binding keys.
+
+```tsx
+import { PlanReleaseConsole } from "@croco/admin-react";
+
+export function PlanReleaseOperations() {
+  return (
+    <PlanReleaseConsole
+      state={state}
+      command={{
+        actorId: operator.id,
+        reason,
+        idempotencyKey,
+        scheduledFor,
+      }}
+      onEdit={(request) => updateDraft(request)}
+      onAction={(action, request) => executeReleaseAction(action, request)}
+      onRequestConfirmation={(action) => confirmDestructiveAction(action)}
+    />
+  );
+}
+```
+
+Semantic review groups price, seat, usage, entitlement, trial, provider, and effective-time changes
+without exposing raw JSON. Blocking diagnostics use alert semantics and remain separate from warnings;
+credential-free structural checks remain separate from remote-provider preflight. Impact items identify
+facts versus estimates for new subscriptions, grandfathered subscriptions, and selected cohorts.
+
+Publish and schedule actions require a current reviewed draft revision, explicit permission, actor,
+reason, and idempotency key. A draft mutation invalidates the earlier review. Stale conflicts preserve
+the local draft alongside the latest server snapshot, provider/repository failures remain typed Problems,
+and successful publication renders an immutable receipt with audit and validation evidence.
+
 ## Tenant credit operations
 
 `CreditOperationsConsole` renders the React-independent `CreditOperationsState`
