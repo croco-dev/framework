@@ -10,9 +10,34 @@ PostHog through the Croco integration layer.
 
 - `PostHogClient` - initializes and wraps the PostHog Node client.
 - `PostHogConfig` - configuration type for API key and host settings.
+- `POSTHOG_CONFIG_TOKEN` - typed DI token for PostHog configuration.
+- `registerPostHogConfig` - validates and registers configuration before client resolution.
 - `PostHogConfigProblem` - stable Problem for missing or invalid PostHog config.
 
-## Usage
+## Dependency injection
+
+Register configuration during application startup before resolving `PostHogClient` or a component
+that depends on it. The API key must be non-empty and the host must be an HTTP(S) URL.
+
+```typescript
+import { Container } from "@croco/framework-context";
+import { PostHogClient, registerPostHogConfig } from "@croco/integrations-posthog";
+
+registerPostHogConfig({
+  apiKey: process.env.POSTHOG_API_KEY ?? "",
+  host: process.env.POSTHOG_HOST,
+});
+
+const posthog = Container.get(PostHogClient);
+```
+
+Missing registration fails with the stable `framework-context/di-resolution-failed` diagnostic.
+Invalid registered values fail with `integrations-posthog/missing-config` before the container is
+mutated.
+
+## Direct construction
+
+Direct construction remains supported and applies the same configuration validation.
 
 ```typescript
 import { PostHogClient } from "@croco/integrations-posthog";

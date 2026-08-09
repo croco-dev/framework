@@ -1,34 +1,24 @@
-import { Component, Container, type ILogger, LOGGER_TOKEN } from "@croco/framework-context";
+import { Component, Inject } from "@croco/framework-context";
 import { PostHog } from "posthog-node";
-import { PostHogConfigProblem } from "./problems/PostHogProblems";
 
-export interface PostHogConfig {
-  apiKey: string;
-  host?: string;
-}
+import {
+  POSTHOG_CONFIG_TOKEN,
+  validatePostHogConfig,
+  warnAboutEnvironmentHost,
+} from "./PostHogConfig";
+import type { PostHogConfig } from "./PostHogConfig";
+
+export type { PostHogConfig } from "./PostHogConfig";
 
 @Component()
 export class PostHogClient {
   private client: PostHog;
 
-  constructor(config: PostHogConfig) {
-    const envHost = process.env.POSTHOG_HOST;
-    const host = config.host ?? envHost;
+  constructor(@Inject(POSTHOG_CONFIG_TOKEN) config: PostHogConfig) {
+    const host = validatePostHogConfig(config);
 
-    if (!host) {
-      throw new PostHogConfigProblem(
-        "[PostHogClient] PostHog host is required for data residency compliance. " +
-          "Set host in config or POSTHOG_HOST env var. " +
-          "Default (app.posthog.com) routes data to US servers.",
-      );
-    }
-
-    if (!config.host && envHost) {
-      const logger = Container.get(LOGGER_TOKEN) as ILogger;
-      logger.warn(
-        "[PostHogClient] POSTHOG_HOST env var is used for PostHog host. " +
-          "Set host explicitly in config to confirm data residency compliance.",
-      );
+    if (!config.host) {
+      warnAboutEnvironmentHost();
     }
 
     this.client = new PostHog(config.apiKey, {

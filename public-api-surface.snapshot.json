@@ -13328,6 +13328,12 @@
           "sourceEntrypoint": "packages/integrations-posthog/src/index.ts",
           "runtimeExports": [
             {
+              "name": "POSTHOG_CONFIG_TOKEN",
+              "exportKind": "named",
+              "source": "./libs/PostHogConfig",
+              "declarationKind": "const"
+            },
+            {
               "name": "PostHogClient",
               "exportKind": "named",
               "source": "./libs/PostHogClient",
@@ -13338,6 +13344,12 @@
               "exportKind": "named",
               "source": "./libs/problems/PostHogProblems",
               "declarationKind": "class"
+            },
+            {
+              "name": "registerPostHogConfig",
+              "exportKind": "named",
+              "source": "./libs/PostHogConfig",
+              "declarationKind": "function"
             }
           ],
           "typeExports": [
