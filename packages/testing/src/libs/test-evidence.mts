@@ -85,6 +85,7 @@ export type TestEvidenceRecord = {
   readonly schemaVersion: typeof TEST_EVIDENCE_SCHEMA_VERSION;
   readonly id: string;
   readonly runner: TestEvidenceRunner;
+  readonly packageName?: string;
   readonly outcome: TestEvidenceOutcome;
   readonly intent: TestEvidenceIntent;
   readonly observed: TestEvidenceObservation;
@@ -292,6 +293,7 @@ export function assertTestEvidenceRecord(value: unknown): asserts value is TestE
       "schemaVersion",
       "id",
       "runner",
+      "packageName",
       "outcome",
       "intent",
       "observed",
@@ -313,6 +315,9 @@ export function assertTestEvidenceRecord(value: unknown): asserts value is TestE
     );
   }
   assertNonEmpty(record.id, "Evidence id");
+  if (record.packageName !== undefined) {
+    assertNonEmpty(record.packageName, `Evidence '${record.id}' packageName`);
+  }
   assertEnum(record.runner, RUNNERS, `Evidence '${record.id}' runner`);
   const attempts = Array.isArray(record.attempts)
     ? [...record.attempts].sort((left, right) => {

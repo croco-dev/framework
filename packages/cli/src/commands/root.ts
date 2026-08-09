@@ -77,6 +77,11 @@ export function createCrocoCommand() {
         "Inspect Croco project artifacts",
         async () => (await import("./project.js")).project as LoadedCommand,
       ),
+      test: lazyCommand(
+        "test",
+        "Plan Croco test execution from executable assurance artifacts",
+        async () => (await import("./test.js")).test as LoadedCommand,
+      ),
       upgrade: lazyCommand(
         "upgrade",
         "Report and apply safe Croco version migration codemods",

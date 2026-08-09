@@ -26,6 +26,11 @@
         "require": "./dist/drizzle.js",
         "types": "./dist/drizzle.d.ts"
       },
+      "./executable-assurance": {
+        "import": "./dist/executable-assurance.mjs",
+        "require": "./dist/executable-assurance.js",
+        "types": "./dist/executable-assurance.d.ts"
+      },
       "./playwright-reporter": {
         "types": "./dist/playwright-reporter.d.ts",
         "import": "./dist/playwright-reporter.mjs",

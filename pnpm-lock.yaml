@@ -857,6 +857,9 @@ importers:
       '@croco/rpc-codegen':
         specifier: workspace:*
         version: link:../rpc-codegen
+      '@croco/testing':
+        specifier: workspace:*
+        version: link:../testing
       citty:
         specifier: ^0.1.6
         version: 0.1.6

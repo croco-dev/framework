@@ -11,7 +11,7 @@ title: "serializeExecutableAssurance"
 
 ### value
 
-[`ExecutableAssuranceReport`](/api/testing/src/type-aliases/executableassurancereport/) \| [`ExecutableAssuranceGraph`](/api/testing/src/type-aliases/executableassurancegraph/)
+[`ExecutableAssuranceGraph`](/api/testing/src/type-aliases/executableassurancegraph/) \| [`ExecutableAssuranceReport`](/api/testing/src/type-aliases/executableassurancereport/)
 
 ## Returns
 

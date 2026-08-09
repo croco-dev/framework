@@ -26063,6 +26063,18 @@
           "sourceEntrypoint": "packages/testing/src/index.ts",
           "runtimeExports": [
             {
+              "name": "assertChangedTestPlanEnforceable",
+              "exportKind": "named",
+              "source": "./libs/changed-test-plan.mjs",
+              "declarationKind": "function"
+            },
+            {
+              "name": "assertChangedTestSelectionBaseline",
+              "exportKind": "named",
+              "source": "./libs/changed-test-plan.mjs",
+              "declarationKind": "function"
+            },
+            {
               "name": "assertContractObservation",
               "exportKind": "named",
               "source": "./libs/contract-testing",
@@ -26141,6 +26153,24 @@
               "declarationKind": "function"
             },
             {
+              "name": "CHANGED_TEST_PLAN_VERSION",
+              "exportKind": "named",
+              "source": "./libs/changed-test-plan.mjs",
+              "declarationKind": "const"
+            },
+            {
+              "name": "CHANGED_TEST_SELECTION_BASELINE_VERSION",
+              "exportKind": "named",
+              "source": "./libs/changed-test-plan.mjs",
+              "declarationKind": "const"
+            },
+            {
+              "name": "ChangedTestPlanProblem",
+              "exportKind": "named",
+              "source": "./libs/changed-test-plan.mjs",
+              "declarationKind": "class"
+            },
+            {
               "name": "classifyTestEvidenceOutcome",
               "exportKind": "named",
               "source": "./libs/test-evidence.mjs",
@@ -26192,6 +26222,12 @@
               "name": "createBillingProviderConformanceSuite",
               "exportKind": "named",
               "source": "./libs/billing-provider-conformance",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createChangedTestPlan",
+              "exportKind": "named",
+              "source": "./libs/changed-test-plan.mjs",
               "declarationKind": "function"
             },
             {
@@ -26591,6 +26627,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "serializeChangedTestPlan",
+              "exportKind": "named",
+              "source": "./libs/changed-test-plan.mjs",
+              "declarationKind": "function"
+            },
+            {
               "name": "serializeExecutableAssurance",
               "exportKind": "named",
               "source": "./libs/executable-assurance.mjs",
@@ -26775,6 +26817,12 @@
               "exportKind": "named",
               "source": "./libs/contract-testing",
               "declarationKind": "class"
+            },
+            {
+              "name": "updateChangedTestSelectionBaseline",
+              "exportKind": "named",
+              "source": "./libs/changed-test-plan.mjs",
+              "declarationKind": "function"
             }
           ],
           "typeExports": [
@@ -27007,6 +27055,46 @@
               "name": "CapturedSpanException",
               "exportKind": "named",
               "source": "./libs/telemetry-testing"
+            },
+            {
+              "name": "ChangedTestExclusion",
+              "exportKind": "named",
+              "source": "./libs/changed-test-plan.mjs"
+            },
+            {
+              "name": "ChangedTestFallback",
+              "exportKind": "named",
+              "source": "./libs/changed-test-plan.mjs"
+            },
+            {
+              "name": "ChangedTestPlan",
+              "exportKind": "named",
+              "source": "./libs/changed-test-plan.mjs"
+            },
+            {
+              "name": "ChangedTestPlanInput",
+              "exportKind": "named",
+              "source": "./libs/changed-test-plan.mjs"
+            },
+            {
+              "name": "ChangedTestSelectionBaseline",
+              "exportKind": "named",
+              "source": "./libs/changed-test-plan.mjs"
+            },
+            {
+              "name": "ChangedTestSelectionReason",
+              "exportKind": "named",
+              "source": "./libs/changed-test-plan.mjs"
+            },
+            {
+              "name": "ChangedTestSource",
+              "exportKind": "named",
+              "source": "./libs/changed-test-plan.mjs"
+            },
+            {
+              "name": "ChangedTestSuite",
+              "exportKind": "named",
+              "source": "./libs/changed-test-plan.mjs"
             },
             {
               "name": "ContractExecutionObservation",
@@ -28077,6 +28165,217 @@
               "name": "DrizzleProviderTransactionConformance",
               "exportKind": "named",
               "source": "./libs/drizzle-provider-conformance"
+            }
+          ]
+        },
+        {
+          "exportPath": "./executable-assurance",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["import"],
+              "target": "./dist/executable-assurance.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/executable-assurance.js"
+            },
+            {
+              "conditions": ["types"],
+              "target": "./dist/executable-assurance.d.ts"
+            }
+          ],
+          "sourceEntrypoint": "packages/testing/src/executable-assurance.ts",
+          "runtimeExports": [
+            {
+              "name": "assertChangedTestPlanEnforceable",
+              "exportKind": "named",
+              "source": "./libs/changed-test-plan.mjs",
+              "declarationKind": "function"
+            },
+            {
+              "name": "assertChangedTestSelectionBaseline",
+              "exportKind": "named",
+              "source": "./libs/changed-test-plan.mjs",
+              "declarationKind": "function"
+            },
+            {
+              "name": "assertExecutableAssuranceGraph",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs",
+              "declarationKind": "function"
+            },
+            {
+              "name": "assertExecutableAssuranceSatisfied",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs",
+              "declarationKind": "function"
+            },
+            {
+              "name": "assertTestEvidenceBundle",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs",
+              "declarationKind": "function"
+            },
+            {
+              "name": "CHANGED_TEST_PLAN_VERSION",
+              "exportKind": "named",
+              "source": "./libs/changed-test-plan.mjs",
+              "declarationKind": "const"
+            },
+            {
+              "name": "CHANGED_TEST_SELECTION_BASELINE_VERSION",
+              "exportKind": "named",
+              "source": "./libs/changed-test-plan.mjs",
+              "declarationKind": "const"
+            },
+            {
+              "name": "ChangedTestPlanProblem",
+              "exportKind": "named",
+              "source": "./libs/changed-test-plan.mjs",
+              "declarationKind": "class"
+            },
+            {
+              "name": "createChangedTestPlan",
+              "exportKind": "named",
+              "source": "./libs/changed-test-plan.mjs",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createExecutableAssuranceGraph",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createTestEvidenceBundle",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createTestEvidenceRecord",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs",
+              "declarationKind": "function"
+            },
+            {
+              "name": "evaluateExecutableAssuranceGraph",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs",
+              "declarationKind": "function"
+            },
+            {
+              "name": "renderExecutableAssuranceMarkdown",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs",
+              "declarationKind": "function"
+            },
+            {
+              "name": "serializeChangedTestPlan",
+              "exportKind": "named",
+              "source": "./libs/changed-test-plan.mjs",
+              "declarationKind": "function"
+            },
+            {
+              "name": "serializeExecutableAssurance",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs",
+              "declarationKind": "function"
+            },
+            {
+              "name": "serializeTestEvidence",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs",
+              "declarationKind": "function"
+            },
+            {
+              "name": "updateChangedTestSelectionBaseline",
+              "exportKind": "named",
+              "source": "./libs/changed-test-plan.mjs",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "AssuranceBehaviorKind",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs"
+            },
+            {
+              "name": "AssuranceBehaviorNode",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs"
+            },
+            {
+              "name": "AssuranceEvidenceObligation",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs"
+            },
+            {
+              "name": "AssuranceSourceLocation",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs"
+            },
+            {
+              "name": "ChangedTestExclusion",
+              "exportKind": "named",
+              "source": "./libs/changed-test-plan.mjs"
+            },
+            {
+              "name": "ChangedTestFallback",
+              "exportKind": "named",
+              "source": "./libs/changed-test-plan.mjs"
+            },
+            {
+              "name": "ChangedTestPlan",
+              "exportKind": "named",
+              "source": "./libs/changed-test-plan.mjs"
+            },
+            {
+              "name": "ChangedTestPlanInput",
+              "exportKind": "named",
+              "source": "./libs/changed-test-plan.mjs"
+            },
+            {
+              "name": "ChangedTestSelectionBaseline",
+              "exportKind": "named",
+              "source": "./libs/changed-test-plan.mjs"
+            },
+            {
+              "name": "ChangedTestSelectionReason",
+              "exportKind": "named",
+              "source": "./libs/changed-test-plan.mjs"
+            },
+            {
+              "name": "ChangedTestSource",
+              "exportKind": "named",
+              "source": "./libs/changed-test-plan.mjs"
+            },
+            {
+              "name": "ChangedTestSuite",
+              "exportKind": "named",
+              "source": "./libs/changed-test-plan.mjs"
+            },
+            {
+              "name": "ExecutableAssuranceGraph",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs"
+            },
+            {
+              "name": "ExecutableAssuranceGraphInput",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs"
+            },
+            {
+              "name": "TestEvidenceBundle",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs"
+            },
+            {
+              "name": "TestEvidenceRecord",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs"
             }
           ]
         },

@@ -60,6 +60,12 @@ function createGraph(): ExecutableAssuranceGraph {
       version: "croco.project-map.manifest.v1",
       routeGraph: { routes: [] },
       problems: { responses: [] },
+      packageGraph: {
+        providerProfile: {
+          profileName: "saas-node",
+          packages: ["@croco/storage-s3"],
+        },
+      },
     },
     tasks: [{ name: "user.welcome", source: { path: "src/tasks/UserWelcome.ts", line: 7 } }],
     runtimeCapability: {
@@ -190,6 +196,7 @@ describe("Executable Assurance Graph", () => {
       providerConformance: "croco.provider-conformance.manifest.v1",
       providerProfile: "croco.saas-provider-profile/v1",
       projectMap: "croco.project-map.manifest.v1",
+      "projectMap+providerProfile": "croco.project-map.manifest.v1+croco.saas-provider-profile/v1",
       publicApi: "croco.public-api-surface/v2",
       runtimeCapability: "croco.runtime-capability.manifest.v1",
       tasks: "croco.task-metadata/v1",
@@ -208,6 +215,9 @@ describe("Executable Assurance Graph", () => {
       ]),
     );
     expect(graph.obligations).toHaveLength(7);
+    expect(
+      graph.nodes.filter(({ id }) => id === "provider-profile:saas-node/@croco/storage-s3"),
+    ).toEqual([expect.objectContaining({ artifact: "projectMap+providerProfile" })]);
   });
 
   it("can derive route and Problem obligations from a generated Project Map", () => {
@@ -266,6 +276,26 @@ describe("Executable Assurance Graph", () => {
         },
       }),
     ).toThrow(ExecutableAssuranceContractProblem);
+  });
+
+  it("rejects drift between Project Map and standalone provider-profile artifacts", () => {
+    expect(() =>
+      createExecutableAssuranceGraph({
+        projectMap: {
+          version: "croco.project-map.manifest.v1",
+          routeGraph: { routes: [] },
+          problems: { responses: [] },
+          packageGraph: {
+            providerProfile: { profileName: "saas-node", packages: ["@croco/storage-s3"] },
+          },
+        },
+        providerProfile: {
+          schemaVersion: "croco.saas-provider-profile/v1",
+          profile: { name: "saas-cloudflare" },
+          packages: ["@croco/storage-r2"],
+        },
+      }),
+    ).toThrow("Project Map and provider-profile artifact disagree");
   });
 
   it("satisfies obligations only when intent, observation, outcome, and fidelity agree", () => {

@@ -31,7 +31,35 @@ title: "VitestTask"
 
 ***
 
+### module?
+
+> `readonly` `optional` **module?**: `object`
+
+#### moduleId
+
+> `readonly` **moduleId**: `string`
+
+***
+
 ### name
+
+> `readonly` **name**: `string`
+
+***
+
+### project?
+
+> `readonly` `optional` **project?**: `object`
+
+#### config?
+
+> `readonly` `optional` **config?**: `object`
+
+##### config.root?
+
+> `readonly` `optional` **root?**: `string`
+
+#### name
 
 > `readonly` **name**: `string`
 

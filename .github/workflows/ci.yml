@@ -20,7 +20,7 @@ jobs:
   validate:
     needs: changes
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     env:
       # renovate: datasource=docker depName=ghcr.io/gitleaks/gitleaks
       GITLEAKS_IMAGE: ghcr.io/gitleaks/gitleaks:v8.23.0@sha256:b4b81841085b4060054a71155500a340e3d2e2a5995c186546649e3efd80b84e
@@ -210,6 +210,79 @@ jobs:
             pnpm --filter @croco/testing test
           fi
 
+      - name: Run full test suite for changed-test shadow
+        if: always() && github.event_name == 'pull_request'
+        continue-on-error: true
+        env:
+          CROCO_TEST_EVIDENCE_DIR: ${{ github.workspace }}/ci-reports/changed-test-plan/full-evidence/records
+        run: |
+          started_at=$(date +%s)
+          set +e
+          pnpm --filter @croco/testing build
+          full_suite_status=$?
+          if [ "$full_suite_status" -eq 0 ]; then
+            pnpm turbo run test --force --continue=always -- \
+              --reporter=default \
+              --reporter=${{ github.workspace }}/packages/testing/dist/vitest-reporter.mjs
+            full_suite_status=$?
+          fi
+          node --experimental-strip-types scripts/changed-test-full-suite-status.mts \
+            "$full_suite_status" \
+            ci-reports/changed-test-plan/full-evidence/records/full-suite-status.json
+          elapsed_seconds=$(($(date +%s) - started_at))
+          echo "Changed-test shadow full suite: ${elapsed_seconds}s on ${{ runner.os }}/${{ runner.arch }}." >> "$GITHUB_STEP_SUMMARY"
+          exit "$full_suite_status"
+
+      - name: Assert changed-test shadow evidence completeness
+        if: always() && github.event_name == 'pull_request'
+        continue-on-error: true
+        shell: bash
+        run: |
+          evidence_count=$(find ci-reports/changed-test-plan/full-evidence/records -type f -name 'vitest-*.json' 2>/dev/null | wc -l | tr -d ' ')
+          if [ "$evidence_count" -eq 0 ]; then
+            echo "The uncached full Vitest suite emitted no changed-test shadow evidence." >&2
+            exit 1
+          fi
+
+      - name: Restore changed-test shadow baseline
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ci-reports/changed-test-plan/baseline.json
+          key: changed-test-plan-${{ github.event.pull_request.number }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            changed-test-plan-${{ github.event.pull_request.number }}-
+
+      - name: Aggregate changed-test shadow full evidence
+        if: always() && github.event_name == 'pull_request'
+        continue-on-error: true
+        shell: bash
+        run: |
+          shadow_args=()
+          if [ -d ci-reports/changed-test-plan/full-evidence/records ]; then
+            while IFS= read -r evidence_record; do
+              shadow_args+=(--input "$evidence_record")
+            done < <(find ci-reports/changed-test-plan/full-evidence/records -type f -name '*.json' -print | sort)
+          fi
+          if [ "${#shadow_args[@]}" -gt 0 ]; then
+            node --experimental-strip-types scripts/test-evidence-bundle.mts "${shadow_args[@]}" --output ci-reports/changed-test-plan/full-evidence
+          else
+            echo "No full-suite shadow evidence was emitted." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Measure changed-test selection misses
+        if: always() && github.event_name == 'pull_request' && hashFiles('ci-reports/changed-test-plan/full-evidence/bundle.json') != ''
+        continue-on-error: true
+        env:
+          VERIFICATION_BASE: ${{ needs.changes.outputs.base }}
+        run: |
+          node --experimental-strip-types scripts/changed-test-plan-shadow.mts \
+            --base "$VERIFICATION_BASE" \
+            --full-evidence ci-reports/changed-test-plan/full-evidence/bundle.json \
+            --output ci-reports/changed-test-plan \
+            --execute-selected
+          cat ci-reports/changed-test-plan/summary.md >> "$GITHUB_STEP_SUMMARY"
+
       - name: Aggregate executable test evidence
         if: always()
         shell: bash
@@ -251,6 +324,7 @@ jobs:
             ci-reports/verification
             ci-reports/release
             ci-reports/test-evidence
+            ci-reports/changed-test-plan
           include-hidden-files: true
           if-no-files-found: warn
 
