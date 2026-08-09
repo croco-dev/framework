@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 584,
+  problemCount: 585,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -6636,6 +6636,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 1705,
           column: 13,
           kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "framework-context/runtime-inspector-invalid-configuration",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#framework-context-runtime-inspector-invalid-configuration",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/framework-context/src/libs/problems/RuntimeInspectorProblems.ts",
+          line: 10,
+          column: 3,
+          kind: "problem-class",
         },
       ],
     },

@@ -469,6 +469,10 @@ const frameworkContextCompatibilityContract = {
           source: "./libs/types",
           names: ["RuntimeInspectorRecorder", "RuntimeInspectorRecorderEventInput"],
         },
+        {
+          source: "./libs/problems/RuntimeInspectorProblems",
+          names: ["RuntimeInspectorConfigurationProblem", "RuntimeInspectorNumericOption"],
+        },
       ],
     },
     {
