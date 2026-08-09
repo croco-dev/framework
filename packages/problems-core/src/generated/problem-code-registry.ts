@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 601,
+  problemCount: 604,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -2152,6 +2152,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "billing/checkout-idempotency-drift",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#billing-checkout-idempotency-drift",
+      recovery: {
+        cause:
+          "The generated billing drill detected more than one committed checkout after response-loss retries completed.",
+        userAction:
+          "Do not retry checkout again; report the affected checkout intent for investigation and reconciliation.",
+        operatorAction:
+          "Inspect the checkout idempotency key, provider attempts, and committed records, then reconcile duplicate checkout state before resuming the flow.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/create-croco-app/templates/saas/apps/api-server/src/demo/failure-drill-smoke.ts",
+          line: 185,
+          column: 13,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
       code: "billing/checkout-in-progress",
       category: "Conflict",
       status: 409,
@@ -2178,6 +2211,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 100,
           column: 3,
           kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "billing/checkout-response-lost",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#billing-checkout-response-lost",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/create-croco-app/templates/saas/apps/api-server/src/demo/failure-drill-smoke.ts",
+          line: 161,
+          column: 9,
+          kind: "problem-factory",
         },
       ],
     },
@@ -15950,6 +16015,36 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/testing/src/libs/testing.ts",
           line: 184,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "testing/scenario-contract-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#testing-scenario-contract-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/testing/src/libs/ScenarioRuntime.ts",
+          line: 131,
           column: 5,
           kind: "problem-constructor",
         },

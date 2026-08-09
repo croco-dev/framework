@@ -218,6 +218,14 @@ Generated apps can override individual catalog entries with app-backed scenarios
 same evidence contract. This keeps failure injection in smoke/test code instead of adding production
 fallback branches.
 
+`createScenarioRuntime()` composes application-specific timelines around named Croco transaction,
+event, task, trigger, provider, retry, and telemetry boundaries. Failure steps are ordered and can
+inject duplicate delivery, response loss, virtual-time timeout, retryable or terminal failure,
+process interruption, and exporter failure. Fluent expectations verify Problem codes, recovery,
+diagnostic, audit, event, task, and telemetry multiplicity. Each successful run returns a stable
+`croco.scenario-report/v1` artifact whose scenario ID, seed, initial virtual time, and serialized
+failure timeline can be passed to `replayScenarioRuntime()`.
+
 ### Operational failure evidence
 
 `createOperationalFailureDrillMatrix()` is the additive contract for generated-app and release

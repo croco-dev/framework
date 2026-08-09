@@ -25968,6 +25968,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "createScenarioRuntime",
+              "exportKind": "named",
+              "source": "./libs/ScenarioRuntime",
+              "declarationKind": "function"
+            },
+            {
               "name": "createStorageProviderConformanceSuite",
               "exportKind": "named",
               "source": "./libs/provider-conformance",
@@ -26064,6 +26070,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "duplicateDelivery",
+              "exportKind": "named",
+              "source": "./libs/ScenarioRuntime",
+              "declarationKind": "function"
+            },
+            {
               "name": "evaluateExecutableAssuranceGraph",
               "exportKind": "named",
               "source": "./libs/executable-assurance.mjs",
@@ -26094,6 +26106,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "failExporter",
+              "exportKind": "named",
+              "source": "./libs/ScenarioRuntime",
+              "declarationKind": "function"
+            },
+            {
               "name": "FAILURE_DRILL_SCENARIO_IDS",
               "exportKind": "named",
               "source": "./libs/failure-drill",
@@ -26109,6 +26127,18 @@
               "name": "installTestingTelemetryCapture",
               "exportKind": "named",
               "source": "./libs/telemetry-testing",
+              "declarationKind": "function"
+            },
+            {
+              "name": "interruptProcess",
+              "exportKind": "named",
+              "source": "./libs/ScenarioRuntime",
+              "declarationKind": "function"
+            },
+            {
+              "name": "loseResponse",
+              "exportKind": "named",
+              "source": "./libs/ScenarioRuntime",
               "declarationKind": "function"
             },
             {
@@ -26166,9 +26196,21 @@
               "declarationKind": "function"
             },
             {
+              "name": "replayScenarioRuntime",
+              "exportKind": "named",
+              "source": "./libs/ScenarioRuntime",
+              "declarationKind": "function"
+            },
+            {
               "name": "resetCrocoTestingContext",
               "exportKind": "named",
               "source": "./libs/testing",
+              "declarationKind": "function"
+            },
+            {
+              "name": "retryableFailure",
+              "exportKind": "named",
+              "source": "./libs/ScenarioRuntime",
               "declarationKind": "function"
             },
             {
@@ -26202,6 +26244,24 @@
               "declarationKind": "function"
             },
             {
+              "name": "SCENARIO_REPORT_SCHEMA_VERSION",
+              "exportKind": "named",
+              "source": "./libs/ScenarioRuntime",
+              "declarationKind": "const"
+            },
+            {
+              "name": "ScenarioContractProblem",
+              "exportKind": "named",
+              "source": "./libs/ScenarioRuntime",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ScenarioRuntime",
+              "exportKind": "named",
+              "source": "./libs/ScenarioRuntime",
+              "declarationKind": "class"
+            },
+            {
               "name": "seededIds",
               "exportKind": "named",
               "source": "./libs/TestRuntime",
@@ -26220,9 +26280,21 @@
               "declarationKind": "function"
             },
             {
+              "name": "serializeScenarioReport",
+              "exportKind": "named",
+              "source": "./libs/ScenarioRuntime",
+              "declarationKind": "function"
+            },
+            {
               "name": "serializeTestEvidence",
               "exportKind": "named",
               "source": "./libs/test-evidence.mjs",
+              "declarationKind": "function"
+            },
+            {
+              "name": "terminalFailure",
+              "exportKind": "named",
+              "source": "./libs/ScenarioRuntime",
               "declarationKind": "function"
             },
             {
@@ -26368,6 +26440,12 @@
               "exportKind": "named",
               "source": "./libs/TestRuntime",
               "declarationKind": "class"
+            },
+            {
+              "name": "timeout",
+              "exportKind": "named",
+              "source": "./libs/ScenarioRuntime",
+              "declarationKind": "function"
             }
           ],
           "typeExports": [
@@ -27050,6 +27128,86 @@
               "name": "ResetCrocoTestingContextOptions",
               "exportKind": "named",
               "source": "./libs/testing"
+            },
+            {
+              "name": "ScenarioBoundary",
+              "exportKind": "named",
+              "source": "./libs/ScenarioRuntime"
+            },
+            {
+              "name": "ScenarioDuplicateDelivery",
+              "exportKind": "named",
+              "source": "./libs/ScenarioRuntime"
+            },
+            {
+              "name": "ScenarioEvidence",
+              "exportKind": "named",
+              "source": "./libs/ScenarioRuntime"
+            },
+            {
+              "name": "ScenarioEvidenceKind",
+              "exportKind": "named",
+              "source": "./libs/ScenarioRuntime"
+            },
+            {
+              "name": "ScenarioExpectation",
+              "exportKind": "named",
+              "source": "./libs/ScenarioRuntime"
+            },
+            {
+              "name": "ScenarioFailure",
+              "exportKind": "named",
+              "source": "./libs/ScenarioRuntime"
+            },
+            {
+              "name": "ScenarioFailureKind",
+              "exportKind": "named",
+              "source": "./libs/ScenarioRuntime"
+            },
+            {
+              "name": "ScenarioProblemFailure",
+              "exportKind": "named",
+              "source": "./libs/ScenarioRuntime"
+            },
+            {
+              "name": "ScenarioReplayDuplicateDelivery",
+              "exportKind": "named",
+              "source": "./libs/ScenarioRuntime"
+            },
+            {
+              "name": "ScenarioReplayFailure",
+              "exportKind": "named",
+              "source": "./libs/ScenarioRuntime"
+            },
+            {
+              "name": "ScenarioReplayMetadata",
+              "exportKind": "named",
+              "source": "./libs/ScenarioRuntime"
+            },
+            {
+              "name": "ScenarioReplayProblemDetails",
+              "exportKind": "named",
+              "source": "./libs/ScenarioRuntime"
+            },
+            {
+              "name": "ScenarioReplayProblemFailure",
+              "exportKind": "named",
+              "source": "./libs/ScenarioRuntime"
+            },
+            {
+              "name": "ScenarioReport",
+              "exportKind": "named",
+              "source": "./libs/ScenarioRuntime"
+            },
+            {
+              "name": "ScenarioRuntimeOptions",
+              "exportKind": "named",
+              "source": "./libs/ScenarioRuntime"
+            },
+            {
+              "name": "ScenarioTimelineEntry",
+              "exportKind": "named",
+              "source": "./libs/ScenarioRuntime"
             },
             {
               "name": "ServerlessProviderConformanceCase",

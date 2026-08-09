@@ -1,10 +1,18 @@
 import {
   createFailureDrillCatalog,
+  createScenarioRuntime,
+  loseResponse,
   runFailureDrills,
   type FailureDrillRunOutput,
 } from "@croco/testing";
-import { ProblemCategory, ProblemCategoryMapper, type ProblemDetails } from "@croco/problems-core";
-import { runSaasDemoFlow } from "../saasDemo";
+import {
+  Problem,
+  ProblemCategory,
+  ProblemCategoryMapper,
+  ProblemFactory,
+  type ProblemDetails,
+} from "@croco/problems-core";
+import { DemoBillingGateway, runSaasDemoFlow } from "../saasDemo";
 import { runGeneratedOperationalFailureDrills } from "./operational-failure-drills";
 import { assertSaasSmokeContract } from "./saasSmokeContract";
 
@@ -134,9 +142,57 @@ async function main(): Promise<void> {
   });
   const report = await runFailureDrills(catalog);
   const operationalReport = await runGeneratedOperationalFailureDrills();
+  const gateway = new DemoBillingGateway();
+  const checkout = {
+    billingAccountId: snapshot.tenant.id,
+    email: "owner@acme.test",
+    idempotencyKey: "scenario-checkout-response-loss",
+    productId: "team",
+    successUrl: "https://app.example.test/billing/success",
+  };
+  const applicationScenario = createScenarioRuntime({
+    scenarioId: "saas-checkout-response-loss",
+    seed: snapshot.lifecycle.ruleId,
+  })
+    .at(
+      "billing.checkout",
+      "provider",
+      loseResponse(
+        ProblemFactory.internalServerError(
+          "billing/checkout-response-lost",
+          "The generated billing gateway committed checkout creation before response loss.",
+        ),
+      ),
+    )
+    .expectProblem("billing/checkout-response-lost")
+    .expectEvidence("audit", "saas.checkout.idempotency_recovered")
+    .expectEvidence("recovery", "retry.billing.checkout");
+  await applicationScenario.run(async (scenario) => {
+    try {
+      await scenario.execute("billing.checkout", "provider", () =>
+        gateway.createCheckout(checkout),
+      );
+    } catch (error) {
+      if (!(error instanceof Problem) || error.code !== "billing/checkout-response-lost") {
+        throw error;
+      }
+    }
+    const recovered = await scenario.execute("billing.checkout", "provider", () =>
+      gateway.createCheckout(checkout),
+    );
+    const replayed = await gateway.createCheckout(checkout);
+    if (recovered.checkoutId !== replayed.checkoutId || gateway.checkoutCreationCount !== 1) {
+      throw ProblemFactory.internalServerError(
+        "billing/checkout-idempotency-drift",
+        "The generated billing gateway did not preserve one committed checkout after response loss.",
+      );
+    }
+    scenario.recordEvidence("audit", "saas.checkout.idempotency_recovered");
+    scenario.recordEvidence("recovery", "retry.billing.checkout");
+  });
 
   console.log(
-    `SaaS failure drill smoke passed (${report.results.length} generic drills, ${operationalReport.results.length} operational drills)`,
+    `SaaS failure drill smoke passed (${report.results.length} generic drills, ${operationalReport.results.length} operational drills, 1 application scenario)`,
   );
 }
 
