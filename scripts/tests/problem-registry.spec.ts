@@ -222,6 +222,45 @@ describe("problem-registry.mts", () => {
     });
   });
 
+  it("publishes non-retryable recovery metadata for React Email rendering failures", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/notifications-react-email/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        "export class ReactEmailRenderProblem extends Problem {",
+        "  constructor() {",
+        '    super("notifications-react-email/render-failed", ProblemCategory.InternalServerError);',
+        "  }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    expect(runProblemRegistryCheck(repo, "write").status).toBe("pass");
+    const registry = readRegistry(repo);
+    const problem = registry.problems.find(
+      ({ code }) => code === "notifications-react-email/render-failed",
+    );
+
+    expect(problem?.recovery).toEqual({
+      cause:
+        "A React Email component failed while producing deterministic HTML or plain text output.",
+      userAction:
+        "Do not retry unchanged message data; report the unavailable message so its email component can be corrected.",
+      operatorAction:
+        "Inspect the component implementation with redacted fixture data, correct the render failure, and redeploy before retrying.",
+      retryability: "not-retryable",
+      redactionPolicy: "operator-only",
+      telemetry: {
+        eventName: "croco.problem.error",
+        severity: "error",
+        attributes: ["problem.code", "problem.category", "problem.status"],
+      },
+    });
+  });
+
   it("publishes deterministic recovery metadata for graceful shutdown timeout", () => {
     const repo = createTempRepo();
     writeFile(

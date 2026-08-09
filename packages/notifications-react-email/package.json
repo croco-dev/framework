@@ -1,0 +1,62 @@
+{
+  "name": "@croco/notifications-react-email",
+  "version": "0.1.0",
+  "description": "Optional React Email rendering adapter for Croco typed email content",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/croco-dev/framework.git",
+    "directory": "packages/notifications-react-email"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "commonjs",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "publishConfig": {
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.js",
+        "types": "./dist/index.d.ts"
+      }
+    },
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts --external @croco/engagement-core --external @croco/problems-core --external @react-email/render --external react --external react-dom",
+    "lint": "oxlint .",
+    "test": "vitest run src/tests/ReactEmail.spec.ts",
+    "test:packed": "vitest run src/tests/PublishedReactEmail.spec.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@croco/engagement-core": "workspace:*",
+    "@croco/problems-core": "workspace:*"
+  },
+  "devDependencies": {
+    "@react-email/render": "2.1.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tsup": "^8.4.0",
+    "typescript": "^5.7.2",
+    "vitest": "4.1.8"
+  },
+  "peerDependencies": {
+    "@react-email/render": ">=2.1.0 <3",
+    "react": ">=19.0.0 <20",
+    "react-dom": ">=19.0.0 <20"
+  }
+}

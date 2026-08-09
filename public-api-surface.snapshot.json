@@ -8167,6 +8167,11 @@
               "source": "./libs/MessageContracts"
             },
             {
+              "name": "EmailContent",
+              "exportKind": "named",
+              "source": "./libs/MessageContracts"
+            },
+            {
               "name": "MessageChannel",
               "exportKind": "named",
               "source": "./libs/MessageContracts"
@@ -18209,6 +18214,63 @@
               "exportKind": "declaration",
               "source": "./libs/NotificationService",
               "declarationKind": "type"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "packageName": "@croco/notifications-react-email",
+      "relativeDir": "packages/notifications-react-email",
+      "entrypoints": [
+        {
+          "exportPath": ".",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/index.js"
+            },
+            {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            }
+          ],
+          "sourceEntrypoint": "packages/notifications-react-email/src/index.ts",
+          "runtimeExports": [
+            {
+              "name": "reactEmail",
+              "exportKind": "named",
+              "source": "./libs/ReactEmail",
+              "declarationKind": "function"
+            },
+            {
+              "name": "ReactEmailRenderProblem",
+              "exportKind": "named",
+              "source": "./libs/ReactEmail",
+              "declarationKind": "class"
+            },
+            {
+              "name": "renderReactEmail",
+              "exportKind": "named",
+              "source": "./libs/ReactEmail",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "ReactEmailInput",
+              "exportKind": "named",
+              "source": "./libs/ReactEmail"
+            },
+            {
+              "name": "ReactEmailRenderOptions",
+              "exportKind": "named",
+              "source": "./libs/ReactEmail"
             }
           ]
         }
