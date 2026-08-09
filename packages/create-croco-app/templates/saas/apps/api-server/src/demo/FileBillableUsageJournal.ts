@@ -14,7 +14,7 @@ import {
   readSqliteFixtureState,
   resetSqliteFixtureState,
   updateSqliteFixtureState,
-} from "./SqliteFixtureState";
+} from "./sqliteFixtureState";
 
 type StoredEntry = {
   event: BillableUsageEvent;
@@ -216,7 +216,12 @@ export class FileBillableUsageJournal implements BillableUsageJournal {
 
 function normalizeEvent(event: BillableUsageEvent): BillableUsageEvent {
   return {
-    ...event,
+    eventId: event.eventId,
+    tenantId: event.tenantId,
+    meterId: event.meterId,
+    aggregation: event.aggregation,
+    unit: event.unit,
+    value: event.value,
     dimensions: Object.freeze(
       Object.fromEntries(
         Object.entries(event.dimensions).sort(([left], [right]) => left.localeCompare(right)),

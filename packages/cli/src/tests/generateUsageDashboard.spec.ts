@@ -136,6 +136,9 @@ describe("runGenerateUsageDashboard", () => {
     expect(pageContent).toContain("Loading usage");
     expect(pageContent).toContain("meter needs quota attention");
     expect(pageContent).toContain("<h2>Billing delivery</h2>");
+    expect(pageContent).toContain("snapshot.billingDelivery.retryCount");
+    expect(pageContent).toContain("snapshot.billingDelivery.terminalFailureCount");
+    expect(pageContent).toContain("snapshot.billingDelivery.oldestPendingAgeMs");
     expect(pageContent).toContain("snapshot.billingDelivery.recoveryCommand");
     expect(routeContent).toContain("path: '/usage'");
   }, 30_000);

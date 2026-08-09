@@ -70,3 +70,21 @@ export class SaasDemoSmokeProblem extends Problem {
     super(undefined, undefined, `SaaS demo smoke failed: ${failures.join("; ")}`);
   }
 }
+
+export class SaasBillableUsageProblem extends Problem {
+  readonly code = "saas-demo/billable-usage-failed";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(message: string) {
+    super(undefined, undefined, message);
+  }
+}
+
+export class SqliteFixtureStateProblem extends Problem {
+  readonly code = "saas-demo/sqlite-fixture-state-invalid";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor() {
+    super(undefined, undefined, "SQLite fixture state must be an object.");
+  }
+}

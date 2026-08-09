@@ -1134,6 +1134,13 @@ export default function UsageDashboardPage() {
             Drift: {formatNumber(snapshot.billingDelivery.usageDrift)}; pending:{' '}
             {snapshot.billingDelivery.backlogCount}
           </p>
+          <p>
+            Retries: {formatNumber(snapshot.billingDelivery.retryCount)}; terminal failures:{' '}
+            {formatNumber(snapshot.billingDelivery.terminalFailureCount)}
+          </p>
+          {snapshot.billingDelivery.oldestPendingAgeMs !== null ? (
+            <p>Oldest pending: {formatNumber(snapshot.billingDelivery.oldestPendingAgeMs)} ms</p>
+          ) : null}
           {snapshot.billingDelivery.backlogCount > 0 ? (
             <code>{snapshot.billingDelivery.recoveryCommand}</code>
           ) : null}

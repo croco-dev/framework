@@ -4,7 +4,7 @@ import {
   readSqliteFixtureState,
   resetSqliteFixtureState,
   updateSqliteFixtureState,
-} from "./SqliteFixtureState";
+} from "./sqliteFixtureState";
 
 type StoredUsageEvent = Omit<UsageBillingEvent, "occurredAt"> & { occurredAt: string };
 type StoredProviderState = { version: 1; acceptedEvents: Record<string, StoredUsageEvent> };

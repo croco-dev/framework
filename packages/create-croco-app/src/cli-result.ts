@@ -1,5 +1,10 @@
 import { Problem, ProblemCategory, type ProblemDetails } from "@croco/problems-core";
-import { GENERATED_NODE_ENGINE_RANGE, GENERATED_NODE_VERSION } from "./node-runtime.js";
+import {
+  GENERATED_NODE_ENGINE_RANGE,
+  GENERATED_NODE_VERSION,
+  SAAS_GENERATED_NODE_ENGINE_RANGE,
+  SAAS_GENERATED_NODE_VERSION,
+} from "./node-runtime.js";
 import type { GeneratorOptions } from "./types.js";
 
 export type CreateCrocoAppSuccessResult = {
@@ -49,6 +54,11 @@ export function createSuccessResult(
   targetDir: string,
   options: GeneratorOptions,
 ): CreateCrocoAppSuccessResult {
+  const isSaasPreset = options.preset === "saas" || options.preset === "ai-saas";
+  const nodeRequirement = isSaasPreset
+    ? SAAS_GENERATED_NODE_ENGINE_RANGE
+    : GENERATED_NODE_ENGINE_RANGE;
+  const nodeVersion = isSaasPreset ? SAAS_GENERATED_NODE_VERSION : GENERATED_NODE_VERSION;
   return {
     ok: true,
     code: "create-croco-app/project-created",
@@ -56,8 +66,8 @@ export function createSuccessResult(
     projectName: options.projectName,
     preset: options.preset,
     packageManager: "pnpm",
-    nodeRequirement: GENERATED_NODE_ENGINE_RANGE,
-    nodeRecovery: `Run nvm install ${GENERATED_NODE_VERSION} && nvm use ${GENERATED_NODE_VERSION}.`,
+    nodeRequirement,
+    nodeRecovery: `Run nvm install ${nodeVersion} && nvm use ${nodeVersion}.`,
     nextSteps: createNextStepCommands(targetDir, options),
   };
 }

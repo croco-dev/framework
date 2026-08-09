@@ -41,6 +41,15 @@ describe("CLI result contract", () => {
     const result = createSuccessResult("/tmp/my-saas", createOptions({ preset: "saas" }));
 
     expect(result.nextSteps).toEqual([{ command: "pnpm", args: ["dev:api"], cwd: "/tmp/my-saas" }]);
+    expect(result.nodeRequirement).toBe(">=22.5");
+    expect(result.nodeRecovery).toBe("Run nvm install 22.5 && nvm use 22.5.");
+  });
+
+  it("uses the SaaS Node contract for AI SaaS next steps", () => {
+    const result = createSuccessResult("/tmp/my-ai-saas", createOptions({ preset: "ai-saas" }));
+
+    expect(result.nodeRequirement).toBe(">=22.5");
+    expect(result.nodeRecovery).toBe("Run nvm install 22.5 && nvm use 22.5.");
   });
 
   it("keeps shell quoting out of structured next steps", () => {

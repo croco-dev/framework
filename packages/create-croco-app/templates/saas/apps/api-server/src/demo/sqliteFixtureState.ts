@@ -1,6 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { SqliteFixtureStateProblem } from "../problems";
 
 const STATE_KEY = "state";
 
@@ -74,7 +75,7 @@ function replaceState<T>(target: T, source: T): void {
     typeof source !== "object" ||
     source === null
   ) {
-    throw new TypeError("SQLite fixture state must be an object.");
+    throw new SqliteFixtureStateProblem();
   }
   for (const key of Object.keys(target)) delete (target as Record<string, unknown>)[key];
   Object.assign(target, structuredClone(source));

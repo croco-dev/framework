@@ -68,6 +68,7 @@ import { assertGeneratedSmokeCaseDependencyMapping } from "./create-croco-app-ge
 const DEFAULT_TENANT_MODEL = "org";
 const GENERATED_NODE_VERSION = VERSIONS.node;
 const GENERATED_NODE_ENGINE_RANGE = `>=${GENERATED_NODE_VERSION}`;
+const SAAS_GENERATED_NODE_VERSION = "22.5";
 const SAAS_GENERATED_NODE_ENGINE_RANGE = ">=22.5";
 const GRAPHQL_CONTRACT_CHECK_LABEL = "GraphQL contract check";
 const GRAPHQL_CONTRACT_SNAPSHOT_LABEL = "GraphQL contract snapshot";
@@ -2476,15 +2477,18 @@ function assertGeneratedNodeRuntimeContract(projectDir: string, smokeCase: Smoke
   const expectedEngineRange = smokeCase.matrixTargets.includes("saas")
     ? SAAS_GENERATED_NODE_ENGINE_RANGE
     : GENERATED_NODE_ENGINE_RANGE;
+  const expectedNodeVersion = smokeCase.matrixTargets.includes("saas")
+    ? SAAS_GENERATED_NODE_VERSION
+    : GENERATED_NODE_VERSION;
 
   if (packageJson.engines?.node !== expectedEngineRange) {
     throw new Error(
       `${smokeCase.name} generated package.json engines.node=${String(packageJson.engines?.node)}; expected ${expectedEngineRange}`,
     );
   }
-  if (nvmrc !== `${GENERATED_NODE_VERSION}\n`) {
+  if (nvmrc !== `${expectedNodeVersion}\n`) {
     throw new Error(
-      `${smokeCase.name} generated .nvmrc=${JSON.stringify(nvmrc)}; expected ${GENERATED_NODE_VERSION}`,
+      `${smokeCase.name} generated .nvmrc=${JSON.stringify(nvmrc)}; expected ${expectedNodeVersion}`,
     );
   }
   if (!readme.includes(`Node.js ${expectedEngineRange}`) || !readme.includes("nvm use")) {

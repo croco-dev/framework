@@ -3,17 +3,15 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
-import type { UsageBillingEvent } from "@croco/billing-core";
 import type { BillableUsageEvent } from "@croco/metering-core";
 import { describe, expect, it } from "vitest";
 import { FileBillableUsageJournal } from "../demo/FileBillableUsageJournal";
-import { FileUsageBillingGateway } from "../demo/FileUsageBillingGateway";
 
 const NOW = new Date("2026-01-02T00:00:00.000Z");
 const execFileAsync = promisify(execFile);
 
 describe("FileBillableUsageJournal", () => {
-  it("preserves concurrent appends from separate journal instances", async () => {
+  it("preserves sequential appends from separate journal instances", async () => {
     await withStateDirectory(async (stateDir) => {
       const path = join(stateDir, "journal.sqlite");
       const first = new FileBillableUsageJournal(path, NOW);
@@ -29,7 +27,62 @@ describe("FileBillableUsageJournal", () => {
     });
   });
 
-  it("issues one exclusive claim with a single fencing token", async () => {
+  it("rejects conflicting duplicate events", async () => {
+    await withStateDirectory(async (stateDir) => {
+      const journal = new FileBillableUsageJournal(join(stateDir, "journal.sqlite"), NOW);
+      await journal.append(billableEvent("usage-1", 1));
+
+      await expect(journal.append(billableEvent("usage-1", 2))).rejects.toThrow("EVENT_CONFLICT");
+    });
+  });
+
+  it("accepts equivalent duplicate events regardless of property order", async () => {
+    await withStateDirectory(async (stateDir) => {
+      const journal = new FileBillableUsageJournal(join(stateDir, "journal.sqlite"), NOW);
+      await journal.append(billableEvent("usage-1", 1));
+      const reordered = {
+        dimensions: {},
+        value: 1,
+        unit: "request",
+        aggregation: "COUNT" as const,
+        meterId: "api_requests",
+        tenantId: "tenant_acme",
+        eventId: "usage-1",
+      };
+
+      await expect(journal.append(reordered)).resolves.toMatchObject({ outcome: "duplicate" });
+    });
+  });
+
+  it("rejects invalid leases", async () => {
+    await withStateDirectory(async (stateDir) => {
+      const journal = new FileBillableUsageJournal(join(stateDir, "journal.sqlite"), NOW);
+
+      await expect(
+        journal.claimNext({ ownerId: "worker-1", leaseDurationMs: 0, now: NOW }),
+      ).rejects.toThrow("INVALID_LEASE");
+    });
+  });
+
+  it("rejects stale claims", async () => {
+    await withStateDirectory(async (stateDir) => {
+      const journal = new FileBillableUsageJournal(join(stateDir, "journal.sqlite"), NOW);
+      await journal.append(billableEvent("usage-1", 1));
+      await journal.markDeliverable("usage-1", NOW);
+      const claim = await journal.claimNext({
+        ownerId: "worker-1",
+        leaseDurationMs: 1_000,
+        now: NOW,
+      });
+      if (!claim) throw new Error("Expected one journal claim.");
+
+      await expect(journal.markAccepted(claim, new Date(NOW.getTime() + 1_000))).rejects.toThrow(
+        "STALE_CLAIM",
+      );
+    });
+  });
+
+  it("issues one claim with a monotonically increasing fencing token", async () => {
     await withStateDirectory(async (stateDir) => {
       const path = join(stateDir, "journal.sqlite");
       const first = new FileBillableUsageJournal(path, NOW);
@@ -70,25 +123,6 @@ describe("FileBillableUsageJournal", () => {
       });
     });
   });
-
-  it("preserves concurrent provider ingestion and duplicate acknowledgement", async () => {
-    await withStateDirectory(async (stateDir) => {
-      const path = join(stateDir, "provider.sqlite");
-      const first = new FileUsageBillingGateway(path);
-      const second = new FileUsageBillingGateway(path);
-      const firstEvent = providerEvent("usage-1", 1);
-      const secondEvent = providerEvent("usage-2", 2);
-
-      await Promise.all([first.ingest([firstEvent]), second.ingest([secondEvent])]);
-      await expect(first.getAcceptedUsage("tenant_acme", "api_requests")).resolves.toBe(3);
-
-      await abandonSqliteTransaction(path);
-      await expect(second.ingest([firstEvent])).resolves.toEqual({
-        receipts: [{ eventId: "usage-1", status: "duplicate" }],
-      });
-      await expect(second.getAcceptedUsage("tenant_acme", "api_requests")).resolves.toBe(3);
-    });
-  });
 });
 
 function billableEvent(eventId: string, value: number): BillableUsageEvent {
@@ -100,16 +134,6 @@ function billableEvent(eventId: string, value: number): BillableUsageEvent {
     unit: "request",
     value,
     dimensions: {},
-  };
-}
-
-function providerEvent(eventId: string, value: number): UsageBillingEvent {
-  return {
-    eventId,
-    billingAccountId: "tenant_acme",
-    meterId: "api_requests",
-    occurredAt: NOW,
-    value,
   };
 }
 

@@ -70,6 +70,7 @@ import { IdempotencyManager, MeteringService, MeterRegistry } from "@croco/meter
 import { NotificationService } from "@croco/notifications-core";
 import { TenantManager } from "@croco/tenant-core";
 import { TxManager } from "@croco/tx-core";
+import { z } from "zod";
 import {
   assertSaasSmokeContract,
   SAAS_SMOKE_CONTRACT_VERSION,
@@ -77,6 +78,7 @@ import {
 } from "./demo/saasSmokeContract";
 import { FileBillableUsageJournal } from "./demo/FileBillableUsageJournal";
 import { FileUsageBillingGateway } from "./demo/FileUsageBillingGateway";
+import { SaasBillableUsageProblem } from "./problems";
 import {
   InMemoryAccessProvider,
   InMemoryEventBus,
@@ -127,6 +129,16 @@ const BILLABLE_USAGE_STATE_DIR = resolve(
 const BILLABLE_USAGE_JOURNAL_PATH = resolve(BILLABLE_USAGE_STATE_DIR, "journal.sqlite");
 const BILLABLE_USAGE_PROVIDER_PATH = resolve(BILLABLE_USAGE_STATE_DIR, "provider.sqlite");
 const execFileAsync = promisify(execFile);
+const recoveryDeliverySchema = z.object({
+  accepted: z.number().int().nonnegative(),
+  retryableFailed: z.number().int().nonnegative(),
+  terminalFailed: z.number().int().nonnegative(),
+});
+type RecoveryDeliveryResult = {
+  accepted: number;
+  retryableFailed: number;
+  terminalFailed: number;
+};
 
 export class DemoBillingGateway implements BillingGateway {
   private createdCheckoutCount = 0;
@@ -1066,7 +1078,9 @@ async function runBillableApiUsageScenario(
     API_REQUESTS_FEATURE_KEY,
   );
   if (!includedEntitlement.granted || includedEntitlement.usage !== includedRecord.value) {
-    throw new Error("Included billable usage did not retain an allowed entitlement.");
+    throw new SaasBillableUsageProblem(
+      "Included billable usage did not retain an allowed entitlement.",
+    );
   }
 
   runtime.usageBillingGateway.setAvailable(false);
@@ -1123,7 +1137,9 @@ async function runBillableApiUsageScenario(
     overageFinalEntry.state !== "accepted" ||
     replayOutcome !== "duplicate"
   ) {
-    throw new Error("Billable usage scenario did not produce its required delivery states.");
+    throw new SaasBillableUsageProblem(
+      "Billable usage scenario did not produce its required delivery states.",
+    );
   }
 
   return {
@@ -1190,9 +1206,11 @@ export async function recoverPendingBillableUsage() {
     retryMaxDelayMs: 1_000,
   });
   const delivery = await worker.deliverNextBatch(BILLABLE_USAGE_RECOVERY_AT);
-  const entry = await requireBillableUsageEntry(journal, OVERAGE_API_USAGE_EVENT_ID);
-  if (entry.state !== "accepted") {
-    throw new Error("Usage recovery process did not accept the pending overage event.");
+  const entry = await journal.get(OVERAGE_API_USAGE_EVENT_ID);
+  if (entry && entry.state !== "accepted") {
+    throw new SaasBillableUsageProblem(
+      "Usage recovery process did not accept the pending overage event.",
+    );
   }
   return delivery;
 }
@@ -1200,7 +1218,9 @@ export async function recoverPendingBillableUsage() {
 async function runUsageRecoveryProcess() {
   const packageManagerCli = process.env.npm_execpath;
   if (!packageManagerCli) {
-    throw new Error("Usage recovery requires npm_execpath from the package manager runtime.");
+    throw new SaasBillableUsageProblem(
+      "Usage recovery requires npm_execpath from the package manager runtime.",
+    );
   }
   const { stdout } = await execFileAsync(
     process.execPath,
@@ -1209,20 +1229,30 @@ async function runUsageRecoveryProcess() {
       cwd: process.cwd(),
       env: process.env,
       encoding: "utf8",
+      timeout: 60_000,
     },
   );
-  const parsed = JSON.parse(stdout.trim()) as {
-    accepted: number;
-    retryableFailed: number;
-    terminalFailed: number;
-  };
-  return parsed;
+  const lastLine = stdout
+    .trim()
+    .split("\n")
+    .filter((line) => line.length > 0)
+    .at(-1);
+  if (!lastLine) {
+    throw new SaasBillableUsageProblem("Usage recovery process returned no delivery result.");
+  }
+  try {
+    return recoveryDeliverySchema.parse(JSON.parse(lastLine)) as RecoveryDeliveryResult;
+  } catch {
+    throw new SaasBillableUsageProblem(
+      "Usage recovery process returned an invalid delivery result.",
+    );
+  }
 }
 
 async function requireBillableUsageEntry(journal: FileBillableUsageJournal, eventId: string) {
   const entry = await journal.get(eventId);
   if (!entry) {
-    throw new Error(`Billable usage journal entry '${eventId}' was not found.`);
+    throw new SaasBillableUsageProblem(`Billable usage journal entry '${eventId}' was not found.`);
   }
   return entry;
 }

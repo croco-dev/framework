@@ -42,6 +42,7 @@ import { DirectoryNotEmptyProblem } from "./libs/problems/DirectoryNotEmptyProbl
 import { PnpmCommandProblem } from "./libs/problems/PnpmCommandProblem.js";
 import {
   SAAS_GENERATED_NODE_ENGINE_RANGE,
+  SAAS_GENERATED_NODE_VERSION,
   assertSupportedNodeVersion,
   writeGeneratedNodeRuntimeContract,
 } from "./node-runtime.js";
@@ -461,6 +462,9 @@ async function finalize(targetDir: string, options: GeneratorOptions): Promise<v
     targetDir,
     options.preset === "saas" || options.preset === "ai-saas"
       ? SAAS_GENERATED_NODE_ENGINE_RANGE
+      : undefined,
+    options.preset === "saas" || options.preset === "ai-saas"
+      ? SAAS_GENERATED_NODE_VERSION
       : undefined,
   );
   writeGoalManifest(targetDir, options);

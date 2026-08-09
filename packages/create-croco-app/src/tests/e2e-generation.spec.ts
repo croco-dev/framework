@@ -1335,7 +1335,9 @@ describe("E2E: generate()", () => {
     const readme = readFileSync(join(testDir, "README.md"), "utf8");
 
     expect(rootPackageJson.engines?.node).toBe(">=22.5");
+    expect(readFileSync(join(testDir, ".nvmrc"), "utf8")).toBe("22.5\n");
     expect(readme).toContain("Dependency installation and builds require Node.js >=22.5");
+    expect(readme).toContain("nvm use 22.5");
 
     expect(rootPackageJson.scripts).toMatchObject({
       typecheck: "turbo typecheck",
