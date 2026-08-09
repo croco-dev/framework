@@ -1,5 +1,6 @@
 ---
 "@croco/cli": minor
+"@croco/problems-core": patch
 "create-croco-app": minor
 ---
 
