@@ -80,6 +80,20 @@ describe("extractRouteIR", () => {
     ]);
   });
 
+  it("should preserve the declared successful response status", () => {
+    @Controller("/orders")
+    class OrdersController {
+      @Post("/")
+      createOrder(): void {}
+    }
+    const metadata = Reflect.getMetadata(REST_ROUTES_KEY, OrdersController) as RouteMetadata[];
+    const first = metadata[0];
+    if (!first) throw new TypeError("Expected route metadata.");
+    first.statusCode = 201;
+
+    expect(extractRouteIR(OrdersController)[0]?.successStatus).toBe(201);
+  });
+
   it("should set inputSchemas.body for a POST route with a body schema", () => {
     const createUserSchema = z.object({ name: z.string() });
 

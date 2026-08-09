@@ -65,10 +65,13 @@ type _QStashTriggerSyncDetailRequiredKeys = Expect<
 >;
 
 const PUBLIC_CONFORMANCE_HELPER_EXPORTS = [
+  "assertContractObservation",
   "assertDrizzleProblem",
   "createAuthProviderConformanceSuite",
   "createBillingProviderConformanceSuite",
+  "createContractCaseArbitrary",
   "createDrizzleProviderConformanceSuite",
+  "createFileContractFailureSink",
   "createLlmProviderConformanceSuite",
   "createProviderConformanceMatrixSuite",
   "createProviderNoCredentialConformanceSuite",
@@ -78,6 +81,8 @@ const PUBLIC_CONFORMANCE_HELPER_EXPORTS = [
   "createStorageProviderConformanceSuite",
   "createUpstashRedisMeteringConformanceSuite",
   "createUpstashRedisRateLimitConformanceSuite",
+  "runContractFuzz",
+  "runContractRuntimeDifferential",
 ] as const;
 
 const SERVERLESS_LIVE_SMOKE_CASE_NAME =

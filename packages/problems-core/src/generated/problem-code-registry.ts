@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 607,
+  problemCount: 611,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -16112,6 +16112,138 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/testing/src/libs/testing.ts",
           line: 184,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "testing/contract-execution-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#testing-contract-execution-failed",
+      recovery: {
+        cause:
+          "The contract executor threw an unexpected non-Problem failure while exercising a case.",
+        userAction:
+          "Reproduce the saved counterexample only after the executor or underlying runtime failure is diagnosed.",
+        operatorAction:
+          "Inspect the failure artifact and runtime logs, then convert expected failures into declared Problems or repair the executor boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/testing/src/libs/contract-testing.ts",
+          line: 209,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "testing/contract-generation-unsupported",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#testing-contract-generation-unsupported",
+      recovery: {
+        cause:
+          "Automatic contract-case generation encountered a schema shape outside its deterministic supported subset.",
+        userAction:
+          "Use supported Zod constructs or provide a caller-owned arbitrary for the unsupported schema.",
+        operatorAction:
+          "Inspect the reported schema path and shape, then replace it with a supported contract or supply an explicit arbitrary.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/testing/src/libs/contract-testing.ts",
+          line: 174,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "testing/contract-invariant-failed",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#testing-contract-invariant-failed",
+      recovery: {
+        cause:
+          "A generated or replayed case violated its route classification, response contract, shrink reproduction, or serialization invariant.",
+        userAction:
+          "Reproduce the saved counterexample with its seed and path after the contract runner or route behavior is corrected.",
+        operatorAction:
+          "Inspect the failure artifact, route classification, executor observation, and shrink path to locate the violated invariant.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/testing/src/libs/contract-testing.ts",
+          line: 186,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "testing/contract-runtime-mismatch",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#testing-contract-runtime-mismatch",
+      recovery: {
+        cause:
+          "Runtime observations disagree with each other or with the declared capability and trace-propagation contracts.",
+        userAction:
+          "Use a runtime build whose observed behavior matches the route and capability manifests before retrying the comparison.",
+        operatorAction:
+          "Compare the reported runtime observations, lifecycle capability manifests, stable headers, and trace propagation evidence.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/testing/src/libs/contract-testing.ts",
+          line: 198,
           column: 5,
           kind: "problem-constructor",
         },

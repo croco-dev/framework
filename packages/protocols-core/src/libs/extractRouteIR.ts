@@ -68,6 +68,7 @@ export function extractRouteIR(controllerCtor: Constructor): RouteIR[] {
       inputSchema: inputSchemas.body,
       inputSchemas,
       outputSchema,
+      successStatus: routeMeta.statusCode ?? 200,
       problemResponses,
       domain: null,
     };

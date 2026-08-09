@@ -11,68 +11,76 @@ title: "RouteIR"
 
 > **controllerName**: `string`
 
-***
+---
 
 ### domain
 
 > **domain**: `string` \| `null`
 
-***
+---
 
 ### httpMethod
 
 > **httpMethod**: `string`
 
-***
+---
 
 ### inputSchema
 
 > **inputSchema**: `ZodType`\<`any`, `ZodTypeDef`, `any`\> \| `null`
 
-***
+---
 
 ### inputSchemas
 
 > **inputSchemas**: `RouteInputSchemas`
 
-***
+---
 
 ### methodName
 
 > **methodName**: `string`
 
-***
+---
 
 ### outputSchema
 
 > **outputSchema**: `ZodType`\<`any`, `ZodTypeDef`, `any`\> \| `null`
 
-***
+---
 
 ### params
 
 > **params**: [`ParamIR`](/api/protocols-core/src/interfaces/paramir/)[]
 
-***
+---
 
 ### path
 
 > **path**: `string`
 
-***
+---
 
 ### problemResponses?
 
 > `optional` **problemResponses?**: readonly [`ProblemResponseIR`](/api/protocols-core/src/type-aliases/problemresponseir/)\<`string`, [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/), `number`\>[]
 
-***
+---
 
 ### routeContract
 
 > **routeContract**: [`RouteContractIR`](/api/protocols-core/src/type-aliases/routecontractir/) \| `null`
 
-***
+---
 
 ### sourceLocation?
 
 > `optional` **sourceLocation?**: [`RouteContractSourceLocation`](/api/protocols-core/src/type-aliases/routecontractsourcelocation/)
+
+---
+
+### successStatus?
+
+> `optional` **successStatus?**: `number`
+
+Declared successful HTTP status. Defaults to 200 for legacy RouteIR artifacts.

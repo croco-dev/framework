@@ -3392,10 +3392,19 @@ importers:
       '@opentelemetry/api':
         specifier: ^1.9.0
         version: 1.9.0
+      fast-check:
+        specifier: ^4.9.0
+        version: 4.9.0
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
     devDependencies:
+      '@croco/preset-cloudflare':
+        specifier: workspace:*
+        version: link:../preset-cloudflare
       '@croco/protocols-rest':
         specifier: workspace:*
         version: link:../protocols-rest
@@ -8359,6 +8368,10 @@ packages:
   extendable-error@0.1.7:
     resolution: {integrity: sha512-UOiS2in6/Q0FK0R0q6UY9vYpQ21mr/Qn1KOnte7vsACuNJf514WvCCUHSRCPcgjPT2bAhNIJdlE6bVap1GKmeg==}
 
+  fast-check@4.9.0:
+    resolution: {integrity: sha512-7ms6T7SybUev/PQITciI0yLM2pOSFy5zpG8Ty7tQofcVaQUvrMXp6CBwqF6fThLCLOrfBtuHAtwq6Yu4XPCllg==}
+    engines: {node: '>=12.17.0'}
+
   fast-copy@4.0.2:
     resolution: {integrity: sha512-ybA6PDXIXOXivLJK/z9e+Otk7ve13I4ckBvGO5I2RRmBU1gMHLVDJYEuJYhGwez7YNlYji2M2DvVU+a9mSFDlw==}
 
@@ -10057,6 +10070,9 @@ packages:
   punycode.js@2.3.1:
     resolution: {integrity: sha512-uxFIHU0YlHYhDQtV4R9J6a52SLx28BCjT+4ieh7IGbgwVJWO+km431c4yRlREUAsAmt/uMjQUyQHNEPf0M39CA==}
     engines: {node: '>=6'}
+
+  pure-rand@8.4.2:
+    resolution: {integrity: sha512-vvuOGgcuPJAirlHvuQw1TrOiw7ptaIXXmIbNuiNOY6lNGJJH49PQ1Kj4nd783nPdQhQdicgOjVI2yI/9BD6/Ng==}
 
   quansync@0.2.11:
     resolution: {integrity: sha512-AifT7QEbW9Nri4tAwR5M/uzpBuqfZf+zwaEM/QkzEjj7NBuFD2rBuy0K3dE+8wltbezDV7JMA0WfnCPYRSYbXA==}
@@ -16083,6 +16099,10 @@ snapshots:
 
   extendable-error@0.1.7: {}
 
+  fast-check@4.9.0:
+    dependencies:
+      pure-rand: 8.4.2
+
   fast-copy@4.0.2: {}
 
   fast-deep-equal@2.0.1: {}
@@ -18244,6 +18264,8 @@ snapshots:
       once: 1.4.0
 
   punycode.js@2.3.1: {}
+
+  pure-rand@8.4.2: {}
 
   quansync@0.2.11: {}
 
