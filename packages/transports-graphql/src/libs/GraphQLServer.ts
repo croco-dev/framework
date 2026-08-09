@@ -2,18 +2,33 @@ import { randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { Container, Context as FrameworkContext } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
-import { Problem } from "@croco/problems-core";
+import {
+  createProblemResponseDetail,
+  createProblemResponseExtensions,
+  Problem,
+  resolveProblemResponseRedactionPolicy,
+} from "@croco/problems-core";
 import { isProblem, problemToGraphQLError } from "@croco/protocols-graphql";
 import { createYoga, maskError } from "graphql-yoga";
 import {
   GraphQLRequestBodyAbortedProblem,
   GraphQLRequestBodyTooLargeProblem,
+  GraphQLRequestHandlingFailedProblem,
   GraphQLSchemaNotConfiguredProblem,
   GraphQLServerNotInitializedProblem,
 } from "./problems/GraphQLTransportProblems";
 import type { GraphQLServerOptions } from "./types";
 
 type YogaHandler = (request: Request) => Promise<Response>;
+type NodeRequestPhase =
+  | "request-context"
+  | "request-url"
+  | "request-body"
+  | "request-construction"
+  | "yoga-execution"
+  | "response-headers"
+  | "response-body"
+  | "response-write";
 
 const DEFAULT_MAX_BODY_SIZE_BYTES = 1024 * 1024;
 
@@ -106,61 +121,65 @@ export class GraphQLServer {
       throw new GraphQLServerNotInitializedProblem("Server not initialized.");
     }
 
-    const handler = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
-      const url = req.url
-        ? new URL(req.url, `http://${req.headers.host}`)
-        : new URL("http://localhost");
-      const method = req.method || "GET";
+    const handler = (req: IncomingMessage, res: ServerResponse): void => {
+      let phase: NodeRequestPhase = "request-context";
 
-      let body: string | undefined;
+      const requestLifecycle = Promise.resolve().then(() => {
+        const requestId = randomUUID();
+        phase = "request-url";
+        return FrameworkContext.run({ requestId }, async () => {
+          const url = req.url
+            ? new URL(req.url, `http://${req.headers.host}`)
+            : new URL("http://localhost");
+          const method = req.method || "GET";
 
-      if (req.method !== "GET" && req.method !== "HEAD") {
-        try {
-          body = await this.getBody(req);
-        } catch (error) {
-          if (error instanceof Problem) {
-            res.statusCode = error.status;
-            res.setHeader("content-type", "application/problem+json");
-            if (error instanceof GraphQLRequestBodyTooLargeProblem) {
-              res.setHeader("connection", "close");
-            }
-            res.end(JSON.stringify(error.toJSON()));
-            return;
+          let body: string | undefined;
+
+          if (req.method !== "GET" && req.method !== "HEAD") {
+            phase = "request-body";
+            body = await this.getBody(req);
           }
 
-          throw error;
-        }
-      }
+          phase = "request-construction";
+          const request = new Request(url, {
+            method,
+            headers: req.headers as HeadersInit,
+            body,
+          });
 
-      const request = new Request(url, {
-        method,
-        headers: req.headers as HeadersInit,
-        body,
+          if (!this.yogaHandler) {
+            throw new GraphQLServerNotInitializedProblem("Server not initialized.");
+          }
+
+          phase = "yoga-execution";
+          const response = await this.yogaHandler(request);
+
+          phase = "response-headers";
+          res.statusCode = response.status;
+          const setCookieHeaders = getSetCookieHeaders(response.headers);
+          if (setCookieHeaders.length > 0) {
+            res.setHeader("set-cookie", setCookieHeaders);
+          }
+          response.headers.forEach((value: string, key: string) => {
+            if (key.toLowerCase() === "set-cookie") return;
+            res.setHeader(key, value);
+          });
+
+          phase = "response-body";
+          const responseBody = await response.text();
+          phase = "response-write";
+          await this.writeNodeResponse(res, responseBody);
+        });
       });
 
-      if (!this.yogaHandler) {
-        const problem = new GraphQLServerNotInitializedProblem("Server not initialized.");
-        res.statusCode = problem.status;
-        res.setHeader("content-type", "application/problem+json");
-        res.end(JSON.stringify(problem.toJSON()));
-        return;
-      }
-
-      const yoga = this.yogaHandler;
-      const response = await FrameworkContext.run({ requestId: randomUUID() }, () => yoga(request));
-
-      res.statusCode = response.status;
-      const setCookieHeaders = getSetCookieHeaders(response.headers);
-      if (setCookieHeaders.length > 0) {
-        res.setHeader("set-cookie", setCookieHeaders);
-      }
-      response.headers.forEach((value: string, key: string) => {
-        if (key.toLowerCase() === "set-cookie") return;
-        res.setHeader(key, value);
-      });
-
-      const responseBody = await response.text();
-      res.end(responseBody);
+      void requestLifecycle
+        .catch((error: unknown) => this.handleNodeRequestFailure(error, phase, res))
+        .catch((error: unknown) => {
+          this.recordNodeRequestFailure(error, "response-write");
+          if (!res.destroyed) {
+            this.destroyNodeResponse(res);
+          }
+        });
     };
 
     this.server = createServer(handler);
@@ -241,6 +260,109 @@ export class GraphQLServer {
       req.on("error", onError);
       req.on("aborted", onAborted);
     });
+  }
+
+  private async handleNodeRequestFailure(
+    error: unknown,
+    phase: NodeRequestPhase,
+    res: ServerResponse,
+  ): Promise<void> {
+    this.recordNodeRequestFailure(error, phase);
+
+    if (res.destroyed || res.writableFinished) {
+      return;
+    }
+
+    const problem = error instanceof Problem ? error : new GraphQLRequestHandlingFailedProblem();
+
+    if (res.headersSent || res.writableEnded) {
+      this.destroyNodeResponse(res);
+      return;
+    }
+
+    for (const headerName of res.getHeaderNames()) {
+      res.removeHeader(headerName);
+    }
+
+    const redactionPolicy = resolveProblemResponseRedactionPolicy(problem);
+    const detail = createProblemResponseDetail(problem.detail, redactionPolicy);
+    const body = {
+      type: problem.type,
+      title: problem.title,
+      status: problem.status,
+      code: problem.code,
+      ...(detail !== undefined ? { detail } : {}),
+      ...createProblemResponseExtensions(problem.extensions, redactionPolicy),
+    };
+
+    res.statusCode = problem.status;
+    res.setHeader("content-type", "application/problem+json");
+    if (problem instanceof GraphQLRequestBodyTooLargeProblem) {
+      res.setHeader("connection", "close");
+    }
+    await this.writeNodeResponse(res, JSON.stringify(body));
+  }
+
+  private writeNodeResponse(res: ServerResponse, body: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const cleanup = () => {
+        res.off("finish", onFinish);
+        res.off("error", onError);
+        res.off("close", onClose);
+      };
+      const onFinish = () => {
+        cleanup();
+        resolve();
+      };
+      const onError = (error: Error) => {
+        cleanup();
+        reject(error);
+      };
+      const onClose = () => {
+        if (res.writableFinished) return;
+        cleanup();
+        reject(new GraphQLRequestHandlingFailedProblem());
+      };
+
+      res.once("finish", onFinish);
+      res.once("error", onError);
+      res.once("close", onClose);
+
+      try {
+        res.end(body);
+      } catch (error) {
+        cleanup();
+        reject(error);
+      }
+    });
+  }
+
+  private destroyNodeResponse(res: ServerResponse): void {
+    try {
+      res.destroy();
+    } catch {
+      return;
+    }
+  }
+
+  private recordNodeRequestFailure(error: unknown, phase: NodeRequestPhase): void {
+    const problemCode =
+      error instanceof Problem ? error.code : "transports-graphql/request-handling-failed";
+    const diagnostic = { phase, problemCode };
+
+    try {
+      if (Container.has(Logger)) {
+        Container.get(Logger).error("GraphQL request failed", diagnostic);
+        return;
+      }
+      console.error("GraphQL request failed", diagnostic);
+    } catch {
+      try {
+        console.error("GraphQL request failed", diagnostic);
+      } catch {
+        return;
+      }
+    }
   }
 
   stop(): Promise<void> {

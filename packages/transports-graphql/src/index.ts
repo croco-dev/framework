@@ -8,6 +8,7 @@ export { GraphQLServer } from "./libs/GraphQLServer";
 export {
   GraphQLRequestBodyAbortedProblem,
   GraphQLRequestBodyTooLargeProblem,
+  GraphQLRequestHandlingFailedProblem,
   GraphQLResolversNotConfiguredProblem,
   GraphQLSchemaNotConfiguredProblem,
   GraphQLServerNotInitializedProblem,

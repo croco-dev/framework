@@ -27411,6 +27411,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "GraphQLRequestHandlingFailedProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/GraphQLTransportProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "GraphQLResolversNotConfiguredProblem",
               "exportKind": "named",
               "source": "./libs/problems/GraphQLTransportProblems",

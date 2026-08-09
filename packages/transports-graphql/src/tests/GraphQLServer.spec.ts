@@ -1,5 +1,8 @@
 import "reflect-metadata";
+import { ServerResponse } from "node:http";
+import { connect } from "node:net";
 import { Container } from "@croco/framework-context";
+import { Logger } from "@croco/framework-logger";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import {
   Field,
@@ -496,6 +499,208 @@ describe("GraphQLServer integration", () => {
     await testServer.stop();
   });
 
+  it("should convert malformed Node requests into a complete redacted response", async () => {
+    const logger = { error: vi.fn() };
+    Container.set(Logger, logger as unknown as Logger);
+    const testServer = new GraphQLServer({
+      schemaOptions: {
+        resolvers: [UserResolver],
+        autoDiscover: false,
+      },
+    });
+
+    await testServer.start(4004);
+
+    try {
+      const response = await sendRawHttpRequest(
+        4004,
+        "GET /graphql HTTP/1.1\r\nHost: [\r\nConnection: close\r\n\r\n",
+      );
+
+      expect(response).toContain("HTTP/1.1 500 Internal Server Error");
+      expect(response).toContain("application/problem+json");
+      expect(response).toContain('"code":"transports-graphql/request-handling-failed"');
+      expect(logger.error).toHaveBeenCalledWith("GraphQL request failed", {
+        phase: "request-url",
+        problemCode: "transports-graphql/request-handling-failed",
+      });
+    } finally {
+      await testServer.stop();
+      Container.reset();
+    }
+  });
+
+  it("should preserve safe Problem details when Yoga rejects", async () => {
+    const logger = { error: vi.fn() };
+    Container.set(Logger, logger as unknown as Logger);
+    const testServer = new GraphQLServer({
+      schemaOptions: {
+        resolvers: [UserResolver],
+        autoDiscover: false,
+      },
+    });
+
+    await testServer.initialize();
+    Reflect.set(testServer, "yogaHandler", async () => {
+      throw new TestGraphQLProblem(
+        "ACCESS_DENIED",
+        ProblemCategory.Forbidden,
+        "You cannot access this tenant",
+        { reason: "tenant mismatch", providerSecret: "secret" },
+      );
+    });
+    await testServer.start(4005);
+
+    try {
+      const response = await fetch("http://localhost:4005/graphql");
+      const problem = (await response.json()) as Record<string, unknown>;
+
+      expect(response.status).toBe(403);
+      expect(problem).toMatchObject({
+        code: "ACCESS_DENIED",
+        detail: "You cannot access this tenant",
+        reason: "tenant mismatch",
+        status: 403,
+      });
+      expect(problem).not.toHaveProperty("providerSecret");
+      expect(logger.error).toHaveBeenCalledWith("GraphQL request failed", {
+        phase: "yoga-execution",
+        problemCode: "ACCESS_DENIED",
+      });
+    } finally {
+      await testServer.stop();
+      Container.reset();
+    }
+  });
+
+  it("should replace Yoga rejections with one stable internal failure", async () => {
+    const logger = { error: vi.fn() };
+    Container.set(Logger, logger as unknown as Logger);
+    const testServer = new GraphQLServer({
+      schemaOptions: {
+        resolvers: [UserResolver],
+        autoDiscover: false,
+      },
+    });
+
+    await testServer.initialize();
+    Reflect.set(testServer, "yogaHandler", async () => {
+      throw new Error("provider credential leaked");
+    });
+    await testServer.start(4006);
+
+    try {
+      const response = await fetch("http://localhost:4006/graphql");
+      const responseBody = await response.text();
+
+      expect(response.status).toBe(500);
+      expect(JSON.parse(responseBody)).toEqual({
+        type: "about:blank",
+        title: "Internal Server Error",
+        status: 500,
+        code: "transports-graphql/request-handling-failed",
+        detail: "An internal error occurred",
+      });
+      expect(responseBody).not.toContain("provider credential leaked");
+      expect(logger.error).toHaveBeenCalledWith("GraphQL request failed", {
+        phase: "yoga-execution",
+        problemCode: "transports-graphql/request-handling-failed",
+      });
+    } finally {
+      await testServer.stop();
+      Container.reset();
+    }
+  });
+
+  it("should replace response streaming failures without stale response headers", async () => {
+    const logger = { error: vi.fn() };
+    Container.set(Logger, logger as unknown as Logger);
+    const testServer = new GraphQLServer({
+      schemaOptions: {
+        resolvers: [UserResolver],
+        autoDiscover: false,
+      },
+    });
+
+    await testServer.initialize();
+    const yogaResponse = new Response("unused", {
+      headers: {
+        "content-length": "999",
+        "set-cookie": "session=should-not-be-sent",
+        "x-yoga-response": "should-not-be-sent",
+      },
+    });
+    Reflect.set(yogaResponse, "text", async () => {
+      throw new Error("stream provider secret");
+    });
+    Reflect.set(testServer, "yogaHandler", async () => yogaResponse);
+    await testServer.start(4007);
+
+    try {
+      const response = await fetch("http://localhost:4007/graphql");
+      const responseBody = await response.text();
+
+      expect(response.status).toBe(500);
+      expect(response.headers.get("set-cookie")).toBeNull();
+      expect(response.headers.get("x-yoga-response")).toBeNull();
+      expect(responseBody).not.toContain("stream provider secret");
+      expect(JSON.parse(responseBody)).toMatchObject({
+        code: "transports-graphql/request-handling-failed",
+        status: 500,
+      });
+      expect(logger.error).toHaveBeenCalledWith("GraphQL request failed", {
+        phase: "response-body",
+        problemCode: "transports-graphql/request-handling-failed",
+      });
+    } finally {
+      await testServer.stop();
+      Container.reset();
+    }
+  });
+
+  it("should destroy a committed response after an asynchronous write failure", async () => {
+    const logger = { error: vi.fn() };
+    Container.set(Logger, logger as unknown as Logger);
+    const destroySpy = vi.spyOn(ServerResponse.prototype, "destroy");
+    const endSpy = vi
+      .spyOn(ServerResponse.prototype, "end")
+      .mockImplementationOnce(function (this: ServerResponse) {
+        this.flushHeaders();
+        Object.defineProperties(this, {
+          writableEnded: { configurable: true, value: true },
+          writableFinished: { configurable: true, value: false },
+        });
+        setImmediate(() => this.emit("error", new Error("socket write provider secret")));
+        return this;
+      });
+    const testServer = new GraphQLServer({
+      schemaOptions: {
+        resolvers: [UserResolver],
+        autoDiscover: false,
+      },
+    });
+
+    await testServer.start(4008);
+
+    try {
+      await expect(
+        fetch("http://localhost:4008/graphql").then((response) => response.text()),
+      ).rejects.toThrow();
+      await vi.waitFor(() => {
+        expect(logger.error).toHaveBeenCalledWith("GraphQL request failed", {
+          phase: "response-write",
+          problemCode: "transports-graphql/request-handling-failed",
+        });
+        expect(destroySpy).toHaveBeenCalled();
+      });
+    } finally {
+      endSpy.mockRestore();
+      destroySpy.mockRestore();
+      await testServer.stop();
+      Container.reset();
+    }
+  });
+
   describe("Problem masking", () => {
     const problemServer = new GraphQLServer({
       schemaOptions: {
@@ -895,4 +1100,20 @@ async function executeQuery(
     response,
     data: await response.json(),
   };
+}
+
+function sendRawHttpRequest(port: number, request: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const socket = connect(port, "127.0.0.1", () => {
+      socket.end(request);
+    });
+    let response = "";
+
+    socket.setEncoding("utf8");
+    socket.on("data", (chunk: string) => {
+      response += chunk;
+    });
+    socket.on("end", () => resolve(response));
+    socket.on("error", reject);
+  });
 }

@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 597,
+  problemCount: 598,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -16378,6 +16378,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 33,
           column: 5,
           kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "transports-graphql/request-handling-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#transports-graphql-request-handling-failed",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/transports-graphql/src/libs/problems/GraphQLTransportProblems.ts",
+          line: 55,
+          column: 3,
+          kind: "problem-class",
         },
       ],
     },

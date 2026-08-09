@@ -432,6 +432,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`TenantRequiredProblem`](/api/tenant-core/src/classes/tenantrequiredproblem/)
 - [`GraphQLRequestBodyAbortedProblem`](/api/transports-graphql/src/classes/graphqlrequestbodyabortedproblem/)
 - [`GraphQLRequestBodyTooLargeProblem`](/api/transports-graphql/src/classes/graphqlrequestbodytoolargeproblem/)
+- [`GraphQLRequestHandlingFailedProblem`](/api/transports-graphql/src/classes/graphqlrequesthandlingfailedproblem/)
 - [`GraphQLResolversNotConfiguredProblem`](/api/transports-graphql/src/classes/graphqlresolversnotconfiguredproblem/)
 - [`GraphQLSchemaNotConfiguredProblem`](/api/transports-graphql/src/classes/graphqlschemanotconfiguredproblem/)
 - [`GraphQLServerNotInitializedProblem`](/api/transports-graphql/src/classes/graphqlservernotinitializedproblem/)

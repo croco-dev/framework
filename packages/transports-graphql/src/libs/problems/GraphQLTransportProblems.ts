@@ -50,3 +50,11 @@ export class GraphQLRequestBodyAbortedProblem extends Problem {
     super(undefined, undefined, "Request body aborted");
   }
 }
+
+export class GraphQLRequestHandlingFailedProblem extends Problem {
+  readonly code = "transports-graphql/request-handling-failed";
+  readonly category = ProblemCategory.InternalServerError;
+  constructor() {
+    super(undefined, undefined, "An internal error occurred");
+  }
+}
