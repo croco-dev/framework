@@ -42,7 +42,7 @@ import {
   createOperationalMetricsResponse,
   createDefaultDiagnosticsCollector,
   resolveDiagnosticsEndpointPolicy,
-  sanitizeReadinessResult,
+  sanitizeHealthCheckResult,
   sanitizeDiagnosticsReport,
 } from "./operationalEndpoints";
 
@@ -435,12 +435,15 @@ export class CrocoApp {
   }
 
   private registerSystemRoutes(): void {
-    this.hono.get("/health", (c) => c.json({ status: "ok" }));
+    this.hono.get("/health", async (c) => {
+      const result = sanitizeHealthCheckResult(await this.healthCheckRegistry.check());
+      return c.json(result, result.status === "up" ? 200 : 503);
+    });
 
     this.hono.get("/health/live", (c) => c.json({ status: "ok" }, 200));
 
     const readinessHandler = async (c: Context) => {
-      const result = sanitizeReadinessResult(await this.healthCheckRegistry.checkReadiness());
+      const result = sanitizeHealthCheckResult(await this.healthCheckRegistry.checkReadiness());
       return c.json(result, result.status === "up" ? 200 : 503);
     };
 

@@ -324,7 +324,7 @@ const apiWorkerFetchSmokeScript = [
   'const response = await fetchHandler(new Request("http://localhost/health", { headers: { origin: "http://localhost:5173", "cf-connecting-ip": "203.0.113.10" } }), { WEB_ORIGIN: "http://localhost:5173" }, executionContext);',
   "const body = await response.json();",
   "if (response.status !== 200) throw new Error(`Expected /health status 200, received ${response.status}`);",
-  'if (body.status !== "ok") throw new Error(`Expected /health body status ok, received ${JSON.stringify(body)}`);',
+  'if (body.status !== "up" || !Array.isArray(body.results) || body.results.length !== 0) throw new Error(`Expected empty aggregate /health body, received ${JSON.stringify(body)}`);',
   "})();",
 ].join(" ");
 const graphqlProtectedRouteSmokeBaseScriptLines = [
