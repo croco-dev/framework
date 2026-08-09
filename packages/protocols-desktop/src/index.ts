@@ -1,5 +1,9 @@
 export { DesktopDefinitionProblem } from "./libs/DesktopDefinitionProblem";
 export {
+  compileDesktopContractGraph,
+  stringifyDesktopContractGraph,
+} from "./libs/DesktopContractGraph";
+export {
   compileDesktopWireSchema,
   DesktopWireSchemaProblem,
   formatDesktopWireSchemaDiagnostic,
@@ -8,6 +12,20 @@ export {
 } from "./libs/DesktopWireSchema";
 export { desktop } from "./libs/desktop";
 export type { DesktopDefinitionProblemCode } from "./libs/DesktopDefinitionProblem";
+export type {
+  CompileDesktopContractGraphOptions,
+  DesktopContractGraphCommand,
+  DesktopContractGraphContract,
+  DesktopContractGraphDiagnostic,
+  DesktopContractGraphEvent,
+  DesktopContractGraphGrant,
+  DesktopContractGraphSchema,
+  DesktopContractGraphSchemaReference,
+  DesktopContractGraphSourceLocations,
+  DesktopContractGraphV1,
+  DesktopContractGraphVersion,
+  DesktopContractGraphWindow,
+} from "./libs/DesktopContractGraph";
 export type {
   DesktopWireEnumDescriptor,
   DesktopWireLiteralDescriptor,

@@ -122,6 +122,42 @@ Grant IDs are derived from the mounted contract and grant member keys, never sup
 deterministic contract and app metadata preserve the serialized grant policy for the future compiler and runtime;
 this package does not issue, redeem, or validate tokens and never accepts a filesystem path as a grant reference.
 
+## Compile the desktop contract graph
+
+`compileDesktopContractGraph(app)` produces the explicit `croco.desktop-contract-graph.v1` artifact consumed by
+later generators and runtime-authority layers. Contracts, commands, events, grants, and windows are ordered by
+stable IDs. Every command includes its input and output descriptors plus explicit effect, Problem, emitted-event,
+and request-response execution-policy fields. Effect and Problem lists remain empty until their declaration APIs
+are introduced rather than being inferred from runtime behavior.
+
+The graph records local-window exposure and receipt, remote-window origin allowlists, opaque grant references, and
+structured schema diagnostics. Unsupported schemas produce a `null` descriptor and diagnostic data in the graph;
+they are never formatted away or degraded to an unvalidated schema. `stringifyDesktopContractGraph(graph)` emits
+canonical, trailing-newline JSON.
+
+The semantic hash is SHA-256 over canonical semantic fields. Source evidence and diagnostic prose are excluded,
+while stable diagnostic codes and targets remain part of the identity. Optional source locations may be supplied by
+graph ID: `app`, `contract:<contract-id>`, `window:<window-id>`, command/event/grant IDs, and the schema IDs
+`<command-id>.input`, `<command-id>.output`, or `<event-id>.payload`. Checkout prefixes and platform separators are
+normalized through the explicit `sourceRoot` before source evidence is serialized. Without a source root, the full
+path is preserved with forward-slash separators so distinct files never collapse to the same evidence location.
+
+```typescript
+const graph = compileDesktopContractGraph(app, {
+  sourceLocations: {
+    app: { path: "/workspace/apps/editor/src/desktop.ts", line: 10 },
+    "contract:project": { path: "/workspace/packages/editor/src/project.contract.ts", line: 12 },
+    "project.readFile.input": {
+      path: "/workspace/packages/editor/src/project.contract.ts",
+      line: 18,
+    },
+  },
+  sourceRoot: "/workspace",
+});
+
+graph.semanticHash; // "sha256:..."
+```
+
 ## Compile and validate DesktopWire schemas
 
 `compileDesktopWireSchema(schema, context)` compiles strict objects, strings, finite numbers, booleans, null,

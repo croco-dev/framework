@@ -20857,6 +20857,12 @@
           "sourceEntrypoint": "packages/protocols-desktop/src/index.ts",
           "runtimeExports": [
             {
+              "name": "compileDesktopContractGraph",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraph",
+              "declarationKind": "function"
+            },
+            {
               "name": "compileDesktopWireSchema",
               "exportKind": "named",
               "source": "./libs/DesktopWireSchema",
@@ -20890,6 +20896,12 @@
               "name": "parseDesktopWireValue",
               "exportKind": "named",
               "source": "./libs/DesktopWireSchema",
+              "declarationKind": "function"
+            },
+            {
+              "name": "stringifyDesktopContractGraph",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraph",
               "declarationKind": "function"
             },
             {
@@ -20956,6 +20968,11 @@
               "source": "./libs/types"
             },
             {
+              "name": "CompileDesktopContractGraphOptions",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraph"
+            },
+            {
               "name": "DesktopAppContractMetadata",
               "exportKind": "named",
               "source": "./libs/types"
@@ -21009,6 +21026,61 @@
               "name": "DesktopContractDefinition",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "DesktopContractGraphCommand",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraph"
+            },
+            {
+              "name": "DesktopContractGraphContract",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraph"
+            },
+            {
+              "name": "DesktopContractGraphDiagnostic",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraph"
+            },
+            {
+              "name": "DesktopContractGraphEvent",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraph"
+            },
+            {
+              "name": "DesktopContractGraphGrant",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraph"
+            },
+            {
+              "name": "DesktopContractGraphSchema",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraph"
+            },
+            {
+              "name": "DesktopContractGraphSchemaReference",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraph"
+            },
+            {
+              "name": "DesktopContractGraphSourceLocations",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraph"
+            },
+            {
+              "name": "DesktopContractGraphV1",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraph"
+            },
+            {
+              "name": "DesktopContractGraphVersion",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraph"
+            },
+            {
+              "name": "DesktopContractGraphWindow",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraph"
             },
             {
               "name": "DesktopContractImplementation",
