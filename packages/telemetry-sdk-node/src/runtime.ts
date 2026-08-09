@@ -6,12 +6,17 @@ import {
   SEMRESATTRS_SERVICE_VERSION,
 } from "@opentelemetry/semantic-conventions";
 import type { TelemetryConfig } from "./config";
-import { resolveAutoInstrumentation } from "./libs/instrumentation/AutoInstrumentation";
+import {
+  createAutoInstrumentationConfigPlan,
+  mergeCustomInstrumentations,
+  resolveAutoInstrumentation,
+} from "./libs/instrumentation/AutoInstrumentation";
 import { TelemetryAutoInstrumentationProblem } from "./libs/problems/TelemetryAutoInstrumentationProblem";
 import {
   LegacyTelemetrySignalConfigProblem,
   OtlpEndpointRequiredProblem,
   TelemetryBatchConfigurationProblem,
+  TelemetryInitializationConflictProblem,
   TelemetryRuntimeProblem,
 } from "./libs/problems/TelemetryProblems";
 import { resolveDeploymentEnvironment } from "./libs/resources/DeploymentEnvironment";
@@ -27,7 +32,10 @@ class TelemetryRuntime {
   private initialized = false;
   private initPromise: Promise<void> | null = null;
   private config: TelemetryConfig | null = null;
+  private configFingerprint: string | null = null;
   private enabledAutoInstrumentationModules: string[] = [];
+  private readonly fingerprintIdentities = new WeakMap<object, number>();
+  private nextFingerprintIdentity = 1;
 
   private constructor() {}
 
@@ -71,24 +79,27 @@ class TelemetryRuntime {
     validateBatchSpanProcessorConfig(config);
 
     const requestedConfig = snapshotTelemetryConfig(config);
+    const requestedFingerprint = this.createConfigFingerprint(requestedConfig);
 
-    if (!this.initialized && !this.initPromise) {
-      this.config = requestedConfig;
-    }
-
-    if (this.initialized) {
+    if (this.configFingerprint !== null) {
+      if (this.configFingerprint !== requestedFingerprint) {
+        throw new TelemetryInitializationConflictProblem(this.getInitializationState());
+      }
+      if (this.initialized) {
+        return;
+      }
+      if (this.initPromise) {
+        return this.initPromise;
+      }
       return;
-    }
-
-    if (this.initPromise) {
-      return this.initPromise;
     }
 
     config = requestedConfig;
     this.config = config;
+    this.configFingerprint = requestedFingerprint;
 
     if (config.enabled === false || config.trace?.enabled === false) {
-      // Store disabled config so a later enabled init can initialize telemetry in the same process.
+      // A disabled runtime still owns this configuration until shutdown clears the contract.
       return;
     }
 
@@ -111,12 +122,7 @@ class TelemetryRuntime {
       const sampler = await this.createSampler(config);
 
       try {
-        const instrumentationEnvironment =
-          config.resourceAttributes?.["cloud.platform"] === "aws_lambda" ||
-          process.env["AWS_LAMBDA_FUNCTION_NAME"] !== undefined ||
-          process.env["AWS_EXECUTION_ENV"]?.includes("AWS_Lambda") === true
-            ? "lambda"
-            : "node";
+        const instrumentationEnvironment = resolveInstrumentationEnvironment(config);
         const resolvedInstrumentation = await resolveAutoInstrumentation(
           traceConfig.autoInstrumentation,
           instrumentationEnvironment,
@@ -184,7 +190,7 @@ class TelemetryRuntime {
     try {
       await this.initPromise;
     } catch (error) {
-      this.initPromise = null;
+      this.clearInitializationContract();
       throw error;
     } finally {
       if (this.initialized) {
@@ -260,9 +266,10 @@ class TelemetryRuntime {
     }
 
     if (!this.sdk) {
+      const reason = this.getDisabledLifecycleReason();
       this.initialized = false;
       this.initPromise = null;
-      const reason = this.getDisabledLifecycleReason();
+      this.clearInitializationContract();
       return reason
         ? { outcome: "skipped", reason }
         : { outcome: "unsupported", reason: "not-initialized" };
@@ -275,6 +282,7 @@ class TelemetryRuntime {
       this.enabledAutoInstrumentationModules = [];
       this.initialized = false;
       this.initPromise = null;
+      this.clearInitializationContract();
       return { outcome: "completed" };
     } catch (error) {
       throw this.createRuntimeProblem("shutdown", error);
@@ -316,6 +324,91 @@ class TelemetryRuntime {
       return "tracing-disabled";
     }
     return null;
+  }
+
+  private getInitializationState(): "disabled" | "initialized" | "initializing" {
+    if (this.initPromise) {
+      return "initializing";
+    }
+    return this.initialized ? "initialized" : "disabled";
+  }
+
+  private clearInitializationContract(): void {
+    this.config = null;
+    this.configFingerprint = null;
+    this.initPromise = null;
+  }
+
+  private createConfigFingerprint(config: TelemetryConfig): string {
+    const trace = config.trace ?? {};
+    const instrumentationEnvironment = resolveInstrumentationEnvironment(config);
+    const autoInstrumentationPlan = createAutoInstrumentationConfigPlan(
+      trace.autoInstrumentation,
+      instrumentationEnvironment,
+    );
+    const customInstrumentations = mergeCustomInstrumentations(
+      trace.instrumentations ?? [],
+      autoInstrumentationPlan.normalized.enabled
+        ? (autoInstrumentationPlan.normalized.customInstrumentations ?? [])
+        : [],
+    );
+    const customInstrumentationNames = new Set(
+      customInstrumentations
+        .map((instrumentation) => instrumentation.instrumentationName ?? "")
+        .filter((name) => name.length > 0),
+    );
+    const automaticModules = autoInstrumentationPlan.selectedNames.filter(
+      (module) => !customInstrumentationNames.has(module),
+    );
+    const autoInstrumentation = {
+      enabled: autoInstrumentationPlan.normalized.enabled,
+      modules: automaticModules,
+      moduleOptions: Object.fromEntries(
+        automaticModules.flatMap((module) => {
+          const options = autoInstrumentationPlan.optionsByName.get(module);
+          return options ? [[module, options]] : [];
+        }),
+      ),
+    };
+    const semanticConfig = {
+      serviceName: config.serviceName,
+      serviceVersion: config.serviceVersion ?? "0.0.0",
+      environment: resolveDeploymentEnvironment(config),
+      enabled: config.enabled !== false,
+      resourceAttributes: {
+        ...config.resourceAttributes,
+        [ATTR_DEPLOYMENT_ENVIRONMENT_NAME]: resolveDeploymentEnvironment(config),
+      },
+      trace: {
+        enabled: trace.enabled !== false,
+        exporterUrl:
+          trace.exporterUrl ??
+          process.env["OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"] ??
+          process.env["OTEL_EXPORTER_OTLP_ENDPOINT"],
+        exporterHeaders: trace.exporterHeaders ?? {},
+        sampler: trace.sampler ?? null,
+        probability: trace.sampler ? undefined : trace.probability,
+        batchTimeout: trace.batchTimeout ?? 5000,
+        batchCount: trace.batchCount ?? 2048,
+        batchSize: trace.batchSize ?? 512,
+        instrumentations: customInstrumentations,
+        autoInstrumentation,
+      },
+    };
+    return canonicalizeFingerprintValue(semanticConfig, (value) =>
+      this.getFingerprintIdentity(value),
+    );
+  }
+
+  private getFingerprintIdentity(value: object): number {
+    const existing = this.fingerprintIdentities.get(value);
+    if (existing !== undefined) {
+      return existing;
+    }
+    const identity = this.nextFingerprintIdentity;
+    this.nextFingerprintIdentity += 1;
+    this.fingerprintIdentities.set(value, identity);
+    return identity;
   }
 }
 
@@ -387,9 +480,92 @@ function snapshotTelemetryConfig(config: TelemetryConfig): TelemetryConfig {
         ...(config.trace.instrumentations && {
           instrumentations: [...config.trace.instrumentations],
         }),
+        ...(config.trace.autoInstrumentation && {
+          autoInstrumentation: {
+            ...config.trace.autoInstrumentation,
+            ...(config.trace.autoInstrumentation.modules && {
+              modules: [...config.trace.autoInstrumentation.modules],
+            }),
+            ...(config.trace.autoInstrumentation.excludeModules && {
+              excludeModules: [...config.trace.autoInstrumentation.excludeModules],
+            }),
+            ...(config.trace.autoInstrumentation.customInstrumentations && {
+              customInstrumentations: [...config.trace.autoInstrumentation.customInstrumentations],
+            }),
+            ...(config.trace.autoInstrumentation.moduleOptions && {
+              moduleOptions: Object.fromEntries(
+                Object.entries(config.trace.autoInstrumentation.moduleOptions).map(
+                  ([module, options]) => [module, { ...options }],
+                ),
+              ),
+            }),
+            ...(config.trace.autoInstrumentation.exclude && {
+              exclude: [...config.trace.autoInstrumentation.exclude],
+            }),
+            ...(config.trace.autoInstrumentation.include && {
+              include: [...config.trace.autoInstrumentation.include],
+            }),
+          },
+        }),
       },
     }),
   };
+}
+
+function resolveInstrumentationEnvironment(config: TelemetryConfig): "lambda" | "node" {
+  return config.resourceAttributes?.["cloud.platform"] === "aws_lambda" ||
+    process.env["AWS_LAMBDA_FUNCTION_NAME"] !== undefined ||
+    process.env["AWS_EXECUTION_ENV"]?.includes("AWS_Lambda") === true
+    ? "lambda"
+    : "node";
+}
+
+function canonicalizeFingerprintValue(
+  value: unknown,
+  getIdentity: (value: object) => number,
+  ancestors = new WeakSet<object>(),
+): string {
+  if (value === undefined) {
+    return "undefined";
+  }
+  if (value === null || typeof value === "boolean" || typeof value === "string") {
+    return JSON.stringify(value);
+  }
+  if (typeof value === "number") {
+    return Number.isNaN(value) ? "number:NaN" : `number:${String(value)}`;
+  }
+  if (typeof value === "function") {
+    return `identity:${getIdentity(value)}`;
+  }
+  if (typeof value !== "object") {
+    return `${typeof value}:${String(value)}`;
+  }
+
+  if (ancestors.has(value)) {
+    return `identity:${getIdentity(value)}`;
+  }
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== Array.prototype && prototype !== null) {
+    return `identity:${getIdentity(value)}`;
+  }
+
+  ancestors.add(value);
+  try {
+    if (Array.isArray(value)) {
+      return `[${value.map((entry) => canonicalizeFingerprintValue(entry, getIdentity, ancestors)).join(",")}]`;
+    }
+    const record = value as Record<string, unknown>;
+    return `{${Object.keys(record)
+      .filter((key) => record[key] !== undefined)
+      .sort()
+      .map(
+        (key) =>
+          `${JSON.stringify(key)}:${canonicalizeFingerprintValue(record[key], getIdentity, ancestors)}`,
+      )
+      .join(",")}}`;
+  } finally {
+    ancestors.delete(value);
+  }
 }
 
 type TelemetryLifecycleSkipReason = "telemetry-disabled" | "tracing-disabled";

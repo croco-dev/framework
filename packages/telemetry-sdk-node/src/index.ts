@@ -28,6 +28,7 @@ export {
   SamplerProblem,
   TelemetryBatchConfigurationProblem,
   TelemetryForceFlushUnsupportedProblem,
+  TelemetryInitializationConflictProblem,
 } from "./libs/problems/TelemetryProblems";
 export type {
   TelemetryBatchConfigurationConstraint,

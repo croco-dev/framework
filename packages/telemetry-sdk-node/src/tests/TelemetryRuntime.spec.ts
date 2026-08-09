@@ -100,25 +100,147 @@ describe("TelemetryRuntime", () => {
     });
   });
 
-  it("should initialize when telemetry is enabled after a disabled init", async () => {
+  it("should reject enabled initialization after a disabled init", async () => {
     await runtime.init({
       serviceName: "test-service",
       enabled: false,
     });
 
+    await expect(
+      runtime.init({
+        serviceName: "test-service",
+        enabled: true,
+        trace: { enabled: true, exporterUrl: "http://collector:4318/v1/traces" },
+      }),
+    ).rejects.toMatchObject({
+      code: "telemetry-sdk-node/init-configuration-conflict",
+      runtimeState: "disabled",
+    });
+    expect(runtime.isInitialized()).toBe(false);
+    expect(runtime.getConfig()).toEqual({ serviceName: "test-service", enabled: false });
+  });
+
+  it("should treat equivalent property order and omitted undefined values as the same disabled config", async () => {
     await runtime.init({
       serviceName: "test-service",
-      enabled: true,
-      trace: { enabled: true, exporterUrl: "http://collector:4318/v1/traces" },
+      enabled: false,
+      resourceAttributes: { region: "ap-northeast-2", version: 1 },
     });
 
-    expect(runtime.isInitialized()).toBe(true);
-    expect(runtime.isEnabled()).toBe(true);
-    expect(runtime.getConfig()).toEqual({
-      serviceName: "test-service",
-      enabled: true,
-      trace: { enabled: true, exporterUrl: "http://collector:4318/v1/traces" },
+    await expect(
+      runtime.init({
+        resourceAttributes: { version: 1, region: "ap-northeast-2" },
+        enabled: false,
+        serviceVersion: undefined,
+        serviceName: "test-service",
+      }),
+    ).resolves.toBeUndefined();
+  });
+
+  it("should treat explicit runtime defaults as semantically equal", async () => {
+    await runtime.init({
+      serviceName: "default-service",
+      trace: { exporterUrl: "http://collector:4318/v1/traces" },
     });
+
+    await expect(
+      runtime.init({
+        serviceName: "default-service",
+        serviceVersion: "0.0.0",
+        environment: "development",
+        enabled: true,
+        resourceAttributes: {},
+        trace: {
+          enabled: true,
+          exporterUrl: "http://collector:4318/v1/traces",
+          exporterHeaders: {},
+          batchTimeout: 5000,
+          batchCount: 2048,
+          batchSize: 512,
+          instrumentations: [],
+          autoInstrumentation: { enabled: false },
+        },
+      }),
+    ).resolves.toBeUndefined();
+  });
+
+  it("should treat equivalent auto-instrumentation aliases and duplicates as semantically equal", async () => {
+    await runtime.init({
+      serviceName: "instrumented-service",
+      trace: {
+        exporterUrl: "http://collector:4318/v1/traces",
+        autoInstrumentation: {
+          modules: ["http", "https", "http"],
+          excludeModules: ["dns", "dns"],
+        },
+      },
+    });
+
+    await expect(
+      runtime.init({
+        serviceName: "instrumented-service",
+        trace: {
+          exporterUrl: "http://collector:4318/v1/traces",
+          autoInstrumentation: {
+            modules: ["https", "http"],
+            excludeModules: [],
+          },
+        },
+      }),
+    ).resolves.toBeUndefined();
+  });
+
+  it("should validate a conflicting init before accepting its canonical fingerprint", async () => {
+    await runtime.init({
+      serviceName: "validated-instrumentation-service",
+      enabled: false,
+      trace: { autoInstrumentation: { modules: ["http", "https"] } },
+    });
+
+    await expect(
+      runtime.init({
+        serviceName: "validated-instrumentation-service",
+        enabled: false,
+        trace: { autoInstrumentation: { modules: ["http"] } },
+      }),
+    ).rejects.toMatchObject({
+      code: "TELEMETRY_AUTO_INSTRUMENTATION_INVALID_CONFIG",
+      detail:
+        "The 'http' and 'https' modules must be selected together because OpenTelemetry provides one shared instrumentation",
+    });
+  });
+
+  it("should treat duplicate custom instrumentations as the same effective plan", async () => {
+    const primary = {
+      instrumentationName: "@opentelemetry/instrumentation-pg",
+    } as unknown as Instrumentation;
+    const duplicateName = {
+      instrumentationName: "@opentelemetry/instrumentation-pg",
+    } as unknown as Instrumentation;
+
+    await runtime.init({
+      serviceName: "custom-instrumented-service",
+      enabled: false,
+      trace: {
+        instrumentations: [primary, primary],
+        autoInstrumentation: {
+          modules: ["pg"],
+          customInstrumentations: [duplicateName],
+          moduleOptions: { pg: { enhancedDatabaseReporting: true } },
+        },
+      },
+    });
+
+    await expect(
+      runtime.init({
+        serviceName: "custom-instrumented-service",
+        enabled: false,
+        trace: {
+          instrumentations: [primary],
+          autoInstrumentation: { modules: ["pg"], customInstrumentations: [] },
+        },
+      }),
+    ).resolves.toBeUndefined();
   });
 
   it.each(["metrics", "logs"] as const)(
@@ -366,16 +488,21 @@ describe("TelemetryRuntime", () => {
     });
   });
 
-  it("should keep enabled initialization active when a later disabled init is requested", async () => {
+  it("should reject a different config after initialization", async () => {
     await runtime.init({
       serviceName: "test-service",
       enabled: true,
       trace: { enabled: true, exporterUrl: "http://collector:4318/v1/traces" },
     });
 
-    await runtime.init({
-      serviceName: "test-service",
-      enabled: false,
+    await expect(
+      runtime.init({
+        serviceName: "test-service",
+        enabled: false,
+      }),
+    ).rejects.toMatchObject({
+      code: "telemetry-sdk-node/init-configuration-conflict",
+      runtimeState: "initialized",
     });
 
     expect(runtime.isInitialized()).toBe(true);
@@ -385,6 +512,24 @@ describe("TelemetryRuntime", () => {
       enabled: true,
       trace: { enabled: true, exporterUrl: "http://collector:4318/v1/traces" },
     });
+  });
+
+  it("should share concurrent initialization only for equal config", async () => {
+    const config = {
+      serviceName: "concurrent-service",
+      enabled: true,
+      trace: { enabled: true, exporterUrl: "http://collector:4318/v1/traces" },
+    };
+
+    const first = runtime.init(config);
+    const equal = runtime.init({ ...config, trace: { ...config.trace } });
+    const conflicting = expect(
+      runtime.init({ ...config, serviceName: "other-service" }),
+    ).rejects.toMatchObject({ runtimeState: "initializing" });
+
+    await expect(equal).resolves.toBeUndefined();
+    await conflicting;
+    await expect(first).resolves.toBeUndefined();
   });
 
   it("should preserve initialized state when the caller mutates its config", async () => {
@@ -436,6 +581,22 @@ describe("TelemetryRuntime", () => {
       enabled: true,
       trace: { enabled: true, exporterUrl: "http://collector:4318/v1/traces" },
     });
+  });
+
+  it("should initialize with a new config after disabled runtime shutdown", async () => {
+    await runtime.init({ serviceName: "disabled-service", enabled: false });
+    await expect(runtime.shutdown()).resolves.toEqual({
+      outcome: "skipped",
+      reason: "telemetry-disabled",
+    });
+
+    await runtime.init({
+      serviceName: "enabled-service",
+      trace: { exporterUrl: "http://collector:4318/v1/traces" },
+    });
+
+    expect(runtime.isInitialized()).toBe(true);
+    expect(runtime.getConfig()?.serviceName).toBe("enabled-service");
   });
 
   it("should wait for in-flight initialization before shutdown", async () => {

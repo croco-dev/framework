@@ -25047,6 +25047,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "TelemetryInitializationConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/TelemetryProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "TelemetryRuntime",
               "exportKind": "named",
               "source": "./runtime",

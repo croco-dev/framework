@@ -6,6 +6,7 @@ import {
   SamplerProblem,
   TelemetryBatchConfigurationProblem,
   TelemetryForceFlushUnsupportedProblem,
+  TelemetryInitializationConflictProblem,
   TelemetryRuntimeProblem,
 } from "../libs/problems/TelemetryProblems";
 
@@ -123,6 +124,22 @@ describe("TelemetryRuntimeProblem", () => {
     const cause = new Error("root cause");
     const problem = new TelemetryRuntimeProblem("init", cause);
     expect(problem.cause).toBe(cause);
+  });
+});
+
+describe("TelemetryInitializationConflictProblem", () => {
+  it("exposes the conflicting runtime state without configuration values", () => {
+    const problem = new TelemetryInitializationConflictProblem("initializing");
+
+    expect(problem).toMatchObject({
+      code: "telemetry-sdk-node/init-configuration-conflict",
+      category: "Conflict",
+      runtimeState: "initializing",
+    });
+    expect(problem.status).toBe(409);
+    expect(problem.detail).toBe(
+      "TelemetryRuntime cannot apply a different configuration while the runtime is initializing; call shutdown() before reconfiguring.",
+    );
   });
 });
 

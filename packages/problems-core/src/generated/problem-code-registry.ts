@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 598,
+  problemCount: 599,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -15288,7 +15288,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts",
-          line: 114,
+          line: 130,
           column: 3,
           kind: "problem-class",
         },
@@ -15345,15 +15345,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         },
       },
       lifecycle: {
-        status: "deprecated",
-        deprecation: {
-          reason:
-            "The telemetry SDK no longer exposes non-executable metrics or logs configuration.",
-          migrationNote:
-            "Stop branching on TELEMETRY_SIGNAL_UNSUPPORTED and remove metrics or logs options from TelemetryConfig consumers.",
-          noReplacementReason:
-            "The trace-only runtime has no unsupported signal configuration path to replace this code.",
-        },
+        status: "active",
       },
       sources: [
         {
@@ -15393,6 +15385,37 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts",
           line: 42,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "telemetry-sdk-node/init-configuration-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#telemetry-sdk-node-init-configuration-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts",
+          line: 117,
           column: 3,
           kind: "problem-class",
         },
