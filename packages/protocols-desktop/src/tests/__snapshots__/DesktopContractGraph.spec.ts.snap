@@ -1,0 +1,229 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`DesktopContractGraph > produces identical canonical output for declaration-order and platform-path fixtures 1`] = `
+"{
+  "app": {
+    "contractIds": [
+      "project",
+      "system"
+    ],
+    "sourceLocation": {
+      "line": 10,
+      "path": "apps/editor/src/desktop.ts"
+    },
+    "windowIds": [
+      "login",
+      "main"
+    ]
+  },
+  "commands": [
+    {
+      "contractId": "project",
+      "effects": [],
+      "events": [],
+      "executionPolicy": {
+        "mode": "request-response"
+      },
+      "id": "project.open",
+      "input": {
+        "descriptor": {
+          "grantId": "project.selectedFile",
+          "kind": "grant-reference"
+        },
+        "id": "project.open.input",
+        "sourceLocation": {
+          "line": 22,
+          "path": "packages/editor/src/project.contract.ts"
+        }
+      },
+      "key": "open",
+      "kind": "mutation",
+      "output": {
+        "descriptor": {
+          "fields": [
+            {
+              "name": "opened",
+              "required": true,
+              "schema": {
+                "kind": "boolean"
+              }
+            }
+          ],
+          "kind": "object",
+          "unknownKeys": "reject"
+        },
+        "id": "project.open.output",
+        "sourceLocation": {
+          "line": 23,
+          "path": "packages/editor/src/project.contract.ts"
+        }
+      },
+      "problems": []
+    },
+    {
+      "contractId": "system",
+      "effects": [],
+      "events": [],
+      "executionPolicy": {
+        "mode": "request-response"
+      },
+      "id": "system.status",
+      "input": {
+        "descriptor": {
+          "fields": [],
+          "kind": "object",
+          "unknownKeys": "reject"
+        },
+        "id": "system.status.input"
+      },
+      "key": "status",
+      "kind": "query",
+      "output": {
+        "descriptor": {
+          "fields": [
+            {
+              "name": "ready",
+              "required": true,
+              "schema": {
+                "kind": "boolean"
+              }
+            }
+          ],
+          "kind": "object",
+          "unknownKeys": "reject"
+        },
+        "id": "system.status.output"
+      },
+      "problems": []
+    }
+  ],
+  "contracts": [
+    {
+      "commandIds": [
+        "project.open"
+      ],
+      "eventIds": [
+        "project.changed"
+      ],
+      "grantIds": [
+        "project.selectedFile"
+      ],
+      "id": "project",
+      "sourceLocation": {
+        "line": 12,
+        "path": "packages/editor/src/project.contract.ts"
+      }
+    },
+    {
+      "commandIds": [
+        "system.status"
+      ],
+      "eventIds": [
+        "system.ready"
+      ],
+      "grantIds": [],
+      "id": "system"
+    }
+  ],
+  "diagnostics": [],
+  "effects": [],
+  "events": [
+    {
+      "contractId": "project",
+      "id": "project.changed",
+      "key": "changed",
+      "payload": {
+        "descriptor": {
+          "fields": [
+            {
+              "name": "path",
+              "required": true,
+              "schema": {
+                "kind": "string"
+              }
+            }
+          ],
+          "kind": "object",
+          "unknownKeys": "reject"
+        },
+        "id": "project.changed.payload",
+        "sourceLocation": {
+          "line": 18,
+          "path": "packages/editor/src/project.contract.ts"
+        }
+      }
+    },
+    {
+      "contractId": "system",
+      "id": "system.ready",
+      "key": "ready",
+      "payload": {
+        "descriptor": {
+          "fields": [
+            {
+              "name": "at",
+              "required": true,
+              "schema": {
+                "kind": "number"
+              }
+            }
+          ],
+          "kind": "object",
+          "unknownKeys": "reject"
+        },
+        "id": "system.ready.payload"
+      }
+    }
+  ],
+  "grants": [
+    {
+      "access": "read",
+      "contractId": "project",
+      "id": "project.selectedFile",
+      "key": "selectedFile",
+      "lifetime": "command",
+      "resource": "file",
+      "scope": "exact"
+    }
+  ],
+  "problems": [],
+  "semanticHash": "sha256:164a853c8d1af661559a000cc2a1058702b476606ae20da5dadf2f1c72ae2a89",
+  "version": "croco.desktop-contract-graph.v1",
+  "windows": [
+    {
+      "exposedCommands": [],
+      "id": "login",
+      "originPolicy": {
+        "allowedOrigins": [
+          "https://accounts.example.com",
+          "https://login.example.com"
+        ],
+        "initialUrl": "https://login.example.com",
+        "mode": "remote-allowlist"
+      },
+      "receivedEvents": [],
+      "trust": "remote"
+    },
+    {
+      "exposedCommands": [
+        "project.open",
+        "system.status"
+      ],
+      "id": "main",
+      "originPolicy": {
+        "mode": "local-content"
+      },
+      "receivedEvents": [
+        "project.changed",
+        "system.ready"
+      ],
+      "sourceLocation": {
+        "line": 7,
+        "path": "apps/editor/src/windows.ts"
+      },
+      "trust": "local"
+    }
+  ]
+}
+"
+`;
