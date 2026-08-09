@@ -3,7 +3,7 @@ import { describeZodSchema } from "@croco/protocols-core";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import type { z } from "zod";
 
-export const MESSAGE_CHANNELS = ["email", "push", "sms", "inApp"] as const;
+export const MESSAGE_CHANNELS = Object.freeze(["email", "push", "sms", "inApp"] as const);
 
 export type MessageChannel = (typeof MESSAGE_CHANNELS)[number];
 
@@ -151,6 +151,10 @@ export function getMessageRendererBinding(renderer: Function): MessageRendererBi
 export class MessageRendererRegistry {
   private readonly messages = new Map<string, AnyMessage>();
   private readonly renderers = new Map<string, Function>();
+  private readonly validatedRenderers = new Map<
+    string,
+    { readonly message: AnyMessage; readonly renderer: Function }
+  >();
 
   registerMessage<TMessage extends AnyMessage>(message: TMessage): void {
     const existing = this.messages.get(message.id);
@@ -158,6 +162,7 @@ export class MessageRendererRegistry {
       throw new MessageAlreadyRegisteredProblem(message.id);
     }
     this.messages.set(message.id, message);
+    this.validatedRenderers.delete(message.id);
   }
 
   registerMessages(messages: readonly AnyMessage[]): void {
@@ -180,6 +185,7 @@ export class MessageRendererRegistry {
       );
     }
     this.renderers.set(binding.message.id, renderer);
+    this.validatedRenderers.delete(binding.message.id);
   }
 
   registerRenderers(renderers: readonly MessageRendererConstructor[]): void {
@@ -190,12 +196,14 @@ export class MessageRendererRegistry {
 
   /** Validates all explicit registrations without constructing renderer classes. */
   bootstrap(): void {
+    this.validatedRenderers.clear();
     for (const [messageId, message] of sortedEntries(this.messages)) {
       const renderer = this.renderers.get(messageId);
       if (renderer === undefined) {
         throw new MessageRendererMissingProblem(messageId, message.channels);
       }
       this.assertRendererMatchesMessage(renderer, message);
+      this.validatedRenderers.set(messageId, { message, renderer });
     }
 
     for (const [messageId, renderer] of sortedEntries(this.renderers)) {
@@ -230,7 +238,18 @@ export class MessageRendererRegistry {
         message.id,
       );
     }
-    this.assertRendererMatchesMessage(registered, message);
+    const validated = this.validatedRenderers.get(message.id);
+    if (validated?.message !== message || validated.renderer !== registered) {
+      this.assertRendererMatchesMessage(registered, message);
+      this.validatedRenderers.set(message.id, { message, renderer: registered });
+    }
+    if (!message.channels.includes(channel)) {
+      throw new MessageRendererUndeclaredChannelProblem(
+        message.id,
+        rendererNameOf(registered),
+        channel,
+      );
+    }
     const render = (renderer as unknown as Record<TChannel, RendererMethod<TMessage, TChannel>>)[
       channel
     ];
@@ -242,11 +261,14 @@ export class MessageRendererRegistry {
       .map((message) => message.descriptor as MessageDescriptor)
       .sort((left, right) => left.id.localeCompare(right.id));
     const renderers = sortedEntries(this.renderers).map(([messageId, renderer]) => {
-      const binding = RENDERER_BINDINGS.get(renderer);
+      const message = this.messages.get(messageId);
+      if (message === undefined) {
+        throw new MessageRendererMessageMissingProblem(rendererNameOf(renderer), messageId);
+      }
       return {
         messageId,
         rendererName: rendererNameOf(renderer),
-        channels: binding?.message.channels ?? [],
+        channels: message.channels,
       };
     });
     return Object.freeze({

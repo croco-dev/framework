@@ -18,10 +18,31 @@ const TrialEnding = defineMessage({
   channels: ["email", "push"],
 });
 
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => {
+    switch (character) {
+      case "&":
+        return "&amp;";
+      case "<":
+        return "&lt;";
+      case ">":
+        return "&gt;";
+      case '"':
+        return "&quot;";
+      default:
+        return "&#39;";
+    }
+  });
+}
+
 @Renders(TrialEnding)
 class TrialEndingRenderer implements MessageRenderer<typeof TrialEnding> {
   email({ data }: MessageContext<typeof TrialEnding>) {
-    return { subject: "Trial ending", html: `<p>${data.tenantName}</p>`, text: data.tenantName };
+    return {
+      subject: "Trial ending",
+      html: `<p>${escapeHtml(data.tenantName)}</p>`,
+      text: data.tenantName,
+    };
   }
 
   push({ data }: MessageContext<typeof TrialEnding>) {

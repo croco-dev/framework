@@ -16,11 +16,15 @@ const TrialEnding = defineMessage({
 
 @Renders(TrialEnding)
 class TrialEndingRenderer implements MessageRenderer<typeof TrialEnding> {
-  email({ data }: MessageContext<typeof TrialEnding>) {
+  email({ channel, data }: MessageContext<typeof TrialEnding, "email">) {
+    const emailChannel: "email" = channel;
+    void emailChannel;
     return { subject: data.firstName, html: data.firstName, text: data.firstName };
   }
 
-  push({ data }: MessageContext<typeof TrialEnding>) {
+  push({ channel, data }: MessageContext<typeof TrialEnding, "push">) {
+    const pushChannel: "push" = channel;
+    void pushChannel;
     return { title: data.firstName, body: data.firstName, deepLink: data.upgradeUrl };
   }
 }

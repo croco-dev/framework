@@ -3,6 +3,7 @@
  */
 export {
   defineMessage,
+  MESSAGE_CHANNELS,
   MessageRendererRegistry,
   Renders,
   getMessageRendererBinding,

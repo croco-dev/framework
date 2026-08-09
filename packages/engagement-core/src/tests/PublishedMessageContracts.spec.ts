@@ -3,17 +3,19 @@ import { existsSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync }
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const packageDir = resolve(__dirname, "../..");
 const rootDir = resolve(packageDir, "../..");
 const spawnTimeoutMs = 180_000;
+const skipPackedConsumer =
+  process.env.CROCO_OFFLINE === "1" || process.env.npm_config_offline === "true";
 
 describe("published message contracts", () => {
-  it(
-    "preserves TypeScript 6 contracts and ESM/CJS loading in a clean packed consumer",
+  it.skipIf(skipPackedConsumer)(
+    "preserves TypeScript declaration contracts and ESM/CJS loading in a clean packed consumer",
     () => {
       const packRoot = mkdtempSync(join(tmpdir(), "croco-engagement-core-pack-"));
       const consumerRoot = mkdtempSync(join(tmpdir(), "croco-engagement-core-consumer-"));
@@ -240,7 +242,13 @@ function tscPath(): string {
 }
 
 function run(command: string, arguments_: readonly string[], cwd: string): void {
-  const result = spawnSync(command, arguments_, { cwd, encoding: "utf8" });
+  const result = spawnSync(command, arguments_, {
+    cwd,
+    encoding: "utf8",
+    killSignal: "SIGKILL",
+    maxBuffer: 64 * 1024 * 1024,
+    timeout: spawnTimeoutMs,
+  });
   if (result.error) {
     throw result.error;
   }
@@ -249,5 +257,4 @@ function run(command: string, arguments_: readonly string[], cwd: string): void 
       `${command} ${arguments_.join(" ")} failed:\n${result.stdout}\n${result.stderr}`,
     );
   }
-  expect(result.status).toBe(0);
 }

@@ -3473,7 +3473,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/MessageContracts.ts:312:5` (problem-constructor)
+- `packages/engagement-core/src/libs/MessageContracts.ts:334:5` (problem-constructor)
 
 <a id="engagement-core-message-data-invalid"></a>
 
@@ -3491,7 +3491,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/MessageContracts.ts:299:5` (problem-constructor)
+- `packages/engagement-core/src/libs/MessageContracts.ts:321:5` (problem-constructor)
 
 <a id="engagement-core-message-definition-invalid"></a>
 
@@ -3509,7 +3509,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/MessageContracts.ts:291:5` (problem-constructor)
+- `packages/engagement-core/src/libs/MessageContracts.ts:313:5` (problem-constructor)
 
 <a id="engagement-core-renderer-already-registered"></a>
 
@@ -3527,7 +3527,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/MessageContracts.ts:325:5` (problem-constructor)
+- `packages/engagement-core/src/libs/MessageContracts.ts:347:5` (problem-constructor)
 
 <a id="engagement-core-renderer-binding-mismatch"></a>
 
@@ -3545,7 +3545,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/MessageContracts.ts:371:5` (problem-constructor)
+- `packages/engagement-core/src/libs/MessageContracts.ts:393:5` (problem-constructor)
 
 <a id="engagement-core-renderer-channel-missing"></a>
 
@@ -3563,7 +3563,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/MessageContracts.ts:360:5` (problem-constructor)
+- `packages/engagement-core/src/libs/MessageContracts.ts:382:5` (problem-constructor)
 
 <a id="engagement-core-renderer-channel-undeclared"></a>
 
@@ -3581,7 +3581,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/MessageContracts.ts:382:5` (problem-constructor)
+- `packages/engagement-core/src/libs/MessageContracts.ts:404:5` (problem-constructor)
 
 <a id="engagement-core-renderer-message-missing"></a>
 
@@ -3599,7 +3599,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/MessageContracts.ts:347:5` (problem-constructor)
+- `packages/engagement-core/src/libs/MessageContracts.ts:369:5` (problem-constructor)
 
 <a id="engagement-core-renderer-missing"></a>
 
@@ -3617,7 +3617,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/MessageContracts.ts:336:5` (problem-constructor)
+- `packages/engagement-core/src/libs/MessageContracts.ts:358:5` (problem-constructor)
 
 <a id="entitlement-denied"></a>
 

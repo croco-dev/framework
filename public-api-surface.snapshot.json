@@ -7866,6 +7866,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "MESSAGE_CHANNELS",
+              "exportKind": "named",
+              "source": "./libs/MessageContracts",
+              "declarationKind": "const"
+            },
+            {
               "name": "MessageAlreadyRegisteredProblem",
               "exportKind": "named",
               "source": "./libs/MessageContracts",

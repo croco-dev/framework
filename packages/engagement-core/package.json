@@ -35,17 +35,21 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "lint": "oxlint .",
-    "test": "vitest run",
+    "test": "vitest run src/tests/MessageContracts.spec.ts",
+    "test:packed": "vitest run src/tests/PublishedMessageContracts.spec.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@croco/problems-core": "workspace:*",
-    "@croco/protocols-core": "workspace:*",
-    "zod": "^3.23.8"
+    "@croco/protocols-core": "workspace:*"
   },
   "devDependencies": {
     "tsup": "^8.4.0",
     "typescript": "^5.7.2",
-    "vitest": "4.1.8"
+    "vitest": "4.1.8",
+    "zod": "^3.23.8"
+  },
+  "peerDependencies": {
+    "zod": "^3.23.8"
   }
 }
