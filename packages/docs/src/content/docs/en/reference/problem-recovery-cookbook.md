@@ -454,11 +454,13 @@ This cookbook documents 604 public Croco Problem codes. The deterministic JSON r
 | [`rpc-codegen/invalid-contract`](#rpc-codegen-invalid-contract)                                                                       | ValidationError       |    422 | not-retryable | public        | active    |       1 |
 | [`rpc-codegen/no-rest-controllers-found`](#rpc-codegen-no-rest-controllers-found)                                                     | BadRequest            |    400 | not-retryable | public        | active    |       1 |
 | [`rpc-codegen/unsupported-form-schema`](#rpc-codegen-unsupported-form-schema)                                                         | ValidationError       |    422 | not-retryable | public        | active    |       1 |
+| [`saas-demo/billable-usage-failed`](#saas-demo-billable-usage-failed)                                                                 | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`saas-demo/demo-endpoint-disabled`](#saas-demo-demo-endpoint-disabled)                                                               | Forbidden             |    403 | not-retryable | safe-message  | active    |       1 |
 | [`saas-demo/invalid-jobs-query`](#saas-demo-invalid-jobs-query)                                                                       | ValidationError       |    422 | not-retryable | public        | active    |       1 |
 | [`saas-demo/invalid-port`](#saas-demo-invalid-port)                                                                                   | ValidationError       |    422 | not-retryable | public        | active    |       1 |
 | [`saas-demo/job-not-found`](#saas-demo-job-not-found)                                                                                 | NotFound              |    404 | not-retryable | public        | active    |       1 |
 | [`saas-demo/smoke-failed`](#saas-demo-smoke-failed)                                                                                   | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
+| [`saas-demo/sqlite-fixture-state-invalid`](#saas-demo-sqlite-fixture-state-invalid)                                                   | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`saas-demo/tenant-already-exists`](#saas-demo-tenant-already-exists)                                                                 | Conflict              |    409 | conditional   | safe-message  | active    |       1 |
 | [`saas-demo/tenant-not-found`](#saas-demo-tenant-not-found)                                                                           | NotFound              |    404 | not-retryable | public        | active    |       1 |
 | [`SEARCH_CAPABILITY_UNAVAILABLE`](#search-capability-unavailable)                                                                     | NotImplemented        |    501 | not-retryable | public        | active    |       1 |
@@ -2832,7 +2834,7 @@ Sources:
 
 Sources:
 
-- `packages/create-croco-app/src/cli-result.ts:28:3` (problem-class)
+- `packages/create-croco-app/src/cli-result.ts:33:3` (problem-class)
 
 <a id="create-croco-app-unsupported-node-version"></a>
 
@@ -8558,6 +8560,24 @@ Sources:
 
 - `packages/rpc-codegen/src/libs/generate.ts:116:5` (problem-constructor)
 
+<a id="saas-demo-billable-usage-failed"></a>
+
+## `saas-demo/billable-usage-failed`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts:75:3` (problem-class)
+
 <a id="saas-demo-demo-endpoint-disabled"></a>
 
 ## `saas-demo/demo-endpoint-disabled`
@@ -8647,6 +8667,24 @@ Sources:
 Sources:
 
 - `packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts:66:3` (problem-class)
+
+<a id="saas-demo-sqlite-fixture-state-invalid"></a>
+
+## `saas-demo/sqlite-fixture-state-invalid`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts:84:3` (problem-class)
 
 <a id="saas-demo-tenant-already-exists"></a>
 
