@@ -645,6 +645,83 @@ describe("CrocoModule", () => {
     expect(calls).toEqual(["database:start", "api:start", "api:shutdown", "database:shutdown"]);
   });
 
+  it("completes shutdown and reports every cleanup failure before resetting runtime state", async () => {
+    const calls: string[] = [];
+    const database: ModuleOptions = {
+      name: "database",
+      shutdown: () => {
+        calls.push("database:shutdown");
+        throw new Error("database cleanup failed");
+      },
+    };
+    const service: ModuleOptions = {
+      name: "service",
+      imports: [database],
+      shutdown: () => {
+        calls.push("service:shutdown");
+      },
+    };
+
+    CrocoModule.use({
+      name: "api",
+      imports: [service],
+      shutdown: () => {
+        calls.push("api:shutdown");
+        throw new Error("api cleanup failed");
+      },
+    });
+
+    await CrocoModule.initialize();
+    const failure = await CrocoModule.shutdown().catch((error: unknown) => error);
+
+    expect(calls).toEqual(["api:shutdown", "service:shutdown", "database:shutdown"]);
+    expect(failure).toBeInstanceOf(ModuleLifecycleProblem);
+    expect(failure).toMatchObject({
+      message: "Module 'api' failed during shutdown: api cleanup failed",
+      extensions: {
+        moduleName: "api",
+        phase: "shutdown",
+        cleanupFailures: [
+          {
+            moduleName: "api",
+            phase: "shutdown",
+            code: "framework-module/lifecycle-failed",
+            message: "Module 'api' failed during shutdown: api cleanup failed",
+          },
+          {
+            moduleName: "database",
+            phase: "shutdown",
+            code: "framework-module/lifecycle-failed",
+            message: "Module 'database' failed during shutdown: database cleanup failed",
+          },
+        ],
+      },
+    });
+
+    await CrocoModule.shutdown();
+    expect(calls).toEqual(["api:shutdown", "service:shutdown", "database:shutdown"]);
+
+    const health = await new ModuleDiagnosticsProvider().getHealth();
+    expect(health.details).toMatchObject({
+      initializedModuleCount: 0,
+      modules: [
+        {
+          name: "database",
+          initialized: false,
+          phase: "failed",
+          cleanupFailures: [{ moduleName: "database", phase: "shutdown" }],
+        },
+        { name: "service", initialized: false, phase: "stopped" },
+        {
+          name: "api",
+          initialized: false,
+          phase: "failed",
+          cleanupFailures: [{ moduleName: "api", phase: "shutdown" }],
+        },
+      ],
+    });
+  });
+
   it("reports module metadata through diagnostics", async () => {
     class UserController {}
 

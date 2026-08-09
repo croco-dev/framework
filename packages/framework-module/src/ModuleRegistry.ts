@@ -210,25 +210,48 @@ export async function shutdownModules(): Promise<void> {
   }
 
   const modules = [...initializedModules].reverse();
+  const container = Container.of(undefined);
+  const cleanupFailures: ModuleCleanupFailure[] = [];
+  let firstFailure: ModuleLifecycleProblem | undefined;
 
-  for (const module of modules) {
-    const container = Container.of(undefined);
-    const moduleContext = createModuleContext(module.name, container);
-    await runLifecycle(module, "shutdown", async () => {
-      await module.shutdown?.(moduleContext);
-    });
+  try {
+    for (const module of modules) {
+      try {
+        const moduleContext = createModuleContext(module.name, container);
+        await runLifecycle(module, "shutdown", async () => {
+          await module.shutdown?.(moduleContext);
+        });
 
-    const state = moduleStates.get(module.name);
-    if (state) {
-      state.phase = "stopped";
-      state.initialized = false;
-      state.lastError = undefined;
+        const state = moduleStates.get(module.name);
+        if (state) {
+          state.phase = "stopped";
+          state.initialized = false;
+          state.lastError = undefined;
+          state.cleanupFailures = undefined;
+        }
+      } catch (error) {
+        const problem =
+          error instanceof ModuleLifecycleProblem
+            ? error
+            : new ModuleLifecycleProblem(module.name, "shutdown", error);
+        const failure = createModuleCleanupFailure(problem, module.name);
+        cleanupFailures.push(failure);
+        firstFailure ??= problem;
+
+        const state = moduleStates.get(module.name);
+        if (state) {
+          state.cleanupFailures = [failure];
+        }
+      }
     }
+  } finally {
+    resetActiveRuntimeState();
   }
 
-  isInitialized = false;
-  initializedModules = [];
-  activeContext = null;
+  if (firstFailure) {
+    attachModuleCleanupFailures(firstFailure, cleanupFailures);
+    throw firstFailure;
+  }
 }
 
 export function resetModules(): void {
@@ -290,12 +313,7 @@ async function compensateInitialization(
       }
     } catch (error) {
       const problem = new ModuleLifecycleProblem(module.name, "shutdown", error);
-      const failure: ModuleCleanupFailure = {
-        moduleName: module.name,
-        phase: "shutdown",
-        code: problem.code,
-        message: problem.message,
-      };
+      const failure = createModuleCleanupFailure(problem, module.name);
       failures.push(failure);
       if (state) {
         state.phase = "failed";
@@ -308,6 +326,18 @@ async function compensateInitialization(
   }
 
   return failures;
+}
+
+function createModuleCleanupFailure(
+  problem: ModuleLifecycleProblem,
+  moduleName: string,
+): ModuleCleanupFailure {
+  return {
+    moduleName,
+    phase: "shutdown",
+    code: problem.code,
+    message: problem.message,
+  };
 }
 
 function resetActiveRuntimeState(): void {
