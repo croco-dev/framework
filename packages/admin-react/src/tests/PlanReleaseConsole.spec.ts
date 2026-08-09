@@ -642,6 +642,64 @@ describe("PlanReleaseConsole rendering", () => {
     expect(onCancelConfirmation).toHaveBeenCalledOnce();
   });
 
+  it("requires confirmation for publish and schedule kinds even without destructive metadata", () => {
+    const onAction = vi.fn();
+    const onRequestConfirmation = vi.fn();
+    const publishWithoutMetadata = { ...publishAction, destructive: undefined };
+    const scheduleWithoutMetadata = { ...scheduleAction, destructive: undefined };
+    const tree = PlanReleaseConsole({
+      command: {
+        actorId: "operator-1",
+        idempotencyKey: "publish-1",
+        reason: "Approved rollout",
+        scheduledFor: candidate.effectiveAt,
+      },
+      onAction,
+      onRequestConfirmation,
+      state: reviewState({ actions: [publishWithoutMetadata, scheduleWithoutMetadata] }),
+    });
+
+    findButton(tree, "Publish")?.props.onClick();
+    findButton(tree, "Schedule")?.props.onClick();
+
+    expect(onRequestConfirmation).toHaveBeenNthCalledWith(1, publishWithoutMetadata);
+    expect(onRequestConfirmation).toHaveBeenNthCalledWith(2, scheduleWithoutMetadata);
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
+  it("executes failure recovery actions and confirms destructive recovery", () => {
+    const onRecoveryAction = vi.fn();
+    const onRequestConfirmation = vi.fn();
+    const destructiveRecovery = {
+      ...editAction,
+      destructive: true,
+      id: "discard-local-draft",
+      label: "Discard local draft",
+    };
+    const state: PlanReleaseConsoleState = {
+      kind: "problem",
+      problem,
+      recoveryActions: [editAction, destructiveRecovery],
+    };
+    const tree = PlanReleaseConsole({ onRecoveryAction, onRequestConfirmation, state });
+
+    findButton(tree, "Return to draft")?.props.onClick();
+    findButton(tree, "Discard local draft")?.props.onClick();
+
+    expect(onRecoveryAction).toHaveBeenCalledWith(editAction);
+    expect(onRequestConfirmation).toHaveBeenCalledWith(destructiveRecovery);
+
+    const confirmationTree = PlanReleaseConsole({
+      onRecoveryAction,
+      onRequestConfirmation,
+      pendingConfirmationActionId: destructiveRecovery.id,
+      state,
+    });
+    expect(findElementByRole(confirmationTree, "alertdialog")).toBeDefined();
+    findButton(confirmationTree, "Confirm Discard local draft")?.props.onClick();
+    expect(onRecoveryAction).toHaveBeenCalledWith(destructiveRecovery);
+  });
+
   it("renders semantic changes as domain labels instead of raw JSON", () => {
     const html = render(reviewState());
     expect(html).toContain("included seats: 1 → 3");

@@ -62,6 +62,9 @@ test("reviews, corrects, publishes, and schedules an immutable plan release", as
   await publish.click();
   await console.getByRole("button", { name: "Confirm Publish reviewed version" }).click();
   await expect(workflow.getByText("Fake workflow state: corrected-publish")).toBeVisible();
+  await expect(console.getByRole("listitem").filter({ hasText: "Pro (pro@2027-01)" })).toHaveCount(
+    1,
+  );
   await expect(console.getByRole("region", { name: "Published release receipt" })).toBeVisible();
 
   await workflow.getByRole("button", { name: "Reset plan release workflow" }).click();

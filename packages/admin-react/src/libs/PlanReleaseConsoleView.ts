@@ -33,6 +33,7 @@ export type PlanReleaseConsoleProps = {
   readonly pendingConfirmationActionId?: string;
   readonly onEdit?: (request: PlanReleaseEditRequest) => void;
   readonly onAction?: (action: PlanReleaseAdminAction, request: PlanReleaseActionRequest) => void;
+  readonly onRecoveryAction?: (action: PlanReleaseAdminAction) => void;
   readonly onCancelConfirmation?: () => void;
   readonly onRequestConfirmation?: (action: PlanReleaseAdminAction) => void;
 };
@@ -42,6 +43,7 @@ export function PlanReleaseConsole({
   onAction,
   onCancelConfirmation,
   onEdit,
+  onRecoveryAction,
   onRequestConfirmation,
   pendingConfirmationActionId,
   state,
@@ -59,28 +61,9 @@ export function PlanReleaseConsole({
   }
 
   if (!("editor" in state)) {
-    if (state.kind === "stale-conflict") {
-      return createElement(
-        "section",
-        { "aria-label": "Plan release console", "data-state": state.kind, role: "alert" },
-        createElement("h1", { tabIndex: -1 }, stateTitle(state.kind)),
-        createElement(ProblemNotice, { problem: state.problem }),
-        createElement(
-          "section",
-          { "aria-label": "Local conflicting draft" },
-          createElement("h2", null, "Local draft"),
-          createElement(
-            "p",
-            null,
-            `${state.localDraft.definition.ref}, revision ${state.localDraft.revision}`,
-          ),
-        ),
-        createElement("h2", null, "Latest server state"),
-        createSnapshot(state.latestServerSnapshot, "draft-editing"),
-        createRecoveryActions(state.recoveryActions, onRequestConfirmation),
-      );
-    }
-
+    const pendingAction = state.recoveryActions.find(
+      (action) => action.id === pendingConfirmationActionId && requiresActionConfirmation(action),
+    );
     return createElement(
       "section",
       {
@@ -88,16 +71,45 @@ export function PlanReleaseConsole({
         "data-state": state.kind,
         role: "alert",
       },
-      createElement("h1", { tabIndex: -1 }, stateTitle(state.kind)),
-      createElement(ProblemNotice, { problem: state.problem }),
-      state.snapshot ? createSnapshot(state.snapshot, "draft-editing") : null,
-      createRecoveryActions(state.recoveryActions, onRequestConfirmation),
+      createElement(
+        "div",
+        {
+          "aria-hidden": pendingAction ? true : undefined,
+          inert: pendingAction ? true : undefined,
+        },
+        createElement("h1", { tabIndex: -1 }, stateTitle(state.kind)),
+        createElement(ProblemNotice, { problem: state.problem }),
+        state.kind === "stale-conflict"
+          ? createElement(
+              Fragment,
+              null,
+              createElement(
+                "section",
+                { "aria-label": "Local conflicting draft" },
+                createElement("h2", null, "Local draft"),
+                createElement(
+                  "p",
+                  null,
+                  `${state.localDraft.definition.ref}, revision ${state.localDraft.revision}`,
+                ),
+              ),
+              createElement("h2", null, "Latest server state"),
+              createSnapshot(state.latestServerSnapshot, "draft-editing"),
+            )
+          : state.snapshot
+            ? createSnapshot(state.snapshot, "draft-editing")
+            : null,
+        createRecoveryActions(state.recoveryActions, onRecoveryAction, onRequestConfirmation),
+      ),
+      pendingAction
+        ? createRecoveryConfirmation(pendingAction, onRecoveryAction, onCancelConfirmation)
+        : null,
     );
   }
 
   const allowedActions = getAllowedPlanReleaseActions(state);
   const pendingAction = allowedActions.find(
-    (action) => action.id === pendingConfirmationActionId && action.destructive,
+    (action) => action.id === pendingConfirmationActionId && requiresActionConfirmation(action),
   );
 
   return createElement(
@@ -135,9 +147,10 @@ function createSnapshot(
   snapshot: PlanReleaseConsoleSnapshot,
   candidateStatus: PlanReleaseConsoleState["kind"],
 ): ReactElement {
+  const currentPublished = snapshot.currentPublished;
   const versions = [
-    ...(snapshot.currentPublished
-      ? [{ definition: snapshot.currentPublished, status: "published" } as const]
+    ...(currentPublished && currentPublished.ref !== snapshot.candidate.definition.ref
+      ? [{ definition: currentPublished, status: "published" } as const]
       : []),
     { definition: snapshot.candidate.definition, status: candidateStatus },
   ];
@@ -384,7 +397,7 @@ function createActions(
           id: `plan-release-action-control-${action.id}`,
           key: action.id,
           onClick: () => {
-            if (action.destructive) onRequestConfirmation?.(action);
+            if (requiresActionConfirmation(action)) onRequestConfirmation?.(action);
             else onAction?.(action, request);
           },
           title: disabledReason,
@@ -485,6 +498,7 @@ function receiptField(label: string, value: string): ReactElement {
 
 function createRecoveryActions(
   actions: readonly PlanReleaseAdminAction[],
+  onRecoveryAction: PlanReleaseConsoleProps["onRecoveryAction"],
   onRequestConfirmation: PlanReleaseConsoleProps["onRequestConfirmation"],
 ): ReactElement | null {
   if (actions.length === 0) return null;
@@ -494,11 +508,58 @@ function createRecoveryActions(
     actions.map((action) =>
       createElement(
         "button",
-        { key: action.id, onClick: () => onRequestConfirmation?.(action), type: "button" },
+        {
+          disabled:
+            !onRecoveryAction || (requiresActionConfirmation(action) && !onRequestConfirmation),
+          id: `plan-release-action-control-${action.id}`,
+          key: action.id,
+          onClick: () => {
+            if (requiresActionConfirmation(action)) onRequestConfirmation?.(action);
+            else onRecoveryAction?.(action);
+          },
+          type: "button",
+        },
         action.label,
       ),
     ),
   );
+}
+
+function createRecoveryConfirmation(
+  action: PlanReleaseAdminAction,
+  onRecoveryAction: PlanReleaseConsoleProps["onRecoveryAction"],
+  onCancel: PlanReleaseConsoleProps["onCancelConfirmation"],
+): ReactElement {
+  const titleId = `plan-release-confirm-${action.id}`;
+  const cancel = () => {
+    onCancel?.();
+    if (typeof document !== "undefined") {
+      queueMicrotask(() =>
+        document.getElementById(`plan-release-action-control-${action.id}`)?.focus(),
+      );
+    }
+  };
+  return createElement(
+    "div",
+    {
+      "aria-labelledby": titleId,
+      "aria-modal": true,
+      onKeyDown: trapConfirmationFocus(cancel),
+      role: "alertdialog",
+    },
+    createElement("h2", { id: titleId }, `Confirm ${action.label}`),
+    createElement("p", null, action.description ?? "This recovery action cannot be undone."),
+    createElement("button", { autoFocus: true, onClick: cancel, type: "button" }, "Cancel"),
+    createElement(
+      "button",
+      { onClick: () => onRecoveryAction?.(action), type: "button" },
+      `Confirm ${action.label}`,
+    ),
+  );
+}
+
+function requiresActionConfirmation(action: PlanReleaseAdminAction): boolean {
+  return action.kind === "publish" || action.kind === "schedule" || action.destructive === true;
 }
 
 function createActionRequest(

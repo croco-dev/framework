@@ -273,7 +273,7 @@ function createScenarioState(
 ): PlanReleaseConsoleState {
   const snapshot: PlanReleaseConsoleSnapshot = {
     candidate,
-    currentPublished,
+    currentPublished: scenario === "corrected-publish" ? candidate.definition : currentPublished,
     releaseRevision: scenario === "draft" ? candidate.revision : candidate.revision + 1,
   };
   const base = {

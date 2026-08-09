@@ -61,6 +61,22 @@ title: "PlanReleaseConsoleProps"
 
 ***
 
+### onRecoveryAction?
+
+> `readonly` `optional` **onRecoveryAction?**: (`action`) => `void`
+
+#### Parameters
+
+##### action
+
+[`PlanReleaseAdminAction`](/api/admin-react/src/type-aliases/planreleaseadminaction/)
+
+#### Returns
+
+`void`
+
+***
+
 ### onRequestConfirmation?
 
 > `readonly` `optional` **onRequestConfirmation?**: (`action`) => `void`
