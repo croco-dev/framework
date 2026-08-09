@@ -730,6 +730,7 @@ function checkSaasStructure() {
   checkFileExists("saas", "package.json.hbs");
   checkFileExists("saas", "README.md.hbs");
   checkFileExists("saas", "apps", "api-server", "package.json.hbs");
+  checkFileExists("saas", "apps", "api-server", "vitest.config.ts");
   checkFileExists("saas", "apps", "api-server", "src", "saasDemo.ts");
   checkFileExists("saas", "apps", "api-server", "src", "providerProfiles.ts");
   checkFileExists("saas", "apps", "api-server", "src", "provider-profile-check.ts");
