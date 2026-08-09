@@ -25812,6 +25812,18 @@
               "declarationKind": "function"
             },
             {
+              "name": "assertExecutableAssuranceGraph",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs",
+              "declarationKind": "function"
+            },
+            {
+              "name": "assertExecutableAssuranceSatisfied",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs",
+              "declarationKind": "function"
+            },
+            {
               "name": "assertFailureDrillResult",
               "exportKind": "named",
               "source": "./libs/failure-drill",
@@ -25893,6 +25905,12 @@
               "name": "createEventTestingHarness",
               "exportKind": "named",
               "source": "./libs/testing",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createExecutableAssuranceGraph",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs",
               "declarationKind": "function"
             },
             {
@@ -26046,6 +26064,36 @@
               "declarationKind": "class"
             },
             {
+              "name": "evaluateExecutableAssuranceGraph",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs",
+              "declarationKind": "function"
+            },
+            {
+              "name": "EXECUTABLE_ASSURANCE_GRAPH_VERSION",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs",
+              "declarationKind": "const"
+            },
+            {
+              "name": "EXECUTABLE_ASSURANCE_REPORT_VERSION",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs",
+              "declarationKind": "const"
+            },
+            {
+              "name": "ExecutableAssuranceContractProblem",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ExecutableAssuranceUnsatisfiedProblem",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs",
+              "declarationKind": "class"
+            },
+            {
               "name": "FAILURE_DRILL_SCENARIO_IDS",
               "exportKind": "named",
               "source": "./libs/failure-drill",
@@ -26100,6 +26148,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "renderExecutableAssuranceMarkdown",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs",
+              "declarationKind": "function"
+            },
+            {
               "name": "renderOperationalFailureDrillMarkdown",
               "exportKind": "named",
               "source": "./libs/operational-failure-drill",
@@ -26151,6 +26205,12 @@
               "name": "seededIds",
               "exportKind": "named",
               "source": "./libs/TestRuntime",
+              "declarationKind": "function"
+            },
+            {
+              "name": "serializeExecutableAssurance",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs",
               "declarationKind": "function"
             },
             {
@@ -26311,6 +26371,91 @@
             }
           ],
           "typeExports": [
+            {
+              "name": "AssuranceBehaviorKind",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs"
+            },
+            {
+              "name": "AssuranceBehaviorNode",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs"
+            },
+            {
+              "name": "AssuranceContradictoryEvidence",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs"
+            },
+            {
+              "name": "AssuranceCriticalJourney",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs"
+            },
+            {
+              "name": "AssuranceEvidenceObligation",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs"
+            },
+            {
+              "name": "AssuranceEvidenceStatus",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs"
+            },
+            {
+              "name": "AssuranceObligationAssessment",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs"
+            },
+            {
+              "name": "AssuranceObservationField",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs"
+            },
+            {
+              "name": "AssuranceObservationRequirement",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs"
+            },
+            {
+              "name": "AssuranceProjectMapArtifact",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs"
+            },
+            {
+              "name": "AssuranceProviderProfileArtifact",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs"
+            },
+            {
+              "name": "AssurancePublicApiSnapshot",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs"
+            },
+            {
+              "name": "AssuranceRecovery",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs"
+            },
+            {
+              "name": "AssuranceRpcContract",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs"
+            },
+            {
+              "name": "AssuranceSourceLocation",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs"
+            },
+            {
+              "name": "AssuranceStaleEvidence",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs"
+            },
+            {
+              "name": "AssuranceTaskArtifact",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs"
+            },
             {
               "name": "AuthProviderAuthConformance",
               "exportKind": "named",
@@ -26500,6 +26645,26 @@
               "name": "EventTestingHarnessOptions",
               "exportKind": "named",
               "source": "./libs/testing"
+            },
+            {
+              "name": "ExecutableAssuranceGraph",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs"
+            },
+            {
+              "name": "ExecutableAssuranceGraphInput",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs"
+            },
+            {
+              "name": "ExecutableAssuranceMode",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs"
+            },
+            {
+              "name": "ExecutableAssuranceReport",
+              "exportKind": "named",
+              "source": "./libs/executable-assurance.mjs"
             },
             {
               "name": "FailureDrillAttributeValue",

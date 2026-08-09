@@ -1183,7 +1183,6 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
       },
       { label: "typecheck", args: ["typecheck"] },
       { label: "build", args: ["build"] },
-      { label: "test", args: ["test"] },
       {
         label: "Contract snapshot",
         args: ["contract:snapshot"],
@@ -1194,6 +1193,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
         args: ["codegen"],
         paths: ["croco.project-map.json", "openapi.json", "libs/shared/provider-rpc/src/saas.ts"],
       },
+      { label: "test", args: ["test"] },
       {
         label: "Contract verify",
         readOnly: true,
@@ -1333,6 +1333,16 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
       runtimeCapabilityManifestValidation("cloudflare-workers"),
       { label: "typecheck", args: ["typecheck"] },
       { label: "build", args: ["build"] },
+      {
+        label: "Contract snapshot",
+        args: ["contract:snapshot"],
+        paths: ["contract-graph.snapshot.json"],
+      },
+      {
+        label: "Contract codegen",
+        args: ["codegen"],
+        paths: ["croco.project-map.json", "openapi.json", "libs/shared/provider-rpc/src/saas.ts"],
+      },
       { label: "test", args: ["test"] },
       { label: "demo flow", args: ["demo:smoke"] },
     ],
@@ -1374,6 +1384,16 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
       runtimeCapabilityManifestValidation("lambda"),
       { label: "typecheck", args: ["typecheck"] },
       { label: "build", args: ["build"] },
+      {
+        label: "Contract snapshot",
+        args: ["contract:snapshot"],
+        paths: ["contract-graph.snapshot.json"],
+      },
+      {
+        label: "Contract codegen",
+        args: ["codegen"],
+        paths: ["croco.project-map.json", "openapi.json", "libs/shared/provider-rpc/src/saas.ts"],
+      },
       { label: "test", args: ["test"] },
       { label: "demo flow", args: ["demo:smoke"] },
     ],
@@ -1395,7 +1415,6 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
     validations: [
       { label: "typecheck", args: ["typecheck"] },
       { label: "build", args: ["build"] },
-      { label: "test", args: ["test"] },
       {
         label: "Contract snapshot",
         args: ["contract:snapshot"],
@@ -1406,6 +1425,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
         args: ["codegen"],
         paths: ["croco.project-map.json", "openapi.json", "libs/shared/provider-rpc/src/ai.ts"],
       },
+      { label: "test", args: ["test"] },
       {
         label: "Contract verify",
         readOnly: true,

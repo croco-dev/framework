@@ -41,7 +41,10 @@ export type TestEvidenceObservation = {
   readonly contractIds: readonly string[];
   readonly eventIds?: readonly string[];
   readonly problemCodes?: readonly string[];
+  readonly providerIds?: readonly string[];
   readonly routeIds?: readonly string[];
+  readonly spanIds?: readonly string[];
+  readonly taskIds?: readonly string[];
 };
 
 export type TestEvidenceReplay = {
@@ -337,7 +340,7 @@ export function assertTestEvidenceRecord(value: unknown): asserts value is TestE
   assertAllowedKeys(intent, ["contractIds", "description"], `Evidence '${record.id}' intent`);
   assertAllowedKeys(
     observed,
-    ["contractIds", "eventIds", "problemCodes", "routeIds"],
+    ["contractIds", "eventIds", "problemCodes", "providerIds", "routeIds", "spanIds", "taskIds"],
     `Evidence '${record.id}' observation`,
   );
   if (intent === observed) {
@@ -350,7 +353,14 @@ export function assertTestEvidenceRecord(value: unknown): asserts value is TestE
   assertNonEmpty(typedIntent.description, `Evidence '${record.id}' intent description`);
   assertStringIds(typedIntent.contractIds, `Evidence '${record.id}' declared contract`);
   assertStringIds(typedObserved.contractIds, `Evidence '${record.id}' observed contract`);
-  for (const field of ["eventIds", "problemCodes", "routeIds"] as const) {
+  for (const field of [
+    "eventIds",
+    "problemCodes",
+    "providerIds",
+    "routeIds",
+    "spanIds",
+    "taskIds",
+  ] as const) {
     if (typedObserved[field] !== undefined) {
       assertStringIds(typedObserved[field], `Evidence '${record.id}' observed ${field}`);
     }
@@ -536,7 +546,12 @@ function normalizeTestEvidenceRecord(record: TestEvidenceRecord): TestEvidenceRe
       ...(record.observed.problemCodes
         ? { problemCodes: sortStrings(record.observed.problemCodes) }
         : {}),
+      ...(record.observed.providerIds
+        ? { providerIds: sortStrings(record.observed.providerIds) }
+        : {}),
       ...(record.observed.routeIds ? { routeIds: sortStrings(record.observed.routeIds) } : {}),
+      ...(record.observed.spanIds ? { spanIds: sortStrings(record.observed.spanIds) } : {}),
+      ...(record.observed.taskIds ? { taskIds: sortStrings(record.observed.taskIds) } : {}),
     },
     diagnostics: sortDiagnostics(record.diagnostics),
     attempts: [...record.attempts]

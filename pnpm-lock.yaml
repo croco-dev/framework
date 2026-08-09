@@ -3328,6 +3328,9 @@ importers:
       '@croco/framework-logger':
         specifier: workspace:*
         version: link:../framework-logger
+      '@croco/framework-routes':
+        specifier: workspace:*
+        version: link:../framework-routes
       '@croco/llm-core':
         specifier: workspace:*
         version: link:../llm-core
@@ -3337,6 +3340,9 @@ importers:
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
+      '@croco/protocols-core':
+        specifier: workspace:*
+        version: link:../protocols-core
       '@croco/ratelimit-core':
         specifier: workspace:*
         version: link:../ratelimit-core

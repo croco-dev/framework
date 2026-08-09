@@ -1,0 +1,32 @@
+---
+editUrl: false
+next: false
+prev: false
+title: "AssuranceSourceLocation"
+---
+
+> **AssuranceSourceLocation** = `object`
+
+## Properties
+
+### column?
+
+> `readonly` `optional` **column?**: `number`
+
+***
+
+### line?
+
+> `readonly` `optional` **line?**: `number`
+
+***
+
+### path
+
+> `readonly` **path**: `string`
+
+***
+
+### symbol?
+
+> `readonly` `optional` **symbol?**: `string`

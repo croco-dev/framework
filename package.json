@@ -31,6 +31,7 @@
     "test": "turbo test",
     "test:release-gates": "node --experimental-strip-types scripts/verification-command.mts --id release-gate-tests",
     "test-evidence:bundle": "node --experimental-strip-types scripts/test-evidence-bundle.mts",
+    "assurance:report": "node --experimental-strip-types scripts/executable-assurance-report.mts",
     "test:coverage:core": "pnpm --filter @croco/problems-core --filter @croco/telemetry-api --filter @croco/tenant-core --filter @croco/dataloader-core --filter @croco/ratelimit-core --filter @croco/llm-core --filter @croco/storage-core --filter @croco/architecture-policy build && node --experimental-strip-types scripts/verification-command.mts --id core-coverage",
     "test:coverage:core:warning": "node --experimental-strip-types scripts/verification-command.mts --id core-coverage-warning",
     "typecheck": "turbo typecheck",

@@ -27,6 +27,24 @@ title: "TestEvidenceObservation"
 
 ***
 
+### providerIds?
+
+> `readonly` `optional` **providerIds?**: readonly `string`[]
+
+***
+
 ### routeIds?
 
 > `readonly` `optional` **routeIds?**: readonly `string`[]
+
+***
+
+### spanIds?
+
+> `readonly` `optional` **spanIds?**: readonly `string`[]
+
+***
+
+### taskIds?
+
+> `readonly` `optional` **taskIds?**: readonly `string`[]

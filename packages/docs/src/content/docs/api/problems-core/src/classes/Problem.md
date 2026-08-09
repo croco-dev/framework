@@ -408,6 +408,8 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`TelemetryAutoInstrumentationProblem`](/api/telemetry-sdk-node/src/classes/telemetryautoinstrumentationproblem/)
 - [`TestEvidenceContractError`](/api/testing/src/classes/testevidencecontracterror/)
 - [`TestEvidenceFidelityError`](/api/testing/src/classes/testevidencefidelityerror/)
+- [`ExecutableAssuranceContractProblem`](/api/testing/src/classes/executableassurancecontractproblem/)
+- [`ExecutableAssuranceUnsatisfiedProblem`](/api/testing/src/classes/executableassuranceunsatisfiedproblem/)
 - [`TestKernelDisposedProblem`](/api/testing/src/classes/testkerneldisposedproblem/)
 - [`TestKernelDisposalProblem`](/api/testing/src/classes/testkerneldisposalproblem/)
 - [`TestKernelLeakProblem`](/api/testing/src/classes/testkernelleakproblem/)

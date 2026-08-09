@@ -180,6 +180,28 @@ Sensitive keys used by the logger security policy (`authorization`, cookies, cre
 and tokens) and secret-like values are redacted before records are emitted; `assertNoTestEvidenceSecrets()`
 supports policy-owned secret samples for validation.
 
+## Executable Assurance Graph
+
+`createExecutableAssuranceGraph()` compiles existing Contract Graph, Problem registry, framework manifest,
+task metadata, runtime capability, provider conformance, public API, RPC, and selected journey artifacts into
+stable behavior nodes and executable evidence obligations. It does not introduce another manually maintained
+contract catalog. Route and Problem sources remain linked to their generated artifact locations, and every
+missing obligation includes a replay command and test template.
+
+`evaluateExecutableAssuranceGraph()` requires declared intent, runtime observation, a passing non-flaky
+outcome, and the obligation's minimum fidelity to agree. Reports separate satisfied, missing, stale, and
+contradictory evidence. Removed or renamed `route:`, `rpc:`, `problem:`, `event:`, `task:`, `provider:`, and
+`journey:` IDs remain visible as stale evidence instead of disappearing. Runtime observations have dedicated
+route, Problem, event, task, span, and provider fields, while arbitrary unit tests remain outside assurance
+unless their behavior is present in the compiled graph.
+
+Evaluation is advisory by default. Pass `{ mode: "enforce" }` and call
+`assertExecutableAssuranceSatisfied()` only after the report's false-positive rate is acceptable. The initial
+blocking obligations are limited to public route/RPC success and Problem behavior, declared public Problems,
+domain events/tasks, required supported provider capabilities, and explicitly selected critical journeys.
+`pnpm assurance:report --graph <graph.json> --evidence <bundle.json>` writes deterministic `report.json` and
+`summary.md`; add `--enforce` to make blocking findings exit non-zero.
+
 ## Failure Drills
 
 `createFailureDrillCatalog()` returns deterministic, zero-credential drills for provider timeout,
