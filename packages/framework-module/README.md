@@ -102,6 +102,11 @@ Shutdown runs in reverse dependency order. Lifecycle failures are wrapped in
 `ModuleLifecycleProblem` with `moduleName` and `phase` extensions. Circular
 imports throw `ModuleCircularDependencyProblem`.
 
+Shutdown attempts every initialized module even when individual hooks fail,
+then rejects with the first `ModuleLifecycleProblem` and exposes every ordered
+failure through its `cleanupFailures` extension. Active runtime state is reset
+after all hooks complete, including failed shutdown attempts.
+
 If `setup` or `start` fails, initialization calls `shutdown` for every module
 whose setup phase was entered, including the failing module, in reverse
 dependency order. Cleanup continues after individual shutdown failures. The
