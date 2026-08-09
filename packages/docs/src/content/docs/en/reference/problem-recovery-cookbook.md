@@ -226,6 +226,7 @@ This cookbook documents 585 public Croco Problem codes. The deterministic JSON r
 | [`framework-context/policy-conflict`](#framework-context-policy-conflict)                                                             | Conflict              |    409 | conditional   | safe-message  | active    |       1 |
 | [`framework-context/policy-definition-invalid`](#framework-context-policy-definition-invalid)                                         | ValidationError       |    422 | not-retryable | public        | active    |       1 |
 | [`framework-context/request-scope-outside-context`](#framework-context-request-scope-outside-context)                                 | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
+| [`framework-context/runtime-inspector-invalid-configuration`](#framework-context-runtime-inspector-invalid-configuration)             | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`framework-context/shutdown-configuration-conflict`](#framework-context-shutdown-configuration-conflict)                             | Conflict              |    409 | conditional   | safe-message  | active    |       1 |
 | [`framework-context/shutdown-hook-execution-failed`](#framework-context-shutdown-hook-execution-failed)                               | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`framework-context/shutdown-timeout`](#framework-context-shutdown-timeout)                                                           | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
@@ -4435,6 +4436,24 @@ Sources:
 Sources:
 
 - `packages/framework-context/src/libs/Container.ts:1705:13` (problem-factory)
+
+<a id="framework-context-runtime-inspector-invalid-configuration"></a>
+
+## `framework-context/runtime-inspector-invalid-configuration`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/framework-context/src/libs/problems/RuntimeInspectorProblems.ts:10:3` (problem-class)
 
 <a id="framework-context-shutdown-configuration-conflict"></a>
 

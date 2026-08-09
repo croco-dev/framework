@@ -61,6 +61,8 @@ export {
   recordRuntimeInspectionEvent,
   startRuntimeInspectionRequest,
 } from "./libs/RuntimeInspector";
+export { RuntimeInspectorConfigurationProblem } from "./libs/problems/RuntimeInspectorProblems";
+export type { RuntimeInspectorNumericOption } from "./libs/problems/RuntimeInspectorProblems";
 
 /**
  * TypeDI 컨테이너 인스턴스 타입입니다.

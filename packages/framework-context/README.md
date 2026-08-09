@@ -80,6 +80,12 @@ surfaced as unhandled promise rejections. Successful shutdown leaves the existin
 테스트나 독립 런타임에서는 `ShutdownManager.reset()`으로 기존 signal listener와 훅을 정리한 뒤 새 singleton을
 생성하세요.
 
+### Runtime inspector limits
+
+`RuntimeInspector`의 `maxRequests`, `maxEventsPerRequest`, `maxStringLength`는 1부터
+`Number.MAX_SAFE_INTEGER` 사이의 정수여야 합니다. 잘못된 값은 진단 데이터 수집을 시작하기 전에
+`RuntimeInspectorConfigurationProblem`으로 거부되며, Problem의 `option` 필드가 잘못된 설정을 식별합니다.
+
 ## API 레퍼런스
 
 - `Container`, `ContainerScope`: 의존성 등록, 조회, 초기화, 비동기 런타임 격리 및 TypeDI provider 식별자 변환
@@ -89,7 +95,7 @@ surfaced as unhandled promise rejections. Successful shutdown leaves the existin
 - `MiddlewareChain`: onion 패턴 미들웨어 실행
 - `ShutdownManager`, `OnShutdown`: graceful shutdown 훅 수집과 실행
 - `LOGGER_TOKEN`, `TRANSACTION_CONTEXT_TOKEN`: 공용 DI 토큰
-- `CircularDependencyProblem`, `MiddlewareProblem`, `ShutdownConfigurationConflictProblem`, `ShutdownTimeoutProblem`: 기반 계층 Problem 타입
+- `CircularDependencyProblem`, `MiddlewareProblem`, `RuntimeInspectorConfigurationProblem`, `ShutdownConfigurationConflictProblem`, `ShutdownTimeoutProblem`: 기반 계층 Problem 타입
 
 ## 의존성 그래프 sourceLocation 진단
 

@@ -1,7 +1,47 @@
 import { describe, expect, it } from "vitest";
-import { Context, RuntimeInspector } from "../index";
+import { Context, RuntimeInspector, RuntimeInspectorConfigurationProblem } from "../index";
 
 describe("RuntimeInspector", () => {
+  describe("configuration", () => {
+    it.each(["maxRequests", "maxEventsPerRequest", "maxStringLength"] as const)(
+      "rejects invalid %s values before collecting requests",
+      (option) => {
+        for (const value of [
+          Number.NaN,
+          Number.POSITIVE_INFINITY,
+          Number.NEGATIVE_INFINITY,
+          null as unknown as number,
+          -1,
+          0,
+          1.5,
+          Number.MAX_SAFE_INTEGER + 1,
+        ]) {
+          expect(() => new RuntimeInspector({ [option]: value })).toThrow(
+            RuntimeInspectorConfigurationProblem,
+          );
+
+          try {
+            new RuntimeInspector({ [option]: value });
+          } catch (error) {
+            expect(error).toMatchObject({
+              code: "framework-context/runtime-inspector-invalid-configuration",
+              option,
+              value,
+            });
+          }
+        }
+      },
+    );
+
+    it.each(["maxRequests", "maxEventsPerRequest", "maxStringLength"] as const)(
+      "accepts valid %s boundaries",
+      (option) => {
+        expect(() => new RuntimeInspector({ [option]: 1 })).not.toThrow();
+        expect(() => new RuntimeInspector({ [option]: Number.MAX_SAFE_INTEGER })).not.toThrow();
+      },
+    );
+  });
+
   it("captures active request events with sensitive fields redacted", async () => {
     const inspector = new RuntimeInspector();
     inspector.startRequest({

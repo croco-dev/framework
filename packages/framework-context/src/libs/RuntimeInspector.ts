@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { Context } from "./Context";
+import { RuntimeInspectorConfigurationProblem } from "./problems/RuntimeInspectorProblems";
+import type { RuntimeInspectorNumericOption } from "./problems/RuntimeInspectorProblems";
 
 export const DEV_INSPECTOR_TOKEN = Symbol.for("@croco/framework-context/dev-inspector");
 
@@ -26,9 +28,12 @@ export type RuntimeInspectorEventKind =
   | (string & {});
 
 export type RuntimeInspectorOptions = {
+  /** Positive safe integer. Defaults to 50. */
   readonly maxRequests?: number;
+  /** Positive safe integer. Defaults to 200. */
   readonly maxEventsPerRequest?: number;
   readonly sensitiveKeyPattern?: RegExp;
+  /** Positive safe integer. Defaults to 500. */
   readonly maxStringLength?: number;
 };
 
@@ -162,15 +167,21 @@ export class RuntimeInspector {
   private readonly activeRequestIds = new Map<string, string[]>();
 
   constructor(options: RuntimeInspectorOptions = {}) {
-    this.maxRequests = Math.max(1, Math.trunc(options.maxRequests ?? DEFAULT_MAX_REQUESTS));
-    this.maxEventsPerRequest = Math.max(
-      1,
-      Math.trunc(options.maxEventsPerRequest ?? DEFAULT_MAX_EVENTS_PER_REQUEST),
+    this.maxRequests = resolveRuntimeInspectorLimit(
+      "maxRequests",
+      options.maxRequests,
+      DEFAULT_MAX_REQUESTS,
+    );
+    this.maxEventsPerRequest = resolveRuntimeInspectorLimit(
+      "maxEventsPerRequest",
+      options.maxEventsPerRequest,
+      DEFAULT_MAX_EVENTS_PER_REQUEST,
     );
     this.sensitiveKeyPattern = options.sensitiveKeyPattern ?? DEFAULT_SENSITIVE_KEY_PATTERN;
-    this.maxStringLength = Math.max(
-      1,
-      Math.trunc(options.maxStringLength ?? DEFAULT_MAX_STRING_LENGTH),
+    this.maxStringLength = resolveRuntimeInspectorLimit(
+      "maxStringLength",
+      options.maxStringLength,
+      DEFAULT_MAX_STRING_LENGTH,
     );
   }
 
@@ -495,6 +506,19 @@ export class RuntimeInspector {
     this.sensitiveKeyPattern.lastIndex = 0;
     return this.sensitiveKeyPattern.test(key);
   }
+}
+
+function resolveRuntimeInspectorLimit(
+  option: RuntimeInspectorNumericOption,
+  configuredValue: number | undefined,
+  defaultValue: number,
+): number {
+  const value = configuredValue === undefined ? defaultValue : configuredValue;
+  if (!Number.isSafeInteger(value) || value <= 0) {
+    throw new RuntimeInspectorConfigurationProblem(option, value);
+  }
+
+  return value;
 }
 
 export type RuntimeInspectorFailureReporter = (error: Error) => void;

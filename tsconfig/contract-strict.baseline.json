@@ -2681,7 +2681,7 @@
     {
       "packageName": "@croco/framework-context",
       "file": "packages/framework-context/src/libs/RuntimeInspector.ts",
-      "line": 179,
+      "line": 190,
       "column": 11,
       "code": "TS2375",
       "message": "Type '{ id: `${string}-${string}-${string}-${string}-${string}`; requestId: string; method: string | undefined; path: string | undefined; route: string | undefined; url: string | undefined; outcome: \"running\"; ... 6 more ...; timeline: never[]; }' is not assignable to type 'MutableRuntimeInspectionRecord' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -2689,7 +2689,7 @@
     {
       "packageName": "@croco/framework-context",
       "file": "packages/framework-context/src/libs/RuntimeInspector.ts",
-      "line": 221,
+      "line": 232,
       "column": 11,
       "code": "TS2375",
       "message": "Type '{ at: string; offsetMs: number; kind: RuntimeInspectorEventKind; outcome: RuntimeInspectorEventOutcome | undefined; name: string | undefined; durationMs: number | undefined; details: Record<...> | undefined; }' is not assignable to type 'RuntimeInspectorTimelineEvent' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -2697,7 +2697,7 @@
     {
       "packageName": "@croco/framework-context",
       "file": "packages/framework-context/src/libs/RuntimeInspector.ts",
-      "line": 242,
+      "line": 253,
       "column": 5,
       "code": "TS2412",
       "message": "Type 'number | undefined' is not assignable to type 'number' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the type of the target."
@@ -2705,7 +2705,7 @@
     {
       "packageName": "@croco/framework-context",
       "file": "packages/framework-context/src/libs/RuntimeInspector.ts",
-      "line": 364,
+      "line": 375,
       "column": 42,
       "code": "TS2532",
       "message": "Object is possibly 'undefined'."
@@ -2713,7 +2713,7 @@
     {
       "packageName": "@croco/framework-context",
       "file": "packages/framework-context/src/libs/RuntimeInspector.ts",
-      "line": 474,
+      "line": 485,
       "column": 5,
       "code": "TS2375",
       "message": "Type '{ id: string; requestId: string; method: string | undefined; path: string | undefined; route: string | undefined; url: string | undefined; status: number | undefined; outcome: RuntimeInspectionOutcome; ... 7 more ...; timeline: RuntimeInspectorTimelineEvent[]; }' is not assignable to type 'RuntimeInspectionRecord' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."

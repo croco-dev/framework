@@ -10252,6 +10252,13 @@
               "compatibilityGroup": "runtime-inspector"
             },
             {
+              "name": "RuntimeInspectorConfigurationProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/RuntimeInspectorProblems",
+              "declarationKind": "class",
+              "compatibilityGroup": "runtime-inspector"
+            },
+            {
               "name": "ShutdownConfigurationConflictProblem",
               "exportKind": "named",
               "source": "./libs/problems/ShutdownProblems",
@@ -10738,6 +10745,12 @@
               "name": "RuntimeInspectorFailureReporter",
               "exportKind": "named",
               "source": "./libs/RuntimeInspector",
+              "compatibilityGroup": "runtime-inspector"
+            },
+            {
+              "name": "RuntimeInspectorNumericOption",
+              "exportKind": "named",
+              "source": "./libs/problems/RuntimeInspectorProblems",
               "compatibilityGroup": "runtime-inspector"
             },
             {
