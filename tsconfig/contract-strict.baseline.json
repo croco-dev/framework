@@ -3201,7 +3201,7 @@
     {
       "packageName": "@croco/protocols-rest",
       "file": "packages/protocols-rest/src/libs/decorators/Params.ts",
-      "line": 33,
+      "line": 34,
       "column": 13,
       "code": "TS2375",
       "message": "Type '{ sourceLocation?: RouteContractSourceLocation; type: ParamType; index: number; name: string | undefined; }' is not assignable to type 'ParamMetadata' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -3233,7 +3233,7 @@
     {
       "packageName": "@croco/rpc-codegen",
       "file": "packages/rpc-codegen/src/libs/generate.ts",
-      "line": 777,
+      "line": 771,
       "column": 16,
       "code": "TS2345",
       "message": "Argument of type 'string | undefined' is not assignable to parameter of type 'string'."
@@ -3241,7 +3241,7 @@
     {
       "packageName": "@croco/rpc-codegen",
       "file": "packages/rpc-codegen/src/libs/generate.ts",
-      "line": 777,
+      "line": 771,
       "column": 49,
       "code": "TS2345",
       "message": "Argument of type 'string | undefined' is not assignable to parameter of type 'string'."

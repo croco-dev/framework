@@ -5,21 +5,21 @@ prev: false
 title: "createValidator"
 ---
 
-> **createValidator**\<`T`\>(`schema`): `object`
+> **createValidator**\<`TSchema`\>(`schema`): `object`
 
 동기, 비동기, 안전 파싱 API를 가진 검증 유틸리티를 생성합니다.
 
 ## Type Parameters
 
-### T
+### TSchema
 
-`T`
+`TSchema` _extends_ `ZodType`\<`any`, `ZodTypeDef`, `any`\>
 
 ## Parameters
 
 ### schema
 
-`ZodType`\<`T`\>
+`TSchema`
 
 ## Returns
 
@@ -27,7 +27,7 @@ title: "createValidator"
 
 ### parse
 
-> **parse**: (`data`) => `T`
+> **parse**: (`data`) => `output`\<`TSchema`\>
 
 #### Parameters
 
@@ -37,11 +37,11 @@ title: "createValidator"
 
 #### Returns
 
-`T`
+`output`\<`TSchema`\>
 
 ### parseAsync
 
-> **parseAsync**: (`data`) => `Promise`\<`T`\>
+> **parseAsync**: (`data`) => `Promise`\<`output`\<`TSchema`\>\>
 
 #### Parameters
 
@@ -51,11 +51,11 @@ title: "createValidator"
 
 #### Returns
 
-`Promise`\<`T`\>
+`Promise`\<`output`\<`TSchema`\>\>
 
 ### safeParse
 
-> **safeParse**: (`data`) => \{ `data`: `T`; `success`: `true`; \} \| \{ `error`: [`ValidationIssue`](/api/protocols-rest/src/type-aliases/validationissue/)[]; `success`: `false`; \}
+> **safeParse**: (`data`) => \{ `data`: `output`\<`TSchema`\>; `success`: `true`; \} \| \{ `error`: [`ValidationIssue`](/api/protocols-rest/src/type-aliases/validationissue/)[]; `success`: `false`; \}
 
 #### Parameters
 
@@ -65,4 +65,4 @@ title: "createValidator"
 
 #### Returns
 
-\{ `data`: `T`; `success`: `true`; \} \| \{ `error`: [`ValidationIssue`](/api/protocols-rest/src/type-aliases/validationissue/)[]; `success`: `false`; \}
+\{ `data`: `output`\<`TSchema`\>; `success`: `true`; \} \| \{ `error`: [`ValidationIssue`](/api/protocols-rest/src/type-aliases/validationissue/)[]; `success`: `false`; \}

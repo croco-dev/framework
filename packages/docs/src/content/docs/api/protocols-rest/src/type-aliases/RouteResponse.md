@@ -5,10 +5,10 @@ prev: false
 title: "RouteResponse"
 ---
 
-> **RouteResponse**\<`TContract`\> = `TContract` *extends* `object` ? `z.infer`\<`Response`\> : `unknown`
+> **RouteResponse**\<`TContract`\> = [`RouteWireResponse`](/api/protocols-rest/src/type-aliases/routewireresponse/)\<`TContract`\>
 
 ## Type Parameters
 
 ### TContract
 
-`TContract` *extends* [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/)
+`TContract` _extends_ [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/)

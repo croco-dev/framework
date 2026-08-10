@@ -11,14 +11,30 @@ title: "PipelineConfig"
 
 > **filters**: [`ExceptionFilter`](/api/protocols-rest/src/interfaces/exceptionfilter/)\<`unknown`, [`HttpExecutionContext`](/api/transports-http/src/classes/httpexecutioncontext/)\>[]
 
-***
+---
 
 ### guards
 
 > **guards**: [`Guard`](/api/framework-context/src/interfaces/guard/)\<[`ExecutionContext`](/api/protocols-rest/src/interfaces/executioncontext/)\>[]
 
-***
+---
 
 ### interceptors
 
 > **interceptors**: [`Interceptor`](/api/protocols-rest/src/interfaces/interceptor/)\<[`ExecutionContext`](/api/protocols-rest/src/interfaces/executioncontext/)\>[]
+
+---
+
+### validateResult?
+
+> `optional` **validateResult?**: (`result`) => `unknown`
+
+#### Parameters
+
+##### result
+
+`unknown`
+
+#### Returns
+
+`unknown`

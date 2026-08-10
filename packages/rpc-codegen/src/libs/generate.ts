@@ -503,10 +503,7 @@ function generateDomainClient(domainRoutes: DomainRoutes, options: GenerateClien
     hasQueryKeyInputs: domainRoutes.routes.some(needsInput),
   });
   const queryHelpers = domainRoutes.routes.some((route) => route.inputSchemas.query)
-    ? `type QueryParamValue = string | number | boolean | null | undefined;
-type QueryParamInput = QueryParamValue | readonly QueryParamValue[];
-
-function serializeQueryParams(query: Record<string, QueryParamInput>): string {
+    ? `function serializeQueryParams(query: Record<string, unknown>): string {
   const params = new URLSearchParams();
 
   for (const [key, value] of Object.entries(query)) {
@@ -530,10 +527,7 @@ function serializeQueryParams(query: Record<string, QueryParamInput>): string {
 `
     : "";
   const headerHelpers = domainRoutes.routes.some((route) => route.inputSchemas.headers)
-    ? `type HeaderParamValue = string | number | boolean | null | undefined;
-type HeaderParamInput = HeaderParamValue | readonly HeaderParamValue[];
-
-function serializeHeaders(headers: Record<string, HeaderParamInput>): Record<string, string> {
+    ? `function serializeHeaders(headers: Record<string, unknown>): Record<string, string> {
   const serialized: Record<string, string> = {};
 
   for (const [key, value] of Object.entries(headers)) {
@@ -2078,7 +2072,7 @@ function generateInputType(route: GeneratedClientRoute): string {
   }
 
   if (hasLegacyBodyInput(route)) {
-    return `export type ${getInputTypeName(route)} = ${zodTypeToTypeScript(route.inputSchemas.body)};`;
+    return `export type ${getInputTypeName(route)} = ${zodInputTypeToTypeScript("body", route.inputSchemas.body)};`;
   }
 
   const fields = getInputSchemaEntries(route).map(
@@ -3005,15 +2999,11 @@ function zodInputTypeToTypeScript(name: string, schema: unknown): string {
   if (name === "headers") {
     return zodTypeToTypeScriptWithOptions(schema, {
       readonlyArrays: true,
-      catchAllowsUndefined: true,
+      lifecycle: "input",
     });
   }
 
-  if (name === "query") {
-    return zodTypeToTypeScriptWithOptions(schema, { catchAllowsUndefined: true });
-  }
-
-  return zodTypeToTypeScript(schema);
+  return zodTypeToTypeScriptWithOptions(schema, { lifecycle: "input" });
 }
 
 function zodTypeToTypeScriptWithOptions(
@@ -3041,7 +3031,7 @@ function zodTypeToTypeScriptWithOptions(
 
 type TypeScriptTypeOptions = {
   readonly readonlyArrays?: boolean;
-  readonly catchAllowsUndefined?: boolean;
+  readonly lifecycle?: "input" | "output";
 };
 
 function schemaDescriptorToTypeScript(
@@ -3099,16 +3089,20 @@ function schemaDescriptorToTypeScript(
   }
 
   if (descriptor.kind === "default") {
-    return schemaDescriptorToTypeScript(getRequiredChildDescriptor(descriptor, "inner"), options);
-  }
-
-  if (descriptor.kind === "catch") {
     const inner = schemaDescriptorToTypeScript(
       getRequiredChildDescriptor(descriptor, "inner"),
       options,
     );
 
-    return options.catchAllowsUndefined ? includeUndefinedType(inner) : inner;
+    return options.lifecycle === "input"
+      ? includeUndefinedType(inner)
+      : excludeUndefinedType(inner);
+  }
+
+  if (descriptor.kind === "catch") {
+    return options.lifecycle === "input"
+      ? "unknown"
+      : schemaDescriptorToTypeScript(getRequiredChildDescriptor(descriptor, "inner"), options);
   }
 
   if (
@@ -3173,6 +3167,10 @@ function includeUndefinedType(type: string): string {
   return type.split(" | ").includes("undefined") ? type : `${type} | undefined`;
 }
 
+function excludeUndefinedType(type: string): string {
+  return unionTypes(type.split(" | ").filter((member) => member !== "undefined"));
+}
+
 function literalValueToTypeScript(value: unknown): string {
   if (typeof value === "string") {
     return `'${value.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`;
@@ -3197,10 +3195,54 @@ function getObjectTypeScript(
 ): string {
   const fields = (descriptor.fields ?? []).map(
     (field) =>
-      `${formatObjectKey(field.name)}: ${schemaDescriptorToTypeScript(field.schema, options)};`,
+      `${formatObjectKey(field.name)}${isOptionalObjectField(field, options.lifecycle ?? "output") ? "?" : ""}: ${schemaDescriptorToTypeScript(field.schema, options)};`,
   );
 
   return `{ ${fields.join(" ")} }`;
+}
+
+function isOptionalObjectField(
+  field: NonNullable<ContractSchemaDescriptor["fields"]>[number],
+  lifecycle: "input" | "output",
+): boolean {
+  return lifecycle === "input"
+    ? !field.required || schemaAllowsUndefined(field.schema, lifecycle)
+    : schemaAllowsUndefined(field.schema, lifecycle);
+}
+
+function schemaAllowsUndefined(
+  descriptor: ContractSchemaDescriptor,
+  lifecycle: "input" | "output",
+): boolean {
+  if (
+    descriptor.kind === "undefined" ||
+    descriptor.kind === "void" ||
+    descriptor.kind === "optional" ||
+    descriptor.kind === "unknown" ||
+    descriptor.kind === "any"
+  ) {
+    return true;
+  }
+
+  if (lifecycle === "input" && (descriptor.kind === "default" || descriptor.kind === "catch")) {
+    return true;
+  }
+
+  if (descriptor.kind === "union") {
+    return (descriptor.options ?? []).some((option) => schemaAllowsUndefined(option, lifecycle));
+  }
+
+  if (
+    descriptor.kind === "effects" ||
+    descriptor.kind === "branded" ||
+    descriptor.kind === "nullable" ||
+    descriptor.kind === "readonly" ||
+    (lifecycle === "output" && descriptor.kind === "catch")
+  ) {
+    return descriptor.inner ? schemaAllowsUndefined(descriptor.inner, lifecycle) : false;
+  }
+
+  return false;
 }
 
 function getObjectFieldNames(schema: unknown): string[] {

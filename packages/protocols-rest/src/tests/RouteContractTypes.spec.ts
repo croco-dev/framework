@@ -13,11 +13,21 @@ import {
   Query,
   ResponseSchema,
   type RouteBody,
+  type RouteClientBody,
+  type RouteClientPathParams,
+  type RouteClientQuery,
+  type RouteClientRequest,
+  type RouteClientResponse,
   type RouteContractHandler,
   type RouteContractRequest,
   type RouteContractResult,
   type RouteContractSpec,
   type RouteHandler,
+  type RouteHandlerBody,
+  type RouteHandlerPathParams,
+  type RouteHandlerQuery,
+  type RouteHandlerRequest,
+  type RouteHandlerReturn,
   type RouteMethodReturn,
   type RouteParam,
   type RoutePathParamName,
@@ -26,12 +36,15 @@ import {
   type RouteQuery,
   type RouteQueryParam,
   type RouteResponse,
+  type RouteWireResponse,
   routeParam,
   routeParamSchema,
   routeProblemResponses,
   routeQueryParam,
+  routeQueryParamSchema,
   routeQuerySchema,
   routeResponseSchema,
+  validateResponse,
 } from "../index";
 
 /* oxlint-disable import/no-duplicates */
@@ -88,6 +101,27 @@ const contractParameterTypes = defineRouteContract({
 });
 
 const otherBrand = z.string().brand<"OtherId">();
+
+const lifecycleContract = defineRouteContract({
+  method: HttpMethod.POST,
+  path: "/lifecycle/:id",
+  params: z.object({
+    id: z.string().brand<"UserId">(),
+  }),
+  query: z.object({
+    caught: z.string().catch("fallback"),
+    coerced: z.coerce.number(),
+    defaulted: z.string().default("default"),
+    nullable: z.string().nullable(),
+    optional: z.string().optional(),
+    preprocessed: z.preprocess((value) => String(value), z.string()),
+    transformed: z.string().transform((value) => value.length),
+  }),
+  body: z
+    .object({ name: z.string() })
+    .transform(({ name }) => ({ normalizedName: name.toUpperCase() })),
+  response: z.string().transform((value) => value.length),
+});
 
 class UserNotFoundProblem extends Problem {
   constructor(id: string) {
@@ -227,6 +261,179 @@ describe("route contract types", () => {
     });
   });
 });
+
+describe("route contract lifecycle types", () => {
+  it("separates client request inputs from parsed handler inputs", () => {
+    expectTypeOf<RouteClientPathParams<typeof lifecycleContract>["id"]>().toEqualTypeOf<string>();
+    expectTypeOf<RouteHandlerPathParams<typeof lifecycleContract>["id"]>().toEqualTypeOf<
+      z.output<typeof lifecycleContract.params.shape.id>
+    >();
+    expectTypeOf<RouteClientQuery<typeof lifecycleContract>["coerced"]>().toEqualTypeOf<number>();
+    expectTypeOf<RouteHandlerQuery<typeof lifecycleContract>["coerced"]>().toEqualTypeOf<number>();
+    expectTypeOf<RouteClientQuery<typeof lifecycleContract>["defaulted"]>().toEqualTypeOf<
+      string | undefined
+    >();
+    expectTypeOf<
+      RouteHandlerQuery<typeof lifecycleContract>["defaulted"]
+    >().toEqualTypeOf<string>();
+    expectTypeOf<
+      RouteClientQuery<typeof lifecycleContract>["transformed"]
+    >().toEqualTypeOf<string>();
+    expectTypeOf<
+      RouteHandlerQuery<typeof lifecycleContract>["transformed"]
+    >().toEqualTypeOf<number>();
+    expectTypeOf<
+      RouteClientQuery<typeof lifecycleContract>["preprocessed"]
+    >().toEqualTypeOf<unknown>();
+    expectTypeOf<
+      RouteHandlerQuery<typeof lifecycleContract>["preprocessed"]
+    >().toEqualTypeOf<string>();
+    expectTypeOf<RouteClientQuery<typeof lifecycleContract>["optional"]>().toEqualTypeOf<
+      string | undefined
+    >();
+    expectTypeOf<RouteHandlerQuery<typeof lifecycleContract>["optional"]>().toEqualTypeOf<
+      string | undefined
+    >();
+    expectTypeOf<RouteClientQuery<typeof lifecycleContract>["nullable"]>().toEqualTypeOf<
+      string | null
+    >();
+    expectTypeOf<RouteHandlerQuery<typeof lifecycleContract>["nullable"]>().toEqualTypeOf<
+      string | null
+    >();
+    expectTypeOf<RouteClientQuery<typeof lifecycleContract>["caught"]>().toEqualTypeOf<unknown>();
+    expectTypeOf<RouteHandlerQuery<typeof lifecycleContract>["caught"]>().toEqualTypeOf<string>();
+    expectTypeOf<RouteClientBody<typeof lifecycleContract>>().toEqualTypeOf<{ name: string }>();
+    expectTypeOf<RouteHandlerBody<typeof lifecycleContract>>().toEqualTypeOf<{
+      normalizedName: string;
+    }>();
+
+    const clientRequest: RouteClientRequest<typeof lifecycleContract> = {
+      params: { id: "user_1" },
+      query: {
+        caught: 42,
+        coerced: 42,
+        nullable: null,
+        preprocessed: 7,
+        transformed: "Ada",
+      },
+      body: { name: "Ada" },
+    };
+    const handlerRequest: RouteHandlerRequest<typeof lifecycleContract> = {
+      params: lifecycleContract.params.parse(clientRequest.params),
+      query: lifecycleContract.query.parse(clientRequest.query),
+      body: lifecycleContract.body.parse(clientRequest.body),
+    };
+
+    expect(handlerRequest).toEqual({
+      params: { id: "user_1" },
+      query: {
+        caught: "fallback",
+        coerced: 42,
+        defaulted: "default",
+        nullable: null,
+        preprocessed: "7",
+        transformed: 3,
+      },
+      body: { normalizedName: "ADA" },
+    });
+    expect(lifecycleContract.query.parse({ ...clientRequest.query, coerced: "42" }).coerced).toBe(
+      42,
+    );
+
+    expectTypeOf<RouteContractRequest<typeof lifecycleContract>>().toEqualTypeOf<
+      RouteHandlerRequest<typeof lifecycleContract>
+    >();
+    expectTypeOf<RoutePathParams<typeof lifecycleContract>>().toEqualTypeOf<
+      RouteHandlerPathParams<typeof lifecycleContract>
+    >();
+    expectTypeOf<RouteQuery<typeof lifecycleContract>>().toEqualTypeOf<
+      RouteHandlerQuery<typeof lifecycleContract>
+    >();
+    expectTypeOf<RouteBody<typeof lifecycleContract>>().toEqualTypeOf<
+      RouteHandlerBody<typeof lifecycleContract>
+    >();
+
+    const transformedQuerySchema = routeQueryParamSchema(lifecycleContract, "transformed");
+    const brandedPathSchema = routeParamSchema(lifecycleContract, "id");
+    expectTypeOf<z.input<typeof transformedQuerySchema>>().toEqualTypeOf<string>();
+    expectTypeOf<z.output<typeof transformedQuerySchema>>().toEqualTypeOf<number>();
+    expectTypeOf<z.input<typeof brandedPathSchema>>().toEqualTypeOf<string>();
+    expectTypeOf<z.output<typeof brandedPathSchema>>().toEqualTypeOf<
+      z.output<typeof lifecycleContract.params.shape.id>
+    >();
+  });
+
+  it("separates handler response inputs from wire and client outputs", () => {
+    expectTypeOf<RouteHandlerReturn<typeof lifecycleContract>>().toEqualTypeOf<string>();
+    expectTypeOf<RouteWireResponse<typeof lifecycleContract>>().toEqualTypeOf<number>();
+    expectTypeOf<RouteClientResponse<typeof lifecycleContract>>().toEqualTypeOf<number>();
+    expectTypeOf<RouteResponse<typeof lifecycleContract>>().toEqualTypeOf<number>();
+    expectTypeOf<RouteContractResult<typeof lifecycleContract>>().toEqualTypeOf<
+      string | Promise<string>
+    >();
+    expectTypeOf<RouteMethodReturn<typeof lifecycleContract>>().toEqualTypeOf<
+      string | Promise<string>
+    >();
+
+    const handlerReturn: RouteHandlerReturn<typeof lifecycleContract> = "Ada";
+    const wireResponse: RouteWireResponse<typeof lifecycleContract> = validateResponse(
+      lifecycleContract.response,
+      handlerReturn,
+    );
+
+    expect(wireResponse).toBe(3);
+  });
+});
+
+// @ts-expect-error transform client inputs use the schema's pre-transform string type.
+const invalidLifecycleClientTransform: RouteClientQuery<typeof lifecycleContract>["transformed"] =
+  3;
+
+// @ts-expect-error handler inputs use the coerced number output.
+const invalidLifecycleHandlerCoerce: RouteHandlerQuery<typeof lifecycleContract>["coerced"] = "42";
+
+const invalidLifecycleHandlerBrand: RouteHandlerPathParams<typeof lifecycleContract> = {
+  // @ts-expect-error handler path params retain the schema brand.
+  id: "user_1",
+};
+
+// @ts-expect-error defaulted handler inputs cannot omit the parsed default value.
+const invalidLifecycleHandlerDefault: RouteHandlerQuery<typeof lifecycleContract>["defaulted"] =
+  undefined;
+
+// @ts-expect-error preprocessed handler inputs use the parsed string output.
+const invalidLifecycleHandlerPreprocess: RouteHandlerQuery<
+  typeof lifecycleContract
+>["preprocessed"] = 7;
+
+// @ts-expect-error optional handler inputs accept strings or undefined, not numbers.
+const invalidLifecycleHandlerOptional: RouteHandlerQuery<typeof lifecycleContract>["optional"] = 7;
+
+// @ts-expect-error nullable handler inputs accept strings or null, not undefined.
+const invalidLifecycleHandlerNullable: RouteHandlerQuery<typeof lifecycleContract>["nullable"] =
+  undefined;
+
+// @ts-expect-error caught handler inputs use the parsed fallback-compatible string output.
+const invalidLifecycleHandlerCatch: RouteHandlerQuery<typeof lifecycleContract>["caught"] = 7;
+
+// @ts-expect-error handler return values use the response schema's pre-transform input.
+const invalidLifecycleHandlerReturn: RouteHandlerReturn<typeof lifecycleContract> = 3;
+
+// @ts-expect-error wire responses use the response schema's transformed output.
+const invalidLifecycleWireResponse: RouteWireResponse<typeof lifecycleContract> = "Ada";
+
+void [
+  invalidLifecycleClientTransform,
+  invalidLifecycleHandlerCoerce,
+  invalidLifecycleHandlerBrand,
+  invalidLifecycleHandlerDefault,
+  invalidLifecycleHandlerPreprocess,
+  invalidLifecycleHandlerOptional,
+  invalidLifecycleHandlerNullable,
+  invalidLifecycleHandlerCatch,
+  invalidLifecycleHandlerReturn,
+  invalidLifecycleWireResponse,
+];
 
 // @ts-expect-error route path declares id, not userId.
 defineRouteContract({

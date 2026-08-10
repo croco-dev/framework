@@ -5,10 +5,10 @@ prev: false
 title: "RoutePathParams"
 ---
 
-> **RoutePathParams**\<`TContract`\> = `TContract` *extends* `object` ? `z.infer`\<`Params`\> : `EmptyObject`
+> **RoutePathParams**\<`TContract`\> = [`RouteHandlerPathParams`](/api/protocols-rest/src/type-aliases/routehandlerpathparams/)\<`TContract`\>
 
 ## Type Parameters
 
 ### TContract
 
-`TContract` *extends* [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/)
+`TContract` _extends_ [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/)

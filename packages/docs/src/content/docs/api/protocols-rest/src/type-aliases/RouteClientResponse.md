@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "RouteQuery"
+title: "RouteClientResponse"
 ---
 
-> **RouteQuery**\<`TContract`\> = [`RouteHandlerQuery`](/api/protocols-rest/src/type-aliases/routehandlerquery/)\<`TContract`\>
+> **RouteClientResponse**\<`TContract`\> = [`RouteWireResponse`](/api/protocols-rest/src/type-aliases/routewireresponse/)\<`TContract`\>
 
 ## Type Parameters
 

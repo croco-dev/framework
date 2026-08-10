@@ -5,10 +5,10 @@ prev: false
 title: "RouteBody"
 ---
 
-> **RouteBody**\<`TContract`\> = `TContract` *extends* `object` ? `z.infer`\<`Body`\> : `undefined`
+> **RouteBody**\<`TContract`\> = [`RouteHandlerBody`](/api/protocols-rest/src/type-aliases/routehandlerbody/)\<`TContract`\>
 
 ## Type Parameters
 
 ### TContract
 
-`TContract` *extends* [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/)
+`TContract` _extends_ [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/)

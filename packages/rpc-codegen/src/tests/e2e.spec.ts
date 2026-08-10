@@ -77,7 +77,7 @@ describe("rpc-codegen e2e", () => {
       "import { createRpcClientRequest, handleRpcRequestError, handleJsonResponse, handleJsonResult, readOptionalJsonResponse, readOptionalJsonResult, toRpcFormProblem, serializeRpcQueryKeyInput, type RpcClientRequestOptions, type RpcClientResult, type RpcDeclaredProblem, type RpcDomainProblem, type RpcFormFieldProblem, type RpcFormGlobalProblem, type RpcFormModel, type RpcProblemDetailsFor, type RpcValidationProblem } from './rpc';",
     );
     expect(content).toContain(
-      "export type GetUserInput = { path: { id: string; }; query: { include: string | undefined; }; headers: { 'x-request-id': string; }; };",
+      "export type GetUserInput = { path: { id: string; }; query: { include?: string | undefined; }; headers: { 'x-request-id': string; }; };",
     );
     expect(content).toContain("export type CreateUserInput = { name: string; };");
     expect(content).toContain("export type CreateUserOutput = { id: string; name: string; };");

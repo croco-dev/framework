@@ -1316,7 +1316,7 @@ void createInvalidationRouteId;
 
     const content = fs.readFileSync(files[0], "utf-8");
     expect(content).toContain(
-      "export type GetInput = { headers: { authorization: string; 'x-tenant-id': string | undefined; }; };",
+      "export type GetInput = { headers: { authorization: string; 'x-tenant-id'?: string | undefined; }; };",
     );
   });
 
@@ -1358,6 +1358,10 @@ void createInvalidationRouteId;
             catchScalar: z.string().catch("fallback"),
             catchFirst,
             catchLast,
+            defaulted: z.string().default("fallback"),
+            optionalCatch: z.string().optional().catch("fallback"),
+            optionalDefault: z.string().optional().default("fallback"),
+            optionalNullable: z.string().optional().nullable(),
           }) as unknown as NonNullable<RouteIR["inputSchemas"]["query"]>,
           headers: z.object({
             "x-catch-array": z.array(z.string()).catch([]),
@@ -1372,7 +1376,7 @@ void createInvalidationRouteId;
     const content = fs.readFileSync(files[0], "utf-8");
 
     expect(content).toContain(
-      "export type ListInput = { query: { catchArray: string[] | undefined; catchFirst: string[] | string | undefined; catchLast: string[] | string | undefined; catchScalar: string | undefined; }; headers: { 'x-catch-array': readonly string[] | undefined; }; };",
+      "export type ListInput = { query: { catchArray?: unknown; catchFirst?: string[] | unknown; catchLast?: string[] | unknown; catchScalar?: unknown; defaulted?: string | undefined; optionalCatch?: unknown; optionalDefault?: string | undefined; optionalNullable?: string | undefined | null; }; headers: { 'x-catch-array'?: unknown; }; };",
     );
     expect(content).toContain("params.append(key, String(item));");
     expect(content).toContain("serialized[key] = serializedValues.join(', ');");
@@ -1386,8 +1390,61 @@ const result = filterClient.list({
   },
   headers: { 'x-catch-array': undefined },
 });
+// @ts-expect-error defaulted request inputs still reject non-string values.
+filterClient.list({ query: { defaulted: 42 }, headers: {} });
 void result;
 `);
+  });
+
+  it("should reject transformed response schemas instead of emitting the handler-return input", () => {
+    const routes: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "getDisplayNameLength",
+        httpMethod: "GET",
+        path: "/users/:id/display-name-length",
+        routeContract: null,
+        params: [{ kind: "path", name: "id", schema: null }],
+        inputSchema: null,
+        inputSchemas: PATH_INPUT_SCHEMAS,
+        outputSchema: z
+          .string()
+          .transform((value) => value.length) as unknown as RouteIR["outputSchema"],
+        domain: null,
+      },
+    ];
+
+    expect(() => generateClientFiles(routes, TEMP_DIR)).toThrow(
+      /contract-schema-json-unsafe.*Zod transform effects can change runtime values/,
+    );
+  });
+
+  it("should project nested default and catch wrappers according to output semantics", () => {
+    const routes: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "getPreferences",
+        httpMethod: "GET",
+        path: "/users/:id/preferences",
+        routeContract: null,
+        params: [{ kind: "path", name: "id", schema: null }],
+        inputSchema: null,
+        inputSchemas: PATH_INPUT_SCHEMAS,
+        outputSchema: z.object({
+          optionalCatch: z.string().optional().catch("fallback"),
+          optionalDefault: z.string().optional().default("fallback"),
+          optionalNullable: z.string().optional().nullable(),
+        }) as unknown as RouteIR["outputSchema"],
+        domain: null,
+      },
+    ];
+
+    const files = generateClientFiles(routes, TEMP_DIR);
+    const content = fs.readFileSync(files[0], "utf-8");
+
+    expect(content).toContain(
+      "export type GetPreferencesOutput = { optionalCatch?: string | undefined; optionalDefault: string; optionalNullable?: string | undefined | null; };",
+    );
   });
 
   it("should generate combined input types from inputSchemas", () => {
@@ -2062,13 +2119,7 @@ void handleMissingProblemBranch;
 
     const content = fs.readFileSync(files[0], "utf-8");
     expect(content).toContain(
-      "type QueryParamValue = string | number | boolean | null | undefined;",
-    );
-    expect(content).toContain(
-      "type QueryParamInput = QueryParamValue | readonly QueryParamValue[];",
-    );
-    expect(content).toContain(
-      "function serializeQueryParams(query: Record<string, QueryParamInput>): string",
+      "function serializeQueryParams(query: Record<string, unknown>): string",
     );
     expect(content).toContain("const query = serializeQueryParams(input.query);");
     expect(content).toContain("const url = query ? `${path}?${query}` : path;");
@@ -2101,10 +2152,7 @@ void handleMissingProblemBranch;
 
     const content = fs.readFileSync(files[0], "utf-8");
     expect(content).toContain(
-      "type HeaderParamInput = HeaderParamValue | readonly HeaderParamValue[];",
-    );
-    expect(content).toContain(
-      "function serializeHeaders(headers: Record<string, HeaderParamInput>): Record<string, string>",
+      "function serializeHeaders(headers: Record<string, unknown>): Record<string, string>",
     );
     expect(content).toContain("serialized[key] = serializedValues.join(', ');");
     expect(content).toContain("const path = '/users';");
@@ -2323,7 +2371,7 @@ void createResultHook;
 
       const content = fs.readFileSync(files[0], "utf-8");
       expect(content).toContain(
-        "export type ListInput = { query: { active: boolean | undefined; deletedAt: string | null; page: number; search: string | undefined; tags: string[]; }; };",
+        "export type ListInput = { query: { active?: boolean | undefined; deletedAt: string | null; page: number; search?: string | undefined; tags: string[]; }; };",
       );
       expect(content).toContain(
         "import { createRpcClientRequest, handleRpcRequestError, readOptionalJsonResponse, readOptionalJsonResult, serializeRpcQueryKeyInput, type RpcClientRequestOptions, type RpcClientResult, type RpcDeclaredProblem, type RpcProblemDetailsFor } from './rpc';",

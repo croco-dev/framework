@@ -5,17 +5,17 @@ prev: false
 title: "routeQueryParamSchema"
 ---
 
-> **routeQueryParamSchema**\<`TContract`, `Name`\>(`contract`, `name`): `ZodType`\<[`RouteQuery`](/api/protocols-rest/src/type-aliases/routequery/)\<`TContract`\>\[`Name`\]\>
+> **routeQueryParamSchema**\<`TContract`, `Name`\>(`contract`, `name`): `TContract`\[`"query"`\]\[`"shape"`\]\[`Name`\]
 
 ## Type Parameters
 
 ### TContract
 
-`TContract` *extends* [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/) & `{ readonly query: AnyZodObject }`
+`TContract` _extends_ [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/) & `{ readonly query: AnyZodObject }`
 
 ### Name
 
-`Name` *extends* keyof [`RouteQuery`](/api/protocols-rest/src/type-aliases/routequery/)\<`TContract`\> & `string`
+`Name` _extends_ keyof [`RouteQuery`](/api/protocols-rest/src/type-aliases/routequery/)\<`TContract`\> & `string`
 
 ## Parameters
 
@@ -29,4 +29,4 @@ title: "routeQueryParamSchema"
 
 ## Returns
 
-`ZodType`\<[`RouteQuery`](/api/protocols-rest/src/type-aliases/routequery/)\<`TContract`\>\[`Name`\]\>
+`TContract`\[`"query"`\]\[`"shape"`\]\[`Name`\]

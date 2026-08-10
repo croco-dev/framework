@@ -5,10 +5,10 @@ prev: false
 title: "RouteContractResult"
 ---
 
-> **RouteContractResult**\<`TContract`\> = [`RouteResponse`](/api/protocols-rest/src/type-aliases/routeresponse/)\<`TContract`\> \| `Promise`\<[`RouteResponse`](/api/protocols-rest/src/type-aliases/routeresponse/)\<`TContract`\>\>
+> **RouteContractResult**\<`TContract`\> = [`RouteHandlerReturn`](/api/protocols-rest/src/type-aliases/routehandlerreturn/)\<`TContract`\> \| `Promise`\<[`RouteHandlerReturn`](/api/protocols-rest/src/type-aliases/routehandlerreturn/)\<`TContract`\>\>
 
 ## Type Parameters
 
 ### TContract
 
-`TContract` *extends* [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/)
+`TContract` _extends_ [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/)

@@ -8,11 +8,11 @@ import {
 /**
  * 요청 데이터를 Zod 스키마로 검증하고 실패 시 요청 검증 Problem을 발생시킵니다.
  */
-export function validateRequest<T>(
-  schema: z.ZodType<T>,
+export function validateRequest<TSchema extends z.ZodType>(
+  schema: TSchema,
   data: unknown,
   source: "body" | "query" | "params" | "headers",
-): T {
+): z.output<TSchema> {
   const result = schema.safeParse(data);
 
   if (!result.success) {
@@ -30,7 +30,10 @@ export function validateRequest<T>(
 /**
  * 응답 데이터를 Zod 스키마로 검증하고 실패 시 응답 검증 Problem을 발생시킵니다.
  */
-export function validateResponse<T>(schema: z.ZodType<T>, data: unknown): T {
+export function validateResponse<TSchema extends z.ZodType>(
+  schema: TSchema,
+  data: unknown,
+): z.output<TSchema> {
   const result = schema.safeParse(data);
 
   if (!result.success) {
@@ -48,9 +51,9 @@ export function validateResponse<T>(schema: z.ZodType<T>, data: unknown): T {
 /**
  * 동기, 비동기, 안전 파싱 API를 가진 검증 유틸리티를 생성합니다.
  */
-export function createValidator<T>(schema: z.ZodType<T>) {
+export function createValidator<TSchema extends z.ZodType>(schema: TSchema) {
   return {
-    parse: (data: unknown): T => {
+    parse: (data: unknown): z.output<TSchema> => {
       const result = schema.safeParse(data);
 
       if (!result.success) {
@@ -65,7 +68,7 @@ export function createValidator<T>(schema: z.ZodType<T>) {
       return result.data;
     },
 
-    parseAsync: async (data: unknown): Promise<T> => {
+    parseAsync: async (data: unknown): Promise<z.output<TSchema>> => {
       const result = await schema.safeParseAsync(data);
 
       if (!result.success) {
@@ -82,7 +85,9 @@ export function createValidator<T>(schema: z.ZodType<T>) {
 
     safeParse: (
       data: unknown,
-    ): { success: true; data: T } | { success: false; error: ValidationIssue[] } => {
+    ):
+      | { success: true; data: z.output<TSchema> }
+      | { success: false; error: ValidationIssue[] } => {
       const result = schema.safeParse(data);
 
       if (!result.success) {
