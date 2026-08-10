@@ -7,54 +7,72 @@ title: "ExecutionProblemCode"
 
 ## Enumeration Members
 
-### CHECKPOINT\_STORE\_CONFORMANCE
+### ATTEMPT_FENCE_CONFLICT
 
-> **CHECKPOINT\_STORE\_CONFORMANCE**: `"execution/checkpoint-store-conformance"`
+> **ATTEMPT_FENCE_CONFLICT**: `"execution/attempt-fence-conflict"`
 
-***
+---
+
+### ATTEMPT_FENCING_UNSUPPORTED
+
+> **ATTEMPT_FENCING_UNSUPPORTED**: `"execution/attempt-fencing-unsupported"`
+
+---
+
+### CHECKPOINT_STORE_CONFORMANCE
+
+> **CHECKPOINT_STORE_CONFORMANCE**: `"execution/checkpoint-store-conformance"`
+
+---
 
 ### CONFLICT
 
 > **CONFLICT**: `"execution/conflict"`
 
-***
+---
 
-### CONTINUATION\_CONFLICT
+### CONTINUATION_CONFLICT
 
-> **CONTINUATION\_CONFLICT**: `"execution/continuation-conflict"`
+> **CONTINUATION_CONFLICT**: `"execution/continuation-conflict"`
 
-***
+---
 
-### CONTINUATION\_UNSUPPORTED
+### CONTINUATION_UNSUPPORTED
 
-> **CONTINUATION\_UNSUPPORTED**: `"execution/continuation-unsupported"`
+> **CONTINUATION_UNSUPPORTED**: `"execution/continuation-unsupported"`
 
-***
+---
 
-### IDEMPOTENCY\_CONFLICT
+### IDEMPOTENCY_CONFLICT
 
-> **IDEMPOTENCY\_CONFLICT**: `"execution/idempotency-conflict"`
+> **IDEMPOTENCY_CONFLICT**: `"execution/idempotency-conflict"`
 
-***
+---
 
-### INVALID\_CONTINUATION\_LEASE\_DURATION
+### INDETERMINATE_RETRY_BLOCKED
 
-> **INVALID\_CONTINUATION\_LEASE\_DURATION**: `"execution/invalid-continuation-lease-duration"`
+> **INDETERMINATE_RETRY_BLOCKED**: `"execution/indeterminate-retry-blocked"`
 
-***
+---
 
-### INVALID\_STATE\_TRANSITION
+### INVALID_CONTINUATION_LEASE_DURATION
 
-> **INVALID\_STATE\_TRANSITION**: `"execution/invalid-state-transition"`
+> **INVALID_CONTINUATION_LEASE_DURATION**: `"execution/invalid-continuation-lease-duration"`
 
-***
+---
 
-### MAX\_RETRIES\_EXCEEDED
+### INVALID_STATE_TRANSITION
 
-> **MAX\_RETRIES\_EXCEEDED**: `"execution/max-retries-exceeded"`
+> **INVALID_STATE_TRANSITION**: `"execution/invalid-state-transition"`
 
-***
+---
 
-### NOT\_FOUND
+### MAX_RETRIES_EXCEEDED
 
-> **NOT\_FOUND**: `"execution/not-found"`
+> **MAX_RETRIES_EXCEEDED**: `"execution/max-retries-exceeded"`
+
+---
+
+### NOT_FOUND
+
+> **NOT_FOUND**: `"execution/not-found"`

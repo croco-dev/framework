@@ -40,7 +40,7 @@ Optional cancellation reason (stored in metadata)
 
 Error if execution not found or state transition is invalid
 
-***
+---
 
 ### checkpoint()
 
@@ -76,7 +76,7 @@ Checkpoint value
 
 Error if execution not found
 
-***
+---
 
 ### complete()
 
@@ -106,7 +106,7 @@ Optional result data
 
 Error if execution not found or state transition is invalid
 
-***
+---
 
 ### create()
 
@@ -131,7 +131,7 @@ The execution is created in 'pending' status.
 
 Created or existing execution
 
-***
+---
 
 ### fail()
 
@@ -162,7 +162,7 @@ Error details
 
 Error if execution not found or state transition is invalid
 
-***
+---
 
 ### get()
 
@@ -184,7 +184,7 @@ Get a single execution by ID.
 
 Error if execution not found
 
-***
+---
 
 ### reconcileTimedOut()
 
@@ -202,13 +202,13 @@ Reconcile persisted running executions whose configured deadline has elapsed.
 
 `Promise`\<[`ReconcileTimedOutResult`](/api/execution-core/src/interfaces/reconciletimedoutresult/)\>
 
-***
+---
 
 ### retry()
 
 > **retry**(`id`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
 
-Retry a failed or timed-out execution.
+Retry a failed or safely resolved timed-out execution.
 
 Preserves the consumed attempt count and transitions to 'retrying' status.
 The subsequent start() call transitions to 'running' and increments attempts exactly once.
@@ -225,9 +225,9 @@ The subsequent start() call transitions to 'running' and increments attempts exa
 
 #### Throws
 
-Error if execution not found or maxAttempts exhausted
+Error if execution not found, maxAttempts exhausted, or timeout outcome remains indeterminate
 
-***
+---
 
 ### start()
 
@@ -251,7 +251,7 @@ Sets startedAt timestamp and increments attempts counter.
 
 Error if execution not found or state transition is invalid
 
-***
+---
 
 ### timeout()
 
@@ -259,7 +259,7 @@ Error if execution not found or state transition is invalid
 
 Mark an execution as timed out.
 
-Transitions status to 'timed_out' and sets completedAt.
+Transitions status to an indeterminate 'timed_out' outcome and sets completedAt.
 Called internally when timeout threshold is exceeded.
 
 #### Parameters
@@ -276,7 +276,7 @@ Called internally when timeout threshold is exceeded.
 
 Error if execution not found or state transition is invalid
 
-***
+---
 
 ### updateProgress()
 

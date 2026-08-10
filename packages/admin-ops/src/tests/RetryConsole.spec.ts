@@ -248,6 +248,35 @@ function execution(overrides: Partial<Execution>): Execution {
 }
 
 describe("RetryConsole", () => {
+  it("routes indeterminate timeouts to inspection instead of an invalid retry", async () => {
+    const manager = new ExecutionManagerImpl(
+      new MemoryExecutionStore([
+        execution({
+          status: "timed_out",
+          error: {
+            code: "execution/timeout-indeterminate",
+            message: "Execution timed out with an indeterminate outcome",
+            retryable: false,
+            indeterminate: true,
+          },
+        }),
+      ]),
+    );
+    const console = createRetryConsole([createTaskRetryConsoleSource(manager)]);
+
+    const items = await console.list();
+
+    expect(items[0]).toMatchObject({
+      state: "non_retryable",
+      recoveryActions: [
+        {
+          kind: "inspect",
+          allowed: true,
+        },
+      ],
+    });
+  });
+
   it("runs a retryable task recovery with permission, audit metadata, and idempotency evidence", async () => {
     const manager = new ExecutionManagerImpl(new MemoryExecutionStore([execution({})]));
     const console = createRetryConsole([createTaskRetryConsoleSource(manager)]);

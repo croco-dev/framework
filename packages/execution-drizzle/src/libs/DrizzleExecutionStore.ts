@@ -3,6 +3,7 @@ import {
   type AcquireExecutionContinuationResult,
   type CreateExecutionRecordParams,
   type Execution,
+  type ExecutionAttemptStore,
   type ExecutionContinuationClaim,
   type ExecutionContinuationState,
   type ExecutionContinuationStore,
@@ -95,12 +96,25 @@ function toUpdateData(data: Partial<Execution>): Record<string, unknown> {
   };
 }
 
+function checkpointMergeSet(key: string, value: unknown): Record<string, unknown> {
+  const checkpoint = prepareExecutionCheckpoint(key, value).serialized;
+  return {
+    checkpoints: sql`(coalesce(${executions.checkpoints}::jsonb, '{}'::jsonb) || ${checkpoint}::jsonb)::json`,
+  };
+}
+
+function logAppendSet(entry: ExecutionLogEntry): Record<string, unknown> {
+  return {
+    logs: sql`coalesce(${executions.logs}, '[]'::jsonb) || ${JSON.stringify([entry])}::jsonb`,
+  };
+}
+
 /**
  * 실행 요청을 Drizzle 테이블에 저장하는 구현체입니다.
  */
 export class DrizzleExecutionStore<TDb extends ExecutionDb>
   extends ExecutionStore
-  implements ExecutionLogStore, ExecutionContinuationStore
+  implements ExecutionLogStore, ExecutionContinuationStore, ExecutionAttemptStore
 {
   /**
    * Drizzle 클라이언트를 받아 실행 저장소를 초기화합니다.
@@ -240,6 +254,81 @@ export class DrizzleExecutionStore<TDb extends ExecutionDb>
   }
 
   /**
+   * 상태와 attempt 소유권이 모두 일치할 때만 실행을 원자적으로 갱신합니다.
+   */
+  async updateIfStatusAndAttempt(
+    id: string,
+    expectedStatus: ExecutionStatus,
+    expectedAttempt: number,
+    data: Partial<Execution>,
+  ): Promise<Execution | null> {
+    const result = (await this.dbOp
+      .update(executions)
+      .set(toUpdateData(data))
+      .where(
+        and(
+          eq(executions.id, id),
+          eq(executions.status, expectedStatus),
+          eq(executions.attempts, expectedAttempt),
+        ),
+      )
+      .returning()) as ExecutionRow[];
+
+    return result.length > 0 ? this.mapToExecution(result[0]) : null;
+  }
+
+  /**
+   * 상태와 attempt 소유권이 모두 일치할 때만 체크포인트를 원자적으로 병합합니다.
+   */
+  async mergeCheckpointIfStatusAndAttempt(
+    id: string,
+    expectedStatus: ExecutionStatus,
+    expectedAttempt: number,
+    key: string,
+    value: unknown,
+  ): Promise<Execution | null> {
+    const set = checkpointMergeSet(key, value);
+    const result = (await this.dbOp
+      .update(executions)
+      .set(set)
+      .where(
+        and(
+          eq(executions.id, id),
+          eq(executions.status, expectedStatus),
+          eq(executions.attempts, expectedAttempt),
+        ),
+      )
+      .returning()) as ExecutionRow[];
+
+    return result.length > 0 ? this.mapToExecution(result[0]) : null;
+  }
+
+  /**
+   * 상태와 attempt 소유권이 모두 일치할 때만 로그를 원자적으로 추가합니다.
+   */
+  async appendLogIfStatusAndAttempt(
+    id: string,
+    expectedStatus: ExecutionStatus,
+    expectedAttempt: number,
+    entry: ExecutionLogEntry,
+  ): Promise<Execution | null> {
+    const set = logAppendSet(entry);
+    const result = (await this.dbOp
+      .update(executions)
+      .set(set)
+      .where(
+        and(
+          eq(executions.id, id),
+          eq(executions.status, expectedStatus),
+          eq(executions.attempts, expectedAttempt),
+        ),
+      )
+      .returning()) as ExecutionRow[];
+
+    return result.length > 0 ? this.mapToExecution(result[0]) : null;
+  }
+
+  /**
    * 실행 중 레코드를 ID 기준 키셋 순서로 조회합니다.
    */
   async listRunning(options: ListRunningExecutionsOptions): Promise<Execution[]> {
@@ -260,11 +349,10 @@ export class DrizzleExecutionStore<TDb extends ExecutionDb>
    * 실행 로그를 원자적으로 추가합니다.
    */
   async appendLog(id: string, entry: ExecutionLogEntry): Promise<Execution> {
+    const set = logAppendSet(entry);
     const result = (await this.dbOp
       .update(executions)
-      .set({
-        logs: sql`coalesce(${executions.logs}, '[]'::jsonb) || ${JSON.stringify([entry])}::jsonb`,
-      })
+      .set(set)
       .where(eq(executions.id, id))
       .returning()) as ExecutionRow[];
 
@@ -279,12 +367,10 @@ export class DrizzleExecutionStore<TDb extends ExecutionDb>
    * 체크포인트 키 하나를 원자적으로 병합합니다.
    */
   async mergeCheckpoint(id: string, key: string, value: unknown): Promise<Execution> {
-    const checkpoint = prepareExecutionCheckpoint(key, value).serialized;
+    const set = checkpointMergeSet(key, value);
     const result = (await this.dbOp
       .update(executions)
-      .set({
-        checkpoints: sql`(coalesce(${executions.checkpoints}::jsonb, '{}'::jsonb) || ${checkpoint}::jsonb)::json`,
-      })
+      .set(set)
       .where(eq(executions.id, id))
       .returning()) as ExecutionRow[];
 

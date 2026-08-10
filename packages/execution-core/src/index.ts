@@ -47,6 +47,7 @@ export {
   summarizeJob,
 } from "./libs/JobsOperations";
 export type {
+  ExecutionAttemptManager,
   ExecutionContinuationManager,
   ExecutionInspectionManager,
   ExecutionManager,
@@ -55,6 +56,7 @@ export type {
   ClaimExecutionContinuationResult,
   RenewExecutionContinuationInput,
   StageExecutionContinuationInput,
+  TimeoutExecutionAttemptOptions,
 } from "./libs/interfaces/ExecutionManager";
 export { ExecutionStore } from "./libs/interfaces/ExecutionStore";
 export type {
@@ -63,6 +65,7 @@ export type {
   ClaimedExecutionContinuationUpdate,
   ExecutionContinuationAcquired,
   ExecutionContinuationStore,
+  ExecutionAttemptStore,
   ExecutionLogStore,
   UpdateClaimedExecutionContinuationInput,
 } from "./libs/interfaces/ExecutionStore";
@@ -71,6 +74,7 @@ export type {
   CreateExecutionRecordParams,
   CreateExecutionParams,
   Execution,
+  ExecutionAttemptToken,
   ExecutionError,
   ExecutionContinuationClaim,
   ExecutionContinuationPublication,

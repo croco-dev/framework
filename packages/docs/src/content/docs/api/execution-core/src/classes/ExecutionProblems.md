@@ -19,6 +19,38 @@ Factory methods for creating ExecutionProblem instances.
 
 ## Methods
 
+### attemptFenceConflict()
+
+> `static` **attemptFenceConflict**(`detail`): [`ExecutionProblem`](/api/execution-core/src/classes/executionproblem/)
+
+#### Parameters
+
+##### detail
+
+`string`
+
+#### Returns
+
+[`ExecutionProblem`](/api/execution-core/src/classes/executionproblem/)
+
+---
+
+### attemptFencingUnsupported()
+
+> `static` **attemptFencingUnsupported**(`detail`): [`ExecutionProblem`](/api/execution-core/src/classes/executionproblem/)
+
+#### Parameters
+
+##### detail
+
+`string`
+
+#### Returns
+
+[`ExecutionProblem`](/api/execution-core/src/classes/executionproblem/)
+
+---
+
 ### checkpointStoreConformance()
 
 > `static` **checkpointStoreConformance**(`detail`): [`ExecutionProblem`](/api/execution-core/src/classes/executionproblem/)
@@ -33,7 +65,7 @@ Factory methods for creating ExecutionProblem instances.
 
 [`ExecutionProblem`](/api/execution-core/src/classes/executionproblem/)
 
-***
+---
 
 ### conflict()
 
@@ -49,7 +81,7 @@ Factory methods for creating ExecutionProblem instances.
 
 [`ExecutionProblem`](/api/execution-core/src/classes/executionproblem/)
 
-***
+---
 
 ### continuationConflict()
 
@@ -69,7 +101,7 @@ Factory methods for creating ExecutionProblem instances.
 
 [`ExecutionProblem`](/api/execution-core/src/classes/executionproblem/)
 
-***
+---
 
 ### continuationUnsupported()
 
@@ -85,7 +117,7 @@ Factory methods for creating ExecutionProblem instances.
 
 [`ExecutionProblem`](/api/execution-core/src/classes/executionproblem/)
 
-***
+---
 
 ### idempotencyConflict()
 
@@ -101,7 +133,23 @@ Factory methods for creating ExecutionProblem instances.
 
 [`ExecutionProblem`](/api/execution-core/src/classes/executionproblem/)
 
-***
+---
+
+### indeterminateRetryBlocked()
+
+> `static` **indeterminateRetryBlocked**(`detail`): [`ExecutionProblem`](/api/execution-core/src/classes/executionproblem/)
+
+#### Parameters
+
+##### detail
+
+`string`
+
+#### Returns
+
+[`ExecutionProblem`](/api/execution-core/src/classes/executionproblem/)
+
+---
 
 ### invalidContinuationLeaseDuration()
 
@@ -117,7 +165,7 @@ Factory methods for creating ExecutionProblem instances.
 
 [`InvalidContinuationLeaseDurationProblem`](/api/execution-core/src/classes/invalidcontinuationleasedurationproblem/)
 
-***
+---
 
 ### invalidStateTransition()
 
@@ -133,7 +181,7 @@ Factory methods for creating ExecutionProblem instances.
 
 [`ExecutionProblem`](/api/execution-core/src/classes/executionproblem/)
 
-***
+---
 
 ### maxRetriesExceeded()
 
@@ -149,7 +197,7 @@ Factory methods for creating ExecutionProblem instances.
 
 [`ExecutionProblem`](/api/execution-core/src/classes/executionproblem/)
 
-***
+---
 
 ### notFound()
 

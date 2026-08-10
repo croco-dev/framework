@@ -8,6 +8,7 @@ title: "ExecutionManagerImpl"
 ExecutionManagerImpl provides lifecycle management for executions.
 
 Features:
+
 - State transition validation
 - Idempotency check via ExecutionStore
 - Timeout handling
@@ -18,6 +19,7 @@ Features:
 ## Implements
 
 - [`ExecutionManager`](/api/execution-core/src/interfaces/executionmanager/)
+- [`ExecutionAttemptManager`](/api/execution-core/src/interfaces/executionattemptmanager/)
 - [`ExecutionInspectionManager`](/api/execution-core/src/interfaces/executioninspectionmanager/)
 - [`ExecutionReplayManager`](/api/execution-core/src/interfaces/executionreplaymanager/)
 - [`ExecutionContinuationManager`](/api/execution-core/src/interfaces/executioncontinuationmanager/)
@@ -76,7 +78,7 @@ Error if execution not found or state transition is invalid
 
 [`ExecutionManager`](/api/execution-core/src/interfaces/executionmanager/).[`cancel`](/api/execution-core/src/interfaces/executionmanager/#cancel)
 
-***
+---
 
 ### checkpoint()
 
@@ -116,7 +118,35 @@ Error if execution not found
 
 [`ExecutionManager`](/api/execution-core/src/interfaces/executionmanager/).[`checkpoint`](/api/execution-core/src/interfaces/executionmanager/#checkpoint)
 
-***
+---
+
+### checkpointAttempt()
+
+> **checkpointAttempt**(`token`, `key`, `value`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
+
+#### Parameters
+
+##### token
+
+[`ExecutionAttemptToken`](/api/execution-core/src/type-aliases/executionattempttoken/)
+
+##### key
+
+`string`
+
+##### value
+
+`unknown`
+
+#### Returns
+
+`Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
+
+#### Implementation of
+
+[`ExecutionAttemptManager`](/api/execution-core/src/interfaces/executionattemptmanager/).[`checkpointAttempt`](/api/execution-core/src/interfaces/executionattemptmanager/#checkpointattempt)
+
+---
 
 ### claimContinuation()
 
@@ -140,7 +170,7 @@ Error if execution not found
 
 [`ExecutionContinuationManager`](/api/execution-core/src/interfaces/executioncontinuationmanager/).[`claimContinuation`](/api/execution-core/src/interfaces/executioncontinuationmanager/#claimcontinuation)
 
-***
+---
 
 ### complete()
 
@@ -174,7 +204,31 @@ Error if execution not found or state transition is invalid
 
 [`ExecutionManager`](/api/execution-core/src/interfaces/executionmanager/).[`complete`](/api/execution-core/src/interfaces/executionmanager/#complete)
 
-***
+---
+
+### completeAttempt()
+
+> **completeAttempt**(`token`, `result?`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
+
+#### Parameters
+
+##### token
+
+[`ExecutionAttemptToken`](/api/execution-core/src/type-aliases/executionattempttoken/)
+
+##### result?
+
+`unknown`
+
+#### Returns
+
+`Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
+
+#### Implementation of
+
+[`ExecutionAttemptManager`](/api/execution-core/src/interfaces/executionattemptmanager/).[`completeAttempt`](/api/execution-core/src/interfaces/executionattemptmanager/#completeattempt)
+
+---
 
 ### completeContinuation()
 
@@ -202,7 +256,7 @@ Error if execution not found or state transition is invalid
 
 [`ExecutionContinuationManager`](/api/execution-core/src/interfaces/executioncontinuationmanager/).[`completeContinuation`](/api/execution-core/src/interfaces/executioncontinuationmanager/#completecontinuation)
 
-***
+---
 
 ### confirmContinuationPublication()
 
@@ -226,7 +280,7 @@ Error if execution not found or state transition is invalid
 
 [`ExecutionContinuationManager`](/api/execution-core/src/interfaces/executioncontinuationmanager/).[`confirmContinuationPublication`](/api/execution-core/src/interfaces/executioncontinuationmanager/#confirmcontinuationpublication)
 
-***
+---
 
 ### create()
 
@@ -255,7 +309,7 @@ Created or existing execution
 
 [`ExecutionManager`](/api/execution-core/src/interfaces/executionmanager/).[`create`](/api/execution-core/src/interfaces/executionmanager/#create)
 
-***
+---
 
 ### fail()
 
@@ -290,7 +344,31 @@ Error if execution not found or state transition is invalid
 
 [`ExecutionManager`](/api/execution-core/src/interfaces/executionmanager/).[`fail`](/api/execution-core/src/interfaces/executionmanager/#fail)
 
-***
+---
+
+### failAttempt()
+
+> **failAttempt**(`token`, `error`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
+
+#### Parameters
+
+##### token
+
+[`ExecutionAttemptToken`](/api/execution-core/src/type-aliases/executionattempttoken/)
+
+##### error
+
+[`ExecutionError`](/api/execution-core/src/interfaces/executionerror/)
+
+#### Returns
+
+`Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
+
+#### Implementation of
+
+[`ExecutionAttemptManager`](/api/execution-core/src/interfaces/executionattemptmanager/).[`failAttempt`](/api/execution-core/src/interfaces/executionattemptmanager/#failattempt)
+
+---
 
 ### failContinuation()
 
@@ -318,7 +396,7 @@ Error if execution not found or state transition is invalid
 
 [`ExecutionContinuationManager`](/api/execution-core/src/interfaces/executioncontinuationmanager/).[`failContinuation`](/api/execution-core/src/interfaces/executioncontinuationmanager/#failcontinuation)
 
-***
+---
 
 ### get()
 
@@ -344,7 +422,7 @@ Error if execution not found
 
 [`ExecutionInspectionManager`](/api/execution-core/src/interfaces/executioninspectionmanager/).[`get`](/api/execution-core/src/interfaces/executioninspectionmanager/#get)
 
-***
+---
 
 ### getContinuationLeaseDurationMs()
 
@@ -363,7 +441,7 @@ cadence renews ownership before the lease can expire.
 
 [`ExecutionContinuationManager`](/api/execution-core/src/interfaces/executioncontinuationmanager/).[`getContinuationLeaseDurationMs`](/api/execution-core/src/interfaces/executioncontinuationmanager/#getcontinuationleasedurationms)
 
-***
+---
 
 ### list()
 
@@ -385,7 +463,7 @@ List executions for inspection and operations views.
 
 [`ExecutionInspectionManager`](/api/execution-core/src/interfaces/executioninspectionmanager/).[`list`](/api/execution-core/src/interfaces/executioninspectionmanager/#list)
 
-***
+---
 
 ### reconcileTimedOut()
 
@@ -407,7 +485,7 @@ Reconcile persisted running executions whose configured deadline has elapsed.
 
 [`ExecutionManager`](/api/execution-core/src/interfaces/executionmanager/).[`reconcileTimedOut`](/api/execution-core/src/interfaces/executionmanager/#reconciletimedout)
 
-***
+---
 
 ### recordLog()
 
@@ -437,7 +515,31 @@ Error if execution not found
 
 [`ExecutionInspectionManager`](/api/execution-core/src/interfaces/executioninspectionmanager/).[`recordLog`](/api/execution-core/src/interfaces/executioninspectionmanager/#recordlog)
 
-***
+---
+
+### recordLogAttempt()
+
+> **recordLogAttempt**(`token`, `params`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
+
+#### Parameters
+
+##### token
+
+[`ExecutionAttemptToken`](/api/execution-core/src/type-aliases/executionattempttoken/)
+
+##### params
+
+[`AddExecutionLogParams`](/api/execution-core/src/interfaces/addexecutionlogparams/)
+
+#### Returns
+
+`Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
+
+#### Implementation of
+
+[`ExecutionAttemptManager`](/api/execution-core/src/interfaces/executionattemptmanager/).[`recordLogAttempt`](/api/execution-core/src/interfaces/executionattemptmanager/#recordlogattempt)
+
+---
 
 ### renewContinuationClaim()
 
@@ -465,7 +567,7 @@ Error if execution not found
 
 [`ExecutionContinuationManager`](/api/execution-core/src/interfaces/executioncontinuationmanager/).[`renewContinuationClaim`](/api/execution-core/src/interfaces/executioncontinuationmanager/#renewcontinuationclaim)
 
-***
+---
 
 ### replay()
 
@@ -498,13 +600,37 @@ Error if execution not found or source execution is not replayable
 
 [`ExecutionReplayManager`](/api/execution-core/src/interfaces/executionreplaymanager/).[`replay`](/api/execution-core/src/interfaces/executionreplaymanager/#replay)
 
-***
+---
+
+### resolveIndeterminateTimeout()
+
+> **resolveIndeterminateTimeout**(`token`, `reason`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
+
+#### Parameters
+
+##### token
+
+[`ExecutionAttemptToken`](/api/execution-core/src/type-aliases/executionattempttoken/)
+
+##### reason
+
+`string`
+
+#### Returns
+
+`Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
+
+#### Implementation of
+
+[`ExecutionAttemptManager`](/api/execution-core/src/interfaces/executionattemptmanager/).[`resolveIndeterminateTimeout`](/api/execution-core/src/interfaces/executionattemptmanager/#resolveindeterminatetimeout)
+
+---
 
 ### retry()
 
 > **retry**(`id`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
 
-Retry a failed or timed-out execution.
+Retry a failed or safely resolved timed-out execution.
 
 Preserves the consumed attempt count and transitions to 'retrying' status.
 The subsequent start() call transitions to 'running' and increments attempts exactly once.
@@ -521,13 +647,33 @@ The subsequent start() call transitions to 'running' and increments attempts exa
 
 #### Throws
 
-Error if execution not found or maxAttempts exhausted
+Error if execution not found, maxAttempts exhausted, or timeout outcome remains indeterminate
 
 #### Implementation of
 
 [`ExecutionManager`](/api/execution-core/src/interfaces/executionmanager/).[`retry`](/api/execution-core/src/interfaces/executionmanager/#retry)
 
-***
+---
+
+### settleTimedOutAttempt()
+
+> **settleTimedOutAttempt**(`token`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
+
+#### Parameters
+
+##### token
+
+[`ExecutionAttemptToken`](/api/execution-core/src/type-aliases/executionattempttoken/)
+
+#### Returns
+
+`Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
+
+#### Implementation of
+
+[`ExecutionAttemptManager`](/api/execution-core/src/interfaces/executionattemptmanager/).[`settleTimedOutAttempt`](/api/execution-core/src/interfaces/executionattemptmanager/#settletimedoutattempt)
+
+---
 
 ### stageContinuation()
 
@@ -555,7 +701,7 @@ Error if execution not found or maxAttempts exhausted
 
 [`ExecutionContinuationManager`](/api/execution-core/src/interfaces/executioncontinuationmanager/).[`stageContinuation`](/api/execution-core/src/interfaces/executioncontinuationmanager/#stagecontinuation)
 
-***
+---
 
 ### start()
 
@@ -583,7 +729,23 @@ Error if execution not found or state transition is invalid
 
 [`ExecutionManager`](/api/execution-core/src/interfaces/executionmanager/).[`start`](/api/execution-core/src/interfaces/executionmanager/#start)
 
-***
+---
+
+### supportsAttemptFencing()
+
+> **supportsAttemptFencing**(): `boolean`
+
+Whether the configured persistence store can enforce atomic attempt fencing.
+
+#### Returns
+
+`boolean`
+
+#### Implementation of
+
+[`ExecutionAttemptManager`](/api/execution-core/src/interfaces/executionattemptmanager/).[`supportsAttemptFencing`](/api/execution-core/src/interfaces/executionattemptmanager/#supportsattemptfencing)
+
+---
 
 ### timeout()
 
@@ -591,7 +753,7 @@ Error if execution not found or state transition is invalid
 
 Mark an execution as timed out.
 
-Transitions status to 'timed_out' and sets completedAt.
+Transitions status to an indeterminate 'timed_out' outcome and sets completedAt.
 Called internally when timeout threshold is exceeded.
 
 #### Parameters
@@ -612,7 +774,33 @@ Error if execution not found or state transition is invalid
 
 [`ExecutionManager`](/api/execution-core/src/interfaces/executionmanager/).[`timeout`](/api/execution-core/src/interfaces/executionmanager/#timeout)
 
-***
+---
+
+### timeoutAttempt()
+
+> **timeoutAttempt**(`token`, `options`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
+
+#### Parameters
+
+##### token
+
+[`ExecutionAttemptToken`](/api/execution-core/src/type-aliases/executionattempttoken/)
+
+##### options
+
+###### retryable
+
+`boolean`
+
+#### Returns
+
+`Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
+
+#### Implementation of
+
+[`ExecutionAttemptManager`](/api/execution-core/src/interfaces/executionattemptmanager/).[`timeoutAttempt`](/api/execution-core/src/interfaces/executionattemptmanager/#timeoutattempt)
+
+---
 
 ### updateProgress()
 
@@ -645,3 +833,27 @@ Error if execution not found
 #### Implementation of
 
 [`ExecutionManager`](/api/execution-core/src/interfaces/executionmanager/).[`updateProgress`](/api/execution-core/src/interfaces/executionmanager/#updateprogress)
+
+---
+
+### updateProgressAttempt()
+
+> **updateProgressAttempt**(`token`, `progress`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
+
+#### Parameters
+
+##### token
+
+[`ExecutionAttemptToken`](/api/execution-core/src/type-aliases/executionattempttoken/)
+
+##### progress
+
+[`ProgressInfo`](/api/execution-core/src/interfaces/progressinfo/)
+
+#### Returns
+
+`Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
+
+#### Implementation of
+
+[`ExecutionAttemptManager`](/api/execution-core/src/interfaces/executionattemptmanager/).[`updateProgressAttempt`](/api/execution-core/src/interfaces/executionattemptmanager/#updateprogressattempt)

@@ -1,3 +1,5 @@
+import type { ExecutionAttemptToken } from "@croco/execution-core";
+
 /**
  * Task options for configuring task behavior.
  */
@@ -18,7 +20,16 @@ export type TaskOptions = {
    * Optional idempotency key for deduplication.
    */
   idempotencyKey?: string;
+  /**
+   * Explicit contract permitting retry after timeout.
+   *
+   * The default waits for the abandoned handler to settle before retry becomes safe.
+   * Idempotent handlers tolerate duplicate effects. Fenced handlers reject stale attemptToken mutations.
+   */
+  timeoutRetry?: TaskTimeoutRetryPolicy;
 };
+
+export type TaskTimeoutRetryPolicy = "after_settlement" | "fenced" | "idempotent";
 
 /**
  * Task reference for identifying tasks.
@@ -58,6 +69,8 @@ export type TaskExecutionContext = {
   executionId: string;
   /** Persisted attempt number returned by ExecutionManager.start(). */
   attempt: number;
+  /** Token Croco-managed effects use to reject stale attempt mutations. */
+  attemptToken: ExecutionAttemptToken;
   /** Cooperative cancellation signal aborted when the execution deadline expires. */
   signal: AbortSignal;
 };

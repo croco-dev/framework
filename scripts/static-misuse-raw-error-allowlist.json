@@ -6,7 +6,7 @@
     {
       "package": "@croco/admin-ops",
       "file": "packages/admin-ops/src/libs/sourceAdapters.ts",
-      "line": 365,
+      "line": 380,
       "excerpt": "throw new Error(\"Execution manager does not support audit log append\");",
       "reason": "Reviewed pre-existing internal runtime assertion; future user-facing failures in this file must use Problem-shaped or diagnostic-coded errors.",
       "owner": "framework-error-handling",
@@ -15,7 +15,7 @@
     {
       "package": "@croco/admin-ops",
       "file": "packages/admin-ops/src/libs/sourceAdapters.ts",
-      "line": 390,
+      "line": 405,
       "excerpt": "throw new Error(\"Execution manager does not support replay\");",
       "reason": "Reviewed pre-existing internal runtime assertion; future user-facing failures in this file must use Problem-shaped or diagnostic-coded errors.",
       "owner": "framework-error-handling",
@@ -24,7 +24,7 @@
     {
       "package": "@croco/admin-ops",
       "file": "packages/admin-ops/src/libs/sourceAdapters.ts",
-      "line": 608,
+      "line": 623,
       "excerpt": "throw new Error(\"Lifecycle recovery provider is not configured\");",
       "reason": "Reviewed pre-existing internal runtime assertion; future user-facing failures in this file must use Problem-shaped or diagnostic-coded errors.",
       "owner": "framework-error-handling",
@@ -33,7 +33,7 @@
     {
       "package": "@croco/admin-ops",
       "file": "packages/admin-ops/src/libs/sourceAdapters.ts",
-      "line": 614,
+      "line": 629,
       "excerpt": "throw new Error(`Lifecycle run '${item.id}' was not found`);",
       "reason": "Reviewed pre-existing internal runtime assertion; future user-facing failures in this file must use Problem-shaped or diagnostic-coded errors.",
       "owner": "framework-error-handling",

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   CreateExecutionRecordParams,
   Execution,
+  ExecutionAttemptStore,
   ExecutionError,
   ExecutionLogEntry,
   ExecutionLogStore,
@@ -19,7 +20,7 @@ import {
   prepareExecutionCheckpoint,
 } from "../index";
 
-class MockExecutionStore implements ExecutionStore, ExecutionLogStore {
+class MockExecutionStore implements ExecutionStore, ExecutionLogStore, ExecutionAttemptStore {
   private executions: Map<string, Execution> = new Map();
   private idCounter = 0;
 
@@ -84,6 +85,47 @@ class MockExecutionStore implements ExecutionStore, ExecutionLogStore {
     }
 
     return this.update(id, data);
+  }
+
+  async updateIfStatusAndAttempt(
+    id: string,
+    expectedStatus: ExecutionStatus,
+    expectedAttempt: number,
+    data: Partial<Execution>,
+  ): Promise<Execution | null> {
+    const existing = this.executions.get(id);
+    if (!existing || existing.status !== expectedStatus || existing.attempts !== expectedAttempt) {
+      return null;
+    }
+
+    return this.update(id, data);
+  }
+
+  async mergeCheckpointIfStatusAndAttempt(
+    id: string,
+    expectedStatus: ExecutionStatus,
+    expectedAttempt: number,
+    key: string,
+    value: unknown,
+  ): Promise<Execution | null> {
+    const existing = this.executions.get(id);
+    if (!existing || existing.status !== expectedStatus || existing.attempts !== expectedAttempt) {
+      return null;
+    }
+    return this.mergeCheckpoint(id, key, value);
+  }
+
+  async appendLogIfStatusAndAttempt(
+    id: string,
+    expectedStatus: ExecutionStatus,
+    expectedAttempt: number,
+    entry: ExecutionLogEntry,
+  ): Promise<Execution | null> {
+    const existing = this.executions.get(id);
+    if (!existing || existing.status !== expectedStatus || existing.attempts !== expectedAttempt) {
+      return null;
+    }
+    return this.appendLog(id, entry);
   }
 
   async listRunning(options: ListRunningExecutionsOptions): Promise<Execution[]> {
@@ -768,14 +810,27 @@ describe("ExecutionManagerImpl", () => {
 
     it("transitions timed_out to retrying", async () => {
       const execution = await manager.create({ type: "task", maxAttempts: 3 });
-      await manager.start(execution.id);
-      await manager.timeout(execution.id);
+      const started = await manager.start(execution.id);
+      await manager.timeoutAttempt(
+        { executionId: execution.id, attempt: started.attempts },
+        { retryable: true },
+      );
 
       const retrying = await manager.retry(execution.id);
 
       expect(retrying.status).toBe("retrying");
       expect(retrying.attempts).toBe(1);
       expect(retrying.completedAt).toBeUndefined();
+    });
+
+    it("blocks retry while a timed-out attempt remains indeterminate", async () => {
+      const execution = await manager.create({ type: "task", maxAttempts: 3 });
+      await manager.start(execution.id);
+      await manager.timeout(execution.id);
+
+      await expect(manager.retry(execution.id)).rejects.toMatchObject({
+        code: "execution/indeterminate-retry-blocked",
+      });
     });
 
     it("increments attempts only once across retry and restart", async () => {
@@ -892,7 +947,111 @@ describe("ExecutionManagerImpl", () => {
       expect(timedOut.status).toBe("timed_out");
       expect(timedOut.completedAt).not.toBeUndefined();
       expect(timedOut.error?.message).toBe("Execution timed out");
-      expect(timedOut.error?.retryable).toBe(true);
+      expect(timedOut.error).toMatchObject({
+        code: "execution/timeout-indeterminate",
+        retryable: false,
+        indeterminate: true,
+      });
+    });
+
+    it("makes an indeterminate timeout retryable only after the same attempt settles", async () => {
+      const execution = await manager.create({ type: "task", maxAttempts: 2 });
+      const started = await manager.start(execution.id);
+      const token = { executionId: execution.id, attempt: started.attempts };
+      await manager.timeoutAttempt(token, { retryable: false });
+
+      const settled = await manager.settleTimedOutAttempt(token);
+
+      expect(settled.error).toMatchObject({
+        code: "execution/timeout-quiescent",
+        retryable: true,
+        indeterminate: false,
+      });
+      await expect(manager.retry(execution.id)).resolves.toMatchObject({ status: "retrying" });
+    });
+
+    it("rejects stale attempt tokens after a retry starts", async () => {
+      const execution = await manager.create({ type: "task", maxAttempts: 2 });
+      const first = await manager.start(execution.id);
+      const firstToken = { executionId: execution.id, attempt: first.attempts };
+      await manager.timeoutAttempt(firstToken, { retryable: true });
+      await manager.retry(execution.id);
+      await manager.start(execution.id);
+
+      await expect(manager.completeAttempt(firstToken, "stale")).rejects.toMatchObject({
+        code: "execution/attempt-fence-conflict",
+      });
+      const current = await manager.get(execution.id);
+      expect(current).toMatchObject({ status: "running", attempts: 2 });
+      expect(current.result).toBeUndefined();
+    });
+
+    it("rejects stale attempt progress, checkpoints, and logs after a retry starts", async () => {
+      const execution = await manager.create({ type: "task", maxAttempts: 2 });
+      const first = await manager.start(execution.id);
+      const firstToken = { executionId: execution.id, attempt: first.attempts };
+      await manager.timeoutAttempt(firstToken, { retryable: true });
+      await manager.retry(execution.id);
+      const second = await manager.start(execution.id);
+      const secondToken = { executionId: execution.id, attempt: second.attempts };
+      await manager.updateProgressAttempt(secondToken, { current: 2, total: 2 });
+      await manager.checkpointAttempt(secondToken, "owner", "second");
+      await manager.recordLogAttempt(secondToken, { level: "info", message: "second attempt" });
+
+      await expect(
+        manager.updateProgressAttempt(firstToken, { current: 1, total: 2 }),
+      ).rejects.toMatchObject({ code: "execution/attempt-fence-conflict" });
+      await expect(manager.checkpointAttempt(firstToken, "owner", "first")).rejects.toMatchObject({
+        code: "execution/attempt-fence-conflict",
+      });
+      await expect(
+        manager.recordLogAttempt(firstToken, { level: "warn", message: "stale attempt" }),
+      ).rejects.toMatchObject({ code: "execution/attempt-fence-conflict" });
+
+      await expect(manager.get(execution.id)).resolves.toMatchObject({
+        status: "running",
+        attempts: 2,
+        progress: { current: 2, total: 2, percent: 100 },
+        checkpoints: { owner: "second" },
+        logs: [{ level: "info", message: "second attempt" }],
+      });
+    });
+
+    it("records an operator reason before releasing an indeterminate timeout", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+      const execution = await manager.create({ type: "task", maxAttempts: 2 });
+      await manager.start(execution.id);
+      await manager.timeout(execution.id);
+
+      const resolved = await manager.resolveIndeterminateTimeout(
+        { executionId: execution.id, attempt: 1 },
+        "provider confirms no charge was committed",
+      );
+
+      expect(resolved.error).toMatchObject({
+        code: "execution/timeout-operator-resolved",
+        retryable: true,
+        indeterminate: false,
+      });
+      expect(resolved.metadata?.timeoutRecovery).toEqual({
+        reason: "provider confirms no charge was committed",
+        resolvedAt: "2026-01-01T00:00:00.000Z",
+      });
+    });
+
+    it("rejects operator recovery after the attempt owner changes", async () => {
+      const execution = await manager.create({ type: "task", maxAttempts: 2 });
+      await manager.start(execution.id);
+      await manager.timeout(execution.id);
+
+      const staleToken = { executionId: execution.id, attempt: 1 };
+      const current = await manager.get(execution.id);
+      await store.update(execution.id, { attempts: current.attempts + 1 });
+
+      await expect(
+        manager.resolveIndeterminateTimeout(staleToken, "provider confirms no effect"),
+      ).rejects.toMatchObject({ code: "execution/attempt-fence-conflict" });
     });
 
     it("throws for completed execution", async () => {
@@ -1119,13 +1278,26 @@ describe("ExecutionManagerImpl", () => {
 
     it("allows replaying timed-out executions", async () => {
       const execution = await manager.create({ type: "scheduled-job" });
-      await manager.start(execution.id);
-      await manager.timeout(execution.id);
+      const started = await manager.start(execution.id);
+      await manager.timeoutAttempt(
+        { executionId: execution.id, attempt: started.attempts },
+        { retryable: true },
+      );
 
       const replayed = await manager.replay(execution.id);
 
       expect(replayed.replayOf).toBe(execution.id);
       expect(replayed.status).toBe("pending");
+    });
+
+    it("blocks replay while a timed-out attempt remains indeterminate", async () => {
+      const execution = await manager.create({ type: "scheduled-job" });
+      await manager.start(execution.id);
+      await manager.timeout(execution.id);
+
+      await expect(manager.replay(execution.id)).rejects.toMatchObject({
+        code: "execution/indeterminate-retry-blocked",
+      });
     });
 
     it("rejects replay for completed executions", async () => {
@@ -1234,9 +1406,9 @@ describe("ExecutionManagerImpl", () => {
             failurePolicy: expect.objectContaining({
               state: "timed_out",
               needsAttention: true,
-              retryable: true,
-              replayable: true,
-              recoveryAction: "retry",
+              retryable: false,
+              replayable: false,
+              recoveryAction: "inspect",
             }),
           }),
         ]),
@@ -1448,8 +1620,11 @@ describe("ExecutionManagerImpl", () => {
     it("allows timeout lifecycle: running → timed_out → retrying → running", async () => {
       const execution = await manager.create({ type: "task", maxAttempts: 3 });
 
-      await manager.start(execution.id);
-      await manager.timeout(execution.id);
+      const first = await manager.start(execution.id);
+      await manager.timeoutAttempt(
+        { executionId: execution.id, attempt: first.attempts },
+        { retryable: true },
+      );
       const retrying = await manager.retry(execution.id);
       expect(retrying.status).toBe("retrying");
 

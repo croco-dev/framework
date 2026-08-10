@@ -10,6 +10,9 @@ export enum ExecutionProblemCode {
   CONTINUATION_UNSUPPORTED = "execution/continuation-unsupported",
   CONTINUATION_CONFLICT = "execution/continuation-conflict",
   CHECKPOINT_STORE_CONFORMANCE = "execution/checkpoint-store-conformance",
+  ATTEMPT_FENCING_UNSUPPORTED = "execution/attempt-fencing-unsupported",
+  ATTEMPT_FENCE_CONFLICT = "execution/attempt-fence-conflict",
+  INDETERMINATE_RETRY_BLOCKED = "execution/indeterminate-retry-blocked",
 }
 
 export type InvalidContinuationLeaseDurationProblemOptions = {
@@ -138,6 +141,30 @@ export class ExecutionProblems {
     return new ExecutionProblem(
       ExecutionProblemCode.CHECKPOINT_STORE_CONFORMANCE,
       ProblemCategory.InternalServerError,
+      detail,
+    );
+  }
+
+  static attemptFencingUnsupported(detail: string): ExecutionProblem {
+    return new ExecutionProblem(
+      ExecutionProblemCode.ATTEMPT_FENCING_UNSUPPORTED,
+      ProblemCategory.InternalServerError,
+      detail,
+    );
+  }
+
+  static attemptFenceConflict(detail: string): ExecutionProblem {
+    return new ExecutionProblem(
+      ExecutionProblemCode.ATTEMPT_FENCE_CONFLICT,
+      ProblemCategory.Conflict,
+      detail,
+    );
+  }
+
+  static indeterminateRetryBlocked(detail: string): ExecutionProblem {
+    return new ExecutionProblem(
+      ExecutionProblemCode.INDETERMINATE_RETRY_BLOCKED,
+      ProblemCategory.Conflict,
       detail,
     );
   }

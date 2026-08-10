@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 617,
+  problemCount: 620,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -6362,6 +6362,68 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "execution/attempt-fence-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#execution-attempt-fence-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/execution-core/src/libs/ExecutionProblem.ts",
+          line: 157,
+          column: 12,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "execution/attempt-fencing-unsupported",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#execution-attempt-fencing-unsupported",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/execution-core/src/libs/ExecutionProblem.ts",
+          line: 149,
+          column: 12,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
       code: "execution/checkpoint-store-conformance",
       category: "InternalServerError",
       status: 500,
@@ -6387,7 +6449,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 138,
+          line: 141,
           column: 12,
           kind: "problem-constructor",
         },
@@ -6417,7 +6479,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 90,
+          line: 93,
           column: 12,
           kind: "problem-constructor",
         },
@@ -6447,7 +6509,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 129,
+          line: 132,
           column: 12,
           kind: "problem-constructor",
         },
@@ -6479,7 +6541,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 118,
+          line: 121,
           column: 12,
           kind: "problem-constructor",
         },
@@ -6509,7 +6571,37 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 94,
+          line: 97,
+          column: 12,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "execution/indeterminate-retry-blocked",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#execution-indeterminate-retry-blocked",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/execution-core/src/libs/ExecutionProblem.ts",
+          line: 165,
           column: 12,
           kind: "problem-constructor",
         },
@@ -6540,7 +6632,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 29,
+          line: 32,
           column: 3,
           kind: "problem-class",
         },
@@ -6570,7 +6662,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 110,
+          line: 113,
           column: 12,
           kind: "problem-constructor",
         },
@@ -6600,7 +6692,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 102,
+          line: 105,
           column: 12,
           kind: "problem-constructor",
         },
@@ -6631,7 +6723,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 86,
+          line: 89,
           column: 12,
           kind: "problem-constructor",
         },
@@ -15444,7 +15536,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tasks-core/src/libs/problems/TasksProblems.ts",
-          line: 46,
+          line: 50,
           column: 5,
           kind: "problem-constructor",
         },

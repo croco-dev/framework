@@ -41,7 +41,7 @@ pnpm add @croco/execution-core
 - **completed**: 성공적으로 완료됨
 - **failed**: 실패함 (재시도 소진)
 - **retrying**: 일시적 실패로 재시도 대기 중
-- **timed_out**: 시간 초과
+- **timed_out**: 시간 초과. 중단된 시도가 정착하거나 안전 계약/운영자 확인이 기록되기 전에는 불확정 상태
 - **cancelled**: 취소됨
 
 ### 상태 전이 규칙
@@ -51,7 +51,7 @@ pending → running | cancelled
 running → completed | failed | timed_out | cancelled
 failed → retrying
 retrying → running | failed
-timed_out → retrying
+timed_out → retrying (불확정 결과가 해소된 경우에만)
 ```
 
 ### ExecutionStore

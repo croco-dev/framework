@@ -32,6 +32,7 @@ export type {
   TaskMetadata,
   TaskOptions,
   TaskReference,
+  TaskTimeoutRetryPolicy,
 } from "./libs/types";
 
 export type { RegisteredTask } from "./libs/TaskRegistry";

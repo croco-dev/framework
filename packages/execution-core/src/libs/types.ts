@@ -77,7 +77,22 @@ export interface ExecutionError {
   stack?: string;
   /** Whether this error is retryable */
   retryable: boolean;
+  /**
+   * Whether the abandoned attempt may still commit side effects. The state clears when the handler
+   * settles, an idempotent or fenced retry contract is confirmed, or an operator records recovery.
+   */
+  indeterminate?: boolean;
 }
+
+/**
+ * Identifies the one execution attempt allowed to commit Croco-managed state.
+ */
+export type ExecutionAttemptToken = {
+  /** Persisted execution identifier. */
+  executionId: string;
+  /** Persisted attempt number returned by start(). */
+  attempt: number;
+};
 
 /**
  * Progress information for long-running executions.

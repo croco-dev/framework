@@ -42,7 +42,11 @@ export class TaskRunnerDIFailureProblem extends Problem {
 }
 
 export class TaskExecutionTimeoutProblem extends Problem {
-  constructor(executionId: string, timeoutMs: number) {
+  readonly executionId: string;
+  readonly timeoutMs: number;
+  readonly retryable: boolean;
+
+  constructor(executionId: string, timeoutMs: number, retryable = false) {
     super(
       "tasks-core/execution-timeout",
       ProblemCategory.InternalServerError,
@@ -51,9 +55,19 @@ export class TaskExecutionTimeoutProblem extends Problem {
         extensions: {
           executionId,
           timeoutMs,
-          retryable: true,
+          retryable,
+          indeterminate: !retryable,
+          ...(!retryable
+            ? {
+                recoveryAction:
+                  "Inspect external effects, then call `TaskRunner.recoverTimeout(executionId, reason)` to resume explicitly.",
+              }
+            : {}),
         },
       },
     );
+    this.executionId = executionId;
+    this.timeoutMs = timeoutMs;
+    this.retryable = retryable;
   }
 }

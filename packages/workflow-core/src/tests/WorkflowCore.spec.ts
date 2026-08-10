@@ -2,6 +2,7 @@ import {
   type CreateExecutionParams,
   createExecutionJobsOperations,
   type Execution,
+  type ExecutionAttemptStore,
   type ExecutionLogEntry,
   type ExecutionLogStore,
   type ExecutionManager,
@@ -28,7 +29,10 @@ class TestWorkflowProblem extends Problem {
   }
 }
 
-class InMemoryExecutionStore extends ExecutionStore implements ExecutionLogStore {
+class InMemoryExecutionStore
+  extends ExecutionStore
+  implements ExecutionLogStore, ExecutionAttemptStore
+{
   private readonly executions = new Map<string, Execution>();
   private idCounter = 0;
 
@@ -102,6 +106,43 @@ class InMemoryExecutionStore extends ExecutionStore implements ExecutionLogStore
   ): Promise<Execution | null> {
     const existing = this.executions.get(id);
     return existing?.status === expectedStatus ? this.update(id, data) : null;
+  }
+
+  async updateIfStatusAndAttempt(
+    id: string,
+    expectedStatus: Execution["status"],
+    expectedAttempt: number,
+    data: Partial<Execution>,
+  ): Promise<Execution | null> {
+    const existing = this.executions.get(id);
+    return existing?.status === expectedStatus && existing.attempts === expectedAttempt
+      ? this.update(id, data)
+      : null;
+  }
+
+  async mergeCheckpointIfStatusAndAttempt(
+    id: string,
+    expectedStatus: Execution["status"],
+    expectedAttempt: number,
+    key: string,
+    value: unknown,
+  ): Promise<Execution | null> {
+    const existing = this.executions.get(id);
+    return existing?.status === expectedStatus && existing.attempts === expectedAttempt
+      ? this.mergeCheckpoint(id, key, value)
+      : null;
+  }
+
+  async appendLogIfStatusAndAttempt(
+    id: string,
+    expectedStatus: Execution["status"],
+    expectedAttempt: number,
+    entry: ExecutionLogEntry,
+  ): Promise<Execution | null> {
+    const existing = this.executions.get(id);
+    return existing?.status === expectedStatus && existing.attempts === expectedAttempt
+      ? this.appendLog(id, entry)
+      : null;
   }
 
   async listRunning(options: { afterId?: string; limit: number }): Promise<Execution[]> {
