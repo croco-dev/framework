@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "ContractTestingProblem"
+title: "NodeEntryLifecycleProblem"
 ---
 
-Concrete Problem raised for invalid contract-testing configuration.
+Reports start() on a Node entry that is already closing or closed.
 
 ## Extends
 
@@ -15,25 +15,21 @@ Concrete Problem raised for invalid contract-testing configuration.
 
 ### Constructor
 
-> **new ContractTestingProblem**(`code`, `detail`, `extensions?`): `ContractTestingProblem`
+> **new NodeEntryLifecycleProblem**(`operation`, `state`): `NodeEntryLifecycleProblem`
 
 #### Parameters
 
-##### code
+##### operation
 
-`string`
+`"start"`
 
-##### detail
+##### state
 
-`string`
-
-##### extensions?
-
-`Record`\<`string`, `unknown`\>
+`"closing"` \| `"closed"`
 
 #### Returns
 
-`ContractTestingProblem`
+`NodeEntryLifecycleProblem`
 
 #### Overrides
 

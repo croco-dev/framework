@@ -10,7 +10,14 @@ framework and protocol packages.
 
 - `createNodeServerPreset` - creates the Node build preset.
 - `createNodeEntry` - builds the Node server entry handler.
+- `NodeEntryCloseTimeoutProblem` - reports an invalid `close(timeoutMs)` value.
+- `NodeEntryLifecycleProblem` - reports a stable lifecycle conflict when an entry is started after closing begins.
 - Node entry option and handler types.
+
+`NodeEntry.start()` shares concurrent startup work and is idempotent after the server starts.
+`NodeEntry.close(timeoutMs?)` waits for active startup, shares concurrent shutdown work, and permanently closes
+the entry. It rejects after 30 seconds by default if the Node server does not finish closing. Create a new entry
+instead of calling `start()` after closing begins.
 
 ## Usage
 

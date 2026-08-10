@@ -16,7 +16,7 @@ title: "CompileDesktopContractGraphOptions"
 Optional source evidence keyed by graph ID. Schema locations use the
 `<command-id>.input`, `<command-id>.output`, and `<event-id>.payload` IDs.
 
----
+***
 
 ### sourceRoot?
 

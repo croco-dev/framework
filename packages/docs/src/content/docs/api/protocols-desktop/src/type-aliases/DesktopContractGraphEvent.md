@@ -13,25 +13,25 @@ title: "DesktopContractGraphEvent"
 
 > `readonly` **contractId**: `string`
 
----
+***
 
 ### id
 
 > `readonly` **id**: `string`
 
----
+***
 
 ### key
 
 > `readonly` **key**: `string`
 
----
+***
 
 ### payload
 
 > `readonly` **payload**: [`DesktopContractGraphSchemaReference`](/api/protocols-desktop/src/type-aliases/desktopcontractgraphschemareference/)
 
----
+***
 
 ### sourceLocation?
 

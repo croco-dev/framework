@@ -1907,6 +1907,22 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "preset-node/lifecycle-conflict": recovery({
+    cause: "start() was called on a Node entry that is closing or already closed.",
+    userAction: "Wait for closure to finish, then create a new entry to start another server.",
+    operatorAction: "Inspect Node entry ownership and the ordering of start() and close() calls.",
+    retryability: "not-retryable",
+    redactionPolicy: "safe-message",
+    severity: "warning",
+  }),
+  "preset-node/lifecycle-io-failed": recovery({
+    cause: "The Node server failed while starting or closing an entry.",
+    userAction: "Retry only after the server or socket failure has been investigated.",
+    operatorAction: "Inspect the preserved cause and the reported lifecycle operation.",
+    retryability: "conditional",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "auth-core/invalid-route-metadata-target": recovery({
     cause:
       "An authentication guard received a route metadata target that was neither an object nor a function.",

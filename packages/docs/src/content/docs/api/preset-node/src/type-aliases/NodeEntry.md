@@ -11,7 +11,13 @@ title: "NodeEntry"
 
 ### close
 
-> `readonly` **close**: () => `Promise`\<`void`\>
+> `readonly` **close**: (`timeoutMs?`) => `Promise`\<`void`\>
+
+#### Parameters
+
+##### timeoutMs?
+
+`number`
 
 #### Returns
 

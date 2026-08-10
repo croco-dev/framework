@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "ContractTestingProblem"
+title: "GraphQLBodyLimitConfigurationProblem"
 ---
 
-Concrete Problem raised for invalid contract-testing configuration.
+The configured request body boundary cannot be enforced safely.
 
 ## Extends
 
@@ -15,25 +15,11 @@ Concrete Problem raised for invalid contract-testing configuration.
 
 ### Constructor
 
-> **new ContractTestingProblem**(`code`, `detail`, `extensions?`): `ContractTestingProblem`
-
-#### Parameters
-
-##### code
-
-`string`
-
-##### detail
-
-`string`
-
-##### extensions?
-
-`Record`\<`string`, `unknown`\>
+> **new GraphQLBodyLimitConfigurationProblem**(): `GraphQLBodyLimitConfigurationProblem`
 
 #### Returns
 
-`ContractTestingProblem`
+`GraphQLBodyLimitConfigurationProblem`
 
 #### Overrides
 

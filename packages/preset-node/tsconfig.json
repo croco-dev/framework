@@ -2,7 +2,8 @@
   "extends": "../../tsconfig/tsconfig.node.json",
   "compilerOptions": {
     "paths": {
-      "@croco/framework-preset": ["../framework-preset/src/index.ts"]
+      "@croco/framework-preset": ["../framework-preset/src/index.ts"],
+      "@croco/problems-core": ["../problems-core/src/index.ts"]
     }
   },
   "include": ["src/**/*.ts"],

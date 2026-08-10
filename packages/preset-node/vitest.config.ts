@@ -9,6 +9,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@croco/framework-preset": "../framework-preset/src/index.ts",
+      "@croco/problems-core": "../problems-core/src/index.ts",
     },
   },
 });

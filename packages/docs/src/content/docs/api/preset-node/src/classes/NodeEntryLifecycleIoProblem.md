@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "ContractTestingProblem"
+title: "NodeEntryLifecycleIoProblem"
 ---
 
-Concrete Problem raised for invalid contract-testing configuration.
+Reports a Node server failure while starting or closing an entry.
 
 ## Extends
 
@@ -15,25 +15,21 @@ Concrete Problem raised for invalid contract-testing configuration.
 
 ### Constructor
 
-> **new ContractTestingProblem**(`code`, `detail`, `extensions?`): `ContractTestingProblem`
+> **new NodeEntryLifecycleIoProblem**(`operation`, `cause`): `NodeEntryLifecycleIoProblem`
 
 #### Parameters
 
-##### code
+##### operation
 
-`string`
+`"start"` \| `"close"`
 
-##### detail
+##### cause
 
-`string`
-
-##### extensions?
-
-`Record`\<`string`, `unknown`\>
+`Error`
 
 #### Returns
 
-`ContractTestingProblem`
+`NodeEntryLifecycleIoProblem`
 
 #### Overrides
 

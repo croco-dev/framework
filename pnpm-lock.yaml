@@ -2764,6 +2764,9 @@ importers:
       '@croco/framework-preset':
         specifier: workspace:*
         version: link:../framework-preset
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
       '@hono/node-server':
         specifier: 1.19.10
         version: 1.19.10(hono@4.12.34)

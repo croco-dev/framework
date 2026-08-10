@@ -22,4 +22,9 @@ export function createNodeServerPreset(): CrocoPreset {
 
 export type { NodeEntry, NodeEntryOptions } from "./entry";
 export { createNodeEntry } from "./entry";
+export {
+  NodeEntryCloseTimeoutProblem,
+  NodeEntryLifecycleIoProblem,
+  NodeEntryLifecycleProblem,
+} from "./problems";
 export type { CrocoPreset, CrocoPresetConfig };

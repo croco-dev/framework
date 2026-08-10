@@ -19641,6 +19641,24 @@
               "exportKind": "named",
               "source": "./entry",
               "declarationKind": "function"
+            },
+            {
+              "name": "NodeEntryCloseTimeoutProblem",
+              "exportKind": "named",
+              "source": "./problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "NodeEntryLifecycleIoProblem",
+              "exportKind": "named",
+              "source": "./problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "NodeEntryLifecycleProblem",
+              "exportKind": "named",
+              "source": "./problems",
+              "declarationKind": "class"
             }
           ],
           "typeExports": [

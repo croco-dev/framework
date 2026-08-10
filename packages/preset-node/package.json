@@ -37,6 +37,7 @@
   },
   "dependencies": {
     "@croco/framework-preset": "workspace:*",
+    "@croco/problems-core": "workspace:*",
     "@hono/node-server": "^1.19.10",
     "hono": "^4.12.34"
   },
