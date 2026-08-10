@@ -1918,6 +1918,17 @@ const recoveryMetadataByCode = {
     redactionPolicy: "safe-message",
     severity: "warning",
   }),
+  "llm-core/completion-event-publication-failed": recovery({
+    cause:
+      "The model completed billable work, but its completion event was not durably confirmed afterward.",
+    userAction:
+      "Recover the completed output from the Problem and retry only the saved completion-event intent; do not invoke the model again.",
+    operatorAction:
+      "Inspect the event delivery state and durable intent, then pass the Problem to retryCompletionEvent after restoring the failed boundary.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "billing/checkout-idempotency-drift": recovery({
     cause:
       "The generated billing drill detected more than one committed checkout after response-loss retries completed.",

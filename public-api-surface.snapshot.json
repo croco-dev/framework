@@ -9139,6 +9139,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "restoreSerializedEventIdentity",
+              "exportKind": "named",
+              "source": "./libs/DomainEvent",
+              "declarationKind": "function"
+            },
+            {
               "name": "UnknownEventTypeProblem",
               "exportKind": "named",
               "source": "./libs/problems/EventsProblems",
@@ -15327,6 +15333,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "LlmCompletionEventPublicationProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/LlmServiceProblem",
+              "declarationKind": "class"
+            },
+            {
               "name": "LlmGeneratedEvent",
               "exportKind": "named",
               "source": "./libs/events/LlmGeneratedEvent",
@@ -15482,6 +15494,36 @@
               "source": "./libs/types"
             },
             {
+              "name": "LlmCompletion",
+              "exportKind": "named",
+              "source": "./libs/LlmCompletionEvents"
+            },
+            {
+              "name": "LlmCompletionEvent",
+              "exportKind": "named",
+              "source": "./libs/LlmCompletionEvents"
+            },
+            {
+              "name": "LlmCompletionEventDeliveryState",
+              "exportKind": "named",
+              "source": "./libs/problems/LlmServiceProblem"
+            },
+            {
+              "name": "LlmCompletionEventIntent",
+              "exportKind": "named",
+              "source": "./libs/LlmCompletionEvents"
+            },
+            {
+              "name": "LlmCompletionEventIntentStore",
+              "exportKind": "named",
+              "source": "./libs/LlmCompletionEvents"
+            },
+            {
+              "name": "LlmGenerateCompletion",
+              "exportKind": "named",
+              "source": "./libs/LlmCompletionEvents"
+            },
+            {
               "name": "LlmInvocationOptions",
               "exportKind": "named",
               "source": "./libs/decorators/Llm"
@@ -15505,6 +15547,16 @@
               "name": "LlmOptions",
               "exportKind": "named",
               "source": "./libs/decorators/Llm"
+            },
+            {
+              "name": "LlmServiceOptions",
+              "exportKind": "named",
+              "source": "./libs/LlmCompletionEvents"
+            },
+            {
+              "name": "LlmStreamCompletion",
+              "exportKind": "named",
+              "source": "./libs/LlmCompletionEvents"
             },
             {
               "name": "LlmUsage",

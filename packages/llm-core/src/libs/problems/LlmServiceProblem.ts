@@ -1,4 +1,39 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
+import type { LlmCompletion, LlmCompletionEventIntent } from "../LlmCompletionEvents";
+
+export type LlmCompletionEventDeliveryState = "not_published" | "published_unconfirmed";
+
+export class LlmCompletionEventPublicationProblem extends Problem {
+  static readonly CODE = "llm-core/completion-event-publication-failed";
+
+  constructor(
+    readonly completion: LlmCompletion,
+    readonly intent: LlmCompletionEventIntent,
+    readonly deliveryState: LlmCompletionEventDeliveryState,
+    readonly durableIntentRecorded: boolean,
+    cause: unknown,
+  ) {
+    const causeError = cause instanceof Error ? cause : new Error(String(cause));
+    super(
+      LlmCompletionEventPublicationProblem.CODE,
+      ProblemCategory.Conflict,
+      `LLM ${completion.operation} completed, but completion event '${intent.eventName}' was not durably confirmed`,
+      {
+        cause: causeError,
+        extensions: {
+          chunksDelivered: completion.operation === "stream",
+          deliveryState,
+          durableIntentRecorded,
+          eventDeliveryRetryable: true,
+          eventId: intent.eventId,
+          eventName: intent.eventName,
+          modelExecutionCompleted: true,
+          retryable: false,
+        },
+      },
+    );
+  }
+}
 
 export class LlmServiceProblem extends Problem {
   static readonly CODE = "LLM_SERVICE_ERROR";

@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 635,
+  problemCount: 636,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -5292,7 +5292,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-core/src/libs/problems/LlmServiceProblem.ts",
-          line: 43,
+          line: 78,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7834,7 +7834,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-core/src/libs/problems/LlmServiceProblem.ts",
-          line: 34,
+          line: 69,
           column: 5,
           kind: "problem-constructor",
         },
@@ -9565,7 +9565,41 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-core/src/libs/problems/LlmServiceProblem.ts",
-          line: 8,
+          line: 43,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "llm-core/completion-event-publication-failed",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#llm-core-completion-event-publication-failed",
+      recovery: {
+        cause:
+          "The model completed billable work, but its completion event was not durably confirmed afterward.",
+        userAction:
+          "Recover the completed output from the Problem and retry only the saved completion-event intent; do not invoke the model again.",
+        operatorAction:
+          "Inspect the event delivery state and durable intent, then pass the Problem to retryCompletionEvent after restoring the failed boundary.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/llm-core/src/libs/problems/LlmServiceProblem.ts",
+          line: 17,
           column: 5,
           kind: "problem-constructor",
         },
@@ -11498,7 +11532,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-core/src/libs/problems/LlmServiceProblem.ts",
-          line: 25,
+          line: 60,
           column: 5,
           kind: "problem-constructor",
         },
@@ -15884,7 +15918,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-core/src/libs/problems/LlmServiceProblem.ts",
-          line: 52,
+          line: 87,
           column: 5,
           kind: "problem-constructor",
         },
@@ -17377,7 +17411,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-core/src/libs/problems/LlmServiceProblem.ts",
-          line: 61,
+          line: 96,
           column: 5,
           kind: "problem-constructor",
         },

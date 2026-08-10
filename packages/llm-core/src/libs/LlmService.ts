@@ -1,11 +1,20 @@
-import type { EventBus } from "@croco/events-core";
+import { restoreSerializedEventIdentity, type EventBus } from "@croco/events-core";
 import { Token } from "@croco/framework-context";
 import { Trace, withSpan } from "@croco/telemetry-api";
 import { LlmGeneratedEvent } from "./events/LlmGeneratedEvent";
 import { LlmStreamCompletedEvent } from "./events/LlmStreamCompletedEvent";
+import type {
+  LlmCompletion,
+  LlmCompletionEvent,
+  LlmCompletionEventIntent,
+  LlmServiceOptions,
+} from "./LlmCompletionEvents";
 import type { LlmRegistry } from "./LlmRegistry";
 import { LlmOperationAbortedProblem } from "./problems/LlmProblems";
-import { LlmServiceProblem } from "./problems/LlmServiceProblem";
+import {
+  LlmCompletionEventPublicationProblem,
+  LlmServiceProblem,
+} from "./problems/LlmServiceProblem";
 import type {
   EmbedManyParams,
   EmbedManyResult,
@@ -24,12 +33,31 @@ import type {
 const MAX_STREAM_BUFFER_CHUNKS = 1000;
 const MAX_STREAM_COMPLETION_EVENT_TEXT_CHARS = 100_000;
 
+type CompletionEventParams =
+  | {
+      operation: "generate";
+      modelId: string;
+      prompt: string;
+      text: string;
+      usage: LlmUsage;
+      metadata?: GenerateResult["metadata"];
+    }
+  | {
+      operation: "stream";
+      modelId: string;
+      text: string;
+      usage: LlmUsage;
+      chunkCount: number;
+      textTruncated: boolean;
+    };
+
 export class LlmService {
   static readonly token = new Token<LlmService>("LlmService");
 
   constructor(
     private readonly registry: LlmRegistry,
     private readonly eventBus: EventBus,
+    private readonly options: LlmServiceOptions = {},
   ) {}
 
   @Trace({ name: "llm.generate" })
@@ -41,14 +69,21 @@ export class LlmService {
       const result = await model.generate(params);
       assertNotAborted(params.signal, "generate");
 
-      // Completion publication is the success commit point; it cannot be retracted by a later abort.
-      await this.publishCompletionEvent({
-        operation: "generate",
-        modelId: model.modelId,
-        prompt: params.prompt,
-        text: result.text,
-        usage: result.usage,
-      });
+      // Provider completion remains recoverable if the separate event-delivery boundary fails.
+      await this.publishCompletionEvent(
+        {
+          operation: "generate",
+          result,
+        },
+        {
+          operation: "generate",
+          modelId: model.modelId,
+          prompt: params.prompt,
+          text: result.text,
+          usage: result.usage,
+          metadata: result.metadata,
+        },
+      );
 
       return result;
     } catch (error) {
@@ -70,7 +105,6 @@ export class LlmService {
       | {
           operation: "stream";
           modelId: string;
-          prompt: string;
           text: string;
           usage: LlmUsage;
           chunkCount: number;
@@ -194,7 +228,6 @@ export class LlmService {
           completionEvent = {
             operation: "stream",
             modelId: model.modelId,
-            prompt: params.prompt,
             text: completionText,
             usage,
             chunkCount,
@@ -242,9 +275,19 @@ export class LlmService {
       removeAbortListener?.();
       assertNotAborted(params.signal, "stream");
 
-      // Detaching before the synchronous check makes publication the stream's success commit point.
+      // Publish only after every chunk was delivered; a typed failure prevents replaying the stream.
       if (completionEvent && !isCancelled) {
-        await this.publishCompletionEvent(completionEvent);
+        await this.publishCompletionEvent(
+          {
+            operation: "stream",
+            text: completionEvent.text,
+            usage: completionEvent.usage,
+            chunkCount: completionEvent.chunkCount,
+            textTruncated: completionEvent.textTruncated,
+            chunksDelivered: true,
+          },
+          completionEvent,
+        );
       }
     } finally {
       cancelProducer();
@@ -318,15 +361,30 @@ export class LlmService {
     }
   }
 
-  private async publishCompletionEvent(params: {
-    operation: "generate" | "stream";
-    modelId: string;
-    prompt: string;
-    text: string;
-    usage: LlmUsage;
-    chunkCount?: number;
-    textTruncated?: boolean;
-  }): Promise<void> {
+  async retryCompletionEvent(
+    recovery: LlmCompletionEventIntent | LlmCompletionEventPublicationProblem,
+  ): Promise<void> {
+    if (
+      recovery instanceof LlmCompletionEventPublicationProblem &&
+      recovery.deliveryState === "published_unconfirmed"
+    ) {
+      await this.confirmPublishedCompletionEvent(recovery);
+      return;
+    }
+
+    const intent =
+      recovery instanceof LlmCompletionEventPublicationProblem ? recovery.intent : recovery;
+    const completion =
+      recovery instanceof LlmCompletionEventPublicationProblem
+        ? recovery.completion
+        : completionFromIntent(intent);
+    await this.deliverCompletionEvent(intent, completion);
+  }
+
+  private async publishCompletionEvent(
+    completion: LlmCompletion,
+    params: CompletionEventParams,
+  ): Promise<void> {
     const event =
       params.operation === "stream"
         ? new LlmStreamCompletedEvent(
@@ -338,7 +396,67 @@ export class LlmService {
           )
         : new LlmGeneratedEvent(params.modelId, params.prompt, params.text, params.usage);
 
-    await this.eventBus.publish(event);
+    await this.deliverCompletionEvent(completionEventIntent(params, event), completion, event);
+  }
+
+  private async deliverCompletionEvent(
+    intent: LlmCompletionEventIntent,
+    completion: LlmCompletion,
+    existingEvent?: LlmCompletionEvent,
+  ): Promise<void> {
+    const intentStore = this.options.completionEventIntentStore;
+    let durableIntentRecorded = false;
+    let deliveryState: "not_published" | "published_unconfirmed" = "not_published";
+
+    try {
+      if (intentStore) {
+        await intentStore.recordPending(intent);
+        durableIntentRecorded = true;
+      }
+
+      await this.eventBus.publish(existingEvent ?? completionEventFromIntent(intent));
+      deliveryState = "published_unconfirmed";
+
+      if (intentStore) {
+        await intentStore.markPublished(intent.id);
+      }
+    } catch (error) {
+      throw new LlmCompletionEventPublicationProblem(
+        completion,
+        intent,
+        deliveryState,
+        durableIntentRecorded,
+        error,
+      );
+    }
+  }
+
+  private async confirmPublishedCompletionEvent(
+    problem: LlmCompletionEventPublicationProblem,
+  ): Promise<void> {
+    const intentStore = this.options.completionEventIntentStore;
+
+    if (!intentStore) {
+      throw new LlmCompletionEventPublicationProblem(
+        problem.completion,
+        problem.intent,
+        "published_unconfirmed",
+        problem.durableIntentRecorded,
+        "Completion event intent store is not configured",
+      );
+    }
+
+    try {
+      await intentStore.markPublished(problem.intent.id);
+    } catch (error) {
+      throw new LlmCompletionEventPublicationProblem(
+        problem.completion,
+        problem.intent,
+        "published_unconfirmed",
+        problem.durableIntentRecorded,
+        error,
+      );
+    }
   }
 
   private buildStreamUsage(
@@ -369,7 +487,11 @@ function normalizeOperationError(
   error: unknown,
   signal: AbortSignal | undefined,
   operation: string,
-): LlmServiceProblem | LlmOperationAbortedProblem {
+): LlmServiceProblem | LlmOperationAbortedProblem | LlmCompletionEventPublicationProblem {
+  if (error instanceof LlmCompletionEventPublicationProblem) {
+    return error;
+  }
+
   if (error instanceof LlmOperationAbortedProblem || signal?.aborted) {
     return error instanceof LlmOperationAbortedProblem
       ? error
@@ -377,4 +499,71 @@ function normalizeOperationError(
   }
 
   return LlmServiceProblem.fromError(error);
+}
+
+function completionEventIntent(
+  params: CompletionEventParams,
+  event: LlmCompletionEvent,
+): LlmCompletionEventIntent {
+  return params.operation === "stream"
+    ? {
+        id: event.eventId,
+        eventId: event.eventId,
+        eventName: "llm.stream_completed",
+        operation: "stream",
+        modelId: params.modelId,
+        text: params.text,
+        usage: params.usage,
+        chunkCount: params.chunkCount,
+        textTruncated: params.textTruncated,
+        occurredAt: event.timestamp.toISOString(),
+      }
+    : {
+        id: event.eventId,
+        eventId: event.eventId,
+        eventName: "llm.generated",
+        operation: "generate",
+        modelId: params.modelId,
+        prompt: params.prompt,
+        text: params.text,
+        usage: params.usage,
+        metadata: params.metadata,
+        occurredAt: event.timestamp.toISOString(),
+      };
+}
+
+function completionEventFromIntent(intent: LlmCompletionEventIntent): LlmCompletionEvent {
+  const event =
+    intent.operation === "stream"
+      ? new LlmStreamCompletedEvent(
+          intent.modelId,
+          intent.text,
+          intent.usage,
+          intent.chunkCount,
+          intent.textTruncated,
+        )
+      : new LlmGeneratedEvent(intent.modelId, intent.prompt, intent.text, intent.usage);
+
+  restoreSerializedEventIdentity(event, intent.eventId, intent.occurredAt);
+  return event;
+}
+
+function completionFromIntent(intent: LlmCompletionEventIntent): LlmCompletion {
+  return intent.operation === "stream"
+    ? {
+        operation: "stream",
+        text: intent.text,
+        usage: intent.usage,
+        chunkCount: intent.chunkCount,
+        textTruncated: intent.textTruncated,
+        chunksDelivered: true,
+      }
+    : {
+        operation: "generate",
+        result: {
+          text: intent.text,
+          usage: intent.usage,
+          metadata: intent.metadata,
+        },
+      };
 }
