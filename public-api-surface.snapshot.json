@@ -28286,6 +28286,12 @@
           "sourceEntrypoint": "packages/transports-graphql/src/index.ts",
           "runtimeExports": [
             {
+              "name": "GraphQLBodyLimitConfigurationProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/GraphQLTransportProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "GraphQLRequestBodyAbortedProblem",
               "exportKind": "named",
               "source": "./libs/problems/GraphQLTransportProblems",

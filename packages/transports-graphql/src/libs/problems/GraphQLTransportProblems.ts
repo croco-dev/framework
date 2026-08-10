@@ -1,5 +1,21 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
 
+const PROBLEM_TYPE_BASE = "https://croco.dev/problems/transports-graphql";
+
+/** The configured request body boundary cannot be enforced safely. */
+export class GraphQLBodyLimitConfigurationProblem extends Problem {
+  constructor() {
+    super(
+      "transports-graphql/body-limit-invalid-configuration",
+      ProblemCategory.InternalServerError,
+      "maxBodySizeBytes must be a finite positive safe integer",
+      {
+        type: `${PROBLEM_TYPE_BASE}/body-limit-invalid-configuration`,
+      },
+    );
+  }
+}
+
 export class GraphQLResolversNotConfiguredProblem extends Problem {
   readonly code = "transports-graphql/resolvers-not-configured";
   readonly category = ProblemCategory.InternalServerError;

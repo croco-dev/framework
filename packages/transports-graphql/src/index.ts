@@ -6,6 +6,7 @@
 /** GraphQL Yoga server runtime. */
 export { GraphQLServer } from "./libs/GraphQLServer";
 export {
+  GraphQLBodyLimitConfigurationProblem,
   GraphQLRequestBodyAbortedProblem,
   GraphQLRequestBodyTooLargeProblem,
   GraphQLRequestHandlingFailedProblem,
