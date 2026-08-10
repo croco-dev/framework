@@ -55,6 +55,7 @@ export const RELEASE_GATE_ENTRYPOINT_PATHS = [
   "scripts/compiler-baseline-check.mts",
   "scripts/core-coverage-warning-check.mts",
   "scripts/create-croco-app-generated-smoke.mts",
+  "scripts/decorator-signature-spike.mts",
   "scripts/dependency-audit-policy.mts",
   "scripts/doc-examples-check.mts",
   "scripts/first-success-verify.mts",
@@ -107,8 +108,23 @@ export const RELEASE_GATE_SUPPORT_PATHS = [
   "scripts/workflow-verification-contract.mts",
 ] as const;
 
+export const RELEASE_GATE_FIXTURE_PATHS = [
+  "scripts/fixtures/decorator-signature-spike/diagnostics.snapshot.txt",
+  "scripts/fixtures/decorator-signature-spike/diagnostics.ts",
+  "scripts/fixtures/decorator-signature-spike/limitations.ts",
+  "scripts/fixtures/decorator-signature-spike/negative.ts",
+  "scripts/fixtures/decorator-signature-spike/packed-consumer.ts",
+  "scripts/fixtures/decorator-signature-spike/positive.ts",
+  "scripts/fixtures/decorator-signature-spike/prototype.snapshot.d.ts",
+  "scripts/fixtures/decorator-signature-spike/prototype.ts",
+  "scripts/fixtures/decorator-signature-spike/tsconfig.declaration.json",
+  "scripts/fixtures/decorator-signature-spike/tsconfig.diagnostics.json",
+  "scripts/fixtures/decorator-signature-spike/tsconfig.json",
+] as const;
+
 export const RELEASE_GATE_IMPLEMENTATION_PATHS = [
   ...RELEASE_GATE_ENTRYPOINT_PATHS,
+  ...RELEASE_GATE_FIXTURE_PATHS,
   ...RELEASE_GATE_SUPPORT_PATHS,
 ] as const;
 

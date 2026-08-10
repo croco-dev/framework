@@ -27,6 +27,21 @@
       "rules": {}
     },
     {
+      "files": [
+        "scripts/fixtures/decorator-signature-spike/diagnostics.ts",
+        "scripts/fixtures/decorator-signature-spike/negative.ts"
+      ],
+      "rules": {
+        "typescript/no-explicit-any": "off"
+      }
+    },
+    {
+      "files": ["scripts/fixtures/decorator-signature-spike/prototype.snapshot.d.ts"],
+      "rules": {
+        "typescript/no-useless-empty-export": "off"
+      }
+    },
+    {
       "files": ["packages/create-croco-app/templates/**/*.ts"],
       "rules": {
         "@croco/oxlint-rules/no-cross-domain-import": "error",

@@ -4,3 +4,4 @@ ci-reports/**
 packages/docs/src/content/docs/api/**
 packages/create-croco-app/templates/spa-be-split/apps/console-web/public/mockServiceWorker.js
 scripts/tests/normalize-packages.spec.ts
+scripts/fixtures/decorator-signature-spike/prototype.snapshot.d.ts

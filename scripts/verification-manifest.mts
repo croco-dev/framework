@@ -392,6 +392,16 @@ const repoOnly = (
     timeoutMs: minutes(5),
   },
   {
+    id: "decorator-signature-spike",
+    label: "Legacy decorator signature spike",
+    category: "typecheck",
+    command: guardedNodeScript(
+      "Restore the reviewed TypeScript 6 decorator signature fixtures and policy",
+      "scripts/decorator-signature-spike.mts",
+    ),
+    timeoutMs: minutes(10),
+  },
+  {
     id: "strict-contract-typecheck",
     label: "Strict contract typecheck",
     category: "typecheck",

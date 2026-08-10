@@ -1,0 +1,11 @@
+{
+  "extends": "../../../tsconfig/tsconfig.node.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "paths": {
+      "zod": ["../../../packages/protocols-rest/node_modules/zod"]
+    },
+    "rootDir": "../../.."
+  },
+  "files": ["limitations.ts", "negative.ts", "positive.ts", "prototype.ts"]
+}
