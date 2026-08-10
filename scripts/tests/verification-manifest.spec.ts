@@ -110,6 +110,7 @@ const repoIds = [
   "security-allowlists",
   "generated-secret-placeholders",
   "compiler-baseline",
+  "decorator-signature-spike",
   "strict-contract-typecheck",
   "static-misuse",
   "lint",

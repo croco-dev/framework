@@ -1,0 +1,11 @@
+{
+  "extends": "../../../tsconfig/tsconfig.node.json",
+  "compilerOptions": {
+    "declaration": true,
+    "declarationMap": false,
+    "emitDeclarationOnly": true,
+    "noEmit": false,
+    "rootDir": "."
+  },
+  "files": ["prototype.ts"]
+}

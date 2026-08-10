@@ -27,6 +27,13 @@
       "rules": {}
     },
     {
+      "files": ["scripts/fixtures/decorator-signature-spike/**/*.ts"],
+      "rules": {
+        "typescript/no-explicit-any": "off",
+        "typescript/no-useless-empty-export": "off"
+      }
+    },
+    {
       "files": ["packages/create-croco-app/templates/**/*.ts"],
       "rules": {
         "@croco/oxlint-rules/no-cross-domain-import": "error",

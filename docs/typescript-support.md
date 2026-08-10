@@ -25,6 +25,13 @@ smokes verify the emitted metadata and implicit DI behavior.
 - `pnpm compiler-baseline:check` enforces the compiler pin, decorator settings, generated-project range, and
   tsconfig migration rules.
 
+## Contract-bound decorator signatures
+
+The TypeScript 6 feasibility decision for strict legacy REST decorators is recorded in
+[`architecture/legacy-decorator-signature-spike.md`](./architecture/legacy-decorator-signature-spike.md). Run
+`pnpm decorator-signature-spike:check` to verify compile fixtures, diagnostics, declaration emit, packed consumption,
+and the type-instantiation budget without changing public decorator exports.
+
 ## Temporary tsup compatibility exception
 
 Owner: Croco release engineering.

@@ -55,6 +55,7 @@ export const RELEASE_GATE_ENTRYPOINT_PATHS = [
   "scripts/compiler-baseline-check.mts",
   "scripts/core-coverage-warning-check.mts",
   "scripts/create-croco-app-generated-smoke.mts",
+  "scripts/decorator-signature-spike.mts",
   "scripts/dependency-audit-policy.mts",
   "scripts/doc-examples-check.mts",
   "scripts/first-success-verify.mts",
