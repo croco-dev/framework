@@ -16,6 +16,7 @@ import {
   getPipes,
   type Interceptor,
   type PipeTransform,
+  validateResponse,
 } from "@croco/protocols-rest";
 import { HttpExecutionContext } from "./HttpExecutionContext";
 import { resolveParamsWithRoutePipes } from "./ParamResolver";
@@ -199,10 +200,16 @@ export class RouteCompiler {
         return typedMethod.apply(instance, args);
       };
 
+      const outputSchema = routeIR.outputSchema;
       return this.pipelineRunner.run(execContext, controllerHandler, {
         guards,
         interceptors,
         filters,
+        ...(outputSchema
+          ? {
+              validateResult: (result: unknown) => validateResponse(outputSchema, result),
+            }
+          : {}),
       });
     };
 

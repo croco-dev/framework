@@ -174,9 +174,22 @@ class UserController {
 
 `defineRouteContract`는 path params, query, body, response, Problem union을 TypeScript 계약으로 연결합니다. 계약을 전달한 `@Param`, `@Query`, `@Body`는 Zod가 파싱한 출력 타입이 컨트롤러 파라미터 타입에 할당 가능한지 검사합니다. 따라서 coercion, default, transform, preprocess 이후의 출력이 기준이며 optional, nullable, union도 전체 출력 범위를 받아야 합니다. branded 출력은 같은 brand뿐 아니라 안전한 wider 타입도 받을 수 있고 `unknown`은 허용되지만, annotation의 `any`와 `never`는 strict 계약을 우회할 수 없습니다. `z.any()`처럼 파싱 결과가 unconstrained인 schema는 `unknown` annotation만 허용합니다. `z.never()`는 값을 전달하지 않으며 안전한 wider annotation으로만 표현합니다.
 
+Route contract 타입은 Zod schema의 입력과 출력을 다음 네 라이프사이클 슬롯으로 분리합니다.
+
+| 라이프사이클 슬롯    | 타입 헬퍼                                                                                | Zod 의미                     |
+| -------------------- | ---------------------------------------------------------------------------------------- | ---------------------------- |
+| 클라이언트 요청      | `RouteClientRequest`, `RouteClientPathParams`, `RouteClientQuery`, `RouteClientBody`     | request schema의 `z.input`   |
+| 핸들러 입력          | `RouteHandlerRequest`, `RouteHandlerPathParams`, `RouteHandlerQuery`, `RouteHandlerBody` | request schema의 `z.output`  |
+| 핸들러 반환          | `RouteHandlerReturn`                                                                     | response schema의 `z.input`  |
+| wire/클라이언트 응답 | `RouteWireResponse`, `RouteClientResponse`                                               | response schema의 `z.output` |
+
+예를 들어 `response: z.string().transform((value) => value.length)`인 계약은 컨트롤러에서 `string`을 반환하고, 응답 schema를 파싱한 뒤 클라이언트에는 `number`를 노출합니다. `RouteMethodReturn`과 `RouteContractResult`는 핸들러 반환 슬롯을 사용합니다. `RouteResponse`는 기존 코드와 생성 클라이언트의 의미를 보존하기 위해 wire 응답 슬롯의 호환 alias입니다. 요청의 기존 `RoutePathParams`, `RouteQuery`, `RouteBody`, `RouteContractRequest`는 핸들러 입력 슬롯의 호환 alias입니다.
+
+응답 schema는 컨트롤러가 반환한 pre-transform 값을 `validateResponse` 또는 schema parsing 경계에서 검증하고 변환합니다. `@croco/transports-http`는 컨트롤러 반환 직후 이 경계를 적용하며, 다른 전송 adapter는 동일한 응답 검증 경계를 명시적으로 설치해야 합니다. OpenAPI와 RPC 생성기는 같은 contract schema metadata를 소비하며 JSON으로 안전하게 표현할 수 없는 transform은 기존 strict schema diagnostic으로 거부합니다.
+
 계약 기반 파라미터 데코레이터는 public instance method 전용입니다. constructor, static, private, protected method는 controller parameter metadata의 안정적인 소유 경계를 제공하지 않으므로 거부합니다. generic method도 concrete annotation을 제공하지 않으므로 typecheck에서 거부합니다. overloaded method는 TypeScript가 decorated implementation annotation을 숨기므로 `static-misuse:check`에서 거부합니다. 이 대상이 필요하면 generic/overload가 아닌 public method를 얇은 controller adapter로 두고 내부 메서드에 위임하세요.
 
-`@Get(createUser)`처럼 HTTP 메서드가 맞지 않거나 `@Param(getUser, "userId")`처럼 path에 없는 이름, response schema와 맞지 않는 반환 타입은 typecheck 단계에서 실패합니다. 기존 `@Query("page", z.coerce.number())` 같은 string/schema 오버로드는 호환성 경로로 유지되어 파라미터 주석을 제한하지 않습니다. `RouteParam`, `RouteQueryParam`, `RouteBody`는 고급 타입 조합과 기존 코드 호환을 위해 계속 제공됩니다. `RouteContract.path`는 `/users/:id` 같은 최종 경로이며, `@Controller("/users")`는 컨트롤러 그룹/런타임 prefix로 유지됩니다. 런타임 값 검증과 metadata 형식은 기존처럼 Zod schema와 pipe가 담당합니다.
+`@Get(createUser)`처럼 HTTP 메서드가 맞지 않거나 `@Param(getUser, "userId")`처럼 path에 없는 이름, response schema와 맞지 않는 반환 타입은 typecheck 단계에서 실패합니다. 기존 `@Query("page", z.coerce.number())` 같은 string/schema 오버로드는 호환성 경로로 유지되어 파라미터 주석을 제한하지 않습니다. `RouteParam`, `RouteQueryParam`, `RouteBody`는 고급 타입 조합과 기존 코드 호환을 위해 계속 제공됩니다. `RouteContract.path`는 `/users/:id` 같은 최종 경로이며, `@Controller("/users")`는 컨트롤러 그룹/런타임 prefix로 유지됩니다. 런타임 값 검증과 metadata 형식은 기존처럼 Zod schema와 pipe가 담당합니다. Route contract는 아직 headers schema를 소유하지 않으므로 `@Header`는 명시적 schema를 받는 기존 경로를 유지하며 네 슬롯의 aggregate request 타입에는 headers가 포함되지 않습니다.
 
 ### 기존 라우트 설정 타입에서 마이그레이션
 
@@ -186,7 +199,7 @@ class UserController {
 - `TypedRouteHandler` → `RouteContractHandler`
 - 전체 요청 객체 → `RouteContractRequest`
 - 전체 path params 객체 → `RoutePathParams`; `RouteParam`은 이름 하나를 지정한 path param에만 사용
-- 응답 값 → `RouteResponse`; 동기 또는 `Promise`를 허용하는 handler 반환값 → `RouteContractResult`
+- 클라이언트 응답 값 → `RouteResponse` 또는 `RouteClientResponse`; controller 반환값 → `RouteHandlerReturn`; 동기 또는 `Promise`를 허용하는 handler 반환값 → `RouteContractResult`
 
 이 마이그레이션은 drop-in 교체가 아닙니다. 제거된 요청 추론 타입과 `RouteContractRequest`는 schema가 없는 body, query, params의 타입 의미가 서로 다릅니다. `inputSchemas` 전체를 대신하는 단일 필드도 없습니다. 기존 body, query, path schema는 각각 `body`, `query`, `params`로 이동해야 합니다. 단, `RouteContractSpec.query`와 `RouteContractSpec.params`는 `z.object(...)` 형태의 객체 스키마만 받습니다. 기존 query 또는 path schema가 scalar, array, union, transform이라면 각 값을 이름 있는 객체 필드로 재구성한 뒤 옮겨야 하며 직접 대입할 수 없습니다. `inputSchemas.headers`에 대응하는 `RouteContractSpec` 필드는 현재 없으며, 이 설정은 기존에도 런타임에서 소비되지 않았습니다. Header schema 지원은 별도의 런타임 소유 계약으로 설계되어야 하므로 마이그레이션 과정에서 조용히 생략하지 마세요.
 
@@ -200,4 +213,4 @@ class UserController {
 - 검증 유틸리티: `createValidator`, `validateRequest`, `validateResponse`, `createValidationPipe`
 - 검증 Problem: `ValidationProblem`, `RequestValidationProblem`, `ResponseValidationProblem`
 - 스키마 계약: `defineRouteSchema`, `InferRouteSchemaRequest`, `InferRouteSchemaResponse`, `defineRouteContract`, `routeParam`, `routeParamSchema`, `routeQueryParam`, `routeQueryParamSchema`, `routePathParamsSchema`, `routeQuerySchema`, `routeBodySchema`, `routeResponseSchema`
-- 타입: `ExecutionContext`, `PipeTransform`, `ExceptionFilter`, `CallHandler`, `RouteSchema`, `RouteHandler`, `RouteContractSpec`, `RouteContractSourceLocation`, `RouteContractRequest`, `RouteContractResult`, `RouteBody`, `RoutePathParams`, `RouteResponse`, `RouteMethodReturn`, `RouteParam`, `RouteQueryParam`
+- 타입: `ExecutionContext`, `PipeTransform`, `ExceptionFilter`, `CallHandler`, `RouteSchema`, `RouteHandler`, `RouteContractSpec`, `RouteContractSourceLocation`, `RouteClientRequest`, `RouteHandlerRequest`, `RouteContractRequest`, `RouteContractResult`, `RouteClientBody`, `RouteHandlerBody`, `RouteBody`, `RouteClientPathParams`, `RouteHandlerPathParams`, `RoutePathParams`, `RouteClientQuery`, `RouteHandlerQuery`, `RouteHandlerReturn`, `RouteWireResponse`, `RouteClientResponse`, `RouteResponse`, `RouteMethodReturn`, `RouteParam`, `RouteQueryParam`

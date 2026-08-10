@@ -29,7 +29,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/PipelineRunner.ts",
-          line: 232,
+          line: 234,
           column: 15,
           kind: "problem-factory",
         },
@@ -17201,7 +17201,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/RouteCompiler.ts",
-          line: 118,
+          line: 119,
           column: 15,
           kind: "problem-factory",
         },
@@ -17368,7 +17368,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/RouteCompiler.ts",
-          line: 70,
+          line: 71,
           column: 11,
           kind: "problem-factory",
         },
@@ -17502,7 +17502,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/RouteCompiler.ts",
-          line: 193,
+          line: 194,
           column: 17,
           kind: "problem-factory",
         },

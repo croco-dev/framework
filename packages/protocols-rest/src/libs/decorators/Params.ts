@@ -10,9 +10,10 @@ import {
   type RouteContractWithBody,
   type RouteContractWithParams,
   type RouteContractWithQuery,
+  type RouteHandlerBody,
+  type RouteHandlerPathParams,
+  type RouteHandlerQuery,
   type RoutePathParamName,
-  type RoutePathParams,
-  type RouteQuery,
 } from "../types/RouteContract";
 import { ValidationPipe } from "../validators/ValidationPipe";
 
@@ -126,15 +127,20 @@ type ContractParameterDecorator<Expected> = <
  */
 export function Param<
   TContract extends RouteContractWithParams,
-  Name extends RoutePathParamName<TContract["path"]> & keyof RoutePathParams<TContract> & string,
->(contract: TContract, name: Name): ContractParameterDecorator<RoutePathParams<TContract>[Name]>;
+  Name extends RoutePathParamName<TContract["path"]> &
+    keyof RouteHandlerPathParams<TContract> &
+    string,
+>(
+  contract: TContract,
+  name: Name,
+): ContractParameterDecorator<RouteHandlerPathParams<TContract>[Name]>;
 export function Param(name: string, schema?: z.ZodType): ParameterDecorator;
 export function Param(
   nameOrContract: string | RouteContractWithParams,
   schemaOrName?: z.ZodType | string,
 ): unknown {
   if (hasRouteParamsContract(nameOrContract)) {
-    const name = schemaOrName as keyof RoutePathParams<typeof nameOrContract> & string;
+    const name = schemaOrName as keyof RouteHandlerPathParams<typeof nameOrContract> & string;
 
     return createParamDecorator(ParamType.PARAM)(name, getObjectShape(nameOrContract.params)[name]);
   }
@@ -147,15 +153,15 @@ export function Param(
  */
 export function Query<
   TContract extends RouteContractWithQuery,
-  Name extends keyof RouteQuery<TContract> & string,
->(contract: TContract, name: Name): ContractParameterDecorator<RouteQuery<TContract>[Name]>;
+  Name extends keyof RouteHandlerQuery<TContract> & string,
+>(contract: TContract, name: Name): ContractParameterDecorator<RouteHandlerQuery<TContract>[Name]>;
 export function Query(name: string, schema?: z.ZodType): ParameterDecorator;
 export function Query(
   nameOrContract: string | RouteContractWithQuery,
   schemaOrName?: z.ZodType | string,
 ): unknown {
   if (hasRouteQueryContract(nameOrContract)) {
-    const name = schemaOrName as keyof RouteQuery<typeof nameOrContract> & string;
+    const name = schemaOrName as keyof RouteHandlerQuery<typeof nameOrContract> & string;
 
     return createParamDecorator(ParamType.QUERY)(name, getObjectShape(nameOrContract.query)[name]);
   }
@@ -174,7 +180,7 @@ export const Header = (name: string, schema?: z.ZodType) =>
  */
 export function Body<TContract extends RouteContractWithBody>(
   contract: TContract,
-): ContractParameterDecorator<z.output<TContract["body"]>>;
+): ContractParameterDecorator<RouteHandlerBody<TContract>>;
 export function Body(schema?: z.ZodType): ParameterDecorator;
 export function Body(schemaOrContract?: z.ZodType | RouteContractWithBody): unknown {
   const schema = hasRouteBodyContract(schemaOrContract) ? schemaOrContract.body : schemaOrContract;

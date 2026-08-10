@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "RouteQuery"
+title: "RouteHandlerReturn"
 ---
 
-> **RouteQuery**\<`TContract`\> = [`RouteHandlerQuery`](/api/protocols-rest/src/type-aliases/routehandlerquery/)\<`TContract`\>
+> **RouteHandlerReturn**\<`TContract`\> = `TContract` _extends_ `object` ? `z.input`\<`Response`\> : `unknown`
 
 ## Type Parameters
 

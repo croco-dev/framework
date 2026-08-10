@@ -121,29 +121,64 @@ export type RoutePathParamName<Path extends string> = string extends Path
       ? NormalizePathParamToken<Token>
       : never;
 
-export type RoutePathParams<TContract extends RouteContractSpec> = TContract extends {
+export type RouteClientPathParams<TContract extends RouteContractSpec> = TContract extends {
   readonly params: infer Params extends AnyZodObject;
 }
-  ? z.infer<Params>
+  ? z.input<Params>
   : EmptyObject;
 
-export type RouteQuery<TContract extends RouteContractSpec> = TContract extends {
+export type RouteHandlerPathParams<TContract extends RouteContractSpec> = TContract extends {
+  readonly params: infer Params extends AnyZodObject;
+}
+  ? z.output<Params>
+  : EmptyObject;
+
+export type RouteClientQuery<TContract extends RouteContractSpec> = TContract extends {
   readonly query: infer Query extends AnyZodObject;
 }
-  ? z.infer<Query>
+  ? z.input<Query>
   : EmptyObject;
 
-export type RouteBody<TContract extends RouteContractSpec> = TContract extends {
+export type RouteHandlerQuery<TContract extends RouteContractSpec> = TContract extends {
+  readonly query: infer Query extends AnyZodObject;
+}
+  ? z.output<Query>
+  : EmptyObject;
+
+export type RouteClientBody<TContract extends RouteContractSpec> = TContract extends {
   readonly body: infer Body extends z.ZodType;
 }
-  ? z.infer<Body>
+  ? z.input<Body>
   : undefined;
 
-export type RouteResponse<TContract extends RouteContractSpec> = TContract extends {
+export type RouteHandlerBody<TContract extends RouteContractSpec> = TContract extends {
+  readonly body: infer Body extends z.ZodType;
+}
+  ? z.output<Body>
+  : undefined;
+
+export type RouteHandlerReturn<TContract extends RouteContractSpec> = TContract extends {
   readonly response: infer Response extends z.ZodType;
 }
-  ? z.infer<Response>
+  ? z.input<Response>
   : unknown;
+
+export type RouteWireResponse<TContract extends RouteContractSpec> = TContract extends {
+  readonly response: infer Response extends z.ZodType;
+}
+  ? z.output<Response>
+  : unknown;
+
+export type RouteClientResponse<TContract extends RouteContractSpec> = RouteWireResponse<TContract>;
+
+export type RoutePathParams<TContract extends RouteContractSpec> =
+  RouteHandlerPathParams<TContract>;
+
+export type RouteQuery<TContract extends RouteContractSpec> = RouteHandlerQuery<TContract>;
+
+export type RouteBody<TContract extends RouteContractSpec> = RouteHandlerBody<TContract>;
+
+export type RouteResponse<TContract extends RouteContractSpec> = RouteWireResponse<TContract>;
 
 export type RouteProblem<TContract extends RouteContractSpec> = TContract extends {
   readonly problems: readonly (infer ProblemEntry)[];
@@ -155,15 +190,24 @@ export type RouteProblem<TContract extends RouteContractSpec> = TContract extend
       : never
   : never;
 
-export type RouteContractRequest<TContract extends RouteContractSpec> = {
-  readonly params: RoutePathParams<TContract>;
-  readonly query: RouteQuery<TContract>;
-  readonly body: RouteBody<TContract>;
+export type RouteClientRequest<TContract extends RouteContractSpec> = {
+  readonly params: RouteClientPathParams<TContract>;
+  readonly query: RouteClientQuery<TContract>;
+  readonly body: RouteClientBody<TContract>;
 };
 
+export type RouteHandlerRequest<TContract extends RouteContractSpec> = {
+  readonly params: RouteHandlerPathParams<TContract>;
+  readonly query: RouteHandlerQuery<TContract>;
+  readonly body: RouteHandlerBody<TContract>;
+};
+
+export type RouteContractRequest<TContract extends RouteContractSpec> =
+  RouteHandlerRequest<TContract>;
+
 export type RouteContractResult<TContract extends RouteContractSpec> =
-  | RouteResponse<TContract>
-  | Promise<RouteResponse<TContract>>;
+  | RouteHandlerReturn<TContract>
+  | Promise<RouteHandlerReturn<TContract>>;
 
 export type RouteContractHandler<TContract extends RouteContractSpec> = (
   request: RouteContractRequest<TContract>,
@@ -280,8 +324,8 @@ export function routeParam<
 export function routeParamSchema<
   TContract extends RouteContractWithParams,
   Name extends RoutePathParamName<TContract["path"]> & keyof RoutePathParams<TContract> & string,
->(contract: TContract, name: Name): z.ZodType<RoutePathParams<TContract>[Name]> {
-  return getObjectShape(contract.params)[name] as z.ZodType<RoutePathParams<TContract>[Name]>;
+>(contract: TContract, name: Name): TContract["params"]["shape"][Name] {
+  return getObjectShape(contract.params)[name] as TContract["params"]["shape"][Name];
 }
 
 export function routeQueryParam<
@@ -294,8 +338,8 @@ export function routeQueryParam<
 export function routeQueryParamSchema<
   TContract extends RouteContractWithQuery,
   Name extends keyof RouteQuery<TContract> & string,
->(contract: TContract, name: Name): z.ZodType<RouteQuery<TContract>[Name]> {
-  return getObjectShape(contract.query)[name] as z.ZodType<RouteQuery<TContract>[Name]>;
+>(contract: TContract, name: Name): TContract["query"]["shape"][Name] {
+  return getObjectShape(contract.query)[name] as TContract["query"]["shape"][Name];
 }
 
 export function routePathParamsSchema<TContract extends RouteContractWithParams>(

@@ -22603,6 +22603,31 @@
               "source": "./RouteContract"
             },
             {
+              "name": "RouteClientBody",
+              "exportKind": "named",
+              "source": "./RouteContract"
+            },
+            {
+              "name": "RouteClientPathParams",
+              "exportKind": "named",
+              "source": "./RouteContract"
+            },
+            {
+              "name": "RouteClientQuery",
+              "exportKind": "named",
+              "source": "./RouteContract"
+            },
+            {
+              "name": "RouteClientRequest",
+              "exportKind": "named",
+              "source": "./RouteContract"
+            },
+            {
+              "name": "RouteClientResponse",
+              "exportKind": "named",
+              "source": "./RouteContract"
+            },
+            {
               "name": "RouteContractHandler",
               "exportKind": "named",
               "source": "./RouteContract"
@@ -22656,6 +22681,31 @@
               "name": "RouteHandler",
               "exportKind": "named",
               "source": "./RouteTypes"
+            },
+            {
+              "name": "RouteHandlerBody",
+              "exportKind": "named",
+              "source": "./RouteContract"
+            },
+            {
+              "name": "RouteHandlerPathParams",
+              "exportKind": "named",
+              "source": "./RouteContract"
+            },
+            {
+              "name": "RouteHandlerQuery",
+              "exportKind": "named",
+              "source": "./RouteContract"
+            },
+            {
+              "name": "RouteHandlerRequest",
+              "exportKind": "named",
+              "source": "./RouteContract"
+            },
+            {
+              "name": "RouteHandlerReturn",
+              "exportKind": "named",
+              "source": "./RouteContract"
             },
             {
               "name": "RouteMethodReturn",
@@ -22721,6 +22771,11 @@
               "name": "RouteSchemaLike",
               "exportKind": "named",
               "source": "@croco/protocols-core"
+            },
+            {
+              "name": "RouteWireResponse",
+              "exportKind": "named",
+              "source": "./RouteContract"
             },
             {
               "name": "TokenVerifier",

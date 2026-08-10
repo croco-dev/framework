@@ -5,17 +5,17 @@ prev: false
 title: "routeParamSchema"
 ---
 
-> **routeParamSchema**\<`TContract`, `Name`\>(`contract`, `name`): `ZodType`\<[`RoutePathParams`](/api/protocols-rest/src/type-aliases/routepathparams/)\<`TContract`\>\[`Name`\]\>
+> **routeParamSchema**\<`TContract`, `Name`\>(`contract`, `name`): `TContract`\[`"params"`\]\[`"shape"`\]\[`Name`\]
 
 ## Type Parameters
 
 ### TContract
 
-`TContract` *extends* [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/) & `{ readonly params: AnyZodObject }`
+`TContract` _extends_ [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/) & `{ readonly params: AnyZodObject }`
 
 ### Name
 
-`Name` *extends* [`RoutePathParamName`](/api/protocols-rest/src/type-aliases/routepathparamname/)\<`TContract`\[`"path"`\]\> & keyof [`RoutePathParams`](/api/protocols-rest/src/type-aliases/routepathparams/)\<`TContract`\> & `string`
+`Name` _extends_ [`RoutePathParamName`](/api/protocols-rest/src/type-aliases/routepathparamname/)\<`TContract`\[`"path"`\]\> & keyof [`RoutePathParams`](/api/protocols-rest/src/type-aliases/routepathparams/)\<`TContract`\> & `string`
 
 ## Parameters
 
@@ -29,4 +29,4 @@ title: "routeParamSchema"
 
 ## Returns
 
-`ZodType`\<[`RoutePathParams`](/api/protocols-rest/src/type-aliases/routepathparams/)\<`TContract`\>\[`Name`\]\>
+`TContract`\[`"params"`\]\[`"shape"`\]\[`Name`\]

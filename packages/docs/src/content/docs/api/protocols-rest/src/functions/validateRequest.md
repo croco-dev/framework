@@ -5,21 +5,21 @@ prev: false
 title: "validateRequest"
 ---
 
-> **validateRequest**\<`T`\>(`schema`, `data`, `source`): `T`
+> **validateRequest**\<`TSchema`\>(`schema`, `data`, `source`): `output`\<`TSchema`\>
 
 요청 데이터를 Zod 스키마로 검증하고 실패 시 요청 검증 Problem을 발생시킵니다.
 
 ## Type Parameters
 
-### T
+### TSchema
 
-`T`
+`TSchema` _extends_ `ZodType`\<`any`, `ZodTypeDef`, `any`\>
 
 ## Parameters
 
 ### schema
 
-`ZodType`\<`T`\>
+`TSchema`
 
 ### data
 
@@ -31,4 +31,4 @@ title: "validateRequest"
 
 ## Returns
 
-`T`
+`output`\<`TSchema`\>

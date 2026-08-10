@@ -81,6 +81,7 @@ export interface PipelineConfig {
   guards: Guard<ExecutionContext>[];
   interceptors: Interceptor<ExecutionContext>[];
   filters: ExceptionFilter<unknown, HttpExecutionContext>[];
+  validateResult?: (result: unknown) => unknown;
 }
 
 export type HttpPipelineGraphConfig = CompiledRoutePipelineGraphConfig & {
@@ -215,7 +216,8 @@ export class PipelineRunner {
     try {
       await this.runGuards(execContext, config.guards);
 
-      return await this.runInterceptorChain(execContext, handler, config.interceptors);
+      const result = await this.runInterceptorChain(execContext, handler, config.interceptors);
+      return config.validateResult ? config.validateResult(result) : result;
     } catch (error) {
       this.recordPipelineError(error);
       return await this.runFilters(error, execContext, config.filters);

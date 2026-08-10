@@ -13,19 +13,24 @@ import {
 } from "@croco/protocols-core";
 import {
   Body,
+  type CallHandler,
   Controller,
   defineRouteContract,
   defineRouteProblem,
   Get,
   Header,
   HttpMethod,
+  type ExecutionContext,
+  type Interceptor,
   Param,
   Post,
   ProblemResponses,
   Query,
   RequestValidationProblem,
   ResponseSchema,
+  type RouteHandlerReturn,
   routeProblemResponses,
+  UseInterceptors,
 } from "@croco/protocols-rest";
 import ts from "typescript";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -104,6 +109,13 @@ const updateWidgetRoute = defineRouteContract({
   problems: [requestValidationProblem, widgetNotFoundProblem],
 });
 
+const transformedResponseRoute = defineRouteContract({
+  id: "contract-parity.transformed-response",
+  method: HttpMethod.GET,
+  path: "/contract-parity/transformed-response",
+  response: z.string().transform((value) => value.length),
+});
+
 type WidgetBody = z.infer<typeof WidgetBodySchema>;
 type WidgetMode = z.infer<typeof WidgetQuerySchema>["mode"];
 type WidgetResponse = z.infer<typeof WidgetResponseSchema>;
@@ -154,6 +166,22 @@ class ContractParityController {
       name: body.name,
       enabled: body.enabled,
     };
+  }
+}
+
+class ReplaceTransformedResponseInterceptor implements Interceptor<ExecutionContext> {
+  async intercept(_context: ExecutionContext, next: CallHandler): Promise<unknown> {
+    await next.handle();
+    return "intercepted";
+  }
+}
+
+@Controller("/contract-parity")
+class TransformedResponseController {
+  @Get(transformedResponseRoute)
+  @UseInterceptors(ReplaceTransformedResponseInterceptor)
+  transformedResponse(): RouteHandlerReturn<typeof transformedResponseRoute> {
+    return "wire-value";
   }
 }
 
@@ -297,6 +325,7 @@ describe("REST contract-to-runtime parity", () => {
         ContractParityController,
         RepeatedParametersController,
         SchemaLessParametersController,
+        TransformedResponseController,
       ],
       securityValidation: "off",
     });
@@ -355,6 +384,15 @@ describe("REST contract-to-runtime parity", () => {
       name: "Contract widget",
       enabled: true,
     });
+  });
+
+  it("parses handler returns into transformed wire responses", async () => {
+    const response = await app.fetch(
+      new Request("http://localhost/contract-parity/transformed-response"),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toBe(11);
   });
 
   it("accepts missing, single, and repeated optional list parameters", async () => {
@@ -444,7 +482,7 @@ describe("REST contract-to-runtime parity", () => {
       .map((file) => fs.readFileSync(file, "utf8"))
       .join("\n");
     expect(generatedSource).toContain(
-      "query: { tag: string | undefined; }; headers: { 'x-request-id': string | undefined; };",
+      "query: { tag?: string | undefined; }; headers: { 'x-request-id'?: string | undefined; };",
     );
   });
 
