@@ -27,9 +27,17 @@
       "rules": {}
     },
     {
-      "files": ["scripts/fixtures/decorator-signature-spike/**/*.ts"],
+      "files": [
+        "scripts/fixtures/decorator-signature-spike/diagnostics.ts",
+        "scripts/fixtures/decorator-signature-spike/negative.ts"
+      ],
       "rules": {
-        "typescript/no-explicit-any": "off",
+        "typescript/no-explicit-any": "off"
+      }
+    },
+    {
+      "files": ["scripts/fixtures/decorator-signature-spike/prototype.snapshot.d.ts"],
+      "rules": {
         "typescript/no-useless-empty-export": "off"
       }
     },

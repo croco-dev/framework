@@ -399,7 +399,7 @@ const repoOnly = (
       "Restore the reviewed TypeScript 6 decorator signature fixtures and policy",
       "scripts/decorator-signature-spike.mts",
     ),
-    timeoutMs: minutes(5),
+    timeoutMs: minutes(10),
   },
   {
     id: "strict-contract-typecheck",

@@ -3,6 +3,7 @@
 import { spawnSync } from "node:child_process";
 import {
   copyFileSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -17,6 +18,7 @@ import { pathToFileURL } from "node:url";
 const rootDir = resolve(import.meta.dirname, "..");
 const fixtureDir = join(rootDir, "scripts", "fixtures", "decorator-signature-spike");
 const tscPath = join(rootDir, "node_modules", "typescript", "bin", "tsc");
+const zodTypesRoot = join(rootDir, "packages", "protocols-rest", "node_modules", "zod");
 const timeoutMs = 180_000;
 const performanceInstantiationBudget = 250_000;
 
@@ -67,6 +69,9 @@ function verifyPositiveAndNegativeFixtures(): void {
 
 function verifyNegativeFixtureSensitivity(temporaryRoot: string): number {
   const sensitivityRoot = join(temporaryRoot, "negative-sensitivity");
+  if (!existsSync(zodTypesRoot)) {
+    throw new Error(`zod types were not found at ${zodTypesRoot}; install workspace dependencies`);
+  }
   mkdirSync(sensitivityRoot, { recursive: true });
   const negativeSource = readFileSync(join(fixtureDir, "negative.ts"), "utf8");
   copyFileSync(join(fixtureDir, "negative.ts"), join(sensitivityRoot, "negative.ts"));
@@ -85,7 +90,7 @@ function verifyNegativeFixtureSensitivity(temporaryRoot: string): number {
       moduleResolution: "Bundler",
       noEmit: true,
       paths: {
-        zod: [join(rootDir, "packages", "protocols-rest", "node_modules", "zod")],
+        zod: [zodTypesRoot],
       },
       skipLibCheck: true,
       strict: true,
@@ -174,6 +179,8 @@ function verifyPackedConsumer(temporaryRoot: string, declarationPath: string): v
   mkdirSync(distRoot, { recursive: true });
   mkdirSync(packRoot, { recursive: true });
   mkdirSync(consumerRoot, { recursive: true });
+  writeFileSync(join(packageRoot, "pnpm-workspace.yaml"), "packages: []\n");
+  writeFileSync(join(consumerRoot, "pnpm-workspace.yaml"), "packages: []\n");
   copyFileSync(declarationPath, join(distRoot, "index.d.ts"));
   writeFileSync(
     join(distRoot, "index.mjs"),
@@ -352,7 +359,8 @@ function assertSucceeded(label: string, result: CommandResult): void {
 }
 
 function normalizeDiagnostics(output: string): string {
-  return output.replaceAll("\\\\", "/").replaceAll(`${rootDir}/`, "").trim();
+  const normalizedRoot = rootDir.replaceAll("\\", "/");
+  return output.replaceAll("\\", "/").replaceAll(`${normalizedRoot}/`, "").trim();
 }
 
 function writeJson(path: string, value: unknown): void {
