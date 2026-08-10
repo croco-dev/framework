@@ -13,13 +13,13 @@ title: "ChangedTestFallback"
 
 > `readonly` **paths**: readonly `string`[]
 
-***
+---
 
 ### profile
 
-> `readonly` **profile**: `"package"` \| `"full"`
+> `readonly` **profile**: `"full"`
 
-***
+---
 
 ### reason
 

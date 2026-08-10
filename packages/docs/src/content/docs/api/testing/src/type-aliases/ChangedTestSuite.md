@@ -13,19 +13,13 @@ title: "ChangedTestSuite"
 
 > `readonly` **command**: readonly `string`[]
 
-***
-
-### packageName?
-
-> `readonly` `optional` **packageName?**: `string`
-
-***
+---
 
 ### profile
 
-> `readonly` **profile**: `"package"` \| `"full"`
+> `readonly` **profile**: `"full"`
 
-***
+---
 
 ### reason
 

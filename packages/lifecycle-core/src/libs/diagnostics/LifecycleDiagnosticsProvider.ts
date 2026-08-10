@@ -19,7 +19,12 @@ import type {
 
 const DEFAULT_RUN_LIMIT = 20;
 const DEFAULT_MONETIZATION_DIAGNOSTICS_TIMEOUT_MS = 5_000;
-const RUN_STATUSES: readonly LifecycleRunStatus[] = ["succeeded", "failed", "skipped"];
+const RUN_STATUSES: readonly LifecycleRunStatus[] = [
+  "indeterminate",
+  "succeeded",
+  "failed",
+  "skipped",
+];
 
 export type LifecycleDiagnosticsRunDetails = {
   readonly id: string;
@@ -288,6 +293,7 @@ export class LifecycleDiagnosticsProvider implements DiagnosticsProvider {
         : []),
     ];
     const status =
+      runsByStatus.indeterminate > 0 ||
       runsByStatus.failed > 0 ||
       failedActionCount > 0 ||
       unavailableRegistrations.length > 0 ||
@@ -302,7 +308,7 @@ export class LifecycleDiagnosticsProvider implements DiagnosticsProvider {
       component: "lifecycle",
       ...(status === "degraded"
         ? {
-            message: `${runsByStatus.failed} lifecycle run(s), ${failedActionCount} action(s), ${unavailableRegistrations.length} unavailable registration(s), ${versionMismatchCount} version mismatch(es), ${monetizationCapabilityDiagnostics.length} monetization capability mismatch(es), and ${monetizationOperationalDiagnostics.length} monetization diagnostics failure(s) need attention`,
+            message: `${runsByStatus.indeterminate} indeterminate lifecycle dispatch(es), ${runsByStatus.failed} failed lifecycle run(s), ${failedActionCount} failed action(s), ${unavailableRegistrations.length} unavailable registration(s), ${versionMismatchCount} version mismatch(es), ${monetizationCapabilityDiagnostics.length} monetization capability mismatch(es), and ${monetizationOperationalDiagnostics.length} monetization diagnostics failure(s) need attention`,
           }
         : {}),
       details: {

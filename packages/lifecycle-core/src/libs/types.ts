@@ -132,7 +132,7 @@ export type LifecycleActionResult = {
   readonly metadata?: Record<string, unknown>;
 };
 
-export type LifecycleRunStatus = "succeeded" | "failed" | "skipped";
+export type LifecycleRunStatus = "indeterminate" | "succeeded" | "failed" | "skipped";
 
 export type LifecycleSkipReason =
   | "condition_not_met"
@@ -164,6 +164,15 @@ export type LifecycleRun = {
   readonly completedAt: Date;
 };
 
+/** A durable boundary proving that action dispatch may have started and requires reconciliation. */
+export type LifecycleIndeterminateRun = LifecycleRun & {
+  readonly status: "indeterminate";
+};
+
+export type LifecycleFinalizedRun = LifecycleRun & {
+  readonly status: Exclude<LifecycleRunStatus, "indeterminate">;
+};
+
 export type LifecycleRunListOptions = {
   readonly tenantId?: string;
   readonly ruleId?: string;
@@ -186,18 +195,35 @@ export type LifecycleRunClaimResult =
       readonly reason: "cooldown_active" | "idempotency_key_reused";
     };
 
+export type LifecycleRunFinalizationResult =
+  | { readonly finalized: true }
+  | {
+      readonly finalized: false;
+      readonly reason: "dispatch_not_found" | "dispatch_fence_mismatch";
+    };
+
 export interface LifecycleRunStore {
   /**
    * Atomically reserves an idempotency key and optional cooldown window before dispatch.
    * Distributed adapters must enforce both constraints in one shared transaction.
    */
-  claim(claim: LifecycleRunClaim): Promise<LifecycleRunClaimResult>;
+  claim(
+    claim: LifecycleRunClaim,
+    dispatchingRun: LifecycleIndeterminateRun,
+  ): Promise<LifecycleRunClaimResult>;
   /**
-   * Releases an unfinished claim without removing a completed run.
+   * Releases a claim and its indeterminate boundary only when dispatch is proven not to have
+   * started. Never call this after an action adapter begins execution.
    * Implementations must make this operation idempotent.
    */
   abortClaim(runId: string, idempotencyKey: string): Promise<void>;
-  save(run: LifecycleRun): Promise<void>;
+  /**
+   * Replaces an indeterminate run with reconciled action evidence using the run id as a fence.
+   * A false result must retain the current claim and run evidence.
+   */
+  finalizeDispatch(run: LifecycleFinalizedRun): Promise<LifecycleRunFinalizationResult>;
+  /** Persists a run that never crossed the action-dispatch boundary. */
+  save(run: LifecycleFinalizedRun): Promise<void>;
   findByIdempotencyKey(idempotencyKey: string): Promise<LifecycleRun | null>;
   findLatestForRule(tenantId: string, ruleId: string, since?: Date): Promise<LifecycleRun | null>;
   list(options?: LifecycleRunListOptions): Promise<readonly LifecycleRun[]>;

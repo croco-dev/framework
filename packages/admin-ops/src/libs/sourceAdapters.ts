@@ -464,6 +464,14 @@ export function createBatchRetryConsoleSource(manager: ExecutionAdminManager): R
 }
 
 function lifecycleProblem(run: LifecycleRun) {
+  if (run.status === "indeterminate") {
+    return {
+      code: "lifecycle-core/run-indeterminate",
+      message: "Lifecycle action dispatch may have completed and requires reconciliation",
+      retryable: false,
+    };
+  }
+
   const failedAction = run.actionResults.find((actionResult) => actionResult.status === "failure");
   const error = run.error ?? failedAction?.error;
 
@@ -479,6 +487,9 @@ function lifecycleProblem(run: LifecycleRun) {
 }
 
 function lifecycleState(run: LifecycleRun): RetryConsoleItemState {
+  if (run.status === "indeterminate") {
+    return "reconciliation_required";
+  }
   if (run.status === "succeeded") {
     return "succeeded";
   }
@@ -491,6 +502,18 @@ function lifecycleRecoveryActions(
   recover: LifecycleRecoveryProvider | undefined,
 ): readonly RetryConsoleRecoveryAction[] {
   const state = lifecycleState(run);
+
+  if (state === "reconciliation_required") {
+    return [
+      recoveryAction(
+        "lifecycle",
+        run.id,
+        "inspect",
+        true,
+        "Reconcile the external provider outcome before finalizing this run; do not replay it",
+      ),
+    ];
+  }
 
   if (state === "terminal_failed") {
     return [

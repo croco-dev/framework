@@ -5,4 +5,4 @@ prev: false
 title: "LifecycleRunStatus"
 ---
 
-> **LifecycleRunStatus** = `"succeeded"` \| `"failed"` \| `"skipped"`
+> **LifecycleRunStatus** = `"indeterminate"` \| `"succeeded"` \| `"failed"` \| `"skipped"`

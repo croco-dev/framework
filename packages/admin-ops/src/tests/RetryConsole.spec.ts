@@ -9,6 +9,8 @@ import type {
 } from "@croco/execution-core";
 import { ExecutionManagerImpl, ExecutionProblems, ExecutionStore } from "@croco/execution-core";
 import type {
+  LifecycleFinalizedRun,
+  LifecycleIndeterminateRun,
   LifecycleRun,
   LifecycleRunClaim,
   LifecycleRunClaimResult,
@@ -157,8 +159,12 @@ class MemoryExecutionStore extends ExecutionStore implements ExecutionLogStore {
 class MemoryLifecycleRunStore implements LifecycleRunStore {
   constructor(private readonly runs: readonly LifecycleRun[]) {}
 
-  async claim(claim: LifecycleRunClaim): Promise<LifecycleRunClaimResult> {
+  async claim(
+    claim: LifecycleRunClaim,
+    dispatchingRun: LifecycleIndeterminateRun,
+  ): Promise<LifecycleRunClaimResult> {
     void claim;
+    void dispatchingRun;
     return { claimed: true };
   }
 
@@ -167,7 +173,12 @@ class MemoryLifecycleRunStore implements LifecycleRunStore {
     void idempotencyKey;
   }
 
-  async save(run: LifecycleRun): Promise<void> {
+  async finalizeDispatch(run: LifecycleFinalizedRun) {
+    void run;
+    return { finalized: false, reason: "dispatch_not_found" } as const;
+  }
+
+  async save(run: LifecycleFinalizedRun): Promise<void> {
     void run;
   }
 
@@ -508,13 +519,20 @@ describe("RetryConsole", () => {
       startedAt: new Date("2026-01-01T00:00:04.000Z"),
       completedAt: new Date("2026-01-01T00:00:05.000Z"),
     };
+    const indeterminateLifecycleRun: LifecycleRun = {
+      ...lifecycleRun,
+      id: "lifecycle-indeterminate-1",
+      status: "indeterminate",
+      idempotencyKey: "lifecycle-key-indeterminate-1",
+      actionResults: [],
+    };
 
     const console = createRetryConsole([
       createTaskRetryConsoleSource(manager),
       createWorkflowRetryConsoleSource(manager),
       createBatchRetryConsoleSource(manager),
       createLifecycleRetryConsoleSource({
-        store: new MemoryLifecycleRunStore([lifecycleRun]),
+        store: new MemoryLifecycleRunStore([lifecycleRun, indeterminateLifecycleRun]),
         recover: lifecycleRecover,
       }),
     ]);
@@ -527,6 +545,7 @@ describe("RetryConsole", () => {
         ["workflow-1", "workflow", "retryable"],
         ["batch-1", "batch", "terminal_failed"],
         ["lifecycle-1", "lifecycle", "terminal_failed"],
+        ["lifecycle-indeterminate-1", "lifecycle", "reconciliation_required"],
         ["running-1", "task", "running"],
         ["succeeded-1", "task", "succeeded"],
       ]),
@@ -537,6 +556,19 @@ describe("RetryConsole", () => {
       tenantId: "tenant-1",
       signalId: "signal-1",
       idempotencyKey: "lifecycle-key-1",
+    });
+    expect(items.find((item) => item.id === "lifecycle-indeterminate-1")).toMatchObject({
+      retryable: false,
+      problem: {
+        code: "lifecycle-core/run-indeterminate",
+        retryable: false,
+      },
+      recoveryActions: [
+        {
+          kind: "inspect",
+          allowed: true,
+        },
+      ],
     });
     expect(items.find((item) => item.id === "running-1")?.recoveryActions[0]).toMatchObject({
       kind: "wait",

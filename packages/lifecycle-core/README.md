@@ -102,7 +102,7 @@ Registering another version never replaces the active version. It remains `inact
 
 Production runs and action emissions record both `ruleVersion` and `ruleFingerprint`. A paused rule still records a skipped run with `skipReason: "rule_paused"`, but it does not dispatch actions. Resuming does not replay signals.
 
-`LifecycleRunStore.claim()` atomically reserves the idempotency key and optional cooldown window before dispatch. Distributed adapters must enforce both constraints in shared durable storage; separate read-then-save checks are not sufficient under concurrent evaluation. `save()` finalizes the claim with the run, while `abortClaim()` idempotently releases only an unfinished claim after infrastructure failure.
+`LifecycleRunStore.claim()` atomically reserves the idempotency key and optional cooldown window together with an `indeterminate` dispatch boundary before any action adapter starts. Distributed adapters must commit the claim and boundary in shared durable storage; separate read-then-save checks are not sufficient under concurrent evaluation or process termination. The durable run means dispatch may have occurred and blocks automatic replay until an operator or provider-specific reconciler supplies action evidence through `finalizeDispatch()`. Finalization must compare-and-set the same run ID and idempotency key. `abortClaim()` may remove the boundary only when dispatch is proven not to have started; finalization failure must retain the claim and indeterminate run. Diagnostics report indeterminate runs as degraded health without exposing action payloads.
 
 ## Dry-run evaluation
 
@@ -126,7 +126,7 @@ Pass an `InMemoryLifecycleDryRunStore` (or another `LifecycleDryRunStore`) to th
 
 The synchronous `get()`, `getAll()`, and `match()` methods are a local compatibility view for `register(rule)`. They can be stale when another process changes a shared store, so do not use them for authoritative version state or dispatch decisions. Versioned execution uses `matchRegistrations()` internally; operational callers should await `inspect()` and `getIdentityState()` against the durable store.
 
-Custom `LifecycleActionAdapter` implementations must now accept `ruleVersion` and `ruleFingerprint` in the run reference. Custom `LifecycleRunStore` implementations must implement atomic `claim()`/`abortClaim()` and persist those required fields. Custom `LifecycleRuleStateStore` implementations must implement expiring, uniquely owned execution leases through `claimExecution()` and `releaseExecution()`. These contracts keep concurrent dispatch attributable, suppress duplicate actions, recover from infrastructure failure, and make pause a reliable dispatch boundary.
+Custom `LifecycleActionAdapter` implementations must accept `ruleVersion` and `ruleFingerprint` in the run reference. Custom `LifecycleRunStore` implementations must atomically persist the claim and supplied dispatch boundary in `claim()`, fence `finalizeDispatch()`, and restrict `abortClaim()` to proven pre-dispatch failures while persisting the required version fields. Custom `LifecycleRuleStateStore` implementations must implement expiring, uniquely owned execution leases through `claimExecution()` and `releaseExecution()`. These contracts keep concurrent dispatch attributable, suppress duplicate actions, preserve ambiguous external outcomes for reconciliation, and make pause a reliable dispatch boundary.
 
 ## Monetization signals and recipes
 

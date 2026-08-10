@@ -20,6 +20,8 @@ import type {
   LifecycleRuleStateStore,
   LifecycleRuleVersionDescriptor,
   LifecycleRuleVersionRecord,
+  LifecycleFinalizedRun,
+  LifecycleIndeterminateRun,
   LifecycleRun,
   LifecycleRunClaim,
 } from "../index";
@@ -592,10 +594,10 @@ describe("LifecycleRuleEvaluator versioned execution", () => {
       releaseLookup = resolve;
     });
     class BlockingRunStore extends InMemoryLifecycleRunStore {
-      override async claim(claim: LifecycleRunClaim) {
+      override async claim(claim: LifecycleRunClaim, dispatchingRun: LifecycleIndeterminateRun) {
         markLookupStarted?.();
         await lookupGate;
-        return super.claim(claim);
+        return super.claim(claim, dispatchingRun);
       }
     }
 
@@ -715,6 +717,132 @@ describe("LifecycleRuleEvaluator versioned execution", () => {
 
     expect(retried.runs).toMatchObject([{ status: "succeeded" }]);
     expect(sink.getEmissions()).toHaveLength(1);
+  });
+
+  it("does not redispatch after an action succeeds but final run persistence fails", async () => {
+    class FailingFinalizationRunStore extends InMemoryLifecycleRunStore {
+      private failNextFinalization = true;
+
+      override async finalizeDispatch(run: LifecycleFinalizedRun) {
+        if (this.failNextFinalization) {
+          this.failNextFinalization = false;
+          throw new Error("temporary final run store outage");
+        }
+        return super.finalizeDispatch(run);
+      }
+    }
+
+    const registry = new LifecycleRuleRegistry();
+    await registerVersion(registry, "1.0.0", { activate: true });
+    const runStore = new FailingFinalizationRunStore();
+    const sink = new InMemoryLifecycleActionSink();
+    const evaluator = new LifecycleRuleEvaluator({ registry, runStore, actionAdapter: sink });
+
+    await expect(evaluator.evaluate(createContext("ambiguous-final-save"))).rejects.toThrow(
+      "temporary final run store outage",
+    );
+    const [indeterminate] = await runStore.list();
+    const health = await new LifecycleDiagnosticsProvider(runStore).getHealth();
+    const retried = await evaluator.evaluate(createContext("ambiguous-final-save"));
+
+    expect(indeterminate).toMatchObject({
+      status: "indeterminate",
+      actionResults: [],
+    });
+    expect(health).toMatchObject({
+      status: "degraded",
+      details: { runsByStatus: { indeterminate: 1 } },
+    });
+    expect(retried.runs).toMatchObject([
+      { status: "skipped", skipReason: "idempotency_key_reused" },
+    ]);
+    expect(sink.getEmissions()).toHaveLength(1);
+    if (!indeterminate) {
+      throw new Error("expected indeterminate lifecycle run evidence");
+    }
+    const reconciliation: LifecycleFinalizedRun = {
+      ...indeterminate,
+      status: "succeeded",
+      actionResults: [
+        {
+          actionId: "create-follow-up",
+          type: "cs.follow_up",
+          status: "success",
+        },
+      ],
+    };
+    await expect(
+      runStore.finalizeDispatch({ ...reconciliation, idempotencyKey: "stale-fence" }),
+    ).resolves.toEqual({ finalized: false, reason: "dispatch_fence_mismatch" });
+    await expect(runStore.finalizeDispatch(reconciliation)).resolves.toEqual({ finalized: true });
+    await expect(
+      runStore.findByIdempotencyKey(indeterminate.idempotencyKey),
+    ).resolves.toMatchObject({ id: indeterminate.id, status: "succeeded" });
+  });
+
+  it("keeps a pre-dispatch persistence failure safely retryable", async () => {
+    class FailingDispatchClaimRunStore extends InMemoryLifecycleRunStore {
+      private failNextClaim = true;
+
+      override async claim(claim: LifecycleRunClaim, dispatchingRun: LifecycleIndeterminateRun) {
+        const result = await super.claim(claim, dispatchingRun);
+        if (this.failNextClaim) {
+          this.failNextClaim = false;
+          throw new Error("temporary dispatch claim outage");
+        }
+        return result;
+      }
+    }
+
+    const registry = new LifecycleRuleRegistry();
+    await registerVersion(registry, "1.0.0", { activate: true });
+    const runStore = new FailingDispatchClaimRunStore();
+    const sink = new InMemoryLifecycleActionSink();
+    const evaluator = new LifecycleRuleEvaluator({ registry, runStore, actionAdapter: sink });
+
+    await expect(evaluator.evaluate(createContext("retryable-boundary"))).rejects.toThrow(
+      "temporary dispatch claim outage",
+    );
+    const retried = await evaluator.evaluate(createContext("retryable-boundary"));
+
+    expect(retried.runs).toMatchObject([{ status: "succeeded" }]);
+    expect(sink.getEmissions()).toHaveLength(1);
+  });
+
+  it("finalizes thrown action evidence and blocks automatic replay", async () => {
+    const registry = new LifecycleRuleRegistry();
+    await registerVersion(registry, "1.0.0", { activate: true });
+    const runStore = new InMemoryLifecycleRunStore();
+    let dispatchCount = 0;
+    const evaluator = new LifecycleRuleEvaluator({
+      registry,
+      runStore,
+      actionAdapter: {
+        execute: async () => {
+          dispatchCount += 1;
+          throw new Error("provider response was interrupted");
+        },
+      },
+    });
+
+    const first = await evaluator.evaluate(createContext("adapter-interrupted"));
+    const retried = await evaluator.evaluate(createContext("adapter-interrupted"));
+
+    expect(first.runs).toMatchObject([
+      {
+        status: "failed",
+        actionResults: [
+          {
+            status: "failure",
+            error: { code: "lifecycle-core/action-adapter-threw" },
+          },
+        ],
+      },
+    ]);
+    expect(retried.runs).toMatchObject([
+      { status: "skipped", skipReason: "idempotency_key_reused" },
+    ]);
+    expect(dispatchCount).toBe(1);
   });
 
   it("allows an action adapter to pause its rule without waiting on its own dispatch lease", async () => {
@@ -1066,7 +1194,7 @@ describe("LifecycleRuleEvaluator versioned execution", () => {
       actionAdapter: new InMemoryLifecycleActionSink(),
     });
     await evaluator.dryRun({ ruleId: "retention-risk", context: createContext() });
-    const mismatchedRun: LifecycleRun = {
+    const mismatchedRun: LifecycleFinalizedRun = {
       id: "mismatched-run",
       ruleId: "retention-risk",
       ruleVersion: "1.0.0",
