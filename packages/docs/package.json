@@ -11,7 +11,9 @@
     "docs:build": "astro build",
     "docs:dev": "astro dev --host",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "playwright:install": "playwright install --with-deps chromium",
+    "test:integration": "playwright test e2e/verify-starlight.spec.ts"
   },
   "dependencies": {
     "@astrojs/starlight": "^0.40.0",

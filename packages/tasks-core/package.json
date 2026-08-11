@@ -29,7 +29,8 @@
     "deploy": "pnpm build && pnpm publish --access public",
     "lint": "oxlint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --exclude src/tests/TaskRunner.integration.spec.ts",
+    "test:integration": "vitest run src/tests/TaskRunner.integration.spec.ts",
     "test:watch": "vitest"
   },
   "dependencies": {

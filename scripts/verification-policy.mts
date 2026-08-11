@@ -59,6 +59,7 @@ const ROOT_SCRIPT_RECOVERY = {
   "spine-promotion:check": "Fix the reported beta spine promotion violations",
   "static-misuse:check": "Fix the reported source misuse",
   "strict-contract-typecheck": "Fix the reported strict contract diagnostic",
+  "test-inventory:check": "pnpm test-inventory:write",
   typecheck: "Fix the reported TypeScript diagnostics",
   "verify:publish": "Fix the failing publish-profile command",
   "verify:repo": "Fix the failing repository-profile command",

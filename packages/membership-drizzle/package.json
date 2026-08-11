@@ -36,7 +36,8 @@
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
     "vitest": "vitest",
-    "test": "vitest run",
+    "test": "vitest run --exclude src/tests/DrizzleMembershipStore.postgres.spec.ts",
+    "test:live": "vitest run src/tests/DrizzleMembershipStore.postgres.spec.ts",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint ."
   },

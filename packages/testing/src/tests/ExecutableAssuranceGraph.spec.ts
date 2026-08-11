@@ -673,6 +673,32 @@ describe("Executable Assurance Graph", () => {
       summary: { blockingUnsatisfied: 0, contradictory: 0, missing: 0, stale: 0 },
     });
   });
+
+  it("consolidates duplicate public export declarations into one behavior node", () => {
+    const graph = createExecutableAssuranceGraph({
+      publicApi: {
+        schemaVersion: 2,
+        packages: [
+          {
+            packageName: "@croco/testing",
+            entrypoints: [
+              {
+                exportPath: ".",
+                typeExports: [
+                  { name: "SharedType", source: "./types" },
+                  { name: "SharedType", source: "./reexport" },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    expect(
+      graph.nodes.filter(({ id }) => id === "public-api:@croco/testing#type:SharedType"),
+    ).toHaveLength(1);
+  });
 });
 
 function contractGraph(): ContractGraphSnapshot {

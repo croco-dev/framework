@@ -1,4 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
+
+import type {
+  CrocoFetchHandler,
+  HeadMetadata,
+  PageRouteDefinition,
+  RuntimeContext,
+} from "../index";
 
 describe("@croco/meta-vite", () => {
   it("should export expected public API symbols", async () => {
@@ -22,15 +29,18 @@ describe("@croco/meta-vite", () => {
     expect(mod.head).toBeDefined();
   });
 
-  it("should export public types", async () => {
-    // Types are compile-time only, but we verify the module resolves
-    const mod = await import("../index");
-    expect(typeof mod.defineRoute).toBe("function");
-    expect(typeof mod.crocoMetaVitePlugin).toBe("function");
-    expect(typeof mod.createMetaFetchHandler).toBe("function");
-    expect(typeof mod.createMetaViteRouteManifest).toBe("function");
-    expect(typeof mod.serializeMetaViteRouteManifest).toBe("function");
-    expect(typeof mod.head).toBe("function");
+  it("should export the fetch handler type contract", () => {
+    expectTypeOf<CrocoFetchHandler>().parameters.toEqualTypeOf<
+      [request: Request, context?: RuntimeContext]
+    >();
+    expectTypeOf<CrocoFetchHandler>().returns.toEqualTypeOf<Promise<Response>>();
+  });
+
+  it("should export the page route metadata type contract", () => {
+    expectTypeOf<PageRouteDefinition["mode"]>().toEqualTypeOf<
+      "ssr" | "ssg" | "isr" | "rsc" | undefined
+    >();
+    expectTypeOf<PageRouteDefinition["head"]>().toEqualTypeOf<(() => HeadMetadata) | undefined>();
   });
 
   it("head() returns a function that produces the given metadata", async () => {

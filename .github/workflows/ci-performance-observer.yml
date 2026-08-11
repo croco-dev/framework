@@ -1,0 +1,127 @@
+name: CI Performance Observer
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: ci-performance-observer-${{ github.event.workflow_run.id }}-${{ github.event.workflow_run.run_attempt }}
+  cancel-in-progress: false
+
+jobs:
+  observe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout trusted observer
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Download untrusted performance data
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ci-performance-${{ github.event.workflow_run.id }}-${{ github.event.workflow_run.run_attempt }}
+          path: ci-observer-input/performance
+          github-token: ${{ github.token }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Download untrusted verification data
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: verification-*
+          path: ci-observer-input/verification
+          merge-multiple: true
+          github-token: ${{ github.token }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Read source run metadata
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_PULL_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+          SOURCE_RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          mkdir -p ci-observer-input
+          gh api \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}" \
+            > ci-observer-input/run.json
+          gh api \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}/jobs?filter=latest&per_page=100" \
+            > ci-observer-input/jobs.json
+          if [ -n "$SOURCE_PULL_NUMBER" ]; then
+            gh api \
+              -H 'Accept: application/vnd.github+json' \
+              -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "/repos/${GITHUB_REPOSITORY}/git/ref/pull/${SOURCE_PULL_NUMBER}/merge" \
+              --jq '.object.sha' \
+              > ci-observer-input/execution-sha.txt
+          else
+            jq -r '.head_sha' ci-observer-input/run.json > ci-observer-input/execution-sha.txt
+          fi
+          execution_sha=$(cat ci-observer-input/execution-sha.txt)
+          gh api \
+            --method GET \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/contents/package.json" \
+            -f "ref=${execution_sha}" \
+            --jq '.content' \
+            | base64 --decode \
+            > ci-observer-input/source-package.json
+          gh api \
+            --method GET \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/contents/test-inventory.json" \
+            -f "ref=${execution_sha}" \
+            --jq '.content' \
+            | base64 --decode \
+            > ci-observer-input/source-test-inventory.json
+
+      - name: Record immutable observation
+        shell: bash
+        run: |
+          if [ "$(jq -r '.currentSamples[0].profile' ci-observer-input/performance/raw-sample.json)" != "publish" ]; then
+            echo "Non-publish CI run is outside the cacheable-lanes observation cohort." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          mapfile -t verification_reports < <(find ci-observer-input/verification -type f -name spine-evidence.json -print)
+          mapfile -t fast_lane_reports < <(find ci-observer-input/verification -type f -name fast-test-lane.json -print)
+          if [ "${#verification_reports[@]}" -ne 1 ] || [ "${#fast_lane_reports[@]}" -ne 1 ]; then
+            echo "Expected exactly one verification report and fast-lane report." >&2
+            exit 1
+          fi
+          node --experimental-strip-types scripts/ci-performance-observer.mts \
+            --run ci-observer-input/run.json \
+            --jobs ci-observer-input/jobs.json \
+            --execution-sha "$(cat ci-observer-input/execution-sha.txt)" \
+            --sample ci-observer-input/performance/raw-sample.json \
+            --verification "${verification_reports[0]}" \
+            --fast-lane "${fast_lane_reports[0]}" \
+            --inventory ci-observer-input/source-test-inventory.json \
+            --package-metadata ci-observer-input/source-package.json \
+            --output ci-observation/observation.json \
+            --markdown-output ci-observation/summary.md
+          cat ci-observation/summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload immutable observation
+        if: ${{ !cancelled() && hashFiles('ci-observation/observation.json') != '' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ci-observation-${{ github.event.workflow_run.id }}-${{ github.event.workflow_run.run_attempt }}
+          path: ci-observation
+          if-no-files-found: error
+          retention-days: 90

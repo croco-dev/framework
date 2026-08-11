@@ -413,10 +413,11 @@ describe("pr-review-companion.mts", () => {
     expect(rootPackageJson.scripts?.["pr-review-companion"]).toBe(
       "node --experimental-strip-types scripts/pr-review-companion.mts",
     );
-    expect(companionJob).toContain("timeout-minutes: 30");
+    expect(companionJob).toContain("timeout-minutes: 60");
     expect(workflow).toContain("pnpm pr-review-companion --");
     expect(workflow).toContain("pnpm --filter @croco/cli... build");
-    expect(workflow).toContain("--run-required-checks --github-annotations");
+    expect(workflow).toContain("--head HEAD --github-annotations");
+    expect(workflow).not.toContain("--run-required-checks");
     expect(workflow).toContain(
       'cat ci-reports/pr-review-companion/report.md >> "$GITHUB_STEP_SUMMARY"',
     );

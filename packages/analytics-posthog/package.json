@@ -36,7 +36,7 @@
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
     "lint": "oxlint .",
-    "test": "vitest run",
+    "test:integration": "vitest run src/tests/Integration.spec.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

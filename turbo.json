@@ -1,10 +1,18 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalDependencies": ["**/.env.*local"],
+  "globalDependencies": ["pnpm-lock.yaml", "**/.env.*local"],
   "globalPassThroughEnv": ["CROCO_TEST_EVIDENCE_DIR"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
+      "env": ["NODE_ENV"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!**/*.spec.*",
+        "!src/tests/**",
+        "!tests/**",
+        "!vitest.config.*"
+      ],
       "outputs": ["dist/**"]
     },
     "deploy": {
@@ -33,14 +41,18 @@
     },
     "test": {
       "cache": true,
-      "dependsOn": ["build", "^build", "^test"]
+      "dependsOn": ["build", "^build"],
+      "env": ["NODE_ENV"],
+      "outputs": [".turbo/croco-test-evidence.json"]
     },
     "@croco/docs#test": {
       "cache": true,
-      "dependsOn": ["^build", "^test"]
+      "dependsOn": ["^build"],
+      "outputs": [".turbo/croco-test-evidence.json"]
     },
     "@croco/oxlint-rules#test": {
-      "cache": true
+      "cache": true,
+      "outputs": [".turbo/croco-test-evidence.json"]
     },
     "typecheck": {
       "cache": true,

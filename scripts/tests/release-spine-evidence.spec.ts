@@ -64,6 +64,8 @@ describe("release-spine-evidence.mts", () => {
       "--experimental-strip-types",
       "scripts/production-ready-check.mts",
       "--require-task-summaries",
+      "--fast-test-lane-report",
+      "ci-reports/package-quality/fast-test-lane.json",
     ]);
     expect(findCheck(publishManifest, "release-metadata").command).toEqual([
       "node",
@@ -76,6 +78,8 @@ describe("release-spine-evidence.mts", () => {
       "ci-reports/generated-apps/spine-blocking-matrix.md",
       "ci-reports/generated-apps/spine-blocking-matrix.json",
       "ci-reports/generated-apps/spine-blocking-journeys",
+      "ci-reports/generated-apps/materialization-evidence.json",
+      "ci-reports/generated-apps/materialized-tests",
     ]);
     expect(findCheck(manifest, "generated-app-smoke").command).toEqual([
       "node",
@@ -176,12 +180,51 @@ describe("release-spine-evidence.mts", () => {
     expect(report.checks.map(({ id }) => id).at(-1)).toBe("publish-dry-run");
   });
 
+  it("converts an early checkpoint rejection into failed evidence", async () => {
+    const repo = createTempRepo();
+    let checkpointCount = 0;
+    let runnerCalled = false;
+    const report = await runReleaseSpineEvidence({
+      rootDir: repo,
+      outputDir: join(repo, "out"),
+      totalTimeoutMs: 10_000,
+      commands: [createCommand("checkpoint-failure")],
+      onCheckpoint: () => {
+        checkpointCount += 1;
+        if (checkpointCount === 2) throw new Error("checkpoint write failed");
+      },
+      runner: () => {
+        runnerCalled = true;
+        return okResult("unexpected");
+      },
+    });
+
+    expect(runnerCalled).toBe(false);
+    expect(report.status).toBe("failed");
+    expect(report.checks[0]).toMatchObject({
+      errorCode: "POST_RUN_EVIDENCE_FAILED",
+      errorMessage: "checkpoint write failed",
+      status: "failed",
+    });
+  });
+
   it.each([
     ["scripts/release-metadata-check.mts", "release-metadata"],
     ["scripts/package-quality-report.mts", "spine-bundle-size"],
   ])("executes and fails changed publish verifier %s", async (changedFile, failingId) => {
     const repo = createTempRepo();
     const calledIds: string[] = [];
+    const selectedCommand = {
+      ...findCheck(
+        createVerificationManifest("publish", {
+          base: "origin/trunk",
+          changedFiles: [changedFile],
+          head: "HEAD",
+        }),
+        failingId,
+      ),
+      dependsOn: [],
+    };
     const report = await runReleaseSpineEvidence({
       rootDir: repo,
       outputDir: join(repo, "ci-reports", "verification", "publish"),
@@ -189,6 +232,7 @@ describe("release-spine-evidence.mts", () => {
       profile: "publish",
       base: "origin/trunk",
       changedFiles: [changedFile],
+      commands: [selectedCommand],
       head: "HEAD",
       runner: (command) => {
         calledIds.push(command.id);
@@ -230,16 +274,56 @@ describe("release-spine-evidence.mts", () => {
     ]);
   });
 
+  it("records post-run helper rejection as a failed check while active checks finish", async () => {
+    const repo = createTempRepo();
+    const fakeTime = createFakeClock();
+    const report = await runReleaseSpineEvidence({
+      rootDir: repo,
+      outputDir: join(repo, "ci-reports", "release"),
+      totalTimeoutMs: 1_000,
+      maxConcurrency: 2,
+      clock: fakeTime.clock,
+      commands: [createCommand("post-run-rejection"), createCommand("concurrent-success")],
+      runner: async (command) => {
+        if (command.id === "concurrent-success") {
+          await Promise.resolve();
+          return okResult("concurrent success");
+        }
+        fakeTime.advance(25);
+        const result = { ...okResult("post-run") };
+        Object.defineProperty(result, "stdout", {
+          get: () => {
+            throw new Error("stdout helper rejected");
+          },
+        });
+        return result;
+      },
+    });
+
+    expect(report.status).toBe("failed");
+    expect(findCheck(report.checks, "post-run-rejection")).toMatchObject({
+      status: "failed",
+      errorCode: "POST_RUN_EVIDENCE_FAILED",
+      completedAt: "1970-01-01T00:00:00.025Z",
+      durationMs: 25,
+      failureReason: expect.stringContaining("stdout helper rejected"),
+    });
+    expect(findCheck(report.checks, "concurrent-success")).toMatchObject({ status: "passed" });
+  });
+
   it("allows filtered generated smoke to omit its optional journey bundle", async () => {
     const repo = createTempRepo();
-    const generatedSmoke = findCheck(
-      createVerificationManifest("publish", {
-        base: "origin/trunk",
-        changedFiles: ["packages/protocols-rest/src/index.ts"],
-        head: "HEAD",
-      }),
-      "generated-app-smoke",
-    );
+    const generatedSmoke = {
+      ...findCheck(
+        createVerificationManifest("publish", {
+          base: "origin/trunk",
+          changedFiles: ["packages/protocols-rest/src/index.ts"],
+          head: "HEAD",
+        }),
+        "generated-app-smoke",
+      ),
+      dependsOn: [],
+    };
     const report = await runReleaseSpineEvidence({
       rootDir: repo,
       outputDir: join(repo, "ci-reports", "release"),
@@ -259,8 +343,8 @@ describe("release-spine-evidence.mts", () => {
 
     expect(report.status).toBe("passed");
     expect(report.checks[0]).toMatchObject({ status: "passed" });
-    expect(report.checks[0]?.artifacts).toHaveLength(3);
-    expect(report.checks[0]?.artifacts.filter(({ required }) => required)).toHaveLength(2);
+    expect(report.checks[0]?.artifacts).toHaveLength(5);
+    expect(report.checks[0]?.artifacts.filter(({ required }) => required)).toHaveLength(4);
     expect(
       report.checks[0]?.artifacts.find(
         ({ sourcePath }) => sourcePath === "ci-reports/generated-apps/spine-blocking-journeys",
@@ -552,18 +636,27 @@ describe("release-spine-evidence.mts", () => {
   it("finalizes real command evidence before reporting an interruption", async () => {
     const repo = createTempRepo();
     const outputDir = join(repo, "ci-reports", "release");
-    const readyPath = join(repo, "interrupted-command.ready");
+    const readyPaths = [join(repo, "interrupted-a.ready"), join(repo, "interrupted-b.ready")];
     let interruptSignal: NodeJS.Signals | null = null;
     const reportPromise = runReleaseSpineEvidence({
       rootDir: repo,
       outputDir,
       totalTimeoutMs: 15_000,
+      maxConcurrency: 2,
       commands: [
-        createCommand("interrupted-command", {
+        createCommand("interrupted-a", {
           command: [
             process.execPath,
             "-e",
-            `process.on("SIGTERM", () => undefined); process.stdout.write("partial output"); require("node:fs").writeFileSync(${JSON.stringify(readyPath)}, "ready"); setInterval(() => undefined, 10_000)`,
+            `process.on("SIGTERM", () => undefined); process.stdout.write("partial output"); require("node:fs").writeFileSync(${JSON.stringify(readyPaths[0])}, "ready"); setInterval(() => undefined, 10_000)`,
+          ],
+          timeoutMs: 10_000,
+        }),
+        createCommand("interrupted-b", {
+          command: [
+            process.execPath,
+            "-e",
+            `process.on("SIGTERM", () => undefined); require("node:fs").writeFileSync(${JSON.stringify(readyPaths[1])}, "ready"); setInterval(() => undefined, 10_000)`,
           ],
           timeoutMs: 10_000,
         }),
@@ -571,20 +664,28 @@ describe("release-spine-evidence.mts", () => {
       ],
       getInterruptSignal: () => interruptSignal,
     });
-    await waitForPath(readyPath);
+    await Promise.all(readyPaths.map((path) => waitForPath(path)));
     interruptSignal = "SIGTERM";
     interruptActiveCommand(interruptSignal, 50);
     const report = await reportPromise;
 
     expect(report.status).toBe("interrupted");
-    expect(report.checks.map(({ status }) => status)).toEqual(["interrupted", "interrupted"]);
+    expect(report.checks.map(({ status }) => status)).toEqual([
+      "interrupted",
+      "interrupted",
+      "interrupted",
+    ]);
     expect(report.checks[0]?.signal).toBe("SIGTERM");
-    expect(
-      readFileSync(join(outputDir, "artifacts", "interrupted-command", "stdout.log"), "utf8"),
-    ).toBe("partial output");
+    expect(readFileSync(join(outputDir, "artifacts", "interrupted-a", "stdout.log"), "utf8")).toBe(
+      "partial output",
+    );
     expect(report.checks[0]?.artifacts.map(({ copiedPath }) => copiedPath)).toEqual([
-      "ci-reports/release/artifacts/interrupted-command/stdout.log",
-      "ci-reports/release/artifacts/interrupted-command/stderr.log",
+      "ci-reports/release/artifacts/interrupted-a/stdout.log",
+      "ci-reports/release/artifacts/interrupted-a/stderr.log",
+    ]);
+    expect(report.checks[1]?.artifacts.map(({ copiedPath }) => copiedPath)).toEqual([
+      "ci-reports/release/artifacts/interrupted-b/stdout.log",
+      "ci-reports/release/artifacts/interrupted-b/stderr.log",
     ]);
   });
 
@@ -599,7 +700,7 @@ describe("release-spine-evidence.mts", () => {
         outputDir: join(repo, "ci-reports", profile),
         totalTimeoutMs: 1_000,
         profile,
-        commands: sharedCommand ? [sharedCommand] : [],
+        commands: sharedCommand ? [{ ...sharedCommand, dependsOn: undefined }] : [],
         runner: () => ({
           errorCode: null,
           errorMessage: null,
@@ -679,6 +780,218 @@ describe("release-spine-evidence.mts", () => {
       "timed_out",
       "skipped_after_timeout",
     ]);
+  });
+
+  it("runs independent checks in parallel without exceeding the configured bound", async () => {
+    const repo = createTempRepo();
+    let active = 0;
+    let maximumActive = 0;
+    const report = await runReleaseSpineEvidence({
+      rootDir: repo,
+      outputDir: join(repo, "out"),
+      totalTimeoutMs: 1_000,
+      maxConcurrency: 2,
+      commands: [createCommand("a"), createCommand("b"), createCommand("c")],
+      runner: async (command) => {
+        active++;
+        maximumActive = Math.max(maximumActive, active);
+        await new Promise((resolvePromise) =>
+          setTimeout(resolvePromise, command.id === "a" ? 20 : 5),
+        );
+        active--;
+        return okResult(command.id);
+      },
+    });
+
+    expect(report.status).toBe("passed");
+    expect(maximumActive).toBe(2);
+  });
+
+  it("waits for dependencies and fails closed when a prerequisite fails", async () => {
+    const repo = createTempRepo();
+    const events: string[] = [];
+    const report = await runReleaseSpineEvidence({
+      rootDir: repo,
+      outputDir: join(repo, "out"),
+      totalTimeoutMs: 1_000,
+      maxConcurrency: 3,
+      commands: [
+        createCommand("build"),
+        createCommand("consumer", { dependsOn: ["build"] }),
+        createCommand("independent"),
+      ],
+      runner: async (command) => {
+        events.push(`start:${command.id}`);
+        await Promise.resolve();
+        events.push(`end:${command.id}`);
+        return command.id === "build"
+          ? { ...okResult(command.id), status: 2 }
+          : okResult(command.id);
+      },
+    });
+
+    expect(events).toContain("start:independent");
+    expect(events).not.toContain("start:consumer");
+    expect(report.checks.map(({ status }) => status)).toEqual([
+      "failed",
+      "skipped_prerequisite",
+      "passed",
+    ]);
+    expect(report.checks[1]?.failureReason).toBe(
+      "Skipped because prerequisite check(s) did not pass: build (failed).",
+    );
+  });
+
+  it("starts a dependent only after its prerequisite completes", async () => {
+    const repo = createTempRepo();
+    const events: string[] = [];
+    await runReleaseSpineEvidence({
+      rootDir: repo,
+      outputDir: join(repo, "out"),
+      totalTimeoutMs: 1_000,
+      maxConcurrency: 2,
+      commands: [createCommand("first"), createCommand("second", { dependsOn: ["first"] })],
+      runner: async (command) => {
+        events.push(`start:${command.id}`);
+        await Promise.resolve();
+        events.push(`end:${command.id}`);
+        return okResult(command.id);
+      },
+    });
+
+    expect(events).toEqual(["start:first", "end:first", "start:second", "end:second"]);
+  });
+
+  it("keeps real manifest build writers behind one completed build fence", async () => {
+    const repo = createTempRepo();
+    const runtimeGate = createDeferred<void>();
+    const buildGate = createDeferred<void>();
+    const testGate = createDeferred<void>();
+    const events: string[] = [];
+    const manifest = createVerificationManifest("spine");
+    const commands = [
+      "architecture-policy-runtime",
+      "build",
+      "typecheck",
+      "test",
+      "package-entrypoints-smoke",
+    ].map((id) => ({
+      ...findCheck(manifest, id),
+      artifacts: [],
+    }));
+    const execution = runReleaseSpineEvidence({
+      rootDir: repo,
+      outputDir: join(repo, "out"),
+      totalTimeoutMs: 1_000,
+      maxConcurrency: 4,
+      commands,
+      runner: async (command) => {
+        events.push(`start:${command.id}`);
+        if (command.id === "architecture-policy-runtime") await runtimeGate.promise;
+        if (command.id === "build") await buildGate.promise;
+        if (command.id === "test") await testGate.promise;
+        events.push(`end:${command.id}`);
+        return okResult(command.id);
+      },
+    });
+
+    await vi.waitFor(() => expect(events).toContain("start:architecture-policy-runtime"));
+    expect(events).not.toContain("start:build");
+    runtimeGate.resolve(undefined);
+    await vi.waitFor(() => expect(events).toContain("start:build"));
+    expect(events).not.toContain("start:typecheck");
+    expect(events).not.toContain("start:test");
+    expect(events).not.toContain("start:package-entrypoints-smoke");
+    buildGate.resolve(undefined);
+
+    await vi.waitFor(() => expect(events).toContain("start:test"));
+    expect(events).not.toContain("start:package-entrypoints-smoke");
+    testGate.resolve(undefined);
+
+    const report = await execution;
+    expect(report.status).toBe("passed");
+    expect(events.indexOf("end:architecture-policy-runtime")).toBeLessThan(
+      events.indexOf("start:build"),
+    );
+    expect(events.indexOf("end:build")).toBeLessThan(events.indexOf("start:typecheck"));
+    expect(events.indexOf("end:build")).toBeLessThan(events.indexOf("start:test"));
+    expect(events.indexOf("end:test")).toBeLessThan(
+      events.indexOf("start:package-entrypoints-smoke"),
+    );
+  });
+
+  it("serializes a concurrency group while allowing unrelated work to overlap", async () => {
+    const repo = createTempRepo();
+    let groupedActive = 0;
+    let maximumGroupedActive = 0;
+    let unrelatedOverlapped = false;
+    await runReleaseSpineEvidence({
+      rootDir: repo,
+      outputDir: join(repo, "out"),
+      totalTimeoutMs: 1_000,
+      maxConcurrency: 3,
+      commands: [
+        createCommand("pack-a", { concurrencyGroup: "packaging" }),
+        createCommand("pack-b", { concurrencyGroup: "packaging" }),
+        createCommand("lint"),
+      ],
+      runner: async (command) => {
+        if (command.concurrencyGroup) {
+          groupedActive++;
+          maximumGroupedActive = Math.max(maximumGroupedActive, groupedActive);
+        } else {
+          unrelatedOverlapped = groupedActive > 0;
+        }
+        await new Promise((resolvePromise) => setTimeout(resolvePromise, 10));
+        if (command.concurrencyGroup) groupedActive--;
+        return okResult(command.id);
+      },
+    });
+
+    expect(maximumGroupedActive).toBe(1);
+    expect(unrelatedOverlapped).toBe(true);
+  });
+
+  it("keeps manifest report order under reverse completion and collects independent failures", async () => {
+    const repo = createTempRepo();
+    const report = await runReleaseSpineEvidence({
+      rootDir: repo,
+      outputDir: join(repo, "out"),
+      totalTimeoutMs: 1_000,
+      maxConcurrency: 3,
+      commands: [createCommand("slow"), createCommand("medium"), createCommand("fast")],
+      runner: async (command) => {
+        const delay = command.id === "slow" ? 30 : command.id === "medium" ? 20 : 5;
+        await new Promise((resolvePromise) => setTimeout(resolvePromise, delay));
+        return { ...okResult(command.id), status: command.id === "medium" ? 0 : 2 };
+      },
+    });
+
+    expect(report.checks.map(({ id }) => id)).toEqual(["slow", "medium", "fast"]);
+    expect(report.checks.map(({ status }) => status)).toEqual(["failed", "passed", "failed"]);
+    expect(report.summary.failed).toBe(2);
+  });
+
+  it("uses maxConcurrency=1 as an explicit sequential fallback", async () => {
+    const repo = createTempRepo();
+    let active = 0;
+    let maximumActive = 0;
+    await runReleaseSpineEvidence({
+      rootDir: repo,
+      outputDir: join(repo, "out"),
+      totalTimeoutMs: 1_000,
+      maxConcurrency: 1,
+      commands: [createCommand("a"), createCommand("b")],
+      runner: async (command) => {
+        active++;
+        maximumActive = Math.max(maximumActive, active);
+        await Promise.resolve();
+        active--;
+        return okResult(command.id);
+      },
+    });
+
+    expect(maximumActive).toBe(1);
   });
 
   it("marks running and pending checks interrupted for best-effort signal reports", async () => {
@@ -923,11 +1236,18 @@ describe("release-spine-evidence.mts", () => {
       "ci-reports/custom-release",
       "--total-timeout-ms",
       "25",
+      "--max-concurrency",
+      "1",
     ]);
 
     expect(options.rootDir).toBe(repo);
     expect(options.outputDir).toBe(resolve("ci-reports/custom-release"));
     expect(options.totalTimeoutMs).toBe(25);
+    expect(options.maxConcurrency).toBe(1);
+  });
+
+  it("uses safe bounded CLI concurrency by default", () => {
+    expect(parseArgs([]).maxConcurrency).toBe(2);
   });
 
   it("enables pending release metadata only through the explicit option", () => {
@@ -1249,6 +1569,8 @@ function createCommand(
   options: {
     readonly artifacts?: readonly EvidenceArtifactExpectation[];
     readonly command?: readonly string[];
+    readonly concurrencyGroup?: string;
+    readonly dependsOn?: readonly string[];
     readonly selectionReason?: string;
     readonly timeoutMs?: number;
   } = {},
@@ -1258,6 +1580,8 @@ function createCommand(
     label: id,
     category: "quality",
     command: options.command ?? ["fake", id],
+    concurrencyGroup: options.concurrencyGroup,
+    dependsOn: options.dependsOn,
     selectionReason: options.selectionReason,
     timeoutMs: options.timeoutMs ?? 100,
     artifacts: options.artifacts,
@@ -1273,6 +1597,23 @@ function okResult(stdout: string): CommandRunResult {
     stderr: "",
     stdout,
     timedOut: false,
+  };
+}
+
+function createDeferred<T>(): {
+  readonly promise: Promise<T>;
+  readonly resolve: (value: T | PromiseLike<T>) => void;
+} {
+  let resolvePromise: ((value: T | PromiseLike<T>) => void) | undefined;
+  const promise = new Promise<T>((resolve) => {
+    resolvePromise = resolve;
+  });
+  return {
+    promise,
+    resolve: (value) => {
+      if (!resolvePromise) throw new Error("Deferred promise was not initialized");
+      resolvePromise(value);
+    },
   };
 }
 

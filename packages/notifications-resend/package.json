@@ -35,7 +35,8 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
-    "test": "vitest run",
+    "test": "vitest run --exclude src/tests/ResendLiveSmoke.spec.ts",
+    "test:live": "vitest run src/tests/ResendLiveSmoke.spec.ts",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint ."
   },

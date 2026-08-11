@@ -1,0 +1,213 @@
+name: Scheduled live tests
+
+on:
+  schedule:
+    - cron: "23 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scheduled-live-tests
+  cancel-in-progress: false
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: ".nvmrc"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build live test dependency graphs
+        run: pnpm build
+
+      - name: Run @croco/auth-drizzle live tests
+        continue-on-error: true
+        env:
+          AUTH_POSTGRES_URL: ${{ secrets.AUTH_POSTGRES_URL }}
+        run: >-
+          node --experimental-strip-types scripts/test-lane-runner.mts
+          --lane live --allow-live --owner @croco/auth-drizzle
+          --output ci-reports/package-quality/live-test-lanes/auth-drizzle.json
+
+      - name: Run @croco/billing-polar live tests
+        continue-on-error: true
+        env:
+          POLAR_ACCESS_TOKEN: ${{ secrets.POLAR_ACCESS_TOKEN }}
+          POLAR_ORGANIZATION_ID: ${{ secrets.POLAR_ORGANIZATION_ID }}
+          POLAR_WEBHOOK_SECRET: ${{ secrets.POLAR_WEBHOOK_SECRET }}
+        run: >-
+          node --experimental-strip-types scripts/test-lane-runner.mts
+          --lane live --allow-live --owner @croco/billing-polar
+          --output ci-reports/package-quality/live-test-lanes/billing-polar.json
+
+      - name: Run @croco/credits-drizzle live tests
+        continue-on-error: true
+        env:
+          CREDITS_POSTGRES_URL: ${{ secrets.CREDITS_POSTGRES_URL }}
+        run: >-
+          node --experimental-strip-types scripts/test-lane-runner.mts
+          --lane live --allow-live --owner @croco/credits-drizzle
+          --output ci-reports/package-quality/live-test-lanes/credits-drizzle.json
+
+      - name: Run @croco/execution-drizzle live tests
+        continue-on-error: true
+        env:
+          EXECUTION_POSTGRES_URL: ${{ secrets.EXECUTION_POSTGRES_URL }}
+        run: >-
+          node --experimental-strip-types scripts/test-lane-runner.mts
+          --lane live --allow-live --owner @croco/execution-drizzle
+          --output ci-reports/package-quality/live-test-lanes/execution-drizzle.json
+
+      - name: Run @croco/llm-openai live tests
+        continue-on-error: true
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: >-
+          node --experimental-strip-types scripts/test-lane-runner.mts
+          --lane live --allow-live --owner @croco/llm-openai
+          --output ci-reports/package-quality/live-test-lanes/llm-openai.json
+
+      - name: Run @croco/membership-drizzle live tests
+        continue-on-error: true
+        env:
+          MEMBERSHIP_POSTGRES_URL: ${{ secrets.MEMBERSHIP_POSTGRES_URL }}
+        run: >-
+          node --experimental-strip-types scripts/test-lane-runner.mts
+          --lane live --allow-live --owner @croco/membership-drizzle
+          --output ci-reports/package-quality/live-test-lanes/membership-drizzle.json
+
+      - name: Run @croco/metering-core live tests
+        continue-on-error: true
+        run: >-
+          node --experimental-strip-types scripts/test-lane-runner.mts
+          --lane live --allow-live --owner @croco/metering-core
+          --output ci-reports/package-quality/live-test-lanes/metering-core.json
+
+      - name: Run @croco/metrics-core live tests
+        continue-on-error: true
+        run: >-
+          node --experimental-strip-types scripts/test-lane-runner.mts
+          --lane live --allow-live --owner @croco/metrics-core
+          --output ci-reports/package-quality/live-test-lanes/metrics-core.json
+
+      - name: Run @croco/migration-runner live tests
+        continue-on-error: true
+        env:
+          MIGRATION_POSTGRES_URL: ${{ secrets.MIGRATION_POSTGRES_URL }}
+        run: >-
+          node --experimental-strip-types scripts/test-lane-runner.mts
+          --lane live --allow-live --owner @croco/migration-runner
+          --output ci-reports/package-quality/live-test-lanes/migration-runner.json
+
+      - name: Run @croco/notifications-resend live tests
+        continue-on-error: true
+        env:
+          CROCO_LIVE_RESEND: "true"
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RESEND_FROM: ${{ secrets.RESEND_FROM }}
+          RESEND_SMOKE_TO: ${{ secrets.RESEND_SMOKE_TO }}
+        run: >-
+          node --experimental-strip-types scripts/test-lane-runner.mts
+          --lane live --allow-live --owner @croco/notifications-resend
+          --output ci-reports/package-quality/live-test-lanes/notifications-resend.json
+
+      - name: Run @croco/search-meilisearch live tests
+        continue-on-error: true
+        env:
+          MEILISEARCH_API_KEY: ${{ secrets.MEILISEARCH_API_KEY }}
+          MEILISEARCH_HOST: ${{ secrets.MEILISEARCH_HOST }}
+        run: >-
+          node --experimental-strip-types scripts/test-lane-runner.mts
+          --lane live --allow-live --owner @croco/search-meilisearch
+          --output ci-reports/package-quality/live-test-lanes/search-meilisearch.json
+
+      - name: Run @croco/storage-cloudflare live tests
+        continue-on-error: true
+        env:
+          CLOUDFLARE_ACCOUNT_HASH: ${{ secrets.CLOUDFLARE_ACCOUNT_HASH }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CROCO_LIVE_CLOUDFLARE_IMAGES: "true"
+        run: >-
+          node --experimental-strip-types scripts/test-lane-runner.mts
+          --lane live --allow-live --owner @croco/storage-cloudflare
+          --output ci-reports/package-quality/live-test-lanes/storage-cloudflare.json
+
+      - name: Run @croco/storage-cloudinary live tests
+        continue-on-error: true
+        env:
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+        run: >-
+          node --experimental-strip-types scripts/test-lane-runner.mts
+          --lane live --allow-live --owner @croco/storage-cloudinary
+          --output ci-reports/package-quality/live-test-lanes/storage-cloudinary.json
+
+      - name: Run @croco/storage-r2 live tests
+        continue-on-error: true
+        env:
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        run: >-
+          node --experimental-strip-types scripts/test-lane-runner.mts
+          --lane live --allow-live --owner @croco/storage-r2
+          --output ci-reports/package-quality/live-test-lanes/storage-r2.json
+
+      - name: Run @croco/testing-resources live tests
+        continue-on-error: true
+        run: >-
+          node --experimental-strip-types scripts/test-lane-runner.mts
+          --lane live --allow-live --owner @croco/testing-resources
+          --output ci-reports/package-quality/live-test-lanes/testing-resources.json
+
+      - name: Enforce scheduled-live evidence
+        if: ${{ !cancelled() }}
+        run: >-
+          node --experimental-strip-types scripts/test-evidence-reconcile.mts
+          --profile scheduled-live
+          --lane-report ci-reports/package-quality/live-test-lanes/auth-drizzle.json
+          --lane-report ci-reports/package-quality/live-test-lanes/billing-polar.json
+          --lane-report ci-reports/package-quality/live-test-lanes/credits-drizzle.json
+          --lane-report ci-reports/package-quality/live-test-lanes/execution-drizzle.json
+          --lane-report ci-reports/package-quality/live-test-lanes/llm-openai.json
+          --lane-report ci-reports/package-quality/live-test-lanes/membership-drizzle.json
+          --lane-report ci-reports/package-quality/live-test-lanes/metering-core.json
+          --lane-report ci-reports/package-quality/live-test-lanes/metrics-core.json
+          --lane-report ci-reports/package-quality/live-test-lanes/migration-runner.json
+          --lane-report ci-reports/package-quality/live-test-lanes/notifications-resend.json
+          --lane-report ci-reports/package-quality/live-test-lanes/search-meilisearch.json
+          --lane-report ci-reports/package-quality/live-test-lanes/storage-cloudflare.json
+          --lane-report ci-reports/package-quality/live-test-lanes/storage-cloudinary.json
+          --lane-report ci-reports/package-quality/live-test-lanes/storage-r2.json
+          --lane-report ci-reports/package-quality/live-test-lanes/testing-resources.json
+          --output ci-reports/package-quality/live-test-evidence.json
+
+      - name: Upload live evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: scheduled-live-test-evidence
+          path: |
+            ci-reports/package-quality/live-test-lanes
+            ci-reports/package-quality/live-test-evidence.json
+          retention-days: 90

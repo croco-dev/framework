@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, extname, join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -6,6 +6,8 @@ import { describe, expect, it } from "vitest";
 import {
   assertVerificationManifest,
   createVerificationManifest,
+  generatedTestMaterializationArguments,
+  PUBLISH_REQUIRED_GENERATED_SMOKE_CASES,
   verificationImplementationPaths,
 } from "../verification-manifest.mts";
 import {
@@ -22,9 +24,12 @@ import { effectivePublishManifest, findPackageJsonFiles } from "../package-manif
 import {
   assertGeneratedSmokeCaseDependencyMapping,
   assertGeneratedSmokeDependencyMapping,
+  readGeneratedSmokeCaseDirectDependencies,
   selectGeneratedSmokeCasesForChangedFiles,
+  selectGeneratedTestPathsForSmokeCases,
 } from "../create-croco-app-generated-smoke-dependencies.mts";
 import { getGeneratedSmokeDependencyCaseInputs } from "../create-croco-app-generated-smoke.mts";
+import { readTestInventory } from "../test-inventory.mts";
 import { generate } from "../../packages/create-croco-app/src/generator.ts";
 import {
   normalizeNonInteractiveOptions,
@@ -93,6 +98,8 @@ function toCamelCase(value: string): string {
 
 const repoIds = [
   "verification-policy",
+  "test-inventory",
+  "turbo-cache-contract",
   "verification-contract-tests",
   "changeset-required",
   "package-manifests",
@@ -129,7 +136,9 @@ const spineOnlyIds = [
   "alpha-release-smoke",
   "typecheck",
   "test",
-  "cli-source-e2e",
+  "integration-test-lane",
+  "published-test-lane",
+  "test-evidence-reconcile",
   "cli-packed-e2e",
   "provider-certification",
   "production-ready",
@@ -159,7 +168,6 @@ describe("verification manifest", () => {
     expect(createVerificationManifest("publish").map(({ id }) => id)).toEqual([
       ...repoIds,
       ...spineOnlyIds,
-      "engagement-packed-consumer",
       "release-gate-tests",
       "release-metadata",
       "spine-bundle-size",
@@ -170,25 +178,113 @@ describe("verification manifest", () => {
     expect(
       createVerificationManifest("publish").find(({ id }) => id === "spine-bundle-size")?.command,
     ).toEqual(["node", "--experimental-strip-types", "scripts/package-quality-report.mts"]);
+    expect(
+      createVerificationManifest("repo").find(({ id }) => id === "test-inventory"),
+    ).toMatchObject({
+      command: expect.arrayContaining([
+        "scripts/test-inventory.mts",
+        "--check",
+        "--profile",
+        "ordinary",
+        "--output",
+        "ci-reports/package-quality/test-inventory.json",
+      ]),
+      artifacts: [
+        expect.objectContaining({
+          path: "ci-reports/package-quality/test-inventory.json",
+          required: true,
+        }),
+      ],
+    });
   });
 
-  it("runs the packed engagement consumer only for engagement package changes", () => {
-    const selected = createVerificationManifest("publish", {
+  it("runs every blocking generated case and the smallest inventory-complete advisory set", () => {
+    const generatedSmoke = createVerificationManifest("publish").find(
+      ({ id }) => id === "generated-app-smoke",
+    );
+    expect(generatedSmoke?.command).toEqual([
+      "node",
+      "--experimental-strip-types",
+      "scripts/create-croco-app-generated-smoke.mts",
+      ...PUBLISH_REQUIRED_GENERATED_SMOKE_CASES,
+    ]);
+    expect(
+      generatedSmoke?.artifacts?.find(
+        ({ path }) => path === "ci-reports/generated-apps/spine-blocking-journeys",
+      )?.required,
+    ).toBe(false);
+
+    const generatedInventoryPaths = readTestInventory()
+      .inventory.tests.filter(({ lane }) => lane === "generated-app")
+      .map(({ path }) => path)
+      .sort();
+    expect(
+      selectGeneratedTestPathsForSmokeCases(
+        PUBLISH_REQUIRED_GENERATED_SMOKE_CASES,
+        generatedInventoryPaths,
+      ).sort(),
+    ).toEqual(generatedInventoryPaths);
+    expect(PUBLISH_REQUIRED_GENERATED_SMOKE_CASES).toHaveLength(8);
+
+    const packedCli = createVerificationManifest("publish").find(
+      ({ id }) => id === "cli-packed-e2e",
+    );
+    expect(packedCli?.command).toEqual(
+      expect.arrayContaining([
+        "scripts/test-lane-evidence-check.mts",
+        "ci-reports/package-quality/integration-test-lane.json",
+      ]),
+    );
+  });
+
+  it("treats inventory changes as affecting every declared fidelity lane", () => {
+    const manifest = createVerificationManifest("publish", {
       base: "origin/trunk",
-      changedFiles: ["packages/engagement-core/src/libs/MessageContracts.ts"],
+      changedFiles: ["test-inventory.json"],
       head: "HEAD",
-    }).find(({ id }) => id === "engagement-packed-consumer");
-    expect(selected).toMatchObject({
+    });
+    for (const id of [
+      "generated-app-smoke",
+      "package-entrypoints-smoke",
+      "integration-test-lane",
+      "published-test-lane",
+      "core-coverage",
+    ]) {
+      expect(manifest.find((command) => command.id === id)?.applicable, id).toBe(true);
+    }
+  });
+
+  it("selects exact inventory lane owners for ordinary changes and full lanes for publish", () => {
+    const cli = createVerificationManifest("spine", {
+      base: "origin/trunk",
+      changedFiles: ["packages/cli/src/index.ts"],
+      head: "HEAD",
+    });
+    expect(cli.find(({ id }) => id === "integration-test-lane")).toMatchObject({
       applicable: true,
-      command: ["pnpm", "--filter", "@croco/engagement-core", "test:packed"],
+      command: expect.arrayContaining(["--lane", "integration", "--owner", "@croco/cli"]),
+    });
+    expect(cli.find(({ id }) => id === "published-test-lane")?.applicable).toBe(false);
+
+    const metaVite = createVerificationManifest("spine", {
+      base: "origin/trunk",
+      changedFiles: ["packages/meta-vite/src/index.ts"],
+      head: "HEAD",
+    });
+    expect(metaVite.find(({ id }) => id === "published-test-lane")).toMatchObject({
+      applicable: true,
+      command: expect.arrayContaining(["--lane", "published", "--owner", "@croco/meta-vite"]),
     });
 
-    const unrelated = createVerificationManifest("publish", {
-      base: "origin/trunk",
-      changedFiles: ["packages/retry-core/src/libs/Retry.ts"],
-      head: "HEAD",
-    }).find(({ id }) => id === "engagement-packed-consumer");
-    expect(unrelated?.applicable).toBe(false);
+    for (const id of ["integration-test-lane", "published-test-lane"]) {
+      const command = createVerificationManifest("publish", {
+        base: "origin/trunk",
+        changedFiles: ["packages/retry-core/src/index.ts"],
+        head: "HEAD",
+      }).find((candidate) => candidate.id === id);
+      expect(command?.applicable, id).toBe(true);
+      expect(command?.command, id).not.toContain("--owner");
+    }
   });
 
   it("runs one authoritative release-gate suite without duplicating contract tests", () => {
@@ -236,8 +332,15 @@ describe("verification manifest", () => {
 
     expect(byId.get("build")?.command).toContain("--filter=...[origin/trunk]");
     expect(byId.get("typecheck")?.command).toContain("--filter=...[origin/trunk]");
-    expect(byId.get("test")?.command).toContain("--filter=...[origin/trunk]");
-    expect(byId.get("test")?.command).toContain("--force");
+    expect(byId.get("test")?.command).toEqual(
+      expect.arrayContaining(["scripts/test-lane-runner.mts", "--lane", "fast"]),
+    );
+    expect(byId.get("test")?.command).not.toContain("--force");
+    expect(byId.get("turbo-cache-contract")?.command).toEqual([
+      "node",
+      "--experimental-strip-types",
+      "scripts/turbo-cache-contract.mts",
+    ]);
     expect(manifest.findIndex(({ id }) => id === "build")).toBeLessThan(
       manifest.findIndex(({ id }) => id === "typecheck"),
     );
@@ -247,7 +350,6 @@ describe("verification manifest", () => {
     expect(byId.get("package-entrypoints-smoke")?.command).toContain("--build-missing");
     for (const id of [
       "alpha-release-smoke",
-      "cli-source-e2e",
       "cli-packed-e2e",
       "core-coverage",
       "package-bins-smoke",
@@ -264,6 +366,54 @@ describe("verification manifest", () => {
     }
     expect(byId.get("generated-app-smoke")?.applicable).toBe(false);
     expect(byId.get("spine-promotion")?.command).toContain("customer-health-core");
+  });
+
+  it("selects fast-test owners through the complete transitive workspace dependency graph", () => {
+    const command = createVerificationManifest("spine", {
+      base: "origin/trunk",
+      changedFiles: ["packages/framework-config/src/libs/ConfigService.ts"],
+      head: "HEAD",
+    }).find(({ id }) => id === "test");
+
+    expect(command?.command).toEqual(
+      expect.arrayContaining([
+        "--owner",
+        "@croco/framework-config",
+        "--owner",
+        "@croco/framework-logger",
+        "--owner",
+        "@croco/auth-core",
+        "--owner",
+        "@croco/membership-core",
+      ]),
+    );
+  });
+
+  it("routes script implementation changes through the repo CI fast lane", () => {
+    const command = createVerificationManifest("spine", {
+      base: "origin/trunk",
+      changedFiles: ["scripts/package-quality-report.mts"],
+      head: "HEAD",
+    }).find(({ id }) => id === "test");
+
+    expect(command).toMatchObject({ applicable: true });
+    expect(command?.command).toEqual(
+      expect.arrayContaining(["--lane", "fast", "--owner", "repo:ci"]),
+    );
+  });
+
+  it.each([
+    ["examples/example/src/index.ts", "repo:examples"],
+    ["tests/root-contract.spec.ts", "repo:tests"],
+  ])("routes %s through fast owner %s", (path, owner) => {
+    const command = createVerificationManifest("spine", {
+      base: "origin/trunk",
+      changedFiles: [path],
+      head: "HEAD",
+    }).find(({ id }) => id === "test");
+
+    expect(command).toMatchObject({ applicable: true });
+    expect(command?.command).toEqual(expect.arrayContaining(["--owner", owner]));
   });
 
   it("selects package accountability checks for scoped certified, spine, and catalog changes", () => {
@@ -291,8 +441,8 @@ describe("verification manifest", () => {
       expect(byId.get("typecheck")?.command.includes("--filter=...[origin/trunk]"), path).toBe(
         !isCatalog,
       );
-      expect(byId.get("test")?.command.includes("--filter=...[origin/trunk]"), path).toBe(
-        !isCatalog,
+      expect(byId.get("test")?.command).toEqual(
+        expect.arrayContaining(["scripts/test-lane-runner.mts", "--lane", "fast"]),
       );
       const affectedGeneratedSmokeCases = selectGeneratedSmokeCasesForChangedFiles([path]);
       expect(byId.get("generated-app-smoke")?.applicable, path).toBe(
@@ -341,7 +491,7 @@ describe("verification manifest", () => {
 
     expect(pullRequestById.get("generated-app-smoke")?.applicable).toBe(true);
     expect(journeyArtifact(pullRequestById.get("generated-app-smoke"))?.required).toBe(true);
-    expect(pullRequestById.get("cli-source-e2e")?.applicable).toBe(false);
+    expect(pullRequestById.get("integration-test-lane")?.applicable).toBe(true);
     expect(pullRequestById.get("cli-packed-e2e")?.applicable).toBe(true);
     expect(pullRequestById.get("alpha-release-smoke")?.applicable).toBe(false);
     expect(fullById.get("generated-app-smoke")?.applicable).toBe(true);
@@ -349,6 +499,21 @@ describe("verification manifest", () => {
     expect(fullById.get("alpha-release-smoke")?.applicable).toBe(true);
     expect(fullById.get("production-ready")?.applicable).toBe(true);
     expect(fullById.get("spine-promotion")?.applicable).toBe(true);
+  });
+
+  it("runs the full fast lane when package accountability needs complete task evidence", () => {
+    const byId = new Map(
+      createVerificationManifest("spine", {
+        base: "origin/trunk",
+        changedFiles: ["docs/package-catalog.json"],
+        head: "HEAD",
+      }).map((command) => [command.id, command]),
+    );
+
+    expect(byId.get("test")?.applicable).toBe(true);
+    expect(byId.get("test")?.command).not.toContain("--owner");
+    expect(byId.get("production-ready")?.applicable).toBe(true);
+    expect(byId.get("production-ready")?.command).toContain("--fast-test-lane-report");
   });
 
   it("selects generated smoke cases through template runtime dependency closure", () => {
@@ -393,6 +558,68 @@ describe("verification manifest", () => {
         packagePath,
       ).toBe(true);
     }
+  });
+
+  it("rejects unknown generated smoke case names", () => {
+    expect(() => readGeneratedSmokeCaseDirectDependencies("unknown-smoke-case")).toThrow(
+      "Unknown generated smoke case: unknown-smoke-case",
+    );
+  });
+
+  it("passes the exact selected generated test paths to evidence reconciliation", () => {
+    const manifest = createVerificationManifest("spine", {
+      base: "origin/trunk",
+      changedFiles: ["packages/cache-core/src/index.ts"],
+      head: "HEAD",
+    });
+    const reconcile = manifest.find(({ id }) => id === "test-evidence-reconcile");
+    const requiredPaths = (reconcile?.command ?? []).flatMap((argument, index, command) =>
+      argument === "--required-generated-path" && command[index + 1] ? [command[index + 1]] : [],
+    );
+
+    expect(requiredPaths.length).toBeGreaterThan(0);
+    expect(requiredPaths).toContain(
+      "packages/create-croco-app/templates/base-ddd/libs/shared/utils-env/src/tests/createEnv.spec.ts",
+    );
+    expect(requiredPaths).not.toContain(
+      "packages/create-croco-app/templates/admin-console/apps/api-server/src/tests/AdminConsole.spec.ts",
+    );
+  });
+
+  it("omits all generated materialization validation arguments for an empty selected path set", () => {
+    const generatedInventoryPaths = readTestInventory()
+      .inventory.tests.filter(({ lane }) => lane === "generated-app")
+      .map(({ path }) => path);
+    const blankBasicPaths = selectGeneratedTestPathsForSmokeCases(
+      ["blank-basic"],
+      generatedInventoryPaths,
+    );
+
+    expect(blankBasicPaths).toEqual([]);
+    expect(generatedTestMaterializationArguments(blankBasicPaths)).toEqual([]);
+    expect(
+      generatedTestMaterializationArguments(["templates/example/src/tests/unit.spec.ts"]),
+    ).toEqual([
+      "--materialization-evidence",
+      "ci-reports/generated-apps/materialization-evidence.json",
+      "--generated-root",
+      "ci-reports/generated-apps/materialized-tests",
+      "--required-generated-path",
+      "templates/example/src/tests/unit.spec.ts",
+    ]);
+  });
+
+  it("requires every generated inventory path for publish evidence", () => {
+    const manifest = createVerificationManifest("publish");
+    const reconcile = manifest.find(({ id }) => id === "test-evidence-reconcile");
+    const requiredPaths = (reconcile?.command ?? []).filter(
+      (argument, index, command) => command[index - 1] === "--required-generated-path",
+    );
+    const generatedInventoryPaths = readTestInventory()
+      .inventory.tests.filter(({ lane }) => lane === "generated-app")
+      .map(({ path }) => path);
+
+    expect(requiredPaths).toEqual(generatedInventoryPaths);
   });
 
   it("does not select generated smoke for an unrelated package change", () => {
@@ -459,7 +686,6 @@ describe("verification manifest", () => {
     const byId = new Map(maintenance.map((command) => [command.id, command]));
 
     for (const id of [
-      "cli-source-e2e",
       "cli-packed-e2e",
       "first-success",
       "generated-app-smoke",
@@ -477,13 +703,13 @@ describe("verification manifest", () => {
     expect(byId.get("spine-promotion")?.selectionReason).toBe(
       "Skipped because no package graph or package catalog input changed.",
     );
-    expect(byId.get("build")?.command).toContain("--filter=...[origin/trunk]");
-    expect(byId.get("typecheck")?.command).toContain("--filter=...[origin/trunk]");
-    expect(byId.get("test")?.command).toContain("--filter=...[origin/trunk]");
+    expect(byId.get("build")?.command).not.toContain("--filter=...[origin/trunk]");
+    expect(byId.get("typecheck")?.command).not.toContain("--filter=...[origin/trunk]");
+    expect(byId.get("test")?.command).not.toContain("--filter=...[origin/trunk]");
     expect(byId.get("release-gate-tests")?.applicable).toBe(true);
   });
 
-  it("distinguishes source and packed CLI integration selectors", () => {
+  it("distinguishes inventory integration and packed CLI selectors", () => {
     const cliChange = createVerificationManifest("spine", {
       base: "origin/trunk",
       changedFiles: ["packages/cli/src/index.ts"],
@@ -495,22 +721,51 @@ describe("verification manifest", () => {
       head: "HEAD",
     });
 
-    expect(cliChange.find(({ id }) => id === "cli-source-e2e")).toMatchObject({
+    expect(cliChange.find(({ id }) => id === "integration-test-lane")).toMatchObject({
       applicable: true,
-      command: expect.arrayContaining(["src/tests/integration/e2e.spec.ts"]),
-      label: "CLI source integration tests",
+      command: expect.arrayContaining(["--lane", "integration", "--owner", "@croco/cli"]),
+      label: "Inventory integration test lane",
     });
-    expect(cliChange.find(({ id }) => id === "cli-packed-e2e")).toMatchObject({
+    expect(cliChange.find(({ id }) => id === "cli-packed-e2e")?.applicable).toBe(false);
+    expect(generatorChange.find(({ id }) => id === "integration-test-lane")).toMatchObject({
       applicable: true,
-      command: expect.arrayContaining(["src/tests/integration/CliCommandIntegration.spec.ts"]),
-      label: "Packed installed CLI integration tests",
+      command: expect.arrayContaining(["--lane", "integration", "--owner", "create-croco-app"]),
     });
-    expect(generatorChange.find(({ id }) => id === "cli-source-e2e")?.applicable).toBe(false);
     expect(generatorChange.find(({ id }) => id === "cli-packed-e2e")).toMatchObject({
       applicable: true,
       command: expect.arrayContaining(["src/tests/integration/CliCommandIntegration.spec.ts"]),
       label: "Packed installed CLI integration tests",
     });
+  });
+
+  it("selects integration owners that depend on a changed package for tests", () => {
+    const manifest = createVerificationManifest("spine", {
+      base: "origin/trunk",
+      changedFiles: ["packages/execution-core/src/index.ts"],
+      head: "HEAD",
+    });
+    expect(manifest.find(({ id }) => id === "integration-test-lane")?.command).toEqual(
+      expect.arrayContaining(["--owner", "@croco/cli"]),
+    );
+  });
+
+  it("routes every CLI integration spec through the authoritative inventory lane", () => {
+    const packageJson = JSON.parse(
+      readFileSync(resolve(ROOT_DIR, "packages/cli/package.json"), "utf8"),
+    ) as { readonly scripts?: Readonly<Record<string, string>> };
+    const integrationFiles = readdirSync(resolve(ROOT_DIR, "packages/cli/src/tests/integration"))
+      .filter((path) => path.endsWith(".spec.ts"))
+      .sort();
+
+    expect(packageJson.scripts?.["test:e2e"]).toBe("vitest run src/tests/integration");
+    expect(integrationFiles).toContain("jobs-e2e.spec.ts");
+    expect(
+      createVerificationManifest("spine", {
+        base: "origin/trunk",
+        changedFiles: ["packages/cli/src/jobs.ts"],
+        head: "HEAD",
+      }).find(({ id }) => id === "integration-test-lane")?.command,
+    ).toEqual(expect.arrayContaining(["--lane", "integration", "--owner", "@croco/cli"]));
   });
 
   it("uses full evidence only for root accountability changes", () => {
@@ -526,9 +781,7 @@ describe("verification manifest", () => {
       });
       const build = manifest.find(({ id }) => id === "build");
 
-      expect(build?.command.includes("--filter=...[origin/trunk]"), path).toBe(
-        path !== "pnpm-lock.yaml",
-      );
+      expect(build?.command.includes("--filter=...[origin/trunk]"), path).toBe(false);
       expect(
         manifest.findIndex(({ id }) => id === "build"),
         path,
@@ -597,7 +850,7 @@ describe("verification manifest", () => {
       readFileSync(resolve(__dirname, "../../package.json"), "utf8"),
     ) as { scripts?: Record<string, string> };
 
-    expect(RELEASE_GATE_TEST_PATHS).toHaveLength(43);
+    expect(RELEASE_GATE_TEST_PATHS).toHaveLength(49);
     expect(RELEASE_GATE_TEST_PATHS).toEqual([...RELEASE_GATE_TEST_PATHS].sort());
     expect(RELEASE_GATE_ENTRYPOINT_PATHS).toEqual([...RELEASE_GATE_ENTRYPOINT_PATHS].sort());
     expect(RELEASE_GATE_FIXTURE_PATHS).toEqual([...RELEASE_GATE_FIXTURE_PATHS].sort());
@@ -610,14 +863,14 @@ describe("verification manifest", () => {
     );
     expect(RELEASE_GATE_MAINTENANCE_PATHS).toContain("scripts/release-gate-maintenance.mts");
     expect(command?.command).toEqual([
-      "pnpm",
-      "exec",
-      "vitest",
-      "run",
-      "--no-file-parallelism",
-      ...RELEASE_GATE_TEST_PATHS,
-      "--config",
-      "vitest.config.ts",
+      "node",
+      "--experimental-strip-types",
+      "scripts/test-lane-evidence-check.mts",
+      "--report",
+      "ci-reports/package-quality/fast-test-lane.json",
+      "--lane",
+      "fast",
+      ...RELEASE_GATE_TEST_PATHS.flatMap((path) => ["--path", path]),
     ]);
     expect(command?.applicable).toBe(true);
     expect(command?.command).toContain("scripts/tests/turbo-task-contract.spec.ts");
@@ -742,6 +995,9 @@ describe("verification manifest", () => {
       "scripts/tests/release-workflow.spec.ts",
       "scripts/tests/turbo-task-contract.spec.ts",
       "scripts/tests/verification-policy.spec.ts",
+      "scripts/tests/test-inventory.spec.ts",
+      "scripts/tests/test-lane-runner.spec.ts",
+      "scripts/tests/turbo-cache-contract.spec.ts",
     ]);
   });
 
@@ -776,6 +1032,104 @@ describe("verification manifest", () => {
     expect(() =>
       assertVerificationManifest([{ ...command, id: "wrapper", command: ["pnpm", "check"] }]),
     ).toThrow("Composite root alias");
+  });
+
+  it("rejects invalid scheduling metadata", () => {
+    const command = createVerificationManifest("repo").find(
+      ({ id }) => id === "package-manifests",
+    ) as EvidenceCommand;
+    expect(() => assertVerificationManifest([{ ...command, dependsOn: ["missing"] }])).toThrow(
+      "depends on unknown command missing",
+    );
+    expect(() => assertVerificationManifest([{ ...command, dependsOn: [command.id] }])).toThrow(
+      "cannot depend on itself",
+    );
+    expect(() =>
+      assertVerificationManifest([
+        { ...command, id: "left", dependsOn: ["right"] },
+        { ...command, id: "right", dependsOn: ["left"] },
+      ]),
+    ).toThrow("dependency graph contains a cycle");
+    expect(() => assertVerificationManifest([{ ...command, concurrencyGroup: " " }])).toThrow(
+      "empty concurrency group",
+    );
+  });
+
+  it("declares artifact and status prerequisites semantically", () => {
+    const byId = new Map(
+      createVerificationManifest("publish").map((command) => [command.id, command]),
+    );
+    const expectedDependencies: Readonly<Record<string, readonly string[]>> = {
+      "architecture-policy": ["architecture-policy-runtime"],
+      build: ["architecture-policy-runtime"],
+      "package-entrypoints-smoke": ["build", "test"],
+      "package-bins-smoke": ["build"],
+      "generated-app-smoke": ["build"],
+      "alpha-release-smoke": ["build"],
+      "integration-test-lane": ["build"],
+      "published-test-lane": ["build"],
+      "test-evidence-reconcile": [
+        "test",
+        "integration-test-lane",
+        "published-test-lane",
+        "generated-app-smoke",
+      ],
+      "cli-packed-e2e": ["integration-test-lane"],
+      typecheck: ["build"],
+      test: ["build", "typecheck"],
+      "production-ready": ["build", "typecheck", "test"],
+      "spine-promotion": [
+        "test",
+        "generated-app-smoke",
+        "provider-certification",
+        "production-ready",
+      ],
+      "core-coverage-warning": ["core-coverage"],
+      "core-coverage": ["build"],
+      "release-gate-tests": ["test"],
+      "publish-dry-run": ["build"],
+    };
+    for (const [id, dependencies] of Object.entries(expectedDependencies)) {
+      expect(byId.get(id)?.dependsOn).toEqual(expect.arrayContaining(dependencies));
+    }
+    expect(byId.get("production-ready")?.command).toEqual(
+      expect.arrayContaining([
+        "--require-task-summaries",
+        "--fast-test-lane-report",
+        "ci-reports/package-quality/fast-test-lane.json",
+      ]),
+    );
+    expect(byId.get("spine-bundle-size")?.dependsOn).toEqual(
+      expect.arrayContaining([
+        "changeset-required",
+        "lint",
+        "format",
+        "build",
+        "typecheck",
+        "test",
+        "provider-certification",
+        "production-ready",
+        "spine-promotion",
+      ]),
+    );
+    for (const id of [
+      "package-entrypoints-smoke",
+      "package-bins-smoke",
+      "generated-app-smoke",
+      "alpha-release-smoke",
+      "integration-test-lane",
+      "published-test-lane",
+      "cli-packed-e2e",
+      "core-coverage",
+      "publish-dry-run",
+    ]) {
+      expect(byId.get(id)?.concurrencyGroup).toBe("workspace-artifacts");
+    }
+    expect(byId.get("release-gate-tests")?.concurrencyGroup).toBeUndefined();
+    expect(byId.get("typecheck")?.concurrencyGroup).toBeUndefined();
+    expect(byId.get("test")?.concurrencyGroup).toBeUndefined();
+    expect(byId.get("typecheck")?.command).toContain("--only");
+    expect(byId.get("package-entrypoints-smoke")?.timeoutMs).toBe(15 * 60 * 1_000);
   });
 
   it("routes compatibility aliases through authoritative profiles", () => {

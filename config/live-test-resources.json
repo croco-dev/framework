@@ -1,0 +1,31 @@
+{
+  "@croco/auth-drizzle": ["AUTH_POSTGRES_URL"],
+  "@croco/billing-polar": ["POLAR_ACCESS_TOKEN", "POLAR_WEBHOOK_SECRET", "POLAR_ORGANIZATION_ID"],
+  "@croco/credits-drizzle": ["CREDITS_POSTGRES_URL"],
+  "@croco/execution-drizzle": ["EXECUTION_POSTGRES_URL"],
+  "@croco/llm-openai": ["OPENAI_API_KEY"],
+  "@croco/membership-drizzle": ["MEMBERSHIP_POSTGRES_URL"],
+  "@croco/migration-runner": ["MIGRATION_POSTGRES_URL"],
+  "@croco/notifications-resend": [
+    "CROCO_LIVE_RESEND",
+    "RESEND_API_KEY",
+    "RESEND_FROM",
+    "RESEND_SMOKE_TO"
+  ],
+  "@croco/search-meilisearch": ["MEILISEARCH_HOST", "MEILISEARCH_API_KEY"],
+  "@croco/storage-cloudflare": [
+    "CROCO_LIVE_CLOUDFLARE_IMAGES",
+    "CLOUDFLARE_ACCOUNT_ID",
+    "CLOUDFLARE_API_TOKEN",
+    "CLOUDFLARE_ACCOUNT_HASH"
+  ],
+  "@croco/storage-cloudinary": [
+    "CLOUDINARY_CLOUD_NAME",
+    "CLOUDINARY_API_KEY",
+    "CLOUDINARY_API_SECRET"
+  ],
+  "@croco/storage-r2": ["R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET"],
+  "@croco/metering-core": [],
+  "@croco/metrics-core": [],
+  "@croco/testing-resources": []
+}

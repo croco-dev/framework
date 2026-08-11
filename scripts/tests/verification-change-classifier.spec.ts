@@ -21,6 +21,7 @@ describe("verification change classifier", () => {
     [[".github/workflows/ci.yml"], "publish"],
     [[".changeset/new.md"], "repo"],
     [["packages/retry-core/package.json"], "publish"],
+    [["test-inventory.json"], "publish"],
     [["turbo.json"], "publish"],
     [["vitest.config.ts"], "publish"],
     [["tsconfig.json"], "publish"],

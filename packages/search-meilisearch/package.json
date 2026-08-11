@@ -33,7 +33,8 @@
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "lint": "oxlint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run --exclude src/tests/MeilisearchLiveSmoke.spec.ts",
+    "test:live": "vitest run src/tests/MeilisearchLiveSmoke.spec.ts"
   },
   "dependencies": {
     "@croco/diagnostics-core": "workspace:*",
