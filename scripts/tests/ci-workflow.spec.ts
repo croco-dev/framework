@@ -44,6 +44,13 @@ const SECRET_SCAN = WORKFLOW.slice(
   WORKFLOW.indexOf("      - name: Assemble security policy summary"),
 );
 
+function workflowStep(name: string): string {
+  const start = VALIDATE_JOB.indexOf(`      - name: ${name}`);
+  if (start === -1) return "";
+  const next = VALIDATE_JOB.indexOf("      - name:", start + 1);
+  return VALIDATE_JOB.slice(start, next === -1 ? undefined : next);
+}
+
 describe("workflow token permissions", () => {
   it("gives every workflow job an explicit effective permission scope", () => {
     expect(findWorkflowPermissionViolations(WORKFLOWS)).toEqual([]);
@@ -181,6 +188,10 @@ describe("CI executable supply chain", () => {
 });
 
 describe("CI verification profile contract", () => {
+  it("allows the selected profile and full changed-test shadow suite to finish", () => {
+    expect(VALIDATE_JOB).toContain("    timeout-minutes: 90");
+  });
+
   it("classifies changes and invokes exactly one shared profile", () => {
     expect(WORKFLOW).toContain("scripts/verification-change-classifier.mts");
     expect(WORKFLOW).toContain('--event "$GITHUB_EVENT_NAME"');
@@ -437,6 +448,47 @@ describe("CI verification profile contract", () => {
     expect(VALIDATE_JOB).toContain("if [ -f ci-reports/test-evidence/summary.md ]; then");
     expect(VALIDATE_JOB).toContain('exit "$evidence_status"');
     expect(VALIDATE_JOB).toContain("ci-reports/test-evidence");
+  });
+
+  it("measures changed-test selection misses against a non-blocking full-suite shadow", () => {
+    const fullSuiteStep = workflowStep("Run full test suite for changed-test shadow");
+    expect(fullSuiteStep).toContain("if: always() && github.event_name == 'pull_request'");
+    expect(fullSuiteStep).toContain(
+      "CROCO_TEST_EVIDENCE_DIR: ${{ github.workspace }}/ci-reports/changed-test-plan/full-evidence/records",
+    );
+    expect(fullSuiteStep).toContain("continue-on-error: true");
+    expect(fullSuiteStep).toContain("pnpm --filter @croco/testing build");
+    expect(fullSuiteStep).toContain('if [ "$full_suite_status" -eq 0 ]; then');
+    expect(fullSuiteStep).toContain("pnpm turbo run test --force --continue=always");
+    expect(fullSuiteStep).toContain("elapsed_seconds=$(($(date +%s) - started_at))");
+    expect(fullSuiteStep).toContain("${{ runner.os }}/${{ runner.arch }}");
+    expect(fullSuiteStep).toContain(
+      "--reporter=${{ github.workspace }}/packages/testing/dist/vitest-reporter.mjs",
+    );
+    expect(VALIDATE_JOB).toContain("Assert changed-test shadow evidence completeness");
+    expect(VALIDATE_JOB).toContain("scripts/changed-test-full-suite-status.mts");
+    expect(VALIDATE_JOB).toContain("full-suite-status.json");
+    expect(fullSuiteStep).toContain('exit "$full_suite_status"');
+    expect(VALIDATE_JOB).toContain('if [ "$evidence_count" -eq 0 ]; then');
+    expect(VALIDATE_JOB).toContain("Restore changed-test shadow baseline");
+    const restoreBaseline = VALIDATE_JOB.slice(
+      VALIDATE_JOB.indexOf("      - name: Restore changed-test shadow baseline"),
+      VALIDATE_JOB.indexOf("      - name: Aggregate changed-test shadow full evidence"),
+    );
+    expect(restoreBaseline).toContain("if: always() && github.event_name == 'pull_request'");
+    expect(VALIDATE_JOB).toContain("path: ci-reports/changed-test-plan/baseline.json");
+    expect(VALIDATE_JOB).toContain(
+      "key: changed-test-plan-${{ github.event.pull_request.number }}-${{ github.run_id }}-${{ github.run_attempt }}",
+    );
+    expect(VALIDATE_JOB).toContain("      - name: Aggregate changed-test shadow full evidence");
+    expect(VALIDATE_JOB).toContain("scripts/test-evidence-bundle.mts");
+    expect(VALIDATE_JOB).toContain("--output ci-reports/changed-test-plan/full-evidence");
+    expect(VALIDATE_JOB).toContain("      - name: Measure changed-test selection misses");
+    expect(VALIDATE_JOB).toContain("scripts/changed-test-plan-shadow.mts");
+    expect(VALIDATE_JOB).toContain("--execute-selected");
+    expect(VALIDATE_JOB).toContain("ci-reports/changed-test-plan/full-evidence/bundle.json");
+    expect(VALIDATE_JOB).toContain("ci-reports/changed-test-plan/summary.md");
+    expect(workflowStep("Upload verification evidence")).toContain("ci-reports/changed-test-plan");
   });
 
   it("produces native evidence for profiles whose affected graph schedules no reporter", () => {

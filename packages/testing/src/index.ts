@@ -36,6 +36,24 @@ export {
   type TestKernelEvidenceRecordInput,
 } from "./libs/test-evidence.mjs";
 export {
+  assertChangedTestSelectionBaseline,
+  assertChangedTestPlanEnforceable,
+  CHANGED_TEST_PLAN_VERSION,
+  CHANGED_TEST_SELECTION_BASELINE_VERSION,
+  ChangedTestPlanProblem,
+  createChangedTestPlan,
+  serializeChangedTestPlan,
+  updateChangedTestSelectionBaseline,
+  type ChangedTestExclusion,
+  type ChangedTestFallback,
+  type ChangedTestPlan,
+  type ChangedTestPlanInput,
+  type ChangedTestSelectionBaseline,
+  type ChangedTestSelectionReason,
+  type ChangedTestSource,
+  type ChangedTestSuite,
+} from "./libs/changed-test-plan.mjs";
+export {
   assertExecutableAssuranceSatisfied,
   assertExecutableAssuranceGraph,
   createExecutableAssuranceGraph,

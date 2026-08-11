@@ -15,6 +15,12 @@ title: "AssuranceBehaviorNode"
 
 ***
 
+### fingerprint?
+
+> `readonly` `optional` **fingerprint?**: `string`
+
+***
+
 ### id
 
 > `readonly` **id**: `string`

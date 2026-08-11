@@ -63,6 +63,12 @@ title: "TestEvidenceRecord"
 
 ***
 
+### packageName?
+
+> `readonly` `optional` **packageName?**: `string`
+
+***
+
 ### replay
 
 > `readonly` **replay**: [`TestEvidenceReplay`](/api/testing/src/type-aliases/testevidencereplay/)

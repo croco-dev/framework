@@ -21,6 +21,30 @@ title: "PlaywrightTestCase"
 
 ***
 
+### location?
+
+> `readonly` `optional` **location?**: `object`
+
+#### file
+
+> `readonly` **file**: `string`
+
+***
+
+### parent?
+
+> `readonly` `optional` **parent?**: `object`
+
+#### project
+
+> `readonly` **project**: () => \{ `name`: `string`; `testDir`: `string`; \} \| `undefined`
+
+##### Returns
+
+\{ `name`: `string`; `testDir`: `string`; \} \| `undefined`
+
+***
+
 ### title
 
 > `readonly` **title**: `string`

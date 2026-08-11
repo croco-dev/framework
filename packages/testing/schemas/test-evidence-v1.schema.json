@@ -33,6 +33,7 @@
         "custom"
       ]
     },
+    "packageName": { "type": "string", "minLength": 1 },
     "outcome": { "enum": ["passed", "failed", "flaky", "skipped"] },
     "intent": { "$ref": "#/$defs/intent" },
     "observed": { "$ref": "#/$defs/observation" },

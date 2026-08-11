@@ -85,6 +85,12 @@ readonly [`TestEvidenceDiagnostic`](/api/testing/src/type-aliases/testevidencedi
 
 ***
 
+### packageName?
+
+> `readonly` `optional` **packageName?**: `string` \| ((`context`) => `string` \| `undefined`)
+
+***
+
 ### replay?
 
 > `readonly` `optional` **replay?**: (`context`) => [`TestEvidenceReplay`](/api/testing/src/type-aliases/testevidencereplay/)

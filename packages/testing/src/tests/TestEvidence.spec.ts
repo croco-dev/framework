@@ -1,6 +1,6 @@
-import { mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 import { Problem, ProblemCategory } from "@croco/problems-core";
@@ -460,6 +460,7 @@ describe("runner reporters", () => {
         { attempt: 2, durationMs: 3, outcome: "passed" },
       ],
       fidelity: isolatedFidelity,
+      packageName: "@croco/testing",
       observed: (context) => ({
         contractIds: [context.runner === "vitest" ? context.state : context.expectedStatus],
       }),
@@ -477,6 +478,7 @@ describe("runner reporters", () => {
     });
     expect(write).toHaveBeenCalledWith(
       expect.objectContaining({
+        id: "@croco/testing::vitest/example",
         attempts: [
           expect.objectContaining({
             diagnostics: [expect.objectContaining({ code: "FIRST_ATTEMPT_FAILED" })],
@@ -487,9 +489,180 @@ describe("runner reporters", () => {
         ],
         observed: { contractIds: ["passed"] },
         outcome: "flaky",
+        packageName: "@croco/testing",
+        replay: {
+          command: 'pnpm --filter "@croco/testing" exec vitest run -t "example retries"',
+        },
         runner: "vitest",
       }),
     );
+  });
+
+  it("uses the current Vitest project name instead of the process root package", async () => {
+    const write = vi.fn();
+    const reporter = new CrocoVitestEvidenceReporter({ fidelity: isolatedFidelity, write });
+    await reporter.onTestCaseResult({
+      id: "vitest/project-package",
+      name: "uses project package",
+      fullName: "uses project package",
+      project: { name: "@croco/users" },
+      diagnostic: () => ({ duration: 1, flaky: false, retryCount: 0 }),
+      result: () => ({ state: "passed" }),
+    });
+
+    expect(write).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "@croco/users::vitest/project-package",
+        packageName: "@croco/users",
+        replay: {
+          command: 'pnpm --filter "@croco/users" exec vitest run -t "uses project package"',
+        },
+      }),
+    );
+  });
+
+  it("aggregates identical Vitest task IDs from two unnamed package projects", async () => {
+    const workspace = mkdtempSync(resolve(tmpdir(), "croco-evidence-workspace-"));
+    const outputDirectory = resolve(workspace, "evidence");
+    try {
+      const packages = ["users", "billing"].map((name) => {
+        const packageDirectory = resolve(workspace, "packages", name);
+        const testFile = resolve(packageDirectory, "src", "Example.spec.ts");
+        mkdirSync(dirname(testFile), { recursive: true });
+        writeFileSync(
+          resolve(packageDirectory, "package.json"),
+          `${JSON.stringify({ name: `@croco/${name}` })}\n`,
+        );
+        return { name, packageDirectory, testFile };
+      });
+
+      for (const { packageDirectory, testFile } of packages) {
+        const reporter = new CrocoVitestEvidenceReporter({
+          fidelity: isolatedFidelity,
+          outputDirectory,
+        });
+        await reporter.onTestCaseResult({
+          id: "shared-task-id",
+          name: "loads an account",
+          fullName: "account > loads an account",
+          module: { moduleId: testFile },
+          project: { config: { root: packageDirectory }, name: "" },
+          diagnostic: () => ({ duration: 1, flaky: false, retryCount: 0 }),
+          result: () => ({ state: "passed" }),
+        });
+      }
+
+      const records = readdirSync(outputDirectory).map(
+        (file) =>
+          JSON.parse(readFileSync(resolve(outputDirectory, file), "utf8")) as TestEvidenceRecord,
+      );
+      const bundle = createTestEvidenceBundle(records);
+      expect(bundle.records.map(({ id }) => id)).toEqual([
+        "@croco/billing::shared-task-id",
+        "@croco/users::shared-task-id",
+      ]);
+      expect(bundle.records.map(({ packageName }) => packageName)).toEqual([
+        "@croco/billing",
+        "@croco/users",
+      ]);
+      expect(bundle.records.map(({ replay }) => replay.command)).toEqual([
+        'pnpm --filter "@croco/billing" exec vitest run -t "account > loads an account"',
+        'pnpm --filter "@croco/users" exec vitest run -t "account > loads an account"',
+      ]);
+    } finally {
+      rmSync(workspace, { force: true, recursive: true });
+    }
+  });
+
+  it("reports an invalid project package manifest instead of silently dropping identity", async () => {
+    const workspace = mkdtempSync(resolve(tmpdir(), "croco-invalid-evidence-package-"));
+    try {
+      const packageDirectory = resolve(workspace, "packages", "users");
+      const testFile = resolve(packageDirectory, "src", "Example.spec.ts");
+      mkdirSync(dirname(testFile), { recursive: true });
+      writeFileSync(resolve(packageDirectory, "package.json"), '{"name":42}\n');
+      const reporter = new CrocoVitestEvidenceReporter({ fidelity: isolatedFidelity });
+
+      await expect(
+        reporter.onTestCaseResult({
+          id: "invalid-package-task",
+          name: "invalid package",
+          fullName: "invalid package",
+          module: { moduleId: testFile },
+          project: { config: { root: packageDirectory }, name: "" },
+          diagnostic: () => ({ duration: 1, flaky: false, retryCount: 0 }),
+          result: () => ({ state: "passed" }),
+        }),
+      ).rejects.toThrow(TestEvidenceContractError);
+    } finally {
+      rmSync(workspace, { force: true, recursive: true });
+    }
+  });
+
+  it("continues past a nameless nested manifest to the owning package", async () => {
+    const workspace = mkdtempSync(resolve(tmpdir(), "croco-parent-evidence-package-"));
+    try {
+      const nestedDirectory = resolve(workspace, "examples", "fixture");
+      const testFile = resolve(nestedDirectory, "src", "Example.spec.ts");
+      mkdirSync(dirname(testFile), { recursive: true });
+      writeFileSync(
+        resolve(workspace, "package.json"),
+        `${JSON.stringify({ name: "@croco/workspace-fixture" })}\n`,
+      );
+      writeFileSync(resolve(nestedDirectory, "package.json"), "{}\n");
+      const write = vi.fn();
+      const reporter = new CrocoVitestEvidenceReporter({ fidelity: isolatedFidelity, write });
+
+      await reporter.onTestCaseResult({
+        id: "parent-package-task",
+        name: "parent package",
+        fullName: "parent package",
+        module: { moduleId: testFile },
+        project: { config: { root: nestedDirectory }, name: "" },
+        diagnostic: () => ({ duration: 1, flaky: false, retryCount: 0 }),
+        result: () => ({ state: "passed" }),
+      });
+
+      expect(write).toHaveBeenCalledWith(
+        expect.objectContaining({ packageName: "@croco/workspace-fixture" }),
+      );
+    } finally {
+      rmSync(workspace, { force: true, recursive: true });
+    }
+  });
+
+  it("reuses a cached package identity for tests in the same source directory", async () => {
+    const workspace = mkdtempSync(resolve(tmpdir(), "croco-cached-evidence-package-"));
+    try {
+      const packageDirectory = resolve(workspace, "packages", "users");
+      const sourceDirectory = resolve(packageDirectory, "src");
+      const manifestPath = resolve(packageDirectory, "package.json");
+      mkdirSync(sourceDirectory, { recursive: true });
+      writeFileSync(manifestPath, '{"name":"@croco/users"}\n');
+      const write = vi.fn();
+      const reporter = new CrocoVitestEvidenceReporter({ fidelity: isolatedFidelity, write });
+      const task = (id: string, file: string) => ({
+        id,
+        name: id,
+        fullName: id,
+        module: { moduleId: resolve(sourceDirectory, file) },
+        project: { config: { root: packageDirectory }, name: "" },
+        diagnostic: () => ({ duration: 1, flaky: false, retryCount: 0 }),
+        result: () => ({ state: "passed" as const }),
+      });
+
+      await reporter.onTestCaseResult(task("cached-package-first", "First.spec.ts"));
+      rmSync(manifestPath);
+      await reporter.onTestCaseResult(task("cached-package-second", "Second.spec.ts"));
+
+      expect(write).toHaveBeenCalledTimes(2);
+      expect(write.mock.calls.map(([record]) => record.packageName)).toEqual([
+        "@croco/users",
+        "@croco/users",
+      ]);
+    } finally {
+      rmSync(workspace, { force: true, recursive: true });
+    }
   });
 
   it("writes deterministic record fragments when a callback is not configured", async () => {
@@ -553,6 +726,10 @@ describe("runner reporters", () => {
     );
   });
 
+  it("can be constructed without options when Vitest loads it by reporter path", () => {
+    expect(new CrocoVitestEvidenceReporter()).toBeInstanceOf(CrocoVitestEvidenceReporter);
+  });
+
   it("adapts Playwright attempts and retains failure attachments", async () => {
     const write = vi.fn();
     const reporter = new CrocoPlaywrightEvidenceReporter({
@@ -590,6 +767,60 @@ describe("runner reporters", () => {
         ],
       }),
     );
+  });
+
+  it("keeps identical Playwright IDs separate by owning package", async () => {
+    const workspace = mkdtempSync(resolve(tmpdir(), "croco-playwright-workspace-"));
+    try {
+      const write = vi.fn();
+      const reporter = new CrocoPlaywrightEvidenceReporter({
+        fidelity: { ...isolatedFidelity, boot: "adapter", runtime: "browser" },
+        write,
+      });
+      for (const name of ["console-web", "admin-web"]) {
+        const packageDirectory = resolve(workspace, "apps", name);
+        const testFile = resolve(packageDirectory, "e2e", "users.spec.ts");
+        mkdirSync(dirname(testFile), { recursive: true });
+        writeFileSync(
+          resolve(packageDirectory, "package.json"),
+          `${JSON.stringify({ name: `@croco/${name}` })}\n`,
+        );
+        reporter.onTestEnd(
+          {
+            id: "shared-browser-id",
+            location: { file: testFile },
+            parent: {
+              project: () => ({ name: "chromium", testDir: resolve(packageDirectory, "e2e") }),
+            },
+            title: "creates a user",
+          },
+          { duration: 8, status: "passed" },
+        );
+      }
+      await reporter.onEnd();
+
+      expect(write).toHaveBeenCalledTimes(2);
+      expect(write.mock.calls.map(([evidence]) => evidence)).toEqual([
+        expect.objectContaining({
+          id: "@croco/admin-web::shared-browser-id",
+          packageName: "@croco/admin-web",
+          replay: {
+            command:
+              'pnpm --filter "@croco/admin-web" exec playwright test --grep "creates a user"',
+          },
+        }),
+        expect.objectContaining({
+          id: "@croco/console-web::shared-browser-id",
+          packageName: "@croco/console-web",
+          replay: {
+            command:
+              'pnpm --filter "@croco/console-web" exec playwright test --grep "creates a user"',
+          },
+        }),
+      ]);
+    } finally {
+      rmSync(workspace, { force: true, recursive: true });
+    }
   });
 
   it("treats an expected Playwright failure as a passed attempt", async () => {

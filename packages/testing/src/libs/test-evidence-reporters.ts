@@ -1,4 +1,7 @@
-import { createTestEvidenceRecord } from "./test-evidence.mjs";
+import { readFileSync } from "node:fs";
+import { dirname, isAbsolute, parse, resolve } from "node:path";
+
+import { createTestEvidenceRecord, TestEvidenceContractError } from "./test-evidence.mjs";
 import {
   type TestEvidenceAttachment,
   type TestEvidenceAttempt,
@@ -41,6 +44,7 @@ export type TestEvidenceReporterContext =
 
 export type TestEvidenceReporterOptions = {
   readonly fidelity: TestEvidenceFidelity;
+  readonly packageName?: string | ((context: TestEvidenceReporterContext) => string | undefined);
   readonly attempts?: (context: TestEvidenceReporterContext) => readonly TestEvidenceAttempt[];
   readonly diagnostics?: (
     context: TestEvidenceReporterContext,
@@ -53,9 +57,26 @@ export type TestEvidenceReporterOptions = {
   readonly write?: (record: TestEvidenceRecord) => Promise<void> | void;
 };
 
+const DEFAULT_VITEST_REPORTER_OPTIONS: TestEvidenceReporterOptions = {
+  fidelity: {
+    boot: "isolated",
+    dependency: "fake",
+    isolation: "fake",
+    runtime: "node",
+    validation: "isolated",
+  },
+};
+
+const PACKAGE_NAMES_BY_DIRECTORY = new Map<string, string | undefined>();
+
 export type VitestTask = {
   readonly id: string;
   readonly name: string;
+  readonly module?: { readonly moduleId: string };
+  readonly project?: {
+    readonly config?: { readonly root?: string };
+    readonly name: string;
+  };
   readonly fullName: string;
   readonly diagnostic: () =>
     | {
@@ -73,6 +94,15 @@ export type VitestTask = {
 export type PlaywrightTestCase = {
   readonly expectedStatus?: PlaywrightTestResult["status"];
   readonly id: string;
+  readonly location?: { readonly file: string };
+  readonly parent?: {
+    readonly project: () =>
+      | {
+          readonly name: string;
+          readonly testDir: string;
+        }
+      | undefined;
+  };
   readonly title: string;
   readonly titlePath?: () => readonly string[];
 };
@@ -89,7 +119,9 @@ export type PlaywrightTestResult = {
 export class CrocoVitestEvidenceReporter {
   private readonly write: (record: TestEvidenceRecord) => Promise<void> | void;
 
-  constructor(private readonly options: TestEvidenceReporterOptions) {
+  constructor(
+    private readonly options: TestEvidenceReporterOptions = DEFAULT_VITEST_REPORTER_OPTIONS,
+  ) {
     this.write = options.write ?? createTestEvidenceFileWriter(options);
   }
 
@@ -109,10 +141,12 @@ export class CrocoVitestEvidenceReporter {
       source: task,
       state: finalOutcome,
     };
+    const packageName = resolvePackageName(this.options.packageName, context);
     await this.write(
       createTestEvidenceRecord({
-        id: task.id,
+        id: evidenceRecordId(packageName, task.id),
         runner: "vitest",
+        ...(packageName ? { packageName } : {}),
         fidelity: this.options.fidelity,
         intent: this.options.intent?.(context) ?? {
           contractIds: [],
@@ -120,7 +154,9 @@ export class CrocoVitestEvidenceReporter {
         },
         observed: this.options.observed?.(context) ?? { contractIds: [] },
         replay: this.options.replay?.(context) ?? {
-          command: `pnpm vitest run -t ${JSON.stringify(task.fullName)}`,
+          command: packageName
+            ? `pnpm --filter ${JSON.stringify(packageName)} exec vitest run -t ${JSON.stringify(task.fullName)}`
+            : `pnpm vitest run -t ${JSON.stringify(task.fullName)}`,
         },
         diagnostics:
           this.options.diagnostics?.(context) ??
@@ -143,10 +179,137 @@ export class CrocoVitestEvidenceReporter {
   }
 }
 
+function resolvePackageName(
+  configured: TestEvidenceReporterOptions["packageName"],
+  context: TestEvidenceReporterContext,
+): string | undefined {
+  const packageName =
+    typeof configured === "function"
+      ? configured(context)
+      : (configured ?? inferPackageName(context));
+  return packageName?.trim() || undefined;
+}
+
+function inferPackageName(context: TestEvidenceReporterContext): string | undefined {
+  if (context.runner === "vitest") {
+    const projectRoot = context.source.project?.config?.root;
+    return (
+      packageNameFromSource(context.source.module?.moduleId, projectRoot) ??
+      packageNameFromDirectory(projectRoot) ??
+      context.source.project?.name
+    );
+  }
+  const project = context.source.test.parent?.project();
+  return (
+    packageNameFromSource(context.source.test.location?.file, project?.testDir) ??
+    packageNameFromDirectory(project?.testDir) ??
+    project?.name
+  );
+}
+
+function packageNameFromSource(
+  source: string | undefined,
+  baseDirectory?: string,
+): string | undefined {
+  if (!source) return undefined;
+  const path = isAbsolute(source)
+    ? source
+    : baseDirectory
+      ? resolve(baseDirectory, source)
+      : undefined;
+  return path ? findPackageName(dirname(path)) : undefined;
+}
+
+function packageNameFromDirectory(directory: string | undefined): string | undefined {
+  return directory ? findPackageName(directory) : undefined;
+}
+
+function findPackageName(startDirectory: string): string | undefined {
+  let directory = resolve(startDirectory);
+  const root = parse(directory).root;
+  const visitedDirectories: string[] = [];
+  while (true) {
+    if (PACKAGE_NAMES_BY_DIRECTORY.has(directory)) {
+      const packageName = PACKAGE_NAMES_BY_DIRECTORY.get(directory);
+      for (const visited of visitedDirectories) {
+        PACKAGE_NAMES_BY_DIRECTORY.set(visited, packageName);
+      }
+      return packageName;
+    }
+    visitedDirectories.push(directory);
+    const manifestPath = resolve(directory, "package.json");
+    let manifest: unknown;
+    try {
+      manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+    } catch (error) {
+      if (!isMissingFile(error)) {
+        throw new TestEvidenceContractError(
+          `Unable to read package identity from '${manifestPath}'.`,
+          error,
+        );
+      }
+      if (directory === root) {
+        for (const visited of visitedDirectories) {
+          PACKAGE_NAMES_BY_DIRECTORY.set(visited, undefined);
+        }
+        return undefined;
+      }
+      directory = dirname(directory);
+      continue;
+    }
+    if (!isRecord(manifest)) {
+      throw new TestEvidenceContractError(
+        `Package manifest '${manifestPath}' must contain a JSON object.`,
+      );
+    }
+    if (!("name" in manifest)) {
+      if (directory === root) {
+        for (const visited of visitedDirectories) {
+          PACKAGE_NAMES_BY_DIRECTORY.set(visited, undefined);
+        }
+        return undefined;
+      }
+      directory = dirname(directory);
+      continue;
+    }
+    if (typeof manifest["name"] !== "string" || !manifest["name"].trim()) {
+      throw new TestEvidenceContractError(
+        `Package manifest '${manifestPath}' must declare a non-empty string name.`,
+      );
+    }
+    const packageName = manifest["name"].trim();
+    for (const visited of visitedDirectories) {
+      PACKAGE_NAMES_BY_DIRECTORY.set(visited, packageName);
+    }
+    return packageName;
+  }
+}
+
+function isMissingFile(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error.code === "ENOENT" || error.code === "ENOTDIR")
+  );
+}
+
+function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function evidenceRecordId(packageName: string | undefined, id: string): string {
+  return packageName ? `${packageName}::${id}` : id;
+}
+
 export class CrocoPlaywrightEvidenceReporter {
   private readonly tests = new Map<
     string,
-    { readonly attempts: PlaywrightTestResult[]; readonly test: PlaywrightTestCase }
+    {
+      readonly attempts: PlaywrightTestResult[];
+      readonly packageName?: string;
+      readonly test: PlaywrightTestCase;
+    }
   >();
 
   private readonly writeRecord: (record: TestEvidenceRecord) => Promise<void> | void;
@@ -156,21 +319,37 @@ export class CrocoPlaywrightEvidenceReporter {
   }
 
   onTestEnd(test: PlaywrightTestCase, result: PlaywrightTestResult): void {
-    const current = this.tests.get(test.id);
-    this.tests.set(test.id, { test, attempts: [...(current?.attempts ?? []), result] });
+    const packageName = resolvePackageName(
+      this.options.packageName,
+      playwrightContext(test, [result]),
+    );
+    const recordId = evidenceRecordId(packageName, test.id);
+    const current = this.tests.get(recordId);
+    this.tests.set(recordId, {
+      test,
+      attempts: [...(current?.attempts ?? []), result],
+      ...(packageName ? { packageName } : {}),
+    });
   }
 
   async onEnd(): Promise<void> {
-    for (const { test, attempts } of [...this.tests.values()].sort((left, right) =>
-      left.test.id < right.test.id ? -1 : left.test.id > right.test.id ? 1 : 0,
+    for (const { test, attempts, packageName } of [...this.tests.values()].sort((left, right) =>
+      evidenceRecordId(left.packageName, left.test.id) <
+      evidenceRecordId(right.packageName, right.test.id)
+        ? -1
+        : evidenceRecordId(left.packageName, left.test.id) >
+            evidenceRecordId(right.packageName, right.test.id)
+          ? 1
+          : 0,
     )) {
-      await this.write(test, attempts);
+      await this.write(test, attempts, packageName);
     }
   }
 
   private async write(
     test: PlaywrightTestCase,
     results: readonly PlaywrightTestResult[],
+    packageName: string | undefined,
   ): Promise<void> {
     const chronologicalResults = results
       .map((result, index) => ({ attempt: (result.retry ?? index) + 1, result }))
@@ -179,24 +358,19 @@ export class CrocoPlaywrightEvidenceReporter {
       playwrightOutcome(result, test.expectedStatus ?? "passed");
     const failed = (result: PlaywrightTestResult): boolean => outcome(result) === "failed";
     const attachments = chronologicalResults.flatMap(({ result }) => playwrightAttachments(result));
-    const context: TestEvidenceReporterContext = {
-      expectedStatus: test.expectedStatus ?? "passed",
-      id: test.id,
-      results,
-      runner: "playwright",
-      source: { test, results },
-      title: test.title,
-      titlePath: test.titlePath?.() ?? [test.title],
-    };
+    const context = playwrightContext(test, results);
     await this.writeRecord(
       createTestEvidenceRecord({
-        id: test.id,
+        id: evidenceRecordId(packageName, test.id),
         runner: "playwright",
+        ...(packageName ? { packageName } : {}),
         fidelity: this.options.fidelity,
         intent: this.options.intent?.(context) ?? { contractIds: [], description: test.title },
         observed: this.options.observed?.(context) ?? { contractIds: [] },
         replay: this.options.replay?.(context) ?? {
-          command: `pnpm playwright test --grep ${JSON.stringify(test.title)}`,
+          command: packageName
+            ? `pnpm --filter ${JSON.stringify(packageName)} exec playwright test --grep ${JSON.stringify(test.title)}`
+            : `pnpm playwright test --grep ${JSON.stringify(test.title)}`,
         },
         diagnostics:
           this.options.diagnostics?.(context) ??
@@ -228,6 +402,21 @@ export class CrocoPlaywrightEvidenceReporter {
       }),
     );
   }
+}
+
+function playwrightContext(
+  test: PlaywrightTestCase,
+  results: readonly PlaywrightTestResult[],
+): Extract<TestEvidenceReporterContext, { readonly runner: "playwright" }> {
+  return {
+    expectedStatus: test.expectedStatus ?? "passed",
+    id: test.id,
+    results,
+    runner: "playwright",
+    source: { test, results },
+    title: test.title,
+    titlePath: test.titlePath?.() ?? [test.title],
+  };
 }
 
 function playwrightOutcome(

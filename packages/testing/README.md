@@ -79,6 +79,10 @@ test.expectClean();
 | `assertDrizzleProblem(operation, expected)`           | Verifies Drizzle provider failures surface stable Croco Problem codes, categories, or status.                                                |
 | `createTestEvidenceRecord(input)`                     | Builds validated `croco.test-evidence/v1` records and derives flaky outcomes from retained attempts.                                         |
 | `createTestEvidenceBundle(records, artifactExists)`   | Deterministically aggregates runner-neutral evidence and reports every missing required attachment.                                          |
+| `createChangedTestPlan(input)`                        | Derives an explainable changed-test plan from assurance graph diffs, evidence, changed paths, and conservative fallbacks.                    |
+| `updateChangedTestSelectionBaseline(plan, evidence)`  | Records shadow-run coverage and selection misses across a bounded observation window.                                                        |
+| `assertChangedTestSelectionBaseline(value)`           | Validates restored changed-test baseline artifacts before they influence shadow or enforcement decisions.                                    |
+| `assertChangedTestPlanEnforceable(baseline)`          | Rejects enforcement until the configured complete observation window and miss threshold are satisfied.                                       |
 | `createContractCaseArbitrary(route)`                  | Builds a bounded fast-check arbitrary from a supported ContractGraph route and its Zod v3 input schemas.                                     |
 | `createFileContractFailureSink(directory)`            | Persists shrunk contract-fuzz failures as JSON artifacts in a deterministic local directory.                                                 |
 | `runContractFuzz(options)`                            | Runs a bounded deterministic fast-check profile against ContractGraph request and response/Problem schemas and persists replayable failures. |
@@ -204,7 +208,9 @@ provider and failure-drill reports remain intact as attachments with their origi
 being flattened into a lossy replacement format.
 
 Both reporter adapters accept optional context mappers for runtime observations, diagnostics, resources, and
-replay metadata. Import their directly loadable defaults from `@croco/testing/vitest-reporter` and
+replay metadata. Vitest evidence takes `packageName` from reporter options or the current Vitest project name;
+it never reuses a package name read from the process working directory for every project. Import the directly
+loadable defaults from `@croco/testing/vitest-reporter` and
 `@croco/testing/playwright-reporter`. A custom `write(record)` callback may select another artifact layout;
 without one, reporters write deterministic JSON fragments to `ci-reports/test-evidence/records` (or the
 configured `outputDirectory`). `pnpm test-evidence:bundle --input <report.json>` consumes already-executed
@@ -241,6 +247,21 @@ blocking obligations are limited to public route/RPC success and Problem behavio
 domain events/tasks, required supported provider capabilities, and explicitly selected critical journeys.
 `pnpm assurance:report --graph <graph.json> --evidence <bundle.json>` writes deterministic `report.json` and
 `summary.md`; add `--enforce` to make blocking findings exit non-zero.
+
+Assurance nodes also carry deterministic SHA-256 fingerprints of their source artifact rows. Schema, Problem,
+event, task, runtime capability, provider profile, generated/public API, and journey content changes therefore
+remain visible even when their stable behavior IDs do not change.
+
+`createChangedTestPlan()` compares base/head assurance graphs and runner-neutral evidence to produce
+`croco.changed-test-plan/v1`. Every selected test has a machine-readable reason; selected package/full suites,
+excluded evidence, fallback paths, replay commands, and source locations remain explicit. Unsupported changes and testing, codegen,
+TypeScript/build, verification-policy, or shared-runtime changes widen execution conservatively. Advisory time
+budgets report overflow as incomplete without removing required evidence.
+
+`updateChangedTestSelectionBaseline()` compares the plan with full-suite evidence and records every omitted
+failure in `croco.changed-test-selection-baseline/v1`. `assertChangedTestPlanEnforceable()` rejects optimization
+until the documented observation window and miss threshold are satisfied, keeping product PRs advisory during
+shadow mode while planner contract tests remain blocking.
 
 ## Failure Drills
 

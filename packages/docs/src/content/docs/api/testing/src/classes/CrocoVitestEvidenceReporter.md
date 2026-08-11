@@ -9,13 +9,13 @@ title: "CrocoVitestEvidenceReporter"
 
 ### Constructor
 
-> **new CrocoVitestEvidenceReporter**(`options`): `CrocoVitestEvidenceReporter`
+> **new CrocoVitestEvidenceReporter**(`options?`): `CrocoVitestEvidenceReporter`
 
 #### Parameters
 
-##### options
+##### options?
 
-[`TestEvidenceReporterOptions`](/api/testing/src/type-aliases/testevidencereporteroptions/)
+[`TestEvidenceReporterOptions`](/api/testing/src/type-aliases/testevidencereporteroptions/) = `DEFAULT_VITEST_REPORTER_OPTIONS`
 
 #### Returns
 

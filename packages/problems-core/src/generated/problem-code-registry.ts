@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 615,
+  problemCount: 616,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -4328,6 +4328,36 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "CROCO_CHANGED_TEST_PLAN_INVALID",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#croco-changed-test-plan-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/testing/src/libs/changed-test-plan.mts",
+          line: 99,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
       code: "CROCO_CLI_JOBS_001",
       category: "BadRequest",
       status: 400,
@@ -4599,7 +4629,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/executable-assurance.mts",
-          line: 205,
+          line: 245,
           column: 5,
           kind: "problem-constructor",
         },
@@ -4629,7 +4659,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/executable-assurance.mts",
-          line: 219,
+          line: 259,
           column: 5,
           kind: "problem-constructor",
         },
@@ -4786,7 +4816,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/test-evidence.mts",
-          line: 162,
+          line: 163,
           column: 5,
           kind: "problem-constructor",
         },
@@ -4817,7 +4847,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/test-evidence.mts",
-          line: 176,
+          line: 177,
           column: 5,
           kind: "problem-constructor",
         },

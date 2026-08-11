@@ -33,6 +33,7 @@ Run from any directory inside a Croco workspace. The CLI automatically detects `
 | `upgrade [paths...] [--write]`          | Report and apply safe version migration codemods |
 | `jobs list\|show\|logs\|cancel\|replay` | Inspect and recover Croco background jobs        |
 | `ops check\|status <url>`               | Validate or inspect operational endpoints        |
+| `test plan --changed <base>`            | Explain conservative changed-test selection      |
 
 ### make — Application Artifacts
 
@@ -70,6 +71,21 @@ Creates a single source file under `apps/api-server/src/`:
 - `croco upgrade apps/console-web --write` applies only safe codemods and keeps uncertain findings as confirmation items.
 - Dry-run and write reports include before/after hunks for every safe codemod so changes are reviewable before commit.
 - Initial rules cover generated SPA `routeConfig` files with a confirmation-required `@croco/meta-vite` `defineRoute` suggestion, `Problem.code` matchers safely migrating the legacy HTTP security diagnostic code to `CROCO_HTTP_SECURITY_001`, and manual-only reporting for legacy compatibility strings or disabled HTTP security validation.
+
+### test plan — Changed Assurance Planning
+
+`croco test plan --changed origin/trunk` compares the committed base and current
+`executable-assurance.graph.json`, then selects test evidence from
+`ci-reports/test-evidence/bundle.json`. The JSON report includes every changed behavior, selected test and suite,
+excluded test, inclusion reason, required evidence ID, direct replay command, source location, and conservative
+fallback. Missing graph history, unknown paths, testing/codegen/configuration changes, and shared runtime
+boundaries widen execution to package or full profiles instead of producing a false green plan.
+
+Use `--full-evidence <bundle.json> --baseline-out <path>` in shadow CI to record full-suite failures omitted by
+the plan. Shadow reports remain advisory. `--enforce` is rejected until `--observation-window` completed runs
+meet `--miss-threshold`; the defaults require 20 observed runs with a zero miss rate. `--budget-ms` never drops
+required evidence: overflow or unknown duration is reported with `incomplete: true` while replay commands stay
+in the plan.
 
 ### doctor — Workspace Diagnostics
 

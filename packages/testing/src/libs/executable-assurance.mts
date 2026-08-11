@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import { Problem, ProblemCategory } from "@croco/problems-core";
 
 import type { RuntimeCapabilityManifest } from "@croco/framework-context";
@@ -27,6 +29,8 @@ export type AssuranceBehaviorKind =
   | "problem"
   | "event"
   | "event-handler"
+  | "di-provider"
+  | "generated-client"
   | "task"
   | "provider"
   | "journey"
@@ -66,6 +70,7 @@ export type AssuranceBehaviorNode = {
   readonly label: string;
   readonly source?: AssuranceSourceLocation | undefined;
   readonly artifact: string;
+  readonly fingerprint?: string;
 };
 
 export type AssuranceEvidenceObligation = {
@@ -127,13 +132,48 @@ export type AssuranceProjectMapArtifact = {
       readonly id: string;
       readonly method: string;
       readonly path: string;
-      readonly source?: AssuranceSourceLocation | undefined;
+      readonly source?: ProjectMapSourceLocation | undefined;
     }[];
   };
   readonly problems: {
     readonly responses: readonly { readonly routeId: string; readonly code: string }[];
   };
+  readonly di?: {
+    readonly providers: readonly {
+      readonly id: string;
+      readonly name: string;
+      readonly scope: string;
+      readonly dependencies: readonly string[];
+      readonly source?: ProjectMapSourceLocation | undefined;
+    }[];
+  };
+  readonly packageGraph?: {
+    readonly providerProfile?: {
+      readonly profileName: string;
+      readonly packages: readonly string[];
+    };
+  };
+  readonly policies?: {
+    readonly runtime?: {
+      readonly target: string;
+      readonly requiredCapabilities: readonly string[];
+    };
+  };
+  readonly generatedArtifacts?: readonly {
+    readonly kind: string;
+    readonly path: string;
+    readonly commitPolicy: string;
+  }[];
 };
+
+type ProjectMapSourceLocation =
+  | AssuranceSourceLocation
+  | {
+      readonly file: string;
+      readonly line?: number;
+      readonly column?: number;
+      readonly symbol?: string;
+    };
 
 export type AssuranceProviderProfileArtifact = {
   readonly schemaVersion: string;
@@ -254,6 +294,9 @@ export function assertExecutableAssuranceGraph(
     assertNonEmptyValue(node["id"], `Graph nodes[${index}] id`);
     assertNonEmptyValue(node["label"], `Graph nodes[${index}] label`);
     assertNonEmptyValue(node["artifact"], `Graph nodes[${index}] artifact`);
+    if (node["fingerprint"] !== undefined) {
+      assertNonEmptyValue(node["fingerprint"], `Graph nodes[${index}] fingerprint`);
+    }
     if (!BEHAVIOR_KINDS.includes(node["kind"] as AssuranceBehaviorKind)) {
       throw new ExecutableAssuranceContractProblem(`Graph nodes[${index}] kind is unsupported.`);
     }
@@ -346,6 +389,7 @@ export function createExecutableAssuranceGraph(
         label: `${route.httpMethod} ${route.path}`,
         source,
         artifact: "contractGraph",
+        fingerprint: artifactFingerprint(route),
       });
       obligations.push(
         createObligation({
@@ -389,6 +433,15 @@ export function createExecutableAssuranceGraph(
         );
       }
     }
+    for (const consumer of input.contractGraph.consumerCoverage?.consumers ?? []) {
+      addNode(nodes, {
+        id: behaviorId("generated-client", consumer.consumerId),
+        kind: "generated-client",
+        label: `${consumer.label}: ${consumer.generatedArtifact}`,
+        artifact: "contractGraph",
+        fingerprint: artifactFingerprint(consumer),
+      });
+    }
   }
 
   if (input.projectMap) {
@@ -397,6 +450,7 @@ export function createExecutableAssuranceGraph(
       (input.contractGraph?.routes ?? []).map((route) => [route.routeId, route]),
     );
     for (const route of input.projectMap.routeGraph.routes) {
+      const routeSource = toProjectMapSource(route.source);
       const contractRoute = contractRoutes.get(route.id);
       if (contractRoute) {
         assertProjectMapRouteCompatible(contractRoute, route, input.projectMap);
@@ -406,8 +460,14 @@ export function createExecutableAssuranceGraph(
           id: nodeId,
           kind: "route",
           label: `${route.method} ${route.path}`,
-          source: route.source,
+          source: routeSource,
           artifact: "projectMap",
+          fingerprint: artifactFingerprint({
+            route,
+            problems: input.projectMap.problems.responses.filter(
+              ({ routeId }) => routeId === route.id,
+            ),
+          }),
         });
         obligations.push(
           createObligation({
@@ -419,7 +479,7 @@ export function createExecutableAssuranceGraph(
               { field: "routeIds", id: route.id },
               { field: "contractIds", id: responseContractId(nodeId) },
             ],
-            source: route.source,
+            source: routeSource,
             recovery: routeRecovery(route.id),
             minimumFidelity: {
               boot: "application",
@@ -442,7 +502,7 @@ export function createExecutableAssuranceGraph(
                 { field: "routeIds", id: route.id },
                 { field: "problemCodes", id: problem.code },
               ],
-              source: route.source,
+              source: routeSource,
               recovery: problemRecovery(problem.code, routeProblemId),
               minimumFidelity: {
                 boot: "application",
@@ -463,6 +523,7 @@ export function createExecutableAssuranceGraph(
           label: problem.code,
           source: problem.source,
           artifact: "projectMap",
+          fingerprint: artifactFingerprint(problem),
         });
         obligations.push(
           createObligation({
@@ -478,6 +539,59 @@ export function createExecutableAssuranceGraph(
         );
       }
     }
+    for (const provider of input.projectMap.di?.providers ?? []) {
+      addNode(nodes, {
+        id: behaviorId("di-provider", provider.id),
+        kind: "di-provider",
+        label: `${provider.name} (${provider.scope})`,
+        source: toProjectMapSource(provider.source),
+        artifact: "projectMap",
+        fingerprint: artifactFingerprint(provider),
+      });
+    }
+    const projectProviderProfile = input.projectMap.packageGraph?.providerProfile;
+    if (projectProviderProfile && input.providerProfile) {
+      assertProviderProfilesCompatible(projectProviderProfile, input.providerProfile);
+      artifactVersions["projectMap+providerProfile"] =
+        `${input.projectMap.version}+${input.providerProfile.schemaVersion}`;
+    }
+    if (projectProviderProfile) {
+      for (const packageName of projectProviderProfile.packages) {
+        addNode(nodes, {
+          id: behaviorId(
+            "provider-profile",
+            `${projectProviderProfile.profileName}/${packageName}`,
+          ),
+          kind: "provider-profile",
+          label: `${projectProviderProfile.profileName}: ${packageName}`,
+          artifact: input.providerProfile ? "projectMap+providerProfile" : "projectMap",
+          fingerprint: artifactFingerprint({
+            projectProviderProfile,
+            providerProfile: input.providerProfile,
+            packageName,
+          }),
+        });
+      }
+    }
+    if (input.projectMap.policies?.runtime) {
+      addNode(nodes, {
+        id: behaviorId("runtime", `project/${input.projectMap.policies.runtime.target}`),
+        kind: "runtime",
+        label: `Project runtime ${input.projectMap.policies.runtime.target}`,
+        artifact: "projectMap",
+        fingerprint: artifactFingerprint(input.projectMap.policies.runtime),
+      });
+    }
+    for (const generated of input.projectMap.generatedArtifacts ?? []) {
+      addNode(nodes, {
+        id: behaviorId("generated-client", `${generated.kind}:${generated.path}`),
+        kind: "generated-client",
+        label: `${generated.kind}: ${generated.path}`,
+        source: { path: generated.path },
+        artifact: "projectMap",
+        fingerprint: artifactFingerprint(generated),
+      });
+    }
   }
 
   if (input.rpcContracts) {
@@ -490,6 +604,7 @@ export function createExecutableAssuranceGraph(
         label: rpc.operation,
         source: rpc.source,
         artifact: "rpcContracts",
+        fingerprint: artifactFingerprint(rpc),
       });
       obligations.push(
         createObligation({
@@ -555,6 +670,7 @@ export function createExecutableAssuranceGraph(
         label: problem.code,
         source,
         artifact: "problemRegistry",
+        fingerprint: artifactFingerprint(problem),
       });
       obligations.push(
         createObligation({
@@ -583,6 +699,7 @@ export function createExecutableAssuranceGraph(
           label: entity.eventName,
           source,
           artifact: "frameworkManifest",
+          fingerprint: artifactFingerprint(entity),
         });
         obligations.push(
           createObligation({
@@ -604,6 +721,7 @@ export function createExecutableAssuranceGraph(
           label: `${entity.name} handles ${entity.eventName}`,
           source: toSource(entity.source),
           artifact: "frameworkManifest",
+          fingerprint: artifactFingerprint(entity),
         });
       }
     }
@@ -619,6 +737,7 @@ export function createExecutableAssuranceGraph(
         label: task.name,
         source: task.source,
         artifact: "tasks",
+        fingerprint: artifactFingerprint(task),
       });
       obligations.push(
         createObligation({
@@ -644,13 +763,21 @@ export function createExecutableAssuranceGraph(
 
   if (input.providerProfile) {
     artifactVersions["providerProfile"] = input.providerProfile.schemaVersion;
+    const projectProviderProfile = input.projectMap?.packageGraph?.providerProfile;
     for (const packageName of input.providerProfile.packages ?? []) {
       const profileName = input.providerProfile.profile?.name ?? "unknown";
+      if (
+        projectProviderProfile?.profileName === profileName &&
+        projectProviderProfile.packages.includes(packageName)
+      ) {
+        continue;
+      }
       addNode(nodes, {
         id: behaviorId("provider-profile", `${profileName}/${packageName}`),
         kind: "provider-profile",
         label: `${profileName}: ${packageName}`,
         artifact: "providerProfile",
+        fingerprint: artifactFingerprint({ profileName, packageName }),
       });
     }
   }
@@ -664,6 +791,11 @@ export function createExecutableAssuranceGraph(
         kind: "runtime",
         label: `${input.runtimeCapability.platform} ${capability}`,
         artifact: "runtimeCapability",
+        fingerprint: artifactFingerprint({
+          platform: input.runtimeCapability.platform,
+          capability,
+          supported,
+        }),
       });
     }
   }
@@ -686,6 +818,12 @@ export function createExecutableAssuranceGraph(
               label: `${publicApiEntrypointId(packageEntry.packageName, entrypoint.exportPath)} ${exported.name}`,
               source: exported.source ? { path: exported.source } : undefined,
               artifact: "publicApi",
+              fingerprint: artifactFingerprint({
+                packageName: packageEntry.packageName,
+                exportPath: entrypoint.exportPath,
+                exportKind,
+                exported,
+              }),
             });
           }
         }
@@ -703,6 +841,7 @@ export function createExecutableAssuranceGraph(
         label: journey.description,
         source: journey.source,
         artifact: "criticalJourneys",
+        fingerprint: artifactFingerprint(journey),
       });
       obligations.push(
         createObligation({
@@ -855,6 +994,11 @@ function addProviderProfile(
       kind: "provider",
       label: providerId,
       artifact: "providerConformance",
+      fingerprint: artifactFingerprint({
+        packageName: profile.packageName,
+        providerName: profile.providerName,
+        capability,
+      }),
     });
     obligations.push(
       createObligation({
@@ -872,6 +1016,12 @@ function addProviderProfile(
 
 function addNode(nodes: AssuranceBehaviorNode[], node: AssuranceBehaviorNode): void {
   nodes.push(node);
+}
+
+function artifactFingerprint(value: unknown): string {
+  return createHash("sha256")
+    .update(JSON.stringify(canonicalizeJson(value)))
+    .digest("hex");
 }
 
 function assessObligation(
@@ -1185,8 +1335,9 @@ function uniqueProjectMapProblems(
   const routeById = new Map(projectMap.routeGraph.routes.map((route) => [route.id, route]));
   const byCode = new Map<string, AssuranceSourceLocation | undefined>();
   for (const response of projectMap.problems.responses) {
-    if (!byCode.has(response.code))
-      byCode.set(response.code, routeById.get(response.routeId)?.source);
+    if (!byCode.has(response.code)) {
+      byCode.set(response.code, toProjectMapSource(routeById.get(response.routeId)?.source));
+    }
   }
   return [...byCode.entries()]
     .map(([code, source]) => ({ code, source }))
@@ -1211,6 +1362,24 @@ function assertProjectMapRouteCompatible(
   ) {
     throw new ExecutableAssuranceContractProblem(
       `Contract Graph and Project Map disagree for route '${projectRoute.id}'.`,
+    );
+  }
+}
+
+function assertProviderProfilesCompatible(
+  projectProfile: NonNullable<
+    NonNullable<AssuranceProjectMapArtifact["packageGraph"]>["providerProfile"]
+  >,
+  providerProfile: AssuranceProviderProfileArtifact,
+): void {
+  const profileName = providerProfile.profile?.name ?? "unknown";
+  const packages = uniqueStrings(providerProfile.packages ?? []);
+  if (
+    projectProfile.profileName !== profileName ||
+    uniqueStrings(projectProfile.packages).join("\0") !== packages.join("\0")
+  ) {
+    throw new ExecutableAssuranceContractProblem(
+      "Project Map and provider-profile artifact disagree on the selected profile or packages.",
     );
   }
 }
@@ -1252,6 +1421,19 @@ function toSource(
     path: source.path,
     ...(source.line === undefined ? {} : { line: source.line }),
     ...(source.column === undefined ? {} : { column: source.column }),
+  };
+}
+
+function toProjectMapSource(
+  source: ProjectMapSourceLocation | undefined,
+): AssuranceSourceLocation | undefined {
+  if (!source) return undefined;
+  if ("path" in source) return source;
+  return {
+    path: source.file,
+    ...(source.line === undefined ? {} : { line: source.line }),
+    ...(source.column === undefined ? {} : { column: source.column }),
+    ...(source.symbol === undefined ? {} : { symbol: source.symbol }),
   };
 }
 
@@ -1342,6 +1524,8 @@ const ASSURANCE_PREFIXES = [
   "problem:",
   "event:",
   "event-handler:",
+  "di-provider:",
+  "generated-client:",
   "task:",
   "provider:",
   "journey:",
@@ -1365,6 +1549,8 @@ const BEHAVIOR_KINDS: readonly AssuranceBehaviorKind[] = [
   "problem",
   "event",
   "event-handler",
+  "di-provider",
+  "generated-client",
   "task",
   "provider",
   "journey",
