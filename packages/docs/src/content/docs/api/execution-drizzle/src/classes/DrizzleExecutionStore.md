@@ -15,12 +15,13 @@ title: "DrizzleExecutionStore"
 
 ### TDb
 
-`TDb` *extends* `ExecutionDb`
+`TDb` _extends_ `ExecutionDb`
 
 ## Implements
 
 - [`ExecutionLogStore`](/api/execution-core/src/interfaces/executionlogstore/)
 - [`ExecutionContinuationStore`](/api/execution-core/src/interfaces/executioncontinuationstore/)
+- [`ExecutionAttemptStore`](/api/execution-core/src/interfaces/executionattemptstore/)
 
 ## Constructors
 
@@ -70,7 +71,7 @@ Drizzle 클라이언트를 받아 실행 저장소를 초기화합니다.
 
 [`ExecutionContinuationStore`](/api/execution-core/src/interfaces/executioncontinuationstore/).[`acquireContinuation`](/api/execution-core/src/interfaces/executioncontinuationstore/#acquirecontinuation)
 
-***
+---
 
 ### appendLog()
 
@@ -96,7 +97,41 @@ Drizzle 클라이언트를 받아 실행 저장소를 초기화합니다.
 
 [`ExecutionLogStore`](/api/execution-core/src/interfaces/executionlogstore/).[`appendLog`](/api/execution-core/src/interfaces/executionlogstore/#appendlog)
 
-***
+---
+
+### appendLogIfStatusAndAttempt()
+
+> **appendLogIfStatusAndAttempt**(`id`, `expectedStatus`, `expectedAttempt`, `entry`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/) \| `null`\>
+
+상태와 attempt 소유권이 모두 일치할 때만 로그를 원자적으로 추가합니다.
+
+#### Parameters
+
+##### id
+
+`string`
+
+##### expectedStatus
+
+[`ExecutionStatus`](/api/execution-core/src/type-aliases/executionstatus/)
+
+##### expectedAttempt
+
+`number`
+
+##### entry
+
+[`ExecutionLogEntry`](/api/execution-core/src/interfaces/executionlogentry/)
+
+#### Returns
+
+`Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/) \| `null`\>
+
+#### Implementation of
+
+[`ExecutionAttemptStore`](/api/execution-core/src/interfaces/executionattemptstore/).[`appendLogIfStatusAndAttempt`](/api/execution-core/src/interfaces/executionattemptstore/#appendlogifstatusandattempt)
+
+---
 
 ### create()
 
@@ -118,7 +153,7 @@ Drizzle 클라이언트를 받아 실행 저장소를 초기화합니다.
 
 [`ExecutionStore`](/api/execution-core/src/classes/executionstore/).[`create`](/api/execution-core/src/classes/executionstore/#create)
 
-***
+---
 
 ### delete()
 
@@ -140,7 +175,7 @@ Drizzle 클라이언트를 받아 실행 저장소를 초기화합니다.
 
 [`ExecutionStore`](/api/execution-core/src/classes/executionstore/).[`delete`](/api/execution-core/src/classes/executionstore/#delete)
 
-***
+---
 
 ### findById()
 
@@ -162,7 +197,7 @@ Drizzle 클라이언트를 받아 실행 저장소를 초기화합니다.
 
 [`ExecutionStore`](/api/execution-core/src/classes/executionstore/).[`findById`](/api/execution-core/src/classes/executionstore/#findbyid)
 
-***
+---
 
 ### findByIdempotencyKey()
 
@@ -184,7 +219,7 @@ idempotencyKey로 기존 실행을 조회합니다.
 
 [`ExecutionStore`](/api/execution-core/src/classes/executionstore/).[`findByIdempotencyKey`](/api/execution-core/src/classes/executionstore/#findbyidempotencykey)
 
-***
+---
 
 ### list()
 
@@ -206,7 +241,7 @@ idempotencyKey로 기존 실행을 조회합니다.
 
 [`ExecutionStore`](/api/execution-core/src/classes/executionstore/).[`list`](/api/execution-core/src/classes/executionstore/#list)
 
-***
+---
 
 ### listRunning()
 
@@ -228,7 +263,7 @@ idempotencyKey로 기존 실행을 조회합니다.
 
 [`ExecutionStore`](/api/execution-core/src/classes/executionstore/).[`listRunning`](/api/execution-core/src/classes/executionstore/#listrunning)
 
-***
+---
 
 ### mergeCheckpoint()
 
@@ -258,7 +293,45 @@ idempotencyKey로 기존 실행을 조회합니다.
 
 [`ExecutionStore`](/api/execution-core/src/classes/executionstore/).[`mergeCheckpoint`](/api/execution-core/src/classes/executionstore/#mergecheckpoint)
 
-***
+---
+
+### mergeCheckpointIfStatusAndAttempt()
+
+> **mergeCheckpointIfStatusAndAttempt**(`id`, `expectedStatus`, `expectedAttempt`, `key`, `value`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/) \| `null`\>
+
+상태와 attempt 소유권이 모두 일치할 때만 체크포인트를 원자적으로 병합합니다.
+
+#### Parameters
+
+##### id
+
+`string`
+
+##### expectedStatus
+
+[`ExecutionStatus`](/api/execution-core/src/type-aliases/executionstatus/)
+
+##### expectedAttempt
+
+`number`
+
+##### key
+
+`string`
+
+##### value
+
+`unknown`
+
+#### Returns
+
+`Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/) \| `null`\>
+
+#### Implementation of
+
+[`ExecutionAttemptStore`](/api/execution-core/src/interfaces/executionattemptstore/).[`mergeCheckpointIfStatusAndAttempt`](/api/execution-core/src/interfaces/executionattemptstore/#mergecheckpointifstatusandattempt)
+
+---
 
 ### update()
 
@@ -284,7 +357,7 @@ idempotencyKey로 기존 실행을 조회합니다.
 
 [`ExecutionStore`](/api/execution-core/src/classes/executionstore/).[`update`](/api/execution-core/src/classes/executionstore/#update)
 
-***
+---
 
 ### updateClaimedContinuation()
 
@@ -310,7 +383,7 @@ fencing token이 현재 claim과 일치할 때만 continuation 상태를 갱신�
 
 [`ExecutionContinuationStore`](/api/execution-core/src/interfaces/executioncontinuationstore/).[`updateClaimedContinuation`](/api/execution-core/src/interfaces/executioncontinuationstore/#updateclaimedcontinuation)
 
-***
+---
 
 ### updateIfStatus()
 
@@ -339,3 +412,37 @@ fencing token이 현재 claim과 일치할 때만 continuation 상태를 갱신�
 #### Overrides
 
 [`ExecutionStore`](/api/execution-core/src/classes/executionstore/).[`updateIfStatus`](/api/execution-core/src/classes/executionstore/#updateifstatus)
+
+---
+
+### updateIfStatusAndAttempt()
+
+> **updateIfStatusAndAttempt**(`id`, `expectedStatus`, `expectedAttempt`, `data`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/) \| `null`\>
+
+상태와 attempt 소유권이 모두 일치할 때만 실행을 원자적으로 갱신합니다.
+
+#### Parameters
+
+##### id
+
+`string`
+
+##### expectedStatus
+
+[`ExecutionStatus`](/api/execution-core/src/type-aliases/executionstatus/)
+
+##### expectedAttempt
+
+`number`
+
+##### data
+
+`Partial`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
+
+#### Returns
+
+`Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/) \| `null`\>
+
+#### Implementation of
+
+[`ExecutionAttemptStore`](/api/execution-core/src/interfaces/executionattemptstore/).[`updateIfStatusAndAttempt`](/api/execution-core/src/interfaces/executionattemptstore/#updateifstatusandattempt)

@@ -1,6 +1,7 @@
 import {
   type CreateExecutionRecordParams,
   type Execution,
+  type ExecutionLogEntry,
   ExecutionManagerImpl,
   ExecutionProblems,
   ExecutionStore,
@@ -9,6 +10,7 @@ import {
   type ListRunningExecutionsOptions,
 } from "@croco/execution-core";
 import { Component, Container, MetadataStorage } from "@croco/framework-context";
+import * as telemetry from "@croco/telemetry-api";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Task } from "../libs/decorators/Task";
 import { TaskExecutionTimeoutProblem } from "../libs/problems/TasksProblems";
@@ -73,6 +75,46 @@ class MemoryExecutionStore extends ExecutionStore {
     const current = this.executions.get(id);
     if (!current || current.status !== expectedStatus) return null;
     return this.update(id, data);
+  }
+
+  async updateIfStatusAndAttempt(
+    id: string,
+    expectedStatus: ExecutionStatus,
+    expectedAttempt: number,
+    data: Partial<Execution>,
+  ): Promise<Execution | null> {
+    const current = this.executions.get(id);
+    if (!current || current.status !== expectedStatus || current.attempts !== expectedAttempt) {
+      return null;
+    }
+    return this.update(id, data);
+  }
+
+  async mergeCheckpointIfStatusAndAttempt(
+    id: string,
+    expectedStatus: ExecutionStatus,
+    expectedAttempt: number,
+    key: string,
+    value: unknown,
+  ): Promise<Execution | null> {
+    const current = this.executions.get(id);
+    if (!current || current.status !== expectedStatus || current.attempts !== expectedAttempt) {
+      return null;
+    }
+    return this.mergeCheckpoint(id, key, value);
+  }
+
+  async appendLogIfStatusAndAttempt(
+    id: string,
+    expectedStatus: ExecutionStatus,
+    expectedAttempt: number,
+    entry: ExecutionLogEntry,
+  ): Promise<Execution | null> {
+    const current = this.executions.get(id);
+    if (!current || current.status !== expectedStatus || current.attempts !== expectedAttempt) {
+      return null;
+    }
+    return this.update(id, { logs: [...(current.logs ?? []), entry] });
   }
 
   async listRunning(options: ListRunningExecutionsOptions): Promise<Execution[]> {
@@ -142,7 +184,12 @@ describe("TaskRunner integration", () => {
 
     expect(executionId).toBeDefined();
     const timedOut = await manager.get(executionId as string);
-    expect(timedOut).toMatchObject({ status: "timed_out", attempts: 1, maxAttempts: 2 });
+    expect(timedOut).toMatchObject({
+      status: "timed_out",
+      attempts: 1,
+      maxAttempts: 2,
+      error: { retryable: true, indeterminate: false },
+    });
 
     const result = await runner.retry(executionId as string);
 
@@ -152,6 +199,156 @@ describe("TaskRunner integration", () => {
       attempts: 2,
       result: "retried: payload",
     });
+  });
+
+  it("blocks retry overlap until a non-cooperative timed-out handler settles", async () => {
+    let resolveFirstAttempt: (() => void) | undefined;
+    let activeHandlers = 0;
+    let maximumConcurrency = 0;
+    let invocations = 0;
+
+    @Component()
+    class NonCooperativeTask {
+      @Task({ name: "non-cooperative-task", timeout: 50, maxAttempts: 2 })
+      async handle(_payload: unknown, context: TaskExecutionContext): Promise<string> {
+        invocations += 1;
+        activeHandlers += 1;
+        maximumConcurrency = Math.max(maximumConcurrency, activeHandlers);
+        try {
+          if (context.attempt === 1) {
+            await new Promise<void>((resolve) => {
+              resolveFirstAttempt = resolve;
+            });
+          }
+          return `attempt-${context.attempt}`;
+        } finally {
+          activeHandlers -= 1;
+        }
+      }
+    }
+
+    Container.set(NonCooperativeTask, new NonCooperativeTask());
+    const manager = new ExecutionManagerImpl(new MemoryExecutionStore());
+    const runner = new TaskRunner(manager, TaskRegistry.fromMetadata());
+    const firstAttempt = runner.execute("non-cooperative-task", {});
+    const firstAttemptRejection = firstAttempt.catch((error: unknown) => error);
+    await vi.advanceTimersByTimeAsync(50);
+    const timeoutError = await firstAttemptRejection;
+    const executionId = (timeoutError as TaskExecutionTimeoutProblem).executionId;
+
+    await expect(runner.retry(executionId)).rejects.toMatchObject({
+      code: "execution/indeterminate-retry-blocked",
+    });
+    expect(invocations).toBe(1);
+    expect(maximumConcurrency).toBe(1);
+    await expect(manager.get(executionId)).resolves.toMatchObject({
+      error: { retryable: false, indeterminate: true },
+    });
+
+    resolveFirstAttempt?.();
+    await vi.waitFor(async () => {
+      await expect(manager.get(executionId)).resolves.toMatchObject({
+        error: { retryable: true, indeterminate: false },
+      });
+    });
+
+    await expect(runner.retry(executionId)).resolves.toBe("attempt-2");
+    expect(invocations).toBe(2);
+    expect(maximumConcurrency).toBe(1);
+  });
+
+  it("allows overlap only for an explicit idempotent timeout contract", async () => {
+    let resolveFirstAttempt: (() => void) | undefined;
+    let activeHandlers = 0;
+    let maximumConcurrency = 0;
+
+    @Component()
+    class IdempotentTimedTask {
+      @Task({
+        name: "idempotent-timed-task",
+        timeout: 50,
+        maxAttempts: 2,
+        timeoutRetry: "idempotent",
+      })
+      async handle(_payload: unknown, context: TaskExecutionContext): Promise<string> {
+        activeHandlers += 1;
+        maximumConcurrency = Math.max(maximumConcurrency, activeHandlers);
+        try {
+          if (context.attempt === 1) {
+            await new Promise<void>((resolve) => {
+              resolveFirstAttempt = resolve;
+            });
+          }
+          return `attempt-${context.attempt}`;
+        } finally {
+          activeHandlers -= 1;
+        }
+      }
+    }
+
+    Container.set(IdempotentTimedTask, new IdempotentTimedTask());
+    const manager = new ExecutionManagerImpl(new MemoryExecutionStore());
+    const runner = new TaskRunner(manager, TaskRegistry.fromMetadata());
+    const firstAttempt = runner.execute("idempotent-timed-task", {});
+    const firstAttemptRejection = firstAttempt.catch((error: unknown) => error);
+    await vi.advanceTimersByTimeAsync(50);
+    const timeoutError = await firstAttemptRejection;
+    const executionId = (timeoutError as TaskExecutionTimeoutProblem).executionId;
+
+    await expect(runner.retry(executionId)).resolves.toBe("attempt-2");
+    expect(maximumConcurrency).toBe(2);
+    resolveFirstAttempt?.();
+    await Promise.resolve();
+    await expect(manager.get(executionId)).resolves.toMatchObject({
+      status: "completed",
+      attempts: 2,
+      result: "attempt-2",
+    });
+  });
+
+  it("requires an operator reason to recover a still-indeterminate timeout", async () => {
+    let resolveFirstAttempt: (() => void) | undefined;
+    const recordErrorSpy = vi.spyOn(telemetry, "recordError").mockImplementation(() => {});
+
+    @Component()
+    class RecoverableTimedTask {
+      @Task({ name: "recoverable-timed-task", timeout: 50, maxAttempts: 2 })
+      async handle(_payload: unknown, context: TaskExecutionContext): Promise<string> {
+        if (context.attempt === 1) {
+          await new Promise<void>((resolve) => {
+            resolveFirstAttempt = resolve;
+          });
+        }
+        return `attempt-${context.attempt}`;
+      }
+    }
+
+    Container.set(RecoverableTimedTask, new RecoverableTimedTask());
+    const manager = new ExecutionManagerImpl(new MemoryExecutionStore());
+    const runner = new TaskRunner(manager, TaskRegistry.fromMetadata());
+    const firstAttemptRejection = runner
+      .execute("recoverable-timed-task", {})
+      .catch((error: unknown) => error);
+    await vi.advanceTimersByTimeAsync(50);
+    const timeoutError = await firstAttemptRejection;
+    const executionId = (timeoutError as TaskExecutionTimeoutProblem).executionId;
+
+    await expect(
+      runner.recoverTimeout(executionId, "provider reports no committed effect"),
+    ).resolves.toBe("attempt-2");
+    await expect(manager.get(executionId)).resolves.toMatchObject({
+      status: "completed",
+      attempts: 2,
+      result: "attempt-2",
+      metadata: {
+        timeoutRecovery: { reason: "provider reports no committed effect" },
+      },
+    });
+    resolveFirstAttempt?.();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(recordErrorSpy).not.toHaveBeenCalled();
+    recordErrorSpy.mockRestore();
   });
 
   it("should reconcile an overdue persisted execution after manager restart", async () => {

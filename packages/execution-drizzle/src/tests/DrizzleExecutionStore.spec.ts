@@ -844,6 +844,89 @@ describe("DrizzleExecutionStore", () => {
     });
   });
 
+  describe("updateIfStatusAndAttempt", () => {
+    it("uses execution ID, status, and attempt predicates", async () => {
+      const execution = createMockExecution({ status: "completed", attempts: 2 });
+      const whereMock = vi.fn((_condition: unknown) => ({
+        returning: vi.fn(() => Promise.resolve([execution])),
+      }));
+      mockDb.update = vi.fn(() => ({
+        set: vi.fn(() => ({ where: whereMock })),
+      }));
+
+      await store.updateIfStatusAndAttempt(execution.id, "running", 2, {
+        status: "completed",
+      });
+
+      const whereCall = whereMock.mock.calls[0];
+      expect(whereCall).toBeDefined();
+      const query = new PgDialect().sqlToQuery(whereCall?.[0] as SQL);
+      expect(query.sql).toContain('"executions"."id" = $1');
+      expect(query.sql).toContain('"executions"."status" = $2');
+      expect(query.sql).toContain('"executions"."attempts" = $3');
+      expect(query.params).toEqual([execution.id, "running", 2]);
+    });
+
+    it("returns null when the attempt token is stale", async () => {
+      mockDb.update = vi.fn(() => ({
+        set: vi.fn(() => ({
+          where: vi.fn(() => ({
+            returning: vi.fn(() => Promise.resolve([])),
+          })),
+        })),
+      }));
+
+      await expect(
+        store.updateIfStatusAndAttempt("stale-attempt", "running", 1, {
+          status: "completed",
+        }),
+      ).resolves.toBeNull();
+    });
+  });
+
+  describe("attempt-fenced checkpoint and log writes", () => {
+    it.each([
+      {
+        name: "checkpoint",
+        run: (execution: Execution) =>
+          store.mergeCheckpointIfStatusAndAttempt(
+            execution.id,
+            "running",
+            execution.attempts,
+            "cursor",
+            "next",
+          ),
+      },
+      {
+        name: "log",
+        run: (execution: Execution) =>
+          store.appendLogIfStatusAndAttempt(execution.id, "running", execution.attempts, {
+            timestamp: "2026-01-01T00:00:00.000Z",
+            level: "info",
+            message: "attempt-owned log",
+          }),
+      },
+    ])("uses execution ID, status, and attempt predicates for $name writes", async ({ run }) => {
+      const execution = createMockExecution({ status: "running", attempts: 2 });
+      const whereMock = vi.fn((_condition: unknown) => ({
+        returning: vi.fn(() => Promise.resolve([execution])),
+      }));
+      mockDb.update = vi.fn(() => ({
+        set: vi.fn(() => ({ where: whereMock })),
+      }));
+
+      await run(execution);
+
+      const whereCall = whereMock.mock.calls[0];
+      expect(whereCall).toBeDefined();
+      const query = new PgDialect().sqlToQuery(whereCall?.[0] as SQL);
+      expect(query.sql).toContain('"executions"."id" = $1');
+      expect(query.sql).toContain('"executions"."status" = $2');
+      expect(query.sql).toContain('"executions"."attempts" = $3');
+      expect(query.params).toEqual([execution.id, "running", 2]);
+    });
+  });
+
   describe("continuation compare-and-set", () => {
     const now = new Date("2026-01-01T00:00:00.000Z");
 

@@ -17,7 +17,15 @@ Runtime context provided as the optional second argument to task handlers.
 
 Persisted attempt number returned by ExecutionManager.start().
 
-***
+---
+
+### attemptToken
+
+> **attemptToken**: [`ExecutionAttemptToken`](/api/execution-core/src/type-aliases/executionattempttoken/)
+
+Token Croco-managed effects use to reject stale attempt mutations.
+
+---
 
 ### executionId
 
@@ -25,7 +33,7 @@ Persisted attempt number returned by ExecutionManager.start().
 
 Persisted execution identifier used for inspection and retry.
 
-***
+---
 
 ### signal
 

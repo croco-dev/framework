@@ -95,6 +95,9 @@ function classifyExecution(execution: Execution): RetryConsoleItemState {
     case "completed":
       return "succeeded";
     case "timed_out":
+      if (execution.error?.indeterminate === true) {
+        return "non_retryable";
+      }
       return hasAttemptsRemaining(execution) ? "retryable" : "terminal_failed";
     case "failed":
       if (execution.error?.retryable && hasAttemptsRemaining(execution)) {
@@ -191,6 +194,18 @@ function executionRecoveryActions(
   const state = classifyExecution(execution);
   const canRecordAudit = typeof manager.recordLog === "function";
   const canReplay = typeof manager.replay === "function";
+
+  if (execution.status === "timed_out" && execution.error?.indeterminate === true) {
+    return [
+      recoveryAction(
+        kind,
+        execution.id,
+        "inspect",
+        true,
+        "Inspect external effects, then resolve the timeout with an audited operator reason",
+      ),
+    ];
+  }
 
   if (state === "retryable") {
     return [

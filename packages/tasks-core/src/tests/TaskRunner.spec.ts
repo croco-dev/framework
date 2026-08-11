@@ -1,4 +1,4 @@
-import type { Execution, ExecutionManager } from "@croco/execution-core";
+import type { Execution, ExecutionAttemptManager, ExecutionManager } from "@croco/execution-core";
 import type { ILogger } from "@croco/framework-context";
 import { Component, Container, MetadataStorage } from "@croco/framework-context";
 import * as telemetry from "@croco/telemetry-api";
@@ -26,7 +26,7 @@ function execution(overrides: Partial<Execution> = {}): Execution {
 }
 
 describe("TaskRunner", () => {
-  let mockExecutionManager!: ExecutionManager;
+  let mockExecutionManager!: ExecutionManager & ExecutionAttemptManager;
   let registry!: TaskRegistry;
   let createdExecution!: Execution;
 
@@ -37,6 +37,7 @@ describe("TaskRunner", () => {
     registry = new TaskRegistry();
 
     mockExecutionManager = {
+      supportsAttemptFencing: vi.fn().mockReturnValue(true),
       get: vi.fn().mockResolvedValue(execution()),
       create: vi.fn().mockImplementation(async (params) => {
         createdExecution = execution({
@@ -62,6 +63,62 @@ describe("TaskRunner", () => {
       checkpoint: vi.fn().mockResolvedValue(undefined),
       timeout: vi.fn().mockResolvedValue(undefined),
       reconcileTimedOut: vi.fn().mockResolvedValue({ scanned: 0, timedOut: 0 }),
+      completeAttempt: vi.fn().mockImplementation(async (token, result) => {
+        await mockExecutionManager.complete(token.executionId, result);
+        return execution({
+          id: token.executionId,
+          status: "completed",
+          attempts: token.attempt,
+          result,
+        });
+      }),
+      failAttempt: vi.fn().mockImplementation(async (token, error) => {
+        await mockExecutionManager.fail(token.executionId, error);
+        return execution({
+          id: token.executionId,
+          status: "failed",
+          attempts: token.attempt,
+          error,
+        });
+      }),
+      timeoutAttempt: vi.fn().mockImplementation(async (token, options) => {
+        await mockExecutionManager.timeout(token.executionId);
+        return execution({
+          id: token.executionId,
+          status: "timed_out",
+          attempts: token.attempt,
+          error: options.retryable
+            ? { message: "Execution timed out", retryable: true }
+            : {
+                message: "Execution timed out with an indeterminate outcome",
+                retryable: false,
+                indeterminate: true,
+              },
+        });
+      }),
+      updateProgressAttempt: vi.fn().mockResolvedValue(undefined),
+      checkpointAttempt: vi.fn().mockResolvedValue(undefined),
+      recordLogAttempt: vi.fn().mockResolvedValue(undefined),
+      settleTimedOutAttempt: vi.fn().mockImplementation(async (token) =>
+        execution({
+          id: token.executionId,
+          status: "timed_out",
+          attempts: token.attempt,
+          error: {
+            message: "Execution timed out after the abandoned attempt settled",
+            retryable: true,
+            indeterminate: false,
+          },
+        }),
+      ),
+      resolveIndeterminateTimeout: vi.fn().mockImplementation(async (token) =>
+        execution({
+          id: token.executionId,
+          attempts: token.attempt,
+          status: "timed_out",
+          error: { message: "Execution timeout was resolved", retryable: true },
+        }),
+      ),
     };
 
     @Component({ scope: "singleton" })
@@ -592,6 +649,26 @@ describe("TaskRunner", () => {
     recordErrorSpy.mockRestore();
   });
 
+  it("should reject timed tasks before starting when attempt fencing is unavailable", async () => {
+    @Component()
+    class UnsupportedTimedTaskHandler {
+      @Task({ name: "unsupported-timed-task", timeout: 100 })
+      handle(): string {
+        return "should-not-run";
+      }
+    }
+
+    Container.set(UnsupportedTimedTaskHandler, new UnsupportedTimedTaskHandler());
+    registry.collectFromMetadata();
+    vi.mocked(mockExecutionManager.supportsAttemptFencing).mockReturnValue(false);
+    const runner = new TaskRunner(mockExecutionManager, registry);
+
+    await expect(runner.execute("unsupported-timed-task", {})).rejects.toMatchObject({
+      code: "execution/attempt-fencing-unsupported",
+    });
+    expect(mockExecutionManager.start).not.toHaveBeenCalled();
+  });
+
   it("should abort cooperative handlers and persist timeout at the deadline", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
@@ -762,6 +839,45 @@ describe("TaskRunner", () => {
     await rejection;
     expect(mockExecutionManager.timeout).toHaveBeenCalledWith("exec-123");
     expect(mockExecutionManager.complete).not.toHaveBeenCalled();
+  });
+
+  it("should record quiescence when the handler settles before a delayed deadline callback", async () => {
+    let now = new Date("2026-01-01T00:00:00.000Z").getTime();
+    let resolveHandler: ((value: string) => void) | undefined;
+
+    @Component()
+    class DelayedDeadlineTaskHandler {
+      @Task({ name: "delayed-deadline-task", timeout: 100 })
+      handle(): Promise<string> {
+        return new Promise((resolve) => {
+          resolveHandler = resolve;
+        });
+      }
+    }
+
+    Container.set(DelayedDeadlineTaskHandler, new DelayedDeadlineTaskHandler());
+    registry.collectFromMetadata();
+    mockExecutionManager.start = vi.fn().mockResolvedValue(
+      execution({
+        type: "delayed-deadline-task",
+        status: "running",
+        attempts: 1,
+        startedAt: new Date(now),
+        timeout: 100,
+      }),
+    );
+    const runner = new TaskRunner(mockExecutionManager, registry, undefined, {
+      now: () => now,
+      schedule: () => () => undefined,
+    });
+
+    const result = runner.execute("delayed-deadline-task", {});
+    await vi.waitFor(() => expect(resolveHandler).toBeDefined());
+    now += 100;
+    resolveHandler?.("settled at deadline");
+
+    await expect(result).rejects.toBeInstanceOf(TaskExecutionTimeoutProblem);
+    await vi.waitFor(() => expect(mockExecutionManager.settleTimedOutAttempt).toHaveBeenCalled());
   });
 
   it("should chunk timeout scheduling beyond the Node timer limit", async () => {

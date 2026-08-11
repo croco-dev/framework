@@ -1,5 +1,6 @@
 import { ExecutionProblems } from "./ExecutionProblem";
 import type {
+  ExecutionAttemptManager,
   ExecutionContinuationManager,
   ExecutionInspectionManager,
   ExecutionManager,
@@ -10,6 +11,7 @@ import type {
   StageExecutionContinuationInput,
 } from "./interfaces/ExecutionManager";
 import type {
+  ExecutionAttemptStore,
   ExecutionContinuationStore,
   ExecutionLogStore,
   ExecutionStore,
@@ -18,6 +20,7 @@ import type {
   AddExecutionLogParams,
   CreateExecutionParams,
   Execution,
+  ExecutionAttemptToken,
   ExecutionError,
   ExecutionContinuationClaim,
   ExecutionLogEntry,
@@ -268,6 +271,7 @@ function canonicalStringify(value: unknown, ancestors = new WeakSet<object>()): 
 export class ExecutionManagerImpl
   implements
     ExecutionManager,
+    ExecutionAttemptManager,
     ExecutionInspectionManager,
     ExecutionReplayManager,
     ExecutionContinuationManager
@@ -293,6 +297,15 @@ export class ExecutionManagerImpl
 
   getContinuationLeaseDurationMs(): number {
     return this.continuationLeaseDurationMs;
+  }
+
+  supportsAttemptFencing(): boolean {
+    const store = this.store as ExecutionStore & Partial<ExecutionAttemptStore>;
+    return (
+      typeof store.updateIfStatusAndAttempt === "function" &&
+      typeof store.mergeCheckpointIfStatusAndAttempt === "function" &&
+      typeof store.appendLogIfStatusAndAttempt === "function"
+    );
   }
 
   async get(id: string): Promise<Execution> {
@@ -418,6 +431,17 @@ export class ExecutionManagerImpl
     });
   }
 
+  async completeAttempt(token: ExecutionAttemptToken, result?: unknown): Promise<Execution> {
+    const execution = await this.findExisting(token.executionId);
+    validateTransition(execution.status, "completed");
+
+    return this.transitionAttempt(execution, token, "completed", {
+      status: "completed",
+      result,
+      completedAt: new Date(),
+    });
+  }
+
   async fail(id: string, error: ExecutionError): Promise<Execution> {
     const execution = await this.findExisting(id);
 
@@ -436,6 +460,25 @@ export class ExecutionManagerImpl
     validateTransition(execution.status, "failed");
 
     return this.transition(execution, "failed", {
+      status: "failed",
+      error,
+      completedAt: new Date(),
+    });
+  }
+
+  async failAttempt(token: ExecutionAttemptToken, error: ExecutionError): Promise<Execution> {
+    const execution = await this.findExisting(token.executionId);
+
+    if (error.retryable && execution.attempts < execution.maxAttempts) {
+      validateTransition(execution.status, "retrying");
+      return this.transitionAttempt(execution, token, "retrying", {
+        status: "retrying",
+        error,
+      });
+    }
+
+    validateTransition(execution.status, "failed");
+    return this.transitionAttempt(execution, token, "failed", {
       status: "failed",
       error,
       completedAt: new Date(),
@@ -461,6 +504,12 @@ export class ExecutionManagerImpl
   async retry(id: string): Promise<Execution> {
     const execution = await this.findExisting(id);
 
+    if (execution.status === "timed_out" && execution.error?.indeterminate === true) {
+      throw ExecutionProblems.indeterminateRetryBlocked(
+        `Execution '${id}' timed out with an indeterminate outcome; inspect external effects and resolve the timeout before retry`,
+      );
+    }
+
     if (execution.attempts >= execution.maxAttempts) {
       throw ExecutionProblems.maxRetriesExceeded("Maximum retry attempts exceeded");
     }
@@ -478,14 +527,8 @@ export class ExecutionManagerImpl
 
   async updateProgress(id: string, progress: ProgressInfo): Promise<Execution> {
     await this.findExisting(id);
-
-    const percent = progress.percent ?? calculatePercent(progress.current, progress.total);
-
     return this.store.update(id, {
-      progress: {
-        ...progress,
-        percent,
-      },
+      progress: this.progressWithPercent(progress),
     });
   }
 
@@ -503,9 +546,147 @@ export class ExecutionManagerImpl
       completedAt: new Date(),
       error: {
         message: "Execution timed out",
-        retryable: true,
+        code: "execution/timeout-indeterminate",
+        retryable: false,
+        indeterminate: true,
       },
     });
+  }
+
+  async timeoutAttempt(
+    token: ExecutionAttemptToken,
+    options: { retryable: boolean },
+  ): Promise<Execution> {
+    const execution = await this.findExisting(token.executionId);
+    validateTransition(execution.status, "timed_out");
+
+    return this.transitionAttempt(execution, token, "timed_out", {
+      status: "timed_out",
+      completedAt: new Date(),
+      error: options.retryable
+        ? {
+            message: "Execution timed out",
+            code: "execution/timeout-retryable",
+            retryable: true,
+          }
+        : {
+            message: "Execution timed out with an indeterminate outcome",
+            code: "execution/timeout-indeterminate",
+            retryable: false,
+            indeterminate: true,
+          },
+    });
+  }
+
+  async updateProgressAttempt(
+    token: ExecutionAttemptToken,
+    progress: ProgressInfo,
+  ): Promise<Execution> {
+    const execution = await this.findRunningAttempt(token);
+    const progressWithPercent = this.progressWithPercent(progress);
+    return this.transitionAttempt(execution, token, "running", { progress: progressWithPercent });
+  }
+
+  async checkpointAttempt(
+    token: ExecutionAttemptToken,
+    key: string,
+    value: unknown,
+  ): Promise<Execution> {
+    const execution = await this.findRunningAttempt(token);
+    const store = this.attemptStore(execution.id);
+    const updated = await store.mergeCheckpointIfStatusAndAttempt(
+      execution.id,
+      "running",
+      token.attempt,
+      key,
+      value,
+    );
+    if (updated) return updated;
+    return this.throwAttemptFenceConflict(token, "checkpoint");
+  }
+
+  async recordLogAttempt(
+    token: ExecutionAttemptToken,
+    params: AddExecutionLogParams,
+  ): Promise<Execution> {
+    const execution = await this.findRunningAttempt(token);
+    const store = this.attemptStore(execution.id);
+    const entry: ExecutionLogEntry = {
+      timestamp: toIsoTimestamp(params.timestamp),
+      level: params.level ?? "info",
+      message: params.message,
+      ...(params.data === undefined ? {} : { data: params.data }),
+    };
+    const updated = await store.appendLogIfStatusAndAttempt(
+      execution.id,
+      "running",
+      token.attempt,
+      entry,
+    );
+    if (updated) return updated;
+    return this.throwAttemptFenceConflict(token, "record log");
+  }
+
+  async settleTimedOutAttempt(token: ExecutionAttemptToken): Promise<Execution> {
+    const execution = await this.findExisting(token.executionId);
+    if (execution.status !== "timed_out" || execution.error?.indeterminate !== true) {
+      throw ExecutionProblems.attemptFenceConflict(
+        `Attempt ${token.attempt} cannot settle execution '${token.executionId}' from status '${execution.status}'`,
+      );
+    }
+
+    return this.transitionAttempt(execution, token, "timed_out", {
+      error: {
+        ...execution.error,
+        message: "Execution timed out after the abandoned attempt settled",
+        code: "execution/timeout-quiescent",
+        retryable: true,
+        indeterminate: false,
+      },
+    });
+  }
+
+  async resolveIndeterminateTimeout(
+    token: ExecutionAttemptToken,
+    reason: string,
+  ): Promise<Execution> {
+    const execution = await this.findExisting(token.executionId);
+    if (execution.status !== "timed_out" || execution.error?.indeterminate !== true) {
+      throw ExecutionProblems.attemptFenceConflict(
+        `Execution '${token.executionId}' is not an indeterminate timeout requiring operator recovery`,
+      );
+    }
+    if (reason.trim().length === 0) {
+      throw ExecutionProblems.conflict("Indeterminate timeout recovery requires a reason");
+    }
+
+    const store = this.attemptStore(token.executionId);
+    const updated = await store.updateIfStatusAndAttempt(
+      token.executionId,
+      "timed_out",
+      token.attempt,
+      {
+        error: {
+          ...execution.error,
+          message: "Execution timeout was resolved by an operator",
+          code: "execution/timeout-operator-resolved",
+          retryable: true,
+          indeterminate: false,
+        },
+        metadata: {
+          ...execution.metadata,
+          timeoutRecovery: {
+            reason,
+            resolvedAt: this.clock().toISOString(),
+          },
+        },
+      },
+    );
+    if (updated) return updated;
+
+    throw ExecutionProblems.attemptFenceConflict(
+      `Attempt ${token.attempt} lost ownership before indeterminate timeout recovery for execution '${token.executionId}' could be recorded`,
+    );
   }
 
   async reconcileTimedOut(
@@ -536,8 +717,10 @@ export class ExecutionManagerImpl
             status: "timed_out",
             completedAt: now,
             error: {
-              message: "Execution timed out",
-              retryable: true,
+              message: "Execution timed out with an indeterminate outcome",
+              code: "execution/timeout-indeterminate",
+              retryable: false,
+              indeterminate: true,
             },
           });
 
@@ -652,6 +835,12 @@ export class ExecutionManagerImpl
   async replay(id: string, params: ReplayExecutionParams = {}): Promise<Execution> {
     const execution = await this.findExisting(id);
 
+    if (execution.status === "timed_out" && execution.error?.indeterminate === true) {
+      throw ExecutionProblems.indeterminateRetryBlocked(
+        `Execution '${id}' timed out with an indeterminate outcome; resolve it before replay`,
+      );
+    }
+
     if (!isReplayableStatus(execution.status)) {
       throw ExecutionProblems.invalidStateTransition(
         `Cannot replay execution in '${execution.status}' status`,
@@ -696,6 +885,13 @@ export class ExecutionManagerImpl
     }
 
     return execution;
+  }
+
+  private progressWithPercent(progress: ProgressInfo): ProgressInfo {
+    return {
+      ...progress,
+      percent: progress.percent ?? calculatePercent(progress.current, progress.total),
+    };
   }
 
   private continuationStore(): ExecutionStore & ExecutionContinuationStore {
@@ -748,6 +944,58 @@ export class ExecutionManagerImpl
     const current = await this.findExisting(execution.id);
     throw ExecutionProblems.invalidStateTransition(
       `Cannot transition execution '${execution.id}' from '${execution.status}' to '${targetStatus}'; current status is '${current.status}'`,
+    );
+  }
+
+  private async transitionAttempt(
+    execution: Execution,
+    token: ExecutionAttemptToken,
+    targetStatus: ExecutionStatus,
+    data: Partial<Execution>,
+  ): Promise<Execution> {
+    if (token.executionId !== execution.id || token.attempt !== execution.attempts) {
+      throw ExecutionProblems.attemptFenceConflict(
+        `Attempt token does not own execution '${execution.id}' attempt ${execution.attempts}`,
+      );
+    }
+
+    const store = this.attemptStore(execution.id);
+
+    const updated = await store.updateIfStatusAndAttempt(
+      execution.id,
+      execution.status,
+      token.attempt,
+      data,
+    );
+    if (updated) return updated;
+
+    return this.throwAttemptFenceConflict(token, `transition to '${targetStatus}'`);
+  }
+
+  private attemptStore(executionId: string): ExecutionStore & ExecutionAttemptStore {
+    if (!this.supportsAttemptFencing()) {
+      throw ExecutionProblems.attemptFencingUnsupported(
+        `Execution store must support atomic attempt fencing for execution '${executionId}'`,
+      );
+    }
+    return this.store as ExecutionStore & ExecutionAttemptStore;
+  }
+
+  private async findRunningAttempt(token: ExecutionAttemptToken): Promise<Execution> {
+    const execution = await this.findExisting(token.executionId);
+    if (execution.status !== "running" || execution.attempts !== token.attempt) {
+      return this.throwAttemptFenceConflict(token, "mutate running state");
+    }
+    return execution;
+  }
+
+  private async throwAttemptFenceConflict(
+    token: ExecutionAttemptToken,
+    operation: string,
+  ): Promise<never> {
+    const current = await this.findExisting(token.executionId);
+    throw ExecutionProblems.attemptFenceConflict(
+      `Attempt ${token.attempt} can no longer ${operation} for execution '${token.executionId}'; current attempt is ${current.attempts} and status is '${current.status}'`,
     );
   }
 

@@ -59,7 +59,32 @@ title: "TaskRunner"
 
 `Promise`\<`unknown`\>
 
-***
+---
+
+### recoverTimeout()
+
+> **recoverTimeout**(`executionId`, `reason`): `Promise`\<`unknown`\>
+
+Records operator recovery for an indeterminate timeout and retries the execution.
+
+The reason is retained as audit metadata. Inspect external effects first, then call this method;
+retry() remains blocked until the attempt-fenced recovery record has been committed.
+
+#### Parameters
+
+##### executionId
+
+`string`
+
+##### reason
+
+`string`
+
+#### Returns
+
+`Promise`\<`unknown`\>
+
+---
 
 ### retry()
 

@@ -52,7 +52,9 @@ describe("TasksProblems", () => {
     expect(problem.toJSON()).toMatchObject({
       executionId: "exec-123",
       timeoutMs: 250,
-      retryable: true,
+      retryable: false,
+      indeterminate: true,
+      recoveryAction: expect.stringContaining("TaskRunner.recoverTimeout"),
     });
   });
 });

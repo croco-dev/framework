@@ -15,7 +15,16 @@ Error details for failed executions.
 
 Optional error code for categorization
 
-***
+---
+
+### indeterminate?
+
+> `optional` **indeterminate?**: `boolean`
+
+Whether the abandoned attempt may still commit side effects. The state clears when the handler
+settles, an idempotent or fenced retry contract is confirmed, or an operator records recovery.
+
+---
 
 ### message
 
@@ -23,7 +32,7 @@ Optional error code for categorization
 
 Error message
 
-***
+---
 
 ### retryable
 
@@ -31,7 +40,7 @@ Error message
 
 Whether this error is retryable
 
-***
+---
 
 ### stack?
 

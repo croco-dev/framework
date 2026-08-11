@@ -9690,6 +9690,21 @@
               "source": "./libs/types"
             },
             {
+              "name": "ExecutionAttemptManager",
+              "exportKind": "named",
+              "source": "./libs/interfaces/ExecutionManager"
+            },
+            {
+              "name": "ExecutionAttemptStore",
+              "exportKind": "named",
+              "source": "./libs/interfaces/ExecutionStore"
+            },
+            {
+              "name": "ExecutionAttemptToken",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
               "name": "ExecutionCheckpointConcurrencyResult",
               "exportKind": "named",
               "source": "./libs/conformance"
@@ -9896,6 +9911,11 @@
             },
             {
               "name": "StageExecutionContinuationInput",
+              "exportKind": "named",
+              "source": "./libs/interfaces/ExecutionManager"
+            },
+            {
+              "name": "TimeoutExecutionAttemptOptions",
               "exportKind": "named",
               "source": "./libs/interfaces/ExecutionManager"
             },
@@ -25025,6 +25045,11 @@
               "name": "TaskRunnerRuntime",
               "exportKind": "named",
               "source": "./libs/TaskRunner"
+            },
+            {
+              "name": "TaskTimeoutRetryPolicy",
+              "exportKind": "named",
+              "source": "./libs/types"
             }
           ]
         }

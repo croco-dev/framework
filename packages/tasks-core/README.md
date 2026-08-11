@@ -56,12 +56,25 @@ class ImageProcessor {
   @Task({ name: "process-image-resize", timeout: 5_000 })
   async resizeImage(payload: { imageUrl: string; width: number }, context: TaskExecutionContext) {
     const response = await fetch(payload.imageUrl, { signal: context.signal });
-    return { attempt: context.attempt, bytes: await response.arrayBuffer() };
+    return {
+      attempt: context.attempt,
+      attemptToken: context.attemptToken,
+      bytes: await response.arrayBuffer(),
+    };
   }
 }
 ```
 
-제한 시간이 지나면 실행은 `timed_out`으로 남고 `TaskExecutionTimeoutProblem`이 발생합니다. Problem의
-`executionId`를 `TaskRunner.retry(executionId)`에 전달하면 idempotency key 없이도 같은 실행의 다음 시도를
-명시적으로 시작할 수 있습니다. 임의의 JavaScript 작업을 강제 종료하지는 않으므로, 취소가 필요한 I/O에는
-반드시 `context.signal`을 전달해야 합니다. `timeout`이 없거나 0 이하이면 기존과 같이 제한 시간을 적용하지 않습니다.
+제한 시간이 지나면 실행은 `timed_out`으로 남고 `TaskExecutionTimeoutProblem`이 발생합니다. 기본
+`timeoutRetry: "after_settlement"` 정책은 원래 핸들러가 정착할 때까지 결과를 `indeterminate`로 표시하고
+`TaskRunner.retry(executionId)` 및 replay를 차단합니다. `context.signal`을 따르는 협력적 핸들러는 abort 후 빠르게
+정착하므로 기존처럼 재시도할 수 있습니다. AbortSignal을 무시하는 핸들러는 계속 실행되더라도 새 시도와 자동으로
+겹치지 않습니다.
+
+외부 효과가 중복에 안전하면 `timeoutRetry: "idempotent"`, 외부 저장소가 `context.attemptToken`으로 오래된
+시도를 원자적으로 거부하면 `timeoutRetry: "fenced"`를 명시할 수 있습니다. 이 두 계약은 원래 핸들러가 아직
+실행 중이어도 재시도를 허용합니다. 운영자가 외부 효과를 직접 확인한 뒤 불확정 타임아웃을 해제해야 한다면
+`TaskRunner.recoverTimeout(executionId, reason)`을 사용합니다. 복구 이유는 실행 metadata에 기록됩니다.
+
+임의의 JavaScript 작업을 강제 종료하지는 않습니다. `timeout`이 없거나 0 이하이면 기존과 같이 제한 시간을
+적용하지 않습니다.

@@ -1,4 +1,10 @@
-import type { Execution, ExecutionManager } from "@croco/execution-core";
+import { ExecutionProblems } from "@croco/execution-core";
+import type {
+  Execution,
+  ExecutionAttemptManager,
+  ExecutionAttemptToken,
+  ExecutionManager,
+} from "@croco/execution-core";
 import type { ILogger } from "@croco/framework-context";
 import { Container } from "@croco/framework-context";
 import { recordError } from "@croco/telemetry-api";
@@ -8,7 +14,7 @@ import {
   TaskRunnerDIFailureProblem,
 } from "./problems/TasksProblems";
 import { TaskRegistry } from "./TaskRegistry";
-import type { TaskExecutionContext, TaskExecutionOptions } from "./types";
+import type { TaskExecutionContext, TaskExecutionOptions, TaskTimeoutRetryPolicy } from "./types";
 
 type Constructor<T = object> = new (...args: unknown[]) => T;
 
@@ -95,6 +101,21 @@ function recordDiagnosticError(error: unknown): void {
   }
 }
 
+function supportsAttemptFencing(
+  manager: ExecutionManager,
+): manager is ExecutionManager & ExecutionAttemptManager {
+  const candidate = manager as ExecutionManager & Partial<ExecutionAttemptManager>;
+  return (
+    typeof candidate.supportsAttemptFencing === "function" &&
+    candidate.supportsAttemptFencing() &&
+    typeof candidate.completeAttempt === "function" &&
+    typeof candidate.failAttempt === "function" &&
+    typeof candidate.timeoutAttempt === "function" &&
+    typeof candidate.settleTimedOutAttempt === "function" &&
+    typeof candidate.resolveIndeterminateTimeout === "function"
+  );
+}
+
 export class TaskRunner {
   private readonly now: () => number;
   private readonly schedule: (callback: () => void, delayMs: number) => () => void;
@@ -147,7 +168,7 @@ export class TaskRunner {
       return execution.result;
     }
 
-    return this.runExecution(task.target, task.methodName, execution);
+    return this.runExecution(task.target, task.methodName, execution, taskOptions.timeoutRetry);
   }
 
   async retry(executionId: string): Promise<unknown> {
@@ -157,20 +178,69 @@ export class TaskRunner {
       throw new TaskNotFoundProblem(execution.type);
     }
 
+    if (execution.status === "timed_out" && execution.error?.indeterminate === true) {
+      throw ExecutionProblems.indeterminateRetryBlocked(
+        `Execution '${executionId}' timed out with an indeterminate outcome; inspect external effects and use recoverTimeout for operator recovery`,
+      );
+    }
+
     const retryingExecution = await this.executionManager.retry(executionId);
-    return this.runExecution(task.target, task.methodName, retryingExecution);
+    return this.runExecution(
+      task.target,
+      task.methodName,
+      retryingExecution,
+      task.metadata.options?.timeoutRetry,
+    );
+  }
+
+  /**
+   * Records operator recovery for an indeterminate timeout and retries the execution.
+   *
+   * The reason is retained as audit metadata. Inspect external effects first, then call this method;
+   * retry() remains blocked until the attempt-fenced recovery record has been committed.
+   */
+  async recoverTimeout(executionId: string, reason: string): Promise<unknown> {
+    if (!supportsAttemptFencing(this.executionManager)) {
+      throw ExecutionProblems.attemptFencingUnsupported(
+        `Execution manager cannot recover indeterminate timeout '${executionId}' without atomic attempt fencing`,
+      );
+    }
+
+    const execution = await this.executionManager.get(executionId);
+    await this.executionManager.resolveIndeterminateTimeout(
+      { executionId, attempt: execution.attempts },
+      reason,
+    );
+    return this.retry(executionId);
   }
 
   private async runExecution(
     target: object,
     methodName: string | symbol,
     execution: Execution,
+    timeoutRetryPolicy?: TaskTimeoutRetryPolicy,
   ): Promise<unknown> {
+    const hasEnforcedTimeout = execution.timeout !== undefined && execution.timeout > 0;
+    const attemptManager: ExecutionAttemptManager | undefined =
+      hasEnforcedTimeout && supportsAttemptFencing(this.executionManager)
+        ? this.executionManager
+        : undefined;
+    if (hasEnforcedTimeout && !attemptManager) {
+      throw ExecutionProblems.attemptFencingUnsupported(
+        `Timed task execution '${execution.id}' requires an execution manager with atomic attempt fencing`,
+      );
+    }
+
     const startedExecution = await this.executionManager.start(execution.id);
+    const attemptToken: ExecutionAttemptToken = {
+      executionId: startedExecution.id,
+      attempt: startedExecution.attempts,
+    };
     const controller = new AbortController();
     const context: TaskExecutionContext = {
       executionId: startedExecution.id,
       attempt: startedExecution.attempts,
+      attemptToken,
       signal: controller.signal,
     };
     const timeoutMs = startedExecution.timeout;
@@ -181,10 +251,45 @@ export class TaskRunner {
     const timeoutProblem =
       deadline === undefined || timeoutMs === undefined
         ? undefined
-        : new TaskExecutionTimeoutProblem(startedExecution.id, timeoutMs);
+        : new TaskExecutionTimeoutProblem(
+            startedExecution.id,
+            timeoutMs,
+            timeoutRetryPolicy === "idempotent" || timeoutRetryPolicy === "fenced",
+          );
+    const declaredOverlapSafe =
+      timeoutRetryPolicy === "idempotent" || timeoutRetryPolicy === "fenced";
     let timeoutClaimed = false;
+    let handlerSettled = false;
+    let settlementScheduled = false;
+    let handlerPromise: Promise<unknown> | undefined;
+    let timeoutCommit: Promise<Execution> | undefined;
     let cancelTimeout: (() => void) | undefined;
     let triggerTimeout: (() => void) | undefined;
+    const settleTimedOutAttempt = (): void => {
+      handlerSettled = true;
+      if (
+        !attemptManager ||
+        declaredOverlapSafe ||
+        !timeoutClaimed ||
+        timeoutCommit === undefined ||
+        settlementScheduled
+      ) {
+        return;
+      }
+      settlementScheduled = true;
+      void timeoutCommit
+        .then(() => attemptManager.settleTimedOutAttempt(attemptToken))
+        .catch((error: unknown) => {
+          if (
+            typeof error !== "object" ||
+            error === null ||
+            !("code" in error) ||
+            error.code !== "execution/attempt-fence-conflict"
+          ) {
+            recordDiagnosticError(error);
+          }
+        });
+    };
     const timeoutPromise =
       timeoutProblem === undefined || deadline === undefined
         ? undefined
@@ -192,9 +297,22 @@ export class TaskRunner {
             triggerTimeout = () => {
               if (timeoutClaimed) return;
               timeoutClaimed = true;
+              timeoutCommit = this.claimTimeout(
+                attemptManager,
+                attemptToken,
+                declaredOverlapSafe || handlerPromise === undefined,
+              );
+              if (handlerSettled) settleTimedOutAttempt();
               controller.abort(timeoutProblem);
-              void this.claimTimeout(startedExecution.id).then(
-                () => reject(timeoutProblem),
+              void timeoutCommit.then(
+                (timedOut) =>
+                  reject(
+                    new TaskExecutionTimeoutProblem(
+                      startedExecution.id,
+                      timeoutProblem.timeoutMs,
+                      timedOut.error?.retryable === true,
+                    ),
+                  ),
                 reject,
               );
             };
@@ -224,9 +342,12 @@ export class TaskRunner {
         payload: unknown,
         context: TaskExecutionContext,
       ) => unknown;
-      const handlerPromise = Promise.resolve().then(() =>
+      handlerPromise = Promise.resolve().then(() =>
         method.call(instance, startedExecution.payload, context),
       );
+      if (attemptManager && !declaredOverlapSafe) {
+        void handlerPromise.then(settleTimedOutAttempt, settleTimedOutAttempt);
+      }
       const result = await (timeoutPromise
         ? Promise.race([handlerPromise, timeoutPromise])
         : handlerPromise);
@@ -239,11 +360,19 @@ export class TaskRunner {
       cancelTimeout?.();
 
       try {
-        await this.executionManager.complete(startedExecution.id, result);
+        if (attemptManager) {
+          await attemptManager.completeAttempt(attemptToken, result);
+        } else {
+          await this.executionManager.complete(startedExecution.id, result);
+        }
       } catch (error) {
         const current = await this.executionManager.get(startedExecution.id);
         if (current.status === "timed_out" && timeoutProblem !== undefined) {
-          throw timeoutProblem;
+          throw new TaskExecutionTimeoutProblem(
+            startedExecution.id,
+            timeoutProblem.timeoutMs,
+            current.error?.retryable === true,
+          );
         }
         throw error;
       }
@@ -272,7 +401,11 @@ export class TaskRunner {
       };
 
       try {
-        await this.executionManager.fail(startedExecution.id, executionError);
+        if (attemptManager) {
+          await attemptManager.failAttempt(attemptToken, executionError);
+        } else {
+          await this.executionManager.fail(startedExecution.id, executionError);
+        }
       } catch (transitionError) {
         let current: Execution;
         try {
@@ -287,7 +420,11 @@ export class TaskRunner {
           throw taskError;
         }
         if (current.status === "timed_out" && timeoutProblem !== undefined) {
-          throw timeoutProblem;
+          throw new TaskExecutionTimeoutProblem(
+            startedExecution.id,
+            timeoutProblem.timeoutMs,
+            current.error?.retryable === true,
+          );
         }
         this.reportFailureRecordingError(startedExecution.id, taskError, transitionError);
         throw taskError;
@@ -321,13 +458,23 @@ export class TaskRunner {
     }
   }
 
-  private async claimTimeout(executionId: string): Promise<void> {
+  private async claimTimeout(
+    attemptManager: ExecutionAttemptManager | undefined,
+    attemptToken: ExecutionAttemptToken,
+    retryable: boolean,
+  ): Promise<Execution> {
+    if (!attemptManager) {
+      throw ExecutionProblems.attemptFencingUnsupported(
+        `Timed task execution '${attemptToken.executionId}' requires an execution manager with atomic attempt fencing`,
+      );
+    }
+
     try {
-      await this.executionManager.timeout(executionId);
+      return await attemptManager.timeoutAttempt(attemptToken, { retryable });
     } catch (error) {
-      const current = await this.executionManager.get(executionId);
+      const current = await this.executionManager.get(attemptToken.executionId);
       if (current.status === "timed_out") {
-        return;
+        return current;
       }
       throw error;
     }

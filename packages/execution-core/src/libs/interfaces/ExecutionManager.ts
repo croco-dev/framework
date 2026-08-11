@@ -2,6 +2,7 @@ import type {
   AddExecutionLogParams,
   CreateExecutionParams,
   Execution,
+  ExecutionAttemptToken,
   ExecutionContinuationClaim,
   ExecutionContinuationPublication,
   ExecutionError,
@@ -11,6 +12,30 @@ import type {
   ReconcileTimedOutResult,
   ReplayExecutionParams,
 } from "../types";
+
+export type TimeoutExecutionAttemptOptions = {
+  /** Whether the abandoned attempt is safe to retry automatically. */
+  retryable: boolean;
+};
+
+/**
+ * Optional manager capability for attempt-fenced task mutations.
+ */
+export interface ExecutionAttemptManager {
+  /** Whether the configured persistence store can enforce atomic attempt fencing. */
+  supportsAttemptFencing(): boolean;
+  completeAttempt(token: ExecutionAttemptToken, result?: unknown): Promise<Execution>;
+  failAttempt(token: ExecutionAttemptToken, error: ExecutionError): Promise<Execution>;
+  timeoutAttempt(
+    token: ExecutionAttemptToken,
+    options: TimeoutExecutionAttemptOptions,
+  ): Promise<Execution>;
+  updateProgressAttempt(token: ExecutionAttemptToken, progress: ProgressInfo): Promise<Execution>;
+  checkpointAttempt(token: ExecutionAttemptToken, key: string, value: unknown): Promise<Execution>;
+  recordLogAttempt(token: ExecutionAttemptToken, params: AddExecutionLogParams): Promise<Execution>;
+  settleTimedOutAttempt(token: ExecutionAttemptToken): Promise<Execution>;
+  resolveIndeterminateTimeout(token: ExecutionAttemptToken, reason: string): Promise<Execution>;
+}
 
 export interface ClaimExecutionContinuationInput {
   deliveryToken: string;
@@ -118,12 +143,12 @@ export interface ExecutionManager {
   cancel(id: string, reason?: string): Promise<Execution>;
 
   /**
-   * Retry a failed or timed-out execution.
+   * Retry a failed or safely resolved timed-out execution.
    *
    * Preserves the consumed attempt count and transitions to 'retrying' status.
    * The subsequent start() call transitions to 'running' and increments attempts exactly once.
    *
-   * @throws Error if execution not found or maxAttempts exhausted
+   * @throws Error if execution not found, maxAttempts exhausted, or timeout outcome remains indeterminate
    */
   retry(id: string): Promise<Execution>;
 
@@ -151,7 +176,7 @@ export interface ExecutionManager {
   /**
    * Mark an execution as timed out.
    *
-   * Transitions status to 'timed_out' and sets completedAt.
+   * Transitions status to an indeterminate 'timed_out' outcome and sets completedAt.
    * Called internally when timeout threshold is exceeded.
    *
    * @throws Error if execution not found or state transition is invalid

@@ -178,15 +178,28 @@ export function getJobFailurePolicy(execution: Execution): JobFailurePolicy {
         recoveryAction: "wait",
         reason: "Job failed a retryable attempt and is waiting for another run",
       };
-    case "timed_out":
+    case "timed_out": {
+      if (execution.error?.indeterminate === true) {
+        return {
+          state: "timed_out",
+          needsAttention: true,
+          retryable: false,
+          replayable: false,
+          recoveryAction: "inspect",
+          reason:
+            "Job timed out with an indeterminate outcome; inspect external effects before operator replay",
+        };
+      }
+      const retryable = execution.error?.retryable === true && hasAttemptsRemaining(execution);
       return {
         state: "timed_out",
         needsAttention: true,
-        retryable: hasAttemptsRemaining(execution),
+        retryable,
         replayable: true,
-        recoveryAction: hasAttemptsRemaining(execution) ? "retry" : "replay",
+        recoveryAction: retryable ? "retry" : "replay",
         reason: "Job timed out before completion",
       };
+    }
     case "failed":
       if (execution.error?.retryable && !hasAttemptsRemaining(execution)) {
         return {
