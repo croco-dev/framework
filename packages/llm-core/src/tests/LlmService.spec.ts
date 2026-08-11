@@ -310,6 +310,7 @@ describe("LlmService", () => {
       });
       expect(problem.extensions).toMatchObject({
         eventDeliveryRetryable: true,
+        failureStage: "publish",
         modelExecutionCompleted: true,
         retryable: false,
       });
@@ -331,6 +332,7 @@ describe("LlmService", () => {
     it("should persist a durable completion intent before publishing and confirm it after recovery", async () => {
       const intentStore: LlmCompletionEventIntentStore = {
         recordPending: vi.fn().mockResolvedValue(undefined),
+        loadDeliveryState: vi.fn().mockResolvedValue("not_published"),
         markPublished: vi.fn().mockResolvedValue(undefined),
       };
       const durableService = new LlmService(registry, eventBus, {
@@ -358,6 +360,7 @@ describe("LlmService", () => {
       expect(intentStore.recordPending).toHaveBeenCalledTimes(2);
       expect(intentStore.recordPending).toHaveBeenNthCalledWith(2, restoredIntent);
       expect(intentStore.markPublished).toHaveBeenCalledWith(problem.intent.id);
+      expect(eventBus.publish).toHaveBeenCalledTimes(2);
     });
 
     it("should expose an unconfirmed state when publication succeeds but durable confirmation fails", async () => {
@@ -367,6 +370,7 @@ describe("LlmService", () => {
       registry.registerProvider(model.modelId, () => model);
       const intentStore: LlmCompletionEventIntentStore = {
         recordPending: vi.fn().mockResolvedValue(undefined),
+        loadDeliveryState: vi.fn().mockResolvedValue("published_unconfirmed"),
         markPublished: vi
           .fn()
           .mockRejectedValueOnce(new Error("intent confirmation failed"))
@@ -386,6 +390,11 @@ describe("LlmService", () => {
 
       expect(problem.deliveryState).toBe("published_unconfirmed");
       expect(problem.durableIntentRecorded).toBe(true);
+      expect(problem.failureStage).toBe("mark_published");
+      expect(problem.extensions).toMatchObject({
+        intentStoreError: "intent confirmation failed",
+        intentStoreOperation: "mark_published",
+      });
 
       await durableService.retryCompletionEvent(problem);
 
@@ -394,15 +403,56 @@ describe("LlmService", () => {
       expect(eventBus.publish).toHaveBeenCalledOnce();
     });
 
+    it("should confirm a stored published intent without publishing it again", async () => {
+      const intentStore: LlmCompletionEventIntentStore = {
+        recordPending: vi.fn().mockResolvedValue(undefined),
+        loadDeliveryState: vi.fn().mockResolvedValue("published_unconfirmed"),
+        markPublished: vi.fn().mockResolvedValue(undefined),
+      };
+      const durableService = new LlmService(registry, eventBus, {
+        completionEventIntentStore: intentStore,
+      });
+      const intent: LlmCompletionEventIntent = {
+        id: "stored-intent",
+        eventId: "stored-event",
+        eventName: "llm.generated",
+        operation: "generate",
+        modelId: "test-model",
+        prompt: "Hello",
+        text: "world",
+        usage: {
+          promptTokens: 1,
+          completionTokens: 1,
+          totalTokens: 2,
+        },
+        occurredAt: "2026-08-10T00:00:00.000Z",
+      };
+
+      await durableService.retryCompletionEvent(intent);
+
+      expect(intentStore.loadDeliveryState).toHaveBeenCalledWith(intent.id);
+      expect(intentStore.markPublished).toHaveBeenCalledWith(intent.id);
+      expect(eventBus.publish).not.toHaveBeenCalled();
+    });
+
     it("should retain provider failure classification without creating a completion intent", async () => {
       const model = new CountingGenerateModel("provider-failure-model");
       vi.spyOn(model, "generate").mockRejectedValueOnce(new Error("provider failed"));
       registry.registerProvider(model.modelId, () => model);
+      const intentStore: LlmCompletionEventIntentStore = {
+        recordPending: vi.fn().mockResolvedValue(undefined),
+        loadDeliveryState: vi.fn().mockResolvedValue("not_published"),
+        markPublished: vi.fn().mockResolvedValue(undefined),
+      };
+      const durableService = new LlmService(registry, eventBus, {
+        completionEventIntentStore: intentStore,
+      });
 
       await expect(
-        service.generate({ modelId: model.modelId, prompt: "Fail" }),
+        durableService.generate({ modelId: model.modelId, prompt: "Fail" }),
       ).rejects.toBeInstanceOf(LlmServiceProblem);
       expect(eventBus.publish).not.toHaveBeenCalled();
+      expect(intentStore.recordPending).not.toHaveBeenCalled();
     });
   });
 

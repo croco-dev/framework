@@ -60,15 +60,6 @@ export { LlmRegistry } from "./libs/LlmRegistry";
  * 생성, 스트리밍, 임베딩, 도구 호출을 통합 제공하는 핵심 서비스입니다.
  */
 export { LlmService } from "./libs/LlmService";
-export type {
-  LlmCompletion,
-  LlmCompletionEvent,
-  LlmCompletionEventIntent,
-  LlmCompletionEventIntentStore,
-  LlmGenerateCompletion,
-  LlmServiceOptions,
-  LlmStreamCompletion,
-} from "./libs/LlmCompletionEvents";
 
 /**
  * LLM 호출 전반에서 사용하는 Problem 하위 타입들입니다.
@@ -96,7 +87,6 @@ export {
   LlmToolExecutionProblem,
   ModelNotFoundError,
 } from "./libs/problems/LlmServiceProblem";
-export type { LlmCompletionEventDeliveryState } from "./libs/problems/LlmServiceProblem";
 
 /**
  * 생성, 임베딩, 스트리밍, 도구 호출에 사용하는 핵심 타입들입니다.
@@ -121,3 +111,16 @@ export type {
   ToolDefinition,
   UsageAccuracy,
 } from "./libs/types";
+export type {
+  LlmCompletion,
+  LlmCompletionEvent,
+  LlmCompletionEventIntent,
+  LlmCompletionEventIntentStore,
+  LlmGenerateCompletion,
+  LlmServiceOptions,
+  LlmStreamCompletion,
+} from "./libs/LlmCompletionEvents";
+export type {
+  LlmCompletionEventDeliveryState,
+  LlmCompletionEventFailureStage,
+} from "./libs/problems/LlmServiceProblem";

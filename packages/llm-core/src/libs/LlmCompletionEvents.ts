@@ -19,7 +19,13 @@ export type LlmStreamCompletion = {
 };
 
 export type LlmCompletion = LlmGenerateCompletion | LlmStreamCompletion;
+export type LlmCompletionEventDeliveryState = "not_published" | "published_unconfirmed";
 
+/**
+ * Stable completion-event data persisted for recovery. Generate intents retain the prompt unchanged,
+ * so external stores must encrypt it as appropriate, define a retention period, and delete it after
+ * delivery according to their data policy. Stream intents deliberately do not persist the prompt.
+ */
 export type LlmCompletionEventIntent =
   | {
       readonly id: string;
@@ -51,6 +57,7 @@ export type LlmCompletionEventIntent =
  */
 export interface LlmCompletionEventIntentStore {
   recordPending(intent: LlmCompletionEventIntent): Promise<void>;
+  loadDeliveryState(intentId: string): Promise<LlmCompletionEventDeliveryState>;
   markPublished(intentId: string): Promise<void>;
 }
 

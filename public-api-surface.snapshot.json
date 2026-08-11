@@ -15509,6 +15509,11 @@
               "source": "./libs/problems/LlmServiceProblem"
             },
             {
+              "name": "LlmCompletionEventFailureStage",
+              "exportKind": "named",
+              "source": "./libs/problems/LlmServiceProblem"
+            },
+            {
               "name": "LlmCompletionEventIntent",
               "exportKind": "named",
               "source": "./libs/LlmCompletionEvents"

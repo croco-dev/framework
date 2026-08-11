@@ -1,7 +1,16 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
-import type { LlmCompletion, LlmCompletionEventIntent } from "../LlmCompletionEvents";
+import type {
+  LlmCompletion,
+  LlmCompletionEventDeliveryState,
+  LlmCompletionEventIntent,
+} from "../LlmCompletionEvents";
 
-export type LlmCompletionEventDeliveryState = "not_published" | "published_unconfirmed";
+export type { LlmCompletionEventDeliveryState } from "../LlmCompletionEvents";
+export type LlmCompletionEventFailureStage =
+  | "load_delivery_state"
+  | "record_pending"
+  | "publish"
+  | "mark_published";
 
 export class LlmCompletionEventPublicationProblem extends Problem {
   static readonly CODE = "llm-core/completion-event-publication-failed";
@@ -12,6 +21,7 @@ export class LlmCompletionEventPublicationProblem extends Problem {
     readonly deliveryState: LlmCompletionEventDeliveryState,
     readonly durableIntentRecorded: boolean,
     cause: unknown,
+    readonly failureStage: LlmCompletionEventFailureStage = "publish",
   ) {
     const causeError = cause instanceof Error ? cause : new Error(String(cause));
     super(
@@ -24,11 +34,18 @@ export class LlmCompletionEventPublicationProblem extends Problem {
           chunksDelivered: completion.operation === "stream",
           deliveryState,
           durableIntentRecorded,
+          failureStage,
           eventDeliveryRetryable: true,
           eventId: intent.eventId,
           eventName: intent.eventName,
           modelExecutionCompleted: true,
           retryable: false,
+          ...(failureStage === "publish"
+            ? {}
+            : {
+                intentStoreError: causeError.message,
+                intentStoreOperation: failureStage,
+              }),
         },
       },
     );

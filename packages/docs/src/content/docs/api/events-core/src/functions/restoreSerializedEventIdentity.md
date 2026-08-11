@@ -7,7 +7,8 @@ title: "restoreSerializedEventIdentity"
 
 > **restoreSerializedEventIdentity**(`event`, `eventId`, `occurredAt`): `void`
 
-모든 도메인 이벤트가 상속해야 하는 기본 추상 클래스입니다.
+Restores the stable identity and occurrence time of a serialized event.
+Use only while deserializing events or reconstructing completed events for redelivery.
 
 ## Parameters
 

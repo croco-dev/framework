@@ -5292,7 +5292,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-core/src/libs/problems/LlmServiceProblem.ts",
-          line: 78,
+          line: 95,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7834,7 +7834,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-core/src/libs/problems/LlmServiceProblem.ts",
-          line: 69,
+          line: 86,
           column: 5,
           kind: "problem-constructor",
         },
@@ -9565,7 +9565,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-core/src/libs/problems/LlmServiceProblem.ts",
-          line: 43,
+          line: 60,
           column: 5,
           kind: "problem-constructor",
         },
@@ -9599,7 +9599,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-core/src/libs/problems/LlmServiceProblem.ts",
-          line: 17,
+          line: 27,
           column: 5,
           kind: "problem-constructor",
         },
@@ -11532,7 +11532,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-core/src/libs/problems/LlmServiceProblem.ts",
-          line: 60,
+          line: 77,
           column: 5,
           kind: "problem-constructor",
         },
@@ -15918,7 +15918,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-core/src/libs/problems/LlmServiceProblem.ts",
-          line: 87,
+          line: 104,
           column: 5,
           kind: "problem-constructor",
         },
@@ -17411,7 +17411,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-core/src/libs/problems/LlmServiceProblem.ts",
-          line: 96,
+          line: 113,
           column: 5,
           kind: "problem-constructor",
         },

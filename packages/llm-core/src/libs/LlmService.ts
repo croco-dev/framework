@@ -15,6 +15,7 @@ import {
   LlmCompletionEventPublicationProblem,
   LlmServiceProblem,
 } from "./problems/LlmServiceProblem";
+import type { LlmCompletionEventDeliveryState } from "./problems/LlmServiceProblem";
 import type {
   EmbedManyParams,
   EmbedManyResult,
@@ -70,20 +71,14 @@ export class LlmService {
       assertNotAborted(params.signal, "generate");
 
       // Provider completion remains recoverable if the separate event-delivery boundary fails.
-      await this.publishCompletionEvent(
-        {
-          operation: "generate",
-          result,
-        },
-        {
-          operation: "generate",
-          modelId: model.modelId,
-          prompt: params.prompt,
-          text: result.text,
-          usage: result.usage,
-          metadata: result.metadata,
-        },
-      );
+      await this.publishCompletionEvent({
+        operation: "generate",
+        modelId: model.modelId,
+        prompt: params.prompt,
+        text: result.text,
+        usage: result.usage,
+        metadata: result.metadata,
+      });
 
       return result;
     } catch (error) {
@@ -277,17 +272,7 @@ export class LlmService {
 
       // Publish only after every chunk was delivered; a typed failure prevents replaying the stream.
       if (completionEvent && !isCancelled) {
-        await this.publishCompletionEvent(
-          {
-            operation: "stream",
-            text: completionEvent.text,
-            usage: completionEvent.usage,
-            chunkCount: completionEvent.chunkCount,
-            textTruncated: completionEvent.textTruncated,
-            chunksDelivered: true,
-          },
-          completionEvent,
-        );
+        await this.publishCompletionEvent(completionEvent);
       }
     } finally {
       cancelProducer();
@@ -368,7 +353,11 @@ export class LlmService {
       recovery instanceof LlmCompletionEventPublicationProblem &&
       recovery.deliveryState === "published_unconfirmed"
     ) {
-      await this.confirmPublishedCompletionEvent(recovery);
+      await this.confirmPublishedCompletionEvent(
+        recovery.completion,
+        recovery.intent,
+        recovery.durableIntentRecorded,
+      );
       return;
     }
 
@@ -378,13 +367,35 @@ export class LlmService {
       recovery instanceof LlmCompletionEventPublicationProblem
         ? recovery.completion
         : completionFromIntent(intent);
+
+    if (!(recovery instanceof LlmCompletionEventPublicationProblem)) {
+      const intentStore = this.options.completionEventIntentStore;
+      if (intentStore) {
+        let deliveryState: LlmCompletionEventDeliveryState;
+        try {
+          deliveryState = await intentStore.loadDeliveryState(intent.id);
+        } catch (error) {
+          throw new LlmCompletionEventPublicationProblem(
+            completion,
+            intent,
+            "not_published",
+            true,
+            error,
+            "load_delivery_state",
+          );
+        }
+
+        if (deliveryState === "published_unconfirmed") {
+          await this.confirmPublishedCompletionEvent(completion, intent, true);
+          return;
+        }
+      }
+    }
+
     await this.deliverCompletionEvent(intent, completion);
   }
 
-  private async publishCompletionEvent(
-    completion: LlmCompletion,
-    params: CompletionEventParams,
-  ): Promise<void> {
+  private async publishCompletionEvent(params: CompletionEventParams): Promise<void> {
     const event =
       params.operation === "stream"
         ? new LlmStreamCompletedEvent(
@@ -396,7 +407,8 @@ export class LlmService {
           )
         : new LlmGeneratedEvent(params.modelId, params.prompt, params.text, params.usage);
 
-    await this.deliverCompletionEvent(completionEventIntent(params, event), completion, event);
+    const intent = completionEventIntent(params, event);
+    await this.deliverCompletionEvent(intent, completionFromIntent(intent), event);
   }
 
   private async deliverCompletionEvent(
@@ -406,7 +418,8 @@ export class LlmService {
   ): Promise<void> {
     const intentStore = this.options.completionEventIntentStore;
     let durableIntentRecorded = false;
-    let deliveryState: "not_published" | "published_unconfirmed" = "not_published";
+    let deliveryState: LlmCompletionEventDeliveryState = "not_published";
+    let failureStage: "record_pending" | "publish" | "mark_published" = "record_pending";
 
     try {
       if (intentStore) {
@@ -414,10 +427,12 @@ export class LlmService {
         durableIntentRecorded = true;
       }
 
+      failureStage = "publish";
       await this.eventBus.publish(existingEvent ?? completionEventFromIntent(intent));
       deliveryState = "published_unconfirmed";
 
       if (intentStore) {
+        failureStage = "mark_published";
         await intentStore.markPublished(intent.id);
       }
     } catch (error) {
@@ -427,34 +442,39 @@ export class LlmService {
         deliveryState,
         durableIntentRecorded,
         error,
+        failureStage,
       );
     }
   }
 
   private async confirmPublishedCompletionEvent(
-    problem: LlmCompletionEventPublicationProblem,
+    completion: LlmCompletion,
+    intent: LlmCompletionEventIntent,
+    durableIntentRecorded: boolean,
   ): Promise<void> {
     const intentStore = this.options.completionEventIntentStore;
 
     if (!intentStore) {
       throw new LlmCompletionEventPublicationProblem(
-        problem.completion,
-        problem.intent,
+        completion,
+        intent,
         "published_unconfirmed",
-        problem.durableIntentRecorded,
+        durableIntentRecorded,
         "Completion event intent store is not configured",
+        "mark_published",
       );
     }
 
     try {
-      await intentStore.markPublished(problem.intent.id);
+      await intentStore.markPublished(intent.id);
     } catch (error) {
       throw new LlmCompletionEventPublicationProblem(
-        problem.completion,
-        problem.intent,
+        completion,
+        intent,
         "published_unconfirmed",
-        problem.durableIntentRecorded,
+        durableIntentRecorded,
         error,
+        "mark_published",
       );
     }
   }

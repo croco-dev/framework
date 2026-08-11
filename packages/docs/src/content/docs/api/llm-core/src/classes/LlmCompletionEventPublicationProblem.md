@@ -15,7 +15,7 @@ title: "LlmCompletionEventPublicationProblem"
 
 ### Constructor
 
-> **new LlmCompletionEventPublicationProblem**(`completion`, `intent`, `deliveryState`, `durableIntentRecorded`, `cause`): `LlmCompletionEventPublicationProblem`
+> **new LlmCompletionEventPublicationProblem**(`completion`, `intent`, `deliveryState`, `durableIntentRecorded`, `cause`, `failureStage?`): `LlmCompletionEventPublicationProblem`
 
 #### Parameters
 
@@ -38,6 +38,10 @@ title: "LlmCompletionEventPublicationProblem"
 ##### cause
 
 `unknown`
+
+##### failureStage?
+
+[`LlmCompletionEventFailureStage`](/api/llm-core/src/type-aliases/llmcompletioneventfailurestage/) = `"publish"`
 
 #### Returns
 
@@ -114,6 +118,12 @@ title: "LlmCompletionEventPublicationProblem"
 #### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`extensions`](/api/problems-core/src/classes/problem/#extensions)
+
+---
+
+### failureStage
+
+> `readonly` **failureStage**: [`LlmCompletionEventFailureStage`](/api/llm-core/src/type-aliases/llmcompletioneventfailurestage/) = `"publish"`
 
 ---
 

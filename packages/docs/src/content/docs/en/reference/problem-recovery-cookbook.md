@@ -3710,7 +3710,7 @@ Sources:
 
 Sources:
 
-- `packages/llm-core/src/libs/problems/LlmServiceProblem.ts:78:5` (problem-constructor)
+- `packages/llm-core/src/libs/problems/LlmServiceProblem.ts:95:5` (problem-constructor)
 
 <a id="engagement-core-message-already-registered"></a>
 
@@ -5168,7 +5168,7 @@ Sources:
 
 Sources:
 
-- `packages/llm-core/src/libs/problems/LlmServiceProblem.ts:69:5` (problem-constructor)
+- `packages/llm-core/src/libs/problems/LlmServiceProblem.ts:86:5` (problem-constructor)
 
 <a id="gid-core-id-type-only-property"></a>
 
@@ -6176,7 +6176,7 @@ Sources:
 
 Sources:
 
-- `packages/llm-core/src/libs/problems/LlmServiceProblem.ts:43:5` (problem-constructor)
+- `packages/llm-core/src/libs/problems/LlmServiceProblem.ts:60:5` (problem-constructor)
 
 <a id="llm-core-completion-event-publication-failed"></a>
 
@@ -6194,7 +6194,7 @@ Sources:
 
 Sources:
 
-- `packages/llm-core/src/libs/problems/LlmServiceProblem.ts:17:5` (problem-constructor)
+- `packages/llm-core/src/libs/problems/LlmServiceProblem.ts:27:5` (problem-constructor)
 
 <a id="llm-core-invalid-llm-prompt"></a>
 
@@ -7310,7 +7310,7 @@ Sources:
 
 Sources:
 
-- `packages/llm-core/src/libs/problems/LlmServiceProblem.ts:60:5` (problem-constructor)
+- `packages/llm-core/src/libs/problems/LlmServiceProblem.ts:77:5` (problem-constructor)
 
 <a id="nested-impersonation-not-allowed"></a>
 
@@ -9812,7 +9812,7 @@ Sources:
 
 Sources:
 
-- `packages/llm-core/src/libs/problems/LlmServiceProblem.ts:87:5` (problem-constructor)
+- `packages/llm-core/src/libs/problems/LlmServiceProblem.ts:104:5` (problem-constructor)
 
 <a id="tasks-core-duplicate-task-registration"></a>
 
@@ -10658,7 +10658,7 @@ Sources:
 
 Sources:
 
-- `packages/llm-core/src/libs/problems/LlmServiceProblem.ts:96:5` (problem-constructor)
+- `packages/llm-core/src/libs/problems/LlmServiceProblem.ts:113:5` (problem-constructor)
 
 <a id="transports-graphql-body-limit-invalid-configuration"></a>
 

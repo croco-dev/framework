@@ -9,6 +9,22 @@ Optional durable boundary for completion events. Recording the same intent twice
 
 ## Methods
 
+### loadDeliveryState()
+
+> **loadDeliveryState**(`intentId`): `Promise`\<[`LlmCompletionEventDeliveryState`](/api/llm-core/src/type-aliases/llmcompletioneventdeliverystate/)\>
+
+#### Parameters
+
+##### intentId
+
+`string`
+
+#### Returns
+
+`Promise`\<[`LlmCompletionEventDeliveryState`](/api/llm-core/src/type-aliases/llmcompletioneventdeliverystate/)\>
+
+---
+
 ### markPublished()
 
 > **markPublished**(`intentId`): `Promise`\<`void`\>

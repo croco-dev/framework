@@ -47,6 +47,10 @@ try {
 확인된 뒤 호출됩니다.
 
 ```ts
+const llmService = new LlmService(registry, eventBus, { completionEventIntentStore });
+```
+
+```ts
 import { Llm, setLlmService } from "@croco/llm-core";
 
 setLlmService(llmService);
