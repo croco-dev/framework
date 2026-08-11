@@ -19,7 +19,16 @@ export type LlmStreamCompletion = {
 };
 
 export type LlmCompletion = LlmGenerateCompletion | LlmStreamCompletion;
-export type LlmCompletionEventDeliveryState = "not_published" | "published_unconfirmed";
+export type LlmCompletionEventDeliveryState =
+  | "not_published"
+  | "delivery_in_progress"
+  | "published_unconfirmed";
+
+export type LlmCompletionEventDeliveryClaim = {
+  readonly intentId: string;
+  readonly ownerId: string;
+  readonly fencingToken: number;
+};
 
 /**
  * Stable completion-event data persisted for recovery. Generate intents retain the prompt unchanged,
@@ -54,11 +63,16 @@ export type LlmCompletionEventIntent =
 
 /**
  * Optional durable boundary for completion events. Recording the same intent twice must be idempotent.
+ * `claimDelivery` must atomically grant at most one active claim for an intent. Claims should expire so
+ * abandoned delivery can be retried. `releaseDelivery` and a claimed `markPublished` transition must
+ * validate the claim fencing token.
  */
 export interface LlmCompletionEventIntentStore {
   recordPending(intent: LlmCompletionEventIntent): Promise<void>;
   loadDeliveryState(intentId: string): Promise<LlmCompletionEventDeliveryState>;
-  markPublished(intentId: string): Promise<void>;
+  claimDelivery(intentId: string): Promise<LlmCompletionEventDeliveryClaim | undefined>;
+  releaseDelivery(claim: LlmCompletionEventDeliveryClaim): Promise<void>;
+  markPublished(intentId: string, claim?: LlmCompletionEventDeliveryClaim): Promise<void>;
 }
 
 export type LlmServiceOptions = {

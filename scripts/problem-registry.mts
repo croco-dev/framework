@@ -1922,9 +1922,9 @@ const recoveryMetadataByCode = {
     cause:
       "The model completed billable work, but its completion event was not durably confirmed afterward.",
     userAction:
-      "Recover the completed output from the Problem and retry only the saved completion-event intent; do not invoke the model again.",
+      "Hand the opaque failure reference to an operator; do not invoke the model again or manually publish the completion event.",
     operatorAction:
-      "Inspect the event delivery state and durable intent, then pass the Problem to retryCompletionEvent after restoring the failed boundary.",
+      "Use retryCompletionEvent with the in-process Problem or saved intent: published_unconfirmed confirms storage without republishing, delivery_in_progress waits for the active claim, and not_published atomically claims delivery before publishing. Never publish the event manually.",
     retryability: "not-retryable",
     redactionPolicy: "operator-only",
     severity: "error",

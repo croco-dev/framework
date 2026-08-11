@@ -113,6 +113,7 @@ export type {
 } from "./libs/types";
 export type {
   LlmCompletion,
+  LlmCompletionEventDeliveryClaim,
   LlmCompletionEvent,
   LlmCompletionEventIntent,
   LlmCompletionEventIntentStore,

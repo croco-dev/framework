@@ -5292,7 +5292,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-core/src/libs/problems/LlmServiceProblem.ts",
-          line: 95,
+          line: 97,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7834,7 +7834,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-core/src/libs/problems/LlmServiceProblem.ts",
-          line: 86,
+          line: 88,
           column: 5,
           kind: "problem-constructor",
         },
@@ -9565,7 +9565,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-core/src/libs/problems/LlmServiceProblem.ts",
-          line: 60,
+          line: 62,
           column: 5,
           kind: "problem-constructor",
         },
@@ -9582,9 +9582,9 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         cause:
           "The model completed billable work, but its completion event was not durably confirmed afterward.",
         userAction:
-          "Recover the completed output from the Problem and retry only the saved completion-event intent; do not invoke the model again.",
+          "Hand the opaque failure reference to an operator; do not invoke the model again or manually publish the completion event.",
         operatorAction:
-          "Inspect the event delivery state and durable intent, then pass the Problem to retryCompletionEvent after restoring the failed boundary.",
+          "Use retryCompletionEvent with the in-process Problem or saved intent: published_unconfirmed confirms storage without republishing, delivery_in_progress waits for the active claim, and not_published atomically claims delivery before publishing. Never publish the event manually.",
         retryability: "not-retryable",
         redactionPolicy: "operator-only",
         telemetry: {
@@ -9599,7 +9599,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-core/src/libs/problems/LlmServiceProblem.ts",
-          line: 27,
+          line: 29,
           column: 5,
           kind: "problem-constructor",
         },
@@ -11532,7 +11532,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-core/src/libs/problems/LlmServiceProblem.ts",
-          line: 77,
+          line: 79,
           column: 5,
           kind: "problem-constructor",
         },
@@ -15918,7 +15918,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-core/src/libs/problems/LlmServiceProblem.ts",
-          line: 104,
+          line: 106,
           column: 5,
           kind: "problem-constructor",
         },
@@ -17411,7 +17411,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-core/src/libs/problems/LlmServiceProblem.ts",
-          line: 113,
+          line: 115,
           column: 5,
           kind: "problem-constructor",
         },

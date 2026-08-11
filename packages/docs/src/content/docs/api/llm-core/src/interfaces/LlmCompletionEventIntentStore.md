@@ -6,8 +6,27 @@ title: "LlmCompletionEventIntentStore"
 ---
 
 Optional durable boundary for completion events. Recording the same intent twice must be idempotent.
+`claimDelivery` must atomically grant at most one active claim for an intent. Claims should expire so
+abandoned delivery can be retried. `releaseDelivery` and a claimed `markPublished` transition must
+validate the claim fencing token.
 
 ## Methods
+
+### claimDelivery()
+
+> **claimDelivery**(`intentId`): `Promise`\<[`LlmCompletionEventDeliveryClaim`](/api/llm-core/src/type-aliases/llmcompletioneventdeliveryclaim/) \| `undefined`\>
+
+#### Parameters
+
+##### intentId
+
+`string`
+
+#### Returns
+
+`Promise`\<[`LlmCompletionEventDeliveryClaim`](/api/llm-core/src/type-aliases/llmcompletioneventdeliveryclaim/) \| `undefined`\>
+
+---
 
 ### loadDeliveryState()
 
@@ -27,13 +46,17 @@ Optional durable boundary for completion events. Recording the same intent twice
 
 ### markPublished()
 
-> **markPublished**(`intentId`): `Promise`\<`void`\>
+> **markPublished**(`intentId`, `claim?`): `Promise`\<`void`\>
 
 #### Parameters
 
 ##### intentId
 
 `string`
+
+##### claim?
+
+[`LlmCompletionEventDeliveryClaim`](/api/llm-core/src/type-aliases/llmcompletioneventdeliveryclaim/)
 
 #### Returns
 
@@ -50,6 +73,22 @@ Optional durable boundary for completion events. Recording the same intent twice
 ##### intent
 
 [`LlmCompletionEventIntent`](/api/llm-core/src/type-aliases/llmcompletioneventintent/)
+
+#### Returns
+
+`Promise`\<`void`\>
+
+---
+
+### releaseDelivery()
+
+> **releaseDelivery**(`claim`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### claim
+
+[`LlmCompletionEventDeliveryClaim`](/api/llm-core/src/type-aliases/llmcompletioneventdeliveryclaim/)
 
 #### Returns
 

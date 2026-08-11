@@ -3710,7 +3710,7 @@ Sources:
 
 Sources:
 
-- `packages/llm-core/src/libs/problems/LlmServiceProblem.ts:95:5` (problem-constructor)
+- `packages/llm-core/src/libs/problems/LlmServiceProblem.ts:97:5` (problem-constructor)
 
 <a id="engagement-core-message-already-registered"></a>
 
@@ -5168,7 +5168,7 @@ Sources:
 
 Sources:
 
-- `packages/llm-core/src/libs/problems/LlmServiceProblem.ts:86:5` (problem-constructor)
+- `packages/llm-core/src/libs/problems/LlmServiceProblem.ts:88:5` (problem-constructor)
 
 <a id="gid-core-id-type-only-property"></a>
 
@@ -6176,7 +6176,7 @@ Sources:
 
 Sources:
 
-- `packages/llm-core/src/libs/problems/LlmServiceProblem.ts:60:5` (problem-constructor)
+- `packages/llm-core/src/libs/problems/LlmServiceProblem.ts:62:5` (problem-constructor)
 
 <a id="llm-core-completion-event-publication-failed"></a>
 
@@ -6188,13 +6188,13 @@ Sources:
 - Redaction policy: `operator-only`
 - Lifecycle: `active`
 - Cause: The model completed billable work, but its completion event was not durably confirmed afterward.
-- User action: Recover the completed output from the Problem and retry only the saved completion-event intent; do not invoke the model again.
-- Operator action: Inspect the event delivery state and durable intent, then pass the Problem to retryCompletionEvent after restoring the failed boundary.
+- User action: Hand the opaque failure reference to an operator; do not invoke the model again or manually publish the completion event.
+- Operator action: Use retryCompletionEvent with the in-process Problem or saved intent: published_unconfirmed confirms storage without republishing, delivery_in_progress waits for the active claim, and not_published atomically claims delivery before publishing. Never publish the event manually.
 - Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:
 
-- `packages/llm-core/src/libs/problems/LlmServiceProblem.ts:27:5` (problem-constructor)
+- `packages/llm-core/src/libs/problems/LlmServiceProblem.ts:29:5` (problem-constructor)
 
 <a id="llm-core-invalid-llm-prompt"></a>
 
@@ -7310,7 +7310,7 @@ Sources:
 
 Sources:
 
-- `packages/llm-core/src/libs/problems/LlmServiceProblem.ts:77:5` (problem-constructor)
+- `packages/llm-core/src/libs/problems/LlmServiceProblem.ts:79:5` (problem-constructor)
 
 <a id="nested-impersonation-not-allowed"></a>
 
@@ -9812,7 +9812,7 @@ Sources:
 
 Sources:
 
-- `packages/llm-core/src/libs/problems/LlmServiceProblem.ts:104:5` (problem-constructor)
+- `packages/llm-core/src/libs/problems/LlmServiceProblem.ts:106:5` (problem-constructor)
 
 <a id="tasks-core-duplicate-task-registration"></a>
 
@@ -10658,7 +10658,7 @@ Sources:
 
 Sources:
 
-- `packages/llm-core/src/libs/problems/LlmServiceProblem.ts:113:5` (problem-constructor)
+- `packages/llm-core/src/libs/problems/LlmServiceProblem.ts:115:5` (problem-constructor)
 
 <a id="transports-graphql-body-limit-invalid-configuration"></a>
 

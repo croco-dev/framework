@@ -5,4 +5,4 @@ prev: false
 title: "LlmCompletionEventDeliveryState"
 ---
 
-> **LlmCompletionEventDeliveryState** = `"not_published"` \| `"published_unconfirmed"`
+> **LlmCompletionEventDeliveryState** = `"not_published"` \| `"delivery_in_progress"` \| `"published_unconfirmed"`

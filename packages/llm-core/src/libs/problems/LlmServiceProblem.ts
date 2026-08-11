@@ -9,7 +9,9 @@ export type { LlmCompletionEventDeliveryState } from "../LlmCompletionEvents";
 export type LlmCompletionEventFailureStage =
   | "load_delivery_state"
   | "record_pending"
+  | "claim_delivery"
   | "publish"
+  | "release_delivery"
   | "mark_published";
 
 export class LlmCompletionEventPublicationProblem extends Problem {

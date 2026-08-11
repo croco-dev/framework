@@ -15504,6 +15504,11 @@
               "source": "./libs/LlmCompletionEvents"
             },
             {
+              "name": "LlmCompletionEventDeliveryClaim",
+              "exportKind": "named",
+              "source": "./libs/LlmCompletionEvents"
+            },
+            {
               "name": "LlmCompletionEventDeliveryState",
               "exportKind": "named",
               "source": "./libs/problems/LlmServiceProblem"

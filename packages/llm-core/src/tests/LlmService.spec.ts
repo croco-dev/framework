@@ -1,9 +1,17 @@
 import type { EventBus } from "@croco/events-core";
+import {
+  OPERATOR_ONLY_PROBLEM_DETAIL,
+  createProblemResponseDetail,
+  createProblemResponseExtensions,
+  extractProblemDetailsResponseExtensions,
+  resolveProblemResponseRedactionPolicy,
+} from "@croco/problems-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LlmStreamCompletedEvent } from "../libs/events/LlmStreamCompletedEvent";
 import { InMemoryLlmModel } from "../libs/InMemoryLlmModel";
 import { InMemoryLlmRegistry } from "../libs/InMemoryLlmRegistry";
 import type {
+  LlmCompletionEventDeliveryClaim,
   LlmCompletionEventIntent,
   LlmCompletionEventIntentStore,
 } from "../libs/LlmCompletionEvents";
@@ -110,6 +118,10 @@ async function collectStream(chunks: AsyncIterable<StreamChunk>): Promise<string
   }
 
   return deltas;
+}
+
+function deliveryClaim(intentId: string): LlmCompletionEventDeliveryClaim {
+  return { intentId, ownerId: "test-worker", fencingToken: 1 };
 }
 
 describe("LlmService", () => {
@@ -333,6 +345,10 @@ describe("LlmService", () => {
       const intentStore: LlmCompletionEventIntentStore = {
         recordPending: vi.fn().mockResolvedValue(undefined),
         loadDeliveryState: vi.fn().mockResolvedValue("not_published"),
+        claimDelivery: vi
+          .fn()
+          .mockImplementation(async (intentId: string) => deliveryClaim(intentId)),
+        releaseDelivery: vi.fn().mockResolvedValue(undefined),
         markPublished: vi.fn().mockResolvedValue(undefined),
       };
       const durableService = new LlmService(registry, eventBus, {
@@ -353,13 +369,17 @@ describe("LlmService", () => {
       expect(problem.durableIntentRecorded).toBe(true);
       expect(intentStore.recordPending).toHaveBeenCalledBefore(vi.mocked(eventBus.publish));
       expect(intentStore.markPublished).not.toHaveBeenCalled();
+      expect(intentStore.releaseDelivery).toHaveBeenCalledWith(deliveryClaim(problem.intent.id));
 
       const restoredIntent = JSON.parse(JSON.stringify(problem.intent)) as LlmCompletionEventIntent;
       await durableService.retryCompletionEvent(restoredIntent);
 
       expect(intentStore.recordPending).toHaveBeenCalledTimes(2);
       expect(intentStore.recordPending).toHaveBeenNthCalledWith(2, restoredIntent);
-      expect(intentStore.markPublished).toHaveBeenCalledWith(problem.intent.id);
+      expect(intentStore.markPublished).toHaveBeenCalledWith(
+        problem.intent.id,
+        deliveryClaim(problem.intent.id),
+      );
       expect(eventBus.publish).toHaveBeenCalledTimes(2);
     });
 
@@ -371,6 +391,10 @@ describe("LlmService", () => {
       const intentStore: LlmCompletionEventIntentStore = {
         recordPending: vi.fn().mockResolvedValue(undefined),
         loadDeliveryState: vi.fn().mockResolvedValue("published_unconfirmed"),
+        claimDelivery: vi
+          .fn()
+          .mockImplementation(async (intentId: string) => deliveryClaim(intentId)),
+        releaseDelivery: vi.fn().mockResolvedValue(undefined),
         markPublished: vi
           .fn()
           .mockRejectedValueOnce(new Error("intent confirmation failed"))
@@ -407,6 +431,10 @@ describe("LlmService", () => {
       const intentStore: LlmCompletionEventIntentStore = {
         recordPending: vi.fn().mockResolvedValue(undefined),
         loadDeliveryState: vi.fn().mockResolvedValue("published_unconfirmed"),
+        claimDelivery: vi
+          .fn()
+          .mockImplementation(async (intentId: string) => deliveryClaim(intentId)),
+        releaseDelivery: vi.fn().mockResolvedValue(undefined),
         markPublished: vi.fn().mockResolvedValue(undefined),
       };
       const durableService = new LlmService(registry, eventBus, {
@@ -435,6 +463,114 @@ describe("LlmService", () => {
       expect(eventBus.publish).not.toHaveBeenCalled();
     });
 
+    it("should publish once when the same completion intent is retried concurrently", async () => {
+      const intent: LlmCompletionEventIntent = {
+        id: "parallel-intent",
+        eventId: "parallel-event",
+        eventName: "llm.generated",
+        operation: "generate",
+        modelId: "test-model",
+        prompt: "Hello",
+        text: "world",
+        usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+        occurredAt: "2026-08-10T00:00:00.000Z",
+      };
+      const intentStore: LlmCompletionEventIntentStore = {
+        recordPending: vi.fn().mockResolvedValue(undefined),
+        loadDeliveryState: vi.fn().mockResolvedValue("not_published"),
+        claimDelivery: vi
+          .fn()
+          .mockResolvedValueOnce(deliveryClaim(intent.id))
+          .mockResolvedValueOnce(undefined),
+        releaseDelivery: vi.fn().mockResolvedValue(undefined),
+        markPublished: vi.fn().mockResolvedValue(undefined),
+      };
+      const durableService = new LlmService(registry, eventBus, {
+        completionEventIntentStore: intentStore,
+      });
+
+      await Promise.all([
+        durableService.retryCompletionEvent(intent),
+        durableService.retryCompletionEvent(intent),
+      ]);
+
+      expect(intentStore.claimDelivery).toHaveBeenCalledTimes(2);
+      expect(eventBus.publish).toHaveBeenCalledOnce();
+      expect(intentStore.markPublished).toHaveBeenCalledOnce();
+    });
+
+    it("should reload delivery state before retrying a state lookup failure", async () => {
+      const intent: LlmCompletionEventIntent = {
+        id: "lookup-failure-intent",
+        eventId: "lookup-failure-event",
+        eventName: "llm.generated",
+        operation: "generate",
+        modelId: "test-model",
+        prompt: "Hello",
+        text: "world",
+        usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+        occurredAt: "2026-08-10T00:00:00.000Z",
+      };
+      const intentStore: LlmCompletionEventIntentStore = {
+        recordPending: vi.fn().mockResolvedValue(undefined),
+        loadDeliveryState: vi
+          .fn()
+          .mockRejectedValueOnce(new Error("state unavailable"))
+          .mockResolvedValueOnce("published_unconfirmed"),
+        claimDelivery: vi
+          .fn()
+          .mockImplementation(async (intentId: string) => deliveryClaim(intentId)),
+        releaseDelivery: vi.fn().mockResolvedValue(undefined),
+        markPublished: vi.fn().mockResolvedValue(undefined),
+      };
+      const durableService = new LlmService(registry, eventBus, {
+        completionEventIntentStore: intentStore,
+      });
+      const problem = await durableService
+        .retryCompletionEvent(intent)
+        .catch((error: unknown) => error);
+      expect(problem).toBeInstanceOf(LlmCompletionEventPublicationProblem);
+      if (!(problem instanceof LlmCompletionEventPublicationProblem)) {
+        throw new Error("Expected completion publication Problem");
+      }
+
+      await durableService.retryCompletionEvent(problem);
+
+      expect(intentStore.loadDeliveryState).toHaveBeenCalledTimes(2);
+      expect(intentStore.markPublished).toHaveBeenCalledWith(intent.id);
+      expect(eventBus.publish).not.toHaveBeenCalled();
+    });
+
+    it("should redact completion recovery data from operator-only responses", async () => {
+      vi.mocked(eventBus.publish).mockRejectedValueOnce(new Error("event bus unavailable"));
+      const problem = await service
+        .generate({ modelId: "test-model", prompt: "sensitive prompt" })
+        .catch((error: unknown) => error);
+      expect(problem).toBeInstanceOf(LlmCompletionEventPublicationProblem);
+      if (!(problem instanceof LlmCompletionEventPublicationProblem)) {
+        throw new Error("Expected completion publication Problem");
+      }
+
+      const details = problem.toJSON();
+      const policy = resolveProblemResponseRedactionPolicy(problem);
+      const response = {
+        type: details.type,
+        title: details.title,
+        status: details.status,
+        code: details.code,
+        detail: createProblemResponseDetail(details.detail, policy),
+        ...createProblemResponseExtensions(
+          extractProblemDetailsResponseExtensions(details),
+          policy,
+        ),
+      };
+
+      expect(response.detail).toBe(OPERATOR_ONLY_PROBLEM_DETAIL);
+      expect(JSON.stringify(response)).not.toContain("sensitive prompt");
+      expect(JSON.stringify(response)).not.toContain("eventId");
+      expect(JSON.stringify(response)).not.toContain("deliveryState");
+    });
+
     it("should retain provider failure classification without creating a completion intent", async () => {
       const model = new CountingGenerateModel("provider-failure-model");
       vi.spyOn(model, "generate").mockRejectedValueOnce(new Error("provider failed"));
@@ -442,6 +578,10 @@ describe("LlmService", () => {
       const intentStore: LlmCompletionEventIntentStore = {
         recordPending: vi.fn().mockResolvedValue(undefined),
         loadDeliveryState: vi.fn().mockResolvedValue("not_published"),
+        claimDelivery: vi
+          .fn()
+          .mockImplementation(async (intentId: string) => deliveryClaim(intentId)),
+        releaseDelivery: vi.fn().mockResolvedValue(undefined),
         markPublished: vi.fn().mockResolvedValue(undefined),
       };
       const durableService = new LlmService(registry, eventBus, {
@@ -450,7 +590,7 @@ describe("LlmService", () => {
 
       await expect(
         durableService.generate({ modelId: model.modelId, prompt: "Fail" }),
-      ).rejects.toBeInstanceOf(LlmServiceProblem);
+      ).rejects.toThrow(LlmServiceProblem);
       expect(eventBus.publish).not.toHaveBeenCalled();
       expect(intentStore.recordPending).not.toHaveBeenCalled();
     });

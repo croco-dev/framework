@@ -5,6 +5,7 @@ import { LlmGeneratedEvent } from "./events/LlmGeneratedEvent";
 import { LlmStreamCompletedEvent } from "./events/LlmStreamCompletedEvent";
 import type {
   LlmCompletion,
+  LlmCompletionEventDeliveryClaim,
   LlmCompletionEvent,
   LlmCompletionEventIntent,
   LlmServiceOptions,
@@ -349,18 +350,6 @@ export class LlmService {
   async retryCompletionEvent(
     recovery: LlmCompletionEventIntent | LlmCompletionEventPublicationProblem,
   ): Promise<void> {
-    if (
-      recovery instanceof LlmCompletionEventPublicationProblem &&
-      recovery.deliveryState === "published_unconfirmed"
-    ) {
-      await this.confirmPublishedCompletionEvent(
-        recovery.completion,
-        recovery.intent,
-        recovery.durableIntentRecorded,
-      );
-      return;
-    }
-
     const intent =
       recovery instanceof LlmCompletionEventPublicationProblem ? recovery.intent : recovery;
     const completion =
@@ -368,31 +357,64 @@ export class LlmService {
         ? recovery.completion
         : completionFromIntent(intent);
 
-    if (!(recovery instanceof LlmCompletionEventPublicationProblem)) {
-      const intentStore = this.options.completionEventIntentStore;
-      if (intentStore) {
-        let deliveryState: LlmCompletionEventDeliveryState;
+    await withSpan(
+      async (span) => {
+        span.setAttribute("llm.completion_event.id", intent.eventId);
+        span.setAttribute("llm.completion_event.intent_id", intent.id);
+        span.setAttribute("llm.completion_event.retry.started", true);
+
         try {
-          deliveryState = await intentStore.loadDeliveryState(intent.id);
+          if (
+            recovery instanceof LlmCompletionEventPublicationProblem &&
+            recovery.deliveryState === "published_unconfirmed"
+          ) {
+            span.setAttribute("llm.completion_event.delivery_state", recovery.deliveryState);
+            await this.confirmPublishedCompletionEvent(
+              completion,
+              intent,
+              recovery.durableIntentRecorded,
+            );
+            return;
+          }
+
+          const intentStore = this.options.completionEventIntentStore;
+          if (intentStore) {
+            let deliveryState: LlmCompletionEventDeliveryState;
+            try {
+              deliveryState = await intentStore.loadDeliveryState(intent.id);
+              span.setAttribute("llm.completion_event.delivery_state", deliveryState);
+            } catch (error) {
+              throw new LlmCompletionEventPublicationProblem(
+                completion,
+                intent,
+                "not_published",
+                true,
+                error,
+                "load_delivery_state",
+              );
+            }
+
+            if (deliveryState === "published_unconfirmed") {
+              await this.confirmPublishedCompletionEvent(completion, intent, true);
+              return;
+            }
+
+            if (deliveryState === "delivery_in_progress") {
+              return;
+            }
+          }
+
+          await this.deliverCompletionEvent(intent, completion);
         } catch (error) {
-          throw new LlmCompletionEventPublicationProblem(
-            completion,
-            intent,
-            "not_published",
-            true,
-            error,
-            "load_delivery_state",
-          );
+          if (error instanceof LlmCompletionEventPublicationProblem) {
+            span.setAttribute("llm.completion_event.delivery_state", error.deliveryState);
+            span.setAttribute("llm.completion_event.failure_stage", error.failureStage);
+          }
+          throw error;
         }
-
-        if (deliveryState === "published_unconfirmed") {
-          await this.confirmPublishedCompletionEvent(completion, intent, true);
-          return;
-        }
-      }
-    }
-
-    await this.deliverCompletionEvent(intent, completion);
+      },
+      { name: "llm.retry_completion_event" },
+    );
   }
 
   private async publishCompletionEvent(params: CompletionEventParams): Promise<void> {
@@ -419,23 +441,61 @@ export class LlmService {
     const intentStore = this.options.completionEventIntentStore;
     let durableIntentRecorded = false;
     let deliveryState: LlmCompletionEventDeliveryState = "not_published";
-    let failureStage: "record_pending" | "publish" | "mark_published" = "record_pending";
+    let deliveryClaim: LlmCompletionEventDeliveryClaim | undefined;
+    let failureStage:
+      | "record_pending"
+      | "claim_delivery"
+      | "publish"
+      | "release_delivery"
+      | "mark_published" = "record_pending";
 
     try {
       if (intentStore) {
         await intentStore.recordPending(intent);
         durableIntentRecorded = true;
+
+        failureStage = "claim_delivery";
+        deliveryClaim = await intentStore.claimDelivery(intent.id);
+        if (!deliveryClaim) {
+          return;
+        }
+        deliveryState = "delivery_in_progress";
       }
 
       failureStage = "publish";
-      await this.eventBus.publish(existingEvent ?? completionEventFromIntent(intent));
+      try {
+        await this.eventBus.publish(existingEvent ?? completionEventFromIntent(intent));
+      } catch (error) {
+        deliveryState = "not_published";
+        if (intentStore && deliveryClaim) {
+          try {
+            await intentStore.releaseDelivery(deliveryClaim);
+          } catch (releaseError) {
+            failureStage = "release_delivery";
+            throw new LlmCompletionEventPublicationProblem(
+              completion,
+              intent,
+              deliveryState,
+              durableIntentRecorded,
+              new Error(
+                `Completion event delivery claim release failed after '${String(error)}': ${String(releaseError)}`,
+              ),
+              "release_delivery",
+            );
+          }
+        }
+        throw error;
+      }
       deliveryState = "published_unconfirmed";
 
       if (intentStore) {
         failureStage = "mark_published";
-        await intentStore.markPublished(intent.id);
+        await intentStore.markPublished(intent.id, deliveryClaim);
       }
     } catch (error) {
+      if (error instanceof LlmCompletionEventPublicationProblem) {
+        throw error;
+      }
       throw new LlmCompletionEventPublicationProblem(
         completion,
         intent,

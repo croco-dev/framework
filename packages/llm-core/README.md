@@ -43,8 +43,9 @@ try {
 ```
 
 영속 복구가 필요하면 `LlmService`의 세 번째 인자에 `completionEventIntentStore`를 제공합니다.
-저장소의 `recordPending()`은 같은 intent에 대해 멱등이어야 하며, `markPublished()`는 이벤트 발행이
-확인된 뒤 호출됩니다.
+저장소의 `recordPending()`은 같은 intent에 대해 멱등이어야 합니다. `claimDelivery()`는 원자적으로 하나의
+활성 claim만 발급하고, 실패한 발행의 claim은 `releaseDelivery()`로 해제하며, `markPublished()`는 이벤트
+발행이 확인된 뒤 호출됩니다. 분산 저장소는 만료 가능한 lease와 fencing token을 검증해야 합니다.
 
 ```ts
 const llmService = new LlmService(registry, eventBus, { completionEventIntentStore });
