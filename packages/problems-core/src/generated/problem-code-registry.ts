@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 616,
+  problemCount: 617,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -8812,7 +8812,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
-          line: 191,
+          line: 210,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8843,7 +8843,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
-          line: 174,
+          line: 193,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8874,7 +8874,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
-          line: 209,
+          line: 228,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8907,7 +8907,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
-          line: 156,
+          line: 175,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8937,7 +8937,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
-          line: 103,
+          line: 122,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8999,7 +8999,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
-          line: 119,
+          line: 138,
           column: 5,
           kind: "problem-constructor",
         },
@@ -9029,7 +9029,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
-          line: 85,
+          line: 104,
           column: 5,
           kind: "problem-constructor",
         },
@@ -9062,7 +9062,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
-          line: 139,
+          line: 158,
           column: 5,
           kind: "problem-constructor",
         },
@@ -9092,7 +9092,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
-          line: 67,
+          line: 86,
           column: 5,
           kind: "problem-constructor",
         },
@@ -9114,6 +9114,37 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         telemetry: {
           eventName: "croco.problem.info",
           severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
+          line: 68,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "lifecycle-core/run-finalization-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#lifecycle-core-run-finalization-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
           attributes: ["problem.code", "problem.category", "problem.status"],
         },
       },

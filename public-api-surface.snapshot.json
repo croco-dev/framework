@@ -14517,6 +14517,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "LifecycleRunFinalizationProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/LifecycleProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "MONETIZATION_SIGNAL_DESCRIPTORS",
               "exportKind": "named",
               "source": "./libs/monetization",
@@ -14694,12 +14700,22 @@
               "source": "./libs/types"
             },
             {
+              "name": "LifecycleFinalizedRun",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
               "name": "LifecycleHealthSummary",
               "exportKind": "named",
               "source": "./libs/types"
             },
             {
               "name": "LifecycleIdempotencyResolver",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "LifecycleIndeterminateRun",
               "exportKind": "named",
               "source": "./libs/types"
             },
@@ -14825,6 +14841,11 @@
             },
             {
               "name": "LifecycleRunClaimResult",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "LifecycleRunFinalizationResult",
               "exportKind": "named",
               "source": "./libs/types"
             },

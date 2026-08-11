@@ -229,6 +229,7 @@ export type RetryConsoleItemState =
   | "running"
   | "succeeded"
   | "retryable"
+  | "reconciliation_required"
   | "non_retryable"
   | "terminal_failed";
 

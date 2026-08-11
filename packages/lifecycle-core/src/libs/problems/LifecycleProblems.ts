@@ -43,6 +43,25 @@ export class LifecycleActionAdapterProblem extends Problem {
   }
 }
 
+/** Indicates that a lifecycle dispatch could not be finalized under its original claim fence. */
+export class LifecycleRunFinalizationProblem extends Problem {
+  constructor(runId: string, reason: string) {
+    super(
+      "lifecycle-core/run-finalization-conflict",
+      ProblemCategory.Conflict,
+      `Lifecycle run '${runId}' could not finalize its dispatch evidence`,
+      {
+        extensions: {
+          runId,
+          reason,
+          retryable: false,
+          reconciliationRequired: true,
+        },
+      },
+    );
+  }
+}
+
 /** Indicates that the requested lifecycle rule version is not registered. */
 export class UnknownLifecycleRuleVersionProblem extends Problem {
   constructor(ruleId: string, version: string) {

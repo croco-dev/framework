@@ -25,7 +25,8 @@ title: "InMemoryLifecycleRunStore"
 
 > **abortClaim**(`runId`, `idempotencyKey`): `Promise`\<`void`\>
 
-Releases an unfinished claim without removing a completed run.
+Releases a claim and its indeterminate boundary only when dispatch is proven not to have
+started. Never call this after an action adapter begins execution.
 Implementations must make this operation idempotent.
 
 #### Parameters
@@ -50,7 +51,7 @@ Implementations must make this operation idempotent.
 
 ### claim()
 
-> **claim**(`claim`): `Promise`\<[`LifecycleRunClaimResult`](/api/lifecycle-core/src/type-aliases/lifecyclerunclaimresult/)\>
+> **claim**(`claim`, `dispatchingRun`): `Promise`\<[`LifecycleRunClaimResult`](/api/lifecycle-core/src/type-aliases/lifecyclerunclaimresult/)\>
 
 Atomically reserves an idempotency key and optional cooldown window before dispatch.
 Distributed adapters must enforce both constraints in one shared transaction.
@@ -61,6 +62,10 @@ Distributed adapters must enforce both constraints in one shared transaction.
 
 [`LifecycleRunClaim`](/api/lifecycle-core/src/type-aliases/lifecyclerunclaim/)
 
+##### dispatchingRun
+
+[`LifecycleIndeterminateRun`](/api/lifecycle-core/src/type-aliases/lifecycleindeterminaterun/)
+
 #### Returns
 
 `Promise`\<[`LifecycleRunClaimResult`](/api/lifecycle-core/src/type-aliases/lifecyclerunclaimresult/)\>
@@ -68,6 +73,29 @@ Distributed adapters must enforce both constraints in one shared transaction.
 #### Implementation of
 
 [`LifecycleRunStore`](/api/lifecycle-core/src/interfaces/lifecyclerunstore/).[`claim`](/api/lifecycle-core/src/interfaces/lifecyclerunstore/#claim)
+
+***
+
+### finalizeDispatch()
+
+> **finalizeDispatch**(`run`): `Promise`\<\{ `finalized`: `false`; `reason`: `"dispatch_not_found"`; \} \| \{ `finalized`: `false`; `reason`: `"dispatch_fence_mismatch"`; \} \| \{ `finalized`: `true`; `reason?`: `undefined`; \}\>
+
+Replaces an indeterminate run with reconciled action evidence using the run id as a fence.
+A false result must retain the current claim and run evidence.
+
+#### Parameters
+
+##### run
+
+[`LifecycleFinalizedRun`](/api/lifecycle-core/src/type-aliases/lifecyclefinalizedrun/)
+
+#### Returns
+
+`Promise`\<\{ `finalized`: `false`; `reason`: `"dispatch_not_found"`; \} \| \{ `finalized`: `false`; `reason`: `"dispatch_fence_mismatch"`; \} \| \{ `finalized`: `true`; `reason?`: `undefined`; \}\>
+
+#### Implementation of
+
+[`LifecycleRunStore`](/api/lifecycle-core/src/interfaces/lifecyclerunstore/).[`finalizeDispatch`](/api/lifecycle-core/src/interfaces/lifecyclerunstore/#finalizedispatch)
 
 ***
 
@@ -143,11 +171,13 @@ Distributed adapters must enforce both constraints in one shared transaction.
 
 > **save**(`run`): `Promise`\<`void`\>
 
+Persists a run that never crossed the action-dispatch boundary.
+
 #### Parameters
 
 ##### run
 
-[`LifecycleRun`](/api/lifecycle-core/src/type-aliases/lifecyclerun/)
+[`LifecycleFinalizedRun`](/api/lifecycle-core/src/type-aliases/lifecyclefinalizedrun/)
 
 #### Returns
 

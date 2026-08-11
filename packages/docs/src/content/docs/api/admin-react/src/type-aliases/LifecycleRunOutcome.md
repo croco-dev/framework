@@ -5,4 +5,4 @@ prev: false
 title: "LifecycleRunOutcome"
 ---
 
-> **LifecycleRunOutcome** = `"completed"` \| `"failed-action"` \| `"not-matched"` \| `"suppressed"` \| `"suppressed-cooldown"`
+> **LifecycleRunOutcome** = `"completed"` \| `"failed-action"` \| `"reconciliation-required"` \| `"not-matched"` \| `"suppressed"` \| `"suppressed-cooldown"`

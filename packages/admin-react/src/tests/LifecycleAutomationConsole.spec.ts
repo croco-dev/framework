@@ -592,6 +592,9 @@ describe("LifecycleAutomationConsole", () => {
 
     expect(classifyLifecycleRun({ ...run, status: "succeeded" })).toBe("completed");
     expect(classifyLifecycleRun({ ...run, status: "failed" })).toBe("failed-action");
+    expect(classifyLifecycleRun({ ...run, status: "indeterminate" })).toBe(
+      "reconciliation-required",
+    );
     expect(
       classifyLifecycleRun({
         ...run,

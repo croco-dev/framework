@@ -1,4 +1,7 @@
+import { LifecycleRunFinalizationProblem } from "./problems/LifecycleProblems";
 import type {
+  LifecycleFinalizedRun,
+  LifecycleIndeterminateRun,
   LifecycleRun,
   LifecycleRunClaim,
   LifecycleRunClaimResult,
@@ -14,7 +17,18 @@ export class InMemoryLifecycleRunStore implements LifecycleRunStore {
   private readonly runs: LifecycleRun[] = [];
   private readonly claims = new Map<string, LifecycleRunClaim>();
 
-  async claim(claim: LifecycleRunClaim): Promise<LifecycleRunClaimResult> {
+  async claim(
+    claim: LifecycleRunClaim,
+    dispatchingRun: LifecycleIndeterminateRun,
+  ): Promise<LifecycleRunClaimResult> {
+    if (
+      dispatchingRun.id !== claim.runId ||
+      dispatchingRun.idempotencyKey !== claim.idempotencyKey ||
+      dispatchingRun.tenantId !== claim.tenantId ||
+      dispatchingRun.ruleId !== claim.ruleId
+    ) {
+      throw new LifecycleRunFinalizationProblem(claim.runId, "dispatch_claim_mismatch");
+    }
     const duplicateRun = this.runs.some(
       (run) => run.idempotencyKey === claim.idempotencyKey && run.status !== "skipped",
     );
@@ -43,6 +57,7 @@ export class InMemoryLifecycleRunStore implements LifecycleRunStore {
     }
 
     this.claims.set(claim.idempotencyKey, claim);
+    this.runs.push(dispatchingRun);
     return { claimed: true };
   }
 
@@ -50,14 +65,37 @@ export class InMemoryLifecycleRunStore implements LifecycleRunStore {
     const claim = this.claims.get(idempotencyKey);
     if (claim?.runId === runId) {
       this.claims.delete(idempotencyKey);
+      const dispatchIndex = this.runs.findIndex(
+        (run) =>
+          run.id === runId &&
+          run.idempotencyKey === idempotencyKey &&
+          run.status === "indeterminate",
+      );
+      if (dispatchIndex >= 0) {
+        this.runs.splice(dispatchIndex, 1);
+      }
     }
   }
 
-  async save(run: LifecycleRun): Promise<void> {
+  async finalizeDispatch(run: LifecycleFinalizedRun) {
+    const dispatchIndex = this.runs.findIndex((candidate) => candidate.id === run.id);
+    if (dispatchIndex < 0) {
+      return { finalized: false, reason: "dispatch_not_found" } as const;
+    }
+    const dispatch = this.runs[dispatchIndex];
+    if (dispatch?.status !== "indeterminate" || dispatch.idempotencyKey !== run.idempotencyKey) {
+      return { finalized: false, reason: "dispatch_fence_mismatch" } as const;
+    }
+
+    this.runs[dispatchIndex] = run;
     const claim = this.claims.get(run.idempotencyKey);
     if (claim?.runId === run.id) {
       this.claims.delete(run.idempotencyKey);
     }
+    return { finalized: true } as const;
+  }
+
+  async save(run: LifecycleFinalizedRun): Promise<void> {
     this.runs.push(run);
   }
 

@@ -73,6 +73,7 @@ export type LifecycleRunEvidence = Omit<
 export type LifecycleRunOutcome =
   | "completed"
   | "failed-action"
+  | "reconciliation-required"
   | "not-matched"
   | "suppressed"
   | "suppressed-cooldown";
@@ -403,6 +404,9 @@ function buildRuleOperations(
 }
 
 export function classifyLifecycleRun(run: LifecycleRun): LifecycleRunOutcome {
+  if (run.status === "indeterminate") {
+    return "reconciliation-required";
+  }
   if (run.status === "succeeded") {
     return "completed";
   }
@@ -424,6 +428,12 @@ function findRecovery(item: RetryConsoleItem | undefined): RetryConsoleRecoveryA
   );
 }
 
+function findReconciliation(
+  item: RetryConsoleItem | undefined,
+): RetryConsoleRecoveryAction | undefined {
+  return item?.recoveryActions.find((action) => action.allowed && action.kind === "inspect");
+}
+
 function buildRunOperation(
   run: LifecycleRun,
   recoveryItems: readonly RetryConsoleItem[],
@@ -431,6 +441,7 @@ function buildRunOperation(
 ): LifecycleRunOperation {
   const failure = run.error ?? run.actionResults.find((result) => result.error)?.error;
   const recoveryItem = recoveryItems.find((item) => item.correlationIds.lifecycleRunId === run.id);
+  const reconciliationRequired = run.status === "indeterminate";
   const safeRun: LifecycleRunEvidence = {
     id: run.id,
     ruleId: run.ruleId,
@@ -453,14 +464,22 @@ function buildRunOperation(
   return {
     run: safeRun,
     outcome: classifyLifecycleRun(run),
-    problem: failure
+    problem: reconciliationRequired
       ? problem(
-          failure.code ?? "lifecycle-core/run-failed",
-          "Lifecycle execution failed. Inspect the linked server-side Problem evidence.",
+          "lifecycle-core/run-indeterminate",
+          "Lifecycle action dispatch may have completed. Reconcile provider evidence before finalizing; do not replay the run.",
           "runs",
         )
-      : undefined,
-    recovery: findRecovery(recoveryItem),
+      : failure
+        ? problem(
+            failure.code ?? "lifecycle-core/run-failed",
+            "Lifecycle execution failed. Inspect the linked server-side Problem evidence.",
+            "runs",
+          )
+        : undefined,
+    recovery: reconciliationRequired
+      ? findReconciliation(recoveryItem)
+      : findRecovery(recoveryItem),
     correlationIds: recoveryItem?.correlationIds ?? {
       lifecycleRunId: run.id,
       lifecycleRuleId: run.ruleId,

@@ -5,4 +5,4 @@ prev: false
 title: "RetryConsoleItemState"
 ---
 
-> **RetryConsoleItemState** = `"running"` \| `"succeeded"` \| `"retryable"` \| `"non_retryable"` \| `"terminal_failed"`
+> **RetryConsoleItemState** = `"running"` \| `"succeeded"` \| `"retryable"` \| `"reconciliation_required"` \| `"non_retryable"` \| `"terminal_failed"`
