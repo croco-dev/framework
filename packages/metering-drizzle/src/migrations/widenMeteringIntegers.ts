@@ -1,9 +1,10 @@
 import { sql } from "drizzle-orm";
+import type { SQLWrapper } from "drizzle-orm";
 
 export type MeteringIntegerMigrationClient = {
-  execute(query: unknown): Promise<unknown>;
+  execute(query: SQLWrapper): Promise<unknown>;
   transaction<T>(
-    callback: (tx: { execute(query: unknown): Promise<unknown> }) => Promise<T>,
+    callback: (tx: { execute(query: SQLWrapper): Promise<unknown> }) => Promise<T>,
   ): Promise<T>;
 };
 

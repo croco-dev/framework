@@ -1,3 +1,4 @@
+import type { SQLWrapper } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 
 import { widenMeteringIntegersPostgres } from "../migrations/widenMeteringIntegers";
@@ -8,7 +9,7 @@ describe("widenMeteringIntegersPostgres", () => {
     const execute = vi.fn().mockResolvedValue(undefined);
     const transactionSpy = vi.fn();
     const transaction: MeteringIntegerMigrationClient["transaction"] = async <T>(
-      callback: (tx: { execute(query: unknown): Promise<unknown> }) => Promise<T>,
+      callback: (tx: { execute(query: SQLWrapper): Promise<unknown> }) => Promise<T>,
     ): Promise<T> => {
       transactionSpy();
       return callback({ execute });

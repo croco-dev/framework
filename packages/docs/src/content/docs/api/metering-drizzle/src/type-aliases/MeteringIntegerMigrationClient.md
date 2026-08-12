@@ -17,13 +17,13 @@ title: "MeteringIntegerMigrationClient"
 
 ##### query
 
-`unknown`
+`SQLWrapper`
 
 #### Returns
 
 `Promise`\<`unknown`\>
 
-***
+---
 
 ### transaction()
 

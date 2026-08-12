@@ -9,17 +9,14 @@ import {
   LlmQuotaExceededProblem,
   PricingNotFoundProblem,
 } from "./problems/LlmMeteringProblems";
-import {
-  COMPLETION_TOKENS,
-  COST_USD_NANOS,
-  EMBEDDING_TOKENS,
-  PROMPT_TOKENS,
-  type LlmEmbeddingUsageRecord,
-  type LlmMeteringFailurePolicy,
-  type LlmMeterUsageDelta,
-  type ModelPricing,
-  type LlmQuotaPolicy,
-  type LlmUsageRecord,
+import { COMPLETION_TOKENS, COST_USD_NANOS, EMBEDDING_TOKENS, PROMPT_TOKENS } from "./types";
+import type {
+  LlmEmbeddingUsageRecord,
+  LlmMeteringFailurePolicy,
+  LlmMeterUsageDelta,
+  LlmQuotaPolicy,
+  LlmUsageRecord,
+  ModelPricing,
 } from "./types";
 
 const USD_NANOS_PER_USD = 1_000_000_000;
@@ -531,6 +528,13 @@ export class LlmMeteringService {
     outputTokens: number,
     operation: string,
   ): number {
+    if (pricing.currency !== "USD") {
+      throw new LlmMeteringRecordFailedProblem(
+        operation,
+        [COST_USD_NANOS],
+        new TypeError(`Unsupported LLM cost currency: ${pricing.currency}`),
+      );
+    }
     if (
       !Number.isSafeInteger(inputTokens) ||
       inputTokens < 0 ||

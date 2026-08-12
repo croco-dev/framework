@@ -550,6 +550,36 @@ describe("LlmMeteringService", () => {
       expect(mockMeteringCore.record).not.toHaveBeenCalled();
     });
 
+    it("should reject non-USD pricing before quota or persistence", async () => {
+      const pricingTable = new PricingTable();
+      pricingTable.setPrice("custom", "euro-priced", {
+        inputPricePerToken: 0.01,
+        outputPricePerToken: 0.02,
+        currency: "EUR",
+      });
+      const quotaPolicy = { enforce: vi.fn() };
+      const isolatedMeteringService = new LlmMeteringService({
+        meteringService: mockMeteringCore,
+        pricingTable,
+        quotaPolicy,
+      });
+
+      await expect(
+        isolatedMeteringService.trackCost({
+          tenantId: "tenant-123",
+          modelId: "euro-priced",
+          provider: "custom",
+          usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+          idempotencyKey: "non-usd-cost",
+        }),
+      ).rejects.toMatchObject({
+        code: "llm-metering/record-failed",
+        extensions: { meterIds: ["llm.cost_usd_nanos"] },
+      });
+      expect(quotaPolicy.enforce).not.toHaveBeenCalled();
+      expect(mockMeteringCore.record).not.toHaveBeenCalled();
+    });
+
     it("should not round fractional nanodollars at large magnitudes", async () => {
       const pricingTable = new PricingTable();
       pricingTable.setPrice("custom", "fractional-large-cost", {

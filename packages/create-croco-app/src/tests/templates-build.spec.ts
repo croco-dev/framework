@@ -1208,6 +1208,12 @@ function checkAiSaasStructure() {
   checkFileContains(
     "ai-saas",
     ["apps", "api-server", "src", "aiSaas.ts"],
+    /const costUsdNanos = await this\.readUsage\(tenantId, COST_USD_NANOS\)/,
+  );
+  checkFileDoesNotContain("ai-saas", ["apps", "api-server", "src", "aiSaas.ts"], /\bCOST_USD\b/);
+  checkFileContains(
+    "ai-saas",
+    ["apps", "api-server", "src", "aiSaas.ts"],
     /assertPreflightQuota\(plan, before, input\.prompt\.length, costUsdNanos\)/,
   );
   checkFileContains("ai-saas", ["apps", "api-server", "src", "aiSaas.ts"], /buildAiIdempotencyKey/);
