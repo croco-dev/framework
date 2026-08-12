@@ -744,6 +744,9 @@ describe("@croco/testing conformance public contract", () => {
     ).toEqual([
       "syncs QStash schedules with stable webhook payloads",
       "rejects invalid webhook signatures before dispatch",
+      "rejects missing QStash delivery identity before dispatch",
+      "rejects mismatched QStash delivery identity before dispatch",
+      "surfaces QStash delivery identity provider failures as retryable diagnostics",
       "dispatches verified webhooks through the execution manager",
       "surfaces retryable QStash schedule failures as redacted diagnostics",
       "surfaces terminal QStash schedule failures as redacted diagnostics",

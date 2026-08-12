@@ -20,6 +20,7 @@ export type {
   HandleResult,
   QStashDeliveryIdentity,
   QStashDeliveryIdentityVerification,
+  QStashDeliveryIdentityVerificationFailure,
   QStashDeliveryIdentityVerifier,
   QStashTriggerHandlerOptions,
   QStashWebhookPayload,

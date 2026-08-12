@@ -29666,6 +29666,11 @@
               "source": "./libs/QStashTriggerHandler"
             },
             {
+              "name": "QStashDeliveryIdentityVerificationFailure",
+              "exportKind": "named",
+              "source": "./libs/QStashTriggerHandler"
+            },
+            {
               "name": "QStashDeliveryIdentityVerifier",
               "exportKind": "named",
               "source": "./libs/QStashTriggerHandler"

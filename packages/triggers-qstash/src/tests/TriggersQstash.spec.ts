@@ -26,6 +26,7 @@ function createUpstreamError(message: string, status: number): Error & { readonl
 function createTriggerConformanceHarness(scenario: ConformanceScenario) {
   const scheduleOperations: Array<Record<string, unknown>> = [];
   const executionEvents: Array<Record<string, unknown>> = [];
+  let deliveryIdentityVerification: boolean | Error = true;
 
   class ConformanceTrigger {
     async run(): Promise<string> {
@@ -98,8 +99,14 @@ function createTriggerConformanceHarness(scenario: ConformanceScenario) {
     getExecutionEvents: () => executionEvents,
     getScheduleOperations: () => scheduleOperations,
     handler: new QStashTriggerHandler({
-      deliveryIdentityVerifier: vi.fn().mockResolvedValue(true),
+      deliveryIdentityVerifier: vi.fn().mockImplementation(async () => {
+        if (deliveryIdentityVerification instanceof Error) {
+          throw deliveryIdentityVerification;
+        }
+        return deliveryIdentityVerification;
+      }),
       executionManager,
+      executionTimeout: 60_000,
       receiver,
       serviceResolver: () => new ConformanceTrigger(),
     }),
@@ -107,6 +114,9 @@ function createTriggerConformanceHarness(scenario: ConformanceScenario) {
       client,
       webhookUrl: "https://example.com/triggers/conformance",
     }),
+    setDeliveryIdentityVerification: (result: boolean | Error) => {
+      deliveryIdentityVerification = result;
+    },
     validSignature: "valid-signature",
     webhookBody: JSON.stringify({
       className: "ConformanceTrigger",

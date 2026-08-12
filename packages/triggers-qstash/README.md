@@ -40,6 +40,7 @@ const handler = new QStashTriggerHandler({
   }),
   deliveryIdentityVerifier: createQStashApiDeliveryIdentityVerifier(client),
   executionManager,
+  executionTimeout: 60_000,
   maxAttempts: 3,
 });
 
@@ -50,20 +51,20 @@ const result = await handler.handle(rawBody, upstashSignature, {
 
 ## Public API
 
-| API                                       | Description                                                                              |
-| ----------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `QStashScheduler`                         | Creates, updates, deletes, or dry-runs QStash schedules from triggers.                   |
-| `QStashSchedulerOptions`                  | Requires QStash client and public webhook URL; accepts prefix and mode.                  |
-| `ScheduleSyncOptions`                     | Per-sync mode override for preview, non-destructive apply, or owned-orphan cleanup.      |
-| `ScheduleSyncResult`                      | Counts and details for created, updated, deleted, skipped, and failed schedules.         |
-| `ScheduleSyncDetail`                      | Per-schedule action, target, method, diagnostic code, retryability, and upstream status. |
-| `QStashTriggerHandler`                    | Verifies QStash signatures and dispatches the target trigger execution.                  |
-| `QStashTriggerHandlerOptions`             | Requires receiver and execution manager; accepts custom service resolver.                |
-| `QStashDeliveryIdentity`                  | Carries the verified `Upstash-Message-Id` used to deduplicate one scheduled occurrence.  |
-| `QStashDeliveryIdentityVerifier`          | Authenticates the message identity before it becomes a durable execution key.            |
-| `createQStashApiDeliveryIdentityVerifier` | Binds identity to body and schedule through QStash's authenticated message API.          |
-| `QStashWebhookPayload`                    | Webhook payload shape expected from QStash schedule delivery.                            |
-| `HandleResult`                            | HTTP-oriented success/error response returned by the handler.                            |
+| API                                       | Description                                                                                                                                                      |
+| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `QStashScheduler`                         | Creates, updates, deletes, or dry-runs QStash schedules from triggers.                                                                                           |
+| `QStashSchedulerOptions`                  | Requires QStash client and public webhook URL; accepts prefix and mode.                                                                                          |
+| `ScheduleSyncOptions`                     | Per-sync mode override for preview, non-destructive apply, or owned-orphan cleanup.                                                                              |
+| `ScheduleSyncResult`                      | Counts and details for created, updated, deleted, skipped, and failed schedules.                                                                                 |
+| `ScheduleSyncDetail`                      | Per-schedule action, target, method, diagnostic code, retryability, and upstream status.                                                                         |
+| `QStashTriggerHandler`                    | Verifies QStash signatures and dispatches the target trigger execution.                                                                                          |
+| `QStashTriggerHandlerOptions`             | Requires receiver, delivery identity verifier, execution manager, and timeout; configures attempts, timeout policy, failure observation, and service resolution. |
+| `QStashDeliveryIdentity`                  | Carries the verified `Upstash-Message-Id` used to deduplicate one scheduled occurrence.                                                                          |
+| `QStashDeliveryIdentityVerifier`          | Authenticates the message identity before it becomes a durable execution key.                                                                                    |
+| `createQStashApiDeliveryIdentityVerifier` | Binds identity to body and schedule through QStash's authenticated message API.                                                                                  |
+| `QStashWebhookPayload`                    | Webhook payload shape expected from QStash schedule delivery.                                                                                                    |
+| `HandleResult`                            | HTTP-oriented success/error response returned by the handler.                                                                                                    |
 
 ## Failure Modes
 
@@ -84,10 +85,14 @@ const result = await handler.handle(rawBody, upstashSignature, {
 - Missing `Upstash-Message-Id` delivery identity returns `400` with
   `code: "triggers-qstash/missing-delivery-identity"` after signature verification and before dispatch.
 - Delivery identity mismatches return `401`; verifier infrastructure failures return retryable `500` with
-  `code: "triggers-qstash/delivery-identity-verification-failed"`.
-- QStash retries reuse the original execution ID. Completed outcomes are replayed, concurrent duplicates
-  receive the authoritative running execution, and retryable failures are exhausted on that execution up
-  to `maxAttempts` before the delivery returns.
+  `code: "triggers-qstash/delivery-identity-verification-failed"`. Configure
+  `onDeliveryIdentityVerificationFailure` to record the original provider error in application logs or telemetry.
+- QStash retries reuse the original execution ID. Completed outcomes are replayed. Running duplicates and
+  retryable execution failures return retryable `503` responses so QStash redelivery supplies provider-managed
+  backoff and resumes the same execution up to `maxAttempts`.
+- `executionTimeout` bounds abandoned running attempts. The default `indeterminate` timeout policy stops rather
+  than risking duplicate side effects. Targets explicitly configured with `timeoutRetryPolicy: "idempotent"`
+  may recover the same execution through atomic attempt fencing when the execution manager supports it.
 - Invalid JSON or malformed payloads return `400` with `code: "triggers-qstash/invalid-payload"`.
 - Unknown target classes and methods return deterministic diagnostic-coded response bodies instead
   of generic strings.
@@ -105,6 +110,7 @@ Current conformance coverage:
 
 - schedule sync payload and dry-run/apply evidence;
 - invalid signature pre-dispatch behavior;
+- missing, mismatched, and unavailable delivery identity verification behavior;
 - verified webhook dispatch behavior;
 - redacted schedule failure diagnostics;
 - no-credential live-smoke gate skip.

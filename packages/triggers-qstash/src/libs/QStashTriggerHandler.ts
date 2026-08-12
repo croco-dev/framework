@@ -1,7 +1,18 @@
-import type { Execution, ExecutionManager } from "@croco/execution-core";
+import type {
+  Execution,
+  ExecutionAttemptManager,
+  ExecutionAttemptToken,
+  ExecutionManager,
+} from "@croco/execution-core";
+import { ExecutionProblems } from "@croco/execution-core";
 import type { Constructor } from "@croco/framework-context";
 import { Container } from "@croco/framework-context";
-import { Problem, ProblemCategory, ProblemCategoryMapper } from "@croco/problems-core";
+import {
+  Problem,
+  ProblemCategory,
+  ProblemCategoryMapper,
+  ProblemFactory,
+} from "@croco/problems-core";
 import { triggerRegistry } from "@croco/triggers-core";
 import { QstashError } from "@upstash/qstash";
 import type { Client, Receiver } from "@upstash/qstash";
@@ -18,6 +29,7 @@ class DefaultServiceResolverError extends Error {
 const GENERIC_EXECUTION_ERROR_CODE = "triggers-qstash/execution-failed";
 const DELIVERY_IDENTITY_VERIFICATION_FAILED_ERROR_CODE =
   "triggers-qstash/delivery-identity-verification-failed";
+const EXECUTION_RETRY_PENDING_ERROR_CODE = "triggers-qstash/execution-retry-pending";
 const INVALID_PAYLOAD_ERROR_CODE = "triggers-qstash/invalid-payload";
 const INVALID_SIGNATURE_ERROR_CODE = "triggers-qstash/invalid-signature";
 const INVALID_DELIVERY_IDENTITY_ERROR_CODE = "triggers-qstash/invalid-delivery-identity";
@@ -43,8 +55,19 @@ export type QStashTriggerHandlerOptions = {
    */
   readonly executionManager: ExecutionManager;
 
+  /** Deadline used to reconcile abandoned running executions. */
+  readonly executionTimeout: number;
+
   /** Maximum attempts for one durable trigger execution. */
   readonly maxAttempts?: number;
+
+  /** Whether a timed-out target may overlap safely with a replacement attempt. */
+  readonly timeoutRetryPolicy?: "idempotent" | "indeterminate";
+
+  /** Receives the original provider failure for logging or telemetry. */
+  readonly onDeliveryIdentityVerificationFailure?: (
+    failure: QStashDeliveryIdentityVerificationFailure,
+  ) => void | Promise<void>;
 
   /**
    * Optional service resolver for getting target instances.
@@ -62,6 +85,11 @@ export type QStashDeliveryIdentityVerification = {
 export type QStashDeliveryIdentityVerifier = (
   verification: QStashDeliveryIdentityVerification,
 ) => Promise<boolean>;
+
+export type QStashDeliveryIdentityVerificationFailure = {
+  readonly error: unknown;
+  readonly messageId: string;
+};
 
 /**
  * QStash delivery metadata verified against the authenticated message API before use.
@@ -147,6 +175,7 @@ type ErrorResponse = {
   readonly error: string;
   readonly code: string;
   readonly category: ProblemCategory;
+  readonly observerFailed?: boolean;
   readonly retryable?: boolean;
 };
 
@@ -175,6 +204,7 @@ type ErrorResponse = {
  *   receiver,
  *   deliveryIdentityVerifier: createQStashApiDeliveryIdentityVerifier(client),
  *   executionManager,
+ *   executionTimeout: 60_000,
  * });
  *
  * app.post('/webhooks/qstash', async (c) => {
@@ -192,15 +222,29 @@ export class QStashTriggerHandler {
   private readonly receiver: Receiver;
   private readonly deliveryIdentityVerifier: QStashDeliveryIdentityVerifier;
   private readonly executionManager: ExecutionManager;
+  private readonly executionTimeout: number;
   private readonly maxAttempts: number | undefined;
+  private readonly onDeliveryIdentityVerificationFailure:
+    | ((failure: QStashDeliveryIdentityVerificationFailure) => void | Promise<void>)
+    | undefined;
   private readonly serviceResolver: ServiceResolver;
+  private readonly timeoutRetryPolicy: "idempotent" | "indeterminate";
   private readonly usesDefaultServiceResolver: boolean;
 
   constructor(options: QStashTriggerHandlerOptions) {
+    if (!Number.isSafeInteger(options.executionTimeout) || options.executionTimeout <= 0) {
+      throw ProblemFactory.badRequest(
+        "triggers-qstash/invalid-execution-timeout",
+        "QStash executionTimeout must be a positive safe integer",
+      );
+    }
     this.receiver = options.receiver;
     this.deliveryIdentityVerifier = options.deliveryIdentityVerifier;
     this.executionManager = options.executionManager;
+    this.executionTimeout = options.executionTimeout;
     this.maxAttempts = options.maxAttempts;
+    this.onDeliveryIdentityVerificationFailure = options.onDeliveryIdentityVerificationFailure;
+    this.timeoutRetryPolicy = options.timeoutRetryPolicy ?? "indeterminate";
     this.usesDefaultServiceResolver = !options.serviceResolver;
     this.serviceResolver =
       options.serviceResolver ??
@@ -241,7 +285,7 @@ export class QStashTriggerHandler {
       };
     }
 
-    const messageId = delivery?.messageId.trim();
+    const messageId = delivery?.messageId?.trim();
     if (!messageId) {
       return {
         success: false,
@@ -287,7 +331,17 @@ export class QStashTriggerHandler {
     let deliveryIsValid: boolean;
     try {
       deliveryIsValid = await this.deliveryIdentityVerifier({ body, messageId, payload });
-    } catch {
+    } catch (error) {
+      let observerFailed = false;
+      try {
+        await this.onDeliveryIdentityVerificationFailure?.({ error, messageId });
+      } catch (observerError) {
+        observerFailed = true;
+        console.error("QStash delivery identity verification observer failed", {
+          error: observerError,
+          messageId,
+        });
+      }
       return {
         success: false,
         statusCode: 500,
@@ -297,6 +351,7 @@ export class QStashTriggerHandler {
             DELIVERY_IDENTITY_VERIFICATION_FAILED_ERROR_CODE,
             ProblemCategory.InternalServerError,
           ),
+          ...(observerFailed ? { observerFailed: true } : {}),
           retryable: true,
         } satisfies ErrorResponse,
       };
@@ -435,6 +490,7 @@ export class QStashTriggerHandler {
       type: "cron",
       idempotencyKey: `qstash:${messageId}`,
       maxAttempts: this.maxAttempts,
+      timeout: this.executionTimeout,
       payload: {
         scheduleId,
         className: payload.className ?? "unknown",
@@ -450,21 +506,22 @@ export class QStashTriggerHandler {
       },
     });
 
-    const authoritativeResult = this.resultForExistingExecution(execution);
+    const authoritativeResult = await this.resultForExistingExecution(execution);
     if (authoritativeResult) {
       return authoritativeResult;
     }
 
     // Start execution
+    let startedExecution: Execution;
     try {
-      await this.executionManager.start(execution.id);
+      startedExecution = await this.executionManager.start(execution.id);
     } catch (error) {
       if (!(error instanceof Problem) || error.category !== ProblemCategory.Conflict) {
         throw error;
       }
 
       const current = await this.executionManager.get(execution.id);
-      const concurrentResult = this.resultForExistingExecution(current);
+      const concurrentResult = await this.resultForExistingExecution(current);
       if (concurrentResult) {
         return concurrentResult;
       }
@@ -472,37 +529,52 @@ export class QStashTriggerHandler {
       throw error;
     }
 
-    while (true) {
-      try {
-        const result = await (method as () => unknown).call(target);
-        await this.executionManager.complete(execution.id, result);
+    const attemptToken: ExecutionAttemptToken = {
+      attempt: startedExecution.attempts,
+      executionId: execution.id,
+    };
+    const attemptManager = this.getAttemptManager();
 
-        return {
-          success: true,
-          executionId: execution.id,
-          statusCode: 200,
-          body: {
-            executionId: execution.id,
-            result,
-          },
-        };
-      } catch (error) {
-        const failed = await this.executionManager.fail(execution.id, {
-          message: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined,
-          retryable: this.isRetryableError(error),
-        });
+    let result: unknown;
+    try {
+      result = await (method as () => unknown).call(target);
+    } catch (error) {
+      const executionError = {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        retryable: this.isRetryableError(error),
+      };
+      const failed = attemptManager
+        ? await attemptManager.failAttempt(attemptToken, executionError)
+        : await this.executionManager.fail(execution.id, executionError);
 
-        if (failed.status !== "retrying") {
-          throw error;
-        }
-
-        await this.executionManager.start(execution.id);
+      if (failed.status === "retrying") {
+        return this.createRetryPendingResult(failed);
       }
+
+      throw error;
     }
+
+    if (attemptManager) {
+      await attemptManager.completeAttempt(attemptToken, result);
+    } else {
+      await this.executionManager.complete(execution.id, result);
+    }
+
+    return {
+      success: true,
+      executionId: execution.id,
+      statusCode: 200,
+      body: {
+        executionId: execution.id,
+        result,
+      },
+    };
   }
 
-  private resultForExistingExecution(execution: Execution): HandleResult | undefined {
+  private async resultForExistingExecution(
+    execution: Execution,
+  ): Promise<HandleResult | undefined> {
     if (execution.status === "completed") {
       return {
         success: true,
@@ -516,15 +588,11 @@ export class QStashTriggerHandler {
     }
 
     if (execution.status === "running") {
-      return {
-        success: true,
-        executionId: execution.id,
-        statusCode: 202,
-        body: {
-          executionId: execution.id,
-          status: execution.status,
-        },
-      };
+      const recovered = await this.recoverExpiredExecution(execution);
+      if (recovered.status !== "running") {
+        return this.resultForExistingExecution(recovered);
+      }
+      return this.createRetryPendingResult(execution);
     }
 
     if (
@@ -544,6 +612,78 @@ export class QStashTriggerHandler {
     }
 
     return undefined;
+  }
+
+  private async recoverExpiredExecution(execution: Execution): Promise<Execution> {
+    if (
+      execution.startedAt === undefined ||
+      execution.timeout === undefined ||
+      execution.startedAt.getTime() + execution.timeout > Date.now()
+    ) {
+      return execution;
+    }
+
+    try {
+      await this.executionManager.timeout(execution.id);
+    } catch (error) {
+      if (!(error instanceof Problem) || error.category !== ProblemCategory.Conflict) {
+        throw error;
+      }
+    }
+    const reconciled = await this.executionManager.get(execution.id);
+    if (reconciled.status !== "timed_out" || this.timeoutRetryPolicy === "indeterminate") {
+      return reconciled;
+    }
+
+    const attemptManager = this.getAttemptManager();
+    if (!attemptManager) {
+      throw ExecutionProblems.attemptFencingUnsupported(
+        `QStash execution '${reconciled.id}' requires atomic attempt fencing for idempotent timeout recovery`,
+      );
+    }
+
+    const token = { attempt: reconciled.attempts, executionId: reconciled.id };
+    try {
+      await attemptManager.resolveIndeterminateTimeout(token, "QStash target declared idempotent");
+      return await this.executionManager.retry(reconciled.id);
+    } catch (error) {
+      if (!(error instanceof Problem) || error.category !== ProblemCategory.Conflict) {
+        throw error;
+      }
+      return this.executionManager.get(reconciled.id);
+    }
+  }
+
+  private getAttemptManager(): ExecutionAttemptManager | undefined {
+    const candidate = this.executionManager as ExecutionManager & Partial<ExecutionAttemptManager>;
+    if (
+      typeof candidate.supportsAttemptFencing !== "function" ||
+      !candidate.supportsAttemptFencing() ||
+      typeof candidate.completeAttempt !== "function" ||
+      typeof candidate.failAttempt !== "function" ||
+      typeof candidate.resolveIndeterminateTimeout !== "function"
+    ) {
+      return undefined;
+    }
+    return candidate as ExecutionManager & ExecutionAttemptManager;
+  }
+
+  private createRetryPendingResult(execution: Execution): HandleResult {
+    return {
+      success: false,
+      executionId: execution.id,
+      statusCode: 503,
+      body: {
+        ...createErrorResponse(
+          "Execution retry pending",
+          EXECUTION_RETRY_PENDING_ERROR_CODE,
+          ProblemCategory.InternalServerError,
+        ),
+        executionId: execution.id,
+        retryable: true,
+        status: execution.status,
+      },
+    };
   }
 
   /**
@@ -666,6 +806,7 @@ export class QStashTriggerHandler {
    *   receiver: myReceiver,
    *   deliveryIdentityVerifier: createQStashApiDeliveryIdentityVerifier(myClient),
    *   executionManager: myExecutionManager,
+   *   executionTimeout: 60_000,
    * });
    * ```
    */

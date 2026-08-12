@@ -242,6 +242,7 @@ export type QStashTriggerConformanceHarness = {
   readonly getScheduleOperations: () => readonly QStashTriggerScheduleRecord[];
   readonly handler: QStashTriggerHandler;
   readonly scheduler: QStashTriggerScheduler;
+  readonly setDeliveryIdentityVerification: (result: boolean | Error) => void;
   readonly webhookBody: string;
   readonly validSignature: string;
 };
@@ -755,6 +756,60 @@ export function createQStashTriggerConformanceSuite(
       },
     },
     {
+      name: "rejects missing QStash delivery identity before dispatch",
+      run: async () => {
+        const harness = await options.createHarness("success");
+        const result = await harness.handler.handle(harness.webhookBody, harness.validSignature, {
+          messageId: "",
+        });
+
+        assert.equal(result.success, false);
+        assert.equal(result.statusCode, 400);
+        assertResponseProblem(result.body, {
+          code: "triggers-qstash/missing-delivery-identity",
+          providerName: options.providerName,
+        });
+        assert.equal(harness.getExecutionEvents?.().length ?? 0, 0);
+      },
+    },
+    {
+      name: "rejects mismatched QStash delivery identity before dispatch",
+      run: async () => {
+        const harness = await options.createHarness("success");
+        harness.setDeliveryIdentityVerification(false);
+        const result = await harness.handler.handle(harness.webhookBody, harness.validSignature, {
+          messageId: "msg-conformance-mismatch",
+        });
+
+        assert.equal(result.success, false);
+        assert.equal(result.statusCode, 401);
+        assertResponseProblem(result.body, {
+          code: "triggers-qstash/invalid-delivery-identity",
+          providerName: options.providerName,
+        });
+        assert.equal(harness.getExecutionEvents?.().length ?? 0, 0);
+      },
+    },
+    {
+      name: "surfaces QStash delivery identity provider failures as retryable diagnostics",
+      run: async () => {
+        const harness = await options.createHarness("success");
+        harness.setDeliveryIdentityVerification(new Error("identity provider unavailable"));
+        const result = await harness.handler.handle(harness.webhookBody, harness.validSignature, {
+          messageId: "msg-conformance-outage",
+        });
+
+        assert.equal(result.success, false);
+        assert.equal(result.statusCode, 500);
+        assertResponseProblem(result.body, {
+          code: "triggers-qstash/delivery-identity-verification-failed",
+          providerName: options.providerName,
+          retryable: true,
+        });
+        assert.equal(harness.getExecutionEvents?.().length ?? 0, 0);
+      },
+    },
+    {
       name: "dispatches verified webhooks through the execution manager",
       run: async () => {
         const harness = await options.createHarness("success");
@@ -881,10 +936,14 @@ function assertResponseProblem(
   options: {
     readonly code: string;
     readonly providerName: string;
+    readonly retryable?: boolean;
   },
 ): void {
   assertRecord(value, `${options.providerName} error response must be an object.`);
   assert.equal(value.code, options.code);
+  if (options.retryable !== undefined) {
+    assert.equal(value["retryable"], options.retryable);
+  }
 }
 
 function createOptionalLiveSmokeCase(
