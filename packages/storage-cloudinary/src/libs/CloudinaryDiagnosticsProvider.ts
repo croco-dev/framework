@@ -1,6 +1,10 @@
 import type { DiagnosticsProvider, HealthStatus } from "@croco/diagnostics-core";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import type { CloudinaryConfig } from "./types";
+import {
+  CLOUDINARY_UPLOAD_SIGNATURE_VALIDITY_SECONDS,
+  isValidCloudinaryUploadIntentTtl,
+} from "./uploadIntentTtl";
 
 const TRANSIENT_HTTP_STATUSES = new Set([408, 425, 429, 500, 502, 503, 504]);
 const TRANSIENT_ERROR_CODES = new Set([
@@ -220,7 +224,7 @@ export function validateCloudinaryConfig(config: Partial<CloudinaryConfig>): Clo
     throw new CloudinaryMissingConfigProblem("apiSecret");
   }
 
-  validatePositiveInteger(config.ttl, "ttl");
+  validateUploadIntentTtl(config.ttl);
 
   return config as CloudinaryConfig;
 }
@@ -371,26 +375,19 @@ function isValidationError(context: CloudinaryStorageErrorContext): boolean {
   );
 }
 
-function validatePositiveInteger(value: unknown, label: string): void {
-  if (value === undefined) {
+function validateUploadIntentTtl(value: unknown): void {
+  if (value === undefined || isValidCloudinaryUploadIntentTtl(value)) {
     return;
   }
 
-  if (
-    typeof value !== "number" ||
-    !Number.isFinite(value) ||
-    !Number.isInteger(value) ||
-    value <= 0
-  ) {
-    throw new CloudinaryValidationProblem(
-      {
-        provider: "cloudinary",
-        operation: "configuration",
-        upstreamCode: `invalid-${label}`,
-      },
-      `Cloudinary configuration '${label}' must be a positive finite integer`,
-    );
-  }
+  throw new CloudinaryValidationProblem(
+    {
+      provider: "cloudinary",
+      operation: "configuration",
+      upstreamCode: "invalid-ttl",
+    },
+    `Cloudinary configuration 'ttl' must be an integer between 1 and ${CLOUDINARY_UPLOAD_SIGNATURE_VALIDITY_SECONDS}`,
+  );
 }
 
 const SENSITIVE_DIAGNOSTIC_KEY =

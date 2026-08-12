@@ -25,7 +25,7 @@ export type CloudinaryConfig = {
   uploadBaseUrl?: string;
 
   /**
-   * Upload Intent TTL (초 단위, 기본값: 3600)
+   * Upload Intent TTL (초 단위, 1-3600, 기본값: 3600)
    */
   ttl?: number;
 };

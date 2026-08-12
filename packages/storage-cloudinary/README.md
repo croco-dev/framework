@@ -31,6 +31,19 @@ const transformed = provider.getTransformUrl("uploads/hero.jpg", {
   fit: "cover",
   format: "webp",
 });
+
+const intent = await provider.getUploadIntent("uploads/avatar", { ttlInSeconds: 300 });
+const form = new FormData();
+
+for (const [name, value] of Object.entries(intent.fields ?? {})) {
+  form.append(name, value);
+}
+form.append("file", file);
+
+const response = await fetch(intent.uploadUrl, {
+  method: "POST",
+  body: form,
+});
 ```
 
 ## 설정
@@ -42,7 +55,7 @@ const transformed = provider.getTransformUrl("uploads/hero.jpg", {
 | `apiSecret`     | API 시크릿                                |
 | `secure`        | HTTPS 사용 여부, 기본값은 `true`          |
 | `uploadBaseUrl` | 업로드 인텐트 생성 시 사용할 API 기준 URL |
-| `ttl`           | 업로드 인텐트 만료 시간, 초 단위          |
+| `ttl`           | 업로드 인텐트 만료 시간, 1-3600초         |
 
 ## API 레퍼런스
 
@@ -101,6 +114,7 @@ pnpm --filter @croco/storage-cloudinary test -- CloudinaryLiveSmoke
 
 - `cover`, `contain`, `fill`, `inside`, `outside`를 Cloudinary crop 값으로 변환합니다.
 - 일시적 네트워크 오류와 5xx 응답은 최대 3회 재시도합니다.
-- 업로드 인텐트는 직접 업로드 엔드포인트 URL과 공개 URL을 함께 반환합니다.
+- 업로드 인텐트는 직접 업로드 엔드포인트, 공개 URL, `public_id`, `timestamp`, `api_key`, `signature` multipart 필드를 반환합니다. API secret은 반환하지 않으며 Cloudinary의 서명 유효 시간에 맞춰 TTL은 최대 1시간입니다.
+- Cloudinary image `public_id` 규칙에 맞춰 직접 업로드 key의 마지막 경로에는 파일 확장자를 포함하지 않습니다. 파일 이름의 확장자는 multipart `file`에만 사용합니다.
 - `StorageProvider`의 `list()` 계약은 아직 존재하지 않으므로 provider도 목록 조회를 제공하지 않습니다.
 - custom metadata는 Cloudinary context로 보존됩니다. `getMetadata().contentType`은 원래 MIME 전체가 아니라 Cloudinary resource `format` 값입니다.

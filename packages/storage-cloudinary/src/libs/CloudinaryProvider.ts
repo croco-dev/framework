@@ -11,7 +11,11 @@ import type {
   TransformOptions,
   UploadIntent,
 } from "@croco/storage-core";
-import { BaseStorageProvider, validateSignedUrlExpiry } from "@croco/storage-core";
+import {
+  BaseStorageProvider,
+  InvalidKeyProblem,
+  validateSignedUrlExpiry,
+} from "@croco/storage-core";
 import { v2 as cloudinary } from "cloudinary";
 import {
   CloudinaryTerminalUpstreamProblem,
@@ -20,6 +24,10 @@ import {
   normalizeCloudinaryStorageError,
 } from "./CloudinaryDiagnosticsProvider";
 import type { CloudinaryConfig, CloudinaryTransformOptions } from "./types";
+import {
+  CLOUDINARY_UPLOAD_SIGNATURE_VALIDITY_SECONDS,
+  isValidCloudinaryUploadIntentTtl,
+} from "./uploadIntentTtl";
 
 const CLOUDINARY_RETRY_POLICY: RetryPolicy = {
   shouldRetry(error: unknown, attempt: number, maxAttempts: number) {
@@ -122,9 +130,6 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
     this.secure = config.secure ?? true;
     this.uploadBaseUrl = config.uploadBaseUrl ?? "https://api.cloudinary.com";
     this.ttl = config.ttl ?? 3600;
-    if (!Number.isFinite(this.ttl) || !Number.isInteger(this.ttl) || this.ttl <= 0) {
-      this.ttl = 3600;
-    }
     this.retryTemplate = new RetryTemplate({
       maxAttempts: 3,
       backoff: {
@@ -326,25 +331,43 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
 
   async getUploadIntent(key: string, options?: { ttlInSeconds?: number }): Promise<UploadIntent> {
     this.validateKey(key);
-
-    const ttl = options?.ttlInSeconds ?? this.ttl;
-    if (!Number.isFinite(ttl) || !Number.isInteger(ttl) || ttl <= 0) {
-      throw ProblemFactory.invalidArgument(
-        "storage-cloudinary/invalid-upload-intent-ttl",
-        "ttlInSeconds must be a positive finite integer",
+    if (key.slice(key.lastIndexOf("/") + 1).includes(".")) {
+      throw new InvalidKeyProblem(
+        key,
+        "Cloudinary image upload intent keys must omit the file extension",
       );
     }
 
+    const ttl = options?.ttlInSeconds ?? this.ttl;
+    if (!isValidCloudinaryUploadIntentTtl(ttl)) {
+      throw ProblemFactory.invalidArgument(
+        "storage-cloudinary/invalid-upload-intent-ttl",
+        `ttlInSeconds must be an integer between 1 and ${CLOUDINARY_UPLOAD_SIGNATURE_VALIDITY_SECONDS}`,
+      );
+    }
+
+    const now = Date.now();
+    const timestamp = Math.floor(now / 1000);
+    const signedFields = {
+      public_id: key,
+      timestamp,
+    };
     const uploadUrl = new URL(
       `/v1_1/${this.cloudName}/image/upload`,
       this.uploadBaseUrl,
     ).toString();
     const publicUrl = this.getPublicUrl(key);
-    const expiresAt = new Date(Date.now() + ttl * 1000);
+    const expiresAt = new Date(now + ttl * 1000);
 
     return {
       uploadUrl,
       publicUrl,
+      fields: {
+        api_key: this.apiKey,
+        public_id: signedFields.public_id,
+        signature: cloudinary.utils.api_sign_request(signedFields, this.apiSecret),
+        timestamp: String(signedFields.timestamp),
+      },
       expiresAt,
     };
   }

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { PassThrough } from "node:stream";
 import { Container } from "@croco/framework-context";
 import type {
@@ -14,7 +15,7 @@ import {
 } from "@croco/storage-core";
 import { createStorageProviderConformanceSuite } from "@croco/testing";
 import { v2 as cloudinary } from "cloudinary";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CloudinaryProvider } from "../libs/CloudinaryProvider";
 
 type UploadStream = typeof cloudinary.uploader.upload_stream;
@@ -26,19 +27,24 @@ type StoredCloudinaryObject = {
 };
 
 // Cloudinary SDK 모킹
-vi.mock("cloudinary", () => ({
-  v2: {
-    config: vi.fn(),
-    uploader: {
-      upload_stream: vi.fn(),
-      destroy: vi.fn(),
+vi.mock("cloudinary", async (importOriginal) => {
+  const original = await importOriginal<{ v2: typeof cloudinary }>();
+
+  return {
+    v2: {
+      ...original.v2,
+      config: vi.fn(),
+      uploader: {
+        upload_stream: vi.fn(),
+        destroy: vi.fn(),
+      },
+      api: {
+        resource: vi.fn(),
+      },
+      url: vi.fn(() => "https://res.cloudinary.com/test-cloud/image/upload/test-key"),
     },
-    api: {
-      resource: vi.fn(),
-    },
-    url: vi.fn(() => "https://res.cloudinary.com/test-cloud/image/upload/test-key"),
-  },
-}));
+  };
+});
 
 // fetch 모킹
 global.fetch = vi.fn();
@@ -58,6 +64,10 @@ describe("CloudinaryProvider", () => {
     vi.clearAllMocks();
 
     provider = new CloudinaryProvider(mockConfig);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   describe("storage provider conformance", () => {
@@ -876,22 +886,35 @@ describe("CloudinaryProvider", () => {
   });
 
   describe("getUploadIntent()", () => {
-    it("should return upload intent with URLs and expiration", async () => {
+    it("should return a deterministic signed multipart upload intent without exposing the API secret", async () => {
+      const now = 1_800_000_000_000;
+      vi.spyOn(Date, "now").mockReturnValue(now);
       vi.mocked(cloudinary.url).mockReturnValue(
         "https://res.cloudinary.com/test-cloud/image/upload/test-key",
       );
 
       const intent = await provider.getUploadIntent("test-key");
+      const repeatedIntent = await provider.getUploadIntent("test-key");
+      const timestamp = String(now / 1000);
+      const signature = createHash("sha1")
+        .update(`public_id=test-key&timestamp=${timestamp}${mockConfig.apiSecret}`)
+        .digest("hex");
 
       const expectedIntent: UploadIntent = {
         uploadUrl: "https://api.cloudinary.com/v1_1/test-cloud/image/upload",
         publicUrl: "https://res.cloudinary.com/test-cloud/image/upload/test-key",
-        expiresAt: expect.any(Date),
+        fields: {
+          api_key: mockConfig.apiKey,
+          public_id: "test-key",
+          signature,
+          timestamp,
+        },
+        expiresAt: new Date(now + 3600 * 1000),
       };
 
       expect(intent).toEqual(expectedIntent);
-      expect(intent.expiresAt.getTime()).toBeGreaterThan(Date.now());
-      expect(intent.expiresAt.getTime()).toBeLessThanOrEqual(Date.now() + 3600 * 1000);
+      expect(repeatedIntent).toEqual(expectedIntent);
+      expect(Object.values(intent.fields ?? {})).not.toContain(mockConfig.apiSecret);
     });
 
     it("should apply ttlInSeconds option to upload intent", async () => {
@@ -904,21 +927,25 @@ describe("CloudinaryProvider", () => {
       const intent = await provider.getUploadIntent("test-key", { ttlInSeconds: 120 });
 
       expect(intent.expiresAt.getTime()).toBe(now + 120 * 1000);
-
-      vi.restoreAllMocks();
     });
 
-    it("should throw Problem when ttlInSeconds is zero or negative", async () => {
-      await expect(provider.getUploadIntent("test-key", { ttlInSeconds: 0 })).rejects.toMatchObject(
-        {
+    it("should reject TTL values outside Cloudinary's one-hour signature validity", async () => {
+      for (const ttlInSeconds of [0, -1, 3601]) {
+        await expect(provider.getUploadIntent("test-key", { ttlInSeconds })).rejects.toMatchObject({
           code: "storage-cloudinary/invalid-upload-intent-ttl",
-        },
-      );
-      await expect(
-        provider.getUploadIntent("test-key", { ttlInSeconds: -1 }),
-      ).rejects.toMatchObject({
+        });
+      }
+
+      expect(cloudinary.url).not.toHaveBeenCalled();
+    });
+
+    it("should reject an invalid configured TTL instead of silently issuing a longer intent", async () => {
+      const invalidTtlProvider = new CloudinaryProvider({ ...mockConfig, ttl: 3601 });
+
+      await expect(invalidTtlProvider.getUploadIntent("test-key")).rejects.toMatchObject({
         code: "storage-cloudinary/invalid-upload-intent-ttl",
       });
+      expect(cloudinary.url).not.toHaveBeenCalled();
     });
 
     it("should throw Problem when ttlInSeconds is not a finite integer", async () => {
@@ -931,6 +958,13 @@ describe("CloudinaryProvider", () => {
 
     it("should throw InvalidKeyProblem for invalid key", async () => {
       await expect(provider.getUploadIntent("")).rejects.toThrow(InvalidKeyProblem);
+    });
+
+    it("should reject image keys whose last segment includes a file extension", async () => {
+      await expect(provider.getUploadIntent("uploads/avatar.png")).rejects.toThrow(
+        InvalidKeyProblem,
+      );
+      expect(cloudinary.url).not.toHaveBeenCalled();
     });
 
     it("should allow custom upload base URL", async () => {
