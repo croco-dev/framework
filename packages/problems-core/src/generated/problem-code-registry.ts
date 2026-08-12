@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 620,
+  problemCount: 621,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -17851,7 +17851,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/triggers-qstash/src/libs/QStashScheduler.ts",
-          line: 253,
+          line: 300,
           column: 15,
           kind: "problem-factory",
         },
@@ -17886,6 +17886,37 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 264,
           column: 13,
           kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "triggers-qstash/invalid-sync-mode",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#triggers-qstash-invalid-sync-mode",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/triggers-qstash/src/libs/QStashScheduler.ts",
+          line: 535,
+          column: 9,
+          kind: "problem-factory",
         },
       ],
     },
