@@ -57,6 +57,7 @@ describe("CloudflareImagesProvider", () => {
 
   afterEach(() => {
     global.fetch = originalFetch;
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
 
@@ -925,8 +926,10 @@ describe("CloudflareImagesProvider", () => {
 
   describe("getUploadIntent", () => {
     it("should generate upload intent successfully", async () => {
-      const mockUploadUrl = "https://upload.cloudflare.com/example";
-      const mockImageId = "uploaded-image-id";
+      const now = Date.parse("2026-08-12T00:00:00.000Z");
+      vi.spyOn(Date, "now").mockReturnValue(now);
+      const mockUploadUrl = "https://upload.imagedelivery.net/account/token";
+      const mockImageId = "new-image.jpg";
       const mockResponse = {
         ok: true,
         json: async () => ({
@@ -945,20 +948,23 @@ describe("CloudflareImagesProvider", () => {
 
       expect(intent.uploadUrl).toBe(mockUploadUrl);
       expect(intent.publicUrl).toBe(
-        "https://imagedelivery.net/test-account-hash/uploaded-image-id/public",
+        "https://imagedelivery.net/test-account-hash/new-image.jpg/public",
       );
       expect(intent.expiresAt).toBeInstanceOf(Date);
       expect(mockFetch).toHaveBeenCalledWith(
-        "https://api.cloudflare.com/client/v4/accounts/test-account-id/images/v1/direct_upload",
+        "https://api.cloudflare.com/client/v4/accounts/test-account-id/images/v2/direct_upload",
         expect.objectContaining({
-          body: JSON.stringify({
-            maxDurationSeconds: 3600,
-            metadata: {
-              originalKey: "new-image.jpg",
-            },
-          }),
+          headers: {
+            Authorization: "Bearer test-api-token",
+          },
+          body: expect.any(FormData),
         }),
       );
+      const request = mockFetch.mock.calls[0]?.[1] as RequestInit;
+      const body = request.body as FormData;
+      expect(body.get("id")).toBe("new-image.jpg");
+      expect(body.get("expiry")).toBe("2026-08-12T01:00:05.000Z");
+      expect(body.get("metadata")).toBe(JSON.stringify({ originalKey: "new-image.jpg" }));
     });
 
     it("should apply ttlInSeconds option to upload intent", async () => {
@@ -970,8 +976,8 @@ describe("CloudflareImagesProvider", () => {
         json: async () => ({
           success: true,
           result: {
-            uploadURL: "https://upload.cloudflare.com/example",
-            id: "uploaded-image-id",
+            uploadURL: "https://upload.imagedelivery.net/account/token",
+            id: "new-image.jpg",
           },
           errors: [],
         }),
@@ -980,37 +986,30 @@ describe("CloudflareImagesProvider", () => {
       const intent = await provider.getUploadIntent("new-image.jpg", { ttlInSeconds: 120 });
 
       expect(mockFetch).toHaveBeenCalledWith(
-        "https://api.cloudflare.com/client/v4/accounts/test-account-id/images/v1/direct_upload",
+        "https://api.cloudflare.com/client/v4/accounts/test-account-id/images/v2/direct_upload",
         expect.objectContaining({
-          body: JSON.stringify({
-            maxDurationSeconds: 120,
-            metadata: {
-              originalKey: "new-image.jpg",
-            },
-          }),
+          body: expect.any(FormData),
         }),
       );
-      expect(intent.expiresAt.getTime()).toBe(now + 120 * 1000);
+      const request = mockFetch.mock.calls[0]?.[1] as RequestInit;
+      const body = request.body as FormData;
+      expect(body.get("id")).toBe("new-image.jpg");
+      expect(body.get("expiry")).toBe(new Date(now + 125 * 1000).toISOString());
+      expect(intent.expiresAt.getTime()).toBe(now + 125 * 1000);
 
       vi.restoreAllMocks();
     });
 
-    it("should throw Problem when ttlInSeconds is zero or negative", async () => {
-      await expect(
-        provider.getUploadIntent("new-image.jpg", { ttlInSeconds: 0 }),
-      ).rejects.toMatchObject({
-        code: "storage/invalid-upload-intent-ttl",
-      });
-      await expect(
-        provider.getUploadIntent("new-image.jpg", { ttlInSeconds: -1 }),
-      ).rejects.toMatchObject({
-        code: "storage/invalid-upload-intent-ttl",
-      });
-      expect(mockFetch).not.toHaveBeenCalled();
-    });
-
-    it("should throw Problem when ttlInSeconds is not a finite integer", async () => {
-      for (const ttlInSeconds of [Number.NaN, Number.POSITIVE_INFINITY, 1.5]) {
+    it("should reject TTL values outside Cloudflare direct-upload bounds", async () => {
+      for (const ttlInSeconds of [
+        -1,
+        0,
+        119,
+        21_601,
+        Number.NaN,
+        Number.POSITIVE_INFINITY,
+        120.5,
+      ]) {
         await expect(
           provider.getUploadIntent("new-image.jpg", { ttlInSeconds }),
         ).rejects.toMatchObject({
@@ -1018,6 +1017,43 @@ describe("CloudflareImagesProvider", () => {
         });
       }
 
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it("should reject an oversized caller key before requesting an upload intent", async () => {
+      await expect(provider.getUploadIntent("a".repeat(1025))).rejects.toMatchObject({
+        code: "storage-cloudflare/validation-failed",
+        extensions: {
+          operation: "upload-intent",
+          upstreamCode: "image-id-too-long",
+        },
+      });
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      "123e4567-e89b-12d3-a456-426614174000",
+      "00000000-0000-0000-0000-000000000000",
+      "ffffffff-ffff-ffff-ffff-ffffffffffff",
+    ])("should reject UUID caller key %s before requesting an upload intent", async (key) => {
+      await expect(provider.getUploadIntent(key)).rejects.toMatchObject({
+        code: "storage-cloudflare/validation-failed",
+        extensions: {
+          operation: "upload-intent",
+          upstreamCode: "image-id-uuid",
+        },
+      });
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it("should reject caller-key metadata above Cloudflare's byte limit", async () => {
+      await expect(provider.getUploadIntent("🦊".repeat(252))).rejects.toMatchObject({
+        code: "storage-cloudflare/validation-failed",
+        extensions: {
+          operation: "upload-intent",
+          upstreamCode: "metadata-too-large",
+        },
+      });
       expect(mockFetch).not.toHaveBeenCalled();
     });
 
@@ -1074,8 +1110,49 @@ describe("CloudflareImagesProvider", () => {
     it.each([
       ["missing upload URL", { id: "uploaded-image-id" }],
       ["non-string upload URL", { uploadURL: 42, id: "uploaded-image-id" }],
-      ["missing image id", { uploadURL: "https://upload.cloudflare.com/example" }],
-      ["non-string image id", { uploadURL: "https://upload.cloudflare.com/example", id: 42 }],
+      ["missing image id", { uploadURL: "https://upload.imagedelivery.net/account/token" }],
+      [
+        "non-string image id",
+        { uploadURL: "https://upload.imagedelivery.net/account/token", id: 42 },
+      ],
+      [
+        "mismatched image id",
+        {
+          uploadURL: "https://upload.imagedelivery.net/account/token",
+          id: "generated-image-id",
+        },
+      ],
+      ["empty upload URL", { uploadURL: "", id: "new-image.jpg" }],
+      ["relative upload URL", { uploadURL: "/upload", id: "new-image.jpg" }],
+      ["insecure upload URL", { uploadURL: "http://upload.example.com", id: "new-image.jpg" }],
+      ["foreign upload URL", { uploadURL: "https://uploads.example.com", id: "new-image.jpg" }],
+      [
+        "origin-only upload URL",
+        { uploadURL: "https://upload.imagedelivery.net", id: "new-image.jpg" },
+      ],
+      [
+        "one-segment upload URL",
+        { uploadURL: "https://upload.imagedelivery.net/token", id: "new-image.jpg" },
+      ],
+      [
+        "fragment-bearing upload URL",
+        {
+          uploadURL: "https://upload.imagedelivery.net/account/token#fragment",
+          id: "new-image.jpg",
+        },
+      ],
+      [
+        "double-slash upload URL",
+        { uploadURL: "https://upload.imagedelivery.net/account//token", id: "new-image.jpg" },
+      ],
+      [
+        "trailing-slash upload URL",
+        { uploadURL: "https://upload.imagedelivery.net/account/token/", id: "new-image.jpg" },
+      ],
+      [
+        "credentialed upload URL",
+        { uploadURL: "https://user@upload.imagedelivery.net/account/token", id: "new-image.jpg" },
+      ],
     ])("should reject a %s in a successful upload-intent response", async (_label, result) => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -1093,8 +1170,8 @@ describe("CloudflareImagesProvider", () => {
 
     it("should use custom domain for publicUrl when configured", async () => {
       const providerWithCustomDomain = new CloudflareImagesProvider(mockOptionsWithCustomDomain);
-      const mockUploadUrl = "https://upload.cloudflare.com/example";
-      const mockImageId = "uploaded-image-id";
+      const mockUploadUrl = "https://upload.imagedelivery.net/account/token";
+      const mockImageId = "new-image.jpg";
       const mockResponse = {
         ok: true,
         json: async () => ({
@@ -1118,8 +1195,8 @@ describe("CloudflareImagesProvider", () => {
       const now = Date.now();
       vi.spyOn(Date, "now").mockReturnValue(now);
 
-      const mockUploadUrl = "https://upload.cloudflare.com/example";
-      const mockImageId = "uploaded-image-id";
+      const mockUploadUrl = "https://upload.imagedelivery.net/account/token";
+      const mockImageId = "new-image.jpg";
       const mockResponse = {
         ok: true,
         json: async () => ({
@@ -1135,7 +1212,7 @@ describe("CloudflareImagesProvider", () => {
       mockFetch.mockResolvedValueOnce(mockResponse);
 
       const intent = await provider.getUploadIntent("new-image.jpg");
-      const expectedExpires = new Date(now + 3600 * 1000);
+      const expectedExpires = new Date(now + 3605 * 1000);
 
       expect(intent.expiresAt.getTime()).toBeCloseTo(expectedExpires.getTime(), -3);
 
