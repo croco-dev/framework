@@ -5,6 +5,20 @@ import type { Client } from "@upstash/qstash";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { QStashScheduler } from "../libs/QStashScheduler";
 
+const DEFAULT_OWNERSHIP_MARKER = "croco:triggers-qstash:v1:croco-trigger";
+
+function ownedSchedule(
+  scheduleId: string,
+  cron: string,
+  ownershipMarker = DEFAULT_OWNERSHIP_MARKER,
+): Record<string, unknown> {
+  return {
+    scheduleId,
+    cron,
+    label: ownershipMarker,
+  };
+}
+
 describe("QStashScheduler", () => {
   beforeEach(() => {
     MetadataStorage.clear();
@@ -213,12 +227,9 @@ describe("QStashScheduler", () => {
   it("삭제 실패를 deleted가 아니라 failed로 집계해야 한다", async () => {
     const client = {
       schedules: {
-        list: vi.fn().mockResolvedValue([
-          {
-            scheduleId: "croco-trigger:OrphanJob:orphan:run",
-            cron: "* * * * *",
-          },
-        ]),
+        list: vi
+          .fn()
+          .mockResolvedValue([ownedSchedule("croco-trigger:OrphanJob:orphan:run", "* * * * *")]),
         create: vi.fn(),
         delete: vi.fn().mockRejectedValue(new Error("delete failed")),
       },
@@ -229,7 +240,7 @@ describe("QStashScheduler", () => {
       webhookUrl: "https://api.example.com/webhooks/qstash",
     });
 
-    const result = await scheduler.sync();
+    const result = await scheduler.sync({ mode: "apply-with-orphan-cleanup" });
 
     expect(result.created).toBe(0);
     expect(result.updated).toBe(0);
@@ -263,12 +274,14 @@ describe("QStashScheduler", () => {
     const deleteSchedule = vi.fn();
     const client = {
       schedules: {
-        list: vi.fn().mockResolvedValue([
-          {
-            scheduleId: "croco-trigger:UpdatedScheduleJob:processQueue:processQueue",
-            cron: "*/5 * * * *",
-          },
-        ]),
+        list: vi
+          .fn()
+          .mockResolvedValue([
+            ownedSchedule(
+              "croco-trigger:UpdatedScheduleJob:processQueue:processQueue",
+              "*/5 * * * *",
+            ),
+          ]),
         create,
         delete: deleteSchedule,
       },
@@ -322,16 +335,12 @@ describe("QStashScheduler", () => {
     const deleteSchedule = vi.fn().mockResolvedValue({});
     const client = {
       schedules: {
-        list: vi.fn().mockResolvedValue([
-          {
-            scheduleId: "croco-trigger:UpdatedDryRunScheduleJob:run:run",
-            cron: "*/30 * * * *",
-          },
-          {
-            scheduleId: "croco-trigger:OrphanDryRunScheduleJob:run:run",
-            cron: "0 * * * *",
-          },
-        ]),
+        list: vi
+          .fn()
+          .mockResolvedValue([
+            ownedSchedule("croco-trigger:UpdatedDryRunScheduleJob:run:run", "*/30 * * * *"),
+            ownedSchedule("croco-trigger:OrphanDryRunScheduleJob:run:run", "0 * * * *"),
+          ]),
         create,
         delete: deleteSchedule,
       },
@@ -400,12 +409,14 @@ describe("QStashScheduler", () => {
     const deleteSchedule = vi.fn();
     const client = {
       schedules: {
-        list: vi.fn().mockResolvedValue([
-          {
-            scheduleId: "croco-trigger:FailingUpdateScheduleJob:processQueue:processQueue",
-            cron: "*/5 * * * *",
-          },
-        ]),
+        list: vi
+          .fn()
+          .mockResolvedValue([
+            ownedSchedule(
+              "croco-trigger:FailingUpdateScheduleJob:processQueue:processQueue",
+              "*/5 * * * *",
+            ),
+          ]),
         create,
         delete: deleteSchedule,
       },
@@ -518,7 +529,356 @@ describe("QStashScheduler", () => {
         cron: "*/5 * * * *",
         destination: "https://api.example.com/webhooks/qstash",
         method: "POST",
+        label: DEFAULT_OWNERSHIP_MARKER,
       }),
     );
+  });
+
+  it("정확히 일치하는 namespace만 조회하고 인접 prefix는 변경하지 않아야 한다", async () => {
+    const deleteSchedule = vi.fn();
+    const appOwnershipMarker = "croco:triggers-qstash:v1:app";
+    const client = {
+      schedules: {
+        list: vi
+          .fn()
+          .mockResolvedValue([
+            ownedSchedule("app:OwnedJob:run:run", "* * * * *", appOwnershipMarker),
+            ownedSchedule("app-prod:AdjacentJob:run:run", "* * * * *"),
+            ownedSchedule("application:AdjacentJob:run:run", "* * * * *"),
+          ]),
+        create: vi.fn(),
+        delete: deleteSchedule,
+      },
+    } as unknown as Client;
+
+    const scheduler = new QStashScheduler({
+      client,
+      webhookUrl: "https://api.example.com/webhooks/qstash",
+      schedulePrefix: "app",
+    });
+
+    const result = await scheduler.sync({ mode: "apply-with-orphan-cleanup" });
+
+    expect(result.deleted).toBe(1);
+    expect(result.applied).toBe(true);
+    expect(result.details).toEqual([
+      expect.objectContaining({
+        name: "app:OwnedJob:run:run",
+        action: "deleted",
+        applied: true,
+      }),
+    ]);
+    expect(deleteSchedule).toHaveBeenCalledOnce();
+    expect(deleteSchedule).toHaveBeenCalledWith("app:OwnedJob:run:run");
+  });
+
+  it("소유 표식이 없는 legacy schedule을 보존하고 migration을 보고해야 한다", async () => {
+    const deleteSchedule = vi.fn();
+    const legacyScheduleId = "croco-trigger:LegacyJob:run:run";
+    const client = {
+      schedules: {
+        list: vi.fn().mockResolvedValue([{ scheduleId: legacyScheduleId, cron: "* * * * *" }]),
+        create: vi.fn(),
+        delete: deleteSchedule,
+      },
+    } as unknown as Client;
+
+    const scheduler = new QStashScheduler({
+      client,
+      webhookUrl: "https://api.example.com/webhooks/qstash",
+    });
+
+    const result = await scheduler.sync({ mode: "apply-with-orphan-cleanup" });
+
+    expect(result.skipped).toBe(1);
+    expect(result.details).toEqual([
+      expect.objectContaining({
+        name: legacyScheduleId,
+        action: "skipped",
+        code: "triggers-qstash/schedule-migration-required",
+      }),
+    ]);
+    expect(deleteSchedule).not.toHaveBeenCalled();
+  });
+
+  it("다른 ownership label의 schedule을 보존하고 migration을 보고해야 한다", async () => {
+    const deleteSchedule = vi.fn();
+    const foreignScheduleId = "croco-trigger:ForeignJob:run:run";
+    const client = {
+      schedules: {
+        list: vi
+          .fn()
+          .mockResolvedValue([
+            ownedSchedule(foreignScheduleId, "* * * * *", "croco:triggers-qstash:v1:other-app"),
+          ]),
+        create: vi.fn(),
+        delete: deleteSchedule,
+      },
+    } as unknown as Client;
+
+    const scheduler = new QStashScheduler({
+      client,
+      webhookUrl: "https://api.example.com/webhooks/qstash",
+    });
+
+    const result = await scheduler.sync({ mode: "apply-with-orphan-cleanup" });
+
+    expect(result.details).toEqual([
+      expect.objectContaining({
+        name: foreignScheduleId,
+        action: "skipped",
+        code: "triggers-qstash/schedule-migration-required",
+      }),
+    ]);
+    expect(deleteSchedule).not.toHaveBeenCalled();
+  });
+
+  it("ownership label이 없는 기존 schedule의 cron 동기화는 유지해야 한다", async () => {
+    class LegacyUpdatedScheduleJob {
+      async run(): Promise<void> {}
+    }
+
+    triggerRegistry.register({
+      type: "cron",
+      expression: "*/10 * * * *",
+      methodName: "run",
+      target: LegacyUpdatedScheduleJob.prototype,
+      options: {},
+    });
+
+    const scheduleId = "croco-trigger:LegacyUpdatedScheduleJob:run:run";
+    const create = vi.fn().mockResolvedValue({});
+    const client = {
+      schedules: {
+        list: vi.fn().mockResolvedValue([{ scheduleId, cron: "*/5 * * * *" }]),
+        create,
+        delete: vi.fn(),
+      },
+    } as unknown as Client;
+
+    const scheduler = new QStashScheduler({
+      client,
+      webhookUrl: "https://api.example.com/webhooks/qstash",
+    });
+
+    const result = await scheduler.sync();
+
+    expect(result.updated).toBe(1);
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scheduleId,
+        cron: "*/10 * * * *",
+        label: DEFAULT_OWNERSHIP_MARKER,
+      }),
+    );
+  });
+
+  it("cron이 같은 active legacy schedule도 migration 대상으로 보고해야 한다", async () => {
+    class LegacyUnchangedScheduleJob {
+      async run(): Promise<void> {}
+    }
+
+    triggerRegistry.register({
+      type: "cron",
+      expression: "*/5 * * * *",
+      methodName: "run",
+      target: LegacyUnchangedScheduleJob.prototype,
+      options: {},
+    });
+
+    const scheduleId = "croco-trigger:LegacyUnchangedScheduleJob:run:run";
+    const client = {
+      schedules: {
+        list: vi.fn().mockResolvedValue([{ scheduleId, cron: "*/5 * * * *" }]),
+        create: vi.fn(),
+        delete: vi.fn(),
+      },
+    } as unknown as Client;
+    const scheduler = new QStashScheduler({
+      client,
+      webhookUrl: "https://api.example.com/webhooks/qstash",
+    });
+
+    const result = await scheduler.sync();
+
+    expect(result.details).toEqual([
+      expect.objectContaining({
+        name: scheduleId,
+        action: "skipped",
+        code: "triggers-qstash/schedule-migration-required",
+      }),
+    ]);
+  });
+
+  it("dry-run cron 변경은 active legacy migration을 보고하고 mutation하지 않아야 한다", async () => {
+    class LegacyDryRunUpdateJob {
+      async run(): Promise<void> {}
+    }
+
+    triggerRegistry.register({
+      type: "cron",
+      expression: "*/10 * * * *",
+      methodName: "run",
+      target: LegacyDryRunUpdateJob.prototype,
+      options: {},
+    });
+
+    const scheduleId = "croco-trigger:LegacyDryRunUpdateJob:run:run";
+    const create = vi.fn();
+    const deleteSchedule = vi.fn();
+    const client = {
+      schedules: {
+        list: vi.fn().mockResolvedValue([{ scheduleId, cron: "*/5 * * * *" }]),
+        create,
+        delete: deleteSchedule,
+      },
+    } as unknown as Client;
+    const scheduler = new QStashScheduler({
+      client,
+      webhookUrl: "https://api.example.com/webhooks/qstash",
+    });
+
+    const result = await scheduler.sync({ mode: "dry-run" });
+
+    expect(result.details).toEqual([
+      expect.objectContaining({
+        name: scheduleId,
+        action: "updated",
+        applied: false,
+        code: "triggers-qstash/schedule-migration-required",
+      }),
+    ]);
+    expect(create).not.toHaveBeenCalled();
+    expect(deleteSchedule).not.toHaveBeenCalled();
+  });
+
+  it("current plural labels response도 ownership evidence로 검증해야 한다", async () => {
+    const scheduleId = "croco-trigger:PluralLabelJob:run:run";
+    const deleteSchedule = vi.fn();
+    const client = {
+      schedules: {
+        list: vi.fn().mockResolvedValue([
+          {
+            scheduleId,
+            cron: "* * * * *",
+            labels: ["unrelated", DEFAULT_OWNERSHIP_MARKER],
+          },
+        ]),
+        create: vi.fn(),
+        delete: deleteSchedule,
+      },
+    } as unknown as Client;
+    const scheduler = new QStashScheduler({
+      client,
+      webhookUrl: "https://api.example.com/webhooks/qstash",
+    });
+
+    const result = await scheduler.sync({ mode: "apply-with-orphan-cleanup" });
+
+    expect(result.deleted).toBe(1);
+    expect(deleteSchedule).toHaveBeenCalledWith(scheduleId);
+  });
+
+  it("malformed schedule ID를 소유 표식과 관계없이 보존하고 migration을 보고해야 한다", async () => {
+    const deleteSchedule = vi.fn();
+    const malformedScheduleId = "croco-trigger:legacy";
+    const client = {
+      schedules: {
+        list: vi.fn().mockResolvedValue([
+          {
+            scheduleId: malformedScheduleId,
+            cron: "* * * * *",
+            labels: [DEFAULT_OWNERSHIP_MARKER],
+          },
+        ]),
+        create: vi.fn(),
+        delete: deleteSchedule,
+      },
+    } as unknown as Client;
+
+    const scheduler = new QStashScheduler({
+      client,
+      webhookUrl: "https://api.example.com/webhooks/qstash",
+    });
+
+    const result = await scheduler.sync({ mode: "apply-with-orphan-cleanup" });
+
+    expect(result.details).toEqual([
+      expect.objectContaining({
+        name: malformedScheduleId,
+        action: "skipped",
+        code: "triggers-qstash/schedule-migration-required",
+      }),
+    ]);
+    expect(deleteSchedule).not.toHaveBeenCalled();
+  });
+
+  it("apply mode는 owned orphan을 보존하고 명시적 cleanup mode를 보고해야 한다", async () => {
+    const deleteSchedule = vi.fn();
+    const orphanScheduleId = "croco-trigger:OrphanJob:run:run";
+    const client = {
+      schedules: {
+        list: vi.fn().mockResolvedValue([ownedSchedule(orphanScheduleId, "* * * * *")]),
+        create: vi.fn(),
+        delete: deleteSchedule,
+      },
+    } as unknown as Client;
+
+    const scheduler = new QStashScheduler({
+      client,
+      webhookUrl: "https://api.example.com/webhooks/qstash",
+    });
+
+    const result = await scheduler.sync();
+
+    expect(result.deleted).toBe(0);
+    expect(result.skipped).toBe(1);
+    expect(result.details).toEqual([
+      expect.objectContaining({
+        name: orphanScheduleId,
+        action: "skipped",
+        code: "triggers-qstash/orphan-cleanup-not-applied",
+      }),
+    ]);
+    expect(deleteSchedule).not.toHaveBeenCalled();
+  });
+
+  it("지원하지 않는 sync mode는 어떤 QStash mutation보다 먼저 거부해야 한다", async () => {
+    const list = vi.fn();
+    const create = vi.fn();
+    const deleteSchedule = vi.fn();
+    const client = {
+      schedules: { list, create, delete: deleteSchedule },
+    } as unknown as Client;
+    const scheduler = new QStashScheduler({
+      client,
+      webhookUrl: "https://api.example.com/webhooks/qstash",
+    });
+
+    await expect(
+      scheduler.sync({ mode: "apply-with-orphan-cleaup" as "apply-with-orphan-cleanup" }),
+    ).rejects.toMatchObject({ code: "triggers-qstash/invalid-sync-mode" });
+    expect(list).not.toHaveBeenCalled();
+    expect(create).not.toHaveBeenCalled();
+    expect(deleteSchedule).not.toHaveBeenCalled();
+  });
+
+  it("지원하지 않는 constructor mode를 즉시 거부해야 한다", () => {
+    const client = {
+      schedules: {
+        list: vi.fn(),
+        create: vi.fn(),
+        delete: vi.fn(),
+      },
+    } as unknown as Client;
+
+    expect(
+      () =>
+        new QStashScheduler({
+          client,
+          webhookUrl: "https://api.example.com/webhooks/qstash",
+          mode: "cleanup" as "apply",
+        }),
+    ).toThrow("Unsupported QStash schedule sync mode: cleanup");
   });
 });

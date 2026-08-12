@@ -25,7 +25,9 @@ const scheduler = new QStashScheduler({
   schedulePrefix: "croco-trigger",
 });
 
+await scheduler.sync({ mode: "dry-run" });
 await scheduler.sync({ mode: "apply" });
+await scheduler.sync({ mode: "apply-with-orphan-cleanup" });
 
 const handler = new QStashTriggerHandler({
   receiver: new Receiver({
@@ -42,7 +44,7 @@ const handler = new QStashTriggerHandler({
 | ----------------------------- | ---------------------------------------------------------------------------------------- |
 | `QStashScheduler`             | Creates, updates, deletes, or dry-runs QStash schedules from triggers.                   |
 | `QStashSchedulerOptions`      | Requires QStash client and public webhook URL; accepts prefix and mode.                  |
-| `ScheduleSyncOptions`         | Per-sync mode override for `dry-run` or `apply`.                                         |
+| `ScheduleSyncOptions`         | Per-sync mode override for preview, non-destructive apply, or owned-orphan cleanup.      |
 | `ScheduleSyncResult`          | Counts and details for created, updated, deleted, skipped, and failed schedules.         |
 | `ScheduleSyncDetail`          | Per-schedule action, target, method, diagnostic code, retryability, and upstream status. |
 | `QStashTriggerHandler`        | Verifies QStash signatures and dispatches the target trigger execution.                  |
@@ -52,6 +54,15 @@ const handler = new QStashTriggerHandler({
 
 ## Failure Modes
 
+- Schedule discovery uses the exact `${schedulePrefix}:` namespace. Adjacent prefixes such as
+  `app-prod` are never owned by a scheduler configured with `app`.
+- New schedules carry a versioned QStash ownership label. Discovery accepts the current plural
+  `labels` response and legacy singular `label` response. Cleanup preserves schedules with missing
+  or mismatched labels and malformed or legacy IDs, reporting
+  `code: "triggers-qstash/schedule-migration-required"` for operator migration.
+- `dry-run` reports owned orphan deletions without changing QStash. `apply` creates and updates but
+  preserves orphans with `code: "triggers-qstash/orphan-cleanup-not-applied"`. Only the explicit
+  `apply-with-orphan-cleanup` mode deletes owned orphans.
 - Schedule create/update/delete upstream failures are recorded in `ScheduleSyncDetail` with
   `code: "triggers-qstash/schedule-upstream-failed"`, redacted `error`, retryability, and optional
   upstream status.

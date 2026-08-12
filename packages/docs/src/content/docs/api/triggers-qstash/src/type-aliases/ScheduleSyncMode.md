@@ -5,6 +5,7 @@ prev: false
 title: "ScheduleSyncMode"
 ---
 
-> **ScheduleSyncMode** = `"dry-run"` \| `"apply"`
+> **ScheduleSyncMode** = `"dry-run"` \| `"apply"` \| `"apply-with-orphan-cleanup"`
 
-Scheduler configuration and synchronization result types.
+`apply` creates and updates schedules but preserves orphans.
+`apply-with-orphan-cleanup` also deletes canonical, ownership-marked orphans.

@@ -2,7 +2,12 @@ import type { ExecutionManager } from "@croco/execution-core";
 import { ProblemFactory } from "@croco/problems-core";
 import type { CronTriggerMetadata } from "@croco/triggers-core";
 import { triggerRegistry } from "@croco/triggers-core";
-import type { Client } from "@upstash/qstash";
+import type { Client, Schedule } from "@upstash/qstash";
+
+const SCHEDULE_NAMESPACE_DELIMITER = ":";
+const SCHEDULE_OWNER_VERSION = "croco:triggers-qstash:v1";
+const SCHEDULE_MIGRATION_REQUIRED_CODE = "triggers-qstash/schedule-migration-required";
+const ORPHAN_CLEANUP_NOT_APPLIED_CODE = "triggers-qstash/orphan-cleanup-not-applied";
 
 /**
  * Configuration options for QStashScheduler.
@@ -41,7 +46,11 @@ export type QStashSchedulerOptions = {
   readonly mode?: ScheduleSyncMode;
 };
 
-export type ScheduleSyncMode = "dry-run" | "apply";
+/**
+ * `apply` creates and updates schedules but preserves orphans.
+ * `apply-with-orphan-cleanup` also deletes canonical, ownership-marked orphans.
+ */
+export type ScheduleSyncMode = "dry-run" | "apply" | "apply-with-orphan-cleanup";
 
 export type ScheduleSyncOptions = {
   /**
@@ -142,13 +151,18 @@ export class QStashScheduler {
   private readonly client: Client;
   private readonly webhookUrl: string;
   private readonly schedulePrefix: string;
+  private readonly scheduleNamespace: string;
+  private readonly ownershipMarker: string;
   private readonly executionManager?: ExecutionManager;
   private readonly mode: ScheduleSyncMode;
 
   constructor(options: QStashSchedulerOptions) {
+    assertScheduleSyncMode(options.mode);
     this.client = options.client;
     this.webhookUrl = options.webhookUrl;
     this.schedulePrefix = options.schedulePrefix ?? "croco-trigger";
+    this.scheduleNamespace = `${this.schedulePrefix}${SCHEDULE_NAMESPACE_DELIMITER}`;
+    this.ownershipMarker = `${SCHEDULE_OWNER_VERSION}:${encodeURIComponent(this.schedulePrefix)}`;
     this.executionManager = options.executionManager;
     this.mode = options.mode ?? "apply";
   }
@@ -162,16 +176,17 @@ export class QStashScheduler {
    * @returns Sync result with counts and details
    */
   async sync(options: ScheduleSyncOptions = {}): Promise<ScheduleSyncResult> {
+    assertScheduleSyncMode(options.mode);
     const mode = options.mode ?? this.mode;
     const cronTriggers = this.getAllCronTriggers();
     const scheduleMap = this.buildScheduleMap(cronTriggers);
 
     // Get existing schedules from QStash
-    const existingSchedules = await this.listQStashSchedules();
+    const discovery = await this.listQStashSchedules();
 
     const result: ScheduleSyncResult = {
       mode,
-      applied: mode === "apply",
+      applied: mode !== "dry-run",
       created: 0,
       updated: 0,
       deleted: 0,
@@ -180,13 +195,29 @@ export class QStashScheduler {
       details: [],
     };
 
+    for (const detail of discovery.malformed) {
+      result.details.push(detail);
+      result.skipped++;
+    }
+
     // Create or update schedules
     for (const [scheduleId, metadata] of scheduleMap.entries()) {
-      const existing = existingSchedules.get(scheduleId);
+      const existing = discovery.canonical.get(scheduleId);
       const detail = await this.syncSchedule(scheduleId, metadata, existing, mode);
-      result.details.push(detail);
+      const reportedDetail =
+        existing &&
+        !discovery.ownedIds.has(scheduleId) &&
+        (detail.action === "skipped" || (mode === "dry-run" && detail.action === "updated"))
+          ? {
+              ...detail,
+              code: SCHEDULE_MIGRATION_REQUIRED_CODE,
+              error:
+                "Schedule ownership marker is missing or does not match this scheduler; migrate it before cleanup.",
+            }
+          : detail;
+      result.details.push(reportedDetail);
 
-      switch (detail.action) {
+      switch (reportedDetail.action) {
         case "created":
           result.created++;
           break;
@@ -203,9 +234,21 @@ export class QStashScheduler {
     }
 
     // Delete schedules that are no longer in code
-    for (const [scheduleId, existing] of existingSchedules.entries()) {
+    for (const [scheduleId, existing] of discovery.canonical.entries()) {
       if (!scheduleMap.has(scheduleId)) {
-        const detail = await this.deleteSchedule(scheduleId, existing, mode);
+        if (!discovery.ownedIds.has(scheduleId)) {
+          result.details.push(
+            createPreservedScheduleDetail(
+              scheduleId,
+              existing,
+              "Schedule ownership marker is missing or does not match this scheduler; migrate it before cleanup.",
+            ),
+          );
+          result.skipped++;
+          continue;
+        }
+
+        const detail = await this.syncOrphanSchedule(scheduleId, existing, mode);
         result.details.push(detail);
 
         if (detail.action === "deleted") {
@@ -213,7 +256,11 @@ export class QStashScheduler {
           continue;
         }
 
-        result.failed++;
+        if (detail.action === "skipped") {
+          result.skipped++;
+        } else {
+          result.failed++;
+        }
       }
     }
 
@@ -269,7 +316,7 @@ export class QStashScheduler {
     const methodName = String(trigger.methodName);
     const triggerName = this.getTriggerIdentifier(trigger);
     const className = trigger.target.constructor.name;
-    return `${this.schedulePrefix}:${className}:${triggerName}:${methodName}`;
+    return `${this.scheduleNamespace}${className}:${triggerName}:${methodName}`;
   }
 
   /**
@@ -279,21 +326,38 @@ export class QStashScheduler {
    * This implementation fetches all schedules and filters client-side.
    * For production with many schedules, consider maintaining a local cache.
    */
-  private async listQStashSchedules(): Promise<Map<string, { cron: string }>> {
-    const schedules = new Map<string, { cron: string }>();
+  private async listQStashSchedules(): Promise<ScheduleDiscovery> {
+    const canonical = new Map<string, ExistingSchedule>();
+    const ownedIds = new Set<string>();
+    const malformed: ScheduleSyncDetail[] = [];
 
     const response = await this.client.schedules.list();
 
     for (const schedule of response) {
       const scheduleId = schedule.scheduleId;
-      if (scheduleId?.startsWith(this.schedulePrefix)) {
-        schedules.set(scheduleId, {
-          cron: schedule.cron ?? "",
-        });
+      if (!scheduleId?.startsWith(this.scheduleNamespace)) {
+        continue;
+      }
+
+      const existing = { cron: schedule.cron ?? "" };
+      if (!isCanonicalScheduleId(scheduleId, this.scheduleNamespace)) {
+        malformed.push(
+          createPreservedScheduleDetail(
+            scheduleId,
+            existing,
+            "Malformed or legacy schedule ID preserved; migrate it to the canonical namespace format.",
+          ),
+        );
+        continue;
+      }
+
+      canonical.set(scheduleId, existing);
+      if (scheduleHasOwnershipMarker(schedule, this.ownershipMarker)) {
+        ownedIds.add(scheduleId);
       }
     }
 
-    return schedules;
+    return { canonical, ownedIds, malformed };
   }
 
   /**
@@ -331,6 +395,7 @@ export class QStashScheduler {
           cron: metadata.expression,
           destination: this.webhookUrl,
           method: "POST" as const,
+          label: this.ownershipMarker,
           headers: {
             "Content-Type": "application/json",
             "X-Schedule-Id": scheduleId,
@@ -351,6 +416,7 @@ export class QStashScheduler {
           cron: metadata.expression,
           destination: this.webhookUrl,
           method: "POST" as const,
+          label: this.ownershipMarker,
           headers: {
             "Content-Type": "application/json",
             "X-Schedule-Id": scheduleId,
@@ -370,14 +436,14 @@ export class QStashScheduler {
   /**
    * Delete a schedule from QStash.
    */
-  private async deleteSchedule(
+  private async syncOrphanSchedule(
     scheduleId: string,
-    existing: { cron: string },
+    existing: ExistingSchedule,
     mode: ScheduleSyncMode = "apply",
   ): Promise<ScheduleSyncDetail> {
     const baseDetail: ScheduleSyncDetail = {
       name: scheduleId,
-      action: "deleted",
+      action: mode === "apply" ? "skipped" : "deleted",
       applied: false,
       expression: "",
       currentExpression: existing.cron,
@@ -385,10 +451,17 @@ export class QStashScheduler {
       method: "unknown",
     };
 
+    if (mode === "apply") {
+      return {
+        ...baseDetail,
+        code: ORPHAN_CLEANUP_NOT_APPLIED_CODE,
+        error: "Orphan schedule preserved; use apply-with-orphan-cleanup to delete owned orphans.",
+      };
+    }
+
     try {
-      if (mode === "dry-run") {
-        return baseDetail;
-      }
+      if (mode === "dry-run") return baseDetail;
+      if (mode !== "apply-with-orphan-cleanup") return baseDetail;
 
       await this.client.schedules.delete(scheduleId);
       return { ...baseDetail, applied: true };
@@ -437,6 +510,66 @@ export class QStashScheduler {
 
     return undefined;
   }
+}
+
+type ExistingSchedule = {
+  readonly cron: string;
+};
+
+type ScheduleDiscovery = {
+  readonly canonical: Map<string, ExistingSchedule>;
+  readonly ownedIds: Set<string>;
+  readonly malformed: ScheduleSyncDetail[];
+};
+
+function assertScheduleSyncMode(mode: ScheduleSyncMode | undefined): void {
+  if (
+    mode === undefined ||
+    mode === "dry-run" ||
+    mode === "apply" ||
+    mode === "apply-with-orphan-cleanup"
+  ) {
+    return;
+  }
+
+  throw ProblemFactory.badRequest(
+    "triggers-qstash/invalid-sync-mode",
+    `Unsupported QStash schedule sync mode: ${String(mode)}`,
+  );
+}
+
+function isCanonicalScheduleId(scheduleId: string, namespace: string): boolean {
+  const components = scheduleId.slice(namespace.length).split(SCHEDULE_NAMESPACE_DELIMITER);
+  return components.length >= 3 && components.every((component) => component.length > 0);
+}
+
+function scheduleHasOwnershipMarker(schedule: Schedule, expectedMarker: string): boolean {
+  const scheduleWithLabels = schedule as Schedule & {
+    readonly label?: string;
+    readonly labels?: string[];
+  };
+  return (
+    scheduleWithLabels.label === expectedMarker ||
+    scheduleWithLabels.labels?.includes(expectedMarker) === true
+  );
+}
+
+function createPreservedScheduleDetail(
+  scheduleId: string,
+  existing: ExistingSchedule,
+  error: string,
+): ScheduleSyncDetail {
+  return {
+    name: scheduleId,
+    action: "skipped",
+    applied: false,
+    expression: "",
+    currentExpression: existing.cron,
+    target: "unknown",
+    method: "unknown",
+    code: SCHEDULE_MIGRATION_REQUIRED_CODE,
+    error,
+  };
 }
 
 const SCHEDULE_UPSTREAM_FAILED_CODE = "triggers-qstash/schedule-upstream-failed";

@@ -95,10 +95,16 @@ const diff = await scheduler.sync({ mode: "dry-run" });
 // No QStash create/delete calls are made in dry-run mode.
 
 await scheduler.sync({ mode: "apply" });
+
+// Destructive cleanup is a separate, explicit operation. Only canonical schedules carrying this
+// scheduler namespace's ownership label can be deleted.
+await scheduler.sync({ mode: "apply-with-orphan-cleanup" });
 ```
 
-`sync()` defaults to `apply` for backwards compatibility. Returned details include `applied`, so
-operators can distinguish planned changes from mutations that were actually sent to QStash.
+`sync()` defaults to the non-destructive `apply` mode. It creates and updates schedules but preserves
+owned orphans until `apply-with-orphan-cleanup` is selected. Returned details include `applied` and
+stable migration or cleanup diagnostic codes, so operators can distinguish planned changes,
+preserved legacy schedules, and mutations that were actually sent to QStash.
 
 ## Batch Checkpoints
 
