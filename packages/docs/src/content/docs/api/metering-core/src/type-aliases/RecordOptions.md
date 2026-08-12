@@ -19,26 +19,28 @@ record() 메서드의 호환성 옵션
 
 > `optional` **idempotencyKey?**: `string`
 
-***
+---
 
 ### metadata?
 
 > `optional` **metadata?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### meterId
 
 > **meterId**: `string`
 
-***
+---
 
 ### tenantId
 
 > **tenantId**: `string`
 
-***
+---
 
 ### value?
 
 > `optional` **value?**: `number`
+
+Optional integer usage amount from 1 through Number.MAX_SAFE_INTEGER. Defaults to 1.

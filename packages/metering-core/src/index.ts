@@ -372,6 +372,7 @@ export { MeteringTransitionProblem } from "./libs/problems/MeteringTransitionPro
 export { InvalidMeterProblem } from "./libs/problems/InvalidMeterProblem";
 export { InvalidUsageEnvelopeProblem } from "./libs/problems/InvalidUsageEnvelopeProblem";
 export { InvalidUsageQueryProblem } from "./libs/problems/InvalidUsageQueryProblem";
+export { InvalidUsageValueProblem } from "./libs/problems/InvalidUsageValueProblem";
 
 /**
  * quota 초과 시 발생하는 문제 타입입니다.

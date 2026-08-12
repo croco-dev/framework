@@ -1,5 +1,5 @@
 import type { ILogger } from "@croco/framework-context";
-import { MeterRegistry } from "@croco/metering-core";
+import { InvalidUsageValueProblem, MeterRegistry } from "@croco/metering-core";
 import { ProblemFactory } from "@croco/problems-core";
 import {
   assertDrizzleProblem,
@@ -490,6 +490,35 @@ describe("DrizzleMeterRepository", () => {
       expect(meter.metadata).toBeUndefined();
     });
 
+    it("should preserve a zero quota", async () => {
+      const meter = await repository.save({
+        tenantId: "tenant-1",
+        meterId: "disabled-meter",
+        type: "COUNT",
+        quota: 0,
+      });
+
+      expect(meter.quota).toBe(0);
+    });
+
+    it.each([-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, Number.MAX_SAFE_INTEGER + 1])(
+      "should reject invalid quota %s before writing the meter",
+      async (quota) => {
+        await expect(
+          repository.save({
+            tenantId: "tenant-1",
+            meterId: "invalid-quota",
+            type: "COUNT",
+            quota,
+          }),
+        ).rejects.toThrow(InvalidUsageValueProblem);
+
+        expect(
+          sqlite.prepare("SELECT * FROM meters WHERE meter_id = ?").all("invalid-quota"),
+        ).toHaveLength(0);
+      },
+    );
+
     it("should handle allowOverQuota true", async () => {
       const meter = await repository.save({
         tenantId: "tenant-1",
@@ -531,6 +560,28 @@ describe("DrizzleMeterRepository", () => {
       const meter = await repository.findByMeterIdAndTenant("api_calls", "tenant-nonexistent");
 
       expect(meter).toBeNull();
+    });
+
+    it("should reject an unsafe stored quota", async () => {
+      sqlite
+        .prepare(
+          `INSERT INTO meters (tenant_id, meter_id, type, quota, allow_over_quota, metadata, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          "tenant-1",
+          "unsafe-quota",
+          "COUNT",
+          BigInt(Number.MAX_SAFE_INTEGER) + BigInt(1),
+          0,
+          "{}",
+          Date.now(),
+          Date.now(),
+        );
+
+      await expect(repository.findByMeterIdAndTenant("unsafe-quota", "tenant-1")).rejects.toThrow(
+        InvalidUsageValueProblem,
+      );
     });
   });
 
@@ -672,6 +723,34 @@ describe("DrizzleMeterRepository", () => {
       expect(JSON.parse(result.dimensions)).toEqual({ model: "gpt-5" });
       expect(JSON.parse(result.metadata)).toEqual({ route: "/generate" });
     });
+
+    it.each([0.1, 1.9, 0, -1, Number.NaN, Number.POSITIVE_INFINITY, Number.MAX_SAFE_INTEGER + 1])(
+      "should reject invalid usage value %s before writing any batch record",
+      async (value) => {
+        const request = repository.saveUsageRecords([
+          {
+            id: "valid-record",
+            tenantId: "tenant-1",
+            meterId: "api_calls",
+            value: 1,
+            timestamp: new Date(),
+            idempotencyKey: "valid-idem",
+          },
+          {
+            id: "invalid-record",
+            tenantId: "tenant-1",
+            meterId: "api_calls",
+            value,
+            timestamp: new Date(),
+            idempotencyKey: "invalid-idem",
+          },
+        ]);
+        await expect(request).rejects.toThrow(InvalidUsageValueProblem);
+        await expect(request).rejects.toMatchObject({ code: "metering/invalid-usage-value" });
+
+        expect(sqlite.prepare("SELECT * FROM usage_records").all()).toHaveLength(0);
+      },
+    );
 
     it.each([
       "GelJson",

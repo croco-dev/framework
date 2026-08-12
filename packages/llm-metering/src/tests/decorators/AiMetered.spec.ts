@@ -241,7 +241,7 @@ describe("@AiMetered decorator", () => {
       );
       expect(mockMeteringService.record).toHaveBeenCalledWith(
         expect.objectContaining({
-          meterId: "llm.cost_usd",
+          meterId: "llm.cost_usd_nanos",
           metadata: expect.objectContaining({
             operationType: "stream",
           }),

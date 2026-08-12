@@ -319,7 +319,7 @@ describe("SaaS golden path demo", () => {
     expect(meters.map((meter) => meter.meterId).sort()).toEqual([
       "api_requests",
       "llm.completion_tokens",
-      "llm.cost_usd",
+      "llm.cost_usd_nanos",
       "llm.prompt_tokens",
       "storage_gb",
     ]);
@@ -348,9 +348,9 @@ describe("SaaS golden path demo", () => {
       provider: "in-memory",
       unit: "token",
     });
-    expect(meters.find((meter) => meter.meterId === "llm.cost_usd")?.metadata).toMatchObject({
+    expect(meters.find((meter) => meter.meterId === "llm.cost_usd_nanos")?.metadata).toMatchObject({
       provider: "in-memory",
-      unit: "usd",
+      unit: "usd_nanos",
     });
     expect(storageUsage).toBe(105);
     expect(storageEntitlement).toMatchObject({

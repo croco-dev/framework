@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 622,
+  problemCount: 623,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -10054,7 +10054,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/metering-drizzle/src/libs/DrizzleMeterRepository.ts",
-          line: 146,
+          line: 148,
           column: 13,
           kind: "problem-factory",
         },
@@ -10370,6 +10370,36 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/metering-core/src/libs/problems/InvalidUsageQueryProblem.ts",
           line: 6,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "metering/invalid-usage-value",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#metering-invalid-usage-value",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/metering-core/src/libs/problems/InvalidUsageValueProblem.ts",
+          line: 7,
           column: 5,
           kind: "problem-constructor",
         },

@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  bigint,
   index,
   integer,
   jsonb,
@@ -25,7 +26,7 @@ export const metersPg = pgTable("meters", {
   tenantId: text("tenant_id").notNull(),
   meterId: text("meter_id").notNull(),
   type: text("type").notNull(),
-  quota: integer("quota"),
+  quota: bigint("quota", { mode: "number" }),
   allowOverQuota: integer("allow_over_quota").notNull().default(0),
   metadata: jsonb("metadata").notNull().default({}),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -41,7 +42,7 @@ export const usageRecordsPg = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     tenantId: text("tenant_id").notNull(),
     meterId: text("meter_id").notNull(),
-    value: integer("value").notNull().default(1),
+    value: bigint("value", { mode: "number" }).notNull().default(1),
     recordedAt: timestamp("recorded_at").notNull().defaultNow(),
     metadata: jsonb("metadata").notNull().default({}),
     idempotencyKey: text("idempotency_key"),

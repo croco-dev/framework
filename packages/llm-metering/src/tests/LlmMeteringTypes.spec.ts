@@ -6,7 +6,13 @@ import type {
   ModelPricing,
   UsageAccuracy,
 } from "../libs/types";
-import { COMPLETION_TOKENS, COST_USD, EMBEDDING_TOKENS, PROMPT_TOKENS } from "../libs/types";
+import {
+  COMPLETION_TOKENS,
+  COST_USD,
+  COST_USD_NANOS,
+  EMBEDDING_TOKENS,
+  PROMPT_TOKENS,
+} from "../libs/types";
 
 describe("types", () => {
   describe("LlmMeterIds", () => {
@@ -22,7 +28,8 @@ describe("types", () => {
       expect(EMBEDDING_TOKENS).toBe("llm.embedding_tokens");
     });
 
-    it("should have COST_USD constant", () => {
+    it("should expose the integer USD nanodollar meter", () => {
+      expect(COST_USD_NANOS).toBe("llm.cost_usd_nanos");
       expect(COST_USD).toBe("llm.cost_usd");
     });
   });

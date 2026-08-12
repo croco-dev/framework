@@ -8,6 +8,9 @@ export type UsageAccuracy = LlmCoreUsageAccuracy;
 export const PROMPT_TOKENS = "llm.prompt_tokens";
 export const COMPLETION_TOKENS = "llm.completion_tokens";
 export const EMBEDDING_TOKENS = "llm.embedding_tokens";
+export const COST_USD_NANOS = "llm.cost_usd_nanos";
+
+/** @deprecated Use COST_USD_NANOS. */
 export const COST_USD = "llm.cost_usd";
 
 /**
@@ -17,7 +20,8 @@ export type LlmMeterId =
   | typeof PROMPT_TOKENS
   | typeof COMPLETION_TOKENS
   | typeof EMBEDDING_TOKENS
-  | typeof COST_USD;
+  | typeof COST_USD
+  | typeof COST_USD_NANOS;
 
 /**
  * 텍스트 생성 호출에서 기록된 토큰 사용량과 비용입니다.

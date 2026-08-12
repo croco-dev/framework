@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { IdempotencyManager } from "../libs/IdempotencyManager";
+import { InvalidUsageValueProblem } from "../libs/problems/InvalidUsageValueProblem";
 import { RedisProblem } from "../libs/problems/RedisProblem";
 import type { RedisClient } from "../libs/RedisClient";
 import { RedisUsageStorage } from "../libs/RedisUsageStorage";
@@ -316,6 +317,22 @@ describe("RedisUsageStorage", () => {
 
       expect(mockRedis.eval).toHaveBeenCalledTimes(2);
     });
+
+    it.each([0.1, 1.9, 0, -1, Number.NaN, Number.POSITIVE_INFINITY, Number.MAX_SAFE_INTEGER + 1])(
+      "should reject invalid usage value %s before acquiring idempotency",
+      async (value) => {
+        const request = storage.record({
+          ...createUsageRecord("invalid-value"),
+          value,
+        });
+        await expect(request).rejects.toThrow(InvalidUsageValueProblem);
+        await expect(request).rejects.toMatchObject({
+          code: "metering/invalid-usage-value",
+        });
+
+        expect(mockRedis.eval).not.toHaveBeenCalled();
+      },
+    );
   });
 
   describe("getUsage", () => {
@@ -333,6 +350,63 @@ describe("RedisUsageStorage", () => {
       const result = await storage.getUsage(options);
 
       expect(result).toBe(10);
+    });
+
+    it.each([
+      "usage-1:0.1",
+      "usage-1:1.9",
+      "usage-1:0",
+      "usage-1:-1",
+      "usage-1:NaN",
+      "usage-1:9007199254740992",
+    ])("should fail closed for invalid stored usage member %s", async (member) => {
+      vi.mocked(mockRedis.zrangebyscore).mockResolvedValue([member]);
+
+      const request = storage.getUsage({
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        period: "billing_cycle",
+      });
+      await expect(request).rejects.toThrow(RedisProblem);
+      await expect(request).rejects.toMatchObject({
+        code: "metering/redis-error",
+        extensions: {
+          operation: "ZRANGEBYSCORE",
+        },
+      });
+    });
+
+    it("should fail closed instead of truncating an accumulated fractional total", async () => {
+      vi.mocked(mockRedis.zrangebyscore).mockResolvedValue([
+        "usage-1:0.1",
+        "usage-2:0.2",
+        "usage-3:1.9",
+      ]);
+
+      const request = storage.getUsage({
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        period: "billing_cycle",
+      });
+      await expect(request).rejects.toThrow(RedisProblem);
+      await expect(request).rejects.toMatchObject({
+        code: "metering/redis-error",
+        extensions: {
+          operation: "ZRANGEBYSCORE",
+        },
+      });
+    });
+
+    it("should preserve the largest supported stored usage value", async () => {
+      vi.mocked(mockRedis.zrangebyscore).mockResolvedValue(["usage-1:9007199254740991"]);
+
+      await expect(
+        storage.getUsage({
+          tenantId: "tenant-1",
+          meterId: "api_calls",
+          period: "billing_cycle",
+        }),
+      ).resolves.toBe(Number.MAX_SAFE_INTEGER);
     });
 
     it("should query the requested period before falling back", async () => {
@@ -586,6 +660,26 @@ describe("RedisUsageStorage", () => {
       );
     });
 
+    it("should fail closed instead of truncating fractional records during fetch", async () => {
+      vi.mocked(mockRedis.zrangebyscore).mockResolvedValue([
+        "usage-1:1.9",
+        String(new Date("2024-01-15T10:30:00Z").getTime()),
+      ]);
+
+      const request = storage.fetchUsageRecords({
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        period: "billing_cycle",
+      });
+      await expect(request).rejects.toThrow(RedisProblem);
+      await expect(request).rejects.toMatchObject({
+        code: "metering/redis-error",
+        extensions: {
+          operation: "ZRANGEBYSCORE",
+        },
+      });
+    });
+
     it("should preserve metadata when fetching usage records", async () => {
       vi.mocked(mockRedis.zrangebyscore).mockResolvedValue([
         "usage-1:5:%7B%22endpoint%22%3A%22%2Fusers%22%2C%22nested%22%3A%7B%22active%22%3Atrue%7D%7D",
@@ -795,10 +889,58 @@ describe("RedisUsageStorage", () => {
 
       expect(result).toEqual({ exceeded: false, newUsage: 8 });
       expect(mockRedis.eval).toHaveBeenCalledWith(
-        expect.any(String),
+        expect.stringMatching(
+          /Invalid stored quota result[\s\S]*redis\.call\('ZRANGEBYSCORE'[\s\S]*Invalid stored usage value/,
+        ),
         ["usage2:tenant-1:api_calls:2024-01", "idem2:record:tenant-1:api_calls:key-123"],
         [10, 5, usage.timestamp.getTime(), expect.stringMatching(/^usage-123:5:v2\./), 0],
       );
+    });
+
+    it.each([0.1, 1.9, 0, -1, Number.NaN, Number.POSITIVE_INFINITY, Number.MAX_SAFE_INTEGER + 1])(
+      "should reject invalid quota usage value %s before eval",
+      async (value) => {
+        const usageRecord = {
+          ...createUsageRecord("invalid-quota-value"),
+          value,
+        };
+
+        const request = storage.checkAndRecordWithinQuota({
+          tenantId: usageRecord.tenantId,
+          meterId: usageRecord.meterId,
+          value,
+          quota: 10,
+          allowOverQuota: false,
+          usageRecord,
+        });
+        await expect(request).rejects.toThrow(InvalidUsageValueProblem);
+        await expect(request).rejects.toMatchObject({
+          code: "metering/invalid-usage-value",
+        });
+
+        expect(mockRedis.eval).not.toHaveBeenCalled();
+        expect(mockRedis.set).not.toHaveBeenCalled();
+      },
+    );
+
+    it("should reject mismatched quota and serialized usage values before eval", async () => {
+      const usageRecord = createUsageRecord("mismatched-value");
+
+      const request = storage.checkAndRecordWithinQuota({
+        tenantId: usageRecord.tenantId,
+        meterId: usageRecord.meterId,
+        value: 4,
+        quota: 10,
+        allowOverQuota: false,
+        usageRecord,
+      });
+      await expect(request).rejects.toThrow(InvalidUsageValueProblem);
+      await expect(request).rejects.toMatchObject({
+        code: "metering/invalid-usage-value",
+        detail: expect.stringContaining("must match"),
+      });
+
+      expect(mockRedis.eval).not.toHaveBeenCalled();
     });
 
     it("should map exceeded result from redis.eval", async () => {

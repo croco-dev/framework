@@ -1,9 +1,12 @@
 import { InvalidUsageQueryProblem } from "./problems/InvalidUsageQueryProblem";
+import { InvalidUsageValueProblem } from "./problems/InvalidUsageValueProblem";
 import { RedisProblem } from "./problems/RedisProblem";
 import { buildMeteringRedisKey, encodeRedisKeySegment } from "./redisKey";
 import type { RedisClient } from "./RedisClient";
 import type { AggregationPeriod, UsageQueryOptions, UsageRecord } from "./types";
 import type { AtomicQuotaCheckOptions, AtomicQuotaCheckResult, UsageStorage } from "./UsageStorage";
+import { MAX_USAGE_VALUE } from "./usageValueLimits";
+import { validateUsageValue } from "./validateUsageValue";
 
 type ScanDeleteResult = [string | number, number];
 type UsageMemberEnvelope = Partial<
@@ -94,13 +97,20 @@ local score = tonumber(ARGV[3])
 local member = ARGV[4]
 local allowOverQuota = ARGV[5] == '1'
 local ttlSeconds = ${RedisUsageStorage.RECORD_IDEMPOTENCY_TTL_SECONDS}
+local maxSafeInteger = ${Number.MAX_SAFE_INTEGER}
 local recordedResult = redis.call('GET', dedupeKey)
 
 if recordedResult then
-  local recordedExceeded, recordedUsage = string.match(recordedResult, '^quota:([01]):(.+)$')
+  local recordedExceeded, recordedUsage = string.match(recordedResult, '^quota:([01]):([1-9]%d*)$')
   local recordedUsageNumber = recordedUsage and tonumber(recordedUsage) or nil
   if recordedExceeded and recordedUsageNumber then
+    if recordedUsageNumber < 0 or recordedUsageNumber % 1 ~= 0 or recordedUsageNumber > maxSafeInteger then
+      return redis.error_reply('Invalid stored quota result')
+    end
     return { tonumber(recordedExceeded), recordedUsageNumber }
+  end
+  if recordedResult ~= '1' then
+    return redis.error_reply('Invalid stored quota result')
   end
 end
 
@@ -108,9 +118,14 @@ local records = redis.call('ZRANGEBYSCORE', usageKey, '-inf', '+inf')
 local currentUsage = 0
 
 for _, existingMember in ipairs(records) do
-  local usageValue = string.match(existingMember, '^[^:]+:(%d+):') or string.match(existingMember, '^[^:]+:(%d+)$')
-  if usageValue then
-    currentUsage = currentUsage + tonumber(usageValue)
+  local usageValue = string.match(existingMember, '^[^:]+:([1-9]%d*):') or string.match(existingMember, '^[^:]+:([1-9]%d*)$')
+  local numericUsageValue = usageValue and tonumber(usageValue)
+  if not numericUsageValue or numericUsageValue > ${MAX_USAGE_VALUE} then
+    return redis.error_reply('Invalid stored usage value')
+  end
+  currentUsage = currentUsage + numericUsageValue
+  if currentUsage > maxSafeInteger then
+    return redis.error_reply('Usage total exceeds the safe integer range')
   end
 end
 
@@ -120,6 +135,9 @@ if recordedResult then
 end
 
 local newUsage = currentUsage + value
+if newUsage > maxSafeInteger then
+  return redis.error_reply('Usage total exceeds the safe integer range')
+end
 local exceeded = newUsage > quota
 
 if (not exceeded) or allowOverQuota then
@@ -129,7 +147,7 @@ end
 redis.call(
   'SET',
   dedupeKey,
-  'quota:' .. (exceeded and '1' or '0') .. ':' .. tostring(newUsage),
+  'quota:' .. (exceeded and '1' or '0') .. ':' .. string.format('%.0f', newUsage),
   'EX',
   ttlSeconds
 )
@@ -163,6 +181,8 @@ return { exceeded and 1 or 0, newUsage }
   }
 
   async record(usage: UsageRecord): Promise<void> {
+    validateUsageValue(usage.value);
+
     const key = this.buildUsageKey(usage.tenantId, usage.meterId, usage.timestamp, "billing_cycle");
     const dedupeKey = this.buildRecordIdempotencyKey(
       usage.tenantId,
@@ -208,6 +228,15 @@ return { exceeded and 1 or 0, newUsage }
   async checkAndRecordWithinQuota(
     options: AtomicQuotaCheckOptions,
   ): Promise<AtomicQuotaCheckResult> {
+    validateUsageValue(options.value);
+    validateUsageValue(options.usageRecord.value);
+    if (options.value !== options.usageRecord.value) {
+      throw new InvalidUsageValueProblem(
+        options.usageRecord.value,
+        "quota value must match usageRecord.value",
+      );
+    }
+
     const key = this.buildUsageKey(
       options.tenantId,
       options.meterId,
@@ -498,15 +527,20 @@ return { exceeded and 1 or 0, newUsage }
   ): Pick<UsageRecord, "id" | "value"> & UsageMemberEnvelope {
     const parts = member.split(":");
     const id = parts[0] ?? "";
-    const value = Number.parseInt(parts[1] ?? "0", 10);
+    const rawValue = parts[1] ?? "";
+    const value = Number(rawValue);
     const payload = parts.length > 2 ? parts.slice(2).join(":") : undefined;
     const envelope = payload?.startsWith("v2.")
       ? this.decodeUsageEnvelope(payload.slice(3))
       : undefined;
 
+    if (!/^[1-9]\d*$/.test(rawValue) || !Number.isSafeInteger(value) || value > MAX_USAGE_VALUE) {
+      throw new RedisProblem("ZRANGEBYSCORE", `Invalid stored usage value '${rawValue}'`);
+    }
+
     return {
       id,
-      value: Number.isNaN(value) ? 0 : value,
+      value,
       idempotencyKey: envelope?.idempotencyKey,
       eventId: envelope?.eventId,
       dimensions: envelope?.dimensions,
@@ -572,7 +606,16 @@ return { exceeded and 1 or 0, newUsage }
   }
 
   private sumUsageMembers(members: string[]): number {
-    return members.reduce((total, member) => total + this.parseUsageMember(member).value, 0);
+    let total = 0;
+
+    for (const member of members) {
+      total += this.parseUsageMember(member).value;
+      if (!Number.isSafeInteger(total)) {
+        throw new RedisProblem("ZRANGEBYSCORE", "Usage total exceeds the safe integer range");
+      }
+    }
+
+    return total;
   }
 
   private getPeriodKey(date: Date, period: AggregationPeriod): string {
