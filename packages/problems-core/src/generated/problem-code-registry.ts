@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 622,
+  problemCount: 623,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -10054,7 +10054,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/metering-drizzle/src/libs/DrizzleMeterRepository.ts",
-          line: 146,
+          line: 148,
           column: 13,
           kind: "problem-factory",
         },
