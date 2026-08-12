@@ -40,6 +40,22 @@ describe("CloudinaryDiagnosticsProvider", () => {
     });
   });
 
+  it("reports unhealthy readiness when upload intent TTL exceeds signature validity", async () => {
+    const provider = new CloudinaryDiagnosticsProvider({ ...validConfig, ttl: 3601 });
+
+    const health = await provider.getHealth();
+
+    expect(health).toMatchObject({
+      status: "unhealthy",
+      component: "storage-cloudinary",
+      details: {
+        liveCheck: "not_started",
+        problemCode: "storage-cloudinary/validation-failed",
+        problemStatus: 422,
+      },
+    });
+  });
+
   it("reports healthy readiness without mutating global Cloudinary config when live check is not configured", async () => {
     const configSpy = vi.spyOn(cloudinary, "config");
     const provider = new CloudinaryDiagnosticsProvider(validConfig);

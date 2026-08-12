@@ -15285,7 +15285,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/storage-cloudinary/src/libs/CloudinaryProvider.ts",
-          line: 332,
+          line: 343,
           column: 13,
           kind: "problem-factory",
         },
@@ -15317,7 +15317,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/storage-cloudinary/src/libs/CloudinaryDiagnosticsProvider.ts",
-          line: 51,
+          line: 55,
           column: 5,
           kind: "problem-constructor",
         },
@@ -15349,7 +15349,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/storage-cloudinary/src/libs/CloudinaryDiagnosticsProvider.ts",
-          line: 84,
+          line: 88,
           column: 5,
           kind: "problem-constructor",
         },
@@ -15381,7 +15381,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/storage-cloudinary/src/libs/CloudinaryDiagnosticsProvider.ts",
-          line: 100,
+          line: 104,
           column: 5,
           kind: "problem-constructor",
         },
@@ -15411,7 +15411,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/storage-cloudinary/src/libs/CloudinaryDiagnosticsProvider.ts",
-          line: 71,
+          line: 75,
           column: 5,
           kind: "problem-constructor",
         },
