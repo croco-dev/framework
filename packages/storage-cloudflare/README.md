@@ -90,7 +90,7 @@ const health = await diagnostics.getHealth();
 
 ## 선택적 live smoke
 
-기본 테스트는 실제 Cloudflare 자격 증명을 요구하지 않습니다. 실제 backend readiness를 확인하려면 아래 환경 변수를 모두 설정한 뒤 live smoke를 opt-in 합니다.
+기본 테스트는 실제 Cloudflare 자격 증명을 요구하지 않습니다. 실제 backend readiness와 v2 direct-upload 후 caller-key 조회를 확인하려면 아래 환경 변수를 모두 설정한 뒤 live smoke를 opt-in 합니다.
 
 ```bash
 CROCO_LIVE_CLOUDFLARE_IMAGES=1 \
@@ -107,6 +107,7 @@ pnpm --filter @croco/storage-cloudflare test -- CloudflareImagesLiveSmoke
 - custom ID는 well-formed Unicode여야 하고 Unicode code point 기준 1,024자를 초과하거나 `.` 또는 `..` path segment를 포함할 수 없습니다. 위반한 key는 stream 소비나 네트워크 요청 전에 `storage-cloudflare/validation-failed`로 거부됩니다.
 - delivery URL은 custom ID의 `/` subpath를 유지하면서 각 segment를 인코딩합니다. 따라서 key에 포함된 `%`는 URL에서 `%25`로 표현됩니다. 관리 API의 조회/삭제 경로는 전체 ID를 하나의 path parameter로 인코딩합니다.
 - upload와 direct-upload 응답은 JSON envelope와 필수 필드를 runtime에서 검증하며, malformed upstream 응답은 일반 `SyntaxError`나 `TypeError` 대신 typed provider Problem으로 실패합니다.
+- direct-upload intent는 Images v2 multipart 계약을 사용해 caller key를 custom ID로 보존하고, 2분 이상 6시간 이하의 TTL에 전송 여유를 반영한 ISO expiry를 전송합니다. UUID custom ID와 1,024-byte를 넘는 metadata는 요청 전에 거부합니다.
 - `StorageProvider`의 `list()` 계약은 아직 존재하지 않으므로 provider도 목록 조회를 제공하지 않습니다.
 - `put()`의 `contentType`은 업로드 파일 MIME으로만 전달됩니다. `getMetadata()`는 현재 size와 upload time만 반환하며, content type과 custom metadata 보존은 지원하지 않습니다.
 - 서명 URL은 `signingKey`가 없으면 생성할 수 없습니다.

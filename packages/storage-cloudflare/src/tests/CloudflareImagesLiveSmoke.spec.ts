@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CloudflareImagesDiagnosticsProvider } from "../libs/CloudflareImagesDiagnosticsProvider";
+import { CloudflareImagesProvider } from "../libs/CloudflareImagesProvider";
 import type { CloudflareImagesOptions } from "../libs/types";
 
 const CLOUDFLARE_IMAGES_LIVE_ENV = [
@@ -77,7 +78,68 @@ describe("Cloudflare Images live smoke", () => {
       });
     },
   );
+
+  it.skipIf(missingLiveSmokeEnv.length > 0)(
+    "uploads through a direct-upload intent and finds the image by its caller key",
+    async () => {
+      const provider = new CloudflareImagesProvider(liveConfig);
+      const key = `croco-live-smoke/direct-upload-${Date.now()}.png`;
+      let intentRequested = false;
+      let primaryFailed = false;
+      let primaryError: unknown;
+      let cleanupFailed = false;
+      let cleanupError: unknown;
+
+      try {
+        intentRequested = true;
+        const intent = await provider.getUploadIntent(key, { ttlInSeconds: 120 });
+        const formData = new FormData();
+        formData.append("file", new File([ONE_PIXEL_PNG], "smoke.png", { type: "image/png" }));
+        const uploadResponse = await fetch(intent.uploadUrl, {
+          method: "POST",
+          body: formData,
+        });
+        const uploadPayload = (await uploadResponse.json()) as {
+          readonly result?: { readonly id?: string };
+          readonly success?: boolean;
+        };
+
+        expect(uploadResponse.ok).toBe(true);
+        expect(uploadPayload).toMatchObject({ success: true, result: { id: key } });
+
+        await expect(provider.getMetadata(key)).resolves.toMatchObject({
+          lastModified: expect.any(Date),
+        });
+      } catch (error) {
+        primaryFailed = true;
+        primaryError = error;
+      } finally {
+        if (intentRequested) {
+          try {
+            await provider.delete(key);
+          } catch (error) {
+            cleanupFailed = true;
+            cleanupError = error;
+          }
+        }
+      }
+
+      if (primaryFailed) {
+        throw primaryError;
+      }
+      if (cleanupFailed) {
+        throw cleanupError;
+      }
+    },
+  );
 });
+
+const ONE_PIXEL_PNG = Uint8Array.from(
+  Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+    "base64",
+  ),
+);
 
 function isTruthyEnv(name: string): boolean {
   const value = process.env[name]?.trim().toLowerCase();

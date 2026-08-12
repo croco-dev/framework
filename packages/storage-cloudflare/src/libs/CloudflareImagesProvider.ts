@@ -22,6 +22,12 @@ import type {
 
 const DEFAULT_MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 const MAX_CLOUDFLARE_IMAGE_ID_CODE_POINTS = 1024;
+const MIN_DIRECT_UPLOAD_TTL_SECONDS = 2 * 60;
+const MAX_DIRECT_UPLOAD_TTL_SECONDS = 6 * 60 * 60;
+const DIRECT_UPLOAD_EXPIRY_MARGIN_SECONDS = 5;
+const MAX_DIRECT_UPLOAD_METADATA_BYTES = 1024;
+const UUID_IMAGE_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const CLOUDFLARE_UPLOAD_ORIGIN = "https://upload.imagedelivery.net";
 
 type CloudflareImagesRuntimeResponse = {
   readonly errors: string[];
@@ -299,31 +305,42 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
 
   async getUploadIntent(key: string, options?: { ttlInSeconds?: number }): Promise<UploadIntent> {
     this.validateKey(key);
-    this.validateImageId(key, "upload-intent");
+    this.validateDirectUploadImageId(key);
 
     const ttl = options?.ttlInSeconds ?? this.ttl;
-    if (!Number.isFinite(ttl) || !Number.isInteger(ttl) || ttl <= 0) {
+    if (
+      !Number.isFinite(ttl) ||
+      !Number.isInteger(ttl) ||
+      ttl < MIN_DIRECT_UPLOAD_TTL_SECONDS ||
+      ttl > MAX_DIRECT_UPLOAD_TTL_SECONDS
+    ) {
       throw ProblemFactory.invalidArgument(
         "storage/invalid-upload-intent-ttl",
-        "ttlInSeconds must be a positive finite integer",
+        `ttlInSeconds must be an integer between ${MIN_DIRECT_UPLOAD_TTL_SECONDS} and ${MAX_DIRECT_UPLOAD_TTL_SECONDS}`,
       );
     }
 
-    const url = `${this.apiBaseUrl}/direct_upload`;
+    const upstreamTtl = Math.min(
+      ttl + DIRECT_UPLOAD_EXPIRY_MARGIN_SECONDS,
+      MAX_DIRECT_UPLOAD_TTL_SECONDS,
+    );
+    const expiresAt = new Date(Date.now() + upstreamTtl * 1000);
+    const metadata = JSON.stringify({ originalKey: key });
+    this.validateDirectUploadMetadata(key, metadata);
+    const formData = new FormData();
+    formData.append("id", key);
+    formData.append("expiry", expiresAt.toISOString());
+    formData.append("metadata", metadata);
+
+    const url = `https://api.cloudflare.com/client/v4/accounts/${this.options.accountId}/images/v2/direct_upload`;
 
     const response = await this.fetchCloudflare(url, {
       init: {
         method: "POST",
         headers: {
           Authorization: `Bearer ${this.options.apiToken}`,
-          "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          maxDurationSeconds: ttl,
-          metadata: {
-            originalKey: key,
-          },
-        }),
+        body: formData,
       },
       key,
       operation: "upload-intent",
@@ -363,7 +380,8 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
       typeof uploadUrl !== "string" ||
       uploadUrl.length === 0 ||
       typeof imageId !== "string" ||
-      imageId.length === 0
+      imageId !== key ||
+      !this.isCloudflareUploadUrl(uploadUrl)
     ) {
       this.throwInvalidCloudflareImagesResponse(key, "upload-intent");
     }
@@ -373,13 +391,59 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
       this.options.defaultVariant ?? "public",
       "upload-intent",
     );
-    const expiresAt = new Date(Date.now() + ttl * 1000);
-
     return {
       uploadUrl,
       publicUrl,
       expiresAt,
     };
+  }
+
+  private isCloudflareUploadUrl(value: string): boolean {
+    try {
+      const url = new URL(value);
+      return (
+        url.origin === CLOUDFLARE_UPLOAD_ORIGIN &&
+        url.username === "" &&
+        url.password === "" &&
+        url.search === "" &&
+        url.hash === "" &&
+        /^\/[^/]+\/[^/]+$/.test(url.pathname)
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  private validateDirectUploadImageId(key: string): void {
+    this.validateUploadImageId(key, "upload-intent");
+
+    if (UUID_IMAGE_ID_PATTERN.test(key)) {
+      throw new CloudflareImagesValidationProblem(
+        {
+          provider: "cloudflare-images",
+          operation: "upload-intent",
+          key,
+          upstreamCode: "image-id-uuid",
+        },
+        "Cloudflare Images direct-upload custom id must not be a UUID",
+      );
+    }
+  }
+
+  private validateDirectUploadMetadata(key: string, metadata: string): void {
+    if (Buffer.byteLength(metadata, "utf8") <= MAX_DIRECT_UPLOAD_METADATA_BYTES) {
+      return;
+    }
+
+    throw new CloudflareImagesValidationProblem(
+      {
+        provider: "cloudflare-images",
+        operation: "upload-intent",
+        key,
+        upstreamCode: "metadata-too-large",
+      },
+      `Cloudflare Images direct-upload metadata must not exceed ${MAX_DIRECT_UPLOAD_METADATA_BYTES} bytes`,
+    );
   }
 
   private buildImageUrl(key: string, variant: string, operation: string): string {
@@ -425,8 +489,8 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
       .join("/");
   }
 
-  private validateUploadImageId(key: string): void {
-    this.validateImageId(key, "put");
+  private validateUploadImageId(key: string, operation = "put"): void {
+    this.validateImageId(key, operation);
 
     if (Array.from(key).length <= MAX_CLOUDFLARE_IMAGE_ID_CODE_POINTS) {
       return;
@@ -435,7 +499,7 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
     throw new CloudflareImagesValidationProblem(
       {
         provider: "cloudflare-images",
-        operation: "put",
+        operation,
         key,
         upstreamCode: "image-id-too-long",
       },
