@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { Container } from "@croco/framework-context";
+import { beforeEach, describe, expect, it } from "vitest";
 import { CloudflareImagesDiagnosticsProvider } from "../libs/CloudflareImagesDiagnosticsProvider";
 import { CloudflareImagesProvider } from "../libs/CloudflareImagesProvider";
 import type { CloudflareImagesOptions } from "../libs/types";
@@ -24,6 +25,13 @@ const missingLiveSmokeEnv = [
 ];
 
 describe("Cloudflare Images live smoke", () => {
+  let storageProvider!: CloudflareImagesProvider;
+
+  beforeEach(() => {
+    Container.reset();
+    storageProvider = new CloudflareImagesProvider(liveConfig);
+  });
+
   it.skipIf(missingLiveSmokeEnv.length > 0)(
     "requires CROCO_LIVE_CLOUDFLARE_IMAGES and Cloudflare Images credentials for live readiness smoke",
     async () => {
@@ -129,6 +137,33 @@ describe("Cloudflare Images live smoke", () => {
       }
       if (cleanupFailed) {
         throw cleanupError;
+      }
+    },
+  );
+
+  it.skipIf(missingLiveSmokeEnv.length > 0)(
+    "reads a small uploaded image through the authenticated base blob endpoint",
+    async () => {
+      const key = `croco-live-base-blob-${crypto.randomUUID()}.png`;
+      const image = Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+        "base64",
+      );
+      let uploaded = false;
+
+      try {
+        await storageProvider.put(key, image, { contentType: "image/png" });
+        uploaded = true;
+        const baseImage = await storageProvider.get(key);
+        expect(baseImage.subarray(0, 8)).toEqual(
+          Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+        );
+        expect(baseImage.readUInt32BE(16)).toBe(1);
+        expect(baseImage.readUInt32BE(20)).toBe(1);
+      } finally {
+        if (uploaded) {
+          await storageProvider.delete(key);
+        }
       }
     },
   );

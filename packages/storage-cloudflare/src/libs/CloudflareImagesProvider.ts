@@ -166,8 +166,18 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
   async get(key: string): Promise<Buffer> {
     this.validateKey(key);
 
-    const url = this.buildImageUrl(key, this.options.defaultVariant ?? "public", "get");
-    const response = await this.fetchCloudflare(url, { key, operation: "get" });
+    const response = await this.fetchCloudflare(
+      `${this.buildManagementImageUrl(key, "get")}/blob`,
+      {
+        init: {
+          headers: {
+            Authorization: `Bearer ${this.options.apiToken}`,
+          },
+        },
+        key,
+        operation: "get",
+      },
+    );
 
     if (!response.ok) {
       if (response.status === 404) {
@@ -181,8 +191,11 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
       });
     }
 
-    const arrayBuffer = await response.arrayBuffer();
-    return Buffer.from(arrayBuffer);
+    try {
+      return Buffer.from(await response.arrayBuffer());
+    } catch (error) {
+      throw normalizeCloudflareImagesError(error, { key, operation: "get" });
+    }
   }
 
   async delete(key: string): Promise<void> {
