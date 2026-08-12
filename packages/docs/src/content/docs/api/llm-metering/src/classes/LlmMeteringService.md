@@ -114,7 +114,7 @@ Quota 체크
 
 #### Description
 
-- 2개 meter 기록: embedding_tokens, cost_usd_nanos
+- 최대 2개 meter 기록: 0보다 큰 embedding_tokens, cost_usd_nanos
 - embed/embedMany 전용
 
 ---
@@ -137,7 +137,7 @@ Quota 체크
 
 #### Description
 
-- 3개 meter 동시 기록: prompt_tokens, completion_tokens, cost_usd_nanos
+- 최대 3개 meter 기록: 0보다 큰 prompt_tokens, completion_tokens, cost_usd_nanos
 - 멱등성 보장 (idempotencyKey:suffix)
 - accuracy 플래그 전파 (EXACT | ESTIMATED | UNKNOWN)
 
@@ -162,4 +162,4 @@ Quota 체크
 #### Description
 
 - PricingTable 조회 → 비용 계산
-- cost_usd_nanos meter 기록
+- 비용이 0보다 클 때 cost_usd_nanos meter 기록

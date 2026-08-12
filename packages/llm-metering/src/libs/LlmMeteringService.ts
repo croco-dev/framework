@@ -100,7 +100,7 @@ export class LlmMeteringService {
    * 텍스트 생성 사용량 기록
    *
    * @description
-   * - 3개 meter 동시 기록: prompt_tokens, completion_tokens, cost_usd_nanos
+   * - 최대 3개 meter 기록: 0보다 큰 prompt_tokens, completion_tokens, cost_usd_nanos
    * - 멱등성 보장 (idempotencyKey:suffix)
    * - accuracy 플래그 전파 (EXACT | ESTIMATED | UNKNOWN)
    */
@@ -244,7 +244,7 @@ export class LlmMeteringService {
    * 임베딩 사용량 기록
    *
    * @description
-   * - 2개 meter 기록: embedding_tokens, cost_usd_nanos
+   * - 최대 2개 meter 기록: 0보다 큰 embedding_tokens, cost_usd_nanos
    * - embed/embedMany 전용
    */
   async recordEmbeddingUsage(event: {
@@ -365,7 +365,7 @@ export class LlmMeteringService {
    *
    * @description
    * - PricingTable 조회 → 비용 계산
-   * - cost_usd_nanos meter 기록
+   * - 비용이 0보다 클 때 cost_usd_nanos meter 기록
    */
   async trackCost(event: LlmUsageEvent): Promise<LlmCostRecord> {
     const { tenantId, modelId, provider, usage, idempotencyKey } = event;

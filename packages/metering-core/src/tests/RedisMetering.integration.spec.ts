@@ -365,33 +365,40 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
     });
   });
 
-  it.each(["quota:2:5", "quota:0:bad", "unexpected"])(
-    "rejects malformed stored quota result %s",
-    async (storedResult) => {
-      if (!connection) {
-        throw new Error("Redis test resource did not start");
-      }
+  it.each([
+    "quota:2:5",
+    "quota:0:bad",
+    "quota:0:5.0",
+    "quota:0:5e0",
+    "quota:0:0x10",
+    "quota:0: 5",
+    "quota:0:0",
+    "quota:0:9007199254740991.1",
+    "unexpected",
+  ])("rejects malformed stored quota result %s", async (storedResult) => {
+    if (!connection) {
+      throw new Error("Redis test resource did not start");
+    }
 
-      const usageRecord = createUsageRecord("invalid-stored-result");
-      const dedupeKey = "idem2:record:tenant-atomic-record:api_calls:invalid-stored-result";
-      await connection.client.set(dedupeKey, storedResult);
-      const storage = new RedisUsageStorage(createRedisClient(connection));
-      const request = storage.checkAndRecordWithinQuota({
-        tenantId: usageRecord.tenantId,
-        meterId: usageRecord.meterId,
-        value: usageRecord.value,
-        quota: 100,
-        allowOverQuota: false,
-        usageRecord,
-      });
+    const usageRecord = createUsageRecord("invalid-stored-result");
+    const dedupeKey = "idem2:record:tenant-atomic-record:api_calls:invalid-stored-result";
+    await connection.client.set(dedupeKey, storedResult);
+    const storage = new RedisUsageStorage(createRedisClient(connection));
+    const request = storage.checkAndRecordWithinQuota({
+      tenantId: usageRecord.tenantId,
+      meterId: usageRecord.meterId,
+      value: usageRecord.value,
+      quota: 100,
+      allowOverQuota: false,
+      usageRecord,
+    });
 
-      await expect(request).rejects.toThrow();
-      await expect(request).rejects.toMatchObject({
-        code: "metering/redis-error",
-        extensions: { operation: "EVAL" },
-      });
-    },
-  );
+    await expect(request).rejects.toThrow();
+    await expect(request).rejects.toMatchObject({
+      code: "metering/redis-error",
+      extensions: { operation: "EVAL" },
+    });
+  });
 
   it("atomically fences concurrent billable delivery claims and replays an expired lease", async () => {
     if (!connection) {

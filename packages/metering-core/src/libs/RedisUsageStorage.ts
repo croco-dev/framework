@@ -101,7 +101,7 @@ local maxSafeInteger = ${Number.MAX_SAFE_INTEGER}
 local recordedResult = redis.call('GET', dedupeKey)
 
 if recordedResult then
-  local recordedExceeded, recordedUsage = string.match(recordedResult, '^quota:([01]):(.+)$')
+  local recordedExceeded, recordedUsage = string.match(recordedResult, '^quota:([01]):([1-9]%d*)$')
   local recordedUsageNumber = recordedUsage and tonumber(recordedUsage) or nil
   if recordedExceeded and recordedUsageNumber then
     if recordedUsageNumber < 0 or recordedUsageNumber % 1 ~= 0 or recordedUsageNumber > maxSafeInteger then

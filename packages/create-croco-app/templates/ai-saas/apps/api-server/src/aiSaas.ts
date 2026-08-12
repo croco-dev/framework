@@ -228,7 +228,8 @@ export class AiSaasService {
     const plan = await this.resolvePlan(tenantId);
     await this.registerAiMeters(tenantId, plan);
     const before = await this.getUsageState(tenantId, modelId);
-    this.assertPreflightQuota(plan, before, input.prompt.length);
+    const costUsdNanos = await this.readUsage(tenantId, COST_USD_NANOS);
+    this.assertPreflightQuota(plan, before, input.prompt.length, costUsdNanos);
     this.assertRateLimit(tenantId, plan);
 
     const idempotencyKey = buildAiIdempotencyKey(tenantId, input.requestId);
@@ -414,18 +415,20 @@ export class AiSaasService {
     ]);
   }
 
-  private assertPreflightQuota(plan: AiPlan, usage: AiUsageState, estimatedPromptTokens: number) {
+  private assertPreflightQuota(
+    plan: AiPlan,
+    usage: AiUsageState,
+    estimatedPromptTokens: number,
+    costUsdNanos: number,
+  ) {
     const projectedTokens = usage.usage.totalTokens + estimatedPromptTokens;
     if (projectedTokens > plan.monthlyTokenBudget) {
       throw new AiQuotaExceededProblem(PROMPT_TOKENS, projectedTokens, plan.monthlyTokenBudget);
     }
 
-    if (usage.usage.costUsd >= plan.monthlyCostBudgetUsd) {
-      throw new AiQuotaExceededProblem(
-        COST_USD_NANOS,
-        usage.usage.costUsd * 1_000_000_000,
-        plan.monthlyCostBudgetUsd * 1_000_000_000,
-      );
+    const costQuotaUsdNanos = plan.monthlyCostBudgetUsd * 1_000_000_000;
+    if (costUsdNanos >= costQuotaUsdNanos) {
+      throw new AiQuotaExceededProblem(COST_USD_NANOS, costUsdNanos, costQuotaUsdNanos);
     }
   }
 
