@@ -1,9 +1,11 @@
-***
+---
+
 editUrl: false
 next: false
 prev: false
 title: "CloudinaryUploadOptions"
-***
+
+---
 
 > **CloudinaryUploadOptions** = `object`
 
@@ -17,7 +19,7 @@ Cloudinary 업로드에 사용할 확장 옵션입니다.
 
 컨텍스트 메타데이터 (key-value 쌍)
 
-***
+---
 
 ### eager?
 
@@ -25,7 +27,7 @@ Cloudinary 업로드에 사용할 확장 옵션입니다.
 
 업로드 시 적용할 변환 (eager transformations)
 
-***
+---
 
 ### folder?
 
@@ -33,7 +35,7 @@ Cloudinary 업로드에 사용할 확장 옵션입니다.
 
 업로드할 폴더 경로
 
-***
+---
 
 ### publicId?
 

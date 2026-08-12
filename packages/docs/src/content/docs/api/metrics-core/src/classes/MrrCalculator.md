@@ -46,11 +46,11 @@ Active subscriptions to calculate MRR from
 
 Total MRR as Money value
 
-***
+---
 
 ### classifyMRRMovement()
 
-> **classifyMRRMovement**(`hasPreviousSubscription`, `wasChurned`, `previousAmount`, `newAmount`): `"new"` \| `"expansion"` \| `"contraction"` \| `"churned"` \| `"reactivation"` \| `"unchanged"`
+> **classifyMRRMovement**(`hasPreviousSubscription`, `wasChurned`, `previousAmount`, `newAmount`): `"new"` \| `"reactivation"` \| `"expansion"` \| `"contraction"` \| `"churned"` \| `"unchanged"`
 
 Classify MRR movement type based on event and subscription history.
 
@@ -82,11 +82,11 @@ New plan amount
 
 #### Returns
 
-`"new"` \| `"expansion"` \| `"contraction"` \| `"churned"` \| `"reactivation"` \| `"unchanged"`
+`"new"` \| `"reactivation"` \| `"expansion"` \| `"contraction"` \| `"churned"` \| `"unchanged"`
 
 MRR movement type
 
-***
+---
 
 ### normalizeMRR()
 
