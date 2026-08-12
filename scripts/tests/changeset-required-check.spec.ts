@@ -1687,6 +1687,7 @@ function runScript(repo: string, options: RunScriptOptions = {}): ScriptResult {
       encoding: "utf-8",
       env: {
         ...process.env,
+        GITHUB_EVENT_PATH: "",
         ...options.env,
       },
     },
