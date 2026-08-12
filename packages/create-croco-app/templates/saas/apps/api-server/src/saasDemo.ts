@@ -49,7 +49,12 @@ import { InMemoryIdempotencyStore } from "@croco/idempotency-core";
 import type { IdempotencyStore } from "@croco/idempotency-core";
 import { InMemoryInvitationStore, InvitationManager } from "@croco/invitation-core";
 import { InMemoryLlmModel, InMemoryLlmRegistry, LlmService } from "@croco/llm-core";
-import { LlmMeteringService, LlmQuotaExceededProblem, PricingTable } from "@croco/llm-metering";
+import {
+  COST_USD_NANOS,
+  LlmMeteringService,
+  LlmQuotaExceededProblem,
+  PricingTable,
+} from "@croco/llm-metering";
 import {
   InMemoryLifecycleActionSink,
   InMemoryLifecycleRunStore,
@@ -111,7 +116,7 @@ const DEMO_SUBSCRIPTION_CURRENT_PERIOD_END = new Date("2030-01-01T00:00:00.000Z"
 const DEMO_BILLING_LAST_SYNCED_AT = new Date("2026-01-01T00:00:00.000Z");
 const PROMPT_TOKENS = "llm.prompt_tokens";
 const COMPLETION_TOKENS = "llm.completion_tokens";
-const COST_USD = "llm.cost_usd";
+const DEMO_LLM_COST_QUOTA_USD_NANOS = 1_000_000_000;
 const ACTIVE_ENTITLEMENT_SUBSCRIPTION_STATUSES = new Set<SubscriptionStatus>([
   "active",
   "trialing",
@@ -510,10 +515,10 @@ export function createSaasRuntime(options: SaasRuntimeOptions): SaasRuntime {
         overagePolicy: "BLOCK",
       },
       {
-        featureKey: COST_USD,
+        featureKey: COST_USD_NANOS,
         type: "metered",
-        meterId: COST_USD,
-        quota: 1,
+        meterId: COST_USD_NANOS,
+        quota: DEMO_LLM_COST_QUOTA_USD_NANOS,
         overagePolicy: "BLOCK",
       },
       {
@@ -891,11 +896,11 @@ export async function runSaasDemoFlow(
     });
     await runtime.meterRegistry.register({
       tenantId: tenant.id,
-      meterId: COST_USD,
+      meterId: COST_USD_NANOS,
       type: "CUSTOM_EVENT",
-      quota: 1,
+      quota: DEMO_LLM_COST_QUOTA_USD_NANOS,
       allowOverQuota: false,
-      metadata: { unit: "usd", provider: DEMO_LLM_PROVIDER },
+      metadata: { unit: "usd_nanos", provider: DEMO_LLM_PROVIDER },
     });
     const aiResult = await runtime.llmService.generate({
       modelId: DEMO_LLM_MODEL_ID,
