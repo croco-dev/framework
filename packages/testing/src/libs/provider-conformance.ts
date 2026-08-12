@@ -267,7 +267,7 @@ function assertStorageMetadata(
   );
   assertOptionalMetadata(
     "customMetadata",
-    metadata.metadata?.conformance,
+    metadata.metadata?.["conformance"],
     "storage-provider",
     options.expectations.customMetadata,
     options.providerName,
