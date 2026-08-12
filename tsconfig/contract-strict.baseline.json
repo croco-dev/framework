@@ -3289,7 +3289,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/serverless-provider-conformance.ts",
-      "line": 276,
+      "line": 281,
       "column": 78,
       "code": "TS2379",
       "message": "Argument of type '{ providerName: string; retryable: false; secretSamples: readonly string[] | undefined; }' is not assignable to parameter of type '{ readonly providerName: string; readonly retryable?: boolean; readonly secretSamples?: readonly string[]; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -3297,7 +3297,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/serverless-provider-conformance.ts",
-      "line": 330,
+      "line": 335,
       "column": 98,
       "code": "TS2379",
       "message": "Argument of type '{ providerName: string; retryable: true; secretSamples: readonly string[] | undefined; }' is not assignable to parameter of type '{ readonly providerName: string; readonly retryable?: boolean; readonly secretSamples?: readonly string[]; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -3305,7 +3305,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/serverless-provider-conformance.ts",
-      "line": 341,
+      "line": 346,
       "column": 96,
       "code": "TS2379",
       "message": "Argument of type '{ providerName: string; retryable: false; secretSamples: readonly string[] | undefined; }' is not assignable to parameter of type '{ readonly providerName: string; readonly retryable?: boolean; readonly secretSamples?: readonly string[]; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -3313,7 +3313,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/serverless-provider-conformance.ts",
-      "line": 379,
+      "line": 384,
       "column": 78,
       "code": "TS2379",
       "message": "Argument of type '{ providerName: string; retryable: false; secretSamples: readonly string[] | undefined; }' is not assignable to parameter of type '{ readonly providerName: string; readonly retryable?: boolean; readonly secretSamples?: readonly string[]; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -3321,7 +3321,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/serverless-provider-conformance.ts",
-      "line": 392,
+      "line": 397,
       "column": 11,
       "code": "TS2379",
       "message": "Argument of type '{ providerName: string; retryable: false; secretSamples: readonly string[] | undefined; }' is not assignable to parameter of type '{ readonly providerName: string; readonly retryable?: boolean; readonly secretSamples?: readonly string[]; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -3329,7 +3329,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/serverless-provider-conformance.ts",
-      "line": 460,
+      "line": 465,
       "column": 98,
       "code": "TS2379",
       "message": "Argument of type '{ providerName: string; retryable: true; secretSamples: readonly string[] | undefined; }' is not assignable to parameter of type '{ readonly providerName: string; readonly retryable?: boolean; readonly secretSamples?: readonly string[]; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -3337,7 +3337,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/serverless-provider-conformance.ts",
-      "line": 471,
+      "line": 476,
       "column": 97,
       "code": "TS2379",
       "message": "Argument of type '{ providerName: string; retryable: false; secretSamples: readonly string[] | undefined; }' is not assignable to parameter of type '{ readonly providerName: string; readonly retryable?: boolean; readonly secretSamples?: readonly string[]; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -3345,7 +3345,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/serverless-provider-conformance.ts",
-      "line": 501,
+      "line": 506,
       "column": 78,
       "code": "TS2379",
       "message": "Argument of type '{ providerName: string; retryable: false; secretSamples: readonly string[] | undefined; }' is not assignable to parameter of type '{ readonly providerName: string; readonly retryable?: boolean; readonly secretSamples?: readonly string[]; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -3353,7 +3353,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/serverless-provider-conformance.ts",
-      "line": 528,
+      "line": 533,
       "column": 37,
       "code": "TS4111",
       "message": "Property 'taskId' comes from an index signature, so it must be accessed with ['taskId']."
@@ -3361,7 +3361,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/serverless-provider-conformance.ts",
-      "line": 529,
+      "line": 534,
       "column": 41,
       "code": "TS4111",
       "message": "Property 'payload' comes from an index signature, so it must be accessed with ['payload']."
@@ -3369,7 +3369,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/serverless-provider-conformance.ts",
-      "line": 537,
+      "line": 542,
       "column": 80,
       "code": "TS2379",
       "message": "Argument of type '{ providerName: string; retryable: false; secretSamples: readonly string[] | undefined; }' is not assignable to parameter of type '{ readonly providerName: string; readonly retryable?: boolean; readonly secretSamples?: readonly string[]; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -3377,7 +3377,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/serverless-provider-conformance.ts",
-      "line": 544,
+      "line": 549,
       "column": 11,
       "code": "TS2379",
       "message": "Argument of type '{ providerName: string; retryable: false; secretSamples: readonly string[] | undefined; }' is not assignable to parameter of type '{ readonly providerName: string; readonly retryable?: boolean; readonly secretSamples?: readonly string[]; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -3385,7 +3385,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/serverless-provider-conformance.ts",
-      "line": 556,
+      "line": 561,
       "column": 96,
       "code": "TS2379",
       "message": "Argument of type '{ providerName: string; retryable: true; secretSamples: readonly string[] | undefined; }' is not assignable to parameter of type '{ readonly providerName: string; readonly retryable?: boolean; readonly secretSamples?: readonly string[]; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -3393,7 +3393,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/serverless-provider-conformance.ts",
-      "line": 567,
+      "line": 572,
       "column": 96,
       "code": "TS2379",
       "message": "Argument of type '{ providerName: string; retryable: false; secretSamples: readonly string[] | undefined; }' is not assignable to parameter of type '{ readonly providerName: string; readonly retryable?: boolean; readonly secretSamples?: readonly string[]; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -3401,7 +3401,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/serverless-provider-conformance.ts",
-      "line": 664,
+      "line": 669,
       "column": 11,
       "code": "TS2379",
       "message": "Argument of type '{ providerName: string; retryable: true; secretSamples: readonly string[] | undefined; }' is not assignable to parameter of type '{ readonly providerName: string; readonly retryable?: boolean; readonly secretSamples?: readonly string[]; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -3409,7 +3409,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/serverless-provider-conformance.ts",
-      "line": 686,
+      "line": 691,
       "column": 11,
       "code": "TS2379",
       "message": "Argument of type '{ providerName: string; retryable: false; secretSamples: readonly string[] | undefined; }' is not assignable to parameter of type '{ readonly providerName: string; readonly retryable?: boolean; readonly secretSamples?: readonly string[]; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -3417,7 +3417,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/serverless-provider-conformance.ts",
-      "line": 847,
+      "line": 910,
       "column": 64,
       "code": "TS4111",
       "message": "Property 'retryable' comes from an index signature, so it must be accessed with ['retryable']."
@@ -3425,7 +3425,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/serverless-provider-conformance.ts",
-      "line": 850,
+      "line": 913,
       "column": 39,
       "code": "TS4111",
       "message": "Property 'retryable' comes from an index signature, so it must be accessed with ['retryable']."
@@ -3433,7 +3433,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/serverless-provider-conformance.ts",
-      "line": 868,
+      "line": 931,
       "column": 24,
       "code": "TS4111",
       "message": "Property 'retryable' comes from an index signature, so it must be accessed with ['retryable']."
@@ -3441,7 +3441,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/serverless-provider-conformance.ts",
-      "line": 879,
+      "line": 943,
       "column": 22,
       "code": "TS4111",
       "message": "Property 'code' comes from an index signature, so it must be accessed with ['code']."
@@ -3449,7 +3449,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/serverless-provider-conformance.ts",
-      "line": 929,
+      "line": 996,
       "column": 27,
       "code": "TS4111",
       "message": "Property 'retryable' comes from an index signature, so it must be accessed with ['retryable']."
