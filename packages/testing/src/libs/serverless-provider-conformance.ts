@@ -221,7 +221,11 @@ export type QStashTriggerHandleResult = {
 };
 
 export type QStashTriggerHandler = {
-  handle(body: string, signature?: string): Promise<QStashTriggerHandleResult>;
+  handle(
+    body: string,
+    signature: string | undefined,
+    delivery: { readonly messageId: string },
+  ): Promise<QStashTriggerHandleResult>;
 };
 
 export type QStashTriggerScheduleRecord = {
@@ -733,7 +737,9 @@ export function createQStashTriggerConformanceSuite(
       name: "rejects invalid webhook signatures before dispatch",
       run: async () => {
         const harness = await options.createHarness("success");
-        const result = await harness.handler.handle(harness.webhookBody, "invalid-signature");
+        const result = await harness.handler.handle(harness.webhookBody, "invalid-signature", {
+          messageId: "msg-conformance-invalid",
+        });
 
         assert.equal(result.success, false);
         assert.equal(result.statusCode, 401);
@@ -752,7 +758,9 @@ export function createQStashTriggerConformanceSuite(
       name: "dispatches verified webhooks through the execution manager",
       run: async () => {
         const harness = await options.createHarness("success");
-        const result = await harness.handler.handle(harness.webhookBody, harness.validSignature);
+        const result = await harness.handler.handle(harness.webhookBody, harness.validSignature, {
+          messageId: "msg-conformance",
+        });
 
         assert.equal(result.success, true);
         assert.equal(result.statusCode, 200);

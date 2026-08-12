@@ -98,6 +98,7 @@ function createTriggerConformanceHarness(scenario: ConformanceScenario) {
     getExecutionEvents: () => executionEvents,
     getScheduleOperations: () => scheduleOperations,
     handler: new QStashTriggerHandler({
+      deliveryIdentityVerifier: vi.fn().mockResolvedValue(true),
       executionManager,
       receiver,
       serviceResolver: () => new ConformanceTrigger(),

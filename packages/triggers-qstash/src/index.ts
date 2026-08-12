@@ -18,9 +18,15 @@ export { QStashScheduler } from "./libs/QStashScheduler";
 /** Webhook handler configuration, payload, and result types. */
 export type {
   HandleResult,
+  QStashDeliveryIdentity,
+  QStashDeliveryIdentityVerification,
+  QStashDeliveryIdentityVerifier,
   QStashTriggerHandlerOptions,
   QStashWebhookPayload,
 } from "./libs/QStashTriggerHandler";
 
 /** Verifies and dispatches incoming QStash webhook requests. */
-export { QStashTriggerHandler } from "./libs/QStashTriggerHandler";
+export {
+  createQStashApiDeliveryIdentityVerifier,
+  QStashTriggerHandler,
+} from "./libs/QStashTriggerHandler";
