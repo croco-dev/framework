@@ -32,6 +32,7 @@ export interface PostgresClient {
  */
 export class TimescaleMetricsStore extends MetricsRepository {
   private static readonly MRR_MOVEMENTS_TABLE = "mrr_movements";
+  private static readonly MRR_MOVEMENT_EVENT_KEYS_TABLE = "mrr_movement_event_keys";
   private static readonly SNAPSHOTS_TABLE = "metrics_snapshots";
 
   private readonly retentionCalculator = new RetentionCalculator();
@@ -47,10 +48,24 @@ export class TimescaleMetricsStore extends MetricsRepository {
     eventKey?: string,
     dedupeEventKeys: readonly string[] = [],
   ): Promise<void> {
-    const hasDedupeAliases = eventKey !== undefined && dedupeEventKeys.length > 0;
     const sql = eventKey
-      ? hasDedupeAliases
-        ? `
+      ? `
+      WITH candidate_event_keys AS MATERIALIZED (
+        SELECT DISTINCT candidate.event_key
+        FROM unnest($16::text[]) AS candidate(event_key)
+      ), claimed_event_keys AS (
+        INSERT INTO ${TimescaleMetricsStore.MRR_MOVEMENT_EVENT_KEYS_TABLE} (tenant_id, event_key)
+        SELECT $1, candidate.event_key
+        FROM candidate_event_keys AS candidate
+        ORDER BY candidate.event_key
+        ON CONFLICT (tenant_id, event_key) DO NOTHING
+        RETURNING event_key
+      ), claim AS MATERIALIZED (
+        SELECT
+          (SELECT COUNT(*) FROM candidate_event_keys) > 0
+          AND (SELECT COUNT(*) FROM claimed_event_keys) = (SELECT COUNT(*) FROM candidate_event_keys)
+          AS won
+      )
       INSERT INTO ${TimescaleMetricsStore.MRR_MOVEMENTS_TABLE} (
         tenant_id, event_key, timestamp,
         new_mrr_amount, new_mrr_currency,
@@ -61,23 +76,8 @@ export class TimescaleMetricsStore extends MetricsRepository {
         net_mrr_amount, net_mrr_currency
       )
       SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
-      WHERE NOT EXISTS (
-        SELECT 1 FROM ${TimescaleMetricsStore.MRR_MOVEMENTS_TABLE}
-        WHERE tenant_id = $1 AND event_key = ANY($16::text[])
-      )
-      ON CONFLICT (tenant_id, event_key) DO NOTHING
-    `
-        : `
-      INSERT INTO ${TimescaleMetricsStore.MRR_MOVEMENTS_TABLE} (
-        tenant_id, event_key, timestamp,
-        new_mrr_amount, new_mrr_currency,
-        expansion_mrr_amount, expansion_mrr_currency,
-        contraction_mrr_amount, contraction_mrr_currency,
-        churned_mrr_amount, churned_mrr_currency,
-        reactivation_mrr_amount, reactivation_mrr_currency,
-        net_mrr_amount, net_mrr_currency
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-      ON CONFLICT (tenant_id, event_key) DO NOTHING
+      FROM claim
+      WHERE claim.won
     `
       : `
       INSERT INTO ${TimescaleMetricsStore.MRR_MOVEMENTS_TABLE} (
@@ -106,13 +106,7 @@ export class TimescaleMetricsStore extends MetricsRepository {
       movement.net.currency,
     ];
     const params = eventKey
-      ? [
-          tenantId,
-          eventKey,
-          timestamp,
-          ...movementParams,
-          ...(hasDedupeAliases ? [[eventKey, ...dedupeEventKeys]] : []),
-        ]
+      ? [tenantId, eventKey, timestamp, ...movementParams, [eventKey, ...dedupeEventKeys]]
       : [tenantId, timestamp, ...movementParams];
 
     await this.db.query(sql, params);

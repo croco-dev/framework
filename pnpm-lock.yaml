@@ -2426,6 +2426,9 @@ importers:
         specifier: workspace:*
         version: link:../problems-core
     devDependencies:
+      '@croco/testing-resources':
+        specifier: workspace:*
+        version: link:../testing-resources
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2

@@ -13,13 +13,14 @@ Repository abstract class for storing and querying metrics data.
 모든 메서드는 tenant 격리를 보장해야 함
 
 **TimescaleDB Schema (Hypertable)**:
+
 ```sql
 -- TimescaleDB 확장 활성화
 CREATE EXTENSION IF NOT EXISTS timescaledb;
 
 -- MRR 변동 이력 테이블
 CREATE TABLE mrr_movements (
-  id BIGSERIAL PRIMARY KEY,
+  id BIGSERIAL NOT NULL,
   tenant_id VARCHAR(255) NOT NULL,
   event_key VARCHAR(255),
   timestamp TIMESTAMPTZ NOT NULL,
@@ -34,7 +35,8 @@ CREATE TABLE mrr_movements (
   reactivation_mrr_amount BIGINT NOT NULL,
   reactivation_mrr_currency VARCHAR(3) NOT NULL,
   net_mrr_amount BIGINT NOT NULL,
-  net_mrr_currency VARCHAR(3) NOT NULL
+  net_mrr_currency VARCHAR(3) NOT NULL,
+  PRIMARY KEY (id, timestamp)
 );
 
 -- 시간 기반 파티셔닝을 위한 Hypertable 변환
@@ -42,19 +44,25 @@ SELECT create_hypertable('mrr_movements', 'timestamp', chunk_time_interval => IN
 
 -- 인덱스 생성
 CREATE INDEX idx_mrr_movements_tenant_timestamp ON mrr_movements (tenant_id, timestamp DESC);
-CREATE UNIQUE INDEX uq_mrr_movements_tenant_event_key
-  ON mrr_movements (tenant_id, event_key)
-  WHERE event_key IS NOT NULL;
+
+-- Hypertable 밖에서 tenant 전역 이벤트 멱등성 키 선점
+CREATE TABLE mrr_movement_event_keys (
+  tenant_id VARCHAR(255) NOT NULL,
+  event_key VARCHAR(255) NOT NULL,
+  claimed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (tenant_id, event_key)
+);
 
 -- 메트릭 스냅샷 테이블
 CREATE TABLE metrics_snapshots (
-  id BIGSERIAL PRIMARY KEY,
+  id BIGSERIAL NOT NULL,
   tenant_id VARCHAR(255) NOT NULL,
   snapshot_date DATE NOT NULL,
   total_mrr_amount BIGINT NOT NULL,
   total_mrr_currency VARCHAR(3) NOT NULL,
   active_customers INTEGER NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (id, snapshot_date),
   UNIQUE (tenant_id, snapshot_date)
 );
 
@@ -64,6 +72,39 @@ SELECT create_hypertable('metrics_snapshots', 'snapshot_date', chunk_time_interv
 -- 인덱스 생성
 CREATE INDEX idx_snapshots_tenant_date ON metrics_snapshots (tenant_id, snapshot_date DESC);
 ```
+
+Migration requires a writer pause: stop every legacy and current metrics writer before the final
+reconciliation, keep them stopped while the schema transaction runs, deploy the new writers, and
+only then resume traffic. For relational installations, run the following while writers remain
+paused:
+
+```sql
+BEGIN;
+LOCK TABLE mrr_movements IN ACCESS EXCLUSIVE MODE;
+LOCK TABLE metrics_snapshots IN ACCESS EXCLUSIVE MODE;
+CREATE TABLE IF NOT EXISTS mrr_movement_event_keys (
+  tenant_id VARCHAR(255) NOT NULL,
+  event_key VARCHAR(255) NOT NULL,
+  claimed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (tenant_id, event_key)
+);
+INSERT INTO mrr_movement_event_keys (tenant_id, event_key)
+SELECT tenant_id, event_key FROM mrr_movements WHERE event_key IS NOT NULL
+ON CONFLICT (tenant_id, event_key) DO NOTHING;
+DROP INDEX IF EXISTS uq_mrr_movements_tenant_event_key;
+ALTER TABLE mrr_movements DROP CONSTRAINT IF EXISTS mrr_movements_pkey;
+ALTER TABLE mrr_movements ADD PRIMARY KEY (id, timestamp);
+ALTER TABLE metrics_snapshots DROP CONSTRAINT IF EXISTS metrics_snapshots_pkey;
+ALTER TABLE metrics_snapshots ADD PRIMARY KEY (id, snapshot_date);
+COMMIT;
+SELECT create_hypertable('mrr_movements', 'timestamp', migrate_data => TRUE);
+SELECT create_hypertable('metrics_snapshots', 'snapshot_date', migrate_data => TRUE);
+```
+
+Existing hypertables use the same writer pause, lock, and idempotent final reconciliation, but keep
+their existing time-inclusive primary key. Drop obsolete time-inclusive event-key uniqueness only
+after reconciliation commits. Never resume mixed-version traffic between the final backfill and
+deployment: a legacy write in that window would not own a companion claim and could be duplicated.
 
 ## Extended by
 
