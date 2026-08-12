@@ -22,7 +22,7 @@ describe("TimescaleMetricsStore", () => {
     store = new TimescaleMetricsStore(db);
   });
 
-  it("should use conflict-safe insert when event key is provided", async () => {
+  it("should atomically claim an event key before inserting a movement", async () => {
     await store.recordMRRMovement(
       "tenant-1",
       movement,
@@ -34,7 +34,8 @@ describe("TimescaleMetricsStore", () => {
     const [sql, params] = vi.mocked(db.query).mock.calls[0] ?? [];
 
     expect(sql).toContain("event_key");
-    expect(sql).toContain("ON CONFLICT (tenant_id, event_key) DO NOTHING");
+    expect(sql).toContain("INSERT INTO mrr_movement_event_keys");
+    expect(sql).toContain("FROM claim");
     expect(params).toEqual([
       "tenant-1",
       "event-key-1",
@@ -51,6 +52,7 @@ describe("TimescaleMetricsStore", () => {
       "USD",
       1000,
       "USD",
+      ["event-key-1"],
     ]);
   });
 
@@ -66,8 +68,9 @@ describe("TimescaleMetricsStore", () => {
     expect(db.query).toHaveBeenCalledTimes(1);
     const [sql, params] = vi.mocked(db.query).mock.calls[0] ?? [];
 
-    expect(sql).toContain("WHERE NOT EXISTS");
-    expect(sql).toContain("event_key = ANY($16::text[])");
+    expect(sql).toContain("SELECT DISTINCT candidate.event_key");
+    expect(sql).toContain("FROM unnest($16::text[])");
+    expect(sql).toContain("ORDER BY candidate.event_key");
     expect(sql).toContain("ON CONFLICT (tenant_id, event_key) DO NOTHING");
     expect(params).toEqual([
       "tenant-1",
@@ -87,6 +90,21 @@ describe("TimescaleMetricsStore", () => {
       "USD",
       ["event-key-v2", "event-key-v1"],
     ]);
+  });
+
+  it("should normalize repeated compatibility keys inside the atomic claim", async () => {
+    await store.recordMRRMovement(
+      "tenant-1",
+      movement,
+      new Date("2026-03-02T00:00:00.000Z"),
+      "event-key-v2",
+      ["event-key-v2", "event-key-v1", "event-key-v1"],
+    );
+
+    const [sql, params] = vi.mocked(db.query).mock.calls[0] ?? [];
+
+    expect(sql).toContain("SELECT DISTINCT candidate.event_key");
+    expect(params?.[15]).toEqual(["event-key-v2", "event-key-v2", "event-key-v1", "event-key-v1"]);
   });
 
   it("should keep legacy insert path when event key is omitted", async () => {

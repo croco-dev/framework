@@ -36,6 +36,7 @@
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
     "test": "vitest run",
+    "test:real": "CROCO_TEST_REAL_RESOURCES=1 vitest run src/tests/TimescaleMetricsStore.integration.spec.ts",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint ."
   },
@@ -45,6 +46,7 @@
     "@croco/problems-core": "workspace:*"
   },
   "devDependencies": {
+    "@croco/testing-resources": "workspace:*",
     "reflect-metadata": "^0.2.2",
     "tsup": "^8.4.0",
     "typescript": "^5.7.2",
