@@ -17,7 +17,15 @@ export type CreditLedgerCommittedEventData = {
 export class CreditLedgerCommittedEvent extends DomainEvent {
   static readonly eventName = "credits.ledger_committed";
 
-  constructor(public readonly data: CreditLedgerCommittedEventData) {
-    super();
+  constructor(
+    public readonly data: CreditLedgerCommittedEventData,
+    eventId?: string,
+    occurredAt?: Date,
+  ) {
+    super(eventId);
+    if (occurredAt) {
+      const event = this as unknown as { timestamp: Date };
+      event.timestamp = new Date(occurredAt);
+    }
   }
 }

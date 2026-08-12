@@ -38,6 +38,16 @@ reservation settlement, and immutable ledger append one atomic critical section 
 
 [`CreditLedgerStore`](/api/credits-core/src/classes/creditledgerstore/).[`constructor`](/api/credits-core/src/classes/creditledgerstore/#constructor)
 
+## Properties
+
+### eventIntentDurability
+
+> `readonly` **eventIntentDurability**: `"persistent"`
+
+#### Overrides
+
+[`CreditLedgerStore`](/api/credits-core/src/classes/creditledgerstore/).[`eventIntentDurability`](/api/credits-core/src/classes/creditledgerstore/#eventintentdurability)
+
 ## Methods
 
 ### execute()
@@ -138,6 +148,26 @@ reservation settlement, and immutable ledger append one atomic critical section 
 
 ***
 
+### getPendingEventIntent()
+
+> **getPendingEventIntent**(`idempotencyKey`): `Promise`\<[`CreditLedgerEventIntent`](/api/credits-core/src/type-aliases/creditledgereventintent/) \| `null`\>
+
+#### Parameters
+
+##### idempotencyKey
+
+`string`
+
+#### Returns
+
+`Promise`\<[`CreditLedgerEventIntent`](/api/credits-core/src/type-aliases/creditledgereventintent/) \| `null`\>
+
+#### Overrides
+
+[`CreditLedgerStore`](/api/credits-core/src/classes/creditledgerstore/).[`getPendingEventIntent`](/api/credits-core/src/classes/creditledgerstore/#getpendingeventintent)
+
+***
+
 ### getReservation()
 
 > **getReservation**(`accountId`, `reservationId`): `Promise`\<[`CreditReservation`](/api/credits-core/src/type-aliases/creditreservation/) \| `null`\>
@@ -159,3 +189,43 @@ reservation settlement, and immutable ledger append one atomic critical section 
 #### Overrides
 
 [`CreditLedgerStore`](/api/credits-core/src/classes/creditledgerstore/).[`getReservation`](/api/credits-core/src/classes/creditledgerstore/#getreservation)
+
+***
+
+### listPendingEventIntents()
+
+> **listPendingEventIntents**(`limit?`): `Promise`\<readonly [`CreditLedgerEventIntent`](/api/credits-core/src/type-aliases/creditledgereventintent/)[]\>
+
+#### Parameters
+
+##### limit?
+
+`number` = `100`
+
+#### Returns
+
+`Promise`\<readonly [`CreditLedgerEventIntent`](/api/credits-core/src/type-aliases/creditledgereventintent/)[]\>
+
+#### Overrides
+
+[`CreditLedgerStore`](/api/credits-core/src/classes/creditledgerstore/).[`listPendingEventIntents`](/api/credits-core/src/classes/creditledgerstore/#listpendingeventintents)
+
+***
+
+### markEventIntentPublished()
+
+> **markEventIntentPublished**(`eventId`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### eventId
+
+`string`
+
+#### Returns
+
+`Promise`\<`void`\>
+
+#### Overrides
+
+[`CreditLedgerStore`](/api/credits-core/src/classes/creditledgerstore/).[`markEventIntentPublished`](/api/credits-core/src/classes/creditledgerstore/#markeventintentpublished)

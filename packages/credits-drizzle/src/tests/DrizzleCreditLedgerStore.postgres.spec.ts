@@ -7,7 +7,7 @@ import {
 } from "@croco/credits-core";
 import { TxManager } from "@croco/tx-core";
 import { createDrizzleTxAdapter } from "@croco/tx-drizzle";
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -17,6 +17,7 @@ import {
   creditAllocations,
   creditGrantLots,
   creditIdempotencyRecords,
+  creditLedgerEventIntents,
   creditReservationAllocations,
   creditReservations,
   creditTransactions,
@@ -34,6 +35,7 @@ const schema = {
   creditAllocations,
   creditGrantLots,
   creditIdempotencyRecords,
+  creditLedgerEventIntents,
   creditReservationAllocations,
   creditReservations,
   creditTransactions,
@@ -59,6 +61,7 @@ describePostgres("DrizzleCreditLedgerStore PostgreSQL conformance", () => {
   async function reset(): Promise<void> {
     await db.execute(sql`
       truncate table
+        credit_ledger_event_intents,
         credit_idempotency_records,
         credit_reservation_allocations,
         credit_allocations,
@@ -92,11 +95,11 @@ describePostgres("DrizzleCreditLedgerStore PostgreSQL conformance", () => {
       clock: () => new Date("2026-07-30T00:00:00.000Z"),
       idGenerator: () => `rollback-${++sequence}`,
       eventPublisher: {
-        publishAfterCommit(_event, onPublished) {
+        publishIdempotentlyAfterCommit(_event, onPublished) {
           publishedEvents += 1;
-          onPublished?.();
+          void onPublished();
         },
-        async publishNow() {
+        async publishIdempotently() {
           publishedEvents += 1;
         },
       },
@@ -163,13 +166,13 @@ describePostgres("DrizzleCreditLedgerStore PostgreSQL conformance", () => {
       store,
       idGenerator: () => `ambient-${++sequence}`,
       eventPublisher: {
-        publishAfterCommit(event, onPublished) {
-          txManager.onAfterCommit(() => {
+        publishIdempotentlyAfterCommit(event, onPublished) {
+          txManager.onAfterCommit(async () => {
             publishedEvents.push(event);
-            onPublished?.();
+            await onPublished();
           });
         },
-        async publishNow(event) {
+        async publishIdempotently(event) {
           publishedEvents.push(event);
         },
       },
@@ -194,6 +197,144 @@ describePostgres("DrizzleCreditLedgerStore PostgreSQL conformance", () => {
       lifetimeGranted: "0",
     });
     expect((await setupService.getHistory(opened.account.id)).transactions).toHaveLength(0);
+  });
+
+  it("recovers a committed event intent after restart without applying the ledger twice", async () => {
+    await reset();
+    let sequence = 0;
+    const firstStore = new DrizzleCreditLedgerStore(db, txManager);
+    const firstProcess = new CreditLedgerService({
+      store: firstStore,
+      clock: () => new Date("2026-07-30T00:00:00.000Z"),
+      idGenerator: () => `restart-${++sequence}`,
+    });
+    const opened = await firstProcess.openAccount({
+      tenantId: "tenant-restart",
+      idempotencyKey: "restart-open",
+      reference: { type: "test", id: "restart-open" },
+    });
+    const input = {
+      accountId: opened.account.id,
+      amount: creditAmount("7"),
+      idempotencyKey: "restart-grant",
+      reference: { type: "test", id: "restart-grant" },
+    };
+    await firstProcess.grantCredits(input);
+
+    const pendingBeforeRestart = await firstStore.getPendingEventIntent(input.idempotencyKey);
+    expect(pendingBeforeRestart?.eventId).toMatch(/^[a-f0-9]{64}$/);
+
+    const publishedEvents: Array<{ eventId: string }> = [];
+    let publicationAcknowledgement: Promise<void> | undefined;
+    const restartedStore = new DrizzleCreditLedgerStore(db, txManager);
+    const restartedProcess = new CreditLedgerService({
+      store: restartedStore,
+      clock: () => new Date("2026-07-30T00:01:00.000Z"),
+      idGenerator: () => `restarted-${++sequence}`,
+      eventPublisher: {
+        publishIdempotentlyAfterCommit(event, onPublished) {
+          publishedEvents.push({ eventId: event.eventId });
+          publicationAcknowledgement = onPublished();
+        },
+        async publishIdempotently(event) {
+          publishedEvents.push({ eventId: event.eventId });
+        },
+      },
+    });
+
+    await expect(restartedProcess.grantCredits(input)).resolves.toMatchObject({ replayed: true });
+    await publicationAcknowledgement;
+    expect(publishedEvents).toEqual([{ eventId: pendingBeforeRestart?.eventId }]);
+    await expect(restartedStore.getPendingEventIntent(input.idempotencyKey)).resolves.toBeNull();
+    await expect(restartedProcess.getBalance(opened.account.id)).resolves.toMatchObject({
+      position: 1,
+      available: "7",
+    });
+    expect((await restartedProcess.getHistory(opened.account.id)).transactions).toHaveLength(1);
+  });
+
+  it("backfills legacy committed rows as pending intents with reconstructable evidence", async () => {
+    await reset();
+    let sequence = 0;
+    const store = new DrizzleCreditLedgerStore(db, txManager);
+    const service = new CreditLedgerService({
+      store,
+      clock: () => new Date("2026-07-30T02:00:00.000Z"),
+      idGenerator: () => `legacy-${++sequence}`,
+    });
+    const opened = await service.openAccount({
+      tenantId: "tenant-legacy",
+      idempotencyKey: "legacy-open",
+      reference: { type: "test", id: "legacy-open" },
+    });
+    const granted = await service.grantCredits({
+      accountId: opened.account.id,
+      amount: creditAmount("9"),
+      idempotencyKey: "legacy-grant",
+      reference: { type: "legacy-recovery", id: "legacy-grant" },
+    });
+    const originalIntent = await store.getPendingEventIntent("legacy-grant");
+    await db
+      .delete(creditLedgerEventIntents)
+      .where(eq(creditLedgerEventIntents.idempotencyKey, "legacy-grant"));
+
+    await createCreditsSchema(db);
+
+    const intent = await store.getPendingEventIntent("legacy-grant");
+    expect(intent).toEqual({
+      eventId: originalIntent?.eventId,
+      idempotencyKey: "legacy-grant",
+      occurredAt: new Date("2026-07-30T02:00:00.000Z"),
+      data: {
+        accountId: opened.account.id,
+        position: 1,
+        transactionIds: [granted.transactions[0]?.id],
+        kinds: ["grant"],
+        reference: { type: "legacy-recovery", id: "legacy-grant" },
+      },
+    });
+  });
+
+  it("repairs a rollout-gap intent on replay without repeating the ledger movement", async () => {
+    await reset();
+    let sequence = 0;
+    const store = new DrizzleCreditLedgerStore(db, txManager);
+    const producer = new CreditLedgerService({
+      store,
+      clock: () => new Date("2026-07-30T03:00:00.000Z"),
+      idGenerator: () => `rollout-${++sequence}`,
+    });
+    const opened = await producer.openAccount({
+      tenantId: "tenant-rollout-gap",
+      idempotencyKey: "rollout-open",
+      reference: { type: "test", id: "rollout-open" },
+    });
+    const input = {
+      accountId: opened.account.id,
+      amount: creditAmount("11"),
+      idempotencyKey: "rollout-grant",
+      reference: { type: "rollout-gap", id: "rollout-grant" },
+    };
+    const granted = await producer.grantCredits(input);
+    await db
+      .delete(creditLedgerEventIntents)
+      .where(eq(creditLedgerEventIntents.idempotencyKey, input.idempotencyKey));
+
+    const replay = await producer.grantCredits(input);
+
+    expect(replay.replayed).toBe(true);
+    await expect(store.getPendingEventIntent(input.idempotencyKey)).resolves.toMatchObject({
+      occurredAt: granted.transactions[0]?.occurredAt,
+      data: {
+        transactionIds: [granted.transactions[0]?.id],
+        reference: input.reference,
+      },
+    });
+    await expect(producer.getBalance(opened.account.id)).resolves.toMatchObject({
+      position: 1,
+      available: "11",
+    });
+    expect((await producer.getHistory(opened.account.id)).transactions).toHaveLength(1);
   });
 
   it("rejects reservation references that cross account boundaries", async () => {

@@ -94,6 +94,7 @@ describe("generated credit operations smoke", () => {
     const service = new CreditLedgerService({
       clock: () => now,
       store: new InMemoryCreditLedgerStore(),
+      eventDelivery: "development",
     });
     const opened = await service.openAccount({
       idempotencyKey: "masked-account",
@@ -266,18 +267,23 @@ describe("generated credit operations smoke", () => {
 
   it("reports committed event-publication failures with durable ledger evidence", async () => {
     const eventStore = new InMemoryCreditLedgerStore();
-    const fixtureService = new CreditLedgerService({ clock: () => now, store: eventStore });
+    const fixtureService = new CreditLedgerService({
+      clock: () => now,
+      store: eventStore,
+      eventDelivery: "development",
+    });
     const eventReady = await loadReadyState(fixtureService, "event-tenant");
     const eventGrant = requireAction(eventReady, "grant");
     const eventService = new CreditLedgerService({
       clock: () => now,
       eventPublisher: {
-        publishAfterCommit() {
+        publishIdempotentlyAfterCommit() {
           throw new Error("event publisher unavailable");
         },
-        publishNow: () => Promise.reject(new Error("event publisher unavailable")),
+        publishIdempotently: () => Promise.reject(new Error("event publisher unavailable")),
       },
       store: eventStore,
+      eventDelivery: "development",
     });
     await expect(
       executeCreditOperationsAction({
@@ -307,6 +313,7 @@ async function createActionFixture(idempotencyKey: string) {
   const service = new CreditLedgerService({
     clock: () => now,
     store: new InMemoryCreditLedgerStore(),
+    eventDelivery: "development",
   });
   const ready = await loadReadyState(service, `tenant-${idempotencyKey}`);
   const grant = requireAction(ready, "grant");

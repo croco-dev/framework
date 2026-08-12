@@ -30,6 +30,7 @@ export {
   type ReserveCreditsInput,
 } from "./libs/CreditLedgerService";
 export { CreditLedgerStore } from "./libs/CreditLedgerStore";
+export { createCreditLedgerEventIntent, type CreditLedgerEventIntent } from "./libs/eventIntent";
 export {
   type CreditLedgerStoreConformanceCase,
   type CreditLedgerStoreConformanceOptions,

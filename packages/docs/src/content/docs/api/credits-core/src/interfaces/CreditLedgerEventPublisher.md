@@ -7,29 +7,11 @@ title: "CreditLedgerEventPublisher"
 
 ## Methods
 
-### publishAfterCommit()
+### publishIdempotently()
 
-> **publishAfterCommit**(`event`, `onPublished?`): `void`
+> **publishIdempotently**(`event`): `Promise`\<`void`\>
 
-#### Parameters
-
-##### event
-
-[`DomainEvent`](/api/events-core/src/classes/domainevent/)
-
-##### onPublished?
-
-() => `void`
-
-#### Returns
-
-`void`
-
-***
-
-### publishNow()
-
-> **publishNow**(`event`): `Promise`\<`void`\>
+Must deduplicate retries and concurrent deliveries by `event.eventId`.
 
 #### Parameters
 
@@ -40,3 +22,23 @@ title: "CreditLedgerEventPublisher"
 #### Returns
 
 `Promise`\<`void`\>
+
+***
+
+### publishIdempotentlyAfterCommit()
+
+> **publishIdempotentlyAfterCommit**(`event`, `onPublished`): `void`
+
+#### Parameters
+
+##### event
+
+[`DomainEvent`](/api/events-core/src/classes/domainevent/)
+
+##### onPublished
+
+() => `Promise`\<`void`\>
+
+#### Returns
+
+`void`

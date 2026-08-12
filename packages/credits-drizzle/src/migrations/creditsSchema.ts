@@ -158,12 +158,66 @@ export async function createCreditsSchema(client: MigrationClient): Promise<void
         committed_at timestamptz not null default now()
       )
     `);
+    await client.execute(sql`
+      create table if not exists credit_ledger_event_intents (
+        event_id text primary key,
+        idempotency_key text not null references credit_idempotency_records(key),
+        occurred_at timestamptz not null,
+        data jsonb not null,
+        published_at timestamptz,
+        created_at timestamptz not null default now(),
+        constraint credit_ledger_event_intents_idempotency_unique unique (idempotency_key)
+      )
+    `);
+    await client.execute(sql`
+      create index if not exists credit_ledger_event_intents_pending_idx
+        on credit_ledger_event_intents(created_at, event_id)
+        where published_at is null
+    `);
+    await client.execute(sql`
+      insert into credit_ledger_event_intents (
+        event_id,
+        idempotency_key,
+        occurred_at,
+        data
+      )
+      select
+        encode(
+          sha256(convert_to('credits.ledger_committed:' || records.key, 'UTF8')),
+          'hex'
+        ),
+        records.key,
+        coalesce((records.result -> 'transactions' -> 0 ->> 'occurredAt')::timestamptz, records.committed_at),
+        jsonb_build_object(
+          'accountId', records.result -> 'account' ->> 'id',
+          'position', (records.result -> 'account' ->> 'position')::bigint,
+          'transactionIds', coalesce(
+            (
+              select jsonb_agg(transaction ->> 'id' order by ordinal)
+              from jsonb_array_elements(records.result -> 'transactions') with ordinality as entries(transaction, ordinal)
+            ),
+            '[]'::jsonb
+          ),
+          'kinds', coalesce(
+            (
+              select jsonb_agg(transaction ->> 'kind' order by ordinal)
+              from jsonb_array_elements(records.result -> 'transactions') with ordinality as entries(transaction, ordinal)
+            ),
+            '[]'::jsonb
+          ),
+          'reference', records.result -> 'transactions' -> 0 -> 'reference'
+        )
+      from credit_idempotency_records records
+      where jsonb_array_length(records.result -> 'transactions') > 0
+      on conflict (idempotency_key) do nothing
+    `);
   });
 }
 
 /** Drops the credit ledger schema in reverse dependency order. */
 export async function dropCreditsSchema(client: MigrationClient): Promise<void> {
   return runMigration("drop schema", async () => {
+    await client.execute(sql`drop table if exists credit_ledger_event_intents`);
     await client.execute(sql`drop table if exists credit_idempotency_records`);
     await client.execute(sql`drop table if exists credit_reservation_allocations`);
     await client.execute(sql`drop table if exists credit_allocations`);

@@ -7,6 +7,7 @@ import {
   CreditAccountNotFoundProblem,
   CreditDuplicateConflictProblem,
   CreditLedgerStore,
+  createCreditLedgerEventIntent,
   CreditRefundMismatchProblem,
   CreditReservationMismatchProblem,
   CreditTransactionNotFoundProblem,
@@ -36,6 +37,7 @@ import type {
   CreditGrantTerms,
   CreditHistoryPage,
   CreditLedgerCommand,
+  CreditLedgerEventIntent,
   CreditReservation,
   CreditReservationId,
   CreditSignedAmount,
@@ -53,6 +55,7 @@ import {
   creditAllocations,
   creditGrantLots,
   creditIdempotencyRecords,
+  creditLedgerEventIntents,
   creditReservationAllocations,
   creditReservations,
   creditTransactions,
@@ -69,6 +72,7 @@ const schema = {
   creditAllocations,
   creditGrantLots,
   creditIdempotencyRecords,
+  creditLedgerEventIntents,
   creditReservationAllocations,
   creditReservations,
   creditTransactions,
@@ -333,6 +337,8 @@ function subtractAllocations(
  * reservation settlement, and immutable ledger append one atomic critical section at READ COMMITTED.
  */
 export class DrizzleCreditLedgerStore extends CreditLedgerStore {
+  readonly eventIntentDurability = "persistent" as const;
+
   constructor(
     private readonly db: DrizzleCreditClient,
     private readonly txManager: DrizzleCreditTxManager,
@@ -358,7 +364,9 @@ export class DrizzleCreditLedgerStore extends CreditLedgerStore {
           if (existing[0].fingerprint !== fingerprint) {
             throw new CreditDuplicateConflictProblem(command.idempotencyKey);
           }
-          return deserializeResult(existing[0].result);
+          const result = deserializeResult(existing[0].result);
+          await this.insertEventIntent(tx, command, result);
+          return result;
         }
 
         await this.assertCandidateIdsAvailable(tx, command);
@@ -372,9 +380,57 @@ export class DrizzleCreditLedgerStore extends CreditLedgerStore {
           fingerprint,
           result,
         });
+        await this.insertEventIntent(tx, command, result);
         return result;
       }),
     );
+  }
+
+  async getPendingEventIntent(idempotencyKey: string): Promise<CreditLedgerEventIntent | null> {
+    return this.persist("get pending event intent", async () => {
+      const rows = await this.getClient()
+        .select()
+        .from(creditLedgerEventIntents)
+        .where(
+          and(
+            eq(creditLedgerEventIntents.idempotencyKey, idempotencyKey),
+            isNull(creditLedgerEventIntents.publishedAt),
+          ),
+        )
+        .limit(1);
+      return rows[0] ? this.mapEventIntent(rows[0]) : null;
+    });
+  }
+
+  async listPendingEventIntents(limit = 100): Promise<readonly CreditLedgerEventIntent[]> {
+    if (!Number.isInteger(limit) || limit < 1 || limit > 1_000) {
+      throw new InvalidCreditCommandProblem(
+        "event intent limit must be an integer between 1 and 1000",
+      );
+    }
+    return this.persist("list pending event intents", async () => {
+      const rows = await this.getClient()
+        .select()
+        .from(creditLedgerEventIntents)
+        .where(isNull(creditLedgerEventIntents.publishedAt))
+        .orderBy(asc(creditLedgerEventIntents.createdAt), asc(creditLedgerEventIntents.eventId))
+        .limit(limit);
+      return rows.map((row) => this.mapEventIntent(row));
+    });
+  }
+
+  async markEventIntentPublished(eventId: string): Promise<void> {
+    await this.persist("mark event intent published", async () => {
+      await this.getClient()
+        .update(creditLedgerEventIntents)
+        .set({ publishedAt: new Date() })
+        .where(
+          and(
+            eq(creditLedgerEventIntents.eventId, eventId),
+            isNull(creditLedgerEventIntents.publishedAt),
+          ),
+        );
+    });
   }
 
   async getAccount(accountId: CreditAccountId): Promise<CreditAccount | null> {
@@ -1471,6 +1527,35 @@ export class DrizzleCreditLedgerStore extends CreditLedgerStore {
       replayed: false,
       nextCursor,
     };
+  }
+
+  private mapEventIntent(
+    row: typeof creditLedgerEventIntents.$inferSelect,
+  ): CreditLedgerEventIntent {
+    return {
+      eventId: row.eventId,
+      idempotencyKey: row.idempotencyKey,
+      occurredAt: new Date(row.occurredAt),
+      data: row.data,
+    };
+  }
+
+  private async insertEventIntent(
+    tx: DrizzleCreditTransaction,
+    command: CreditLedgerCommand,
+    result: CreditCommandResult,
+  ): Promise<void> {
+    const eventIntent = createCreditLedgerEventIntent(command, result);
+    if (!eventIntent) return;
+    await tx
+      .insert(creditLedgerEventIntents)
+      .values({
+        eventId: eventIntent.eventId,
+        idempotencyKey: eventIntent.idempotencyKey,
+        occurredAt: eventIntent.occurredAt,
+        data: eventIntent.data,
+      })
+      .onConflictDoNothing({ target: creditLedgerEventIntents.idempotencyKey });
   }
 
   private getClient(): DrizzleCreditClient | DrizzleCreditTransaction {

@@ -4,6 +4,7 @@ import {
   EventAfterCommitRequiresActiveTransactionProblem,
 } from "@croco/events-core";
 import type { CreditLedgerStore } from "./CreditLedgerStore";
+import type { CreditLedgerEventIntent } from "./eventIntent";
 import { CreditLedgerCommittedEvent } from "./events/CreditLedgerCommittedEvent";
 import { creditAccountId, creditReservationId, creditTransactionId } from "./identifiers";
 import { CreditEventPublicationProblem, InvalidCreditCommandProblem } from "./problems";
@@ -23,8 +24,9 @@ import type {
 } from "./types";
 
 export interface CreditLedgerEventPublisher {
-  publishNow(event: DomainEvent): Promise<void>;
-  publishAfterCommit(event: DomainEvent, onPublished?: () => void): void;
+  /** Must deduplicate retries and concurrent deliveries by `event.eventId`. */
+  publishIdempotently(event: DomainEvent): Promise<void>;
+  publishIdempotentlyAfterCommit(event: DomainEvent, onPublished: () => Promise<void>): void;
 }
 
 export type CreditLedgerServiceOptions = {
@@ -32,8 +34,7 @@ export type CreditLedgerServiceOptions = {
   readonly eventPublisher?: CreditLedgerEventPublisher;
   readonly clock?: () => Date;
   readonly idGenerator?: () => string;
-  readonly pendingEventLimit?: number;
-  readonly onPendingEventEvicted?: (idempotencyKey: string) => void;
+  readonly eventDelivery?: "development" | "durable";
 };
 
 type CommandMetadata = {
@@ -105,26 +106,18 @@ export class CreditLedgerService {
   private readonly eventPublisher?: CreditLedgerEventPublisher;
   private readonly clock: () => Date;
   private readonly idGenerator: () => string;
-  private readonly pendingEventLimit: number;
-  private readonly onPendingEventEvicted: (idempotencyKey: string) => void;
-  private readonly pendingEvents = new Map<string, CreditLedgerCommittedEvent>();
 
   constructor(options: CreditLedgerServiceOptions) {
     this.store = options.store;
     this.eventPublisher = options.eventPublisher;
     this.clock = options.clock ?? (() => new Date());
     this.idGenerator = options.idGenerator ?? randomUUID;
-    this.pendingEventLimit = options.pendingEventLimit ?? 1_000;
-    if (!Number.isInteger(this.pendingEventLimit) || this.pendingEventLimit < 1) {
-      throw new InvalidCreditCommandProblem("pendingEventLimit must be a positive integer");
+    const eventDelivery = options.eventDelivery ?? "durable";
+    if (eventDelivery === "durable" && this.store.eventIntentDurability !== "persistent") {
+      throw new InvalidCreditCommandProblem(
+        "durable event delivery requires a store with persistent event intent capability",
+      );
     }
-    this.onPendingEventEvicted =
-      options.onPendingEventEvicted ??
-      ((idempotencyKey) => {
-        console.warn(
-          `[credits-core] evicted pending ledger event for idempotency key '${idempotencyKey}'`,
-        );
-      });
   }
 
   async openAccount(input: OpenCreditAccountInput): Promise<CreditCommandResult> {
@@ -258,6 +251,17 @@ export class CreditLedgerService {
     return this.store.getHistory(accountId, options);
   }
 
+  async publishPendingEvents(limit = 100): Promise<number> {
+    if (!this.eventPublisher) {
+      throw new InvalidCreditCommandProblem(
+        "publishing pending events requires an idempotent event publisher",
+      );
+    }
+    const intents = await this.store.listPendingEventIntents(limit);
+    for (const intent of intents) await this.publishIntentNow(intent);
+    return intents.length;
+  }
+
   private metadata(input: CommandMetadata): CommandMetadata & { readonly occurredAt: Date } {
     return {
       idempotencyKey: input.idempotencyKey,
@@ -296,65 +300,39 @@ export class CreditLedgerService {
         `store returned '${result.operation}' for '${command.operation}'`,
       );
     }
-    const pendingEvent = this.pendingEvents.get(command.idempotencyKey);
-    if (pendingEvent) {
-      await this.publishAfterCommitOrNow(command.idempotencyKey, pendingEvent);
-    } else if (!result.replayed && result.transactions.length > 0) {
-      await this.publishAfterCommitOrNow(
-        command.idempotencyKey,
-        new CreditLedgerCommittedEvent({
-          accountId: result.account.id,
-          position: result.account.position,
-          transactionIds: result.transactions.map((transaction) => transaction.id),
-          kinds: result.transactions.map((transaction) => transaction.kind),
-          reference: command.reference,
-        }),
-      );
+    if (this.eventPublisher) {
+      const intent = await this.store.getPendingEventIntent(command.idempotencyKey);
+      if (intent) await this.publishIntentAfterCommitOrNow(intent);
     }
     return result;
   }
 
-  private async publishAfterCommitOrNow(
-    idempotencyKey: string,
-    event: CreditLedgerCommittedEvent,
-  ): Promise<void> {
+  private async publishIntentAfterCommitOrNow(intent: CreditLedgerEventIntent): Promise<void> {
     if (!this.eventPublisher) return;
-    this.rememberPendingEvent(idempotencyKey, event);
+    const event = new CreditLedgerCommittedEvent(intent.data, intent.eventId, intent.occurredAt);
     try {
-      this.eventPublisher.publishAfterCommit(event, () => {
-        this.pendingEvents.delete(idempotencyKey);
+      this.eventPublisher.publishIdempotentlyAfterCommit(event, async () => {
+        await this.store.markEventIntentPublished(intent.eventId);
       });
     } catch (error) {
       if (!(error instanceof EventAfterCommitRequiresActiveTransactionProblem)) {
         const cause = error instanceof Error ? error : new Error(String(error));
-        throw new CreditEventPublicationProblem(idempotencyKey, cause);
+        throw new CreditEventPublicationProblem(intent.idempotencyKey, cause);
       }
-      await this.publishPendingImmediate(idempotencyKey, event);
+      await this.publishIntentNow(intent);
     }
   }
 
-  private rememberPendingEvent(idempotencyKey: string, event: CreditLedgerCommittedEvent): void {
-    this.pendingEvents.delete(idempotencyKey);
-    this.pendingEvents.set(idempotencyKey, event);
-    while (this.pendingEvents.size > this.pendingEventLimit) {
-      const oldestIdempotencyKey = this.pendingEvents.keys().next().value;
-      if (oldestIdempotencyKey === undefined) return;
-      this.pendingEvents.delete(oldestIdempotencyKey);
-      this.onPendingEventEvicted(oldestIdempotencyKey);
-    }
-  }
-
-  private async publishPendingImmediate(
-    idempotencyKey: string,
-    event: CreditLedgerCommittedEvent,
-  ): Promise<void> {
+  private async publishIntentNow(intent: CreditLedgerEventIntent): Promise<void> {
     if (!this.eventPublisher) return;
     try {
-      await this.eventPublisher.publishNow(event);
-      this.pendingEvents.delete(idempotencyKey);
+      await this.eventPublisher.publishIdempotently(
+        new CreditLedgerCommittedEvent(intent.data, intent.eventId, intent.occurredAt),
+      );
+      await this.store.markEventIntentPublished(intent.eventId);
     } catch (error) {
       const cause = error instanceof Error ? error : new Error(String(error));
-      throw new CreditEventPublicationProblem(idempotencyKey, cause);
+      throw new CreditEventPublicationProblem(intent.idempotencyKey, cause);
     }
   }
 }

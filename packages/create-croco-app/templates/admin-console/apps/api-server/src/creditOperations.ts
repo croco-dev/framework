@@ -43,7 +43,10 @@ const grantedPermissions: readonly string[] = [
 ];
 
 export class CreditOperationsService {
-  private readonly ledger = new CreditLedgerService({ store: new InMemoryCreditLedgerStore() });
+  private readonly ledger = new CreditLedgerService({
+    store: new InMemoryCreditLedgerStore(),
+    eventDelivery: "development",
+  });
   private readonly fixtureDates = new Map<string, Date>();
 
   async snapshot(tenantId: string): Promise<CreditOperationsSnapshot> {

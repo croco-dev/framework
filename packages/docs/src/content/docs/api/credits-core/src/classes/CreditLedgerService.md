@@ -205,6 +205,22 @@ title: "CreditLedgerService"
 
 ***
 
+### publishPendingEvents()
+
+> **publishPendingEvents**(`limit?`): `Promise`\<`number`\>
+
+#### Parameters
+
+##### limit?
+
+`number` = `100`
+
+#### Returns
+
+`Promise`\<`number`\>
+
+***
+
 ### refundCredits()
 
 > **refundCredits**(`input`): `Promise`\<[`CreditCommandResult`](/api/credits-core/src/type-aliases/creditcommandresult/)\>

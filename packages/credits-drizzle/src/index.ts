@@ -13,6 +13,7 @@ export {
   creditAllocations,
   creditGrantLots,
   creditIdempotencyRecords,
+  creditLedgerEventIntents,
   creditReservationAllocations,
   creditReservations,
   creditTransactions,
