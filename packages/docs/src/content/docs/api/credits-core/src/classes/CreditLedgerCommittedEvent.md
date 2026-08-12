@@ -15,13 +15,21 @@ title: "CreditLedgerCommittedEvent"
 
 ### Constructor
 
-> **new CreditLedgerCommittedEvent**(`data`): `CreditLedgerCommittedEvent`
+> **new CreditLedgerCommittedEvent**(`data`, `eventId?`, `occurredAt?`): `CreditLedgerCommittedEvent`
 
 #### Parameters
 
 ##### data
 
 [`CreditLedgerCommittedEventData`](/api/credits-core/src/type-aliases/creditledgercommittedeventdata/)
+
+##### eventId?
+
+`string`
+
+##### occurredAt?
+
+`Date`
 
 #### Returns
 

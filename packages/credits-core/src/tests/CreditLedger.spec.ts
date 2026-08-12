@@ -77,9 +77,14 @@ describe("CreditLedgerService", () => {
     store = new InMemoryCreditLedgerStore();
     service = new CreditLedgerService({
       store,
+      eventDelivery: "development",
       clock: () => new Date("2026-07-26T12:00:00.000Z"),
       idGenerator: () => `id-${++sequence}`,
     });
+  });
+
+  it("requires volatile stores to be selected explicitly for development", () => {
+    expect(() => new CreditLedgerService({ store })).toThrow(InvalidCreditCommandProblem);
   });
 
   it("publishes a stable ledger event only after the store command commits", async () => {
@@ -95,16 +100,16 @@ describe("CreditLedgerService", () => {
     const events: DomainEvent[] = [];
     service = new CreditLedgerService({
       store: new ObservedStore(),
+      eventDelivery: "development",
       clock: () => new Date("2026-07-26T12:00:00.000Z"),
       idGenerator: () => `event-id-${++sequence}`,
       eventPublisher: {
-        publishAfterCommit(event, onPublished) {
+        publishIdempotentlyAfterCommit() {
+          throw new EventAfterCommitRequiresActiveTransactionProblem();
+        },
+        async publishIdempotently(event) {
           expect(commandCommitted).toBe(true);
           events.push(event);
-          onPublished?.();
-        },
-        async publishNow() {
-          throw new InvalidCreditAmountProblem("unexpected immediate publication");
         },
       },
     });
@@ -130,6 +135,8 @@ describe("CreditLedgerService", () => {
     });
 
     expect(events).toHaveLength(1);
+    expect(events[0]?.eventId).toMatch(/^[a-f0-9]{64}$/);
+    expect(events[0]?.timestamp).toEqual(new Date("2026-07-26T12:00:00.000Z"));
     expect(events[0]).toBeInstanceOf(CreditLedgerCommittedEvent);
     expect((events[0] as CreditLedgerCommittedEvent).data).toEqual({
       accountId: opened.account.id,
@@ -140,54 +147,19 @@ describe("CreditLedgerService", () => {
     });
   });
 
-  it("publishes immediately only when no active transaction exists", async () => {
-    const immediate: DomainEvent[] = [];
-    service = new CreditLedgerService({
-      store,
-      clock: () => new Date("2026-07-26T12:00:00.000Z"),
-      idGenerator: () => `fallback-id-${++sequence}`,
-      eventPublisher: {
-        publishAfterCommit() {
-          throw new EventAfterCommitRequiresActiveTransactionProblem();
-        },
-        async publishNow(event) {
-          immediate.push(event);
-        },
-      },
-    });
-
-    await service.openAccount({
-      tenantId: "tenant-fallback",
-      idempotencyKey: "fallback-open",
-      reference: ref("fallback-open"),
-    });
-    const account = await service.openAccount({
-      tenantId: "tenant-fallback",
-      idempotencyKey: "fallback-open-again",
-      reference: ref("fallback-open-again"),
-    });
-    await service.grantCredits({
-      accountId: account.account.id,
-      amount: creditAmount("1"),
-      idempotencyKey: "fallback-grant",
-      reference: ref("fallback-grant"),
-    });
-
-    expect(immediate).toHaveLength(1);
-  });
-
-  it("retries a failed post-commit publication without moving the balance twice", async () => {
+  it("replays a retained event intent on a new service without moving the balance twice", async () => {
     const published: DomainEvent[] = [];
     let publicationAttempts = 0;
     service = new CreditLedgerService({
       store,
+      eventDelivery: "development",
       clock: () => new Date("2026-07-26T12:00:00.000Z"),
       idGenerator: () => `retry-event-id-${++sequence}`,
       eventPublisher: {
-        publishAfterCommit() {
+        publishIdempotentlyAfterCommit() {
           throw new EventAfterCommitRequiresActiveTransactionProblem();
         },
-        async publishNow(event) {
+        async publishIdempotently(event) {
           publicationAttempts++;
           if (publicationAttempts === 1) {
             throw new InvalidCreditAmountProblem("simulated event transport failure");
@@ -213,29 +185,47 @@ describe("CreditLedgerService", () => {
       position: 1,
       available: "5",
     });
-    await expect(service.grantCredits(grantInput)).resolves.toMatchObject({
+    const restartedService = new CreditLedgerService({
+      store,
+      eventDelivery: "development",
+      clock: () => new Date("2026-07-26T12:00:00.000Z"),
+      idGenerator: () => `restarted-event-id-${++sequence}`,
+      eventPublisher: {
+        publishIdempotentlyAfterCommit() {
+          throw new EventAfterCommitRequiresActiveTransactionProblem();
+        },
+        async publishIdempotently(event) {
+          publicationAttempts++;
+          published.push(event);
+        },
+      },
+    });
+    await expect(restartedService.grantCredits(grantInput)).resolves.toMatchObject({
       replayed: true,
     });
 
     expect(publicationAttempts).toBe(2);
     expect(published).toHaveLength(1);
+    expect(published[0]?.eventId).toMatch(/^[a-f0-9]{64}$/);
+    expect(published[0]?.timestamp).toEqual(new Date("2026-07-26T12:00:00.000Z"));
     expect(await service.getBalance(opened.account.id)).toMatchObject({
       position: 1,
       available: "5",
     });
   });
 
-  it("keeps a scheduled event pending until post-commit publication is acknowledged", async () => {
-    const acknowledgements: Array<() => void> = [];
+  it("keeps scheduled intent pending until idempotent publication is acknowledged", async () => {
+    const acknowledgements: Array<() => Promise<void>> = [];
     service = new CreditLedgerService({
       store,
+      eventDelivery: "development",
       clock: () => new Date("2026-07-26T12:00:00.000Z"),
       idGenerator: () => `scheduled-event-id-${++sequence}`,
       eventPublisher: {
-        publishAfterCommit(_event, onPublished) {
-          if (onPublished) acknowledgements.push(onPublished);
+        publishIdempotentlyAfterCommit(_event, onPublished) {
+          acknowledgements.push(onPublished);
         },
-        async publishNow() {
+        async publishIdempotently() {
           throw new InvalidCreditAmountProblem("unexpected immediate publication");
         },
       },
@@ -256,7 +246,7 @@ describe("CreditLedgerService", () => {
     await service.grantCredits(input);
     expect(acknowledgements).toHaveLength(2);
 
-    acknowledgements[1]?.();
+    await acknowledgements[1]?.();
     await service.grantCredits(input);
     expect(acknowledgements).toHaveLength(2);
     expect(await service.getBalance(opened.account.id)).toMatchObject({
@@ -265,43 +255,52 @@ describe("CreditLedgerService", () => {
     });
   });
 
-  it("bounds pending event retries and reports eviction", async () => {
-    const evicted: string[] = [];
-    service = new CreditLedgerService({
+  it("retains every development event intent under queue pressure", async () => {
+    const producer = new CreditLedgerService({
       store,
+      eventDelivery: "development",
       clock: () => new Date("2026-07-26T12:00:00.000Z"),
       idGenerator: () => `bounded-event-id-${++sequence}`,
-      pendingEventLimit: 1,
-      onPendingEventEvicted: (idempotencyKey) => evicted.push(idempotencyKey),
-      eventPublisher: {
-        publishAfterCommit() {
-          throw new InvalidCreditAmountProblem("simulated scheduling failure");
-        },
-        async publishNow() {},
-      },
     });
-    const opened = await service.openAccount({
+    const opened = await producer.openAccount({
       tenantId: "tenant-bounded-event",
       idempotencyKey: "bounded-event-open",
       reference: ref("bounded-event-open"),
     });
 
     for (const id of ["first", "second"]) {
-      await expect(
-        service.grantCredits({
-          accountId: opened.account.id,
-          amount: creditAmount("1"),
-          idempotencyKey: `bounded-event-${id}`,
-          reference: ref(`bounded-event-${id}`),
-        }),
-      ).rejects.toThrow(CreditEventPublicationProblem);
+      await producer.grantCredits({
+        accountId: opened.account.id,
+        amount: creditAmount("1"),
+        idempotencyKey: `bounded-event-${id}`,
+        reference: ref(`bounded-event-${id}`),
+      });
     }
 
-    expect(evicted).toEqual(["bounded-event-first"]);
+    const published: DomainEvent[] = [];
+    const recovery = new CreditLedgerService({
+      store,
+      eventDelivery: "development",
+      eventPublisher: {
+        publishIdempotentlyAfterCommit() {
+          throw new InvalidCreditAmountProblem("unexpected scheduled publication");
+        },
+        async publishIdempotently(event) {
+          published.push(event);
+        },
+      },
+    });
+    await expect(recovery.publishPendingEvents()).resolves.toBe(2);
+    expect(published).toHaveLength(2);
+    await expect(recovery.publishPendingEvents()).resolves.toBe(0);
     expect(await service.getBalance(opened.account.id)).toMatchObject({
       position: 2,
       available: "2",
     });
+  });
+
+  it("fails instead of reporting a drained queue without a publisher", async () => {
+    await expect(service.publishPendingEvents()).rejects.toThrow(InvalidCreditCommandProblem);
   });
 
   it("rejects expired and meter-restricted grants before balance movement", async () => {
@@ -482,6 +481,7 @@ describe("CreditLedgerService", () => {
     });
     const collidingService = new CreditLedgerService({
       store,
+      eventDelivery: "development",
       clock: () => new Date("2026-07-26T12:00:00.000Z"),
       idGenerator: () => "id-2",
     });
@@ -587,6 +587,7 @@ describe("CreditLedgerService", () => {
     let now = new Date("2026-07-26T00:00:00.000Z");
     service = new CreditLedgerService({
       store,
+      eventDelivery: "development",
       clock: () => now,
       idGenerator: () => `replay-id-${++sequence}`,
     });

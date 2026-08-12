@@ -36,6 +36,7 @@ export function createCreditLedgerStoreConformanceSuite(
     const store = await options.createStore();
     return new CreditLedgerService({
       store,
+      eventDelivery: store.eventIntentDurability === "persistent" ? "durable" : "development",
       clock: () => new Date("2026-07-26T00:00:00.000Z"),
       idGenerator: () => `${options.storeName}-${++sequence}`,
     });

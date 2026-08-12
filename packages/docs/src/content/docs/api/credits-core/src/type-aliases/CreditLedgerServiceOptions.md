@@ -19,6 +19,12 @@ title: "CreditLedgerServiceOptions"
 
 ***
 
+### eventDelivery?
+
+> `readonly` `optional` **eventDelivery?**: `"development"` \| `"durable"`
+
+***
+
 ### eventPublisher?
 
 > `readonly` `optional` **eventPublisher?**: [`CreditLedgerEventPublisher`](/api/credits-core/src/interfaces/creditledgereventpublisher/)
@@ -32,28 +38,6 @@ title: "CreditLedgerServiceOptions"
 #### Returns
 
 `string`
-
-***
-
-### onPendingEventEvicted?
-
-> `readonly` `optional` **onPendingEventEvicted?**: (`idempotencyKey`) => `void`
-
-#### Parameters
-
-##### idempotencyKey
-
-`string`
-
-#### Returns
-
-`void`
-
-***
-
-### pendingEventLimit?
-
-> `readonly` `optional` **pendingEventLimit?**: `number`
 
 ***
 

@@ -1,4 +1,8 @@
-import type { CreditReservation, CreditTransactionKind } from "@croco/credits-core";
+import type {
+  CreditLedgerCommittedEventData,
+  CreditReservation,
+  CreditTransactionKind,
+} from "@croco/credits-core";
 import { sql } from "drizzle-orm";
 import {
   bigint,
@@ -232,6 +236,26 @@ export const creditIdempotencyRecords = pgTable("credit_idempotency_records", {
   result: jsonb("result").notNull(),
   committedAt: timestamp("committed_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const creditLedgerEventIntents = pgTable(
+  "credit_ledger_event_intents",
+  {
+    eventId: text("event_id").primaryKey(),
+    idempotencyKey: text("idempotency_key")
+      .notNull()
+      .references(() => creditIdempotencyRecords.key),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
+    data: jsonb("data").notNull().$type<CreditLedgerCommittedEventData>(),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("credit_ledger_event_intents_idempotency_unique").on(table.idempotencyKey),
+    index("credit_ledger_event_intents_pending_idx")
+      .on(table.createdAt, table.eventId)
+      .where(sql`${table.publishedAt} is null`),
+  ],
+);
 
 export type CreditAccountRow = typeof creditAccounts.$inferSelect;
 export type CreditTransactionRow = typeof creditTransactions.$inferSelect;

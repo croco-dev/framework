@@ -32,6 +32,7 @@ import { CreditLedgerService, InMemoryCreditLedgerStore, creditAmount } from "@c
 
 const credits = new CreditLedgerService({
   store: new InMemoryCreditLedgerStore(),
+  eventDelivery: "development",
   eventPublisher,
 });
 
@@ -119,16 +120,18 @@ do {
 
 ## Events and adapter contract
 
-`CreditLedgerService` publishes `CreditLedgerCommittedEvent` for transaction-producing commands
-through `publishAfterCommit()`. When no transaction context exists, it publishes immediately after
-the in-memory command has committed. If immediate publication fails,
-`CreditEventPublicationProblem` reports that the ledger command already committed; retrying the same
-command on the same service instance republishes the pending event without moving the balance again.
-The in-process retry buffer is bounded by `pendingEventLimit` (default `1000`) and reports evictions
-through `onPendingEventEvicted` or a default warning. This buffer is a process-local recovery aid, not
-a durable delivery mechanism.
-Persistent adapters should execute `CreditLedgerStore.execute()` inside the application transaction
-or a durable outbox boundary so pending delivery survives process restarts.
+`CreditLedgerStore.execute()` must atomically persist every transaction-producing command and its
+`CreditLedgerCommittedEvent` intent. `CreditLedgerService` schedules the stable event identity through
+`publishIdempotentlyAfterCommit()` when an ambient transaction exists and otherwise calls
+`publishIdempotently()` after the store commit. Publication acknowledgement marks the stored intent as
+published; a crash before acknowledgement leaves it available to command replay or
+`publishPendingEvents()` without applying the balance movement twice.
+
+The default service mode is `durable` and fails fast unless the store reports persistent event-intent
+capability. `InMemoryCreditLedgerStore` is intentionally available only through the explicit
+`eventDelivery: "development"` mode. Its intent queue is volatile and cannot be used as production
+delivery evidence. Publishers must deduplicate by `event.eventId` because a crash after transport
+acceptance but before acknowledgement can produce an at-least-once retry.
 
 Adapters must pass the exported conformance suite:
 

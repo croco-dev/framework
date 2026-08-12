@@ -20,6 +20,12 @@ title: "CreditLedgerStore"
 
 `CreditLedgerStore`
 
+## Properties
+
+### eventIntentDurability
+
+> `abstract` `readonly` **eventIntentDurability**: `"persistent"` \| `"volatile"`
+
 ## Methods
 
 ### execute()
@@ -104,6 +110,22 @@ title: "CreditLedgerStore"
 
 ***
 
+### getPendingEventIntent()
+
+> `abstract` **getPendingEventIntent**(`idempotencyKey`): `Promise`\<[`CreditLedgerEventIntent`](/api/credits-core/src/type-aliases/creditledgereventintent/) \| `null`\>
+
+#### Parameters
+
+##### idempotencyKey
+
+`string`
+
+#### Returns
+
+`Promise`\<[`CreditLedgerEventIntent`](/api/credits-core/src/type-aliases/creditledgereventintent/) \| `null`\>
+
+***
+
 ### getReservation()
 
 > `abstract` **getReservation**(`accountId`, `reservationId`): `Promise`\<[`CreditReservation`](/api/credits-core/src/type-aliases/creditreservation/) \| `null`\>
@@ -121,3 +143,35 @@ title: "CreditLedgerStore"
 #### Returns
 
 `Promise`\<[`CreditReservation`](/api/credits-core/src/type-aliases/creditreservation/) \| `null`\>
+
+***
+
+### listPendingEventIntents()
+
+> `abstract` **listPendingEventIntents**(`limit?`): `Promise`\<readonly [`CreditLedgerEventIntent`](/api/credits-core/src/type-aliases/creditledgereventintent/)[]\>
+
+#### Parameters
+
+##### limit?
+
+`number`
+
+#### Returns
+
+`Promise`\<readonly [`CreditLedgerEventIntent`](/api/credits-core/src/type-aliases/creditledgereventintent/)[]\>
+
+***
+
+### markEventIntentPublished()
+
+> `abstract` **markEventIntentPublished**(`eventId`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### eventId
+
+`string`
+
+#### Returns
+
+`Promise`\<`void`\>

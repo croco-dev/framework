@@ -27,6 +27,15 @@ const txManager = new TxManager(createDrizzleTxAdapter(db));
 
 const credits = new CreditLedgerService({
   store: new DrizzleCreditLedgerStore(db, txManager),
+  eventPublisher: {
+    publishIdempotentlyAfterCommit(event, onPublished) {
+      txManager.onAfterCommit(async () => {
+        await publishToBrokerIdempotently(event);
+        await onPublished();
+      });
+    },
+    publishIdempotently: publishToBrokerIdempotently,
+  },
 });
 ```
 
@@ -43,8 +52,23 @@ adapter:
 - locks the account row before reading balances, grant lots, or reservations;
 - appends ledger transactions and allocations before atomically updating the account projection;
 - stores the committed command result with its semantic fingerprint;
-- lets `CreditLedgerService` register its event against the same outer transaction, or returns only after
-  its own transaction commits.
+- inserts a stable `credit_ledger_event_intents` row in the same transaction as the ledger mutation and
+  idempotency record;
+- lets `CreditLedgerService` register idempotent publication against the same outer transaction, or
+  publishes only after the adapter-owned transaction commits.
+
+### Existing-row migration
+
+`createCreditsSchema` backfills an unpublished intent for every existing idempotency record whose stored
+result contains transactions. Those rows have unknown historical delivery state, so the safe migration is
+operator-controlled at-least-once recovery: first reconcile downstream consumers by the immutable
+`transactionIds` in each event because previously published events had unrelated random event IDs. Then
+deploy an idempotent publisher, run `publishPendingEvents()` in bounded batches until it returns `0`, and
+retain normal downstream deduplication by the new stable event ID. Do not publish legacy unknown-state
+rows to a consumer that cannot semantically deduplicate transaction IDs, and do not mark them published
+based only on their age or ledger position. Rerun the idempotent migration after all legacy writers have
+stopped. The current adapter also repairs a missing intent atomically whenever its idempotency key is
+replayed, closing gaps created during a rolling deployment without repeating the balance movement.
 
 The supported isolation level is PostgreSQL `READ COMMITTED` plus explicit account/lot/reservation row
 locking. Writes to one account are serialized, so concurrent reservations cannot spend the same grant

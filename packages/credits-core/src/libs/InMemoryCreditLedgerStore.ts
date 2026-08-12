@@ -10,6 +10,11 @@ import {
 } from "./amount";
 import { CreditLedgerStore } from "./CreditLedgerStore";
 import {
+  cloneCreditLedgerEventIntent,
+  createCreditLedgerEventIntent,
+  type CreditLedgerEventIntent,
+} from "./eventIntent";
+import {
   CreditAccountMismatchProblem,
   CreditAccountNotFoundProblem,
   CreditDuplicateConflictProblem,
@@ -256,11 +261,13 @@ function isAfterCursor(lot: LotState, cursor: CreditExpiryCursor | undefined): b
 }
 
 export class InMemoryCreditLedgerStore extends CreditLedgerStore {
+  readonly eventIntentDurability = "volatile" as const;
   private readonly accounts = new Map<CreditAccountId, AccountState>();
   private readonly accountsByTenant = new Map<string, Map<string, CreditAccountId>>();
   private readonly idempotency = new Map<string, IdempotencyRecord>();
   private readonly transactionAccounts = new Map<CreditTransactionId, CreditAccountId>();
   private readonly reservationAccounts = new Map<CreditReservationId, CreditAccountId>();
+  private readonly eventIntents = new Map<string, CreditLedgerEventIntent>();
 
   async execute(command: CreditLedgerCommand): Promise<CreditCommandResult> {
     this.validateCommand(command);
@@ -282,7 +289,29 @@ export class InMemoryCreditLedgerStore extends CreditLedgerStore {
       fingerprint,
       result: cloneResult(result),
     });
+    const eventIntent = createCreditLedgerEventIntent(command, result);
+    if (eventIntent) this.eventIntents.set(eventIntent.eventId, eventIntent);
     return cloneResult(result);
+  }
+
+  async listPendingEventIntents(limit = 100): Promise<readonly CreditLedgerEventIntent[]> {
+    if (!Number.isInteger(limit) || limit < 1 || limit > 1_000) {
+      throw new InvalidCreditCommandProblem(
+        "event intent limit must be an integer between 1 and 1000",
+      );
+    }
+    return [...this.eventIntents.values()].slice(0, limit).map(cloneCreditLedgerEventIntent);
+  }
+
+  async getPendingEventIntent(idempotencyKey: string): Promise<CreditLedgerEventIntent | null> {
+    const intent = [...this.eventIntents.values()].find(
+      (candidate) => candidate.idempotencyKey === idempotencyKey,
+    );
+    return intent ? cloneCreditLedgerEventIntent(intent) : null;
+  }
+
+  async markEventIntentPublished(eventId: string): Promise<void> {
+    this.eventIntents.delete(eventId);
   }
 
   async getAccount(accountId: CreditAccountId): Promise<CreditAccount | null> {

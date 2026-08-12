@@ -7044,6 +7044,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "createCreditLedgerEventIntent",
+              "exportKind": "named",
+              "source": "./libs/eventIntent",
+              "declarationKind": "function"
+            },
+            {
               "name": "createCreditLedgerStoreConformanceSuite",
               "exportKind": "named",
               "source": "./libs/conformance",
@@ -7286,6 +7292,11 @@
               "source": "./libs/events/CreditLedgerCommittedEvent"
             },
             {
+              "name": "CreditLedgerEventIntent",
+              "exportKind": "named",
+              "source": "./libs/eventIntent"
+            },
+            {
               "name": "CreditLedgerEventPublisher",
               "exportKind": "named",
               "source": "./libs/CreditLedgerService"
@@ -7458,6 +7469,12 @@
             },
             {
               "name": "creditIdempotencyRecords",
+              "exportKind": "named",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "creditLedgerEventIntents",
               "exportKind": "named",
               "source": "./libs/schema",
               "declarationKind": "const"
