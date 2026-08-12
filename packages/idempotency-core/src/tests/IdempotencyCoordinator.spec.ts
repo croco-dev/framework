@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   createIdempotencyCoordinator,
   createIdempotentHandler,
+  type DerivedIdempotencyKey,
   deriveHttpIdempotencyKey,
   deriveIdempotencyKey,
   deriveWebhookIdempotencyKey,
@@ -9,6 +10,7 @@ import {
   IdempotencyCoordinator,
   type IdempotencyFailOptions,
   type IdempotencyFailedRecord,
+  type IdempotencyReserveOptions,
   InMemoryIdempotencyStore,
   InvalidIdempotencyKeyProblem,
   InvalidIdempotencyTtlProblem,
@@ -223,6 +225,7 @@ describe("IdempotencyCoordinator", () => {
 
   it("stores failure evidence and allows retry after a transient Problem", async () => {
     const store = new InMemoryIdempotencyStore<string>();
+    const fail = vi.spyOn(store, "fail");
     const coordinator = createIdempotencyCoordinator({ store });
     const key = deriveIdempotencyKey({
       namespace: "retry",
@@ -244,6 +247,223 @@ describe("IdempotencyCoordinator", () => {
 
     expect(retry).toMatchObject({ outcome: "executed", response: "created" });
     expect(calls).toBe(2);
+    expect(fail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadata: { idempotencyFailurePhase: "handler" },
+      }),
+    );
+  });
+
+  it.each([undefined, 60_000])(
+    "makes a reserved audit failure retryable when ttlMs is %s",
+    async (ttlMs) => {
+      const auditFailure = Object.assign(new Error("audit unavailable"), {
+        code: "AUDIT_UNAVAILABLE",
+        status: 503,
+      });
+      let auditAvailable = false;
+      const store = new InMemoryIdempotencyStore<string>();
+      const fail = vi.spyOn(store, "fail");
+      const coordinator = createIdempotencyCoordinator({
+        store,
+        auditSink: {
+          recordIdempotency: (event) => {
+            if (event.type === "idempotency.reserved" && !auditAvailable) {
+              throw auditFailure;
+            }
+          },
+        },
+      });
+      const key = deriveIdempotencyKey({
+        namespace: "audit-recovery",
+        source: { kind: "explicit", key: "key-1", fingerprint: "payload-a" },
+      });
+      const handler = vi.fn(() => "created");
+
+      await expect(
+        coordinator.execute({ key, ttlMs, metadata: { operation: "create" } }, handler),
+      ).rejects.toBe(auditFailure);
+
+      expect(handler).not.toHaveBeenCalled();
+      expect(fail).toHaveBeenCalledWith({
+        key,
+        reservationId: "reservation-1",
+        problem: {
+          code: "AUDIT_UNAVAILABLE",
+          status: 503,
+          detail: "audit unavailable",
+        },
+        retryable: true,
+        ttlMs,
+        metadata: {
+          operation: "create",
+          idempotencyFailurePhase: "reserved-audit",
+        },
+      });
+
+      auditAvailable = true;
+      const recovered = await coordinator.execute({ key, ttlMs }, handler);
+
+      expect(recovered).toMatchObject({ outcome: "executed", response: "created" });
+      expect(handler).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it("keeps a failed-state write error as secondary evidence on the original audit failure", async () => {
+    const auditFailure = new Error("audit unavailable");
+    const failureRecordError = new InvalidIdempotencyKeyProblem("failure record unavailable");
+
+    class FailureRecordStore<TResult> extends InMemoryIdempotencyStore<TResult> {
+      override async fail(): Promise<never> {
+        throw failureRecordError;
+      }
+    }
+
+    const store = new FailureRecordStore<string>();
+    const coordinator = createIdempotencyCoordinator({
+      store,
+      auditSink: {
+        recordIdempotency: () => {
+          throw auditFailure;
+        },
+      },
+    });
+    const key = deriveIdempotencyKey({
+      namespace: "audit-recovery",
+      source: { kind: "explicit", key: "key-1", fingerprint: "payload-a" },
+    });
+    const handler = vi.fn(() => "must-not-run");
+
+    await expect(coordinator.execute({ key }, handler)).rejects.toBe(auditFailure);
+
+    expect(handler).not.toHaveBeenCalled();
+    expect(Object.getOwnPropertyDescriptor(auditFailure, "idempotencyFailureRecordError")).toEqual({
+      configurable: true,
+      enumerable: false,
+      value: failureRecordError,
+      writable: false,
+    });
+  });
+
+  it("transitions the reservation when audit failure diagnostics have hostile getters", async () => {
+    const auditFailure = new Error("audit unavailable");
+    Object.defineProperty(auditFailure, "code", {
+      get: () => {
+        throw new Error("must not escape diagnostic extraction");
+      },
+    });
+    let auditAvailable = false;
+    const store = new InMemoryIdempotencyStore<string>();
+    const fail = vi.spyOn(store, "fail");
+    const coordinator = createIdempotencyCoordinator({
+      store,
+      auditSink: {
+        recordIdempotency: () => {
+          if (!auditAvailable) {
+            throw auditFailure;
+          }
+        },
+      },
+    });
+    const key = deriveIdempotencyKey({
+      namespace: "audit-recovery",
+      source: { kind: "explicit", key: "hostile-error", fingerprint: "payload-a" },
+    });
+    const handler = vi.fn(() => "created");
+
+    await expect(coordinator.execute({ key }, handler)).rejects.toBe(auditFailure);
+
+    expect(handler).not.toHaveBeenCalled();
+    expect(fail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        problem: { code: "unknown", detail: "audit unavailable" },
+        retryable: true,
+      }),
+    );
+
+    auditAvailable = true;
+    await expect(coordinator.execute({ key }, handler)).resolves.toMatchObject({
+      outcome: "executed",
+      response: "created",
+    });
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+
+  it("transitions the reservation when failure metadata has hostile getters", async () => {
+    class MetadataIsolatingStore<TResult> extends InMemoryIdempotencyStore<TResult> {
+      override reserve(key: DerivedIdempotencyKey, options: IdempotencyReserveOptions = {}) {
+        return super.reserve(key, { ...options, metadata: {} });
+      }
+    }
+
+    const auditFailure = new Error("audit unavailable");
+    let auditAvailable = false;
+    const store = new MetadataIsolatingStore<string>();
+    const fail = vi.spyOn(store, "fail");
+    const coordinator = createIdempotencyCoordinator({
+      store,
+      auditSink: {
+        recordIdempotency: () => {
+          if (!auditAvailable) {
+            throw auditFailure;
+          }
+        },
+      },
+    });
+    const key = deriveIdempotencyKey({
+      namespace: "audit-recovery",
+      source: { kind: "explicit", key: "hostile-metadata", fingerprint: "payload-a" },
+    });
+    const metadata = Object.defineProperty({}, "payload", {
+      enumerable: true,
+      get: () => {
+        throw new Error("must not escape metadata extraction");
+      },
+    });
+    const handler = vi.fn(() => "created");
+
+    await expect(coordinator.execute({ key, metadata }, handler)).rejects.toBe(auditFailure);
+
+    expect(handler).not.toHaveBeenCalled();
+    expect(fail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadata: { idempotencyFailurePhase: "reserved-audit" },
+        retryable: true,
+      }),
+    );
+
+    auditAvailable = true;
+    await expect(coordinator.execute({ key }, handler)).resolves.toMatchObject({
+      outcome: "executed",
+      response: "created",
+    });
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+
+  it("preserves a non-extensible audit failure when failed-state recording also fails", async () => {
+    const auditFailure = Object.freeze(new Error("audit unavailable"));
+    const failureRecordError = new InvalidIdempotencyKeyProblem("failure record unavailable");
+
+    class FailureRecordStore<TResult> extends InMemoryIdempotencyStore<TResult> {
+      override async fail(): Promise<never> {
+        throw failureRecordError;
+      }
+    }
+
+    const coordinator = createIdempotencyCoordinator({
+      store: new FailureRecordStore<string>(),
+      auditSink: {
+        recordIdempotency: () => {
+          throw auditFailure;
+        },
+      },
+    });
+    const key = deriveIdempotencyKey({
+      namespace: "audit-recovery",
+      source: { kind: "explicit", key: "frozen-error", fingerprint: "payload-a" },
+    });
+
+    await expect(coordinator.execute({ key }, () => "must-not-run")).rejects.toBe(auditFailure);
   });
 
   it("does not mark reservations failed when commit fails after handler success", async () => {

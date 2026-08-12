@@ -2833,15 +2833,15 @@
     {
       "packageName": "@croco/idempotency-core",
       "file": "packages/idempotency-core/src/libs/IdempotencyCoordinator.ts",
-      "line": 101,
+      "line": 110,
       "column": 29,
       "code": "TS2379",
-      "message": "Argument of type '{ key: DerivedIdempotencyKey; reservationId: string; problem: { readonly code: string; readonly status?: number; readonly detail?: string; }; retryable: true; ttlMs: number | undefined; metadata: Record<...> | undefined; }' is not assignable to parameter of type 'IdempotencyFailOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
+      "message": "Argument of type '{ key: DerivedIdempotencyKey; reservationId: string; problem: { readonly code: string; readonly status?: number; readonly detail?: string; }; retryable: true; ttlMs: number | undefined; metadata: Record<...>; }' is not assignable to parameter of type 'IdempotencyFailOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
     },
     {
       "packageName": "@croco/idempotency-core",
       "file": "packages/idempotency-core/src/libs/IdempotencyCoordinator.ts",
-      "line": 177,
+      "line": 188,
       "column": 3,
       "code": "TS2375",
       "message": "Type '{ detail: string | undefined; status?: number; code: string; }' is not assignable to type '{ readonly code: string; readonly status?: number; readonly detail?: string; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -2849,7 +2849,7 @@
     {
       "packageName": "@croco/idempotency-core",
       "file": "packages/idempotency-core/src/libs/IdempotencyCoordinator.ts",
-      "line": 66,
+      "line": 74,
       "column": 44,
       "code": "TS2379",
       "message": "Argument of type '{ key: DerivedIdempotencyKey; reservationId: string; response: TResult; ttlMs: number | undefined; metadata: Record<string, unknown> | undefined; }' is not assignable to parameter of type 'IdempotencyCommitOptions<TResult>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -2857,7 +2857,7 @@
     {
       "packageName": "@croco/idempotency-core",
       "file": "packages/idempotency-core/src/libs/IdempotencyCoordinator.ts",
-      "line": 83,
+      "line": 91,
       "column": 52,
       "code": "TS2379",
       "message": "Argument of type '{ metadata: Record<string, unknown> | undefined; ttlMs: number | undefined; }' is not assignable to parameter of type 'IdempotencyReserveOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."

@@ -13,6 +13,8 @@ export type IdempotencyCoordinatorOptions<TResult = unknown> = {
   readonly auditSink?: IdempotencyAuditSink;
 };
 
+type IdempotencyExecutionFailurePhase = "reserved-audit" | "handler";
+
 export class IdempotencyCoordinator<TResult = unknown> {
   private readonly store: IdempotencyStore<TResult>;
   private readonly auditSink: IdempotencyAuditSink | undefined;
@@ -53,13 +55,19 @@ export class IdempotencyCoordinator<TResult = unknown> {
       };
     }
 
-    await this.record("idempotency.reserved", request, reservation.record.metadata);
-
     let response: TResult;
+    let failurePhase: IdempotencyExecutionFailurePhase = "reserved-audit";
     try {
+      await this.record("idempotency.reserved", request, reservation.record.metadata);
+      failurePhase = "handler";
       response = await handler();
     } catch (error) {
-      await this.recordHandlerFailure(request, reservation.reservation.reservationId, error);
+      await this.recordExecutionFailure(
+        request,
+        reservation.reservation.reservationId,
+        failurePhase,
+        error,
+      );
       throw error;
     }
 
@@ -92,9 +100,10 @@ export class IdempotencyCoordinator<TResult = unknown> {
     }
   }
 
-  private async recordHandlerFailure(
+  private async recordExecutionFailure(
     request: IdempotencyExecutionRequest,
     reservationId: string,
+    phase: IdempotencyExecutionFailurePhase,
     error: unknown,
   ): Promise<void> {
     try {
@@ -104,7 +113,7 @@ export class IdempotencyCoordinator<TResult = unknown> {
         problem: toProblemSummary(error),
         retryable: true,
         ttlMs: request.ttlMs,
-        metadata: request.metadata,
+        metadata: createFailureMetadata(request, phase),
       });
     } catch (failureRecordError) {
       attachFailureRecordError(error, failureRecordError);
@@ -134,11 +143,15 @@ function attachFailureRecordError(error: unknown, failureRecordError: unknown): 
     return;
   }
 
-  Object.defineProperty(error, "idempotencyFailureRecordError", {
-    configurable: true,
-    enumerable: false,
-    value: failureRecordError,
-  });
+  try {
+    Object.defineProperty(error, "idempotencyFailureRecordError", {
+      configurable: true,
+      enumerable: false,
+      value: failureRecordError,
+    });
+  } catch {
+    return;
+  }
 }
 
 export function createIdempotencyCoordinator<TResult>(
@@ -167,21 +180,39 @@ function toProblemSummary(error: unknown): {
     };
   }
 
-  const candidate = error as {
-    readonly code?: unknown;
-    readonly status?: unknown;
-    readonly detail?: unknown;
-    readonly message?: unknown;
-  };
+  const code = readDiagnosticProperty(error, "code");
+  const status = readDiagnosticProperty(error, "status");
+  const detail = readDiagnosticProperty(error, "detail");
+  const message = readDiagnosticProperty(error, "message");
 
   return {
-    code: typeof candidate.code === "string" ? candidate.code : "unknown",
-    ...(typeof candidate.status === "number" ? { status: candidate.status } : {}),
-    detail:
-      typeof candidate.detail === "string"
-        ? candidate.detail
-        : typeof candidate.message === "string"
-          ? candidate.message
-          : undefined,
+    code: typeof code === "string" ? code : "unknown",
+    ...(typeof status === "number" ? { status } : {}),
+    detail: typeof detail === "string" ? detail : typeof message === "string" ? message : undefined,
   };
+}
+
+function readDiagnosticProperty(
+  error: object,
+  property: "code" | "status" | "detail" | "message",
+): unknown {
+  try {
+    return (error as Record<string, unknown>)[property];
+  } catch {
+    return undefined;
+  }
+}
+
+function createFailureMetadata(
+  request: IdempotencyExecutionRequest,
+  phase: IdempotencyExecutionFailurePhase,
+): Record<string, unknown> {
+  try {
+    return {
+      ...request.metadata,
+      idempotencyFailurePhase: phase,
+    };
+  } catch {
+    return { idempotencyFailurePhase: phase };
+  }
 }
