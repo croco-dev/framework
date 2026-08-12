@@ -340,7 +340,7 @@ describe("CloudflareImagesProvider", () => {
   });
 
   describe("get", () => {
-    it("should download image successfully", async () => {
+    it("should download the authenticated base image blob without using the delivery variant", async () => {
       const mockImageData = Buffer.from("mock-image-data");
       const mockResponse = {
         ok: true,
@@ -353,7 +353,12 @@ describe("CloudflareImagesProvider", () => {
 
       expect(result).toEqual(mockImageData);
       expect(mockFetch).toHaveBeenCalledWith(
-        "https://imagedelivery.net/test-account-hash/test-image-id/public",
+        "https://api.cloudflare.com/client/v4/accounts/test-account-id/images/v1/test-image-id/blob",
+        {
+          headers: {
+            Authorization: "Bearer test-api-token",
+          },
+        },
       );
     });
 
@@ -368,7 +373,44 @@ describe("CloudflareImagesProvider", () => {
       await expect(provider.get("non-existent-id")).rejects.toThrow(FileNotFoundProblem);
     });
 
-    it("should use custom domain when configured", async () => {
+    it.each([
+      [500, "storage-cloudflare/retryable-upstream", true],
+      [400, "storage-cloudflare/validation-failed", undefined],
+    ])(
+      "should preserve the provider Problem for a %s blob response",
+      async (status, code, retryable) => {
+        mockFetch.mockResolvedValueOnce({ ok: false, status });
+
+        await expect(provider.get("test-image-id")).rejects.toMatchObject({
+          code,
+          extensions: {
+            operation: "get",
+            status,
+            ...(retryable !== undefined && { retryable }),
+          },
+        });
+      },
+    );
+
+    it("should normalize a blob body read failure into a stable provider Problem", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        arrayBuffer: async () =>
+          Promise.reject(Object.assign(new Error("connection reset"), { code: "ECONNRESET" })),
+      });
+
+      await expect(provider.get("test-image-id")).rejects.toMatchObject({
+        code: "storage-cloudflare/retryable-upstream",
+        extensions: {
+          key: "test-image-id",
+          operation: "get",
+          retryable: true,
+          upstreamCode: "ECONNRESET",
+        },
+      });
+    });
+
+    it("should not use a configured custom delivery domain for base image reads", async () => {
       const providerWithCustomDomain = new CloudflareImagesProvider(mockOptionsWithCustomDomain);
       const mockImageData = Buffer.from("mock-image-data");
       const mockResponse = {
@@ -381,7 +423,26 @@ describe("CloudflareImagesProvider", () => {
       await providerWithCustomDomain.get("test-image-id");
 
       expect(mockFetch).toHaveBeenCalledWith(
-        "https://cdn.example.com/cdn-cgi/imagedelivery/test-account-hash/test-image-id/public",
+        "https://api.cloudflare.com/client/v4/accounts/test-account-id/images/v1/test-image-id/blob",
+        expect.objectContaining({
+          headers: {
+            Authorization: "Bearer test-api-token",
+          },
+        }),
+      );
+    });
+
+    it("should encode the complete image id as one blob path parameter", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        arrayBuffer: async () => new ArrayBuffer(0),
+      });
+
+      await provider.get("folder/50% café?#.jpg");
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        "https://api.cloudflare.com/client/v4/accounts/test-account-id/images/v1/folder%2F50%25%20caf%C3%A9%3F%23.jpg/blob",
+        expect.any(Object),
       );
     });
   });
@@ -1289,6 +1350,26 @@ function useInMemoryCloudflareImagesBackend(
       return jsonResponse({ success: true, errors: [] });
     }
 
+    if (method === "GET" && url.endsWith("/blob") && url.includes("/images/v1/")) {
+      const encodedKey = url.split("/images/v1/")[1]?.slice(0, -"/blob".length) ?? "";
+      const key = decodeURIComponent(encodedKey);
+      const image = images.get(key);
+      if (!image) {
+        return new Response(null, { status: 404 });
+      }
+
+      if (
+        init?.headers === undefined ||
+        new Headers(init.headers).get("Authorization") !== "Bearer test-api-token"
+      ) {
+        return new Response(null, { status: 401 });
+      }
+
+      return new Response(new Uint8Array(image.data), {
+        headers: image.contentType ? { "Content-Type": image.contentType } : undefined,
+      });
+    }
+
     if (method === "GET" && url.includes("/images/v1/")) {
       const key = decodeURIComponent(url.split("/images/v1/")[1] ?? "");
       const image = images.get(key);
@@ -1316,9 +1397,12 @@ function useInMemoryCloudflareImagesBackend(
         return new Response(null, { status: 404 });
       }
 
-      return new Response(new Uint8Array(image.data), {
-        headers: image.contentType ? { "Content-Type": image.contentType } : undefined,
-      });
+      return new Response(
+        new Uint8Array(Buffer.concat([Buffer.from("delivery-variant:"), image.data])),
+        {
+          headers: image.contentType ? { "Content-Type": image.contentType } : undefined,
+        },
+      );
     }
 
     return new Response("Not found", { status: 404 });

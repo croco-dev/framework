@@ -104,6 +104,7 @@ pnpm --filter @croco/storage-cloudflare test -- CloudflareImagesLiveSmoke
 
 - Cloudflare Images는 이미지 전용 서비스입니다.
 - `put(key)`는 `key`를 Cloudflare Images의 custom ID로 전달하고, 응답의 `result.id`가 같은 값일 때만 성공합니다. buffer와 stream 업로드에 동일하게 적용됩니다.
+- `get(key)`는 인증된 관리 API의 base image blob을 읽습니다. `defaultVariant`와 custom delivery domain은 공개, 서명, 변환 URL에만 적용됩니다. Cloudflare는 대부분의 이미지에 원본 업로드를 반환하지만 큰 이미지는 near-lossless 결과를 반환할 수 있습니다.
 - custom ID는 well-formed Unicode여야 하고 Unicode code point 기준 1,024자를 초과하거나 `.` 또는 `..` path segment를 포함할 수 없습니다. 위반한 key는 stream 소비나 네트워크 요청 전에 `storage-cloudflare/validation-failed`로 거부됩니다.
 - delivery URL은 custom ID의 `/` subpath를 유지하면서 각 segment를 인코딩합니다. 따라서 key에 포함된 `%`는 URL에서 `%25`로 표현됩니다. 관리 API의 조회/삭제 경로는 전체 ID를 하나의 path parameter로 인코딩합니다.
 - upload와 direct-upload 응답은 JSON envelope와 필수 필드를 runtime에서 검증하며, malformed upstream 응답은 일반 `SyntaxError`나 `TypeError` 대신 typed provider Problem으로 실패합니다.
