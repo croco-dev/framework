@@ -381,7 +381,9 @@ describe("CloudflareImagesProvider", () => {
       async (status, code, retryable) => {
         mockFetch.mockResolvedValueOnce({ ok: false, status });
 
-        await expect(provider.get("test-image-id")).rejects.toMatchObject({
+        const request = provider.get("test-image-id");
+        await expect(request).rejects.toThrow();
+        await expect(request).rejects.toMatchObject({
           code,
           extensions: {
             operation: "get",
@@ -399,7 +401,9 @@ describe("CloudflareImagesProvider", () => {
           Promise.reject(Object.assign(new Error("connection reset"), { code: "ECONNRESET" })),
       });
 
-      await expect(provider.get("test-image-id")).rejects.toMatchObject({
+      const request = provider.get("test-image-id");
+      await expect(request).rejects.toThrow();
+      await expect(request).rejects.toMatchObject({
         code: "storage-cloudflare/retryable-upstream",
         extensions: {
           key: "test-image-id",
