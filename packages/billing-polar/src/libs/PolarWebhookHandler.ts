@@ -1,4 +1,9 @@
-import type { BillingStore, PlanRegistry, Subscription } from "@croco/billing-core";
+import type {
+  BillingStore,
+  OrderPaymentReason,
+  PlanRegistry,
+  Subscription,
+} from "@croco/billing-core";
 import { SubscriptionPastDueEvent, WebhookAlreadyProcessedProblem } from "@croco/billing-core";
 import type { DomainEvent, EventPublisher } from "@croco/events-core";
 import { Problem } from "@croco/problems-core";
@@ -50,6 +55,7 @@ type ParsedOrderPayload = {
   tenantId: string;
   amount: number;
   currency: string;
+  reason: OrderPaymentReason;
   paidAt: Date;
 };
 
@@ -255,6 +261,7 @@ export class PolarWebhookHandler {
       tenantId: this.extractTenantId(orderData.customer),
       amount: orderData.amount,
       currency: orderData.currency,
+      reason: this.mapOrderPaymentReason(orderData.billingReason),
       paidAt: this.resolvePaidAt(orderData.createdAt),
     };
   }
@@ -362,7 +369,7 @@ export class PolarWebhookHandler {
       externalOrderId: payload.id,
       amount: payload.amount,
       currency: payload.currency,
-      reason: "subscription_cycle",
+      reason: payload.reason,
       paidAt: payload.paidAt,
     });
 
@@ -370,6 +377,7 @@ export class PolarWebhookHandler {
       id: payload.id,
       amount: payload.amount,
       currency: payload.currency,
+      reason: payload.reason,
     });
 
     for (const event of domainEvents) {
@@ -441,6 +449,17 @@ export class PolarWebhookHandler {
         throw new BillingStatusMappingProblem(polarStatus);
     }
   }
+
+  private mapOrderPaymentReason(
+    billingReason:
+      | "purchase"
+      | "subscription_create"
+      | "subscription_cycle"
+      | "subscription_update",
+  ): OrderPaymentReason {
+    return billingReason === "purchase" ? "one_time" : billingReason;
+  }
+
   private async tryRollbackWebhook(eventId: string): Promise<string | null> {
     try {
       await this.store.failWebhook(eventId);
@@ -492,6 +511,7 @@ function normalizeVerifiedEvent(event: unknown): unknown {
       customer,
       currentPeriodEnd: data.currentPeriodEnd ?? data.current_period_end,
       cancelAtPeriodEnd: data.cancelAtPeriodEnd ?? data.cancel_at_period_end,
+      billingReason: data.billingReason ?? data.billing_reason,
       createdAt: data.createdAt ?? data.created_at,
     },
   };

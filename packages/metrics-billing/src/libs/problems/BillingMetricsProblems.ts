@@ -57,3 +57,16 @@ export class BillingMetricRecordingProblem extends Problem {
     });
   }
 }
+
+export class InvalidOrderPaymentReasonProblem extends Problem {
+  readonly code = "metrics-billing/invalid-order-payment-reason";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(reason: unknown) {
+    super(undefined, undefined, "OrderPaidEvent has an invalid payment reason", {
+      extensions: {
+        reason: typeof reason === "string" ? reason : null,
+      },
+    });
+  }
+}

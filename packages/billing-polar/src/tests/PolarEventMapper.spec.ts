@@ -228,6 +228,7 @@ describe("PolarEventMapper", () => {
         id: "order-123",
         amount: 9900,
         currency: "USD",
+        reason: "subscription_create",
       });
 
       expect(events).toHaveLength(1);
@@ -237,6 +238,7 @@ describe("PolarEventMapper", () => {
       expect(event.externalOrderId).toBe("order-123");
       expect(event.amount).toBe(9900);
       expect(event.currency).toBe("USD");
+      expect(event.reason).toBe("subscription_create");
     });
 
     it("알 수 없는 order 이벤트 → 빈 배열", () => {
@@ -244,6 +246,7 @@ describe("PolarEventMapper", () => {
         id: "order-123",
         amount: 9900,
         currency: "USD",
+        reason: "subscription_cycle",
       });
 
       expect(events).toHaveLength(0);

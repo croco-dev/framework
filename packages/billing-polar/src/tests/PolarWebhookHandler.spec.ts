@@ -215,6 +215,7 @@ describe("PolarWebhookHandler", () => {
         id: "order-conformance",
         amount: 9900,
         currency: "USD",
+        billingReason: "subscription_create",
         customer: { externalId: "tenant-conformance", metadata: {} },
         createdAt: "2026-01-31T00:00:00Z",
       },
@@ -1043,6 +1044,7 @@ describe("PolarWebhookHandler", () => {
           id: "order-123",
           amount: 9900,
           currency: "USD",
+          billing_reason: "subscription_create",
           customer: { externalId: "tenant-123", metadata: {} },
           createdAt: "2026-01-31T00:00:00Z",
         },
@@ -1062,19 +1064,81 @@ describe("PolarWebhookHandler", () => {
         externalOrderId: "order-123",
         amount: 9900,
         currency: "USD",
-        reason: "subscription_cycle",
+        reason: "subscription_create",
         paidAt: expect.any(Date),
       });
-      expect(mockEventPublisher.publishNow).toHaveBeenCalled();
+      expect(mockEventPublisher.publishNow).toHaveBeenCalledWith(
+        expect.objectContaining({ reason: "subscription_create" }),
+      );
       expect(mockStore.reserveWebhook).toHaveBeenCalledWith("evt-456", "order.paid");
       expect(mockStore.completeWebhook).toHaveBeenCalledWith("evt-456");
     });
+
+    it.each([
+      ["purchase", "one_time"],
+      ["subscription_create", "subscription_create"],
+      ["subscription_cycle", "subscription_cycle"],
+      ["subscription_update", "subscription_update"],
+    ] as const)("maps Polar billing reason %s to %s", async (billingReason, reason) => {
+      const eventData = {
+        id: `evt-${billingReason}`,
+        type: "order.paid",
+        data: {
+          id: `order-${billingReason}`,
+          amount: 9900,
+          currency: "USD",
+          billing_reason: billingReason,
+          customer: { externalId: "tenant-123", metadata: {} },
+          createdAt: "2026-01-31T00:00:00Z",
+        },
+      };
+
+      vi.mocked(mockVerifyPolarWebhook).mockReturnValue(eventData);
+
+      await handler.handle(JSON.stringify(eventData), {
+        "webhook-id": eventData.id,
+      });
+
+      expect(mockStore.saveOrder).toHaveBeenCalledWith(expect.objectContaining({ reason }));
+      expect(mockEventPublisher.publishNow).toHaveBeenCalledWith(
+        expect.objectContaining({ reason }),
+      );
+    });
+
+    it.each([undefined, "subscription_reactivation"])(
+      "rejects unsupported Polar billing reason %s before reservation",
+      async (billingReason) => {
+        const eventData = {
+          id: "evt-invalid-billing-reason",
+          type: "order.paid",
+          data: {
+            id: "order-invalid-billing-reason",
+            amount: 9900,
+            currency: "USD",
+            ...(billingReason && { billing_reason: billingReason }),
+            customer: { externalId: "tenant-123", metadata: {} },
+            createdAt: "2026-01-31T00:00:00Z",
+          },
+        };
+
+        vi.mocked(mockVerifyPolarWebhook).mockReturnValue(eventData);
+
+        await expect(
+          handler.handle(JSON.stringify(eventData), {
+            "webhook-id": eventData.id,
+          }),
+        ).rejects.toBeInstanceOf(WebhookValidationProblem);
+        expect(mockStore.reserveWebhook).not.toHaveBeenCalled();
+        expect(mockStore.saveOrder).not.toHaveBeenCalled();
+      },
+    );
 
     it("lifecycle ordering and duplicate delivery cannot persist an unpaid order", async () => {
       const orderData = {
         id: "order-lifecycle",
         amount: 9900,
         currency: "USD",
+        billingReason: "subscription_cycle",
         customer: { externalId: "tenant-lifecycle", metadata: {} },
         createdAt: "2026-01-31T00:00:00Z",
       };
@@ -1130,9 +1194,13 @@ describe("PolarWebhookHandler", () => {
         expect.objectContaining({
           id: "order-lifecycle",
           externalOrderId: "order-lifecycle",
+          reason: "subscription_cycle",
         }),
       );
       expect(mockEventPublisher.publishNow).toHaveBeenCalledTimes(1);
+      expect(mockEventPublisher.publishNow).toHaveBeenCalledWith(
+        expect.objectContaining({ reason: "subscription_cycle" }),
+      );
       expect(mockStore.failWebhook).not.toHaveBeenCalled();
     });
   });

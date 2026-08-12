@@ -80,13 +80,20 @@ export type BillingLifecycleCommand = {
 
 export type LegacySubscription = Omit<Subscription, "planVersionRef">;
 
+export type OrderPaymentReason =
+  | "subscription_create"
+  | "subscription_cycle"
+  | "subscription_reactivation"
+  | "subscription_update"
+  | "one_time";
+
 export type Order = {
   id: string;
   billingAccountId: string;
   externalOrderId: string;
   amount: number;
   currency: string;
-  reason: "subscription_cycle" | "subscription_update" | "one_time";
+  reason: OrderPaymentReason;
   paidAt: Date;
 };
 

@@ -36,6 +36,12 @@ export const PolarOrderDataSchema = z
     id: z.string(),
     amount: z.number().finite().positive().optional(),
     currency: z.string().length(3).optional(),
+    billingReason: z.enum([
+      "purchase",
+      "subscription_create",
+      "subscription_cycle",
+      "subscription_update",
+    ]),
     createdAt: z.union([z.string(), z.date()]).nullable().optional(),
     customer: PolarCustomerSchema.optional(),
   })

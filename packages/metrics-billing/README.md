@@ -14,11 +14,11 @@ pnpm add @croco/metrics-billing
 
 ### 지원하는 이벤트
 
-| 이벤트                      | 설명           | MRR Movement                   |
-| --------------------------- | -------------- | ------------------------------ |
-| `OrderPaidEvent`            | 주문 결제 완료 | `new`                          |
-| `PlanChangedEvent`          | 플랜 변경      | `expansion` 또는 `contraction` |
-| `SubscriptionCanceledEvent` | 구독 취소      | `churned`                      |
+| 이벤트                      | 설명           | MRR Movement                                      |
+| --------------------------- | -------------- | ------------------------------------------------- |
+| `OrderPaidEvent`            | 주문 결제 완료 | 결제 사유에 따라 `new`, `reactivation`, 또는 없음 |
+| `PlanChangedEvent`          | 플랜 변경      | `expansion` 또는 `contraction`                    |
+| `SubscriptionCanceledEvent` | 구독 취소      | `churned`                                         |
 
 ## 사용법
 
@@ -30,7 +30,9 @@ import { Container } from "@croco/framework-context";
 const metricsRepository = new TimescaleMetricsStore(db);
 const handler = new BillingEventHandler(planRegistry, billingStore, metricsRepository);
 
-await eventBus.publish(new OrderPaidEvent("tenant-1", "order-1", 2900, "USD"));
+await eventBus.publish(
+  new OrderPaidEvent("tenant-1", "order-1", 2900, "USD", "subscription_create"),
+);
 ```
 
 ### DI 컨테이너 등록
@@ -50,7 +52,10 @@ Container.register(BillingEventHandler, {
 
 ### OrderPaidEvent
 
-- 신규 구독: `new` MRR 기록
+- `subscription_create`: `new` MRR 기록
+- `subscription_reactivation`: `reactivation` MRR 기록
+- `subscription_cycle`: 갱신 결제이므로 MRR movement를 기록하지 않음
+- `subscription_update`, `one_time`: 활성 구독 MRR을 새로 만들지 않으므로 movement를 기록하지 않음
 - 연간 플랜: 월별 MRR로 정규화 (amount / 12)
 
 ### PlanChangedEvent

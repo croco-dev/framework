@@ -172,6 +172,12 @@ reservation을 해제합니다. 구독이 past-due 상태를 벗어나면 reserv
 | `order.created` | delivery를 멱등 처리하지만 결제 주문으로 저장하지 않음 |
 | `order.updated` | delivery를 멱등 처리하지만 결제 주문으로 저장하지 않음 |
 
+`order.paid`의 공식 `billing_reason`은 `Order.reason`과 `OrderPaidEvent.reason`에 전달됩니다.
+`subscription_create`는 구독 시작 결제, `subscription_cycle`은 정기 갱신,
+`subscription_update`는 구독 변경 결제, `purchase`는 `one_time`으로 정규화됩니다.
+Polar 주문 payload가 제공하지 않는 재활성화는 도착 순서나 로컬 상태로 추측하지 않습니다.
+재활성화를 명시할 수 있는 provider는 `subscription_reactivation`을 사용해야 합니다.
+
 ### 기존 오분류 주문 복구
 
 `@croco/billing-polar` 0.0.4 이하에서 `order.created` 또는 `order.updated` webhook을 처리했다면 결제

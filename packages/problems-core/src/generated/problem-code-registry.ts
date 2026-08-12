@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 621,
+  problemCount: 622,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -10464,6 +10464,40 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 5,
           column: 5,
           kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "metrics-billing/invalid-order-payment-reason",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#metrics-billing-invalid-order-payment-reason",
+      recovery: {
+        cause:
+          "A paid-order event omitted its authoritative payment reason or supplied an unsupported value.",
+        userAction:
+          "Enrich the event from authoritative provider data before replaying it; never default an unknown payment reason to a new subscription.",
+        operatorAction:
+          "Pause consumption, migrate queued or outbox paid-order events with authoritative payment reasons, deploy compatible producers and consumers together, then resume.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/metrics-billing/src/libs/problems/BillingMetricsProblems.ts",
+          line: 62,
+          column: 3,
+          kind: "problem-class",
         },
       ],
     },
