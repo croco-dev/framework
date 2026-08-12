@@ -148,7 +148,7 @@ MRR 변동 이력 조회
 
 MRR 변동 데이터 배열
 
-***
+---
 
 ### getRetentionMetrics()
 
@@ -176,7 +176,7 @@ MRR 변동 데이터 배열
 
 리텐션 메트릭 (GRR, NRR, Churn Rate 등)
 
-***
+---
 
 ### getSnapshot()
 
@@ -204,7 +204,7 @@ MRR 변동 데이터 배열
 
 스냅샷 데이터, 없으면 null
 
-***
+---
 
 ### recordMRRMovement()
 
@@ -248,7 +248,7 @@ readonly `string`[]
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### recordSnapshot()
 

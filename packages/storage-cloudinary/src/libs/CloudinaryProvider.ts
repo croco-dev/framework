@@ -19,6 +19,7 @@ import {
 import { v2 as cloudinary } from "cloudinary";
 import {
   CloudinaryTerminalUpstreamProblem,
+  CloudinaryValidationProblem,
   getCloudinaryErrorMessage,
   isRetryableCloudinaryStorageError,
   normalizeCloudinaryStorageError,
@@ -144,10 +145,11 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
 
   async put(key: string, data: Buffer | Readable, options?: PutOptions): Promise<void> {
     this.validateKey(key);
+    this.validateSupportedContentType(key, options?.contentType);
 
     const uploadOptions: Record<string, unknown> = {
       public_id: key,
-      resource_type: this.inferResourceType(options?.contentType),
+      resource_type: "image",
     };
 
     if (options?.metadata) {
@@ -489,20 +491,20 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
     }
   }
 
-  private inferResourceType(contentType?: string): string {
-    if (!contentType) {
-      return "auto";
+  private validateSupportedContentType(key: string, contentType?: string): void {
+    if (contentType === undefined || contentType.toLowerCase().startsWith("image/")) {
+      return;
     }
 
-    if (contentType.startsWith("image/")) {
-      return "image";
-    }
-
-    if (contentType.startsWith("video/")) {
-      return "video";
-    }
-
-    return "raw";
+    throw new CloudinaryValidationProblem(
+      {
+        provider: "cloudinary",
+        operation: "put",
+        key,
+        upstreamCode: "unsupported-resource-type",
+      },
+      `CloudinaryProvider supports image uploads only; received '${contentType}'`,
+    );
   }
 
   private formatContext(metadata: Record<string, string>): string {

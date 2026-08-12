@@ -1,5 +1,7 @@
+import { randomUUID } from "node:crypto";
+import { FileNotFoundProblem } from "@croco/storage-core";
 import { v2 as cloudinary } from "cloudinary";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { CloudinaryDiagnosticsProvider } from "../libs/CloudinaryDiagnosticsProvider";
 import { CloudinaryProvider } from "../libs/CloudinaryProvider";
 import type { CloudinaryConfig } from "../libs/types";
@@ -99,7 +101,120 @@ describe("Cloudinary live smoke", () => {
       }
     },
   );
+
+  it.skipIf(missingLiveSmokeEnv.length > 0)(
+    "preserves the image lifecycle across provider reconstruction",
+    async () => {
+      const key = `croco-live-smoke/${randomUUID()}`;
+      const image = Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Z7WkAAAAASUVORK5CYII=",
+        "base64",
+      );
+      const uploader = new CloudinaryProvider(liveConfig);
+      const reconstructedProvider = new CloudinaryProvider(liveConfig);
+
+      await runLifecycleSmoke({
+        cleanup: async () => await reconstructedProvider.delete(key),
+        upload: async () => await uploader.put(key, image, { contentType: "image/png" }),
+        verifyDeleted: async () => {
+          await expect(reconstructedProvider.getMetadata(key)).rejects.toThrow(FileNotFoundProblem);
+        },
+        verifyUploaded: async () => {
+          await expect(reconstructedProvider.get(key)).resolves.toSatisfy(
+            (value: Buffer) => value.length > 0,
+          );
+          await expect(reconstructedProvider.exists(key)).resolves.toBe(true);
+          await expect(reconstructedProvider.getMetadata(key)).resolves.toMatchObject({
+            size: expect.any(Number),
+          });
+        },
+      });
+    },
+  );
 });
+
+describe("Cloudinary live smoke cleanup", () => {
+  it("cleans up a remotely persisted image when upload completion rejects", async () => {
+    const uploadError = new Error("upload response lost");
+    const cleanup = vi.fn().mockResolvedValue(undefined);
+
+    await expect(
+      runLifecycleSmoke({
+        cleanup,
+        upload: vi.fn().mockRejectedValue(uploadError),
+        verifyDeleted: vi.fn(),
+        verifyUploaded: vi.fn(),
+      }),
+    ).rejects.toBe(uploadError);
+    expect(cleanup).toHaveBeenCalledOnce();
+  });
+
+  it("preserves the upload failure when cleanup also fails", async () => {
+    const uploadError = new Error("upload response lost");
+    const cleanupError = new Error("cleanup failed");
+    const cleanup = vi.fn().mockRejectedValue(cleanupError);
+
+    const result = runLifecycleSmoke({
+      cleanup,
+      upload: vi.fn().mockRejectedValue(uploadError),
+      verifyDeleted: vi.fn(),
+      verifyUploaded: vi.fn(),
+    });
+
+    await expect(result).rejects.toMatchObject({
+      cleanupError,
+      message: uploadError.message,
+    });
+    expect(cleanup).toHaveBeenCalledOnce();
+  });
+});
+
+type LifecycleSmokeSteps = {
+  readonly cleanup: () => Promise<void>;
+  readonly upload: () => Promise<unknown>;
+  readonly verifyDeleted: () => Promise<void>;
+  readonly verifyUploaded: () => Promise<void>;
+};
+
+async function runLifecycleSmoke(steps: LifecycleSmokeSteps): Promise<void> {
+  let primaryFailed = false;
+  let primaryError: unknown;
+  let cleanupFailed = false;
+  let cleanupError: unknown;
+
+  try {
+    await steps.upload();
+    await steps.verifyUploaded();
+  } catch (error) {
+    primaryFailed = true;
+    primaryError = error;
+  } finally {
+    try {
+      await steps.cleanup();
+    } catch (error) {
+      cleanupFailed = true;
+      cleanupError = error;
+    }
+  }
+
+  if (primaryFailed && cleanupFailed) {
+    throw attachCleanupError(primaryError, cleanupError);
+  }
+  if (primaryFailed) throw primaryError;
+  if (cleanupFailed) throw cleanupError;
+  await steps.verifyDeleted();
+}
+
+function attachCleanupError(primaryError: unknown, cleanupError: unknown): Error {
+  if (primaryError instanceof Error) {
+    Object.defineProperty(primaryError, "cleanupError", {
+      configurable: true,
+      value: cleanupError,
+    });
+    return primaryError;
+  }
+  return Object.assign(new Error(String(primaryError)), { cleanupError });
+}
 
 function isTruthyEnv(name: string): boolean {
   const value = process.env[name]?.trim().toLowerCase();

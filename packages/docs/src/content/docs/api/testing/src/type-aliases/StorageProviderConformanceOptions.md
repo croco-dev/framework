@@ -17,13 +17,13 @@ title: "StorageProviderConformanceOptions"
 
 [`StorageProvider`](/api/storage-core/src/type-aliases/storageprovider/) \| `Promise`\<[`StorageProvider`](/api/storage-core/src/type-aliases/storageprovider/)\>
 
-***
+---
 
 ### keyPrefix?
 
 > `readonly` `optional` **keyPrefix?**: `string`
 
-***
+---
 
 ### metadata?
 
@@ -37,19 +37,25 @@ title: "StorageProviderConformanceOptions"
 
 > `readonly` `optional` **customMetadata?**: [`StorageProviderOptionalMetadataExpectation`](/api/testing/src/type-aliases/storageprovideroptionalmetadataexpectation/)
 
-***
+---
 
 ### providerName
 
 > `readonly` **providerName**: `string`
 
-***
+---
 
 ### publicUrl?
 
 > `readonly` `optional` **publicUrl?**: [`StorageProviderUrlExpectation`](/api/testing/src/type-aliases/storageproviderurlexpectation/)
 
-***
+---
+
+### putContentType?
+
+> `readonly` `optional` **putContentType?**: `string`
+
+---
 
 ### signedUrl?
 

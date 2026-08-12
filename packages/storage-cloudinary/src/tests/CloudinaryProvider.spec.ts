@@ -82,6 +82,7 @@ describe("CloudinaryProvider", () => {
           contentType: "unsupported",
           customMetadata: "required",
         },
+        putContentType: "image/png",
         providerName: "storage-cloudinary",
         publicUrl: "https://res.cloudinary.com/test-cloud/image/upload/",
         signedUrl: /s=mock-signature/,
@@ -160,7 +161,7 @@ describe("CloudinaryProvider", () => {
       expect(cloudinary.uploader.upload_stream).toHaveBeenCalledWith(
         {
           public_id: "test-key",
-          resource_type: "auto",
+          resource_type: "image",
         },
         expect.any(Function),
       );
@@ -239,7 +240,7 @@ describe("CloudinaryProvider", () => {
       expect(cloudinary.uploader.upload_stream).toHaveBeenCalledWith(
         {
           public_id: "test-key",
-          resource_type: "auto",
+          resource_type: "image",
           context: "alt=test%20image|author=test",
         },
         expect.any(Function),
@@ -273,7 +274,7 @@ describe("CloudinaryProvider", () => {
       expect(cloudinary.uploader.upload_stream).toHaveBeenCalledWith(
         {
           public_id: "test-key",
-          resource_type: "auto",
+          resource_type: "image",
           context: "alt=value%3Dwith%7Cseparators|special%7Ckey=hello%3Dworld",
         },
         expect.any(Function),
@@ -1061,8 +1062,8 @@ describe("CloudinaryProvider", () => {
     });
   });
 
-  describe("resource type inference", () => {
-    it("should infer image type from content type", async () => {
+  describe("resource type contract", () => {
+    it("should upload image content in the image namespace", async () => {
       const mockUploadStream = vi.fn(
         (_options: unknown, callback: (error: Error | undefined, result: unknown) => void) => {
           callback(undefined, { public_id: "test-key" });
@@ -1088,59 +1089,61 @@ describe("CloudinaryProvider", () => {
       );
     });
 
-    it("should infer video type from content type", async () => {
-      const mockUploadStream = vi.fn(
-        (_options: unknown, callback: (error: Error | undefined, result: unknown) => void) => {
-          callback(undefined, { public_id: "test-key" });
-          return {
-            end: vi.fn(),
-          };
-        },
-      );
+    it.each(["video/mp4", "application/pdf"])(
+      "should reject unsupported %s content before upload",
+      async (contentType) => {
+        await expect(
+          provider.put("test-key", Buffer.from("test data"), { contentType }),
+        ).rejects.toMatchObject({
+          code: "storage-cloudinary/validation-failed",
+          extensions: {
+            key: "test-key",
+            operation: "put",
+            provider: "cloudinary",
+            upstreamCode: "unsupported-resource-type",
+          },
+        });
 
-      vi.mocked(cloudinary.uploader.upload_stream).mockImplementation(
-        mockUploadStream as unknown as UploadStream,
-      );
+        expect(cloudinary.uploader.upload_stream).not.toHaveBeenCalled();
+      },
+    );
 
-      const buffer = Buffer.from("test data");
-      await provider.put("test-key", buffer, { contentType: "video/mp4" });
+    it("should reject an unsupported readable stream before consuming bytes", async () => {
+      const { Readable } = await import("node:stream");
+      const stream = Readable.from(Buffer.from("video data"));
 
-      expect(cloudinary.uploader.upload_stream).toHaveBeenCalledWith(
-        {
-          public_id: "test-key",
-          resource_type: "video",
-        },
-        expect.any(Function),
-      );
+      await expect(
+        provider.put("test-key", stream, { contentType: "video/mp4" }),
+      ).rejects.toMatchObject({
+        code: "storage-cloudinary/validation-failed",
+      });
+
+      expect(stream.readableDidRead).toBe(false);
+      expect(cloudinary.uploader.upload_stream).not.toHaveBeenCalled();
     });
 
-    it("should infer raw type for other content types", async () => {
-      const mockUploadStream = vi.fn(
-        (_options: unknown, callback: (error: Error | undefined, result: unknown) => void) => {
-          callback(undefined, { public_id: "test-key" });
-          return {
-            end: vi.fn(),
-          };
-        },
-      );
+    it("should preserve the accepted image lifecycle after provider reconstruction", async () => {
+      useInMemoryCloudinaryBackend();
+      const key = "restart/image.png";
+      const data = Buffer.from("image data");
 
-      vi.mocked(cloudinary.uploader.upload_stream).mockImplementation(
-        mockUploadStream as unknown as UploadStream,
-      );
+      await provider.put(key, data, { contentType: "image/png" });
 
-      const buffer = Buffer.from("test data");
-      await provider.put("test-key", buffer, { contentType: "application/pdf" });
+      const reconstructedProvider = new CloudinaryProvider(mockConfig);
+      await expect(reconstructedProvider.get(key)).resolves.toEqual(data);
+      await expect(reconstructedProvider.exists(key)).resolves.toBe(true);
+      await expect(reconstructedProvider.getMetadata(key)).resolves.toMatchObject({
+        size: data.length,
+      });
+      await expect(reconstructedProvider.delete(key)).resolves.toBeUndefined();
+      await expect(reconstructedProvider.exists(key)).resolves.toBe(false);
 
-      expect(cloudinary.uploader.upload_stream).toHaveBeenCalledWith(
-        {
-          public_id: "test-key",
-          resource_type: "raw",
-        },
-        expect.any(Function),
-      );
+      expect(cloudinary.uploader.destroy).toHaveBeenCalledWith(key, {
+        resource_type: "image",
+      });
     });
 
-    it("should use auto when content type is not provided", async () => {
+    it("should use the image namespace when content type is not provided", async () => {
       const mockUploadStream = vi.fn(
         (_options: unknown, callback: (error: Error | undefined, result: unknown) => void) => {
           callback(undefined, { public_id: "test-key" });
@@ -1160,7 +1163,7 @@ describe("CloudinaryProvider", () => {
       expect(cloudinary.uploader.upload_stream).toHaveBeenCalledWith(
         {
           public_id: "test-key",
-          resource_type: "auto",
+          resource_type: "image",
         },
         expect.any(Function),
       );

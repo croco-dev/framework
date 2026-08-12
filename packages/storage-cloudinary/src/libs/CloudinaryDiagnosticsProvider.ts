@@ -203,6 +203,7 @@ export class CloudinaryDiagnosticsProvider implements DiagnosticsProvider {
       hasApiSecret: isNonEmptyString(this.config.apiSecret),
       secure: this.config.secure ?? true,
       hasUploadBaseUrl: isNonEmptyString(this.config.uploadBaseUrl),
+      acceptedResourceTypes: ["image"],
       metadataSupport: {
         contentType: "format-only",
         customMetadata: "required",
