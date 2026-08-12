@@ -49,4 +49,4 @@ billing account, invoice, order, plan, subscription 도메인 타입입니다.
 
 ### reason
 
-> **reason**: `"subscription_cycle"` \| `"subscription_update"` \| `"one_time"`
+> **reason**: [`OrderPaymentReason`](/api/billing-core/src/type-aliases/orderpaymentreason/)

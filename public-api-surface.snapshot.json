@@ -5120,6 +5120,11 @@
               "source": "./types"
             },
             {
+              "name": "OrderPaymentReason",
+              "exportKind": "named",
+              "source": "./types"
+            },
+            {
               "name": "Plan",
               "exportKind": "named",
               "source": "./types"

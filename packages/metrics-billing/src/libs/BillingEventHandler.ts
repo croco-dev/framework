@@ -6,6 +6,7 @@ import {
   PlanChangedEvent,
   type PlanRegistry,
   type PlanVersionRef,
+  type OrderPaymentReason,
   SubscriptionCanceledEvent,
 } from "@croco/billing-core";
 import { type DomainEvent, type EventHandler, RegisterEventHandler } from "@croco/events-core";
@@ -15,6 +16,7 @@ import { MrrCalculator } from "@croco/metrics-core";
 import {
   BillingMetricDroppedProblem,
   BillingMetricRecordingProblem,
+  InvalidOrderPaymentReasonProblem,
 } from "./problems/BillingMetricsProblems";
 import type { BillingMetricDropReason } from "./problems/BillingMetricsProblems";
 
@@ -83,6 +85,11 @@ export class BillingEventHandler
   }
 
   private async handleOrderPaid(event: OrderPaidEvent): Promise<void> {
+    const movementType = this.getOrderPaidMovementType(event.reason);
+    if (movementType === null) {
+      return;
+    }
+
     const account = await this.billingStore.findAccountByTenantId(event.tenantId);
     if (account === null) {
       throw this.createDroppedProblem(event, "account_not_found", event.tenantId);
@@ -100,9 +107,24 @@ export class BillingEventHandler
 
     const mrrAmount = this.calculator.normalizeMRR(plan.amount, plan.interval, plan.intervalCount);
     const mrr: Money = { amount: mrrAmount, currency: plan.currency };
-    const movement = this.createMRRMovement(mrr, "new");
+    const movement = this.createMRRMovement(mrr, movementType);
 
     await this.recordMRRMovement(event, movement);
+  }
+
+  private getOrderPaidMovementType(reason: OrderPaymentReason): "new" | "reactivation" | null {
+    switch (reason) {
+      case "subscription_create":
+        return "new";
+      case "subscription_reactivation":
+        return "reactivation";
+      case "subscription_cycle":
+      case "subscription_update":
+      case "one_time":
+        return null;
+      default:
+        throw new InvalidOrderPaymentReasonProblem(reason);
+    }
   }
 
   private async handlePlanChanged(event: PlanChangedEvent): Promise<void> {

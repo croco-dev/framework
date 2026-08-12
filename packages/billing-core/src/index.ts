@@ -291,6 +291,7 @@ export type {
   LegacySubscription,
   MembershipRole,
   Order,
+  OrderPaymentReason,
   Plan,
   PlanInterval,
   PlanRatingDefinition,

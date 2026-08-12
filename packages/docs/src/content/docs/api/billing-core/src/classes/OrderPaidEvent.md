@@ -15,7 +15,7 @@ title: "OrderPaidEvent"
 
 ### Constructor
 
-> **new OrderPaidEvent**(`tenantId`, `externalOrderId`, `amount`, `currency`): `OrderPaidEvent`
+> **new OrderPaidEvent**(`tenantId`, `externalOrderId`, `amount`, `currency`, `reason`): `OrderPaidEvent`
 
 #### Parameters
 
@@ -34,6 +34,10 @@ title: "OrderPaidEvent"
 ##### currency
 
 `string`
+
+##### reason
+
+[`OrderPaymentReason`](/api/billing-core/src/type-aliases/orderpaymentreason/)
 
 #### Returns
 
@@ -90,6 +94,12 @@ title: "OrderPaidEvent"
 #### Inherited from
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`metadata`](/api/events-core/src/classes/domainevent/#metadata)
+
+***
+
+### reason
+
+> `readonly` **reason**: [`OrderPaymentReason`](/api/billing-core/src/type-aliases/orderpaymentreason/)
 
 ***
 

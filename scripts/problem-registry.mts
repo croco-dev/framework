@@ -2180,6 +2180,17 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "metrics-billing/invalid-order-payment-reason": recovery({
+    cause:
+      "A paid-order event omitted its authoritative payment reason or supplied an unsupported value.",
+    userAction:
+      "Enrich the event from authoritative provider data before replaying it; never default an unknown payment reason to a new subscription.",
+    operatorAction:
+      "Pause consumption, migrate queued or outbox paid-order events with authoritative payment reasons, deploy compatible producers and consumers together, then resume.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "notifications-resend/idempotency-conflict": recovery({
     cause: "Resend rejected reuse of an idempotency key for a different send request.",
     userAction:

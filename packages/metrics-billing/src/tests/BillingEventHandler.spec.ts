@@ -11,6 +11,7 @@ import { BillingEventHandler } from "../libs/BillingEventHandler";
 import {
   BillingMetricDroppedProblem,
   BillingMetricRecordingProblem,
+  InvalidOrderPaymentReasonProblem,
 } from "../libs/problems/BillingMetricsProblems";
 
 describe("BillingEventHandler", () => {
@@ -156,7 +157,7 @@ describe("BillingEventHandler", () => {
 
   describe("OrderPaidEvent", () => {
     it("should record new MRR when order is paid", async () => {
-      const event = new OrderPaidEvent("tenant-1", "order-1", 2900, "USD");
+      const event = new OrderPaidEvent("tenant-1", "order-1", 2900, "USD", "subscription_create");
 
       vi.mocked(billingStore.findAccountByTenantId).mockResolvedValue(mockAccount);
       vi.mocked(billingStore.findSubscription).mockResolvedValue(mockSubscription);
@@ -183,7 +184,7 @@ describe("BillingEventHandler", () => {
     });
 
     it("should normalize yearly plan to monthly MRR", async () => {
-      const event = new OrderPaidEvent("tenant-1", "order-1", 29000, "USD");
+      const event = new OrderPaidEvent("tenant-1", "order-1", 29000, "USD", "subscription_create");
 
       vi.mocked(billingStore.findAccountByTenantId).mockResolvedValue(mockAccount);
       vi.mocked(billingStore.findSubscription).mockResolvedValue({
@@ -200,8 +201,51 @@ describe("BillingEventHandler", () => {
       expect(movement.new.amount).toBeCloseTo(2416.67, 2);
     });
 
+    it.each(["subscription_cycle", "subscription_update", "one_time"] as const)(
+      "should not record MRR for %s payments",
+      async (reason) => {
+        const event = new OrderPaidEvent("tenant-1", `order-${reason}`, 2900, "USD", reason);
+
+        await handler.handle(event);
+
+        expect(billingStore.findAccountByTenantId).not.toHaveBeenCalled();
+        expect(metricsRepository.recordMRRMovement).not.toHaveBeenCalled();
+      },
+    );
+
+    it("should record reactivation MRR for authoritative reactivation payments", async () => {
+      const event = new OrderPaidEvent(
+        "tenant-1",
+        "order-reactivation",
+        2900,
+        "USD",
+        "subscription_reactivation",
+      );
+
+      vi.mocked(billingStore.findAccountByTenantId).mockResolvedValue(mockAccount);
+      vi.mocked(billingStore.findSubscription).mockResolvedValue(mockSubscription);
+      vi.mocked(planRegistry.getPlanVersion).mockResolvedValue(asPlanVersion(mockPlan));
+
+      await handler.handle(event);
+
+      expect(metricsRepository.recordMRRMovement).toHaveBeenCalledWith(
+        "tenant-1",
+        {
+          new: { amount: 0, currency: "USD" },
+          expansion: { amount: 0, currency: "USD" },
+          contraction: { amount: 0, currency: "USD" },
+          churned: { amount: 0, currency: "USD" },
+          reactivation: { amount: 2900, currency: "USD" },
+          net: { amount: 2900, currency: "USD" },
+        },
+        event.timestamp,
+        primaryEventKey(event),
+        [legacyTimestampEventKey(event)],
+      );
+    });
+
     it("should delegate duplicate prevention to repository across handler instances", async () => {
-      const event = new OrderPaidEvent("tenant-1", "order-1", 2900, "USD");
+      const event = new OrderPaidEvent("tenant-1", "order-1", 2900, "USD", "subscription_create");
 
       vi.mocked(billingStore.findAccountByTenantId).mockResolvedValue(mockAccount);
       vi.mocked(billingStore.findSubscription).mockResolvedValue(mockSubscription);
@@ -221,14 +265,43 @@ describe("BillingEventHandler", () => {
       expect(calls[1]?.[4]).toEqual([legacyTimestampEventKey(event)]);
     });
 
+    it.each([undefined, "legacy_unknown"])(
+      "should reject invalid order payment reason %s before metric lookup",
+      async (reason) => {
+        const event = new OrderPaidEvent("tenant-1", "order-1", 2900, "USD", reason as never);
+
+        const result = handler.handle(event);
+
+        await expect(result).rejects.toBeInstanceOf(InvalidOrderPaymentReasonProblem);
+        await expect(result).rejects.toMatchObject({
+          code: "metrics-billing/invalid-order-payment-reason",
+          extensions: { reason: typeof reason === "string" ? reason : null },
+        });
+        expect(billingStore.findAccountByTenantId).not.toHaveBeenCalled();
+        expect(metricsRepository.recordMRRMovement).not.toHaveBeenCalled();
+      },
+    );
+
     it("should preserve distinct metrics for events with the same millisecond timestamp", async () => {
       const timestamp = new Date("2026-01-01T00:00:00.000Z");
       vi.useFakeTimers();
       vi.setSystemTime(timestamp);
 
       try {
-        const firstEvent = new OrderPaidEvent("tenant-1", "order-1", 2900, "USD");
-        const secondEvent = new OrderPaidEvent("tenant-1", "order-2", 2900, "USD");
+        const firstEvent = new OrderPaidEvent(
+          "tenant-1",
+          "order-1",
+          2900,
+          "USD",
+          "subscription_create",
+        );
+        const secondEvent = new OrderPaidEvent(
+          "tenant-1",
+          "order-2",
+          2900,
+          "USD",
+          "subscription_create",
+        );
 
         vi.mocked(billingStore.findAccountByTenantId).mockResolvedValue(mockAccount);
         vi.mocked(billingStore.findSubscription).mockResolvedValue(mockSubscription);
@@ -253,7 +326,7 @@ describe("BillingEventHandler", () => {
     });
 
     it("should surface dropped metric evidence if account is not found", async () => {
-      const event = new OrderPaidEvent("tenant-1", "order-1", 2900, "USD");
+      const event = new OrderPaidEvent("tenant-1", "order-1", 2900, "USD", "subscription_create");
 
       vi.mocked(billingStore.findAccountByTenantId).mockResolvedValue(null);
 
@@ -269,7 +342,7 @@ describe("BillingEventHandler", () => {
     });
 
     it("should surface dropped metric evidence if subscription is not found", async () => {
-      const event = new OrderPaidEvent("tenant-1", "order-1", 2900, "USD");
+      const event = new OrderPaidEvent("tenant-1", "order-1", 2900, "USD", "subscription_create");
 
       vi.mocked(billingStore.findAccountByTenantId).mockResolvedValue(mockAccount);
       vi.mocked(billingStore.findSubscription).mockResolvedValue(null);
@@ -288,7 +361,7 @@ describe("BillingEventHandler", () => {
     });
 
     it("should surface repository failures as stable recording Problems", async () => {
-      const event = new OrderPaidEvent("tenant-1", "order-1", 2900, "USD");
+      const event = new OrderPaidEvent("tenant-1", "order-1", 2900, "USD", "subscription_create");
 
       vi.mocked(billingStore.findAccountByTenantId).mockResolvedValue(mockAccount);
       vi.mocked(billingStore.findSubscription).mockResolvedValue(mockSubscription);
