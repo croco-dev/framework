@@ -29,6 +29,7 @@ export type StorageProviderConformanceOptions = {
     readonly contentType?: StorageProviderOptionalMetadataExpectation;
     readonly customMetadata?: StorageProviderOptionalMetadataExpectation;
   };
+  readonly putContentType?: string;
   readonly publicUrl?: StorageProviderUrlExpectation;
   readonly signedUrl?: StorageProviderUrlExpectation;
 };
@@ -63,6 +64,7 @@ export function createStorageProviderConformanceSuite(
     ...defaultMetadataExpectations,
     ...options.metadata,
   };
+  const putContentType = options.putContentType ?? "text/plain";
 
   const createKey = (label: string): string => {
     keySequence += 1;
@@ -82,7 +84,7 @@ export function createStorageProviderConformanceSuite(
           const data = Buffer.from("croco storage conformance buffer");
 
           await provider.put(key, data, {
-            contentType: "text/plain",
+            contentType: putContentType,
             metadata: {
               conformance: "storage-provider",
               provider: options.providerName,
@@ -96,6 +98,7 @@ export function createStorageProviderConformanceSuite(
           assertStorageMetadata(metadata, {
             data,
             expectations: metadataExpectations,
+            putContentType,
             providerName: options.providerName,
           });
         },
@@ -108,7 +111,7 @@ export function createStorageProviderConformanceSuite(
           const data = Buffer.from("croco storage conformance stream");
 
           await provider.put(key, Readable.from([data]), {
-            contentType: "text/plain",
+            contentType: putContentType,
           });
 
           const stream = await provider.getStream(key);
@@ -245,6 +248,7 @@ function assertStorageMetadata(
   options: {
     readonly data: Buffer;
     readonly expectations: Required<NonNullable<StorageProviderConformanceOptions["metadata"]>>;
+    readonly putContentType: string;
     readonly providerName: string;
   },
 ): void {
@@ -257,7 +261,7 @@ function assertStorageMetadata(
   assertOptionalMetadata(
     "contentType",
     metadata.contentType,
-    "text/plain",
+    options.putContentType,
     options.expectations.contentType,
     options.providerName,
   );

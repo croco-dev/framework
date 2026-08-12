@@ -1,9 +1,9 @@
----
+***
 editUrl: false
 next: false
 prev: false
 title: "CloudinaryUploadOptions"
----
+***
 
 > **CloudinaryUploadOptions** = `object`
 
@@ -41,15 +41,15 @@ Cloudinary 업로드에 사용할 확장 옵션입니다.
 
 사용자 정의 public ID (key)
 
-***
+---
 
 ### resourceType?
 
-> `optional` **resourceType?**: `"image"` \| `"video"` \| `"raw"`
+> `optional` **resourceType?**: `"image"`
 
-리소스 타입
+리소스 타입. CloudinaryProvider는 전체 객체 lifecycle에서 image만 지원합니다.
 
-***
+---
 
 ### tags?
 

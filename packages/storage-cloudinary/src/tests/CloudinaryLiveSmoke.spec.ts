@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+import { FileNotFoundProblem } from "@croco/storage-core";
 import { v2 as cloudinary } from "cloudinary";
 import { describe, expect, it } from "vitest";
 import { CloudinaryDiagnosticsProvider } from "../libs/CloudinaryDiagnosticsProvider";
@@ -97,6 +99,39 @@ describe("Cloudinary live smoke", () => {
       } finally {
         await provider.delete(key);
       }
+    },
+  );
+
+  it.skipIf(missingLiveSmokeEnv.length > 0)(
+    "preserves the image lifecycle across provider reconstruction",
+    async () => {
+      const key = `croco-live-smoke/${randomUUID()}`;
+      const image = Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Z7WkAAAAASUVORK5CYII=",
+        "base64",
+      );
+      const uploader = new CloudinaryProvider(liveConfig);
+      const reconstructedProvider = new CloudinaryProvider(liveConfig);
+      let uploaded = false;
+
+      try {
+        await uploader.put(key, image, { contentType: "image/png" });
+        uploaded = true;
+
+        await expect(reconstructedProvider.get(key)).resolves.toSatisfy(
+          (value: Buffer) => value.length > 0,
+        );
+        await expect(reconstructedProvider.exists(key)).resolves.toBe(true);
+        await expect(reconstructedProvider.getMetadata(key)).resolves.toMatchObject({
+          size: expect.any(Number),
+        });
+      } finally {
+        if (uploaded) {
+          await reconstructedProvider.delete(key);
+        }
+      }
+
+      await expect(reconstructedProvider.getMetadata(key)).rejects.toThrow(FileNotFoundProblem);
     },
   );
 });

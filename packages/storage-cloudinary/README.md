@@ -46,6 +46,10 @@ const response = await fetch(intent.uploadUrl, {
 });
 ```
 
+`CloudinaryProvider`는 전체 객체 lifecycle에서 이미지 리소스만 지원합니다. `image/*` MIME 또는 생략된
+`contentType`은 Cloudinary `image` namespace에 저장되며, `video/*`와 raw MIME은 bytes를 업로드하기 전에
+`storage-cloudinary/validation-failed`로 거부됩니다.
+
 ## 설정
 
 | 옵션            | 설명                                      |
@@ -88,6 +92,7 @@ const health = await diagnostics.getHealth();
 - `readinessCheck`를 넘기지 않으면 외부 API를 호출하지 않고 설정 존재 여부만 `healthy`로 보고합니다.
 - `readinessCheck`가 실패하면 `degraded` 상태와 정규화된 provider Problem 코드가 반환됩니다.
 - 진단 detail은 토큰, secret, authorization 값을 redaction 처리합니다.
+- 진단 detail의 `acceptedResourceTypes`는 현재 지원 계약인 `["image"]`를 반환합니다.
 
 ## 실패 코드
 
@@ -100,7 +105,7 @@ const health = await diagnostics.getHealth();
 
 ## 선택적 live smoke
 
-기본 테스트는 실제 Cloudinary 자격 증명을 요구하지 않습니다. 실제 backend readiness를 확인하려면 아래 환경 변수를 모두 설정한 뒤 live smoke를 opt-in 합니다.
+기본 테스트는 실제 Cloudinary 자격 증명을 요구하지 않습니다. 실제 backend readiness와 이미지 lifecycle을 확인하려면 아래 환경 변수를 모두 설정한 뒤 live smoke를 opt-in 합니다. Lifecycle smoke는 이미지를 업로드하고 provider를 재생성한 뒤 조회, 존재 확인, 메타데이터 조회, 삭제를 검증합니다.
 
 ```bash
 CROCO_LIVE_CLOUDINARY=1 \
@@ -116,5 +121,7 @@ pnpm --filter @croco/storage-cloudinary test -- CloudinaryLiveSmoke
 - 일시적 네트워크 오류와 5xx 응답은 최대 3회 재시도합니다.
 - 업로드 인텐트는 직접 업로드 엔드포인트, 공개 URL, `public_id`, `timestamp`, `api_key`, `signature` multipart 필드를 반환합니다. API secret은 반환하지 않으며 Cloudinary의 서명 유효 시간에 맞춰 TTL은 최대 1시간입니다.
 - Cloudinary image `public_id` 규칙에 맞춰 직접 업로드 key의 마지막 경로에는 파일 확장자를 포함하지 않습니다. 파일 이름의 확장자는 multipart `file`에만 사용합니다.
+- 성공한 업로드는 항상 `image` namespace를 사용하므로 provider 재생성 후에도 조회, 존재 확인, 메타데이터 조회,
+  삭제가 같은 key로 동작합니다.
 - `StorageProvider`의 `list()` 계약은 아직 존재하지 않으므로 provider도 목록 조회를 제공하지 않습니다.
 - custom metadata는 Cloudinary context로 보존됩니다. `getMetadata().contentType`은 원래 MIME 전체가 아니라 Cloudinary resource `format` 값입니다.
