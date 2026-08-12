@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { IdempotencyManager } from "../libs/IdempotencyManager";
+import { InvalidUsageValueProblem } from "../libs/problems/InvalidUsageValueProblem";
 import { RedisProblem } from "../libs/problems/RedisProblem";
 import type { RedisClient } from "../libs/RedisClient";
 import { RedisUsageStorage } from "../libs/RedisUsageStorage";
@@ -320,12 +321,12 @@ describe("RedisUsageStorage", () => {
     it.each([0.1, 1.9, 0, -1, Number.NaN, Number.POSITIVE_INFINITY, Number.MAX_SAFE_INTEGER + 1])(
       "should reject invalid usage value %s before acquiring idempotency",
       async (value) => {
-        await expect(
-          storage.record({
-            ...createUsageRecord("invalid-value"),
-            value,
-          }),
-        ).rejects.toMatchObject({
+        const request = storage.record({
+          ...createUsageRecord("invalid-value"),
+          value,
+        });
+        await expect(request).rejects.toThrow(InvalidUsageValueProblem);
+        await expect(request).rejects.toMatchObject({
           code: "metering/invalid-usage-value",
         });
 
@@ -361,13 +362,13 @@ describe("RedisUsageStorage", () => {
     ])("should fail closed for invalid stored usage member %s", async (member) => {
       vi.mocked(mockRedis.zrangebyscore).mockResolvedValue([member]);
 
-      await expect(
-        storage.getUsage({
-          tenantId: "tenant-1",
-          meterId: "api_calls",
-          period: "billing_cycle",
-        }),
-      ).rejects.toMatchObject({
+      const request = storage.getUsage({
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        period: "billing_cycle",
+      });
+      await expect(request).rejects.toThrow(RedisProblem);
+      await expect(request).rejects.toMatchObject({
         code: "metering/redis-error",
         extensions: {
           operation: "ZRANGEBYSCORE",
@@ -382,13 +383,13 @@ describe("RedisUsageStorage", () => {
         "usage-3:1.9",
       ]);
 
-      await expect(
-        storage.getUsage({
-          tenantId: "tenant-1",
-          meterId: "api_calls",
-          period: "billing_cycle",
-        }),
-      ).rejects.toMatchObject({
+      const request = storage.getUsage({
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        period: "billing_cycle",
+      });
+      await expect(request).rejects.toThrow(RedisProblem);
+      await expect(request).rejects.toMatchObject({
         code: "metering/redis-error",
         extensions: {
           operation: "ZRANGEBYSCORE",
@@ -665,13 +666,13 @@ describe("RedisUsageStorage", () => {
         String(new Date("2024-01-15T10:30:00Z").getTime()),
       ]);
 
-      await expect(
-        storage.fetchUsageRecords({
-          tenantId: "tenant-1",
-          meterId: "api_calls",
-          period: "billing_cycle",
-        }),
-      ).rejects.toMatchObject({
+      const request = storage.fetchUsageRecords({
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        period: "billing_cycle",
+      });
+      await expect(request).rejects.toThrow(RedisProblem);
+      await expect(request).rejects.toMatchObject({
         code: "metering/redis-error",
         extensions: {
           operation: "ZRANGEBYSCORE",
@@ -904,16 +905,16 @@ describe("RedisUsageStorage", () => {
           value,
         };
 
-        await expect(
-          storage.checkAndRecordWithinQuota({
-            tenantId: usageRecord.tenantId,
-            meterId: usageRecord.meterId,
-            value,
-            quota: 10,
-            allowOverQuota: false,
-            usageRecord,
-          }),
-        ).rejects.toMatchObject({
+        const request = storage.checkAndRecordWithinQuota({
+          tenantId: usageRecord.tenantId,
+          meterId: usageRecord.meterId,
+          value,
+          quota: 10,
+          allowOverQuota: false,
+          usageRecord,
+        });
+        await expect(request).rejects.toThrow(InvalidUsageValueProblem);
+        await expect(request).rejects.toMatchObject({
           code: "metering/invalid-usage-value",
         });
 
@@ -925,16 +926,16 @@ describe("RedisUsageStorage", () => {
     it("should reject mismatched quota and serialized usage values before eval", async () => {
       const usageRecord = createUsageRecord("mismatched-value");
 
-      await expect(
-        storage.checkAndRecordWithinQuota({
-          tenantId: usageRecord.tenantId,
-          meterId: usageRecord.meterId,
-          value: 4,
-          quota: 10,
-          allowOverQuota: false,
-          usageRecord,
-        }),
-      ).rejects.toMatchObject({
+      const request = storage.checkAndRecordWithinQuota({
+        tenantId: usageRecord.tenantId,
+        meterId: usageRecord.meterId,
+        value: 4,
+        quota: 10,
+        allowOverQuota: false,
+        usageRecord,
+      });
+      await expect(request).rejects.toThrow(InvalidUsageValueProblem);
+      await expect(request).rejects.toMatchObject({
         code: "metering/invalid-usage-value",
         detail: expect.stringContaining("must match"),
       });

@@ -139,7 +139,7 @@ Quota 체크
 
 - 3개 meter 동시 기록: prompt_tokens, completion_tokens, cost_usd_nanos
 - 멱등성 보장 (idempotencyKey:suffix)
-- accuracy 플래그 전파 (reported|estimated)
+- accuracy 플래그 전파 (EXACT | ESTIMATED | UNKNOWN)
 
 ---
 

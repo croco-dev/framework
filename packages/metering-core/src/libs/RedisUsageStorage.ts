@@ -109,6 +109,9 @@ if recordedResult then
     end
     return { tonumber(recordedExceeded), recordedUsageNumber }
   end
+  if recordedResult ~= '1' then
+    return redis.error_reply('Invalid stored quota result')
+  end
 end
 
 local records = redis.call('ZRANGEBYSCORE', usageKey, '-inf', '+inf')

@@ -43,4 +43,4 @@ record() 메서드의 호환성 옵션
 
 > `optional` **value?**: `number`
 
-Optional usage amount from 1 through Number.MAX_SAFE_INTEGER. Defaults to 1.
+Optional integer usage amount from 1 through Number.MAX_SAFE_INTEGER. Defaults to 1.

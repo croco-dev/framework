@@ -5,6 +5,7 @@ import type { BillableUsageClaim, BillableUsageEvent } from "../libs/BillableUsa
 import { MeteringService } from "../libs/MeteringService";
 import type { MeterRegistry } from "../libs/MeterRegistry";
 import { DuplicateRecordProblem } from "../libs/problems/DuplicateRecordProblem";
+import { RedisProblem } from "../libs/problems/RedisProblem";
 import type { RedisClient } from "../libs/RedisClient";
 import { RedisBillableUsageJournal } from "../libs/RedisBillableUsageJournal";
 import { RedisUsageStorage } from "../libs/RedisUsageStorage";
@@ -303,6 +304,7 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
         usageRecord,
       });
 
+      await expect(quotaCheck).rejects.toThrow(RedisProblem);
       await expect(quotaCheck).rejects.toMatchObject({
         code: "metering/redis-error",
         extensions: { operation: "EVAL" },
@@ -356,11 +358,40 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
       exceeded: false,
       newUsage: Number.MAX_SAFE_INTEGER,
     });
-    await expect(storage.checkAndRecordWithinQuota(options)).resolves.toEqual({
+    const replayStorage = new RedisUsageStorage(createRedisClient(connection));
+    await expect(replayStorage.checkAndRecordWithinQuota(options)).resolves.toEqual({
       exceeded: false,
       newUsage: Number.MAX_SAFE_INTEGER,
     });
   });
+
+  it.each(["quota:2:5", "quota:0:bad", "unexpected"])(
+    "rejects malformed stored quota result %s",
+    async (storedResult) => {
+      if (!connection) {
+        throw new Error("Redis test resource did not start");
+      }
+
+      const usageRecord = createUsageRecord("invalid-stored-result");
+      const dedupeKey = "idem2:record:tenant-atomic-record:api_calls:invalid-stored-result";
+      await connection.client.set(dedupeKey, storedResult);
+      const storage = new RedisUsageStorage(createRedisClient(connection));
+      const request = storage.checkAndRecordWithinQuota({
+        tenantId: usageRecord.tenantId,
+        meterId: usageRecord.meterId,
+        value: usageRecord.value,
+        quota: 100,
+        allowOverQuota: false,
+        usageRecord,
+      });
+
+      await expect(request).rejects.toThrow();
+      await expect(request).rejects.toMatchObject({
+        code: "metering/redis-error",
+        extensions: { operation: "EVAL" },
+      });
+    },
+  );
 
   it("atomically fences concurrent billable delivery claims and replays an expired lease", async () => {
     if (!connection) {

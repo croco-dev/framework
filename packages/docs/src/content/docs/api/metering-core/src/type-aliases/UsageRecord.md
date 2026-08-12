@@ -63,4 +63,4 @@ title: "UsageRecord"
 
 > **value**: `number`
 
-Usage amount from 1 through Number.MAX_SAFE_INTEGER, supported by every storage adapter.
+Integer usage amount from 1 through Number.MAX_SAFE_INTEGER, supported by every storage adapter.

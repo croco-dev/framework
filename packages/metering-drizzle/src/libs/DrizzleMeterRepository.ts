@@ -126,6 +126,8 @@ export class DrizzleMeterRepository extends MeterRepository {
     const client = this.getClient();
     const now = new Date();
 
+    this.validateQuota(meter.quota);
+
     const values = {
       tenantId: meter.tenantId,
       meterId: meter.meterId,
@@ -270,17 +272,29 @@ export class DrizzleMeterRepository extends MeterRepository {
   }
 
   private mapToMeterDefinition(raw: Record<string, unknown>): MeterDefinition {
+    const quota = raw.quota === null || raw.quota === undefined ? undefined : Number(raw.quota);
+    this.validateQuota(quota);
+
     return {
       id: String(raw.id),
       tenantId: String(raw.tenantId),
       meterId: String(raw.meterId),
       type: String(raw.type) as MeterDefinition["type"],
-      quota: raw.quota ? Number(raw.quota) : undefined,
+      quota,
       allowOverQuota: Boolean(raw.allowOverQuota),
       metadata: this.deserializeMetadata(raw.metadata),
       createdAt: this.parseDate(raw.createdAt),
       updatedAt: this.parseDate(raw.updatedAt),
     };
+  }
+
+  private validateQuota(quota: number | undefined): void {
+    if (quota !== undefined && (!Number.isSafeInteger(quota) || quota < 0)) {
+      throw new InvalidUsageValueProblem(
+        quota,
+        "quota must be an integer between 0 and Number.MAX_SAFE_INTEGER",
+      );
+    }
   }
 
   private deserializeMetadata(value: unknown): Record<string, unknown> | undefined {
