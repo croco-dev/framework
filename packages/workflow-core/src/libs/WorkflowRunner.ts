@@ -171,7 +171,7 @@ export class WorkflowRunner {
     span.addEvent("workflow.execution.started", getExecutionTelemetryAttributes(workflow, running));
     const steps: WorkflowStepResult[] = [];
 
-    await this.recordLog(running.id, "info", "Workflow execution started", {
+    await this.recordLog(span, running.id, "info", "Workflow execution started", {
       workflowName: workflow.name,
     });
 
@@ -184,7 +184,7 @@ export class WorkflowRunner {
           "workflow.step.task": step.task,
         };
         span.addEvent("workflow.step.started", stepAttributes);
-        await this.recordLog(running.id, "info", "Workflow step started", {
+        await this.recordLog(span, running.id, "info", "Workflow step started", {
           step: step.name,
           task: step.task,
         });
@@ -219,7 +219,7 @@ export class WorkflowRunner {
           result,
         });
 
-        await this.recordLog(running.id, "info", "Workflow step completed", {
+        await this.recordLog(span, running.id, "info", "Workflow step completed", {
           step: step.name,
           task: step.task,
         });
@@ -234,7 +234,7 @@ export class WorkflowRunner {
         "workflow.execution.completed",
         getExecutionTelemetryAttributes(workflow, completed),
       );
-      await this.recordLog(running.id, "info", "Workflow execution completed", {
+      await this.recordLog(span, running.id, "info", "Workflow execution completed", {
         workflowName: workflow.name,
       });
 
@@ -246,7 +246,7 @@ export class WorkflowRunner {
         reused: false,
       };
     } catch (error) {
-      await this.recordLog(running.id, "error", "Workflow execution failed", {
+      await this.recordLog(span, running.id, "error", "Workflow execution failed", {
         workflowName: workflow.name,
         error: error instanceof Error ? error.message : String(error),
       });
@@ -315,6 +315,7 @@ export class WorkflowRunner {
   }
 
   private async recordLog(
+    span: WorkflowTelemetrySpan,
     executionId: string,
     level: "info" | "error",
     message: string,
@@ -324,10 +325,19 @@ export class WorkflowRunner {
       return;
     }
 
-    await this.executionManager.recordLog(executionId, {
-      level,
-      message,
-      data,
-    });
+    try {
+      await this.executionManager.recordLog(executionId, {
+        level,
+        message,
+        data,
+      });
+    } catch (error) {
+      span.addEvent("workflow.log.failed", {
+        "workflow.execution.id": executionId,
+        "workflow.log.level": level,
+        "workflow.log.message": message,
+        "workflow.error.message": error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 }
