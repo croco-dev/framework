@@ -10,13 +10,11 @@ import type {
 } from "./interfaces/AbstractMembershipManager";
 import type { MembershipStore } from "./MembershipStore";
 import {
-  AlreadyMemberProblem,
   InvalidMembershipCommandProblem,
   InvalidRoleProblem,
   MembershipEventPublicationProblem,
   MembershipNotFoundProblem,
   RoleHierarchyViolationProblem,
-  SeatLimitExceededProblem,
 } from "./problems/MembershipProblems";
 import type { SeatLimitChecker } from "./SeatLimitChecker";
 import {
@@ -80,11 +78,11 @@ export class MembershipService implements MembershipManager {
     idempotencyKey: string,
   ): Promise<AddMembershipCommandResult> {
     this.ensureValidRole(role);
-    if (!(await this.store.hasExecutedCommand(idempotencyKey))) {
-      const existing = await this.store.findByTenantAndUser(tenantId, userId);
-      if (existing) throw new AlreadyMemberProblem(tenantId, userId);
-      await this.checkSeatLimit(tenantId);
-    }
+    const alreadyExecuted = await this.store.hasExecutedCommand(idempotencyKey);
+    const configuredMaxSeats =
+      !alreadyExecuted && this.seatLimitChecker
+        ? await this.seatLimitChecker.getMaxSeats(tenantId)
+        : null;
     const result = await this.execute({
       operation: "add",
       idempotencyKey,
@@ -92,6 +90,7 @@ export class MembershipService implements MembershipManager {
       tenantId,
       userId,
       role,
+      maxSeats: configuredMaxSeats === Number.POSITIVE_INFINITY ? null : configuredMaxSeats,
     });
     if (result.operation !== "add") {
       throw new InvalidMembershipCommandProblem(`store returned '${result.operation}' for 'add'`);
@@ -220,13 +219,5 @@ export class MembershipService implements MembershipManager {
 
   private ensureValidRole(role: string): void {
     if (!isMembershipRole(role)) throw new InvalidRoleProblem(role);
-  }
-
-  private async checkSeatLimit(tenantId: string): Promise<void> {
-    if (!this.seatLimitChecker) return;
-    const status = await this.seatLimitChecker.checkSeatAvailability(tenantId);
-    if (status.exceeded) {
-      throw new SeatLimitExceededProblem(tenantId, status.usage, status.quota);
-    }
   }
 }

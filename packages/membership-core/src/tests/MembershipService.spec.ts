@@ -28,6 +28,92 @@ function createService(
 }
 
 describe("MembershipService atomic commands", () => {
+  it("allows exactly one concurrent addition for the final seat", async () => {
+    const store = new InMemoryMembershipStore();
+    const service = new MembershipService({
+      store,
+      eventDelivery: "development",
+      eventPublisher: { publishIdempotently: async () => undefined },
+      seatLimitChecker: {
+        checkSeatAvailability: async () => ({
+          usage: 0,
+          quota: 1,
+          exceeded: false,
+          remaining: 1,
+        }),
+        getCurrentMemberCount: async () => store.countAll("tenant-1"),
+        getMaxSeats: async () => 1,
+      },
+    });
+
+    const results = await Promise.allSettled([
+      service.addMember("tenant-1", "user-1", "member", "add:user-1"),
+      service.addMember("tenant-1", "user-2", "member", "add:user-2"),
+    ]);
+
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    expect(results.find((result) => result.status === "rejected")).toMatchObject({
+      reason: expect.any(SeatLimitExceededProblem),
+    });
+    await expect(store.countAll("tenant-1")).resolves.toBe(1);
+    await expect(store.listPendingEventIntents()).resolves.toHaveLength(1);
+  });
+
+  it("keeps positive-infinity plans unlimited", async () => {
+    const store = new InMemoryMembershipStore();
+    const service = new MembershipService({
+      store,
+      eventDelivery: "development",
+      eventPublisher: { publishIdempotently: async () => undefined },
+      seatLimitChecker: {
+        checkSeatAvailability: async () => ({
+          usage: 0,
+          quota: Number.POSITIVE_INFINITY,
+          exceeded: false,
+          remaining: Number.POSITIVE_INFINITY,
+        }),
+        getCurrentMemberCount: async () => store.countAll("tenant-1"),
+        getMaxSeats: async () => Number.POSITIVE_INFINITY,
+      },
+    });
+
+    await service.addMember("tenant-1", "user-1", "member", "add:user-1");
+    await service.addMember("tenant-1", "user-2", "member", "add:user-2");
+
+    await expect(store.countAll("tenant-1")).resolves.toBe(2);
+  });
+
+  it("replays a committed add without rechecking capacity", async () => {
+    const store = new InMemoryMembershipStore();
+    let quotaAvailable = true;
+    const service = new MembershipService({
+      store,
+      eventDelivery: "development",
+      eventPublisher: { publishIdempotently: async () => undefined },
+      seatLimitChecker: {
+        checkSeatAvailability: async () => ({
+          usage: 0,
+          quota: 1,
+          exceeded: false,
+          remaining: 1,
+        }),
+        getCurrentMemberCount: async () => store.countAll("tenant-1"),
+        getMaxSeats: async () => {
+          if (!quotaAvailable) throw new Error("quota provider unavailable");
+          return 1;
+        },
+      },
+      idGenerator: () => "membership-1",
+    });
+
+    const original = await service.addMember("tenant-1", "user-1", "member", "add:user-1");
+    quotaAvailable = false;
+    const replay = await service.addMember("tenant-1", "user-1", "member", "add:user-1");
+
+    expect(replay).toEqual(original);
+    await expect(store.countAll("tenant-1")).resolves.toBe(1);
+  });
+
   it("allows only one concurrent owner removal and exposes the stable Problem", async () => {
     const store = new InMemoryMembershipStore();
     await store.save({ id: "owner-1", tenantId: "tenant-1", userId: "owner-1", role: "owner" });
@@ -115,7 +201,7 @@ describe("MembershipService atomic commands", () => {
       seatLimitChecker: {
         checkSeatAvailability: async () => ({ usage: 1, quota: 1, exceeded: true, remaining: 0 }),
         getCurrentMemberCount: async () => 1,
-        getMaxSeats: async () => 1,
+        getMaxSeats: async () => 0,
       },
     });
     await expect(
