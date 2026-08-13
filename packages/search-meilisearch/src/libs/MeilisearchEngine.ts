@@ -167,10 +167,19 @@ export class MeilisearchEngine extends SearchEngine {
   }
 
   async generateTenantToken(tenantId: string, expiresAt?: Date): Promise<string> {
+    const activeTenantId = this.getTenantId("generateTenantToken");
+
     if (!tenantId.trim()) {
       throw new MeilisearchInvalidRequestProblem(
         { operation: "generateTenantToken" },
         "Tenant id must be a non-empty string",
+      );
+    }
+
+    if (tenantId !== activeTenantId) {
+      throw new MeilisearchInvalidRequestProblem(
+        { operation: "generateTenantToken", upstreamCode: "invalid-tenant-context" },
+        "Meilisearch tenant token id must match the active tenant context",
       );
     }
 
@@ -182,7 +191,7 @@ export class MeilisearchEngine extends SearchEngine {
 
     const searchRules = {
       "*": {
-        filter: `_tenantId = "${this.escapeFilterValue(tenantId)}"`,
+        filter: `_tenantId = "${this.escapeFilterValue(activeTenantId)}"`,
       },
     };
 
