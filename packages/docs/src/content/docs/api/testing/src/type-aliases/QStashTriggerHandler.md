@@ -11,7 +11,7 @@ title: "QStashTriggerHandler"
 
 ### handle()
 
-> **handle**(`body`, `signature?`): `Promise`\<[`QStashTriggerHandleResult`](/api/testing/src/type-aliases/qstashtriggerhandleresult/)\>
+> **handle**(`body`, `signature`, `delivery`): `Promise`\<[`QStashTriggerHandleResult`](/api/testing/src/type-aliases/qstashtriggerhandleresult/)\>
 
 #### Parameters
 
@@ -19,7 +19,13 @@ title: "QStashTriggerHandler"
 
 `string`
 
-##### signature?
+##### signature
+
+`string` \| `undefined`
+
+##### delivery
+
+###### messageId
 
 `string`
 

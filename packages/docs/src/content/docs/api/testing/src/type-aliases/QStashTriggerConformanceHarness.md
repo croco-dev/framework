@@ -17,7 +17,7 @@ title: "QStashTriggerConformanceHarness"
 
 readonly `unknown`[]
 
-***
+---
 
 ### getScheduleOperations
 
@@ -27,25 +27,41 @@ readonly `unknown`[]
 
 readonly [`QStashTriggerScheduleRecord`](/api/testing/src/type-aliases/qstashtriggerschedulerecord/)[]
 
-***
+---
 
 ### handler
 
 > `readonly` **handler**: [`QStashTriggerHandler`](/api/testing/src/type-aliases/qstashtriggerhandler/)
 
-***
+---
 
 ### scheduler
 
 > `readonly` **scheduler**: [`QStashTriggerScheduler`](/api/testing/src/type-aliases/qstashtriggerscheduler/)
 
-***
+---
+
+### setDeliveryIdentityVerification
+
+> `readonly` **setDeliveryIdentityVerification**: (`result`) => `void`
+
+#### Parameters
+
+##### result
+
+`boolean` \| `Error`
+
+#### Returns
+
+`void`
+
+---
 
 ### validSignature
 
 > `readonly` **validSignature**: `string`
 
-***
+---
 
 ### webhookBody
 

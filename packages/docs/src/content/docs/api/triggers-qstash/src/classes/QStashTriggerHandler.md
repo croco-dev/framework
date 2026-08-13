@@ -8,6 +8,7 @@ title: "QStashTriggerHandler"
 QStashTriggerHandler handles incoming webhooks from QStash.
 
 This handler:
+
 - Verifies the QStash signature to ensure the request is authentic
 - Parses the payload to identify the target class and method
 - Resolves the target instance from the DI container
@@ -15,20 +16,31 @@ This handler:
 - Dispatches the execution to the target method
 
 Usage with Hono (for Lambda):
+
 ```typescript
-import { Hono } from 'hono';
-import { receiver } from './qstash-config';
-import { executionManager } from './execution-config';
-import { QStashTriggerHandler } from '@croco/triggers-qstash';
+import { Hono } from "hono";
+import { client, receiver } from "./qstash-config";
+import { executionManager } from "./execution-config";
+import {
+  createQStashApiDeliveryIdentityVerifier,
+  QStashTriggerHandler,
+} from "@croco/triggers-qstash";
 
 const app = new Hono();
-const handler = new QStashTriggerHandler({ receiver, executionManager });
+const handler = new QStashTriggerHandler({
+  receiver,
+  deliveryIdentityVerifier: createQStashApiDeliveryIdentityVerifier(client),
+  executionManager,
+  executionTimeout: 60_000,
+});
 
-app.post('/webhooks/qstash', async (c) => {
+app.post("/webhooks/qstash", async (c) => {
   const body = await c.req.text();
-  const signature = c.req.header('Upstash-Signature');
+  const signature = c.req.header("Upstash-Signature");
 
-  const result = await handler.handle(body, signature);
+  const result = await handler.handle(body, signature, {
+    messageId: c.req.header("Upstash-Message-Id") ?? "",
+  });
   return c.json(result.body, result.statusCode);
 });
 ```
@@ -53,7 +65,7 @@ app.post('/webhooks/qstash', async (c) => {
 
 ### handle()
 
-> **handle**(`body`, `signature?`): `Promise`\<[`HandleResult`](/api/triggers-qstash/src/type-aliases/handleresult/)\>
+> **handle**(`body`, `signature`, `delivery`): `Promise`\<[`HandleResult`](/api/triggers-qstash/src/type-aliases/handleresult/)\>
 
 Handle an incoming QStash webhook request.
 
@@ -65,11 +77,15 @@ Handle an incoming QStash webhook request.
 
 Raw request body as string
 
-##### signature?
+##### signature
 
-`string`
+`string` \| `undefined`
 
 QStash signature from 'Upstash-Signature' header
+
+##### delivery
+
+[`QStashDeliveryIdentity`](/api/triggers-qstash/src/type-aliases/qstashdeliveryidentity/)
 
 #### Returns
 
@@ -77,7 +93,7 @@ QStash signature from 'Upstash-Signature' header
 
 Handle result with status and response data
 
-***
+---
 
 ### createLambdaHandler()
 
@@ -86,10 +102,13 @@ Handle result with status and response data
 Create a Lambda handler wrapper for easy integration.
 
 Usage:
+
 ```typescript
 export const handler = createLambdaHandler({
   receiver: myReceiver,
+  deliveryIdentityVerifier: createQStashApiDeliveryIdentityVerifier(myClient),
   executionManager: myExecutionManager,
+  executionTimeout: 60_000,
 });
 ```
 
