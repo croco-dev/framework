@@ -2,7 +2,7 @@ import type { HealthTransitionEventIntent, TenantHealthScore } from "@croco/cust
 import { describe, expect, it, vi } from "vitest";
 import { DrizzleHealthScoreStore } from "../libs/DrizzleHealthScoreStore";
 import type { DrizzleHealthClient } from "../libs/DrizzleHealthScoreStore";
-import { tenantHealthScores } from "../libs/schema";
+import { tenantHealthEventIntents, tenantHealthScores } from "../libs/schema";
 
 describe("DrizzleHealthScoreStore", () => {
   it("persists the score and transition intents in one transaction", async () => {
@@ -106,6 +106,28 @@ describe("DrizzleHealthScoreStore", () => {
     expect(result).toEqual({ committed: false, latest });
     expect(insert).not.toHaveBeenCalled();
     expect(containsQueryChunk(orderByExpression, tenantHealthScores.transitionSequence)).toBe(true);
+  });
+
+  it("loads pending intents in committed transition and declaration order", async () => {
+    const orderBy = vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([]) });
+    const db = {
+      select: vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({ orderBy }),
+        }),
+      }),
+    } as unknown as DrizzleHealthClient;
+    const store = new DrizzleHealthScoreStore(db);
+
+    await store.listPendingEventIntents("tenant-1");
+
+    expect(orderBy).toHaveBeenCalledTimes(1);
+    const ordering = orderBy.mock.calls[0];
+    expect(ordering).toHaveLength(2);
+    expect(containsQueryChunk(ordering?.[0], tenantHealthEventIntents.transitionSequence)).toBe(
+      true,
+    );
+    expect(containsQueryChunk(ordering?.[1], tenantHealthEventIntents.intentOrder)).toBe(true);
   });
 });
 

@@ -7659,6 +7659,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "HealthEventPublisherNotConfiguredProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/HealthProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "HealthScoreCalculator",
               "exportKind": "named",
               "source": "./libs/HealthScoreCalculator",
@@ -7846,6 +7852,12 @@
               "name": "DrizzleHealthSignalRegistry",
               "exportKind": "named",
               "source": "./libs/DrizzleHealthSignalRegistry",
+              "declarationKind": "class"
+            },
+            {
+              "name": "HealthTransitionSequenceMissingProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/DrizzleHealthProblems",
               "declarationKind": "class"
             },
             {
