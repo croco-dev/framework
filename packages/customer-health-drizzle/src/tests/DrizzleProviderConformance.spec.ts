@@ -130,6 +130,8 @@ describe("customer-health-drizzle provider conformance", () => {
                 expect.arrayContaining([
                   "eventId",
                   "tenantId",
+                  "transitionSequence",
+                  "intentOrder",
                   "occurredAt",
                   "data",
                   "publishedAt",

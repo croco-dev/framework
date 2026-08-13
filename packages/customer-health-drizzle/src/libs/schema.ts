@@ -4,7 +4,16 @@ import type {
   HealthTrend,
   SignalCategory,
 } from "@croco/customer-health-core";
-import { bigserial, index, integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  bigint,
+  bigserial,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
 /**
@@ -27,6 +36,8 @@ export const tenantHealthEventIntents = pgTable(
   {
     eventId: text("event_id").primaryKey(),
     tenantId: text("tenant_id").notNull(),
+    transitionSequence: bigint("transition_sequence", { mode: "bigint" }).notNull(),
+    intentOrder: integer("intent_order").notNull(),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
     data: jsonb("data").notNull().$type<HealthTransitionEventIntent["data"]>(),
     publishedAt: timestamp("published_at", { withTimezone: true }),
@@ -34,7 +45,7 @@ export const tenantHealthEventIntents = pgTable(
   },
   (table) => [
     index("tenant_health_event_intents_pending_idx")
-      .on(table.tenantId, table.createdAt, table.eventId)
+      .on(table.tenantId, table.transitionSequence, table.intentOrder)
       .where(sql`${table.publishedAt} is null`),
   ],
 );

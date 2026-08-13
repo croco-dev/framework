@@ -4,6 +4,7 @@ import { CustomerHealthService } from "../libs/CustomerHealthService";
 import { HealthScoreDroppedEvent, HealthStatusChangedEvent } from "../libs/events";
 import { HealthScoreCalculator } from "../libs/HealthScoreCalculator";
 import { InMemoryHealthScoreStore } from "../libs/InMemoryHealthScoreStore";
+import { HealthEventPublisherNotConfiguredProblem } from "../libs/problems/HealthProblems";
 import {
   CustomerHealthEventPublisher,
   HealthScoreStore,
@@ -503,6 +504,9 @@ describe("CustomerHealthService", () => {
     expect(result.status).toBe("at_risk");
     expect(result.previousScore).toBe(85);
     expect(vi.mocked(mockEventPublisher.publishIdempotently)).not.toHaveBeenCalled();
+    await expect(service.publishPendingEvents("tenant-1")).rejects.toBeInstanceOf(
+      HealthEventPublisherNotConfiguredProblem,
+    );
   });
 
   it("should resolve from Container with optional event publisher wiring intact", () => {

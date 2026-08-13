@@ -48,6 +48,8 @@ export async function addHealthEventIntents(db: CustomerHealthMigrationClient): 
     CREATE TABLE IF NOT EXISTS tenant_health_event_intents (
       event_id text PRIMARY KEY,
       tenant_id text NOT NULL,
+      transition_sequence bigint NOT NULL,
+      intent_order integer NOT NULL,
       occurred_at timestamp with time zone NOT NULL,
       data jsonb NOT NULL,
       published_at timestamp with time zone,
@@ -56,7 +58,7 @@ export async function addHealthEventIntents(db: CustomerHealthMigrationClient): 
   `);
   await db.execute(sql`
     CREATE INDEX IF NOT EXISTS tenant_health_event_intents_pending_idx
-      ON tenant_health_event_intents (tenant_id, created_at, event_id)
+      ON tenant_health_event_intents (tenant_id, transition_sequence, intent_order)
       WHERE published_at IS NULL
   `);
 }

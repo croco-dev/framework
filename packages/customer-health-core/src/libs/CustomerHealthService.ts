@@ -4,6 +4,7 @@ import type { HealthTransitionEventIntent } from "./eventIntent";
 import { HealthScoreDroppedEvent, HealthStatusChangedEvent } from "./events";
 import { HealthScoreCalculator } from "./HealthScoreCalculator";
 import { CustomerHealthEventPublisher, HealthScoreStore, HealthSignalRegistry } from "./interfaces";
+import { HealthEventPublisherNotConfiguredProblem } from "./problems/HealthProblems";
 import type { HealthScoreProfile, HealthTrend, TenantHealthScore } from "./types";
 
 @Component()
@@ -45,17 +46,21 @@ export class CustomerHealthService {
       previous = commit.latest;
     }
 
-    await this.publishPendingEvents(tenantId);
+    const eventPublisher = this.getEventPublisher();
+    if (eventPublisher) {
+      const intents = await this.store.listPendingEventIntents(tenantId, 100);
+      await this.publishEventIntents(intents, eventPublisher);
+    }
 
     return score;
   }
 
   async publishPendingEvents(tenantId: string, limit = 100): Promise<number> {
     const eventPublisher = this.getEventPublisher();
-    if (!eventPublisher) return 0;
+    if (!eventPublisher) throw new HealthEventPublisherNotConfiguredProblem();
 
     const intents = await this.store.listPendingEventIntents(tenantId, limit);
-    await this.publishEventIntents(intents);
+    await this.publishEventIntents(intents, eventPublisher);
     return intents.length;
   }
 
@@ -95,10 +100,8 @@ export class CustomerHealthService {
 
   private async publishEventIntents(
     intents: readonly HealthTransitionEventIntent[],
+    eventPublisher: CustomerHealthEventPublisher,
   ): Promise<void> {
-    const eventPublisher = this.getEventPublisher();
-    if (!eventPublisher) return;
-
     for (const intent of intents) {
       const event = this.restoreEvent(intent);
       await eventPublisher.publishIdempotently(event);

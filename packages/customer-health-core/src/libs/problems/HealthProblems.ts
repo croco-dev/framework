@@ -16,3 +16,12 @@ export class HealthEventIntentConflictProblem extends Problem {
     super(`Health event intent '${eventId}' conflicts with an existing intent`);
   }
 }
+
+export class HealthEventPublisherNotConfiguredProblem extends Problem {
+  readonly code = "customer-health-core/event-publisher-not-configured";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor() {
+    super("Customer health event publisher is not configured");
+  }
+}

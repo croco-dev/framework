@@ -14,7 +14,7 @@ describe("DrizzleHealthScoreStore", () => {
     }));
     const store = new DrizzleHealthScoreStore({ transaction } as unknown as DrizzleHealthClient);
     const score = createScore(50, "critical", "2026-03-15T11:00:00Z");
-    const intent: HealthTransitionEventIntent = {
+    const statusIntent: HealthTransitionEventIntent = {
       eventId: "event-1",
       tenantId: "tenant-1",
       occurredAt: score.calculatedAt,
@@ -26,8 +26,20 @@ describe("DrizzleHealthScoreStore", () => {
         score: 50,
       },
     };
+    const dropIntent: HealthTransitionEventIntent = {
+      eventId: "event-2",
+      tenantId: "tenant-1",
+      occurredAt: score.calculatedAt,
+      data: {
+        kind: "score_dropped",
+        tenantId: "tenant-1",
+        previousScore: 90,
+        currentScore: 50,
+        dropPercentage: 44.44,
+      },
+    };
 
-    const result = await store.saveTransition(score, null, [intent]);
+    const result = await store.saveTransition(score, null, [statusIntent, dropIntent]);
 
     expect(result).toEqual({ committed: true });
     expect(score.transitionVersion).toBe("1");
@@ -36,8 +48,18 @@ describe("DrizzleHealthScoreStore", () => {
       {
         eventId: "event-1",
         tenantId: "tenant-1",
+        transitionSequence: BigInt(1),
+        intentOrder: 0,
         occurredAt: score.calculatedAt,
-        data: intent.data,
+        data: statusIntent.data,
+      },
+      {
+        eventId: "event-2",
+        tenantId: "tenant-1",
+        transitionSequence: BigInt(1),
+        intentOrder: 1,
+        occurredAt: score.calculatedAt,
+        data: dropIntent.data,
       },
     ]);
   });

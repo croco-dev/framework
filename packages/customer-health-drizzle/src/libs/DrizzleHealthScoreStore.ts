@@ -8,6 +8,7 @@ import { Component, Inject, Token } from "@croco/framework-context";
 import { and, asc, desc, eq, gte, isNull, lte, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { tenantHealthEventIntents, tenantHealthScores } from "./schema";
+import { HealthTransitionSequenceMissingProblem } from "./problems/DrizzleHealthProblems";
 
 /**
  * 건강 점수 저장소에서 사용하는 Drizzle 클라이언트 타입입니다.
@@ -75,10 +76,13 @@ export class DrizzleHealthScoreStore extends HealthScoreStore {
       const inserted = insertedRows[0];
       if (inserted) score.transitionVersion = String(inserted.transitionSequence);
       if (eventIntents.length > 0) {
+        if (!inserted) throw new HealthTransitionSequenceMissingProblem();
         await tx.insert(tenantHealthEventIntents).values(
-          eventIntents.map((intent) => ({
+          eventIntents.map((intent, intentOrder) => ({
             eventId: intent.eventId,
             tenantId: intent.tenantId,
+            transitionSequence: inserted.transitionSequence,
+            intentOrder,
             occurredAt: intent.occurredAt,
             data: intent.data,
           })),
@@ -102,7 +106,10 @@ export class DrizzleHealthScoreStore extends HealthScoreStore {
           isNull(tenantHealthEventIntents.publishedAt),
         ),
       )
-      .orderBy(asc(tenantHealthEventIntents.createdAt), asc(tenantHealthEventIntents.eventId))
+      .orderBy(
+        asc(tenantHealthEventIntents.transitionSequence),
+        asc(tenantHealthEventIntents.intentOrder),
+      )
       .limit(limit);
     return rows.map((row) => ({
       eventId: row.eventId,

@@ -11,6 +11,7 @@ export * from "./libs/interfaces";
 // Problems
 export {
   HealthEventIntentConflictProblem,
+  HealthEventPublisherNotConfiguredProblem,
   HealthScoreNotFoundProblem,
 } from "./libs/problems/HealthProblems";
 

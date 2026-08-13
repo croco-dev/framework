@@ -28,6 +28,12 @@ describe("health event intent migrations", () => {
     expect(dialect.sqlToQuery(execute.mock.calls[6]?.[0] as SQL).sql).toContain(
       "tenant_health_event_intents",
     );
+    expect(dialect.sqlToQuery(execute.mock.calls[6]?.[0] as SQL).sql).toContain(
+      "transition_sequence bigint NOT NULL",
+    );
+    expect(dialect.sqlToQuery(execute.mock.calls[6]?.[0] as SQL).sql).toContain(
+      "intent_order integer NOT NULL",
+    );
     expect(dialect.sqlToQuery(execute.mock.calls[7]?.[0] as SQL).sql).toContain(
       "tenant_health_event_intents_pending_idx",
     );
