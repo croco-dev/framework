@@ -59,6 +59,7 @@ describe("@Auditable", () => {
         resourceType: "Project",
         resourceIdParam: "resourceId",
         payloadParam: "payload",
+        includeResult: true,
       })
       async update(
         resourceId: string,
@@ -128,6 +129,7 @@ describe("@Auditable", () => {
         resourceType: "Project",
         resourceIdParam: "resourceId",
         payloadParam: "payload",
+        includeResult: true,
       })
       async create(
         resourceId: string,
@@ -230,6 +232,332 @@ describe("@Auditable", () => {
           error: "delete failed: project-3",
         }),
         diff: { status: { before: "ACTIVE", after: "DELETED" } },
+      }),
+    );
+  });
+
+  it("should redact nested secret-bearing values without changing non-sensitive fields", async () => {
+    const createSpy = vi.fn(async (entry: Omit<AuditLogEntry, "id" | "createdAt">) =>
+      createPersistedEntry(entry),
+    );
+    const repository = {
+      create: createSpy,
+      find: vi.fn(),
+    } as unknown as AuditLogRepository;
+
+    vi.spyOn(Container, "get").mockReturnValue(repository);
+    vi.spyOn(Context, "get").mockReturnValue({
+      requestId: "req-redaction",
+      tenantId: "tenant-redaction",
+      user: { id: "actor-redaction" },
+    } as RequestContextStub);
+
+    class TestService {
+      @Auditable({
+        action: "credential.rotate",
+        resourceType: "Credential",
+        resourceIdParam: "resourceId",
+        payloadParam: "payload",
+      })
+      async rotate(resourceId: string, payload: Record<string, unknown>): Promise<void> {
+        void resourceId;
+        void payload;
+      }
+    }
+
+    let serializationHookCalls = 0;
+    await new TestService().rotate("credential-1", {
+      name: "primary",
+      password: "plain-password",
+      db_password: "database-password",
+      diff: {
+        dbPassword: { before: "old-password", after: "new-password" },
+        enabled: { before: false, after: true },
+      },
+      nested: {
+        toJSON: () => {
+          serializationHookCalls += 1;
+          return { password: "serialization-bypass" };
+        },
+        apiKey: "api-key-value",
+        "x-api-key": "header-api-key-value",
+        enabled: true,
+        description: "Apply basic validation and use digest authentication",
+        items: [
+          { accessToken: "access-token-value", label: "first" },
+          { authorization: "Bearer bearer-value", label: "second" },
+        ],
+        createdAt: Object.defineProperty(new Date("2026-08-13T00:00:00.000Z"), "getTime", {
+          enumerable: true,
+          get: () => {
+            throw new Error("date getTime getter must not run");
+          },
+        }),
+      },
+    });
+
+    await Promise.resolve();
+
+    const expectedInput = {
+      name: "primary",
+      password: "[Redacted]",
+      db_password: "[Redacted]",
+      diff: {
+        dbPassword: "[Redacted]",
+        enabled: { before: false, after: true },
+      },
+      nested: {
+        apiKey: "[Redacted]",
+        "x-api-key": "[Redacted]",
+        enabled: true,
+        description: "Apply basic validation and use digest authentication",
+        items: [
+          { accessToken: "[Redacted]", label: "first" },
+          { authorization: "[Redacted]", label: "second" },
+        ],
+        createdAt: new Date("2026-08-13T00:00:00.000Z"),
+      },
+    };
+    expect(createSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payload: {
+          arguments: ["credential-1", expectedInput],
+          input: expectedInput,
+        },
+        diff: {
+          dbPassword: "[Redacted]",
+          enabled: { before: false, after: true },
+        },
+      }),
+    );
+    expect(JSON.stringify(createSpy.mock.calls[0]?.[0].payload)).not.toContain(
+      "serialization-bypass",
+    );
+    expect(serializationHookCalls).toBe(0);
+  });
+
+  it("should omit results by default and sanitize explicitly included results", async () => {
+    const createSpy = vi.fn(async (entry: Omit<AuditLogEntry, "id" | "createdAt">) =>
+      createPersistedEntry(entry),
+    );
+    const repository = {
+      create: createSpy,
+      find: vi.fn(),
+    } as unknown as AuditLogRepository;
+
+    vi.spyOn(Container, "get").mockReturnValue(repository);
+    vi.spyOn(Context, "get").mockReturnValue({
+      requestId: "req-result-policy",
+      tenantId: "tenant-result-policy",
+      user: { id: "actor-result-policy" },
+    } as RequestContextStub);
+
+    class TestService {
+      @Auditable({ action: "session.default", resourceType: "Session" })
+      async createDefault(): Promise<Record<string, unknown>> {
+        return { sessionId: "session-1", refreshToken: "default-secret" };
+      }
+
+      @Auditable({ action: "session.explicit", resourceType: "Session", includeResult: true })
+      async createExplicit(): Promise<Record<string, unknown>> {
+        return { sessionId: "session-2", refreshToken: "explicit-secret", active: true };
+      }
+
+      @Auditable({ action: "session.accessors", resourceType: "Session", includeResult: true })
+      async createWithAccessors(): Promise<Record<string, unknown>> {
+        return Object.defineProperties(
+          { sessionId: "session-3", active: true },
+          {
+            refreshToken: {
+              enumerable: true,
+              get: () => {
+                throw new Error("secret getter must not run");
+              },
+            },
+            displayName: {
+              enumerable: true,
+              get: () => {
+                throw new Error("ordinary getter must not run");
+              },
+            },
+          },
+        );
+      }
+    }
+
+    const service = new TestService();
+    await service.createDefault();
+    await service.createExplicit();
+    const accessorResult = await service.createWithAccessors();
+    await Promise.resolve();
+
+    expect(createSpy.mock.calls[0]?.[0].payload).toEqual({ arguments: [] });
+    expect(createSpy.mock.calls[1]?.[0].payload).toEqual({
+      arguments: [],
+      result: { sessionId: "session-2", refreshToken: "[Redacted]", active: true },
+    });
+    expect(accessorResult.sessionId).toBe("session-3");
+    expect(createSpy.mock.calls[2]?.[0].payload).toEqual({
+      arguments: [],
+      result: {
+        sessionId: "session-3",
+        active: true,
+        refreshToken: "[Redacted]",
+        displayName: "[Accessor]",
+      },
+    });
+  });
+
+  it("should redact secret-bearing labels in persisted error messages", async () => {
+    const createSpy = vi.fn(async (entry: Omit<AuditLogEntry, "id" | "createdAt">) =>
+      createPersistedEntry(entry),
+    );
+    const repository = {
+      create: createSpy,
+      find: vi.fn(),
+    } as unknown as AuditLogRepository;
+
+    vi.spyOn(Container, "get").mockReturnValue(repository);
+    vi.spyOn(Context, "get").mockReturnValue({
+      requestId: "req-error-redaction",
+      tenantId: "tenant-error-redaction",
+      user: { id: "actor-error-redaction" },
+    } as RequestContextStub);
+
+    class TestService {
+      @Auditable({ action: "session.fail", resourceType: "Session" })
+      async fail(): Promise<void> {
+        throw new Error(
+          'request failed {"password":"pa\'ss,tail","apiKey":"key\\\"value,tail"}\nCookie: sid=first-secret; csrf=second-secret\nauthorization=Bearer bearer-value',
+        );
+      }
+    }
+
+    await expect(new TestService().fail()).rejects.toThrow("pa'ss,tail");
+    await Promise.resolve();
+
+    expect(createSpy.mock.calls[0]?.[0].payload).toEqual({
+      arguments: [],
+      error:
+        'request failed {"password":"[Redacted]","apiKey":"[Redacted]"}\nCookie: [Redacted]\nauthorization=[Redacted]',
+    });
+  });
+
+  it("should not invoke input accessors while constructing audit payloads", async () => {
+    const createSpy = vi.fn(async (entry: Omit<AuditLogEntry, "id" | "createdAt">) =>
+      createPersistedEntry(entry),
+    );
+    const repository = {
+      create: createSpy,
+      find: vi.fn(),
+    } as unknown as AuditLogRepository;
+    let accessorCalls = 0;
+
+    vi.spyOn(Container, "get").mockReturnValue(repository);
+    vi.spyOn(Context, "get").mockReturnValue({
+      requestId: "req-input-accessor",
+      tenantId: "tenant-input-accessor",
+      user: { id: "actor-input-accessor" },
+    } as RequestContextStub);
+
+    const payload = Object.defineProperties(
+      { name: "safe-name" },
+      {
+        diff: {
+          enumerable: true,
+          get: () => {
+            accessorCalls += 1;
+            throw new Error("diff getter must not run");
+          },
+        },
+        password: {
+          enumerable: true,
+          get: () => {
+            accessorCalls += 1;
+            throw new Error("password getter must not run");
+          },
+        },
+      },
+    );
+
+    class TestService {
+      @Auditable({
+        action: "credential.accessor",
+        resourceType: "Credential",
+        resourceIdParam: "resourceId",
+        payloadParam: "payload",
+      })
+      async update(resourceId: string, input: Record<string, unknown>): Promise<string> {
+        void input;
+        return `updated:${resourceId}`;
+      }
+    }
+
+    await expect(new TestService().update("credential-2", payload)).resolves.toBe(
+      "updated:credential-2",
+    );
+    await Promise.resolve();
+
+    expect(accessorCalls).toBe(0);
+    expect(createSpy.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({
+        diff: null,
+        payload: {
+          arguments: [
+            "credential-2",
+            { name: "safe-name", diff: "[Accessor]", password: "[Redacted]" },
+          ],
+          input: { name: "safe-name", diff: "[Accessor]", password: "[Redacted]" },
+        },
+      }),
+    );
+  });
+
+  it("should keep uninspectable diffs within the object-or-null storage contract", async () => {
+    const createSpy = vi.fn(async (entry: Omit<AuditLogEntry, "id" | "createdAt">) =>
+      createPersistedEntry(entry),
+    );
+    const repository = {
+      create: createSpy,
+      find: vi.fn(),
+    } as unknown as AuditLogRepository;
+    const uninspectableDiff = new Proxy(
+      {},
+      {
+        ownKeys: () => {
+          throw new Error("diff cannot be inspected");
+        },
+      },
+    );
+
+    vi.spyOn(Container, "get").mockReturnValue(repository);
+    vi.spyOn(Context, "get").mockReturnValue({
+      requestId: "req-uninspectable-diff",
+      tenantId: "tenant-uninspectable-diff",
+      user: { id: "actor-uninspectable-diff" },
+    } as RequestContextStub);
+
+    class TestService {
+      @Auditable({
+        action: "credential.diff",
+        resourceType: "Credential",
+        resourceIdParam: "resourceId",
+        payloadParam: "payload",
+      })
+      async update(resourceId: string, payload: Record<string, unknown>): Promise<string> {
+        void payload;
+        return resourceId;
+      }
+    }
+
+    await expect(
+      new TestService().update("credential-3", { diff: uninspectableDiff }),
+    ).resolves.toBe("credential-3");
+    await Promise.resolve();
+
+    expect(createSpy.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({
+        diff: null,
       }),
     );
   });
