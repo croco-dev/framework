@@ -1,5 +1,5 @@
 import { createPolicyDecisionTrace } from "@croco/access-core";
-import { Container } from "@croco/framework-context";
+import { Container, Context } from "@croco/framework-context";
 import * as telemetry from "@croco/telemetry-api";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -73,11 +73,18 @@ function createContext(options: {
   target?: unknown;
   handler?: string | symbol;
   request?: Partial<RequestWithOptionalTenantUser>;
+  httpTenantId?: string;
 }): RouteExecutionContext {
   return {
     getClass: () => options.target ?? {},
     getHandler: () => options.handler ?? "testMethod",
     getRequest: () => options.request as RequestWithTenant,
+    getHttpContext: () => ({
+      req: { params: {} },
+      param: () => undefined,
+      get: <T>(key: string): T | undefined =>
+        (key === "tenantId" ? options.httpTenantId : undefined) as T | undefined,
+    }),
   };
 }
 
@@ -249,7 +256,7 @@ describe("EntitlementGuard", () => {
         "entitlement.status": "denied",
         "tenant.id": "unknown",
         "route.id": "TestController.testMethod",
-        "entitlement.reason": "missing_tenant",
+        "entitlement.reason": "missing_authenticated_tenant",
         "problem.code": "ENTITLEMENT_DENIED",
       }),
     );
@@ -259,7 +266,7 @@ describe("EntitlementGuard", () => {
         tenantId: "unknown",
         feature: "test_feature",
         status: "denied",
-        reason: "missing_tenant",
+        reason: "missing_authenticated_tenant",
         problemCode: "ENTITLEMENT_DENIED",
         route: {
           controllerName: "TestController",
@@ -325,7 +332,7 @@ describe("EntitlementGuard", () => {
     ]);
   });
 
-  it("should use request.tenantId when available", async () => {
+  it("should deny an untrusted request tenant without authenticated tenant evidence", async () => {
     class TestController {
       testMethod() {}
     }
@@ -337,14 +344,6 @@ describe("EntitlementGuard", () => {
       "testMethod",
     );
 
-    mockManager.checkResult = {
-      granted: true,
-      status: "allowed",
-      featureKey: "test_feature",
-      type: "boolean",
-      planId: "pro",
-    };
-
     const checkSpy = vi.spyOn(mockManager, "check");
     const context = createContext({
       target: TestController,
@@ -353,14 +352,143 @@ describe("EntitlementGuard", () => {
       },
     });
 
-    await guard.canActivate(context);
+    await expect(guard.canActivate(context)).rejects.toThrow("authenticated tenantId not found");
+    expect(checkSpy).not.toHaveBeenCalled();
+  });
+
+  it("should deny a request tenant that conflicts with the authenticated user", async () => {
+    class TestController {
+      testMethod() {}
+    }
+
+    Reflect.defineMetadata(
+      ENTITLEMENT_REQUIRED_KEY,
+      "test_feature",
+      TestController.prototype,
+      "testMethod",
+    );
+
+    const checkSpy = vi.spyOn(mockManager, "check");
+    const context = createContext({
+      target: TestController,
+      request: {
+        tenantId: "paid-tenant",
+        user: createUser("caller-tenant"),
+      },
+    });
+
+    await expect(guard.canActivate(context)).rejects.toThrow(
+      "request tenantId conflicts with the authenticated tenant",
+    );
+    expect(checkSpy).not.toHaveBeenCalled();
+    expect(auditSink.events).toEqual([
+      expect.objectContaining({
+        tenantId: "caller-tenant",
+        reason: "tenant_mismatch",
+      }),
+    ]);
+  });
+
+  it("should use a verified tenant when every active tenant source agrees", async () => {
+    class TestController {
+      testMethod() {}
+    }
+
+    Reflect.defineMetadata(
+      ENTITLEMENT_REQUIRED_KEY,
+      "test_feature",
+      TestController.prototype,
+      "testMethod",
+    );
+
+    const checkSpy = vi.spyOn(mockManager, "check");
+    const context = createContext({
+      target: TestController,
+      httpTenantId: "tenant-verified",
+      request: {
+        tenantId: "tenant-verified",
+        user: createUser("tenant-verified"),
+      },
+    });
+
+    await Context.run({ requestId: "request-verified", tenantId: "tenant-verified" }, () =>
+      expect(guard.canActivate(context)).resolves.toBe(true),
+    );
 
     expect(checkSpy).toHaveBeenCalledWith(
-      "tenant-from-request",
+      "tenant-verified",
       "test_feature",
-      expect.objectContaining({
-        ruleId: "entitlement:test_feature",
-      }),
+      expect.objectContaining({ ruleId: "entitlement:test_feature" }),
+    );
+  });
+
+  it("should deny conflicting HTTP and framework tenant contexts", async () => {
+    class TestController {
+      testMethod() {}
+    }
+
+    Reflect.defineMetadata(
+      ENTITLEMENT_REQUIRED_KEY,
+      "test_feature",
+      TestController.prototype,
+      "testMethod",
+    );
+
+    const checkSpy = vi.spyOn(mockManager, "check");
+    const httpConflict = createContext({
+      target: TestController,
+      httpTenantId: "other-tenant",
+      request: { user: createUser("caller-tenant") },
+    });
+
+    await expect(guard.canActivate(httpConflict)).rejects.toThrow(
+      "HTTP context tenantId conflicts with the authenticated tenant",
+    );
+
+    const frameworkConflict = createContext({
+      target: TestController,
+      request: { user: createUser("caller-tenant") },
+    });
+    await Context.run({ requestId: "request-conflict", tenantId: "other-tenant" }, () =>
+      expect(guard.canActivate(frameworkConflict)).rejects.toThrow(
+        "framework Context tenantId conflicts with the authenticated tenant",
+      ),
+    );
+
+    expect(checkSpy).not.toHaveBeenCalled();
+  });
+
+  it("should accept an authenticated API key principal tenant", async () => {
+    class TestController {
+      testMethod() {}
+    }
+
+    Reflect.defineMetadata(
+      ENTITLEMENT_REQUIRED_KEY,
+      "test_feature",
+      TestController.prototype,
+      "testMethod",
+    );
+
+    const checkSpy = vi.spyOn(mockManager, "check");
+    const context = createContext({
+      target: TestController,
+      request: {
+        tenantId: "tenant-api-key",
+        principal: {
+          type: "apikey",
+          id: "key-1",
+          permissions: [],
+          tenantId: "tenant-api-key",
+        },
+      },
+    });
+
+    await expect(guard.canActivate(context)).resolves.toBe(true);
+    expect(checkSpy).toHaveBeenCalledWith(
+      "tenant-api-key",
+      "test_feature",
+      expect.objectContaining({ ruleId: "entitlement:test_feature" }),
     );
   });
 

@@ -56,7 +56,38 @@ export type EntitlementGuardInput = {
   readonly route: EntitlementGuardRoute;
 };
 
-type EntitlementGuardPrecheckFailureReason = "missing_tenant" | "missing_resource";
+type EntitlementGuardPrecheckFailureReason =
+  | "missing_authenticated_tenant"
+  | "missing_resource"
+  | "tenant_mismatch";
+
+type EntitlementTenantResolution =
+  | {
+      readonly ok: true;
+      readonly tenantId: string;
+    }
+  | {
+      readonly ok: false;
+      readonly tenantId: string | null;
+      readonly reason: "missing_authenticated_tenant" | "tenant_mismatch";
+      readonly detail: string;
+    };
+
+function normalizeTenantId(value: unknown): string | null {
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function tenantMismatch(
+  authenticatedTenantId: string,
+  source: string,
+): EntitlementTenantResolution {
+  return {
+    ok: false,
+    tenantId: authenticatedTenantId,
+    reason: "tenant_mismatch",
+    detail: `${source} tenantId conflicts with the authenticated tenant`,
+  };
+}
 
 type EntitlementGuardInputResolution =
   | {
@@ -154,21 +185,21 @@ export class EntitlementGuard implements Guard<RouteExecutionContext> {
   ): EntitlementGuardInputResolution {
     const request = context.getRequest();
     const user = request.user as EntitlementAuthUser | undefined;
-    const tenantId = this.resolveTenantId(context, request, user);
+    const tenant = this.resolveTenantId(context, request, user);
     const route = this.resolveRoute(context);
     const inputBase: EntitlementGuardInput = {
       requirement,
-      tenantId: tenantId ?? "unknown",
+      tenantId: tenant.tenantId ?? "unknown",
       ...(user?.id ? { subject: { type: "user", id: user.id } } : {}),
       route,
     };
 
-    if (!tenantId) {
+    if (!tenant.ok) {
       return {
         ok: false,
         input: inputBase,
-        reason: "missing_tenant",
-        problem: new EntitlementDeniedProblem(requirement.feature, "tenantId not found in request"),
+        reason: tenant.reason,
+        problem: new EntitlementDeniedProblem(requirement.feature, tenant.detail),
       };
     }
 
@@ -196,26 +227,39 @@ export class EntitlementGuard implements Guard<RouteExecutionContext> {
     context: RouteExecutionContext,
     request: AuthRequest & { tenantId?: string },
     user: EntitlementAuthUser | undefined,
-  ): string | null {
-    if (typeof request.tenantId === "string" && request.tenantId.length > 0) {
-      return request.tenantId;
+  ): EntitlementTenantResolution {
+    const principalTenantId = normalizeTenantId(request.principal?.tenantId);
+    const userTenantId = normalizeTenantId(user?.tenantId);
+    const authenticatedTenantId = principalTenantId ?? userTenantId;
+
+    if (!authenticatedTenantId) {
+      return {
+        ok: false,
+        tenantId: null,
+        reason: "missing_authenticated_tenant",
+        detail: "authenticated tenantId not found",
+      };
     }
 
-    if (typeof user?.tenantId === "string" && user.tenantId.length > 0) {
-      return user.tenantId;
+    if (principalTenantId && userTenantId && principalTenantId !== userTenantId) {
+      return tenantMismatch(authenticatedTenantId, "authenticated principal and user");
     }
 
+    const requestTenantId = normalizeTenantId(request.tenantId);
     const httpContextTenantId = context.getHttpContext?.()?.get<string>("tenantId");
-    if (typeof httpContextTenantId === "string" && httpContextTenantId.length > 0) {
-      return httpContextTenantId;
+    const selections = [
+      ["request", requestTenantId],
+      ["HTTP context", normalizeTenantId(httpContextTenantId)],
+      ["framework Context", normalizeTenantId(Context.getTenantId())],
+    ] as const;
+
+    for (const [source, tenantId] of selections) {
+      if (tenantId && tenantId !== authenticatedTenantId) {
+        return tenantMismatch(authenticatedTenantId, source);
+      }
     }
 
-    const currentTenantId = Context.getTenantId();
-    if (typeof currentTenantId === "string" && currentTenantId.length > 0) {
-      return currentTenantId;
-    }
-
-    return null;
+    return { ok: true, tenantId: authenticatedTenantId };
   }
 
   private resolveResource(
