@@ -1,10 +1,17 @@
-import type { HealthStatus, HealthTrend, SignalCategory } from "@croco/customer-health-core";
-import { integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import type {
+  HealthStatus,
+  HealthTransitionEventIntent,
+  HealthTrend,
+  SignalCategory,
+} from "@croco/customer-health-core";
+import { bigserial, index, integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 /**
  * 테넌트 건강 점수 이력을 저장하는 PostgreSQL 스키마입니다.
  */
 export const tenantHealthScores = pgTable("tenant_health_scores", {
+  transitionSequence: bigserial("transition_sequence", { mode: "bigint" }).notNull(),
   tenantId: text("tenant_id").notNull(),
   overallScore: integer("overall_score").notNull(),
   status: text("status").notNull().$type<HealthStatus>(),
@@ -14,3 +21,20 @@ export const tenantHealthScores = pgTable("tenant_health_scores", {
   previousScore: integer("previous_score"),
   calculatedAt: timestamp("calculated_at").notNull(),
 });
+
+export const tenantHealthEventIntents = pgTable(
+  "tenant_health_event_intents",
+  {
+    eventId: text("event_id").primaryKey(),
+    tenantId: text("tenant_id").notNull(),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
+    data: jsonb("data").notNull().$type<HealthTransitionEventIntent["data"]>(),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("tenant_health_event_intents_pending_idx")
+      .on(table.tenantId, table.createdAt, table.eventId)
+      .where(sql`${table.publishedAt} is null`),
+  ],
+);

@@ -31,3 +31,8 @@ export {
  * 건강 점수 영속화에 사용하는 스키마입니다.
  */
 export * from "./libs/schema";
+export {
+  addHealthEventIntents,
+  removeHealthEventIntents,
+  type CustomerHealthMigrationClient,
+} from "./migrations/addHealthEventIntents";

@@ -71,11 +71,15 @@ const ticketSignal: SupportTicketFrequencySignal = {
 
 ```typescript
 import {
+  CustomerHealthEventPublisher,
   CustomerHealthService,
   HealthScoreCalculator,
   InMemoryHealthScoreStore,
   SignalProvider,
 } from "@croco/customer-health-core";
+import { Container } from "@croco/framework-context";
+
+Container.set(CustomerHealthEventPublisher.token, idempotentEventPublisher);
 
 // 신호 제공자 구현
 class MySignalProvider extends SignalProvider {
@@ -111,6 +115,10 @@ const profile: HealthScoreProfile = {
 
 const score = await service.calculateAndStore("tenant-1", profile);
 ```
+
+`idempotentEventPublisher`는 `event.eventId`를 기준으로 재시도와 동시 발행을 중복 제거해야 합니다.
+`calculateAndStore`는 새 점수와 상태 변경/점수 급락 이벤트 의도를 원자적으로 저장한 뒤, 이전 실패로
+남은 의도를 재발행합니다. 별도 복구 작업에서는 `publishPendingEvents(tenantId)`를 호출할 수 있습니다.
 
 ### 추세 분석
 
@@ -196,6 +204,7 @@ class MyService {
 #### Methods
 
 - `calculateAndStore(tenantId: string, profile: HealthScoreProfile): Promise<TenantHealthScore>` - 신호 수집 및 점수 계산
+- `publishPendingEvents(tenantId: string, limit?: number): Promise<number>` - 저장된 이벤트 의도 재발행
 - `getLatest(tenantId: string): Promise<TenantHealthScore | null>` - 최신 점수 조회
 - `getTrend(tenantId: string, days: number): Promise<{ trend: HealthTrend; changePercentage: number } | null>` - 추세 분석
 
@@ -227,7 +236,19 @@ abstract class SignalProvider {
 
 ```typescript
 abstract class HealthScoreStore {
-  abstract save(score: TenantHealthScore): Promise<void>;
+  abstract saveTransition(
+    score: TenantHealthScore,
+    previous: TenantHealthScore | null,
+    eventIntents: readonly HealthTransitionEventIntent[],
+  ): Promise<
+    | { readonly committed: true }
+    | { readonly committed: false; readonly latest: TenantHealthScore | null }
+  >;
+  abstract listPendingEventIntents(
+    tenantId: string,
+    limit?: number,
+  ): Promise<readonly HealthTransitionEventIntent[]>;
+  abstract markEventIntentPublished(eventId: string): Promise<void>;
   abstract findLatest(tenantId: string): Promise<TenantHealthScore | null>;
   abstract findHistory(tenantId: string, limit: number): Promise<TenantHealthScore[]>;
   abstract findHistoryByPeriod(

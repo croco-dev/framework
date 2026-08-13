@@ -9,8 +9,14 @@ export class HealthStatusChangedEvent extends DomainEvent {
     public readonly oldStatus: HealthStatus,
     public readonly newStatus: HealthStatus,
     public readonly score: number,
+    eventId?: string,
+    occurredAt?: Date,
   ) {
-    super();
+    super(eventId);
+    if (occurredAt) {
+      const event = this as unknown as { timestamp: Date };
+      event.timestamp = new Date(occurredAt);
+    }
   }
 }
 
@@ -22,7 +28,13 @@ export class HealthScoreDroppedEvent extends DomainEvent {
     public readonly previousScore: number,
     public readonly currentScore: number,
     public readonly dropPercentage: number,
+    eventId?: string,
+    occurredAt?: Date,
   ) {
-    super();
+    super(eventId);
+    if (occurredAt) {
+      const event = this as unknown as { timestamp: Date };
+      event.timestamp = new Date(occurredAt);
+    }
   }
 }

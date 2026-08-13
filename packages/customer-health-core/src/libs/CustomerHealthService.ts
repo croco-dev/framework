@@ -1,11 +1,10 @@
-import { EventPublisher } from "@croco/events-core";
 import { Component, Container, Inject } from "@croco/framework-context";
+import { createHealthTransitionEventIntents } from "./eventIntent";
+import type { HealthTransitionEventIntent } from "./eventIntent";
 import { HealthScoreDroppedEvent, HealthStatusChangedEvent } from "./events";
 import { HealthScoreCalculator } from "./HealthScoreCalculator";
-import { HealthScoreStore, HealthSignalRegistry } from "./interfaces";
+import { CustomerHealthEventPublisher, HealthScoreStore, HealthSignalRegistry } from "./interfaces";
 import type { HealthScoreProfile, HealthTrend, TenantHealthScore } from "./types";
-
-const SCORE_DROP_EVENT_THRESHOLD_PERCENT = 20;
 
 @Component()
 export class CustomerHealthService {
@@ -37,17 +36,27 @@ export class CustomerHealthService {
     const score = this.calculator.calculate(allSignals, profile);
     score.tenantId = tenantId;
 
-    const previous = await this.store.findLatest(tenantId);
-    if (previous) {
-      score.previousScore = previous.overallScore;
-      score.trend = this.calculator.determineTrend(score.overallScore, previous.overallScore);
+    let previous = await this.store.findLatest(tenantId);
+    while (true) {
+      this.applyPreviousScore(score, previous);
+      const eventIntents = createHealthTransitionEventIntents(previous, score);
+      const commit = await this.store.saveTransition(score, previous, eventIntents);
+      if (commit.committed) break;
+      previous = commit.latest;
     }
 
-    await this.store.save(score);
-
-    await this.publishEvents(score, previous);
+    await this.publishPendingEvents(tenantId);
 
     return score;
+  }
+
+  async publishPendingEvents(tenantId: string, limit = 100): Promise<number> {
+    const eventPublisher = this.getEventPublisher();
+    if (!eventPublisher) return 0;
+
+    const intents = await this.store.listPendingEventIntents(tenantId, limit);
+    await this.publishEventIntents(intents);
+    return intents.length;
   }
 
   async getLatest(tenantId: string): Promise<TenantHealthScore | null> {
@@ -84,52 +93,54 @@ export class CustomerHealthService {
     return { trend, changePercentage };
   }
 
-  private async publishEvents(
-    score: TenantHealthScore,
-    previous: TenantHealthScore | null,
+  private async publishEventIntents(
+    intents: readonly HealthTransitionEventIntent[],
   ): Promise<void> {
     const eventPublisher = this.getEventPublisher();
-    if (!previous || !eventPublisher) {
+    if (!eventPublisher) return;
+
+    for (const intent of intents) {
+      const event = this.restoreEvent(intent);
+      await eventPublisher.publishIdempotently(event);
+      await this.store.markEventIntentPublished(intent.eventId);
+    }
+  }
+
+  private getEventPublisher(): CustomerHealthEventPublisher | null {
+    return Container.has(CustomerHealthEventPublisher.token)
+      ? Container.get(CustomerHealthEventPublisher.token)
+      : null;
+  }
+
+  private restoreEvent(intent: HealthTransitionEventIntent) {
+    const event =
+      intent.data.kind === "status_changed"
+        ? new HealthStatusChangedEvent(
+            intent.data.tenantId,
+            intent.data.oldStatus,
+            intent.data.newStatus,
+            intent.data.score,
+            intent.eventId,
+            intent.occurredAt,
+          )
+        : new HealthScoreDroppedEvent(
+            intent.data.tenantId,
+            intent.data.previousScore,
+            intent.data.currentScore,
+            intent.data.dropPercentage,
+            intent.eventId,
+            intent.occurredAt,
+          );
+    return event;
+  }
+
+  private applyPreviousScore(score: TenantHealthScore, previous: TenantHealthScore | null): void {
+    if (!previous) {
+      delete score.previousScore;
+      score.trend = "stable";
       return;
     }
-
-    if (previous.status !== score.status) {
-      await eventPublisher.publishNow(
-        new HealthStatusChangedEvent(
-          score.tenantId,
-          previous.status,
-          score.status,
-          score.overallScore,
-        ),
-      );
-    }
-
-    const dropPercentage = this.calculateDropPercentage(previous.overallScore, score.overallScore);
-    if (dropPercentage >= SCORE_DROP_EVENT_THRESHOLD_PERCENT) {
-      await eventPublisher.publishNow(
-        new HealthScoreDroppedEvent(
-          score.tenantId,
-          previous.overallScore,
-          score.overallScore,
-          dropPercentage,
-        ),
-      );
-    }
-  }
-
-  private getEventPublisher(): EventPublisher | null {
-    if (!Container.has(EventPublisher)) {
-      return null;
-    }
-
-    return Container.get(EventPublisher);
-  }
-
-  private calculateDropPercentage(previousScore: number, currentScore: number): number {
-    if (previousScore <= 0 || currentScore >= previousScore) {
-      return 0;
-    }
-
-    return ((previousScore - currentScore) / previousScore) * 100;
+    score.previousScore = previous.overallScore;
+    score.trend = this.calculator.determineTrend(score.overallScore, previous.overallScore);
   }
 }

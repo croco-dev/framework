@@ -170,6 +170,7 @@ This cookbook documents 625 public Croco Problem codes. The deterministic JSON r
 | [`CROCO_HTTP_SECURITY_002`](#croco-http-security-002)                                                                                 | BadRequest            |    400 | not-retryable | public        | active    |       1 |
 | [`CROCO_TEST_EVIDENCE_CONTRACT_INVALID`](#croco-test-evidence-contract-invalid)                                                       | ValidationError       |    422 | not-retryable | public        | active    |       1 |
 | [`CROCO_TEST_EVIDENCE_FIDELITY_UNSATISFIED`](#croco-test-evidence-fidelity-unsatisfied)                                               | ValidationError       |    422 | not-retryable | public        | active    |       1 |
+| [`customer-health-core/event-intent-conflict`](#customer-health-core-event-intent-conflict)                                           | Conflict              |    409 | conditional   | safe-message  | active    |       1 |
 | [`dataloader-core/batch-result-length-mismatch`](#dataloader-core-batch-result-length-mismatch)                                       | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`diagnostics-core/duplicate-provider`](#diagnostics-core-duplicate-provider)                                                         | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`diagnostics-core/invalid-timeout`](#diagnostics-core-invalid-timeout)                                                               | ValidationError       |    422 | not-retryable | public        | active    |       1 |
@@ -3466,6 +3467,24 @@ Sources:
 Sources:
 
 - `packages/testing/src/libs/test-evidence.mts:177:5` (problem-constructor)
+
+<a id="customer-health-core-event-intent-conflict"></a>
+
+## `customer-health-core/event-intent-conflict`
+
+- Category: `Conflict`
+- HTTP status: `409` Conflict
+- Retryability: `conditional`
+- Redaction policy: `safe-message`
+- Lifecycle: `active`
+- Cause: The request conflicts with current state or an idempotency constraint.
+- User action: Refresh state, resolve the conflict, and retry with the updated intent.
+- Operator action: Inspect concurrent writes, idempotency keys, and uniqueness constraints.
+- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/customer-health-core/src/libs/problems/HealthProblems.ts:12:3` (problem-class)
 
 <a id="dataloader-core-batch-result-length-mismatch"></a>
 
