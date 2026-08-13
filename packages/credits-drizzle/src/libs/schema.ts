@@ -229,28 +229,45 @@ export const creditReservationAllocations = pgTable(
   ],
 );
 
-export const creditIdempotencyRecords = pgTable("credit_idempotency_records", {
-  key: text("key").primaryKey(),
-  accountId: text("account_id").references(() => creditAccounts.id),
-  fingerprint: text("fingerprint").notNull(),
-  result: jsonb("result").notNull(),
-  committedAt: timestamp("committed_at", { withTimezone: true }).notNull().defaultNow(),
-});
+export const creditIdempotencyRecords = pgTable(
+  "credit_idempotency_records",
+  {
+    tenantId: text("tenant_id").notNull(),
+    key: text("key").notNull(),
+    accountId: text("account_id").references(() => creditAccounts.id),
+    fingerprint: text("fingerprint").notNull(),
+    result: jsonb("result").notNull(),
+    committedAt: timestamp("committed_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({
+      name: "credit_idempotency_records_pkey",
+      columns: [table.tenantId, table.key],
+    }),
+  ],
+);
 
 export const creditLedgerEventIntents = pgTable(
   "credit_ledger_event_intents",
   {
     eventId: text("event_id").primaryKey(),
-    idempotencyKey: text("idempotency_key")
-      .notNull()
-      .references(() => creditIdempotencyRecords.key),
+    tenantId: text("tenant_id").notNull(),
+    idempotencyKey: text("idempotency_key").notNull(),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
     data: jsonb("data").notNull().$type<CreditLedgerCommittedEventData>(),
     publishedAt: timestamp("published_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    uniqueIndex("credit_ledger_event_intents_idempotency_unique").on(table.idempotencyKey),
+    foreignKey({
+      name: "credit_ledger_event_intents_idempotency_fk",
+      columns: [table.tenantId, table.idempotencyKey],
+      foreignColumns: [creditIdempotencyRecords.tenantId, creditIdempotencyRecords.key],
+    }),
+    uniqueIndex("credit_ledger_event_intents_idempotency_unique").on(
+      table.tenantId,
+      table.idempotencyKey,
+    ),
     index("credit_ledger_event_intents_pending_idx")
       .on(table.createdAt, table.eventId)
       .where(sql`${table.publishedAt} is null`),

@@ -170,6 +170,154 @@ export async function createCreditsSchema(client: MigrationClient): Promise<void
       )
     `);
     await client.execute(sql`
+      alter table credit_idempotency_records
+        add column if not exists tenant_id text
+    `);
+    await client.execute(sql`
+      alter table credit_ledger_event_intents
+        add column if not exists tenant_id text
+    `);
+    await client.execute(sql`
+      update credit_idempotency_records records
+      set tenant_id = accounts.tenant_id
+      from credit_accounts accounts
+      where records.tenant_id is null
+        and records.account_id = accounts.id
+    `);
+    await client.execute(sql`
+      update credit_idempotency_records
+      set tenant_id = result -> 'account' ->> 'tenantId'
+      where tenant_id is null
+        and nullif(result -> 'account' ->> 'tenantId', '') is not null
+    `);
+    await client.execute(sql`
+      do $$
+      begin
+        if exists (select 1 from credit_idempotency_records where tenant_id is null) then
+          raise exception 'credit idempotency tenant migration requires an account tenant';
+        end if;
+      end
+      $$
+    `);
+    await client.execute(sql`
+      update credit_ledger_event_intents intents
+      set tenant_id = records.tenant_id
+      from credit_idempotency_records records
+      where intents.tenant_id is null
+        and intents.idempotency_key = records.key
+    `);
+    await client.execute(sql`
+      do $$
+      begin
+        if exists (select 1 from credit_ledger_event_intents where tenant_id is null) then
+          raise exception 'credit event intent tenant migration requires an idempotency tenant';
+        end if;
+      end
+      $$
+    `);
+    await client.execute(sql`
+      alter table credit_ledger_event_intents
+        drop constraint if exists credit_ledger_event_intents_idempotency_key_fkey
+    `);
+    await client.execute(sql`
+      do $$
+      begin
+        if exists (
+          select 1
+          from pg_constraint constraints
+          where constraints.conrelid = 'credit_ledger_event_intents'::regclass
+            and constraints.conname = 'credit_ledger_event_intents_idempotency_unique'
+            and constraints.contype = 'u'
+            and cardinality(constraints.conkey) = 1
+            and constraints.conkey[1] = (
+              select attributes.attnum
+              from pg_attribute attributes
+              where attributes.attrelid = constraints.conrelid
+                and attributes.attname = 'idempotency_key'
+            )
+        ) then
+          alter table credit_ledger_event_intents
+            drop constraint credit_ledger_event_intents_idempotency_unique;
+        end if;
+      end
+      $$
+    `);
+    await client.execute(sql`
+      do $$
+      declare
+        legacy_index regclass;
+      begin
+        select indexes.indexrelid
+        into legacy_index
+        from pg_index indexes
+        where indexes.indrelid = 'credit_ledger_event_intents'::regclass
+          and indexes.indexrelid::regclass::text = 'credit_ledger_event_intents_idempotency_unique'
+          and indexes.indnkeyatts = 1
+          and not exists (
+            select 1
+            from pg_constraint constraints
+            where constraints.conindid = indexes.indexrelid
+          );
+
+        if legacy_index is not null then
+          execute 'drop index credit_ledger_event_intents_idempotency_unique';
+        end if;
+      end
+      $$
+    `);
+    await client.execute(sql`
+      alter table credit_idempotency_records alter column tenant_id set not null
+    `);
+    await client.execute(sql`
+      do $$
+      begin
+        if exists (
+          select 1
+          from pg_constraint constraints
+          where constraints.conrelid = 'credit_idempotency_records'::regclass
+            and constraints.conname = 'credit_idempotency_records_pkey'
+            and constraints.contype = 'p'
+            and cardinality(constraints.conkey) = 1
+            and constraints.conkey[1] = (
+              select attributes.attnum
+              from pg_attribute attributes
+              where attributes.attrelid = constraints.conrelid
+                and attributes.attname = 'key'
+            )
+        ) then
+          alter table credit_idempotency_records
+            drop constraint credit_idempotency_records_pkey;
+          alter table credit_idempotency_records
+            add constraint credit_idempotency_records_pkey primary key (tenant_id, key);
+        end if;
+      end
+      $$
+    `);
+    await client.execute(sql`
+      alter table credit_ledger_event_intents alter column tenant_id set not null
+    `);
+    await client.execute(sql`
+      do $$
+      begin
+        if not exists (
+          select 1
+          from pg_constraint
+          where conrelid = 'credit_ledger_event_intents'::regclass
+            and conname = 'credit_ledger_event_intents_idempotency_fk'
+        ) then
+          alter table credit_ledger_event_intents
+            add constraint credit_ledger_event_intents_idempotency_fk
+              foreign key (tenant_id, idempotency_key)
+              references credit_idempotency_records(tenant_id, key);
+        end if;
+      end
+      $$
+    `);
+    await client.execute(sql`
+      create unique index if not exists credit_ledger_event_intents_idempotency_unique
+        on credit_ledger_event_intents(tenant_id, idempotency_key)
+    `);
+    await client.execute(sql`
       create index if not exists credit_ledger_event_intents_pending_idx
         on credit_ledger_event_intents(created_at, event_id)
         where published_at is null
@@ -177,15 +325,26 @@ export async function createCreditsSchema(client: MigrationClient): Promise<void
     await client.execute(sql`
       insert into credit_ledger_event_intents (
         event_id,
+        tenant_id,
         idempotency_key,
         occurred_at,
         data
       )
       select
         encode(
-          sha256(convert_to('credits.ledger_committed:' || records.key, 'UTF8')),
+          sha256(
+            convert_to(
+              'credits.ledger_committed:'
+                || octet_length(records.tenant_id)::text
+                || ':'
+                || records.tenant_id
+                || records.key,
+              'UTF8'
+            )
+          ),
           'hex'
         ),
+        records.tenant_id,
         records.key,
         coalesce((records.result -> 'transactions' -> 0 ->> 'occurredAt')::timestamptz, records.committed_at),
         jsonb_build_object(
@@ -209,7 +368,7 @@ export async function createCreditsSchema(client: MigrationClient): Promise<void
         )
       from credit_idempotency_records records
       where jsonb_array_length(records.result -> 'transactions') > 0
-      on conflict (idempotency_key) do nothing
+      on conflict (tenant_id, idempotency_key) do nothing
     `);
   });
 }

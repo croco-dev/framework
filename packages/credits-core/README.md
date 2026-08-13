@@ -79,7 +79,8 @@ credit/debit adjustments, and bounded expiry batches use the same command contra
 ## Ledger invariants
 
 - Transactions and allocation records are append-only. There is no balance setter.
-- Every command requires an idempotency key and immutable semantic reference.
+- Every command requires an idempotency key scoped to its tenant ledger and an immutable semantic
+  reference.
 - Replaying the same semantic command returns its original identifiers and result without another
   balance movement. Reusing the key for different input raises
   `CreditDuplicateConflictProblem`.
@@ -126,6 +127,10 @@ do {
 `publishIdempotently()` after the store commit. Publication acknowledgement marks the stored intent as
 published; a crash before acknowledgement leaves it available to command replay or
 `publishPendingEvents()` without applying the balance movement twice.
+
+Event intents carry their tenant identity, and stores resolve a command-specific pending intent with
+`getPendingEventIntent(tenantId, idempotencyKey)`. Event IDs bind both values so equal client-generated
+keys in independent tenant ledgers cannot alias during publication.
 
 The default service mode is `durable` and fails fast unless the store reports persistent event-intent
 capability. `InMemoryCreditLedgerStore` is intentionally available only through the explicit

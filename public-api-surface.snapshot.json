@@ -7049,6 +7049,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "createCreditIdempotencyIdentity",
+              "exportKind": "named",
+              "source": "./libs/eventIntent",
+              "declarationKind": "function"
+            },
+            {
               "name": "createCreditLedgerEventIntent",
               "exportKind": "named",
               "source": "./libs/eventIntent",
