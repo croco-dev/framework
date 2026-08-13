@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { InMemoryDomainPolicyStore } from "../libs/InMemoryDomainPolicyStore";
-import type { DomainPolicy } from "../libs/types";
+import type { DomainAutoJoinIntentInput, DomainPolicy } from "../libs/types";
 
 describe("InMemoryDomainPolicyStore", () => {
   let store!: InMemoryDomainPolicyStore;
@@ -15,6 +15,24 @@ describe("InMemoryDomainPolicyStore", () => {
       createdAt: overrides.createdAt ?? new Date("2026-01-01T00:00:00.000Z"),
     };
   };
+
+  const createAutoJoinIntent = (
+    overrides: Partial<DomainAutoJoinIntentInput> = {},
+  ): DomainAutoJoinIntentInput => ({
+    idempotencyKey: overrides.idempotencyKey ?? "auto-join-key",
+    tenantId: overrides.tenantId ?? "tenant-1",
+    userId: overrides.userId ?? "user-1",
+    email: overrides.email ?? "user@croco.dev",
+    domain: overrides.domain ?? "croco.dev",
+    role: overrides.role ?? "member",
+    membership: overrides.membership ?? null,
+    eventStatus: overrides.eventStatus ?? "pending",
+    eventClaimId: overrides.eventClaimId ?? null,
+    eventClaimExpiresAt: overrides.eventClaimExpiresAt ?? null,
+    eventId: overrides.eventId ?? "event-1",
+    eventOccurredAt: overrides.eventOccurredAt ?? new Date("2026-01-01T00:00:00.000Z"),
+    createdAt: overrides.createdAt ?? new Date("2026-01-01T00:00:00.000Z"),
+  });
 
   beforeEach(() => {
     store = new InMemoryDomainPolicyStore();
@@ -97,4 +115,96 @@ describe("InMemoryDomainPolicyStore", () => {
       );
     },
   );
+
+  it("should persist one semantic auto-join intent and replay its committed membership", async () => {
+    const input = createAutoJoinIntent();
+    const membership = {
+      id: "membership-1",
+      tenantId: input.tenantId,
+      userId: input.userId,
+      role: input.role,
+      createdAt: new Date("2026-01-01T00:01:00.000Z"),
+      updatedAt: new Date("2026-01-01T00:01:00.000Z"),
+    };
+
+    await expect(store.createAutoJoinIntent(input)).resolves.toMatchObject({ created: true });
+    await expect(store.createAutoJoinIntent(input)).resolves.toMatchObject({ created: false });
+    await expect(
+      store.completeAutoJoinMembership(input.tenantId, input.idempotencyKey, membership),
+    ).resolves.toMatchObject({ membership });
+    await expect(
+      store.findAutoJoinIntent(input.tenantId, input.idempotencyKey),
+    ).resolves.toMatchObject({ membership });
+  });
+
+  it("should lease, release, reclaim, and complete auto-join event delivery", async () => {
+    const input = createAutoJoinIntent({
+      membership: {
+        id: "membership-1",
+        tenantId: "tenant-1",
+        userId: "user-1",
+        role: "member",
+        createdAt: new Date("2026-01-01T00:01:00.000Z"),
+        updatedAt: new Date("2026-01-01T00:01:00.000Z"),
+      },
+    });
+    await store.createAutoJoinIntent(input);
+
+    await expect(
+      store.claimAutoJoinEvent(
+        input.tenantId,
+        input.idempotencyKey,
+        "claim-1",
+        new Date(Date.now() + 60_000),
+      ),
+    ).resolves.toMatchObject({ eventStatus: "processing", eventClaimId: "claim-1" });
+    await expect(
+      store.claimAutoJoinEvent(
+        input.tenantId,
+        input.idempotencyKey,
+        "claim-2",
+        new Date(Date.now() + 60_000),
+      ),
+    ).resolves.toBeNull();
+
+    await store.releaseAutoJoinEvent(input.tenantId, input.idempotencyKey, "claim-1");
+    await expect(
+      store.claimAutoJoinEvent(
+        input.tenantId,
+        input.idempotencyKey,
+        "claim-2",
+        new Date(Date.now() + 60_000),
+      ),
+    ).resolves.toMatchObject({ eventClaimId: "claim-2" });
+    await expect(
+      store.completeAutoJoinEvent(input.tenantId, input.idempotencyKey, "claim-2"),
+    ).resolves.toMatchObject({ eventStatus: "completed", eventClaimId: null });
+  });
+
+  it("should delete only auto-join intents without a committed membership", async () => {
+    const pending = createAutoJoinIntent({ idempotencyKey: "pending" });
+    const committed = createAutoJoinIntent({
+      idempotencyKey: "committed",
+      membership: {
+        id: "membership-1",
+        tenantId: "tenant-1",
+        userId: "user-1",
+        role: "member",
+        createdAt: new Date("2026-01-01T00:01:00.000Z"),
+        updatedAt: new Date("2026-01-01T00:01:00.000Z"),
+      },
+    });
+    await store.createAutoJoinIntent(pending);
+    await store.createAutoJoinIntent(committed);
+
+    await store.deleteUncommittedAutoJoinIntent(pending.tenantId, pending.idempotencyKey);
+    await store.deleteUncommittedAutoJoinIntent(committed.tenantId, committed.idempotencyKey);
+
+    await expect(
+      store.findAutoJoinIntent(pending.tenantId, pending.idempotencyKey),
+    ).resolves.toBeNull();
+    await expect(
+      store.findAutoJoinIntent(committed.tenantId, committed.idempotencyKey),
+    ).resolves.toMatchObject({ membership: committed.membership });
+  });
 });

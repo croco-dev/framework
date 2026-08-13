@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import type { DomainPolicy } from "@croco/invitation-core";
+import type { DomainAutoJoinIntentInput, DomainPolicy } from "@croco/invitation-core";
 import type { TxManager } from "@croco/tx-core";
 import type { DrizzleDb } from "@croco/tx-drizzle";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
@@ -20,12 +20,50 @@ const createPolicy = (overrides: Partial<DomainPolicy> = {}): DomainPolicy => {
   };
 };
 
+const createAutoJoinIntent = (
+  overrides: Partial<DomainAutoJoinIntentInput> = {},
+): DomainAutoJoinIntentInput => ({
+  idempotencyKey: overrides.idempotencyKey ?? "auto-join-key",
+  tenantId: overrides.tenantId ?? "tenant-1",
+  userId: overrides.userId ?? "user-1",
+  email: overrides.email ?? "user@croco.dev",
+  domain: overrides.domain ?? "croco.dev",
+  role: overrides.role ?? "member",
+  membership: overrides.membership ?? null,
+  eventStatus: overrides.eventStatus ?? "pending",
+  eventClaimId: overrides.eventClaimId ?? null,
+  eventClaimExpiresAt: overrides.eventClaimExpiresAt ?? null,
+  eventId: overrides.eventId ?? "event-1",
+  eventOccurredAt: overrides.eventOccurredAt ?? new Date("2026-01-01T00:00:00.000Z"),
+  createdAt: overrides.createdAt ?? new Date("2026-01-01T00:00:00.000Z"),
+});
+
+const toAutoJoinRow = (intent: DomainAutoJoinIntentInput) => ({
+  tenantId: intent.tenantId,
+  idempotencyKey: intent.idempotencyKey,
+  userId: intent.userId,
+  email: intent.email,
+  domain: intent.domain,
+  role: intent.role,
+  membershipId: intent.membership?.id ?? null,
+  membershipRole: intent.membership?.role ?? null,
+  membershipCreatedAt: intent.membership?.createdAt ?? null,
+  membershipUpdatedAt: intent.membership?.updatedAt ?? null,
+  eventStatus: intent.eventStatus,
+  eventClaimId: intent.eventClaimId,
+  eventClaimExpiresAt: intent.eventClaimExpiresAt,
+  eventId: intent.eventId,
+  eventOccurredAt: intent.eventOccurredAt,
+  createdAt: intent.createdAt,
+});
+
 describe("DrizzleDomainPolicyStore", () => {
   let store!: DrizzleDomainPolicyStore;
 
   let mockDb!: {
     select: ReturnType<typeof vi.fn>;
     insert: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
     delete: ReturnType<typeof vi.fn>;
   };
 
@@ -33,6 +71,7 @@ describe("DrizzleDomainPolicyStore", () => {
     mockDb = {
       select: vi.fn(),
       insert: vi.fn(),
+      update: vi.fn(),
       delete: vi.fn(),
     };
 
@@ -125,5 +164,66 @@ describe("DrizzleDomainPolicyStore", () => {
 
     await expect(store.delete("tenant-1", "croco.dev")).resolves.toBeUndefined();
     expect(mockDb.delete).toHaveBeenCalled();
+  });
+
+  it("should create and return a durable auto-join intent", async () => {
+    const intent = createAutoJoinIntent();
+    mockDb.insert.mockReturnValue({
+      values: vi.fn().mockReturnValue({
+        onConflictDoNothing: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([toAutoJoinRow(intent)]),
+        }),
+      }),
+    });
+
+    await expect(store.createAutoJoinIntent(intent)).resolves.toEqual({
+      intent,
+      created: true,
+    });
+  });
+
+  it("should persist membership and fence event publication with a claim", async () => {
+    const membership = {
+      id: "membership-1",
+      tenantId: "tenant-1",
+      userId: "user-1",
+      role: "member" as const,
+      createdAt: new Date("2026-01-01T00:01:00.000Z"),
+      updatedAt: new Date("2026-01-01T00:01:00.000Z"),
+    };
+    const committed = createAutoJoinIntent({ membership });
+    const claimed = createAutoJoinIntent({
+      membership,
+      eventStatus: "processing",
+      eventClaimId: "claim-1",
+      eventClaimExpiresAt: new Date("2026-01-01T00:06:00.000Z"),
+    });
+    mockDb.update
+      .mockReturnValueOnce({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([toAutoJoinRow(committed)]),
+          }),
+        }),
+      })
+      .mockReturnValueOnce({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([toAutoJoinRow(claimed)]),
+          }),
+        }),
+      });
+
+    await expect(
+      store.completeAutoJoinMembership("tenant-1", "auto-join-key", membership),
+    ).resolves.toMatchObject({ membership });
+    await expect(
+      store.claimAutoJoinEvent(
+        "tenant-1",
+        "auto-join-key",
+        "claim-1",
+        claimed.eventClaimExpiresAt ?? new Date(),
+      ),
+    ).resolves.toMatchObject({ eventStatus: "processing", eventClaimId: "claim-1" });
   });
 });

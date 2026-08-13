@@ -13965,6 +13965,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "DomainAutoJoinRecoveryProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/DomainPolicyProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "DomainPolicyAddedEvent",
               "exportKind": "named",
               "source": "./libs/events/DomainPolicyEvents",
@@ -14160,6 +14166,26 @@
               "source": "./libs/InvitationManager"
             },
             {
+              "name": "DomainAutoJoinEventStatus",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DomainAutoJoinIntent",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DomainAutoJoinIntentCreation",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DomainAutoJoinIntentInput",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
               "name": "DomainPolicy",
               "exportKind": "named",
               "source": "./libs/types"
@@ -14237,6 +14263,12 @@
           "sourceEntrypoint": "packages/invitation-drizzle/src/index.ts",
           "runtimeExports": [
             {
+              "name": "addDomainAutoJoinIntents",
+              "exportKind": "declaration",
+              "source": "./migrations/addDomainAutoJoinIntents",
+              "declarationKind": "function"
+            },
+            {
               "name": "addEmailCreationIntents",
               "exportKind": "declaration",
               "source": "./migrations/addEmailCreationIntents",
@@ -14247,6 +14279,12 @@
               "exportKind": "declaration",
               "source": "./libs/InvitationTokenCipher",
               "declarationKind": "class"
+            },
+            {
+              "name": "domainAutoJoinIntents",
+              "exportKind": "declaration",
+              "source": "./libs/schema",
+              "declarationKind": "const"
             },
             {
               "name": "domainPolicies",
@@ -14301,6 +14339,12 @@
               "exportKind": "declaration",
               "source": "./libs/InvitationTokenCipher",
               "declarationKind": "class"
+            },
+            {
+              "name": "removeDomainAutoJoinIntents",
+              "exportKind": "declaration",
+              "source": "./migrations/addDomainAutoJoinIntents",
+              "declarationKind": "function"
             },
             {
               "name": "removeEmailCreationIntents",

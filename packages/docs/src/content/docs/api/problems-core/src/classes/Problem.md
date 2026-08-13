@@ -231,6 +231,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`InvalidHealthCheckTimeoutProblem`](/api/health-core/src/classes/invalidhealthchecktimeoutproblem/)
 - [`PostHogConfigProblem`](/api/integrations-posthog/src/classes/posthogconfigproblem/)
 - [`BatchSizeExceededProblem`](/api/invitation-core/src/classes/batchsizeexceededproblem/)
+- [`DomainAutoJoinRecoveryProblem`](/api/invitation-core/src/classes/domainautojoinrecoveryproblem/)
 - [`InvalidAutoJoinRoleProblem`](/api/invitation-core/src/classes/invalidautojoinroleproblem/)
 - [`PublicEmailDomainNotAllowedProblem`](/api/invitation-core/src/classes/publicemaildomainnotallowedproblem/)
 - [`InvalidInvitationExpiryDurationProblem`](/api/invitation-core/src/classes/invalidinvitationexpirydurationproblem/)

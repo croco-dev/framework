@@ -6,7 +6,12 @@ import { createDrizzleProviderConformanceSuite } from "@croco/testing/drizzle";
 import { DrizzleHealthIndicator } from "@croco/tx-drizzle";
 import { DrizzleDomainPolicyStore } from "../libs/DrizzleDomainPolicyStore";
 import { DrizzleInvitationStore } from "../libs/DrizzleInvitationStore";
-import { domainPolicies, invitationEmailCreationIntents, invitations } from "../libs/schema";
+import {
+  domainAutoJoinIntents,
+  domainPolicies,
+  invitationEmailCreationIntents,
+  invitations,
+} from "../libs/schema";
 
 type DrizzleInvitationClient = ConstructorParameters<typeof DrizzleInvitationStore>[0];
 type InvitationTxManager = ConstructorParameters<typeof DrizzleInvitationStore>[1];
@@ -80,6 +85,17 @@ describe("invitation-drizzle provider conformance", () => {
               expect(Object.keys(getTableColumns(domainPolicies))).toEqual(
                 expect.arrayContaining(["id", "tenantId", "domain", "role", "enabled"]),
               );
+              expect(Object.keys(getTableColumns(domainAutoJoinIntents))).toEqual(
+                expect.arrayContaining([
+                  "tenantId",
+                  "idempotencyKey",
+                  "userId",
+                  "membershipId",
+                  "eventStatus",
+                  "eventClaimId",
+                  "eventId",
+                ]),
+              );
               expect(Object.keys(getTableColumns(invitationEmailCreationIntents))).toEqual(
                 expect.arrayContaining([
                   "invitationId",
@@ -101,6 +117,16 @@ describe("invitation-drizzle provider conformance", () => {
               expect(idempotencyIndex?.config.unique).toBe(true);
               expect(
                 idempotencyIndex?.config.columns.map((column) =>
+                  "name" in column ? column.name : undefined,
+                ),
+              ).toEqual(["tenant_id", "idempotency_key"]);
+              const autoJoinConfig = getTableConfig(domainAutoJoinIntents);
+              const autoJoinIdempotencyIndex = autoJoinConfig.indexes.find(
+                (index) => index.config.name === "domain_auto_join_tenant_idempotency_unique",
+              );
+              expect(autoJoinIdempotencyIndex?.config.unique).toBe(true);
+              expect(
+                autoJoinIdempotencyIndex?.config.columns.map((column) =>
                   "name" in column ? column.name : undefined,
                 ),
               ).toEqual(["tenant_id", "idempotency_key"]);

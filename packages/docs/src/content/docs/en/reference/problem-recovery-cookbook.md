@@ -176,6 +176,7 @@ This cookbook documents 632 public Croco Problem codes. The deterministic JSON r
 | [`dataloader-core/batch-result-length-mismatch`](#dataloader-core-batch-result-length-mismatch)                                       | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`diagnostics-core/duplicate-provider`](#diagnostics-core-duplicate-provider)                                                         | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`diagnostics-core/invalid-timeout`](#diagnostics-core-invalid-timeout)                                                               | ValidationError       |    422 | not-retryable | public        | active    |       1 |
+| [`DOMAIN_AUTO_JOIN_RECOVERY_FAILED`](#domain-auto-join-recovery-failed)                                                               | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`DUPLICATE_INVITATION`](#duplicate-invitation)                                                                                       | Conflict              |    409 | conditional   | safe-message  | active    |       1 |
 | [`DUPLICATE_RECOVER_HANDLER`](#duplicate-recover-handler)                                                                             | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`DURATION_PARSE_ERROR`](#duration-parse-error)                                                                                       | BadRequest            |    400 | not-retryable | public        | active    |       1 |
@@ -3581,6 +3582,24 @@ Sources:
 Sources:
 
 - `packages/diagnostics-core/src/libs/problems/DiagnosticsProblems.ts:9:3` (problem-class)
+
+<a id="domain-auto-join-recovery-failed"></a>
+
+## `DOMAIN_AUTO_JOIN_RECOVERY_FAILED`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/invitation-core/src/libs/problems/DomainPolicyProblems.ts:30:3` (problem-class)
 
 <a id="duplicate-invitation"></a>
 

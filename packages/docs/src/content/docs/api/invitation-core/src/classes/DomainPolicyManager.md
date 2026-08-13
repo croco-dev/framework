@@ -11,7 +11,7 @@ title: "DomainPolicyManager"
 
 ### Constructor
 
-> **new DomainPolicyManager**(`store`, `membershipManager`, `eventPublisher`): `DomainPolicyManager`
+> **new DomainPolicyManager**(`store`, `membershipManager`, `eventPublisher`, `txManager`): `DomainPolicyManager`
 
 #### Parameters
 
@@ -26,6 +26,10 @@ title: "DomainPolicyManager"
 ##### eventPublisher
 
 [`EventPublisher`](/api/events-core/src/classes/eventpublisher/)
+
+##### txManager
+
+[`TxManager`](/api/tx-core/src/classes/txmanager/)\<`unknown`\>
 
 #### Returns
 
@@ -55,7 +59,7 @@ title: "DomainPolicyManager"
 
 `Promise`\<[`DomainPolicy`](/api/invitation-core/src/type-aliases/domainpolicy/)\>
 
-***
+---
 
 ### listDomainPolicies()
 
@@ -71,7 +75,7 @@ title: "DomainPolicyManager"
 
 `Promise`\<[`DomainPolicy`](/api/invitation-core/src/type-aliases/domainpolicy/)[]\>
 
-***
+---
 
 ### removeDomainPolicy()
 
@@ -91,7 +95,7 @@ title: "DomainPolicyManager"
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### tryAutoJoin()
 

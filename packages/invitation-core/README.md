@@ -45,7 +45,12 @@ await manager.acceptInvitation({ token, userId: "user-2", email: "new-user@examp
 ```ts
 import { DomainPolicyManager, InMemoryDomainPolicyStore } from "@croco/invitation-core";
 
-const domainPolicyManager = new DomainPolicyManager(domainStore, membershipManager, eventPublisher);
+const domainPolicyManager = new DomainPolicyManager(
+  domainStore,
+  membershipManager,
+  eventPublisher,
+  txManager,
+);
 
 await domainPolicyManager.addDomainPolicy("tenant-123", "acme.com", "member");
 await domainPolicyManager.tryAutoJoin("tenant-123", "user-3", "user@acme.com");
@@ -88,6 +93,10 @@ await domainPolicyManager.tryAutoJoin("tenant-123", "user-3", "user@acme.com");
 - `expiresInDays`는 0보다 큰 정수 일수만 허용합니다. 0, 음수, 소수, `NaN`, 무한대 및 유효한 날짜를
   만들 수 없는 큰 값은 토큰 생성이나 저장 전에 거부됩니다.
 - 도메인 정책은 회사 이메일 사용자를 자동으로 멤버십에 연결할 때 유용합니다.
+- 도메인 자동 가입은 테넌트, 사용자, 정규화된 이메일에서 만든 멱등성 키로 멤버십 결과와 이벤트 의도를
+  함께 저장합니다. `DomainPolicyStore`, `MembershipManager`가 같은 `TxManager`에 참여해야 합니다.
+- 이벤트 발행이 실패하면 같은 `tryAutoJoin` 입력으로 재시도해 저장된 멤버십을 반환하고 미전달 이벤트를
+  재생합니다.
 - 도메인 자동 가입은 정확히 하나의 `@`와 공백 없는 로컬·도메인 구간을 요구합니다. 국제화 도메인은
   punycode로 자동 변환하지 않으므로 정책과 이메일에 같은 유니코드 또는 ASCII 표기를 사용해야 합니다.
 - batch invite는 성공과 실패를 분리해 반환합니다.

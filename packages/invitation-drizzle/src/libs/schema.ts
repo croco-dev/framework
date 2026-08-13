@@ -1,4 +1,8 @@
-import type { InvitationStatus, InvitationType } from "@croco/invitation-core";
+import type {
+  DomainAutoJoinEventStatus,
+  InvitationStatus,
+  InvitationType,
+} from "@croco/invitation-core";
 import { boolean, index, pgTable, text, timestamp, unique, uniqueIndex } from "drizzle-orm/pg-core";
 
 type InvitationRole = "owner" | "admin" | "member" | "viewer";
@@ -92,5 +96,44 @@ export const domainPolicies = pgTable(
   (table) => [
     unique("domain_policies_tenant_id_domain_unique").on(table.tenantId, table.domain),
     index("domain_policies_tenant_id_idx").on(table.tenantId),
+  ],
+);
+
+/**
+ * 도메인 자동 가입의 멤버십 결과와 재생 가능한 이벤트 전달 의도를 저장합니다.
+ */
+export const domainAutoJoinIntents = pgTable(
+  "domain_auto_join_intents",
+  {
+    tenantId: text("tenant_id").notNull(),
+    idempotencyKey: text("idempotency_key").notNull(),
+    userId: text("user_id").notNull(),
+    email: text("email").notNull(),
+    domain: text("domain").notNull(),
+    role: text("role", { enum: ["owner", "admin", "member", "viewer"] })
+      .$type<InvitationRole>()
+      .notNull(),
+    membershipId: text("membership_id"),
+    membershipRole: text("membership_role", {
+      enum: ["owner", "admin", "member", "viewer"],
+    }).$type<InvitationRole>(),
+    membershipCreatedAt: timestamp("membership_created_at"),
+    membershipUpdatedAt: timestamp("membership_updated_at"),
+    eventStatus: text("event_status", { enum: ["pending", "processing", "completed"] })
+      .$type<DomainAutoJoinEventStatus>()
+      .notNull()
+      .default("pending"),
+    eventClaimId: text("event_claim_id"),
+    eventClaimExpiresAt: timestamp("event_claim_expires_at"),
+    eventId: text("event_id").notNull(),
+    eventOccurredAt: timestamp("event_occurred_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("domain_auto_join_tenant_idempotency_unique").on(
+      table.tenantId,
+      table.idempotencyKey,
+    ),
+    index("domain_auto_join_event_status_idx").on(table.eventStatus, table.eventClaimExpiresAt),
   ],
 );

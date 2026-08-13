@@ -25,3 +25,17 @@ export class InvalidAutoJoinRoleProblem extends Problem {
     );
   }
 }
+
+export class DomainAutoJoinRecoveryProblem extends Problem {
+  readonly code = "DOMAIN_AUTO_JOIN_RECOVERY_FAILED";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(phase: "membership" | "event") {
+    super(undefined, undefined, "Domain auto-join did not complete; retry the same operation", {
+      extensions: {
+        phase,
+        retrySafe: true,
+      },
+    });
+  }
+}
