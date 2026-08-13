@@ -2,6 +2,7 @@ import "reflect-metadata";
 import type { EventPublisher } from "@croco/events-core";
 import type { Membership } from "@croco/membership-core";
 import { AlreadyMemberProblem, type MembershipManager } from "@croco/membership-core";
+import { TxManager, type TxAdapter } from "@croco/tx-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DomainPolicyManager } from "../libs/DomainPolicyManager";
 import {
@@ -11,6 +12,7 @@ import {
 } from "../libs/events/DomainPolicyEvents";
 import { InMemoryDomainPolicyStore } from "../libs/InMemoryDomainPolicyStore";
 import {
+  DomainAutoJoinRecoveryProblem,
   InvalidAutoJoinRoleProblem,
   PublicEmailDomainNotAllowedProblem,
 } from "../libs/problems/DomainPolicyProblems";
@@ -20,19 +22,33 @@ describe("DomainPolicyManager", () => {
   let store!: InMemoryDomainPolicyStore;
   let publishNow!: ReturnType<typeof vi.fn>;
   let addMemberCommand!: ReturnType<typeof vi.fn>;
+  let getMember!: ReturnType<typeof vi.fn>;
+  let txManager!: TxManager<unknown>;
 
   beforeEach(() => {
     store = new InMemoryDomainPolicyStore();
     publishNow = vi.fn();
     addMemberCommand = vi.fn();
+    getMember = vi.fn();
+    const txAdapter: TxAdapter<unknown> = {
+      async transaction<T>(fn: (client: unknown) => Promise<T>): Promise<T> {
+        return fn({});
+      },
+      async savepoint<T>(_client: unknown, fn: (client: unknown) => Promise<T>): Promise<T> {
+        return fn({});
+      },
+      supportsSavepoint: () => false,
+    };
+    txManager = new TxManager(txAdapter);
 
     manager = new DomainPolicyManager(
       store,
-      { addMemberCommand } as unknown as MembershipManager,
+      { addMemberCommand, getMember } as unknown as MembershipManager,
       {
         publishNow,
         publishMany: vi.fn(),
       } as unknown as EventPublisher,
+      txManager,
     );
   });
 
@@ -178,9 +194,90 @@ describe("DomainPolicyManager", () => {
     publishNow.mockClear();
     publishNow.mockRejectedValueOnce(new Error("auto join publish failed"));
 
-    await expect(manager.tryAutoJoin("tenant-1", "user-1", "user@croco.dev")).rejects.toThrow(
-      "auto join publish failed",
+    await expect(manager.tryAutoJoin("tenant-1", "user-1", "user@croco.dev")).rejects.toMatchObject(
+      {
+        extensions: {
+          committed: true,
+          failures: [{ message: "auto join publish failed" }],
+        },
+      },
     );
+  });
+
+  it("should replay a committed auto-join and publish its missing event on retry", async () => {
+    await manager.addDomainPolicy("tenant-1", "croco.dev", "member");
+
+    const membership: Membership = {
+      id: "mem-1",
+      tenantId: "tenant-1",
+      userId: "user-1",
+      role: "member",
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+    };
+
+    addMemberCommand.mockResolvedValueOnce({ operation: "add", membership, replayed: false });
+    publishNow.mockClear();
+    publishNow
+      .mockRejectedValueOnce(new Error("auto join publish failed"))
+      .mockResolvedValueOnce(undefined);
+
+    await expect(manager.tryAutoJoin("tenant-1", "user-1", "user@croco.dev")).rejects.toMatchObject(
+      {
+        extensions: {
+          committed: true,
+          failures: [{ message: "auto join publish failed" }],
+        },
+      },
+    );
+
+    await expect(manager.tryAutoJoin("tenant-1", "user-1", "user@croco.dev")).resolves.toEqual(
+      membership,
+    );
+    expect(addMemberCommand).toHaveBeenCalledTimes(1);
+    expect(publishNow).toHaveBeenCalledTimes(2);
+    const [firstEvent] = publishNow.mock.calls[0] as [DomainAutoJoinedEvent];
+    const [retriedEvent] = publishNow.mock.calls[1] as [DomainAutoJoinedEvent];
+    expect(retriedEvent.eventId).toBe(firstEvent.eventId);
+    expect(retriedEvent.timestamp).toEqual(firstEvent.timestamp);
+  });
+
+  it("should fence concurrent auto-joins to one membership result and one event", async () => {
+    await manager.addDomainPolicy("tenant-1", "croco.dev", "member");
+    const membership: Membership = {
+      id: "mem-concurrent",
+      tenantId: "tenant-1",
+      userId: "user-1",
+      role: "member",
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+    };
+    addMemberCommand.mockResolvedValue({ operation: "add", membership, replayed: false });
+    publishNow.mockClear();
+    let releasePublish!: () => void;
+    publishNow.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          releasePublish = resolve;
+        }),
+    );
+
+    const firstAttempt = manager.tryAutoJoin("tenant-1", "user-1", "user@croco.dev");
+    await vi.waitFor(() => expect(publishNow).toHaveBeenCalledTimes(1));
+
+    await expect(
+      manager.tryAutoJoin("tenant-1", "user-1", "user@croco.dev"),
+    ).rejects.toBeInstanceOf(DomainAutoJoinRecoveryProblem);
+    expect(addMemberCommand).toHaveBeenCalledTimes(1);
+    expect(publishNow).toHaveBeenCalledTimes(1);
+    expect(publishNow).toHaveBeenCalledWith(expect.any(DomainAutoJoinedEvent));
+
+    releasePublish();
+    await expect(firstAttempt).resolves.toEqual(membership);
+    await expect(manager.tryAutoJoin("tenant-1", "user-1", "user@croco.dev")).resolves.toEqual(
+      membership,
+    );
+    expect(publishNow).toHaveBeenCalledTimes(1);
   });
 
   it("should return null when no matching policy exists", async () => {
@@ -197,22 +294,6 @@ describe("DomainPolicyManager", () => {
     const result = await manager.tryAutoJoin("tenant-1", "user-1", "user@croco.dev");
 
     expect(result).toBeNull();
-  });
-
-  it("should suppress the domain event when the membership command is replayed", async () => {
-    await manager.addDomainPolicy("tenant-1", "croco.dev", "member");
-    const membership: Membership = {
-      id: "mem-1",
-      tenantId: "tenant-1",
-      userId: "user-1",
-      role: "member",
-      createdAt: new Date("2026-01-01T00:00:00.000Z"),
-      updatedAt: new Date("2026-01-01T00:00:00.000Z"),
-    };
-    addMemberCommand.mockResolvedValue({ operation: "add", membership, replayed: true });
-    publishNow.mockClear();
-
-    await expect(manager.tryAutoJoin("tenant-1", "user-1", "user@croco.dev")).resolves.toBeNull();
-    expect(publishNow).not.toHaveBeenCalled();
+    expect(getMember).not.toHaveBeenCalled();
   });
 });

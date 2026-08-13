@@ -1,13 +1,19 @@
 import { Component, Inject, Token } from "@croco/framework-context";
-import { DomainPolicyStore } from "@croco/invitation-core";
-import type { DomainPolicy } from "@croco/invitation-core";
+import { DomainAutoJoinRecoveryProblem, DomainPolicyStore } from "@croco/invitation-core";
+import type {
+  DomainAutoJoinEventStatus,
+  DomainAutoJoinIntent,
+  DomainAutoJoinIntentCreation,
+  DomainAutoJoinIntentInput,
+  DomainPolicy,
+} from "@croco/invitation-core";
 // Runtime value required for constructor metadata.
 // oxlint-disable-next-line typescript/consistent-type-imports
 import { TxManager } from "@croco/tx-core";
 import type { DrizzleDb } from "@croco/tx-drizzle";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, lte, or } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { domainPolicies } from "./schema";
+import { domainAutoJoinIntents, domainPolicies } from "./schema";
 
 type DrizzleDomainPolicyClient = DrizzleDb & NodePgDatabase<Record<string, never>>;
 
@@ -17,6 +23,25 @@ interface DomainPolicyRow {
   domain: string;
   role: "owner" | "admin" | "member" | "viewer";
   enabled: boolean;
+  createdAt: Date;
+}
+
+interface DomainAutoJoinIntentRow {
+  tenantId: string;
+  idempotencyKey: string;
+  userId: string;
+  email: string;
+  domain: string;
+  role: "owner" | "admin" | "member" | "viewer";
+  membershipId: string | null;
+  membershipRole: "owner" | "admin" | "member" | "viewer" | null;
+  membershipCreatedAt: Date | null;
+  membershipUpdatedAt: Date | null;
+  eventStatus: DomainAutoJoinEventStatus;
+  eventClaimId: string | null;
+  eventClaimExpiresAt: Date | null;
+  eventId: string;
+  eventOccurredAt: Date;
   createdAt: Date;
 }
 
@@ -120,6 +145,170 @@ export class DrizzleDomainPolicyStore extends DomainPolicyStore {
       .where(and(eq(domainPolicies.tenantId, tenantId), eq(domainPolicies.domain, domain)));
   }
 
+  async createAutoJoinIntent(
+    input: DomainAutoJoinIntentInput,
+  ): Promise<DomainAutoJoinIntentCreation> {
+    const client = this.txManager.getClient() ?? this.db;
+    const inserted = (await client
+      .insert(domainAutoJoinIntents)
+      .values(this.mapAutoJoinIntentToValues(input))
+      .onConflictDoNothing({
+        target: [domainAutoJoinIntents.tenantId, domainAutoJoinIntents.idempotencyKey],
+      })
+      .returning()) as DomainAutoJoinIntentRow[];
+
+    const [created] = inserted;
+    if (created) {
+      return { intent: this.mapToAutoJoinIntent(created), created: true };
+    }
+
+    const existing = await this.findAutoJoinIntentWithClient(
+      client,
+      input.tenantId,
+      input.idempotencyKey,
+    );
+    if (!existing) {
+      throw new DomainAutoJoinRecoveryProblem("membership");
+    }
+    return { intent: existing, created: false };
+  }
+
+  async findAutoJoinIntent(
+    tenantId: string,
+    idempotencyKey: string,
+  ): Promise<DomainAutoJoinIntent | null> {
+    const client = this.txManager.getClient() ?? this.db;
+    return this.findAutoJoinIntentWithClient(client, tenantId, idempotencyKey);
+  }
+
+  async completeAutoJoinMembership(
+    tenantId: string,
+    idempotencyKey: string,
+    membership: NonNullable<DomainAutoJoinIntent["membership"]>,
+  ): Promise<DomainAutoJoinIntent | null> {
+    const client = this.txManager.getClient() ?? this.db;
+    const updated = (await client
+      .update(domainAutoJoinIntents)
+      .set({
+        membershipId: membership.id,
+        membershipRole: membership.role,
+        membershipCreatedAt: membership.createdAt,
+        membershipUpdatedAt: membership.updatedAt,
+      })
+      .where(
+        and(
+          eq(domainAutoJoinIntents.tenantId, tenantId),
+          eq(domainAutoJoinIntents.idempotencyKey, idempotencyKey),
+          isNull(domainAutoJoinIntents.membershipId),
+        ),
+      )
+      .returning()) as DomainAutoJoinIntentRow[];
+
+    const [intent] = updated;
+    if (intent) {
+      return this.mapToAutoJoinIntent(intent);
+    }
+    return this.findAutoJoinIntentWithClient(client, tenantId, idempotencyKey);
+  }
+
+  async claimAutoJoinEvent(
+    tenantId: string,
+    idempotencyKey: string,
+    claimId: string,
+    claimExpiresAt: Date,
+  ): Promise<DomainAutoJoinIntent | null> {
+    const client = this.txManager.getClient() ?? this.db;
+    const updated = (await client
+      .update(domainAutoJoinIntents)
+      .set({
+        eventStatus: "processing",
+        eventClaimId: claimId,
+        eventClaimExpiresAt: claimExpiresAt,
+      })
+      .where(
+        and(
+          eq(domainAutoJoinIntents.tenantId, tenantId),
+          eq(domainAutoJoinIntents.idempotencyKey, idempotencyKey),
+          isNotNull(domainAutoJoinIntents.membershipId),
+          or(
+            eq(domainAutoJoinIntents.eventStatus, "pending"),
+            and(
+              eq(domainAutoJoinIntents.eventStatus, "processing"),
+              or(
+                isNull(domainAutoJoinIntents.eventClaimExpiresAt),
+                lte(domainAutoJoinIntents.eventClaimExpiresAt, new Date()),
+              ),
+            ),
+          ),
+        ),
+      )
+      .returning()) as DomainAutoJoinIntentRow[];
+    const [intent] = updated;
+    return intent ? this.mapToAutoJoinIntent(intent) : null;
+  }
+
+  async completeAutoJoinEvent(
+    tenantId: string,
+    idempotencyKey: string,
+    claimId: string,
+  ): Promise<DomainAutoJoinIntent | null> {
+    const client = this.txManager.getClient() ?? this.db;
+    const updated = (await client
+      .update(domainAutoJoinIntents)
+      .set({
+        eventStatus: "completed",
+        eventClaimId: null,
+        eventClaimExpiresAt: null,
+      })
+      .where(
+        and(
+          eq(domainAutoJoinIntents.tenantId, tenantId),
+          eq(domainAutoJoinIntents.idempotencyKey, idempotencyKey),
+          eq(domainAutoJoinIntents.eventStatus, "processing"),
+          eq(domainAutoJoinIntents.eventClaimId, claimId),
+        ),
+      )
+      .returning()) as DomainAutoJoinIntentRow[];
+    const [intent] = updated;
+    return intent ? this.mapToAutoJoinIntent(intent) : null;
+  }
+
+  async releaseAutoJoinEvent(
+    tenantId: string,
+    idempotencyKey: string,
+    claimId: string,
+  ): Promise<void> {
+    const client = this.txManager.getClient() ?? this.db;
+    await client
+      .update(domainAutoJoinIntents)
+      .set({
+        eventStatus: "pending",
+        eventClaimId: null,
+        eventClaimExpiresAt: null,
+      })
+      .where(
+        and(
+          eq(domainAutoJoinIntents.tenantId, tenantId),
+          eq(domainAutoJoinIntents.idempotencyKey, idempotencyKey),
+          eq(domainAutoJoinIntents.eventStatus, "processing"),
+          eq(domainAutoJoinIntents.eventClaimId, claimId),
+        ),
+      );
+  }
+
+  async deleteUncommittedAutoJoinIntent(tenantId: string, idempotencyKey: string): Promise<void> {
+    const client = this.txManager.getClient() ?? this.db;
+    await client
+      .delete(domainAutoJoinIntents)
+      .where(
+        and(
+          eq(domainAutoJoinIntents.tenantId, tenantId),
+          eq(domainAutoJoinIntents.idempotencyKey, idempotencyKey),
+          isNull(domainAutoJoinIntents.membershipId),
+        ),
+      );
+  }
+
   private mapToDomainPolicy(row: DomainPolicyRow): DomainPolicy {
     return {
       id: row.id,
@@ -127,6 +316,75 @@ export class DrizzleDomainPolicyStore extends DomainPolicyStore {
       domain: row.domain,
       role: row.role,
       enabled: row.enabled,
+      createdAt: row.createdAt,
+    };
+  }
+
+  private async findAutoJoinIntentWithClient(
+    client: DrizzleDomainPolicyClient,
+    tenantId: string,
+    idempotencyKey: string,
+  ): Promise<DomainAutoJoinIntent | null> {
+    const rows = (await client
+      .select()
+      .from(domainAutoJoinIntents)
+      .where(
+        and(
+          eq(domainAutoJoinIntents.tenantId, tenantId),
+          eq(domainAutoJoinIntents.idempotencyKey, idempotencyKey),
+        ),
+      )
+      .limit(1)) as DomainAutoJoinIntentRow[];
+    const [row] = rows;
+    return row ? this.mapToAutoJoinIntent(row) : null;
+  }
+
+  private mapAutoJoinIntentToValues(intent: DomainAutoJoinIntentInput) {
+    return {
+      tenantId: intent.tenantId,
+      idempotencyKey: intent.idempotencyKey,
+      userId: intent.userId,
+      email: intent.email,
+      domain: intent.domain,
+      role: intent.role,
+      membershipId: intent.membership?.id ?? null,
+      membershipRole: intent.membership?.role ?? null,
+      membershipCreatedAt: intent.membership?.createdAt ?? null,
+      membershipUpdatedAt: intent.membership?.updatedAt ?? null,
+      eventStatus: intent.eventStatus,
+      eventClaimId: intent.eventClaimId,
+      eventClaimExpiresAt: intent.eventClaimExpiresAt,
+      eventId: intent.eventId,
+      eventOccurredAt: intent.eventOccurredAt,
+      createdAt: intent.createdAt,
+    };
+  }
+
+  private mapToAutoJoinIntent(row: DomainAutoJoinIntentRow): DomainAutoJoinIntent {
+    const membership =
+      row.membershipId && row.membershipRole && row.membershipCreatedAt && row.membershipUpdatedAt
+        ? {
+            id: row.membershipId,
+            tenantId: row.tenantId,
+            userId: row.userId,
+            role: row.membershipRole,
+            createdAt: row.membershipCreatedAt,
+            updatedAt: row.membershipUpdatedAt,
+          }
+        : null;
+    return {
+      tenantId: row.tenantId,
+      idempotencyKey: row.idempotencyKey,
+      userId: row.userId,
+      email: row.email,
+      domain: row.domain,
+      role: row.role,
+      membership,
+      eventStatus: row.eventStatus,
+      eventClaimId: row.eventClaimId,
+      eventClaimExpiresAt: row.eventClaimExpiresAt,
+      eventId: row.eventId,
+      eventOccurredAt: row.eventOccurredAt,
       createdAt: row.createdAt,
     };
   }

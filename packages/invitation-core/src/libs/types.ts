@@ -1,4 +1,4 @@
-import type { MembershipRole } from "@croco/membership-core";
+import type { Membership, MembershipRole } from "@croco/membership-core";
 
 export type InvitationType = "email" | "link";
 
@@ -91,6 +91,31 @@ export type DomainPolicyCreateInput = {
   tenantId: string;
   domain: string;
   role: MembershipRole;
+};
+
+export type DomainAutoJoinEventStatus = "pending" | "processing" | "completed";
+
+export type DomainAutoJoinIntent = {
+  idempotencyKey: string;
+  tenantId: string;
+  userId: string;
+  email: string;
+  domain: string;
+  role: MembershipRole;
+  membership: Membership | null;
+  eventStatus: DomainAutoJoinEventStatus;
+  eventClaimId: string | null;
+  eventClaimExpiresAt: Date | null;
+  eventId: string;
+  eventOccurredAt: Date;
+  createdAt: Date;
+};
+
+export type DomainAutoJoinIntentInput = DomainAutoJoinIntent;
+
+export type DomainAutoJoinIntentCreation = {
+  intent: DomainAutoJoinIntent;
+  created: boolean;
 };
 
 export type BatchInviteResult = {

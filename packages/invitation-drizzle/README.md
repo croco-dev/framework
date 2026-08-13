@@ -77,12 +77,14 @@ const policy = await policyStore.findByTenantAndDomain("tenant-1", "example.com"
 - `findAllByTenant(tenantId)`, 테넌트의 모든 정책을 조회합니다.
 - `save(policy)`, 도메인 정책을 upsert로 저장합니다.
 - `delete(tenantId, domain)`, 도메인 정책을 삭제합니다.
+- 자동 가입 intent 메서드는 멤버십 결과를 저장하고 이벤트 전달을 lease/claim으로 fencing합니다.
 
 ### 스키마와 토큰
 
 - `invitations`, 초대 엔터티 스키마입니다.
 - `invitationEmailCreationIntents`, tenant-scoped 생성 멱등성과 전달 단계 스키마입니다.
 - `domainPolicies`, 도메인 정책 스키마입니다.
+- `domainAutoJoinIntents`, 자동 가입 멤버십 결과와 이벤트 전달 의도 스키마입니다.
 - `DRIZZLE_INVITATION_TOKEN`, 초대 저장소용 DB 토큰입니다.
 - `DRIZZLE_DOMAIN_POLICY_TOKEN`, 도메인 정책 저장소용 DB 토큰입니다.
 
@@ -91,3 +93,7 @@ const policy = await policyStore.findByTenantAndDomain("tenant-1", "example.com"
 AES-256-GCM ciphertext만 저장합니다. 새 런타임을 배포하기 전에
 export된 `addEmailCreationIntents(db)` migration을 적용하고, 키 관리 시스템에서 32-byte 키를
 주입하세요. 키 교체 시 기존 intent의 보존 기간이 끝날 때까지 이전 key ID도 유지해야 합니다.
+
+도메인 자동 가입을 사용하기 전에 export된 `addDomainAutoJoinIntents(db)` migration도 적용하세요.
+`DrizzleDomainPolicyStore`와 멤버십 저장소는 같은 `TxManager`를 사용해야 멤버십과 intent가 하나의
+트랜잭션에 참여합니다.

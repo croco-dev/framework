@@ -71,6 +71,7 @@ export { BatchSizeExceededProblem } from "./libs/problems/BatchInviteProblems";
  * 도메인 정책 검증 실패 시 사용하는 Problem 타입입니다.
  */
 export {
+  DomainAutoJoinRecoveryProblem,
   InvalidAutoJoinRoleProblem,
   PublicEmailDomainNotAllowedProblem,
 } from "./libs/problems/DomainPolicyProblems";
@@ -113,6 +114,10 @@ export { generateToken, hashToken } from "./libs/token";
 export type {
   BatchInviteOptions,
   BatchInviteResult,
+  DomainAutoJoinEventStatus,
+  DomainAutoJoinIntent,
+  DomainAutoJoinIntentCreation,
+  DomainAutoJoinIntentInput,
   DomainPolicy,
   DomainPolicyCreateInput,
   EmailInvitationCreation,
