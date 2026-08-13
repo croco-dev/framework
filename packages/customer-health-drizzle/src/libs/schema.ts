@@ -7,6 +7,7 @@ import type {
 import {
   bigint,
   bigserial,
+  doublePrecision,
   index,
   integer,
   jsonb,
@@ -22,12 +23,12 @@ import { sql } from "drizzle-orm";
 export const tenantHealthScores = pgTable("tenant_health_scores", {
   transitionSequence: bigserial("transition_sequence", { mode: "bigint" }).notNull(),
   tenantId: text("tenant_id").notNull(),
-  overallScore: integer("overall_score").notNull(),
+  overallScore: doublePrecision("overall_score").notNull(),
   status: text("status").notNull().$type<HealthStatus>(),
   categoryScores: jsonb("category_scores").$type<Record<SignalCategory, number>>().notNull(),
   signals: jsonb("signals").notNull(),
   trend: text("trend").notNull().$type<HealthTrend>(),
-  previousScore: integer("previous_score"),
+  previousScore: doublePrecision("previous_score"),
   calculatedAt: timestamp("calculated_at").notNull(),
 });
 
