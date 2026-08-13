@@ -265,6 +265,7 @@ describe("@Auditable", () => {
       }
     }
 
+    let serializationHookCalls = 0;
     await new TestService().rotate("credential-1", {
       name: "primary",
       password: "plain-password",
@@ -274,6 +275,10 @@ describe("@Auditable", () => {
         enabled: { before: false, after: true },
       },
       nested: {
+        toJSON: () => {
+          serializationHookCalls += 1;
+          return { password: "serialization-bypass" };
+        },
         apiKey: "api-key-value",
         "x-api-key": "header-api-key-value",
         enabled: true,
@@ -325,6 +330,10 @@ describe("@Auditable", () => {
         },
       }),
     );
+    expect(JSON.stringify(createSpy.mock.calls[0]?.[0].payload)).not.toContain(
+      "serialization-bypass",
+    );
+    expect(serializationHookCalls).toBe(0);
   });
 
   it("should omit results by default and sanitize explicitly included results", async () => {
@@ -419,7 +428,7 @@ describe("@Auditable", () => {
       @Auditable({ action: "session.fail", resourceType: "Session" })
       async fail(): Promise<void> {
         throw new Error(
-          'request failed {"password":"pa\'ss,tail","apiKey":"key\\\"value,tail"} authorization=Bearer bearer-value',
+          'request failed {"password":"pa\'ss,tail","apiKey":"key\\\"value,tail"}\nCookie: sid=first-secret; csrf=second-secret\nauthorization=Bearer bearer-value',
         );
       }
     }
@@ -430,7 +439,7 @@ describe("@Auditable", () => {
     expect(createSpy.mock.calls[0]?.[0].payload).toEqual({
       arguments: [],
       error:
-        'request failed {"password":"[Redacted]","apiKey":"[Redacted]"} authorization=[Redacted]',
+        'request failed {"password":"[Redacted]","apiKey":"[Redacted]"}\nCookie: [Redacted]\nauthorization=[Redacted]',
     });
   });
 

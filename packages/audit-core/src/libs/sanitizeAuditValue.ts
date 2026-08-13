@@ -65,14 +65,26 @@ function isSensitiveKey(key: string): boolean {
   );
 }
 
+function replaceSecretLabel(
+  match: string,
+  labelQuote: string,
+  label: string,
+  separator: string,
+): string {
+  const value = match.slice(labelQuote.length * 2 + label.length + separator.length);
+  const valueQuote = value.startsWith('"') || value.startsWith("'") ? value[0] : "";
+  return `${labelQuote}${label}${labelQuote}${separator}${valueQuote}${REDACTED_VALUE}${valueQuote}`;
+}
+
 function sanitizeText(value: string): string {
-  return value.replace(
-    /(["']?)(authorization|proxy[-_]?authorization|cookie|set[-_]?cookie|credential|password|passphrase|passwd|pwd|secret|token|api[-_]?key|private[-_]?key|access[-_]?key(?:[-_]?id)?|access[-_]?token|refresh[-_]?token|client[-_]?secret|connection[-_]?string|dsn)\1(\s*[:=]\s*)(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|(?:bearer|basic|digest|apikey)\s+[^\s,;}\]]+|[^,\s;}\]]+)/gi,
-    (match, labelQuote: string, label: string, separator: string) => {
-      const value = match.slice(labelQuote.length * 2 + label.length + separator.length);
-      const valueQuote = value.startsWith('"') || value.startsWith("'") ? value[0] : "";
-      return `${labelQuote}${label}${labelQuote}${separator}${valueQuote}${REDACTED_VALUE}${valueQuote}`;
-    },
+  const sanitizedCookies = value.replace(
+    /(["']?)(cookie|set[-_]?cookie)\1(\s*[:=]\s*)(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\r\n]+)/gi,
+    replaceSecretLabel,
+  );
+
+  return sanitizedCookies.replace(
+    /(["']?)(authorization|proxy[-_]?authorization|credential|password|passphrase|passwd|pwd|secret|token|api[-_]?key|private[-_]?key|access[-_]?key(?:[-_]?id)?|access[-_]?token|refresh[-_]?token|client[-_]?secret|connection[-_]?string|dsn)\1(\s*[:=]\s*)(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|(?:bearer|basic|digest|apikey)\s+[^\s,;}\]]+|[^,\s;}\]]+)/gi,
+    replaceSecretLabel,
   );
 }
 
@@ -121,7 +133,7 @@ function sanitizeObject(
 
   const sanitizedEntries: [string, unknown][] = [];
   for (const [key, descriptor] of Object.entries(descriptors)) {
-    if (!descriptor.enumerable) {
+    if (!descriptor.enumerable || key === "toJSON") {
       continue;
     }
     sanitizedEntries.push([
