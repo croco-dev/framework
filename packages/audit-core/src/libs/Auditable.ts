@@ -3,6 +3,7 @@ import { recordError } from "@croco/telemetry-api";
 import type { AuditLogRepository } from "./AuditLogRepository";
 import { AUDIT_LOG_REPOSITORY_TOKEN } from "./AuditLogRepositoryToken";
 import { AuditableDecoratorProblem } from "./problems/AuditableDecoratorProblem";
+import { sanitizeAuditValue } from "./sanitizeAuditValue";
 import type { AuditableOptions, AuditLogEntry } from "./types";
 
 type DecoratedMethod = (...args: unknown[]) => unknown;
@@ -39,16 +40,31 @@ function getImpersonationContext(context: unknown): ImpersonationContext | undef
 }
 
 function extractDiffFromPayload(payload: unknown): Record<string, unknown> | null {
-  if (!payload || typeof payload !== "object" || !("diff" in payload)) {
+  if (!payload || typeof payload !== "object") {
     return null;
   }
 
-  const diff = payload.diff;
+  let descriptor: PropertyDescriptor | undefined;
+  try {
+    descriptor = Object.getOwnPropertyDescriptor(payload, "diff");
+  } catch {
+    return null;
+  }
+
+  if (!descriptor || !("value" in descriptor)) {
+    return null;
+  }
+
+  const diff = descriptor.value;
   if (!diff || typeof diff !== "object") {
     return null;
   }
 
-  return diff as Record<string, unknown>;
+  const sanitized = sanitizeAuditValue(diff);
+  if (!sanitized || typeof sanitized !== "object" || Array.isArray(sanitized)) {
+    return null;
+  }
+  return sanitized as Record<string, unknown>;
 }
 
 function toResourceId(value: unknown, args: unknown[]): string {
@@ -68,26 +84,34 @@ function buildAuditPayload(
   args: unknown[],
   payloadInput: unknown,
   result: unknown,
-  error: Error | null,
+  errorMessage: string | null,
   includeResult: boolean,
 ): Record<string, unknown> {
   const payload: Record<string, unknown> = {
-    arguments: args,
+    arguments: sanitizeAuditValue(args),
   };
 
   if (payloadInput !== undefined) {
-    payload.input = payloadInput;
+    payload.input = sanitizeAuditValue(payloadInput);
   }
 
-  if (includeResult && error === null) {
-    payload.result = result;
+  if (includeResult && errorMessage === null) {
+    payload.result = sanitizeAuditValue(result);
   }
 
-  if (error !== null) {
-    payload.error = error.message;
+  if (errorMessage !== null) {
+    payload.error = sanitizeAuditValue(errorMessage);
   }
 
   return payload;
+}
+
+function getErrorMessage(error: unknown): string {
+  try {
+    return error instanceof Error ? error.message : String(error);
+  } catch {
+    return "[Unserializable]";
+  }
 }
 
 type AuditWriteConfig = {
@@ -224,8 +248,7 @@ export function Auditable(options: AuditableOptions): MethodDecorator {
       try {
         result = await originalMethod.apply(this, args);
       } catch (error) {
-        const errorObj = error instanceof Error ? error : new Error(String(error));
-        const payload = buildAuditPayload(args, payloadInput, null, errorObj, false);
+        const payload = buildAuditPayload(args, payloadInput, null, getErrorMessage(error), false);
         if (dependencies) {
           if (options.throwOnFailure) {
             await writeAuditLog(auditConfig, payload, dependencies);
@@ -242,7 +265,7 @@ export function Auditable(options: AuditableOptions): MethodDecorator {
         payloadInput,
         result,
         null,
-        options.includeResult ?? true,
+        options.includeResult ?? false,
       );
       if (dependencies) {
         if (options.throwOnFailure) {

@@ -19,6 +19,7 @@ class UserService {
     resourceType: "User",
     resourceIdParam: "id",
     payloadParam: "dto",
+    includeResult: false,
   })
   async updateUser(id: string, dto: unknown): Promise<void> {
     void id;
@@ -26,6 +27,10 @@ class UserService {
   }
 }
 ```
+
+`Auditable`은 인자, 선택된 payload, diff, 오류 메시지와 명시적으로 포함한 결과에서 일반적인 credential 키와
+labelled secret 문자열을 재귀적으로 치환합니다. 메서드 결과는 기본적으로 저장하지 않으며, 필요한 경우에만
+`includeResult: true`로 활성화하면 치환된 결과가 기록됩니다.
 
 ```ts
 import { AuditInterceptor } from "@croco/audit-core";
