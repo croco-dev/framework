@@ -1,6 +1,7 @@
 import { createHmac } from "node:crypto";
 import type { BillingStore, PlanRegistry, PlanVersionDefinition } from "@croco/billing-core";
 import {
+  InMemoryBillingStore,
   planVersionRef,
   SubscriptionPastDueEvent,
   WebhookAlreadyProcessedProblem,
@@ -8,41 +9,33 @@ import {
 import type { EventPublisher } from "@croco/events-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PolarWebhookHandler } from "../libs/PolarWebhookHandler";
+import type { WebhookDependencies } from "../libs/PolarWebhookHandler";
 import { WebhookValidationProblem } from "../libs/problems/WebhookValidationProblem";
 import type { PolarConfig } from "../types";
 
 function createMockStore(): BillingStore {
-  return {
-    findAccountByTenantId: vi.fn(),
-    findAccountByExternalId: vi.fn(),
-    saveAccount: vi.fn(),
-    deleteAccount: vi.fn(),
-    findSubscription: vi.fn(),
-    findSubscriptionByExternalId: vi.fn(),
-    saveSubscription: vi.fn(),
-    deleteSubscription: vi.fn(),
-    reconcileLifecycleSubscription: vi.fn(),
-    createLifecycleCommand: vi.fn(),
-    findLifecycleCommand: vi.fn(),
-    findPendingLifecycleCommandByTenantId: vi.fn(),
-    resolveLifecycleSubscription: vi.fn(),
-    claimLifecycleEventDelivery: vi.fn(),
-    saveLifecycleCommand: vi.fn(),
-    listPendingLifecycleCommands: vi.fn(),
-    saveOrder: vi.fn(),
-    findOrdersByAccount: vi.fn(),
-    reserveWebhook: vi.fn(),
-    completeWebhook: vi.fn(),
-    failWebhook: vi.fn(),
-  };
+  const store = new InMemoryBillingStore();
+  vi.spyOn(store, "findSubscription");
+  vi.spyOn(store, "saveSubscription");
+  vi.spyOn(store, "commitSubscriptionWebhook");
+  vi.spyOn(store, "markWebhookEventIntentPublished");
+  vi.spyOn(store, "claimWebhookDelivery");
+  vi.spyOn(store, "completeWebhookDelivery");
+  vi.spyOn(store, "releaseWebhookDelivery");
+  vi.spyOn(store, "reserveWebhook");
+  vi.spyOn(store, "completeWebhook");
+  vi.spyOn(store, "failWebhook");
+  return store;
 }
 
-function createMockEventPublisher(): EventPublisher {
+function createMockEventPublisher() {
+  const publish = vi.fn();
   return {
     publish: vi.fn(),
-    publishNow: vi.fn(),
+    publishNow: publish,
     publishMany: vi.fn(),
-  } as unknown as EventPublisher;
+    publishIdempotently: publish,
+  } as unknown as WebhookDependencies["eventPublisher"] & EventPublisher;
 }
 
 const POLAR_PLAN_VERSION = {
@@ -188,7 +181,7 @@ describe("PolarWebhookHandler Standard Webhooks signature verification", () => {
   const now = new Date("2026-01-31T00:00:00Z");
   let handler!: PolarWebhookHandler;
   let mockStore!: BillingStore;
-  let mockEventPublisher!: EventPublisher;
+  let mockEventPublisher!: WebhookDependencies["eventPublisher"];
   let mockPlanRegistry!: PlanRegistry;
 
   beforeEach(() => {
@@ -220,7 +213,6 @@ describe("PolarWebhookHandler Standard Webhooks signature verification", () => {
     const headers = createSignedHeaders({ body, eventId, secret: webhookSecret, timestamp });
 
     vi.mocked(mockStore.findSubscription).mockResolvedValue(null);
-    vi.mocked(mockStore.completeWebhook).mockResolvedValue(undefined);
     vi.mocked(mockStore.reserveWebhook)
       .mockResolvedValueOnce(undefined)
       .mockRejectedValueOnce(new WebhookAlreadyProcessedProblem(eventId));
@@ -230,13 +222,11 @@ describe("PolarWebhookHandler Standard Webhooks signature verification", () => {
 
     expect(firstResult).toEqual({ success: true, eventId });
     expect(replayResult).toEqual({ success: true, eventId });
-    expect(mockStore.reserveWebhook).toHaveBeenCalledTimes(2);
+    expect(mockStore.reserveWebhook).not.toHaveBeenCalled();
     expect(mockStore.saveSubscription).toHaveBeenCalledTimes(1);
     expect(mockEventPublisher.publishNow).toHaveBeenCalledTimes(1);
     expect(mockStore.completeWebhook).toHaveBeenCalledTimes(1);
-    expect(mockStore.failWebhook).toHaveBeenCalledWith(
-      "croco:billing:polar:subscription:sub-sdk-replay:past_due",
-    );
+    expect(mockStore.failWebhook).not.toHaveBeenCalled();
   });
 
   it("should verify and publish a directly signed subscription.past_due event", async () => {
@@ -264,9 +254,10 @@ describe("PolarWebhookHandler Standard Webhooks signature verification", () => {
     expect(mockEventPublisher.publishNow).toHaveBeenCalledWith(
       expect.any(SubscriptionPastDueEvent),
     );
-    expect(mockStore.reserveWebhook).toHaveBeenCalledWith(
+    expect(mockStore.claimWebhookDelivery).toHaveBeenCalledWith(
       "croco:billing:polar:subscription:sub-sdk-replay:past_due",
       "billing.subscription_past_due",
+      30_000,
     );
   });
 

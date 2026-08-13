@@ -7,13 +7,22 @@ import type {
   Subscription,
 } from "../types";
 import { BillingStore } from "./BillingStore";
+import type {
+  BillingSubscriptionWebhookTransition,
+  BillingWebhookDeliveryClaim,
+  BillingWebhookEventIntent,
+  CommitBillingSubscriptionWebhookInput,
+} from "./BillingStore";
 import {
   BillingLifecycleCommandConflictProblem,
   BillingLifecycleCommandInProgressProblem,
+  WebhookEventIntentsPendingProblem,
   WebhookAlreadyProcessedProblem,
 } from "./problems/BillingProblems";
 
-type WebhookState = "RESERVED" | "COMPLETED";
+type WebhookState =
+  | { readonly state: "RESERVED"; readonly leaseUntil?: Date; readonly claimToken?: string }
+  | { readonly state: "COMPLETED" };
 
 /**
  * In-memory billing store for testing and development.
@@ -29,6 +38,11 @@ export class InMemoryBillingStore extends BillingStore {
   private readonly pendingLifecycleCommandKeysByTenantId = new Map<string, string>();
   private readonly orders = new Map<string, Order[]>();
   private readonly processedWebhooks = new Map<string, WebhookState>();
+  private readonly subscriptionWebhookTransitions = new Map<
+    string,
+    BillingSubscriptionWebhookTransition
+  >();
+  private webhookDeliveryClaimSequence = 0;
 
   constructor(private readonly clock: () => Date = () => new Date()) {
     super();
@@ -285,20 +299,142 @@ export class InMemoryBillingStore extends BillingStore {
     return this.orders.get(billingAccountId) ?? [];
   }
 
+  async commitSubscriptionWebhook(
+    input: CommitBillingSubscriptionWebhookInput,
+  ): Promise<BillingSubscriptionWebhookTransition> {
+    const existingTransition = this.subscriptionWebhookTransitions.get(input.eventId);
+    if (existingTransition) {
+      return cloneSubscriptionWebhookTransition(existingTransition);
+    }
+    if (this.processedWebhooks.has(input.eventId)) {
+      throw new WebhookAlreadyProcessedProblem(input.eventId);
+    }
+
+    const previousSubscription = this.subscriptions.get(input.subscription.billingAccountId);
+    const previousEvidence = previousSubscription ? cloneSubscription(previousSubscription) : null;
+    const intents = input.createEventIntents(previousEvidence).map((event) => ({
+      event: structuredClone(event),
+      publishedAt: null,
+    }));
+    const transition: BillingSubscriptionWebhookTransition = {
+      eventId: input.eventId,
+      eventType: input.eventType,
+      previousSubscription: previousEvidence,
+      subscription: cloneSubscription(input.subscription),
+      intents,
+      state: "pending",
+    };
+
+    const clearedReservationState = input.clearWebhookReservationId
+      ? this.processedWebhooks.get(input.clearWebhookReservationId)
+      : undefined;
+    if (input.clearWebhookReservationId) {
+      this.processedWebhooks.delete(input.clearWebhookReservationId);
+    }
+    this.processedWebhooks.set(input.eventId, { state: "RESERVED" });
+    this.subscriptionWebhookTransitions.set(input.eventId, transition);
+    try {
+      await this.saveSubscription(input.subscription);
+    } catch (error) {
+      this.processedWebhooks.delete(input.eventId);
+      this.subscriptionWebhookTransitions.delete(input.eventId);
+      if (input.clearWebhookReservationId && clearedReservationState) {
+        this.processedWebhooks.set(input.clearWebhookReservationId, clearedReservationState);
+      }
+      throw error;
+    }
+    return cloneSubscriptionWebhookTransition(transition);
+  }
+
+  async markWebhookEventIntentPublished(eventId: string, intentEventId: string): Promise<void> {
+    const transition = this.subscriptionWebhookTransitions.get(eventId);
+    if (!transition) {
+      throw new WebhookAlreadyProcessedProblem(eventId);
+    }
+
+    const intents: BillingWebhookEventIntent[] = transition.intents.map((intent) =>
+      intent.event.eventId === intentEventId
+        ? { event: structuredClone(intent.event), publishedAt: intent.publishedAt ?? this.clock() }
+        : cloneWebhookEventIntent(intent),
+    );
+    this.subscriptionWebhookTransitions.set(eventId, {
+      ...transition,
+      intents,
+    });
+  }
+
+  async claimWebhookDelivery(
+    eventId: string,
+    _eventType: string,
+    leaseDurationMs: number,
+  ): Promise<BillingWebhookDeliveryClaim> {
+    const existing = this.processedWebhooks.get(eventId);
+    if (existing?.state === "COMPLETED") return { status: "completed" };
+
+    const now = this.clock();
+    if (existing?.leaseUntil && existing.leaseUntil.getTime() > now.getTime()) {
+      return { status: "in_progress" };
+    }
+
+    const token = `${eventId}:${++this.webhookDeliveryClaimSequence}`;
+    this.processedWebhooks.set(eventId, {
+      state: "RESERVED",
+      leaseUntil: new Date(now.getTime() + leaseDurationMs),
+      claimToken: token,
+    });
+    return { status: "claimed", token };
+  }
+
+  async completeWebhookDelivery(eventId: string, claimToken: string): Promise<boolean> {
+    const existing = this.processedWebhooks.get(eventId);
+    if (
+      existing?.state !== "RESERVED" ||
+      existing.claimToken !== claimToken ||
+      !existing.leaseUntil ||
+      existing.leaseUntil.getTime() <= this.clock().getTime()
+    ) {
+      return false;
+    }
+    this.processedWebhooks.set(eventId, { state: "COMPLETED" });
+    return true;
+  }
+
+  async releaseWebhookDelivery(eventId: string, claimToken: string): Promise<boolean> {
+    const existing = this.processedWebhooks.get(eventId);
+    if (
+      existing?.state !== "RESERVED" ||
+      existing.claimToken !== claimToken ||
+      !existing.leaseUntil ||
+      existing.leaseUntil.getTime() <= this.clock().getTime()
+    ) {
+      return false;
+    }
+    this.processedWebhooks.delete(eventId);
+    return true;
+  }
+
   async reserveWebhook(eventId: string, _eventType: string): Promise<void> {
     if (this.processedWebhooks.has(eventId)) {
       throw new WebhookAlreadyProcessedProblem(eventId);
     }
 
-    this.processedWebhooks.set(eventId, "RESERVED");
+    this.processedWebhooks.set(eventId, { state: "RESERVED" });
   }
 
   async completeWebhook(eventId: string): Promise<void> {
-    if (this.processedWebhooks.get(eventId) !== "RESERVED") {
+    if (this.processedWebhooks.get(eventId)?.state !== "RESERVED") {
       throw new WebhookAlreadyProcessedProblem(eventId);
     }
 
-    this.processedWebhooks.set(eventId, "COMPLETED");
+    const transition = this.subscriptionWebhookTransitions.get(eventId);
+    if (transition?.intents.some((intent) => intent.publishedAt === null)) {
+      throw new WebhookEventIntentsPendingProblem(eventId);
+    }
+
+    this.processedWebhooks.set(eventId, { state: "COMPLETED" });
+    if (transition) {
+      this.subscriptionWebhookTransitions.set(eventId, { ...transition, state: "completed" });
+    }
   }
 
   async failWebhook(eventId: string): Promise<void> {
@@ -318,7 +454,29 @@ export class InMemoryBillingStore extends BillingStore {
     this.pendingLifecycleCommandKeysByTenantId.clear();
     this.orders.clear();
     this.processedWebhooks.clear();
+    this.subscriptionWebhookTransitions.clear();
+    this.webhookDeliveryClaimSequence = 0;
   }
+}
+
+function cloneWebhookEventIntent(intent: BillingWebhookEventIntent): BillingWebhookEventIntent {
+  return {
+    event: structuredClone(intent.event),
+    publishedAt: intent.publishedAt ? new Date(intent.publishedAt) : null,
+  };
+}
+
+function cloneSubscriptionWebhookTransition(
+  transition: BillingSubscriptionWebhookTransition,
+): BillingSubscriptionWebhookTransition {
+  return {
+    ...transition,
+    previousSubscription: transition.previousSubscription
+      ? cloneSubscription(transition.previousSubscription)
+      : null,
+    subscription: cloneSubscription(transition.subscription),
+    intents: transition.intents.map(cloneWebhookEventIntent),
+  };
 }
 
 function cloneSubscription(subscription: Subscription): Subscription {

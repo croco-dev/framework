@@ -1,10 +1,13 @@
 import type {
   BillingStore,
+  CommitBillingSubscriptionWebhookInput,
   PlanRegistry,
   PlanVersionDefinition,
   Subscription,
 } from "@croco/billing-core";
 import {
+  InMemoryBillingStore,
+  PlanChangedEvent,
   planVersionRef,
   SubscriptionPastDueEvent,
   UnknownProviderPlanMappingProblem,
@@ -14,12 +17,17 @@ import type { EventPublisher } from "@croco/events-core";
 import { createBillingProviderConformanceSuite } from "@croco/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PolarWebhookHandler } from "../libs/PolarWebhookHandler";
+import type { WebhookDependencies } from "../libs/PolarWebhookHandler";
 import { WebhookProcessingProblem } from "../libs/problems/WebhookProcessingProblem";
 import { WebhookValidationProblem } from "../libs/problems/WebhookValidationProblem";
 import type { PolarConfig } from "../types";
 
 function createMockStore(): BillingStore {
-  return {
+  const transitions = new Map<
+    string,
+    Awaited<ReturnType<BillingStore["commitSubscriptionWebhook"]>>
+  >();
+  const store: BillingStore = {
     findAccountByTenantId: vi.fn(),
     findAccountByExternalId: vi.fn(),
     saveAccount: vi.fn(),
@@ -38,18 +46,88 @@ function createMockStore(): BillingStore {
     listPendingLifecycleCommands: vi.fn(),
     saveOrder: vi.fn(),
     findOrdersByAccount: vi.fn(),
+    commitSubscriptionWebhook: vi.fn(async (input: CommitBillingSubscriptionWebhookInput) => {
+      const existing = transitions.get(input.eventId);
+      if (existing) return existing;
+      await store.reserveWebhook(input.eventId, input.eventType);
+      const previousSubscription = await store.findSubscription(
+        input.subscription.billingAccountId,
+      );
+      try {
+        const transition = {
+          eventId: input.eventId,
+          eventType: input.eventType,
+          previousSubscription,
+          subscription: input.subscription,
+          intents: input.createEventIntents(previousSubscription).map((event) => ({
+            event,
+            publishedAt: null,
+          })),
+          state: "pending" as const,
+        };
+        await store.saveSubscription(input.subscription);
+        if (input.clearWebhookReservationId) {
+          await store.failWebhook(input.clearWebhookReservationId);
+        }
+        transitions.set(input.eventId, transition);
+        return transition;
+      } catch (error) {
+        if (previousSubscription) {
+          await store.saveSubscription(previousSubscription);
+        }
+        await store.failWebhook(input.eventId);
+        throw error;
+      }
+    }),
+    markWebhookEventIntentPublished: vi.fn(async (eventId, intentEventId) => {
+      const transition = transitions.get(eventId);
+      if (!transition) return;
+      transitions.set(eventId, {
+        ...transition,
+        intents: transition.intents.map((intent) =>
+          intent.event.eventId === intentEventId ? { ...intent, publishedAt: new Date() } : intent,
+        ),
+      });
+    }),
+    claimWebhookDelivery: vi.fn(async (eventId, eventType) => {
+      try {
+        await store.reserveWebhook(eventId, eventType);
+        return { status: "claimed" as const, token: eventId };
+      } catch (error) {
+        if (error instanceof WebhookAlreadyProcessedProblem) {
+          return { status: "completed" as const };
+        }
+        throw error;
+      }
+    }),
+    completeWebhookDelivery: vi.fn(async (eventId) => {
+      await store.completeWebhook(eventId);
+      return true;
+    }),
+    releaseWebhookDelivery: vi.fn(async (eventId) => {
+      await store.failWebhook(eventId);
+      return true;
+    }),
     reserveWebhook: vi.fn(),
-    completeWebhook: vi.fn(),
+    completeWebhook: vi.fn(async (eventId) => {
+      const transition = transitions.get(eventId);
+      if (transition) {
+        transitions.set(eventId, { ...transition, state: "completed" });
+      }
+    }),
     failWebhook: vi.fn(),
   };
+  return store;
 }
 
-function createMockEventPublisher(): EventPublisher {
+function createMockEventPublisher() {
+  const publish = vi.fn();
   const mockPublisher = {
     publish: vi.fn(),
-    publishNow: vi.fn(),
+    publishNow: publish,
     publishMany: vi.fn(),
-  } as unknown as EventPublisher;
+    publishIdempotently: publish,
+  } as unknown as WebhookDependencies["eventPublisher"] & EventPublisher;
   return mockPublisher;
 }
 
@@ -171,7 +249,7 @@ const webhookValidationFailureCases: readonly {
 describe("PolarWebhookHandler", () => {
   let handler!: PolarWebhookHandler;
   let mockStore!: BillingStore;
-  let mockEventPublisher!: EventPublisher;
+  let mockEventPublisher!: WebhookDependencies["eventPublisher"];
   let mockPlanRegistry!: PlanRegistry;
   let config!: PolarConfig;
 
@@ -223,7 +301,6 @@ describe("PolarWebhookHandler", () => {
 
     function configureConformanceHandler(): PolarWebhookHandler {
       vi.mocked(mockStore.findSubscription).mockResolvedValue(null);
-      vi.mocked(mockStore.completeWebhook).mockResolvedValue(undefined);
       vi.mocked(mockStore.failWebhook).mockResolvedValue(undefined);
       vi.mocked(mockStore.reserveWebhook)
         .mockResolvedValueOnce(undefined)
@@ -300,7 +377,7 @@ describe("PolarWebhookHandler", () => {
             },
             idempotency: () => {
               expect(mockStore.saveSubscription).toHaveBeenCalledTimes(1);
-              expect(mockStore.reserveWebhook).toHaveBeenCalledTimes(2);
+              expect(mockStore.reserveWebhook).toHaveBeenCalledTimes(1);
             },
             invalidSignature: (problem) => {
               expect(problem).toBeInstanceOf(WebhookValidationProblem);
@@ -319,7 +396,6 @@ describe("PolarWebhookHandler", () => {
   describe("이미 처리된 이벤트는 스킵 (멱등성)", () => {
     it("should treat replayed signed deliveries as idempotent successes", async () => {
       vi.mocked(mockStore.findSubscription).mockResolvedValue(null);
-      vi.mocked(mockStore.completeWebhook).mockResolvedValue(undefined);
       vi.mocked(mockStore.reserveWebhook)
         .mockResolvedValueOnce(undefined)
         .mockRejectedValueOnce(new WebhookAlreadyProcessedProblem(signedSubscriptionEvent.id));
@@ -348,7 +424,7 @@ describe("PolarWebhookHandler", () => {
       expect(firstResult).toEqual({ success: true, eventId: signedSubscriptionEvent.id });
       expect(replayResult).toEqual({ success: true, eventId: signedSubscriptionEvent.id });
       expect(mockVerifyPolarWebhook).toHaveBeenCalledTimes(2);
-      expect(mockStore.reserveWebhook).toHaveBeenCalledTimes(2);
+      expect(mockStore.reserveWebhook).toHaveBeenCalledTimes(1);
       expect(mockStore.saveSubscription).toHaveBeenCalledTimes(1);
       expect(mockEventPublisher.publishNow).toHaveBeenCalledTimes(1);
       expect(mockStore.completeWebhook).toHaveBeenCalledTimes(1);
@@ -479,22 +555,14 @@ describe("PolarWebhookHandler", () => {
         },
       } as never);
 
-      await expect(
-        handler.handle("{}", { "webhook-id": "evt-reservation-failure" }),
-      ).rejects.toSatisfy((problem: unknown) => {
-        expect(problem).toBeInstanceOf(WebhookProcessingProblem);
-        expect(problem).toMatchObject({
-          detail: "Webhook processing failed: Webhook reservation failed",
-          cause: error,
-        });
-        expect((problem as WebhookProcessingProblem).toJSON()).toMatchObject({
-          detail: "Webhook processing failed: Webhook reservation failed",
-        });
-        expect(JSON.stringify((problem as WebhookProcessingProblem).toJSON())).not.toContain(
-          error.message,
-        );
-        return true;
+      const result = await handler.handle("{}", {
+        "webhook-id": "evt-reservation-failure",
       });
+      expect(result).toMatchObject({
+        success: false,
+        error: expect.stringContaining("Webhook transition commit failed"),
+      });
+      expect(result.error).not.toContain(error.message);
       expect(mockStore.saveSubscription).not.toHaveBeenCalled();
       expect(mockEventPublisher.publishNow).not.toHaveBeenCalled();
       expect(mockStore.completeWebhook).not.toHaveBeenCalled();
@@ -517,22 +585,14 @@ describe("PolarWebhookHandler", () => {
         },
       } as never);
 
-      await expect(
-        handler.handle("{}", { "webhook-id": "evt-non-error-reservation-failure" }),
-      ).rejects.toSatisfy((problem: unknown) => {
-        expect(problem).toBeInstanceOf(WebhookProcessingProblem);
-        expect(problem).toMatchObject({
-          detail: "Webhook processing failed: Webhook reservation failed",
-          cause: expect.objectContaining({
-            message: "Billing store rejected webhook reservation with a non-Error value",
-            cause: rejection,
-          }),
-        });
-        expect(JSON.stringify((problem as WebhookProcessingProblem).toJSON())).not.toContain(
-          rejection.constraint,
-        );
-        return true;
+      const result = await handler.handle("{}", {
+        "webhook-id": "evt-non-error-reservation-failure",
       });
+      expect(result).toMatchObject({
+        success: false,
+        error: expect.stringContaining("Webhook transition commit failed"),
+      });
+      expect(result.error).not.toContain(rejection.constraint);
       expect(mockStore.saveSubscription).not.toHaveBeenCalled();
       expect(mockEventPublisher.publishNow).not.toHaveBeenCalled();
       expect(mockStore.completeWebhook).not.toHaveBeenCalled();
@@ -575,6 +635,188 @@ describe("PolarWebhookHandler", () => {
       expect(mockEventPublisher.publishNow).toHaveBeenCalled();
       expect(mockStore.reserveWebhook).toHaveBeenCalledWith("evt-123", "subscription.created");
       expect(mockStore.completeWebhook).toHaveBeenCalledWith("evt-123");
+    });
+
+    it("resumes durable plan-change intents after a failure before first publication", async () => {
+      const durableStore = new InMemoryBillingStore();
+      await durableStore.saveSubscription({
+        id: "sub-durable-first",
+        billingAccountId: "tenant-durable-first",
+        externalSubscriptionId: "sub-durable-first",
+        planId: "plan-basic",
+        planVersionRef: planVersionRef("plan-basic@v1"),
+        status: "active",
+        currentPeriodEnd: new Date("2026-02-01T00:00:00Z"),
+        cancelAtPeriodEnd: false,
+        lastSyncedAt: new Date("2026-01-01T00:00:00Z"),
+      });
+      const publisher = createMockEventPublisher();
+      vi.mocked(publisher.publishNow).mockRejectedValueOnce(new Error("subscriber unavailable"));
+      const eventData = {
+        id: "evt-durable-first",
+        type: "subscription.updated",
+        data: {
+          id: "sub-durable-first",
+          customer: { externalId: "tenant-durable-first", metadata: {} },
+          product: { id: "plan-pro" },
+          status: "active",
+          currentPeriodEnd: "2026-02-01T00:00:00Z",
+          cancelAtPeriodEnd: false,
+        },
+      };
+      vi.mocked(mockVerifyPolarWebhook).mockReturnValue(eventData);
+
+      const firstHandler = new PolarWebhookHandler(config, {
+        store: durableStore,
+        eventPublisher: publisher,
+        planRegistry: mockPlanRegistry,
+      });
+      const retryHandler = new PolarWebhookHandler(config, {
+        store: durableStore,
+        eventPublisher: publisher,
+        planRegistry: mockPlanRegistry,
+      });
+      const first = await firstHandler.handle(JSON.stringify(eventData), {
+        "webhook-id": eventData.id,
+      });
+      const retry = await retryHandler.handle(JSON.stringify(eventData), {
+        "webhook-id": eventData.id,
+      });
+
+      expect(first).toMatchObject({
+        success: false,
+        error: expect.stringContaining("unavailable"),
+      });
+      expect(retry).toEqual({ success: true, eventId: eventData.id });
+      expect(vi.mocked(publisher.publishNow).mock.calls).toHaveLength(2);
+      expect(vi.mocked(publisher.publishNow).mock.calls[1]?.[0]).toBeInstanceOf(PlanChangedEvent);
+      expect(vi.mocked(publisher.publishNow).mock.calls[0]?.[0].eventId).toBe(
+        vi.mocked(publisher.publishNow).mock.calls[1]?.[0].eventId,
+      );
+    });
+
+    it("does not republish a completed intent when a later intent fails", async () => {
+      const durableStore = new InMemoryBillingStore();
+      await durableStore.saveSubscription({
+        id: "sub-durable-many",
+        billingAccountId: "tenant-durable-many",
+        externalSubscriptionId: "sub-durable-many",
+        planId: "plan-basic",
+        planVersionRef: planVersionRef("plan-basic@v1"),
+        status: "active",
+        currentPeriodEnd: new Date("2026-02-01T00:00:00Z"),
+        cancelAtPeriodEnd: false,
+        lastSyncedAt: new Date("2026-01-01T00:00:00Z"),
+      });
+      const publisher = createMockEventPublisher();
+      vi.mocked(publisher.publishNow)
+        .mockResolvedValueOnce(undefined)
+        .mockRejectedValueOnce(new Error("past-due subscriber unavailable"));
+      const eventData = {
+        id: "evt-durable-many",
+        type: "subscription.updated",
+        data: {
+          id: "sub-durable-many",
+          customer: { externalId: "tenant-durable-many", metadata: {} },
+          product: { id: "plan-pro" },
+          status: "past_due",
+          currentPeriodEnd: "2026-02-01T00:00:00Z",
+          cancelAtPeriodEnd: false,
+        },
+      };
+      vi.mocked(mockVerifyPolarWebhook).mockReturnValue(eventData);
+      const firstHandler = new PolarWebhookHandler(config, {
+        store: durableStore,
+        eventPublisher: publisher,
+        planRegistry: mockPlanRegistry,
+      });
+      const retryHandler = new PolarWebhookHandler(config, {
+        store: durableStore,
+        eventPublisher: publisher,
+        planRegistry: mockPlanRegistry,
+      });
+
+      const first = await firstHandler.handle(JSON.stringify(eventData), {
+        "webhook-id": eventData.id,
+      });
+      const retry = await retryHandler.handle(JSON.stringify(eventData), {
+        "webhook-id": eventData.id,
+      });
+      const publishedEvents = vi.mocked(publisher.publishNow).mock.calls.map(([event]) => event);
+
+      expect(first).toMatchObject({ success: false });
+      expect(retry).toEqual({ success: true, eventId: eventData.id });
+      expect(publishedEvents.filter((event) => event instanceof PlanChangedEvent)).toHaveLength(1);
+      expect(
+        publishedEvents.filter((event) => event instanceof SubscriptionPastDueEvent),
+      ).toHaveLength(2);
+      expect(publishedEvents[1]?.eventId).toBe(publishedEvents[2]?.eventId);
+    });
+
+    it("uses stable event identity when acknowledgement fails after publication", async () => {
+      const durableStore = new InMemoryBillingStore();
+      await durableStore.saveSubscription({
+        id: "sub-ack-failure",
+        billingAccountId: "tenant-ack-failure",
+        externalSubscriptionId: "sub-ack-failure",
+        planId: "plan-basic",
+        planVersionRef: planVersionRef("plan-basic@v1"),
+        status: "active",
+        currentPeriodEnd: new Date("2026-02-01T00:00:00Z"),
+        cancelAtPeriodEnd: false,
+        lastSyncedAt: new Date("2026-01-01T00:00:00Z"),
+      });
+      const originalMark = durableStore.markWebhookEventIntentPublished.bind(durableStore);
+      let failAcknowledgement = true;
+      vi.spyOn(durableStore, "markWebhookEventIntentPublished").mockImplementation(
+        async (eventId, intentEventId) => {
+          if (failAcknowledgement) {
+            failAcknowledgement = false;
+            throw new Error("acknowledgement unavailable");
+          }
+          await originalMark(eventId, intentEventId);
+        },
+      );
+      const publisher = createMockEventPublisher();
+      const deliveredEventIds = new Set<string>();
+      vi.mocked(publisher.publishIdempotently).mockImplementation(async (event) => {
+        deliveredEventIds.add(event.eventId);
+      });
+      const eventData = {
+        id: "evt-ack-failure",
+        type: "subscription.updated",
+        data: {
+          id: "sub-ack-failure",
+          customer: { externalId: "tenant-ack-failure", metadata: {} },
+          product: { id: "plan-pro" },
+          status: "active",
+          currentPeriodEnd: "2026-02-01T00:00:00Z",
+          cancelAtPeriodEnd: false,
+        },
+      };
+      vi.mocked(mockVerifyPolarWebhook).mockReturnValue(eventData);
+      const firstHandler = new PolarWebhookHandler(config, {
+        store: durableStore,
+        eventPublisher: publisher,
+        planRegistry: mockPlanRegistry,
+      });
+      const retryHandler = new PolarWebhookHandler(config, {
+        store: durableStore,
+        eventPublisher: publisher,
+        planRegistry: mockPlanRegistry,
+      });
+
+      const first = await firstHandler.handle(JSON.stringify(eventData), {
+        "webhook-id": eventData.id,
+      });
+      const retry = await retryHandler.handle(JSON.stringify(eventData), {
+        "webhook-id": eventData.id,
+      });
+
+      expect(first).toMatchObject({ success: false });
+      expect(retry).toEqual({ success: true, eventId: eventData.id });
+      expect(publisher.publishIdempotently).toHaveBeenCalledTimes(2);
+      expect(deliveredEventIds.size).toBe(1);
     });
 
     it("publishes one past-due transition for concurrent updated and past_due events", async () => {
@@ -656,6 +898,71 @@ describe("PolarWebhookHandler", () => {
         "billing.subscription_past_due",
       );
       expect(mockStore.saveSubscription).toHaveBeenCalledTimes(2);
+    });
+
+    it("does not acknowledge a past-due intent while another worker owns its delivery lease", async () => {
+      const durableStore = new InMemoryBillingStore();
+      const publisher = createMockEventPublisher();
+      let releasePublication: (() => void) | undefined;
+      const publicationBlocked = new Promise<void>((resolve) => {
+        releasePublication = resolve;
+      });
+      let publicationStarted: (() => void) | undefined;
+      const started = new Promise<void>((resolve) => {
+        publicationStarted = resolve;
+      });
+      vi.mocked(publisher.publishIdempotently).mockImplementationOnce(async () => {
+        publicationStarted?.();
+        await publicationBlocked;
+      });
+      vi.mocked(mockVerifyPolarWebhook).mockImplementation((body: Buffer | string) =>
+        JSON.parse(body.toString()),
+      );
+      const createEvent = (id: string) => ({
+        id,
+        type: "subscription.past_due",
+        data: {
+          id: "sub-past-due-lease",
+          customer: { externalId: "tenant-past-due-lease", metadata: {} },
+          product: { id: "plan-pro" },
+          status: "past_due",
+          currentPeriodEnd: "2026-02-01T00:00:00Z",
+          cancelAtPeriodEnd: false,
+        },
+      });
+      const firstEvent = createEvent("evt-past-due-owner");
+      const secondEvent = createEvent("evt-past-due-contender");
+      const firstHandler = new PolarWebhookHandler(config, {
+        store: durableStore,
+        eventPublisher: publisher,
+        planRegistry: mockPlanRegistry,
+      });
+      const secondHandler = new PolarWebhookHandler(config, {
+        store: durableStore,
+        eventPublisher: publisher,
+        planRegistry: mockPlanRegistry,
+      });
+
+      const owner = firstHandler.handle(JSON.stringify(firstEvent), {
+        "webhook-id": firstEvent.id,
+      });
+      await started;
+      const contender = await secondHandler.handle(JSON.stringify(secondEvent), {
+        "webhook-id": secondEvent.id,
+      });
+      releasePublication?.();
+      const ownerResult = await owner;
+      const retryResult = await secondHandler.handle(JSON.stringify(secondEvent), {
+        "webhook-id": secondEvent.id,
+      });
+
+      expect(contender).toMatchObject({
+        success: false,
+        error: expect.stringContaining("already in progress"),
+      });
+      expect(ownerResult).toEqual({ success: true, eventId: firstEvent.id });
+      expect(retryResult).toEqual({ success: true, eventId: secondEvent.id });
+      expect(publisher.publishIdempotently).toHaveBeenCalledTimes(1);
     });
 
     it("retries a past-due publication after persistence without losing the transition", async () => {
@@ -856,7 +1163,7 @@ describe("PolarWebhookHandler", () => {
 
       expect(failedRecovery).toMatchObject({
         success: false,
-        error: expect.stringContaining("reset unavailable"),
+        error: expect.stringContaining("Webhook transition commit failed"),
       });
       expect(retriedRecovery).toEqual({ success: true, eventId: recovery.id });
       expect(nextPastDueResult).toEqual({ success: true, eventId: nextPastDue.id });
@@ -918,7 +1225,7 @@ describe("PolarWebhookHandler", () => {
       });
       expect(retryResult).toEqual({ success: true, eventId: eventData.id });
       expect(mockEventPublisher.publishNow).toHaveBeenCalledTimes(1);
-      expect(mockStore.failWebhook).toHaveBeenCalledWith(eventData.id);
+      expect(mockStore.failWebhook).not.toHaveBeenCalledWith(eventData.id);
       expect(mockStore.failWebhook).not.toHaveBeenCalledWith(transitionReservationId);
     });
 
@@ -1020,7 +1327,7 @@ describe("PolarWebhookHandler", () => {
       });
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain("temporary store failure");
+      expect(result.error).toContain("Webhook transition commit failed");
       expect(mockStore.reserveWebhook).toHaveBeenCalledWith(
         "evt-retryable-failure",
         "subscription.created",
@@ -1335,7 +1642,7 @@ describe("PolarWebhookHandler", () => {
       });
       expect(mockStore.saveSubscription).not.toHaveBeenCalled();
       expect(mockEventPublisher.publishNow).not.toHaveBeenCalled();
-      expect(mockStore.failWebhook).toHaveBeenCalledWith("evt-unknown-plan");
+      expect(mockStore.failWebhook).not.toHaveBeenCalledWith("evt-unknown-plan");
     });
   });
 });

@@ -94,7 +94,7 @@ export type {
 /**
  * Dependencies for Polar webhook handler.
  */
-export type { WebhookDependencies } from "./libs/PolarWebhookHandler";
+export type { PolarWebhookEventPublisher, WebhookDependencies } from "./libs/PolarWebhookHandler";
 
 // Webhook
 /**

@@ -63,6 +63,12 @@ export { BillingService, hashCheckoutValue, stableStringify } from "./libs/Billi
  * billing account, subscription, order를 저장하는 영속 계약입니다.
  */
 export { BillingStore } from "./libs/BillingStore";
+export type {
+  BillingSubscriptionWebhookTransition,
+  BillingWebhookDeliveryClaim,
+  BillingWebhookEventIntent,
+  CommitBillingSubscriptionWebhookInput,
+} from "./libs/BillingStore";
 
 /**
  * 결제 완료 시 발행되는 도메인 이벤트입니다.
@@ -262,6 +268,7 @@ export {
   UnknownPlanVersionProblem,
   UnknownProviderPlanMappingProblem,
   WebhookAlreadyProcessedProblem,
+  WebhookEventIntentsPendingProblem,
 } from "./libs/problems/BillingProblems";
 export {
   InvalidPlanReleaseScheduleProblem,

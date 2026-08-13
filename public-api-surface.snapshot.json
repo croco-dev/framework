@@ -4926,6 +4926,12 @@
               "exportKind": "named",
               "source": "./libs/problems/BillingProblems",
               "declarationKind": "class"
+            },
+            {
+              "name": "WebhookEventIntentsPendingProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/BillingProblems",
+              "declarationKind": "class"
             }
           ],
           "typeExports": [
@@ -5010,6 +5016,21 @@
               "source": "./libs/BillingService"
             },
             {
+              "name": "BillingSubscriptionWebhookTransition",
+              "exportKind": "named",
+              "source": "./libs/BillingStore"
+            },
+            {
+              "name": "BillingWebhookDeliveryClaim",
+              "exportKind": "named",
+              "source": "./libs/BillingStore"
+            },
+            {
+              "name": "BillingWebhookEventIntent",
+              "exportKind": "named",
+              "source": "./libs/BillingStore"
+            },
+            {
               "name": "CancelSubscriptionParams",
               "exportKind": "named",
               "source": "./libs/BillingService"
@@ -5018,6 +5039,11 @@
               "name": "CheckoutResult",
               "exportKind": "named",
               "source": "./libs/BillingGateway"
+            },
+            {
+              "name": "CommitBillingSubscriptionWebhookInput",
+              "exportKind": "named",
+              "source": "./libs/BillingStore"
             },
             {
               "name": "CreateBillingCheckoutParams",
@@ -5715,6 +5741,11 @@
               "name": "PolarUsageMeterBinding",
               "exportKind": "named",
               "source": "./libs/PolarUsageBillingGateway"
+            },
+            {
+              "name": "PolarWebhookEventPublisher",
+              "exportKind": "named",
+              "source": "./libs/PolarWebhookHandler"
             },
             {
               "name": "WebhookDependencies",

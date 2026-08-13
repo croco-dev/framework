@@ -1,3 +1,4 @@
+import type { SerializedEvent } from "@croco/events-core";
 import type {
   BillingAccount,
   BillingLifecycleCommand,
@@ -6,6 +7,35 @@ import type {
   Order,
   Subscription,
 } from "../types";
+
+export type BillingWebhookEventIntent = {
+  readonly event: SerializedEvent;
+  readonly publishedAt: Date | null;
+};
+
+export type BillingSubscriptionWebhookTransition = {
+  readonly eventId: string;
+  readonly eventType: string;
+  readonly previousSubscription: Subscription | null;
+  readonly subscription: Subscription;
+  readonly intents: readonly BillingWebhookEventIntent[];
+  readonly state: "pending" | "completed";
+};
+
+export type CommitBillingSubscriptionWebhookInput = {
+  readonly eventId: string;
+  readonly eventType: string;
+  readonly subscription: Subscription;
+  readonly clearWebhookReservationId?: string;
+  readonly createEventIntents: (
+    previousSubscription: Subscription | null,
+  ) => readonly SerializedEvent[];
+};
+
+export type BillingWebhookDeliveryClaim =
+  | { readonly status: "claimed"; readonly token: string }
+  | { readonly status: "in_progress" }
+  | { readonly status: "completed" };
 
 /**
  * Abstract storage for billing data.
@@ -91,6 +121,26 @@ export abstract class BillingStore {
   // Order
   abstract saveOrder(order: Order): Promise<void>;
   abstract findOrdersByAccount(billingAccountId: string): Promise<Order[]>;
+
+  /**
+   * Atomically reserves a subscription webhook, reads its previous subscription, saves the new
+   * subscription, and persists every derived event intent. Repeated calls for the same webhook
+   * must return the original transition without recomputing intents from current subscription
+   * state.
+   */
+  abstract commitSubscriptionWebhook(
+    input: CommitBillingSubscriptionWebhookInput,
+  ): Promise<BillingSubscriptionWebhookTransition>;
+  /** Marks one stable event intent as durably published. The operation must be idempotent. */
+  abstract markWebhookEventIntentPublished(eventId: string, intentEventId: string): Promise<void>;
+  /** Atomically claims a webhook-addressed delivery with a datastore-time lease. */
+  abstract claimWebhookDelivery(
+    eventId: string,
+    eventType: string,
+    leaseDurationMs: number,
+  ): Promise<BillingWebhookDeliveryClaim>;
+  abstract completeWebhookDelivery(eventId: string, claimToken: string): Promise<boolean>;
+  abstract releaseWebhookDelivery(eventId: string, claimToken: string): Promise<boolean>;
 
   // Idempotency
   /**
