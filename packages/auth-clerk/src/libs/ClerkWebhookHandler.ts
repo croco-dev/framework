@@ -1,15 +1,23 @@
 import type { verifyWebhook } from "@clerk/backend/webhooks";
+import { deriveWebhookIdempotencyKey, IdempotencyCoordinator } from "@croco/idempotency-core";
 
-import { InvalidWebhookPayloadProblem, WebhookVerificationProblem } from "./problems/ClerkProblems";
+import {
+  ClerkWebhookDeliveryFailedProblem,
+  ClerkWebhookDeliveryInFlightProblem,
+  InvalidWebhookPayloadProblem,
+  WebhookVerificationProblem,
+} from "./problems/ClerkProblems";
 import type {
   ClerkMembershipEvent,
   ClerkOrgEvent,
   ClerkUserEvent,
+  ClerkWebhookDeliveryOutcome,
   WebhookEventHandler,
   WebhookHandlerOptions,
 } from "./types";
 
 type VerifyWebhook = typeof verifyWebhook;
+const DEFAULT_IDEMPOTENCY_TTL_MS = 86_400_000;
 
 async function loadVerifyWebhook(): Promise<VerifyWebhook> {
   const module = await import("@clerk/backend/webhooks");
@@ -64,10 +72,14 @@ type ParsedWebhookEvent = {
 };
 
 export class ClerkWebhookHandler {
+  private readonly coordinator: IdempotencyCoordinator<ClerkWebhookDeliveryOutcome>;
+
   constructor(
-    private options: WebhookHandlerOptions,
-    private handlers: WebhookEventHandler,
-  ) {}
+    private readonly options: WebhookHandlerOptions,
+    private readonly handlers: WebhookEventHandler,
+  ) {
+    this.coordinator = new IdempotencyCoordinator({ store: options.idempotencyStore });
+  }
 
   private parseWebhookEvent(event: unknown): ParsedWebhookEvent {
     if (!isObjectRecord(event) || typeof event.type !== "string") {
@@ -101,7 +113,7 @@ export class ClerkWebhookHandler {
     return data;
   }
 
-  async handleWebhook(request: Request): Promise<void> {
+  async handleWebhook(request: Request): Promise<ClerkWebhookDeliveryOutcome> {
     let event: unknown;
     try {
       const verifyWebhook = await loadVerifyWebhook();
@@ -111,7 +123,47 @@ export class ClerkWebhookHandler {
     }
 
     const webhookEvent = this.parseWebhookEvent(event);
+    const deliveryId = request.headers.get("svix-id")?.trim();
+    if (!deliveryId) {
+      throw new InvalidWebhookPayloadProblem(webhookEvent.type);
+    }
 
+    const idempotencyKey = deriveWebhookIdempotencyKey({
+      provider: "clerk",
+      eventId: deliveryId,
+      namespace: "auth-clerk-webhook",
+    });
+    const execution = await this.coordinator.execute(
+      {
+        key: idempotencyKey,
+        ttlMs: this.options.idempotencyTtlMs ?? DEFAULT_IDEMPOTENCY_TTL_MS,
+        metadata: {
+          deliveryId,
+          eventType: webhookEvent.type,
+          provider: "clerk",
+        },
+      },
+      async () => ({
+        deliveryId,
+        eventType: webhookEvent.type,
+        outcome: await this.dispatchWebhookEvent(webhookEvent),
+      }),
+    );
+
+    if (execution.outcome === "in-flight") {
+      throw new ClerkWebhookDeliveryInFlightProblem(deliveryId, webhookEvent.type);
+    }
+
+    if (execution.outcome === "failed") {
+      throw new ClerkWebhookDeliveryFailedProblem(deliveryId, webhookEvent.type);
+    }
+
+    return execution.response;
+  }
+
+  private async dispatchWebhookEvent(
+    webhookEvent: ParsedWebhookEvent,
+  ): Promise<ClerkWebhookDeliveryOutcome["outcome"]> {
     switch (webhookEvent.type) {
       case "user.created":
         await this.handlers["user.created"]?.(
@@ -153,6 +205,10 @@ export class ClerkWebhookHandler {
           this.parseMembershipEvent(webhookEvent.data, webhookEvent.type),
         );
         break;
+      default:
+        return "ignored";
     }
+
+    return "handled";
   }
 }

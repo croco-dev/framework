@@ -5,7 +5,7 @@ Clerk Backend SDK를 Croco 인증, 세션, 조직 API에 연결하는 패키지�
 ## 설치
 
 ```bash
-pnpm add @croco/auth-clerk @clerk/backend
+pnpm add @croco/auth-clerk @croco/idempotency-core @clerk/backend
 ```
 
 ## 사용법
@@ -70,9 +70,13 @@ const tenantId = await mapper.resolve("org_123");
 
 ```typescript
 import { ClerkWebhookHandler } from "@croco/auth-clerk";
+import { InMemoryIdempotencyStore } from "@croco/idempotency-core";
 
 const handler = new ClerkWebhookHandler(
-  { signingSecret: process.env.CLERK_WEBHOOK_SECRET! },
+  {
+    signingSecret: process.env.CLERK_WEBHOOK_SECRET!,
+    idempotencyStore: new InMemoryIdempotencyStore(),
+  },
   {
     "user.created": async (event) => {
       await syncUser(event.id);
@@ -82,6 +86,12 @@ const handler = new ClerkWebhookHandler(
 
 await handler.handleWebhook(request);
 ```
+
+운영 환경에서는 모든 worker가 공유하는 durable `IdempotencyStore`를 전달해야 합니다. 핸들러는
+서명 검증을 통과한 `svix-id`만 예약하며, 완료된 delivery의 결과를 저장한 뒤에만 이후 재전달을
+중복으로 승인합니다. 처리 중인 중복은 retryable `auth-clerk/webhook-delivery-in-flight` Problem으로
+실패하므로 Clerk가 완료 결과를 다시 확인할 수 있습니다. 예약과 완료 결과는 기본 24시간 동안
+유지되며, `idempotencyTtlMs`로 provider retry 정책에 맞게 조정할 수 있습니다.
 
 ## Diagnostics와 Conformance
 
@@ -108,7 +118,7 @@ const diagnostics = new ClerkAuthDiagnosticsProvider({
 - Clerk upstream 실패는 secret 값을 redaction한 `auth-clerk/token-verification-upstream-failed`
   Problem으로 정규화하고 retryable evidence를 노출합니다.
 - Clerk 웹훅은 서명 성공/실패, handler가 등록된 malformed payload, user/org/membership
-  이벤트 분기를 검증합니다.
+  이벤트 분기, 검증된 delivery ID의 중복 및 동시 처리를 검증합니다.
 - `ClerkTenantMapper`는 Clerk org ID를 Croco tenant ID로 매핑하고, 미등록 org는 `null`을
   반환합니다.
 - readiness diagnostics는 필수 env 이름만 노출하고 secret 값은 노출하지 않습니다.
@@ -141,7 +151,7 @@ pnpm public-api:check
 | `ClerkUserService`                      | 사용자 조회, 생성, 수정, 삭제, 밴 관리를 제공합니다.      |
 | `ClerkOrganizationService`              | 조직, 멤버십, 초대 관리를 제공합니다.                     |
 | `ClerkTenantMapper`                     | Clerk 조직 ID와 Croco tenant ID를 매핑합니다.             |
-| `ClerkWebhookHandler`                   | Clerk 서명을 검증하고 이벤트별 핸들러를 실행합니다.       |
+| `ClerkWebhookHandler`                   | Clerk 서명을 검증하고 delivery를 한 번만 처리합니다.      |
 | `WebhookVerificationProblem` 외 Problem | 토큰, 웹훅, tenant 매핑 오류를 Problem 형태로 제공합니다. |
 
 ## 공개 타입
@@ -151,4 +161,4 @@ pnpm public-api:check
 - `ClerkUser`, `CreateClerkUserInput`, `UpdateClerkUserInput`
 - `ClerkOrganization`, `CreateOrganizationInput`, `CreateInvitationInput`
 - `ClerkTenantRequest`, `TenantMappingStore`
-- `WebhookHandlerOptions`, `WebhookEventHandler`, `WebhookEventType`
+- `WebhookHandlerOptions`, `WebhookEventHandler`, `WebhookEventType`, `ClerkWebhookDeliveryOutcome`

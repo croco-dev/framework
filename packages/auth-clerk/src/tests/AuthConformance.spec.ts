@@ -1,6 +1,7 @@
 import type * as ClerkBackend from "@clerk/backend";
 import { verifyToken } from "@clerk/backend";
 import { verifyWebhook } from "@clerk/backend/webhooks";
+import { InMemoryIdempotencyStore } from "@croco/idempotency-core";
 import { ProblemCategory } from "@croco/problems-core";
 import { createAuthProviderConformanceSuite } from "@croco/testing";
 import { describe, expect, it, vi } from "vitest";
@@ -37,8 +38,20 @@ function createRequest(authHeader?: string): AuthorizationHeaderCarrier {
 function createWebhookRequest(): Request {
   return new Request("http://localhost/webhook", {
     method: "POST",
+    headers: { "svix-id": "msg_conformance" },
     body: JSON.stringify({ type: "user.created" }),
   });
+}
+
+function createWebhookHandlerOptions() {
+  return {
+    signingSecret: "whsec_test",
+    idempotencyStore: new InMemoryIdempotencyStore<{
+      readonly deliveryId: string;
+      readonly eventType: string;
+      readonly outcome: "handled" | "ignored";
+    }>(),
+  };
 }
 
 function isClerkLiveSmokeEnabled(): boolean {
@@ -130,7 +143,7 @@ describe("Clerk auth conformance", () => {
           },
         } as unknown as VerifiedWebhook);
 
-        await new ClerkWebhookHandler({ signingSecret: "whsec_test" }, handlers).handleWebhook(
+        await new ClerkWebhookHandler(createWebhookHandlerOptions(), handlers).handleWebhook(
           createWebhookRequest(),
         );
 
@@ -144,7 +157,7 @@ describe("Clerk auth conformance", () => {
         category: ProblemCategory.Unauthorized,
         run: () => {
           vi.mocked(verifyWebhook).mockRejectedValueOnce(new Error("invalid signature"));
-          return new ClerkWebhookHandler({ signingSecret: "whsec_test" }, {}).handleWebhook(
+          return new ClerkWebhookHandler(createWebhookHandlerOptions(), {}).handleWebhook(
             createWebhookRequest(),
           );
         },
@@ -157,10 +170,9 @@ describe("Clerk auth conformance", () => {
             type: "user.created",
             data: { email_addresses: [] },
           } as unknown as VerifiedWebhook);
-          return new ClerkWebhookHandler(
-            { signingSecret: "whsec_test" },
-            { "user.created": vi.fn() },
-          ).handleWebhook(createWebhookRequest());
+          return new ClerkWebhookHandler(createWebhookHandlerOptions(), {
+            "user.created": vi.fn(),
+          }).handleWebhook(createWebhookRequest());
         },
       },
     },

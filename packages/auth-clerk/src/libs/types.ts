@@ -1,3 +1,5 @@
+import type { IdempotencyStore } from "@croco/idempotency-core";
+
 export type ClerkUserEvent = {
   id: string;
   email_addresses: Array<{ email_address: string; id?: string; verification?: { status: string } }>;
@@ -39,7 +41,15 @@ export type WebhookEventType =
   | "organizationMembership.deleted";
 
 export type WebhookHandlerOptions = {
-  signingSecret: string;
+  readonly signingSecret: string;
+  readonly idempotencyStore: IdempotencyStore<ClerkWebhookDeliveryOutcome>;
+  readonly idempotencyTtlMs?: number;
+};
+
+export type ClerkWebhookDeliveryOutcome = {
+  readonly deliveryId: string;
+  readonly eventType: string;
+  readonly outcome: "handled" | "ignored";
 };
 
 export type WebhookEventHandler = {

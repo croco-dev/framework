@@ -1896,6 +1896,28 @@ const recoveryMetadataByCategory = {
 } as const satisfies Record<ProblemCategory, ProblemRecoveryMetadata>;
 
 const recoveryMetadataByCode = {
+  "auth-clerk/webhook-delivery-failed": recovery({
+    cause:
+      "The idempotency store contains a terminal failure for this Clerk deliveryId and eventType.",
+    userAction:
+      "Do not replay the delivery until the stored failure cause has been verified and corrected.",
+    operatorAction:
+      "Inspect the stored delivery result and preserved cause for the reported deliveryId and eventType, correct the mutation failure, then decide whether to clear or replay the record after idempotencyTtlMs expires.",
+    retryability: "not-retryable",
+    redactionPolicy: "safe-message",
+    severity: "error",
+  }),
+  "auth-clerk/webhook-delivery-in-flight": recovery({
+    cause:
+      "Another worker currently owns the Clerk delivery reservation for this deliveryId and eventType.",
+    userAction:
+      "Retry the same delivery after the active worker completes or after the configured idempotencyTtlMs expires.",
+    operatorAction:
+      "Inspect concurrent worker state for the reported deliveryId and eventType; if the owner was abandoned, wait for idempotencyTtlMs expiry before retrying.",
+    retryability: "retryable",
+    redactionPolicy: "safe-message",
+    severity: "warning",
+  }),
   "billing/checkout-idempotency-drift": recovery({
     cause:
       "The generated billing drill detected more than one committed checkout after response-loss retries completed.",

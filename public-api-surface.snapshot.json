@@ -3560,6 +3560,18 @@
               "declarationKind": "class"
             },
             {
+              "name": "ClerkWebhookDeliveryFailedProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/ClerkProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ClerkWebhookDeliveryInFlightProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/ClerkProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "ClerkWebhookHandler",
               "exportKind": "named",
               "source": "./libs/ClerkWebhookHandler",
@@ -3663,6 +3675,11 @@
             },
             {
               "name": "ClerkUserEvent",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ClerkWebhookDeliveryOutcome",
               "exportKind": "named",
               "source": "./libs/types"
             },
