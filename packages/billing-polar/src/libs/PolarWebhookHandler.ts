@@ -1,11 +1,21 @@
+import { createHash } from "node:crypto";
 import type {
+  BillingSubscriptionWebhookTransition,
   BillingStore,
   OrderPaymentReason,
   PlanRegistry,
   Subscription,
 } from "@croco/billing-core";
-import { SubscriptionPastDueEvent, WebhookAlreadyProcessedProblem } from "@croco/billing-core";
-import type { DomainEvent, EventPublisher } from "@croco/events-core";
+import {
+  PlanChangedEvent,
+  SubscriptionActivatedEvent,
+  SubscriptionCanceledEvent,
+  SubscriptionPastDueEvent,
+  SubscriptionRevokedEvent,
+  WebhookAlreadyProcessedProblem,
+} from "@croco/billing-core";
+import type { DomainEvent } from "@croco/events-core";
+import { DefaultEventSerializer, EventRegistry } from "@croco/events-core";
 import { Problem } from "@croco/problems-core";
 import { Trace } from "@croco/telemetry-api";
 import { ZodError } from "zod";
@@ -23,9 +33,15 @@ import {
 } from "./schemas/polarWebhookSchema";
 import { verifyPolarWebhook } from "./verifyPolarWebhook";
 
+export type PolarWebhookEventPublisher = {
+  publishNow(event: DomainEvent): Promise<void>;
+  /** Publishes one logical event exactly once across retries and concurrent workers. */
+  publishIdempotently(event: DomainEvent): Promise<void>;
+};
+
 export type WebhookDependencies = {
   store: BillingStore;
-  eventPublisher: EventPublisher;
+  eventPublisher: PolarWebhookEventPublisher;
   planRegistry: PlanRegistry;
 };
 
@@ -75,10 +91,12 @@ type ParsedWebhookEvent =
     };
 
 export class PolarWebhookHandler {
+  private static readonly DELIVERY_LEASE_MS = 30_000;
   private readonly store: BillingStore;
-  private readonly eventPublisher: EventPublisher;
+  private readonly eventPublisher: WebhookDependencies["eventPublisher"];
   private readonly planRegistry: PlanRegistry;
   private readonly eventMapper: PolarEventMapper;
+  private readonly eventSerializer: DefaultEventSerializer;
   private readonly webhookSecret: string;
   private static readonly inFlightEvents = new Map<string, Promise<WebhookHandlerResult>>();
 
@@ -88,6 +106,14 @@ export class PolarWebhookHandler {
     this.eventPublisher = deps.eventPublisher;
     this.planRegistry = deps.planRegistry;
     this.eventMapper = new PolarEventMapper();
+    this.eventSerializer = new DefaultEventSerializer(
+      new EventRegistry()
+        .register(PlanChangedEvent)
+        .register(SubscriptionActivatedEvent)
+        .register(SubscriptionCanceledEvent)
+        .register(SubscriptionPastDueEvent)
+        .register(SubscriptionRevokedEvent),
+    );
   }
 
   @Trace({ name: "polar.webhook.handle" })
@@ -145,6 +171,10 @@ export class PolarWebhookHandler {
     eventType: string,
     parsedEvent: ParsedWebhookEvent,
   ): Promise<WebhookHandlerResult> {
+    if (parsedEvent.kind === "subscription") {
+      return this.processSubscriptionEventAtomically(eventId, parsedEvent);
+    }
+
     let rollbackErrorMessage: string | null = null;
 
     const shouldProcess = await this.reserveWebhook(eventId, eventType);
@@ -171,6 +201,48 @@ export class PolarWebhookHandler {
     }
   }
 
+  private async processSubscriptionEventAtomically(
+    eventId: string,
+    event: Extract<ParsedWebhookEvent, { kind: "subscription" }>,
+  ): Promise<WebhookHandlerResult> {
+    let transition: BillingSubscriptionWebhookTransition;
+    try {
+      transition = await this.prepareSubscriptionTransition(eventId, event);
+    } catch (error) {
+      if (error instanceof WebhookAlreadyProcessedProblem) return { success: true, eventId };
+      return {
+        success: false,
+        eventId,
+        error: `Event processing failed: ${this.getErrorMessage(error)}`,
+      };
+    }
+
+    if (transition.state === "completed") {
+      return { success: true, eventId };
+    }
+
+    try {
+      for (const intent of transition.intents) {
+        if (intent.publishedAt) continue;
+        const domainEvent = this.eventSerializer.deserialize(intent.event);
+        await this.publishDomainEvent(
+          domainEvent,
+          this.pastDueTransitionReservationId(event.payload.id),
+        );
+        await this.store.markWebhookEventIntentPublished(eventId, intent.event.eventId);
+      }
+
+      await this.store.completeWebhook(eventId);
+      return { success: true, eventId };
+    } catch (error) {
+      return {
+        success: false,
+        eventId,
+        error: `Event processing failed: ${this.getErrorMessage(error)}`,
+      };
+    }
+  }
+
   private async reserveWebhook(eventId: string, eventType: string): Promise<boolean> {
     try {
       await this.store.reserveWebhook(eventId, eventType);
@@ -189,11 +261,6 @@ export class PolarWebhookHandler {
   }
 
   private async processParsedEvent(event: ParsedWebhookEvent): Promise<void> {
-    if (event.kind === "subscription") {
-      await this.handleSubscriptionEvent(event.eventType, event.payload);
-      return;
-    }
-
     if (event.kind === "order") {
       await this.handleOrderEvent(event.eventType, event.payload);
     }
@@ -313,12 +380,11 @@ export class PolarWebhookHandler {
 
     return parsedCurrentPeriodEnd;
   }
-  private async handleSubscriptionEvent(
-    eventType: string,
-    payload: ParsedSubscriptionPayload,
-  ): Promise<void> {
-    const previousSubscription = await this.store.findSubscription(payload.tenantId);
-    const previousPlanId = previousSubscription?.planId;
+  private async prepareSubscriptionTransition(
+    eventId: string,
+    event: Extract<ParsedWebhookEvent, { kind: "subscription" }>,
+  ): Promise<BillingSubscriptionWebhookTransition> {
+    const { eventType, payload } = event;
     const planVersion = await this.planRegistry.resolveProviderPlanVersion({
       provider: "polar",
       productId: payload.productId,
@@ -336,29 +402,42 @@ export class PolarWebhookHandler {
       cancelAtPeriodEnd: payload.cancelAtPeriodEnd,
       lastSyncedAt: new Date(),
     };
-    await this.store.saveSubscription(subscription);
-
-    const pastDueTransitionReservationId = this.pastDueTransitionReservationId(payload.id);
-    if (payload.status !== "past_due") {
-      await this.clearPastDueTransition(pastDueTransitionReservationId);
-    }
-
-    const domainEvents = this.eventMapper.mapSubscriptionEvent(
-      eventType,
-      payload.tenantId,
-      {
-        id: payload.id,
-        productId: planVersion.planId,
-        planVersionRef: planVersion.ref,
-        status: payload.rawStatus,
-        cancelAtPeriodEnd: payload.cancelAtPeriodEnd,
-      },
-      previousPlanId,
-      previousSubscription?.planVersionRef,
-    );
-
-    for (const event of domainEvents) {
-      await this.publishDomainEvent(event, pastDueTransitionReservationId);
+    try {
+      return await this.store.commitSubscriptionWebhook({
+        eventId,
+        eventType,
+        subscription,
+        ...(payload.status === "past_due"
+          ? {}
+          : { clearWebhookReservationId: this.pastDueTransitionReservationId(payload.id) }),
+        createEventIntents: (previousSubscription) =>
+          this.eventMapper
+            .mapSubscriptionEvent(
+              eventType,
+              payload.tenantId,
+              {
+                id: payload.id,
+                productId: planVersion.planId,
+                planVersionRef: planVersion.ref,
+                status: payload.rawStatus,
+                cancelAtPeriodEnd: payload.cancelAtPeriodEnd,
+              },
+              previousSubscription?.planId,
+              previousSubscription?.planVersionRef,
+            )
+            .map((domainEvent, index) => ({
+              ...this.eventSerializer.serialize(domainEvent),
+              eventId: this.subscriptionIntentEventId(eventId, domainEvent.eventName, index),
+            })),
+      });
+    } catch (error) {
+      if (error instanceof WebhookAlreadyProcessedProblem) throw error;
+      if (error instanceof Error) {
+        throw new WebhookProcessingProblem("Webhook transition commit failed", error);
+      }
+      const cause = new Error("Billing store rejected webhook transition with a non-Error value");
+      Object.defineProperty(cause, "cause", { value: error });
+      throw new WebhookProcessingProblem("Webhook transition commit failed", cause);
     }
   }
 
@@ -390,45 +469,59 @@ export class PolarWebhookHandler {
     pastDueTransitionReservationId: string,
   ): Promise<void> {
     if (!(event instanceof SubscriptionPastDueEvent)) {
-      await this.eventPublisher.publishNow(event);
+      await this.eventPublisher.publishIdempotently(event);
       return;
     }
 
-    const shouldPublish = await this.reserveWebhook(
+    const claim = await this.store.claimWebhookDelivery(
       pastDueTransitionReservationId,
       event.eventName,
+      PolarWebhookHandler.DELIVERY_LEASE_MS,
     );
-    if (!shouldPublish) {
+    if (claim.status === "completed") {
       return;
+    }
+    if (claim.status === "in_progress") {
+      throw new WebhookProcessingProblem("Past-due transition delivery is already in progress");
     }
 
     try {
-      await this.eventPublisher.publishNow(event);
+      await this.eventPublisher.publishIdempotently(event);
     } catch (error) {
-      const rollbackErrorMessage = await this.tryRollbackWebhook(pastDueTransitionReservationId);
-      if (rollbackErrorMessage) {
+      const released = await this.store.releaseWebhookDelivery(
+        pastDueTransitionReservationId,
+        claim.token,
+      );
+      if (!released) {
         throw new WebhookProcessingProblem(
-          `Past-due transition publication failed and reservation rollback failed: ${rollbackErrorMessage}`,
+          "Past-due transition publication failed after its delivery claim expired",
           error instanceof Error ? error : undefined,
         );
       }
       throw error;
     }
 
-    await this.store.completeWebhook(pastDueTransitionReservationId);
+    const completed = await this.store.completeWebhookDelivery(
+      pastDueTransitionReservationId,
+      claim.token,
+    );
+    if (!completed) {
+      throw new WebhookProcessingProblem("Past-due transition delivery claim expired");
+    }
   }
 
   private pastDueTransitionReservationId(externalSubscriptionId: string): string {
     return `croco:billing:polar:subscription:${externalSubscriptionId}:past_due`;
   }
 
-  private async clearPastDueTransition(reservationId: string): Promise<void> {
-    const rollbackErrorMessage = await this.tryRollbackWebhook(reservationId);
-    if (rollbackErrorMessage) {
-      throw new WebhookProcessingProblem(
-        `Past-due transition reset failed: ${rollbackErrorMessage}`,
-      );
-    }
+  private subscriptionIntentEventId(
+    webhookEventId: string,
+    eventName: string,
+    index: number,
+  ): string {
+    return createHash("sha256")
+      .update(`billing-polar:${webhookEventId}:${index}:${eventName}`)
+      .digest("hex");
   }
 
   private mapStatus(

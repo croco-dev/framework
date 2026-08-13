@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { InMemoryBillingStore } from "../libs/InMemoryBillingStore";
-import { WebhookAlreadyProcessedProblem } from "../libs/problems/BillingProblems";
+import {
+  WebhookAlreadyProcessedProblem,
+  WebhookEventIntentsPendingProblem,
+} from "../libs/problems/BillingProblems";
 import type { BillingAccount, BillingLifecycleCommand, Order, Subscription } from "../types";
 
 const PLAN_VERSION_REF = "plan-pro@v1" as Subscription["planVersionRef"];
@@ -534,6 +537,151 @@ describe("InMemoryBillingStore", () => {
       await expect(
         store.reserveWebhook("event-1", "subscription.created"),
       ).resolves.toBeUndefined();
+    });
+  });
+
+  describe("subscription webhook transitions", () => {
+    it("retains previous-state evidence and resumes only unpublished event intents", async () => {
+      const previousSubscription: Subscription = {
+        id: "sub-transition",
+        billingAccountId: "tenant-transition",
+        externalSubscriptionId: "sub-transition",
+        planId: "plan-basic",
+        planVersionRef: "plan-basic@v1" as Subscription["planVersionRef"],
+        status: "active",
+        currentPeriodEnd: new Date("2026-02-01T00:00:00.000Z"),
+        cancelAtPeriodEnd: false,
+        lastSyncedAt: new Date("2026-01-01T00:00:00.000Z"),
+      };
+      const nextSubscription: Subscription = {
+        ...previousSubscription,
+        planId: "plan-pro",
+        planVersionRef: PLAN_VERSION_REF,
+        status: "past_due",
+        lastSyncedAt: new Date("2026-01-02T00:00:00.000Z"),
+      };
+      let derivations = 0;
+      const createEventIntents = (previous: Subscription | null) => {
+        derivations += 1;
+        expect(previous).toEqual(previousSubscription);
+        return ["billing.plan_changed", "billing.subscription_past_due"].map(
+          (eventType, index) => ({
+            eventType,
+            eventId: `intent-${index}`,
+            occurredAt: "2026-01-02T00:00:00.000Z",
+            payload: { previousPlanId: previous?.planId },
+          }),
+        );
+      };
+
+      await store.saveSubscription(previousSubscription);
+      const committed = await store.commitSubscriptionWebhook({
+        eventId: "webhook-transition",
+        eventType: "subscription.updated",
+        subscription: nextSubscription,
+        createEventIntents,
+      });
+      await store.markWebhookEventIntentPublished("webhook-transition", "intent-0");
+      const resumed = await store.commitSubscriptionWebhook({
+        eventId: "webhook-transition",
+        eventType: "subscription.updated",
+        subscription: nextSubscription,
+        createEventIntents,
+      });
+
+      expect(derivations).toBe(1);
+      expect(committed.previousSubscription).toEqual(previousSubscription);
+      expect(resumed.intents.map((intent) => intent.publishedAt !== null)).toEqual([true, false]);
+      await expect(store.completeWebhook("webhook-transition")).rejects.toBeInstanceOf(
+        WebhookEventIntentsPendingProblem,
+      );
+
+      await store.markWebhookEventIntentPublished("webhook-transition", "intent-1");
+      await store.completeWebhook("webhook-transition");
+      const completed = await store.commitSubscriptionWebhook({
+        eventId: "webhook-transition",
+        eventType: "subscription.updated",
+        subscription: nextSubscription,
+        createEventIntents,
+      });
+      expect(completed.state).toBe("completed");
+    });
+
+    it("commits one transition for concurrent deliveries of the same webhook", async () => {
+      const subscription: Subscription = {
+        id: "sub-concurrent-transition",
+        billingAccountId: "tenant-concurrent-transition",
+        externalSubscriptionId: "sub-concurrent-transition",
+        planId: "plan-pro",
+        planVersionRef: PLAN_VERSION_REF,
+        status: "active",
+        currentPeriodEnd: new Date("2026-02-01T00:00:00.000Z"),
+        cancelAtPeriodEnd: false,
+        lastSyncedAt: new Date("2026-01-01T00:00:00.000Z"),
+      };
+      let derivations = 0;
+      const input = {
+        eventId: "webhook-concurrent-transition",
+        eventType: "subscription.created",
+        subscription,
+        createEventIntents: () => {
+          derivations += 1;
+          return [
+            {
+              eventType: "billing.subscription_activated",
+              eventId: "intent-concurrent-transition",
+              occurredAt: "2026-01-01T00:00:00.000Z",
+              payload: {},
+            },
+          ];
+        },
+      };
+
+      const [first, second] = await Promise.all([
+        store.commitSubscriptionWebhook(input),
+        store.commitSubscriptionWebhook(input),
+      ]);
+
+      expect(derivations).toBe(1);
+      expect(first).toEqual(second);
+    });
+
+    it("allows only the lease owner to deliver until completion or lease expiry", async () => {
+      let now = new Date("2026-01-01T00:00:00.000Z");
+      store = new InMemoryBillingStore(() => now);
+
+      const firstClaim = await store.claimWebhookDelivery("delivery-1", "billing.event", 30_000);
+      expect(firstClaim).toMatchObject({ status: "claimed" });
+      expect(await store.claimWebhookDelivery("delivery-1", "billing.event", 30_000)).toEqual({
+        status: "in_progress",
+      });
+
+      now = new Date("2026-01-01T00:00:31.000Z");
+      const secondClaim = await store.claimWebhookDelivery("delivery-1", "billing.event", 30_000);
+      expect(secondClaim).toMatchObject({ status: "claimed" });
+      if (firstClaim.status !== "claimed" || secondClaim.status !== "claimed") {
+        throw new Error("Expected both lease attempts to be claimed");
+      }
+      expect(await store.completeWebhookDelivery("delivery-1", secondClaim.token)).toBe(true);
+      expect(await store.releaseWebhookDelivery("delivery-1", firstClaim.token)).toBe(false);
+      expect(await store.claimWebhookDelivery("delivery-1", "billing.event", 30_000)).toEqual({
+        status: "completed",
+      });
+    });
+
+    it("rejects terminal writes from an expired owner before another worker reclaims", async () => {
+      let now = new Date("2026-01-01T00:00:00.000Z");
+      store = new InMemoryBillingStore(() => now);
+      const claim = await store.claimWebhookDelivery("delivery-expired", "billing.event", 30_000);
+      if (claim.status !== "claimed") throw new Error("Expected delivery claim");
+
+      now = new Date("2026-01-01T00:00:30.000Z");
+
+      expect(await store.completeWebhookDelivery("delivery-expired", claim.token)).toBe(false);
+      expect(await store.releaseWebhookDelivery("delivery-expired", claim.token)).toBe(false);
+      expect(
+        await store.claimWebhookDelivery("delivery-expired", "billing.event", 30_000),
+      ).toMatchObject({ status: "claimed" });
     });
   });
 });

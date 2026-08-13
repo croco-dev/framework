@@ -44,6 +44,14 @@ export class WebhookAlreadyProcessedProblem extends Problem {
   }
 }
 
+export class WebhookEventIntentsPendingProblem extends Problem {
+  readonly code = "billing/webhook-event-intents-pending";
+  readonly category = ProblemCategory.Conflict;
+  constructor(eventId: string) {
+    super(undefined, undefined, `Webhook '${eventId}' still has unpublished event intents`);
+  }
+}
+
 export class BillingLifecycleCommandConflictProblem extends Problem {
   readonly code = "billing/lifecycle-command-conflict";
   readonly category = ProblemCategory.Conflict;

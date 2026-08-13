@@ -2,6 +2,14 @@ import { DomainEvent } from "@croco/events-core";
 
 export class SubscriptionCanceledEvent extends DomainEvent {
   static readonly eventName = "billing.subscription_canceled";
+  static fromPayload(payload: Record<string, unknown>): SubscriptionCanceledEvent {
+    return new SubscriptionCanceledEvent(
+      payload.tenantId as string,
+      payload.externalSubscriptionId as string,
+      payload.cancelAtPeriodEnd as boolean,
+    );
+  }
+
   constructor(
     public readonly tenantId: string,
     public readonly externalSubscriptionId: string,

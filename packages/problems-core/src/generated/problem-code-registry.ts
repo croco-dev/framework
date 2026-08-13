@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 624,
+  problemCount: 625,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -2145,7 +2145,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 92,
+          line: 100,
           column: 3,
           kind: "problem-class",
         },
@@ -2208,7 +2208,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 100,
+          line: 108,
           column: 3,
           kind: "problem-class",
         },
@@ -2272,7 +2272,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 80,
+          line: 88,
           column: 3,
           kind: "problem-class",
         },
@@ -2303,7 +2303,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 113,
+          line: 121,
           column: 3,
           kind: "problem-class",
         },
@@ -2334,7 +2334,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 121,
+          line: 129,
           column: 3,
           kind: "problem-class",
         },
@@ -2427,7 +2427,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 157,
+          line: 165,
           column: 3,
           kind: "problem-class",
         },
@@ -2458,7 +2458,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 149,
+          line: 157,
           column: 3,
           kind: "problem-class",
         },
@@ -2489,7 +2489,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 216,
+          line: 224,
           column: 3,
           kind: "problem-class",
         },
@@ -2519,7 +2519,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 48,
+          line: 56,
           column: 3,
           kind: "problem-class",
         },
@@ -2549,7 +2549,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 60,
+          line: 68,
           column: 3,
           kind: "problem-class",
         },
@@ -2580,7 +2580,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 72,
+          line: 80,
           column: 3,
           kind: "problem-class",
         },
@@ -2611,7 +2611,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 129,
+          line: 137,
           column: 3,
           kind: "problem-class",
         },
@@ -2642,7 +2642,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 141,
+          line: 149,
           column: 3,
           kind: "problem-class",
         },
@@ -2794,7 +2794,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 165,
+          line: 173,
           column: 3,
           kind: "problem-class",
         },
@@ -2824,7 +2824,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 173,
+          line: 181,
           column: 3,
           kind: "problem-class",
         },
@@ -2948,7 +2948,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 203,
+          line: 211,
           column: 3,
           kind: "problem-class",
         },
@@ -2981,7 +2981,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 262,
+          line: 270,
           column: 3,
           kind: "problem-class",
         },
@@ -3012,7 +3012,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 275,
+          line: 283,
           column: 3,
           kind: "problem-class",
         },
@@ -3043,7 +3043,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 241,
+          line: 249,
           column: 3,
           kind: "problem-class",
         },
@@ -3076,7 +3076,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 251,
+          line: 259,
           column: 3,
           kind: "problem-class",
         },
@@ -3107,7 +3107,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 224,
+          line: 232,
           column: 3,
           kind: "problem-class",
         },
@@ -3138,7 +3138,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 181,
+          line: 189,
           column: 3,
           kind: "problem-class",
         },
@@ -3169,7 +3169,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 189,
+          line: 197,
           column: 3,
           kind: "problem-class",
         },
@@ -3200,6 +3200,36 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
           line: 40,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "billing/webhook-event-intents-pending",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#billing-webhook-event-intents-pending",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
+          line: 48,
           column: 3,
           kind: "problem-class",
         },
