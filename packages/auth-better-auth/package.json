@@ -43,8 +43,10 @@
     "@croco/auth-core": "workspace:*",
     "@croco/diagnostics-core": "workspace:*",
     "@croco/framework-context": "workspace:*",
+    "@croco/idempotency-core": "workspace:*",
     "@croco/problems-core": "workspace:*",
     "@croco/tx-drizzle": "workspace:*",
+    "@croco/webhooks-core": "workspace:*",
     "better-auth": "^1.6.23",
     "drizzle-orm": "catalog:"
   },
