@@ -80,6 +80,7 @@ describe("onboarding-drizzle provider conformance", () => {
                   "steps",
                   "isCompleted",
                   "completedAt",
+                  "completionStepId",
                   "createdAt",
                   "updatedAt",
                 ]),
@@ -221,8 +222,35 @@ describe("onboarding-drizzle provider conformance", () => {
           ],
         },
         conflict: {
-          supported: false,
-          reason: "Onboarding state duplicates are normalized to upserts.",
+          supported: true,
+          checks: [
+            {
+              name: "preserves transaction-fatal conflicts for the transaction owner",
+              run: async () => {
+                const transactionConflict = { code: "40001" };
+                const store = new DrizzleOnboardingStore(
+                  {
+                    insert: vi.fn().mockReturnValue({
+                      values: vi.fn().mockReturnValue({
+                        onConflictDoUpdate: vi.fn().mockReturnValue({
+                          returning: vi.fn().mockRejectedValue(transactionConflict),
+                        }),
+                      }),
+                    }),
+                  } as unknown as DrizzleOnboardingClient,
+                  { getClient: vi.fn().mockReturnValue(null) } as unknown as OnboardingTxManager,
+                );
+
+                await expect(
+                  store.completeStep("tenant-a", "user-1", "default", {
+                    stepId: "workspace-created",
+                    completedAt: new Date("2026-08-13T00:00:00.000Z"),
+                    requiredStepIds: ["workspace-created"],
+                  }),
+                ).rejects.toBe(transactionConflict);
+              },
+            },
+          ],
         },
         retryableFailure: {
           supported: false,

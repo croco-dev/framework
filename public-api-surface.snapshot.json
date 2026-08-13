@@ -18697,6 +18697,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "OnboardingStepCompletionConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/OnboardingProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "OnboardingStepNotFoundProblem",
               "exportKind": "named",
               "source": "./libs/problems/OnboardingProblems",
@@ -18710,6 +18716,16 @@
             }
           ],
           "typeExports": [
+            {
+              "name": "CompleteOnboardingStepInput",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "CompleteOnboardingStepResult",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
             {
               "name": "OnboardingContext",
               "exportKind": "named",
@@ -18783,6 +18799,12 @@
           "sourceEntrypoint": "packages/onboarding-drizzle/src/index.ts",
           "runtimeExports": [
             {
+              "name": "addCompletionStepIdentity",
+              "exportKind": "named",
+              "source": "./migrations/addCompletionStepIdentity",
+              "declarationKind": "function"
+            },
+            {
               "name": "DRIZZLE_TOKEN",
               "exportKind": "named",
               "source": "./libs/DrizzleOnboardingStore",
@@ -18799,6 +18821,12 @@
               "exportKind": "named",
               "source": "./libs/schema",
               "declarationKind": "const"
+            },
+            {
+              "name": "removeCompletionStepIdentity",
+              "exportKind": "named",
+              "source": "./migrations/addCompletionStepIdentity",
+              "declarationKind": "function"
             }
           ],
           "typeExports": [
@@ -18806,6 +18834,11 @@
               "name": "DrizzleOnboardingClient",
               "exportKind": "named",
               "source": "./libs/DrizzleOnboardingStore"
+            },
+            {
+              "name": "OnboardingMigrationClient",
+              "exportKind": "named",
+              "source": "./migrations/addCompletionStepIdentity"
             },
             {
               "name": "OnboardingStateRow",

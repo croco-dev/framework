@@ -1,10 +1,15 @@
 import { Component, Inject, Token } from "@croco/framework-context";
-import { type OnboardingState, OnboardingStore } from "@croco/onboarding-core";
+import {
+  type CompleteOnboardingStepInput,
+  type CompleteOnboardingStepResult,
+  type OnboardingState,
+  OnboardingStore,
+} from "@croco/onboarding-core";
 // Runtime value required for constructor metadata.
 // oxlint-disable-next-line typescript/consistent-type-imports
 import { TxManager } from "@croco/tx-core";
 import type { DrizzleDb } from "@croco/tx-drizzle";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { onboardingStates } from "./schema";
 
@@ -92,6 +97,7 @@ export class DrizzleOnboardingStore extends OnboardingStore {
         steps: state.steps,
         isCompleted: state.isCompleted,
         completedAt: state.completedAt,
+        completionStepId: null,
       })
       .onConflictDoUpdate({
         target: [onboardingStates.tenantId, onboardingStates.userId, onboardingStates.onboardingId],
@@ -99,8 +105,99 @@ export class DrizzleOnboardingStore extends OnboardingStore {
           steps: state.steps,
           isCompleted: state.isCompleted,
           completedAt: state.completedAt,
+          completionStepId: null,
           updatedAt: new Date(),
         },
       });
+  }
+
+  /**
+   * 단계 완료와 전체 완료 전이를 하나의 원자적 upsert 문장에서 적용합니다.
+   */
+  async completeStep(
+    tenantId: string,
+    userId: string,
+    onboardingId: string,
+    input: CompleteOnboardingStepInput,
+  ): Promise<CompleteOnboardingStepResult> {
+    const client = this.txManager.getClient() ?? this.db;
+    const completedStep = JSON.stringify({
+      completed: true,
+      completedAt: input.completedAt,
+    });
+    const patchedSteps = sql`jsonb_set(
+      ${onboardingStates.steps},
+      ARRAY[${input.stepId}]::text[],
+      coalesce(${onboardingStates.steps} -> ${input.stepId}, '{}'::jsonb) || ${completedStep}::jsonb,
+      true
+    )`;
+    const requiredStepsCompleted =
+      input.requiredStepIds.length === 0
+        ? sql`true`
+        : sql.join(
+            input.requiredStepIds.map(
+              (requiredStepId) =>
+                sql`coalesce((${patchedSteps} #>> ARRAY[${requiredStepId}, 'completed'])::boolean, false)`,
+            ),
+            sql` and `,
+          );
+    const completesOnInsert = input.requiredStepIds.every(
+      (requiredStepId) => requiredStepId === input.stepId,
+    );
+
+    const rows = await client
+      .insert(onboardingStates)
+      .values({
+        tenantId,
+        userId,
+        onboardingId,
+        steps: { [input.stepId]: { completed: true, completedAt: input.completedAt } },
+        isCompleted: completesOnInsert,
+        completedAt: completesOnInsert ? input.completedAt : undefined,
+        completionStepId: completesOnInsert ? input.stepId : undefined,
+      })
+      .onConflictDoUpdate({
+        target: [onboardingStates.tenantId, onboardingStates.userId, onboardingStates.onboardingId],
+        set: {
+          steps: patchedSteps,
+          isCompleted: sql`${onboardingStates.isCompleted} or (${requiredStepsCompleted})`,
+          completedAt: sql`case
+            when not ${onboardingStates.isCompleted} and (${requiredStepsCompleted}) then ${input.completedAt}
+            else ${onboardingStates.completedAt}
+          end`,
+          completionStepId: sql`case
+            when not ${onboardingStates.isCompleted} and (${requiredStepsCompleted}) then ${input.stepId}
+            else ${onboardingStates.completionStepId}
+          end`,
+          updatedAt: new Date(),
+        },
+        setWhere: sql`not coalesce(
+          (${onboardingStates.steps} #>> ARRAY[${input.stepId}, 'completed'])::boolean,
+          false
+        )`,
+      })
+      .returning({
+        steps: onboardingStates.steps,
+        isCompleted: onboardingStates.isCompleted,
+        completedAt: onboardingStates.completedAt,
+        onboardingCompleted: sql<boolean>`coalesce(
+          ${onboardingStates.completionStepId} = ${input.stepId},
+          false
+        )`,
+      });
+    const row = rows[0];
+    if (!row) {
+      return { status: "already_completed" };
+    }
+
+    return {
+      status: "completed",
+      state: {
+        steps: row.steps as OnboardingState["steps"],
+        isCompleted: row.isCompleted,
+        completedAt: row.completedAt ?? undefined,
+      },
+      onboardingCompleted: row.onboardingCompleted,
+    };
   }
 }

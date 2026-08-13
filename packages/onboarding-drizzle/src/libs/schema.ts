@@ -14,6 +14,7 @@ export const onboardingStates = pgTable(
     steps: jsonb("steps").$type<OnboardingState["steps"]>().notNull().default({}),
     isCompleted: boolean("is_completed").notNull().default(false),
     completedAt: timestamp("completed_at"),
+    completionStepId: text("completion_step_id"),
 
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),

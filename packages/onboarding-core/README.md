@@ -68,6 +68,15 @@ class MyOnboardingStore extends OnboardingStore {
   ): Promise<void> {
     // 구현
   }
+
+  async completeStep(
+    tenantId: string,
+    userId: string,
+    onboardingId: string,
+    input: CompleteOnboardingStepInput,
+  ): Promise<CompleteOnboardingStepResult> {
+    // 단계 상태와 전체 완료 전이를 원자적으로 적용
+  }
 }
 ```
 
@@ -92,12 +101,14 @@ constructor(
 
 #### `completeStep()` 저장 및 분석 이벤트 계약
 
-`completeStep()`는 컨텍스트, 온보딩 정의, 단계 존재 여부를 먼저 검증한 뒤 상태를 새 객체로 계산하고
-`OnboardingStore.saveState()`가 성공한 후에만 분석 이벤트를 전송합니다.
+`completeStep()`는 컨텍스트, 온보딩 정의, 단계 존재 여부를 먼저 검증한 뒤
+`OnboardingStore.completeStep()`로 단계 상태와 전체 완료 전이를 원자적으로 적용합니다.
 
-- `saveState()`가 실패하면 `completeStep()`는 해당 오류로 reject되고 분석 이벤트는 전송되지 않습니다.
-- 저장 전 상태 객체는 직접 변경하지 않으므로, 저장 실패가 기존 저장 상태를 암묵적으로 바꾸지 않습니다.
-- 저장 성공 후 `onboarding_completed`와 `onboarding_step_completed` 이벤트를 best-effort로 전송합니다.
+- 서로 다른 단계의 동시 완료는 한 상태에 모두 보존되며 전체 완료 전이는 한 번만 적용됩니다.
+- 동일한 단계의 반복 완료는 저장과 분석 이벤트를 반복하지 않습니다.
+- 저장소가 `conflict`를 반환하면 최대 3회 시도하고, 모두 충돌하면
+  `OnboardingStepCompletionConflictProblem`으로 명시적으로 실패합니다.
+- 원자적 저장 성공 후 `onboarding_completed`와 `onboarding_step_completed` 이벤트를 best-effort로 전송합니다.
 - 분석 이벤트 전송이 동기적으로 실패해도 저장된 온보딩 상태는 유지되고 `completeStep()`는 성공으로 처리됩니다.
 
 ### 타입

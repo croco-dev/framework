@@ -7,27 +7,33 @@ import { InMemoryOnboardingStore, OnboardingStore } from "../libs/OnboardingStor
 import {
   OnboardingContextRequiredProblem,
   OnboardingDefinitionNotFoundProblem,
+  OnboardingStepCompletionConflictProblem,
   OnboardingStepNotFoundProblem,
 } from "../libs/problems/OnboardingProblems";
-import type { OnboardingDefinition, OnboardingState } from "../libs/types";
+import type {
+  CompleteOnboardingStepInput,
+  CompleteOnboardingStepResult,
+  OnboardingDefinition,
+  OnboardingState,
+} from "../libs/types";
 
 class RecordingOnboardingStore extends InMemoryOnboardingStore {
   constructor(private readonly operations: string[]) {
     super();
   }
 
-  override async saveState(
+  override async completeStep(
     tenantId: string,
     userId: string,
     onboardingId: string,
-    state: OnboardingState,
-  ): Promise<void> {
+    input: CompleteOnboardingStepInput,
+  ): Promise<CompleteOnboardingStepResult> {
     this.operations.push("save");
-    await super.saveState(tenantId, userId, onboardingId, state);
+    return super.completeStep(tenantId, userId, onboardingId, input);
   }
 }
 
-class ReferenceFailingSaveStore extends OnboardingStore {
+class ReferenceFailingCompletionStore extends OnboardingStore {
   constructor(private readonly state: OnboardingState) {
     super();
   }
@@ -37,7 +43,25 @@ class ReferenceFailingSaveStore extends OnboardingStore {
   }
 
   async saveState(): Promise<void> {
-    throw new Error("save failed");
+    throw new Error("unexpected save");
+  }
+
+  async completeStep(): Promise<CompleteOnboardingStepResult> {
+    throw new Error("completion failed");
+  }
+}
+
+class ConflictingOnboardingStore extends OnboardingStore {
+  readonly completeStep = vi.fn<() => Promise<CompleteOnboardingStepResult>>(async () => ({
+    status: "conflict",
+  }));
+
+  async getState(): Promise<OnboardingState | null> {
+    return null;
+  }
+
+  async saveState(): Promise<void> {
+    throw new Error("unexpected save");
   }
 }
 
@@ -109,6 +133,49 @@ describe("OnboardingManager", () => {
     );
   });
 
+  it("should preserve concurrent distinct step completions and emit completion once", async () => {
+    await Context.run(
+      { requestId: "req-concurrent", user: { id: "user-1" }, tenantId: "tenant-1" },
+      async () => {
+        await Promise.all([
+          manager.completeStep("welcome-tour", "step-1"),
+          manager.completeStep("welcome-tour", "step-2"),
+        ]);
+
+        const status = await manager.getStatus("welcome-tour");
+        expect(status.steps["step-1"]?.completed).toBe(true);
+        expect(status.steps["step-2"]?.completed).toBe(true);
+        expect(status.isCompleted).toBe(true);
+      },
+    );
+
+    expect(analytics.capture).toHaveBeenCalledWith(
+      "onboarding_completed",
+      expect.objectContaining({ onboardingId: "welcome-tour" }),
+    );
+    expect(
+      vi.mocked(analytics.capture).mock.calls.filter(([event]) => event === "onboarding_completed"),
+    ).toHaveLength(1);
+  });
+
+  it("should apply concurrent repeated completion of the same step once", async () => {
+    await Context.run(
+      { requestId: "req-idempotent", user: { id: "user-1" }, tenantId: "tenant-1" },
+      async () => {
+        await Promise.all([
+          manager.completeStep("welcome-tour", "step-1"),
+          manager.completeStep("welcome-tour", "step-1"),
+        ]);
+      },
+    );
+
+    expect(
+      vi
+        .mocked(analytics.capture)
+        .mock.calls.filter(([event]) => event === "onboarding_step_completed"),
+    ).toHaveLength(1);
+  });
+
   it("should ignore optional steps for completion calculation", async () => {
     await Context.run(
       { requestId: "req-3", user: { id: "user-2" }, tenantId: "tenant-1" },
@@ -167,7 +234,7 @@ describe("OnboardingManager", () => {
       },
       isCompleted: false,
     };
-    const storeInstance = new ReferenceFailingSaveStore(initialState);
+    const storeInstance = new ReferenceFailingCompletionStore(initialState);
     const failingManager = new OnboardingManager(storeInstance, analytics);
     failingManager.register(sampleDefinition);
 
@@ -175,7 +242,7 @@ describe("OnboardingManager", () => {
       { requestId: "req-9", user: { id: "user-1" }, tenantId: "tenant-1" },
       async () => {
         await expect(failingManager.completeStep("welcome-tour", "step-2")).rejects.toThrow(
-          "save failed",
+          "completion failed",
         );
       },
     );
@@ -184,6 +251,24 @@ describe("OnboardingManager", () => {
     expect(initialState.steps["step-2"]).toBeUndefined();
     expect(initialState.isCompleted).toBe(false);
     expect(initialState.completedAt).toBeUndefined();
+  });
+
+  it("should fail explicitly after bounded atomic completion conflicts", async () => {
+    const storeInstance = new ConflictingOnboardingStore();
+    const conflictingManager = new OnboardingManager(storeInstance, analytics);
+    conflictingManager.register(sampleDefinition);
+
+    await Context.run(
+      { requestId: "req-conflict", user: { id: "user-1" }, tenantId: "tenant-1" },
+      async () => {
+        await expect(conflictingManager.completeStep("welcome-tour", "step-1")).rejects.toThrow(
+          OnboardingStepCompletionConflictProblem,
+        );
+      },
+    );
+
+    expect(storeInstance.completeStep).toHaveBeenCalledTimes(3);
+    expect(analytics.capture).not.toHaveBeenCalled();
   });
 
   it("should persist state and resolve when analytics capture throws after save", async () => {

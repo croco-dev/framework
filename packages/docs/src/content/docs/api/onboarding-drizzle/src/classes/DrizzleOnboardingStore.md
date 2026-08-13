@@ -49,6 +49,40 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 ## Methods
 
+### completeStep()
+
+> **completeStep**(`tenantId`, `userId`, `onboardingId`, `input`): `Promise`\<[`CompleteOnboardingStepResult`](/api/onboarding-core/src/type-aliases/completeonboardingstepresult/)\>
+
+단계 완료와 전체 완료 전이를 하나의 원자적 upsert 문장에서 적용합니다.
+
+#### Parameters
+
+##### tenantId
+
+`string`
+
+##### userId
+
+`string`
+
+##### onboardingId
+
+`string`
+
+##### input
+
+[`CompleteOnboardingStepInput`](/api/onboarding-core/src/interfaces/completeonboardingstepinput/)
+
+#### Returns
+
+`Promise`\<[`CompleteOnboardingStepResult`](/api/onboarding-core/src/type-aliases/completeonboardingstepresult/)\>
+
+#### Overrides
+
+[`OnboardingStore`](/api/onboarding-core/src/classes/onboardingstore/).[`completeStep`](/api/onboarding-core/src/classes/onboardingstore/#completestep)
+
+---
+
 ### getState()
 
 > **getState**(`tenantId`, `userId`, `onboardingId`): `Promise`\<[`OnboardingState`](/api/onboarding-core/src/interfaces/onboardingstate/) \| `null`\>
@@ -77,7 +111,7 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`OnboardingStore`](/api/onboarding-core/src/classes/onboardingstore/).[`getState`](/api/onboarding-core/src/classes/onboardingstore/#getstate)
 
-***
+---
 
 ### saveState()
 

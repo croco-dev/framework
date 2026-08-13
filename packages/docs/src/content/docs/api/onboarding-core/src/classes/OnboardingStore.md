@@ -28,6 +28,34 @@ title: "OnboardingStore"
 
 ## Methods
 
+### completeStep()
+
+> `abstract` **completeStep**(`tenantId`, `userId`, `onboardingId`, `input`): `Promise`\<[`CompleteOnboardingStepResult`](/api/onboarding-core/src/type-aliases/completeonboardingstepresult/)\>
+
+#### Parameters
+
+##### tenantId
+
+`string`
+
+##### userId
+
+`string`
+
+##### onboardingId
+
+`string`
+
+##### input
+
+[`CompleteOnboardingStepInput`](/api/onboarding-core/src/interfaces/completeonboardingstepinput/)
+
+#### Returns
+
+`Promise`\<[`CompleteOnboardingStepResult`](/api/onboarding-core/src/type-aliases/completeonboardingstepresult/)\>
+
+---
+
 ### getState()
 
 > `abstract` **getState**(`tenantId`, `userId`, `onboardingId`): `Promise`\<[`OnboardingState`](/api/onboarding-core/src/interfaces/onboardingstate/) \| `null`\>
@@ -50,7 +78,7 @@ title: "OnboardingStore"
 
 `Promise`\<[`OnboardingState`](/api/onboarding-core/src/interfaces/onboardingstate/) \| `null`\>
 
-***
+---
 
 ### saveState()
 

@@ -29,6 +29,25 @@ export interface OnboardingState {
   currentStepId?: string;
 }
 
+export interface CompleteOnboardingStepInput {
+  stepId: string;
+  completedAt: Date;
+  requiredStepIds: readonly string[];
+}
+
+export type CompleteOnboardingStepResult =
+  | {
+      status: "completed";
+      state: OnboardingState;
+      onboardingCompleted: boolean;
+    }
+  | {
+      status: "already_completed";
+    }
+  | {
+      status: "conflict";
+    };
+
 export interface OnboardingDefinition {
   id: string;
   steps: OnboardingStep[];
