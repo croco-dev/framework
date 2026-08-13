@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 632,
+  problemCount: 635,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -1207,7 +1207,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 94,
+          line: 132,
           column: 3,
           kind: "problem-class",
         },
@@ -1239,7 +1239,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 121,
+          line: 159,
           column: 5,
           kind: "problem-constructor",
         },
@@ -1299,7 +1299,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 83,
+          line: 121,
           column: 3,
           kind: "problem-class",
         },
@@ -1331,7 +1331,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 109,
+          line: 147,
           column: 3,
           kind: "problem-class",
         },
@@ -1361,7 +1361,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 36,
+          line: 74,
           column: 3,
           kind: "problem-class",
         },
@@ -1394,7 +1394,73 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 60,
+          line: 98,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "auth-clerk/webhook-delivery-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#auth-clerk-webhook-delivery-failed",
+      recovery: {
+        cause:
+          "The idempotency store contains a terminal failure for this Clerk deliveryId and eventType.",
+        userAction:
+          "Do not replay the delivery until the stored failure cause has been verified and corrected.",
+        operatorAction:
+          "Inspect the stored delivery result and preserved cause for the reported deliveryId and eventType, correct the mutation failure, then decide whether to clear or replay the record after idempotencyTtlMs expires.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
+          line: 55,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "auth-clerk/webhook-delivery-in-flight",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#auth-clerk-webhook-delivery-in-flight",
+      recovery: {
+        cause:
+          "Another worker currently owns the Clerk delivery reservation for this deliveryId and eventType.",
+        userAction:
+          "Retry the same delivery after the active worker completes or after the configured idempotencyTtlMs expires.",
+        operatorAction:
+          "Inspect concurrent worker state for the reported deliveryId and eventType; if the owner was abandoned, wait for idempotencyTtlMs expiry before retrying.",
+        retryability: "retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
+          line: 36,
           column: 3,
           kind: "problem-class",
         },

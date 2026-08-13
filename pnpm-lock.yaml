@@ -600,6 +600,9 @@ importers:
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
+      '@croco/idempotency-core':
+        specifier: workspace:*
+        version: link:../idempotency-core
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core

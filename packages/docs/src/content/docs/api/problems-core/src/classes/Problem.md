@@ -68,6 +68,8 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`PostHogAnalyticsFlushProblem`](/api/analytics-posthog/src/classes/posthoganalyticsflushproblem/)
 - [`PostHogAnalyticsReadinessProblem`](/api/analytics-posthog/src/classes/posthoganalyticsreadinessproblem/)
 - [`AuditableDecoratorProblem`](/api/audit-core/src/classes/auditabledecoratorproblem/)
+- [`ClerkWebhookDeliveryFailedProblem`](/api/auth-clerk/src/classes/clerkwebhookdeliveryfailedproblem/)
+- [`ClerkWebhookDeliveryInFlightProblem`](/api/auth-clerk/src/classes/clerkwebhookdeliveryinflightproblem/)
 - [`ClerkExternalServiceProblem`](/api/auth-clerk/src/classes/clerkexternalserviceproblem/)
 - [`ClerkMalformedClaimProblem`](/api/auth-clerk/src/classes/clerkmalformedclaimproblem/)
 - [`ClerkPublicUserDataMissingProblem`](/api/auth-clerk/src/classes/clerkpublicuserdatamissingproblem/)
@@ -115,6 +117,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`UnknownPlanVersionProblem`](/api/billing-core/src/classes/unknownplanversionproblem/)
 - [`UnknownProviderPlanMappingProblem`](/api/billing-core/src/classes/unknownproviderplanmappingproblem/)
 - [`WebhookAlreadyProcessedProblem`](/api/billing-core/src/classes/webhookalreadyprocessedproblem/)
+- [`WebhookEventIntentsPendingProblem`](/api/billing-core/src/classes/webhookeventintentspendingproblem/)
 - [`InvalidPlanReleaseScheduleProblem`](/api/billing-core/src/classes/invalidplanreleasescheduleproblem/)
 - [`InvalidPlanReleaseTransitionProblem`](/api/billing-core/src/classes/invalidplanreleasetransitionproblem/)
 - [`OverlappingPlanEffectivePeriodProblem`](/api/billing-core/src/classes/overlappingplaneffectiveperiodproblem/)
@@ -155,7 +158,10 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`InvalidCreditCommandProblem`](/api/credits-core/src/classes/invalidcreditcommandproblem/)
 - [`StaleLedgerPositionProblem`](/api/credits-core/src/classes/staleledgerpositionproblem/)
 - [`CreditLedgerPersistenceProblem`](/api/credits-drizzle/src/classes/creditledgerpersistenceproblem/)
+- [`HealthEventIntentConflictProblem`](/api/customer-health-core/src/classes/healtheventintentconflictproblem/)
+- [`HealthEventPublisherNotConfiguredProblem`](/api/customer-health-core/src/classes/healtheventpublishernotconfiguredproblem/)
 - [`HealthScoreNotFoundProblem`](/api/customer-health-core/src/classes/healthscorenotfoundproblem/)
+- [`HealthTransitionSequenceMissingProblem`](/api/customer-health-drizzle/src/classes/healthtransitionsequencemissingproblem/)
 - [`BatchResultLengthMismatchProblem`](/api/dataloader-core/src/classes/batchresultlengthmismatchproblem/)
 - [`DuplicateDiagnosticsProviderProblem`](/api/diagnostics-core/src/classes/duplicatediagnosticsproviderproblem/)
 - [`InvalidDiagnosticsTimeoutProblem`](/api/diagnostics-core/src/classes/invaliddiagnosticstimeoutproblem/)
@@ -287,9 +293,12 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`PricingRegistryConflictProblem`](/api/llm-metering/src/classes/pricingregistryconflictproblem/)
 - [`MembershipConstraintProblem`](/api/membership-core/src/classes/membershipconstraintproblem/)
 - [`AlreadyMemberProblem`](/api/membership-core/src/classes/alreadymemberproblem/)
+- [`InvalidMembershipCommandProblem`](/api/membership-core/src/classes/invalidmembershipcommandproblem/)
 - [`InvalidRoleProblem`](/api/membership-core/src/classes/invalidroleproblem/)
 - [`LastOwnerProblem`](/api/membership-core/src/classes/lastownerproblem/)
 - [`MembershipNotFoundProblem`](/api/membership-core/src/classes/membershipnotfoundproblem/)
+- [`MembershipEventPublicationProblem`](/api/membership-core/src/classes/membershipeventpublicationproblem/)
+- [`MembershipIdempotencyConflictProblem`](/api/membership-core/src/classes/membershipidempotencyconflictproblem/)
 - [`OwnershipTransferRequiredProblem`](/api/membership-core/src/classes/ownershiptransferrequiredproblem/)
 - [`RoleHierarchyViolationProblem`](/api/membership-core/src/classes/rolehierarchyviolationproblem/)
 - [`SeatLimitExceededProblem`](/api/membership-core/src/classes/seatlimitexceededproblem/)
@@ -337,6 +346,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`ResendValidationProblem`](/api/notifications-resend/src/classes/resendvalidationproblem/)
 - [`OnboardingContextRequiredProblem`](/api/onboarding-core/src/classes/onboardingcontextrequiredproblem/)
 - [`OnboardingDefinitionNotFoundProblem`](/api/onboarding-core/src/classes/onboardingdefinitionnotfoundproblem/)
+- [`OnboardingStepCompletionConflictProblem`](/api/onboarding-core/src/classes/onboardingstepcompletionconflictproblem/)
 - [`OnboardingStepNotFoundProblem`](/api/onboarding-core/src/classes/onboardingstepnotfoundproblem/)
 - [`OutboxDispatchProblem`](/api/outbox-core/src/classes/outboxdispatchproblem/)
 - [`OutboxFailureMetadataProblem`](/api/outbox-core/src/classes/outboxfailuremetadataproblem/)
@@ -495,7 +505,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 > `readonly` **category**: [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
 
----
+***
 
 ### cause?
 
@@ -505,31 +515,31 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 `Error.cause`
 
----
+***
 
 ### code
 
 > `readonly` **code**: `string`
 
----
+***
 
 ### detail?
 
 > `readonly` `optional` **detail?**: `string`
 
----
+***
 
 ### extensions?
 
 > `readonly` `optional` **extensions?**: [`ProblemExtensions`](/api/problems-core/src/type-aliases/problemextensions/)
 
----
+***
 
 ### instance?
 
 > `readonly` `optional` **instance?**: `string`
 
----
+***
 
 ### message
 
@@ -539,7 +549,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 `Error.message`
 
----
+***
 
 ### name
 
@@ -549,7 +559,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 `Error.name`
 
----
+***
 
 ### stack?
 
@@ -559,13 +569,13 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 `Error.stack`
 
----
+***
 
 ### type
 
 > `readonly` **type**: `string`
 
----
+***
 
 ### stackTraceLimit
 
@@ -597,7 +607,7 @@ not capture any frames.
 
 `number`
 
----
+***
 
 ### title
 
@@ -619,7 +629,7 @@ not capture any frames.
 
 [`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
 
----
+***
 
 ### captureStackTrace()
 
@@ -632,7 +642,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack; // Similar to `new Error().stack`
+myObject.stack;  // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -687,7 +697,7 @@ a();
 
 `Error.captureStackTrace`
 
----
+***
 
 ### prepareStackTrace()
 

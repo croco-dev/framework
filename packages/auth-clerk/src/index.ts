@@ -73,6 +73,8 @@ export { ClerkUserService } from "./libs/ClerkUserService";
 export { ClerkWebhookHandler } from "./libs/ClerkWebhookHandler";
 export type { ClerkTokenVerificationOperation } from "./libs/problems/ClerkProblems";
 export {
+  ClerkWebhookDeliveryFailedProblem,
+  ClerkWebhookDeliveryInFlightProblem,
   ClerkExternalServiceProblem,
   ClerkMalformedClaimProblem,
   ClerkPublicUserDataMissingProblem,
@@ -92,6 +94,7 @@ export type {
   ClerkMembershipEvent,
   ClerkOrgEvent,
   ClerkUserEvent,
+  ClerkWebhookDeliveryOutcome,
   WebhookEventHandler,
   WebhookEventType,
   WebhookHandlerOptions,

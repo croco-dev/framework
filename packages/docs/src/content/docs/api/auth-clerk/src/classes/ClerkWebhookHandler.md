@@ -31,7 +31,7 @@ Clerk 웹훅 서명 검증과 이벤트 분기를 처리하는 핸들러입니�
 
 ### handleWebhook()
 
-> **handleWebhook**(`request`): `Promise`\<`void`\>
+> **handleWebhook**(`request`): `Promise`\<[`ClerkWebhookDeliveryOutcome`](/api/auth-clerk/src/type-aliases/clerkwebhookdeliveryoutcome/)\>
 
 #### Parameters
 
@@ -41,4 +41,4 @@ Clerk 웹훅 서명 검증과 이벤트 분기를 처리하는 핸들러입니�
 
 #### Returns
 
-`Promise`\<`void`\>
+`Promise`\<[`ClerkWebhookDeliveryOutcome`](/api/auth-clerk/src/type-aliases/clerkwebhookdeliveryoutcome/)\>

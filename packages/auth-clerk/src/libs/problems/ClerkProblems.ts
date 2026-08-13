@@ -30,6 +30,44 @@ export class InvalidWebhookPayloadProblem extends Problem {
 }
 
 /**
+ * 동일한 Clerk 웹훅 delivery가 다른 worker에서 처리 중일 때 발생하는 Problem입니다.
+ */
+export class ClerkWebhookDeliveryInFlightProblem extends Problem {
+  readonly code = "auth-clerk/webhook-delivery-in-flight";
+  readonly category = ProblemCategory.Conflict;
+
+  constructor(deliveryId: string, eventType: string) {
+    super(undefined, undefined, `Clerk webhook delivery '${deliveryId}' is already in-flight`, {
+      extensions: {
+        deliveryId,
+        eventType,
+        provider: "clerk",
+        retryable: true,
+      },
+    });
+  }
+}
+
+/**
+ * 동일한 Clerk 웹훅 delivery에 terminal 실패 결과가 저장되어 있을 때 발생하는 Problem입니다.
+ */
+export class ClerkWebhookDeliveryFailedProblem extends Problem {
+  readonly code = "auth-clerk/webhook-delivery-failed";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(deliveryId: string, eventType: string) {
+    super(undefined, undefined, `Clerk webhook delivery '${deliveryId}' has a stored failure`, {
+      extensions: {
+        deliveryId,
+        eventType,
+        provider: "clerk",
+        retryable: false,
+      },
+    });
+  }
+}
+
+/**
  * Clerk JWT 토큰 검증이 실패했을 때 발생하는 Problem입니다.
  */
 export class ClerkTokenVerificationProblem extends Problem {
