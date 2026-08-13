@@ -91,6 +91,7 @@ export type MembershipCommand =
       readonly tenantId: string;
       readonly userId: string;
       readonly role: MembershipRole;
+      readonly maxSeats: number | null;
     }
   | {
       readonly operation: "remove";

@@ -16322,9 +16322,21 @@
               "declarationKind": "const"
             },
             {
+              "name": "membershipSeatOrdinalSequence",
+              "exportKind": "declaration",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
               "name": "addMembershipEventIntents",
               "exportKind": "named",
               "source": "./migrations/membershipEventIntents",
+              "declarationKind": "function"
+            },
+            {
+              "name": "addMembershipSeatOrdinals",
+              "exportKind": "named",
+              "source": "./migrations/addMembershipSeatOrdinals",
               "declarationKind": "function"
             }
           ],

@@ -24,6 +24,7 @@ export function createMembershipStoreConformanceSuite(options: {
             tenantId: "tenant-1",
             userId: "user-1",
             role: "member" as const,
+            maxSeats: null,
           };
           const original = await store.execute(command);
           const replay = await store.execute(command);
@@ -71,6 +72,7 @@ export function createMembershipStoreConformanceSuite(options: {
               tenantId: "tenant-concurrent",
               userId: "user-1",
               role: "member",
+              maxSeats: null,
             }),
             store.execute({
               operation: "add",
@@ -79,6 +81,7 @@ export function createMembershipStoreConformanceSuite(options: {
               tenantId: "tenant-concurrent",
               userId: "user-1",
               role: "admin",
+              maxSeats: null,
             }),
           ]);
           assert.equal(results.filter((result) => result.status === "fulfilled").length, 1);

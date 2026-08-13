@@ -11,6 +11,7 @@ import {
   LastOwnerProblem,
   MembershipNotFoundProblem,
   OwnershipTransferRequiredProblem,
+  SeatLimitExceededProblem,
 } from "./problems/MembershipProblems";
 import { LastOwnerCannotBeRemovedProblem } from "./problems/LastOwnerCannotBeRemovedProblem";
 import type {
@@ -217,6 +218,10 @@ export class InMemoryMembershipStore extends MembershipStore {
     if (command.operation === "add") {
       const existing = await this.findByTenantAndUser(command.tenantId, command.userId);
       if (existing) throw new AlreadyMemberProblem(command.tenantId, command.userId);
+      const currentSeats = await this.countAll(command.tenantId);
+      if (command.maxSeats !== null && currentSeats >= command.maxSeats) {
+        throw new SeatLimitExceededProblem(command.tenantId, currentSeats, command.maxSeats);
+      }
       return {
         operation: "add",
         membership: await this.save({

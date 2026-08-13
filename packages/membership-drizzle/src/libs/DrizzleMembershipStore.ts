@@ -15,10 +15,12 @@ import {
   InvalidMembershipCommandProblem,
   LastOwnerProblem,
   LastOwnerCannotBeRemovedProblem,
+  MembershipConstraintProblem,
   MembershipIdempotencyConflictProblem,
   MembershipNotFoundProblem,
   MembershipStore,
   OwnershipTransferRequiredProblem,
+  SeatLimitExceededProblem,
 } from "@croco/membership-core";
 // Runtime value required for constructor metadata.
 // oxlint-disable-next-line typescript/consistent-type-imports
@@ -31,6 +33,15 @@ import { membershipEventIntents, membershipIdempotencyRecords, memberships } fro
 type DrizzleMembershipClient = DrizzleDb & NodePgDatabase<Record<string, never>>;
 
 type MembershipRow = typeof memberships.$inferSelect;
+
+type RawMembershipRow = {
+  id: string;
+  tenant_id: string;
+  user_id: string;
+  role: MembershipRole;
+  created_at: Date;
+  updated_at: Date;
+};
 
 /**
  * 멤버십 저장소용 Drizzle 클라이언트 주입 토큰입니다.
@@ -73,42 +84,50 @@ export class DrizzleMembershipStore extends MembershipStore {
       throw new InvalidMembershipCommandProblem("idempotencyKey is required");
     }
     const fingerprint = this.fingerprint(command);
-    return this.txManager.run(async () => {
-      const client = this.txManager.getClient() ?? this.db;
-      await client.execute(
-        sql`select pg_advisory_xact_lock(hashtextextended(${command.idempotencyKey}, 0))`,
-      );
-      await client.execute(
-        sql`select pg_advisory_xact_lock(hashtextextended(${`membership:${command.tenantId}`}, 0))`,
-      );
-      const existing = await client
-        .select()
-        .from(membershipIdempotencyRecords)
-        .where(eq(membershipIdempotencyRecords.key, command.idempotencyKey))
-        .limit(1);
-      if (existing[0]) {
-        if (existing[0].fingerprint !== fingerprint) {
-          throw new MembershipIdempotencyConflictProblem(command.idempotencyKey);
+    const joinedTransaction = this.txManager.getClient() !== null;
+    try {
+      return await this.txManager.run(async () => {
+        const client = this.txManager.getClient() ?? this.db;
+        await client.execute(
+          sql`select pg_advisory_xact_lock(hashtextextended(${`membership:${command.tenantId}`}, 0))`,
+        );
+        await client.execute(
+          sql`select pg_advisory_xact_lock(hashtextextended(${command.idempotencyKey}, 0))`,
+        );
+        const existing = await client
+          .select()
+          .from(membershipIdempotencyRecords)
+          .where(eq(membershipIdempotencyRecords.key, command.idempotencyKey))
+          .limit(1);
+        if (existing[0]) {
+          if (existing[0].fingerprint !== fingerprint) {
+            throw new MembershipIdempotencyConflictProblem(command.idempotencyKey);
+          }
+          return this.cloneResult(existing[0].result, true);
         }
-        return this.cloneResult(existing[0].result, true);
-      }
 
-      const result = await this.applyCommand(command);
-      await client.insert(membershipIdempotencyRecords).values({
-        key: command.idempotencyKey,
-        fingerprint,
-        result,
-      });
-      const intent = createMembershipEventIntent(command, result, new Date());
-      if (intent) {
-        await client.insert(membershipEventIntents).values({
-          intentId: intent.intentId,
-          idempotencyKey: intent.idempotencyKey,
-          events: intent.events,
+        const result = await this.applyCommand(command);
+        await client.insert(membershipIdempotencyRecords).values({
+          key: command.idempotencyKey,
+          fingerprint,
+          result,
         });
+        const intent = createMembershipEventIntent(command, result, new Date());
+        if (intent) {
+          await client.insert(membershipEventIntents).values({
+            intentId: intent.intentId,
+            idempotencyKey: intent.idempotencyKey,
+            events: intent.events,
+          });
+        }
+        return this.cloneResult(result, false);
+      });
+    } catch (error) {
+      if (command.operation === "add" && this.isSeatClaimConflict(error)) {
+        return this.classifyCommittedAdd(command, fingerprint, joinedTransaction);
       }
-      return this.cloneResult(result, false);
-    });
+      throw error;
+    }
   }
 
   async getPendingEventIntent(idempotencyKey: string): Promise<MembershipEventIntent | null> {
@@ -461,14 +480,10 @@ export class DrizzleMembershipStore extends MembershipStore {
     if (command.operation === "add") {
       const existing = await this.findByTenantAndUser(command.tenantId, command.userId);
       if (existing) throw new AlreadyMemberProblem(command.tenantId, command.userId);
+      const membership = await this.insertWithinSeatLimit(command);
       return {
         operation: "add",
-        membership: await this.save({
-          id: command.membershipId,
-          tenantId: command.tenantId,
-          userId: command.userId,
-          role: command.role,
-        }),
+        membership,
         replayed: false,
       };
     }
@@ -580,6 +595,153 @@ export class DrizzleMembershipStore extends MembershipStore {
       createdAt: new Date(membership.createdAt),
       updatedAt: new Date(membership.updatedAt),
     };
+  }
+
+  private async insertWithinSeatLimit(
+    command: Extract<MembershipCommand, { operation: "add" }>,
+  ): Promise<Membership> {
+    if (command.maxSeats === null) {
+      const client = this.txManager.getClient() ?? this.db;
+      const rows = (await client
+        .insert(memberships)
+        .values({
+          id: command.membershipId,
+          tenantId: command.tenantId,
+          userId: command.userId,
+          role: command.role,
+        })
+        .onConflictDoNothing({ target: [memberships.tenantId, memberships.userId] })
+        .returning()) as MembershipRow[];
+      if (rows[0]) return this.mapToMembership(rows[0]);
+      const duplicate = await this.findByTenantAndUser(command.tenantId, command.userId);
+      if (duplicate) throw new AlreadyMemberProblem(command.tenantId, command.userId);
+      throw new MembershipConstraintProblem("Membership creation conflicted; retry the request", {
+        tenantId: command.tenantId,
+        userId: command.userId,
+      });
+    }
+
+    const client = this.txManager.getClient() ?? this.db;
+    const result = (await client.execute(sql`
+      with candidate as (
+        select slot
+        from generate_series(1, ${command.maxSeats}) as slot
+        where (
+          select count(*)
+          from ${memberships}
+          where ${memberships.tenantId} = ${command.tenantId}
+        ) < ${command.maxSeats}
+          and not exists (
+            select 1
+            from ${memberships} as claimed_seat
+            where claimed_seat.tenant_id = ${command.tenantId}
+              and claimed_seat.seat_ordinal = slot
+          )
+        order by slot
+        limit 1
+      )
+      insert into ${memberships} (id, tenant_id, user_id, role, seat_ordinal)
+      select ${command.membershipId}, ${command.tenantId}, ${command.userId}, ${command.role}, slot
+      from candidate
+      on conflict do nothing
+      returning id, tenant_id, user_id, role, created_at, updated_at
+    `)) as unknown as { rows: RawMembershipRow[] };
+    const row = result.rows[0];
+    if (row) return this.mapRawToMembership(row);
+
+    const duplicate = await this.findByTenantAndUser(command.tenantId, command.userId);
+    if (duplicate) throw new AlreadyMemberProblem(command.tenantId, command.userId);
+    const currentSeats = await this.countAll(command.tenantId);
+    if (currentSeats >= command.maxSeats) {
+      throw new SeatLimitExceededProblem(command.tenantId, currentSeats, command.maxSeats);
+    }
+    throw new MembershipConstraintProblem("Membership creation conflicted; retry the request", {
+      tenantId: command.tenantId,
+      userId: command.userId,
+    });
+  }
+
+  private mapRawToMembership(row: RawMembershipRow): Membership {
+    return {
+      id: row.id,
+      tenantId: row.tenant_id,
+      userId: row.user_id,
+      role: row.role,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  }
+
+  private isSeatClaimConflict(error: unknown): boolean {
+    if (this.isSerializationFailure(error)) return true;
+    if (typeof error !== "object" || error === null) return false;
+    if (
+      "code" in error &&
+      (error as { code?: unknown }).code === "23505" &&
+      "constraint" in error &&
+      (error as { constraint?: unknown }).constraint === "memberships_tenant_id_seat_ordinal_unique"
+    ) {
+      return true;
+    }
+    return "cause" in error && this.isSeatClaimConflict((error as { cause?: unknown }).cause);
+  }
+
+  private async classifyCommittedAdd(
+    command: Extract<MembershipCommand, { operation: "add" }>,
+    fingerprint: string,
+    joinedTransaction: boolean,
+  ): Promise<MembershipCommandResult> {
+    const records = await this.db
+      .select()
+      .from(membershipIdempotencyRecords)
+      .where(eq(membershipIdempotencyRecords.key, command.idempotencyKey))
+      .limit(1);
+    const record = records[0];
+    if (record) {
+      if (record.fingerprint !== fingerprint) {
+        throw new MembershipIdempotencyConflictProblem(command.idempotencyKey);
+      }
+      if (!joinedTransaction) {
+        return this.cloneResult(record.result, true);
+      }
+      throw new MembershipConstraintProblem("Membership creation conflicted; retry the request", {
+        tenantId: command.tenantId,
+        userId: command.userId,
+      });
+    }
+
+    const duplicate = await this.findCommittedByTenantAndUser(command.tenantId, command.userId);
+    if (duplicate) throw new AlreadyMemberProblem(command.tenantId, command.userId);
+    if (command.maxSeats !== null) {
+      const currentSeats = await this.countCommitted(command.tenantId);
+      if (currentSeats >= command.maxSeats) {
+        throw new SeatLimitExceededProblem(command.tenantId, currentSeats, command.maxSeats);
+      }
+    }
+    throw new MembershipConstraintProblem("Membership creation conflicted; retry the request", {
+      tenantId: command.tenantId,
+      userId: command.userId,
+    });
+  }
+
+  private async findCommittedByTenantAndUser(
+    tenantId: string,
+    userId: string,
+  ): Promise<Membership | null> {
+    const rows = (await this.db
+      .select()
+      .from(memberships)
+      .where(and(eq(memberships.tenantId, tenantId), eq(memberships.userId, userId)))
+      .limit(1)) as MembershipRow[];
+    return rows[0] ? this.mapToMembership(rows[0]) : null;
+  }
+
+  private async countCommitted(tenantId: string): Promise<number> {
+    const rows = (await this.db
+      .select({ total: count() })
+      .from(memberships)
+      .where(eq(memberships.tenantId, tenantId))) as { total: number }[];
+    return Number(rows[0]?.total ?? 0);
   }
 
   private isSerializationFailure(error: unknown): boolean {

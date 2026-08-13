@@ -9,3 +9,4 @@ export * from "./libs/DrizzleMembershipStore";
 export * from "./libs/schema";
 export { addMembershipEventIntents } from "./migrations/membershipEventIntents";
 export type { MembershipMigrationClient } from "./migrations/membershipEventIntents";
+export { addMembershipSeatOrdinals } from "./migrations/addMembershipSeatOrdinals";
