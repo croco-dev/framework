@@ -31,6 +31,14 @@ const token = await manager.createEmailInvitation({
   role: "member",
 });
 
+const linkToken = await manager.createLinkInvitation({
+  // A retry of this command returns the same token and resumes event delivery.
+  idempotencyKey: "invite-link:tenant-123:member",
+  tenantId: "tenant-123",
+  inviterId: "user-1",
+  role: "member",
+});
+
 await manager.acceptInvitation({ token, userId: "user-2", email: "new-user@example.com" });
 ```
 
@@ -71,8 +79,11 @@ await domainPolicyManager.tryAutoJoin("tenant-123", "user-3", "user@acme.com");
 
 ## 구현 포인트
 
-- 이메일 초대는 전달이 완료되기 전까지 `creating` 상태이며, 성공한 뒤에만 수락 가능한 `pending` 상태가 됩니다.
-- 같은 이메일 초대 재시도는 같은 `idempotencyKey`를 사용해야 동일 토큰과 전달 의도를 재생합니다.
+- 이메일과 링크 초대는 필요한 전달이 완료되기 전까지 `creating` 상태이며, 성공한 뒤에만 수락 가능한
+  `pending` 상태가 됩니다.
+- 같은 초대 생성 재시도는 같은 `idempotencyKey`를 사용해야 동일 토큰과 전달 의도를 재생합니다.
+- 초대 재전송도 `resendInvitation(invitationId, idempotencyKey)`에 같은 명령 키를 다시 전달해야 실패한
+  링크 생성 단계를 이어갑니다.
 - 이메일 초대는 토큰을 해시해 저장하고, 링크 초대는 이메일 없이 공유할 수 있습니다.
 - `expiresInDays`는 0보다 큰 정수 일수만 허용합니다. 0, 음수, 소수, `NaN`, 무한대 및 유효한 날짜를
   만들 수 없는 큰 값은 토큰 생성이나 저장 전에 거부됩니다.

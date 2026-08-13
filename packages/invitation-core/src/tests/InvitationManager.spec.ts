@@ -7,6 +7,7 @@ import {
   NotificationChannel,
   type NotificationService,
 } from "@croco/notifications-core";
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import { TxManager, type TxAdapter } from "@croco/tx-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -29,6 +30,17 @@ import {
 } from "../libs/problems/InvitationProblems";
 import { hashToken } from "../libs/token";
 import type { Invitation } from "../libs/types";
+
+class NonRetryablePersistenceProblem extends Problem {
+  constructor() {
+    super(
+      "invitation-test/non-retryable-persistence",
+      ProblemCategory.InternalServerError,
+      "Persistence is not configured",
+      { extensions: { retryable: false } },
+    );
+  }
+}
 
 describe("InvitationManager", () => {
   const invalidExpiryDurations = [
@@ -390,6 +402,7 @@ describe("InvitationManager", () => {
 
   it("should create link invitation without sending notification", async () => {
     const token = await manager.createLinkInvitation({
+      idempotencyKey: "create-link-1",
       tenantId: "tenant-1",
       inviterId: "inviter-1",
       role: "member",
@@ -401,6 +414,137 @@ describe("InvitationManager", () => {
     expect(invitation?.type).toBe("link");
     expect(invitation?.email).toBeNull();
     expect(send).not.toHaveBeenCalled();
+  });
+
+  it("should retry a link event intent with the original token and event identity", async () => {
+    publishNow.mockRejectedValueOnce(new Error("publish failed"));
+    const input = {
+      idempotencyKey: "link-event-failure-1",
+      tenantId: "tenant-1",
+      inviterId: "inviter-1",
+      role: "member" as const,
+    };
+
+    await expect(manager.createLinkInvitation(input)).rejects.toMatchObject({
+      extensions: { phase: "event", retrySafe: true },
+    });
+    const token = await manager.createLinkInvitation(input);
+
+    expect(await store.findAllByTenant("tenant-1")).toHaveLength(1);
+    expect((await store.findByTokenHash(hashToken(token)))?.status).toBe("pending");
+    expect(send).not.toHaveBeenCalled();
+    expect(publishNow).toHaveBeenCalledTimes(2);
+    const firstEvent = publishNow.mock.calls[0]?.[0] as InvitationCreatedEvent;
+    const secondEvent = publishNow.mock.calls[1]?.[0] as InvitationCreatedEvent;
+    expect(secondEvent.eventId).toBe(firstEvent.eventId);
+  });
+
+  it("should replay a completed link creation without creating another invitation", async () => {
+    const input = {
+      idempotencyKey: "link-response-lost-1",
+      tenantId: "tenant-1",
+      inviterId: "inviter-1",
+      role: "member" as const,
+    };
+
+    const firstToken = await manager.createLinkInvitation(input);
+    const replayedToken = await manager.createLinkInvitation(input);
+
+    expect(replayedToken).toBe(firstToken);
+    expect(await store.findAllByTenant("tenant-1")).toHaveLength(1);
+    expect(publishNow).toHaveBeenCalledTimes(1);
+  });
+
+  it("should fence concurrent link retries to one stable event identity", async () => {
+    let releasePublication!: () => void;
+    const publication = new Promise<void>((resolve) => {
+      releasePublication = resolve;
+    });
+    publishNow.mockImplementation(() => publication);
+    const input = {
+      idempotencyKey: "concurrent-link-1",
+      tenantId: "tenant-1",
+      inviterId: "inviter-1",
+      role: "member" as const,
+    };
+
+    const firstRequest = manager.createLinkInvitation(input);
+    await vi.waitFor(() => expect(publishNow).toHaveBeenCalledTimes(1));
+    const secondRequest = manager.createLinkInvitation(input);
+    await expect(secondRequest).rejects.toMatchObject({
+      extensions: { phase: "event", retrySafe: true },
+    });
+    releasePublication();
+    await expect(firstRequest).resolves.toBeTypeOf("string");
+
+    expect(await store.findAllByTenant("tenant-1")).toHaveLength(1);
+    expect(publishNow).toHaveBeenCalledTimes(1);
+  });
+
+  it("should reject conflicting link input under the same idempotency key", async () => {
+    await manager.createLinkInvitation({
+      idempotencyKey: "conflicting-link-1",
+      tenantId: "tenant-1",
+      inviterId: "inviter-1",
+      role: "member",
+    });
+
+    await expect(
+      manager.createLinkInvitation({
+        idempotencyKey: "conflicting-link-1",
+        tenantId: "tenant-1",
+        inviterId: "inviter-1",
+        role: "admin",
+      }),
+    ).rejects.toBeInstanceOf(InvitationIdempotencyConflictProblem);
+    expect(await store.findAllByTenant("tenant-1")).toHaveLength(1);
+  });
+
+  it("should reject an email and link command sharing one idempotency key", async () => {
+    await manager.createEmailInvitation({
+      idempotencyKey: "cross-type-conflict-1",
+      tenantId: "tenant-1",
+      inviterId: "inviter-1",
+      email: "member@croco.dev",
+      role: "member",
+    });
+
+    await expect(
+      manager.createLinkInvitation({
+        idempotencyKey: "cross-type-conflict-1",
+        tenantId: "tenant-1",
+        inviterId: "inviter-1",
+        role: "member",
+      }),
+    ).rejects.toBeInstanceOf(InvitationIdempotencyConflictProblem);
+  });
+
+  it("should preserve a non-retryable persistence Problem during link creation", async () => {
+    const problem = new NonRetryablePersistenceProblem();
+    vi.spyOn(store, "createEmailInvitation").mockRejectedValueOnce(problem);
+
+    await expect(
+      manager.createLinkInvitation({
+        idempotencyKey: "link-persistence-config-1",
+        tenantId: "tenant-1",
+        inviterId: "inviter-1",
+        role: "member",
+      }),
+    ).rejects.toBe(problem);
+  });
+
+  it("should preserve a non-retryable activation Problem during link creation", async () => {
+    const problem = new NonRetryablePersistenceProblem();
+    vi.spyOn(store, "activateEmailInvitation").mockRejectedValueOnce(problem);
+
+    await expect(
+      manager.createLinkInvitation({
+        idempotencyKey: "link-activation-config-1",
+        tenantId: "tenant-1",
+        inviterId: "inviter-1",
+        role: "member",
+      }),
+    ).rejects.toBe(problem);
   });
 
   it.each(invalidExpiryDurations)(
@@ -434,6 +578,7 @@ describe("InvitationManager", () => {
 
       await expect(
         manager.createLinkInvitation({
+          idempotencyKey: `invalid-link-expiry-${_label}`,
           tenantId: "tenant-1",
           inviterId: "inviter-1",
           role: "member",
@@ -464,6 +609,7 @@ describe("InvitationManager", () => {
               expiresInDays,
             })
           : await manager.createLinkInvitation({
+              idempotencyKey: "finite-expiry-link",
               tenantId: "tenant-1",
               inviterId: "inviter-1",
               role: "member",
@@ -734,7 +880,7 @@ describe("InvitationManager", () => {
   it("should resend invitation by revoking old one and issuing a new token", async () => {
     await store.save(createInvitation("old-token", { id: "inv-old" }));
 
-    const newToken = await manager.resendInvitation("inv-old");
+    const newToken = await manager.resendInvitation("inv-old", "resend-old-1");
     const oldInvitation = await store.findById("inv-old");
     const newInvitation = await store.findByTokenHash(hashToken(newToken));
 
@@ -769,6 +915,32 @@ describe("InvitationManager", () => {
     expect(publishNow).toHaveBeenCalledWith(expect.any(InvitationCreatedEvent));
   });
 
+  it("should resume a failed link resend with the original token and event identity", async () => {
+    await store.save(
+      createInvitation("old-link-token", {
+        id: "inv-old-link",
+        email: null,
+        type: "link",
+      }),
+    );
+    publishNow.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error("publish failed"));
+
+    await expect(
+      manager.resendInvitation("inv-old-link", "resend-old-link-1"),
+    ).rejects.toBeInstanceOf(InvitationCreationFailedProblem);
+    const token = await manager.resendInvitation("inv-old-link", "resend-old-link-1");
+
+    const invitations = await store.findAllByTenant("tenant-1");
+    expect(invitations).toHaveLength(2);
+    expect(invitations.filter((invitation) => invitation.status === "pending")).toHaveLength(1);
+    expect((await store.findByTokenHash(hashToken(token)))?.type).toBe("link");
+    const createdEvents = publishNow.mock.calls
+      .map(([event]) => event)
+      .filter((event): event is InvitationCreatedEvent => event instanceof InvitationCreatedEvent);
+    expect(createdEvents).toHaveLength(2);
+    expect(createdEvents[1]?.eventId).toBe(createdEvents[0]?.eventId);
+  });
+
   it("should throw InvitationInvalidStatusProblem when resending accepted invitation", async () => {
     await store.save(
       createInvitation("accepted-resend-token", {
@@ -778,8 +950,8 @@ describe("InvitationManager", () => {
       }),
     );
 
-    await expect(manager.resendInvitation("inv-accepted")).rejects.toBeInstanceOf(
-      InvitationInvalidStatusProblem,
-    );
+    await expect(
+      manager.resendInvitation("inv-accepted", "resend-accepted-1"),
+    ).rejects.toBeInstanceOf(InvitationInvalidStatusProblem);
   });
 });

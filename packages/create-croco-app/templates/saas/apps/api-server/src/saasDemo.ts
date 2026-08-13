@@ -753,6 +753,7 @@ export async function runSaasDemoFlow(
       "owner",
     );
     const invitationToken = await runtime.invitationManager.createLinkInvitation({
+      idempotencyKey: `invite_${tenant.id}_${invitedUserId}`,
       tenantId: tenant.id,
       inviterId: ownerUserId,
       role: "member",

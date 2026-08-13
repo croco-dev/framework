@@ -6,6 +6,7 @@ import type { TxManager } from "@croco/tx-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { InMemoryInvitationStore } from "../libs/InMemoryInvitationStore";
 import { InvitationManager } from "../libs/InvitationManager";
+import { InvitationCreationFailedProblem } from "../libs/problems/InvitationProblems";
 import {
   DuplicateInvitationProblem,
   InvitationRateLimitExceededProblem,
@@ -313,6 +314,7 @@ describe("RateLimitedInvitationService", () => {
   describe("createLinkInvitationWithRateLimit", () => {
     it("should create link invitation within rate limits", async () => {
       const token = await service.createLinkInvitationWithRateLimit({
+        idempotencyKey: "rate-limited-link-1",
         tenantId: "tenant-1",
         inviterId: "inviter-1",
         role: "member",
@@ -336,11 +338,34 @@ describe("RateLimitedInvitationService", () => {
 
       await expect(
         service.createLinkInvitationWithRateLimit({
+          idempotencyKey: "rate-limited-link-exceeded-1",
           tenantId: "tenant-1",
           inviterId: "inviter-1",
           role: "member",
         }),
       ).rejects.toBeInstanceOf(InvitationRateLimitExceededProblem);
+    });
+
+    it("should resume a durable link creation before applying the rate limit", async () => {
+      publishNow.mockRejectedValueOnce(new Error("publish failed"));
+      const input = {
+        idempotencyKey: "rate-limited-link-replay-1",
+        tenantId: "tenant-1",
+        inviterId: "inviter-1",
+        role: "member" as const,
+      };
+
+      await expect(service.createLinkInvitationWithRateLimit(input)).rejects.toBeInstanceOf(
+        InvitationCreationFailedProblem,
+      );
+      for (let i = 0; i < 2; i += 1) {
+        await store.save(
+          createInvitation({ id: `rate-limit-${i}`, email: `member-${i}@croco.dev` }),
+        );
+      }
+
+      await expect(service.createLinkInvitationWithRateLimit(input)).resolves.toBeTypeOf("string");
+      expect(publishNow).toHaveBeenCalledTimes(2);
     });
   });
 });

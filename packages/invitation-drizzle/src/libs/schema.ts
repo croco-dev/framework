@@ -38,7 +38,7 @@ export const invitations = pgTable(
 );
 
 /**
- * 이메일 초대 생성의 멱등성 키와 재생 가능한 알림/이벤트 전달 의도를 저장합니다.
+ * 초대 생성의 멱등성 키와 재생 가능한 알림/이벤트 전달 의도를 저장합니다.
  */
 export const invitationEmailCreationIntents = pgTable(
   "invitation_email_creation_intents",
