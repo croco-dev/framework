@@ -22,6 +22,7 @@ type CreateEmailInvitationInput = {
 };
 
 type CreateLinkInvitationInput = {
+  idempotencyKey: string;
   tenantId: string;
   inviterId: string;
   role: MembershipRole;
@@ -84,6 +85,14 @@ export class RateLimitedInvitationService {
   }
 
   async createLinkInvitationWithRateLimit(input: CreateLinkInvitationInput): Promise<string> {
+    const replay = await this.store.findEmailInvitationCreation(
+      input.tenantId,
+      input.idempotencyKey,
+    );
+    if (replay) {
+      return this.manager.createLinkInvitation(input);
+    }
+
     await this.checkRateLimit(input.tenantId);
 
     return this.manager.createLinkInvitation(input);

@@ -107,11 +107,15 @@ title: "InvitationManager"
 
 ### resendInvitation()
 
-> **resendInvitation**(`invitationId`): `Promise`\<`string`\>
+> **resendInvitation**(`invitationId`, `idempotencyKey`): `Promise`\<`string`\>
 
 #### Parameters
 
 ##### invitationId
+
+`string`
+
+##### idempotencyKey
 
 `string`
 

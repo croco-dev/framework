@@ -65,6 +65,7 @@ export type CreateEmailInvitationInput = {
 };
 
 export type CreateLinkInvitationInput = {
+  idempotencyKey: string;
   tenantId: string;
   inviterId: string;
   role: MembershipRole;
