@@ -21,6 +21,8 @@ describe("RedisUsageStorage", () => {
     timestamp: new Date("2024-01-15T10:30:00Z"),
     idempotencyKey,
   });
+  const withScores = (members: string[], timestamp = new Date("2024-01-15T10:30:00Z")) =>
+    members.flatMap((member) => [member, String(timestamp.getTime())]);
 
   beforeEach(() => {
     mockRedis = {
@@ -337,7 +339,9 @@ describe("RedisUsageStorage", () => {
 
   describe("getUsage", () => {
     it("should sum values from Redis", async () => {
-      vi.mocked(mockRedis.zrangebyscore).mockResolvedValue(["usage-1:5", "usage-2:3", "usage-3:2"]);
+      vi.mocked(mockRedis.zrangebyscore).mockResolvedValue(
+        withScores(["usage-1:5", "usage-2:3", "usage-3:2"]),
+      );
 
       const options: UsageQueryOptions = {
         tenantId: "tenant-1",
@@ -398,7 +402,9 @@ describe("RedisUsageStorage", () => {
     });
 
     it("should preserve the largest supported stored usage value", async () => {
-      vi.mocked(mockRedis.zrangebyscore).mockResolvedValue(["usage-1:9007199254740991"]);
+      vi.mocked(mockRedis.zrangebyscore).mockResolvedValue(
+        withScores(["usage-1:9007199254740991"]),
+      );
 
       await expect(
         storage.getUsage({
@@ -409,10 +415,10 @@ describe("RedisUsageStorage", () => {
       ).resolves.toBe(Number.MAX_SAFE_INTEGER);
     });
 
-    it("should query the requested period before falling back", async () => {
+    it("should reconcile records across period and billing-cycle partitions", async () => {
       vi.mocked(mockRedis.zrangebyscore)
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce(["usage-1:5"]);
+        .mockResolvedValueOnce(withScores(["usage-legacy:3"]))
+        .mockResolvedValueOnce(withScores(["usage-current:5"]));
 
       const options: UsageQueryOptions = {
         tenantId: "tenant-1",
@@ -424,28 +430,120 @@ describe("RedisUsageStorage", () => {
 
       const result = await storage.getUsage(options);
 
-      expect(result).toBe(5);
+      expect(result).toBe(8);
       expect(mockRedis.zrangebyscore).toHaveBeenNthCalledWith(
         1,
         "usage2:tenant-1:api_calls:2024-01-15",
         expect.any(Number),
         expect.any(Number),
+        "WITHSCORES",
       );
       expect(mockRedis.zrangebyscore).toHaveBeenNthCalledWith(
         2,
         "usage2:tenant-1:api_calls:2024-01",
         expect.any(Number),
         expect.any(Number),
+        "WITHSCORES",
       );
     });
 
-    it("should aggregate every billing-cycle month across empty intermediate partitions", async () => {
+    it("should count a record present in both layouts once", async () => {
       vi.mocked(mockRedis.zrangebyscore)
-        .mockResolvedValueOnce(["usage-january:10"])
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce(["usage-march:20"]);
+        .mockResolvedValueOnce(withScores(["usage-duplicate:5"]))
+        .mockResolvedValueOnce(withScores(["usage-duplicate:5"]));
+
+      const result = await storage.getUsage({
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        period: "day",
+        startDate: new Date("2024-01-15T00:00:00Z"),
+        endDate: new Date("2024-01-15T23:59:59Z"),
+      });
+
+      expect(result).toBe(5);
+      expect(mockRedis.zrangebyscore).toHaveBeenCalledTimes(2);
+    });
+
+    it("should reject reused identity at a different timestamp instead of undercounting", async () => {
+      vi.mocked(mockRedis.zrangebyscore)
+        .mockResolvedValueOnce(withScores(["usage-duplicate:5"], new Date("2024-01-15T10:30:00Z")))
+        .mockResolvedValueOnce(withScores(["usage-duplicate:5"], new Date("2024-01-15T11:30:00Z")));
+
+      await expect(
+        storage.getUsage({
+          tenantId: "tenant-1",
+          meterId: "api_calls",
+          period: "day",
+          startDate: new Date("2024-01-15T00:00:00Z"),
+          endDate: new Date("2024-01-15T23:59:59Z"),
+        }),
+      ).rejects.toMatchObject({
+        code: "metering/redis-error",
+        detail: expect.stringContaining("Conflicting stored usage record"),
+      });
+    });
+
+    it("should query every hour and billing-cycle partition intersecting the range", async () => {
+      vi.mocked(mockRedis.zrangebyscore).mockImplementation(async (key) => {
+        const membersByKey: Record<string, string[]> = {
+          "usage2:tenant-1:api_calls:2024-01-15-23": withScores(
+            ["usage-hour-23:2"],
+            new Date("2024-01-15T23:45:00Z"),
+          ),
+          "usage2:tenant-1:api_calls:2024-01-16-00": withScores(
+            ["usage-hour-00:3"],
+            new Date("2024-01-16T00:15:00Z"),
+          ),
+          "usage2:tenant-1:api_calls:2024-01": withScores(
+            ["usage-current:5"],
+            new Date("2024-01-16T00:20:00Z"),
+          ),
+        };
+        return membersByKey[key] ?? [];
+      });
+
+      const result = await storage.getUsage({
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        period: "hour",
+        startDate: new Date("2024-01-15T23:30:00Z"),
+        endDate: new Date("2024-01-16T00:30:00Z"),
+      });
+
+      expect(result).toBe(10);
+      expect(vi.mocked(mockRedis.zrangebyscore).mock.calls.map(([key]) => key)).toEqual([
+        "usage2:tenant-1:api_calls:2024-01-15-23",
+        "usage2:tenant-1:api_calls:2024-01-16-00",
+        "usage2:tenant-1:api_calls:2024-01",
+      ]);
+    });
+
+    it("should query every day and billing-cycle partition intersecting the range", async () => {
+      vi.mocked(mockRedis.zrangebyscore).mockResolvedValue([]);
+
+      await storage.getUsage({
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        period: "day",
+        startDate: new Date("2024-01-31T23:30:00Z"),
+        endDate: new Date("2024-02-01T00:30:00Z"),
+      });
+
+      expect(vi.mocked(mockRedis.zrangebyscore).mock.calls.map(([key]) => key)).toEqual([
+        "usage2:tenant-1:api_calls:2024-01-31",
+        "usage2:tenant-1:api_calls:2024-02-01",
+        "usage2:tenant-1:api_calls:2024-01",
+        "usage2:tenant-1:api_calls:2024-02",
+      ]);
+    });
+
+    it("should aggregate every billing-cycle month across empty intermediate partitions", async () => {
       const startDate = new Date("2026-01-31T23:00:00Z");
       const endDate = new Date("2026-03-01T01:00:00Z");
+      vi.mocked(mockRedis.zrangebyscore)
+        .mockResolvedValueOnce(withScores(["usage-january:10"], startDate))
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce(withScores(["usage-march:20"], endDate));
 
       const result = await storage.getUsage({
         tenantId: "tenant-1",
@@ -461,24 +559,27 @@ describe("RedisUsageStorage", () => {
         "usage2:tenant-1:api_calls:2026-01",
         startDate.getTime(),
         endDate.getTime(),
+        "WITHSCORES",
       );
       expect(mockRedis.zrangebyscore).toHaveBeenNthCalledWith(
         2,
         "usage2:tenant-1:api_calls:2026-02",
         startDate.getTime(),
         endDate.getTime(),
+        "WITHSCORES",
       );
       expect(mockRedis.zrangebyscore).toHaveBeenNthCalledWith(
         3,
         "usage2:tenant-1:api_calls:2026-03",
         startDate.getTime(),
         endDate.getTime(),
+        "WITHSCORES",
       );
     });
 
     it("should aggregate large Redis partitions without spreading members onto the call stack", async () => {
       vi.mocked(mockRedis.zrangebyscore).mockResolvedValue(
-        Array.from({ length: 200_000 }, (_, index) => `usage-${index}:1`),
+        withScores(Array.from({ length: 200_000 }, (_, index) => `usage-${index}:1`)),
       );
 
       const result = await storage.getUsage({
@@ -534,6 +635,23 @@ describe("RedisUsageStorage", () => {
       expect(mockRedis.zrangebyscore).not.toHaveBeenCalled();
     });
 
+    it("should reject more than 1,200 hour partitions before reading Redis", async () => {
+      const request = storage.getUsage({
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        period: "hour",
+        startDate: new Date("2026-01-01T00:00:00Z"),
+        endDate: new Date("2026-02-20T00:00:00Z"),
+      });
+
+      await expect(request).rejects.toMatchObject({
+        code: "metering/invalid-usage-query",
+        status: 422,
+        detail: expect.stringContaining("more than 1200 hour partitions"),
+      });
+      expect(mockRedis.zrangebyscore).not.toHaveBeenCalled();
+    });
+
     it("should return 0 for empty result", async () => {
       vi.mocked(mockRedis.zrangebyscore).mockResolvedValue([]);
 
@@ -551,7 +669,7 @@ describe("RedisUsageStorage", () => {
     it("should fall back to billing cycle data when a period-specific key is empty", async () => {
       vi.mocked(mockRedis.zrangebyscore)
         .mockResolvedValueOnce([])
-        .mockResolvedValueOnce(["usage-1:5"]);
+        .mockResolvedValueOnce(withScores(["usage-1:5"]));
 
       const result = await storage.getUsage({
         tenantId: "tenant-1",
@@ -567,12 +685,14 @@ describe("RedisUsageStorage", () => {
         "usage2:tenant-1:api_calls:2024-01-15",
         new Date("2024-01-15T00:00:00Z").getTime(),
         new Date("2024-01-15T23:59:59Z").getTime(),
+        "WITHSCORES",
       );
       expect(mockRedis.zrangebyscore).toHaveBeenNthCalledWith(
         2,
         "usage2:tenant-1:api_calls:2024-01",
         new Date("2024-01-15T00:00:00Z").getTime(),
         new Date("2024-01-15T23:59:59Z").getTime(),
+        "WITHSCORES",
       );
     });
 
@@ -623,6 +743,36 @@ describe("RedisUsageStorage", () => {
   });
 
   describe("fetchUsageRecords", () => {
+    it("should prefer the current envelope while deduplicating a record across layouts", async () => {
+      const timestamp = new Date("2024-01-15T10:30:00Z");
+      vi.mocked(mockRedis.zrangebyscore)
+        .mockResolvedValueOnce(["usage-shared:5", String(timestamp.getTime())])
+        .mockResolvedValueOnce([
+          "usage-current:5:v2.%7B%22idempotencyKey%22%3A%22usage-shared%22%2C%22metadata%22%3A%7B%22source%22%3A%22current%22%7D%7D",
+          String(timestamp.getTime()),
+        ]);
+
+      const records = await storage.fetchUsageRecords({
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        period: "day",
+        startDate: new Date("2024-01-15T00:00:00Z"),
+        endDate: new Date("2024-01-15T23:59:59Z"),
+      });
+
+      expect(records).toEqual([
+        {
+          id: "usage-current",
+          tenantId: "tenant-1",
+          meterId: "api_calls",
+          value: 5,
+          timestamp,
+          idempotencyKey: "usage-shared",
+          metadata: { source: "current" },
+        },
+      ]);
+    });
+
     it("should return parsed usage records with timestamps restored from Redis scores", async () => {
       const firstTimestamp = new Date("2024-01-15T10:30:00Z");
       const secondTimestamp = new Date("2024-01-15T11:45:00Z");
@@ -1259,6 +1409,72 @@ describe("RedisUsageStorage", () => {
       );
     });
 
+    it("should remove reconciled records from every intersecting legacy and current partition", async () => {
+      const record: UsageRecord = {
+        id: "usage-shared",
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        value: 5,
+        timestamp: new Date("2024-01-16T00:15:00Z"),
+        idempotencyKey: "request-1",
+      };
+
+      await storage.deleteUsageRecords(
+        {
+          tenantId: "tenant-1",
+          meterId: "api_calls",
+          period: "hour",
+          startDate: new Date("2024-01-15T23:30:00Z"),
+          endDate: new Date("2024-01-16T00:30:00Z"),
+        },
+        [record],
+      );
+
+      expect(vi.mocked(mockRedis.eval).mock.calls.map(([, keys]) => keys[0])).toEqual([
+        "usage2:tenant-1:api_calls:2024-01-16-00",
+        "usage2:tenant-1:api_calls:2024-01",
+      ]);
+    });
+
+    it("should delete the exact legacy and current members returned by reconciliation", async () => {
+      const timestamp = new Date("2024-01-15T10:30:00Z");
+      const legacyMember = "usage-shared:5";
+      const currentMember =
+        "usage-current:5:v2.%7B%22idempotencyKey%22%3A%22usage-shared%22%2C%22metadata%22%3A%7B%22source%22%3A%22current%22%7D%7D";
+      vi.mocked(mockRedis.zrangebyscore).mockImplementation(async (key) => {
+        if (key.endsWith("2024-01-15")) {
+          return [legacyMember, String(timestamp.getTime())];
+        }
+        if (key.endsWith("2024-01")) {
+          return [currentMember, String(timestamp.getTime())];
+        }
+        return [];
+      });
+      const options: UsageQueryOptions = {
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        period: "day",
+        startDate: new Date("2024-01-15T00:00:00Z"),
+        endDate: new Date("2024-01-15T23:59:59Z"),
+      };
+
+      const records = await storage.fetchUsageRecords(options);
+      await storage.deleteUsageRecords(options, records);
+
+      expect(mockRedis.eval).toHaveBeenNthCalledWith(
+        1,
+        expect.stringContaining("ZSCORE"),
+        ["usage2:tenant-1:api_calls:2024-01-15"],
+        expect.arrayContaining([legacyMember, timestamp.getTime()]),
+      );
+      expect(mockRedis.eval).toHaveBeenNthCalledWith(
+        2,
+        expect.stringContaining("ZSCORE"),
+        ["usage2:tenant-1:api_calls:2024-01"],
+        expect.arrayContaining([currentMember, timestamp.getTime()]),
+      );
+    });
+
     it("should delete records written with the legacy member format", async () => {
       const timestamp = new Date("2024-01-15T10:30:00Z");
       const legacyMember = "usage-legacy:5:%7B%22source%22%3A%22api%22%7D";
@@ -1472,6 +1688,7 @@ describe("RedisUsageStorage", () => {
         expect.any(String),
         startDate.getTime(),
         endDate.getTime(),
+        "WITHSCORES",
       );
     });
   });
