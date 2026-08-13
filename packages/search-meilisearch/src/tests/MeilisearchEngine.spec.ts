@@ -423,9 +423,11 @@ describe("Meilisearch provider conformance", () => {
     it("rejects tenant ids that differ from the active tenant before generating a token", async () => {
       vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-1");
 
-      await expect(engine.generateTenantToken("tenant-2")).rejects.toThrow(
+      const problem = await expectProblem(
+        () => engine.generateTenantToken("tenant-2"),
         MeilisearchInvalidRequestProblem,
       );
+      expect(problem.extensions).toMatchObject({ upstreamCode: "invalid-tenant-context" });
       expect(mocks.clientMock.generateTenantToken).not.toHaveBeenCalled();
     });
 
