@@ -368,6 +368,8 @@ describe("Meilisearch provider conformance", () => {
 
   describe("generateTenantToken", () => {
     it("generates tenant token using escaped tenant search rules", async () => {
+      vi.spyOn(Context, "getTenantId").mockReturnValue('tenant-"one"\\x');
+
       const token = await engine.generateTenantToken('tenant-"one"\\x');
 
       expect(mocks.clientMock.generateTenantToken).toHaveBeenCalledWith(
@@ -383,6 +385,7 @@ describe("Meilisearch provider conformance", () => {
     });
 
     it("computes expiresAt when expiresIn is 0", async () => {
+      vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-1");
       const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
 
       const engineWithZeroExpiresIn = new MeilisearchEngine({
@@ -410,7 +413,24 @@ describe("Meilisearch provider conformance", () => {
       dateNowSpy.mockRestore();
     });
 
+    it("requires an active tenant context before generating a token", async () => {
+      vi.spyOn(Context, "getTenantId").mockReturnValue(null);
+
+      await expect(engine.generateTenantToken("tenant-1")).rejects.toThrow(MissingTenantProblem);
+      expect(mocks.clientMock.generateTenantToken).not.toHaveBeenCalled();
+    });
+
+    it("rejects tenant ids that differ from the active tenant before generating a token", async () => {
+      vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-1");
+
+      await expect(engine.generateTenantToken("tenant-2")).rejects.toThrow(
+        MeilisearchInvalidRequestProblem,
+      );
+      expect(mocks.clientMock.generateTenantToken).not.toHaveBeenCalled();
+    });
+
     it("rejects missing token configuration and empty tenant ids", async () => {
+      vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-1");
       const engineWithoutTokenConfig = new MeilisearchEngine({
         apiKey: "masterKey",
         host: "http://localhost:7700",

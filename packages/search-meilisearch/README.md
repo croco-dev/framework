@@ -60,7 +60,7 @@ await Context.run({ requestId: "req-1", tenantId: "tenant-1" }, async () => {
 ## 동작 메모
 
 - 모든 검색과 인덱싱은 현재 `Context.getTenantId()` 값을 `_tenantId` 필드에 반영합니다.
-- tenant token은 `_tenantId` 필터 규칙을 포함해 생성됩니다.
+- tenant token은 요청한 tenant가 현재 `Context.getTenantId()`와 일치할 때만 `_tenantId` 필터 규칙을 포함해 생성됩니다.
 - tenant 정보가 없으면 `MissingTenantProblem`이 발생합니다.
 - `createIndex`, `indexDocument`, `bulkIndex`, `deleteDocument`, `deleteIndex`는 기본적으로
   Meilisearch task 완료를 기다린 뒤 resolve합니다. 필요하면 `taskWait.enabled: false`로
