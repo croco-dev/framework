@@ -36,3 +36,18 @@ export class OnboardingContextRequiredProblem extends Problem {
     );
   }
 }
+
+/**
+ * 온보딩 단계 상태의 동시 변경 충돌이 유한 재시도 안에 해소되지 않을 때 발생하는 Problem입니다.
+ */
+export class OnboardingStepCompletionConflictProblem extends Problem {
+  readonly code = "onboarding/step-completion-conflict";
+  readonly category = ProblemCategory.Conflict;
+  constructor(onboardingId: string, stepId: string) {
+    super(
+      undefined,
+      undefined,
+      `Step '${stepId}' in onboarding '${onboardingId}' could not be completed due to concurrent updates`,
+    );
+  }
+}

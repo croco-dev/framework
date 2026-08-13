@@ -35,6 +35,38 @@ title: "InMemoryOnboardingStore"
 
 ## Methods
 
+### completeStep()
+
+> **completeStep**(`tenantId`, `userId`, `onboardingId`, `input`): `Promise`\<[`CompleteOnboardingStepResult`](/api/onboarding-core/src/type-aliases/completeonboardingstepresult/)\>
+
+#### Parameters
+
+##### tenantId
+
+`string`
+
+##### userId
+
+`string`
+
+##### onboardingId
+
+`string`
+
+##### input
+
+[`CompleteOnboardingStepInput`](/api/onboarding-core/src/interfaces/completeonboardingstepinput/)
+
+#### Returns
+
+`Promise`\<[`CompleteOnboardingStepResult`](/api/onboarding-core/src/type-aliases/completeonboardingstepresult/)\>
+
+#### Overrides
+
+[`OnboardingStore`](/api/onboarding-core/src/classes/onboardingstore/).[`completeStep`](/api/onboarding-core/src/classes/onboardingstore/#completestep)
+
+---
+
 ### getState()
 
 > **getState**(`tenantId`, `userId`, `onboardingId`): `Promise`\<[`OnboardingState`](/api/onboarding-core/src/interfaces/onboardingstate/) \| `null`\>
@@ -61,7 +93,7 @@ title: "InMemoryOnboardingStore"
 
 [`OnboardingStore`](/api/onboarding-core/src/classes/onboardingstore/).[`getState`](/api/onboarding-core/src/classes/onboardingstore/#getstate)
 
-***
+---
 
 ### saveState()
 

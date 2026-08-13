@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 628,
+  problemCount: 632,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -12227,6 +12227,36 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/onboarding-core/src/libs/problems/OnboardingProblems.ts",
           line: 7,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "onboarding/step-completion-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#onboarding-step-completion-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/onboarding-core/src/libs/problems/OnboardingProblems.ts",
+          line: 44,
           column: 3,
           kind: "problem-class",
         },

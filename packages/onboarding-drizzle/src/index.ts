@@ -10,3 +10,8 @@ export { DRIZZLE_TOKEN, DrizzleOnboardingStore } from "./libs/DrizzleOnboardingS
  * 온보딩 상태 영속화에 사용하는 스키마입니다.
  */
 export { onboardingStates } from "./libs/schema";
+export {
+  addCompletionStepIdentity,
+  removeCompletionStepIdentity,
+} from "./migrations/addCompletionStepIdentity";
+export type { OnboardingMigrationClient } from "./migrations/addCompletionStepIdentity";

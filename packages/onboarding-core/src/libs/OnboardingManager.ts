@@ -4,9 +4,12 @@ import { OnboardingStore } from "./OnboardingStore"; // oxlint-disable-line type
 import {
   OnboardingContextRequiredProblem,
   OnboardingDefinitionNotFoundProblem,
+  OnboardingStepCompletionConflictProblem,
   OnboardingStepNotFoundProblem,
 } from "./problems/OnboardingProblems";
 import type { OnboardingDefinition, OnboardingState } from "./types";
+
+const STEP_COMPLETION_MAX_ATTEMPTS = 3;
 
 @Component()
 export class OnboardingManager {
@@ -43,51 +46,40 @@ export class OnboardingManager {
     }
 
     const { tenantId, userId } = this.getContext();
-    const state = (await this.store.getState(tenantId, userId, onboardingId)) ?? {
-      steps: {},
-      isCompleted: false,
-    };
+    const requiredStepIds = definition.steps
+      .filter((definitionStep) => definitionStep.required !== false)
+      .map((definitionStep) => definitionStep.id);
 
-    if (state.steps[stepId]?.completed) {
-      return; // Already completed
-    }
-
-    const nextState: OnboardingState = {
-      ...state,
-      steps: {
-        ...state.steps,
-        [stepId]: {
-          ...state.steps[stepId],
-          completed: true,
-          completedAt: new Date(),
-        },
-      },
-    };
-
-    const allRequiredCompleted = definition.steps
-      .filter((s) => s.required !== false)
-      .every((s) => nextState.steps[s.id]?.completed);
-
-    const becameCompleted = allRequiredCompleted && !state.isCompleted;
-    if (becameCompleted) {
-      nextState.isCompleted = true;
-      nextState.completedAt = new Date();
-    }
-
-    await this.store.saveState(tenantId, userId, onboardingId, nextState);
-
-    if (becameCompleted) {
-      this.captureAnalytics("onboarding_completed", {
-        onboardingId,
-        completedAt: nextState.completedAt,
+    for (let attempt = 0; attempt < STEP_COMPLETION_MAX_ATTEMPTS; attempt += 1) {
+      const result = await this.store.completeStep(tenantId, userId, onboardingId, {
+        stepId,
+        completedAt: new Date(),
+        requiredStepIds,
       });
+
+      if (result.status === "conflict") {
+        continue;
+      }
+      if (result.status === "already_completed") {
+        return;
+      }
+
+      if (result.onboardingCompleted) {
+        this.captureAnalytics("onboarding_completed", {
+          onboardingId,
+          completedAt: result.state.completedAt,
+        });
+      }
+
+      this.captureAnalytics("onboarding_step_completed", {
+        onboardingId,
+        stepId,
+        stepTitle: step.title,
+      });
+      return;
     }
 
-    this.captureAnalytics("onboarding_step_completed", {
-      onboardingId,
-      stepId,
-      stepTitle: step.title,
-    });
+    throw new OnboardingStepCompletionConflictProblem(onboardingId, stepId);
   }
 
   private getContext(): { tenantId: string; userId: string } {
