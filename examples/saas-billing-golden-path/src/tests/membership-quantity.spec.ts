@@ -12,7 +12,6 @@ import type {
   SetLicensedQuantityInput,
   SetLicensedQuantityResult,
 } from "@croco/billing-core";
-import type { EventPublisher } from "@croco/events-core";
 import { InMemoryMembershipStore, MembershipManager } from "@croco/membership-core";
 import type {
   MembershipCreatedEvent,
@@ -192,20 +191,21 @@ describe("membership-to-billing licensed quantity golden path", () => {
       planVersionRef: PLAN_VERSION_REF,
     }));
     afterCommitHooks = [];
-    manager = new MembershipManager(membershipStore, {
-      publishAfterCommit: (
-        event: MembershipCreatedEvent | MembershipRemovedEvent | MembershipUpdatedEvent,
-      ) => {
-        afterCommitHooks.push(() => handler.handle(event));
+    manager = new MembershipManager({
+      store: membershipStore,
+      eventDelivery: "development",
+      eventPublisher: {
+        publishIdempotently: async (
+          event: MembershipCreatedEvent | MembershipRemovedEvent | MembershipUpdatedEvent,
+        ) => {
+          afterCommitHooks.push(() => handler.handle(event));
+        },
       },
-      publishNow: async () => {
-        throw new SubscriptionQuantityReconciliationFailedProblem("unexpected-immediate-event");
-      },
-    } as unknown as EventPublisher);
+    });
   });
 
   it("persists membership before creating an inspectable quantity intent after commit", async () => {
-    await manager.addMember("tenant-1", "member-1", "member");
+    await manager.addMember("tenant-1", "member-1", "member", "add:member-1");
 
     await expect(
       membershipStore.findByTenantAndUser("tenant-1", "member-1"),
@@ -214,6 +214,7 @@ describe("membership-to-billing licensed quantity golden path", () => {
       quantityStore.findCurrent("tenant-1", "external-subscription-1"),
     ).resolves.toBeNull();
 
+    await manager.publishPendingEvents();
     await afterCommitHooks[0]?.();
 
     await expect(
@@ -233,7 +234,8 @@ describe("membership-to-billing licensed quantity golden path", () => {
 
   it("keeps a committed membership when the provider is unavailable and repairs it later", async () => {
     gateway.unavailable = true;
-    await manager.addMember("tenant-1", "member-1", "member");
+    await manager.addMember("tenant-1", "member-1", "member", "add:member-1");
+    await manager.publishPendingEvents();
     await afterCommitHooks[0]?.();
     await reconciler.repair(1);
 
@@ -273,10 +275,12 @@ describe("membership-to-billing licensed quantity golden path", () => {
   });
 
   it("reduces quantity on removal and a bounded repair scan recovers missed event delivery", async () => {
-    await manager.addMember("tenant-1", "member-1", "member");
+    await manager.addMember("tenant-1", "member-1", "member", "add:member-1");
+    await manager.publishPendingEvents();
     await afterCommitHooks.shift()?.();
     await reconciler.repair(1);
-    await manager.removeMember("tenant-1", "member-1");
+    await manager.removeMember("tenant-1", "member-1", "remove:member-1");
+    await manager.publishPendingEvents();
     await afterCommitHooks.shift()?.();
     await reconciler.repair(1);
     expect(gateway.quantity).toBe(1);
@@ -293,15 +297,17 @@ describe("membership-to-billing licensed quantity golden path", () => {
   });
 
   it("reconciles add and role-change bursts from the final committed membership state", async () => {
-    await manager.addMember("tenant-1", "member-1", "member");
-    await manager.addMember("tenant-1", "member-2", "member");
+    await manager.addMember("tenant-1", "member-1", "member", "add:member-1");
+    await manager.addMember("tenant-1", "member-2", "member", "add:member-2");
+    await manager.publishPendingEvents();
     await Promise.all(afterCommitHooks.splice(0).map((hook) => hook()));
     expect(gateway.updates).toHaveLength(0);
     await reconciler.repair(1);
     expect(gateway.quantity).toBe(3);
 
-    await manager.updateRole("tenant-1", "member-1", "admin");
-    await manager.updateRole("tenant-1", "member-2", "admin");
+    await manager.updateRole("tenant-1", "member-1", "admin", "promote:member-1");
+    await manager.updateRole("tenant-1", "member-2", "admin", "promote:member-2");
+    await manager.publishPendingEvents();
     await Promise.all(afterCommitHooks.splice(0).map((hook) => hook()));
     await reconciler.repair(1);
 

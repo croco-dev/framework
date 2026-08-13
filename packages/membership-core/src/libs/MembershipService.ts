@@ -1,164 +1,158 @@
-// Constructor dependencies must remain runtime values for emitted design:paramtypes metadata.
-/* oxlint-disable typescript/consistent-type-imports */
 import { randomUUID } from "node:crypto";
-import {
-  EventAfterCommitRequiresActiveTransactionProblem,
-  EventPublisher,
-} from "@croco/events-core";
-import { Component } from "@croco/framework-context";
+import type { DomainEvent } from "@croco/events-core";
+import type { MembershipEventIntent, MembershipEventIntentEvent } from "./eventIntent";
 import { MembershipCreatedEvent } from "./events/MembershipCreatedEvent";
 import { MembershipRemovedEvent } from "./events/MembershipRemovedEvent";
 import { MembershipUpdatedEvent } from "./events/MembershipUpdatedEvent";
-import type { MembershipManager } from "./interfaces/AbstractMembershipManager";
-import { MembershipStore } from "./MembershipStore";
+import type {
+  AddMembershipCommandResult,
+  MembershipManager,
+} from "./interfaces/AbstractMembershipManager";
+import type { MembershipStore } from "./MembershipStore";
 import {
   AlreadyMemberProblem,
+  InvalidMembershipCommandProblem,
   InvalidRoleProblem,
-  LastOwnerProblem,
+  MembershipEventPublicationProblem,
   MembershipNotFoundProblem,
-  OwnershipTransferRequiredProblem,
   RoleHierarchyViolationProblem,
   SeatLimitExceededProblem,
 } from "./problems/MembershipProblems";
-import { LastOwnerCannotBeRemovedProblem } from "./problems/LastOwnerCannotBeRemovedProblem";
-import { SeatLimitChecker } from "./SeatLimitChecker";
+import type { SeatLimitChecker } from "./SeatLimitChecker";
 import {
   canDemote,
   canPromote,
   isHigherRole,
   isMembershipRole,
   type Membership,
+  type MembershipCommand,
+  type MembershipCommandResult,
   type MembershipRole,
 } from "./types";
 
-@Component()
+export interface MembershipEventPublisher {
+  /** Implementations must deduplicate retries and concurrent deliveries by `event.eventId`. */
+  publishIdempotently(event: DomainEvent): Promise<void>;
+}
+
+export type MembershipServiceOptions = {
+  readonly store: MembershipStore;
+  readonly eventPublisher?: MembershipEventPublisher;
+  readonly seatLimitChecker?: SeatLimitChecker;
+  readonly eventDelivery?: "development" | "durable";
+  readonly idGenerator?: () => string;
+};
+
 export class MembershipService implements MembershipManager {
-  constructor(
-    private readonly store: MembershipStore,
-    private readonly eventPublisher: EventPublisher,
-    private readonly seatLimitChecker: SeatLimitChecker | undefined = undefined,
-  ) {}
+  private readonly store: MembershipStore;
+  private readonly eventPublisher?: MembershipEventPublisher;
+  private readonly seatLimitChecker?: SeatLimitChecker;
+  private readonly idGenerator: () => string;
 
-  async addMember(tenantId: string, userId: string, role: MembershipRole): Promise<Membership> {
-    this.ensureValidRole(role);
-
-    const existing = await this.store.findByTenantAndUser(tenantId, userId);
-    if (existing) {
-      throw new AlreadyMemberProblem(tenantId, userId);
+  constructor(options: MembershipServiceOptions) {
+    this.store = options.store;
+    this.eventPublisher = options.eventPublisher;
+    this.seatLimitChecker = options.seatLimitChecker;
+    this.idGenerator = options.idGenerator ?? randomUUID;
+    if (
+      (options.eventDelivery ?? "durable") === "durable" &&
+      this.store.eventIntentDurability !== "persistent"
+    ) {
+      throw new InvalidMembershipCommandProblem(
+        "durable event delivery requires persistent event intents",
+      );
     }
+  }
 
-    await this.checkSeatLimit(tenantId);
+  async addMember(
+    tenantId: string,
+    userId: string,
+    role: MembershipRole,
+    idempotencyKey: string,
+  ): Promise<Membership> {
+    return (await this.addMemberCommand(tenantId, userId, role, idempotencyKey)).membership;
+  }
 
-    const membership = await this.store.save({
-      id: randomUUID(),
+  async addMemberCommand(
+    tenantId: string,
+    userId: string,
+    role: MembershipRole,
+    idempotencyKey: string,
+  ): Promise<AddMembershipCommandResult> {
+    this.ensureValidRole(role);
+    if (!(await this.store.hasExecutedCommand(idempotencyKey))) {
+      const existing = await this.store.findByTenantAndUser(tenantId, userId);
+      if (existing) throw new AlreadyMemberProblem(tenantId, userId);
+      await this.checkSeatLimit(tenantId);
+    }
+    const result = await this.execute({
+      operation: "add",
+      idempotencyKey,
+      membershipId: this.idGenerator(),
       tenantId,
       userId,
       role,
     });
-
-    await this.publishAfterCommitOrNow(new MembershipCreatedEvent({ tenantId, userId, role }));
-    return membership;
+    if (result.operation !== "add") {
+      throw new InvalidMembershipCommandProblem(`store returned '${result.operation}' for 'add'`);
+    }
+    return result;
   }
 
-  async removeMember(tenantId: string, userId: string): Promise<void> {
-    const result = await this.store.mutateOwner({
+  async removeMember(tenantId: string, userId: string, idempotencyKey: string): Promise<void> {
+    await this.execute({ operation: "remove", idempotencyKey, tenantId, userId });
+  }
+
+  async updateRole(
+    tenantId: string,
+    userId: string,
+    newRole: MembershipRole,
+    idempotencyKey: string,
+  ): Promise<Membership> {
+    this.ensureValidRole(newRole);
+    if (!(await this.store.hasExecutedCommand(idempotencyKey))) {
+      const membership = await this.getMembershipOrThrow(tenantId, userId);
+      if (isHigherRole(newRole, membership.role) && !canPromote(membership.role, newRole)) {
+        throw new RoleHierarchyViolationProblem(membership.role, newRole, "promote");
+      }
+      if (isHigherRole(membership.role, newRole) && !canDemote(membership.role, newRole)) {
+        throw new RoleHierarchyViolationProblem(membership.role, newRole, "demote");
+      }
+    }
+    const result = await this.execute({
+      operation: "update_role",
+      idempotencyKey,
       tenantId,
       userId,
-      operation: "remove",
+      role: newRole,
     });
-    if (result.status === "not_found") {
-      throw new MembershipNotFoundProblem(tenantId, userId);
-    }
-    if (result.status === "last_owner" || result.status === "conflict") {
-      throw new LastOwnerCannotBeRemovedProblem(tenantId, userId);
-    }
-
-    await this.publishAfterCommitOrNow(
-      new MembershipRemovedEvent({ tenantId, userId, role: result.membership.role }),
-    );
+    return this.requireMembershipResult(result, "update_role");
   }
 
-  async updateRole(tenantId: string, userId: string, newRole: MembershipRole): Promise<Membership> {
-    this.ensureValidRole(newRole);
-
-    const membership = await this.getMembershipOrThrow(tenantId, userId);
-    if (membership.role === newRole) {
-      return membership;
-    }
-
-    if (isHigherRole(newRole, membership.role) && !canPromote(membership.role, newRole)) {
-      throw new RoleHierarchyViolationProblem(membership.role, newRole, "promote");
-    }
-
-    if (isHigherRole(membership.role, newRole) && !canDemote(membership.role, newRole)) {
-      throw new RoleHierarchyViolationProblem(membership.role, newRole, "demote");
-    }
-
-    let updated: Membership;
-    if (newRole !== "owner") {
-      const result = await this.store.mutateOwner({
-        tenantId,
-        userId,
-        operation: "demote",
-        role: newRole,
-      });
-      if (result.status === "not_found") {
-        throw new MembershipNotFoundProblem(tenantId, userId);
-      }
-      if (result.status === "last_owner" || result.status === "conflict") {
-        throw new LastOwnerProblem(tenantId, userId, "demote");
-      }
-      updated = result.membership;
-    } else {
-      updated = await this.store.save({
-        id: membership.id,
-        tenantId,
-        userId,
-        role: newRole,
-      });
-    }
-
-    await this.publishAfterCommitOrNow(
-      new MembershipUpdatedEvent({
-        tenantId,
-        userId,
-        oldRole: membership.role,
-        newRole,
-      }),
-    );
-
-    return updated;
+  async transferOwnership(
+    tenantId: string,
+    fromUserId: string,
+    toUserId: string,
+    idempotencyKey: string,
+  ): Promise<void> {
+    await this.execute({
+      operation: "transfer_ownership",
+      idempotencyKey,
+      tenantId,
+      fromUserId,
+      toUserId,
+    });
   }
 
-  async transferOwnership(tenantId: string, fromUserId: string, toUserId: string): Promise<void> {
-    const result = await this.store.transferOwnership({ tenantId, fromUserId, toUserId });
-    if (result.status === "not_found") {
-      throw new MembershipNotFoundProblem(tenantId, result.userId);
+  async publishPendingEvents(limit = 100): Promise<number> {
+    if (!this.eventPublisher) {
+      throw new InvalidMembershipCommandProblem(
+        "publishing pending events requires an idempotent event publisher",
+      );
     }
-    if (result.status === "source_not_owner" || result.status === "conflict") {
-      throw new OwnershipTransferRequiredProblem(tenantId, fromUserId);
-    }
-    if (fromUserId === toUserId) {
-      return;
-    }
-
-    await this.publishAfterCommitOrNow(
-      new MembershipUpdatedEvent({
-        tenantId,
-        userId: fromUserId,
-        oldRole: "owner",
-        newRole: result.fromMembership.role,
-      }),
-    );
-
-    await this.publishAfterCommitOrNow(
-      new MembershipUpdatedEvent({
-        tenantId,
-        userId: toUserId,
-        oldRole: result.previousToRole,
-        newRole: result.toMembership.role,
-      }),
-    );
+    const intents = await this.store.listPendingEventIntents(limit);
+    for (const intent of intents) await this.publishIntent(intent);
+    return intents.length;
   }
 
   async getMember(tenantId: string, userId: string): Promise<Membership> {
@@ -173,47 +167,66 @@ export class MembershipService implements MembershipManager {
     return this.store.findAllByUser(userId);
   }
 
+  private async execute(command: MembershipCommand): Promise<MembershipCommandResult> {
+    const result = await this.store.execute(command);
+    if (result.operation !== command.operation) {
+      throw new InvalidMembershipCommandProblem(
+        `store returned '${result.operation}' for '${command.operation}'`,
+      );
+    }
+    return result;
+  }
+
+  private async publishIntent(intent: MembershipEventIntent): Promise<void> {
+    if (!this.eventPublisher) return;
+    try {
+      for (const event of intent.events) {
+        await this.eventPublisher.publishIdempotently(this.restoreEvent(event));
+      }
+      await this.store.markEventIntentPublished(intent.intentId);
+    } catch (error) {
+      const cause = error instanceof Error ? error : new Error(String(error));
+      throw new MembershipEventPublicationProblem(intent.idempotencyKey, cause);
+    }
+  }
+
+  private restoreEvent(event: MembershipEventIntentEvent): DomainEvent {
+    if (event.eventName === "membership.created") {
+      return new MembershipCreatedEvent(event.data, event.eventId, event.occurredAt);
+    }
+    if (event.eventName === "membership.removed") {
+      return new MembershipRemovedEvent(event.data, event.eventId, event.occurredAt);
+    }
+    return new MembershipUpdatedEvent(event.data, event.eventId, event.occurredAt);
+  }
+
+  private requireMembershipResult(
+    result: MembershipCommandResult,
+    operation: "add" | "update_role",
+  ): Membership {
+    if (result.operation !== operation) {
+      throw new InvalidMembershipCommandProblem(
+        `store returned '${result.operation}' for '${operation}'`,
+      );
+    }
+    return result.membership;
+  }
+
   private async getMembershipOrThrow(tenantId: string, userId: string): Promise<Membership> {
     const membership = await this.store.findByTenantAndUser(tenantId, userId);
-    if (!membership) {
-      throw new MembershipNotFoundProblem(tenantId, userId);
-    }
-
+    if (!membership) throw new MembershipNotFoundProblem(tenantId, userId);
     return membership;
   }
 
   private ensureValidRole(role: string): void {
-    if (!isMembershipRole(role)) {
-      throw new InvalidRoleProblem(role);
-    }
+    if (!isMembershipRole(role)) throw new InvalidRoleProblem(role);
   }
 
   private async checkSeatLimit(tenantId: string): Promise<void> {
     if (!this.seatLimitChecker) return;
-
     const status = await this.seatLimitChecker.checkSeatAvailability(tenantId);
     if (status.exceeded) {
       throw new SeatLimitExceededProblem(tenantId, status.usage, status.quota);
-    }
-  }
-
-  private async publishSafely(
-    event: MembershipCreatedEvent | MembershipUpdatedEvent | MembershipRemovedEvent,
-  ): Promise<void> {
-    await this.eventPublisher.publishNow(event);
-  }
-
-  private async publishAfterCommitOrNow(
-    event: MembershipCreatedEvent | MembershipUpdatedEvent | MembershipRemovedEvent,
-  ): Promise<void> {
-    try {
-      this.eventPublisher.publishAfterCommit(event);
-    } catch (error) {
-      if (!(error instanceof EventAfterCommitRequiresActiveTransactionProblem)) {
-        throw error;
-      }
-
-      await this.publishSafely(event);
     }
   }
 }

@@ -78,7 +78,13 @@ export class DomainPolicyManager {
     }
 
     try {
-      const membership = await this.membershipManager.addMember(tenantId, userId, policy.role);
+      const result = await this.membershipManager.addMemberCommand(
+        tenantId,
+        userId,
+        policy.role,
+        `domain-auto-join:${tenantId}:${userId}:${domain}`,
+      );
+      if (result.replayed) return null;
       await this.publishSafely(
         new DomainAutoJoinedEvent({
           tenantId,
@@ -88,7 +94,7 @@ export class DomainPolicyManager {
           role: policy.role,
         }),
       );
-      return membership;
+      return result.membership;
     } catch (error) {
       if (error instanceof AlreadyMemberProblem) {
         return null;

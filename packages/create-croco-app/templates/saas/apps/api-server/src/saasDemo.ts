@@ -573,11 +573,29 @@ export function createSaasRuntime(options: SaasRuntimeOptions): SaasRuntime {
   const llmMeteringService = new LlmMeteringService(llmMeteringOptions);
   const membershipStore = new InMemoryMembershipStore();
   const seatLimitChecker = new EntitlementSeatLimitChecker(membershipStore, entitlementManager);
-  const membershipManager = new MembershipManager(
-    membershipStore,
-    eventPublisher,
+  const membershipEventPublications = new Map<string, Promise<void>>();
+  const membershipManager = new MembershipManager({
+    store: membershipStore,
+    eventPublisher: {
+      publishIdempotently: async (event) => {
+        const existing = membershipEventPublications.get(event.eventId);
+        if (existing) return existing;
+
+        const publication = eventPublisher.publishNow(event);
+        membershipEventPublications.set(event.eventId, publication);
+        try {
+          await publication;
+        } catch (error) {
+          if (membershipEventPublications.get(event.eventId) === publication) {
+            membershipEventPublications.delete(event.eventId);
+          }
+          throw error;
+        }
+      },
+    },
     seatLimitChecker,
-  );
+    eventDelivery: "development",
+  });
   const invitationManager = new InvitationManager(
     new InMemoryInvitationStore(),
     membershipManager,
@@ -751,6 +769,7 @@ export async function runSaasDemoFlow(
       tenant.id,
       ownerUserId,
       "owner",
+      `demo-owner:${tenant.id}:${ownerUserId}`,
     );
     const invitationToken = await runtime.invitationManager.createLinkInvitation({
       idempotencyKey: `invite_${tenant.id}_${invitedUserId}`,
@@ -765,13 +784,19 @@ export async function runSaasDemoFlow(
     const invitation = invitationOutcome.value;
     let seatLimitFailureCode = "none";
     try {
-      await runtime.membershipManager.addMember(tenant.id, rejectedUserId, "member");
+      await runtime.membershipManager.addMember(
+        tenant.id,
+        rejectedUserId,
+        "member",
+        `demo-seat-limit:${tenant.id}:${rejectedUserId}`,
+      );
     } catch (error) {
       if (!(error instanceof SeatLimitExceededProblem)) {
         throw error;
       }
       seatLimitFailureCode = error.code;
     }
+    await runtime.membershipManager.publishPendingEvents();
     const seatLimit = await runtime.seatLimitChecker.checkSeatAvailability(tenant.id);
     const memberMembership = await runtime.membershipManager.getMember(tenant.id, invitedUserId);
     const members = await runtime.membershipManager.listMembers(tenant.id);

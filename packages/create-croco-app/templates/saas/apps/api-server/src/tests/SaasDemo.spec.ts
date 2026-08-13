@@ -2,6 +2,7 @@ import { Container } from "typedi";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { CheckoutResult } from "@croco/billing-core";
+import { EventPublisher } from "@croco/events-core";
 import { Container as CrocoContainer, LOGGER_TOKEN } from "@croco/framework-context";
 import type { ILogger } from "@croco/framework-context";
 import { InMemoryIdempotencyStore } from "@croco/idempotency-core";
@@ -30,6 +31,37 @@ import {
 describe("SaaS golden path demo", () => {
   beforeEach(() => {
     Container.reset();
+  });
+
+  it("deduplicates concurrent membership event relay calls", async () => {
+    let releasePublication!: () => void;
+    const publicationBlocked = new Promise<void>((resolve) => {
+      releasePublication = resolve;
+    });
+    const publishNow = vi
+      .spyOn(EventPublisher.prototype, "publishNow")
+      .mockImplementation(() => publicationBlocked);
+    try {
+      const runtime = createSaasDemoRuntime();
+      await runtime.membershipStore.execute({
+        operation: "add",
+        idempotencyKey: "member:add:concurrent-relay",
+        membershipId: "membership-concurrent-relay",
+        tenantId: "tenant-concurrent-relay",
+        userId: "user-concurrent-relay",
+        role: "member",
+      });
+
+      const firstRelay = runtime.membershipManager.publishPendingEvents();
+      const secondRelay = runtime.membershipManager.publishPendingEvents();
+      await vi.waitFor(() => expect(publishNow).toHaveBeenCalledTimes(1));
+      releasePublication();
+
+      await expect(Promise.all([firstRelay, secondRelay])).resolves.toEqual([1, 1]);
+    } finally {
+      releasePublication();
+      publishNow.mockRestore();
+    }
   });
 
   it("replays pending metering delivery state without changing its operation identity", async () => {

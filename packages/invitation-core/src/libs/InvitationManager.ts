@@ -279,7 +279,12 @@ export class InvitationManager {
         throw new InvitationAlreadyAcceptedProblem(invitation.id);
       }
 
-      await this.membershipManager.addMember(invitation.tenantId, input.userId, invitation.role);
+      await this.membershipManager.addMember(
+        invitation.tenantId,
+        input.userId,
+        invitation.role,
+        `invitation-accept:${invitation.id}:${input.userId}`,
+      );
 
       this.txManager.onAfterCommit(() =>
         this.publishSafely(

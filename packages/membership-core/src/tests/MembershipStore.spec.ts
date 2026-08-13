@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { InMemoryMembershipStore } from "../libs/InMemoryMembershipStore";
+import { createMembershipStoreConformanceSuite } from "../libs/conformance";
 import type { MembershipCreateInput } from "../libs/types";
 
 describe("InMemoryMembershipStore", () => {
@@ -57,6 +58,27 @@ describe("InMemoryMembershipStore", () => {
 
     const membership = await store.findByTenantAndUser("tenant-1", "user-1");
     expect(membership).toBeNull();
+  });
+
+  it("should timestamp a removal intent when the removal command executes", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+      await store.save(createInput({ role: "member" }));
+      vi.setSystemTime(new Date("2026-02-01T00:00:00.000Z"));
+
+      await store.execute({
+        operation: "remove",
+        idempotencyKey: "remove-member-1",
+        tenantId: "tenant-1",
+        userId: "user-1",
+      });
+
+      const intent = await store.getPendingEventIntent("remove-member-1");
+      expect(intent?.events[0]?.occurredAt).toEqual(new Date("2026-02-01T00:00:00.000Z"));
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("should count memberships by role in tenant", async () => {
@@ -194,4 +216,13 @@ describe("InMemoryMembershipStore", () => {
     });
     expect(await store.countByRole("tenant-1", "owner")).toBe(1);
   });
+});
+
+describe("in-memory membership command conformance", () => {
+  for (const testCase of createMembershipStoreConformanceSuite({
+    createStore: () => new InMemoryMembershipStore(),
+  }).cases) {
+    // oxlint-disable-next-line jest/valid-title -- provider contract supplies stable case names
+    it(testCase.name, testCase.run);
+  }
 });

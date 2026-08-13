@@ -19,16 +19,16 @@ describe("DomainPolicyManager", () => {
   let manager!: DomainPolicyManager;
   let store!: InMemoryDomainPolicyStore;
   let publishNow!: ReturnType<typeof vi.fn>;
-  let addMember!: ReturnType<typeof vi.fn>;
+  let addMemberCommand!: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     store = new InMemoryDomainPolicyStore();
     publishNow = vi.fn();
-    addMember = vi.fn();
+    addMemberCommand = vi.fn();
 
     manager = new DomainPolicyManager(
       store,
-      { addMember } as unknown as MembershipManager,
+      { addMemberCommand } as unknown as MembershipManager,
       {
         publishNow,
         publishMany: vi.fn(),
@@ -105,11 +105,16 @@ describe("DomainPolicyManager", () => {
       createdAt: new Date("2026-01-01T00:00:00.000Z"),
       updatedAt: new Date("2026-01-01T00:00:00.000Z"),
     };
-    addMember.mockResolvedValue(membership);
+    addMemberCommand.mockResolvedValue({ operation: "add", membership, replayed: false });
 
     const result = await manager.tryAutoJoin("tenant-1", "user-1", "  User@Croco.Dev  ");
 
-    expect(addMember).toHaveBeenCalledWith("tenant-1", "user-1", "member");
+    expect(addMemberCommand).toHaveBeenCalledWith(
+      "tenant-1",
+      "user-1",
+      "member",
+      "domain-auto-join:tenant-1:user-1:croco.dev",
+    );
     expect(result).toEqual(membership);
     expect(publishNow).toHaveBeenCalledWith(expect.any(DomainAutoJoinedEvent));
   });
@@ -125,12 +130,17 @@ describe("DomainPolicyManager", () => {
       createdAt: new Date("2026-01-01T00:00:00.000Z"),
       updatedAt: new Date("2026-01-01T00:00:00.000Z"),
     };
-    addMember.mockResolvedValue(membership);
+    addMemberCommand.mockResolvedValue({ operation: "add", membership, replayed: false });
 
     const result = await manager.tryAutoJoin("tenant-1", "user-1", "User@例え.テスト");
 
     expect(result).toEqual(membership);
-    expect(addMember).toHaveBeenCalledWith("tenant-1", "user-1", "member");
+    expect(addMemberCommand).toHaveBeenCalledWith(
+      "tenant-1",
+      "user-1",
+      "member",
+      "domain-auto-join:tenant-1:user-1:例え.テスト",
+    );
   });
 
   it.each([
@@ -148,7 +158,7 @@ describe("DomainPolicyManager", () => {
     const result = await manager.tryAutoJoin("tenant-1", "user-1", email);
 
     expect(result).toBeNull();
-    expect(addMember).not.toHaveBeenCalled();
+    expect(addMemberCommand).not.toHaveBeenCalled();
     expect(publishNow).not.toHaveBeenCalled();
   });
 
@@ -164,7 +174,7 @@ describe("DomainPolicyManager", () => {
       updatedAt: new Date("2026-01-01T00:00:00.000Z"),
     };
 
-    addMember.mockResolvedValue(membership);
+    addMemberCommand.mockResolvedValue({ operation: "add", membership, replayed: false });
     publishNow.mockClear();
     publishNow.mockRejectedValueOnce(new Error("auto join publish failed"));
 
@@ -177,15 +187,32 @@ describe("DomainPolicyManager", () => {
     const result = await manager.tryAutoJoin("tenant-1", "user-1", "user@unknown.dev");
 
     expect(result).toBeNull();
-    expect(addMember).not.toHaveBeenCalled();
+    expect(addMemberCommand).not.toHaveBeenCalled();
   });
 
   it("should return null when user is already a member", async () => {
     await manager.addDomainPolicy("tenant-1", "croco.dev", "viewer");
-    addMember.mockRejectedValue(new AlreadyMemberProblem("tenant-1", "user-1"));
+    addMemberCommand.mockRejectedValue(new AlreadyMemberProblem("tenant-1", "user-1"));
 
     const result = await manager.tryAutoJoin("tenant-1", "user-1", "user@croco.dev");
 
     expect(result).toBeNull();
+  });
+
+  it("should suppress the domain event when the membership command is replayed", async () => {
+    await manager.addDomainPolicy("tenant-1", "croco.dev", "member");
+    const membership: Membership = {
+      id: "mem-1",
+      tenantId: "tenant-1",
+      userId: "user-1",
+      role: "member",
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+    };
+    addMemberCommand.mockResolvedValue({ operation: "add", membership, replayed: true });
+    publishNow.mockClear();
+
+    await expect(manager.tryAutoJoin("tenant-1", "user-1", "user@croco.dev")).resolves.toBeNull();
+    expect(publishNow).not.toHaveBeenCalled();
   });
 });

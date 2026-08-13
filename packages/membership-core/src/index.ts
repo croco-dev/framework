@@ -18,19 +18,19 @@
  * import { MembershipManager, InMemoryMembershipStore } from '@croco/membership-core';
  *
  * const store = new InMemoryMembershipStore();
- * const manager = new MembershipManager(store, eventPublisher);
+ * const manager = new MembershipManager({ store, eventPublisher, eventDelivery: 'development' });
  *
  * // 멤버 추가
- * const membership = await manager.addMember('tenant-123', 'user-456', 'admin');
+ * const membership = await manager.addMember('tenant-123', 'user-456', 'admin', 'member:add:user-456');
  *
  * // 역할 변경
- * await manager.updateRole('tenant-123', 'user-456', 'owner');
+ * await manager.updateRole('tenant-123', 'user-456', 'owner', 'member:promote:user-456');
  *
  * // 소유권 이전
- * await manager.transferOwnership('tenant-123', 'current-owner', 'new-owner');
+ * await manager.transferOwnership('tenant-123', 'current-owner', 'new-owner', 'owner:transfer:new-owner');
  *
  * // 멤버 제거
- * await manager.removeMember('tenant-123', 'user-456');
+ * await manager.removeMember('tenant-123', 'user-456', 'member:remove:user-456');
  * ```
  *
  * @description 이 패키지는 다음을 제공합니다:
@@ -90,6 +90,12 @@ export { MembershipRemovedEvent } from "./libs/events/MembershipRemovedEvent";
  * ```
  */
 export { MembershipUpdatedEvent } from "./libs/events/MembershipUpdatedEvent";
+export {
+  createMembershipStoreConformanceSuite,
+  type MembershipStoreConformanceCase,
+} from "./libs/conformance";
+export type { MembershipEventIntent, MembershipEventIntentEvent } from "./libs/eventIntent";
+export { createMembershipEventIntent } from "./libs/eventIntent";
 
 /**
  * 인메모리 멤버십 저장소 구현체
@@ -117,6 +123,7 @@ export { InMemoryMembershipStore } from "./libs/InMemoryMembershipStore";
  * @description 멤버십 관리 기능의 추상 인터페이스입니다.
  */
 export { MembershipManager as AbstractMembershipManager } from "./libs/interfaces/AbstractMembershipManager";
+export type { AddMembershipCommandResult } from "./libs/interfaces/AbstractMembershipManager";
 
 /**
  * 멤버십 관리자
@@ -129,19 +136,27 @@ export { MembershipManager as AbstractMembershipManager } from "./libs/interface
  *
  * @example 매니저 사용
  * ```typescript
- * const manager = new MembershipManager(store, eventPublisher, seatLimitChecker);
+ * const manager = new MembershipManager({
+ *   store,
+ *   eventPublisher: idempotentEventPublisher,
+ *   seatLimitChecker,
+ *   eventDelivery: 'development',
+ * });
  *
  * // 멤버 추가
- * await manager.addMember('tenant-123', 'user-456', 'admin');
+ * await manager.addMember('tenant-123', 'user-456', 'admin', 'member:add:user-456');
  *
  * // 역할 변경
- * await manager.updateRole('tenant-123', 'user-456', 'owner');
+ * await manager.updateRole('tenant-123', 'user-456', 'owner', 'member:promote:user-456');
  *
  * // 소유권 이전
- * await manager.transferOwnership('tenant-123', 'current-owner', 'new-owner');
+ * await manager.transferOwnership('tenant-123', 'current-owner', 'new-owner', 'owner:transfer:new-owner');
  *
  * // 멤버 제거
- * await manager.removeMember('tenant-123', 'user-456');
+ * await manager.removeMember('tenant-123', 'user-456', 'member:remove:user-456');
+ *
+ * // 커밋된 intent를 별도 relay 경계에서 발행
+ * await manager.publishPendingEvents();
  * ```
  */
 export { MembershipManager } from "./libs/MembershipManager";
@@ -175,22 +190,27 @@ export { MembershipOwnerGuard } from "./libs/MembershipOwnerGuard";
  *
  * @example 서비스 사용
  * ```typescript
- * const service = new MembershipService(store, eventPublisher, seatLimitChecker);
+ * const service = new MembershipService({
+ *   store,
+ *   eventPublisher: idempotentEventPublisher,
+ *   seatLimitChecker,
+ * });
  *
  * // 멤버 추가
- * await service.addMember('tenant-123', 'user-456', 'admin');
+ * await service.addMember('tenant-123', 'user-456', 'admin', 'member:add:user-456');
  *
  * // 역할 변경
- * await service.updateRole('tenant-123', 'user-456', 'owner');
+ * await service.updateRole('tenant-123', 'user-456', 'owner', 'member:promote:user-456');
  *
  * // 소유권 이전
- * await service.transferOwnership('tenant-123', 'current-owner', 'new-owner');
+ * await service.transferOwnership('tenant-123', 'current-owner', 'new-owner', 'owner:transfer:new-owner');
  *
  * // 멤버 제거
- * await service.removeMember('tenant-123', 'user-456');
+ * await service.removeMember('tenant-123', 'user-456', 'member:remove:user-456');
  * ```
  */
 export { MembershipService } from "./libs/MembershipService";
+export type { MembershipEventPublisher, MembershipServiceOptions } from "./libs/MembershipService";
 
 /**
  * 멤버십 저장소 인터페이스
@@ -277,9 +297,12 @@ export { MembershipConstraintProblem } from "./libs/problems/MembershipConstrain
  */
 export {
   AlreadyMemberProblem,
+  InvalidMembershipCommandProblem,
   InvalidRoleProblem,
   LastOwnerProblem,
   MembershipNotFoundProblem,
+  MembershipEventPublicationProblem,
+  MembershipIdempotencyConflictProblem,
   OwnershipTransferRequiredProblem,
   RoleHierarchyViolationProblem,
   SeatLimitExceededProblem,

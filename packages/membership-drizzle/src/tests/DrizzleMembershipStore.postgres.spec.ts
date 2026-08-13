@@ -1,5 +1,9 @@
 import "reflect-metadata";
-import { LastOwnerCannotBeRemovedProblem, MembershipService } from "@croco/membership-core";
+import {
+  createMembershipStoreConformanceSuite,
+  LastOwnerCannotBeRemovedProblem,
+  MembershipService,
+} from "@croco/membership-core";
 import { TxManager } from "@croco/tx-core";
 import { createDrizzleTxAdapter } from "@croco/tx-drizzle";
 import { drizzle } from "drizzle-orm/node-postgres";
@@ -9,6 +13,7 @@ import {
   type DrizzleMembershipClient,
   DrizzleMembershipStore,
 } from "../libs/DrizzleMembershipStore";
+import { addMembershipEventIntents } from "../migrations/membershipEventIntents";
 
 const connectionString = process.env.MEMBERSHIP_POSTGRES_URL ?? "";
 
@@ -26,11 +31,10 @@ describe.skipIf(connectionString.length === 0)(
       const client = db as unknown as DrizzleMembershipClient;
       txManager = new TxManager(createDrizzleTxAdapter(client));
       store = new DrizzleMembershipStore(client, txManager);
-      service = new MembershipService(store, {
-        publishAfterCommit: () => undefined,
-        publishNow: async () => undefined,
-        publishMany: async () => undefined,
-      } as unknown as ConstructorParameters<typeof MembershipService>[1]);
+      service = new MembershipService({
+        store,
+        eventPublisher: { publishIdempotently: async () => undefined },
+      });
 
       await pool.query(`
       create table if not exists memberships (
@@ -43,10 +47,13 @@ describe.skipIf(connectionString.length === 0)(
         unique (tenant_id, user_id)
       )
     `);
+      await addMembershipEventIntents({ execute: (query) => db.execute(query) });
     });
 
     beforeEach(async () => {
-      await pool.query("truncate table memberships");
+      await pool.query(
+        "truncate table membership_event_intents, membership_idempotency_records, memberships",
+      );
       await store.save({
         id: "membership-a",
         tenantId: "tenant-1",
@@ -104,6 +111,40 @@ describe.skipIf(connectionString.length === 0)(
       },
     );
 
+    it("rolls back membership and idempotency when event intent insertion fails", async () => {
+      await pool.query("drop table membership_event_intents");
+
+      await expect(
+        store.execute({
+          operation: "add",
+          idempotencyKey: "rollback-add",
+          membershipId: "rollback-membership",
+          tenantId: "tenant-rollback",
+          userId: "user-rollback",
+          role: "member",
+        }),
+      ).rejects.toThrow();
+      await expect(
+        store.findByTenantAndUser("tenant-rollback", "user-rollback"),
+      ).resolves.toBeNull();
+      await expect(store.hasExecutedCommand("rollback-add")).resolves.toBe(false);
+
+      const db = drizzle(pool);
+      await addMembershipEventIntents({ execute: (query) => db.execute(query) });
+    });
+
+    it("satisfies the shared membership command conformance contract", async () => {
+      const suite = createMembershipStoreConformanceSuite({
+        createStore: async () => {
+          await pool.query(
+            "truncate table membership_event_intents, membership_idempotency_records, memberships",
+          );
+          return store;
+        },
+      });
+      for (const testCase of suite.cases) await testCase.run();
+    });
+
     it("applies the same invariant to repeatable-read demotions", async () => {
       let arrivals = 0;
       let release!: () => void;
@@ -149,7 +190,7 @@ describe.skipIf(connectionString.length === 0)(
               release();
             }
             await barrier;
-            return service.removeMember("tenant-1", userId);
+            return service.removeMember("tenant-1", userId, `remove:${userId}`);
           },
           { options: { isolationLevel: "repeatable read" } },
         );
