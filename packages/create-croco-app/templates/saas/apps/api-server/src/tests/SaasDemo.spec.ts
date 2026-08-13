@@ -50,6 +50,7 @@ describe("SaaS golden path demo", () => {
         tenantId: "tenant-concurrent-relay",
         userId: "user-concurrent-relay",
         role: "member",
+        maxSeats: null,
       });
 
       const firstRelay = runtime.membershipManager.publishPendingEvents();
