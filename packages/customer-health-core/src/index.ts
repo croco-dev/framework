@@ -4,11 +4,16 @@ export { CustomerHealthService } from "./libs/CustomerHealthService";
 export { HealthScoreDroppedEvent, HealthStatusChangedEvent } from "./libs/events";
 export { HealthScoreCalculator } from "./libs/HealthScoreCalculator";
 export { InMemoryHealthScoreStore } from "./libs/InMemoryHealthScoreStore";
+export type { HealthTransitionEventIntent } from "./libs/eventIntent";
 // Interfaces
 export * from "./libs/interfaces";
 
 // Problems
-export { HealthScoreNotFoundProblem } from "./libs/problems/HealthProblems";
+export {
+  HealthEventIntentConflictProblem,
+  HealthEventPublisherNotConfiguredProblem,
+  HealthScoreNotFoundProblem,
+} from "./libs/problems/HealthProblems";
 
 // Types
 export * from "./libs/types";

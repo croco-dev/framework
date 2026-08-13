@@ -56,6 +56,7 @@ export type HealthScoreProfile = {
 
 export type TenantHealthScore = {
   tenantId: string;
+  transitionVersion?: string;
   overallScore: number;
   status: HealthStatus;
   categoryScores: Record<SignalCategory, number>;

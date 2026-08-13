@@ -4,11 +4,12 @@ import { ProblemFactory } from "@croco/problems-core";
 import { createDrizzleProviderConformanceSuite } from "@croco/testing/drizzle";
 import { DrizzleHealthIndicator } from "@croco/tx-drizzle";
 import { DrizzleHealthScoreStore } from "../libs/DrizzleHealthScoreStore";
-import { tenantHealthScores } from "../libs/schema";
+import { tenantHealthEventIntents, tenantHealthScores } from "../libs/schema";
 
 type DrizzleHealthClient = ConstructorParameters<typeof DrizzleHealthScoreStore>[0];
 
 const createHealthScoreRow = (tenantId: string, overallScore: number) => ({
+  transitionSequence: BigInt(overallScore),
   tenantId,
   overallScore,
   status: "healthy",
@@ -109,12 +110,32 @@ describe("customer-health-drizzle provider conformance", () => {
               expect(Object.keys(columns)).toEqual(
                 expect.arrayContaining([
                   "tenantId",
+                  "transitionSequence",
                   "overallScore",
                   "status",
                   "categoryScores",
                   "signals",
                   "trend",
                   "calculatedAt",
+                ]),
+              );
+            },
+          },
+          {
+            name: "declares durable health transition event intent columns",
+            run: async () => {
+              const columns = getTableColumns(tenantHealthEventIntents);
+
+              expect(Object.keys(columns)).toEqual(
+                expect.arrayContaining([
+                  "eventId",
+                  "tenantId",
+                  "transitionSequence",
+                  "intentOrder",
+                  "occurredAt",
+                  "data",
+                  "publishedAt",
+                  "createdAt",
                 ]),
               );
             },

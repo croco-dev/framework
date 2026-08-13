@@ -7617,6 +7617,12 @@
           "sourceEntrypoint": "packages/customer-health-core/src/index.ts",
           "runtimeExports": [
             {
+              "name": "CustomerHealthEventPublisher",
+              "exportKind": "declaration",
+              "source": "./libs/interfaces",
+              "declarationKind": "class"
+            },
+            {
               "name": "HealthScoreStore",
               "exportKind": "declaration",
               "source": "./libs/interfaces",
@@ -7644,6 +7650,18 @@
               "name": "CustomerHealthService",
               "exportKind": "named",
               "source": "./libs/CustomerHealthService",
+              "declarationKind": "class"
+            },
+            {
+              "name": "HealthEventIntentConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/HealthProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "HealthEventPublisherNotConfiguredProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/HealthProblems",
               "declarationKind": "class"
             },
             {
@@ -7761,6 +7779,11 @@
               "exportKind": "declaration",
               "source": "./libs/types",
               "declarationKind": "type"
+            },
+            {
+              "name": "HealthTransitionEventIntent",
+              "exportKind": "named",
+              "source": "./libs/eventIntent"
             }
           ]
         }
@@ -7790,10 +7813,22 @@
           "sourceEntrypoint": "packages/customer-health-drizzle/src/index.ts",
           "runtimeExports": [
             {
+              "name": "tenantHealthEventIntents",
+              "exportKind": "declaration",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
               "name": "tenantHealthScores",
               "exportKind": "declaration",
               "source": "./libs/schema",
               "declarationKind": "const"
+            },
+            {
+              "name": "addHealthEventIntents",
+              "exportKind": "named",
+              "source": "./migrations/addHealthEventIntents",
+              "declarationKind": "function"
             },
             {
               "name": "BillingSignalProvider",
@@ -7820,13 +7855,30 @@
               "declarationKind": "class"
             },
             {
+              "name": "HealthTransitionSequenceMissingProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/DrizzleHealthProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "MeteringSignalProvider",
               "exportKind": "named",
               "source": "./libs/MeteringSignalProvider",
               "declarationKind": "class"
+            },
+            {
+              "name": "removeHealthEventIntents",
+              "exportKind": "named",
+              "source": "./migrations/addHealthEventIntents",
+              "declarationKind": "function"
             }
           ],
           "typeExports": [
+            {
+              "name": "CustomerHealthMigrationClient",
+              "exportKind": "named",
+              "source": "./migrations/addHealthEventIntents"
+            },
             {
               "name": "DrizzleHealthClient",
               "exportKind": "named",

@@ -19,6 +19,7 @@ export {
  * 기본 신호 제공자 조합을 반환하는 레지스트리입니다.
  */
 export { DrizzleHealthSignalRegistry } from "./libs/DrizzleHealthSignalRegistry";
+export { HealthTransitionSequenceMissingProblem } from "./libs/problems/DrizzleHealthProblems";
 /**
  * 사용량 기반 신호 제공자와 관련 타입입니다.
  */
@@ -31,3 +32,8 @@ export {
  * 건강 점수 영속화에 사용하는 스키마입니다.
  */
 export * from "./libs/schema";
+export {
+  addHealthEventIntents,
+  removeHealthEventIntents,
+  type CustomerHealthMigrationClient,
+} from "./migrations/addHealthEventIntents";
