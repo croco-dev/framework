@@ -1021,13 +1021,13 @@ importers:
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
       '@croco/tx-drizzle':
         specifier: workspace:*
         version: link:../tx-drizzle
     devDependencies:
-      '@croco/problems-core':
-        specifier: workspace:*
-        version: link:../problems-core
       '@croco/testing':
         specifier: workspace:*
         version: link:../testing

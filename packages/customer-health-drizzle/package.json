@@ -34,10 +34,10 @@
   "dependencies": {
     "@croco/customer-health-core": "workspace:*",
     "@croco/framework-context": "workspace:*",
+    "@croco/problems-core": "workspace:*",
     "@croco/tx-drizzle": "workspace:*"
   },
   "devDependencies": {
-    "@croco/problems-core": "workspace:*",
     "@croco/testing": "workspace:*",
     "drizzle-orm": "catalog:",
     "reflect-metadata": "^0.2.2"
