@@ -1,6 +1,7 @@
 import Database from "better-sqlite3";
+import type { SQL } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { integer, SQLiteSyncDialect, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DrizzleAccessProvider } from "../libs/DrizzleAccessProvider";
 
@@ -20,6 +21,24 @@ describe("DrizzleAccessProvider", () => {
   let db!: ReturnType<typeof drizzle>;
   let sqlite!: Database.Database;
   let executeFn!: ReturnType<typeof vi.fn>;
+
+  function createSqliteProvider(): DrizzleAccessProvider {
+    const dialect = new SQLiteSyncDialect();
+
+    return new DrizzleAccessProvider({
+      execute: async (query) => {
+        const rendered = dialect.sqlToQuery(query as SQL);
+        const statement = sqlite.prepare(rendered.sql);
+
+        if (statement.reader) {
+          return { rows: statement.all(...rendered.params) };
+        }
+
+        statement.run(...rendered.params);
+        return { rows: [] };
+      },
+    });
+  }
 
   beforeEach(() => {
     sqlite = new Database(":memory:");
@@ -200,26 +219,195 @@ describe("DrizzleAccessProvider", () => {
   });
 
   describe("check - recursive access (nested)", () => {
-    it("should handle simple recursive case", async () => {
+    it("should allow access through a group membership tuple", async () => {
       await db.insert(testRelationTuples).values([
+        {
+          tenantId: "tenant-1",
+          object: "group:engineering",
+          relation: "member",
+          subject: "user:alice",
+        },
         {
           tenantId: "tenant-1",
           object: "document:doc1",
           relation: "viewer",
-          subject: "user:alice",
+          subject: "group:engineering",
         },
       ]);
 
-      executeFn.mockImplementationOnce(async () => {
-        const result = sqlite
-          .prepare(
-            `SELECT EXISTS(SELECT 1 FROM relation_tuples WHERE tenant_id = 'tenant-1' AND subject = 'user:alice' AND relation = 'viewer' AND object = 'document:doc1') as allowed`,
-          )
-          .get() as { allowed: 0 | 1 };
-        return { rows: [result] };
+      const result = await createSqliteProvider().check({
+        tenantId: "tenant-1",
+        subject: "user:alice",
+        relation: "viewer",
+        object: "document:doc1",
       });
 
-      const result = await provider.check({
+      expect(result.allowed).toBe(true);
+    });
+
+    it("should allow access through nested group and role memberships", async () => {
+      await db.insert(testRelationTuples).values([
+        {
+          tenantId: "tenant-1",
+          object: "group:engineering",
+          relation: "member",
+          subject: "user:alice",
+        },
+        {
+          tenantId: "tenant-1",
+          object: "role:maintainer",
+          relation: "member",
+          subject: "group:engineering",
+        },
+        {
+          tenantId: "tenant-1",
+          object: "document:doc1",
+          relation: "editor",
+          subject: "role:maintainer",
+        },
+      ]);
+
+      const result = await createSqliteProvider().check({
+        tenantId: "tenant-1",
+        subject: "user:alice",
+        relation: "editor",
+        object: "document:doc1",
+      });
+
+      expect(result.allowed).toBe(true);
+    });
+
+    it("should deny a chain with an incompatible intermediate relation", async () => {
+      await db.insert(testRelationTuples).values([
+        {
+          tenantId: "tenant-1",
+          object: "group:engineering",
+          relation: "viewer",
+          subject: "user:alice",
+        },
+        {
+          tenantId: "tenant-1",
+          object: "document:doc1",
+          relation: "viewer",
+          subject: "group:engineering",
+        },
+      ]);
+
+      const result = await createSqliteProvider().check({
+        tenantId: "tenant-1",
+        subject: "user:alice",
+        relation: "viewer",
+        object: "document:doc1",
+      });
+
+      expect(result.allowed).toBe(false);
+    });
+
+    it("should not traverse tuples from another tenant", async () => {
+      await db.insert(testRelationTuples).values([
+        {
+          tenantId: "tenant-1",
+          object: "group:engineering",
+          relation: "member",
+          subject: "user:alice",
+        },
+        {
+          tenantId: "tenant-2",
+          object: "document:doc1",
+          relation: "viewer",
+          subject: "group:engineering",
+        },
+      ]);
+
+      const result = await createSqliteProvider().check({
+        tenantId: "tenant-1",
+        subject: "user:alice",
+        relation: "viewer",
+        object: "document:doc1",
+      });
+
+      expect(result.allowed).toBe(false);
+    });
+
+    it("should terminate cyclic memberships without granting access", async () => {
+      await db.insert(testRelationTuples).values([
+        {
+          tenantId: "tenant-1",
+          object: "group:one",
+          relation: "member",
+          subject: "user:alice",
+        },
+        {
+          tenantId: "tenant-1",
+          object: "group:two",
+          relation: "member",
+          subject: "group:one",
+        },
+        {
+          tenantId: "tenant-1",
+          object: "group:one",
+          relation: "member",
+          subject: "group:two",
+        },
+      ]);
+
+      const result = await createSqliteProvider().check({
+        tenantId: "tenant-1",
+        subject: "user:alice",
+        relation: "viewer",
+        object: "document:doc1",
+      });
+
+      expect(result.allowed).toBe(false);
+    });
+
+    it("should deny a grant beyond the maximum traversal depth", async () => {
+      const memberships = Array.from({ length: 10 }, (_, index) => ({
+        tenantId: "tenant-1",
+        object: `group:${index + 1}`,
+        relation: "member",
+        subject: index === 0 ? "user:alice" : `group:${index}`,
+      }));
+
+      await db.insert(testRelationTuples).values([
+        ...memberships,
+        {
+          tenantId: "tenant-1",
+          object: "document:doc1",
+          relation: "viewer",
+          subject: "group:10",
+        },
+      ]);
+
+      const result = await createSqliteProvider().check({
+        tenantId: "tenant-1",
+        subject: "user:alice",
+        relation: "viewer",
+        object: "document:doc1",
+      });
+
+      expect(result.allowed).toBe(false);
+    });
+
+    it("should allow a grant at the maximum traversal depth", async () => {
+      const memberships = Array.from({ length: 9 }, (_, index) => ({
+        tenantId: "tenant-1",
+        object: `group:${index + 1}`,
+        relation: "member",
+        subject: index === 0 ? "user:alice" : `group:${index}`,
+      }));
+
+      await db.insert(testRelationTuples).values([
+        ...memberships,
+        {
+          tenantId: "tenant-1",
+          object: "document:doc1",
+          relation: "viewer",
+          subject: "group:9",
+        },
+      ]);
+
+      const result = await createSqliteProvider().check({
         tenantId: "tenant-1",
         subject: "user:alice",
         relation: "viewer",

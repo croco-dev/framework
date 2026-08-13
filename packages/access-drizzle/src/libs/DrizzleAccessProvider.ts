@@ -103,8 +103,10 @@ export class DrizzleAccessProvider implements AccessProvider {
           FROM relation_tuples
           WHERE tenant_id = ${request.tenantId}
             AND subject = ${request.subject}
-            AND object = ${request.object}
-            AND relation = ${request.relation}
+            AND (
+              (object = ${request.object} AND relation = ${request.relation})
+              OR (relation = 'member' AND (object LIKE 'group:%' OR object LIKE 'role:%'))
+            )
           
           UNION
           
@@ -113,9 +115,16 @@ export class DrizzleAccessProvider implements AccessProvider {
           JOIN reachable r ON rt.subject = r.object
           WHERE rt.tenant_id = ${request.tenantId}
             AND r.depth < ${MAX_TRAVERSAL_DEPTH}
+            AND (
+              (rt.object = ${request.object} AND rt.relation = ${request.relation})
+              OR (rt.relation = 'member' AND (rt.object LIKE 'group:%' OR rt.object LIKE 'role:%'))
+            )
         )
         SELECT EXISTS(
-          SELECT 1 FROM reachable WHERE object = ${request.object}
+          SELECT 1
+          FROM reachable
+          WHERE object = ${request.object}
+            AND relation = ${request.relation}
         ) as allowed
       `,
     );
