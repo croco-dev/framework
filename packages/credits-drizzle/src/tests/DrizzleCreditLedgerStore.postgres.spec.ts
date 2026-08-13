@@ -2,6 +2,8 @@ import {
   createCreditLedgerStoreConformanceSuite,
   CreditAccountMismatchProblem,
   creditAmount,
+  createCreditIdempotencyIdentity,
+  CreditDuplicateConflictProblem,
   CreditLedgerService,
   CreditReservationMismatchProblem,
 } from "@croco/credits-core";
@@ -148,6 +150,199 @@ describePostgres("DrizzleCreditLedgerStore PostgreSQL conformance", () => {
     expect(publishedEvents).toBe(0);
   });
 
+  it("scopes repeated and conflicting idempotency keys to one tenant", async () => {
+    await reset();
+    let sequence = 0;
+    const store = new DrizzleCreditLedgerStore(db, txManager);
+    const service = new CreditLedgerService({
+      store,
+      idGenerator: () => `tenant-idempotency-${++sequence}`,
+    });
+    const [first, second] = await Promise.all([
+      service.openAccount({
+        tenantId: "tenant-idempotency-a",
+        idempotencyKey: "open-tenant-idempotency-a",
+        reference: { type: "test", id: "open-tenant-idempotency-a" },
+      }),
+      service.openAccount({
+        tenantId: "tenant-idempotency-b",
+        idempotencyKey: "open-tenant-idempotency-b",
+        reference: { type: "test", id: "open-tenant-idempotency-b" },
+      }),
+    ]);
+    const sharedInput = {
+      amount: creditAmount("5"),
+      idempotencyKey: "shared-tenant-idempotency-key",
+      reference: { type: "test", id: "shared-tenant-idempotency-key" },
+    };
+
+    const [firstGrant, secondGrant] = await Promise.all([
+      service.grantCredits({ ...sharedInput, accountId: first.account.id }),
+      service.grantCredits({ ...sharedInput, accountId: second.account.id }),
+    ]);
+
+    expect(firstGrant.replayed).toBe(false);
+    expect(secondGrant.replayed).toBe(false);
+    expect(firstGrant.account.tenantId).toBe("tenant-idempotency-a");
+    expect(secondGrant.account.tenantId).toBe("tenant-idempotency-b");
+    await expect(
+      service.grantCredits({ ...sharedInput, accountId: first.account.id }),
+    ).resolves.toMatchObject({ replayed: true, account: { tenantId: "tenant-idempotency-a" } });
+    await expect(
+      service.grantCredits({
+        ...sharedInput,
+        accountId: first.account.id,
+        amount: creditAmount("6"),
+      }),
+    ).rejects.toBeInstanceOf(CreditDuplicateConflictProblem);
+
+    const intents = await store.listPendingEventIntents();
+    expect(intents).toHaveLength(2);
+    expect(new Set(intents.map((intent) => intent.eventId)).size).toBe(2);
+  });
+
+  it("isolates advisory locks for the same key across tenants", async () => {
+    await reset();
+    let sequence = 0;
+    const service = new CreditLedgerService({
+      store: new DrizzleCreditLedgerStore(db, txManager),
+      idGenerator: () => `tenant-lock-${++sequence}`,
+    });
+    const [first, second] = await Promise.all([
+      service.openAccount({
+        tenantId: "tenant-lock-a",
+        idempotencyKey: "open-tenant-lock-a",
+        reference: { type: "test", id: "open-tenant-lock-a" },
+      }),
+      service.openAccount({
+        tenantId: "tenant-lock-b",
+        idempotencyKey: "open-tenant-lock-b",
+        reference: { type: "test", id: "open-tenant-lock-b" },
+      }),
+    ]);
+    const lockClient = await pool.connect();
+    let blockedExecution: Promise<unknown> | undefined;
+    try {
+      await lockClient.query("begin");
+      await lockClient.query("select pg_advisory_xact_lock(hashtextextended($1, 0))", [
+        createCreditIdempotencyIdentity("tenant-lock-a", "shared-tenant-lock-key"),
+      ]);
+      blockedExecution = service.grantCredits({
+        accountId: first.account.id,
+        amount: creditAmount("1"),
+        idempotencyKey: "shared-tenant-lock-key",
+        reference: { type: "test", id: "shared-tenant-lock-key" },
+      });
+      for (let attempt = 0; attempt < 40; attempt += 1) {
+        const waiting = await pool.query<{ count: string }>(
+          "select count(*) from pg_locks where locktype = 'advisory' and not granted",
+        );
+        if (waiting.rows[0]?.count !== "0") break;
+        await new Promise((resolve) => setTimeout(resolve, 25));
+      }
+      const waiting = await pool.query<{ count: string }>(
+        "select count(*) from pg_locks where locktype = 'advisory' and not granted",
+      );
+      expect(Number(waiting.rows[0]?.count)).toBeGreaterThan(0);
+
+      await expect(
+        service.grantCredits({
+          accountId: second.account.id,
+          amount: creditAmount("1"),
+          idempotencyKey: "shared-tenant-lock-key",
+          reference: { type: "test", id: "shared-tenant-lock-key" },
+        }),
+      ).resolves.toMatchObject({ account: { tenantId: "tenant-lock-b" } });
+    } finally {
+      await lockClient.query("rollback");
+      lockClient.release();
+      await blockedExecution;
+    }
+  });
+
+  it("migrates legacy global idempotency rows without losing replay or event intents", async () => {
+    await reset();
+    let sequence = 0;
+    const store = new DrizzleCreditLedgerStore(db, txManager);
+    const service = new CreditLedgerService({
+      store,
+      idGenerator: () => `tenant-migration-${++sequence}`,
+    });
+    const first = await service.openAccount({
+      tenantId: "tenant-migration-a",
+      idempotencyKey: "open-tenant-migration-a",
+      reference: { type: "test", id: "open-tenant-migration-a" },
+    });
+    const legacyInput = {
+      accountId: first.account.id,
+      amount: creditAmount("3"),
+      idempotencyKey: "legacy-global-idempotency-key",
+      reference: { type: "test", id: "legacy-global-idempotency-key" },
+    };
+    await service.grantCredits(legacyInput);
+    await db
+      .update(creditLedgerEventIntents)
+      .set({ eventId: "legacy-global-event-id" })
+      .where(eq(creditLedgerEventIntents.idempotencyKey, legacyInput.idempotencyKey));
+    const legacyIntent = await store.getPendingEventIntent(
+      first.account.tenantId,
+      legacyInput.idempotencyKey,
+    );
+
+    await db.execute(sql`
+      alter table credit_ledger_event_intents
+        drop constraint credit_ledger_event_intents_idempotency_fk
+    `);
+    await db.execute(sql`
+      drop index credit_ledger_event_intents_idempotency_unique
+    `);
+    await db.execute(sql`
+      alter table credit_idempotency_records
+        drop constraint credit_idempotency_records_pkey
+    `);
+    await db.execute(sql`
+      alter table credit_ledger_event_intents drop column tenant_id
+    `);
+    await db.execute(sql`
+      alter table credit_idempotency_records drop column tenant_id
+    `);
+    await db.execute(sql`
+      alter table credit_idempotency_records
+        add constraint credit_idempotency_records_pkey primary key (key)
+    `);
+    await db.execute(sql`
+      alter table credit_ledger_event_intents
+        add constraint credit_ledger_event_intents_idempotency_key_fkey
+          foreign key (idempotency_key) references credit_idempotency_records(key)
+    `);
+    await db.execute(sql`
+      create unique index credit_ledger_event_intents_idempotency_unique
+        on credit_ledger_event_intents(idempotency_key)
+    `);
+
+    await createCreditsSchema(db);
+
+    const migratedRecords = await db
+      .select({ tenantId: creditIdempotencyRecords.tenantId })
+      .from(creditIdempotencyRecords)
+      .where(eq(creditIdempotencyRecords.key, legacyInput.idempotencyKey));
+    expect(migratedRecords).toEqual([{ tenantId: "tenant-migration-a" }]);
+    await expect(service.grantCredits(legacyInput)).resolves.toMatchObject({ replayed: true });
+
+    const second = await service.openAccount({
+      tenantId: "tenant-migration-b",
+      idempotencyKey: "open-tenant-migration-b",
+      reference: { type: "test", id: "open-tenant-migration-b" },
+    });
+    await expect(
+      service.grantCredits({ ...legacyInput, accountId: second.account.id }),
+    ).resolves.toMatchObject({ replayed: false, account: { tenantId: "tenant-migration-b" } });
+    const intents = await store.listPendingEventIntents();
+    expect(intents).toHaveLength(2);
+    expect(intents).toContainEqual(legacyIntent);
+    expect(new Set(intents.map((intent) => intent.eventId)).size).toBe(2);
+  });
+
   it("joins an ambient transaction so ledger writes and events disappear on rollback", async () => {
     await reset();
     let sequence = 0;
@@ -221,7 +416,10 @@ describePostgres("DrizzleCreditLedgerStore PostgreSQL conformance", () => {
     };
     await firstProcess.grantCredits(input);
 
-    const pendingBeforeRestart = await firstStore.getPendingEventIntent(input.idempotencyKey);
+    const pendingBeforeRestart = await firstStore.getPendingEventIntent(
+      opened.account.tenantId,
+      input.idempotencyKey,
+    );
     expect(pendingBeforeRestart?.eventId).toMatch(/^[a-f0-9]{64}$/);
 
     const publishedEvents: Array<{ eventId: string }> = [];
@@ -245,7 +443,9 @@ describePostgres("DrizzleCreditLedgerStore PostgreSQL conformance", () => {
     await expect(restartedProcess.grantCredits(input)).resolves.toMatchObject({ replayed: true });
     await publicationAcknowledgement;
     expect(publishedEvents).toEqual([{ eventId: pendingBeforeRestart?.eventId }]);
-    await expect(restartedStore.getPendingEventIntent(input.idempotencyKey)).resolves.toBeNull();
+    await expect(
+      restartedStore.getPendingEventIntent(opened.account.tenantId, input.idempotencyKey),
+    ).resolves.toBeNull();
     await expect(restartedProcess.getBalance(opened.account.id)).resolves.toMatchObject({
       position: 1,
       available: "7",
@@ -263,7 +463,7 @@ describePostgres("DrizzleCreditLedgerStore PostgreSQL conformance", () => {
       idGenerator: () => `legacy-${++sequence}`,
     });
     const opened = await service.openAccount({
-      tenantId: "tenant-legacy",
+      tenantId: "tenant-legacy-한글",
       idempotencyKey: "legacy-open",
       reference: { type: "test", id: "legacy-open" },
     });
@@ -273,16 +473,17 @@ describePostgres("DrizzleCreditLedgerStore PostgreSQL conformance", () => {
       idempotencyKey: "legacy-grant",
       reference: { type: "legacy-recovery", id: "legacy-grant" },
     });
-    const originalIntent = await store.getPendingEventIntent("legacy-grant");
+    const originalIntent = await store.getPendingEventIntent("tenant-legacy-한글", "legacy-grant");
     await db
       .delete(creditLedgerEventIntents)
       .where(eq(creditLedgerEventIntents.idempotencyKey, "legacy-grant"));
 
     await createCreditsSchema(db);
 
-    const intent = await store.getPendingEventIntent("legacy-grant");
+    const intent = await store.getPendingEventIntent("tenant-legacy-한글", "legacy-grant");
     expect(intent).toEqual({
       eventId: originalIntent?.eventId,
+      tenantId: "tenant-legacy-한글",
       idempotencyKey: "legacy-grant",
       occurredAt: new Date("2026-07-30T02:00:00.000Z"),
       data: {
@@ -323,7 +524,9 @@ describePostgres("DrizzleCreditLedgerStore PostgreSQL conformance", () => {
     const replay = await producer.grantCredits(input);
 
     expect(replay.replayed).toBe(true);
-    await expect(store.getPendingEventIntent(input.idempotencyKey)).resolves.toMatchObject({
+    await expect(
+      store.getPendingEventIntent(opened.account.tenantId, input.idempotencyKey),
+    ).resolves.toMatchObject({
       occurredAt: granted.transactions[0]?.occurredAt,
       data: {
         transactionIds: [granted.transactions[0]?.id],

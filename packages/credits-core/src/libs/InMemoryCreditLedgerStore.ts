@@ -303,9 +303,12 @@ export class InMemoryCreditLedgerStore extends CreditLedgerStore {
     return [...this.eventIntents.values()].slice(0, limit).map(cloneCreditLedgerEventIntent);
   }
 
-  async getPendingEventIntent(idempotencyKey: string): Promise<CreditLedgerEventIntent | null> {
+  async getPendingEventIntent(
+    tenantId: string,
+    idempotencyKey: string,
+  ): Promise<CreditLedgerEventIntent | null> {
     const intent = [...this.eventIntents.values()].find(
-      (candidate) => candidate.idempotencyKey === idempotencyKey,
+      (candidate) => candidate.tenantId === tenantId && candidate.idempotencyKey === idempotencyKey,
     );
     return intent ? cloneCreditLedgerEventIntent(intent) : null;
   }

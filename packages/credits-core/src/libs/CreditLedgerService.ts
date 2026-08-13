@@ -301,7 +301,10 @@ export class CreditLedgerService {
       );
     }
     if (this.eventPublisher) {
-      const intent = await this.store.getPendingEventIntent(command.idempotencyKey);
+      const intent = await this.store.getPendingEventIntent(
+        result.account.tenantId,
+        command.idempotencyKey,
+      );
       if (intent) await this.publishIntentAfterCommitOrNow(intent);
     }
     return result;

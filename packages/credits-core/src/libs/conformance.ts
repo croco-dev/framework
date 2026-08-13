@@ -80,12 +80,14 @@ export function createCreditLedgerStoreConformanceSuite(
         run: async () => {
           const service = await createService();
           const first = await service.openAccount({
-            tenantId: "tenant-matrix-a",
+            tenantId: "tenant-matrix",
+            walletKey: "first",
             idempotencyKey: "open-matrix-a",
             reference: reference("open-matrix-a"),
           });
           const second = await service.openAccount({
-            tenantId: "tenant-matrix-b",
+            tenantId: "tenant-matrix",
+            walletKey: "second",
             idempotencyKey: "open-matrix-b",
             reference: reference("open-matrix-b"),
           });

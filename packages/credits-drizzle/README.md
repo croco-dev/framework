@@ -48,7 +48,7 @@ migration runner.
 Each command joins the injected `TxManager` transaction or opens one when no transaction is active. The
 adapter:
 
-- takes a transaction-scoped advisory lock for the idempotency key;
+- takes a transaction-scoped advisory lock for the tenant and idempotency key;
 - locks the account row before reading balances, grant lots, or reservations;
 - appends ledger transactions and allocations before atomically updating the account projection;
 - stores the committed command result with its semantic fingerprint;
@@ -70,11 +70,16 @@ based only on their age or ledger position. Rerun the idempotent migration after
 stopped. The current adapter also repairs a missing intent atomically whenever its idempotency key is
 replayed, closing gaps created during a rolling deployment without repeating the balance movement.
 
+The same migration derives `tenant_id` from each existing record's account (or its stored account result),
+then replaces the global key and event-intent constraints with `(tenant_id, key)` constraints. It fails
+instead of guessing when a legacy row has no recoverable tenant. Stop legacy writers before this constraint
+cutover; after it completes, the same client-generated key is independent across tenant ledgers.
+
 The supported isolation level is PostgreSQL `READ COMMITTED` plus explicit account/lot/reservation row
 locking. Writes to one account are serialized, so concurrent reservations cannot spend the same grant
 availability. Account IDs, transaction IDs, reservation IDs, tenant/wallet identities, ledger positions,
-and idempotency keys have database uniqueness constraints. Composite foreign keys reject cross-account
-reservation, refund, lot, and allocation references.
+and tenant-scoped idempotency keys have database uniqueness constraints. Composite foreign keys reject
+cross-account reservation, refund, lot, and allocation references.
 
 ## Amounts and ordering
 

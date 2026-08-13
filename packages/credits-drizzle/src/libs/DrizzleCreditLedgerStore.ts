@@ -8,6 +8,7 @@ import {
   CreditDuplicateConflictProblem,
   CreditLedgerStore,
   createCreditLedgerEventIntent,
+  createCreditIdempotencyIdentity,
   CreditRefundMismatchProblem,
   CreditReservationMismatchProblem,
   CreditTransactionNotFoundProblem,
@@ -352,13 +353,22 @@ export class DrizzleCreditLedgerStore extends CreditLedgerStore {
     return this.persist(command.operation, () =>
       this.txManager.run(async () => {
         const tx = this.requireTransactionClient();
+        const tenantId = await this.resolveCommandTenantId(tx, command);
         await tx.execute(
-          sql`select pg_advisory_xact_lock(hashtextextended(${command.idempotencyKey}, 0))`,
+          sql`select pg_advisory_xact_lock(hashtextextended(${createCreditIdempotencyIdentity(
+            tenantId,
+            command.idempotencyKey,
+          )}, 0))`,
         );
         const existing = await tx
           .select()
           .from(creditIdempotencyRecords)
-          .where(eq(creditIdempotencyRecords.key, command.idempotencyKey))
+          .where(
+            and(
+              eq(creditIdempotencyRecords.tenantId, tenantId),
+              eq(creditIdempotencyRecords.key, command.idempotencyKey),
+            ),
+          )
           .limit(1);
         if (existing[0]) {
           if (existing[0].fingerprint !== fingerprint) {
@@ -375,6 +385,7 @@ export class DrizzleCreditLedgerStore extends CreditLedgerStore {
             ? await this.openAccount(tx, command)
             : await this.executeOnAccount(tx, command);
         await tx.insert(creditIdempotencyRecords).values({
+          tenantId,
           key: command.idempotencyKey,
           accountId: result.account.id,
           fingerprint,
@@ -386,13 +397,17 @@ export class DrizzleCreditLedgerStore extends CreditLedgerStore {
     );
   }
 
-  async getPendingEventIntent(idempotencyKey: string): Promise<CreditLedgerEventIntent | null> {
+  async getPendingEventIntent(
+    tenantId: string,
+    idempotencyKey: string,
+  ): Promise<CreditLedgerEventIntent | null> {
     return this.persist("get pending event intent", async () => {
       const rows = await this.getClient()
         .select()
         .from(creditLedgerEventIntents)
         .where(
           and(
+            eq(creditLedgerEventIntents.tenantId, tenantId),
             eq(creditLedgerEventIntents.idempotencyKey, idempotencyKey),
             isNull(creditLedgerEventIntents.publishedAt),
           ),
@@ -1339,6 +1354,14 @@ export class DrizzleCreditLedgerStore extends CreditLedgerStore {
     return mapAccount(rows[0]);
   }
 
+  private async resolveCommandTenantId(
+    tx: DrizzleCreditTransaction,
+    command: CreditLedgerCommand,
+  ): Promise<string> {
+    if (command.operation === "open") return command.tenantId;
+    return (await this.requireAccount(tx, command.accountId)).tenantId;
+  }
+
   private async assertCandidateIdsAvailable(
     tx: DrizzleCreditTransaction,
     command: CreditLedgerCommand,
@@ -1534,6 +1557,7 @@ export class DrizzleCreditLedgerStore extends CreditLedgerStore {
   ): CreditLedgerEventIntent {
     return {
       eventId: row.eventId,
+      tenantId: row.tenantId,
       idempotencyKey: row.idempotencyKey,
       occurredAt: new Date(row.occurredAt),
       data: row.data,
@@ -1551,11 +1575,14 @@ export class DrizzleCreditLedgerStore extends CreditLedgerStore {
       .insert(creditLedgerEventIntents)
       .values({
         eventId: eventIntent.eventId,
+        tenantId: eventIntent.tenantId,
         idempotencyKey: eventIntent.idempotencyKey,
         occurredAt: eventIntent.occurredAt,
         data: eventIntent.data,
       })
-      .onConflictDoNothing({ target: creditLedgerEventIntents.idempotencyKey });
+      .onConflictDoNothing({
+        target: [creditLedgerEventIntents.tenantId, creditLedgerEventIntents.idempotencyKey],
+      });
   }
 
   private getClient(): DrizzleCreditClient | DrizzleCreditTransaction {
