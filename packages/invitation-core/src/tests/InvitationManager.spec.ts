@@ -645,7 +645,12 @@ describe("InvitationManager", () => {
       email: "MEMBER@CROCO.DEV",
     });
 
-    expect(addMember).toHaveBeenCalledWith("tenant-1", "user-1", "member");
+    expect(addMember).toHaveBeenCalledWith(
+      "tenant-1",
+      "user-1",
+      "member",
+      "invitation-accept:inv-1:user-1",
+    );
     expect(accepted.status).toBe("committed");
     expect(accepted.value.status).toBe("accepted");
     expect(accepted.value.acceptedAt).not.toBeNull();
@@ -712,7 +717,12 @@ describe("InvitationManager", () => {
       userId: "user-2",
     });
 
-    expect(addMember).toHaveBeenCalledWith("tenant-1", "user-2", "member");
+    expect(addMember).toHaveBeenCalledWith(
+      "tenant-1",
+      "user-2",
+      "member",
+      "invitation-accept:inv-1:user-2",
+    );
     expect(accepted.status).toBe("committed");
     expect(accepted.value.status).toBe("accepted");
   });

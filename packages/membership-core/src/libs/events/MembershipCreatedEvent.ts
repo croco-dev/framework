@@ -8,8 +8,16 @@ export type MembershipCreatedEventData = {
 };
 
 export class MembershipCreatedEvent extends DomainEvent {
-  constructor(public readonly data: MembershipCreatedEventData) {
-    super();
+  constructor(
+    public readonly data: MembershipCreatedEventData,
+    eventId?: string,
+    occurredAt?: Date,
+  ) {
+    super(eventId);
+    if (occurredAt) {
+      const event = this as unknown as { timestamp: Date };
+      event.timestamp = new Date(occurredAt);
+    }
   }
   static eventName = "membership.created";
 }

@@ -1,21 +1,32 @@
 import { Component, Inject, Token } from "@croco/framework-context";
 import {
+  createMembershipEventIntent,
   type Membership,
+  type MembershipCommand,
+  type MembershipCommandResult,
   type MembershipCreateInput,
+  type MembershipEventIntent,
   type MembershipOwnerMutationInput,
   type MembershipOwnerMutationResult,
   type MembershipOwnershipTransferInput,
   type MembershipOwnershipTransferResult,
   type MembershipRole,
+  AlreadyMemberProblem,
+  InvalidMembershipCommandProblem,
+  LastOwnerProblem,
+  LastOwnerCannotBeRemovedProblem,
+  MembershipIdempotencyConflictProblem,
+  MembershipNotFoundProblem,
   MembershipStore,
+  OwnershipTransferRequiredProblem,
 } from "@croco/membership-core";
 // Runtime value required for constructor metadata.
 // oxlint-disable-next-line typescript/consistent-type-imports
 import { TxManager } from "@croco/tx-core";
 import type { DrizzleDb } from "@croco/tx-drizzle";
-import { and, count, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, count, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { memberships } from "./schema";
+import { membershipEventIntents, membershipIdempotencyRecords, memberships } from "./schema";
 
 type DrizzleMembershipClient = DrizzleDb & NodePgDatabase<Record<string, never>>;
 
@@ -36,6 +47,7 @@ export type { DrizzleMembershipClient };
  */
 @Component()
 export class DrizzleMembershipStore extends MembershipStore {
+  readonly eventIntentDurability = "persistent" as const;
   /**
    * Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기화합니다.
    */
@@ -44,6 +56,101 @@ export class DrizzleMembershipStore extends MembershipStore {
     private readonly txManager: TxManager<DrizzleMembershipClient>,
   ) {
     super();
+  }
+
+  async hasExecutedCommand(idempotencyKey: string): Promise<boolean> {
+    const client = this.txManager.getClient() ?? this.db;
+    const rows = await client
+      .select({ key: membershipIdempotencyRecords.key })
+      .from(membershipIdempotencyRecords)
+      .where(eq(membershipIdempotencyRecords.key, idempotencyKey))
+      .limit(1);
+    return rows.length > 0;
+  }
+
+  async execute(command: MembershipCommand): Promise<MembershipCommandResult> {
+    if (command.idempotencyKey.trim().length === 0) {
+      throw new InvalidMembershipCommandProblem("idempotencyKey is required");
+    }
+    const fingerprint = this.fingerprint(command);
+    return this.txManager.run(async () => {
+      const client = this.txManager.getClient() ?? this.db;
+      await client.execute(
+        sql`select pg_advisory_xact_lock(hashtextextended(${command.idempotencyKey}, 0))`,
+      );
+      await client.execute(
+        sql`select pg_advisory_xact_lock(hashtextextended(${`membership:${command.tenantId}`}, 0))`,
+      );
+      const existing = await client
+        .select()
+        .from(membershipIdempotencyRecords)
+        .where(eq(membershipIdempotencyRecords.key, command.idempotencyKey))
+        .limit(1);
+      if (existing[0]) {
+        if (existing[0].fingerprint !== fingerprint) {
+          throw new MembershipIdempotencyConflictProblem(command.idempotencyKey);
+        }
+        return this.cloneResult(existing[0].result, true);
+      }
+
+      const result = await this.applyCommand(command);
+      await client.insert(membershipIdempotencyRecords).values({
+        key: command.idempotencyKey,
+        fingerprint,
+        result,
+      });
+      const intent = createMembershipEventIntent(command, result, new Date());
+      if (intent) {
+        await client.insert(membershipEventIntents).values({
+          intentId: intent.intentId,
+          idempotencyKey: intent.idempotencyKey,
+          events: intent.events,
+        });
+      }
+      return this.cloneResult(result, false);
+    });
+  }
+
+  async getPendingEventIntent(idempotencyKey: string): Promise<MembershipEventIntent | null> {
+    const client = this.txManager.getClient() ?? this.db;
+    const rows = await client
+      .select()
+      .from(membershipEventIntents)
+      .where(
+        and(
+          eq(membershipEventIntents.idempotencyKey, idempotencyKey),
+          isNull(membershipEventIntents.publishedAt),
+        ),
+      )
+      .limit(1);
+    return rows[0] ? this.mapIntent(rows[0]) : null;
+  }
+
+  async listPendingEventIntents(limit = 100): Promise<readonly MembershipEventIntent[]> {
+    if (!Number.isInteger(limit) || limit < 1 || limit > 1_000) {
+      throw new InvalidMembershipCommandProblem("event intent limit must be between 1 and 1000");
+    }
+    const client = this.txManager.getClient() ?? this.db;
+    const rows = await client
+      .select()
+      .from(membershipEventIntents)
+      .where(isNull(membershipEventIntents.publishedAt))
+      .orderBy(asc(membershipEventIntents.createdAt), asc(membershipEventIntents.intentId))
+      .limit(limit);
+    return rows.map((row) => this.mapIntent(row));
+  }
+
+  async markEventIntentPublished(intentId: string): Promise<void> {
+    const client = this.txManager.getClient() ?? this.db;
+    await client
+      .update(membershipEventIntents)
+      .set({ publishedAt: new Date() })
+      .where(
+        and(
+          eq(membershipEventIntents.intentId, intentId),
+          isNull(membershipEventIntents.publishedAt),
+        ),
+      );
   }
 
   /**
@@ -347,6 +454,131 @@ export class DrizzleMembershipStore extends MembershipStore {
       role: row.role,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
+    };
+  }
+
+  private async applyCommand(command: MembershipCommand): Promise<MembershipCommandResult> {
+    if (command.operation === "add") {
+      const existing = await this.findByTenantAndUser(command.tenantId, command.userId);
+      if (existing) throw new AlreadyMemberProblem(command.tenantId, command.userId);
+      return {
+        operation: "add",
+        membership: await this.save({
+          id: command.membershipId,
+          tenantId: command.tenantId,
+          userId: command.userId,
+          role: command.role,
+        }),
+        replayed: false,
+      };
+    }
+    if (command.operation === "remove") {
+      const result = await this.mutateOwner({
+        tenantId: command.tenantId,
+        userId: command.userId,
+        operation: "remove",
+      });
+      if (result.status === "not_found") {
+        throw new MembershipNotFoundProblem(command.tenantId, command.userId);
+      }
+      if (result.status !== "applied") {
+        throw new LastOwnerCannotBeRemovedProblem(command.tenantId, command.userId);
+      }
+      return { operation: "remove", membership: result.membership, replayed: false };
+    }
+    if (command.operation === "update_role") {
+      const previous = await this.findByTenantAndUser(command.tenantId, command.userId);
+      if (!previous) throw new MembershipNotFoundProblem(command.tenantId, command.userId);
+      if (previous.role === command.role) {
+        return {
+          operation: "update_role",
+          membership: previous,
+          previousRole: previous.role,
+          replayed: false,
+        };
+      }
+      let membership: Membership;
+      if (command.role === "owner") {
+        membership = await this.save({
+          id: previous.id,
+          tenantId: command.tenantId,
+          userId: command.userId,
+          role: command.role,
+        });
+      } else {
+        const result = await this.mutateOwner({
+          tenantId: command.tenantId,
+          userId: command.userId,
+          operation: "demote",
+          role: command.role,
+        });
+        if (result.status === "not_found") {
+          throw new MembershipNotFoundProblem(command.tenantId, command.userId);
+        }
+        if (result.status !== "applied") {
+          throw new LastOwnerProblem(command.tenantId, command.userId, "demote");
+        }
+        membership = result.membership;
+      }
+      return {
+        operation: "update_role",
+        membership,
+        previousRole: previous.role,
+        replayed: false,
+      };
+    }
+    const result = await this.transferOwnership(command);
+    if (result.status === "not_found") {
+      throw new MembershipNotFoundProblem(command.tenantId, result.userId);
+    }
+    if (result.status !== "applied") {
+      throw new OwnershipTransferRequiredProblem(command.tenantId, command.fromUserId);
+    }
+    return { operation: "transfer_ownership", ...result, replayed: false };
+  }
+
+  private mapIntent(row: typeof membershipEventIntents.$inferSelect): MembershipEventIntent {
+    return {
+      intentId: row.intentId,
+      idempotencyKey: row.idempotencyKey,
+      events: row.events.map((event) => ({
+        ...event,
+        occurredAt: new Date(event.occurredAt),
+        data: { ...event.data },
+      })) as readonly MembershipEventIntent["events"][number][],
+    };
+  }
+
+  private fingerprint(command: MembershipCommand): string {
+    const semantic =
+      command.operation === "add"
+        ? {
+            operation: command.operation,
+            tenantId: command.tenantId,
+            userId: command.userId,
+            role: command.role,
+          }
+        : command;
+    return JSON.stringify(semantic, Object.keys(semantic).sort());
+  }
+
+  private cloneResult(result: MembershipCommandResult, replayed: boolean): MembershipCommandResult {
+    if (result.operation === "transfer_ownership") {
+      return {
+        ...result,
+        fromMembership: this.cloneMembership(result.fromMembership),
+        toMembership: this.cloneMembership(result.toMembership),
+        replayed,
+      };
+    }
+    return { ...result, membership: this.cloneMembership(result.membership), replayed };
+  }
+
+  private cloneMembership(membership: Membership): Membership {
+    return {
+      ...membership,
+      createdAt: new Date(membership.createdAt),
+      updatedAt: new Date(membership.updatedAt),
     };
   }
 

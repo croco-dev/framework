@@ -11,7 +11,15 @@ export type MembershipUpdatedEventData = {
 export class MembershipUpdatedEvent extends DomainEvent {
   static eventName = "membership.updated";
 
-  constructor(public readonly data: MembershipUpdatedEventData) {
-    super();
+  constructor(
+    public readonly data: MembershipUpdatedEventData,
+    eventId?: string,
+    occurredAt?: Date,
+  ) {
+    super(eventId);
+    if (occurredAt) {
+      const event = this as unknown as { timestamp: Date };
+      event.timestamp = new Date(occurredAt);
+    }
   }
 }

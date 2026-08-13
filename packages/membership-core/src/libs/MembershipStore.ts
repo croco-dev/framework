@@ -1,13 +1,22 @@
 import type {
   Membership,
+  MembershipCommand,
+  MembershipCommandResult,
   MembershipOwnerMutationInput,
   MembershipOwnerMutationResult,
   MembershipOwnershipTransferInput,
   MembershipOwnershipTransferResult,
   MembershipRole,
 } from "./types";
+import type { MembershipEventIntent } from "./eventIntent";
 
 export abstract class MembershipStore {
+  abstract readonly eventIntentDurability: "persistent" | "volatile";
+  abstract hasExecutedCommand(idempotencyKey: string): Promise<boolean>;
+  abstract execute(command: MembershipCommand): Promise<MembershipCommandResult>;
+  abstract getPendingEventIntent(idempotencyKey: string): Promise<MembershipEventIntent | null>;
+  abstract listPendingEventIntents(limit?: number): Promise<readonly MembershipEventIntent[]>;
+  abstract markEventIntentPublished(intentId: string): Promise<void>;
   abstract findByTenantAndUser(tenantId: string, userId: string): Promise<Membership | null>;
   abstract findAllByTenant(tenantId: string): Promise<Membership[]>;
   abstract findAllByUser(userId: string): Promise<Membership[]>;

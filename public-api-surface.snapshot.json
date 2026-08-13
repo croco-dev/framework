@@ -15928,9 +15928,27 @@
               "declarationKind": "class"
             },
             {
+              "name": "createMembershipEventIntent",
+              "exportKind": "named",
+              "source": "./libs/eventIntent",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createMembershipStoreConformanceSuite",
+              "exportKind": "named",
+              "source": "./libs/conformance",
+              "declarationKind": "function"
+            },
+            {
               "name": "InMemoryMembershipStore",
               "exportKind": "named",
               "source": "./libs/InMemoryMembershipStore",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InvalidMembershipCommandProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/MembershipProblems",
               "declarationKind": "class"
             },
             {
@@ -15961,6 +15979,18 @@
               "name": "MembershipCreatedEvent",
               "exportKind": "named",
               "source": "./libs/events/MembershipCreatedEvent",
+              "declarationKind": "class"
+            },
+            {
+              "name": "MembershipEventPublicationProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/MembershipProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "MembershipIdempotencyConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/MembershipProblems",
               "declarationKind": "class"
             },
             {
@@ -16038,6 +16068,18 @@
               "declarationKind": "type"
             },
             {
+              "name": "MembershipCommand",
+              "exportKind": "declaration",
+              "source": "./libs/types",
+              "declarationKind": "type"
+            },
+            {
+              "name": "MembershipCommandResult",
+              "exportKind": "declaration",
+              "source": "./libs/types",
+              "declarationKind": "type"
+            },
+            {
               "name": "MembershipCreateInput",
               "exportKind": "declaration",
               "source": "./libs/types",
@@ -16078,6 +16120,36 @@
               "exportKind": "declaration",
               "source": "./libs/types",
               "declarationKind": "type"
+            },
+            {
+              "name": "AddMembershipCommandResult",
+              "exportKind": "named",
+              "source": "./libs/interfaces/AbstractMembershipManager"
+            },
+            {
+              "name": "MembershipEventIntent",
+              "exportKind": "named",
+              "source": "./libs/eventIntent"
+            },
+            {
+              "name": "MembershipEventIntentEvent",
+              "exportKind": "named",
+              "source": "./libs/eventIntent"
+            },
+            {
+              "name": "MembershipEventPublisher",
+              "exportKind": "named",
+              "source": "./libs/MembershipService"
+            },
+            {
+              "name": "MembershipServiceOptions",
+              "exportKind": "named",
+              "source": "./libs/MembershipService"
+            },
+            {
+              "name": "MembershipStoreConformanceCase",
+              "exportKind": "named",
+              "source": "./libs/conformance"
             }
           ]
         }
@@ -16119,10 +16191,28 @@
               "declarationKind": "class"
             },
             {
+              "name": "membershipEventIntents",
+              "exportKind": "declaration",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "membershipIdempotencyRecords",
+              "exportKind": "declaration",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
               "name": "memberships",
               "exportKind": "declaration",
               "source": "./libs/schema",
               "declarationKind": "const"
+            },
+            {
+              "name": "addMembershipEventIntents",
+              "exportKind": "named",
+              "source": "./migrations/membershipEventIntents",
+              "declarationKind": "function"
             }
           ],
           "typeExports": [
@@ -16130,6 +16220,11 @@
               "name": "DrizzleMembershipClient",
               "exportKind": "named",
               "source": "./libs/DrizzleMembershipStore"
+            },
+            {
+              "name": "MembershipMigrationClient",
+              "exportKind": "named",
+              "source": "./migrations/membershipEventIntents"
             }
           ]
         }

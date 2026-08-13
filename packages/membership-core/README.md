@@ -14,11 +14,17 @@ pnpm add @croco/membership-core
 import { InMemoryMembershipStore, MembershipManager } from "@croco/membership-core";
 
 const store = new InMemoryMembershipStore();
-const manager = new MembershipManager(store, eventPublisher, seatLimitChecker);
+const manager = new MembershipManager({
+  store,
+  eventPublisher: idempotentEventPublisher,
+  seatLimitChecker,
+  eventDelivery: "development",
+});
 
-await manager.addMember("tenant-123", "user-1", "admin");
-await manager.updateRole("tenant-123", "user-1", "owner");
-await manager.transferOwnership("tenant-123", "user-1", "user-2");
+await manager.addMember("tenant-123", "user-1", "admin", "member:add:user-1");
+await manager.updateRole("tenant-123", "user-1", "owner", "member:promote:user-1");
+await manager.transferOwnership("tenant-123", "user-1", "user-2", "owner:transfer:user-2");
+await manager.publishPendingEvents();
 ```
 
 ## API 레퍼런스
@@ -56,5 +62,7 @@ await manager.transferOwnership("tenant-123", "user-1", "user-2");
 - 역할 계층은 `owner > admin > member > viewer` 순서입니다.
 - 소유자 제거, 강등, 이전은 원자적으로 적용되며 마지막 소유자는 항상 유지됩니다.
 - `SeatLimitChecker`를 주입하면 플랜별 좌석 수를 강제할 수 있습니다.
-- 활성 transaction context가 있으면 membership 생성·변경·제거 이벤트는 commit 후 발행됩니다.
-  billing provider 동기화 같은 외부 side effect는 이 이벤트를 소비해 요청 transaction 밖에서 수행합니다.
+- 명령은 상태와 recoverable event intent만 원자적으로 커밋합니다. `publishPendingEvents()`는 요청 transaction 밖의
+  relay 또는 worker에서 호출해야 하며, publisher는 `eventId` 기준 중복 제거를 보장해야 합니다.
+- `MembershipManager`와 `MembershipService`는 options 객체로 직접 생성합니다. 프레임워크 DI를 사용할 때는
+  애플리케이션 provider factory에서 이 객체를 구성해 등록합니다.

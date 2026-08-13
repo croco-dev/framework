@@ -7,3 +7,5 @@ export * from "./libs/DrizzleMembershipStore";
  * 멤버십 영속화에 사용하는 Drizzle 스키마를 내보냅니다.
  */
 export * from "./libs/schema";
+export { addMembershipEventIntents } from "./migrations/membershipEventIntents";
+export type { MembershipMigrationClient } from "./migrations/membershipEventIntents";

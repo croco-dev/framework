@@ -85,3 +85,35 @@ export class SeatLimitExceededProblem extends Problem {
     );
   }
 }
+
+export class MembershipIdempotencyConflictProblem extends Problem {
+  constructor(idempotencyKey: string) {
+    super(
+      "MEMBERSHIP_IDEMPOTENCY_CONFLICT",
+      ProblemCategory.Conflict,
+      `Idempotency key '${idempotencyKey}' was already used for a different membership command`,
+      { extensions: { idempotencyKey } },
+    );
+  }
+}
+
+export class InvalidMembershipCommandProblem extends Problem {
+  constructor(reason: string) {
+    super(
+      "INVALID_MEMBERSHIP_COMMAND",
+      ProblemCategory.BadRequest,
+      `Invalid membership command: ${reason}`,
+    );
+  }
+}
+
+export class MembershipEventPublicationProblem extends Problem {
+  constructor(idempotencyKey: string, cause: Error) {
+    super(
+      "MEMBERSHIP_EVENT_PUBLICATION_FAILED",
+      ProblemCategory.InternalServerError,
+      `Membership command '${idempotencyKey}' committed, but its event intent remains pending`,
+      { cause, extensions: { idempotencyKey } },
+    );
+  }
+}

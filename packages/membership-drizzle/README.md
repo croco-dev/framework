@@ -28,6 +28,8 @@ const members = await store.findAllByTenant("tenant-1");
 const adminCount = await store.countByRole("tenant-1", "admin");
 ```
 
+Existing deployments must run `addMembershipEventIntents(client)` before using atomic membership commands. It creates the idempotency and recoverable event-intent tables without modifying membership rows.
+
 ## API 레퍼런스
 
 ### `DrizzleMembershipStore`

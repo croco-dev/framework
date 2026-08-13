@@ -1,442 +1,258 @@
 import "reflect-metadata";
-import type { EntitlementQuotaStatus } from "@croco/entitlements-core";
-import { EventAfterCommitRequiresActiveTransactionProblem } from "@croco/events-core";
-import type { EventPublisher } from "@croco/events-core";
-import { Container } from "@croco/framework-context";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { MembershipCreatedEvent } from "../libs/events/MembershipCreatedEvent";
-import type { MembershipRemovedEvent } from "../libs/events/MembershipRemovedEvent";
-import { MembershipUpdatedEvent } from "../libs/events/MembershipUpdatedEvent";
+import type { DomainEvent } from "@croco/events-core";
+import { describe, expect, it, vi } from "vitest";
 import { InMemoryMembershipStore } from "../libs/InMemoryMembershipStore";
 import { MembershipService } from "../libs/MembershipService";
-import { LastOwnerCannotBeRemovedProblem } from "../libs/problems/LastOwnerCannotBeRemovedProblem";
 import {
   InvalidRoleProblem,
   LastOwnerProblem,
+  MembershipEventPublicationProblem,
+  MembershipIdempotencyConflictProblem,
   MembershipNotFoundProblem,
   OwnershipTransferRequiredProblem,
   SeatLimitExceededProblem,
 } from "../libs/problems/MembershipProblems";
-import type { SeatLimitChecker } from "../libs/SeatLimitChecker";
-import type {
-  Membership,
-  MembershipCreateInput,
-  MembershipOwnerMutationInput,
-  MembershipOwnerMutationResult,
-} from "../libs/types";
+import { LastOwnerCannotBeRemovedProblem } from "../libs/problems/LastOwnerCannotBeRemovedProblem";
+import type { Membership } from "../libs/types";
 
-class BarrierMembershipStore extends InMemoryMembershipStore {
-  private arrivals = 0;
-  private release: (() => void) | undefined;
-  private readonly barrier = new Promise<void>((resolve) => {
-    this.release = resolve;
+function createService(
+  store: InMemoryMembershipStore,
+  publishIdempotently: (event: DomainEvent) => Promise<void>,
+): MembershipService {
+  return new MembershipService({
+    store,
+    eventDelivery: "development",
+    idGenerator: () => "membership-1",
+    eventPublisher: { publishIdempotently },
   });
-
-  override async mutateOwner(
-    input: MembershipOwnerMutationInput,
-  ): Promise<MembershipOwnerMutationResult> {
-    this.arrivals += 1;
-    if (this.arrivals === 2) {
-      this.release?.();
-    }
-    await this.barrier;
-    return super.mutateOwner(input);
-  }
 }
 
-class StaleRoleReadStore extends InMemoryMembershipStore {
-  private pauseNextRoleRead = true;
-  private release: (() => void) | undefined;
-  private readonly barrier = new Promise<void>((resolve) => {
-    this.release = resolve;
-  });
-  private signalRead: (() => void) | undefined;
-  private readonly readReached = new Promise<void>((resolve) => {
-    this.signalRead = resolve;
-  });
+describe("MembershipService atomic commands", () => {
+  it("allows only one concurrent owner removal and exposes the stable Problem", async () => {
+    const store = new InMemoryMembershipStore();
+    await store.save({ id: "owner-1", tenantId: "tenant-1", userId: "owner-1", role: "owner" });
+    await store.save({ id: "owner-2", tenantId: "tenant-1", userId: "owner-2", role: "owner" });
+    const service = createService(store, async () => undefined);
 
-  override async findByTenantAndUser(tenantId: string, userId: string): Promise<Membership | null> {
-    const membership = await super.findByTenantAndUser(tenantId, userId);
-    if (userId === "user-2" && this.pauseNextRoleRead) {
-      this.pauseNextRoleRead = false;
-      this.signalRead?.();
-      await this.barrier;
-    }
-    return membership;
-  }
-
-  waitForRoleRead(): Promise<void> {
-    return this.readReached;
-  }
-
-  releaseRoleRead(): void {
-    this.release?.();
-  }
-}
-
-describe("MembershipService", () => {
-  let service!: MembershipService;
-  let store!: InMemoryMembershipStore;
-  let publishNow!: ReturnType<typeof vi.fn>;
-
-  const createInput = (overrides: Partial<MembershipCreateInput> = {}): MembershipCreateInput => {
-    return {
-      id: overrides.id ?? "mem-1",
-      tenantId: overrides.tenantId ?? "tenant-1",
-      userId: overrides.userId ?? "user-1",
-      role: overrides.role ?? "member",
-    };
-  };
-
-  const seedMembership = async (overrides: Partial<MembershipCreateInput> = {}): Promise<void> => {
-    await store.save(createInput(overrides));
-  };
-
-  beforeEach(() => {
-    Container.reset();
-
-    store = new InMemoryMembershipStore();
-    publishNow = vi.fn();
-
-    service = new MembershipService(store, {
-      publishAfterCommit: vi.fn(() => {
-        throw new EventAfterCommitRequiresActiveTransactionProblem();
-      }),
-      publishNow,
-      publishMany: vi.fn(),
-    } as unknown as EventPublisher);
+    const results = await Promise.allSettled([
+      service.removeMember("tenant-1", "owner-1", "remove:owner-1"),
+      service.removeMember("tenant-1", "owner-2", "remove:owner-2"),
+    ]);
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    expect(results.find((result) => result.status === "rejected")).toMatchObject({
+      reason: expect.any(LastOwnerCannotBeRemovedProblem),
+    });
+    await expect(store.countByRole("tenant-1", "owner")).resolves.toBe(1);
   });
 
-  describe("addMember", () => {
-    it("should propagate event publication failures when adding a member", async () => {
-      publishNow.mockRejectedValueOnce(new Error("publish failed"));
+  it("allows only one concurrent owner demotion", async () => {
+    const store = new InMemoryMembershipStore();
+    await store.save({ id: "owner-1", tenantId: "tenant-1", userId: "owner-1", role: "owner" });
+    await store.save({ id: "owner-2", tenantId: "tenant-1", userId: "owner-2", role: "owner" });
+    const service = createService(store, async () => undefined);
 
-      await expect(service.addMember("tenant-1", "user-1", "member")).rejects.toThrow(
-        "publish failed",
-      );
+    const results = await Promise.allSettled([
+      service.updateRole("tenant-1", "owner-1", "admin", "demote:owner-1"),
+      service.updateRole("tenant-1", "owner-2", "admin", "demote:owner-2"),
+    ]);
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    expect(results.find((result) => result.status === "rejected")).toMatchObject({
+      reason: expect.any(LastOwnerProblem),
     });
-
-    it("should throw InvalidRoleProblem when adding a member with invalid role", async () => {
-      await expect(
-        service.addMember("tenant-1", "user-1", "invalid" as never),
-      ).rejects.toBeInstanceOf(InvalidRoleProblem);
-    });
-
-    it("should add member successfully", async () => {
-      const membership = await service.addMember("tenant-1", "user-1", "member");
-
-      expect(membership.tenantId).toBe("tenant-1");
-      expect(membership.userId).toBe("user-1");
-      expect(membership.role).toBe("member");
-    });
-
-    it("should defer the membership-created event until commit when a transaction is active", async () => {
-      const afterCommitEvents: MembershipCreatedEvent[] = [];
-      service = new MembershipService(store, {
-        publishAfterCommit: (event: MembershipCreatedEvent) => {
-          afterCommitEvents.push(event);
-        },
-        publishNow,
-      } as unknown as EventPublisher);
-
-      await service.addMember("tenant-1", "user-1", "member");
-
-      expect(afterCommitEvents).toHaveLength(1);
-      expect(publishNow).not.toHaveBeenCalled();
-    });
+    await expect(store.countByRole("tenant-1", "owner")).resolves.toBe(1);
   });
 
-  describe("seat limit", () => {
-    it("should throw SeatLimitExceededProblem when seat limit is exceeded", async () => {
-      const seatLimitChecker: SeatLimitChecker = {
-        checkSeatAvailability: vi.fn().mockResolvedValue({
-          usage: 10,
-          quota: 10,
-          exceeded: true,
-          remaining: 0,
-        } as EntitlementQuotaStatus),
-        getCurrentMemberCount: vi.fn().mockResolvedValue(10),
-        getMaxSeats: vi.fn().mockResolvedValue(10),
-      };
-
-      service = new MembershipService(
-        store,
-        {
-          publishAfterCommit: vi.fn(() => {
-            throw new EventAfterCommitRequiresActiveTransactionProblem();
-          }),
-          publishNow,
-          publishMany: vi.fn(),
-        } as unknown as EventPublisher,
-        seatLimitChecker,
-      );
-
-      await expect(service.addMember("tenant-1", "user-1", "member")).rejects.toBeInstanceOf(
-        SeatLimitExceededProblem,
-      );
-    });
-
-    it("should allow adding member when seat limit is not exceeded", async () => {
-      const seatLimitChecker: SeatLimitChecker = {
-        checkSeatAvailability: vi.fn().mockResolvedValue({
-          usage: 5,
-          quota: 10,
-          exceeded: false,
-          remaining: 5,
-        } as EntitlementQuotaStatus),
-        getCurrentMemberCount: vi.fn().mockResolvedValue(5),
-        getMaxSeats: vi.fn().mockResolvedValue(10),
-      };
-
-      service = new MembershipService(
-        store,
-        {
-          publishAfterCommit: vi.fn(() => {
-            throw new EventAfterCommitRequiresActiveTransactionProblem();
-          }),
-          publishNow,
-          publishMany: vi.fn(),
-        } as unknown as EventPublisher,
-        seatLimitChecker,
-      );
-
-      const membership = await service.addMember("tenant-1", "user-1", "member");
-      expect(membership).toBeDefined();
-    });
-  });
-
-  describe("removeMember", () => {
-    it("BUG-10 마지막 오너는 삭제할 수 없다", async () => {
-      await store.save({
-        id: "mem-owner",
-        tenantId: "tenant-1",
-        userId: "user-owner",
-        role: "owner",
+  it("rejects a stale non-owner update after ownership transfers", async () => {
+    class PausedReadStore extends InMemoryMembershipStore {
+      private release!: () => void;
+      private reached!: () => void;
+      readonly readReached = new Promise<void>((resolve) => {
+        this.reached = resolve;
       });
-
-      await expect(service.removeMember("tenant-1", "user-owner")).rejects.toBeInstanceOf(
-        LastOwnerCannotBeRemovedProblem,
-      );
-    });
-
-    it("should remove member when not last owner", async () => {
-      await seedMembership({ id: "mem-1", userId: "user-1", role: "owner" });
-      await seedMembership({ id: "mem-2", userId: "user-2", role: "owner" });
-
-      await service.removeMember("tenant-1", "user-1");
-
-      const membership = await store.findByTenantAndUser("tenant-1", "user-1");
-      expect(membership).toBeNull();
-    });
-
-    it("should defer the membership-removed event until commit when a transaction is active", async () => {
-      const afterCommitEvents: MembershipRemovedEvent[] = [];
-      service = new MembershipService(store, {
-        publishAfterCommit: (event: MembershipRemovedEvent) => {
-          afterCommitEvents.push(event);
-        },
-        publishNow,
-      } as unknown as EventPublisher);
-      await seedMembership({ role: "member" });
-
-      await service.removeMember("tenant-1", "user-1");
-
-      expect(afterCommitEvents).toHaveLength(1);
-      expect(publishNow).not.toHaveBeenCalled();
-    });
-
-    it("allows only one concurrent owner removal after both mutations reach the barrier", async () => {
-      store = new BarrierMembershipStore();
-      service = new MembershipService(store, {
-        publishAfterCommit: vi.fn(() => {
-          throw new EventAfterCommitRequiresActiveTransactionProblem();
-        }),
-        publishNow,
-        publishMany: vi.fn(),
-      } as unknown as EventPublisher);
-      await seedMembership({ id: "mem-1", userId: "user-1", role: "owner" });
-      await seedMembership({ id: "mem-2", userId: "user-2", role: "owner" });
-
-      const results = await Promise.allSettled([
-        service.removeMember("tenant-1", "user-1"),
-        service.removeMember("tenant-1", "user-2"),
-      ]);
-
-      expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
-      const rejected = results.find((result) => result.status === "rejected");
-      expect(rejected).toMatchObject({
-        status: "rejected",
-        reason: expect.any(LastOwnerCannotBeRemovedProblem),
+      private readonly barrier = new Promise<void>((resolve) => {
+        this.release = resolve;
       });
-      expect(await store.countByRole("tenant-1", "owner")).toBe(1);
-    });
-  });
+      private pause = true;
 
-  describe("updateRole", () => {
-    it("BUG-10 마지막 오너 권한 변경은 제한된다", async () => {
-      await store.save({
-        id: "mem-owner",
-        tenantId: "tenant-1",
-        userId: "user-owner",
-        role: "owner",
-      });
-
-      await expect(service.updateRole("tenant-1", "user-owner", "member")).rejects.toBeInstanceOf(
-        LastOwnerProblem,
-      );
-    });
-
-    it("should throw InvalidRoleProblem when updating to invalid role", async () => {
-      await store.save({
-        id: "mem-member",
-        tenantId: "tenant-1",
-        userId: "user-member",
-        role: "member",
-      });
-
-      await expect(
-        service.updateRole("tenant-1", "user-member", "invalid" as never),
-      ).rejects.toBeInstanceOf(InvalidRoleProblem);
-    });
-
-    it("should reject demoting the last owner", async () => {
-      await seedMembership({ id: "mem-1", userId: "user-1", role: "owner" });
-
-      await expect(service.updateRole("tenant-1", "user-1", "admin")).rejects.toBeInstanceOf(
-        LastOwnerProblem,
-      );
-    });
-
-    it("allows only one concurrent owner demotion after both mutations reach the barrier", async () => {
-      store = new BarrierMembershipStore();
-      service = new MembershipService(store, {
-        publishAfterCommit: vi.fn(() => {
-          throw new EventAfterCommitRequiresActiveTransactionProblem();
-        }),
-        publishNow,
-        publishMany: vi.fn(),
-      } as unknown as EventPublisher);
-      await seedMembership({ id: "mem-1", userId: "user-1", role: "owner" });
-      await seedMembership({ id: "mem-2", userId: "user-2", role: "owner" });
-
-      const results = await Promise.allSettled([
-        service.updateRole("tenant-1", "user-1", "admin"),
-        service.updateRole("tenant-1", "user-2", "admin"),
-      ]);
-
-      expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
-      const rejected = results.find((result) => result.status === "rejected");
-      expect(rejected).toMatchObject({
-        status: "rejected",
-        reason: expect.any(LastOwnerProblem),
-      });
-      expect(await store.countByRole("tenant-1", "owner")).toBe(1);
-      expect(await store.countByRole("tenant-1", "admin")).toBe(1);
-    });
-
-    it("rejects a stale non-owner update after ownership transfers to that member", async () => {
-      const staleStore = new StaleRoleReadStore();
-      store = staleStore;
-      service = new MembershipService(store, {
-        publishAfterCommit: vi.fn(() => {
-          throw new EventAfterCommitRequiresActiveTransactionProblem();
-        }),
-        publishNow,
-        publishMany: vi.fn(),
-      } as unknown as EventPublisher);
-      await seedMembership({ id: "mem-1", userId: "user-1", role: "owner" });
-      await seedMembership({ id: "mem-2", userId: "user-2", role: "admin" });
-
-      const staleUpdate = service.updateRole("tenant-1", "user-2", "member");
-      await staleStore.waitForRoleRead();
-      await service.transferOwnership("tenant-1", "user-1", "user-2");
-      staleStore.releaseRoleRead();
-
-      await expect(staleUpdate).rejects.toBeInstanceOf(LastOwnerProblem);
-      expect(await store.countByRole("tenant-1", "owner")).toBe(1);
-      expect((await store.findByTenantAndUser("tenant-1", "user-2"))?.role).toBe("owner");
-    });
-  });
-
-  describe("transferOwnership", () => {
-    it("should transfer ownership from one user to another", async () => {
-      await seedMembership({ id: "mem-1", userId: "user-1", role: "owner" });
-      await seedMembership({ id: "mem-2", userId: "user-2", role: "admin" });
-
-      await service.transferOwnership("tenant-1", "user-1", "user-2");
-
-      const fromMembership = await store.findByTenantAndUser("tenant-1", "user-1");
-      const toMembership = await store.findByTenantAndUser("tenant-1", "user-2");
-
-      expect(fromMembership?.role).toBe("admin");
-      expect(toMembership?.role).toBe("owner");
-    });
-
-    it("should throw OwnershipTransferRequiredProblem when from user is not owner", async () => {
-      await seedMembership({ id: "mem-1", userId: "user-1", role: "admin" });
-      await seedMembership({ id: "mem-2", userId: "user-2", role: "member" });
-
-      await expect(
-        service.transferOwnership("tenant-1", "user-1", "user-2"),
-      ).rejects.toBeInstanceOf(OwnershipTransferRequiredProblem);
-    });
-
-    it("should throw MembershipNotFoundProblem when to user is not a member", async () => {
-      await seedMembership({ id: "mem-1", userId: "user-1", role: "owner" });
-
-      await expect(
-        service.transferOwnership("tenant-1", "user-1", "user-2"),
-      ).rejects.toBeInstanceOf(MembershipNotFoundProblem);
-    });
-
-    it("should publishNow events for both users", async () => {
-      await seedMembership({ id: "mem-1", userId: "user-1", role: "owner" });
-      await seedMembership({ id: "mem-2", userId: "user-2", role: "admin" });
-
-      await service.transferOwnership("tenant-1", "user-1", "user-2");
-
-      expect(publishNow).toHaveBeenCalledTimes(2);
-      expect(publishNow).toHaveBeenCalledWith(expect.any(MembershipUpdatedEvent));
-    });
-
-    it("should defer ownership events when after-commit publication is available", async () => {
-      const afterCommitHooks: Array<() => void | Promise<void>> = [];
-      const publishCommittedEvent = vi.fn(async (_event: MembershipUpdatedEvent) => {});
-      service = new MembershipService(store, {
-        publishAfterCommit: (event: MembershipUpdatedEvent) => {
-          afterCommitHooks.push(() => publishCommittedEvent(event));
-        },
-        publishNow: publishCommittedEvent,
-        publishMany: vi.fn(),
-      } as unknown as EventPublisher);
-      await seedMembership({ id: "mem-1", userId: "user-1", role: "owner" });
-      await seedMembership({ id: "mem-2", userId: "user-2", role: "admin" });
-
-      await service.transferOwnership("tenant-1", "user-1", "user-2");
-
-      expect(afterCommitHooks).toHaveLength(2);
-      expect(publishCommittedEvent).not.toHaveBeenCalled();
-
-      for (const hook of afterCommitHooks) {
-        await hook();
+      override async findByTenantAndUser(
+        tenantId: string,
+        userId: string,
+      ): Promise<Membership | null> {
+        const membership = await super.findByTenantAndUser(tenantId, userId);
+        if (userId === "member" && this.pause) {
+          this.pause = false;
+          this.reached();
+          await this.barrier;
+        }
+        return membership;
       }
-      expect(publishCommittedEvent).toHaveBeenCalledTimes(2);
+
+      resume(): void {
+        this.release();
+      }
+    }
+    const store = new PausedReadStore();
+    await store.save({ id: "owner", tenantId: "tenant-1", userId: "owner", role: "owner" });
+    await store.save({ id: "member", tenantId: "tenant-1", userId: "member", role: "member" });
+    const service = createService(store, async () => undefined);
+
+    const stale = service.updateRole("tenant-1", "member", "admin", "stale-update");
+    await store.readReached;
+    await service.transferOwnership("tenant-1", "owner", "member", "transfer-before-update");
+    store.resume();
+    await expect(stale).rejects.toBeInstanceOf(LastOwnerProblem);
+    await expect(store.findByTenantAndUser("tenant-1", "member")).resolves.toMatchObject({
+      role: "owner",
     });
   });
 
-  describe("role hierarchy", () => {
-    it("should allow promoting member to admin", async () => {
-      await seedMembership({ role: "member" });
+  it("preserves role, seat-limit, and last-owner domain Problems", async () => {
+    const store = new InMemoryMembershipStore();
+    const service = new MembershipService({
+      store,
+      eventDelivery: "development",
+      eventPublisher: { publishIdempotently: async () => undefined },
+      seatLimitChecker: {
+        checkSeatAvailability: async () => ({ usage: 1, quota: 1, exceeded: true, remaining: 0 }),
+        getCurrentMemberCount: async () => 1,
+        getMaxSeats: async () => 1,
+      },
+    });
+    await expect(
+      service.addMember("tenant-1", "user-1", "invalid" as never, "invalid-role"),
+    ).rejects.toBeInstanceOf(InvalidRoleProblem);
+    await expect(
+      service.addMember("tenant-1", "user-1", "member", "seat-limit"),
+    ).rejects.toBeInstanceOf(SeatLimitExceededProblem);
 
-      const membership = await service.updateRole("tenant-1", "user-1", "admin");
-      expect(membership.role).toBe("admin");
+    await store.save({ id: "owner", tenantId: "tenant-1", userId: "owner", role: "owner" });
+    const unconstrained = createService(store, async () => undefined);
+    await expect(
+      unconstrained.removeMember("tenant-1", "owner", "remove-owner"),
+    ).rejects.toBeInstanceOf(LastOwnerCannotBeRemovedProblem);
+    await expect(
+      unconstrained.updateRole("tenant-1", "owner", "member", "demote-owner"),
+    ).rejects.toBeInstanceOf(LastOwnerProblem);
+  });
+
+  it("preserves ownership transfer validation Problems", async () => {
+    const store = new InMemoryMembershipStore();
+    const service = createService(store, async () => undefined);
+    await store.save({ id: "member", tenantId: "tenant-1", userId: "member", role: "member" });
+    await store.save({ id: "target", tenantId: "tenant-1", userId: "target", role: "member" });
+    await expect(
+      service.transferOwnership("tenant-1", "member", "target", "invalid-source"),
+    ).rejects.toBeInstanceOf(OwnershipTransferRequiredProblem);
+    await store.save({ id: "owner", tenantId: "tenant-1", userId: "owner", role: "owner" });
+    await expect(
+      service.transferOwnership("tenant-1", "owner", "missing", "missing-target"),
+    ).rejects.toBeInstanceOf(MembershipNotFoundProblem);
+  });
+
+  it("commits add with a recoverable intent independently of publication", async () => {
+    const store = new InMemoryMembershipStore();
+    const published: DomainEvent[] = [];
+    let attempts = 0;
+    const service = createService(store, async (event) => {
+      attempts += 1;
+      if (attempts === 1) throw new Error("transport failed");
+      published.push(event);
     });
 
-    it("should allow demoting admin to member", async () => {
-      await seedMembership({ role: "admin" });
+    await expect(
+      service.addMember("tenant-1", "user-1", "member", "add:user-1"),
+    ).resolves.toMatchObject({ id: "membership-1", role: "member" });
+    expect(attempts).toBe(0);
+    await expect(store.findByTenantAndUser("tenant-1", "user-1")).resolves.toMatchObject({
+      id: "membership-1",
+      role: "member",
+    });
+    await expect(store.getPendingEventIntent("add:user-1")).resolves.toMatchObject({
+      idempotencyKey: "add:user-1",
+    });
 
-      const membership = await service.updateRole("tenant-1", "user-1", "member");
-      expect(membership.role).toBe("member");
+    await expect(service.publishPendingEvents()).rejects.toBeInstanceOf(
+      MembershipEventPublicationProblem,
+    );
+    const replay = await service.addMember("tenant-1", "user-1", "member", "add:user-1");
+    expect(replay.id).toBe("membership-1");
+    await expect(service.publishPendingEvents()).resolves.toBe(1);
+    expect(published).toHaveLength(1);
+    expect(published[0]?.eventId).toMatch(/^[a-f0-9]{64}$/u);
+    await expect(store.getPendingEventIntent("add:user-1")).resolves.toBeNull();
+  });
+
+  it("rejects semantic reuse of an idempotency key", async () => {
+    const store = new InMemoryMembershipStore();
+    const service = createService(store, async () => undefined);
+    await service.addMember("tenant-1", "user-1", "member", "membership-command");
+
+    await expect(
+      service.addMember("tenant-1", "user-2", "member", "membership-command"),
+    ).rejects.toBeInstanceOf(MembershipIdempotencyConflictProblem);
+  });
+
+  it("replays an update result while its original intent remains pending", async () => {
+    const store = new InMemoryMembershipStore();
+    await store.save({
+      id: "membership-1",
+      tenantId: "tenant-1",
+      userId: "user-1",
+      role: "member",
+    });
+    let attempts = 0;
+    const service = createService(store, async () => {
+      attempts += 1;
+      if (attempts === 1) throw new Error("transport failed");
+    });
+
+    await expect(
+      service.updateRole("tenant-1", "user-1", "admin", "promote:user-1"),
+    ).resolves.toMatchObject({ role: "admin" });
+    await expect(service.publishPendingEvents()).rejects.toBeInstanceOf(
+      MembershipEventPublicationProblem,
+    );
+    await expect(
+      service.updateRole("tenant-1", "user-1", "admin", "promote:user-1"),
+    ).resolves.toMatchObject({ role: "admin" });
+    await expect(service.publishPendingEvents()).resolves.toBe(1);
+    expect(attempts).toBe(2);
+  });
+
+  it("keeps both ownership events in one intent and recovers partial publication", async () => {
+    const store = new InMemoryMembershipStore();
+    await store.save({ id: "owner", tenantId: "tenant-1", userId: "owner", role: "owner" });
+    await store.save({ id: "member", tenantId: "tenant-1", userId: "member", role: "member" });
+    const delivered = new Set<string>();
+    let attempts = 0;
+    const publish = vi.fn(async (event: DomainEvent) => {
+      attempts += 1;
+      if (attempts === 2) throw new Error("second event failed");
+      delivered.add(event.eventId);
+    });
+    const service = createService(store, publish);
+
+    await expect(
+      service.transferOwnership("tenant-1", "owner", "member", "transfer-1"),
+    ).resolves.toBeUndefined();
+    expect(publish).not.toHaveBeenCalled();
+    await expect(service.publishPendingEvents()).rejects.toBeInstanceOf(
+      MembershipEventPublicationProblem,
+    );
+    await expect(store.getPendingEventIntent("transfer-1")).resolves.toMatchObject({
+      events: [{ eventName: "membership.updated" }, { eventName: "membership.updated" }],
+    });
+
+    const recovery = createService(store, async (event) => {
+      delivered.add(event.eventId);
+    });
+    await expect(recovery.publishPendingEvents()).resolves.toBe(1);
+    expect(delivered.size).toBe(2);
+    await expect(store.findByTenantAndUser("tenant-1", "owner")).resolves.toMatchObject({
+      role: "admin",
+    });
+    await expect(store.findByTenantAndUser("tenant-1", "member")).resolves.toMatchObject({
+      role: "owner",
     });
   });
 });

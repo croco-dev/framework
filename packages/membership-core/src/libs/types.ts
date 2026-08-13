@@ -83,6 +83,61 @@ export type MembershipOwnershipTransferResult =
       status: "conflict";
     };
 
+export type MembershipCommand =
+  | {
+      readonly operation: "add";
+      readonly idempotencyKey: string;
+      readonly membershipId: string;
+      readonly tenantId: string;
+      readonly userId: string;
+      readonly role: MembershipRole;
+    }
+  | {
+      readonly operation: "remove";
+      readonly idempotencyKey: string;
+      readonly tenantId: string;
+      readonly userId: string;
+    }
+  | {
+      readonly operation: "update_role";
+      readonly idempotencyKey: string;
+      readonly tenantId: string;
+      readonly userId: string;
+      readonly role: MembershipRole;
+    }
+  | {
+      readonly operation: "transfer_ownership";
+      readonly idempotencyKey: string;
+      readonly tenantId: string;
+      readonly fromUserId: string;
+      readonly toUserId: string;
+    };
+
+export type MembershipCommandResult =
+  | {
+      readonly operation: "add";
+      readonly membership: Membership;
+      readonly replayed: boolean;
+    }
+  | {
+      readonly operation: "update_role";
+      readonly membership: Membership;
+      readonly previousRole: MembershipRole;
+      readonly replayed: boolean;
+    }
+  | {
+      readonly operation: "remove";
+      readonly membership: Membership;
+      readonly replayed: boolean;
+    }
+  | {
+      readonly operation: "transfer_ownership";
+      readonly fromMembership: Membership;
+      readonly toMembership: Membership;
+      readonly previousToRole: MembershipRole;
+      readonly replayed: boolean;
+    };
+
 export const ROLE_HIERARCHY: Record<MembershipRole, number> = {
   owner: 4,
   admin: 3,
