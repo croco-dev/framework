@@ -15,6 +15,12 @@ type UsageMemberEnvelope = Partial<
 type RecordedQuotaResult = AtomicQuotaCheckResult & {
   expiresAt: number;
 };
+type ParsedUsageMember = Pick<UsageRecord, "id" | "value"> & UsageMemberEnvelope;
+type ReconciledUsageMember = {
+  member: string;
+  parsed: ParsedUsageMember;
+  score?: number;
+};
 
 function stableStringify(value: unknown): string {
   return JSON.stringify(value, (_key, nestedValue: unknown) => {
@@ -53,6 +59,8 @@ export class RedisUsageStorage implements UsageStorage {
   private static readonly RECORD_IDEMPOTENCY_CACHE_MAX_ENTRIES = 10_000;
   private static readonly RECORD_IDEMPOTENCY_CACHE_PRUNE_INTERVAL_MILLISECONDS = 60_000;
   private static readonly MAX_BILLING_CYCLE_PARTITIONS = 1_200;
+  private static readonly MAX_PERIOD_PARTITIONS = 1_200;
+  private static readonly PARTITION_READ_CONCURRENCY = 16;
   private static readonly RESET_SCAN_BATCH_SIZE = 500;
   private static readonly RECORD_USAGE_SCRIPT = `
 local usageKey = KEYS[1]
@@ -203,8 +211,10 @@ return { exceeded and 1 or 0, newUsage }
 
   async getUsage(options: UsageQueryOptions): Promise<number> {
     try {
-      const { members } = await this.readUsageMembers(options);
-      return this.sumUsageMembers(members);
+      const { members } = await this.readUsageMembers(options, "WITHSCORES");
+      return this.sumUsageMembers(
+        this.parseScoredUsageMembers(members).map(({ member }) => member),
+      );
     } catch (error) {
       throw this.toRedisProblem("ZRANGEBYSCORE", error);
     }
@@ -327,9 +337,45 @@ return { exceeded and 1 or 0, newUsage }
       return this.getBillingCycleUsageKeys(tenantId, meterId, min, max);
     }
 
-    const date = new Date(min);
-    const primaryKey = this.buildUsageKey(tenantId, meterId, date, period);
-    return [primaryKey, this.buildUsageKey(tenantId, meterId, date, "billing_cycle")];
+    return [
+      ...this.getPeriodUsageKeys(tenantId, meterId, min, max, period),
+      ...this.getBillingCycleUsageKeys(tenantId, meterId, min, max),
+    ];
+  }
+
+  private getPeriodUsageKeys(
+    tenantId: string,
+    meterId: string,
+    min: number,
+    max: number,
+    period: Exclude<AggregationPeriod, "billing_cycle">,
+  ): string[] {
+    const cursor = new Date(min);
+    const end = new Date(max);
+    const keys: string[] = [];
+
+    if (period === "hour") {
+      cursor.setUTCMinutes(0, 0, 0);
+    } else {
+      cursor.setUTCHours(0, 0, 0, 0);
+    }
+
+    while (cursor.getTime() <= end.getTime()) {
+      if (keys.length >= RedisUsageStorage.MAX_PERIOD_PARTITIONS) {
+        throw new InvalidUsageQueryProblem(
+          `Usage query spans more than ${RedisUsageStorage.MAX_PERIOD_PARTITIONS} ${period} partitions`,
+        );
+      }
+
+      keys.push(this.buildUsageKey(tenantId, meterId, cursor, period));
+      if (period === "hour") {
+        cursor.setUTCHours(cursor.getUTCHours() + 1);
+      } else {
+        cursor.setUTCDate(cursor.getUTCDate() + 1);
+      }
+    }
+
+    return keys;
   }
 
   private getBillingCycleUsageKeys(
@@ -386,25 +432,118 @@ return { exceeded and 1 or 0, newUsage }
     const candidates = this.getUsageKeyCandidates(tenantId, meterId, min, partitionMax, period);
     const allMembers: string[] = [];
 
-    for (const key of candidates) {
-      const members =
-        withScores === "WITHSCORES"
-          ? await this.redis.zrangebyscore(key, min, max, withScores)
-          : await this.redis.zrangebyscore(key, min, max);
+    for (
+      let offset = 0;
+      offset < candidates.length;
+      offset += RedisUsageStorage.PARTITION_READ_CONCURRENCY
+    ) {
+      const batch = candidates.slice(offset, offset + RedisUsageStorage.PARTITION_READ_CONCURRENCY);
+      const batchMembers = await Promise.all(
+        batch.map((key) =>
+          withScores === "WITHSCORES"
+            ? this.redis.zrangebyscore(key, min, max, withScores)
+            : this.redis.zrangebyscore(key, min, max),
+        ),
+      );
 
-      if (period === "billing_cycle") {
+      for (const members of batchMembers) {
+        if (withScores === "WITHSCORES") {
+          this.parseScoredUsageMembers(members);
+        }
         for (const member of members) {
           allMembers.push(member);
         }
-        continue;
-      }
-
-      if (members.length > 0) {
-        return { key, members };
       }
     }
 
-    return { key: candidates[0], members: allMembers };
+    return {
+      key: candidates[0],
+      members: this.reconcileUsageMembers(allMembers, withScores === "WITHSCORES"),
+    };
+  }
+
+  private reconcileUsageMembers(members: string[], withScores: boolean): string[] {
+    const parsedMembers: ReconciledUsageMember[] = withScores
+      ? this.parseScoredUsageMembers(members).map(({ member, score }) => ({
+          member,
+          parsed: this.parseUsageMember(member),
+          score,
+        }))
+      : members.map((member) => ({ member, parsed: this.parseUsageMember(member) }));
+    const parents = parsedMembers.map((_, index) => index);
+    const findRoot = (index: number): number => {
+      let root = index;
+      while (parents[root] !== root) {
+        root = parents[root] ?? root;
+      }
+      while (parents[index] !== index) {
+        const parent = parents[index] ?? root;
+        parents[index] = root;
+        index = parent;
+      }
+      return root;
+    };
+    const firstIndexByIdentity = new Map<string, number>();
+
+    parsedMembers.forEach(({ parsed }, index) => {
+      for (const identity of this.getUsageMemberIdentities(parsed)) {
+        const firstIndex = firstIndexByIdentity.get(identity);
+        if (firstIndex === undefined) {
+          firstIndexByIdentity.set(identity, index);
+          continue;
+        }
+        parents[findRoot(index)] = findRoot(firstIndex);
+      }
+    });
+
+    const groups = new Map<number, ReconciledUsageMember[]>();
+    parsedMembers.forEach((candidate, index) => {
+      const root = findRoot(index);
+      groups.set(root, [...(groups.get(root) ?? []), candidate]);
+    });
+
+    const reconciled = Array.from(groups.values()).map((group) => {
+      const [first, ...duplicates] = group;
+      if (first === undefined) {
+        throw new RedisProblem(
+          "ZRANGEBYSCORE",
+          "Stored usage reconciliation produced an empty group",
+        );
+      }
+
+      let preferred = first;
+      for (const candidate of duplicates) {
+        if (first.parsed.value !== candidate.parsed.value || first.score !== candidate.score) {
+          throw new RedisProblem(
+            "ZRANGEBYSCORE",
+            `Conflicting stored usage record '${candidate.parsed.id}' across Redis partitions`,
+          );
+        }
+        if (
+          this.getUsageMemberRichness(candidate.parsed) >
+          this.getUsageMemberRichness(preferred.parsed)
+        ) {
+          preferred = candidate;
+        }
+      }
+      return preferred;
+    });
+
+    return reconciled.flatMap(({ member, score }) =>
+      withScores ? [member, String(score)] : [member],
+    );
+  }
+
+  private getUsageMemberIdentities(usage: Pick<UsageRecord, "id"> & UsageMemberEnvelope): string[] {
+    return [
+      `id:${usage.id}`,
+      `idempotency:${usage.idempotencyKey ?? usage.id}`,
+      ...(usage.eventId === undefined ? [] : [`event:${usage.eventId}`]),
+    ];
+  }
+
+  private getUsageMemberRichness(usage: UsageMemberEnvelope): number {
+    return Number(usage.idempotencyKey !== undefined) + Number(usage.eventId !== undefined);
   }
 
   private buildRecordIdempotencyKey(
@@ -522,9 +661,7 @@ return { exceeded and 1 or 0, newUsage }
       : `${base}:${encodeURIComponent(JSON.stringify(usage.metadata))}`;
   }
 
-  private parseUsageMember(
-    member: string,
-  ): Pick<UsageRecord, "id" | "value"> & UsageMemberEnvelope {
+  private parseUsageMember(member: string): ParsedUsageMember {
     const parts = member.split(":");
     const id = parts[0] ?? "";
     const rawValue = parts[1] ?? "";
@@ -743,50 +880,91 @@ return { exceeded and 1 or 0, newUsage }
       partitionMax,
       options.period,
     );
-    const membersByKey = new Map<string, string[]>();
-
-    if (options.period === "billing_cycle") {
-      const candidateKeys = new Set(keys);
-
-      for (const record of records) {
-        const key = this.buildUsageKey(
-          options.tenantId,
-          options.meterId,
-          record.timestamp,
-          "billing_cycle",
-        );
-
-        if (!candidateKeys.has(key)) {
-          continue;
+    const candidateKeys = new Set(keys);
+    const recordsByKey = new Map<string, UsageRecord[]>();
+    for (const record of records) {
+      const recordKeys =
+        options.period === "billing_cycle"
+          ? [
+              this.buildUsageKey(
+                options.tenantId,
+                options.meterId,
+                record.timestamp,
+                "billing_cycle",
+              ),
+            ]
+          : [
+              this.buildUsageKey(
+                options.tenantId,
+                options.meterId,
+                record.timestamp,
+                options.period,
+              ),
+              this.buildUsageKey(
+                options.tenantId,
+                options.meterId,
+                record.timestamp,
+                "billing_cycle",
+              ),
+            ];
+      for (const key of recordKeys) {
+        if (candidateKeys.has(key)) {
+          recordsByKey.set(key, [...(recordsByKey.get(key) ?? []), record]);
         }
-
-        const members = membersByKey.get(key) ?? [];
-        members.push(this.serializeUsageMember(record), this.serializeLegacyUsageMember(record));
-        membersByKey.set(key, members);
       }
-    } else {
-      const members = records.flatMap((record) => [
-        this.serializeUsageMember(record),
-        this.serializeLegacyUsageMember(record),
+    }
+
+    const membersByKey = new Map<string, Array<{ member: string; score: number }>>();
+    for (const [key, keyRecords] of recordsByKey) {
+      const knownMembers = keyRecords.flatMap((record) => [
+        { member: this.serializeUsageMember(record), score: record.timestamp.getTime() },
+        { member: this.serializeLegacyUsageMember(record), score: record.timestamp.getTime() },
       ]);
+      const storedMembers = await this.runRedisOperation("ZRANGEBYSCORE", () =>
+        this.redis.zrangebyscore(key, min, max, "WITHSCORES"),
+      );
+      const exactMembers = this.parseScoredUsageMembers(storedMembers).filter(
+        ({ member, score }) => {
+          const parsed = this.parseUsageMember(member);
+          const parsedIdentities = new Set(this.getUsageMemberIdentities(parsed));
+          return keyRecords.some(
+            (record) =>
+              record.value === parsed.value &&
+              record.timestamp.getTime() === score &&
+              this.getUsageMemberIdentities(record).some((identity) =>
+                parsedIdentities.has(identity),
+              ),
+          );
+        },
+      );
 
-      for (const key of keys) {
-        membersByKey.set(key, members);
-      }
+      const uniqueMembers = new Map(
+        [...knownMembers, ...exactMembers].map((candidate) => [candidate.member, candidate]),
+      );
+      membersByKey.set(key, [...uniqueMembers.values()]);
     }
 
     const script = `
 local removed = 0
 local usageKey = KEYS[1]
-for _, member in ipairs(ARGV) do
-  removed = removed + redis.call('ZREM', usageKey, member)
+for index = 1, #ARGV, 2 do
+  local member = ARGV[index]
+  local expectedScore = ARGV[index + 1]
+  local actualScore = redis.call('ZSCORE', usageKey, member)
+  if actualScore and actualScore == expectedScore then
+    removed = removed + redis.call('ZREM', usageKey, member)
+  end
 end
 return removed
 `;
 
     try {
       for (const [key, members] of membersByKey) {
-        await this.redis.eval<[number]>(script, [key], members);
+        await this.redis.eval<[number]>(
+          script,
+          [key],
+          members.flatMap(({ member, score }) => [member, score]),
+        );
       }
     } catch (error) {
       throw this.toRedisProblem("ZREM", error);
