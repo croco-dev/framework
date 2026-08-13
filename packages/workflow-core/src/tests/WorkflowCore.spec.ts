@@ -1055,6 +1055,88 @@ describe("workflow-core", () => {
     expect(mockSpan.end).toHaveBeenCalledTimes(1);
   });
 
+  it.each([
+    ["start", "Workflow execution started", false],
+    ["step start", "Workflow step started", false],
+    ["step completion", "Workflow step completed", false],
+    ["completion", "Workflow execution completed", false],
+    ["failure", "Workflow execution failed", true],
+  ] as const)(
+    "keeps the execution state authoritative when the %s log write fails",
+    async (_phase, failedLogMessage, workflowShouldFail) => {
+      const mockSpan = createMockSpan();
+      vi.spyOn(trace, "getTracer").mockReturnValue(createMockTracer(mockSpan.span));
+      const workflowFailure = new TestWorkflowProblem("workflow operation failed");
+      const logFailure = new TestWorkflowProblem("execution log store unavailable");
+
+      @Component()
+      class LogFailureTasks {
+        @Task({ name: "billing.log-failure" })
+        run(): { completed: true } {
+          if (workflowShouldFail) {
+            throw workflowFailure;
+          }
+
+          return { completed: true };
+        }
+      }
+
+      @Component()
+      class LogFailureWorkflows {
+        @Workflow({
+          name: "billing-log-failure",
+          steps: ["billing.log-failure"],
+        })
+        run(): void {}
+      }
+
+      Container.set(LogFailureTasks, new LogFailureTasks());
+      Container.set(LogFailureWorkflows, new LogFailureWorkflows());
+      const recordLog = manager.recordLog.bind(manager);
+      vi.spyOn(manager, "recordLog").mockImplementation(async (executionId, params) => {
+        if (params.message === failedLogMessage) {
+          throw logFailure;
+        }
+
+        return recordLog(executionId, params);
+      });
+      const runner = new WorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+
+      const executionPromise = runner.execute("billing-log-failure", {});
+      if (workflowShouldFail) {
+        await expect(executionPromise).rejects.toBe(workflowFailure);
+      } else {
+        await expect(executionPromise).resolves.toEqual(
+          expect.objectContaining({
+            reused: false,
+            steps: [
+              expect.objectContaining({
+                step: "billing.log-failure",
+                result: { completed: true },
+              }),
+            ],
+          }),
+        );
+      }
+
+      const [workflowExecution] = await manager.list({ type: "workflow" });
+      expect(workflowExecution).toEqual(
+        expect.objectContaining({
+          status: workflowShouldFail ? "failed" : "completed",
+          ...(workflowShouldFail
+            ? { error: expect.objectContaining({ message: workflowFailure.message }) }
+            : {}),
+        }),
+      );
+      expect(mockSpan.addEvent).toHaveBeenCalledWith("workflow.log.failed", {
+        "workflow.execution.id": workflowExecution.id,
+        "workflow.log.level": workflowShouldFail ? "error" : "info",
+        "workflow.log.message": failedLogMessage,
+        "workflow.error.message": logFailure.message,
+      });
+    },
+  );
+
   it("marks failed workflow executions and allows explicit replay creation", async () => {
     @Component()
     class FailingTasks {
