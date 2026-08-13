@@ -1,4 +1,6 @@
 import { createHmac } from "node:crypto";
+import { IdempotencyConflictProblem, InMemoryIdempotencyStore } from "@croco/idempotency-core";
+import type { WebhookGatewayStoredResult } from "@croco/webhooks-core";
 import "reflect-metadata";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BetterAuthWebhookProcessor } from "../libs/BetterAuthWebhookProcessor";
@@ -9,6 +11,20 @@ import {
 import type { BetterAuthSessionProvider, BetterAuthWebhookHandler } from "../libs/types";
 
 const TEST_SIGNING_SECRET = "test-secret";
+const TEST_EVENT_TIMESTAMP = new Date().toISOString();
+
+function normalizeWebhookBody(body: string): string {
+  try {
+    const value = JSON.parse(body);
+    if (typeof value === "object" && value !== null && !("timestamp" in value)) {
+      return JSON.stringify({ ...value, timestamp: TEST_EVENT_TIMESTAMP });
+    }
+  } catch {
+    return body;
+  }
+
+  return body;
+}
 
 function createMockSessionProvider(): BetterAuthSessionProvider {
   return {
@@ -18,9 +34,13 @@ function createMockSessionProvider(): BetterAuthSessionProvider {
   };
 }
 
-function createSignature(body: string, secret = TEST_SIGNING_SECRET): string {
+function createRawSignature(body: string, secret = TEST_SIGNING_SECRET): string {
   const digest = createHmac("sha256", secret).update(body).digest("hex");
   return `sha256=${digest}`;
+}
+
+function createSignature(body: string, secret = TEST_SIGNING_SECRET): string {
+  return createRawSignature(normalizeWebhookBody(body), secret);
 }
 
 function createMockWebhookRequest(
@@ -29,7 +49,7 @@ function createMockWebhookRequest(
 ): { headers: Headers; text: () => Promise<string> } {
   return {
     headers: new Headers(signature ? { "x-better-auth-signature": signature } : {}),
-    text: () => Promise.resolve(body),
+    text: () => Promise.resolve(normalizeWebhookBody(body)),
   };
 }
 
@@ -37,9 +57,11 @@ describe("BetterAuthWebhookProcessor", () => {
   let processor!: BetterAuthWebhookProcessor;
   let mockSessionProvider!: BetterAuthSessionProvider;
   let mockHandlers!: BetterAuthWebhookHandler;
+  let idempotencyStore!: InMemoryIdempotencyStore<WebhookGatewayStoredResult>;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    idempotencyStore = new InMemoryIdempotencyStore();
     mockSessionProvider = createMockSessionProvider();
     mockHandlers = {
       "user.created": vi.fn().mockResolvedValue(undefined),
@@ -49,7 +71,10 @@ describe("BetterAuthWebhookProcessor", () => {
       "session.revoked": vi.fn().mockResolvedValue(undefined),
     };
     processor = new BetterAuthWebhookProcessor(
-      { signingSecret: TEST_SIGNING_SECRET },
+      {
+        signingSecret: TEST_SIGNING_SECRET,
+        idempotencyStore,
+      },
       mockHandlers,
       mockSessionProvider,
     );
@@ -73,6 +98,7 @@ describe("BetterAuthWebhookProcessor", () => {
       await expect(processor.processWebhook(request)).rejects.toBeInstanceOf(
         InvalidWebhookSignatureProblem,
       );
+      expect(idempotencyStore.size).toBe(0);
     });
 
     it("should throw InvalidWebhookSignatureProblem when signature header is missing", async () => {
@@ -93,6 +119,19 @@ describe("BetterAuthWebhookProcessor", () => {
       );
     });
 
+    it("should reject a signed event without a timestamp before reserving idempotency state", async () => {
+      const rawBody = JSON.stringify({ type: "user.created", data: { id: "user-123" } });
+      const request = {
+        headers: new Headers({ "x-better-auth-signature": createRawSignature(rawBody) }),
+        text: () => Promise.resolve(rawBody),
+      };
+
+      await expect(processor.processWebhook(request)).rejects.toBeInstanceOf(
+        InvalidWebhookPayloadProblem,
+      );
+      expect(idempotencyStore.size).toBe(0);
+    });
+
     it("should throw InvalidWebhookSignatureProblem when the body is tampered with", async () => {
       const signedBody = JSON.stringify({ type: "user.created", data: { id: "user-123" } });
       const tamperedBody = JSON.stringify({ type: "user.created", data: { id: "user-456" } });
@@ -102,6 +141,159 @@ describe("BetterAuthWebhookProcessor", () => {
         InvalidWebhookSignatureProblem,
       );
     });
+
+    it("should invoke a handler once for identical verified deliveries", async () => {
+      const rawBody = JSON.stringify({
+        type: "user.created",
+        data: { id: "user-123" },
+      });
+      const request = () => createMockWebhookRequest(rawBody, createSignature(rawBody));
+
+      await processor.processWebhook(request());
+      await processor.processWebhook(request());
+
+      expect(mockHandlers["user.created"]).toHaveBeenCalledTimes(1);
+    });
+
+    it("should share one handler execution across concurrent duplicates", async () => {
+      let releaseHandler!: () => void;
+      let markHandlerStarted!: () => void;
+      const handlerStarted = new Promise<void>((resolve) => {
+        markHandlerStarted = resolve;
+      });
+      const handlerReleased = new Promise<void>((resolve) => {
+        releaseHandler = resolve;
+      });
+      mockHandlers["user.created"] = vi.fn(async () => {
+        markHandlerStarted();
+        await handlerReleased;
+      });
+      const rawBody = JSON.stringify({
+        id: "delivery-123",
+        type: "user.created",
+        data: { id: "user-123" },
+      });
+      const request = () => createMockWebhookRequest(rawBody, createSignature(rawBody));
+
+      const first = processor.processWebhook(request());
+      await handlerStarted;
+      const duplicate = processor.processWebhook(request());
+      releaseHandler();
+      await Promise.all([first, duplicate]);
+
+      expect(mockHandlers["user.created"]).toHaveBeenCalledTimes(1);
+    });
+
+    it("should not let an invalid signature join an active verified delivery", async () => {
+      let releaseHandler!: () => void;
+      let markHandlerStarted!: () => void;
+      const handlerStarted = new Promise<void>((resolve) => {
+        markHandlerStarted = resolve;
+      });
+      const handlerReleased = new Promise<void>((resolve) => {
+        releaseHandler = resolve;
+      });
+      mockHandlers["user.created"] = vi.fn(async () => {
+        markHandlerStarted();
+        await handlerReleased;
+      });
+      const rawBody = JSON.stringify({
+        id: "delivery-123",
+        type: "user.created",
+        data: { id: "user-123" },
+      });
+      const verified = processor.processWebhook(
+        createMockWebhookRequest(rawBody, createSignature(rawBody)),
+      );
+      await handlerStarted;
+
+      await expect(
+        processor.processWebhook(createMockWebhookRequest(rawBody, "invalid-signature")),
+      ).rejects.toBeInstanceOf(InvalidWebhookSignatureProblem);
+
+      releaseHandler();
+      await verified;
+      expect(mockHandlers["user.created"]).toHaveBeenCalledTimes(1);
+    });
+
+    it("should reject a changed payload that reuses a delivery id", async () => {
+      const originalBody = JSON.stringify({
+        id: "delivery-123",
+        type: "user.created",
+        data: { id: "user-123" },
+      });
+      const changedBody = JSON.stringify({
+        id: "delivery-123",
+        type: "user.created",
+        data: { id: "user-456" },
+      });
+
+      await processor.processWebhook(
+        createMockWebhookRequest(originalBody, createSignature(originalBody)),
+      );
+
+      await expect(
+        processor.processWebhook(
+          createMockWebhookRequest(changedBody, createSignature(changedBody)),
+        ),
+      ).rejects.toBeInstanceOf(IdempotencyConflictProblem);
+      expect(mockHandlers["user.created"]).toHaveBeenCalledTimes(1);
+    });
+
+    it("should reject stale signed events before reserving idempotency state", async () => {
+      const store = new InMemoryIdempotencyStore<WebhookGatewayStoredResult>();
+      const reserve = vi.spyOn(store, "reserve");
+      const staleProcessor = new BetterAuthWebhookProcessor(
+        { signingSecret: TEST_SIGNING_SECRET, idempotencyStore: store },
+        mockHandlers,
+        mockSessionProvider,
+      );
+      const rawBody = JSON.stringify({
+        type: "user.created",
+        data: { id: "user-123" },
+        timestamp: new Date(Date.now() - 600_000).toISOString(),
+      });
+
+      await expect(
+        staleProcessor.processWebhook(createMockWebhookRequest(rawBody, createSignature(rawBody))),
+      ).rejects.toBeInstanceOf(InvalidWebhookSignatureProblem);
+      expect(reserve).not.toHaveBeenCalled();
+    });
+
+    it("should reject signed events too far in the future before reserving idempotency state", async () => {
+      const rawBody = JSON.stringify({
+        type: "user.created",
+        data: { id: "user-123" },
+        timestamp: new Date(Date.now() + 600_000).toISOString(),
+      });
+
+      await expect(
+        processor.processWebhook(createMockWebhookRequest(rawBody, createSignature(rawBody))),
+      ).rejects.toBeInstanceOf(InvalidWebhookSignatureProblem);
+      expect(idempotencyStore.size).toBe(0);
+    });
+
+    it.each([
+      "2026-08-13T12:00:00",
+      "Thu, 13 Aug 2026 12:00:00 GMT",
+      "2026-02-31T12:00:00Z",
+      "2026-08-13T25:00:00Z",
+      "2026-08-13T12:00:00+24:00",
+    ])(
+      "should reject non-canonical timestamp %s before reserving idempotency",
+      async (timestamp) => {
+        const rawBody = JSON.stringify({
+          type: "user.created",
+          data: { id: "user-123" },
+          timestamp,
+        });
+
+        await expect(
+          processor.processWebhook(createMockWebhookRequest(rawBody, createSignature(rawBody))),
+        ).rejects.toBeInstanceOf(InvalidWebhookPayloadProblem);
+        expect(idempotencyStore.size).toBe(0);
+      },
+    );
 
     it("should throw InvalidWebhookPayloadProblem when body is not an object", async () => {
       const rawBody = JSON.stringify("not-an-object");
@@ -188,7 +380,10 @@ describe("BetterAuthWebhookProcessor", () => {
 
     it("should not throw when handler is not defined", async () => {
       const processorWithoutHandlers = new BetterAuthWebhookProcessor(
-        { signingSecret: TEST_SIGNING_SECRET },
+        {
+          signingSecret: TEST_SIGNING_SECRET,
+          idempotencyStore: new InMemoryIdempotencyStore(),
+        },
         {},
         mockSessionProvider,
       );

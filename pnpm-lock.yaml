@@ -551,12 +551,18 @@ importers:
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
+      '@croco/idempotency-core':
+        specifier: workspace:*
+        version: link:../idempotency-core
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
       '@croco/tx-drizzle':
         specifier: workspace:*
         version: link:../tx-drizzle
+      '@croco/webhooks-core':
+        specifier: workspace:*
+        version: link:../webhooks-core
       better-auth:
         specifier: ^1.6.23
         version: 1.6.23(@cloudflare/workers-types@4.20260316.1)(@opentelemetry/api@1.9.0)(drizzle-orm@0.45.2(@cloudflare/workers-types@4.20260316.1)(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(@types/pg@8.15.6)(@upstash/redis@1.36.1)(better-sqlite3@11.10.0)(kysely@0.28.17)(pg@8.20.0))(pg@8.20.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(vitest@4.1.8)

@@ -1,5 +1,6 @@
 import { createHmac } from "node:crypto";
 import "reflect-metadata";
+import { InMemoryIdempotencyStore } from "@croco/idempotency-core";
 import { ProblemCategory } from "@croco/problems-core";
 import { createAuthProviderConformanceSuite } from "@croco/testing";
 import { describe, expect, it, vi } from "vitest";
@@ -11,6 +12,20 @@ import type { BetterAuthSessionProvider, BetterAuthWebhookHandler } from "../lib
 
 const TEST_SIGNING_SECRET = "test-secret";
 const SECRET_SAMPLE = "super-secret-token";
+const TEST_EVENT_TIMESTAMP = new Date().toISOString();
+
+function normalizeWebhookBody(body: string): string {
+  try {
+    const value = JSON.parse(body);
+    if (typeof value === "object" && value !== null && !("timestamp" in value)) {
+      return JSON.stringify({ ...value, timestamp: TEST_EVENT_TIMESTAMP });
+    }
+  } catch {
+    return body;
+  }
+
+  return body;
+}
 
 function createMockBetterAuthFactory(session: unknown, error?: unknown): BetterAuthFactory {
   return {
@@ -48,7 +63,7 @@ function createMockSessionProvider(): BetterAuthSessionProvider {
 }
 
 function createSignature(body: string, secret = TEST_SIGNING_SECRET): string {
-  const digest = createHmac("sha256", secret).update(body).digest("hex");
+  const digest = createHmac("sha256", secret).update(normalizeWebhookBody(body)).digest("hex");
   return `sha256=${digest}`;
 }
 
@@ -58,13 +73,16 @@ function createWebhookRequest(
 ): { headers: Headers; text: () => Promise<string> } {
   return {
     headers: new Headers(signature ? { "x-better-auth-signature": signature } : {}),
-    text: () => Promise.resolve(body),
+    text: () => Promise.resolve(normalizeWebhookBody(body)),
   };
 }
 
 function createWebhookProcessor(handlers: BetterAuthWebhookHandler): BetterAuthWebhookProcessor {
   return new BetterAuthWebhookProcessor(
-    { signingSecret: TEST_SIGNING_SECRET },
+    {
+      signingSecret: TEST_SIGNING_SECRET,
+      idempotencyStore: new InMemoryIdempotencyStore(),
+    },
     handlers,
     createMockSessionProvider(),
   );

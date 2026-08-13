@@ -49,7 +49,10 @@ await sessions.revokeUserSessions("user_123");
 import { BetterAuthWebhookProcessor } from "@croco/auth-better-auth";
 
 const processor = new BetterAuthWebhookProcessor(
-  { signingSecret: process.env.BETTER_AUTH_WEBHOOK_SECRET! },
+  {
+    signingSecret: process.env.BETTER_AUTH_WEBHOOK_SECRET!,
+    idempotencyStore,
+  },
   {
     "session.revoked": async (payload) => {
       await auditSession(payload);
@@ -60,6 +63,14 @@ const processor = new BetterAuthWebhookProcessor(
 
 await processor.processWebhook(request);
 ```
+
+웹훅 본문은 ISO 8601 `timestamp`를 포함해야 하며 전체 원문이 `x-better-auth-signature`로
+서명되어야 합니다. 처리기는 수신 시각에서 5분을 벗어난 이벤트를 거부한 뒤, 제공된 `id`와
+본문 fingerprint를 사용해 중복·동시 전달을 한 번만 실행합니다. 같은 processor에 동시에 들어온
+동일 전달은 활성 실행 결과를 함께 기다리며, 다른 인스턴스의 진행 중 전달은 성공으로 숨기지 않습니다.
+`id`가 없으면 서명된 원문의
+SHA-256 digest가 전달 ID가 됩니다. 여러 프로세스나 인스턴스에서 실행할 때는 공유 durable
+`idempotencyStore`를 제공해야 합니다.
 
 ### 5. 제공 스키마 사용
 

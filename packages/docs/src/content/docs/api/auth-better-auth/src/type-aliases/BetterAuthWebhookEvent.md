@@ -17,6 +17,12 @@ Better Auth 웹훅 이벤트 페이로드입니다.
 
 ***
 
+### id?
+
+> `optional` **id**: `string`
+
+***
+
 ### timestamp
 
 > **timestamp**: `Date`

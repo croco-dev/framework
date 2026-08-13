@@ -1,9 +1,12 @@
 import type { AuthUser } from "@croco/auth-core";
+import type { IdempotencyStore } from "@croco/idempotency-core";
+import type { WebhookGatewayStoredResult } from "@croco/webhooks-core";
 
 /**
  * Better Auth 웹훅 이벤트 페이로드입니다.
  */
 export type BetterAuthWebhookEvent = {
+  id?: string;
   type: "user.created" | "user.updated" | "user.deleted" | "session.created" | "session.revoked";
   data: Record<string, unknown>;
   timestamp: Date;
@@ -25,6 +28,7 @@ export type BetterAuthWebhookHandler = {
  */
 export type BetterAuthWebhookOptions = {
   signingSecret: string;
+  idempotencyStore: IdempotencyStore<WebhookGatewayStoredResult>;
 };
 
 /**
