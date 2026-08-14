@@ -77,6 +77,7 @@ export const CACHEABLE_LANE_CHECK_SCHEMA = "croco.ci-cacheable-lane-check/v1" as
 const DEFAULT_TOTAL_TIMEOUT_MS = 150 * 60 * 1000;
 const DEFAULT_MAX_CONCURRENCY = 2;
 const PRODUCER_BUNDLE_FILE = "producer-bundle.json";
+const SPLIT_WORKSPACE_ARTIFACT_CHECK_IDS = new Set(["typecheck", "test", "integration-test-lane"]);
 
 type NormalizedCheckRecord = {
   readonly schemaVersion: typeof CACHEABLE_LANE_CHECK_SCHEMA;
@@ -115,6 +116,7 @@ export type RunCacheableLaneOptions = {
   readonly base?: string;
   readonly head?: string;
   readonly changedFiles?: readonly string[];
+  readonly allowPendingReleaseMetadata?: boolean;
   readonly maxConcurrency?: number;
   readonly totalTimeoutMs?: number;
   readonly runner?: CommandRunner;
@@ -211,6 +213,12 @@ function commandWithLocalDependencies(
   return { ...command, dependsOn };
 }
 
+function withSplitScheduling(command: EvidenceCommand): EvidenceCommand {
+  return SPLIT_WORKSPACE_ARTIFACT_CHECK_IDS.has(command.id)
+    ? { ...command, concurrencyGroup: "workspace-artifacts" }
+    : command;
+}
+
 export function createCacheableLaneExecutionPlan(
   profile: VerificationProfile,
   lane: ProducerLane,
@@ -245,7 +253,7 @@ export function createCacheableLaneExecutionPlan(
     );
   }
   const commands = [...laneManifest.physicalLocalPrerequisites, ...laneManifest.commands].map(
-    (command) => commandWithLocalDependencies(command, localIds),
+    (command) => withSplitScheduling(commandWithLocalDependencies(command, localIds)),
   );
   return { laneManifest, commands, ownedCommands, ownedIds, physicalPrerequisiteIds };
 }
@@ -1016,6 +1024,7 @@ export async function runCacheableLane(
   const changedFiles =
     options.changedFiles ?? changedFilesForRange(rootDir, options.base, options.head);
   const context: VerificationContext = {
+    ...(options.allowPendingReleaseMetadata ? { allowPendingReleaseMetadata: true } : {}),
     base: options.base,
     head: options.head,
     changedFiles,
@@ -1122,6 +1131,7 @@ type CliOptions = {
   readonly securityArtifactPaths: readonly string[];
   readonly cacheDir?: string;
   readonly cacheOrigin?: CacheOrigin;
+  readonly allowPendingReleaseMetadata: boolean;
 };
 
 function requiredValue(args: readonly string[], index: number, flag: string): string {
@@ -1143,9 +1153,14 @@ function parseCli(args: readonly string[]): CliOptions {
   let securityResultsPath: string | undefined;
   let cacheDir: string | undefined;
   let cacheOrigin: CacheOrigin | undefined;
+  let allowPendingReleaseMetadata = false;
   const securityArtifactPaths: string[] = [];
   for (let index = 0; index < args.length; index += 1) {
     const flag = args[index];
+    if (flag === "--allow-pending-release-metadata") {
+      allowPendingReleaseMetadata = true;
+      continue;
+    }
     const value = requiredValue(args, index, flag ?? "argument");
     index += 1;
     if (flag === "--identity") identityPath = value;
@@ -1213,6 +1228,7 @@ function parseCli(args: readonly string[]): CliOptions {
     securityArtifactPaths,
     cacheDir,
     cacheOrigin,
+    allowPendingReleaseMetadata,
   };
 }
 
@@ -1236,6 +1252,7 @@ async function main(args: readonly string[]): Promise<void> {
     securityArtifactPaths: options.securityArtifactPaths,
     cacheDir: options.cacheDir,
     cacheOrigin: options.cacheOrigin,
+    allowPendingReleaseMetadata: options.allowPendingReleaseMetadata,
   });
   if (result.failed) process.exitCode = 1;
 }

@@ -133,6 +133,21 @@ describe("cacheable producer lane planning", () => {
       ).toBe(true);
       expect(plan.physicalPrerequisiteIds.every((id) => !plan.ownedIds.includes(id))).toBe(true);
     }
+
+    const packagePlan = createCacheableLaneExecutionPlan("publish", "package-artifacts", {
+      allowPendingReleaseMetadata: true,
+    });
+    expect(packagePlan.physicalPrerequisiteIds).toEqual(["architecture-policy-runtime", "build"]);
+    expect(packagePlan.commands.find(({ id }) => id === "release-metadata")?.command).toContain(
+      "--allow-pending-changesets",
+    );
+
+    const corePlan = createCacheableLaneExecutionPlan("publish", "core-verification");
+    for (const id of ["typecheck", "test", "integration-test-lane"]) {
+      expect(corePlan.commands.find((command) => command.id === id)?.concurrencyGroup).toBe(
+        "workspace-artifacts",
+      );
+    }
   });
 
   it("rejects the synthesis lane as a producer", () => {

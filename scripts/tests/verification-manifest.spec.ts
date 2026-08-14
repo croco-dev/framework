@@ -347,13 +347,7 @@ describe("verification manifest", () => {
       createVerificationLaneManifest("publish", "package-artifacts").physicalLocalPrerequisites.map(
         ({ id }) => id,
       ),
-    ).toEqual([
-      "architecture-policy-runtime",
-      "build",
-      "typecheck",
-      "test",
-      "integration-test-lane",
-    ]);
+    ).toEqual(["architecture-policy-runtime", "build"]);
     expect(
       createVerificationLaneManifest("publish", "generated-apps").physicalLocalPrerequisites.map(
         ({ id }) => id,

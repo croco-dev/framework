@@ -154,6 +154,7 @@ function workflowCommandUnits(file: string, source: string): CommandUnit[] {
     return units;
   }
 
+  const workflowEnvironment = applyWorkflowEnvironment(new Map(), workflow.env);
   let runLineCursor = 0;
   let imageLineCursor = 0;
   for (const job of Object.values(workflow.jobs)) {
@@ -168,7 +169,11 @@ function workflowCommandUnits(file: string, source: string): CommandUnit[] {
     if (!Array.isArray(job.steps)) {
       continue;
     }
-    const jobEnvironment = applyWorkflowEnvironment(new Map(), job.env);
+    const jobEnvironment = applyWorkflowEnvironment(
+      new Map(workflowEnvironment),
+      job.env,
+      workflowEnvironment,
+    );
     for (const step of job.steps) {
       if (!isPlainRecord(step) || typeof step.run !== "string") {
         continue;

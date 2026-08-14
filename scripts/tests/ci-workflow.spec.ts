@@ -250,6 +250,11 @@ describe("Phase B cacheable verification shadow", () => {
     expect(security).not.toContain("id: exact_receipts");
     expect(security).not.toContain("--cache-dir");
     expect(security).toContain('NPM_CONFIG_PROVENANCE: "true"');
+
+    const packages = workflowJob("package-artifacts", "coverage-security");
+    expect(packages).toContain('if [ "${{ github.event_name }}" = "pull_request" ]; then');
+    expect(packages).toContain("lane_args+=(--allow-pending-release-metadata)");
+    expect(packages).toContain('"${lane_args[@]}"');
   });
 
   it("downloads the exact four immutable bundles before advisory synthesis", () => {

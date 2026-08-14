@@ -905,6 +905,10 @@ jobs:
           VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}
         run: |
           cache_args=()
+          lane_args=()
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            lane_args+=(--allow-pending-release-metadata)
+          fi
           if [ "$TRUSTED_CACHE" = "true" ]; then
             cache_args+=(--cache-dir .ci-cache/exact/package-artifacts)
             if [ "$EXACT_CACHE_HIT" = "true" ]; then
@@ -914,6 +918,7 @@ jobs:
           node --experimental-strip-types scripts/ci-cacheable-lane-runner.mts \
             --identity ci-reports/cacheable-ci/identity.json --lane package-artifacts \
             --profile "$VERIFICATION_PROFILE" --root . --base "$VERIFICATION_BASE" --head HEAD \
+            "${lane_args[@]}" \
             "${cache_args[@]}"
       - name: Upload package artifacts producer evidence
         if: always()
