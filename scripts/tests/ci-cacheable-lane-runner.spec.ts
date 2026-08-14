@@ -61,7 +61,36 @@ function successfulRunner(rootDir: string): CommandRunner {
     for (const artifact of command.artifacts ?? []) {
       const path = join(rootDir, artifact.path);
       mkdirSync(dirname(path), { recursive: true });
-      writeFileSync(path, `${command.id}\n`);
+      const contents = artifact.path.endsWith("published-test-lane.json")
+        ? JSON.stringify({
+            schemaVersion: "croco.test-lane-report/v1",
+            inventoryVersion: 1,
+            inventoryDigest: DIGEST,
+            lane: "published",
+            allowLive: false,
+            selectedOwners: ["fixture"],
+            status: "passed",
+            executedPaths: ["fixture.spec.ts"],
+            diagnostics: [],
+            commands: [
+              {
+                owner: "fixture",
+                cwd: ".",
+                paths: ["fixture.spec.ts"],
+                command: ["vitest", "run", "fixture.spec.ts"],
+                status: "passed",
+                exitCode: 0,
+                durationMs: 1,
+                cacheStatus: "miss",
+                executedPaths: ["fixture.spec.ts"],
+                executionState: "executed",
+              },
+            ],
+          })
+        : artifact.path.endsWith("public-api-summary.json")
+          ? JSON.stringify({ status: "pass" })
+          : `${command.id}\n`;
+      writeFileSync(path, `${contents}\n`);
     }
     return {
       errorCode: null,
@@ -225,46 +254,84 @@ describe("cacheable producer lane evidence", () => {
   it("restores only an exact-key lane cache and issues current-run attestations", async () => {
     useCurrentRunEnvironment();
     const rootDir = mkdtempSync(join(tmpdir(), "croco-cacheable-lane-exact-hit-"));
-    const cacheDir = join(rootDir, ".cache", "generated-apps");
+    const cacheDir = join(rootDir, ".cache", "package-artifacts");
     const base = "a".repeat(40);
     const changedFiles = ["README.md"];
 
     const cold = await runCacheableLane({
-      identity: identity("repo"),
-      lane: "generated-apps",
-      profile: "repo",
+      identity: identity("publish"),
+      lane: "package-artifacts",
+      profile: "publish",
       rootDir,
       base,
       head: COMMIT_SHA,
       changedFiles,
       cacheDir,
-      runner: vi.fn<CommandRunner>(),
+      runner: successfulRunner(rootDir),
     });
     expect(cold.cacheHit).toBe(false);
+    expect(cold.bundle.receipts.length).toBeGreaterThan(0);
 
     vi.stubEnv("GITHUB_RUN_ID", "67890");
     vi.stubEnv("GITHUB_RUN_ATTEMPT", "3");
     const hit = await runCacheableLane({
-      identity: identity("repo", "67890", 3),
-      lane: "generated-apps",
-      profile: "repo",
+      identity: identity("publish", "67890", 3),
+      lane: "package-artifacts",
+      profile: "publish",
       rootDir,
       base,
       head: COMMIT_SHA,
       changedFiles,
       cacheDir,
       cacheOrigin: "github-exact-key",
-      runner: vi.fn<CommandRunner>(),
+      runner: successfulRunner(rootDir),
     });
 
     expect(hit.cacheHit).toBe(true);
     expect(hit.bundle.runId).toBe("67890");
     expect(hit.bundle.runAttempt).toBe(3);
     expect(hit.bundle.attestations[0]).toMatchObject({ runId: "67890", runAttempt: 3 });
+    expect(hit.bundle.receipts.length).toBeGreaterThan(0);
+    expect(hit.bundle.receipts.every(({ cache }) => cache.origin === "github-exact-key")).toBe(
+      true,
+    );
     const currentRecord = JSON.parse(
-      readFileSync(join(hit.outputDir, "checks", "generated-app-smoke.json"), "utf8"),
+      readFileSync(join(hit.outputDir, "checks", "package-entrypoints-smoke.json"), "utf8"),
     ) as { identity: { runId: string; runAttempt: number } };
     expect(currentRecord.identity).toMatchObject({ runId: "67890", runAttempt: 3 });
+
+    vi.stubEnv("GITHUB_RUN_ID", "67891");
+    vi.stubEnv("GITHUB_RUN_ATTEMPT", "4");
+    const mutatingRunner: CommandRunner = async (command) => {
+      if (command.id === "package-entrypoints-smoke") {
+        const artifact = command.artifacts?.[0];
+        if (!artifact) throw new Error("Expected a package entrypoint artifact.");
+        writeFileSync(join(rootDir, artifact.path), "mutated cached output\n");
+      }
+      return {
+        errorCode: null,
+        errorMessage: null,
+        signal: null,
+        status: 0,
+        stderr: "",
+        stdout: `${command.id} passed`,
+        timedOut: false,
+      };
+    };
+    await expect(
+      runCacheableLane({
+        identity: identity("publish", "67891", 4),
+        lane: "package-artifacts",
+        profile: "publish",
+        rootDir,
+        base,
+        head: COMMIT_SHA,
+        changedFiles,
+        cacheDir,
+        cacheOrigin: "github-exact-key",
+        runner: mutatingRunner,
+      }),
+    ).rejects.toMatchObject({ code: "EXACT_CACHE_REVALIDATION_FAILED" });
   });
 
   it("rejects cross-run caching for the physical coverage-security lane", async () => {

@@ -185,6 +185,17 @@ function reject(code: string, message: string): never {
   throw new VerificationProblem(code, "contract", message);
 }
 
+function readProducerJson(path: string, lane: ProducerLane, label: string): unknown {
+  try {
+    return JSON.parse(readFileSync(path, "utf8")) as unknown;
+  } catch {
+    reject(
+      "UNREADABLE_PRODUCER_ARTIFACT",
+      `${lane} ${label} is missing, unreadable, or malformed JSON.`,
+    );
+  }
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -368,13 +379,15 @@ function verifyDownloadedArtifact(
     .filter((path) => resolve(path) !== resolve(bundlePath))
     .map((path) => relative(downloadedRoot, path).replaceAll("\\", "/"))
     .sort();
-  const expectedFiles = bundle.artifact.files.map(({ path }) => {
+  const expectedOutputs = bundle.artifact.files.map((output) => {
+    const { path } = output;
     const normalized = normalizedRelativePath(path, `${bundle.lane}.artifact.files.path`);
     if (!normalized.startsWith(expectedPrefix)) {
       reject("SYNTHESIS_ARTIFACT_PREFIX_MISMATCH", `${normalized} is not owned by ${bundle.lane}.`);
     }
-    return normalized.slice(expectedPrefix.length);
+    return { output, suffix: normalized.slice(expectedPrefix.length) };
   });
+  const expectedFiles = expectedOutputs.map(({ suffix }) => suffix);
   if (JSON.stringify(actualFiles) !== JSON.stringify([...expectedFiles].sort())) {
     reject(
       "SYNTHESIS_ARTIFACT_FILE_SET_MISMATCH",
@@ -382,8 +395,7 @@ function verifyDownloadedArtifact(
     );
   }
   const repositoryRelativeBySuffix = new Map<string, string>();
-  for (const output of bundle.artifact.files) {
-    const suffix = output.path.slice(expectedPrefix.length);
+  for (const { output, suffix } of expectedOutputs) {
     const downloadedPath = resolve(downloadedRoot, suffix);
     const relativePath = relative(resolve(downloadedRoot), downloadedPath).replaceAll("\\", "/");
     if (relativePath.startsWith("../") || isAbsolute(relativePath)) {
@@ -1284,8 +1296,10 @@ export function assembleSynthesisInput(options: AssembleSynthesisInputOptions): 
   const facts = new Map<ProducerLane, ProducerFacts>();
   for (const lane of PRODUCER_LANES) {
     const directory = resolve(options.producerDirectories[lane]);
-    const bundleValue: unknown = JSON.parse(
-      readFileSync(join(directory, "producer-bundle.json"), "utf8"),
+    const bundleValue = readProducerJson(
+      join(directory, "producer-bundle.json"),
+      lane,
+      "producer-bundle.json",
     );
     const bundle = parseProducerBundle(bundleValue, `${lane}.bundle`);
     if (bundle.lane !== lane)
@@ -1295,7 +1309,11 @@ export function assembleSynthesisInput(options: AssembleSynthesisInputOptions): 
     const factPath = paths.get(PRODUCER_FACTS_FILE);
     if (!factPath)
       reject("MISSING_PRODUCER_FACTS", `${lane} bundle does not contain ${PRODUCER_FACTS_FILE}.`);
-    const factValue: unknown = JSON.parse(readFileSync(resolve(options.rootDir, factPath), "utf8"));
+    const factValue = readProducerJson(
+      resolve(options.rootDir, factPath),
+      lane,
+      PRODUCER_FACTS_FILE,
+    );
     facts.set(lane, parseProducerFacts(factValue, lane));
     bundles.push(bundle);
   }
@@ -1375,7 +1393,7 @@ export function assembleSynthesisInputFromRepository(args: readonly string[]): {
   const headRef = value(args, "--head");
   const output = value(args, "--output");
   if (!identityPath || !baseRef || !headRef || !output) {
-    throw new Error("--identity, --base, --head, and --output are required");
+    reject("INVALID_SYNTHESIS_ARGUMENTS", "--identity, --base, --head, and --output are required");
   }
   const identity = parseExperimentIdentity(
     JSON.parse(readFileSync(resolve(rootDir, identityPath), "utf8")) as unknown,

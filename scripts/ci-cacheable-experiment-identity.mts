@@ -9,6 +9,7 @@ import { pathToFileURL } from "node:url";
 
 import { parseExperimentIdentity } from "./ci-lane-evidence.mts";
 import { inventoryDigest, readTestInventory } from "./test-inventory.mts";
+import { formatVerificationProblem, VerificationProblem } from "./verification-problem.mts";
 import type { ExperimentIdentity, VerificationProfile } from "./ci-lane-evidence.mts";
 
 export type CacheableExperimentIdentityInput = {
@@ -78,7 +79,11 @@ export function cacheableInputDigest(input: {
   readonly changedFilesDigest?: string;
 }): string {
   if ((input.baseSha === undefined) !== (input.changedFilesDigest === undefined)) {
-    throw new Error("baseSha and changedFilesDigest must be provided together");
+    throw new VerificationProblem(
+      "INCOMPLETE_CHANGE_IDENTITY",
+      "input",
+      "baseSha and changedFilesDigest must be provided together",
+    );
   }
   return digestParts([
     input.commitSha,
@@ -131,20 +136,38 @@ function optionValue(args: readonly string[], option: string): string | undefine
 
 function requiredOption(args: readonly string[], option: string): string {
   const value = optionValue(args, option);
-  if (!value) throw new Error(`${option} requires a value`);
+  if (!value) {
+    throw new VerificationProblem("MISSING_IDENTITY_OPTION", "input", `${option} requires a value`);
+  }
   return value;
 }
 
 function positiveInteger(value: string, option: string): number {
-  if (!/^[1-9]\d*$/.test(value)) throw new Error(`${option} must be a positive integer`);
+  if (!/^[1-9]\d*$/.test(value)) {
+    throw new VerificationProblem(
+      "INVALID_POSITIVE_INTEGER",
+      "input",
+      `${option} must be a positive integer`,
+    );
+  }
   const parsed = Number(value);
-  if (!Number.isSafeInteger(parsed)) throw new Error(`${option} must be a positive integer`);
+  if (!Number.isSafeInteger(parsed)) {
+    throw new VerificationProblem(
+      "INVALID_POSITIVE_INTEGER",
+      "input",
+      `${option} must be a positive integer`,
+    );
+  }
   return parsed;
 }
 
 function profile(value: string): VerificationProfile {
   if (value !== "repo" && value !== "spine" && value !== "publish") {
-    throw new Error("--profile must be repo, spine, or publish");
+    throw new VerificationProblem(
+      "UNKNOWN_VERIFICATION_PROFILE",
+      "input",
+      "--profile must be repo, spine, or publish",
+    );
   }
   return value;
 }
@@ -153,9 +176,22 @@ function packageMetadata(rootDir: string): {
   readonly packageManager: string;
   readonly turboVersion: string;
 } {
-  const value = JSON.parse(readFileSync(resolve(rootDir, "package.json"), "utf8")) as unknown;
+  let value: unknown;
+  try {
+    value = JSON.parse(readFileSync(resolve(rootDir, "package.json"), "utf8")) as unknown;
+  } catch (error) {
+    throw new VerificationProblem(
+      "INVALID_PACKAGE_METADATA",
+      "configuration",
+      `Unable to parse package.json: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new Error("package.json must contain an object");
+    throw new VerificationProblem(
+      "INVALID_PACKAGE_METADATA",
+      "configuration",
+      "package.json must contain an object",
+    );
   }
   const metadata = value as Record<string, unknown>;
   const devDependencies = metadata.devDependencies;
@@ -166,7 +202,11 @@ function packageMetadata(rootDir: string): {
     Array.isArray(devDependencies) ||
     typeof (devDependencies as Record<string, unknown>).turbo !== "string"
   ) {
-    throw new Error("package.json must declare packageManager and devDependencies.turbo");
+    throw new VerificationProblem(
+      "INVALID_PACKAGE_METADATA",
+      "configuration",
+      "package.json must declare packageManager and devDependencies.turbo",
+    );
   }
   return {
     packageManager: metadata.packageManager,
@@ -194,7 +234,11 @@ export function createCacheableExperimentIdentityFromRepository(args: readonly s
   const headSha = resolveCommitSha(rootDir, headRef);
   const commitSha = requiredOption(args, "--commit-sha");
   if (headSha !== commitSha) {
-    throw new Error("--commit-sha must match the resolved --head commit");
+    throw new VerificationProblem(
+      "COMMIT_SHA_MISMATCH",
+      "input",
+      "--commit-sha must match the resolved --head commit",
+    );
   }
   const changedFiles = readChangedFiles(rootDir, baseSha, headSha);
   const identity = createCacheableExperimentIdentity({
@@ -233,9 +277,15 @@ if (import.meta.url === pathToFileURL(resolve(argv[1] ?? "")).href) {
   try {
     main();
   } catch (error) {
-    console.error(
-      `[ci-cacheable-experiment-identity] ${error instanceof Error ? error.message : String(error)}`,
-    );
+    const problem =
+      error instanceof VerificationProblem
+        ? error
+        : new VerificationProblem(
+            "UNEXPECTED_FAILURE",
+            "contract",
+            error instanceof Error ? error.message : String(error),
+          );
+    console.error(`[ci-cacheable-experiment-identity] ${formatVerificationProblem(problem)}`);
     exit(1);
   }
 }

@@ -86,6 +86,24 @@ describe("package-quality-report.mts", () => {
     });
   });
 
+  it("rejects invalid authoritative summary timestamps", () => {
+    const repo = createTempRepo();
+    writePackage(repo, "alpha", "@croco/alpha", { test: "vitest run" });
+    writeTurboSummary(repo, "test.json", "turbo run test --summarize", Date.now(), [
+      task("@croco/alpha", "test", 0, "packages/alpha/.turbo/turbo-test.log"),
+    ]);
+
+    expect(() =>
+      createPackageQualityReport({
+        rootDir: repo,
+        summaryDir: join(repo, ".turbo", "runs"),
+        summaryWindows: {
+          test: { startedAt: "invalid", completedAt: new Date().toISOString() },
+        },
+      }),
+    ).toThrow("summaryWindows.test must contain parseable timestamps");
+  });
+
   it("renders from normalized task, bundle, public API, and gate facts without Turbo or dist", () => {
     const repo = createTempRepo();
     writePackage(repo, "alpha", "@croco/alpha", {

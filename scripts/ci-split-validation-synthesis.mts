@@ -24,7 +24,7 @@ import {
   writeSpinePromotionReport,
 } from "./spine-promotion-check.mts";
 import { parseSynthesisInput } from "./ci-synthesis-input.mts";
-import { SECURITY_OWNERSHIP } from "./ci-verification-contract.mts";
+import { ADVISORY_CHECK_IDS, SECURITY_OWNERSHIP } from "./ci-verification-contract.mts";
 import { reconcileTestEvidence } from "./test-evidence-reconcile.mts";
 import { VERIFICATION_LANE_OWNERSHIP } from "./verification-manifest.mts";
 import type {
@@ -34,6 +34,7 @@ import type {
 } from "./ci-lane-evidence.mts";
 import type { PromotionEvidenceContext } from "./spine-promotion-check.mts";
 import type { SynthesisInput } from "./ci-synthesis-input.mts";
+import { VerificationProblem } from "./verification-problem.mts";
 
 const PACKAGE_QUALITY_OUTPUT = join("ci-reports", "package-quality");
 const SECURITY_OUTPUT = join("ci-reports", "security");
@@ -66,11 +67,14 @@ function outcome(
   selection: SynthesisCheckResult["selection"],
   result: SynthesisCheckResult["outcome"],
   diagnostics: readonly string[] = [],
+  semantics: SynthesisCheckResult["semantics"] = ADVISORY_CHECK_IDS.includes(id as never)
+    ? "advisory"
+    : "blocking",
 ): SynthesisCheckResult {
   return {
     id,
     selection,
-    semantics: id === "core-coverage-warning" ? "advisory" : "blocking",
+    semantics,
     outcome: result,
     diagnostics: [...new Set(diagnostics)].sort(),
   };
@@ -78,7 +82,7 @@ function outcome(
 
 function producerChecks(input: SynthesisInput): readonly SynthesisCheckResult[] {
   return input.producerResults.map((result) =>
-    outcome(result.id, result.selection, result.outcome, result.diagnostics),
+    outcome(result.id, result.selection, result.outcome, result.diagnostics, result.semantics),
   );
 }
 
@@ -179,7 +183,7 @@ function createPromotionContext(
           })),
         blocking: producerResult.semantics === "blocking",
         commandId: producerResult.id,
-        completedAt: selected ? (producer?.status ? completedAt : null) : null,
+        completedAt: selected && producer?.status === "success" ? completedAt : null,
         outcome:
           check?.outcome === "passed"
             ? "passed"
@@ -212,7 +216,13 @@ function securityResults(
     ({ owner }) => owner === "coverage-security",
   ).map((ownership) => {
     const observed = physical.get(ownership.id);
-    if (!observed) throw new Error(`Synthesis security result is missing ${ownership.id}`);
+    if (!observed) {
+      throw new VerificationProblem(
+        "MISSING_SECURITY_PHYSICAL_RESULT",
+        "contract",
+        `Synthesis security result is missing ${ownership.id}`,
+      );
+    }
     return observed;
   });
   const summary = {
@@ -248,7 +258,13 @@ function orderedChecks(
 ): readonly SynthesisCheckResult[] {
   return Object.keys(VERIFICATION_LANE_OWNERSHIP).map((id) => {
     const result = results.get(id);
-    if (!result) throw new Error(`Synthesis result is missing ${id}`);
+    if (!result) {
+      throw new VerificationProblem(
+        "MISSING_SYNTHESIS_RESULT",
+        "contract",
+        `Synthesis result is missing ${id}`,
+      );
+    }
     return result;
   });
 }
@@ -363,6 +379,13 @@ export function runSplitValidationSynthesis(options: RunOptions): SplitSynthesis
       continue;
     }
 
+    if (plan.id !== "spine-bundle-size") {
+      throw new VerificationProblem(
+        "UNSUPPORTED_SYNTHESIS_CHECK",
+        "contract",
+        `Unsupported synthesis check ${String(plan.id)}`,
+      );
+    }
     const quality = createPackageQualityReport({
       rootDir,
       summaryDir: "normalized-synthesis-input",
@@ -428,7 +451,9 @@ function value(args: readonly string[], flag: string): string | undefined {
 
 function main(args: readonly string[]): void {
   const inputPath = value(args, "--input");
-  if (!inputPath) throw new Error("--input is required");
+  if (!inputPath) {
+    throw new VerificationProblem("INVALID_SYNTHESIS_ARGUMENTS", "input", "--input is required");
+  }
   const rootDir = resolve(value(args, "--root") ?? process.cwd());
   const reportPath = value(args, "--output");
   const inputValue: unknown = JSON.parse(readFileSync(resolve(rootDir, inputPath), "utf8"));

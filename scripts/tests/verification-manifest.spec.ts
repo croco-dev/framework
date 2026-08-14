@@ -195,6 +195,7 @@ const expectedLaneIds = {
     "typecheck",
     "test",
     "integration-test-lane",
+    "cli-packed-e2e",
     "release-gate-tests",
   ],
   "generated-apps": ["generated-app-smoke"],
@@ -203,7 +204,6 @@ const expectedLaneIds = {
     "package-bins-smoke",
     "alpha-release-smoke",
     "published-test-lane",
-    "cli-packed-e2e",
     "provider-certification",
     "public-api",
     "release-metadata",
@@ -288,9 +288,10 @@ describe("verification manifest", () => {
     const manifests = (["repo", "spine", "publish"] as const).map((profile) =>
       createVerificationManifest(profile),
     );
-    expect(createHash("sha256").update(JSON.stringify(manifests)).digest("hex")).toBe(
-      "15ee35a3594d4a106135663a760b697ba703ed5baf59abb50d1df62badc95fc9",
-    );
+    expect(
+      createHash("sha256").update(JSON.stringify(manifests)).digest("hex"),
+      "The pre-split monolithic manifest changed; update this digest only after intentionally verifying the new serialized commands.",
+    ).toBe("15ee35a3594d4a106135663a760b697ba703ed5baf59abb50d1df62badc95fc9");
   });
 
   it("classifies every dependency edge and every cross-lane edge for synthesis", () => {
@@ -415,6 +416,10 @@ describe("verification manifest", () => {
         "scripts/test-lane-evidence-check.mts",
         "ci-reports/package-quality/integration-test-lane.json",
       ]),
+    );
+    expect(VERIFICATION_LANE_OWNERSHIP["cli-packed-e2e"]).toBe("core-verification");
+    expect(VERIFICATION_DEPENDENCY_CLASSIFICATION["cli-packed-e2e->integration-test-lane"]).toEqual(
+      ["physical-local"],
     );
   });
 

@@ -16,6 +16,7 @@ import {
 import {
   evaluateLocalEquivalence,
   LOCAL_EQUIVALENCE_REPORT_SCHEMA,
+  LocalEquivalenceError,
   runLocalEquivalenceCli,
 } from "../ci-cacheable-lanes-local-harness.mts";
 import type {
@@ -285,6 +286,23 @@ describe("local monolith versus split verification harness", () => {
     expect(() =>
       evaluateLocalEquivalence({ ...value, producerBundles: value.producerBundles.slice(0, 3) }),
     ).toThrow(/missing producer lane/i);
+  });
+
+  it.each([
+    ["non-object check", [null]],
+    ["empty check ID", [{ id: "", status: "passed" }]],
+    ["unknown check status", [{ id: "test", status: "successful" }]],
+  ] as const)("rejects a malformed monolithic report with %s", (_case, checks) => {
+    const value = fixture();
+    const malformed = { ...value.monolithic, checks };
+
+    try {
+      evaluateLocalEquivalence({ ...value, monolithic: malformed as never });
+      throw new Error("expected malformed monolithic report to fail");
+    } catch (error) {
+      expect(error).toBeInstanceOf(LocalEquivalenceError);
+      expect(error).toMatchObject({ code: "INVALID_MONOLITHIC_REPORT" });
+    }
   });
 
   it("rejects a duplicate producer lane", () => {

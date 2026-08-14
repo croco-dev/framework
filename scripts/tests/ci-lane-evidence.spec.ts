@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { SECURITY_OWNERSHIP } from "../ci-cacheable-lanes-evaluator.mts";
+import { ADVISORY_CHECK_IDS, SECURITY_OWNERSHIP } from "../ci-verification-contract.mts";
 import { VERIFICATION_LANE_OWNERSHIP } from "../verification-manifest.mts";
 import {
   CiLaneEvidenceError,
@@ -187,7 +187,7 @@ function bundle(
     checks.push({
       id: checkId,
       selection: isNotApplicable ? "not-applicable" : "selected",
-      semantics: checkId === "core-coverage-warning" ? "advisory" : "blocking",
+      semantics: ADVISORY_CHECK_IDS.includes(checkId as never) ? "advisory" : "blocking",
       outcome: decision,
       receiptDigest: checkReceipt?.receiptDigest ?? null,
       attestationDigest: checkAttestation.attestationDigest,
@@ -225,7 +225,7 @@ function shadowEvidence(
     return {
       id,
       selection: "selected",
-      semantics: id === "core-coverage-warning" ? "advisory" : "blocking",
+      semantics: ADVISORY_CHECK_IDS.includes(id as never) ? "advisory" : "blocking",
       outcome: failed ? "failed" : "passed",
       diagnostics: failed ? ["INJECTED_CHECK_FAILURE"] : [],
     };

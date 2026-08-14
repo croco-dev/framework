@@ -201,6 +201,18 @@ function readEntry(cacheDir: string): unknown | null {
   }
 }
 
+function readCheckRecord(cacheDir: string, recordPath: string): Record<string, unknown> {
+  try {
+    return record(JSON.parse(readFileSync(cacheFile(cacheDir, recordPath), "utf8")), recordPath);
+  } catch (error) {
+    if (error instanceof VerificationProblem) throw error;
+    fail(
+      "INVALID_EXACT_CACHE_RECORD",
+      `Unable to parse ${recordPath}: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
 function parseMaterialization(value: unknown, index: number): LaneCacheMaterialization {
   const parsed = record(value, `materializations[${index}]`);
   exactKeys(parsed, ["sourcePath", "copiedPath", "directory"], `materializations[${index}]`);
@@ -414,30 +426,22 @@ function validateCachedFiles(cacheDir: string, entry: ExactLaneCacheEntry): void
         if (!entry.isFile()) fail("INVALID_EXACT_CACHE_OUTPUT", `Exact cache contains ${path}.`);
         return [relative(filesRoot, path).replaceAll("\\", "/")];
       });
-  const actualPaths = visitFiles(filesRoot);
-  const expectedPaths = entry.bundle.artifact.files.map(({ path }) => path).sort();
+  const actualPaths = [...visitFiles(filesRoot)].sort((left, right) => left.localeCompare(right));
+  const expectedPaths = entry.bundle.artifact.files
+    .map(({ path }) => path)
+    .sort((left, right) => left.localeCompare(right));
   if (JSON.stringify(actualPaths) !== JSON.stringify(expectedPaths)) {
     fail("EXACT_CACHE_PATH_SET_MISMATCH", "Exact cache file path set does not match the bundle.");
   }
   const bindingById = new Map(entry.commandBindings.map((binding) => [binding.checkId, binding]));
+  const checkRecords = new Map<string, Record<string, unknown>>();
   for (const check of entry.bundle.checks) {
     const recordPath = `${entry.outputDir}/checks/${check.id}.json`;
     if (!artifactByPath.has(recordPath)) {
       fail("MISSING_EXACT_CACHE_RECORD", `Bundle lacks normalized record ${recordPath}.`);
     }
-    let checkRecord: Record<string, unknown>;
-    try {
-      checkRecord = record(
-        JSON.parse(readFileSync(cacheFile(cacheDir, recordPath), "utf8")),
-        recordPath,
-      );
-    } catch (error) {
-      if (error instanceof VerificationProblem) throw error;
-      fail(
-        "INVALID_EXACT_CACHE_RECORD",
-        `Unable to parse ${recordPath}: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
+    const checkRecord = readCheckRecord(cacheDir, recordPath);
+    checkRecords.set(check.id, checkRecord);
     exactKeys(
       checkRecord,
       [
@@ -480,10 +484,8 @@ function validateCachedFiles(cacheDir: string, entry: ExactLaneCacheEntry): void
     const recordPath = `${entry.outputDir}/checks/${receipt.checkId}.json`;
     const recordOutput = receipt.outputs.find(({ path }) => path === recordPath);
     if (!recordOutput) fail("MISSING_EXACT_CACHE_RECORD", `Receipt lacks ${recordPath}.`);
-    const checkRecord = record(
-      JSON.parse(readFileSync(cacheFile(cacheDir, recordPath), "utf8")),
-      recordPath,
-    );
+    const checkRecord = checkRecords.get(receipt.checkId);
+    if (!checkRecord) fail("MISSING_EXACT_CACHE_RECORD", `Receipt lacks parsed ${recordPath}.`);
     if (
       checkRecord.schemaVersion !== "croco.ci-cacheable-lane-check/v1" ||
       checkRecord.checkId !== receipt.checkId ||
@@ -588,6 +590,13 @@ export function writeExactLaneCache(options: {
   ) {
     fail("EXACT_CACHE_ALREADY_EXISTS", "Refusing to overwrite an existing exact cache candidate.");
   }
+  const materializations = options.materializations.map((materialization, index) =>
+    parseMaterialization(materialization, index),
+  );
+  assertUnique(
+    materializations.map(({ sourcePath }) => sourcePath),
+    "DUPLICATE_EXACT_CACHE_MATERIALIZATION",
+  );
   for (const output of options.bundle.artifact.files) {
     const source = resolve(options.rootDir, output.path);
     assertDescendant(options.rootDir, source, "EXACT_CACHE_SOURCE_ESCAPE");
@@ -612,7 +621,7 @@ export function writeExactLaneCache(options: {
     changedFilesDigest: options.context.changedFilesDigest,
     outputDir: options.context.outputDir,
     commandBindings: contextBindings(options.context),
-    materializations: options.materializations,
+    materializations,
     bundle: options.bundle,
   } as const;
   const entry = { ...unsigned, entryDigest: evidenceDigest(unsigned) };

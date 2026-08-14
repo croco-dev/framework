@@ -6,6 +6,8 @@ export const SECURITY_OWNERSHIP = [
   { id: "security-upload", owner: "producing-job", semantics: "report-transport" },
 ] as const;
 
+export const ADVISORY_CHECK_IDS = ["core-coverage-warning"] as const;
+
 export type SecurityResultId = (typeof SECURITY_OWNERSHIP)[number]["id"];
 export type SecurityResultOwner = (typeof SECURITY_OWNERSHIP)[number]["owner"];
 export type SecurityResultSemantics = (typeof SECURITY_OWNERSHIP)[number]["semantics"];

@@ -1011,12 +1011,13 @@ jobs:
             --security-artifact ci-reports/security/gitleaks-smoke.txt \
             --security-artifact ci-reports/security/gitleaks.txt \
             --security-artifact ci-reports/security/gitleaks.sarif
-      - name: Enforce physical security failures
+      - name: Report advisory physical security failures
         if: always()
         env:
           SMOKE_EXIT: ${{ steps.physical_security.outputs.smoke_exit }}
           SCAN_EXIT: ${{ steps.physical_security.outputs.scan_exit }}
         run: |
+          echo "This shadow lane is advisory; validate retains the blocking Gitleaks checks."
           test "$SMOKE_EXIT" = "0"
           test "$SCAN_EXIT" = "0"
       - name: Upload coverage and security producer evidence

@@ -1559,6 +1559,11 @@ export function createPackageQualityReport(
         const window = options.summaryWindows[task];
         const startedAt = Date.parse(window.startedAt);
         const completedAt = Date.parse(window.completedAt);
+        if (Number.isNaN(startedAt) || Number.isNaN(completedAt)) {
+          throw new TypeError(
+            `summaryWindows.${task} must contain parseable timestamps: ${window.startedAt}..${window.completedAt}`,
+          );
+        }
         return (
           statSync(summary.filePath).mtimeMs >= startedAt &&
           summary.endTime >= startedAt &&

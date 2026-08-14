@@ -238,6 +238,26 @@ function loadFastTestLaneEvidence(
   return loadFastTestLaneEvidenceFromValue(readJsonFile(reportPath), reportPath, inventory);
 }
 
+function resolveFastTestLaneEvidence(
+  options: {
+    readonly fastTestLaneReportPath?: string | null;
+    readonly fastTestLaneReport?: LaneReport | null;
+  },
+  inventory: ReturnType<typeof readTestInventory>["inventory"],
+): FastTestLaneEvidence | null {
+  if (options.fastTestLaneReport) {
+    return loadFastTestLaneEvidenceFromValue(
+      options.fastTestLaneReport,
+      "normalized synthesis input",
+      inventory,
+    );
+  }
+  if (options.fastTestLaneReportPath) {
+    return loadFastTestLaneEvidence(options.fastTestLaneReportPath, inventory);
+  }
+  return null;
+}
+
 function applyFastTestLaneEvidence(
   rows: readonly PackageQualityRow[],
   evidence: FastTestLaneEvidence | null,
@@ -1658,15 +1678,7 @@ export function createProductionReadyReport(
   const inventoryEvidence = options.inventory
     ? { inventory: options.inventory, diagnostics: [] }
     : readTestInventory(join(options.rootDir, testInventoryPath));
-  const fastTestLaneEvidence = options.fastTestLaneReport
-    ? loadFastTestLaneEvidenceFromValue(
-        options.fastTestLaneReport,
-        "normalized synthesis input",
-        inventoryEvidence.inventory,
-      )
-    : options.fastTestLaneReportPath
-      ? loadFastTestLaneEvidence(options.fastTestLaneReportPath, inventoryEvidence.inventory)
-      : null;
+  const fastTestLaneEvidence = resolveFastTestLaneEvidence(options, inventoryEvidence.inventory);
   const qualityRows =
     options.qualityRows ??
     createPackageQualityReport({

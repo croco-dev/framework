@@ -78,6 +78,17 @@ const EXPECTED_CHECK_IDS = Object.keys(VERIFICATION_LANE_OWNERSHIP);
 const LOCALLY_COMPARABLE_SECURITY_IDS = new Set(
   SECURITY_OWNERSHIP.filter(({ id }) => id !== "security-upload").map(({ id }) => id),
 );
+const EVIDENCE_STATUSES = new Set<EvidenceStatus>([
+  "pending",
+  "running",
+  "passed",
+  "failed",
+  "timed_out",
+  "interrupted",
+  "skipped_after_timeout",
+  "skipped_prerequisite",
+  "not_applicable",
+]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -115,6 +126,26 @@ function parseMonolithicReport(value: unknown): ReleaseSpineEvidenceReport {
       "INVALID_MONOLITHIC_REPORT",
       "monolithic.checks must be an array",
     );
+  }
+  for (const [index, checkValue] of report.checks.entries()) {
+    if (!isRecord(checkValue)) {
+      throw new LocalEquivalenceError(
+        "INVALID_MONOLITHIC_REPORT",
+        `monolithic.checks[${index}] must be an object`,
+      );
+    }
+    if (typeof checkValue.id !== "string" || checkValue.id.trim().length === 0) {
+      throw new LocalEquivalenceError(
+        "INVALID_MONOLITHIC_REPORT",
+        `monolithic.checks[${index}].id must be a non-empty string`,
+      );
+    }
+    if (!EVIDENCE_STATUSES.has(checkValue.status as EvidenceStatus)) {
+      throw new LocalEquivalenceError(
+        "INVALID_MONOLITHIC_REPORT",
+        `monolithic.checks[${index}].status is invalid`,
+      );
+    }
   }
   if (report.completedAt === null || typeof report.completedAt !== "string") {
     throw new LocalEquivalenceError(

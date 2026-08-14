@@ -7,6 +7,7 @@ import { pathToFileURL } from "node:url";
 
 import { parseSecurityPhysicalResults } from "./ci-synthesis-input.mts";
 import { SECURITY_OWNERSHIP } from "./ci-verification-contract.mts";
+import { formatVerificationProblem, VerificationProblem } from "./verification-problem.mts";
 import type { SynthesisSecurityResult } from "./ci-lane-evidence.mts";
 
 export type SecurityExitCodes = {
@@ -15,17 +16,37 @@ export type SecurityExitCodes = {
   readonly blockingSecretScan: number;
 };
 
+function nonNegativeInteger(value: number, field: string): number {
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw new VerificationProblem(
+      "INVALID_SECURITY_EXIT_CODE",
+      "input",
+      `${field} requires a non-negative safe integer`,
+    );
+  }
+  return value;
+}
+
 function exitCode(value: string | undefined, flag: string): number {
-  if (!value || !/^\d+$/.test(value)) throw new Error(`${flag} requires a non-negative integer`);
+  if (!value || !/^\d+$/.test(value)) {
+    throw new VerificationProblem(
+      "INVALID_SECURITY_EXIT_CODE",
+      "input",
+      `${flag} requires a non-negative safe integer`,
+    );
+  }
   const parsed = Number(value);
-  if (!Number.isSafeInteger(parsed)) throw new Error(`${flag} requires a non-negative integer`);
-  return parsed;
+  return nonNegativeInteger(parsed, flag);
 }
 
 function result(id: string, code: number): SynthesisSecurityResult {
   const ownership = SECURITY_OWNERSHIP.find((entry) => entry.id === id);
   if (!ownership || ownership.owner !== "coverage-security") {
-    throw new Error(`${id} is not a physical coverage-security responsibility`);
+    throw new VerificationProblem(
+      "SECURITY_OWNERSHIP_MISMATCH",
+      "contract",
+      `${id} is not a physical coverage-security responsibility`,
+    );
   }
   return {
     id,
@@ -40,9 +61,18 @@ export function createSecurityPhysicalResults(
   codes: SecurityExitCodes,
 ): readonly SynthesisSecurityResult[] {
   return parseSecurityPhysicalResults([
-    result("advisory-production-audit", codes.advisoryProductionAudit),
-    result("gitleaks-acceptance-smoke", codes.gitleaksAcceptanceSmoke),
-    result("blocking-secret-scan", codes.blockingSecretScan),
+    result(
+      "advisory-production-audit",
+      nonNegativeInteger(codes.advisoryProductionAudit, "advisoryProductionAudit"),
+    ),
+    result(
+      "gitleaks-acceptance-smoke",
+      nonNegativeInteger(codes.gitleaksAcceptanceSmoke, "gitleaksAcceptanceSmoke"),
+    ),
+    result(
+      "blocking-secret-scan",
+      nonNegativeInteger(codes.blockingSecretScan, "blockingSecretScan"),
+    ),
   ]);
 }
 
@@ -53,7 +83,9 @@ function value(args: readonly string[], flag: string): string | undefined {
 
 function main(args: readonly string[]): void {
   const output = value(args, "--output");
-  if (!output) throw new Error("--output is required");
+  if (!output) {
+    throw new VerificationProblem("MISSING_SECURITY_OUTPUT", "input", "--output is required");
+  }
   const results = createSecurityPhysicalResults({
     advisoryProductionAudit: exitCode(
       value(args, "--advisory-audit-exit-code"),
@@ -76,8 +108,16 @@ if (import.meta.url === pathToFileURL(argv[1] ?? "").href) {
   try {
     main(argv.slice(2));
   } catch (error) {
+    const problem =
+      error instanceof VerificationProblem
+        ? error
+        : new VerificationProblem(
+            "UNEXPECTED_FAILURE",
+            "contract",
+            error instanceof Error ? error.message : String(error),
+          );
     process.stderr.write(
-      `[ci-cacheable-security-evidence] ${error instanceof Error ? error.message : String(error)}\n`,
+      `[ci-cacheable-security-evidence] ${formatVerificationProblem(problem)}\n`,
     );
     exit(1);
   }

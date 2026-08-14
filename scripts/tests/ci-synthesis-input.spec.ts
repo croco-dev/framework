@@ -254,6 +254,38 @@ function replaceProducerArtifact(
   writeFileSync(join(directory, "producer-bundle.json"), `${JSON.stringify(bundle, null, 2)}\n`);
 }
 
+function replaceProducerFactsContents(
+  value: ReturnType<typeof fixture>,
+  lane: ProducerLane,
+  contents: string,
+): void {
+  const directory = value.producerDirectories[lane];
+  const factsPath = join(directory, PRODUCER_FACTS_FILE);
+  writeFileSync(factsPath, contents);
+  const factsContents = readFileSync(factsPath);
+  const previous = JSON.parse(
+    readFileSync(join(directory, "producer-bundle.json"), "utf8"),
+  ) as ProducerBundle;
+  const bundle = createProducerBundle({
+    ...identity,
+    lane,
+    startedAt: previous.startedAt,
+    completedAt: previous.completedAt,
+    status: previous.status,
+    checks: previous.checks,
+    receipts: previous.receipts,
+    attestations: previous.attestations,
+    artifactFiles: [
+      {
+        path: `ci-reports/cacheable-ci/${lane}/${PRODUCER_FACTS_FILE}`,
+        digest: digest(factsContents),
+        bytes: factsContents.length,
+      },
+    ],
+  });
+  writeFileSync(join(directory, "producer-bundle.json"), `${JSON.stringify(bundle, null, 2)}\n`);
+}
+
 function fixture(failed?: { lane: ProducerLane; checkId: string }) {
   const root = mkdtempSync(join(tmpdir(), "croco-synthesis-input-"));
   const producerDirectories = Object.fromEntries(
@@ -331,6 +363,27 @@ describe("cacheable CI synthesis input", () => {
       join(symlink.root, "coverage-security", "unexpected-link.json"),
     );
     expect(() => assemble(symlink)).toThrow(/symbolic link/);
+  });
+
+  it.each([
+    ["producer-bundle.json", "core-verification"],
+    [PRODUCER_FACTS_FILE, "generated-apps"],
+  ] as const)("reports malformed %s with lane-specific evidence", (file, lane) => {
+    const value = fixture();
+    if (file === "producer-bundle.json") {
+      writeFileSync(join(value.producerDirectories[lane], file), "{not-json");
+    } else {
+      replaceProducerFactsContents(value, lane, "{not-json");
+    }
+
+    try {
+      assemble(value);
+      throw new Error("expected malformed producer JSON to fail");
+    } catch (error) {
+      expect(error).toMatchObject({ code: "UNREADABLE_PRODUCER_ARTIFACT" });
+      expect(error).toHaveProperty("message", expect.stringContaining(lane));
+      expect(error).toHaveProperty("message", expect.stringContaining(file));
+    }
   });
 
   it("accepts a runner execution checkpoint only when the producer bundle digest-binds it", () => {

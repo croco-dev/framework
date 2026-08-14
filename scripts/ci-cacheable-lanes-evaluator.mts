@@ -4,8 +4,8 @@ import { readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-export { SECURITY_OWNERSHIP } from "./ci-verification-contract.mts";
 import { SECURITY_OWNERSHIP } from "./ci-verification-contract.mts";
+export { SECURITY_OWNERSHIP };
 
 export const DATASET_SCHEMA = "croco.ci-cacheable-lanes-dataset/v1" as const;
 export const INVENTORY_SCHEMA = "croco.ci-cacheable-lanes-inventory/v1" as const;
@@ -48,6 +48,7 @@ export const LANE_OWNERSHIP = {
     "typecheck",
     "test",
     "integration-test-lane",
+    "cli-packed-e2e",
     "release-gate-tests",
   ],
   "generated-apps": ["generated-app-smoke"],
@@ -56,7 +57,6 @@ export const LANE_OWNERSHIP = {
     "package-bins-smoke",
     "alpha-release-smoke",
     "published-test-lane",
-    "cli-packed-e2e",
     "provider-certification",
     "public-api",
     "release-metadata",

@@ -1,6 +1,7 @@
 import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { isNode, parseDocument } from "yaml";
 import { describe, expect, it } from "vitest";
 
 import { createVerificationManifest, getVerificationCommand } from "../verification-manifest.mts";
@@ -14,6 +15,14 @@ import {
 
 const ROOT_DIR = resolve(import.meta.dirname, "../..");
 const WORKFLOW = readFileSync(resolve(ROOT_DIR, ".github/workflows/ci.yml"), "utf8");
+const WORKFLOW_DOCUMENT = parseDocument(WORKFLOW, { uniqueKeys: true });
+if (WORKFLOW_DOCUMENT.errors.length > 0) {
+  throw new Error(WORKFLOW_DOCUMENT.errors.map(({ message }) => message).join("\n"));
+}
+const WORKFLOW_JOBS = (WORKFLOW_DOCUMENT.toJS() as { readonly jobs?: unknown }).jobs;
+if (typeof WORKFLOW_JOBS !== "object" || WORKFLOW_JOBS === null || Array.isArray(WORKFLOW_JOBS)) {
+  throw new Error("ci.yml must declare a jobs mapping");
+}
 const WORKFLOWS = Object.fromEntries(
   readdirSync(resolve(ROOT_DIR, ".github/workflows"))
     .filter((path) => /\.ya?ml$/.test(path))
@@ -30,29 +39,25 @@ const GITLEAKS_SMOKE = readFileSync(
   resolve(ROOT_DIR, "scripts/security-gitleaks-smoke.mts"),
   "utf8",
 );
-const VALIDATE_JOB = WORKFLOW.slice(
-  WORKFLOW.indexOf("  validate:"),
-  WORKFLOW.indexOf("  changes:"),
-);
-const REAL_RESOURCE_JOB_START = WORKFLOW.indexOf("  real-resource-tests:");
-const REAL_RESOURCE_JOB = WORKFLOW.slice(
-  REAL_RESOURCE_JOB_START,
-  WORKFLOW.indexOf("  windows-scaffold:", REAL_RESOURCE_JOB_START),
-);
-const SECRET_SCAN = WORKFLOW.slice(
-  WORKFLOW.indexOf("      - name: Secret scan blocking report"),
-  WORKFLOW.indexOf("      - name: Assemble security policy summary"),
-);
-
-function workflowJob(id: string, nextId: string): string {
-  const start = WORKFLOW.indexOf(`  ${id}:`);
-  const end = WORKFLOW.indexOf(`  ${nextId}:`, start + 1);
-  return WORKFLOW.slice(start, end === -1 ? undefined : end);
+function workflowJob(id: string): string {
+  if ((WORKFLOW_JOBS as Readonly<Record<string, unknown>>)[id] === undefined) {
+    throw new Error(`ci.yml does not declare the ${id} job`);
+  }
+  const job = WORKFLOW_DOCUMENT.getIn(["jobs", id], true);
+  if (!isNode(job) || !job.range) throw new Error(`ci.yml ${id} job has no source range`);
+  return WORKFLOW.slice(job.range[0], job.range[1]);
 }
+
+const VALIDATE_JOB = workflowJob("validate");
+const REAL_RESOURCE_JOB = workflowJob("real-resource-tests");
+const SECRET_SCAN = VALIDATE_JOB.slice(
+  VALIDATE_JOB.indexOf("- name: Secret scan blocking report"),
+  VALIDATE_JOB.indexOf("- name: Assemble security policy summary"),
+);
 
 function workflowStep(name: string): string {
   const start = VALIDATE_JOB.indexOf(`      - name: ${name}`);
-  if (start === -1) return "";
+  if (start === -1) throw new Error(`ci.yml validate job does not declare the ${name} step`);
   const next = VALIDATE_JOB.indexOf("      - name:", start + 1);
   return VALIDATE_JOB.slice(start, next === -1 ? undefined : next);
 }
@@ -201,11 +206,17 @@ describe("Phase B cacheable verification shadow", () => {
     ["coverage-security", "split-validation-shadow"],
   ] as const;
 
+  it("fails fast when an explicitly selected workflow job is missing", () => {
+    expect(() => workflowJob("missing-cacheable-job")).toThrow(
+      "ci.yml does not declare the missing-cacheable-job job",
+    );
+  });
+
   it("keeps the monolithic validate job authoritative while running four advisory peer producers", () => {
     expect(VALIDATE_JOB).toContain("needs: changes");
     expect(VALIDATE_JOB).not.toContain("ci-cacheable-lanes:producer");
-    for (const [jobId, nextJobId] of producerJobs) {
-      const job = workflowJob(jobId, nextJobId);
+    for (const [jobId] of producerJobs) {
+      const job = workflowJob(jobId);
       expect(job).toContain("needs: changes");
       expect(job).toContain("scripts/ci-cacheable-experiment-identity.mts");
       expect(job).toContain("scripts/ci-cacheable-lane-runner.mts");
@@ -215,16 +226,16 @@ describe("Phase B cacheable verification shadow", () => {
       );
       expect(job).toContain("continue-on-error: true");
     }
-    const cacheableJobs = WORKFLOW.slice(
-      WORKFLOW.indexOf("  core-verification:"),
-      WORKFLOW.indexOf("  ecosystem-advisory:"),
-    );
+    const cacheableJobs = [
+      ...producerJobs.map(([jobId]) => workflowJob(jobId)),
+      workflowJob("split-validation-shadow"),
+    ].join("\n");
     expect(findWorkflowVerificationViolations(cacheableJobs, ROOT_DIR)).toEqual([]);
   });
 
   it("restores only exact producer receipts and keeps physical security execution fresh", () => {
-    for (const [jobId, nextJobId] of producerJobs.slice(0, 3)) {
-      const job = workflowJob(jobId, nextJobId);
+    for (const [jobId] of producerJobs.slice(0, 3)) {
+      const job = workflowJob(jobId);
       expect(job).toContain("id: split_identity");
       expect(job).toContain("id: exact_receipts");
       expect(job).toContain(
@@ -246,19 +257,19 @@ describe("Phase B cacheable verification shadow", () => {
       expect(job).toContain('if [ "$TRUSTED_CACHE" = "true" ]; then');
       expect(job).toContain("--cache-origin github-exact-key");
     }
-    const security = workflowJob("coverage-security", "split-validation-shadow");
+    const security = workflowJob("coverage-security");
     expect(security).not.toContain("id: exact_receipts");
     expect(security).not.toContain("--cache-dir");
     expect(security).toContain('NPM_CONFIG_PROVENANCE: "true"');
 
-    const packages = workflowJob("package-artifacts", "coverage-security");
+    const packages = workflowJob("package-artifacts");
     expect(packages).toContain('if [ "${{ github.event_name }}" = "pull_request" ]; then');
     expect(packages).toContain("lane_args+=(--allow-pending-release-metadata)");
     expect(packages).toContain('"${lane_args[@]}"');
   });
 
   it("downloads the exact four immutable bundles before advisory synthesis", () => {
-    const shadow = workflowJob("split-validation-shadow", "ecosystem-advisory");
+    const shadow = workflowJob("split-validation-shadow");
     expect(shadow).toContain(
       "needs: [changes, core-verification, generated-apps, package-artifacts, coverage-security]",
     );
@@ -276,7 +287,7 @@ describe("Phase B cacheable verification shadow", () => {
   });
 
   it("digest-binds the three physical security outcomes and their raw reports", () => {
-    const security = workflowJob("coverage-security", "split-validation-shadow");
+    const security = workflowJob("coverage-security");
     expect(security).toContain("scripts/ci-cacheable-security-evidence.mts");
     expect(security).toContain("--security-results ci-reports/security/security-physical.json");
     for (const path of [
@@ -290,6 +301,11 @@ describe("Phase B cacheable verification shadow", () => {
     }
     expect(security).toContain('test "$SMOKE_EXIT" = "0"');
     expect(security).toContain('test "$SCAN_EXIT" = "0"');
+    expect(security).toContain("name: Report advisory physical security failures");
+    expect(security).toContain(
+      "This shadow lane is advisory; validate retains the blocking Gitleaks checks.",
+    );
+    expect(VALIDATE_JOB).toContain("name: Secret scan blocking report");
   });
 });
 

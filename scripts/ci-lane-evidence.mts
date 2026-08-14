@@ -1,6 +1,11 @@
 import { createHash } from "node:crypto";
 
-import { SECURITY_OWNERSHIP } from "./ci-verification-contract.mts";
+import { ADVISORY_CHECK_IDS, SECURITY_OWNERSHIP } from "./ci-verification-contract.mts";
+import type {
+  SecurityResultId,
+  SecurityResultOwner,
+  SecurityResultSemantics,
+} from "./ci-verification-contract.mts";
 import { VERIFICATION_LANE_OWNERSHIP } from "./verification-manifest.mts";
 
 export const LANE_RECEIPT_SCHEMA = "croco.ci-lane-receipt/v1" as const;
@@ -142,14 +147,9 @@ export type SynthesisCheckResult = {
 };
 
 export type SynthesisSecurityResult = {
-  readonly id: string;
-  readonly owner: string;
-  readonly semantics:
-    | "advisory-report"
-    | "acceptance-smoke"
-    | "blocking"
-    | "report-only"
-    | "report-transport";
+  readonly id: SecurityResultId;
+  readonly owner: SecurityResultOwner;
+  readonly semantics: SecurityResultSemantics;
   readonly outcome: CheckOutcome;
   readonly diagnostics: readonly string[];
 };
@@ -1020,14 +1020,13 @@ function parseSynthesisCheckResult(value: unknown, path: string): SynthesisCheck
 function parseSynthesisSecurityResult(value: unknown, path: string): SynthesisSecurityResult {
   const result = record(value, path);
   exactKeys(result, ["id", "owner", "semantics", "outcome", "diagnostics"], path);
+  const ids = SECURITY_OWNERSHIP.map(({ id }) => id);
+  const owners = SECURITY_OWNERSHIP.map(({ owner }) => owner);
+  const semantics = SECURITY_OWNERSHIP.map(({ semantics }) => semantics);
   return {
-    id: nonEmptyString(result.id, `${path}.id`),
-    owner: nonEmptyString(result.owner, `${path}.owner`),
-    semantics: enumeration(
-      result.semantics,
-      ["advisory-report", "acceptance-smoke", "blocking", "report-only", "report-transport"],
-      `${path}.semantics`,
-    ),
+    id: enumeration(result.id, ids, `${path}.id`),
+    owner: enumeration(result.owner, owners, `${path}.owner`),
+    semantics: enumeration(result.semantics, semantics, `${path}.semantics`),
     outcome: enumeration(result.outcome, ["passed", "failed", "not-applicable"], `${path}.outcome`),
     diagnostics: stableDiagnostics(result.diagnostics, `${path}.diagnostics`),
   };
@@ -1217,7 +1216,11 @@ export function parseSplitValidationShadowEvidence(
   const checkIds = checks.map(({ id }) => id);
   assertUnique(checkIds, `${path}.checks ids`);
   if (JSON.stringify([...checkIds].sort()) !== JSON.stringify([...SYNTHESIZED_CHECK_IDS].sort())) {
-    reject("SYNTHESIZED_CHECK_SET_MISMATCH", `${path}.checks must contain all 53 check IDs`, path);
+    reject(
+      "SYNTHESIZED_CHECK_SET_MISMATCH",
+      `${path}.checks must contain all ${SYNTHESIZED_CHECK_IDS.length} check IDs`,
+      path,
+    );
   }
   assertUnique(expected.selectedCheckIds, "expected.selectedCheckIds");
   const unexpectedSelected = expected.selectedCheckIds.filter(
@@ -1240,7 +1243,9 @@ export function parseSplitValidationShadowEvidence(
         check.id,
       );
     }
-    const expectedSemantics = check.id === "core-coverage-warning" ? "advisory" : "blocking";
+    const expectedSemantics = ADVISORY_CHECK_IDS.includes(check.id as never)
+      ? "advisory"
+      : "blocking";
     if (check.semantics !== expectedSemantics) {
       reject(
         "CHECK_SEMANTICS_MISMATCH",

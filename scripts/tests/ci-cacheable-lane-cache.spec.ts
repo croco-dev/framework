@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -151,6 +151,31 @@ function context(
   };
 }
 
+function output(rootDir: string, path: string, contents: string): EvidenceOutput {
+  const absolutePath = join(rootDir, path);
+  mkdirSync(dirname(absolutePath), { recursive: true });
+  writeFileSync(absolutePath, contents);
+  return {
+    path,
+    digest: createHash("sha256").update(contents).digest("hex"),
+    bytes: Buffer.byteLength(contents),
+  };
+}
+
+function withArtifactFiles(
+  bundle: ProducerBundle,
+  artifactFiles: readonly EvidenceOutput[],
+): ProducerBundle {
+  const {
+    schemaVersion: _schemaVersion,
+    artifact: _artifact,
+    outputDigest: _outputDigest,
+    bundleDigest: _bundleDigest,
+    ...unsigned
+  } = bundle;
+  return createProducerBundle({ ...unsigned, artifactFiles });
+}
+
 describe("exact lane cache", () => {
   it("revalidates exact bytes and reissues an exact-key receipt for the current run", () => {
     const rootDir = mkdtempSync(join(tmpdir(), "croco-exact-lane-cache-"));
@@ -246,6 +271,165 @@ describe("exact lane cache", () => {
     ).toThrow(/bytes do not match/);
   });
 
+  it("rejects a cache entry whose sealed payload was tampered with", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "croco-exact-lane-entry-tamper-"));
+    const cacheDir = join(rootDir, ".cache", "generated-apps");
+    const { binding, bundle } = fixture(rootDir);
+    const sourceContext = context(identity(), binding);
+    writeExactLaneCache({
+      rootDir,
+      cacheDir,
+      context: sourceContext,
+      bundle,
+      materializations: [],
+    });
+    const entryPath = join(cacheDir, "entry.json");
+    const entry = JSON.parse(readFileSync(entryPath, "utf8")) as Record<string, unknown>;
+    entry.sourceRun = { runId: "tampered", runAttempt: 1, verificationExperimentId: "tampered-1" };
+    writeFileSync(entryPath, `${JSON.stringify(entry, null, 2)}\n`);
+
+    expect(() =>
+      restoreExactLaneCache({
+        rootDir,
+        cacheDir,
+        origin: "github-exact-key",
+        context: sourceContext,
+      }),
+    ).toThrow(/entry digest does not bind its payload/);
+  });
+
+  it("restores exact file and directory materializations", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "croco-exact-lane-materializations-"));
+    const cacheDir = join(rootDir, ".cache", "generated-apps");
+    const { binding, bundle, output: recordOutput } = fixture(rootDir);
+    const sourceContext = context(identity(), binding);
+    writeExactLaneCache({
+      rootDir,
+      cacheDir,
+      context: sourceContext,
+      bundle,
+      materializations: [
+        { sourcePath: "generated/check.json", copiedPath: recordOutput.path, directory: false },
+        {
+          sourcePath: "generated/checks",
+          copiedPath: "ci-reports/cacheable-ci/generated-apps/checks",
+          directory: true,
+        },
+      ],
+    });
+    rmSync(join(rootDir, "ci-reports"), { recursive: true });
+
+    restoreExactLaneCache({
+      rootDir,
+      cacheDir,
+      origin: "github-exact-key",
+      context: sourceContext,
+    });
+
+    expect(readFileSync(join(rootDir, "generated/check.json"), "utf8")).toContain(
+      "croco.ci-cacheable-lane-check/v1",
+    );
+    expect(
+      readFileSync(join(rootDir, "generated/checks/generated-app-smoke.json"), "utf8"),
+    ).toContain("croco.ci-cacheable-lane-check/v1");
+  });
+
+  it("fails closed for missing, unsafe, and duplicate materializations", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "croco-exact-lane-materialization-hostile-"));
+    const { binding, bundle } = fixture(rootDir);
+    const sourceContext = context(identity(), binding);
+    const missingCacheDir = join(rootDir, ".cache", "missing");
+    writeExactLaneCache({
+      rootDir,
+      cacheDir: missingCacheDir,
+      context: sourceContext,
+      bundle,
+      materializations: [
+        {
+          sourcePath: "generated/missing.json",
+          copiedPath: "ci-reports/cacheable-ci/generated-apps/missing.json",
+          directory: false,
+        },
+      ],
+    });
+    expect(() =>
+      restoreExactLaneCache({
+        rootDir,
+        cacheDir: missingCacheDir,
+        origin: "github-exact-key",
+        context: sourceContext,
+      }),
+    ).toThrow(/is not cached/);
+
+    expect(() =>
+      writeExactLaneCache({
+        rootDir,
+        cacheDir: join(rootDir, ".cache", "unsafe"),
+        context: sourceContext,
+        bundle,
+        materializations: [
+          {
+            sourcePath: "../escape",
+            copiedPath: bundle.artifact.files[0]?.path ?? "",
+            directory: false,
+          },
+        ],
+      }),
+    ).toThrow(/repository-relative and normalized/);
+    expect(() =>
+      writeExactLaneCache({
+        rootDir,
+        cacheDir: join(rootDir, ".cache", "duplicate"),
+        context: sourceContext,
+        bundle,
+        materializations: [
+          {
+            sourcePath: "generated/same",
+            copiedPath: bundle.artifact.files[0]?.path ?? "",
+            directory: false,
+          },
+          {
+            sourcePath: "generated/same",
+            copiedPath: bundle.artifact.files[0]?.path ?? "",
+            directory: false,
+          },
+        ],
+      }),
+    ).toThrow(/DUPLICATE_EXACT_CACHE_MATERIALIZATION/);
+  });
+
+  it("compares cache path sets with one canonical ordering", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "croco-exact-lane-path-order-"));
+    const cacheDir = join(rootDir, ".cache", "generated-apps");
+    const { binding, bundle } = fixture(rootDir);
+    const prefix = "ci-reports/cacheable-ci/generated-apps";
+    const extras = [
+      output(rootDir, `${prefix}/checks.json`, "checks file\n"),
+      output(rootDir, `${prefix}/checks/a.json`, "nested check\n"),
+      output(rootDir, `${prefix}/B.json`, "uppercase\n"),
+      output(rootDir, `${prefix}/a.json`, "lowercase\n"),
+    ];
+    const expandedBundle = withArtifactFiles(bundle, [...bundle.artifact.files, ...extras]);
+    const sourceContext = context(identity(), binding);
+    writeExactLaneCache({
+      rootDir,
+      cacheDir,
+      context: sourceContext,
+      bundle: expandedBundle,
+      materializations: [],
+    });
+    rmSync(join(rootDir, "ci-reports"), { recursive: true });
+
+    expect(
+      restoreExactLaneCache({
+        rootDir,
+        cacheDir,
+        origin: "github-exact-key",
+        context: sourceContext,
+      }),
+    ).not.toBeNull();
+  });
+
   it("never restores coverage-security physical evidence across runs", () => {
     const rootDir = mkdtempSync(join(tmpdir(), "croco-security-cache-forbidden-"));
     const cacheDir = join(rootDir, ".cache", "generated-apps");
@@ -267,5 +451,21 @@ describe("exact lane cache", () => {
         context: { ...sourceContext, lane: "coverage-security" },
       }),
     ).toThrow(/cannot be reused/);
+  });
+
+  it("does not write a coverage-security cache", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "croco-security-cache-noop-"));
+    const cacheDir = join(rootDir, ".cache", "coverage-security");
+    const { binding, bundle } = fixture(rootDir);
+
+    writeExactLaneCache({
+      rootDir,
+      cacheDir,
+      context: { ...context(identity(), binding), lane: "coverage-security" },
+      bundle,
+      materializations: [],
+    });
+
+    expect(existsSync(cacheDir)).toBe(false);
   });
 });

@@ -3,6 +3,10 @@ import { describe, expect, it } from "vitest";
 
 import { LANE_OWNERSHIP, SECURITY_OWNERSHIP } from "../ci-cacheable-lanes-evaluator.mts";
 import {
+  changedFilesDigest,
+  createCacheableExperimentIdentity,
+} from "../ci-cacheable-experiment-identity.mts";
+import {
   PRODUCER_LANES,
   createCurrentRunAttestation,
   createProducerBundle,
@@ -16,11 +20,19 @@ import {
   createCiPerformanceObservation,
   createCiPerformanceObservations,
 } from "../ci-performance-observer.mts";
+import { inventoryDigest, parseStrictTestInventory } from "../test-inventory.mts";
+import { createVerificationManifest } from "../verification-manifest.mts";
 
 const EXECUTION_SHA = "bf70515ee2d99a1e8d6bfc23d76c5b33f892b16f";
-const INVENTORY_BYTES = Buffer.from('{"inventoryVersion":1}\n');
+const BASE_SHA = "d".repeat(40);
+const CHANGED_FILES: readonly string[] = [];
+const SOURCE_WORKFLOW_BYTES = Buffer.from("name: CI\n");
+const SOURCE_WORKFLOW_DIGEST = createHash("sha256").update(SOURCE_WORKFLOW_BYTES).digest("hex");
+const INVENTORY_BYTES = Buffer.from('{"version":1,"tests":[],"exceptions":[]}\n');
 const INVENTORY_FILE_DIGEST = createHash("sha256").update(INVENTORY_BYTES).digest("hex");
-const INVENTORY_MODEL_DIGEST = "a".repeat(64);
+const INVENTORY_MODEL_DIGEST = inventoryDigest(
+  parseStrictTestInventory(JSON.parse(INVENTORY_BYTES.toString("utf8")) as unknown),
+);
 const RUN = {
   id: 123,
   run_attempt: 2,
@@ -111,7 +123,7 @@ function rawSample(overrides: Readonly<Record<string, unknown>> = {}) {
         pnpmVersion: "11.9.0",
         cacheEvidenceComplete: true,
         inventoryDigest: INVENTORY_FILE_DIGEST,
-        workflowDigest: "b".repeat(64),
+        workflowDigest: SOURCE_WORKFLOW_DIGEST,
         componentConclusion: "success",
         conclusion: "success",
         retryAttempt: 2,
@@ -175,18 +187,24 @@ function phaseBArtifacts(
 
 function phaseBInput(overrides: Readonly<Record<string, unknown>> = {}) {
   const monolithic = createCiPerformanceObservation(createInput());
-  const sharedIdentity = {
-    architectureVersion: "shadow-split",
+  const sharedIdentity = createCacheableExperimentIdentity({
     commitSha: monolithic.sourceSha,
     runId: monolithic.sourceRunId,
     runAttempt: monolithic.sourceAttempt,
     profile: "publish",
-    manifestDigest: monolithic.manifestDigest,
-    inventoryDigest: monolithic.inventoryDigest,
-    toolchainDigest: monolithic.toolchainDigest,
-    inputDigest: monolithic.inputDigest,
-    verificationExperimentId: monolithic.verificationExperimentId,
-  } as const satisfies Omit<EvidenceIdentity, "lane">;
+    runnerOs: monolithic.runnerOs,
+    runnerArch: monolithic.runnerArch,
+    runnerLabel: monolithic.runnerLabel,
+    nodeVersion: monolithic.nodeVersion,
+    pnpmVersion: monolithic.pnpmVersion,
+    turboVersion: monolithic.turboVersion,
+    packageManager: "pnpm@11.9.0",
+    workflowDigest: SOURCE_WORKFLOW_DIGEST,
+    inventoryDigest: INVENTORY_MODEL_DIGEST,
+    inventoryFileDigest: INVENTORY_FILE_DIGEST,
+    baseSha: BASE_SHA,
+    changedFilesDigest: changedFilesDigest(CHANGED_FILES),
+  }) satisfies Omit<EvidenceIdentity, "lane">;
   const bundles = PRODUCER_LANES.map((lane): ProducerBundle => {
     const startedAt = PHASE_B_JOBS.jobs.find(({ name }) => name === lane)?.started_at;
     const completedAt = PHASE_B_JOBS.jobs.find(({ name }) => name === lane)?.completed_at;
@@ -288,11 +306,40 @@ function phaseBInput(overrides: Readonly<Record<string, unknown>> = {}) {
     completedAt: "2026-08-14T00:32:00.000Z",
     issuedAt: "2026-08-14T00:32:00.000Z",
   });
+  const unsignedSynthesisInput = {
+    schemaVersion: "croco.ci-synthesis-input/v1",
+    identity: sharedIdentity,
+    selection: {
+      baseSha: BASE_SHA,
+      headSha: EXECUTION_SHA,
+      changedFilesDigest: changedFilesDigest(CHANGED_FILES),
+      inventoryFileDigest: INVENTORY_FILE_DIGEST,
+      selectedCheckIds: createVerificationManifest("publish", {
+        base: BASE_SHA,
+        head: EXECUTION_SHA,
+        changedFiles: CHANGED_FILES,
+      })
+        .filter(({ applicable }) => applicable !== false)
+        .map(({ id }) => id),
+    },
+    producers: bundles.map(({ lane, bundleDigest }) => ({ lane, bundleDigest })),
+    producerResults: [],
+    facts: {},
+    synthesisPlan: [],
+  };
+  const synthesisInput = {
+    ...unsignedSynthesisInput,
+    synthesisInputDigest: evidenceDigest(unsignedSynthesisInput),
+  };
   return {
     ...createInput(),
     jobs: PHASE_B_JOBS,
     artifacts: phaseBArtifacts(),
     producerBundles: bundles.map((parsed) => jsonEvidence(parsed)),
+    baseSha: BASE_SHA,
+    changedFiles: CHANGED_FILES,
+    sourceWorkflowBytes: SOURCE_WORKFLOW_BYTES,
+    synthesisInput: jsonEvidence(synthesisInput),
     splitValidationShadow: jsonEvidence(shadow),
     splitSecuritySummary: jsonEvidence({
       schemaVersion: "croco.ci-split-security-policy-summary/v1",
@@ -387,6 +434,10 @@ function phaseBFailureInput() {
     completedAt: originalShadow.completedAt,
     issuedAt: originalShadow.issuedAt,
   });
+  const synthesisInput = signedSynthesisInput(input, (unsigned) => ({
+    ...unsigned,
+    producers: failedBundles.map(({ lane, bundleDigest }) => ({ lane, bundleDigest })),
+  }));
   return {
     ...input,
     jobs: {
@@ -398,8 +449,20 @@ function phaseBFailureInput() {
       ),
     },
     producerBundles: failedBundles.map((parsed) => jsonEvidence(parsed)),
+    synthesisInput,
     splitValidationShadow: jsonEvidence(failedShadow),
   };
+}
+
+function signedSynthesisInput(
+  input: ReturnType<typeof phaseBInput>,
+  mutate: (unsigned: Record<string, unknown>) => Record<string, unknown>,
+) {
+  const current = input.synthesisInput.parsed as Record<string, unknown>;
+  const unsigned = mutate(
+    Object.fromEntries(Object.entries(current).filter(([key]) => key !== "synthesisInputDigest")),
+  );
+  return jsonEvidence({ ...unsigned, synthesisInputDigest: evidenceDigest(unsigned) });
 }
 
 describe("CI performance observer", () => {
@@ -605,6 +668,121 @@ describe("CI performance observer", () => {
       semantics: "advisory",
       diagnostics: [],
     });
+  });
+
+  it("derives split security blocking semantics from the ownership contract", () => {
+    const input = phaseBInput();
+    const original = input.splitValidationShadow.parsed as ReturnType<
+      typeof createSplitValidationShadowEvidence
+    >;
+    const failedShadow = createSplitValidationShadowEvidence({
+      architectureVersion: original.architectureVersion,
+      commitSha: original.commitSha,
+      runId: original.runId,
+      runAttempt: original.runAttempt,
+      profile: original.profile,
+      manifestDigest: original.manifestDigest,
+      inventoryDigest: original.inventoryDigest,
+      toolchainDigest: original.toolchainDigest,
+      inputDigest: original.inputDigest,
+      verificationExperimentId: original.verificationExperimentId,
+      producerBundles: original.producerBundles,
+      checks: original.checks,
+      security: original.security.map((result) =>
+        result.id === "gitleaks-acceptance-smoke"
+          ? { ...result, outcome: "failed", diagnostics: ["acceptance-smoke:failed"] }
+          : result,
+      ),
+      conclusion: "success",
+      operationalFailure: null,
+      startedAt: original.startedAt,
+      completedAt: original.completedAt,
+      issuedAt: original.issuedAt,
+    });
+    const observations = createCiPerformanceObservations({
+      ...input,
+      splitValidationShadow: jsonEvidence(failedShadow),
+      splitSecuritySummary: jsonEvidence({
+        schemaVersion: "croco.ci-split-security-policy-summary/v1",
+        generatedAt: failedShadow.completedAt,
+        results: failedShadow.security.filter(({ owner }) => owner === "coverage-security"),
+      }),
+    });
+    const coverage = observations.find(({ jobIdentity }) => jobIdentity === "coverage-security");
+
+    expect(coverage?.securityResults).toContainEqual({
+      id: "gitleaks-acceptance-smoke",
+      conclusion: "failure",
+      semantics: "blocking",
+      diagnostics: ["acceptance-smoke:failed"],
+    });
+    expect(coverage?.blockingOutcome).toBe("failure");
+  });
+
+  it("rejects a source workflow that does not match the observed workflow digest", () => {
+    expect(() =>
+      createCiPerformanceObservations(
+        phaseBInput({ sourceWorkflowBytes: Buffer.from("name: forged\n") }),
+      ),
+    ).toThrow(/source workflow bytes/);
+  });
+
+  it("rejects changed files that do not match the synthesis-bound source range", () => {
+    expect(() =>
+      createCiPerformanceObservations(phaseBInput({ changedFiles: ["forged-change.ts"] })),
+    ).toThrow(/selection changedFilesDigest is not independently verified/);
+  });
+
+  it("fails closed when a split run has no trusted base contract", () => {
+    expect(() => createCiPerformanceObservations(phaseBInput({ baseSha: undefined }))).toThrow(
+      /trusted base SHA/,
+    );
+  });
+
+  it("rejects a re-signed synthesis selection that changes the trusted base", () => {
+    const input = phaseBInput();
+    const synthesisInput = signedSynthesisInput(input, (unsigned) => ({
+      ...unsigned,
+      selection: {
+        ...(unsigned.selection as Record<string, unknown>),
+        baseSha: "c".repeat(40),
+      },
+    }));
+
+    expect(() => createCiPerformanceObservations({ ...input, synthesisInput })).toThrow(
+      /selection baseSha is not independently verified/,
+    );
+  });
+
+  it("rejects a re-signed synthesis identity instead of adopting its input digest", () => {
+    const input = phaseBInput();
+    const forgedInputDigest = "8".repeat(64);
+    const synthesisInput = signedSynthesisInput(input, (unsigned) => ({
+      ...unsigned,
+      identity: {
+        ...(unsigned.identity as Record<string, unknown>),
+        inputDigest: forgedInputDigest,
+        verificationExperimentId: `123-2-${forgedInputDigest.slice(0, 12)}`,
+      },
+    }));
+
+    expect(() => createCiPerformanceObservations({ ...input, synthesisInput })).toThrow(
+      /identity inputDigest is not independently verified/,
+    );
+  });
+
+  it("rejects a re-signed synthesis input that substitutes a producer bundle digest", () => {
+    const input = phaseBInput();
+    const synthesisInput = signedSynthesisInput(input, (unsigned) => ({
+      ...unsigned,
+      producers: (unsigned.producers as readonly Record<string, unknown>[]).map((producer, index) =>
+        index === 0 ? { ...producer, bundleDigest: "9".repeat(64) } : producer,
+      ),
+    }));
+
+    expect(() => createCiPerformanceObservations({ ...input, synthesisInput })).toThrow(
+      /producer digest does not match synthesis input/,
+    );
   });
 
   it("records an evidenced producer failure as an actual non-operational outcome", () => {

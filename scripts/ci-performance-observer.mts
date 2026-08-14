@@ -13,9 +13,15 @@ import {
   type Observation,
   type ResultRecord,
 } from "./ci-cacheable-lanes-evaluator.mts";
-import { createCacheableExperimentIdentity } from "./ci-cacheable-experiment-identity.mts";
+import {
+  changedFilesDigest,
+  createCacheableExperimentIdentity,
+  readChangedFiles,
+} from "./ci-cacheable-experiment-identity.mts";
 import {
   PRODUCER_LANES,
+  evidenceDigest,
+  parseExperimentIdentity,
   parseProducerBundle,
   parseSplitValidationShadowEvidence,
   type ProducerBundle,
@@ -24,6 +30,11 @@ import {
   type VerificationProfile,
 } from "./ci-lane-evidence.mts";
 import { parseSecurityPhysicalResults } from "./ci-synthesis-input.mts";
+import { SECURITY_OWNERSHIP } from "./ci-verification-contract.mts";
+import { inventoryDigest, parseStrictTestInventory } from "./test-inventory.mts";
+import { createVerificationManifest } from "./verification-manifest.mts";
+import type { ExperimentIdentity } from "./ci-lane-evidence.mts";
+import type { SecurityResultId } from "./ci-verification-contract.mts";
 
 type Conclusion = "success" | "failure" | "cancelled";
 
@@ -138,30 +149,30 @@ export type CreateCiPerformanceObservationInput = {
   readonly producerBundles?: readonly { readonly bytes: Buffer; readonly parsed: unknown }[];
   readonly splitValidationShadow?: { readonly bytes: Buffer; readonly parsed: unknown };
   readonly splitSecuritySummary?: { readonly bytes: Buffer; readonly parsed: unknown };
+  readonly baseSha?: string;
+  readonly changedFiles?: readonly string[];
+  readonly sourceWorkflowBytes?: Buffer;
+  readonly synthesisInput?: { readonly bytes: Buffer; readonly parsed: unknown };
 };
 
 const SECURITY_STEPS = [
   {
     id: "advisory-production-audit",
     name: "Production dependency audit report",
-    semantics: "advisory",
   },
   {
     id: "gitleaks-acceptance-smoke",
     name: "Security Gitleaks acceptance smoke",
-    semantics: "blocking",
   },
-  { id: "blocking-secret-scan", name: "Secret scan blocking report", semantics: "blocking" },
+  { id: "blocking-secret-scan", name: "Secret scan blocking report" },
   {
     id: "security-policy-summary",
     name: "Assemble security policy summary",
-    semantics: "advisory",
   },
-  { id: "security-upload", name: "Upload security report", semantics: "advisory" },
+  { id: "security-upload", name: "Upload security report" },
 ] as const satisfies readonly {
-  readonly id: string;
+  readonly id: SecurityResultId;
   readonly name: string;
-  readonly semantics: ResultRecord["semantics"];
 }[];
 
 const EXPECTED_CHECKS = Object.values(LANE_OWNERSHIP).flat();
@@ -416,10 +427,18 @@ function securityResult(job: SourceJob, contract: (typeof SECURITY_STEPS)[number
   return {
     id: contract.id,
     conclusion: stepConclusion === "success" ? "success" : "failure",
-    semantics: contract.semantics,
+    semantics: securitySemantics(contract.id),
     diagnostics:
       stepConclusion === "success" ? [] : [`${contract.id}:${stepConclusion ?? "missing"}`],
   };
+}
+
+function securitySemantics(id: SecurityResultId): ResultRecord["semantics"] {
+  const ownership = SECURITY_OWNERSHIP.find((entry) => entry.id === id);
+  if (!ownership) throw new Error(`unknown security result ${id}`);
+  return ownership.semantics === "blocking" || ownership.semantics === "acceptance-smoke"
+    ? "blocking"
+    : "advisory";
 }
 
 function exactStepConclusion(job: SourceJob, name: string): string | null {
@@ -497,15 +516,10 @@ function splitResult(result: {
 function splitSecurityResult(
   result: SplitValidationShadowEvidence["security"][number],
 ): ResultRecord {
-  const advisory = new Set([
-    "advisory-production-audit",
-    "security-policy-summary",
-    "security-upload",
-  ]);
   return {
     id: result.id,
     conclusion: resultConclusion(result.outcome),
-    semantics: advisory.has(result.id) ? "advisory" : "blocking",
+    semantics: securitySemantics(result.id),
     diagnostics: [...result.diagnostics],
   };
 }
@@ -592,6 +606,192 @@ function assertSplitIdentity(
       throw new Error(`${label} ${field} does not match the monolithic observation identity`);
     }
   }
+}
+
+type SynthesisIdentityBinding = {
+  readonly identity: ExperimentIdentity;
+  readonly selection: {
+    readonly baseSha: string;
+    readonly headSha: string;
+    readonly changedFilesDigest: string;
+    readonly inventoryFileDigest: string;
+    readonly selectedCheckIds: readonly string[];
+  };
+  readonly producers: readonly {
+    readonly lane: ProducerLane;
+    readonly bundleDigest: string;
+  }[];
+};
+
+function digest(value: unknown, field: string): string {
+  const parsed = requiredString(value, field);
+  if (!/^[0-9a-f]{64}$/.test(parsed)) throw new Error(`${field} must be a SHA-256 digest`);
+  return parsed;
+}
+
+function commitSha(value: unknown, field: string): string {
+  const parsed = requiredString(value, field);
+  if (!/^[0-9a-f]{40}$/.test(parsed)) throw new Error(`${field} must be a 40-character SHA`);
+  return parsed;
+}
+
+function stringArray(value: unknown, field: string): readonly string[] {
+  if (!Array.isArray(value) || value.some((entry) => typeof entry !== "string")) {
+    throw new Error(`${field} must be an array of strings`);
+  }
+  if (new Set(value).size !== value.length) throw new Error(`${field} must not contain duplicates`);
+  return value;
+}
+
+function parseSynthesisIdentityBinding(value: unknown): SynthesisIdentityBinding {
+  if (!isRecord(value)) throw new Error("synthesis input must be an object");
+  if (value.schemaVersion !== "croco.ci-synthesis-input/v1") {
+    throw new Error("synthesis input has an unsupported schema");
+  }
+  const synthesisInputDigest = digest(value.synthesisInputDigest, "synthesis input digest");
+  const unsigned = Object.fromEntries(
+    Object.entries(value).filter(([key]) => key !== "synthesisInputDigest"),
+  );
+  if (evidenceDigest(unsigned) !== synthesisInputDigest) {
+    throw new Error("synthesis input digest does not bind the complete input");
+  }
+  const selection = value.selection;
+  if (!isRecord(selection)) throw new Error("synthesis selection must be an object");
+  assertExactKeys(
+    selection,
+    ["baseSha", "headSha", "changedFilesDigest", "inventoryFileDigest", "selectedCheckIds"],
+    "synthesis selection",
+  );
+  if (!Array.isArray(value.producers)) throw new Error("synthesis producers must be an array");
+  const producers = value.producers.map((entry, index) => {
+    if (!isRecord(entry)) throw new Error(`synthesis producer ${index} must be an object`);
+    const lane = requiredString(entry.lane, `synthesis producer ${index} lane`);
+    if (!PRODUCER_LANES.includes(lane as ProducerLane)) {
+      throw new Error(`synthesis producer ${index} has an unknown lane`);
+    }
+    return {
+      lane: lane as ProducerLane,
+      bundleDigest: digest(entry.bundleDigest, `synthesis producer ${index} bundle digest`),
+    };
+  });
+  assertSetEquality(
+    producers.map(({ lane }) => lane),
+    PRODUCER_LANES,
+    "synthesis producer lanes",
+  );
+  if (new Set(producers.map(({ lane }) => lane)).size !== producers.length) {
+    throw new Error("synthesis producers contain duplicate lanes");
+  }
+  return {
+    identity: parseExperimentIdentity(value.identity),
+    selection: {
+      baseSha: commitSha(selection.baseSha, "synthesis selection base SHA"),
+      headSha: commitSha(selection.headSha, "synthesis selection head SHA"),
+      changedFilesDigest: digest(
+        selection.changedFilesDigest,
+        "synthesis selection changed-files digest",
+      ),
+      inventoryFileDigest: digest(
+        selection.inventoryFileDigest,
+        "synthesis selection inventory-file digest",
+      ),
+      selectedCheckIds: stringArray(selection.selectedCheckIds, "synthesis selection check IDs"),
+    },
+    producers,
+  };
+}
+
+function independentlyVerifiedPhaseBIdentity(
+  monolithic: Observation,
+  input: CreateCiPerformanceObservationInput,
+): { readonly identity: ExperimentIdentity; readonly synthesis: SynthesisIdentityBinding } {
+  if (
+    !input.baseSha ||
+    !input.changedFiles ||
+    !input.sourceWorkflowBytes ||
+    !input.synthesisInput
+  ) {
+    throw new Error(
+      "Phase B observation requires the trusted base SHA, changed files, source workflow, and synthesis input",
+    );
+  }
+  const baseSha = commitSha(input.baseSha, "source base SHA");
+  const changedFiles = stringArray(input.changedFiles, "source changed files");
+  const normalizedChangedFiles = [...changedFiles].sort();
+  if (JSON.stringify(changedFiles) !== JSON.stringify(normalizedChangedFiles)) {
+    throw new Error("source changed files must be sorted");
+  }
+  const workflowDigest = createHash("sha256").update(input.sourceWorkflowBytes).digest("hex");
+  if (workflowDigest !== monolithic.manifestDigest) {
+    throw new Error("source workflow bytes do not match the observed workflow digest");
+  }
+  const inventoryFileDigest = createHash("sha256").update(input.inventoryBytes).digest("hex");
+  const inventoryValue = JSON.parse(input.inventoryBytes.toString("utf8")) as unknown;
+  const inventoryModelDigest = inventoryDigest(parseStrictTestInventory(inventoryValue));
+  if (inventoryModelDigest !== monolithic.inventoryDigest) {
+    throw new Error("source inventory model does not match the observed inventory digest");
+  }
+  const identity = createCacheableExperimentIdentity({
+    commitSha: monolithic.sourceSha,
+    runId: monolithic.sourceRunId,
+    runAttempt: monolithic.sourceAttempt,
+    profile: monolithic.profile,
+    runnerOs: monolithic.runnerOs,
+    runnerArch: monolithic.runnerArch,
+    runnerLabel: monolithic.runnerLabel,
+    nodeVersion: monolithic.nodeVersion,
+    pnpmVersion: monolithic.pnpmVersion,
+    turboVersion: monolithic.turboVersion,
+    packageManager: parsePackageMetadata(input.packageMetadata).packageManager,
+    workflowDigest,
+    inventoryDigest: inventoryModelDigest,
+    inventoryFileDigest,
+    baseSha,
+    changedFilesDigest: changedFilesDigest(changedFiles),
+  });
+  const synthesis = parseSynthesisIdentityBinding(input.synthesisInput.parsed);
+  for (const [field, actual, expected] of [
+    ["baseSha", synthesis.selection.baseSha, baseSha],
+    ["headSha", synthesis.selection.headSha, monolithic.sourceSha],
+    [
+      "changedFilesDigest",
+      synthesis.selection.changedFilesDigest,
+      changedFilesDigest(changedFiles),
+    ],
+    ["inventoryFileDigest", synthesis.selection.inventoryFileDigest, inventoryFileDigest],
+  ] as const) {
+    if (actual !== expected)
+      throw new Error(`synthesis selection ${field} is not independently verified`);
+  }
+  for (const field of [
+    "architectureVersion",
+    "commitSha",
+    "runId",
+    "runAttempt",
+    "profile",
+    "manifestDigest",
+    "inventoryDigest",
+    "toolchainDigest",
+    "inputDigest",
+    "verificationExperimentId",
+  ] as const) {
+    if (synthesis.identity[field] !== identity[field]) {
+      throw new Error(`synthesis identity ${field} is not independently verified`);
+    }
+  }
+  const expectedSelectedCheckIds = createVerificationManifest(monolithic.profile, {
+    base: baseSha,
+    head: monolithic.sourceSha,
+    changedFiles,
+  })
+    .filter(({ applicable }) => applicable !== false)
+    .map(({ id }) => id);
+  assertSetEquality(
+    synthesis.selection.selectedCheckIds,
+    expectedSelectedCheckIds,
+    "synthesis selected check IDs",
+  );
+  return { identity, synthesis };
 }
 
 export function createCiPerformanceObservation(
@@ -845,6 +1045,15 @@ export function createCiPerformanceObservations(
   const bundles = input.producerBundles.map((evidence, index) =>
     parseProducerBundle(evidence.parsed, `producerBundles[${index}]`),
   );
+  const verifiedPhaseB = independentlyVerifiedPhaseBIdentity(monolithic, input);
+  monolithic = parseObservation({
+    ...monolithic,
+    toolchainDigest: verifiedPhaseB.identity.toolchainDigest,
+    manifestDigest: verifiedPhaseB.identity.manifestDigest,
+    inventoryDigest: verifiedPhaseB.identity.inventoryDigest,
+    inputDigest: verifiedPhaseB.identity.inputDigest,
+    verificationExperimentId: verifiedPhaseB.identity.verificationExperimentId,
+  });
   const canonicalBundle = bundles[0];
   if (!canonicalBundle) throw new Error("Phase B producer bundles are missing");
   for (const [field, actual, expected] of [
@@ -855,16 +1064,17 @@ export function createCiPerformanceObservations(
     ["manifestDigest", canonicalBundle.manifestDigest, monolithic.manifestDigest],
     ["inventoryDigest", canonicalBundle.inventoryDigest, monolithic.inventoryDigest],
     ["toolchainDigest", canonicalBundle.toolchainDigest, monolithic.toolchainDigest],
+    ["inputDigest", canonicalBundle.inputDigest, monolithic.inputDigest],
+    [
+      "verificationExperimentId",
+      canonicalBundle.verificationExperimentId,
+      monolithic.verificationExperimentId,
+    ],
   ] as const) {
     if (actual !== expected) {
       throw new Error(`Phase B canonical producer ${field} does not match monolithic provenance`);
     }
   }
-  monolithic = parseObservation({
-    ...monolithic,
-    inputDigest: canonicalBundle.inputDigest,
-    verificationExperimentId: canonicalBundle.verificationExperimentId,
-  });
   const producerBytesByLane = new Map(
     bundles.map((bundle, index) => [bundle.lane, input.producerBundles?.[index]?.bytes]),
   );
@@ -875,6 +1085,14 @@ export function createCiPerformanceObservations(
   );
   if (new Set(bundles.map(({ lane }) => lane)).size !== bundles.length) {
     throw new Error("producer bundles contain duplicate lanes");
+  }
+  const synthesisProducerDigests = new Map(
+    verifiedPhaseB.synthesis.producers.map(({ lane, bundleDigest }) => [lane, bundleDigest]),
+  );
+  for (const bundle of bundles) {
+    if (synthesisProducerDigests.get(bundle.lane) !== bundle.bundleDigest) {
+      throw new Error(`${bundle.lane} producer digest does not match synthesis input`);
+    }
   }
   const monolithicVerification = parseVerificationReport(input.verification.parsed);
   const producerBundleDigests = bundles.map(({ lane, bundleDigest }) => ({ lane, bundleDigest }));
@@ -1099,12 +1317,16 @@ function main(arguments_: readonly string[]): void {
   const producerPaths = optionValues(arguments_, "--producer-bundle");
   const shadowPath = optionValue(arguments_, "--split-validation-shadow");
   const splitSecuritySummaryPath = optionValue(arguments_, "--split-security-summary");
+  const baseSha = optionValue(arguments_, "--base-sha");
+  const sourceWorkflowPath = optionValue(arguments_, "--source-workflow");
+  const synthesisInputPath = optionValue(arguments_, "--synthesis-input");
+  const executionSha = requiredOption(arguments_, "--execution-sha");
   const observations = createCiPerformanceObservations({
     run: JSON.parse(readFileSync(resolve(requiredOption(arguments_, "--run")), "utf8")) as unknown,
     jobs: JSON.parse(
       readFileSync(resolve(requiredOption(arguments_, "--jobs")), "utf8"),
     ) as unknown,
-    executionSha: requiredOption(arguments_, "--execution-sha"),
+    executionSha,
     rawSample: readJsonBytes(requiredOption(arguments_, "--sample")),
     verification: readJsonBytes(requiredOption(arguments_, "--verification")),
     fastLane: readJsonBytes(requiredOption(arguments_, "--fast-lane")),
@@ -1122,6 +1344,13 @@ function main(arguments_: readonly string[]): void {
     ...(splitSecuritySummaryPath
       ? { splitSecuritySummary: readJsonBytes(splitSecuritySummaryPath) }
       : {}),
+    ...(baseSha
+      ? { baseSha, changedFiles: readChangedFiles(process.cwd(), baseSha, executionSha) }
+      : {}),
+    ...(sourceWorkflowPath
+      ? { sourceWorkflowBytes: readFileSync(resolve(sourceWorkflowPath)) }
+      : {}),
+    ...(synthesisInputPath ? { synthesisInput: readJsonBytes(synthesisInputPath) } : {}),
   });
   mkdirSync(dirname(outputPath), { recursive: true });
   mkdirSync(dirname(markdownPath), { recursive: true });

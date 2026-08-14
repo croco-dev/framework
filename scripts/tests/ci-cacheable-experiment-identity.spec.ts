@@ -7,12 +7,14 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
+  cacheableInputDigest,
   changedFilesDigest,
   createCacheableExperimentIdentity,
   createCacheableExperimentIdentityFromRepository,
   readChangedFiles,
   resolveCommitSha,
 } from "../ci-cacheable-experiment-identity.mts";
+import { VerificationProblem } from "../verification-problem.mts";
 
 const SHA = "a".repeat(40);
 const DIGEST = "b".repeat(64);
@@ -195,5 +197,53 @@ describe("cacheable CI experiment identity", () => {
         "11.9.0",
       ]),
     ).toThrow("--run-attempt must be a positive integer");
+  });
+
+  it("rejects an unknown verification profile with a stable Problem", () => {
+    try {
+      createCacheableExperimentIdentityFromRepository([
+        "--commit-sha",
+        SHA,
+        "--run-id",
+        "99",
+        "--run-attempt",
+        "1",
+        "--profile",
+        "unknown",
+        "--runner-os",
+        "Linux",
+        "--runner-arch",
+        "X64",
+        "--runner-label",
+        "ubuntu-latest",
+        "--pnpm-version",
+        "11.9.0",
+      ]);
+      throw new Error("Expected profile validation to fail.");
+    } catch (error) {
+      expect(error).toBeInstanceOf(VerificationProblem);
+      expect(error).toMatchObject({ code: "UNKNOWN_VERIFICATION_PROFILE", category: "input" });
+    }
+  });
+
+  it("rejects a partial change identity with a stable Problem", () => {
+    expect(() =>
+      cacheableInputDigest({
+        commitSha: SHA,
+        workflowDigest: DIGEST,
+        inventoryFileDigest: DIGEST,
+        toolchainDigest: DIGEST,
+        baseSha: BASE_SHA,
+      }),
+    ).toThrow(expect.objectContaining({ code: "INCOMPLETE_CHANGE_IDENTITY", category: "input" }));
+  });
+
+  it("models malformed package metadata as a configuration Problem", () => {
+    const root = mkdtempSync(join(tmpdir(), "croco-cacheable-identity-package-"));
+    writeFileSync(join(root, "package.json"), "not json\n");
+
+    expect(() => createCacheableExperimentIdentityFromRepository(["--root", root])).toThrow(
+      expect.objectContaining({ code: "INVALID_PACKAGE_METADATA", category: "configuration" }),
+    );
   });
 });

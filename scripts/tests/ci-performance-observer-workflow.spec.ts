@@ -109,6 +109,9 @@ describe("CI performance observer workflow", () => {
     );
     expect(record?.run).toContain("scripts/ci-performance-observer.mts");
     expect(record?.run).toContain('--execution-sha "$(cat ci-observer-input/execution-sha.txt)"');
+    expect(record?.run).toContain('--base-sha "$(cat ci-observer-input/base-sha.txt)"');
+    expect(record?.run).toContain("--source-workflow ci-observer-input/source-ci.yml");
+    expect(record?.run).toContain('observer_args+=(--synthesis-input "${synthesis_inputs[0]}")');
     expect(record?.run).toContain("--verification");
     expect(record?.run).toContain("--fast-lane");
     expect(record?.run).toContain("--inventory");
@@ -123,6 +126,7 @@ describe("CI performance observer workflow", () => {
     );
     expect(record?.run).toContain("-name split-validation-shadow.json");
     expect(record?.run).toContain("-name split-security-policy-summary.json");
+    expect(record?.run).toContain("-name synthesis-input.json");
     expect(record?.run).toContain("The source run did not emit normalized performance evidence.");
     expect(record?.run).toContain(
       'if [ "${#producer_reports[@]}" -ne 4 ] || [ "${#shadow_reports[@]}" -ne 1 ]',
@@ -130,6 +134,26 @@ describe("CI performance observer workflow", () => {
     expect(record?.run).not.toMatch(/(?:^|\n)\s*(?:source|eval|\.)\s/);
     expect(source).toContain("> ci-observer-input/source-package.json");
     expect(source).toContain("> ci-observer-input/source-test-inventory.json");
+    expect(source).toContain("> ci-observer-input/source-ci.yml");
     expect(source).toContain("> ci-observer-input/artifacts.json");
+  });
+
+  it("uses the run-bound PR base instead of the topic head first parent", () => {
+    const metadata = parsedWorkflow().jobs?.observe?.steps?.find(
+      ({ name }) => name === "Read source run metadata",
+    );
+
+    expect(metadata?.run).toContain(".pull_requests | select(length == 1) | .[0].base.sha");
+    expect(metadata?.run).toContain(".pull_requests[0].head.sha");
+    expect(metadata?.run).toContain(".parents[0].sha == $expected_base_sha");
+    expect(metadata?.run).toContain(".parents[1].sha == $expected_head_sha");
+    expect(metadata?.run).toContain(
+      'elif [ "$(jq -er \'.event\' ci-observer-input/run.json)" = "push" ]; then',
+    );
+    expect(metadata?.run).toContain("jq -er '.parents | select(length >= 1) | .[0].sha'");
+    expect(metadata?.run).toContain(": > ci-observer-input/base-sha.txt");
+    expect(metadata?.run).not.toMatch(
+      /if \[ -n "\$SOURCE_PULL_NUMBER" \]; then[\s\S]{0,200}\.parents\[0\]\.sha/,
+    );
   });
 });

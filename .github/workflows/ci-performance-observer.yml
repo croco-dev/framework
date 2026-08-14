@@ -78,6 +78,36 @@ jobs:
           fi
           execution_sha=$(cat ci-observer-input/execution-sha.txt)
           gh api \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/commits/${execution_sha}" \
+            > ci-observer-input/execution-commit.json
+          if [ -n "$SOURCE_PULL_NUMBER" ]; then
+            jq -er \
+              '.pull_requests | select(length == 1) | .[0].base.sha' \
+              ci-observer-input/run.json \
+              > ci-observer-input/base-sha.txt
+            expected_head_sha=$(jq -er '.pull_requests[0].head.sha' ci-observer-input/run.json)
+            expected_base_sha=$(cat ci-observer-input/base-sha.txt)
+            jq -e \
+              --arg expected_base_sha "$expected_base_sha" \
+              --arg expected_head_sha "$expected_head_sha" \
+              '.parents | length == 2 and
+               .parents[0].sha == $expected_base_sha and
+               .parents[1].sha == $expected_head_sha' \
+              ci-observer-input/execution-commit.json >/dev/null
+          elif [ "$(jq -er '.event' ci-observer-input/run.json)" = "push" ]; then
+            jq -er '.parents | select(length >= 1) | .[0].sha' \
+              ci-observer-input/execution-commit.json \
+              > ci-observer-input/base-sha.txt
+          else
+            : > ci-observer-input/base-sha.txt
+          fi
+          if [ -s ci-observer-input/base-sha.txt ]; then
+            git fetch --no-tags --depth=1 origin "$(cat ci-observer-input/base-sha.txt)"
+          fi
+          git fetch --no-tags --depth=1 origin "$execution_sha"
+          gh api \
             --method GET \
             -H 'Accept: application/vnd.github+json' \
             -H 'X-GitHub-Api-Version: 2022-11-28' \
@@ -95,6 +125,15 @@ jobs:
             --jq '.content' \
             | base64 --decode \
             > ci-observer-input/source-test-inventory.json
+          gh api \
+            --method GET \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/contents/.github/workflows/ci.yml" \
+            -f "ref=${execution_sha}" \
+            --jq '.content' \
+            | base64 --decode \
+            > ci-observer-input/source-ci.yml
 
       - name: Download exact split evidence when present
         shell: bash
@@ -172,13 +211,17 @@ jobs:
             mapfile -t producer_reports < <(find ci-observer-input/split -type f -name producer-bundle.json -print | sort)
             mapfile -t shadow_reports < <(find ci-observer-input/split -type f -name split-validation-shadow.json -print)
             mapfile -t split_security_summaries < <(find ci-observer-input/split -type f -name split-security-policy-summary.json -print)
-            if [ "${#producer_reports[@]}" -ne 4 ] || [ "${#shadow_reports[@]}" -ne 1 ] || [ "${#split_security_summaries[@]}" -ne 1 ]; then
-              echo "Expected four producer bundles, one split validation shadow report, and one split security summary." >&2
+            mapfile -t synthesis_inputs < <(find ci-observer-input/split -type f -name synthesis-input.json -print)
+            if [ "${#producer_reports[@]}" -ne 4 ] || [ "${#shadow_reports[@]}" -ne 1 ] || [ "${#split_security_summaries[@]}" -ne 1 ] || [ "${#synthesis_inputs[@]}" -ne 1 ]; then
+              echo "Expected four producer bundles, one synthesis input, one split validation shadow report, and one split security summary." >&2
               exit 1
             fi
             for report in "${producer_reports[@]}"; do
               observer_args+=(--producer-bundle "$report")
             done
+            observer_args+=(--base-sha "$(cat ci-observer-input/base-sha.txt)")
+            observer_args+=(--source-workflow ci-observer-input/source-ci.yml)
+            observer_args+=(--synthesis-input "${synthesis_inputs[0]}")
             observer_args+=(--split-validation-shadow "${shadow_reports[0]}")
             observer_args+=(--split-security-summary "${split_security_summaries[0]}")
           fi

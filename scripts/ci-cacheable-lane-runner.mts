@@ -463,7 +463,7 @@ function outputForFile(rootDir: string, path: string): EvidenceOutput {
   return {
     path: relative(resolve(rootDir), path).replaceAll("\\", "/"),
     digest: sha256(contents),
-    bytes: statSync(path).size,
+    bytes: contents.byteLength,
   };
 }
 
