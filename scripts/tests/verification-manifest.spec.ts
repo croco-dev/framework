@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, extname, join, relative, resolve } from "node:path";
@@ -5,9 +6,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   assertVerificationManifest,
+  createVerificationLaneManifest,
   createVerificationManifest,
   generatedTestMaterializationArguments,
   PUBLISH_REQUIRED_GENERATED_SMOKE_CASES,
+  VERIFICATION_DEPENDENCY_CLASSIFICATION,
+  VERIFICATION_LANE_OWNERSHIP,
   verificationImplementationPaths,
 } from "../verification-manifest.mts";
 import {
@@ -148,6 +152,79 @@ const spineOnlyIds = [
   "public-api",
 ];
 
+const publishOnlyIds = [
+  "release-gate-tests",
+  "release-metadata",
+  "spine-bundle-size",
+  "dependency-audit-policy",
+  "provenance-config",
+  "publish-dry-run",
+];
+
+const expectedLaneIds = {
+  "core-verification": [
+    "verification-policy",
+    "test-inventory",
+    "turbo-cache-contract",
+    "verification-contract-tests",
+    "changeset-required",
+    "package-manifests",
+    "release-version-sync",
+    "docs-catalog",
+    "docs-api-triggers",
+    "problem-registry",
+    "docs-examples",
+    "release-docs",
+    "ci-executables",
+    "ci-performance-budget",
+    "architecture-policy-runtime",
+    "architecture-policy",
+    "architecture-circular-allowlist",
+    "dependency-boundaries",
+    "compiler-baseline",
+    "decorator-signature-spike",
+    "strict-contract-typecheck",
+    "static-misuse",
+    "lint",
+    "format",
+    "architecture-circular",
+    "benchmark-thresholds",
+    "build",
+    "quick-start-lambda-smoke",
+    "first-success",
+    "typecheck",
+    "test",
+    "integration-test-lane",
+    "release-gate-tests",
+  ],
+  "generated-apps": ["generated-app-smoke"],
+  "package-artifacts": [
+    "package-entrypoints-smoke",
+    "package-bins-smoke",
+    "alpha-release-smoke",
+    "published-test-lane",
+    "cli-packed-e2e",
+    "provider-certification",
+    "public-api",
+    "release-metadata",
+    "publish-dry-run",
+  ],
+  "coverage-security": [
+    "security-allowlists",
+    "generated-secret-placeholders",
+    "core-coverage",
+    "core-coverage-warning",
+    "dependency-audit-policy",
+    "provenance-config",
+  ],
+  "split-validation-shadow": [
+    "test-evidence-reconcile",
+    "production-ready",
+    "spine-promotion",
+    "spine-bundle-size",
+  ],
+} as const;
+
 describe("verification manifest", () => {
   it("discovers static, dynamic, and side-effect relative imports", () => {
     expect(
@@ -168,12 +245,7 @@ describe("verification manifest", () => {
     expect(createVerificationManifest("publish").map(({ id }) => id)).toEqual([
       ...repoIds,
       ...spineOnlyIds,
-      "release-gate-tests",
-      "release-metadata",
-      "spine-bundle-size",
-      "dependency-audit-policy",
-      "provenance-config",
-      "publish-dry-run",
+      ...publishOnlyIds,
     ]);
     expect(
       createVerificationManifest("publish").find(({ id }) => id === "spine-bundle-size")?.command,
@@ -196,6 +268,121 @@ describe("verification manifest", () => {
         }),
       ],
     });
+  });
+
+  it("owns all 53 commands exactly once across the closed verification lanes", () => {
+    const publishIds = [...repoIds, ...spineOnlyIds, ...publishOnlyIds];
+    const ownedIds = Object.values(expectedLaneIds).flat();
+
+    expect(publishIds).toHaveLength(53);
+    expect(new Set(ownedIds).size).toBe(53);
+    expect([...ownedIds].sort()).toEqual([...publishIds].sort());
+    expect(VERIFICATION_LANE_OWNERSHIP).toEqual(
+      Object.fromEntries(
+        Object.entries(expectedLaneIds).flatMap(([lane, ids]) => ids.map((id) => [id, lane])),
+      ),
+    );
+  });
+
+  it("preserves the exact pre-split monolithic manifest output", () => {
+    const manifests = (["repo", "spine", "publish"] as const).map((profile) =>
+      createVerificationManifest(profile),
+    );
+    expect(createHash("sha256").update(JSON.stringify(manifests)).digest("hex")).toBe(
+      "15ee35a3594d4a106135663a760b697ba703ed5baf59abb50d1df62badc95fc9",
+    );
+  });
+
+  it("classifies every dependency edge and every cross-lane edge for synthesis", () => {
+    const manifest = createVerificationManifest("publish");
+    const expectedEdges = manifest.flatMap((command) =>
+      (command.dependsOn ?? []).map((dependency) => `${command.id}->${dependency}`),
+    );
+
+    expect(Object.keys(VERIFICATION_DEPENDENCY_CLASSIFICATION).sort()).toEqual(
+      [...expectedEdges].sort(),
+    );
+    for (const command of manifest) {
+      for (const dependency of command.dependsOn ?? []) {
+        const classifications =
+          VERIFICATION_DEPENDENCY_CLASSIFICATION[
+            `${command.id}->${dependency}` as keyof typeof VERIFICATION_DEPENDENCY_CLASSIFICATION
+          ];
+        expect(classifications.length, `${command.id}->${dependency}`).toBeGreaterThan(0);
+        expect(new Set(classifications).size, `${command.id}->${dependency}`).toBe(
+          classifications.length,
+        );
+        if (
+          VERIFICATION_LANE_OWNERSHIP[command.id as keyof typeof VERIFICATION_LANE_OWNERSHIP] !==
+          VERIFICATION_LANE_OWNERSHIP[dependency as keyof typeof VERIFICATION_LANE_OWNERSHIP]
+        ) {
+          expect(classifications, `${command.id}->${dependency}`).toContain("logical-synthesis");
+        }
+      }
+    }
+  });
+
+  it("selects owned commands unchanged and exposes transitive physical-local prerequisites", () => {
+    const context = {
+      base: "origin/trunk",
+      changedFiles: ["scripts/verification-manifest.mts"],
+      head: "HEAD",
+    } as const;
+    const monolithic = createVerificationManifest("publish", context);
+    const serializedMonolithic = JSON.stringify(monolithic);
+
+    for (const [lane, ids] of Object.entries(expectedLaneIds)) {
+      const selected = createVerificationLaneManifest(
+        "publish",
+        lane as keyof typeof expectedLaneIds,
+        context,
+      );
+      expect(selected.commands).toEqual(monolithic.filter(({ id }) => ids.includes(id as never)));
+      for (const command of selected.commands) {
+        expect(command.applicable).toBe(monolithic.find(({ id }) => id === command.id)?.applicable);
+      }
+    }
+
+    expect(
+      createVerificationLaneManifest("publish", "package-artifacts").physicalLocalPrerequisites.map(
+        ({ id }) => id,
+      ),
+    ).toEqual([
+      "architecture-policy-runtime",
+      "build",
+      "typecheck",
+      "test",
+      "integration-test-lane",
+    ]);
+    expect(
+      createVerificationLaneManifest("publish", "generated-apps").physicalLocalPrerequisites.map(
+        ({ id }) => id,
+      ),
+    ).toEqual(["architecture-policy-runtime", "build"]);
+    expect(
+      createVerificationLaneManifest("publish", "coverage-security").physicalLocalPrerequisites.map(
+        ({ id }) => id,
+      ),
+    ).toEqual(["architecture-policy-runtime", "build"]);
+    expect(
+      createVerificationLaneManifest("publish", "split-validation-shadow")
+        .physicalLocalPrerequisites,
+    ).toEqual([]);
+    expect(
+      createVerificationLaneManifest(
+        "publish",
+        "package-artifacts",
+        context,
+      ).physicalLocalPrerequisites.map(({ id }) => id),
+    ).toEqual(["architecture-policy-runtime", "build"]);
+    expect(JSON.stringify(monolithic)).toBe(serializedMonolithic);
+    expect(createVerificationManifest("publish", context)).toEqual(monolithic);
+  });
+
+  it("rejects verification lanes outside the closed lane set", () => {
+    expect(() =>
+      createVerificationLaneManifest("publish", "unknown" as "core-verification"),
+    ).toThrow("Unknown verification lane: unknown");
   });
 
   it("runs every blocking generated case and the smallest inventory-complete advisory set", () => {

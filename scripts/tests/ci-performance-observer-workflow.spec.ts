@@ -88,6 +88,19 @@ describe("CI performance observer workflow", () => {
       "if-no-files-found": "error",
       "retention-days": 90,
     });
+    const splitDownload = steps.find(
+      ({ name }) => name === "Download exact split evidence when present",
+    );
+    expect(splitDownload?.run).toContain(
+      '"ci-lane-core-verification-${SOURCE_RUN_ID}-${SOURCE_RUN_ATTEMPT}"',
+    );
+    expect(splitDownload?.run).toContain(
+      '"ci-lane-split-validation-shadow-${SOURCE_RUN_ID}-${SOURCE_RUN_ATTEMPT}"',
+    );
+    expect(splitDownload?.run).toContain('gh run download "$SOURCE_RUN_ID"');
+    expect(splitDownload?.run).toContain('--repo "$GITHUB_REPOSITORY"');
+    expect(splitDownload?.run).toContain('--name "$artifact_name"');
+    expect(splitDownload?.run).toContain('if [ "$split_artifact_count" -eq 0 ]');
   });
 
   it("uses the trusted parser for API metadata and artifact bytes without sourcing either input", () => {
@@ -100,8 +113,18 @@ describe("CI performance observer workflow", () => {
     expect(record?.run).toContain("--fast-lane");
     expect(record?.run).toContain("--inventory");
     expect(record?.run).toContain("--package-metadata ci-observer-input/source-package.json");
+    expect(record?.run).toContain("--artifacts ci-observer-input/artifacts.json");
+    expect(record?.run).toContain('observer_args+=(--producer-bundle "$report")');
+    expect(record?.run).toContain(
+      'observer_args+=(--split-validation-shadow "${shadow_reports[0]}")',
+    );
+    expect(record?.run).toContain("The source run did not emit normalized performance evidence.");
+    expect(record?.run).toContain(
+      'if [ "${#producer_reports[@]}" -ne 4 ] || [ "${#shadow_reports[@]}" -ne 1 ]',
+    );
     expect(record?.run).not.toMatch(/(?:^|\n)\s*(?:source|eval|\.)\s/);
     expect(source).toContain("> ci-observer-input/source-package.json");
     expect(source).toContain("> ci-observer-input/source-test-inventory.json");
+    expect(source).toContain("> ci-observer-input/artifacts.json");
   });
 });

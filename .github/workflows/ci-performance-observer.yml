@@ -61,6 +61,11 @@ jobs:
             -H 'X-GitHub-Api-Version: 2022-11-28' \
             "/repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}/jobs?filter=latest&per_page=100" \
             > ci-observer-input/jobs.json
+          gh api \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}/artifacts?per_page=100" \
+            > ci-observer-input/artifacts.json
           if [ -n "$SOURCE_PULL_NUMBER" ]; then
             gh api \
               -H 'Accept: application/vnd.github+json' \
@@ -91,10 +96,56 @@ jobs:
             | base64 --decode \
             > ci-observer-input/source-test-inventory.json
 
+      - name: Download exact split evidence when present
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          SOURCE_RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          artifact_total=$(jq -r '.total_count' ci-observer-input/artifacts.json)
+          artifact_page_count=$(jq -r '.artifacts | length' ci-observer-input/artifacts.json)
+          if [ "$artifact_total" -ne "$artifact_page_count" ]; then
+            echo "Source artifact response is incomplete." >&2
+            exit 1
+          fi
+          split_artifact_count=$(jq -r '[.artifacts[] | select(.name | startswith("ci-lane-"))] | length' ci-observer-input/artifacts.json)
+          if [ "$split_artifact_count" -eq 0 ]; then
+            exit 0
+          fi
+          expected_artifacts=(
+            "ci-lane-core-verification-${SOURCE_RUN_ID}-${SOURCE_RUN_ATTEMPT}"
+            "ci-lane-generated-apps-${SOURCE_RUN_ID}-${SOURCE_RUN_ATTEMPT}"
+            "ci-lane-package-artifacts-${SOURCE_RUN_ID}-${SOURCE_RUN_ATTEMPT}"
+            "ci-lane-coverage-security-${SOURCE_RUN_ID}-${SOURCE_RUN_ATTEMPT}"
+            "ci-lane-split-validation-shadow-${SOURCE_RUN_ID}-${SOURCE_RUN_ATTEMPT}"
+          )
+          if [ "$split_artifact_count" -ne "${#expected_artifacts[@]}" ]; then
+            echo "Expected an exact five-artifact Phase B split evidence set." >&2
+            exit 1
+          fi
+          mkdir -p ci-observer-input/split
+          for artifact_name in "${expected_artifacts[@]}"; do
+            matching_count=$(jq --arg name "$artifact_name" '[.artifacts[] | select(.name == $name and .expired == false)] | length' ci-observer-input/artifacts.json)
+            if [ "$matching_count" -ne 1 ]; then
+              echo "Expected one unexpired ${artifact_name} artifact." >&2
+              exit 1
+            fi
+            gh run download "$SOURCE_RUN_ID" \
+              --repo "$GITHUB_REPOSITORY" \
+              --name "$artifact_name" \
+              --dir "ci-observer-input/split/${artifact_name}"
+          done
+
       - name: Record immutable observation
         shell: bash
         run: |
-          if [ "$(jq -r '.currentSamples[0].profile' ci-observer-input/performance/raw-sample.json)" != "publish" ]; then
+          if [ ! -f ci-observer-input/performance/raw-sample.json ]; then
+            echo "The source run did not emit normalized performance evidence." >&2
+            exit 1
+          fi
+          source_profile=$(jq -er '.currentSamples | select(length == 1) | .[0].profile' ci-observer-input/performance/raw-sample.json)
+          if [ "$source_profile" != "publish" ]; then
             echo "Non-publish CI run is outside the cacheable-lanes observation cohort." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
@@ -104,9 +155,10 @@ jobs:
             echo "Expected exactly one verification report and fast-lane report." >&2
             exit 1
           fi
-          node --experimental-strip-types scripts/ci-performance-observer.mts \
+          observer_args=(
             --run ci-observer-input/run.json \
             --jobs ci-observer-input/jobs.json \
+            --artifacts ci-observer-input/artifacts.json \
             --execution-sha "$(cat ci-observer-input/execution-sha.txt)" \
             --sample ci-observer-input/performance/raw-sample.json \
             --verification "${verification_reports[0]}" \
@@ -115,6 +167,20 @@ jobs:
             --package-metadata ci-observer-input/source-package.json \
             --output ci-observation/observation.json \
             --markdown-output ci-observation/summary.md
+          )
+          if [ -d ci-observer-input/split ]; then
+            mapfile -t producer_reports < <(find ci-observer-input/split -type f -name producer-bundle.json -print | sort)
+            mapfile -t shadow_reports < <(find ci-observer-input/split -type f -path '*/ci-reports/cacheable-ci/split-validation-shadow.json' -print)
+            if [ "${#producer_reports[@]}" -ne 4 ] || [ "${#shadow_reports[@]}" -ne 1 ]; then
+              echo "Expected four producer bundles and one split validation shadow report." >&2
+              exit 1
+            fi
+            for report in "${producer_reports[@]}"; do
+              observer_args+=(--producer-bundle "$report")
+            done
+            observer_args+=(--split-validation-shadow "${shadow_reports[0]}")
+          fi
+          node --experimental-strip-types scripts/ci-performance-observer.mts "${observer_args[@]}"
           cat ci-observation/summary.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload immutable observation

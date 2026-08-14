@@ -13,6 +13,14 @@ import {
   type Observation,
   type ResultRecord,
 } from "./ci-cacheable-lanes-evaluator.mts";
+import {
+  PRODUCER_LANES,
+  parseProducerBundle,
+  parseSplitValidationShadowEvidence,
+  type ProducerBundle,
+  type ProducerLane,
+  type SplitValidationShadowEvidence,
+} from "./ci-lane-evidence.mts";
 
 type Conclusion = "success" | "failure" | "cancelled";
 
@@ -47,6 +55,16 @@ type SourceJobs = {
   readonly jobs: readonly SourceJob[];
 };
 
+type SourceArtifact = {
+  readonly name: string;
+  readonly expired: boolean;
+};
+
+type SourceArtifacts = {
+  readonly total_count: number;
+  readonly artifacts: readonly SourceArtifact[];
+};
+
 type PerformanceSample = {
   readonly measurementScope: "validate-job";
   readonly runId: string;
@@ -63,6 +81,7 @@ type PerformanceSample = {
   readonly workflowDigest: string;
   readonly conclusion: Conclusion;
   readonly retryAttempt: number;
+  readonly injectedFailure?: string;
 };
 
 type VerificationCheck = {
@@ -112,6 +131,9 @@ export type CreateCiPerformanceObservationInput = {
   readonly fastLane: { readonly bytes: Buffer; readonly parsed: unknown };
   readonly inventoryBytes: Buffer;
   readonly packageMetadata: unknown;
+  readonly artifacts?: unknown;
+  readonly producerBundles?: readonly { readonly bytes: Buffer; readonly parsed: unknown }[];
+  readonly splitValidationShadow?: { readonly bytes: Buffer; readonly parsed: unknown };
 };
 
 const SECURITY_STEPS = [
@@ -235,6 +257,29 @@ function parseJobs(value: unknown): SourceJobs {
     );
   }
   return { total_count: totalCount, jobs };
+}
+
+function parseArtifacts(value: unknown): SourceArtifacts {
+  if (!isRecord(value) || !Array.isArray(value.artifacts)) {
+    throw new Error("source artifacts must contain an artifacts array");
+  }
+  const artifacts = value.artifacts.map((candidate, index): SourceArtifact => {
+    if (!isRecord(candidate)) throw new Error(`source artifact ${index} must be an object`);
+    if (typeof candidate.expired !== "boolean") {
+      throw new Error(`source artifact ${index} expired must be a boolean`);
+    }
+    return {
+      name: requiredString(candidate.name, `source artifact ${index} name`),
+      expired: candidate.expired,
+    };
+  });
+  const totalCount = requiredNumber(value.total_count, "source artifacts total_count");
+  if (totalCount !== artifacts.length) {
+    throw new Error(
+      `source artifacts response is incomplete: expected ${totalCount}, received ${artifacts.length}`,
+    );
+  }
+  return { total_count: totalCount, artifacts };
 }
 
 function parsePerformanceSample(value: unknown): PerformanceSample {
@@ -371,6 +416,142 @@ function assertSetEquality(
     throw new Error(`${field} does not match the authoritative contract`);
 }
 
+const SPLIT_JOB_IDENTITIES = [...PRODUCER_LANES, "split-validation-shadow"] as const;
+
+function exactJob(jobs: SourceJobs, name: string): SourceJob {
+  const matches = jobs.jobs.filter((job) => job.name === name);
+  if (matches.length !== 1) {
+    throw new Error(`source run must contain exactly one ${name} job, found ${matches.length}`);
+  }
+  const job = matches[0];
+  if (!job || job.status !== "completed" || job.completed_at === null) {
+    throw new Error(`${name} job must be completed`);
+  }
+  return job;
+}
+
+function resultConclusion(
+  value: "passed" | "failed" | "not-applicable",
+): ResultRecord["conclusion"] {
+  if (value === "passed") return "success";
+  if (value === "failed") return "failure";
+  return "not-selected";
+}
+
+function splitResult(result: {
+  readonly id: string;
+  readonly outcome: "passed" | "failed" | "not-applicable";
+  readonly semantics: "blocking" | "advisory";
+  readonly diagnostics: readonly string[];
+}): ResultRecord {
+  return {
+    id: result.id,
+    conclusion: resultConclusion(result.outcome),
+    semantics: result.semantics,
+    diagnostics: [...result.diagnostics],
+  };
+}
+
+function splitSecurityResult(
+  result: SplitValidationShadowEvidence["security"][number],
+): ResultRecord {
+  const advisory = new Set([
+    "advisory-production-audit",
+    "security-policy-summary",
+    "security-upload",
+  ]);
+  return {
+    id: result.id,
+    conclusion: resultConclusion(result.outcome),
+    semantics: advisory.has(result.id) ? "advisory" : "blocking",
+    diagnostics: [...result.diagnostics],
+  };
+}
+
+function cacheTaskId(lane: ProducerLane, checkId: string): string {
+  return `${lane}#${checkId}`;
+}
+
+function producerCacheEvidence(bundle: ProducerBundle): {
+  readonly eligible: readonly string[];
+  readonly hits: readonly string[];
+} {
+  const eligible = bundle.checks
+    .filter(({ selection }) => selection === "selected")
+    .map(({ id }) => cacheTaskId(bundle.lane, id));
+  const receipts = new Map(bundle.receipts.map((receipt) => [receipt.checkId, receipt]));
+  const hits = bundle.checks.flatMap(({ id, selection, receiptDigest }) => {
+    if (selection !== "selected" || receiptDigest === null) return [];
+    const receipt = receipts.get(id);
+    if (!receipt) throw new Error(`${bundle.lane} is missing the receipt for ${id}`);
+    return receipt.cache.origin === "executed" ? [] : [cacheTaskId(bundle.lane, id)];
+  });
+  return { eligible, hits };
+}
+
+function injectedFailure(sample: PerformanceSample): Observation["injectedFailure"] {
+  const value = sample.injectedFailure ?? "none";
+  const allowed = ["none", ...Object.keys(LANE_OWNERSHIP)];
+  if (!allowed.includes(value)) throw new Error(`unsupported injected failure class ${value}`);
+  return value as Observation["injectedFailure"];
+}
+
+function assertSplitArtifactSet(
+  run: SourceRun,
+  artifactsValue: unknown,
+  splitEvidencePresent: boolean,
+): void {
+  if (artifactsValue === undefined) {
+    if (splitEvidencePresent) throw new Error("split evidence requires source artifact metadata");
+    return;
+  }
+  const artifacts = parseArtifacts(artifactsValue);
+  const relevant = artifacts.artifacts.filter(({ name }) => name.startsWith("ci-lane-"));
+  const expected = SPLIT_JOB_IDENTITIES.map(
+    (identity) => `ci-lane-${identity}-${run.id}-${run.run_attempt}`,
+  );
+  if (relevant.length === 0) {
+    if (splitEvidencePresent) throw new Error("split evidence artifacts are missing");
+    return;
+  }
+  if (relevant.some(({ expired }) => expired))
+    throw new Error("split evidence artifact is expired");
+  assertSetEquality(
+    relevant.map(({ name }) => name),
+    expected,
+    "split evidence artifact names",
+  );
+  if (new Set(relevant.map(({ name }) => name)).size !== relevant.length) {
+    throw new Error("split evidence artifacts contain duplicates");
+  }
+  if (!splitEvidencePresent)
+    throw new Error("source artifacts declare split evidence without input bytes");
+}
+
+function assertSplitIdentity(
+  mono: Observation,
+  bundle: ProducerBundle | SplitValidationShadowEvidence,
+  label: string,
+): void {
+  const expected = {
+    architectureVersion: "shadow-split",
+    commitSha: mono.sourceSha,
+    runId: mono.sourceRunId,
+    runAttempt: mono.sourceAttempt,
+    profile: mono.profile,
+    manifestDigest: mono.manifestDigest,
+    inventoryDigest: mono.inventoryDigest,
+    toolchainDigest: mono.toolchainDigest,
+    inputDigest: mono.inputDigest,
+    verificationExperimentId: mono.verificationExperimentId,
+  } as const;
+  for (const field of Object.keys(expected) as readonly (keyof typeof expected)[]) {
+    if (bundle[field] !== expected[field]) {
+      throw new Error(`${label} ${field} does not match the monolithic observation identity`);
+    }
+  }
+}
+
 export function createCiPerformanceObservation(
   input: CreateCiPerformanceObservationInput,
 ): Observation {
@@ -385,14 +566,7 @@ export function createCiPerformanceObservation(
     throw new Error("source execution SHA must be a 40-character SHA");
   if (run.name !== "CI" || run.status !== "completed")
     throw new Error("source workflow must be a completed CI run");
-  const validateJobs = jobs.jobs.filter(({ name }) => name === "validate");
-  if (validateJobs.length !== 1)
-    throw new Error(
-      `source run must contain exactly one validate job, found ${validateJobs.length}`,
-    );
-  const validateJob = validateJobs[0];
-  if (validateJob.status !== "completed" || validateJob.completed_at === null)
-    throw new Error("validate job must be completed");
+  const validateJob = exactJob(jobs, "validate");
   const validateConclusion = conclusion(validateJob.conclusion, "validate job conclusion");
   if (
     sample.measurementScope !== "validate-job" ||
@@ -504,7 +678,7 @@ export function createCiPerformanceObservation(
     inputDigest,
     verificationExperimentId: `${run.id}-${run.run_attempt}-${inputDigest.slice(0, 12)}`,
     evidenceDigest,
-    injectedFailure: "none",
+    injectedFailure: injectedFailure(sample),
     cacheEligibleTaskIds: commandIds,
     validCacheHitTaskIds: fastLane.commands.flatMap(({ owner, cacheStatus }) =>
       cacheStatus === "hit" ? [`${owner}#test`] : [],
@@ -516,9 +690,293 @@ export function createCiPerformanceObservation(
   });
 }
 
+function sourceJobConclusion(value: string | null, field: string): Observation["conclusion"] {
+  if (value !== "success" && value !== "failure" && value !== "cancelled" && value !== "skipped") {
+    throw new Error(`${field} must be success, failure, cancelled, or skipped`);
+  }
+  return value;
+}
+
+function operationalProducerFailure(
+  jobConclusion: Observation["conclusion"],
+  bundle: ProducerBundle,
+): boolean {
+  if (jobConclusion === "success") return bundle.status !== "success";
+  if (jobConclusion === "failure") return bundle.status !== "failure";
+  return true;
+}
+
+function blockingOutcome(results: readonly ResultRecord[]): "success" | "failure" {
+  return results.some(
+    ({ conclusion: resultConclusionValue, semantics }) =>
+      semantics === "blocking" && resultConclusionValue === "failure",
+  )
+    ? "failure"
+    : "success";
+}
+
+function splitStableDiagnostics(
+  results: readonly ResultRecord[],
+  operationalDiagnostic?: string,
+): readonly string[] {
+  return [
+    ...new Set([
+      ...results.flatMap(({ diagnostics }) => diagnostics),
+      ...(operationalDiagnostic ? [operationalDiagnostic] : []),
+    ]),
+  ].sort();
+}
+
+function assertProducerMatchesSynthesis(
+  bundle: ProducerBundle,
+  shadow: SplitValidationShadowEvidence,
+): void {
+  const synthesized = new Map(
+    shadow.checks
+      .filter(({ id }) => LANE_OWNERSHIP[bundle.lane].includes(id as never))
+      .map((result) => [result.id, result]),
+  );
+  if (synthesized.size !== bundle.checks.length) {
+    throw new Error(`${bundle.lane} synthesis check coverage is incomplete`);
+  }
+  for (const result of bundle.checks) {
+    const expected = synthesized.get(result.id);
+    if (
+      !expected ||
+      result.selection !== expected.selection ||
+      result.semantics !== expected.semantics ||
+      result.outcome !== expected.outcome ||
+      JSON.stringify(result.diagnostics) !== JSON.stringify(expected.diagnostics)
+    ) {
+      throw new Error(`${bundle.lane} result ${result.id} does not match synthesis evidence`);
+    }
+  }
+}
+
+export function createCiPerformanceObservations(
+  input: CreateCiPerformanceObservationInput,
+): readonly Observation[] {
+  const monolithic = createCiPerformanceObservation(input);
+  const run = parseRun(input.run);
+  const jobs = parseJobs(input.jobs);
+  const hasProducerInput = input.producerBundles !== undefined;
+  const hasShadowInput = input.splitValidationShadow !== undefined;
+  const splitEvidencePresent = hasProducerInput || hasShadowInput;
+  assertSplitArtifactSet(run, input.artifacts, splitEvidencePresent);
+
+  const splitJobCount = SPLIT_JOB_IDENTITIES.reduce(
+    (count, identity) => count + jobs.jobs.filter(({ name }) => name === identity).length,
+    0,
+  );
+  if (!splitEvidencePresent && splitJobCount === 0) return [monolithic];
+  if (!hasProducerInput || !hasShadowInput) {
+    throw new Error("Phase B observation requires four producer bundles and shadow evidence");
+  }
+  if (splitJobCount !== SPLIT_JOB_IDENTITIES.length) {
+    throw new Error(
+      `Phase B source run must contain exactly five split jobs, found ${splitJobCount}`,
+    );
+  }
+  if (input.producerBundles.length !== PRODUCER_LANES.length) {
+    throw new Error(
+      `Phase B observation requires exactly four producer bundles, found ${input.producerBundles.length}`,
+    );
+  }
+  if (monolithic.profile !== "publish") {
+    throw new Error("Phase B observations are restricted to the publish profile");
+  }
+
+  const bundles = input.producerBundles.map((evidence, index) =>
+    parseProducerBundle(evidence.parsed, `producerBundles[${index}]`),
+  );
+  const producerBytesByLane = new Map(
+    bundles.map((bundle, index) => [bundle.lane, input.producerBundles?.[index]?.bytes]),
+  );
+  assertSetEquality(
+    bundles.map(({ lane }) => lane),
+    PRODUCER_LANES,
+    "producer bundle lanes",
+  );
+  if (new Set(bundles.map(({ lane }) => lane)).size !== bundles.length) {
+    throw new Error("producer bundles contain duplicate lanes");
+  }
+  const monolithicVerification = parseVerificationReport(input.verification.parsed);
+  const producerBundleDigests = bundles.map(({ lane, bundleDigest }) => ({ lane, bundleDigest }));
+  const shadow = parseSplitValidationShadowEvidence(
+    input.splitValidationShadow.parsed,
+    {
+      architectureVersion: "shadow-split",
+      commitSha: monolithic.sourceSha,
+      runId: monolithic.sourceRunId,
+      runAttempt: monolithic.sourceAttempt,
+      profile: monolithic.profile,
+      manifestDigest: monolithic.manifestDigest,
+      inventoryDigest: monolithic.inventoryDigest,
+      toolchainDigest: monolithic.toolchainDigest,
+      inputDigest: monolithic.inputDigest,
+      verificationExperimentId: monolithic.verificationExperimentId,
+      selectedCheckIds: monolithicVerification.checks
+        .filter(({ status }) => status !== "not_applicable")
+        .map(({ id }) => id),
+      producerBundleDigests,
+    },
+    "splitValidationShadow",
+  );
+  for (const bundle of bundles) {
+    assertSplitIdentity(monolithic, bundle, bundle.lane);
+    assertProducerMatchesSynthesis(bundle, shadow);
+  }
+  assertSplitIdentity(monolithic, shadow, "split-validation-shadow");
+  const expectedBundleDigests = producerBundleDigests.sort((left, right) =>
+    left.lane.localeCompare(right.lane),
+  );
+  const shadowBundleDigests = [...shadow.producerBundles].sort((left, right) =>
+    left.lane.localeCompare(right.lane),
+  );
+  if (JSON.stringify(expectedBundleDigests) !== JSON.stringify(shadowBundleDigests)) {
+    throw new Error("split-validation-shadow does not bind the exact producer bundles");
+  }
+
+  const artifactName = `ci-observation-${run.id}-${run.run_attempt}`;
+  const failureClass = monolithic.injectedFailure;
+  const securityByOwner = (owner: string): readonly ResultRecord[] =>
+    shadow.security
+      .filter(
+        (result) =>
+          result.owner === owner ||
+          (owner === "validate-synthesis" && result.id === "security-upload"),
+      )
+      .map(splitSecurityResult);
+  const producerObservations = bundles.map((bundle): Observation => {
+    const job = exactJob(jobs, bundle.lane);
+    const jobConclusion = sourceJobConclusion(job.conclusion, `${bundle.lane} job conclusion`);
+    const checkResults = bundle.checks.map(splitResult);
+    const securityResults = securityByOwner(bundle.lane);
+    const allResults = [...checkResults, ...securityResults];
+    const operationalFailure = operationalProducerFailure(jobConclusion, bundle);
+    const cache = producerCacheEvidence(bundle);
+    const producerBytes = producerBytesByLane.get(bundle.lane);
+    if (!producerBytes) throw new Error(`${bundle.lane} evidence bytes are missing`);
+    return parseObservation({
+      schemaVersion: OBSERVATION_SCHEMA,
+      sourceRunId: String(run.id),
+      sourceAttempt: run.run_attempt,
+      sourceCreatedAt: run.created_at,
+      sourceCompletedAt: run.updated_at,
+      sourceSha: monolithic.sourceSha,
+      architectureVersion: "shadow-split",
+      jobIdentity: bundle.lane,
+      lane: bundle.lane,
+      artifactName,
+      startedAt: job.started_at,
+      completedAt: job.completed_at,
+      conclusion: jobConclusion,
+      blockingOutcome: blockingOutcome(allResults),
+      operationalFailure,
+      profile: monolithic.profile,
+      runnerOs: monolithic.runnerOs,
+      runnerArch: monolithic.runnerArch,
+      runnerLabel: monolithic.runnerLabel,
+      nodeVersion: monolithic.nodeVersion,
+      pnpmVersion: monolithic.pnpmVersion,
+      turboVersion: monolithic.turboVersion,
+      toolchainDigest: monolithic.toolchainDigest,
+      manifestDigest: monolithic.manifestDigest,
+      inventoryDigest: monolithic.inventoryDigest,
+      inputDigest: monolithic.inputDigest,
+      verificationExperimentId: monolithic.verificationExperimentId,
+      evidenceDigest: sha256([producerBytes, input.splitValidationShadow.bytes]),
+      injectedFailure: failureClass,
+      cacheEligibleTaskIds: cache.eligible,
+      validCacheHitTaskIds: cache.hits,
+      freshAttestation: bundle.attestations.every(({ fresh }) => fresh),
+      checkResults,
+      securityResults,
+      stableDiagnostics: splitStableDiagnostics(
+        allResults,
+        operationalFailure ? `${bundle.lane}-job:${jobConclusion}` : undefined,
+      ),
+    });
+  });
+
+  const shadowJob = exactJob(jobs, "split-validation-shadow");
+  const shadowConclusion = sourceJobConclusion(
+    shadowJob.conclusion,
+    "split-validation-shadow job conclusion",
+  );
+  if (shadow.conclusion !== shadowConclusion) {
+    throw new Error("split-validation-shadow conclusion does not match source job metadata");
+  }
+  const synthesisCheckIds = LANE_OWNERSHIP["validate-synthesis"];
+  const synthesisChecks = shadow.checks
+    .filter(({ id }) => synthesisCheckIds.includes(id as never))
+    .map(splitResult);
+  const synthesisSecurity = securityByOwner("validate-synthesis");
+  const synthesisResults = [...synthesisChecks, ...synthesisSecurity];
+  const allCache = producerObservations.flatMap(({ cacheEligibleTaskIds }) => cacheEligibleTaskIds);
+  const allHits = producerObservations.flatMap(({ validCacheHitTaskIds }) => validCacheHitTaskIds);
+  const synthesisObservation = parseObservation({
+    schemaVersion: OBSERVATION_SCHEMA,
+    sourceRunId: String(run.id),
+    sourceAttempt: run.run_attempt,
+    sourceCreatedAt: run.created_at,
+    sourceCompletedAt: run.updated_at,
+    sourceSha: monolithic.sourceSha,
+    architectureVersion: "shadow-split",
+    jobIdentity: "split-validation-shadow",
+    lane: "validate-synthesis",
+    artifactName,
+    startedAt: shadowJob.started_at,
+    completedAt: shadowJob.completed_at,
+    conclusion: shadowConclusion,
+    blockingOutcome: shadow.blockingOutcome === "passed" ? "success" : "failure",
+    operationalFailure: shadow.operationalFailure !== null,
+    profile: monolithic.profile,
+    runnerOs: monolithic.runnerOs,
+    runnerArch: monolithic.runnerArch,
+    runnerLabel: monolithic.runnerLabel,
+    nodeVersion: monolithic.nodeVersion,
+    pnpmVersion: monolithic.pnpmVersion,
+    turboVersion: monolithic.turboVersion,
+    toolchainDigest: monolithic.toolchainDigest,
+    manifestDigest: monolithic.manifestDigest,
+    inventoryDigest: monolithic.inventoryDigest,
+    inputDigest: monolithic.inputDigest,
+    verificationExperimentId: monolithic.verificationExperimentId,
+    evidenceDigest: sha256([
+      input.splitValidationShadow.bytes,
+      ...input.producerBundles.map(({ bytes }) => bytes),
+    ]),
+    injectedFailure: failureClass,
+    cacheEligibleTaskIds: allCache,
+    validCacheHitTaskIds: allHits,
+    freshAttestation: shadow.fresh,
+    checkResults: synthesisChecks,
+    securityResults: synthesisSecurity,
+    stableDiagnostics: splitStableDiagnostics(
+      synthesisResults,
+      shadow.operationalFailure ?? undefined,
+    ),
+  });
+
+  const splitDiagnostics = [...producerObservations, synthesisObservation]
+    .flatMap(({ stableDiagnostics }) => stableDiagnostics)
+    .sort();
+  if (JSON.stringify(splitDiagnostics) !== JSON.stringify([...shadow.stableDiagnostics].sort())) {
+    throw new Error("split observation diagnostics do not match shadow evidence");
+  }
+  return [monolithic, ...producerObservations, synthesisObservation];
+}
+
 function optionValue(arguments_: readonly string[], name: string): string | undefined {
   const index = arguments_.indexOf(name);
   return index === -1 ? undefined : arguments_[index + 1];
+}
+
+function optionValues(arguments_: readonly string[], name: string): readonly string[] {
+  return arguments_.flatMap((argument, index) =>
+    argument === name && arguments_[index + 1] ? [arguments_[index + 1] as string] : [],
+  );
 }
 
 function requiredOption(arguments_: readonly string[], name: string): string {
@@ -535,7 +993,10 @@ function readJsonBytes(path: string): { readonly bytes: Buffer; readonly parsed:
 function main(arguments_: readonly string[]): void {
   const outputPath = resolve(requiredOption(arguments_, "--output"));
   const markdownPath = resolve(requiredOption(arguments_, "--markdown-output"));
-  const observation = createCiPerformanceObservation({
+  const artifactPath = optionValue(arguments_, "--artifacts");
+  const producerPaths = optionValues(arguments_, "--producer-bundle");
+  const shadowPath = optionValue(arguments_, "--split-validation-shadow");
+  const observations = createCiPerformanceObservations({
     run: JSON.parse(readFileSync(resolve(requiredOption(arguments_, "--run")), "utf8")) as unknown,
     jobs: JSON.parse(
       readFileSync(resolve(requiredOption(arguments_, "--jobs")), "utf8"),
@@ -548,26 +1009,45 @@ function main(arguments_: readonly string[]): void {
     packageMetadata: JSON.parse(
       readFileSync(resolve(requiredOption(arguments_, "--package-metadata")), "utf8"),
     ) as unknown,
+    ...(artifactPath
+      ? { artifacts: JSON.parse(readFileSync(resolve(artifactPath), "utf8")) as unknown }
+      : {}),
+    ...(producerPaths.length > 0
+      ? { producerBundles: producerPaths.map((path) => readJsonBytes(path)) }
+      : {}),
+    ...(shadowPath ? { splitValidationShadow: readJsonBytes(shadowPath) } : {}),
   });
   mkdirSync(dirname(outputPath), { recursive: true });
   mkdirSync(dirname(markdownPath), { recursive: true });
-  writeFileSync(outputPath, `${JSON.stringify(observation, null, 2)}\n`);
+  observations.forEach((observation, index) => {
+    const path =
+      index === 0
+        ? outputPath
+        : resolve(
+            dirname(outputPath),
+            `observation-${observation.architectureVersion}-${observation.jobIdentity}.json`,
+          );
+    writeFileSync(path, `${JSON.stringify(observation, null, 2)}\n`);
+  });
   writeFileSync(
     markdownPath,
     [
       "# CI performance observation",
       "",
-      `- Source run: ${observation.sourceRunId} (attempt ${observation.sourceAttempt})`,
-      `- Validate conclusion: ${observation.conclusion}`,
-      `- Queue-inclusive wall: ${(
-        (Date.parse(observation.completedAt) - Date.parse(observation.sourceCreatedAt)) /
-        60_000
-      ).toFixed(2)} minutes`,
-      `- Execution critical path: ${(
-        (Date.parse(observation.completedAt) - Date.parse(observation.startedAt)) /
-        60_000
-      ).toFixed(2)} minutes`,
-      `- Cache task hits: ${observation.validCacheHitTaskIds.length}/${observation.cacheEligibleTaskIds.length}`,
+      `- Source run: ${observations[0]?.sourceRunId} (attempt ${observations[0]?.sourceAttempt})`,
+      `- Immutable records: ${observations.length}`,
+      ...observations.flatMap((observation) => [
+        `- ${observation.architectureVersion}/${observation.jobIdentity}: ${observation.conclusion}`,
+        `  - Queue-inclusive wall: ${(
+          (Date.parse(observation.completedAt) - Date.parse(observation.sourceCreatedAt)) /
+          60_000
+        ).toFixed(2)} minutes`,
+        `  - Execution duration: ${(
+          (Date.parse(observation.completedAt) - Date.parse(observation.startedAt)) /
+          60_000
+        ).toFixed(2)} minutes`,
+        `  - Cache task hits: ${observation.validCacheHitTaskIds.length}/${observation.cacheEligibleTaskIds.length}`,
+      ]),
       "",
     ].join("\n"),
   );

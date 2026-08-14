@@ -3923,7 +3923,19 @@
       "owner": "repo:ci"
     },
     {
+      "path": "scripts/tests/ci-cacheable-lanes-local-harness.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:ci"
+    },
+    {
       "path": "scripts/tests/ci-executable-policy.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:ci"
+    },
+    {
+      "path": "scripts/tests/ci-lane-evidence.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "repo:ci"
