@@ -45,7 +45,7 @@ title: "SubscriptionPastDueEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventId`](/api/events-core/src/classes/domainevent/#eventid)
 
-***
+---
 
 ### eventName
 
@@ -55,13 +55,13 @@ title: "SubscriptionPastDueEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventName`](/api/events-core/src/classes/domainevent/#eventname)
 
-***
+---
 
 ### externalSubscriptionId
 
 > `readonly` **externalSubscriptionId**: `string`
 
-***
+---
 
 ### metadata
 
@@ -71,13 +71,13 @@ title: "SubscriptionPastDueEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`metadata`](/api/events-core/src/classes/domainevent/#metadata)
 
-***
+---
 
 ### tenantId
 
 > `readonly` **tenantId**: `string`
 
-***
+---
 
 ### timestamp
 
@@ -87,7 +87,7 @@ title: "SubscriptionPastDueEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`timestamp`](/api/events-core/src/classes/domainevent/#timestamp)
 
-***
+---
 
 ### eventName
 
@@ -96,3 +96,19 @@ title: "SubscriptionPastDueEvent"
 #### Overrides
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventName`](/api/events-core/src/classes/domainevent/#eventname-1)
+
+## Methods
+
+### fromPayload()
+
+> `static` **fromPayload**(`payload`): `SubscriptionPastDueEvent`
+
+#### Parameters
+
+##### payload
+
+`Record`\<`string`, `unknown`\>
+
+#### Returns
+
+`SubscriptionPastDueEvent`

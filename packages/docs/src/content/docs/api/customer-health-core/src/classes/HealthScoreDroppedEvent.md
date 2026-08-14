@@ -15,7 +15,7 @@ title: "HealthScoreDroppedEvent"
 
 ### Constructor
 
-> **new HealthScoreDroppedEvent**(`tenantId`, `previousScore`, `currentScore`, `dropPercentage`): `HealthScoreDroppedEvent`
+> **new HealthScoreDroppedEvent**(`tenantId`, `previousScore`, `currentScore`, `dropPercentage`, `eventId?`, `occurredAt?`): `HealthScoreDroppedEvent`
 
 #### Parameters
 
@@ -35,6 +35,14 @@ title: "HealthScoreDroppedEvent"
 
 `number`
 
+##### eventId?
+
+`string`
+
+##### occurredAt?
+
+`Date`
+
 #### Returns
 
 `HealthScoreDroppedEvent`
@@ -49,13 +57,13 @@ title: "HealthScoreDroppedEvent"
 
 > `readonly` **currentScore**: `number`
 
-***
+---
 
 ### dropPercentage
 
 > `readonly` **dropPercentage**: `number`
 
-***
+---
 
 ### eventId
 
@@ -65,7 +73,7 @@ title: "HealthScoreDroppedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventId`](/api/events-core/src/classes/domainevent/#eventid)
 
-***
+---
 
 ### eventName
 
@@ -75,7 +83,7 @@ title: "HealthScoreDroppedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventName`](/api/events-core/src/classes/domainevent/#eventname)
 
-***
+---
 
 ### metadata
 
@@ -85,19 +93,19 @@ title: "HealthScoreDroppedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`metadata`](/api/events-core/src/classes/domainevent/#metadata)
 
-***
+---
 
 ### previousScore
 
 > `readonly` **previousScore**: `number`
 
-***
+---
 
 ### tenantId
 
 > `readonly` **tenantId**: `string`
 
-***
+---
 
 ### timestamp
 
@@ -107,7 +115,7 @@ title: "HealthScoreDroppedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`timestamp`](/api/events-core/src/classes/domainevent/#timestamp)
 
-***
+---
 
 ### eventName
 

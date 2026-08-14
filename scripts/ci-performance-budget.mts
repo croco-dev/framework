@@ -5,8 +5,10 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
+import { parseCacheableFailureClass } from "./ci-cacheable-failure-injection.mts";
 import { createVerificationManifest } from "./verification-manifest.mts";
 import type { EvidenceCommand } from "./release-spine-evidence.mts";
+import type { CacheableFailureClass } from "./ci-cacheable-failure-injection.mts";
 
 export const CI_PERFORMANCE_SAMPLE_SCHEMA = "croco.ci-performance-samples/v1" as const;
 export const CI_PERFORMANCE_BASELINE_SCHEMA = "croco.ci-performance-baselines/v1" as const;
@@ -60,6 +62,7 @@ export type CiPerformanceSample = CiPerformancePartition & {
   readonly componentConclusion: CiConclusion;
   readonly conclusion: CiConclusion;
   readonly retryAttempt: number;
+  readonly injectedFailure?: CacheableFailureClass;
 };
 
 export type CiPerformanceSampleFile = {
@@ -264,10 +267,7 @@ export function findCiPerformanceBudgetViolations(
   ) {
     violations.push("real-resource services must not start in the ordinary validate job");
   }
-  if (
-    !validate.includes('if [ "$GITHUB_EVENT_NAME" != "workflow_dispatch" ]; then') ||
-    !validate.includes('args+=(--base "$VERIFICATION_BASE" --head HEAD)')
-  ) {
+  if (!validate.includes('args+=(--base "$VERIFICATION_BASE" --head HEAD)')) {
     violations.push("pull-request and trunk validation must both use the changed-file scope");
   }
   if (
@@ -991,6 +991,7 @@ export function createCiPerformanceSampleFromEvidence(input: {
   readonly taskCount?: number;
   readonly cacheState: CacheState;
   readonly cacheEvidenceComplete?: boolean;
+  readonly injectedFailure?: CacheableFailureClass;
 }): CiPerformanceSample {
   const measurementStartedMs = Date.parse(input.measurementStartedAt);
   const measurementCompletedMs = Date.parse(input.measurementCompletedAt);
@@ -1050,6 +1051,7 @@ export function createCiPerformanceSampleFromEvidence(input: {
           : "failure",
     conclusion: input.conclusion,
     retryAttempt: Number(input.evidence.provenance.runAttempt),
+    injectedFailure: input.injectedFailure ?? "none",
   };
 }
 
@@ -1119,6 +1121,9 @@ function main(): void {
         optionValue(arguments_, "--cache-state"),
       ),
       cacheEvidenceComplete: cacheProvenance.complete,
+      injectedFailure: parseCacheableFailureClass(
+        optionValue(arguments_, "--injected-failure") ?? "none",
+      ),
     });
     const sampleOutput = optionValue(arguments_, "--sample-output");
     if (sampleOutput) {

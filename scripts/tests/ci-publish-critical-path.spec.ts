@@ -50,4 +50,21 @@ describe("publish validate critical path", () => {
       ]),
     );
   });
+
+  it("fails when typecheck skips the build graph required by a clean checkout", () => {
+    const commands = createVerificationManifest("publish").map((command) =>
+      command.id === "typecheck"
+        ? { ...command, command: [...command.command, "--only"] }
+        : command,
+    );
+
+    const evaluation = evaluatePublishCriticalPath({
+      commands,
+      workflow: readFileSync(resolve(ROOT_DIR, ".github/workflows/ci.yml"), "utf8"),
+    });
+
+    expect(evaluation.diagnostics).toContain(
+      "typecheck must retain its declared build dependencies on a clean checkout",
+    );
+  });
 });

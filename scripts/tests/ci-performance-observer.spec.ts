@@ -7,6 +7,11 @@ import {
   createCacheableExperimentIdentity,
 } from "../ci-cacheable-experiment-identity.mts";
 import {
+  CACHEABLE_FAILURE_CLASSES,
+  CACHEABLE_INJECTED_FAILURE_CODE,
+  injectedFailureCommandId,
+} from "../ci-cacheable-failure-injection.mts";
+import {
   PRODUCER_LANES,
   createCurrentRunAttestation,
   createProducerBundle,
@@ -142,6 +147,23 @@ function verification(overrides: Readonly<Record<string, unknown>> = {}) {
       .flat()
       .map((id) => ({ id, status: "passed", errorCode: null, failureReason: null })),
     ...overrides,
+  });
+}
+
+function injectedVerification(
+  failureClass: Exclude<(typeof CACHEABLE_FAILURE_CLASSES)[number], "none">,
+) {
+  const commandId = injectedFailureCommandId(failureClass);
+  if (!commandId) throw new Error(`Missing injected command for ${failureClass}`);
+  return verification({
+    checks: Object.values(LANE_OWNERSHIP)
+      .flat()
+      .map((id) => ({
+        id,
+        status: id === commandId ? "failed" : "passed",
+        errorCode: id === commandId ? CACHEABLE_INJECTED_FAILURE_CODE : null,
+        failureReason: null,
+      })),
   });
 }
 
@@ -354,13 +376,12 @@ function phaseBInput(overrides: Readonly<Record<string, unknown>> = {}) {
   };
 }
 
-function phaseBFailureInput() {
+function phaseBFailureInput(diagnostic = "generated-app-smoke:synthetic failure") {
   const input = phaseBInput();
   const bundles = input.producerBundles.map(({ parsed }) => parsed as ProducerBundle);
   const generated = bundles.find(({ lane }) => lane === "generated-apps");
   if (!generated) throw new Error("Missing generated-apps fixture bundle");
   const failedId = "generated-app-smoke";
-  const diagnostic = `${failedId}:synthetic failure`;
   const failedAttestation = createCurrentRunAttestation({
     commitSha: generated.commitSha,
     runId: generated.runId,
@@ -507,6 +528,83 @@ describe("CI performance observer", () => {
     ]) {
       expect(digest).toMatch(/^[0-9a-f]{64}$/);
     }
+  });
+
+  it.each(CACHEABLE_FAILURE_CLASSES.filter((value) => value !== "none"))(
+    "accepts %s only when workflow dispatch records the exact injected target",
+    (failureClass) => {
+      const observation = createCiPerformanceObservation(
+        createInput({
+          run: { ...RUN, event: "workflow_dispatch", conclusion: "failure" },
+          jobs: {
+            ...JOBS,
+            jobs: JOBS.jobs.map((job) =>
+              job.name === "validate" ? { ...job, conclusion: "failure" } : job,
+            ),
+          },
+          rawSample: rawSample({
+            injectedFailure: failureClass,
+            componentConclusion: "failure",
+            conclusion: "failure",
+          }),
+          verification: injectedVerification(failureClass),
+        }),
+      );
+      const commandId = injectedFailureCommandId(failureClass);
+
+      expect(observation.injectedFailure).toBe(failureClass);
+      expect(observation.checkResults.find(({ id }) => id === commandId)).toMatchObject({
+        conclusion: "failure",
+        diagnostics: [`${commandId}:${CACHEABLE_INJECTED_FAILURE_CODE}`],
+      });
+    },
+  );
+
+  it("rejects injected labels from non-dispatch runs and natural failures", () => {
+    const exact = createInput({
+      run: { ...RUN, conclusion: "failure" },
+      jobs: {
+        ...JOBS,
+        jobs: JOBS.jobs.map((job) =>
+          job.name === "validate" ? { ...job, conclusion: "failure" } : job,
+        ),
+      },
+      rawSample: rawSample({
+        injectedFailure: "core-verification",
+        componentConclusion: "failure",
+        conclusion: "failure",
+      }),
+      verification: injectedVerification("core-verification"),
+    });
+    expect(() => createCiPerformanceObservation(exact)).toThrow(
+      expect.objectContaining({
+        code: "INVALID_INJECTED_FAILURE_SOURCE",
+        category: "contract",
+      }),
+    );
+
+    const naturalFailure = verification({
+      checks: Object.values(LANE_OWNERSHIP)
+        .flat()
+        .map((id) => ({
+          id,
+          status: id === "verification-policy" ? "failed" : "passed",
+          errorCode: id === "verification-policy" ? "NATURAL_FAILURE" : null,
+          failureReason: null,
+        })),
+    });
+    expect(() =>
+      createCiPerformanceObservation({
+        ...exact,
+        run: { ...RUN, event: "workflow_dispatch", conclusion: "failure" },
+        verification: naturalFailure,
+      }),
+    ).toThrow(
+      expect.objectContaining({
+        code: "INVALID_INJECTED_FAILURE_EVIDENCE",
+        category: "contract",
+      }),
+    );
   });
 
   it("preserves blocking check failures and stable diagnostics without classifying them as operational", () => {
@@ -817,6 +915,59 @@ describe("CI performance observer", () => {
       operationalFailure: false,
       stableDiagnostics: [],
     });
+  });
+
+  it("requires the split shadow to carry the exact injected target diagnostic", () => {
+    const diagnostic = `generated-app-smoke:${CACHEABLE_INJECTED_FAILURE_CODE}`;
+    const input = phaseBFailureInput(diagnostic);
+    const synthesisInput = signedSynthesisInput(input, (unsigned) => ({
+      ...unsigned,
+      selection: {
+        ...(unsigned.selection as Record<string, unknown>),
+        selectedCheckIds: createVerificationManifest("publish")
+          .filter(({ applicable }) => applicable !== false)
+          .map(({ id }) => id),
+      },
+    }));
+    const injected = {
+      ...input,
+      run: { ...RUN, event: "workflow_dispatch", conclusion: "failure" },
+      jobs: {
+        ...input.jobs,
+        jobs: input.jobs.jobs.map((job) =>
+          job.name === "validate" ? { ...job, conclusion: "failure" } : job,
+        ),
+      },
+      rawSample: rawSample({
+        injectedFailure: "generated-apps",
+        componentConclusion: "failure",
+        conclusion: "failure",
+      }),
+      verification: injectedVerification("generated-apps"),
+      synthesisInput,
+    };
+
+    expect(createCiPerformanceObservations(injected)).toHaveLength(6);
+    const natural = phaseBFailureInput();
+    const naturalSynthesisInput = signedSynthesisInput(natural, (unsigned) => ({
+      ...unsigned,
+      selection: {
+        ...(unsigned.selection as Record<string, unknown>),
+        selectedCheckIds: createVerificationManifest("publish")
+          .filter(({ applicable }) => applicable !== false)
+          .map(({ id }) => id),
+      },
+    }));
+    expect(() =>
+      createCiPerformanceObservations({
+        ...natural,
+        run: injected.run,
+        jobs: injected.jobs,
+        rawSample: injected.rawSample,
+        verification: injected.verification,
+        synthesisInput: naturalSynthesisInput,
+      }),
+    ).toThrow(/split validation shadow does not contain the exact injected failure evidence/);
   });
 
   it("marks a failed advisory job with successful evidence as operational", () => {

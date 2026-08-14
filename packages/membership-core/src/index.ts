@@ -297,16 +297,31 @@ export { MembershipConstraintProblem } from "./libs/problems/MembershipConstrain
  */
 export {
   AlreadyMemberProblem,
-  InvalidMembershipCommandProblem,
   InvalidRoleProblem,
   LastOwnerProblem,
   MembershipNotFoundProblem,
-  MembershipEventPublicationProblem,
-  MembershipIdempotencyConflictProblem,
   OwnershipTransferRequiredProblem,
   RoleHierarchyViolationProblem,
   SeatLimitExceededProblem,
 } from "./libs/problems/MembershipProblems";
+/**
+ * 잘못된 멤버십 명령 문제
+ *
+ * @description 필수 입력 누락이나 허용되지 않은 연산 등 멤버십 명령 계약을 위반했을 때 발생하는 문제입니다.
+ */
+export { InvalidMembershipCommandProblem } from "./libs/problems/MembershipProblems";
+/**
+ * 멤버십 이벤트 발행 문제
+ *
+ * @description 멤버십 명령은 커밋되었지만 해당 이벤트 intent가 아직 발행되지 못했을 때 발생하는 문제입니다.
+ */
+export { MembershipEventPublicationProblem } from "./libs/problems/MembershipProblems";
+/**
+ * 멤버십 멱등성 충돌 문제
+ *
+ * @description 같은 idempotency key를 다른 명령 fingerprint로 재사용했을 때 발생하는 문제입니다.
+ */
+export { MembershipIdempotencyConflictProblem } from "./libs/problems/MembershipProblems";
 /**
  * 좌석 제한 체커 인터페이스
  *

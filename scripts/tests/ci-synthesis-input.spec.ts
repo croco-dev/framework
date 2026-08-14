@@ -636,6 +636,12 @@ describe("cacheable CI synthesis input", () => {
 
   it("preserves a valid producer failure as a failed shadow outcome", () => {
     const value = fixture({ lane: "generated-apps", checkId: "generated-app-smoke" });
+    value.selectedCheckIds.push(
+      "test-evidence-reconcile",
+      "production-ready",
+      "spine-promotion",
+      "spine-bundle-size",
+    );
     const result = runSplitValidationSynthesis({
       input: assemble(value),
       rootDir: value.root,
@@ -647,6 +653,14 @@ describe("cacheable CI synthesis input", () => {
     expect(result.evidence.checks.find(({ id }) => id === "generated-app-smoke")?.outcome).toBe(
       "failed",
     );
+    expect(result.evidence.checks.find(({ id }) => id === "production-ready")?.diagnostics).toEqual(
+      [
+        "production-ready:Skipped because prerequisite check(s) did not pass: test-evidence-reconcile (skipped_prerequisite).",
+      ],
+    );
+    expect(result.evidence.checks.find(({ id }) => id === "spine-promotion")?.diagnostics).toEqual([
+      "spine-promotion:Skipped because prerequisite check(s) did not pass: generated-app-smoke (failed), production-ready (skipped_prerequisite).",
+    ]);
   });
 
   it("executes selected synthesis checks from normalized facts and writes their report", () => {
@@ -667,5 +681,45 @@ describe("cacheable CI synthesis input", () => {
         readFileSync(join(value.root, "ci-reports/package-quality/test-evidence.json"), "utf8"),
       ),
     ).toMatchObject({ mode: "enforced", profile: "publish", diagnostics: [] });
+  });
+
+  it("injects the synthesis failure class into its deterministic blocking check", () => {
+    const value = fixture();
+    value.selectedCheckIds.push(
+      "test-evidence-reconcile",
+      "production-ready",
+      "spine-promotion",
+      "spine-bundle-size",
+    );
+    const result = runSplitValidationSynthesis({
+      input: assemble(value),
+      rootDir: value.root,
+      now: () => "2026-08-14T02:00:00.000Z",
+      injectedFailure: "validate-synthesis",
+    });
+
+    expect(result.failed).toBe(true);
+    expect(result.evidence.checks.find(({ id }) => id === "test-evidence-reconcile")).toMatchObject(
+      {
+        selection: "selected",
+        outcome: "failed",
+        diagnostics: ["test-evidence-reconcile:CACHEABLE_EXPERIMENT_INJECTED_FAILURE"],
+      },
+    );
+    expect(result.evidence.checks.find(({ id }) => id === "production-ready")?.diagnostics).toEqual(
+      [
+        "production-ready:Skipped because prerequisite check(s) did not pass: test-evidence-reconcile (failed).",
+      ],
+    );
+    expect(result.evidence.checks.find(({ id }) => id === "spine-promotion")?.diagnostics).toEqual([
+      "spine-promotion:Skipped because prerequisite check(s) did not pass: production-ready (skipped_prerequisite).",
+    ]);
+    expect(() =>
+      runSplitValidationSynthesis({
+        input: assemble(fixture()),
+        rootDir: value.root,
+        injectedFailure: "core-verification",
+      }),
+    ).toThrow(/cannot inject/);
   });
 });

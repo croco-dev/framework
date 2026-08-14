@@ -294,15 +294,15 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`PricingRegistryConflictProblem`](/api/llm-metering/src/classes/pricingregistryconflictproblem/)
 - [`MembershipConstraintProblem`](/api/membership-core/src/classes/membershipconstraintproblem/)
 - [`AlreadyMemberProblem`](/api/membership-core/src/classes/alreadymemberproblem/)
-- [`InvalidMembershipCommandProblem`](/api/membership-core/src/classes/invalidmembershipcommandproblem/)
 - [`InvalidRoleProblem`](/api/membership-core/src/classes/invalidroleproblem/)
 - [`LastOwnerProblem`](/api/membership-core/src/classes/lastownerproblem/)
 - [`MembershipNotFoundProblem`](/api/membership-core/src/classes/membershipnotfoundproblem/)
-- [`MembershipEventPublicationProblem`](/api/membership-core/src/classes/membershipeventpublicationproblem/)
-- [`MembershipIdempotencyConflictProblem`](/api/membership-core/src/classes/membershipidempotencyconflictproblem/)
 - [`OwnershipTransferRequiredProblem`](/api/membership-core/src/classes/ownershiptransferrequiredproblem/)
 - [`RoleHierarchyViolationProblem`](/api/membership-core/src/classes/rolehierarchyviolationproblem/)
 - [`SeatLimitExceededProblem`](/api/membership-core/src/classes/seatlimitexceededproblem/)
+- [`InvalidMembershipCommandProblem`](/api/membership-core/src/classes/invalidmembershipcommandproblem/)
+- [`MembershipEventPublicationProblem`](/api/membership-core/src/classes/membershipeventpublicationproblem/)
+- [`MembershipIdempotencyConflictProblem`](/api/membership-core/src/classes/membershipidempotencyconflictproblem/)
 - [`ServerActionInvalidPathProblem`](/api/meta-vite/src/classes/serveractioninvalidpathproblem/)
 - [`ServerActionNotFoundProblem`](/api/meta-vite/src/classes/serveractionnotfoundproblem/)
 - [`ServerActionValidationProblem`](/api/meta-vite/src/classes/serveractionvalidationproblem/)
@@ -506,7 +506,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 > `readonly` **category**: [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
 
-***
+---
 
 ### cause?
 
@@ -516,31 +516,31 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 `Error.cause`
 
-***
+---
 
 ### code
 
 > `readonly` **code**: `string`
 
-***
+---
 
 ### detail?
 
 > `readonly` `optional` **detail?**: `string`
 
-***
+---
 
 ### extensions?
 
 > `readonly` `optional` **extensions?**: [`ProblemExtensions`](/api/problems-core/src/type-aliases/problemextensions/)
 
-***
+---
 
 ### instance?
 
 > `readonly` `optional` **instance?**: `string`
 
-***
+---
 
 ### message
 
@@ -550,7 +550,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 `Error.message`
 
-***
+---
 
 ### name
 
@@ -560,7 +560,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 `Error.name`
 
-***
+---
 
 ### stack?
 
@@ -570,13 +570,13 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 `Error.stack`
 
-***
+---
 
 ### type
 
 > `readonly` **type**: `string`
 
-***
+---
 
 ### stackTraceLimit
 
@@ -608,7 +608,7 @@ not capture any frames.
 
 `number`
 
-***
+---
 
 ### title
 
@@ -630,7 +630,7 @@ not capture any frames.
 
 [`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
 
-***
+---
 
 ### captureStackTrace()
 
@@ -643,7 +643,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack;  // Similar to `new Error().stack`
+myObject.stack; // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -698,7 +698,7 @@ a();
 
 `Error.captureStackTrace`
 
-***
+---
 
 ### prepareStackTrace()
 

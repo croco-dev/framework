@@ -945,7 +945,6 @@ const spineOnly = (
         "turbo",
         "run",
         "typecheck",
-        "--only",
         ...affectedArguments,
         "--summarize",
         "--continue=always",
@@ -1332,7 +1331,7 @@ const VERIFICATION_DEPENDENCIES: Readonly<Record<string, readonly string[]>> = {
   build: ["architecture-policy-runtime"],
   "quick-start-lambda-smoke": ["build"],
   "first-success": ["build"],
-  "package-entrypoints-smoke": ["build", "test"],
+  "package-entrypoints-smoke": ["build", "typecheck", "generated-app-smoke"],
   "package-bins-smoke": ["build"],
   "generated-app-smoke": ["build"],
   "alpha-release-smoke": ["build"],
@@ -1364,7 +1363,8 @@ type VerificationDependencyEdge =
   | "quick-start-lambda-smoke->build"
   | "first-success->build"
   | "package-entrypoints-smoke->build"
-  | "package-entrypoints-smoke->test"
+  | "package-entrypoints-smoke->typecheck"
+  | "package-entrypoints-smoke->generated-app-smoke"
   | "package-bins-smoke->build"
   | "generated-app-smoke->build"
   | "alpha-release-smoke->build"
@@ -1406,7 +1406,8 @@ export const VERIFICATION_DEPENDENCY_CLASSIFICATION = {
   "quick-start-lambda-smoke->build": ["physical-local"],
   "first-success->build": ["physical-local"],
   "package-entrypoints-smoke->build": ["physical-local", "logical-synthesis"],
-  "package-entrypoints-smoke->test": ["logical-synthesis"],
+  "package-entrypoints-smoke->typecheck": ["logical-synthesis"],
+  "package-entrypoints-smoke->generated-app-smoke": ["logical-synthesis"],
   "package-bins-smoke->build": ["physical-local", "logical-synthesis"],
   "generated-app-smoke->build": ["physical-local", "logical-synthesis"],
   "alpha-release-smoke->build": ["physical-local", "logical-synthesis"],
@@ -1446,7 +1447,7 @@ export const VERIFICATION_DEPENDENCY_CLASSIFICATION = {
 >;
 
 const WORKSPACE_ARTIFACT_CONCURRENCY_GROUP = new Set([
-  "package-entrypoints-smoke",
+  "typecheck",
   "package-bins-smoke",
   "generated-app-smoke",
   "alpha-release-smoke",
@@ -1457,14 +1458,25 @@ const WORKSPACE_ARTIFACT_CONCURRENCY_GROUP = new Set([
   "publish-dry-run",
 ]);
 
+const PACKAGE_ENTRYPOINT_CONCURRENCY_GROUP = new Set([
+  "package-entrypoints-smoke",
+  "integration-test-lane",
+]);
+
 function withSchedulingContract(command: EvidenceCommand): EvidenceCommand {
   const dependsOn = VERIFICATION_DEPENDENCIES[command.id];
+  const writesWorkspaceArtifacts =
+    WORKSPACE_ARTIFACT_CONCURRENCY_GROUP.has(command.id) ||
+    (command.id === "package-entrypoints-smoke" && command.command.includes("--build-missing"));
+  const concurrencyGroups = [
+    ...(writesWorkspaceArtifacts ? ["workspace-artifacts"] : []),
+    ...(PACKAGE_ENTRYPOINT_CONCURRENCY_GROUP.has(command.id) ? ["package-entrypoints"] : []),
+    ...(["test", "integration-test-lane"].includes(command.id) ? ["test-integration"] : []),
+  ];
   return {
     ...command,
     ...(dependsOn ? { dependsOn } : {}),
-    ...(WORKSPACE_ARTIFACT_CONCURRENCY_GROUP.has(command.id)
-      ? { concurrencyGroup: "workspace-artifacts" }
-      : {}),
+    ...(concurrencyGroups.length > 0 ? { concurrencyGroups } : {}),
   };
 }
 
@@ -1493,11 +1505,19 @@ export function assertVerificationManifest(commands: readonly EvidenceCommand[])
         );
       }
     }
-    if (command.concurrencyGroup !== undefined && command.concurrencyGroup.trim().length === 0) {
+    const concurrencyGroups = command.concurrencyGroups ?? [];
+    if (concurrencyGroups.some((group) => group.trim().length === 0)) {
       throw new VerificationProblem(
         "EMPTY_VERIFICATION_CONCURRENCY_GROUP",
         "contract",
         `Verification command ${command.id} has an empty concurrency group.`,
+      );
+    }
+    if (new Set(concurrencyGroups).size !== concurrencyGroups.length) {
+      throw new VerificationProblem(
+        "DUPLICATE_VERIFICATION_CONCURRENCY_GROUP",
+        "contract",
+        `Verification command ${command.id} declares a duplicate concurrency group.`,
       );
     }
     for (const dependency of command.dependsOn ?? []) {
@@ -1556,9 +1576,17 @@ export function createVerificationManifest(
   profile: VerificationProfile,
   context: VerificationContext = {},
 ): readonly EvidenceCommand[] {
-  const releaseGateMaintenance = isApplicableToChangedFiles(context, isReleaseGateMaintenancePath);
-  const repo = repoOnly(context, profile, profile === "publish" && releaseGateMaintenance);
   const spine = spineOnly(context, profile);
+  const fastTest = spine.find(({ id }) => id === "test");
+  const fastTestCoversRepositoryContracts =
+    profile !== "repo" &&
+    fastTest?.applicable === true &&
+    (!fastTest.command.includes("--owner") || fastTest.command.includes("repo:ci"));
+  const repo = repoOnly(
+    context,
+    profile,
+    profile === "publish" || fastTestCoversRepositoryContracts,
+  );
   const commands = (
     profile === "repo"
       ? repo

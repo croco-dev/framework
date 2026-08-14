@@ -131,15 +131,31 @@ export abstract class BillingStore {
   abstract commitSubscriptionWebhook(
     input: CommitBillingSubscriptionWebhookInput,
   ): Promise<BillingSubscriptionWebhookTransition>;
-  /** Marks one stable event intent as durably published. The operation must be idempotent. */
+  /**
+   * Marks one stable event intent as durably published. Repeated calls with the same
+   * `intentEventId` must be idempotent.
+   */
   abstract markWebhookEventIntentPublished(eventId: string, intentEventId: string): Promise<void>;
-  /** Atomically claims a webhook-addressed delivery with a datastore-time lease. */
+  /**
+   * Atomically claims a webhook-addressed delivery with a datastore-time lease.
+   *
+   * An active lease returns `in_progress`, an expired lease is reclaimed with a new token and
+   * returns `claimed`, and a completed delivery returns `completed`.
+   */
   abstract claimWebhookDelivery(
     eventId: string,
     eventType: string,
     leaseDurationMs: number,
   ): Promise<BillingWebhookDeliveryClaim>;
+  /**
+   * Completes the delivery only for the current, unexpired lease token. Returns `false` for a stale
+   * or expired token.
+   */
   abstract completeWebhookDelivery(eventId: string, claimToken: string): Promise<boolean>;
+  /**
+   * Releases the delivery only for the current, unexpired lease token. Returns `false` for a stale
+   * or expired token.
+   */
   abstract releaseWebhookDelivery(eventId: string, claimToken: string): Promise<boolean>;
 
   // Idempotency

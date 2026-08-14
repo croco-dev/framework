@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  assertLaneReportShape,
   assertMaterializationEvidence,
   parseTestEvidenceProfile,
   reconcileTestEvidence,
@@ -182,5 +183,46 @@ describe("test evidence reconciliation", () => {
         reports: [{ ...valid, commands: [command] }],
       }),
     ).not.toThrow();
+  });
+
+  it("preserves a structurally valid failed lane report for producer failure evidence", () => {
+    const valid = laneReport([]);
+    const failed = {
+      ...valid,
+      status: "failed",
+      diagnostics: [{ code: "TEST_LANE_EXECUTION_FAILED", message: "command failed" }],
+      commands: [
+        {
+          ...valid.commands[0],
+          status: "failed",
+          exitCode: 1,
+          executedPaths: [],
+        },
+      ],
+    };
+
+    expect(() => assertLaneReportShape(failed)).not.toThrow();
+    expect(() =>
+      reconcileTestEvidence({ inventory, profile: "ordinary", reports: [failed as never] }),
+    ).toThrow("Test lane evidence is failed");
+  });
+
+  it("rejects failed lane evidence that credits an unplanned path", () => {
+    const valid = laneReport(["packages/a/src/tests/other.spec.ts"]);
+    const failed = {
+      ...valid,
+      status: "failed",
+      diagnostics: [{ code: "TEST_LANE_EXECUTION_FAILED", message: "command failed" }],
+      commands: [
+        {
+          ...valid.commands[0],
+          status: "failed",
+          exitCode: 1,
+          executedPaths: ["src/tests/other.spec.ts"],
+        },
+      ],
+    };
+
+    expect(() => assertLaneReportShape(failed)).toThrow("invalid command result");
   });
 });

@@ -436,7 +436,7 @@ describe("spine-promotion-check.mts", () => {
         runId: "run-1",
         runAttempt: "1",
       }),
-    ).toThrow("invalid report shape");
+    ).toThrow("Test lane evidence is failed");
   });
 
   it("fails release synthesis for missing, stale, malformed, or mismatched lane evidence", () => {

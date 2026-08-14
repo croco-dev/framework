@@ -48,7 +48,57 @@ revision and persists a lease computed from datastore-authoritative time.
 
 `Promise`\<[`BillingLifecycleCommand`](/api/billing-core/src/type-aliases/billinglifecyclecommand/) \| `null`\>
 
-***
+---
+
+### claimWebhookDelivery()
+
+> `abstract` **claimWebhookDelivery**(`eventId`, `eventType`, `leaseDurationMs`): `Promise`\<[`BillingWebhookDeliveryClaim`](/api/billing-core/src/type-aliases/billingwebhookdeliveryclaim/)\>
+
+Atomically claims a webhook-addressed delivery with a datastore-time lease.
+
+An active lease returns `in_progress`, an expired lease is reclaimed with a new token and
+returns `claimed`, and a completed delivery returns `completed`.
+
+#### Parameters
+
+##### eventId
+
+`string`
+
+##### eventType
+
+`string`
+
+##### leaseDurationMs
+
+`number`
+
+#### Returns
+
+`Promise`\<[`BillingWebhookDeliveryClaim`](/api/billing-core/src/type-aliases/billingwebhookdeliveryclaim/)\>
+
+---
+
+### commitSubscriptionWebhook()
+
+> `abstract` **commitSubscriptionWebhook**(`input`): `Promise`\<[`BillingSubscriptionWebhookTransition`](/api/billing-core/src/type-aliases/billingsubscriptionwebhooktransition/)\>
+
+Atomically reserves a subscription webhook, reads its previous subscription, saves the new
+subscription, and persists every derived event intent. Repeated calls for the same webhook
+must return the original transition without recomputing intents from current subscription
+state.
+
+#### Parameters
+
+##### input
+
+[`CommitBillingSubscriptionWebhookInput`](/api/billing-core/src/type-aliases/commitbillingsubscriptionwebhookinput/)
+
+#### Returns
+
+`Promise`\<[`BillingSubscriptionWebhookTransition`](/api/billing-core/src/type-aliases/billingsubscriptionwebhooktransition/)\>
+
+---
 
 ### completeWebhook()
 
@@ -64,7 +114,30 @@ revision and persists a lease computed from datastore-authoritative time.
 
 `Promise`\<`void`\>
 
-***
+---
+
+### completeWebhookDelivery()
+
+> `abstract` **completeWebhookDelivery**(`eventId`, `claimToken`): `Promise`\<`boolean`\>
+
+Completes the delivery only for the current, unexpired lease token. Returns `false` for a stale
+or expired token.
+
+#### Parameters
+
+##### eventId
+
+`string`
+
+##### claimToken
+
+`string`
+
+#### Returns
+
+`Promise`\<`boolean`\>
+
+---
 
 ### createLifecycleCommand()
 
@@ -86,7 +159,7 @@ the same tenant.
 
 `Promise`\<[`BillingLifecycleCommand`](/api/billing-core/src/type-aliases/billinglifecyclecommand/)\>
 
-***
+---
 
 ### deleteAccount()
 
@@ -102,7 +175,7 @@ the same tenant.
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### deleteSubscription()
 
@@ -118,7 +191,7 @@ the same tenant.
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### failWebhook()
 
@@ -139,7 +212,7 @@ independently of domain-state persistence.
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### findAccountByExternalId()
 
@@ -155,7 +228,7 @@ independently of domain-state persistence.
 
 `Promise`\<[`BillingAccount`](/api/billing-core/src/type-aliases/billingaccount/) \| `null`\>
 
-***
+---
 
 ### findAccountByTenantId()
 
@@ -171,7 +244,7 @@ independently of domain-state persistence.
 
 `Promise`\<[`BillingAccount`](/api/billing-core/src/type-aliases/billingaccount/) \| `null`\>
 
-***
+---
 
 ### findLifecycleCommand()
 
@@ -187,7 +260,7 @@ independently of domain-state persistence.
 
 `Promise`\<[`BillingLifecycleCommand`](/api/billing-core/src/type-aliases/billinglifecyclecommand/) \| `null`\>
 
-***
+---
 
 ### findOrdersByAccount()
 
@@ -203,7 +276,7 @@ independently of domain-state persistence.
 
 `Promise`\<[`Order`](/api/billing-core/src/type-aliases/order/)[]\>
 
-***
+---
 
 ### findPendingLifecycleCommandByTenantId()
 
@@ -219,7 +292,7 @@ independently of domain-state persistence.
 
 `Promise`\<[`BillingLifecycleCommand`](/api/billing-core/src/type-aliases/billinglifecyclecommand/) \| `null`\>
 
-***
+---
 
 ### findSubscription()
 
@@ -235,7 +308,7 @@ independently of domain-state persistence.
 
 `Promise`\<[`Subscription`](/api/billing-core/src/type-aliases/subscription/) \| `null`\>
 
-***
+---
 
 ### findSubscriptionByExternalId()
 
@@ -251,7 +324,7 @@ independently of domain-state persistence.
 
 `Promise`\<[`Subscription`](/api/billing-core/src/type-aliases/subscription/) \| `null`\>
 
-***
+---
 
 ### listPendingLifecycleCommands()
 
@@ -267,7 +340,30 @@ independently of domain-state persistence.
 
 `Promise`\<[`BillingLifecycleCommand`](/api/billing-core/src/type-aliases/billinglifecyclecommand/)[]\>
 
-***
+---
+
+### markWebhookEventIntentPublished()
+
+> `abstract` **markWebhookEventIntentPublished**(`eventId`, `intentEventId`): `Promise`\<`void`\>
+
+Marks one stable event intent as durably published. Repeated calls with the same
+`intentEventId` must be idempotent.
+
+#### Parameters
+
+##### eventId
+
+`string`
+
+##### intentEventId
+
+`string`
+
+#### Returns
+
+`Promise`\<`void`\>
+
+---
 
 ### reconcileLifecycleSubscription()
 
@@ -295,7 +391,30 @@ subscription occupies the billing account.
 
 `Promise`\<[`BillingLifecycleLocalResult`](/api/billing-core/src/type-aliases/billinglifecyclelocalresult/)\>
 
-***
+---
+
+### releaseWebhookDelivery()
+
+> `abstract` **releaseWebhookDelivery**(`eventId`, `claimToken`): `Promise`\<`boolean`\>
+
+Releases the delivery only for the current, unexpired lease token. Returns `false` for a stale
+or expired token.
+
+#### Parameters
+
+##### eventId
+
+`string`
+
+##### claimToken
+
+`string`
+
+#### Returns
+
+`Promise`\<`boolean`\>
+
+---
 
 ### reserveWebhook()
 
@@ -320,7 +439,7 @@ reservation already exists. Other storage failures must retain their original fa
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### resolveLifecycleSubscription()
 
@@ -343,7 +462,7 @@ second, racy subscription read.
 
 `Promise`\<[`BillingLifecycleSubscriptionResolution`](/api/billing-core/src/type-aliases/billinglifecyclesubscriptionresolution/)\>
 
-***
+---
 
 ### saveAccount()
 
@@ -359,7 +478,7 @@ second, racy subscription read.
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### saveLifecycleCommand()
 
@@ -383,7 +502,7 @@ reopen or rewrite a completed command. Once local reconciliation runs, the comma
 
 `Promise`\<[`BillingLifecycleCommand`](/api/billing-core/src/type-aliases/billinglifecyclecommand/)\>
 
-***
+---
 
 ### saveOrder()
 
@@ -399,7 +518,7 @@ reopen or rewrite a completed command. Once local reconciliation runs, the comma
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### saveSubscription()
 

@@ -68,7 +68,7 @@ reservation settlement, and immutable ledger append one atomic critical section 
 
 [`CreditLedgerStore`](/api/credits-core/src/classes/creditledgerstore/).[`execute`](/api/credits-core/src/classes/creditledgerstore/#execute)
 
-***
+---
 
 ### getAccount()
 
@@ -88,7 +88,7 @@ reservation settlement, and immutable ledger append one atomic critical section 
 
 [`CreditLedgerStore`](/api/credits-core/src/classes/creditledgerstore/).[`getAccount`](/api/credits-core/src/classes/creditledgerstore/#getaccount)
 
-***
+---
 
 ### getBalance()
 
@@ -112,7 +112,7 @@ reservation settlement, and immutable ledger append one atomic critical section 
 
 [`CreditLedgerStore`](/api/credits-core/src/classes/creditledgerstore/).[`getBalance`](/api/credits-core/src/classes/creditledgerstore/#getbalance)
 
-***
+---
 
 ### getHistory()
 
@@ -146,13 +146,17 @@ reservation settlement, and immutable ledger append one atomic critical section 
 
 [`CreditLedgerStore`](/api/credits-core/src/classes/creditledgerstore/).[`getHistory`](/api/credits-core/src/classes/creditledgerstore/#gethistory)
 
-***
+---
 
 ### getPendingEventIntent()
 
-> **getPendingEventIntent**(`idempotencyKey`): `Promise`\<[`CreditLedgerEventIntent`](/api/credits-core/src/type-aliases/creditledgereventintent/) \| `null`\>
+> **getPendingEventIntent**(`tenantId`, `idempotencyKey`): `Promise`\<[`CreditLedgerEventIntent`](/api/credits-core/src/type-aliases/creditledgereventintent/) \| `null`\>
 
 #### Parameters
+
+##### tenantId
+
+`string`
 
 ##### idempotencyKey
 
@@ -166,7 +170,7 @@ reservation settlement, and immutable ledger append one atomic critical section 
 
 [`CreditLedgerStore`](/api/credits-core/src/classes/creditledgerstore/).[`getPendingEventIntent`](/api/credits-core/src/classes/creditledgerstore/#getpendingeventintent)
 
-***
+---
 
 ### getReservation()
 
@@ -190,7 +194,7 @@ reservation settlement, and immutable ledger append one atomic critical section 
 
 [`CreditLedgerStore`](/api/credits-core/src/classes/creditledgerstore/).[`getReservation`](/api/credits-core/src/classes/creditledgerstore/#getreservation)
 
-***
+---
 
 ### listPendingEventIntents()
 
@@ -210,7 +214,7 @@ reservation settlement, and immutable ledger append one atomic critical section 
 
 [`CreditLedgerStore`](/api/credits-core/src/classes/creditledgerstore/).[`listPendingEventIntents`](/api/credits-core/src/classes/creditledgerstore/#listpendingeventintents)
 
-***
+---
 
 ### markEventIntentPublished()
 

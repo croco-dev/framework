@@ -15,6 +15,10 @@ import {
   parseObservation,
   SECURITY_OWNERSHIP,
 } from "../ci-cacheable-lanes-evaluator.mts";
+import {
+  injectedFailureCommandId,
+  injectedFailureDiagnostic,
+} from "../ci-cacheable-failure-injection.mts";
 import type {
   Dataset,
   Observation,
@@ -44,17 +48,17 @@ const manifestOwnership: OwnershipRecord[] = Object.entries(LANE_OWNERSHIP).flat
 
 function checkResults(
   owner?: keyof typeof LANE_OWNERSHIP,
-  failureOwner?: keyof typeof LANE_OWNERSHIP,
+  failureClass?: Observation["injectedFailure"],
 ): ResultRecord[] {
   const records = owner
     ? manifestOwnership.filter((record) => record.owner === owner)
     : manifestOwnership;
-  const failingId = failureOwner ? LANE_OWNERSHIP[failureOwner][0] : undefined;
+  const failingId = failureClass ? injectedFailureCommandId(failureClass) : null;
   return records.map((record) => ({
     id: record.id,
     conclusion: record.id === failingId ? "failure" : "success",
     semantics: record.semantics === "advisory" ? "advisory" : "blocking",
-    diagnostics: [],
+    diagnostics: record.id === failingId ? [injectedFailureDiagnostic(record.id)] : [],
   }));
 }
 
@@ -98,7 +102,8 @@ function makeObservation(
   const failed = failedLane || synthesisFailed;
   const startMinute = isMonolith ? 2 : lane === "validate-synthesis" ? 22 : 1;
   const completeMinute = isMonolith ? 22 : lane === "validate-synthesis" ? 26 : 6;
-  const diagnostic = injectedFailure === "none" ? [] : [`INJECTED_${injectedFailure}`];
+  const commandId = injectedFailureCommandId(injectedFailure);
+  const diagnostic = commandId ? [injectedFailureDiagnostic(commandId)] : [];
   return {
     schemaVersion: OBSERVATION_SCHEMA,
     sourceRunId,
@@ -320,6 +325,26 @@ describe("cacheable CI lane promotion gates", () => {
         "INSUFFICIENT_PRIMARY_SAMPLES",
       ]),
     );
+  });
+
+  it("does not count a labeled failure class without the exact injected diagnostic", () => {
+    const dataset = structuredClone(makeDataset());
+    const sourceRecords = dataset.observations.filter(({ sourceRunId }) => sourceRunId === "10005");
+    for (const record of sourceRecords) {
+      const target = record.checkResults.find(({ id }) => id === "verification-policy");
+      if (!target) continue;
+      target.diagnostics = ["verification-policy:natural failure"];
+      record.stableDiagnostics = ["verification-policy:natural failure"];
+    }
+
+    const report = evaluateDataset(dataset);
+    expect(report.failed).toBe(true);
+    expect(report.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "DATASET_INVALID",
+        message: expect.stringContaining("lacks exact injected failure evidence"),
+      }),
+    ]);
   });
 
   it("rejects pair identity/result drift and stale attestations", () => {

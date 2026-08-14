@@ -86,6 +86,7 @@ export class SeatLimitExceededProblem extends Problem {
   }
 }
 
+/** Indicates that an idempotency key was reused for a membership command with a different fingerprint. */
 export class MembershipIdempotencyConflictProblem extends Problem {
   constructor(idempotencyKey: string) {
     super(
@@ -97,6 +98,7 @@ export class MembershipIdempotencyConflictProblem extends Problem {
   }
 }
 
+/** Indicates that a membership command violates its required input or operation contract. */
 export class InvalidMembershipCommandProblem extends Problem {
   constructor(reason: string) {
     super(
@@ -107,6 +109,7 @@ export class InvalidMembershipCommandProblem extends Problem {
   }
 }
 
+/** Indicates that a committed membership command still has an unpublished event intent. */
 export class MembershipEventPublicationProblem extends Problem {
   constructor(idempotencyKey: string, cause: Error) {
     super(

@@ -77,7 +77,7 @@ export function assertMaterializationEvidence(
   }
 }
 
-export function assertLaneReport(value: unknown): asserts value is LaneReport {
+export function assertLaneReportShape(value: unknown): asserts value is LaneReport {
   if (!value || typeof value !== "object")
     throw new Error("Test lane evidence has an invalid report shape");
   const report = value as Record<string, unknown>;
@@ -89,7 +89,7 @@ export function assertLaneReport(value: unknown): asserts value is LaneReport {
     report.lane === "generated-app" ||
     typeof report.allowLive !== "boolean" ||
     !isStringArray(report.selectedOwners) ||
-    report.status !== "passed" ||
+    (report.status !== "passed" && report.status !== "failed") ||
     !isStringArray(report.executedPaths) ||
     !Array.isArray(report.diagnostics) ||
     !report.diagnostics.every(
@@ -117,8 +117,9 @@ export function assertLaneReport(value: unknown): asserts value is LaneReport {
       command.paths.length === 0 ||
       !isStringArray(command.command) ||
       command.command.length === 0 ||
-      command.status !== "passed" ||
-      command.exitCode !== 0 ||
+      (command.status !== "passed" && command.status !== "failed") ||
+      typeof command.exitCode !== "number" ||
+      !Number.isInteger(command.exitCode) ||
       typeof command.durationMs !== "number" ||
       !Number.isFinite(command.durationMs) ||
       command.durationMs < 0 ||
@@ -126,10 +127,18 @@ export function assertLaneReport(value: unknown): asserts value is LaneReport {
         command.cacheStatus !== "hit" &&
         command.cacheStatus !== "miss") ||
       !isStringArray(command.executedPaths) ||
-      JSON.stringify(command.executedPaths) !== JSON.stringify(command.paths) ||
+      command.executedPaths.some((path) => !(command.paths as readonly string[]).includes(path)) ||
       (command.executionState !== "executed" && command.executionState !== "reused") ||
       ((command.executionState === "reused" || command.cacheHash !== undefined) &&
         (typeof command.cacheHash !== "string" || command.cacheHash.length === 0))
+    ) {
+      throw new Error("Test lane evidence has an invalid command result");
+    }
+    if (
+      (command.status === "passed" &&
+        (command.exitCode !== 0 ||
+          JSON.stringify(command.executedPaths) !== JSON.stringify(command.paths))) ||
+      (command.status === "failed" && command.exitCode === 0)
     ) {
       throw new Error("Test lane evidence has an invalid command result");
     }
@@ -142,6 +151,24 @@ export function assertLaneReport(value: unknown): asserts value is LaneReport {
     .sort();
   if (JSON.stringify(report.executedPaths) !== JSON.stringify(executedPaths)) {
     throw new Error("Test lane evidence has inconsistent executed paths");
+  }
+  const commands = report.commands as LaneReport["commands"];
+  const diagnostics = report.diagnostics as LaneReport["diagnostics"];
+  if (
+    (report.status === "passed" &&
+      (commands.some(({ status }) => status !== "passed") || diagnostics.length > 0)) ||
+    (report.status === "failed" &&
+      commands.every(({ status }) => status === "passed") &&
+      diagnostics.length === 0)
+  ) {
+    throw new Error("Test lane evidence has an inconsistent status");
+  }
+}
+
+export function assertLaneReport(value: unknown): asserts value is LaneReport {
+  assertLaneReportShape(value);
+  if (value.status !== "passed") {
+    throw new Error("Test lane evidence is failed");
   }
 }
 

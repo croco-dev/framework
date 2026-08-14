@@ -11,6 +11,7 @@ const isolatedBuildRoot = process.env.CROCO_DOCS_BUILD_ROOT;
 const isolatedDirectories = isolatedBuildRoot
   ? {
       srcDir: join(isolatedBuildRoot, "src"),
+      publicDir: join(isolatedBuildRoot, "public"),
       outDir: join(isolatedBuildRoot, "dist"),
       cacheDir: join(isolatedBuildRoot, "cache"),
       vite: {

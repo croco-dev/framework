@@ -33,14 +33,26 @@ import {
 } from "./schemas/polarWebhookSchema";
 import { verifyPolarWebhook } from "./verifyPolarWebhook";
 
+/**
+ * Event publication contract required by Polar webhook handling.
+ *
+ * Existing `EventPublisher` instances must be wrapped by an adapter that durably deduplicates a
+ * stable event identity before implementing `publishIdempotently`; forwarding that method directly
+ * to `publishNow` does not satisfy this contract.
+ */
 export type PolarWebhookEventPublisher = {
   publishNow(event: DomainEvent): Promise<void>;
   /** Publishes one logical event exactly once across retries and concurrent workers. */
   publishIdempotently(event: DomainEvent): Promise<void>;
 };
 
+/** Dependencies for Polar webhook handling, including an idempotent publication adapter. */
 export type WebhookDependencies = {
   store: BillingStore;
+  /**
+   * Use an adapter when migrating from `EventPublisher`; the adapter must provide durable,
+   * stable-identity deduplication for `publishIdempotently`.
+   */
   eventPublisher: PolarWebhookEventPublisher;
   planRegistry: PlanRegistry;
 };

@@ -19,6 +19,11 @@ import {
   readChangedFiles,
 } from "./ci-cacheable-experiment-identity.mts";
 import {
+  injectedFailureCommandId,
+  injectedFailureDiagnostic,
+  parseCacheableFailureClass,
+} from "./ci-cacheable-failure-injection.mts";
+import {
   PRODUCER_LANES,
   evidenceDigest,
   parseExperimentIdentity,
@@ -33,6 +38,8 @@ import { parseSecurityPhysicalResults } from "./ci-synthesis-input.mts";
 import { SECURITY_OWNERSHIP } from "./ci-verification-contract.mts";
 import { inventoryDigest, parseStrictTestInventory } from "./test-inventory.mts";
 import { createVerificationManifest } from "./verification-manifest.mts";
+import { VerificationProblem } from "./verification-problem.mts";
+import type { CacheableFailureClass } from "./ci-cacheable-failure-injection.mts";
 import type { ExperimentIdentity } from "./ci-lane-evidence.mts";
 import type { SecurityResultId } from "./ci-verification-contract.mts";
 
@@ -545,11 +552,45 @@ function producerCacheEvidence(bundle: ProducerBundle): {
   return { eligible, hits };
 }
 
-function injectedFailure(sample: PerformanceSample): Observation["injectedFailure"] {
-  const value = sample.injectedFailure ?? "none";
-  const allowed = ["none", ...Object.keys(LANE_OWNERSHIP)];
-  if (!allowed.includes(value)) throw new Error(`unsupported injected failure class ${value}`);
-  return value as Observation["injectedFailure"];
+function injectedFailure(sample: PerformanceSample): CacheableFailureClass {
+  return parseCacheableFailureClass(sample.injectedFailure ?? "none");
+}
+
+function assertInjectedFailureEvidence(
+  sourceEvent: string,
+  failureClass: CacheableFailureClass,
+  results: readonly ResultRecord[],
+  architecture: string,
+): void {
+  if (failureClass === "none") return;
+  if (sourceEvent !== "workflow_dispatch") {
+    throw new VerificationProblem(
+      "INVALID_INJECTED_FAILURE_SOURCE",
+      "contract",
+      "injected failure evidence requires a workflow_dispatch source run",
+    );
+  }
+  const commandId = injectedFailureCommandId(failureClass);
+  if (!commandId) {
+    throw new VerificationProblem(
+      "MISSING_INJECTED_FAILURE_MAPPING",
+      "contract",
+      `missing injected command mapping for ${failureClass}`,
+    );
+  }
+  const matches = results.filter(({ id }) => id === commandId);
+  const expectedDiagnostic = injectedFailureDiagnostic(commandId);
+  if (
+    matches.length !== 1 ||
+    matches[0]?.conclusion !== "failure" ||
+    JSON.stringify(matches[0].diagnostics) !== JSON.stringify([expectedDiagnostic])
+  ) {
+    throw new VerificationProblem(
+      "INVALID_INJECTED_FAILURE_EVIDENCE",
+      "contract",
+      `${architecture} does not contain the exact injected failure evidence for ${failureClass}`,
+    );
+  }
 }
 
 function assertSplitArtifactSet(
@@ -779,11 +820,16 @@ function independentlyVerifiedPhaseBIdentity(
       throw new Error(`synthesis identity ${field} is not independently verified`);
     }
   }
-  const expectedSelectedCheckIds = createVerificationManifest(monolithic.profile, {
-    base: baseSha,
-    head: monolithic.sourceSha,
-    changedFiles,
-  })
+  const expectedSelectedCheckIds = createVerificationManifest(
+    monolithic.profile,
+    monolithic.injectedFailure === "none"
+      ? {
+          base: baseSha,
+          head: monolithic.sourceSha,
+          changedFiles,
+        }
+      : {},
+  )
     .filter(({ applicable }) => applicable !== false)
     .map(({ id }) => id);
   assertSetEquality(
@@ -853,6 +899,8 @@ export function createCiPerformanceObservation(
 
   const checkResults = verification.checks.map(checkResult);
   const securityResults = SECURITY_STEPS.map((contract) => securityResult(validateJob, contract));
+  const failureClass = injectedFailure(sample);
+  assertInjectedFailureEvidence(run.event, failureClass, checkResults, "monolithic verification");
   const blockingFailed = [...checkResults, ...securityResults].some(
     (result) => result.semantics === "blocking" && result.conclusion === "failure",
   );
@@ -921,7 +969,7 @@ export function createCiPerformanceObservation(
     inputDigest: experimentIdentity.inputDigest,
     verificationExperimentId: experimentIdentity.verificationExperimentId,
     evidenceDigest,
-    injectedFailure: injectedFailure(sample),
+    injectedFailure: failureClass,
     cacheEligibleTaskIds: commandIds,
     validCacheHitTaskIds: fastLane.commands.flatMap(({ owner, cacheStatus }) =>
       cacheStatus === "hit" ? [`${owner}#test`] : [],
@@ -1134,6 +1182,12 @@ export function createCiPerformanceObservations(
 
   const artifactName = `ci-observation-${run.id}-${run.run_attempt}`;
   const failureClass = monolithic.injectedFailure;
+  assertInjectedFailureEvidence(
+    run.event,
+    failureClass,
+    shadow.checks.map(splitResult),
+    "split validation shadow",
+  );
   const shadowJob = exactJob(jobs, "split-validation-shadow");
   const uploadStepConclusion = exactStepConclusion(
     shadowJob,

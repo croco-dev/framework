@@ -8,6 +8,19 @@ on:
     branches:
       - trunk
   workflow_dispatch:
+    inputs:
+      cacheable_failure_class:
+        description: Cacheable CI equivalence failure class
+        required: true
+        default: none
+        type: choice
+        options:
+          - none
+          - core-verification
+          - generated-apps
+          - package-artifacts
+          - coverage-security
+          - validate-synthesis
 
 permissions:
   contents: read
@@ -15,9 +28,10 @@ permissions:
 env:
   # renovate: datasource=docker depName=ghcr.io/gitleaks/gitleaks
   GITLEAKS_IMAGE: ghcr.io/gitleaks/gitleaks:v8.23.0@sha256:b4b81841085b4060054a71155500a340e3d2e2a5995c186546649e3efd80b84e
+  CROCO_CACHEABLE_FAILURE_CLASS: ${{ inputs.cacheable_failure_class || 'none' }}
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -188,8 +202,10 @@ jobs:
           if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
             args+=(--allow-pending-release-metadata)
           fi
-          if [ "$GITHUB_EVENT_NAME" != "workflow_dispatch" ]; then
-            args+=(--base "$VERIFICATION_BASE" --head HEAD)
+          args+=(--base "$VERIFICATION_BASE" --head HEAD)
+          if [ "$CROCO_CACHEABLE_FAILURE_CLASS" != "none" ]; then
+            args+=(--full-selection)
+            args+=(--inject-failure "$CROCO_CACHEABLE_FAILURE_CLASS")
           fi
           node --experimental-strip-types scripts/release-spine-evidence.mts "${args[@]}"
 
@@ -219,7 +235,7 @@ jobs:
           fi
 
       - name: Ensure native Vitest evidence
-        if: always()
+        if: ${{ !cancelled() }}
         shell: bash
         env:
           CROCO_TEST_EVIDENCE_DIR: ${{ github.workspace }}/ci-reports/test-evidence/records
@@ -229,7 +245,7 @@ jobs:
           fi
 
       - name: Run full test suite for changed-test shadow
-        if: always() && github.event_name == 'pull_request'
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
         shell: bash
         env:
           VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}
@@ -274,7 +290,7 @@ jobs:
           exit "$full_suite_status"
 
       - name: Assert changed-test shadow evidence completeness
-        if: always() && github.event_name == 'pull_request'
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
         shell: bash
         run: |
           node --experimental-strip-types scripts/changed-test-full-suite-status.mts \
@@ -282,7 +298,7 @@ jobs:
           test -f ci-reports/changed-test-plan/full-evidence/records/full-suite-status.json
 
       - name: Restore changed-test shadow baseline
-        if: always() && github.event_name == 'pull_request'
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ci-reports/changed-test-plan/baseline.json
@@ -291,7 +307,7 @@ jobs:
             changed-test-plan-${{ github.event.pull_request.number }}-
 
       - name: Aggregate changed-test shadow full evidence
-        if: always() && github.event_name == 'pull_request'
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
         shell: bash
         run: |
           node --experimental-strip-types scripts/test-evidence-bundle.mts \
@@ -299,15 +315,14 @@ jobs:
             --output ci-reports/changed-test-plan/full-evidence
 
       - name: Measure changed-test selection misses
-        if: always() && github.event_name == 'pull_request' && hashFiles('ci-reports/changed-test-plan/full-evidence/bundle.json') != ''
+        if: ${{ !cancelled() && github.event_name == 'pull_request' && hashFiles('ci-reports/changed-test-plan/full-evidence/bundle.json') != '' }}
         env:
           VERIFICATION_BASE: ${{ needs.changes.outputs.base }}
         run: |
           node --experimental-strip-types scripts/changed-test-plan-shadow.mts \
             --base "$VERIFICATION_BASE" \
             --full-evidence ci-reports/changed-test-plan/full-evidence/bundle.json \
-            --output ci-reports/changed-test-plan \
-            --execute-selected
+            --output ci-reports/changed-test-plan
           cat ci-reports/changed-test-plan/summary.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Aggregate executable test evidence
@@ -447,6 +462,7 @@ jobs:
             --runner-os "$RUNNER_OS" \
             --runner-arch "$RUNNER_ARCH" \
             --runner-label "ubuntu-latest" \
+            --injected-failure "$CROCO_CACHEABLE_FAILURE_CLASS" \
             --enforce || performance_status=$?
           if [ -f ci-reports/ci-performance/report.md ]; then
             cat ci-reports/ci-performance/report.md >> "$GITHUB_STEP_SUMMARY"
@@ -730,7 +746,7 @@ jobs:
           echo "input_digest=$input_digest" >> "$GITHUB_OUTPUT"
       - name: Restore exact core verification receipts
         id: exact_receipts
-        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        if: env.CROCO_CACHEABLE_FAILURE_CLASS == 'none' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .ci-cache/exact/core-verification
@@ -743,7 +759,13 @@ jobs:
           VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}
         run: |
           cache_args=()
-          if [ "$TRUSTED_CACHE" = "true" ]; then
+          failure_args=()
+          if [ "$CROCO_CACHEABLE_FAILURE_CLASS" != "none" ]; then
+            failure_args+=(--full-selection)
+          fi
+          if [ "$CROCO_CACHEABLE_FAILURE_CLASS" = "core-verification" ]; then
+            failure_args+=(--inject-failure "$CROCO_CACHEABLE_FAILURE_CLASS")
+          elif [ "$CROCO_CACHEABLE_FAILURE_CLASS" = "none" ] && [ "$TRUSTED_CACHE" = "true" ]; then
             cache_args+=(--cache-dir .ci-cache/exact/core-verification)
             if [ "$EXACT_CACHE_HIT" = "true" ]; then
               cache_args+=(--cache-origin github-exact-key)
@@ -756,6 +778,7 @@ jobs:
             --root . \
             --base "$VERIFICATION_BASE" \
             --head HEAD \
+            "${failure_args[@]}" \
             "${cache_args[@]}"
       - name: Upload core verification producer evidence
         if: always()
@@ -814,7 +837,7 @@ jobs:
           echo "input_digest=$input_digest" >> "$GITHUB_OUTPUT"
       - name: Restore exact generated apps receipts
         id: exact_receipts
-        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        if: env.CROCO_CACHEABLE_FAILURE_CLASS == 'none' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .ci-cache/exact/generated-apps
@@ -827,7 +850,13 @@ jobs:
           VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}
         run: |
           cache_args=()
-          if [ "$TRUSTED_CACHE" = "true" ]; then
+          failure_args=()
+          if [ "$CROCO_CACHEABLE_FAILURE_CLASS" != "none" ]; then
+            failure_args+=(--full-selection)
+          fi
+          if [ "$CROCO_CACHEABLE_FAILURE_CLASS" = "generated-apps" ]; then
+            failure_args+=(--inject-failure "$CROCO_CACHEABLE_FAILURE_CLASS")
+          elif [ "$CROCO_CACHEABLE_FAILURE_CLASS" = "none" ] && [ "$TRUSTED_CACHE" = "true" ]; then
             cache_args+=(--cache-dir .ci-cache/exact/generated-apps)
             if [ "$EXACT_CACHE_HIT" = "true" ]; then
               cache_args+=(--cache-origin github-exact-key)
@@ -836,6 +865,7 @@ jobs:
           node --experimental-strip-types scripts/ci-cacheable-lane-runner.mts \
             --identity ci-reports/cacheable-ci/identity.json --lane generated-apps \
             --profile "$VERIFICATION_PROFILE" --root . --base "$VERIFICATION_BASE" --head HEAD \
+            "${failure_args[@]}" \
             "${cache_args[@]}"
       - name: Upload generated apps producer evidence
         if: always()
@@ -892,7 +922,7 @@ jobs:
           echo "input_digest=$input_digest" >> "$GITHUB_OUTPUT"
       - name: Restore exact package artifact receipts
         id: exact_receipts
-        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        if: env.CROCO_CACHEABLE_FAILURE_CLASS == 'none' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .ci-cache/exact/package-artifacts
@@ -906,10 +936,16 @@ jobs:
         run: |
           cache_args=()
           lane_args=()
+          failure_args=()
           if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
             lane_args+=(--allow-pending-release-metadata)
           fi
-          if [ "$TRUSTED_CACHE" = "true" ]; then
+          if [ "$CROCO_CACHEABLE_FAILURE_CLASS" != "none" ]; then
+            failure_args+=(--full-selection)
+          fi
+          if [ "$CROCO_CACHEABLE_FAILURE_CLASS" = "package-artifacts" ]; then
+            failure_args+=(--inject-failure "$CROCO_CACHEABLE_FAILURE_CLASS")
+          elif [ "$CROCO_CACHEABLE_FAILURE_CLASS" = "none" ] && [ "$TRUSTED_CACHE" = "true" ]; then
             cache_args+=(--cache-dir .ci-cache/exact/package-artifacts)
             if [ "$EXACT_CACHE_HIT" = "true" ]; then
               cache_args+=(--cache-origin github-exact-key)
@@ -919,6 +955,7 @@ jobs:
             --identity ci-reports/cacheable-ci/identity.json --lane package-artifacts \
             --profile "$VERIFICATION_PROFILE" --root . --base "$VERIFICATION_BASE" --head HEAD \
             "${lane_args[@]}" \
+            "${failure_args[@]}" \
             "${cache_args[@]}"
       - name: Upload package artifacts producer evidence
         if: always()
@@ -1002,6 +1039,13 @@ jobs:
           VERIFICATION_BASE: ${{ needs.changes.outputs.base }}
           VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}
         run: |
+          failure_args=()
+          if [ "$CROCO_CACHEABLE_FAILURE_CLASS" != "none" ]; then
+            failure_args+=(--full-selection)
+          fi
+          if [ "$CROCO_CACHEABLE_FAILURE_CLASS" = "coverage-security" ]; then
+            failure_args+=(--inject-failure "$CROCO_CACHEABLE_FAILURE_CLASS")
+          fi
           node --experimental-strip-types scripts/ci-cacheable-lane-runner.mts \
             --identity ci-reports/cacheable-ci/identity.json --lane coverage-security \
             --profile "$VERIFICATION_PROFILE" --root . --base "$VERIFICATION_BASE" --head HEAD \
@@ -1010,7 +1054,8 @@ jobs:
             --security-artifact ci-reports/security/pnpm-audit-prod.txt \
             --security-artifact ci-reports/security/gitleaks-smoke.txt \
             --security-artifact ci-reports/security/gitleaks.txt \
-            --security-artifact ci-reports/security/gitleaks.sarif
+            --security-artifact ci-reports/security/gitleaks.sarif \
+            "${failure_args[@]}"
       - name: Report advisory physical security failures
         if: always()
         env:
@@ -1089,6 +1134,10 @@ jobs:
         env:
           VERIFICATION_BASE: ${{ needs.changes.outputs.base }}
         run: |
+          selection_args=()
+          if [ "$CROCO_CACHEABLE_FAILURE_CLASS" != "none" ]; then
+            selection_args+=(--full-selection)
+          fi
           node --experimental-strip-types scripts/ci-synthesis-input.mts \
             --identity ci-reports/cacheable-ci/identity.json \
             --base "$VERIFICATION_BASE" --head HEAD \
@@ -1096,12 +1145,18 @@ jobs:
             --producer-dir generated-apps=incoming/generated-apps \
             --producer-dir package-artifacts=incoming/package-artifacts \
             --producer-dir coverage-security=incoming/coverage-security \
-            --output ci-reports/cacheable-ci/synthesis-input.json
+            --output ci-reports/cacheable-ci/synthesis-input.json \
+            "${selection_args[@]}"
       - name: Synthesize split verification shadow
         run: |
+          failure_args=()
+          if [ "$CROCO_CACHEABLE_FAILURE_CLASS" = "validate-synthesis" ]; then
+            failure_args+=(--inject-failure "$CROCO_CACHEABLE_FAILURE_CLASS")
+          fi
           node --experimental-strip-types scripts/ci-split-validation-synthesis.mts \
             --input ci-reports/cacheable-ci/synthesis-input.json \
-            --output ci-reports/cacheable-ci/split-validation-shadow.json
+            --output ci-reports/cacheable-ci/split-validation-shadow.json \
+            "${failure_args[@]}"
       - name: Upload split validation shadow evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
