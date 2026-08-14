@@ -311,13 +311,22 @@ function exactCacheContext(options: {
       "Exact lane cache requires base, head, and resolved changed files.",
     );
   }
-  const baseSha = /^[a-f0-9]{40}$/.test(options.base)
-    ? options.base
-    : execFileSync("git", ["rev-parse", `${options.base}^{commit}`], {
+  let baseSha = options.base;
+  if (!/^[a-f0-9]{40}$/.test(baseSha)) {
+    try {
+      baseSha = execFileSync("git", ["rev-parse", `${options.base}^{commit}`], {
         cwd: options.rootDir,
         encoding: "utf8",
         stdio: ["ignore", "pipe", "pipe"],
       }).trim();
+    } catch (error) {
+      throw new VerificationProblem(
+        "CACHEABLE_LANE_CHANGE_RANGE_FAILED",
+        "input",
+        `Unable to resolve cache base ${options.base}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
   const outputRelative = relative(options.rootDir, options.outputDir).replaceAll("\\", "/");
   return {
     identity: options.identity,

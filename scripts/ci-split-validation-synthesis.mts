@@ -456,7 +456,16 @@ function main(args: readonly string[]): void {
   }
   const rootDir = resolve(value(args, "--root") ?? process.cwd());
   const reportPath = value(args, "--output");
-  const inputValue: unknown = JSON.parse(readFileSync(resolve(rootDir, inputPath), "utf8"));
+  let inputValue: unknown;
+  try {
+    inputValue = JSON.parse(readFileSync(resolve(rootDir, inputPath), "utf8")) as unknown;
+  } catch {
+    throw new VerificationProblem(
+      "UNREADABLE_SYNTHESIS_INPUT",
+      "input",
+      "Synthesis input is missing, unreadable, or malformed JSON.",
+    );
+  }
   const result = runSplitValidationSynthesis({
     input: parseSynthesisInput(inputValue),
     rootDir,

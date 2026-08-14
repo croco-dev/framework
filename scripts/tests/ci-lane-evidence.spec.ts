@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { ADVISORY_CHECK_IDS, SECURITY_OWNERSHIP } from "../ci-verification-contract.mts";
+import { VerificationProblem } from "../verification-problem.mts";
 import { VERIFICATION_LANE_OWNERSHIP } from "../verification-manifest.mts";
 import {
   CiLaneEvidenceError,
@@ -276,6 +277,8 @@ function expectCode(action: () => unknown, code: string): void {
     throw new Error(`Expected ${code}`);
   } catch (error) {
     expect(error).toBeInstanceOf(CiLaneEvidenceError);
+    expect(error).toBeInstanceOf(VerificationProblem);
+    expect(error).toMatchObject({ category: "contract" });
     expect((error as CiLaneEvidenceError).code).toBe(code);
   }
 }

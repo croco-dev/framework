@@ -169,11 +169,7 @@ function workflowCommandUnits(file: string, source: string): CommandUnit[] {
     if (!Array.isArray(job.steps)) {
       continue;
     }
-    const jobEnvironment = applyWorkflowEnvironment(
-      new Map(workflowEnvironment),
-      job.env,
-      workflowEnvironment,
-    );
+    const jobEnvironment = applyWorkflowEnvironment(new Map(workflowEnvironment), job.env);
     for (const step of job.steps) {
       if (!isPlainRecord(step) || typeof step.run !== "string") {
         continue;

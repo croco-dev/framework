@@ -51,10 +51,14 @@ function workflowJob(id: string): string {
 
 const VALIDATE_JOB = workflowJob("validate");
 const REAL_RESOURCE_JOB = workflowJob("real-resource-tests");
-const SECRET_SCAN = VALIDATE_JOB.slice(
-  VALIDATE_JOB.indexOf("- name: Secret scan blocking report"),
-  VALIDATE_JOB.indexOf("- name: Assemble security policy summary"),
-);
+const SECRET_SCAN = (() => {
+  const start = VALIDATE_JOB.indexOf("- name: Secret scan blocking report");
+  const end = VALIDATE_JOB.indexOf("- name: Assemble security policy summary");
+  if (start === -1 || end === -1) {
+    throw new Error("ci.yml validate job does not declare the secret scan boundary steps");
+  }
+  return VALIDATE_JOB.slice(start, end);
+})();
 
 function workflowStep(name: string): string {
   const start = VALIDATE_JOB.indexOf(`      - name: ${name}`);
@@ -201,10 +205,10 @@ describe("CI executable supply chain", () => {
 
 describe("Phase B cacheable verification shadow", () => {
   const producerJobs = [
-    ["core-verification", "generated-apps"],
-    ["generated-apps", "package-artifacts"],
-    ["package-artifacts", "coverage-security"],
-    ["coverage-security", "split-validation-shadow"],
+    "core-verification",
+    "generated-apps",
+    "package-artifacts",
+    "coverage-security",
   ] as const;
 
   it("fails fast when an explicitly selected workflow job is missing", () => {
@@ -215,7 +219,7 @@ describe("Phase B cacheable verification shadow", () => {
 
   it("pins one Node patch release across independent hosted runners", () => {
     expect(NVMRC).toMatch(/^\d+\.\d+\.\d+$/);
-    for (const [jobId] of producerJobs) {
+    for (const jobId of producerJobs) {
       expect(workflowJob(jobId)).toContain('node-version-file: ".nvmrc"');
     }
     expect(workflowJob("split-validation-shadow")).toContain('node-version-file: ".nvmrc"');
@@ -224,7 +228,7 @@ describe("Phase B cacheable verification shadow", () => {
   it("keeps the monolithic validate job authoritative while running four advisory peer producers", () => {
     expect(VALIDATE_JOB).toContain("needs: changes");
     expect(VALIDATE_JOB).not.toContain("ci-cacheable-lanes:producer");
-    for (const [jobId] of producerJobs) {
+    for (const jobId of producerJobs) {
       const job = workflowJob(jobId);
       expect(job).toContain("needs: changes");
       expect(job).toContain("scripts/ci-cacheable-experiment-identity.mts");
@@ -236,14 +240,14 @@ describe("Phase B cacheable verification shadow", () => {
       expect(job).toContain("continue-on-error: true");
     }
     const cacheableJobs = [
-      ...producerJobs.map(([jobId]) => workflowJob(jobId)),
+      ...producerJobs.map((jobId) => workflowJob(jobId)),
       workflowJob("split-validation-shadow"),
     ].join("\n");
     expect(findWorkflowVerificationViolations(cacheableJobs, ROOT_DIR)).toEqual([]);
   });
 
   it("restores only exact producer receipts and keeps physical security execution fresh", () => {
-    for (const [jobId] of producerJobs.slice(0, 3)) {
+    for (const jobId of producerJobs.slice(0, 3)) {
       const job = workflowJob(jobId);
       expect(job).toContain("id: split_identity");
       expect(job).toContain("id: exact_receipts");
@@ -272,7 +276,7 @@ describe("Phase B cacheable verification shadow", () => {
     expect(security).toContain('NPM_CONFIG_PROVENANCE: "true"');
 
     const packages = workflowJob("package-artifacts");
-    expect(packages).toContain('if [ "${{ github.event_name }}" = "pull_request" ]; then');
+    expect(packages).toContain('if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then');
     expect(packages).toContain("lane_args+=(--allow-pending-release-metadata)");
     expect(packages).toContain('"${lane_args[@]}"');
   });
@@ -283,7 +287,7 @@ describe("Phase B cacheable verification shadow", () => {
       "needs: [changes, core-verification, generated-apps, package-artifacts, coverage-security]",
     );
     expect(shadow).toContain("continue-on-error: true");
-    for (const [lane] of producerJobs) {
+    for (const lane of producerJobs) {
       expect(shadow).toContain(
         `name: ci-lane-${lane}-${"${{ github.run_id }}"}-${"${{ github.run_attempt }}"}`,
       );
@@ -359,7 +363,7 @@ describe("CI verification profile contract", () => {
     expect(WORKFLOW).toContain("VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}");
     expect(WORKFLOW).toContain('args=(--profile "$VERIFICATION_PROFILE")');
     expect(WORKFLOW).toContain(
-      'if [ "${{ github.event_name }}" = "pull_request" ]; then\n            args+=(--allow-pending-release-metadata)',
+      'if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then\n            args+=(--allow-pending-release-metadata)',
     );
     expect(WORKFLOW).toContain(
       'if [ "${{ github.event_name }}" != "workflow_dispatch" ]; then\n            args+=(--base "$VERIFICATION_BASE" --head HEAD)',

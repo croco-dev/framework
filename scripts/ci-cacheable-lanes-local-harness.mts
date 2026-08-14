@@ -191,7 +191,7 @@ function assertExactCheckSet(report: ReleaseSpineEvidenceReport): void {
   if (JSON.stringify([...ids].sort()) !== JSON.stringify([...EXPECTED_CHECK_IDS].sort())) {
     throw new LocalEquivalenceError(
       "MONOLITHIC_CHECK_SET_MISMATCH",
-      "monolithic report must contain exactly all 53 verification check IDs",
+      `monolithic report must contain exactly all ${EXPECTED_CHECK_IDS.length} verification check IDs`,
     );
   }
 }

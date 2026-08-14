@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import { ADVISORY_CHECK_IDS, SECURITY_OWNERSHIP } from "./ci-verification-contract.mts";
+import { VerificationProblem } from "./verification-problem.mts";
 import type {
   SecurityResultId,
   SecurityResultOwner,
@@ -183,12 +184,11 @@ export type SplitValidationShadowEvidence = Omit<EvidenceIdentity, "lane"> & {
   readonly evidenceDigest: string;
 };
 
-export class CiLaneEvidenceError extends Error {
-  readonly code: string;
+export class CiLaneEvidenceError extends VerificationProblem {
   readonly key?: string;
 
   constructor(code: string, message: string, key?: string) {
-    super(message);
+    super(code, "contract", message);
     this.name = "CiLaneEvidenceError";
     this.code = code;
     if (key !== undefined) this.key = key;
@@ -1053,29 +1053,11 @@ function splitIdentity(
   value: Record<string, unknown>,
   path: string,
 ): Omit<EvidenceIdentity, "lane"> {
-  const architectureVersion = enumeration(
-    value.architectureVersion,
-    ["shadow-split", "cutover-split"],
-    `${path}.architectureVersion`,
-  );
-  if (architectureVersion !== "shadow-split") {
+  const identity = parseExperimentIdentityFields(value, path);
+  if (identity.architectureVersion !== "shadow-split") {
     reject("INVALID_SHADOW_ARCHITECTURE", `${path}.architectureVersion must be shadow-split`, path);
   }
-  return {
-    architectureVersion,
-    commitSha: commitSha(value.commitSha, `${path}.commitSha`),
-    runId: nonEmptyString(value.runId, `${path}.runId`),
-    runAttempt: positiveInteger(value.runAttempt, `${path}.runAttempt`),
-    profile: enumeration(value.profile, ["repo", "spine", "publish"], `${path}.profile`),
-    manifestDigest: digest(value.manifestDigest, `${path}.manifestDigest`),
-    inventoryDigest: digest(value.inventoryDigest, `${path}.inventoryDigest`),
-    toolchainDigest: digest(value.toolchainDigest, `${path}.toolchainDigest`),
-    inputDigest: digest(value.inputDigest, `${path}.inputDigest`),
-    verificationExperimentId: nonEmptyString(
-      value.verificationExperimentId,
-      `${path}.verificationExperimentId`,
-    ),
-  };
+  return identity;
 }
 
 function expectedStableDiagnostics(

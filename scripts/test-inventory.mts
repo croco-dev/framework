@@ -617,6 +617,24 @@ export function parseMaterializationEvidence(
   value: unknown,
   expectedInventoryDigest?: string,
 ): readonly MaterializationEvidence[] {
+  const repositoryPath = (value: unknown, index: number, field: string): string => {
+    if (typeof value !== "string" || validateRepositoryPath(value)) {
+      throw new TypeError(`materialization evidence[${index}].${field} must be a repository path`);
+    }
+    return value;
+  };
+  const sha256Digest = (value: unknown, index: number, field: string): string => {
+    if (typeof value !== "string" || !/^[a-f0-9]{64}$/.test(value)) {
+      throw new TypeError(`materialization evidence[${index}].${field} must be a SHA-256 digest`);
+    }
+    return value;
+  };
+  const commandIdentifier = (value: unknown, index: number): string => {
+    if (typeof value !== "string" || value.trim().length === 0 || value !== value.trim()) {
+      throw new TypeError(`materialization evidence[${index}].commandId must be non-empty`);
+    }
+    return value;
+  };
   if (!Array.isArray(value)) throw new TypeError("materialization evidence must be an array");
   const parsed = value.map((value, index): MaterializationEvidence => {
     const entry = objectValue(value);
@@ -633,33 +651,16 @@ export function parseMaterializationEvidence(
       ],
       `materialization evidence[${index}]`,
     );
-    const {
-      sourcePath,
-      sourceDigest,
-      generatedPath,
-      generatedDigest,
-      inventoryDigest: materializationInventoryDigest,
-      commandId,
-    } = entry;
-    for (const [field, path] of [
-      ["sourcePath", sourcePath],
-      ["generatedPath", generatedPath],
-    ] as const) {
-      if (typeof path !== "string" || validateRepositoryPath(path)) {
-        throw new TypeError(
-          `materialization evidence[${index}].${field} must be a repository path`,
-        );
-      }
-    }
-    for (const [field, digest] of [
-      ["sourceDigest", sourceDigest],
-      ["generatedDigest", generatedDigest],
-      ["inventoryDigest", materializationInventoryDigest],
-    ] as const) {
-      if (typeof digest !== "string" || !/^[a-f0-9]{64}$/.test(digest)) {
-        throw new TypeError(`materialization evidence[${index}].${field} must be a SHA-256 digest`);
-      }
-    }
+    const sourcePath = repositoryPath(entry.sourcePath, index, "sourcePath");
+    const generatedPath = repositoryPath(entry.generatedPath, index, "generatedPath");
+    const sourceDigest = sha256Digest(entry.sourceDigest, index, "sourceDigest");
+    const generatedDigest = sha256Digest(entry.generatedDigest, index, "generatedDigest");
+    const materializationInventoryDigest = sha256Digest(
+      entry.inventoryDigest,
+      index,
+      "inventoryDigest",
+    );
+    const commandId = commandIdentifier(entry.commandId, index);
     if (
       expectedInventoryDigest !== undefined &&
       materializationInventoryDigest !== expectedInventoryDigest
@@ -667,13 +668,6 @@ export function parseMaterializationEvidence(
       throw new TypeError(
         `materialization evidence[${index}].inventoryDigest does not match the inventory`,
       );
-    }
-    if (
-      typeof commandId !== "string" ||
-      commandId.trim().length === 0 ||
-      commandId !== commandId.trim()
-    ) {
-      throw new TypeError(`materialization evidence[${index}].commandId must be non-empty`);
     }
     return {
       sourcePath,

@@ -14,7 +14,7 @@ import {
   readChangedFiles,
   resolveCommitSha,
 } from "../ci-cacheable-experiment-identity.mts";
-import { VerificationProblem } from "../verification-problem.mts";
+import type { VerificationProblem } from "../verification-problem.mts";
 
 const SHA = "a".repeat(40);
 const DIGEST = "b".repeat(64);
@@ -28,6 +28,41 @@ function digestParts(parts: readonly string[]): string {
     hash.update("\0");
   }
   return hash.digest("hex");
+}
+
+function createRepositoryFixture(): {
+  readonly root: string;
+  readonly baseSha: string;
+  readonly headSha: string;
+} {
+  const root = mkdtempSync(join(tmpdir(), "croco-cacheable-identity-"));
+  mkdirSync(join(root, ".github", "workflows"), { recursive: true });
+  writeFileSync(
+    join(root, "package.json"),
+    JSON.stringify({ packageManager: "pnpm@11.9.0", devDependencies: { turbo: "2.10.2" } }),
+  );
+  writeFileSync(join(root, ".github", "workflows", "ci.yml"), "name: CI\n");
+  writeFileSync(
+    join(root, "test-inventory.json"),
+    JSON.stringify({ version: 1, tests: [], exceptions: [] }),
+  );
+  execFileSync("git", ["init"], { cwd: root });
+  execFileSync("git", ["config", "user.email", "ci@example.invalid"], { cwd: root });
+  execFileSync("git", ["config", "user.name", "CI"], { cwd: root });
+  execFileSync("git", ["add", "."], { cwd: root });
+  execFileSync("git", ["commit", "-m", "base"], { cwd: root });
+  const baseSha = execFileSync("git", ["rev-parse", "HEAD"], {
+    cwd: root,
+    encoding: "utf8",
+  }).trim();
+  writeFileSync(join(root, "changed.txt"), "changed\n");
+  execFileSync("git", ["add", "changed.txt"], { cwd: root });
+  execFileSync("git", ["commit", "-m", "head"], { cwd: root });
+  const headSha = execFileSync("git", ["rev-parse", "HEAD"], {
+    cwd: root,
+    encoding: "utf8",
+  }).trim();
+  return { root, baseSha, headSha };
 }
 
 describe("cacheable CI experiment identity", () => {
@@ -109,33 +144,7 @@ describe("cacheable CI experiment identity", () => {
   });
 
   it("creates the same strict envelope from repository files", () => {
-    const root = mkdtempSync(join(tmpdir(), "croco-cacheable-identity-"));
-    mkdirSync(join(root, ".github", "workflows"), { recursive: true });
-    writeFileSync(
-      join(root, "package.json"),
-      JSON.stringify({ packageManager: "pnpm@11.9.0", devDependencies: { turbo: "2.10.2" } }),
-    );
-    writeFileSync(join(root, ".github", "workflows", "ci.yml"), "name: CI\n");
-    writeFileSync(
-      join(root, "test-inventory.json"),
-      JSON.stringify({ version: 1, tests: [], exceptions: [] }),
-    );
-    execFileSync("git", ["init"], { cwd: root });
-    execFileSync("git", ["config", "user.email", "ci@example.invalid"], { cwd: root });
-    execFileSync("git", ["config", "user.name", "CI"], { cwd: root });
-    execFileSync("git", ["add", "."], { cwd: root });
-    execFileSync("git", ["commit", "-m", "base"], { cwd: root });
-    const baseSha = execFileSync("git", ["rev-parse", "HEAD"], {
-      cwd: root,
-      encoding: "utf8",
-    }).trim();
-    writeFileSync(join(root, "changed.txt"), "changed\n");
-    execFileSync("git", ["add", "changed.txt"], { cwd: root });
-    execFileSync("git", ["commit", "-m", "head"], { cwd: root });
-    const headSha = execFileSync("git", ["rev-parse", "HEAD"], {
-      cwd: root,
-      encoding: "utf8",
-    }).trim();
+    const { root, baseSha, headSha } = createRepositoryFixture();
 
     const result = createCacheableExperimentIdentityFromRepository([
       "--root",
@@ -176,6 +185,50 @@ describe("cacheable CI experiment identity", () => {
     expect(() => readFileSync(join(root, "ci-reports", "cacheable-ci", "identity.json"))).toThrow();
   });
 
+  it("rejects a commit identity that differs from the resolved head", () => {
+    const { root, baseSha, headSha } = createRepositoryFixture();
+
+    expect(() =>
+      createCacheableExperimentIdentityFromRepository([
+        "--root",
+        root,
+        "--commit-sha",
+        baseSha,
+        "--base",
+        baseSha,
+        "--head",
+        headSha,
+        "--run-id",
+        "99",
+        "--run-attempt",
+        "1",
+        "--profile",
+        "publish",
+        "--runner-os",
+        "Linux",
+        "--runner-arch",
+        "X64",
+        "--runner-label",
+        "ubuntu-latest",
+        "--node-version",
+        "v24.5.0",
+        "--pnpm-version",
+        "11.9.0",
+      ]),
+    ).toThrow(expect.objectContaining({ code: "COMMIT_SHA_MISMATCH", category: "input" }));
+  });
+
+  it("reports Git identity failures with stable Problems", () => {
+    const { root, headSha } = createRepositoryFixture();
+
+    expect(() => resolveCommitSha(root, "missing-ref")).toThrow(
+      expect.objectContaining({ code: "COMMIT_SHA_RESOLUTION_FAILED", category: "input" }),
+    );
+    expect(() => readChangedFiles(root, "0".repeat(40), headSha)).toThrow(
+      expect.objectContaining({ code: "CHANGED_FILES_RESOLUTION_FAILED", category: "input" }),
+    );
+  });
+
   it("rejects invalid profile and run attempts", () => {
     expect(() =>
       createCacheableExperimentIdentityFromRepository([
@@ -200,7 +253,7 @@ describe("cacheable CI experiment identity", () => {
   });
 
   it("rejects an unknown verification profile with a stable Problem", () => {
-    try {
+    expect(() =>
       createCacheableExperimentIdentityFromRepository([
         "--commit-sha",
         SHA,
@@ -218,12 +271,13 @@ describe("cacheable CI experiment identity", () => {
         "ubuntu-latest",
         "--pnpm-version",
         "11.9.0",
-      ]);
-      throw new Error("Expected profile validation to fail.");
-    } catch (error) {
-      expect(error).toBeInstanceOf(VerificationProblem);
-      expect(error).toMatchObject({ code: "UNKNOWN_VERIFICATION_PROFILE", category: "input" });
-    }
+      ]),
+    ).toThrow(
+      expect.objectContaining({
+        code: "UNKNOWN_VERIFICATION_PROFILE",
+        category: "input",
+      } satisfies Partial<VerificationProblem>),
+    );
   });
 
   it("rejects a partial change identity with a stable Problem", () => {

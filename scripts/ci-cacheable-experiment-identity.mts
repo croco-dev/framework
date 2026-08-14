@@ -44,11 +44,39 @@ export function digestFile(path: string): string {
   return createHash("sha256").update(readFileSync(path)).digest("hex");
 }
 
+const GIT_TIMEOUT_MS = 30_000;
+const GIT_MAX_BUFFER_BYTES = 16 * 1024 * 1024;
+
+function gitOutput(
+  rootDir: string,
+  args: readonly string[],
+  code: string,
+  operation: string,
+): string {
+  try {
+    return execFileSync("git", args, {
+      cwd: rootDir,
+      encoding: "utf8",
+      maxBuffer: GIT_MAX_BUFFER_BYTES,
+      stdio: ["ignore", "pipe", "pipe"],
+      timeout: GIT_TIMEOUT_MS,
+    });
+  } catch (error) {
+    throw new VerificationProblem(
+      code,
+      "input",
+      `${operation} failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
 export function resolveCommitSha(rootDir: string, ref: string): string {
-  return execFileSync("git", ["rev-parse", `${ref}^{commit}`], {
-    cwd: rootDir,
-    encoding: "utf8",
-  }).trim();
+  return gitOutput(
+    rootDir,
+    ["rev-parse", `${ref}^{commit}`],
+    "COMMIT_SHA_RESOLUTION_FAILED",
+    `Resolving commit ${ref}`,
+  ).trim();
 }
 
 export function readChangedFiles(
@@ -56,10 +84,12 @@ export function readChangedFiles(
   baseSha: string,
   headSha: string,
 ): readonly string[] {
-  return execFileSync("git", ["diff", "--name-only", baseSha, headSha], {
-    cwd: rootDir,
-    encoding: "utf8",
-  })
+  return gitOutput(
+    rootDir,
+    ["diff", "--name-only", baseSha, headSha],
+    "CHANGED_FILES_RESOLUTION_FAILED",
+    `Reading changed files for ${baseSha}..${headSha}`,
+  )
     .trim()
     .split("\n")
     .filter(Boolean)

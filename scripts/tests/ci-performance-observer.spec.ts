@@ -260,15 +260,19 @@ function phaseBInput(overrides: Readonly<Record<string, unknown>> = {}) {
       startedAt,
       completedAt,
       status: "success",
-      checks: receipts.map((receipt, index) => ({
-        id: receipt.checkId,
-        selection: "selected",
-        semantics: receipt.checkId === "core-coverage-warning" ? "advisory" : "blocking",
-        outcome: "passed",
-        receiptDigest: receipt.receiptDigest,
-        attestationDigest: attestations[index]?.attestationDigest ?? "",
-        diagnostics: [],
-      })),
+      checks: receipts.map((receipt, index) => {
+        const attestation = attestations[index];
+        if (!attestation) throw new Error(`Missing attestation fixture at index ${index}.`);
+        return {
+          id: receipt.checkId,
+          selection: "selected",
+          semantics: receipt.checkId === "core-coverage-warning" ? "advisory" : "blocking",
+          outcome: "passed",
+          receiptDigest: receipt.receiptDigest,
+          attestationDigest: attestation.attestationDigest,
+          diagnostics: [],
+        };
+      }),
       receipts,
       attestations,
       artifactFiles: [
@@ -893,17 +897,15 @@ describe("CI performance observer", () => {
   });
 
   it.each([
-    ["run", { runId: "999" }],
-    ["attempt", { runAttempt: 1 }],
-    ["SHA", { commitSha: "c".repeat(40) }],
-  ])("rejects a producer bundle with mismatched %s provenance", (_label, mismatch) => {
+    ["run", { runId: "999" }, "artifact.name does not match lane/run/attempt"],
+    ["attempt", { runAttempt: 1 }, "artifact.name does not match lane/run/attempt"],
+    ["SHA", { commitSha: "c".repeat(40) }, "mismatches commitSha"],
+  ])("rejects a producer bundle with mismatched %s provenance", (_label, mismatch, message) => {
     const input = phaseBInput();
     const producerBundles = input.producerBundles.map((evidence, index) =>
       index === 0 ? jsonEvidence({ ...evidence.parsed, ...mismatch }) : evidence,
     );
-    expect(() => createCiPerformanceObservations({ ...input, producerBundles })).toThrow(
-      /digest|identity|provenance|match|mismatch/i,
-    );
+    expect(() => createCiPerformanceObservations({ ...input, producerBundles })).toThrow(message);
   });
 
   it("rejects duplicate split artifacts", () => {

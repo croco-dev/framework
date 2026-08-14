@@ -92,7 +92,7 @@ jobs:
             jq -e \
               --arg expected_base_sha "$expected_base_sha" \
               --arg expected_head_sha "$expected_head_sha" \
-              '.parents | length == 2 and
+              '(.parents | length) == 2 and
                .parents[0].sha == $expected_base_sha and
                .parents[1].sha == $expected_head_sha' \
               ci-observer-input/execution-commit.json >/dev/null

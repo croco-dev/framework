@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseDocument } from "yaml";
@@ -147,6 +148,31 @@ describe("CI performance observer workflow", () => {
     expect(metadata?.run).toContain(".pull_requests[0].head.sha");
     expect(metadata?.run).toContain(".parents[0].sha == $expected_base_sha");
     expect(metadata?.run).toContain(".parents[1].sha == $expected_head_sha");
+    const parentExpression = [
+      "(.parents | length) == 2 and",
+      ".parents[0].sha == $expected_base_sha and",
+      ".parents[1].sha == $expected_head_sha",
+    ].join("\n");
+    expect(metadata?.run?.replace(/^\s+/gm, "")).toContain(parentExpression);
+    expect(() =>
+      execFileSync(
+        "jq",
+        [
+          "-e",
+          "--arg",
+          "expected_base_sha",
+          "base",
+          "--arg",
+          "expected_head_sha",
+          "head",
+          parentExpression,
+        ],
+        {
+          encoding: "utf8",
+          input: JSON.stringify({ parents: [{ sha: "base" }, { sha: "head" }] }),
+        },
+      ),
+    ).not.toThrow();
     expect(metadata?.run).toContain(
       'elif [ "$(jq -er \'.event\' ci-observer-input/run.json)" = "push" ]; then',
     );

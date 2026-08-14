@@ -472,6 +472,25 @@ describe("cacheable producer lane evidence", () => {
     ).rejects.toThrow(/coverage-security physical results cannot be restored/);
   });
 
+  it("reports an invalid exact-cache base with a stable change-range Problem", async () => {
+    useCurrentRunEnvironment();
+    const rootDir = mkdtempSync(join(tmpdir(), "croco-cacheable-invalid-base-"));
+
+    await expect(
+      runCacheableLane({
+        identity: identity(),
+        lane: "package-artifacts",
+        profile: "publish",
+        rootDir,
+        base: "missing-base-ref",
+        head: COMMIT_SHA,
+        changedFiles: [],
+        cacheDir: join(rootDir, ".cache", "package-artifacts"),
+        runner: successfulRunner(rootDir),
+      }),
+    ).rejects.toMatchObject({ code: "CACHEABLE_LANE_CHANGE_RANGE_FAILED", category: "input" });
+  });
+
   it("turns a physical prerequisite failure into owned failure evidence without attesting the prerequisite", async () => {
     useCurrentRunEnvironment();
     const rootDir = mkdtempSync(join(tmpdir(), "croco-cacheable-lane-prerequisite-"));

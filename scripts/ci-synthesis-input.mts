@@ -1395,9 +1395,16 @@ export function assembleSynthesisInputFromRepository(args: readonly string[]): {
   if (!identityPath || !baseRef || !headRef || !output) {
     reject("INVALID_SYNTHESIS_ARGUMENTS", "--identity, --base, --head, and --output are required");
   }
-  const identity = parseExperimentIdentity(
-    JSON.parse(readFileSync(resolve(rootDir, identityPath), "utf8")) as unknown,
-  );
+  let identityValue: unknown;
+  try {
+    identityValue = JSON.parse(readFileSync(resolve(rootDir, identityPath), "utf8")) as unknown;
+  } catch {
+    reject(
+      "UNREADABLE_SYNTHESIS_IDENTITY",
+      "Synthesis identity is missing, unreadable, or malformed JSON.",
+    );
+  }
+  const identity = parseExperimentIdentity(identityValue);
   const baseSha = resolveCommitSha(rootDir, baseRef);
   const headSha = resolveCommitSha(rootDir, headRef);
   if (headSha !== identity.commitSha) {

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { mkdirSync, renameSync, writeFileSync } from "node:fs";
+import { mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { argv, exit } from "node:process";
 import { pathToFileURL } from "node:url";
@@ -9,6 +9,7 @@ import { parseSecurityPhysicalResults } from "./ci-synthesis-input.mts";
 import { SECURITY_OWNERSHIP } from "./ci-verification-contract.mts";
 import { formatVerificationProblem, VerificationProblem } from "./verification-problem.mts";
 import type { SynthesisSecurityResult } from "./ci-lane-evidence.mts";
+import type { SecurityResultId } from "./ci-verification-contract.mts";
 
 export type SecurityExitCodes = {
   readonly advisoryProductionAudit: number;
@@ -39,7 +40,7 @@ function exitCode(value: string | undefined, flag: string): number {
   return nonNegativeInteger(parsed, flag);
 }
 
-function result(id: string, code: number): SynthesisSecurityResult {
+function result(id: SecurityResultId, code: number): SynthesisSecurityResult {
   const ownership = SECURITY_OWNERSHIP.find((entry) => entry.id === id);
   if (!ownership || ownership.owner !== "coverage-security") {
     throw new VerificationProblem(
@@ -78,7 +79,8 @@ export function createSecurityPhysicalResults(
 
 function value(args: readonly string[], flag: string): string | undefined {
   const index = args.indexOf(flag);
-  return index === -1 ? undefined : args[index + 1];
+  const result = index === -1 ? undefined : args[index + 1];
+  return result?.startsWith("-") ? undefined : result;
 }
 
 function main(args: readonly string[]): void {
@@ -100,8 +102,12 @@ function main(args: readonly string[]): void {
   const outputPath = resolve(output);
   mkdirSync(dirname(outputPath), { recursive: true });
   const temporaryPath = `${outputPath}.${process.pid}.tmp`;
-  writeFileSync(temporaryPath, `${JSON.stringify(results, null, 2)}\n`);
-  renameSync(temporaryPath, outputPath);
+  try {
+    writeFileSync(temporaryPath, `${JSON.stringify(results, null, 2)}\n`);
+    renameSync(temporaryPath, outputPath);
+  } finally {
+    rmSync(temporaryPath, { force: true });
+  }
 }
 
 if (import.meta.url === pathToFileURL(argv[1] ?? "").href) {

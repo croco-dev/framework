@@ -17,20 +17,15 @@ import type { TestLane } from "./test-inventory.mts";
 
 export type VerificationProfile = "repo" | "spine" | "publish";
 
-export type VerificationLane =
-  | "core-verification"
-  | "generated-apps"
-  | "package-artifacts"
-  | "coverage-security"
-  | "split-validation-shadow";
-
 const VERIFICATION_LANES = [
   "core-verification",
   "generated-apps",
   "package-artifacts",
   "coverage-security",
   "split-validation-shadow",
-] as const satisfies readonly VerificationLane[];
+] as const;
+
+export type VerificationLane = (typeof VERIFICATION_LANES)[number];
 
 const VERIFICATION_COMMAND_IDS = [
   "verification-policy",
@@ -1594,6 +1589,23 @@ function verificationDependencyEdge(dependentId: string, prerequisiteId: string)
   return `${dependentId}->${prerequisiteId}`;
 }
 
+function verificationDependencyClassifications(
+  dependentId: string,
+  prerequisiteId: string,
+): readonly VerificationDependencyClassification[] {
+  const edge = verificationDependencyEdge(dependentId, prerequisiteId);
+  const classifications =
+    VERIFICATION_DEPENDENCY_CLASSIFICATION[edge as VerificationDependencyEdge];
+  if (!classifications || classifications.length === 0) {
+    throw new VerificationProblem(
+      "UNCLASSIFIED_VERIFICATION_DEPENDENCY",
+      "contract",
+      `Verification dependency ${edge} is unknown or unclassified.`,
+    );
+  }
+  return classifications;
+}
+
 function assertVerificationLaneContract(commands: readonly EvidenceCommand[]): void {
   const commandIds = commands.map(({ id }) => id);
   const commandIdSet = new Set(commandIds);
@@ -1642,17 +1654,14 @@ function assertVerificationLaneContract(commands: readonly EvidenceCommand[]): v
     }
     for (const prerequisiteId of command.dependsOn ?? []) {
       const prerequisiteLane = VERIFICATION_LANE_OWNERSHIP[prerequisiteId as VerificationCommandId];
-      const classifications =
-        VERIFICATION_DEPENDENCY_CLASSIFICATION[
-          verificationDependencyEdge(command.id, prerequisiteId) as VerificationDependencyEdge
-        ];
-      if (!prerequisiteLane || !classifications || classifications.length === 0) {
+      if (!prerequisiteLane) {
         throw new VerificationProblem(
           "UNCLASSIFIED_VERIFICATION_DEPENDENCY",
           "contract",
           `Verification dependency ${command.id}->${prerequisiteId} is unknown or unclassified.`,
         );
       }
+      const classifications = verificationDependencyClassifications(command.id, prerequisiteId);
       if (new Set(classifications).size !== classifications.length) {
         throw new VerificationProblem(
           "AMBIGUOUS_VERIFICATION_DEPENDENCY_CLASSIFICATION",
@@ -1684,7 +1693,9 @@ export function createVerificationLaneManifest(
     );
   }
   const manifest = createVerificationManifest(profile, context);
-  assertVerificationLaneContract(createVerificationManifest("publish", context));
+  assertVerificationLaneContract(
+    profile === "publish" ? manifest : createVerificationManifest("publish", context),
+  );
   const byId = new Map(manifest.map((command) => [command.id, command]));
   const commands = manifest.filter(
     ({ id }) => VERIFICATION_LANE_OWNERSHIP[id as VerificationCommandId] === lane,
@@ -1692,10 +1703,7 @@ export function createVerificationLaneManifest(
   const dependencies = commands.flatMap((command) =>
     (command.dependsOn ?? []).map(
       (prerequisiteId): VerificationLaneDependency => ({
-        classifications:
-          VERIFICATION_DEPENDENCY_CLASSIFICATION[
-            verificationDependencyEdge(command.id, prerequisiteId) as VerificationDependencyEdge
-          ],
+        classifications: verificationDependencyClassifications(command.id, prerequisiteId),
         dependentId: command.id,
         dependentLane: lane,
         prerequisiteId,
@@ -1705,12 +1713,12 @@ export function createVerificationLaneManifest(
   );
 
   const physicalPrerequisiteIds = new Set<string>();
+  const visited = new Set<string>();
   const visitPhysicalPrerequisites = (command: EvidenceCommand): void => {
+    if (visited.has(command.id)) return;
+    visited.add(command.id);
     for (const prerequisiteId of command.dependsOn ?? []) {
-      const classifications =
-        VERIFICATION_DEPENDENCY_CLASSIFICATION[
-          verificationDependencyEdge(command.id, prerequisiteId) as VerificationDependencyEdge
-        ];
+      const classifications = verificationDependencyClassifications(command.id, prerequisiteId);
       if (!classifications.includes("physical-local")) continue;
       const prerequisite = byId.get(prerequisiteId);
       if (!prerequisite) {

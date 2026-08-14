@@ -185,7 +185,7 @@ jobs:
           VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}
         run: |
           args=(--profile "$VERIFICATION_PROFILE")
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
             args+=(--allow-pending-release-metadata)
           fi
           if [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
@@ -906,7 +906,7 @@ jobs:
         run: |
           cache_args=()
           lane_args=()
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
             lane_args+=(--allow-pending-release-metadata)
           fi
           if [ "$TRUSTED_CACHE" = "true" ]; then
@@ -987,16 +987,16 @@ jobs:
           docker run --rm -v "$PWD:/repo" "${{ env.GITLEAKS_IMAGE }}" detect --source /repo --redact --no-banner --log-opts=HEAD --report-format sarif --report-path /repo/ci-reports/security/gitleaks.sarif > ci-reports/security/gitleaks.txt 2>&1
           scan_exit=$?
           set -e
-          node --experimental-strip-types scripts/ci-cacheable-security-evidence.mts \
-            --advisory-audit-exit-code "$audit_exit" \
-            --gitleaks-smoke-exit-code "$smoke_exit" \
-            --secret-scan-exit-code "$scan_exit" \
-            --output ci-reports/security/security-physical.json
           {
             echo "audit_exit=$audit_exit"
             echo "smoke_exit=$smoke_exit"
             echo "scan_exit=$scan_exit"
           } >> "$GITHUB_OUTPUT"
+          node --experimental-strip-types scripts/ci-cacheable-security-evidence.mts \
+            --advisory-audit-exit-code "$audit_exit" \
+            --gitleaks-smoke-exit-code "$smoke_exit" \
+            --secret-scan-exit-code "$scan_exit" \
+            --output ci-reports/security/security-physical.json
       - name: Run coverage and security producer
         env:
           VERIFICATION_BASE: ${{ needs.changes.outputs.base }}

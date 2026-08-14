@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -40,24 +40,24 @@ describe("cacheable CI physical security evidence", () => {
 
   it.each(["-1", "1.5", "not-a-number"])("rejects invalid CLI exit code %s", (exitCode) => {
     const output = join(mkdtempSync(join(tmpdir(), "croco-security-exit-code-")), "results.json");
-    expect(() =>
-      execFileSync(
-        process.execPath,
-        [
-          "--experimental-strip-types",
-          "scripts/ci-cacheable-security-evidence.mts",
-          "--output",
-          output,
-          "--advisory-audit-exit-code",
-          exitCode,
-          "--gitleaks-smoke-exit-code",
-          "0",
-          "--secret-scan-exit-code",
-          "0",
-        ],
-        { cwd: process.cwd(), stdio: "pipe" },
-      ),
-    ).toThrow();
+    const result = spawnSync(
+      process.execPath,
+      [
+        "--experimental-strip-types",
+        "scripts/ci-cacheable-security-evidence.mts",
+        "--output",
+        output,
+        "--advisory-audit-exit-code",
+        exitCode,
+        "--gitleaks-smoke-exit-code",
+        "0",
+        "--secret-scan-exit-code",
+        "0",
+      ],
+      { cwd: process.cwd(), encoding: "utf8" },
+    );
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("INVALID_SECURITY_EXIT_CODE");
   });
 
   it.each([-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY])(
