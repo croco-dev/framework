@@ -1,4 +1,5 @@
 import {
+  existsSync,
   lstatSync,
   mkdirSync,
   mkdtempSync,
@@ -20,6 +21,8 @@ import {
 } from "../ci-cacheable-lane-runner.mts";
 import { createReusableReceipt, PRODUCER_LANES } from "../ci-lane-evidence.mts";
 import { SECURITY_OWNERSHIP } from "../ci-verification-contract.mts";
+import { defaultCommandRunner } from "../release-spine-evidence.mts";
+import { fileDigest, inventoryDigest, readTestInventory } from "../test-inventory.mts";
 import { VERIFICATION_LANE_OWNERSHIP } from "../verification-manifest.mts";
 import type { ExperimentIdentity, ProducerLane } from "../ci-lane-evidence.mts";
 import type {
@@ -91,6 +94,64 @@ function successfulRunner(rootDir: string): CommandRunner {
           ? JSON.stringify({ status: "pass" })
           : `${command.id}\n`;
       writeFileSync(path, `${contents}\n`);
+    }
+    return {
+      errorCode: null,
+      errorMessage: null,
+      signal: null,
+      status: 0,
+      stderr: "",
+      stdout: `${command.id} passed`,
+      timedOut: false,
+    };
+  };
+}
+
+function generatedArtifactsRunner(rootDir: string): CommandRunner {
+  return async (command, context) => {
+    if (command.command[0] === "node" && command.command[1] === "-e") {
+      return defaultCommandRunner(command, context);
+    }
+    if (command.id === "generated-app-smoke") {
+      const repositoryRoot = join(import.meta.dirname, "..", "..");
+      const { diagnostics, inventory } = readTestInventory(
+        join(repositoryRoot, "test-inventory.json"),
+      );
+      if (diagnostics.length > 0)
+        throw new Error("Expected the repository test inventory to be valid.");
+      writeFileSync(join(rootDir, "test-inventory.json"), `${JSON.stringify(inventory)}\n`);
+      const materializedRoot = join(rootDir, "ci-reports", "generated-apps", "materialized-tests");
+      const materializations = inventory.tests
+        .filter((entry) => entry.lane === "generated-app" && entry.generated)
+        .map((entry) => {
+          const generated = entry.generated;
+          if (!generated) throw new Error(`Expected generated mapping for ${entry.path}.`);
+          const sourcePath = join(rootDir, entry.path);
+          const generatedPath = join(materializedRoot, generated.generatedPath);
+          mkdirSync(dirname(sourcePath), { recursive: true });
+          mkdirSync(dirname(generatedPath), { recursive: true });
+          writeFileSync(sourcePath, `${entry.path}\n`);
+          writeFileSync(generatedPath, `${entry.path}\n`);
+          return {
+            sourcePath: entry.path,
+            sourceDigest: fileDigest(sourcePath),
+            generatedPath: generated.generatedPath,
+            generatedDigest: fileDigest(generatedPath),
+            inventoryDigest: inventoryDigest(inventory),
+            commandId: generated.commandId,
+          };
+        });
+      for (const artifact of command.artifacts ?? []) {
+        if (!artifact.required || artifact.path.endsWith("materialized-tests")) continue;
+        const path = join(rootDir, artifact.path);
+        mkdirSync(dirname(path), { recursive: true });
+        writeFileSync(
+          path,
+          artifact.path.endsWith("materialization-evidence.json")
+            ? `${JSON.stringify(materializations)}\n`
+            : `${command.id}\n`,
+        );
+      }
     }
     return {
       errorCode: null,
@@ -332,6 +393,65 @@ describe("cacheable producer lane evidence", () => {
         runner: mutatingRunner,
       }),
     ).rejects.toMatchObject({ code: "EXACT_CACHE_REVALIDATION_FAILED" });
+  });
+
+  it("restores a generated-app cache when an optional artifact was not produced", async () => {
+    useCurrentRunEnvironment();
+    const rootDir = mkdtempSync(join(tmpdir(), "croco-cacheable-generated-optional-"));
+    const cacheDir = join(rootDir, ".cache", "generated-apps");
+    const base = "a".repeat(40);
+    const changedFiles = [
+      "packages/create-croco-app/templates/admin-console/apps/api-server/src/tests/AdminConsole.spec.ts",
+    ];
+    const optionalArtifact = join(
+      rootDir,
+      "ci-reports",
+      "generated-apps",
+      "spine-blocking-journeys",
+    );
+
+    const cold = await runCacheableLane({
+      identity: identity("publish"),
+      lane: "generated-apps",
+      profile: "publish",
+      rootDir,
+      base,
+      head: COMMIT_SHA,
+      changedFiles,
+      cacheDir,
+      runner: generatedArtifactsRunner(rootDir),
+    });
+    expect(cold.failed).toBe(false);
+    expect(existsSync(optionalArtifact)).toBe(false);
+
+    vi.stubEnv("GITHUB_RUN_ID", "67890");
+    vi.stubEnv("GITHUB_RUN_ATTEMPT", "3");
+    const hit = await runCacheableLane({
+      identity: identity("publish", "67890", 3),
+      lane: "generated-apps",
+      profile: "publish",
+      rootDir,
+      base,
+      head: COMMIT_SHA,
+      changedFiles,
+      cacheDir,
+      cacheOrigin: "github-exact-key",
+      runner: generatedArtifactsRunner(rootDir),
+    });
+
+    expect(hit.cacheHit).toBe(true);
+    expect(hit.failed).toBe(false);
+    expect(existsSync(optionalArtifact)).toBe(false);
+    expect(hit.report.checks.find(({ id }) => id === "generated-app-smoke")).toMatchObject({
+      status: "passed",
+      artifacts: expect.arrayContaining([
+        expect.objectContaining({
+          sourcePath: "ci-reports/generated-apps/spine-blocking-journeys",
+          required: false,
+          exists: false,
+        }),
+      ]),
+    });
   });
 
   it("rejects cross-run caching for the physical coverage-security lane", async () => {

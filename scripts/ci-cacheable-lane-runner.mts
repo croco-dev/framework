@@ -4,6 +4,7 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   copyFileSync,
+  existsSync,
   lstatSync,
   mkdirSync,
   readFileSync,
@@ -328,8 +329,10 @@ function exactCacheContext(options: {
   };
 }
 
-function cacheHitCommand(command: EvidenceCommand): EvidenceCommand {
-  const artifactPaths = (command.artifacts ?? []).map(({ path }) => path);
+function cacheHitCommand(rootDir: string, command: EvidenceCommand): EvidenceCommand {
+  const artifactPaths = (command.artifacts ?? [])
+    .map(({ path }) => path)
+    .filter((path) => existsSync(resolve(rootDir, path)));
   return {
     ...command,
     command: [
@@ -1053,7 +1056,7 @@ export async function runCacheableLane(
       : null;
   const runCommands = cacheHit
     ? plan.commands.map((command) =>
-        cacheHit.receipts.has(command.id) ? cacheHitCommand(command) : command,
+        cacheHit.receipts.has(command.id) ? cacheHitCommand(rootDir, command) : command,
       )
     : plan.commands;
   const report = await runReleaseSpineEvidence({
