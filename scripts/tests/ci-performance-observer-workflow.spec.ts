@@ -111,6 +111,8 @@ describe("CI performance observer workflow", () => {
     expect(record?.run).toContain("scripts/ci-performance-observer.mts");
     expect(record?.run).toContain('--execution-sha "$(cat ci-observer-input/execution-sha.txt)"');
     expect(record?.run).toContain('--base-sha "$(cat ci-observer-input/base-sha.txt)"');
+    expect(record?.run).toContain("if [ ! -s ci-observer-input/base-sha.txt ]; then");
+    expect(record?.run).toContain("Split observation requires a non-empty trusted base SHA.");
     expect(record?.run).toContain("--source-workflow ci-observer-input/source-ci.yml");
     expect(record?.run).toContain('observer_args+=(--synthesis-input "${synthesis_inputs[0]}")');
     expect(record?.run).toContain("--verification");
@@ -154,6 +156,10 @@ describe("CI performance observer workflow", () => {
       ".parents[1].sha == $expected_head_sha",
     ].join("\n");
     expect(metadata?.run?.replace(/^\s+/gm, "")).toContain(parentExpression);
+    expect(
+      () => execFileSync("jq", ["--version"], { encoding: "utf8" }),
+      "jq is required to validate the workflow expression",
+    ).not.toThrow();
     expect(() =>
       execFileSync(
         "jq",

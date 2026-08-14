@@ -216,6 +216,10 @@ jobs:
               echo "Expected four producer bundles, one synthesis input, one split validation shadow report, and one split security summary." >&2
               exit 1
             fi
+            if [ ! -s ci-observer-input/base-sha.txt ]; then
+              echo "Split observation requires a non-empty trusted base SHA." >&2
+              exit 1
+            fi
             for report in "${producer_reports[@]}"; do
               observer_args+=(--producer-bundle "$report")
             done

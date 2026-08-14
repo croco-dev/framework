@@ -190,7 +190,6 @@ export class CiLaneEvidenceError extends VerificationProblem {
   constructor(code: string, message: string, key?: string) {
     super(code, "contract", message);
     this.name = "CiLaneEvidenceError";
-    this.code = code;
     if (key !== undefined) this.key = key;
   }
 }

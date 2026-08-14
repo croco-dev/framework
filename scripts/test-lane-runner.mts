@@ -203,7 +203,9 @@ export function readVitestFailureDetails(
         (assertion) => assertion.status === "failed",
       );
       const details =
-        failedAssertions.length > 0 ? failedAssertions : [{ failureMessages: [message] }];
+        failedAssertions.length > 0
+          ? failedAssertions
+          : [{ fullName: undefined, title: undefined, failureMessages: [message] }];
       return details.map((assertion) => {
         const title = assertion.fullName ?? assertion.title;
         const failures = (assertion.failureMessages ?? []).filter(
@@ -270,6 +272,7 @@ function runVitestCommandWithEvidence(
   readonly durationMs: number;
   readonly executedPaths: readonly string[];
   readonly executionState: "executed";
+  readonly failureDetails: readonly string[];
 } {
   const reportPath = evidencePath(rootDir, command);
   rmSync(reportPath, { force: true });
@@ -438,6 +441,7 @@ function defaultRunner(
         readonly exitCode: number;
         readonly durationMs: number;
         readonly executedPaths: readonly string[];
+        readonly failureDetails: readonly string[];
       }
     >();
     return (command) => {

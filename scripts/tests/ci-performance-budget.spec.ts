@@ -219,7 +219,7 @@ describe("pull-request CI performance budget", () => {
 
   it("rejects restoring full-spine validation on trunk pushes", () => {
     const mutant = WORKFLOW.replace(
-      'if [ "${{ github.event_name }}" != "workflow_dispatch" ]; then',
+      'if [ "$GITHUB_EVENT_NAME" != "workflow_dispatch" ]; then',
       'if [ "${{ github.event_name }}" = "pull_request" ]; then',
     );
 

@@ -312,8 +312,10 @@ describe("Phase B cacheable verification shadow", () => {
     ]) {
       expect(security).toContain(`--security-artifact ci-reports/security/${path}`);
     }
-    expect(security).toContain('test "$SMOKE_EXIT" = "0"');
-    expect(security).toContain('test "$SCAN_EXIT" = "0"');
+    expect(security).toContain("Advisory Gitleaks smoke exit code: ${SMOKE_EXIT:-unknown}");
+    expect(security).toContain("Advisory secret scan exit code: ${SCAN_EXIT:-unknown}");
+    expect(security).not.toContain('test "$SMOKE_EXIT" = "0"');
+    expect(security).not.toContain('test "$SCAN_EXIT" = "0"');
     expect(security).toContain("name: Report advisory physical security failures");
     expect(security).toContain(
       "This shadow lane is advisory; validate retains the blocking Gitleaks checks.",
@@ -366,7 +368,7 @@ describe("CI verification profile contract", () => {
       'if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then\n            args+=(--allow-pending-release-metadata)',
     );
     expect(WORKFLOW).toContain(
-      'if [ "${{ github.event_name }}" != "workflow_dispatch" ]; then\n            args+=(--base "$VERIFICATION_BASE" --head HEAD)',
+      'if [ "$GITHUB_EVENT_NAME" != "workflow_dispatch" ]; then\n            args+=(--base "$VERIFICATION_BASE" --head HEAD)',
     );
     expect(WORKFLOW).toContain("VERIFICATION_BASE: ${{ needs.changes.outputs.base }}");
     expect(WORKFLOW).not.toContain("test:release-gates");

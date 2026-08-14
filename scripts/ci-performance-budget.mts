@@ -265,7 +265,7 @@ export function findCiPerformanceBudgetViolations(
     violations.push("real-resource services must not start in the ordinary validate job");
   }
   if (
-    !validate.includes('if [ "${{ github.event_name }}" != "workflow_dispatch" ]; then') ||
+    !validate.includes('if [ "$GITHUB_EVENT_NAME" != "workflow_dispatch" ]; then') ||
     !validate.includes('args+=(--base "$VERIFICATION_BASE" --head HEAD)')
   ) {
     violations.push("pull-request and trunk validation must both use the changed-file scope");

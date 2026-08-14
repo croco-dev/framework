@@ -188,7 +188,7 @@ jobs:
           if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
             args+=(--allow-pending-release-metadata)
           fi
-          if [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+          if [ "$GITHUB_EVENT_NAME" != "workflow_dispatch" ]; then
             args+=(--base "$VERIFICATION_BASE" --head HEAD)
           fi
           node --experimental-strip-types scripts/release-spine-evidence.mts "${args[@]}"
@@ -1018,8 +1018,10 @@ jobs:
           SCAN_EXIT: ${{ steps.physical_security.outputs.scan_exit }}
         run: |
           echo "This shadow lane is advisory; validate retains the blocking Gitleaks checks."
-          test "$SMOKE_EXIT" = "0"
-          test "$SCAN_EXIT" = "0"
+          {
+            echo "- Advisory Gitleaks smoke exit code: ${SMOKE_EXIT:-unknown}"
+            echo "- Advisory secret scan exit code: ${SCAN_EXIT:-unknown}"
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload coverage and security producer evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
