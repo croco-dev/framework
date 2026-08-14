@@ -1,6 +1,6 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalDependencies": ["pnpm-lock.yaml", "**/.env.*local"],
+  "globalDependencies": [".nvmrc", "pnpm-lock.yaml", "**/.env.*local"],
   "globalPassThroughEnv": ["CROCO_TEST_EVIDENCE_DIR"],
   "tasks": {
     "build": {

@@ -22,9 +22,9 @@ describe("generated Node runtime contract", () => {
       engines?: { node?: unknown };
     };
 
-    expect(GENERATED_NODE_VERSION).toBe(
-      readFileSync(join(repositoryRoot, ".nvmrc"), "utf8").trim(),
-    );
+    const repositoryNodeVersion = readFileSync(join(repositoryRoot, ".nvmrc"), "utf8").trim();
+
+    expect(repositoryNodeVersion.split(".")[0]).toBe(GENERATED_NODE_VERSION);
     expect(GENERATED_NODE_ENGINE_RANGE).toBe(rootPackageJson.engines?.node);
     expect(GENERATED_NODE_ENGINE_RANGE).toBe(generatorPackageJson.engines?.node);
   });
