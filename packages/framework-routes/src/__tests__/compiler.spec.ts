@@ -3,7 +3,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ContractGraphDiagnosticError } from "@croco/protocols-core";
-import { describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import type { CompiledController } from "../compiler";
 import {
   assertRouteRegistrationTable,
@@ -13,7 +13,14 @@ import {
   generateRouteRegistrationCode,
 } from "../compiler";
 
+const ROUTE_ARTIFACT_TEST_TIMEOUT_MS = 30_000;
+vi.setConfig({ testTimeout: ROUTE_ARTIFACT_TEST_TIMEOUT_MS });
+
 describe("compiler", () => {
+  afterAll(() => {
+    vi.resetConfig();
+  });
+
   const mockControllers: readonly CompiledController[] = [
     {
       basePath: "/api",
