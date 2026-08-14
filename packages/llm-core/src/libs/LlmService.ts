@@ -1,6 +1,6 @@
 import { restoreSerializedEventIdentity, type EventBus } from "@croco/events-core";
 import { Token } from "@croco/framework-context";
-import { Trace, withSpan } from "@croco/telemetry-api";
+import { Trace, recordEvent, withSpan } from "@croco/telemetry-api";
 import { LlmGeneratedEvent } from "./events/LlmGeneratedEvent";
 import { LlmStreamCompletedEvent } from "./events/LlmStreamCompletedEvent";
 import type {
@@ -388,7 +388,9 @@ export class LlmService {
                 completion,
                 intent,
                 "not_published",
-                true,
+                recovery instanceof LlmCompletionEventPublicationProblem
+                  ? recovery.durableIntentRecorded
+                  : false,
                 error,
                 "load_delivery_state",
               );
@@ -457,6 +459,10 @@ export class LlmService {
         failureStage = "claim_delivery";
         deliveryClaim = await intentStore.claimDelivery(intent.id);
         if (!deliveryClaim) {
+          recordEvent("llm.completion_event.delivery_claim_rejected", {
+            "llm.completion_event.intent_id": intent.id,
+            "llm.completion_event.delivery_claim_accepted": false,
+          });
           return;
         }
         deliveryState = "delivery_in_progress";

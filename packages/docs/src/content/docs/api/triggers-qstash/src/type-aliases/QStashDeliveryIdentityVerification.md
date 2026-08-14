@@ -7,7 +7,7 @@ title: "QStashDeliveryIdentityVerification"
 
 > **QStashDeliveryIdentityVerification** = `object`
 
-Webhook handler configuration, payload, and result types.
+Input used to verify a delivery body and payload against its QStash message ID.
 
 ## Properties
 

@@ -7,7 +7,7 @@ title: "QStashDeliveryIdentityVerifier"
 
 > **QStashDeliveryIdentityVerifier** = (`verification`) => `Promise`\<`boolean`\>
 
-Webhook handler configuration, payload, and result types.
+Verifies a QStash delivery identity and resolves whether the delivery is authentic.
 
 ## Parameters
 

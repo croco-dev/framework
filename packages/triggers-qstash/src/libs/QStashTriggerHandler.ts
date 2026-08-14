@@ -76,16 +76,19 @@ export type QStashTriggerHandlerOptions = {
   readonly serviceResolver?: ServiceResolver;
 };
 
+/** Input used to verify a delivery body and payload against its QStash message ID. */
 export type QStashDeliveryIdentityVerification = {
   readonly body: string;
   readonly messageId: string;
   readonly payload: QStashWebhookPayload;
 };
 
+/** Verifies a QStash delivery identity and resolves whether the delivery is authentic. */
 export type QStashDeliveryIdentityVerifier = (
   verification: QStashDeliveryIdentityVerification,
 ) => Promise<boolean>;
 
+/** Input reported when delivery identity verification fails for a QStash message ID. */
 export type QStashDeliveryIdentityVerificationFailure = {
   readonly error: unknown;
   readonly messageId: string;

@@ -427,6 +427,49 @@ describe("LlmService", () => {
       expect(eventBus.publish).toHaveBeenCalledOnce();
     });
 
+    it("should expose claim release failure and allow a later retry", async () => {
+      const intentStore: LlmCompletionEventIntentStore = {
+        recordPending: vi.fn().mockResolvedValue(undefined),
+        loadDeliveryState: vi.fn().mockResolvedValue("not_published"),
+        claimDelivery: vi
+          .fn()
+          .mockImplementation(async (intentId: string) => deliveryClaim(intentId)),
+        releaseDelivery: vi.fn().mockRejectedValueOnce(new Error("claim release failed")),
+        markPublished: vi.fn().mockResolvedValue(undefined),
+      };
+      const durableService = new LlmService(registry, eventBus, {
+        completionEventIntentStore: intentStore,
+      });
+      vi.mocked(eventBus.publish)
+        .mockRejectedValueOnce(new Error("event bus unavailable"))
+        .mockResolvedValueOnce(undefined);
+
+      const problem = await durableService
+        .generate({ modelId: "test-model", prompt: "Hello" })
+        .catch((error: unknown) => error);
+      expect(problem).toBeInstanceOf(LlmCompletionEventPublicationProblem);
+      if (!(problem instanceof LlmCompletionEventPublicationProblem)) {
+        throw new Error("Expected completion publication Problem");
+      }
+
+      expect(problem.deliveryState).toBe("not_published");
+      expect(problem.failureStage).toBe("release_delivery");
+      expect(problem.extensions).toMatchObject({
+        intentStoreError:
+          "Completion event delivery claim release failed after 'Error: event bus unavailable': Error: claim release failed",
+        intentStoreOperation: "release_delivery",
+      });
+
+      await durableService.retryCompletionEvent(problem);
+
+      expect(intentStore.claimDelivery).toHaveBeenCalledTimes(2);
+      expect(eventBus.publish).toHaveBeenCalledTimes(2);
+      expect(intentStore.markPublished).toHaveBeenCalledWith(
+        problem.intent.id,
+        deliveryClaim(problem.intent.id),
+      );
+    });
+
     it("should confirm a stored published intent without publishing it again", async () => {
       const intentStore: LlmCompletionEventIntentStore = {
         recordPending: vi.fn().mockResolvedValue(undefined),
@@ -533,6 +576,7 @@ describe("LlmService", () => {
       if (!(problem instanceof LlmCompletionEventPublicationProblem)) {
         throw new Error("Expected completion publication Problem");
       }
+      expect(problem.durableIntentRecorded).toBe(false);
 
       await durableService.retryCompletionEvent(problem);
 

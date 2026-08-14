@@ -7,7 +7,7 @@ title: "QStashDeliveryIdentityVerificationFailure"
 
 > **QStashDeliveryIdentityVerificationFailure** = `object`
 
-Webhook handler configuration, payload, and result types.
+Input reported when delivery identity verification fails for a QStash message ID.
 
 ## Properties
 
