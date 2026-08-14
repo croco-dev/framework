@@ -379,6 +379,7 @@ function normalizedCheckRecord(
   identity: EvidenceIdentity,
   command: EvidenceCommand,
   check: EvidenceCheckResult,
+  diagnostics: readonly string[] = diagnosticsForCheck(check),
 ): NormalizedCheckRecord {
   return {
     schemaVersion: CACHEABLE_LANE_CHECK_SCHEMA,
@@ -397,7 +398,7 @@ function normalizedCheckRecord(
       errorCode: check.errorCode,
       failureReason: check.failureReason,
     },
-    diagnostics: diagnosticsForCheck(check),
+    diagnostics,
   };
 }
 
@@ -564,6 +565,7 @@ export function createProducerBundleFromReport(options: {
   readonly report: ReleaseSpineEvidenceReport;
   readonly additionalArtifactFiles?: readonly EvidenceOutput[];
   readonly reusedReceipts?: ReadonlyMap<string, ReusableReceipt>;
+  readonly reusedChecks?: ReadonlyMap<string, ProducerCheckResult>;
 }): ProducerBundle {
   const { identity, lane, plan, report } = options;
   if (identity.profile !== report.profile) {
@@ -611,7 +613,27 @@ export function createProducerBundleFromReport(options: {
     }
     const recordPath = join(checksDirectory, `${checkId}.json`);
     const reusedReceipt = options.reusedReceipts?.get(checkId);
-    const record = normalizedCheckRecord(evidenceIdentity, command, check);
+    const reusedCheck = options.reusedChecks?.get(checkId);
+    if (
+      reusedReceipt &&
+      options.reusedChecks &&
+      (!reusedCheck ||
+        reusedCheck.selection !== "selected" ||
+        reusedCheck.semantics !== checkSemantics(checkId) ||
+        reusedCheck.outcome !== "passed")
+    ) {
+      throw new VerificationProblem(
+        "EXACT_CACHE_CHECK_REVALIDATION_FAILED",
+        "contract",
+        `Restored semantic result no longer matches ${checkId}.`,
+      );
+    }
+    const record = normalizedCheckRecord(
+      evidenceIdentity,
+      command,
+      check,
+      reusedCheck?.diagnostics,
+    );
     writeAtomicJson(recordPath, record);
     const recordOutput = outputForFile(options.rootDir, recordPath);
     const checkOutputs = collectImmutableCheckOutputs({
@@ -1111,6 +1133,9 @@ export async function runCacheableLane(
     report,
     additionalArtifactFiles: [factsOutput, ...securityOutputs, ...executionOutputs],
     reusedReceipts: cacheHit?.receipts,
+    reusedChecks: cacheHit
+      ? new Map(cacheHit.bundle.checks.map((check) => [check.id, check]))
+      : undefined,
   });
   writeAtomicJson(join(outputDir, PRODUCER_BUNDLE_FILE), bundle);
   if (options.cacheDir && cacheContext && !cacheHit) {

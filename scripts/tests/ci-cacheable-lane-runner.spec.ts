@@ -375,6 +375,23 @@ describe("cacheable producer lane evidence", () => {
     expect(hit.bundle.receipts.every(({ cache }) => cache.origin === "github-exact-key")).toBe(
       true,
     );
+    expect(
+      hit.bundle.checks.map(({ id, selection, semantics, outcome, diagnostics }) => ({
+        id,
+        selection,
+        semantics,
+        outcome,
+        diagnostics,
+      })),
+    ).toEqual(
+      cold.bundle.checks.map(({ id, selection, semantics, outcome, diagnostics }) => ({
+        id,
+        selection,
+        semantics,
+        outcome,
+        diagnostics,
+      })),
+    );
     const currentRecord = JSON.parse(
       readFileSync(join(hit.outputDir, "checks", "package-entrypoints-smoke.json"), "utf8"),
     ) as { identity: { runId: string; runAttempt: number } };
