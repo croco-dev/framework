@@ -329,7 +329,11 @@ describe("cacheable producer lane evidence", () => {
     const rootDir = mkdtempSync(join(tmpdir(), "croco-cacheable-lane-exact-hit-"));
     const cacheDir = join(rootDir, ".cache", "package-artifacts");
     const base = "a".repeat(40);
-    const changedFiles = ["README.md"];
+    const changedFiles = ["packages/testing/package.json"];
+    const artifactFreshnessClock = {
+      nowIso: () => new Date(0).toISOString(),
+      nowMs: () => 0,
+    };
 
     const cold = await runCacheableLane({
       identity: identity("publish"),
@@ -340,9 +344,11 @@ describe("cacheable producer lane evidence", () => {
       head: COMMIT_SHA,
       changedFiles,
       cacheDir,
+      clock: artifactFreshnessClock,
       runner: successfulRunner(rootDir),
     });
     expect(cold.cacheHit).toBe(false);
+    expect(cold.failed).toBe(false);
     expect(cold.bundle.receipts.length).toBeGreaterThan(0);
 
     vi.stubEnv("GITHUB_RUN_ID", "67890");
@@ -357,6 +363,7 @@ describe("cacheable producer lane evidence", () => {
       changedFiles,
       cacheDir,
       cacheOrigin: "github-exact-key",
+      clock: artifactFreshnessClock,
       runner: successfulRunner(rootDir),
     });
 
@@ -402,6 +409,7 @@ describe("cacheable producer lane evidence", () => {
         changedFiles,
         cacheDir,
         cacheOrigin: "github-exact-key",
+        clock: artifactFreshnessClock,
         runner: mutatingRunner,
       }),
     ).rejects.toMatchObject({ code: "EXACT_CACHE_REVALIDATION_FAILED" });
