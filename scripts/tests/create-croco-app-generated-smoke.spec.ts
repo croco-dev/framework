@@ -1,5 +1,6 @@
 import {
   closeSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   openSync,
@@ -13,14 +14,22 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   assertGeneratedBrowserWorkflowLeastPrivilege,
   assertGeneratedVerificationValidationsAreReadOnly,
+  markWorkspacePackageClosureBuilt,
   assertGeneratedPresentationProfileMatchesCatalog,
   createSaasMonetizationCanarySource,
+  hasCompleteTapTestEvidence,
+  prepareGeneratedUnitEvidenceCapture,
   readCommandOutputSegment,
   readGeneratedSmokeAllowlistMetadata,
+  reconcileGeneratedTestPaths,
   requiresCommandShell,
+  resolveTapSelectedGeneratedPaths,
+  selectCompletedGeneratedTestEntries,
   turboBuildArguments,
   turboConcurrencyArguments,
 } from "../create-croco-app-generated-smoke.mts";
+import type { TestInventoryEntry } from "../test-inventory.mts";
+import { readCompletedPlaywrightPaths, readCompletedVitestPaths } from "../test-lane-runner.mts";
 import {
   classifySmokeCommandFailure,
   classifySmokeFailure,
@@ -65,6 +74,303 @@ const journeySourceCaseNames = [
   "graphql-lambda-api",
   "rest-spa-contracts",
 ] as const;
+
+function generatedUnitInventoryEntry(generatedPath: string): TestInventoryEntry {
+  const sourcePath = `packages/create-croco-app/templates/test/${generatedPath}`;
+  return {
+    path: sourcePath,
+    lane: "generated-app",
+    qualifiers: [],
+    owner: "@croco/create-croco-app",
+    generated: {
+      sourcePath,
+      generatedPath,
+      commandId: "create-croco-app",
+    },
+  };
+}
+
+describe("generated test execution evidence", () => {
+  const entries: readonly TestInventoryEntry[] = [
+    {
+      path: "packages/create-croco-app/templates/example/src/tests/unit.spec.ts",
+      lane: "generated-app",
+      qualifiers: [],
+      owner: "@croco/create-croco-app",
+      generated: {
+        sourcePath: "packages/create-croco-app/templates/example/src/tests/unit.spec.ts",
+        generatedPath: "src/tests/unit.spec.ts",
+        commandId: "create-croco-app",
+      },
+    },
+    {
+      path: "packages/create-croco-app/templates/example/tests/journeys/user.spec.ts",
+      lane: "generated-app",
+      qualifiers: [],
+      owner: "@croco/create-croco-app",
+      generated: {
+        sourcePath: "packages/create-croco-app/templates/example/tests/journeys/user.spec.ts",
+        generatedPath: "tests/journeys/user.spec.ts",
+        commandId: "create-croco-app",
+      },
+    },
+  ];
+  const utilsEnvInventory = [
+    generatedUnitInventoryEntry("libs/shared/utils-env/src/tests/createEnv.spec.ts"),
+  ];
+
+  it("does not treat generated files as executed before their exact test stages pass", () => {
+    const projectDir = createTempRoot();
+    writeFile(join(projectDir, "src/tests/unit.spec.ts"), "test source");
+    writeFile(join(projectDir, "tests/journeys/user.spec.ts"), "journey source");
+
+    expect(selectCompletedGeneratedTestEntries(projectDir, entries, new Set())).toEqual([]);
+    expect(
+      selectCompletedGeneratedTestEntries(
+        projectDir,
+        entries,
+        new Set(["src/tests/unit.spec.ts"]),
+      ).map(({ path }) => path),
+    ).toEqual([entries[0].path]);
+    expect(
+      selectCompletedGeneratedTestEntries(
+        projectDir,
+        entries,
+        new Set(["src/tests/unit.spec.ts", "tests/journeys/user.spec.ts"]),
+      ).map(({ path }) => path),
+    ).toEqual(entries.map(({ path }) => path));
+  });
+
+  it("rejects skipped and partial TAP output from generated exact tests", () => {
+    expect(
+      hasCompleteTapTestEvidence(
+        "TAP version 13\n# tests 2\n# pass 2\n# fail 0\n# skipped 0\n# todo 0\n",
+      ),
+    ).toBe(true);
+    expect(
+      hasCompleteTapTestEvidence(
+        "TAP version 13\n# tests 2\n# pass 1\n# fail 0\n# skipped 1\n# todo 0\n",
+      ),
+    ).toBe(false);
+    expect(
+      hasCompleteTapTestEvidence(
+        "TAP version 13\n# tests 2\n# pass 1\n# fail 0\n# skipped 0\n# todo 0\n",
+      ),
+    ).toBe(false);
+  });
+
+  it("rejects all-skipped generated files while accepting platform-conditional skips", () => {
+    const projectDir = createTempRoot();
+    const vitestReport = join(projectDir, "vitest.json");
+    const playwrightReport = join(projectDir, "playwright.json");
+    writeFile(
+      vitestReport,
+      JSON.stringify({
+        testResults: [
+          {
+            name: join(projectDir, "src/tests/passed.spec.ts"),
+            status: "passed",
+            assertionResults: [{ status: "passed" }],
+          },
+          {
+            name: join(projectDir, "src/tests/partial.spec.ts"),
+            status: "passed",
+            assertionResults: [{ status: "passed" }, { status: "skipped" }],
+          },
+        ],
+      }),
+    );
+    writeFile(
+      playwrightReport,
+      JSON.stringify({
+        suites: [
+          {
+            specs: [
+              {
+                file: "tests/journeys/passed.spec.ts",
+                tests: [{ results: [{ status: "passed" }] }],
+              },
+              {
+                file: "tests/journeys/skipped.spec.ts",
+                tests: [{ results: [{ status: "skipped" }] }],
+              },
+            ],
+          },
+        ],
+      }),
+    );
+
+    expect(readCompletedVitestPaths(vitestReport, projectDir)).toEqual([
+      "src/tests/partial.spec.ts",
+      "src/tests/passed.spec.ts",
+    ]);
+    expect(readCompletedPlaywrightPaths(playwrightReport, projectDir)).toEqual([
+      "tests/journeys/passed.spec.ts",
+    ]);
+  });
+
+  it("reconciles Playwright basenames only when they identify one expected journey", () => {
+    expect(
+      reconcileGeneratedTestPaths(
+        ["create-user.spec.ts", "problem-rendering.spec.ts"],
+        ["tests/journeys/create-user.spec.ts", "tests/journeys/problem-rendering.spec.ts"],
+      ),
+    ).toEqual(["tests/journeys/create-user.spec.ts", "tests/journeys/problem-rendering.spec.ts"]);
+    expect(
+      reconcileGeneratedTestPaths(
+        ["duplicate.spec.ts"],
+        [
+          "apps/admin/tests/journeys/duplicate.spec.ts",
+          "apps/console/tests/journeys/duplicate.spec.ts",
+        ],
+      ),
+    ).toEqual([]);
+  });
+
+  it("captures evidence inside each existing generated test stage without adding test commands", () => {
+    const source = readFileSync(
+      join(import.meta.dirname, "../create-croco-app-generated-smoke.mts"),
+      "utf8",
+    );
+
+    expect(source).not.toContain("runExactGeneratedTest");
+    expect(source).not.toContain('"--force"');
+    expect(source.match(/runValidation\(projectDir, smokeCase, validation/g)).toHaveLength(1);
+    expect(source).toContain('validation.label === "test"');
+    expect(source).toContain('validation.label === "browser journeys"');
+    expect(source).toMatch(/try \{\n\s+unitCapture =/);
+  });
+
+  it("instruments the existing generated package test script and restores it", () => {
+    const projectDir = createTempRoot();
+    const packageDir = join(projectDir, "libs/shared/utils-env");
+    const manifestPath = join(packageDir, "package.json");
+    const turboConfigPath = join(projectDir, "turbo.json");
+    writeGeneratedPackage(projectDir, "package.json", {
+      name: "generated-app",
+      scripts: { test: "turbo test" },
+    });
+    writeGeneratedPackage(projectDir, "turbo.json", {
+      tasks: { test: { dependsOn: ["build"] } },
+    });
+    writeFile(join(projectDir, "libs/shared/utils-env/src/tests/createEnv.spec.ts"), "test source");
+    writeGeneratedPackage(projectDir, "libs/shared/utils-env/package.json", {
+      name: "@smoke/utils-env",
+      scripts: { test: "tsx --test src/tests/**/*.spec.ts" },
+    });
+    const original = readFileSync(manifestPath, "utf8");
+    const originalTurboConfig = readFileSync(turboConfigPath, "utf8");
+
+    const capture = prepareGeneratedUnitEvidenceCapture(projectDir, utilsEnvInventory);
+    expect(capture.reports).toHaveLength(1);
+    expect(capture.reports[0]).toMatchObject({
+      kind: "tap",
+      path: join(packageDir, ".croco-generated-test-evidence.json"),
+      packageDir,
+      selectedGeneratedPaths: ["libs/shared/utils-env/src/tests/createEnv.spec.ts"],
+    });
+    expect(readFileSync(manifestPath, "utf8")).toContain(
+      "tsx --test --test-reporter=tap --test-reporter-destination=.croco-generated-test-evidence.json src/tests/**/*.spec.ts",
+    );
+    expect(readGeneratedPackage(projectDir, "turbo.json")).toMatchObject({
+      tasks: { test: { outputs: [".croco-generated-test-evidence.json"] } },
+    });
+    capture.restore();
+
+    expect(readFileSync(manifestPath, "utf8")).toBe(original);
+    expect(readFileSync(turboConfigPath, "utf8")).toBe(originalTurboConfig);
+    expect(existsSync(join(packageDir, ".croco-generated-test-evidence.json"))).toBe(false);
+  });
+
+  it("does not credit aggregate TAP output when the script selects a different file", () => {
+    const projectDir = createTempRoot();
+    writeFile(
+      join(projectDir, "libs/shared/utils-env/src/tests/createEnv.spec.ts"),
+      "mapped test source",
+    );
+    writeFile(
+      join(projectDir, "libs/shared/utils-env/src/tests/other.spec.ts"),
+      "other test source",
+    );
+    writeGeneratedPackage(projectDir, "libs/shared/utils-env/package.json", {
+      name: "@smoke/utils-env",
+      scripts: { test: "tsx --test src/tests/other.spec.ts" },
+    });
+
+    expect(() => prepareGeneratedUnitEvidenceCapture(projectDir, utilsEnvInventory)).toThrow(
+      "TAP generated test selectors do not exactly match mapped tests",
+    );
+  });
+
+  it("rolls back earlier generated package and Turbo mutations when preparation later fails", () => {
+    const projectDir = createTempRoot();
+    const validManifestPath = join(projectDir, "apps/valid/package.json");
+    const turboConfigPath = join(projectDir, "turbo.json");
+    writeGeneratedPackage(projectDir, "package.json", {
+      name: "generated-app",
+      scripts: { test: "turbo test" },
+    });
+    writeGeneratedPackage(projectDir, "turbo.json", {
+      tasks: { test: { dependsOn: ["build"] } },
+    });
+    writeFile(join(projectDir, "apps/valid/src/tests/valid.spec.ts"), "valid test source");
+    writeGeneratedPackage(projectDir, "apps/valid/package.json", {
+      name: "@smoke/valid",
+      scripts: { test: "vitest run" },
+    });
+    writeFile(
+      join(projectDir, "libs/unsupported/src/tests/unsupported.spec.ts"),
+      "unsupported test source",
+    );
+    writeGeneratedPackage(projectDir, "libs/unsupported/package.json", {
+      name: "@smoke/unsupported",
+      scripts: { test: "node src/tests/unsupported.spec.ts" },
+    });
+    const originalValidManifest = readFileSync(validManifestPath, "utf8");
+    const originalTurboConfig = readFileSync(turboConfigPath, "utf8");
+
+    expect(() =>
+      prepareGeneratedUnitEvidenceCapture(projectDir, [
+        generatedUnitInventoryEntry("apps/valid/src/tests/valid.spec.ts"),
+        generatedUnitInventoryEntry("libs/unsupported/src/tests/unsupported.spec.ts"),
+      ]),
+    ).toThrow("uses an unsupported evidence runner");
+
+    expect(readFileSync(validManifestPath, "utf8")).toBe(originalValidManifest);
+    expect(readFileSync(turboConfigPath, "utf8")).toBe(originalTurboConfig);
+    expect(existsSync(join(projectDir, "apps/valid/.croco-generated-test-evidence.json"))).toBe(
+      false,
+    );
+  });
+
+  it("rejects generated inventory paths outside the generated project boundary", () => {
+    const root = createTempRoot();
+    const projectDir = join(root, "project");
+    mkdirSync(projectDir, { recursive: true });
+    writeFile(join(root, "outside/src/tests/outside.spec.ts"), "outside test source");
+    writeGeneratedPackage(root, "outside/package.json", {
+      name: "@smoke/outside",
+      scripts: { test: "vitest run" },
+    });
+
+    expect(() =>
+      prepareGeneratedUnitEvidenceCapture(projectDir, [
+        generatedUnitInventoryEntry("../outside/src/tests/outside.spec.ts"),
+      ]),
+    ).toThrow("Generated test has no package.json boundary: ../outside/src/tests/outside.spec.ts");
+  });
+
+  it("excludes directory entries selected by broad TAP globs", () => {
+    const projectDir = createTempRoot();
+    const packageDir = join(projectDir, "apps/api");
+    writeFile(join(projectDir, "apps/api/src/tests/unit.spec.ts"), "test source");
+    mkdirSync(join(packageDir, "src/tests/fixtures"), { recursive: true });
+
+    expect(resolveTapSelectedGeneratedPaths("tsx --test src/**", packageDir, projectDir)).toEqual([
+      "apps/api/src/tests/unit.spec.ts",
+    ]);
+  });
+});
 
 describe("generated browser workflow policy", () => {
   it("accepts read-only permissions with non-persistent checkout credentials", () => {
@@ -119,17 +425,66 @@ describe("generated smoke command execution", () => {
   });
 
   it("bounds Windows workspace build concurrency for TypeScript declaration bundling", () => {
-    expect(turboConcurrencyArguments("win32")).toEqual(["--concurrency=4"]);
-    expect(turboConcurrencyArguments("linux")).toEqual([]);
+    expect(turboConcurrencyArguments("win32")).toEqual(["--concurrency=2"]);
+    expect(turboConcurrencyArguments("linux")).toEqual(["--concurrency=4"]);
     expect(turboBuildArguments(["@croco/example"], "win32")).toEqual([
       "build",
-      "--concurrency=4",
+      "--concurrency=2",
       "--filter=@croco/example...",
     ]);
     expect(turboBuildArguments(["@croco/example"], "linux")).toEqual([
       "build",
+      "--concurrency=4",
       "--filter=@croco/example...",
     ]);
+  });
+
+  it("reuses every package built by a successful workspace dependency closure", () => {
+    const built = new Set(["@croco/already-built"]);
+    const workspacePackages = new Map([
+      [
+        "@croco/app",
+        {
+          name: "@croco/app",
+          packageDir: "/workspace/packages/app",
+          version: "1.0.0",
+          dependencyNames: ["@croco/core"],
+        },
+      ],
+      [
+        "@croco/core",
+        {
+          name: "@croco/core",
+          packageDir: "/workspace/packages/core",
+          version: "1.0.0",
+          dependencyNames: ["@croco/shared"],
+        },
+      ],
+      [
+        "@croco/shared",
+        {
+          name: "@croco/shared",
+          packageDir: "/workspace/packages/shared",
+          version: "1.0.0",
+          dependencyNames: [],
+        },
+      ],
+    ]);
+
+    markWorkspacePackageClosureBuilt(["@croco/app"], workspacePackages, built);
+
+    expect([...built].sort()).toEqual([
+      "@croco/already-built",
+      "@croco/app",
+      "@croco/core",
+      "@croco/shared",
+    ]);
+  });
+
+  it("fails when a declared workspace build root is unknown", () => {
+    expect(() =>
+      markWorkspacePackageClosureBuilt(["@croco/missing"], new Map(), new Set()),
+    ).toThrow("Workspace build references unknown package @croco/missing");
   });
 });
 

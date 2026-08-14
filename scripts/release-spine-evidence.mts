@@ -8,6 +8,7 @@ import {
   mkdirSync,
   openSync,
   readFileSync,
+  renameSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -36,6 +37,7 @@ const DEFAULT_TOTAL_TIMEOUT_MS = 150 * 60 * 1000;
 const DEFAULT_OUTPUT_EXCERPT_LENGTH = 4_000;
 const COMMAND_OUTPUT_MAX_BUFFER = 50 * 1024 * 1024;
 const COMMAND_TIMEOUT_KILL_GRACE_MS = 5_000;
+const DEFAULT_CLI_MAX_CONCURRENCY = 2;
 
 type EvidenceCategory =
   | "build"
@@ -56,6 +58,7 @@ export type EvidenceStatus =
   | "timed_out"
   | "interrupted"
   | "skipped_after_timeout"
+  | "skipped_prerequisite"
   | "not_applicable";
 
 export type EvidenceArtifactExpectation = {
@@ -81,6 +84,8 @@ export type EvidenceCommand = {
   readonly category: EvidenceCategory;
   readonly command: readonly string[];
   readonly timeoutMs: number;
+  readonly dependsOn?: readonly string[];
+  readonly concurrencyGroup?: string;
   readonly applicable?: boolean;
   readonly selectionReason?: string;
   readonly artifacts?: readonly EvidenceArtifactExpectation[];
@@ -127,6 +132,7 @@ export type ReleaseSpineEvidenceReport = {
     readonly pending: number;
     readonly running: number;
     readonly skippedAfterTimeout: number;
+    readonly skippedPrerequisite: number;
     readonly timedOut: number;
     readonly total: number;
   };
@@ -174,13 +180,15 @@ type Options = {
   readonly rootDir: string;
   readonly outputDir: string;
   readonly totalTimeoutMs: number;
+  readonly maxConcurrency: number;
   readonly profile?: VerificationProfile;
   readonly base?: string;
   readonly head?: string;
   readonly testEvidencePath?: string;
 };
 
-type RunOptions = Options & {
+type RunOptions = Omit<Options, "maxConcurrency"> & {
+  readonly maxConcurrency?: number;
   readonly changedFiles?: readonly string[];
   readonly clock?: Clock;
   readonly commands?: readonly EvidenceCommand[];
@@ -234,8 +242,8 @@ function readChangedFiles(
     return undefined;
   }
 }
-let activeCommandProcess: ChildProcess | null = null;
-let activeInterruptKillTimer: ReturnType<typeof setTimeout> | null = null;
+const activeCommandProcesses = new Set<ChildProcess>();
+const activeInterruptKillTimers = new Map<ChildProcess, ReturnType<typeof setTimeout>>();
 
 export function createReleaseSpineEvidenceManifest(): readonly EvidenceCommand[] {
   return createVerificationManifest("spine");
@@ -305,6 +313,7 @@ function emptySummary(total: number): ReleaseSpineEvidenceReport["summary"] {
     pending: total,
     running: 0,
     skippedAfterTimeout: 0,
+    skippedPrerequisite: 0,
     timedOut: 0,
     total,
   };
@@ -331,6 +340,9 @@ function summarizeReport(report: ReleaseSpineEvidenceReport): ReleaseSpineEviden
       if (check.status === "skipped_after_timeout") {
         return { ...counts, skippedAfterTimeout: counts.skippedAfterTimeout + 1 };
       }
+      if (check.status === "skipped_prerequisite") {
+        return { ...counts, skippedPrerequisite: counts.skippedPrerequisite + 1 };
+      }
       if (check.status === "running") {
         return { ...counts, running: counts.running + 1 };
       }
@@ -344,6 +356,7 @@ function summarizeReport(report: ReleaseSpineEvidenceReport): ReleaseSpineEviden
       pending: 0,
       running: 0,
       skippedAfterTimeout: 0,
+      skippedPrerequisite: 0,
       timedOut: 0,
       total: report.checks.length,
     },
@@ -366,6 +379,9 @@ function finalStatus(checks: readonly EvidenceCheckResult[]): ReleaseSpineEviden
     return "timed_out";
   }
   if (checks.some((check) => check.status === "failed")) {
+    return "failed";
+  }
+  if (checks.some((check) => check.status === "skipped_prerequisite")) {
     return "failed";
   }
   if (checks.some((check) => check.status === "running" || check.status === "pending")) {
@@ -441,24 +457,29 @@ export function interruptActiveCommand(
   signal: NodeJS.Signals,
   killGraceMs = COMMAND_TIMEOUT_KILL_GRACE_MS,
 ): void {
-  const child = activeCommandProcess;
-  if (!child) {
+  if (activeCommandProcesses.size === 0) {
     return;
   }
 
-  signalCommandProcessTree(child, signal);
-  if (signal === "SIGKILL") {
-    return;
-  }
-  if (activeInterruptKillTimer) {
-    clearTimeout(activeInterruptKillTimer);
-  }
-  activeInterruptKillTimer = setTimeout(() => {
-    if (activeCommandProcess === child) {
-      signalCommandProcessTree(child, "SIGKILL");
+  for (const child of activeCommandProcesses) {
+    signalCommandProcessTree(child, signal);
+    if (signal === "SIGKILL") {
+      continue;
     }
-    activeInterruptKillTimer = null;
-  }, killGraceMs);
+    const existingTimer = activeInterruptKillTimers.get(child);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
+    activeInterruptKillTimers.set(
+      child,
+      setTimeout(() => {
+        if (activeCommandProcesses.has(child)) {
+          signalCommandProcessTree(child, "SIGKILL");
+        }
+        activeInterruptKillTimers.delete(child);
+      }, killGraceMs),
+    );
+  }
 }
 
 function signalCommandProcessTree(child: ChildProcess, signal: NodeJS.Signals): void {
@@ -568,7 +589,7 @@ export const defaultCommandRunner: CommandRunner = (check, context) =>
       env: context.env ?? process.env,
       stdio: ["ignore", "pipe", "pipe"],
     });
-    activeCommandProcess = child;
+    activeCommandProcesses.add(child);
 
     const timeoutTimer = setTimeout(() => {
       timedOut = true;
@@ -587,12 +608,11 @@ export const defaultCommandRunner: CommandRunner = (check, context) =>
       if (killTimer) {
         clearTimeout(killTimer);
       }
-      if (activeCommandProcess === child) {
-        activeCommandProcess = null;
-      }
-      if (activeInterruptKillTimer) {
-        clearTimeout(activeInterruptKillTimer);
-        activeInterruptKillTimer = null;
+      activeCommandProcesses.delete(child);
+      const interruptKillTimer = activeInterruptKillTimers.get(child);
+      if (interruptKillTimer) {
+        clearTimeout(interruptKillTimer);
+        activeInterruptKillTimers.delete(child);
       }
       closeOutput("stdout", stdoutDescriptor);
       closeOutput("stderr", stderrDescriptor);
@@ -971,13 +991,12 @@ function rejectedCommandRunResult(error: unknown): CommandRunResult {
 
 function markSkippedAfterTimeout(
   report: ReleaseSpineEvidenceReport,
-  startIndex: number,
   completedAt: string,
 ): ReleaseSpineEvidenceReport {
   return summarizeReport({
     ...report,
-    checks: report.checks.map((check, index) => {
-      if (index < startIndex || check.status !== "pending") {
+    checks: report.checks.map((check) => {
+      if (check.status !== "pending") {
         return check;
       }
 
@@ -989,6 +1008,68 @@ function markSkippedAfterTimeout(
       };
     }),
   });
+}
+
+function assertValidDependencies(commands: readonly EvidenceCommand[]): void {
+  const ids = new Set<string>();
+  for (const command of commands) {
+    if (ids.has(command.id)) {
+      throw new VerificationProblem(
+        "DUPLICATE_EVIDENCE_COMMAND",
+        "input",
+        `Evidence command ID must be unique: ${command.id}`,
+      );
+    }
+    ids.add(command.id);
+  }
+
+  for (const command of commands) {
+    for (const dependency of command.dependsOn ?? []) {
+      if (!ids.has(dependency)) {
+        throw new VerificationProblem(
+          "UNKNOWN_EVIDENCE_DEPENDENCY",
+          "input",
+          `Evidence command ${command.id} depends on unknown command ${dependency}.`,
+        );
+      }
+    }
+  }
+
+  const visited = new Set<string>();
+  const visiting = new Set<string>();
+  const byId = new Map(commands.map((command) => [command.id, command]));
+  const visit = (id: string): void => {
+    if (visited.has(id)) return;
+    if (visiting.has(id)) {
+      throw new VerificationProblem(
+        "CYCLIC_EVIDENCE_DEPENDENCY",
+        "input",
+        `Evidence command dependency graph contains a cycle involving ${id}.`,
+      );
+    }
+    visiting.add(id);
+    for (const dependency of byId.get(id)?.dependsOn ?? []) {
+      if (byId.has(dependency)) visit(dependency);
+    }
+    visiting.delete(id);
+    visited.add(id);
+  };
+  for (const command of commands) visit(command.id);
+}
+
+function skippedPrerequisiteReason(
+  command: EvidenceCommand,
+  checksById: ReadonlyMap<string, EvidenceCheckResult>,
+): string | null {
+  const blockers = (command.dependsOn ?? []).flatMap((dependency) => {
+    const status = checksById.get(dependency)?.status;
+    return status && status !== "passed" && status !== "not_applicable"
+      ? [`${dependency} (${status})`]
+      : [];
+  });
+  return blockers.length > 0
+    ? `Skipped because prerequisite check(s) did not pass: ${blockers.join(", ")}.`
+    : null;
 }
 
 export function markReportInterrupted(
@@ -1041,7 +1122,16 @@ export async function runReleaseSpineEvidence(
         rootDir,
       )
     : unresolvedCommands;
+  assertValidDependencies(commands);
   const runner = options.runner ?? defaultCommandRunner;
+  const maxConcurrency = options.maxConcurrency ?? 1;
+  if (!Number.isSafeInteger(maxConcurrency) || maxConcurrency <= 0) {
+    throw new VerificationProblem(
+      "INVALID_MAX_CONCURRENCY",
+      "input",
+      "maxConcurrency must be a positive integer",
+    );
+  }
   const maxOutputExcerptLength = options.maxOutputExcerptLength ?? DEFAULT_OUTPUT_EXCERPT_LENGTH;
   const outputDir = resolve(rootDir, options.outputDir);
   const generatedAt = clock.nowIso();
@@ -1075,24 +1165,33 @@ export async function runReleaseSpineEvidence(
 
   checkpoint();
 
-  for (const [index, check] of commands.entries()) {
-    const signalBeforeCheck = options.getInterruptSignal?.() ?? null;
-    if (signalBeforeCheck) {
-      report = markReportInterrupted(report, signalBeforeCheck, clock.nowIso());
-      checkpoint();
-      break;
+  type CompletedExecution = { readonly index: number; readonly check: EvidenceCheckResult };
+  const active = new Map<number, Promise<CompletedExecution>>();
+  const activeGroups = new Set<string>();
+  let interruptionHandled = false;
+
+  const executeCheckUnsafe = async (index: number): Promise<CompletedExecution> => {
+    const check = commands[index];
+    const current = report.checks[index];
+    if (!check || !current) {
+      throw new VerificationProblem(
+        "MISSING_EVIDENCE_COMMAND",
+        "contract",
+        `Missing check ${index}.`,
+      );
     }
     if (check.applicable === false) {
-      report = updateCheck(report, index, {
-        ...report.checks[index],
-        completedAt: clock.nowIso(),
-        failureReason:
-          check.selectionReason ??
-          "Not applicable to the changed files in this verification context.",
-        status: "not_applicable",
-      });
-      checkpoint();
-      continue;
+      return {
+        index,
+        check: {
+          ...current,
+          completedAt: clock.nowIso(),
+          failureReason:
+            check.selectionReason ??
+            "Not applicable to the changed files in this verification context.",
+          status: "not_applicable",
+        },
+      };
     }
     if (check.reusedEvidence) {
       const artifacts = collectReusedArtifactReferences(
@@ -1101,31 +1200,24 @@ export async function runReleaseSpineEvidence(
         check.reusedEvidence.recordId,
       );
       if (artifacts.every((artifact) => !artifact.required || artifact.exists)) {
-        report = updateCheck(report, index, {
-          ...report.checks[index],
-          artifacts,
-          completedAt: clock.nowIso(),
-          durationMs: 0,
-          effectiveTimeoutMs: 0,
-          exitCode: 0,
-          status: "passed",
-          stdoutExcerpt: `Reused ${check.reusedEvidence.recordId} from ${check.reusedEvidence.path} for commit ${commitSha}.`,
-        });
-        checkpoint();
-        continue;
+        return {
+          index,
+          check: {
+            ...current,
+            artifacts,
+            completedAt: clock.nowIso(),
+            durationMs: 0,
+            effectiveTimeoutMs: 0,
+            exitCode: 0,
+            status: "passed",
+            stdoutExcerpt: `Reused ${check.reusedEvidence.recordId} from ${check.reusedEvidence.path} for commit ${commitSha}.`,
+          },
+        };
       }
-      report = updateCheck(report, index, {
-        ...clearReusedEvidence(report.checks[index]),
-      });
-    }
-    const elapsedMs = clock.nowMs() - runStartedAtMs;
-    const remainingTotalTimeoutMs = options.totalTimeoutMs - elapsedMs;
-    if (remainingTotalTimeoutMs <= 0) {
-      report = markSkippedAfterTimeout(report, index, clock.nowIso());
-      checkpoint();
-      break;
+      report = updateCheck(report, index, clearReusedEvidence(current));
     }
 
+    const remainingTotalTimeoutMs = options.totalTimeoutMs - (clock.nowMs() - runStartedAtMs);
     const startedAt = clock.nowIso();
     const startedMs = clock.nowMs();
     const effectiveTimeoutMs = Math.min(check.timeoutMs, remainingTotalTimeoutMs);
@@ -1184,53 +1276,189 @@ export async function runReleaseSpineEvidence(
     } catch (error) {
       result = rejectedCommandRunResult(error);
     }
-    const completedAt = clock.nowIso();
-    const durationMs = Math.max(0, clock.nowMs() - startedMs);
-    const commandArtifacts = collectArtifactReferences(check, rootDir, outputDir, startedMs);
-    const artifactReason = artifactFailureReason(commandArtifacts);
+    try {
+      const completedAt = clock.nowIso();
+      const commandArtifacts = collectArtifactReferences(check, rootDir, outputDir, startedMs);
+      const artifactReason = artifactFailureReason(commandArtifacts);
+      const interruptionSignal = options.getInterruptSignal?.() ?? null;
+      let status: EvidenceStatus = interruptionSignal
+        ? "interrupted"
+        : artifactReason && result.status === 0 && !result.timedOut
+          ? "failed"
+          : resultStatus(result);
+      let cleanupError: string | null = null;
+      if (status === "passed") {
+        cleanupError = discardCommandOutput(outputDir, check.id);
+        if (cleanupError) status = "failed";
+      }
+      const artifacts =
+        status === "failed" || status === "timed_out" || status === "interrupted"
+          ? [
+              ...commandArtifacts,
+              ...persistFailedCommandOutput(check.id, result, rootDir, outputDir, completedAt),
+            ]
+          : commandArtifacts;
+      return {
+        index,
+        check: {
+          ...report.checks[index],
+          artifacts,
+          completedAt,
+          durationMs: Math.max(0, clock.nowMs() - startedMs),
+          effectiveTimeoutMs,
+          errorCode: cleanupError ? "COMMAND_OUTPUT_CLEANUP_FAILED" : result.errorCode,
+          errorMessage: cleanupError ?? result.errorMessage,
+          exitCode: result.status,
+          failureReason: interruptionSignal
+            ? `Release spine evidence was interrupted by ${interruptionSignal}.`
+            : (cleanupError ?? failureReason(result, artifactReason)),
+          signal: interruptionSignal ?? result.signal,
+          status,
+          stderrExcerpt: outputExcerpt(result.stderr, maxOutputExcerptLength),
+          stdoutExcerpt: outputExcerpt(result.stdout, maxOutputExcerptLength),
+        },
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return {
+        index,
+        check: {
+          ...report.checks[index],
+          artifacts: [],
+          completedAt: clock.nowIso(),
+          durationMs: Math.max(0, clock.nowMs() - startedMs),
+          effectiveTimeoutMs,
+          errorCode: "POST_RUN_EVIDENCE_FAILED",
+          errorMessage: message,
+          exitCode: result.status,
+          failureReason: `Post-run release evidence processing failed: ${message}`,
+          signal: result.signal,
+          status: "failed",
+          stderrExcerpt: "",
+          stdoutExcerpt: "",
+        },
+      };
+    }
+  };
+
+  const executeCheck = async (index: number): Promise<CompletedExecution> => {
+    try {
+      return await executeCheckUnsafe(index);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const command = commands[index] ?? {
+        id: `missing-${index}`,
+        label: `Missing check ${index}`,
+        category: "quality" as const,
+        command: [],
+        timeoutMs: 0,
+      };
+      const current = report.checks[index] ?? createPendingCheck(command);
+      return {
+        index,
+        check: {
+          ...current,
+          artifacts: [],
+          completedAt: clock.nowIso(),
+          durationMs: current.durationMs ?? 0,
+          errorCode: error instanceof VerificationProblem ? error.code : "POST_RUN_EVIDENCE_FAILED",
+          errorMessage: message,
+          exitCode: current.exitCode,
+          failureReason: `Release evidence execution failed before a result was produced: ${message}`,
+          signal: current.signal,
+          status: "failed",
+          stderrExcerpt: current.stderrExcerpt,
+          stdoutExcerpt: current.stdoutExcerpt,
+        },
+      };
+    }
+  };
+
+  while (report.checks.some(({ status }) => status === "pending" || status === "running")) {
     const interruptionSignal = options.getInterruptSignal?.() ?? null;
-    let status = interruptionSignal
-      ? "interrupted"
-      : artifactReason && result.status === 0 && !result.timedOut
-        ? "failed"
-        : resultStatus(result);
-    let cleanupError: string | null = null;
-    if (status !== "failed" && status !== "timed_out" && status !== "interrupted") {
-      cleanupError = discardCommandOutput(outputDir, check.id);
-      if (cleanupError) {
-        status = "failed";
+    if (interruptionSignal && !interruptionHandled) {
+      interruptionHandled = true;
+      interruptActiveCommand(interruptionSignal);
+      report = markReportInterrupted(report, interruptionSignal, clock.nowIso());
+      checkpoint();
+    }
+
+    if (!interruptionSignal) {
+      let skippedAny = false;
+      const checksById = new Map(report.checks.map((check) => [check.id, check]));
+      for (const [index, command] of commands.entries()) {
+        if (report.checks[index]?.status !== "pending") continue;
+        const dependencyChecks = (command.dependsOn ?? []).map((id) => checksById.get(id));
+        if (
+          dependencyChecks.some(
+            (check) => check?.status === "pending" || check?.status === "running",
+          )
+        ) {
+          continue;
+        }
+        const reason = skippedPrerequisiteReason(command, checksById);
+        if (!reason) continue;
+        report = updateCheck(report, index, {
+          ...report.checks[index],
+          completedAt: clock.nowIso(),
+          failureReason: reason,
+          status: "skipped_prerequisite",
+        });
+        skippedAny = true;
+      }
+      if (skippedAny) checkpoint();
+
+      if (options.totalTimeoutMs - (clock.nowMs() - runStartedAtMs) <= 0) {
+        report = markSkippedAfterTimeout(report, clock.nowIso());
+        checkpoint();
+      } else {
+        const checksByIdAfterSkips = new Map(report.checks.map((check) => [check.id, check]));
+        for (const [index, command] of commands.entries()) {
+          if (active.size >= maxConcurrency) break;
+          if (report.checks[index]?.status !== "pending") continue;
+          if (command.concurrencyGroup && activeGroups.has(command.concurrencyGroup)) continue;
+          const dependenciesReady = (command.dependsOn ?? []).every((id) => {
+            const status = checksByIdAfterSkips.get(id)?.status;
+            return status === "passed" || status === "not_applicable";
+          });
+          if (!dependenciesReady) continue;
+          if (command.concurrencyGroup) activeGroups.add(command.concurrencyGroup);
+          const execution = executeCheck(index);
+          active.set(index, execution);
+        }
       }
     }
-    const artifacts =
-      status === "failed" || status === "timed_out" || status === "interrupted"
-        ? [
-            ...commandArtifacts,
-            ...persistFailedCommandOutput(check.id, result, rootDir, outputDir, completedAt),
-          ]
-        : commandArtifacts;
 
-    report = updateCheck(report, index, {
-      ...report.checks[index],
-      artifacts,
-      completedAt,
-      durationMs,
-      effectiveTimeoutMs,
-      errorCode: cleanupError ? "COMMAND_OUTPUT_CLEANUP_FAILED" : result.errorCode,
-      errorMessage: cleanupError ?? result.errorMessage,
-      exitCode: result.status,
-      failureReason: interruptionSignal
-        ? `Release spine evidence was interrupted by ${interruptionSignal}.`
-        : (cleanupError ?? failureReason(result, artifactReason)),
-      signal: interruptionSignal ?? result.signal,
-      status,
-      stderrExcerpt: outputExcerpt(result.stderr, maxOutputExcerptLength),
-      stdoutExcerpt: outputExcerpt(result.stdout, maxOutputExcerptLength),
-    });
+    if (active.size === 0) break;
+    const completed = await Promise.race(active.values());
+    active.delete(completed.index);
+    const completedCommand = commands[completed.index];
+    if (completedCommand?.concurrencyGroup) activeGroups.delete(completedCommand.concurrencyGroup);
+    const existing = report.checks[completed.index];
+    const nextCheck =
+      existing?.status === "interrupted"
+        ? {
+            ...completed.check,
+            failureReason: existing.failureReason,
+            signal: existing.signal,
+            status: "interrupted" as const,
+          }
+        : completed.check;
+    report = updateCheck(report, completed.index, nextCheck);
     checkpoint();
-    if (interruptionSignal) {
-      report = markReportInterrupted(report, interruptionSignal, completedAt);
+  }
+
+  if (active.size > 0) {
+    const completed = await Promise.all(active.values());
+    for (const result of completed) {
+      const existing = report.checks[result.index];
+      report = updateCheck(report, result.index, {
+        ...result.check,
+        failureReason: existing?.failureReason ?? result.check.failureReason,
+        signal: existing?.signal ?? result.check.signal,
+        status: existing?.status === "interrupted" ? "interrupted" : result.check.status,
+      });
       checkpoint();
-      break;
     }
   }
 
@@ -1363,7 +1591,7 @@ export function buildReleaseSpineEvidenceMarkdown(report: ReleaseSpineEvidenceRe
     `- Commit: \`${report.provenance.commitSha}\``,
     `- Run: \`${report.provenance.runId}\` attempt \`${report.provenance.runAttempt}\``,
     `- Total timeout: ${formatTimeout(report.totalTimeoutMs)}`,
-    `- Checks: ${report.summary.passed}/${report.summary.total} passed, ${report.summary.notApplicable} not applicable, ${report.summary.failed} failed, ${report.summary.timedOut} timed out, ${report.summary.interrupted} interrupted, ${report.summary.skippedAfterTimeout} skipped after timeout`,
+    `- Checks: ${report.summary.passed}/${report.summary.total} passed, ${report.summary.notApplicable} not applicable, ${report.summary.failed} failed, ${report.summary.timedOut} timed out, ${report.summary.interrupted} interrupted, ${report.summary.skippedAfterTimeout} skipped after timeout, ${report.summary.skippedPrerequisite} skipped by prerequisite`,
     "",
     "## Check summary",
     "",
@@ -1417,12 +1645,21 @@ export function writeReleaseSpineEvidenceReport(
 ): ReleaseSpineEvidenceReport {
   mkdirSync(outputDir, { recursive: true });
   const summarized = summarizeReport(report);
-  writeFileSync(join(outputDir, REPORT_JSON_FILE_NAME), `${JSON.stringify(summarized, null, 2)}\n`);
-  writeFileSync(
+  writeAtomicFile(
+    join(outputDir, REPORT_JSON_FILE_NAME),
+    `${JSON.stringify(summarized, null, 2)}\n`,
+  );
+  writeAtomicFile(
     join(outputDir, REPORT_MARKDOWN_FILE_NAME),
     buildReleaseSpineEvidenceMarkdown(summarized),
   );
   return summarized;
+}
+
+function writeAtomicFile(path: string, contents: string): void {
+  const temporaryPath = `${path}.${process.pid}.tmp`;
+  writeFileSync(temporaryPath, contents);
+  renameSync(temporaryPath, path);
 }
 
 export function failedCheckDiagnostics(report: ReleaseSpineEvidenceReport): readonly string[] {
@@ -1432,7 +1669,8 @@ export function failedCheckDiagnostics(report: ReleaseSpineEvidenceReport): read
         status === "failed" ||
         status === "timed_out" ||
         status === "interrupted" ||
-        status === "skipped_after_timeout",
+        status === "skipped_after_timeout" ||
+        status === "skipped_prerequisite",
     )
     .map(({ errorMessage, failureReason, id, status, stderrExcerpt }) => {
       const details = [failureReason, errorMessage, stderrExcerpt.trim()]
@@ -1468,6 +1706,7 @@ export function parseArgs(args: readonly string[] = argv.slice(2)): Options {
   let outputDir = join(rootDir, DEFAULT_OUTPUT_DIRECTORY);
   let outputDirWasExplicit = false;
   let totalTimeoutMs = DEFAULT_TOTAL_TIMEOUT_MS;
+  let maxConcurrency = DEFAULT_CLI_MAX_CONCURRENCY;
   let profile: VerificationProfile = "spine";
   let profileWasExplicit = false;
   let base: string | undefined;
@@ -1545,6 +1784,20 @@ export function parseArgs(args: readonly string[] = argv.slice(2)): Options {
       continue;
     }
 
+    if (arg === "--max-concurrency") {
+      const value = args[index + 1];
+      if (!value) {
+        throw new VerificationProblem(
+          "MISSING_MAX_CONCURRENCY",
+          "input",
+          "--max-concurrency requires a value",
+        );
+      }
+      maxConcurrency = parsePositiveInteger(value, "--max-concurrency");
+      index++;
+      continue;
+    }
+
     if (arg === "--profile") {
       if (profileWasExplicit) {
         throw new VerificationProblem(
@@ -1593,6 +1846,7 @@ export function parseArgs(args: readonly string[] = argv.slice(2)): Options {
     rootDir: resolve(rootDir),
     outputDir: resolve(outputDir),
     totalTimeoutMs,
+    maxConcurrency,
     profile,
     base,
     head,

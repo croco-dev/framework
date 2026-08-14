@@ -1,8 +1,10 @@
+import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import {
   closeSync,
   copyFileSync,
   existsSync,
+  globSync,
   mkdirSync,
   mkdtempSync,
   openSync,
@@ -14,7 +16,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, dirname, extname, join, relative, resolve } from "node:path";
+import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parse as parseYaml } from "yaml";
 import {
@@ -64,6 +66,9 @@ import {
   writePnpmWorkspaceOverrides,
 } from "./create-croco-app-generated-smoke-support.mts";
 import { assertGeneratedSmokeCaseDependencyMapping } from "./create-croco-app-generated-smoke-dependencies.mts";
+import { inventoryDigest, readTestInventory } from "./test-inventory.mts";
+import { readCompletedPlaywrightPaths, readCompletedVitestPaths } from "./test-lane-runner.mts";
+import type { MaterializationEvidence, TestInventoryEntry } from "./test-inventory.mts";
 
 const DEFAULT_TENANT_MODEL = "org";
 const GENERATED_NODE_VERSION = VERSIONS.node;
@@ -81,6 +86,43 @@ const GRAPHQL_RESOLVER_METADATA_DRIFT_CODES = [
   "graphql-resolver-interceptors-changed",
   "graphql-resolver-di-scope-changed",
   "graphql-resolver-problems-changed",
+] as const;
+const GENERATED_SMOKE_WORKSPACE_BUILD_ROOTS = [
+  "@croco/auth-better-auth",
+  "@croco/auth-clerk",
+  "@croco/auth-drizzle",
+  "@croco/billing-polar",
+  "@croco/cli",
+  "@croco/events-core",
+  "@croco/events-inmemory",
+  "create-croco-app",
+  "@croco/framework-context",
+  "@croco/frontend-cloudflare",
+  "@croco/frontend-problems",
+  "@croco/frontend-react",
+  "@croco/frontend-vite",
+  "@croco/llm-core",
+  "@croco/llm-metering",
+  "@croco/meta-vite",
+  "@croco/lifecycle-core",
+  "@croco/metering-drizzle",
+  "@croco/metering-upstash",
+  "@croco/openapi-spec",
+  "@croco/problems-core",
+  "@croco/preset-cloudflare",
+  "@croco/preset-lambda",
+  "@croco/repository-core",
+  "@croco/retry-core",
+  "@croco/rpc-codegen",
+  "@croco/storage-cloudinary",
+  "@croco/storage-r2",
+  "@croco/tasks-qstash",
+  "@croco/telemetry-api",
+  "@croco/telemetry-sdk-node",
+  "@croco/tenant-core",
+  "@croco/transports-http",
+  "@croco/triggers-qstash",
+  "@croco/tx-drizzle",
 ] as const;
 
 type GraphQLContractSnapshotJson = {
@@ -156,6 +198,7 @@ type SmokeStepResult = {
   readonly expectFailure?: boolean;
   status: SmokeStepStatus;
   diagnosticCodes: readonly string[];
+  executedTestPaths: readonly string[];
   error?: string;
 };
 
@@ -259,6 +302,302 @@ const generatedAppTemplatesDir = join(rootDir, "packages", "create-croco-app", "
 const generatedSmokeReportDir = resolve(
   process.env.CROCO_GENERATED_SMOKE_REPORT_DIR ?? join(rootDir, "ci-reports", "generated-apps"),
 );
+const testInventory = readTestInventory().inventory;
+const testInventoryDigest = inventoryDigest(testInventory);
+const generatedMaterializationEvidence = new Map<string, MaterializationEvidence>();
+
+function fileSha256(path: string): string {
+  return createHash("sha256").update(readFileSync(path)).digest("hex");
+}
+
+export function selectCompletedGeneratedTestEntries(
+  projectDir: string,
+  entries: readonly TestInventoryEntry[],
+  executedPaths: ReadonlySet<string>,
+): readonly TestInventoryEntry[] {
+  return entries.filter((entry) => {
+    if (!entry.generated || !existsSync(join(projectDir, entry.generated.generatedPath))) {
+      return false;
+    }
+    return executedPaths.has(entry.generated.generatedPath);
+  });
+}
+
+function recordGeneratedTestMaterialization(
+  projectDir: string,
+  executedPaths: ReadonlySet<string>,
+): void {
+  const materializedRoot = join(generatedSmokeReportDir, "materialized-tests");
+  const generatedEntries = testInventory.tests.filter(({ lane }) => lane === "generated-app");
+  for (const entry of selectCompletedGeneratedTestEntries(
+    projectDir,
+    generatedEntries,
+    executedPaths,
+  )) {
+    if (!entry.generated || generatedMaterializationEvidence.has(entry.path)) continue;
+    const generatedPath = join(projectDir, entry.generated.generatedPath);
+    if (!existsSync(generatedPath)) continue;
+    const reportPath = join(materializedRoot, entry.generated.generatedPath);
+    mkdirSync(dirname(reportPath), { recursive: true });
+    copyFileSync(generatedPath, reportPath);
+    generatedMaterializationEvidence.set(entry.path, {
+      sourcePath: entry.path,
+      sourceDigest: fileSha256(join(rootDir, entry.path)),
+      generatedPath: entry.generated.generatedPath,
+      generatedDigest: fileSha256(reportPath),
+      inventoryDigest: testInventoryDigest,
+      commandId: entry.generated.commandId,
+    });
+  }
+}
+
+export function hasCompleteTapTestEvidence(output: string): boolean {
+  const value = (name: string): number | undefined => {
+    const match = new RegExp(`^# ${name} (\\d+)$`, "m").exec(output);
+    return match?.[1] === undefined ? undefined : Number(match[1]);
+  };
+  const tests = value("tests");
+  const pass = value("pass");
+  return (
+    tests !== undefined &&
+    tests > 0 &&
+    pass === tests &&
+    value("fail") === 0 &&
+    (value("skipped") ?? 0) === 0 &&
+    (value("todo") ?? 0) === 0
+  );
+}
+
+function findGeneratedTestPackageDirectory(projectDir: string, generatedPath: string): string {
+  const resolvedProjectDir = resolve(projectDir);
+  const generatedTestPath = resolve(resolvedProjectDir, generatedPath);
+  const projectRelativePath = relative(resolvedProjectDir, generatedTestPath);
+  if (
+    projectRelativePath === ".." ||
+    projectRelativePath.startsWith(`..${sep}`) ||
+    isAbsolute(projectRelativePath)
+  ) {
+    throw new Error(`Generated test has no package.json boundary: ${generatedPath}`);
+  }
+
+  let directory = dirname(generatedTestPath);
+  while (directory !== resolvedProjectDir) {
+    if (existsSync(join(directory, "package.json"))) return directory;
+    const parentDirectory = dirname(directory);
+    if (parentDirectory === directory) break;
+    directory = parentDirectory;
+  }
+  if (existsSync(join(resolvedProjectDir, "package.json"))) return resolvedProjectDir;
+  throw new Error(`Generated test has no package.json boundary: ${generatedPath}`);
+}
+
+type GeneratedUnitEvidenceCapture = {
+  readonly projectDir: string;
+  readonly reports: readonly {
+    readonly kind: "vitest" | "tap";
+    readonly path: string;
+    readonly packageDir: string;
+    readonly generatedPaths: readonly string[];
+    readonly selectedGeneratedPaths?: readonly string[];
+  }[];
+  readonly restore: () => void;
+};
+
+function normalizedPaths(paths: readonly string[]): readonly string[] {
+  return [...new Set(paths.map((path) => path.split(sep).join("/")))].sort();
+}
+
+export function reconcileGeneratedTestPaths(
+  reportedPaths: readonly string[],
+  expectedPaths: readonly string[],
+): readonly string[] {
+  const expected = normalizedPaths(expectedPaths);
+  return normalizedPaths(
+    normalizedPaths(reportedPaths).flatMap((reportedPath) => {
+      if (expected.includes(reportedPath)) return [reportedPath];
+      const suffixMatches = expected.filter((expectedPath) =>
+        expectedPath.endsWith(`/${reportedPath}`),
+      );
+      return suffixMatches.length === 1 ? suffixMatches : [];
+    }),
+  );
+}
+
+export function resolveTapSelectedGeneratedPaths(
+  script: string,
+  packageDir: string,
+  projectDir: string,
+): readonly string[] {
+  const tokens = script.trim().split(/\s+/);
+  const testIndex = tokens.indexOf("--test");
+  if (testIndex < 0) throw new Error(`TAP generated test script has no --test selector: ${script}`);
+  const selectors = tokens
+    .slice(testIndex + 1)
+    .filter((token) => !token.startsWith("--"))
+    .map((token) => token.replace(/^(['"])(.*)\1$/, "$2"));
+  if (selectors.length === 0) {
+    throw new Error(`TAP generated test script has no explicit file selector: ${script}`);
+  }
+  return normalizedPaths(
+    selectors.flatMap((selector) =>
+      globSync(selector, { cwd: packageDir, withFileTypes: true })
+        .filter((entry) => !entry.isDirectory())
+        .map((entry) => relative(projectDir, join(entry.parentPath, entry.name))),
+    ),
+  );
+}
+
+function resolveGeneratedTestScriptName(scripts: Readonly<Record<string, string>>): string {
+  let name = "test";
+  for (let depth = 0; depth < 4; depth += 1) {
+    const script = scripts[name];
+    const delegated = script && /^pnpm (?:run )?(test(?::[^\s]+))$/.exec(script)?.[1];
+    if (!delegated) return name;
+    name = delegated;
+  }
+  throw new Error("Generated test script delegation is too deep");
+}
+
+export function prepareGeneratedUnitEvidenceCapture(
+  projectDir: string,
+  inventoryEntries: readonly TestInventoryEntry[] = testInventory.tests,
+): GeneratedUnitEvidenceCapture {
+  const grouped = new Map<string, string[]>();
+  for (const entry of inventoryEntries.filter(({ lane }) => lane === "generated-app")) {
+    const generatedPath = entry.generated?.generatedPath;
+    if (
+      !generatedPath ||
+      generatedPath.startsWith("tests/journeys/") ||
+      !existsSync(resolve(projectDir, generatedPath))
+    ) {
+      continue;
+    }
+    const packageDir = findGeneratedTestPackageDirectory(projectDir, generatedPath);
+    grouped.set(packageDir, [...(grouped.get(packageDir) ?? []), generatedPath]);
+  }
+
+  const originals = new Map<string, string>();
+  const reports: GeneratedUnitEvidenceCapture["reports"][number][] = [];
+  const restore = (): void => {
+    for (const [manifestPath, original] of originals) writeFileSync(manifestPath, original);
+    for (const report of reports) rmSync(report.path, { force: true });
+  };
+
+  try {
+    const rootManifestPath = join(projectDir, "package.json");
+    if (existsSync(rootManifestPath)) {
+      const rootManifest = JSON.parse(readFileSync(rootManifestPath, "utf8")) as {
+        readonly scripts?: Readonly<Record<string, string>>;
+      };
+      const rootTestScript =
+        rootManifest.scripts?.[resolveGeneratedTestScriptName(rootManifest.scripts)];
+      const turboConfigPath = join(projectDir, "turbo.json");
+      if (rootTestScript?.includes("turbo") && existsSync(turboConfigPath)) {
+        const original = readFileSync(turboConfigPath, "utf8");
+        const turboConfig = JSON.parse(original) as {
+          tasks?: Record<string, { outputs?: string[] }>;
+        };
+        const testTask = turboConfig.tasks?.test;
+        if (testTask) {
+          testTask.outputs = [
+            ...new Set([...(testTask.outputs ?? []), ".croco-generated-test-evidence.json"]),
+          ];
+          originals.set(turboConfigPath, original);
+          writeFileSync(turboConfigPath, `${JSON.stringify(turboConfig, null, 2)}\n`);
+        }
+      }
+    }
+
+    for (const [packageDir, generatedPaths] of grouped) {
+      const manifestPath = join(packageDir, "package.json");
+      const original = readFileSync(manifestPath, "utf8");
+      const manifest = JSON.parse(original) as {
+        readonly [key: string]: unknown;
+        scripts?: Record<string, string>;
+      };
+      const scripts = manifest.scripts;
+      if (!scripts)
+        throw new Error(`${relative(projectDir, packageDir)}/package.json has no scripts`);
+      const scriptName = resolveGeneratedTestScriptName(scripts);
+      const script = scripts[scriptName];
+      const reportFile = ".croco-generated-test-evidence.json";
+      const reportPath = join(packageDir, reportFile);
+      rmSync(reportPath, { force: true });
+      if (script?.includes("vitest")) {
+        scripts[scriptName] = `${script} --reporter=json --outputFile=${reportFile}`;
+        reports.push({ kind: "vitest", path: reportPath, packageDir, generatedPaths });
+      } else if (script?.includes("tsx --test")) {
+        if (generatedPaths.length !== 1) {
+          throw new Error(`TAP generated package must own exactly one mapped test: ${packageDir}`);
+        }
+        const selectedGeneratedPaths = resolveTapSelectedGeneratedPaths(
+          script,
+          packageDir,
+          projectDir,
+        );
+        const expectedGeneratedPaths = normalizedPaths(generatedPaths);
+        if (
+          selectedGeneratedPaths.length !== expectedGeneratedPaths.length ||
+          selectedGeneratedPaths.some((path, index) => path !== expectedGeneratedPaths[index])
+        ) {
+          throw new Error(
+            `TAP generated test selectors do not exactly match mapped tests: ${relative(projectDir, packageDir)}`,
+          );
+        }
+        scripts[scriptName] = script.replace(
+          "tsx --test",
+          `tsx --test --test-reporter=tap --test-reporter-destination=${reportFile}`,
+        );
+        reports.push({
+          kind: "tap",
+          path: reportPath,
+          packageDir,
+          generatedPaths,
+          selectedGeneratedPaths,
+        });
+      } else {
+        throw new Error(
+          `Generated test package uses an unsupported evidence runner: ${packageDir}`,
+        );
+      }
+      originals.set(manifestPath, original);
+      writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+    }
+
+    return { projectDir, reports, restore };
+  } catch (error) {
+    restore();
+    throw error;
+  }
+}
+
+function readGeneratedUnitEvidence(capture: GeneratedUnitEvidenceCapture): readonly string[] {
+  return capture.reports.flatMap((report) => {
+    if (!existsSync(report.path)) return [];
+    if (report.kind === "tap") {
+      const exactSelectors =
+        JSON.stringify(normalizedPaths(report.selectedGeneratedPaths ?? [])) ===
+        JSON.stringify(normalizedPaths(report.generatedPaths));
+      return exactSelectors && hasCompleteTapTestEvidence(readFileSync(report.path, "utf8"))
+        ? report.generatedPaths
+        : [];
+    }
+    const completed = new Set(readCompletedVitestPaths(report.path, report.packageDir));
+    return report.generatedPaths.filter((generatedPath) =>
+      completed.has(
+        relative(report.packageDir, join(capture.projectDir, generatedPath)).split(sep).join("/"),
+      ),
+    );
+  });
+}
+
+function writeGeneratedTestMaterializationEvidence(): void {
+  mkdirSync(generatedSmokeReportDir, { recursive: true });
+  writeFileSync(
+    join(generatedSmokeReportDir, "materialization-evidence.json"),
+    `${JSON.stringify([...generatedMaterializationEvidence.values()], null, 2)}\n`,
+  );
+}
 const turboPath = join(rootDir, "node_modules", "turbo", "bin", "turbo");
 const corepackCommand = process.platform === "win32" ? "corepack.cmd" : "corepack";
 let smokeRoot: string | undefined;
@@ -666,6 +1005,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
         args: ["exec", "tsx", "--eval", graphqlLambdaProtectedRouteSmokeScript],
       },
       { label: "build", args: ["build"] },
+      { label: "test", args: ["test"] },
     ],
   },
   {
@@ -1509,7 +1849,7 @@ if (isMainModule()) {
     assertGeneratedTemplateLintContracts(generatedAppTemplatesDir);
 
     const smokeSelection = selectGeneratedSmokeMatrixCases(selectableSmokeCases, {
-      args: process.argv.slice(2),
+      args: process.argv.slice(2).filter((argument) => argument !== "--full-matrix"),
       env: process.env,
     });
     const selectedSmokeCases = smokeSelection.cases.filter(
@@ -1548,15 +1888,19 @@ if (isMainModule()) {
       smokeReport,
       "create-croco-app CLI bootstrap",
       process.execPath,
-      [turboPath, "build", "--filter=create-croco-app...", "--force"],
+      [turboPath, "build", "--filter=create-croco-app..."],
       rootDir,
       "spine-blocking",
     );
     assertExists(cliPath, "create-croco-app dist CLI is missing after build");
 
+    const workspacePackageIndex = createWorkspacePackageIndex(rootDir);
+    const packedWorkspacePackages = new Map<string, string>();
+    const builtWorkspacePackageNames = new Set<string>();
+
     if (smokeSelection.selectedTier !== "spine-blocking") {
       runGeneratedAppContractGates(smokeReport);
-      runContinuingGateCommand(
+      const workspaceBuildPassed = runContinuingGateCommand(
         smokeReport,
         "workspace package build",
         process.execPath,
@@ -1564,51 +1908,25 @@ if (isMainModule()) {
           turboPath,
           "build",
           ...turboConcurrencyArguments(),
-          "--filter=@croco/auth-better-auth...",
-          "--filter=@croco/auth-clerk...",
-          "--filter=@croco/auth-drizzle...",
-          "--filter=@croco/billing-polar...",
-          "--filter=@croco/cli...",
-          "--filter=@croco/events-core...",
-          "--filter=@croco/events-inmemory...",
-          "--filter=create-croco-app...",
-          "--filter=@croco/framework-context...",
-          "--filter=@croco/frontend-cloudflare...",
-          "--filter=@croco/frontend-problems...",
-          "--filter=@croco/frontend-react...",
-          "--filter=@croco/frontend-vite...",
-          "--filter=@croco/llm-core...",
-          "--filter=@croco/llm-metering...",
-          "--filter=@croco/meta-vite...",
-          "--filter=@croco/lifecycle-core...",
-          "--filter=@croco/metering-drizzle...",
-          "--filter=@croco/metering-upstash...",
-          "--filter=@croco/openapi-spec...",
-          "--filter=@croco/problems-core...",
-          "--filter=@croco/preset-cloudflare...",
-          "--filter=@croco/preset-lambda...",
-          "--filter=@croco/repository-core...",
-          "--filter=@croco/retry-core...",
-          "--filter=@croco/rpc-codegen...",
-          "--filter=@croco/storage-cloudinary...",
-          "--filter=@croco/storage-r2...",
-          "--filter=@croco/tasks-qstash...",
-          "--filter=@croco/telemetry-api...",
-          "--filter=@croco/telemetry-sdk-node...",
-          "--filter=@croco/tenant-core...",
-          "--filter=@croco/transports-http...",
-          "--filter=@croco/triggers-qstash...",
-          "--filter=@croco/tx-drizzle...",
-          "--force",
+          ...GENERATED_SMOKE_WORKSPACE_BUILD_ROOTS.map(
+            (packageName) => `--filter=${packageName}...`,
+          ),
         ],
         rootDir,
         "ecosystem-advisory",
       );
+      if (workspaceBuildPassed) {
+        markWorkspacePackageClosureBuilt(
+          GENERATED_SMOKE_WORKSPACE_BUILD_ROOTS.filter(
+            (packageName) => packageName !== "create-croco-app",
+          ),
+          workspacePackageIndex,
+          builtWorkspacePackageNames,
+        );
+        builtWorkspacePackageNames.add("create-croco-app");
+      }
     }
 
-    const workspacePackageIndex = createWorkspacePackageIndex(rootDir);
-    const packedWorkspacePackages = new Map<string, string>();
-    const builtWorkspacePackageNames = new Set<string>();
     const smokeCaseFailures: Error[] = [];
 
     for (const smokeCase of selectedSmokeCases) {
@@ -1679,7 +1997,11 @@ if (isMainModule()) {
         runSaasMonetizationContractCanaries(projectDir, smokeCase, smokeReport, caseResult);
         runGeneratedBrowserContractDriftCanaries(projectDir, smokeCase, smokeReport, caseResult);
         runGraphQLContractDriftCanaries(projectDir, smokeCase, smokeReport, caseResult);
+        const executedGeneratedPaths = new Set(
+          caseResult.steps.flatMap(({ executedTestPaths }) => executedTestPaths),
+        );
         caseResult.status = "passed";
+        recordGeneratedTestMaterialization(projectDir, executedGeneratedPaths);
         writeGeneratedSmokeReport(smokeReport);
       } catch (error) {
         recordUnhandledSmokeCaseFailure(smokeReport, caseResult, projectDir, error);
@@ -1716,6 +2038,7 @@ if (isMainModule()) {
     }
 
     smokeReport.status = "passed";
+    writeGeneratedTestMaterializationEvidence();
     writeGeneratedSmokeReport(smokeReport);
     console.log("create-croco-app-generated-smoke: all generated app smoke cases passed");
   } catch (error) {
@@ -2116,12 +2439,14 @@ function runContinuingGateCommand(
   args: readonly string[],
   cwd: string,
   tier: SmokeMatrixTier,
-): void {
+): boolean {
   try {
     runGateCommand(report, label, command, args, cwd, tier);
     console.log(`create-croco-app-generated-smoke: ${label} passed`);
+    return true;
   } catch (error) {
     console.error(`create-croco-app-generated-smoke: ${label} failed: ${toErrorMessage(error)}`);
+    return false;
   }
 }
 
@@ -2208,6 +2533,7 @@ function createSmokeStep(
     expectFailure: options.expectFailure,
     status: "pending",
     diagnosticCodes: [],
+    executedTestPaths: [],
   };
 }
 
@@ -2635,8 +2961,18 @@ function runValidation(
   });
   caseResult.steps.push(step);
   writeGeneratedSmokeReport(report);
+  let unitCapture: GeneratedUnitEvidenceCapture | undefined;
+  const journeyReportDirectory =
+    validation.label === "browser journeys"
+      ? mkdtempSync(join(tmpdir(), "croco-generated-journey-evidence-"))
+      : undefined;
+  const journeyReportPath = journeyReportDirectory
+    ? join(journeyReportDirectory, "playwright.json")
+    : undefined;
 
   try {
+    unitCapture =
+      validation.label === "test" ? prepareGeneratedUnitEvidenceCapture(projectDir) : undefined;
     if (validation.args) {
       if (validation.expectFailure) {
         const commandResult = runExpectFailure(
@@ -2650,6 +2986,16 @@ function runValidation(
         step.diagnosticCodes = commandResult.diagnosticCodes;
       } else {
         if (validation.readOnly) ensureGeneratedVerificationBaseline(validationDir);
+        const commandArgs = [
+          "pnpm",
+          "--dir",
+          validationDir,
+          ...validation.args,
+          ...(journeyReportPath ? ["--reporter=json"] : []),
+        ];
+        const commandEnv = journeyReportPath
+          ? { ...validation.env, PLAYWRIGHT_JSON_OUTPUT_FILE: journeyReportPath }
+          : validation.env;
         appendSmokeCaseOutput(
           caseResult,
           validation.label,
@@ -2663,21 +3009,48 @@ function runValidation(
                   validation.recovery ?? `Run the explicit writer for ${validation.label}`,
                   "--",
                   corepackCommand,
-                  "pnpm",
-                  "--dir",
-                  validationDir,
-                  ...validation.args,
+                  ...commandArgs,
                 ],
                 validationDir,
-                validation.env,
+                commandEnv,
               )
-            : run(
-                corepackCommand,
-                ["pnpm", "--dir", validationDir, ...validation.args],
-                rootDir,
-                validation.env,
-              ),
+            : run(corepackCommand, commandArgs, rootDir, commandEnv),
         );
+        if (unitCapture) {
+          const expected = unitCapture.reports
+            .flatMap(({ generatedPaths }) => generatedPaths)
+            .sort();
+          const executed = [...new Set(readGeneratedUnitEvidence(unitCapture))].sort();
+          if (JSON.stringify(executed) !== JSON.stringify(expected)) {
+            throw new Error(
+              `${smokeCase.name} generated unit tests did not complete exactly: expected ${expected.join(", ")}; executed ${executed.join(", ")}`,
+            );
+          }
+          step.executedTestPaths = executed;
+        }
+        if (journeyReportPath) {
+          const expected = testInventory.tests
+            .filter(
+              (entry) =>
+                entry.lane === "generated-app" &&
+                entry.generated?.generatedPath.startsWith("tests/journeys/") &&
+                existsSync(join(projectDir, entry.generated.generatedPath)),
+            )
+            .flatMap((entry) => (entry.generated ? [entry.generated.generatedPath] : []))
+            .sort();
+          const executed = existsSync(journeyReportPath)
+            ? reconcileGeneratedTestPaths(
+                readCompletedPlaywrightPaths(journeyReportPath, projectDir),
+                expected,
+              )
+            : [];
+          if (JSON.stringify(executed) !== JSON.stringify(expected)) {
+            throw new Error(
+              `${smokeCase.name} generated journeys did not complete exactly: expected ${expected.join(", ")}; executed ${executed.join(", ")}`,
+            );
+          }
+          step.executedTestPaths = executed;
+        }
       }
     }
 
@@ -2741,6 +3114,11 @@ function runValidation(
     }
     recordSmokeCaseFailure(report, caseResult, step, error, projectDir);
     throw createSmokeFailureError(caseResult, step, error);
+  } finally {
+    unitCapture?.restore();
+    if (journeyReportDirectory) {
+      rmSync(journeyReportDirectory, { recursive: true, force: true });
+    }
   }
 
   console.log(`create-croco-app-generated-smoke: ${smokeCase.name} ${validation.label} passed`);
@@ -3641,6 +4019,27 @@ function buildWorkspacePackages(
   }
 }
 
+export function markWorkspacePackageClosureBuilt(
+  packageNames: readonly string[],
+  workspacePackageIndex: ReadonlyMap<string, WorkspacePackage>,
+  builtWorkspacePackageNames: Set<string>,
+): void {
+  const pending = [...packageNames];
+
+  while (pending.length > 0) {
+    const packageName = pending.pop();
+    if (!packageName || builtWorkspacePackageNames.has(packageName)) continue;
+
+    const workspacePackage = workspacePackageIndex.get(packageName);
+    if (!workspacePackage) {
+      throw new Error(`Workspace build references unknown package ${packageName}`);
+    }
+
+    builtWorkspacePackageNames.add(packageName);
+    pending.push(...workspacePackage.dependencyNames);
+  }
+}
+
 export function turboBuildArguments(
   packageNames: readonly string[],
   platform: NodeJS.Platform = process.platform,
@@ -3654,8 +4053,8 @@ export function turboBuildArguments(
 
 export function turboConcurrencyArguments(platform: NodeJS.Platform = process.platform): string[] {
   // TypeScript 6 declaration bundling is substantially more memory-intensive on the hosted Windows runner.
-  // Bound parallelism there so a large generated-app dependency graph cannot terminate Turbo without diagnostics.
-  return platform === "win32" ? ["--concurrency=4"] : [];
+  // Leave process-initialization headroom so a large generated-app dependency graph remains deterministic.
+  return [`--concurrency=${platform === "win32" ? 2 : 4}`];
 }
 
 function packWorkspacePackage(

@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -10,6 +10,10 @@ import {
 import { validateGeneratedSaasDocsContract } from "../first-success-generated-contract.mts";
 
 const scriptPath = resolve(__dirname, "../first-success-verify.mts");
+const createCrocoAppVerificationBundle = resolve(
+  __dirname,
+  "../../packages/create-croco-app/dist/verification.js",
+);
 const tempRoots: string[] = [];
 const validCreateCommand =
   "npx create-croco-app@latest my-saas-api --goal saas-api --scope @myorg --no-install --no-git";
@@ -68,6 +72,8 @@ type FixtureOptions = {
 
 describe("first-success-verify.mts", () => {
   beforeAll(() => {
+    if (existsSync(createCrocoAppVerificationBundle)) return;
+
     const result = spawnSync("pnpm", ["build", "--filter=create-croco-app"], {
       cwd: resolve(__dirname, "../.."),
       encoding: "utf-8",

@@ -33,7 +33,8 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --exclude src/tests/OpenAiLiveSmoke.spec.ts",
+    "test:live": "vitest run src/tests/OpenAiLiveSmoke.spec.ts",
     "lint": "oxlint ."
   },
   "dependencies": {

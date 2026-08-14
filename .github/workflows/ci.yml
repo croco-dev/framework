@@ -27,6 +27,10 @@ jobs:
       NPM_CONFIG_PROVENANCE: "true"
 
     steps:
+      - name: Start validate performance measurement
+        shell: bash
+        run: echo "CROCO_VALIDATE_MEASUREMENT_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)" >> "$GITHUB_ENV"
+
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -63,6 +67,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: pnpm --dir packages/docs run playwright:install
 
       - name: Production dependency audit report
         id: security_audit_advisory
@@ -184,6 +191,15 @@ jobs:
           fi
           node --experimental-strip-types scripts/release-spine-evidence.mts "${args[@]}"
 
+      - name: Restore observed CI performance history
+        if: always() && github.ref_name == 'trunk'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ci-reports/ci-performance/history.json
+          key: ci-performance-history-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ci-performance-history-${{ runner.os }}-
+
       - name: Publish verification summary
         if: always()
         shell: bash
@@ -212,37 +228,56 @@ jobs:
 
       - name: Run full test suite for changed-test shadow
         if: always() && github.event_name == 'pull_request'
-        continue-on-error: true
+        shell: bash
         env:
-          CROCO_TEST_EVIDENCE_DIR: ${{ github.workspace }}/ci-reports/changed-test-plan/full-evidence/records
+          VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}
         run: |
           started_at=$(date +%s)
-          set +e
-          pnpm --filter @croco/testing build
-          full_suite_status=$?
-          if [ "$full_suite_status" -eq 0 ]; then
-            pnpm turbo run test --force --continue=always -- \
-              --reporter=default \
-              --reporter=${{ github.workspace }}/packages/testing/dist/vitest-reporter.mjs
+          mkdir -p ci-reports/changed-test-plan/full-evidence/records
+          rm -f \
+            ci-reports/changed-test-plan/full-fast-lane.json \
+            ci-reports/changed-test-plan/full-evidence/records/full-suite-status.json
+          full_suite_status=0
+          shadow_source="executed full fast lane"
+          if [ "$VERIFICATION_PROFILE" = "publish" ]; then
+            shadow_source="reused publish verification fast lane"
+            if [ -f ci-reports/package-quality/fast-test-lane.json ]; then
+              cp \
+                ci-reports/package-quality/fast-test-lane.json \
+                ci-reports/changed-test-plan/full-fast-lane.json || full_suite_status=$?
+            else
+              echo "Publish fast lane evidence is missing; the verification fast lane did not run." >> "$GITHUB_STEP_SUMMARY"
+              full_suite_status=1
+            fi
+          else
+            set +e
+            node --experimental-strip-types scripts/test-lane-runner.mts \
+              --lane fast \
+              --output ci-reports/changed-test-plan/full-fast-lane.json
             full_suite_status=$?
+            set -e
           fi
+          set +e
           node --experimental-strip-types scripts/changed-test-full-suite-status.mts \
             "$full_suite_status" \
-            ci-reports/changed-test-plan/full-evidence/records/full-suite-status.json
+            ci-reports/changed-test-plan/full-evidence/records/full-suite-status.json \
+            ci-reports/changed-test-plan/full-fast-lane.json
+          status_evidence_status=$?
+          set -e
+          if [ "$status_evidence_status" -ne 0 ]; then
+            full_suite_status=$status_evidence_status
+          fi
           elapsed_seconds=$(($(date +%s) - started_at))
-          echo "Changed-test shadow full suite: ${elapsed_seconds}s on ${{ runner.os }}/${{ runner.arch }}." >> "$GITHUB_STEP_SUMMARY"
+          echo "Changed-test shadow full suite: ${elapsed_seconds}s on ${{ runner.os }}/${{ runner.arch }} (${shadow_source})." >> "$GITHUB_STEP_SUMMARY"
           exit "$full_suite_status"
 
       - name: Assert changed-test shadow evidence completeness
         if: always() && github.event_name == 'pull_request'
-        continue-on-error: true
         shell: bash
         run: |
-          evidence_count=$(find ci-reports/changed-test-plan/full-evidence/records -type f -name 'vitest-*.json' 2>/dev/null | wc -l | tr -d ' ')
-          if [ "$evidence_count" -eq 0 ]; then
-            echo "The uncached full Vitest suite emitted no changed-test shadow evidence." >&2
-            exit 1
-          fi
+          node --experimental-strip-types scripts/changed-test-full-suite-status.mts \
+            --check ci-reports/changed-test-plan/full-fast-lane.json
+          test -f ci-reports/changed-test-plan/full-evidence/records/full-suite-status.json
 
       - name: Restore changed-test shadow baseline
         if: always() && github.event_name == 'pull_request'
@@ -255,24 +290,14 @@ jobs:
 
       - name: Aggregate changed-test shadow full evidence
         if: always() && github.event_name == 'pull_request'
-        continue-on-error: true
         shell: bash
         run: |
-          shadow_args=()
-          if [ -d ci-reports/changed-test-plan/full-evidence/records ]; then
-            while IFS= read -r evidence_record; do
-              shadow_args+=(--input "$evidence_record")
-            done < <(find ci-reports/changed-test-plan/full-evidence/records -type f -name '*.json' -print | sort)
-          fi
-          if [ "${#shadow_args[@]}" -gt 0 ]; then
-            node --experimental-strip-types scripts/test-evidence-bundle.mts "${shadow_args[@]}" --output ci-reports/changed-test-plan/full-evidence
-          else
-            echo "No full-suite shadow evidence was emitted." >> "$GITHUB_STEP_SUMMARY"
-          fi
+          node --experimental-strip-types scripts/test-evidence-bundle.mts \
+            --input ci-reports/changed-test-plan/full-evidence/records/full-suite-status.json \
+            --output ci-reports/changed-test-plan/full-evidence
 
       - name: Measure changed-test selection misses
         if: always() && github.event_name == 'pull_request' && hashFiles('ci-reports/changed-test-plan/full-evidence/bundle.json') != ''
-        continue-on-error: true
         env:
           VERIFICATION_BASE: ${{ needs.changes.outputs.base }}
         run: |
@@ -378,6 +403,64 @@ jobs:
           else
             echo "Core coverage warning report was not generated." >> "$GITHUB_STEP_SUMMARY"
           fi
+
+      - name: Complete validate performance measurement
+        if: always()
+        shell: bash
+        run: echo "CROCO_VALIDATE_MEASUREMENT_COMPLETED_AT=$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)" >> "$GITHUB_ENV"
+
+      - name: Record observed CI performance budget
+        if: always()
+        shell: bash
+        env:
+          CROCO_VALIDATE_JOB_CONCLUSION: ${{ job.status }}
+          VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}
+        run: |
+          report="ci-reports/verification/${VERIFICATION_PROFILE}/spine-evidence.json"
+          if [ "$VERIFICATION_PROFILE" = "spine" ]; then
+            report="ci-reports/release/spine-evidence.json"
+          fi
+          if [ ! -f "$report" ]; then
+            echo "CI performance sample was not generated because verification evidence is missing." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          history_args=()
+          if [ -f ci-reports/ci-performance/history.json ]; then
+            history_args+=(--input ci-reports/ci-performance/history.json)
+          fi
+          performance_status=0
+          node --experimental-strip-types scripts/ci-performance-budget.mts \
+            "${history_args[@]}" \
+            --evidence "$report" \
+            --measurement-started-at "$CROCO_VALIDATE_MEASUREMENT_STARTED_AT" \
+            --measurement-completed-at "$CROCO_VALIDATE_MEASUREMENT_COMPLETED_AT" \
+            --conclusion "$CROCO_VALIDATE_JOB_CONCLUSION" \
+            --sample-output ci-reports/ci-performance/raw-sample.json \
+            --history-output ci-reports/ci-performance/history.json \
+            --json-output ci-reports/ci-performance/report.json \
+            --markdown-output ci-reports/ci-performance/report.md \
+            --pnpm-version "$(pnpm --version)" \
+            --branch "$GITHUB_REF_NAME" \
+            --job-id "$GITHUB_JOB" \
+            --runner-os "$RUNNER_OS" \
+            --runner-arch "$RUNNER_ARCH" \
+            --runner-label "ubuntu-latest" \
+            --enforce || performance_status=$?
+          if [ -f ci-reports/ci-performance/report.md ]; then
+            cat ci-reports/ci-performance/report.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "CI performance report was not generated." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$performance_status"
+
+      - name: Upload observed CI performance evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ci-performance-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ci-reports/ci-performance
+          if-no-files-found: warn
+          retention-days: 90
 
       - name: Upload core coverage warning report
         if: always()
@@ -742,6 +825,8 @@ jobs:
           pnpm --filter @croco/testing-resources test:real
           pnpm build --filter=@croco/metering-core...
           pnpm --filter @croco/metering-core test:real
+          pnpm build --filter=@croco/metrics-core...
+          pnpm --filter @croco/metrics-core test:real
 
   windows-scaffold:
     needs: changes

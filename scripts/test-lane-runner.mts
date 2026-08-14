@@ -1,0 +1,714 @@
+#!/usr/bin/env node
+
+import { spawnSync } from "node:child_process";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
+import { availableParallelism, tmpdir } from "node:os";
+import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
+import { fileURLToPath } from "node:url";
+
+import {
+  inventoryDigest,
+  isSelectedByVitestScript,
+  readTestInventory,
+  TEST_LANES,
+} from "./test-inventory.mts";
+import type { TestInventory, TestInventoryEntry, TestLane } from "./test-inventory.mts";
+
+export type TestLaneCommand = {
+  readonly owner: string;
+  readonly cwd: string;
+  readonly paths: readonly string[];
+  readonly command: readonly string[];
+};
+
+export type TestLaneCommandResult = TestLaneCommand & {
+  readonly durationMs: number;
+  readonly exitCode: number;
+  readonly status: "passed" | "failed";
+  readonly cacheStatus?: "hit" | "miss";
+  readonly executedPaths: readonly string[];
+  readonly executionState?: "executed" | "reused";
+  readonly cacheHash?: string;
+};
+
+export type TestLaneReport = {
+  readonly schemaVersion: "croco.test-lane-report/v1";
+  readonly inventoryVersion: 1;
+  readonly inventoryDigest: string;
+  readonly lane: Exclude<TestLane, "generated-app">;
+  readonly allowLive: boolean;
+  readonly selectedOwners: readonly string[];
+  readonly executedPaths: readonly string[];
+  readonly status: "passed" | "failed";
+  readonly diagnostics: readonly { readonly code: string; readonly message: string }[];
+  readonly commands: readonly TestLaneCommandResult[];
+};
+
+export type TestLaneCommandRunner = (command: TestLaneCommand) => {
+  readonly exitCode: number;
+  readonly durationMs: number;
+  readonly totalTests?: number;
+  readonly skippedTests?: number;
+  readonly cacheStatus?: "hit" | "miss";
+  readonly executedPaths?: readonly string[];
+  readonly executionState?: "executed" | "reused";
+  readonly cacheHash?: string;
+};
+
+export type TestLaneScriptResolver = (
+  command: TestLaneCommand,
+  lane: TestLaneReport["lane"],
+) => string | undefined;
+
+const ROOT_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const VITEST_EVIDENCE_FILE = ".turbo/croco-test-evidence.json";
+const MAX_FAST_PACKAGE_PROCESSES = 4;
+
+export function createFastPackageTurboArguments(
+  rootDir: string,
+  packageCommands: readonly TestLaneCommand[],
+): string[] {
+  const concurrency = Math.max(1, Math.min(MAX_FAST_PACKAGE_PROCESSES, availableParallelism()));
+
+  return [
+    "turbo",
+    "run",
+    "test",
+    "--only",
+    `--concurrency=${concurrency}`,
+    ...resolveTurboPackageFilters(rootDir, packageCommands).map(
+      (packageName) => `--filter=${packageName}`,
+    ),
+    "--summarize",
+    "--continue=always",
+    "--",
+    "--maxWorkers=1",
+    "--reporter=json",
+    `--outputFile=${VITEST_EVIDENCE_FILE}`,
+  ];
+}
+
+type VitestJsonReport = {
+  readonly testResults?: readonly {
+    readonly name?: string;
+    readonly status?: string;
+    readonly assertionResults?: readonly { readonly status?: string }[];
+  }[];
+};
+
+type PlaywrightJsonSuite = {
+  readonly suites?: readonly PlaywrightJsonSuite[];
+  readonly specs?: readonly {
+    readonly file?: string;
+    readonly tests?: readonly {
+      readonly results?: readonly { readonly status?: string }[];
+    }[];
+  }[];
+};
+
+export type TurboRunSummary = {
+  readonly tasks?: readonly {
+    readonly package?: string;
+    readonly task?: string;
+    readonly hash?: string;
+    readonly cliArguments?: readonly string[];
+    readonly execution?: { readonly exitCode?: number };
+    readonly cache?: { readonly status?: string };
+  }[];
+};
+
+function relativeExistingPath(workspaceRoot: string, absolutePath: string): string | undefined {
+  const workspace = statSync(workspaceRoot);
+  const segments: string[] = [];
+  let current = absolutePath;
+  while (true) {
+    const candidate = statSync(current);
+    if (candidate.dev === workspace.dev && candidate.ino === workspace.ino) {
+      return segments.reverse().join("/");
+    }
+    const parent = dirname(current);
+    if (parent === current) return undefined;
+    segments.push(basename(current));
+    current = parent;
+  }
+}
+
+export function readCompletedVitestPaths(
+  reportPath: string,
+  workspaceRoot: string,
+): readonly string[] {
+  const report = JSON.parse(readFileSync(reportPath, "utf8")) as VitestJsonReport;
+  return (report.testResults ?? [])
+    .filter(
+      ({ status, assertionResults }) =>
+        status === "passed" &&
+        Boolean(assertionResults?.length) &&
+        assertionResults?.some((assertion) => assertion.status === "passed") &&
+        assertionResults?.every(
+          (assertion) => assertion.status === "passed" || assertion.status === "skipped",
+        ),
+    )
+    .flatMap(({ name }) => {
+      if (!name) return [];
+      const absoluteName = isAbsolute(name) ? name : resolve(workspaceRoot, name);
+      if (absoluteName === workspaceRoot || absoluteName.startsWith(`${workspaceRoot}${sep}`)) {
+        return [relative(workspaceRoot, absoluteName).split(sep).join("/")];
+      }
+      const existingRelative = existsSync(absoluteName)
+        ? relativeExistingPath(workspaceRoot, absoluteName)
+        : undefined;
+      return existingRelative ? [existingRelative] : [];
+    })
+    .sort(compareText);
+}
+
+export function readCompletedPlaywrightPaths(
+  reportPath: string,
+  workspaceRoot: string,
+  expectedPaths: readonly string[] = [],
+): readonly string[] {
+  const report = JSON.parse(readFileSync(reportPath, "utf8")) as PlaywrightJsonSuite;
+  const visit = (suite: PlaywrightJsonSuite): readonly string[] => [
+    ...(suite.specs ?? []).flatMap(({ file, tests }) =>
+      file &&
+      Boolean(tests?.length) &&
+      tests?.some(({ results }) => results?.some(({ status }) => status === "passed")) &&
+      tests?.every(
+        ({ results }) =>
+          Boolean(results?.length) &&
+          results?.every(({ status }) => status === "passed" || status === "skipped"),
+      )
+        ? [
+            relative(workspaceRoot, isAbsolute(file) ? file : resolve(workspaceRoot, file))
+              .split(sep)
+              .join("/"),
+          ]
+        : [],
+    ),
+    ...(suite.suites ?? []).flatMap(visit),
+  ];
+  return [
+    ...new Set(
+      visit(report).flatMap((observedPath) => {
+        if (expectedPaths.length === 0 || expectedPaths.includes(observedPath)) {
+          return [observedPath];
+        }
+        const matches = expectedPaths.filter((expectedPath) =>
+          expectedPath.endsWith(`/${observedPath}`),
+        );
+        return matches.length === 1 ? matches : [];
+      }),
+    ),
+  ].sort(compareText);
+}
+
+function evidencePath(rootDir: string, command: TestLaneCommand): string {
+  return resolve(rootDir, command.cwd, VITEST_EVIDENCE_FILE);
+}
+
+function runVitestCommandWithEvidence(
+  rootDir: string,
+  command: TestLaneCommand,
+): {
+  readonly exitCode: number;
+  readonly durationMs: number;
+  readonly executedPaths: readonly string[];
+  readonly executionState: "executed";
+} {
+  const reportPath = evidencePath(rootDir, command);
+  rmSync(reportPath, { force: true });
+  mkdirSync(dirname(reportPath), { recursive: true });
+  const startedAt = Date.now();
+  const result = spawnSync(
+    command.command[0],
+    [...command.command.slice(1), "--reporter=json", `--outputFile=${reportPath}`],
+    { cwd: resolve(rootDir, command.cwd), env: process.env, stdio: "inherit" },
+  );
+  const executedPaths = existsSync(reportPath)
+    ? readCompletedVitestPaths(reportPath, resolve(rootDir, command.cwd))
+    : [];
+  rmSync(reportPath, { force: true });
+  return {
+    exitCode: result.status ?? 1,
+    durationMs: Date.now() - startedAt,
+    executedPaths,
+    executionState: "executed" as const,
+  };
+}
+
+export function readTurboRunSummary(rootDir: string, output: string): TurboRunSummary | undefined {
+  const summaryPath = /Summary:\s+([^\r\n]+\.json)/.exec(output)?.[1]?.trim();
+  const resolvedSummaryPath = summaryPath ? resolve(rootDir, summaryPath) : undefined;
+  if (resolvedSummaryPath && existsSync(resolvedSummaryPath)) {
+    return JSON.parse(readFileSync(resolvedSummaryPath, "utf8")) as TurboRunSummary;
+  }
+
+  const runsDirectory = resolve(rootDir, ".turbo/runs");
+  if (!existsSync(runsDirectory)) return undefined;
+  const newest = readdirSync(runsDirectory, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
+    .map((entry) => {
+      const path = resolve(runsDirectory, entry.name);
+      return { path, modifiedAt: statSync(path).mtimeMs };
+    })
+    .sort(
+      (left, right) => right.modifiedAt - left.modifiedAt || right.path.localeCompare(left.path),
+    )[0];
+  return newest ? (JSON.parse(readFileSync(newest.path, "utf8")) as TurboRunSummary) : undefined;
+}
+
+export function readTurboTestTaskEvidence(
+  rootDir: string,
+  command: TestLaneCommand,
+  packageName: string,
+  summary: TurboRunSummary | undefined,
+):
+  | {
+      readonly executedPaths: readonly string[];
+      readonly executionState: "executed" | "reused";
+      readonly cacheHash: string;
+    }
+  | undefined {
+  const task = summary?.tasks?.find(
+    (candidate) => candidate.package === packageName && candidate.task === "test",
+  );
+  const reportPath = evidencePath(rootDir, command);
+  if (
+    task?.execution?.exitCode !== 0 ||
+    typeof task.hash !== "string" ||
+    task.hash.length === 0 ||
+    task.cliArguments?.includes("--reporter=json") !== true ||
+    !task.cliArguments.includes(`--outputFile=${VITEST_EVIDENCE_FILE}`) ||
+    !existsSync(reportPath)
+  ) {
+    return undefined;
+  }
+  return {
+    executedPaths: readCompletedVitestPaths(reportPath, resolve(rootDir, command.cwd)),
+    executionState: task.cache?.status === "HIT" ? "reused" : "executed",
+    cacheHash: task.hash,
+  };
+}
+
+function compareText(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+function workspaceDirectory(path: string): string {
+  if (path.startsWith("scripts/tests/") || path.startsWith("tests/")) return ".";
+  const match = /^(packages|apps|examples)\/([^/]+)\//.exec(path);
+  if (!match?.[1] || !match[2]) throw new Error(`Cannot resolve workspace for ${path}`);
+  return `${match[1]}/${match[2]}`;
+}
+
+function toWorkspacePath(workspace: string, path: string): string {
+  if (workspace === ".") return path;
+  const prefix = `${workspace}/`;
+  if (!path.startsWith(prefix)) throw new Error(`${path} is outside ${workspace}`);
+  return path.slice(prefix.length);
+}
+
+export function createTestLanePlan(
+  inventory: TestInventory,
+  lane: Exclude<TestLane, "generated-app">,
+  owners: readonly string[] = [],
+): readonly TestLaneCommand[] {
+  const selectedOwners = new Set(owners);
+  const entries = inventory.tests.filter(
+    (entry) =>
+      entry.lane === lane && (selectedOwners.size === 0 || selectedOwners.has(entry.owner)),
+  );
+  const grouped = new Map<string, TestInventoryEntry[]>();
+  for (const entry of entries) {
+    const workspace = workspaceDirectory(entry.path);
+    const key = `${workspace}\u0000${entry.owner}`;
+    const group = grouped.get(key) ?? [];
+    group.push(entry);
+    grouped.set(key, group);
+  }
+  return [...grouped.entries()]
+    .sort(([left], [right]) => compareText(left, right))
+    .map(([key, group]) => {
+      const [workspace = ".", owner = ""] = key.split("\u0000");
+      const paths = group.map(({ path }) => toWorkspacePath(workspace, path)).sort(compareText);
+      return {
+        owner,
+        cwd: workspace,
+        paths,
+        command:
+          workspace === "."
+            ? ["pnpm", "exec", "vitest", "run", ...paths]
+            : ["pnpm", "run", lane === "fast" ? "test" : `test:${lane}`],
+      };
+    });
+}
+
+function defaultRunner(
+  rootDir: string,
+  lane: TestLaneReport["lane"],
+  plan: readonly TestLaneCommand[],
+  resolveScript: TestLaneScriptResolver,
+): TestLaneCommandRunner {
+  if (lane === "fast") {
+    let packageResult:
+      | {
+          readonly exitCode: number;
+          readonly durationMs: number;
+          readonly cacheStatus?: "hit" | "miss";
+        }
+      | undefined;
+    const packageEvidence = new Map<
+      string,
+      {
+        readonly executedPaths: readonly string[];
+        readonly executionState: "executed" | "reused";
+        readonly cacheHash?: string;
+      }
+    >();
+    const rootResults = new Map<
+      string,
+      {
+        readonly exitCode: number;
+        readonly durationMs: number;
+        readonly executedPaths: readonly string[];
+      }
+    >();
+    return (command) => {
+      if (!packageResult) {
+        const packageCommands = plan.filter(({ cwd }) => cwd !== ".");
+        for (const packageCommand of packageCommands) {
+          rmSync(evidencePath(rootDir, packageCommand), { force: true });
+        }
+        const startedAt = Date.now();
+        if (packageCommands.length === 0) {
+          packageResult = { exitCode: 0, durationMs: 0 };
+        } else {
+          const result = spawnSync(
+            "pnpm",
+            createFastPackageTurboArguments(rootDir, packageCommands),
+            { cwd: rootDir, env: process.env, encoding: "utf8" },
+          );
+          process.stdout.write(result.stdout ?? "");
+          process.stderr.write(result.stderr ?? "");
+          const cache = /Cached:\s+(\d+) cached,\s+(\d+) total/.exec(result.stdout ?? "");
+          packageResult = {
+            exitCode: result.status ?? 1,
+            durationMs: Date.now() - startedAt,
+            cacheStatus: cache && cache[1] === cache[2] ? "hit" : "miss",
+          };
+          const summary = readTurboRunSummary(
+            rootDir,
+            `${result.stdout ?? ""}\n${result.stderr ?? ""}`,
+          );
+          for (const packageCommand of packageCommands) {
+            const packageName = resolveTurboPackageFilters(rootDir, [packageCommand])[0];
+            const evidence = readTurboTestTaskEvidence(
+              rootDir,
+              packageCommand,
+              packageName ?? "",
+              summary,
+            );
+            if (evidence) packageEvidence.set(packageCommand.cwd, evidence);
+          }
+        }
+        for (const rootCommand of plan.filter(({ cwd }) => cwd === ".")) {
+          rootResults.set(rootCommand.owner, runVitestCommandWithEvidence(rootDir, rootCommand));
+        }
+      }
+      return command.cwd === "."
+        ? (rootResults.get(command.owner) ?? packageResult)
+        : {
+            ...packageResult,
+            ...(packageEvidence.get(command.cwd) ?? { executedPaths: [] }),
+          };
+    };
+  }
+  return (command) => {
+    const reportDirectory = mkdtempSync(resolve(tmpdir(), "croco-test-lane-"));
+    try {
+      const reportPath = resolve(reportDirectory, "vitest.json");
+      const playwright = resolveScript(command, lane)?.includes("playwright test") ?? false;
+      const startedAt = Date.now();
+      const result = spawnSync(
+        command.command[0],
+        [
+          ...command.command.slice(1),
+          "--reporter=json",
+          ...(playwright ? [] : [`--outputFile=${reportPath}`]),
+        ],
+        {
+          cwd: resolve(rootDir, command.cwd),
+          env: playwright
+            ? { ...process.env, PLAYWRIGHT_JSON_OUTPUT_FILE: reportPath }
+            : process.env,
+          stdio: "inherit",
+        },
+      );
+      return {
+        exitCode: result.status ?? 1,
+        durationMs: Date.now() - startedAt,
+        executedPaths: existsSync(reportPath)
+          ? playwright
+            ? readCompletedPlaywrightPaths(reportPath, resolve(rootDir, command.cwd), command.paths)
+            : readCompletedVitestPaths(reportPath, resolve(rootDir, command.cwd))
+          : [],
+        executionState: "executed" as const,
+      };
+    } finally {
+      rmSync(reportDirectory, { recursive: true, force: true });
+    }
+  };
+}
+
+function defaultScriptResolver(rootDir: string): TestLaneScriptResolver {
+  return (command, lane) => {
+    if (command.cwd === ".") return undefined;
+    const manifest = JSON.parse(
+      readFileSync(resolve(rootDir, command.cwd, "package.json"), "utf8"),
+    ) as { readonly scripts?: Readonly<Record<string, string>> };
+    return manifest.scripts?.[lane === "fast" ? "test" : `test:${lane}`];
+  };
+}
+
+function expectedLaneSelections(command: TestLaneCommand): readonly string[] {
+  const paths = command.paths.join(" ");
+  return [`vitest run ${paths}`, `playwright test ${paths}`];
+}
+
+export function resolveTurboPackageFilters(
+  rootDir: string,
+  commands: readonly TestLaneCommand[],
+): readonly string[] {
+  return [
+    ...new Set(
+      commands
+        .filter(({ cwd }) => cwd !== ".")
+        .map(({ cwd }) => {
+          const manifest = JSON.parse(
+            readFileSync(resolve(rootDir, cwd, "package.json"), "utf8"),
+          ) as { readonly name?: string };
+          if (!manifest.name) throw new Error(`${cwd}/package.json has no package name`);
+          return manifest.name;
+        }),
+    ),
+  ].sort(compareText);
+}
+
+function validateLaneScript(
+  command: TestLaneCommand,
+  lane: TestLaneReport["lane"],
+  resolveScript: TestLaneScriptResolver,
+  workspaceTestPaths: readonly string[],
+): string | undefined {
+  if (command.cwd === ".") return undefined;
+  const script = resolveScript(command, lane)?.trim();
+  if (!script)
+    return `${command.cwd}/package.json has no ${lane === "fast" ? "test" : `test:${lane}`} script`;
+  const commandWithoutEnvironment = script.replace(/^(?:[A-Z_][A-Z0-9_]*=[^\s]+\s+)*/, "");
+  const selectedFastPaths =
+    lane === "fast"
+      ? workspaceTestPaths
+          .filter((path) => isSelectedByVitestScript(script, path))
+          .sort(compareText)
+      : [];
+  if (
+    expectedLaneSelections(command).includes(commandWithoutEnvironment) ||
+    (lane === "fast" && JSON.stringify(selectedFastPaths) === JSON.stringify(command.paths))
+  ) {
+    return undefined;
+  }
+  const scriptName = lane === "fast" ? "test" : `test:${lane}`;
+  return `${command.cwd}/package.json ${scriptName} must select exactly: ${command.paths.join(", ")}`;
+}
+
+export function runTestLane(options: {
+  readonly inventory: TestInventory;
+  readonly lane: Exclude<TestLane, "generated-app">;
+  readonly owners?: readonly string[];
+  readonly allowLive?: boolean;
+  readonly runner?: TestLaneCommandRunner;
+  readonly scriptResolver?: TestLaneScriptResolver;
+  readonly rootDir?: string;
+  readonly liveCredentialsAvailable?: boolean;
+}): TestLaneReport {
+  const owners = [...new Set(options.owners ?? [])].sort(compareText);
+  const plan = createTestLanePlan(options.inventory, options.lane, owners);
+  const diagnostics: { code: string; message: string }[] = [];
+  if (options.lane === "live" && !options.allowLive) {
+    diagnostics.push({
+      code: "TEST_LIVE_CREDENTIALS_MISSING",
+      message:
+        "The live lane requires explicit --allow-live after credentials/resources are provisioned.",
+    });
+  }
+  if (plan.length === 0) {
+    diagnostics.push({
+      code: "TEST_LANE_EMPTY_SELECTION",
+      message: `No ${options.lane} tests match owners: ${owners.join(", ") || "<all>"}.`,
+    });
+  }
+  const rootDir = options.rootDir ?? ROOT_DIR;
+  if (options.lane === "live" && options.allowLive && options.liveCredentialsAvailable !== true) {
+    const requirements = JSON.parse(
+      readFileSync(resolve(rootDir, "config/live-test-resources.json"), "utf8"),
+    ) as Readonly<Record<string, readonly string[]>>;
+    const missing = plan.flatMap(({ owner }) =>
+      requirements[owner] === undefined
+        ? [`${owner}:<undeclared>`]
+        : requirements[owner]
+            .filter((name) => !process.env[name])
+            .map((name) => `${owner}:${name}`),
+    );
+    if (missing.length > 0) {
+      diagnostics.push({
+        code: "TEST_LIVE_CREDENTIALS_MISSING",
+        message: `Required live credentials/resources are unavailable: ${[...new Set(missing)].sort().join(", ")}.`,
+      });
+    }
+  }
+  const resolveScript = options.scriptResolver ?? defaultScriptResolver(rootDir);
+  for (const command of plan) {
+    const workspaceTestPaths = options.inventory.tests
+      .filter(
+        ({ lane, path }) => lane !== "generated-app" && workspaceDirectory(path) === command.cwd,
+      )
+      .map(({ path }) => toWorkspacePath(command.cwd, path));
+    const error = validateLaneScript(command, options.lane, resolveScript, workspaceTestPaths);
+    if (error) {
+      diagnostics.push({ code: "TEST_LANE_SCRIPT_DRIFT", message: error });
+    }
+  }
+  const runner = options.runner ?? defaultRunner(rootDir, options.lane, plan, resolveScript);
+  const commands =
+    diagnostics.length > 0
+      ? []
+      : plan.map((command): TestLaneCommandResult => {
+          const result = runner(command);
+          const executedPaths = [...new Set(result.executedPaths ?? [])].sort(compareText);
+          const complete = JSON.stringify(executedPaths) === JSON.stringify(command.paths);
+          return {
+            ...command,
+            ...result,
+            executedPaths,
+            status: result.exitCode === 0 && complete ? "passed" : "failed",
+          };
+        });
+  if (commands.some(({ status }) => status === "failed")) {
+    diagnostics.push({
+      code: "TEST_LANE_EXECUTION_FAILED",
+      message: `At least one ${options.lane} lane command failed.`,
+    });
+  }
+  if (commands.some(({ status, exitCode }) => exitCode === 0 && status === "failed")) {
+    diagnostics.push({
+      code: "TEST_LANE_EXECUTION_INCOMPLETE",
+      message: `At least one ${options.lane} lane command did not complete every selected test path without skips.`,
+    });
+  }
+  return {
+    schemaVersion: "croco.test-lane-report/v1",
+    inventoryVersion: 1,
+    inventoryDigest: inventoryDigest(options.inventory),
+    lane: options.lane,
+    allowLive: options.allowLive ?? false,
+    selectedOwners: owners,
+    executedPaths: commands
+      .flatMap(({ cwd, executedPaths }) =>
+        executedPaths.map((path) => (cwd === "." ? path : `${cwd}/${path}`)),
+      )
+      .sort(compareText),
+    status: diagnostics.length === 0 ? "passed" : "failed",
+    diagnostics,
+    commands,
+  };
+}
+
+function parseArguments(args: readonly string[]): {
+  readonly lane: Exclude<TestLane, "generated-app">;
+  readonly owners: readonly string[];
+  readonly allowLive: boolean;
+  readonly list: boolean;
+  readonly output?: string;
+} {
+  let lane: Exclude<TestLane, "generated-app"> | undefined;
+  const owners: string[] = [];
+  let allowLive = false;
+  let list = false;
+  let output: string | undefined;
+  for (let index = 0; index < args.length; index += 1) {
+    const argument = args[index];
+    if (argument === "--lane") {
+      const value = args[index + 1];
+      if (!value || !TEST_LANES.includes(value as TestLane) || value === "generated-app") {
+        throw new Error("--lane requires fast, integration, published, or live");
+      }
+      lane = value as Exclude<TestLane, "generated-app">;
+      index += 1;
+    } else if (argument === "--owner") {
+      const owner = args[index + 1];
+      if (!owner) throw new Error("--owner requires a value");
+      owners.push(owner);
+      index += 1;
+    } else if (argument === "--allow-live") {
+      allowLive = true;
+    } else if (argument === "--list") {
+      list = true;
+    } else if (argument === "--output") {
+      output = args[index + 1];
+      if (!output) throw new Error("--output requires a path");
+      index += 1;
+    } else {
+      throw new Error(`Unknown argument: ${argument}`);
+    }
+  }
+  if (!lane) throw new Error("--lane is required");
+  return { lane, owners, allowLive, list, ...(output ? { output } : {}) };
+}
+
+export function runTestLaneCli(args: readonly string[], rootDir = ROOT_DIR): number {
+  const options = parseArguments(args);
+  const { inventory, diagnostics } = readTestInventory(resolve(rootDir, "test-inventory.json"));
+  if (diagnostics.length > 0) throw new Error(JSON.stringify(diagnostics));
+  const report = options.list
+    ? {
+        schemaVersion: "croco.test-lane-plan/v1",
+        inventoryVersion: 1,
+        inventoryDigest: inventoryDigest(inventory),
+        lane: options.lane,
+        commands: createTestLanePlan(inventory, options.lane, options.owners),
+      }
+    : runTestLane({
+        inventory,
+        lane: options.lane,
+        owners: options.owners,
+        allowLive: options.allowLive,
+        rootDir,
+      });
+  const rendered = `${JSON.stringify(report, null, 2)}\n`;
+  if (options.output) {
+    const outputPath = resolve(rootDir, options.output);
+    const relation = relative(resolve(rootDir), outputPath);
+    if (relation === ".." || relation.startsWith(`..${sep}`)) {
+      throw new Error("--output must remain inside the repository");
+    }
+    mkdirSync(dirname(outputPath), { recursive: true });
+    writeFileSync(outputPath, rendered);
+  } else {
+    process.stdout.write(rendered);
+  }
+  return "status" in report && report.status === "failed" ? 1 : 0;
+}
+
+const invokedPath = process.argv[1] ? resolve(process.argv[1]) : undefined;
+if (invokedPath === fileURLToPath(import.meta.url)) {
+  process.exitCode = runTestLaneCli(process.argv.slice(2));
+}

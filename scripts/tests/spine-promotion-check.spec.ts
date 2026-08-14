@@ -15,11 +15,14 @@ import {
   readExplicitPromotionEvidenceContext,
   writeSpinePromotionReport,
 } from "../spine-promotion-check.mts";
+import { inventoryDigest, readTestInventory } from "../test-inventory.mts";
+import { createTestLanePlan } from "../test-lane-runner.mts";
 
 const tempRepos: string[] = [];
 const commitSha = "0123456789abcdef";
 const startedAt = "2026-01-01T00:00:00.000Z";
 const completedAt = "2026-01-01T00:10:00.000Z";
+const fastTestLaneReportPath = "ci-reports/package-quality/fast-test-lane.json";
 
 describe("spine-promotion-check.mts", () => {
   afterEach(() => {
@@ -324,7 +327,7 @@ describe("spine-promotion-check.mts", () => {
     );
   });
 
-  it("normalizes equivalent CI and release evidence from existing run artifacts", () => {
+  it("normalizes CI Turbo evidence and authoritative release fast-lane evidence", () => {
     const fixture = createPromotionFixture("protocols-core");
     const runId = "run-1";
     const runAttempt = "1";
@@ -334,7 +337,12 @@ describe("spine-promotion-check.mts", () => {
       runAttempt,
       startedAt,
     });
-    writeTurboTestSummary(fixture.repo, "random-summary-name.json", "@croco/protocols-core");
+    writeTurboTestSummary(
+      fixture.repo,
+      "random-summary-name.json",
+      "@croco/protocols-core",
+      Date.parse(startedAt) + 1_000,
+    );
 
     const ciContext = createCiPromotionEvidenceContext({
       env: { SPINE_PROMOTION_TEST_OUTCOME: "success" },
@@ -359,6 +367,107 @@ describe("spine-promotion-check.mts", () => {
         runAttempt,
       }),
     ).toThrow("checkpoint provenance does not match");
+  });
+
+  it("uses passed release fast-lane commands even when later Turbo summaries disagree", () => {
+    const fixture = createPromotionFixture("protocols-core");
+    const runId = "run-1";
+    const runAttempt = "1";
+    writeTurboTestSummary(
+      fixture.repo,
+      "authoritative-test.json",
+      "@croco/protocols-core",
+      Date.parse(startedAt) + 1_000,
+    );
+    writeTurboTestSummary(
+      fixture.repo,
+      "later-nested-test.json",
+      "@croco/testing",
+      Date.parse(completedAt) + 1_000,
+    );
+    writeReleaseCheckpoint(fixture.repo, runId, runAttempt);
+
+    const context = createReleasePromotionEvidenceContext({
+      checkpointPath: join(fixture.repo, "release-checkpoint.json"),
+      commitSha,
+      runId,
+      runAttempt,
+    });
+
+    expect(hasSpinePromotionFailures(createReport(fixture.repo, context))).toBe(false);
+  });
+
+  it("fails release synthesis when the fast-lane report omits the promotion owner", () => {
+    const fixture = createPromotionFixture("protocols-core");
+    writeReleaseCheckpoint(fixture.repo, "run-1", "1");
+    const laneReportPath = join(fixture.repo, fastTestLaneReportPath);
+    const laneReport = JSON.parse(readFileSync(laneReportPath, "utf8")) as {
+      commands: { owner: string }[];
+    };
+    laneReport.commands[0] = { ...laneReport.commands[0], owner: "@croco/another-package" };
+    writeJson(laneReportPath, laneReport);
+
+    expect(() =>
+      createReleasePromotionEvidenceContext({
+        checkpointPath: join(fixture.repo, "release-checkpoint.json"),
+        commitSha,
+        runId: "run-1",
+        runAttempt: "1",
+      }),
+    ).toThrow("does not match the selected fast-lane plan");
+  });
+
+  it("fails release synthesis when the required fast-lane owner command failed", () => {
+    const fixture = createPromotionFixture("protocols-core");
+    writeReleaseCheckpoint(fixture.repo, "run-1", "1");
+    const laneReportPath = join(fixture.repo, fastTestLaneReportPath);
+    const laneReport = JSON.parse(readFileSync(laneReportPath, "utf8")) as {
+      status: string;
+      commands: { status: string; exitCode: number }[];
+    };
+    laneReport.status = "failed";
+    laneReport.commands[0] = { ...laneReport.commands[0], status: "failed", exitCode: 1 };
+    writeJson(laneReportPath, laneReport);
+
+    expect(() =>
+      createReleasePromotionEvidenceContext({
+        checkpointPath: join(fixture.repo, "release-checkpoint.json"),
+        commitSha,
+        runId: "run-1",
+        runAttempt: "1",
+      }),
+    ).toThrow("invalid report shape");
+  });
+
+  it("fails release synthesis for missing, stale, malformed, or mismatched lane evidence", () => {
+    const fixture = createPromotionFixture("protocols-core");
+    const checkpointPath = join(fixture.repo, "release-checkpoint.json");
+    const laneReportPath = join(fixture.repo, fastTestLaneReportPath);
+    const createContext = () =>
+      createReleasePromotionEvidenceContext({
+        checkpointPath,
+        commitSha,
+        runId: "run-1",
+        runAttempt: "1",
+      });
+
+    writeReleaseCheckpoint(fixture.repo, "run-1", "1", { artifactExists: false });
+    expect(createContext).toThrow("missing or stale");
+
+    writeReleaseCheckpoint(fixture.repo, "run-1", "1", { artifactFresh: false });
+    expect(createContext).toThrow("missing or stale");
+
+    writeReleaseCheckpoint(fixture.repo, "run-1", "1");
+    writeJson(laneReportPath, { schemaVersion: "unknown" });
+    expect(createContext).toThrow("invalid report shape");
+
+    writeReleaseCheckpoint(fixture.repo, "run-1", "1");
+    const laneReport = JSON.parse(readFileSync(laneReportPath, "utf8")) as {
+      inventoryDigest: string;
+    };
+    laneReport.inventoryDigest = "stale";
+    writeJson(laneReportPath, laneReport);
+    expect(createContext).toThrow("stale test inventory digest");
   });
 
   it("fails stale promotion metadata outside the beta spine", () => {
@@ -407,6 +516,7 @@ function createPromotionFixture(
 ): { readonly repo: string } {
   const repo = createTempRepo();
   writePackage(repo, shortName, testScript);
+  writeTestInventory(repo, shortName);
   writeCatalogMetadata(repo, shortName, references);
   return { repo };
 }
@@ -563,11 +673,16 @@ function writeJson(filePath: string, value: unknown): void {
   writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
 }
 
-function writeTurboTestSummary(repo: string, fileName: string, packageName: string): void {
+function writeTurboTestSummary(
+  repo: string,
+  fileName: string,
+  packageName: string,
+  endTime = Date.now(),
+): void {
   writeJson(join(repo, ".turbo", "runs", fileName), {
     execution: {
       command: "turbo run test --summarize --continue=always",
-      endTime: Date.now(),
+      endTime,
       exitCode: 0,
     },
     tasks: [
@@ -582,7 +697,62 @@ function writeTurboTestSummary(repo: string, fileName: string, packageName: stri
   });
 }
 
-function writeReleaseCheckpoint(repo: string, runId: string, runAttempt: string): void {
+function writeTestInventory(repo: string, shortName: string): void {
+  writeJson(join(repo, "test-inventory.json"), {
+    version: 1,
+    tests: [
+      {
+        path: `packages/${shortName}/src/tests/evidence.spec.ts`,
+        lane: "fast",
+        qualifiers: [],
+        owner: shortName === "create-croco-app" ? shortName : `@croco/${shortName}`,
+      },
+    ],
+    exceptions: [],
+  });
+}
+
+function writeReleaseCheckpoint(
+  repo: string,
+  runId: string,
+  runAttempt: string,
+  options: {
+    readonly artifactExists?: boolean;
+    readonly artifactFresh?: boolean;
+    readonly laneOwners?: readonly string[];
+  } = {},
+): void {
+  const { diagnostics, inventory } = readTestInventory(join(repo, "test-inventory.json"));
+  if (diagnostics.length > 0) {
+    throw new Error(`Invalid fixture test inventory: ${JSON.stringify(diagnostics)}`);
+  }
+  const selectedOwners = options.laneOwners ?? [];
+  const commands = createTestLanePlan(inventory, "fast", selectedOwners).map((command) => ({
+    ...command,
+    durationMs: 1,
+    exitCode: 0,
+    status: "passed",
+    cacheStatus: "miss",
+    executedPaths: command.paths,
+    executionState: "executed",
+    cacheHash: `cache-${command.owner}`,
+  }));
+  writeJson(join(repo, fastTestLaneReportPath), {
+    schemaVersion: "croco.test-lane-report/v1",
+    inventoryVersion: 1,
+    inventoryDigest: inventoryDigest(inventory),
+    lane: "fast",
+    allowLive: false,
+    selectedOwners,
+    executedPaths: commands
+      .flatMap(({ cwd, executedPaths }) =>
+        executedPaths.map((path) => (cwd === "." ? path : `${cwd}/${path}`)),
+      )
+      .sort(),
+    status: "passed",
+    diagnostics: [],
+    commands,
+  });
   writeJson(join(repo, "release-checkpoint.json"), {
     schemaVersion: 1,
     generatedAt: startedAt,
@@ -594,7 +764,19 @@ function writeReleaseCheckpoint(repo: string, runId: string, runAttempt: string)
         status: "passed",
         startedAt,
         completedAt,
-        artifacts: [],
+        artifacts: [
+          {
+            label: "Fast test lane evidence",
+            path: fastTestLaneReportPath,
+            required: true,
+            copiedPath: null,
+            copyError: null,
+            exists: options.artifactExists ?? true,
+            fresh: options.artifactFresh ?? true,
+            modifiedAt: completedAt,
+            sourcePath: fastTestLaneReportPath,
+          },
+        ],
       },
       {
         id: "spine-promotion",

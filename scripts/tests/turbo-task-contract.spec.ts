@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 type TurboTask = {
   readonly dependsOn?: readonly string[];
   readonly inputs?: readonly string[];
+  readonly outputs?: readonly string[];
 };
 
 type TurboConfiguration = {
@@ -38,8 +39,12 @@ describe("Turbo task contract", () => {
   });
 
   it("keeps package task overrides independent from the removed lint edge", () => {
-    expect(turbo.tasks["@croco/docs#test"]?.dependsOn).toEqual(["^build", "^test"]);
+    expect(turbo.tasks["@croco/docs#test"]?.dependsOn).toEqual(["^build"]);
+    expect(turbo.tasks["@croco/docs#test"]?.outputs).toEqual([".turbo/croco-test-evidence.json"]);
     expect(turbo.tasks["@croco/docs#typecheck"]?.dependsOn).toEqual(["^build", "^typecheck"]);
     expect(turbo.tasks["@croco/oxlint-rules#test"]?.dependsOn).toBeUndefined();
+    expect(turbo.tasks["@croco/oxlint-rules#test"]?.outputs).toEqual([
+      ".turbo/croco-test-evidence.json",
+    ]);
   });
 });

@@ -1,4 +1,12 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -10,6 +18,7 @@ import {
   parseArgs,
   writeProductionReadyReport,
 } from "../production-ready-check.mts";
+import { inventoryDigest, readTestInventory } from "../test-inventory.mts";
 
 const tempRepos: string[] = [];
 
@@ -316,6 +325,44 @@ describe("production-ready-check.mts", () => {
     },
   );
 
+  it("accepts a lane-aware test contract that isolates published tests from the default lane", () => {
+    const repo = createReadyRepo({
+      testScript: "vitest run --exclude src/tests/PublishedContract.spec.ts",
+    });
+    addInventoryTest(repo, "stable", "src/tests/PublishedContract.spec.ts", "published");
+    updatePackageScripts(repo, "stable", {
+      "test:published": "vitest run src/tests/PublishedContract.spec.ts",
+    });
+
+    expect(hasProductionReadyFailures(createReport(repo))).toBe(false);
+  });
+
+  it("rejects a default test script that leaks a special lane", () => {
+    const repo = createReadyRepo();
+    addInventoryTest(repo, "stable", "src/tests/PublishedContract.spec.ts", "published");
+    updatePackageScripts(repo, "stable", {
+      "test:published": "vitest run src/tests/PublishedContract.spec.ts",
+    });
+
+    expect(buildProductionReadyMarkdown(createReport(repo))).toContain(
+      'test script must be exactly "vitest run --exclude src/tests/PublishedContract.spec.ts"',
+    );
+  });
+
+  it("rejects production packages without deterministic fast tests", () => {
+    const repo = createReadyRepo({
+      testScript: "vitest run --exclude src/tests/Behavior.spec.ts",
+    });
+    setInventoryLane(repo, "stable", "src/tests/Behavior.spec.ts", "published");
+    updatePackageScripts(repo, "stable", {
+      "test:published": "vitest run src/tests/Behavior.spec.ts",
+    });
+
+    expect(buildProductionReadyMarkdown(createReport(repo))).toContain(
+      "test-inventory.json has no deterministic fast test for @croco/stable",
+    );
+  });
+
   it("rejects package-local Vitest configuration that can exclude the mapped spec", () => {
     const repo = createReadyRepo();
     writeFile(
@@ -597,13 +644,67 @@ describe("production-ready-check.mts", () => {
     expect(markdown).toContain("build status is not-collected");
   });
 
+  it("uses authoritative fast-lane evidence when a later narrow Turbo run shadows the full summary", () => {
+    const repo = createReadyRepo();
+    writeTurboSummaries(repo, ["@croco/stable"]);
+    writeJson(join(repo, ".turbo", "runs", "later-narrow-test.json"), {
+      execution: {
+        command: "turbo run test --filter=@croco/other --summarize",
+        endTime: 400,
+        exitCode: 0,
+      },
+      tasks: [
+        {
+          taskId: "@croco/other#test",
+          task: "test",
+          package: "@croco/other",
+          directory: "packages/other",
+          execution: { exitCode: 0 },
+          cache: { status: "MISS" },
+        },
+      ],
+    });
+    const fastTestLaneReportPath = writeFastTestLaneReport(repo, ["stable"]);
+
+    expect(hasProductionReadyFailures(createReport(repo, { requireTaskSummaries: true }))).toBe(
+      true,
+    );
+    expect(
+      hasProductionReadyFailures(
+        createReport(repo, { fastTestLaneReportPath, requireTaskSummaries: true }),
+      ),
+    ).toBe(false);
+  });
+
+  it("rejects fast-lane evidence whose paths do not match the current inventory plan", () => {
+    const repo = createReadyRepo();
+    writeTurboSummaries(repo, ["@croco/stable"]);
+    const fastTestLaneReportPath = writeFastTestLaneReport(repo, ["stable"], {
+      paths: ["src/tests/Other.spec.ts"],
+    });
+
+    const report = createReport(repo, { fastTestLaneReportPath, requireTaskSummaries: true });
+
+    expect(hasProductionReadyFailures(report)).toBe(true);
+    expect(buildProductionReadyMarkdown(report)).toContain("does not match the fast-lane plan");
+  });
+
   it("accepts the pnpm CLI separator before CI-only options", () => {
     const repo = createTempRepo();
 
-    const options = parseArgs(["--", "--root", repo, "--require-task-summaries"]);
+    const laneReportPath = join(repo, "fast-test-lane.json");
+    const options = parseArgs([
+      "--",
+      "--root",
+      repo,
+      "--require-task-summaries",
+      "--fast-test-lane-report",
+      laneReportPath,
+    ]);
 
     expect(options.rootDir).toBe(repo);
     expect(options.requireTaskSummaries).toBe(true);
+    expect(options.fastTestLaneReportPath).toBe(laneReportPath);
   });
 
   it("requires adapter and provider maturity evidence in reference docs for production packages", () => {
@@ -645,8 +746,15 @@ describe("production-ready-check.mts", () => {
   });
 });
 
-function createReport(repo: string, options: { readonly requireTaskSummaries?: boolean } = {}) {
+function createReport(
+  repo: string,
+  options: {
+    readonly fastTestLaneReportPath?: string;
+    readonly requireTaskSummaries?: boolean;
+  } = {},
+) {
   return createProductionReadyReport({
+    fastTestLaneReportPath: options.fastTestLaneReportPath,
     generatedAt: "2026-01-01T00:00:00.000Z",
     requireTaskSummaries: options.requireTaskSummaries ?? false,
     rootDir: repo,
@@ -756,6 +864,32 @@ function writePackage(
       typecheck: "tsc --noEmit",
     },
   });
+
+  const inventoryPath = join(repo, "test-inventory.json");
+  const inventory = JSON.parse(
+    existsSync(inventoryPath)
+      ? readFileSync(inventoryPath, "utf-8")
+      : '{"version":1,"tests":[],"exceptions":[]}',
+  ) as {
+    version: 1;
+    tests: Array<{
+      path: string;
+      lane: "fast";
+      qualifiers: string[];
+      owner: string;
+    }>;
+    exceptions: unknown[];
+  };
+  inventory.tests = inventory.tests.filter((entry) => entry.owner !== `@croco/${dirName}`);
+  if (options.tests !== false) {
+    inventory.tests.push({
+      path: `packages/${dirName}/src/tests/Behavior.spec.ts`,
+      lane: "fast",
+      qualifiers: [],
+      owner: `@croco/${dirName}`,
+    });
+  }
+  writeJson(inventoryPath, inventory);
 }
 
 function writeGeneratedApiDocs(repo: string, dirName: string): void {
@@ -898,6 +1032,41 @@ function writeTurboSummaries(repo: string, packageNames: readonly string[]): voi
   }
 }
 
+function writeFastTestLaneReport(
+  repo: string,
+  packageNames: readonly string[],
+  overrides: { readonly paths?: readonly string[] } = {},
+): string {
+  const inventory = readTestInventory(join(repo, "test-inventory.json")).inventory;
+  const commands = packageNames.map((packageName) => ({
+    owner: `@croco/${packageName}`,
+    cwd: `packages/${packageName}`,
+    paths: overrides.paths ?? ["src/tests/Behavior.spec.ts"],
+    command: ["pnpm", "run", "test"],
+    durationMs: 1,
+    exitCode: 0,
+    status: "passed" as const,
+    cacheStatus: "miss" as const,
+    executedPaths: overrides.paths ?? ["src/tests/Behavior.spec.ts"],
+    executionState: "executed" as const,
+    cacheHash: `${packageName}-test-hash`,
+  }));
+  const reportPath = join(repo, "fast-test-lane.json");
+  writeJson(reportPath, {
+    schemaVersion: "croco.test-lane-report/v1",
+    inventoryVersion: 1,
+    inventoryDigest: inventoryDigest(inventory),
+    lane: "fast",
+    allowLive: false,
+    selectedOwners: [],
+    executedPaths: commands.map(({ cwd, paths }) => `${cwd}/${paths[0]}`),
+    status: "passed",
+    diagnostics: [],
+    commands,
+  });
+  return reportPath;
+}
+
 function writeReferenceDocs(repo: string): void {
   const referenceRoot = join(repo, "packages", "docs", "src", "content", "docs", "en", "reference");
   writeFile(
@@ -921,6 +1090,68 @@ function writeReferenceDocs(repo: string): void {
     "# Provider Maturity\n\nEvidence for other adapters.\n",
   );
   mkdirSync(referenceRoot, { recursive: true });
+}
+
+type FixtureInventory = {
+  version: 1;
+  tests: Array<{
+    path: string;
+    lane: "fast" | "integration" | "published" | "live";
+    qualifiers: string[];
+    owner: string;
+  }>;
+  exceptions: unknown[];
+};
+
+function addInventoryTest(
+  repo: string,
+  packageName: string,
+  relativeTestPath: string,
+  lane: "integration" | "published" | "live",
+): void {
+  writeFile(
+    repo,
+    `packages/${packageName}/${relativeTestPath}`,
+    'import { expect, it } from "vitest";\nit("runs the special contract", () => expect(true).toBe(true));\n',
+  );
+  const inventoryPath = join(repo, "test-inventory.json");
+  const inventory = JSON.parse(readFileSync(inventoryPath, "utf-8")) as FixtureInventory;
+  inventory.tests.push({
+    path: `packages/${packageName}/${relativeTestPath}`,
+    lane,
+    qualifiers: [],
+    owner: `@croco/${packageName}`,
+  });
+  writeJson(inventoryPath, inventory);
+}
+
+function setInventoryLane(
+  repo: string,
+  packageName: string,
+  relativeTestPath: string,
+  lane: "published",
+): void {
+  const inventoryPath = join(repo, "test-inventory.json");
+  const inventory = JSON.parse(readFileSync(inventoryPath, "utf-8")) as FixtureInventory;
+  const entry = inventory.tests.find(
+    (candidate) => candidate.path === `packages/${packageName}/${relativeTestPath}`,
+  );
+  if (!entry) throw new Error(`missing fixture inventory entry: ${relativeTestPath}`);
+  entry.lane = lane;
+  writeJson(inventoryPath, inventory);
+}
+
+function updatePackageScripts(
+  repo: string,
+  packageName: string,
+  scripts: Readonly<Record<string, string>>,
+): void {
+  const manifestPath = join(repo, "packages", packageName, "package.json");
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf-8")) as {
+    scripts: Record<string, string>;
+  };
+  Object.assign(manifest.scripts, scripts);
+  writeJson(manifestPath, manifest);
 }
 
 function writeFile(repo: string, relativePath: string, content: string): void {

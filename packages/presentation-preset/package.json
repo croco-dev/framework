@@ -28,7 +28,8 @@
   "scripts": {
     "build": "tsup",
     "lint": "oxlint .",
-    "test": "vitest run",
+    "test": "vitest run --exclude src/__tests__/e2e.spec.ts",
+    "test:integration": "vitest run src/__tests__/e2e.spec.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

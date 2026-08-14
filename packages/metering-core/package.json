@@ -34,7 +34,8 @@
   },
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
-    "test": "vitest run",
+    "test": "vitest run --exclude src/tests/RedisMetering.integration.spec.ts",
+    "test:live": "CROCO_TEST_REAL_RESOURCES=1 vitest run src/tests/RedisMetering.integration.spec.ts",
     "test:real": "CROCO_TEST_REAL_RESOURCES=1 vitest run src/tests/RedisMetering.integration.spec.ts",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint ."

@@ -54,7 +54,7 @@ jobs:
         run: |
           base_ref="${GITHUB_BASE_REF:-trunk}"
           git fetch origin "$base_ref"
-          pnpm pr-review-companion -- --base "origin/${base_ref}" --head HEAD --run-required-checks --github-annotations
+          pnpm pr-review-companion -- --base "origin/${base_ref}" --head HEAD --github-annotations
 
       - name: Publish companion summary
         if: always()

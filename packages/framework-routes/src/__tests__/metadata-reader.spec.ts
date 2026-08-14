@@ -7,6 +7,8 @@ import { describe, expect, it } from "vitest";
 import { readControllerMetadata, readControllersMetadata } from "../metadata-reader";
 import { SampleController } from "./fixtures/SampleController";
 
+const COMPILED_CONTROLLER_TEST_TIMEOUT_MS = 30_000;
+
 describe("readControllerMetadata", () => {
   it("reads controller metadata from a class", () => {
     const controllerKey = Symbol.for("croco:rest:controller");
@@ -56,33 +58,37 @@ describe("readControllerMetadata", () => {
     ]);
   });
 
-  it("reads metadata from a compiled controller module", async () => {
-    const outputDir = await mkdtemp(join(tmpdir(), "croco-framework-routes-fixture-"));
+  it(
+    "reads metadata from a compiled controller module",
+    async () => {
+      const outputDir = await mkdtemp(join(tmpdir(), "croco-framework-routes-fixture-"));
 
-    try {
-      await build({
-        entry: [new URL("./fixtures/SampleController.ts", import.meta.url).pathname],
-        format: ["esm"],
-        outDir: outputDir,
-        clean: true,
-        dts: false,
-        silent: true,
-        external: ["reflect-metadata"],
-        noExternal: ["@croco/framework-context", "@croco/protocols-rest", "@croco/problems-core"],
-      });
+      try {
+        await build({
+          entry: [new URL("./fixtures/SampleController.ts", import.meta.url).pathname],
+          format: ["esm"],
+          outDir: outputDir,
+          clean: true,
+          dts: false,
+          silent: true,
+          external: ["reflect-metadata"],
+          noExternal: ["@croco/framework-context", "@croco/protocols-rest", "@croco/problems-core"],
+        });
 
-      const info = await readControllerMetadata(
-        new URL(`file://${join(outputDir, "SampleController.mjs")}`).href,
-      );
+        const info = await readControllerMetadata(
+          new URL(`file://${join(outputDir, "SampleController.mjs")}`).href,
+        );
 
-      expect(info?.basePath).toBe("/api");
-      expect(info?.className).toBe("SampleController");
-      expect(info?.routes).toEqual([
-        { method: "GET", path: "/hello", handlerName: "hello" },
-        { method: "POST", path: "/users", handlerName: "createUser" },
-      ]);
-    } finally {
-      await rm(outputDir, { recursive: true, force: true });
-    }
-  });
+        expect(info?.basePath).toBe("/api");
+        expect(info?.className).toBe("SampleController");
+        expect(info?.routes).toEqual([
+          { method: "GET", path: "/hello", handlerName: "hello" },
+          { method: "POST", path: "/users", handlerName: "createUser" },
+        ]);
+      } finally {
+        await rm(outputDir, { recursive: true, force: true });
+      }
+    },
+    COMPILED_CONTROLLER_TEST_TIMEOUT_MS,
+  );
 });

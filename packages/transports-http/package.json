@@ -29,7 +29,8 @@
     "deploy": "pnpm run build && pnpm publish --no-git-checks",
     "lint": "oxlint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --exclude src/tests/PublishedListen.spec.ts",
+    "test:published": "vitest run src/tests/PublishedListen.spec.ts",
     "test:watch": "vitest"
   },
   "dependencies": {

@@ -196,12 +196,32 @@ export function selectGeneratedSmokeCasesForChangedFiles(
     .map(([caseName]) => caseName);
 }
 
+export function selectGeneratedTestPathsForSmokeCases(
+  caseNames: readonly string[],
+  generatedTestPaths: readonly string[],
+): readonly string[] {
+  const templateRoots = new Set(
+    caseNames.flatMap(
+      (caseName) => CASE_TEMPLATE_ROOTS[caseName as keyof typeof CASE_TEMPLATE_ROOTS] ?? [],
+    ),
+  );
+  return generatedTestPaths
+    .filter((path) =>
+      [...templateRoots].some((templateRoot) =>
+        path.startsWith(`packages/create-croco-app/templates/${templateRoot}/`),
+      ),
+    )
+    .sort();
+}
+
 export function readGeneratedSmokeCaseDirectDependencies(
   caseName: string,
   rootDir = ROOT_DIR,
 ): readonly string[] {
   const templateRoots = CASE_TEMPLATE_ROOTS[caseName as keyof typeof CASE_TEMPLATE_ROOTS];
-  if (!templateRoots) return [];
+  if (!templateRoots) {
+    throw new Error(`Unknown generated smoke case: ${caseName}`);
+  }
   return [
     ...new Set([
       ...templateRoots.flatMap((templateRoot) =>

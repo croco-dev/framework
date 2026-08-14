@@ -808,21 +808,31 @@ export function createExecutableAssuranceGraph(
           ["runtime", entrypoint.runtimeExports ?? []],
           ["type", entrypoint.typeExports ?? []],
         ] as const) {
-          for (const exported of exports) {
+          const exportsByName = new Map<string, (typeof exports)[number][]>();
+          for (const declaration of exports) {
+            const declarations = exportsByName.get(declaration.name) ?? [];
+            declarations.push(declaration);
+            exportsByName.set(declaration.name, declarations);
+          }
+          for (const [name, declarations] of exportsByName) {
+            const source =
+              declarations.length === 1 && declarations[0]?.source
+                ? { path: declarations[0].source }
+                : undefined;
             addNode(nodes, {
               id: behaviorId(
                 "public-api",
-                `${publicApiEntrypointId(packageEntry.packageName, entrypoint.exportPath)}#${exportKind}:${exported.name}`,
+                `${publicApiEntrypointId(packageEntry.packageName, entrypoint.exportPath)}#${exportKind}:${name}`,
               ),
               kind: "public-api",
-              label: `${publicApiEntrypointId(packageEntry.packageName, entrypoint.exportPath)} ${exported.name}`,
-              source: exported.source ? { path: exported.source } : undefined,
+              label: `${publicApiEntrypointId(packageEntry.packageName, entrypoint.exportPath)} ${name}`,
+              source,
               artifact: "publicApi",
               fingerprint: artifactFingerprint({
                 packageName: packageEntry.packageName,
                 exportPath: entrypoint.exportPath,
                 exportKind,
-                exported,
+                declarations,
               }),
             });
           }

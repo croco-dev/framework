@@ -12,7 +12,7 @@ import {
   TRUSTED_GITLEAKS_IMAGE,
 } from "../workflow-verification-contract.mts";
 
-const ROOT_DIR = resolve(__dirname, "../..");
+const ROOT_DIR = resolve(import.meta.dirname, "../..");
 const WORKFLOW = readFileSync(resolve(ROOT_DIR, ".github/workflows/ci.yml"), "utf8");
 const WORKFLOWS = Object.fromEntries(
   readdirSync(resolve(ROOT_DIR, ".github/workflows"))
@@ -192,6 +192,32 @@ describe("CI verification profile contract", () => {
     expect(VALIDATE_JOB).toContain("    timeout-minutes: 90");
   });
 
+  it("measures the complete validate-job boundary after post-spine checks", () => {
+    expect(workflowStep("Start validate performance measurement")).toContain(
+      "CROCO_VALIDATE_MEASUREMENT_STARTED_AT=",
+    );
+    expect(workflowStep("Complete validate performance measurement")).toContain(
+      "CROCO_VALIDATE_MEASUREMENT_COMPLETED_AT=",
+    );
+    const performanceStep = workflowStep("Record observed CI performance budget");
+    expect(performanceStep).toContain(
+      '--measurement-started-at "$CROCO_VALIDATE_MEASUREMENT_STARTED_AT"',
+    );
+    expect(performanceStep).toContain(
+      '--measurement-completed-at "$CROCO_VALIDATE_MEASUREMENT_COMPLETED_AT"',
+    );
+    expect(performanceStep).toContain("if [ -f ci-reports/ci-performance/report.md ]; then");
+    expect(performanceStep).toContain('exit "$performance_status"');
+    const coverageSummary = VALIDATE_JOB.indexOf("Publish core coverage warning summary");
+    const measurementComplete = VALIDATE_JOB.indexOf("Complete validate performance measurement");
+    const performanceBudget = VALIDATE_JOB.indexOf("Record observed CI performance budget");
+    expect(coverageSummary).toBeGreaterThan(-1);
+    expect(measurementComplete).toBeGreaterThan(-1);
+    expect(performanceBudget).toBeGreaterThan(-1);
+    expect(coverageSummary).toBeLessThan(measurementComplete);
+    expect(measurementComplete).toBeLessThan(performanceBudget);
+  });
+
   it("classifies changes and invokes exactly one shared profile", () => {
     expect(WORKFLOW).toContain("scripts/verification-change-classifier.mts");
     expect(WORKFLOW).toContain('--event "$GITHUB_EVENT_NAME"');
@@ -274,6 +300,26 @@ describe("CI verification profile contract", () => {
     expect(GITLEAKS_SMOKE).toContain('"clean", clean');
     expect(GITLEAKS_SMOKE).toContain('"invalid-config", invalidConfig');
     expect(GITLEAKS_SMOKE).not.toMatch(/ghp_[A-Za-z0-9]{36}/);
+  });
+
+  it("installs the browser required by the authoritative docs integration lane", () => {
+    const install = VALIDATE_JOB.indexOf("      - name: Install dependencies");
+    const playwright = VALIDATE_JOB.indexOf("      - name: Install Playwright Chromium");
+    const verification = VALIDATE_JOB.indexOf("      - name: Run selected verification profile");
+
+    expect(playwright).toBeGreaterThan(install);
+    expect(playwright).toBeLessThan(verification);
+    expect(VALIDATE_JOB).toContain("pnpm --dir packages/docs run playwright:install");
+  });
+
+  it("fails publish shadow reuse with an explicit missing-evidence diagnostic", () => {
+    const shadow = workflowStep("Run full test suite for changed-test shadow");
+
+    expect(shadow).toContain("if [ -f ci-reports/package-quality/fast-test-lane.json ]; then");
+    expect(shadow).toContain(
+      "Publish fast lane evidence is missing; the verification fast lane did not run.",
+    );
+    expect(shadow).toContain("full_suite_status=1");
   });
 
   it("keeps the blocking Gitleaks summary and report upload observable", () => {
@@ -365,6 +411,12 @@ describe("CI verification profile contract", () => {
     expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/metering-core test:real");
   });
 
+  it("runs Timescale metrics idempotency against a real TimescaleDB container", () => {
+    expect(WORKFLOW).toContain("              - 'packages/metrics-core/src/**'");
+    expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/metrics-core...");
+    expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/metrics-core test:real");
+  });
+
   it("runs fresh migration status against real PostgreSQL", () => {
     expect(WORKFLOW).toContain("              - 'packages/migration-runner/**'");
     expect(REAL_RESOURCE_JOB).toContain(
@@ -450,26 +502,51 @@ describe("CI verification profile contract", () => {
     expect(VALIDATE_JOB).toContain("ci-reports/test-evidence");
   });
 
-  it("measures changed-test selection misses against a non-blocking full-suite shadow", () => {
+  it("measures changed-test selection misses against cache-aware authoritative shadow evidence", () => {
     const fullSuiteStep = workflowStep("Run full test suite for changed-test shadow");
     expect(fullSuiteStep).toContain("if: always() && github.event_name == 'pull_request'");
-    expect(fullSuiteStep).toContain(
-      "CROCO_TEST_EVIDENCE_DIR: ${{ github.workspace }}/ci-reports/changed-test-plan/full-evidence/records",
+    expect(fullSuiteStep).not.toContain("continue-on-error");
+    expect(fullSuiteStep).toContain("VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}");
+    expect(fullSuiteStep).toContain('if [ "$VERIFICATION_PROFILE" = "publish" ]; then');
+    expect(fullSuiteStep).toContain("ci-reports/package-quality/fast-test-lane.json");
+    expect(fullSuiteStep).toContain("ci-reports/changed-test-plan/full-fast-lane.json");
+    expect(fullSuiteStep).toContain('shadow_source="reused publish verification fast lane"');
+    const publishBranchStart = fullSuiteStep.indexOf(
+      'if [ "$VERIFICATION_PROFILE" = "publish" ]; then',
     );
-    expect(fullSuiteStep).toContain("continue-on-error: true");
-    expect(fullSuiteStep).toContain("pnpm --filter @croco/testing build");
-    expect(fullSuiteStep).toContain('if [ "$full_suite_status" -eq 0 ]; then');
-    expect(fullSuiteStep).toContain("pnpm turbo run test --force --continue=always");
+    const nonPublishBranchStart = fullSuiteStep.indexOf("          else", publishBranchStart);
+    const statusValidationStart = fullSuiteStep.indexOf(
+      "scripts/changed-test-full-suite-status.mts",
+      nonPublishBranchStart,
+    );
+    expect(publishBranchStart).toBeGreaterThan(-1);
+    expect(nonPublishBranchStart).toBeGreaterThan(publishBranchStart);
+    expect(statusValidationStart).toBeGreaterThan(nonPublishBranchStart);
+    expect(fullSuiteStep.slice(publishBranchStart, nonPublishBranchStart)).toContain("cp \\");
+    expect(fullSuiteStep.slice(publishBranchStart, nonPublishBranchStart)).not.toContain(
+      "scripts/test-lane-runner.mts",
+    );
+    expect(fullSuiteStep.slice(nonPublishBranchStart, statusValidationStart)).toContain(
+      "scripts/test-lane-runner.mts",
+    );
+    expect(fullSuiteStep.slice(nonPublishBranchStart, statusValidationStart)).toContain(
+      "--lane fast",
+    );
+    expect(fullSuiteStep).not.toContain("--force");
+    expect(fullSuiteStep).toContain("scripts/changed-test-full-suite-status.mts");
+    expect(fullSuiteStep).toContain("full-suite-status.json");
     expect(fullSuiteStep).toContain("elapsed_seconds=$(($(date +%s) - started_at))");
     expect(fullSuiteStep).toContain("${{ runner.os }}/${{ runner.arch }}");
-    expect(fullSuiteStep).toContain(
-      "--reporter=${{ github.workspace }}/packages/testing/dist/vitest-reporter.mjs",
-    );
     expect(VALIDATE_JOB).toContain("Assert changed-test shadow evidence completeness");
     expect(VALIDATE_JOB).toContain("scripts/changed-test-full-suite-status.mts");
     expect(VALIDATE_JOB).toContain("full-suite-status.json");
     expect(fullSuiteStep).toContain('exit "$full_suite_status"');
-    expect(VALIDATE_JOB).toContain('if [ "$evidence_count" -eq 0 ]; then');
+    const completenessStep = workflowStep("Assert changed-test shadow evidence completeness");
+    expect(completenessStep).not.toContain("continue-on-error");
+    expect(completenessStep).toContain("--check ci-reports/changed-test-plan/full-fast-lane.json");
+    expect(completenessStep).toContain(
+      "test -f ci-reports/changed-test-plan/full-evidence/records/full-suite-status.json",
+    );
     expect(VALIDATE_JOB).toContain("Restore changed-test shadow baseline");
     const restoreBaseline = VALIDATE_JOB.slice(
       VALIDATE_JOB.indexOf("      - name: Restore changed-test shadow baseline"),
@@ -481,9 +558,18 @@ describe("CI verification profile contract", () => {
       "key: changed-test-plan-${{ github.event.pull_request.number }}-${{ github.run_id }}-${{ github.run_attempt }}",
     );
     expect(VALIDATE_JOB).toContain("      - name: Aggregate changed-test shadow full evidence");
+    expect(workflowStep("Aggregate changed-test shadow full evidence")).not.toContain(
+      "continue-on-error",
+    );
     expect(VALIDATE_JOB).toContain("scripts/test-evidence-bundle.mts");
+    expect(workflowStep("Aggregate changed-test shadow full evidence")).toContain(
+      "--input ci-reports/changed-test-plan/full-evidence/records/full-suite-status.json",
+    );
     expect(VALIDATE_JOB).toContain("--output ci-reports/changed-test-plan/full-evidence");
     expect(VALIDATE_JOB).toContain("      - name: Measure changed-test selection misses");
+    expect(workflowStep("Measure changed-test selection misses")).not.toContain(
+      "continue-on-error",
+    );
     expect(VALIDATE_JOB).toContain("scripts/changed-test-plan-shadow.mts");
     expect(VALIDATE_JOB).toContain("--execute-selected");
     expect(VALIDATE_JOB).toContain("ci-reports/changed-test-plan/full-evidence/bundle.json");
@@ -498,8 +584,8 @@ describe("CI verification profile contract", () => {
       changedFiles: ["packages/retry-core/src/libs/Retry.ts"],
       head: "HEAD",
     });
-    expect(unrelatedSpine.find(({ id }) => id === "test")?.command).toContain(
-      "--filter=...[origin/trunk]",
+    expect(unrelatedSpine.find(({ id }) => id === "test")?.command).toEqual(
+      expect.arrayContaining(["scripts/test-lane-runner.mts", "--lane", "fast"]),
     );
     expect(VALIDATE_JOB).toContain("pnpm --filter @croco/testing test");
   });

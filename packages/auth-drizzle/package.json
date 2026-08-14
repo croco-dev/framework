@@ -35,7 +35,8 @@
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint .",
-    "test": "vitest run"
+    "test": "vitest run --exclude src/tests/DrizzleApiKeyStore.postgres.spec.ts",
+    "test:live": "vitest run src/tests/DrizzleApiKeyStore.postgres.spec.ts"
   },
   "dependencies": {
     "@croco/auth-core": "workspace:*",

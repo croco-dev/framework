@@ -48,10 +48,10 @@ describe("dependency-audit-policy.mts", () => {
       });
     });
 
-    expect(workspace.overrides?.nanoid).toBe("3.3.17");
-    expect(lockfile.overrides?.nanoid).toBe("3.3.17");
-    expect(resolvedNanoidVersions).toEqual(["3.3.17"]);
-    expect([...new Set(transitiveNanoidVersions)]).toEqual(["3.3.17"]);
+    expect(workspace.overrides?.nanoid).toBe("3.3.18");
+    expect(lockfile.overrides?.nanoid).toBe("3.3.18");
+    expect(resolvedNanoidVersions).toEqual(["3.3.18"]);
+    expect([...new Set(transitiveNanoidVersions)]).toEqual(["3.3.18"]);
   });
 
   it("fails high runtime dependency findings without reviewed metadata", () => {

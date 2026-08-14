@@ -32,6 +32,7 @@ function classifyPath(path: string): PathKind {
   if (path === ".changeset/config.json") return "publish";
   if (/^\.changeset\/(pre\.json|[^/]+\.md)$/.test(path)) return "changeset";
   if (/^(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml)$/.test(path)) return "publish";
+  if (path === "test-inventory.json") return "publish";
   if (/^packages\/[^/]+\/(package\.json|CHANGELOG\.md)$/.test(path)) return "publish";
   if (
     /^packages\/[^/]+\/(src|tests?|test|config)\//.test(path) ||

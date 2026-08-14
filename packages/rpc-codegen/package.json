@@ -38,7 +38,9 @@
     "build": "tsup src/index.ts src/cli.ts --format esm,cjs --minify --clean --dts",
     "lint": "oxlint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run --exclude src/tests/e2e.spec.ts --exclude src/tests/real-app.e2e.spec.ts --exclude src/tests/PublishedCli.spec.ts",
+    "test:integration": "vitest run src/tests/e2e.spec.ts src/tests/real-app.e2e.spec.ts",
+    "test:published": "vitest run src/tests/PublishedCli.spec.ts"
   },
   "dependencies": {
     "@croco/presentation-preset": "workspace:*",

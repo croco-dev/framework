@@ -21,12 +21,17 @@ import {
 import {
   createReleaseSpineEvidenceManifest,
   type EvidenceArtifactReference,
+  type EvidenceCheckResult,
   type ReleaseSpineEvidenceReport,
 } from "./release-spine-evidence.mts";
+import { assertLaneReport, type LaneReport } from "./test-evidence-reconcile.mts";
+import { inventoryDigest, readTestInventory } from "./test-inventory.mts";
+import { createTestLanePlan } from "./test-lane-runner.mts";
 
 const reportDirectory = join("ci-reports", "package-quality");
 const reportFileName = "spine-promotion.md";
 const catalogMetadataPath = join("docs", "package-catalog.json");
+const fastTestLaneReportPath = join("ci-reports", "package-quality", "fast-test-lane.json");
 const maturityOrder = ["production", "beta", "alpha", "deprecated"] as const;
 
 type MaturityKey = (typeof maturityOrder)[number];
@@ -929,17 +934,20 @@ function readArtifact(rootDir: string, path: string, startedAt: string) {
 function readTurboTestRun(
   rootDir: string,
   startedAt: string,
+  completedAt?: string | null,
 ): {
   readonly outcome: PromotionCommandResult["outcome"];
   readonly tasks: PromotionCommandResult["testTasks"];
 } {
   const startedAtMs = Date.parse(startedAt);
+  const completedAtMs = completedAt ? Date.parse(completedAt) : Number.POSITIVE_INFINITY;
   const summary = readTurboRunSummaries(join(rootDir, ".turbo", "runs"))
     .filter(
       (candidate) =>
         /(?:^|\s)turbo\s+(?:run\s+)?test(?:\s|$)/.test(candidate.command) &&
         statSync(candidate.filePath).mtimeMs >= startedAtMs &&
-        candidate.endTime >= startedAtMs,
+        candidate.endTime >= startedAtMs &&
+        candidate.endTime <= completedAtMs,
     )
     .at(-1);
   if (!summary) {
@@ -963,8 +971,79 @@ function readTurboTestRun(
 function readTurboTestTasks(
   rootDir: string,
   startedAt: string,
+  completedAt?: string | null,
 ): PromotionCommandResult["testTasks"] {
-  return readTurboTestRun(rootDir, startedAt).tasks;
+  return readTurboTestRun(rootDir, startedAt, completedAt).tasks;
+}
+
+function readReleaseFastTestTasks(
+  report: ReleaseSpineEvidenceReport,
+  check: EvidenceCheckResult,
+): PromotionCommandResult["testTasks"] {
+  const artifact = check.artifacts.find(
+    (candidate) =>
+      candidate.required && toPosixPath(candidate.path) === toPosixPath(fastTestLaneReportPath),
+  );
+  if (!artifact) {
+    throw new Error(`Release test check must own required artifact ${fastTestLaneReportPath}`);
+  }
+  if (!artifact.exists || !artifact.fresh) {
+    throw new Error(`Release test check artifact ${fastTestLaneReportPath} is missing or stale`);
+  }
+  if (toPosixPath(artifact.sourcePath) !== toPosixPath(fastTestLaneReportPath)) {
+    throw new Error(`Release test check artifact source does not match ${fastTestLaneReportPath}`);
+  }
+
+  const laneReport = readJsonFile(resolve(report.rootDir, artifact.sourcePath));
+  assertLaneReport(laneReport);
+  if (laneReport.lane !== "fast") {
+    throw new Error(`Release test lane evidence must be fast, received ${laneReport.lane}`);
+  }
+  if (laneReport.diagnostics.length !== 0) {
+    throw new Error("Release test lane evidence must not contain diagnostics");
+  }
+
+  const { diagnostics, inventory } = readTestInventory(join(report.rootDir, "test-inventory.json"));
+  if (diagnostics.length > 0) {
+    throw new Error(`Current test inventory is invalid: ${JSON.stringify(diagnostics)}`);
+  }
+  if (laneReport.inventoryDigest !== inventoryDigest(inventory)) {
+    throw new Error("Release test lane evidence uses a stale test inventory digest");
+  }
+  if (new Set(laneReport.selectedOwners).size !== laneReport.selectedOwners.length) {
+    throw new Error("Release test lane evidence contains duplicate selected owners");
+  }
+
+  const commandsByOwner = new Map<string, LaneReport["commands"][number]>();
+  for (const command of laneReport.commands) {
+    if (commandsByOwner.has(command.owner)) {
+      throw new Error(`Release test lane evidence contains duplicate owner ${command.owner}`);
+    }
+    commandsByOwner.set(command.owner, command);
+  }
+  const expectedPlan = createTestLanePlan(inventory, "fast", laneReport.selectedOwners);
+  if (expectedPlan.length !== laneReport.commands.length) {
+    throw new Error("Release test lane evidence does not cover the exact selected fast-lane plan");
+  }
+  for (const expected of expectedPlan) {
+    const actual = commandsByOwner.get(expected.owner);
+    if (
+      !actual ||
+      actual.cwd !== expected.cwd ||
+      JSON.stringify(actual.paths) !== JSON.stringify(expected.paths) ||
+      JSON.stringify(actual.command) !== JSON.stringify(expected.command)
+    ) {
+      throw new Error(
+        `Release test lane evidence for ${expected.owner} does not match the selected fast-lane plan`,
+      );
+    }
+  }
+
+  return laneReport.commands.map((command) => ({
+    packageName: command.owner,
+    status: "passed",
+    taskId: `${command.owner}#test`,
+  }));
 }
 
 export function createCiPromotionEvidenceContext(options: {
@@ -1060,6 +1139,11 @@ export function createReleasePromotionEvidenceContext(options: {
   ) {
     throw new Error("Release promotion checkpoint provenance does not match the current run");
   }
+  const testChecks = report.checks.filter((check) => check.id === "test");
+  if (testChecks.length !== 1) {
+    throw new Error("Release promotion checkpoint must contain exactly one test check");
+  }
+  const releaseTestTasks = readReleaseFastTestTasks(report, testChecks[0]);
   return {
     schemaVersion: 1,
     source: "release",
@@ -1096,11 +1180,13 @@ export function createReleasePromotionEvidenceContext(options: {
                 ? "interrupted"
                 : check.status === "skipped_after_timeout"
                   ? "skipped"
-                  : "pending",
+                  : check.status === "skipped_prerequisite"
+                    ? "skipped"
+                    : "pending",
       runAttempt: options.runAttempt,
       runId: options.runId,
       startedAt: check.startedAt,
-      testTasks: check.id === "test" ? readTurboTestTasks(report.rootDir, report.generatedAt) : [],
+      testTasks: check.id === "test" ? releaseTestTasks : [],
     })),
   };
 }

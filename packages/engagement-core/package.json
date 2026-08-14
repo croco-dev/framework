@@ -36,6 +36,7 @@
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "lint": "oxlint .",
     "test": "vitest run src/tests/MessageContracts.spec.ts",
+    "test:published": "vitest run src/tests/PublishedMessageContracts.spec.ts",
     "test:packed": "vitest run src/tests/PublishedMessageContracts.spec.ts",
     "typecheck": "tsc --noEmit"
   },

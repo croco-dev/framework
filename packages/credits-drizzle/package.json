@@ -27,7 +27,8 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "lint": "oxlint .",
-    "test": "vitest run",
+    "test": "vitest run --exclude src/tests/DrizzleCreditLedgerStore.postgres.spec.ts",
+    "test:live": "vitest run src/tests/DrizzleCreditLedgerStore.postgres.spec.ts",
     "test:postgres": "vitest run src/tests/DrizzleCreditLedgerStore.postgres.spec.ts",
     "typecheck": "tsc --noEmit"
   },

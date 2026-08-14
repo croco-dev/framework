@@ -234,7 +234,7 @@ describe("EventBusConfig", () => {
   });
 
   describe("subscribe", () => {
-    it("should register event subscription", () => {
+    it("should store a registered event subscription", () => {
       const config = EventBusConfig.getInstance();
       const subscription: EventSubscription = {
         eventName: "TestEvent",
@@ -243,22 +243,24 @@ describe("EventBusConfig", () => {
 
       config.subscribe(subscription);
 
-      expect(true).toBe(true);
+      expect(config.getSubscriptions()).toContain(subscription);
     });
 
-    it("should allow multiple subscriptions", () => {
+    it("should store multiple registered subscriptions", () => {
       const config = EventBusConfig.getInstance();
-
-      config.subscribe({
+      const firstSubscription: EventSubscription = {
         eventName: "TestEvent",
         handlerClass: TestHandler as EventHandlerClass,
-      });
-      config.subscribe({
+      };
+      const secondSubscription: EventSubscription = {
         eventName: "AnotherEvent",
         handlerClass: AnotherHandler as EventHandlerClass,
-      });
+      };
 
-      expect(true).toBe(true);
+      config.subscribe(firstSubscription);
+      config.subscribe(secondSubscription);
+
+      expect([...config.getSubscriptions()]).toEqual([firstSubscription, secondSubscription]);
     });
 
     it("should store subscriptions for later use in start", async () => {

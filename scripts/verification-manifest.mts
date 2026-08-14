@@ -1,10 +1,19 @@
-import { selectGeneratedSmokeCasesForChangedFiles } from "./create-croco-app-generated-smoke-dependencies.mts";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { resolve } from "node:path";
+
+import {
+  selectGeneratedSmokeCasesForChangedFiles,
+  selectGeneratedTestPathsForSmokeCases,
+} from "./create-croco-app-generated-smoke-dependencies.mts";
+import { GENERATED_SMOKE_MATRIX_CASES } from "./create-croco-app-generated-smoke-matrix.mts";
 import {
   isReleaseGateMaintenancePath,
   RELEASE_GATE_TEST_PATHS,
 } from "./release-gate-maintenance.mts";
+import { readTestInventory } from "./test-inventory.mts";
 import { VerificationProblem } from "./verification-problem.mts";
 import type { EvidenceCommand } from "./release-spine-evidence.mts";
+import type { TestLane } from "./test-inventory.mts";
 
 export type VerificationProfile = "repo" | "spine" | "publish";
 
@@ -64,12 +73,20 @@ const PACKAGE_BIN_BUILD_FILTERS = [
   "@croco/rpc-codegen",
 ] as const;
 
+export const PUBLISH_REQUIRED_GENERATED_SMOKE_CASES = [
+  ...GENERATED_SMOKE_MATRIX_CASES.filter(({ tier }) => tier === "spine-blocking").map(
+    ({ name }) => name,
+  ),
+  "admin-console-starter",
+  "ai-saas-golden-path",
+] as const;
+
 function isApplicableToChangedFiles(
   context: VerificationContext,
   predicate: (path: string) => boolean,
 ): boolean {
   if (!context.base || !context.head || !context.changedFiles) return true;
-  return context.changedFiles.some(predicate);
+  return context.changedFiles.some((path) => path === "test-inventory.json" || predicate(path));
 }
 
 function isChangeScopedVerification(context: VerificationContext): boolean {
@@ -102,10 +119,6 @@ function affectsPackageBins(path: string): boolean {
     ) ||
     path === "scripts/package-bin-smoke.mts"
   );
-}
-
-function affectsCli(path: string): boolean {
-  return path.startsWith("packages/cli/");
 }
 
 function affectsCreateCrocoApp(path: string): boolean {
@@ -147,7 +160,7 @@ function packageAccountabilitySelection(context: VerificationContext): {
     ].sort();
     return {
       applicable: true,
-      fullEvidence: relevantFiles.some((path) => !path.startsWith("packages/")),
+      fullEvidence: relevantFiles.some((path) => !/^(?:apps|examples|packages)\//.test(path)),
       packages,
       reason: `Selected because package accountability inputs changed: ${relevantFiles.join(", ")}.`,
     };
@@ -168,13 +181,149 @@ function affectsCoreCoverage(path: string): boolean {
 }
 
 function affectedTurboArguments(context: VerificationContext): readonly string[] {
+  // Docs is verified by its dedicated gates instead of the affected package build/typecheck tasks.
   return isChangeScopedVerification(context) && context.base
     ? [`--filter=...[${context.base}]`, "--filter=!@croco/docs"]
     : [];
 }
 
+const TEST_INVENTORY = readTestInventory().inventory;
+
+type WorkspacePackage = {
+  readonly dependencies: ReadonlySet<string>;
+  readonly directory: string;
+  readonly name: string;
+};
+
+function readWorkspacePackages(): readonly WorkspacePackage[] {
+  const root = resolve(import.meta.dirname, "..");
+  return ["apps", "examples", "packages"]
+    .flatMap((workspaceRoot) => {
+      const absoluteRoot = resolve(root, workspaceRoot);
+      if (!existsSync(absoluteRoot)) return [];
+      return readdirSync(absoluteRoot, { withFileTypes: true }).flatMap((entry) => {
+        if (!entry.isDirectory()) return [];
+        const directory = `${workspaceRoot}/${entry.name}`;
+        const manifestPath = resolve(root, directory, "package.json");
+        if (!existsSync(manifestPath)) return [];
+        const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as {
+          readonly name?: string;
+          readonly dependencies?: Readonly<Record<string, string>>;
+          readonly devDependencies?: Readonly<Record<string, string>>;
+          readonly optionalDependencies?: Readonly<Record<string, string>>;
+          readonly peerDependencies?: Readonly<Record<string, string>>;
+        };
+        if (!manifest.name) return [];
+        return [
+          {
+            dependencies: new Set([
+              ...Object.keys(manifest.dependencies ?? {}),
+              ...Object.keys(manifest.devDependencies ?? {}),
+              ...Object.keys(manifest.optionalDependencies ?? {}),
+              ...Object.keys(manifest.peerDependencies ?? {}),
+            ]),
+            directory,
+            name: manifest.name,
+          },
+        ];
+      });
+    })
+    .sort((left, right) => left.name.localeCompare(right.name));
+}
+
+const WORKSPACE_PACKAGES = readWorkspacePackages();
+const WORKSPACE_PACKAGE_BY_DIRECTORY = new Map(
+  WORKSPACE_PACKAGES.map((workspacePackage) => [workspacePackage.directory, workspacePackage]),
+);
+
+function transitivelyAffectedPackages(changedPackages: ReadonlySet<string>): ReadonlySet<string> {
+  const affected = new Set(changedPackages);
+  let expanded = true;
+  while (expanded) {
+    expanded = false;
+    for (const workspacePackage of WORKSPACE_PACKAGES) {
+      // Docs has dedicated verification commands and is intentionally outside package test propagation.
+      if (workspacePackage.name === "@croco/docs" || affected.has(workspacePackage.name)) continue;
+      if ([...workspacePackage.dependencies].some((dependency) => affected.has(dependency))) {
+        affected.add(workspacePackage.name);
+        expanded = true;
+      }
+    }
+  }
+  return affected;
+}
+
+function inventoryEntryWorkspace(path: string): string | undefined {
+  const match = /^(packages|apps|examples)\/([^/]+)\//.exec(path);
+  if (match?.[1] && match[2]) return `${match[1]}/${match[2]}/`;
+  if (path.startsWith("scripts/tests/")) return "scripts/";
+  if (path.startsWith("tests/")) return "tests/";
+  return undefined;
+}
+
+function laneSelection(
+  context: VerificationContext,
+  profile: VerificationProfile,
+  lane: TestLane,
+): { readonly applicable: boolean; readonly owners: readonly string[]; readonly full: boolean } {
+  if (!isChangeScopedVerification(context) || profile === "publish") {
+    return { applicable: true, owners: [], full: true };
+  }
+  const changedFiles = context.changedFiles ?? [];
+  const full = changedFiles.some(
+    (path) =>
+      path === "test-inventory.json" ||
+      /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|turbo\.json|vitest(?:\.[^/]+)?\.ts)$/.test(
+        path,
+      ),
+  );
+  if (full) return { applicable: true, owners: [], full: true };
+  const directlyChangedPackages = new Set(
+    changedFiles.flatMap((path) => {
+      const workspace = inventoryEntryWorkspace(path);
+      if (!workspace || workspace === "scripts/" || workspace === "tests/") return [];
+      const workspacePackage = WORKSPACE_PACKAGE_BY_DIRECTORY.get(workspace.slice(0, -1));
+      return workspacePackage ? [workspacePackage.name] : [];
+    }),
+  );
+  const affectedPackages = transitivelyAffectedPackages(directlyChangedPackages);
+  const repositoryOwners =
+    lane === "fast"
+      ? changedFiles.flatMap((path) => {
+          if (path.startsWith("scripts/")) return ["repo:ci"];
+          if (path.startsWith("examples/")) return ["repo:examples"];
+          if (path.startsWith("tests/")) return ["repo:tests"];
+          return [];
+        })
+      : [];
+  const owners = [
+    ...new Set([
+      ...repositoryOwners,
+      ...TEST_INVENTORY.tests
+        .filter((entry) => entry.lane === lane)
+        .filter((entry) => affectedPackages.has(entry.owner))
+        .map(({ owner }) => owner),
+    ]),
+  ].sort();
+  return { applicable: owners.length > 0, owners, full: false };
+}
+
+export function generatedTestMaterializationArguments(
+  requiredGeneratedPaths: readonly string[],
+): readonly string[] {
+  if (requiredGeneratedPaths.length === 0) return [];
+  return [
+    "--materialization-evidence",
+    "ci-reports/generated-apps/materialization-evidence.json",
+    "--generated-root",
+    "ci-reports/generated-apps/materialized-tests",
+    ...requiredGeneratedPaths.flatMap((path) => ["--required-generated-path", path]),
+  ];
+}
+
 const repoOnly = (
   context: VerificationContext,
+  profile: VerificationProfile,
   suppressVerificationContractTests = false,
 ): readonly EvidenceCommand[] => [
   {
@@ -185,6 +334,35 @@ const repoOnly = (
       "Guard or classify the reported verification path",
       "scripts/verification-policy.mts",
     ),
+    timeoutMs: minutes(5),
+  },
+  {
+    id: "test-inventory",
+    label: "Authoritative test inventory",
+    category: "quality",
+    command: guardedNodeScript(
+      "node --experimental-strip-types scripts/test-inventory.mts --write",
+      "scripts/test-inventory.mts",
+      "--check",
+      "--profile",
+      profile === "publish" ? "publish" : "ordinary",
+      "--output",
+      "ci-reports/package-quality/test-inventory.json",
+    ),
+    timeoutMs: minutes(5),
+    artifacts: [
+      {
+        label: "Resolved test inventory",
+        path: "ci-reports/package-quality/test-inventory.json",
+        required: true,
+      },
+    ],
+  },
+  {
+    id: "turbo-cache-contract",
+    label: "Turbo cache reuse and invalidation contract",
+    category: "quality",
+    command: nodeScript("scripts/turbo-cache-contract.mts"),
     timeoutMs: minutes(5),
   },
   {
@@ -205,6 +383,9 @@ const repoOnly = (
       "scripts/tests/release-workflow.spec.ts",
       "scripts/tests/turbo-task-contract.spec.ts",
       "scripts/tests/verification-policy.spec.ts",
+      "scripts/tests/test-inventory.spec.ts",
+      "scripts/tests/test-lane-runner.spec.ts",
+      "scripts/tests/turbo-cache-contract.spec.ts",
     ],
     timeoutMs: minutes(10),
     applicable: !suppressVerificationContractTests,
@@ -465,12 +646,16 @@ const repoOnly = (
   },
 ];
 
-const spineOnly = (context: VerificationContext): readonly EvidenceCommand[] => {
+const spineOnly = (
+  context: VerificationContext,
+  profile: VerificationProfile,
+): readonly EvidenceCommand[] => {
   const changeScoped = isChangeScopedVerification(context);
   const packageAccountability = packageAccountabilitySelection(context);
-  const affectedArguments = packageAccountability.fullEvidence
-    ? []
-    : affectedTurboArguments(context);
+  const affectedArguments =
+    profile === "publish" || packageAccountability.fullEvidence
+      ? []
+      : affectedTurboArguments(context);
   const scaffoldApplicable = isApplicableToChangedFiles(context, affectsScaffold);
   const affectedGeneratedSmokeCases = context.changedFiles
     ? selectGeneratedSmokeCasesForChangedFiles(context.changedFiles)
@@ -478,6 +663,21 @@ const spineOnly = (context: VerificationContext): readonly EvidenceCommand[] => 
   const generatedAppSmokeFullTier = scaffoldApplicable || packageAccountability.fullEvidence;
   const generatedAppSmokeApplicable =
     generatedAppSmokeFullTier || affectedGeneratedSmokeCases.length > 0;
+  const selectedGeneratedSmokeCases =
+    profile === "publish"
+      ? PUBLISH_REQUIRED_GENERATED_SMOKE_CASES
+      : generatedAppSmokeFullTier
+        ? GENERATED_SMOKE_MATRIX_CASES.filter(({ tier }) => tier === "spine-blocking").map(
+            ({ name }) => name,
+          )
+        : affectedGeneratedSmokeCases;
+  const generatedTestPaths = TEST_INVENTORY.tests
+    .filter(({ lane }) => lane === "generated-app")
+    .map(({ path }) => path);
+  const requiredGeneratedPaths = selectGeneratedTestPathsForSmokeCases(
+    selectedGeneratedSmokeCases,
+    generatedTestPaths,
+  );
   const scaffoldBuildArguments =
     changeScoped && scaffoldApplicable && !packageAccountability.fullEvidence
       ? ["--filter=create-croco-app"]
@@ -488,12 +688,14 @@ const spineOnly = (context: VerificationContext): readonly EvidenceCommand[] => 
     changeScoped && binsApplicable && !packageAccountability.fullEvidence
       ? PACKAGE_BIN_BUILD_FILTERS.map((packageName) => `--filter=${packageName}`)
       : [];
-  const cliApplicable = isApplicableToChangedFiles(context, affectsCli);
-  const packedCliApplicable = isApplicableToChangedFiles(
-    context,
-    (path) => affectsCli(path) || affectsCreateCrocoApp(path),
-  );
+  const packedCliApplicable = isApplicableToChangedFiles(context, affectsCreateCrocoApp);
   const coreCoverageApplicable = isApplicableToChangedFiles(context, affectsCoreCoverage);
+  const selectedFastLane = laneSelection(context, profile, "fast");
+  const fastSelection = packageAccountability.fullEvidence
+    ? { applicable: true, owners: [], full: true }
+    : selectedFastLane;
+  const integrationSelection = laneSelection(context, profile, "integration");
+  const publishedSelection = laneSelection(context, profile, "published");
 
   return [
     {
@@ -541,7 +743,7 @@ const spineOnly = (context: VerificationContext): readonly EvidenceCommand[] => 
         "scripts/package-entrypoint-smoke.mts",
         ...(changeScoped ? ["--build-missing"] : []),
       ),
-      timeoutMs: minutes(10),
+      timeoutMs: minutes(15),
       applicable: entrypointsApplicable,
     },
     {
@@ -558,7 +760,11 @@ const spineOnly = (context: VerificationContext): readonly EvidenceCommand[] => 
       category: "generated-app",
       command: nodeScript(
         "scripts/create-croco-app-generated-smoke.mts",
-        ...(generatedAppSmokeFullTier ? ["--tier", "spine-blocking"] : affectedGeneratedSmokeCases),
+        ...(profile === "publish"
+          ? PUBLISH_REQUIRED_GENERATED_SMOKE_CASES
+          : generatedAppSmokeFullTier
+            ? ["--tier", "spine-blocking"]
+            : affectedGeneratedSmokeCases),
       ),
       timeoutMs: minutes(45),
       applicable: generatedAppSmokeApplicable,
@@ -576,8 +782,18 @@ const spineOnly = (context: VerificationContext): readonly EvidenceCommand[] => 
         {
           label: "Generated app smoke journey bundle",
           path: "ci-reports/generated-apps/spine-blocking-journeys",
-          required: generatedAppSmokeFullTier,
+          required: generatedAppSmokeFullTier && profile !== "publish",
           copyRelativePath: "spine-blocking-journeys",
+        },
+        {
+          label: "Generated test materialization evidence",
+          path: "ci-reports/generated-apps/materialization-evidence.json",
+          required: true,
+        },
+        {
+          label: "Generated test materializations",
+          path: "ci-reports/generated-apps/materialized-tests",
+          required: true,
         },
       ],
     },
@@ -605,6 +821,7 @@ const spineOnly = (context: VerificationContext): readonly EvidenceCommand[] => 
         "turbo",
         "run",
         "typecheck",
+        "--only",
         ...affectedArguments,
         "--summarize",
         "--continue=always",
@@ -615,46 +832,135 @@ const spineOnly = (context: VerificationContext): readonly EvidenceCommand[] => 
       id: "test",
       label: "Summarized tests",
       category: "quality",
-      command: [
-        "pnpm",
-        "turbo",
-        "run",
-        "test",
-        ...affectedArguments,
-        "--force",
-        "--summarize",
-        "--continue=always",
-      ],
+      command: nodeScript(
+        "scripts/test-lane-runner.mts",
+        "--lane",
+        "fast",
+        ...fastSelection.owners.flatMap((owner) => ["--owner", owner]),
+        "--output",
+        "ci-reports/package-quality/fast-test-lane.json",
+      ),
       timeoutMs: minutes(45),
+      applicable: fastSelection.applicable,
+      artifacts: [
+        {
+          label: "Fast test lane evidence",
+          path: "ci-reports/package-quality/fast-test-lane.json",
+          required: true,
+        },
+      ],
     },
     {
-      id: "cli-source-e2e",
-      label: "CLI source integration tests",
+      id: "integration-test-lane",
+      label: "Inventory integration test lane",
       category: "quality",
-      command: [
-        "pnpm",
-        "--dir=packages/cli",
-        "exec",
-        "vitest",
-        "run",
-        "src/tests/integration/e2e.spec.ts",
+      command: nodeScript(
+        "scripts/test-lane-runner.mts",
+        "--lane",
+        "integration",
+        ...integrationSelection.owners.flatMap((owner) => ["--owner", owner]),
+        "--output",
+        "ci-reports/package-quality/integration-test-lane.json",
+      ),
+      timeoutMs: minutes(30),
+      applicable: integrationSelection.applicable,
+      selectionReason: integrationSelection.full
+        ? "Selected for the full integration inventory."
+        : `Selected affected integration owners: ${integrationSelection.owners.join(", ")}.`,
+      artifacts: [
+        {
+          label: "Integration test lane evidence",
+          path: "ci-reports/package-quality/integration-test-lane.json",
+          required: true,
+        },
       ],
-      timeoutMs: minutes(15),
-      applicable: cliApplicable,
+    },
+    {
+      id: "published-test-lane",
+      label: "Inventory published-consumer test lane",
+      category: "package-smoke",
+      command: nodeScript(
+        "scripts/test-lane-runner.mts",
+        "--lane",
+        "published",
+        ...publishedSelection.owners.flatMap((owner) => ["--owner", owner]),
+        "--output",
+        "ci-reports/package-quality/published-test-lane.json",
+      ),
+      timeoutMs: minutes(45),
+      applicable: publishedSelection.applicable,
+      selectionReason: publishedSelection.full
+        ? "Selected for the full published-consumer inventory."
+        : `Selected affected published owners: ${publishedSelection.owners.join(", ")}.`,
+      artifacts: [
+        {
+          label: "Published-consumer test lane evidence",
+          path: "ci-reports/package-quality/published-test-lane.json",
+          required: true,
+        },
+      ],
+    },
+    {
+      id: "test-evidence-reconcile",
+      label: "Enforced test execution evidence",
+      category: "quality",
+      command: nodeScript(
+        "scripts/test-evidence-reconcile.mts",
+        "--profile",
+        profile === "publish" ? "publish" : "ordinary",
+        ...[...new Set([...fastSelection.owners, ...integrationSelection.owners])].flatMap(
+          (owner) => ["--affected-owner", owner],
+        ),
+        ...publishedSelection.owners.flatMap((owner) => ["--packaging-owner", owner]),
+        ...(fastSelection.applicable
+          ? ["--lane-report", "ci-reports/package-quality/fast-test-lane.json"]
+          : []),
+        ...(integrationSelection.applicable
+          ? ["--lane-report", "ci-reports/package-quality/integration-test-lane.json"]
+          : []),
+        ...(publishedSelection.applicable
+          ? ["--lane-report", "ci-reports/package-quality/published-test-lane.json"]
+          : []),
+        ...(generatedAppSmokeApplicable
+          ? generatedTestMaterializationArguments(requiredGeneratedPaths)
+          : []),
+        "--output",
+        "ci-reports/package-quality/test-evidence.json",
+      ),
+      timeoutMs: minutes(5),
+      artifacts: [
+        {
+          label: "Enforced test evidence",
+          path: "ci-reports/package-quality/test-evidence.json",
+          required: true,
+        },
+      ],
     },
     {
       id: "cli-packed-e2e",
-      label: "Packed installed CLI integration tests",
+      label: integrationSelection.full
+        ? "Packed installed CLI integration evidence"
+        : "Packed installed CLI integration tests",
       category: "quality",
-      command: [
-        "pnpm",
-        "--dir=packages/cli",
-        "exec",
-        "vitest",
-        "run",
-        "src/tests/integration/CliCommandIntegration.spec.ts",
-      ],
-      timeoutMs: minutes(15),
+      command: integrationSelection.full
+        ? nodeScript(
+            "scripts/test-lane-evidence-check.mts",
+            "--report",
+            "ci-reports/package-quality/integration-test-lane.json",
+            "--lane",
+            "integration",
+            "--path",
+            "packages/cli/src/tests/integration/CliCommandIntegration.spec.ts",
+          )
+        : [
+            "pnpm",
+            "--dir=packages/cli",
+            "exec",
+            "vitest",
+            "run",
+            "src/tests/integration/CliCommandIntegration.spec.ts",
+          ],
+      timeoutMs: minutes(integrationSelection.full ? 2 : 15),
       applicable: packedCliApplicable,
     },
     {
@@ -686,7 +992,13 @@ const spineOnly = (context: VerificationContext): readonly EvidenceCommand[] => 
       command: guardedNodeScript(
         "Fix the reported production-ready package violations",
         "scripts/production-ready-check.mts",
-        ...(packageAccountability.fullEvidence ? ["--require-task-summaries"] : []),
+        ...(packageAccountability.fullEvidence
+          ? [
+              "--require-task-summaries",
+              "--fast-test-lane-report",
+              "ci-reports/package-quality/fast-test-lane.json",
+            ]
+          : []),
       ),
       timeoutMs: minutes(10),
       applicable: packageAccountability.applicable,
@@ -780,30 +1092,18 @@ const spineOnly = (context: VerificationContext): readonly EvidenceCommand[] => 
 
 const publishOnly = (context: VerificationContext): readonly EvidenceCommand[] => [
   {
-    id: "engagement-packed-consumer",
-    label: "Packed engagement contract consumer",
-    category: "package-smoke",
-    command: ["pnpm", "--filter", "@croco/engagement-core", "test:packed"],
-    timeoutMs: minutes(10),
-    applicable: isApplicableToChangedFiles(context, (path) =>
-      path.startsWith("packages/engagement-core/"),
-    ),
-  },
-  {
     id: "release-gate-tests",
-    label: "Release-gate maintenance tests",
+    label: "Release-gate maintenance test evidence",
     category: "quality",
-    command: [
-      "pnpm",
-      "exec",
-      "vitest",
-      "run",
-      "--no-file-parallelism",
-      ...RELEASE_GATE_TEST_PATHS,
-      "--config",
-      "vitest.config.ts",
-    ],
-    timeoutMs: minutes(30),
+    command: nodeScript(
+      "scripts/test-lane-evidence-check.mts",
+      "--report",
+      "ci-reports/package-quality/fast-test-lane.json",
+      "--lane",
+      "fast",
+      ...RELEASE_GATE_TEST_PATHS.flatMap((path) => ["--path", path]),
+    ),
+    timeoutMs: minutes(2),
     applicable: isApplicableToChangedFiles(context, isReleaseGateMaintenancePath),
   },
   {
@@ -900,7 +1200,60 @@ const PACKAGE_QUALITY_STATUS_PREREQUISITES = [
   "test",
   "provider-certification",
   "production-ready",
+  "spine-promotion",
 ] as const;
+
+const VERIFICATION_DEPENDENCIES: Readonly<Record<string, readonly string[]>> = {
+  "architecture-policy": ["architecture-policy-runtime"],
+  build: ["architecture-policy-runtime"],
+  "quick-start-lambda-smoke": ["build"],
+  "first-success": ["build"],
+  "package-entrypoints-smoke": ["build", "test"],
+  "package-bins-smoke": ["build"],
+  "generated-app-smoke": ["build"],
+  "alpha-release-smoke": ["build"],
+  typecheck: ["build"],
+  test: ["build", "typecheck"],
+  "integration-test-lane": ["build"],
+  "published-test-lane": ["build"],
+  "test-evidence-reconcile": [
+    "test",
+    "integration-test-lane",
+    "published-test-lane",
+    "generated-app-smoke",
+  ],
+  "cli-packed-e2e": ["integration-test-lane"],
+  "production-ready": ["build", "typecheck", "test", "test-evidence-reconcile"],
+  "spine-promotion": ["test", "generated-app-smoke", "provider-certification", "production-ready"],
+  "core-coverage": ["build"],
+  "core-coverage-warning": ["core-coverage"],
+  "spine-bundle-size": PACKAGE_QUALITY_STATUS_PREREQUISITES,
+  "release-gate-tests": ["test"],
+  "publish-dry-run": ["build"],
+};
+
+const WORKSPACE_ARTIFACT_CONCURRENCY_GROUP = new Set([
+  "package-entrypoints-smoke",
+  "package-bins-smoke",
+  "generated-app-smoke",
+  "alpha-release-smoke",
+  "integration-test-lane",
+  "published-test-lane",
+  "cli-packed-e2e",
+  "core-coverage",
+  "publish-dry-run",
+]);
+
+function withSchedulingContract(command: EvidenceCommand): EvidenceCommand {
+  const dependsOn = VERIFICATION_DEPENDENCIES[command.id];
+  return {
+    ...command,
+    ...(dependsOn ? { dependsOn } : {}),
+    ...(WORKSPACE_ARTIFACT_CONCURRENCY_GROUP.has(command.id)
+      ? { concurrencyGroup: "workspace-artifacts" }
+      : {}),
+  };
+}
 
 export function assertVerificationManifest(commands: readonly EvidenceCommand[]): void {
   const seen = new Set<string>();
@@ -927,16 +1280,59 @@ export function assertVerificationManifest(commands: readonly EvidenceCommand[])
         );
       }
     }
+    if (command.concurrencyGroup !== undefined && command.concurrencyGroup.trim().length === 0) {
+      throw new VerificationProblem(
+        "EMPTY_VERIFICATION_CONCURRENCY_GROUP",
+        "contract",
+        `Verification command ${command.id} has an empty concurrency group.`,
+      );
+    }
+    for (const dependency of command.dependsOn ?? []) {
+      if (dependency === command.id) {
+        throw new VerificationProblem(
+          "SELF_VERIFICATION_DEPENDENCY",
+          "contract",
+          `Verification command ${command.id} cannot depend on itself.`,
+        );
+      }
+      if (!indexes.has(dependency)) {
+        throw new VerificationProblem(
+          "UNKNOWN_VERIFICATION_DEPENDENCY",
+          "contract",
+          `Verification command ${command.id} depends on unknown command ${dependency}.`,
+        );
+      }
+    }
   }
+
+  const visited = new Set<string>();
+  const visiting = new Set<string>();
+  const byId = new Map(commands.map((command) => [command.id, command]));
+  const visit = (id: string): void => {
+    if (visited.has(id)) return;
+    if (visiting.has(id)) {
+      throw new VerificationProblem(
+        "CYCLIC_VERIFICATION_DEPENDENCY",
+        "contract",
+        `Verification command dependency graph contains a cycle involving ${id}.`,
+      );
+    }
+    visiting.add(id);
+    for (const dependency of byId.get(id)?.dependsOn ?? []) visit(dependency);
+    visiting.delete(id);
+    visited.add(id);
+  };
+  for (const command of commands) visit(command.id);
+
   const spineBundleIndex = indexes.get("spine-bundle-size");
   if (spineBundleIndex !== undefined) {
+    const spineBundle = byId.get("spine-bundle-size");
     for (const prerequisiteId of PACKAGE_QUALITY_STATUS_PREREQUISITES) {
-      const prerequisiteIndex = indexes.get(prerequisiteId);
-      if (prerequisiteIndex === undefined || prerequisiteIndex > spineBundleIndex) {
+      if (!spineBundle?.dependsOn?.includes(prerequisiteId)) {
         throw new VerificationProblem(
-          "PACKAGE_QUALITY_STATUS_ORDER",
+          "PACKAGE_QUALITY_STATUS_DEPENDENCY",
           "contract",
-          `${prerequisiteId} must appear before spine-bundle-size so package quality dashboard status values are already known.`,
+          `${prerequisiteId} must be a prerequisite of spine-bundle-size so package quality dashboard status values are already known.`,
         );
       }
     }
@@ -948,14 +1344,15 @@ export function createVerificationManifest(
   context: VerificationContext = {},
 ): readonly EvidenceCommand[] {
   const releaseGateMaintenance = isApplicableToChangedFiles(context, isReleaseGateMaintenancePath);
-  const repo = repoOnly(context, profile === "publish" && releaseGateMaintenance);
-  const spine = spineOnly(context);
-  const commands =
+  const repo = repoOnly(context, profile, profile === "publish" && releaseGateMaintenance);
+  const spine = spineOnly(context, profile);
+  const commands = (
     profile === "repo"
       ? repo
       : profile === "spine"
         ? [...repo, ...spine]
-        : [...repo, ...spine, ...publishOnly(context)];
+        : [...repo, ...spine, ...publishOnly(context)]
+  ).map(withSchedulingContract);
   assertVerificationManifest(commands);
   return commands;
 }

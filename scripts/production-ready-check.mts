@@ -20,6 +20,14 @@ import {
   type QualityTask,
   readPackages,
 } from "./package-quality-report.mts";
+import { assertLaneReport, type LaneReport } from "./test-evidence-reconcile.mts";
+import {
+  inventoryDigest,
+  readTestInventory,
+  type TestInventoryEntry,
+  type TestLane,
+} from "./test-inventory.mts";
+import { createTestLanePlan } from "./test-lane-runner.mts";
 
 type CheckStatus = "pass" | "fail" | "not-applicable" | "not-collected";
 type MaturityKey = (typeof maturityOrder)[number];
@@ -29,6 +37,7 @@ type Options = {
   readonly outputDir: string;
   readonly summaryDir: string;
   readonly requireTaskSummaries: boolean;
+  readonly fastTestLaneReportPath: string | null;
 };
 
 type WorkspacePackage = {
@@ -77,6 +86,11 @@ type PublicApiSnapshotEvidence = {
   readonly packageNames: ReadonlySet<string>;
 };
 
+type FastTestLaneEvidence = {
+  readonly commandsByOwner: ReadonlyMap<string, LaneReport["commands"][number]>;
+  readonly errors: readonly string[];
+};
+
 export type ProductionReadyCheck = {
   readonly id: string;
   readonly label: string;
@@ -116,6 +130,7 @@ const turboRunsDirectory = join(".turbo", "runs");
 const catalogMetadataPath = join("docs", "package-catalog.json");
 const docsBaselinePath = join("docs", "package-docs-baseline.json");
 const publicApiSnapshotPath = "public-api-surface.snapshot.json";
+const testInventoryPath = "test-inventory.json";
 const apiDocsRoot = join("packages", "docs", "src", "content", "docs", "api");
 const referenceDocsRoot = join("packages", "docs", "src", "content", "docs", "en", "reference");
 const maturityOrder = ["production", "beta", "alpha", "deprecated"] as const;
@@ -158,6 +173,96 @@ function toPosixPath(path: string): string {
 
 function readJsonFile(filePath: string): unknown {
   return JSON.parse(readFileSync(filePath, "utf-8")) as unknown;
+}
+
+function loadFastTestLaneEvidence(
+  reportPath: string,
+  inventory: ReturnType<typeof readTestInventory>["inventory"],
+): FastTestLaneEvidence {
+  try {
+    const report = readJsonFile(reportPath);
+    assertLaneReport(report);
+    if (report.lane !== "fast") {
+      throw new Error(`expected fast lane, received ${report.lane}`);
+    }
+    if (report.inventoryDigest !== inventoryDigest(inventory)) {
+      throw new Error("inventory digest does not match the current test inventory");
+    }
+
+    const commandsByOwner = new Map<string, LaneReport["commands"][number]>();
+    for (const command of report.commands) {
+      if (commandsByOwner.has(command.owner)) {
+        throw new Error(`owner ${command.owner} appears more than once`);
+      }
+      commandsByOwner.set(command.owner, command);
+    }
+    if (report.selectedOwners.length !== 0) {
+      throw new Error("expected a full repository fast-lane report without owner filtering");
+    }
+    if (report.diagnostics.length !== 0) {
+      throw new Error("expected a passed fast-lane report without diagnostics");
+    }
+    const expectedPlan = createTestLanePlan(inventory, "fast");
+    if (report.commands.length !== expectedPlan.length) {
+      throw new Error("completed commands do not cover the full fast-lane plan");
+    }
+    for (const expected of expectedPlan) {
+      const actual = commandsByOwner.get(expected.owner);
+      if (
+        !actual ||
+        actual.cwd !== expected.cwd ||
+        JSON.stringify(actual.paths) !== JSON.stringify(expected.paths) ||
+        JSON.stringify(actual.command) !== JSON.stringify(expected.command)
+      ) {
+        throw new Error(
+          `completed command for ${expected.owner} does not match the fast-lane plan`,
+        );
+      }
+    }
+
+    return { commandsByOwner, errors: [] };
+  } catch (error) {
+    return {
+      commandsByOwner: new Map(),
+      errors: [
+        `Fast test lane evidence ${reportPath} is invalid: ${error instanceof Error ? error.message : String(error)}`,
+      ],
+    };
+  }
+}
+
+function applyFastTestLaneEvidence(
+  rows: readonly PackageQualityRow[],
+  evidence: FastTestLaneEvidence | null,
+): readonly PackageQualityRow[] {
+  if (!evidence) {
+    return rows;
+  }
+
+  return rows.map((row) => {
+    const command = evidence.commandsByOwner.get(row.packageName);
+    return {
+      ...row,
+      tasks: {
+        ...row.tasks,
+        test: command
+          ? {
+              task: "test" as const,
+              status: "pass" as const,
+              taskId: `${row.packageName}#test`,
+              logFile: null,
+              cacheStatus: command.cacheStatus?.toUpperCase() ?? null,
+            }
+          : {
+              task: "test" as const,
+              status: "not-run" as const,
+              taskId: null,
+              logFile: null,
+              cacheStatus: null,
+            },
+      },
+    };
+  });
 }
 
 function parseCatalogGroups(groupsValue: unknown, errors: string[]): ReadonlyMap<string, string> {
@@ -827,12 +932,100 @@ function findVitestTestConfig(sourceFile: ts.SourceFile): VitestTestConfig | nul
   return { root, test: test.initializer };
 }
 
-function validateVitestInclusion(rootDir: string, pkg: WorkspacePackage): readonly string[] {
+function packageInventoryEntries(
+  pkg: WorkspacePackage,
+  inventoryEntries: readonly TestInventoryEntry[],
+): readonly TestInventoryEntry[] {
+  const packagePrefix = `${toPosixPath(pkg.relativeDir)}/`;
+  return inventoryEntries.filter((entry) => entry.path.startsWith(packagePrefix));
+}
+
+function packageRelativeTestPath(pkg: WorkspacePackage, entry: TestInventoryEntry): string {
+  return entry.path.slice(`${toPosixPath(pkg.relativeDir)}/`.length);
+}
+
+function expectedDefaultTestScript(
+  pkg: WorkspacePackage,
+  entries: readonly TestInventoryEntry[],
+): string {
+  const excludedPaths = entries
+    .filter((entry) => entry.lane !== "fast")
+    .map((entry) => packageRelativeTestPath(pkg, entry))
+    .sort();
+  return ["vitest run", ...excludedPaths.flatMap((path) => ["--exclude", path])].join(" ");
+}
+
+function validateLaneScript(
+  pkg: WorkspacePackage,
+  lane: Exclude<TestLane, "fast" | "generated-app">,
+  entries: readonly TestInventoryEntry[],
+): string | null {
+  const paths = entries
+    .filter((entry) => entry.lane === lane)
+    .map((entry) => packageRelativeTestPath(pkg, entry))
+    .sort();
+  if (paths.length === 0) return null;
+
+  const scriptName = `test:${lane}`;
+  const script = pkg.scripts[scriptName]?.trim();
+  const expectedCommand = `vitest run ${paths.join(" ")}`;
+  if (!script) {
+    return `${pkg.relativeDir}/package.json has no ${scriptName} script for ${paths.join(", ")}`;
+  }
+  if (script === expectedCommand) return null;
+
+  const suffix = ` ${expectedCommand}`;
+  if (!script.endsWith(suffix)) {
+    return `${pkg.relativeDir}/package.json ${scriptName} script must execute exactly: ${expectedCommand}`;
+  }
+  const environmentPrefix = script.slice(0, -suffix.length);
+  if (!/^(?:[A-Z_][A-Z0-9_]*=[^\s]+)(?:\s+[A-Z_][A-Z0-9_]*=[^\s]+)*$/.test(environmentPrefix)) {
+    return `${pkg.relativeDir}/package.json ${scriptName} script has an unsupported command prefix`;
+  }
+  return null;
+}
+
+function createTestLaneCheck(
+  pkg: WorkspacePackage,
+  inventoryEntries: readonly TestInventoryEntry[],
+): ProductionReadyCheck {
+  const entries = packageInventoryEntries(pkg, inventoryEntries);
+  const fastEntries = entries.filter((entry) => entry.lane === "fast");
   const errors: string[] = [];
-  if (pkg.scripts.test?.trim() !== "vitest run") {
-    errors.push(`${pkg.relativeDir}/package.json test script must be exactly "vitest run"`);
+  if (fastEntries.length === 0) {
+    errors.push(`${testInventoryPath} has no deterministic fast test for ${pkg.name}`);
   }
 
+  const expectedTest = expectedDefaultTestScript(pkg, entries);
+  if (pkg.scripts.test?.trim() !== expectedTest) {
+    errors.push(
+      `${pkg.relativeDir}/package.json test script must be exactly ${JSON.stringify(expectedTest)}`,
+    );
+  }
+
+  for (const lane of ["integration", "published", "live"] as const) {
+    const error = validateLaneScript(pkg, lane, entries);
+    if (error) errors.push(error);
+  }
+
+  if (errors.length > 0) {
+    return fail(
+      "test-lanes",
+      "Test lanes",
+      errors.join("; "),
+      `Keep deterministic fast tests in ${pkg.relativeDir}/package.json test and route every special inventory lane through its test:<lane> script.`,
+    );
+  }
+  const specialLaneCount = entries.length - fastEntries.length;
+  return pass(
+    "test-lanes",
+    "Test lanes",
+    `${fastEntries.length} deterministic fast test(s); ${specialLaneCount} special-lane test(s) isolated`,
+  );
+}
+
+function validateVitestInclusion(rootDir: string, pkg: WorkspacePackage): readonly string[] {
+  const errors: string[] = [];
   const configNames = [
     "vitest.config.ts",
     "vitest.config.mts",
@@ -1393,6 +1586,7 @@ function createProductionRow(
   catalog: CatalogEvidence,
   baseline: BaselineEvidence,
   snapshot: PublicApiSnapshotEvidence,
+  inventoryEntries: readonly TestInventoryEntry[],
   requireTaskSummaries: boolean,
 ): ProductionReadyPackageRow {
   return {
@@ -1403,6 +1597,7 @@ function createProductionRow(
       createReadmeCheck(pkg),
       createApiDocsCheck(pkg, baseline.temporaryProductionApiDocExceptions),
       createTestsCheck(pkg),
+      createTestLaneCheck(pkg, inventoryEntries),
       ...qualityTasks.map((task) => createTaskCheck(pkg, qualityRow, task, requireTaskSummaries)),
       createPublicApiCheck(pkg, snapshot),
       createMaturityEvidenceCheck(rootDir, pkg, catalog),
@@ -1432,6 +1627,7 @@ function createNonProductionSummary(
 export function createProductionReadyReport(
   options: Pick<Options, "rootDir" | "summaryDir" | "requireTaskSummaries"> & {
     readonly generatedAt?: string;
+    readonly fastTestLaneReportPath?: string | null;
   },
 ): ProductionReadyReport {
   const catalog = loadCatalogEvidence(options.rootDir);
@@ -1449,12 +1645,18 @@ export function createProductionReadyReport(
     actualPackageNames,
   );
   const snapshot = loadPublicApiSnapshotEvidence(options.rootDir);
+  const inventoryEvidence = readTestInventory(join(options.rootDir, testInventoryPath));
+  const fastTestLaneEvidence = options.fastTestLaneReportPath
+    ? loadFastTestLaneEvidence(options.fastTestLaneReportPath, inventoryEvidence.inventory)
+    : null;
   const qualityReport = createPackageQualityReport({
     rootDir: options.rootDir,
     summaryDir: options.summaryDir,
   });
   const qualityRowsByPackage = new Map(
-    qualityReport.rows.map((row) => [row.packageName, row] as const),
+    applyFastTestLaneEvidence(qualityReport.rows, fastTestLaneEvidence).map(
+      (row) => [row.packageName, row] as const,
+    ),
   );
   const missingProductionPackages = catalog.productionPackages.filter(
     (packageName) => !packageByShortName.has(packageName),
@@ -1463,6 +1665,10 @@ export function createProductionReadyReport(
     ...catalog.errors,
     ...baseline.errors,
     ...snapshot.errors,
+    ...inventoryEvidence.diagnostics.map(
+      (diagnostic) => `${testInventoryPath}: ${diagnostic.code}: ${diagnostic.message}`,
+    ),
+    ...(fastTestLaneEvidence?.errors ?? []),
     ...missingProductionPackages.map(
       (packageName) =>
         `${catalogMetadataPath}: maturity.production references missing package ${packageName}`,
@@ -1489,6 +1695,7 @@ export function createProductionReadyReport(
           catalog,
           baseline,
           snapshot,
+          inventoryEvidence.inventory.tests,
           options.requireTaskSummaries,
         ),
       ];
@@ -1546,11 +1753,11 @@ export function buildProductionReadyMarkdown(report: ProductionReadyReport): str
     "",
     "## Production package evidence",
     "",
-    "| Package | Group | README | API docs | Tests | Build | Typecheck | Test | Public API | Maturity evidence | Behavioral evidence |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| Package | Group | README | API docs | Tests | Test lanes | Build | Typecheck | Test | Public API | Maturity evidence | Behavioral evidence |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ...report.productionRows.map(
       (row) =>
-        `| \`${row.packageName}\` | ${formatTableCell(row.group)} | ${formatSummaryCheck(row, "readme")} | ${formatSummaryCheck(row, "api-docs")} | ${formatSummaryCheck(row, "tests")} | ${formatSummaryCheck(row, "build-report")} | ${formatSummaryCheck(row, "typecheck-report")} | ${formatSummaryCheck(row, "test-report")} | ${formatSummaryCheck(row, "public-api-snapshot")} | ${formatSummaryCheck(row, "maturity-evidence")} | ${formatSummaryCheck(row, "behavioral-evidence")} |`,
+        `| \`${row.packageName}\` | ${formatTableCell(row.group)} | ${formatSummaryCheck(row, "readme")} | ${formatSummaryCheck(row, "api-docs")} | ${formatSummaryCheck(row, "tests")} | ${formatSummaryCheck(row, "test-lanes")} | ${formatSummaryCheck(row, "build-report")} | ${formatSummaryCheck(row, "typecheck-report")} | ${formatSummaryCheck(row, "test-report")} | ${formatSummaryCheck(row, "public-api-snapshot")} | ${formatSummaryCheck(row, "maturity-evidence")} | ${formatSummaryCheck(row, "behavioral-evidence")} |`,
     ),
     "",
     "## Non-production package summary",
@@ -1570,6 +1777,7 @@ export function buildProductionReadyMarkdown(report: ProductionReadyReport): str
     "- Generate `packages/docs/src/content/docs/api/<name>/` for production packages missing API docs.",
     "- Use `docs/package-docs-baseline.json` `temporaryProductionApiDocExceptions` only for a production package that currently lacks generated API docs, and include a short-lived justification. Stale entries fail this gate.",
     "- Add focused tests under `src/tests` or `src/__tests__` for production packages missing package test evidence.",
+    "- Keep deterministic fast tests in the default `test` script and route integration, published-package, and live tests through explicit lane scripts.",
     "- Keep production package `build`, `typecheck`, and `test` scripts wired into Turbo summaries before CI runs this gate with required task summaries.",
     "- Run `pnpm public-api:write` when a publishable package entrypoint is intentionally added to the public API snapshot.",
     "- Link adapter, provider, integration, transport, or presentation production evidence from the relevant reference docs before promotion.",
@@ -1594,6 +1802,7 @@ export function parseArgs(args: readonly string[]): Options {
   let outputDir = join(rootDir, reportDirectory);
   let summaryDir = join(rootDir, turboRunsDirectory);
   let requireTaskSummaries = false;
+  let fastTestLaneReportPath: string | null = null;
 
   for (let index = 0; index < args.length; index++) {
     const arg = args[index];
@@ -1639,6 +1848,16 @@ export function parseArgs(args: readonly string[]): Options {
       continue;
     }
 
+    if (arg === "--fast-test-lane-report") {
+      const value = args[index + 1];
+      if (!value) {
+        throw new Error("--fast-test-lane-report requires a path");
+      }
+      fastTestLaneReportPath = resolve(value);
+      index++;
+      continue;
+    }
+
     throw new Error(`Unknown option: ${arg}`);
   }
 
@@ -1647,6 +1866,7 @@ export function parseArgs(args: readonly string[]): Options {
     outputDir,
     summaryDir,
     requireTaskSummaries,
+    fastTestLaneReportPath,
   };
 }
 
