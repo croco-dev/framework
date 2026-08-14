@@ -24,6 +24,7 @@ import { SECURITY_OWNERSHIP } from "../ci-verification-contract.mts";
 import { defaultCommandRunner } from "../release-spine-evidence.mts";
 import { fileDigest, inventoryDigest, readTestInventory } from "../test-inventory.mts";
 import { VERIFICATION_LANE_OWNERSHIP } from "../verification-manifest.mts";
+import { VerificationProblem } from "../verification-problem.mts";
 import type { ExperimentIdentity, ProducerLane } from "../ci-lane-evidence.mts";
 import type {
   CommandRunner,
@@ -117,15 +118,26 @@ function generatedArtifactsRunner(rootDir: string): CommandRunner {
       const { diagnostics, inventory } = readTestInventory(
         join(repositoryRoot, "test-inventory.json"),
       );
-      if (diagnostics.length > 0)
-        throw new Error("Expected the repository test inventory to be valid.");
+      if (diagnostics.length > 0) {
+        throw new VerificationProblem(
+          "INVALID_TEST_FIXTURE_INVENTORY",
+          "contract",
+          "Expected the repository test inventory to be valid.",
+        );
+      }
       writeFileSync(join(rootDir, "test-inventory.json"), `${JSON.stringify(inventory)}\n`);
       const materializedRoot = join(rootDir, "ci-reports", "generated-apps", "materialized-tests");
       const materializations = inventory.tests
         .filter((entry) => entry.lane === "generated-app" && entry.generated)
         .map((entry) => {
           const generated = entry.generated;
-          if (!generated) throw new Error(`Expected generated mapping for ${entry.path}.`);
+          if (!generated) {
+            throw new VerificationProblem(
+              "MISSING_TEST_FIXTURE_GENERATED_MAPPING",
+              "contract",
+              `Expected generated mapping for ${entry.path}.`,
+            );
+          }
           const sourcePath = join(rootDir, entry.path);
           const generatedPath = join(materializedRoot, generated.generatedPath);
           mkdirSync(dirname(sourcePath), { recursive: true });
