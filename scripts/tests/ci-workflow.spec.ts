@@ -35,6 +35,7 @@ const ROOT_PACKAGE_JSON = JSON.parse(
   readFileSync(resolve(ROOT_DIR, "package.json"), "utf8"),
 ) as Record<string, unknown>;
 const PNPM_LOCK = readFileSync(resolve(ROOT_DIR, "pnpm-lock.yaml"), "utf8");
+const NVMRC = readFileSync(resolve(ROOT_DIR, ".nvmrc"), "utf8").trim();
 const GITLEAKS_SMOKE = readFileSync(
   resolve(ROOT_DIR, "scripts/security-gitleaks-smoke.mts"),
   "utf8",
@@ -210,6 +211,14 @@ describe("Phase B cacheable verification shadow", () => {
     expect(() => workflowJob("missing-cacheable-job")).toThrow(
       "ci.yml does not declare the missing-cacheable-job job",
     );
+  });
+
+  it("pins one Node patch release across independent hosted runners", () => {
+    expect(NVMRC).toMatch(/^\d+\.\d+\.\d+$/);
+    for (const [jobId] of producerJobs) {
+      expect(workflowJob(jobId)).toContain('node-version-file: ".nvmrc"');
+    }
+    expect(workflowJob("split-validation-shadow")).toContain('node-version-file: ".nvmrc"');
   });
 
   it("keeps the monolithic validate job authoritative while running four advisory peer producers", () => {
