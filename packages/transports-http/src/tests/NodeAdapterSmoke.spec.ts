@@ -399,7 +399,16 @@ function getBaseUrl(server: NodeServerHandle, description: string): string {
     throw new Error(`${description} used a Unix socket address; expected TCP.`);
   }
 
-  return `http://127.0.0.1:${address.port}`;
+  const hostname =
+    address.address === "::"
+      ? "[::1]"
+      : address.address === "0.0.0.0"
+        ? "127.0.0.1"
+        : address.family === "IPv6"
+          ? `[${address.address}]`
+          : address.address;
+
+  return `http://${hostname}:${address.port}`;
 }
 
 async function fetchWithTimeout(url: string, description: string): Promise<Response> {
