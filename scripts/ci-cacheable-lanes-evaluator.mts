@@ -4,6 +4,10 @@ import { readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
+import { SECURITY_OWNERSHIP } from "./ci-verification-contract.mts";
+import { VERIFICATION_LANE_OWNERSHIP } from "./verification-manifest.mts";
+export { SECURITY_OWNERSHIP };
+
 export const DATASET_SCHEMA = "croco.ci-cacheable-lanes-dataset/v1" as const;
 export const INVENTORY_SCHEMA = "croco.ci-cacheable-lanes-inventory/v1" as const;
 export const OBSERVATION_SCHEMA = "croco.ci-cacheable-lanes-observation/v1" as const;
@@ -11,77 +15,26 @@ export const REPORT_SCHEMA = "croco.ci-cacheable-lanes-evaluation/v1" as const;
 export const RETENTION_DAYS = 90;
 export const SAMPLE_WINDOW = 30;
 
-export const LANE_OWNERSHIP = {
-  "core-verification": [
-    "verification-policy",
-    "test-inventory",
-    "turbo-cache-contract",
-    "verification-contract-tests",
-    "changeset-required",
-    "package-manifests",
-    "release-version-sync",
-    "docs-catalog",
-    "docs-api-triggers",
-    "problem-registry",
-    "docs-examples",
-    "release-docs",
-    "ci-executables",
-    "ci-performance-budget",
-    "architecture-policy-runtime",
-    "architecture-policy",
-    "architecture-circular-allowlist",
-    "dependency-boundaries",
-    "compiler-baseline",
-    "decorator-signature-spike",
-    "strict-contract-typecheck",
-    "static-misuse",
-    "lint",
-    "format",
-    "architecture-circular",
-    "benchmark-thresholds",
-    "build",
-    "quick-start-lambda-smoke",
-    "first-success",
-    "typecheck",
-    "test",
-    "integration-test-lane",
-    "release-gate-tests",
-  ],
-  "generated-apps": ["generated-app-smoke"],
-  "package-artifacts": [
-    "package-entrypoints-smoke",
-    "package-bins-smoke",
-    "alpha-release-smoke",
-    "published-test-lane",
-    "cli-packed-e2e",
-    "provider-certification",
-    "public-api",
-    "release-metadata",
-    "publish-dry-run",
-  ],
-  "coverage-security": [
-    "security-allowlists",
-    "generated-secret-placeholders",
-    "core-coverage",
-    "core-coverage-warning",
-    "dependency-audit-policy",
-    "provenance-config",
-  ],
-  "validate-synthesis": [
-    "test-evidence-reconcile",
-    "production-ready",
-    "spine-promotion",
-    "spine-bundle-size",
-  ],
-} as const;
-
-export const SECURITY_OWNERSHIP = [
-  { id: "advisory-production-audit", owner: "coverage-security", semantics: "advisory-report" },
-  { id: "gitleaks-acceptance-smoke", owner: "coverage-security", semantics: "acceptance-smoke" },
-  { id: "blocking-secret-scan", owner: "coverage-security", semantics: "blocking" },
-  { id: "security-policy-summary", owner: "validate-synthesis", semantics: "report-only" },
-  { id: "security-upload", owner: "producing-job", semantics: "report-transport" },
+const EVALUATOR_LANES = [
+  "core-verification",
+  "generated-apps",
+  "package-artifacts",
+  "coverage-security",
+  "validate-synthesis",
 ] as const;
+
+type EvaluatorLane = (typeof EVALUATOR_LANES)[number];
+
+export const LANE_OWNERSHIP = Object.fromEntries(
+  EVALUATOR_LANES.map((lane) => [
+    lane,
+    Object.entries(VERIFICATION_LANE_OWNERSHIP)
+      .filter(([, owner]) =>
+        lane === "validate-synthesis" ? owner === "split-validation-shadow" : owner === lane,
+      )
+      .map(([id]) => id),
+  ]),
+) as Readonly<Record<EvaluatorLane, readonly string[]>>;
 
 type ArchitectureVersion = "monolithic" | "shadow-split" | "cutover-split";
 type CacheCohort = "cold" | "partial" | "warm" | "no-cache";

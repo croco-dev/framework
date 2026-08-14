@@ -65,6 +65,7 @@ function createFixture(root: string): void {
     workspaces: ["packages/*"],
   });
   writeFixtureFile(root, "pnpm-workspace.yaml", "packages:\n  - packages/*\n");
+  writeFixtureFile(root, ".nvmrc", readFileSync(join(REPOSITORY_ROOT, ".nvmrc"), "utf8"));
   writeFixtureFile(
     root,
     "pnpm-lock.yaml",
@@ -323,7 +324,11 @@ export function assertTurboCacheContract(result: TurboCacheContractResult): void
     expectDependency(scenarioName, { build: "HIT", test: "HIT" });
   }
 
-  for (const scenarioName of ["declared-env-mutation", "lockfile-mutation"]) {
+  for (const scenarioName of [
+    "declared-env-mutation",
+    "lockfile-mutation",
+    "node-version-mutation",
+  ]) {
     expectApp(scenarioName, { build: "MISS", test: "MISS" });
     expectDependency(scenarioName, { build: "MISS", test: "MISS" });
   }
@@ -373,6 +378,7 @@ export function runTurboCacheContract(
         "specifier: workspace:^",
       ),
     );
+    mutateAndRun("node-version-mutation", ".nvmrc", "22.23.3\n");
     mutateAndRun(
       "direct-dependency-mutation",
       "packages/dependency/src/index.ts",

@@ -297,7 +297,7 @@ const DEPENDENCY_BOUNDARY_RULES: readonly DependencyBoundaryRule[] = [
     packageName: "@croco/protocols-desktop",
     sourceDir: "packages/protocols-desktop/src",
     forbiddenPattern:
-      /(?:from\s+|import\s*\(\s*|require\s*\(\s*)[\"'](?:electron(?:\/[^\"']*)?|node:[^\"']+|@croco\/transports-electron(?:\/[^\"']*)?)[\"']/,
+      /(?:from\s+|import\s*\(\s*|require\s*\(\s*)["'](?:electron(?:\/[^"']*)?|node:[^"']+|@croco\/transports-electron(?:\/[^"']*)?)["']/,
     policy:
       "@croco/protocols-desktop is a browser-safe contract boundary and must not import Electron, Node runtime APIs, or Electron transports in src.",
   },
@@ -1154,7 +1154,7 @@ function readStringField(
   return typeof value[fieldName] === "string" ? value[fieldName] : fallback;
 }
 
-function readPublicApiGuardResult(rootDir: string): PublicApiGuardResult {
+export function readPublicApiGuardResult(rootDir: string): PublicApiGuardResult {
   const summaryPath = join(rootDir, publicApiSummaryPath);
 
   if (!existsSync(summaryPath)) {
@@ -1542,12 +1542,37 @@ export function createPackageQualityReport(
   options: Pick<CheckOptions, "rootDir" | "summaryDir"> & {
     readonly enforceSpineBundleSize?: boolean;
     readonly generatedAppVersionSet?: CompatibilityTrainGeneratedAppVersionSet;
+    readonly packageRows?: readonly PackageQualityRow[];
+    readonly bundleSize?: BundleSizeWarningReport;
+    readonly publicApi?: PublicApiGuardResult;
+    readonly gateOutcomes?: Readonly<Record<string, string>>;
+    readonly summaryWindows?: Partial<
+      Readonly<Record<QualityTask, { readonly startedAt: string; readonly completedAt: string }>>
+    >;
   },
 ): PackageQualityReport {
-  const summaries = readTurboRunSummaries(options.summaryDir);
+  const summaries = options.packageRows
+    ? []
+    : readTurboRunSummaries(options.summaryDir).filter((summary) => {
+        const task = getCommandTask(summary.command);
+        if (!task || !options.summaryWindows?.[task]) return true;
+        const window = options.summaryWindows[task];
+        const startedAt = Date.parse(window.startedAt);
+        const completedAt = Date.parse(window.completedAt);
+        if (Number.isNaN(startedAt) || Number.isNaN(completedAt)) {
+          throw new TypeError(
+            `summaryWindows.${task} must contain parseable timestamps: ${window.startedAt}..${window.completedAt}`,
+          );
+        }
+        return (
+          statSync(summary.filePath).mtimeMs >= startedAt &&
+          summary.endTime >= startedAt &&
+          summary.endTime <= completedAt
+        );
+      });
   const summaryByTask = getLatestSummaryByTask(summaries);
   const packages = mergePackagesWithTurboTasks(readPackages(options.rootDir), summaries);
-  const rows = packages.map((pkg) => createPackageRow(pkg, summaryByTask));
+  const rows = options.packageRows ?? packages.map((pkg) => createPackageRow(pkg, summaryByTask));
 
   return {
     generatedAt: new Date().toISOString(),
@@ -1555,15 +1580,17 @@ export function createPackageQualityReport(
     summaryDir: options.summaryDir,
     rows,
     boundaries: scanDependencyBoundaries(options.rootDir),
-    publicApi: readPublicApiGuardResult(options.rootDir),
-    bundleSize: createBundleSizeWarningReport(options.rootDir, packages, {
-      enforceSpineBundleSize: options.enforceSpineBundleSize,
-    }),
+    publicApi: options.publicApi ?? readPublicApiGuardResult(options.rootDir),
+    bundleSize:
+      options.bundleSize ??
+      createBundleSizeWarningReport(options.rootDir, packages, {
+        enforceSpineBundleSize: options.enforceSpineBundleSize,
+      }),
     compatibilityTrain: createCompatibilityTrainReport(
       options.rootDir,
       options.generatedAppVersionSet ?? getGeneratedAppCrocoVersionSet(),
     ),
-    gateOutcomes: readGateOutcomes(),
+    gateOutcomes: options.gateOutcomes ?? readGateOutcomes(),
   };
 }
 

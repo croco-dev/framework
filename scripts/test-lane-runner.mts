@@ -62,6 +62,7 @@ export type TestLaneCommandRunner = (command: TestLaneCommand) => {
   readonly executedPaths?: readonly string[];
   readonly executionState?: "executed" | "reused";
   readonly cacheHash?: string;
+  readonly failureDetails?: readonly string[];
 };
 
 export type TestLaneScriptResolver = (
@@ -72,6 +73,9 @@ export type TestLaneScriptResolver = (
 const ROOT_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const VITEST_EVIDENCE_FILE = ".turbo/croco-test-evidence.json";
 const MAX_FAST_PACKAGE_PROCESSES = 4;
+const MAX_ROOT_VITEST_WORKERS = 2;
+const MAX_FAILURE_DETAILS = 8;
+const MAX_FAILURE_DETAIL_LENGTH = 2_000;
 
 export function createFastPackageTurboArguments(
   rootDir: string,
@@ -101,7 +105,13 @@ type VitestJsonReport = {
   readonly testResults?: readonly {
     readonly name?: string;
     readonly status?: string;
-    readonly assertionResults?: readonly { readonly status?: string }[];
+    readonly message?: string;
+    readonly assertionResults?: readonly {
+      readonly status?: string;
+      readonly title?: string;
+      readonly fullName?: string;
+      readonly failureMessages?: readonly string[];
+    }[];
   }[];
 };
 
@@ -171,6 +181,45 @@ export function readCompletedVitestPaths(
     .sort(compareText);
 }
 
+export function readVitestFailureDetails(
+  reportPath: string,
+  workspaceRoot: string,
+): readonly string[] {
+  const report = JSON.parse(readFileSync(reportPath, "utf8")) as VitestJsonReport;
+  return (report.testResults ?? [])
+    .flatMap(({ name, status, message, assertionResults }) => {
+      if (status !== "failed") return [];
+      const absoluteName = name
+        ? isAbsolute(name)
+          ? name
+          : resolve(workspaceRoot, name)
+        : undefined;
+      const file =
+        absoluteName &&
+        (absoluteName === workspaceRoot || absoluteName.startsWith(`${workspaceRoot}${sep}`))
+          ? relative(workspaceRoot, absoluteName).split(sep).join("/")
+          : (name ?? "<unknown test file>");
+      const failedAssertions = (assertionResults ?? []).filter(
+        (assertion) => assertion.status === "failed",
+      );
+      const details =
+        failedAssertions.length > 0
+          ? failedAssertions
+          : [{ fullName: undefined, title: undefined, failureMessages: [message] }];
+      return details.map((assertion) => {
+        const title = assertion.fullName ?? assertion.title;
+        const failures = (assertion.failureMessages ?? []).filter(
+          (failure): failure is string => typeof failure === "string" && failure.length > 0,
+        );
+        return `${file}${title ? ` > ${title}` : ""}${failures.length > 0 ? `\n${failures.join("\n")}` : ""}`.slice(
+          0,
+          MAX_FAILURE_DETAIL_LENGTH,
+        );
+      });
+    })
+    .slice(0, MAX_FAILURE_DETAILS);
+}
+
 export function readCompletedPlaywrightPaths(
   reportPath: string,
   workspaceRoot: string,
@@ -223,25 +272,37 @@ function runVitestCommandWithEvidence(
   readonly durationMs: number;
   readonly executedPaths: readonly string[];
   readonly executionState: "executed";
+  readonly failureDetails: readonly string[];
 } {
   const reportPath = evidencePath(rootDir, command);
   rmSync(reportPath, { force: true });
   mkdirSync(dirname(reportPath), { recursive: true });
   const startedAt = Date.now();
+  const maxWorkers = Math.max(1, Math.min(MAX_ROOT_VITEST_WORKERS, availableParallelism()));
   const result = spawnSync(
     command.command[0],
-    [...command.command.slice(1), "--reporter=json", `--outputFile=${reportPath}`],
+    [
+      ...command.command.slice(1),
+      `--maxWorkers=${maxWorkers}`,
+      "--reporter=json",
+      `--outputFile=${reportPath}`,
+    ],
     { cwd: resolve(rootDir, command.cwd), env: process.env, stdio: "inherit" },
   );
   const executedPaths = existsSync(reportPath)
     ? readCompletedVitestPaths(reportPath, resolve(rootDir, command.cwd))
     : [];
+  const failureDetails =
+    result.status !== 0 && existsSync(reportPath)
+      ? readVitestFailureDetails(reportPath, resolve(rootDir, command.cwd))
+      : [];
   rmSync(reportPath, { force: true });
   return {
     exitCode: result.status ?? 1,
     durationMs: Date.now() - startedAt,
     executedPaths,
     executionState: "executed" as const,
+    failureDetails,
   };
 }
 
@@ -380,6 +441,7 @@ function defaultRunner(
         readonly exitCode: number;
         readonly durationMs: number;
         readonly executedPaths: readonly string[];
+        readonly failureDetails: readonly string[];
       }
     >();
     return (command) => {
@@ -588,11 +650,16 @@ export function runTestLane(options: {
     }
   }
   const runner = options.runner ?? defaultRunner(rootDir, options.lane, plan, resolveScript);
+  const commandFailureDetails: { readonly owner: string; readonly details: readonly string[] }[] =
+    [];
   const commands =
     diagnostics.length > 0
       ? []
       : plan.map((command): TestLaneCommandResult => {
-          const result = runner(command);
+          const { failureDetails = [], ...result } = runner(command);
+          if (failureDetails.length > 0) {
+            commandFailureDetails.push({ owner: command.owner, details: failureDetails });
+          }
           const executedPaths = [...new Set(result.executedPaths ?? [])].sort(compareText);
           const complete = JSON.stringify(executedPaths) === JSON.stringify(command.paths);
           return {
@@ -606,6 +673,12 @@ export function runTestLane(options: {
     diagnostics.push({
       code: "TEST_LANE_EXECUTION_FAILED",
       message: `At least one ${options.lane} lane command failed.`,
+    });
+  }
+  for (const { owner, details } of commandFailureDetails) {
+    diagnostics.push({
+      code: "TEST_LANE_COMMAND_FAILURE_DETAIL",
+      message: `${owner}: ${details.join("\n\n")}`,
     });
   }
   if (commands.some(({ status, exitCode }) => exitCode === 0 && status === "failed")) {

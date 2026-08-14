@@ -1,6 +1,7 @@
 import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { isNode, parseDocument } from "yaml";
 import { describe, expect, it } from "vitest";
 
 import { createVerificationManifest, getVerificationCommand } from "../verification-manifest.mts";
@@ -14,6 +15,14 @@ import {
 
 const ROOT_DIR = resolve(import.meta.dirname, "../..");
 const WORKFLOW = readFileSync(resolve(ROOT_DIR, ".github/workflows/ci.yml"), "utf8");
+const WORKFLOW_DOCUMENT = parseDocument(WORKFLOW, { uniqueKeys: true });
+if (WORKFLOW_DOCUMENT.errors.length > 0) {
+  throw new Error(WORKFLOW_DOCUMENT.errors.map(({ message }) => message).join("\n"));
+}
+const WORKFLOW_JOBS = (WORKFLOW_DOCUMENT.toJS() as { readonly jobs?: unknown }).jobs;
+if (typeof WORKFLOW_JOBS !== "object" || WORKFLOW_JOBS === null || Array.isArray(WORKFLOW_JOBS)) {
+  throw new Error("ci.yml must declare a jobs mapping");
+}
 const WORKFLOWS = Object.fromEntries(
   readdirSync(resolve(ROOT_DIR, ".github/workflows"))
     .filter((path) => /\.ya?ml$/.test(path))
@@ -26,27 +35,34 @@ const ROOT_PACKAGE_JSON = JSON.parse(
   readFileSync(resolve(ROOT_DIR, "package.json"), "utf8"),
 ) as Record<string, unknown>;
 const PNPM_LOCK = readFileSync(resolve(ROOT_DIR, "pnpm-lock.yaml"), "utf8");
+const NVMRC = readFileSync(resolve(ROOT_DIR, ".nvmrc"), "utf8").trim();
 const GITLEAKS_SMOKE = readFileSync(
   resolve(ROOT_DIR, "scripts/security-gitleaks-smoke.mts"),
   "utf8",
 );
-const VALIDATE_JOB = WORKFLOW.slice(
-  WORKFLOW.indexOf("  validate:"),
-  WORKFLOW.indexOf("  changes:"),
-);
-const REAL_RESOURCE_JOB_START = WORKFLOW.indexOf("  real-resource-tests:");
-const REAL_RESOURCE_JOB = WORKFLOW.slice(
-  REAL_RESOURCE_JOB_START,
-  WORKFLOW.indexOf("  windows-scaffold:", REAL_RESOURCE_JOB_START),
-);
-const SECRET_SCAN = WORKFLOW.slice(
-  WORKFLOW.indexOf("      - name: Secret scan blocking report"),
-  WORKFLOW.indexOf("      - name: Assemble security policy summary"),
-);
+function workflowJob(id: string): string {
+  if ((WORKFLOW_JOBS as Readonly<Record<string, unknown>>)[id] === undefined) {
+    throw new Error(`ci.yml does not declare the ${id} job`);
+  }
+  const job = WORKFLOW_DOCUMENT.getIn(["jobs", id], true);
+  if (!isNode(job) || !job.range) throw new Error(`ci.yml ${id} job has no source range`);
+  return WORKFLOW.slice(job.range[0], job.range[1]);
+}
+
+const VALIDATE_JOB = workflowJob("validate");
+const REAL_RESOURCE_JOB = workflowJob("real-resource-tests");
+const SECRET_SCAN = (() => {
+  const start = VALIDATE_JOB.indexOf("- name: Secret scan blocking report");
+  const end = VALIDATE_JOB.indexOf("- name: Assemble security policy summary");
+  if (start === -1 || end === -1) {
+    throw new Error("ci.yml validate job does not declare the secret scan boundary steps");
+  }
+  return VALIDATE_JOB.slice(start, end);
+})();
 
 function workflowStep(name: string): string {
   const start = VALIDATE_JOB.indexOf(`      - name: ${name}`);
-  if (start === -1) return "";
+  if (start === -1) throw new Error(`ci.yml validate job does not declare the ${name} step`);
   const next = VALIDATE_JOB.indexOf("      - name:", start + 1);
   return VALIDATE_JOB.slice(start, next === -1 ? undefined : next);
 }
@@ -133,15 +149,15 @@ describe("CI executable supply chain", () => {
 
   it("rejects moving the trusted image declaration to an inert job", () => {
     const trustedDeclaration = [
-      "      # renovate: datasource=docker depName=ghcr.io/gitleaks/gitleaks",
-      `      GITLEAKS_IMAGE: ${TRUSTED_GITLEAKS_IMAGE}`,
+      "  # renovate: datasource=docker depName=ghcr.io/gitleaks/gitleaks",
+      `  GITLEAKS_IMAGE: ${TRUSTED_GITLEAKS_IMAGE}`,
     ].join("\n");
     const mutant = WORKFLOW.replace(
       trustedDeclaration,
-      `      "GITLEAKS_IMAGE": ghcr.io/gitleaks/gitleaks:v9@sha256:${"b".repeat(64)}`,
+      `  "GITLEAKS_IMAGE": ghcr.io/gitleaks/gitleaks:v9@sha256:${"b".repeat(64)}`,
     ).replace(
       "  changes:",
-      `  inert:\n    env:\n${trustedDeclaration}\n    steps: []\n\n  changes:`,
+      `  inert:\n    env:\n      # renovate: datasource=docker depName=ghcr.io/gitleaks/gitleaks\n      GITLEAKS_IMAGE: ${TRUSTED_GITLEAKS_IMAGE}\n    steps: []\n\n  changes:`,
     );
 
     expect(mutant).not.toBe(WORKFLOW);
@@ -187,6 +203,127 @@ describe("CI executable supply chain", () => {
   });
 });
 
+describe("Phase B cacheable verification shadow", () => {
+  const producerJobs = [
+    "core-verification",
+    "generated-apps",
+    "package-artifacts",
+    "coverage-security",
+  ] as const;
+
+  it("fails fast when an explicitly selected workflow job is missing", () => {
+    expect(() => workflowJob("missing-cacheable-job")).toThrow(
+      "ci.yml does not declare the missing-cacheable-job job",
+    );
+  });
+
+  it("pins one Node patch release across independent hosted runners", () => {
+    expect(NVMRC).toMatch(/^\d+\.\d+\.\d+$/);
+    for (const jobId of producerJobs) {
+      expect(workflowJob(jobId)).toContain('node-version-file: ".nvmrc"');
+    }
+    expect(workflowJob("split-validation-shadow")).toContain('node-version-file: ".nvmrc"');
+  });
+
+  it("keeps the monolithic validate job authoritative while running four advisory peer producers", () => {
+    expect(VALIDATE_JOB).toContain("needs: changes");
+    expect(VALIDATE_JOB).not.toContain("ci-cacheable-lanes:producer");
+    for (const jobId of producerJobs) {
+      const job = workflowJob(jobId);
+      expect(job).toContain("needs: changes");
+      expect(job).toContain("scripts/ci-cacheable-experiment-identity.mts");
+      expect(job).toContain("scripts/ci-cacheable-lane-runner.mts");
+      expect(job).toContain("if: always()");
+      expect(job).toContain(
+        `name: ci-lane-${jobId}-${"${{ github.run_id }}"}-${"${{ github.run_attempt }}"}`,
+      );
+      expect(job).toContain("continue-on-error: true");
+    }
+    const cacheableJobs = [
+      ...producerJobs.map((jobId) => workflowJob(jobId)),
+      workflowJob("split-validation-shadow"),
+    ].join("\n");
+    expect(findWorkflowVerificationViolations(cacheableJobs, ROOT_DIR)).toEqual([]);
+  });
+
+  it("restores only exact producer receipts and keeps physical security execution fresh", () => {
+    for (const jobId of producerJobs.slice(0, 3)) {
+      const job = workflowJob(jobId);
+      expect(job).toContain("id: split_identity");
+      expect(job).toContain("id: exact_receipts");
+      expect(job).toContain(
+        'input_digest=$(node -e \'process.stdout.write(JSON.parse(require("node:fs")',
+      );
+      expect(job).toContain('echo "input_digest=$input_digest" >> "$GITHUB_OUTPUT"');
+      expect(job).not.toContain('echo "input_digest=$(node -e');
+      expect(job).toContain(`path: .ci-cache/exact/${jobId}`);
+      expect(job).toContain(
+        `key: ci-lane-receipt-v1-${"${{ runner.os }}"}-${jobId}-${"${{ needs.changes.outputs.profile }}"}-${"${{ steps.split_identity.outputs.input_digest }}"}`,
+      );
+      const exactCacheStart = job.indexOf(`      - name: Restore exact`);
+      const exactCacheEnd = job.indexOf("      - name:", exactCacheStart + 1);
+      const exactCache = job.slice(exactCacheStart, exactCacheEnd);
+      expect(exactCache).not.toContain("restore-keys:");
+      expect(exactCache).toContain(
+        "if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository",
+      );
+      expect(job).toContain('if [ "$TRUSTED_CACHE" = "true" ]; then');
+      expect(job).toContain("--cache-origin github-exact-key");
+    }
+    const security = workflowJob("coverage-security");
+    expect(security).not.toContain("id: exact_receipts");
+    expect(security).not.toContain("--cache-dir");
+    expect(security).toContain('NPM_CONFIG_PROVENANCE: "true"');
+
+    const packages = workflowJob("package-artifacts");
+    expect(packages).toContain('if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then');
+    expect(packages).toContain("lane_args+=(--allow-pending-release-metadata)");
+    expect(packages).toContain('"${lane_args[@]}"');
+  });
+
+  it("downloads the exact four immutable bundles before advisory synthesis", () => {
+    const shadow = workflowJob("split-validation-shadow");
+    expect(shadow).toContain(
+      "needs: [changes, core-verification, generated-apps, package-artifacts, coverage-security]",
+    );
+    expect(shadow).toContain("continue-on-error: true");
+    for (const lane of producerJobs) {
+      expect(shadow).toContain(
+        `name: ci-lane-${lane}-${"${{ github.run_id }}"}-${"${{ github.run_attempt }}"}`,
+      );
+      expect(shadow).toContain(`--producer-dir ${lane}=incoming/${lane}`);
+    }
+    expect(shadow).toContain("scripts/ci-synthesis-input.mts");
+    expect(shadow).toContain("scripts/ci-split-validation-synthesis.mts");
+    expect(shadow).toContain("ci-reports/cacheable-ci/split-validation-shadow.json");
+    expect(shadow).toContain("ci-reports/security/split-security-policy-summary.json");
+  });
+
+  it("digest-binds the three physical security outcomes and their raw reports", () => {
+    const security = workflowJob("coverage-security");
+    expect(security).toContain("scripts/ci-cacheable-security-evidence.mts");
+    expect(security).toContain("--security-results ci-reports/security/security-physical.json");
+    for (const path of [
+      "security-physical.json",
+      "pnpm-audit-prod.txt",
+      "gitleaks-smoke.txt",
+      "gitleaks.txt",
+      "gitleaks.sarif",
+    ]) {
+      expect(security).toContain(`--security-artifact ci-reports/security/${path}`);
+    }
+    expect(security).toContain("Advisory Gitleaks smoke exit code: ${SMOKE_EXIT:-unknown}");
+    expect(security).toContain("Advisory secret scan exit code: ${SCAN_EXIT:-unknown}");
+    expect(security).not.toContain('test "$SMOKE_EXIT" = "0"');
+    expect(security).not.toContain('test "$SCAN_EXIT" = "0"');
+    expect(security).toContain("name: Report advisory physical security failures");
+    expect(security).toContain(
+      "This shadow lane is advisory; validate retains the blocking Gitleaks checks.",
+    );
+    expect(VALIDATE_JOB).toContain("name: Secret scan blocking report");
+  });
+});
+
 describe("CI verification profile contract", () => {
   it("allows the selected profile and full changed-test shadow suite to finish", () => {
     expect(VALIDATE_JOB).toContain("    timeout-minutes: 90");
@@ -228,10 +365,10 @@ describe("CI verification profile contract", () => {
     expect(WORKFLOW).toContain("VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}");
     expect(WORKFLOW).toContain('args=(--profile "$VERIFICATION_PROFILE")');
     expect(WORKFLOW).toContain(
-      'if [ "${{ github.event_name }}" = "pull_request" ]; then\n            args+=(--allow-pending-release-metadata)',
+      'if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then\n            args+=(--allow-pending-release-metadata)',
     );
     expect(WORKFLOW).toContain(
-      'if [ "${{ github.event_name }}" != "workflow_dispatch" ]; then\n            args+=(--base "$VERIFICATION_BASE" --head HEAD)',
+      'if [ "$GITHUB_EVENT_NAME" != "workflow_dispatch" ]; then\n            args+=(--base "$VERIFICATION_BASE" --head HEAD)',
     );
     expect(WORKFLOW).toContain("VERIFICATION_BASE: ${{ needs.changes.outputs.base }}");
     expect(WORKFLOW).not.toContain("test:release-gates");

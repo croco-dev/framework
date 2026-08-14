@@ -17,6 +17,130 @@ import type { TestLane } from "./test-inventory.mts";
 
 export type VerificationProfile = "repo" | "spine" | "publish";
 
+const VERIFICATION_LANES = [
+  "core-verification",
+  "generated-apps",
+  "package-artifacts",
+  "coverage-security",
+  "split-validation-shadow",
+] as const;
+
+export type VerificationLane = (typeof VERIFICATION_LANES)[number];
+
+const VERIFICATION_COMMAND_IDS = [
+  "verification-policy",
+  "test-inventory",
+  "turbo-cache-contract",
+  "verification-contract-tests",
+  "changeset-required",
+  "package-manifests",
+  "release-version-sync",
+  "docs-catalog",
+  "docs-api-triggers",
+  "problem-registry",
+  "docs-examples",
+  "release-docs",
+  "ci-executables",
+  "ci-performance-budget",
+  "architecture-policy-runtime",
+  "architecture-policy",
+  "architecture-circular-allowlist",
+  "dependency-boundaries",
+  "security-allowlists",
+  "generated-secret-placeholders",
+  "compiler-baseline",
+  "decorator-signature-spike",
+  "strict-contract-typecheck",
+  "static-misuse",
+  "lint",
+  "format",
+  "architecture-circular",
+  "benchmark-thresholds",
+  "build",
+  "quick-start-lambda-smoke",
+  "first-success",
+  "package-entrypoints-smoke",
+  "package-bins-smoke",
+  "generated-app-smoke",
+  "alpha-release-smoke",
+  "typecheck",
+  "test",
+  "integration-test-lane",
+  "published-test-lane",
+  "test-evidence-reconcile",
+  "cli-packed-e2e",
+  "provider-certification",
+  "production-ready",
+  "spine-promotion",
+  "core-coverage",
+  "core-coverage-warning",
+  "public-api",
+  "release-gate-tests",
+  "release-metadata",
+  "spine-bundle-size",
+  "dependency-audit-policy",
+  "provenance-config",
+  "publish-dry-run",
+] as const;
+
+type VerificationCommandId = (typeof VERIFICATION_COMMAND_IDS)[number];
+
+export const VERIFICATION_LANE_OWNERSHIP = {
+  "verification-policy": "core-verification",
+  "test-inventory": "core-verification",
+  "turbo-cache-contract": "core-verification",
+  "verification-contract-tests": "core-verification",
+  "changeset-required": "core-verification",
+  "package-manifests": "core-verification",
+  "release-version-sync": "core-verification",
+  "docs-catalog": "core-verification",
+  "docs-api-triggers": "core-verification",
+  "problem-registry": "core-verification",
+  "docs-examples": "core-verification",
+  "release-docs": "core-verification",
+  "ci-executables": "core-verification",
+  "ci-performance-budget": "core-verification",
+  "architecture-policy-runtime": "core-verification",
+  "architecture-policy": "core-verification",
+  "architecture-circular-allowlist": "core-verification",
+  "dependency-boundaries": "core-verification",
+  "security-allowlists": "coverage-security",
+  "generated-secret-placeholders": "coverage-security",
+  "compiler-baseline": "core-verification",
+  "decorator-signature-spike": "core-verification",
+  "strict-contract-typecheck": "core-verification",
+  "static-misuse": "core-verification",
+  lint: "core-verification",
+  format: "core-verification",
+  "architecture-circular": "core-verification",
+  "benchmark-thresholds": "core-verification",
+  build: "core-verification",
+  "quick-start-lambda-smoke": "core-verification",
+  "first-success": "core-verification",
+  "package-entrypoints-smoke": "package-artifacts",
+  "package-bins-smoke": "package-artifacts",
+  "generated-app-smoke": "generated-apps",
+  "alpha-release-smoke": "package-artifacts",
+  typecheck: "core-verification",
+  test: "core-verification",
+  "integration-test-lane": "core-verification",
+  "cli-packed-e2e": "core-verification",
+  "published-test-lane": "package-artifacts",
+  "test-evidence-reconcile": "split-validation-shadow",
+  "provider-certification": "package-artifacts",
+  "production-ready": "split-validation-shadow",
+  "spine-promotion": "split-validation-shadow",
+  "core-coverage": "coverage-security",
+  "core-coverage-warning": "coverage-security",
+  "public-api": "package-artifacts",
+  "release-gate-tests": "core-verification",
+  "release-metadata": "package-artifacts",
+  "spine-bundle-size": "split-validation-shadow",
+  "dependency-audit-policy": "coverage-security",
+  "provenance-config": "coverage-security",
+  "publish-dry-run": "package-artifacts",
+} as const satisfies Readonly<Record<VerificationCommandId, VerificationLane>>;
+
 export type VerificationContext = {
   readonly allowPendingReleaseMetadata?: boolean;
   readonly base?: string;
@@ -1232,6 +1356,95 @@ const VERIFICATION_DEPENDENCIES: Readonly<Record<string, readonly string[]>> = {
   "publish-dry-run": ["build"],
 };
 
+export type VerificationDependencyClassification = "physical-local" | "logical-synthesis";
+
+type VerificationDependencyEdge =
+  | "architecture-policy->architecture-policy-runtime"
+  | "build->architecture-policy-runtime"
+  | "quick-start-lambda-smoke->build"
+  | "first-success->build"
+  | "package-entrypoints-smoke->build"
+  | "package-entrypoints-smoke->test"
+  | "package-bins-smoke->build"
+  | "generated-app-smoke->build"
+  | "alpha-release-smoke->build"
+  | "typecheck->build"
+  | "test->build"
+  | "test->typecheck"
+  | "integration-test-lane->build"
+  | "published-test-lane->build"
+  | "test-evidence-reconcile->test"
+  | "test-evidence-reconcile->integration-test-lane"
+  | "test-evidence-reconcile->published-test-lane"
+  | "test-evidence-reconcile->generated-app-smoke"
+  | "cli-packed-e2e->integration-test-lane"
+  | "production-ready->build"
+  | "production-ready->typecheck"
+  | "production-ready->test"
+  | "production-ready->test-evidence-reconcile"
+  | "spine-promotion->test"
+  | "spine-promotion->generated-app-smoke"
+  | "spine-promotion->provider-certification"
+  | "spine-promotion->production-ready"
+  | "core-coverage->build"
+  | "core-coverage-warning->core-coverage"
+  | "release-gate-tests->test"
+  | "spine-bundle-size->changeset-required"
+  | "spine-bundle-size->lint"
+  | "spine-bundle-size->format"
+  | "spine-bundle-size->build"
+  | "spine-bundle-size->typecheck"
+  | "spine-bundle-size->test"
+  | "spine-bundle-size->provider-certification"
+  | "spine-bundle-size->production-ready"
+  | "spine-bundle-size->spine-promotion"
+  | "publish-dry-run->build";
+
+export const VERIFICATION_DEPENDENCY_CLASSIFICATION = {
+  "architecture-policy->architecture-policy-runtime": ["physical-local"],
+  "build->architecture-policy-runtime": ["physical-local"],
+  "quick-start-lambda-smoke->build": ["physical-local"],
+  "first-success->build": ["physical-local"],
+  "package-entrypoints-smoke->build": ["physical-local", "logical-synthesis"],
+  "package-entrypoints-smoke->test": ["logical-synthesis"],
+  "package-bins-smoke->build": ["physical-local", "logical-synthesis"],
+  "generated-app-smoke->build": ["physical-local", "logical-synthesis"],
+  "alpha-release-smoke->build": ["physical-local", "logical-synthesis"],
+  "typecheck->build": ["physical-local"],
+  "test->build": ["physical-local"],
+  "test->typecheck": ["physical-local"],
+  "integration-test-lane->build": ["physical-local"],
+  "published-test-lane->build": ["physical-local", "logical-synthesis"],
+  "test-evidence-reconcile->test": ["logical-synthesis"],
+  "test-evidence-reconcile->integration-test-lane": ["logical-synthesis"],
+  "test-evidence-reconcile->published-test-lane": ["logical-synthesis"],
+  "test-evidence-reconcile->generated-app-smoke": ["logical-synthesis"],
+  "cli-packed-e2e->integration-test-lane": ["physical-local"],
+  "production-ready->build": ["logical-synthesis"],
+  "production-ready->typecheck": ["logical-synthesis"],
+  "production-ready->test": ["logical-synthesis"],
+  "production-ready->test-evidence-reconcile": ["physical-local"],
+  "spine-promotion->test": ["logical-synthesis"],
+  "spine-promotion->generated-app-smoke": ["logical-synthesis"],
+  "spine-promotion->provider-certification": ["logical-synthesis"],
+  "spine-promotion->production-ready": ["physical-local"],
+  "core-coverage->build": ["physical-local", "logical-synthesis"],
+  "core-coverage-warning->core-coverage": ["physical-local"],
+  "release-gate-tests->test": ["physical-local"],
+  "spine-bundle-size->changeset-required": ["logical-synthesis"],
+  "spine-bundle-size->lint": ["logical-synthesis"],
+  "spine-bundle-size->format": ["logical-synthesis"],
+  "spine-bundle-size->build": ["logical-synthesis"],
+  "spine-bundle-size->typecheck": ["logical-synthesis"],
+  "spine-bundle-size->test": ["logical-synthesis"],
+  "spine-bundle-size->provider-certification": ["logical-synthesis"],
+  "spine-bundle-size->production-ready": ["physical-local"],
+  "spine-bundle-size->spine-promotion": ["physical-local"],
+  "publish-dry-run->build": ["physical-local", "logical-synthesis"],
+} as const satisfies Readonly<
+  Record<VerificationDependencyEdge, readonly VerificationDependencyClassification[]>
+>;
+
 const WORKSPACE_ARTIFACT_CONCURRENCY_GROUP = new Set([
   "package-entrypoints-smoke",
   "package-bins-smoke",
@@ -1355,6 +1568,182 @@ export function createVerificationManifest(
   ).map(withSchedulingContract);
   assertVerificationManifest(commands);
   return commands;
+}
+
+export type VerificationLaneDependency = {
+  readonly classifications: readonly VerificationDependencyClassification[];
+  readonly dependentId: string;
+  readonly dependentLane: VerificationLane;
+  readonly prerequisiteId: string;
+  readonly prerequisiteLane: VerificationLane;
+};
+
+export type VerificationLaneManifest = {
+  readonly commands: readonly EvidenceCommand[];
+  readonly dependencies: readonly VerificationLaneDependency[];
+  readonly lane: VerificationLane;
+  readonly physicalLocalPrerequisites: readonly EvidenceCommand[];
+};
+
+function verificationDependencyEdge(dependentId: string, prerequisiteId: string): string {
+  return `${dependentId}->${prerequisiteId}`;
+}
+
+function verificationDependencyClassifications(
+  dependentId: string,
+  prerequisiteId: string,
+): readonly VerificationDependencyClassification[] {
+  const edge = verificationDependencyEdge(dependentId, prerequisiteId);
+  const classifications =
+    VERIFICATION_DEPENDENCY_CLASSIFICATION[edge as VerificationDependencyEdge];
+  if (!classifications || classifications.length === 0) {
+    throw new VerificationProblem(
+      "UNCLASSIFIED_VERIFICATION_DEPENDENCY",
+      "contract",
+      `Verification dependency ${edge} is unknown or unclassified.`,
+    );
+  }
+  return classifications;
+}
+
+function assertVerificationLaneContract(commands: readonly EvidenceCommand[]): void {
+  const commandIds = commands.map(({ id }) => id);
+  const commandIdSet = new Set(commandIds);
+  const declaredIds = Object.keys(VERIFICATION_LANE_OWNERSHIP);
+  if (
+    commandIds.length !== VERIFICATION_COMMAND_IDS.length ||
+    commandIdSet.size !== VERIFICATION_COMMAND_IDS.length ||
+    VERIFICATION_COMMAND_IDS.some((id) => !commandIdSet.has(id)) ||
+    declaredIds.length !== VERIFICATION_COMMAND_IDS.length ||
+    declaredIds.some((id) => !commandIdSet.has(id))
+  ) {
+    throw new VerificationProblem(
+      "VERIFICATION_LANE_OWNERSHIP_COVERAGE",
+      "contract",
+      "Verification lane ownership must cover every publish verification command exactly once.",
+    );
+  }
+
+  const expectedEdges = new Set(
+    commands.flatMap((command) =>
+      (command.dependsOn ?? []).map((prerequisiteId) =>
+        verificationDependencyEdge(command.id, prerequisiteId),
+      ),
+    ),
+  );
+  const classifiedEdges = Object.keys(VERIFICATION_DEPENDENCY_CLASSIFICATION);
+  if (
+    expectedEdges.size !== classifiedEdges.length ||
+    classifiedEdges.some((edge) => !expectedEdges.has(edge))
+  ) {
+    throw new VerificationProblem(
+      "VERIFICATION_DEPENDENCY_CLASSIFICATION_COVERAGE",
+      "contract",
+      "Every verification dependency edge must have exactly one declared classification record.",
+    );
+  }
+
+  for (const command of commands) {
+    const dependentLane = VERIFICATION_LANE_OWNERSHIP[command.id as VerificationCommandId];
+    if (!dependentLane) {
+      throw new VerificationProblem(
+        "UNKNOWN_VERIFICATION_LANE_OWNER",
+        "contract",
+        `Verification command ${command.id} has no lane owner.`,
+      );
+    }
+    for (const prerequisiteId of command.dependsOn ?? []) {
+      const prerequisiteLane = VERIFICATION_LANE_OWNERSHIP[prerequisiteId as VerificationCommandId];
+      if (!prerequisiteLane) {
+        throw new VerificationProblem(
+          "UNCLASSIFIED_VERIFICATION_DEPENDENCY",
+          "contract",
+          `Verification dependency ${command.id}->${prerequisiteId} is unknown or unclassified.`,
+        );
+      }
+      const classifications = verificationDependencyClassifications(command.id, prerequisiteId);
+      if (new Set(classifications).size !== classifications.length) {
+        throw new VerificationProblem(
+          "AMBIGUOUS_VERIFICATION_DEPENDENCY_CLASSIFICATION",
+          "contract",
+          `Verification dependency ${command.id}->${prerequisiteId} repeats a classification.`,
+        );
+      }
+      if (dependentLane !== prerequisiteLane && !classifications.includes("logical-synthesis")) {
+        throw new VerificationProblem(
+          "CROSS_LANE_DEPENDENCY_WITHOUT_SYNTHESIS",
+          "contract",
+          `Cross-lane dependency ${command.id}->${prerequisiteId} must be enforced by synthesis.`,
+        );
+      }
+    }
+  }
+}
+
+export function createVerificationLaneManifest(
+  profile: VerificationProfile,
+  lane: VerificationLane,
+  context: VerificationContext = {},
+): VerificationLaneManifest {
+  if (!VERIFICATION_LANES.includes(lane)) {
+    throw new VerificationProblem(
+      "UNKNOWN_VERIFICATION_LANE",
+      "input",
+      `Unknown verification lane: ${lane}`,
+    );
+  }
+  const manifest = createVerificationManifest(profile, context);
+  assertVerificationLaneContract(
+    profile === "publish" ? manifest : createVerificationManifest("publish", context),
+  );
+  const byId = new Map(manifest.map((command) => [command.id, command]));
+  const commands = manifest.filter(
+    ({ id }) => VERIFICATION_LANE_OWNERSHIP[id as VerificationCommandId] === lane,
+  );
+  const dependencies = commands.flatMap((command) =>
+    (command.dependsOn ?? []).map(
+      (prerequisiteId): VerificationLaneDependency => ({
+        classifications: verificationDependencyClassifications(command.id, prerequisiteId),
+        dependentId: command.id,
+        dependentLane: lane,
+        prerequisiteId,
+        prerequisiteLane: VERIFICATION_LANE_OWNERSHIP[prerequisiteId as VerificationCommandId],
+      }),
+    ),
+  );
+
+  const physicalPrerequisiteIds = new Set<string>();
+  const visited = new Set<string>();
+  const visitPhysicalPrerequisites = (command: EvidenceCommand): void => {
+    if (visited.has(command.id)) return;
+    visited.add(command.id);
+    for (const prerequisiteId of command.dependsOn ?? []) {
+      const classifications = verificationDependencyClassifications(command.id, prerequisiteId);
+      if (!classifications.includes("physical-local")) continue;
+      const prerequisite = byId.get(prerequisiteId);
+      if (!prerequisite) {
+        throw new VerificationProblem(
+          "MISSING_PHYSICAL_LOCAL_PREREQUISITE",
+          "contract",
+          `Physical-local prerequisite ${prerequisiteId} is absent from the ${profile} manifest.`,
+        );
+      }
+      if (VERIFICATION_LANE_OWNERSHIP[prerequisiteId as VerificationCommandId] !== lane) {
+        physicalPrerequisiteIds.add(prerequisiteId);
+      }
+      visitPhysicalPrerequisites(prerequisite);
+    }
+  };
+  for (const command of commands) {
+    if (command.applicable !== false) visitPhysicalPrerequisites(command);
+  }
+
+  return {
+    commands,
+    dependencies,
+    lane,
+    physicalLocalPrerequisites: manifest.filter(({ id }) => physicalPrerequisiteIds.has(id)),
+  };
 }
 
 export function getVerificationCommand(

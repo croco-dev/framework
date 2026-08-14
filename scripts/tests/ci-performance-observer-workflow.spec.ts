@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseDocument } from "yaml";
@@ -88,6 +89,19 @@ describe("CI performance observer workflow", () => {
       "if-no-files-found": "error",
       "retention-days": 90,
     });
+    const splitDownload = steps.find(
+      ({ name }) => name === "Download exact split evidence when present",
+    );
+    expect(splitDownload?.run).toContain(
+      '"ci-lane-core-verification-${SOURCE_RUN_ID}-${SOURCE_RUN_ATTEMPT}"',
+    );
+    expect(splitDownload?.run).toContain(
+      '"ci-lane-split-validation-shadow-${SOURCE_RUN_ID}-${SOURCE_RUN_ATTEMPT}"',
+    );
+    expect(splitDownload?.run).toContain('gh run download "$SOURCE_RUN_ID"');
+    expect(splitDownload?.run).toContain('--repo "$GITHUB_REPOSITORY"');
+    expect(splitDownload?.run).toContain('--name "$artifact_name"');
+    expect(splitDownload?.run).toContain('if [ "$split_artifact_count" -eq 0 ]');
   });
 
   it("uses the trusted parser for API metadata and artifact bytes without sourcing either input", () => {
@@ -96,12 +110,82 @@ describe("CI performance observer workflow", () => {
     );
     expect(record?.run).toContain("scripts/ci-performance-observer.mts");
     expect(record?.run).toContain('--execution-sha "$(cat ci-observer-input/execution-sha.txt)"');
+    expect(record?.run).toContain('--base-sha "$(cat ci-observer-input/base-sha.txt)"');
+    expect(record?.run).toContain("if [ ! -s ci-observer-input/base-sha.txt ]; then");
+    expect(record?.run).toContain("Split observation requires a non-empty trusted base SHA.");
+    expect(record?.run).toContain("--source-workflow ci-observer-input/source-ci.yml");
+    expect(record?.run).toContain('observer_args+=(--synthesis-input "${synthesis_inputs[0]}")');
     expect(record?.run).toContain("--verification");
     expect(record?.run).toContain("--fast-lane");
     expect(record?.run).toContain("--inventory");
     expect(record?.run).toContain("--package-metadata ci-observer-input/source-package.json");
+    expect(record?.run).toContain("--artifacts ci-observer-input/artifacts.json");
+    expect(record?.run).toContain('observer_args+=(--producer-bundle "$report")');
+    expect(record?.run).toContain(
+      'observer_args+=(--split-validation-shadow "${shadow_reports[0]}")',
+    );
+    expect(record?.run).toContain(
+      'observer_args+=(--split-security-summary "${split_security_summaries[0]}")',
+    );
+    expect(record?.run).toContain("-name split-validation-shadow.json");
+    expect(record?.run).toContain("-name split-security-policy-summary.json");
+    expect(record?.run).toContain("-name synthesis-input.json");
+    expect(record?.run).toContain("The source run did not emit normalized performance evidence.");
+    expect(record?.run).toContain(
+      'if [ "${#producer_reports[@]}" -ne 4 ] || [ "${#shadow_reports[@]}" -ne 1 ]',
+    );
     expect(record?.run).not.toMatch(/(?:^|\n)\s*(?:source|eval|\.)\s/);
     expect(source).toContain("> ci-observer-input/source-package.json");
     expect(source).toContain("> ci-observer-input/source-test-inventory.json");
+    expect(source).toContain("> ci-observer-input/source-ci.yml");
+    expect(source).toContain("> ci-observer-input/artifacts.json");
+  });
+
+  it("uses the run-bound PR base instead of the topic head first parent", () => {
+    const metadata = parsedWorkflow().jobs?.observe?.steps?.find(
+      ({ name }) => name === "Read source run metadata",
+    );
+
+    expect(metadata?.run).toContain(".pull_requests | select(length == 1) | .[0].base.sha");
+    expect(metadata?.run).toContain(".pull_requests[0].head.sha");
+    expect(metadata?.run).toContain(".parents[0].sha == $expected_base_sha");
+    expect(metadata?.run).toContain(".parents[1].sha == $expected_head_sha");
+    const parentExpression = [
+      "(.parents | length) == 2 and",
+      ".parents[0].sha == $expected_base_sha and",
+      ".parents[1].sha == $expected_head_sha",
+    ].join("\n");
+    expect(metadata?.run?.replace(/^\s+/gm, "")).toContain(parentExpression);
+    expect(
+      () => execFileSync("jq", ["--version"], { encoding: "utf8" }),
+      "jq is required to validate the workflow expression",
+    ).not.toThrow();
+    expect(() =>
+      execFileSync(
+        "jq",
+        [
+          "-e",
+          "--arg",
+          "expected_base_sha",
+          "base",
+          "--arg",
+          "expected_head_sha",
+          "head",
+          parentExpression,
+        ],
+        {
+          encoding: "utf8",
+          input: JSON.stringify({ parents: [{ sha: "base" }, { sha: "head" }] }),
+        },
+      ),
+    ).not.toThrow();
+    expect(metadata?.run).toContain(
+      'elif [ "$(jq -er \'.event\' ci-observer-input/run.json)" = "push" ]; then',
+    );
+    expect(metadata?.run).toContain("jq -er '.parents | select(length >= 1) | .[0].sha'");
+    expect(metadata?.run).toContain(": > ci-observer-input/base-sha.txt");
+    expect(metadata?.run).not.toMatch(
+      /if \[ -n "\$SOURCE_PULL_NUMBER" \]; then[\s\S]{0,200}\.parents\[0\]\.sha/,
+    );
   });
 });

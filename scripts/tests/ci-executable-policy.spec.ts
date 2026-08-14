@@ -463,6 +463,50 @@ describe("ci-executable-policy.mts", () => {
     ).toEqual([]);
   });
 
+  it("inherits a statically pinned top-level workflow environment image", () => {
+    const repo = createRepo();
+    writeFile(
+      repo,
+      ".github/workflows/ci.yml",
+      [
+        "env:",
+        `  SECURITY_IMAGE: tool:v1@sha256:${"a".repeat(64)}`,
+        "jobs:",
+        "  security:",
+        "    steps:",
+        '      - run: docker run "${{ env.SECURITY_IMAGE }}" scan',
+        "",
+      ].join("\n"),
+    );
+
+    expect(
+      runCiExecutablePolicy({ checkedPaths: [".github/workflows/ci.yml"], rootDir: repo }).findings,
+    ).toEqual([]);
+  });
+
+  it("accepts a statically pinned job override of a workflow environment image", () => {
+    const repo = createRepo();
+    writeFile(
+      repo,
+      ".github/workflows/ci.yml",
+      [
+        "env:",
+        `  SECURITY_IMAGE: tool:v1@sha256:${"a".repeat(64)}`,
+        "jobs:",
+        "  security:",
+        "    env:",
+        `      SECURITY_IMAGE: tool:v2@sha256:${"b".repeat(64)}`,
+        "    steps:",
+        '      - run: docker run "${{ env.SECURITY_IMAGE }}" scan',
+        "",
+      ].join("\n"),
+    );
+
+    expect(
+      runCiExecutablePolicy({ checkedPaths: [".github/workflows/ci.yml"], rootDir: repo }).findings,
+    ).toEqual([]);
+  });
+
   it("rejects shell-variable image references even when the workflow environment is pinned", () => {
     const repo = createRepo();
     writeFile(

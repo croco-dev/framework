@@ -10,7 +10,7 @@ import {
   type TurboCacheContractResult,
 } from "../turbo-cache-contract.mts";
 
-const TURBO_CACHE_SCENARIO_COUNT = 9;
+const TURBO_CACHE_SCENARIO_COUNT = 10;
 const REAL_TURBO_TEST_TIMEOUT_MS = TURBO_EXECUTION_TIMEOUT_MS * TURBO_CACHE_SCENARIO_COUNT;
 
 describe("Turbo cache contract", () => {
@@ -66,7 +66,7 @@ describe("Turbo cache contract", () => {
     },
   );
 
-  it.each([["declared-env-mutation"], ["lockfile-mutation"]])(
+  it.each([["declared-env-mutation"], ["lockfile-mutation"], ["node-version-mutation"]])(
     "invalidates every selected build and test task after %s",
     (scenarioName) => {
       expect(scenario(scenarioName)).toMatchObject({ taskCount: 4, hitCount: 0, missCount: 4 });

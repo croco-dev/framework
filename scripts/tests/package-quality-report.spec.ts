@@ -57,6 +57,85 @@ describe("package-quality-report.mts", () => {
     );
   });
 
+  it("binds each task summary to its authoritative check interval", () => {
+    const repo = createTempRepo();
+    writePackage(repo, "alpha", "@croco/alpha", { test: "vitest run" });
+    const now = Date.now();
+    writeTurboSummary(repo, "authoritative.json", "turbo run test --summarize", now, [
+      task("@croco/alpha", "test", 0, "packages/alpha/.turbo/turbo-test.log"),
+    ]);
+    writeTurboSummary(repo, "later-nested.json", "turbo run test --summarize", now + 10_000, [
+      task("@croco/alpha", "test", 1, "packages/alpha/.turbo/turbo-test.log"),
+    ]);
+
+    const report = createPackageQualityReport({
+      rootDir: repo,
+      summaryDir: join(repo, ".turbo", "runs"),
+      summaryWindows: {
+        test: {
+          startedAt: new Date(now - 1_000).toISOString(),
+          completedAt: new Date(now + 1_000).toISOString(),
+        },
+      },
+    });
+
+    expect(
+      report.rows.find(({ packageName }) => packageName === "@croco/alpha")?.tasks.test,
+    ).toMatchObject({
+      status: "pass",
+    });
+  });
+
+  it("rejects invalid authoritative summary timestamps", () => {
+    const repo = createTempRepo();
+    writePackage(repo, "alpha", "@croco/alpha", { test: "vitest run" });
+    writeTurboSummary(repo, "test.json", "turbo run test --summarize", Date.now(), [
+      task("@croco/alpha", "test", 0, "packages/alpha/.turbo/turbo-test.log"),
+    ]);
+
+    expect(() =>
+      createPackageQualityReport({
+        rootDir: repo,
+        summaryDir: join(repo, ".turbo", "runs"),
+        summaryWindows: {
+          test: { startedAt: "invalid", completedAt: new Date().toISOString() },
+        },
+      }),
+    ).toThrow("summaryWindows.test must contain parseable timestamps");
+  });
+
+  it("renders from normalized task, bundle, public API, and gate facts without Turbo or dist", () => {
+    const repo = createTempRepo();
+    writePackage(repo, "alpha", "@croco/alpha", {
+      build: "tsup",
+      test: "vitest run",
+      typecheck: "tsc --noEmit",
+    });
+    writeTurboSummary(repo, "build.json", "turbo run build --summarize", 100, [
+      task("@croco/alpha", "build", 0, "packages/alpha/.turbo/turbo-build.log"),
+    ]);
+    const source = createPackageQualityReport({
+      rootDir: repo,
+      summaryDir: join(repo, ".turbo", "runs"),
+    });
+    rmSync(join(repo, ".turbo"), { force: true, recursive: true });
+    rmSync(join(repo, "packages", "alpha", "dist"), { force: true, recursive: true });
+
+    const normalized = createPackageQualityReport({
+      rootDir: repo,
+      summaryDir: "normalized-synthesis-input",
+      packageRows: source.rows,
+      bundleSize: source.bundleSize,
+      publicApi: source.publicApi,
+      gateOutcomes: source.gateOutcomes,
+    });
+
+    expect(normalized.rows).toEqual(source.rows);
+    expect(normalized.bundleSize).toEqual(source.bundleSize);
+    expect(normalized.publicApi).toEqual(source.publicApi);
+    expect(normalized.gateOutcomes).toEqual(source.gateOutcomes);
+  });
+
   it("includes example workspace package failures", () => {
     const repo = createTempRepo();
     writeFile(

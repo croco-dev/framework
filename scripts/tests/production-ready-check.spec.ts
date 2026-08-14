@@ -18,6 +18,7 @@ import {
   parseArgs,
   writeProductionReadyReport,
 } from "../production-ready-check.mts";
+import { createPackageQualityReport } from "../package-quality-report.mts";
 import { inventoryDigest, readTestInventory } from "../test-inventory.mts";
 
 const tempRepos: string[] = [];
@@ -42,6 +43,64 @@ describe("production-ready-check.mts", () => {
 
     expect(hasProductionReadyFailures(report)).toBe(false);
     expect(buildProductionReadyMarkdown(report)).toContain("| `@croco/stable` | Core | pass:");
+  });
+
+  it("accepts normalized task rows and inventory without reading Turbo summaries", () => {
+    const repo = createReadyRepo();
+    writeTurboSummaries(repo, ["@croco/stable"]);
+    const quality = createPackageQualityReport({
+      rootDir: repo,
+      summaryDir: join(repo, ".turbo", "runs"),
+    });
+    const inventory = readTestInventory(join(repo, "test-inventory.json")).inventory;
+    rmSync(join(repo, ".turbo"), { force: true, recursive: true });
+
+    const report = createProductionReadyReport({
+      generatedAt: "2026-01-01T00:00:00.000Z",
+      requireTaskSummaries: true,
+      rootDir: repo,
+      summaryDir: "normalized-synthesis-input",
+      inventory,
+      qualityRows: quality.rows,
+    });
+
+    expect(hasProductionReadyFailures(report)).toBe(false);
+    expect(report.summaryDir).toBe("normalized-synthesis-input");
+  });
+
+  it("accepts normalized fast-lane evidence and rejects a stale inventory digest", () => {
+    const repo = createReadyRepo();
+    writeTurboSummaries(repo, ["@croco/stable"]);
+    const quality = createPackageQualityReport({
+      rootDir: repo,
+      summaryDir: join(repo, ".turbo", "runs"),
+    });
+    const inventory = readTestInventory(join(repo, "test-inventory.json")).inventory;
+    const fastTestLaneReport = createFastTestLaneReport(repo, ["stable"]);
+
+    const valid = createProductionReadyReport({
+      fastTestLaneReport,
+      generatedAt: "2026-01-01T00:00:00.000Z",
+      inventory,
+      qualityRows: quality.rows,
+      requireTaskSummaries: true,
+      rootDir: repo,
+      summaryDir: "normalized-synthesis-input",
+    });
+    const stale = createProductionReadyReport({
+      fastTestLaneReport: { ...fastTestLaneReport, inventoryDigest: "0".repeat(64) },
+      generatedAt: "2026-01-01T00:00:00.000Z",
+      inventory,
+      qualityRows: quality.rows,
+      requireTaskSummaries: true,
+      rootDir: repo,
+      summaryDir: "normalized-synthesis-input",
+    });
+
+    expect(hasProductionReadyFailures(valid)).toBe(false);
+    expect(buildProductionReadyMarkdown(stale)).toContain(
+      "Fast test lane evidence normalized synthesis input is invalid: inventory digest does not match",
+    );
   });
 
   it("uses the public API snapshot only as package inventory", () => {
@@ -1037,6 +1096,16 @@ function writeFastTestLaneReport(
   packageNames: readonly string[],
   overrides: { readonly paths?: readonly string[] } = {},
 ): string {
+  const reportPath = join(repo, "fast-test-lane.json");
+  writeJson(reportPath, createFastTestLaneReport(repo, packageNames, overrides));
+  return reportPath;
+}
+
+function createFastTestLaneReport(
+  repo: string,
+  packageNames: readonly string[],
+  overrides: { readonly paths?: readonly string[] } = {},
+) {
   const inventory = readTestInventory(join(repo, "test-inventory.json")).inventory;
   const commands = packageNames.map((packageName) => ({
     owner: `@croco/${packageName}`,
@@ -1051,8 +1120,7 @@ function writeFastTestLaneReport(
     executionState: "executed" as const,
     cacheHash: `${packageName}-test-hash`,
   }));
-  const reportPath = join(repo, "fast-test-lane.json");
-  writeJson(reportPath, {
+  return {
     schemaVersion: "croco.test-lane-report/v1",
     inventoryVersion: 1,
     inventoryDigest: inventoryDigest(inventory),
@@ -1063,8 +1131,7 @@ function writeFastTestLaneReport(
     status: "passed",
     diagnostics: [],
     commands,
-  });
-  return reportPath;
+  } as const;
 }
 
 function writeReferenceDocs(repo: string): void {

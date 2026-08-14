@@ -16,6 +16,7 @@ import {
   createTestLanePlan,
   readCompletedPlaywrightPaths,
   readCompletedVitestPaths,
+  readVitestFailureDetails,
   readTurboRunSummary,
   readTurboTestTaskEvidence,
   resolveTurboPackageFilters,
@@ -153,6 +154,34 @@ describe("test lane runner", () => {
 
     expect(readCompletedVitestPaths(reportPath, alias)).toEqual(["src/tests/passed.spec.ts"]);
     rmSync(parent, { recursive: true, force: true });
+  });
+
+  it("retains bounded failed assertion details after the Vitest report is consumed", () => {
+    const root = mkdtempSync(join(tmpdir(), "croco-lane-failure-report-"));
+    const reportPath = join(root, "vitest.json");
+    writeFileSync(
+      reportPath,
+      JSON.stringify({
+        testResults: [
+          {
+            name: join(root, "scripts/tests/failing.spec.ts"),
+            status: "failed",
+            assertionResults: [
+              {
+                status: "failed",
+                fullName: "failing contract rejects stale evidence",
+                failureMessages: ["expected stale evidence to fail"],
+              },
+            ],
+          },
+        ],
+      }),
+    );
+
+    expect(readVitestFailureDetails(reportPath, root)).toEqual([
+      "scripts/tests/failing.spec.ts > failing contract rejects stale evidence\nexpected stale evidence to fail",
+    ]);
+    rmSync(root, { recursive: true, force: true });
   });
 
   it("rejects skipped or partially completed Playwright specs", () => {
@@ -335,6 +364,27 @@ describe("test lane runner", () => {
       diagnostics: [expect.objectContaining({ code: "TEST_LANE_EXECUTION_FAILED" })],
     });
     expect(runner).toHaveBeenCalledTimes(2);
+  });
+
+  it("publishes command failure details without adding unvalidated command fields", () => {
+    const report = runTestLane({
+      inventory,
+      lane: "fast",
+      owners: ["repo:ci"],
+      runner: () => ({
+        exitCode: 1,
+        durationMs: 5,
+        executedPaths: ["scripts/tests/repo.spec.ts"],
+        failureDetails: ["scripts/tests/repo.spec.ts > reports the failing assertion"],
+      }),
+      scriptResolver: exactScript,
+    });
+
+    expect(report.diagnostics).toContainEqual({
+      code: "TEST_LANE_COMMAND_FAILURE_DETAIL",
+      message: "repo:ci: scripts/tests/repo.spec.ts > reports the failing assertion",
+    });
+    expect(report.commands[0]).not.toHaveProperty("failureDetails");
   });
 
   it("fails closed for live runs without explicit credential provisioning", () => {
