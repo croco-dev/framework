@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 635,
+  problemCount: 636,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -5292,7 +5292,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-core/src/libs/problems/LlmServiceProblem.ts",
-          line: 43,
+          line: 97,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7834,7 +7834,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-core/src/libs/problems/LlmServiceProblem.ts",
-          line: 34,
+          line: 88,
           column: 5,
           kind: "problem-constructor",
         },
@@ -9565,7 +9565,41 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-core/src/libs/problems/LlmServiceProblem.ts",
-          line: 8,
+          line: 62,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "llm-core/completion-event-publication-failed",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#llm-core-completion-event-publication-failed",
+      recovery: {
+        cause:
+          "The model completed billable work, but its completion event was not durably confirmed afterward.",
+        userAction:
+          "Hand the opaque failure reference to an operator; do not invoke the model again or manually publish the completion event.",
+        operatorAction:
+          "Use retryCompletionEvent with the in-process Problem or saved intent: published_unconfirmed confirms storage without republishing, delivery_in_progress waits for the active claim, and not_published atomically claims delivery before publishing. Never publish the event manually.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/llm-core/src/libs/problems/LlmServiceProblem.ts",
+          line: 29,
           column: 5,
           kind: "problem-constructor",
         },
@@ -11498,7 +11532,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-core/src/libs/problems/LlmServiceProblem.ts",
-          line: 25,
+          line: 79,
           column: 5,
           kind: "problem-constructor",
         },
@@ -15884,7 +15918,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-core/src/libs/problems/LlmServiceProblem.ts",
-          line: 52,
+          line: 106,
           column: 5,
           kind: "problem-constructor",
         },
@@ -17377,7 +17411,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-core/src/libs/problems/LlmServiceProblem.ts",
-          line: 61,
+          line: 115,
           column: 5,
           kind: "problem-constructor",
         },
@@ -18295,7 +18329,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/triggers-qstash/src/libs/QStashTriggerHandler.ts",
-          line: 408,
+          line: 411,
           column: 13,
           kind: "problem-metadata",
         },
@@ -18327,7 +18361,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/triggers-qstash/src/libs/QStashTriggerHandler.ts",
-          line: 236,
+          line: 239,
           column: 13,
           kind: "problem-factory",
         },
@@ -18391,7 +18425,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/triggers-qstash/src/libs/QStashTriggerHandler.ts",
-          line: 398,
+          line: 401,
           column: 15,
           kind: "problem-metadata",
         },

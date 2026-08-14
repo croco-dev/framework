@@ -11,6 +11,11 @@ export type { DomainEventMetadata, EventTraceContext } from "./libs/DomainEvent"
  * 모든 도메인 이벤트가 상속해야 하는 기본 추상 클래스입니다.
  */
 export { DomainEvent } from "./libs/DomainEvent";
+/**
+ * 직렬화된 이벤트의 식별자와 발생 시각을 복원하는 제한적 복구 유틸리티입니다.
+ * 역직렬화 및 완료 이벤트 재전달 경로에서만 사용합니다.
+ */
+export { restoreSerializedEventIdentity } from "./libs/DomainEvent";
 
 /**
  * 이벤트 필드 메타데이터 타입입니다.

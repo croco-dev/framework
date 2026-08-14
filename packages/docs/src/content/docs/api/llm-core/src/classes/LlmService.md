@@ -11,7 +11,7 @@ title: "LlmService"
 
 ### Constructor
 
-> **new LlmService**(`registry`, `eventBus`): `LlmService`
+> **new LlmService**(`registry`, `eventBus`, `options?`): `LlmService`
 
 #### Parameters
 
@@ -22,6 +22,10 @@ title: "LlmService"
 ##### eventBus
 
 [`EventBus`](/api/events-core/src/interfaces/eventbus/)
+
+##### options?
+
+[`LlmServiceOptions`](/api/llm-core/src/type-aliases/llmserviceoptions/) = `{}`
 
 #### Returns
 
@@ -49,7 +53,7 @@ title: "LlmService"
 
 `Promise`\<[`ToolCallResult`](/api/llm-core/src/type-aliases/toolcallresult/)\>
 
-***
+---
 
 ### embed()
 
@@ -65,7 +69,7 @@ title: "LlmService"
 
 `Promise`\<[`EmbedResult`](/api/llm-core/src/type-aliases/embedresult/)\>
 
-***
+---
 
 ### embedMany()
 
@@ -81,7 +85,7 @@ title: "LlmService"
 
 `Promise`\<[`EmbedManyResult`](/api/llm-core/src/type-aliases/embedmanyresult/)\>
 
-***
+---
 
 ### generate()
 
@@ -97,7 +101,7 @@ title: "LlmService"
 
 `Promise`\<[`GenerateResult`](/api/llm-core/src/type-aliases/generateresult/)\>
 
-***
+---
 
 ### generateObject()
 
@@ -119,7 +123,23 @@ title: "LlmService"
 
 `Promise`\<`T`\>
 
-***
+---
+
+### retryCompletionEvent()
+
+> **retryCompletionEvent**(`recovery`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### recovery
+
+[`LlmCompletionEventIntent`](/api/llm-core/src/type-aliases/llmcompletioneventintent/) \| [`LlmCompletionEventPublicationProblem`](/api/llm-core/src/classes/llmcompletioneventpublicationproblem/)
+
+#### Returns
+
+`Promise`\<`void`\>
+
+---
 
 ### stream()
 

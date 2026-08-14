@@ -1918,6 +1918,17 @@ const recoveryMetadataByCode = {
     redactionPolicy: "safe-message",
     severity: "warning",
   }),
+  "llm-core/completion-event-publication-failed": recovery({
+    cause:
+      "The model completed billable work, but its completion event was not durably confirmed afterward.",
+    userAction:
+      "Hand the opaque failure reference to an operator; do not invoke the model again or manually publish the completion event.",
+    operatorAction:
+      "Use retryCompletionEvent with the in-process Problem or saved intent: published_unconfirmed confirms storage without republishing, delivery_in_progress waits for the active claim, and not_published atomically claims delivery before publishing. Never publish the event manually.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "billing/checkout-idempotency-drift": recovery({
     cause:
       "The generated billing drill detected more than one committed checkout after response-loss retries completed.",

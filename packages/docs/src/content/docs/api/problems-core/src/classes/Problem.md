@@ -274,6 +274,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`LlmTokenLimitExceededProblem`](/api/llm-core/src/classes/llmtokenlimitexceededproblem/)
 - [`EmbeddingError`](/api/llm-core/src/classes/embeddingerror/)
 - [`GenerationError`](/api/llm-core/src/classes/generationerror/)
+- [`LlmCompletionEventPublicationProblem`](/api/llm-core/src/classes/llmcompletioneventpublicationproblem/)
 - [`LlmServiceProblem`](/api/llm-core/src/classes/llmserviceproblem/)
 - [`LlmStructuredOutputProblem`](/api/llm-core/src/classes/llmstructuredoutputproblem/)
 - [`LlmToolExecutionProblem`](/api/llm-core/src/classes/llmtoolexecutionproblem/)

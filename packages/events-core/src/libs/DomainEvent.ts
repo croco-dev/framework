@@ -34,6 +34,10 @@ export abstract class DomainEvent {
   }
 }
 
+/**
+ * Restores the stable identity and occurrence time of a serialized event.
+ * Use only while deserializing events or reconstructing completed events for redelivery.
+ */
 export function restoreSerializedEventIdentity(
   event: DomainEvent,
   eventId: string,

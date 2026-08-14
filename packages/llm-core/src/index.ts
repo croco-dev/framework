@@ -81,6 +81,7 @@ export {
 export {
   EmbeddingError,
   GenerationError,
+  LlmCompletionEventPublicationProblem,
   LlmServiceProblem,
   LlmStructuredOutputProblem,
   LlmToolExecutionProblem,
@@ -110,3 +111,17 @@ export type {
   ToolDefinition,
   UsageAccuracy,
 } from "./libs/types";
+export type {
+  LlmCompletion,
+  LlmCompletionEventDeliveryClaim,
+  LlmCompletionEvent,
+  LlmCompletionEventIntent,
+  LlmCompletionEventIntentStore,
+  LlmGenerateCompletion,
+  LlmServiceOptions,
+  LlmStreamCompletion,
+} from "./libs/LlmCompletionEvents";
+export type {
+  LlmCompletionEventDeliveryState,
+  LlmCompletionEventFailureStage,
+} from "./libs/problems/LlmServiceProblem";
