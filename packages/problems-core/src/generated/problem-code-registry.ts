@@ -18329,7 +18329,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/triggers-qstash/src/libs/QStashTriggerHandler.ts",
-          line: 408,
+          line: 411,
           column: 13,
           kind: "problem-metadata",
         },
@@ -18361,7 +18361,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/triggers-qstash/src/libs/QStashTriggerHandler.ts",
-          line: 236,
+          line: 239,
           column: 13,
           kind: "problem-factory",
         },
@@ -18425,7 +18425,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/triggers-qstash/src/libs/QStashTriggerHandler.ts",
-          line: 398,
+          line: 401,
           column: 15,
           kind: "problem-metadata",
         },
