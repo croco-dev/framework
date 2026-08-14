@@ -249,6 +249,7 @@ describe("Phase B cacheable verification shadow", () => {
     const security = workflowJob("coverage-security", "split-validation-shadow");
     expect(security).not.toContain("id: exact_receipts");
     expect(security).not.toContain("--cache-dir");
+    expect(security).toContain('NPM_CONFIG_PROVENANCE: "true"');
   });
 
   it("downloads the exact four immutable bundles before advisory synthesis", () => {

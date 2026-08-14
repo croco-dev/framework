@@ -929,6 +929,8 @@ jobs:
     continue-on-error: true
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    env:
+      NPM_CONFIG_PROVENANCE: "true"
     permissions:
       contents: read
     steps:
