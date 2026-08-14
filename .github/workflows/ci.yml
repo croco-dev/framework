@@ -12,6 +12,10 @@ on:
 permissions:
   contents: read
 
+env:
+  # renovate: datasource=docker depName=ghcr.io/gitleaks/gitleaks
+  GITLEAKS_IMAGE: ghcr.io/gitleaks/gitleaks:v8.23.0@sha256:b4b81841085b4060054a71155500a340e3d2e2a5995c186546649e3efd80b84e
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -22,8 +26,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
-      # renovate: datasource=docker depName=ghcr.io/gitleaks/gitleaks
-      GITLEAKS_IMAGE: ghcr.io/gitleaks/gitleaks:v8.23.0@sha256:b4b81841085b4060054a71155500a340e3d2e2a5995c186546649e3efd80b84e
       NPM_CONFIG_PROVENANCE: "true"
 
     steps:
@@ -673,6 +675,432 @@ jobs:
               - 'packages/workflow-core/src/**'
               - 'packages/docs/astro.config.mjs'
               - 'packages/docs/tsconfig.typedoc.json'
+
+  core-verification:
+    needs: changes
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Setup pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: ".nvmrc"
+          cache: pnpm
+      - name: Restore producer Turbo cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-core-verification-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-core-verification-
+            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install Playwright Chromium
+        run: pnpm --dir packages/docs run playwright:install
+      - name: Create split verification identity
+        id: split_identity
+        env:
+          VERIFICATION_BASE: ${{ needs.changes.outputs.base }}
+          VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}
+        run: |
+          node --experimental-strip-types scripts/ci-cacheable-experiment-identity.mts \
+            --commit-sha "$GITHUB_SHA" \
+            --base "$VERIFICATION_BASE" \
+            --head HEAD \
+            --run-id "$GITHUB_RUN_ID" \
+            --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --profile "$VERIFICATION_PROFILE" \
+            --runner-os "$RUNNER_OS" \
+            --runner-arch "$RUNNER_ARCH" \
+            --runner-label ubuntu-latest \
+            --pnpm-version "$(pnpm --version)" \
+            --output ci-reports/cacheable-ci/identity.json
+          echo "input_digest=$(node -e \"process.stdout.write(JSON.parse(require('node:fs').readFileSync('ci-reports/cacheable-ci/identity.json','utf8')).inputDigest)\")" >> "$GITHUB_OUTPUT"
+      - name: Restore exact core verification receipts
+        id: exact_receipts
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .ci-cache/exact/core-verification
+          key: ci-lane-receipt-v1-${{ runner.os }}-core-verification-${{ needs.changes.outputs.profile }}-${{ steps.split_identity.outputs.input_digest }}
+      - name: Run core verification producer
+        env:
+          EXACT_CACHE_HIT: ${{ steps.exact_receipts.outputs.cache-hit }}
+          TRUSTED_CACHE: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+          VERIFICATION_BASE: ${{ needs.changes.outputs.base }}
+          VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}
+        run: |
+          cache_args=()
+          if [ "$TRUSTED_CACHE" = "true" ]; then
+            cache_args+=(--cache-dir .ci-cache/exact/core-verification)
+            if [ "$EXACT_CACHE_HIT" = "true" ]; then
+              cache_args+=(--cache-origin github-exact-key)
+            fi
+          fi
+          node --experimental-strip-types scripts/ci-cacheable-lane-runner.mts \
+            --identity ci-reports/cacheable-ci/identity.json \
+            --lane core-verification \
+            --profile "$VERIFICATION_PROFILE" \
+            --root . \
+            --base "$VERIFICATION_BASE" \
+            --head HEAD \
+            "${cache_args[@]}"
+      - name: Upload core verification producer evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ci-lane-core-verification-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ci-reports/cacheable-ci/core-verification
+          if-no-files-found: error
+          retention-days: 90
+
+  generated-apps:
+    needs: changes
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Setup pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: ".nvmrc"
+          cache: pnpm
+      - name: Restore producer Turbo cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-generated-apps-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-generated-apps-
+            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install Playwright Chromium
+        run: pnpm --dir packages/docs run playwright:install
+      - name: Create split verification identity
+        id: split_identity
+        env:
+          VERIFICATION_BASE: ${{ needs.changes.outputs.base }}
+          VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}
+        run: |
+          node --experimental-strip-types scripts/ci-cacheable-experiment-identity.mts \
+            --commit-sha "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --base "$VERIFICATION_BASE" --head HEAD \
+            --profile "$VERIFICATION_PROFILE" --runner-os "$RUNNER_OS" --runner-arch "$RUNNER_ARCH" \
+            --runner-label ubuntu-latest --pnpm-version "$(pnpm --version)" \
+            --output ci-reports/cacheable-ci/identity.json
+          echo "input_digest=$(node -e \"process.stdout.write(JSON.parse(require('node:fs').readFileSync('ci-reports/cacheable-ci/identity.json','utf8')).inputDigest)\")" >> "$GITHUB_OUTPUT"
+      - name: Restore exact generated apps receipts
+        id: exact_receipts
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .ci-cache/exact/generated-apps
+          key: ci-lane-receipt-v1-${{ runner.os }}-generated-apps-${{ needs.changes.outputs.profile }}-${{ steps.split_identity.outputs.input_digest }}
+      - name: Run generated apps producer
+        env:
+          EXACT_CACHE_HIT: ${{ steps.exact_receipts.outputs.cache-hit }}
+          TRUSTED_CACHE: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+          VERIFICATION_BASE: ${{ needs.changes.outputs.base }}
+          VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}
+        run: |
+          cache_args=()
+          if [ "$TRUSTED_CACHE" = "true" ]; then
+            cache_args+=(--cache-dir .ci-cache/exact/generated-apps)
+            if [ "$EXACT_CACHE_HIT" = "true" ]; then
+              cache_args+=(--cache-origin github-exact-key)
+            fi
+          fi
+          node --experimental-strip-types scripts/ci-cacheable-lane-runner.mts \
+            --identity ci-reports/cacheable-ci/identity.json --lane generated-apps \
+            --profile "$VERIFICATION_PROFILE" --root . --base "$VERIFICATION_BASE" --head HEAD \
+            "${cache_args[@]}"
+      - name: Upload generated apps producer evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ci-lane-generated-apps-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ci-reports/cacheable-ci/generated-apps
+          if-no-files-found: error
+          retention-days: 90
+
+  package-artifacts:
+    needs: changes
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Setup pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: ".nvmrc"
+          cache: pnpm
+      - name: Restore producer Turbo cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-package-artifacts-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-package-artifacts-
+            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Create split verification identity
+        id: split_identity
+        env:
+          VERIFICATION_BASE: ${{ needs.changes.outputs.base }}
+          VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}
+        run: |
+          node --experimental-strip-types scripts/ci-cacheable-experiment-identity.mts \
+            --commit-sha "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --base "$VERIFICATION_BASE" --head HEAD \
+            --profile "$VERIFICATION_PROFILE" --runner-os "$RUNNER_OS" --runner-arch "$RUNNER_ARCH" \
+            --runner-label ubuntu-latest --pnpm-version "$(pnpm --version)" \
+            --output ci-reports/cacheable-ci/identity.json
+          echo "input_digest=$(node -e \"process.stdout.write(JSON.parse(require('node:fs').readFileSync('ci-reports/cacheable-ci/identity.json','utf8')).inputDigest)\")" >> "$GITHUB_OUTPUT"
+      - name: Restore exact package artifact receipts
+        id: exact_receipts
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .ci-cache/exact/package-artifacts
+          key: ci-lane-receipt-v1-${{ runner.os }}-package-artifacts-${{ needs.changes.outputs.profile }}-${{ steps.split_identity.outputs.input_digest }}
+      - name: Run package artifacts producer
+        env:
+          EXACT_CACHE_HIT: ${{ steps.exact_receipts.outputs.cache-hit }}
+          TRUSTED_CACHE: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+          VERIFICATION_BASE: ${{ needs.changes.outputs.base }}
+          VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}
+        run: |
+          cache_args=()
+          if [ "$TRUSTED_CACHE" = "true" ]; then
+            cache_args+=(--cache-dir .ci-cache/exact/package-artifacts)
+            if [ "$EXACT_CACHE_HIT" = "true" ]; then
+              cache_args+=(--cache-origin github-exact-key)
+            fi
+          fi
+          node --experimental-strip-types scripts/ci-cacheable-lane-runner.mts \
+            --identity ci-reports/cacheable-ci/identity.json --lane package-artifacts \
+            --profile "$VERIFICATION_PROFILE" --root . --base "$VERIFICATION_BASE" --head HEAD \
+            "${cache_args[@]}"
+      - name: Upload package artifacts producer evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ci-lane-package-artifacts-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ci-reports/cacheable-ci/package-artifacts
+          if-no-files-found: error
+          retention-days: 90
+
+  coverage-security:
+    needs: changes
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Setup pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: ".nvmrc"
+          cache: pnpm
+      - name: Restore producer Turbo cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-coverage-security-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-coverage-security-
+            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Create split verification identity
+        env:
+          VERIFICATION_BASE: ${{ needs.changes.outputs.base }}
+          VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}
+        run: |
+          node --experimental-strip-types scripts/ci-cacheable-experiment-identity.mts \
+            --commit-sha "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --base "$VERIFICATION_BASE" --head HEAD \
+            --profile "$VERIFICATION_PROFILE" --runner-os "$RUNNER_OS" --runner-arch "$RUNNER_ARCH" \
+            --runner-label ubuntu-latest --pnpm-version "$(pnpm --version)" \
+            --output ci-reports/cacheable-ci/identity.json
+      - name: Capture physical security evidence
+        id: physical_security
+        shell: bash
+        run: |
+          mkdir -p ci-reports/security
+          set +e
+          pnpm audit:prod > ci-reports/security/pnpm-audit-prod.txt 2>&1
+          audit_exit=$?
+          pnpm security:gitleaks-smoke > ci-reports/security/gitleaks-smoke.txt 2>&1
+          smoke_exit=$?
+          : > ci-reports/security/gitleaks.txt
+          printf '%s\n' '{"version":"2.1.0","runs":[]}' > ci-reports/security/gitleaks.sarif
+          docker run --rm -v "$PWD:/repo" "${{ env.GITLEAKS_IMAGE }}" detect --source /repo --redact --no-banner --log-opts=HEAD --report-format sarif --report-path /repo/ci-reports/security/gitleaks.sarif > ci-reports/security/gitleaks.txt 2>&1
+          scan_exit=$?
+          set -e
+          node --experimental-strip-types scripts/ci-cacheable-security-evidence.mts \
+            --advisory-audit-exit-code "$audit_exit" \
+            --gitleaks-smoke-exit-code "$smoke_exit" \
+            --secret-scan-exit-code "$scan_exit" \
+            --output ci-reports/security/security-physical.json
+          {
+            echo "audit_exit=$audit_exit"
+            echo "smoke_exit=$smoke_exit"
+            echo "scan_exit=$scan_exit"
+          } >> "$GITHUB_OUTPUT"
+      - name: Run coverage and security producer
+        env:
+          VERIFICATION_BASE: ${{ needs.changes.outputs.base }}
+          VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}
+        run: |
+          node --experimental-strip-types scripts/ci-cacheable-lane-runner.mts \
+            --identity ci-reports/cacheable-ci/identity.json --lane coverage-security \
+            --profile "$VERIFICATION_PROFILE" --root . --base "$VERIFICATION_BASE" --head HEAD \
+            --security-results ci-reports/security/security-physical.json \
+            --security-artifact ci-reports/security/security-physical.json \
+            --security-artifact ci-reports/security/pnpm-audit-prod.txt \
+            --security-artifact ci-reports/security/gitleaks-smoke.txt \
+            --security-artifact ci-reports/security/gitleaks.txt \
+            --security-artifact ci-reports/security/gitleaks.sarif
+      - name: Enforce physical security failures
+        if: always()
+        env:
+          SMOKE_EXIT: ${{ steps.physical_security.outputs.smoke_exit }}
+          SCAN_EXIT: ${{ steps.physical_security.outputs.scan_exit }}
+        run: |
+          test "$SMOKE_EXIT" = "0"
+          test "$SCAN_EXIT" = "0"
+      - name: Upload coverage and security producer evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ci-lane-coverage-security-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ci-reports/cacheable-ci/coverage-security
+          if-no-files-found: error
+          retention-days: 90
+
+  split-validation-shadow:
+    needs: [changes, core-verification, generated-apps, package-artifacts, coverage-security]
+    if: always() && needs.changes.result == 'success'
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Setup pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: ".nvmrc"
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Create split verification identity
+        env:
+          VERIFICATION_BASE: ${{ needs.changes.outputs.base }}
+          VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}
+        run: |
+          node --experimental-strip-types scripts/ci-cacheable-experiment-identity.mts \
+            --commit-sha "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --base "$VERIFICATION_BASE" --head HEAD \
+            --profile "$VERIFICATION_PROFILE" --runner-os "$RUNNER_OS" --runner-arch "$RUNNER_ARCH" \
+            --runner-label ubuntu-latest --pnpm-version "$(pnpm --version)" \
+            --output ci-reports/cacheable-ci/identity.json
+      - name: Download core verification producer evidence
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ci-lane-core-verification-${{ github.run_id }}-${{ github.run_attempt }}
+          path: incoming/core-verification
+      - name: Download generated apps producer evidence
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ci-lane-generated-apps-${{ github.run_id }}-${{ github.run_attempt }}
+          path: incoming/generated-apps
+      - name: Download package artifacts producer evidence
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ci-lane-package-artifacts-${{ github.run_id }}-${{ github.run_attempt }}
+          path: incoming/package-artifacts
+      - name: Download coverage and security producer evidence
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ci-lane-coverage-security-${{ github.run_id }}-${{ github.run_attempt }}
+          path: incoming/coverage-security
+      - name: Assemble immutable split verification input
+        env:
+          VERIFICATION_BASE: ${{ needs.changes.outputs.base }}
+        run: |
+          node --experimental-strip-types scripts/ci-synthesis-input.mts \
+            --identity ci-reports/cacheable-ci/identity.json \
+            --base "$VERIFICATION_BASE" --head HEAD \
+            --producer-dir core-verification=incoming/core-verification \
+            --producer-dir generated-apps=incoming/generated-apps \
+            --producer-dir package-artifacts=incoming/package-artifacts \
+            --producer-dir coverage-security=incoming/coverage-security \
+            --output ci-reports/cacheable-ci/synthesis-input.json
+      - name: Synthesize split verification shadow
+        run: |
+          node --experimental-strip-types scripts/ci-split-validation-synthesis.mts \
+            --input ci-reports/cacheable-ci/synthesis-input.json \
+            --output ci-reports/cacheable-ci/split-validation-shadow.json
+      - name: Upload split validation shadow evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ci-lane-split-validation-shadow-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ci-reports/cacheable-ci/synthesis-input.json
+            ci-reports/cacheable-ci/split-validation-shadow.json
+            ci-reports/package-quality
+            ci-reports/security/split-security-policy-summary.json
+          if-no-files-found: error
+          retention-days: 90
 
   ecosystem-advisory:
     needs: changes

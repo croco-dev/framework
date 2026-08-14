@@ -84,7 +84,7 @@ const PHASE_B_JOBS = {
       conclusion: "success",
       started_at: "2026-08-14T00:24:00.000Z",
       completed_at: "2026-08-14T00:32:00.000Z",
-      steps: [],
+      steps: [{ name: "Upload split validation shadow evidence", conclusion: "success" }],
     },
   ],
 };
@@ -278,8 +278,9 @@ function phaseBInput(overrides: Readonly<Record<string, unknown>> = {}) {
       id,
       owner,
       semantics,
-      outcome: "passed" as const,
-      diagnostics: [],
+      outcome: id === "security-upload" ? ("not-applicable" as const) : ("passed" as const),
+      diagnostics:
+        id === "security-upload" ? ["HOSTED_TRANSPORT_NOT_OBSERVED"] : ([] as readonly string[]),
     })),
     conclusion: "success",
     operationalFailure: null,
@@ -293,6 +294,11 @@ function phaseBInput(overrides: Readonly<Record<string, unknown>> = {}) {
     artifacts: phaseBArtifacts(),
     producerBundles: bundles.map((parsed) => jsonEvidence(parsed)),
     splitValidationShadow: jsonEvidence(shadow),
+    splitSecuritySummary: jsonEvidence({
+      schemaVersion: "croco.ci-split-security-policy-summary/v1",
+      generatedAt: shadow.completedAt,
+      results: shadow.security.filter(({ owner }) => owner === "coverage-security"),
+    }),
     ...overrides,
   };
 }
@@ -593,10 +599,25 @@ describe("CI performance observer", () => {
     });
     expect(synthesis?.cacheEligibleTaskIds).toHaveLength(49);
     expect(synthesis?.validCacheHitTaskIds).toHaveLength(4);
+    expect(synthesis?.securityResults).toContainEqual({
+      id: "security-upload",
+      conclusion: "success",
+      semantics: "advisory",
+      diagnostics: [],
+    });
   });
 
   it("records an evidenced producer failure as an actual non-operational outcome", () => {
-    const observations = createCiPerformanceObservations(phaseBFailureInput());
+    const input = phaseBFailureInput();
+    const maskedJobs = {
+      ...PHASE_B_JOBS,
+      jobs: PHASE_B_JOBS.jobs.map((job) =>
+        job.name === "generated-apps" || job.name === "split-validation-shadow"
+          ? { ...job, conclusion: "success" }
+          : job,
+      ),
+    };
+    const observations = createCiPerformanceObservations({ ...input, jobs: maskedJobs });
     const producer = observations.find(({ jobIdentity }) => jobIdentity === "generated-apps");
     const synthesis = observations.find(
       ({ jobIdentity }) => jobIdentity === "split-validation-shadow",
@@ -614,6 +635,73 @@ describe("CI performance observer", () => {
       operationalFailure: false,
       stableDiagnostics: [],
     });
+  });
+
+  it("marks a failed advisory job with successful evidence as operational", () => {
+    const input = phaseBInput();
+    const jobs = {
+      ...PHASE_B_JOBS,
+      jobs: PHASE_B_JOBS.jobs.map((job) =>
+        job.name === "generated-apps" ? { ...job, conclusion: "failure" } : job,
+      ),
+    };
+    const observations = createCiPerformanceObservations({ ...input, jobs });
+    const producer = observations.find(({ jobIdentity }) => jobIdentity === "generated-apps");
+
+    expect(producer).toMatchObject({
+      conclusion: "failure",
+      blockingOutcome: "success",
+      operationalFailure: true,
+      stableDiagnostics: ["generated-apps-job:failure"],
+    });
+  });
+
+  it("records a failed split evidence upload as an advisory result", () => {
+    const input = phaseBInput();
+    const jobs = {
+      ...PHASE_B_JOBS,
+      jobs: PHASE_B_JOBS.jobs.map((job) =>
+        job.name === "split-validation-shadow"
+          ? {
+              ...job,
+              conclusion: "success",
+              steps: [{ name: "Upload split validation shadow evidence", conclusion: "failure" }],
+            }
+          : job,
+      ),
+    };
+    const observations = createCiPerformanceObservations({ ...input, jobs });
+    const synthesis = observations.find(
+      ({ jobIdentity }) => jobIdentity === "split-validation-shadow",
+    );
+
+    expect(synthesis).toMatchObject({
+      conclusion: "success",
+      blockingOutcome: "success",
+      operationalFailure: false,
+    });
+    expect(synthesis?.securityResults).toContainEqual({
+      id: "security-upload",
+      conclusion: "failure",
+      semantics: "advisory",
+      diagnostics: ["security-upload:failure"],
+    });
+  });
+
+  it("rejects missing or mutated split security summary evidence", () => {
+    const input = phaseBInput();
+    expect(() =>
+      createCiPerformanceObservations({ ...input, splitSecuritySummary: undefined }),
+    ).toThrow(/security summary/);
+    expect(() =>
+      createCiPerformanceObservations({
+        ...input,
+        splitSecuritySummary: jsonEvidence({
+          ...(input.splitSecuritySummary.parsed as Readonly<Record<string, unknown>>),
+          generatedAt: "2026-08-14T00:31:59.000Z",
+        }),
+      }),
+    ).toThrow(/timestamp/);
   });
 
   it("rejects an incomplete five-record split job set", () => {

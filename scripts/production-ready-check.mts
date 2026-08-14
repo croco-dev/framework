@@ -175,12 +175,12 @@ function readJsonFile(filePath: string): unknown {
   return JSON.parse(readFileSync(filePath, "utf-8")) as unknown;
 }
 
-function loadFastTestLaneEvidence(
-  reportPath: string,
+function loadFastTestLaneEvidenceFromValue(
+  report: unknown,
+  label: string,
   inventory: ReturnType<typeof readTestInventory>["inventory"],
 ): FastTestLaneEvidence {
   try {
-    const report = readJsonFile(reportPath);
     assertLaneReport(report);
     if (report.lane !== "fast") {
       throw new Error(`expected fast lane, received ${report.lane}`);
@@ -225,10 +225,17 @@ function loadFastTestLaneEvidence(
     return {
       commandsByOwner: new Map(),
       errors: [
-        `Fast test lane evidence ${reportPath} is invalid: ${error instanceof Error ? error.message : String(error)}`,
+        `Fast test lane evidence ${label} is invalid: ${error instanceof Error ? error.message : String(error)}`,
       ],
     };
   }
+}
+
+function loadFastTestLaneEvidence(
+  reportPath: string,
+  inventory: ReturnType<typeof readTestInventory>["inventory"],
+): FastTestLaneEvidence {
+  return loadFastTestLaneEvidenceFromValue(readJsonFile(reportPath), reportPath, inventory);
 }
 
 function applyFastTestLaneEvidence(
@@ -1628,6 +1635,9 @@ export function createProductionReadyReport(
   options: Pick<Options, "rootDir" | "summaryDir" | "requireTaskSummaries"> & {
     readonly generatedAt?: string;
     readonly fastTestLaneReportPath?: string | null;
+    readonly fastTestLaneReport?: LaneReport | null;
+    readonly inventory?: ReturnType<typeof readTestInventory>["inventory"];
+    readonly qualityRows?: readonly PackageQualityRow[];
   },
 ): ProductionReadyReport {
   const catalog = loadCatalogEvidence(options.rootDir);
@@ -1645,16 +1655,26 @@ export function createProductionReadyReport(
     actualPackageNames,
   );
   const snapshot = loadPublicApiSnapshotEvidence(options.rootDir);
-  const inventoryEvidence = readTestInventory(join(options.rootDir, testInventoryPath));
-  const fastTestLaneEvidence = options.fastTestLaneReportPath
-    ? loadFastTestLaneEvidence(options.fastTestLaneReportPath, inventoryEvidence.inventory)
-    : null;
-  const qualityReport = createPackageQualityReport({
-    rootDir: options.rootDir,
-    summaryDir: options.summaryDir,
-  });
+  const inventoryEvidence = options.inventory
+    ? { inventory: options.inventory, diagnostics: [] }
+    : readTestInventory(join(options.rootDir, testInventoryPath));
+  const fastTestLaneEvidence = options.fastTestLaneReport
+    ? loadFastTestLaneEvidenceFromValue(
+        options.fastTestLaneReport,
+        "normalized synthesis input",
+        inventoryEvidence.inventory,
+      )
+    : options.fastTestLaneReportPath
+      ? loadFastTestLaneEvidence(options.fastTestLaneReportPath, inventoryEvidence.inventory)
+      : null;
+  const qualityRows =
+    options.qualityRows ??
+    createPackageQualityReport({
+      rootDir: options.rootDir,
+      summaryDir: options.summaryDir,
+    }).rows;
   const qualityRowsByPackage = new Map(
-    applyFastTestLaneEvidence(qualityReport.rows, fastTestLaneEvidence).map(
+    applyFastTestLaneEvidence(qualityRows, fastTestLaneEvidence).map(
       (row) => [row.packageName, row] as const,
     ),
   );

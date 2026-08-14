@@ -11,6 +11,7 @@ import {
   evidenceDigest,
   formatCiLaneEvidenceError,
   parseCurrentRunAttestation,
+  parseExperimentIdentity,
   parseProducerBundle,
   parseReusableReceipt,
   parseSplitValidationShadowEvidence,
@@ -70,6 +71,21 @@ const synthesisExpectation = {
     bundleDigest: bundle(lane).bundleDigest,
   })),
 } as const;
+
+describe("experiment identity", () => {
+  it("accepts the exact shared monolith and split identity envelope", () => {
+    expect(parseExperimentIdentity(baseIdentity)).toEqual(baseIdentity);
+  });
+
+  it("rejects unknown fields and stale run identity", () => {
+    expect(() => parseExperimentIdentity({ ...baseIdentity, lane: "core-verification" })).toThrow(
+      CiLaneEvidenceError,
+    );
+    expect(() => parseExperimentIdentity({ ...baseIdentity, runAttempt: 0 })).toThrow(
+      CiLaneEvidenceError,
+    );
+  });
+});
 
 function output(lane: ProducerLane, checkId: string) {
   return {
@@ -571,7 +587,7 @@ describe("four-producer fan-in", () => {
     );
   });
 
-  it("rejects missing, duplicate, unexpected, stale, and failed producers", () => {
+  it("rejects missing, duplicate, unexpected, and stale producers while preserving valid failures", () => {
     expectCode(
       () => validateProducerFanIn(allBundles().slice(1), fanInExpectation),
       "MISSING_PRODUCER_LANE",
@@ -606,17 +622,15 @@ describe("four-producer fan-in", () => {
         "IDENTITY_MISMATCH",
       );
     }
-    expectCode(
-      () =>
-        validateProducerFanIn(
-          [
-            bundle("core-verification", { failed: "verification-policy" }),
-            ...PRODUCER_LANES.slice(1).map((lane) => bundle(lane)),
-          ],
-          fanInExpectation,
-        ),
-      "PRODUCER_NOT_SUCCESSFUL",
-    );
+    expect(
+      validateProducerFanIn(
+        [
+          bundle("core-verification", { failed: "verification-policy" }),
+          ...PRODUCER_LANES.slice(1).map((lane) => bundle(lane)),
+        ],
+        fanInExpectation,
+      )["core-verification"].status,
+    ).toBe("failure");
   });
 
   it("formats stable diagnostics without losing the machine code", () => {

@@ -26,6 +26,7 @@ import type {
   ProducerLane,
   ReusableReceipt,
   SynthesisCheckResult,
+  SynthesisSecurityResult,
 } from "../ci-lane-evidence.mts";
 import type {
   EvidenceCheckResult,
@@ -153,6 +154,7 @@ function bundle(
 function shadow(
   bundles: readonly ProducerBundle[],
   overrides: Readonly<Record<string, Partial<SynthesisCheckResult>>> = {},
+  securityOverrides: Readonly<Record<string, Partial<SynthesisSecurityResult>>> = {},
 ) {
   const checks: SynthesisCheckResult[] = allCheckIds.map((id) => ({
     id,
@@ -170,12 +172,16 @@ function shadow(
       ...entry,
       outcome: "passed" as const,
       diagnostics: [],
+      ...securityOverrides[entry.id],
     })),
-    conclusion: checks.some(
-      ({ outcome, semantics }) => outcome === "failed" && semantics === "blocking",
-    )
-      ? "failure"
-      : "success",
+    conclusion:
+      checks.some(({ outcome, semantics }) => outcome === "failed" && semantics === "blocking") ||
+      SECURITY_OWNERSHIP.some(
+        (entry) =>
+          entry.semantics === "blocking" && securityOverrides[entry.id]?.outcome === "failed",
+      )
+        ? "failure"
+        : "success",
     operationalFailure: null,
     startedAt: STARTED_AT,
     completedAt: COMPLETED_AT,
@@ -240,9 +246,15 @@ function monolithic(): ReleaseSpineEvidenceReport {
 
 function fixture() {
   const producerBundles = PRODUCER_LANES.map((lane) => bundle(lane));
+  const monolithicSecurity = SECURITY_OWNERSHIP.map((entry) => ({
+    ...entry,
+    outcome: "passed" as const,
+    diagnostics: [],
+  }));
   return {
     identity,
     monolithic: monolithic(),
+    monolithicSecurity,
     producerBundles,
     splitValidationShadow: shadow(producerBundles),
   };
@@ -256,6 +268,7 @@ describe("local monolith versus split verification harness", () => {
       schemaVersion: LOCAL_EQUIVALENCE_REPORT_SCHEMA,
       status: "passed",
       comparedCheckCount: 53,
+      comparedSecurityCount: 4,
       monolithicBlockingOutcome: "passed",
       splitBlockingOutcome: "passed",
       mismatches: [],
@@ -335,6 +348,71 @@ describe("local monolith versus split verification harness", () => {
     });
   });
 
+  it("reports exact security outcome drift locally", () => {
+    const value = fixture();
+    const changedSecurity = value.monolithicSecurity.map((result) =>
+      result.id === "blocking-secret-scan"
+        ? { ...result, outcome: "failed" as const, diagnostics: ["SECRET_SCAN_FAILED"] }
+        : result,
+    );
+
+    const report = evaluateLocalEquivalence({ ...value, monolithicSecurity: changedSecurity });
+
+    expect(report.status).toBe("failed");
+    expect(report.mismatches.map(({ code }) => code)).toEqual(
+      expect.arrayContaining([
+        "BLOCKING_OUTCOME_MISMATCH",
+        "SECURITY_OUTCOME_MISMATCH",
+        "SECURITY_DIAGNOSTICS_MISMATCH",
+      ]),
+    );
+    expect(report.monolithicBlockingOutcome).toBe("failed");
+  });
+
+  it("accepts an equivalent blocking security failure on both architectures", () => {
+    const value = fixture();
+    const failedSecurity = value.monolithicSecurity.map((result) =>
+      result.id === "blocking-secret-scan"
+        ? { ...result, outcome: "failed" as const, diagnostics: ["SECRET_SCAN_FAILED"] }
+        : result,
+    );
+    const failedShadow = shadow(
+      value.producerBundles,
+      {},
+      {
+        "blocking-secret-scan": {
+          outcome: "failed",
+          diagnostics: ["SECRET_SCAN_FAILED"],
+        },
+      },
+    );
+
+    const report = evaluateLocalEquivalence({
+      ...value,
+      monolithicSecurity: failedSecurity,
+      splitValidationShadow: failedShadow,
+    });
+
+    expect(report.status).toBe("passed");
+    expect(report.monolithicBlockingOutcome).toBe("failed");
+    expect(report.splitBlockingOutcome).toBe("failed");
+  });
+
+  it("leaves hosted security artifact transport outside local equivalence", () => {
+    const value = fixture();
+    const changedSecurity = value.monolithicSecurity.map((result) =>
+      result.id === "security-upload"
+        ? { ...result, outcome: "failed" as const, diagnostics: ["UPLOAD_FAILED"] }
+        : result,
+    );
+
+    const report = evaluateLocalEquivalence({ ...value, monolithicSecurity: changedSecurity });
+
+    expect(report.status).toBe("passed");
+    expect(report.comparedSecurityCount).toBe(4);
+    expect(report.hostedOnlyMetrics.artifactService).toBe("not-measured");
+  });
+
   it("returns a nonzero CLI status and persists the deterministic failed report", () => {
     const directory = mkdtempSync(join(tmpdir(), "croco-local-equivalence-"));
     const value = fixture();
@@ -344,6 +422,7 @@ describe("local monolith versus split verification harness", () => {
     const paths = {
       identity: join(directory, "identity.json"),
       monolithic: join(directory, "monolithic.json"),
+      monolithicSecurity: join(directory, "monolithic-security.json"),
       shadow: join(directory, "shadow.json"),
       output: join(directory, "report.json"),
     };
@@ -352,6 +431,7 @@ describe("local monolith versus split verification harness", () => {
     );
     writeFileSync(paths.identity, JSON.stringify(value.identity));
     writeFileSync(paths.monolithic, JSON.stringify(value.monolithic));
+    writeFileSync(paths.monolithicSecurity, JSON.stringify(value.monolithicSecurity));
     writeFileSync(paths.shadow, JSON.stringify(changedShadow));
     value.producerBundles.forEach((bundleValue, index) => {
       const path = producerPaths[index];
@@ -365,6 +445,8 @@ describe("local monolith versus split verification harness", () => {
         paths.identity,
         "--monolithic",
         paths.monolithic,
+        "--monolithic-security",
+        paths.monolithicSecurity,
         ...producerPaths.flatMap((path) => ["--producer", path]),
         "--shadow",
         paths.shadow,

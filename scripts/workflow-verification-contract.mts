@@ -36,6 +36,11 @@ export const ACTIONS_ONLY_WORKFLOW_COMMAND_ALLOWLIST = [
   "node --experimental-strip-types scripts/release-spine-evidence.mts",
   "node --experimental-strip-types scripts/ci-performance-budget.mts",
   "node --experimental-strip-types scripts/ci-performance-observer.mts",
+  "node --experimental-strip-types scripts/ci-cacheable-experiment-identity.mts",
+  "node --experimental-strip-types scripts/ci-cacheable-lane-runner.mts",
+  "node --experimental-strip-types scripts/ci-cacheable-security-evidence.mts",
+  "node --experimental-strip-types scripts/ci-synthesis-input.mts",
+  "node --experimental-strip-types scripts/ci-split-validation-synthesis.mts",
   "node --experimental-strip-types scripts/security-gitleaks-smoke.mts --ensure-sarif ci-reports/security/gitleaks.sarif",
   "node --experimental-strip-types scripts/test-evidence-bundle.mts",
   "node --experimental-strip-types scripts/test-lane-runner.mts",
@@ -240,12 +245,11 @@ export function findTrustedGitleaksImageViolations(workflowSource: string): read
   if (!isPlainRecord(workflow) || !isPlainRecord(workflow.jobs)) {
     return ["CI workflow must define jobs"];
   }
-  const validate = workflow.jobs.validate;
-  const environment = isPlainRecord(validate) && isPlainRecord(validate.env) ? validate.env : null;
+  const environment = isPlainRecord(workflow.env) ? workflow.env : null;
   const image = environment?.GITLEAKS_IMAGE;
   const violations: string[] = [];
   if (image !== TRUSTED_GITLEAKS_IMAGE) {
-    violations.push("jobs.validate.env.GITLEAKS_IMAGE must be the digest-pinned trusted image");
+    violations.push("env.GITLEAKS_IMAGE must be the digest-pinned trusted image");
   }
 
   const declarations = workflowSource
@@ -254,7 +258,7 @@ export function findTrustedGitleaksImageViolations(workflowSource: string): read
     .filter(({ line }) => /^GITLEAKS_IMAGE\s*:/.test(line));
   if (declarations.length !== 1 || declarations[0]?.previous !== GITLEAKS_RENOVATE_DIRECTIVE) {
     violations.push(
-      "the sole GITLEAKS_IMAGE declaration must be jobs.validate.env with its Renovate directive attached",
+      "the sole GITLEAKS_IMAGE declaration must be workflow env with its Renovate directive attached",
     );
   }
   return violations;

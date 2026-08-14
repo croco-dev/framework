@@ -376,6 +376,18 @@ function objectValue(value: unknown): Record<string, unknown> | undefined {
     : undefined;
 }
 
+function assertExactObjectKeys(
+  value: Record<string, unknown>,
+  expected: readonly string[],
+  label: string,
+): void {
+  const actual = Object.keys(value).sort();
+  const canonical = [...expected].sort();
+  if (JSON.stringify(actual) !== JSON.stringify(canonical)) {
+    throw new TypeError(`${label} keys must exactly match ${canonical.join(", ")}`);
+  }
+}
+
 function parseGenerated(
   value: unknown,
   path: string,
@@ -543,6 +555,129 @@ export function parseTestInventory(value: unknown): {
     });
   }
   return { inventory: { version: 1, tests, exceptions }, diagnostics };
+}
+
+export function parseStrictTestInventory(value: unknown): TestInventory {
+  const object = objectValue(value);
+  if (!object) throw new TypeError("test inventory must be an object");
+  assertExactObjectKeys(object, ["version", "tests", "exceptions"], "test inventory");
+  if (object.version !== TEST_INVENTORY_VERSION) {
+    throw new TypeError(`test inventory version must be ${TEST_INVENTORY_VERSION}`);
+  }
+  if (!Array.isArray(object.tests) || !Array.isArray(object.exceptions)) {
+    throw new TypeError("test inventory tests and exceptions must be arrays");
+  }
+  object.tests.forEach((value, index) => {
+    const entry = objectValue(value);
+    if (!entry) throw new TypeError(`test inventory tests[${index}] must be an object`);
+    const generated = entry.lane === "generated-app";
+    assertExactObjectKeys(
+      entry,
+      generated
+        ? ["path", "lane", "qualifiers", "owner", "generated"]
+        : ["path", "lane", "qualifiers", "owner"],
+      `test inventory tests[${index}]`,
+    );
+    if (typeof entry.owner !== "string" || entry.owner.trim().length === 0) {
+      throw new TypeError(`test inventory tests[${index}].owner must be non-empty`);
+    }
+    if (generated) {
+      const mapping = objectValue(entry.generated);
+      if (!mapping)
+        throw new TypeError(`test inventory tests[${index}].generated must be an object`);
+      assertExactObjectKeys(
+        mapping,
+        ["sourcePath", "generatedPath", "commandId"],
+        `test inventory tests[${index}].generated`,
+      );
+    }
+  });
+  object.exceptions.forEach((value, index) => {
+    const exception = objectValue(value);
+    if (!exception) throw new TypeError(`test inventory exceptions[${index}] must be an object`);
+    assertExactObjectKeys(
+      exception,
+      ["path", "kind", "reason", "owner"],
+      `test inventory exceptions[${index}]`,
+    );
+    if (typeof exception.owner !== "string" || exception.owner.trim().length === 0) {
+      throw new TypeError(`test inventory exceptions[${index}].owner must be non-empty`);
+    }
+  });
+  const parsed = parseTestInventory(object);
+  if (parsed.diagnostics.length > 0) {
+    throw new TypeError(
+      `test inventory diagnostics are not empty: ${JSON.stringify(parsed.diagnostics)}`,
+    );
+  }
+  return canonicalInventory(parsed.inventory);
+}
+
+export function parseMaterializationEvidence(
+  value: unknown,
+  expectedInventoryDigest?: string,
+): readonly MaterializationEvidence[] {
+  if (!Array.isArray(value)) throw new TypeError("materialization evidence must be an array");
+  const parsed = value.map((value, index): MaterializationEvidence => {
+    const entry = objectValue(value);
+    if (!entry) throw new TypeError(`materialization evidence[${index}] must be an object`);
+    assertExactObjectKeys(
+      entry,
+      [
+        "sourcePath",
+        "sourceDigest",
+        "generatedPath",
+        "generatedDigest",
+        "inventoryDigest",
+        "commandId",
+      ],
+      `materialization evidence[${index}]`,
+    );
+    for (const field of ["sourcePath", "generatedPath"] as const) {
+      if (typeof entry[field] !== "string" || validateRepositoryPath(entry[field])) {
+        throw new TypeError(
+          `materialization evidence[${index}].${field} must be a repository path`,
+        );
+      }
+    }
+    for (const field of ["sourceDigest", "generatedDigest", "inventoryDigest"] as const) {
+      if (typeof entry[field] !== "string" || !/^[a-f0-9]{64}$/.test(entry[field])) {
+        throw new TypeError(`materialization evidence[${index}].${field} must be a SHA-256 digest`);
+      }
+    }
+    if (
+      expectedInventoryDigest !== undefined &&
+      entry.inventoryDigest !== expectedInventoryDigest
+    ) {
+      throw new TypeError(
+        `materialization evidence[${index}].inventoryDigest does not match the inventory`,
+      );
+    }
+    if (
+      typeof entry.commandId !== "string" ||
+      entry.commandId.trim().length === 0 ||
+      entry.commandId !== entry.commandId.trim()
+    ) {
+      throw new TypeError(`materialization evidence[${index}].commandId must be non-empty`);
+    }
+    return {
+      sourcePath: entry.sourcePath,
+      sourceDigest: entry.sourceDigest,
+      generatedPath: entry.generatedPath,
+      generatedDigest: entry.generatedDigest,
+      inventoryDigest: entry.inventoryDigest,
+      commandId: entry.commandId,
+    };
+  });
+  const sourcePaths = parsed.map(({ sourcePath }) => sourcePath);
+  const generatedPaths = parsed.map(({ generatedPath }) => generatedPath);
+  if (
+    new Set(sourcePaths).size !== sourcePaths.length ||
+    new Set(generatedPaths).size !== generatedPaths.length
+  ) {
+    throw new TypeError("materialization evidence paths must be unique");
+  }
+  return [...parsed].sort((left, right) => compareText(left.sourcePath, right.sourcePath));
 }
 
 export function readTestInventory(path = INVENTORY_PATH): {

@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import { SECURITY_OWNERSHIP } from "./ci-cacheable-lanes-evaluator.mts";
+import { SECURITY_OWNERSHIP } from "./ci-verification-contract.mts";
 import { VERIFICATION_LANE_OWNERSHIP } from "./verification-manifest.mts";
 
 export const LANE_RECEIPT_SCHEMA = "croco.ci-lane-receipt/v1" as const;
@@ -51,6 +51,8 @@ export type EvidenceIdentity = {
   readonly inputDigest: string;
   readonly verificationExperimentId: string;
 };
+
+export type ExperimentIdentity = Omit<EvidenceIdentity, "lane">;
 
 export type EvidenceOutput = {
   readonly path: string;
@@ -630,7 +632,10 @@ function parseCheckResult(value: unknown, path: string): ProducerCheckResult {
   return parsed;
 }
 
-function parseIdentity(value: Record<string, unknown>, path: string): EvidenceIdentity {
+function parseExperimentIdentityFields(
+  value: Record<string, unknown>,
+  path: string,
+): ExperimentIdentity {
   return {
     architectureVersion: enumeration(
       value.architectureVersion,
@@ -641,7 +646,6 @@ function parseIdentity(value: Record<string, unknown>, path: string): EvidenceId
     runId: nonEmptyString(value.runId, `${path}.runId`),
     runAttempt: positiveInteger(value.runAttempt, `${path}.runAttempt`),
     profile: enumeration(value.profile, ["repo", "spine", "publish"], `${path}.profile`),
-    lane: enumeration(value.lane, PRODUCER_LANES, `${path}.lane`),
     manifestDigest: digest(value.manifestDigest, `${path}.manifestDigest`),
     inventoryDigest: digest(value.inventoryDigest, `${path}.inventoryDigest`),
     toolchainDigest: digest(value.toolchainDigest, `${path}.toolchainDigest`),
@@ -650,6 +654,34 @@ function parseIdentity(value: Record<string, unknown>, path: string): EvidenceId
       value.verificationExperimentId,
       `${path}.verificationExperimentId`,
     ),
+  };
+}
+
+export function parseExperimentIdentity(value: unknown, path = "identity"): ExperimentIdentity {
+  const identity = record(value, path);
+  exactKeys(
+    identity,
+    [
+      "architectureVersion",
+      "commitSha",
+      "runId",
+      "runAttempt",
+      "profile",
+      "manifestDigest",
+      "inventoryDigest",
+      "toolchainDigest",
+      "inputDigest",
+      "verificationExperimentId",
+    ],
+    path,
+  );
+  return parseExperimentIdentityFields(identity, path);
+}
+
+function parseIdentity(value: Record<string, unknown>, path: string): EvidenceIdentity {
+  return {
+    ...parseExperimentIdentityFields(value, path),
+    lane: enumeration(value.lane, PRODUCER_LANES, `${path}.lane`),
   };
 }
 
@@ -953,9 +985,6 @@ export function validateProducerFanIn(
           check.id,
         );
       }
-    }
-    if (bundle.status !== "success") {
-      reject("PRODUCER_NOT_SUCCESSFUL", `producer ${bundle.lane} did not succeed`, bundle.lane);
     }
   }
   return Object.fromEntries(parsed.map((bundle) => [bundle.lane, bundle])) as Record<

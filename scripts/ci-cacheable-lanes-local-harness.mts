@@ -6,17 +6,20 @@ import { argv, exit } from "node:process";
 import { pathToFileURL } from "node:url";
 
 import {
+  parseExperimentIdentity,
   parseProducerBundle,
   parseSplitValidationShadowEvidence,
   PRODUCER_LANES,
   validateProducerFanIn,
 } from "./ci-lane-evidence.mts";
+import { SECURITY_OWNERSHIP } from "./ci-verification-contract.mts";
 import { VERIFICATION_LANE_OWNERSHIP } from "./verification-manifest.mts";
 import type {
-  EvidenceIdentity,
+  ExperimentIdentity,
   ProducerBundle,
   ProducerLane,
   SplitValidationShadowEvidence,
+  SynthesisSecurityResult,
 } from "./ci-lane-evidence.mts";
 import type {
   EvidenceCheckResult,
@@ -27,7 +30,7 @@ import type {
 export const LOCAL_EQUIVALENCE_REPORT_SCHEMA =
   "croco.ci-cacheable-lanes-local-equivalence/v1" as const;
 
-type LocalExperimentIdentity = Omit<EvidenceIdentity, "lane">;
+type LocalExperimentIdentity = ExperimentIdentity;
 type NormalizedOutcome = "passed" | "failed" | "not-applicable";
 
 type NormalizedCheck = {
@@ -50,6 +53,7 @@ export type LocalEquivalenceReport = {
   readonly status: "passed" | "failed";
   readonly identity: LocalExperimentIdentity;
   readonly comparedCheckCount: number;
+  readonly comparedSecurityCount: number;
   readonly monolithicBlockingOutcome: "passed" | "failed";
   readonly splitBlockingOutcome: "passed" | "failed";
   readonly mismatches: readonly LocalEquivalenceMismatch[];
@@ -71,6 +75,9 @@ export class LocalEquivalenceError extends Error {
 }
 
 const EXPECTED_CHECK_IDS = Object.keys(VERIFICATION_LANE_OWNERSHIP);
+const LOCALLY_COMPARABLE_SECURITY_IDS = new Set(
+  SECURITY_OWNERSHIP.filter(({ id }) => id !== "security-upload").map(({ id }) => id),
+);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -89,80 +96,15 @@ function requiredString(value: unknown, path: string): string {
   return value;
 }
 
-function requiredDigest(value: unknown, path: string): string {
-  const parsed = requiredString(value, path);
-  if (!/^[a-f0-9]{64}$/.test(parsed)) {
-    throw new LocalEquivalenceError("INVALID_INPUT", `${path} must be a lowercase SHA-256 digest`);
-  }
-  return parsed;
-}
-
 export function parseLocalExperimentIdentity(value: unknown): LocalExperimentIdentity {
-  const identity = requiredRecord(value, "identity");
-  const expectedKeys = [
-    "architectureVersion",
-    "commitSha",
-    "runId",
-    "runAttempt",
-    "profile",
-    "manifestDigest",
-    "inventoryDigest",
-    "toolchainDigest",
-    "inputDigest",
-    "verificationExperimentId",
-  ].sort();
-  const actualKeys = Object.keys(identity).sort();
-  if (JSON.stringify(actualKeys) !== JSON.stringify(expectedKeys)) {
-    throw new LocalEquivalenceError(
-      "INVALID_IDENTITY",
-      `identity keys must equal ${expectedKeys.join(",")}`,
-    );
-  }
-  const architectureVersion = requiredString(
-    identity.architectureVersion,
-    "identity.architectureVersion",
-  );
-  if (architectureVersion !== "shadow-split") {
+  const identity = parseExperimentIdentity(value);
+  if (identity.architectureVersion !== "shadow-split") {
     throw new LocalEquivalenceError(
       "INVALID_IDENTITY",
       "identity.architectureVersion must be shadow-split",
     );
   }
-  const commitSha = requiredString(identity.commitSha, "identity.commitSha");
-  if (!/^[a-f0-9]{40}$/.test(commitSha)) {
-    throw new LocalEquivalenceError(
-      "INVALID_IDENTITY",
-      "identity.commitSha must be a lowercase 40-character git SHA",
-    );
-  }
-  if (!Number.isSafeInteger(identity.runAttempt) || (identity.runAttempt as number) <= 0) {
-    throw new LocalEquivalenceError(
-      "INVALID_IDENTITY",
-      "identity.runAttempt must be a positive integer",
-    );
-  }
-  const profile = requiredString(identity.profile, "identity.profile");
-  if (profile !== "repo" && profile !== "spine" && profile !== "publish") {
-    throw new LocalEquivalenceError(
-      "INVALID_IDENTITY",
-      "identity.profile must be repo, spine, or publish",
-    );
-  }
-  return {
-    architectureVersion,
-    commitSha,
-    runId: requiredString(identity.runId, "identity.runId"),
-    runAttempt: identity.runAttempt as number,
-    profile,
-    manifestDigest: requiredDigest(identity.manifestDigest, "identity.manifestDigest"),
-    inventoryDigest: requiredDigest(identity.inventoryDigest, "identity.inventoryDigest"),
-    toolchainDigest: requiredDigest(identity.toolchainDigest, "identity.toolchainDigest"),
-    inputDigest: requiredDigest(identity.inputDigest, "identity.inputDigest"),
-    verificationExperimentId: requiredString(
-      identity.verificationExperimentId,
-      "identity.verificationExperimentId",
-    ),
-  };
+  return identity;
 }
 
 function parseMonolithicReport(value: unknown): ReleaseSpineEvidenceReport {
@@ -223,6 +165,77 @@ function assertExactCheckSet(report: ReleaseSpineEvidenceReport): void {
   }
 }
 
+function parseMonolithicSecurity(value: unknown): readonly SynthesisSecurityResult[] {
+  if (!Array.isArray(value)) {
+    throw new LocalEquivalenceError(
+      "INVALID_MONOLITHIC_SECURITY",
+      "monolithic security evidence must be an array",
+    );
+  }
+  const expectedById = new Map(SECURITY_OWNERSHIP.map((entry) => [entry.id, entry]));
+  const parsed = value.map((entry, index): SynthesisSecurityResult => {
+    const record = requiredRecord(entry, `monolithicSecurity[${index}]`);
+    const actualKeys = Object.keys(record).sort();
+    const expectedKeys = ["diagnostics", "id", "outcome", "owner", "semantics"];
+    if (JSON.stringify(actualKeys) !== JSON.stringify(expectedKeys)) {
+      throw new LocalEquivalenceError(
+        "INVALID_MONOLITHIC_SECURITY",
+        `monolithicSecurity[${index}] keys do not match the security contract`,
+      );
+    }
+    const id = requiredString(record.id, `monolithicSecurity[${index}].id`);
+    const expected = expectedById.get(id);
+    if (!expected || record.owner !== expected.owner || record.semantics !== expected.semantics) {
+      throw new LocalEquivalenceError(
+        "MONOLITHIC_SECURITY_OWNERSHIP_MISMATCH",
+        `${id} does not match the exact security ownership contract`,
+      );
+    }
+    if (
+      record.outcome !== "passed" &&
+      record.outcome !== "failed" &&
+      record.outcome !== "not-applicable"
+    ) {
+      throw new LocalEquivalenceError("INVALID_MONOLITHIC_SECURITY", `${id}.outcome is invalid`);
+    }
+    if (
+      !Array.isArray(record.diagnostics) ||
+      !record.diagnostics.every((diagnostic) => typeof diagnostic === "string")
+    ) {
+      throw new LocalEquivalenceError(
+        "INVALID_MONOLITHIC_SECURITY",
+        `${id}.diagnostics must be a string array`,
+      );
+    }
+    const diagnostics = record.diagnostics as readonly string[];
+    if (JSON.stringify(diagnostics) !== JSON.stringify([...diagnostics].sort())) {
+      throw new LocalEquivalenceError(
+        "UNSTABLE_MONOLITHIC_SECURITY_DIAGNOSTICS",
+        `${id}.diagnostics must be sorted`,
+      );
+    }
+    return {
+      id,
+      owner: expected.owner,
+      semantics: expected.semantics,
+      outcome: record.outcome,
+      diagnostics,
+    };
+  });
+  const ids = parsed.map(({ id }) => id);
+  if (
+    new Set(ids).size !== ids.length ||
+    JSON.stringify([...ids].sort()) !==
+      JSON.stringify(SECURITY_OWNERSHIP.map(({ id }) => id).sort())
+  ) {
+    throw new LocalEquivalenceError(
+      "MONOLITHIC_SECURITY_SET_MISMATCH",
+      "monolithic security evidence must contain the exact five results",
+    );
+  }
+  return parsed;
+}
+
 function stableDiagnostics(check: EvidenceCheckResult): readonly string[] {
   if (check.status === "passed" || check.status === "not_applicable") return [];
   return [
@@ -251,6 +264,17 @@ function normalizeMonolithicCheck(check: EvidenceCheckResult): NormalizedCheck {
 function blockingOutcome(checks: readonly NormalizedCheck[]): "passed" | "failed" {
   return checks.some(
     ({ semantics, outcome: checkOutcome }) => semantics === "blocking" && checkOutcome === "failed",
+  )
+    ? "failed"
+    : "passed";
+}
+
+function securityBlockingOutcome(results: readonly SynthesisSecurityResult[]): "passed" | "failed" {
+  return results.some(
+    ({ id, semantics, outcome: resultOutcome }) =>
+      LOCALLY_COMPARABLE_SECURITY_IDS.has(id) &&
+      semantics === "blocking" &&
+      resultOutcome === "failed",
   )
     ? "failed"
     : "passed";
@@ -312,11 +336,13 @@ function assertProducerMatchesShadow(
 export function evaluateLocalEquivalence(input: {
   readonly identity: unknown;
   readonly monolithic: unknown;
+  readonly monolithicSecurity: unknown;
   readonly producerBundles: readonly unknown[];
   readonly splitValidationShadow: unknown;
 }): LocalEquivalenceReport {
   const identity = parseLocalExperimentIdentity(input.identity);
   const monolithic = parseMonolithicReport(input.monolithic);
+  const monolithicSecurity = parseMonolithicSecurity(input.monolithicSecurity);
   assertMonolithicIdentity(monolithic, identity);
   assertExactCheckSet(monolithic);
 
@@ -356,14 +382,41 @@ export function evaluateLocalEquivalence(input: {
         : [mismatch("CHECK_MISSING", splitCheck.id, null, splitCheck)];
     })
     .sort((left, right) => `${left.key}:${left.code}`.localeCompare(`${right.key}:${right.code}`));
-  const monolithicBlockingOutcome = blockingOutcome(monolithicChecks);
-  if ((monolithic.status === "passed") !== (monolithicBlockingOutcome === "passed")) {
+  const splitSecurityById = new Map(shadow.security.map((result) => [result.id, result]));
+  for (const result of monolithicSecurity.filter(({ id }) =>
+    LOCALLY_COMPARABLE_SECURITY_IDS.has(id),
+  )) {
+    const splitResult = splitSecurityById.get(result.id);
+    if (!splitResult) {
+      mismatches.push(mismatch("SECURITY_MISSING", result.id, result, null));
+      continue;
+    }
+    for (const field of ["owner", "semantics", "outcome", "diagnostics"] as const) {
+      if (JSON.stringify(result[field]) !== JSON.stringify(splitResult[field])) {
+        mismatches.push(
+          mismatch(
+            `SECURITY_${field.toUpperCase()}_MISMATCH`,
+            `${result.id}.${field}`,
+            result[field],
+            splitResult[field],
+          ),
+        );
+      }
+    }
+  }
+  const monolithicCheckBlockingOutcome = blockingOutcome(monolithicChecks);
+  const monolithicBlockingOutcome =
+    monolithicCheckBlockingOutcome === "failed" ||
+    securityBlockingOutcome(monolithicSecurity) === "failed"
+      ? "failed"
+      : "passed";
+  if ((monolithic.status === "passed") !== (monolithicCheckBlockingOutcome === "passed")) {
     mismatches.push(
       mismatch(
         "MONOLITHIC_BLOCKING_OUTCOME_MISMATCH",
-        "blockingOutcome",
+        "checkBlockingOutcome",
         monolithic.status,
-        monolithicBlockingOutcome,
+        monolithicCheckBlockingOutcome,
       ),
     );
   }
@@ -400,6 +453,7 @@ export function evaluateLocalEquivalence(input: {
     status: mismatches.length === 0 ? "passed" : "failed",
     identity,
     comparedCheckCount: splitChecks.length,
+    comparedSecurityCount: LOCALLY_COMPARABLE_SECURITY_IDS.size,
     monolithicBlockingOutcome,
     splitBlockingOutcome: shadow.blockingOutcome,
     mismatches,
@@ -414,6 +468,7 @@ export function evaluateLocalEquivalence(input: {
 type CliOptions = {
   readonly identityPath: string;
   readonly monolithicPath: string;
+  readonly monolithicSecurityPath: string;
   readonly producerPaths: readonly string[];
   readonly shadowPath: string;
   readonly outputPath?: string;
@@ -422,6 +477,7 @@ type CliOptions = {
 function parseCliOptions(args: readonly string[]): CliOptions {
   let identityPath: string | undefined;
   let monolithicPath: string | undefined;
+  let monolithicSecurityPath: string | undefined;
   const producerPaths: string[] = [];
   let shadowPath: string | undefined;
   let outputPath: string | undefined;
@@ -433,19 +489,33 @@ function parseCliOptions(args: readonly string[]): CliOptions {
     }
     if (flag === "--identity") identityPath = value;
     else if (flag === "--monolithic") monolithicPath = value;
+    else if (flag === "--monolithic-security") monolithicSecurityPath = value;
     else if (flag === "--producer") producerPaths.push(value);
     else if (flag === "--shadow") shadowPath = value;
     else if (flag === "--output") outputPath = value;
     else throw new LocalEquivalenceError("CLI_INVALID", `unknown option ${flag}`);
     index += 1;
   }
-  if (!identityPath || !monolithicPath || !shadowPath || producerPaths.length !== 4) {
+  if (
+    !identityPath ||
+    !monolithicPath ||
+    !monolithicSecurityPath ||
+    !shadowPath ||
+    producerPaths.length !== 4
+  ) {
     throw new LocalEquivalenceError(
       "CLI_INVALID",
-      "required: --identity <json> --monolithic <json> --producer <json> (exactly four) --shadow <json> [--output <json>]",
+      "required: --identity <json> --monolithic <json> --monolithic-security <json> --producer <json> (exactly four) --shadow <json> [--output <json>]",
     );
   }
-  return { identityPath, monolithicPath, producerPaths, shadowPath, outputPath };
+  return {
+    identityPath,
+    monolithicPath,
+    monolithicSecurityPath,
+    producerPaths,
+    shadowPath,
+    outputPath,
+  };
 }
 
 function readJson(path: string): unknown {
@@ -458,6 +528,7 @@ export function runLocalEquivalenceCli(args: readonly string[]): number {
     const report = evaluateLocalEquivalence({
       identity: readJson(options.identityPath),
       monolithic: readJson(options.monolithicPath),
+      monolithicSecurity: readJson(options.monolithicSecurityPath),
       producerBundles: options.producerPaths.map(readJson),
       splitValidationShadow: readJson(options.shadowPath),
     });

@@ -118,6 +118,11 @@ describe("CI performance observer workflow", () => {
     expect(record?.run).toContain(
       'observer_args+=(--split-validation-shadow "${shadow_reports[0]}")',
     );
+    expect(record?.run).toContain(
+      'observer_args+=(--split-security-summary "${split_security_summaries[0]}")',
+    );
+    expect(record?.run).toContain("-name split-validation-shadow.json");
+    expect(record?.run).toContain("-name split-security-policy-summary.json");
     expect(record?.run).toContain("The source run did not emit normalized performance evidence.");
     expect(record?.run).toContain(
       'if [ "${#producer_reports[@]}" -ne 4 ] || [ "${#shadow_reports[@]}" -ne 1 ]',

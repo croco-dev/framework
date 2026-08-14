@@ -44,6 +44,12 @@ const SECRET_SCAN = WORKFLOW.slice(
   WORKFLOW.indexOf("      - name: Assemble security policy summary"),
 );
 
+function workflowJob(id: string, nextId: string): string {
+  const start = WORKFLOW.indexOf(`  ${id}:`);
+  const end = WORKFLOW.indexOf(`  ${nextId}:`, start + 1);
+  return WORKFLOW.slice(start, end === -1 ? undefined : end);
+}
+
 function workflowStep(name: string): string {
   const start = VALIDATE_JOB.indexOf(`      - name: ${name}`);
   if (start === -1) return "";
@@ -133,15 +139,15 @@ describe("CI executable supply chain", () => {
 
   it("rejects moving the trusted image declaration to an inert job", () => {
     const trustedDeclaration = [
-      "      # renovate: datasource=docker depName=ghcr.io/gitleaks/gitleaks",
-      `      GITLEAKS_IMAGE: ${TRUSTED_GITLEAKS_IMAGE}`,
+      "  # renovate: datasource=docker depName=ghcr.io/gitleaks/gitleaks",
+      `  GITLEAKS_IMAGE: ${TRUSTED_GITLEAKS_IMAGE}`,
     ].join("\n");
     const mutant = WORKFLOW.replace(
       trustedDeclaration,
-      `      "GITLEAKS_IMAGE": ghcr.io/gitleaks/gitleaks:v9@sha256:${"b".repeat(64)}`,
+      `  "GITLEAKS_IMAGE": ghcr.io/gitleaks/gitleaks:v9@sha256:${"b".repeat(64)}`,
     ).replace(
       "  changes:",
-      `  inert:\n    env:\n${trustedDeclaration}\n    steps: []\n\n  changes:`,
+      `  inert:\n    env:\n      # renovate: datasource=docker depName=ghcr.io/gitleaks/gitleaks\n      GITLEAKS_IMAGE: ${TRUSTED_GITLEAKS_IMAGE}\n    steps: []\n\n  changes:`,
     );
 
     expect(mutant).not.toBe(WORKFLOW);
@@ -184,6 +190,95 @@ describe("CI executable supply chain", () => {
       currentValue: "v8.23.0",
       currentDigest: "sha256:b4b81841085b4060054a71155500a340e3d2e2a5995c186546649e3efd80b84e",
     });
+  });
+});
+
+describe("Phase B cacheable verification shadow", () => {
+  const producerJobs = [
+    ["core-verification", "generated-apps"],
+    ["generated-apps", "package-artifacts"],
+    ["package-artifacts", "coverage-security"],
+    ["coverage-security", "split-validation-shadow"],
+  ] as const;
+
+  it("keeps the monolithic validate job authoritative while running four advisory peer producers", () => {
+    expect(VALIDATE_JOB).toContain("needs: changes");
+    expect(VALIDATE_JOB).not.toContain("ci-cacheable-lanes:producer");
+    for (const [jobId, nextJobId] of producerJobs) {
+      const job = workflowJob(jobId, nextJobId);
+      expect(job).toContain("needs: changes");
+      expect(job).toContain("scripts/ci-cacheable-experiment-identity.mts");
+      expect(job).toContain("scripts/ci-cacheable-lane-runner.mts");
+      expect(job).toContain("if: always()");
+      expect(job).toContain(
+        `name: ci-lane-${jobId}-${"${{ github.run_id }}"}-${"${{ github.run_attempt }}"}`,
+      );
+      expect(job).toContain("continue-on-error: true");
+    }
+    const cacheableJobs = WORKFLOW.slice(
+      WORKFLOW.indexOf("  core-verification:"),
+      WORKFLOW.indexOf("  ecosystem-advisory:"),
+    );
+    expect(findWorkflowVerificationViolations(cacheableJobs, ROOT_DIR)).toEqual([]);
+  });
+
+  it("restores only exact producer receipts and keeps physical security execution fresh", () => {
+    for (const [jobId, nextJobId] of producerJobs.slice(0, 3)) {
+      const job = workflowJob(jobId, nextJobId);
+      expect(job).toContain("id: split_identity");
+      expect(job).toContain("id: exact_receipts");
+      expect(job).toContain(`path: .ci-cache/exact/${jobId}`);
+      expect(job).toContain(
+        `key: ci-lane-receipt-v1-${"${{ runner.os }}"}-${jobId}-${"${{ needs.changes.outputs.profile }}"}-${"${{ steps.split_identity.outputs.input_digest }}"}`,
+      );
+      const exactCacheStart = job.indexOf(`      - name: Restore exact`);
+      const exactCacheEnd = job.indexOf("      - name:", exactCacheStart + 1);
+      const exactCache = job.slice(exactCacheStart, exactCacheEnd);
+      expect(exactCache).not.toContain("restore-keys:");
+      expect(exactCache).toContain(
+        "if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository",
+      );
+      expect(job).toContain('if [ "$TRUSTED_CACHE" = "true" ]; then');
+      expect(job).toContain("--cache-origin github-exact-key");
+    }
+    const security = workflowJob("coverage-security", "split-validation-shadow");
+    expect(security).not.toContain("id: exact_receipts");
+    expect(security).not.toContain("--cache-dir");
+  });
+
+  it("downloads the exact four immutable bundles before advisory synthesis", () => {
+    const shadow = workflowJob("split-validation-shadow", "ecosystem-advisory");
+    expect(shadow).toContain(
+      "needs: [changes, core-verification, generated-apps, package-artifacts, coverage-security]",
+    );
+    expect(shadow).toContain("continue-on-error: true");
+    for (const [lane] of producerJobs) {
+      expect(shadow).toContain(
+        `name: ci-lane-${lane}-${"${{ github.run_id }}"}-${"${{ github.run_attempt }}"}`,
+      );
+      expect(shadow).toContain(`--producer-dir ${lane}=incoming/${lane}`);
+    }
+    expect(shadow).toContain("scripts/ci-synthesis-input.mts");
+    expect(shadow).toContain("scripts/ci-split-validation-synthesis.mts");
+    expect(shadow).toContain("ci-reports/cacheable-ci/split-validation-shadow.json");
+    expect(shadow).toContain("ci-reports/security/split-security-policy-summary.json");
+  });
+
+  it("digest-binds the three physical security outcomes and their raw reports", () => {
+    const security = workflowJob("coverage-security", "split-validation-shadow");
+    expect(security).toContain("scripts/ci-cacheable-security-evidence.mts");
+    expect(security).toContain("--security-results ci-reports/security/security-physical.json");
+    for (const path of [
+      "security-physical.json",
+      "pnpm-audit-prod.txt",
+      "gitleaks-smoke.txt",
+      "gitleaks.txt",
+      "gitleaks.sarif",
+    ]) {
+      expect(security).toContain(`--security-artifact ci-reports/security/${path}`);
+    }
+    expect(security).toContain('test "$SMOKE_EXIT" = "0"');
+    expect(security).toContain('test "$SCAN_EXIT" = "0"');
   });
 });
 

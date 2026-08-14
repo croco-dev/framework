@@ -170,15 +170,17 @@ jobs:
           )
           if [ -d ci-observer-input/split ]; then
             mapfile -t producer_reports < <(find ci-observer-input/split -type f -name producer-bundle.json -print | sort)
-            mapfile -t shadow_reports < <(find ci-observer-input/split -type f -path '*/ci-reports/cacheable-ci/split-validation-shadow.json' -print)
-            if [ "${#producer_reports[@]}" -ne 4 ] || [ "${#shadow_reports[@]}" -ne 1 ]; then
-              echo "Expected four producer bundles and one split validation shadow report." >&2
+            mapfile -t shadow_reports < <(find ci-observer-input/split -type f -name split-validation-shadow.json -print)
+            mapfile -t split_security_summaries < <(find ci-observer-input/split -type f -name split-security-policy-summary.json -print)
+            if [ "${#producer_reports[@]}" -ne 4 ] || [ "${#shadow_reports[@]}" -ne 1 ] || [ "${#split_security_summaries[@]}" -ne 1 ]; then
+              echo "Expected four producer bundles, one split validation shadow report, and one split security summary." >&2
               exit 1
             fi
             for report in "${producer_reports[@]}"; do
               observer_args+=(--producer-bundle "$report")
             done
             observer_args+=(--split-validation-shadow "${shadow_reports[0]}")
+            observer_args+=(--split-security-summary "${split_security_summaries[0]}")
           fi
           node --experimental-strip-types scripts/ci-performance-observer.mts "${observer_args[@]}"
           cat ci-observation/summary.md >> "$GITHUB_STEP_SUMMARY"

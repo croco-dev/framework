@@ -13,6 +13,7 @@ import {
   type Observation,
   type ResultRecord,
 } from "./ci-cacheable-lanes-evaluator.mts";
+import { createCacheableExperimentIdentity } from "./ci-cacheable-experiment-identity.mts";
 import {
   PRODUCER_LANES,
   parseProducerBundle,
@@ -20,7 +21,9 @@ import {
   type ProducerBundle,
   type ProducerLane,
   type SplitValidationShadowEvidence,
+  type VerificationProfile,
 } from "./ci-lane-evidence.mts";
+import { parseSecurityPhysicalResults } from "./ci-synthesis-input.mts";
 
 type Conclusion = "success" | "failure" | "cancelled";
 
@@ -70,7 +73,7 @@ type PerformanceSample = {
   readonly runId: string;
   readonly jobId: string;
   readonly commitSha: string;
-  readonly profile: string;
+  readonly profile: VerificationProfile;
   readonly runnerOs: string;
   readonly runnerArch: string;
   readonly runnerLabel: string;
@@ -134,6 +137,7 @@ export type CreateCiPerformanceObservationInput = {
   readonly artifacts?: unknown;
   readonly producerBundles?: readonly { readonly bytes: Buffer; readonly parsed: unknown }[];
   readonly splitValidationShadow?: { readonly bytes: Buffer; readonly parsed: unknown };
+  readonly splitSecuritySummary?: { readonly bytes: Buffer; readonly parsed: unknown };
 };
 
 const SECURITY_STEPS = [
@@ -176,6 +180,18 @@ function requiredNumber(value: unknown, field: string): number {
   if (typeof value !== "number" || !Number.isFinite(value))
     throw new Error(`${field} must be a finite number`);
   return value;
+}
+
+function assertExactKeys(
+  value: Readonly<Record<string, unknown>>,
+  expected: readonly string[],
+  field: string,
+): void {
+  const actual = Object.keys(value).sort();
+  const normalizedExpected = [...expected].sort();
+  if (JSON.stringify(actual) !== JSON.stringify(normalizedExpected)) {
+    throw new Error(`${field} must contain exactly ${normalizedExpected.join(", ")}`);
+  }
 }
 
 function conclusion(value: unknown, field: string): Conclusion {
@@ -406,6 +422,32 @@ function securityResult(job: SourceJob, contract: (typeof SECURITY_STEPS)[number
   };
 }
 
+function exactStepConclusion(job: SourceJob, name: string): string | null {
+  const steps = job.steps.filter((step) => step.name === name);
+  if (steps.length !== 1) throw new Error(`${job.name} job must contain exactly one ${name} step`);
+  return steps[0]?.conclusion ?? null;
+}
+
+function parseSplitSecuritySummary(
+  value: unknown,
+  shadow: SplitValidationShadowEvidence,
+): readonly ReturnType<typeof parseSecurityPhysicalResults>[number][] {
+  if (!isRecord(value)) throw new Error("split security policy summary must be an object");
+  assertExactKeys(value, ["schemaVersion", "generatedAt", "results"], "split security summary");
+  if (value.schemaVersion !== "croco.ci-split-security-policy-summary/v1") {
+    throw new Error("split security policy summary has an unsupported schema");
+  }
+  if (timestamp(value.generatedAt, "split security summary generatedAt") !== shadow.completedAt) {
+    throw new Error("split security policy summary timestamp does not match shadow evidence");
+  }
+  const results = parseSecurityPhysicalResults(value.results);
+  const shadowResults = shadow.security.filter(({ owner }) => owner === "coverage-security");
+  if (JSON.stringify(results) !== JSON.stringify(shadowResults)) {
+    throw new Error("split security policy summary results do not match shadow evidence");
+  }
+  return results;
+}
+
 function assertSetEquality(
   actual: readonly string[],
   expected: readonly string[],
@@ -623,21 +665,22 @@ export function createCiPerformanceObservation(
     packageMetadata.devDependencies.turbo,
     "trusted Turbo version",
   );
-  const toolchainDigest = sha256([
-    sample.runnerOs,
-    sample.runnerArch,
-    sample.runnerLabel,
-    sample.nodeVersion,
-    sample.pnpmVersion,
+  const experimentIdentity = createCacheableExperimentIdentity({
+    commitSha: executionSha,
+    runId: String(run.id),
+    runAttempt: run.run_attempt,
+    profile: sample.profile,
+    runnerOs: sample.runnerOs,
+    runnerArch: sample.runnerArch,
+    runnerLabel: sample.runnerLabel,
+    nodeVersion: sample.nodeVersion,
+    pnpmVersion: sample.pnpmVersion,
     turboVersion,
-    packageMetadata.packageManager,
-  ]);
-  const inputDigest = sha256([
-    executionSha,
-    sample.workflowDigest,
-    sample.inventoryDigest,
-    toolchainDigest,
-  ]);
+    packageManager: packageMetadata.packageManager,
+    workflowDigest: sample.workflowDigest,
+    inventoryDigest: fastLane.inventoryDigest,
+    inventoryFileDigest: sample.inventoryDigest,
+  });
   const evidenceDigest = sha256([
     input.rawSample.bytes,
     input.verification.bytes,
@@ -672,11 +715,11 @@ export function createCiPerformanceObservation(
     nodeVersion: sample.nodeVersion,
     pnpmVersion: sample.pnpmVersion,
     turboVersion,
-    toolchainDigest,
-    manifestDigest: sample.workflowDigest,
-    inventoryDigest: fastLane.inventoryDigest,
-    inputDigest,
-    verificationExperimentId: `${run.id}-${run.run_attempt}-${inputDigest.slice(0, 12)}`,
+    toolchainDigest: experimentIdentity.toolchainDigest,
+    manifestDigest: experimentIdentity.manifestDigest,
+    inventoryDigest: experimentIdentity.inventoryDigest,
+    inputDigest: experimentIdentity.inputDigest,
+    verificationExperimentId: experimentIdentity.verificationExperimentId,
     evidenceDigest,
     injectedFailure: injectedFailure(sample),
     cacheEligibleTaskIds: commandIds,
@@ -697,13 +740,23 @@ function sourceJobConclusion(value: string | null, field: string): Observation["
   return value;
 }
 
+function producerObservationConclusion(
+  jobConclusion: Observation["conclusion"],
+  bundle: ProducerBundle,
+): Observation["conclusion"] {
+  if (bundle.status === "failure" && (jobConclusion === "success" || jobConclusion === "failure")) {
+    return "failure";
+  }
+  return jobConclusion;
+}
+
 function operationalProducerFailure(
   jobConclusion: Observation["conclusion"],
   bundle: ProducerBundle,
 ): boolean {
-  if (jobConclusion === "success") return bundle.status !== "success";
-  if (jobConclusion === "failure") return bundle.status !== "failure";
-  return true;
+  if (jobConclusion === "cancelled" || jobConclusion === "skipped") return true;
+  if (bundle.status === "failure") return false;
+  return jobConclusion !== "success";
 }
 
 function blockingOutcome(results: readonly ResultRecord[]): "success" | "failure" {
@@ -756,12 +809,13 @@ function assertProducerMatchesSynthesis(
 export function createCiPerformanceObservations(
   input: CreateCiPerformanceObservationInput,
 ): readonly Observation[] {
-  const monolithic = createCiPerformanceObservation(input);
+  let monolithic = createCiPerformanceObservation(input);
   const run = parseRun(input.run);
   const jobs = parseJobs(input.jobs);
   const hasProducerInput = input.producerBundles !== undefined;
   const hasShadowInput = input.splitValidationShadow !== undefined;
-  const splitEvidencePresent = hasProducerInput || hasShadowInput;
+  const hasSecuritySummaryInput = input.splitSecuritySummary !== undefined;
+  const splitEvidencePresent = hasProducerInput || hasShadowInput || hasSecuritySummaryInput;
   assertSplitArtifactSet(run, input.artifacts, splitEvidencePresent);
 
   const splitJobCount = SPLIT_JOB_IDENTITIES.reduce(
@@ -769,8 +823,10 @@ export function createCiPerformanceObservations(
     0,
   );
   if (!splitEvidencePresent && splitJobCount === 0) return [monolithic];
-  if (!hasProducerInput || !hasShadowInput) {
-    throw new Error("Phase B observation requires four producer bundles and shadow evidence");
+  if (!hasProducerInput || !hasShadowInput || !hasSecuritySummaryInput) {
+    throw new Error(
+      "Phase B observation requires four producer bundles, shadow evidence, and a security summary",
+    );
   }
   if (splitJobCount !== SPLIT_JOB_IDENTITIES.length) {
     throw new Error(
@@ -789,6 +845,26 @@ export function createCiPerformanceObservations(
   const bundles = input.producerBundles.map((evidence, index) =>
     parseProducerBundle(evidence.parsed, `producerBundles[${index}]`),
   );
+  const canonicalBundle = bundles[0];
+  if (!canonicalBundle) throw new Error("Phase B producer bundles are missing");
+  for (const [field, actual, expected] of [
+    ["commitSha", canonicalBundle.commitSha, monolithic.sourceSha],
+    ["runId", canonicalBundle.runId, monolithic.sourceRunId],
+    ["runAttempt", canonicalBundle.runAttempt, monolithic.sourceAttempt],
+    ["profile", canonicalBundle.profile, monolithic.profile],
+    ["manifestDigest", canonicalBundle.manifestDigest, monolithic.manifestDigest],
+    ["inventoryDigest", canonicalBundle.inventoryDigest, monolithic.inventoryDigest],
+    ["toolchainDigest", canonicalBundle.toolchainDigest, monolithic.toolchainDigest],
+  ] as const) {
+    if (actual !== expected) {
+      throw new Error(`Phase B canonical producer ${field} does not match monolithic provenance`);
+    }
+  }
+  monolithic = parseObservation({
+    ...monolithic,
+    inputDigest: canonicalBundle.inputDigest,
+    verificationExperimentId: canonicalBundle.verificationExperimentId,
+  });
   const producerBytesByLane = new Map(
     bundles.map((bundle, index) => [bundle.lane, input.producerBundles?.[index]?.bytes]),
   );
@@ -822,6 +898,7 @@ export function createCiPerformanceObservations(
     },
     "splitValidationShadow",
   );
+  parseSplitSecuritySummary(input.splitSecuritySummary.parsed, shadow);
   for (const bundle of bundles) {
     assertSplitIdentity(monolithic, bundle, bundle.lane);
     assertProducerMatchesSynthesis(bundle, shadow);
@@ -839,14 +916,27 @@ export function createCiPerformanceObservations(
 
   const artifactName = `ci-observation-${run.id}-${run.run_attempt}`;
   const failureClass = monolithic.injectedFailure;
-  const securityByOwner = (owner: string): readonly ResultRecord[] =>
-    shadow.security
-      .filter(
-        (result) =>
-          result.owner === owner ||
-          (owner === "validate-synthesis" && result.id === "security-upload"),
-      )
+  const shadowJob = exactJob(jobs, "split-validation-shadow");
+  const uploadStepConclusion = exactStepConclusion(
+    shadowJob,
+    "Upload split validation shadow evidence",
+  );
+  const uploadResult: ResultRecord = {
+    id: "security-upload",
+    conclusion: uploadStepConclusion === "success" ? "success" : "failure",
+    semantics: "advisory",
+    diagnostics:
+      uploadStepConclusion === "success"
+        ? []
+        : [`security-upload:${uploadStepConclusion ?? "missing"}`],
+  };
+  const securityByOwner = (owner: string): readonly ResultRecord[] => {
+    const evidenced = shadow.security
+      .filter((result) => result.owner === owner && result.id !== "security-upload")
       .map(splitSecurityResult);
+    if (owner !== "validate-synthesis") return evidenced;
+    return [...evidenced, uploadResult];
+  };
   const producerObservations = bundles.map((bundle): Observation => {
     const job = exactJob(jobs, bundle.lane);
     const jobConclusion = sourceJobConclusion(job.conclusion, `${bundle.lane} job conclusion`);
@@ -854,6 +944,7 @@ export function createCiPerformanceObservations(
     const securityResults = securityByOwner(bundle.lane);
     const allResults = [...checkResults, ...securityResults];
     const operationalFailure = operationalProducerFailure(jobConclusion, bundle);
+    const conclusion = producerObservationConclusion(jobConclusion, bundle);
     const cache = producerCacheEvidence(bundle);
     const producerBytes = producerBytesByLane.get(bundle.lane);
     if (!producerBytes) throw new Error(`${bundle.lane} evidence bytes are missing`);
@@ -870,7 +961,7 @@ export function createCiPerformanceObservations(
       artifactName,
       startedAt: job.started_at,
       completedAt: job.completed_at,
-      conclusion: jobConclusion,
+      conclusion,
       blockingOutcome: blockingOutcome(allResults),
       operationalFailure,
       profile: monolithic.profile,
@@ -899,14 +990,18 @@ export function createCiPerformanceObservations(
     });
   });
 
-  const shadowJob = exactJob(jobs, "split-validation-shadow");
   const shadowConclusion = sourceJobConclusion(
     shadowJob.conclusion,
     "split-validation-shadow job conclusion",
   );
-  if (shadow.conclusion !== shadowConclusion) {
-    throw new Error("split-validation-shadow conclusion does not match source job metadata");
-  }
+  const synthesisOperationalFailure =
+    shadow.operationalFailure !== null ||
+    shadowConclusion === "cancelled" ||
+    shadowConclusion === "skipped" ||
+    (shadow.conclusion === "success" &&
+      shadowConclusion !== "success" &&
+      uploadResult.conclusion === "success");
+  const synthesisConclusion = synthesisOperationalFailure ? shadowConclusion : shadow.conclusion;
   const synthesisCheckIds = LANE_OWNERSHIP["validate-synthesis"];
   const synthesisChecks = shadow.checks
     .filter(({ id }) => synthesisCheckIds.includes(id as never))
@@ -928,9 +1023,9 @@ export function createCiPerformanceObservations(
     artifactName,
     startedAt: shadowJob.started_at,
     completedAt: shadowJob.completed_at,
-    conclusion: shadowConclusion,
+    conclusion: synthesisConclusion,
     blockingOutcome: shadow.blockingOutcome === "passed" ? "success" : "failure",
-    operationalFailure: shadow.operationalFailure !== null,
+    operationalFailure: synthesisOperationalFailure,
     profile: monolithic.profile,
     runnerOs: monolithic.runnerOs,
     runnerArch: monolithic.runnerArch,
@@ -945,6 +1040,7 @@ export function createCiPerformanceObservations(
     verificationExperimentId: monolithic.verificationExperimentId,
     evidenceDigest: sha256([
       input.splitValidationShadow.bytes,
+      input.splitSecuritySummary.bytes,
       ...input.producerBundles.map(({ bytes }) => bytes),
     ]),
     injectedFailure: failureClass,
@@ -959,10 +1055,16 @@ export function createCiPerformanceObservations(
     ),
   });
 
-  const splitDiagnostics = [...producerObservations, synthesisObservation]
-    .flatMap(({ stableDiagnostics }) => stableDiagnostics)
-    .sort();
-  if (JSON.stringify(splitDiagnostics) !== JSON.stringify([...shadow.stableDiagnostics].sort())) {
+  const splitEvidenceDiagnostics = [...producerObservations, synthesisObservation]
+    .flatMap(({ checkResults, securityResults }) => [...checkResults, ...securityResults])
+    .filter(({ id }) => id !== "security-upload")
+    .flatMap(({ diagnostics }) => diagnostics);
+  const normalizedSplitEvidenceDiagnostics = [...new Set(splitEvidenceDiagnostics)].sort();
+  const evidencedDiagnostics = splitStableDiagnostics(
+    [...shadow.checks, ...shadow.security.filter(({ id }) => id !== "security-upload")],
+    shadow.operationalFailure ?? undefined,
+  ).sort();
+  if (JSON.stringify(normalizedSplitEvidenceDiagnostics) !== JSON.stringify(evidencedDiagnostics)) {
     throw new Error("split observation diagnostics do not match shadow evidence");
   }
   return [monolithic, ...producerObservations, synthesisObservation];
@@ -996,6 +1098,7 @@ function main(arguments_: readonly string[]): void {
   const artifactPath = optionValue(arguments_, "--artifacts");
   const producerPaths = optionValues(arguments_, "--producer-bundle");
   const shadowPath = optionValue(arguments_, "--split-validation-shadow");
+  const splitSecuritySummaryPath = optionValue(arguments_, "--split-security-summary");
   const observations = createCiPerformanceObservations({
     run: JSON.parse(readFileSync(resolve(requiredOption(arguments_, "--run")), "utf8")) as unknown,
     jobs: JSON.parse(
@@ -1016,6 +1119,9 @@ function main(arguments_: readonly string[]): void {
       ? { producerBundles: producerPaths.map((path) => readJsonBytes(path)) }
       : {}),
     ...(shadowPath ? { splitValidationShadow: readJsonBytes(shadowPath) } : {}),
+    ...(splitSecuritySummaryPath
+      ? { splitSecuritySummary: readJsonBytes(splitSecuritySummaryPath) }
+      : {}),
   });
   mkdirSync(dirname(outputPath), { recursive: true });
   mkdirSync(dirname(markdownPath), { recursive: true });

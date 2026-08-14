@@ -4,6 +4,9 @@ import { readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
+export { SECURITY_OWNERSHIP } from "./ci-verification-contract.mts";
+import { SECURITY_OWNERSHIP } from "./ci-verification-contract.mts";
+
 export const DATASET_SCHEMA = "croco.ci-cacheable-lanes-dataset/v1" as const;
 export const INVENTORY_SCHEMA = "croco.ci-cacheable-lanes-inventory/v1" as const;
 export const OBSERVATION_SCHEMA = "croco.ci-cacheable-lanes-observation/v1" as const;
@@ -74,14 +77,6 @@ export const LANE_OWNERSHIP = {
     "spine-bundle-size",
   ],
 } as const;
-
-export const SECURITY_OWNERSHIP = [
-  { id: "advisory-production-audit", owner: "coverage-security", semantics: "advisory-report" },
-  { id: "gitleaks-acceptance-smoke", owner: "coverage-security", semantics: "acceptance-smoke" },
-  { id: "blocking-secret-scan", owner: "coverage-security", semantics: "blocking" },
-  { id: "security-policy-summary", owner: "validate-synthesis", semantics: "report-only" },
-  { id: "security-upload", owner: "producing-job", semantics: "report-transport" },
-] as const;
 
 type ArchitectureVersion = "monolithic" | "shadow-split" | "cutover-split";
 type CacheCohort = "cold" | "partial" | "warm" | "no-cache";

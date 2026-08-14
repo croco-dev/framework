@@ -3911,6 +3911,24 @@
       "owner": "repo:ci"
     },
     {
+      "path": "scripts/tests/ci-cacheable-experiment-identity.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:ci"
+    },
+    {
+      "path": "scripts/tests/ci-cacheable-lane-cache.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:ci"
+    },
+    {
+      "path": "scripts/tests/ci-cacheable-lane-runner.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:ci"
+    },
+    {
       "path": "scripts/tests/ci-cacheable-lanes-collector.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -3924,6 +3942,12 @@
     },
     {
       "path": "scripts/tests/ci-cacheable-lanes-local-harness.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:ci"
+    },
+    {
+      "path": "scripts/tests/ci-cacheable-security-evidence.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "repo:ci"
@@ -3960,6 +3984,12 @@
     },
     {
       "path": "scripts/tests/ci-publish-critical-path.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:ci"
+    },
+    {
+      "path": "scripts/tests/ci-synthesis-input.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "repo:ci"
