@@ -227,6 +227,11 @@ describe("Phase B cacheable verification shadow", () => {
       const job = workflowJob(jobId, nextJobId);
       expect(job).toContain("id: split_identity");
       expect(job).toContain("id: exact_receipts");
+      expect(job).toContain(
+        'input_digest=$(node -e \'process.stdout.write(JSON.parse(require("node:fs")',
+      );
+      expect(job).toContain('echo "input_digest=$input_digest" >> "$GITHUB_OUTPUT"');
+      expect(job).not.toContain('echo "input_digest=$(node -e');
       expect(job).toContain(`path: .ci-cache/exact/${jobId}`);
       expect(job).toContain(
         `key: ci-lane-receipt-v1-${"${{ runner.os }}"}-${jobId}-${"${{ needs.changes.outputs.profile }}"}-${"${{ steps.split_identity.outputs.input_digest }}"}`,

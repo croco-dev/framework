@@ -726,7 +726,8 @@ jobs:
             --runner-label ubuntu-latest \
             --pnpm-version "$(pnpm --version)" \
             --output ci-reports/cacheable-ci/identity.json
-          echo "input_digest=$(node -e \"process.stdout.write(JSON.parse(require('node:fs').readFileSync('ci-reports/cacheable-ci/identity.json','utf8')).inputDigest)\")" >> "$GITHUB_OUTPUT"
+          input_digest=$(node -e 'process.stdout.write(JSON.parse(require("node:fs").readFileSync("ci-reports/cacheable-ci/identity.json", "utf8")).inputDigest)')
+          echo "input_digest=$input_digest" >> "$GITHUB_OUTPUT"
       - name: Restore exact core verification receipts
         id: exact_receipts
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
@@ -809,7 +810,8 @@ jobs:
             --profile "$VERIFICATION_PROFILE" --runner-os "$RUNNER_OS" --runner-arch "$RUNNER_ARCH" \
             --runner-label ubuntu-latest --pnpm-version "$(pnpm --version)" \
             --output ci-reports/cacheable-ci/identity.json
-          echo "input_digest=$(node -e \"process.stdout.write(JSON.parse(require('node:fs').readFileSync('ci-reports/cacheable-ci/identity.json','utf8')).inputDigest)\")" >> "$GITHUB_OUTPUT"
+          input_digest=$(node -e 'process.stdout.write(JSON.parse(require("node:fs").readFileSync("ci-reports/cacheable-ci/identity.json", "utf8")).inputDigest)')
+          echo "input_digest=$input_digest" >> "$GITHUB_OUTPUT"
       - name: Restore exact generated apps receipts
         id: exact_receipts
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
@@ -886,7 +888,8 @@ jobs:
             --profile "$VERIFICATION_PROFILE" --runner-os "$RUNNER_OS" --runner-arch "$RUNNER_ARCH" \
             --runner-label ubuntu-latest --pnpm-version "$(pnpm --version)" \
             --output ci-reports/cacheable-ci/identity.json
-          echo "input_digest=$(node -e \"process.stdout.write(JSON.parse(require('node:fs').readFileSync('ci-reports/cacheable-ci/identity.json','utf8')).inputDigest)\")" >> "$GITHUB_OUTPUT"
+          input_digest=$(node -e 'process.stdout.write(JSON.parse(require("node:fs").readFileSync("ci-reports/cacheable-ci/identity.json", "utf8")).inputDigest)')
+          echo "input_digest=$input_digest" >> "$GITHUB_OUTPUT"
       - name: Restore exact package artifact receipts
         id: exact_receipts
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
