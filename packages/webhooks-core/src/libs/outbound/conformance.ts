@@ -119,6 +119,95 @@ export function createOutboundWebhookStoreConformanceSuite(
         },
       },
       {
+        name: "keeps retry schedules consistent across retrying and terminal transitions",
+        run: async () => {
+          const invalidStore = await options.createStore();
+          const invalidCommit = await invalidStore.commitEvent({
+            event: options.event,
+            endpoints: [options.endpoint],
+          });
+          const invalidDelivery = invalidCommit.deliveries[0];
+          assert(invalidDelivery !== undefined, "delivery must exist");
+
+          await assertRejectsConfigurationProblem(
+            () =>
+              invalidStore.recordAttempt({
+                tenantId: options.event.tenantId,
+                attempt: createAttempt(invalidDelivery.id, 1, options, "retryable"),
+                status: "retrying",
+              }),
+            "retrying transition without a schedule must fail",
+          );
+          await assertRejectsConfigurationProblem(
+            () =>
+              invalidStore.recordAttempt({
+                tenantId: options.event.tenantId,
+                attempt: createAttempt(invalidDelivery.id, 1, options, "retryable"),
+                status: "retrying",
+                nextAttemptAt: new Date(Number.NaN),
+              }),
+            "retrying transition with an invalid schedule must fail",
+          );
+          await assertRejectsConfigurationProblem(
+            () =>
+              invalidStore.recordAttempt({
+                tenantId: options.event.tenantId,
+                attempt: createAttempt(invalidDelivery.id, 1, options, "retryable"),
+                status: "retrying",
+                nextAttemptAt: options.event.committedAt,
+              }),
+            "retrying transition before attempt completion must fail",
+          );
+          assert(
+            (await invalidStore.listAttempts(options.event.tenantId, invalidDelivery.id)).length ===
+              0,
+            "invalid retry schedules must not record attempt evidence",
+          );
+
+          for (const status of ["delivered", "dead"] as const) {
+            const store = await options.createStore();
+            const committed = await store.commitEvent({
+              event: options.event,
+              endpoints: [options.endpoint],
+            });
+            const delivery = committed.deliveries[0];
+            assert(delivery !== undefined, "delivery must exist");
+            const nextAttemptAt = new Date(options.event.committedAt.getTime() + 1_000);
+            const retrying = await store.recordAttempt({
+              tenantId: options.event.tenantId,
+              attempt: createAttempt(delivery.id, 1, options, "retryable"),
+              status: "retrying",
+              nextAttemptAt,
+            });
+            assert(
+              retrying.nextAttemptAt?.getTime() === nextAttemptAt.getTime(),
+              "retrying transition must preserve its schedule",
+            );
+
+            const terminal = await store.recordAttempt({
+              tenantId: options.event.tenantId,
+              attempt: createAttempt(
+                delivery.id,
+                2,
+                options,
+                status === "delivered" ? "delivered" : "permanent",
+              ),
+              status,
+            });
+            assert(
+              terminal.nextAttemptAt === undefined,
+              `${status} transition must clear the earlier retry schedule`,
+            );
+            assert(
+              (await store.listAttempts(options.event.tenantId, delivery.id))
+                .map((attempt) => attempt.number)
+                .join(",") === "1,2",
+              "terminal transition must preserve ordered attempt history",
+            );
+          }
+        },
+      },
+      {
         name: "claims an eligible delivery only once under concurrency",
         run: async () => {
           const store = await options.createStore();
@@ -140,6 +229,39 @@ export function createOutboundWebhookStoreConformanceSuite(
       },
     ],
   };
+}
+
+function createAttempt(
+  deliveryId: string,
+  number: number,
+  options: OutboundWebhookStoreConformanceOptions,
+  classification: OutboundWebhookAttempt["classification"],
+): OutboundWebhookAttempt {
+  return {
+    id: `attempt-conformance-${number}`,
+    deliveryId,
+    number,
+    secretVersion: options.endpoint.activeSecretVersion,
+    signature: "v1=fixture",
+    timestamp: String(number),
+    startedAt: options.event.committedAt,
+    completedAt: new Date(options.event.committedAt.getTime() + number),
+    outcome: { kind: "http", status: classification === "delivered" ? 204 : 500 },
+    classification,
+  };
+}
+
+async function assertRejectsConfigurationProblem(
+  operation: () => Promise<unknown>,
+  message: string,
+): Promise<void> {
+  try {
+    await operation();
+  } catch (error) {
+    assert(error instanceof OutboundWebhookConfigurationProblem, message);
+    return;
+  }
+  throw new OutboundWebhookConfigurationProblem(`store conformance failed: ${message}`);
 }
 
 function assert(condition: boolean, message: string): asserts condition {

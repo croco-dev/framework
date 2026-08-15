@@ -203,6 +203,18 @@ export class InMemoryOutboundWebhookStore implements OutboundWebhookStore {
         actualAttempt: input.attempt.number,
       });
     }
+    const nextAttemptTime = input.nextAttemptAt?.getTime();
+    if (
+      input.status === "retrying" &&
+      (nextAttemptTime === undefined ||
+        !Number.isFinite(nextAttemptTime) ||
+        nextAttemptTime < input.attempt.completedAt.getTime())
+    ) {
+      throw new OutboundWebhookConfigurationProblem(
+        "retrying delivery requires a valid next attempt time",
+        { deliveryId: current.id },
+      );
+    }
 
     const attempts = this.attemptsByDelivery.get(key) ?? [];
     attempts.push(cloneAttempt(input.attempt));
@@ -213,9 +225,10 @@ export class InMemoryOutboundWebhookStore implements OutboundWebhookStore {
       status: input.status,
       attemptCount: input.attempt.number,
       updatedAt: new Date(input.attempt.completedAt),
-      ...(input.nextAttemptAt === undefined
-        ? {}
-        : { nextAttemptAt: new Date(input.nextAttemptAt) }),
+      nextAttemptAt:
+        input.status === "retrying" && input.nextAttemptAt !== undefined
+          ? new Date(input.nextAttemptAt)
+          : undefined,
     };
     this.deliveries.set(key, updated);
 
