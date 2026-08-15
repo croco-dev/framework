@@ -178,6 +178,7 @@ export function reconcileTestEvidence(options: {
   readonly reports: readonly LaneReport[];
   readonly affectedOwners?: readonly string[];
   readonly packagingOwners?: readonly string[];
+  readonly requiredGeneratedPaths?: readonly string[];
   readonly generatedExecutedPaths?: readonly string[];
   readonly generatedDiagnostics?: readonly TestInventoryDiagnostic[];
 }): TestInventoryEvidenceReport {
@@ -191,6 +192,7 @@ export function reconcileTestEvidence(options: {
   const report = createTestInventoryEvidenceReport(options.inventory, options.profile, {
     affectedOwners: options.affectedOwners,
     packagingSurfaceOwners: options.packagingOwners,
+    requiredGeneratedPaths: options.requiredGeneratedPaths,
     executedPaths: [
       ...options.reports.flatMap(({ executedPaths }) => executedPaths),
       ...(options.generatedExecutedPaths ?? []),
@@ -275,6 +277,12 @@ function main(args: readonly string[]): number {
     reports,
     affectedOwners: values(args, "--affected-owner"),
     packagingOwners: values(args, "--packaging-owner"),
+    requiredGeneratedPaths:
+      materializationPath === undefined
+        ? []
+        : requiredGeneratedPaths
+          ? [...requiredGeneratedPaths]
+          : undefined,
     generatedExecutedPaths: materializationEvidence?.map(({ sourcePath }) => sourcePath),
     generatedDiagnostics,
   });

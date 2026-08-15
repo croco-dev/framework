@@ -302,7 +302,7 @@ function fixture(failed?: { lane: ProducerLane; checkId: string }) {
   return { root, producerDirectories, bundles, selectedCheckIds };
 }
 
-function assemble(value = fixture()) {
+function assemble(value = fixture(), spinePromotionPackages: readonly string[] = []) {
   return assembleSynthesisInput({
     rootDir: value.root,
     identity,
@@ -316,6 +316,7 @@ function assemble(value = fixture()) {
     producerDirectories: value.producerDirectories,
     affectedOwners: [],
     packagingOwners: [],
+    spinePromotionPackages,
   });
 }
 
@@ -334,6 +335,13 @@ describe("cacheable CI synthesis input", () => {
       true,
     );
     expect(result.facts.productionReadyRequireTaskSummaries).toBe(true);
+    expect(parseSynthesisInput(result)).toEqual(result);
+  });
+
+  it("binds scoped spine promotion packages into the synthesis contract", () => {
+    const result = assemble(fixture(), ["docs"]);
+
+    expect(result.facts.spinePromotionPackages).toEqual(["docs"]);
     expect(parseSynthesisInput(result)).toEqual(result);
   });
 
@@ -569,6 +577,7 @@ describe("cacheable CI synthesis input", () => {
         producerDirectories: value.producerDirectories,
         affectedOwners: [],
         packagingOwners: [],
+        spinePromotionPackages: [],
       }),
     ).toThrow(/headSha must equal identity.commitSha/);
   });

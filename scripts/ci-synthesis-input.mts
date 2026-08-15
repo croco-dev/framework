@@ -163,6 +163,7 @@ export type SynthesisInput = {
     readonly publicApi: PublicApiGuardResult;
     readonly securityPhysical: readonly SynthesisSecurityResult[];
     readonly productionReadyRequireTaskSummaries: boolean;
+    readonly spinePromotionPackages: readonly string[];
   };
   readonly synthesisPlan: readonly {
     readonly id: SynthesisCheckId;
@@ -179,6 +180,7 @@ type AssembleSynthesisInputOptions = {
   readonly producerDirectories: Readonly<Record<ProducerLane, string>>;
   readonly affectedOwners: readonly string[];
   readonly packagingOwners: readonly string[];
+  readonly spinePromotionPackages: readonly string[];
 };
 
 function reject(code: string, message: string): never {
@@ -1073,6 +1075,7 @@ function parseFacts(value: unknown, identity: ExperimentIdentity): SynthesisInpu
       "publicApi",
       "securityPhysical",
       "productionReadyRequireTaskSummaries",
+      "spinePromotionPackages",
     ],
     "facts",
   );
@@ -1157,6 +1160,10 @@ function parseFacts(value: unknown, identity: ExperimentIdentity): SynthesisInpu
     productionReadyRequireTaskSummaries: boolean(
       value.productionReadyRequireTaskSummaries,
       "facts.productionReadyRequireTaskSummaries",
+    ),
+    spinePromotionPackages: stringArray(
+      value.spinePromotionPackages,
+      "facts.spinePromotionPackages",
     ),
   };
 }
@@ -1361,6 +1368,7 @@ export function assembleSynthesisInput(options: AssembleSynthesisInputOptions): 
       publicApi: packages.publicApi,
       securityPhysical: security.securityPhysical,
       productionReadyRequireTaskSummaries: core.productionReadyRequireTaskSummaries,
+      spinePromotionPackages: [...options.spinePromotionPackages],
     },
     synthesisPlan: synthesisPlan(selection),
   };
@@ -1445,6 +1453,7 @@ export function assembleSynthesisInputFromRepository(args: readonly string[]): {
         },
   );
   const reconcile = manifest.find(({ id }) => id === "test-evidence-reconcile");
+  const spinePromotion = manifest.find(({ id }) => id === "spine-promotion");
   const producerDirectories = Object.fromEntries(
     PRODUCER_LANES.map((lane) => {
       const explicit = values(args, "--producer-dir")
@@ -1468,6 +1477,9 @@ export function assembleSynthesisInputFromRepository(args: readonly string[]): {
     producerDirectories,
     affectedOwners: reconcile ? commandValues(reconcile.command, "--affected-owner") : [],
     packagingOwners: reconcile ? commandValues(reconcile.command, "--packaging-owner") : [],
+    spinePromotionPackages: spinePromotion
+      ? commandValues(spinePromotion.command, "--package")
+      : [],
   });
   return { input, outputPath: resolve(rootDir, output) };
 }

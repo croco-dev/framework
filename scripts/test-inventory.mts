@@ -1003,6 +1003,7 @@ export function createTestInventoryEvidenceReport(
   options: {
     readonly affectedOwners?: readonly string[];
     readonly packagingSurfaceOwners?: readonly string[];
+    readonly requiredGeneratedPaths?: readonly string[];
     readonly executedPaths?: readonly string[];
     readonly enforce?: boolean;
     readonly liveCredentialsAvailable?: boolean;
@@ -1012,12 +1013,23 @@ export function createTestInventoryEvidenceReport(
   const executed = new Set(executedPaths);
   const affectedOwners = new Set(options.affectedOwners ?? []);
   const packagingSurfaceOwners = new Set(options.packagingSurfaceOwners ?? []);
+  const requiredGeneratedPaths = options.requiredGeneratedPaths
+    ? new Set(options.requiredGeneratedPaths)
+    : undefined;
   const diagnostics = [...validateExecutedPaths(inventory, executedPaths)];
   const entries = canonicalInventory(inventory).tests.map((entry): TestInventoryEvidenceEntry => {
-    const resolution = resolveTestProfile(entry, profile, {
-      affected: affectedOwners.has(entry.owner),
-      packagingSurfaceAffected: packagingSurfaceOwners.has(entry.owner),
-    });
+    const resolution =
+      entry.lane === "generated-app" && requiredGeneratedPaths
+        ? requiredGeneratedPaths.has(entry.path)
+          ? { requirement: "R" as const, reasonCode: "REQUIRED_AFFECTED" as const }
+          : {
+              requirement: "N/A" as const,
+              reasonCode: "UNAFFECTED_PACKAGING_SURFACE" as const,
+            }
+        : resolveTestProfile(entry, profile, {
+            affected: affectedOwners.has(entry.owner),
+            packagingSurfaceAffected: packagingSurfaceOwners.has(entry.owner),
+          });
     if (executed.has(entry.path)) {
       return {
         ...entry,

@@ -359,6 +359,7 @@ export function runSplitValidationSynthesis(options: RunOptions): SplitSynthesis
         ].filter((entry): entry is NonNullable<typeof entry> => entry !== null),
         affectedOwners: input.facts.tests.affectedOwners,
         packagingOwners: input.facts.tests.packagingOwners,
+        requiredGeneratedPaths: input.facts.tests.generated.requiredSourcePaths,
         generatedExecutedPaths: input.facts.tests.generated.executedSourcePaths,
       });
       atomicWrite(
@@ -409,6 +410,7 @@ export function runSplitValidationSynthesis(options: RunOptions): SplitSynthesis
           promotionCompletedAt,
         ),
         generatedAt: promotionCompletedAt,
+        packageNames: input.facts.spinePromotionPackages,
         rootDir,
         testInventory: (pkg) => {
           const prefix = `${pkg.relativeDir}/`;
