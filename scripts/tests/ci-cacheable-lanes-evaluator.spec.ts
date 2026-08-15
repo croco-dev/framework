@@ -32,6 +32,12 @@ const CUTOFF = "2026-08-14T00:00:00.000Z";
 const WINDOW_START = "2026-05-16T00:00:00.000Z";
 const DIRECTORIES: string[] = [];
 
+type Mutable<T> = T extends readonly (infer Entry)[]
+  ? Mutable<Entry>[]
+  : T extends object
+    ? { -readonly [Key in keyof T]: Mutable<T[Key]> }
+    : T;
+
 afterEach(() => {
   for (const directory of DIRECTORIES.splice(0))
     rmSync(directory, { recursive: true, force: true });
@@ -182,6 +188,7 @@ function makeDataset(runCount = 35): Dataset {
       schemaVersion: INVENTORY_SCHEMA,
       cutoffAt: CUTOFF,
       windowStartedAt: WINDOW_START,
+      cohortStartedAt: WINDOW_START,
       retentionDays: 90,
       sourceRunCount: sources.length,
       eligibleSourceCount: sources.length,
@@ -234,6 +241,10 @@ function makeDataset(runCount = 35): Dataset {
   };
 }
 
+function mutableDataset(runCount = 35): Mutable<Dataset> {
+  return structuredClone(makeDataset(runCount)) as Mutable<Dataset>;
+}
+
 describe("cacheable CI lane evaluator contract", () => {
   it("strictly rejects unknown observation fields and invalid cache hits", () => {
     const observation = makeObservation(0, "monolithic", "monolithic");
@@ -249,12 +260,30 @@ describe("cacheable CI lane evaluator contract", () => {
     const passing = evaluateDataset(makeDataset(1), { contractOnly: true });
     expect(passing.failed).toBe(false);
 
-    const mutant = structuredClone(makeDataset(1));
+    const mutant = mutableDataset(1);
     mutant.inventory.ownership.manifest.pop();
     expect(evaluateDataset(mutant, { contractOnly: true }).diagnostics).toEqual([
       expect.objectContaining({
         code: "DATASET_INVALID",
         message: expect.stringContaining("ownership"),
+      }),
+    ]);
+  });
+
+  it("rejects pre-cohort inventory schema documents", () => {
+    const dataset = mutableDataset(1);
+    const preCohortDataset = {
+      ...dataset,
+      inventory: {
+        ...dataset.inventory,
+        schemaVersion: "croco.ci-cacheable-lanes-inventory/v1",
+      },
+    };
+
+    expect(evaluateDataset(preCohortDataset, { contractOnly: true }).diagnostics).toEqual([
+      expect.objectContaining({
+        code: "DATASET_INVALID",
+        message: expect.stringContaining("inventory.schemaVersion"),
       }),
     ]);
   });
@@ -270,24 +299,41 @@ describe("cacheable CI lane evaluator contract", () => {
 
   it("fails closed on pagination gaps, duplicate unique keys, missing records, and cutoff drift", () => {
     const cases = [
-      (dataset: Dataset) => {
+      (dataset: Mutable<Dataset>) => {
         dataset.inventory.pages[1] = { ...dataset.inventory.pages[1], cursor: "gap" };
       },
-      (dataset: Dataset) => {
-        dataset.observations.push(dataset.observations[0] as Observation);
+      (dataset: Mutable<Dataset>) => {
+        dataset.observations.push(dataset.observations[0]!);
       },
-      (dataset: Dataset) => {
+      (dataset: Mutable<Dataset>) => {
         dataset.observations.pop();
       },
-      (dataset: Dataset) => {
+      (dataset: Mutable<Dataset>) => {
         dataset.inventory.windowStartedAt = "2026-05-17T00:00:00.000Z";
+      },
+      (dataset: Mutable<Dataset>) => {
+        dataset.inventory.cohortStartedAt = "2026-08-14T00:00:00.000Z";
       },
     ];
     for (const mutate of cases) {
-      const dataset = structuredClone(makeDataset(1));
+      const dataset = mutableDataset(1);
       mutate(dataset);
       expect(evaluateDataset(dataset, { contractOnly: true }).failed).toBe(true);
     }
+  });
+
+  it("rejects an eligible source before the cohort even without expected records", () => {
+    const dataset = mutableDataset(1);
+    dataset.inventory.cohortStartedAt = timestamp(1, 0);
+    dataset.inventory.sources[0]!.expectedRecordKeys = [];
+    dataset.observations = [];
+
+    expect(evaluateDataset(dataset, { contractOnly: true }).diagnostics).toEqual([
+      expect.objectContaining({
+        code: "DATASET_INVALID",
+        message: expect.stringContaining("predates the trusted cohort"),
+      }),
+    ]);
   });
 });
 
@@ -328,7 +374,7 @@ describe("cacheable CI lane promotion gates", () => {
   });
 
   it("does not count a labeled failure class without the exact injected diagnostic", () => {
-    const dataset = structuredClone(makeDataset());
+    const dataset = mutableDataset();
     const sourceRecords = dataset.observations.filter(({ sourceRunId }) => sourceRunId === "10005");
     for (const record of sourceRecords) {
       const target = record.checkResults.find(({ id }) => id === "verification-policy");
@@ -349,17 +395,17 @@ describe("cacheable CI lane promotion gates", () => {
 
   it("rejects pair identity/result drift and stale attestations", () => {
     for (const mutate of [
-      (record: Observation) => {
+      (record: Mutable<Observation>) => {
         record.manifestDigest = "c".repeat(64);
       },
-      (record: Observation) => {
+      (record: Mutable<Observation>) => {
         record.checkResults[0] = { ...record.checkResults[0], conclusion: "failure" };
       },
-      (record: Observation) => {
+      (record: Mutable<Observation>) => {
         record.freshAttestation = false;
       },
     ]) {
-      const dataset = structuredClone(makeDataset());
+      const dataset = mutableDataset();
       const record = dataset.observations.find(
         ({ sourceRunId, architectureVersion, lane }) =>
           sourceRunId === "10034" &&
@@ -367,13 +413,13 @@ describe("cacheable CI lane promotion gates", () => {
           lane === "core-verification",
       );
       expect(record).toBeDefined();
-      mutate(record as Observation);
+      mutate(record!);
       expect(evaluateDataset(dataset).failed).toBe(true);
     }
   });
 
   it("enforces wall, critical path, lane duration, warm/cold, and runner-minute budgets", () => {
-    const dataset = structuredClone(makeDataset(65));
+    const dataset = mutableDataset(65);
     for (const record of dataset.observations) {
       if (Number(record.sourceRunId) < 10_035) continue;
       record.sourceCompletedAt = timestamp(Number(record.sourceRunId) - 10_000, 50);

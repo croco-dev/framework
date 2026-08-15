@@ -45,7 +45,7 @@
     "alpha-release:smoke": "node --experimental-strip-types scripts/verification-command.mts --id alpha-release-smoke",
     "changeset-required:check": "node --experimental-strip-types scripts/verification-command.mts --id changeset-required",
     "ci-executables:check": "node --experimental-strip-types scripts/verification-command.mts --id ci-executables",
-    "ci-cacheable-lanes:collect": "node --experimental-strip-types scripts/ci-cacheable-lanes-collector.mts --repo croco-dev/framework --output ci-reports/ci-observations",
+    "ci-cacheable-lanes:collect": "node --experimental-strip-types scripts/ci-cacheable-lanes-collector.mts --repo croco-dev/framework --cohort-start-at 2026-08-15T03:49:21.000Z --output ci-reports/ci-observations",
     "ci-cacheable-lanes:evaluate": "pnpm ci-cacheable-lanes:collect && node --experimental-strip-types scripts/ci-cacheable-lanes-evaluator.mts --input ci-reports/ci-observations",
     "ci-cacheable-lanes:identity": "node --experimental-strip-types scripts/ci-cacheable-experiment-identity.mts",
     "ci-cacheable-lanes:producer": "node --experimental-strip-types scripts/ci-cacheable-lane-runner.mts",
