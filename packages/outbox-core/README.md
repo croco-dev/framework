@@ -32,4 +32,4 @@ const [claimed] = await store.claimBatch({
 });
 ```
 
-Use `createTransactionalOutboxStoreContractSuite` to verify provider implementations against duplicate idempotency keys, Unit-of-Work rollback, concurrent claims, dispatch success, retryable failure, terminal failure, and stale claim behavior.
+Use `createTransactionalOutboxStoreContractSuite` to verify provider implementations against duplicate idempotency keys, delimiter-safe tenant and idempotency boundaries, Unit-of-Work rollback, concurrent claims, dispatch success, retryable failure, terminal failure, and stale claim behavior.
