@@ -150,12 +150,20 @@ function addMs(date: Date, ms: number): Date {
   return new Date(date.getTime() + ms);
 }
 
+function encodeIdentity(parts: readonly (string | null)[]): string {
+  return JSON.stringify(parts);
+}
+
 function tenantKey(tenant: OutboxTenantBoundary): string {
-  return `${tenant.tenantId}:${tenant.isolationKey ?? ""}`;
+  return encodeIdentity([tenant.tenantId, tenant.isolationKey ?? null]);
 }
 
 function idempotencyScopeKey(intent: OutboxIntent): string {
-  return `${tenantKey(intent.tenant)}:${intent.idempotencyKey}`;
+  return encodeIdentity([
+    intent.tenant.tenantId,
+    intent.tenant.isolationKey ?? null,
+    intent.idempotencyKey,
+  ]);
 }
 
 function defaultIdFactory(): string {

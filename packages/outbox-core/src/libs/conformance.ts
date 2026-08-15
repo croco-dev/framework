@@ -106,6 +106,64 @@ export function createTransactionalOutboxStoreContractSuite<
         },
       },
       {
+        name: "keeps delimiter-bearing idempotency scopes distinct",
+        run: async () => {
+          const store = await options.createStore();
+          const now = new Date("2026-01-01T00:00:00.000Z");
+          const collisionVectors = [
+            {
+              first: { tenantId: "a:b", isolationKey: "c" },
+              firstIdempotencyKey: "d",
+              second: { tenantId: "a", isolationKey: "b" },
+              secondIdempotencyKey: "c:d",
+            },
+            {
+              first: { tenantId: "tenant", isolationKey: "west:blue" },
+              firstIdempotencyKey: "welcome",
+              second: { tenantId: "tenant:west", isolationKey: "blue" },
+              secondIdempotencyKey: "welcome",
+            },
+          ] as const;
+
+          for (const [index, vector] of collisionVectors.entries()) {
+            const first = await store.record(
+              createIntent({
+                tenant: vector.first,
+                idempotencyKey: vector.firstIdempotencyKey,
+                payload: { vector: index, side: "first" },
+              }),
+              { id: `collision-${index}-first`, now },
+            );
+            const second = await store.record(
+              createIntent({
+                tenant: vector.second,
+                idempotencyKey: vector.secondIdempotencyKey,
+                payload: { vector: index, side: "second" },
+              }),
+              { id: `collision-${index}-second`, now },
+            );
+
+            assertEqual(first.id, `collision-${index}-first`, "first scope must create its record");
+            assertEqual(
+              second.id,
+              `collision-${index}-second`,
+              "delimiter-bearing scope must create an independent record",
+            );
+            assertEqual(
+              second.payload.side,
+              "second",
+              "delimiter-bearing scope must preserve its own payload",
+            );
+          }
+
+          assertEqual(
+            (await options.listRecords(store)).length,
+            collisionVectors.length * 2,
+            "every structured idempotency scope must remain distinct",
+          );
+        },
+      },
+      {
         name: "rejects explicit record id reuse across idempotency scopes",
         run: async () => {
           const store = await options.createStore();
@@ -415,6 +473,34 @@ export function createTransactionalOutboxStoreContractSuite<
             "tenant-a",
             "claimed record must match requested tenant",
           );
+        },
+      },
+      {
+        name: "keeps delimiter-bearing tenant claim boundaries distinct",
+        run: async () => {
+          const store = await options.createStore();
+          const now = new Date("2026-01-01T00:00:00.000Z");
+          const requestedTenant = { tenantId: "tenant:west", isolationKey: "blue" };
+          const collidingTenant = { tenantId: "tenant", isolationKey: "west:blue" };
+
+          await store.record(
+            createIntent({ tenant: requestedTenant, idempotencyKey: "requested" }),
+            { id: "requested", now },
+          );
+          await store.record(
+            createIntent({ tenant: collidingTenant, idempotencyKey: "colliding" }),
+            { id: "colliding", now },
+          );
+
+          const claimed = await store.claimBatch({
+            limit: 10,
+            now,
+            visibilityTimeoutMs: 1_000,
+            tenant: requestedTenant,
+          });
+
+          assertEqual(claimed.length, 1, "claim batch must exclude delimiter-colliding tenants");
+          assertEqual(claimed[0].id, "requested", "claim batch must match the structured tenant");
         },
       },
       {
