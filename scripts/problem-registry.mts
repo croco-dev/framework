@@ -2304,6 +2304,16 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "outbox-core/claim-configuration-invalid": recovery({
+    cause:
+      "An outbox dispatcher requested a visibility lease that is not a positive safe-integer duration with a representable expiry.",
+    userAction: "Ask the operator to correct visibilityTimeoutMs before retrying outbox dispatch.",
+    operatorAction:
+      "Correct dispatcher lease configuration and verify every store validates claim options before reading or mutating claim state.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "outbox-core/record-id-conflict": recovery({
     cause:
       "A caller tried to create an outbox record with an explicit id that already belongs to another idempotency scope.",

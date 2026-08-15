@@ -51,6 +51,44 @@ describe("TransactionalOutboxStore contract", () => {
     await expect(store.listRecords()).resolves.toEqual([]);
   });
 
+  it("snapshots claim options before queued execution", async () => {
+    const store = new InMemoryTransactionalOutboxStore();
+    const unitOfWorkReady = createDeferred<void>();
+    const releaseUnitOfWork = createDeferred<void>();
+    const now = new Date("2026-01-01T00:00:00.000Z");
+    await store.record(createIntent("claim-options-snapshot"), {
+      id: "claim-options-snapshot",
+      now,
+    });
+
+    const unitOfWork = store.runInUnitOfWork(async () => {
+      unitOfWorkReady.resolve(undefined);
+      await releaseUnitOfWork.promise;
+    });
+    await unitOfWorkReady.promise;
+
+    const claimOptions = {
+      limit: 1,
+      now,
+      visibilityTimeoutMs: 1_000,
+      dispatcherId: "dispatcher-a",
+    };
+    const claim = store.claimBatch(claimOptions);
+    claimOptions.visibilityTimeoutMs = 0;
+    claimOptions.dispatcherId = "dispatcher-b";
+    now.setTime(Date.parse("2026-01-02T00:00:00.000Z"));
+    releaseUnitOfWork.resolve(undefined);
+
+    const [claimed] = await claim;
+    await unitOfWork;
+
+    expect(claimed.claim).toMatchObject({
+      dispatcherId: "dispatcher-a",
+      claimedAt: new Date("2026-01-01T00:00:00.000Z"),
+      expiresAt: new Date("2026-01-01T00:00:01.000Z"),
+    });
+  });
+
   it("rejects root mutations started from an active Unit of Work callback", async () => {
     const cases: ReadonlyArray<{
       readonly name: string;

@@ -350,6 +350,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`OnboardingDefinitionNotFoundProblem`](/api/onboarding-core/src/classes/onboardingdefinitionnotfoundproblem/)
 - [`OnboardingStepCompletionConflictProblem`](/api/onboarding-core/src/classes/onboardingstepcompletionconflictproblem/)
 - [`OnboardingStepNotFoundProblem`](/api/onboarding-core/src/classes/onboardingstepnotfoundproblem/)
+- [`OutboxClaimConfigurationProblem`](/api/outbox-core/src/classes/outboxclaimconfigurationproblem/)
 - [`OutboxDispatchProblem`](/api/outbox-core/src/classes/outboxdispatchproblem/)
 - [`OutboxFailureMetadataProblem`](/api/outbox-core/src/classes/outboxfailuremetadataproblem/)
 - [`OutboxRecordIdConflictProblem`](/api/outbox-core/src/classes/outboxrecordidconflictproblem/)

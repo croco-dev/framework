@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { Problem } from "@croco/problems-core";
+import { assertValidClaimBatchOptions } from "./claimValidation";
 import {
   createOutboxFailureProblemExtensions,
   OutboxFailureMetadataProblem,
@@ -245,12 +246,19 @@ export class InMemoryTransactionalOutboxStore implements TransactionalOutboxStor
   async claimBatch(
     options: ClaimBatchOptions<InMemoryTransactionalOutboxStoreClient>,
   ): Promise<ClaimedOutboxRecord[]> {
-    if (!options.context) {
+    const claimOptions: ClaimBatchOptions<InMemoryTransactionalOutboxStoreClient> = {
+      ...options,
+      now: new Date(options.now.getTime()),
+      ...(options.tenant ? { tenant: { ...options.tenant } } : {}),
+    };
+    assertValidClaimBatchOptions(claimOptions);
+
+    if (!claimOptions.context) {
       this.assertNoActiveUnitOfWorkRootMutation();
-      return this.enqueue(() => this.claimBatchInState(this.rootState, options));
+      return this.enqueue(() => this.claimBatchInState(this.rootState, claimOptions));
     }
 
-    return this.claimBatchInState(this.resolveState(options.context), options);
+    return this.claimBatchInState(this.resolveState(claimOptions.context), claimOptions);
   }
 
   async markDispatched(id: string, result: DispatchResult): Promise<void> {
