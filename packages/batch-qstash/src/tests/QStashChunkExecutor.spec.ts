@@ -501,6 +501,44 @@ describe("QStashChunkExecutor continuation execution", () => {
     expect(claim).not.toHaveBeenCalled();
   });
 
+  it.each([
+    0,
+    -1,
+    1.5,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    Number.NEGATIVE_INFINITY,
+    Number.MAX_SAFE_INTEGER + 1,
+  ])(
+    "rejects invalid chunk size %s before acquiring a claim or performing batch work",
+    async (chunkSize) => {
+      const harness = createHarness();
+      const execution = await harness.createExecution();
+      const claim = vi.spyOn(harness.manager, "claimContinuation");
+      const stage = vi.spyOn(harness.manager, "stageContinuation");
+      const complete = vi.spyOn(harness.manager, "completeContinuation");
+      const reader = createCheckpointReader([1]);
+      const writer = createWriter();
+
+      await expect(
+        harness.executor.executeChunk(execution.id, createStep(reader, writer, chunkSize)),
+      ).rejects.toMatchObject({
+        code: "batch-qstash/invalid-publish-request",
+        detail: `QStash batch step.chunkSize must be a positive safe integer; received ${String(chunkSize)}.`,
+      });
+
+      expect(claim).not.toHaveBeenCalled();
+      expect(stage).not.toHaveBeenCalled();
+      expect(complete).not.toHaveBeenCalled();
+      expect(reader.read).not.toHaveBeenCalled();
+      expect(reader.getCheckpoint).not.toHaveBeenCalled();
+      expect(reader.restoreCheckpoint).not.toHaveBeenCalled();
+      expect(writer.write).not.toHaveBeenCalled();
+      expect(writer.writeIdempotent).not.toHaveBeenCalled();
+      expect(harness.publishJSON).not.toHaveBeenCalled();
+    },
+  );
+
   it("accepts the documented dual ItemWriter and QStash writer shape", () => {
     const writer: ItemWriter<number> & {
       writeIdempotent(items: number[], context: QStashIdempotentWriteContext): Promise<void>;
