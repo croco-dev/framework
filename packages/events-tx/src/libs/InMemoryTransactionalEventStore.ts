@@ -135,7 +135,7 @@ function compareDates(left: Date, right: Date): number {
 }
 
 function inboxStorageKey(consumerId: string, inboxKey: string): string {
-  return `${consumerId}:${inboxKey}`;
+  return JSON.stringify([consumerId, inboxKey]);
 }
 
 function getAbortError(signal?: AbortSignal): Error | null {
