@@ -7664,6 +7664,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "createHealthScoreStoreConformanceSuite",
+              "exportKind": "named",
+              "source": "./libs/conformance",
+              "declarationKind": "function"
+            },
+            {
               "name": "CustomerHealthService",
               "exportKind": "named",
               "source": "./libs/CustomerHealthService",
@@ -7796,6 +7802,21 @@
               "exportKind": "declaration",
               "source": "./libs/types",
               "declarationKind": "type"
+            },
+            {
+              "name": "HealthScoreStoreConformanceCase",
+              "exportKind": "named",
+              "source": "./libs/conformance"
+            },
+            {
+              "name": "HealthScoreStoreConformanceOptions",
+              "exportKind": "named",
+              "source": "./libs/conformance"
+            },
+            {
+              "name": "HealthScoreStoreConformanceSuite",
+              "exportKind": "named",
+              "source": "./libs/conformance"
             },
             {
               "name": "HealthTransitionEventIntent",

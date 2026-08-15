@@ -1,8 +1,21 @@
 import { describe, expect, it } from "vitest";
-import type { HealthTransitionEventIntent, TenantHealthScore } from "../index";
+import {
+  createHealthScoreStoreConformanceSuite,
+  type HealthTransitionEventIntent,
+  type TenantHealthScore,
+} from "../index";
 import { InMemoryHealthScoreStore } from "../libs/InMemoryHealthScoreStore";
 
 describe("InMemoryHealthScoreStore", () => {
+  const conformance = createHealthScoreStoreConformanceSuite({
+    createStore: () => new InMemoryHealthScoreStore(),
+  });
+
+  for (const testCase of conformance.cases) {
+    // oxlint-disable-next-line jest/valid-title -- exported conformance cases own stable names
+    it(testCase.name, testCase.run);
+  }
+
   it("rejects event identity reuse instead of committing a score without its intent", async () => {
     const store = new InMemoryHealthScoreStore();
     const first = score(90, "healthy", "2026-03-15T10:00:00Z");

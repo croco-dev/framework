@@ -68,7 +68,7 @@ export class InMemoryHealthScoreStore extends HealthScoreStore {
     if (limit <= 0) {
       return [];
     }
-    return history.slice(-limit);
+    return history.slice(-limit).reverse();
   }
 
   async findHistoryByPeriod(
