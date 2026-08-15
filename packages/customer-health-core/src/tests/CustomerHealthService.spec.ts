@@ -384,9 +384,10 @@ describe("CustomerHealthService", () => {
 
     const history = await store.findHistory("tenant-1", 10);
     expect(history.map(({ overallScore }) => overallScore)).toHaveLength(3);
-    const expectedStatusTransitions = history
+    const chronologicalHistory = [...history].reverse();
+    const expectedStatusTransitions = chronologicalHistory
       .slice(1)
-      .map((current, index) => ({ previous: history[index], current }))
+      .map((current, index) => ({ previous: chronologicalHistory[index], current }))
       .filter(({ previous, current }) => previous?.status !== current.status)
       .map(({ previous, current }) => [previous?.status, current.status, current.overallScore]);
     const actualStatusTransitions = deliveredEvents

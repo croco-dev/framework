@@ -1,10 +1,23 @@
-import type { HealthTransitionEventIntent, TenantHealthScore } from "@croco/customer-health-core";
+import {
+  createHealthScoreStoreConformanceSuite,
+  type HealthTransitionEventIntent,
+  type TenantHealthScore,
+} from "@croco/customer-health-core";
 import { describe, expect, it, vi } from "vitest";
 import { DrizzleHealthScoreStore } from "../libs/DrizzleHealthScoreStore";
 import type { DrizzleHealthClient } from "../libs/DrizzleHealthScoreStore";
 import { tenantHealthEventIntents, tenantHealthScores } from "../libs/schema";
 
 describe("DrizzleHealthScoreStore", () => {
+  const conformance = createHealthScoreStoreConformanceSuite({
+    createStore: () => new DrizzleHealthScoreStore(createStatefulClient()),
+  });
+
+  for (const testCase of conformance.cases) {
+    // oxlint-disable-next-line jest/valid-title -- exported conformance cases own stable names
+    it(testCase.name, testCase.run);
+  }
+
   it("persists the score and transition intents in one transaction", async () => {
     const scoreReturning = vi.fn().mockResolvedValue([{ transitionSequence: BigInt(1) }]);
     const scoreValues = vi.fn().mockReturnValue({ returning: scoreReturning });
@@ -154,12 +167,68 @@ function createTransaction(
   );
 }
 
+function createStatefulClient(): DrizzleHealthClient {
+  const rows: Array<TenantHealthScore & { transitionSequence: bigint }> = [];
+  let transitionSequence = BigInt(0);
+  const select = () => ({
+    from: () => ({
+      where: () => ({
+        orderBy: (...ordering: unknown[]) => ({
+          limit: (limit: number) => {
+            const primaryOrdering = ordering[0];
+            const transitionSequenceDescending =
+              containsQueryChunk(primaryOrdering, tenantHealthScores.transitionSequence) &&
+              containsQueryText(primaryOrdering, " desc");
+            if (!transitionSequenceDescending) {
+              throw new Error("Expected transition sequence descending order");
+            }
+            const ordered = [...rows];
+            ordered.reverse();
+            return Promise.resolve(ordered.slice(0, limit));
+          },
+        }),
+      }),
+    }),
+  });
+  const client = {
+    select,
+    execute: vi.fn().mockResolvedValue(undefined),
+    insert: (table: unknown) => ({
+      values: (value: TenantHealthScore) => {
+        if (table !== tenantHealthScores) return Promise.resolve(undefined);
+        return {
+          returning: () => {
+            transitionSequence += BigInt(1);
+            rows.push({ ...value, transitionSequence });
+            return Promise.resolve([{ transitionSequence }]);
+          },
+        };
+      },
+    }),
+    transaction: async (run: (tx: DrizzleHealthClient) => Promise<unknown>) => run(client),
+  } as unknown as DrizzleHealthClient;
+  return client;
+}
+
 function containsQueryChunk(value: unknown, target: unknown): boolean {
   if (value === target) return true;
   if (!value || typeof value !== "object" || !("queryChunks" in value)) return false;
   const queryChunks = value.queryChunks;
   return (
     Array.isArray(queryChunks) && queryChunks.some((chunk) => containsQueryChunk(chunk, target))
+  );
+}
+
+function containsQueryText(value: unknown, target: string): boolean {
+  if (!value || typeof value !== "object") return false;
+  if ("value" in value) {
+    const content = value.value;
+    if (Array.isArray(content) && content.some((part) => part === target)) return true;
+  }
+  if (!("queryChunks" in value)) return false;
+  const queryChunks = value.queryChunks;
+  return (
+    Array.isArray(queryChunks) && queryChunks.some((chunk) => containsQueryText(chunk, target))
   );
 }
 
