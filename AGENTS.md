@@ -28,6 +28,9 @@ pnpm typecheck          # 전체 패키지
 pnpm --filter @croco/events-core typecheck  # 단일 패키지
 ```
 
+`pnpm check`의 로컬 Markdown/JSON 검증 보고서는 작업트리를 변경하지 않도록 OS 임시 디렉터리에 저장한다.
+CI와 release workflow는 업로드할 보고서 경로를 `--output-dir`로 명시한다.
+
 ## Croco Design Principles
 
 Croco는 런타임에서 추측하게 하지 않고, 빌드타임에 의도를 명시하고 검증하며, 사람과 LLM이 모두 이해 가능한 실행 가능한 계약을 중심으로 동작하는 프레임워크다. 구현 판단은 아래 기준을 따른다.

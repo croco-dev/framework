@@ -199,6 +199,11 @@ jobs:
           VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}
         run: |
           args=(--profile "$VERIFICATION_PROFILE" --allow-pending-release-metadata)
+          if [ "$VERIFICATION_PROFILE" = "spine" ]; then
+            args+=(--output-dir ci-reports/release)
+          else
+            args+=(--output-dir "ci-reports/verification/${VERIFICATION_PROFILE}")
+          fi
           args+=(--base "$VERIFICATION_BASE" --head HEAD)
           if [ "$CROCO_CACHEABLE_FAILURE_CLASS" != "none" ]; then
             args+=(--full-selection)
