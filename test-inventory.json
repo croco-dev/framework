@@ -416,6 +416,12 @@
       "owner": "@croco/batch-core"
     },
     {
+      "path": "packages/batch-core/src/tests/JobBuilder.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/batch-core"
+    },
+    {
       "path": "packages/batch-qstash/src/tests/QStashChunkExecutor.spec.ts",
       "lane": "fast",
       "qualifiers": [],
