@@ -6,6 +6,7 @@ import {
   SagaDefinitionProblem,
   SagaExecutionFailedProblem,
   InMemorySagaStore,
+  SagaListPaginationProblem,
   SagaRunner,
   type SagaDefinition,
   type SagaStore,
@@ -77,6 +78,24 @@ function createMockTracer(spanNames: string[], span: Span): Tracer {
 describe("SagaRunner", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it("rejects invalid pagination before querying a configured store", async () => {
+    const delegate = new InMemorySagaStore();
+    const list = vi.fn((options) => delegate.list(options));
+    const store: SagaStore = {
+      create: (params) => delegate.create(params),
+      findById: (id) => delegate.findById(id),
+      findByIdempotencyKey: (sagaName, key) => delegate.findByIdempotencyKey(sagaName, key),
+      update: (id, data) => delegate.update(id, data),
+      list,
+    };
+    const runner = new SagaRunner(store);
+
+    await expect(runner.listExecutions({ limit: 0 })).rejects.toBeInstanceOf(
+      SagaListPaginationProblem,
+    );
+    expect(list).not.toHaveBeenCalled();
   });
 
   it("compensates completed steps in reverse order and keeps saga state queryable", async () => {

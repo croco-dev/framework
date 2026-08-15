@@ -4,6 +4,7 @@ export {
   SagaDefinitionProblem,
   SagaExecutionFailedProblem,
   SagaExecutionNotFoundProblem,
+  SagaListPaginationProblem,
   SagaReplayProblem,
   SagaStoreConflictProblem,
   WorkflowDefinitionProblem,
@@ -11,6 +12,7 @@ export {
   WorkflowReplayUnsupportedProblem,
 } from "./libs/problems/WorkflowProblems";
 export { InMemorySagaStore } from "./libs/saga/InMemorySagaStore";
+export { assertValidListSagaExecutionsOptions } from "./libs/saga/assertValidListSagaExecutionsOptions";
 export { SagaRunner } from "./libs/saga/SagaRunner";
 export { WorkflowDiagnosticsProvider } from "./libs/diagnostics/WorkflowDiagnosticsProvider";
 export { WorkflowRegistry } from "./libs/WorkflowRegistry";

@@ -496,6 +496,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`SagaDefinitionProblem`](/api/workflow-core/src/classes/sagadefinitionproblem/)
 - [`SagaExecutionFailedProblem`](/api/workflow-core/src/classes/sagaexecutionfailedproblem/)
 - [`SagaExecutionNotFoundProblem`](/api/workflow-core/src/classes/sagaexecutionnotfoundproblem/)
+- [`SagaListPaginationProblem`](/api/workflow-core/src/classes/sagalistpaginationproblem/)
 - [`SagaReplayProblem`](/api/workflow-core/src/classes/sagareplayproblem/)
 - [`SagaStoreConflictProblem`](/api/workflow-core/src/classes/sagastoreconflictproblem/)
 - [`WorkflowDefinitionProblem`](/api/workflow-core/src/classes/workflowdefinitionproblem/)

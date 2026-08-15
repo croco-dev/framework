@@ -180,7 +180,9 @@ export type ListSagaExecutionsOptions = {
   readonly sagaName?: string;
   readonly status?: SagaExecutionStatus;
   readonly replayOf?: string | null;
+  /** Positive integer maximum number of executions to return. */
   readonly limit?: number;
+  /** Non-negative integer number of executions to skip. */
   readonly offset?: number;
 };
 

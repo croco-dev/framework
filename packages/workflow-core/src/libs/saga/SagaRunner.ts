@@ -6,6 +6,7 @@ import {
   SagaReplayProblem,
 } from "../problems/WorkflowProblems";
 import { InMemorySagaStore } from "./InMemorySagaStore";
+import { assertValidListSagaExecutionsOptions } from "./assertValidListSagaExecutionsOptions";
 import type {
   ListSagaExecutionsOptions,
   ReplaySagaParams,
@@ -153,6 +154,7 @@ export class SagaRunner {
   }
 
   async listExecutions(options?: ListSagaExecutionsOptions): Promise<SagaExecution[]> {
+    assertValidListSagaExecutionsOptions(options);
     return this.store.list(options);
   }
 

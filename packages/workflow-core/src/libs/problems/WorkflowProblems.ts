@@ -98,6 +98,24 @@ export class SagaStoreConflictProblem extends Problem {
   }
 }
 
+export class SagaListPaginationProblem extends Problem {
+  constructor(field: "limit" | "offset", value: number) {
+    const requirement = field === "limit" ? "a positive integer" : "a non-negative integer";
+    super(
+      "workflow-core/saga-list-pagination-invalid",
+      ProblemCategory.BadRequest,
+      `Saga list ${field} must be ${requirement}`,
+      {
+        extensions: {
+          field,
+          receivedValue: String(value),
+          retryable: false,
+        },
+      },
+    );
+  }
+}
+
 export class SagaReplayProblem extends Problem {
   constructor(executionId: string, message: string) {
     super(
