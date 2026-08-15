@@ -128,6 +128,37 @@ describe("test evidence reconciliation", () => {
     ]);
   });
 
+  it("does not require unselected generated tests in a publish profile", () => {
+    const generatedInventory: TestInventory = {
+      version: 1,
+      exceptions: [],
+      tests: [
+        {
+          path: "packages/create-croco-app/templates/a/src/tests/a.spec.ts",
+          lane: "generated-app",
+          qualifiers: [],
+          owner: "create-croco-app",
+          generated: {
+            sourcePath: "packages/create-croco-app/templates/a/src/tests/a.spec.ts",
+            generatedPath: "src/tests/a.spec.ts",
+          },
+        },
+      ],
+    };
+
+    const report = reconcileTestEvidence({
+      inventory: generatedInventory,
+      profile: "publish",
+      reports: [],
+      requiredGeneratedPaths: [],
+    });
+
+    expect(report.diagnostics).toEqual([]);
+    expect(report.entries).toEqual([
+      expect.objectContaining({ requirement: "N/A", state: "not-run" }),
+    ]);
+  });
+
   it("rejects lane evidence produced from a stale inventory", () => {
     expect(() =>
       reconcileTestEvidence({

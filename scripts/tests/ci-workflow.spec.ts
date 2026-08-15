@@ -311,8 +311,10 @@ describe("Phase B cacheable verification shadow", () => {
     expect(security).toContain('NPM_CONFIG_PROVENANCE: "true"');
 
     const packages = workflowJob("package-artifacts");
-    expect(packages).toContain('if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then');
-    expect(packages).toContain("lane_args+=(--allow-pending-release-metadata)");
+    expect(packages).toContain("lane_args=(--allow-pending-release-metadata)");
+    expect(packages).not.toContain(
+      'if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then\n            lane_args+=(--allow-pending-release-metadata)',
+    );
     expect(packages).toContain('"${lane_args[@]}"');
   });
 
@@ -433,8 +435,10 @@ describe("CI verification profile contract", () => {
     expect(WORKFLOW.match(/scripts\/release-spine-evidence\.mts/g)).toHaveLength(1);
     expect(WORKFLOW).toContain("validate:\n    needs: changes");
     expect(WORKFLOW).toContain("VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}");
-    expect(WORKFLOW).toContain('args=(--profile "$VERIFICATION_PROFILE")');
     expect(WORKFLOW).toContain(
+      'args=(--profile "$VERIFICATION_PROFILE" --allow-pending-release-metadata)',
+    );
+    expect(WORKFLOW).not.toContain(
       'if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then\n            args+=(--allow-pending-release-metadata)',
     );
     expect(WORKFLOW).toContain('args+=(--base "$VERIFICATION_BASE" --head HEAD)');
