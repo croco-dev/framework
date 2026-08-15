@@ -92,9 +92,7 @@ describe("SagaRunner", () => {
     };
     const runner = new SagaRunner(store);
 
-    await expect(runner.listExecutions({ limit: 0 })).rejects.toBeInstanceOf(
-      SagaListPaginationProblem,
-    );
+    await expect(runner.listExecutions({ limit: 0 })).rejects.toThrow(SagaListPaginationProblem);
     expect(list).not.toHaveBeenCalled();
   });
 

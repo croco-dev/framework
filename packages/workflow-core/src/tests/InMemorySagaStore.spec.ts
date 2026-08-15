@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
-import {
-  InMemorySagaStore,
-  SagaListPaginationProblem,
-  type ListSagaExecutionsOptions,
-} from "../index";
+import { InMemorySagaStore, SagaListPaginationProblem } from "../index";
+import type { ListSagaExecutionsOptions } from "../index";
 
 type PaginationField = "limit" | "offset";
 
@@ -30,8 +27,10 @@ describe("InMemorySagaStore", () => {
     async ({ field, value }) => {
       const store = new InMemorySagaStore();
       const options = { [field]: value } as ListSagaExecutionsOptions;
+      const result = store.list(options);
 
-      await expect(store.list(options)).rejects.toMatchObject({
+      await expect(result).rejects.toThrow(SagaListPaginationProblem);
+      await expect(result).rejects.toMatchObject({
         code: "workflow-core/saga-list-pagination-invalid",
         extensions: {
           field,
@@ -39,7 +38,6 @@ describe("InMemorySagaStore", () => {
           retryable: false,
         },
       });
-      await expect(store.list(options)).rejects.toBeInstanceOf(SagaListPaginationProblem);
     },
   );
 
