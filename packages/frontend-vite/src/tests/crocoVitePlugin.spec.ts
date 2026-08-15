@@ -4,21 +4,27 @@ import type { Plugin, PluginOption } from "vite";
 import { crocoVitePlugin } from "../libs/crocoVitePlugin";
 import { MissingCloudflareVitePluginProblem } from "../libs/problems/MissingCloudflareVitePluginProblem";
 
+const REAL_CLOUDFLARE_PLUGIN_LOAD_TIMEOUT_MS = 30_000;
+
 describe("crocoVitePlugin", () => {
   afterEach(() => {
     vi.doUnmock("@cloudflare/vite-plugin");
     vi.resetModules();
   });
 
-  it("should return plugins array with cloudflare by default", async () => {
-    const plugins = await resolvePluginOptions(crocoVitePlugin());
+  it(
+    "should return plugins array with cloudflare by default",
+    async () => {
+      const plugins = await resolvePluginOptions(crocoVitePlugin());
 
-    expect(Array.isArray(plugins)).toBe(true);
-    expect(plugins.length).toBeGreaterThan(0);
+      expect(Array.isArray(plugins)).toBe(true);
+      expect(plugins.length).toBeGreaterThan(0);
 
-    const hasCloudflare = plugins.some((p) => p.name?.includes("cloudflare"));
-    expect(hasCloudflare).toBe(true);
-  });
+      const hasCloudflare = plugins.some((p) => p.name?.includes("cloudflare"));
+      expect(hasCloudflare).toBe(true);
+    },
+    REAL_CLOUDFLARE_PLUGIN_LOAD_TIMEOUT_MS,
+  );
 
   it("should exclude cloudflare plugin when cloudflare: false", () => {
     const plugins = crocoVitePlugin({ cloudflare: false });

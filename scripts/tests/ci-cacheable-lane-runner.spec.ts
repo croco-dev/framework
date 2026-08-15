@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import {
   existsSync,
   lstatSync,
@@ -516,6 +517,67 @@ describe("cacheable producer lane evidence", () => {
         runner: mutatingRunner,
       }),
     ).rejects.toMatchObject({ code: "EXACT_CACHE_REVALIDATION_FAILED" });
+  });
+
+  it("canonicalizes symbolic cache refs before binding lane commands", async () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "croco-cacheable-lane-symbolic-ref-"));
+    const cacheDir = join(rootDir, ".cache", "package-artifacts");
+    const packageManifest = join(rootDir, "packages", "testing", "package.json");
+    mkdirSync(dirname(packageManifest), { recursive: true });
+    execFileSync("git", ["init", "--quiet"], { cwd: rootDir });
+    execFileSync("git", ["config", "user.email", "ci@example.invalid"], { cwd: rootDir });
+    execFileSync("git", ["config", "user.name", "CI Fixture"], { cwd: rootDir });
+    writeFileSync(packageManifest, '{"name":"@croco/testing"}\n');
+    execFileSync("git", ["add", "."], { cwd: rootDir });
+    execFileSync("git", ["commit", "--quiet", "-m", "base"], { cwd: rootDir });
+    const baseSha = execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd: rootDir,
+      encoding: "utf8",
+    }).trim();
+    writeFileSync(packageManifest, '{"name":"@croco/testing","private":true}\n');
+    execFileSync("git", ["add", "."], { cwd: rootDir });
+    execFileSync("git", ["commit", "--quiet", "-m", "head"], { cwd: rootDir });
+    const headSha = execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd: rootDir,
+      encoding: "utf8",
+    }).trim();
+    vi.stubEnv("GITHUB_SHA", headSha);
+    vi.stubEnv("GITHUB_RUN_ID", "12345");
+    vi.stubEnv("GITHUB_RUN_ATTEMPT", "1");
+    const coldIdentity = { ...identity("publish", "12345", 1), commitSha: headSha };
+    const changedFiles = ["packages/testing/package.json"];
+
+    const cold = await runCacheableLane({
+      identity: coldIdentity,
+      lane: "package-artifacts",
+      profile: "publish",
+      rootDir,
+      base: baseSha,
+      head: headSha,
+      changedFiles,
+      cacheDir,
+      clock: ARTIFACT_FRESHNESS_CLOCK,
+      runner: successfulRunner(rootDir),
+    });
+    expect(cold.cacheHit).toBe(false);
+
+    vi.stubEnv("GITHUB_RUN_ID", "67890");
+    vi.stubEnv("GITHUB_RUN_ATTEMPT", "2");
+    const hit = await runCacheableLane({
+      identity: { ...coldIdentity, runId: "67890", runAttempt: 2 },
+      lane: "package-artifacts",
+      profile: "publish",
+      rootDir,
+      base: "HEAD^",
+      head: "HEAD",
+      changedFiles,
+      cacheDir,
+      cacheOrigin: "github-exact-key",
+      clock: ARTIFACT_FRESHNESS_CLOCK,
+      runner: successfulRunner(rootDir),
+    });
+
+    expect(hit.cacheHit).toBe(true);
   });
 
   it("restores a generated-app cache when an optional artifact was not produced", async () => {
