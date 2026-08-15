@@ -19,9 +19,14 @@ import { R2StorageProvider } from "../libs/R2StorageProvider";
 import type { R2Options } from "../libs/types";
 
 const mockSend = vi.fn();
+const mockClientConstructor = vi.fn();
 
 vi.mock("@aws-sdk/client-s3", () => ({
   S3Client: class {
+    constructor() {
+      mockClientConstructor();
+    }
+
     send = mockSend;
   },
   GetObjectCommand: class {
@@ -84,6 +89,7 @@ describe("R2StorageProvider", () => {
   beforeEach(() => {
     Container.reset();
     mockSend.mockReset();
+    mockClientConstructor.mockReset();
     vi.mocked(getSignedUrl).mockClear();
 
     configService = {
@@ -122,6 +128,22 @@ describe("R2StorageProvider", () => {
   });
 
   describe("constructor", () => {
+    it("rejects blank configuration before constructing an R2 client", () => {
+      mockClientConstructor.mockClear();
+      vi.mocked(configService.get).mockImplementation((key: string) => {
+        if (key === "R2_SECRET_ACCESS_KEY") {
+          return " \t\n ";
+        }
+
+        return defaultEnvs[key];
+      });
+
+      expect(() => new R2StorageProvider(configService, logger)).toThrow(
+        "Missing required R2 configuration: R2_SECRET_ACCESS_KEY",
+      );
+      expect(mockClientConstructor).not.toHaveBeenCalled();
+    });
+
     it.each([["R2_ACCOUNT_ID"], ["R2_ACCESS_KEY_ID"], ["R2_SECRET_ACCESS_KEY"], ["R2_BUCKET"]])(
       "should throw MissingR2ConfigProblem when %s is missing",
       (missingKey) => {
