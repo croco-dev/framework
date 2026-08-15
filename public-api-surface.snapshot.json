@@ -9426,6 +9426,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "OutboxMessageIdConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/EventsTxProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "OutboxPublishExhaustedProblem",
               "exportKind": "named",
               "source": "./libs/problems/EventsTxProblems",

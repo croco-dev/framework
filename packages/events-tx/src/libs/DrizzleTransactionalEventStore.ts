@@ -26,6 +26,7 @@ import { findOutboxIdempotencyConflicts } from "./OutboxIdempotency";
 import {
   InboxClaimConflictProblem,
   OutboxIdempotencyConflictProblem,
+  OutboxMessageIdConflictProblem,
   OutboxStorageProblem,
 } from "./problems/EventsTxProblems";
 import { transactionalInboxRecords, transactionalOutboxMessages } from "./schema";
@@ -34,7 +35,7 @@ type AwaitableRows = PromiseLike<unknown[]>;
 
 type InsertQuery = {
   values(values: Record<string, unknown>): {
-    onConflictDoNothing(config: { target: unknown }): {
+    onConflictDoNothing(config?: { target: unknown }): {
       returning(): AwaitableRows;
     };
     returning(): AwaitableRows;
@@ -362,6 +363,11 @@ export class DrizzleTransactionalEventStore<
       return existing;
     }
 
+    const occupied = await this.findOutboxById(input.id, context);
+    if (occupied) {
+      throw new OutboxMessageIdConflictProblem(input.id);
+    }
+
     const [inserted] = await this.client(context)
       .insert(this.outbox)
       .values({
@@ -387,7 +393,7 @@ export class DrizzleTransactionalEventStore<
         deadLetterReason: null,
         diagnostics: input.diagnostics ?? [],
       })
-      .onConflictDoNothing({ target: this.outbox.idempotencyKey })
+      .onConflictDoNothing()
       .returning();
 
     if (inserted !== undefined) {
@@ -398,6 +404,11 @@ export class DrizzleTransactionalEventStore<
     if (duplicated) {
       this.assertIdempotentReplay(input, duplicated);
       return duplicated;
+    }
+
+    const conflictingId = await this.findOutboxById(input.id, context);
+    if (conflictingId) {
+      throw new OutboxMessageIdConflictProblem(input.id);
     }
 
     throw new OutboxStorageProblem("Failed to insert or resolve outbox message conflict.");

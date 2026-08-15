@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 636,
+  problemCount: 637,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -6422,7 +6422,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-tx/src/libs/problems/EventsTxProblems.ts",
-          line: 120,
+          line: 135,
           column: 3,
           kind: "problem-class",
         },
@@ -6434,6 +6434,36 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       status: 409,
       title: "Conflict",
       cookbookPath: "/reference/problem-recovery-cookbook/#events-tx-outbox-idempotency-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/events-tx/src/libs/problems/EventsTxProblems.ts",
+          line: 98,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "events-tx/outbox-message-id-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#events-tx-outbox-message-id-conflict",
       recovery: {
         cause: "The request conflicts with current state or an idempotency constraint.",
         userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
@@ -6484,7 +6514,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-tx/src/libs/problems/EventsTxProblems.ts",
-          line: 105,
+          line: 120,
           column: 3,
           kind: "problem-class",
         },

@@ -78,6 +78,21 @@ export class OutboxStorageProblem extends Problem {
   }
 }
 
+/** Raised when an outbox message id already belongs to another idempotency key. */
+export class OutboxMessageIdConflictProblem extends Problem {
+  readonly code = "events-tx/outbox-message-id-conflict";
+  readonly category = ProblemCategory.Conflict;
+
+  constructor(readonly id: string) {
+    super(
+      undefined,
+      undefined,
+      `Outbox message id '${id}' already exists for another idempotency key.`,
+      { extensions: { id } },
+    );
+  }
+}
+
 /** Raised when an outbox idempotency key is reused for a different canonical request. */
 export class OutboxIdempotencyConflictProblem extends Problem {
   readonly code = "events-tx/outbox-idempotency-conflict";
