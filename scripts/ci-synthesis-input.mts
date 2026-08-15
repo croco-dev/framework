@@ -616,10 +616,36 @@ function parseBundleSize(value: unknown): BundleSizeWarningReport {
     value.blockingUnmatchedBaselines,
     "bundleSize.blockingUnmatchedBaselines",
   );
+  const expectedCounts = {
+    measuredPackageCount: new Set(artifacts.map(({ packageName }) => packageName)).size,
+    artifactCount: artifacts.filter(({ artifactPath }) => artifactPath !== null).length,
+    missingBaselineCount: artifacts.filter(({ status }) => status === "missing-baseline").length,
+    overBaselineCount: artifacts.filter(({ status }) => status === "over-baseline").length,
+    unmatchedBaselineCount: unmatchedBaselines.length,
+    notBuiltPackageCount: artifacts.filter(({ status }) => status === "not-built").length,
+    spineBlockingRegressionCount: artifacts.filter(
+      ({ blocking, status }) => blocking && status === "over-baseline",
+    ).length,
+    spineBlockingSetupIssueCount: artifacts.filter(
+      ({ blocking, status }) =>
+        blocking && (status === "missing-baseline" || status === "not-built"),
+    ).length,
+    spineBlockingUnmatchedBaselineCount: blockingUnmatchedBaselines.length,
+    nonSpineAdvisoryWarningCount: artifacts.filter(
+      ({ scope, status }) => scope === "non-spine" && status !== "within-baseline",
+    ).length,
+    advisoryWarningCount:
+      artifacts.filter(({ blocking, status }) => !blocking && status !== "within-baseline").length +
+      unmatchedBaselines.length -
+      blockingUnmatchedBaselines.length,
+  };
+  const expectedSpineBlockingIssueCount =
+    expectedCounts.spineBlockingRegressionCount +
+    expectedCounts.spineBlockingSetupIssueCount +
+    expectedCounts.spineBlockingUnmatchedBaselineCount;
   if (
-    counts.artifactCount !== artifacts.length ||
-    counts.unmatchedBaselineCount !== unmatchedBaselines.length ||
-    counts.spineBlockingUnmatchedBaselineCount !== blockingUnmatchedBaselines.length
+    Object.entries(expectedCounts).some(([field, expected]) => counts[field] !== expected) ||
+    counts.spineBlockingIssueCount !== expectedSpineBlockingIssueCount
   ) {
     reject("INVALID_PRODUCER_FACTS", "bundleSize counters do not match their normalized arrays.");
   }

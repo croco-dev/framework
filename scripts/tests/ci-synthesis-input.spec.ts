@@ -345,6 +345,59 @@ describe("cacheable CI synthesis input", () => {
     expect(parseSynthesisInput(result)).toEqual(result);
   });
 
+  it("accepts not-built bundle entries without counting them as measured artifacts", () => {
+    const value = fixture();
+    const current = facts("core-verification") as Extract<
+      ProducerFacts,
+      { lane: "core-verification" }
+    >;
+    replaceProducerArtifact(value, "core-verification", {
+      ...current,
+      bundleSize: {
+        ...current.bundleSize,
+        measuredPackageCount: 1,
+        artifactCount: 0,
+        notBuiltPackageCount: 1,
+        nonSpineAdvisoryWarningCount: 1,
+        advisoryWarningCount: 1,
+        artifacts: [
+          {
+            packageName: "@croco/example",
+            relativeDir: "packages/example",
+            scope: "non-spine",
+            artifactPath: null,
+            baselineKey: null,
+            sizeBytes: null,
+            baselineBytes: null,
+            deltaBytes: null,
+            deltaPercent: null,
+            allowedPositiveDeltaBytes: null,
+            status: "not-built",
+            blocking: false,
+            blockingReason: null,
+            recoveryCommand: "pnpm build",
+          },
+        ],
+      },
+    });
+
+    expect(() => assemble(value)).not.toThrow();
+  });
+
+  it("rejects bundle counters that do not match their semantic artifact subsets", () => {
+    const value = fixture();
+    const current = facts("core-verification") as Extract<
+      ProducerFacts,
+      { lane: "core-verification" }
+    >;
+    replaceProducerArtifact(value, "core-verification", {
+      ...current,
+      bundleSize: { ...current.bundleSize, artifactCount: 1 },
+    });
+
+    expect(() => assemble(value)).toThrow(/bundleSize counters/);
+  });
+
   it("accepts a valid failed producer bundle and propagates its selected failure", () => {
     const value = fixture({ lane: "generated-apps", checkId: "generated-app-smoke" });
     const result = assemble(value);
