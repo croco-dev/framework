@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   InboxClaimConflictProblem,
   OutboxIdempotencyConflictProblem,
+  OutboxMessageIdConflictProblem,
   OutboxPublishExhaustedProblem,
   OutboxStorageProblem,
   OutboxTransactionRequiredProblem,
@@ -65,5 +66,13 @@ describe("EventsTxProblems", () => {
       conflictingFields: ["eventType", "payload"],
     });
     expect(problem.toJSON()).not.toHaveProperty("payload");
+  });
+
+  it("should expose outbox message id conflict evidence", () => {
+    const problem = new OutboxMessageIdConflictProblem("shared-row-id");
+
+    expect(problem.code).toBe("events-tx/outbox-message-id-conflict");
+    expect(problem.category).toBe(ProblemCategory.Conflict);
+    expect(problem.extensions).toEqual({ id: "shared-row-id" });
   });
 });

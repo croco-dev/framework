@@ -1709,7 +1709,7 @@ describe("DrizzleTransactionalEventStore", () => {
     const existing = createOutboxRow({ id: "message-existing" });
     const db = createMockDrizzleDb({
       insertResults: [[]],
-      selectResults: [[], [existing]],
+      selectResults: [[], [], [existing]],
     });
     const store = new DrizzleTransactionalEventStore({
       db,
@@ -1732,7 +1732,7 @@ describe("DrizzleTransactionalEventStore", () => {
       id: "message-existing",
       idempotencyKey: "credit-acct-1",
     });
-    expect(db.conflictTargets).toHaveLength(1);
+    expect(db.conflictTargets).toEqual([undefined]);
   });
 
   it("returns duplicate when a concurrent inbox insert wins the unique key", async () => {
@@ -2444,7 +2444,7 @@ function createMockDrizzleDb(
             if (options.failInsert) {
               throw new Error("root db should not be used");
             }
-            conflictTargets.push(config.target);
+            conflictTargets.push(config?.target);
             inserts.push(values);
             return insertResults.shift() ?? [values];
           },

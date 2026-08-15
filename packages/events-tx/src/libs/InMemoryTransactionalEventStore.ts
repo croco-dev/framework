@@ -26,6 +26,7 @@ import { findOutboxIdempotencyConflicts } from "./OutboxIdempotency";
 import {
   InboxClaimConflictProblem,
   OutboxIdempotencyConflictProblem,
+  OutboxMessageIdConflictProblem,
   OutboxStorageProblem,
 } from "./problems/EventsTxProblems";
 
@@ -234,6 +235,10 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
           this.assertIdempotentReplay(input, existing);
           return cloneOutboxMessage(existing);
         }
+      }
+
+      if (state.outbox.has(input.id)) {
+        throw new OutboxMessageIdConflictProblem(input.id);
       }
 
       const now = input.diagnostics?.[0]?.at ?? new Date();
@@ -620,7 +625,10 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
       stagedState.outbox,
       nextState.outbox,
       cloneOutboxMessage,
-      (key) => new OutboxStorageProblem(`Outbox message '${key}' changed concurrently.`),
+      (key, base, staged, actual) =>
+        base === undefined && staged !== undefined && actual !== undefined
+          ? new OutboxMessageIdConflictProblem(key)
+          : new OutboxStorageProblem(`Outbox message '${key}' changed concurrently.`),
     );
     this.mergeMap(
       baseState.outboxIdByIdempotencyKey,

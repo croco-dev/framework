@@ -11,6 +11,7 @@ import {
 
 type OutboxStoreHarness = {
   store: TransactionalEventStore;
+  appendWithContext: (input: AppendOutboxMessageInput) => Promise<unknown>;
   count: () => Promise<number>;
 };
 
@@ -34,8 +35,11 @@ function createInput(overrides: Partial<AppendOutboxMessageInput> = {}): AppendO
 
 function createInMemoryHarness(): OutboxStoreHarness {
   const store = new InMemoryTransactionalEventStore();
+  const adapter = store.createTxAdapter();
   return {
     store,
+    appendWithContext: (input) =>
+      adapter.transaction((client) => store.appendOutbox(input, { client })),
     count: async () => (await store.listOutboxMessages()).length,
   };
 }
@@ -48,6 +52,38 @@ function createStatefulDrizzleHarness(): OutboxStoreHarness {
     payload: jsonRoundTrip(values.payload),
     metadata: jsonRoundTrip(values.metadata),
   });
+  const matchingRow = (condition: { queryChunks: readonly unknown[] } | undefined): unknown[] => {
+    if (!row || !condition) {
+      return row ? [row] : [];
+    }
+    const column = condition.queryChunks.find(
+      (chunk) =>
+        typeof chunk === "object" &&
+        chunk !== null &&
+        "name" in chunk &&
+        typeof chunk.name === "string",
+    );
+    const parameter = condition.queryChunks.find(
+      (chunk) =>
+        typeof chunk === "object" &&
+        chunk !== null &&
+        "value" in chunk &&
+        !Array.isArray(chunk.value),
+    );
+    if (
+      typeof column !== "object" ||
+      column === null ||
+      !("name" in column) ||
+      typeof column.name !== "string" ||
+      typeof parameter !== "object" ||
+      parameter === null ||
+      !("value" in parameter)
+    ) {
+      return [];
+    }
+    const property = column.name === "idempotency_key" ? "idempotencyKey" : column.name;
+    return row[property] === parameter.value ? [row] : [];
+  };
   const db: DrizzleTransactionalEventStoreDb = {
     insert: () => ({
       values: (values) => ({
@@ -68,10 +104,10 @@ function createStatefulDrizzleHarness(): OutboxStoreHarness {
     }),
     select: () => ({
       from: () => ({
-        where: () => ({
-          limit: async () => (row ? [row] : []),
+        where: (condition) => ({
+          limit: async () => matchingRow(condition),
           orderBy: () => ({
-            limit: async () => (row ? [row] : []),
+            limit: async () => matchingRow(condition),
           }),
         }),
       }),
@@ -90,6 +126,7 @@ function createStatefulDrizzleHarness(): OutboxStoreHarness {
   const store = new DrizzleTransactionalEventStore({ db });
   return {
     store,
+    appendWithContext: (input) => store.appendOutbox(input, { client: db }),
     count: async () => (row ? 1 : 0),
   };
 }
@@ -100,6 +137,43 @@ const implementations = [
 ] as const;
 
 describe.each(implementations)("%s outbox idempotency conformance", (_name, createHarness) => {
+  it.each(["direct", "transaction context"] as const)(
+    "rejects a reused row id before mutation through the %s append path",
+    async (appendPath) => {
+      const harness = createHarness();
+      const first = createInput({
+        id: "shared-row-id",
+        idempotencyKey: "key-first",
+        eventId: "event-first",
+        payload: { event: "first" },
+      });
+      const conflicting = createInput({
+        id: "shared-row-id",
+        idempotencyKey: "key-second",
+        eventId: "event-second",
+        payload: { event: "second" },
+      });
+
+      await harness.store.appendOutbox(first);
+      const append =
+        appendPath === "direct"
+          ? harness.store.appendOutbox(conflicting)
+          : harness.appendWithContext(conflicting);
+
+      await expect(append).rejects.toMatchObject({
+        code: "events-tx/outbox-message-id-conflict",
+        category: "Conflict",
+        extensions: { id: "shared-row-id" },
+      });
+      await expect(harness.store.findOutboxById("shared-row-id")).resolves.toMatchObject(first);
+      await expect(harness.store.findOutboxByIdempotencyKey("key-first")).resolves.toMatchObject(
+        first,
+      );
+      await expect(harness.store.findOutboxByIdempotencyKey("key-second")).resolves.toBeNull();
+      await expect(harness.count()).resolves.toBe(1);
+    },
+  );
+
   it("replays the existing row for an identical canonical request", async () => {
     const harness = createHarness();
     const input = createInput();
@@ -197,6 +271,32 @@ describe.each(implementations)("%s outbox idempotency conformance", (_name, crea
       {
         reason: {
           code: "events-tx/outbox-idempotency-conflict",
+        },
+      },
+    ]);
+    await expect(harness.count()).resolves.toBe(1);
+  });
+
+  it("resolves concurrent row id reuse as one insert and one typed conflict", async () => {
+    const harness = createHarness();
+    const results = await Promise.allSettled([
+      harness.store.appendOutbox(createInput({ id: "shared-row-id", idempotencyKey: "key-first" })),
+      harness.store.appendOutbox(
+        createInput({
+          id: "shared-row-id",
+          idempotencyKey: "key-second",
+          eventId: "event-second",
+          payload: { event: "second" },
+        }),
+      ),
+    ]);
+
+    expect(results.filter(({ status }) => status === "fulfilled")).toHaveLength(1);
+    expect(results.filter(({ status }) => status === "rejected")).toMatchObject([
+      {
+        reason: {
+          code: "events-tx/outbox-message-id-conflict",
+          extensions: { id: "shared-row-id" },
         },
       },
     ]);
@@ -367,6 +467,54 @@ describe("InMemoryTransactionalEventStore transactional idempotency", () => {
       },
     });
     await expect(store.listOutboxMessages()).resolves.toMatchObject([{ id: "message-1" }]);
+  });
+
+  it("reports the row id conflict when different-key transactions race", async () => {
+    const store = new InMemoryTransactionalEventStore();
+    const adapter = store.createTxAdapter();
+    let releaseTransactions = (): void => {};
+    let markReady = (): void => {};
+    const transactionGate = new Promise<void>((resolve) => {
+      releaseTransactions = resolve;
+    });
+    const bothReady = new Promise<void>((resolve) => {
+      markReady = resolve;
+    });
+    let readyCount = 0;
+    const append = (input: AppendOutboxMessageInput): Promise<string> =>
+      adapter.transaction(async (client) => {
+        const result = await store.appendOutbox(input, { client });
+        readyCount += 1;
+        if (readyCount === 2) {
+          markReady();
+        }
+        await transactionGate;
+        return result.id;
+      });
+    const first = append(createInput({ id: "shared-row-id", idempotencyKey: "key-first" }));
+    const second = append(
+      createInput({
+        id: "shared-row-id",
+        idempotencyKey: "key-second",
+        eventId: "event-second",
+        payload: { event: "second" },
+      }),
+    );
+
+    await bothReady;
+    releaseTransactions();
+    const results = await Promise.allSettled([first, second]);
+
+    expect(results.filter(({ status }) => status === "fulfilled")).toHaveLength(1);
+    expect(results.filter(({ status }) => status === "rejected")).toMatchObject([
+      {
+        reason: {
+          code: "events-tx/outbox-message-id-conflict",
+          extensions: { id: "shared-row-id" },
+        },
+      },
+    ]);
+    await expect(store.listOutboxMessages()).resolves.toHaveLength(1);
   });
 
   it.each([

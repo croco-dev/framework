@@ -5,6 +5,7 @@ export {
   InboxClaimConflictProblem,
   InvalidTransactionalEventConfigurationProblem,
   OutboxIdempotencyConflictProblem,
+  OutboxMessageIdConflictProblem,
   OutboxPublishExhaustedProblem,
   OutboxStorageProblem,
   OutboxTransactionRequiredProblem,
