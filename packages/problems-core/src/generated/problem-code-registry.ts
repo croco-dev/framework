@@ -5040,7 +5040,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/customer-health-drizzle/src/libs/problems/DrizzleHealthProblems.ts",
-          line: 4,
+          line: 5,
           column: 3,
           kind: "problem-class",
         },
@@ -8604,7 +8604,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/membership-core/src/libs/problems/MembershipProblems.ts",
-          line: 102,
+          line: 104,
           column: 5,
           kind: "problem-constructor",
         },
@@ -10220,7 +10220,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/membership-core/src/libs/problems/MembershipProblems.ts",
-          line: 112,
+          line: 115,
           column: 5,
           kind: "problem-constructor",
         },
@@ -10250,7 +10250,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/membership-core/src/libs/problems/MembershipProblems.ts",
-          line: 91,
+          line: 92,
           column: 5,
           kind: "problem-constructor",
         },

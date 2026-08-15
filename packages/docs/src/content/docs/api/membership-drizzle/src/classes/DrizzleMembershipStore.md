@@ -37,6 +37,16 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`constructor`](/api/membership-core/src/classes/membershipstore/#constructor)
 
+## Properties
+
+### eventIntentDurability
+
+> `readonly` **eventIntentDurability**: `"persistent"`
+
+#### Overrides
+
+[`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`eventIntentDurability`](/api/membership-core/src/classes/membershipstore/#eventintentdurability)
+
 ## Methods
 
 ### countAll()
@@ -59,7 +69,7 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`countAll`](/api/membership-core/src/classes/membershipstore/#countall)
 
-***
+---
 
 ### countByRole()
 
@@ -85,7 +95,7 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`countByRole`](/api/membership-core/src/classes/membershipstore/#countbyrole)
 
-***
+---
 
 ### delete()
 
@@ -111,7 +121,27 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`delete`](/api/membership-core/src/classes/membershipstore/#delete)
 
-***
+---
+
+### execute()
+
+> **execute**(`command`): `Promise`\<[`MembershipCommandResult`](/api/membership-core/src/type-aliases/membershipcommandresult/)\>
+
+#### Parameters
+
+##### command
+
+[`MembershipCommand`](/api/membership-core/src/type-aliases/membershipcommand/)
+
+#### Returns
+
+`Promise`\<[`MembershipCommandResult`](/api/membership-core/src/type-aliases/membershipcommandresult/)\>
+
+#### Overrides
+
+[`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`execute`](/api/membership-core/src/classes/membershipstore/#execute)
+
+---
 
 ### findAllByTenant()
 
@@ -133,7 +163,7 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`findAllByTenant`](/api/membership-core/src/classes/membershipstore/#findallbytenant)
 
-***
+---
 
 ### findAllByUser()
 
@@ -155,7 +185,7 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`findAllByUser`](/api/membership-core/src/classes/membershipstore/#findallbyuser)
 
-***
+---
 
 ### findByTenantAndUser()
 
@@ -181,7 +211,87 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`findByTenantAndUser`](/api/membership-core/src/classes/membershipstore/#findbytenantanduser)
 
-***
+---
+
+### getPendingEventIntent()
+
+> **getPendingEventIntent**(`idempotencyKey`): `Promise`\<[`MembershipEventIntent`](/api/membership-core/src/type-aliases/membershipeventintent/) \| `null`\>
+
+#### Parameters
+
+##### idempotencyKey
+
+`string`
+
+#### Returns
+
+`Promise`\<[`MembershipEventIntent`](/api/membership-core/src/type-aliases/membershipeventintent/) \| `null`\>
+
+#### Overrides
+
+[`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`getPendingEventIntent`](/api/membership-core/src/classes/membershipstore/#getpendingeventintent)
+
+---
+
+### hasExecutedCommand()
+
+> **hasExecutedCommand**(`idempotencyKey`): `Promise`\<`boolean`\>
+
+#### Parameters
+
+##### idempotencyKey
+
+`string`
+
+#### Returns
+
+`Promise`\<`boolean`\>
+
+#### Overrides
+
+[`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`hasExecutedCommand`](/api/membership-core/src/classes/membershipstore/#hasexecutedcommand)
+
+---
+
+### listPendingEventIntents()
+
+> **listPendingEventIntents**(`limit?`): `Promise`\<readonly [`MembershipEventIntent`](/api/membership-core/src/type-aliases/membershipeventintent/)[]\>
+
+#### Parameters
+
+##### limit?
+
+`number` = `100`
+
+#### Returns
+
+`Promise`\<readonly [`MembershipEventIntent`](/api/membership-core/src/type-aliases/membershipeventintent/)[]\>
+
+#### Overrides
+
+[`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`listPendingEventIntents`](/api/membership-core/src/classes/membershipstore/#listpendingeventintents)
+
+---
+
+### markEventIntentPublished()
+
+> **markEventIntentPublished**(`intentId`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### intentId
+
+`string`
+
+#### Returns
+
+`Promise`\<`void`\>
+
+#### Overrides
+
+[`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`markEventIntentPublished`](/api/membership-core/src/classes/membershipstore/#markeventintentpublished)
+
+---
 
 ### mutateOwner()
 
@@ -203,7 +313,7 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`mutateOwner`](/api/membership-core/src/classes/membershipstore/#mutateowner)
 
-***
+---
 
 ### save()
 
@@ -225,7 +335,7 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`save`](/api/membership-core/src/classes/membershipstore/#save)
 
-***
+---
 
 ### transferOwnership()
 

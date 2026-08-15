@@ -49,7 +49,7 @@ title: "SubscriptionActivatedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventId`](/api/events-core/src/classes/domainevent/#eventid)
 
-***
+---
 
 ### eventName
 
@@ -59,13 +59,13 @@ title: "SubscriptionActivatedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventName`](/api/events-core/src/classes/domainevent/#eventname)
 
-***
+---
 
 ### externalSubscriptionId
 
 > `readonly` **externalSubscriptionId**: `string`
 
-***
+---
 
 ### metadata
 
@@ -75,19 +75,19 @@ title: "SubscriptionActivatedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`metadata`](/api/events-core/src/classes/domainevent/#metadata)
 
-***
+---
 
 ### planId
 
 > `readonly` **planId**: `string`
 
-***
+---
 
 ### tenantId
 
 > `readonly` **tenantId**: `string`
 
-***
+---
 
 ### timestamp
 
@@ -97,7 +97,7 @@ title: "SubscriptionActivatedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`timestamp`](/api/events-core/src/classes/domainevent/#timestamp)
 
-***
+---
 
 ### eventName
 
@@ -106,3 +106,19 @@ title: "SubscriptionActivatedEvent"
 #### Overrides
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventName`](/api/events-core/src/classes/domainevent/#eventname-1)
+
+## Methods
+
+### fromPayload()
+
+> `static` **fromPayload**(`payload`): `SubscriptionActivatedEvent`
+
+#### Parameters
+
+##### payload
+
+`Record`\<`string`, `unknown`\>
+
+#### Returns
+
+`SubscriptionActivatedEvent`

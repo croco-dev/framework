@@ -34,6 +34,10 @@ import type {
 
 const DIGEST = "a".repeat(64);
 const COMMIT_SHA = "b".repeat(40);
+const ARTIFACT_FRESHNESS_CLOCK = {
+  nowIso: () => new Date(0).toISOString(),
+  nowMs: () => 0,
+};
 
 function identity(
   profile: "repo" | "spine" | "publish" = "publish",
@@ -105,6 +109,21 @@ function successfulRunner(rootDir: string): CommandRunner {
       stdout: `${command.id} passed`,
       timedOut: false,
     };
+  };
+}
+
+function invalidPublishedLaneRunner(rootDir: string): CommandRunner {
+  const fallback = successfulRunner(rootDir);
+  return async (command, context) => {
+    const result = await fallback(command, context);
+    for (const artifact of command.artifacts ?? []) {
+      if (!artifact.path.endsWith("published-test-lane.json")) continue;
+      writeFileSync(
+        join(rootDir, artifact.path),
+        `${JSON.stringify({ schemaVersion: "croco.test-lane-report/v1" })}\n`,
+      );
+    }
+    return result;
   };
 }
 
@@ -245,11 +264,16 @@ describe("cacheable producer lane planning", () => {
     );
 
     const corePlan = createCacheableLaneExecutionPlan("publish", "core-verification");
-    for (const id of ["typecheck", "test", "integration-test-lane"]) {
-      expect(corePlan.commands.find((command) => command.id === id)?.concurrencyGroup).toBe(
-        "workspace-artifacts",
-      );
-    }
+    expect(
+      corePlan.commands.find((command) => command.id === "typecheck")?.concurrencyGroups,
+    ).toEqual(["workspace-artifacts"]);
+    expect(corePlan.commands.find((command) => command.id === "test")?.concurrencyGroups).toEqual([
+      "test-integration",
+    ]);
+    expect(
+      corePlan.commands.find((command) => command.id === "integration-test-lane")
+        ?.concurrencyGroups,
+    ).toEqual(["workspace-artifacts", "package-entrypoints", "test-integration"]);
   });
 
   it("rejects the synthesis lane as a producer", () => {
@@ -324,17 +348,79 @@ describe("cacheable producer lane evidence", () => {
     expect(result.bundle.receipts).toEqual([]);
   });
 
+  it("emits a deterministic failed producer record and forbids cache reuse", async () => {
+    useCurrentRunEnvironment();
+    const rootDir = mkdtempSync(join(tmpdir(), "croco-cacheable-lane-injected-"));
+    const result = await runCacheableLane({
+      identity: identity(),
+      lane: "coverage-security",
+      profile: "publish",
+      rootDir,
+      runner: successfulRunner(rootDir),
+      securityPhysical: securityPhysical(),
+      injectedFailure: "coverage-security",
+    });
+
+    expect(result.failed).toBe(true);
+    expect(result.bundle.checks.find(({ id }) => id === "security-allowlists")).toMatchObject({
+      outcome: "failed",
+      diagnostics: ["security-allowlists:CACHEABLE_EXPERIMENT_INJECTED_FAILURE"],
+    });
+    await expect(
+      runCacheableLane({
+        identity: identity(),
+        lane: "core-verification",
+        profile: "publish",
+        rootDir: mkdtempSync(join(tmpdir(), "croco-cacheable-lane-injected-cache-")),
+        cacheDir: ".cache",
+        injectedFailure: "core-verification",
+      }),
+    ).rejects.toThrow(/cannot restore or write reusable receipts/);
+  });
+
+  it("forbids change-scoped receipt caching for full-selection runs", async () => {
+    useCurrentRunEnvironment();
+    const rootDir = mkdtempSync(join(tmpdir(), "croco-cacheable-lane-full-selection-cache-"));
+
+    await expect(
+      runCacheableLane({
+        identity: identity(),
+        lane: "core-verification",
+        profile: "publish",
+        rootDir,
+        fullSelection: true,
+        cacheDir: join(rootDir, ".cache", "core-verification"),
+        runner: successfulRunner(rootDir),
+      }),
+    ).rejects.toMatchObject({ code: "FULL_SELECTION_CACHE_FORBIDDEN", category: "input" });
+  });
+
+  it("normalizes invalid lane report parsing and validation failures", async () => {
+    useCurrentRunEnvironment();
+    const rootDir = mkdtempSync(join(tmpdir(), "croco-cacheable-lane-invalid-report-"));
+
+    await expect(
+      runCacheableLane({
+        identity: identity(),
+        lane: "package-artifacts",
+        profile: "publish",
+        rootDir,
+        clock: ARTIFACT_FRESHNESS_CLOCK,
+        runner: invalidPublishedLaneRunner(rootDir),
+      }),
+    ).rejects.toMatchObject({
+      code: "INVALID_LANE_REPORT",
+      category: "contract",
+      message: expect.stringContaining("Test lane evidence has an invalid report shape"),
+    });
+  });
+
   it("restores only an exact-key lane cache and issues current-run attestations", async () => {
     useCurrentRunEnvironment();
     const rootDir = mkdtempSync(join(tmpdir(), "croco-cacheable-lane-exact-hit-"));
     const cacheDir = join(rootDir, ".cache", "package-artifacts");
     const base = "a".repeat(40);
     const changedFiles = ["packages/testing/package.json"];
-    const artifactFreshnessClock = {
-      nowIso: () => new Date(0).toISOString(),
-      nowMs: () => 0,
-    };
-
     const cold = await runCacheableLane({
       identity: identity("publish"),
       lane: "package-artifacts",
@@ -344,7 +430,7 @@ describe("cacheable producer lane evidence", () => {
       head: COMMIT_SHA,
       changedFiles,
       cacheDir,
-      clock: artifactFreshnessClock,
+      clock: ARTIFACT_FRESHNESS_CLOCK,
       runner: successfulRunner(rootDir),
     });
     expect(cold.cacheHit).toBe(false);
@@ -363,7 +449,7 @@ describe("cacheable producer lane evidence", () => {
       changedFiles,
       cacheDir,
       cacheOrigin: "github-exact-key",
-      clock: artifactFreshnessClock,
+      clock: ARTIFACT_FRESHNESS_CLOCK,
       runner: successfulRunner(rootDir),
     });
 
@@ -426,7 +512,7 @@ describe("cacheable producer lane evidence", () => {
         changedFiles,
         cacheDir,
         cacheOrigin: "github-exact-key",
-        clock: artifactFreshnessClock,
+        clock: ARTIFACT_FRESHNESS_CLOCK,
         runner: mutatingRunner,
       }),
     ).rejects.toMatchObject({ code: "EXACT_CACHE_REVALIDATION_FAILED" });
@@ -566,6 +652,7 @@ describe("cacheable producer lane evidence", () => {
       lane: "coverage-security",
       profile: "publish",
       rootDir,
+      clock: ARTIFACT_FRESHNESS_CLOCK,
       runner: successfulRunner(rootDir),
       securityPhysical: securityPhysical(),
     });

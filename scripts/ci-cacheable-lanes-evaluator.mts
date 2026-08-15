@@ -5,6 +5,10 @@ import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { SECURITY_OWNERSHIP } from "./ci-verification-contract.mts";
+import {
+  injectedFailureCommandId,
+  injectedFailureDiagnostic,
+} from "./ci-cacheable-failure-injection.mts";
 import { VERIFICATION_LANE_OWNERSHIP } from "./verification-manifest.mts";
 export { SECURITY_OWNERSHIP };
 
@@ -712,6 +716,26 @@ function architectureResults(records: readonly Observation[]): {
     outcome: synthesis.blockingOutcome,
   };
 }
+
+function assertInjectedFailureEvidence(records: readonly Observation[]): void {
+  const failureClass = records[0]?.injectedFailure;
+  if (!failureClass || failureClass === "none") return;
+  const commandId = injectedFailureCommandId(failureClass);
+  if (!commandId) fail(`source ${records[0]?.sourceRunId} has no injected failure command`);
+  const matches = records.flatMap(({ checkResults }) =>
+    checkResults.filter(({ id }) => id === commandId),
+  );
+  const expectedDiagnostic = injectedFailureDiagnostic(commandId);
+  if (
+    matches.length !== 1 ||
+    matches[0]?.conclusion !== "failure" ||
+    stable(matches[0].diagnostics) !== stable([expectedDiagnostic])
+  ) {
+    fail(
+      `source ${records[0]?.sourceRunId} ${records[0]?.architectureVersion} lacks exact injected failure evidence for ${failureClass}`,
+    );
+  }
+}
 function diagnostic(code: string, message: string, key?: string): Diagnostic {
   return key ? { code, key, message } : { code, message };
 }
@@ -990,6 +1014,8 @@ export function evaluateDataset(
           fail(`source ${monoAnchor.sourceRunId} pair identity mismatch for ${identity}`);
       const left = architectureResults(mono);
       const right = architectureResults(split);
+      assertInjectedFailureEvidence(mono);
+      assertInjectedFailureEvidence(split);
       if (stable(left) !== stable(right))
         fail(`source ${monoAnchor.sourceRunId} monolith/split results are not equivalent`);
       if (monoAnchor.injectedFailure !== "none" && left.outcome !== "failure")

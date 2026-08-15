@@ -18,8 +18,7 @@ title: "MembershipUpdatedEvent"
 ```typescript
 @RegisterEventHandler(MembershipUpdatedEvent)
 class Handler implements EventHandler<MembershipUpdatedEvent> {
-  async handle(event: MembershipUpdatedEvent) {
-  }
+  async handle(event: MembershipUpdatedEvent) {}
 }
 ```
 
@@ -31,13 +30,21 @@ class Handler implements EventHandler<MembershipUpdatedEvent> {
 
 ### Constructor
 
-> **new MembershipUpdatedEvent**(`data`): `MembershipUpdatedEvent`
+> **new MembershipUpdatedEvent**(`data`, `eventId?`, `occurredAt?`): `MembershipUpdatedEvent`
 
 #### Parameters
 
 ##### data
 
 `MembershipUpdatedEventData`
+
+##### eventId?
+
+`string`
+
+##### occurredAt?
+
+`Date`
 
 #### Returns
 
@@ -53,7 +60,7 @@ class Handler implements EventHandler<MembershipUpdatedEvent> {
 
 > `readonly` **data**: `MembershipUpdatedEventData`
 
-***
+---
 
 ### eventId
 
@@ -63,7 +70,7 @@ class Handler implements EventHandler<MembershipUpdatedEvent> {
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventId`](/api/events-core/src/classes/domainevent/#eventid)
 
-***
+---
 
 ### eventName
 
@@ -73,7 +80,7 @@ class Handler implements EventHandler<MembershipUpdatedEvent> {
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventName`](/api/events-core/src/classes/domainevent/#eventname)
 
-***
+---
 
 ### metadata
 
@@ -83,7 +90,7 @@ class Handler implements EventHandler<MembershipUpdatedEvent> {
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`metadata`](/api/events-core/src/classes/domainevent/#metadata)
 
-***
+---
 
 ### timestamp
 
@@ -93,7 +100,7 @@ class Handler implements EventHandler<MembershipUpdatedEvent> {
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`timestamp`](/api/events-core/src/classes/domainevent/#timestamp)
 
-***
+---
 
 ### eventName
 

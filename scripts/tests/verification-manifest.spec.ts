@@ -291,7 +291,7 @@ describe("verification manifest", () => {
     expect(
       createHash("sha256").update(JSON.stringify(manifests)).digest("hex"),
       "The pre-split monolithic manifest changed; update this digest only after intentionally verifying the new serialized commands.",
-    ).toBe("15ee35a3594d4a106135663a760b697ba703ed5baf59abb50d1df62badc95fc9");
+    ).toBe("147630644eb8dbc526d24e4680dd96cbaefbd85ac5a267629171089978e05a7f");
   });
 
   it("classifies every dependency edge and every cross-lane edge for synthesis", () => {
@@ -496,7 +496,20 @@ describe("verification manifest", () => {
     expect(packageCandidate.find(({ id }) => id === "release-gate-tests")?.applicable).toBe(false);
     expect(
       packageCandidate.find(({ id }) => id === "verification-contract-tests")?.applicable,
-    ).toBe(true);
+    ).toBe(false);
+    expect(packageCandidate.find(({ id }) => id === "test")?.command).not.toContain("--owner");
+
+    const spineScripts = createVerificationManifest("spine", {
+      base: "origin/trunk",
+      changedFiles: ["scripts/ci-cacheable-failure-injection.mts"],
+      head: "HEAD",
+    });
+    expect(spineScripts.find(({ id }) => id === "verification-contract-tests")?.applicable).toBe(
+      false,
+    );
+    expect(spineScripts.find(({ id }) => id === "test")?.command).toEqual(
+      expect.arrayContaining(["--owner", "repo:ci"]),
+    );
 
     expect(
       createVerificationManifest("repo").find(({ id }) => id === "verification-contract-tests")
@@ -505,7 +518,7 @@ describe("verification manifest", () => {
     expect(
       createVerificationManifest("spine").find(({ id }) => id === "verification-contract-tests")
         ?.applicable,
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it("keeps affected task evidence while selecting scoped package accountability checks", () => {
@@ -534,6 +547,10 @@ describe("verification manifest", () => {
       manifest.findIndex(({ id }) => id === "test"),
     );
     expect(byId.get("package-entrypoints-smoke")?.command).toContain("--build-missing");
+    expect(byId.get("package-entrypoints-smoke")?.concurrencyGroups).toEqual([
+      "workspace-artifacts",
+      "package-entrypoints",
+    ]);
     for (const id of [
       "alpha-release-smoke",
       "cli-packed-e2e",
@@ -1236,9 +1253,12 @@ describe("verification manifest", () => {
         { ...command, id: "right", dependsOn: ["left"] },
       ]),
     ).toThrow("dependency graph contains a cycle");
-    expect(() => assertVerificationManifest([{ ...command, concurrencyGroup: " " }])).toThrow(
+    expect(() => assertVerificationManifest([{ ...command, concurrencyGroups: [" "] }])).toThrow(
       "empty concurrency group",
     );
+    expect(() =>
+      assertVerificationManifest([{ ...command, concurrencyGroups: ["same", "same"] }]),
+    ).toThrow("duplicate concurrency group");
   });
 
   it("declares artifact and status prerequisites semantically", () => {
@@ -1248,7 +1268,7 @@ describe("verification manifest", () => {
     const expectedDependencies: Readonly<Record<string, readonly string[]>> = {
       "architecture-policy": ["architecture-policy-runtime"],
       build: ["architecture-policy-runtime"],
-      "package-entrypoints-smoke": ["build", "test"],
+      "package-entrypoints-smoke": ["build", "typecheck", "generated-app-smoke"],
       "package-bins-smoke": ["build"],
       "generated-app-smoke": ["build"],
       "alpha-release-smoke": ["build"],
@@ -1299,7 +1319,6 @@ describe("verification manifest", () => {
       ]),
     );
     for (const id of [
-      "package-entrypoints-smoke",
       "package-bins-smoke",
       "generated-app-smoke",
       "alpha-release-smoke",
@@ -1309,12 +1328,20 @@ describe("verification manifest", () => {
       "core-coverage",
       "publish-dry-run",
     ]) {
-      expect(byId.get(id)?.concurrencyGroup).toBe("workspace-artifacts");
+      expect(byId.get(id)?.concurrencyGroups).toContain("workspace-artifacts");
     }
-    expect(byId.get("release-gate-tests")?.concurrencyGroup).toBeUndefined();
-    expect(byId.get("typecheck")?.concurrencyGroup).toBeUndefined();
-    expect(byId.get("test")?.concurrencyGroup).toBeUndefined();
-    expect(byId.get("typecheck")?.command).toContain("--only");
+    expect(byId.get("test")?.concurrencyGroups).toEqual(["test-integration"]);
+    expect(byId.get("typecheck")?.concurrencyGroups).toEqual(["workspace-artifacts"]);
+    expect(byId.get("package-entrypoints-smoke")?.concurrencyGroups).toEqual([
+      "package-entrypoints",
+    ]);
+    expect(byId.get("integration-test-lane")?.concurrencyGroups).toEqual([
+      "workspace-artifacts",
+      "package-entrypoints",
+      "test-integration",
+    ]);
+    expect(byId.get("release-gate-tests")?.concurrencyGroups).toBeUndefined();
+    expect(byId.get("typecheck")?.command).not.toContain("--only");
     expect(byId.get("package-entrypoints-smoke")?.timeoutMs).toBe(15 * 60 * 1_000);
   });
 

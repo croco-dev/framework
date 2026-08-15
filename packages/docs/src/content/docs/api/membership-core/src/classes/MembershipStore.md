@@ -39,6 +39,12 @@ class PostgresMembershipStore extends MembershipStore {
 
 `MembershipStore`
 
+## Properties
+
+### eventIntentDurability
+
+> `abstract` `readonly` **eventIntentDurability**: `"persistent"` \| `"volatile"`
+
 ## Methods
 
 ### countAll()
@@ -55,7 +61,7 @@ class PostgresMembershipStore extends MembershipStore {
 
 `Promise`\<`number`\>
 
-***
+---
 
 ### countByRole()
 
@@ -75,7 +81,7 @@ class PostgresMembershipStore extends MembershipStore {
 
 `Promise`\<`number`\>
 
-***
+---
 
 ### delete()
 
@@ -95,7 +101,23 @@ class PostgresMembershipStore extends MembershipStore {
 
 `Promise`\<`void`\>
 
-***
+---
+
+### execute()
+
+> `abstract` **execute**(`command`): `Promise`\<[`MembershipCommandResult`](/api/membership-core/src/type-aliases/membershipcommandresult/)\>
+
+#### Parameters
+
+##### command
+
+[`MembershipCommand`](/api/membership-core/src/type-aliases/membershipcommand/)
+
+#### Returns
+
+`Promise`\<[`MembershipCommandResult`](/api/membership-core/src/type-aliases/membershipcommandresult/)\>
+
+---
 
 ### findAllByTenant()
 
@@ -111,7 +133,7 @@ class PostgresMembershipStore extends MembershipStore {
 
 `Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/)[]\>
 
-***
+---
 
 ### findAllByUser()
 
@@ -127,7 +149,7 @@ class PostgresMembershipStore extends MembershipStore {
 
 `Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/)[]\>
 
-***
+---
 
 ### findByTenantAndUser()
 
@@ -147,7 +169,71 @@ class PostgresMembershipStore extends MembershipStore {
 
 `Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/) \| `null`\>
 
-***
+---
+
+### getPendingEventIntent()
+
+> `abstract` **getPendingEventIntent**(`idempotencyKey`): `Promise`\<[`MembershipEventIntent`](/api/membership-core/src/type-aliases/membershipeventintent/) \| `null`\>
+
+#### Parameters
+
+##### idempotencyKey
+
+`string`
+
+#### Returns
+
+`Promise`\<[`MembershipEventIntent`](/api/membership-core/src/type-aliases/membershipeventintent/) \| `null`\>
+
+---
+
+### hasExecutedCommand()
+
+> `abstract` **hasExecutedCommand**(`idempotencyKey`): `Promise`\<`boolean`\>
+
+#### Parameters
+
+##### idempotencyKey
+
+`string`
+
+#### Returns
+
+`Promise`\<`boolean`\>
+
+---
+
+### listPendingEventIntents()
+
+> `abstract` **listPendingEventIntents**(`limit?`): `Promise`\<readonly [`MembershipEventIntent`](/api/membership-core/src/type-aliases/membershipeventintent/)[]\>
+
+#### Parameters
+
+##### limit?
+
+`number`
+
+#### Returns
+
+`Promise`\<readonly [`MembershipEventIntent`](/api/membership-core/src/type-aliases/membershipeventintent/)[]\>
+
+---
+
+### markEventIntentPublished()
+
+> `abstract` **markEventIntentPublished**(`intentId`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### intentId
+
+`string`
+
+#### Returns
+
+`Promise`\<`void`\>
+
+---
 
 ### mutateOwner()
 
@@ -169,7 +255,7 @@ be returned as `conflict`.
 
 `Promise`\<[`MembershipOwnerMutationResult`](/api/membership-core/src/type-aliases/membershipownermutationresult/)\>
 
-***
+---
 
 ### save()
 
@@ -199,7 +285,7 @@ be returned as `conflict`.
 
 `Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/)\>
 
-***
+---
 
 ### transferOwnership()
 

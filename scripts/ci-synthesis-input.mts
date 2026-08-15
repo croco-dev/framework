@@ -27,7 +27,7 @@ import {
   PRODUCER_LANES,
 } from "./ci-lane-evidence.mts";
 import { SECURITY_OWNERSHIP } from "./ci-verification-contract.mts";
-import { assertLaneReport } from "./test-evidence-reconcile.mts";
+import { assertLaneReportShape } from "./test-evidence-reconcile.mts";
 import {
   parseMaterializationEvidence,
   parseStrictTestInventory,
@@ -816,8 +816,8 @@ export function parseProducerFacts(value: unknown, expectedLane: ProducerLane): 
       expectedLane,
     );
     const inventory = parseStrictTestInventory(value.inventory);
-    if (value.fastLane !== null) assertLaneReport(value.fastLane);
-    if (value.integrationLane !== null) assertLaneReport(value.integrationLane);
+    if (value.fastLane !== null) assertLaneReportShape(value.fastLane);
+    if (value.integrationLane !== null) assertLaneReportShape(value.integrationLane);
     return {
       schemaVersion: PRODUCER_FACTS_SCHEMA,
       lane: expectedLane,
@@ -876,7 +876,7 @@ export function parseProducerFacts(value: unknown, expectedLane: ProducerLane): 
       ["schemaVersion", "lane", "publishedLane", "publicApi", "promotionArtifacts"],
       expectedLane,
     );
-    if (value.publishedLane !== null) assertLaneReport(value.publishedLane);
+    if (value.publishedLane !== null) assertLaneReportShape(value.publishedLane);
     return {
       schemaVersion: PRODUCER_FACTS_SCHEMA,
       lane: expectedLane,
@@ -1102,9 +1102,9 @@ function parseFacts(value: unknown, identity: ExperimentIdentity): SynthesisInpu
   if (profile !== "ordinary" && profile !== "publish") {
     reject("INVALID_SYNTHESIS_INPUT", "facts.tests.profile is invalid.");
   }
-  if (value.tests.fast !== null) assertLaneReport(value.tests.fast);
-  if (value.tests.integration !== null) assertLaneReport(value.tests.integration);
-  if (value.tests.published !== null) assertLaneReport(value.tests.published);
+  if (value.tests.fast !== null) assertLaneReportShape(value.tests.fast);
+  if (value.tests.integration !== null) assertLaneReportShape(value.tests.integration);
+  if (value.tests.published !== null) assertLaneReportShape(value.tests.published);
   if (!isRecord(value.tests.generated)) {
     reject("INVALID_SYNTHESIS_INPUT", "facts.tests.generated must be an object.");
   }
@@ -1434,11 +1434,16 @@ export function assembleSynthesisInputFromRepository(args: readonly string[]): {
       "Resolved base/head and changed files are not bound by identity.inputDigest.",
     );
   }
-  const manifest = createVerificationManifest(identity.profile, {
-    base: baseSha,
-    head: headSha,
-    changedFiles,
-  });
+  const manifest = createVerificationManifest(
+    identity.profile,
+    args.includes("--full-selection")
+      ? {}
+      : {
+          base: baseSha,
+          head: headSha,
+          changedFiles,
+        },
+  );
   const reconcile = manifest.find(({ id }) => id === "test-evidence-reconcile");
   const producerDirectories = Object.fromEntries(
     PRODUCER_LANES.map((lane) => {

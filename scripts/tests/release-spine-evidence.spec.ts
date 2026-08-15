@@ -17,8 +17,10 @@ import {
   writeGeneratedSmokeJourneyBundle,
   type GeneratedSmokeJourneySourceReport,
 } from "../create-croco-app-generated-smoke-journey-report.mts";
+import { CACHEABLE_FAILURE_COMMAND } from "../ci-cacheable-failure-injection.mts";
 import {
   createReleaseSpineEvidenceManifest,
+  createReleaseSpineCommands,
   defaultCommandRunner,
   failedCheckDiagnostics,
   interruptActiveCommand,
@@ -862,19 +864,25 @@ describe("release-spine-evidence.mts", () => {
     expect(events).toEqual(["start:first", "end:first", "start:second", "end:second"]);
   });
 
-  it("keeps real manifest build writers behind one completed build fence", async () => {
+  it("locks integration against fast tests and workspace artifacts without serializing independent work", async () => {
     const repo = createTempRepo();
     const runtimeGate = createDeferred<void>();
     const buildGate = createDeferred<void>();
+    const typecheckGate = createDeferred<void>();
     const testGate = createDeferred<void>();
+    const generatedGate = createDeferred<void>();
+    const entrypointGate = createDeferred<void>();
     const events: string[] = [];
     const manifest = createVerificationManifest("spine");
     const commands = [
       "architecture-policy-runtime",
       "build",
+      "package-entrypoints-smoke",
+      "package-bins-smoke",
+      "generated-app-smoke",
       "typecheck",
       "test",
-      "package-entrypoints-smoke",
+      "integration-test-lane",
     ].map((id) => ({
       ...findCheck(manifest, id),
       artifacts: [],
@@ -889,7 +897,10 @@ describe("release-spine-evidence.mts", () => {
         events.push(`start:${command.id}`);
         if (command.id === "architecture-policy-runtime") await runtimeGate.promise;
         if (command.id === "build") await buildGate.promise;
+        if (command.id === "typecheck") await typecheckGate.promise;
         if (command.id === "test") await testGate.promise;
+        if (command.id === "package-entrypoints-smoke") await entrypointGate.promise;
+        if (command.id === "generated-app-smoke") await generatedGate.promise;
         events.push(`end:${command.id}`);
         return okResult(command.id);
       },
@@ -901,12 +912,29 @@ describe("release-spine-evidence.mts", () => {
     await vi.waitFor(() => expect(events).toContain("start:build"));
     expect(events).not.toContain("start:typecheck");
     expect(events).not.toContain("start:test");
-    expect(events).not.toContain("start:package-entrypoints-smoke");
+    expect(events).not.toContain("start:package-bins-smoke");
     buildGate.resolve(undefined);
 
-    await vi.waitFor(() => expect(events).toContain("start:test"));
+    await vi.waitFor(() => expect(events).toContain("start:generated-app-smoke"));
+    expect(events).not.toContain("start:typecheck");
     expect(events).not.toContain("start:package-entrypoints-smoke");
+    expect(events).not.toContain("start:test");
+    generatedGate.resolve(undefined);
+
+    await vi.waitFor(() => expect(events).toContain("start:typecheck"));
+    expect(events).not.toContain("start:package-entrypoints-smoke");
+    expect(events).not.toContain("start:test");
+    typecheckGate.resolve(undefined);
+
+    await vi.waitFor(() => {
+      expect(events).toContain("start:test");
+      expect(events).toContain("start:package-entrypoints-smoke");
+    });
+    expect(events).not.toContain("start:integration-test-lane");
     testGate.resolve(undefined);
+    await vi.waitFor(() => expect(events).toContain("end:test"));
+    expect(events).not.toContain("start:integration-test-lane");
+    entrypointGate.resolve(undefined);
 
     const report = await execution;
     expect(report.status).toBe("passed");
@@ -915,8 +943,18 @@ describe("release-spine-evidence.mts", () => {
     );
     expect(events.indexOf("end:build")).toBeLessThan(events.indexOf("start:typecheck"));
     expect(events.indexOf("end:build")).toBeLessThan(events.indexOf("start:test"));
-    expect(events.indexOf("end:test")).toBeLessThan(
-      events.indexOf("start:package-entrypoints-smoke"),
+    expect(events.indexOf("end:generated-app-smoke")).toBeLessThan(
+      events.indexOf("start:typecheck"),
+    );
+    expect(events.indexOf("start:test")).toBeLessThan(
+      events.indexOf("end:package-entrypoints-smoke"),
+    );
+    expect(events.indexOf("start:package-entrypoints-smoke")).toBeLessThan(
+      events.indexOf("end:test"),
+    );
+    expect(events.indexOf("end:test")).toBeLessThan(events.indexOf("start:integration-test-lane"));
+    expect(events.indexOf("end:package-entrypoints-smoke")).toBeLessThan(
+      events.indexOf("start:integration-test-lane"),
     );
   });
 
@@ -931,19 +969,19 @@ describe("release-spine-evidence.mts", () => {
       totalTimeoutMs: 1_000,
       maxConcurrency: 3,
       commands: [
-        createCommand("pack-a", { concurrencyGroup: "packaging" }),
-        createCommand("pack-b", { concurrencyGroup: "packaging" }),
+        createCommand("pack-a", { concurrencyGroups: ["packaging"] }),
+        createCommand("pack-b", { concurrencyGroups: ["packaging"] }),
         createCommand("lint"),
       ],
       runner: async (command) => {
-        if (command.concurrencyGroup) {
+        if ((command.concurrencyGroups?.length ?? 0) > 0) {
           groupedActive++;
           maximumGroupedActive = Math.max(maximumGroupedActive, groupedActive);
         } else {
           unrelatedOverlapped = groupedActive > 0;
         }
         await new Promise((resolvePromise) => setTimeout(resolvePromise, 10));
-        if (command.concurrencyGroup) groupedActive--;
+        if ((command.concurrencyGroups?.length ?? 0) > 0) groupedActive--;
         return okResult(command.id);
       },
     });
@@ -1248,6 +1286,54 @@ describe("release-spine-evidence.mts", () => {
 
   it("uses safe bounded CLI concurrency by default", () => {
     expect(parseArgs([]).maxConcurrency).toBe(2);
+  });
+
+  it("parses the explicit cacheable failure class", () => {
+    expect(parseArgs(["--inject-failure", "core-verification"]).injectedFailure).toBe(
+      "core-verification",
+    );
+    expect(() => parseArgs(["--inject-failure", "unknown"])).toThrow(
+      "Failure class must be one of",
+    );
+    expect(parseArgs(["--full-selection"]).fullSelection).toBe(true);
+  });
+
+  it("uses the full publish manifest when full selection is requested with a scoped range", () => {
+    const commands = createReleaseSpineCommands({
+      rootDir: process.cwd(),
+      profile: "publish",
+      base: "origin/trunk",
+      head: "HEAD",
+      changedFiles: ["packages/retry-core/package.json"],
+      fullSelection: true,
+    });
+
+    for (const id of Object.values(CACHEABLE_FAILURE_COMMAND)) {
+      expect(findCheck(commands, id).applicable).not.toBe(false);
+    }
+  });
+
+  it("fails the deterministic command without invoking its real runner", async () => {
+    const repo = createTempRepo();
+    const runner = vi.fn<CommandRunner>(() => okResult("unexpected"));
+    const report = await runReleaseSpineEvidence({
+      rootDir: repo,
+      outputDir: join(repo, "evidence"),
+      totalTimeoutMs: 1_000,
+      profile: "publish",
+      commands: [createCommand("verification-policy")],
+      injectedFailure: "core-verification",
+      runner,
+    });
+
+    expect(runner).not.toHaveBeenCalled();
+    expect(report.status).toBe("failed");
+    expect(report.checks[0]).toMatchObject({
+      id: "verification-policy",
+      status: "failed",
+      errorCode: "CACHEABLE_EXPERIMENT_INJECTED_FAILURE",
+      exitCode: 1,
+    });
   });
 
   it("enables pending release metadata only through the explicit option", () => {
@@ -1569,7 +1655,7 @@ function createCommand(
   options: {
     readonly artifacts?: readonly EvidenceArtifactExpectation[];
     readonly command?: readonly string[];
-    readonly concurrencyGroup?: string;
+    readonly concurrencyGroups?: readonly string[];
     readonly dependsOn?: readonly string[];
     readonly selectionReason?: string;
     readonly timeoutMs?: number;
@@ -1580,7 +1666,7 @@ function createCommand(
     label: id,
     category: "quality",
     command: options.command ?? ["fake", id],
-    concurrencyGroup: options.concurrencyGroup,
+    concurrencyGroups: options.concurrencyGroups,
     dependsOn: options.dependsOn,
     selectionReason: options.selectionReason,
     timeoutMs: options.timeoutMs ?? 100,

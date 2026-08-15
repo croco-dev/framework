@@ -96,12 +96,14 @@ jobs:
                .parents[0].sha == $expected_base_sha and
                .parents[1].sha == $expected_head_sha' \
               ci-observer-input/execution-commit.json >/dev/null
-          elif [ "$(jq -er '.event' ci-observer-input/run.json)" = "push" ]; then
+          elif [ "$(jq -er '.event' ci-observer-input/run.json)" = "push" ] || \
+               [ "$(jq -er '.event' ci-observer-input/run.json)" = "workflow_dispatch" ]; then
             jq -er '.parents | select(length >= 1) | .[0].sha' \
               ci-observer-input/execution-commit.json \
               > ci-observer-input/base-sha.txt
           else
-            : > ci-observer-input/base-sha.txt
+            echo "Unsupported source event for cacheable CI observation." >&2
+            exit 1
           fi
           if [ -s ci-observer-input/base-sha.txt ]; then
             git fetch --no-tags --depth=1 origin "$(cat ci-observer-input/base-sha.txt)"

@@ -49,7 +49,7 @@ title: "CustomerHealthService"
 
 `Promise`\<[`TenantHealthScore`](/api/customer-health-core/src/type-aliases/tenanthealthscore/)\>
 
-***
+---
 
 ### getLatest()
 
@@ -65,7 +65,7 @@ title: "CustomerHealthService"
 
 `Promise`\<[`TenantHealthScore`](/api/customer-health-core/src/type-aliases/tenanthealthscore/) \| `null`\>
 
-***
+---
 
 ### getTrend()
 
@@ -84,3 +84,23 @@ title: "CustomerHealthService"
 #### Returns
 
 `Promise`\<\{ `changePercentage`: `number`; `trend`: [`HealthTrend`](/api/customer-health-core/src/type-aliases/healthtrend/); \} \| `null`\>
+
+---
+
+### publishPendingEvents()
+
+> **publishPendingEvents**(`tenantId`, `limit?`): `Promise`\<`number`\>
+
+#### Parameters
+
+##### tenantId
+
+`string`
+
+##### limit?
+
+`number` = `100`
+
+#### Returns
+
+`Promise`\<`number`\>

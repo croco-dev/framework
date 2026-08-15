@@ -69,7 +69,7 @@ Drizzle 클라이언트를 받아 저장소를 초기화합니다.
 
 [`HealthScoreStore`](/api/customer-health-core/src/classes/healthscorestore/).[`findHistory`](/api/customer-health-core/src/classes/healthscorestore/#findhistory)
 
-***
+---
 
 ### findHistoryByPeriod()
 
@@ -103,7 +103,7 @@ Drizzle 클라이언트를 받아 저장소를 초기화합니다.
 
 [`HealthScoreStore`](/api/customer-health-core/src/classes/healthscorestore/).[`findHistoryByPeriod`](/api/customer-health-core/src/classes/healthscorestore/#findhistorybyperiod)
 
-***
+---
 
 ### findLatest()
 
@@ -125,11 +125,55 @@ Drizzle 클라이언트를 받아 저장소를 초기화합니다.
 
 [`HealthScoreStore`](/api/customer-health-core/src/classes/healthscorestore/).[`findLatest`](/api/customer-health-core/src/classes/healthscorestore/#findlatest)
 
-***
+---
 
-### save()
+### listPendingEventIntents()
 
-> **save**(`score`): `Promise`\<`void`\>
+> **listPendingEventIntents**(`tenantId`, `limit?`): `Promise`\<readonly [`HealthTransitionEventIntent`](/api/customer-health-core/src/type-aliases/healthtransitioneventintent/)[]\>
+
+#### Parameters
+
+##### tenantId
+
+`string`
+
+##### limit?
+
+`number` = `100`
+
+#### Returns
+
+`Promise`\<readonly [`HealthTransitionEventIntent`](/api/customer-health-core/src/type-aliases/healthtransitioneventintent/)[]\>
+
+#### Overrides
+
+[`HealthScoreStore`](/api/customer-health-core/src/classes/healthscorestore/).[`listPendingEventIntents`](/api/customer-health-core/src/classes/healthscorestore/#listpendingeventintents)
+
+---
+
+### markEventIntentPublished()
+
+> **markEventIntentPublished**(`eventId`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### eventId
+
+`string`
+
+#### Returns
+
+`Promise`\<`void`\>
+
+#### Overrides
+
+[`HealthScoreStore`](/api/customer-health-core/src/classes/healthscorestore/).[`markEventIntentPublished`](/api/customer-health-core/src/classes/healthscorestore/#markeventintentpublished)
+
+---
+
+### saveTransition()
+
+> **saveTransition**(`score`, `previous`, `eventIntents`): `Promise`\<\{ `committed`: `true`; \} \| \{ `committed`: `false`; `latest`: [`TenantHealthScore`](/api/customer-health-core/src/type-aliases/tenanthealthscore/) \| `null`; \}\>
 
 계산된 건강 점수를 저장합니다.
 
@@ -139,10 +183,18 @@ Drizzle 클라이언트를 받아 저장소를 초기화합니다.
 
 [`TenantHealthScore`](/api/customer-health-core/src/type-aliases/tenanthealthscore/)
 
+##### previous
+
+[`TenantHealthScore`](/api/customer-health-core/src/type-aliases/tenanthealthscore/) \| `null`
+
+##### eventIntents
+
+readonly [`HealthTransitionEventIntent`](/api/customer-health-core/src/type-aliases/healthtransitioneventintent/)[]
+
 #### Returns
 
-`Promise`\<`void`\>
+`Promise`\<\{ `committed`: `true`; \} \| \{ `committed`: `false`; `latest`: [`TenantHealthScore`](/api/customer-health-core/src/type-aliases/tenanthealthscore/) \| `null`; \}\>
 
 #### Overrides
 
-[`HealthScoreStore`](/api/customer-health-core/src/classes/healthscorestore/).[`save`](/api/customer-health-core/src/classes/healthscorestore/#save)
+[`HealthScoreStore`](/api/customer-health-core/src/classes/healthscorestore/).[`saveTransition`](/api/customer-health-core/src/classes/healthscorestore/#savetransition)

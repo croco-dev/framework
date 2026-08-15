@@ -13,20 +13,26 @@ title: "CreditLedgerEventIntent"
 
 > `readonly` **data**: [`CreditLedgerCommittedEventData`](/api/credits-core/src/type-aliases/creditledgercommittedeventdata/)
 
-***
+---
 
 ### eventId
 
 > `readonly` **eventId**: `string`
 
-***
+---
 
 ### idempotencyKey
 
 > `readonly` **idempotencyKey**: `string`
 
-***
+---
 
 ### occurredAt
 
 > `readonly` **occurredAt**: `Date`
+
+---
+
+### tenantId
+
+> `readonly` **tenantId**: `string`

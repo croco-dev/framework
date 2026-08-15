@@ -25,6 +25,10 @@ import {
   parseExperimentIdentity,
   PRODUCER_LANES,
 } from "./ci-lane-evidence.mts";
+import {
+  injectedFailureCommandId,
+  parseCacheableFailureClass,
+} from "./ci-cacheable-failure-injection.mts";
 import { restoreExactLaneCache, writeExactLaneCache } from "./ci-cacheable-lane-cache.mts";
 import {
   parseProducerFacts,
@@ -34,7 +38,10 @@ import {
 } from "./ci-synthesis-input.mts";
 import { createPackageQualityReport, readPublicApiGuardResult } from "./package-quality-report.mts";
 import { runReleaseSpineEvidence } from "./release-spine-evidence.mts";
-import { assertLaneReport, assertMaterializationEvidence } from "./test-evidence-reconcile.mts";
+import {
+  assertLaneReportShape,
+  assertMaterializationEvidence,
+} from "./test-evidence-reconcile.mts";
 import { readTestInventory, validateGeneratedMaterialization } from "./test-inventory.mts";
 import {
   createVerificationLaneManifest,
@@ -55,6 +62,7 @@ import type {
   SynthesisSecurityResult,
   VerificationProfile,
 } from "./ci-lane-evidence.mts";
+import type { CacheableFailureClass } from "./ci-cacheable-failure-injection.mts";
 import type { ProducerFacts, PromotionArtifactFact } from "./ci-synthesis-input.mts";
 import type {
   ExactLaneCacheContext,
@@ -78,8 +86,6 @@ export const CACHEABLE_LANE_CHECK_SCHEMA = "croco.ci-cacheable-lane-check/v1" as
 const DEFAULT_TOTAL_TIMEOUT_MS = 150 * 60 * 1000;
 const DEFAULT_MAX_CONCURRENCY = 2;
 const PRODUCER_BUNDLE_FILE = "producer-bundle.json";
-const SPLIT_WORKSPACE_ARTIFACT_CHECK_IDS = new Set(["typecheck", "test", "integration-test-lane"]);
-
 type NormalizedCheckRecord = {
   readonly schemaVersion: typeof CACHEABLE_LANE_CHECK_SCHEMA;
   readonly identity: EvidenceIdentity;
@@ -126,6 +132,8 @@ export type RunCacheableLaneOptions = {
   readonly securityArtifactPaths?: readonly string[];
   readonly cacheDir?: string;
   readonly cacheOrigin?: CacheOrigin;
+  readonly injectedFailure?: CacheableFailureClass;
+  readonly fullSelection?: boolean;
 };
 
 export type CacheableLaneRunResult = {
@@ -214,12 +222,6 @@ function commandWithLocalDependencies(
   return { ...command, dependsOn };
 }
 
-function withSplitScheduling(command: EvidenceCommand): EvidenceCommand {
-  return SPLIT_WORKSPACE_ARTIFACT_CHECK_IDS.has(command.id)
-    ? { ...command, concurrencyGroup: "workspace-artifacts" }
-    : command;
-}
-
 export function createCacheableLaneExecutionPlan(
   profile: VerificationProfile,
   lane: ProducerLane,
@@ -254,7 +256,7 @@ export function createCacheableLaneExecutionPlan(
     );
   }
   const commands = [...laneManifest.physicalLocalPrerequisites, ...laneManifest.commands].map(
-    (command) => withSplitScheduling(commandWithLocalDependencies(command, localIds)),
+    (command) => commandWithLocalDependencies(command, localIds),
   );
   return { laneManifest, commands, ownedCommands, ownedIds, physicalPrerequisiteIds };
 }
@@ -354,12 +356,12 @@ function cacheHitCommand(rootDir: string, command: EvidenceCommand): EvidenceCom
 }
 
 function diagnosticsForCheck(check: EvidenceCheckResult): readonly string[] {
-  const details = [
-    check.failureReason,
-    check.errorMessage,
-    check.stderrExcerpt.trim() || null,
-  ].filter((value): value is string => Boolean(value));
-  return [...new Set(details)];
+  if (check.status === "passed" || check.status === "not_applicable") return [];
+  return [
+    `${check.id}:${check.errorCode ?? check.failureReason ?? check.status}`
+      .replace(/\s+/g, " ")
+      .trim(),
+  ];
 }
 
 function outcomeForCheck(check: EvidenceCheckResult): "passed" | "failed" | "not-applicable" {
@@ -843,11 +845,16 @@ function laneReport(rootDir: string, path: string): LaneReport | null {
   const absolutePath = resolve(rootDir, path);
   try {
     const value = readJson(absolutePath);
-    assertLaneReport(value);
+    assertLaneReportShape(value);
     return value;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
-    throw error;
+    const cause = error instanceof Error ? error.message : String(error);
+    throw new VerificationProblem(
+      "INVALID_LANE_REPORT",
+      "contract",
+      `Unable to read or validate lane report ${path}: ${cause}`,
+    );
   }
 }
 
@@ -1050,6 +1057,13 @@ export async function runCacheableLane(
       "coverage-security physical results cannot be restored from or saved to a cross-run cache.",
     );
   }
+  if (options.fullSelection && options.cacheDir) {
+    throw new VerificationProblem(
+      "FULL_SELECTION_CACHE_FORBIDDEN",
+      "input",
+      "Full-selection runs cannot restore or write change-scoped reusable receipts.",
+    );
+  }
   const rootDir = resolve(options.rootDir);
   const outputDir = assertSafeOutputDirectory(
     rootDir,
@@ -1057,12 +1071,35 @@ export async function runCacheableLane(
   );
   const changedFiles =
     options.changedFiles ?? changedFilesForRange(rootDir, options.base, options.head);
-  const context: VerificationContext = {
-    ...(options.allowPendingReleaseMetadata ? { allowPendingReleaseMetadata: true } : {}),
-    base: options.base,
-    head: options.head,
-    changedFiles,
-  };
+  const context: VerificationContext = options.fullSelection
+    ? options.allowPendingReleaseMetadata
+      ? { allowPendingReleaseMetadata: true }
+      : {}
+    : {
+        ...(options.allowPendingReleaseMetadata ? { allowPendingReleaseMetadata: true } : {}),
+        base: options.base,
+        head: options.head,
+        changedFiles,
+      };
+  const injectedCommandId = injectedFailureCommandId(options.injectedFailure ?? "none");
+  if (
+    injectedCommandId &&
+    VERIFICATION_LANE_OWNERSHIP[injectedCommandId as keyof typeof VERIFICATION_LANE_OWNERSHIP] !==
+      options.lane
+  ) {
+    throw new VerificationProblem(
+      "CACHEABLE_FAILURE_LANE_MISMATCH",
+      "input",
+      `Injected failure target ${injectedCommandId} is not owned by ${options.lane}.`,
+    );
+  }
+  if (injectedCommandId && options.cacheDir) {
+    throw new VerificationProblem(
+      "CACHEABLE_FAILURE_CACHE_FORBIDDEN",
+      "input",
+      "Injected failure runs cannot restore or write reusable receipts.",
+    );
+  }
   const plan = createCacheableLaneExecutionPlan(options.profile, options.lane, context);
   const cacheContext = options.cacheDir
     ? exactCacheContext({
@@ -1102,6 +1139,7 @@ export async function runCacheableLane(
     commands: runCommands,
     runner: options.runner,
     clock: options.clock,
+    injectedFailure: options.injectedFailure,
   });
   const factsPath = join(outputDir, PRODUCER_FACTS_FILE);
   if (cacheHit) {
@@ -1168,6 +1206,8 @@ type CliOptions = {
   readonly securityArtifactPaths: readonly string[];
   readonly cacheDir?: string;
   readonly cacheOrigin?: CacheOrigin;
+  readonly injectedFailure: CacheableFailureClass;
+  readonly fullSelection: boolean;
   readonly allowPendingReleaseMetadata: boolean;
 };
 
@@ -1190,12 +1230,18 @@ function parseCli(args: readonly string[]): CliOptions {
   let securityResultsPath: string | undefined;
   let cacheDir: string | undefined;
   let cacheOrigin: CacheOrigin | undefined;
+  let injectedFailure: CacheableFailureClass = "none";
+  let fullSelection = false;
   let allowPendingReleaseMetadata = false;
   const securityArtifactPaths: string[] = [];
   for (let index = 0; index < args.length; index += 1) {
     const flag = args[index];
     if (flag === "--allow-pending-release-metadata") {
       allowPendingReleaseMetadata = true;
+      continue;
+    }
+    if (flag === "--full-selection") {
+      fullSelection = true;
       continue;
     }
     const value = requiredValue(args, index, flag ?? "argument");
@@ -1235,6 +1281,8 @@ function parseCli(args: readonly string[]): CliOptions {
         );
       }
       cacheOrigin = value;
+    } else if (flag === "--inject-failure") {
+      injectedFailure = parseCacheableFailureClass(value);
     } else {
       throw new VerificationProblem("UNKNOWN_CLI_ARGUMENT", "input", `Unknown argument: ${flag}`);
     }
@@ -1265,6 +1313,8 @@ function parseCli(args: readonly string[]): CliOptions {
     securityArtifactPaths,
     cacheDir,
     cacheOrigin,
+    injectedFailure,
+    fullSelection,
     allowPendingReleaseMetadata,
   };
 }
@@ -1289,6 +1339,8 @@ async function main(args: readonly string[]): Promise<void> {
     securityArtifactPaths: options.securityArtifactPaths,
     cacheDir: options.cacheDir,
     cacheOrigin: options.cacheOrigin,
+    injectedFailure: options.injectedFailure,
+    fullSelection: options.fullSelection,
     allowPendingReleaseMetadata: options.allowPendingReleaseMetadata,
   });
   if (result.failed) process.exitCode = 1;

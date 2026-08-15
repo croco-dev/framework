@@ -10,6 +10,11 @@ import {
   splitValidationShadowReportPath,
 } from "./ci-lane-evidence.mts";
 import {
+  CACHEABLE_INJECTED_FAILURE_CODE,
+  injectedFailureCommandId,
+  parseCacheableFailureClass,
+} from "./ci-cacheable-failure-injection.mts";
+import {
   createPackageQualityReport,
   writePackageQualityReport,
 } from "./package-quality-report.mts";
@@ -32,6 +37,7 @@ import type {
   SynthesisCheckResult,
   SynthesisSecurityResult,
 } from "./ci-lane-evidence.mts";
+import type { CacheableFailureClass } from "./ci-cacheable-failure-injection.mts";
 import type { PromotionEvidenceContext } from "./spine-promotion-check.mts";
 import type { SynthesisInput } from "./ci-synthesis-input.mts";
 import { VerificationProblem } from "./verification-problem.mts";
@@ -49,6 +55,7 @@ type RunOptions = {
   readonly rootDir: string;
   readonly reportPath?: string;
   readonly now?: () => string;
+  readonly injectedFailure?: CacheableFailureClass;
 };
 
 function atomicWrite(path: string, contents: string): void {
@@ -90,11 +97,27 @@ function resultMap(results: readonly SynthesisCheckResult[]): Map<string, Synthe
   return new Map(results.map((result) => [result.id, result]));
 }
 
+type ExecutionStatus = "passed" | "failed" | "not_applicable" | "skipped_prerequisite";
+
+function executionStatus(result: SynthesisCheckResult): ExecutionStatus {
+  if (result.outcome === "passed") return "passed";
+  if (result.outcome === "not-applicable") return "not_applicable";
+  return result.diagnostics.some((entry) =>
+    entry.startsWith(`${result.id}:Skipped because prerequisite check(s) did not pass:`),
+  )
+    ? "skipped_prerequisite"
+    : "failed";
+}
+
 function failedPrerequisites(
   dependencies: readonly string[],
   results: ReadonlyMap<string, SynthesisCheckResult>,
-): readonly string[] {
-  return dependencies.filter((dependency) => results.get(dependency)?.outcome === "failed");
+): readonly { readonly id: string; readonly status: ExecutionStatus }[] {
+  return dependencies.flatMap((dependency) => {
+    const result = results.get(dependency);
+    if (!result || result.outcome !== "failed") return [];
+    return [{ id: dependency, status: executionStatus(result) }];
+  });
 }
 
 function testEvidenceDiagnostics(
@@ -276,6 +299,18 @@ export function runSplitValidationSynthesis(options: RunOptions): SplitSynthesis
   const startedAt = now();
   const results = resultMap(producerChecks(input));
   const packageQualityOutput = join(rootDir, PACKAGE_QUALITY_OUTPUT);
+  const injectedCommandId = injectedFailureCommandId(options.injectedFailure ?? "none");
+  if (
+    injectedCommandId &&
+    VERIFICATION_LANE_OWNERSHIP[injectedCommandId as keyof typeof VERIFICATION_LANE_OWNERSHIP] !==
+      "split-validation-shadow"
+  ) {
+    throw new VerificationProblem(
+      "CACHEABLE_FAILURE_LANE_MISMATCH",
+      "input",
+      `Synthesis cannot inject the ${options.injectedFailure} producer failure class.`,
+    );
+  }
 
   for (const plan of input.synthesisPlan) {
     if (plan.selection === "not-applicable") {
@@ -284,13 +319,30 @@ export function runSplitValidationSynthesis(options: RunOptions): SplitSynthesis
     }
     const failed = failedPrerequisites(plan.dependsOn, results);
     if (failed.length > 0) {
+      const blockers = failed
+        .sort((left, right) => left.id.localeCompare(right.id))
+        .map(({ id, status }) => `${id} (${status})`)
+        .join(", ");
       results.set(
         plan.id,
         outcome(
           plan.id,
           "selected",
           "failed",
-          diagnostic(`SKIPPED_PREREQUISITE: ${failed.sort().join(", ")}`),
+          diagnostic(`${plan.id}:Skipped because prerequisite check(s) did not pass: ${blockers}.`),
+        ),
+      );
+      continue;
+    }
+
+    if (plan.id === injectedCommandId) {
+      results.set(
+        plan.id,
+        outcome(
+          plan.id,
+          "selected",
+          "failed",
+          diagnostic(`${plan.id}:${CACHEABLE_INJECTED_FAILURE_CODE}`),
         ),
       );
       continue;
@@ -456,6 +508,7 @@ function main(args: readonly string[]): void {
   }
   const rootDir = resolve(value(args, "--root") ?? process.cwd());
   const reportPath = value(args, "--output");
+  const injectedFailure = parseCacheableFailureClass(value(args, "--inject-failure") ?? "none");
   let inputValue: unknown;
   try {
     inputValue = JSON.parse(readFileSync(resolve(rootDir, inputPath), "utf8")) as unknown;
@@ -470,6 +523,7 @@ function main(args: readonly string[]): void {
     input: parseSynthesisInput(inputValue),
     rootDir,
     reportPath,
+    injectedFailure,
   });
   if (result.failed) process.exitCode = 1;
 }

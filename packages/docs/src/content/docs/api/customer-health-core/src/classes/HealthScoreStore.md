@@ -46,7 +46,7 @@ title: "HealthScoreStore"
 
 `Promise`\<[`TenantHealthScore`](/api/customer-health-core/src/type-aliases/tenanthealthscore/)[]\>
 
-***
+---
 
 ### findHistoryByPeriod()
 
@@ -74,7 +74,7 @@ title: "HealthScoreStore"
 
 `Promise`\<[`TenantHealthScore`](/api/customer-health-core/src/type-aliases/tenanthealthscore/)[]\>
 
-***
+---
 
 ### findLatest()
 
@@ -90,11 +90,47 @@ title: "HealthScoreStore"
 
 `Promise`\<[`TenantHealthScore`](/api/customer-health-core/src/type-aliases/tenanthealthscore/) \| `null`\>
 
-***
+---
 
-### save()
+### listPendingEventIntents()
 
-> `abstract` **save**(`score`): `Promise`\<`void`\>
+> `abstract` **listPendingEventIntents**(`tenantId`, `limit?`): `Promise`\<readonly [`HealthTransitionEventIntent`](/api/customer-health-core/src/type-aliases/healthtransitioneventintent/)[]\>
+
+#### Parameters
+
+##### tenantId
+
+`string`
+
+##### limit?
+
+`number`
+
+#### Returns
+
+`Promise`\<readonly [`HealthTransitionEventIntent`](/api/customer-health-core/src/type-aliases/healthtransitioneventintent/)[]\>
+
+---
+
+### markEventIntentPublished()
+
+> `abstract` **markEventIntentPublished**(`eventId`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### eventId
+
+`string`
+
+#### Returns
+
+`Promise`\<`void`\>
+
+---
+
+### saveTransition()
+
+> `abstract` **saveTransition**(`score`, `previous`, `eventIntents`): `Promise`\<\{ `committed`: `true`; \} \| \{ `committed`: `false`; `latest`: [`TenantHealthScore`](/api/customer-health-core/src/type-aliases/tenanthealthscore/) \| `null`; \}\>
 
 #### Parameters
 
@@ -102,6 +138,14 @@ title: "HealthScoreStore"
 
 [`TenantHealthScore`](/api/customer-health-core/src/type-aliases/tenanthealthscore/)
 
+##### previous
+
+[`TenantHealthScore`](/api/customer-health-core/src/type-aliases/tenanthealthscore/) \| `null`
+
+##### eventIntents
+
+readonly [`HealthTransitionEventIntent`](/api/customer-health-core/src/type-aliases/healthtransitioneventintent/)[]
+
 #### Returns
 
-`Promise`\<`void`\>
+`Promise`\<\{ `committed`: `true`; \} \| \{ `committed`: `false`; `latest`: [`TenantHealthScore`](/api/customer-health-core/src/type-aliases/tenanthealthscore/) \| `null`; \}\>

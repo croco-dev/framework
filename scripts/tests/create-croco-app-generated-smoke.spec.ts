@@ -425,11 +425,11 @@ describe("generated smoke command execution", () => {
   });
 
   it("bounds Windows workspace build concurrency for TypeScript declaration bundling", () => {
-    expect(turboConcurrencyArguments("win32")).toEqual(["--concurrency=2"]);
+    expect(turboConcurrencyArguments("win32")).toEqual(["--concurrency=1"]);
     expect(turboConcurrencyArguments("linux")).toEqual(["--concurrency=4"]);
     expect(turboBuildArguments(["@croco/example"], "win32")).toEqual([
       "build",
-      "--concurrency=2",
+      "--concurrency=1",
       "--filter=@croco/example...",
     ]);
     expect(turboBuildArguments(["@croco/example"], "linux")).toEqual([

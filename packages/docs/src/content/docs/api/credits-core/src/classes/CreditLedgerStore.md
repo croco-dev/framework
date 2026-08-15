@@ -42,7 +42,7 @@ title: "CreditLedgerStore"
 
 `Promise`\<[`CreditCommandResult`](/api/credits-core/src/type-aliases/creditcommandresult/)\>
 
-***
+---
 
 ### getAccount()
 
@@ -58,7 +58,7 @@ title: "CreditLedgerStore"
 
 `Promise`\<[`CreditAccount`](/api/credits-core/src/type-aliases/creditaccount/) \| `null`\>
 
-***
+---
 
 ### getBalance()
 
@@ -78,7 +78,7 @@ title: "CreditLedgerStore"
 
 `Promise`\<[`CreditBalance`](/api/credits-core/src/type-aliases/creditbalance/)\>
 
-***
+---
 
 ### getHistory()
 
@@ -108,13 +108,17 @@ title: "CreditLedgerStore"
 
 `Promise`\<[`CreditHistoryPage`](/api/credits-core/src/type-aliases/credithistorypage/)\>
 
-***
+---
 
 ### getPendingEventIntent()
 
-> `abstract` **getPendingEventIntent**(`idempotencyKey`): `Promise`\<[`CreditLedgerEventIntent`](/api/credits-core/src/type-aliases/creditledgereventintent/) \| `null`\>
+> `abstract` **getPendingEventIntent**(`tenantId`, `idempotencyKey`): `Promise`\<[`CreditLedgerEventIntent`](/api/credits-core/src/type-aliases/creditledgereventintent/) \| `null`\>
 
 #### Parameters
+
+##### tenantId
+
+`string`
 
 ##### idempotencyKey
 
@@ -124,7 +128,7 @@ title: "CreditLedgerStore"
 
 `Promise`\<[`CreditLedgerEventIntent`](/api/credits-core/src/type-aliases/creditledgereventintent/) \| `null`\>
 
-***
+---
 
 ### getReservation()
 
@@ -144,7 +148,7 @@ title: "CreditLedgerStore"
 
 `Promise`\<[`CreditReservation`](/api/credits-core/src/type-aliases/creditreservation/) \| `null`\>
 
-***
+---
 
 ### listPendingEventIntents()
 
@@ -160,7 +164,7 @@ title: "CreditLedgerStore"
 
 `Promise`\<readonly [`CreditLedgerEventIntent`](/api/credits-core/src/type-aliases/creditledgereventintent/)[]\>
 
-***
+---
 
 ### markEventIntentPublished()
 

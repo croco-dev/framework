@@ -23,10 +23,16 @@ import {
   assertGeneratedSmokeJourneyReport,
   renderGeneratedSmokeJourneyReport,
 } from "./create-croco-app-generated-smoke-journey-report.mts";
+import {
+  CACHEABLE_INJECTED_FAILURE_CODE,
+  injectedFailureCommandId,
+  parseCacheableFailureClass,
+} from "./ci-cacheable-failure-injection.mts";
 import { assertTestEvidenceBundle } from "./test-evidence-runtime.mts";
 import { createVerificationManifest } from "./verification-manifest.mts";
 import { formatVerificationProblem, VerificationProblem } from "./verification-problem.mts";
 import type { ChildProcess } from "node:child_process";
+import type { CacheableFailureClass } from "./ci-cacheable-failure-injection.mts";
 import type { VerificationProfile } from "./verification-manifest.mts";
 
 const DEFAULT_OUTPUT_DIRECTORY = join("ci-reports", "release");
@@ -85,7 +91,7 @@ export type EvidenceCommand = {
   readonly command: readonly string[];
   readonly timeoutMs: number;
   readonly dependsOn?: readonly string[];
-  readonly concurrencyGroup?: string;
+  readonly concurrencyGroups?: readonly string[];
   readonly applicable?: boolean;
   readonly selectionReason?: string;
   readonly artifacts?: readonly EvidenceArtifactExpectation[];
@@ -140,6 +146,10 @@ export type ReleaseSpineEvidenceReport = {
   readonly checks: readonly EvidenceCheckResult[];
 };
 
+function commandConcurrencyGroups(command: EvidenceCommand): readonly string[] {
+  return command.concurrencyGroups ?? [];
+}
+
 export type CommandRunResult = {
   readonly errorCode: string | null;
   readonly errorMessage: string | null;
@@ -185,6 +195,8 @@ type Options = {
   readonly base?: string;
   readonly head?: string;
   readonly testEvidencePath?: string;
+  readonly injectedFailure?: CacheableFailureClass;
+  readonly fullSelection?: boolean;
 };
 
 type RunOptions = Omit<Options, "maxConcurrency"> & {
@@ -199,6 +211,17 @@ type RunOptions = Omit<Options, "maxConcurrency"> & {
   readonly onCheckpoint?: (report: ReleaseSpineEvidenceReport) => void;
   readonly runner?: CommandRunner;
 };
+
+type VerificationSelectionOptions = Pick<
+  RunOptions,
+  | "allowPendingReleaseMetadata"
+  | "base"
+  | "changedFiles"
+  | "fullSelection"
+  | "head"
+  | "profile"
+  | "rootDir"
+>;
 
 type CommandRunnerContext = Parameters<CommandRunner>[1];
 
@@ -241,6 +264,25 @@ function readChangedFiles(
   } catch {
     return undefined;
   }
+}
+
+export function createReleaseSpineCommands(
+  options: VerificationSelectionOptions,
+): readonly EvidenceCommand[] {
+  const profile = options.profile ?? "spine";
+  return createVerificationManifest(
+    profile,
+    options.fullSelection
+      ? { allowPendingReleaseMetadata: options.allowPendingReleaseMetadata }
+      : {
+          allowPendingReleaseMetadata: options.allowPendingReleaseMetadata,
+          base: options.base,
+          changedFiles:
+            options.changedFiles ??
+            readChangedFiles(resolve(options.rootDir), options.base, options.head),
+          head: options.head,
+        },
+  );
 }
 const activeCommandProcesses = new Set<ChildProcess>();
 const activeInterruptKillTimers = new Map<ChildProcess, ReturnType<typeof setTimeout>>();
@@ -1104,14 +1146,7 @@ export async function runReleaseSpineEvidence(
   const clock = options.clock ?? systemClock;
   const profile = options.profile ?? "spine";
   const rootDir = resolve(options.rootDir);
-  const unresolvedCommands =
-    options.commands ??
-    createVerificationManifest(profile, {
-      allowPendingReleaseMetadata: options.allowPendingReleaseMetadata,
-      base: options.base,
-      changedFiles: options.changedFiles ?? readChangedFiles(rootDir, options.base, options.head),
-      head: options.head,
-    });
+  const unresolvedCommands = options.commands ?? createReleaseSpineCommands(options);
   const commitSha = process.env.GITHUB_SHA ?? readCurrentCommitOrUnknown(rootDir);
   const commands = options.testEvidencePath
     ? reuseTestEvidence(
@@ -1123,7 +1158,32 @@ export async function runReleaseSpineEvidence(
       )
     : unresolvedCommands;
   assertValidDependencies(commands);
-  const runner = options.runner ?? defaultCommandRunner;
+  const baseRunner = options.runner ?? defaultCommandRunner;
+  const injectedCommandId = injectedFailureCommandId(options.injectedFailure ?? "none");
+  if (
+    injectedCommandId &&
+    !commands.some(({ id, applicable }) => id === injectedCommandId && applicable !== false)
+  ) {
+    throw new VerificationProblem(
+      "CACHEABLE_FAILURE_TARGET_NOT_SELECTED",
+      "contract",
+      `Injected failure target ${injectedCommandId} is not selected by the ${profile} verification plan.`,
+    );
+  }
+  const runner: CommandRunner = injectedCommandId
+    ? (command, context) =>
+        command.id === injectedCommandId
+          ? {
+              errorCode: CACHEABLE_INJECTED_FAILURE_CODE,
+              errorMessage: `Injected cacheable CI failure for ${command.id}.`,
+              signal: null,
+              status: 1,
+              stderr: "",
+              stdout: "",
+              timedOut: false,
+            }
+          : baseRunner(command, context)
+    : baseRunner;
   const maxConcurrency = options.maxConcurrency ?? 1;
   if (!Number.isSafeInteger(maxConcurrency) || maxConcurrency <= 0) {
     throw new VerificationProblem(
@@ -1416,13 +1476,13 @@ export async function runReleaseSpineEvidence(
         for (const [index, command] of commands.entries()) {
           if (active.size >= maxConcurrency) break;
           if (report.checks[index]?.status !== "pending") continue;
-          if (command.concurrencyGroup && activeGroups.has(command.concurrencyGroup)) continue;
+          if (commandConcurrencyGroups(command).some((group) => activeGroups.has(group))) continue;
           const dependenciesReady = (command.dependsOn ?? []).every((id) => {
             const status = checksByIdAfterSkips.get(id)?.status;
             return status === "passed" || status === "not_applicable";
           });
           if (!dependenciesReady) continue;
-          if (command.concurrencyGroup) activeGroups.add(command.concurrencyGroup);
+          for (const group of commandConcurrencyGroups(command)) activeGroups.add(group);
           const execution = executeCheck(index);
           active.set(index, execution);
         }
@@ -1433,7 +1493,9 @@ export async function runReleaseSpineEvidence(
     const completed = await Promise.race(active.values());
     active.delete(completed.index);
     const completedCommand = commands[completed.index];
-    if (completedCommand?.concurrencyGroup) activeGroups.delete(completedCommand.concurrencyGroup);
+    if (completedCommand) {
+      for (const group of commandConcurrencyGroups(completedCommand)) activeGroups.delete(group);
+    }
     const existing = report.checks[completed.index];
     const nextCheck =
       existing?.status === "interrupted"
@@ -1713,6 +1775,8 @@ export function parseArgs(args: readonly string[] = argv.slice(2)): Options {
   let head: string | undefined;
   let allowPendingReleaseMetadata = false;
   let testEvidencePath: string | undefined;
+  let injectedFailure: CacheableFailureClass = "none";
+  let fullSelection = false;
 
   for (let index = 0; index < args.length; index++) {
     const arg = args[index];
@@ -1722,6 +1786,11 @@ export function parseArgs(args: readonly string[] = argv.slice(2)): Options {
 
     if (arg === "--allow-pending-release-metadata") {
       allowPendingReleaseMetadata = true;
+      continue;
+    }
+
+    if (arg === "--full-selection") {
+      fullSelection = true;
       continue;
     }
 
@@ -1735,6 +1804,20 @@ export function parseArgs(args: readonly string[] = argv.slice(2)): Options {
         );
       }
       testEvidencePath = value;
+      index++;
+      continue;
+    }
+
+    if (arg === "--inject-failure") {
+      const value = args[index + 1];
+      if (!value) {
+        throw new VerificationProblem(
+          "MISSING_CACHEABLE_FAILURE_CLASS",
+          "input",
+          "--inject-failure requires a failure class",
+        );
+      }
+      injectedFailure = parseCacheableFailureClass(value);
       index++;
       continue;
     }
@@ -1851,18 +1934,13 @@ export function parseArgs(args: readonly string[] = argv.slice(2)): Options {
     base,
     head,
     testEvidencePath,
+    injectedFailure,
+    fullSelection,
   };
 }
 
 async function main(): Promise<void> {
   const options = parseArgs(argv.slice(2));
-  const profile = options.profile ?? "spine";
-  const commands = createVerificationManifest(profile, {
-    allowPendingReleaseMetadata: options.allowPendingReleaseMetadata,
-    base: options.base,
-    changedFiles: readChangedFiles(options.rootDir, options.base, options.head),
-    head: options.head,
-  });
   let interruptSignal: NodeJS.Signals | null = null;
   const interrupt = (signal: string) => {
     interruptSignal = signal as NodeJS.Signals;
@@ -1875,7 +1953,6 @@ async function main(): Promise<void> {
 
   const report = await runReleaseSpineEvidence({
     ...options,
-    commands,
     getInterruptSignal: () => interruptSignal,
   });
 

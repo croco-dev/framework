@@ -62,7 +62,65 @@ revision and persists a lease computed from datastore-authoritative time.
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`claimLifecycleEventDelivery`](/api/billing-core/src/classes/billingstore/#claimlifecycleeventdelivery)
 
-***
+---
+
+### claimWebhookDelivery()
+
+> **claimWebhookDelivery**(`eventId`, `_eventType`, `leaseDurationMs`): `Promise`\<[`BillingWebhookDeliveryClaim`](/api/billing-core/src/type-aliases/billingwebhookdeliveryclaim/)\>
+
+Atomically claims a webhook-addressed delivery with a datastore-time lease.
+
+An active lease returns `in_progress`, an expired lease is reclaimed with a new token and
+returns `claimed`, and a completed delivery returns `completed`.
+
+#### Parameters
+
+##### eventId
+
+`string`
+
+##### \_eventType
+
+`string`
+
+##### leaseDurationMs
+
+`number`
+
+#### Returns
+
+`Promise`\<[`BillingWebhookDeliveryClaim`](/api/billing-core/src/type-aliases/billingwebhookdeliveryclaim/)\>
+
+#### Overrides
+
+[`BillingStore`](/api/billing-core/src/classes/billingstore/).[`claimWebhookDelivery`](/api/billing-core/src/classes/billingstore/#claimwebhookdelivery)
+
+---
+
+### commitSubscriptionWebhook()
+
+> **commitSubscriptionWebhook**(`input`): `Promise`\<[`BillingSubscriptionWebhookTransition`](/api/billing-core/src/type-aliases/billingsubscriptionwebhooktransition/)\>
+
+Atomically reserves a subscription webhook, reads its previous subscription, saves the new
+subscription, and persists every derived event intent. Repeated calls for the same webhook
+must return the original transition without recomputing intents from current subscription
+state.
+
+#### Parameters
+
+##### input
+
+[`CommitBillingSubscriptionWebhookInput`](/api/billing-core/src/type-aliases/commitbillingsubscriptionwebhookinput/)
+
+#### Returns
+
+`Promise`\<[`BillingSubscriptionWebhookTransition`](/api/billing-core/src/type-aliases/billingsubscriptionwebhooktransition/)\>
+
+#### Overrides
+
+[`BillingStore`](/api/billing-core/src/classes/billingstore/).[`commitSubscriptionWebhook`](/api/billing-core/src/classes/billingstore/#commitsubscriptionwebhook)
+
+---
 
 ### completeWebhook()
 
@@ -82,7 +140,34 @@ revision and persists a lease computed from datastore-authoritative time.
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`completeWebhook`](/api/billing-core/src/classes/billingstore/#completewebhook)
 
-***
+---
+
+### completeWebhookDelivery()
+
+> **completeWebhookDelivery**(`eventId`, `claimToken`): `Promise`\<`boolean`\>
+
+Completes the delivery only for the current, unexpired lease token. Returns `false` for a stale
+or expired token.
+
+#### Parameters
+
+##### eventId
+
+`string`
+
+##### claimToken
+
+`string`
+
+#### Returns
+
+`Promise`\<`boolean`\>
+
+#### Overrides
+
+[`BillingStore`](/api/billing-core/src/classes/billingstore/).[`completeWebhookDelivery`](/api/billing-core/src/classes/billingstore/#completewebhookdelivery)
+
+---
 
 ### createLifecycleCommand()
 
@@ -108,7 +193,7 @@ the same tenant.
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`createLifecycleCommand`](/api/billing-core/src/classes/billingstore/#createlifecyclecommand)
 
-***
+---
 
 ### deleteAccount()
 
@@ -128,7 +213,7 @@ the same tenant.
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`deleteAccount`](/api/billing-core/src/classes/billingstore/#deleteaccount)
 
-***
+---
 
 ### deleteSubscription()
 
@@ -148,7 +233,7 @@ the same tenant.
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`deleteSubscription`](/api/billing-core/src/classes/billingstore/#deletesubscription)
 
-***
+---
 
 ### failWebhook()
 
@@ -173,7 +258,7 @@ independently of domain-state persistence.
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`failWebhook`](/api/billing-core/src/classes/billingstore/#failwebhook)
 
-***
+---
 
 ### findAccountByExternalId()
 
@@ -193,7 +278,7 @@ independently of domain-state persistence.
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`findAccountByExternalId`](/api/billing-core/src/classes/billingstore/#findaccountbyexternalid)
 
-***
+---
 
 ### findAccountByTenantId()
 
@@ -213,7 +298,7 @@ independently of domain-state persistence.
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`findAccountByTenantId`](/api/billing-core/src/classes/billingstore/#findaccountbytenantid)
 
-***
+---
 
 ### findLifecycleCommand()
 
@@ -233,7 +318,7 @@ independently of domain-state persistence.
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`findLifecycleCommand`](/api/billing-core/src/classes/billingstore/#findlifecyclecommand)
 
-***
+---
 
 ### findOrdersByAccount()
 
@@ -253,7 +338,7 @@ independently of domain-state persistence.
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`findOrdersByAccount`](/api/billing-core/src/classes/billingstore/#findordersbyaccount)
 
-***
+---
 
 ### findPendingLifecycleCommandByTenantId()
 
@@ -273,7 +358,7 @@ independently of domain-state persistence.
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`findPendingLifecycleCommandByTenantId`](/api/billing-core/src/classes/billingstore/#findpendinglifecyclecommandbytenantid)
 
-***
+---
 
 ### findSubscription()
 
@@ -293,7 +378,7 @@ independently of domain-state persistence.
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`findSubscription`](/api/billing-core/src/classes/billingstore/#findsubscription)
 
-***
+---
 
 ### findSubscriptionByExternalId()
 
@@ -313,7 +398,7 @@ independently of domain-state persistence.
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`findSubscriptionByExternalId`](/api/billing-core/src/classes/billingstore/#findsubscriptionbyexternalid)
 
-***
+---
 
 ### listPendingLifecycleCommands()
 
@@ -333,7 +418,34 @@ independently of domain-state persistence.
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`listPendingLifecycleCommands`](/api/billing-core/src/classes/billingstore/#listpendinglifecyclecommands)
 
-***
+---
+
+### markWebhookEventIntentPublished()
+
+> **markWebhookEventIntentPublished**(`eventId`, `intentEventId`): `Promise`\<`void`\>
+
+Marks one stable event intent as durably published. Repeated calls with the same
+`intentEventId` must be idempotent.
+
+#### Parameters
+
+##### eventId
+
+`string`
+
+##### intentEventId
+
+`string`
+
+#### Returns
+
+`Promise`\<`void`\>
+
+#### Overrides
+
+[`BillingStore`](/api/billing-core/src/classes/billingstore/).[`markWebhookEventIntentPublished`](/api/billing-core/src/classes/billingstore/#markwebhookeventintentpublished)
+
+---
 
 ### reconcileLifecycleSubscription()
 
@@ -365,7 +477,34 @@ subscription occupies the billing account.
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`reconcileLifecycleSubscription`](/api/billing-core/src/classes/billingstore/#reconcilelifecyclesubscription)
 
-***
+---
+
+### releaseWebhookDelivery()
+
+> **releaseWebhookDelivery**(`eventId`, `claimToken`): `Promise`\<`boolean`\>
+
+Releases the delivery only for the current, unexpired lease token. Returns `false` for a stale
+or expired token.
+
+#### Parameters
+
+##### eventId
+
+`string`
+
+##### claimToken
+
+`string`
+
+#### Returns
+
+`Promise`\<`boolean`\>
+
+#### Overrides
+
+[`BillingStore`](/api/billing-core/src/classes/billingstore/).[`releaseWebhookDelivery`](/api/billing-core/src/classes/billingstore/#releasewebhookdelivery)
+
+---
 
 ### reserveWebhook()
 
@@ -394,7 +533,7 @@ reservation already exists. Other storage failures must retain their original fa
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`reserveWebhook`](/api/billing-core/src/classes/billingstore/#reservewebhook)
 
-***
+---
 
 ### reset()
 
@@ -406,7 +545,7 @@ Clear all data (for testing)
 
 `void`
 
-***
+---
 
 ### resolveLifecycleSubscription()
 
@@ -433,7 +572,7 @@ second, racy subscription read.
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`resolveLifecycleSubscription`](/api/billing-core/src/classes/billingstore/#resolvelifecyclesubscription)
 
-***
+---
 
 ### saveAccount()
 
@@ -453,7 +592,7 @@ second, racy subscription read.
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`saveAccount`](/api/billing-core/src/classes/billingstore/#saveaccount)
 
-***
+---
 
 ### saveLifecycleCommand()
 
@@ -481,7 +620,7 @@ reopen or rewrite a completed command. Once local reconciliation runs, the comma
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`saveLifecycleCommand`](/api/billing-core/src/classes/billingstore/#savelifecyclecommand)
 
-***
+---
 
 ### saveOrder()
 
@@ -501,7 +640,7 @@ reopen or rewrite a completed command. Once local reconciliation runs, the comma
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`saveOrder`](/api/billing-core/src/classes/billingstore/#saveorder)
 
-***
+---
 
 ### saveSubscription()
 

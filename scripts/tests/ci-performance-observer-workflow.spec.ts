@@ -180,10 +180,14 @@ describe("CI performance observer workflow", () => {
       ),
     ).not.toThrow();
     expect(metadata?.run).toContain(
-      'elif [ "$(jq -er \'.event\' ci-observer-input/run.json)" = "push" ]; then',
+      '[ "$(jq -er \'.event\' ci-observer-input/run.json)" = "push" ] ||',
+    );
+    expect(metadata?.run).toContain(
+      '[ "$(jq -er \'.event\' ci-observer-input/run.json)" = "workflow_dispatch" ]; then',
     );
     expect(metadata?.run).toContain("jq -er '.parents | select(length >= 1) | .[0].sha'");
-    expect(metadata?.run).toContain(": > ci-observer-input/base-sha.txt");
+    expect(metadata?.run).toContain("Unsupported source event for cacheable CI observation.");
+    expect(metadata?.run).not.toContain(": > ci-observer-input/base-sha.txt");
     expect(metadata?.run).not.toMatch(
       /if \[ -n "\$SOURCE_PULL_NUMBER" \]; then[\s\S]{0,200}\.parents\[0\]\.sha/,
     );

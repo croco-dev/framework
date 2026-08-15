@@ -15,19 +15,19 @@ Better Auth 웹훅 이벤트 페이로드입니다.
 
 > **data**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### id?
 
-> `optional` **id**: `string`
+> `optional` **id?**: `string`
 
-***
+---
 
 ### timestamp
 
 > **timestamp**: `Date`
 
-***
+---
 
 ### type
 

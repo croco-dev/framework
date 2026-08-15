@@ -218,10 +218,7 @@ describe("pull-request CI performance budget", () => {
   });
 
   it("rejects restoring full-spine validation on trunk pushes", () => {
-    const mutant = WORKFLOW.replace(
-      'if [ "$GITHUB_EVENT_NAME" != "workflow_dispatch" ]; then',
-      'if [ "${{ github.event_name }}" = "pull_request" ]; then',
-    );
+    const mutant = WORKFLOW.replace('args+=(--base "$VERIFICATION_BASE" --head HEAD)', "");
 
     expect(
       findCiPerformanceBudgetViolations({
@@ -527,6 +524,7 @@ describe("observed CI performance budgets", () => {
       cacheMissCount: 3,
       cacheState: "partial",
       cacheEvidenceComplete: true,
+      injectedFailure: "generated-apps",
     });
 
     expect(created).toMatchObject({
@@ -541,6 +539,7 @@ describe("observed CI performance budgets", () => {
       inventoryDigest: "inventory",
       workflowDigest: "workflow",
       cacheEvidenceComplete: true,
+      injectedFailure: "generated-apps",
     });
   });
 

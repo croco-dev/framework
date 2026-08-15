@@ -4054,7 +4054,7 @@ export function turboBuildArguments(
 export function turboConcurrencyArguments(platform: NodeJS.Platform = process.platform): string[] {
   // TypeScript 6 declaration bundling is substantially more memory-intensive on the hosted Windows runner.
   // Leave process-initialization headroom so a large generated-app dependency graph remains deterministic.
-  return [`--concurrency=${platform === "win32" ? 2 : 4}`];
+  return [`--concurrency=${platform === "win32" ? 1 : 4}`];
 }
 
 function packWorkspacePackage(

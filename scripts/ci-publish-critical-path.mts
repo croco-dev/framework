@@ -17,7 +17,7 @@ const observedDurationMinutes: Readonly<Record<string, number>> = {
   "architecture-circular-allowlist": 0.3,
   "strict-contract-typecheck": 2.4,
   "dependency-audit-policy": 0.6,
-  "package-entrypoints-smoke": 6.5,
+  "package-entrypoints-smoke": 6,
   "package-bins-smoke": 0.4,
   "quick-start-lambda-smoke": 2.1,
   typecheck: 4.8,
@@ -73,15 +73,13 @@ export function calculateVerificationCriticalPath(commands: readonly EvidenceCom
     for (let index = 0; index < pending.length && active.length < MAX_CONCURRENCY; ) {
       const command = pending[index];
       const dependenciesReady = (command.dependsOn ?? []).every((id) => completed.has(id));
-      if (
-        !dependenciesReady ||
-        (command.concurrencyGroup !== undefined && activeGroups.has(command.concurrencyGroup))
-      ) {
+      const concurrencyGroups = command.concurrencyGroups ?? [];
+      if (!dependenciesReady || concurrencyGroups.some((group) => activeGroups.has(group))) {
         index += 1;
         continue;
       }
       pending.splice(index, 1);
-      if (command.concurrencyGroup) activeGroups.add(command.concurrencyGroup);
+      for (const group of concurrencyGroups) activeGroups.add(group);
       active.push({ command, completedAt: now + durationMinutes(command) });
       started = true;
     }
@@ -98,7 +96,7 @@ export function calculateVerificationCriticalPath(commands: readonly EvidenceCom
     if (!next) throw new Error("Critical-path model lost its next active command");
     now = next.completedAt;
     completed.set(next.command.id, now);
-    if (next.command.concurrencyGroup) activeGroups.delete(next.command.concurrencyGroup);
+    for (const group of next.command.concurrencyGroups ?? []) activeGroups.delete(group);
   }
 
   return now;
@@ -132,8 +130,8 @@ export function evaluatePublishCriticalPath(
       diagnostics.push(`${id} must reuse authoritative lane evidence instead of rerunning tests`);
     }
   }
-  if (!byId.get("typecheck")?.command.includes("--only")) {
-    diagnostics.push("typecheck must not repeat the prerequisite build graph");
+  if (byId.get("typecheck")?.command.includes("--only")) {
+    diagnostics.push("typecheck must retain its declared build dependencies on a clean checkout");
   }
   const testLaneRunner = readFileSync(resolve("scripts/test-lane-runner.mts"), "utf8");
   if (!/"test",\s*"--only",/.test(testLaneRunner)) {

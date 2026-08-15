@@ -25,7 +25,7 @@ title: "AbstractMembershipManager"
 
 ### addMember()
 
-> `abstract` **addMember**(`tenantId`, `userId`, `role`): `Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/)\>
+> `abstract` **addMember**(`tenantId`, `userId`, `role`, `idempotencyKey`): `Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/)\>
 
 #### Parameters
 
@@ -41,11 +41,43 @@ title: "AbstractMembershipManager"
 
 [`MembershipRole`](/api/membership-core/src/type-aliases/membershiprole/)
 
+##### idempotencyKey
+
+`string`
+
 #### Returns
 
 `Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/)\>
 
-***
+---
+
+### addMemberCommand()
+
+> `abstract` **addMemberCommand**(`tenantId`, `userId`, `role`, `idempotencyKey`): `Promise`\<\{ `membership`: [`Membership`](/api/membership-core/src/type-aliases/membership/); `operation`: `"add"`; `replayed`: `boolean`; \}\>
+
+#### Parameters
+
+##### tenantId
+
+`string`
+
+##### userId
+
+`string`
+
+##### role
+
+[`MembershipRole`](/api/membership-core/src/type-aliases/membershiprole/)
+
+##### idempotencyKey
+
+`string`
+
+#### Returns
+
+`Promise`\<\{ `membership`: [`Membership`](/api/membership-core/src/type-aliases/membership/); `operation`: `"add"`; `replayed`: `boolean`; \}\>
+
+---
 
 ### getMember()
 
@@ -65,7 +97,7 @@ title: "AbstractMembershipManager"
 
 `Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/)\>
 
-***
+---
 
 ### listMembers()
 
@@ -81,7 +113,7 @@ title: "AbstractMembershipManager"
 
 `Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/)[]\>
 
-***
+---
 
 ### listTenants()
 
@@ -97,11 +129,27 @@ title: "AbstractMembershipManager"
 
 `Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/)[]\>
 
-***
+---
+
+### publishPendingEvents()
+
+> `abstract` **publishPendingEvents**(`limit?`): `Promise`\<`number`\>
+
+#### Parameters
+
+##### limit?
+
+`number`
+
+#### Returns
+
+`Promise`\<`number`\>
+
+---
 
 ### removeMember()
 
-> `abstract` **removeMember**(`tenantId`, `userId`): `Promise`\<`void`\>
+> `abstract` **removeMember**(`tenantId`, `userId`, `idempotencyKey`): `Promise`\<`void`\>
 
 #### Parameters
 
@@ -113,15 +161,19 @@ title: "AbstractMembershipManager"
 
 `string`
 
+##### idempotencyKey
+
+`string`
+
 #### Returns
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### transferOwnership()
 
-> `abstract` **transferOwnership**(`tenantId`, `fromUserId`, `toUserId`): `Promise`\<`void`\>
+> `abstract` **transferOwnership**(`tenantId`, `fromUserId`, `toUserId`, `idempotencyKey`): `Promise`\<`void`\>
 
 #### Parameters
 
@@ -137,15 +189,19 @@ title: "AbstractMembershipManager"
 
 `string`
 
+##### idempotencyKey
+
+`string`
+
 #### Returns
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### updateRole()
 
-> `abstract` **updateRole**(`tenantId`, `userId`, `newRole`): `Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/)\>
+> `abstract` **updateRole**(`tenantId`, `userId`, `newRole`, `idempotencyKey`): `Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/)\>
 
 #### Parameters
 
@@ -160,6 +216,10 @@ title: "AbstractMembershipManager"
 ##### newRole
 
 [`MembershipRole`](/api/membership-core/src/type-aliases/membershiprole/)
+
+##### idempotencyKey
+
+`string`
 
 #### Returns
 

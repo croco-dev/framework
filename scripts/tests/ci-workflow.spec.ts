@@ -4,6 +4,10 @@ import { join, resolve } from "node:path";
 import { isNode, parseDocument } from "yaml";
 import { describe, expect, it } from "vitest";
 
+import {
+  CACHEABLE_FAILURE_CLASSES,
+  CACHEABLE_FAILURE_COMMAND,
+} from "../ci-cacheable-failure-injection.mts";
 import { createVerificationManifest, getVerificationCommand } from "../verification-manifest.mts";
 import { ensureSarif, GITLEAKS_CORE_ARGS } from "../security-gitleaks-smoke.mts";
 import {
@@ -38,6 +42,15 @@ const PNPM_LOCK = readFileSync(resolve(ROOT_DIR, "pnpm-lock.yaml"), "utf8");
 const NVMRC = readFileSync(resolve(ROOT_DIR, ".nvmrc"), "utf8").trim();
 const GITLEAKS_SMOKE = readFileSync(
   resolve(ROOT_DIR, "scripts/security-gitleaks-smoke.mts"),
+  "utf8",
+);
+const DOCS_PLAYWRIGHT_CONFIG = readFileSync(
+  resolve(ROOT_DIR, "packages/docs/playwright.config.ts"),
+  "utf8",
+);
+const DOCS_ASTRO_CONFIG = readFileSync(resolve(ROOT_DIR, "packages/docs/astro.config.mjs"), "utf8");
+const DOCS_PLAYWRIGHT_TEARDOWN = readFileSync(
+  resolve(ROOT_DIR, "packages/docs/playwright.global-teardown.ts"),
   "utf8",
 );
 function workflowJob(id: string): string {
@@ -204,6 +217,28 @@ describe("CI executable supply chain", () => {
 });
 
 describe("Phase B cacheable verification shadow", () => {
+  it("isolates every docs Playwright input and removes its temporary root", () => {
+    expect(DOCS_PLAYWRIGHT_CONFIG).toContain(
+      'cpSync(join(import.meta.dirname, "public"), join(isolatedBuildRoot, "public"),',
+    );
+    expect(DOCS_PLAYWRIGHT_CONFIG).toContain("reuseExistingServer: false");
+    expect(DOCS_PLAYWRIGHT_CONFIG).toContain('globalTeardown: "./playwright.global-teardown.ts"');
+    expect(
+      DOCS_PLAYWRIGHT_CONFIG.indexOf('process.once("exit", cleanupIsolatedBuildRoot)'),
+    ).toBeLessThan(DOCS_PLAYWRIGHT_CONFIG.indexOf('cpSync(join(import.meta.dirname, "src")'));
+    expect(DOCS_ASTRO_CONFIG).toContain('publicDir: join(isolatedBuildRoot, "public")');
+    expect(DOCS_PLAYWRIGHT_TEARDOWN).toContain(
+      "rmSync(isolatedRoot, { recursive: true, force: true })",
+    );
+  });
+
+  it("keeps ordinary runs latest-only while giving each manual experiment an independent group", () => {
+    expect(WORKFLOW).toContain(
+      "group: ci-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.ref }}",
+    );
+    expect(WORKFLOW).toContain("cancel-in-progress: true");
+  });
+
   const producerJobs = [
     "core-verification",
     "generated-apps",
@@ -265,9 +300,9 @@ describe("Phase B cacheable verification shadow", () => {
       const exactCache = job.slice(exactCacheStart, exactCacheEnd);
       expect(exactCache).not.toContain("restore-keys:");
       expect(exactCache).toContain(
-        "if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository",
+        "if: env.CROCO_CACHEABLE_FAILURE_CLASS == 'none' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)",
       );
-      expect(job).toContain('if [ "$TRUSTED_CACHE" = "true" ]; then');
+      expect(job).toContain('[ "$TRUSTED_CACHE" = "true" ]; then');
       expect(job).toContain("--cache-origin github-exact-key");
     }
     const security = workflowJob("coverage-security");
@@ -297,6 +332,41 @@ describe("Phase B cacheable verification shadow", () => {
     expect(shadow).toContain("scripts/ci-split-validation-synthesis.mts");
     expect(shadow).toContain("ci-reports/cacheable-ci/split-validation-shadow.json");
     expect(shadow).toContain("ci-reports/security/split-security-policy-summary.json");
+  });
+
+  it("runs each explicit failure class without reusable receipts and records the class", () => {
+    for (const failureClass of CACHEABLE_FAILURE_CLASSES) {
+      expect(WORKFLOW).toContain(`          - ${failureClass}`);
+    }
+    expect(WORKFLOW).toContain(
+      "CROCO_CACHEABLE_FAILURE_CLASS: ${{ inputs.cacheable_failure_class || 'none' }}",
+    );
+    expect(VALIDATE_JOB).toContain('args+=(--inject-failure "$CROCO_CACHEABLE_FAILURE_CLASS")');
+    expect(workflowStep("Record observed CI performance budget")).toContain(
+      '--injected-failure "$CROCO_CACHEABLE_FAILURE_CLASS"',
+    );
+    for (const [jobId, failureClass] of [
+      ["core-verification", "core-verification"],
+      ["generated-apps", "generated-apps"],
+      ["package-artifacts", "package-artifacts"],
+      ["coverage-security", "coverage-security"],
+    ] as const) {
+      const job = workflowJob(jobId);
+      expect(job).toContain(`= "${failureClass}" ]; then`);
+      expect(job).toContain('failure_args+=(--inject-failure "$CROCO_CACHEABLE_FAILURE_CLASS")');
+      expect(job).toContain(
+        'if [ "$CROCO_CACHEABLE_FAILURE_CLASS" != "none" ]; then\n            failure_args+=(--full-selection)',
+      );
+    }
+    const shadow = workflowJob("split-validation-shadow");
+    expect(shadow).toContain('[ "$CROCO_CACHEABLE_FAILURE_CLASS" = "validate-synthesis" ]; then');
+    expect(shadow).toContain("selection_args+=(--full-selection)");
+    expect(shadow).toContain('"${selection_args[@]}"');
+    expect(VALIDATE_JOB).toContain("args+=(--full-selection)");
+    const fullPublish = createVerificationManifest("publish");
+    for (const commandId of Object.values(CACHEABLE_FAILURE_COMMAND)) {
+      expect(fullPublish.find(({ id }) => id === commandId)?.applicable, commandId).not.toBe(false);
+    }
   });
 
   it("digest-binds the three physical security outcomes and their raw reports", () => {
@@ -367,8 +437,10 @@ describe("CI verification profile contract", () => {
     expect(WORKFLOW).toContain(
       'if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then\n            args+=(--allow-pending-release-metadata)',
     );
+    expect(WORKFLOW).toContain('args+=(--base "$VERIFICATION_BASE" --head HEAD)');
+    expect(WORKFLOW).not.toContain('if [ "$GITHUB_EVENT_NAME" != "workflow_dispatch" ]');
     expect(WORKFLOW).toContain(
-      'if [ "$GITHUB_EVENT_NAME" != "workflow_dispatch" ]; then\n            args+=(--base "$VERIFICATION_BASE" --head HEAD)',
+      'if [ "$CROCO_CACHEABLE_FAILURE_CLASS" != "none" ]; then\n            args+=(--full-selection)\n            args+=(--inject-failure "$CROCO_CACHEABLE_FAILURE_CLASS")',
     );
     expect(WORKFLOW).toContain("VERIFICATION_BASE: ${{ needs.changes.outputs.base }}");
     expect(WORKFLOW).not.toContain("test:release-gates");
@@ -614,6 +686,7 @@ describe("CI verification profile contract", () => {
 
     expect(ensureNativeStart).toBeGreaterThan(-1);
     expect(ensureNativeStart).toBeLessThan(aggregateStart);
+    expect(workflowStep("Ensure native Vitest evidence")).toContain("if: ${{ !cancelled() }}");
     expect(VALIDATE_JOB.slice(ensureNativeStart, aggregateStart)).toContain(
       "pnpm --filter @croco/testing test",
     );
@@ -641,7 +714,9 @@ describe("CI verification profile contract", () => {
 
   it("measures changed-test selection misses against cache-aware authoritative shadow evidence", () => {
     const fullSuiteStep = workflowStep("Run full test suite for changed-test shadow");
-    expect(fullSuiteStep).toContain("if: always() && github.event_name == 'pull_request'");
+    expect(fullSuiteStep).toContain(
+      "if: ${{ !cancelled() && github.event_name == 'pull_request' }}",
+    );
     expect(fullSuiteStep).not.toContain("continue-on-error");
     expect(fullSuiteStep).toContain("VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}");
     expect(fullSuiteStep).toContain('if [ "$VERIFICATION_PROFILE" = "publish" ]; then');
@@ -689,7 +764,9 @@ describe("CI verification profile contract", () => {
       VALIDATE_JOB.indexOf("      - name: Restore changed-test shadow baseline"),
       VALIDATE_JOB.indexOf("      - name: Aggregate changed-test shadow full evidence"),
     );
-    expect(restoreBaseline).toContain("if: always() && github.event_name == 'pull_request'");
+    expect(restoreBaseline).toContain(
+      "if: ${{ !cancelled() && github.event_name == 'pull_request' }}",
+    );
     expect(VALIDATE_JOB).toContain("path: ci-reports/changed-test-plan/baseline.json");
     expect(VALIDATE_JOB).toContain(
       "key: changed-test-plan-${{ github.event.pull_request.number }}-${{ github.run_id }}-${{ github.run_attempt }}",
@@ -697,6 +774,9 @@ describe("CI verification profile contract", () => {
     expect(VALIDATE_JOB).toContain("      - name: Aggregate changed-test shadow full evidence");
     expect(workflowStep("Aggregate changed-test shadow full evidence")).not.toContain(
       "continue-on-error",
+    );
+    expect(workflowStep("Aggregate changed-test shadow full evidence")).toContain(
+      "if: ${{ !cancelled() && github.event_name == 'pull_request' }}",
     );
     expect(VALIDATE_JOB).toContain("scripts/test-evidence-bundle.mts");
     expect(workflowStep("Aggregate changed-test shadow full evidence")).toContain(
@@ -707,8 +787,11 @@ describe("CI verification profile contract", () => {
     expect(workflowStep("Measure changed-test selection misses")).not.toContain(
       "continue-on-error",
     );
+    expect(workflowStep("Measure changed-test selection misses")).toContain("!cancelled()");
     expect(VALIDATE_JOB).toContain("scripts/changed-test-plan-shadow.mts");
-    expect(VALIDATE_JOB).toContain("--execute-selected");
+    expect(workflowStep("Measure changed-test selection misses")).not.toContain(
+      "--execute-selected",
+    );
     expect(VALIDATE_JOB).toContain("ci-reports/changed-test-plan/full-evidence/bundle.json");
     expect(VALIDATE_JOB).toContain("ci-reports/changed-test-plan/summary.md");
     expect(workflowStep("Upload verification evidence")).toContain("ci-reports/changed-test-plan");

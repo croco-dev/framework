@@ -53,7 +53,7 @@ title: "InMemoryCreditLedgerStore"
 
 [`CreditLedgerStore`](/api/credits-core/src/classes/creditledgerstore/).[`execute`](/api/credits-core/src/classes/creditledgerstore/#execute)
 
-***
+---
 
 ### getAccount()
 
@@ -73,7 +73,7 @@ title: "InMemoryCreditLedgerStore"
 
 [`CreditLedgerStore`](/api/credits-core/src/classes/creditledgerstore/).[`getAccount`](/api/credits-core/src/classes/creditledgerstore/#getaccount)
 
-***
+---
 
 ### getBalance()
 
@@ -97,7 +97,7 @@ title: "InMemoryCreditLedgerStore"
 
 [`CreditLedgerStore`](/api/credits-core/src/classes/creditledgerstore/).[`getBalance`](/api/credits-core/src/classes/creditledgerstore/#getbalance)
 
-***
+---
 
 ### getHistory()
 
@@ -131,13 +131,17 @@ title: "InMemoryCreditLedgerStore"
 
 [`CreditLedgerStore`](/api/credits-core/src/classes/creditledgerstore/).[`getHistory`](/api/credits-core/src/classes/creditledgerstore/#gethistory)
 
-***
+---
 
 ### getPendingEventIntent()
 
-> **getPendingEventIntent**(`idempotencyKey`): `Promise`\<[`CreditLedgerEventIntent`](/api/credits-core/src/type-aliases/creditledgereventintent/) \| `null`\>
+> **getPendingEventIntent**(`tenantId`, `idempotencyKey`): `Promise`\<[`CreditLedgerEventIntent`](/api/credits-core/src/type-aliases/creditledgereventintent/) \| `null`\>
 
 #### Parameters
+
+##### tenantId
+
+`string`
 
 ##### idempotencyKey
 
@@ -151,7 +155,7 @@ title: "InMemoryCreditLedgerStore"
 
 [`CreditLedgerStore`](/api/credits-core/src/classes/creditledgerstore/).[`getPendingEventIntent`](/api/credits-core/src/classes/creditledgerstore/#getpendingeventintent)
 
-***
+---
 
 ### getReservation()
 
@@ -175,7 +179,7 @@ title: "InMemoryCreditLedgerStore"
 
 [`CreditLedgerStore`](/api/credits-core/src/classes/creditledgerstore/).[`getReservation`](/api/credits-core/src/classes/creditledgerstore/#getreservation)
 
-***
+---
 
 ### listPendingEventIntents()
 
@@ -195,7 +199,7 @@ title: "InMemoryCreditLedgerStore"
 
 [`CreditLedgerStore`](/api/credits-core/src/classes/creditledgerstore/).[`listPendingEventIntents`](/api/credits-core/src/classes/creditledgerstore/#listpendingeventintents)
 
-***
+---
 
 ### markEventIntentPublished()
 

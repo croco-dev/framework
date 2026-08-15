@@ -15,7 +15,7 @@ title: "HealthStatusChangedEvent"
 
 ### Constructor
 
-> **new HealthStatusChangedEvent**(`tenantId`, `oldStatus`, `newStatus`, `score`): `HealthStatusChangedEvent`
+> **new HealthStatusChangedEvent**(`tenantId`, `oldStatus`, `newStatus`, `score`, `eventId?`, `occurredAt?`): `HealthStatusChangedEvent`
 
 #### Parameters
 
@@ -35,6 +35,14 @@ title: "HealthStatusChangedEvent"
 
 `number`
 
+##### eventId?
+
+`string`
+
+##### occurredAt?
+
+`Date`
+
 #### Returns
 
 `HealthStatusChangedEvent`
@@ -53,7 +61,7 @@ title: "HealthStatusChangedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventId`](/api/events-core/src/classes/domainevent/#eventid)
 
-***
+---
 
 ### eventName
 
@@ -63,7 +71,7 @@ title: "HealthStatusChangedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventName`](/api/events-core/src/classes/domainevent/#eventname)
 
-***
+---
 
 ### metadata
 
@@ -73,31 +81,31 @@ title: "HealthStatusChangedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`metadata`](/api/events-core/src/classes/domainevent/#metadata)
 
-***
+---
 
 ### newStatus
 
 > `readonly` **newStatus**: [`HealthStatus`](/api/customer-health-core/src/type-aliases/healthstatus/)
 
-***
+---
 
 ### oldStatus
 
 > `readonly` **oldStatus**: [`HealthStatus`](/api/customer-health-core/src/type-aliases/healthstatus/)
 
-***
+---
 
 ### score
 
 > `readonly` **score**: `number`
 
-***
+---
 
 ### tenantId
 
 > `readonly` **tenantId**: `string`
 
-***
+---
 
 ### timestamp
 
@@ -107,7 +115,7 @@ title: "HealthStatusChangedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`timestamp`](/api/events-core/src/classes/domainevent/#timestamp)
 
-***
+---
 
 ### eventName
 
