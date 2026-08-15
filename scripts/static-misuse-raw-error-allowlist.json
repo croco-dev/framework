@@ -420,7 +420,7 @@
     {
       "package": "@croco/outbox-core",
       "file": "packages/outbox-core/src/libs/conformance.ts",
-      "line": 353,
+      "line": 355,
       "excerpt": "throw new Error(\"rollback\");",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
       "owner": "framework-error-handling",

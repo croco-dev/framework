@@ -19098,6 +19098,12 @@
           "sourceEntrypoint": "packages/outbox-core/src/index.ts",
           "runtimeExports": [
             {
+              "name": "assertValidClaimBatchOptions",
+              "exportKind": "named",
+              "source": "./libs/claimValidation",
+              "declarationKind": "function"
+            },
+            {
               "name": "createOutboxFailureProblemExtensions",
               "exportKind": "named",
               "source": "./libs/problems/OutboxProblems",
@@ -19114,6 +19120,12 @@
               "exportKind": "named",
               "source": "./libs/InMemoryTransactionalOutboxStore",
               "declarationKind": "class"
+            },
+            {
+              "name": "OUTBOX_CLAIM_CONFIGURATION_PROBLEM_CODE",
+              "exportKind": "named",
+              "source": "./libs/problems/OutboxProblems",
+              "declarationKind": "const"
             },
             {
               "name": "OUTBOX_DISPATCH_PROBLEM_CODE",
@@ -19138,6 +19150,12 @@
               "exportKind": "named",
               "source": "./libs/problems/OutboxProblems",
               "declarationKind": "const"
+            },
+            {
+              "name": "OutboxClaimConfigurationProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/OutboxProblems",
+              "declarationKind": "class"
             },
             {
               "name": "OutboxDispatchProblem",

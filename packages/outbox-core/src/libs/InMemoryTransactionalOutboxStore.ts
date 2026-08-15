@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { Problem } from "@croco/problems-core";
+import { assertValidClaimBatchOptions } from "./claimValidation";
 import {
   createOutboxFailureProblemExtensions,
   OutboxFailureMetadataProblem,
@@ -245,6 +246,8 @@ export class InMemoryTransactionalOutboxStore implements TransactionalOutboxStor
   async claimBatch(
     options: ClaimBatchOptions<InMemoryTransactionalOutboxStoreClient>,
   ): Promise<ClaimedOutboxRecord[]> {
+    assertValidClaimBatchOptions(options);
+
     if (!options.context) {
       this.assertNoActiveUnitOfWorkRootMutation();
       return this.enqueue(() => this.claimBatchInState(this.rootState, options));

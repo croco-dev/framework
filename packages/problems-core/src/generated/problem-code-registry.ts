@@ -12580,6 +12580,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "outbox-core/claim-configuration-invalid",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#outbox-core-claim-configuration-invalid",
+      recovery: {
+        cause:
+          "An outbox dispatcher requested a visibility lease that is not a positive safe-integer duration with a representable expiry.",
+        userAction:
+          "Ask the operator to correct visibilityTimeoutMs before retrying outbox dispatch.",
+        operatorAction:
+          "Correct dispatcher lease configuration and verify every store validates claim options before reading or mutating claim state.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/outbox-core/src/libs/problems/OutboxProblems.ts",
+          line: 34,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
       code: "outbox-core/dispatch-failed",
       category: "InternalServerError",
       status: 500,
@@ -12605,7 +12638,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/outbox-core/src/libs/problems/OutboxProblems.ts",
-          line: 86,
+          line: 103,
           column: 5,
           kind: "problem-constructor",
         },
@@ -12638,7 +12671,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/outbox-core/src/libs/problems/OutboxProblems.ts",
-          line: 116,
+          line: 133,
           column: 5,
           kind: "problem-constructor",
         },
@@ -12671,7 +12704,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/outbox-core/src/libs/problems/OutboxProblems.ts",
-          line: 103,
+          line: 120,
           column: 5,
           kind: "problem-constructor",
         },
@@ -12705,7 +12738,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/outbox-core/src/libs/problems/OutboxProblems.ts",
-          line: 129,
+          line: 146,
           column: 5,
           kind: "problem-constructor",
         },

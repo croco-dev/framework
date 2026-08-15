@@ -2,6 +2,7 @@ import { Problem, ProblemCategory } from "@croco/problems-core";
 import type { OutboxFailureMetadata } from "../types";
 
 export const OUTBOX_DISPATCH_PROBLEM_CODE = "outbox-core/dispatch-failed";
+export const OUTBOX_CLAIM_CONFIGURATION_PROBLEM_CODE = "outbox-core/claim-configuration-invalid";
 export const OUTBOX_RECORD_ID_CONFLICT_PROBLEM_CODE = "outbox-core/record-id-conflict";
 export const OUTBOX_FAILURE_METADATA_PROBLEM_CODE = "outbox-core/failure-metadata-missing";
 export const OUTBOX_UNIT_OF_WORK_CONTEXT_PROBLEM_CODE = "outbox-core/unit-of-work-context-invalid";
@@ -23,6 +24,22 @@ export type OutboxDispatchProblemOptions = {
   readonly failure: OutboxFailureMetadata;
   readonly cause?: Error;
 };
+
+/** Problem raised when an outbox claim lease cannot preserve exclusive ownership. */
+export class OutboxClaimConfigurationProblem extends Problem {
+  readonly visibilityTimeoutMs: number;
+
+  constructor(visibilityTimeoutMs: number) {
+    const receivedValue = String(visibilityTimeoutMs);
+    super(
+      OUTBOX_CLAIM_CONFIGURATION_PROBLEM_CODE,
+      ProblemCategory.InternalServerError,
+      `visibilityTimeoutMs must be a positive safe integer that produces a representable lease expiry; received ${receivedValue}.`,
+      { extensions: { visibilityTimeoutMs: receivedValue } },
+    );
+    this.visibilityTimeoutMs = visibilityTimeoutMs;
+  }
+}
 
 export function createOutboxFailureProblemExtensions(
   failure: OutboxFailureMetadata,

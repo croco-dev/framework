@@ -32,4 +32,9 @@ const [claimed] = await store.claimBatch({
 });
 ```
 
+`visibilityTimeoutMs` must be a positive safe integer that produces a representable expiry from
+`now`. Invalid leases fail with `OutboxClaimConfigurationProblem` before a store reads or mutates
+claim state. Custom store implementations can enforce the same boundary with
+`assertValidClaimBatchOptions`.
+
 Use `createTransactionalOutboxStoreContractSuite` to verify provider implementations against duplicate idempotency keys, delimiter-safe tenant and idempotency boundaries, Unit-of-Work rollback, concurrent claims, dispatch success, retryable failure, terminal failure, and stale claim behavior.

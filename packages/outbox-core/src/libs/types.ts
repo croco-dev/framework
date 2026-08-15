@@ -131,6 +131,7 @@ export type ClaimedOutboxRecord = OutboxRecord & {
 export type ClaimBatchOptions<TClient = unknown> = {
   readonly limit: number;
   readonly now: Date;
+  /** Positive safe-integer lease duration that produces a representable expiry from `now`. */
   readonly visibilityTimeoutMs: number;
   readonly dispatcherId?: string;
   readonly tenant?: OutboxTenantBoundary;

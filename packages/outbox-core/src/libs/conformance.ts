@@ -1,6 +1,8 @@
 import { fail, strictEqual } from "node:assert/strict";
 import {
+  OUTBOX_CLAIM_CONFIGURATION_PROBLEM_CODE,
   OUTBOX_DISPATCH_PROBLEM_CODE,
+  OutboxClaimConfigurationProblem,
   OutboxDispatchProblem,
   OutboxFailureMetadataProblem,
   OutboxRecordIdConflictProblem,
@@ -382,6 +384,47 @@ export function createTransactionalOutboxStoreContractSuite<
             0,
             "malformed Unit of Work context must not fall back to non-transactional writes",
           );
+        },
+      },
+      {
+        name: "rejects invalid visibility leases before mutating records",
+        run: async () => {
+          const invalidVisibilityTimeouts = [
+            0,
+            -1,
+            1.5,
+            Number.NaN,
+            Number.POSITIVE_INFINITY,
+            Number.NEGATIVE_INFINITY,
+            Number.MAX_SAFE_INTEGER,
+            Number.MAX_SAFE_INTEGER + 1,
+          ];
+
+          for (const visibilityTimeoutMs of invalidVisibilityTimeouts) {
+            const store = await options.createStore();
+            const now = new Date("2026-01-01T00:00:00.000Z");
+            await store.record(createIntent(), { id: "claimable", now });
+
+            const problem = await assertRejects(
+              () =>
+                store.claimBatch({
+                  limit: 1,
+                  now,
+                  visibilityTimeoutMs,
+                  dispatcherId: "dispatcher-a",
+                }),
+              OutboxClaimConfigurationProblem,
+            );
+
+            assertEqual(
+              (problem as OutboxClaimConfigurationProblem).code,
+              OUTBOX_CLAIM_CONFIGURATION_PROBLEM_CODE,
+              "rejected claim must use the stable configuration Problem code",
+            );
+            const [record] = await options.listRecords(store);
+            assertEqual(record.status, "pending", "rejected claim must preserve record status");
+            assertEqual(record.retry.attempt, 0, "rejected claim must preserve attempt count");
+          }
         },
       },
       {
@@ -857,17 +900,20 @@ export function createDeferred<T>(): Deferred<T> {
 async function assertRejects(
   fn: () => Promise<unknown>,
   expectedError?: new (...args: never[]) => Error,
-): Promise<void> {
+): Promise<Error> {
   try {
     await fn();
   } catch (error) {
-    if (expectedError && !(error instanceof expectedError)) {
-      fail(
-        `Expected operation to reject with ${expectedError.name}, got ${error instanceof Error ? error.name : typeof error}.`,
-      );
+    if (!(error instanceof Error)) {
+      fail(`Expected operation to reject with an Error, got ${typeof error}.`);
     }
 
-    return;
+    const errorName = error.name;
+    if (expectedError && !(error instanceof expectedError)) {
+      fail(`Expected operation to reject with ${expectedError.name}, got ${errorName}.`);
+    }
+
+    return error;
   }
 
   fail("Expected operation to reject.");
