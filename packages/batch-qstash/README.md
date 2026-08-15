@@ -71,7 +71,7 @@ await executor.executeChunk(body.executionId, step, {
 | `QStashChunkDelivery`           | Continuation token and optional worker identity from the webhook.       |
 | `QStashExecutorOptions`         | Requires `qstashClient` and a public `webhookUrl`.                      |
 | `QStashBatchConfigProblem`      | Terminal Problem for missing execution manager, client, or webhook URL. |
-| `QStashBatchValidationProblem`  | Terminal Problem for malformed publish URLs.                            |
+| `QStashBatchValidationProblem`  | Terminal Problem for malformed publish URLs or invalid chunk sizes.     |
 | `QStashBatchPublishProblem`     | Redacted QStash publish failure with retryability and status evidence.  |
 | `isRetryableQStashBatchError()` | Classifies transient QStash publish failures for diagnostics/tests.     |
 
@@ -83,6 +83,7 @@ await executor.executeChunk(body.executionId, step, {
 - Duplicate stale tokens return a zero-work `stale` result; an actively owned token throws
   `execution/continuation-conflict` so QStash can retry it.
 - Non-HTTP(S) webhook URLs throw `QStashBatchValidationProblem`.
+- `step.chunkSize` must be a positive safe integer and is rejected before a continuation claim.
 - Next-chunk publish failures throw `QStashBatchPublishProblem`.
 - Upstream status `408`, `429`, and `5xx` are marked retryable. Terminal upstream failures are marked
   non-retryable.

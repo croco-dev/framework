@@ -393,6 +393,12 @@ function validateExecutionManager(
 }
 
 function validateQStashStep<I, O>(step: QStashStep<I, O>): void {
+  if (!Number.isSafeInteger(step?.chunkSize) || step.chunkSize <= 0) {
+    throw new QStashBatchValidationProblem(
+      `QStash batch step.chunkSize must be a positive safe integer; received ${String(step?.chunkSize)}.`,
+    );
+  }
+
   const writer = step?.writer as Partial<QStashIdempotentWriter<O>> | undefined;
   if (!writer || typeof writer.writeIdempotent !== "function") {
     throw new QStashBatchConfigProblem("step.writer.writeIdempotent");
