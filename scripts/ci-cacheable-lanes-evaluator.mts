@@ -13,7 +13,7 @@ import { VERIFICATION_LANE_OWNERSHIP } from "./verification-manifest.mts";
 export { SECURITY_OWNERSHIP };
 
 export const DATASET_SCHEMA = "croco.ci-cacheable-lanes-dataset/v1" as const;
-export const INVENTORY_SCHEMA = "croco.ci-cacheable-lanes-inventory/v1" as const;
+export const INVENTORY_SCHEMA = "croco.ci-cacheable-lanes-inventory/v2" as const;
 export const OBSERVATION_SCHEMA = "croco.ci-cacheable-lanes-observation/v1" as const;
 export const REPORT_SCHEMA = "croco.ci-cacheable-lanes-evaluation/v1" as const;
 export const RETENTION_DAYS = 90;
@@ -99,6 +99,7 @@ export type Inventory = {
   readonly schemaVersion: typeof INVENTORY_SCHEMA;
   readonly cutoffAt: string;
   readonly windowStartedAt: string;
+  readonly cohortStartedAt: string;
   readonly retentionDays: number;
   readonly sourceRunCount: number;
   readonly eligibleSourceCount: number;
@@ -419,6 +420,7 @@ function parseInventory(value: unknown, path = "inventory"): Inventory {
       "schemaVersion",
       "cutoffAt",
       "windowStartedAt",
+      "cohortStartedAt",
       "retentionDays",
       "sourceRunCount",
       "eligibleSourceCount",
@@ -516,6 +518,7 @@ function parseInventory(value: unknown, path = "inventory"): Inventory {
     schemaVersion: INVENTORY_SCHEMA,
     cutoffAt: timestamp(entry.cutoffAt, `${path}.cutoffAt`),
     windowStartedAt: timestamp(entry.windowStartedAt, `${path}.windowStartedAt`),
+    cohortStartedAt: timestamp(entry.cohortStartedAt, `${path}.cohortStartedAt`),
     retentionDays: integer(entry.retentionDays, `${path}.retentionDays`, 1),
     sourceRunCount: integer(entry.sourceRunCount, `${path}.sourceRunCount`),
     eligibleSourceCount: integer(entry.eligibleSourceCount, `${path}.eligibleSourceCount`),
@@ -751,15 +754,17 @@ export function evaluateDataset(
       fail(`inventory.retentionDays must equal ${RETENTION_DAYS}`);
     const cutoff = Date.parse(inventory.cutoffAt);
     const windowStart = Date.parse(inventory.windowStartedAt);
+    const cohortStart = Date.parse(inventory.cohortStartedAt);
     if (windowStart !== cutoff - RETENTION_DAYS * 24 * 60 * MINUTE)
       fail("inventory.windowStartedAt must be exactly 90 days before cutoffAt");
+    if (cohortStart < windowStart || cohortStart > cutoff)
+      fail("inventory.cohortStartedAt must be within the fixed 90-day window");
     setEquality(inventory.ownership.manifest, EXPECTED_MANIFEST, "manifest");
     setEquality(inventory.ownership.security, SECURITY_OWNERSHIP, "security");
     if (inventory.pages.length === 0) fail("inventory.pages must not be empty");
     const queryPages = new Map<string, typeof inventory.pages>();
     inventory.pages.forEach((page, index) => {
       unique(page.sourceRunIds, `inventory.pages[${index}].sourceRunIds`);
-      unique(page.artifactNames, `inventory.pages[${index}].artifactNames`);
       if (page.sourceRunIds.length + page.artifactNames.length > page.itemCount)
         fail(`inventory.pages[${index}] records exceed itemCount`);
       queryPages.set(page.query, [...(queryPages.get(page.query) ?? []), page]);
@@ -802,8 +807,15 @@ export function evaluateDataset(
     if (stable([...accountedIds].sort()) !== stable([...pagedRuns].sort()))
       fail("all paginated source runs must be explicitly accounted");
     const sourceArtifacts = inventory.sources.map(({ artifactName }) => artifactName);
+    const sourceIdSet = new Set(sourceIds);
+    const eligiblePagedArtifacts = pagedArtifacts.filter((artifactName) => {
+      const sourceRunId = /^ci-observation-(\d+)-\d+$/.exec(artifactName)?.[1];
+      if (!sourceRunId || !accountedIds.includes(sourceRunId))
+        fail(`observer artifact ${artifactName} has no accounted source run`);
+      return sourceIdSet.has(sourceRunId);
+    });
     unique(sourceArtifacts, "inventory.sources artifactName");
-    if (stable([...sourceArtifacts].sort()) !== stable([...pagedArtifacts].sort()))
+    if (stable([...sourceArtifacts].sort()) !== stable([...eligiblePagedArtifacts].sort()))
       fail("inventory source artifacts must equal paginated artifacts");
     const recordsByKey = new Map<string, Observation>();
     for (const observation of observations) {
@@ -811,10 +823,10 @@ export function evaluateDataset(
       if (recordsByKey.has(key)) fail(`duplicate observation key ${key}`);
       recordsByKey.set(key, observation);
       if (
-        Date.parse(observation.sourceCreatedAt) < windowStart ||
+        Date.parse(observation.sourceCreatedAt) < cohortStart ||
         Date.parse(observation.sourceCreatedAt) > cutoff
       )
-        fail(`${key} is outside the fixed 90-day window`);
+        fail(`${key} is outside the trusted cohort window`);
       if (observation.sourceAttempt !== 1) fail(`${key} is not a first-attempt observation`);
       if (!observation.freshAttestation) fail(`${key} lacks a fresh current-run attestation`);
       recordResultContract(observation);
@@ -829,6 +841,8 @@ export function evaluateDataset(
         fail(`source ${source.sourceRunId} is outside the fixed 90-day window`);
     }
     for (const source of inventory.sources) {
+      if (Date.parse(source.createdAt) < cohortStart)
+        fail(`source ${source.sourceRunId} predates the trusted cohort`);
       if (source.artifactName !== `ci-observation-${source.sourceRunId}-${source.sourceAttempt}`)
         fail(`source ${source.sourceRunId} has an invalid artifact name`);
       for (const key of source.expectedRecordKeys) {

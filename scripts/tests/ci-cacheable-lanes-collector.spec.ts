@@ -16,9 +16,11 @@ import {
 const DIGEST = "a".repeat(64);
 const SHA = "b".repeat(40);
 const CUTOFF = "2026-08-14T00:00:00.000Z";
+const COHORT_STARTED_AT = "2026-08-10T00:00:00.000Z";
 
 type FixtureOptions = {
   readonly includeMissingObserverSource?: boolean;
+  readonly includeLegacyMismatchedObserver?: boolean;
   readonly duplicateObserverArtifact?: boolean;
   readonly truncateSourcePagination?: boolean;
 };
@@ -90,8 +92,19 @@ function performance(profile: string): unknown {
   };
 }
 
+function performanceHistory(): unknown {
+  return {
+    schemaVersion: "croco.ci-performance-samples/v1",
+    samples: [],
+  };
+}
+
 function fixture(options: FixtureOptions = {}): CacheableCiCollectionClient {
-  const publishRuns = options.includeMissingObserverSource ? [101, 104] : [101];
+  const publishRuns = [
+    101,
+    ...(options.includeMissingObserverSource ? [104] : []),
+    ...(options.includeLegacyMismatchedObserver ? [105] : []),
+  ];
   const sourceRuns = [
     ...publishRuns.map((id, index) => ({
       id,
@@ -126,6 +139,9 @@ function fixture(options: FixtureOptions = {}): CacheableCiCollectionClient {
     : sourceRuns;
   const observerArtifacts = [
     { name: "ci-observation-101-1", expired: false },
+    ...(options.includeLegacyMismatchedObserver
+      ? [{ name: "ci-observation-105-1", expired: false }]
+      : []),
     ...(options.duplicateObserverArtifact
       ? [{ name: "ci-observation-101-1", expired: false }]
       : []),
@@ -169,8 +185,12 @@ function fixture(options: FixtureOptions = {}): CacheableCiCollectionClient {
         };
       if (runId === 102)
         return {
-          total_count: 1,
-          artifacts: [{ name: "ci-performance-102-1", expired: false }],
+          total_count: 3,
+          artifacts: [
+            { name: "ci-performance-102-1", expired: false },
+            { name: "package-quality-dashboard", expired: false },
+            { name: "package-quality-dashboard", expired: false },
+          ],
         };
       return { total_count: 0, artifacts: [] };
     },
@@ -180,16 +200,21 @@ function fixture(options: FixtureOptions = {}): CacheableCiCollectionClient {
     }),
     readArtifactJson: (runId, artifactName) => {
       if (runId === 900 && artifactName === "ci-observation-101-1") return [observation(101)];
+      if (runId === 900 && artifactName === "ci-observation-105-1")
+        return [{ ...observation(105), jobIdentity: "unexpected-job" }];
       if (artifactName.startsWith("ci-performance-"))
-        return [performance(runId === 102 ? "spine" : "publish")];
+        return [performanceHistory(), performance(runId === 102 ? "spine" : "publish")];
       return [];
     },
   };
 }
 
 describe("cacheable CI observation collector", () => {
-  it("accounts every source and produces a contract-valid immutable dataset", () => {
-    const dataset = collectCacheableCiDataset(fixture(), { cutoffAt: CUTOFF });
+  it("selects the current sample beside history and produces a contract-valid dataset", () => {
+    const dataset = collectCacheableCiDataset(fixture(), {
+      cutoffAt: CUTOFF,
+      cohortStartedAt: COHORT_STARTED_AT,
+    });
 
     expect(dataset.inventory.sourceRunCount).toBe(3);
     expect(dataset.inventory.eligibleSourceCount).toBe(1);
@@ -210,6 +235,7 @@ describe("cacheable CI observation collector", () => {
     expect(() =>
       collectCacheableCiDataset(fixture({ truncateSourcePagination: true }), {
         cutoffAt: CUTOFF,
+        cohortStartedAt: COHORT_STARTED_AT,
       }),
     ).toThrow(/pagination ended before total_count/);
   });
@@ -217,6 +243,7 @@ describe("cacheable CI observation collector", () => {
   it("makes a missing observer artifact an evaluator-blocking omission", () => {
     const dataset = collectCacheableCiDataset(fixture({ includeMissingObserverSource: true }), {
       cutoffAt: CUTOFF,
+      cohortStartedAt: COHORT_STARTED_AT,
     });
     const report = evaluateDataset(dataset, { contractOnly: true });
 
@@ -226,11 +253,42 @@ describe("cacheable CI observation collector", () => {
     );
   });
 
+  it("accounts incompatible pre-cohort observer records without counting them", () => {
+    const dataset = collectCacheableCiDataset(fixture({ includeLegacyMismatchedObserver: true }), {
+      cutoffAt: CUTOFF,
+      cohortStartedAt: COHORT_STARTED_AT,
+    });
+
+    expect(dataset.inventory.eligibleSourceCount).toBe(1);
+    expect(dataset.inventory.operationalSources).toContainEqual(
+      expect.objectContaining({ sourceRunId: "105", reason: "observer-record-set-mismatch" }),
+    );
+    expect(dataset.observations.map(({ sourceRunId }) => sourceRunId)).toEqual(["101"]);
+    expect(evaluateDataset(dataset, { contractOnly: true }).failed).toBe(false);
+  });
+
   it("rejects duplicate immutable observer artifacts", () => {
     expect(() =>
       collectCacheableCiDataset(fixture({ duplicateObserverArtifact: true }), {
         cutoffAt: CUTOFF,
+        cohortStartedAt: COHORT_STARTED_AT,
       }),
     ).toThrow(/must be unique/);
+  });
+
+  it("excludes sources before the trusted cohort start before inspecting artifacts", () => {
+    const cohortStartedAt = "2026-08-12T12:00:00.000Z";
+    const dataset = collectCacheableCiDataset(fixture(), {
+      cutoffAt: CUTOFF,
+      cohortStartedAt,
+    });
+
+    expect(dataset.inventory.cohortStartedAt).toBe(cohortStartedAt);
+    expect(dataset.inventory.eligibleSourceCount).toBe(1);
+    expect(dataset.inventory.excludedSources).toEqual([
+      expect.objectContaining({ sourceRunId: "102", reason: `before-cohort:${cohortStartedAt}` }),
+      expect.objectContaining({ sourceRunId: "103", reason: `before-cohort:${cohortStartedAt}` }),
+    ]);
+    expect(evaluateDataset(dataset, { contractOnly: true }).failed).toBe(false);
   });
 });

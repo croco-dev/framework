@@ -60,6 +60,7 @@ export type CacheableCiCollectionClient = {
 
 export type CollectCacheableCiDatasetOptions = {
   readonly cutoffAt: string;
+  readonly cohortStartedAt: string;
   readonly sourceWorkflow?: string;
   readonly observerWorkflow?: string;
 };
@@ -173,7 +174,9 @@ function collectPages<T>(options: {
 function performanceProfile(documents: readonly unknown[]): string {
   const samples = documents.filter(
     (document) =>
-      isRecord(document) && document.schemaVersion === "croco.ci-performance-samples/v1",
+      isRecord(document) &&
+      document.schemaVersion === "croco.ci-performance-samples/v1" &&
+      Array.isArray(document.currentSamples),
   );
   if (samples.length !== 1) throw new Error("performance artifact must contain one raw sample");
   const currentSamples = samples[0]?.currentSamples;
@@ -235,6 +238,12 @@ export function collectCacheableCiDataset(
   const cutoffAt = timestamp(options.cutoffAt, "cutoffAt");
   const cutoff = Date.parse(cutoffAt);
   const windowStartedAt = new Date(cutoff - RETENTION_DAYS * 24 * 60 * 60_000).toISOString();
+  const cohortStartedAt = timestamp(options.cohortStartedAt, "cohortStartedAt");
+  if (
+    Date.parse(cohortStartedAt) < Date.parse(windowStartedAt) ||
+    Date.parse(cohortStartedAt) > cutoff
+  )
+    throw new Error("cohortStartedAt must be within the fixed 90-day window");
   const sourceWorkflow = options.sourceWorkflow ?? "ci.yml";
   const observerWorkflow = options.observerWorkflow ?? "ci-performance-observer.yml";
   const inventoryPages: InventoryPage[] = [];
@@ -289,6 +298,10 @@ export function collectCacheableCiDataset(
       operationalSources.push(sourceRecord(sourceRun, "source-run-is-not-first-attempt"));
       continue;
     }
+    if (Date.parse(sourceRun.createdAt) < Date.parse(cohortStartedAt)) {
+      excludedSources.push(sourceRecord(sourceRun, `before-cohort:${cohortStartedAt}`));
+      continue;
+    }
     const artifactResult = collectPages({
       query: `source-artifacts:${sourceRun.id}`,
       load: (page) => client.listRunArtifacts(sourceRun.id, page),
@@ -334,27 +347,38 @@ export function collectCacheableCiDataset(
     inventoryPages.push(...jobsResult.pages);
     const artifactName = `ci-observation-${sourceRun.id}-${sourceRun.runAttempt}`;
     const expectedRecordKeys = expectedObservationKeys(sourceRun, jobsResult.items);
-    eligibleSources.push({
+    const eligibleSource = {
       sourceRunId: String(sourceRun.id),
       sourceAttempt: sourceRun.runAttempt,
       createdAt: sourceRun.createdAt,
       artifactName,
       expectedRecordKeys,
-    });
+    };
     const candidates = observationArtifacts.get(artifactName) ?? [];
-    if (candidates.length === 0) continue;
+    if (candidates.length === 0) {
+      eligibleSources.push(eligibleSource);
+      continue;
+    }
     if (candidates.length !== 1)
       throw new Error(`observer artifact ${artifactName} must be unique`);
     const candidate = candidates[0];
     if (!candidate || candidate.artifact.expired)
       throw new Error(`observer artifact ${artifactName} is expired`);
-    const artifactObservations = client
-      .readArtifactJson(candidate.runId, artifactName)
-      .filter((document) => isRecord(document) && document.schemaVersion === OBSERVATION_SCHEMA)
-      .map((document, index) => parseObservation(document, `${artifactName}[${index}]`));
+    let artifactObservations: readonly Observation[];
+    try {
+      artifactObservations = client
+        .readArtifactJson(candidate.runId, artifactName)
+        .filter((document) => isRecord(document) && document.schemaVersion === OBSERVATION_SCHEMA)
+        .map((document, index) => parseObservation(document, `${artifactName}[${index}]`));
+    } catch {
+      operationalSources.push(sourceRecord(sourceRun, "observer-artifact-malformed"));
+      continue;
+    }
     const actualKeys = artifactObservations.map(observationKey).sort();
-    if (JSON.stringify(actualKeys) !== JSON.stringify([...expectedRecordKeys].sort()))
-      throw new Error(`observer artifact ${artifactName} record keys do not match source jobs`);
+    if (JSON.stringify(actualKeys) !== JSON.stringify([...expectedRecordKeys].sort())) {
+      operationalSources.push(sourceRecord(sourceRun, "observer-record-set-mismatch"));
+      continue;
+    }
     if (
       artifactObservations.some(
         (observation) =>
@@ -362,8 +386,11 @@ export function collectCacheableCiDataset(
           observation.sourceAttempt !== sourceRun.runAttempt ||
           observation.artifactName !== artifactName,
       )
-    )
-      throw new Error(`observer artifact ${artifactName} provenance does not match the source run`);
+    ) {
+      operationalSources.push(sourceRecord(sourceRun, "observer-provenance-mismatch"));
+      continue;
+    }
+    eligibleSources.push(eligibleSource);
     observations.push(...artifactObservations);
   }
 
@@ -378,6 +405,7 @@ export function collectCacheableCiDataset(
       schemaVersion: INVENTORY_SCHEMA,
       cutoffAt,
       windowStartedAt,
+      cohortStartedAt,
       retentionDays: RETENTION_DAYS,
       sourceRunCount: sourceRunResult.items.length,
       eligibleSourceCount: eligibleSources.length,
@@ -528,8 +556,12 @@ function main(arguments_: readonly string[]): void {
   const repository = optionValue(arguments_, "--repo") ?? process.env.GITHUB_REPOSITORY;
   if (!repository) throw new Error("Missing --repo and GITHUB_REPOSITORY");
   const cutoffAt = optionValue(arguments_, "--cutoff-at") ?? new Date().toISOString();
+  const cohortStartedAt = requiredOption(arguments_, "--cohort-start-at");
   const output = requiredOption(arguments_, "--output");
-  const dataset = collectCacheableCiDataset(githubClient(repository), { cutoffAt });
+  const dataset = collectCacheableCiDataset(githubClient(repository), {
+    cutoffAt,
+    cohortStartedAt,
+  });
   writeDataset(output, dataset);
   process.stdout.write(
     `[ci-cacheable-lanes-collector] sources=${dataset.inventory.sourceRunCount} eligible=${dataset.inventory.eligibleSourceCount} observations=${dataset.observations.length} output=${resolve(output)}\n`,
