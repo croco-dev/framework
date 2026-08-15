@@ -1288,6 +1288,15 @@ describe("release-spine-evidence.mts", () => {
     expect(parseArgs([]).maxConcurrency).toBe(2);
   });
 
+  it("keeps default repository verification evidence outside the worktree", () => {
+    const repo = createTempRepo();
+    const options = parseArgs(["--root", repo, "--profile", "repo"]);
+    tempRepos.push(options.outputDir);
+
+    expect(options.outputDir.startsWith(`${repo}/`)).toBe(false);
+    expect(options.outputDir.startsWith(join(tmpdir(), "croco-verification-repo-"))).toBe(true);
+  });
+
   it("parses the explicit cacheable failure class", () => {
     expect(parseArgs(["--inject-failure", "core-verification"]).injectedFailure).toBe(
       "core-verification",

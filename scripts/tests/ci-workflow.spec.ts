@@ -684,6 +684,18 @@ describe("CI verification profile contract", () => {
     expect(WORKFLOW).toContain("name: core-coverage-warning-report");
   });
 
+  it("persists verification reports only through explicit CI artifact directories", () => {
+    const verificationStep = workflowStep("Run selected verification profile");
+
+    expect(verificationStep).toContain("args+=(--output-dir ci-reports/release)");
+    expect(verificationStep).toContain(
+      'args+=(--output-dir "ci-reports/verification/${VERIFICATION_PROFILE}")',
+    );
+    expect(verificationStep).toContain(
+      'node --experimental-strip-types scripts/release-spine-evidence.mts "${args[@]}"',
+    );
+  });
+
   it("publishes unified JSON and Markdown evidence even when aggregation fails closed", () => {
     const ensureNativeStart = VALIDATE_JOB.indexOf("      - name: Ensure native Vitest evidence");
     const aggregateStart = VALIDATE_JOB.indexOf("      - name: Aggregate executable test evidence");

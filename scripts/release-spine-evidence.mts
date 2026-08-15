@@ -5,6 +5,7 @@ import {
   closeSync,
   cpSync,
   existsSync,
+  mkdtempSync,
   mkdirSync,
   openSync,
   readFileSync,
@@ -14,6 +15,7 @@ import {
   writeFileSync,
   writeSync,
 } from "node:fs";
+import { tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { argv, exit } from "node:process";
 import { pathToFileURL } from "node:url";
@@ -1765,8 +1767,7 @@ function parsePositiveInteger(value: string, flag: string): number {
 
 export function parseArgs(args: readonly string[] = argv.slice(2)): Options {
   let rootDir = process.cwd();
-  let outputDir = join(rootDir, DEFAULT_OUTPUT_DIRECTORY);
-  let outputDirWasExplicit = false;
+  let outputDir: string | undefined;
   let totalTimeoutMs = DEFAULT_TOTAL_TIMEOUT_MS;
   let maxConcurrency = DEFAULT_CLI_MAX_CONCURRENCY;
   let profile: VerificationProfile = "spine";
@@ -1828,12 +1829,6 @@ export function parseArgs(args: readonly string[] = argv.slice(2)): Options {
         throw new VerificationProblem("MISSING_ROOT_PATH", "input", "--root requires a path");
       }
       rootDir = resolve(value);
-      if (!outputDirWasExplicit) {
-        outputDir =
-          profile === "spine"
-            ? join(rootDir, DEFAULT_OUTPUT_DIRECTORY)
-            : join(rootDir, "ci-reports", "verification", profile);
-      }
       index++;
       continue;
     }
@@ -1848,7 +1843,6 @@ export function parseArgs(args: readonly string[] = argv.slice(2)): Options {
         );
       }
       outputDir = resolve(value);
-      outputDirWasExplicit = true;
       index++;
       continue;
     }
@@ -1899,9 +1893,6 @@ export function parseArgs(args: readonly string[] = argv.slice(2)): Options {
       }
       profile = value;
       profileWasExplicit = true;
-      if (!outputDirWasExplicit && profile !== "spine") {
-        outputDir = join(rootDir, "ci-reports", "verification", profile);
-      }
       index++;
       continue;
     }
@@ -1924,10 +1915,19 @@ export function parseArgs(args: readonly string[] = argv.slice(2)): Options {
     throw new VerificationProblem("UNKNOWN_VERIFICATION_OPTION", "input", `Unknown option: ${arg}`);
   }
 
+  const resolvedRootDir = resolve(rootDir);
+  const resolvedOutputDir =
+    outputDir ??
+    (profile === "repo"
+      ? mkdtempSync(join(tmpdir(), "croco-verification-repo-"))
+      : profile === "spine"
+        ? join(resolvedRootDir, DEFAULT_OUTPUT_DIRECTORY)
+        : join(resolvedRootDir, "ci-reports", "verification", profile));
+
   return {
     allowPendingReleaseMetadata,
-    rootDir: resolve(rootDir),
-    outputDir: resolve(outputDir),
+    rootDir: resolvedRootDir,
+    outputDir: resolve(resolvedOutputDir),
     totalTimeoutMs,
     maxConcurrency,
     profile,
