@@ -246,14 +246,19 @@ export class InMemoryTransactionalOutboxStore implements TransactionalOutboxStor
   async claimBatch(
     options: ClaimBatchOptions<InMemoryTransactionalOutboxStoreClient>,
   ): Promise<ClaimedOutboxRecord[]> {
-    assertValidClaimBatchOptions(options);
+    const claimOptions: ClaimBatchOptions<InMemoryTransactionalOutboxStoreClient> = {
+      ...options,
+      now: new Date(options.now.getTime()),
+      ...(options.tenant ? { tenant: { ...options.tenant } } : {}),
+    };
+    assertValidClaimBatchOptions(claimOptions);
 
-    if (!options.context) {
+    if (!claimOptions.context) {
       this.assertNoActiveUnitOfWorkRootMutation();
-      return this.enqueue(() => this.claimBatchInState(this.rootState, options));
+      return this.enqueue(() => this.claimBatchInState(this.rootState, claimOptions));
     }
 
-    return this.claimBatchInState(this.resolveState(options.context), options);
+    return this.claimBatchInState(this.resolveState(claimOptions.context), claimOptions);
   }
 
   async markDispatched(id: string, result: DispatchResult): Promise<void> {
