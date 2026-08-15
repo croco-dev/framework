@@ -210,6 +210,23 @@ function changedFilesForRange(
   }
 }
 
+function canonicalCacheRef(rootDir: string, ref: string): string {
+  if (/^[a-f0-9]{40}$/.test(ref)) return ref;
+  try {
+    return execFileSync("git", ["rev-parse", `${ref}^{commit}`], {
+      cwd: rootDir,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    }).trim();
+  } catch (error) {
+    throw new VerificationProblem(
+      "CACHEABLE_LANE_CHANGE_RANGE_FAILED",
+      "input",
+      `Unable to resolve cache ref ${ref}: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
 function commandWithLocalDependencies(
   command: EvidenceCommand,
   localIds: ReadonlySet<string>,
@@ -1065,20 +1082,23 @@ export async function runCacheableLane(
     );
   }
   const rootDir = resolve(options.rootDir);
+  const base =
+    options.cacheDir && options.base ? canonicalCacheRef(rootDir, options.base) : options.base;
+  const head =
+    options.cacheDir && options.head ? canonicalCacheRef(rootDir, options.head) : options.head;
   const outputDir = assertSafeOutputDirectory(
     rootDir,
     options.outputDir ?? join("ci-reports", "cacheable-ci", options.lane),
   );
-  const changedFiles =
-    options.changedFiles ?? changedFilesForRange(rootDir, options.base, options.head);
+  const changedFiles = options.changedFiles ?? changedFilesForRange(rootDir, base, head);
   const context: VerificationContext = options.fullSelection
     ? options.allowPendingReleaseMetadata
       ? { allowPendingReleaseMetadata: true }
       : {}
     : {
         ...(options.allowPendingReleaseMetadata ? { allowPendingReleaseMetadata: true } : {}),
-        base: options.base,
-        head: options.head,
+        base,
+        head,
         changedFiles,
       };
   const injectedCommandId = injectedFailureCommandId(options.injectedFailure ?? "none");
@@ -1108,8 +1128,8 @@ export async function runCacheableLane(
         plan,
         rootDir,
         outputDir,
-        base: options.base,
-        head: options.head,
+        base,
+        head,
         changedFiles,
       })
     : null;
@@ -1133,8 +1153,8 @@ export async function runCacheableLane(
     totalTimeoutMs: options.totalTimeoutMs ?? DEFAULT_TOTAL_TIMEOUT_MS,
     maxConcurrency: options.maxConcurrency ?? DEFAULT_MAX_CONCURRENCY,
     profile: options.profile,
-    base: options.base,
-    head: options.head,
+    base,
+    head,
     changedFiles,
     commands: runCommands,
     runner: options.runner,
