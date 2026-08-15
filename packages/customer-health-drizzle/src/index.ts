@@ -37,3 +37,4 @@ export {
   removeHealthEventIntents,
   type CustomerHealthMigrationClient,
 } from "./migrations/addHealthEventIntents";
+export * from "./migrations/widenHealthScorePrecision";

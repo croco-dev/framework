@@ -7863,6 +7863,12 @@
               "declarationKind": "const"
             },
             {
+              "name": "widenHealthScorePrecisionPostgres",
+              "exportKind": "declaration",
+              "source": "./migrations/widenHealthScorePrecision",
+              "declarationKind": "function"
+            },
+            {
               "name": "addHealthEventIntents",
               "exportKind": "named",
               "source": "./migrations/addHealthEventIntents",
@@ -7912,6 +7918,12 @@
             }
           ],
           "typeExports": [
+            {
+              "name": "HealthScorePrecisionMigrationClient",
+              "exportKind": "declaration",
+              "source": "./migrations/widenHealthScorePrecision",
+              "declarationKind": "interface"
+            },
             {
               "name": "CustomerHealthMigrationClient",
               "exportKind": "named",

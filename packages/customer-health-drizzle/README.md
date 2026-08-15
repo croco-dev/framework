@@ -47,6 +47,10 @@ const providers = registry.getProviders();
 `addHealthEventIntents(db)`를 실행하세요. 이후 저장소는 DB가 부여한 단조 증가 transition sequence로
 최신 점수를 판별합니다.
 
+기존 PostgreSQL 배포에서는 소수 건강 점수를 저장하기 전에
+`widenHealthScorePrecisionPostgres`를 실행해야 합니다. 이 migration은 현재 점수와 이전 점수
+컬럼을 한 transaction에서 `DOUBLE PRECISION`으로 변환하며 기존 정수 값은 그대로 유지합니다.
+
 ## API 레퍼런스
 
 ### `DrizzleHealthScoreStore`
@@ -73,3 +77,5 @@ const providers = registry.getProviders();
 - `tenantHealthScores`, 건강 점수 스키마입니다.
 - `tenantHealthEventIntents`, 복구 가능한 전이 이벤트 의도 스키마입니다.
 - `addHealthEventIntents`, 운영 전 이벤트 의도 테이블과 인덱스를 생성하는 마이그레이션입니다.
+- `widenHealthScorePrecisionPostgres`, 기존 PostgreSQL 점수 컬럼을 소수 지원 타입으로
+  변환합니다.

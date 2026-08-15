@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { ProblemFactory } from "@croco/problems-core";
 import { createDrizzleProviderConformanceSuite } from "@croco/testing/drizzle";
 import { DrizzleHealthIndicator } from "@croco/tx-drizzle";
+import type { TenantHealthScore } from "@croco/customer-health-core";
 import { DrizzleHealthScoreStore } from "../libs/DrizzleHealthScoreStore";
 import { tenantHealthEventIntents, tenantHealthScores } from "../libs/schema";
 
@@ -95,6 +96,38 @@ function createSelectClient(rowsByTenant: ReadonlyMap<string, unknown[]>): Drizz
   } as unknown as DrizzleHealthClient;
 }
 
+function createRoundTripClient(): DrizzleHealthClient {
+  let storedRows: unknown[] = [];
+  const select = vi.fn().mockReturnValue({
+    from: vi.fn().mockReturnValue({
+      where: vi.fn().mockReturnValue({
+        orderBy: vi.fn().mockReturnValue({
+          limit: vi.fn(async () => storedRows),
+        }),
+      }),
+    }),
+  });
+  const transactionClient = {
+    execute: vi.fn().mockResolvedValue(undefined),
+    select,
+    insert: vi.fn().mockReturnValue({
+      values: vi.fn((row: unknown) => {
+        storedRows = [{ transitionSequence: BigInt(1), ...(row as object) }];
+        return {
+          returning: vi.fn().mockResolvedValue([{ transitionSequence: BigInt(1) }]),
+        };
+      }),
+    }),
+  };
+
+  return {
+    transaction: vi.fn(async (callback: (tx: typeof transactionClient) => unknown) =>
+      callback(transactionClient),
+    ),
+    select,
+  } as unknown as DrizzleHealthClient;
+}
+
 describe("customer-health-drizzle provider conformance", () => {
   it.each(
     createDrizzleProviderConformanceSuite({
@@ -119,6 +152,8 @@ describe("customer-health-drizzle provider conformance", () => {
                   "calculatedAt",
                 ]),
               );
+              expect(columns.overallScore.getSQLType()).toBe("double precision");
+              expect(columns.previousScore.getSQLType()).toBe("double precision");
             },
           },
           {
@@ -178,6 +213,28 @@ describe("customer-health-drizzle provider conformance", () => {
               expect(tenantAScore?.overallScore).toBe(92);
               expect(tenantBScore?.tenantId).toBe("tenant-b");
               expect(tenantBScore?.overallScore).toBe(71);
+            },
+          },
+          {
+            name: "round-trips fractional current and previous health scores without precision loss",
+            run: async () => {
+              const score: TenantHealthScore = {
+                tenantId: "tenant-fractional",
+                overallScore: 74.5,
+                status: "at_risk",
+                categoryScores: { usage: 74.5, business: 81.25, engagement: 68.75 },
+                signals: [],
+                trend: "declining",
+                previousScore: 81.25,
+                calculatedAt: new Date("2026-01-01T00:00:00.000Z"),
+              };
+              const store = new DrizzleHealthScoreStore(createRoundTripClient());
+
+              await store.saveTransition(score, null, []);
+              const reloaded = await store.findLatest("tenant-fractional");
+
+              expect(reloaded?.overallScore).toBe(74.5);
+              expect(reloaded?.previousScore).toBe(81.25);
             },
           },
         ],
