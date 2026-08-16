@@ -19,13 +19,18 @@ import {
   PRODUCER_FACTS_SCHEMA,
   SYNTHESIS_INPUT_SCHEMA,
 } from "../ci-synthesis-input.mts";
-import { runSplitValidationSynthesis } from "../ci-split-validation-synthesis.mts";
+import {
+  productionReadyFastTestLaneReport,
+  runSplitValidationSynthesis,
+} from "../ci-split-validation-synthesis.mts";
 import { SECURITY_OWNERSHIP } from "../ci-verification-contract.mts";
 import { inventoryDigest } from "../test-inventory.mts";
 import { VERIFICATION_LANE_OWNERSHIP } from "../verification-manifest.mts";
 import type { ExperimentIdentity, ProducerBundle, ProducerLane } from "../ci-lane-evidence.mts";
 import type { ProducerFacts } from "../ci-synthesis-input.mts";
+import type { LaneReport } from "../test-evidence-reconcile.mts";
 import type { TestInventory } from "../test-inventory.mts";
+import type { VerificationProfile } from "../verification-manifest.mts";
 
 const inventory: TestInventory = { version: 1, tests: [], exceptions: [] };
 const BASE_SHA = "e".repeat(40);
@@ -78,16 +83,23 @@ function ownedIds(lane: ProducerLane): readonly string[] {
     .map(([id]) => id);
 }
 
-function facts(lane: ProducerLane): ProducerFacts {
+function facts(
+  lane: ProducerLane,
+  options: {
+    readonly fastLane?: LaneReport | null;
+    readonly inventory?: TestInventory;
+    readonly productionReadyRequireTaskSummaries?: boolean;
+  } = {},
+): ProducerFacts {
   if (lane === "core-verification") {
     return {
       schemaVersion: PRODUCER_FACTS_SCHEMA,
       lane,
-      inventory,
-      fastLane: null,
+      inventory: options.inventory ?? inventory,
+      fastLane: options.fastLane ?? null,
       integrationLane: null,
       packageTasks: [],
-      productionReadyRequireTaskSummaries: true,
+      productionReadyRequireTaskSummaries: options.productionReadyRequireTaskSummaries ?? true,
       bundleSize: {
         ciMode: "warning-only",
         enforceSpineBundleSize: false,
@@ -156,11 +168,16 @@ function createBundleFixture(options: {
   root: string;
   lane: ProducerLane;
   failedCheckId?: string;
+  identity: ExperimentIdentity;
+  factsOptions?: Parameters<typeof facts>[1];
 }): ProducerBundle {
   const directory = join(options.root, options.lane);
   mkdirSync(directory, { recursive: true });
   const factsPath = join(directory, PRODUCER_FACTS_FILE);
-  writeFileSync(factsPath, `${JSON.stringify(facts(options.lane), null, 2)}\n`);
+  writeFileSync(
+    factsPath,
+    `${JSON.stringify(facts(options.lane, options.factsOptions), null, 2)}\n`,
+  );
   const factsContents = readFileSync(factsPath);
   const output = {
     path: `ci-reports/cacheable-ci/${options.lane}/${PRODUCER_FACTS_FILE}`,
@@ -171,16 +188,16 @@ function createBundleFixture(options: {
     const failed = checkId === options.failedCheckId;
     const selected = failed;
     const attestation = createCurrentRunAttestation({
-      commitSha: identity.commitSha,
-      runId: identity.runId,
-      runAttempt: identity.runAttempt,
-      profile: identity.profile,
+      commitSha: options.identity.commitSha,
+      runId: options.identity.runId,
+      runAttempt: options.identity.runAttempt,
+      profile: options.identity.profile,
       lane: options.lane,
       checkId,
-      manifestDigest: identity.manifestDigest,
-      inventoryDigest: identity.inventoryDigest,
-      toolchainDigest: identity.toolchainDigest,
-      inputDigest: identity.inputDigest,
+      manifestDigest: options.identity.manifestDigest,
+      inventoryDigest: options.identity.inventoryDigest,
+      toolchainDigest: options.identity.toolchainDigest,
+      inputDigest: options.identity.inputDigest,
       receiptDigest: null,
       outputDigest: null,
       decision: failed ? "failed" : "not-applicable",
@@ -202,7 +219,7 @@ function createBundleFixture(options: {
     };
   });
   const bundle = createProducerBundle({
-    ...identity,
+    ...options.identity,
     lane: options.lane,
     startedAt: "2026-08-14T01:00:00.000Z",
     completedAt: "2026-08-14T01:10:00.000Z",
@@ -241,7 +258,7 @@ function replaceProducerArtifact(
     readFileSync(join(directory, "producer-bundle.json"), "utf8"),
   ) as ProducerBundle;
   const bundle = createProducerBundle({
-    ...identity,
+    ...value.identity,
     lane,
     startedAt: previous.startedAt,
     completedAt: previous.completedAt,
@@ -267,7 +284,7 @@ function replaceProducerFactsContents(
     readFileSync(join(directory, "producer-bundle.json"), "utf8"),
   ) as ProducerBundle;
   const bundle = createProducerBundle({
-    ...identity,
+    ...value.identity,
     lane,
     startedAt: previous.startedAt,
     completedAt: previous.completedAt,
@@ -286,8 +303,106 @@ function replaceProducerFactsContents(
   writeFileSync(join(directory, "producer-bundle.json"), `${JSON.stringify(bundle, null, 2)}\n`);
 }
 
-function fixture(failed?: { lane: ProducerLane; checkId: string }) {
+function createFastLaneReport(
+  fixtureInventory: TestInventory,
+  owners: readonly string[],
+): LaneReport {
+  const selected = new Set(owners);
+  const commands = fixtureInventory.tests
+    .filter(({ lane, owner }) => lane === "fast" && selected.has(owner))
+    .map(({ owner, path }) => {
+      const cwd = path.split("/src/")[0] ?? ".";
+      const testPath = path.slice(cwd === "." ? 0 : cwd.length + 1);
+      return {
+        owner,
+        cwd,
+        paths: [testPath],
+        command: ["pnpm", "run", "test"],
+        status: "passed" as const,
+        exitCode: 0,
+        durationMs: 1,
+        executedPaths: [testPath],
+        executionState: "executed" as const,
+      };
+    });
+  return {
+    schemaVersion: "croco.test-lane-report/v1",
+    inventoryVersion: 1,
+    inventoryDigest: inventoryDigest(fixtureInventory),
+    lane: "fast",
+    allowLive: false,
+    selectedOwners: owners,
+    executedPaths: commands.flatMap(({ cwd, executedPaths }) =>
+      executedPaths.map((path) => `${cwd}/${path}`),
+    ),
+    status: "passed",
+    diagnostics: [],
+    commands,
+  };
+}
+
+function writeSynthesisRepositoryContracts(root: string): void {
+  mkdirSync(join(root, "docs"), { recursive: true });
+  mkdirSync(join(root, "packages"), { recursive: true });
+  writeFileSync(
+    join(root, "docs", "package-catalog.json"),
+    `${JSON.stringify(
+      {
+        schemaVersion: 1,
+        groups: {},
+        maturity: {
+          production: { label: "production-ready", packages: [] },
+          beta: { label: "beta", packages: [] },
+          alpha: { label: "alpha", packages: [] },
+          deprecated: { label: "deprecated", packages: [] },
+        },
+        extensionMatrix: { groups: [], packages: {} },
+        spine: { packages: [], behavioralEvidence: { packages: {} } },
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  writeFileSync(
+    join(root, "docs", "package-docs-baseline.json"),
+    `${JSON.stringify(
+      {
+        schemaVersion: 1,
+        allowedMissingReadme: [],
+        allowedMissingApiDocs: [],
+        allowedMissingTests: [],
+        temporaryProductionApiDocExceptions: {},
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  writeFileSync(
+    join(root, "public-api-surface.snapshot.json"),
+    `${JSON.stringify({ schemaVersion: 2, packages: [] }, null, 2)}\n`,
+  );
+}
+
+function fixture(
+  failed?: { lane: ProducerLane; checkId: string },
+  options: {
+    readonly affectedOwners?: readonly string[];
+    readonly inventory?: TestInventory;
+    readonly profile?: VerificationProfile;
+    readonly productionReadyRequireTaskSummaries?: boolean;
+    readonly selectedCheckIds?: readonly string[];
+  } = {},
+) {
   const root = mkdtempSync(join(tmpdir(), "croco-synthesis-input-"));
+  const fixtureInventory = options.inventory ?? inventory;
+  const fixtureIdentity = {
+    ...identity,
+    profile: options.profile ?? identity.profile,
+    inventoryDigest: inventoryDigest(fixtureInventory),
+  };
+  const affectedOwners = options.affectedOwners ?? [];
+  const fastLane =
+    affectedOwners.length > 0 ? createFastLaneReport(fixtureInventory, affectedOwners) : null;
   const producerDirectories = Object.fromEntries(
     PRODUCER_LANES.map((lane) => [lane, join(root, lane)]),
   ) as Record<ProducerLane, string>;
@@ -296,31 +411,116 @@ function fixture(failed?: { lane: ProducerLane; checkId: string }) {
       root,
       lane,
       failedCheckId: failed?.lane === lane ? failed.checkId : undefined,
+      identity: fixtureIdentity,
+      factsOptions: {
+        fastLane,
+        inventory: fixtureInventory,
+        productionReadyRequireTaskSummaries: options.productionReadyRequireTaskSummaries,
+      },
     }),
   );
-  const selectedCheckIds = failed ? [failed.checkId] : [];
-  return { root, producerDirectories, bundles, selectedCheckIds };
+  const selectedCheckIds = [...(options.selectedCheckIds ?? (failed ? [failed.checkId] : []))];
+  return {
+    root,
+    producerDirectories,
+    bundles,
+    selectedCheckIds,
+    identity: fixtureIdentity,
+    affectedOwners,
+  };
 }
 
 function assemble(value = fixture(), spinePromotionPackages: readonly string[] = []) {
   return assembleSynthesisInput({
     rootDir: value.root,
-    identity,
+    identity: value.identity,
     selection: {
       baseSha: BASE_SHA,
-      headSha: identity.commitSha,
+      headSha: value.identity.commitSha,
       changedFilesDigest: CHANGED_FILES_DIGEST,
       inventoryFileDigest: INVENTORY_FILE_DIGEST,
       selectedCheckIds: value.selectedCheckIds,
     },
     producerDirectories: value.producerDirectories,
-    affectedOwners: [],
+    affectedOwners: value.affectedOwners,
     packagingOwners: [],
     spinePromotionPackages,
   });
 }
 
 describe("cacheable CI synthesis input", () => {
+  it("keeps ordinary affected-owner evidence out of production-ready full-evidence validation", () => {
+    const affectedOwnerReport = createFastLaneReport(
+      {
+        version: 1,
+        tests: [
+          {
+            path: "packages/batch-qstash/src/tests/QStashBatchExecutor.spec.ts",
+            lane: "fast",
+            qualifiers: [],
+            owner: "@croco/batch-qstash",
+          },
+        ],
+        exceptions: [],
+      },
+      ["@croco/batch-qstash"],
+    );
+
+    expect(productionReadyFastTestLaneReport("repo", affectedOwnerReport)).toBeNull();
+    expect(productionReadyFastTestLaneReport("publish", affectedOwnerReport)).toBe(
+      affectedOwnerReport,
+    );
+  });
+
+  it.each([
+    ["repo", "passed", []],
+    [
+      "publish",
+      "failed",
+      [
+        "Fast test lane evidence normalized synthesis input is invalid: expected a full repository fast-lane report without owner filtering",
+      ],
+    ],
+  ] as const)(
+    "synthesizes %s affected-owner evidence with the profile's full-evidence contract",
+    (profile, expectedOutcome, expectedDiagnostics) => {
+      const owner = "@croco/batch-qstash";
+      const value = fixture(undefined, {
+        affectedOwners: [owner],
+        inventory: {
+          version: 1,
+          tests: [
+            {
+              path: "packages/batch-qstash/src/tests/QStashBatchExecutor.spec.ts",
+              lane: "fast",
+              qualifiers: [],
+              owner,
+            },
+          ],
+          exceptions: [],
+        },
+        profile,
+        productionReadyRequireTaskSummaries: false,
+        selectedCheckIds: ["production-ready"],
+      });
+      writeSynthesisRepositoryContracts(value.root);
+
+      const result = runSplitValidationSynthesis({
+        input: assemble(value),
+        rootDir: value.root,
+        now: () => "2026-08-14T02:00:00.000Z",
+      });
+      const productionReady = result.evidence.checks.find(({ id }) => id === "production-ready");
+
+      expect(productionReady).toMatchObject({
+        selection: "selected",
+        outcome: expectedOutcome,
+        diagnostics: expectedDiagnostics,
+      });
+      expect(result.failed).toBe(profile === "publish");
+    },
+  );
+
   it("assembles exact immutable producer files into one self-contained normalized contract", () => {
     const result = assemble();
 

@@ -103,6 +103,31 @@ describe("production-ready-check.mts", () => {
     );
   });
 
+  it("rejects affected-owner evidence when production-ready requires a full fast lane", () => {
+    const repo = createReadyRepo();
+    writeTurboSummaries(repo, ["@croco/stable"]);
+    const quality = createPackageQualityReport({
+      rootDir: repo,
+      summaryDir: join(repo, ".turbo", "runs"),
+    });
+    const inventory = readTestInventory(join(repo, "test-inventory.json")).inventory;
+    const fullReport = createFastTestLaneReport(repo, ["stable"]);
+    const report = createProductionReadyReport({
+      fastTestLaneReport: { ...fullReport, selectedOwners: ["@croco/stable"] },
+      generatedAt: "2026-01-01T00:00:00.000Z",
+      inventory,
+      qualityRows: quality.rows,
+      requireTaskSummaries: true,
+      rootDir: repo,
+      summaryDir: "normalized-synthesis-input",
+    });
+
+    expect(hasProductionReadyFailures(report)).toBe(true);
+    expect(report.catalogErrors).toContain(
+      "Fast test lane evidence normalized synthesis input is invalid: expected a full repository fast-lane report without owner filtering",
+    );
+  });
+
   it("uses the public API snapshot only as package inventory", () => {
     const repo = createReadyRepo();
     const before = createReport(repo);
