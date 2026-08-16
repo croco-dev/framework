@@ -223,6 +223,109 @@ describe("ExecutionManagerImpl", () => {
     vi.useRealTimers();
   });
 
+  describe("injected clock", () => {
+    it("controls basic lifecycle timestamps without replacing the store creation time", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2030-01-01T00:00:00.000Z"));
+      const clockTime = new Date("2000-01-01T00:00:00.000Z");
+      const clockManager = new ExecutionManagerImpl(store, { clock: () => clockTime });
+
+      const completedSource = await clockManager.create({ type: "completed" });
+      const started = await clockManager.start(completedSource.id);
+      const completed = await clockManager.complete(completedSource.id);
+
+      const failedSource = await clockManager.create({ type: "failed" });
+      await clockManager.start(failedSource.id);
+      const failed = await clockManager.fail(failedSource.id, {
+        message: "fatal",
+        retryable: false,
+      });
+
+      const cancelledSource = await clockManager.create({ type: "cancelled" });
+      const cancelled = await clockManager.cancel(cancelledSource.id);
+
+      const timedOutSource = await clockManager.create({ type: "timed-out" });
+      await clockManager.start(timedOutSource.id);
+      const timedOut = await clockManager.timeout(timedOutSource.id);
+
+      expect(completedSource.createdAt).toEqual(new Date("2030-01-01T00:00:00.000Z"));
+      expect(started.startedAt).toEqual(clockTime);
+      expect(completed.completedAt).toEqual(clockTime);
+      expect(failed.completedAt).toEqual(clockTime);
+      expect(cancelled.completedAt).toEqual(clockTime);
+      expect(timedOut.completedAt).toEqual(clockTime);
+    });
+
+    it("controls attempt, log, and timeout recovery timestamps", async () => {
+      const clockTime = new Date("2000-01-01T00:00:00.000Z");
+      const clockManager = new ExecutionManagerImpl(store, { clock: () => clockTime });
+
+      const completedSource = await clockManager.create({ type: "attempt-completed" });
+      const completedStarted = await clockManager.start(completedSource.id);
+      const completed = await clockManager.completeAttempt({
+        executionId: completedSource.id,
+        attempt: completedStarted.attempts,
+      });
+
+      const failedSource = await clockManager.create({ type: "attempt-failed" });
+      const failedStarted = await clockManager.start(failedSource.id);
+      const failed = await clockManager.failAttempt(
+        { executionId: failedSource.id, attempt: failedStarted.attempts },
+        { message: "fatal", retryable: false },
+      );
+
+      const timedOutSource = await clockManager.create({ type: "attempt-timed-out" });
+      const timedOutStarted = await clockManager.start(timedOutSource.id);
+      const timedOut = await clockManager.timeoutAttempt(
+        { executionId: timedOutSource.id, attempt: timedOutStarted.attempts },
+        { retryable: false },
+      );
+      const recovered = await clockManager.resolveIndeterminateTimeout(
+        { executionId: timedOutSource.id, attempt: timedOutStarted.attempts },
+        "provider confirmed no effect",
+      );
+
+      const loggedSource = await clockManager.create({ type: "logged" });
+      const logged = await clockManager.recordLog(loggedSource.id, { message: "manager log" });
+      const attemptLoggedSource = await clockManager.create({ type: "attempt-logged" });
+      const attemptLoggedStarted = await clockManager.start(attemptLoggedSource.id);
+      const attemptLogged = await clockManager.recordLogAttempt(
+        { executionId: attemptLoggedSource.id, attempt: attemptLoggedStarted.attempts },
+        { message: "attempt log" },
+      );
+
+      expect(completed.completedAt).toEqual(clockTime);
+      expect(failed.completedAt).toEqual(clockTime);
+      expect(timedOut.completedAt).toEqual(clockTime);
+      expect(recovered.metadata?.timeoutRecovery).toEqual({
+        reason: "provider confirmed no effect",
+        resolvedAt: clockTime.toISOString(),
+      });
+      expect(logged.logs?.[0]?.timestamp).toBe(clockTime.toISOString());
+      expect(attemptLogged.logs?.[0]?.timestamp).toBe(clockTime.toISOString());
+    });
+
+    it("controls reconciliation defaults and replay evidence", async () => {
+      let clockTime = new Date("2000-01-01T00:00:00.000Z");
+      const clockManager = new ExecutionManagerImpl(store, { clock: () => clockTime });
+
+      const overdueSource = await clockManager.create({ type: "overdue", timeout: 1_000 });
+      await clockManager.start(overdueSource.id);
+      const failedSource = await clockManager.create({ type: "replay-source" });
+      await clockManager.start(failedSource.id);
+      await clockManager.fail(failedSource.id, { message: "fatal", retryable: false });
+
+      clockTime = new Date("2000-01-01T00:00:01.000Z");
+      await expect(clockManager.reconcileTimedOut()).resolves.toEqual({ scanned: 1, timedOut: 1 });
+      const reconciled = await clockManager.get(overdueSource.id);
+      const replayed = await clockManager.replay(failedSource.id);
+
+      expect(reconciled.completedAt).toEqual(clockTime);
+      expect(replayed.metadata?.replayedAt).toBe(clockTime.toISOString());
+      expect(replayed.logs?.[0]?.timestamp).toBe(clockTime.toISOString());
+    });
+  });
+
   describe("create", () => {
     it("creates execution with pending status", async () => {
       const execution = await manager.create({ type: "task" });

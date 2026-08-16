@@ -110,14 +110,6 @@ function calculatePercent(current: number, total: number): number {
   return Math.min(100, Math.round((current / total) * 100));
 }
 
-function toIsoTimestamp(timestamp?: Date | string): string {
-  if (timestamp === undefined) {
-    return new Date().toISOString();
-  }
-
-  return timestamp instanceof Date ? timestamp.toISOString() : timestamp;
-}
-
 function isReplayableStatus(status: ExecutionStatus): boolean {
   return status === "failed" || status === "timed_out";
 }
@@ -407,7 +399,7 @@ export class ExecutionManagerImpl
     const targetStatus: ExecutionStatus = "running";
     validateTransition(execution.status, targetStatus);
 
-    const startedAt = new Date();
+    const startedAt = this.clock();
     const attempts = execution.attempts + 1;
 
     return this.transition(execution, targetStatus, {
@@ -427,7 +419,7 @@ export class ExecutionManagerImpl
     return this.transition(execution, "completed", {
       status: "completed",
       result,
-      completedAt: new Date(),
+      completedAt: this.clock(),
     });
   }
 
@@ -438,7 +430,7 @@ export class ExecutionManagerImpl
     return this.transitionAttempt(execution, token, "completed", {
       status: "completed",
       result,
-      completedAt: new Date(),
+      completedAt: this.clock(),
     });
   }
 
@@ -462,7 +454,7 @@ export class ExecutionManagerImpl
     return this.transition(execution, "failed", {
       status: "failed",
       error,
-      completedAt: new Date(),
+      completedAt: this.clock(),
     });
   }
 
@@ -481,7 +473,7 @@ export class ExecutionManagerImpl
     return this.transitionAttempt(execution, token, "failed", {
       status: "failed",
       error,
-      completedAt: new Date(),
+      completedAt: this.clock(),
     });
   }
 
@@ -496,7 +488,7 @@ export class ExecutionManagerImpl
 
     return this.transition(execution, "cancelled", {
       status: "cancelled",
-      completedAt: new Date(),
+      completedAt: this.clock(),
       metadata,
     });
   }
@@ -543,7 +535,7 @@ export class ExecutionManagerImpl
 
     return this.transition(execution, "timed_out", {
       status: "timed_out",
-      completedAt: new Date(),
+      completedAt: this.clock(),
       error: {
         message: "Execution timed out",
         code: "execution/timeout-indeterminate",
@@ -562,7 +554,7 @@ export class ExecutionManagerImpl
 
     return this.transitionAttempt(execution, token, "timed_out", {
       status: "timed_out",
-      completedAt: new Date(),
+      completedAt: this.clock(),
       error: options.retryable
         ? {
             message: "Execution timed out",
@@ -612,7 +604,7 @@ export class ExecutionManagerImpl
     const execution = await this.findRunningAttempt(token);
     const store = this.attemptStore(execution.id);
     const entry: ExecutionLogEntry = {
-      timestamp: toIsoTimestamp(params.timestamp),
+      timestamp: this.toIsoTimestamp(params.timestamp),
       level: params.level ?? "info",
       message: params.message,
       ...(params.data === undefined ? {} : { data: params.data }),
@@ -692,7 +684,7 @@ export class ExecutionManagerImpl
   async reconcileTimedOut(
     options: ReconcileTimedOutOptions = {},
   ): Promise<ReconcileTimedOutResult> {
-    const now = options.now ?? new Date();
+    const now = options.now ?? this.clock();
     const batchSize = options.batchSize ?? DEFAULT_RECONCILIATION_BATCH_SIZE;
 
     if (!Number.isInteger(batchSize) || batchSize <= 0) {
@@ -823,7 +815,7 @@ export class ExecutionManagerImpl
     }
 
     const entry: ExecutionLogEntry = {
-      timestamp: toIsoTimestamp(params.timestamp),
+      timestamp: this.toIsoTimestamp(params.timestamp),
       level: params.level ?? "info",
       message: params.message,
       ...(params.data !== undefined ? { data: params.data } : {}),
@@ -847,7 +839,7 @@ export class ExecutionManagerImpl
       );
     }
 
-    const replayedAt = new Date().toISOString();
+    const replayedAt = this.clock().toISOString();
     const logData = params.reason
       ? { sourceExecutionId: execution.id, reason: params.reason }
       : { sourceExecutionId: execution.id };
@@ -892,6 +884,11 @@ export class ExecutionManagerImpl
       ...progress,
       percent: progress.percent ?? calculatePercent(progress.current, progress.total),
     };
+  }
+
+  private toIsoTimestamp(timestamp?: Date | string): string {
+    const resolvedTimestamp = timestamp ?? this.clock();
+    return resolvedTimestamp instanceof Date ? resolvedTimestamp.toISOString() : resolvedTimestamp;
   }
 
   private continuationStore(): ExecutionStore & ExecutionContinuationStore {
