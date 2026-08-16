@@ -1,4 +1,5 @@
 import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -27,6 +28,11 @@ import { readTestInventory } from "../test-inventory.mts";
 import type { TestInventory } from "../test-inventory.mts";
 
 const REAL_TURBO_TEST_TIMEOUT_MS = 120_000;
+const PACKAGE_MANAGER = (
+  JSON.parse(readFileSync(resolve(import.meta.dirname, "../../package.json"), "utf8")) as {
+    readonly packageManager: string;
+  }
+).packageManager;
 
 const inventory: TestInventory = {
   version: 1,
@@ -69,6 +75,125 @@ describe("test lane runner", () => {
       /^--concurrency=[1-4]$/,
     );
   });
+
+  it(
+    "builds workspace dependencies before a clean-cache fast package test",
+    () => {
+      const root = mkdtempSync(join(tmpdir(), "croco-fast-lane-build-graph-"));
+      const previousTurboCacheDirectory = process.env.TURBO_CACHE_DIR;
+      try {
+        process.env.TURBO_CACHE_DIR = join(root, ".turbo-cache");
+        mkdirSync(join(root, "packages/dependency"), { recursive: true });
+        mkdirSync(join(root, "packages/consumer/src/tests"), { recursive: true });
+        symlinkSync(
+          resolve(import.meta.dirname, "../../node_modules"),
+          join(root, "node_modules"),
+          process.platform === "win32" ? "junction" : "dir",
+        );
+        writeFileSync(
+          join(root, "package.json"),
+          `${JSON.stringify({ private: true, packageManager: PACKAGE_MANAGER }, null, 2)}\n`,
+        );
+        writeFileSync(join(root, "pnpm-workspace.yaml"), "packages:\n  - packages/*\n");
+        writeFileSync(
+          join(root, "pnpm-lock.yaml"),
+          "lockfileVersion: '9.0'\nsettings:\n  autoInstallPeers: true\n  excludeLinksFromLockfile: false\nimporters:\n  .: {}\n  packages/dependency: {}\n  packages/consumer:\n    dependencies:\n      '@fixture/dependency':\n        specifier: workspace:*\n        version: link:../dependency\n",
+        );
+        writeFileSync(
+          join(root, "turbo.json"),
+          `${JSON.stringify(
+            {
+              tasks: {
+                build: { dependsOn: ["^build"], outputs: ["dist/**"] },
+                test: {
+                  dependsOn: ["build", "^build"],
+                  outputs: [".turbo/croco-test-evidence.json"],
+                },
+              },
+            },
+            null,
+            2,
+          )}\n`,
+        );
+        writeFileSync(
+          join(root, "packages/dependency/package.json"),
+          `${JSON.stringify(
+            {
+              name: "@fixture/dependency",
+              version: "1.0.0",
+              scripts: { build: "node build.mjs" },
+            },
+            null,
+            2,
+          )}\n`,
+        );
+        writeFileSync(
+          join(root, "packages/dependency/build.mjs"),
+          'import { mkdirSync, writeFileSync } from "node:fs";\nmkdirSync("dist", { recursive: true });\nwriteFileSync("dist/ready.txt", "ready\\n");\n',
+        );
+        writeFileSync(
+          join(root, "packages/consumer/package.json"),
+          `${JSON.stringify(
+            {
+              name: "@fixture/consumer",
+              version: "1.0.0",
+              dependencies: { "@fixture/dependency": "workspace:*" },
+              scripts: {
+                build: "node build.mjs",
+                test: "vitest run src/tests/consumer.spec.ts",
+              },
+            },
+            null,
+            2,
+          )}\n`,
+        );
+        writeFileSync(
+          join(root, "packages/consumer/build.mjs"),
+          'import { mkdirSync, writeFileSync } from "node:fs";\nmkdirSync("dist", { recursive: true });\nwriteFileSync("dist/ready.txt", "ready\\n");\n',
+        );
+        writeFileSync(
+          join(root, "packages/consumer/src/tests/consumer.spec.ts"),
+          'import { existsSync } from "node:fs";\nimport { expect, it } from "vitest";\nit("receives declared build artifacts", () => {\n  expect(existsSync("../dependency/dist/ready.txt")).toBe(true);\n  expect(existsSync("dist/ready.txt")).toBe(true);\n});\n',
+        );
+
+        const report = runTestLane({
+          inventory: {
+            version: 1,
+            exceptions: [],
+            tests: [
+              {
+                path: "packages/consumer/src/tests/consumer.spec.ts",
+                lane: "fast",
+                qualifiers: [],
+                owner: "@fixture/consumer",
+              },
+            ],
+          },
+          lane: "fast",
+          rootDir: root,
+        });
+
+        expect(report.status).toBe("passed");
+        expect(existsSync(join(root, "packages/dependency/dist/ready.txt"))).toBe(true);
+        expect(existsSync(join(root, "packages/consumer/dist/ready.txt"))).toBe(true);
+        expect(report.commands).toEqual([
+          expect.objectContaining({
+            owner: "@fixture/consumer",
+            executionState: "executed",
+            cacheHash: expect.any(String),
+          }),
+        ]);
+      } finally {
+        if (previousTurboCacheDirectory === undefined) {
+          delete process.env.TURBO_CACHE_DIR;
+        } else {
+          process.env.TURBO_CACHE_DIR = previousTurboCacheDirectory;
+        }
+        rmSync(root, { recursive: true, force: true });
+      }
+    },
+    REAL_TURBO_TEST_TIMEOUT_MS,
+  );
 
   const exactScript = (command: { readonly paths: readonly string[] }, lane: string): string =>
     `vitest run ${command.paths.join(" ")}`;
