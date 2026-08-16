@@ -31187,6 +31187,12 @@
           "sourceEntrypoint": "packages/workflow-core/src/index.ts",
           "runtimeExports": [
             {
+              "name": "assertValidListSagaExecutionsOptions",
+              "exportKind": "named",
+              "source": "./libs/saga/assertValidListSagaExecutionsOptions",
+              "declarationKind": "function"
+            },
+            {
               "name": "DuplicateWorkflowRegistrationProblem",
               "exportKind": "named",
               "source": "./libs/problems/WorkflowProblems",
@@ -31212,6 +31218,12 @@
             },
             {
               "name": "SagaExecutionNotFoundProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/WorkflowProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "SagaListPaginationProblem",
               "exportKind": "named",
               "source": "./libs/problems/WorkflowProblems",
               "declarationKind": "class"

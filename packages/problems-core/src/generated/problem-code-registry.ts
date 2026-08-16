@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 638,
+  problemCount: 639,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -19878,7 +19878,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/workflow-core/src/libs/problems/WorkflowProblems.ts",
-          line: 127,
+          line: 145,
           column: 5,
           kind: "problem-constructor",
         },
@@ -19916,6 +19916,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "workflow-core/saga-list-pagination-invalid",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#workflow-core-saga-list-pagination-invalid",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/workflow-core/src/libs/problems/WorkflowProblems.ts",
+          line: 104,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
       code: "workflow-core/saga-replay-invalid",
       category: "InternalServerError",
       status: 500,
@@ -19941,7 +19973,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/workflow-core/src/libs/problems/WorkflowProblems.ts",
-          line: 103,
+          line: 121,
           column: 5,
           kind: "problem-constructor",
         },

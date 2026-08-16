@@ -2,6 +2,7 @@ import {
   SagaExecutionNotFoundProblem,
   SagaStoreConflictProblem,
 } from "../problems/WorkflowProblems";
+import { assertValidListSagaExecutionsOptions } from "./assertValidListSagaExecutionsOptions";
 import type {
   CreateSagaExecutionParams,
   ListSagaExecutionsOptions,
@@ -77,6 +78,7 @@ export class InMemorySagaStore implements SagaStore {
   }
 
   async list(options: ListSagaExecutionsOptions = {}): Promise<SagaExecution[]> {
+    assertValidListSagaExecutionsOptions(options);
     let executions = Array.from(this.executions.values());
 
     if (options.sagaName !== undefined) {
@@ -94,6 +96,9 @@ export class InMemorySagaStore implements SagaStore {
     }
 
     const offset = options.offset ?? 0;
-    return executions.slice(offset, options.limit ? offset + options.limit : undefined);
+    return executions.slice(
+      offset,
+      options.limit === undefined ? undefined : offset + options.limit,
+    );
   }
 }
