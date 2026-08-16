@@ -40,6 +40,8 @@ import type {
 import type { CacheableFailureClass } from "./ci-cacheable-failure-injection.mts";
 import type { PromotionEvidenceContext } from "./spine-promotion-check.mts";
 import type { SynthesisInput } from "./ci-synthesis-input.mts";
+import type { LaneReport } from "./test-evidence-reconcile.mts";
+import type { VerificationProfile } from "./verification-manifest.mts";
 import { VerificationProblem } from "./verification-problem.mts";
 
 const PACKAGE_QUALITY_OUTPUT = join("ci-reports", "package-quality");
@@ -168,6 +170,14 @@ function packageQualityDiagnostics(
         : [],
     ),
   ].sort();
+}
+
+export function productionReadyFastTestLaneReport(
+  profile: VerificationProfile,
+  report: LaneReport | null,
+): LaneReport | null {
+  if (!report || profile === "publish" || report.selectedOwners.length === 0) return report;
+  return null;
 }
 
 function dashboardStatus(result: SynthesisCheckResult | undefined): string {
@@ -380,7 +390,10 @@ export function runSplitValidationSynthesis(options: RunOptions): SplitSynthesis
         summaryDir: "normalized-synthesis-input",
         requireTaskSummaries: input.facts.productionReadyRequireTaskSummaries,
         generatedAt: now(),
-        fastTestLaneReport: input.facts.tests.fast,
+        fastTestLaneReport: productionReadyFastTestLaneReport(
+          input.identity.profile,
+          input.facts.tests.fast,
+        ),
         inventory: input.facts.tests.inventory,
         qualityRows: input.facts.packageTasks,
       });
