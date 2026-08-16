@@ -469,7 +469,7 @@ function defaultRunner(
         if (packageCommands.length === 0) {
           packageResult = { exitCode: 0, durationMs: 0 };
         } else {
-          const runTurbo = (): { readonly result: typeof spawnSync; readonly output: string } => {
+          const runTurbo = () => {
             const result = spawnSync(
               "pnpm",
               createFastPackageTurboArguments(rootDir, packageCommands),

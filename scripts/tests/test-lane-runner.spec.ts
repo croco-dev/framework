@@ -81,8 +81,10 @@ describe("test lane runner", () => {
     () => {
       const root = mkdtempSync(join(tmpdir(), "croco-fast-lane-build-graph-"));
       const previousTurboCacheDirectory = process.env.TURBO_CACHE_DIR;
+      const previousTurboForce = process.env.TURBO_FORCE;
       try {
         process.env.TURBO_CACHE_DIR = join(root, ".turbo-cache");
+        process.env.TURBO_FORCE = "1";
         mkdirSync(join(root, "packages/dependency"), { recursive: true });
         mkdirSync(join(root, "packages/consumer/src/tests"), { recursive: true });
         symlinkSync(
@@ -188,6 +190,11 @@ describe("test lane runner", () => {
           delete process.env.TURBO_CACHE_DIR;
         } else {
           process.env.TURBO_CACHE_DIR = previousTurboCacheDirectory;
+        }
+        if (previousTurboForce === undefined) {
+          delete process.env.TURBO_FORCE;
+        } else {
+          process.env.TURBO_FORCE = previousTurboForce;
         }
         rmSync(root, { recursive: true, force: true });
       }
