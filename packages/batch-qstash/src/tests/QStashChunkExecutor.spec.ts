@@ -494,7 +494,7 @@ describe("QStashChunkExecutor continuation execution", () => {
       chunkSize: 1,
     } as Step<number, number>;
 
-    // @ts-expect-error A plain Step intentionally lacks the QStash idempotency contract.
+    // @ts-expect-error A plain Step intentionally lacks the QStash idempotency contract and Checkpointable reader.
     await expect(harness.executor.executeChunk(execution.id, plainStep)).rejects.toMatchObject({
       code: "batch-qstash/missing-config",
     });
@@ -545,7 +545,7 @@ describe("QStashChunkExecutor continuation execution", () => {
     } = createWriter();
     const step: QStashStep<number, number> = {
       name: "typed",
-      reader: { read: async () => null },
+      reader: createCheckpointReader([]),
       writer,
       chunkSize: 1,
     };
@@ -556,6 +556,57 @@ describe("QStashChunkExecutor continuation execution", () => {
     expect(() => createHarness({ leaseDurationMs: 100, heartbeatIntervalMs: 100 })).toThrow(
       "heartbeatIntervalMs must be less than the execution continuation lease duration.",
     );
+  });
+
+  it("restores persisted cursor across reconstructed checkpoint readers for two deliveries", async () => {
+    const harness = createHarness();
+    const execution = await harness.createExecution();
+    const writer = createWriter();
+
+    const firstReader = createCheckpointReader([1, 2, 3]);
+    const first = await harness.executor.executeChunk(
+      execution.id,
+      createStep(firstReader, writer, 2),
+    );
+    expect(first).toEqual({ hasMore: true, processedCount: 2 });
+
+    const secondReader = createCheckpointReader([1, 2, 3]);
+    const second = await harness.executor.executeChunk(
+      execution.id,
+      createStep(secondReader, writer, 2),
+      { continuationToken: publishedToken(harness, 0) },
+    );
+    expect(second).toEqual({ hasMore: false, processedCount: 1 });
+    expect(secondReader.restoreCheckpoint).toHaveBeenCalled();
+
+    const completed = await harness.manager.get(execution.id);
+    expect(completed).toMatchObject({ status: "completed", result: { processedCount: 3 } });
+    expect(writer.writeIdempotent.mock.calls.map(([items]) => items)).toEqual([[1, 2], [3]]);
+    expect(harness.publishJSON).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects a non-checkpointable reader with the configuration Problem before any work", async () => {
+    const harness = createHarness();
+    const execution = await harness.createExecution();
+    const claim = vi.spyOn(harness.manager, "claimContinuation");
+    const plainReader = { read: vi.fn(async () => null) };
+    const writer = createWriter();
+
+    await expect(
+      harness.executor.executeChunk(execution.id, {
+        name: "numbers",
+        reader: plainReader,
+        writer,
+        chunkSize: 1,
+      } as unknown as QStashStep<number, number>),
+    ).rejects.toMatchObject({
+      code: "batch-qstash/missing-config",
+      detail: expect.stringContaining("step.reader.checkpoint"),
+    });
+    expect(claim).not.toHaveBeenCalled();
+    expect(plainReader.read).not.toHaveBeenCalled();
+    expect(writer.writeIdempotent).not.toHaveBeenCalled();
+    expect(harness.publishJSON).not.toHaveBeenCalled();
   });
 
   it("accepts a heartbeat interval below the configured continuation lease", () => {

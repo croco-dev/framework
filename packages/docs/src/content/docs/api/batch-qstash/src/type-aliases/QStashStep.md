@@ -5,9 +5,13 @@ prev: false
 title: "QStashStep"
 ---
 
-> **QStashStep**\<`I`, `O`\> = `Omit`\<[`Step`](/api/batch-core/src/classes/step/)\<`I`, `O`\>, `"writer"`\> & `object`
+> **QStashStep**\<`I`, `O`\> = `Omit`\<[`Step`](/api/batch-core/src/classes/step/)\<`I`, `O`\>, `"reader"` \| `"writer"`\> & `object`
 
 ## Type Declaration
+
+### reader
+
+> **reader**: [`ItemReader`](/api/batch-core/src/interfaces/itemreader/)\<`I`\> & [`Checkpointable`](/api/batch-core/src/interfaces/checkpointable/)
 
 ### writer
 
