@@ -874,6 +874,57 @@ describe("LifecycleRuleEvaluator versioned execution", () => {
     expect(await registry.getRegistrationState("retention-risk", "1.0.0")).toBe("paused");
   });
 
+  it("holds the execution lease until an async action settles so external pause cannot complete mid-dispatch", async () => {
+    let markActionStarted: (() => void) | undefined;
+    let releaseAction: (() => void) | undefined;
+    const actionStarted = new Promise<void>((resolve) => {
+      markActionStarted = resolve;
+    });
+    const actionGate = new Promise<void>((resolve) => {
+      releaseAction = resolve;
+    });
+    const registry = new LifecycleRuleRegistry();
+    await registerVersion(registry, "1.0.0", { activate: true });
+    const sink = new InMemoryLifecycleActionSink();
+    const evaluator = new LifecycleRuleEvaluator({
+      registry,
+      runStore: new InMemoryLifecycleRunStore(),
+      actionAdapter: {
+        execute: async (action, context, run) => {
+          markActionStarted?.();
+          await actionGate;
+          return sink.execute(action, context, run);
+        },
+      },
+    });
+
+    const evaluation = evaluator.evaluate(createContext("deferred-action"));
+    await actionStarted;
+
+    let pauseCompleted = false;
+    const pause = registry
+      .pause({
+        commandId: "pause-while-action-pending",
+        ruleId: "retention-risk",
+        version: "1.0.0",
+        expectedRevision: 1,
+      })
+      .then(() => {
+        pauseCompleted = true;
+      });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(pauseCompleted).toBe(false);
+
+    releaseAction?.();
+    await evaluation;
+    await pause;
+
+    expect(pauseCompleted).toBe(true);
+    expect(sink.getEmissions()).toHaveLength(1);
+    expect(await registry.getRegistrationState("retention-risk", "1.0.0")).toBe("paused");
+  });
+
   it("claims production idempotency and cooldown atomically before dispatch", async () => {
     const registry = new LifecycleRuleRegistry();
     await registerVersion(registry, "1.0.0", { activate: true });
