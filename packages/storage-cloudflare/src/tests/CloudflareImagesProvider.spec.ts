@@ -77,7 +77,7 @@ describe("CloudflareImagesProvider", () => {
         },
         providerName: "storage-cloudflare",
         publicUrl: "https://imagedelivery.net/test-account-hash/",
-        signedUrl: /signature=/,
+        signedUrl: /sig=/,
       }).cases,
     )("$name", async ({ run }) => {
       await run();
@@ -631,18 +631,18 @@ describe("CloudflareImagesProvider", () => {
       mockCryptoSign.mockResolvedValue(new ArrayBuffer(32));
     });
 
-    it("should generate signed URL with HMAC signature", async () => {
+    it("should generate signed URL with exp and sig query parameters", async () => {
       const mockSignature = Buffer.alloc(32, "ab").toString("hex");
       mockCryptoSign.mockResolvedValue(new Uint8Array(Buffer.from(mockSignature, "hex")).buffer);
 
       const url = await provider.getSignedUrl("test-image-id", { expiresIn: 3600 });
 
       expect(url).toContain("https://imagedelivery.net/test-account-hash/test-image-id/public");
-      expect(url).toContain("expires=");
-      expect(url).toContain("signature=");
+      expect(url).toContain("exp=");
+      expect(url).toContain("sig=");
     });
 
-    it("should include correct expiration timestamp", async () => {
+    it("should include correct expiration timestamp in exp parameter", async () => {
       const now = Date.now();
       vi.spyOn(Date, "now").mockReturnValue(now);
 
@@ -653,7 +653,7 @@ describe("CloudflareImagesProvider", () => {
       });
       const expectedExpires = Math.floor(now / 1000) + MAX_SIGNED_URL_EXPIRY_SECONDS;
 
-      expect(url).toContain(`expires=${expectedExpires}`);
+      expect(url).toContain(`exp=${expectedExpires}`);
 
       vi.restoreAllMocks();
     });
@@ -669,14 +669,23 @@ describe("CloudflareImagesProvider", () => {
       expect(url).toContain("cdn.example.com");
     });
 
-    it("should encode delivery path segments without changing the logical signature key", async () => {
+    it("should sign the pathname and exp query, not the raw key", async () => {
+      const now = Date.now();
+      vi.spyOn(Date, "now").mockReturnValue(now);
+      const expectedExp = Math.floor(now / 1000) + 3600;
+
       const url = await provider.getSignedUrl("folder/50% café?#.jpg", { expiresIn: 3600 });
 
       expect(url).toContain(
         "https://imagedelivery.net/test-account-hash/folder/50%25%20caf%C3%A9%3F%23.jpg/public",
       );
       const signedData = mockCryptoSign.mock.calls[0]?.[2] as Uint8Array;
-      expect(new TextDecoder().decode(signedData)).toContain("folder/50% café?#.jpg:");
+      const decoded = new TextDecoder().decode(signedData);
+      expect(decoded).toBe(
+        `/test-account-hash/folder/50%25%20caf%C3%A9%3F%23.jpg/public?exp=${expectedExp}`,
+      );
+
+      vi.restoreAllMocks();
     });
 
     it("should throw validation provider Problem when signingKey is missing", async () => {
@@ -692,6 +701,70 @@ describe("CloudflareImagesProvider", () => {
       ).rejects.toMatchObject({
         code: "storage-cloudflare/validation-failed",
       });
+    });
+
+    it("should produce deterministic private URL with exp and sig for known inputs", async () => {
+      vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
+
+      const deterministicDigest = new Uint8Array([0xab, 0xcd, 0xef, 0x01]).buffer;
+      mockCryptoSign.mockResolvedValue(deterministicDigest);
+
+      const url = await provider.getSignedUrl("image-id/private", { expiresIn: 60 });
+
+      expect(url).toBe(
+        "https://imagedelivery.net/test-account-hash/image-id/private/public?exp=1700000060&sig=abcdef01",
+      );
+
+      const signedPayload = new TextDecoder().decode(
+        mockCryptoSign.mock.calls[0]?.[2] as Uint8Array,
+      );
+      expect(signedPayload).toBe("/test-account-hash/image-id/private/public?exp=1700000060");
+
+      vi.restoreAllMocks();
+    });
+
+    it("should use custom domain in signed path when configured", async () => {
+      vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
+      mockCryptoSign.mockResolvedValue(new Uint8Array([0xaa]).buffer);
+
+      const providerWithCustomDomain = new CloudflareImagesProvider(mockOptionsWithCustomDomain);
+      const url = await providerWithCustomDomain.getSignedUrl("image-id", { expiresIn: 60 });
+
+      const parsed = new URL(url);
+      expect(parsed.origin).toBe("https://cdn.example.com");
+      expect(parsed.searchParams.get("exp")).toBe("1700000060");
+      expect(parsed.searchParams.get("sig")).toBe("aa");
+
+      const signedPayload = new TextDecoder().decode(
+        mockCryptoSign.mock.calls[0]?.[2] as Uint8Array,
+      );
+      expect(signedPayload).toBe(
+        "/cdn-cgi/imagedelivery/test-account-hash/image-id/public?exp=1700000060",
+      );
+
+      vi.restoreAllMocks();
+    });
+
+    it("should include variant name in signed path", async () => {
+      const providerWithVariant = new CloudflareImagesProvider({
+        ...mockOptions,
+        defaultVariant: "thumbnail",
+      });
+      vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
+      mockCryptoSign.mockResolvedValue(new Uint8Array([0xbb]).buffer);
+
+      const url = await providerWithVariant.getSignedUrl("image-id", { expiresIn: 60 });
+
+      const parsed = new URL(url);
+      expect(parsed.pathname).toContain("/thumbnail");
+      expect(parsed.searchParams.get("exp")).toBe("1700000060");
+
+      const signedPayload = new TextDecoder().decode(
+        mockCryptoSign.mock.calls[0]?.[2] as Uint8Array,
+      );
+      expect(signedPayload).toBe("/test-account-hash/image-id/thumbnail?exp=1700000060");
+
+      vi.restoreAllMocks();
     });
   });
 

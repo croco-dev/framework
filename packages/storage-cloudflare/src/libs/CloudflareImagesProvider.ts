@@ -244,13 +244,20 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
     this.validateKey(key);
     const expiresIn = validateSignedUrlExpiry(options.expiresIn);
 
-    const url = this.buildImageUrl(key, this.options.defaultVariant ?? "public", "signed-url");
-
+    const baseUrl = this.buildImageUrl(key, this.options.defaultVariant ?? "public", "signed-url");
     const expiresAt = Math.floor(Date.now() / 1000) + expiresIn;
 
-    const signature = await this.generateSignature(key, expiresAt);
+    const url = new URL(baseUrl);
+    url.searchParams.set("exp", String(expiresAt));
 
-    return `${url}?expires=${expiresAt}&signature=${signature}`;
+    const signature = await this.generateSignature(
+      key,
+      `${url.pathname}?${url.searchParams.toString()}`,
+    );
+
+    url.searchParams.set("sig", signature);
+
+    return url.toString();
   }
 
   async getMetadata(
@@ -726,11 +733,9 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
     }
   }
 
-  private async generateSignature(key: string, expiresAt: number): Promise<string> {
-    const text = `${key}:${expiresAt}`;
-
+  private async generateSignature(key: string, urlPath: string): Promise<string> {
     const encoder = new TextEncoder();
-    const data = encoder.encode(text);
+    const data = encoder.encode(urlPath);
 
     const signature = await crypto.subtle.sign("HMAC", await this.getSigningKey(key), data);
 
