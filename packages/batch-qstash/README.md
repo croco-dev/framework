@@ -27,7 +27,12 @@ and rejects `heartbeatIntervalMs` values that are greater than or equal to that 
 heartbeat comfortably below expiry; the defaults use a 10-second heartbeat with a 30-second lease,
 and one-third of the lease duration is the recommended operational target.
 
-QStash steps require a writer that implements both the generic `ItemWriter.write()` contract and
+QStash distributed continuations require a reader that implements both `ItemReader` and
+`Checkpointable`. Each webhook delivery reconstructs the reader, so the checkpoint must fully
+capture the cursor position. A reader that lacks `getCheckpoint` or `restoreCheckpoint` is
+rejected with `QStashBatchConfigProblem` before a continuation claim is acquired.
+
+QStash steps also require a writer that implements both the generic `ItemWriter.write()` contract and
 `QStashIdempotentWriter.writeIdempotent()`. Use `processingToken` as the provider or database
 idempotency key; it remains stable if an expired continuation lease is reclaimed.
 
@@ -63,23 +68,23 @@ await executor.executeChunk(body.executionId, step, {
 
 ## Public API
 
-| API                             | Description                                                             |
-| ------------------------------- | ----------------------------------------------------------------------- |
-| `QStashChunkExecutor`           | Executes a batch chunk and schedules the next chunk through QStash.     |
-| `QStashStep`                    | Batch step whose writer supports generic and idempotent QStash writes.  |
-| `QStashIdempotentWriter`        | External writer capability fenced by a stable processing token.         |
-| `QStashChunkDelivery`           | Continuation token and optional worker identity from the webhook.       |
-| `QStashExecutorOptions`         | Requires `qstashClient` and a public `webhookUrl`.                      |
-| `QStashBatchConfigProblem`      | Terminal Problem for missing execution manager, client, or webhook URL. |
-| `QStashBatchValidationProblem`  | Terminal Problem for malformed publish URLs or invalid chunk sizes.     |
-| `QStashBatchPublishProblem`     | Redacted QStash publish failure with retryability and status evidence.  |
-| `isRetryableQStashBatchError()` | Classifies transient QStash publish failures for diagnostics/tests.     |
+| API                             | Description                                                                |
+| ------------------------------- | -------------------------------------------------------------------------- |
+| `QStashChunkExecutor`           | Executes a batch chunk and schedules the next chunk through QStash.        |
+| `QStashStep`                    | Batch step requiring a checkpointable reader and idempotent QStash writer. |
+| `QStashIdempotentWriter`        | External writer capability fenced by a stable processing token.            |
+| `QStashChunkDelivery`           | Continuation token and optional worker identity from the webhook.          |
+| `QStashExecutorOptions`         | Requires `qstashClient` and a public `webhookUrl`.                         |
+| `QStashBatchConfigProblem`      | Terminal Problem for missing execution manager, client, or webhook URL.    |
+| `QStashBatchValidationProblem`  | Terminal Problem for malformed publish URLs or invalid chunk sizes.        |
+| `QStashBatchPublishProblem`     | Redacted QStash publish failure with retryability and status evidence.     |
+| `isRetryableQStashBatchError()` | Classifies transient QStash publish failures for diagnostics/tests.        |
 
 ## Failure Modes
 
 - Missing execution manager, QStash client, or webhook URL throws `QStashBatchConfigProblem`.
-- Execution managers without atomic continuation support and steps without an idempotent writer
-  fail before processing begins.
+- Execution managers without atomic continuation support, steps without a checkpointable reader,
+  and steps without an idempotent writer fail before processing begins.
 - Duplicate stale tokens return a zero-work `stale` result; an actively owned token throws
   `execution/continuation-conflict` so QStash can retry it.
 - Non-HTTP(S) webhook URLs throw `QStashBatchValidationProblem`.

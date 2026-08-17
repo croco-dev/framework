@@ -1,4 +1,4 @@
-import type { Checkpointable, ItemWriter, Step } from "@croco/batch-core";
+import type { Checkpointable, ItemReader, ItemWriter, Step } from "@croco/batch-core";
 import { createStepExecutionError } from "@croco/batch-core";
 import type {
   Execution,
@@ -48,7 +48,8 @@ export interface QStashIdempotentWriter<O> {
   writeIdempotent(items: O[], context: QStashIdempotentWriteContext): Promise<void>;
 }
 
-export type QStashStep<I, O> = Omit<Step<I, O>, "writer"> & {
+export type QStashStep<I, O> = Omit<Step<I, O>, "reader" | "writer"> & {
+  reader: ItemReader<I> & Checkpointable;
   writer: ItemWriter<O> & QStashIdempotentWriter<O>;
 };
 
@@ -180,7 +181,7 @@ export class QStashChunkExecutor {
     const checkpointKey = `${step.name}.cursor`;
     const processedCountKey = `${step.name}.processedCount`;
     const checkpoint = execution.checkpoints?.[checkpointKey];
-    if (checkpoint !== undefined && isCheckpointable(step.reader)) {
+    if (checkpoint !== undefined) {
       step.reader.restoreCheckpoint(checkpoint);
     }
 
@@ -210,9 +211,7 @@ export class QStashChunkExecutor {
     }
     await heartbeat.assertOwned();
 
-    const checkpointAfterChunk = isCheckpointable(step.reader)
-      ? step.reader.getCheckpoint()
-      : undefined;
+    const checkpointAfterChunk = step.reader.getCheckpoint();
     const hasMore = await this.hasMoreItems(step, readCount, checkpointAfterChunk);
     const cumulativeProcessedCount = previousProcessedCount + items.length;
 
@@ -258,12 +257,9 @@ export class QStashChunkExecutor {
   ): Promise<boolean> {
     if (readCount < step.chunkSize) return false;
     if (isPeekable<I>(step.reader)) return (await step.reader.peek()) !== null;
-    if (isCheckpointable(step.reader)) {
-      const nextItem = await step.reader.read();
-      step.reader.restoreCheckpoint(checkpointAfterChunk);
-      return nextItem !== null;
-    }
-    return true;
+    const nextItem = await step.reader.read();
+    step.reader.restoreCheckpoint(checkpointAfterChunk);
+    return nextItem !== null;
   }
 
   private async publishContinuation(
@@ -397,6 +393,10 @@ function validateQStashStep<I, O>(step: QStashStep<I, O>): void {
     throw new QStashBatchValidationProblem(
       `QStash batch step.chunkSize must be a positive safe integer; received ${String(step?.chunkSize)}.`,
     );
+  }
+
+  if (!isCheckpointable(step?.reader)) {
+    throw new QStashBatchConfigProblem("step.reader.checkpoint");
   }
 
   const writer = step?.writer as Partial<QStashIdempotentWriter<O>> | undefined;
