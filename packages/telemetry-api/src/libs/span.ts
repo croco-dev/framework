@@ -2,6 +2,7 @@ import {
   type Attributes,
   context,
   type Exception,
+  isSpanContextValid,
   type Span,
   SpanStatusCode,
   trace,
@@ -100,6 +101,6 @@ export function getActiveTraceInfo(): TraceInfo {
     traceId: spanContext.traceId,
     spanId: spanContext.spanId,
     traceFlags: spanContext.traceFlags,
-    isValid: (spanContext.traceFlags & 1) === 1,
+    isValid: isSpanContextValid(spanContext),
   };
 }

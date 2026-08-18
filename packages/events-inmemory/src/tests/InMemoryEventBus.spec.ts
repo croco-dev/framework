@@ -539,6 +539,36 @@ describe("InMemoryEventBus", () => {
       setSpanContextSpy.mockRestore();
     });
 
+    it("should restore a valid unsampled remote parent context", async () => {
+      const handler = new TestHandler();
+      Container.set(TestHandler, handler);
+      eventBus.subscribe({ eventName: "TestEvent", handlerClass: TestHandler });
+
+      const traceInfoSpy = vi.spyOn(telemetryApi, "getActiveTraceInfo").mockReturnValue({
+        traceId: "0123456789abcdef0123456789abcdef",
+        spanId: "0123456789abcdef",
+        traceFlags: 0,
+        isValid: true,
+      });
+
+      const contextWithSpy = vi.spyOn(otelApi.context, "with");
+      const setSpanContextSpy = vi.spyOn(otelApi.trace, "setSpanContext");
+
+      await eventBus.publish(new TestEvent("restore-unsampled-trace-context"));
+
+      expect(setSpanContextSpy).toHaveBeenCalledWith(expect.anything(), {
+        traceId: "0123456789abcdef0123456789abcdef",
+        spanId: "0123456789abcdef",
+        traceFlags: 0,
+        isRemote: true,
+      });
+      expect(contextWithSpy).toHaveBeenCalled();
+
+      traceInfoSpy.mockRestore();
+      contextWithSpy.mockRestore();
+      setSpanContextSpy.mockRestore();
+    });
+
     it("should pass Error object to recordException", async () => {
       const failHandler = new FailingHandler();
       Container.set(FailingHandler, failHandler);

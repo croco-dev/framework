@@ -394,6 +394,63 @@ describe("getActiveTraceInfo", () => {
     expect(info).toHaveProperty("traceFlags");
     expect(info).toHaveProperty("isValid");
   });
+
+  it("should report a valid unsampled span context as valid", () => {
+    const parentContext = trace.setSpanContext(context.active(), {
+      traceId: "0123456789abcdef0123456789abcdef",
+      spanId: "0123456789abcdef",
+      traceFlags: 0,
+      isRemote: true,
+    });
+
+    context.with(parentContext, () => {
+      const info = getActiveTraceInfo();
+      expect(info).toEqual({
+        traceId: "0123456789abcdef0123456789abcdef",
+        spanId: "0123456789abcdef",
+        traceFlags: 0,
+        isValid: true,
+      });
+    });
+  });
+
+  it("should report zero trace and span ids as invalid", () => {
+    const parentContext = trace.setSpanContext(context.active(), {
+      traceId: "00000000000000000000000000000000",
+      spanId: "0000000000000000",
+      traceFlags: 1,
+      isRemote: true,
+    });
+
+    context.with(parentContext, () => {
+      const info = getActiveTraceInfo();
+      expect(info).toEqual({
+        traceId: "00000000000000000000000000000000",
+        spanId: "0000000000000000",
+        traceFlags: 1,
+        isValid: false,
+      });
+    });
+  });
+
+  it("should report malformed trace ids as invalid", () => {
+    const parentContext = trace.setSpanContext(context.active(), {
+      traceId: "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+      spanId: "0123456789abcdef",
+      traceFlags: 1,
+      isRemote: true,
+    });
+
+    context.with(parentContext, () => {
+      const info = getActiveTraceInfo();
+      expect(info).toEqual({
+        traceId: "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+        spanId: "0123456789abcdef",
+        traceFlags: 1,
+        isValid: false,
+      });
+    });
+  });
 });
 
 describe("getTracer", () => {
