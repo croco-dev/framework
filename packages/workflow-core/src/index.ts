@@ -4,6 +4,7 @@ export {
   SagaDefinitionProblem,
   SagaExecutionFailedProblem,
   SagaExecutionNotFoundProblem,
+  SagaFinalizationProblem,
   SagaListPaginationProblem,
   SagaReplayProblem,
   SagaStoreConflictProblem,

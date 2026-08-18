@@ -31223,6 +31223,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "SagaFinalizationProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/WorkflowProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "SagaListPaginationProblem",
               "exportKind": "named",
               "source": "./libs/problems/WorkflowProblems",

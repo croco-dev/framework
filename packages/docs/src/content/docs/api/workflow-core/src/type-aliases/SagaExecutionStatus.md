@@ -5,4 +5,4 @@ prev: false
 title: "SagaExecutionStatus"
 ---
 
-> **SagaExecutionStatus** = `"pending"` \| `"running"` \| `"completed"` \| `"compensated"` \| `"failed"`
+> **SagaExecutionStatus** = `"pending"` \| `"running"` \| `"completing"` \| `"completed"` \| `"compensated"` \| `"failed"`

@@ -1,4 +1,10 @@
-export type SagaExecutionStatus = "pending" | "running" | "completed" | "compensated" | "failed";
+export type SagaExecutionStatus =
+  | "pending"
+  | "running"
+  | "completing"
+  | "completed"
+  | "compensated"
+  | "failed";
 
 export type SagaStepStatus =
   | "pending"
