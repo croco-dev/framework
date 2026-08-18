@@ -3255,14 +3255,6 @@
       "message": "Type '{ name: string | undefined; attributes: { [attributeKey: string]: AttributeValue | undefined; } | undefined; }' is not assignable to type 'TraceDecoratorOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
     },
     {
-      "packageName": "@croco/telemetry-api",
-      "file": "packages/telemetry-api/src/libs/span.ts",
-      "line": 78,
-      "column": 5,
-      "code": "TS2412",
-      "message": "Type 'string | undefined' is not assignable to type 'string' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the type of the target."
-    },
-    {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/auth-provider-conformance.ts",
       "line": 312,
