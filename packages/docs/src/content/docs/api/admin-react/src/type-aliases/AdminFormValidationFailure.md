@@ -11,7 +11,7 @@ title: "AdminFormValidationFailure"
 
 ### TValues
 
-`TValues` _extends_ `object`
+`TValues` *extends* `object`
 
 ## Properties
 
@@ -19,25 +19,25 @@ title: "AdminFormValidationFailure"
 
 > `readonly` `optional` **audit?**: [`AdminAuditMetadata`](/api/admin-react/src/type-aliases/adminauditmetadata/)
 
----
+***
 
 ### fieldErrors
 
 > `readonly` **fieldErrors**: [`AdminFormFieldErrors`](/api/admin-react/src/type-aliases/adminformfielderrors/)\<`TValues`\>
 
----
+***
 
 ### kind
 
 > `readonly` **kind**: `"validation_failed"`
 
----
+***
 
 ### problem?
 
 > `readonly` `optional` **problem?**: [`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
 
----
+***
 
 ### recoveryActions?
 

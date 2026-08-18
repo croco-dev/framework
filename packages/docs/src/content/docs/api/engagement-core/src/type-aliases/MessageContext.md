@@ -11,8 +11,8 @@ title: "MessageContext"
 
 ### TMessage
 
-`TMessage` _extends_ `AnyMessage`
+`TMessage` *extends* `AnyMessage`
 
 ### TChannel
 
-`TChannel` _extends_ `MessageChannels`\<`TMessage`\> = `MessageChannels`\<`TMessage`\>
+`TChannel` *extends* `MessageChannels`\<`TMessage`\> = `MessageChannels`\<`TMessage`\>

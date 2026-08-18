@@ -13,25 +13,25 @@ title: "TestEvidenceAttempt"
 
 > `readonly` `optional` **attachments?**: readonly [`TestEvidenceAttachment`](/api/testing/src/type-aliases/testevidenceattachment/)[]
 
----
+***
 
 ### attempt
 
 > `readonly` **attempt**: `number`
 
----
+***
 
 ### diagnostics?
 
 > `readonly` `optional` **diagnostics?**: readonly [`TestEvidenceDiagnostic`](/api/testing/src/type-aliases/testevidencediagnostic/)[]
 
----
+***
 
 ### durationMs?
 
 > `readonly` `optional` **durationMs?**: `number`
 
----
+***
 
 ### outcome
 

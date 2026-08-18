@@ -13,31 +13,31 @@ title: "ScenarioReport"
 
 > `readonly` **evidence**: readonly [`ScenarioEvidence`](/api/testing/src/type-aliases/scenarioevidence/)[]
 
----
+***
 
 ### problems
 
 > `readonly` **problems**: readonly [`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)[]
 
----
+***
 
 ### replay
 
 > `readonly` **replay**: [`ScenarioReplayMetadata`](/api/testing/src/type-aliases/scenarioreplaymetadata/)
 
----
+***
 
 ### schemaVersion
 
-> `readonly` **schemaVersion**: _typeof_ [`SCENARIO_REPORT_SCHEMA_VERSION`](/api/testing/src/variables/scenario_report_schema_version/)
+> `readonly` **schemaVersion**: *typeof* [`SCENARIO_REPORT_SCHEMA_VERSION`](/api/testing/src/variables/scenario_report_schema_version/)
 
----
+***
 
 ### status
 
 > `readonly` **status**: `"passed"`
 
----
+***
 
 ### timeline
 

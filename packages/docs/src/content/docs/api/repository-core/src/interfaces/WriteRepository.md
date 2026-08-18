@@ -64,7 +64,7 @@ The ID of the entity to delete
 
 `Promise`\<`void`\>
 
----
+***
 
 ### save()
 

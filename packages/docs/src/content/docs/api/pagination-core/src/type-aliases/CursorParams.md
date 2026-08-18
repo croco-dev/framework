@@ -13,13 +13,13 @@ title: "CursorParams"
 
 > `optional` **cursor?**: `string`
 
----
+***
 
 ### direction?
 
 > `optional` **direction?**: `"forward"` \| `"backward"`
 
----
+***
 
 ### limit
 

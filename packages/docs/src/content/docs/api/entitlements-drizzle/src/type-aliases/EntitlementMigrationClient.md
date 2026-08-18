@@ -23,7 +23,7 @@ title: "EntitlementMigrationClient"
 
 `Promise`\<`unknown`\>
 
----
+***
 
 ### transaction()?
 

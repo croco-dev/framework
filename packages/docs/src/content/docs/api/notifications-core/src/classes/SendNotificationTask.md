@@ -37,7 +37,7 @@ title: "SendNotificationTask"
 
 `Promise`\<`void`\>
 
----
+***
 
 ### registerProvider()
 

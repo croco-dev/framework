@@ -10,7 +10,7 @@ Drizzle 트랜잭션 관련 타입 유틸리티입니다.
 ## Example
 
 ```typescript
-import { InferTxClient, InferTxOptions } from "@croco/tx-drizzle";
+import { InferTxClient, InferTxOptions } from '@croco/tx-drizzle';
 
 type TxClient = InferTxClient<typeof db>;
 type TxOptions = InferTxOptions<typeof db>;
@@ -28,7 +28,7 @@ type TxOptions = InferTxOptions<typeof db>;
 
 ### TDb
 
-`TDb` _extends_ [`DrizzleDb`](/api/tx-drizzle/src/interfaces/drizzledb/)\<`unknown`\> = [`DrizzleDb`](/api/tx-drizzle/src/interfaces/drizzledb/)
+`TDb` *extends* [`DrizzleDb`](/api/tx-drizzle/src/interfaces/drizzledb/)\<`unknown`\> = [`DrizzleDb`](/api/tx-drizzle/src/interfaces/drizzledb/)
 
 ## Implements
 
@@ -78,7 +78,7 @@ The ID of the entity to delete
 
 [`Repository`](/api/repository-core/src/interfaces/repository/).[`deleteById`](/api/repository-core/src/interfaces/repository/#deletebyid)
 
----
+***
 
 ### findById()
 
@@ -104,7 +104,7 @@ The entity if found, null otherwise
 
 [`Repository`](/api/repository-core/src/interfaces/repository/).[`findById`](/api/repository-core/src/interfaces/repository/#findbyid)
 
----
+***
 
 ### findByIds()
 
@@ -131,7 +131,7 @@ any order, and every requested ID may appear at most once.
 
 [`Repository`](/api/repository-core/src/interfaces/repository/).[`findByIds`](/api/repository-core/src/interfaces/repository/#findbyids)
 
----
+***
 
 ### save()
 

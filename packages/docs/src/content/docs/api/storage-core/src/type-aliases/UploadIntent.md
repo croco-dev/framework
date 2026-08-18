@@ -17,7 +17,7 @@ title: "UploadIntent"
 
 만료 시간
 
----
+***
 
 ### fields?
 
@@ -25,7 +25,7 @@ title: "UploadIntent"
 
 업로드에 필요한 추가 필드 (multipart/form-data)
 
----
+***
 
 ### publicUrl
 
@@ -33,7 +33,7 @@ title: "UploadIntent"
 
 업로드 후 public URL
 
----
+***
 
 ### uploadUrl
 

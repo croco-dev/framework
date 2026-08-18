@@ -13,13 +13,13 @@ title: "HealthScoreProfile"
 
 > **id**: `string`
 
----
+***
 
 ### name
 
 > **name**: `string`
 
----
+***
 
 ### thresholds
 
@@ -33,7 +33,7 @@ title: "HealthScoreProfile"
 
 > **healthy**: `number`
 
----
+***
 
 ### weights
 

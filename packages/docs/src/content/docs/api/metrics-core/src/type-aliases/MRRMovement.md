@@ -21,7 +21,7 @@ Net MRR = New + Expansion - Contraction - Churned + Reactivation
 
 MRR from customers who churned
 
----
+***
 
 ### contraction
 
@@ -29,7 +29,7 @@ MRR from customers who churned
 
 MRR from existing customers downgrading/reducing seats
 
----
+***
 
 ### expansion
 
@@ -37,7 +37,7 @@ MRR from existing customers downgrading/reducing seats
 
 MRR from existing customers upgrading/adding seats
 
----
+***
 
 ### net
 
@@ -45,7 +45,7 @@ MRR from existing customers upgrading/adding seats
 
 Net change in MRR (New + Expansion - Contraction - Churned + Reactivation)
 
----
+***
 
 ### new
 
@@ -53,7 +53,7 @@ Net change in MRR (New + Expansion - Contraction - Churned + Reactivation)
 
 MRR from new customers
 
----
+***
 
 ### reactivation
 

@@ -13,19 +13,19 @@ title: "ModuleGraphManifest"
 
 > `readonly` **diagnostics**: readonly [`ModuleGraphDiagnostic`](/api/framework-module/src/type-aliases/modulegraphdiagnostic/)[]
 
----
+***
 
 ### modules
 
 > `readonly` **modules**: readonly [`ModuleGraphModule`](/api/framework-module/src/type-aliases/modulegraphmodule/)[]
 
----
+***
 
 ### status
 
 > `readonly` **status**: [`ModuleGraphManifestStatus`](/api/framework-module/src/type-aliases/modulegraphmanifeststatus/)
 
----
+***
 
 ### version
 

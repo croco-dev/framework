@@ -17,19 +17,19 @@ title: "VitestTask"
 
 \{ `duration`: `number`; `flaky`: `boolean`; `retryCount`: `number`; \} \| `undefined`
 
----
+***
 
 ### fullName
 
 > `readonly` **fullName**: `string`
 
----
+***
 
 ### id
 
 > `readonly` **id**: `string`
 
----
+***
 
 ### module?
 
@@ -39,13 +39,13 @@ title: "VitestTask"
 
 > `readonly` **moduleId**: `string`
 
----
+***
 
 ### name
 
 > `readonly` **name**: `string`
 
----
+***
 
 ### project?
 
@@ -63,7 +63,7 @@ title: "VitestTask"
 
 > `readonly` **name**: `string`
 
----
+***
 
 ### result
 

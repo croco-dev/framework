@@ -11,7 +11,7 @@ title: "createDrizzleTxAdapter"
 
 ### TDb
 
-`TDb` _extends_ [`DrizzleDb`](/api/tx-drizzle/src/interfaces/drizzledb/)\<`unknown`, `unknown`\>
+`TDb` *extends* [`DrizzleDb`](/api/tx-drizzle/src/interfaces/drizzledb/)\<`unknown`, `unknown`\>
 
 ## Parameters
 

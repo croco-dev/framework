@@ -41,7 +41,7 @@ title: "ImpersonationStartedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventId`](/api/events-core/src/classes/domainevent/#eventid)
 
----
+***
 
 ### eventName
 
@@ -51,7 +51,7 @@ title: "ImpersonationStartedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventName`](/api/events-core/src/classes/domainevent/#eventname)
 
----
+***
 
 ### metadata
 
@@ -61,13 +61,13 @@ title: "ImpersonationStartedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`metadata`](/api/events-core/src/classes/domainevent/#metadata)
 
----
+***
 
 ### session
 
 > `readonly` **session**: [`ImpersonationState`](/api/impersonation-core/src/type-aliases/impersonationstate/)
 
----
+***
 
 ### timestamp
 
@@ -77,7 +77,7 @@ title: "ImpersonationStartedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`timestamp`](/api/events-core/src/classes/domainevent/#timestamp)
 
----
+***
 
 ### eventName
 

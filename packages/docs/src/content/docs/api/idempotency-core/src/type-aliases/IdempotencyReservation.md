@@ -13,13 +13,13 @@ title: "IdempotencyReservation"
 
 > `readonly` **key**: [`DerivedIdempotencyKey`](/api/idempotency-core/src/type-aliases/derivedidempotencykey/)
 
----
+***
 
 ### reservationId
 
 > `readonly` **reservationId**: `string`
 
----
+***
 
 ### storageKey
 

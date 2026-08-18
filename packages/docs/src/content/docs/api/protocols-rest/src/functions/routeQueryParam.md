@@ -11,11 +11,11 @@ title: "routeQueryParam"
 
 ### TContract
 
-`TContract` _extends_ [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/)\<[`HttpMethod`](/api/protocols-rest/src/enumerations/httpmethod/), `string`, `AnyZodObject` \| `undefined`, `AnyZodObject` \| `undefined`, `ZodType`\<`any`, `ZodTypeDef`, `any`\> \| `undefined`, `ZodType`\<`any`, `ZodTypeDef`, `any`\> \| `undefined`, readonly [`RouteContractProblem`](/api/protocols-rest/src/type-aliases/routecontractproblem/)[] \| `undefined`\>
+`TContract` *extends* [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/)\<[`HttpMethod`](/api/protocols-rest/src/enumerations/httpmethod/), `string`, `AnyZodObject` \| `undefined`, `AnyZodObject` \| `undefined`, `ZodType`\<`any`, `ZodTypeDef`, `any`\> \| `undefined`, `ZodType`\<`any`, `ZodTypeDef`, `any`\> \| `undefined`, readonly [`RouteContractProblem`](/api/protocols-rest/src/type-aliases/routecontractproblem/)[] \| `undefined`\>
 
 ### Name
 
-`Name` _extends_ `string`
+`Name` *extends* `string`
 
 ## Parameters
 

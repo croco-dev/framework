@@ -17,7 +17,7 @@ title: "EmbedManyResult"
 
 임베딩 벡터 목록
 
----
+***
 
 ### usage
 

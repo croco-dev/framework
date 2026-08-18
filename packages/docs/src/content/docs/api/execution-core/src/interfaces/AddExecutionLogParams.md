@@ -15,7 +15,7 @@ Parameters for recording an execution log entry.
 
 Optional structured log data
 
----
+***
 
 ### level?
 
@@ -23,7 +23,7 @@ Optional structured log data
 
 Severity level (default: info)
 
----
+***
 
 ### message
 
@@ -31,7 +31,7 @@ Severity level (default: info)
 
 Human-readable log message
 
----
+***
 
 ### timestamp?
 

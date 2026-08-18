@@ -13,19 +13,19 @@ title: "ContractProviderMappingDriftInput"
 
 > `readonly` **meterBindings**: readonly [`ContractProviderMeterBinding`](/api/protocols-core/src/type-aliases/contractprovidermeterbinding/)[]
 
----
+***
 
 ### planVersionRef
 
 > `readonly` **planVersionRef**: `string`
 
----
+***
 
 ### priceIds
 
 > `readonly` **priceIds**: readonly `string`[]
 
----
+***
 
 ### productId
 

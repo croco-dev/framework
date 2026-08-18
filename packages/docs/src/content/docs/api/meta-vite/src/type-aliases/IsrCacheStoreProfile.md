@@ -13,19 +13,19 @@ title: "IsrCacheStoreProfile"
 
 > `readonly` **durability**: [`IsrCacheDurability`](/api/meta-vite/src/type-aliases/isrcachedurability/)
 
----
+***
 
 ### label
 
 > `readonly` **label**: `string`
 
----
+***
 
 ### store
 
 > `readonly` **store**: [`IsrCacheStore`](/api/meta-vite/src/type-aliases/isrcachestore/)
 
----
+***
 
 ### workerSafe
 

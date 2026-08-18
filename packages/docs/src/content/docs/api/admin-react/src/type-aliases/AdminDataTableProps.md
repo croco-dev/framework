@@ -29,7 +29,7 @@ title: "AdminDataTableProps"
 
 `void`
 
----
+***
 
 ### onFilterChange?
 
@@ -45,7 +45,7 @@ title: "AdminDataTableProps"
 
 `void`
 
----
+***
 
 ### onPageChange?
 
@@ -61,7 +61,7 @@ title: "AdminDataTableProps"
 
 `void`
 
----
+***
 
 ### onRecoveryAction?
 
@@ -77,7 +77,7 @@ title: "AdminDataTableProps"
 
 `void`
 
----
+***
 
 ### onRowAction?
 
@@ -93,7 +93,7 @@ title: "AdminDataTableProps"
 
 `void`
 
----
+***
 
 ### onSelectionChange?
 
@@ -109,7 +109,7 @@ title: "AdminDataTableProps"
 
 `void`
 
----
+***
 
 ### onSortChange?
 
@@ -125,7 +125,7 @@ title: "AdminDataTableProps"
 
 `void`
 
----
+***
 
 ### state
 

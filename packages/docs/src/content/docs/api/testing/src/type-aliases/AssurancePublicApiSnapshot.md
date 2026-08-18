@@ -13,7 +13,7 @@ title: "AssurancePublicApiSnapshot"
 
 > `readonly` **packages**: readonly `object`[]
 
----
+***
 
 ### schemaVersion
 

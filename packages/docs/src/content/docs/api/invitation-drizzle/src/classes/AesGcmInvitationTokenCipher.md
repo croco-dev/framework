@@ -54,7 +54,7 @@ until all creation intents encrypted with them have expired or been removed.
 
 [`InvitationTokenCipher`](/api/invitation-drizzle/src/interfaces/invitationtokencipher/).[`decrypt`](/api/invitation-drizzle/src/interfaces/invitationtokencipher/#decrypt)
 
----
+***
 
 ### encrypt()
 

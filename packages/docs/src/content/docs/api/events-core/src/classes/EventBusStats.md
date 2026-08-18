@@ -25,7 +25,7 @@ title: "EventBusStats"
 
 `void`
 
----
+***
 
 ### getStats()
 
@@ -47,7 +47,7 @@ title: "EventBusStats"
 
 > **publishedCount**: `number`
 
----
+***
 
 ### publish()
 

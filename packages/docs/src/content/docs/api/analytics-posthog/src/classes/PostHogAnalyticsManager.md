@@ -68,7 +68,7 @@ Capture an event.
 
 [`AnalyticsManager`](/api/analytics-core/src/classes/analyticsmanager/).[`capture`](/api/analytics-core/src/classes/analyticsmanager/#capture)
 
----
+***
 
 ### flush()
 
@@ -84,7 +84,7 @@ Flush buffered analytics events before a runtime boundary such as Lambda return 
 
 [`AnalyticsManager`](/api/analytics-core/src/classes/analyticsmanager/).[`flush`](/api/analytics-core/src/classes/analyticsmanager/#flush)
 
----
+***
 
 ### group()
 
@@ -115,7 +115,7 @@ Essential for B2B SaaS analytics.
 
 [`AnalyticsManager`](/api/analytics-core/src/classes/analyticsmanager/).[`group`](/api/analytics-core/src/classes/analyticsmanager/#group)
 
----
+***
 
 ### identify()
 

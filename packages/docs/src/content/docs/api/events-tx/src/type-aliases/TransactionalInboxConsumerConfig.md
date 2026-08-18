@@ -19,7 +19,7 @@ title: "TransactionalInboxConsumerConfig"
 
 > **consumerId**: `string`
 
----
+***
 
 ### now?
 
@@ -29,25 +29,25 @@ title: "TransactionalInboxConsumerConfig"
 
 `Date`
 
----
+***
 
 ### store
 
 > **store**: [`TransactionalEventStore`](/api/events-tx/src/interfaces/transactionaleventstore/)\<`TClient`\>
 
----
+***
 
 ### throwOnError?
 
 > `optional` **throwOnError?**: `boolean`
 
----
+***
 
 ### txManager?
 
 > `optional` **txManager?**: `Pick`\<[`TxManager`](/api/tx-core/src/classes/txmanager/)\<`TClient`\>, `"getClient"`\>
 
----
+***
 
 ### visibilityTimeoutMs?
 

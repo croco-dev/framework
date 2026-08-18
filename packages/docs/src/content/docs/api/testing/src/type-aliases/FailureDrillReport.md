@@ -13,7 +13,7 @@ title: "FailureDrillReport"
 
 > `readonly` **results**: readonly [`FailureDrillResult`](/api/testing/src/type-aliases/failuredrillresult/)[]
 
----
+***
 
 ### status
 

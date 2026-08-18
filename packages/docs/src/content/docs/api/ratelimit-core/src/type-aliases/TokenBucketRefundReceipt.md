@@ -15,13 +15,13 @@ title: "TokenBucketRefundReceipt"
 
 > **algorithm**: `"token-bucket"`
 
----
+***
 
 ### expiresAtMs
 
 > **expiresAtMs**: `number`
 
----
+***
 
 ### id
 

@@ -11,7 +11,7 @@ title: "getRuntimeCapabilitySupport"
 
 ### TPlatform
 
-`TPlatform` _extends_ [`KnownRuntimePlatform`](/api/framework-context/src/type-aliases/knownruntimeplatform/)
+`TPlatform` *extends* [`KnownRuntimePlatform`](/api/framework-context/src/type-aliases/knownruntimeplatform/)
 
 ## Parameters
 

@@ -13,25 +13,25 @@ title: "LifecycleRuleActionDescriptor"
 
 > `readonly` `optional` **configurationFingerprint?**: `string`
 
----
+***
 
 ### description?
 
 > `readonly` `optional` **description?**: `string`
 
----
+***
 
 ### id
 
 > `readonly` **id**: `string`
 
----
+***
 
 ### title?
 
 > `readonly` `optional` **title?**: `string`
 
----
+***
 
 ### type
 

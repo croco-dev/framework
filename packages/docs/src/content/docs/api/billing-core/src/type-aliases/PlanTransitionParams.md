@@ -15,19 +15,19 @@ title: "PlanTransitionParams"
 
 > **currentPlan**: [`Plan`](/api/billing-core/src/type-aliases/plan/)
 
----
+***
 
 ### effectiveAt
 
 > **effectiveAt**: `Date`
 
----
+***
 
 ### nextPlan
 
 > **nextPlan**: [`Plan`](/api/billing-core/src/type-aliases/plan/)
 
----
+***
 
 ### subscription
 

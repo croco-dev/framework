@@ -37,8 +37,8 @@ title: "ProblemDetails"
 
 ### Code
 
-`Code` _extends_ `string` = `string`
+`Code` *extends* `string` = `string`
 
 ### Status
 
-`Status` _extends_ `number` = `number`
+`Status` *extends* `number` = `number`

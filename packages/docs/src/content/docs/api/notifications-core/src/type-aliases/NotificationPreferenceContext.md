@@ -13,19 +13,19 @@ title: "NotificationPreferenceContext"
 
 > `readonly` **channel**: [`NotificationChannel`](/api/notifications-core/src/enumerations/notificationchannel/)
 
----
+***
 
 ### tenantId
 
 > `readonly` **tenantId**: `string`
 
----
+***
 
 ### topic
 
 > `readonly` **topic**: `string`
 
----
+***
 
 ### userId
 

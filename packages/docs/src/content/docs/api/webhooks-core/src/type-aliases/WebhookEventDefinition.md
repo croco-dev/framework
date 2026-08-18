@@ -23,7 +23,7 @@ title: "WebhookEventDefinition"
 
 > `readonly` **payload**: `TPayload`
 
----
+***
 
 ### result
 

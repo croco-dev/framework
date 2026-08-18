@@ -13,19 +13,19 @@ title: "ContractSchemaSupportMatrixEntry"
 
 > `readonly` **jsonSafe**: [`ContractSchemaJsonSafeStatus`](/api/protocols-core/src/type-aliases/contractschemajsonsafestatus/)
 
----
+***
 
 ### kind
 
 > `readonly` **kind**: `string`
 
----
+***
 
 ### note
 
 > `readonly` **note**: `string`
 
----
+***
 
 ### typeName
 

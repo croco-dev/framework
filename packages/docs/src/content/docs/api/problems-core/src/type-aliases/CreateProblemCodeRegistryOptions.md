@@ -13,7 +13,7 @@ title: "CreateProblemCodeRegistryOptions"
 
 > `readonly` `optional` **cookbookBasePath?**: `string`
 
----
+***
 
 ### statusPolicies?
 

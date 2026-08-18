@@ -15,19 +15,19 @@ Versioned, JSON-safe contract graph used as the stable source for strict generat
 
 > `readonly` **diagnostics**: readonly [`ContractDiagnostic`](/api/protocols-core/src/type-aliases/contractdiagnostic/)[]
 
----
+***
 
 ### monetization?
 
 > `readonly` `optional` **monetization?**: [`ContractMonetizationGraph`](/api/protocols-core/src/type-aliases/contractmonetizationgraph/)
 
----
+***
 
 ### routes
 
 > `readonly` **routes**: readonly [`ContractGraphV1Route`](/api/protocols-core/src/type-aliases/contractgraphv1route/)[]
 
----
+***
 
 ### version
 

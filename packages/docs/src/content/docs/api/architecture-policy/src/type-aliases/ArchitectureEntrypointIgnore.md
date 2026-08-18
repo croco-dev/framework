@@ -13,13 +13,13 @@ title: "ArchitectureEntrypointIgnore"
 
 > `readonly` `optional` **packages?**: readonly `string`[]
 
----
+***
 
 ### paths?
 
 > `readonly` `optional` **paths?**: readonly `string`[]
 
----
+***
 
 ### specifiers?
 

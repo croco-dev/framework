@@ -15,25 +15,25 @@ title: "SearchFieldMetadata"
 
 > **derived**: [`SearchDerivedFieldConfig`](/api/search-core/src/type-aliases/searchderivedfieldconfig/)[]
 
----
+***
 
 ### filterable
 
 > **filterable**: `boolean`
 
----
+***
 
 ### propertyKey
 
 > **propertyKey**: `string`
 
----
+***
 
 ### searchable
 
 > **searchable**: `boolean`
 
----
+***
 
 ### sortable
 

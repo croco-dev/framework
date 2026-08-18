@@ -27,13 +27,13 @@ title: "MetaFetchHandlerOptions"
 
 `Promise`\<[`CrocoApiHandlerResult`](/api/meta-vite/src/type-aliases/crocoapihandlerresult/)\>
 
----
+***
 
 ### apiRoutes?
 
 > `readonly` `optional` **apiRoutes?**: readonly [`ApiRouteIR`](/api/meta-vite/src/type-aliases/apirouteir/)[]
 
----
+***
 
 ### pageHandler?
 

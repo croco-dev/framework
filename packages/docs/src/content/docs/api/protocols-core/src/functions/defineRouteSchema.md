@@ -11,11 +11,11 @@ title: "defineRouteSchema"
 
 ### Res
 
-`Res` _extends_ [`RouteSchemaLike`](/api/protocols-core/src/type-aliases/routeschemalike/)\<`unknown`\>
+`Res` *extends* [`RouteSchemaLike`](/api/protocols-core/src/type-aliases/routeschemalike/)\<`unknown`\>
 
 ### Req
 
-`Req` _extends_ [`RouteRequestSchemas`](/api/protocols-core/src/type-aliases/routerequestschemas/) = \{ \}
+`Req` *extends* [`RouteRequestSchemas`](/api/protocols-core/src/type-aliases/routerequestschemas/) = \{ \}
 
 ## Parameters
 

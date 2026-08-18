@@ -13,7 +13,7 @@ title: "CacheInvalidationEventDeclaration"
 
 > `readonly` `optional` **description?**: `string`
 
----
+***
 
 ### eventName
 

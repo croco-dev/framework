@@ -13,7 +13,7 @@ title: "LifecycleRuleStateMutation"
 
 > `readonly` **replayed**: `boolean`
 
----
+***
 
 ### state
 

@@ -11,19 +11,19 @@ title: "CheckResult"
 
 > **allowed**: `boolean`
 
----
+***
 
 ### decision?
 
 > `optional` **decision?**: [`PolicyDecisionResult`](/api/access-core/src/type-aliases/policydecisionresult/)
 
----
+***
 
 ### reason?
 
 > `optional` **reason?**: `string`
 
----
+***
 
 ### trace?
 

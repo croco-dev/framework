@@ -56,7 +56,7 @@ title: "BillingEventHandler"
 
 [`PlanProvider`](/api/metrics-core/src/interfaces/planprovider/).[`getPlan`](/api/metrics-core/src/interfaces/planprovider/#getplan)
 
----
+***
 
 ### handle()
 

@@ -10,7 +10,6 @@ Feature flag manager abstract class.
 ## Description
 
 Provides an interface for feature flag management with support for:
-
 - Boolean feature flags (enabled/disabled)
 - Multivariate feature flags (A/B testing, staged rollouts)
 - Context-aware flag evaluation (userId, tenantId, etc.)
@@ -21,8 +20,8 @@ Flagsmith, or custom configuration sources.
 ## Examples
 
 ```typescript
-import { Container } from "@croco/framework-context";
-import { FeatureManager } from "@croco/features-core";
+import { Container } from '@croco/framework-context';
+import { FeatureManager } from '@croco/features-core';
 
 // Register your implementation
 class CustomFeatureManager extends FeatureManager {
@@ -31,15 +30,12 @@ class CustomFeatureManager extends FeatureManager {
     return config.features[key]?.enabled ?? false;
   }
 
-  async getVariant(
-    key: string,
-    context?: Record<string, unknown>,
-  ): Promise<string | boolean | number | object> {
-    return config.features[key]?.variant ?? "default";
+  async getVariant(key: string, context?: Record<string, unknown>): Promise<string | boolean | number | object> {
+    return config.features[key]?.variant ?? 'default';
   }
 }
 
-Container.register(CustomFeatureManager, { scope: "singleton" });
+Container.register(CustomFeatureManager, { scope: 'singleton' });
 
 // Use in services
 @Service()
@@ -47,7 +43,7 @@ class UserService {
   constructor(private readonly features: FeatureManager) {}
 
   async createProfile(dto: CreateProfileDto) {
-    if (await this.features.isEnabled("new-profile-flow", { userId: dto.userId })) {
+    if (await this.features.isEnabled('new-profile-flow', { userId: dto.userId })) {
       return this.createNewProfile(dto);
     }
     return this.createLegacyProfile(dto);
@@ -62,12 +58,12 @@ class RecommendationService {
   constructor(private readonly features: FeatureManager) {}
 
   async getRecommendations(userId: string) {
-    const algorithm = await this.features.getVariant("recommendation-alg", { userId });
+    const algorithm = await this.features.getVariant('recommendation-alg', { userId });
 
     switch (algorithm) {
-      case "collaborative-filtering":
+      case 'collaborative-filtering':
         return this.collaborativeFiltering(userId);
-      case "content-based":
+      case 'content-based':
         return this.contentBased(userId);
       default:
         return this.defaultAlgorithm(userId);
@@ -119,7 +115,7 @@ Useful for multivariate flags or JSON configuration.
 
 `Promise`\<`string` \| `number` \| `boolean` \| `object`\>
 
----
+***
 
 ### isEnabled()
 

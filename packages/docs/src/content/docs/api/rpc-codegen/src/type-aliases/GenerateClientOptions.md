@@ -13,19 +13,19 @@ title: "GenerateClientOptions"
 
 > `readonly` `optional` **frontendActionManifestPath?**: `string`
 
----
+***
 
 ### manifestBundlePath?
 
 > `readonly` `optional` **manifestBundlePath?**: `string`
 
----
+***
 
 ### problemRuntime?
 
 > `readonly` `optional` **problemRuntime?**: [`GenerateClientProblemRuntime`](/api/rpc-codegen/src/type-aliases/generateclientproblemruntime/)
 
----
+***
 
 ### reactQuery?
 

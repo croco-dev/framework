@@ -13,7 +13,7 @@ title: "PlanReleaseConsoleProps"
 
 > `readonly` `optional` **command?**: `Omit`\<[`PlanReleaseActionRequest`](/api/admin-react/src/type-aliases/planreleaseactionrequest/), `"actionId"` \| `"expectedReleaseRevision"`\>
 
----
+***
 
 ### onAction?
 
@@ -33,7 +33,7 @@ title: "PlanReleaseConsoleProps"
 
 `void`
 
----
+***
 
 ### onCancelConfirmation?
 
@@ -43,7 +43,7 @@ title: "PlanReleaseConsoleProps"
 
 `void`
 
----
+***
 
 ### onEdit?
 
@@ -59,7 +59,7 @@ title: "PlanReleaseConsoleProps"
 
 `void`
 
----
+***
 
 ### onRecoveryAction?
 
@@ -75,7 +75,7 @@ title: "PlanReleaseConsoleProps"
 
 `void`
 
----
+***
 
 ### onRequestConfirmation?
 
@@ -91,13 +91,13 @@ title: "PlanReleaseConsoleProps"
 
 `void`
 
----
+***
 
 ### pendingConfirmationActionId?
 
 > `readonly` `optional` **pendingConfirmationActionId?**: `string`
 
----
+***
 
 ### state
 

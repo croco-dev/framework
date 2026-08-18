@@ -13,25 +13,25 @@ title: "PolarBillingErrorContext"
 
 > `readonly` **operation**: `string`
 
----
+***
 
 ### provider
 
 > `readonly` **provider**: `"polar"`
 
----
+***
 
 ### retryable?
 
 > `readonly` `optional` **retryable?**: `boolean`
 
----
+***
 
 ### status?
 
 > `readonly` `optional` **status?**: `number`
 
----
+***
 
 ### upstreamCode?
 

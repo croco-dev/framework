@@ -13,7 +13,7 @@ title: "DesktopWireEnumDescriptor"
 
 > `readonly` **kind**: `"enum"`
 
----
+***
 
 ### values
 

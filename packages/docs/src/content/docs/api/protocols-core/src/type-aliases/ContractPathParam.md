@@ -13,7 +13,7 @@ title: "ContractPathParam"
 
 > `readonly` **name**: `string`
 
----
+***
 
 ### token
 

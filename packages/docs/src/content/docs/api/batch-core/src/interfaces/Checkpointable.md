@@ -43,7 +43,7 @@ Returns the current state of the component.
 
 `unknown`
 
----
+***
 
 ### restoreCheckpoint()
 

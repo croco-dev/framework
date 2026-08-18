@@ -13,13 +13,13 @@ title: "GeneratedControllerBinding"
 
 > `readonly` **controllerName**: `string`
 
----
+***
 
 ### exportName
 
 > `readonly` **exportName**: `string`
 
----
+***
 
 ### importPath
 

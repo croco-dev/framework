@@ -5,7 +5,7 @@ prev: false
 title: "GLOBAL_OPTIONS"
 ---
 
-> `const` **GLOBAL_OPTIONS**: `object`
+> `const` **GLOBAL\_OPTIONS**: `object`
 
 ## Type Declaration
 

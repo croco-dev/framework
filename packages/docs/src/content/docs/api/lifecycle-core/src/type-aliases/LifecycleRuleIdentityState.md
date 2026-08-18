@@ -13,19 +13,19 @@ title: "LifecycleRuleIdentityState"
 
 > `readonly` **history**: readonly [`LifecycleRuleActivationEvent`](/api/lifecycle-core/src/type-aliases/lifecycleruleactivationevent/)[]
 
----
+***
 
 ### revision
 
 > `readonly` **revision**: `number`
 
----
+***
 
 ### ruleId
 
 > `readonly` **ruleId**: `string`
 
----
+***
 
 ### versions
 

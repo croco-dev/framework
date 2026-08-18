@@ -70,7 +70,7 @@ Revenue CC result, or null if NRR = 100% (infinite capacity)
 
 Capacity = Monthly New MRR / (1 - NRR)
 
----
+***
 
 ### calculateUserCC()
 
@@ -100,7 +100,7 @@ Capacity = Daily New Users / Daily Churn Rate
 
 Daily Churn Rate = (1 - (NRR / 100)) ^ (1/30) (derived from monthly NRR)
 
----
+***
 
 ### simulate()
 

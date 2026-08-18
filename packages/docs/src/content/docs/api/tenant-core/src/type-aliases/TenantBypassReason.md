@@ -13,13 +13,13 @@ title: "TenantBypassReason"
 
 > `readonly` `optional` **actorId?**: `string`
 
----
+***
 
 ### reason
 
 > `readonly` **reason**: `string`
 
----
+***
 
 ### ticket?
 

@@ -13,13 +13,13 @@ title: "ContractGraphSnapshotParam"
 
 > `readonly` **kind**: [`ParamIR`](/api/protocols-core/src/interfaces/paramir/)\[`"kind"`\]
 
----
+***
 
 ### name
 
 > `readonly` **name**: `string`
 
----
+***
 
 ### schema
 

@@ -49,7 +49,7 @@ title: "MigrationRunner"
 
 `Promise`\<`string`[]\>
 
----
+***
 
 ### init()
 
@@ -59,7 +59,7 @@ title: "MigrationRunner"
 
 `Promise`\<`void`\>
 
----
+***
 
 ### previewDown()
 
@@ -79,7 +79,7 @@ title: "MigrationRunner"
 
 `Promise`\<`string`[]\>
 
----
+***
 
 ### previewUp()
 
@@ -95,7 +95,7 @@ title: "MigrationRunner"
 
 `Promise`\<`string`[]\>
 
----
+***
 
 ### status()
 
@@ -105,7 +105,7 @@ title: "MigrationRunner"
 
 `Promise`\<[`MigrationStatus`](/api/migration-runner/src/interfaces/migrationstatus/)[]\>
 
----
+***
 
 ### up()
 

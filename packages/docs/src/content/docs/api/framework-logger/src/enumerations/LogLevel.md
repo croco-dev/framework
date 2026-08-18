@@ -11,25 +11,25 @@ title: "LogLevel"
 
 > **DEBUG**: `"debug"`
 
----
+***
 
 ### ERROR
 
 > **ERROR**: `"error"`
 
----
+***
 
 ### FATAL
 
 > **FATAL**: `"fatal"`
 
----
+***
 
 ### INFO
 
 > **INFO**: `"info"`
 
----
+***
 
 ### WARN
 

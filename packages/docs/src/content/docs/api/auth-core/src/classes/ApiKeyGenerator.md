@@ -59,7 +59,7 @@ title: "ApiKeyGenerator"
 
 > **shortToken**: `string`
 
----
+***
 
 ### parse()
 

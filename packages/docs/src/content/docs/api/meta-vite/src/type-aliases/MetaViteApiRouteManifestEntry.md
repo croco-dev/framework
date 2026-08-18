@@ -13,25 +13,25 @@ title: "MetaViteApiRouteManifestEntry"
 
 > `readonly` **kind**: `"api"`
 
----
+***
 
 ### method
 
 > `readonly` **method**: [`ApiMethod`](/api/meta-vite/src/type-aliases/apimethod/)
 
----
+***
 
 ### order
 
 > `readonly` **order**: `number`
 
----
+***
 
 ### path
 
 > `readonly` **path**: `string`
 
----
+***
 
 ### runtimeCapabilities
 

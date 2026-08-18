@@ -13,13 +13,13 @@ title: "DependencySourceLocation"
 
 > `readonly` `optional` **column?**: `number`
 
----
+***
 
 ### file
 
 > `readonly` **file**: `string`
 
----
+***
 
 ### line?
 

@@ -15,7 +15,7 @@ Configuration for backoff behavior.
 
 Non-negative integer milliseconds up to 2,147,483,647 (default: 1000).
 
----
+***
 
 ### jitter?
 
@@ -23,7 +23,7 @@ Non-negative integer milliseconds up to 2,147,483,647 (default: 1000).
 
 Enable Full Jitter randomization (default: true)
 
----
+***
 
 ### maxDelay?
 
@@ -31,7 +31,7 @@ Enable Full Jitter randomization (default: true)
 
 Positive integer milliseconds up to 2,147,483,647 (default: 30000).
 
----
+***
 
 ### multiplier?
 

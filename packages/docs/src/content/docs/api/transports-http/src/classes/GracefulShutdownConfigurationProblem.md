@@ -41,7 +41,7 @@ Graceful shutdown received an invalid timeout configuration.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`category`](/api/problems-core/src/classes/problem/#category)
 
----
+***
 
 ### cause?
 
@@ -51,7 +51,7 @@ Graceful shutdown received an invalid timeout configuration.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`cause`](/api/problems-core/src/classes/problem/#cause)
 
----
+***
 
 ### code
 
@@ -61,7 +61,7 @@ Graceful shutdown received an invalid timeout configuration.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`code`](/api/problems-core/src/classes/problem/#code)
 
----
+***
 
 ### detail?
 
@@ -71,7 +71,7 @@ Graceful shutdown received an invalid timeout configuration.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`detail`](/api/problems-core/src/classes/problem/#detail)
 
----
+***
 
 ### extensions?
 
@@ -81,7 +81,7 @@ Graceful shutdown received an invalid timeout configuration.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`extensions`](/api/problems-core/src/classes/problem/#extensions)
 
----
+***
 
 ### instance?
 
@@ -91,7 +91,7 @@ Graceful shutdown received an invalid timeout configuration.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`instance`](/api/problems-core/src/classes/problem/#instance)
 
----
+***
 
 ### message
 
@@ -101,7 +101,7 @@ Graceful shutdown received an invalid timeout configuration.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`message`](/api/problems-core/src/classes/problem/#message)
 
----
+***
 
 ### name
 
@@ -111,19 +111,19 @@ Graceful shutdown received an invalid timeout configuration.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`name`](/api/problems-core/src/classes/problem/#name)
 
----
+***
 
 ### option
 
 > `readonly` **option**: [`GracefulShutdownTimeoutOption`](/api/transports-http/src/type-aliases/gracefulshutdowntimeoutoption/)
 
----
+***
 
 ### receivedValue
 
 > `readonly` **receivedValue**: `string`
 
----
+***
 
 ### stack?
 
@@ -133,7 +133,7 @@ Graceful shutdown received an invalid timeout configuration.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`stack`](/api/problems-core/src/classes/problem/#stack)
 
----
+***
 
 ### type
 
@@ -143,7 +143,7 @@ Graceful shutdown received an invalid timeout configuration.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`type`](/api/problems-core/src/classes/problem/#type)
 
----
+***
 
 ### stackTraceLimit
 
@@ -179,7 +179,7 @@ not capture any frames.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`status`](/api/problems-core/src/classes/problem/#status)
 
----
+***
 
 ### title
 
@@ -209,7 +209,7 @@ not capture any frames.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`toJSON`](/api/problems-core/src/classes/problem/#tojson)
 
----
+***
 
 ### captureStackTrace()
 
@@ -222,7 +222,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack; // Similar to `new Error().stack`
+myObject.stack;  // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -277,7 +277,7 @@ a();
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`captureStackTrace`](/api/problems-core/src/classes/problem/#capturestacktrace)
 
----
+***
 
 ### prepareStackTrace()
 

@@ -13,7 +13,7 @@ title: "CacheInvalidationAdapter"
 
 > `readonly` **capabilities**: [`CacheInvalidationAdapterCapabilities`](/api/cache-core/src/type-aliases/cacheinvalidationadaptercapabilities/)
 
----
+***
 
 ### invalidateKey?
 
@@ -29,7 +29,7 @@ title: "CacheInvalidationAdapter"
 
 `Promise`\<[`CacheInvalidationAdapterOperationResult`](/api/cache-core/src/type-aliases/cacheinvalidationadapteroperationresult/) \| `void`\>
 
----
+***
 
 ### invalidatePattern?
 
@@ -45,7 +45,7 @@ title: "CacheInvalidationAdapter"
 
 `Promise`\<[`CacheInvalidationAdapterOperationResult`](/api/cache-core/src/type-aliases/cacheinvalidationadapteroperationresult/) \| `void`\>
 
----
+***
 
 ### invalidateTag?
 
@@ -61,7 +61,7 @@ title: "CacheInvalidationAdapter"
 
 `Promise`\<[`CacheInvalidationAdapterOperationResult`](/api/cache-core/src/type-aliases/cacheinvalidationadapteroperationresult/) \| `void`\>
 
----
+***
 
 ### name?
 

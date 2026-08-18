@@ -19,37 +19,37 @@ title: "OutboundWebhookEventDescriptor"
 
 > `readonly` **id**: `string`
 
----
+***
 
 ### name
 
 > `readonly` **name**: `string`
 
----
+***
 
 ### occurredAt
 
 > `readonly` **occurredAt**: `Date`
 
----
+***
 
 ### payload
 
 > `readonly` **payload**: `TPayload`
 
----
+***
 
 ### schemaVersion
 
 > `readonly` **schemaVersion**: `string`
 
----
+***
 
 ### subject
 
 > `readonly` **subject**: `string`
 
----
+***
 
 ### tenantId
 

@@ -11,10 +11,10 @@ title: "DrizzleTransactionalEventStoreTables"
 
 ### inbox?
 
-> `optional` **inbox?**: _typeof_ [`transactionalInboxRecords`](/api/events-tx/src/variables/transactionalinboxrecords/)
+> `optional` **inbox?**: *typeof* [`transactionalInboxRecords`](/api/events-tx/src/variables/transactionalinboxrecords/)
 
----
+***
 
 ### outbox?
 
-> `optional` **outbox?**: _typeof_ [`transactionalOutboxMessages`](/api/events-tx/src/variables/transactionaloutboxmessages/)
+> `optional` **outbox?**: *typeof* [`transactionalOutboxMessages`](/api/events-tx/src/variables/transactionaloutboxmessages/)

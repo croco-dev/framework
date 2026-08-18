@@ -17,7 +17,7 @@ Deployment target metadata — describes where and how the output is deployed
 
 Output contract this target uses
 
----
+***
 
 ### requiredEnvVars?
 
@@ -25,7 +25,7 @@ Output contract this target uses
 
 Required environment variables
 
----
+***
 
 ### runtime?
 
@@ -45,7 +45,7 @@ Runtime constraints
 
 > `readonly` `optional` **timeout?**: `number`
 
----
+***
 
 ### target
 

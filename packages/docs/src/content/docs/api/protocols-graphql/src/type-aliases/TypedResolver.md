@@ -15,7 +15,7 @@ title: "TypedResolver"
 
 ### TContext
 
-`TContext` _extends_ `Record`\<`string`, `unknown`\> = `Record`\<`string`, `unknown`\>
+`TContext` *extends* `Record`\<`string`, `unknown`\> = `Record`\<`string`, `unknown`\>
 
 ### TArgs
 

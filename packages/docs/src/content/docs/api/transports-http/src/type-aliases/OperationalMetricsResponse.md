@@ -21,7 +21,7 @@ title: "OperationalMetricsResponse"
 
 > `readonly` **standardEndpointPathCount**: `number`
 
----
+***
 
 ### timestamp
 

@@ -5,4 +5,4 @@ prev: false
 title: "TransactionalOutboxMessageRow"
 ---
 
-> **TransactionalOutboxMessageRow** = _typeof_ `transactionalOutboxMessages.$inferSelect`
+> **TransactionalOutboxMessageRow** = *typeof* `transactionalOutboxMessages.$inferSelect`

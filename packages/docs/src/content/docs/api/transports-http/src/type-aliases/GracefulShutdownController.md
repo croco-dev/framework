@@ -19,7 +19,7 @@ graceful shutdown 상태를 관리하는 미들웨어와 제어 함수입니다.
 
 `number`
 
----
+***
 
 ### isShuttingDown
 
@@ -29,13 +29,13 @@ graceful shutdown 상태를 관리하는 미들웨어와 제어 함수입니다.
 
 `boolean`
 
----
+***
 
 ### middleware
 
 > **middleware**: [`MiddlewareFunction`](/api/transports-http/src/type-aliases/middlewarefunction/)
 
----
+***
 
 ### reset
 
@@ -45,7 +45,7 @@ graceful shutdown 상태를 관리하는 미들웨어와 제어 함수입니다.
 
 `void`
 
----
+***
 
 ### shutdown
 

@@ -13,19 +13,19 @@ title: "LifecycleRuleOperation"
 
 > `readonly` **actions**: readonly [`LifecycleRuleAdminAction`](/api/admin-react/src/type-aliases/lifecycleruleadminaction/)[]
 
----
+***
 
 ### activeVersion?
 
 > `readonly` `optional` **activeVersion?**: `string`
 
----
+***
 
 ### descriptorDiff
 
 > `readonly` **descriptorDiff**: readonly [`LifecycleDescriptorDiff`](/api/admin-react/src/type-aliases/lifecycledescriptordiff/)[]
 
----
+***
 
 ### inspection
 

@@ -27,7 +27,7 @@ title: "LifecycleRuleStateStore"
 
 [`LifecycleRuleStateStoreResult`](/api/lifecycle-core/src/type-aliases/lifecyclerulestatestoreresult/)\<[`LifecycleRuleStateMutation`](/api/lifecycle-core/src/type-aliases/lifecyclerulestatemutation/)\>
 
----
+***
 
 ### claimExecution()
 
@@ -48,7 +48,7 @@ be rejected rather than shared.
 
 [`LifecycleRuleStateStoreResult`](/api/lifecycle-core/src/type-aliases/lifecyclerulestatestoreresult/)\<[`LifecycleRuleExecutionClaimResult`](/api/lifecycle-core/src/type-aliases/lifecycleruleexecutionclaimresult/)\>
 
----
+***
 
 ### get()
 
@@ -64,7 +64,7 @@ be rejected rather than shared.
 
 [`LifecycleRuleStateStoreResult`](/api/lifecycle-core/src/type-aliases/lifecyclerulestatestoreresult/)\<[`LifecycleRuleIdentityState`](/api/lifecycle-core/src/type-aliases/lifecycleruleidentitystate/) \| `undefined`\>
 
----
+***
 
 ### list()
 
@@ -74,7 +74,7 @@ be rejected rather than shared.
 
 [`LifecycleRuleStateStoreResult`](/api/lifecycle-core/src/type-aliases/lifecyclerulestatestoreresult/)\<readonly [`LifecycleRuleIdentityState`](/api/lifecycle-core/src/type-aliases/lifecycleruleidentitystate/)[]\>
 
----
+***
 
 ### releaseExecution()
 
@@ -90,7 +90,7 @@ be rejected rather than shared.
 
 [`LifecycleRuleStateStoreResult`](/api/lifecycle-core/src/type-aliases/lifecyclerulestatestoreresult/)\<`void`\>
 
----
+***
 
 ### saveRegistration()
 

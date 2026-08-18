@@ -31,7 +31,7 @@ title: "JobBuilder"
 
 [`Job`](/api/batch-core/src/interfaces/job/)
 
----
+***
 
 ### next()
 
@@ -47,7 +47,7 @@ title: "JobBuilder"
 
 `this`
 
----
+***
 
 ### start()
 

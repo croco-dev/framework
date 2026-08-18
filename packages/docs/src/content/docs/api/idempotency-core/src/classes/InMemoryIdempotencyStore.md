@@ -53,7 +53,7 @@ title: "InMemoryIdempotencyStore"
 
 `void`
 
----
+***
 
 ### commit()
 
@@ -73,7 +73,7 @@ title: "InMemoryIdempotencyStore"
 
 `IdempotencyStore.commit`
 
----
+***
 
 ### expire()
 
@@ -93,7 +93,7 @@ title: "InMemoryIdempotencyStore"
 
 `IdempotencyStore.expire`
 
----
+***
 
 ### fail()
 
@@ -113,7 +113,7 @@ title: "InMemoryIdempotencyStore"
 
 `IdempotencyStore.fail`
 
----
+***
 
 ### replay()
 
@@ -133,7 +133,7 @@ title: "InMemoryIdempotencyStore"
 
 `IdempotencyStore.replay`
 
----
+***
 
 ### reserve()
 

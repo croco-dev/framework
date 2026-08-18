@@ -23,13 +23,13 @@ title: "TransactionalOutboxConfig"
 
 `string`
 
----
+***
 
 ### maxAttempts?
 
 > `optional` **maxAttempts?**: `number`
 
----
+***
 
 ### now?
 
@@ -39,19 +39,19 @@ title: "TransactionalOutboxConfig"
 
 `Date`
 
----
+***
 
 ### serializer?
 
 > `optional` **serializer?**: [`EventSerializer`](/api/events-core/src/interfaces/eventserializer/)
 
----
+***
 
 ### store
 
 > **store**: [`TransactionalEventStore`](/api/events-tx/src/interfaces/transactionaleventstore/)\<`TClient`\>
 
----
+***
 
 ### txManager
 

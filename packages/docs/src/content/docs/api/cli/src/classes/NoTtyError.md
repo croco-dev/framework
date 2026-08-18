@@ -33,7 +33,7 @@ title: "NoTtyError"
 
 `Error.cause`
 
----
+***
 
 ### message
 
@@ -43,7 +43,7 @@ title: "NoTtyError"
 
 `Error.message`
 
----
+***
 
 ### name
 
@@ -53,7 +53,7 @@ title: "NoTtyError"
 
 `Error.name`
 
----
+***
 
 ### stack?
 
@@ -63,7 +63,7 @@ title: "NoTtyError"
 
 `Error.stack`
 
----
+***
 
 ### stackTraceLimit
 
@@ -96,7 +96,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack; // Similar to `new Error().stack`
+myObject.stack;  // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -151,7 +151,7 @@ a();
 
 `Error.captureStackTrace`
 
----
+***
 
 ### prepareStackTrace()
 

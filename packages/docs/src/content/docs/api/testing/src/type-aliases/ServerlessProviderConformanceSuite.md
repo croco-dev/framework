@@ -13,7 +13,7 @@ title: "ServerlessProviderConformanceSuite"
 
 > `readonly` **cases**: readonly [`ServerlessProviderConformanceCase`](/api/testing/src/type-aliases/serverlessproviderconformancecase/)[]
 
----
+***
 
 ### liveSmoke?
 

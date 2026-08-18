@@ -13,7 +13,7 @@ title: "LifecycleRuleRegistration"
 
 > `readonly` **descriptor**: [`LifecycleRuleVersionDescriptor`](/api/lifecycle-core/src/type-aliases/lifecycleruleversiondescriptor/)
 
----
+***
 
 ### rule
 

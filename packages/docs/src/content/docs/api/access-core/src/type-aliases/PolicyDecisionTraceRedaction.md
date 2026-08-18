@@ -13,7 +13,7 @@ title: "PolicyDecisionTraceRedaction"
 
 > `readonly` **applied**: `boolean`
 
----
+***
 
 ### paths
 

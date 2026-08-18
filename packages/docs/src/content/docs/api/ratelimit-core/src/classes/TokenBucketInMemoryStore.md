@@ -55,7 +55,7 @@ title: "TokenBucketInMemoryStore"
 
 [`TokenBucketStore`](/api/ratelimit-core/src/classes/tokenbucketstore/).[`check`](/api/ratelimit-core/src/classes/tokenbucketstore/#check)
 
----
+***
 
 ### checkTokenBucket()
 
@@ -79,7 +79,7 @@ title: "TokenBucketInMemoryStore"
 
 [`TokenBucketStore`](/api/ratelimit-core/src/classes/tokenbucketstore/).[`checkTokenBucket`](/api/ratelimit-core/src/classes/tokenbucketstore/#checktokenbucket)
 
----
+***
 
 ### close()
 
@@ -89,7 +89,7 @@ title: "TokenBucketInMemoryStore"
 
 `void`
 
----
+***
 
 ### destroy()
 
@@ -99,7 +99,7 @@ title: "TokenBucketInMemoryStore"
 
 `void`
 
----
+***
 
 ### expire()
 
@@ -123,7 +123,7 @@ title: "TokenBucketInMemoryStore"
 
 [`TokenBucketStore`](/api/ratelimit-core/src/classes/tokenbucketstore/).[`expire`](/api/ratelimit-core/src/classes/tokenbucketstore/#expire)
 
----
+***
 
 ### getCount()
 
@@ -137,7 +137,7 @@ title: "TokenBucketInMemoryStore"
 
 [`TokenBucketStore`](/api/ratelimit-core/src/classes/tokenbucketstore/).[`getCount`](/api/ratelimit-core/src/classes/tokenbucketstore/#getcount)
 
----
+***
 
 ### getStats()
 
@@ -151,7 +151,7 @@ title: "TokenBucketInMemoryStore"
 
 [`TokenBucketStore`](/api/ratelimit-core/src/classes/tokenbucketstore/).[`getStats`](/api/ratelimit-core/src/classes/tokenbucketstore/#getstats)
 
----
+***
 
 ### increment()
 
@@ -165,7 +165,7 @@ title: "TokenBucketInMemoryStore"
 
 [`TokenBucketStore`](/api/ratelimit-core/src/classes/tokenbucketstore/).[`increment`](/api/ratelimit-core/src/classes/tokenbucketstore/#increment)
 
----
+***
 
 ### pruneExpired()
 
@@ -179,7 +179,7 @@ title: "TokenBucketInMemoryStore"
 
 [`TokenBucketStore`](/api/ratelimit-core/src/classes/tokenbucketstore/).[`pruneExpired`](/api/ratelimit-core/src/classes/tokenbucketstore/#pruneexpired)
 
----
+***
 
 ### refund()
 
@@ -207,7 +207,7 @@ title: "TokenBucketInMemoryStore"
 
 [`TokenBucketStore`](/api/ratelimit-core/src/classes/tokenbucketstore/).[`refund`](/api/ratelimit-core/src/classes/tokenbucketstore/#refund)
 
----
+***
 
 ### reset()
 

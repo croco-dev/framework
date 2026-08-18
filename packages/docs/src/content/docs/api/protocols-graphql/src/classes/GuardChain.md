@@ -37,7 +37,7 @@ title: "GuardChain"
 
 `Promise`\<`boolean`\>
 
----
+***
 
 ### execute()
 

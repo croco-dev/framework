@@ -11,4 +11,4 @@ title: "BoundDesktopContracts"
 
 ### TContracts
 
-`TContracts` _extends_ [`DesktopContractRecord`](/api/protocols-desktop/src/type-aliases/desktopcontractrecord/)
+`TContracts` *extends* [`DesktopContractRecord`](/api/protocols-desktop/src/type-aliases/desktopcontractrecord/)

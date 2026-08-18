@@ -12,17 +12,17 @@ Configuration types and handler results for Polar integration.
 ## Example
 
 ```typescript
-import type { PolarConfig, WebhookHandlerResult } from "@croco/billing-polar";
+import type { PolarConfig, WebhookHandlerResult } from '@croco/billing-polar';
 
 const config: PolarConfig = {
-  accessToken: "polar_access_token",
-  environment: "sandbox",
-  webhookSecret: "whsec_...",
+  accessToken: 'polar_access_token',
+  environment: 'sandbox',
+  webhookSecret: 'whsec_...',
 };
 
 const result: WebhookHandlerResult = {
   success: true,
-  eventId: "evt_123",
+  eventId: 'evt_123'
 };
 ```
 
@@ -32,19 +32,19 @@ const result: WebhookHandlerResult = {
 
 > **accessToken**: `string`
 
----
+***
 
 ### environment
 
 > **environment**: `"sandbox"` \| `"production"`
 
----
+***
 
 ### organizationId?
 
 > `optional` **organizationId?**: `string`
 
----
+***
 
 ### webhookSecret
 

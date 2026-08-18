@@ -48,7 +48,7 @@ Token 기반 DI를 지원하며, 모든 구현체는 이 abstract class를 상�
 
 [`SearchEngine`](/api/search-core/src/classes/searchengine/).[`capabilities`](/api/search-core/src/classes/searchengine/#capabilities)
 
----
+***
 
 ### token
 
@@ -86,7 +86,7 @@ Token 기반 DI를 지원하며, 모든 구현체는 이 abstract class를 상�
 
 [`SearchEngine`](/api/search-core/src/classes/searchengine/).[`bulkIndex`](/api/search-core/src/classes/searchengine/#bulkindex)
 
----
+***
 
 ### createIndex()
 
@@ -110,7 +110,7 @@ Token 기반 DI를 지원하며, 모든 구현체는 이 abstract class를 상�
 
 [`SearchEngine`](/api/search-core/src/classes/searchengine/).[`createIndex`](/api/search-core/src/classes/searchengine/#createindex)
 
----
+***
 
 ### deleteDocument()
 
@@ -138,7 +138,7 @@ Token 기반 DI를 지원하며, 모든 구현체는 이 abstract class를 상�
 
 [`SearchEngine`](/api/search-core/src/classes/searchengine/).[`deleteDocument`](/api/search-core/src/classes/searchengine/#deletedocument)
 
----
+***
 
 ### deleteIndex()
 
@@ -162,7 +162,7 @@ Token 기반 DI를 지원하며, 모든 구현체는 이 abstract class를 상�
 
 [`SearchEngine`](/api/search-core/src/classes/searchengine/).[`deleteIndex`](/api/search-core/src/classes/searchengine/#deleteindex)
 
----
+***
 
 ### generateTenantToken()
 
@@ -182,7 +182,7 @@ Token 기반 DI를 지원하며, 모든 구현체는 이 abstract class를 상�
 
 `Promise`\<`string`\>
 
----
+***
 
 ### indexDocument()
 
@@ -210,7 +210,7 @@ Token 기반 DI를 지원하며, 모든 구현체는 이 abstract class를 상�
 
 [`SearchEngine`](/api/search-core/src/classes/searchengine/).[`indexDocument`](/api/search-core/src/classes/searchengine/#indexdocument)
 
----
+***
 
 ### search()
 

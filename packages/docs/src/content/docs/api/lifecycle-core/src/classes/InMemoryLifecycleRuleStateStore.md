@@ -51,7 +51,7 @@ title: "InMemoryLifecycleRuleStateStore"
 
 [`LifecycleRuleStateStore`](/api/lifecycle-core/src/interfaces/lifecyclerulestatestore/).[`applyCommand`](/api/lifecycle-core/src/interfaces/lifecyclerulestatestore/#applycommand)
 
----
+***
 
 ### claimExecution()
 
@@ -76,7 +76,7 @@ be rejected rather than shared.
 
 [`LifecycleRuleStateStore`](/api/lifecycle-core/src/interfaces/lifecyclerulestatestore/).[`claimExecution`](/api/lifecycle-core/src/interfaces/lifecyclerulestatestore/#claimexecution)
 
----
+***
 
 ### get()
 
@@ -96,7 +96,7 @@ be rejected rather than shared.
 
 [`LifecycleRuleStateStore`](/api/lifecycle-core/src/interfaces/lifecyclerulestatestore/).[`get`](/api/lifecycle-core/src/interfaces/lifecyclerulestatestore/#get)
 
----
+***
 
 ### list()
 
@@ -110,7 +110,7 @@ readonly [`LifecycleRuleIdentityState`](/api/lifecycle-core/src/type-aliases/lif
 
 [`LifecycleRuleStateStore`](/api/lifecycle-core/src/interfaces/lifecyclerulestatestore/).[`list`](/api/lifecycle-core/src/interfaces/lifecyclerulestatestore/#list)
 
----
+***
 
 ### releaseExecution()
 
@@ -130,7 +130,7 @@ readonly [`LifecycleRuleIdentityState`](/api/lifecycle-core/src/type-aliases/lif
 
 [`LifecycleRuleStateStore`](/api/lifecycle-core/src/interfaces/lifecyclerulestatestore/).[`releaseExecution`](/api/lifecycle-core/src/interfaces/lifecyclerulestatestore/#releaseexecution)
 
----
+***
 
 ### saveRegistration()
 

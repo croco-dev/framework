@@ -21,12 +21,12 @@ title: "BoundDesktopCommand"
 
 ### TCommand
 
-`TCommand` _extends_ [`KeyedDesktopCommand`](/api/protocols-desktop/src/type-aliases/keyeddesktopcommand/) = [`KeyedDesktopCommand`](/api/protocols-desktop/src/type-aliases/keyeddesktopcommand/)
+`TCommand` *extends* [`KeyedDesktopCommand`](/api/protocols-desktop/src/type-aliases/keyeddesktopcommand/) = [`KeyedDesktopCommand`](/api/protocols-desktop/src/type-aliases/keyeddesktopcommand/)
 
 ### TContractKey
 
-`TContractKey` _extends_ `string` = `string`
+`TContractKey` *extends* `string` = `string`
 
 ### TMemberKey
 
-`TMemberKey` _extends_ `string` = `TCommand`\[`"memberKey"`\]
+`TMemberKey` *extends* `string` = `TCommand`\[`"memberKey"`\]

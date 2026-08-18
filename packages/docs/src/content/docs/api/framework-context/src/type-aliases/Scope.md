@@ -12,7 +12,7 @@ title: "Scope"
 ## Example
 
 ```typescript
-import type { Scope } from "@croco/framework-context";
+import type { Scope } from '@croco/framework-context';
 
-const scope: Scope = "singleton";
+const scope: Scope = 'singleton';
 ```

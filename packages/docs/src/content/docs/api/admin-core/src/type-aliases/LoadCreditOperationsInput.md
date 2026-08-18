@@ -13,25 +13,25 @@ title: "LoadCreditOperationsInput"
 
 > `readonly` `optional` **accountId?**: `string`
 
----
+***
 
 ### grantedPermissions
 
 > `readonly` **grantedPermissions**: readonly `string`[]
 
----
+***
 
 ### signal?
 
 > `readonly` `optional` **signal?**: `AbortSignal`
 
----
+***
 
 ### source
 
 > `readonly` **source**: [`CreditOperationsSource`](/api/admin-core/src/interfaces/creditoperationssource/)
 
----
+***
 
 ### tenantId
 

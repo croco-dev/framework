@@ -13,7 +13,7 @@ title: "PolarReadinessCheckContext"
 
 > `readonly` **config**: [`PolarConfig`](/api/billing-polar/src/type-aliases/polarconfig/)
 
----
+***
 
 ### signal?
 

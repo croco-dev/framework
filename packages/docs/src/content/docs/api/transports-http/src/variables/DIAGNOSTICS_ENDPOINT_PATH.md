@@ -5,4 +5,4 @@ prev: false
 title: "DIAGNOSTICS_ENDPOINT_PATH"
 ---
 
-> `const` **DIAGNOSTICS_ENDPOINT_PATH**: `"/health/diagnostics"` = `"/health/diagnostics"`
+> `const` **DIAGNOSTICS\_ENDPOINT\_PATH**: `"/health/diagnostics"` = `"/health/diagnostics"`

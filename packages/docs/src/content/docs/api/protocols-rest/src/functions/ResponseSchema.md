@@ -15,7 +15,7 @@ title: "ResponseSchema"
 
 #### TContract
 
-`TContract` _extends_ [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/) & `{ readonly response: z.ZodType }`
+`TContract` *extends* [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/) & `{ readonly response: z.ZodType }`
 
 ### Parameters
 

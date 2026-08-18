@@ -16,7 +16,7 @@ or single-process deployments only.
 
 > `readonly` **cache**: [`IsrCacheStore`](/api/meta-vite/src/type-aliases/isrcachestore/)
 
----
+***
 
 ### render
 
@@ -32,7 +32,7 @@ or single-process deployments only.
 
 `Promise`\<`Response`\>
 
----
+***
 
 ### ttlMs
 

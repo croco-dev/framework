@@ -17,19 +17,19 @@ title: "CacheEvictOptions"
 
 > `optional` **allEntries?**: `boolean`
 
----
+***
 
 ### key?
 
 > `optional` **key?**: `string`
 
----
+***
 
 ### namespace?
 
 > `optional` **namespace?**: `string`
 
----
+***
 
 ### store
 

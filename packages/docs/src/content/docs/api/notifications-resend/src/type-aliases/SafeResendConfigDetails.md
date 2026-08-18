@@ -15,25 +15,25 @@ Resend 전송기 생성에 필요한 설정 타입입니다.
 
 > `readonly` `optional` **defaultFromDomain?**: `string`
 
----
+***
 
 ### hasApiKey
 
 > `readonly` **hasApiKey**: `boolean`
 
----
+***
 
 ### hasDefaultFrom
 
 > `readonly` **hasDefaultFrom**: `boolean`
 
----
+***
 
 ### missingConfig
 
 > `readonly` **missingConfig**: readonly `string`[]
 
----
+***
 
 ### provider
 

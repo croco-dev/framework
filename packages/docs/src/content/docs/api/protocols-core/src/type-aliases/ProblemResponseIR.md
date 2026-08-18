@@ -11,15 +11,15 @@ title: "ProblemResponseIR"
 
 ### Code
 
-`Code` _extends_ `string` = `string`
+`Code` *extends* `string` = `string`
 
 ### Category
 
-`Category` _extends_ [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/) = [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
+`Category` *extends* [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/) = [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
 
 ### Status
 
-`Status` _extends_ `number` = `number`
+`Status` *extends* `number` = `number`
 
 ## Properties
 
@@ -27,43 +27,43 @@ title: "ProblemResponseIR"
 
 > `readonly` **category**: `Category`
 
----
+***
 
 ### code
 
 > `readonly` **code**: `Code`
 
----
+***
 
 ### cookbookPath?
 
 > `readonly` `optional` **cookbookPath?**: `string`
 
----
+***
 
 ### description?
 
 > `readonly` `optional` **description?**: `string`
 
----
+***
 
 ### registry?
 
 > `readonly` `optional` **registry?**: [`ProblemRegistryReferenceIR`](/api/protocols-core/src/type-aliases/problemregistryreferenceir/)
 
----
+***
 
 ### routeContractProblems?
 
 > `readonly` `optional` **routeContractProblems?**: readonly `ProblemResponseIR`[]
 
----
+***
 
 ### status
 
 > `readonly` **status**: `Status`
 
----
+***
 
 ### type?
 

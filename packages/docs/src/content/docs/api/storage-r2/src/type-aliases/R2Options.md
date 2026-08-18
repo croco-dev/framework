@@ -17,7 +17,7 @@ Cloudflare R2 제공자 생성에 필요한 설정입니다.
 
 R2 Access Key ID
 
----
+***
 
 ### accountId
 
@@ -25,7 +25,7 @@ R2 Access Key ID
 
 Cloudflare Account ID
 
----
+***
 
 ### bucket
 
@@ -33,7 +33,7 @@ Cloudflare Account ID
 
 R2 버킷 이름
 
----
+***
 
 ### publicUrlBase?
 
@@ -47,7 +47,7 @@ Custom domain을 사용하는 경우 설정합니다.
 설정하지 않으면 R2의 기본 퍼블릭 URL을 사용합니다:
 `https://{bucket}.{accountId}.r2.dev`
 
----
+***
 
 ### secretAccessKey
 

@@ -13,13 +13,13 @@ title: "FrameworkManifestSourceFile"
 
 > `readonly` **exports**: readonly [`FrameworkManifestExportSymbol`](/api/framework-routes/src/type-aliases/frameworkmanifestexportsymbol/)[]
 
----
+***
 
 ### path
 
 > `readonly` **path**: `string`
 
----
+***
 
 ### roles
 

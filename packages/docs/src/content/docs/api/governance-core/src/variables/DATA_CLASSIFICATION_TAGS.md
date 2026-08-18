@@ -5,4 +5,4 @@ prev: false
 title: "DATA_CLASSIFICATION_TAGS"
 ---
 
-> `const` **DATA_CLASSIFICATION_TAGS**: readonly \[`"audit"`, `"billing"`, `"operational"`, `"pii"`, `"sensitive"`\]
+> `const` **DATA\_CLASSIFICATION\_TAGS**: readonly \[`"audit"`, `"billing"`, `"operational"`, `"pii"`, `"sensitive"`\]

@@ -31,7 +31,7 @@ title: "NotificationTemplateRegistry"
 
 [`NotificationTemplate`](/api/notifications-core/src/type-aliases/notificationtemplate/) \| `undefined`
 
----
+***
 
 ### registerTemplate()
 
@@ -47,7 +47,7 @@ title: "NotificationTemplateRegistry"
 
 `void`
 
----
+***
 
 ### render()
 

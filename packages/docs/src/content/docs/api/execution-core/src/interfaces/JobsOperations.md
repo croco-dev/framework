@@ -25,7 +25,7 @@ title: "JobsOperations"
 
 `Promise`\<[`JobDetails`](/api/execution-core/src/type-aliases/jobdetails/)\>
 
----
+***
 
 ### list()
 
@@ -41,7 +41,7 @@ title: "JobsOperations"
 
 `Promise`\<[`JobListReport`](/api/execution-core/src/type-aliases/joblistreport/)\>
 
----
+***
 
 ### logs()
 
@@ -57,7 +57,7 @@ title: "JobsOperations"
 
 `Promise`\<readonly [`ExecutionLogEntry`](/api/execution-core/src/interfaces/executionlogentry/)[]\>
 
----
+***
 
 ### replay()
 
@@ -77,7 +77,7 @@ title: "JobsOperations"
 
 `Promise`\<[`JobDetails`](/api/execution-core/src/type-aliases/jobdetails/)\>
 
----
+***
 
 ### show()
 

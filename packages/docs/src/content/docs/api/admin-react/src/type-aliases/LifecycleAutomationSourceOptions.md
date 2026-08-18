@@ -13,13 +13,13 @@ title: "LifecycleAutomationSourceOptions"
 
 > `readonly` **evaluator**: [`LifecycleRuleEvaluator`](/api/lifecycle-core/src/classes/lifecycleruleevaluator/)
 
----
+***
 
 ### fixtures?
 
 > `readonly` `optional` **fixtures?**: readonly [`LifecycleDryRunFixture`](/api/admin-react/src/type-aliases/lifecycledryrunfixture/)[]
 
----
+***
 
 ### listRecoveryItems?
 
@@ -29,7 +29,7 @@ title: "LifecycleAutomationSourceOptions"
 
 `Promise`\<readonly [`RetryConsoleItem`](/api/admin-ops/src/type-aliases/retryconsoleitem/)[]\>
 
----
+***
 
 ### parsePastedContext?
 
@@ -45,13 +45,13 @@ title: "LifecycleAutomationSourceOptions"
 
 [`LifecycleContext`](/api/lifecycle-core/src/type-aliases/lifecyclecontext/) \| `Promise`\<[`LifecycleContext`](/api/lifecycle-core/src/type-aliases/lifecyclecontext/)\>
 
----
+***
 
 ### registry
 
 > `readonly` **registry**: [`LifecycleRuleRegistry`](/api/lifecycle-core/src/classes/lifecycleruleregistry/)
 
----
+***
 
 ### runLinks?
 
@@ -67,7 +67,7 @@ title: "LifecycleAutomationSourceOptions"
 
 [`LifecycleRunOperation`](/api/admin-react/src/type-aliases/lifecyclerunoperation/)\[`"links"`\]
 
----
+***
 
 ### runStore
 

@@ -13,43 +13,43 @@ title: "AdminProviderState"
 
 > `readonly` `optional` **externalCustomerId?**: `string`
 
----
+***
 
 ### externalSubscriptionId?
 
 > `readonly` `optional` **externalSubscriptionId?**: `string`
 
----
+***
 
 ### lastSyncedAt?
 
 > `readonly` `optional` **lastSyncedAt?**: `Date`
 
----
+***
 
 ### mutability
 
 > `readonly` **mutability**: `"read-only"`
 
----
+***
 
 ### problem?
 
 > `readonly` `optional` **problem?**: [`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
 
----
+***
 
 ### providerName
 
 > `readonly` **providerName**: `string`
 
----
+***
 
 ### source
 
 > `readonly` **source**: `"provider"`
 
----
+***
 
 ### status
 

@@ -15,37 +15,37 @@ Clerk 조직 관리에 필요한 공개 타입입니다.
 
 > **createdAt**: `Date`
 
----
+***
 
 ### emailAddress
 
 > **emailAddress**: `string`
 
----
+***
 
 ### id
 
 > **id**: `string`
 
----
+***
 
 ### organizationId
 
 > **organizationId**: `string`
 
----
+***
 
 ### role
 
 > **role**: `string`
 
----
+***
 
 ### status
 
 > **status**: `"pending"` \| `"accepted"` \| `"revoked"` \| `"expired"`
 
----
+***
 
 ### updatedAt
 

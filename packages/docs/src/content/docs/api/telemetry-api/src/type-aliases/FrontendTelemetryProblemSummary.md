@@ -15,25 +15,25 @@ title: "FrontendTelemetryProblemSummary"
 
 > `readonly` `optional` **category?**: `string`
 
----
+***
 
 ### code
 
 > `readonly` **code**: `string`
 
----
+***
 
 ### status
 
 > `readonly` **status**: `number`
 
----
+***
 
 ### title?
 
 > `readonly` `optional` **title?**: `string`
 
----
+***
 
 ### type?
 

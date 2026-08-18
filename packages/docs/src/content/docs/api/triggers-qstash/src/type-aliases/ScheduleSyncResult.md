@@ -15,7 +15,7 @@ Result of a schedule sync operation.
 
 > `readonly` **applied**: `boolean`
 
----
+***
 
 ### created
 
@@ -23,7 +23,7 @@ Result of a schedule sync operation.
 
 Number of schedules created.
 
----
+***
 
 ### deleted
 
@@ -31,7 +31,7 @@ Number of schedules created.
 
 Number of schedules deleted (removed from code but still in QStash).
 
----
+***
 
 ### details
 
@@ -39,19 +39,19 @@ Number of schedules deleted (removed from code but still in QStash).
 
 Details of all schedules processed.
 
----
+***
 
 ### failed
 
 > **failed**: `number`
 
----
+***
 
 ### mode
 
 > `readonly` **mode**: [`ScheduleSyncMode`](/api/triggers-qstash/src/type-aliases/schedulesyncmode/)
 
----
+***
 
 ### skipped
 
@@ -59,7 +59,7 @@ Details of all schedules processed.
 
 Number of schedules skipped (already in sync).
 
----
+***
 
 ### updated
 

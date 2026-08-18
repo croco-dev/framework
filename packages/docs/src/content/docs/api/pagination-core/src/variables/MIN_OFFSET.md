@@ -5,4 +5,4 @@ prev: false
 title: "MIN_OFFSET"
 ---
 
-> `const` **MIN_OFFSET**: `0` = `0`
+> `const` **MIN\_OFFSET**: `0` = `0`

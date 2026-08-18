@@ -11,7 +11,7 @@ title: "routeProblemResponses"
 
 ### TProblems
 
-`TProblems` _extends_ readonly [`RouteProblemDeclaration`](/api/protocols-rest/src/type-aliases/routeproblemdeclaration/)\<[`Problem`](/api/problems-core/src/classes/problem/), `string`, [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/), `400` \| `401` \| `403` \| `404` \| `409` \| `410` \| `413` \| `422` \| `429` \| `500` \| `501`\>[]
+`TProblems` *extends* readonly [`RouteProblemDeclaration`](/api/protocols-rest/src/type-aliases/routeproblemdeclaration/)\<[`Problem`](/api/problems-core/src/classes/problem/), `string`, [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/), `400` \| `401` \| `403` \| `404` \| `409` \| `410` \| `413` \| `422` \| `429` \| `500` \| `501`\>[]
 
 ## Parameters
 

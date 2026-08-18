@@ -13,25 +13,25 @@ title: "TestResourceFidelity"
 
 > `readonly` **id**: `string`
 
----
+***
 
 ### image
 
 > `readonly` **image**: `string`
 
----
+***
 
 ### isolation
 
 > `readonly` **isolation**: [`TestResourceIsolation`](/api/testing/src/type-aliases/testresourceisolation/)
 
----
+***
 
 ### kind
 
 > `readonly` **kind**: `string`
 
----
+***
 
 ### mode
 

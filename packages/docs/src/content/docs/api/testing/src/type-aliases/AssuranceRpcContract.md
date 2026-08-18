@@ -13,19 +13,19 @@ title: "AssuranceRpcContract"
 
 > `readonly` **id**: `string`
 
----
+***
 
 ### operation
 
 > `readonly` **operation**: `string`
 
----
+***
 
 ### problems?
 
 > `readonly` `optional` **problems?**: readonly `string`[]
 
----
+***
 
 ### source?
 

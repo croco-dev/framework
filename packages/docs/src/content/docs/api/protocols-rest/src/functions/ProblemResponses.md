@@ -11,7 +11,7 @@ title: "ProblemResponses"
 
 ### Responses
 
-`Responses` _extends_ readonly [`ProblemResponseOptions`](/api/protocols-rest/src/type-aliases/problemresponseoptions/)[]
+`Responses` *extends* readonly [`ProblemResponseOptions`](/api/protocols-rest/src/type-aliases/problemresponseoptions/)[]
 
 ## Parameters
 

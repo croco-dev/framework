@@ -5,4 +5,4 @@ prev: false
 title: "CreditGrantLotRow"
 ---
 
-> **CreditGrantLotRow** = _typeof_ `creditGrantLots.$inferSelect`
+> **CreditGrantLotRow** = *typeof* `creditGrantLots.$inferSelect`

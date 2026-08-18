@@ -13,7 +13,7 @@ title: "LifecycleRunOperation"
 
 > `readonly` **correlationIds**: [`RetryConsoleCorrelationIds`](/api/admin-ops/src/type-aliases/retryconsolecorrelationids/)
 
----
+***
 
 ### links?
 
@@ -27,25 +27,25 @@ title: "LifecycleRunOperation"
 
 > `readonly` `optional` **tenantHref?**: `string`
 
----
+***
 
 ### outcome
 
 > `readonly` **outcome**: [`LifecycleRunOutcome`](/api/admin-react/src/type-aliases/lifecyclerunoutcome/)
 
----
+***
 
 ### problem?
 
 > `readonly` `optional` **problem?**: [`LifecycleOperationsProblem`](/api/admin-react/src/type-aliases/lifecycleoperationsproblem/)
 
----
+***
 
 ### recovery?
 
 > `readonly` `optional` **recovery?**: [`RetryConsoleRecoveryAction`](/api/admin-ops/src/type-aliases/retryconsolerecoveryaction/)
 
----
+***
 
 ### run
 

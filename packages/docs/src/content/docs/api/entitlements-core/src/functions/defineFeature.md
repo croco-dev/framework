@@ -13,7 +13,7 @@ title: "defineFeature"
 
 ### Key
 
-`Key` _extends_ `string`
+`Key` *extends* `string`
 
 ## Parameters
 

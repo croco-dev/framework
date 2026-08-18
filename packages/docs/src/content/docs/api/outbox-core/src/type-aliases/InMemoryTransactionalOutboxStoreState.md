@@ -13,7 +13,7 @@ title: "InMemoryTransactionalOutboxStoreState"
 
 > **idByIdempotencyScope**: `Map`\<`string`, `string`\>
 
----
+***
 
 ### records
 

@@ -17,22 +17,14 @@ interface User {
 
 class UserRepository implements Repository<User, string> {
   // Read operations
-  async findById(id: string): Promise<User | null> {
-    /-* ... *-/;
-  }
+  async findById(id: string): Promise<User | null> { /-* ... *-/ }
   async findByIds(
     ids: readonly string[],
-  ): Promise<ReadonlyArray<KeyedRepositoryResult<string, User>>> {
-    /-* ... *-/;
-  }
+  ): Promise<ReadonlyArray<KeyedRepositoryResult<string, User>>> { /-* ... *-/ }
 
   // Write operations
-  async save(entity: User): Promise<User> {
-    /-* ... *-/;
-  }
-  async deleteById(id: string): Promise<void> {
-    /-* ... *-/;
-  }
+  async save(entity: User): Promise<User> { /-* ... *-/ }
+  async deleteById(id: string): Promise<void> { /-* ... *-/ }
 }
 ```
 
@@ -78,7 +70,7 @@ The ID of the entity to delete
 
 [`WriteRepository`](/api/repository-core/src/interfaces/writerepository/).[`deleteById`](/api/repository-core/src/interfaces/writerepository/#deletebyid)
 
----
+***
 
 ### findById()
 
@@ -104,7 +96,7 @@ The entity if found, null otherwise
 
 [`ReadRepository`](/api/repository-core/src/interfaces/readrepository/).[`findById`](/api/repository-core/src/interfaces/readrepository/#findbyid)
 
----
+***
 
 ### findByIds()
 
@@ -131,7 +123,7 @@ any order, and every requested ID may appear at most once.
 
 [`ReadRepository`](/api/repository-core/src/interfaces/readrepository/).[`findByIds`](/api/repository-core/src/interfaces/readrepository/#findbyids)
 
----
+***
 
 ### save()
 

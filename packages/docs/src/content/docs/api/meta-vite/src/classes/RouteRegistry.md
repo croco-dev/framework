@@ -25,7 +25,7 @@ title: "RouteRegistry"
 
 [`RenderRouteIR`](/api/meta-vite/src/type-aliases/renderrouteir/)[]
 
----
+***
 
 ### getApiRoutes()
 
@@ -35,7 +35,7 @@ title: "RouteRegistry"
 
 [`ApiRouteIR`](/api/meta-vite/src/type-aliases/apirouteir/)[]
 
----
+***
 
 ### getPageRoutes()
 
@@ -45,7 +45,7 @@ title: "RouteRegistry"
 
 [`PageRouteIR`](/api/meta-vite/src/type-aliases/pagerouteir/)[]
 
----
+***
 
 ### register()
 
@@ -61,7 +61,7 @@ title: "RouteRegistry"
 
 `void`
 
----
+***
 
 ### registerApiRoute()
 

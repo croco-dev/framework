@@ -5,4 +5,4 @@ prev: false
 title: "CURSOR_VERSION"
 ---
 
-> `const` **CURSOR_VERSION**: `1` = `1`
+> `const` **CURSOR\_VERSION**: `1` = `1`

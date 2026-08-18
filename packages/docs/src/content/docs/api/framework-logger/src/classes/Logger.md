@@ -10,7 +10,7 @@ Croco 전역 로거가 따라야 하는 최소 인터페이스 타입입니다.
 ## Example
 
 ```typescript
-import type { ILogger } from "@croco/framework-context";
+import type { ILogger } from '@croco/framework-context';
 
 const logger: ILogger = {
   info: () => undefined,
@@ -62,7 +62,7 @@ Create a child logger with bound context
 
 [`ILogger`](/api/framework-context/src/interfaces/ilogger/).[`child`](/api/framework-context/src/interfaces/ilogger/#child)
 
----
+***
 
 ### debug()
 
@@ -86,7 +86,7 @@ Create a child logger with bound context
 
 [`ILogger`](/api/framework-context/src/interfaces/ilogger/).[`debug`](/api/framework-context/src/interfaces/ilogger/#debug)
 
----
+***
 
 ### error()
 
@@ -110,7 +110,7 @@ Create a child logger with bound context
 
 [`ILogger`](/api/framework-context/src/interfaces/ilogger/).[`error`](/api/framework-context/src/interfaces/ilogger/#error)
 
----
+***
 
 ### fatal()
 
@@ -130,7 +130,7 @@ Create a child logger with bound context
 
 `void`
 
----
+***
 
 ### info()
 
@@ -154,7 +154,7 @@ Create a child logger with bound context
 
 [`ILogger`](/api/framework-context/src/interfaces/ilogger/).[`info`](/api/framework-context/src/interfaces/ilogger/#info)
 
----
+***
 
 ### warn()
 

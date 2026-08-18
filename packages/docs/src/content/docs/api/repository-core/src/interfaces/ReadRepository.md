@@ -20,9 +20,7 @@ class UserRepository implements ReadRepository<User, string> {
     // Fetch from database
   }
 
-  async findByIds(
-    ids: readonly string[],
-  ): Promise<ReadonlyArray<KeyedRepositoryResult<string, User>>> {
+  async findByIds(ids: readonly string[]): Promise<ReadonlyArray<KeyedRepositoryResult<string, User>>> {
     const users = await this.fetchUsers(ids);
     return users.map((user) => ({ key: user.id, value: user }));
   }
@@ -69,7 +67,7 @@ The entity ID
 
 The entity if found, null otherwise
 
----
+***
 
 ### findByIds()
 

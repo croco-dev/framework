@@ -5,4 +5,4 @@ prev: false
 title: "OffsetParamsInput"
 ---
 
-> **OffsetParamsInput** = `z.input`\<_typeof_ [`OffsetParamsSchema`](/api/pagination-core/src/variables/offsetparamsschema/)\>
+> **OffsetParamsInput** = `z.input`\<*typeof* [`OffsetParamsSchema`](/api/pagination-core/src/variables/offsetparamsschema/)\>

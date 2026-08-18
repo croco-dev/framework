@@ -19,7 +19,7 @@ title: "NotificationJobPayload"
 
 [`NotificationPayload`](/api/notifications-core/src/interfaces/notificationpayload/).[`content`](/api/notifications-core/src/interfaces/notificationpayload/#content)
 
----
+***
 
 ### dispatchContext?
 
@@ -89,13 +89,13 @@ title: "NotificationJobPayload"
 
 > **version**: `string`
 
----
+***
 
 ### idempotencyKey?
 
 > `optional` **idempotencyKey?**: `string`
 
----
+***
 
 ### locale?
 
@@ -105,7 +105,7 @@ title: "NotificationJobPayload"
 
 [`NotificationPayload`](/api/notifications-core/src/interfaces/notificationpayload/).[`locale`](/api/notifications-core/src/interfaces/notificationpayload/#locale)
 
----
+***
 
 ### metadata?
 
@@ -115,7 +115,7 @@ title: "NotificationJobPayload"
 
 [`NotificationPayload`](/api/notifications-core/src/interfaces/notificationpayload/).[`metadata`](/api/notifications-core/src/interfaces/notificationpayload/#metadata)
 
----
+***
 
 ### outbox?
 
@@ -129,13 +129,13 @@ title: "NotificationJobPayload"
 
 > `optional` **outboxMessageId?**: `string`
 
----
+***
 
 ### providerName
 
 > **providerName**: `string`
 
----
+***
 
 ### subject?
 
@@ -145,7 +145,7 @@ title: "NotificationJobPayload"
 
 [`NotificationPayload`](/api/notifications-core/src/interfaces/notificationpayload/).[`subject`](/api/notifications-core/src/interfaces/notificationpayload/#subject)
 
----
+***
 
 ### templateId?
 
@@ -155,7 +155,7 @@ title: "NotificationJobPayload"
 
 [`NotificationPayload`](/api/notifications-core/src/interfaces/notificationpayload/).[`templateId`](/api/notifications-core/src/interfaces/notificationpayload/#templateid)
 
----
+***
 
 ### templateVersion?
 
@@ -165,7 +165,7 @@ title: "NotificationJobPayload"
 
 [`NotificationPayload`](/api/notifications-core/src/interfaces/notificationpayload/).[`templateVersion`](/api/notifications-core/src/interfaces/notificationpayload/#templateversion)
 
----
+***
 
 ### to
 
@@ -175,7 +175,7 @@ title: "NotificationJobPayload"
 
 [`NotificationPayload`](/api/notifications-core/src/interfaces/notificationpayload/).[`to`](/api/notifications-core/src/interfaces/notificationpayload/#to)
 
----
+***
 
 ### variables?
 

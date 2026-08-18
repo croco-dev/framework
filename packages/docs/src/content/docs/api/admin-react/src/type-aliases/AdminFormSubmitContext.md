@@ -11,7 +11,7 @@ title: "AdminFormSubmitContext"
 
 ### TValues
 
-`TValues` _extends_ `object`
+`TValues` *extends* `object`
 
 ### TResult
 
@@ -23,25 +23,25 @@ title: "AdminFormSubmitContext"
 
 > `readonly` **audit**: [`AdminAuditMetadata`](/api/admin-react/src/type-aliases/adminauditmetadata/)
 
----
+***
 
 ### intent
 
 > `readonly` **intent**: [`AdminFormIntent`](/api/admin-react/src/type-aliases/adminformintent/)
 
----
+***
 
 ### previousState
 
 > `readonly` **previousState**: [`AdminFormState`](/api/admin-react/src/type-aliases/adminformstate/)\<`TValues`, `TResult`\>
 
----
+***
 
 ### signal?
 
 > `readonly` `optional` **signal?**: `AbortSignal`
 
----
+***
 
 ### values
 

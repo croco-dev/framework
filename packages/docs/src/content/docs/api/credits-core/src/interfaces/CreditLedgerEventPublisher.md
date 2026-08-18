@@ -23,7 +23,7 @@ Must deduplicate retries and concurrent deliveries by `event.eventId`.
 
 `Promise`\<`void`\>
 
----
+***
 
 ### publishIdempotentlyAfterCommit()
 

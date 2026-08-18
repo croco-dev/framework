@@ -13,7 +13,7 @@ title: "ResendReadinessCheckContext"
 
 > `readonly` **config**: [`ResendConfig`](/api/notifications-resend/src/type-aliases/resendconfig/)
 
----
+***
 
 ### signal?
 

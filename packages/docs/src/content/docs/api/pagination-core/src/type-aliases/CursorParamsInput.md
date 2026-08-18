@@ -5,4 +5,4 @@ prev: false
 title: "CursorParamsInput"
 ---
 
-> **CursorParamsInput** = `z.input`\<_typeof_ [`CursorParamsSchema`](/api/pagination-core/src/variables/cursorparamsschema/)\>
+> **CursorParamsInput** = `z.input`\<*typeof* [`CursorParamsSchema`](/api/pagination-core/src/variables/cursorparamsschema/)\>

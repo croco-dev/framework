@@ -5,4 +5,4 @@ prev: false
 title: "DIAGNOSTICS_TOKEN_HEADER"
 ---
 
-> `const` **DIAGNOSTICS_TOKEN_HEADER**: `"X-Diagnostics-Token"` = `"X-Diagnostics-Token"`
+> `const` **DIAGNOSTICS\_TOKEN\_HEADER**: `"X-Diagnostics-Token"` = `"X-Diagnostics-Token"`

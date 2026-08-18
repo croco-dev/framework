@@ -27,7 +27,7 @@ const options: HealthCheckServiceOptions = {
 
 > **results**: [`HealthIndicatorResult`](/api/health-core/src/type-aliases/healthindicatorresult/)[]
 
----
+***
 
 ### status
 

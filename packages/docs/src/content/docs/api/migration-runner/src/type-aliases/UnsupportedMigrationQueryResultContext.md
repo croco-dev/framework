@@ -13,7 +13,7 @@ title: "UnsupportedMigrationQueryResultContext"
 
 > `readonly` `optional` **field?**: [`MigrationQueryResultField`](/api/migration-runner/src/type-aliases/migrationqueryresultfield/)
 
----
+***
 
 ### rowIndex?
 

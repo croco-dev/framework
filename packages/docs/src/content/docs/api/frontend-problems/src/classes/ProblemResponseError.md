@@ -39,7 +39,7 @@ title: "ProblemResponseError"
 
 > `readonly` `optional` **body?**: `unknown`
 
----
+***
 
 ### cause?
 
@@ -49,7 +49,7 @@ title: "ProblemResponseError"
 
 `Error.cause`
 
----
+***
 
 ### message
 
@@ -59,7 +59,7 @@ title: "ProblemResponseError"
 
 `Error.message`
 
----
+***
 
 ### name
 
@@ -69,13 +69,13 @@ title: "ProblemResponseError"
 
 `Error.name`
 
----
+***
 
 ### response
 
 > `readonly` **response**: `Response`
 
----
+***
 
 ### stack?
 
@@ -85,7 +85,7 @@ title: "ProblemResponseError"
 
 `Error.stack`
 
----
+***
 
 ### stackTraceLimit
 
@@ -118,7 +118,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack; // Similar to `new Error().stack`
+myObject.stack;  // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -173,7 +173,7 @@ a();
 
 `Error.captureStackTrace`
 
----
+***
 
 ### prepareStackTrace()
 

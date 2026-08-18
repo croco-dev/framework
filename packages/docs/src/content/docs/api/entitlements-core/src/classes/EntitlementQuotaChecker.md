@@ -45,7 +45,7 @@ title: "EntitlementQuotaChecker"
 
 `Promise`\<[`EntitlementQuotaStatus`](/api/entitlements-core/src/type-aliases/entitlementquotastatus/)\>
 
----
+***
 
 ### getCurrentUsage()
 
@@ -65,7 +65,7 @@ title: "EntitlementQuotaChecker"
 
 `Promise`\<`number`\>
 
----
+***
 
 ### getUsageHistory()
 
@@ -89,7 +89,7 @@ title: "EntitlementQuotaChecker"
 
 `Promise`\<[`UsageHistoryEntry`](/api/entitlements-core/src/type-aliases/usagehistoryentry/)[]\>
 
----
+***
 
 ### resetUsage()
 

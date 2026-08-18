@@ -13,13 +13,13 @@ title: "DesktopMemberReferenceMetadata"
 
 > `readonly` **id**: `string`
 
----
+***
 
 ### key
 
 > `readonly` **key**: `string`
 
----
+***
 
 ### kind
 

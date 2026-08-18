@@ -13,7 +13,7 @@ Better Auth 초기화에 필요한 설정입니다.
 
 > **baseURL**: `string`
 
----
+***
 
 ### secret
 

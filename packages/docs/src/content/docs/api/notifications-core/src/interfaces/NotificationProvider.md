@@ -17,7 +17,7 @@ Provider capability contract used by the dispatch layer.
 
 [`NotificationProviderCapabilities`](/api/notifications-core/src/type-aliases/notificationprovidercapabilities/)
 
----
+***
 
 ### getChannel()
 
@@ -29,7 +29,7 @@ Get the channel this provider supports
 
 [`NotificationChannel`](/api/notifications-core/src/enumerations/notificationchannel/)
 
----
+***
 
 ### getName()
 
@@ -41,7 +41,7 @@ Provider identifier (e.g., 'resend', 'twilio')
 
 `string`
 
----
+***
 
 ### send()
 

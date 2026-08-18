@@ -55,7 +55,7 @@ Calculate delay for the given attempt (0-based)
 
 [`BackoffPolicy`](/api/retry-core/src/interfaces/backoffpolicy/).[`getDelay`](/api/retry-core/src/interfaces/backoffpolicy/#getdelay)
 
----
+***
 
 ### reset()
 
@@ -71,7 +71,7 @@ Reset internal state if any
 
 [`BackoffPolicy`](/api/retry-core/src/interfaces/backoffpolicy/).[`reset`](/api/retry-core/src/interfaces/backoffpolicy/#reset)
 
----
+***
 
 ### wait()
 

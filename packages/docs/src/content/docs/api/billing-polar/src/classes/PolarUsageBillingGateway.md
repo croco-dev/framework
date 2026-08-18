@@ -54,7 +54,7 @@ readonly [`PolarUsageMeterBinding`](/api/billing-polar/src/type-aliases/polarusa
 
 [`UsageBillingGateway`](/api/billing-core/src/interfaces/usagebillinggateway/).[`getCustomerMeterState`](/api/billing-core/src/interfaces/usagebillinggateway/#getcustomermeterstate)
 
----
+***
 
 ### ingest()
 

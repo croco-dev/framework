@@ -31,25 +31,25 @@ title: "CompileOptions"
 
 `T`
 
----
+***
 
 ### globalFilters?
 
 > `optional` **globalFilters?**: `unknown`[]
 
----
+***
 
 ### globalGuards?
 
 > `optional` **globalGuards?**: `unknown`[]
 
----
+***
 
 ### globalInterceptors?
 
 > `optional` **globalInterceptors?**: `unknown`[]
 
----
+***
 
 ### globalPipes?
 

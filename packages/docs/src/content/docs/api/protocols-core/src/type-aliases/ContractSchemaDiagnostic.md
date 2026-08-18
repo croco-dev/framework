@@ -13,25 +13,25 @@ title: "ContractSchemaDiagnostic"
 
 > `readonly` **code**: `string`
 
----
+***
 
 ### message
 
 > `readonly` **message**: `string`
 
----
+***
 
 ### schemaPath
 
 > `readonly` **schemaPath**: readonly `string`[]
 
----
+***
 
 ### severity
 
 > `readonly` **severity**: [`ContractSchemaDiagnosticSeverity`](/api/protocols-core/src/type-aliases/contractschemadiagnosticseverity/)
 
----
+***
 
 ### typeName
 

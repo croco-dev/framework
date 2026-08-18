@@ -15,19 +15,19 @@ Cache runtime statistics.
 
 > **evictions**: `number`
 
----
+***
 
 ### hits
 
 > **hits**: `number`
 
----
+***
 
 ### misses
 
 > **misses**: `number`
 
----
+***
 
 ### size
 

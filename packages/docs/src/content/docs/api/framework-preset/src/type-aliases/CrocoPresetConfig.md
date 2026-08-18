@@ -13,19 +13,19 @@ title: "CrocoPresetConfig"
 
 > `readonly` **entry**: `string`
 
----
+***
 
 ### hooks?
 
 > `readonly` `optional` **hooks?**: [`HookMap`](/api/framework-preset/src/type-aliases/hookmap/)
 
----
+***
 
 ### name
 
 > `readonly` **name**: `string`
 
----
+***
 
 ### output
 

@@ -19,7 +19,7 @@ title: "OutboxRelayConfig"
 
 > `optional` **batchSize?**: `number`
 
----
+***
 
 ### deadLetter?
 
@@ -35,7 +35,7 @@ title: "OutboxRelayConfig"
 
 `Promise`\<`void`\>
 
----
+***
 
 ### now?
 
@@ -45,7 +45,7 @@ title: "OutboxRelayConfig"
 
 `Date`
 
----
+***
 
 ### publish
 
@@ -61,25 +61,25 @@ title: "OutboxRelayConfig"
 
 `Promise`\<`void`\>
 
----
+***
 
 ### retry?
 
 > `optional` **retry?**: `Partial`\<[`OutboxRelayRetryPolicy`](/api/events-tx/src/type-aliases/outboxrelayretrypolicy/)\>
 
----
+***
 
 ### store
 
 > **store**: [`TransactionalEventStore`](/api/events-tx/src/interfaces/transactionaleventstore/)\<`TClient`\>
 
----
+***
 
 ### txManager?
 
 > `optional` **txManager?**: `Pick`\<[`TxManager`](/api/tx-core/src/classes/txmanager/)\<`TClient`\>, `"getClient"`\>
 
----
+***
 
 ### visibilityTimeoutMs?
 

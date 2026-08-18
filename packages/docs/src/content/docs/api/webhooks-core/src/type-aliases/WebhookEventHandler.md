@@ -11,7 +11,7 @@ title: "WebhookEventHandler"
 
 ### TEvent
 
-`TEvent` _extends_ [`WebhookEvent`](/api/webhooks-core/src/type-aliases/webhookevent/) = [`WebhookEvent`](/api/webhooks-core/src/type-aliases/webhookevent/)
+`TEvent` *extends* [`WebhookEvent`](/api/webhooks-core/src/type-aliases/webhookevent/) = [`WebhookEvent`](/api/webhooks-core/src/type-aliases/webhookevent/)
 
 ### TResult
 

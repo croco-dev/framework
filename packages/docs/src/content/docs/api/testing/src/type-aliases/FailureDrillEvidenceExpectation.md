@@ -13,13 +13,13 @@ title: "FailureDrillEvidenceExpectation"
 
 > `readonly` **audit**: `string` \| readonly `string`[]
 
----
+***
 
 ### diagnostic?
 
 > `readonly` `optional` **diagnostic?**: `string` \| readonly `string`[]
 
----
+***
 
 ### telemetry
 

@@ -27,7 +27,7 @@ title: "OpenAiTransport"
 
 `Promise`\<[`OpenAiEmbeddingResponse`](/api/llm-openai/src/type-aliases/openaiembeddingresponse/)\>
 
----
+***
 
 ### createResponse()
 
@@ -47,7 +47,7 @@ title: "OpenAiTransport"
 
 `Promise`\<[`OpenAiResponse`](/api/llm-openai/src/type-aliases/openairesponse/)\>
 
----
+***
 
 ### streamResponse()
 

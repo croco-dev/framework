@@ -13,19 +13,19 @@ title: "DiCheckReport"
 
 > `readonly` **diagnostics**: readonly [`DiCheckDiagnostic`](/api/cli/src/type-aliases/dicheckdiagnostic/)[]
 
----
+***
 
 ### manifestVersion
 
 > `readonly` **manifestVersion**: `string`
 
----
+***
 
 ### status
 
 > `readonly` **status**: `DiCheckStatus`
 
----
+***
 
 ### version
 

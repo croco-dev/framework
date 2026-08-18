@@ -13,7 +13,7 @@ title: "MeilisearchReadinessCheckResult"
 
 > `readonly` `optional` **details?**: `Record`\<`string`, `unknown`\>
 
----
+***
 
 ### message?
 

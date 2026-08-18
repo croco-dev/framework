@@ -13,25 +13,25 @@ title: "EntitlementRequirement"
 
 > `readonly` `optional` **description?**: `string`
 
----
+***
 
 ### feature
 
 > `readonly` **feature**: `string`
 
----
+***
 
 ### resource?
 
 > `readonly` `optional` **resource?**: [`EntitlementResourceRequirement`](/api/entitlements-core/src/type-aliases/entitlementresourcerequirement/)
 
----
+***
 
 ### ruleId?
 
 > `readonly` `optional` **ruleId?**: `string`
 
----
+***
 
 ### sourceLocation?
 

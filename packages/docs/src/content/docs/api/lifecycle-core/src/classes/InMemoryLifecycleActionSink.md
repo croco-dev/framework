@@ -53,7 +53,7 @@ title: "InMemoryLifecycleActionSink"
 
 [`LifecycleActionAdapter`](/api/lifecycle-core/src/interfaces/lifecycleactionadapter/).[`execute`](/api/lifecycle-core/src/interfaces/lifecycleactionadapter/#execute)
 
----
+***
 
 ### getEmissions()
 

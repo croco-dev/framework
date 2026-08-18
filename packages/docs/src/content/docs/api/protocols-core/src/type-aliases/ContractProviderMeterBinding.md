@@ -13,7 +13,7 @@ title: "ContractProviderMeterBinding"
 
 > `readonly` **meterId**: `string`
 
----
+***
 
 ### meterKey
 

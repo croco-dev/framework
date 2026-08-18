@@ -9,4 +9,4 @@ title: "CrocoApiHandlerResult"
 
 API handler result type.
 `{ handled: true; response: Response }` — API handler claimed the request.
-{ handled: false } — API handler declined, page fallback MAY proceed.
+ { handled: false } — API handler declined, page fallback MAY proceed.

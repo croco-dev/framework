@@ -11,11 +11,11 @@ title: "DesktopFileGrantOptions"
 
 ### TAccess
 
-`TAccess` _extends_ [`DesktopGrantAccess`](/api/protocols-desktop/src/type-aliases/desktopgrantaccess/)
+`TAccess` *extends* [`DesktopGrantAccess`](/api/protocols-desktop/src/type-aliases/desktopgrantaccess/)
 
 ### TLifetime
 
-`TLifetime` _extends_ [`DesktopGrantLifetime`](/api/protocols-desktop/src/type-aliases/desktopgrantlifetime/)
+`TLifetime` *extends* [`DesktopGrantLifetime`](/api/protocols-desktop/src/type-aliases/desktopgrantlifetime/)
 
 ## Properties
 
@@ -23,13 +23,13 @@ title: "DesktopFileGrantOptions"
 
 > `readonly` **access**: `TAccess`
 
----
+***
 
 ### lifetime
 
 > `readonly` **lifetime**: `TLifetime`
 
----
+***
 
 ### scope
 

@@ -19,13 +19,13 @@ title: "StartedTestResource"
 
 > `readonly` **connection**: `TConnection`
 
----
+***
 
 ### diagnostics
 
 > `readonly` **diagnostics**: readonly [`TestResourceDiagnostic`](/api/testing/src/type-aliases/testresourcediagnostic/)[]
 
----
+***
 
 ### dispose
 
@@ -35,7 +35,7 @@ title: "StartedTestResource"
 
 `Promise`\<`void`\> \| `void`
 
----
+***
 
 ### fidelity
 

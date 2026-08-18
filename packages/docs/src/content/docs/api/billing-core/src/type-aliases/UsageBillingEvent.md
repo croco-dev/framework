@@ -15,31 +15,31 @@ Provider-neutral usage event ingestion and customer meter state contracts.
 
 > `readonly` **billingAccountId**: `string`
 
----
+***
 
 ### dimensions?
 
 > `readonly` `optional` **dimensions?**: `Readonly`\<`Record`\<`string`, [`UsageBillingDimensionValue`](/api/billing-core/src/type-aliases/usagebillingdimensionvalue/)\>\>
 
----
+***
 
 ### eventId
 
 > `readonly` **eventId**: `string`
 
----
+***
 
 ### meterId
 
 > `readonly` **meterId**: `string`
 
----
+***
 
 ### occurredAt
 
 > `readonly` **occurredAt**: `Date`
 
----
+***
 
 ### value
 

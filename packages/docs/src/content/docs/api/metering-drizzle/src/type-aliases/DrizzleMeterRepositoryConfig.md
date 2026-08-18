@@ -25,19 +25,19 @@ title: "DrizzleMeterRepositoryConfig"
 
 `unknown`
 
----
+***
 
 ### meterSchema
 
 > **meterSchema**: [`MeterTable`](/api/metering-drizzle/src/type-aliases/metertable/)
 
----
+***
 
 ### meterTable
 
 > **meterTable**: `unknown`
 
----
+***
 
 ### serializeJson?
 
@@ -53,13 +53,13 @@ title: "DrizzleMeterRepositoryConfig"
 
 `string`
 
----
+***
 
 ### usageRecordSchema
 
 > **usageRecordSchema**: [`UsageRecordTable`](/api/metering-drizzle/src/type-aliases/usagerecordtable/)
 
----
+***
 
 ### usageRecordTable
 

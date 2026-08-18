@@ -13,19 +13,19 @@ title: "MetaViteRouteManifest"
 
 > `readonly` **apiRoutes**: readonly [`MetaViteApiRouteManifestEntry`](/api/meta-vite/src/type-aliases/metaviteapiroutemanifestentry/)[]
 
----
+***
 
 ### pages
 
 > `readonly` **pages**: readonly [`MetaVitePageRouteManifestEntry`](/api/meta-vite/src/type-aliases/metavitepageroutemanifestentry/)[]
 
----
+***
 
 ### schemaVersion
 
-> `readonly` **schemaVersion**: _typeof_ [`META_VITE_ROUTE_MANIFEST_SCHEMA_VERSION`](/api/meta-vite/src/variables/meta_vite_route_manifest_schema_version/)
+> `readonly` **schemaVersion**: *typeof* [`META_VITE_ROUTE_MANIFEST_SCHEMA_VERSION`](/api/meta-vite/src/variables/meta_vite_route_manifest_schema_version/)
 
----
+***
 
 ### serverActions
 

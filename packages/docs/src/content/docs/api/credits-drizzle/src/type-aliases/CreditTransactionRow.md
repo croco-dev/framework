@@ -5,4 +5,4 @@ prev: false
 title: "CreditTransactionRow"
 ---
 
-> **CreditTransactionRow** = _typeof_ `creditTransactions.$inferSelect`
+> **CreditTransactionRow** = *typeof* `creditTransactions.$inferSelect`

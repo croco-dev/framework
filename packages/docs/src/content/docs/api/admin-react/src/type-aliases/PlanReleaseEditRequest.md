@@ -13,13 +13,13 @@ title: "PlanReleaseEditRequest"
 
 > `readonly` **descriptorId**: `string`
 
----
+***
 
 ### expectedDraftRevision
 
 > `readonly` **expectedDraftRevision**: `number`
 
----
+***
 
 ### value
 

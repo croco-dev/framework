@@ -13,13 +13,13 @@ title: "ModuleGraphProvider"
 
 > `readonly` `optional` **className?**: `string`
 
----
+***
 
 ### provider
 
 > `readonly` **provider**: `"class"` \| `"value"` \| `"factory"` \| `"token"`
 
----
+***
 
 ### token
 

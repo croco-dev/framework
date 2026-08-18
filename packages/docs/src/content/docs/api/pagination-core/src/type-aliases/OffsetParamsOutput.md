@@ -5,4 +5,4 @@ prev: false
 title: "OffsetParamsOutput"
 ---
 
-> **OffsetParamsOutput** = `z.output`\<_typeof_ [`OffsetParamsSchema`](/api/pagination-core/src/variables/offsetparamsschema/)\>
+> **OffsetParamsOutput** = `z.output`\<*typeof* [`OffsetParamsSchema`](/api/pagination-core/src/variables/offsetparamsschema/)\>

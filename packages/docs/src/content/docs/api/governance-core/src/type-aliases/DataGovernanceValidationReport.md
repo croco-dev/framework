@@ -13,7 +13,7 @@ title: "DataGovernanceValidationReport"
 
 > `readonly` **diagnostics**: readonly [`DataGovernanceDiagnostic`](/api/governance-core/src/type-aliases/datagovernancediagnostic/)[]
 
----
+***
 
 ### valid
 

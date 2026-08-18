@@ -13,13 +13,13 @@ title: "DiagnosticsAccessContext"
 
 > `readonly` **method**: `string`
 
----
+***
 
 ### path
 
 > `readonly` **path**: `string`
 
----
+***
 
 ### request
 

@@ -11,7 +11,7 @@ title: "RouteSchema"
 
 ### Req
 
-`Req` _extends_ [`RequestSchema`](/api/protocols-rest/src/type-aliases/requestschema/) = [`RequestSchema`](/api/protocols-rest/src/type-aliases/requestschema/)
+`Req` *extends* [`RequestSchema`](/api/protocols-rest/src/type-aliases/requestschema/) = [`RequestSchema`](/api/protocols-rest/src/type-aliases/requestschema/)
 
 ### Res
 
@@ -23,7 +23,7 @@ title: "RouteSchema"
 
 > **request**: `Req`
 
----
+***
 
 ### response
 

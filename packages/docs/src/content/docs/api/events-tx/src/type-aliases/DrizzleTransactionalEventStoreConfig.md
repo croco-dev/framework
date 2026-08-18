@@ -11,11 +11,11 @@ title: "DrizzleTransactionalEventStoreConfig"
 
 ### TDb
 
-`TDb` _extends_ [`DrizzleTransactionalEventStoreDb`](/api/events-tx/src/type-aliases/drizzletransactionaleventstoredb/)
+`TDb` *extends* [`DrizzleTransactionalEventStoreDb`](/api/events-tx/src/type-aliases/drizzletransactionaleventstoredb/)
 
 ### TClient
 
-`TClient` _extends_ [`DrizzleTransactionalEventStoreDb`](/api/events-tx/src/type-aliases/drizzletransactionaleventstoredb/) = `TDb`
+`TClient` *extends* [`DrizzleTransactionalEventStoreDb`](/api/events-tx/src/type-aliases/drizzletransactionaleventstoredb/) = `TDb`
 
 ## Properties
 
@@ -23,13 +23,13 @@ title: "DrizzleTransactionalEventStoreConfig"
 
 > **db**: `TDb`
 
----
+***
 
 ### tables?
 
 > `optional` **tables?**: [`DrizzleTransactionalEventStoreTables`](/api/events-tx/src/type-aliases/drizzletransactionaleventstoretables/)
 
----
+***
 
 ### txManager?
 

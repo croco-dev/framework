@@ -5,4 +5,4 @@ prev: false
 title: "OpsEndpointName"
 ---
 
-> **OpsEndpointName** = _typeof_ `OPS_ENDPOINTS`\[`number`\]\[`"name"`\]
+> **OpsEndpointName** = *typeof* `OPS_ENDPOINTS`\[`number`\]\[`"name"`\]

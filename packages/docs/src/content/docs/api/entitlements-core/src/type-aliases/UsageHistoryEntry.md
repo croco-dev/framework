@@ -13,7 +13,7 @@ title: "UsageHistoryEntry"
 
 > **timestamp**: `Date`
 
----
+***
 
 ### usage
 

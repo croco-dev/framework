@@ -13,7 +13,7 @@ title: "ChangedTestExclusion"
 
 > `readonly` **reason**: `string`
 
----
+***
 
 ### testId
 

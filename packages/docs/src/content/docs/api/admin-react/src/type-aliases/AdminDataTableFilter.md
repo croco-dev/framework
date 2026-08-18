@@ -19,19 +19,19 @@ title: "AdminDataTableFilter"
 
 > `readonly` `optional` **field?**: [`AdminDataTableField`](/api/admin-react/src/type-aliases/admindatatablefield/)\<`TData`\> \| `string`
 
----
+***
 
 ### id
 
 > `readonly` **id**: `string`
 
----
+***
 
 ### operator
 
 > `readonly` **operator**: [`AdminDataTableFilterOperator`](/api/admin-react/src/type-aliases/admindatatablefilteroperator/)
 
----
+***
 
 ### value
 

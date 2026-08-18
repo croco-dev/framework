@@ -13,7 +13,7 @@ title: "ProblemResponseConfig"
 
 > `readonly` **description**: `string`
 
----
+***
 
 ### status
 

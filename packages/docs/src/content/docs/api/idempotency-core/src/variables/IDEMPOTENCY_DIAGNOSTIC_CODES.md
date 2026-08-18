@@ -5,7 +5,7 @@ prev: false
 title: "IDEMPOTENCY_DIAGNOSTIC_CODES"
 ---
 
-> `const` **IDEMPOTENCY_DIAGNOSTIC_CODES**: `object`
+> `const` **IDEMPOTENCY\_DIAGNOSTIC\_CODES**: `object`
 
 ## Type Declaration
 

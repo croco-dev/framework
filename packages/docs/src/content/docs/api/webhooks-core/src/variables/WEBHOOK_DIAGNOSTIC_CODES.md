@@ -5,7 +5,7 @@ prev: false
 title: "WEBHOOK_DIAGNOSTIC_CODES"
 ---
 
-> `const` **WEBHOOK_DIAGNOSTIC_CODES**: `object`
+> `const` **WEBHOOK\_DIAGNOSTIC\_CODES**: `object`
 
 ## Type Declaration
 

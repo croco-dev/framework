@@ -17,7 +17,7 @@ Cloudflare Images 업로드 응답 구조입니다.
 
 에러 목록
 
----
+***
 
 ### messages
 
@@ -25,7 +25,7 @@ Cloudflare Images 업로드 응답 구조입니다.
 
 메시지 목록
 
----
+***
 
 ### result
 
@@ -63,7 +63,7 @@ Cloudflare Images 업로드 응답 구조입니다.
 
 가능한 변형(variants) URL 목록
 
----
+***
 
 ### success
 

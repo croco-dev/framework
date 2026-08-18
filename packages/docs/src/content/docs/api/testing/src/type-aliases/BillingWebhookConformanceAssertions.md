@@ -11,11 +11,11 @@ title: "BillingWebhookConformanceAssertions"
 
 ### TResult
 
-`TResult` _extends_ [`BillingWebhookResult`](/api/testing/src/type-aliases/billingwebhookresult/) = [`BillingWebhookResult`](/api/testing/src/type-aliases/billingwebhookresult/)
+`TResult` *extends* [`BillingWebhookResult`](/api/testing/src/type-aliases/billingwebhookresult/) = [`BillingWebhookResult`](/api/testing/src/type-aliases/billingwebhookresult/)
 
 ### THandler
 
-`THandler` _extends_ [`BillingWebhookHandlerContract`](/api/testing/src/type-aliases/billingwebhookhandlercontract/)\<`TResult`\> = [`BillingWebhookHandlerContract`](/api/testing/src/type-aliases/billingwebhookhandlercontract/)\<`TResult`\>
+`THandler` *extends* [`BillingWebhookHandlerContract`](/api/testing/src/type-aliases/billingwebhookhandlercontract/)\<`TResult`\> = [`BillingWebhookHandlerContract`](/api/testing/src/type-aliases/billingwebhookhandlercontract/)\<`TResult`\>
 
 ## Properties
 
@@ -47,7 +47,7 @@ readonly \[`TResult`, `TResult`\]
 
 `void` \| `Promise`\<`void`\>
 
----
+***
 
 ### invalidPayload?
 
@@ -63,7 +63,7 @@ readonly \[`TResult`, `TResult`\]
 
 `void` \| `Promise`\<`void`\>
 
----
+***
 
 ### invalidSignature?
 
@@ -79,7 +79,7 @@ readonly \[`TResult`, `TResult`\]
 
 `void` \| `Promise`\<`void`\>
 
----
+***
 
 ### order?
 
@@ -109,7 +109,7 @@ readonly \[`TResult`, `TResult`\]
 
 `void` \| `Promise`\<`void`\>
 
----
+***
 
 ### subscription?
 

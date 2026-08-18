@@ -13,7 +13,7 @@ title: "OutboundWebhookValidatedTarget"
 
 > `readonly` **resolvedAddresses**: readonly `string`[]
 
----
+***
 
 ### url
 

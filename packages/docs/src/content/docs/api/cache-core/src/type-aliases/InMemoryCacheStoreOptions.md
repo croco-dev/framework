@@ -15,7 +15,7 @@ title: "InMemoryCacheStoreOptions"
 
 Integer milliseconds from 1 through 2,147,483,647. Disabled by default.
 
----
+***
 
 ### maxEntries?
 

@@ -48,8 +48,8 @@ Parent Context which may contain a span.
 `string`
 
 of the span to be created. It can be different from the
-traceId in the SpanContext. Typically in situations when the
-span to be created starts a new trace.
+    traceId in the SpanContext. Typically in situations when the
+    span to be created starts a new trace.
 
 ##### \_spanName
 
@@ -77,7 +77,7 @@ a SamplingResult.
 
 `Sampler.shouldSample`
 
----
+***
 
 ### toString()
 

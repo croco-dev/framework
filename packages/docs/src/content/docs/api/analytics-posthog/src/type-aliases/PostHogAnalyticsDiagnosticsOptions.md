@@ -13,7 +13,7 @@ title: "PostHogAnalyticsDiagnosticsOptions"
 
 > `readonly` `optional` **enabled?**: `boolean`
 
----
+***
 
 ### readinessCheck?
 

@@ -13,7 +13,7 @@ title: "OutboundWebhookRetryPolicy"
 
 > `readonly` **backoff**: `Pick`\<[`BackoffPolicy`](/api/retry-core/src/interfaces/backoffpolicy/), `"getDelay"`\>
 
----
+***
 
 ### maxAttempts
 

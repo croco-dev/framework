@@ -16,7 +16,7 @@ title: "ModuleOptions"
 Controller tokens owned by this module. The module package records these
 for diagnostics; transport packages decide how to bind them.
 
----
+***
 
 ### exports?
 
@@ -24,7 +24,7 @@ for diagnostics; transport packages decide how to bind them.
 
 Provider tokens that become visible to direct importers.
 
----
+***
 
 ### imports?
 
@@ -33,7 +33,7 @@ Provider tokens that become visible to direct importers.
 Imported modules are initialized first. Only tokens listed in an imported
 module's `exports` are visible to this module context.
 
----
+***
 
 ### name
 
@@ -42,7 +42,7 @@ module's `exports` are visible to this module context.
 Stable module identifier used for dependency ordering, diagnostics, and
 lifecycle failure messages.
 
----
+***
 
 ### providers?
 
@@ -52,19 +52,19 @@ Providers owned by this module. Token-only class providers are registered
 by class; string and Token providers document ownership and can be bound
 with `ModuleContext.set` or a provider definition.
 
----
+***
 
 ### setup?
 
 > `readonly` `optional` **setup?**: [`ModuleLifecycleHook`](/api/framework-module/src/type-aliases/modulelifecyclehook/)
 
----
+***
 
 ### shutdown?
 
 > `readonly` `optional` **shutdown?**: [`ModuleLifecycleHook`](/api/framework-module/src/type-aliases/modulelifecyclehook/)
 
----
+***
 
 ### start?
 

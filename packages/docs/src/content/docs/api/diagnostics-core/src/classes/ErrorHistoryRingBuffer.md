@@ -37,7 +37,7 @@ push 연산은 O(1) amortized이며, maxSize 초과 시 가장 오래된 항목�
 
 `number`
 
----
+***
 
 ### size
 
@@ -59,7 +59,7 @@ push 연산은 O(1) amortized이며, maxSize 초과 시 가장 오래된 항목�
 
 `void`
 
----
+***
 
 ### getAll()
 
@@ -69,7 +69,7 @@ push 연산은 O(1) amortized이며, maxSize 초과 시 가장 오래된 항목�
 
 readonly [`ErrorRecord`](/api/diagnostics-core/src/type-aliases/errorrecord/)[]
 
----
+***
 
 ### push()
 

@@ -13,31 +13,31 @@ title: "LifecycleAutomationEmptyState"
 
 > `readonly` `optional` **dryRun?**: [`LifecycleDryRunResponse`](/api/admin-react/src/type-aliases/lifecycledryrunresponse/)
 
----
+***
 
 ### fixtures
 
 > `readonly` **fixtures**: readonly [`LifecycleDryRunFixtureDescriptor`](/api/admin-react/src/type-aliases/lifecycledryrunfixturedescriptor/)[]
 
----
+***
 
 ### generatedAt
 
 > `readonly` **generatedAt**: `Date`
 
----
+***
 
 ### grantedPermissions
 
 > `readonly` **grantedPermissions**: readonly `string`[]
 
----
+***
 
 ### kind
 
 > `readonly` **kind**: `"empty"`
 
----
+***
 
 ### problems
 

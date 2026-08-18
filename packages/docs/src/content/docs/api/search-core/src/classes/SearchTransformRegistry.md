@@ -57,7 +57,7 @@ title: "SearchTransformRegistry"
 
 `string`
 
----
+***
 
 ### get()
 
@@ -79,7 +79,7 @@ title: "SearchTransformRegistry"
 
 [`SearchTransformAdapter`](/api/search-core/src/interfaces/searchtransformadapter/)\<`TOptions`\> \| `undefined`
 
----
+***
 
 ### register()
 

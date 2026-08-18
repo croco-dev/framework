@@ -13,7 +13,7 @@ title: "AdminFormStateOptions"
 
 > `readonly` `optional` **generatedAt?**: `Date`
 
----
+***
 
 ### grantedPermissions?
 

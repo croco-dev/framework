@@ -13,19 +13,19 @@ title: "DataSubjectIdentity"
 
 > `readonly` **idField**: `string`
 
----
+***
 
 ### labelField?
 
 > `readonly` `optional` **labelField?**: `string`
 
----
+***
 
 ### tenantField?
 
 > `readonly` `optional` **tenantField?**: `string`
 
----
+***
 
 ### type
 

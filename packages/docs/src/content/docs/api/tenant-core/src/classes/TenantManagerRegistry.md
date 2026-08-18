@@ -34,7 +34,7 @@ Supports multiple managers with key-based lookup.
 
 `void`
 
----
+***
 
 ### get()
 
@@ -50,7 +50,7 @@ Supports multiple managers with key-based lookup.
 
 [`TenantManager`](/api/tenant-core/src/classes/tenantmanager/)
 
----
+***
 
 ### has()
 
@@ -66,7 +66,7 @@ Supports multiple managers with key-based lookup.
 
 `boolean`
 
----
+***
 
 ### register()
 
@@ -86,7 +86,7 @@ Supports multiple managers with key-based lookup.
 
 `void`
 
----
+***
 
 ### clear()
 
@@ -98,7 +98,7 @@ Clear all registered managers. Useful for testing.
 
 `void`
 
----
+***
 
 ### get()
 
@@ -120,7 +120,7 @@ Get a registered TenantManager instance.
 
 Error if manager is not registered
 
----
+***
 
 ### getInstance()
 
@@ -130,7 +130,7 @@ Error if manager is not registered
 
 `TenantManagerRegistry`
 
----
+***
 
 ### has()
 
@@ -148,7 +148,7 @@ Check if a TenantManager is registered.
 
 `boolean`
 
----
+***
 
 ### register()
 

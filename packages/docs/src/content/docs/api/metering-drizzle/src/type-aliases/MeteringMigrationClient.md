@@ -23,7 +23,7 @@ title: "MeteringMigrationClient"
 
 `Promise`\<`unknown`\>
 
----
+***
 
 ### transaction()?
 

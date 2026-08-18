@@ -13,7 +13,7 @@ title: "CreditOperationsConsoleProps"
 
 > `readonly` `optional` **filter?**: [`CreditOperationsFilter`](/api/admin-core/src/type-aliases/creditoperationsfilter/)
 
----
+***
 
 ### onAction?
 
@@ -29,7 +29,7 @@ title: "CreditOperationsConsoleProps"
 
 `void`
 
----
+***
 
 ### onFilterChange?
 
@@ -45,7 +45,7 @@ title: "CreditOperationsConsoleProps"
 
 `void`
 
----
+***
 
 ### onRefresh?
 
@@ -55,7 +55,7 @@ title: "CreditOperationsConsoleProps"
 
 `void`
 
----
+***
 
 ### onSelectReservation?
 
@@ -71,7 +71,7 @@ title: "CreditOperationsConsoleProps"
 
 `void`
 
----
+***
 
 ### onSelectTransaction?
 
@@ -87,19 +87,19 @@ title: "CreditOperationsConsoleProps"
 
 `void`
 
----
+***
 
 ### selectedReservationId?
 
 > `readonly` `optional` **selectedReservationId?**: `string`
 
----
+***
 
 ### selectedTransactionId?
 
 > `readonly` `optional` **selectedTransactionId?**: `string`
 
----
+***
 
 ### state
 

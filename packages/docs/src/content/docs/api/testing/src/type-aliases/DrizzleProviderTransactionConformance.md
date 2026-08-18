@@ -13,7 +13,7 @@ title: "DrizzleProviderTransactionConformance"
 
 > `readonly` **participation**: [`DrizzleProviderConformanceCapability`](/api/testing/src/type-aliases/drizzleproviderconformancecapability/)
 
----
+***
 
 ### rollback
 

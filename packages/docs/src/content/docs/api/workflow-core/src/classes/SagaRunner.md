@@ -41,7 +41,7 @@ title: "SagaRunner"
 
 `Promise`\<[`SagaExecution`](/api/workflow-core/src/type-aliases/sagaexecution/)\>
 
----
+***
 
 ### execute()
 
@@ -61,7 +61,7 @@ title: "SagaRunner"
 
 `Promise`\<[`SagaRunResult`](/api/workflow-core/src/type-aliases/sagarunresult/)\>
 
----
+***
 
 ### getExecution()
 
@@ -77,7 +77,7 @@ title: "SagaRunner"
 
 `Promise`\<[`SagaExecution`](/api/workflow-core/src/type-aliases/sagaexecution/)\>
 
----
+***
 
 ### listExecutions()
 
@@ -93,7 +93,7 @@ title: "SagaRunner"
 
 `Promise`\<[`SagaExecution`](/api/workflow-core/src/type-aliases/sagaexecution/)[]\>
 
----
+***
 
 ### replay()
 

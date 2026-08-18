@@ -13,7 +13,7 @@ title: "DiCheckIo"
 
 > `readonly` **cwd**: `string`
 
----
+***
 
 ### mkdir
 
@@ -29,7 +29,7 @@ title: "DiCheckIo"
 
 `void`
 
----
+***
 
 ### readFile
 
@@ -45,7 +45,7 @@ title: "DiCheckIo"
 
 `string`
 
----
+***
 
 ### stderr
 
@@ -61,7 +61,7 @@ title: "DiCheckIo"
 
 `void`
 
----
+***
 
 ### stdout
 
@@ -77,7 +77,7 @@ title: "DiCheckIo"
 
 `void`
 
----
+***
 
 ### writeFile
 

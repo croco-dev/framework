@@ -13,19 +13,19 @@ title: "OpsStatusReport"
 
 > `readonly` **endpoints**: readonly [`OpsEndpointSnapshot`](/api/cli/src/type-aliases/opsendpointsnapshot/)[]
 
----
+***
 
 ### summary
 
 > `readonly` **summary**: [`OpsStatusSummary`](/api/cli/src/type-aliases/opsstatussummary/)
 
----
+***
 
 ### target
 
 > `readonly` **target**: `string`
 
----
+***
 
 ### timestamp
 

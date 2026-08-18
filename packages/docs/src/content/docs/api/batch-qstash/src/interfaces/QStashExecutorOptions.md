@@ -13,13 +13,13 @@ Options required by the QStash chunk executor.
 
 > `optional` **heartbeatIntervalMs?**: `number`
 
----
+***
 
 ### qstashClient
 
 > **qstashClient**: `Client`
 
----
+***
 
 ### tokenGenerator?
 
@@ -29,13 +29,13 @@ Options required by the QStash chunk executor.
 
 `string`
 
----
+***
 
 ### webhookUrl
 
 > **webhookUrl**: `string`
 
----
+***
 
 ### workerIdGenerator?
 

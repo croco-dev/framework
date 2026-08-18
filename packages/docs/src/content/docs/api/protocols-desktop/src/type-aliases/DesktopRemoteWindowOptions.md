@@ -11,11 +11,11 @@ title: "DesktopRemoteWindowOptions"
 
 ### TInitialUrl
 
-`TInitialUrl` _extends_ `string`
+`TInitialUrl` *extends* `string`
 
 ### TAllowedOrigins
 
-`TAllowedOrigins` _extends_ readonly `string`[]
+`TAllowedOrigins` *extends* readonly `string`[]
 
 ## Properties
 
@@ -23,19 +23,19 @@ title: "DesktopRemoteWindowOptions"
 
 > `readonly` **allowedOrigins**: `TAllowedOrigins`
 
----
+***
 
 ### expose?
 
 > `readonly` `optional` **expose?**: `never`
 
----
+***
 
 ### initialUrl
 
 > `readonly` **initialUrl**: `TInitialUrl`
 
----
+***
 
 ### receive?
 

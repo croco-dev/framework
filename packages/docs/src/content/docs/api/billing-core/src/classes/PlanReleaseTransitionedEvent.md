@@ -63,7 +63,7 @@ Records one durable, revision-addressed plan release lifecycle transition.
 
 > `readonly` **actorId**: `string`
 
----
+***
 
 ### eventId
 
@@ -73,7 +73,7 @@ Records one durable, revision-addressed plan release lifecycle transition.
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventId`](/api/events-core/src/classes/domainevent/#eventid)
 
----
+***
 
 ### eventName
 
@@ -83,13 +83,13 @@ Records one durable, revision-addressed plan release lifecycle transition.
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventName`](/api/events-core/src/classes/domainevent/#eventname)
 
----
+***
 
 ### from
 
 > `readonly` **from**: [`PlanReleaseState`](/api/billing-core/src/type-aliases/planreleasestate/) \| `null`
 
----
+***
 
 ### metadata
 
@@ -99,25 +99,25 @@ Records one durable, revision-addressed plan release lifecycle transition.
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`metadata`](/api/events-core/src/classes/domainevent/#metadata)
 
----
+***
 
 ### planVersionRef
 
 > `readonly` **planVersionRef**: [`PlanVersionRef`](/api/billing-core/src/type-aliases/planversionref/)
 
----
+***
 
 ### reason
 
 > `readonly` **reason**: `string`
 
----
+***
 
 ### revision
 
 > `readonly` **revision**: `number`
 
----
+***
 
 ### timestamp
 
@@ -127,13 +127,13 @@ Records one durable, revision-addressed plan release lifecycle transition.
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`timestamp`](/api/events-core/src/classes/domainevent/#timestamp)
 
----
+***
 
 ### to
 
 > `readonly` **to**: [`PlanReleaseState`](/api/billing-core/src/type-aliases/planreleasestate/)
 
----
+***
 
 ### eventName
 

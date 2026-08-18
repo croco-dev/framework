@@ -67,7 +67,7 @@ title: "RateLimiter"
 
 `Promise`\<[`RateLimitResult`](/api/ratelimit-core/src/type-aliases/ratelimitresult/)\>
 
----
+***
 
 ### checkWithKey()
 
@@ -91,7 +91,7 @@ title: "RateLimiter"
 
 `Promise`\<[`RateLimitResult`](/api/ratelimit-core/src/type-aliases/ratelimitresult/)\>
 
----
+***
 
 ### getStats()
 
@@ -107,7 +107,7 @@ title: "RateLimiter"
 
 `Promise`\<[`RateLimitStats`](/api/ratelimit-core/src/type-aliases/ratelimitstats/)\>
 
----
+***
 
 ### refund()
 
@@ -131,7 +131,7 @@ title: "RateLimiter"
 
 `Promise`\<[`RateLimitRefundResult`](/api/ratelimit-core/src/type-aliases/ratelimitrefundresult/)\>
 
----
+***
 
 ### refundWithKey()
 

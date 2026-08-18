@@ -30,7 +30,7 @@ Get the current tenant ID, or null if not in a tenant context.
 
 `string` \| `null`
 
----
+***
 
 ### isInTenantContext()
 
@@ -42,7 +42,7 @@ Check if currently within a tenant context.
 
 `boolean`
 
----
+***
 
 ### requireTenantId()
 
@@ -55,7 +55,7 @@ Use this when tenant context is required.
 
 `string`
 
----
+***
 
 ### run()
 
@@ -84,7 +84,7 @@ The tenant context will be available to all async operations within.
 
 `Promise`\<`T`\>
 
----
+***
 
 ### suspend()
 

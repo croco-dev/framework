@@ -41,7 +41,7 @@ title: "TestKernelHttp"
 
 `Promise`\<`Response`\>
 
----
+***
 
 ### get()
 
@@ -61,7 +61,7 @@ title: "TestKernelHttp"
 
 `Promise`\<`Response`\>
 
----
+***
 
 ### patch()
 
@@ -81,7 +81,7 @@ title: "TestKernelHttp"
 
 `Promise`\<`Response`\>
 
----
+***
 
 ### post()
 
@@ -101,7 +101,7 @@ title: "TestKernelHttp"
 
 `Promise`\<`Response`\>
 
----
+***
 
 ### put()
 
@@ -121,7 +121,7 @@ title: "TestKernelHttp"
 
 `Promise`\<`Response`\>
 
----
+***
 
 ### request()
 

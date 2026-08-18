@@ -13,19 +13,19 @@ title: "PlanReleaseEventDeliveryResult"
 
 > `readonly` **attempted**: `number`
 
----
+***
 
 ### failures
 
 > `readonly` **failures**: readonly `object`[]
 
----
+***
 
 ### pending
 
 > `readonly` **pending**: `number`
 
----
+***
 
 ### published
 

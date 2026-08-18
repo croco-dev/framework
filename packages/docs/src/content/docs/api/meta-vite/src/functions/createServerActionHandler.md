@@ -9,14 +9,12 @@ title: "createServerActionHandler"
 
 Create a fetch handler that dispatches Server Actions via HTTP.
 Integrates with composeHandler's apiRoutes dispatch:
-
 - Base path: `/api/action`
 - Extracts action name from URL pathname (e.g., `/api/action/signup` → `signup`)
 - Method: POST only (Server Actions are write operations)
 - Passes FormData to dispatchServerAction
 
 Usage with composeHandler:
-
 ```ts
 const handler = createMetaFetchHandler({
   apiRoutes: [createServerActionHandler()],

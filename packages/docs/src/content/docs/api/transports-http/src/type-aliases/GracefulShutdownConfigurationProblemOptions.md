@@ -13,7 +13,7 @@ title: "GracefulShutdownConfigurationProblemOptions"
 
 > `readonly` **option**: [`GracefulShutdownTimeoutOption`](/api/transports-http/src/type-aliases/gracefulshutdowntimeoutoption/)
 
----
+***
 
 ### receivedValue
 

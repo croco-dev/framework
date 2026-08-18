@@ -13,7 +13,7 @@ title: "DesktopWireLiteralDescriptor"
 
 > `readonly` **kind**: `"literal"`
 
----
+***
 
 ### value
 

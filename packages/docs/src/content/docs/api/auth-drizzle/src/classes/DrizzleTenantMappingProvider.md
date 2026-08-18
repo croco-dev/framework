@@ -61,7 +61,7 @@ Drizzle DB와 테넌트 매핑 스키마를 받아 제공자를 초기화합니�
 
 [`TenantMappingProvider`](/api/auth-core/src/interfaces/tenantmappingprovider/).[`register`](/api/auth-core/src/interfaces/tenantmappingprovider/#register)
 
----
+***
 
 ### remove()
 
@@ -83,7 +83,7 @@ Drizzle DB와 테넌트 매핑 스키마를 받아 제공자를 초기화합니�
 
 [`TenantMappingProvider`](/api/auth-core/src/interfaces/tenantmappingprovider/).[`remove`](/api/auth-core/src/interfaces/tenantmappingprovider/#remove)
 
----
+***
 
 ### resolve()
 

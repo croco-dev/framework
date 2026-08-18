@@ -19,13 +19,13 @@ title: "DesktopEventDefinition"
 
 > `readonly` **definitionType**: `"event"`
 
----
+***
 
 ### kind
 
 > `readonly` **kind**: `"event"`
 
----
+***
 
 ### payload
 

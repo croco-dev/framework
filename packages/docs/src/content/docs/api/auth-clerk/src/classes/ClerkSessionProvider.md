@@ -47,7 +47,7 @@ Clerk 세션 조회와 세션 해제를 담당하는 구현체입니다.
 
 [`SessionProvider`](/api/auth-core/src/interfaces/sessionprovider/).[`getSession`](/api/auth-core/src/interfaces/sessionprovider/#getsession)
 
----
+***
 
 ### listSessions()
 
@@ -67,7 +67,7 @@ Clerk 세션 조회와 세션 해제를 담당하는 구현체입니다.
 
 [`SessionProvider`](/api/auth-core/src/interfaces/sessionprovider/).[`listSessions`](/api/auth-core/src/interfaces/sessionprovider/#listsessions)
 
----
+***
 
 ### revokeAllSessions()
 
@@ -87,7 +87,7 @@ Clerk 세션 조회와 세션 해제를 담당하는 구현체입니다.
 
 [`SessionProvider`](/api/auth-core/src/interfaces/sessionprovider/).[`revokeAllSessions`](/api/auth-core/src/interfaces/sessionprovider/#revokeallsessions)
 
----
+***
 
 ### revokeSession()
 

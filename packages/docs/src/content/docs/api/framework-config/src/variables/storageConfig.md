@@ -17,25 +17,25 @@ title: "storageConfig"
 
 > **server**: `object`
 
-#### server.R2_ACCESS_KEY_ID
+#### server.R2\_ACCESS\_KEY\_ID
 
-> **R2_ACCESS_KEY_ID**: `ZodOptional`\<`ZodString`\>
+> **R2\_ACCESS\_KEY\_ID**: `ZodOptional`\<`ZodString`\>
 
-#### server.R2_ACCOUNT_ID
+#### server.R2\_ACCOUNT\_ID
 
-> **R2_ACCOUNT_ID**: `ZodOptional`\<`ZodString`\>
+> **R2\_ACCOUNT\_ID**: `ZodOptional`\<`ZodString`\>
 
-#### server.R2_BUCKET
+#### server.R2\_BUCKET
 
-> **R2_BUCKET**: `ZodOptional`\<`ZodString`\>
+> **R2\_BUCKET**: `ZodOptional`\<`ZodString`\>
 
-#### server.R2_PUBLIC_URL_BASE
+#### server.R2\_PUBLIC\_URL\_BASE
 
-> **R2_PUBLIC_URL_BASE**: `ZodOptional`\<`ZodString`\>
+> **R2\_PUBLIC\_URL\_BASE**: `ZodOptional`\<`ZodString`\>
 
-#### server.R2_SECRET_ACCESS_KEY
+#### server.R2\_SECRET\_ACCESS\_KEY
 
-> **R2_SECRET_ACCESS_KEY**: `ZodOptional`\<`ZodString`\>
+> **R2\_SECRET\_ACCESS\_KEY**: `ZodOptional`\<`ZodString`\>
 
 ### shared
 

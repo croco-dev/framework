@@ -13,7 +13,7 @@ title: "RenderRouteComponentProps"
 
 > `readonly` `optional` **context?**: [`RuntimeContext`](/api/meta-vite/src/type-aliases/runtimecontext/)
 
----
+***
 
 ### request
 

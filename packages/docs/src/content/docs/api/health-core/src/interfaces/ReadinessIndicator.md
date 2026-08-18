@@ -15,7 +15,7 @@ Can include metrics, latency information, or other diagnostic data.
 const successDetails: HealthIndicatorSuccessDetails = {
   latency: 15,
   connections: 5,
-  version: "1.2.3",
+  version: '1.2.3',
 };
 ```
 
@@ -53,7 +53,7 @@ const successDetails: HealthIndicatorSuccessDetails = {
 
 [`HealthIndicator`](/api/health-core/src/interfaces/healthindicator/).[`check`](/api/health-core/src/interfaces/healthindicator/#check)
 
----
+***
 
 ### isReady()
 

@@ -13,7 +13,7 @@ title: "TenantImpersonationConsoleProps"
 
 > `readonly` `optional` **onAction?**: [`AdminPanelActionHandler`](/api/admin-react/src/type-aliases/adminpanelactionhandler/)
 
----
+***
 
 ### state
 

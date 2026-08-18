@@ -13,7 +13,7 @@ title: "TestEvidenceDiagnostic"
 
 > `readonly` **code**: `string`
 
----
+***
 
 ### recoveryAction
 

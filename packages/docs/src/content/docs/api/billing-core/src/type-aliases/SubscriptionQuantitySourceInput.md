@@ -13,7 +13,7 @@ title: "SubscriptionQuantitySourceInput"
 
 > `readonly` **planVersion**: [`PlanVersionDefinition`](/api/billing-core/src/type-aliases/planversiondefinition/)
 
----
+***
 
 ### tenantId
 

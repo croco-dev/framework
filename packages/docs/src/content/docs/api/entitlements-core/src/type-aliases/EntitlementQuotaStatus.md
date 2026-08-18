@@ -13,19 +13,19 @@ title: "EntitlementQuotaStatus"
 
 > **exceeded**: `boolean`
 
----
+***
 
 ### quota
 
 > **quota**: `number`
 
----
+***
 
 ### remaining
 
 > **remaining**: `number`
 
----
+***
 
 ### usage
 

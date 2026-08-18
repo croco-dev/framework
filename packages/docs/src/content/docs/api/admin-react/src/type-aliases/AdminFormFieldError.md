@@ -13,19 +13,19 @@ title: "AdminFormFieldError"
 
 > `readonly` **code**: `string`
 
----
+***
 
 ### message
 
 > `readonly` **message**: `string`
 
----
+***
 
 ### problem?
 
 > `readonly` `optional` **problem?**: [`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
 
----
+***
 
 ### recoveryActionIds?
 

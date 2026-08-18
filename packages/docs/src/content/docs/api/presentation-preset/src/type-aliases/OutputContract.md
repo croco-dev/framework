@@ -18,7 +18,7 @@ Describes the complete build output of a preset.
 
 List of all build artifacts
 
----
+***
 
 ### buildTime
 
@@ -26,7 +26,7 @@ List of all build artifacts
 
 When the build was performed (ISO 8601)
 
----
+***
 
 ### checksum?
 
@@ -34,7 +34,7 @@ When the build was performed (ISO 8601)
 
 Optional checksum for integrity verification
 
----
+***
 
 ### entries
 
@@ -42,7 +42,7 @@ Optional checksum for integrity verification
 
 Entry point descriptors
 
----
+***
 
 ### format
 
@@ -50,7 +50,7 @@ Entry point descriptors
 
 Output format of the build
 
----
+***
 
 ### presetName
 

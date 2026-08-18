@@ -13,25 +13,25 @@ title: "FrontendAuthGateAllowedState"
 
 > `readonly` **entitlements**: readonly [`FrontendEntitlementCheck`](/api/frontend-react/src/type-aliases/frontendentitlementcheck/)[]
 
----
+***
 
 ### kind
 
 > `readonly` **kind**: `"allowed"`
 
----
+***
 
 ### permissions
 
 > `readonly` **permissions**: readonly [`FrontendPermissionCheck`](/api/frontend-react/src/type-aliases/frontendpermissioncheck/)[]
 
----
+***
 
 ### session
 
 > `readonly` **session**: [`FrontendSession`](/api/frontend-react/src/type-aliases/frontendsession/)
 
----
+***
 
 ### tenant?
 

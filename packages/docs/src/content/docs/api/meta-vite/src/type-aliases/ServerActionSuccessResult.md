@@ -19,7 +19,7 @@ title: "ServerActionSuccessResult"
 
 > `readonly` **data**: `TOutput`
 
----
+***
 
 ### ok
 

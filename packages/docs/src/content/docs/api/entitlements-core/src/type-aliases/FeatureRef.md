@@ -11,15 +11,15 @@ title: "FeatureRef"
 
 ### Key
 
-`Key` _extends_ `string` = `string`
+`Key` *extends* `string` = `string`
 
 ## Properties
 
-### \[FEATURE_REF_BRAND\]
+### \[FEATURE\_REF\_BRAND\]
 
-> `readonly` **\[FEATURE_REF_BRAND\]**: `true`
+> `readonly` **\[FEATURE\_REF\_BRAND\]**: `true`
 
----
+***
 
 ### key
 

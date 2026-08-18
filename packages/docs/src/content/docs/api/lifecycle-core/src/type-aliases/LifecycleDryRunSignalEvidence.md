@@ -13,13 +13,13 @@ title: "LifecycleDryRunSignalEvidence"
 
 > `readonly` `optional` **id?**: `string`
 
----
+***
 
 ### occurredAt
 
 > `readonly` **occurredAt**: `Date`
 
----
+***
 
 ### type
 

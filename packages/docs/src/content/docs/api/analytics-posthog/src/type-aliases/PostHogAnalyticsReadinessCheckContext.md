@@ -13,7 +13,7 @@ title: "PostHogAnalyticsReadinessCheckContext"
 
 > `readonly` **config**: [`PostHogConfig`](/api/integrations-posthog/src/interfaces/posthogconfig/)
 
----
+***
 
 ### signal?
 

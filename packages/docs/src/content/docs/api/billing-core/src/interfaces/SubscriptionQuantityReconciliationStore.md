@@ -21,7 +21,7 @@ title: "SubscriptionQuantityReconciliationStore"
 
 `Promise`\<[`SubscriptionQuantitySnapshot`](/api/billing-core/src/type-aliases/subscriptionquantitysnapshot/)\>
 
----
+***
 
 ### findCurrent()
 
@@ -41,7 +41,7 @@ title: "SubscriptionQuantityReconciliationStore"
 
 `Promise`\<[`SubscriptionQuantitySnapshot`](/api/billing-core/src/type-aliases/subscriptionquantitysnapshot/) \| `null`\>
 
----
+***
 
 ### getDiagnostics()
 
@@ -63,7 +63,7 @@ title: "SubscriptionQuantityReconciliationStore"
 
 `Promise`\<[`SubscriptionQuantityDiagnostics`](/api/billing-core/src/type-aliases/subscriptionquantitydiagnostics/)\>
 
----
+***
 
 ### listRecent()
 
@@ -79,7 +79,7 @@ title: "SubscriptionQuantityReconciliationStore"
 
 `Promise`\<[`SubscriptionQuantitySnapshot`](/api/billing-core/src/type-aliases/subscriptionquantitysnapshot/)[]\>
 
----
+***
 
 ### listRepairable()
 
@@ -95,7 +95,7 @@ title: "SubscriptionQuantityReconciliationStore"
 
 `Promise`\<[`SubscriptionQuantitySnapshot`](/api/billing-core/src/type-aliases/subscriptionquantitysnapshot/)[]\>
 
----
+***
 
 ### saveIfCurrent()
 

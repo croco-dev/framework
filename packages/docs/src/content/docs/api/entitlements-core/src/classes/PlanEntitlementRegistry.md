@@ -46,7 +46,7 @@ title: "PlanEntitlementRegistry"
 
 `Promise`\<[`EntitlementRule`](/api/entitlements-core/src/type-aliases/entitlementrule/) \| `null`\>
 
----
+***
 
 ### findRuleByPlanVersion()
 
@@ -70,7 +70,7 @@ title: "PlanEntitlementRegistry"
 
 `Promise`\<[`EntitlementRule`](/api/entitlements-core/src/type-aliases/entitlementrule/) \| `null`\>
 
----
+***
 
 ### getEntitlements()
 
@@ -86,7 +86,7 @@ title: "PlanEntitlementRegistry"
 
 `Promise`\<[`EntitlementRule`](/api/entitlements-core/src/type-aliases/entitlementrule/)[]\>
 
----
+***
 
 ### getEntitlementsByPlanVersion()
 

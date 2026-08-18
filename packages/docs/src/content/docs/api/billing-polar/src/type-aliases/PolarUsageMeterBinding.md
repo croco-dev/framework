@@ -11,7 +11,7 @@ title: "PolarUsageMeterBinding"
 
 ### Meter
 
-`Meter` _extends_ [`MeterRef`](/api/metering-core/src/type-aliases/meterref/) = [`MeterRef`](/api/metering-core/src/type-aliases/meterref/)
+`Meter` *extends* [`MeterRef`](/api/metering-core/src/type-aliases/meterref/) = [`MeterRef`](/api/metering-core/src/type-aliases/meterref/)
 
 ## Properties
 
@@ -19,19 +19,19 @@ title: "PolarUsageMeterBinding"
 
 > `readonly` **eventName**: `string`
 
----
+***
 
 ### meter
 
 > `readonly` **meter**: `Meter`
 
----
+***
 
 ### providerMeterId
 
 > `readonly` **providerMeterId**: `string`
 
----
+***
 
 ### valueMetadataKey
 

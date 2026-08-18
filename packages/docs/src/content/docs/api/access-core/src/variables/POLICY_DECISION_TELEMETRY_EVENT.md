@@ -5,4 +5,4 @@ prev: false
 title: "POLICY_DECISION_TELEMETRY_EVENT"
 ---
 
-> `const` **POLICY_DECISION_TELEMETRY_EVENT**: `"policy.decision"` = `"policy.decision"`
+> `const` **POLICY\_DECISION\_TELEMETRY\_EVENT**: `"policy.decision"` = `"policy.decision"`

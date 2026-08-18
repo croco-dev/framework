@@ -13,43 +13,43 @@ title: "SubscriptionQuantityDiagnostics"
 
 > `readonly` **drifted**: `number`
 
----
+***
 
 ### oldestPendingAt
 
 > `readonly` **oldestPendingAt**: `Date` \| `null`
 
----
+***
 
 ### pending
 
 > `readonly` **pending**: `number`
 
----
+***
 
 ### providerMismatches
 
 > `readonly` **providerMismatches**: `number`
 
----
+***
 
 ### retryExhausted
 
 > `readonly` **retryExhausted**: `number`
 
----
+***
 
 ### sourceMismatches
 
 > `readonly` **sourceMismatches**: `number`
 
----
+***
 
 ### truncated
 
 > `readonly` **truncated**: `boolean`
 
----
+***
 
 ### unsupported
 

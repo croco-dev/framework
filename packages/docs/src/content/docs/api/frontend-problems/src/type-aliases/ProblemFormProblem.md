@@ -11,8 +11,8 @@ title: "ProblemFormProblem"
 
 ### FieldName
 
-`FieldName` _extends_ `string`
+`FieldName` *extends* `string`
 
 ### Problem
 
-`Problem` _extends_ [`ProblemDeclaration`](/api/frontend-problems/src/type-aliases/problemdeclaration/)
+`Problem` *extends* [`ProblemDeclaration`](/api/frontend-problems/src/type-aliases/problemdeclaration/)

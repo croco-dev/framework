@@ -19,13 +19,13 @@ title: "AdminDataTableSortChangeEvent"
 
 > `readonly` **column**: [`AdminDataTableColumn`](/api/admin-react/src/type-aliases/admindatatablecolumn/)\<`TData`\>
 
----
+***
 
 ### sorting
 
 > `readonly` **sorting**: readonly [`AdminDataTableSort`](/api/admin-react/src/type-aliases/admindatatablesort/)\<`TData`\>[]
 
----
+***
 
 ### state
 

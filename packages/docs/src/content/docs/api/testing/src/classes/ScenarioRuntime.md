@@ -43,7 +43,7 @@ title: "ScenarioRuntime"
 
 `Promise`\<`void`\>
 
----
+***
 
 ### at()
 
@@ -67,7 +67,7 @@ title: "ScenarioRuntime"
 
 `this`
 
----
+***
 
 ### execute()
 
@@ -97,7 +97,7 @@ title: "ScenarioRuntime"
 
 `Promise`\<`T`\>
 
----
+***
 
 ### expectEventOnce()
 
@@ -113,7 +113,7 @@ title: "ScenarioRuntime"
 
 `this`
 
----
+***
 
 ### expectEvidence()
 
@@ -137,7 +137,7 @@ title: "ScenarioRuntime"
 
 `this`
 
----
+***
 
 ### expectProblem()
 
@@ -157,7 +157,7 @@ title: "ScenarioRuntime"
 
 `this`
 
----
+***
 
 ### expectTask()
 
@@ -177,7 +177,7 @@ title: "ScenarioRuntime"
 
 `this`
 
----
+***
 
 ### recordEvidence()
 
@@ -197,7 +197,7 @@ title: "ScenarioRuntime"
 
 `void`
 
----
+***
 
 ### run()
 

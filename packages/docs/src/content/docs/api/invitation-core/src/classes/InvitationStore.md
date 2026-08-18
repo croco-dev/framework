@@ -42,7 +42,7 @@ title: "InvitationStore"
 
 `Promise`\<[`EmailInvitationCreation`](/api/invitation-core/src/type-aliases/emailinvitationcreation/) \| `null`\>
 
----
+***
 
 ### claimEmailInvitationEvent()
 
@@ -70,7 +70,7 @@ title: "InvitationStore"
 
 `Promise`\<[`EmailInvitationCreation`](/api/invitation-core/src/type-aliases/emailinvitationcreation/) \| `null`\>
 
----
+***
 
 ### claimEmailInvitationNotification()
 
@@ -98,7 +98,7 @@ title: "InvitationStore"
 
 `Promise`\<[`EmailInvitationCreation`](/api/invitation-core/src/type-aliases/emailinvitationcreation/) \| `null`\>
 
----
+***
 
 ### compareAndSetStatus()
 
@@ -136,7 +136,7 @@ title: "InvitationStore"
 
 `Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/) \| `null`\>
 
----
+***
 
 ### completeEmailInvitationEvent()
 
@@ -160,7 +160,7 @@ title: "InvitationStore"
 
 `Promise`\<[`EmailInvitationCreation`](/api/invitation-core/src/type-aliases/emailinvitationcreation/) \| `null`\>
 
----
+***
 
 ### completeEmailInvitationNotification()
 
@@ -184,7 +184,7 @@ title: "InvitationStore"
 
 `Promise`\<[`EmailInvitationCreation`](/api/invitation-core/src/type-aliases/emailinvitationcreation/) \| `null`\>
 
----
+***
 
 ### countPendingByTenant()
 
@@ -204,7 +204,7 @@ title: "InvitationStore"
 
 `Promise`\<`number`\>
 
----
+***
 
 ### createEmailInvitation()
 
@@ -220,7 +220,7 @@ title: "InvitationStore"
 
 `Promise`\<[`EmailInvitationCreation`](/api/invitation-core/src/type-aliases/emailinvitationcreation/)\>
 
----
+***
 
 ### deleteExpiredEmailInvitationCreations()
 
@@ -236,7 +236,7 @@ title: "InvitationStore"
 
 `Promise`\<`number`\>
 
----
+***
 
 ### findAllByTenant()
 
@@ -252,7 +252,7 @@ title: "InvitationStore"
 
 `Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/)[]\>
 
----
+***
 
 ### findById()
 
@@ -268,7 +268,7 @@ title: "InvitationStore"
 
 `Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/) \| `null`\>
 
----
+***
 
 ### findByTenantAndEmail()
 
@@ -288,7 +288,7 @@ title: "InvitationStore"
 
 `Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/) \| `null`\>
 
----
+***
 
 ### findByTokenHash()
 
@@ -304,7 +304,7 @@ title: "InvitationStore"
 
 `Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/) \| `null`\>
 
----
+***
 
 ### findEmailInvitationCreation()
 
@@ -324,7 +324,7 @@ title: "InvitationStore"
 
 `Promise`\<[`EmailInvitationCreation`](/api/invitation-core/src/type-aliases/emailinvitationcreation/) \| `null`\>
 
----
+***
 
 ### releaseEmailInvitationEvent()
 
@@ -348,7 +348,7 @@ title: "InvitationStore"
 
 `Promise`\<`void`\>
 
----
+***
 
 ### releaseEmailInvitationNotification()
 
@@ -372,7 +372,7 @@ title: "InvitationStore"
 
 `Promise`\<`void`\>
 
----
+***
 
 ### save()
 
@@ -388,7 +388,7 @@ title: "InvitationStore"
 
 `Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/)\>
 
----
+***
 
 ### updateStatus()
 

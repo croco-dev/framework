@@ -17,7 +17,7 @@ title: "TraceDecoratorOptions"
 
 Span에 추가할 속성 집합입니다.
 
----
+***
 
 ### name?
 

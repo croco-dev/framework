@@ -30,7 +30,7 @@ Tenant data
 
 The created tenant
 
----
+***
 
 ### delete()
 
@@ -52,7 +52,7 @@ Tenant ID
 
 True if deleted, false if not found
 
----
+***
 
 ### exists()
 
@@ -74,7 +74,7 @@ Tenant ID
 
 True if exists, false otherwise
 
----
+***
 
 ### findAll()
 
@@ -96,7 +96,7 @@ Filter criteria
 
 Array of matching tenants
 
----
+***
 
 ### findById()
 
@@ -118,7 +118,7 @@ Tenant ID
 
 The tenant if found, null otherwise
 
----
+***
 
 ### findBySlug()
 
@@ -140,7 +140,7 @@ Tenant slug/identifier
 
 The tenant if found, null otherwise
 
----
+***
 
 ### update()
 
@@ -168,7 +168,7 @@ Partial tenant data to update
 
 The updated tenant
 
----
+***
 
 ### updateSettings()
 

@@ -13,13 +13,13 @@ title: "ArchitecturePolicyPackageGroup"
 
 > `readonly` `optional` **description?**: `string`
 
----
+***
 
 ### packages?
 
 > `readonly` `optional` **packages?**: readonly `string`[]
 
----
+***
 
 ### paths?
 

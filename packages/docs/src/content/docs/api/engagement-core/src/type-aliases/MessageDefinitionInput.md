@@ -11,19 +11,19 @@ title: "MessageDefinitionInput"
 
 ### TId
 
-`TId` _extends_ `string` = `string`
+`TId` *extends* `string` = `string`
 
 ### TTopic
 
-`TTopic` _extends_ `string` = `string`
+`TTopic` *extends* `string` = `string`
 
 ### TData
 
-`TData` _extends_ `z.ZodTypeAny` = `z.ZodTypeAny`
+`TData` *extends* `z.ZodTypeAny` = `z.ZodTypeAny`
 
 ### TChannels
 
-`TChannels` _extends_ readonly [`MessageChannel`](/api/engagement-core/src/type-aliases/messagechannel/)[] = readonly [`MessageChannel`](/api/engagement-core/src/type-aliases/messagechannel/)[]
+`TChannels` *extends* readonly [`MessageChannel`](/api/engagement-core/src/type-aliases/messagechannel/)[] = readonly [`MessageChannel`](/api/engagement-core/src/type-aliases/messagechannel/)[]
 
 ## Properties
 
@@ -31,19 +31,19 @@ title: "MessageDefinitionInput"
 
 > `readonly` **channels**: `TChannels`
 
----
+***
 
 ### data
 
 > `readonly` **data**: `TData`
 
----
+***
 
 ### id
 
 > `readonly` **id**: `TId`
 
----
+***
 
 ### topic
 

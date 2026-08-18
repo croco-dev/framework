@@ -11,7 +11,7 @@ title: "routeQuerySchema"
 
 ### TContract
 
-`TContract` _extends_ [`RouteContractWithQuery`](/api/protocols-rest/src/type-aliases/routecontractwithquery/)
+`TContract` *extends* [`RouteContractWithQuery`](/api/protocols-rest/src/type-aliases/routecontractwithquery/)
 
 ## Parameters
 

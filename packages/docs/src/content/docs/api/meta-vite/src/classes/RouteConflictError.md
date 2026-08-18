@@ -43,7 +43,7 @@ title: "RouteConflictError"
 
 `Error.cause`
 
----
+***
 
 ### message
 
@@ -53,7 +53,7 @@ title: "RouteConflictError"
 
 `Error.message`
 
----
+***
 
 ### name
 
@@ -63,7 +63,7 @@ title: "RouteConflictError"
 
 `Error.name`
 
----
+***
 
 ### stack?
 
@@ -73,7 +73,7 @@ title: "RouteConflictError"
 
 `Error.stack`
 
----
+***
 
 ### stackTraceLimit
 
@@ -106,7 +106,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack; // Similar to `new Error().stack`
+myObject.stack;  // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -161,7 +161,7 @@ a();
 
 `Error.captureStackTrace`
 
----
+***
 
 ### prepareStackTrace()
 

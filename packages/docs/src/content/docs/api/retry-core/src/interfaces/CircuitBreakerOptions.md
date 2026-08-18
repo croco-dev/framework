@@ -13,7 +13,7 @@ title: "CircuitBreakerOptions"
 
 > **circuitId**: `string`
 
----
+***
 
 ### failureThreshold?
 
@@ -21,13 +21,13 @@ title: "CircuitBreakerOptions"
 
 Positive safe integer (default: 5).
 
----
+***
 
 ### fallback?
 
 > `optional` **fallback?**: [`CircuitBreakerFallback`](/api/retry-core/src/type-aliases/circuitbreakerfallback/)\<`unknown`\>
 
----
+***
 
 ### halfOpenRequests?
 
@@ -35,7 +35,7 @@ Positive safe integer (default: 5).
 
 Positive safe integer (default: 1).
 
----
+***
 
 ### openDuration?
 
@@ -43,7 +43,7 @@ Positive safe integer (default: 1).
 
 Positive integer milliseconds up to 2,147,483,647 (default: 30000).
 
----
+***
 
 ### stateStore?
 

@@ -11,31 +11,31 @@ title: "SeverityNumber"
 
 > **DEBUG**: `5`
 
----
+***
 
 ### ERROR
 
 > **ERROR**: `17`
 
----
+***
 
 ### FATAL
 
 > **FATAL**: `21`
 
----
+***
 
 ### INFO
 
 > **INFO**: `9`
 
----
+***
 
 ### TRACE
 
 > **TRACE**: `1`
 
----
+***
 
 ### WARN
 

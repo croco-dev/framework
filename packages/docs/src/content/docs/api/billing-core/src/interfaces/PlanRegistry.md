@@ -19,7 +19,7 @@ Get all currently effective plan versions, one per plan family.
 
 `Promise`\<[`PlanVersionDefinition`](/api/billing-core/src/type-aliases/planversiondefinition/)[]\>
 
----
+***
 
 ### getAllPlanVersions()
 
@@ -37,7 +37,7 @@ Get every published version, including future-effective versions.
 
 `Promise`\<[`PlanVersionDefinition`](/api/billing-core/src/type-aliases/planversiondefinition/)[]\>
 
----
+***
 
 ### getPlan()
 
@@ -55,7 +55,7 @@ Get the currently effective version for a plan family.
 
 `Promise`\<[`PlanVersionDefinition`](/api/billing-core/src/type-aliases/planversiondefinition/) \| `null`\>
 
----
+***
 
 ### getPlanAtDate()
 
@@ -77,7 +77,7 @@ Get the identified plan version effective at a historical instant.
 
 `Promise`\<[`PlanVersionDefinition`](/api/billing-core/src/type-aliases/planversiondefinition/) \| `null`\>
 
----
+***
 
 ### getPlanVersion()
 
@@ -95,7 +95,7 @@ Get an immutable plan version by its pinned reference.
 
 `Promise`\<[`PlanVersionDefinition`](/api/billing-core/src/type-aliases/planversiondefinition/) \| `null`\>
 
----
+***
 
 ### publishPlanVersion()
 
@@ -113,7 +113,7 @@ Publish a plan version exactly once.
 
 `Promise`\<`void`\>
 
----
+***
 
 ### resolveProviderPlanVersion()
 

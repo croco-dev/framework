@@ -11,13 +11,13 @@ title: "ExecutionContinuationConflictEvidence"
 
 > `optional` **currentLeaseExpiresAt?**: `string`
 
----
+***
 
 ### currentStatus?
 
 > `optional` **currentStatus?**: `string`
 
----
+***
 
 ### currentWorkerId?
 

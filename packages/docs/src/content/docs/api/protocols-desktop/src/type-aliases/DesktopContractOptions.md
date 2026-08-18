@@ -11,15 +11,15 @@ title: "DesktopContractOptions"
 
 ### TCommands
 
-`TCommands` _extends_ [`DesktopCommandRecord`](/api/protocols-desktop/src/type-aliases/desktopcommandrecord/)
+`TCommands` *extends* [`DesktopCommandRecord`](/api/protocols-desktop/src/type-aliases/desktopcommandrecord/)
 
 ### TEvents
 
-`TEvents` _extends_ [`DesktopEventRecord`](/api/protocols-desktop/src/type-aliases/desktopeventrecord/)
+`TEvents` *extends* [`DesktopEventRecord`](/api/protocols-desktop/src/type-aliases/desktopeventrecord/)
 
 ### TGrants
 
-`TGrants` _extends_ [`DesktopGrantRecord`](/api/protocols-desktop/src/type-aliases/desktopgrantrecord/)
+`TGrants` *extends* [`DesktopGrantRecord`](/api/protocols-desktop/src/type-aliases/desktopgrantrecord/)
 
 ## Properties
 
@@ -27,13 +27,13 @@ title: "DesktopContractOptions"
 
 > `readonly` `optional` **commands?**: `TCommands`
 
----
+***
 
 ### events?
 
 > `readonly` `optional` **events?**: `TEvents`
 
----
+***
 
 ### grants?
 

@@ -11,11 +11,11 @@ title: "DesktopEffectDefinition"
 
 ### TNamespace
 
-`TNamespace` _extends_ `string` = `string`
+`TNamespace` *extends* `string` = `string`
 
 ### TMethods
 
-`TMethods` _extends_ `Readonly`\<`Record`\<`string`, [`DesktopEffectMethodDefinition`](/api/protocols-desktop/src/type-aliases/desktopeffectmethoddefinition/)\>\> = `Readonly`\<`Record`\<`string`, [`DesktopEffectMethodDefinition`](/api/protocols-desktop/src/type-aliases/desktopeffectmethoddefinition/)\>\>
+`TMethods` *extends* `Readonly`\<`Record`\<`string`, [`DesktopEffectMethodDefinition`](/api/protocols-desktop/src/type-aliases/desktopeffectmethoddefinition/)\>\> = `Readonly`\<`Record`\<`string`, [`DesktopEffectMethodDefinition`](/api/protocols-desktop/src/type-aliases/desktopeffectmethoddefinition/)\>\>
 
 ## Properties
 
@@ -23,13 +23,13 @@ title: "DesktopEffectDefinition"
 
 > `readonly` **definitionType**: `"effect"`
 
----
+***
 
 ### methods
 
 > `readonly` **methods**: `TMethods`
 
----
+***
 
 ### namespace
 

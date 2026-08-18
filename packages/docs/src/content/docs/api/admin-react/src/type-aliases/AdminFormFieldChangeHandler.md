@@ -11,13 +11,13 @@ title: "AdminFormFieldChangeHandler"
 
 ### TValues
 
-`TValues` _extends_ `object`
+`TValues` *extends* `object`
 
 ## Type Parameters
 
 ### TName
 
-`TName` _extends_ [`AdminFormFieldName`](/api/admin-react/src/type-aliases/adminformfieldname/)\<`TValues`\>
+`TName` *extends* [`AdminFormFieldName`](/api/admin-react/src/type-aliases/adminformfieldname/)\<`TValues`\>
 
 ## Parameters
 

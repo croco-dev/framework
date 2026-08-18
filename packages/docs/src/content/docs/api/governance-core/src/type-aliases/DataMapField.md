@@ -13,49 +13,49 @@ title: "DataMapField"
 
 > `readonly` **classifications**: readonly [`DataClassificationTag`](/api/governance-core/src/type-aliases/dataclassificationtag/)[]
 
----
+***
 
 ### deleted
 
 > `readonly` **deleted**: `boolean`
 
----
+***
 
 ### description?
 
 > `readonly` `optional` **description?**: `string`
 
----
+***
 
 ### exported
 
 > `readonly` **exported**: `boolean`
 
----
+***
 
 ### id
 
 > `readonly` **id**: `string`
 
----
+***
 
 ### label?
 
 > `readonly` `optional` **label?**: `string`
 
----
+***
 
 ### retentionPolicyId?
 
 > `readonly` `optional` **retentionPolicyId?**: `string`
 
----
+***
 
 ### source?
 
 > `readonly` `optional` **source?**: `string`
 
----
+***
 
 ### valueType?
 

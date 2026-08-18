@@ -13,19 +13,19 @@ title: "ProblemOptions"
 
 > `optional` **cause?**: `Error`
 
----
+***
 
 ### extensions?
 
 > `optional` **extensions?**: [`ProblemExtensions`](/api/problems-core/src/type-aliases/problemextensions/)
 
----
+***
 
 ### instance?
 
 > `optional` **instance?**: `string`
 
----
+***
 
 ### type?
 

@@ -5,4 +5,4 @@ prev: false
 title: "TenantIsolationDiagnosticCode"
 ---
 
-> **TenantIsolationDiagnosticCode** = _typeof_ [`TENANT_ISOLATION_DIAGNOSTIC_CODES`](/api/tenant-core/src/variables/tenant_isolation_diagnostic_codes/)\[keyof _typeof_ [`TENANT_ISOLATION_DIAGNOSTIC_CODES`](/api/tenant-core/src/variables/tenant_isolation_diagnostic_codes/)\]
+> **TenantIsolationDiagnosticCode** = *typeof* [`TENANT_ISOLATION_DIAGNOSTIC_CODES`](/api/tenant-core/src/variables/tenant_isolation_diagnostic_codes/)\[keyof *typeof* [`TENANT_ISOLATION_DIAGNOSTIC_CODES`](/api/tenant-core/src/variables/tenant_isolation_diagnostic_codes/)\]

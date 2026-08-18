@@ -13,7 +13,7 @@ title: "ContractGraphBlockingDiagnostics"
 
 > `readonly` **blockingDiagnostics**: readonly [`ContractDiagnostic`](/api/protocols-core/src/type-aliases/contractdiagnostic/)[]
 
----
+***
 
 ### errors
 

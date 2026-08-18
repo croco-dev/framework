@@ -18,13 +18,13 @@ const manager = new QuotaManager(usageStorage, meterRegistry);
 
 // 원자적 quota 체크 및 기록
 const result = await manager.checkAndRecord({
-  tenantId: "tenant-123",
-  meterId: "api_calls",
+  tenantId: 'tenant-123',
+  meterId: 'api_calls',
   value: 1,
 });
 
 if (!result.allowed) {
-  throw new QuotaExceededProblem("api_calls", result.quota, result.currentUsage);
+  throw new QuotaExceededProblem('api_calls', result.quota, result.currentUsage);
 }
 ```
 
@@ -60,7 +60,7 @@ if (!result.allowed) {
 
 `Promise`\<[`QuotaCheckAndRecordResult`](/api/metering-core/src/type-aliases/quotacheckandrecordresult/)\>
 
----
+***
 
 ### validateOrThrow()
 

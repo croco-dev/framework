@@ -18,7 +18,7 @@ Uses MetadataStorage to store trigger configurations.
 
 `Map`\<`object`, `Map`\<`string` \| `symbol`, [`AnyTriggerMetadata`](/api/triggers-core/src/type-aliases/anytriggermetadata/)\>\>
 
----
+***
 
 ### getTriggers()
 
@@ -34,7 +34,7 @@ Uses MetadataStorage to store trigger configurations.
 
 `Map`\<`string` \| `symbol`, [`AnyTriggerMetadata`](/api/triggers-core/src/type-aliases/anytriggermetadata/)\>
 
----
+***
 
 ### getTriggersByType()
 
@@ -44,7 +44,7 @@ Uses MetadataStorage to store trigger configurations.
 
 ##### T
 
-`T` _extends_ [`TriggerType`](/api/triggers-core/src/type-aliases/triggertype/)
+`T` *extends* [`TriggerType`](/api/triggers-core/src/type-aliases/triggertype/)
 
 #### Parameters
 
@@ -60,7 +60,7 @@ Uses MetadataStorage to store trigger configurations.
 
 `Map`\<`string` \| `symbol`, [`AnyTriggerMetadata`](/api/triggers-core/src/type-aliases/anytriggermetadata/)\>
 
----
+***
 
 ### register()
 
@@ -76,7 +76,7 @@ Uses MetadataStorage to store trigger configurations.
 
 `void`
 
----
+***
 
 ### getInstance()
 

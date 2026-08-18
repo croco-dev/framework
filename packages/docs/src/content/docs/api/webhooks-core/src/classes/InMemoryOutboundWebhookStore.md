@@ -47,7 +47,7 @@ title: "InMemoryOutboundWebhookStore"
 
 `OutboundWebhookStore.claimDelivery`
 
----
+***
 
 ### commitEvent()
 
@@ -73,7 +73,7 @@ readonly [`OutboundWebhookEndpoint`](/api/webhooks-core/src/type-aliases/outboun
 
 `OutboundWebhookStore.commitEvent`
 
----
+***
 
 ### createReplay()
 
@@ -107,7 +107,7 @@ readonly [`OutboundWebhookEndpoint`](/api/webhooks-core/src/type-aliases/outboun
 
 `OutboundWebhookStore.createReplay`
 
----
+***
 
 ### getDelivery()
 
@@ -131,7 +131,7 @@ readonly [`OutboundWebhookEndpoint`](/api/webhooks-core/src/type-aliases/outboun
 
 `OutboundWebhookStore.getDelivery`
 
----
+***
 
 ### getEvent()
 
@@ -155,7 +155,7 @@ readonly [`OutboundWebhookEndpoint`](/api/webhooks-core/src/type-aliases/outboun
 
 `OutboundWebhookStore.getEvent`
 
----
+***
 
 ### listAttempts()
 
@@ -179,7 +179,7 @@ readonly [`OutboundWebhookEndpoint`](/api/webhooks-core/src/type-aliases/outboun
 
 `OutboundWebhookStore.listAttempts`
 
----
+***
 
 ### listDeliveries()
 
@@ -203,7 +203,7 @@ readonly [`OutboundWebhookEndpoint`](/api/webhooks-core/src/type-aliases/outboun
 
 `OutboundWebhookStore.listDeliveries`
 
----
+***
 
 ### listUnpublishedIntents()
 
@@ -223,7 +223,7 @@ readonly [`OutboundWebhookEndpoint`](/api/webhooks-core/src/type-aliases/outboun
 
 `OutboundWebhookStore.listUnpublishedIntents`
 
----
+***
 
 ### markIntentPublished()
 
@@ -251,7 +251,7 @@ readonly [`OutboundWebhookEndpoint`](/api/webhooks-core/src/type-aliases/outboun
 
 `OutboundWebhookStore.markIntentPublished`
 
----
+***
 
 ### recordAttempt()
 
@@ -285,7 +285,7 @@ readonly [`OutboundWebhookEndpoint`](/api/webhooks-core/src/type-aliases/outboun
 
 `OutboundWebhookStore.recordAttempt`
 
----
+***
 
 ### releaseDeliveryClaim()
 
@@ -309,7 +309,7 @@ readonly [`OutboundWebhookEndpoint`](/api/webhooks-core/src/type-aliases/outboun
 
 `OutboundWebhookStore.releaseDeliveryClaim`
 
----
+***
 
 ### scheduleDelivery()
 

@@ -39,7 +39,7 @@ Hono 앱을 API Gateway v2 형태의 AWS Lambda 핸들러로 연결하는 어댑
 
 [`LambdaHandler`](/api/preset-lambda/src/type-aliases/lambdahandler/)
 
----
+***
 
 ### getExecutionEnv()
 

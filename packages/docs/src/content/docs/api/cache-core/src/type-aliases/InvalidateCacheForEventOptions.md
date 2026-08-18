@@ -13,19 +13,19 @@ title: "InvalidateCacheForEventOptions"
 
 > `readonly` **adapter**: [`CacheInvalidationAdapter`](/api/cache-core/src/type-aliases/cacheinvalidationadapter/)
 
----
+***
 
 ### event
 
 > `readonly` **event**: [`CacheInvalidationEventLike`](/api/cache-core/src/type-aliases/cacheinvalidationeventlike/)
 
----
+***
 
 ### manifest
 
 > `readonly` **manifest**: [`CacheInvalidationManifest`](/api/cache-core/src/type-aliases/cacheinvalidationmanifest/)
 
----
+***
 
 ### telemetry?
 

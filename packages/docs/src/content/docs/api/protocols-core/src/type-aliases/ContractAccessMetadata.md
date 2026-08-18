@@ -13,7 +13,7 @@ title: "ContractAccessMetadata"
 
 > `readonly` **guards**: readonly [`ContractMetadataReference`](/api/protocols-core/src/type-aliases/contractmetadatareference/)[]
 
----
+***
 
 ### roles
 

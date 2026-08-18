@@ -13,55 +13,55 @@ title: "DataGovernanceResource"
 
 > `readonly` `optional` **description?**: `string`
 
----
+***
 
 ### fields
 
 > `readonly` **fields**: [`NonEmptyArray`](/api/governance-core/src/type-aliases/nonemptyarray/)\<[`DataGovernanceField`](/api/governance-core/src/type-aliases/datagovernancefield/)\>
 
----
+***
 
 ### kind
 
 > `readonly` **kind**: `string`
 
----
+***
 
 ### label
 
 > `readonly` **label**: `string`
 
----
+***
 
 ### metadata?
 
 > `readonly` `optional` **metadata?**: `Readonly`\<`Record`\<`string`, `unknown`\>\>
 
----
+***
 
 ### problems?
 
 > `readonly` `optional` **problems?**: readonly [`DataGovernanceProblemContract`](/api/governance-core/src/type-aliases/datagovernanceproblemcontract/)[]
 
----
+***
 
 ### retentionPolicies?
 
 > `readonly` `optional` **retentionPolicies?**: readonly [`DataRetentionPolicy`](/api/governance-core/src/type-aliases/dataretentionpolicy/)[]
 
----
+***
 
 ### scope
 
 > `readonly` **scope**: [`DataGovernanceScope`](/api/governance-core/src/type-aliases/datagovernancescope/)
 
----
+***
 
 ### subject
 
 > `readonly` **subject**: [`DataSubjectIdentity`](/api/governance-core/src/type-aliases/datasubjectidentity/)
 
----
+***
 
 ### subjectRequests?
 

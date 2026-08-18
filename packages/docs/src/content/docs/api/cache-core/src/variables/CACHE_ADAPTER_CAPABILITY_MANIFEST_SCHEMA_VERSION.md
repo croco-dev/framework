@@ -5,4 +5,4 @@ prev: false
 title: "CACHE_ADAPTER_CAPABILITY_MANIFEST_SCHEMA_VERSION"
 ---
 
-> `const` **CACHE_ADAPTER_CAPABILITY_MANIFEST_SCHEMA_VERSION**: `"croco.cache-adapter-capabilities.v1"`
+> `const` **CACHE\_ADAPTER\_CAPABILITY\_MANIFEST\_SCHEMA\_VERSION**: `"croco.cache-adapter-capabilities.v1"`

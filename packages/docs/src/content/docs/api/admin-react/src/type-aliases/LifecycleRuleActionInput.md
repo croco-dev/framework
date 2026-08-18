@@ -13,25 +13,25 @@ title: "LifecycleRuleActionInput"
 
 > `readonly` **action**: [`LifecycleRuleAdminAction`](/api/admin-react/src/type-aliases/lifecycleruleadminaction/)
 
----
+***
 
 ### actor
 
 > `readonly` **actor**: `string`
 
----
+***
 
 ### grantedPermissions
 
 > `readonly` **grantedPermissions**: readonly `string`[]
 
----
+***
 
 ### idempotencyKey
 
 > `readonly` **idempotencyKey**: `string`
 
----
+***
 
 ### reason
 

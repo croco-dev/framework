@@ -17,19 +17,19 @@ title: "SearchFieldConfig"
 
 > `optional` **derived?**: [`SearchDerivedFieldConfig`](/api/search-core/src/type-aliases/searchderivedfieldconfig/)[]
 
----
+***
 
 ### filterable?
 
 > `optional` **filterable?**: `boolean`
 
----
+***
 
 ### searchable?
 
 > `optional` **searchable?**: `boolean`
 
----
+***
 
 ### sortable?
 

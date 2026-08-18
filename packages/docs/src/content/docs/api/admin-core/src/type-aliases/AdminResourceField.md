@@ -13,49 +13,49 @@ title: "AdminResourceField"
 
 > `readonly` `optional` **description?**: `string`
 
----
+***
 
 ### filterable?
 
 > `readonly` `optional` **filterable?**: `boolean`
 
----
+***
 
 ### id
 
 > `readonly` **id**: `string`
 
----
+***
 
 ### label
 
 > `readonly` **label**: `string`
 
----
+***
 
 ### problemCode?
 
 > `readonly` `optional` **problemCode?**: `string`
 
----
+***
 
 ### sensitive?
 
 > `readonly` `optional` **sensitive?**: `boolean`
 
----
+***
 
 ### sortable?
 
 > `readonly` `optional` **sortable?**: `boolean`
 
----
+***
 
 ### source?
 
 > `readonly` `optional` **source?**: [`AdminResourceSource`](/api/admin-core/src/type-aliases/adminresourcesource/)
 
----
+***
 
 ### valueType
 

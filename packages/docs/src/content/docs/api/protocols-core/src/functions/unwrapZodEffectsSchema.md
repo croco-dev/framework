@@ -11,7 +11,7 @@ title: "unwrapZodEffectsSchema"
 
 ### TSchema
 
-`TSchema` _extends_ `ZodType`\<`any`, `ZodTypeDef`, `any`\> \| `null` \| `undefined`
+`TSchema` *extends* `ZodType`\<`any`, `ZodTypeDef`, `any`\> \| `null` \| `undefined`
 
 ## Parameters
 

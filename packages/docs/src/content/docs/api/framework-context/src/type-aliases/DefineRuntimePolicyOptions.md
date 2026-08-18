@@ -17,4 +17,4 @@ title: "DefineRuntimePolicyOptions"
 
 ### TPlatform
 
-`TPlatform` _extends_ [`RuntimePlatform`](/api/framework-context/src/type-aliases/runtimeplatform/)
+`TPlatform` *extends* [`RuntimePlatform`](/api/framework-context/src/type-aliases/runtimeplatform/)

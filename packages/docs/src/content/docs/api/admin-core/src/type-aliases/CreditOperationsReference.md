@@ -13,25 +13,25 @@ title: "CreditOperationsReference"
 
 > `readonly` `optional` **maskedValue?**: `string`
 
----
+***
 
 ### requiredPermissions?
 
 > `readonly` `optional` **requiredPermissions?**: readonly `string`[]
 
----
+***
 
 ### type
 
 > `readonly` **type**: `string`
 
----
+***
 
 ### value?
 
 > `readonly` `optional` **value?**: `string`
 
----
+***
 
 ### visibility
 

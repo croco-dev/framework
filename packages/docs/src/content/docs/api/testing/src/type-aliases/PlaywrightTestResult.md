@@ -13,31 +13,31 @@ title: "PlaywrightTestResult"
 
 > `readonly` `optional` **attachments?**: readonly `object`[]
 
----
+***
 
 ### duration
 
 > `readonly` **duration**: `number`
 
----
+***
 
 ### error?
 
 > `readonly` `optional` **error?**: `unknown`
 
----
+***
 
 ### errors?
 
 > `readonly` `optional` **errors?**: readonly `unknown`[]
 
----
+***
 
 ### retry?
 
 > `readonly` `optional` **retry?**: `number`
 
----
+***
 
 ### status
 

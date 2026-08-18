@@ -19,13 +19,13 @@ title: "AdminDataTableRowActionEvent"
 
 > `readonly` **action**: [`AdminActionContract`](/api/admin-react/src/type-aliases/adminactioncontract/)
 
----
+***
 
 ### row
 
 > `readonly` **row**: [`AdminDataTableRow`](/api/admin-react/src/type-aliases/admindatatablerow/)\<`TData`\>
 
----
+***
 
 ### state
 

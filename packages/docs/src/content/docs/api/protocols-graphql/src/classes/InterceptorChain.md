@@ -47,7 +47,7 @@ title: "InterceptorChain"
 
 `Promise`\<`T`\>
 
----
+***
 
 ### execute()
 

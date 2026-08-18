@@ -13,19 +13,19 @@ title: "RuntimeInspectorSnapshot"
 
 > `readonly` **activeRequestCount**: `number`
 
----
+***
 
 ### generatedAt
 
 > `readonly` **generatedAt**: `string`
 
----
+***
 
 ### requestCount
 
 > `readonly` **requestCount**: `number`
 
----
+***
 
 ### requests
 

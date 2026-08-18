@@ -5,6 +5,6 @@ prev: false
 title: "DRIZZLE_TOKEN"
 ---
 
-> `const` **DRIZZLE_TOKEN**: [`Token`](/api/framework-context/src/classes/token/)\<[`DrizzleMembershipClient`](/api/membership-drizzle/src/type-aliases/drizzlemembershipclient/)\>
+> `const` **DRIZZLE\_TOKEN**: [`Token`](/api/framework-context/src/classes/token/)\<[`DrizzleMembershipClient`](/api/membership-drizzle/src/type-aliases/drizzlemembershipclient/)\>
 
 멤버십 저장소용 Drizzle 클라이언트 주입 토큰입니다.

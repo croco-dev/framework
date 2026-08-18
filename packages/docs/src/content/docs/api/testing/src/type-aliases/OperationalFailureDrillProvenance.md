@@ -13,7 +13,7 @@ title: "OperationalFailureDrillProvenance"
 
 > `readonly` **boundary**: `string`
 
----
+***
 
 ### fixture
 

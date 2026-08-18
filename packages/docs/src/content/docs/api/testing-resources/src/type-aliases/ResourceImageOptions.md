@@ -13,7 +13,7 @@ title: "ResourceImageOptions"
 
 > `readonly` `optional` **allowUnpinnedImage?**: `boolean`
 
----
+***
 
 ### image?
 

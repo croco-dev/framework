@@ -13,13 +13,13 @@ title: "PlanVersionEntitlementMigrationMapping"
 
 > `readonly` `optional` **allowEmpty?**: `boolean`
 
----
+***
 
 ### planId
 
 > `readonly` **planId**: `string`
 
----
+***
 
 ### planVersionRef
 

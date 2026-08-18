@@ -15,13 +15,13 @@ Defines one deterministic metered-usage price tier, with `null` meaning no upper
 
 > `readonly` **meterKey**: `string`
 
----
+***
 
 ### unitAmount
 
 > `readonly` **unitAmount**: `number`
 
----
+***
 
 ### upTo
 

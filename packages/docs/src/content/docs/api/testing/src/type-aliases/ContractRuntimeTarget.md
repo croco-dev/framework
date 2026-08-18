@@ -13,13 +13,13 @@ title: "ContractRuntimeTarget"
 
 > `readonly` **capabilities**: [`RuntimeCapabilityManifest`](/api/framework-context/src/type-aliases/runtimecapabilitymanifest/)
 
----
+***
 
 ### execute
 
 > `readonly` **execute**: [`ContractExecutor`](/api/testing/src/type-aliases/contractexecutor/)
 
----
+***
 
 ### runtime
 

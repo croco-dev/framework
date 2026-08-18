@@ -13,4 +13,4 @@ Registry shape returned from [defineIdPrefixes](/api/gid-core/src/functions/defi
 
 ### T
 
-`T` _extends_ `Record`\<`string`, `string`\>
+`T` *extends* `Record`\<`string`, `string`\>

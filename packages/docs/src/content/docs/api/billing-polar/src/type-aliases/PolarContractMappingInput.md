@@ -13,19 +13,19 @@ title: "PolarContractMappingInput"
 
 > `readonly` **meterBindings**: readonly `object`[]
 
----
+***
 
 ### planVersionRef
 
 > `readonly` **planVersionRef**: `string`
 
----
+***
 
 ### priceIds
 
 > `readonly` **priceIds**: readonly `string`[]
 
----
+***
 
 ### productId
 

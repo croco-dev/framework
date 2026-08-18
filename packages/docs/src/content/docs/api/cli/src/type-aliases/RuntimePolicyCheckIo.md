@@ -13,7 +13,7 @@ title: "RuntimePolicyCheckIo"
 
 > `readonly` **cwd**: `string`
 
----
+***
 
 ### readFile
 
@@ -29,7 +29,7 @@ title: "RuntimePolicyCheckIo"
 
 `string`
 
----
+***
 
 ### stderr
 
@@ -45,7 +45,7 @@ title: "RuntimePolicyCheckIo"
 
 `void`
 
----
+***
 
 ### stdout
 

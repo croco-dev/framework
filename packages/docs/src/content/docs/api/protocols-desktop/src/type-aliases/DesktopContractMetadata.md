@@ -13,13 +13,13 @@ title: "DesktopContractMetadata"
 
 > `readonly` **grants**: readonly [`DesktopGrantMetadata`](/api/protocols-desktop/src/type-aliases/desktopgrantmetadata/)[]
 
----
+***
 
 ### members
 
 > `readonly` **members**: readonly [`DesktopContractMemberMetadata`](/api/protocols-desktop/src/type-aliases/desktopcontractmembermetadata/)[]
 
----
+***
 
 ### schema
 

@@ -17,7 +17,7 @@ title: "MetaViteRouteRegistryManifestSource"
 
 readonly [`ApiRouteIR`](/api/meta-vite/src/type-aliases/apirouteir/)[]
 
----
+***
 
 ### getPageRoutes
 

@@ -13,13 +13,13 @@ title: "LifecycleDescriptorDiff"
 
 > `readonly` **field**: `"actions"` \| `"contextRequirements"` \| `"cooldownDurationMs"` \| `"executableFingerprint"` \| `"severity"` \| `"triggers"`
 
----
+***
 
 ### next
 
 > `readonly` **next**: `string`
 
----
+***
 
 ### previous
 

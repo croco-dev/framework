@@ -15,13 +15,13 @@ Clerk 사용자 관리에 필요한 공개 타입입니다.
 
 > **banned**: `boolean`
 
----
+***
 
 ### createdAt
 
 > **createdAt**: `Date`
 
----
+***
 
 ### emailAddresses
 
@@ -39,43 +39,43 @@ Clerk 사용자 관리에 필요한 공개 타입입니다.
 
 > **verified**: `boolean`
 
----
+***
 
 ### firstName
 
 > **firstName**: `string` \| `null`
 
----
+***
 
 ### id
 
 > **id**: `string`
 
----
+***
 
 ### lastName
 
 > **lastName**: `string` \| `null`
 
----
+***
 
 ### primaryEmailAddressId
 
 > **primaryEmailAddressId**: `string` \| `null`
 
----
+***
 
 ### privateMetadata
 
 > **privateMetadata**: `Record`\<`string`, `unknown`\>
 
----
+***
 
 ### publicMetadata
 
 > **publicMetadata**: `Record`\<`string`, `unknown`\>
 
----
+***
 
 ### updatedAt
 

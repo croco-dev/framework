@@ -17,19 +17,19 @@ title: "CreditLedgerServiceOptions"
 
 `Date`
 
----
+***
 
 ### eventDelivery?
 
 > `readonly` `optional` **eventDelivery?**: `"development"` \| `"durable"`
 
----
+***
 
 ### eventPublisher?
 
 > `readonly` `optional` **eventPublisher?**: [`CreditLedgerEventPublisher`](/api/credits-core/src/interfaces/creditledgereventpublisher/)
 
----
+***
 
 ### idGenerator?
 
@@ -39,7 +39,7 @@ title: "CreditLedgerServiceOptions"
 
 `string`
 
----
+***
 
 ### store
 

@@ -29,19 +29,19 @@ title: "CreateCursorPageOptions"
 
 `string`
 
----
+***
 
 ### hasPrevious?
 
 > `optional` **hasPrevious?**: `boolean`
 
----
+***
 
 ### limit
 
 > **limit**: `number`
 
----
+***
 
 ### prevCursor?
 

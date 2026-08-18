@@ -13,25 +13,25 @@ title: "ContractGraphConsumerRouteCoverage"
 
 > `readonly` **coveredFields**: readonly [`ContractGraphConsumerRouteField`](/api/protocols-core/src/type-aliases/contractgraphconsumerroutefield/)[]
 
----
+***
 
 ### missingFields
 
 > `readonly` **missingFields**: readonly [`ContractGraphConsumerRouteField`](/api/protocols-core/src/type-aliases/contractgraphconsumerroutefield/)[]
 
----
+***
 
 ### operationId
 
 > `readonly` **operationId**: `string`
 
----
+***
 
 ### routeId
 
 > `readonly` **routeId**: `string`
 
----
+***
 
 ### unsupportedFields
 

@@ -47,7 +47,7 @@ title: "WorkflowRegistry"
 
 [`WorkflowDefinition`](/api/workflow-core/src/type-aliases/workflowdefinition/) \| `undefined`
 
----
+***
 
 ### getAll()
 
@@ -57,7 +57,7 @@ title: "WorkflowRegistry"
 
 [`WorkflowDefinition`](/api/workflow-core/src/type-aliases/workflowdefinition/)[]
 
----
+***
 
 ### has()
 
@@ -73,7 +73,7 @@ title: "WorkflowRegistry"
 
 `boolean`
 
----
+***
 
 ### register()
 
@@ -89,7 +89,7 @@ title: "WorkflowRegistry"
 
 `void`
 
----
+***
 
 ### fromMetadata()
 

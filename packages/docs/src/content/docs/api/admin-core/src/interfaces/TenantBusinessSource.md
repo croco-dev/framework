@@ -9,7 +9,7 @@ title: "TenantBusinessSource"
 
 ### TState
 
-`TState` _extends_ [`TenantWorkspaceSourceData`](/api/admin-core/src/type-aliases/tenantworkspacesourcedata/)
+`TState` *extends* [`TenantWorkspaceSourceData`](/api/admin-core/src/type-aliases/tenantworkspacesourcedata/)
 
 ## Properties
 
@@ -17,19 +17,19 @@ title: "TenantBusinessSource"
 
 > `readonly` **id**: `string`
 
----
+***
 
 ### label
 
 > `readonly` **label**: `string`
 
----
+***
 
 ### requiredPermissions
 
 > `readonly` **requiredPermissions**: readonly `string`[]
 
----
+***
 
 ### section
 

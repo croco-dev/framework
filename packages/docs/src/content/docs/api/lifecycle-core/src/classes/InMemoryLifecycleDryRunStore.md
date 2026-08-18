@@ -45,7 +45,7 @@ readonly [`LifecycleDryRunResult`](/api/lifecycle-core/src/type-aliases/lifecycl
 
 [`LifecycleDryRunStore`](/api/lifecycle-core/src/interfaces/lifecycledryrunstore/).[`list`](/api/lifecycle-core/src/interfaces/lifecycledryrunstore/#list)
 
----
+***
 
 ### save()
 

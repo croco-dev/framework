@@ -13,7 +13,7 @@ title: "ChangedTestPlan"
 
 > `readonly` **base**: `string`
 
----
+***
 
 ### budget
 
@@ -35,79 +35,79 @@ title: "ChangedTestPlan"
 
 > `readonly` **unknownDurationTests**: readonly `string`[]
 
----
+***
 
 ### changedContracts
 
 > `readonly` **changedContracts**: readonly `string`[]
 
----
+***
 
 ### commands
 
 > `readonly` **commands**: readonly readonly `string`[][]
 
----
+***
 
 ### excludedTests
 
 > `readonly` **excludedTests**: readonly [`ChangedTestExclusion`](/api/testing/src/type-aliases/changedtestexclusion/)[]
 
----
+***
 
 ### fallbacks
 
 > `readonly` **fallbacks**: readonly [`ChangedTestFallback`](/api/testing/src/type-aliases/changedtestfallback/)[]
 
----
+***
 
 ### head
 
 > `readonly` **head**: `string`
 
----
+***
 
 ### incomplete
 
 > `readonly` **incomplete**: `boolean`
 
----
+***
 
 ### mode
 
 > `readonly` **mode**: `"shadow"` \| `"enforce"`
 
----
+***
 
 ### requiredEvidence
 
 > `readonly` **requiredEvidence**: readonly `string`[]
 
----
+***
 
 ### schemaVersion
 
-> `readonly` **schemaVersion**: _typeof_ [`CHANGED_TEST_PLAN_VERSION`](/api/testing/src/variables/changed_test_plan_version/)
+> `readonly` **schemaVersion**: *typeof* [`CHANGED_TEST_PLAN_VERSION`](/api/testing/src/variables/changed_test_plan_version/)
 
----
+***
 
 ### selectedSuites
 
 > `readonly` **selectedSuites**: readonly [`ChangedTestSuite`](/api/testing/src/type-aliases/changedtestsuite/)[]
 
----
+***
 
 ### selectedTests
 
 > `readonly` **selectedTests**: readonly `string`[]
 
----
+***
 
 ### selectionReasons
 
 > `readonly` **selectionReasons**: readonly [`ChangedTestSelectionReason`](/api/testing/src/type-aliases/changedtestselectionreason/)[]
 
----
+***
 
 ### sourceLocations
 

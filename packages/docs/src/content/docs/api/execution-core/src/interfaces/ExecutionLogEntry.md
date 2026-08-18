@@ -15,7 +15,7 @@ Append-only execution log entry for inspectable workflow/task history.
 
 Optional structured log data
 
----
+***
 
 ### level
 
@@ -23,7 +23,7 @@ Optional structured log data
 
 Severity level
 
----
+***
 
 ### message
 
@@ -31,7 +31,7 @@ Severity level
 
 Human-readable log message
 
----
+***
 
 ### timestamp
 

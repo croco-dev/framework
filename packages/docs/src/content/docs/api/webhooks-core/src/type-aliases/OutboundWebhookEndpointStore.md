@@ -27,7 +27,7 @@ title: "OutboundWebhookEndpointStore"
 
 `Promise`\<[`OutboundWebhookEndpoint`](/api/webhooks-core/src/type-aliases/outboundwebhookendpoint/) \| `undefined`\>
 
----
+***
 
 ### listSubscribedEndpoints()
 

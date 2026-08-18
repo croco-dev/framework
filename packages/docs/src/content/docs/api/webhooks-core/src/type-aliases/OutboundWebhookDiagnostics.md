@@ -13,19 +13,19 @@ title: "OutboundWebhookDiagnostics"
 
 > `readonly` **attemptCount**: `number`
 
----
+***
 
 ### deliveryCounts
 
 > `readonly` **deliveryCounts**: `Readonly`\<`Record`\<[`OutboundWebhookDeliveryStatus`](/api/webhooks-core/src/type-aliases/outboundwebhookdeliverystatus/), `number`\>\>
 
----
+***
 
 ### eventId
 
 > `readonly` **eventId**: `string`
 
----
+***
 
 ### tenantId
 

@@ -19,7 +19,7 @@ Random function (default: Math.random)
 
 `number`
 
----
+***
 
 ### sleep?
 
@@ -41,7 +41,7 @@ Sleep function (default: setTimeout-based)
 
 `Promise`\<`void`\>
 
----
+***
 
 ### sleepSupportsAbortSignal?
 

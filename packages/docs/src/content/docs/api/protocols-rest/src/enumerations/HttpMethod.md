@@ -13,43 +13,43 @@ REST 프로토콜에서 사용하는 메타데이터 키, HTTP 메서드, 파라
 
 > **ALL**: `"ALL"`
 
----
+***
 
 ### DELETE
 
 > **DELETE**: `"DELETE"`
 
----
+***
 
 ### GET
 
 > **GET**: `"GET"`
 
----
+***
 
 ### HEAD
 
 > **HEAD**: `"HEAD"`
 
----
+***
 
 ### OPTIONS
 
 > **OPTIONS**: `"OPTIONS"`
 
----
+***
 
 ### PATCH
 
 > **PATCH**: `"PATCH"`
 
----
+***
 
 ### POST
 
 > **POST**: `"POST"`
 
----
+***
 
 ### PUT
 

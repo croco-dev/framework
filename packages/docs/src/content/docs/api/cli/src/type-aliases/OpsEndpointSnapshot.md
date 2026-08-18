@@ -13,37 +13,37 @@ title: "OpsEndpointSnapshot"
 
 > `readonly` **body**: `unknown`
 
----
+***
 
 ### error?
 
 > `readonly` `optional` **error?**: `string`
 
----
+***
 
 ### httpStatus
 
 > `readonly` **httpStatus**: `number` \| `null`
 
----
+***
 
 ### name
 
 > `readonly` **name**: [`OpsEndpointName`](/api/cli/src/type-aliases/opsendpointname/)
 
----
+***
 
 ### ok
 
 > `readonly` **ok**: `boolean`
 
----
+***
 
 ### required
 
 > `readonly` **required**: `boolean`
 
----
+***
 
 ### url
 

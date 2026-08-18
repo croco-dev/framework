@@ -13,7 +13,7 @@ Creates the executable concurrency contract shared by in-memory and durable exec
 
 ### TStore
 
-`TStore` _extends_ [`ExecutionStore`](/api/execution-core/src/classes/executionstore/)
+`TStore` *extends* [`ExecutionStore`](/api/execution-core/src/classes/executionstore/)
 
 ## Parameters
 

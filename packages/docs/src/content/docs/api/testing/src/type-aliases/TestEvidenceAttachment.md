@@ -13,13 +13,13 @@ title: "TestEvidenceAttachment"
 
 > `readonly` **kind**: `"contract"` \| `"coverage"` \| `"log"` \| `"report"` \| `"screenshot"` \| `"trace"`
 
----
+***
 
 ### path
 
 > `readonly` **path**: `string`
 
----
+***
 
 ### schemaVersion?
 

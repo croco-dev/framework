@@ -17,7 +17,7 @@ Cloudflare Images 상세 조회 응답 구조입니다.
 
 에러 목록
 
----
+***
 
 ### messages
 
@@ -25,7 +25,7 @@ Cloudflare Images 상세 조회 응답 구조입니다.
 
 메시지 목록
 
----
+***
 
 ### result
 
@@ -75,11 +75,11 @@ Cloudflare Images 상세 조회 응답 구조입니다.
 
 가능한 변성(variants) URL 목록
 
----
+***
 
 `null`
 
----
+***
 
 ### success
 

@@ -33,7 +33,7 @@ GraphQL Yoga server runtime.
 
 `YogaHandler`
 
----
+***
 
 ### initialize()
 
@@ -43,7 +43,7 @@ GraphQL Yoga server runtime.
 
 `Promise`\<`void`\>
 
----
+***
 
 ### start()
 
@@ -59,7 +59,7 @@ GraphQL Yoga server runtime.
 
 `Promise`\<`void`\>
 
----
+***
 
 ### stop()
 

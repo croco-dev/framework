@@ -53,7 +53,7 @@ Carries the quantity that was successfully reconciled with the provider.
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventId`](/api/events-core/src/classes/domainevent/#eventid)
 
----
+***
 
 ### eventName
 
@@ -63,13 +63,13 @@ Carries the quantity that was successfully reconciled with the provider.
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventName`](/api/events-core/src/classes/domainevent/#eventname)
 
----
+***
 
 ### externalSubscriptionId
 
 > `readonly` **externalSubscriptionId**: `string`
 
----
+***
 
 ### metadata
 
@@ -79,25 +79,25 @@ Carries the quantity that was successfully reconciled with the provider.
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`metadata`](/api/events-core/src/classes/domainevent/#metadata)
 
----
+***
 
 ### planVersionRef
 
 > `readonly` **planVersionRef**: [`PlanVersionRef`](/api/billing-core/src/type-aliases/planversionref/)
 
----
+***
 
 ### quantity
 
 > `readonly` **quantity**: `number`
 
----
+***
 
 ### tenantId
 
 > `readonly` **tenantId**: `string`
 
----
+***
 
 ### timestamp
 
@@ -107,7 +107,7 @@ Carries the quantity that was successfully reconciled with the provider.
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`timestamp`](/api/events-core/src/classes/domainevent/#timestamp)
 
----
+***
 
 ### eventName
 

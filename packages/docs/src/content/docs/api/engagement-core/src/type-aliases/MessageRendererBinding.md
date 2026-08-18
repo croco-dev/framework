@@ -11,4 +11,4 @@ title: "MessageRendererBinding"
 
 ### TMessage
 
-`TMessage` _extends_ `AnyMessage` = `AnyMessage`
+`TMessage` *extends* `AnyMessage` = `AnyMessage`

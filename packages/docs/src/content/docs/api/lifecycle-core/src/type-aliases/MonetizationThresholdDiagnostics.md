@@ -13,31 +13,31 @@ title: "MonetizationThresholdDiagnostics"
 
 > `readonly` **emittedCrossingCount**: `number`
 
----
+***
 
 ### expiredClaimCount
 
 > `readonly` **expiredClaimCount**: `number`
 
----
+***
 
 ### outOfOrderObservationCount
 
 > `readonly` **outOfOrderObservationCount**: `number`
 
----
+***
 
 ### pendingCrossingCount
 
 > `readonly` **pendingCrossingCount**: `number`
 
----
+***
 
 ### scopeCount
 
 > `readonly` **scopeCount**: `number`
 
----
+***
 
 ### suppressedDuplicateCount
 

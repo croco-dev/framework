@@ -13,7 +13,7 @@ title: "ScenarioEvidence"
 
 > `readonly` **kind**: [`ScenarioEvidenceKind`](/api/testing/src/type-aliases/scenarioevidencekind/)
 
----
+***
 
 ### name
 

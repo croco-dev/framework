@@ -13,25 +13,25 @@ title: "OutboundWebhookTransportRequest"
 
 > `readonly` **body**: `Uint8Array`
 
----
+***
 
 ### headers
 
 > `readonly` **headers**: `Readonly`\<`Record`\<`string`, `string`\>\>
 
----
+***
 
 ### resolvedAddresses
 
 > `readonly` **resolvedAddresses**: readonly `string`[]
 
----
+***
 
 ### signal?
 
 > `readonly` `optional` **signal?**: `AbortSignal`
 
----
+***
 
 ### url
 

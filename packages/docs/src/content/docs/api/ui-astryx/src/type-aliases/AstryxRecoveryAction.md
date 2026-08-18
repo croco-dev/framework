@@ -13,19 +13,19 @@ title: "AstryxRecoveryAction"
 
 > `readonly` `optional` **href?**: `string`
 
----
+***
 
 ### id
 
 > `readonly` **id**: `string`
 
----
+***
 
 ### label
 
 > `readonly` **label**: `string`
 
----
+***
 
 ### onRecover?
 
@@ -35,7 +35,7 @@ title: "AstryxRecoveryAction"
 
 `void` \| `Promise`\<`void`\>
 
----
+***
 
 ### problemCodes?
 

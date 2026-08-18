@@ -43,25 +43,25 @@ title: "ComponentScannerDiagnosticError"
 
 [`ComponentScannerError`](/api/esbuild-plugin/src/classes/componentscannererror/).[`cause`](/api/esbuild-plugin/src/classes/componentscannererror/#cause)
 
----
+***
 
 ### column?
 
 > `readonly` `optional` **column?**: `number`
 
----
+***
 
 ### diagnostic
 
 > `readonly` **diagnostic**: `Diagnostic`
 
----
+***
 
 ### diagnosticText
 
 > `readonly` **diagnosticText**: `string`
 
----
+***
 
 ### filePath
 
@@ -71,13 +71,13 @@ title: "ComponentScannerDiagnosticError"
 
 [`ComponentScannerError`](/api/esbuild-plugin/src/classes/componentscannererror/).[`filePath`](/api/esbuild-plugin/src/classes/componentscannererror/#filepath)
 
----
+***
 
 ### line?
 
 > `readonly` `optional` **line?**: `number`
 
----
+***
 
 ### message
 
@@ -87,7 +87,7 @@ title: "ComponentScannerDiagnosticError"
 
 [`ComponentScannerError`](/api/esbuild-plugin/src/classes/componentscannererror/).[`message`](/api/esbuild-plugin/src/classes/componentscannererror/#message)
 
----
+***
 
 ### name
 
@@ -97,7 +97,7 @@ title: "ComponentScannerDiagnosticError"
 
 [`ComponentScannerError`](/api/esbuild-plugin/src/classes/componentscannererror/).[`name`](/api/esbuild-plugin/src/classes/componentscannererror/#name)
 
----
+***
 
 ### stack?
 
@@ -107,7 +107,7 @@ title: "ComponentScannerDiagnosticError"
 
 [`ComponentScannerError`](/api/esbuild-plugin/src/classes/componentscannererror/).[`stack`](/api/esbuild-plugin/src/classes/componentscannererror/#stack)
 
----
+***
 
 ### stackTraceLimit
 
@@ -140,7 +140,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack; // Similar to `new Error().stack`
+myObject.stack;  // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -195,7 +195,7 @@ a();
 
 [`ComponentScannerError`](/api/esbuild-plugin/src/classes/componentscannererror/).[`captureStackTrace`](/api/esbuild-plugin/src/classes/componentscannererror/#capturestacktrace)
 
----
+***
 
 ### prepareStackTrace()
 

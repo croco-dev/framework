@@ -5,4 +5,4 @@ prev: false
 title: "DRIZZLE_TOKEN"
 ---
 
-> `const` **DRIZZLE_TOKEN**: `"DRIZZLE_TOKEN"` = `"DRIZZLE_TOKEN"`
+> `const` **DRIZZLE\_TOKEN**: `"DRIZZLE_TOKEN"` = `"DRIZZLE_TOKEN"`

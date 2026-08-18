@@ -13,19 +13,19 @@ title: "TransactionalEventError"
 
 > `optional` **code?**: `string`
 
----
+***
 
 ### message
 
 > **message**: `string`
 
----
+***
 
 ### name
 
 > **name**: `string`
 
----
+***
 
 ### stack?
 

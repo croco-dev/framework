@@ -13,73 +13,73 @@ title: "JobSummary"
 
 > `readonly` **attempts**: `number`
 
----
+***
 
 ### completedAt?
 
 > `readonly` `optional` **completedAt?**: `string`
 
----
+***
 
 ### createdAt
 
 > `readonly` **createdAt**: `string`
 
----
+***
 
 ### errorMessage?
 
 > `readonly` `optional` **errorMessage?**: `string`
 
----
+***
 
 ### failurePolicy
 
 > `readonly` **failurePolicy**: [`JobFailurePolicy`](/api/execution-core/src/type-aliases/jobfailurepolicy/)
 
----
+***
 
 ### id
 
 > `readonly` **id**: `string`
 
----
+***
 
 ### logCount
 
 > `readonly` **logCount**: `number`
 
----
+***
 
 ### maxAttempts
 
 > `readonly` **maxAttempts**: `number`
 
----
+***
 
 ### replayOf?
 
 > `readonly` `optional` **replayOf?**: `string`
 
----
+***
 
 ### startedAt?
 
 > `readonly` `optional` **startedAt?**: `string`
 
----
+***
 
 ### status
 
 > `readonly` **status**: [`ExecutionStatus`](/api/execution-core/src/type-aliases/executionstatus/)
 
----
+***
 
 ### type
 
 > `readonly` **type**: `string`
 
----
+***
 
 ### workflowName?
 

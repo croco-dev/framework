@@ -13,7 +13,7 @@ title: "AstryxSession"
 
 > `readonly` `optional` **provider?**: `string`
 
----
+***
 
 ### user
 

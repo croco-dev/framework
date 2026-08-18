@@ -13,19 +13,19 @@ title: "CreditCommandBase"
 
 > `readonly` `optional` **expectedPosition?**: `number`
 
----
+***
 
 ### idempotencyKey
 
 > `readonly` **idempotencyKey**: `string`
 
----
+***
 
 ### occurredAt
 
 > `readonly` **occurredAt**: `Date`
 
----
+***
 
 ### reference
 

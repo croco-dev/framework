@@ -47,7 +47,7 @@ title: "OutboundWebhookPermanentProblem"
 
 `OutboundWebhookProblem.category`
 
----
+***
 
 ### cause?
 
@@ -57,7 +57,7 @@ title: "OutboundWebhookPermanentProblem"
 
 `OutboundWebhookProblem.cause`
 
----
+***
 
 ### code
 
@@ -67,7 +67,7 @@ title: "OutboundWebhookPermanentProblem"
 
 `OutboundWebhookProblem.code`
 
----
+***
 
 ### detail?
 
@@ -77,7 +77,7 @@ title: "OutboundWebhookPermanentProblem"
 
 `OutboundWebhookProblem.detail`
 
----
+***
 
 ### extensions?
 
@@ -87,7 +87,7 @@ title: "OutboundWebhookPermanentProblem"
 
 `OutboundWebhookProblem.extensions`
 
----
+***
 
 ### instance?
 
@@ -97,7 +97,7 @@ title: "OutboundWebhookPermanentProblem"
 
 `OutboundWebhookProblem.instance`
 
----
+***
 
 ### message
 
@@ -107,7 +107,7 @@ title: "OutboundWebhookPermanentProblem"
 
 `OutboundWebhookProblem.message`
 
----
+***
 
 ### name
 
@@ -117,7 +117,7 @@ title: "OutboundWebhookPermanentProblem"
 
 `OutboundWebhookProblem.name`
 
----
+***
 
 ### stack?
 
@@ -127,7 +127,7 @@ title: "OutboundWebhookPermanentProblem"
 
 `OutboundWebhookProblem.stack`
 
----
+***
 
 ### type
 
@@ -137,7 +137,7 @@ title: "OutboundWebhookPermanentProblem"
 
 `OutboundWebhookProblem.type`
 
----
+***
 
 ### stackTraceLimit
 
@@ -173,7 +173,7 @@ not capture any frames.
 
 `OutboundWebhookProblem.status`
 
----
+***
 
 ### title
 
@@ -203,7 +203,7 @@ not capture any frames.
 
 `OutboundWebhookProblem.toJSON`
 
----
+***
 
 ### captureStackTrace()
 
@@ -216,7 +216,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack; // Similar to `new Error().stack`
+myObject.stack;  // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -271,7 +271,7 @@ a();
 
 `OutboundWebhookProblem.captureStackTrace`
 
----
+***
 
 ### prepareStackTrace()
 

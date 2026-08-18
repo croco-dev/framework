@@ -13,13 +13,13 @@ title: "OutboxRelayRetryPolicy"
 
 > **baseDelayMs**: `number`
 
----
+***
 
 ### maxDelayMs
 
 > **maxDelayMs**: `number`
 
----
+***
 
 ### multiplier
 

@@ -16,7 +16,7 @@ title: "EventSubscribing"
 
 ### TEvent
 
-`TEvent` _extends_ [`DomainEvent`](/api/events-core/src/classes/domainevent/) = [`DomainEvent`](/api/events-core/src/classes/domainevent/)
+`TEvent` *extends* [`DomainEvent`](/api/events-core/src/classes/domainevent/) = [`DomainEvent`](/api/events-core/src/classes/domainevent/)
 
 ## Methods
 
@@ -28,7 +28,7 @@ title: "EventSubscribing"
 
 `void`
 
----
+***
 
 ### subscribe()
 
@@ -44,7 +44,7 @@ title: "EventSubscribing"
 
 `void`
 
----
+***
 
 ### unsubscribe()
 

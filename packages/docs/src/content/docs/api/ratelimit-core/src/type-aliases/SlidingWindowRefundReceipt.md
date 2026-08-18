@@ -15,13 +15,13 @@ title: "SlidingWindowRefundReceipt"
 
 > **algorithm**: `"sliding"`
 
----
+***
 
 ### id
 
 > **id**: `string`
 
----
+***
 
 ### timestamp
 

@@ -47,7 +47,7 @@ Atomically creates the draft and appends its lifecycle event to the durable outb
 
 [`PlanReleaseStore`](/api/billing-core/src/interfaces/planreleasestore/).[`create`](/api/billing-core/src/interfaces/planreleasestore/#create)
 
----
+***
 
 ### get()
 
@@ -67,7 +67,7 @@ Atomically creates the draft and appends its lifecycle event to the durable outb
 
 [`PlanReleaseStore`](/api/billing-core/src/interfaces/planreleasestore/).[`get`](/api/billing-core/src/interfaces/planreleasestore/#get)
 
----
+***
 
 ### list()
 
@@ -87,7 +87,7 @@ Atomically creates the draft and appends its lifecycle event to the durable outb
 
 [`PlanReleaseStore`](/api/billing-core/src/interfaces/planreleasestore/).[`list`](/api/billing-core/src/interfaces/planreleasestore/#list)
 
----
+***
 
 ### listPendingEvents()
 
@@ -107,7 +107,7 @@ Atomically creates the draft and appends its lifecycle event to the durable outb
 
 [`PlanReleaseStore`](/api/billing-core/src/interfaces/planreleasestore/).[`listPendingEvents`](/api/billing-core/src/interfaces/planreleasestore/#listpendingevents)
 
----
+***
 
 ### markEventPublished()
 
@@ -127,7 +127,7 @@ Atomically creates the draft and appends its lifecycle event to the durable outb
 
 [`PlanReleaseStore`](/api/billing-core/src/interfaces/planreleasestore/).[`markEventPublished`](/api/billing-core/src/interfaces/planreleasestore/#markeventpublished)
 
----
+***
 
 ### save()
 

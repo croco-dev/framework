@@ -19,4 +19,4 @@ Branded string type for a generated prefixed GID.
 
 ### TPrefix
 
-`TPrefix` _extends_ `string`
+`TPrefix` *extends* `string`

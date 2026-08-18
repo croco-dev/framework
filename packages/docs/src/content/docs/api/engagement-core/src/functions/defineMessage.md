@@ -13,19 +13,19 @@ Typed message contracts and explicit, decorator-bound renderer registration for 
 
 ### TId
 
-`TId` _extends_ `string`
+`TId` *extends* `string`
 
 ### TTopic
 
-`TTopic` _extends_ `string`
+`TTopic` *extends* `string`
 
 ### TData
 
-`TData` _extends_ `ZodTypeAny`
+`TData` *extends* `ZodTypeAny`
 
 ### TChannels
 
-`TChannels` _extends_ readonly \[`"email"` \| `"push"` \| `"sms"` \| `"inApp"`, `"email"` \| `"push"` \| `"sms"` \| `"inApp"`\]
+`TChannels` *extends* readonly \[`"email"` \| `"push"` \| `"sms"` \| `"inApp"`, `"email"` \| `"push"` \| `"sms"` \| `"inApp"`\]
 
 ## Parameters
 

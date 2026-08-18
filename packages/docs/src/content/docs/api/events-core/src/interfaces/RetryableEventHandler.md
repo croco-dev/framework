@@ -19,7 +19,7 @@ title: "RetryableEventHandler"
 
 `Partial`\<[`DeadLetterPolicy`](/api/events-core/src/type-aliases/deadletterpolicy/)\>
 
----
+***
 
 ### onExhaustedRetries()?
 
@@ -31,7 +31,7 @@ title: "RetryableEventHandler"
 
 ##### TEvent
 
-`TEvent` _extends_ [`DomainEvent`](/api/events-core/src/classes/domainevent/)
+`TEvent` *extends* [`DomainEvent`](/api/events-core/src/classes/domainevent/)
 
 #### Parameters
 

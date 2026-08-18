@@ -11,13 +11,13 @@ title: "RelationTuple"
 
 > **object**: `` `${string}:${string}` ``
 
----
+***
 
 ### relation
 
 > **relation**: `string`
 
----
+***
 
 ### subject
 

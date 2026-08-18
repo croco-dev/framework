@@ -11,4 +11,4 @@ title: "MessageData"
 
 ### TMessage
 
-`TMessage` _extends_ `AnyMessage`
+`TMessage` *extends* `AnyMessage`

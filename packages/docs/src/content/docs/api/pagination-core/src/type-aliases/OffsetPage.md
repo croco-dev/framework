@@ -19,19 +19,19 @@ title: "OffsetPage"
 
 > **data**: `T`[]
 
----
+***
 
 ### limit
 
 > **limit**: `number`
 
----
+***
 
 ### offset
 
 > **offset**: `number`
 
----
+***
 
 ### total
 

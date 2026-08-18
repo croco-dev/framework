@@ -51,7 +51,7 @@ Drizzle 실행 클라이언트를 주입해 접근 제어 저장소를 초기화
 
 [`AccessProvider`](/api/access-core/src/interfaces/accessprovider/).[`check`](/api/access-core/src/interfaces/accessprovider/#check)
 
----
+***
 
 ### grant()
 
@@ -73,7 +73,7 @@ Drizzle 실행 클라이언트를 주입해 접근 제어 저장소를 초기화
 
 [`AccessProvider`](/api/access-core/src/interfaces/accessprovider/).[`grant`](/api/access-core/src/interfaces/accessprovider/#grant)
 
----
+***
 
 ### list()
 
@@ -95,7 +95,7 @@ Drizzle 실행 클라이언트를 주입해 접근 제어 저장소를 초기화
 
 [`AccessProvider`](/api/access-core/src/interfaces/accessprovider/).[`list`](/api/access-core/src/interfaces/accessprovider/#list)
 
----
+***
 
 ### revoke()
 

@@ -5,4 +5,4 @@ prev: false
 title: "EXECUTABLE_ASSURANCE_REPORT_VERSION"
 ---
 
-> `const` **EXECUTABLE_ASSURANCE_REPORT_VERSION**: `"croco.executable-assurance-report/v1"`
+> `const` **EXECUTABLE\_ASSURANCE\_REPORT\_VERSION**: `"croco.executable-assurance-report/v1"`

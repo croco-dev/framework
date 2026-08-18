@@ -21,7 +21,7 @@ Register a server action in the global registry by default.
 
 ### TProblemCode
 
-`TProblemCode` _extends_ `string` = `string`
+`TProblemCode` *extends* `string` = `string`
 
 ## Parameters
 

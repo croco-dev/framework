@@ -11,7 +11,7 @@ Cohort Capacity result for user and revenue capacity planning.
 
 ## Formula
 
-Headroom % = ((Capacity - Current) / Capacity) \* 100
+Headroom % = ((Capacity - Current) / Capacity) * 100
 
 ## Formula
 
@@ -29,7 +29,7 @@ Daily Inflow = New MRR per day (for revenue) or New Users per day (for users)
 
 Maximum capacity (users or MRR)
 
----
+***
 
 ### current
 
@@ -37,7 +37,7 @@ Maximum capacity (users or MRR)
 
 Current count (users or MRR)
 
----
+***
 
 ### dailyChurnRate
 
@@ -45,7 +45,7 @@ Current count (users or MRR)
 
 Daily churn rate (0-1, derived from NRR)
 
----
+***
 
 ### dailyInflow
 
@@ -53,7 +53,7 @@ Daily churn rate (0-1, derived from NRR)
 
 Daily new inflow rate (users/day or MRR/day)
 
----
+***
 
 ### headroom
 
@@ -61,7 +61,7 @@ Daily new inflow rate (users/day or MRR/day)
 
 Remaining capacity (capacity - current)
 
----
+***
 
 ### headroomPercent
 

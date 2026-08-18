@@ -15,37 +15,37 @@ billing account, invoice, order, plan, subscription 도메인 타입입니다.
 
 > **amount**: `number`
 
----
+***
 
 ### billingAccountId
 
 > **billingAccountId**: `string`
 
----
+***
 
 ### currency
 
 > **currency**: `string`
 
----
+***
 
 ### externalOrderId
 
 > **externalOrderId**: `string`
 
----
+***
 
 ### id
 
 > **id**: `string`
 
----
+***
 
 ### paidAt
 
 > **paidAt**: `Date`
 
----
+***
 
 ### reason
 

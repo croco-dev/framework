@@ -13,13 +13,13 @@ title: "LifecycleOperationsProblem"
 
 > `readonly` **code**: `string`
 
----
+***
 
 ### message
 
 > `readonly` **message**: `string`
 
----
+***
 
 ### source
 

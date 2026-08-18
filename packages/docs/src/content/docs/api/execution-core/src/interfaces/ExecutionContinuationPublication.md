@@ -13,13 +13,13 @@ Publication staged atomically with checkpoint changes.
 
 > **attempt**: `number`
 
----
+***
 
 ### nextToken
 
 > **nextToken**: `string`
 
----
+***
 
 ### sourceToken
 

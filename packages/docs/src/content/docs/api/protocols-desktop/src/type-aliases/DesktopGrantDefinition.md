@@ -11,19 +11,19 @@ title: "DesktopGrantDefinition"
 
 ### TResource
 
-`TResource` _extends_ [`DesktopGrantResourceKind`](/api/protocols-desktop/src/type-aliases/desktopgrantresourcekind/) = [`DesktopGrantResourceKind`](/api/protocols-desktop/src/type-aliases/desktopgrantresourcekind/)
+`TResource` *extends* [`DesktopGrantResourceKind`](/api/protocols-desktop/src/type-aliases/desktopgrantresourcekind/) = [`DesktopGrantResourceKind`](/api/protocols-desktop/src/type-aliases/desktopgrantresourcekind/)
 
 ### TAccess
 
-`TAccess` _extends_ [`DesktopGrantAccess`](/api/protocols-desktop/src/type-aliases/desktopgrantaccess/) = [`DesktopGrantAccess`](/api/protocols-desktop/src/type-aliases/desktopgrantaccess/)
+`TAccess` *extends* [`DesktopGrantAccess`](/api/protocols-desktop/src/type-aliases/desktopgrantaccess/) = [`DesktopGrantAccess`](/api/protocols-desktop/src/type-aliases/desktopgrantaccess/)
 
 ### TScope
 
-`TScope` _extends_ `DesktopGrantScopeFor`\<`TResource`\> = `DesktopGrantScopeFor`\<`TResource`\>
+`TScope` *extends* `DesktopGrantScopeFor`\<`TResource`\> = `DesktopGrantScopeFor`\<`TResource`\>
 
 ### TLifetime
 
-`TLifetime` _extends_ [`DesktopGrantLifetime`](/api/protocols-desktop/src/type-aliases/desktopgrantlifetime/) = [`DesktopGrantLifetime`](/api/protocols-desktop/src/type-aliases/desktopgrantlifetime/)
+`TLifetime` *extends* [`DesktopGrantLifetime`](/api/protocols-desktop/src/type-aliases/desktopgrantlifetime/) = [`DesktopGrantLifetime`](/api/protocols-desktop/src/type-aliases/desktopgrantlifetime/)
 
 ## Properties
 
@@ -65,31 +65,31 @@ title: "DesktopGrantDefinition"
 
 > `readonly` **version**: `1`
 
----
+***
 
 ### access
 
 > `readonly` **access**: `TAccess`
 
----
+***
 
 ### definitionType
 
 > `readonly` **definitionType**: `"grant"`
 
----
+***
 
 ### lifetime
 
 > `readonly` **lifetime**: `TLifetime`
 
----
+***
 
 ### resource
 
 > `readonly` **resource**: `TResource`
 
----
+***
 
 ### scope
 

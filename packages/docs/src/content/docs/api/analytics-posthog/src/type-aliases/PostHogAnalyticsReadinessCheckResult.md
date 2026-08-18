@@ -13,7 +13,7 @@ title: "PostHogAnalyticsReadinessCheckResult"
 
 > `readonly` `optional` **details?**: `Record`\<`string`, `unknown`\>
 
----
+***
 
 ### message?
 

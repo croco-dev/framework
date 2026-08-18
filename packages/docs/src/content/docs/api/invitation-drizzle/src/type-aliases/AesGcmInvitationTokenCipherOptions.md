@@ -13,7 +13,7 @@ title: "AesGcmInvitationTokenCipherOptions"
 
 > **activeKeyId**: `string`
 
----
+***
 
 ### keys
 

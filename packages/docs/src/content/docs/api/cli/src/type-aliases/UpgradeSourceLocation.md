@@ -13,13 +13,13 @@ title: "UpgradeSourceLocation"
 
 > `readonly` **column**: `number`
 
----
+***
 
 ### file
 
 > `readonly` **file**: `string`
 
----
+***
 
 ### line
 

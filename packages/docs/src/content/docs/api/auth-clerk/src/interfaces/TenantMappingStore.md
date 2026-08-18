@@ -23,7 +23,7 @@ Clerk tenant 매핑에 필요한 공개 타입입니다.
 
 `Promise`\<`void`\>
 
----
+***
 
 ### get()
 
@@ -39,7 +39,7 @@ Clerk tenant 매핑에 필요한 공개 타입입니다.
 
 `Promise`\<`string` \| `null`\>
 
----
+***
 
 ### set()
 

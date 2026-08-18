@@ -49,7 +49,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 > `readonly` **adapterName**: `string`
 
----
+***
 
 ### category
 
@@ -59,7 +59,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`category`](/api/problems-core/src/classes/problem/#category)
 
----
+***
 
 ### cause?
 
@@ -69,7 +69,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`cause`](/api/problems-core/src/classes/problem/#cause)
 
----
+***
 
 ### code
 
@@ -79,7 +79,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`code`](/api/problems-core/src/classes/problem/#code)
 
----
+***
 
 ### detail?
 
@@ -89,13 +89,13 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`detail`](/api/problems-core/src/classes/problem/#detail)
 
----
+***
 
 ### eventName
 
 > `readonly` **eventName**: `string`
 
----
+***
 
 ### extensions?
 
@@ -105,7 +105,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`extensions`](/api/problems-core/src/classes/problem/#extensions)
 
----
+***
 
 ### instance?
 
@@ -115,7 +115,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`instance`](/api/problems-core/src/classes/problem/#instance)
 
----
+***
 
 ### message
 
@@ -125,7 +125,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`message`](/api/problems-core/src/classes/problem/#message)
 
----
+***
 
 ### name
 
@@ -135,13 +135,13 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`name`](/api/problems-core/src/classes/problem/#name)
 
----
+***
 
 ### operation
 
 > `readonly` **operation**: `CacheInvalidationProblemOperation`
 
----
+***
 
 ### stack?
 
@@ -151,7 +151,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`stack`](/api/problems-core/src/classes/problem/#stack)
 
----
+***
 
 ### type
 
@@ -161,7 +161,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`type`](/api/problems-core/src/classes/problem/#type)
 
----
+***
 
 ### stackTraceLimit
 
@@ -197,7 +197,7 @@ not capture any frames.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`status`](/api/problems-core/src/classes/problem/#status)
 
----
+***
 
 ### title
 
@@ -227,7 +227,7 @@ not capture any frames.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`toJSON`](/api/problems-core/src/classes/problem/#tojson)
 
----
+***
 
 ### captureStackTrace()
 
@@ -240,7 +240,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack; // Similar to `new Error().stack`
+myObject.stack;  // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -295,7 +295,7 @@ a();
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`captureStackTrace`](/api/problems-core/src/classes/problem/#capturestacktrace)
 
----
+***
 
 ### prepareStackTrace()
 

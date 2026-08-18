@@ -13,25 +13,25 @@ title: "AdminPermissionRequirement"
 
 > `readonly` `optional` **condition?**: `string`
 
----
+***
 
 ### mode?
 
 > `readonly` `optional` **mode?**: [`AdminPermissionMode`](/api/admin-core/src/type-aliases/adminpermissionmode/)
 
----
+***
 
 ### permissions
 
 > `readonly` **permissions**: [`NonEmptyArray`](/api/admin-core/src/type-aliases/nonemptyarray/)\<`string`\>
 
----
+***
 
 ### resource?
 
 > `readonly` `optional` **resource?**: `string`
 
----
+***
 
 ### scope?
 

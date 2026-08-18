@@ -13,7 +13,7 @@ title: "SagaIdempotencyContext"
 
 > `readonly` **payload**: `unknown`
 
----
+***
 
 ### saga
 

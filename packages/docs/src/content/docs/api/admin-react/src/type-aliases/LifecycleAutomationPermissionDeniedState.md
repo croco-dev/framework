@@ -13,25 +13,25 @@ title: "LifecycleAutomationPermissionDeniedState"
 
 > `readonly` **generatedAt**: `Date`
 
----
+***
 
 ### grantedPermissions
 
 > `readonly` **grantedPermissions**: readonly `string`[]
 
----
+***
 
 ### kind
 
 > `readonly` **kind**: `"permission-denied"`
 
----
+***
 
 ### problem
 
 > `readonly` **problem**: [`LifecycleOperationsProblem`](/api/admin-react/src/type-aliases/lifecycleoperationsproblem/)
 
----
+***
 
 ### requiredPermissions
 

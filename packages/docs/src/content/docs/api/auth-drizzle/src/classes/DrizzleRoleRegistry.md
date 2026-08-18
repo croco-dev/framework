@@ -61,7 +61,7 @@ Drizzle DB와 역할 스키마를 받아 레지스트리를 초기화합니다.
 
 `Promise`\<`void`\>
 
----
+***
 
 ### getPermissionsForRole()
 
@@ -79,7 +79,7 @@ Drizzle DB와 역할 스키마를 받아 레지스트리를 초기화합니다.
 
 `string`[]
 
----
+***
 
 ### getRoleDefinition()
 
@@ -97,7 +97,7 @@ Drizzle DB와 역할 스키마를 받아 레지스트리를 초기화합니다.
 
 [`RoleDefinition`](/api/auth-core/src/type-aliases/roledefinition/) \| `undefined`
 
----
+***
 
 ### getRolePermissions()
 
@@ -119,7 +119,7 @@ Drizzle DB와 역할 스키마를 받아 레지스트리를 초기화합니다.
 
 [`AbstractRoleRegistry`](/api/auth-core/src/classes/abstractroleregistry/).[`getRolePermissions`](/api/auth-core/src/classes/abstractroleregistry/#getrolepermissions)
 
----
+***
 
 ### getUserRoles()
 
@@ -141,7 +141,7 @@ Drizzle DB와 역할 스키마를 받아 레지스트리를 초기화합니다.
 
 `Promise`\<`string`[]\>
 
----
+***
 
 ### registerRole()
 
@@ -163,7 +163,7 @@ Drizzle DB와 역할 스키마를 받아 레지스트리를 초기화합니다.
 
 `void`
 
----
+***
 
 ### revokeRole()
 

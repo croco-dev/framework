@@ -13,13 +13,13 @@ title: "OutboxCompletionInput"
 
 > **expectedAttempts**: `number`
 
----
+***
 
 ### id
 
 > **id**: `string`
 
----
+***
 
 ### now
 

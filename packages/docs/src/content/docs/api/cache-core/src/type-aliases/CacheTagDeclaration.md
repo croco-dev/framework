@@ -13,13 +13,13 @@ title: "CacheTagDeclaration"
 
 > `readonly` `optional` **description?**: `string`
 
----
+***
 
 ### id
 
 > `readonly` **id**: `string`
 
----
+***
 
 ### tag
 

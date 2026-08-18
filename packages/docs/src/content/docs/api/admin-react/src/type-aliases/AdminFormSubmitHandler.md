@@ -11,7 +11,7 @@ title: "AdminFormSubmitHandler"
 
 ### TValues
 
-`TValues` _extends_ `object`
+`TValues` *extends* `object`
 
 ### TResult
 

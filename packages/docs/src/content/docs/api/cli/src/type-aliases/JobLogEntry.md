@@ -13,19 +13,19 @@ title: "JobLogEntry"
 
 > `readonly` `optional` **data?**: `Record`\<`string`, `unknown`\>
 
----
+***
 
 ### level
 
 > `readonly` **level**: `string`
 
----
+***
 
 ### message
 
 > `readonly` **message**: `string`
 
----
+***
 
 ### timestamp
 

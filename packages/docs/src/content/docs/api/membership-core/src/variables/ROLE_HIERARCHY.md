@@ -5,4 +5,4 @@ prev: false
 title: "ROLE_HIERARCHY"
 ---
 
-> `const` **ROLE_HIERARCHY**: `Record`\<[`MembershipRole`](/api/membership-core/src/type-aliases/membershiprole/), `number`\>
+> `const` **ROLE\_HIERARCHY**: `Record`\<[`MembershipRole`](/api/membership-core/src/type-aliases/membershiprole/), `number`\>

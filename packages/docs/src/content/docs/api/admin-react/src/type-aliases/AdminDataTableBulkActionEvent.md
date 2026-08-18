@@ -19,19 +19,19 @@ title: "AdminDataTableBulkActionEvent"
 
 > `readonly` **action**: [`AdminActionContract`](/api/admin-react/src/type-aliases/adminactioncontract/)
 
----
+***
 
 ### rows
 
 > `readonly` **rows**: readonly [`AdminDataTableRow`](/api/admin-react/src/type-aliases/admindatatablerow/)\<`TData`\>[]
 
----
+***
 
 ### selectedRowIds
 
 > `readonly` **selectedRowIds**: readonly [`AdminDataTableRowId`](/api/admin-react/src/type-aliases/admindatatablerowid/)[]
 
----
+***
 
 ### state
 

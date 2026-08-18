@@ -13,19 +13,19 @@ title: "FeatureUsageRateSignal"
 
 > **featureKey**: `string`
 
----
+***
 
 ### type
 
 > **type**: `"feature_usage_rate"`
 
----
+***
 
 ### uniqueUsers
 
 > **uniqueUsers**: `number`
 
----
+***
 
 ### usageCount
 

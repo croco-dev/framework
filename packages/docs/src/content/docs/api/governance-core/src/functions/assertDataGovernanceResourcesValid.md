@@ -11,7 +11,7 @@ title: "assertDataGovernanceResourcesValid"
 
 ### TResources
 
-`TResources` _extends_ readonly [`DataGovernanceResource`](/api/governance-core/src/type-aliases/datagovernanceresource/)[]
+`TResources` *extends* readonly [`DataGovernanceResource`](/api/governance-core/src/type-aliases/datagovernanceresource/)[]
 
 ## Parameters
 

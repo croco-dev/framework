@@ -15,13 +15,13 @@ Meilisearch 비동기 task 완료 대기 옵션입니다.
 
 > `optional` **enabled?**: `boolean`
 
----
+***
 
 ### intervalMs?
 
 > `optional` **intervalMs?**: `number`
 
----
+***
 
 ### timeoutMs?
 

@@ -5,10 +5,10 @@ prev: false
 title: "ProblemFetchProblemFailure"
 ---
 
-> **ProblemFetchProblemFailure**\<`Problem`\> = `Problem` _extends_ [`ProblemDeclaration`](/api/frontend-problems/src/type-aliases/problemdeclaration/) ? `object` : `never`
+> **ProblemFetchProblemFailure**\<`Problem`\> = `Problem` *extends* [`ProblemDeclaration`](/api/frontend-problems/src/type-aliases/problemdeclaration/) ? `object` : `never`
 
 ## Type Parameters
 
 ### Problem
 
-`Problem` _extends_ [`ProblemDeclaration`](/api/frontend-problems/src/type-aliases/problemdeclaration/) = [`ProblemDeclaration`](/api/frontend-problems/src/type-aliases/problemdeclaration/)
+`Problem` *extends* [`ProblemDeclaration`](/api/frontend-problems/src/type-aliases/problemdeclaration/) = [`ProblemDeclaration`](/api/frontend-problems/src/type-aliases/problemdeclaration/)

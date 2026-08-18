@@ -13,13 +13,13 @@ title: "EntitlementResourceRequirement"
 
 > `readonly` `optional` **id?**: `string`
 
----
+***
 
 ### idParam?
 
 > `readonly` `optional` **idParam?**: `string`
 
----
+***
 
 ### type
 

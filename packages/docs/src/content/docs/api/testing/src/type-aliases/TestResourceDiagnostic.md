@@ -13,19 +13,19 @@ title: "TestResourceDiagnostic"
 
 > `readonly` **logs**: readonly `string`[]
 
----
+***
 
 ### message
 
 > `readonly` **message**: `string`
 
----
+***
 
 ### stage
 
 > `readonly` **stage**: [`TestResourceDiagnosticStage`](/api/testing/src/type-aliases/testresourcediagnosticstage/)
 
----
+***
 
 ### status
 

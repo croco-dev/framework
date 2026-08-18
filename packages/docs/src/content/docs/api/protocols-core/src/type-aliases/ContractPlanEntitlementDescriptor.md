@@ -13,13 +13,13 @@ title: "ContractPlanEntitlementDescriptor"
 
 > `readonly` **entitlements**: readonly [`ContractEntitlementRuleDescriptor`](/api/protocols-core/src/type-aliases/contractentitlementruledescriptor/)[]
 
----
+***
 
 ### planId
 
 > `readonly` **planId**: `string`
 
----
+***
 
 ### planVersionRef
 

@@ -13,7 +13,7 @@ title: "CacheInvalidationRule"
 
 > `readonly` **eventName**: `string`
 
----
+***
 
 ### invalidates
 

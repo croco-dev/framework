@@ -18,13 +18,13 @@ Full SEO framework is out of scope for v1.
 
 Canonical URL override
 
----
+***
 
 ### description?
 
 > `optional` **description?**: `string`
 
----
+***
 
 ### ogTitle?
 
@@ -32,7 +32,7 @@ Canonical URL override
 
 OpenGraph / Twitter card title override
 
----
+***
 
 ### title?
 

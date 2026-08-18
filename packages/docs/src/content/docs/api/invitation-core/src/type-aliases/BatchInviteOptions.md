@@ -15,13 +15,13 @@ title: "BatchInviteOptions"
 
 > `optional` **expiresInDays?**: `number`
 
----
+***
 
 ### idempotencyKey?
 
 > `optional` **idempotencyKey?**: `string`
 
----
+***
 
 ### maxBatchSize?
 

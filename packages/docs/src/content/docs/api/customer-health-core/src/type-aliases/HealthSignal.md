@@ -13,31 +13,31 @@ title: "HealthSignal"
 
 > **category**: [`SignalCategory`](/api/customer-health-core/src/type-aliases/signalcategory/)
 
----
+***
 
 ### collectedAt
 
 > **collectedAt**: `Date`
 
----
+***
 
 ### name
 
 > **name**: `string`
 
----
+***
 
 ### rawValue
 
 > **rawValue**: `unknown`
 
----
+***
 
 ### value
 
 > **value**: `number`
 
----
+***
 
 ### weight
 

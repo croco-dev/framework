@@ -5,10 +5,10 @@ prev: false
 title: "RuntimePolicyPresetConfig"
 ---
 
-> **RuntimePolicyPresetConfig**\<`TPlatform`\> = `TPlatform` _extends_ [`RuntimePlatform`](/api/framework-context/src/type-aliases/runtimeplatform/) ? `object` & `RuntimePolicyPresetCapabilitySupportInput`\<`TPlatform`\> : `never`
+> **RuntimePolicyPresetConfig**\<`TPlatform`\> = `TPlatform` *extends* [`RuntimePlatform`](/api/framework-context/src/type-aliases/runtimeplatform/) ? `object` & `RuntimePolicyPresetCapabilitySupportInput`\<`TPlatform`\> : `never`
 
 ## Type Parameters
 
 ### TPlatform
 
-`TPlatform` _extends_ [`RuntimePlatform`](/api/framework-context/src/type-aliases/runtimeplatform/) = [`RuntimePlatform`](/api/framework-context/src/type-aliases/runtimeplatform/)
+`TPlatform` *extends* [`RuntimePlatform`](/api/framework-context/src/type-aliases/runtimeplatform/) = [`RuntimePlatform`](/api/framework-context/src/type-aliases/runtimeplatform/)

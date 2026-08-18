@@ -11,19 +11,19 @@ title: "CrocoPluginOptions"
 
 > `optional` **cache?**: `boolean`
 
----
+***
 
 ### decorators?
 
 > `optional` **decorators?**: `string`[]
 
----
+***
 
 ### exclude?
 
 > `optional` **exclude?**: `string`[]
 
----
+***
 
 ### scanDirs?
 

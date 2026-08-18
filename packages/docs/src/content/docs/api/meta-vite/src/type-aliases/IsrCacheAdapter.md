@@ -43,7 +43,7 @@ v1: exact-key + TTL-only getOrSet semantics.
 
 `Promise`\<`V`\>
 
----
+***
 
 ### invalidate
 

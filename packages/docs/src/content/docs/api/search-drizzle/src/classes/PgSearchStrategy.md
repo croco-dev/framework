@@ -61,7 +61,7 @@ title: "PgSearchStrategy"
 
 [`SearchStrategy`](/api/search-drizzle/src/interfaces/searchstrategy/).[`buildDeleteQuery`](/api/search-drizzle/src/interfaces/searchstrategy/#builddeletequery)
 
----
+***
 
 ### buildIndexQuery()
 
@@ -91,7 +91,7 @@ title: "PgSearchStrategy"
 
 [`SearchStrategy`](/api/search-drizzle/src/interfaces/searchstrategy/).[`buildIndexQuery`](/api/search-drizzle/src/interfaces/searchstrategy/#buildindexquery)
 
----
+***
 
 ### buildSearchQuery()
 
@@ -121,7 +121,7 @@ title: "PgSearchStrategy"
 
 [`SearchStrategy`](/api/search-drizzle/src/interfaces/searchstrategy/).[`buildSearchQuery`](/api/search-drizzle/src/interfaces/searchstrategy/#buildsearchquery)
 
----
+***
 
 ### checkCapability()
 
@@ -143,7 +143,7 @@ title: "PgSearchStrategy"
 
 [`SearchStrategy`](/api/search-drizzle/src/interfaces/searchstrategy/).[`checkCapability`](/api/search-drizzle/src/interfaces/searchstrategy/#checkcapability)
 
----
+***
 
 ### getCapabilities()
 
@@ -159,7 +159,7 @@ title: "PgSearchStrategy"
 
 [`SearchStrategy`](/api/search-drizzle/src/interfaces/searchstrategy/).[`getCapabilities`](/api/search-drizzle/src/interfaces/searchstrategy/#getcapabilities)
 
----
+***
 
 ### getRequiredExtensions()
 

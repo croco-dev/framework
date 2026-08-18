@@ -13,13 +13,13 @@ title: "CreatePlanDraftCommand"
 
 > `readonly` **actor**: [`PlanReleaseActor`](/api/billing-core/src/type-aliases/planreleaseactor/)
 
----
+***
 
 ### definition
 
 > `readonly` **definition**: [`PlanVersionDefinition`](/api/billing-core/src/type-aliases/planversiondefinition/)
 
----
+***
 
 ### reason
 

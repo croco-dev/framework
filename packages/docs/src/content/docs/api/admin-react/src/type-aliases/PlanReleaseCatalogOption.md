@@ -13,7 +13,7 @@ title: "PlanReleaseCatalogOption"
 
 > `readonly` **key**: `string`
 
----
+***
 
 ### label
 

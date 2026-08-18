@@ -23,7 +23,7 @@ title: "AuditSequenceGenerator"
 
 `number`
 
----
+***
 
 ### validateOrder()
 

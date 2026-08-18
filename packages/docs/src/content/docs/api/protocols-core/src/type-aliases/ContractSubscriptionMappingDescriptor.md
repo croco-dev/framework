@@ -13,13 +13,13 @@ title: "ContractSubscriptionMappingDescriptor"
 
 > `readonly` **entitlementPlanVersionRef**: `string`
 
----
+***
 
 ### providerPlanVersionRef
 
 > `readonly` **providerPlanVersionRef**: `string`
 
----
+***
 
 ### subscriptionId
 

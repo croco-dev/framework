@@ -41,7 +41,7 @@ title: "NotificationService"
 
 `void`
 
----
+***
 
 ### registerProvider()
 
@@ -61,7 +61,7 @@ title: "NotificationService"
 
 `void`
 
----
+***
 
 ### registerTemplate()
 
@@ -77,7 +77,7 @@ title: "NotificationService"
 
 `void`
 
----
+***
 
 ### renderTemplate()
 
@@ -93,7 +93,7 @@ title: "NotificationService"
 
 [`NotificationTemplateRenderResult`](/api/notifications-core/src/type-aliases/notificationtemplaterenderresult/)
 
----
+***
 
 ### send()
 
@@ -123,7 +123,7 @@ back to the caller.
 
 `Promise`\<`void`\>
 
----
+***
 
 ### sendTemplate()
 

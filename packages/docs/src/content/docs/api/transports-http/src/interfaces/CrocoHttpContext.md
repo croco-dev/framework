@@ -11,13 +11,13 @@ title: "CrocoHttpContext"
 
 > `readonly` **raw**: `Context`
 
----
+***
 
 ### req
 
 > `readonly` **req**: [`CrocoRequest`](/api/transports-http/src/interfaces/crocorequest/)
 
----
+***
 
 ### res
 
@@ -45,7 +45,7 @@ title: "CrocoHttpContext"
 
 `T` \| `undefined`
 
----
+***
 
 ### header()
 
@@ -61,7 +61,7 @@ title: "CrocoHttpContext"
 
 `string` \| `undefined`
 
----
+***
 
 ### json()
 
@@ -77,7 +77,7 @@ title: "CrocoHttpContext"
 
 `Promise`\<`T`\>
 
----
+***
 
 ### jsonResponse()
 
@@ -103,7 +103,7 @@ title: "CrocoHttpContext"
 
 `Response`
 
----
+***
 
 ### param()
 
@@ -119,7 +119,7 @@ title: "CrocoHttpContext"
 
 `string` \| `undefined`
 
----
+***
 
 ### query()
 
@@ -135,7 +135,7 @@ title: "CrocoHttpContext"
 
 `string` \| `string`[] \| `undefined`
 
----
+***
 
 ### redirect()
 
@@ -155,7 +155,7 @@ title: "CrocoHttpContext"
 
 `Response`
 
----
+***
 
 ### set()
 
@@ -181,7 +181,7 @@ title: "CrocoHttpContext"
 
 `void`
 
----
+***
 
 ### text()
 

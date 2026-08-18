@@ -13,31 +13,31 @@ title: "OutboxAppendOptions"
 
 > `optional` **aggregateId?**: `string`
 
----
+***
 
 ### id?
 
 > `optional` **id?**: `string`
 
----
+***
 
 ### idempotencyKey?
 
 > `optional` **idempotencyKey?**: `string`
 
----
+***
 
 ### maxAttempts?
 
 > `optional` **maxAttempts?**: `number`
 
----
+***
 
 ### metadata?
 
 > `optional` **metadata?**: `Record`\<`string`, `unknown`\>
 
----
+***
 
 ### visibleAt?
 

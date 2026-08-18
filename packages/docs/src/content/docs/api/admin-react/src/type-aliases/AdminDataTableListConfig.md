@@ -19,19 +19,19 @@ title: "AdminDataTableListConfig"
 
 > `readonly` `optional` **generatedClient?**: `string`
 
----
+***
 
 ### load?
 
 > `readonly` `optional` **load?**: [`AdminDataTableListLoader`](/api/admin-react/src/type-aliases/admindatatablelistloader/)\<`TData`\>
 
----
+***
 
 ### queryKey?
 
 > `readonly` `optional` **queryKey?**: readonly `unknown`[]
 
----
+***
 
 ### queryOptions?
 

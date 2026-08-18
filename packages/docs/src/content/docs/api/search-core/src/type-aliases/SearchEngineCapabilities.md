@@ -15,19 +15,19 @@ title: "SearchEngineCapabilities"
 
 > **facetedSearch**: `boolean`
 
----
+***
 
 ### fuzzySearch
 
 > **fuzzySearch**: `boolean`
 
----
+***
 
 ### highlightSearch
 
 > **highlightSearch**: `boolean`
 
----
+***
 
 ### vectorSearch
 

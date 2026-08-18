@@ -13,7 +13,7 @@ title: "NotificationOutboxReference"
 
 > `readonly` **idempotencyKey**: `string`
 
----
+***
 
 ### outboxMessageId?
 

@@ -11,7 +11,7 @@ title: "UpdateClaimedExecutionContinuationInput"
 
 > **fencingToken**: `string`
 
----
+***
 
 ### update
 

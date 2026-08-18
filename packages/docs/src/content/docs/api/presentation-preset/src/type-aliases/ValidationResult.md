@@ -13,13 +13,13 @@ title: "ValidationResult"
 
 > `readonly` **message**: `string`
 
----
+***
 
 ### path
 
 > `readonly` **path**: `string`
 
----
+***
 
 ### severity
 

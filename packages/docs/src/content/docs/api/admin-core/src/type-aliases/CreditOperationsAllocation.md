@@ -13,7 +13,7 @@ title: "CreditOperationsAllocation"
 
 > `readonly` **amount**: `string`
 
----
+***
 
 ### grantTransactionId
 

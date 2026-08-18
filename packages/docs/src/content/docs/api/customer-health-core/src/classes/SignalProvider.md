@@ -26,7 +26,7 @@ title: "SignalProvider"
 
 > `abstract` `readonly` **category**: [`SignalCategory`](/api/customer-health-core/src/type-aliases/signalcategory/)
 
----
+***
 
 ### token
 

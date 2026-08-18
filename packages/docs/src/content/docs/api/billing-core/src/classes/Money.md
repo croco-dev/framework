@@ -33,7 +33,7 @@ title: "Money"
 
 > `readonly` **amount**: `number`
 
----
+***
 
 ### currency
 
@@ -55,7 +55,7 @@ title: "Money"
 
 `Money`
 
----
+***
 
 ### divide()
 
@@ -75,7 +75,7 @@ title: "Money"
 
 `Money`
 
----
+***
 
 ### eq()
 
@@ -91,7 +91,7 @@ title: "Money"
 
 `boolean`
 
----
+***
 
 ### gt()
 
@@ -107,7 +107,7 @@ title: "Money"
 
 `boolean`
 
----
+***
 
 ### gte()
 
@@ -123,7 +123,7 @@ title: "Money"
 
 `boolean`
 
----
+***
 
 ### lt()
 
@@ -139,7 +139,7 @@ title: "Money"
 
 `boolean`
 
----
+***
 
 ### lte()
 
@@ -155,7 +155,7 @@ title: "Money"
 
 `boolean`
 
----
+***
 
 ### multiply()
 
@@ -175,7 +175,7 @@ title: "Money"
 
 `Money`
 
----
+***
 
 ### subtract()
 
@@ -191,7 +191,7 @@ title: "Money"
 
 `Money`
 
----
+***
 
 ### toDecimal()
 
@@ -201,7 +201,7 @@ title: "Money"
 
 `number`
 
----
+***
 
 ### toFormattedString()
 
@@ -217,7 +217,7 @@ title: "Money"
 
 `string`
 
----
+***
 
 ### toJSON()
 
@@ -235,7 +235,7 @@ title: "Money"
 
 > **currency**: `string`
 
----
+***
 
 ### toString()
 
@@ -245,7 +245,7 @@ title: "Money"
 
 `string`
 
----
+***
 
 ### fromDecimal()
 
@@ -269,7 +269,7 @@ title: "Money"
 
 `Money`
 
----
+***
 
 ### zero()
 

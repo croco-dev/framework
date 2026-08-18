@@ -29,7 +29,7 @@ const options: HealthCheckServiceOptions = {
 
 `HealthCheckResult.results`
 
----
+***
 
 ### status
 

@@ -13,7 +13,7 @@ title: "PolarRemoteProductMapping"
 
 > `readonly` **meterIds**: readonly `string`[]
 
----
+***
 
 ### priceIds
 

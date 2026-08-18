@@ -13,7 +13,7 @@ title: "AdminResourceDetailDescriptor"
 
 > `readonly` **fields**: [`NonEmptyArray`](/api/admin-core/src/type-aliases/nonemptyarray/)\<`string`\>
 
----
+***
 
 ### sections?
 

@@ -13,31 +13,31 @@ title: "IntentMapProvider"
 
 > `readonly` **dependencies**: readonly `string`[]
 
----
+***
 
 ### description
 
 > `readonly` **description**: `string`
 
----
+***
 
 ### id
 
 > `readonly` **id**: `string`
 
----
+***
 
 ### name
 
 > `readonly` **name**: `string`
 
----
+***
 
 ### scope
 
 > `readonly` **scope**: `"singleton"` \| `"request"` \| `"transient"` \| `"unknown"`
 
----
+***
 
 ### source
 

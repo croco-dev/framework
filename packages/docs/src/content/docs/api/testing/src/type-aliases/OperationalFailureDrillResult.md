@@ -13,13 +13,13 @@ title: "OperationalFailureDrillResult"
 
 > `readonly` **id**: [`OperationalFailureDrillScenarioId`](/api/testing/src/type-aliases/operationalfailuredrillscenarioid/)
 
----
+***
 
 ### name
 
 > `readonly` **name**: `string`
 
----
+***
 
 ### outcome
 

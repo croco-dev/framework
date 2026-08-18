@@ -11,7 +11,7 @@ title: "TenantContextRequirement"
 
 ### TTenantId
 
-`TTenantId` _extends_ `string` = `string`
+`TTenantId` *extends* `string` = `string`
 
 ## Properties
 

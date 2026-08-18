@@ -13,7 +13,7 @@ title: "IdempotencyReserveOptions"
 
 > `readonly` `optional` **metadata?**: `Record`\<`string`, `unknown`\>
 
----
+***
 
 ### ttlMs?
 

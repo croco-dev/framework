@@ -13,25 +13,25 @@ title: "DataMapArtifact"
 
 > `readonly` **diagnostics**: readonly `object`[]
 
----
+***
 
 ### projectMapSection
 
 > `readonly` **projectMapSection**: [`DataMapProjectSection`](/api/governance-core/src/type-aliases/datamapprojectsection/)
 
----
+***
 
 ### resources
 
 > `readonly` **resources**: readonly [`DataMapResource`](/api/governance-core/src/type-aliases/datamapresource/)[]
 
----
+***
 
 ### summary
 
 > `readonly` **summary**: [`DataMapSummary`](/api/governance-core/src/type-aliases/datamapsummary/)
 
----
+***
 
 ### version
 

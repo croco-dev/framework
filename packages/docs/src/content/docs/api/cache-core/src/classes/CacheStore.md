@@ -20,7 +20,7 @@ Backward-compatible cache store base class.
 
 ### K
 
-`K` _extends_ `string` = `string`
+`K` *extends* `string` = `string`
 
 ### V
 
@@ -54,7 +54,7 @@ Backward-compatible cache store base class.
 
 [`Cache`](/api/cache-core/src/classes/cache/).[`clear`](/api/cache-core/src/classes/cache/#clear)
 
----
+***
 
 ### delete()
 
@@ -74,7 +74,7 @@ Backward-compatible cache store base class.
 
 [`Cache`](/api/cache-core/src/classes/cache/).[`delete`](/api/cache-core/src/classes/cache/#delete)
 
----
+***
 
 ### get()
 
@@ -94,7 +94,7 @@ Backward-compatible cache store base class.
 
 [`Cache`](/api/cache-core/src/classes/cache/).[`get`](/api/cache-core/src/classes/cache/#get)
 
----
+***
 
 ### getOrSet()
 
@@ -122,7 +122,7 @@ Backward-compatible cache store base class.
 
 [`Cache`](/api/cache-core/src/classes/cache/).[`getOrSet`](/api/cache-core/src/classes/cache/#getorset)
 
----
+***
 
 ### getStats()
 
@@ -136,7 +136,7 @@ Backward-compatible cache store base class.
 
 [`Cache`](/api/cache-core/src/classes/cache/).[`getStats`](/api/cache-core/src/classes/cache/#getstats)
 
----
+***
 
 ### has()
 
@@ -156,7 +156,7 @@ Backward-compatible cache store base class.
 
 [`Cache`](/api/cache-core/src/classes/cache/).[`has`](/api/cache-core/src/classes/cache/#has)
 
----
+***
 
 ### invalidatePattern()
 
@@ -176,7 +176,7 @@ Backward-compatible cache store base class.
 
 [`Cache`](/api/cache-core/src/classes/cache/).[`invalidatePattern`](/api/cache-core/src/classes/cache/#invalidatepattern)
 
----
+***
 
 ### pruneExpired()
 
@@ -190,7 +190,7 @@ Backward-compatible cache store base class.
 
 [`Cache`](/api/cache-core/src/classes/cache/).[`pruneExpired`](/api/cache-core/src/classes/cache/#pruneexpired)
 
----
+***
 
 ### set()
 
@@ -221,7 +221,7 @@ A zero lifetime expires immediately.
 
 [`Cache`](/api/cache-core/src/classes/cache/).[`set`](/api/cache-core/src/classes/cache/#set)
 
----
+***
 
 ### warmup()
 

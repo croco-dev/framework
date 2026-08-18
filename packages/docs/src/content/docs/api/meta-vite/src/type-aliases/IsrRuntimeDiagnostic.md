@@ -13,19 +13,19 @@ title: "IsrRuntimeDiagnostic"
 
 > `readonly` **code**: [`IsrRuntimeDiagnosticCode`](/api/meta-vite/src/type-aliases/isrruntimediagnosticcode/)
 
----
+***
 
 ### message
 
 > `readonly` **message**: `string`
 
----
+***
 
 ### recovery
 
 > `readonly` **recovery**: `string`
 
----
+***
 
 ### severity
 

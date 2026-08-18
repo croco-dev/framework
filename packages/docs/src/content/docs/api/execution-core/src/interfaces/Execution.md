@@ -15,7 +15,7 @@ Execution entity representing a single execution record.
 
 Current attempt count
 
----
+***
 
 ### checkpoints?
 
@@ -23,7 +23,7 @@ Current attempt count
 
 Checkpoints for batch resume (key-value pairs)
 
----
+***
 
 ### completedAt?
 
@@ -31,7 +31,7 @@ Checkpoints for batch resume (key-value pairs)
 
 Execution completion timestamp
 
----
+***
 
 ### continuation?
 
@@ -39,7 +39,7 @@ Execution completion timestamp
 
 Optional atomic continuation state for chunked deliveries
 
----
+***
 
 ### createdAt
 
@@ -47,7 +47,7 @@ Optional atomic continuation state for chunked deliveries
 
 Creation timestamp
 
----
+***
 
 ### error?
 
@@ -55,7 +55,7 @@ Creation timestamp
 
 Error details (set on failure)
 
----
+***
 
 ### id
 
@@ -63,7 +63,7 @@ Error details (set on failure)
 
 Unique execution ID
 
----
+***
 
 ### idempotencyKey?
 
@@ -71,7 +71,7 @@ Unique execution ID
 
 Optional idempotency key for deduplication
 
----
+***
 
 ### logs?
 
@@ -79,7 +79,7 @@ Optional idempotency key for deduplication
 
 Append-only inspection log
 
----
+***
 
 ### maxAttempts
 
@@ -87,7 +87,7 @@ Append-only inspection log
 
 Maximum allowed attempts
 
----
+***
 
 ### metadata?
 
@@ -95,7 +95,7 @@ Maximum allowed attempts
 
 Optional metadata
 
----
+***
 
 ### parentId?
 
@@ -103,7 +103,7 @@ Optional metadata
 
 Optional parent execution ID
 
----
+***
 
 ### payload?
 
@@ -111,7 +111,7 @@ Optional parent execution ID
 
 Optional payload data
 
----
+***
 
 ### progress?
 
@@ -119,7 +119,7 @@ Optional payload data
 
 Progress information
 
----
+***
 
 ### replayOf?
 
@@ -127,7 +127,7 @@ Progress information
 
 Original execution ID when this execution was created by replay
 
----
+***
 
 ### requestFingerprint?
 
@@ -135,7 +135,7 @@ Original execution ID when this execution was created by replay
 
 Canonical fingerprint of the execution type and payload used for idempotency validation.
 
----
+***
 
 ### result?
 
@@ -143,7 +143,7 @@ Canonical fingerprint of the execution type and payload used for idempotency val
 
 Execution result (set on completion)
 
----
+***
 
 ### scheduledFor?
 
@@ -151,7 +151,7 @@ Execution result (set on completion)
 
 Optional scheduled start time
 
----
+***
 
 ### startedAt?
 
@@ -159,7 +159,7 @@ Optional scheduled start time
 
 Execution start timestamp
 
----
+***
 
 ### status
 
@@ -167,7 +167,7 @@ Execution start timestamp
 
 Current execution status
 
----
+***
 
 ### timeout?
 
@@ -175,7 +175,7 @@ Current execution status
 
 Timeout in milliseconds
 
----
+***
 
 ### type
 

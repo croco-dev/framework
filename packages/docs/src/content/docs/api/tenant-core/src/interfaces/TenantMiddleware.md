@@ -29,7 +29,7 @@ The incoming request
 
 True if the middleware can handle the request
 
----
+***
 
 ### execute()
 

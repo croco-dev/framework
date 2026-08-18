@@ -13,7 +13,7 @@ title: "MetaViteRouteManifestRegistryOptions"
 
 > `readonly` **routeRegistry**: [`MetaViteRouteRegistryManifestSource`](/api/meta-vite/src/type-aliases/metaviterouteregistrymanifestsource/)
 
----
+***
 
 ### serverActionRegistry?
 

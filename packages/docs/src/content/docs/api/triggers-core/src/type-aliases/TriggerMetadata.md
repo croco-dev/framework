@@ -15,13 +15,13 @@ Base trigger metadata interface.
 
 > `readonly` **methodName**: `string` \| `symbol`
 
----
+***
 
 ### target
 
 > `readonly` **target**: `object`
 
----
+***
 
 ### type
 

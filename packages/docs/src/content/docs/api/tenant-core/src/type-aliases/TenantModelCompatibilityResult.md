@@ -13,7 +13,7 @@ title: "TenantModelCompatibilityResult"
 
 > `readonly` **diagnostics**: readonly [`TenantModelCompatibilityDiagnostic`](/api/tenant-core/src/type-aliases/tenantmodelcompatibilitydiagnostic/)[]
 
----
+***
 
 ### ok
 

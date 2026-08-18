@@ -13,13 +13,13 @@ title: "HttpExceptionFilterResponse"
 
 > **body**: `Record`\<`string`, `unknown`\>
 
----
+***
 
 ### headers
 
 > **headers**: `Record`\<`string`, `string`\>
 
----
+***
 
 ### status
 

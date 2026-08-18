@@ -5,7 +5,7 @@ prev: false
 title: "InferDesktopAppContracts"
 ---
 
-> **InferDesktopAppContracts**\<`TApp`\> = `TApp` _extends_ `object` ? `TContracts` : `never`
+> **InferDesktopAppContracts**\<`TApp`\> = `TApp` *extends* `object` ? `TContracts` : `never`
 
 ## Type Parameters
 

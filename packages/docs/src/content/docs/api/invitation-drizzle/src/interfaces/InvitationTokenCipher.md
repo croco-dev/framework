@@ -25,7 +25,7 @@ title: "InvitationTokenCipher"
 
 `string`
 
----
+***
 
 ### encrypt()
 

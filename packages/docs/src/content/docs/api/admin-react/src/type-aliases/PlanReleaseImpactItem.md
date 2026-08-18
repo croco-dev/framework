@@ -13,31 +13,31 @@ title: "PlanReleaseImpactItem"
 
 > `readonly` **audience**: [`PlanReleaseImpactAudience`](/api/admin-react/src/type-aliases/planreleaseimpactaudience/)
 
----
+***
 
 ### code
 
 > `readonly` **code**: `string`
 
----
+***
 
 ### confidence?
 
 > `readonly` `optional` **confidence?**: `"low"` \| `"medium"` \| `"high"`
 
----
+***
 
 ### kind
 
 > `readonly` **kind**: `"fact"` \| `"estimate"`
 
----
+***
 
 ### message
 
 > `readonly` **message**: `string`
 
----
+***
 
 ### references
 

@@ -13,7 +13,7 @@ title: "OffsetParams"
 
 > **limit**: `number`
 
----
+***
 
 ### offset
 

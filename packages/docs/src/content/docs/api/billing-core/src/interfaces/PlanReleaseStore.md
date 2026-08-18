@@ -27,7 +27,7 @@ Atomically creates the draft and appends its lifecycle event to the durable outb
 
 `Promise`\<`void`\>
 
----
+***
 
 ### get()
 
@@ -43,7 +43,7 @@ Atomically creates the draft and appends its lifecycle event to the durable outb
 
 `Promise`\<[`PlanRelease`](/api/billing-core/src/type-aliases/planrelease/) \| `null`\>
 
----
+***
 
 ### list()
 
@@ -59,7 +59,7 @@ Atomically creates the draft and appends its lifecycle event to the durable outb
 
 `Promise`\<readonly [`PlanRelease`](/api/billing-core/src/type-aliases/planrelease/)[]\>
 
----
+***
 
 ### listPendingEvents()
 
@@ -75,7 +75,7 @@ Atomically creates the draft and appends its lifecycle event to the durable outb
 
 `Promise`\<readonly [`PlanReleaseLifecycleEvent`](/api/billing-core/src/type-aliases/planreleaselifecycleevent/)[]\>
 
----
+***
 
 ### markEventPublished()
 
@@ -91,7 +91,7 @@ Atomically creates the draft and appends its lifecycle event to the durable outb
 
 `Promise`\<`void`\>
 
----
+***
 
 ### save()
 

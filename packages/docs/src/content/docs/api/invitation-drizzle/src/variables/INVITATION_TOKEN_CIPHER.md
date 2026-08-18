@@ -5,4 +5,4 @@ prev: false
 title: "INVITATION_TOKEN_CIPHER"
 ---
 
-> `const` **INVITATION_TOKEN_CIPHER**: [`Token`](/api/framework-context/src/classes/token/)\<[`InvitationTokenCipher`](/api/invitation-drizzle/src/interfaces/invitationtokencipher/)\>
+> `const` **INVITATION\_TOKEN\_CIPHER**: [`Token`](/api/framework-context/src/classes/token/)\<[`InvitationTokenCipher`](/api/invitation-drizzle/src/interfaces/invitationtokencipher/)\>

@@ -13,7 +13,7 @@ title: "TestKernelResourceEvidence"
 
 > `readonly` **diagnostics**: readonly [`TestResourceDiagnostic`](/api/testing/src/type-aliases/testresourcediagnostic/)[]
 
----
+***
 
 ### fidelity
 

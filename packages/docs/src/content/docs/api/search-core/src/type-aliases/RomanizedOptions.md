@@ -15,7 +15,7 @@ title: "RomanizedOptions"
 
 > `optional` **locale?**: `string`
 
----
+***
 
 ### system?
 

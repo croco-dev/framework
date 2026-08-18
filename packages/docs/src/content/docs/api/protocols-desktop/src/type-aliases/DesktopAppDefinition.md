@@ -29,8 +29,8 @@ title: "DesktopAppDefinition"
 
 ### TContracts
 
-`TContracts` _extends_ [`DesktopContractRecord`](/api/protocols-desktop/src/type-aliases/desktopcontractrecord/) = [`DesktopContractRecord`](/api/protocols-desktop/src/type-aliases/desktopcontractrecord/)
+`TContracts` *extends* [`DesktopContractRecord`](/api/protocols-desktop/src/type-aliases/desktopcontractrecord/) = [`DesktopContractRecord`](/api/protocols-desktop/src/type-aliases/desktopcontractrecord/)
 
 ### TWindows
 
-`TWindows` _extends_ [`DesktopWindowRecord`](/api/protocols-desktop/src/type-aliases/desktopwindowrecord/) = [`DesktopWindowRecord`](/api/protocols-desktop/src/type-aliases/desktopwindowrecord/)
+`TWindows` *extends* [`DesktopWindowRecord`](/api/protocols-desktop/src/type-aliases/desktopwindowrecord/) = [`DesktopWindowRecord`](/api/protocols-desktop/src/type-aliases/desktopwindowrecord/)

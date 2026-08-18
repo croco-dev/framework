@@ -11,4 +11,4 @@ title: "DefinedProblemRegistryEntries"
 
 ### Problems
 
-`Problems` _extends_ [`ProblemRegistryProblemDefinitions`](/api/problems-core/src/type-aliases/problemregistryproblemdefinitions/)
+`Problems` *extends* [`ProblemRegistryProblemDefinitions`](/api/problems-core/src/type-aliases/problemregistryproblemdefinitions/)

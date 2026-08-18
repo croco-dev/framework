@@ -17,13 +17,13 @@ title: "AssuranceProjectMapArtifact"
 
 > `readonly` **providers**: readonly `object`[]
 
----
+***
 
 ### generatedArtifacts?
 
 > `readonly` `optional` **generatedArtifacts?**: readonly `object`[]
 
----
+***
 
 ### packageGraph?
 
@@ -41,7 +41,7 @@ title: "AssuranceProjectMapArtifact"
 
 > `readonly` **profileName**: `string`
 
----
+***
 
 ### policies?
 
@@ -59,7 +59,7 @@ title: "AssuranceProjectMapArtifact"
 
 > `readonly` **target**: `string`
 
----
+***
 
 ### problems
 
@@ -69,7 +69,7 @@ title: "AssuranceProjectMapArtifact"
 
 > `readonly` **responses**: readonly `object`[]
 
----
+***
 
 ### routeGraph
 
@@ -79,7 +79,7 @@ title: "AssuranceProjectMapArtifact"
 
 > `readonly` **routes**: readonly `object`[]
 
----
+***
 
 ### version
 

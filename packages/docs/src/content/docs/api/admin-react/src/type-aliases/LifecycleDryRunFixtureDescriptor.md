@@ -13,19 +13,19 @@ title: "LifecycleDryRunFixtureDescriptor"
 
 > `readonly` `optional` **description?**: `string`
 
----
+***
 
 ### id
 
 > `readonly` **id**: `string`
 
----
+***
 
 ### label
 
 > `readonly` **label**: `string`
 
----
+***
 
 ### tenantId?
 

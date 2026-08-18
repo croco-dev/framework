@@ -5,4 +5,4 @@ prev: false
 title: "ScenarioBoundary"
 ---
 
-> **ScenarioBoundary** = _typeof_ `SCENARIO_BOUNDARIES`\[`number`\]
+> **ScenarioBoundary** = *typeof* `SCENARIO_BOUNDARIES`\[`number`\]

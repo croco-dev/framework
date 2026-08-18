@@ -40,7 +40,7 @@ Map을 사용하여 파일을 메모리에 저장합니다. 실제 운영 환경
 
 `void`
 
----
+***
 
 ### delete()
 
@@ -64,7 +64,7 @@ Map을 사용하여 파일을 메모리에 저장합니다. 실제 운영 환경
 
 `StorageProvider.delete`
 
----
+***
 
 ### exists()
 
@@ -88,7 +88,7 @@ Map을 사용하여 파일을 메모리에 저장합니다. 실제 운영 환경
 
 `StorageProvider.exists`
 
----
+***
 
 ### get()
 
@@ -118,7 +118,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 `StorageProvider.get`
 
----
+***
 
 ### getMetadata()
 
@@ -148,7 +148,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 `StorageProvider.getMetadata`
 
----
+***
 
 ### getPublicUrl()
 
@@ -174,7 +174,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 `StorageProvider.getPublicUrl`
 
----
+***
 
 ### getSignedUrl()
 
@@ -206,7 +206,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 `StorageProvider.getSignedUrl`
 
----
+***
 
 ### getStream()
 
@@ -236,7 +236,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 `StorageProvider.getStream`
 
----
+***
 
 ### put()
 

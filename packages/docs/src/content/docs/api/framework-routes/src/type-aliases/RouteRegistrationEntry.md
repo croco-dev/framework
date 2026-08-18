@@ -13,31 +13,31 @@ title: "RouteRegistrationEntry"
 
 > `readonly` **controllerName**: `string`
 
----
+***
 
 ### controllerPath
 
 > `readonly` **controllerPath**: `string`
 
----
+***
 
 ### handlerName
 
 > `readonly` **handlerName**: `string`
 
----
+***
 
 ### id
 
 > `readonly` **id**: `string`
 
----
+***
 
 ### method
 
 > `readonly` **method**: `string`
 
----
+***
 
 ### path
 

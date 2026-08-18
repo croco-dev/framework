@@ -11,55 +11,55 @@ title: "MeterRef"
 
 ### Key
 
-`Key` _extends_ `string` = `string`
+`Key` *extends* `string` = `string`
 
 ### Aggregation
 
-`Aggregation` _extends_ [`MeterAggregation`](/api/metering-core/src/type-aliases/meteraggregation/) = [`MeterAggregation`](/api/metering-core/src/type-aliases/meteraggregation/)
+`Aggregation` *extends* [`MeterAggregation`](/api/metering-core/src/type-aliases/meteraggregation/) = [`MeterAggregation`](/api/metering-core/src/type-aliases/meteraggregation/)
 
 ### Unit
 
-`Unit` _extends_ `string` = `string`
+`Unit` *extends* `string` = `string`
 
 ### Dimensions
 
-`Dimensions` _extends_ [`MeterDimensionSchema`](/api/metering-core/src/type-aliases/meterdimensionschema/) = [`MeterDimensionSchema`](/api/metering-core/src/type-aliases/meterdimensionschema/)
+`Dimensions` *extends* [`MeterDimensionSchema`](/api/metering-core/src/type-aliases/meterdimensionschema/) = [`MeterDimensionSchema`](/api/metering-core/src/type-aliases/meterdimensionschema/)
 
 ### Billing
 
-`Billing` _extends_ [`MeterBillingIntent`](/api/metering-core/src/type-aliases/meterbillingintent/) = [`MeterBillingIntent`](/api/metering-core/src/type-aliases/meterbillingintent/)
+`Billing` *extends* [`MeterBillingIntent`](/api/metering-core/src/type-aliases/meterbillingintent/) = [`MeterBillingIntent`](/api/metering-core/src/type-aliases/meterbillingintent/)
 
 ## Properties
 
-### \[METER_REF_BRAND\]
+### \[METER\_REF\_BRAND\]
 
-> `readonly` **\[METER_REF_BRAND\]**: `true`
+> `readonly` **\[METER\_REF\_BRAND\]**: `true`
 
----
+***
 
 ### aggregation
 
 > `readonly` **aggregation**: `Aggregation`
 
----
+***
 
 ### billing
 
 > `readonly` **billing**: `Billing`
 
----
+***
 
 ### dimensions
 
 > `readonly` **dimensions**: `Dimensions`
 
----
+***
 
 ### key
 
 > `readonly` **key**: `Key`
 
----
+***
 
 ### unit
 

@@ -15,7 +15,7 @@ title: "SearchableOptions"
 
 > `optional` **autoSync?**: `boolean`
 
----
+***
 
 ### index?
 

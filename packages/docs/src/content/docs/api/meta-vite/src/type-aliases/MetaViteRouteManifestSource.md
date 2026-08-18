@@ -13,13 +13,13 @@ title: "MetaViteRouteManifestSource"
 
 > `readonly` `optional` **apiRoutes?**: readonly [`ApiRouteIR`](/api/meta-vite/src/type-aliases/apirouteir/)[]
 
----
+***
 
 ### pages
 
 > `readonly` **pages**: readonly [`PageRouteIR`](/api/meta-vite/src/type-aliases/pagerouteir/)[]
 
----
+***
 
 ### serverActions?
 

@@ -5,4 +5,4 @@ prev: false
 title: "GRAPHQL_GUARDS_KEY"
 ---
 
-> `const` **GRAPHQL_GUARDS_KEY**: _typeof_ `GRAPHQL_GUARDS_KEY`
+> `const` **GRAPHQL\_GUARDS\_KEY**: *typeof* `GRAPHQL_GUARDS_KEY`

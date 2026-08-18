@@ -13,25 +13,25 @@ title: "OutboxClaim"
 
 > `readonly` **attempt**: `number`
 
----
+***
 
 ### claimedAt
 
 > `readonly` **claimedAt**: `Date`
 
----
+***
 
 ### dispatcherId?
 
 > `readonly` `optional` **dispatcherId?**: `string`
 
----
+***
 
 ### expiresAt
 
 > `readonly` **expiresAt**: `Date`
 
----
+***
 
 ### id
 

@@ -13,20 +13,20 @@ title: "ExecutableAssuranceGraph"
 
 > `readonly` **artifactVersions**: `Readonly`\<`Record`\<`string`, `string`\>\>
 
----
+***
 
 ### nodes
 
 > `readonly` **nodes**: readonly [`AssuranceBehaviorNode`](/api/testing/src/type-aliases/assurancebehaviornode/)[]
 
----
+***
 
 ### obligations
 
 > `readonly` **obligations**: readonly [`AssuranceEvidenceObligation`](/api/testing/src/type-aliases/assuranceevidenceobligation/)[]
 
----
+***
 
 ### schemaVersion
 
-> `readonly` **schemaVersion**: _typeof_ [`EXECUTABLE_ASSURANCE_GRAPH_VERSION`](/api/testing/src/variables/executable_assurance_graph_version/)
+> `readonly` **schemaVersion**: *typeof* [`EXECUTABLE_ASSURANCE_GRAPH_VERSION`](/api/testing/src/variables/executable_assurance_graph_version/)

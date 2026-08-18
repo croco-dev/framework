@@ -13,25 +13,25 @@ title: "PolarUsageDeliveryWorkerOptions"
 
 > `readonly` **leaseDurationMs**: `number`
 
----
+***
 
 ### maxBatchSize?
 
 > `readonly` `optional` **maxBatchSize?**: `number`
 
----
+***
 
 ### ownerId
 
 > `readonly` **ownerId**: `string`
 
----
+***
 
 ### retryBaseDelayMs?
 
 > `readonly` `optional` **retryBaseDelayMs?**: `number`
 
----
+***
 
 ### retryMaxDelayMs?
 

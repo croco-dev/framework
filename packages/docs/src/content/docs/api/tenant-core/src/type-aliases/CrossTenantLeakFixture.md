@@ -11,7 +11,7 @@ title: "CrossTenantLeakFixture"
 
 ### TRecord
 
-`TRecord` _extends_ [`CrossTenantLeakFixtureRecord`](/api/tenant-core/src/type-aliases/crosstenantleakfixturerecord/)
+`TRecord` *extends* [`CrossTenantLeakFixtureRecord`](/api/tenant-core/src/type-aliases/crosstenantleakfixturerecord/)
 
 ## Properties
 
@@ -19,19 +19,19 @@ title: "CrossTenantLeakFixture"
 
 > `readonly` **operation**: `string`
 
----
+***
 
 ### records
 
 > `readonly` **records**: readonly `TRecord`[]
 
----
+***
 
 ### tenantIds
 
 > `readonly` **tenantIds**: readonly `string`[]
 
----
+***
 
 ### tenantKey
 
@@ -57,7 +57,7 @@ readonly `TRecord`[]
 
 `void`
 
----
+***
 
 ### expectedRowsForTenant()
 

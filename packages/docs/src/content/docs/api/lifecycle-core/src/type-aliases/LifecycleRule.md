@@ -13,7 +13,7 @@ title: "LifecycleRule"
 
 > `readonly` **actions**: readonly [`LifecycleAction`](/api/lifecycle-core/src/type-aliases/lifecycleaction/)[] \| ((`context`) => readonly [`LifecycleAction`](/api/lifecycle-core/src/type-aliases/lifecycleaction/)[] \| `Promise`\<readonly [`LifecycleAction`](/api/lifecycle-core/src/type-aliases/lifecycleaction/)[]\>)
 
----
+***
 
 ### conditionEvidence?
 
@@ -29,7 +29,7 @@ title: "LifecycleRule"
 
 [`LifecycleConditionEvidence`](/api/lifecycle-core/src/type-aliases/lifecycleconditionevidence/) \| `Promise`\<[`LifecycleConditionEvidence`](/api/lifecycle-core/src/type-aliases/lifecycleconditionevidence/)\>
 
----
+***
 
 ### cooldown?
 
@@ -39,37 +39,37 @@ title: "LifecycleRule"
 
 > `readonly` **durationMs**: `number`
 
----
+***
 
 ### description
 
 > `readonly` **description**: `string`
 
----
+***
 
 ### id
 
 > `readonly` **id**: `string`
 
----
+***
 
 ### idempotencyKey?
 
 > `readonly` `optional` **idempotencyKey?**: [`LifecycleIdempotencyResolver`](/api/lifecycle-core/src/type-aliases/lifecycleidempotencyresolver/)
 
----
+***
 
 ### severity
 
 > `readonly` **severity**: [`LifecycleSeverity`](/api/lifecycle-core/src/type-aliases/lifecycleseverity/)
 
----
+***
 
 ### triggers
 
 > `readonly` **triggers**: readonly [`LifecycleTrigger`](/api/lifecycle-core/src/type-aliases/lifecycletrigger/)[]
 
----
+***
 
 ### when?
 

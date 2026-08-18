@@ -5,4 +5,4 @@ prev: false
 title: "TransactionalInboxRecordRow"
 ---
 
-> **TransactionalInboxRecordRow** = _typeof_ `transactionalInboxRecords.$inferSelect`
+> **TransactionalInboxRecordRow** = *typeof* `transactionalInboxRecords.$inferSelect`

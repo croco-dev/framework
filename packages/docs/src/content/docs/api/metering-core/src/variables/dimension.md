@@ -13,11 +13,11 @@ Definition-first meter helpers and deterministic meter descriptors.
 
 ```typescript
 const requests = defineMeter({
-  key: "api.requests",
-  aggregation: "COUNT",
-  unit: "request",
+  key: 'api.requests',
+  aggregation: 'COUNT',
+  unit: 'request',
   dimensions: {
-    region: dimension.enum(["apac", "emea"]),
+    region: dimension.enum(['apac', 'emea']),
   },
 });
 ```

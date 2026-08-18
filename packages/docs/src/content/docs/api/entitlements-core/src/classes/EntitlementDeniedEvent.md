@@ -49,7 +49,7 @@ entitlement 거부, quota 초과, overage 허용 시 발행되는 이벤트입�
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventId`](/api/events-core/src/classes/domainevent/#eventid)
 
----
+***
 
 ### eventName
 
@@ -59,13 +59,13 @@ entitlement 거부, quota 초과, overage 허용 시 발행되는 이벤트입�
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventName`](/api/events-core/src/classes/domainevent/#eventname)
 
----
+***
 
 ### featureKey
 
 > `readonly` **featureKey**: `string`
 
----
+***
 
 ### metadata
 
@@ -75,19 +75,19 @@ entitlement 거부, quota 초과, overage 허용 시 발행되는 이벤트입�
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`metadata`](/api/events-core/src/classes/domainevent/#metadata)
 
----
+***
 
 ### reason
 
 > `readonly` **reason**: `string`
 
----
+***
 
 ### tenantId
 
 > `readonly` **tenantId**: `string`
 
----
+***
 
 ### timestamp
 
@@ -97,7 +97,7 @@ entitlement 거부, quota 초과, overage 허용 시 발행되는 이벤트입�
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`timestamp`](/api/events-core/src/classes/domainevent/#timestamp)
 
----
+***
 
 ### eventName
 

@@ -30,7 +30,7 @@ update returns null when the execution is no longer running under the supplied f
 
 `Promise`\<[`AcquireExecutionContinuationResult`](/api/execution-core/src/type-aliases/acquireexecutioncontinuationresult/)\>
 
----
+***
 
 ### updateClaimedContinuation()
 

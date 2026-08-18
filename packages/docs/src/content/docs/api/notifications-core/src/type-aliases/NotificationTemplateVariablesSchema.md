@@ -13,7 +13,7 @@ title: "NotificationTemplateVariablesSchema"
 
 > `readonly` `optional` **additionalProperties?**: `boolean`
 
----
+***
 
 ### properties
 

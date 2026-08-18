@@ -67,7 +67,7 @@ AWS S3 SDK를 사용하여 R2와 통신합니다.
 
 [`BaseStorageProvider`](/api/storage-core/src/classes/basestorageprovider/).[`delete`](/api/storage-core/src/classes/basestorageprovider/#delete)
 
----
+***
 
 ### exists()
 
@@ -91,7 +91,7 @@ AWS S3 SDK를 사용하여 R2와 통신합니다.
 
 [`BaseStorageProvider`](/api/storage-core/src/classes/basestorageprovider/).[`exists`](/api/storage-core/src/classes/basestorageprovider/#exists)
 
----
+***
 
 ### get()
 
@@ -121,7 +121,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 [`BaseStorageProvider`](/api/storage-core/src/classes/basestorageprovider/).[`get`](/api/storage-core/src/classes/basestorageprovider/#get)
 
----
+***
 
 ### getMetadata()
 
@@ -151,7 +151,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 [`BaseStorageProvider`](/api/storage-core/src/classes/basestorageprovider/).[`getMetadata`](/api/storage-core/src/classes/basestorageprovider/#getmetadata)
 
----
+***
 
 ### getPublicUrl()
 
@@ -177,7 +177,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 [`BaseStorageProvider`](/api/storage-core/src/classes/basestorageprovider/).[`getPublicUrl`](/api/storage-core/src/classes/basestorageprovider/#getpublicurl)
 
----
+***
 
 ### getSignedUrl()
 
@@ -209,7 +209,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 [`BaseStorageProvider`](/api/storage-core/src/classes/basestorageprovider/).[`getSignedUrl`](/api/storage-core/src/classes/basestorageprovider/#getsignedurl)
 
----
+***
 
 ### getStream()
 
@@ -239,7 +239,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 [`BaseStorageProvider`](/api/storage-core/src/classes/basestorageprovider/).[`getStream`](/api/storage-core/src/classes/basestorageprovider/#getstream)
 
----
+***
 
 ### put()
 

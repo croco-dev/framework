@@ -21,7 +21,7 @@ title: "AccessProvider"
 
 `Promise`\<[`CheckResult`](/api/access-core/src/interfaces/checkresult/)\>
 
----
+***
 
 ### grant()
 
@@ -37,7 +37,7 @@ title: "AccessProvider"
 
 `Promise`\<`void`\>
 
----
+***
 
 ### list()
 
@@ -53,7 +53,7 @@ title: "AccessProvider"
 
 `Promise`\<[`RelationTuple`](/api/access-core/src/interfaces/relationtuple/)[]\>
 
----
+***
 
 ### revoke()
 

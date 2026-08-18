@@ -13,31 +13,31 @@ title: "OutboxFailureProblemExtensions"
 
 > `readonly` **outboxAttempt**: `number`
 
----
+***
 
 ### outboxFailedAt
 
 > `readonly` **outboxFailedAt**: `string`
 
----
+***
 
 ### outboxMaxAttempts
 
 > `readonly` **outboxMaxAttempts**: `number`
 
----
+***
 
 ### outboxNextVisibleAt?
 
 > `readonly` `optional` **outboxNextVisibleAt?**: `string`
 
----
+***
 
 ### outboxRetryable
 
 > `readonly` **outboxRetryable**: `boolean`
 
----
+***
 
 ### outboxTerminal
 

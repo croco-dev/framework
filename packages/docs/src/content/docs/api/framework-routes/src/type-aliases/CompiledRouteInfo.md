@@ -13,13 +13,13 @@ title: "CompiledRouteInfo"
 
 > `readonly` **handlerName**: `string`
 
----
+***
 
 ### method
 
 > `readonly` **method**: `string`
 
----
+***
 
 ### path
 

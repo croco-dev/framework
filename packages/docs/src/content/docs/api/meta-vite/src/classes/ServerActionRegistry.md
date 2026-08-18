@@ -27,14 +27,13 @@ Clear all server actions from this registry.
 
 `void`
 
----
+***
 
 ### dispatch()
 
 > **dispatch**(`name`, `formData`, `context?`): `Promise`\<`Response`\>
 
 Dispatch a registered server action by name.
-
 - Validates input against the registered schema (if any)
 - Returns 404 if action not found
 - Returns 422 if validation fails
@@ -58,7 +57,7 @@ Dispatch a registered server action by name.
 
 `Promise`\<`Response`\>
 
----
+***
 
 ### getActions()
 
@@ -68,7 +67,7 @@ Dispatch a registered server action by name.
 
 [`ServerActionContractIR`](/api/meta-vite/src/type-aliases/serveractioncontractir/)[]
 
----
+***
 
 ### register()
 
@@ -88,7 +87,7 @@ Register a server action in this registry.
 
 ##### TProblemCode
 
-`TProblemCode` _extends_ `string`
+`TProblemCode` *extends* `string`
 
 #### Parameters
 
@@ -104,7 +103,7 @@ Register a server action in this registry.
 
 Error if action name is already registered in this registry
 
----
+***
 
 ### unregister()
 

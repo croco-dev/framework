@@ -54,7 +54,7 @@ Number of active customers
 
 ARPA as Money value
 
----
+***
 
 ### calculateLTV()
 

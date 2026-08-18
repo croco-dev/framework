@@ -21,19 +21,19 @@ title: "SearchResult"
 
 > **hits**: [`SearchHit`](/api/search-core/src/type-aliases/searchhit/)\<`T`\>[]
 
----
+***
 
 ### processingTimeMs
 
 > **processingTimeMs**: `number`
 
----
+***
 
 ### query
 
 > **query**: [`SearchQuery`](/api/search-core/src/type-aliases/searchquery/)
 
----
+***
 
 ### total
 

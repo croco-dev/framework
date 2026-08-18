@@ -11,7 +11,7 @@ title: "EnumDimension"
 
 ### Values
 
-`Values` _extends_ [`NonEmptyMeterDimensionValues`](/api/metering-core/src/type-aliases/nonemptymeterdimensionvalues/) = [`NonEmptyMeterDimensionValues`](/api/metering-core/src/type-aliases/nonemptymeterdimensionvalues/)
+`Values` *extends* [`NonEmptyMeterDimensionValues`](/api/metering-core/src/type-aliases/nonemptymeterdimensionvalues/) = [`NonEmptyMeterDimensionValues`](/api/metering-core/src/type-aliases/nonemptymeterdimensionvalues/)
 
 ## Properties
 
@@ -19,7 +19,7 @@ title: "EnumDimension"
 
 > `readonly` **kind**: `"enum"`
 
----
+***
 
 ### values
 

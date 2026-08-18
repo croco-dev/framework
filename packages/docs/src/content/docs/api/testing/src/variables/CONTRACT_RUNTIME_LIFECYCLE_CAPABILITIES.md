@@ -5,4 +5,4 @@ prev: false
 title: "CONTRACT_RUNTIME_LIFECYCLE_CAPABILITIES"
 ---
 
-> `const` **CONTRACT_RUNTIME_LIFECYCLE_CAPABILITIES**: readonly \[`"streamingResponse"`, `"deadline"`, `"abortSignal"`, `"waitUntil"`, `"flush"`, `"shutdown"`\]
+> `const` **CONTRACT\_RUNTIME\_LIFECYCLE\_CAPABILITIES**: readonly \[`"streamingResponse"`, `"deadline"`, `"abortSignal"`, `"waitUntil"`, `"flush"`, `"shutdown"`\]

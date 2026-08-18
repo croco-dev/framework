@@ -15,31 +15,31 @@ title: "SubscriptionData"
 
 > **cancelAtPeriodEnd**: `boolean`
 
----
+***
 
 ### currentPeriodEnd
 
 > **currentPeriodEnd**: `Date`
 
----
+***
 
 ### currentPeriodStart
 
 > **currentPeriodStart**: `Date`
 
----
+***
 
 ### planId
 
 > **planId**: `string`
 
----
+***
 
 ### status
 
 > **status**: [`SubscriptionStatus`](/api/customer-health-drizzle/src/type-aliases/subscriptionstatus/)
 
----
+***
 
 ### tenantId
 

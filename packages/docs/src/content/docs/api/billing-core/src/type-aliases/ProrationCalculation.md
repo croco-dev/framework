@@ -15,25 +15,25 @@ title: "ProrationCalculation"
 
 > **charge**: [`Money`](/api/billing-core/src/classes/money/)
 
----
+***
 
 ### credit
 
 > **credit**: [`Money`](/api/billing-core/src/classes/money/)
 
----
+***
 
 ### netAmount
 
 > **netAmount**: [`Money`](/api/billing-core/src/classes/money/)
 
----
+***
 
 ### remainingRatio
 
 > **remainingRatio**: `number`
 
----
+***
 
 ### usedRatio
 

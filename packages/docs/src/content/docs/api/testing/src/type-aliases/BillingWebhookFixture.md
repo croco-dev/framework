@@ -13,13 +13,13 @@ title: "BillingWebhookFixture"
 
 > `readonly` **body**: `Buffer` \| `string`
 
----
+***
 
 ### eventId
 
 > `readonly` **eventId**: `string`
 
----
+***
 
 ### headers
 

@@ -11,7 +11,7 @@ title: "HttpResponseLike"
 
 > **headers**: `Record`\<`string`, `string`\>
 
----
+***
 
 ### status
 

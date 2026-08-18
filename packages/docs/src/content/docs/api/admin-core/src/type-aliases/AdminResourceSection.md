@@ -13,13 +13,13 @@ title: "AdminResourceSection"
 
 > `readonly` **fields**: [`NonEmptyArray`](/api/admin-core/src/type-aliases/nonemptyarray/)\<`string`\>
 
----
+***
 
 ### id
 
 > `readonly` **id**: `string`
 
----
+***
 
 ### label
 

@@ -13,19 +13,19 @@ title: "OutboundWebhookCommitResult"
 
 > `readonly` **deliveries**: readonly [`OutboundWebhookDelivery`](/api/webhooks-core/src/type-aliases/outboundwebhookdelivery/)[]
 
----
+***
 
 ### duplicate
 
 > `readonly` **duplicate**: `boolean`
 
----
+***
 
 ### event
 
 > `readonly` **event**: [`OutboundWebhookEvent`](/api/webhooks-core/src/type-aliases/outboundwebhookevent/)
 
----
+***
 
 ### intents
 

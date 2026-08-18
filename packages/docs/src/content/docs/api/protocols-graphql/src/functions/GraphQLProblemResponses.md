@@ -11,7 +11,7 @@ title: "GraphQLProblemResponses"
 
 ### Responses
 
-`Responses` _extends_ readonly [`GraphQLProblemResponseOptions`](/api/protocols-graphql/src/type-aliases/graphqlproblemresponseoptions/)\<`string`, [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)\>[]
+`Responses` *extends* readonly [`GraphQLProblemResponseOptions`](/api/protocols-graphql/src/type-aliases/graphqlproblemresponseoptions/)\<`string`, [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)\>[]
 
 ## Parameters
 

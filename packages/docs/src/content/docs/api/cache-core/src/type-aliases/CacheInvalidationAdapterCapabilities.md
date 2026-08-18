@@ -13,13 +13,13 @@ title: "CacheInvalidationAdapterCapabilities"
 
 > `readonly` **exactKey**: `boolean`
 
----
+***
 
 ### pattern
 
 > `readonly` **pattern**: `boolean`
 
----
+***
 
 ### tag
 

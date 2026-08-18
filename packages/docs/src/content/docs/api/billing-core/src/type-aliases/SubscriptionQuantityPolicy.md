@@ -15,19 +15,19 @@ Defines the licensed quantity floor, included seats, quota, and billable members
 
 > `readonly` **billableMembershipRoles**: readonly [`MembershipRole`](/api/billing-core/src/type-aliases/membershiprole/)[]
 
----
+***
 
 ### includedSeats
 
 > `readonly` **includedSeats**: `number`
 
----
+***
 
 ### minimumQuantity
 
 > `readonly` **minimumQuantity**: `number`
 
----
+***
 
 ### seatQuota
 

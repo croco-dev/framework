@@ -27,7 +27,7 @@ Publish a value for a given topic.
 
 `void`
 
----
+***
 
 ### subscribe()
 

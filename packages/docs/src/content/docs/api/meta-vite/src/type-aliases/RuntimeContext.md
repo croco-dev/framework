@@ -17,25 +17,25 @@ Render core must guard before accessing optional fields.
 
 > `optional` **env?**: `unknown`
 
----
+***
 
 ### event?
 
 > `optional` **event?**: `unknown`
 
----
+***
 
 ### executionContext?
 
 > `optional` **executionContext?**: `unknown`
 
----
+***
 
 ### lambdaContext?
 
 > `optional` **lambdaContext?**: `unknown`
 
----
+***
 
 ### platform
 

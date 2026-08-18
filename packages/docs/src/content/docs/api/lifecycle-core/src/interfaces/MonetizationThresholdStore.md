@@ -21,7 +21,7 @@ title: "MonetizationThresholdStore"
 
 `Promise`\<`void`\>
 
----
+***
 
 ### claimCrossings()
 
@@ -37,7 +37,7 @@ title: "MonetizationThresholdStore"
 
 `Promise`\<[`MonetizationThresholdClaimResult`](/api/lifecycle-core/src/type-aliases/monetizationthresholdclaimresult/)\>
 
----
+***
 
 ### getDiagnostics()
 
@@ -47,7 +47,7 @@ title: "MonetizationThresholdStore"
 
 `Promise`\<[`MonetizationThresholdDiagnostics`](/api/lifecycle-core/src/type-aliases/monetizationthresholddiagnostics/)\>
 
----
+***
 
 ### releaseCrossings()
 

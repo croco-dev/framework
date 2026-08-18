@@ -23,19 +23,19 @@ title: "AdminDataTableCellContext"
 
 > `readonly` **column**: [`AdminDataTableColumn`](/api/admin-react/src/type-aliases/admindatatablecolumn/)\<`TData`, `TValue`\>
 
----
+***
 
 ### row
 
 > `readonly` **row**: `TData`
 
----
+***
 
 ### rowId
 
 > `readonly` **rowId**: [`AdminDataTableRowId`](/api/admin-react/src/type-aliases/admindatatablerowid/)
 
----
+***
 
 ### value
 

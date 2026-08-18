@@ -5,7 +5,7 @@ prev: false
 title: "TENANT_ISOLATION_DIAGNOSTIC_CODES"
 ---
 
-> `const` **TENANT_ISOLATION_DIAGNOSTIC_CODES**: `object`
+> `const` **TENANT\_ISOLATION\_DIAGNOSTIC\_CODES**: `object`
 
 Tenant isolation enforcement failures and stable diagnostic codes.
 

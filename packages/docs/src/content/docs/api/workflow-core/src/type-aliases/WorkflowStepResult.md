@@ -13,13 +13,13 @@ title: "WorkflowStepResult"
 
 > `readonly` **result**: `unknown`
 
----
+***
 
 ### step
 
 > `readonly` **step**: `string`
 
----
+***
 
 ### task
 

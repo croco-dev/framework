@@ -11,7 +11,7 @@ JWT claim에서 tenantId를 해석하는 resolver입니다.
 
 ### TRequest
 
-`TRequest` _extends_ `JwtRequest` = `JwtRequest`
+`TRequest` *extends* `JwtRequest` = `JwtRequest`
 
 ## Implements
 

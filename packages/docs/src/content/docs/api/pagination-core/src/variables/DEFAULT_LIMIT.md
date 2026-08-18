@@ -5,4 +5,4 @@ prev: false
 title: "DEFAULT_LIMIT"
 ---
 
-> `const` **DEFAULT_LIMIT**: `20` = `20`
+> `const` **DEFAULT\_LIMIT**: `20` = `20`

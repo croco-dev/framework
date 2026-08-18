@@ -13,13 +13,13 @@ title: "TestEvidenceReplay"
 
 > `readonly` **command**: `string`
 
----
+***
 
 ### seed?
 
 > `readonly` `optional` **seed?**: `string`
 
----
+***
 
 ### virtualTime?
 

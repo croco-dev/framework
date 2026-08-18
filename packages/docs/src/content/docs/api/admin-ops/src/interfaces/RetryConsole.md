@@ -21,7 +21,7 @@ title: "RetryConsole"
 
 `Promise`\<readonly [`RetryConsoleItem`](/api/admin-ops/src/type-aliases/retryconsoleitem/)[]\>
 
----
+***
 
 ### recover()
 
@@ -37,7 +37,7 @@ title: "RetryConsole"
 
 `Promise`\<[`RetryConsoleRecoveryResult`](/api/admin-ops/src/type-aliases/retryconsolerecoveryresult/)\>
 
----
+***
 
 ### show()
 

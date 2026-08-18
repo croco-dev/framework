@@ -17,7 +17,7 @@ Options for webhook triggers.
 
 Whether to require authentication (default: false).
 
----
+***
 
 ### cors?
 
@@ -37,7 +37,7 @@ CORS configuration for the webhook endpoint.
 
 > `readonly` `optional` **origin?**: `string` \| `string`[]
 
----
+***
 
 ### description?
 
@@ -45,7 +45,7 @@ CORS configuration for the webhook endpoint.
 
 Description of what this webhook handler does.
 
----
+***
 
 ### enabled?
 
@@ -53,7 +53,7 @@ Description of what this webhook handler does.
 
 Whether the handler is enabled (default: true).
 
----
+***
 
 ### name?
 

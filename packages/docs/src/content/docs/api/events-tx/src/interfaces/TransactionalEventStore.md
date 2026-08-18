@@ -31,7 +31,7 @@ title: "TransactionalEventStore"
 
 `Promise`\<[`TransactionalOutboxMessage`](/api/events-tx/src/type-aliases/transactionaloutboxmessage/)\>
 
----
+***
 
 ### claimOutboxBatch()
 
@@ -51,7 +51,7 @@ title: "TransactionalEventStore"
 
 `Promise`\<[`TransactionalOutboxMessage`](/api/events-tx/src/type-aliases/transactionaloutboxmessage/)[]\>
 
----
+***
 
 ### findInboxRecord()
 
@@ -75,7 +75,7 @@ title: "TransactionalEventStore"
 
 `Promise`\<[`TransactionalInboxRecord`](/api/events-tx/src/type-aliases/transactionalinboxrecord/) \| `null`\>
 
----
+***
 
 ### findOutboxById()
 
@@ -95,7 +95,7 @@ title: "TransactionalEventStore"
 
 `Promise`\<[`TransactionalOutboxMessage`](/api/events-tx/src/type-aliases/transactionaloutboxmessage/) \| `null`\>
 
----
+***
 
 ### findOutboxByIdempotencyKey()
 
@@ -115,7 +115,7 @@ title: "TransactionalEventStore"
 
 `Promise`\<[`TransactionalOutboxMessage`](/api/events-tx/src/type-aliases/transactionaloutboxmessage/) \| `null`\>
 
----
+***
 
 ### listInboxRecords()
 
@@ -135,7 +135,7 @@ title: "TransactionalEventStore"
 
 `Promise`\<[`TransactionalInboxRecord`](/api/events-tx/src/type-aliases/transactionalinboxrecord/)[]\>
 
----
+***
 
 ### listOutboxMessages()
 
@@ -155,7 +155,7 @@ title: "TransactionalEventStore"
 
 `Promise`\<[`TransactionalOutboxMessage`](/api/events-tx/src/type-aliases/transactionaloutboxmessage/)[]\>
 
----
+***
 
 ### markInboxFailed()
 
@@ -175,7 +175,7 @@ title: "TransactionalEventStore"
 
 `Promise`\<[`TransactionalInboxRecord`](/api/events-tx/src/type-aliases/transactionalinboxrecord/)\>
 
----
+***
 
 ### markInboxProcessed()
 
@@ -195,7 +195,7 @@ title: "TransactionalEventStore"
 
 `Promise`\<[`TransactionalInboxRecord`](/api/events-tx/src/type-aliases/transactionalinboxrecord/)\>
 
----
+***
 
 ### markOutboxDeadLettered()
 
@@ -215,7 +215,7 @@ title: "TransactionalEventStore"
 
 `Promise`\<[`TransactionalOutboxMessage`](/api/events-tx/src/type-aliases/transactionaloutboxmessage/) \| `null`\>
 
----
+***
 
 ### markOutboxFailed()
 
@@ -235,7 +235,7 @@ title: "TransactionalEventStore"
 
 `Promise`\<[`TransactionalOutboxMessage`](/api/events-tx/src/type-aliases/transactionaloutboxmessage/) \| `null`\>
 
----
+***
 
 ### markOutboxPublished()
 
@@ -255,7 +255,7 @@ title: "TransactionalEventStore"
 
 `Promise`\<[`TransactionalOutboxMessage`](/api/events-tx/src/type-aliases/transactionaloutboxmessage/) \| `null`\>
 
----
+***
 
 ### startInboxProcessing()
 

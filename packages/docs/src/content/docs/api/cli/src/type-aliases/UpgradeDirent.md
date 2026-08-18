@@ -17,7 +17,7 @@ title: "UpgradeDirent"
 
 `boolean`
 
----
+***
 
 ### isFile
 
@@ -27,7 +27,7 @@ title: "UpgradeDirent"
 
 `boolean`
 
----
+***
 
 ### name
 

@@ -15,13 +15,13 @@ title: "UsageWithModelInfo"
 
 > **modelId**: `string`
 
----
+***
 
 ### provider
 
 > **provider**: `string`
 
----
+***
 
 ### usage
 

@@ -11,7 +11,7 @@ title: "TransactionalOutboxStoreContractOptions"
 
 ### TStore
 
-`TStore` _extends_ [`TransactionalOutboxStore`](/api/outbox-core/src/interfaces/transactionaloutboxstore/)\<`TClient`\>
+`TStore` *extends* [`TransactionalOutboxStore`](/api/outbox-core/src/interfaces/transactionaloutboxstore/)\<`TClient`\>
 
 ### TClient
 
@@ -27,7 +27,7 @@ title: "TransactionalOutboxStoreContractOptions"
 
 `TStore` \| `Promise`\<`TStore`\>
 
----
+***
 
 ### listRecords
 
@@ -43,7 +43,7 @@ title: "TransactionalOutboxStoreContractOptions"
 
 `Promise`\<readonly [`OutboxRecord`](/api/outbox-core/src/type-aliases/outboxrecord/)[]\>
 
----
+***
 
 ### runInUnitOfWork
 

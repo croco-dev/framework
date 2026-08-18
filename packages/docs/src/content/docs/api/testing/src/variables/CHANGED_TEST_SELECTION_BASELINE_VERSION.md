@@ -5,4 +5,4 @@ prev: false
 title: "CHANGED_TEST_SELECTION_BASELINE_VERSION"
 ---
 
-> `const` **CHANGED_TEST_SELECTION_BASELINE_VERSION**: `"croco.changed-test-selection-baseline/v1"`
+> `const` **CHANGED\_TEST\_SELECTION\_BASELINE\_VERSION**: `"croco.changed-test-selection-baseline/v1"`

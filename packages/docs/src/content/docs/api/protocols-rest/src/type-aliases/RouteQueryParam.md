@@ -11,8 +11,8 @@ title: "RouteQueryParam"
 
 ### TContract
 
-`TContract` _extends_ [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/)
+`TContract` *extends* [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/)
 
 ### Name
 
-`Name` _extends_ keyof [`RouteQuery`](/api/protocols-rest/src/type-aliases/routequery/)\<`TContract`\> & `string`
+`Name` *extends* keyof [`RouteQuery`](/api/protocols-rest/src/type-aliases/routequery/)\<`TContract`\> & `string`

@@ -13,13 +13,13 @@ title: "TestReplayMetadata"
 
 > `readonly` **scenarioId**: `string`
 
----
+***
 
 ### seed
 
 > `readonly` **seed**: `string`
 
----
+***
 
 ### virtualTime
 

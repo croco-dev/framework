@@ -17,7 +17,7 @@ Represents a single build output artifact
 
 Format of this artifact
 
----
+***
 
 ### path
 
@@ -25,7 +25,7 @@ Format of this artifact
 
 Relative path from output directory (e.g. "index.js", "dist/worker.js")
 
----
+***
 
 ### size?
 
@@ -33,7 +33,7 @@ Relative path from output directory (e.g. "index.js", "dist/worker.js")
 
 Optional file size in bytes (filled after build)
 
----
+***
 
 ### type
 

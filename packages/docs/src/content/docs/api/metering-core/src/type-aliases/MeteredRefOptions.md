@@ -37,4 +37,4 @@ title: "MeteredRefOptions"
 
 ### Meter
 
-`Meter` _extends_ [`CountMeterRef`](/api/metering-core/src/type-aliases/countmeterref/)
+`Meter` *extends* [`CountMeterRef`](/api/metering-core/src/type-aliases/countmeterref/)

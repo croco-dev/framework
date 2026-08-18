@@ -39,7 +39,7 @@ title: "TaskRegistry"
 
 `void`
 
----
+***
 
 ### get()
 
@@ -55,7 +55,7 @@ title: "TaskRegistry"
 
 [`RegisteredTask`](/api/tasks-core/src/type-aliases/registeredtask/) \| `undefined`
 
----
+***
 
 ### getAll()
 
@@ -65,7 +65,7 @@ title: "TaskRegistry"
 
 [`RegisteredTask`](/api/tasks-core/src/type-aliases/registeredtask/)[]
 
----
+***
 
 ### has()
 
@@ -81,7 +81,7 @@ title: "TaskRegistry"
 
 `boolean`
 
----
+***
 
 ### register()
 
@@ -109,7 +109,7 @@ title: "TaskRegistry"
 
 `void`
 
----
+***
 
 ### reset()
 
@@ -119,7 +119,7 @@ title: "TaskRegistry"
 
 `void`
 
----
+***
 
 ### fromMetadata()
 
@@ -135,7 +135,7 @@ title: "TaskRegistry"
 
 `TaskRegistry`
 
----
+***
 
 ### getInstance()
 

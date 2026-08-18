@@ -39,7 +39,7 @@ Optional tenant ID for tenant-specific aggregation. If omitted, returns aggregat
 
 The count of churned users
 
----
+***
 
 ### getDailyActiveUsers()
 
@@ -70,7 +70,7 @@ Optional tenant ID for tenant-specific aggregation. If omitted, returns aggregat
 
 The count of active users
 
----
+***
 
 ### getNewUsersCount()
 

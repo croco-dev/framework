@@ -13,7 +13,7 @@ Tenant-scoped operation, repository/query boundary, RLS evidence, and leak fixtu
 
 ### TRecord
 
-`TRecord` _extends_ [`CrossTenantLeakFixtureRecord`](/api/tenant-core/src/type-aliases/crosstenantleakfixturerecord/)
+`TRecord` *extends* [`CrossTenantLeakFixtureRecord`](/api/tenant-core/src/type-aliases/crosstenantleakfixturerecord/)
 
 ## Parameters
 

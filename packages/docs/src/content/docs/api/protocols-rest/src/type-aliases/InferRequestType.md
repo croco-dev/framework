@@ -11,28 +11,28 @@ title: "InferRequestType"
 
 ### T
 
-`T` _extends_ [`RequestSchema`](/api/protocols-rest/src/type-aliases/requestschema/)
+`T` *extends* [`RequestSchema`](/api/protocols-rest/src/type-aliases/requestschema/)
 
 ## Properties
 
 ### body
 
-> **body**: `T`\[`"body"`\] _extends_ `z.ZodType` ? `z.infer`\<`T`\[`"body"`\]\> : `unknown`
+> **body**: `T`\[`"body"`\] *extends* `z.ZodType` ? `z.infer`\<`T`\[`"body"`\]\> : `unknown`
 
----
+***
 
 ### headers
 
-> **headers**: `T`\[`"headers"`\] _extends_ `z.ZodType` ? `z.infer`\<`T`\[`"headers"`\]\> : `unknown`
+> **headers**: `T`\[`"headers"`\] *extends* `z.ZodType` ? `z.infer`\<`T`\[`"headers"`\]\> : `unknown`
 
----
+***
 
 ### params
 
-> **params**: `T`\[`"params"`\] _extends_ `z.ZodType` ? `z.infer`\<`T`\[`"params"`\]\> : `unknown`
+> **params**: `T`\[`"params"`\] *extends* `z.ZodType` ? `z.infer`\<`T`\[`"params"`\]\> : `unknown`
 
----
+***
 
 ### query
 
-> **query**: `T`\[`"query"`\] _extends_ `z.ZodType` ? `z.infer`\<`T`\[`"query"`\]\> : `unknown`
+> **query**: `T`\[`"query"`\] *extends* `z.ZodType` ? `z.infer`\<`T`\[`"query"`\]\> : `unknown`

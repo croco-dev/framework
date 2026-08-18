@@ -25,25 +25,25 @@ title: "DataMapProjectSection"
 
 > `readonly` **version**: [`DataMapVersion`](/api/governance-core/src/type-aliases/datamapversion/)
 
----
+***
 
 ### id
 
 > `readonly` **id**: `"data-governance"`
 
----
+***
 
 ### resources
 
 > `readonly` **resources**: readonly `object`[]
 
----
+***
 
 ### summary
 
 > `readonly` **summary**: [`DataMapSummary`](/api/governance-core/src/type-aliases/datamapsummary/)
 
----
+***
 
 ### title
 

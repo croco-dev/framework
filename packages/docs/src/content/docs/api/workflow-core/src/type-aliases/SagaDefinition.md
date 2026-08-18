@@ -13,31 +13,31 @@ title: "SagaDefinition"
 
 > `readonly` `optional` **description?**: `string`
 
----
+***
 
 ### idempotencyKey?
 
 > `readonly` `optional` **idempotencyKey?**: `string` \| [`SagaIdempotencyResolver`](/api/workflow-core/src/type-aliases/sagaidempotencyresolver/)
 
----
+***
 
 ### metadata?
 
 > `readonly` `optional` **metadata?**: `Record`\<`string`, `unknown`\>
 
----
+***
 
 ### name
 
 > `readonly` **name**: `string`
 
----
+***
 
 ### outbox?
 
 > `readonly` `optional` **outbox?**: [`SagaOutboxPublisher`](/api/workflow-core/src/type-aliases/sagaoutboxpublisher/)
 
----
+***
 
 ### steps
 

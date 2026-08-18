@@ -13,7 +13,7 @@ title: "ListOutboxMessagesOptions"
 
 > `optional` **limit?**: `number`
 
----
+***
 
 ### status?
 

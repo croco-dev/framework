@@ -13,13 +13,13 @@ title: "PlaywrightTestCase"
 
 > `readonly` `optional` **expectedStatus?**: [`PlaywrightTestResult`](/api/testing/src/type-aliases/playwrighttestresult/)\[`"status"`\]
 
----
+***
 
 ### id
 
 > `readonly` **id**: `string`
 
----
+***
 
 ### location?
 
@@ -29,7 +29,7 @@ title: "PlaywrightTestCase"
 
 > `readonly` **file**: `string`
 
----
+***
 
 ### parent?
 
@@ -43,13 +43,13 @@ title: "PlaywrightTestCase"
 
 \{ `name`: `string`; `testDir`: `string`; \} \| `undefined`
 
----
+***
 
 ### title
 
 > `readonly` **title**: `string`
 
----
+***
 
 ### titlePath?
 

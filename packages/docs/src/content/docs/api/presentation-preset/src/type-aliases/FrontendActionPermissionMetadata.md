@@ -13,13 +13,13 @@ title: "FrontendActionPermissionMetadata"
 
 > `readonly` **entitlements**: readonly [`FrontendActionEntitlement`](/api/presentation-preset/src/type-aliases/frontendactionentitlement/)[]
 
----
+***
 
 ### guards
 
 > `readonly` **guards**: readonly [`FrontendActionMetadataReference`](/api/presentation-preset/src/type-aliases/frontendactionmetadatareference/)[]
 
----
+***
 
 ### roles
 

@@ -17,7 +17,7 @@ title: "QStashTaskConformanceOptions"
 
 `unknown` \| `Promise`\<`unknown`\>
 
----
+***
 
 ### createPublisher
 
@@ -33,19 +33,19 @@ title: "QStashTaskConformanceOptions"
 
 [`QStashTaskConformanceHarness`](/api/testing/src/type-aliases/qstashtaskconformanceharness/) \| `Promise`\<[`QStashTaskConformanceHarness`](/api/testing/src/type-aliases/qstashtaskconformanceharness/)\>
 
----
+***
 
 ### liveSmoke?
 
 > `readonly` `optional` **liveSmoke?**: [`ServerlessProviderLiveSmokeGate`](/api/testing/src/type-aliases/serverlessproviderlivesmokegate/)
 
----
+***
 
 ### providerName
 
 > `readonly` **providerName**: `string`
 
----
+***
 
 ### secretSamples?
 

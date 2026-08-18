@@ -53,7 +53,7 @@ Better Auth 세션 목록 조회와 세션 해제를 제공하는 매니저입�
 
 [`BetterAuthSessionProvider`](/api/auth-better-auth/src/interfaces/betterauthsessionprovider/).[`getSession`](/api/auth-better-auth/src/interfaces/betterauthsessionprovider/#getsession)
 
----
+***
 
 ### revokeSession()
 
@@ -73,7 +73,7 @@ Better Auth 세션 목록 조회와 세션 해제를 제공하는 매니저입�
 
 [`BetterAuthSessionProvider`](/api/auth-better-auth/src/interfaces/betterauthsessionprovider/).[`revokeSession`](/api/auth-better-auth/src/interfaces/betterauthsessionprovider/#revokesession)
 
----
+***
 
 ### revokeUserSessions()
 

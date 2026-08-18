@@ -13,19 +13,19 @@ title: "WorkflowDefinition"
 
 > `readonly` `optional` **description?**: `string`
 
----
+***
 
 ### methodName
 
 > `readonly` **methodName**: `string`
 
----
+***
 
 ### name
 
 > `readonly` **name**: `string`
 
----
+***
 
 ### options
 
@@ -43,19 +43,19 @@ title: "WorkflowDefinition"
 
 > `readonly` `optional` **timeout?**: `number`
 
----
+***
 
 ### steps
 
 > `readonly` **steps**: readonly [`WorkflowTaskStep`](/api/workflow-core/src/type-aliases/workflowtaskstep/)[]
 
----
+***
 
 ### target
 
 > `readonly` **target**: `object`
 
----
+***
 
 ### triggers
 

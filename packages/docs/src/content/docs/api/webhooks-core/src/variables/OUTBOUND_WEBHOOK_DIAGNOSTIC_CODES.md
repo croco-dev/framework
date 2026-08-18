@@ -5,7 +5,7 @@ prev: false
 title: "OUTBOUND_WEBHOOK_DIAGNOSTIC_CODES"
 ---
 
-> `const` **OUTBOUND_WEBHOOK_DIAGNOSTIC_CODES**: `object`
+> `const` **OUTBOUND\_WEBHOOK\_DIAGNOSTIC\_CODES**: `object`
 
 ## Type Declaration
 

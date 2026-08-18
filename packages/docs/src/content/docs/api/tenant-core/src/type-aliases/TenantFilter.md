@@ -15,13 +15,13 @@ Tenant search/filter options
 
 > `optional` **search?**: `string`
 
----
+***
 
 ### slug?
 
 > `optional` **slug?**: `string`
 
----
+***
 
 ### status?
 

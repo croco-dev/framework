@@ -13,19 +13,19 @@ title: "SagaOutboxPublishContext"
 
 > `readonly` **executionId**: `string`
 
----
+***
 
 ### message
 
 > `readonly` **message**: [`SagaOutboxRecord`](/api/workflow-core/src/type-aliases/sagaoutboxrecord/)
 
----
+***
 
 ### saga
 
 > `readonly` **saga**: [`SagaDefinition`](/api/workflow-core/src/type-aliases/sagadefinition/)
 
----
+***
 
 ### step
 

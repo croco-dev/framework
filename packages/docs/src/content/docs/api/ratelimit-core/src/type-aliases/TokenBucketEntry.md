@@ -15,7 +15,7 @@ title: "TokenBucketEntry"
 
 > **lastRefill**: `number`
 
----
+***
 
 ### tokens
 

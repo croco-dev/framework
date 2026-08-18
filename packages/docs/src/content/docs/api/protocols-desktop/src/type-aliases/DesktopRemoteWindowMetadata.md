@@ -13,19 +13,19 @@ title: "DesktopRemoteWindowMetadata"
 
 > `readonly` **allowedOrigins**: readonly `string`[]
 
----
+***
 
 ### initialUrl
 
 > `readonly` **initialUrl**: `string`
 
----
+***
 
 ### key
 
 > `readonly` **key**: `string`
 
----
+***
 
 ### trust
 

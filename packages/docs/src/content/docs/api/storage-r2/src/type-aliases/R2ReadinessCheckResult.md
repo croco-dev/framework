@@ -13,7 +13,7 @@ title: "R2ReadinessCheckResult"
 
 > `readonly` `optional` **details?**: `Record`\<`string`, `unknown`\>
 
----
+***
 
 ### message?
 

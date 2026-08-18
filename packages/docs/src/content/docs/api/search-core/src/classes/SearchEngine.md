@@ -35,7 +35,7 @@ Token 기반 DI를 지원하며, 모든 구현체는 이 abstract class를 상�
 
 검색 엔진 기능 플래그
 
----
+***
 
 ### token
 
@@ -67,7 +67,7 @@ Token 기반 DI를 지원하며, 모든 구현체는 이 abstract class를 상�
 
 `Promise`\<`void`\>
 
----
+***
 
 ### createIndex()
 
@@ -87,7 +87,7 @@ Token 기반 DI를 지원하며, 모든 구현체는 이 abstract class를 상�
 
 `Promise`\<`void`\>
 
----
+***
 
 ### deleteDocument()
 
@@ -113,7 +113,7 @@ Token 기반 DI를 지원하며, 모든 구현체는 이 abstract class를 상�
 
 `Promise`\<`void`\>
 
----
+***
 
 ### deleteIndex()
 
@@ -133,7 +133,7 @@ Token 기반 DI를 지원하며, 모든 구현체는 이 abstract class를 상�
 
 `Promise`\<`void`\>
 
----
+***
 
 ### indexDocument()
 
@@ -159,7 +159,7 @@ Token 기반 DI를 지원하며, 모든 구현체는 이 abstract class를 상�
 
 `Promise`\<`void`\>
 
----
+***
 
 ### search()
 

@@ -7,9 +7,8 @@ title: "Money"
 
 > **Money** = `object`
 
-/\*\*
-
-- Money value with currency.
+/**
+ * Money value with currency.
 
 ## Properties
 
@@ -19,7 +18,7 @@ title: "Money"
 
 Monetary amount in minor units (e.g., cents for USD, won for KRW)
 
----
+***
 
 ### currency
 

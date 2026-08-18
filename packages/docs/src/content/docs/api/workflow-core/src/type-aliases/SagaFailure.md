@@ -13,19 +13,19 @@ title: "SagaFailure"
 
 > `readonly` `optional` **code?**: `string`
 
----
+***
 
 ### message
 
 > `readonly` **message**: `string`
 
----
+***
 
 ### retryable
 
 > `readonly` **retryable**: `boolean`
 
----
+***
 
 ### stack?
 

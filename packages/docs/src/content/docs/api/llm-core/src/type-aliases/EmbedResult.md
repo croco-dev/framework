@@ -17,7 +17,7 @@ title: "EmbedResult"
 
 임베딩 벡터
 
----
+***
 
 ### usage
 

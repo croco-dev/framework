@@ -13,31 +13,31 @@ title: "AstryxProblemRecoveryAction"
 
 > `readonly` `optional` **ariaLabel?**: `string`
 
----
+***
 
 ### disabled?
 
 > `readonly` `optional` **disabled?**: `boolean`
 
----
+***
 
 ### href?
 
 > `readonly` `optional` **href?**: `string`
 
----
+***
 
 ### id
 
 > `readonly` **id**: `string`
 
----
+***
 
 ### label
 
 > `readonly` **label**: `string`
 
----
+***
 
 ### onRecover?
 
@@ -53,7 +53,7 @@ title: "AstryxProblemRecoveryAction"
 
 `void` \| `Promise`\<`void`\>
 
----
+***
 
 ### problemCodes?
 

@@ -37,7 +37,7 @@ title: "NotificationPreferenceEvaluator"
 
 [`NotificationPreferenceDecision`](/api/notifications-core/src/type-aliases/notificationpreferencedecision/)
 
----
+***
 
 ### registerRule()
 

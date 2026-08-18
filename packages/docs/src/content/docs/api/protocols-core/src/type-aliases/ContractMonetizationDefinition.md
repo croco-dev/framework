@@ -13,7 +13,7 @@ title: "ContractMonetizationDefinition"
 
 > `readonly` **input**: [`ContractMonetizationInput`](/api/protocols-core/src/type-aliases/contractmonetizationinput/)
 
----
+***
 
 ### kind
 

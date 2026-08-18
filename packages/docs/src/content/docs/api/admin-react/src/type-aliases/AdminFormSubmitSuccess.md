@@ -19,19 +19,19 @@ title: "AdminFormSubmitSuccess"
 
 > `readonly` `optional` **audit?**: [`AdminAuditMetadata`](/api/admin-react/src/type-aliases/adminauditmetadata/)
 
----
+***
 
 ### data?
 
 > `readonly` `optional` **data?**: `TResult`
 
----
+***
 
 ### kind
 
 > `readonly` **kind**: `"success"`
 
----
+***
 
 ### recoveryActions?
 

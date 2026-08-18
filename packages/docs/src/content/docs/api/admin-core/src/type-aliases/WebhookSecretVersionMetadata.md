@@ -13,13 +13,13 @@ title: "WebhookSecretVersionMetadata"
 
 > `readonly` **activeVersion**: `string`
 
----
+***
 
 ### previousValidUntil?
 
 > `readonly` `optional` **previousValidUntil?**: `Date`
 
----
+***
 
 ### previousVersion?
 

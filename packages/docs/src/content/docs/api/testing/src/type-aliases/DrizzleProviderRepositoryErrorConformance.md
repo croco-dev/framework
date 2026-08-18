@@ -13,25 +13,25 @@ title: "DrizzleProviderRepositoryErrorConformance"
 
 > `readonly` **conflict**: [`DrizzleProviderConformanceCapability`](/api/testing/src/type-aliases/drizzleproviderconformancecapability/)
 
----
+***
 
 ### duplicate
 
 > `readonly` **duplicate**: [`DrizzleProviderConformanceCapability`](/api/testing/src/type-aliases/drizzleproviderconformancecapability/)
 
----
+***
 
 ### notFound
 
 > `readonly` **notFound**: [`DrizzleProviderConformanceCapability`](/api/testing/src/type-aliases/drizzleproviderconformancecapability/)
 
----
+***
 
 ### retryableFailure
 
 > `readonly` **retryableFailure**: [`DrizzleProviderConformanceCapability`](/api/testing/src/type-aliases/drizzleproviderconformancecapability/)
 
----
+***
 
 ### validation
 

@@ -15,31 +15,31 @@ title: "DomainPolicy"
 
 > **createdAt**: `Date`
 
----
+***
 
 ### domain
 
 > **domain**: `string`
 
----
+***
 
 ### enabled
 
 > **enabled**: `boolean`
 
----
+***
 
 ### id
 
 > **id**: `string`
 
----
+***
 
 ### role
 
 > **role**: [`MembershipRole`](/api/membership-core/src/type-aliases/membershiprole/)
 
----
+***
 
 ### tenantId
 

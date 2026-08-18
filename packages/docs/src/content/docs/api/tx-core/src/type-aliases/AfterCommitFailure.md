@@ -15,25 +15,25 @@ title: "AfterCommitFailure"
 
 > `optional` **code?**: `string`
 
----
+***
 
 ### hookIndex
 
 > **hookIndex**: `number`
 
----
+***
 
 ### message
 
 > **message**: `string`
 
----
+***
 
 ### name
 
 > **name**: `string`
 
----
+***
 
 ### phase
 

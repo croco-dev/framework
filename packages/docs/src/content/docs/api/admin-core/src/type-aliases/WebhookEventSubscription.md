@@ -13,7 +13,7 @@ title: "WebhookEventSubscription"
 
 > `readonly` **name**: `string`
 
----
+***
 
 ### schemaVersion
 

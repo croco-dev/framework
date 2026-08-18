@@ -13,13 +13,13 @@ title: "FrameworkManifestExportSymbol"
 
 > `readonly` **kind**: [`FrameworkManifestPublicSymbolKind`](/api/framework-routes/src/type-aliases/frameworkmanifestpublicsymbolkind/)
 
----
+***
 
 ### name
 
 > `readonly` **name**: `string`
 
----
+***
 
 ### source
 

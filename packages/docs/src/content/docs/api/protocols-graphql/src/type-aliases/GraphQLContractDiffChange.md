@@ -13,37 +13,37 @@ title: "GraphQLContractDiffChange"
 
 > `readonly` **code**: `string`
 
----
+***
 
 ### fieldPath?
 
 > `readonly` `optional` **fieldPath?**: `string`
 
----
+***
 
 ### message
 
 > `readonly` **message**: `string`
 
----
+***
 
 ### methodName?
 
 > `readonly` `optional` **methodName?**: `string`
 
----
+***
 
 ### operationName?
 
 > `readonly` `optional` **operationName?**: `string`
 
----
+***
 
 ### resolverName?
 
 > `readonly` `optional` **resolverName?**: `string`
 
----
+***
 
 ### severity
 

@@ -15,13 +15,13 @@ title: "DomainPolicyCreateInput"
 
 > **domain**: `string`
 
----
+***
 
 ### role
 
 > **role**: [`MembershipRole`](/api/membership-core/src/type-aliases/membershiprole/)
 
----
+***
 
 ### tenantId
 

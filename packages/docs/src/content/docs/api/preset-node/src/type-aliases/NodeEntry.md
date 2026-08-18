@@ -23,13 +23,13 @@ title: "NodeEntry"
 
 `Promise`\<`void`\>
 
----
+***
 
 ### server
 
 > `readonly` **server**: `HTTPServer` \| `null`
 
----
+***
 
 ### start
 

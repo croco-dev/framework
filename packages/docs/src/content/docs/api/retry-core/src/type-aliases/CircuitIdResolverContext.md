@@ -15,25 +15,25 @@ title: "CircuitIdResolverContext"
 
 > **args**: `unknown`[]
 
----
+***
 
 ### defaultCircuitId
 
 > **defaultCircuitId**: `string`
 
----
+***
 
 ### instance
 
 > **instance**: `unknown`
 
----
+***
 
 ### methodName
 
 > **methodName**: `string`
 
----
+***
 
 ### targetName
 

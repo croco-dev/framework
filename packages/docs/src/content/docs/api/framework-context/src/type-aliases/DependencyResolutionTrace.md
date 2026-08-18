@@ -13,13 +13,13 @@ title: "DependencyResolutionTrace"
 
 > `readonly` **root**: `string`
 
----
+***
 
 ### status
 
 > `readonly` **status**: [`DependencyResolutionTraceStatus`](/api/framework-context/src/type-aliases/dependencyresolutiontracestatus/)
 
----
+***
 
 ### steps
 

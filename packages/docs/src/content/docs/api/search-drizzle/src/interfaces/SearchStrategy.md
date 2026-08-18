@@ -33,7 +33,7 @@ PostgreSQL 검색 전략이 구현해야 하는 계약입니다.
 
 `SQL`
 
----
+***
 
 ### buildIndexQuery()
 
@@ -59,7 +59,7 @@ PostgreSQL 검색 전략이 구현해야 하는 계약입니다.
 
 `SQL`
 
----
+***
 
 ### buildSearchQuery()
 
@@ -85,7 +85,7 @@ PostgreSQL 검색 전략이 구현해야 하는 계약입니다.
 
 `SQL`
 
----
+***
 
 ### checkCapability()
 
@@ -103,7 +103,7 @@ PostgreSQL 검색 전략이 구현해야 하는 계약입니다.
 
 `Promise`\<`boolean`\>
 
----
+***
 
 ### getCapabilities()
 
@@ -115,7 +115,7 @@ PostgreSQL 검색 전략이 구현해야 하는 계약입니다.
 
 [`SearchEngineCapabilities`](/api/search-core/src/type-aliases/searchenginecapabilities/)
 
----
+***
 
 ### getRequiredExtensions()
 
@@ -127,7 +127,7 @@ PostgreSQL 검색 전략이 구현해야 하는 계약입니다.
 
 `string`[]
 
----
+***
 
 ### mapSearchRow()?
 

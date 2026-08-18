@@ -9,7 +9,7 @@ title: "CrocoEventTestingHarness"
 
 ### TEvent
 
-`TEvent` _extends_ [`DomainEvent`](/api/events-core/src/classes/domainevent/) = [`DomainEvent`](/api/events-core/src/classes/domainevent/)
+`TEvent` *extends* [`DomainEvent`](/api/events-core/src/classes/domainevent/) = [`DomainEvent`](/api/events-core/src/classes/domainevent/)
 
 ## Constructors
 
@@ -41,13 +41,13 @@ title: "CrocoEventTestingHarness"
 
 > `readonly` **config**: [`EventBusConfig`](/api/events-core/src/classes/eventbusconfig/)
 
----
+***
 
 ### eventBus
 
 > `readonly` **eventBus**: [`EventBus`](/api/events-core/src/interfaces/eventbus/)\<`TEvent`\>
 
----
+***
 
 ### transactionContext
 
@@ -63,7 +63,7 @@ title: "CrocoEventTestingHarness"
 
 `void`
 
----
+***
 
 ### dispatch()
 
@@ -79,7 +79,7 @@ title: "CrocoEventTestingHarness"
 
 `Promise`\<`void`\>
 
----
+***
 
 ### flushAfterCommitHooks()
 
@@ -89,7 +89,7 @@ title: "CrocoEventTestingHarness"
 
 `Promise`\<`void`\>
 
----
+***
 
 ### publish()
 
@@ -105,7 +105,7 @@ title: "CrocoEventTestingHarness"
 
 `Promise`\<`void`\>
 
----
+***
 
 ### publishAfterCommit()
 

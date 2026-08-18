@@ -15,7 +15,7 @@ title: "handleJsonResult"
 
 ### Problem
 
-`Problem` _extends_ [`ProblemDeclaration`](/api/frontend-problems/src/type-aliases/problemdeclaration/)\<`string`, `string`, `number`\> = `never`
+`Problem` *extends* [`ProblemDeclaration`](/api/frontend-problems/src/type-aliases/problemdeclaration/)\<`string`, `string`, `number`\> = `never`
 
 ## Parameters
 

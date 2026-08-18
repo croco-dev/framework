@@ -9,7 +9,7 @@ title: "WebhookEventRouter"
 
 ### TEvents
 
-`TEvents` _extends_ [`WebhookEventCatalog`](/api/webhooks-core/src/type-aliases/webhookeventcatalog/) = [`WebhookEventCatalog`](/api/webhooks-core/src/type-aliases/webhookeventcatalog/)
+`TEvents` *extends* [`WebhookEventCatalog`](/api/webhooks-core/src/type-aliases/webhookeventcatalog/) = [`WebhookEventCatalog`](/api/webhooks-core/src/type-aliases/webhookeventcatalog/)
 
 ## Constructors
 
@@ -31,7 +31,7 @@ title: "WebhookEventRouter"
 
 ##### TType
 
-`TType` _extends_ `string`
+`TType` *extends* `string`
 
 #### Parameters
 
@@ -47,7 +47,7 @@ title: "WebhookEventRouter"
 
 `Promise`\<`EventResult`\<`TEvents`, `TType`\>\>
 
----
+***
 
 ### has()
 
@@ -63,7 +63,7 @@ title: "WebhookEventRouter"
 
 `boolean`
 
----
+***
 
 ### register()
 
@@ -73,7 +73,7 @@ title: "WebhookEventRouter"
 
 ##### TType
 
-`TType` _extends_ `string`
+`TType` *extends* `string`
 
 #### Parameters
 

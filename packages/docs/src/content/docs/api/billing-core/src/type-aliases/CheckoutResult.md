@@ -15,7 +15,7 @@ title: "CheckoutResult"
 
 > **checkoutId**: `string`
 
----
+***
 
 ### checkoutUrl
 

@@ -5,7 +5,7 @@ prev: false
 title: "ADMIN_CORE_DIAGNOSTIC_CODES"
 ---
 
-> `const` **ADMIN_CORE_DIAGNOSTIC_CODES**: `object`
+> `const` **ADMIN\_CORE\_DIAGNOSTIC\_CODES**: `object`
 
 ## Type Declaration
 

@@ -27,31 +27,31 @@ title: "UsageData"
 
 > **usage**: `number`
 
----
+***
 
 ### limit
 
 > **limit**: `number`
 
----
+***
 
 ### periodEnd
 
 > **periodEnd**: `Date`
 
----
+***
 
 ### periodStart
 
 > **periodStart**: `Date`
 
----
+***
 
 ### tenantId
 
 > **tenantId**: `string`
 
----
+***
 
 ### usage
 

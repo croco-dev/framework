@@ -13,13 +13,13 @@ title: "MeilisearchReadinessCheckContext"
 
 > `readonly` **client**: `MeiliSearch`
 
----
+***
 
 ### config
 
 > `readonly` **config**: [`MeilisearchEngineOptions`](/api/search-meilisearch/src/type-aliases/meilisearchengineoptions/)
 
----
+***
 
 ### signal?
 

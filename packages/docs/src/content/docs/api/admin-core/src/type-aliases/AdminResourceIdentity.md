@@ -13,31 +13,31 @@ title: "AdminResourceIdentity"
 
 > `readonly` **idField**: `string`
 
----
+***
 
 ### labelField?
 
 > `readonly` `optional` **labelField?**: `string`
 
----
+***
 
 ### statusField?
 
 > `readonly` `optional` **statusField?**: `string`
 
----
+***
 
 ### subjectType?
 
 > `readonly` `optional` **subjectType?**: `string`
 
----
+***
 
 ### tenantField?
 
 > `readonly` `optional` **tenantField?**: `string`
 
----
+***
 
 ### versionField?
 

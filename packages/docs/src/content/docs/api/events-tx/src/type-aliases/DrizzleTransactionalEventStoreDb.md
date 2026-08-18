@@ -23,7 +23,7 @@ title: "DrizzleTransactionalEventStoreDb"
 
 `InsertQuery`
 
----
+***
 
 ### select()
 
@@ -33,7 +33,7 @@ title: "DrizzleTransactionalEventStoreDb"
 
 `SelectQuery`
 
----
+***
 
 ### update()
 

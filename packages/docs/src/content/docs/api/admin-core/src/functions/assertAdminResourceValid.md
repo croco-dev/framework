@@ -11,7 +11,7 @@ title: "assertAdminResourceValid"
 
 ### TResource
 
-`TResource` _extends_ [`AdminResource`](/api/admin-core/src/type-aliases/adminresource/)
+`TResource` *extends* [`AdminResource`](/api/admin-core/src/type-aliases/adminresource/)
 
 ## Parameters
 

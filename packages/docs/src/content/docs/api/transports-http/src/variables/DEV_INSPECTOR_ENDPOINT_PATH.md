@@ -5,4 +5,4 @@ prev: false
 title: "DEV_INSPECTOR_ENDPOINT_PATH"
 ---
 
-> `const` **DEV_INSPECTOR_ENDPOINT_PATH**: `"/dev/inspector"` = `"/dev/inspector"`
+> `const` **DEV\_INSPECTOR\_ENDPOINT\_PATH**: `"/dev/inspector"` = `"/dev/inspector"`

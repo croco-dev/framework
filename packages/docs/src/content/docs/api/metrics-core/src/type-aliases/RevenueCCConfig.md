@@ -17,7 +17,7 @@ Configuration for Revenue Carrying Capacity calculation.
 
 Number of months to look back for calculating monthly averages
 
----
+***
 
 ### tenantId
 

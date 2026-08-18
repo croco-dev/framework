@@ -10,7 +10,7 @@ title: "GraphQLAuthGuard"
 ## Example
 
 ```typescript
-import type { Guard } from "@croco/framework-context";
+import type { Guard } from '@croco/framework-context';
 
 const guard: Guard<{ userId: string }> = {
   canActivate(context) {

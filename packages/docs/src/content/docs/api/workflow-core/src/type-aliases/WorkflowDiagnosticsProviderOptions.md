@@ -13,7 +13,7 @@ title: "WorkflowDiagnosticsProviderOptions"
 
 > `readonly` `optional` **executionLimit?**: `number`
 
----
+***
 
 ### executionPageSize?
 

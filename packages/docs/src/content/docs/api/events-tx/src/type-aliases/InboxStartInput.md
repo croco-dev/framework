@@ -13,37 +13,37 @@ title: "InboxStartInput"
 
 > **consumerId**: `string`
 
----
+***
 
 ### eventType
 
 > **eventType**: `string`
 
----
+***
 
 ### inboxKey
 
 > **inboxKey**: `string`
 
----
+***
 
 ### messageId
 
 > **messageId**: `string`
 
----
+***
 
 ### metadata?
 
 > `optional` **metadata?**: `Record`\<`string`, `unknown`\>
 
----
+***
 
 ### now
 
 > **now**: `Date`
 
----
+***
 
 ### visibilityTimeoutMs?
 

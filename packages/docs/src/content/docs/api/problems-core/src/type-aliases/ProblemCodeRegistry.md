@@ -13,13 +13,13 @@ title: "ProblemCodeRegistry"
 
 > `readonly` **problemCount**: `number`
 
----
+***
 
 ### problems
 
 > `readonly` **problems**: readonly [`ProblemCodeRegistryEntry`](/api/problems-core/src/type-aliases/problemcoderegistryentry/)[]
 
----
+***
 
 ### version
 

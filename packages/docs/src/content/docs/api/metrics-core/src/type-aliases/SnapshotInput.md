@@ -15,13 +15,13 @@ title: "SnapshotInput"
 
 > **activeCustomers**: `number`
 
----
+***
 
 ### planProvider
 
 > **planProvider**: [`PlanProvider`](/api/metrics-core/src/interfaces/planprovider/)
 
----
+***
 
 ### subscriptions
 

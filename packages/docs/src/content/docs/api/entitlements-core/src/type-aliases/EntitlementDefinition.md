@@ -11,4 +11,4 @@ title: "EntitlementDefinition"
 
 ### Feature
 
-`Feature` _extends_ [`FeatureReference`](/api/entitlements-core/src/type-aliases/featurereference/) = [`FeatureReference`](/api/entitlements-core/src/type-aliases/featurereference/)
+`Feature` *extends* [`FeatureReference`](/api/entitlements-core/src/type-aliases/featurereference/) = [`FeatureReference`](/api/entitlements-core/src/type-aliases/featurereference/)

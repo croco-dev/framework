@@ -13,7 +13,7 @@ title: "CreditAllocation"
 
 > `readonly` **amount**: [`CreditAmount`](/api/credits-core/src/type-aliases/creditamount/)
 
----
+***
 
 ### grantTransactionId
 

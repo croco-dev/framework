@@ -15,7 +15,7 @@ CircuitBreaker 설정 옵션.
 
 실패 임계값 - 양의 안전 정수이며, 이 횟수 이상 실패하면 OPEN 상태로 전환
 
----
+***
 
 ### stateStore?
 
@@ -23,7 +23,7 @@ CircuitBreaker 설정 옵션.
 
 상태 공유 범위를 제어하는 저장소 (기본값: decorated method별 in-memory store)
 
----
+***
 
 ### successThreshold?
 
@@ -31,7 +31,7 @@ CircuitBreaker 설정 옵션.
 
 양의 안전 정수 성공 임계값 (HALF_OPEN 상태에서 이 횟수 성공하면 CLOSED로 복귀)
 
----
+***
 
 ### timeout?
 

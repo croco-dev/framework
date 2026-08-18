@@ -13,7 +13,7 @@ title: "PlanReleaseDraft"
 
 > `readonly` **definition**: [`PlanVersionDefinition`](/api/billing-core/src/type-aliases/planversiondefinition/)
 
----
+***
 
 ### revision
 

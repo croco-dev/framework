@@ -13,13 +13,13 @@ title: "ProblemTelemetryMapping"
 
 > `readonly` **attributes**: readonly `string`[]
 
----
+***
 
 ### eventName
 
 > `readonly` **eventName**: `string`
 
----
+***
 
 ### severity
 

@@ -11,7 +11,7 @@ title: "PackageProblemRegistry"
 
 ### Problems
 
-`Problems` _extends_ readonly [`PackageProblemRegistryEntry`](/api/problems-core/src/type-aliases/packageproblemregistryentry/)[] = readonly [`PackageProblemRegistryEntry`](/api/problems-core/src/type-aliases/packageproblemregistryentry/)[]
+`Problems` *extends* readonly [`PackageProblemRegistryEntry`](/api/problems-core/src/type-aliases/packageproblemregistryentry/)[] = readonly [`PackageProblemRegistryEntry`](/api/problems-core/src/type-aliases/packageproblemregistryentry/)[]
 
 ## Properties
 
@@ -19,25 +19,25 @@ title: "PackageProblemRegistry"
 
 > `readonly` **package**: `string`
 
----
+***
 
 ### packagePrefix
 
 > `readonly` **packagePrefix**: `string`
 
----
+***
 
 ### problemCount
 
 > `readonly` **problemCount**: `number`
 
----
+***
 
 ### problems
 
 > `readonly` **problems**: `Problems`
 
----
+***
 
 ### version
 

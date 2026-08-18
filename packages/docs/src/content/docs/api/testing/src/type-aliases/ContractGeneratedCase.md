@@ -13,13 +13,13 @@ title: "ContractGeneratedCase"
 
 > `readonly` **canarySecret**: `string`
 
----
+***
 
 ### input
 
 > `readonly` **input**: [`ContractRequestInput`](/api/testing/src/type-aliases/contractrequestinput/)
 
----
+***
 
 ### kind
 

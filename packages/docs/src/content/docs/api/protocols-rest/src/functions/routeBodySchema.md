@@ -11,7 +11,7 @@ title: "routeBodySchema"
 
 ### TContract
 
-`TContract` _extends_ [`RouteContractWithBody`](/api/protocols-rest/src/type-aliases/routecontractwithbody/)
+`TContract` *extends* [`RouteContractWithBody`](/api/protocols-rest/src/type-aliases/routecontractwithbody/)
 
 ## Parameters
 

@@ -11,4 +11,4 @@ title: "MessageContent"
 
 ### TChannel
 
-`TChannel` _extends_ [`MessageChannel`](/api/engagement-core/src/type-aliases/messagechannel/)
+`TChannel` *extends* [`MessageChannel`](/api/engagement-core/src/type-aliases/messagechannel/)

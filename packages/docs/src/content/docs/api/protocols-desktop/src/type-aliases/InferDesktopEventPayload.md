@@ -5,7 +5,7 @@ prev: false
 title: "InferDesktopEventPayload"
 ---
 
-> **InferDesktopEventPayload**\<`TEvent`\> = `TEvent` _extends_ [`DesktopEventDefinition`](/api/protocols-desktop/src/type-aliases/desktopeventdefinition/)\<infer TPayloadSchema\> ? [`InferDesktopSchema`](/api/protocols-desktop/src/type-aliases/inferdesktopschema/)\<`TPayloadSchema`\> : `never`
+> **InferDesktopEventPayload**\<`TEvent`\> = `TEvent` *extends* [`DesktopEventDefinition`](/api/protocols-desktop/src/type-aliases/desktopeventdefinition/)\<infer TPayloadSchema\> ? [`InferDesktopSchema`](/api/protocols-desktop/src/type-aliases/inferdesktopschema/)\<`TPayloadSchema`\> : `never`
 
 ## Type Parameters
 

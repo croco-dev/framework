@@ -11,7 +11,7 @@ title: "DesktopProblemReference"
 
 ### TProblem
 
-`TProblem` _extends_ [`Problem`](/api/problems-core/src/classes/problem/) = [`Problem`](/api/problems-core/src/classes/problem/)
+`TProblem` *extends* [`Problem`](/api/problems-core/src/classes/problem/) = [`Problem`](/api/problems-core/src/classes/problem/)
 
 ## Properties
 

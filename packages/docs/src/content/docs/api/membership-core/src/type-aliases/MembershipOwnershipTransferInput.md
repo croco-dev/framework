@@ -13,13 +13,13 @@ title: "MembershipOwnershipTransferInput"
 
 > **fromUserId**: `string`
 
----
+***
 
 ### tenantId
 
 > **tenantId**: `string`
 
----
+***
 
 ### toUserId
 

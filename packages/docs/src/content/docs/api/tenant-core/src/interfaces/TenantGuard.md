@@ -29,7 +29,7 @@ The resolved tenant
 
 True if allowed, false otherwise
 
----
+***
 
 ### getName()
 

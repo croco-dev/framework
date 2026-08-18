@@ -13,7 +13,7 @@ title: "RuntimeCapabilityRequirement"
 
 > `readonly` **capability**: [`RuntimeCapabilityName`](/api/framework-context/src/type-aliases/runtimecapabilityname/)
 
----
+***
 
 ### source?
 

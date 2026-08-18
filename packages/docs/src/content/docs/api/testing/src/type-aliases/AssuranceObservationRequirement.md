@@ -13,7 +13,7 @@ title: "AssuranceObservationRequirement"
 
 > `readonly` **field**: [`AssuranceObservationField`](/api/testing/src/type-aliases/assuranceobservationfield/)
 
----
+***
 
 ### id
 

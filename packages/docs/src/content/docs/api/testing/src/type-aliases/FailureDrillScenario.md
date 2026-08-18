@@ -13,19 +13,19 @@ title: "FailureDrillScenario"
 
 > `readonly` **description**: `string`
 
----
+***
 
 ### expected
 
 > `readonly` **expected**: [`FailureDrillExpectedOutcome`](/api/testing/src/type-aliases/failuredrillexpectedoutcome/)
 
----
+***
 
 ### id
 
 > `readonly` **id**: [`FailureDrillScenarioId`](/api/testing/src/type-aliases/failuredrillscenarioid/) \| `string` & `object`
 
----
+***
 
 ### name
 

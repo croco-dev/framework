@@ -13,19 +13,19 @@ title: "ChangedTestSelectionReason"
 
 > `readonly` **command**: readonly `string`[]
 
----
+***
 
 ### contractId
 
 > `readonly` **contractId**: `string`
 
----
+***
 
 ### reason
 
 > `readonly` **reason**: `string`
 
----
+***
 
 ### testId
 

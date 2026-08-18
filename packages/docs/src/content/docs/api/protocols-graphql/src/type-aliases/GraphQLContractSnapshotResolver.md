@@ -13,13 +13,13 @@ title: "GraphQLContractSnapshotResolver"
 
 > `readonly` **diScope**: [`Scope`](/api/framework-context/src/type-aliases/scope/) \| `null`
 
----
+***
 
 ### methods
 
 > `readonly` **methods**: readonly [`GraphQLContractSnapshotResolverMethod`](/api/protocols-graphql/src/type-aliases/graphqlcontractsnapshotresolvermethod/)[]
 
----
+***
 
 ### resolverName
 

@@ -13,19 +13,19 @@ title: "MembershipCreateInput"
 
 > **id**: `string`
 
----
+***
 
 ### role
 
 > **role**: [`MembershipRole`](/api/membership-core/src/type-aliases/membershiprole/)
 
----
+***
 
 ### tenantId
 
 > **tenantId**: `string`
 
----
+***
 
 ### userId
 

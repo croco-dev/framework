@@ -11,7 +11,7 @@ title: "definePolicy"
 
 ### TPolicy
 
-`TPolicy` _extends_ [`RuntimePolicy`](/api/framework-context/src/type-aliases/runtimepolicy/)
+`TPolicy` *extends* [`RuntimePolicy`](/api/framework-context/src/type-aliases/runtimepolicy/)
 
 ## Parameters
 

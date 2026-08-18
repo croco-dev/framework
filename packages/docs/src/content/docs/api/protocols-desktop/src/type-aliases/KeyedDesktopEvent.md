@@ -17,8 +17,8 @@ title: "KeyedDesktopEvent"
 
 ### TEvent
 
-`TEvent` _extends_ [`AnyDesktopEvent`](/api/protocols-desktop/src/type-aliases/anydesktopevent/) = [`AnyDesktopEvent`](/api/protocols-desktop/src/type-aliases/anydesktopevent/)
+`TEvent` *extends* [`AnyDesktopEvent`](/api/protocols-desktop/src/type-aliases/anydesktopevent/) = [`AnyDesktopEvent`](/api/protocols-desktop/src/type-aliases/anydesktopevent/)
 
 ### TKey
 
-`TKey` _extends_ `string` = `string`
+`TKey` *extends* `string` = `string`

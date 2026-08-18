@@ -13,7 +13,7 @@ title: "UpgradeIo"
 
 > `readonly` **cwd**: `string`
 
----
+***
 
 ### exists
 
@@ -29,7 +29,7 @@ title: "UpgradeIo"
 
 `boolean`
 
----
+***
 
 ### mkdir
 
@@ -45,7 +45,7 @@ title: "UpgradeIo"
 
 `void`
 
----
+***
 
 ### readDir
 
@@ -61,7 +61,7 @@ title: "UpgradeIo"
 
 readonly [`UpgradeDirent`](/api/cli/src/type-aliases/upgradedirent/)[]
 
----
+***
 
 ### readFile
 
@@ -77,7 +77,7 @@ readonly [`UpgradeDirent`](/api/cli/src/type-aliases/upgradedirent/)[]
 
 `string`
 
----
+***
 
 ### stat
 
@@ -109,7 +109,7 @@ readonly [`UpgradeDirent`](/api/cli/src/type-aliases/upgradedirent/)[]
 
 `boolean`
 
----
+***
 
 ### stderr
 
@@ -125,7 +125,7 @@ readonly [`UpgradeDirent`](/api/cli/src/type-aliases/upgradedirent/)[]
 
 `void`
 
----
+***
 
 ### stdout
 
@@ -141,7 +141,7 @@ readonly [`UpgradeDirent`](/api/cli/src/type-aliases/upgradedirent/)[]
 
 `void`
 
----
+***
 
 ### writeFile
 

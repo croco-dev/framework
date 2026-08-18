@@ -13,19 +13,19 @@ title: "ProblemCodeSource"
 
 > `readonly` **column**: `number`
 
----
+***
 
 ### file
 
 > `readonly` **file**: `string`
 
----
+***
 
 ### kind
 
 > `readonly` **kind**: [`ProblemCodeSourceKind`](/api/problems-core/src/type-aliases/problemcodesourcekind/)
 
----
+***
 
 ### line
 

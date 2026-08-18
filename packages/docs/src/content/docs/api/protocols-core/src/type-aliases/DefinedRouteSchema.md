@@ -11,11 +11,11 @@ title: "DefinedRouteSchema"
 
 ### Req
 
-`Req` _extends_ [`RouteRequestSchemas`](/api/protocols-core/src/type-aliases/routerequestschemas/) = [`RouteRequestSchemas`](/api/protocols-core/src/type-aliases/routerequestschemas/)
+`Req` *extends* [`RouteRequestSchemas`](/api/protocols-core/src/type-aliases/routerequestschemas/) = [`RouteRequestSchemas`](/api/protocols-core/src/type-aliases/routerequestschemas/)
 
 ### Res
 
-`Res` _extends_ [`RouteSchemaLike`](/api/protocols-core/src/type-aliases/routeschemalike/) = [`RouteSchemaLike`](/api/protocols-core/src/type-aliases/routeschemalike/)
+`Res` *extends* [`RouteSchemaLike`](/api/protocols-core/src/type-aliases/routeschemalike/) = [`RouteSchemaLike`](/api/protocols-core/src/type-aliases/routeschemalike/)
 
 ## Properties
 
@@ -23,7 +23,7 @@ title: "DefinedRouteSchema"
 
 > `readonly` **request**: `Req`
 
----
+***
 
 ### response
 

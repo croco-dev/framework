@@ -5,7 +5,7 @@ prev: false
 title: "TENANT_MODEL_DEFINITIONS"
 ---
 
-> `const` **TENANT_MODEL_DEFINITIONS**: `object`
+> `const` **TENANT\_MODEL\_DEFINITIONS**: `object`
 
 Tenant model manifest, compatibility, playbook, and migration helpers.
 

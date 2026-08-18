@@ -47,7 +47,7 @@ In-memory reconciliation intent store for tests and local composition.
 
 [`SubscriptionQuantityReconciliationStore`](/api/billing-core/src/interfaces/subscriptionquantityreconciliationstore/).[`createOrSupersede`](/api/billing-core/src/interfaces/subscriptionquantityreconciliationstore/#createorsupersede)
 
----
+***
 
 ### findCurrent()
 
@@ -71,7 +71,7 @@ In-memory reconciliation intent store for tests and local composition.
 
 [`SubscriptionQuantityReconciliationStore`](/api/billing-core/src/interfaces/subscriptionquantityreconciliationstore/).[`findCurrent`](/api/billing-core/src/interfaces/subscriptionquantityreconciliationstore/#findcurrent)
 
----
+***
 
 ### getDiagnostics()
 
@@ -97,7 +97,7 @@ In-memory reconciliation intent store for tests and local composition.
 
 [`SubscriptionQuantityReconciliationStore`](/api/billing-core/src/interfaces/subscriptionquantityreconciliationstore/).[`getDiagnostics`](/api/billing-core/src/interfaces/subscriptionquantityreconciliationstore/#getdiagnostics)
 
----
+***
 
 ### listRecent()
 
@@ -117,7 +117,7 @@ In-memory reconciliation intent store for tests and local composition.
 
 [`SubscriptionQuantityReconciliationStore`](/api/billing-core/src/interfaces/subscriptionquantityreconciliationstore/).[`listRecent`](/api/billing-core/src/interfaces/subscriptionquantityreconciliationstore/#listrecent)
 
----
+***
 
 ### listRepairable()
 
@@ -137,7 +137,7 @@ In-memory reconciliation intent store for tests and local composition.
 
 [`SubscriptionQuantityReconciliationStore`](/api/billing-core/src/interfaces/subscriptionquantityreconciliationstore/).[`listRepairable`](/api/billing-core/src/interfaces/subscriptionquantityreconciliationstore/#listrepairable)
 
----
+***
 
 ### saveIfCurrent()
 

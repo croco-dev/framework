@@ -15,7 +15,7 @@ title: "AccessExecutionContext"
 
 `object`
 
----
+***
 
 ### getHandler()
 
@@ -25,7 +25,7 @@ title: "AccessExecutionContext"
 
 `string` \| `symbol`
 
----
+***
 
 ### getHttpContext()?
 
@@ -35,7 +35,7 @@ title: "AccessExecutionContext"
 
 \{ `req`: \{ `params`: `Record`\<`string`, `string`\>; \}; `get`: `T` \| `undefined`; `param`: `string` \| `undefined`; \} \| `null`
 
----
+***
 
 ### getRequest()
 

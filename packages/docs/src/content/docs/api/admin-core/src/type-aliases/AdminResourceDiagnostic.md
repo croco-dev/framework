@@ -13,49 +13,49 @@ title: "AdminResourceDiagnostic"
 
 > `readonly` `optional` **actionId?**: `string`
 
----
+***
 
 ### code
 
 > `readonly` **code**: [`AdminResourceDiagnosticCode`](/api/admin-core/src/type-aliases/adminresourcediagnosticcode/)
 
----
+***
 
 ### fieldId?
 
 > `readonly` `optional` **fieldId?**: `string`
 
----
+***
 
 ### message
 
 > `readonly` **message**: `string`
 
----
+***
 
 ### path
 
 > `readonly` **path**: `string`
 
----
+***
 
 ### problemCode?
 
 > `readonly` `optional` **problemCode?**: `string`
 
----
+***
 
 ### resourceKind?
 
 > `readonly` `optional` **resourceKind?**: `string`
 
----
+***
 
 ### severity
 
 > `readonly` **severity**: `"error"`
 
----
+***
 
 ### target
 

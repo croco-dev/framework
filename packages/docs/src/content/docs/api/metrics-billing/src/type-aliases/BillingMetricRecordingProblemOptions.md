@@ -13,19 +13,19 @@ title: "BillingMetricRecordingProblemOptions"
 
 > `readonly` `optional` **cause?**: `Error`
 
----
+***
 
 ### eventKey
 
 > `readonly` **eventKey**: `string`
 
----
+***
 
 ### eventName
 
 > `readonly` **eventName**: `string`
 
----
+***
 
 ### tenantId
 
