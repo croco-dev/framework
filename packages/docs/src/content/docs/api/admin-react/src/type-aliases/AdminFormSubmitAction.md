@@ -11,7 +11,7 @@ title: "AdminFormSubmitAction"
 
 ### TValues
 
-`TValues` *extends* `object`
+`TValues` _extends_ `object`
 
 ### TResult
 

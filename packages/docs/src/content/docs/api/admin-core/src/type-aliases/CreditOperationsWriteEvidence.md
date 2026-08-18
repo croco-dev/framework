@@ -13,25 +13,25 @@ title: "CreditOperationsWriteEvidence"
 
 > `readonly` **actorId**: `string`
 
-***
+---
 
 ### expectedPosition
 
 > `readonly` **expectedPosition**: `number`
 
-***
+---
 
 ### idempotencyKey
 
 > `readonly` **idempotencyKey**: `string`
 
-***
+---
 
 ### reason
 
 > `readonly` **reason**: `string`
 
-***
+---
 
 ### reference
 

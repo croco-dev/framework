@@ -13,19 +13,19 @@ title: "TenantIsolationEnforcerOptions"
 
 > `readonly` `optional` **auditSink?**: [`TenantIsolationAuditSink`](/api/tenant-core/src/type-aliases/tenantisolationauditsink/)
 
-***
+---
 
 ### contextProvider?
 
 > `readonly` `optional` **contextProvider?**: [`TenantContextProvider`](/api/tenant-core/src/type-aliases/tenantcontextprovider/)
 
-***
+---
 
 ### defaultTenantIds?
 
 > `readonly` `optional` **defaultTenantIds?**: readonly `string`[]
 
-***
+---
 
 ### observabilityFailureMode?
 
@@ -33,7 +33,7 @@ title: "TenantIsolationEnforcerOptions"
 
 Defaults to best-effort. Denials always preserve their original Tenant Problem.
 
-***
+---
 
 ### policyDecisionTraceSink?
 

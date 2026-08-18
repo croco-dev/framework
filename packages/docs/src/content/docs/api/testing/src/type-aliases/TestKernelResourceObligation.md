@@ -13,7 +13,7 @@ title: "TestKernelResourceObligation"
 
 > `readonly` **kind**: `"after-commit"` \| `"deferred-constraint"` \| `"outbox"` \| `"serialization"`
 
-***
+---
 
 ### resource
 

@@ -5,4 +5,4 @@ prev: false
 title: "ProjectManifestBundleArtifactKey"
 ---
 
-> **ProjectManifestBundleArtifactKey** = *typeof* [`PROJECT_MANIFEST_BUNDLE_ARTIFACT_ENTRIES`](/api/protocols-core/src/variables/project_manifest_bundle_artifact_entries/)\[`number`\]\[`0`\]
+> **ProjectManifestBundleArtifactKey** = _typeof_ [`PROJECT_MANIFEST_BUNDLE_ARTIFACT_ENTRIES`](/api/protocols-core/src/variables/project_manifest_bundle_artifact_entries/)\[`number`\]\[`0`\]

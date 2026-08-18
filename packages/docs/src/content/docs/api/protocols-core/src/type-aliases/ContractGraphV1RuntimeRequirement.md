@@ -15,13 +15,13 @@ Runtime capability required to serve a ContractGraph v1 route.
 
 > `readonly` **method**: `string`
 
-***
+---
 
 ### path
 
 > `readonly` **path**: `string`
 
-***
+---
 
 ### type
 

@@ -11,7 +11,7 @@ title: "addPolicyDecisionIdExtension"
 
 ### TProblem
 
-`TProblem` *extends* [`Problem`](/api/problems-core/src/classes/problem/)
+`TProblem` _extends_ [`Problem`](/api/problems-core/src/classes/problem/)
 
 ## Parameters
 

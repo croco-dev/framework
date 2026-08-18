@@ -15,19 +15,19 @@ Meilisearch 엔진 초기화 옵션입니다.
 
 > **apiKey**: `string`
 
-***
+---
 
 ### host
 
 > **host**: `string`
 
-***
+---
 
 ### taskWait?
 
 > `optional` **taskWait?**: [`MeilisearchTaskWaitOptions`](/api/search-meilisearch/src/type-aliases/meilisearchtaskwaitoptions/)
 
-***
+---
 
 ### tenantTokenOptions?
 

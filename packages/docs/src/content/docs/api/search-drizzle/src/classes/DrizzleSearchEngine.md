@@ -93,7 +93,7 @@ Drizzle DB와 검색 전략을 받아 검색 엔진을 초기화합니다.
 
 [`SearchEngine`](/api/search-core/src/classes/searchengine/).[`bulkIndex`](/api/search-core/src/classes/searchengine/#bulkindex)
 
-***
+---
 
 ### createIndex()
 
@@ -115,7 +115,7 @@ Drizzle 검색 엔진에서 지원하지 않는 인덱스 생성 API입니다.
 
 [`SearchEngine`](/api/search-core/src/classes/searchengine/).[`createIndex`](/api/search-core/src/classes/searchengine/#createindex)
 
-***
+---
 
 ### deleteDocument()
 
@@ -141,7 +141,7 @@ Drizzle 검색 엔진에서 지원하지 않는 인덱스 생성 API입니다.
 
 [`SearchEngine`](/api/search-core/src/classes/searchengine/).[`deleteDocument`](/api/search-core/src/classes/searchengine/#deletedocument)
 
-***
+---
 
 ### deleteIndex()
 
@@ -163,7 +163,7 @@ Drizzle 검색 엔진에서 지원하지 않는 인덱스 삭제 API입니다.
 
 [`SearchEngine`](/api/search-core/src/classes/searchengine/).[`deleteIndex`](/api/search-core/src/classes/searchengine/#deleteindex)
 
-***
+---
 
 ### indexDocument()
 
@@ -189,7 +189,7 @@ Drizzle 검색 엔진에서 지원하지 않는 인덱스 삭제 API입니다.
 
 [`SearchEngine`](/api/search-core/src/classes/searchengine/).[`indexDocument`](/api/search-core/src/classes/searchengine/#indexdocument)
 
-***
+---
 
 ### search()
 

@@ -11,4 +11,4 @@ title: "RuntimeCapabilityOverridesFor"
 
 ### TPlatform
 
-`TPlatform` *extends* [`RuntimePlatform`](/api/framework-context/src/type-aliases/runtimeplatform/)
+`TPlatform` _extends_ [`RuntimePlatform`](/api/framework-context/src/type-aliases/runtimeplatform/)

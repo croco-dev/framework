@@ -17,13 +17,13 @@ title: "appConfig"
 
 > **server**: `object`
 
-#### server.LOG\_LEVEL
+#### server.LOG_LEVEL
 
-> **LOG\_LEVEL**: `ZodDefault`\<`ZodEnum`\<\{ `debug`: `"debug"`; `error`: `"error"`; `info`: `"info"`; `warn`: `"warn"`; \}\>\>
+> **LOG_LEVEL**: `ZodDefault`\<`ZodEnum`\<\{ `debug`: `"debug"`; `error`: `"error"`; `info`: `"info"`; `warn`: `"warn"`; \}\>\>
 
-#### server.NODE\_ENV
+#### server.NODE_ENV
 
-> **NODE\_ENV**: `ZodDefault`\<`ZodEnum`\<\{ `development`: `"development"`; `production`: `"production"`; `test`: `"test"`; \}\>\>
+> **NODE_ENV**: `ZodDefault`\<`ZodEnum`\<\{ `development`: `"development"`; `production`: `"production"`; `test`: `"test"`; \}\>\>
 
 #### server.PORT
 

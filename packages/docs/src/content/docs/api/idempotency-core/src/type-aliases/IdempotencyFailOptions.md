@@ -13,13 +13,13 @@ title: "IdempotencyFailOptions"
 
 > `readonly` **key**: [`DerivedIdempotencyKey`](/api/idempotency-core/src/type-aliases/derivedidempotencykey/)
 
-***
+---
 
 ### metadata?
 
 > `readonly` `optional` **metadata?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### problem?
 
@@ -37,19 +37,19 @@ title: "IdempotencyFailOptions"
 
 > `readonly` `optional` **status?**: `number`
 
-***
+---
 
 ### reservationId
 
 > `readonly` **reservationId**: `string`
 
-***
+---
 
 ### retryable?
 
 > `readonly` `optional` **retryable?**: `boolean`
 
-***
+---
 
 ### ttlMs?
 

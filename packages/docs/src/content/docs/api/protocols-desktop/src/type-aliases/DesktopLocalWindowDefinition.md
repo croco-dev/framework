@@ -11,11 +11,11 @@ title: "DesktopLocalWindowDefinition"
 
 ### TExpose
 
-`TExpose` *extends* readonly [`KeyedDesktopCommand`](/api/protocols-desktop/src/type-aliases/keyeddesktopcommand/)[] = readonly [`KeyedDesktopCommand`](/api/protocols-desktop/src/type-aliases/keyeddesktopcommand/)[]
+`TExpose` _extends_ readonly [`KeyedDesktopCommand`](/api/protocols-desktop/src/type-aliases/keyeddesktopcommand/)[] = readonly [`KeyedDesktopCommand`](/api/protocols-desktop/src/type-aliases/keyeddesktopcommand/)[]
 
 ### TReceive
 
-`TReceive` *extends* readonly [`KeyedDesktopEvent`](/api/protocols-desktop/src/type-aliases/keyeddesktopevent/)[] = readonly [`KeyedDesktopEvent`](/api/protocols-desktop/src/type-aliases/keyeddesktopevent/)[]
+`TReceive` _extends_ readonly [`KeyedDesktopEvent`](/api/protocols-desktop/src/type-aliases/keyeddesktopevent/)[] = readonly [`KeyedDesktopEvent`](/api/protocols-desktop/src/type-aliases/keyeddesktopevent/)[]
 
 ## Properties
 
@@ -23,19 +23,19 @@ title: "DesktopLocalWindowDefinition"
 
 > `readonly` **definitionType**: `"window"`
 
-***
+---
 
 ### expose
 
 > `readonly` **expose**: `TExpose`
 
-***
+---
 
 ### receive
 
 > `readonly` **receive**: `TReceive`
 
-***
+---
 
 ### trust
 

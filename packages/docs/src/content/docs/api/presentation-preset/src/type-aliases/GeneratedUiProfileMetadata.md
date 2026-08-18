@@ -15,7 +15,7 @@ title: "GeneratedUiProfileMetadata"
 
 Generated app smoke case that proves this UI profile
 
-***
+---
 
 ### maturity
 
@@ -23,7 +23,7 @@ Generated app smoke case that proves this UI profile
 
 Current support maturity of the generated UI profile
 
-***
+---
 
 ### name
 
@@ -31,7 +31,7 @@ Current support maturity of the generated UI profile
 
 UI profile selected by the generator
 
-***
+---
 
 ### requiresStylexCompile
 
@@ -39,7 +39,7 @@ UI profile selected by the generator
 
 Whether the generated application must compile StyleX source
 
-***
+---
 
 ### styleEngine
 

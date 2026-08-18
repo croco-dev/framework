@@ -13,13 +13,13 @@ title: "ResetCrocoTestingContextOptions"
 
 > `readonly` `optional` **logger?**: [`TestLogger`](/api/testing/src/type-aliases/testlogger/)
 
-***
+---
 
 ### providers?
 
 > `readonly` `optional` **providers?**: readonly [`TestingProvider`](/api/testing/src/type-aliases/testingprovider/)[]
 
-***
+---
 
 ### transactionContext?
 

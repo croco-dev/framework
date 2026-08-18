@@ -13,13 +13,13 @@ title: "NotificationTemplateRef"
 
 > `readonly` **id**: `string`
 
-***
+---
 
 ### locale
 
 > `readonly` **locale**: `string`
 
-***
+---
 
 ### version
 

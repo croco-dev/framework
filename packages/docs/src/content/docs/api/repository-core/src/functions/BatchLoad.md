@@ -13,7 +13,7 @@ Read-only repository contract for fetching entities by single or multiple IDs.
 
 ### TRepository
 
-`TRepository` *extends* `object` = `object`
+`TRepository` _extends_ `object` = `object`
 
 ## Parameters
 

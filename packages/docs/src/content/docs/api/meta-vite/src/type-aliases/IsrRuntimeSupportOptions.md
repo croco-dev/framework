@@ -13,13 +13,13 @@ title: "IsrRuntimeSupportOptions"
 
 > `readonly` **cache**: [`IsrCacheStoreProfile`](/api/meta-vite/src/type-aliases/isrcachestoreprofile/)
 
-***
+---
 
 ### requireDurable?
 
 > `readonly` `optional` **requireDurable?**: `boolean`
 
-***
+---
 
 ### runtime
 

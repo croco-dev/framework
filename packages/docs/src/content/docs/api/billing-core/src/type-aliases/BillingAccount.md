@@ -15,25 +15,25 @@ billing account, invoice, order, plan, subscription 도메인 타입입니다.
 
 > **createdAt**: `Date`
 
-***
+---
 
 ### email
 
 > **email**: `string`
 
-***
+---
 
 ### externalCustomerId
 
 > **externalCustomerId**: `string`
 
-***
+---
 
 ### id
 
 > **id**: `string`
 
-***
+---
 
 ### tenantId
 

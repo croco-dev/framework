@@ -13,7 +13,7 @@ title: "R2ReadinessCheckContext"
 
 > `readonly` **config**: [`R2Options`](/api/storage-r2/src/type-aliases/r2options/)
 
-***
+---
 
 ### signal?
 

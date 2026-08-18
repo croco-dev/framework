@@ -19,13 +19,13 @@ title: "ProblemClientSuccess"
 
 > `readonly` **data**: `T`
 
-***
+---
 
 ### ok
 
 > `readonly` **ok**: `true`
 
-***
+---
 
 ### response
 

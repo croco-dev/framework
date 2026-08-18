@@ -13,13 +13,13 @@ title: "GracefulShutdownTimeoutProblemOptions"
 
 > `readonly` **elapsedMs**: `number`
 
-***
+---
 
 ### phase
 
 > `readonly` **phase**: [`GracefulShutdownPhase`](/api/transports-http/src/type-aliases/gracefulshutdownphase/)
 
-***
+---
 
 ### timeoutMs
 

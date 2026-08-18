@@ -13,21 +13,21 @@ and payment processing.
 ## Example
 
 ```typescript
-import { PolarBillingGateway, PolarConfig } from '@croco/billing-polar';
+import { PolarBillingGateway, PolarConfig } from "@croco/billing-polar";
 
 const config: PolarConfig = {
-  accessToken: 'polar_access_token',
-  environment: 'sandbox',
-  webhookSecret: 'whsec_...',
+  accessToken: "polar_access_token",
+  environment: "sandbox",
+  webhookSecret: "whsec_...",
 };
 
 const gateway = new PolarBillingGateway(config, logger);
 const checkout = await gateway.createCheckout({
-  billingAccountId: 'tenant_123',
-  email: 'buyer@example.com',
-  productId: 'prod_123',
-  successUrl: 'https://example.com/success',
-  idempotencyKey: 'checkout_order_123'
+  billingAccountId: "tenant_123",
+  email: "buyer@example.com",
+  productId: "prod_123",
+  successUrl: "https://example.com/success",
+  idempotencyKey: "checkout_order_123",
 });
 ```
 
@@ -83,7 +83,7 @@ const checkout = await gateway.createCheckout({
 
 [`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/).[`cancelSubscription`](/api/billing-core/src/interfaces/billinggateway/#cancelsubscription)
 
-***
+---
 
 ### createCheckout()
 
@@ -103,7 +103,7 @@ const checkout = await gateway.createCheckout({
 
 [`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/).[`createCheckout`](/api/billing-core/src/interfaces/billinggateway/#createcheckout)
 
-***
+---
 
 ### ensureCustomer()
 
@@ -127,7 +127,7 @@ const checkout = await gateway.createCheckout({
 
 [`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/).[`ensureCustomer`](/api/billing-core/src/interfaces/billinggateway/#ensurecustomer)
 
-***
+---
 
 ### getCustomerPortalUrl()
 
@@ -147,7 +147,7 @@ const checkout = await gateway.createCheckout({
 
 [`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/).[`getCustomerPortalUrl`](/api/billing-core/src/interfaces/billinggateway/#getcustomerportalurl)
 
-***
+---
 
 ### reconcileCheckout()
 
@@ -170,7 +170,7 @@ Used to recover ambiguous provider responses and idempotency-store commit failur
 
 [`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/).[`reconcileCheckout`](/api/billing-core/src/interfaces/billinggateway/#reconcilecheckout)
 
-***
+---
 
 ### resumeSubscription()
 

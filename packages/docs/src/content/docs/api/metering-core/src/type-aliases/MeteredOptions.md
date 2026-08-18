@@ -15,7 +15,7 @@ title: "MeteredOptions"
 
 > `optional` **billing?**: `"local"` \| `"required"`
 
-***
+---
 
 ### idempotencyKeyExtractor?
 
@@ -31,7 +31,7 @@ title: "MeteredOptions"
 
 `string` \| `undefined`
 
-***
+---
 
 ### metadataExtractor?
 
@@ -51,13 +51,13 @@ title: "MeteredOptions"
 
 `Record`\<`string`, `unknown`\> \| `undefined`
 
-***
+---
 
 ### meterId
 
 > **meterId**: `string`
 
-***
+---
 
 ### valueExtractor?
 

@@ -13,7 +13,7 @@ title: "ContractLifecycleObservation"
 
 > `readonly` **outcome**: [`ContractLifecycleOutcome`](/api/testing/src/type-aliases/contractlifecycleoutcome/)
 
-***
+---
 
 ### supported
 

@@ -11,7 +11,7 @@ title: "StageExecutionContinuationInput"
 
 > **checkpoints**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### nextToken
 

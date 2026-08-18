@@ -13,43 +13,43 @@ title: "AdminProblemContract"
 
 > `readonly` `optional` **category?**: `string`
 
-***
+---
 
 ### code
 
 > `readonly` **code**: `string`
 
-***
+---
 
 ### detail?
 
 > `readonly` `optional` **detail?**: `string`
 
-***
+---
 
 ### metadata?
 
 > `readonly` `optional` **metadata?**: `Readonly`\<`Record`\<`string`, `unknown`\>\>
 
-***
+---
 
 ### recoveryActionId?
 
 > `readonly` `optional` **recoveryActionId?**: `string`
 
-***
+---
 
 ### retryable?
 
 > `readonly` `optional` **retryable?**: `boolean`
 
-***
+---
 
 ### status?
 
 > `readonly` `optional` **status?**: `number`
 
-***
+---
 
 ### title?
 

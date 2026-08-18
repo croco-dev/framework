@@ -13,19 +13,19 @@ title: "RequirePermissionProps"
 
 > `readonly` **children**: `ReactNode` \| ((`state`) => `ReactNode`)
 
-***
+---
 
 ### fallback?
 
 > `readonly` `optional` **fallback?**: [`FrontendAuthGateFallback`](/api/frontend-react/src/type-aliases/frontendauthgatefallback/)
 
-***
+---
 
 ### permissions
 
 > `readonly` **permissions**: `string` \| readonly `string`[]
 
-***
+---
 
 ### tenantRequired?
 

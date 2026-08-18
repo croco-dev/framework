@@ -13,13 +13,13 @@ title: "AdminProblemReference"
 
 > `readonly` **code**: `string`
 
-***
+---
 
 ### detail?
 
 > `readonly` `optional` **detail?**: `string`
 
-***
+---
 
 ### source
 

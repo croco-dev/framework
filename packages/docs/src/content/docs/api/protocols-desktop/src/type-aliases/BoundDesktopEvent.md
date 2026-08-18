@@ -21,12 +21,12 @@ title: "BoundDesktopEvent"
 
 ### TEvent
 
-`TEvent` *extends* [`KeyedDesktopEvent`](/api/protocols-desktop/src/type-aliases/keyeddesktopevent/) = [`KeyedDesktopEvent`](/api/protocols-desktop/src/type-aliases/keyeddesktopevent/)
+`TEvent` _extends_ [`KeyedDesktopEvent`](/api/protocols-desktop/src/type-aliases/keyeddesktopevent/) = [`KeyedDesktopEvent`](/api/protocols-desktop/src/type-aliases/keyeddesktopevent/)
 
 ### TContractKey
 
-`TContractKey` *extends* `string` = `string`
+`TContractKey` _extends_ `string` = `string`
 
 ### TMemberKey
 
-`TMemberKey` *extends* `string` = `TEvent`\[`"memberKey"`\]
+`TMemberKey` _extends_ `string` = `TEvent`\[`"memberKey"`\]

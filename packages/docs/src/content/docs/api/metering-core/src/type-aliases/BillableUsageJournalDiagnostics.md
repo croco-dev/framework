@@ -13,19 +13,19 @@ title: "BillableUsageJournalDiagnostics"
 
 > `readonly` **backlogCount**: `number`
 
-***
+---
 
 ### oldestPendingAgeMs
 
 > `readonly` **oldestPendingAgeMs**: `number` \| `null`
 
-***
+---
 
 ### retryCount
 
 > `readonly` **retryCount**: `number`
 
-***
+---
 
 ### terminalFailureCount
 

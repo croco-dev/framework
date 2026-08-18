@@ -15,11 +15,11 @@ title: "TestResourceProvider"
 
 ## Properties
 
-### \[TEST\_RESOURCE\_PROVIDER\]
+### \[TEST_RESOURCE_PROVIDER\]
 
-> `readonly` **\[TEST\_RESOURCE\_PROVIDER\]**: `true`
+> `readonly` **\[TEST_RESOURCE_PROVIDER\]**: `true`
 
-***
+---
 
 ### provide
 
@@ -35,7 +35,7 @@ title: "TestResourceProvider"
 
 `unknown`
 
-***
+---
 
 ### token
 

@@ -13,19 +13,19 @@ title: "WorkflowDiagnosticsWorkflowDetails"
 
 > `readonly` `optional` **description?**: `string`
 
-***
+---
 
 ### name
 
 > `readonly` **name**: `string`
 
-***
+---
 
 ### stepCount
 
 > `readonly` **stepCount**: `number`
 
-***
+---
 
 ### triggerTypes
 

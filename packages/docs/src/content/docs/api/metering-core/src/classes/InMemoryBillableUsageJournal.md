@@ -56,7 +56,7 @@ Production adapters must implement BillableUsageJournal with persistent storage.
 
 [`BillableUsageJournal`](/api/metering-core/src/interfaces/billableusagejournal/).[`append`](/api/metering-core/src/interfaces/billableusagejournal/#append)
 
-***
+---
 
 ### claimNext()
 
@@ -76,7 +76,7 @@ Production adapters must implement BillableUsageJournal with persistent storage.
 
 [`BillableUsageJournal`](/api/metering-core/src/interfaces/billableusagejournal/).[`claimNext`](/api/metering-core/src/interfaces/billableusagejournal/#claimnext)
 
-***
+---
 
 ### get()
 
@@ -96,7 +96,7 @@ Production adapters must implement BillableUsageJournal with persistent storage.
 
 [`BillableUsageJournal`](/api/metering-core/src/interfaces/billableusagejournal/).[`get`](/api/metering-core/src/interfaces/billableusagejournal/#get)
 
-***
+---
 
 ### getDiagnostics()
 
@@ -116,7 +116,7 @@ Production adapters must implement BillableUsageJournal with persistent storage.
 
 [`BillableUsageJournal`](/api/metering-core/src/interfaces/billableusagejournal/).[`getDiagnostics`](/api/metering-core/src/interfaces/billableusagejournal/#getdiagnostics)
 
-***
+---
 
 ### markAccepted()
 
@@ -140,7 +140,7 @@ Production adapters must implement BillableUsageJournal with persistent storage.
 
 [`BillableUsageJournal`](/api/metering-core/src/interfaces/billableusagejournal/).[`markAccepted`](/api/metering-core/src/interfaces/billableusagejournal/#markaccepted)
 
-***
+---
 
 ### markDeliverable()
 
@@ -164,7 +164,7 @@ Production adapters must implement BillableUsageJournal with persistent storage.
 
 [`BillableUsageJournal`](/api/metering-core/src/interfaces/billableusagejournal/).[`markDeliverable`](/api/metering-core/src/interfaces/billableusagejournal/#markdeliverable)
 
-***
+---
 
 ### markRetryableFailed()
 
@@ -196,7 +196,7 @@ Production adapters must implement BillableUsageJournal with persistent storage.
 
 [`BillableUsageJournal`](/api/metering-core/src/interfaces/billableusagejournal/).[`markRetryableFailed`](/api/metering-core/src/interfaces/billableusagejournal/#markretryablefailed)
 
-***
+---
 
 ### markTerminalFailed()
 
@@ -224,7 +224,7 @@ Production adapters must implement BillableUsageJournal with persistent storage.
 
 [`BillableUsageJournal`](/api/metering-core/src/interfaces/billableusagejournal/).[`markTerminalFailed`](/api/metering-core/src/interfaces/billableusagejournal/#markterminalfailed)
 
-***
+---
 
 ### markUndeliverable()
 

@@ -13,13 +13,13 @@ title: "GeneratedRuntimeProfileCatalog"
 
 > `readonly` **profiles**: readonly [`GeneratedRuntimeProfile`](/api/presentation-preset/src/type-aliases/generatedruntimeprofile/)[]
 
-***
+---
 
 ### schemaVersion
 
 > `readonly` **schemaVersion**: `1`
 
-***
+---
 
 ### validationCommand
 

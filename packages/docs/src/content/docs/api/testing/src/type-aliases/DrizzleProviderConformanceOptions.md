@@ -13,31 +13,31 @@ title: "DrizzleProviderConformanceOptions"
 
 > `readonly` `optional` **diagnostics?**: [`DrizzleProviderConformanceCapability`](/api/testing/src/type-aliases/drizzleproviderconformancecapability/)
 
-***
+---
 
 ### providerName
 
 > `readonly` **providerName**: `string`
 
-***
+---
 
 ### repositoryErrors
 
 > `readonly` **repositoryErrors**: [`DrizzleProviderRepositoryErrorConformance`](/api/testing/src/type-aliases/drizzleproviderrepositoryerrorconformance/)
 
-***
+---
 
 ### schema
 
 > `readonly` **schema**: [`DrizzleProviderConformanceCapability`](/api/testing/src/type-aliases/drizzleproviderconformancecapability/)
 
-***
+---
 
 ### tenantIsolation
 
 > `readonly` **tenantIsolation**: [`DrizzleProviderConformanceCapability`](/api/testing/src/type-aliases/drizzleproviderconformancecapability/)
 
-***
+---
 
 ### transaction
 

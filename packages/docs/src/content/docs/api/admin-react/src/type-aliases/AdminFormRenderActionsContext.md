@@ -11,7 +11,7 @@ title: "AdminFormRenderActionsContext"
 
 ### TValues
 
-`TValues` *extends* `object`
+`TValues` _extends_ `object`
 
 ### TResult
 
@@ -23,7 +23,7 @@ title: "AdminFormRenderActionsContext"
 
 > `readonly` **state**: [`AdminFormState`](/api/admin-react/src/type-aliases/adminformstate/)\<`TValues`, `TResult`\>
 
-***
+---
 
 ### submitDisabled
 

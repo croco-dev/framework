@@ -15,7 +15,7 @@ title: "WebhookEvent"
 
 ### TType
 
-`TType` *extends* `string` = `string`
+`TType` _extends_ `string` = `string`
 
 ## Properties
 
@@ -23,37 +23,37 @@ title: "WebhookEvent"
 
 > `readonly` `optional` **fingerprint?**: `string`
 
-***
+---
 
 ### id
 
 > `readonly` **id**: `string`
 
-***
+---
 
 ### occurredAt?
 
 > `readonly` `optional` **occurredAt?**: `Date`
 
-***
+---
 
 ### payload
 
 > `readonly` **payload**: `TPayload`
 
-***
+---
 
 ### provider
 
 > `readonly` **provider**: `string`
 
-***
+---
 
 ### tenantId?
 
 > `readonly` `optional` **tenantId?**: `string` \| `null`
 
-***
+---
 
 ### type
 

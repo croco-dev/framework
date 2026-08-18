@@ -15,7 +15,7 @@ title: "GuardedResolver"
 
 ### TContext
 
-`TContext` *extends* `Record`\<`string`, `unknown`\> = `Record`\<`string`, `unknown`\>
+`TContext` _extends_ `Record`\<`string`, `unknown`\> = `Record`\<`string`, `unknown`\>
 
 ### TArgs
 
@@ -35,7 +35,7 @@ title: "GuardedResolver"
 
 [`GraphQLGuard`](/api/protocols-graphql/src/type-aliases/graphqlguard/)
 
-***
+---
 
 ### resolver
 

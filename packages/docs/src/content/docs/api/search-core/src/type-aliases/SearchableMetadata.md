@@ -15,13 +15,13 @@ title: "SearchableMetadata"
 
 > **autoSync**: `boolean`
 
-***
+---
 
 ### index
 
 > **index**: `string`
 
-***
+---
 
 ### target
 

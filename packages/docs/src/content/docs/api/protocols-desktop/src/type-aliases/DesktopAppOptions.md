@@ -11,11 +11,11 @@ title: "DesktopAppOptions"
 
 ### TContracts
 
-`TContracts` *extends* [`DesktopContractRecord`](/api/protocols-desktop/src/type-aliases/desktopcontractrecord/)
+`TContracts` _extends_ [`DesktopContractRecord`](/api/protocols-desktop/src/type-aliases/desktopcontractrecord/)
 
 ### TWindows
 
-`TWindows` *extends* [`DesktopWindowRecord`](/api/protocols-desktop/src/type-aliases/desktopwindowrecord/)
+`TWindows` _extends_ [`DesktopWindowRecord`](/api/protocols-desktop/src/type-aliases/desktopwindowrecord/)
 
 ## Properties
 
@@ -23,7 +23,7 @@ title: "DesktopAppOptions"
 
 > `readonly` **contracts**: `TContracts`
 
-***
+---
 
 ### windows
 

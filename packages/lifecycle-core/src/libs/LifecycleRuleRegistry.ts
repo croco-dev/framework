@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { createHash } from "node:crypto";
 import { InMemoryLifecycleRuleStateStore } from "./InMemoryLifecycleRuleStateStore";
 import {
@@ -208,6 +209,11 @@ export class LifecycleRuleRegistry {
   private readonly registrations = new Map<string, LifecycleRuleRegistration>();
   private readonly activeRegistrationKeys = new Set<string>();
   private readonly stateStore: LifecycleRuleStateStore;
+  private readonly activeExecutionStorage = new AsyncLocalStorage<{
+    readonly claimId: string;
+    readonly ruleId: string;
+    readonly version: string;
+  }>();
 
   constructor(options: LifecycleRuleRegistryOptions = {}) {
     this.stateStore = options.stateStore ?? new InMemoryLifecycleRuleStateStore();
@@ -417,6 +423,7 @@ export class LifecycleRuleRegistry {
   }
 
   async pause(request: LifecycleRuleActivationCommand): Promise<LifecycleRuleStateMutation> {
+    await this.releaseSelfExecutionIfHeld(request.ruleId, request.version);
     const mutation = await this.stateStore.applyCommand({ command: "pause", request });
     this.synchronizeActiveRegistrations(mutation.state);
     return mutation;
@@ -430,6 +437,7 @@ export class LifecycleRuleRegistry {
   }
 
   async supersede(request: LifecycleRuleActivationCommand): Promise<LifecycleRuleStateMutation> {
+    await this.releaseSelfExecutionIfHeld(request.ruleId, request.version);
     const mutation = await this.stateStore.applyCommand({ command: "supersede", request });
     this.synchronizeActiveRegistrations(mutation.state);
     return mutation;
@@ -469,7 +477,7 @@ export class LifecycleRuleRegistry {
     ruleId: string,
     version: string,
     claimId: string,
-    execute: () => T,
+    execute: () => T | Promise<T>,
     expiresAt = new Date(Date.now() + 30_000),
   ): Promise<LifecycleRuleExecutionResult<T>> {
     const claim = await this.stateStore.claimExecution({ claimId, ruleId, version, expiresAt });
@@ -479,11 +487,18 @@ export class LifecycleRuleRegistry {
 
     let value: T;
     try {
-      value = execute();
+      value = await this.activeExecutionStorage.run({ claimId, ruleId, version }, execute);
     } finally {
       await this.stateStore.releaseExecution(claimId);
     }
     return { executed: true, value };
+  }
+
+  private async releaseSelfExecutionIfHeld(ruleId: string, version: string): Promise<void> {
+    const active = this.activeExecutionStorage.getStore();
+    if (active && active.ruleId === ruleId && active.version === version) {
+      await this.stateStore.releaseExecution(active.claimId);
+    }
   }
 
   async getIdentityState(ruleId: string): Promise<LifecycleRuleIdentityState | undefined> {

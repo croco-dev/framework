@@ -13,19 +13,19 @@ title: "RequireEntitlementProps"
 
 > `readonly` **children**: `ReactNode` \| ((`state`) => `ReactNode`)
 
-***
+---
 
 ### entitlements
 
 > `readonly` **entitlements**: `string` \| readonly `string`[]
 
-***
+---
 
 ### fallback?
 
 > `readonly` `optional` **fallback?**: [`FrontendAuthGateFallback`](/api/frontend-react/src/type-aliases/frontendauthgatefallback/)
 
-***
+---
 
 ### tenantRequired?
 

@@ -13,19 +13,19 @@ title: "IntentMapFile"
 
 > `readonly` **description**: `string`
 
-***
+---
 
 ### path
 
 > `readonly` **path**: `string`
 
-***
+---
 
 ### publicSymbols
 
 > `readonly` **publicSymbols**: readonly [`IntentMapPublicSymbol`](/api/framework-routes/src/type-aliases/intentmappublicsymbol/)[]
 
-***
+---
 
 ### roles
 

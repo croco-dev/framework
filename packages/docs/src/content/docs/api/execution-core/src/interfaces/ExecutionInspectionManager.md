@@ -27,7 +27,7 @@ This remains available here for compatibility and is also part of the primary ma
 
 `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
 
-***
+---
 
 ### list()
 
@@ -45,7 +45,7 @@ List executions for inspection and operations views.
 
 `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)[]\>
 
-***
+---
 
 ### recordLog()
 

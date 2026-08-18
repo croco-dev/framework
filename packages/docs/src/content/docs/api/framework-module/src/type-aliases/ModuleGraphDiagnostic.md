@@ -13,31 +13,31 @@ title: "ModuleGraphDiagnostic"
 
 > `readonly` **code**: [`ModuleGraphDiagnosticCode`](/api/framework-module/src/type-aliases/modulegraphdiagnosticcode/)
 
-***
+---
 
 ### message
 
 > `readonly` **message**: `string`
 
-***
+---
 
 ### moduleName
 
 > `readonly` **moduleName**: `string`
 
-***
+---
 
 ### path
 
 > `readonly` **path**: readonly `string`[]
 
-***
+---
 
 ### severity
 
 > `readonly` **severity**: `"error"`
 
-***
+---
 
 ### token?
 

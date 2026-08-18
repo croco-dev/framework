@@ -27,7 +27,7 @@ title: "CacheInvalidationTelemetrySink"
 
 `void`
 
-***
+---
 
 ### recordEvent?
 

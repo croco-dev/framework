@@ -13,7 +13,7 @@ title: "BillableUsageAppendResult"
 
 > `readonly` **entry**: [`BillableUsageJournalEntry`](/api/metering-core/src/type-aliases/billableusagejournalentry/)
 
-***
+---
 
 ### outcome
 

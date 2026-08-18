@@ -53,7 +53,7 @@ readonly [`OutboundWebhookSecret`](/api/webhooks-core/src/type-aliases/outboundw
 
 `OutboundWebhookSecretStore.getSecret`
 
-***
+---
 
 ### set()
 

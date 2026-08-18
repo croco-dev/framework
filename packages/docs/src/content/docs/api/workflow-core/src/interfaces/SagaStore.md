@@ -21,7 +21,7 @@ title: "SagaStore"
 
 `Promise`\<[`SagaExecution`](/api/workflow-core/src/type-aliases/sagaexecution/)\>
 
-***
+---
 
 ### findById()
 
@@ -37,7 +37,7 @@ title: "SagaStore"
 
 `Promise`\<[`SagaExecution`](/api/workflow-core/src/type-aliases/sagaexecution/) \| `null`\>
 
-***
+---
 
 ### findByIdempotencyKey()
 
@@ -57,7 +57,7 @@ title: "SagaStore"
 
 `Promise`\<[`SagaExecution`](/api/workflow-core/src/type-aliases/sagaexecution/) \| `null`\>
 
-***
+---
 
 ### list()
 
@@ -73,7 +73,7 @@ title: "SagaStore"
 
 `Promise`\<[`SagaExecution`](/api/workflow-core/src/type-aliases/sagaexecution/)[]\>
 
-***
+---
 
 ### update()
 

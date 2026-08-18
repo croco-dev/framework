@@ -37,7 +37,7 @@ title: "LifecycleRuleEvaluator"
 
 `Promise`\<[`LifecycleDryRunResult`](/api/lifecycle-core/src/type-aliases/lifecycledryrunresult/)\>
 
-***
+---
 
 ### evaluate()
 

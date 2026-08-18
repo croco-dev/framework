@@ -13,19 +13,19 @@ title: "PolicyTarget"
 
 > `readonly` **id**: `string`
 
-***
+---
 
 ### kind
 
 > `readonly` **kind**: [`PolicyTargetKind`](/api/framework-context/src/type-aliases/policytargetkind/)
 
-***
+---
 
 ### operation?
 
 > `readonly` `optional` **operation?**: `string`
 
-***
+---
 
 ### source?
 

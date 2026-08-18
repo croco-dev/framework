@@ -31,7 +31,7 @@ title: "CrocoPlaywrightEvidenceReporter"
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### onTestEnd()
 

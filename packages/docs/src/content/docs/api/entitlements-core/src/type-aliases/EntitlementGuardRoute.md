@@ -13,13 +13,13 @@ title: "EntitlementGuardRoute"
 
 > `readonly` **controllerName**: `string`
 
-***
+---
 
 ### handlerName
 
 > `readonly` **handlerName**: `string`
 
-***
+---
 
 ### routeId
 

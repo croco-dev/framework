@@ -53,7 +53,7 @@ title: "DuplicateWebhookEventProblem"
 
 `WebhookProblem.category`
 
-***
+---
 
 ### cause?
 
@@ -63,7 +63,7 @@ title: "DuplicateWebhookEventProblem"
 
 `WebhookProblem.cause`
 
-***
+---
 
 ### code
 
@@ -73,7 +73,7 @@ title: "DuplicateWebhookEventProblem"
 
 `WebhookProblem.code`
 
-***
+---
 
 ### detail?
 
@@ -83,7 +83,7 @@ title: "DuplicateWebhookEventProblem"
 
 `WebhookProblem.detail`
 
-***
+---
 
 ### extensions?
 
@@ -93,7 +93,7 @@ title: "DuplicateWebhookEventProblem"
 
 `WebhookProblem.extensions`
 
-***
+---
 
 ### instance?
 
@@ -103,7 +103,7 @@ title: "DuplicateWebhookEventProblem"
 
 `WebhookProblem.instance`
 
-***
+---
 
 ### message
 
@@ -113,7 +113,7 @@ title: "DuplicateWebhookEventProblem"
 
 `WebhookProblem.message`
 
-***
+---
 
 ### name
 
@@ -123,7 +123,7 @@ title: "DuplicateWebhookEventProblem"
 
 `WebhookProblem.name`
 
-***
+---
 
 ### stack?
 
@@ -133,7 +133,7 @@ title: "DuplicateWebhookEventProblem"
 
 `WebhookProblem.stack`
 
-***
+---
 
 ### type
 
@@ -143,7 +143,7 @@ title: "DuplicateWebhookEventProblem"
 
 `WebhookProblem.type`
 
-***
+---
 
 ### stackTraceLimit
 
@@ -179,7 +179,7 @@ not capture any frames.
 
 `WebhookProblem.status`
 
-***
+---
 
 ### title
 
@@ -209,7 +209,7 @@ not capture any frames.
 
 `WebhookProblem.toJSON`
 
-***
+---
 
 ### captureStackTrace()
 
@@ -222,7 +222,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack;  // Similar to `new Error().stack`
+myObject.stack; // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -277,7 +277,7 @@ a();
 
 `WebhookProblem.captureStackTrace`
 
-***
+---
 
 ### prepareStackTrace()
 

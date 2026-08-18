@@ -13,37 +13,37 @@ title: "TenantImpersonationConsoleDeniedState"
 
 > `readonly` **actions**: readonly [`AdminActionContract`](/api/admin-react/src/type-aliases/adminactioncontract/)[]
 
-***
+---
 
 ### generatedAt
 
 > `readonly` **generatedAt**: `Date`
 
-***
+---
 
 ### grantedPermissions
 
 > `readonly` **grantedPermissions**: readonly `string`[]
 
-***
+---
 
 ### kind
 
 > `readonly` **kind**: `"denied"`
 
-***
+---
 
 ### problem
 
 > `readonly` **problem**: [`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
 
-***
+---
 
 ### requiredPermissions
 
 > `readonly` **requiredPermissions**: readonly `string`[]
 
-***
+---
 
 ### tenantId?
 

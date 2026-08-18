@@ -27,7 +27,7 @@ title: "ConfigService"
 
 `boolean`
 
-***
+---
 
 ### isProduction
 
@@ -39,7 +39,7 @@ title: "ConfigService"
 
 `boolean`
 
-***
+---
 
 ### isTest
 
@@ -63,7 +63,7 @@ Type-safe environment variable getter
 
 ##### K
 
-`K` *extends* `"R2_ACCOUNT_ID"` \| `"R2_ACCESS_KEY_ID"` \| `"R2_SECRET_ACCESS_KEY"` \| `"R2_BUCKET"` \| `"R2_PUBLIC_URL_BASE"` \| `"REDIS_URL"` \| `"REDIS_TOKEN"` \| `"DATABASE_URL"` \| `"NODE_ENV"` \| `"PORT"` \| `"LOG_LEVEL"`
+`K` _extends_ `"R2_ACCOUNT_ID"` \| `"R2_ACCESS_KEY_ID"` \| `"R2_SECRET_ACCESS_KEY"` \| `"R2_BUCKET"` \| `"R2_PUBLIC_URL_BASE"` \| `"REDIS_URL"` \| `"REDIS_TOKEN"` \| `"DATABASE_URL"` \| `"NODE_ENV"` \| `"PORT"` \| `"LOG_LEVEL"`
 
 #### Parameters
 

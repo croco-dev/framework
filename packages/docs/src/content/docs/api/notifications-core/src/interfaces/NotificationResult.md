@@ -11,19 +11,19 @@ title: "NotificationResult"
 
 > `optional` **error?**: `Error`
 
-***
+---
 
 ### messageId?
 
 > `optional` **messageId?**: `string`
 
-***
+---
 
 ### providerResponse?
 
 > `optional` **providerResponse?**: `unknown`
 
-***
+---
 
 ### success
 

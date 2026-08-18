@@ -13,25 +13,25 @@ title: "RetryPolicyDefinition"
 
 > `readonly` `optional` **backoffMs?**: `number`
 
-***
+---
 
 ### kind
 
 > `readonly` **kind**: `"retry"`
 
-***
+---
 
 ### maxAttempts
 
 > `readonly` **maxAttempts**: `number`
 
-***
+---
 
 ### onExhausted?
 
 > `readonly` `optional` **onExhausted?**: `"throw-last-error"` \| `"throw-problem"`
 
-***
+---
 
 ### retryOn?
 

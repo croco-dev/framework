@@ -13,7 +13,7 @@ The overall health status is 'up' only if all indicators report 'up'.
 ## Example
 
 ```typescript
-import { HealthCheckService } from '@croco/health-core';
+import { HealthCheckService } from "@croco/health-core";
 
 const service = new HealthCheckService({ timeout: 5000 });
 service.register(new RedisHealthIndicator(redis));
@@ -49,7 +49,7 @@ const result = await service.check();
 
 `Promise`\<[`HealthCheckResult`](/api/health-core/src/type-aliases/healthcheckresult/)\>
 
-***
+---
 
 ### checkReadiness()
 
@@ -59,7 +59,7 @@ const result = await service.check();
 
 `Promise`\<[`HealthCheckResult`](/api/health-core/src/type-aliases/healthcheckresult/)\>
 
-***
+---
 
 ### isLive()
 
@@ -69,7 +69,7 @@ const result = await service.check();
 
 `boolean`
 
-***
+---
 
 ### isReady()
 
@@ -79,7 +79,7 @@ const result = await service.check();
 
 `Promise`\<`boolean`\>
 
-***
+---
 
 ### register()
 
@@ -99,7 +99,7 @@ const result = await service.check();
 
 `void`
 
-***
+---
 
 ### registerReadiness()
 

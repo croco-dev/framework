@@ -5,4 +5,4 @@ prev: false
 title: "ProblemCategoryName"
 ---
 
-> **ProblemCategoryName** = keyof *typeof* [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
+> **ProblemCategoryName** = keyof _typeof_ [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)

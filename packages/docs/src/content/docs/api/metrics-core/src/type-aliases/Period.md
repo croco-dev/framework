@@ -17,7 +17,7 @@ Time period for metrics aggregation.
 
 Period start date (inclusive)
 
-***
+---
 
 ### granularity
 
@@ -25,7 +25,7 @@ Period start date (inclusive)
 
 Aggregation granularity
 
-***
+---
 
 ### to
 

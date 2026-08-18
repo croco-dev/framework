@@ -13,19 +13,19 @@ title: "RetryConsoleTimestamps"
 
 > `readonly` `optional` **completedAt?**: `string`
 
-***
+---
 
 ### createdAt?
 
 > `readonly` `optional` **createdAt?**: `string`
 
-***
+---
 
 ### startedAt?
 
 > `readonly` `optional` **startedAt?**: `string`
 
-***
+---
 
 ### updatedAt?
 

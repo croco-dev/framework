@@ -15,13 +15,13 @@ Page route definition accepted by defineRoute().
 
 > **component**: `React.ComponentType`\<[`RenderRouteComponentProps`](/api/meta-vite/src/type-aliases/renderroutecomponentprops/)\>
 
-***
+---
 
 ### componentRef?
 
 > `optional` **componentRef?**: `string`
 
-***
+---
 
 ### head?
 
@@ -31,19 +31,19 @@ Page route definition accepted by defineRoute().
 
 [`HeadMetadata`](/api/meta-vite/src/type-aliases/headmetadata/)
 
-***
+---
 
 ### mode?
 
 > `optional` **mode?**: [`RenderMode`](/api/meta-vite/src/type-aliases/rendermode/)
 
-***
+---
 
 ### path
 
 > **path**: `string`
 
-***
+---
 
 ### revalidate?
 

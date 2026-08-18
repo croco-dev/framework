@@ -21,19 +21,19 @@ title: "AdminResourceListDescriptor"
 
 > `readonly` **field**: `string`
 
-***
+---
 
 ### fields
 
 > `readonly` **fields**: [`NonEmptyArray`](/api/admin-core/src/type-aliases/nonemptyarray/)\<`string`\>
 
-***
+---
 
 ### filters?
 
 > `readonly` `optional` **filters?**: readonly `string`[]
 
-***
+---
 
 ### pageSize?
 

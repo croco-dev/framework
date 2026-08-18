@@ -13,13 +13,13 @@ title: "OutboxClaimOptions"
 
 > **limit**: `number`
 
-***
+---
 
 ### now
 
 > **now**: `Date`
 
-***
+---
 
 ### visibilityTimeoutMs
 

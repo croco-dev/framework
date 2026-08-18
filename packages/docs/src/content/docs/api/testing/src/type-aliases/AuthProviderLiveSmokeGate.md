@@ -17,13 +17,13 @@ title: "AuthProviderLiveSmokeGate"
 
 `boolean`
 
-***
+---
 
 ### requiredEnv
 
 > `readonly` **requiredEnv**: readonly `string`[]
 
-***
+---
 
 ### run?
 

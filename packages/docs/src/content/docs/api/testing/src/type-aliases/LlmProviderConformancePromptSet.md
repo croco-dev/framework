@@ -27,7 +27,7 @@ title: "LlmProviderConformancePromptSet"
 
 > `readonly` **text**: `string`
 
-***
+---
 
 ### embedMany
 
@@ -41,7 +41,7 @@ title: "LlmProviderConformancePromptSet"
 
 > `readonly` **texts**: readonly `string`[]
 
-***
+---
 
 ### generate
 
@@ -55,7 +55,7 @@ title: "LlmProviderConformancePromptSet"
 
 > `readonly` **prompt**: `string`
 
-***
+---
 
 ### object
 
@@ -83,7 +83,7 @@ title: "LlmProviderConformancePromptSet"
 
 > `readonly` **schema**: [`GenerateObjectParams`](/api/llm-core/src/type-aliases/generateobjectparams/)\<`TObject`\>\[`"schema"`\]
 
-***
+---
 
 ### stream
 
@@ -97,7 +97,7 @@ title: "LlmProviderConformancePromptSet"
 
 > `readonly` **prompt**: `string`
 
-***
+---
 
 ### tool
 

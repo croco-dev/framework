@@ -13,13 +13,13 @@ title: "ValidationReport"
 
 > `readonly` **contractName**: `string`
 
-***
+---
 
 ### passed
 
 > `readonly` **passed**: `boolean`
 
-***
+---
 
 ### results
 

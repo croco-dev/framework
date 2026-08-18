@@ -13,67 +13,67 @@ title: "DependencyResolutionStep"
 
 > `readonly` `optional` **dependencyOf?**: `string`
 
-***
+---
 
 ### dependencyOfId?
 
 > `readonly` `optional` **dependencyOfId?**: `string`
 
-***
+---
 
 ### parameterIndex?
 
 > `readonly` `optional` **parameterIndex?**: `number`
 
-***
+---
 
 ### path
 
 > `readonly` **path**: readonly `string`[]
 
-***
+---
 
 ### pathIds
 
 > `readonly` **pathIds**: readonly `string`[]
 
-***
+---
 
 ### provider
 
 > `readonly` **provider**: [`DependencyProviderKind`](/api/framework-context/src/type-aliases/dependencyproviderkind/)
 
-***
+---
 
 ### reason
 
 > `readonly` **reason**: `string`
 
-***
+---
 
 ### scope?
 
 > `readonly` `optional` **scope?**: [`Scope`](/api/framework-context/src/type-aliases/scope/)
 
-***
+---
 
 ### status
 
 > `readonly` **status**: [`DependencyResolutionStepStatus`](/api/framework-context/src/type-aliases/dependencyresolutionstepstatus/)
 
-***
+---
 
 ### token
 
 > `readonly` **token**: `string`
 
-***
+---
 
 ### tokenId
 
 > `readonly` **tokenId**: `string`
 
-***
+---
 
 ### tokenKind
 

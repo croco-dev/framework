@@ -11,7 +11,7 @@ title: "BatchLoadScopeResolver"
 
 ### TRepository
 
-`TRepository` *extends* `object` = `object`
+`TRepository` _extends_ `object` = `object`
 
 ## Parameters
 

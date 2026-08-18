@@ -39,7 +39,7 @@ title: "InMemorySagaStore"
 
 [`SagaStore`](/api/workflow-core/src/interfaces/sagastore/).[`create`](/api/workflow-core/src/interfaces/sagastore/#create)
 
-***
+---
 
 ### findById()
 
@@ -59,7 +59,7 @@ title: "InMemorySagaStore"
 
 [`SagaStore`](/api/workflow-core/src/interfaces/sagastore/).[`findById`](/api/workflow-core/src/interfaces/sagastore/#findbyid)
 
-***
+---
 
 ### findByIdempotencyKey()
 
@@ -83,7 +83,7 @@ title: "InMemorySagaStore"
 
 [`SagaStore`](/api/workflow-core/src/interfaces/sagastore/).[`findByIdempotencyKey`](/api/workflow-core/src/interfaces/sagastore/#findbyidempotencykey)
 
-***
+---
 
 ### list()
 
@@ -103,7 +103,7 @@ title: "InMemorySagaStore"
 
 [`SagaStore`](/api/workflow-core/src/interfaces/sagastore/).[`list`](/api/workflow-core/src/interfaces/sagastore/#list)
 
-***
+---
 
 ### update()
 

@@ -68,7 +68,7 @@ Useful for multivariate flags or JSON configuration.
 
 [`FeatureManager`](/api/features-core/src/classes/featuremanager/).[`getVariant`](/api/features-core/src/classes/featuremanager/#getvariant)
 
-***
+---
 
 ### isEnabled()
 

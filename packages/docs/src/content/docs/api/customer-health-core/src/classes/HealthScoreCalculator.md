@@ -35,7 +35,7 @@ title: "HealthScoreCalculator"
 
 [`TenantHealthScore`](/api/customer-health-core/src/type-aliases/tenanthealthscore/)
 
-***
+---
 
 ### determineTrend()
 

@@ -15,7 +15,7 @@ title: "MeteredMetadata"
 
 > `optional` **billing?**: `"local"` \| `"required"`
 
-***
+---
 
 ### dimensionsExtractor?
 
@@ -31,7 +31,7 @@ title: "MeteredMetadata"
 
 `Record`\<`string`, `string` \| `number` \| `boolean`\>
 
-***
+---
 
 ### eventIdExtractor?
 
@@ -47,7 +47,7 @@ title: "MeteredMetadata"
 
 `string` \| `undefined`
 
-***
+---
 
 ### idempotencyKeyExtractor?
 
@@ -63,7 +63,7 @@ title: "MeteredMetadata"
 
 `string` \| `undefined`
 
-***
+---
 
 ### metadataExtractor?
 
@@ -83,19 +83,19 @@ title: "MeteredMetadata"
 
 `Record`\<`string`, `unknown`\> \| `undefined`
 
-***
+---
 
 ### meter?
 
 > `optional` **meter?**: [`CountMeterRef`](/api/metering-core/src/type-aliases/countmeterref/)
 
-***
+---
 
 ### meterId
 
 > **meterId**: `string`
 
-***
+---
 
 ### valueExtractor
 

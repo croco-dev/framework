@@ -13,37 +13,37 @@ title: "LifecycleRuleActivationCommand"
 
 > `readonly` `optional` **actor?**: `string`
 
-***
+---
 
 ### at?
 
 > `readonly` `optional` **at?**: `Date`
 
-***
+---
 
 ### commandId
 
 > `readonly` **commandId**: `string`
 
-***
+---
 
 ### expectedRevision
 
 > `readonly` **expectedRevision**: `number`
 
-***
+---
 
 ### reason?
 
 > `readonly` `optional` **reason?**: `string`
 
-***
+---
 
 ### ruleId
 
 > `readonly` **ruleId**: `string`
 
-***
+---
 
 ### version
 

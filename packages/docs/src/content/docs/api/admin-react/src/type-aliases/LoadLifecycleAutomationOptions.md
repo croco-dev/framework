@@ -13,25 +13,25 @@ title: "LoadLifecycleAutomationOptions"
 
 > `readonly` `optional` **dryRun?**: [`LifecycleDryRunResponse`](/api/admin-react/src/type-aliases/lifecycledryrunresponse/)
 
-***
+---
 
 ### filters?
 
 > `readonly` `optional` **filters?**: [`LifecycleRunFilters`](/api/admin-react/src/type-aliases/lifecyclerunfilters/)
 
-***
+---
 
 ### generatedAt?
 
 > `readonly` `optional` **generatedAt?**: `Date`
 
-***
+---
 
 ### grantedPermissions
 
 > `readonly` **grantedPermissions**: readonly `string`[]
 
-***
+---
 
 ### source
 

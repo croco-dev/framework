@@ -13,23 +13,23 @@ Defines an inspectable, serializable usage meter while retaining literal keys an
 
 ### Key
 
-`Key` *extends* `string`
+`Key` _extends_ `string`
 
 ### Aggregation
 
-`Aggregation` *extends* [`MeterAggregation`](/api/metering-core/src/type-aliases/meteraggregation/)
+`Aggregation` _extends_ [`MeterAggregation`](/api/metering-core/src/type-aliases/meteraggregation/)
 
 ### Unit
 
-`Unit` *extends* `string`
+`Unit` _extends_ `string`
 
 ### Dimensions
 
-`Dimensions` *extends* `Readonly`\<`Record`\<`string`, [`EnumDimension`](/api/metering-core/src/type-aliases/enumdimension/)\<[`NonEmptyMeterDimensionValues`](/api/metering-core/src/type-aliases/nonemptymeterdimensionvalues/)\>\>\> = `Record`\<`never`, `never`\>
+`Dimensions` _extends_ `Readonly`\<`Record`\<`string`, [`EnumDimension`](/api/metering-core/src/type-aliases/enumdimension/)\<[`NonEmptyMeterDimensionValues`](/api/metering-core/src/type-aliases/nonemptymeterdimensionvalues/)\>\>\> = `Record`\<`never`, `never`\>
 
 ### Billing
 
-`Billing` *extends* [`MeterBillingIntent`](/api/metering-core/src/type-aliases/meterbillingintent/) = `"local"`
+`Billing` _extends_ [`MeterBillingIntent`](/api/metering-core/src/type-aliases/meterbillingintent/) = `"local"`
 
 ## Parameters
 

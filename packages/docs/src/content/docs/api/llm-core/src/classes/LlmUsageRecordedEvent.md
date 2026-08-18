@@ -49,7 +49,7 @@ LLM 사용량 기록 이벤트입니다.
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventId`](/api/events-core/src/classes/domainevent/#eventid)
 
-***
+---
 
 ### eventName
 
@@ -59,7 +59,7 @@ LLM 사용량 기록 이벤트입니다.
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventName`](/api/events-core/src/classes/domainevent/#eventname)
 
-***
+---
 
 ### metadata
 
@@ -69,19 +69,19 @@ LLM 사용량 기록 이벤트입니다.
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`metadata`](/api/events-core/src/classes/domainevent/#metadata)
 
-***
+---
 
 ### modelId
 
 > `readonly` **modelId**: `string`
 
-***
+---
 
 ### operation
 
 > `readonly` **operation**: `"generate"` \| `"stream"` \| `"embed"` \| `"embedMany"` \| `"generateObject"` \| `"callTool"`
 
-***
+---
 
 ### timestamp
 
@@ -91,19 +91,19 @@ LLM 사용량 기록 이벤트입니다.
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`timestamp`](/api/events-core/src/classes/domainevent/#timestamp)
 
-***
+---
 
 ### type
 
 > `readonly` **type**: `"llm.usage_recorded"` = `"llm.usage_recorded"`
 
-***
+---
 
 ### usage
 
 > `readonly` **usage**: [`LlmUsage`](/api/llm-core/src/type-aliases/llmusage/)
 
-***
+---
 
 ### eventName
 

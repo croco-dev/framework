@@ -53,7 +53,7 @@ title: "InMemoryImpersonationStore"
 
 [`ImpersonationStore`](/api/impersonation-core/src/classes/impersonationstore/).[`find`](/api/impersonation-core/src/classes/impersonationstore/#find)
 
-***
+---
 
 ### findByImpersonator()
 
@@ -73,7 +73,7 @@ title: "InMemoryImpersonationStore"
 
 [`ImpersonationStore`](/api/impersonation-core/src/classes/impersonationstore/).[`findByImpersonator`](/api/impersonation-core/src/classes/impersonationstore/#findbyimpersonator)
 
-***
+---
 
 ### revoke()
 
@@ -93,7 +93,7 @@ title: "InMemoryImpersonationStore"
 
 [`ImpersonationStore`](/api/impersonation-core/src/classes/impersonationstore/).[`revoke`](/api/impersonation-core/src/classes/impersonationstore/#revoke)
 
-***
+---
 
 ### save()
 

@@ -41,7 +41,7 @@ title: "OutboundWebhookRuntime"
 
 `Promise`\<[`OutboundWebhookDiagnostics`](/api/webhooks-core/src/type-aliases/outboundwebhookdiagnostics/)\>
 
-***
+---
 
 ### dispatch()
 
@@ -65,7 +65,7 @@ title: "OutboundWebhookRuntime"
 
 `Promise`\<[`OutboundWebhookDelivery`](/api/webhooks-core/src/type-aliases/outboundwebhookdelivery/)\>
 
-***
+---
 
 ### publish()
 
@@ -87,7 +87,7 @@ title: "OutboundWebhookRuntime"
 
 `Promise`\<[`OutboundWebhookCommitResult`](/api/webhooks-core/src/type-aliases/outboundwebhookcommitresult/)\>
 
-***
+---
 
 ### publishUnpublishedIntents()
 
@@ -103,7 +103,7 @@ title: "OutboundWebhookRuntime"
 
 `Promise`\<`number`\>
 
-***
+---
 
 ### replay()
 
@@ -127,7 +127,7 @@ title: "OutboundWebhookRuntime"
 
 `Promise`\<[`OutboundWebhookDelivery`](/api/webhooks-core/src/type-aliases/outboundwebhookdelivery/)\>
 
-***
+---
 
 ### resume()
 

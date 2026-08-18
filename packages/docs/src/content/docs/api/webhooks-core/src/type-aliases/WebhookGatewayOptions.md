@@ -13,25 +13,25 @@ title: "WebhookGatewayOptions"
 
 > `readonly` **adapter**: [`WebhookProviderAdapter`](/api/webhooks-core/src/type-aliases/webhookprovideradapter/)
 
-***
+---
 
 ### idempotencyNamespace?
 
 > `readonly` `optional` **idempotencyNamespace?**: `string`
 
-***
+---
 
 ### idempotencyStore
 
 > `readonly` **idempotencyStore**: [`IdempotencyStore`](/api/idempotency-core/src/type-aliases/idempotencystore/)\<[`WebhookGatewayStoredResult`](/api/webhooks-core/src/type-aliases/webhookgatewaystoredresult/)\>
 
-***
+---
 
 ### idempotencyTtlMs?
 
 > `readonly` `optional` **idempotencyTtlMs?**: `number`
 
-***
+---
 
 ### now?
 
@@ -41,7 +41,7 @@ title: "WebhookGatewayOptions"
 
 `Date`
 
-***
+---
 
 ### router
 
@@ -79,13 +79,13 @@ title: "WebhookGatewayOptions"
 
 `boolean`
 
-***
+---
 
 ### unknownEventPolicy
 
 > `readonly` **unknownEventPolicy**: [`UnknownEventPolicy`](/api/webhooks-core/src/type-aliases/unknowneventpolicy/)
 
-***
+---
 
 ### unknownEventReporter?
 

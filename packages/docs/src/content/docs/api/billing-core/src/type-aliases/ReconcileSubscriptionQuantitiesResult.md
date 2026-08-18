@@ -13,19 +13,19 @@ title: "ReconcileSubscriptionQuantitiesResult"
 
 > `readonly` **failed**: `number`
 
-***
+---
 
 ### inSync
 
 > `readonly` **inSync**: `number`
 
-***
+---
 
 ### requested
 
 > `readonly` **requested**: `number`
 
-***
+---
 
 ### superseded
 

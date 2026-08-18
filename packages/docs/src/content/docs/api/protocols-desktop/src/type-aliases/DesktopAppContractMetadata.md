@@ -13,13 +13,13 @@ title: "DesktopAppContractMetadata"
 
 > `readonly` **grants**: readonly [`DesktopGrantMetadata`](/api/protocols-desktop/src/type-aliases/desktopgrantmetadata/) & `object`[]
 
-***
+---
 
 ### key
 
 > `readonly` **key**: `string`
 
-***
+---
 
 ### members
 

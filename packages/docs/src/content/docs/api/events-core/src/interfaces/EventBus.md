@@ -15,7 +15,7 @@ title: "EventBus"
 
 ### TEvent
 
-`TEvent` *extends* [`DomainEvent`](/api/events-core/src/classes/domainevent/) = [`DomainEvent`](/api/events-core/src/classes/domainevent/)
+`TEvent` _extends_ [`DomainEvent`](/api/events-core/src/classes/domainevent/) = [`DomainEvent`](/api/events-core/src/classes/domainevent/)
 
 ## Methods
 
@@ -31,7 +31,7 @@ title: "EventBus"
 
 [`EventSubscribing`](/api/events-core/src/interfaces/eventsubscribing/).[`clear`](/api/events-core/src/interfaces/eventsubscribing/#clear)
 
-***
+---
 
 ### publish()
 
@@ -51,7 +51,7 @@ title: "EventBus"
 
 [`EventPublishing`](/api/events-core/src/interfaces/eventpublishing/).[`publish`](/api/events-core/src/interfaces/eventpublishing/#publish)
 
-***
+---
 
 ### subscribe()
 
@@ -71,7 +71,7 @@ title: "EventBus"
 
 [`EventSubscribing`](/api/events-core/src/interfaces/eventsubscribing/).[`subscribe`](/api/events-core/src/interfaces/eventsubscribing/#subscribe)
 
-***
+---
 
 ### unsubscribe()
 

@@ -13,7 +13,7 @@ title: "AssuranceTaskArtifact"
 
 > `readonly` **name**: `string`
 
-***
+---
 
 ### source?
 

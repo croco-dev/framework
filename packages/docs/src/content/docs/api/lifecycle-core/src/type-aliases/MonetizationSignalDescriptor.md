@@ -13,31 +13,31 @@ title: "MonetizationSignalDescriptor"
 
 > `readonly` **description**: `string`
 
-***
+---
 
 ### id
 
 > `readonly` **id**: `string`
 
-***
+---
 
 ### planVersionRequired
 
 > `readonly` **planVersionRequired**: `boolean`
 
-***
+---
 
 ### recoveryType?
 
 > `readonly` `optional` **recoveryType?**: [`MonetizationSignalType`](/api/lifecycle-core/src/type-aliases/monetizationsignaltype/)
 
-***
+---
 
 ### schemaVersion
 
 > `readonly` **schemaVersion**: `"1"`
 
-***
+---
 
 ### type
 

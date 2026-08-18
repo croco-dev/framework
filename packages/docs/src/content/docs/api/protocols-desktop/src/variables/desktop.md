@@ -17,11 +17,11 @@ title: "desktop"
 
 ##### TContracts
 
-`TContracts` *extends* `Readonly`\<`Record`\<`string`, [`AnyDesktopContract`](/api/protocols-desktop/src/type-aliases/anydesktopcontract/)\>\>
+`TContracts` _extends_ `Readonly`\<`Record`\<`string`, [`AnyDesktopContract`](/api/protocols-desktop/src/type-aliases/anydesktopcontract/)\>\>
 
 ##### TWindows
 
-`TWindows` *extends* `Readonly`\<`Record`\<`string`, [`AnyDesktopWindow`](/api/protocols-desktop/src/type-aliases/anydesktopwindow/)\>\>
+`TWindows` _extends_ `Readonly`\<`Record`\<`string`, [`AnyDesktopWindow`](/api/protocols-desktop/src/type-aliases/anydesktopwindow/)\>\>
 
 #### Parameters
 
@@ -41,15 +41,15 @@ title: "desktop"
 
 ##### TCommands
 
-`TCommands` *extends* `Readonly`\<`Record`\<`string`, [`AnyDesktopCommand`](/api/protocols-desktop/src/type-aliases/anydesktopcommand/)\>\> = `Record`\<`never`, `never`\>
+`TCommands` _extends_ `Readonly`\<`Record`\<`string`, [`AnyDesktopCommand`](/api/protocols-desktop/src/type-aliases/anydesktopcommand/)\>\> = `Record`\<`never`, `never`\>
 
 ##### TEvents
 
-`TEvents` *extends* `Readonly`\<`Record`\<`string`, [`AnyDesktopEvent`](/api/protocols-desktop/src/type-aliases/anydesktopevent/)\>\> = `Record`\<`never`, `never`\>
+`TEvents` _extends_ `Readonly`\<`Record`\<`string`, [`AnyDesktopEvent`](/api/protocols-desktop/src/type-aliases/anydesktopevent/)\>\> = `Record`\<`never`, `never`\>
 
 ##### TGrants
 
-`TGrants` *extends* `Readonly`\<`Record`\<`string`, [`AnyDesktopGrant`](/api/protocols-desktop/src/type-aliases/anydesktopgrant/)\>\> = `Record`\<`never`, `never`\>
+`TGrants` _extends_ `Readonly`\<`Record`\<`string`, [`AnyDesktopGrant`](/api/protocols-desktop/src/type-aliases/anydesktopgrant/)\>\> = `Record`\<`never`, `never`\>
 
 #### Parameters
 
@@ -75,7 +75,7 @@ title: "desktop"
 
 ###### TArguments
 
-`TArguments` *extends* readonly `unknown`[]
+`TArguments` _extends_ readonly `unknown`[]
 
 ###### TResult
 
@@ -117,15 +117,15 @@ title: "desktop"
 
 ###### TAccess
 
-`TAccess` *extends* [`DesktopGrantAccess`](/api/protocols-desktop/src/type-aliases/desktopgrantaccess/)
+`TAccess` _extends_ [`DesktopGrantAccess`](/api/protocols-desktop/src/type-aliases/desktopgrantaccess/)
 
 ###### TScope
 
-`TScope` *extends* [`DesktopGrantScope`](/api/protocols-desktop/src/type-aliases/desktopgrantscope/)
+`TScope` _extends_ [`DesktopGrantScope`](/api/protocols-desktop/src/type-aliases/desktopgrantscope/)
 
 ###### TLifetime
 
-`TLifetime` *extends* [`DesktopGrantLifetime`](/api/protocols-desktop/src/type-aliases/desktopgrantlifetime/)
+`TLifetime` _extends_ [`DesktopGrantLifetime`](/api/protocols-desktop/src/type-aliases/desktopgrantlifetime/)
 
 ##### Parameters
 
@@ -145,11 +145,11 @@ title: "desktop"
 
 ###### TAccess
 
-`TAccess` *extends* [`DesktopGrantAccess`](/api/protocols-desktop/src/type-aliases/desktopgrantaccess/)
+`TAccess` _extends_ [`DesktopGrantAccess`](/api/protocols-desktop/src/type-aliases/desktopgrantaccess/)
 
 ###### TLifetime
 
-`TLifetime` *extends* [`DesktopGrantLifetime`](/api/protocols-desktop/src/type-aliases/desktopgrantlifetime/)
+`TLifetime` _extends_ [`DesktopGrantLifetime`](/api/protocols-desktop/src/type-aliases/desktopgrantlifetime/)
 
 ##### Parameters
 
@@ -169,7 +169,7 @@ title: "desktop"
 
 ##### TOptions
 
-`TOptions` *extends* `AnyDesktopMutationOptions`
+`TOptions` _extends_ `AnyDesktopMutationOptions`
 
 #### Parameters
 
@@ -189,7 +189,7 @@ title: "desktop"
 
 ##### TOptions
 
-`TOptions` *extends* `AnyDesktopQueryOptions`
+`TOptions` _extends_ `AnyDesktopQueryOptions`
 
 #### Parameters
 
@@ -213,11 +213,11 @@ title: "desktop"
 
 ###### TExpose
 
-`TExpose` *extends* readonly [`KeyedDesktopCommand`](/api/protocols-desktop/src/type-aliases/keyeddesktopcommand/)[] = readonly \[\]
+`TExpose` _extends_ readonly [`KeyedDesktopCommand`](/api/protocols-desktop/src/type-aliases/keyeddesktopcommand/)[] = readonly \[\]
 
 ###### TReceive
 
-`TReceive` *extends* readonly [`KeyedDesktopEvent`](/api/protocols-desktop/src/type-aliases/keyeddesktopevent/)[] = readonly \[\]
+`TReceive` _extends_ readonly [`KeyedDesktopEvent`](/api/protocols-desktop/src/type-aliases/keyeddesktopevent/)[] = readonly \[\]
 
 ##### Parameters
 
@@ -237,11 +237,11 @@ title: "desktop"
 
 ###### TInitialUrl
 
-`TInitialUrl` *extends* `string`
+`TInitialUrl` _extends_ `string`
 
 ###### TAllowedOrigins
 
-`TAllowedOrigins` *extends* readonly `string`[]
+`TAllowedOrigins` _extends_ readonly `string`[]
 
 ##### Parameters
 

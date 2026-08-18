@@ -13,7 +13,7 @@ title: "IntentMapSensitiveDataPolicy"
 
 > `readonly` **excluded**: readonly `string`[]
 
-***
+---
 
 ### included
 

@@ -23,7 +23,7 @@ title: "DatabaseClient"
 
 `Promise`\<`unknown`\>
 
-***
+---
 
 ### transaction?
 

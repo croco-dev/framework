@@ -19,7 +19,7 @@ title: "AdminDataTableFilterChangeEvent"
 
 > `readonly` **filters**: readonly [`AdminDataTableFilter`](/api/admin-react/src/type-aliases/admindatatablefilter/)\<`TData`\>[]
 
-***
+---
 
 ### state
 

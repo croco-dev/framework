@@ -19,25 +19,25 @@ title: "AdminDataTableFilterDefinition"
 
 > `readonly` `optional` **defaultValue?**: [`AdminDataTableFilterValue`](/api/admin-react/src/type-aliases/admindatatablefiltervalue/)
 
-***
+---
 
 ### field?
 
 > `readonly` `optional` **field?**: [`AdminDataTableField`](/api/admin-react/src/type-aliases/admindatatablefield/)\<`TData`\>
 
-***
+---
 
 ### id
 
 > `readonly` **id**: `string`
 
-***
+---
 
 ### label
 
 > `readonly` **label**: `string`
 
-***
+---
 
 ### operator
 

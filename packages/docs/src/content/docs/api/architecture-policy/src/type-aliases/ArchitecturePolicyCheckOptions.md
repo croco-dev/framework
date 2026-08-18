@@ -13,7 +13,7 @@ title: "ArchitecturePolicyCheckOptions"
 
 > `readonly` **manifest**: [`ArchitecturePolicyManifest`](/api/architecture-policy/src/type-aliases/architecturepolicymanifest/)
 
-***
+---
 
 ### rootDir
 

@@ -69,7 +69,7 @@ Drizzle 클라이언트를 받아 권한 레지스트리를 초기화합니다.
 
 [`PlanEntitlementRegistry`](/api/entitlements-core/src/classes/planentitlementregistry/).[`findRule`](/api/entitlements-core/src/classes/planentitlementregistry/#findrule)
 
-***
+---
 
 ### findRuleByPlanVersion()
 
@@ -99,7 +99,7 @@ Drizzle 클라이언트를 받아 권한 레지스트리를 초기화합니다.
 
 [`PlanEntitlementRegistry`](/api/entitlements-core/src/classes/planentitlementregistry/).[`findRuleByPlanVersion`](/api/entitlements-core/src/classes/planentitlementregistry/#findrulebyplanversion)
 
-***
+---
 
 ### getEntitlements()
 
@@ -121,7 +121,7 @@ Drizzle 클라이언트를 받아 권한 레지스트리를 초기화합니다.
 
 [`PlanEntitlementRegistry`](/api/entitlements-core/src/classes/planentitlementregistry/).[`getEntitlements`](/api/entitlements-core/src/classes/planentitlementregistry/#getentitlements)
 
-***
+---
 
 ### getEntitlementsByPlanVersion()
 

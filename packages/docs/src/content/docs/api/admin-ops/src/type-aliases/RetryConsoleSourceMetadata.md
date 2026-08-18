@@ -13,13 +13,13 @@ title: "RetryConsoleSourceMetadata"
 
 > `readonly` **kind**: [`RetryConsoleSourceKind`](/api/admin-ops/src/type-aliases/retryconsolesourcekind/)
 
-***
+---
 
 ### label
 
 > `readonly` **label**: `string`
 
-***
+---
 
 ### target?
 

@@ -13,19 +13,19 @@ title: "AssuranceObligationAssessment"
 
 > `readonly` **evidenceIds**: readonly `string`[]
 
-***
+---
 
 ### obligation
 
 > `readonly` **obligation**: [`AssuranceEvidenceObligation`](/api/testing/src/type-aliases/assuranceevidenceobligation/)
 
-***
+---
 
 ### reasons
 
 > `readonly` **reasons**: readonly `string`[]
 
-***
+---
 
 ### status
 

@@ -23,7 +23,7 @@ title: "IdempotencyStoreConformanceOptions"
 
 `TResult`
 
-***
+---
 
 ### createStore
 

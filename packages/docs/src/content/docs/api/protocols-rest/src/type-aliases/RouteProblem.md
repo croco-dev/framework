@@ -5,10 +5,10 @@ prev: false
 title: "RouteProblem"
 ---
 
-> **RouteProblem**\<`TContract`\> = `TContract` *extends* `object` ? `ProblemEntry` *extends* [`ProblemConstructor`](/api/protocols-rest/src/type-aliases/problemconstructor/)\<infer TProblem\> ? `TProblem` : `ProblemEntry` *extends* [`RouteProblemDeclaration`](/api/protocols-rest/src/type-aliases/routeproblemdeclaration/)\<infer TProblem\> ? `TProblem` : `never` : `never`
+> **RouteProblem**\<`TContract`\> = `TContract` _extends_ `object` ? `ProblemEntry` _extends_ [`ProblemConstructor`](/api/protocols-rest/src/type-aliases/problemconstructor/)\<infer TProblem\> ? `TProblem` : `ProblemEntry` _extends_ [`RouteProblemDeclaration`](/api/protocols-rest/src/type-aliases/routeproblemdeclaration/)\<infer TProblem\> ? `TProblem` : `never` : `never`
 
 ## Type Parameters
 
 ### TContract
 
-`TContract` *extends* [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/)
+`TContract` _extends_ [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/)

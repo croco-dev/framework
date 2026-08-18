@@ -11,12 +11,12 @@ Upstash Redis를 metering-core용 RedisClient로 어댑팅하는 구현체와 �
 
 ## Properties
 
-### UPSTASH\_REDIS\_REST\_TOKEN?
+### UPSTASH_REDIS_REST_TOKEN?
 
-> `readonly` `optional` **UPSTASH\_REDIS\_REST\_TOKEN?**: `string`
+> `readonly` `optional` **UPSTASH_REDIS_REST_TOKEN?**: `string`
 
-***
+---
 
-### UPSTASH\_REDIS\_REST\_URL?
+### UPSTASH_REDIS_REST_URL?
 
-> `readonly` `optional` **UPSTASH\_REDIS\_REST\_URL?**: `string`
+> `readonly` `optional` **UPSTASH_REDIS_REST_URL?**: `string`

@@ -13,7 +13,7 @@ title: "BetterAuthReadinessCheckContext"
 
 > `readonly` **config**: [`BetterAuthConfig`](/api/auth-better-auth/src/interfaces/betterauthconfig/)
 
-***
+---
 
 ### signal?
 

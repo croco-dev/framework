@@ -13,7 +13,7 @@ title: "SagaRetryPolicy"
 
 > `readonly` `optional` **maxAttempts?**: `number`
 
-***
+---
 
 ### shouldRetry?
 

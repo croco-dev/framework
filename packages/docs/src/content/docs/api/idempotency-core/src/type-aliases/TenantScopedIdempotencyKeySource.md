@@ -13,19 +13,19 @@ title: "TenantScopedIdempotencyKeySource"
 
 > `readonly` `optional` **fingerprint?**: `string`
 
-***
+---
 
 ### key
 
 > `readonly` **key**: `string`
 
-***
+---
 
 ### kind
 
 > `readonly` **kind**: `"tenant-scoped"`
 
-***
+---
 
 ### tenantId
 

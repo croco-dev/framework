@@ -13,19 +13,19 @@ title: "FailureDrillProblemExpectation"
 
 > `readonly` **code**: `string`
 
-***
+---
 
 ### detailIncludes?
 
 > `readonly` `optional` **detailIncludes?**: `string` \| readonly `string`[]
 
-***
+---
 
 ### status?
 
 > `readonly` `optional` **status?**: `number`
 
-***
+---
 
 ### title?
 

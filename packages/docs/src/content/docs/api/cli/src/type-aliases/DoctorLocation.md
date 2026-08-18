@@ -13,13 +13,13 @@ title: "DoctorLocation"
 
 > `readonly` `optional` **file?**: `string`
 
-***
+---
 
 ### line?
 
 > `readonly` `optional` **line?**: `number`
 
-***
+---
 
 ### packageName?
 

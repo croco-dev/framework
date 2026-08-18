@@ -13,13 +13,13 @@ title: "DesktopAppMetadata"
 
 > `readonly` **contracts**: readonly [`DesktopAppContractMetadata`](/api/protocols-desktop/src/type-aliases/desktopappcontractmetadata/)[]
 
-***
+---
 
 ### schema
 
 > `readonly` **schema**: `"croco.desktop-app-definition.v1"`
 
-***
+---
 
 ### windows
 

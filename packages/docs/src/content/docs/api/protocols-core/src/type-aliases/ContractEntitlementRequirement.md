@@ -13,13 +13,13 @@ title: "ContractEntitlementRequirement"
 
 > `readonly` `optional` **description?**: `string`
 
-***
+---
 
 ### feature
 
 > `readonly` **feature**: `string`
 
-***
+---
 
 ### resource?
 

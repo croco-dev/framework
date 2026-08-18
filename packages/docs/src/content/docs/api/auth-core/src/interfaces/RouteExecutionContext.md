@@ -17,7 +17,7 @@ title: "RouteExecutionContext"
 
 `object`
 
-***
+---
 
 ### getHandler()
 
@@ -27,7 +27,7 @@ title: "RouteExecutionContext"
 
 `string` \| `symbol`
 
-***
+---
 
 ### getRequest()
 

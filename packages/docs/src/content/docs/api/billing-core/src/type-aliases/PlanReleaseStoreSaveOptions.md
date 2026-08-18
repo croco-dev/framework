@@ -13,7 +13,7 @@ title: "PlanReleaseStoreSaveOptions"
 
 > `readonly` `optional` **enforceNoEffectivePeriodOverlap?**: `boolean`
 
-***
+---
 
 ### event?
 

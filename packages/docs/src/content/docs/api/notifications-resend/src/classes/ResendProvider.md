@@ -43,7 +43,7 @@ Provider capability contract used by the dispatch layer.
 
 [`NotificationProvider`](/api/notifications-core/src/interfaces/notificationprovider/).[`getCapabilities`](/api/notifications-core/src/interfaces/notificationprovider/#getcapabilities)
 
-***
+---
 
 ### getChannel()
 
@@ -59,7 +59,7 @@ Get the channel this provider supports
 
 [`NotificationProvider`](/api/notifications-core/src/interfaces/notificationprovider/).[`getChannel`](/api/notifications-core/src/interfaces/notificationprovider/#getchannel)
 
-***
+---
 
 ### getName()
 
@@ -75,7 +75,7 @@ Provider identifier (e.g., 'resend', 'twilio')
 
 [`NotificationProvider`](/api/notifications-core/src/interfaces/notificationprovider/).[`getName`](/api/notifications-core/src/interfaces/notificationprovider/#getname)
 
-***
+---
 
 ### send()
 
@@ -101,7 +101,7 @@ Send a notification via this provider
 
 [`NotificationProvider`](/api/notifications-core/src/interfaces/notificationprovider/).[`send`](/api/notifications-core/src/interfaces/notificationprovider/#send)
 
-***
+---
 
 ### sendBatch()
 

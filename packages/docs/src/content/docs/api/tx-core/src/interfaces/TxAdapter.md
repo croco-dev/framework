@@ -54,7 +54,7 @@ with `TransactionRollbackConfirmedProblem` before release, or fulfill after rele
 
 `Promise`\<`T`\>
 
-***
+---
 
 ### supportsSavepoint()
 
@@ -64,7 +64,7 @@ with `TransactionRollbackConfirmedProblem` before release, or fulfill after rele
 
 `boolean`
 
-***
+---
 
 ### transaction()
 

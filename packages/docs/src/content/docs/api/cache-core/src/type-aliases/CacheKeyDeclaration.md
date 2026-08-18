@@ -13,19 +13,19 @@ title: "CacheKeyDeclaration"
 
 > `readonly` `optional` **description?**: `string`
 
-***
+---
 
 ### id
 
 > `readonly` **id**: `string`
 
-***
+---
 
 ### key?
 
 > `readonly` `optional` **key?**: `string`
 
-***
+---
 
 ### pattern?
 

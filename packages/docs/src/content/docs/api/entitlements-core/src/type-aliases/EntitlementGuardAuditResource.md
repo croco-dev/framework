@@ -13,7 +13,7 @@ title: "EntitlementGuardAuditResource"
 
 > `readonly` **id**: `string`
 
-***
+---
 
 ### type
 

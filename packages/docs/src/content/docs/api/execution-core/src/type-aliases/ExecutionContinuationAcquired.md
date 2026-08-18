@@ -13,7 +13,7 @@ title: "ExecutionContinuationAcquired"
 
 > **claim**: [`ExecutionContinuationClaim`](/api/execution-core/src/interfaces/executioncontinuationclaim/)
 
-***
+---
 
 ### execution
 

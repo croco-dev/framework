@@ -15,7 +15,7 @@ title: "CompressionOptions"
 
 > `optional` **encodings?**: [`CompressionEncoding`](/api/transports-http/src/type-aliases/compressionencoding/)[]
 
-***
+---
 
 ### threshold?
 

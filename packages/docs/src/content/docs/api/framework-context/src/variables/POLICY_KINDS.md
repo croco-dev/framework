@@ -5,4 +5,4 @@ prev: false
 title: "POLICY_KINDS"
 ---
 
-> `const` **POLICY\_KINDS**: readonly \[`"timeout"`, `"retry"`, `"tracing"`\]
+> `const` **POLICY_KINDS**: readonly \[`"timeout"`, `"retry"`, `"tracing"`\]

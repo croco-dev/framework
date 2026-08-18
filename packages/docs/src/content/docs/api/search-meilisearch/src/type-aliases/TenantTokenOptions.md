@@ -15,7 +15,7 @@ title: "TenantTokenOptions"
 
 > **apiKeyUid**: `string`
 
-***
+---
 
 ### expiresIn?
 

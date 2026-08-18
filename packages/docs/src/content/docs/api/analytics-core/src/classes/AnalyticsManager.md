@@ -48,7 +48,7 @@ Capture an event.
 
 `void`
 
-***
+---
 
 ### flush()
 
@@ -60,7 +60,7 @@ Flush buffered analytics events before a runtime boundary such as Lambda return 
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### group()
 
@@ -87,7 +87,7 @@ Essential for B2B SaaS analytics.
 
 `void`
 
-***
+---
 
 ### identify()
 

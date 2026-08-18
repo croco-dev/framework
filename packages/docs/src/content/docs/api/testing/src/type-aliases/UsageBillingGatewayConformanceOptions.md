@@ -11,7 +11,7 @@ title: "UsageBillingGatewayConformanceOptions"
 
 ### TGateway
 
-`TGateway` *extends* [`UsageBillingGateway`](/api/billing-core/src/interfaces/usagebillinggateway/) = [`UsageBillingGateway`](/api/billing-core/src/interfaces/usagebillinggateway/)
+`TGateway` _extends_ [`UsageBillingGateway`](/api/billing-core/src/interfaces/usagebillinggateway/) = [`UsageBillingGateway`](/api/billing-core/src/interfaces/usagebillinggateway/)
 
 ## Properties
 
@@ -43,7 +43,7 @@ title: "UsageBillingGatewayConformanceOptions"
 
 `void` \| `Promise`\<`void`\>
 
-***
+---
 
 ### createGateway
 
@@ -53,7 +53,7 @@ title: "UsageBillingGatewayConformanceOptions"
 
 `TGateway` \| `Promise`\<`TGateway`\>
 
-***
+---
 
 ### failureScenarios
 
@@ -79,13 +79,13 @@ title: "UsageBillingGatewayConformanceOptions"
 
 > `readonly` **timeout**: [`UsageBillingFailureScenario`](/api/testing/src/type-aliases/usagebillingfailurescenario/)\<`Extract`\<[`UsageBillingRetryableFailureFixture`](/api/testing/src/type-aliases/usagebillingretryablefailurefixture/), \{ `kind`: `"timeout"`; \}\>, `TGateway`\>
 
-***
+---
 
 ### fixtures
 
 > `readonly` **fixtures**: [`UsageBillingConformanceFixtures`](/api/testing/src/type-aliases/usagebillingconformancefixtures/)
 
-***
+---
 
 ### liveSmoke?
 

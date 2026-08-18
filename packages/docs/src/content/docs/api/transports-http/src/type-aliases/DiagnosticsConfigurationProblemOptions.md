@@ -13,7 +13,7 @@ title: "DiagnosticsConfigurationProblemOptions"
 
 > `readonly` **option**: [`DiagnosticsLimitOption`](/api/transports-http/src/type-aliases/diagnosticslimitoption/)
 
-***
+---
 
 ### receivedValue
 

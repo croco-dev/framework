@@ -17,13 +17,13 @@ title: "LogContext"
 
 > `optional` **requestId?**: `string`
 
-***
+---
 
 ### spanId?
 
 > `optional` **spanId?**: `string`
 
-***
+---
 
 ### traceId?
 

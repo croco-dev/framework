@@ -13,7 +13,7 @@ title: "CapturedSpanEvent"
 
 > `readonly` **attributes**: `Attributes`
 
-***
+---
 
 ### name
 

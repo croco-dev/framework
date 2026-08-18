@@ -13,13 +13,13 @@ title: "InvalidTransactionalEventConfigurationProblemOptions"
 
 > `readonly` **constraint**: [`TransactionalEventConfigurationConstraint`](/api/events-tx/src/type-aliases/transactionaleventconfigurationconstraint/)
 
-***
+---
 
 ### field
 
 > `readonly` **field**: [`TransactionalEventConfigurationField`](/api/events-tx/src/type-aliases/transactionaleventconfigurationfield/)
 
-***
+---
 
 ### receivedValue
 

@@ -19,7 +19,7 @@ Quota 검증 및 기록 작업의 옵션과 결과를 정의합니다.
 
 > **exceeded**: `boolean`
 
-***
+---
 
 ### newUsage
 

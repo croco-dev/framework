@@ -13,19 +13,19 @@ title: "QStashTriggerHandleResult"
 
 > `readonly` **body**: `unknown`
 
-***
+---
 
 ### executionId?
 
 > `readonly` `optional` **executionId?**: `string`
 
-***
+---
 
 ### statusCode
 
 > `readonly` **statusCode**: `number`
 
-***
+---
 
 ### success
 

@@ -17,7 +17,7 @@ title: "CreditLedgerStoreConformanceOptions"
 
 [`CreditLedgerStore`](/api/credits-core/src/classes/creditledgerstore/) \| `Promise`\<[`CreditLedgerStore`](/api/credits-core/src/classes/creditledgerstore/)\>
 
-***
+---
 
 ### storeName
 

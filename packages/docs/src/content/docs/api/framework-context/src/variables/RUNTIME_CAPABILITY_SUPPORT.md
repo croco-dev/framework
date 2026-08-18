@@ -5,7 +5,7 @@ prev: false
 title: "RUNTIME_CAPABILITY_SUPPORT"
 ---
 
-> `const` **RUNTIME\_CAPABILITY\_SUPPORT**: `object`
+> `const` **RUNTIME_CAPABILITY_SUPPORT**: `object`
 
 ## Type Declaration
 

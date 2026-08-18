@@ -15,7 +15,7 @@ title: "TenantModelManifest"
 
 #### currentVersion
 
-> `readonly` **currentVersion**: *typeof* [`TENANT_MODEL_MANIFEST_SCHEMA_VERSION`](/api/tenant-core/src/variables/tenant_model_manifest_schema_version/)
+> `readonly` **currentVersion**: _typeof_ [`TENANT_MODEL_MANIFEST_SCHEMA_VERSION`](/api/tenant-core/src/variables/tenant_model_manifest_schema_version/)
 
 #### generatedArtifacts
 
@@ -51,53 +51,53 @@ title: "TenantModelManifest"
 
 #### rules
 
-> `readonly` **rules**: *typeof* [`TENANT_MODEL_MANIFEST_COMPATIBILITY_RULES`](/api/tenant-core/src/variables/tenant_model_manifest_compatibility_rules/)
+> `readonly` **rules**: _typeof_ [`TENANT_MODEL_MANIFEST_COMPATIBILITY_RULES`](/api/tenant-core/src/variables/tenant_model_manifest_compatibility_rules/)
 
 #### schemaId
 
-> `readonly` **schemaId**: *typeof* [`TENANT_MODEL_MANIFEST_SCHEMA_ID`](/api/tenant-core/src/variables/tenant_model_manifest_schema_id/)
+> `readonly` **schemaId**: _typeof_ [`TENANT_MODEL_MANIFEST_SCHEMA_ID`](/api/tenant-core/src/variables/tenant_model_manifest_schema_id/)
 
 #### supportedVersions
 
-> `readonly` **supportedVersions**: *typeof* [`SUPPORTED_TENANT_MODEL_MANIFEST_SCHEMA_VERSIONS`](/api/tenant-core/src/variables/supported_tenant_model_manifest_schema_versions/)
+> `readonly` **supportedVersions**: _typeof_ [`SUPPORTED_TENANT_MODEL_MANIFEST_SCHEMA_VERSIONS`](/api/tenant-core/src/variables/supported_tenant_model_manifest_schema_versions/)
 
-***
+---
 
 ### currentModel
 
 > `readonly` **currentModel**: [`TenantModelName`](/api/tenant-core/src/type-aliases/tenantmodelname/)
 
-***
+---
 
 ### defaultModel
 
 > `readonly` **defaultModel**: [`TenantModelName`](/api/tenant-core/src/type-aliases/tenantmodelname/)
 
-***
+---
 
 ### diagnostics
 
 > `readonly` **diagnostics**: readonly `object`[]
 
-***
+---
 
 ### migration
 
 > `readonly` **migration**: [`TenantMigrationPlan`](/api/tenant-core/src/type-aliases/tenantmigrationplan/)
 
-***
+---
 
 ### models
 
 > `readonly` **models**: readonly [`TenantModelDefinition`](/api/tenant-core/src/type-aliases/tenantmodeldefinition/)[]
 
-***
+---
 
 ### qualityGates
 
 > `readonly` **qualityGates**: readonly `string`[]
 
-***
+---
 
 ### schema
 
@@ -109,15 +109,15 @@ title: "TenantModelManifest"
 
 #### version
 
-> `readonly` **version**: *typeof* [`TENANT_MODEL_MANIFEST_SCHEMA_VERSION`](/api/tenant-core/src/variables/tenant_model_manifest_schema_version/)
+> `readonly` **version**: _typeof_ [`TENANT_MODEL_MANIFEST_SCHEMA_VERSION`](/api/tenant-core/src/variables/tenant_model_manifest_schema_version/)
 
-***
+---
 
 ### schemaVersion
 
 > `readonly` **schemaVersion**: [`TenantModelManifestSchemaVersion`](/api/tenant-core/src/type-aliases/tenantmodelmanifestschemaversion/)
 
-***
+---
 
 ### selected
 

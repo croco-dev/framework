@@ -16,13 +16,13 @@ Concrete implementations (e.g., Drizzle) will convert this to SQL.
 
 > **condition**: `string`
 
-***
+---
 
 ### params?
 
 > `optional` **params?**: `unknown`[]
 
-***
+---
 
 ### type
 

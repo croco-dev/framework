@@ -29,7 +29,7 @@ title: "IdempotencyStore"
 
 `Promise`\<[`IdempotencyCompletedRecord`](/api/idempotency-core/src/type-aliases/idempotencycompletedrecord/)\<`TResult`\>\>
 
-***
+---
 
 ### expire()
 
@@ -45,7 +45,7 @@ title: "IdempotencyStore"
 
 `Promise`\<`boolean`\>
 
-***
+---
 
 ### fail()
 
@@ -61,7 +61,7 @@ title: "IdempotencyStore"
 
 `Promise`\<[`IdempotencyFailedRecord`](/api/idempotency-core/src/type-aliases/idempotencyfailedrecord/)\>
 
-***
+---
 
 ### replay()
 
@@ -77,7 +77,7 @@ title: "IdempotencyStore"
 
 `Promise`\<[`IdempotencyCompletedRecord`](/api/idempotency-core/src/type-aliases/idempotencycompletedrecord/)\<`TResult`\> \| `null`\>
 
-***
+---
 
 ### reserve()
 

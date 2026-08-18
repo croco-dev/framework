@@ -11,15 +11,15 @@ title: "defineRouteProblem"
 
 ### TProblem
 
-`TProblem` *extends* [`Problem`](/api/problems-core/src/classes/problem/)
+`TProblem` _extends_ [`Problem`](/api/problems-core/src/classes/problem/)
 
 ### Code
 
-`Code` *extends* `string`
+`Code` _extends_ `string`
 
 ### Category
 
-`Category` *extends* [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
+`Category` _extends_ [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
 
 ## Parameters
 

@@ -23,19 +23,19 @@ title: "QStashTriggerConformanceOptions"
 
 [`QStashTriggerConformanceHarness`](/api/testing/src/type-aliases/qstashtriggerconformanceharness/) \| `Promise`\<[`QStashTriggerConformanceHarness`](/api/testing/src/type-aliases/qstashtriggerconformanceharness/)\>
 
-***
+---
 
 ### liveSmoke?
 
 > `readonly` `optional` **liveSmoke?**: [`ServerlessProviderLiveSmokeGate`](/api/testing/src/type-aliases/serverlessproviderlivesmokegate/)
 
-***
+---
 
 ### providerName
 
 > `readonly` **providerName**: `string`
 
-***
+---
 
 ### secretSamples?
 

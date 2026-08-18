@@ -13,25 +13,25 @@ title: "CreditLedgerCommittedEventData"
 
 > `readonly` **accountId**: [`CreditAccountId`](/api/credits-core/src/type-aliases/creditaccountid/)
 
-***
+---
 
 ### kinds
 
 > `readonly` **kinds**: readonly [`CreditTransactionKind`](/api/credits-core/src/type-aliases/credittransactionkind/)[]
 
-***
+---
 
 ### position
 
 > `readonly` **position**: `number`
 
-***
+---
 
 ### reference
 
 > `readonly` **reference**: [`CreditSemanticReference`](/api/credits-core/src/type-aliases/creditsemanticreference/)
 
-***
+---
 
 ### transactionIds
 

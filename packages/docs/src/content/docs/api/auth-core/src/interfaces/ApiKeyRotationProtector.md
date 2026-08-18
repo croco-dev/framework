@@ -25,7 +25,7 @@ title: "ApiKeyRotationProtector"
 
 `string`
 
-***
+---
 
 ### encrypt()
 

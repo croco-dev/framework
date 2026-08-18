@@ -13,13 +13,13 @@ title: "OperationsTimelineActor"
 
 > `readonly` `optional` **displayName?**: `string`
 
-***
+---
 
 ### id
 
 > `readonly` **id**: `string`
 
-***
+---
 
 ### type?
 

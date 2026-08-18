@@ -41,7 +41,7 @@ churn, GRR, NRR, Logo Churn 등 리텐션 지표를 계산하는 계산기입니
 
 `Promise`\<`number` \| `null`\>
 
-***
+---
 
 ### calculateGRR()
 
@@ -49,7 +49,7 @@ churn, GRR, NRR, Logo Churn 등 리텐션 지표를 계산하는 계산기입니
 
 Calculate Gross Revenue Retention (GRR) for a period.
 
-Formula: max(0, min(100, ((Starting MRR - Churned MRR - Contraction MRR) / Starting MRR) * 100))
+Formula: max(0, min(100, ((Starting MRR - Churned MRR - Contraction MRR) / Starting MRR) \* 100))
 
 #### Parameters
 
@@ -75,7 +75,7 @@ GRR as percentage (0-100), or null if starting MRR is zero
 
 InvalidRetentionMovementProblem when churn or contraction is negative or non-finite
 
-***
+---
 
 ### calculateLogoChurn()
 
@@ -83,7 +83,7 @@ InvalidRetentionMovementProblem when churn or contraction is negative or non-fin
 
 Calculate Logo Churn Rate (customer churn rate based on number of customers).
 
-Formula: (Starting Customers - Ending Customers) / Starting Customers * 100
+Formula: (Starting Customers - Ending Customers) / Starting Customers \* 100
 
 #### Parameters
 
@@ -105,7 +105,7 @@ Number of customers at end of period
 
 Logo Churn as percentage, or null if starting customers is zero
 
-***
+---
 
 ### calculateNRR()
 
@@ -135,7 +135,7 @@ MRR movement data for the period
 
 NRR as percentage (can be >100%), or null if starting MRR is zero
 
-***
+---
 
 ### calculateRetention()
 

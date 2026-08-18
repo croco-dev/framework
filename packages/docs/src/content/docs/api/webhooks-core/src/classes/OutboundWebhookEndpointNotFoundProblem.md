@@ -39,7 +39,7 @@ title: "OutboundWebhookEndpointNotFoundProblem"
 
 `OutboundWebhookProblem.category`
 
-***
+---
 
 ### cause?
 
@@ -49,7 +49,7 @@ title: "OutboundWebhookEndpointNotFoundProblem"
 
 `OutboundWebhookProblem.cause`
 
-***
+---
 
 ### code
 
@@ -59,7 +59,7 @@ title: "OutboundWebhookEndpointNotFoundProblem"
 
 `OutboundWebhookProblem.code`
 
-***
+---
 
 ### detail?
 
@@ -69,7 +69,7 @@ title: "OutboundWebhookEndpointNotFoundProblem"
 
 `OutboundWebhookProblem.detail`
 
-***
+---
 
 ### extensions?
 
@@ -79,7 +79,7 @@ title: "OutboundWebhookEndpointNotFoundProblem"
 
 `OutboundWebhookProblem.extensions`
 
-***
+---
 
 ### instance?
 
@@ -89,7 +89,7 @@ title: "OutboundWebhookEndpointNotFoundProblem"
 
 `OutboundWebhookProblem.instance`
 
-***
+---
 
 ### message
 
@@ -99,7 +99,7 @@ title: "OutboundWebhookEndpointNotFoundProblem"
 
 `OutboundWebhookProblem.message`
 
-***
+---
 
 ### name
 
@@ -109,7 +109,7 @@ title: "OutboundWebhookEndpointNotFoundProblem"
 
 `OutboundWebhookProblem.name`
 
-***
+---
 
 ### stack?
 
@@ -119,7 +119,7 @@ title: "OutboundWebhookEndpointNotFoundProblem"
 
 `OutboundWebhookProblem.stack`
 
-***
+---
 
 ### type
 
@@ -129,7 +129,7 @@ title: "OutboundWebhookEndpointNotFoundProblem"
 
 `OutboundWebhookProblem.type`
 
-***
+---
 
 ### stackTraceLimit
 
@@ -165,7 +165,7 @@ not capture any frames.
 
 `OutboundWebhookProblem.status`
 
-***
+---
 
 ### title
 
@@ -195,7 +195,7 @@ not capture any frames.
 
 `OutboundWebhookProblem.toJSON`
 
-***
+---
 
 ### captureStackTrace()
 
@@ -208,7 +208,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack;  // Similar to `new Error().stack`
+myObject.stack; // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -263,7 +263,7 @@ a();
 
 `OutboundWebhookProblem.captureStackTrace`
 
-***
+---
 
 ### prepareStackTrace()
 

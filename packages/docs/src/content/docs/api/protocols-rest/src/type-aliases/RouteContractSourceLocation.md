@@ -13,13 +13,13 @@ title: "RouteContractSourceLocation"
 
 > `readonly` `optional` **column?**: `number`
 
-***
+---
 
 ### line?
 
 > `readonly` `optional` **line?**: `number`
 
-***
+---
 
 ### path
 

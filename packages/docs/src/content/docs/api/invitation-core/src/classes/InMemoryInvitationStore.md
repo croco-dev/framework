@@ -49,7 +49,7 @@ title: "InMemoryInvitationStore"
 
 [`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`activateEmailInvitation`](/api/invitation-core/src/classes/invitationstore/#activateemailinvitation)
 
-***
+---
 
 ### claimEmailInvitationEvent()
 
@@ -81,7 +81,7 @@ title: "InMemoryInvitationStore"
 
 [`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`claimEmailInvitationEvent`](/api/invitation-core/src/classes/invitationstore/#claimemailinvitationevent)
 
-***
+---
 
 ### claimEmailInvitationNotification()
 
@@ -113,7 +113,7 @@ title: "InMemoryInvitationStore"
 
 [`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`claimEmailInvitationNotification`](/api/invitation-core/src/classes/invitationstore/#claimemailinvitationnotification)
 
-***
+---
 
 ### compareAndSetStatus()
 
@@ -155,7 +155,7 @@ title: "InMemoryInvitationStore"
 
 [`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`compareAndSetStatus`](/api/invitation-core/src/classes/invitationstore/#compareandsetstatus)
 
-***
+---
 
 ### completeEmailInvitationEvent()
 
@@ -183,7 +183,7 @@ title: "InMemoryInvitationStore"
 
 [`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`completeEmailInvitationEvent`](/api/invitation-core/src/classes/invitationstore/#completeemailinvitationevent)
 
-***
+---
 
 ### completeEmailInvitationNotification()
 
@@ -211,7 +211,7 @@ title: "InMemoryInvitationStore"
 
 [`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`completeEmailInvitationNotification`](/api/invitation-core/src/classes/invitationstore/#completeemailinvitationnotification)
 
-***
+---
 
 ### countPendingByTenant()
 
@@ -235,7 +235,7 @@ title: "InMemoryInvitationStore"
 
 [`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`countPendingByTenant`](/api/invitation-core/src/classes/invitationstore/#countpendingbytenant)
 
-***
+---
 
 ### createEmailInvitation()
 
@@ -255,7 +255,7 @@ title: "InMemoryInvitationStore"
 
 [`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`createEmailInvitation`](/api/invitation-core/src/classes/invitationstore/#createemailinvitation)
 
-***
+---
 
 ### deleteExpiredEmailInvitationCreations()
 
@@ -275,7 +275,7 @@ title: "InMemoryInvitationStore"
 
 [`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`deleteExpiredEmailInvitationCreations`](/api/invitation-core/src/classes/invitationstore/#deleteexpiredemailinvitationcreations)
 
-***
+---
 
 ### findAllByTenant()
 
@@ -295,7 +295,7 @@ title: "InMemoryInvitationStore"
 
 [`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`findAllByTenant`](/api/invitation-core/src/classes/invitationstore/#findallbytenant)
 
-***
+---
 
 ### findById()
 
@@ -315,7 +315,7 @@ title: "InMemoryInvitationStore"
 
 [`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`findById`](/api/invitation-core/src/classes/invitationstore/#findbyid)
 
-***
+---
 
 ### findByTenantAndEmail()
 
@@ -339,7 +339,7 @@ title: "InMemoryInvitationStore"
 
 [`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`findByTenantAndEmail`](/api/invitation-core/src/classes/invitationstore/#findbytenantandemail)
 
-***
+---
 
 ### findByTokenHash()
 
@@ -359,7 +359,7 @@ title: "InMemoryInvitationStore"
 
 [`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`findByTokenHash`](/api/invitation-core/src/classes/invitationstore/#findbytokenhash)
 
-***
+---
 
 ### findEmailInvitationCreation()
 
@@ -383,7 +383,7 @@ title: "InMemoryInvitationStore"
 
 [`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`findEmailInvitationCreation`](/api/invitation-core/src/classes/invitationstore/#findemailinvitationcreation)
 
-***
+---
 
 ### releaseEmailInvitationEvent()
 
@@ -411,7 +411,7 @@ title: "InMemoryInvitationStore"
 
 [`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`releaseEmailInvitationEvent`](/api/invitation-core/src/classes/invitationstore/#releaseemailinvitationevent)
 
-***
+---
 
 ### releaseEmailInvitationNotification()
 
@@ -439,7 +439,7 @@ title: "InMemoryInvitationStore"
 
 [`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`releaseEmailInvitationNotification`](/api/invitation-core/src/classes/invitationstore/#releaseemailinvitationnotification)
 
-***
+---
 
 ### save()
 
@@ -459,7 +459,7 @@ title: "InMemoryInvitationStore"
 
 [`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`save`](/api/invitation-core/src/classes/invitationstore/#save)
 
-***
+---
 
 ### updateStatus()
 

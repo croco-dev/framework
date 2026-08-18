@@ -25,7 +25,7 @@ readonly `string`[]
 
 `Promise`\<[`LifecycleDryRunResponse`](/api/admin-react/src/type-aliases/lifecycledryrunresponse/)\>
 
-***
+---
 
 ### executeRuleAction()
 
@@ -41,7 +41,7 @@ readonly `string`[]
 
 `Promise`\<[`LifecycleRuleActionResult`](/api/admin-react/src/type-aliases/lifecycleruleactionresult/)\>
 
-***
+---
 
 ### inspectRules()
 
@@ -51,7 +51,7 @@ readonly `string`[]
 
 `Promise`\<readonly [`LifecycleRuleInspection`](/api/lifecycle-core/src/type-aliases/lifecycleruleinspection/)[]\>
 
-***
+---
 
 ### listDryRunFixtures()
 
@@ -61,7 +61,7 @@ readonly `string`[]
 
 readonly [`LifecycleDryRunFixtureDescriptor`](/api/admin-react/src/type-aliases/lifecycledryrunfixturedescriptor/)[]
 
-***
+---
 
 ### listRecoveryItems()?
 
@@ -71,7 +71,7 @@ readonly [`LifecycleDryRunFixtureDescriptor`](/api/admin-react/src/type-aliases/
 
 `Promise`\<readonly [`RetryConsoleItem`](/api/admin-ops/src/type-aliases/retryconsoleitem/)[]\>
 
-***
+---
 
 ### listRuns()
 
@@ -87,7 +87,7 @@ readonly [`LifecycleDryRunFixtureDescriptor`](/api/admin-react/src/type-aliases/
 
 `Promise`\<readonly [`LifecycleRun`](/api/lifecycle-core/src/type-aliases/lifecyclerun/)[]\>
 
-***
+---
 
 ### runLinks()?
 

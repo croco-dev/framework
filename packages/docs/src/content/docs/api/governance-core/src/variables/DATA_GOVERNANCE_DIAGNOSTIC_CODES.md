@@ -5,7 +5,7 @@ prev: false
 title: "DATA_GOVERNANCE_DIAGNOSTIC_CODES"
 ---
 
-> `const` **DATA\_GOVERNANCE\_DIAGNOSTIC\_CODES**: `object`
+> `const` **DATA_GOVERNANCE_DIAGNOSTIC_CODES**: `object`
 
 ## Type Declaration
 

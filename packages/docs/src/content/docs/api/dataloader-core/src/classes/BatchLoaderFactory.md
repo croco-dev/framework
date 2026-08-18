@@ -77,20 +77,20 @@ Dynamic scope function for transaction-aware caching
 ```typescript
 // Basic usage with database IDs
 const loader = createBatchLoader<User, string>({
-  name: 'users',
+  name: "users",
   batchFn: async (ids) => {
     const users = await db.users.findByIds(ids);
-    return ids.map(id => users.get(id) ?? null);
+    return ids.map((id) => users.get(id) ?? null);
   },
 });
 
-const user = await loader.load('user-123');
+const user = await loader.load("user-123");
 ```
 
 ```typescript
 // With transaction-aware scoping
 const orderLoader = createBatchLoader<Order, string>({
-  name: 'orders',
+  name: "orders",
   batchFn: async (ids) => await fetchOrders(ids),
   resolveScope: () => TransactionContext.get()?.id,
 });

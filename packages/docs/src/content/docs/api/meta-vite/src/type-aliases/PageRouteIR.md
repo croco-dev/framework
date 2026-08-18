@@ -16,7 +16,7 @@ Normalized from PageRouteDefinition by route compiler.
 
 > `optional` **componentRef?**: `string`
 
-***
+---
 
 ### head?
 
@@ -26,19 +26,19 @@ Normalized from PageRouteDefinition by route compiler.
 
 [`HeadMetadata`](/api/meta-vite/src/type-aliases/headmetadata/)
 
-***
+---
 
 ### mode
 
 > **mode**: [`RenderMode`](/api/meta-vite/src/type-aliases/rendermode/)
 
-***
+---
 
 ### path
 
 > **path**: `string`
 
-***
+---
 
 ### revalidateMs?
 

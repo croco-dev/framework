@@ -13,13 +13,13 @@ title: "ProblemRegistrySnapshotPackage"
 
 > `readonly` **package**: `string`
 
-***
+---
 
 ### packagePrefix
 
 > `readonly` **packagePrefix**: `string`
 
-***
+---
 
 ### problemCodes
 

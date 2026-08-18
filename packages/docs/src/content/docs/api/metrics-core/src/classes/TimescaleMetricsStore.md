@@ -72,7 +72,7 @@ MRR 변동 데이터 배열
 
 [`MetricsRepository`](/api/metrics-core/src/classes/metricsrepository/).[`getMRRHistory`](/api/metrics-core/src/classes/metricsrepository/#getmrrhistory)
 
-***
+---
 
 ### getRetentionMetrics()
 
@@ -104,7 +104,7 @@ MRR 변동 데이터 배열
 
 [`MetricsRepository`](/api/metrics-core/src/classes/metricsrepository/).[`getRetentionMetrics`](/api/metrics-core/src/classes/metricsrepository/#getretentionmetrics)
 
-***
+---
 
 ### getSnapshot()
 
@@ -136,7 +136,7 @@ MRR 변동 데이터 배열
 
 [`MetricsRepository`](/api/metrics-core/src/classes/metricsrepository/).[`getSnapshot`](/api/metrics-core/src/classes/metricsrepository/#getsnapshot)
 
-***
+---
 
 ### recordMRRMovement()
 
@@ -184,7 +184,7 @@ readonly `string`[] = `[]`
 
 [`MetricsRepository`](/api/metrics-core/src/classes/metricsrepository/).[`recordMRRMovement`](/api/metrics-core/src/classes/metricsrepository/#recordmrrmovement)
 
-***
+---
 
 ### recordSnapshot()
 

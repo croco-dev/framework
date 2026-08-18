@@ -13,13 +13,13 @@ title: "TenantImpersonationConsoleLoadingState"
 
 > `readonly` **generatedAt**: `Date`
 
-***
+---
 
 ### kind
 
 > `readonly` **kind**: `"loading"`
 
-***
+---
 
 ### tenantId?
 

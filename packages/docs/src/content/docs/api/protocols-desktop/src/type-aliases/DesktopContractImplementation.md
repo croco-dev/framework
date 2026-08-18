@@ -11,7 +11,7 @@ title: "DesktopContractImplementation"
 
 ### TContract
 
-`TContract` *extends* [`AnyDesktopContract`](/api/protocols-desktop/src/type-aliases/anydesktopcontract/)
+`TContract` _extends_ [`AnyDesktopContract`](/api/protocols-desktop/src/type-aliases/anydesktopcontract/)
 
 ## Properties
 

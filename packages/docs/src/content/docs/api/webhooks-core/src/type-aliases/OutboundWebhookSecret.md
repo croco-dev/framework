@@ -13,25 +13,25 @@ title: "OutboundWebhookSecret"
 
 > `readonly` **endpointId**: `string`
 
-***
+---
 
 ### expiresAt?
 
 > `readonly` `optional` **expiresAt?**: `Date`
 
-***
+---
 
 ### material
 
 > `readonly` **material**: `Uint8Array`
 
-***
+---
 
 ### tenantId
 
 > `readonly` **tenantId**: `string`
 
-***
+---
 
 ### version
 

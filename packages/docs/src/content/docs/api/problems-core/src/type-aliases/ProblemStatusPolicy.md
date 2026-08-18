@@ -13,13 +13,13 @@ title: "ProblemStatusPolicy"
 
 > `readonly` **configuration**: `string`
 
-***
+---
 
 ### defaultStatus
 
 > `readonly` **defaultStatus**: `number`
 
-***
+---
 
 ### kind
 

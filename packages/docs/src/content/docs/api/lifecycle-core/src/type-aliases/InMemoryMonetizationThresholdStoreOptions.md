@@ -13,7 +13,7 @@ title: "InMemoryMonetizationThresholdStoreOptions"
 
 > `readonly` `optional` **claimLeaseDurationMs?**: `number`
 
-***
+---
 
 ### now?
 

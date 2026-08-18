@@ -37,7 +37,7 @@ Get all currently effective plan versions, one per plan family.
 
 [`PlanRegistry`](/api/billing-core/src/interfaces/planregistry/).[`getAllPlans`](/api/billing-core/src/interfaces/planregistry/#getallplans)
 
-***
+---
 
 ### getAllPlanVersions()
 
@@ -59,7 +59,7 @@ Get every published version, including future-effective versions.
 
 [`PlanRegistry`](/api/billing-core/src/interfaces/planregistry/).[`getAllPlanVersions`](/api/billing-core/src/interfaces/planregistry/#getallplanversions)
 
-***
+---
 
 ### getPlan()
 
@@ -81,7 +81,7 @@ Get the currently effective version for a plan family.
 
 [`PlanRegistry`](/api/billing-core/src/interfaces/planregistry/).[`getPlan`](/api/billing-core/src/interfaces/planregistry/#getplan)
 
-***
+---
 
 ### getPlanAtDate()
 
@@ -107,7 +107,7 @@ Get the identified plan version effective at a historical instant.
 
 [`PlanRegistry`](/api/billing-core/src/interfaces/planregistry/).[`getPlanAtDate`](/api/billing-core/src/interfaces/planregistry/#getplanatdate)
 
-***
+---
 
 ### getPlanVersion()
 
@@ -129,7 +129,7 @@ Get an immutable plan version by its pinned reference.
 
 [`PlanRegistry`](/api/billing-core/src/interfaces/planregistry/).[`getPlanVersion`](/api/billing-core/src/interfaces/planregistry/#getplanversion)
 
-***
+---
 
 ### publishPlanVersion()
 
@@ -151,7 +151,7 @@ Publish a plan version exactly once.
 
 [`PlanRegistry`](/api/billing-core/src/interfaces/planregistry/).[`publishPlanVersion`](/api/billing-core/src/interfaces/planregistry/#publishplanversion)
 
-***
+---
 
 ### resolveProviderPlanVersion()
 

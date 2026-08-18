@@ -36,7 +36,7 @@ title: "SubscriptionProvider"
 
 `Promise`\<[`SubscriptionPlanReference`](/api/entitlements-core/src/type-aliases/subscriptionplanreference/) \| `null`\>
 
-***
+---
 
 ### token
 

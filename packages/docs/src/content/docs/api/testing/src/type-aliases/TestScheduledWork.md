@@ -13,13 +13,13 @@ title: "TestScheduledWork"
 
 > `readonly` **dueAt**: `string`
 
-***
+---
 
 ### id
 
 > `readonly` **id**: `string`
 
-***
+---
 
 ### source
 

@@ -13,19 +13,19 @@ title: "PlanReleaseImpactFact"
 
 > `readonly` **code**: `string`
 
-***
+---
 
 ### message
 
 > `readonly` **message**: `string`
 
-***
+---
 
 ### outcome?
 
 > `readonly` `optional` **outcome?**: `"pass"` \| `"fail"`
 
-***
+---
 
 ### references
 

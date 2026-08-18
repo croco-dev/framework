@@ -13,7 +13,7 @@ title: "CacheInvalidationResult"
 
 > `readonly` **eventName**: `string`
 
-***
+---
 
 ### operations
 

@@ -15,7 +15,7 @@ title: "SnapshotSchedulerConfig"
 
 > `optional` **retentionLookbackDays?**: `number`
 
-***
+---
 
 ### tenantId
 

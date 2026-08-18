@@ -5,10 +5,10 @@ prev: false
 title: "ProblemClientFailure"
 ---
 
-> **ProblemClientFailure**\<`Problem`\> = \[`Problem`\] *extends* \[`never`\] ? `never` : [`ProblemClientProblemFailure`](/api/frontend-problems/src/type-aliases/problemclientproblemfailure/)\<`Problem`\> \| [`ProblemClientExternalFailure`](/api/frontend-problems/src/type-aliases/problemclientexternalfailure/)
+> **ProblemClientFailure**\<`Problem`\> = \[`Problem`\] _extends_ \[`never`\] ? `never` : [`ProblemClientProblemFailure`](/api/frontend-problems/src/type-aliases/problemclientproblemfailure/)\<`Problem`\> \| [`ProblemClientExternalFailure`](/api/frontend-problems/src/type-aliases/problemclientexternalfailure/)
 
 ## Type Parameters
 
 ### Problem
 
-`Problem` *extends* [`ProblemDeclaration`](/api/frontend-problems/src/type-aliases/problemdeclaration/) = `never`
+`Problem` _extends_ [`ProblemDeclaration`](/api/frontend-problems/src/type-aliases/problemdeclaration/) = `never`

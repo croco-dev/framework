@@ -13,19 +13,19 @@ title: "ProviderConformanceProfileManifest"
 
 > `readonly` **capabilities**: readonly [`ProviderConformanceCapabilityManifest`](/api/testing/src/type-aliases/providerconformancecapabilitymanifest/)[]
 
-***
+---
 
 ### category
 
 > `readonly` **category**: [`ProviderConformanceCategory`](/api/testing/src/type-aliases/providerconformancecategory/)
 
-***
+---
 
 ### packageName
 
 > `readonly` **packageName**: `string`
 
-***
+---
 
 ### providerName
 

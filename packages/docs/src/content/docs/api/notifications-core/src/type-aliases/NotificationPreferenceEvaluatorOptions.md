@@ -13,7 +13,7 @@ title: "NotificationPreferenceEvaluatorOptions"
 
 > `readonly` `optional` **defaultAllowed?**: `boolean`
 
-***
+---
 
 ### rules?
 

@@ -15,37 +15,37 @@ Tenant entity
 
 > **createdAt**: `Date`
 
-***
+---
 
 ### id
 
 > **id**: `string`
 
-***
+---
 
 ### name
 
 > **name**: `string`
 
-***
+---
 
 ### settings
 
 > **settings**: [`TenantSettings`](/api/tenant-core/src/type-aliases/tenantsettings/)
 
-***
+---
 
 ### slug
 
 > **slug**: `string`
 
-***
+---
 
 ### status
 
 > **status**: [`TenantStatus`](/api/tenant-core/src/type-aliases/tenantstatus/)
 
-***
+---
 
 ### updatedAt
 

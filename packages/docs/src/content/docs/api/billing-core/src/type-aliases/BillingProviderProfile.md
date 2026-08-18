@@ -11,11 +11,11 @@ title: "BillingProviderProfile"
 
 ### ProviderName
 
-`ProviderName` *extends* `string` = `string`
+`ProviderName` _extends_ `string` = `string`
 
 ### Capabilities
 
-`Capabilities` *extends* [`BillingProviderCapabilityProfile`](/api/billing-core/src/type-aliases/billingprovidercapabilityprofile/) = [`BillingProviderCapabilityProfile`](/api/billing-core/src/type-aliases/billingprovidercapabilityprofile/)
+`Capabilities` _extends_ [`BillingProviderCapabilityProfile`](/api/billing-core/src/type-aliases/billingprovidercapabilityprofile/) = [`BillingProviderCapabilityProfile`](/api/billing-core/src/type-aliases/billingprovidercapabilityprofile/)
 
 ## Properties
 
@@ -23,7 +23,7 @@ title: "BillingProviderProfile"
 
 > `readonly` **capabilities**: `Capabilities`
 
-***
+---
 
 ### providerName
 

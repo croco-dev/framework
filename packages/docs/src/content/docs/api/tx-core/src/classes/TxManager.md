@@ -57,7 +57,7 @@ Whether the active callback still accepts hooks and preserves their delivery evi
 
 [`TransactionContext`](/api/framework-context/src/interfaces/transactioncontext/).[`canRegisterAfterCommit`](/api/framework-context/src/interfaces/transactioncontext/#canregisteraftercommit)
 
-***
+---
 
 ### getClient()
 
@@ -67,7 +67,7 @@ Whether the active callback still accepts hooks and preserves their delivery evi
 
 `TClient` \| `null`
 
-***
+---
 
 ### isInTransaction()
 
@@ -81,7 +81,7 @@ Whether the active callback still accepts hooks and preserves their delivery evi
 
 [`TransactionContext`](/api/framework-context/src/interfaces/transactioncontext/).[`isInTransaction`](/api/framework-context/src/interfaces/transactioncontext/#isintransaction)
 
-***
+---
 
 ### onAfterCommit()
 
@@ -101,7 +101,7 @@ Whether the active callback still accepts hooks and preserves their delivery evi
 
 [`TransactionContext`](/api/framework-context/src/interfaces/transactioncontext/).[`onAfterCommit`](/api/framework-context/src/interfaces/transactioncontext/#onaftercommit)
 
-***
+---
 
 ### run()
 
@@ -127,7 +127,7 @@ Whether the active callback still accepts hooks and preserves their delivery evi
 
 `Promise`\<`T`\>
 
-***
+---
 
 ### runWithOutcome()
 
@@ -153,7 +153,7 @@ Whether the active callback still accepts hooks and preserves their delivery evi
 
 `Promise`\<[`TxRunOutcome`](/api/tx-core/src/type-aliases/txrunoutcome/)\<`T`\>\>
 
-***
+---
 
 ### suspend()
 

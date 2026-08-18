@@ -53,7 +53,7 @@ title: "LlmGeneratedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventId`](/api/events-core/src/classes/domainevent/#eventid)
 
-***
+---
 
 ### eventName
 
@@ -63,7 +63,7 @@ title: "LlmGeneratedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventName`](/api/events-core/src/classes/domainevent/#eventname)
 
-***
+---
 
 ### metadata
 
@@ -73,25 +73,25 @@ title: "LlmGeneratedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`metadata`](/api/events-core/src/classes/domainevent/#metadata)
 
-***
+---
 
 ### modelId
 
 > `readonly` **modelId**: `string`
 
-***
+---
 
 ### prompt
 
 > `readonly` **prompt**: `string`
 
-***
+---
 
 ### result
 
 > `readonly` **result**: `string`
 
-***
+---
 
 ### timestamp
 
@@ -101,19 +101,19 @@ title: "LlmGeneratedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`timestamp`](/api/events-core/src/classes/domainevent/#timestamp)
 
-***
+---
 
 ### type
 
 > `readonly` **type**: `"llm.generated"` = `"llm.generated"`
 
-***
+---
 
 ### usage
 
 > `readonly` **usage**: [`LlmUsage`](/api/llm-core/src/type-aliases/llmusage/)
 
-***
+---
 
 ### eventName
 

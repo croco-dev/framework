@@ -11,7 +11,7 @@ title: "DefineProblemRegistryOptions"
 
 ### Problems
 
-`Problems` *extends* [`ProblemRegistryProblemDefinitions`](/api/problems-core/src/type-aliases/problemregistryproblemdefinitions/) = [`ProblemRegistryProblemDefinitions`](/api/problems-core/src/type-aliases/problemregistryproblemdefinitions/)
+`Problems` _extends_ [`ProblemRegistryProblemDefinitions`](/api/problems-core/src/type-aliases/problemregistryproblemdefinitions/) = [`ProblemRegistryProblemDefinitions`](/api/problems-core/src/type-aliases/problemregistryproblemdefinitions/)
 
 ## Properties
 
@@ -19,7 +19,7 @@ title: "DefineProblemRegistryOptions"
 
 > `readonly` **package**: `string`
 
-***
+---
 
 ### problems
 

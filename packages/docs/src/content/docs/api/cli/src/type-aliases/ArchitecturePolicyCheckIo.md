@@ -13,7 +13,7 @@ title: "ArchitecturePolicyCheckIo"
 
 > `readonly` **cwd**: `string`
 
-***
+---
 
 ### readFile
 
@@ -29,7 +29,7 @@ title: "ArchitecturePolicyCheckIo"
 
 `string`
 
-***
+---
 
 ### stderr
 
@@ -45,7 +45,7 @@ title: "ArchitecturePolicyCheckIo"
 
 `void`
 
-***
+---
 
 ### stdout
 

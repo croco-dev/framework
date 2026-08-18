@@ -13,7 +13,7 @@ title: "BootstrapValidationPolicy"
 
 > `readonly` **di**: `NonNullable`\<[`AppConfig`](/api/transports-http/src/interfaces/appconfig/)\[`"diValidation"`\]\>
 
-***
+---
 
 ### security
 

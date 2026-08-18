@@ -13,25 +13,25 @@ title: "SubscriptionQuantityFailureEvidence"
 
 > `readonly` **code**: `string`
 
-***
+---
 
 ### detail
 
 > `readonly` **detail**: `string`
 
-***
+---
 
 ### occurredAt
 
 > `readonly` **occurredAt**: `Date`
 
-***
+---
 
 ### retryable
 
 > `readonly` **retryable**: `boolean`
 
-***
+---
 
 ### status
 

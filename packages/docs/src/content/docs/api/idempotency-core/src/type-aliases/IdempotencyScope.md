@@ -13,7 +13,7 @@ title: "IdempotencyScope"
 
 > `readonly` `optional` **namespace?**: `string`
 
-***
+---
 
 ### tenantId?
 

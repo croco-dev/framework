@@ -15,13 +15,13 @@ title: "FixedWindowRefundReceipt"
 
 > **algorithm**: `"fixed"`
 
-***
+---
 
 ### id
 
 > **id**: `string`
 
-***
+---
 
 ### windowStart
 

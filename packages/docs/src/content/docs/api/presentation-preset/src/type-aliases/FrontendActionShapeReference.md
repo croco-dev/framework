@@ -13,19 +13,19 @@ title: "FrontendActionShapeReference"
 
 > `readonly` `optional` **description?**: `string`
 
-***
+---
 
 ### kind
 
 > `readonly` **kind**: [`FrontendActionShapeReferenceKind`](/api/presentation-preset/src/type-aliases/frontendactionshapereferencekind/)
 
-***
+---
 
 ### locations?
 
 > `readonly` `optional` **locations?**: readonly [`FrontendActionInputLocation`](/api/presentation-preset/src/type-aliases/frontendactioninputlocation/)[]
 
-***
+---
 
 ### ref?
 

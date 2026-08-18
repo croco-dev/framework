@@ -45,7 +45,7 @@ In-memory transactional event store. It is intended for tests, local fixtures, a
 
 [`TransactionalEventStore`](/api/events-tx/src/interfaces/transactionaleventstore/).[`appendOutbox`](/api/events-tx/src/interfaces/transactionaleventstore/#appendoutbox)
 
-***
+---
 
 ### claimOutboxBatch()
 
@@ -69,7 +69,7 @@ In-memory transactional event store. It is intended for tests, local fixtures, a
 
 [`TransactionalEventStore`](/api/events-tx/src/interfaces/transactionaleventstore/).[`claimOutboxBatch`](/api/events-tx/src/interfaces/transactionaleventstore/#claimoutboxbatch)
 
-***
+---
 
 ### clear()
 
@@ -79,7 +79,7 @@ In-memory transactional event store. It is intended for tests, local fixtures, a
 
 `void`
 
-***
+---
 
 ### createTxAdapter()
 
@@ -89,7 +89,7 @@ In-memory transactional event store. It is intended for tests, local fixtures, a
 
 [`TxAdapter`](/api/tx-core/src/interfaces/txadapter/)\<[`InMemoryTransactionalEventStoreClient`](/api/events-tx/src/type-aliases/inmemorytransactionaleventstoreclient/)\>
 
-***
+---
 
 ### findInboxRecord()
 
@@ -117,7 +117,7 @@ In-memory transactional event store. It is intended for tests, local fixtures, a
 
 [`TransactionalEventStore`](/api/events-tx/src/interfaces/transactionaleventstore/).[`findInboxRecord`](/api/events-tx/src/interfaces/transactionaleventstore/#findinboxrecord)
 
-***
+---
 
 ### findOutboxById()
 
@@ -141,7 +141,7 @@ In-memory transactional event store. It is intended for tests, local fixtures, a
 
 [`TransactionalEventStore`](/api/events-tx/src/interfaces/transactionaleventstore/).[`findOutboxById`](/api/events-tx/src/interfaces/transactionaleventstore/#findoutboxbyid)
 
-***
+---
 
 ### findOutboxByIdempotencyKey()
 
@@ -165,7 +165,7 @@ In-memory transactional event store. It is intended for tests, local fixtures, a
 
 [`TransactionalEventStore`](/api/events-tx/src/interfaces/transactionaleventstore/).[`findOutboxByIdempotencyKey`](/api/events-tx/src/interfaces/transactionaleventstore/#findoutboxbyidempotencykey)
 
-***
+---
 
 ### listInboxRecords()
 
@@ -189,7 +189,7 @@ In-memory transactional event store. It is intended for tests, local fixtures, a
 
 [`TransactionalEventStore`](/api/events-tx/src/interfaces/transactionaleventstore/).[`listInboxRecords`](/api/events-tx/src/interfaces/transactionaleventstore/#listinboxrecords)
 
-***
+---
 
 ### listOutboxMessages()
 
@@ -213,7 +213,7 @@ In-memory transactional event store. It is intended for tests, local fixtures, a
 
 [`TransactionalEventStore`](/api/events-tx/src/interfaces/transactionaleventstore/).[`listOutboxMessages`](/api/events-tx/src/interfaces/transactionaleventstore/#listoutboxmessages)
 
-***
+---
 
 ### markInboxFailed()
 
@@ -237,7 +237,7 @@ In-memory transactional event store. It is intended for tests, local fixtures, a
 
 [`TransactionalEventStore`](/api/events-tx/src/interfaces/transactionaleventstore/).[`markInboxFailed`](/api/events-tx/src/interfaces/transactionaleventstore/#markinboxfailed)
 
-***
+---
 
 ### markInboxProcessed()
 
@@ -261,7 +261,7 @@ In-memory transactional event store. It is intended for tests, local fixtures, a
 
 [`TransactionalEventStore`](/api/events-tx/src/interfaces/transactionaleventstore/).[`markInboxProcessed`](/api/events-tx/src/interfaces/transactionaleventstore/#markinboxprocessed)
 
-***
+---
 
 ### markOutboxDeadLettered()
 
@@ -285,7 +285,7 @@ In-memory transactional event store. It is intended for tests, local fixtures, a
 
 [`TransactionalEventStore`](/api/events-tx/src/interfaces/transactionaleventstore/).[`markOutboxDeadLettered`](/api/events-tx/src/interfaces/transactionaleventstore/#markoutboxdeadlettered)
 
-***
+---
 
 ### markOutboxFailed()
 
@@ -309,7 +309,7 @@ In-memory transactional event store. It is intended for tests, local fixtures, a
 
 [`TransactionalEventStore`](/api/events-tx/src/interfaces/transactionaleventstore/).[`markOutboxFailed`](/api/events-tx/src/interfaces/transactionaleventstore/#markoutboxfailed)
 
-***
+---
 
 ### markOutboxPublished()
 
@@ -333,7 +333,7 @@ In-memory transactional event store. It is intended for tests, local fixtures, a
 
 [`TransactionalEventStore`](/api/events-tx/src/interfaces/transactionaleventstore/).[`markOutboxPublished`](/api/events-tx/src/interfaces/transactionaleventstore/#markoutboxpublished)
 
-***
+---
 
 ### startInboxProcessing()
 

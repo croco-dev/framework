@@ -11,4 +11,4 @@ title: "CrocoProblemStatus"
 
 ### Code
 
-`Code` *extends* [`CrocoProblemCode`](/api/problems-core/src/type-aliases/crocoproblemcode/) = [`CrocoProblemCode`](/api/problems-core/src/type-aliases/crocoproblemcode/)
+`Code` _extends_ [`CrocoProblemCode`](/api/problems-core/src/type-aliases/crocoproblemcode/) = [`CrocoProblemCode`](/api/problems-core/src/type-aliases/crocoproblemcode/)

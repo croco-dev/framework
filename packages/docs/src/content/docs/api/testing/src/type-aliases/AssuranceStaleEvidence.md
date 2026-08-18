@@ -13,25 +13,25 @@ title: "AssuranceStaleEvidence"
 
 > `readonly` **evidenceId**: `string`
 
-***
+---
 
 ### field
 
 > `readonly` **field**: `"intent.contractIds"` \| `` `observed.${AssuranceObservationField}` ``
 
-***
+---
 
 ### recoveryAction
 
 > `readonly` **recoveryAction**: `string`
 
-***
+---
 
 ### status
 
 > `readonly` **status**: `"stale"`
 
-***
+---
 
 ### unknownId
 

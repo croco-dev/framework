@@ -25,7 +25,7 @@ ARPA = MRR / Active Customer Count
 
 Average Revenue Per Account
 
-***
+---
 
 ### ltv
 

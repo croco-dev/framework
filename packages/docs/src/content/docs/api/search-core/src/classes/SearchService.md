@@ -43,7 +43,7 @@ tenant 격리를 자동 적용하는 상위 검색 서비스입니다.
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### deleteDocument()
 
@@ -63,7 +63,7 @@ tenant 격리를 자동 적용하는 상위 검색 서비스입니다.
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### indexDocument()
 
@@ -83,7 +83,7 @@ tenant 격리를 자동 적용하는 상위 검색 서비스입니다.
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### search()
 

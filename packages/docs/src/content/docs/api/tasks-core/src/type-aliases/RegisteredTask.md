@@ -13,19 +13,19 @@ title: "RegisteredTask"
 
 > **metadata**: [`TaskMetadata`](/api/tasks-core/src/type-aliases/taskmetadata/)
 
-***
+---
 
 ### methodName
 
 > **methodName**: `string`
 
-***
+---
 
 ### name
 
 > **name**: `string`
 
-***
+---
 
 ### target
 

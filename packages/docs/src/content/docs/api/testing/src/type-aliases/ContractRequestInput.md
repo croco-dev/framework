@@ -13,25 +13,25 @@ title: "ContractRequestInput"
 
 > `readonly` `optional` **body?**: `unknown`
 
-***
+---
 
 ### headers?
 
 > `readonly` `optional` **headers?**: `unknown`
 
-***
+---
 
 ### path?
 
 > `readonly` `optional` **path?**: `unknown`
 
-***
+---
 
 ### query?
 
 > `readonly` `optional` **query?**: `unknown`
 
-***
+---
 
 ### transportHeaders?
 

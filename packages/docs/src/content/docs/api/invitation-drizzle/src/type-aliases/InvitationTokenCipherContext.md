@@ -13,13 +13,13 @@ title: "InvitationTokenCipherContext"
 
 > **idempotencyKey**: `string`
 
-***
+---
 
 ### invitationId
 
 > **invitationId**: `string`
 
-***
+---
 
 ### tenantId
 

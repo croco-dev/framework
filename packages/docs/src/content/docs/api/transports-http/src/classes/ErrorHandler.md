@@ -47,7 +47,7 @@ HTTP 애플리케이션 구성과 라우트 실행에 사용하는 핵심 공개
 
 `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### createProblemResponseBody()
 
@@ -67,7 +67,7 @@ HTTP 애플리케이션 구성과 라우트 실행에 사용하는 핵심 공개
 
 [`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
 
-***
+---
 
 ### handleError()
 

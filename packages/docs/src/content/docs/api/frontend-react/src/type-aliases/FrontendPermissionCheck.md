@@ -13,25 +13,25 @@ title: "FrontendPermissionCheck"
 
 > `readonly` **granted**: `boolean`
 
-***
+---
 
 ### permission
 
 > `readonly` **permission**: `string`
 
-***
+---
 
 ### problem?
 
 > `readonly` `optional` **problem?**: [`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
 
-***
+---
 
 ### recoveryActions?
 
 > `readonly` `optional` **recoveryActions?**: readonly [`FrontendRecoveryAction`](/api/frontend-react/src/type-aliases/frontendrecoveryaction/)[]
 
-***
+---
 
 ### source?
 

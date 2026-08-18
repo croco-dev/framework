@@ -11,7 +11,7 @@ title: "defineDataGovernanceResource"
 
 ### TResource
 
-`TResource` *extends* [`DataGovernanceResource`](/api/governance-core/src/type-aliases/datagovernanceresource/)
+`TResource` _extends_ [`DataGovernanceResource`](/api/governance-core/src/type-aliases/datagovernanceresource/)
 
 ## Parameters
 

@@ -13,13 +13,13 @@ title: "ProviderNoCredentialDiagnostic"
 
 > `readonly` **code**: `string`
 
-***
+---
 
 ### details?
 
 > `readonly` `optional` **details?**: `unknown`
 
-***
+---
 
 ### message
 

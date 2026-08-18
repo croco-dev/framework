@@ -5,4 +5,4 @@ prev: false
 title: "POLICY_TARGET_KINDS"
 ---
 
-> `const` **POLICY\_TARGET\_KINDS**: readonly \[`"route"`, `"service"`, `"event-handler"`\]
+> `const` **POLICY_TARGET_KINDS**: readonly \[`"route"`, `"service"`, `"event-handler"`\]

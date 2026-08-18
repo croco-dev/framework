@@ -13,25 +13,25 @@ title: "TenantModelCompatibilityInput"
 
 > `readonly` `optional` **capabilities?**: readonly [`TenantModelCapabilityName`](/api/tenant-core/src/type-aliases/tenantmodelcapabilityname/)[]
 
-***
+---
 
 ### packages
 
 > `readonly` **packages**: readonly `string`[]
 
-***
+---
 
 ### providerProfileName
 
 > `readonly` **providerProfileName**: `string`
 
-***
+---
 
 ### runtimeTarget
 
 > `readonly` **runtimeTarget**: [`TenantModelRuntimeTarget`](/api/tenant-core/src/type-aliases/tenantmodelruntimetarget/)
 
-***
+---
 
 ### tenantModel
 

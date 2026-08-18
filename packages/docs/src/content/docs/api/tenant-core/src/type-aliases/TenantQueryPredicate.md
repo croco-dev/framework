@@ -13,13 +13,13 @@ title: "TenantQueryPredicate"
 
 > `readonly` **field**: `string`
 
-***
+---
 
 ### operator
 
 > `readonly` **operator**: `"="` \| `"in"` \| `"rls"` \| `"raw"`
 
-***
+---
 
 ### value?
 

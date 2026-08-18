@@ -5,4 +5,4 @@ prev: false
 title: "PROJECT_MANIFEST_BUNDLE_ARTIFACTS"
 ---
 
-> `const` **PROJECT\_MANIFEST\_BUNDLE\_ARTIFACTS**: `Record`\<`"providers"` \| `"problems"` \| `"runtime"` \| `"contractGraph"` \| `"diGraph"` \| `"policies"`, `"contract-graph.json"` \| `"problems.json"` \| `"di-graph.json"` \| `"runtime.json"` \| `"policies.json"` \| `"providers.json"`\>
+> `const` **PROJECT_MANIFEST_BUNDLE_ARTIFACTS**: `Record`\<`"providers"` \| `"problems"` \| `"runtime"` \| `"contractGraph"` \| `"diGraph"` \| `"policies"`, `"contract-graph.json"` \| `"problems.json"` \| `"di-graph.json"` \| `"runtime.json"` \| `"policies.json"` \| `"providers.json"`\>

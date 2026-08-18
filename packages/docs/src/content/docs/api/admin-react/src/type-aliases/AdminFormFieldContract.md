@@ -11,11 +11,11 @@ title: "AdminFormFieldContract"
 
 ### TValues
 
-`TValues` *extends* `object`
+`TValues` _extends_ `object`
 
 ### TName
 
-`TName` *extends* [`AdminFormFieldName`](/api/admin-react/src/type-aliases/adminformfieldname/)\<`TValues`\> = [`AdminFormFieldName`](/api/admin-react/src/type-aliases/adminformfieldname/)\<`TValues`\>
+`TName` _extends_ [`AdminFormFieldName`](/api/admin-react/src/type-aliases/adminformfieldname/)\<`TValues`\> = [`AdminFormFieldName`](/api/admin-react/src/type-aliases/adminformfieldname/)\<`TValues`\>
 
 ## Properties
 
@@ -23,37 +23,37 @@ title: "AdminFormFieldContract"
 
 > `readonly` `optional` **description?**: `string`
 
-***
+---
 
 ### inputType?
 
 > `readonly` `optional` **inputType?**: [`AdminFormFieldType`](/api/admin-react/src/type-aliases/adminformfieldtype/)
 
-***
+---
 
 ### label
 
 > `readonly` **label**: `string`
 
-***
+---
 
 ### name
 
 > `readonly` **name**: `TName`
 
-***
+---
 
 ### options?
 
 > `readonly` `optional` **options?**: readonly [`AdminFormFieldOption`](/api/admin-react/src/type-aliases/adminformfieldoption/)\<`TValues`\[`TName`\]\>[]
 
-***
+---
 
 ### required?
 
 > `readonly` `optional` **required?**: `boolean`
 
-***
+---
 
 ### schemaPath?
 

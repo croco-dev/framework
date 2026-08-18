@@ -11,8 +11,8 @@ title: "DesktopHandlerContext"
 
 ### TCommand
 
-`TCommand` *extends* [`AnyDesktopCommand`](/api/protocols-desktop/src/type-aliases/anydesktopcommand/)
+`TCommand` _extends_ [`AnyDesktopCommand`](/api/protocols-desktop/src/type-aliases/anydesktopcommand/)
 
 ### TContract
 
-`TContract` *extends* [`AnyDesktopContract`](/api/protocols-desktop/src/type-aliases/anydesktopcontract/)
+`TContract` _extends_ [`AnyDesktopContract`](/api/protocols-desktop/src/type-aliases/anydesktopcontract/)

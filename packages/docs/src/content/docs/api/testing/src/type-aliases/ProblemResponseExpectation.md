@@ -13,31 +13,31 @@ title: "ProblemResponseExpectation"
 
 > `readonly` `optional` **code?**: `string`
 
-***
+---
 
 ### detailIncludes?
 
 > `readonly` `optional` **detailIncludes?**: `string` \| readonly `string`[]
 
-***
+---
 
 ### instance?
 
 > `readonly` `optional` **instance?**: `string`
 
-***
+---
 
 ### status?
 
 > `readonly` `optional` **status?**: `number`
 
-***
+---
 
 ### title?
 
 > `readonly` `optional` **title?**: `string`
 
-***
+---
 
 ### type?
 

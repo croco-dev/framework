@@ -13,9 +13,9 @@ API 및 정적 자산에 대한 Fetcher 바인딩을 제공합니다.
 
 ## Type Declaration
 
-### API\_WORKER?
+### API_WORKER?
 
-> `optional` **API\_WORKER?**: `Fetcher`
+> `optional` **API_WORKER?**: `Fetcher`
 
 API 서비스 Worker 바인딩
 

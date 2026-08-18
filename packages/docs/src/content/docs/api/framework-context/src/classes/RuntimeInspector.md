@@ -31,7 +31,7 @@ title: "RuntimeInspector"
 
 `void`
 
-***
+---
 
 ### finishRequest()
 
@@ -47,7 +47,7 @@ title: "RuntimeInspector"
 
 [`RuntimeInspectionRecord`](/api/framework-context/src/type-aliases/runtimeinspectionrecord/) \| `undefined`
 
-***
+---
 
 ### recordEvent()
 
@@ -63,7 +63,7 @@ title: "RuntimeInspector"
 
 `void`
 
-***
+---
 
 ### snapshot()
 
@@ -73,7 +73,7 @@ title: "RuntimeInspector"
 
 [`RuntimeInspectorSnapshot`](/api/framework-context/src/type-aliases/runtimeinspectorsnapshot/)
 
-***
+---
 
 ### startRequest()
 

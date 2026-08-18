@@ -16,11 +16,11 @@ caching behavior, and scoping options.
 
 ```typescript
 const options: BatchLoaderOptions<string, User> = {
-  name: 'users',
+  name: "users",
   batchFn: async (ids) => await fetchUsers(ids),
   maxBatchSize: 100,
   cache: true,
-  scope: 'tenant-123',
+  scope: "tenant-123",
 };
 ```
 
@@ -54,7 +54,7 @@ The type of loaded values
 
 `void`
 
-***
+---
 
 ### clearAll()
 
@@ -64,7 +64,7 @@ The type of loaded values
 
 `void`
 
-***
+---
 
 ### load()
 
@@ -80,7 +80,7 @@ The type of loaded values
 
 `Promise`\<`V` \| `null`\>
 
-***
+---
 
 ### loadMany()
 
@@ -96,7 +96,7 @@ The type of loaded values
 
 `Promise`\<(`Error` \| `V` \| `null`)[]\>
 
-***
+---
 
 ### prime()
 

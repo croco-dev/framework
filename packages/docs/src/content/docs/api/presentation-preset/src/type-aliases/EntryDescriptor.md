@@ -18,7 +18,7 @@ Maps CrocoPresetConfig.output entries to actual file paths
 
 The CJS entry file path (only for dual format)
 
-***
+---
 
 ### exportName
 
@@ -26,7 +26,7 @@ The CJS entry file path (only for dual format)
 
 Export subpath (e.g. ".", "./entry", "./handler", "./fetch")
 
-***
+---
 
 ### main
 
@@ -34,7 +34,7 @@ Export subpath (e.g. ".", "./entry", "./handler", "./fetch")
 
 The main entry file path
 
-***
+---
 
 ### types
 

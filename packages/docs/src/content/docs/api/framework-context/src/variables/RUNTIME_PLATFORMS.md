@@ -5,4 +5,4 @@ prev: false
 title: "RUNTIME_PLATFORMS"
 ---
 
-> `const` **RUNTIME\_PLATFORMS**: readonly \[`"node"`, `"lambda"`, `"cloudflare-workers"`\]
+> `const` **RUNTIME_PLATFORMS**: readonly \[`"node"`, `"lambda"`, `"cloudflare-workers"`\]

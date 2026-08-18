@@ -443,27 +443,29 @@ export class LifecycleRuleEvaluator {
       };
     }
 
-    let execution: LifecycleRuleExecutionResult<readonly Promise<LifecycleActionResult>[]>;
+    let execution: LifecycleRuleExecutionResult<readonly LifecycleActionResult[]>;
     let dispatchStarted = false;
     try {
       execution = await this.registry.executeIfActive(
         registration.rule.id,
         registration.descriptor.version,
         `lifecycle_execution_${globalThis.crypto.randomUUID()}`,
-        () => {
+        async () => {
           dispatchStarted = true;
-          return actions.map(async (action) => {
-            try {
-              return await this.actionAdapter.execute(action, context, runBase);
-            } catch (error) {
-              return summarizeAdapterError(
-                action,
-                new LifecycleActionAdapterProblem(
-                  error instanceof Error ? error.message : String(error),
-                ),
-              );
-            }
-          });
+          return Promise.all(
+            actions.map(async (action) => {
+              try {
+                return await this.actionAdapter.execute(action, context, runBase);
+              } catch (error) {
+                return summarizeAdapterError(
+                  action,
+                  new LifecycleActionAdapterProblem(
+                    error instanceof Error ? error.message : String(error),
+                  ),
+                );
+              }
+            }),
+          );
         },
       );
     } catch (error) {
@@ -485,7 +487,7 @@ export class LifecycleRuleEvaluator {
         persisted: false,
       };
     }
-    const actionResults = await Promise.all(execution.value);
+    const actionResults = execution.value;
     const status = deriveRunStatus(actionResults);
     const firstFailure = actionResults.find((result) => result.status === "failure");
 

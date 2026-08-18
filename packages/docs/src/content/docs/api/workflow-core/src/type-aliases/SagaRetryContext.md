@@ -13,25 +13,25 @@ title: "SagaRetryContext"
 
 > `readonly` **attempt**: `number`
 
-***
+---
 
 ### error
 
 > `readonly` **error**: `unknown`
 
-***
+---
 
 ### executionId
 
 > `readonly` **executionId**: `string`
 
-***
+---
 
 ### saga
 
 > `readonly` **saga**: [`SagaDefinition`](/api/workflow-core/src/type-aliases/sagadefinition/)
 
-***
+---
 
 ### step
 

@@ -17,13 +17,13 @@ title: "redisConfig"
 
 > **server**: `object`
 
-#### server.REDIS\_TOKEN
+#### server.REDIS_TOKEN
 
-> **REDIS\_TOKEN**: `ZodOptional`\<`ZodString`\>
+> **REDIS_TOKEN**: `ZodOptional`\<`ZodString`\>
 
-#### server.REDIS\_URL
+#### server.REDIS_URL
 
-> **REDIS\_URL**: `ZodString`
+> **REDIS_URL**: `ZodString`
 
 ### shared
 

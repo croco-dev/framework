@@ -21,7 +21,7 @@ Quick Ratio = (New MRR + Expansion MRR) / (Churned MRR + Contraction MRR)
 
 New + Expansion / (Churned + Contraction). >1 means growing, <1 means shrinking
 
-***
+---
 
 ### revenueCC?
 
@@ -29,7 +29,7 @@ New + Expansion / (Churned + Contraction). >1 means growing, <1 means shrinking
 
 Optional: Revenue-based cohort capacity analysis
 
-***
+---
 
 ### userCC?
 

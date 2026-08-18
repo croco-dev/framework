@@ -13,19 +13,19 @@ title: "DefinePolicyOptions"
 
 > `readonly` `optional` **order?**: `number`
 
-***
+---
 
 ### override?
 
 > `readonly` `optional` **override?**: `boolean`
 
-***
+---
 
 ### requiredCapabilities?
 
 > `readonly` `optional` **requiredCapabilities?**: readonly [`PolicyRuntimeCapability`](/api/framework-context/src/type-aliases/policyruntimecapability/)[]
 
-***
+---
 
 ### source?
 

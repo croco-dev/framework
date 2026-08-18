@@ -13,55 +13,55 @@ title: "AuditLogsTable"
 
 > **action**: `string`
 
-***
+---
 
 ### actorId
 
 > **actorId**: `string`
 
-***
+---
 
 ### createdAt
 
 > **createdAt**: `Date`
 
-***
+---
 
 ### diff
 
 > **diff**: `Record`\<`string`, `unknown`\> \| `null`
 
-***
+---
 
 ### id
 
 > **id**: `string` \| `number`
 
-***
+---
 
 ### metadata
 
 > **metadata**: `unknown`
 
-***
+---
 
 ### payload
 
 > **payload**: `unknown`
 
-***
+---
 
 ### resourceId
 
 > **resourceId**: `string`
 
-***
+---
 
 ### resourceType
 
 > **resourceType**: `string`
 
-***
+---
 
 ### tenantId
 

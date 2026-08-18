@@ -5,7 +5,7 @@ prev: false
 title: "InferDesktopSchema"
 ---
 
-> **InferDesktopSchema**\<`TSchema`\> = `TSchema` *extends* `object` ? `TOutput` : `TSchema` *extends* `object` ? `TOutput` : `TSchema` *extends* `object` ? `TOutput` : `TSchema`
+> **InferDesktopSchema**\<`TSchema`\> = `TSchema` _extends_ `object` ? `TOutput` : `TSchema` _extends_ `object` ? `TOutput` : `TSchema` _extends_ `object` ? `TOutput` : `TSchema`
 
 ## Type Parameters
 

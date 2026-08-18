@@ -13,25 +13,25 @@ title: "ContractMeterDescriptor"
 
 > `readonly` **aggregation**: `"COUNT"` \| `"SUM"`
 
-***
+---
 
 ### billing
 
 > `readonly` **billing**: `"local"` \| `"required"`
 
-***
+---
 
 ### dimensions?
 
 > `readonly` `optional` **dimensions?**: `Readonly`\<`Record`\<`string`, \{ `kind`: `"enum"`; `values`: readonly (`string` \| `number` \| `boolean`)[]; \}\>\>
 
-***
+---
 
 ### key
 
 > `readonly` **key**: `string`
 
-***
+---
 
 ### unit
 

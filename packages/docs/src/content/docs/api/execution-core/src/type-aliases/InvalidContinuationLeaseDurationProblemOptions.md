@@ -13,13 +13,13 @@ title: "InvalidContinuationLeaseDurationProblemOptions"
 
 > **maximumMs**: `number`
 
-***
+---
 
 ### minimumMs
 
 > **minimumMs**: `number`
 
-***
+---
 
 ### receivedValue
 

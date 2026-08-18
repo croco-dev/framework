@@ -5,4 +5,4 @@ prev: false
 title: "POLICY_DECISION_REDACTED_VALUE"
 ---
 
-> `const` **POLICY\_DECISION\_REDACTED\_VALUE**: `"[Redacted]"` = `"[Redacted]"`
+> `const` **POLICY_DECISION_REDACTED_VALUE**: `"[Redacted]"` = `"[Redacted]"`

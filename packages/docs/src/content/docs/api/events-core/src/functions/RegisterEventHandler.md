@@ -13,7 +13,7 @@ title: "RegisterEventHandler"
 
 ### TArgs
 
-`TArgs` *extends* `unknown`[]
+`TArgs` _extends_ `unknown`[]
 
 ## Parameters
 

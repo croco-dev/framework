@@ -17,8 +17,8 @@ title: "KeyedDesktopCommand"
 
 ### TCommand
 
-`TCommand` *extends* [`AnyDesktopCommand`](/api/protocols-desktop/src/type-aliases/anydesktopcommand/) = [`AnyDesktopCommand`](/api/protocols-desktop/src/type-aliases/anydesktopcommand/)
+`TCommand` _extends_ [`AnyDesktopCommand`](/api/protocols-desktop/src/type-aliases/anydesktopcommand/) = [`AnyDesktopCommand`](/api/protocols-desktop/src/type-aliases/anydesktopcommand/)
 
 ### TKey
 
-`TKey` *extends* `string` = `string`
+`TKey` _extends_ `string` = `string`

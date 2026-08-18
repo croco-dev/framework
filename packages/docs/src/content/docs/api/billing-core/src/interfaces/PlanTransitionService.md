@@ -23,7 +23,7 @@ title: "PlanTransitionService"
 
 `Promise`\<[`PlanTransitionPreview`](/api/billing-core/src/type-aliases/plantransitionpreview/)\>
 
-***
+---
 
 ### transitionPlan()
 

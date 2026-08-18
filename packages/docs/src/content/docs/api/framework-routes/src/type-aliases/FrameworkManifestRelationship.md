@@ -13,19 +13,19 @@ title: "FrameworkManifestRelationship"
 
 > `readonly` **description**: `string`
 
-***
+---
 
 ### from
 
 > `readonly` **from**: [`FrameworkManifestEntityRef`](/api/framework-routes/src/type-aliases/frameworkmanifestentityref/)
 
-***
+---
 
 ### kind
 
 > `readonly` **kind**: [`IntentMapRelationshipKind`](/api/framework-routes/src/type-aliases/intentmaprelationshipkind/)
 
-***
+---
 
 ### to
 
