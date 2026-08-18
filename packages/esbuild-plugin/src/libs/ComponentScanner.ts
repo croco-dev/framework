@@ -6,6 +6,8 @@ export interface ScanResult {
   filePath: string;
   hasComponent: boolean;
   decorators: string[];
+  /** Exported declaration names carrying a matched decorator, in source order. */
+  symbols: string[];
 }
 
 export interface CrocoPluginOptions {
@@ -20,6 +22,7 @@ interface ScanCache {
   mtime: number;
   hasComponent: boolean;
   decorators: string[];
+  symbols: string[];
 }
 
 const DEFAULT_SCAN_DIRS = ["src"];
@@ -144,18 +147,25 @@ export class ComponentScanner {
           filePath: absolutePath,
           hasComponent: cached.hasComponent,
           decorators: cached.decorators,
+          symbols: cached.symbols,
         };
       }
     }
 
-    const decorators = this.getDecorators(absolutePath);
+    const { decorators, symbols } = this.getDecorators(absolutePath);
     const hasComponent = decorators.length > 0;
 
     if (this.options.cache) {
-      this.cache.set(absolutePath, { filePath: absolutePath, mtime, hasComponent, decorators });
+      this.cache.set(absolutePath, {
+        filePath: absolutePath,
+        mtime,
+        hasComponent,
+        decorators,
+        symbols,
+      });
     }
 
-    return { filePath: absolutePath, hasComponent, decorators };
+    return { filePath: absolutePath, hasComponent, decorators, symbols };
   }
 
   clearCache(): void {
@@ -263,10 +273,10 @@ export class ComponentScanner {
     return new RegExp(regexStr);
   }
 
-  private getDecorators(filePath: string): string[] {
+  private getDecorators(filePath: string): { decorators: string[]; symbols: string[] } {
     try {
       if (filePath.endsWith(".d.ts")) {
-        return [];
+        return { decorators: [], symbols: [] };
       }
 
       const sourceCode = fs.readFileSync(filePath, "utf-8");
@@ -286,19 +296,24 @@ export class ComponentScanner {
       const sourceFile = ts.createSourceFile(filePath, sourceCode, ts.ScriptTarget.Latest, true);
 
       const decorators: string[] = [];
+      const symbols: string[] = [];
 
       const visitNode = (node: ts.Node) => {
         if (ts.isDecorator(node)) {
           const decoratorName = this.getDecoratorName(node);
           if (this.options.decorators.includes(decoratorName)) {
             decorators.push(decoratorName);
+            const symbol = this.getDecoratedSymbol(node);
+            if (symbol) {
+              symbols.push(symbol);
+            }
           }
         }
         ts.forEachChild(node, visitNode);
       };
 
       ts.forEachChild(sourceFile, visitNode);
-      return decorators;
+      return { decorators, symbols };
     } catch (error) {
       if (error instanceof ComponentScannerError) {
         throw error;
@@ -306,6 +321,46 @@ export class ComponentScanner {
 
       throw new ComponentScannerDecoratorScanError(filePath, error);
     }
+  }
+
+  private getDecoratedSymbol(decorator: ts.Decorator): string | undefined {
+    const declaration = decorator.parent;
+    const name = this.getDeclarationName(declaration);
+    if (!name) {
+      return undefined;
+    }
+
+    // Only decorators directly on module-level declarations yield importable symbols.
+    const isModuleLevel =
+      ts.isClassDeclaration(declaration) ||
+      ts.isFunctionDeclaration(declaration) ||
+      ts.isVariableStatement(declaration);
+    if (!isModuleLevel || !ts.isSourceFile(declaration.parent)) {
+      return undefined;
+    }
+
+    if (!ts.canHaveModifiers(declaration)) {
+      return undefined;
+    }
+    const modifiers = ts.getModifiers(declaration);
+    const hasExport = modifiers?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword) ?? false;
+    const hasDefault = modifiers?.some((m) => m.kind === ts.SyntaxKind.DefaultKeyword) ?? false;
+    return hasExport && !hasDefault ? name : undefined;
+  }
+
+  private getDeclarationName(node: ts.Node): string | undefined {
+    if (ts.isClassDeclaration(node) || ts.isFunctionDeclaration(node)) {
+      return node.name?.text;
+    }
+
+    if (ts.isVariableStatement(node)) {
+      const firstDeclaration = node.declarationList.declarations[0];
+      return firstDeclaration && ts.isIdentifier(firstDeclaration.name)
+        ? firstDeclaration.name.text
+        : undefined;
+    }
+
+    return undefined;
   }
 
   private getDecoratorName(decorator: ts.Decorator): string {

@@ -5,6 +5,7 @@ import {
   ComponentScanner,
   ComponentScannerDiagnosticError,
   ComponentScannerError,
+  type ScanResult,
 } from "./ComponentScanner";
 
 const REFLECT_METADATA_IMPORT = "import 'reflect-metadata';\n";
@@ -69,8 +70,8 @@ function normalizeConfig(config: CrocoPluginConfig | undefined): NormalizedCroco
 }
 
 function generateRegistryContent(
-  controllers: { filePath: string; decorators: string[] }[],
-  components: { filePath: string; decorators: string[] }[],
+  controllers: ScanResult[],
+  components: ScanResult[],
   baseDir: string,
 ): string {
   const lines = ["// AUTO-GENERATED - DO NOT EDIT", ""];
@@ -82,20 +83,22 @@ function generateRegistryContent(
   const uniqueFiles = Array.from(new Map(allFiles.map((f) => [f.filePath, f])).values());
 
   for (const file of uniqueFiles) {
+    if (file.symbols.length === 0) {
+      continue;
+    }
     const relativePath = path
       .relative(baseDir, file.filePath)
-      .replace(/\.ts$/, "")
+      .replace(/\.(ts|tsx)$/, "")
       .replace(/\\/g, "/");
-    const className = path.basename(file.filePath, ".ts");
-    lines.push(`import { ${className} } from '${relativePath}';`);
+    lines.push(`import { ${file.symbols.join(", ")} } from '${relativePath}';`);
   }
 
   lines.push("");
 
-  const controllerNames = controllerFiles.map((c) => path.basename(c.filePath, ".ts"));
+  const controllerNames = controllerFiles.flatMap((c) => c.symbols);
   const componentNames = componentFiles
     .filter((c) => !controllerFiles.some((ctrl) => ctrl.filePath === c.filePath))
-    .map((c) => path.basename(c.filePath, ".ts"));
+    .flatMap((c) => c.symbols);
 
   lines.push(`export const controllers = [${controllerNames.join(", ")}] as const;`);
   lines.push(`export const components = [${componentNames.join(", ")}] as const;`);

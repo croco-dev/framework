@@ -231,6 +231,75 @@ describe("ComponentScanner", () => {
       expect(result.filePath).toContain("WithComponent.tsx");
     });
 
+    it("should collect exported symbol names of decorated declarations", () => {
+      const withComponentPath = path.join(FIXTURES_DIR, "WithComponent.ts");
+      const result = scanner.scanFile(withComponentPath);
+
+      expect(result.symbols).toContain("WithComponent");
+    });
+
+    it("should collect exported symbols from .tsx files", () => {
+      const cardPath = path.join(FIXTURES_DIR, "Card.tsx");
+      const result = scanner.scanFile(cardPath);
+
+      expect(result.hasComponent).toBe(true);
+      expect(result.symbols).toEqual(["Card"]);
+    });
+
+    it("should collect symbols for every decorated export", () => {
+      const multiScanner = new ComponentScanner({
+        decorators: ["Component", "Service"],
+      });
+
+      const multipleDecoratorsPath = path.join(FIXTURES_DIR, "MultipleDecorators.ts");
+      const result = multiScanner.scanFile(multipleDecoratorsPath);
+
+      expect(result.symbols).toEqual(["FirstComponent", "SecondComponent"]);
+    });
+
+    it("should not collect symbols for non-exported decorated declarations", () => {
+      const nonExportedPath = path.join(TEMP_DIR, "NonExported.ts");
+      fs.writeFileSync(nonExportedPath, "@Component()\nclass HiddenComponent { id: string; }");
+
+      const result = scanner.scanFile(nonExportedPath);
+
+      expect(result.hasComponent).toBe(true);
+      expect(result.symbols).toEqual([]);
+    });
+
+    it("should not collect symbols for default exports", () => {
+      const defaultExportPath = path.join(TEMP_DIR, "DefaultExport.ts");
+      fs.writeFileSync(
+        defaultExportPath,
+        "@Component()\nexport default class Card { id: string; }",
+      );
+
+      const result = scanner.scanFile(defaultExportPath);
+
+      expect(result.hasComponent).toBe(true);
+      expect(result.symbols).toEqual([]);
+    });
+
+    it("should collect symbols for decorated exported variables", () => {
+      const variablePath = path.join(TEMP_DIR, "VariableComponent.ts");
+      fs.writeFileSync(variablePath, "@Component()\nexport const VariableComponent = () => {};");
+
+      const result = scanner.scanFile(variablePath);
+
+      expect(result.hasComponent).toBe(true);
+      expect(result.symbols).toEqual(["VariableComponent"]);
+    });
+
+    it("should not collect symbols for method decorators inside classes", () => {
+      const methodPath = path.join(TEMP_DIR, "MethodDecorated.ts");
+      fs.writeFileSync(methodPath, "export class Holder {\n  @Component()\n  method(): void {}\n}");
+
+      const result = scanner.scanFile(methodPath);
+
+      expect(result.hasComponent).toBe(true);
+      expect(result.symbols).toEqual([]);
+    });
+
     it("should skip .d.ts files", () => {
       const declarationFile = path.join(TEMP_DIR, "types.d.ts");
       fs.writeFileSync(declarationFile, "export interface Test {}");
