@@ -2,6 +2,7 @@ import {
   type Attributes,
   context,
   type Exception,
+  isSpanContextValid,
   type Span,
   SpanStatusCode,
   trace,
@@ -75,7 +76,9 @@ export function recordError(error: unknown, span?: Span): void {
   };
 
   if (error instanceof Error) {
-    exception.stack = error.stack;
+    if (error.stack) {
+      exception.stack = error.stack;
+    }
     exception.name = error.name;
   }
 
@@ -100,6 +103,6 @@ export function getActiveTraceInfo(): TraceInfo {
     traceId: spanContext.traceId,
     spanId: spanContext.spanId,
     traceFlags: spanContext.traceFlags,
-    isValid: (spanContext.traceFlags & 1) === 1,
+    isValid: isSpanContextValid(spanContext),
   };
 }
