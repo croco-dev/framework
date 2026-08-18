@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type * as esbuild from "esbuild";
+import * as esbuild from "esbuild";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ComponentScannerDiagnosticError } from "../libs/ComponentScanner";
 import { crocoPlugin } from "../libs/plugin";
@@ -514,6 +514,85 @@ describe("crocoPlugin", () => {
       if (fs.existsSync(REGISTRY_DIR)) {
         fs.rmSync(REGISTRY_DIR, { recursive: true, force: true });
       }
+    });
+
+    it("should generate a valid registry for .tsx components", () => {
+      const entryFilePath = path.join(TEMP_DIR, "entry.ts");
+      fs.writeFileSync(entryFilePath, "console.log('hello');");
+
+      const cardFilePath = path.join(TEMP_DIR, "Card.tsx");
+      fs.writeFileSync(cardFilePath, "@Component()\nexport class Card { name: string; }");
+
+      mockBuildContext.initialOptions.entryPoints = [entryFilePath];
+
+      const plugin = crocoPlugin({
+        scan: {
+          dirs: [TEMP_DIR],
+          decorators: ["Component"],
+        },
+        generateRegistry: {
+          enabled: true,
+          outDir: REGISTRY_DIR,
+          outFile: "registry.gen.ts",
+        },
+      });
+
+      plugin.setup(mockBuildContext);
+
+      const onStartCallback = vi.mocked(mockBuildContext.onStart).mock.calls[0]?.[0];
+      if (onStartCallback) {
+        onStartCallback();
+      }
+
+      const registryPath = path.join(REGISTRY_DIR, "registry.gen.ts");
+      expect(fs.existsSync(registryPath)).toBe(true);
+
+      const registryContent = fs.readFileSync(registryPath, "utf-8");
+      expect(registryContent).toContain("import { Card } from '../Card';");
+      expect(registryContent).toContain("export const components = [Card] as const;");
+      expect(registryContent).not.toContain("Card.tsx");
+    });
+
+    it("should build the generated registry with esbuild for .tsx components", async () => {
+      const entryFilePath = path.join(TEMP_DIR, "entry.ts");
+      fs.writeFileSync(entryFilePath, "console.log('hello');");
+
+      const cardFilePath = path.join(TEMP_DIR, "Card.tsx");
+      fs.writeFileSync(cardFilePath, "@Component()\nexport class Card { name: string; }");
+
+      mockBuildContext.initialOptions.entryPoints = [entryFilePath];
+
+      const plugin = crocoPlugin({
+        scan: {
+          dirs: [TEMP_DIR],
+          decorators: ["Component"],
+        },
+        generateRegistry: {
+          enabled: true,
+          outDir: REGISTRY_DIR,
+          outFile: "registry.gen.ts",
+        },
+      });
+
+      plugin.setup(mockBuildContext);
+
+      const onStartCallback = vi.mocked(mockBuildContext.onStart).mock.calls[0]?.[0];
+      if (onStartCallback) {
+        onStartCallback();
+      }
+
+      const registryPath = path.join(REGISTRY_DIR, "registry.gen.ts");
+      expect(fs.existsSync(registryPath)).toBe(true);
+
+      const buildResult = await esbuild.build({
+        entryPoints: [registryPath],
+        bundle: true,
+        write: false,
+        format: "esm",
+      });
+
+      expect(buildResult.errors).toEqual([]);
+      expect(buildResult.outputFiles?.length).toBeGreaterThan(0);
     });
 
     it("should generate registry.gen.ts with controllers and components", () => {
