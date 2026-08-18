@@ -563,6 +563,8 @@ describe("InMemoryEventBus", () => {
         isRemote: true,
       });
       expect(contextWithSpy).toHaveBeenCalled();
+      const parentContext = setSpanContextSpy.mock.results[0]?.value;
+      expect(contextWithSpy).toHaveBeenCalledWith(parentContext, expect.any(Function));
 
       traceInfoSpy.mockRestore();
       contextWithSpy.mockRestore();
