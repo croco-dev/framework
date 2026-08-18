@@ -76,7 +76,9 @@ export function recordError(error: unknown, span?: Span): void {
   };
 
   if (error instanceof Error) {
-    exception.stack = error.stack;
+    if (error.stack) {
+      exception.stack = error.stack;
+    }
     exception.name = error.name;
   }
 
