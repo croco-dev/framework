@@ -17,7 +17,7 @@ title: "CursorPayload"
 
 > **id**: `string`
 
-***
+---
 
 ### v
 

@@ -45,7 +45,7 @@ LLM 사용량 기록 완료 시 발행되는 이벤트입니다.
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventId`](/api/events-core/src/classes/domainevent/#eventid)
 
-***
+---
 
 ### eventName
 
@@ -55,7 +55,7 @@ LLM 사용량 기록 완료 시 발행되는 이벤트입니다.
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventName`](/api/events-core/src/classes/domainevent/#eventname)
 
-***
+---
 
 ### metadata
 
@@ -65,13 +65,13 @@ LLM 사용량 기록 완료 시 발행되는 이벤트입니다.
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`metadata`](/api/events-core/src/classes/domainevent/#metadata)
 
-***
+---
 
 ### tenantId
 
 > `readonly` **tenantId**: `string`
 
-***
+---
 
 ### timestamp
 
@@ -81,13 +81,13 @@ LLM 사용량 기록 완료 시 발행되는 이벤트입니다.
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`timestamp`](/api/events-core/src/classes/domainevent/#timestamp)
 
-***
+---
 
 ### usage
 
 > `readonly` **usage**: [`LlmUsageRecord`](/api/llm-metering/src/type-aliases/llmusagerecord/)
 
-***
+---
 
 ### eventName
 

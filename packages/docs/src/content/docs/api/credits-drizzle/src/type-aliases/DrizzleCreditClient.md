@@ -5,4 +5,4 @@ prev: false
 title: "DrizzleCreditClient"
 ---
 
-> **DrizzleCreditClient** = `NodePgDatabase`\<*typeof* `schema`\>
+> **DrizzleCreditClient** = `NodePgDatabase`\<_typeof_ `schema`\>

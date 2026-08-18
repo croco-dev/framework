@@ -19,7 +19,7 @@ title: "SearchDocument"
 
 > **id**: `string`
 
-***
+---
 
 ### tenantId
 

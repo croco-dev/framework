@@ -30,7 +30,7 @@ Tenant ID
 
 SQL condition or null if not applicable
 
-***
+---
 
 ### getRowLevelColumnName()
 
@@ -44,7 +44,7 @@ Get the column name for row-level filtering
 
 Column name or null if not applicable
 
-***
+---
 
 ### getSchemaName()
 
@@ -66,7 +66,7 @@ Tenant ID
 
 Schema name or null if not applicable
 
-***
+---
 
 ### getType()
 
@@ -80,7 +80,7 @@ Get the isolation type
 
 The isolation strategy type
 
-***
+---
 
 ### supports()
 

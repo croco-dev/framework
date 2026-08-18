@@ -31,7 +31,7 @@ title: "OutputContractValidator"
 
 [`ValidationReport`](/api/presentation-preset/src/type-aliases/validationreport/)
 
-***
+---
 
 ### validateDeployTarget()
 
@@ -47,7 +47,7 @@ title: "OutputContractValidator"
 
 [`ValidationReport`](/api/presentation-preset/src/type-aliases/validationreport/)
 
-***
+---
 
 ### validateGeneratedRuntimeProfile()
 
@@ -63,7 +63,7 @@ title: "OutputContractValidator"
 
 [`ValidationReport`](/api/presentation-preset/src/type-aliases/validationreport/)
 
-***
+---
 
 ### validateGeneratedRuntimeProfileCatalog()
 

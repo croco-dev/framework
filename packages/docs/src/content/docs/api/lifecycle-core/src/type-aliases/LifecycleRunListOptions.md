@@ -13,13 +13,13 @@ title: "LifecycleRunListOptions"
 
 > `readonly` `optional` **limit?**: `number`
 
-***
+---
 
 ### ruleId?
 
 > `readonly` `optional` **ruleId?**: `string`
 
-***
+---
 
 ### tenantId?
 

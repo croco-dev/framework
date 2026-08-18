@@ -23,7 +23,7 @@ title: "LlmProviderConformanceOptions"
 
 [`LlmModel`](/api/llm-core/src/classes/llmmodel/) \| `Promise`\<[`LlmModel`](/api/llm-core/src/classes/llmmodel/)\>
 
-***
+---
 
 ### createModel
 
@@ -33,19 +33,19 @@ title: "LlmProviderConformanceOptions"
 
 [`LlmModel`](/api/llm-core/src/classes/llmmodel/) \| `Promise`\<[`LlmModel`](/api/llm-core/src/classes/llmmodel/)\>
 
-***
+---
 
 ### modelId
 
 > `readonly` **modelId**: `string`
 
-***
+---
 
 ### prompts
 
 > `readonly` **prompts**: [`LlmProviderConformancePromptSet`](/api/testing/src/type-aliases/llmproviderconformancepromptset/)\<`TObject`\>
 
-***
+---
 
 ### providerName
 

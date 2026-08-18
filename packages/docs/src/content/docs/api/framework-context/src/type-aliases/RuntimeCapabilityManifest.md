@@ -13,19 +13,19 @@ title: "RuntimeCapabilityManifest"
 
 > `readonly` **capabilities**: [`RuntimeCapabilities`](/api/framework-context/src/type-aliases/runtimecapabilities/)
 
-***
+---
 
 ### diagnostics
 
 > `readonly` **diagnostics**: readonly [`RuntimeCapabilityDiagnostic`](/api/framework-context/src/type-aliases/runtimecapabilitydiagnostic/)[]
 
-***
+---
 
 ### platform
 
 > `readonly` **platform**: [`RuntimePlatform`](/api/framework-context/src/type-aliases/runtimeplatform/)
 
-***
+---
 
 ### version
 

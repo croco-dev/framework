@@ -13,7 +13,7 @@ title: "UsageHistoryPeriod"
 
 > **endDate**: `Date`
 
-***
+---
 
 ### startDate
 

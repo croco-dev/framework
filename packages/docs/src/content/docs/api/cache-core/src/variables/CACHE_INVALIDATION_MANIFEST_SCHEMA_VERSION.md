@@ -5,4 +5,4 @@ prev: false
 title: "CACHE_INVALIDATION_MANIFEST_SCHEMA_VERSION"
 ---
 
-> `const` **CACHE\_INVALIDATION\_MANIFEST\_SCHEMA\_VERSION**: `"croco.cache-invalidation-graph.manifest.v1"`
+> `const` **CACHE_INVALIDATION_MANIFEST_SCHEMA_VERSION**: `"croco.cache-invalidation-graph.manifest.v1"`

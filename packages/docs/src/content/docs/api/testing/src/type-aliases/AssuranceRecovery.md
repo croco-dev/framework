@@ -13,7 +13,7 @@ title: "AssuranceRecovery"
 
 > `readonly` **command**: `string`
 
-***
+---
 
 ### testTemplate
 

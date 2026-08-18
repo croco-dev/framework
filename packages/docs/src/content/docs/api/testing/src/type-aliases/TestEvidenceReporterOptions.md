@@ -23,7 +23,7 @@ title: "TestEvidenceReporterOptions"
 
 readonly [`TestEvidenceAttempt`](/api/testing/src/type-aliases/testevidenceattempt/)[]
 
-***
+---
 
 ### diagnostics?
 
@@ -39,13 +39,13 @@ readonly [`TestEvidenceAttempt`](/api/testing/src/type-aliases/testevidenceattem
 
 readonly [`TestEvidenceDiagnostic`](/api/testing/src/type-aliases/testevidencediagnostic/)[]
 
-***
+---
 
 ### fidelity
 
 > `readonly` **fidelity**: [`TestEvidenceFidelity`](/api/testing/src/type-aliases/testevidencefidelity/)
 
-***
+---
 
 ### intent?
 
@@ -61,7 +61,7 @@ readonly [`TestEvidenceDiagnostic`](/api/testing/src/type-aliases/testevidencedi
 
 [`TestEvidenceIntent`](/api/testing/src/type-aliases/testevidenceintent/)
 
-***
+---
 
 ### observed?
 
@@ -77,19 +77,19 @@ readonly [`TestEvidenceDiagnostic`](/api/testing/src/type-aliases/testevidencedi
 
 [`TestEvidenceObservation`](/api/testing/src/type-aliases/testevidenceobservation/)
 
-***
+---
 
 ### outputDirectory?
 
 > `readonly` `optional` **outputDirectory?**: `string`
 
-***
+---
 
 ### packageName?
 
 > `readonly` `optional` **packageName?**: `string` \| ((`context`) => `string` \| `undefined`)
 
-***
+---
 
 ### replay?
 
@@ -105,7 +105,7 @@ readonly [`TestEvidenceDiagnostic`](/api/testing/src/type-aliases/testevidencedi
 
 [`TestEvidenceReplay`](/api/testing/src/type-aliases/testevidencereplay/)
 
-***
+---
 
 ### resources?
 
@@ -121,7 +121,7 @@ readonly [`TestEvidenceDiagnostic`](/api/testing/src/type-aliases/testevidencedi
 
 [`TestEvidenceResourceStatus`](/api/testing/src/type-aliases/testevidenceresourcestatus/)
 
-***
+---
 
 ### write?
 

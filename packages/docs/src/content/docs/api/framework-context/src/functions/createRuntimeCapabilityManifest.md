@@ -11,7 +11,7 @@ title: "createRuntimeCapabilityManifest"
 
 ### TPlatform
 
-`TPlatform` *extends* [`KnownRuntimePlatform`](/api/framework-context/src/type-aliases/knownruntimeplatform/)
+`TPlatform` _extends_ [`KnownRuntimePlatform`](/api/framework-context/src/type-aliases/knownruntimeplatform/)
 
 ## Parameters
 

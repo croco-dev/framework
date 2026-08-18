@@ -31,7 +31,7 @@ title: "ComponentScanner"
 
 `void`
 
-***
+---
 
 ### incrementalScan()
 
@@ -51,7 +51,7 @@ title: "ComponentScanner"
 
 `ScanResult`[]
 
-***
+---
 
 ### invalidateCache()
 
@@ -67,7 +67,7 @@ title: "ComponentScanner"
 
 `void`
 
-***
+---
 
 ### rescanFile()
 
@@ -83,7 +83,7 @@ title: "ComponentScanner"
 
 `ScanResult`
 
-***
+---
 
 ### scan()
 
@@ -99,7 +99,7 @@ title: "ComponentScanner"
 
 `ScanResult`[]
 
-***
+---
 
 ### scanFile()
 

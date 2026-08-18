@@ -27,7 +27,7 @@ title: "RetryConsoleSource"
 
 `Promise`\<readonly [`RetryConsoleItem`](/api/admin-ops/src/type-aliases/retryconsoleitem/)[]\>
 
-***
+---
 
 ### recover()
 

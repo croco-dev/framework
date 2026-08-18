@@ -5,4 +5,4 @@ prev: false
 title: "SCENARIO_REPORT_SCHEMA_VERSION"
 ---
 
-> `const` **SCENARIO\_REPORT\_SCHEMA\_VERSION**: `"croco.scenario-report/v1"`
+> `const` **SCENARIO_REPORT_SCHEMA_VERSION**: `"croco.scenario-report/v1"`

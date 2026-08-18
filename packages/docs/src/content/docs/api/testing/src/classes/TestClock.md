@@ -33,7 +33,7 @@ title: "TestClock"
 
 `Date`
 
-***
+---
 
 ### pendingWork
 
@@ -61,7 +61,7 @@ readonly [`TestScheduledWork`](/api/testing/src/type-aliases/testscheduledwork/)
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### drain()
 
@@ -71,7 +71,7 @@ readonly [`TestScheduledWork`](/api/testing/src/type-aliases/testscheduledwork/)
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### schedule()
 
@@ -95,7 +95,7 @@ readonly [`TestScheduledWork`](/api/testing/src/type-aliases/testscheduledwork/)
 
 () => `void`
 
-***
+---
 
 ### sleep()
 

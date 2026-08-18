@@ -13,13 +13,13 @@ title: "CacheInvalidationDiagnostic"
 
 > `readonly` **code**: `string`
 
-***
+---
 
 ### message
 
 > `readonly` **message**: `string`
 
-***
+---
 
 ### target
 

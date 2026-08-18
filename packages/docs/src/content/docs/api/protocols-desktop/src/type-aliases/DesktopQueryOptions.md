@@ -19,15 +19,15 @@ title: "DesktopQueryOptions"
 
 ### TEffects
 
-`TEffects` *extends* readonly [`AnyDesktopEffect`](/api/protocols-desktop/src/type-aliases/anydesktopeffect/)[] \| `undefined` = `undefined`
+`TEffects` _extends_ readonly [`AnyDesktopEffect`](/api/protocols-desktop/src/type-aliases/anydesktopeffect/)[] \| `undefined` = `undefined`
 
 ### TEvents
 
-`TEvents` *extends* readonly `string`[] \| `undefined` = `undefined`
+`TEvents` _extends_ readonly `string`[] \| `undefined` = `undefined`
 
 ### TProblems
 
-`TProblems` *extends* readonly [`DesktopProblemReference`](/api/protocols-desktop/src/type-aliases/desktopproblemreference/)[] \| `undefined` = `undefined`
+`TProblems` _extends_ readonly [`DesktopProblemReference`](/api/protocols-desktop/src/type-aliases/desktopproblemreference/)[] \| `undefined` = `undefined`
 
 ## Properties
 
@@ -35,25 +35,25 @@ title: "DesktopQueryOptions"
 
 > `readonly` `optional` **effects?**: `TEffects`
 
-***
+---
 
 ### events?
 
 > `readonly` `optional` **events?**: `TEvents`
 
-***
+---
 
 ### input
 
 > `readonly` **input**: `TInputSchema`
 
-***
+---
 
 ### output
 
 > `readonly` **output**: `TOutputSchema`
 
-***
+---
 
 ### problems?
 

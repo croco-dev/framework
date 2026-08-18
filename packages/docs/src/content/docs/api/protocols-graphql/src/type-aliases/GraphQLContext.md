@@ -17,7 +17,7 @@ title: "GraphQLContext"
 
 > `optional` **requestId?**: `string`
 
-***
+---
 
 ### userId?
 

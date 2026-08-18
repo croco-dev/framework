@@ -11,7 +11,7 @@ title: "AdminFormProps"
 
 ### TValues
 
-`TValues` *extends* `object`
+`TValues` _extends_ `object`
 
 ### TResult
 
@@ -23,7 +23,7 @@ title: "AdminFormProps"
 
 > `readonly` `optional` **onFieldChange?**: [`AdminFormFieldChangeHandler`](/api/admin-react/src/type-aliases/adminformfieldchangehandler/)\<`TValues`\>
 
-***
+---
 
 ### onRecoveryAction?
 
@@ -39,7 +39,7 @@ title: "AdminFormProps"
 
 `void`
 
-***
+---
 
 ### onSubmit?
 
@@ -49,7 +49,7 @@ title: "AdminFormProps"
 
 `void`
 
-***
+---
 
 ### renderActions?
 
@@ -65,7 +65,7 @@ title: "AdminFormProps"
 
 `ReactElement`
 
-***
+---
 
 ### renderField?
 
@@ -81,7 +81,7 @@ title: "AdminFormProps"
 
 `ReactElement`
 
-***
+---
 
 ### state
 

@@ -5,7 +5,7 @@ prev: false
 title: "DIAGNOSTIC_CODE_CHANGE_POLICY"
 ---
 
-> `const` **DIAGNOSTIC\_CODE\_CHANGE\_POLICY**: `object`
+> `const` **DIAGNOSTIC_CODE_CHANGE_POLICY**: `object`
 
 ## Type Declaration
 

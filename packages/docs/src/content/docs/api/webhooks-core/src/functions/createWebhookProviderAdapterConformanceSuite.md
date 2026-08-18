@@ -11,7 +11,7 @@ title: "createWebhookProviderAdapterConformanceSuite"
 
 ### TEvent
 
-`TEvent` *extends* [`WebhookEvent`](/api/webhooks-core/src/type-aliases/webhookevent/)
+`TEvent` _extends_ [`WebhookEvent`](/api/webhooks-core/src/type-aliases/webhookevent/)
 
 ## Parameters
 

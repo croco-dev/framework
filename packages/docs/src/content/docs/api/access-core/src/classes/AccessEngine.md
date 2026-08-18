@@ -41,7 +41,7 @@ title: "AccessEngine"
 
 `Promise`\<[`CheckResult`](/api/access-core/src/interfaces/checkresult/)\>
 
-***
+---
 
 ### grant()
 
@@ -57,7 +57,7 @@ title: "AccessEngine"
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### list()
 
@@ -73,7 +73,7 @@ title: "AccessEngine"
 
 `Promise`\<`Promise`\<[`RelationTuple`](/api/access-core/src/interfaces/relationtuple/)[]\>\>
 
-***
+---
 
 ### revoke()
 

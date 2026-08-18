@@ -11,7 +11,7 @@ title: "BatchLoadOptions"
 
 ### TRepository
 
-`TRepository` *extends* `object` = `object`
+`TRepository` _extends_ `object` = `object`
 
 ## Properties
 
@@ -23,7 +23,7 @@ The field name to use as the key for mapping results.
 This is required to ensure the order of results matches the order of keys.
 Example: 'id'
 
-***
+---
 
 ### name?
 
@@ -32,7 +32,7 @@ Example: 'id'
 The name of the DataLoader.
 If not provided, it defaults to `${ClassName}:${methodName}`.
 
-***
+---
 
 ### scope?
 

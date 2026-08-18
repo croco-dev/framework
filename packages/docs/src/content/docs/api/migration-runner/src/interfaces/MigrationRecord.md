@@ -11,13 +11,13 @@ title: "MigrationRecord"
 
 > **executedAt**: `Date`
 
-***
+---
 
 ### id
 
 > **id**: `string`
 
-***
+---
 
 ### name
 

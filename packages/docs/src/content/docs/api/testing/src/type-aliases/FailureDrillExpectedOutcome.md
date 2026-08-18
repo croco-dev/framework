@@ -13,13 +13,13 @@ title: "FailureDrillExpectedOutcome"
 
 > `readonly` **evidence**: [`FailureDrillEvidenceExpectation`](/api/testing/src/type-aliases/failuredrillevidenceexpectation/)
 
-***
+---
 
 ### problem
 
 > `readonly` **problem**: [`FailureDrillProblemExpectation`](/api/testing/src/type-aliases/failuredrillproblemexpectation/)
 
-***
+---
 
 ### recoveryAction
 

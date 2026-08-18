@@ -13,13 +13,13 @@ title: "ScenarioRuntimeOptions"
 
 > `readonly` `optional` **initialTime?**: `Date` \| `string`
 
-***
+---
 
 ### scenarioId
 
 > `readonly` **scenarioId**: `string`
 
-***
+---
 
 ### seed?
 

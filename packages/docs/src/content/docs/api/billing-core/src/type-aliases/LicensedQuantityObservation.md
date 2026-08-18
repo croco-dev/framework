@@ -13,7 +13,7 @@ title: "LicensedQuantityObservation"
 
 > `readonly` `optional` **providerVersion?**: `string`
 
-***
+---
 
 ### quantity
 

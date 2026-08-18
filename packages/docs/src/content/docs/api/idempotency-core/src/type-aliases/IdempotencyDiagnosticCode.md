@@ -5,4 +5,4 @@ prev: false
 title: "IdempotencyDiagnosticCode"
 ---
 
-> **IdempotencyDiagnosticCode** = *typeof* [`IDEMPOTENCY_DIAGNOSTIC_CODES`](/api/idempotency-core/src/variables/idempotency_diagnostic_codes/)\[keyof *typeof* [`IDEMPOTENCY_DIAGNOSTIC_CODES`](/api/idempotency-core/src/variables/idempotency_diagnostic_codes/)\]
+> **IdempotencyDiagnosticCode** = _typeof_ [`IDEMPOTENCY_DIAGNOSTIC_CODES`](/api/idempotency-core/src/variables/idempotency_diagnostic_codes/)\[keyof _typeof_ [`IDEMPOTENCY_DIAGNOSTIC_CODES`](/api/idempotency-core/src/variables/idempotency_diagnostic_codes/)\]

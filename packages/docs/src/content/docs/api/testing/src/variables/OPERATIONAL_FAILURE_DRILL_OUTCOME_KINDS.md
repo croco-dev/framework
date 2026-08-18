@@ -5,7 +5,7 @@ prev: false
 title: "OPERATIONAL_FAILURE_DRILL_OUTCOME_KINDS"
 ---
 
-> `const` **OPERATIONAL\_FAILURE\_DRILL\_OUTCOME\_KINDS**: `object`
+> `const` **OPERATIONAL_FAILURE_DRILL_OUTCOME_KINDS**: `object`
 
 ## Type Declaration
 

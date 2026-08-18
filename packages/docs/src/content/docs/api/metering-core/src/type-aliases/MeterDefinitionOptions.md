@@ -11,23 +11,23 @@ title: "MeterDefinitionOptions"
 
 ### Key
 
-`Key` *extends* `string`
+`Key` _extends_ `string`
 
 ### Aggregation
 
-`Aggregation` *extends* [`MeterAggregation`](/api/metering-core/src/type-aliases/meteraggregation/)
+`Aggregation` _extends_ [`MeterAggregation`](/api/metering-core/src/type-aliases/meteraggregation/)
 
 ### Unit
 
-`Unit` *extends* `string`
+`Unit` _extends_ `string`
 
 ### Dimensions
 
-`Dimensions` *extends* [`MeterDimensionSchema`](/api/metering-core/src/type-aliases/meterdimensionschema/)
+`Dimensions` _extends_ [`MeterDimensionSchema`](/api/metering-core/src/type-aliases/meterdimensionschema/)
 
 ### Billing
 
-`Billing` *extends* [`MeterBillingIntent`](/api/metering-core/src/type-aliases/meterbillingintent/)
+`Billing` _extends_ [`MeterBillingIntent`](/api/metering-core/src/type-aliases/meterbillingintent/)
 
 ## Properties
 
@@ -35,25 +35,25 @@ title: "MeterDefinitionOptions"
 
 > `readonly` **aggregation**: `Aggregation`
 
-***
+---
 
 ### billing?
 
 > `readonly` `optional` **billing?**: `Billing`
 
-***
+---
 
 ### dimensions?
 
 > `readonly` `optional` **dimensions?**: `Dimensions`
 
-***
+---
 
 ### key
 
 > `readonly` **key**: `Key`
 
-***
+---
 
 ### unit
 

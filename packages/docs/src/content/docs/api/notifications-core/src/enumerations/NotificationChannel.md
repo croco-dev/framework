@@ -11,25 +11,25 @@ title: "NotificationChannel"
 
 > **EMAIL**: `"EMAIL"`
 
-***
+---
 
-### IN\_APP
+### IN_APP
 
-> **IN\_APP**: `"IN_APP"`
+> **IN_APP**: `"IN_APP"`
 
-***
+---
 
 ### PUSH
 
 > **PUSH**: `"PUSH"`
 
-***
+---
 
 ### SLACK
 
 > **SLACK**: `"SLACK"`
 
-***
+---
 
 ### SMS
 

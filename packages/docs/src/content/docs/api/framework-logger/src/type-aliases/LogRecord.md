@@ -13,13 +13,13 @@ title: "LogRecord"
 
 > **attributes**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### body
 
 > **body**: `string`
 
-***
+---
 
 ### instrumentationScope?
 
@@ -33,25 +33,25 @@ title: "LogRecord"
 
 > `optional` **version?**: `string`
 
-***
+---
 
 ### resource?
 
 > `optional` **resource?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### severityNumber
 
 > **severityNumber**: [`SeverityNumber`](/api/framework-logger/src/enumerations/severitynumber/)
 
-***
+---
 
 ### severityText
 
 > **severityText**: `string`
 
-***
+---
 
 ### timeUnixNano
 

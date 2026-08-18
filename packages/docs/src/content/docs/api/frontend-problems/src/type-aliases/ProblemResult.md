@@ -15,4 +15,4 @@ title: "ProblemResult"
 
 ### Problem
 
-`Problem` *extends* [`ProblemDeclaration`](/api/frontend-problems/src/type-aliases/problemdeclaration/) = [`ProblemDeclaration`](/api/frontend-problems/src/type-aliases/problemdeclaration/)
+`Problem` _extends_ [`ProblemDeclaration`](/api/frontend-problems/src/type-aliases/problemdeclaration/) = [`ProblemDeclaration`](/api/frontend-problems/src/type-aliases/problemdeclaration/)

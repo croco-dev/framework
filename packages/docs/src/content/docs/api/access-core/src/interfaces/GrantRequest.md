@@ -11,7 +11,7 @@ title: "GrantRequest"
 
 > **tenantId**: `string`
 
-***
+---
 
 ### tuple
 

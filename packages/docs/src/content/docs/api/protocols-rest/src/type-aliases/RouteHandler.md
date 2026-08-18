@@ -11,7 +11,7 @@ title: "RouteHandler"
 
 ### Req
 
-`Req` *extends* `Record`\<`string`, `unknown`\> = `Record`\<`string`, `unknown`\>
+`Req` _extends_ `Record`\<`string`, `unknown`\> = `Record`\<`string`, `unknown`\>
 
 ### Res
 

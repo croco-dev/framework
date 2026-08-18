@@ -57,7 +57,7 @@ title: "WebhookDispatchProblem"
 
 `WebhookProblem.category`
 
-***
+---
 
 ### cause?
 
@@ -67,7 +67,7 @@ title: "WebhookDispatchProblem"
 
 `WebhookProblem.cause`
 
-***
+---
 
 ### code
 
@@ -77,7 +77,7 @@ title: "WebhookDispatchProblem"
 
 `WebhookProblem.code`
 
-***
+---
 
 ### detail?
 
@@ -87,7 +87,7 @@ title: "WebhookDispatchProblem"
 
 `WebhookProblem.detail`
 
-***
+---
 
 ### extensions?
 
@@ -97,7 +97,7 @@ title: "WebhookDispatchProblem"
 
 `WebhookProblem.extensions`
 
-***
+---
 
 ### instance?
 
@@ -107,7 +107,7 @@ title: "WebhookDispatchProblem"
 
 `WebhookProblem.instance`
 
-***
+---
 
 ### message
 
@@ -117,7 +117,7 @@ title: "WebhookDispatchProblem"
 
 `WebhookProblem.message`
 
-***
+---
 
 ### name
 
@@ -127,7 +127,7 @@ title: "WebhookDispatchProblem"
 
 `WebhookProblem.name`
 
-***
+---
 
 ### stack?
 
@@ -137,7 +137,7 @@ title: "WebhookDispatchProblem"
 
 `WebhookProblem.stack`
 
-***
+---
 
 ### type
 
@@ -147,7 +147,7 @@ title: "WebhookDispatchProblem"
 
 `WebhookProblem.type`
 
-***
+---
 
 ### stackTraceLimit
 
@@ -183,7 +183,7 @@ not capture any frames.
 
 `WebhookProblem.status`
 
-***
+---
 
 ### title
 
@@ -213,7 +213,7 @@ not capture any frames.
 
 `WebhookProblem.toJSON`
 
-***
+---
 
 ### captureStackTrace()
 
@@ -226,7 +226,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack;  // Similar to `new Error().stack`
+myObject.stack; // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -281,7 +281,7 @@ a();
 
 `WebhookProblem.captureStackTrace`
 
-***
+---
 
 ### prepareStackTrace()
 

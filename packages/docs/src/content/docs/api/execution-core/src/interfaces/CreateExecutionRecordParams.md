@@ -23,7 +23,7 @@ Optional idempotency key for deduplication
 
 [`CreateExecutionParams`](/api/execution-core/src/interfaces/createexecutionparams/).[`idempotencyKey`](/api/execution-core/src/interfaces/createexecutionparams/#idempotencykey)
 
-***
+---
 
 ### logs?
 
@@ -35,7 +35,7 @@ Initial log entries
 
 [`CreateExecutionParams`](/api/execution-core/src/interfaces/createexecutionparams/).[`logs`](/api/execution-core/src/interfaces/createexecutionparams/#logs)
 
-***
+---
 
 ### maxAttempts?
 
@@ -47,7 +47,7 @@ Maximum retry attempts (default: 1)
 
 [`CreateExecutionParams`](/api/execution-core/src/interfaces/createexecutionparams/).[`maxAttempts`](/api/execution-core/src/interfaces/createexecutionparams/#maxattempts)
 
-***
+---
 
 ### metadata?
 
@@ -59,7 +59,7 @@ Optional metadata
 
 [`CreateExecutionParams`](/api/execution-core/src/interfaces/createexecutionparams/).[`metadata`](/api/execution-core/src/interfaces/createexecutionparams/#metadata)
 
-***
+---
 
 ### parentId?
 
@@ -71,7 +71,7 @@ Optional parent execution ID for nested executions
 
 [`CreateExecutionParams`](/api/execution-core/src/interfaces/createexecutionparams/).[`parentId`](/api/execution-core/src/interfaces/createexecutionparams/#parentid)
 
-***
+---
 
 ### payload?
 
@@ -83,7 +83,7 @@ Optional payload data
 
 [`CreateExecutionParams`](/api/execution-core/src/interfaces/createexecutionparams/).[`payload`](/api/execution-core/src/interfaces/createexecutionparams/#payload)
 
-***
+---
 
 ### replayOf?
 
@@ -95,7 +95,7 @@ Optional original execution ID when this execution is a replay
 
 [`CreateExecutionParams`](/api/execution-core/src/interfaces/createexecutionparams/).[`replayOf`](/api/execution-core/src/interfaces/createexecutionparams/#replayof)
 
-***
+---
 
 ### requestFingerprint?
 
@@ -103,7 +103,7 @@ Optional original execution ID when this execution is a replay
 
 Required and persisted when idempotencyKey is present.
 
-***
+---
 
 ### scheduledFor?
 
@@ -115,7 +115,7 @@ Optional scheduled start time
 
 [`CreateExecutionParams`](/api/execution-core/src/interfaces/createexecutionparams/).[`scheduledFor`](/api/execution-core/src/interfaces/createexecutionparams/#scheduledfor)
 
-***
+---
 
 ### timeout?
 
@@ -127,7 +127,7 @@ Timeout in milliseconds (default: no timeout)
 
 [`CreateExecutionParams`](/api/execution-core/src/interfaces/createexecutionparams/).[`timeout`](/api/execution-core/src/interfaces/createexecutionparams/#timeout)
 
-***
+---
 
 ### type
 

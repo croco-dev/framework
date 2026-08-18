@@ -13,25 +13,25 @@ title: "TenantMigrationPlan"
 
 > `readonly` **from**: [`TenantModelName`](/api/tenant-core/src/type-aliases/tenantmodelname/)
 
-***
+---
 
 ### manualSteps
 
 > `readonly` **manualSteps**: readonly `string`[]
 
-***
+---
 
 ### risk
 
 > `readonly` **risk**: [`TenantModelRiskLevel`](/api/tenant-core/src/type-aliases/tenantmodelrisklevel/)
 
-***
+---
 
 ### to
 
 > `readonly` **to**: [`TenantModelName`](/api/tenant-core/src/type-aliases/tenantmodelname/)
 
-***
+---
 
 ### warnings
 

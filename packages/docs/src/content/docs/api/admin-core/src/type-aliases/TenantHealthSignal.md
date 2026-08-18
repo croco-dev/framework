@@ -13,19 +13,19 @@ title: "TenantHealthSignal"
 
 > `readonly` **contribution**: `number`
 
-***
+---
 
 ### id
 
 > `readonly` **id**: `string`
 
-***
+---
 
 ### label
 
 > `readonly` **label**: `string`
 
-***
+---
 
 ### trend?
 

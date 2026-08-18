@@ -13,13 +13,13 @@ title: "OpenAiSdkTransportOptions"
 
 > `readonly` **apiKey**: `string`
 
-***
+---
 
 ### baseUrl?
 
 > `readonly` `optional` **baseUrl?**: `string`
 
-***
+---
 
 ### timeout?
 

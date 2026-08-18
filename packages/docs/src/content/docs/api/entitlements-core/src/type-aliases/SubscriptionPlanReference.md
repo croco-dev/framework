@@ -13,7 +13,7 @@ title: "SubscriptionPlanReference"
 
 > `readonly` **planId**: `string`
 
-***
+---
 
 ### planVersionRef
 

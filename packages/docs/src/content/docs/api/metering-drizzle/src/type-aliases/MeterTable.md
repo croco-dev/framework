@@ -15,49 +15,49 @@ title: "MeterTable"
 
 > **allowOverQuota**: `SQLiteColumn`
 
-***
+---
 
 ### createdAt
 
 > **createdAt**: `SQLiteColumn`
 
-***
+---
 
 ### id
 
 > **id**: `SQLiteColumn`
 
-***
+---
 
 ### metadata
 
 > **metadata**: `SQLiteColumn`
 
-***
+---
 
 ### meterId
 
 > **meterId**: `SQLiteColumn`
 
-***
+---
 
 ### quota
 
 > **quota**: `SQLiteColumn`
 
-***
+---
 
 ### tenantId
 
 > **tenantId**: `SQLiteColumn`
 
-***
+---
 
 ### type
 
 > **type**: `SQLiteColumn`
 
-***
+---
 
 ### updatedAt
 

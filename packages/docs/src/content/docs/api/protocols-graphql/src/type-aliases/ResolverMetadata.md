@@ -13,25 +13,25 @@ title: "ResolverMetadata"
 
 > `optional` **args?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### methodName
 
 > **methodName**: `string`
 
-***
+---
 
 ### returnType?
 
 > `optional` **returnType?**: `unknown`
 
-***
+---
 
 ### target
 
 > **target**: `object`
 
-***
+---
 
 ### type
 

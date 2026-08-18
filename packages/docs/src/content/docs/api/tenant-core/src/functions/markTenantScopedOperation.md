@@ -13,7 +13,7 @@ Tenant-scoped operation, repository/query boundary, RLS evidence, and leak fixtu
 
 ### operation
 
-`Omit`\<[`TenantScopedOperation`](/api/tenant-core/src/type-aliases/tenantscopedoperation/), *typeof* `tenantScopedOperationBrand`\>
+`Omit`\<[`TenantScopedOperation`](/api/tenant-core/src/type-aliases/tenantscopedoperation/), _typeof_ `tenantScopedOperationBrand`\>
 
 ## Returns
 

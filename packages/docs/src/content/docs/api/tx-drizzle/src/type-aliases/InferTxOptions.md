@@ -5,7 +5,7 @@ prev: false
 title: "InferTxOptions"
 ---
 
-> **InferTxOptions**\<`TDb`\> = `TDb` *extends* `object` ? `TOptions` : `undefined`
+> **InferTxOptions**\<`TDb`\> = `TDb` _extends_ `object` ? `TOptions` : `undefined`
 
 ## Type Parameters
 

@@ -41,7 +41,7 @@ title: "ImpersonationStore"
 
 `Promise`\<[`ImpersonationState`](/api/impersonation-core/src/type-aliases/impersonationstate/) \| `null`\>
 
-***
+---
 
 ### findByImpersonator()
 
@@ -57,7 +57,7 @@ title: "ImpersonationStore"
 
 `Promise`\<[`ImpersonationState`](/api/impersonation-core/src/type-aliases/impersonationstate/) \| `null`\>
 
-***
+---
 
 ### revoke()
 
@@ -73,7 +73,7 @@ title: "ImpersonationStore"
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### save()
 

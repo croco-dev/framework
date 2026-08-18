@@ -13,7 +13,7 @@ Public contract for a single prefixed GID generator and validator.
 
 ### TPrefix
 
-`TPrefix` *extends* `string`
+`TPrefix` _extends_ `string`
 
 ## Properties
 
@@ -31,7 +31,7 @@ Public contract for a single prefixed GID generator and validator.
 
 `` `${TPrefix}_${string}` ``
 
-***
+---
 
 ### getExpectedLength()
 
@@ -41,7 +41,7 @@ Public contract for a single prefixed GID generator and validator.
 
 `number`
 
-***
+---
 
 ### getPrefix()
 
@@ -51,7 +51,7 @@ Public contract for a single prefixed GID generator and validator.
 
 `TPrefix`
 
-***
+---
 
 ### validate()
 

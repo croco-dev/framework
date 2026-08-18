@@ -5,4 +5,4 @@ prev: false
 title: "VALID_MEMBERSHIP_ROLES"
 ---
 
-> `const` **VALID\_MEMBERSHIP\_ROLES**: \[`"owner"`, `"admin"`, `"member"`, `"viewer"`\]
+> `const` **VALID_MEMBERSHIP_ROLES**: \[`"owner"`, `"admin"`, `"member"`, `"viewer"`\]

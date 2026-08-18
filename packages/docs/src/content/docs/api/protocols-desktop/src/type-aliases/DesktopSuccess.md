@@ -19,7 +19,7 @@ title: "DesktopSuccess"
 
 > `readonly` **ok**: `true`
 
-***
+---
 
 ### value
 

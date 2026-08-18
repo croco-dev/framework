@@ -13,25 +13,25 @@ title: "CreateSagaExecutionParams"
 
 > `readonly` `optional` **idempotencyKey?**: `string`
 
-***
+---
 
 ### metadata?
 
 > `readonly` `optional` **metadata?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### payload
 
 > `readonly` **payload**: `unknown`
 
-***
+---
 
 ### replayOf?
 
 > `readonly` `optional` **replayOf?**: `string`
 
-***
+---
 
 ### sagaName
 

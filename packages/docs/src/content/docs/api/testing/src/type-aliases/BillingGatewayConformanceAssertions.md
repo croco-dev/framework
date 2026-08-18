@@ -11,7 +11,7 @@ title: "BillingGatewayConformanceAssertions"
 
 ### TGateway
 
-`TGateway` *extends* [`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/) = [`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/)
+`TGateway` _extends_ [`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/) = [`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/)
 
 ## Properties
 
@@ -43,7 +43,7 @@ title: "BillingGatewayConformanceAssertions"
 
 `void` \| `Promise`\<`void`\>
 
-***
+---
 
 ### customerPortal?
 
@@ -77,7 +77,7 @@ title: "BillingGatewayConformanceAssertions"
 
 `void` \| `Promise`\<`void`\>
 
-***
+---
 
 ### subscriptionLifecycle?
 

@@ -13,13 +13,13 @@ title: "ContractSchemaFieldDescriptor"
 
 > `readonly` **name**: `string`
 
-***
+---
 
 ### required
 
 > `readonly` **required**: `boolean`
 
-***
+---
 
 ### schema
 

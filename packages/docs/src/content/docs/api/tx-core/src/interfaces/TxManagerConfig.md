@@ -13,7 +13,7 @@ title: "TxManagerConfig"
 
 > `optional` **defaultNesting?**: [`NestingStrategy`](/api/tx-core/src/type-aliases/nestingstrategy/)
 
-***
+---
 
 ### defaultTimeout?
 

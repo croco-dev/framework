@@ -11,8 +11,8 @@ Row-Level Security(RLS) 사용 시 테넌트 컨텍스트가 누락된 경우 �
 
 ```typescript
 throw new TenantContextRequiredProblem(
-  'tenantId',
-  'RLS가 활성화된 테이블에 접근하려면 테넌트 컨텍스트가 필요합니다.'
+  "tenantId",
+  "RLS가 활성화된 테이블에 접근하려면 테넌트 컨텍스트가 필요합니다.",
 );
 ```
 
@@ -44,7 +44,7 @@ throw new TenantContextRequiredProblem(
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`category`](/api/problems-core/src/classes/problem/#category)
 
-***
+---
 
 ### cause?
 
@@ -54,7 +54,7 @@ throw new TenantContextRequiredProblem(
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`cause`](/api/problems-core/src/classes/problem/#cause)
 
-***
+---
 
 ### code
 
@@ -64,7 +64,7 @@ throw new TenantContextRequiredProblem(
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`code`](/api/problems-core/src/classes/problem/#code)
 
-***
+---
 
 ### detail?
 
@@ -74,7 +74,7 @@ throw new TenantContextRequiredProblem(
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`detail`](/api/problems-core/src/classes/problem/#detail)
 
-***
+---
 
 ### extensions?
 
@@ -84,7 +84,7 @@ throw new TenantContextRequiredProblem(
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`extensions`](/api/problems-core/src/classes/problem/#extensions)
 
-***
+---
 
 ### instance?
 
@@ -94,7 +94,7 @@ throw new TenantContextRequiredProblem(
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`instance`](/api/problems-core/src/classes/problem/#instance)
 
-***
+---
 
 ### message
 
@@ -104,7 +104,7 @@ throw new TenantContextRequiredProblem(
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`message`](/api/problems-core/src/classes/problem/#message)
 
-***
+---
 
 ### name
 
@@ -114,7 +114,7 @@ throw new TenantContextRequiredProblem(
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`name`](/api/problems-core/src/classes/problem/#name)
 
-***
+---
 
 ### stack?
 
@@ -124,7 +124,7 @@ throw new TenantContextRequiredProblem(
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`stack`](/api/problems-core/src/classes/problem/#stack)
 
-***
+---
 
 ### type
 
@@ -134,7 +134,7 @@ throw new TenantContextRequiredProblem(
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`type`](/api/problems-core/src/classes/problem/#type)
 
-***
+---
 
 ### stackTraceLimit
 
@@ -170,7 +170,7 @@ not capture any frames.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`status`](/api/problems-core/src/classes/problem/#status)
 
-***
+---
 
 ### title
 
@@ -200,7 +200,7 @@ not capture any frames.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`toJSON`](/api/problems-core/src/classes/problem/#tojson)
 
-***
+---
 
 ### captureStackTrace()
 
@@ -213,7 +213,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack;  // Similar to `new Error().stack`
+myObject.stack; // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -268,7 +268,7 @@ a();
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`captureStackTrace`](/api/problems-core/src/classes/problem/#capturestacktrace)
 
-***
+---
 
 ### prepareStackTrace()
 

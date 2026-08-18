@@ -15,25 +15,25 @@ title: "TokenBucketPolicy"
 
 > **algorithm**: `"token-bucket"`
 
-***
+---
 
 ### capacity
 
 > **capacity**: `number`
 
-***
+---
 
 ### name
 
 > **name**: `string`
 
-***
+---
 
 ### refillIntervalMs
 
 > **refillIntervalMs**: `number`
 
-***
+---
 
 ### refillRate
 

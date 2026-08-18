@@ -17,19 +17,19 @@ Usage 조회 옵션
 
 Inclusive upper timestamp bound. Must be provided together with startDate.
 
-***
+---
 
 ### meterId
 
 > **meterId**: `string`
 
-***
+---
 
 ### period
 
 > **period**: [`AggregationPeriod`](/api/metering-core/src/type-aliases/aggregationperiod/)
 
-***
+---
 
 ### startDate?
 
@@ -37,7 +37,7 @@ Inclusive upper timestamp bound. Must be provided together with startDate.
 
 Inclusive lower timestamp bound. Must be provided together with endDate.
 
-***
+---
 
 ### tenantId
 

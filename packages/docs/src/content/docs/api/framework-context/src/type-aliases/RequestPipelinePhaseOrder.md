@@ -13,19 +13,19 @@ title: "RequestPipelinePhaseOrder"
 
 > `readonly` **after**: readonly `string`[]
 
-***
+---
 
 ### before
 
 > `readonly` **before**: readonly `string`[]
 
-***
+---
 
 ### error
 
 > `readonly` **error**: readonly `string`[]
 
-***
+---
 
 ### handler
 

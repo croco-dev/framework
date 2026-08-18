@@ -5,4 +5,4 @@ prev: false
 title: "RUNTIME_CAPABILITY_MANIFEST_VERSION"
 ---
 
-> `const` **RUNTIME\_CAPABILITY\_MANIFEST\_VERSION**: `"croco.runtime-capability.manifest.v1"`
+> `const` **RUNTIME_CAPABILITY_MANIFEST_VERSION**: `"croco.runtime-capability.manifest.v1"`

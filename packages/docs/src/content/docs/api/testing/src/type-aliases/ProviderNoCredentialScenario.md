@@ -13,19 +13,19 @@ title: "ProviderNoCredentialScenario"
 
 > `readonly` **diagnosticTokens**: readonly `string`[]
 
-***
+---
 
 ### expectedCode
 
 > `readonly` **expectedCode**: `string`
 
-***
+---
 
 ### missingEnvironment
 
 > `readonly` **missingEnvironment**: readonly `string`[]
 
-***
+---
 
 ### name
 

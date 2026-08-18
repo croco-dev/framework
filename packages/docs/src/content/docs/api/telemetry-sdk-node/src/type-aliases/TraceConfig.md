@@ -20,7 +20,7 @@ sampling strategy, and batching behavior.
 
 Auto-instrumentation configuration
 
-***
+---
 
 ### batchCount?
 
@@ -28,7 +28,7 @@ Auto-instrumentation configuration
 
 Maximum queue size. Integer from 1 through 2_147_483_647. Default: 2048
 
-***
+---
 
 ### batchSize?
 
@@ -36,7 +36,7 @@ Maximum queue size. Integer from 1 through 2_147_483_647. Default: 2048
 
 Maximum export batch size. Must not exceed batchCount. Default: 512
 
-***
+---
 
 ### batchTimeout?
 
@@ -44,7 +44,7 @@ Maximum export batch size. Must not exceed batchCount. Default: 512
 
 Batch timeout in milliseconds. Integer from 0 through 2_147_483_647. Default: 5000
 
-***
+---
 
 ### enabled?
 
@@ -52,7 +52,7 @@ Batch timeout in milliseconds. Integer from 0 through 2_147_483_647. Default: 50
 
 Whether tracing is enabled. Default: true
 
-***
+---
 
 ### exporterHeaders?
 
@@ -60,7 +60,7 @@ Whether tracing is enabled. Default: true
 
 Additional HTTP headers for the exporter
 
-***
+---
 
 ### exporterUrl?
 
@@ -68,7 +68,7 @@ Additional HTTP headers for the exporter
 
 OTLP exporter URL. Default: from env or localhost:4318
 
-***
+---
 
 ### instrumentations?
 
@@ -76,7 +76,7 @@ OTLP exporter URL. Default: from env or localhost:4318
 
 Custom instrumentation instances
 
-***
+---
 
 ### probability?
 
@@ -84,7 +84,7 @@ Custom instrumentation instances
 
 Sampling probability (0.0-1.0). Alternative to sampler
 
-***
+---
 
 ### sampler?
 

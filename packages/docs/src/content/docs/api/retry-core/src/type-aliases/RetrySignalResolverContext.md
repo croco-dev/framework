@@ -15,19 +15,19 @@ title: "RetrySignalResolverContext"
 
 > **args**: `unknown`[]
 
-***
+---
 
 ### instance
 
 > **instance**: `unknown`
 
-***
+---
 
 ### methodName
 
 > **methodName**: `string`
 
-***
+---
 
 ### targetName
 

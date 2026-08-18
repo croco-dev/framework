@@ -13,25 +13,25 @@ title: "FrameworkManifestGeneratedArtifact"
 
 > `readonly` **commitPolicy**: [`FrameworkManifestCommitPolicy`](/api/framework-routes/src/type-aliases/frameworkmanifestcommitpolicy/)
 
-***
+---
 
 ### gitIgnored
 
 > `readonly` **gitIgnored**: `boolean`
 
-***
+---
 
 ### gitIgnoreRule?
 
 > `readonly` `optional` **gitIgnoreRule?**: `string`
 
-***
+---
 
 ### kind
 
 > `readonly` **kind**: [`FrameworkManifestGeneratedArtifactKind`](/api/framework-routes/src/type-aliases/frameworkmanifestgeneratedartifactkind/)
 
-***
+---
 
 ### path
 

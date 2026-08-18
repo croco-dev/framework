@@ -11,7 +11,7 @@ title: "ProblemFetchOptions"
 
 ### Problem
 
-`Problem` *extends* [`ProblemDeclaration`](/api/frontend-problems/src/type-aliases/problemdeclaration/) = [`ProblemDeclaration`](/api/frontend-problems/src/type-aliases/problemdeclaration/)
+`Problem` _extends_ [`ProblemDeclaration`](/api/frontend-problems/src/type-aliases/problemdeclaration/) = [`ProblemDeclaration`](/api/frontend-problems/src/type-aliases/problemdeclaration/)
 
 ## Properties
 
@@ -19,7 +19,7 @@ title: "ProblemFetchOptions"
 
 > `readonly` `optional` **declaredProblems?**: readonly `Problem`[]
 
-***
+---
 
 ### fetch?
 

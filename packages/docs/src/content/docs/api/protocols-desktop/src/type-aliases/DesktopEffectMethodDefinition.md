@@ -11,7 +11,7 @@ title: "DesktopEffectMethodDefinition"
 
 ### TArguments
 
-`TArguments` *extends* readonly `unknown`[] = readonly `unknown`[]
+`TArguments` _extends_ readonly `unknown`[] = readonly `unknown`[]
 
 ### TResult
 
@@ -31,7 +31,7 @@ title: "DesktopEffectMethodDefinition"
 
 > `readonly` **result**: `TResult`
 
-***
+---
 
 ### definitionType
 

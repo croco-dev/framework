@@ -13,19 +13,19 @@ title: "ApiKeyRotationProtectionContext"
 
 > **idempotencyKey**: `string`
 
-***
+---
 
 ### newKeyId
 
 > **newKeyId**: `string`
 
-***
+---
 
 ### oldKeyId
 
 > **oldKeyId**: `string`
 
-***
+---
 
 ### tenantId
 

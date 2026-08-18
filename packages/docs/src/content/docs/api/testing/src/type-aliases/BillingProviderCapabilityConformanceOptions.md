@@ -17,7 +17,7 @@ title: "BillingProviderCapabilityConformanceOptions"
 
 [`BillingProvider`](/api/billing-core/src/classes/billingprovider/) \| `Promise`\<[`BillingProvider`](/api/billing-core/src/classes/billingprovider/)\>
 
-***
+---
 
 ### required
 

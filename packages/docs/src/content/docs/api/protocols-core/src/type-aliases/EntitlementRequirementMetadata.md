@@ -13,13 +13,13 @@ title: "EntitlementRequirementMetadata"
 
 > `readonly` `optional` **description?**: `string`
 
-***
+---
 
 ### feature
 
 > `readonly` **feature**: `string`
 
-***
+---
 
 ### resource?
 

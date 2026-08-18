@@ -13,19 +13,19 @@ title: "UsageBillingConformanceFixtures"
 
 > `readonly` **customerMeterState**: `Omit`\<[`CustomerMeterState`](/api/billing-core/src/type-aliases/customermeterstate/), `"updatedAt"`\>
 
-***
+---
 
 ### emptyCustomerMeterStateQuery
 
 > `readonly` **emptyCustomerMeterStateQuery**: [`CustomerMeterStateQuery`](/api/billing-core/src/type-aliases/customermeterstatequery/)
 
-***
+---
 
 ### events
 
 > `readonly` **events**: readonly [`UsageBillingEvent`](/api/billing-core/src/type-aliases/usagebillingevent/)[]
 
-***
+---
 
 ### partialBatch
 

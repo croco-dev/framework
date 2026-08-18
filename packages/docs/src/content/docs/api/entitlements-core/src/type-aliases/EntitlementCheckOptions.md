@@ -13,19 +13,19 @@ title: "EntitlementCheckOptions"
 
 > `readonly` `optional` **inputs?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### ruleId?
 
 > `readonly` `optional` **ruleId?**: `string`
 
-***
+---
 
 ### sourceLocation?
 
 > `readonly` `optional` **sourceLocation?**: [`PolicyDecisionSourceLocation`](/api/access-core/src/type-aliases/policydecisionsourcelocation/)
 
-***
+---
 
 ### subjectRef?
 

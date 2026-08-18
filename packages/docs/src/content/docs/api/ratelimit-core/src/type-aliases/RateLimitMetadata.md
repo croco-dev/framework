@@ -25,7 +25,7 @@ title: "RateLimitMetadata"
 
 `string`
 
-***
+---
 
 ### policy
 

@@ -11,7 +11,7 @@ title: "ProblemConstructor"
 
 ### TProblem
 
-`TProblem` *extends* [`Problem`](/api/problems-core/src/classes/problem/) = [`Problem`](/api/problems-core/src/classes/problem/)
+`TProblem` _extends_ [`Problem`](/api/problems-core/src/classes/problem/) = [`Problem`](/api/problems-core/src/classes/problem/)
 
 ## Properties
 
@@ -19,7 +19,7 @@ title: "ProblemConstructor"
 
 > `readonly` **name**: `string`
 
-***
+---
 
 ### prototype
 

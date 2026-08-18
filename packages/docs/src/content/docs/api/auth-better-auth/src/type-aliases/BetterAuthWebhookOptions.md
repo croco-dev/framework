@@ -15,7 +15,7 @@ Better Auth 웹훅 검증 옵션입니다.
 
 > **idempotencyStore**: [`IdempotencyStore`](/api/idempotency-core/src/type-aliases/idempotencystore/)\<[`WebhookGatewayStoredResult`](/api/webhooks-core/src/type-aliases/webhookgatewaystoredresult/)\>
 
-***
+---
 
 ### signingSecret
 

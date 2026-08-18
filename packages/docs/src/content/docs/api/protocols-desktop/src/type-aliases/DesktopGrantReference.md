@@ -14,23 +14,23 @@ redemption, and path validation belong to the desktop runtime.
 
 ## Type Declaration
 
-### \[DESKTOP\_GRANT\_REFERENCE\]
+### \[DESKTOP_GRANT_REFERENCE\]
 
-> `readonly` **\[DESKTOP\_GRANT\_REFERENCE\]**: `object`
+> `readonly` **\[DESKTOP_GRANT_REFERENCE\]**: `object`
 
-#### \[DESKTOP\_GRANT\_REFERENCE\].access
+#### \[DESKTOP_GRANT_REFERENCE\].access
 
 > `readonly` **access**: `TAccess`
 
-#### \[DESKTOP\_GRANT\_REFERENCE\].lifetime
+#### \[DESKTOP_GRANT_REFERENCE\].lifetime
 
 > `readonly` **lifetime**: `TLifetime`
 
-#### \[DESKTOP\_GRANT\_REFERENCE\].resource
+#### \[DESKTOP_GRANT_REFERENCE\].resource
 
 > `readonly` **resource**: `TResource`
 
-#### \[DESKTOP\_GRANT\_REFERENCE\].scope
+#### \[DESKTOP_GRANT_REFERENCE\].scope
 
 > `readonly` **scope**: `TScope`
 
@@ -38,16 +38,16 @@ redemption, and path validation belong to the desktop runtime.
 
 ### TResource
 
-`TResource` *extends* [`DesktopGrantResourceKind`](/api/protocols-desktop/src/type-aliases/desktopgrantresourcekind/) = [`DesktopGrantResourceKind`](/api/protocols-desktop/src/type-aliases/desktopgrantresourcekind/)
+`TResource` _extends_ [`DesktopGrantResourceKind`](/api/protocols-desktop/src/type-aliases/desktopgrantresourcekind/) = [`DesktopGrantResourceKind`](/api/protocols-desktop/src/type-aliases/desktopgrantresourcekind/)
 
 ### TAccess
 
-`TAccess` *extends* [`DesktopGrantAccess`](/api/protocols-desktop/src/type-aliases/desktopgrantaccess/) = [`DesktopGrantAccess`](/api/protocols-desktop/src/type-aliases/desktopgrantaccess/)
+`TAccess` _extends_ [`DesktopGrantAccess`](/api/protocols-desktop/src/type-aliases/desktopgrantaccess/) = [`DesktopGrantAccess`](/api/protocols-desktop/src/type-aliases/desktopgrantaccess/)
 
 ### TScope
 
-`TScope` *extends* `DesktopGrantScopeFor`\<`TResource`\> = `DesktopGrantScopeFor`\<`TResource`\>
+`TScope` _extends_ `DesktopGrantScopeFor`\<`TResource`\> = `DesktopGrantScopeFor`\<`TResource`\>
 
 ### TLifetime
 
-`TLifetime` *extends* [`DesktopGrantLifetime`](/api/protocols-desktop/src/type-aliases/desktopgrantlifetime/) = [`DesktopGrantLifetime`](/api/protocols-desktop/src/type-aliases/desktopgrantlifetime/)
+`TLifetime` _extends_ [`DesktopGrantLifetime`](/api/protocols-desktop/src/type-aliases/desktopgrantlifetime/) = [`DesktopGrantLifetime`](/api/protocols-desktop/src/type-aliases/desktopgrantlifetime/)

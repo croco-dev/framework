@@ -19,7 +19,7 @@ title: "AdminDataTableRecoveryActionEvent"
 
 > `readonly` **action**: [`AdminActionContract`](/api/admin-react/src/type-aliases/adminactioncontract/)
 
-***
+---
 
 ### state
 

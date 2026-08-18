@@ -25,4 +25,4 @@ title: "MonetizationSignalData"
 
 ### TType
 
-`TType` *extends* [`MonetizationSignalType`](/api/lifecycle-core/src/type-aliases/monetizationsignaltype/) = [`MonetizationSignalType`](/api/lifecycle-core/src/type-aliases/monetizationsignaltype/)
+`TType` _extends_ [`MonetizationSignalType`](/api/lifecycle-core/src/type-aliases/monetizationsignaltype/) = [`MonetizationSignalType`](/api/lifecycle-core/src/type-aliases/monetizationsignaltype/)

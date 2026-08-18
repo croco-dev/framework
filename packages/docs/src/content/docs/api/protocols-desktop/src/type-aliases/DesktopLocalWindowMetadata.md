@@ -13,19 +13,19 @@ title: "DesktopLocalWindowMetadata"
 
 > `readonly` **expose**: readonly [`DesktopMemberReferenceMetadata`](/api/protocols-desktop/src/type-aliases/desktopmemberreferencemetadata/)[]
 
-***
+---
 
 ### key
 
 > `readonly` **key**: `string`
 
-***
+---
 
 ### receive
 
 > `readonly` **receive**: readonly [`DesktopMemberReferenceMetadata`](/api/protocols-desktop/src/type-aliases/desktopmemberreferencemetadata/)[]
 
-***
+---
 
 ### trust
 

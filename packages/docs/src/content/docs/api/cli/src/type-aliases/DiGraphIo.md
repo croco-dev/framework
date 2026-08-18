@@ -13,7 +13,7 @@ title: "DiGraphIo"
 
 > `readonly` **cwd**: `string`
 
-***
+---
 
 ### mkdir
 
@@ -29,7 +29,7 @@ title: "DiGraphIo"
 
 `void`
 
-***
+---
 
 ### stderr
 
@@ -45,7 +45,7 @@ title: "DiGraphIo"
 
 `void`
 
-***
+---
 
 ### stdout
 
@@ -61,7 +61,7 @@ title: "DiGraphIo"
 
 `void`
 
-***
+---
 
 ### writeFile
 

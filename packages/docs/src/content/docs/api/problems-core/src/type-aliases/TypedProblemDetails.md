@@ -21,8 +21,8 @@ title: "TypedProblemDetails"
 
 ### Code
 
-`Code` *extends* `string` = `string`
+`Code` _extends_ `string` = `string`
 
 ### Status
 
-`Status` *extends* `number` = `number`
+`Status` _extends_ `number` = `number`

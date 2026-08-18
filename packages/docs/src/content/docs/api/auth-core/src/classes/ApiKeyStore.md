@@ -49,7 +49,7 @@ API 키 저장소 토큰과 추상 저장소 계약입니다.
 
 `Promise`\<[`ApiKeyRotation`](/api/auth-core/src/type-aliases/apikeyrotation/) \| `null`\>
 
-***
+---
 
 ### completeRotationEvent()
 
@@ -73,7 +73,7 @@ API 키 저장소 토큰과 추상 저장소 계약입니다.
 
 `Promise`\<[`ApiKeyRotation`](/api/auth-core/src/type-aliases/apikeyrotation/) \| `null`\>
 
-***
+---
 
 ### delete()
 
@@ -89,7 +89,7 @@ API 키 저장소 토큰과 추상 저장소 계약입니다.
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### findById()
 
@@ -105,7 +105,7 @@ API 키 저장소 토큰과 추상 저장소 계약입니다.
 
 `Promise`\<[`ApiKey`](/api/auth-core/src/type-aliases/apikey/) \| `null`\>
 
-***
+---
 
 ### findByShortToken()
 
@@ -121,7 +121,7 @@ API 키 저장소 토큰과 추상 저장소 계약입니다.
 
 `Promise`\<[`ApiKey`](/api/auth-core/src/type-aliases/apikey/) \| `null`\>
 
-***
+---
 
 ### listByTenant()
 
@@ -137,7 +137,7 @@ API 키 저장소 토큰과 추상 저장소 계약입니다.
 
 `Promise`\<[`ApiKey`](/api/auth-core/src/type-aliases/apikey/)[]\>
 
-***
+---
 
 ### releaseRotationEvent()
 
@@ -161,7 +161,7 @@ API 키 저장소 토큰과 추상 저장소 계약입니다.
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### revoke()
 
@@ -177,7 +177,7 @@ API 키 저장소 토큰과 추상 저장소 계약입니다.
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### rotate()
 
@@ -193,7 +193,7 @@ API 키 저장소 토큰과 추상 저장소 계약입니다.
 
 `Promise`\<[`ApiKeyRotation`](/api/auth-core/src/type-aliases/apikeyrotation/)\>
 
-***
+---
 
 ### save()
 
@@ -209,7 +209,7 @@ API 키 저장소 토큰과 추상 저장소 계약입니다.
 
 `Promise`\<[`ApiKey`](/api/auth-core/src/type-aliases/apikey/)\>
 
-***
+---
 
 ### updateLastUsed()
 

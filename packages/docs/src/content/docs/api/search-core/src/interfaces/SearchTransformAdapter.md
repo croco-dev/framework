@@ -19,7 +19,7 @@ title: "SearchTransformAdapter"
 
 > `abstract` `readonly` **defaultSuffix**: `string`
 
-***
+---
 
 ### id
 

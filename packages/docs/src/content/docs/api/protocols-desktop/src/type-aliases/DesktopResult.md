@@ -15,4 +15,4 @@ title: "DesktopResult"
 
 ### TProblem
 
-`TProblem` *extends* [`Problem`](/api/problems-core/src/classes/problem/) = `never`
+`TProblem` _extends_ [`Problem`](/api/problems-core/src/classes/problem/) = `never`

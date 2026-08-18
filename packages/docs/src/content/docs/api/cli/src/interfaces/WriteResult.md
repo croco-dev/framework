@@ -11,13 +11,13 @@ title: "WriteResult"
 
 > `optional` **diff?**: `string`
 
-***
+---
 
 ### path
 
 > **path**: `string`
 
-***
+---
 
 ### status
 

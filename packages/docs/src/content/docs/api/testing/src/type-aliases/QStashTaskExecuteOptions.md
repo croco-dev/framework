@@ -13,13 +13,13 @@ title: "QStashTaskExecuteOptions"
 
 > `readonly` `optional` **delay?**: `number`
 
-***
+---
 
 ### headers?
 
 > `readonly` `optional` **headers?**: `Record`\<`string`, `string`\>
 
-***
+---
 
 ### idempotencyKey?
 

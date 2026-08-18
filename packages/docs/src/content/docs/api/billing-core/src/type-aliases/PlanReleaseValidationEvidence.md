@@ -16,37 +16,37 @@ snapshotId, and checkedAt bindings are verified locally without re-running valid
 
 > `readonly` **checkedAt**: `string`
 
-***
+---
 
 ### definitionFingerprint
 
 > `readonly` **definitionFingerprint**: `string`
 
-***
+---
 
 ### diagnostics
 
 > `readonly` **diagnostics**: readonly [`PlanReleaseValidationDiagnostic`](/api/billing-core/src/type-aliases/planreleasevalidationdiagnostic/)[]
 
-***
+---
 
 ### draftRevision
 
 > `readonly` **draftRevision**: `number`
 
-***
+---
 
 ### graphVersion
 
 > `readonly` **graphVersion**: `string`
 
-***
+---
 
 ### planVersionRef
 
 > `readonly` **planVersionRef**: [`PlanVersionRef`](/api/billing-core/src/type-aliases/planversionref/)
 
-***
+---
 
 ### snapshotId
 

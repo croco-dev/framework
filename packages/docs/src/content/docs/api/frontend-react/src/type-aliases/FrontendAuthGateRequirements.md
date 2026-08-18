@@ -13,13 +13,13 @@ title: "FrontendAuthGateRequirements"
 
 > `readonly` `optional` **entitlements?**: `string` \| readonly `string`[]
 
-***
+---
 
 ### permissions?
 
 > `readonly` `optional` **permissions?**: `string` \| readonly `string`[]
 
-***
+---
 
 ### tenantRequired?
 

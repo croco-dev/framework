@@ -17,7 +17,7 @@ Configuration for User Carrying Capacity calculation.
 
 Number of days to look back for calculating average daily inflow/churn
 
-***
+---
 
 ### tenantId
 

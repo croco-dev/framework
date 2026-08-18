@@ -11,7 +11,7 @@ title: "MiddlewareFn"
 
 ### TContext
 
-`TContext` *extends* `object` = `object`
+`TContext` _extends_ `object` = `object`
 
 ## Parameters
 

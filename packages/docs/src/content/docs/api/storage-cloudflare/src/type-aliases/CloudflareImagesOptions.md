@@ -17,7 +17,7 @@ Cloudflare Images 제공자 설정입니다.
 
 Cloudflare Account Hash (공개 URL용)
 
-***
+---
 
 ### accountId
 
@@ -25,7 +25,7 @@ Cloudflare Account Hash (공개 URL용)
 
 Cloudflare Account ID
 
-***
+---
 
 ### apiToken
 
@@ -33,7 +33,7 @@ Cloudflare Account ID
 
 Cloudflare API Token (Images API 권한 필요)
 
-***
+---
 
 ### customDomain?
 
@@ -42,7 +42,7 @@ Cloudflare API Token (Images API 권한 필요)
 커스텀 도메인 (선택)
 설정된 경우 커스텀 도메인을 통해 이미지 제공
 
-***
+---
 
 ### defaultVariant?
 
@@ -51,19 +51,19 @@ Cloudflare API Token (Images API 권한 필요)
 기본 변형 (variant)
 기본값: 'public'
 
-***
+---
 
 ### maxUploadBytes?
 
 > `optional` **maxUploadBytes?**: `number`
 
-***
+---
 
 ### signingKey?
 
 > `optional` **signingKey?**: `string`
 
-***
+---
 
 ### ttl?
 

@@ -13,49 +13,49 @@ title: "ProjectIntentMap"
 
 > `readonly` **controllers**: readonly [`IntentMapController`](/api/framework-routes/src/type-aliases/intentmapcontroller/)[]
 
-***
+---
 
 ### eventHandlers
 
 > `readonly` **eventHandlers**: readonly [`IntentMapEventHandler`](/api/framework-routes/src/type-aliases/intentmapeventhandler/)[]
 
-***
+---
 
 ### files
 
 > `readonly` **files**: readonly [`IntentMapFile`](/api/framework-routes/src/type-aliases/intentmapfile/)[]
 
-***
+---
 
 ### generatedArtifacts
 
 > `readonly` **generatedArtifacts**: readonly [`IntentMapGeneratedArtifact`](/api/framework-routes/src/type-aliases/intentmapgeneratedartifact/)[]
 
-***
+---
 
 ### providers
 
 > `readonly` **providers**: readonly [`IntentMapProvider`](/api/framework-routes/src/type-aliases/intentmapprovider/)[]
 
-***
+---
 
 ### relationships
 
 > `readonly` **relationships**: readonly [`IntentMapRelationship`](/api/framework-routes/src/type-aliases/intentmaprelationship/)[]
 
-***
+---
 
 ### routes
 
 > `readonly` **routes**: readonly [`IntentMapRoute`](/api/framework-routes/src/type-aliases/intentmaproute/)[]
 
-***
+---
 
 ### sensitiveDataPolicy
 
 > `readonly` **sensitiveDataPolicy**: [`IntentMapSensitiveDataPolicy`](/api/framework-routes/src/type-aliases/intentmapsensitivedatapolicy/)
 
-***
+---
 
 ### summary
 
@@ -85,7 +85,7 @@ title: "ProjectIntentMap"
 
 > `readonly` **routes**: `number`
 
-***
+---
 
 ### version
 

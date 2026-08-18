@@ -13,7 +13,7 @@ title: "PlanReleaseEditor"
 
 > `readonly` **catalog**: [`PlanReleaseEditorCatalog`](/api/admin-react/src/type-aliases/planreleaseeditorcatalog/)
 
-***
+---
 
 ### fields
 

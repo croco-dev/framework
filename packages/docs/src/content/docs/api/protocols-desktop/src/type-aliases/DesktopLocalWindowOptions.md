@@ -11,11 +11,11 @@ title: "DesktopLocalWindowOptions"
 
 ### TExpose
 
-`TExpose` *extends* readonly [`KeyedDesktopCommand`](/api/protocols-desktop/src/type-aliases/keyeddesktopcommand/)[]
+`TExpose` _extends_ readonly [`KeyedDesktopCommand`](/api/protocols-desktop/src/type-aliases/keyeddesktopcommand/)[]
 
 ### TReceive
 
-`TReceive` *extends* readonly [`KeyedDesktopEvent`](/api/protocols-desktop/src/type-aliases/keyeddesktopevent/)[]
+`TReceive` _extends_ readonly [`KeyedDesktopEvent`](/api/protocols-desktop/src/type-aliases/keyeddesktopevent/)[]
 
 ## Properties
 
@@ -23,7 +23,7 @@ title: "DesktopLocalWindowOptions"
 
 > `readonly` `optional` **expose?**: `TExpose`
 
-***
+---
 
 ### receive?
 

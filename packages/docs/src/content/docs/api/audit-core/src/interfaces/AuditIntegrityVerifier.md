@@ -23,7 +23,7 @@ title: "AuditIntegrityVerifier"
 
 `string`
 
-***
+---
 
 ### verify()
 

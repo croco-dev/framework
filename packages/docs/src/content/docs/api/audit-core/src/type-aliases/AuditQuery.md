@@ -15,13 +15,13 @@ title: "AuditQuery"
 
 > `optional` **limit?**: `number`
 
-***
+---
 
 ### offset?
 
 > `optional` **offset?**: `number`
 
-***
+---
 
 ### tenantId
 

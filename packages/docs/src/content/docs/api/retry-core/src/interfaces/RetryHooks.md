@@ -25,7 +25,7 @@ title: "RetryHooks"
 
 `boolean` \| `Promise`\<`boolean`\>
 
-***
+---
 
 ### onExhausted?
 
@@ -45,7 +45,7 @@ title: "RetryHooks"
 
 `void` \| `Promise`\<`void`\>
 
-***
+---
 
 ### onRetryError?
 
@@ -65,7 +65,7 @@ title: "RetryHooks"
 
 `void` \| `Promise`\<`void`\>
 
-***
+---
 
 ### onStart?
 
@@ -81,7 +81,7 @@ title: "RetryHooks"
 
 `boolean` \| `Promise`\<`boolean`\>
 
-***
+---
 
 ### onSuccess?
 

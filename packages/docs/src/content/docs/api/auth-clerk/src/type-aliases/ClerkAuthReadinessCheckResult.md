@@ -15,7 +15,7 @@ Clerk 인증 readiness diagnostics provider입니다.
 
 > `readonly` `optional` **details?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### message?
 

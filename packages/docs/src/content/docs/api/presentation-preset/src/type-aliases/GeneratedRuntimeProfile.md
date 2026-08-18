@@ -15,7 +15,7 @@ title: "GeneratedRuntimeProfile"
 
 create-croco-app generated smoke case that exercises this profile
 
-***
+---
 
 ### generatedAppSmokeCommand
 
@@ -23,7 +23,7 @@ create-croco-app generated smoke case that exercises this profile
 
 Focused command for re-running the generated smoke evidence
 
-***
+---
 
 ### name
 
@@ -31,7 +31,7 @@ Focused command for re-running the generated smoke evidence
 
 Stable generated profile name used in tests and docs
 
-***
+---
 
 ### packageTestName
 
@@ -39,7 +39,7 @@ Stable generated profile name used in tests and docs
 
 Named package test that validates this profile contract
 
-***
+---
 
 ### runtime
 
@@ -47,7 +47,7 @@ Named package test that validates this profile contract
 
 Runtime claim this generated profile proves for the package catalog
 
-***
+---
 
 ### target
 
@@ -55,7 +55,7 @@ Runtime claim this generated profile proves for the package catalog
 
 Runtime target metadata and expected output contract for the profile
 
-***
+---
 
 ### ui?
 

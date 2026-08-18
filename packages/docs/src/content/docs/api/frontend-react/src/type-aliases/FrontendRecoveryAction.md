@@ -13,19 +13,19 @@ title: "FrontendRecoveryAction"
 
 > `readonly` `optional` **href?**: `string`
 
-***
+---
 
 ### id
 
 > `readonly` **id**: `string`
 
-***
+---
 
 ### label
 
 > `readonly` **label**: `string`
 
-***
+---
 
 ### onRecover?
 
@@ -35,7 +35,7 @@ title: "FrontendRecoveryAction"
 
 `void` \| `Promise`\<`void`\>
 
-***
+---
 
 ### problemCodes?
 

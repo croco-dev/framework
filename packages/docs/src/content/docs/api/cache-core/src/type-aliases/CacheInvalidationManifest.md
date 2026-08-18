@@ -13,19 +13,19 @@ title: "CacheInvalidationManifest"
 
 > `readonly` **diagnostics**: readonly [`CacheInvalidationDiagnostic`](/api/cache-core/src/type-aliases/cacheinvalidationdiagnostic/)[]
 
-***
+---
 
 ### events
 
 > `readonly` **events**: readonly [`CacheInvalidationManifestEvent`](/api/cache-core/src/type-aliases/cacheinvalidationmanifestevent/)[]
 
-***
+---
 
 ### schemaVersion
 
 > `readonly` **schemaVersion**: [`CacheInvalidationManifestSchemaVersion`](/api/cache-core/src/type-aliases/cacheinvalidationmanifestschemaversion/)
 
-***
+---
 
 ### status
 

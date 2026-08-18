@@ -11,11 +11,11 @@ title: "ProblemRegistryProblemDefinition"
 
 ### Category
 
-`Category` *extends* [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/) = [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
+`Category` _extends_ [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/) = [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
 
 ### Status
 
-`Status` *extends* `number` = `number`
+`Status` _extends_ `number` = `number`
 
 ## Properties
 
@@ -23,49 +23,49 @@ title: "ProblemRegistryProblemDefinition"
 
 > `readonly` **category**: `Category`
 
-***
+---
 
 ### cookbookPath?
 
 > `readonly` `optional` **cookbookPath?**: `string`
 
-***
+---
 
 ### description?
 
 > `readonly` `optional` **description?**: `string`
 
-***
+---
 
 ### public
 
 > `readonly` **public**: `boolean`
 
-***
+---
 
 ### redaction
 
 > `readonly` **redaction**: [`ProblemRegistryRedaction`](/api/problems-core/src/type-aliases/problemregistryredaction/)
 
-***
+---
 
 ### retryable
 
 > `readonly` **retryable**: `boolean`
 
-***
+---
 
 ### status?
 
 > `readonly` `optional` **status?**: `Status`
 
-***
+---
 
 ### statusPolicy?
 
 > `readonly` `optional` **statusPolicy?**: [`ProblemStatusPolicy`](/api/problems-core/src/type-aliases/problemstatuspolicy/)
 
-***
+---
 
 ### type?
 

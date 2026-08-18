@@ -13,25 +13,25 @@ title: "WebhookGatewayHandledResult"
 
 > `readonly` **dispatch**: [`WebhookDispatchResult`](/api/webhooks-core/src/type-aliases/webhookdispatchresult/)
 
-***
+---
 
 ### event
 
 > `readonly` **event**: [`WebhookEvent`](/api/webhooks-core/src/type-aliases/webhookevent/)
 
-***
+---
 
 ### idempotencyKey
 
 > `readonly` **idempotencyKey**: [`DerivedIdempotencyKey`](/api/idempotency-core/src/type-aliases/derivedidempotencykey/)
 
-***
+---
 
 ### outcome
 
 > `readonly` **outcome**: `"handled"`
 
-***
+---
 
 ### record
 

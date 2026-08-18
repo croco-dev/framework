@@ -11,7 +11,7 @@ title: "DesktopFailure"
 
 ### TProblem
 
-`TProblem` *extends* [`Problem`](/api/problems-core/src/classes/problem/)
+`TProblem` _extends_ [`Problem`](/api/problems-core/src/classes/problem/)
 
 ## Properties
 
@@ -19,7 +19,7 @@ title: "DesktopFailure"
 
 > `readonly` **ok**: `false`
 
-***
+---
 
 ### problem
 

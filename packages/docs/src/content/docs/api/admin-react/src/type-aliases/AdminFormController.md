@@ -11,7 +11,7 @@ title: "AdminFormController"
 
 ### TValues
 
-`TValues` *extends* `object`
+`TValues` _extends_ `object`
 
 ### TResult
 
@@ -23,7 +23,7 @@ title: "AdminFormController"
 
 > `readonly` **contract**: [`AdminFormContract`](/api/admin-react/src/type-aliases/adminformcontract/)\<`TValues`, `TResult`\>
 
-***
+---
 
 ### reset
 
@@ -33,25 +33,25 @@ title: "AdminFormController"
 
 `void`
 
-***
+---
 
 ### retry
 
 > `readonly` **retry**: [`AdminFormSubmitAction`](/api/admin-react/src/type-aliases/adminformsubmitaction/)\<`TValues`, `TResult`\>
 
-***
+---
 
 ### setFieldValue
 
 > `readonly` **setFieldValue**: [`AdminFormFieldChangeHandler`](/api/admin-react/src/type-aliases/adminformfieldchangehandler/)\<`TValues`\>
 
-***
+---
 
 ### state
 
 > `readonly` **state**: [`AdminFormState`](/api/admin-react/src/type-aliases/adminformstate/)\<`TValues`, `TResult`\>
 
-***
+---
 
 ### submit
 

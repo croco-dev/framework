@@ -13,13 +13,13 @@ title: "IntentMapSourceLocation"
 
 > `readonly` **column**: `number`
 
-***
+---
 
 ### line
 
 > `readonly` **line**: `number`
 
-***
+---
 
 ### path
 

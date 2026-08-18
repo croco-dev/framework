@@ -17,7 +17,7 @@ title: "UpstashRedisRateLimitConformanceOptions"
 
 `unknown` \| `Promise`\<`unknown`\>
 
-***
+---
 
 ### createStore
 
@@ -33,37 +33,37 @@ title: "UpstashRedisRateLimitConformanceOptions"
 
 [`RateLimitStore`](/api/ratelimit-core/src/classes/ratelimitstore/) \| `Promise`\<[`RateLimitStore`](/api/ratelimit-core/src/classes/ratelimitstore/)\>
 
-***
+---
 
 ### invalidPolicy
 
 > `readonly` **invalidPolicy**: [`RateLimitPolicy`](/api/ratelimit-core/src/type-aliases/ratelimitpolicy/)
 
-***
+---
 
 ### keyPrefix?
 
 > `readonly` `optional` **keyPrefix?**: `string`
 
-***
+---
 
 ### liveSmoke?
 
 > `readonly` `optional` **liveSmoke?**: [`ServerlessProviderLiveSmokeGate`](/api/testing/src/type-aliases/serverlessproviderlivesmokegate/)
 
-***
+---
 
 ### policy
 
 > `readonly` **policy**: [`RateLimitPolicy`](/api/ratelimit-core/src/type-aliases/ratelimitpolicy/)
 
-***
+---
 
 ### providerName
 
 > `readonly` **providerName**: `string`
 
-***
+---
 
 ### secretSamples?
 

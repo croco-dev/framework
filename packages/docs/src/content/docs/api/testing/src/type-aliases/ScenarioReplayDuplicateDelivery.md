@@ -13,19 +13,19 @@ title: "ScenarioReplayDuplicateDelivery"
 
 > `readonly` **boundary**: [`ScenarioBoundary`](/api/testing/src/type-aliases/scenarioboundary/)
 
-***
+---
 
 ### deliveries
 
 > `readonly` **deliveries**: `number`
 
-***
+---
 
 ### kind
 
 > `readonly` **kind**: `"duplicate-delivery"`
 
-***
+---
 
 ### point
 

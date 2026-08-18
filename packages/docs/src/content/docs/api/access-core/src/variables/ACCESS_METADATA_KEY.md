@@ -5,4 +5,4 @@ prev: false
 title: "ACCESS_METADATA_KEY"
 ---
 
-> `const` **ACCESS\_METADATA\_KEY**: `"access:metadata"` = `"access:metadata"`
+> `const` **ACCESS_METADATA_KEY**: `"access:metadata"` = `"access:metadata"`

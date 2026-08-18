@@ -13,13 +13,13 @@ title: "PlanReleaseConsoleSnapshot"
 
 > `readonly` **candidate**: [`PlanReleaseDraft`](/api/admin-react/src/type-aliases/planreleasedraft/)
 
-***
+---
 
 ### currentPublished
 
 > `readonly` **currentPublished**: [`PlanVersionDefinition`](/api/billing-core/src/type-aliases/planversiondefinition/) \| `null`
 
-***
+---
 
 ### releaseRevision
 

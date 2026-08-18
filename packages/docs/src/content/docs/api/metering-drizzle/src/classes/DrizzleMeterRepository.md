@@ -61,7 +61,7 @@ DB, 트랜잭션 매니저, 스키마 설정을 받아 저장소를 초기화합
 
 [`MeterRepository`](/api/metering-core/src/classes/meterrepository/).[`findAll`](/api/metering-core/src/classes/meterrepository/#findall)
 
-***
+---
 
 ### findByMeterIdAndTenant()
 
@@ -87,7 +87,7 @@ DB, 트랜잭션 매니저, 스키마 설정을 받아 저장소를 초기화합
 
 [`MeterRepository`](/api/metering-core/src/classes/meterrepository/).[`findByMeterIdAndTenant`](/api/metering-core/src/classes/meterrepository/#findbymeteridandtenant)
 
-***
+---
 
 ### findByTenant()
 
@@ -109,7 +109,7 @@ DB, 트랜잭션 매니저, 스키마 설정을 받아 저장소를 초기화합
 
 [`MeterRepository`](/api/metering-core/src/classes/meterrepository/).[`findByTenant`](/api/metering-core/src/classes/meterrepository/#findbytenant)
 
-***
+---
 
 ### save()
 
@@ -131,7 +131,7 @@ DB, 트랜잭션 매니저, 스키마 설정을 받아 저장소를 초기화합
 
 [`MeterRepository`](/api/metering-core/src/classes/meterrepository/).[`save`](/api/metering-core/src/classes/meterrepository/#save)
 
-***
+---
 
 ### saveUsageRecords()
 

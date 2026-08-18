@@ -13,19 +13,19 @@ title: "ContractRuntimeDifferentialOptions"
 
 > `readonly` **route**: [`ContractGraphRoute`](/api/protocols-core/src/type-aliases/contractgraphroute/)
 
-***
+---
 
 ### stableHeaders?
 
 > `readonly` `optional` **stableHeaders?**: readonly `string`[]
 
-***
+---
 
 ### targets
 
 > `readonly` **targets**: readonly [`ContractRuntimeTarget`](/api/testing/src/type-aliases/contractruntimetarget/)[]
 
-***
+---
 
 ### testCase
 

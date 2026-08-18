@@ -13,7 +13,7 @@ title: "IntentMapEntityRef"
 
 > `readonly` **id**: `string`
 
-***
+---
 
 ### kind
 

@@ -13,19 +13,19 @@ title: "TransactionalEventDiagnostic"
 
 > **at**: `Date`
 
-***
+---
 
 ### code
 
 > **code**: `string`
 
-***
+---
 
 ### details?
 
 > `optional` **details?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### message
 

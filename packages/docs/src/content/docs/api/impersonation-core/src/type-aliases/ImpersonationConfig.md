@@ -13,13 +13,13 @@ title: "ImpersonationConfig"
 
 > **blockedActions**: `string`[]
 
-***
+---
 
 ### maxDurationMs
 
 > **maxDurationMs**: `number`
 
-***
+---
 
 ### requireReason
 

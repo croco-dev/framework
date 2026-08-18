@@ -13,7 +13,7 @@ title: "ContractFailureArtifact"
 
 > `readonly` **counterexamplePath**: `string`
 
-***
+---
 
 ### error
 
@@ -27,37 +27,37 @@ title: "ContractFailureArtifact"
 
 > `readonly` **message**: `string`
 
-***
+---
 
 ### minimalInput
 
 > `readonly` **minimalInput**: [`ContractGeneratedCase`](/api/testing/src/type-aliases/contractgeneratedcase/)
 
-***
+---
 
 ### replayCommand
 
 > `readonly` **replayCommand**: `string`
 
-***
+---
 
 ### routeId
 
 > `readonly` **routeId**: `string`
 
-***
+---
 
 ### runtime
 
 > `readonly` **runtime**: `string`
 
-***
+---
 
 ### schemaVersion
 
 > `readonly` **schemaVersion**: `"croco.contract-test-failure.v1"`
 
-***
+---
 
 ### seed
 

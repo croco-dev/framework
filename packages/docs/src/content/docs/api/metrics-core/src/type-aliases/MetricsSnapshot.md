@@ -20,7 +20,7 @@ used for historical analysis and trend calculation.
 
 Number of active customers contributing to MRR
 
-***
+---
 
 ### date
 
@@ -28,7 +28,7 @@ Number of active customers contributing to MRR
 
 Snapshot date
 
-***
+---
 
 ### movement?
 
@@ -36,7 +36,7 @@ Snapshot date
 
 Optional: MRR movement breakdown for this period
 
-***
+---
 
 ### totalMRR
 

@@ -13,13 +13,13 @@ title: "BillingProviderCapabilityProfile"
 
 > `readonly` **checkout**: [`BillingProviderCapabilityAvailability`](/api/billing-core/src/type-aliases/billingprovidercapabilityavailability/)
 
-***
+---
 
 ### licensed-quantity
 
 > `readonly` **licensed-quantity**: [`BillingProviderCapabilityAvailability`](/api/billing-core/src/type-aliases/billingprovidercapabilityavailability/)
 
-***
+---
 
 ### usage
 

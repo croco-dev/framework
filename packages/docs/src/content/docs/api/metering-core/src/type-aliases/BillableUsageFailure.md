@@ -13,7 +13,7 @@ title: "BillableUsageFailure"
 
 > `readonly` **code**: `string`
 
-***
+---
 
 ### message
 

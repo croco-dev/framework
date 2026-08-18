@@ -11,11 +11,11 @@ title: "ProblemResponse"
 
 ### Code
 
-`Code` *extends* `string`
+`Code` _extends_ `string`
 
 ### Category
 
-`Category` *extends* [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
+`Category` _extends_ [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
 
 ## Parameters
 

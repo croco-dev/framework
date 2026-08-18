@@ -13,13 +13,13 @@ title: "IntentMapPublicSymbol"
 
 > `readonly` **kind**: [`IntentMapPublicSymbolKind`](/api/framework-routes/src/type-aliases/intentmappublicsymbolkind/)
 
-***
+---
 
 ### location
 
 > `readonly` **location**: [`IntentMapSourceLocation`](/api/framework-routes/src/type-aliases/intentmapsourcelocation/)
 
-***
+---
 
 ### name
 

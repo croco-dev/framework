@@ -65,7 +65,7 @@ Adapts a tRPC procedure invocation to Croco's controller execution context.
 
 [`ExecutionContext`](/api/protocols-rest/src/interfaces/executioncontext/).[`getClass`](/api/protocols-rest/src/interfaces/executioncontext/#getclass)
 
-***
+---
 
 ### getHandler()
 
@@ -81,7 +81,7 @@ Adapts a tRPC procedure invocation to Croco's controller execution context.
 
 [`ExecutionContext`](/api/protocols-rest/src/interfaces/executioncontext/).[`getHandler`](/api/protocols-rest/src/interfaces/executioncontext/#gethandler)
 
-***
+---
 
 ### getMethod()
 
@@ -97,7 +97,7 @@ HTTP 메서드 (GET, POST 등)
 
 [`ExecutionContext`](/api/protocols-rest/src/interfaces/executioncontext/).[`getMethod`](/api/protocols-rest/src/interfaces/executioncontext/#getmethod)
 
-***
+---
 
 ### getPath()
 
@@ -113,7 +113,7 @@ HTTP 메서드 (GET, POST 등)
 
 [`ExecutionContext`](/api/protocols-rest/src/interfaces/executioncontext/).[`getPath`](/api/protocols-rest/src/interfaces/executioncontext/#getpath)
 
-***
+---
 
 ### getRequest()
 
@@ -129,7 +129,7 @@ HTTP 메서드 (GET, POST 등)
 
 [`ExecutionContext`](/api/protocols-rest/src/interfaces/executioncontext/).[`getRequest`](/api/protocols-rest/src/interfaces/executioncontext/#getrequest)
 
-***
+---
 
 ### getTrpcContext()
 

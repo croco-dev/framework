@@ -41,7 +41,7 @@ R2 다운로드 응답에 본문이 없을 때 발생하는 문제입니다.
 
 [`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`category`](/api/storage-core/src/classes/storageproblem/#category)
 
-***
+---
 
 ### cause?
 
@@ -51,7 +51,7 @@ R2 다운로드 응답에 본문이 없을 때 발생하는 문제입니다.
 
 [`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`cause`](/api/storage-core/src/classes/storageproblem/#cause)
 
-***
+---
 
 ### code
 
@@ -61,7 +61,7 @@ R2 다운로드 응답에 본문이 없을 때 발생하는 문제입니다.
 
 [`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`code`](/api/storage-core/src/classes/storageproblem/#code)
 
-***
+---
 
 ### detail?
 
@@ -71,7 +71,7 @@ R2 다운로드 응답에 본문이 없을 때 발생하는 문제입니다.
 
 [`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`detail`](/api/storage-core/src/classes/storageproblem/#detail)
 
-***
+---
 
 ### extensions?
 
@@ -81,7 +81,7 @@ R2 다운로드 응답에 본문이 없을 때 발생하는 문제입니다.
 
 [`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`extensions`](/api/storage-core/src/classes/storageproblem/#extensions)
 
-***
+---
 
 ### instance?
 
@@ -91,7 +91,7 @@ R2 다운로드 응답에 본문이 없을 때 발생하는 문제입니다.
 
 [`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`instance`](/api/storage-core/src/classes/storageproblem/#instance)
 
-***
+---
 
 ### message
 
@@ -101,7 +101,7 @@ R2 다운로드 응답에 본문이 없을 때 발생하는 문제입니다.
 
 [`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`message`](/api/storage-core/src/classes/storageproblem/#message)
 
-***
+---
 
 ### name
 
@@ -111,7 +111,7 @@ R2 다운로드 응답에 본문이 없을 때 발생하는 문제입니다.
 
 [`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`name`](/api/storage-core/src/classes/storageproblem/#name)
 
-***
+---
 
 ### stack?
 
@@ -121,7 +121,7 @@ R2 다운로드 응답에 본문이 없을 때 발생하는 문제입니다.
 
 [`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`stack`](/api/storage-core/src/classes/storageproblem/#stack)
 
-***
+---
 
 ### type
 
@@ -131,7 +131,7 @@ R2 다운로드 응답에 본문이 없을 때 발생하는 문제입니다.
 
 [`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`type`](/api/storage-core/src/classes/storageproblem/#type)
 
-***
+---
 
 ### stackTraceLimit
 
@@ -167,7 +167,7 @@ not capture any frames.
 
 [`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`status`](/api/storage-core/src/classes/storageproblem/#status)
 
-***
+---
 
 ### title
 
@@ -197,7 +197,7 @@ not capture any frames.
 
 [`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`toJSON`](/api/storage-core/src/classes/storageproblem/#tojson)
 
-***
+---
 
 ### captureStackTrace()
 
@@ -210,7 +210,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack;  // Similar to `new Error().stack`
+myObject.stack; // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -265,7 +265,7 @@ a();
 
 [`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`captureStackTrace`](/api/storage-core/src/classes/storageproblem/#capturestacktrace)
 
-***
+---
 
 ### prepareStackTrace()
 

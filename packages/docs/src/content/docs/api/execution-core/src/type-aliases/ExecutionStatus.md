@@ -10,6 +10,7 @@ title: "ExecutionStatus"
 Execution status represents the current state of an execution.
 
 State transitions (allowed only):
+
 - pending → running | cancelled
 - running → completed | failed | timed_out | cancelled
 - failed → retrying → running
@@ -17,4 +18,5 @@ State transitions (allowed only):
 - timed_out → retrying
 
 Terminal states (no outgoing transitions):
+
 - completed, cancelled, failed (when max retries exhausted)

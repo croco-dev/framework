@@ -17,7 +17,7 @@ title: "LlmQuotaPolicyContext"
 
 중복 기록을 방지하기 위한 멱등성 키입니다.
 
-***
+---
 
 ### metadata?
 
@@ -25,7 +25,7 @@ title: "LlmQuotaPolicyContext"
 
 정책 구현체가 참고할 수 있는 추가 메타데이터입니다.
 
-***
+---
 
 ### meters
 
@@ -33,7 +33,7 @@ title: "LlmQuotaPolicyContext"
 
 이번 작업에서 기록하려는 메터 사용량 변화 목록입니다.
 
-***
+---
 
 ### modelId
 
@@ -41,7 +41,7 @@ title: "LlmQuotaPolicyContext"
 
 사용량이 발생한 모델 식별자입니다.
 
-***
+---
 
 ### operation
 
@@ -49,7 +49,7 @@ title: "LlmQuotaPolicyContext"
 
 쿼터 검사 대상 작업 이름입니다.
 
-***
+---
 
 ### provider
 
@@ -57,7 +57,7 @@ title: "LlmQuotaPolicyContext"
 
 사용량이 발생한 LLM 제공자 식별자입니다.
 
-***
+---
 
 ### tenantId
 

@@ -17,7 +17,7 @@ Options for cron triggers.
 
 Description of what this trigger does.
 
-***
+---
 
 ### enabled?
 
@@ -25,7 +25,7 @@ Description of what this trigger does.
 
 Whether the trigger is enabled (default: true).
 
-***
+---
 
 ### name?
 
@@ -33,7 +33,7 @@ Whether the trigger is enabled (default: true).
 
 Human-readable name for this cron trigger.
 
-***
+---
 
 ### timezone?
 

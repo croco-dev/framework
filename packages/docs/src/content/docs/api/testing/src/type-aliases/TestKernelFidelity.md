@@ -13,13 +13,13 @@ title: "TestKernelFidelity"
 
 > `readonly` **boot**: [`TestKernelBootFidelity`](/api/testing/src/type-aliases/testkernelbootfidelity/)
 
-***
+---
 
 ### runtime
 
 > `readonly` **runtime**: [`TestKernelRuntime`](/api/testing/src/type-aliases/testkernelruntime/)
 
-***
+---
 
 ### validation
 

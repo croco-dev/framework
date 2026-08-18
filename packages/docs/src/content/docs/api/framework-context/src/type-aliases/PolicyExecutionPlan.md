@@ -13,19 +13,19 @@ title: "PolicyExecutionPlan"
 
 > `readonly` **entries**: readonly [`PolicyExecutionEntry`](/api/framework-context/src/type-aliases/policyexecutionentry/)[]
 
-***
+---
 
 ### executionOrder
 
 > `readonly` **executionOrder**: readonly [`PolicyKind`](/api/framework-context/src/type-aliases/policykind/)[]
 
-***
+---
 
 ### failurePropagation
 
 > `readonly` **failurePropagation**: readonly [`PolicyFailurePropagationEntry`](/api/framework-context/src/type-aliases/policyfailurepropagationentry/)[]
 
-***
+---
 
 ### target
 

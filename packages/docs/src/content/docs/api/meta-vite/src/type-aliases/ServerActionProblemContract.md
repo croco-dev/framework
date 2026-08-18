@@ -11,7 +11,7 @@ title: "ServerActionProblemContract"
 
 ### Code
 
-`Code` *extends* `string` = `string`
+`Code` _extends_ `string` = `string`
 
 ## Properties
 
@@ -19,19 +19,19 @@ title: "ServerActionProblemContract"
 
 > `readonly` **code**: `Code`
 
-***
+---
 
 ### description?
 
 > `readonly` `optional` **description?**: `string`
 
-***
+---
 
 ### status?
 
 > `readonly` `optional` **status?**: `number`
 
-***
+---
 
 ### type?
 

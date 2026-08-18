@@ -13,7 +13,7 @@ title: "LifecycleAutomationLoadingState"
 
 > `readonly` **generatedAt**: `Date`
 
-***
+---
 
 ### kind
 

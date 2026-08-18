@@ -15,7 +15,7 @@ Backward-compatible cache store base class.
 
 ### K
 
-`K` *extends* `string` = `string`
+`K` _extends_ `string` = `string`
 
 ### V
 
@@ -55,7 +55,7 @@ Backward-compatible cache store base class.
 
 `Promise`\<[`DistributedCacheLock`](/api/cache-core/src/type-aliases/distributedcachelock/) \| `undefined`\>
 
-***
+---
 
 ### clear()
 
@@ -69,7 +69,7 @@ Backward-compatible cache store base class.
 
 [`CacheStore`](/api/cache-core/src/classes/cachestore/).[`clear`](/api/cache-core/src/classes/cachestore/#clear)
 
-***
+---
 
 ### delete()
 
@@ -89,7 +89,7 @@ Backward-compatible cache store base class.
 
 [`CacheStore`](/api/cache-core/src/classes/cachestore/).[`delete`](/api/cache-core/src/classes/cachestore/#delete)
 
-***
+---
 
 ### get()
 
@@ -109,7 +109,7 @@ Backward-compatible cache store base class.
 
 [`CacheStore`](/api/cache-core/src/classes/cachestore/).[`get`](/api/cache-core/src/classes/cachestore/#get)
 
-***
+---
 
 ### getOrSet()
 
@@ -137,7 +137,7 @@ Backward-compatible cache store base class.
 
 [`CacheStore`](/api/cache-core/src/classes/cachestore/).[`getOrSet`](/api/cache-core/src/classes/cachestore/#getorset)
 
-***
+---
 
 ### getStats()
 
@@ -151,7 +151,7 @@ Backward-compatible cache store base class.
 
 [`CacheStore`](/api/cache-core/src/classes/cachestore/).[`getStats`](/api/cache-core/src/classes/cachestore/#getstats)
 
-***
+---
 
 ### has()
 
@@ -171,7 +171,7 @@ Backward-compatible cache store base class.
 
 [`CacheStore`](/api/cache-core/src/classes/cachestore/).[`has`](/api/cache-core/src/classes/cachestore/#has)
 
-***
+---
 
 ### invalidatePattern()
 
@@ -191,7 +191,7 @@ Backward-compatible cache store base class.
 
 [`CacheStore`](/api/cache-core/src/classes/cachestore/).[`invalidatePattern`](/api/cache-core/src/classes/cachestore/#invalidatepattern)
 
-***
+---
 
 ### pruneExpired()
 
@@ -205,7 +205,7 @@ Backward-compatible cache store base class.
 
 [`CacheStore`](/api/cache-core/src/classes/cachestore/).[`pruneExpired`](/api/cache-core/src/classes/cachestore/#pruneexpired)
 
-***
+---
 
 ### publishInvalidation()
 
@@ -221,7 +221,7 @@ Backward-compatible cache store base class.
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### set()
 
@@ -252,7 +252,7 @@ A zero lifetime expires immediately.
 
 [`CacheStore`](/api/cache-core/src/classes/cachestore/).[`set`](/api/cache-core/src/classes/cachestore/#set)
 
-***
+---
 
 ### warmup()
 

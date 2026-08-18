@@ -13,31 +13,31 @@ title: "ContractFuzzReport"
 
 > `readonly` **numRuns**: `number`
 
-***
+---
 
 ### profile
 
 > `readonly` **profile**: [`ContractTestProfile`](/api/testing/src/type-aliases/contracttestprofile/)
 
-***
+---
 
 ### routeId
 
 > `readonly` **routeId**: `string`
 
-***
+---
 
 ### runtime
 
 > `readonly` **runtime**: `string`
 
-***
+---
 
 ### seed
 
 > `readonly` **seed**: `number`
 
-***
+---
 
 ### status
 

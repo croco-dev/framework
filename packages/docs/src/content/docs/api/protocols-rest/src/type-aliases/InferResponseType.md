@@ -11,4 +11,4 @@ title: "InferResponseType"
 
 ### T
 
-`T` *extends* [`ResponseSchemaType`](/api/protocols-rest/src/type-aliases/responseschematype/)
+`T` _extends_ [`ResponseSchemaType`](/api/protocols-rest/src/type-aliases/responseschematype/)

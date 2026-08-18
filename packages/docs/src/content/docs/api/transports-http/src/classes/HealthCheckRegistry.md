@@ -27,7 +27,7 @@ HTTP 애플리케이션 구성과 라우트 실행에 사용하는 핵심 공개
 
 `Promise`\<[`HealthCheckRegistryResult`](/api/transports-http/src/interfaces/healthcheckregistryresult/)\>
 
-***
+---
 
 ### checkReadiness()
 
@@ -37,7 +37,7 @@ HTTP 애플리케이션 구성과 라우트 실행에 사용하는 핵심 공개
 
 `Promise`\<[`HealthCheckRegistryResult`](/api/transports-http/src/interfaces/healthcheckregistryresult/)\>
 
-***
+---
 
 ### getRegisteredCheckCount()
 
@@ -47,7 +47,7 @@ HTTP 애플리케이션 구성과 라우트 실행에 사용하는 핵심 공개
 
 `number`
 
-***
+---
 
 ### register()
 
@@ -71,7 +71,7 @@ HTTP 애플리케이션 구성과 라우트 실행에 사용하는 핵심 공개
 
 `void`
 
-***
+---
 
 ### registerReadiness()
 

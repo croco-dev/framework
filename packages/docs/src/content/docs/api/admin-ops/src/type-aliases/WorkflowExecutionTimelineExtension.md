@@ -13,7 +13,7 @@ title: "WorkflowExecutionTimelineExtension"
 
 > `readonly` **execution**: [`WorkflowExecutionTimelineSource`](/api/admin-ops/src/type-aliases/workflowexecutiontimelinesource/)
 
-***
+---
 
 ### source
 

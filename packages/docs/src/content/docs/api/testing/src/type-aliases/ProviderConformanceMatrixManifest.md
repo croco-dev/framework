@@ -13,7 +13,7 @@ title: "ProviderConformanceMatrixManifest"
 
 > `readonly` **profiles**: readonly [`ProviderConformanceProfileManifest`](/api/testing/src/type-aliases/providerconformanceprofilemanifest/)[]
 
-***
+---
 
 ### version
 

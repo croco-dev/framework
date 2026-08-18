@@ -57,7 +57,7 @@ Carries stable Problem evidence for a failed licensed-quantity reconciliation.
 
 > `readonly` **desiredQuantity**: `number`
 
-***
+---
 
 ### eventId
 
@@ -67,7 +67,7 @@ Carries stable Problem evidence for a failed licensed-quantity reconciliation.
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventId`](/api/events-core/src/classes/domainevent/#eventid)
 
-***
+---
 
 ### eventName
 
@@ -77,13 +77,13 @@ Carries stable Problem evidence for a failed licensed-quantity reconciliation.
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventName`](/api/events-core/src/classes/domainevent/#eventname)
 
-***
+---
 
 ### externalSubscriptionId
 
 > `readonly` **externalSubscriptionId**: `string`
 
-***
+---
 
 ### metadata
 
@@ -93,31 +93,31 @@ Carries stable Problem evidence for a failed licensed-quantity reconciliation.
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`metadata`](/api/events-core/src/classes/domainevent/#metadata)
 
-***
+---
 
 ### planVersionRef
 
 > `readonly` **planVersionRef**: [`PlanVersionRef`](/api/billing-core/src/type-aliases/planversionref/)
 
-***
+---
 
 ### problemCode
 
 > `readonly` **problemCode**: `string`
 
-***
+---
 
 ### retryable
 
 > `readonly` **retryable**: `boolean`
 
-***
+---
 
 ### tenantId
 
 > `readonly` **tenantId**: `string`
 
-***
+---
 
 ### timestamp
 
@@ -127,7 +127,7 @@ Carries stable Problem evidence for a failed licensed-quantity reconciliation.
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`timestamp`](/api/events-core/src/classes/domainevent/#timestamp)
 
-***
+---
 
 ### eventName
 

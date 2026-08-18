@@ -13,31 +13,31 @@ title: "NotificationProviderCapabilities"
 
 > **channels**: readonly [`NotificationChannel`](/api/notifications-core/src/enumerations/notificationchannel/)[]
 
-***
+---
 
 ### outboxIntegration
 
 > **outboxIntegration**: [`NotificationProviderOutboxIntegration`](/api/notifications-core/src/type-aliases/notificationprovideroutboxintegration/)
 
-***
+---
 
 ### providerName
 
 > **providerName**: `string`
 
-***
+---
 
 ### supportsIdempotencyKey
 
 > **supportsIdempotencyKey**: `boolean`
 
-***
+---
 
 ### supportsProviderTemplates
 
 > **supportsProviderTemplates**: `boolean`
 
-***
+---
 
 ### supportsRenderedTemplates
 

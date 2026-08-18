@@ -17,7 +17,7 @@ title: "UpstashRedisMeteringClient"
 
 ##### TResult
 
-`TResult` *extends* `unknown`[]
+`TResult` _extends_ `unknown`[]
 
 #### Parameters
 
@@ -37,7 +37,7 @@ title: "UpstashRedisMeteringClient"
 
 `Promise`\<`TResult`\>
 
-***
+---
 
 ### set()
 
@@ -69,7 +69,7 @@ title: "UpstashRedisMeteringClient"
 
 `Promise`\<`string` \| `null`\>
 
-***
+---
 
 ### zadd()
 
@@ -93,7 +93,7 @@ title: "UpstashRedisMeteringClient"
 
 `Promise`\<`number`\>
 
-***
+---
 
 ### zrangebyscore()
 

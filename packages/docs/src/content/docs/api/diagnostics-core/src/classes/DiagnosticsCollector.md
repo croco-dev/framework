@@ -31,7 +31,7 @@ title: "DiagnosticsCollector"
 
 readonly [`DiagnosticsProvider`](/api/diagnostics-core/src/interfaces/diagnosticsprovider/)[]
 
-***
+---
 
 ### getReport()
 
@@ -41,7 +41,7 @@ readonly [`DiagnosticsProvider`](/api/diagnostics-core/src/interfaces/diagnostic
 
 `Promise`\<[`DiagnosticsReport`](/api/diagnostics-core/src/type-aliases/diagnosticsreport/)\>
 
-***
+---
 
 ### recordError()
 
@@ -57,7 +57,7 @@ readonly [`DiagnosticsProvider`](/api/diagnostics-core/src/interfaces/diagnostic
 
 `void`
 
-***
+---
 
 ### registerProvider()
 

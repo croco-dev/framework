@@ -13,13 +13,13 @@ title: "RouteRegistrationTable"
 
 > `readonly` **category**: [`RouteRegistrationCategory`](/api/framework-routes/src/type-aliases/routeregistrationcategory/)
 
-***
+---
 
 ### entries
 
 > `readonly` **entries**: readonly [`RouteRegistrationEntry`](/api/framework-routes/src/type-aliases/routeregistrationentry/)[]
 
-***
+---
 
 ### version
 

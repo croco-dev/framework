@@ -20,7 +20,7 @@ Compares baseline CC with simulated CC after applying changes
 
 Baseline carrying capacity before simulation
 
-***
+---
 
 ### capacityDelta
 
@@ -28,7 +28,7 @@ Baseline carrying capacity before simulation
 
 Capacity change (simulated - baseline)
 
-***
+---
 
 ### headroomDelta
 
@@ -36,7 +36,7 @@ Capacity change (simulated - baseline)
 
 Headroom change (simulated - baseline)
 
-***
+---
 
 ### headroomPercentDelta
 
@@ -44,7 +44,7 @@ Headroom change (simulated - baseline)
 
 Headroom percent change (simulated - baseline)
 
-***
+---
 
 ### simulated
 

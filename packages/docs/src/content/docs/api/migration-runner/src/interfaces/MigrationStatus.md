@@ -11,19 +11,19 @@ title: "MigrationStatus"
 
 > **executed**: `boolean`
 
-***
+---
 
 ### executedAt?
 
 > `optional` **executedAt?**: `Date`
 
-***
+---
 
 ### id
 
 > **id**: `string`
 
-***
+---
 
 ### name
 

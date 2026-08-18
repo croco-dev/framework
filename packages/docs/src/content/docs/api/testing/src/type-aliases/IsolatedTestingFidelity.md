@@ -13,13 +13,13 @@ title: "IsolatedTestingFidelity"
 
 > `readonly` **boot**: `"isolated"`
 
-***
+---
 
 ### runtime
 
 > `readonly` **runtime**: `"node"`
 
-***
+---
 
 ### validation
 

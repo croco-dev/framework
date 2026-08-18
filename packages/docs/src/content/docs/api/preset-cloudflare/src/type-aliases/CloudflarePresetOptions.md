@@ -13,7 +13,7 @@ title: "CloudflarePresetOptions"
 
 > `readonly` `optional` **entry?**: `string`
 
-***
+---
 
 ### name?
 

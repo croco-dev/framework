@@ -43,7 +43,7 @@ title: "MeteringSignalProvider"
 
 [`SignalProvider`](/api/customer-health-core/src/classes/signalprovider/).[`category`](/api/customer-health-core/src/classes/signalprovider/#category)
 
-***
+---
 
 ### token
 

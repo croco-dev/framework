@@ -13,13 +13,13 @@ title: "ContractDiagnosticSourceLocation"
 
 > `readonly` `optional` **column?**: `number`
 
-***
+---
 
 ### line?
 
 > `readonly` `optional` **line?**: `number`
 
-***
+---
 
 ### path
 

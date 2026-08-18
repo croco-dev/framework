@@ -11,7 +11,7 @@ title: "QStashChunkDelivery"
 
 > `optional` **continuationToken?**: `string`
 
-***
+---
 
 ### workerId?
 

@@ -53,7 +53,7 @@ Signals that the provider quantity differs from the desired application-owned qu
 
 > `readonly` **desiredQuantity**: `number`
 
-***
+---
 
 ### eventId
 
@@ -63,7 +63,7 @@ Signals that the provider quantity differs from the desired application-owned qu
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventId`](/api/events-core/src/classes/domainevent/#eventid)
 
-***
+---
 
 ### eventName
 
@@ -73,13 +73,13 @@ Signals that the provider quantity differs from the desired application-owned qu
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventName`](/api/events-core/src/classes/domainevent/#eventname)
 
-***
+---
 
 ### externalSubscriptionId
 
 > `readonly` **externalSubscriptionId**: `string`
 
-***
+---
 
 ### metadata
 
@@ -89,25 +89,25 @@ Signals that the provider quantity differs from the desired application-owned qu
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`metadata`](/api/events-core/src/classes/domainevent/#metadata)
 
-***
+---
 
 ### planVersionRef
 
 > `readonly` **planVersionRef**: [`PlanVersionRef`](/api/billing-core/src/type-aliases/planversionref/)
 
-***
+---
 
 ### providerQuantity
 
 > `readonly` **providerQuantity**: `number`
 
-***
+---
 
 ### tenantId
 
 > `readonly` **tenantId**: `string`
 
-***
+---
 
 ### timestamp
 
@@ -117,7 +117,7 @@ Signals that the provider quantity differs from the desired application-owned qu
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`timestamp`](/api/events-core/src/classes/domainevent/#timestamp)
 
-***
+---
 
 ### eventName
 

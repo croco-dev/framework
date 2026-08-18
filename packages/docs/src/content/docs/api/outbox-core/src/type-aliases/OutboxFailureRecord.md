@@ -15,7 +15,7 @@ Persisted failure state containing Problem.toJSON() output and normalized retry 
 
 > `readonly` **problem**: `ReturnType`\<[`Problem`](/api/problems-core/src/classes/problem/)\[`"toJSON"`\]\>
 
-***
+---
 
 ### retry
 

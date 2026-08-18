@@ -49,7 +49,7 @@ Raised before SDK construction when BatchSpanProcessor tuning is unsafe.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`category`](/api/problems-core/src/classes/problem/#category)
 
-***
+---
 
 ### cause?
 
@@ -59,7 +59,7 @@ Raised before SDK construction when BatchSpanProcessor tuning is unsafe.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`cause`](/api/problems-core/src/classes/problem/#cause)
 
-***
+---
 
 ### code
 
@@ -69,13 +69,13 @@ Raised before SDK construction when BatchSpanProcessor tuning is unsafe.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`code`](/api/problems-core/src/classes/problem/#code)
 
-***
+---
 
 ### constraint
 
 > `readonly` **constraint**: [`TelemetryBatchConfigurationConstraint`](/api/telemetry-sdk-node/src/type-aliases/telemetrybatchconfigurationconstraint/)
 
-***
+---
 
 ### detail?
 
@@ -85,7 +85,7 @@ Raised before SDK construction when BatchSpanProcessor tuning is unsafe.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`detail`](/api/problems-core/src/classes/problem/#detail)
 
-***
+---
 
 ### extensions?
 
@@ -95,13 +95,13 @@ Raised before SDK construction when BatchSpanProcessor tuning is unsafe.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`extensions`](/api/problems-core/src/classes/problem/#extensions)
 
-***
+---
 
 ### field
 
 > `readonly` **field**: [`TelemetryBatchConfigurationField`](/api/telemetry-sdk-node/src/type-aliases/telemetrybatchconfigurationfield/)
 
-***
+---
 
 ### instance?
 
@@ -111,7 +111,7 @@ Raised before SDK construction when BatchSpanProcessor tuning is unsafe.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`instance`](/api/problems-core/src/classes/problem/#instance)
 
-***
+---
 
 ### message
 
@@ -121,7 +121,7 @@ Raised before SDK construction when BatchSpanProcessor tuning is unsafe.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`message`](/api/problems-core/src/classes/problem/#message)
 
-***
+---
 
 ### name
 
@@ -131,13 +131,13 @@ Raised before SDK construction when BatchSpanProcessor tuning is unsafe.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`name`](/api/problems-core/src/classes/problem/#name)
 
-***
+---
 
 ### receivedValue
 
 > `readonly` **receivedValue**: `string`
 
-***
+---
 
 ### stack?
 
@@ -147,7 +147,7 @@ Raised before SDK construction when BatchSpanProcessor tuning is unsafe.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`stack`](/api/problems-core/src/classes/problem/#stack)
 
-***
+---
 
 ### type
 
@@ -157,7 +157,7 @@ Raised before SDK construction when BatchSpanProcessor tuning is unsafe.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`type`](/api/problems-core/src/classes/problem/#type)
 
-***
+---
 
 ### stackTraceLimit
 
@@ -193,7 +193,7 @@ not capture any frames.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`status`](/api/problems-core/src/classes/problem/#status)
 
-***
+---
 
 ### title
 
@@ -223,7 +223,7 @@ not capture any frames.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`toJSON`](/api/problems-core/src/classes/problem/#tojson)
 
-***
+---
 
 ### captureStackTrace()
 
@@ -236,7 +236,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack;  // Similar to `new Error().stack`
+myObject.stack; // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -291,7 +291,7 @@ a();
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`captureStackTrace`](/api/problems-core/src/classes/problem/#capturestacktrace)
 
-***
+---
 
 ### prepareStackTrace()
 

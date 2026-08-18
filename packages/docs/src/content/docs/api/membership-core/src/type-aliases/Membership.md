@@ -13,31 +13,31 @@ title: "Membership"
 
 > **createdAt**: `Date`
 
-***
+---
 
 ### id
 
 > **id**: `string`
 
-***
+---
 
 ### role
 
 > **role**: [`MembershipRole`](/api/membership-core/src/type-aliases/membershiprole/)
 
-***
+---
 
 ### tenantId
 
 > **tenantId**: `string`
 
-***
+---
 
 ### updatedAt
 
 > **updatedAt**: `Date`
 
-***
+---
 
 ### userId
 

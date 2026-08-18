@@ -21,37 +21,37 @@ title: "PlanReleasePublishedReceipt"
 
 > `readonly` **id**: `string`
 
-***
+---
 
 ### idempotencyKey
 
 > `readonly` **idempotencyKey**: `string`
 
-***
+---
 
 ### planVersionRef
 
 > `readonly` **planVersionRef**: [`PlanVersionDefinition`](/api/billing-core/src/type-aliases/planversiondefinition/)\[`"ref"`\]
 
-***
+---
 
 ### publishedAt
 
 > `readonly` **publishedAt**: `string`
 
-***
+---
 
 ### reason
 
 > `readonly` **reason**: `string`
 
-***
+---
 
 ### reviewedDraftRevision
 
 > `readonly` **reviewedDraftRevision**: `number`
 
-***
+---
 
 ### validationSnapshotId
 

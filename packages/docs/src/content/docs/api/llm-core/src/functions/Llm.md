@@ -30,12 +30,12 @@ title: "Llm"
 
 ```typescript
 class ChatService {
-  @Llm({ modelId: 'gpt-4' })
+  @Llm({ modelId: "gpt-4" })
   async generateResponse(prompt: string, options?: LlmInvocationOptions): Promise<string> {
     // 데코레이터가 LlmService를 호출하여 결과 반환
   }
 
-  @Llm({ modelId: 'gpt-3.5-turbo', systemPrompt: 'You are helpful.' })
+  @Llm({ modelId: "gpt-3.5-turbo", systemPrompt: "You are helpful." })
   async chat(userPrompt: string): Promise<string> {
     // systemPrompt와 함께 호출
   }

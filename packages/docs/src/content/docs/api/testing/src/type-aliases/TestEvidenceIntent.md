@@ -13,7 +13,7 @@ title: "TestEvidenceIntent"
 
 > `readonly` **contractIds**: readonly `string`[]
 
-***
+---
 
 ### description
 

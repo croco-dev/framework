@@ -11,7 +11,7 @@ title: "PlanEntitlementDefinition"
 
 ### Definitions
 
-`Definitions` *extends* readonly [`EntitlementDefinition`](/api/entitlements-core/src/type-aliases/entitlementdefinition/)[] = readonly [`EntitlementDefinition`](/api/entitlements-core/src/type-aliases/entitlementdefinition/)[]
+`Definitions` _extends_ readonly [`EntitlementDefinition`](/api/entitlements-core/src/type-aliases/entitlementdefinition/)[] = readonly [`EntitlementDefinition`](/api/entitlements-core/src/type-aliases/entitlementdefinition/)[]
 
 ## Properties
 
@@ -19,13 +19,13 @@ title: "PlanEntitlementDefinition"
 
 > `readonly` **entitlements**: `Definitions`
 
-***
+---
 
 ### planId
 
 > `readonly` **planId**: `string`
 
-***
+---
 
 ### planVersionRef
 

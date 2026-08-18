@@ -17,19 +17,19 @@ title: "CacheableOptions"
 
 > `optional` **keyPrefix?**: `string`
 
-***
+---
 
 ### namespace?
 
 > `optional` **namespace?**: `string`
 
-***
+---
 
 ### store
 
 > **store**: [`CacheStore`](/api/cache-core/src/classes/cachestore/)\<`string`, `V`\>
 
-***
+---
 
 ### ttl?
 

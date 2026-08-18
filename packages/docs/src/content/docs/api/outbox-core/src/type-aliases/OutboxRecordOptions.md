@@ -19,25 +19,25 @@ title: "OutboxRecordOptions"
 
 > `readonly` `optional` **availableAt?**: `Date`
 
-***
+---
 
 ### context?
 
 > `readonly` `optional` **context?**: [`TransactionalOutboxStoreContext`](/api/outbox-core/src/type-aliases/transactionaloutboxstorecontext/)\<`TClient`\>
 
-***
+---
 
 ### id?
 
 > `readonly` `optional` **id?**: `string`
 
-***
+---
 
 ### now?
 
 > `readonly` `optional` **now?**: `Date`
 
-***
+---
 
 ### retry?
 

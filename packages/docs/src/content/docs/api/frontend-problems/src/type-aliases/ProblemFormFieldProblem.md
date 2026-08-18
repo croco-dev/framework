@@ -5,14 +5,14 @@ prev: false
 title: "ProblemFormFieldProblem"
 ---
 
-> **ProblemFormFieldProblem**\<`FieldName`, `Problem`\> = \[`Problem`\] *extends* \[`never`\] ? `never` : `Problem` *extends* [`ProblemDeclaration`](/api/frontend-problems/src/type-aliases/problemdeclaration/) ? `object` : `never`
+> **ProblemFormFieldProblem**\<`FieldName`, `Problem`\> = \[`Problem`\] _extends_ \[`never`\] ? `never` : `Problem` _extends_ [`ProblemDeclaration`](/api/frontend-problems/src/type-aliases/problemdeclaration/) ? `object` : `never`
 
 ## Type Parameters
 
 ### FieldName
 
-`FieldName` *extends* `string`
+`FieldName` _extends_ `string`
 
 ### Problem
 
-`Problem` *extends* [`ProblemDeclaration`](/api/frontend-problems/src/type-aliases/problemdeclaration/)
+`Problem` _extends_ [`ProblemDeclaration`](/api/frontend-problems/src/type-aliases/problemdeclaration/)

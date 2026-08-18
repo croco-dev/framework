@@ -29,7 +29,7 @@ title: "HookMap"
 
 `Promise`\<`void`\> \| `void`
 
-***
+---
 
 ### build:before?
 
@@ -45,7 +45,7 @@ title: "HookMap"
 
 `Promise`\<[`CrocoPresetConfig`](/api/framework-preset/src/type-aliases/crocopresetconfig/)\> \| [`CrocoPresetConfig`](/api/framework-preset/src/type-aliases/crocopresetconfig/)
 
-***
+---
 
 ### dev:start?
 

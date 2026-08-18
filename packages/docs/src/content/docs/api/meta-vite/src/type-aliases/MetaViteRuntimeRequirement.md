@@ -13,19 +13,19 @@ title: "MetaViteRuntimeRequirement"
 
 > `readonly` **capability**: [`MetaViteRuntimeCapability`](/api/meta-vite/src/type-aliases/metaviteruntimecapability/)
 
-***
+---
 
 ### code
 
 > `readonly` **code**: [`MetaViteRuntimeRequirementCode`](/api/meta-vite/src/type-aliases/metaviteruntimerequirementcode/)
 
-***
+---
 
 ### phase
 
 > `readonly` **phase**: `"build"` \| `"runtime"`
 
-***
+---
 
 ### revalidateMs?
 

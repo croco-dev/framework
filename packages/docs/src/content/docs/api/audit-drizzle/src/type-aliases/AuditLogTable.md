@@ -15,55 +15,55 @@ title: "AuditLogTable"
 
 > **action**: `AnyColumn`
 
-***
+---
 
 ### actorId
 
 > **actorId**: `AnyColumn`
 
-***
+---
 
 ### createdAt
 
 > **createdAt**: `AnyColumn`
 
-***
+---
 
 ### diff
 
 > **diff**: `AnyColumn`
 
-***
+---
 
 ### id
 
 > **id**: `AnyColumn`
 
-***
+---
 
 ### metadata
 
 > **metadata**: `AnyColumn`
 
-***
+---
 
 ### payload
 
 > **payload**: `AnyColumn`
 
-***
+---
 
 ### resourceId
 
 > **resourceId**: `AnyColumn`
 
-***
+---
 
 ### resourceType
 
 > **resourceType**: `AnyColumn`
 
-***
+---
 
 ### tenantId
 

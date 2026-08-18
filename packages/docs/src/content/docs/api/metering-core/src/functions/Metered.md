@@ -16,14 +16,14 @@ Metered 메서드 데코레이터와 서비스 바인딩 헬퍼입니다.
 ```typescript
 // 데코레이터 사용
 class ApiService {
-  @Metered({ meterId: 'api_calls' })
+  @Metered({ meterId: "api_calls" })
   async handleRequest(req: Request): Promise<Response> {
     return { status: 200 };
   }
 
   // 커스텀 value 추출
   @Metered({
-    meterId: 'data_transfer',
+    meterId: "data_transfer",
     valueExtractor: (args, result) => result.size,
   })
   async uploadFile(file: Buffer): Promise<{ size: number }> {
@@ -44,7 +44,7 @@ const service = getMeteringService();
 
 #### Meter
 
-`Meter` *extends* [`CountMeterRef`](/api/metering-core/src/type-aliases/countmeterref/)
+`Meter` _extends_ [`CountMeterRef`](/api/metering-core/src/type-aliases/countmeterref/)
 
 ### Parameters
 
@@ -72,13 +72,13 @@ billing-required meter의 기록 실패는 원본 메서드가 완료된 뒤 전
 
 ```typescript
 const apiCalls = defineMeter({
-  key: 'api.calls',
-  aggregation: 'COUNT',
-  unit: 'request',
+  key: "api.calls",
+  aggregation: "COUNT",
+  unit: "request",
   dimensions: {
-    region: dimension.enum(['us', 'eu']),
+    region: dimension.enum(["us", "eu"]),
   },
-  billing: 'required',
+  billing: "required",
 });
 
 class ApiService {
@@ -86,20 +86,20 @@ class ApiService {
     meter: apiCalls,
     eventIdExtractor: ([request]) => (request as { eventId: string }).eventId,
     dimensionsExtractor: ([request]) => ({
-      region: (request as { region: 'us' | 'eu' }).region,
+      region: (request as { region: "us" | "eu" }).region,
     }),
   })
-  async listUsers(request: { eventId: string; region: 'us' | 'eu' }): Promise<void> {
+  async listUsers(request: { eventId: string; region: "us" | "eu" }): Promise<void> {
     // ...
   }
 
-  @Metered({ meterId: 'api_calls' })
+  @Metered({ meterId: "api_calls" })
   async handleRequest(req: Request): Promise<Response> {
     // ...
   }
 
   @Metered({
-    meterId: 'data_transfer',
+    meterId: "data_transfer",
     valueExtractor: (args, result) => (result as { size: number }).size,
   })
   async transferData(data: Buffer): Promise<{ size: number }> {
@@ -138,13 +138,13 @@ billing-required meter의 기록 실패는 원본 메서드가 완료된 뒤 전
 
 ```typescript
 const apiCalls = defineMeter({
-  key: 'api.calls',
-  aggregation: 'COUNT',
-  unit: 'request',
+  key: "api.calls",
+  aggregation: "COUNT",
+  unit: "request",
   dimensions: {
-    region: dimension.enum(['us', 'eu']),
+    region: dimension.enum(["us", "eu"]),
   },
-  billing: 'required',
+  billing: "required",
 });
 
 class ApiService {
@@ -152,20 +152,20 @@ class ApiService {
     meter: apiCalls,
     eventIdExtractor: ([request]) => (request as { eventId: string }).eventId,
     dimensionsExtractor: ([request]) => ({
-      region: (request as { region: 'us' | 'eu' }).region,
+      region: (request as { region: "us" | "eu" }).region,
     }),
   })
-  async listUsers(request: { eventId: string; region: 'us' | 'eu' }): Promise<void> {
+  async listUsers(request: { eventId: string; region: "us" | "eu" }): Promise<void> {
     // ...
   }
 
-  @Metered({ meterId: 'api_calls' })
+  @Metered({ meterId: "api_calls" })
   async handleRequest(req: Request): Promise<Response> {
     // ...
   }
 
   @Metered({
-    meterId: 'data_transfer',
+    meterId: "data_transfer",
     valueExtractor: (args, result) => (result as { size: number }).size,
   })
   async transferData(data: Buffer): Promise<{ size: number }> {

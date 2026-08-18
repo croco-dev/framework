@@ -13,25 +13,25 @@ title: "DoctorCheckResult"
 
 > `readonly` **diagnostics**: readonly [`DoctorDiagnostic`](/api/cli/src/type-aliases/doctordiagnostic/)[]
 
-***
+---
 
 ### id
 
 > `readonly` **id**: `string`
 
-***
+---
 
 ### note?
 
 > `readonly` `optional` **note?**: `string`
 
-***
+---
 
 ### status
 
 > `readonly` **status**: [`DoctorCheckStatus`](/api/cli/src/type-aliases/doctorcheckstatus/)
 
-***
+---
 
 ### title
 

@@ -57,7 +57,7 @@ Drizzle DB와 세션 스키마를 받아 제공자를 초기화합니다.
 
 [`SessionProvider`](/api/auth-core/src/interfaces/sessionprovider/).[`getSession`](/api/auth-core/src/interfaces/sessionprovider/#getsession)
 
-***
+---
 
 ### listSessions()
 
@@ -79,7 +79,7 @@ Drizzle DB와 세션 스키마를 받아 제공자를 초기화합니다.
 
 [`SessionProvider`](/api/auth-core/src/interfaces/sessionprovider/).[`listSessions`](/api/auth-core/src/interfaces/sessionprovider/#listsessions)
 
-***
+---
 
 ### revokeAllSessions()
 
@@ -101,7 +101,7 @@ Drizzle DB와 세션 스키마를 받아 제공자를 초기화합니다.
 
 [`SessionProvider`](/api/auth-core/src/interfaces/sessionprovider/).[`revokeAllSessions`](/api/auth-core/src/interfaces/sessionprovider/#revokeallsessions)
 
-***
+---
 
 ### revokeSession()
 

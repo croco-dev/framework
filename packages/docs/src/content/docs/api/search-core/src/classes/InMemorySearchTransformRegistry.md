@@ -69,7 +69,7 @@ title: "InMemorySearchTransformRegistry"
 
 [`SearchTransformRegistry`](/api/search-core/src/classes/searchtransformregistry/).[`apply`](/api/search-core/src/classes/searchtransformregistry/#apply)
 
-***
+---
 
 ### get()
 
@@ -95,7 +95,7 @@ title: "InMemorySearchTransformRegistry"
 
 [`SearchTransformRegistry`](/api/search-core/src/classes/searchtransformregistry/).[`get`](/api/search-core/src/classes/searchtransformregistry/#get)
 
-***
+---
 
 ### register()
 

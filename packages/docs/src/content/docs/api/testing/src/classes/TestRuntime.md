@@ -27,31 +27,31 @@ title: "TestRuntime"
 
 > `readonly` **clock**: [`TestClock`](/api/testing/src/classes/testclock/)
 
-***
+---
 
 ### environment
 
 > `readonly` **environment**: [`TestEnvironment`](/api/testing/src/classes/testenvironment/)
 
-***
+---
 
 ### ids
 
 > `readonly` **ids**: [`TestIdSource`](/api/testing/src/classes/testidsource/)
 
-***
+---
 
 ### network
 
 > `readonly` **network**: [`TestNetwork`](/api/testing/src/classes/testnetwork/)
 
-***
+---
 
 ### random
 
 > `readonly` **random**: [`TestRandomSource`](/api/testing/src/classes/testrandomsource/)
 
-***
+---
 
 ### scenarioId
 
@@ -69,7 +69,7 @@ title: "TestRuntime"
 
 [`TestReplayMetadata`](/api/testing/src/type-aliases/testreplaymetadata/)
 
-***
+---
 
 ### retry
 

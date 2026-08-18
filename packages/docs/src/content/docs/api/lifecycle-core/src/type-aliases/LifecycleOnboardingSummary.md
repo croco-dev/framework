@@ -13,31 +13,31 @@ title: "LifecycleOnboardingSummary"
 
 > `readonly` `optional` **completedAt?**: `Date`
 
-***
+---
 
 ### currentStepId?
 
 > `readonly` `optional` **currentStepId?**: `string`
 
-***
+---
 
 ### isCompleted?
 
 > `readonly` `optional` **isCompleted?**: `boolean`
 
-***
+---
 
 ### stalledSince?
 
 > `readonly` `optional` **stalledSince?**: `Date`
 
-***
+---
 
 ### startedAt?
 
 > `readonly` `optional` **startedAt?**: `Date`
 
-***
+---
 
 ### status?
 

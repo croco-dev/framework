@@ -11,4 +11,4 @@ title: "AdminFormFieldErrors"
 
 ### TValues
 
-`TValues` *extends* `object`
+`TValues` _extends_ `object`

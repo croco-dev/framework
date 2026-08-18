@@ -13,19 +13,19 @@ title: "AdminGeneratedArtifact"
 
 > `readonly` **clientBindings**: `Readonly`\<`Record`\<`string`, [`AdminGeneratedClientBinding`](/api/admin-generated/src/type-aliases/admingeneratedclientbinding/)\>\>
 
-***
+---
 
 ### diagnostics
 
 > `readonly` **diagnostics**: readonly [`AdminGeneratedDiagnostic`](/api/admin-generated/src/type-aliases/admingenerateddiagnostic/)[]
 
-***
+---
 
 ### resources
 
 > `readonly` **resources**: readonly [`AdminGeneratedResourceConfig`](/api/admin-generated/src/type-aliases/admingeneratedresourceconfig/)[]
 
-***
+---
 
 ### version
 

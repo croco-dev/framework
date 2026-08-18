@@ -13,7 +13,7 @@ title: "FrameworkManifestEntityRef"
 
 > `readonly` **id**: `string`
 
-***
+---
 
 ### kind
 

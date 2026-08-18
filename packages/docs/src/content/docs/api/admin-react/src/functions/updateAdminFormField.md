@@ -11,7 +11,7 @@ title: "updateAdminFormField"
 
 ### TValues
 
-`TValues` *extends* `object`
+`TValues` _extends_ `object`
 
 ### TResult
 
@@ -19,7 +19,7 @@ title: "updateAdminFormField"
 
 ### TName
 
-`TName` *extends* `string` = [`AdminFormFieldName`](/api/admin-react/src/type-aliases/adminformfieldname/)\<`TValues`\>
+`TName` _extends_ `string` = [`AdminFormFieldName`](/api/admin-react/src/type-aliases/adminformfieldname/)\<`TValues`\>
 
 ## Parameters
 

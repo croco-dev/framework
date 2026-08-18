@@ -13,37 +13,37 @@ title: "IntentMapRoute"
 
 > `readonly` **controllerId**: `string`
 
-***
+---
 
 ### description
 
 > `readonly` **description**: `string`
 
-***
+---
 
 ### handlerName
 
 > `readonly` **handlerName**: `string`
 
-***
+---
 
 ### id
 
 > `readonly` **id**: `string`
 
-***
+---
 
 ### method
 
 > `readonly` **method**: `string`
 
-***
+---
 
 ### path
 
 > `readonly` **path**: `string`
 
-***
+---
 
 ### source?
 

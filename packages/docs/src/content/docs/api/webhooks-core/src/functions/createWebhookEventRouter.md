@@ -11,7 +11,7 @@ title: "createWebhookEventRouter"
 
 ### TEvents
 
-`TEvents` *extends* [`WebhookEventCatalog`](/api/webhooks-core/src/type-aliases/webhookeventcatalog/) = [`WebhookEventCatalog`](/api/webhooks-core/src/type-aliases/webhookeventcatalog/)
+`TEvents` _extends_ [`WebhookEventCatalog`](/api/webhooks-core/src/type-aliases/webhookeventcatalog/) = [`WebhookEventCatalog`](/api/webhooks-core/src/type-aliases/webhookeventcatalog/)
 
 ## Returns
 

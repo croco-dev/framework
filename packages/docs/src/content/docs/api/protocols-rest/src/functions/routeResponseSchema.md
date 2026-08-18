@@ -11,7 +11,7 @@ title: "routeResponseSchema"
 
 ### TContract
 
-`TContract` *extends* [`RouteContractWithResponse`](/api/protocols-rest/src/type-aliases/routecontractwithresponse/)
+`TContract` _extends_ [`RouteContractWithResponse`](/api/protocols-rest/src/type-aliases/routecontractwithresponse/)
 
 ## Parameters
 

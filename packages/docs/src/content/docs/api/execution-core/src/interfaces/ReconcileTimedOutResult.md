@@ -15,7 +15,7 @@ Summary of an explicit timed-out execution reconciliation pass.
 
 Number of running records inspected.
 
-***
+---
 
 ### timedOut
 

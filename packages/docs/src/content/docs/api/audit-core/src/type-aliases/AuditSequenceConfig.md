@@ -15,7 +15,7 @@ title: "AuditSequenceConfig"
 
 > **enableOrdering**: `boolean`
 
-***
+---
 
 ### sequenceField?
 

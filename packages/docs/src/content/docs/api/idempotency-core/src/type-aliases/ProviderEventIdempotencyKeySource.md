@@ -13,19 +13,19 @@ title: "ProviderEventIdempotencyKeySource"
 
 > `readonly` **eventId**: `string`
 
-***
+---
 
 ### fingerprint?
 
 > `readonly` `optional` **fingerprint?**: `string`
 
-***
+---
 
 ### kind
 
 > `readonly` **kind**: `"provider-event"`
 
-***
+---
 
 ### provider
 

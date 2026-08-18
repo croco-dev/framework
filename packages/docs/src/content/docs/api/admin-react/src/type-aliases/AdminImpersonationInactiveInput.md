@@ -13,13 +13,13 @@ title: "AdminImpersonationInactiveInput"
 
 > `readonly` `optional` **actor?**: [`AdminImpersonationPrincipal`](/api/admin-react/src/type-aliases/adminimpersonationprincipal/)
 
-***
+---
 
 ### kind
 
 > `readonly` **kind**: `"inactive"`
 
-***
+---
 
 ### startAction?
 

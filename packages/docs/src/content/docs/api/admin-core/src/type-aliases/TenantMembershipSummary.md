@@ -13,31 +13,31 @@ title: "TenantMembershipSummary"
 
 > `readonly` **activeMembers**: `number`
 
-***
+---
 
 ### detailHref?
 
 > `readonly` `optional` **detailHref?**: `string`
 
-***
+---
 
 ### kind
 
 > `readonly` **kind**: `"membership"`
 
-***
+---
 
 ### pendingInvitations?
 
 > `readonly` `optional` **pendingInvitations?**: `number`
 
-***
+---
 
 ### seatLimit?
 
 > `readonly` `optional` **seatLimit?**: `number`
 
-***
+---
 
 ### seatPercent?
 

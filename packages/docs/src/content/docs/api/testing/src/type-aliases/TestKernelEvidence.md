@@ -13,19 +13,19 @@ title: "TestKernelEvidence"
 
 > `readonly` **fidelity**: [`TestKernelFidelity`](/api/testing/src/type-aliases/testkernelfidelity/)
 
-***
+---
 
 ### method
 
 > `readonly` **method**: `string`
 
-***
+---
 
 ### path
 
 > `readonly` **path**: `string`
 
-***
+---
 
 ### status
 

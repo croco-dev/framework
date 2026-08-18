@@ -23,7 +23,7 @@ decorator.
 
 Backoff configuration
 
-***
+---
 
 ### backoffPolicy?
 
@@ -31,7 +31,7 @@ Backoff configuration
 
 Custom backoff policy. When provided, it overrides and bypasses validation of `backoff`.
 
-***
+---
 
 ### circuitBreaker?
 
@@ -39,7 +39,7 @@ Custom backoff policy. When provided, it overrides and bypasses validation of `b
 
 CircuitBreaker options
 
-***
+---
 
 ### circuitIdResolver?
 
@@ -57,7 +57,7 @@ Custom circuit ID resolver
 
 `string`
 
-***
+---
 
 ### lambdaTimeoutReserveMs?
 
@@ -65,7 +65,7 @@ Custom circuit ID resolver
 
 Non-negative integer Lambda reserve time up to 2,147,483,647ms.
 
-***
+---
 
 ### listeners?
 
@@ -73,7 +73,7 @@ Non-negative integer Lambda reserve time up to 2,147,483,647ms.
 
 Custom retry listeners
 
-***
+---
 
 ### maxAttempts?
 
@@ -85,7 +85,7 @@ Positive safe-integer maximum attempts (default: 3).
 
 [`RetryPolicyOptions`](/api/retry-core/src/interfaces/retrypolicyoptions/).[`maxAttempts`](/api/retry-core/src/interfaces/retrypolicyoptions/#maxattempts)
 
-***
+---
 
 ### noRetryFor?
 
@@ -107,7 +107,7 @@ Exception classes to never retry
 
 [`RetryPolicyOptions`](/api/retry-core/src/interfaces/retrypolicyoptions/).[`noRetryFor`](/api/retry-core/src/interfaces/retrypolicyoptions/#noretryfor)
 
-***
+---
 
 ### recover?
 
@@ -115,7 +115,7 @@ Exception classes to never retry
 
 Recovery method name on the same class
 
-***
+---
 
 ### retryFor?
 
@@ -137,7 +137,7 @@ Exception classes to retry (empty = retry all except noRetryFor)
 
 [`RetryPolicyOptions`](/api/retry-core/src/interfaces/retrypolicyoptions/).[`retryFor`](/api/retry-core/src/interfaces/retrypolicyoptions/#retryfor)
 
-***
+---
 
 ### retryForCategories?
 
@@ -149,7 +149,7 @@ ProblemCategory values to retry (croco integration)
 
 [`RetryPolicyOptions`](/api/retry-core/src/interfaces/retrypolicyoptions/).[`retryForCategories`](/api/retry-core/src/interfaces/retrypolicyoptions/#retryforcategories)
 
-***
+---
 
 ### retryPolicy?
 
@@ -157,7 +157,7 @@ ProblemCategory values to retry (croco integration)
 
 Custom retry policy
 
-***
+---
 
 ### signal?
 
@@ -165,7 +165,7 @@ Custom retry policy
 
 Caller cancellation signal
 
-***
+---
 
 ### signalResolver?
 
@@ -183,7 +183,7 @@ Resolve a caller cancellation signal for each invocation
 
 `AbortSignal` \| `undefined`
 
-***
+---
 
 ### trace?
 
@@ -191,7 +191,7 @@ Resolve a caller cancellation signal for each invocation
 
 Disable telemetry (default: true)
 
-***
+---
 
 ### wrapExhausted?
 

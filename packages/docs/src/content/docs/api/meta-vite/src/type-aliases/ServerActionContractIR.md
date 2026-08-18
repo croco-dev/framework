@@ -17,25 +17,25 @@ title: "ServerActionContractIR"
 
 > `readonly` **schema**: `"declared"` \| `"none"`
 
-***
+---
 
 ### invalidates?
 
 > `readonly` `optional` **invalidates?**: readonly [`FrontendActionInvalidationHint`](/api/presentation-preset/src/type-aliases/frontendactioninvalidationhint/)[]
 
-***
+---
 
 ### method
 
 > `readonly` **method**: `"POST"`
 
-***
+---
 
 ### name
 
 > `readonly` **name**: `string`
 
-***
+---
 
 ### output
 
@@ -49,13 +49,13 @@ title: "ServerActionContractIR"
 
 > `readonly` **schema**: `"declared"` \| `"none"`
 
-***
+---
 
 ### path
 
 > `readonly` **path**: `string`
 
-***
+---
 
 ### problems
 

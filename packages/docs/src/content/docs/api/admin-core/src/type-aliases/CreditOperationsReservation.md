@@ -13,31 +13,31 @@ title: "CreditOperationsReservation"
 
 > `readonly` **allocations**: readonly [`CreditOperationsAllocation`](/api/admin-core/src/type-aliases/creditoperationsallocation/)[]
 
-***
+---
 
 ### amount
 
 > `readonly` **amount**: `string`
 
-***
+---
 
 ### createdAt
 
 > `readonly` **createdAt**: `Date`
 
-***
+---
 
 ### id
 
 > `readonly` **id**: `string`
 
-***
+---
 
 ### meterKey?
 
 > `readonly` `optional` **meterKey?**: `string`
 
-***
+---
 
 ### release?
 
@@ -51,13 +51,13 @@ title: "CreditOperationsReservation"
 
 > `readonly` **reason**: `string`
 
-***
+---
 
 ### settledAt?
 
 > `readonly` `optional` **settledAt?**: `Date`
 
-***
+---
 
 ### status
 

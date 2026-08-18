@@ -21,13 +21,13 @@ title: "SearchTransformRef"
 
 > `optional` **\_optionsType?**: `TOptions`
 
-***
+---
 
 ### defaultSuffix
 
 > **defaultSuffix**: `string`
 
-***
+---
 
 ### id
 

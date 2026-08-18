@@ -13,19 +13,19 @@ title: "LifecycleRuleVersionRecord"
 
 > `readonly` **descriptor**: [`LifecycleRuleVersionDescriptor`](/api/lifecycle-core/src/type-aliases/lifecycleruleversiondescriptor/)
 
-***
+---
 
 ### registeredAt
 
 > `readonly` **registeredAt**: `Date`
 
-***
+---
 
 ### state
 
 > `readonly` **state**: `Exclude`\<[`LifecycleRuleState`](/api/lifecycle-core/src/type-aliases/lifecyclerulestate/), `"unavailable"`\>
 
-***
+---
 
 ### updatedAt
 

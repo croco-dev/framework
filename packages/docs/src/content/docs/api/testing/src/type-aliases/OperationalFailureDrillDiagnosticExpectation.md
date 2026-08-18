@@ -13,7 +13,7 @@ title: "OperationalFailureDrillDiagnosticExpectation"
 
 > `readonly` **code**: `string`
 
-***
+---
 
 ### fields?
 

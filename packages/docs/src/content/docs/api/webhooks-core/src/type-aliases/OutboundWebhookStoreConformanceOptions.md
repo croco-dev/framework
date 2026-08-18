@@ -17,19 +17,19 @@ title: "OutboundWebhookStoreConformanceOptions"
 
 [`OutboundWebhookStore`](/api/webhooks-core/src/type-aliases/outboundwebhookstore/) \| `Promise`\<[`OutboundWebhookStore`](/api/webhooks-core/src/type-aliases/outboundwebhookstore/)\>
 
-***
+---
 
 ### endpoint
 
 > `readonly` **endpoint**: [`OutboundWebhookEndpoint`](/api/webhooks-core/src/type-aliases/outboundwebhookendpoint/)
 
-***
+---
 
 ### event
 
 > `readonly` **event**: [`OutboundWebhookEvent`](/api/webhooks-core/src/type-aliases/outboundwebhookevent/)
 
-***
+---
 
 ### reopenStore?
 

@@ -29,7 +29,7 @@ title: "Meter"
 ## Example
 
 ```typescript
-@Meter({ meterId: 'api_calls', type: 'COUNT', quota: 1000 })
+@Meter({ meterId: "api_calls", type: "COUNT", quota: 1000 })
 class ApiController {
   // ...
 }

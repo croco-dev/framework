@@ -13,7 +13,7 @@ title: "AssuranceProviderProfileArtifact"
 
 > `readonly` `optional` **packages?**: readonly `string`[]
 
-***
+---
 
 ### profile?
 
@@ -23,7 +23,7 @@ title: "AssuranceProviderProfileArtifact"
 
 > `readonly` `optional` **name?**: `string`
 
-***
+---
 
 ### schemaVersion
 

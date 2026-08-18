@@ -13,7 +13,7 @@ title: "ProviderConformanceMatrixSuite"
 
 > `readonly` **cases**: readonly [`ProviderConformanceMatrixCase`](/api/testing/src/type-aliases/providerconformancematrixcase/)[]
 
-***
+---
 
 ### manifest
 

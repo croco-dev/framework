@@ -13,25 +13,25 @@ title: "ContractGraphSnapshotController"
 
 > `readonly` **guards**: readonly [`ContractMetadataReference`](/api/protocols-core/src/type-aliases/contractmetadatareference/)[]
 
-***
+---
 
 ### name
 
 > `readonly` **name**: `string`
 
-***
+---
 
 ### path
 
 > `readonly` **path**: `string`
 
-***
+---
 
 ### roles
 
 > `readonly` **roles**: readonly `string`[]
 
-***
+---
 
 ### routeIds
 

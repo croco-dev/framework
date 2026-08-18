@@ -11,4 +11,4 @@ title: "InferRouteSchemaRequest"
 
 ### T
 
-`T` *extends* [`DefinedRouteSchema`](/api/protocols-core/src/type-aliases/definedrouteschema/)
+`T` _extends_ [`DefinedRouteSchema`](/api/protocols-core/src/type-aliases/definedrouteschema/)

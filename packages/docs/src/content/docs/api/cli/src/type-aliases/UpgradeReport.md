@@ -13,19 +13,19 @@ title: "UpgradeReport"
 
 > `readonly` **cwd**: `string`
 
-***
+---
 
 ### findings
 
 > `readonly` **findings**: readonly [`UpgradeFinding`](/api/cli/src/type-aliases/upgradefinding/)[]
 
-***
+---
 
 ### mode
 
 > `readonly` **mode**: [`UpgradeReportMode`](/api/cli/src/type-aliases/upgradereportmode/)
 
-***
+---
 
 ### summary
 
@@ -51,7 +51,7 @@ title: "UpgradeReport"
 
 > `readonly` **safeCodemods**: `number`
 
-***
+---
 
 ### version
 

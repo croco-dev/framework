@@ -13,19 +13,19 @@ title: "CreditOperationsReadyState"
 
 > `readonly` **actions**: readonly [`CreditOperationsAction`](/api/admin-core/src/type-aliases/creditoperationsaction/)[]
 
-***
+---
 
 ### grantedPermissions
 
 > `readonly` **grantedPermissions**: readonly `string`[]
 
-***
+---
 
 ### kind
 
 > `readonly` **kind**: `"ready"`
 
-***
+---
 
 ### snapshot
 

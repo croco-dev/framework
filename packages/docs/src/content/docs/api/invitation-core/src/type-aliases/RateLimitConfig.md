@@ -15,7 +15,7 @@ title: "RateLimitConfig"
 
 > **maxInvitesPerDay**: `number`
 
-***
+---
 
 ### maxInvitesPerHour
 

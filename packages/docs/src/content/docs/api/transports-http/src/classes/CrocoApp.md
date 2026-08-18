@@ -45,7 +45,7 @@ title: "CrocoApp"
 
 [`BootstrapValidationPolicy`](/api/transports-http/src/type-aliases/bootstrapvalidationpolicy/)
 
-***
+---
 
 ### describeRequestPipelineGraphs()
 
@@ -55,7 +55,7 @@ title: "CrocoApp"
 
 readonly [`RequestPipelineGraph`](/api/framework-context/src/type-aliases/requestpipelinegraph/)[]
 
-***
+---
 
 ### fetch()
 
@@ -79,7 +79,7 @@ readonly [`RequestPipelineGraph`](/api/framework-context/src/type-aliases/reques
 
 `Promise`\<`Response`\>
 
-***
+---
 
 ### getHono()
 
@@ -89,7 +89,7 @@ readonly [`RequestPipelineGraph`](/api/framework-context/src/type-aliases/reques
 
 `Hono`
 
-***
+---
 
 ### lambdaHandler()
 
@@ -105,7 +105,7 @@ readonly [`RequestPipelineGraph`](/api/framework-context/src/type-aliases/reques
 
 [`LambdaHandler`](/api/preset-lambda/src/type-aliases/lambdahandler/)
 
-***
+---
 
 ### listen()
 
@@ -129,7 +129,7 @@ readonly [`RequestPipelineGraph`](/api/framework-context/src/type-aliases/reques
 
 `Promise`\<[`NodeServerHandle`](/api/transports-http/src/type-aliases/nodeserverhandle/)\>
 
-***
+---
 
 ### nodeHandler()
 

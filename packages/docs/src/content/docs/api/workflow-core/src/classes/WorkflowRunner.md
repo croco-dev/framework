@@ -49,7 +49,7 @@ title: "WorkflowRunner"
 
 `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
 
-***
+---
 
 ### execute()
 
@@ -69,7 +69,7 @@ title: "WorkflowRunner"
 
 `Promise`\<[`WorkflowRunResult`](/api/workflow-core/src/type-aliases/workflowrunresult/)\>
 
-***
+---
 
 ### replay()
 

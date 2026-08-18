@@ -13,7 +13,7 @@ title: "DesktopContractMemberMetadata"
 
 > `readonly` **key**: `string`
 
-***
+---
 
 ### kind
 

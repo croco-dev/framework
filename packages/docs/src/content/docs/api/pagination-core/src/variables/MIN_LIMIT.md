@@ -5,4 +5,4 @@ prev: false
 title: "MIN_LIMIT"
 ---
 
-> `const` **MIN\_LIMIT**: `1` = `1`
+> `const` **MIN_LIMIT**: `1` = `1`

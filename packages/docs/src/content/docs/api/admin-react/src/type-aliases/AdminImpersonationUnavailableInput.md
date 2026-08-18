@@ -13,13 +13,13 @@ title: "AdminImpersonationUnavailableInput"
 
 > `readonly` **kind**: `"unavailable"`
 
-***
+---
 
 ### problem
 
 > `readonly` **problem**: [`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
 
-***
+---
 
 ### recoveryAction?
 

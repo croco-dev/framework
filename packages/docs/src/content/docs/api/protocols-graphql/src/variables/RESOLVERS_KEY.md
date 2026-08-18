@@ -5,4 +5,4 @@ prev: false
 title: "RESOLVERS_KEY"
 ---
 
-> `const` **RESOLVERS\_KEY**: *typeof* `RESOLVERS_KEY`
+> `const` **RESOLVERS_KEY**: _typeof_ `RESOLVERS_KEY`

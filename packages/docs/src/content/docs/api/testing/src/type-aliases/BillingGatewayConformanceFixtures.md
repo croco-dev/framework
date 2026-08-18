@@ -13,7 +13,7 @@ title: "BillingGatewayConformanceFixtures"
 
 > `readonly` **checkout**: [`CreateCheckoutParams`](/api/billing-core/src/type-aliases/createcheckoutparams/)
 
-***
+---
 
 ### portal
 
@@ -27,7 +27,7 @@ title: "BillingGatewayConformanceFixtures"
 
 > `readonly` **email**: `string`
 
-***
+---
 
 ### subscription
 

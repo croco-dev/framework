@@ -13,13 +13,13 @@ title: "AdminActionRecoveryDescriptor"
 
 > `readonly` `optional` **failureState?**: `string`
 
-***
+---
 
 ### retryable?
 
 > `readonly` `optional` **retryable?**: `boolean`
 
-***
+---
 
 ### successState?
 

@@ -13,13 +13,13 @@ title: "WorkflowDiagnosticsLogDetails"
 
 > `readonly` **level**: [`ExecutionLogLevel`](/api/execution-core/src/type-aliases/executionloglevel/)
 
-***
+---
 
 ### message
 
 > `readonly` **message**: `string`
 
-***
+---
 
 ### timestamp
 

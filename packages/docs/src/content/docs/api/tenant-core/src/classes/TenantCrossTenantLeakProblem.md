@@ -49,7 +49,7 @@ Tenant isolation enforcement failures and stable diagnostic codes.
 
 `TenantIsolationProblem.category`
 
-***
+---
 
 ### cause?
 
@@ -59,7 +59,7 @@ Tenant isolation enforcement failures and stable diagnostic codes.
 
 `TenantIsolationProblem.cause`
 
-***
+---
 
 ### code
 
@@ -69,7 +69,7 @@ Tenant isolation enforcement failures and stable diagnostic codes.
 
 `TenantIsolationProblem.code`
 
-***
+---
 
 ### detail?
 
@@ -79,7 +79,7 @@ Tenant isolation enforcement failures and stable diagnostic codes.
 
 `TenantIsolationProblem.detail`
 
-***
+---
 
 ### extensions?
 
@@ -89,7 +89,7 @@ Tenant isolation enforcement failures and stable diagnostic codes.
 
 `TenantIsolationProblem.extensions`
 
-***
+---
 
 ### instance?
 
@@ -99,7 +99,7 @@ Tenant isolation enforcement failures and stable diagnostic codes.
 
 `TenantIsolationProblem.instance`
 
-***
+---
 
 ### message
 
@@ -109,7 +109,7 @@ Tenant isolation enforcement failures and stable diagnostic codes.
 
 `TenantIsolationProblem.message`
 
-***
+---
 
 ### name
 
@@ -119,7 +119,7 @@ Tenant isolation enforcement failures and stable diagnostic codes.
 
 `TenantIsolationProblem.name`
 
-***
+---
 
 ### stack?
 
@@ -129,7 +129,7 @@ Tenant isolation enforcement failures and stable diagnostic codes.
 
 `TenantIsolationProblem.stack`
 
-***
+---
 
 ### type
 
@@ -139,7 +139,7 @@ Tenant isolation enforcement failures and stable diagnostic codes.
 
 `TenantIsolationProblem.type`
 
-***
+---
 
 ### stackTraceLimit
 
@@ -175,7 +175,7 @@ not capture any frames.
 
 `TenantIsolationProblem.status`
 
-***
+---
 
 ### title
 
@@ -205,7 +205,7 @@ not capture any frames.
 
 `TenantIsolationProblem.toJSON`
 
-***
+---
 
 ### captureStackTrace()
 
@@ -218,7 +218,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack;  // Similar to `new Error().stack`
+myObject.stack; // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -273,7 +273,7 @@ a();
 
 `TenantIsolationProblem.captureStackTrace`
 
-***
+---
 
 ### prepareStackTrace()
 

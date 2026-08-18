@@ -13,25 +13,25 @@ title: "AdminAuditMetadata"
 
 > `readonly` `optional` **actorId?**: `string`
 
-***
+---
 
 ### eventName
 
 > `readonly` **eventName**: `string`
 
-***
+---
 
 ### metadata?
 
 > `readonly` `optional` **metadata?**: `Readonly`\<`Record`\<`string`, `unknown`\>\>
 
-***
+---
 
 ### subjectId
 
 > `readonly` **subjectId**: `string`
 
-***
+---
 
 ### subjectType
 

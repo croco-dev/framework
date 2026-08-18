@@ -15,7 +15,7 @@ title: "RuntimeInspectorOptions"
 
 Positive safe integer. Defaults to 200.
 
-***
+---
 
 ### maxRequests?
 
@@ -23,7 +23,7 @@ Positive safe integer. Defaults to 200.
 
 Positive safe integer. Defaults to 50.
 
-***
+---
 
 ### maxStringLength?
 
@@ -31,7 +31,7 @@ Positive safe integer. Defaults to 50.
 
 Positive safe integer. Defaults to 500.
 
-***
+---
 
 ### sensitiveKeyPattern?
 

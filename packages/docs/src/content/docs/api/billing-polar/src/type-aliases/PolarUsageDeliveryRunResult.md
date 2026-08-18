@@ -13,13 +13,13 @@ title: "PolarUsageDeliveryRunResult"
 
 > `readonly` **accepted**: `number`
 
-***
+---
 
 ### retryableFailed
 
 > `readonly` **retryableFailed**: `number`
 
-***
+---
 
 ### terminalFailed
 

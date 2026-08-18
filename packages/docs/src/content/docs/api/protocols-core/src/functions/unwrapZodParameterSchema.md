@@ -16,7 +16,7 @@ they contain a catch. Value-changing effects and discriminated unions remain opa
 
 ### TSchema
 
-`TSchema` *extends* `ZodType`\<`any`, `ZodTypeDef`, `any`\> \| `null` \| `undefined`
+`TSchema` _extends_ `ZodType`\<`any`, `ZodTypeDef`, `any`\> \| `null` \| `undefined`
 
 ## Parameters
 

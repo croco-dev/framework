@@ -13,7 +13,7 @@ title: "MessageContentByChannel"
 
 > `readonly` **email**: [`EmailContent`](/api/engagement-core/src/type-aliases/emailcontent/)
 
-***
+---
 
 ### inApp
 
@@ -31,7 +31,7 @@ title: "MessageContentByChannel"
 
 > `readonly` **title**: `string`
 
-***
+---
 
 ### push
 
@@ -49,7 +49,7 @@ title: "MessageContentByChannel"
 
 > `readonly` **title**: `string`
 
-***
+---
 
 ### sms
 

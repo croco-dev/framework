@@ -11,7 +11,7 @@ title: "GraphQLResolver"
 
 ### T
 
-`T` *extends* `object` = `object`
+`T` _extends_ `object` = `object`
 
 ## Parameters
 

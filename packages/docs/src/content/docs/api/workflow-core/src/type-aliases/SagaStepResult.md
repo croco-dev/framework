@@ -13,7 +13,7 @@ title: "SagaStepResult"
 
 > `readonly` **result**: `unknown`
 
-***
+---
 
 ### stepId
 

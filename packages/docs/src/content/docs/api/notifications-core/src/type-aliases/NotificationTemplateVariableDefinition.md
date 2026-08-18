@@ -13,7 +13,7 @@ title: "NotificationTemplateVariableDefinition"
 
 > `readonly` `optional` **required?**: `boolean`
 
-***
+---
 
 ### type
 

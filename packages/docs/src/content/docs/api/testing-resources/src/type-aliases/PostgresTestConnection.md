@@ -13,43 +13,43 @@ title: "PostgresTestConnection"
 
 > `readonly` `optional` **client?**: `PoolClient`
 
-***
+---
 
 ### connectionString
 
 > `readonly` **connectionString**: `string`
 
-***
+---
 
 ### database
 
 > `readonly` **database**: `string`
 
-***
+---
 
 ### host
 
 > `readonly` **host**: `string`
 
-***
+---
 
 ### password
 
 > `readonly` **password**: `string`
 
-***
+---
 
 ### pool
 
 > `readonly` **pool**: `Pool`
 
-***
+---
 
 ### port
 
 > `readonly` **port**: `number`
 
-***
+---
 
 ### query
 
@@ -59,7 +59,7 @@ title: "PostgresTestConnection"
 
 ##### TRow
 
-`TRow` *extends* `QueryResultRow` = `QueryResultRow`
+`TRow` _extends_ `QueryResultRow` = `QueryResultRow`
 
 #### Parameters
 
@@ -75,7 +75,7 @@ title: "PostgresTestConnection"
 
 `Promise`\<`QueryResult`\<`TRow`\>\>
 
-***
+---
 
 ### username
 

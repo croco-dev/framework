@@ -15,7 +15,7 @@ title: "SlidingWindowEntry"
 
 > **timestamps**: `number`[]
 
-***
+---
 
 ### windowMs
 

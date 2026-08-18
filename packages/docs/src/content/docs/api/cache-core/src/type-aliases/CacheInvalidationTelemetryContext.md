@@ -13,13 +13,13 @@ title: "CacheInvalidationTelemetryContext"
 
 > `readonly` **adapterName**: `string`
 
-***
+---
 
 ### eventName
 
 > `readonly` **eventName**: `string`
 
-***
+---
 
 ### operation
 

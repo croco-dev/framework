@@ -11,7 +11,7 @@ title: "extractProblemFormFieldErrors"
 
 ### FieldName
 
-`FieldName` *extends* `string`
+`FieldName` _extends_ `string`
 
 ## Parameters
 

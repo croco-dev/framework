@@ -13,37 +13,37 @@ title: "EntitlementRule"
 
 > **featureKey**: `string`
 
-***
+---
 
 ### meterBilling?
 
 > `optional` **meterBilling?**: `"local"` \| `"required"`
 
-***
+---
 
 ### meterId?
 
 > `optional` **meterId?**: `string`
 
-***
+---
 
 ### overagePolicy?
 
 > `optional` **overagePolicy?**: [`OveragePolicy`](/api/entitlements-core/src/type-aliases/overagepolicy/)
 
-***
+---
 
 ### quota?
 
 > `optional` **quota?**: `number`
 
-***
+---
 
 ### type
 
 > **type**: [`EntitlementType`](/api/entitlements-core/src/type-aliases/entitlementtype/)
 
-***
+---
 
 ### value?
 

@@ -13,7 +13,7 @@ title: "LifecycleDryRunEvidence"
 
 > `readonly` **kind**: `"dry-run"`
 
-***
+---
 
 ### result
 

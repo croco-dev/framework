@@ -15,7 +15,7 @@ title: "DecomposedOptions"
 
 > `optional` **form?**: `"nfd"` \| `"nfkd"` \| `"jamo"`
 
-***
+---
 
 ### locale?
 
