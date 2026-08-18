@@ -37,7 +37,7 @@ title: "MonetizationSubscriptionConditionTracker"
 
 `Promise`\<[`MonetizationConditionEvaluation`](/api/lifecycle-core/src/type-aliases/monetizationconditionevaluation/)\<[`LifecycleSignal`](/api/lifecycle-core/src/type-aliases/lifecyclesignal/) & `object`\>\>
 
-***
+---
 
 ### observeRecovered()
 

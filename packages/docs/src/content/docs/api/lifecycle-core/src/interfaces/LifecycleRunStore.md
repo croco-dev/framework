@@ -29,7 +29,7 @@ Implementations must make this operation idempotent.
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### claim()
 
@@ -52,7 +52,7 @@ Distributed adapters must enforce both constraints in one shared transaction.
 
 `Promise`\<[`LifecycleRunClaimResult`](/api/lifecycle-core/src/type-aliases/lifecyclerunclaimresult/)\>
 
-***
+---
 
 ### finalizeDispatch()
 
@@ -71,7 +71,7 @@ A false result must retain the current claim and run evidence.
 
 `Promise`\<[`LifecycleRunFinalizationResult`](/api/lifecycle-core/src/type-aliases/lifecyclerunfinalizationresult/)\>
 
-***
+---
 
 ### findByIdempotencyKey()
 
@@ -87,7 +87,7 @@ A false result must retain the current claim and run evidence.
 
 `Promise`\<[`LifecycleRun`](/api/lifecycle-core/src/type-aliases/lifecyclerun/) \| `null`\>
 
-***
+---
 
 ### findLatestForRule()
 
@@ -111,7 +111,7 @@ A false result must retain the current claim and run evidence.
 
 `Promise`\<[`LifecycleRun`](/api/lifecycle-core/src/type-aliases/lifecyclerun/) \| `null`\>
 
-***
+---
 
 ### list()
 
@@ -127,7 +127,7 @@ A false result must retain the current claim and run evidence.
 
 `Promise`\<readonly [`LifecycleRun`](/api/lifecycle-core/src/type-aliases/lifecyclerun/)[]\>
 
-***
+---
 
 ### save()
 

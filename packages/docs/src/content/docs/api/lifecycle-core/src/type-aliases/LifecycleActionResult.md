@@ -13,13 +13,13 @@ title: "LifecycleActionResult"
 
 > `readonly` **actionId**: `string`
 
-***
+---
 
 ### emissionId?
 
 > `readonly` `optional` **emissionId?**: `string`
 
-***
+---
 
 ### error?
 
@@ -33,25 +33,25 @@ title: "LifecycleActionResult"
 
 > `readonly` **message**: `string`
 
-***
+---
 
 ### message?
 
 > `readonly` `optional` **message?**: `string`
 
-***
+---
 
 ### metadata?
 
 > `readonly` `optional` **metadata?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### status
 
 > `readonly` **status**: [`LifecycleActionStatus`](/api/lifecycle-core/src/type-aliases/lifecycleactionstatus/)
 
-***
+---
 
 ### type
 

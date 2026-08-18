@@ -13,19 +13,19 @@ title: "LifecycleRuleExecutionClaim"
 
 > `readonly` **claimId**: `string`
 
-***
+---
 
 ### expiresAt
 
 > `readonly` **expiresAt**: `Date`
 
-***
+---
 
 ### ruleId
 
 > `readonly` **ruleId**: `string`
 
-***
+---
 
 ### version
 

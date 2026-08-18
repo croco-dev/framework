@@ -9,9 +9,9 @@ title: "MonetizationSignalEvidenceByType"
 
 ## Properties
 
-### billing.credit.balance\_low
+### billing.credit.balance_low
 
-> `readonly` **billing.credit.balance\_low**: `object`
+> `readonly` **billing.credit.balance_low**: `object`
 
 #### balance
 
@@ -25,7 +25,7 @@ title: "MonetizationSignalEvidenceByType"
 
 > `readonly` **unit**: `string`
 
-***
+---
 
 ### billing.credit.exhausted
 
@@ -39,11 +39,11 @@ title: "MonetizationSignalEvidenceByType"
 
 > `readonly` **unit**: `string`
 
-***
+---
 
-### billing.seat.quantity\_drifted
+### billing.seat.quantity_drifted
 
-> `readonly` **billing.seat.quantity\_drifted**: `object`
+> `readonly` **billing.seat.quantity_drifted**: `object`
 
 #### difference
 
@@ -57,17 +57,17 @@ title: "MonetizationSignalEvidenceByType"
 
 > `readonly` **observedQuantity**: `number`
 
-***
+---
 
-### billing.subscription.past\_due
+### billing.subscription.past_due
 
-> `readonly` **billing.subscription.past\_due**: `object`
+> `readonly` **billing.subscription.past_due**: `object`
 
 #### attemptCount
 
 > `readonly` **attemptCount**: `number`
 
-***
+---
 
 ### billing.subscription.recovered
 
@@ -77,7 +77,7 @@ title: "MonetizationSignalEvidenceByType"
 
 > `readonly` **recovered**: `boolean`
 
-***
+---
 
 ### billing.trial.ending
 
@@ -91,11 +91,11 @@ title: "MonetizationSignalEvidenceByType"
 
 > `readonly` **trialEndsAt**: `string`
 
-***
+---
 
-### billing.usage.delivery\_lagging
+### billing.usage.delivery_lagging
 
-> `readonly` **billing.usage.delivery\_lagging**: `object`
+> `readonly` **billing.usage.delivery_lagging**: `object`
 
 #### meterKey
 
@@ -113,11 +113,11 @@ title: "MonetizationSignalEvidenceByType"
 
 > `readonly` **periodEndsAt**: `string`
 
-***
+---
 
-### billing.usage.sync\_drifted
+### billing.usage.sync_drifted
 
-> `readonly` **billing.usage.sync\_drifted**: `object`
+> `readonly` **billing.usage.sync_drifted**: `object`
 
 #### difference
 
@@ -147,11 +147,11 @@ title: "MonetizationSignalEvidenceByType"
 
 > `readonly` **upstreamObserved**: `number`
 
-***
+---
 
-### billing.usage.threshold\_crossed
+### billing.usage.threshold_crossed
 
-> `readonly` **billing.usage.threshold\_crossed**: `object`
+> `readonly` **billing.usage.threshold_crossed**: `object`
 
 #### consumed
 

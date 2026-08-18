@@ -13,7 +13,7 @@ title: "MonetizationRecipeDefinition"
 
 > `readonly` **descriptor**: [`MonetizationRecipeDescriptor`](/api/lifecycle-core/src/type-aliases/monetizationrecipedescriptor/)
 
-***
+---
 
 ### registration
 

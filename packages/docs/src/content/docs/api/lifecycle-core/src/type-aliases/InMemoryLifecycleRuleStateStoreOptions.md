@@ -13,7 +13,7 @@ title: "InMemoryLifecycleRuleStateStoreOptions"
 
 > `readonly` `optional` **commandTtlMs?**: `number`
 
-***
+---
 
 ### now?
 
@@ -23,7 +23,7 @@ Supplies the logical clock used for command retention and execution lease expiry
 When this clock does not advance with wall time, provide scheduleExecutionClaimWake
 on the same logical timeline.
 
-***
+---
 
 ### scheduleExecutionClaimWake?
 

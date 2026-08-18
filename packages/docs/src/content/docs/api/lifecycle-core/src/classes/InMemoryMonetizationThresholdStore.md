@@ -45,7 +45,7 @@ title: "InMemoryMonetizationThresholdStore"
 
 [`MonetizationThresholdStore`](/api/lifecycle-core/src/interfaces/monetizationthresholdstore/).[`acknowledgeCrossings`](/api/lifecycle-core/src/interfaces/monetizationthresholdstore/#acknowledgecrossings)
 
-***
+---
 
 ### claimCrossings()
 
@@ -65,7 +65,7 @@ title: "InMemoryMonetizationThresholdStore"
 
 [`MonetizationThresholdStore`](/api/lifecycle-core/src/interfaces/monetizationthresholdstore/).[`claimCrossings`](/api/lifecycle-core/src/interfaces/monetizationthresholdstore/#claimcrossings)
 
-***
+---
 
 ### getDiagnostics()
 
@@ -79,7 +79,7 @@ title: "InMemoryMonetizationThresholdStore"
 
 [`MonetizationThresholdStore`](/api/lifecycle-core/src/interfaces/monetizationthresholdstore/).[`getDiagnostics`](/api/lifecycle-core/src/interfaces/monetizationthresholdstore/#getdiagnostics)
 
-***
+---
 
 ### releaseCrossings()
 

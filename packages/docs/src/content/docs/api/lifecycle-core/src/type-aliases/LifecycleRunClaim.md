@@ -13,31 +13,31 @@ title: "LifecycleRunClaim"
 
 > `readonly` **claimedAt**: `Date`
 
-***
+---
 
 ### cooldownSince?
 
 > `readonly` `optional` **cooldownSince?**: `Date`
 
-***
+---
 
 ### idempotencyKey
 
 > `readonly` **idempotencyKey**: `string`
 
-***
+---
 
 ### ruleId
 
 > `readonly` **ruleId**: `string`
 
-***
+---
 
 ### runId
 
 > `readonly` **runId**: `string`
 
-***
+---
 
 ### tenantId
 

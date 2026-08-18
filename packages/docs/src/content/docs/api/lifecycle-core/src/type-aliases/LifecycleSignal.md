@@ -13,31 +13,31 @@ title: "LifecycleSignal"
 
 > `readonly` `optional` **data?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### id?
 
 > `readonly` `optional` **id?**: `string`
 
-***
+---
 
 ### occurredAt
 
 > `readonly` **occurredAt**: `Date`
 
-***
+---
 
 ### source?
 
 > `readonly` `optional` **source?**: `string`
 
-***
+---
 
 ### tenantId
 
 > `readonly` **tenantId**: `string`
 
-***
+---
 
 ### type
 

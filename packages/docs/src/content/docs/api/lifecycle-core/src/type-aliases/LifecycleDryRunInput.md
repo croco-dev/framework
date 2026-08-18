@@ -13,13 +13,13 @@ title: "LifecycleDryRunInput"
 
 > `readonly` **context**: [`LifecycleContext`](/api/lifecycle-core/src/type-aliases/lifecyclecontext/)
 
-***
+---
 
 ### ruleId
 
 > `readonly` **ruleId**: `string`
 
-***
+---
 
 ### version?
 
