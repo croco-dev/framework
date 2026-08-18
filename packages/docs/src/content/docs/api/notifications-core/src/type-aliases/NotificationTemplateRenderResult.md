@@ -13,19 +13,19 @@ title: "NotificationTemplateRenderResult"
 
 > `readonly` **content**: `string`
 
-***
+---
 
 ### subject?
 
 > `readonly` `optional` **subject?**: `string`
 
-***
+---
 
 ### template
 
 > `readonly` **template**: [`NotificationTemplateRef`](/api/notifications-core/src/type-aliases/notificationtemplateref/)
 
-***
+---
 
 ### variables
 

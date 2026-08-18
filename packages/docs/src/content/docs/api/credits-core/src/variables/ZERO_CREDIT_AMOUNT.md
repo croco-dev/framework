@@ -5,4 +5,4 @@ prev: false
 title: "ZERO_CREDIT_AMOUNT"
 ---
 
-> `const` **ZERO\_CREDIT\_AMOUNT**: [`CreditAmount`](/api/credits-core/src/type-aliases/creditamount/)
+> `const` **ZERO_CREDIT_AMOUNT**: [`CreditAmount`](/api/credits-core/src/type-aliases/creditamount/)

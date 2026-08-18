@@ -13,13 +13,13 @@ title: "RequestPipelineGraphEdge"
 
 > `readonly` **from**: `string`
 
-***
+---
 
 ### reason
 
 > `readonly` **reason**: [`RequestPipelineGraphEdgeReason`](/api/framework-context/src/type-aliases/requestpipelinegraphedgereason/)
 
-***
+---
 
 ### to
 

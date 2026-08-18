@@ -27,7 +27,7 @@ decorated methods.
 
 `Error`
 
-***
+---
 
 ### methodName
 

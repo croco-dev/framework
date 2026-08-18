@@ -43,7 +43,7 @@ title: "OutboundWebhookReplayNotAllowedProblem"
 
 `OutboundWebhookProblem.category`
 
-***
+---
 
 ### cause?
 
@@ -53,7 +53,7 @@ title: "OutboundWebhookReplayNotAllowedProblem"
 
 `OutboundWebhookProblem.cause`
 
-***
+---
 
 ### code
 
@@ -63,7 +63,7 @@ title: "OutboundWebhookReplayNotAllowedProblem"
 
 `OutboundWebhookProblem.code`
 
-***
+---
 
 ### detail?
 
@@ -73,7 +73,7 @@ title: "OutboundWebhookReplayNotAllowedProblem"
 
 `OutboundWebhookProblem.detail`
 
-***
+---
 
 ### extensions?
 
@@ -83,7 +83,7 @@ title: "OutboundWebhookReplayNotAllowedProblem"
 
 `OutboundWebhookProblem.extensions`
 
-***
+---
 
 ### instance?
 
@@ -93,7 +93,7 @@ title: "OutboundWebhookReplayNotAllowedProblem"
 
 `OutboundWebhookProblem.instance`
 
-***
+---
 
 ### message
 
@@ -103,7 +103,7 @@ title: "OutboundWebhookReplayNotAllowedProblem"
 
 `OutboundWebhookProblem.message`
 
-***
+---
 
 ### name
 
@@ -113,7 +113,7 @@ title: "OutboundWebhookReplayNotAllowedProblem"
 
 `OutboundWebhookProblem.name`
 
-***
+---
 
 ### stack?
 
@@ -123,7 +123,7 @@ title: "OutboundWebhookReplayNotAllowedProblem"
 
 `OutboundWebhookProblem.stack`
 
-***
+---
 
 ### type
 
@@ -133,7 +133,7 @@ title: "OutboundWebhookReplayNotAllowedProblem"
 
 `OutboundWebhookProblem.type`
 
-***
+---
 
 ### stackTraceLimit
 
@@ -169,7 +169,7 @@ not capture any frames.
 
 `OutboundWebhookProblem.status`
 
-***
+---
 
 ### title
 
@@ -199,7 +199,7 @@ not capture any frames.
 
 `OutboundWebhookProblem.toJSON`
 
-***
+---
 
 ### captureStackTrace()
 
@@ -212,7 +212,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack;  // Similar to `new Error().stack`
+myObject.stack; // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -267,7 +267,7 @@ a();
 
 `OutboundWebhookProblem.captureStackTrace`
 
-***
+---
 
 ### prepareStackTrace()
 

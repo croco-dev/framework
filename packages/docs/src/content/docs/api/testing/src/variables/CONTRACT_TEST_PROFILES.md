@@ -5,7 +5,7 @@ prev: false
 title: "CONTRACT_TEST_PROFILES"
 ---
 
-> `const` **CONTRACT\_TEST\_PROFILES**: `object`
+> `const` **CONTRACT_TEST_PROFILES**: `object`
 
 ## Type Declaration
 

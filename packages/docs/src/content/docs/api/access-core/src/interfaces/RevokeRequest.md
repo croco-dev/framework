@@ -11,7 +11,7 @@ title: "RevokeRequest"
 
 > **tenantId**: `string`
 
-***
+---
 
 ### tuple
 

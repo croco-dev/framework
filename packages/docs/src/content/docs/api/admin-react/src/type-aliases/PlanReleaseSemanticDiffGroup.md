@@ -13,7 +13,7 @@ title: "PlanReleaseSemanticDiffGroup"
 
 > `readonly` **changes**: readonly [`PlanReleaseSemanticDiff`](/api/admin-react/src/type-aliases/planreleasesemanticdiff/)[]
 
-***
+---
 
 ### group
 

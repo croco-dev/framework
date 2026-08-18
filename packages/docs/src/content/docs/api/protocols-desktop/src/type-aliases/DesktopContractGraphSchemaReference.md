@@ -13,13 +13,13 @@ title: "DesktopContractGraphSchemaReference"
 
 > `readonly` **descriptor**: [`DesktopContractGraphSchema`](/api/protocols-desktop/src/type-aliases/desktopcontractgraphschema/) \| `null`
 
-***
+---
 
 ### id
 
 > `readonly` **id**: `string`
 
-***
+---
 
 ### sourceLocation?
 

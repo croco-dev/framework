@@ -15,13 +15,13 @@ Internal API route IR (intermediate representation).
 
 > **handler**: [`ApiRouteHandler`](/api/meta-vite/src/type-aliases/apiroutehandler/)
 
-***
+---
 
 ### method?
 
 > `optional` **method?**: [`ApiMethod`](/api/meta-vite/src/type-aliases/apimethod/)
 
-***
+---
 
 ### path
 

@@ -29,7 +29,7 @@ title: "JobsCommandClient"
 
 `Promise`\<[`JobDetails`](/api/cli/src/type-aliases/jobdetails/)\>
 
-***
+---
 
 ### list()
 
@@ -45,7 +45,7 @@ title: "JobsCommandClient"
 
 `Promise`\<[`JobListReport`](/api/cli/src/type-aliases/joblistreport/)\>
 
-***
+---
 
 ### logs()
 
@@ -61,7 +61,7 @@ title: "JobsCommandClient"
 
 `Promise`\<readonly [`JobLogEntry`](/api/cli/src/type-aliases/joblogentry/)[]\>
 
-***
+---
 
 ### replay()
 
@@ -83,7 +83,7 @@ title: "JobsCommandClient"
 
 `Promise`\<[`JobDetails`](/api/cli/src/type-aliases/jobdetails/)\>
 
-***
+---
 
 ### show()
 

@@ -37,7 +37,7 @@ title: "ContractBillingProviderDescriptor"
 
 > `readonly` **supported**: `boolean`
 
-***
+---
 
 ### providerName
 

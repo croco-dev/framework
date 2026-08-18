@@ -13,19 +13,19 @@ title: "PlanReleaseTransitionCommand"
 
 > `readonly` **actor**: [`PlanReleaseActor`](/api/billing-core/src/type-aliases/planreleaseactor/)
 
-***
+---
 
 ### expectedRevision
 
 > `readonly` **expectedRevision**: `number`
 
-***
+---
 
 ### reason
 
 > `readonly` **reason**: `string`
 
-***
+---
 
 ### ref
 

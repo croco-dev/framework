@@ -13,13 +13,13 @@ title: "CacheAdapterCapabilityManifest"
 
 > `readonly` **adapterName**: `string`
 
-***
+---
 
 ### capabilities
 
 > `readonly` **capabilities**: [`CacheInvalidationAdapterCapabilities`](/api/cache-core/src/type-aliases/cacheinvalidationadaptercapabilities/)
 
-***
+---
 
 ### schemaVersion
 

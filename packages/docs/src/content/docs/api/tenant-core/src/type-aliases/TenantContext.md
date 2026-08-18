@@ -31,7 +31,7 @@ Tenant context stored in AsyncLocalStorage
 
 > **status**: `TenantStatus`
 
-***
+---
 
 ### tenantId
 

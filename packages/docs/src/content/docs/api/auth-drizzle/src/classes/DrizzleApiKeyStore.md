@@ -75,7 +75,7 @@ Drizzle DB와 API 키 스키마를 받아 저장소를 초기화합니다.
 
 [`ApiKeyStore`](/api/auth-core/src/classes/apikeystore/).[`claimRotationEvent`](/api/auth-core/src/classes/apikeystore/#claimrotationevent)
 
-***
+---
 
 ### completeRotationEvent()
 
@@ -103,7 +103,7 @@ Drizzle DB와 API 키 스키마를 받아 저장소를 초기화합니다.
 
 [`ApiKeyStore`](/api/auth-core/src/classes/apikeystore/).[`completeRotationEvent`](/api/auth-core/src/classes/apikeystore/#completerotationevent)
 
-***
+---
 
 ### delete()
 
@@ -125,7 +125,7 @@ API 키를 영구 삭제합니다.
 
 [`ApiKeyStore`](/api/auth-core/src/classes/apikeystore/).[`delete`](/api/auth-core/src/classes/apikeystore/#delete)
 
-***
+---
 
 ### findById()
 
@@ -147,7 +147,7 @@ ID로 API 키를 조회합니다.
 
 [`ApiKeyStore`](/api/auth-core/src/classes/apikeystore/).[`findById`](/api/auth-core/src/classes/apikeystore/#findbyid)
 
-***
+---
 
 ### findByShortToken()
 
@@ -169,7 +169,7 @@ ID로 API 키를 조회합니다.
 
 [`ApiKeyStore`](/api/auth-core/src/classes/apikeystore/).[`findByShortToken`](/api/auth-core/src/classes/apikeystore/#findbyshorttoken)
 
-***
+---
 
 ### listByTenant()
 
@@ -191,7 +191,7 @@ ID로 API 키를 조회합니다.
 
 [`ApiKeyStore`](/api/auth-core/src/classes/apikeystore/).[`listByTenant`](/api/auth-core/src/classes/apikeystore/#listbytenant)
 
-***
+---
 
 ### releaseRotationEvent()
 
@@ -219,7 +219,7 @@ ID로 API 키를 조회합니다.
 
 [`ApiKeyStore`](/api/auth-core/src/classes/apikeystore/).[`releaseRotationEvent`](/api/auth-core/src/classes/apikeystore/#releaserotationevent)
 
-***
+---
 
 ### revoke()
 
@@ -241,7 +241,7 @@ API 키를 폐기 처리합니다.
 
 [`ApiKeyStore`](/api/auth-core/src/classes/apikeystore/).[`revoke`](/api/auth-core/src/classes/apikeystore/#revoke)
 
-***
+---
 
 ### rotate()
 
@@ -263,7 +263,7 @@ API 키를 폐기 처리합니다.
 
 [`ApiKeyStore`](/api/auth-core/src/classes/apikeystore/).[`rotate`](/api/auth-core/src/classes/apikeystore/#rotate)
 
-***
+---
 
 ### save()
 
@@ -285,7 +285,7 @@ API 키를 폐기 처리합니다.
 
 [`ApiKeyStore`](/api/auth-core/src/classes/apikeystore/).[`save`](/api/auth-core/src/classes/apikeystore/#save)
 
-***
+---
 
 ### updateLastUsed()
 

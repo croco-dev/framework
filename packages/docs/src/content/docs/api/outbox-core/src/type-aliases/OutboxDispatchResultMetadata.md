@@ -15,7 +15,7 @@ Provider dispatch result metadata captured after a message is delivered.
 
 > `readonly` `optional` **metadata?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### providerMessageId?
 

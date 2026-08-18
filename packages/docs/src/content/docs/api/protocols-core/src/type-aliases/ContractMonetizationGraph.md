@@ -13,13 +13,13 @@ title: "ContractMonetizationGraph"
 
 > `readonly` **edges**: readonly [`ContractMonetizationEdge`](/api/protocols-core/src/type-aliases/contractmonetizationedge/)[]
 
-***
+---
 
 ### nodes
 
 > `readonly` **nodes**: readonly [`ContractMonetizationNode`](/api/protocols-core/src/type-aliases/contractmonetizationnode/)[]
 
-***
+---
 
 ### verification
 

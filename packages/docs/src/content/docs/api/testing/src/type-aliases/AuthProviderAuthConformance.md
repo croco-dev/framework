@@ -13,19 +13,19 @@ title: "AuthProviderAuthConformance"
 
 > `readonly` **expectedUser**: [`AuthUser`](/api/auth-core/src/type-aliases/authuser/)
 
-***
+---
 
 ### invalidCredentials
 
 > `readonly` **invalidCredentials**: [`AuthProviderCredentialFailureExpectation`](/api/testing/src/type-aliases/authprovidercredentialfailureexpectation/)
 
-***
+---
 
 ### malformedPayload
 
 > `readonly` **malformedPayload**: [`AuthProviderProblemExpectation`](/api/testing/src/type-aliases/authproviderproblemexpectation/)
 
-***
+---
 
 ### upstreamFailure
 
@@ -41,7 +41,7 @@ title: "AuthProviderAuthConformance"
 
 [`AuthUser`](/api/auth-core/src/type-aliases/authuser/) \| `Promise`\<[`AuthUser`](/api/auth-core/src/type-aliases/authuser/) \| `null`\> \| `null`
 
-***
+---
 
 ### authenticateValid()
 

@@ -15,31 +15,31 @@ billing account, invoice, order, plan, subscription 도메인 타입입니다.
 
 > **amount**: `number`
 
-***
+---
 
 ### currency
 
 > **currency**: `string`
 
-***
+---
 
 ### id
 
 > **id**: `string`
 
-***
+---
 
 ### interval
 
 > **interval**: [`PlanInterval`](/api/billing-core/src/type-aliases/planinterval/)
 
-***
+---
 
 ### intervalCount
 
 > **intervalCount**: `number`
 
-***
+---
 
 ### name
 

@@ -14,7 +14,7 @@ Polar event metadata, so the Polar meter filter can be declared against the same
 
 ### Meter
 
-`Meter` *extends* [`MeterRef`](/api/metering-core/src/type-aliases/meterref/)
+`Meter` _extends_ [`MeterRef`](/api/metering-core/src/type-aliases/meterref/)
 
 ## Parameters
 

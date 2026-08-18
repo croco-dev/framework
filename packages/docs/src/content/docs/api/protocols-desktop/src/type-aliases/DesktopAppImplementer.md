@@ -11,7 +11,7 @@ title: "DesktopAppImplementer"
 
 ### TContracts
 
-`TContracts` *extends* [`DesktopContractRecord`](/api/protocols-desktop/src/type-aliases/desktopcontractrecord/)
+`TContracts` _extends_ [`DesktopContractRecord`](/api/protocols-desktop/src/type-aliases/desktopcontractrecord/)
 
 ## Properties
 
@@ -23,7 +23,7 @@ title: "DesktopAppImplementer"
 
 ##### TImplementation
 
-`TImplementation` *extends* [`DesktopAppImplementation`](/api/protocols-desktop/src/type-aliases/desktopappimplementation/)\<`TContracts`\>
+`TImplementation` _extends_ [`DesktopAppImplementation`](/api/protocols-desktop/src/type-aliases/desktopappimplementation/)\<`TContracts`\>
 
 #### Parameters
 

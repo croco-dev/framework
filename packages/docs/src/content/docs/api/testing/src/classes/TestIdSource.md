@@ -49,7 +49,7 @@ title: "TestIdSource"
 
 `TestIdSource`
 
-***
+---
 
 ### next()
 

@@ -32,7 +32,7 @@ Implementations: PolarBillingGateway
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### createCheckout()
 
@@ -48,7 +48,7 @@ Implementations: PolarBillingGateway
 
 `Promise`\<[`CheckoutResult`](/api/billing-core/src/type-aliases/checkoutresult/)\>
 
-***
+---
 
 ### ensureCustomer()
 
@@ -68,7 +68,7 @@ Implementations: PolarBillingGateway
 
 `Promise`\<`string`\>
 
-***
+---
 
 ### getCustomerPortalUrl()
 
@@ -84,7 +84,7 @@ Implementations: PolarBillingGateway
 
 `Promise`\<`string`\>
 
-***
+---
 
 ### reconcileCheckout()
 
@@ -103,7 +103,7 @@ Used to recover ambiguous provider responses and idempotency-store commit failur
 
 `Promise`\<[`CheckoutResult`](/api/billing-core/src/type-aliases/checkoutresult/) \| `null`\>
 
-***
+---
 
 ### resumeSubscription()
 

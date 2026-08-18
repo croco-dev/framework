@@ -11,11 +11,11 @@ title: "UsageBillingFailureScenario"
 
 ### TFixture
 
-`TFixture` *extends* [`UsageBillingRetryableFailureFixture`](/api/testing/src/type-aliases/usagebillingretryablefailurefixture/) \| [`UsageBillingTerminalFailureFixture`](/api/testing/src/type-aliases/usagebillingterminalfailurefixture/)
+`TFixture` _extends_ [`UsageBillingRetryableFailureFixture`](/api/testing/src/type-aliases/usagebillingretryablefailurefixture/) \| [`UsageBillingTerminalFailureFixture`](/api/testing/src/type-aliases/usagebillingterminalfailurefixture/)
 
 ### TGateway
 
-`TGateway` *extends* [`UsageBillingGateway`](/api/billing-core/src/interfaces/usagebillinggateway/) = [`UsageBillingGateway`](/api/billing-core/src/interfaces/usagebillinggateway/)
+`TGateway` _extends_ [`UsageBillingGateway`](/api/billing-core/src/interfaces/usagebillinggateway/) = [`UsageBillingGateway`](/api/billing-core/src/interfaces/usagebillinggateway/)
 
 ## Properties
 
@@ -33,19 +33,19 @@ title: "UsageBillingFailureScenario"
 
 `TGateway` \| `Promise`\<`TGateway`\>
 
-***
+---
 
 ### fixture
 
 > `readonly` **fixture**: `TFixture`
 
-***
+---
 
 ### forbiddenValues
 
 > `readonly` **forbiddenValues**: readonly \[`string`, `...string[]`\]
 
-***
+---
 
 ### run
 

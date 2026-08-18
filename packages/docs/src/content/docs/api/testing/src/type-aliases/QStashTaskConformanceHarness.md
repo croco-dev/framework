@@ -17,7 +17,7 @@ title: "QStashTaskConformanceHarness"
 
 readonly [`QStashTaskPublishRecord`](/api/testing/src/type-aliases/qstashtaskpublishrecord/)[]
 
-***
+---
 
 ### publisher
 

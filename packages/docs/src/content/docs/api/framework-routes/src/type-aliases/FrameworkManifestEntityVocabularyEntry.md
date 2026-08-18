@@ -13,19 +13,19 @@ title: "FrameworkManifestEntityVocabularyEntry"
 
 > `readonly` **description**: `string`
 
-***
+---
 
 ### discoveredFrom
 
 > `readonly` **discoveredFrom**: readonly `string`[]
 
-***
+---
 
 ### kind
 
 > `readonly` **kind**: [`FrameworkManifestEntityKind`](/api/framework-routes/src/type-aliases/frameworkmanifestentitykind/)
 
-***
+---
 
 ### requiredFields
 

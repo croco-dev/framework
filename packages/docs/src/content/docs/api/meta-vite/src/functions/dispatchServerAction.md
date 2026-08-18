@@ -8,6 +8,7 @@ title: "dispatchServerAction"
 > **dispatchServerAction**(`name`, `formData`, `context?`, `registry?`): `Promise`\<`Response`\>
 
 Dispatch a registered server action by name from the global registry by default.
+
 - Validates input against the registered schema (if any)
 - Returns 404 if action not found
 - Returns 422 if validation fails

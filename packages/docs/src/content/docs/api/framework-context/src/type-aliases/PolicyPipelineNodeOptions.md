@@ -13,7 +13,7 @@ title: "PolicyPipelineNodeOptions"
 
 > `readonly` `optional` **idPrefix?**: `string`
 
-***
+---
 
 ### orderOffset?
 

@@ -24,10 +24,10 @@ Drizzle DB 인스턴스
 ## Example
 
 ```typescript
-import { createRlsTxAdapter } from '@croco/tx-drizzle';
+import { createRlsTxAdapter } from "@croco/tx-drizzle";
 
 const adapter = createRlsTxAdapter(db, {
-  getTenantId: () => Context.get('tenantId')
+  getTenantId: () => Context.get("tenantId"),
 });
 ```
 
@@ -37,19 +37,19 @@ const adapter = createRlsTxAdapter(db, {
 
 > `optional` **adminRoles?**: `string`[]
 
-***
+---
 
 ### configKey?
 
 > `optional` **configKey?**: `string`
 
-***
+---
 
 ### tableName
 
 > **tableName**: `string`
 
-***
+---
 
 ### tenantColumn?
 

@@ -13,37 +13,37 @@ title: "PlanReleasePublicationEvidence"
 
 > `readonly` **actor**: [`PlanReleaseActor`](/api/billing-core/src/type-aliases/planreleaseactor/)
 
-***
+---
 
 ### commandFingerprint
 
 > `readonly` **commandFingerprint**: `string`
 
-***
+---
 
 ### idempotencyKey
 
 > `readonly` **idempotencyKey**: `string`
 
-***
+---
 
 ### publishedAt
 
 > `readonly` **publishedAt**: `string`
 
-***
+---
 
 ### reason
 
 > `readonly` **reason**: `string`
 
-***
+---
 
 ### reviewedDraftRevision
 
 > `readonly` **reviewedDraftRevision**: `number`
 
-***
+---
 
 ### validationSnapshotId
 

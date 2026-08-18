@@ -5,4 +5,4 @@ prev: false
 title: "ReservedDesktopKey"
 ---
 
-> **ReservedDesktopKey** = *typeof* `RESERVED_DESKTOP_KEYS`\[`number`\]
+> **ReservedDesktopKey** = _typeof_ `RESERVED_DESKTOP_KEYS`\[`number`\]

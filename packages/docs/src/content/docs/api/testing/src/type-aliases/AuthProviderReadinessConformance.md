@@ -23,7 +23,7 @@ title: "AuthProviderReadinessConformance"
 
 [`HealthStatus`](/api/diagnostics-core/src/type-aliases/healthstatus/) \| `Promise`\<[`HealthStatus`](/api/diagnostics-core/src/type-aliases/healthstatus/)\>
 
-***
+---
 
 ### createReadyHealth()?
 

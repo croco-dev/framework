@@ -16,25 +16,25 @@ The processing token is stable for one logical checkpoint, including lease takeo
 
 > **attempt**: `number`
 
-***
+---
 
 ### expiresAt
 
 > **expiresAt**: `Date`
 
-***
+---
 
 ### fencingToken
 
 > **fencingToken**: `string`
 
-***
+---
 
 ### processingToken
 
 > **processingToken**: `string`
 
-***
+---
 
 ### workerId
 

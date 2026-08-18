@@ -5,4 +5,4 @@ prev: false
 title: "WebhookDiagnosticCode"
 ---
 
-> **WebhookDiagnosticCode** = *typeof* [`WEBHOOK_DIAGNOSTIC_CODES`](/api/webhooks-core/src/variables/webhook_diagnostic_codes/)\[keyof *typeof* [`WEBHOOK_DIAGNOSTIC_CODES`](/api/webhooks-core/src/variables/webhook_diagnostic_codes/)\]
+> **WebhookDiagnosticCode** = _typeof_ [`WEBHOOK_DIAGNOSTIC_CODES`](/api/webhooks-core/src/variables/webhook_diagnostic_codes/)\[keyof _typeof_ [`WEBHOOK_DIAGNOSTIC_CODES`](/api/webhooks-core/src/variables/webhook_diagnostic_codes/)\]

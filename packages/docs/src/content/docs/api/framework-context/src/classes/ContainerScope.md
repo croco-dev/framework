@@ -41,7 +41,7 @@ Owns an isolated DI runtime that can be entered across asynchronous bootstrap an
 
 `AsyncDisposable.[asyncDispose]`
 
-***
+---
 
 ### \[dispose\]()
 
@@ -51,7 +51,7 @@ Owns an isolated DI runtime that can be entered across asynchronous bootstrap an
 
 `void`
 
-***
+---
 
 ### dispose()
 
@@ -61,7 +61,7 @@ Owns an isolated DI runtime that can be entered across asynchronous bootstrap an
 
 `void`
 
-***
+---
 
 ### run()
 

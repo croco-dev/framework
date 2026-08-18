@@ -11,15 +11,15 @@ title: "AdminGeneratedProblem"
 
 ### Code
 
-`Code` *extends* `string` = `string`
+`Code` _extends_ `string` = `string`
 
 ### Category
 
-`Category` *extends* `string` = `string`
+`Category` _extends_ `string` = `string`
 
 ### Status
 
-`Status` *extends* `number` = `number`
+`Status` _extends_ `number` = `number`
 
 ## Properties
 
@@ -27,25 +27,25 @@ title: "AdminGeneratedProblem"
 
 > `readonly` **category**: `Category`
 
-***
+---
 
 ### code
 
 > `readonly` **code**: `Code`
 
-***
+---
 
 ### description?
 
 > `readonly` `optional` **description?**: `string`
 
-***
+---
 
 ### status
 
 > `readonly` **status**: `Status`
 
-***
+---
 
 ### type?
 

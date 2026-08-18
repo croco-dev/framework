@@ -23,7 +23,7 @@ title: "LifecycleAutomationConsoleProps"
 
 `void`
 
-***
+---
 
 ### onRecoverRun?
 
@@ -39,7 +39,7 @@ title: "LifecycleAutomationConsoleProps"
 
 `void`
 
-***
+---
 
 ### onRuleAction?
 
@@ -55,7 +55,7 @@ title: "LifecycleAutomationConsoleProps"
 
 `void`
 
-***
+---
 
 ### state
 

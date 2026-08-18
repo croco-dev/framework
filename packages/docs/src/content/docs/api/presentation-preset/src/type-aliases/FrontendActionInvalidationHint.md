@@ -13,13 +13,13 @@ title: "FrontendActionInvalidationHint"
 
 > `readonly` **kind**: `"query-key-prefix"` \| `"custom"`
 
-***
+---
 
 ### reason?
 
 > `readonly` `optional` **reason?**: `string`
 
-***
+---
 
 ### target
 

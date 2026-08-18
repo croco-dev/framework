@@ -19,7 +19,7 @@ title: "AdminDataTableRow"
 
 > `readonly` **data**: `TData`
 
-***
+---
 
 ### id
 

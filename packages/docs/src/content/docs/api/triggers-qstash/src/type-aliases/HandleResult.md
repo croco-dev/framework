@@ -17,7 +17,7 @@ Result of handling a QStash webhook.
 
 Response body.
 
-***
+---
 
 ### error?
 
@@ -25,7 +25,7 @@ Response body.
 
 Error message if handling failed.
 
-***
+---
 
 ### executionId?
 
@@ -33,7 +33,7 @@ Error message if handling failed.
 
 Execution ID if an execution was created.
 
-***
+---
 
 ### statusCode
 
@@ -41,7 +41,7 @@ Execution ID if an execution was created.
 
 HTTP status code to return.
 
-***
+---
 
 ### success
 

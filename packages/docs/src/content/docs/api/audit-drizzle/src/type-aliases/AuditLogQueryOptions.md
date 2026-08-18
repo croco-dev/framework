@@ -15,13 +15,13 @@ title: "AuditLogQueryOptions"
 
 > `optional` **limit?**: `number`
 
-***
+---
 
 ### offset?
 
 > `optional` **offset?**: `number`
 
-***
+---
 
 ### orderBy?
 

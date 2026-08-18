@@ -11,7 +11,7 @@ title: "MessageDescriptor"
 
 ### TChannels
 
-`TChannels` *extends* readonly [`MessageChannel`](/api/engagement-core/src/type-aliases/messagechannel/)[] = readonly [`MessageChannel`](/api/engagement-core/src/type-aliases/messagechannel/)[]
+`TChannels` _extends_ readonly [`MessageChannel`](/api/engagement-core/src/type-aliases/messagechannel/)[] = readonly [`MessageChannel`](/api/engagement-core/src/type-aliases/messagechannel/)[]
 
 ## Properties
 
@@ -19,19 +19,19 @@ title: "MessageDescriptor"
 
 > `readonly` **channels**: `TChannels`
 
-***
+---
 
 ### dataSchema
 
 > `readonly` **dataSchema**: [`ContractSchemaDescriptor`](/api/protocols-core/src/type-aliases/contractschemadescriptor/) \| `null`
 
-***
+---
 
 ### id
 
 > `readonly` **id**: `string`
 
-***
+---
 
 ### topic
 

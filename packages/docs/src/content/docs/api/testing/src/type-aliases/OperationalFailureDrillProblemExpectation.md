@@ -13,25 +13,25 @@ title: "OperationalFailureDrillProblemExpectation"
 
 > `readonly` **code**: `string`
 
-***
+---
 
 ### extensions?
 
 > `readonly` `optional` **extensions?**: `Readonly`\<`Record`\<`string`, [`OperationalFailureDrillJsonValue`](/api/testing/src/type-aliases/operationalfailuredrilljsonvalue/)\>\>
 
-***
+---
 
 ### status?
 
 > `readonly` `optional` **status?**: `number`
 
-***
+---
 
 ### title?
 
 > `readonly` `optional` **title?**: `string`
 
-***
+---
 
 ### type?
 

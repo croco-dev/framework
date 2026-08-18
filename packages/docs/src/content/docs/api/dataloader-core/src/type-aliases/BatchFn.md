@@ -42,10 +42,10 @@ caching behavior, and scoping options.
 
 ```typescript
 const options: BatchLoaderOptions<string, User> = {
-  name: 'users',
+  name: "users",
   batchFn: async (ids) => await fetchUsers(ids),
   maxBatchSize: 100,
   cache: true,
-  scope: 'tenant-123',
+  scope: "tenant-123",
 };
 ```

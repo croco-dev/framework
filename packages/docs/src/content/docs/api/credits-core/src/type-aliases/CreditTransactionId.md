@@ -9,6 +9,6 @@ title: "CreditTransactionId"
 
 ## Type Declaration
 
-### \[CREDIT\_TRANSACTION\_ID\]
+### \[CREDIT_TRANSACTION_ID\]
 
-> `readonly` **\[CREDIT\_TRANSACTION\_ID\]**: `true`
+> `readonly` **\[CREDIT_TRANSACTION_ID\]**: `true`

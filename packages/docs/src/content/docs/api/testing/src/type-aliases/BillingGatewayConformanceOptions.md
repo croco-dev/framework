@@ -11,7 +11,7 @@ title: "BillingGatewayConformanceOptions"
 
 ### TGateway
 
-`TGateway` *extends* [`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/) = [`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/)
+`TGateway` _extends_ [`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/) = [`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/)
 
 ## Properties
 
@@ -19,13 +19,13 @@ title: "BillingGatewayConformanceOptions"
 
 > `readonly` `optional` **assertions?**: [`BillingGatewayConformanceAssertions`](/api/testing/src/type-aliases/billinggatewayconformanceassertions/)\<`TGateway`\>
 
-***
+---
 
 ### checkoutConflictProblemCode?
 
 > `readonly` `optional` **checkoutConflictProblemCode?**: `string`
 
-***
+---
 
 ### createGateway
 
@@ -35,19 +35,19 @@ title: "BillingGatewayConformanceOptions"
 
 `TGateway` \| `Promise`\<`TGateway`\>
 
-***
+---
 
 ### failureScenarios?
 
 > `readonly` `optional` **failureScenarios?**: readonly [`BillingGatewayFailureScenario`](/api/testing/src/type-aliases/billinggatewayfailurescenario/)\<`TGateway`\>[]
 
-***
+---
 
 ### fixtures
 
 > `readonly` **fixtures**: [`BillingGatewayConformanceFixtures`](/api/testing/src/type-aliases/billinggatewayconformancefixtures/)
 
-***
+---
 
 ### getCheckoutCreateCount
 

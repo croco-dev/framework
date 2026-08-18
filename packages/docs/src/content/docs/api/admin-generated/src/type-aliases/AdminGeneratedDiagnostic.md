@@ -13,19 +13,19 @@ title: "AdminGeneratedDiagnostic"
 
 > `readonly` **code**: `string`
 
-***
+---
 
 ### message
 
 > `readonly` **message**: `string`
 
-***
+---
 
 ### path?
 
 > `readonly` `optional` **path?**: `string`
 
-***
+---
 
 ### routeId?
 

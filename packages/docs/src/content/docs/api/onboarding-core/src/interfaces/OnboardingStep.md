@@ -11,49 +11,49 @@ title: "OnboardingStep"
 
 > `optional` **dependsOn?**: `string`[]
 
-***
+---
 
 ### description?
 
 > `optional` **description?**: `string`
 
-***
+---
 
 ### featureFlagKey?
 
 > `optional` **featureFlagKey?**: `string`
 
-***
+---
 
 ### id
 
 > **id**: `string`
 
-***
+---
 
 ### metadata?
 
 > `optional` **metadata?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### order?
 
 > `optional` **order?**: `number`
 
-***
+---
 
 ### required?
 
 > `optional` **required?**: `boolean`
 
-***
+---
 
 ### title
 
 > **title**: `string`
 
-***
+---
 
 ### type?
 

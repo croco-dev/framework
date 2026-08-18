@@ -29,7 +29,7 @@ Provider-neutral transactional outbox storage contract.
 
 `Promise`\<[`ClaimedOutboxRecord`](/api/outbox-core/src/type-aliases/claimedoutboxrecord/)[]\>
 
-***
+---
 
 ### markDispatched()
 
@@ -49,7 +49,7 @@ Provider-neutral transactional outbox storage contract.
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### markFailed()
 
@@ -69,7 +69,7 @@ Provider-neutral transactional outbox storage contract.
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### record()
 

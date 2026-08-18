@@ -13,19 +13,19 @@ title: "AccessRuleMetadata"
 
 > `readonly` **objectType**: `string`
 
-***
+---
 
 ### relation
 
 > `readonly` **relation**: `Relation`
 
-***
+---
 
 ### ruleId
 
 > `readonly` **ruleId**: `string`
 
-***
+---
 
 ### sourceLocation?
 

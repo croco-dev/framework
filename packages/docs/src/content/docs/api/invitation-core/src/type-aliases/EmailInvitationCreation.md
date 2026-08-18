@@ -15,79 +15,79 @@ title: "EmailInvitationCreation"
 
 > **createdAt**: `Date`
 
-***
+---
 
 ### eventClaimExpiresAt
 
 > **eventClaimExpiresAt**: `Date` \| `null`
 
-***
+---
 
 ### eventClaimId
 
 > **eventClaimId**: `string` \| `null`
 
-***
+---
 
 ### eventId
 
 > **eventId**: `string`
 
-***
+---
 
 ### eventOccurredAt
 
 > **eventOccurredAt**: `Date`
 
-***
+---
 
 ### eventStatus
 
 > **eventStatus**: [`InvitationCreationPhaseStatus`](/api/invitation-core/src/type-aliases/invitationcreationphasestatus/)
 
-***
+---
 
 ### idempotencyKey
 
 > **idempotencyKey**: `string`
 
-***
+---
 
 ### invitation
 
 > **invitation**: [`Invitation`](/api/invitation-core/src/type-aliases/invitation/)
 
-***
+---
 
 ### notificationClaimExpiresAt
 
 > **notificationClaimExpiresAt**: `Date` \| `null`
 
-***
+---
 
 ### notificationClaimId
 
 > **notificationClaimId**: `string` \| `null`
 
-***
+---
 
 ### notificationIdempotencyKey
 
 > **notificationIdempotencyKey**: `string`
 
-***
+---
 
 ### notificationStatus
 
 > **notificationStatus**: [`InvitationCreationPhaseStatus`](/api/invitation-core/src/type-aliases/invitationcreationphasestatus/)
 
-***
+---
 
 ### requestFingerprint
 
 > **requestFingerprint**: `string`
 
-***
+---
 
 ### token
 

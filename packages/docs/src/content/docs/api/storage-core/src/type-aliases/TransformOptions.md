@@ -17,20 +17,21 @@ title: "TransformOptions"
 
 Device Pixel Ratio (1-3)
 
-***
+---
 
 ### fit?
 
 > `optional` **fit?**: `"cover"` \| `"contain"` \| `"fill"` \| `"inside"` \| `"outside"`
 
 리사이징 모드
+
 - cover: 비율 유지하면서 채우기 (자르기)
 - contain: 비율 유지하면서 맞추기 (여백)
 - fill: 비율 무시하고 채우기
 - inside: 비율 유지, 지정 크기 내에 맞춤
 - outside: 비율 유지, 지정 크기覆盖
 
-***
+---
 
 ### format?
 
@@ -38,7 +39,7 @@ Device Pixel Ratio (1-3)
 
 출력 형식
 
-***
+---
 
 ### height?
 
@@ -46,7 +47,7 @@ Device Pixel Ratio (1-3)
 
 대상 높이 (px)
 
-***
+---
 
 ### quality?
 
@@ -54,7 +55,7 @@ Device Pixel Ratio (1-3)
 
 품질 (1-100)
 
-***
+---
 
 ### width?
 

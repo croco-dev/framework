@@ -52,7 +52,7 @@ Lua 스크립트 실행
 
 ##### TResult
 
-`TResult` *extends* `unknown`[]
+`TResult` _extends_ `unknown`[]
 
 #### Parameters
 
@@ -76,7 +76,7 @@ Lua 스크립트 실행
 
 [`RedisClient`](/api/metering-core/src/interfaces/redisclient/).[`eval`](/api/metering-core/src/interfaces/redisclient/#eval)
 
-***
+---
 
 ### set()
 
@@ -114,7 +114,7 @@ Lua 스크립트 실행
 
 [`RedisClient`](/api/metering-core/src/interfaces/redisclient/).[`set`](/api/metering-core/src/interfaces/redisclient/#set)
 
-***
+---
 
 ### zadd()
 
@@ -144,7 +144,7 @@ Sorted Set에 멤버 추가
 
 [`RedisClient`](/api/metering-core/src/interfaces/redisclient/).[`zadd`](/api/metering-core/src/interfaces/redisclient/#zadd)
 
-***
+---
 
 ### zrangebyscore()
 

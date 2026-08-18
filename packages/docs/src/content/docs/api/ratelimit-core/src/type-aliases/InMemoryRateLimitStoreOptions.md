@@ -17,13 +17,13 @@ title: "InMemoryRateLimitStoreOptions"
 
 `number`
 
-***
+---
 
 ### pruneIntervalMs?
 
 > `readonly` `optional` **pruneIntervalMs?**: `number`
 
-***
+---
 
 ### random?
 
@@ -33,7 +33,7 @@ title: "InMemoryRateLimitStoreOptions"
 
 `number`
 
-***
+---
 
 ### scheduler?
 

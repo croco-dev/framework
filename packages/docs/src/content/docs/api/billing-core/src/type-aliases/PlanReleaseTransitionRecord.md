@@ -13,31 +13,31 @@ title: "PlanReleaseTransitionRecord"
 
 > `readonly` **actor**: [`PlanReleaseActor`](/api/billing-core/src/type-aliases/planreleaseactor/)
 
-***
+---
 
 ### from
 
 > `readonly` **from**: [`PlanReleaseState`](/api/billing-core/src/type-aliases/planreleasestate/) \| `null`
 
-***
+---
 
 ### occurredAt
 
 > `readonly` **occurredAt**: `string`
 
-***
+---
 
 ### reason
 
 > `readonly` **reason**: `string`
 
-***
+---
 
 ### revision
 
 > `readonly` **revision**: `number`
 
-***
+---
 
 ### to
 

@@ -13,13 +13,13 @@ title: "AdminImpersonationPrincipal"
 
 > `readonly` `optional` **email?**: `string`
 
-***
+---
 
 ### label?
 
 > `readonly` `optional` **label?**: `string`
 
-***
+---
 
 ### userId
 

@@ -13,13 +13,13 @@ title: "TenantWorkspaceAction"
 
 > `readonly` **action**: [`AdminAction`](/api/admin-core/src/type-aliases/adminaction/)
 
-***
+---
 
 ### availability
 
 > `readonly` **availability**: [`TenantWorkspaceActionAvailability`](/api/admin-core/src/type-aliases/tenantworkspaceactionavailability/)
 
-***
+---
 
 ### permission
 

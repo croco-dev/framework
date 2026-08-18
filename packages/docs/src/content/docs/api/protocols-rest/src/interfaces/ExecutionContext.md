@@ -20,7 +20,7 @@ NestJS의 ExecutionContext를 참고하되 Croco에 맞게 단순화
 
 [`Constructor`](/api/protocols-rest/src/type-aliases/constructor/)
 
-***
+---
 
 ### getHandler()
 
@@ -32,7 +32,7 @@ NestJS의 ExecutionContext를 참고하되 Croco에 맞게 단순화
 
 `string` \| `symbol`
 
-***
+---
 
 ### getMethod()
 
@@ -44,7 +44,7 @@ HTTP 메서드 (GET, POST 등)
 
 `string`
 
-***
+---
 
 ### getPath()
 
@@ -56,7 +56,7 @@ HTTP 메서드 (GET, POST 등)
 
 `string`
 
-***
+---
 
 ### getRequest()
 

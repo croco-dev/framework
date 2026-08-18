@@ -9,17 +9,17 @@ title: "OpenAiEmbeddingRequest"
 
 ## Properties
 
-### encoding\_format
+### encoding_format
 
-> `readonly` **encoding\_format**: `"float"`
+> `readonly` **encoding_format**: `"float"`
 
-***
+---
 
 ### input
 
 > `readonly` **input**: `string` \| readonly `string`[]
 
-***
+---
 
 ### model
 

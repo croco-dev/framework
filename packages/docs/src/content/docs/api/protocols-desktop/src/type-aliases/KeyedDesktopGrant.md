@@ -17,8 +17,8 @@ title: "KeyedDesktopGrant"
 
 ### TGrant
 
-`TGrant` *extends* [`AnyDesktopGrant`](/api/protocols-desktop/src/type-aliases/anydesktopgrant/) = [`AnyDesktopGrant`](/api/protocols-desktop/src/type-aliases/anydesktopgrant/)
+`TGrant` _extends_ [`AnyDesktopGrant`](/api/protocols-desktop/src/type-aliases/anydesktopgrant/) = [`AnyDesktopGrant`](/api/protocols-desktop/src/type-aliases/anydesktopgrant/)
 
 ### TKey
 
-`TKey` *extends* `string` = `string`
+`TKey` _extends_ `string` = `string`

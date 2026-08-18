@@ -63,7 +63,7 @@ DB, 트랜잭션 매니저, 스키마 설정을 받아 저장소를 초기화합
 
 [`AuditLogRepository`](/api/audit-core/src/classes/auditlogrepository/).[`create`](/api/audit-core/src/classes/auditlogrepository/#create)
 
-***
+---
 
 ### find()
 
@@ -85,7 +85,7 @@ DB, 트랜잭션 매니저, 스키마 설정을 받아 저장소를 초기화합
 
 [`AuditLogRepository`](/api/audit-core/src/classes/auditlogrepository/).[`find`](/api/audit-core/src/classes/auditlogrepository/#find)
 
-***
+---
 
 ### findByActor()
 
@@ -125,7 +125,7 @@ DB, 트랜잭션 매니저, 스키마 설정을 받아 저장소를 초기화합
 
 `Promise`\<[`AuditLogEntry`](/api/audit-core/src/type-aliases/auditlogentry/)[]\>
 
-***
+---
 
 ### findByDateRange()
 
@@ -161,7 +161,7 @@ DB, 트랜잭션 매니저, 스키마 설정을 받아 저장소를 초기화합
 
 `Promise`\<[`AuditLogEntry`](/api/audit-core/src/type-aliases/auditlogentry/)[]\>
 
-***
+---
 
 ### findByResource()
 

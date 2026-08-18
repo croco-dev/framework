@@ -13,13 +13,13 @@ title: "FrameworkManifestSchema"
 
 > `readonly` **consumerApis**: readonly `string`[]
 
-***
+---
 
 ### entityVocabulary
 
 > `readonly` **entityVocabulary**: readonly [`FrameworkManifestEntityVocabularyEntry`](/api/framework-routes/src/type-aliases/frameworkmanifestentityvocabularyentry/)[]
 
-***
+---
 
 ### sourceLocationFields
 

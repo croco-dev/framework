@@ -49,7 +49,7 @@ readonly [`OutboundWebhookEndpoint`](/api/webhooks-core/src/type-aliases/outboun
 
 `OutboundWebhookEndpointStore.getEndpoint`
 
-***
+---
 
 ### listSubscribedEndpoints()
 
@@ -73,7 +73,7 @@ readonly [`OutboundWebhookEndpoint`](/api/webhooks-core/src/type-aliases/outboun
 
 `OutboundWebhookEndpointStore.listSubscribedEndpoints`
 
-***
+---
 
 ### set()
 

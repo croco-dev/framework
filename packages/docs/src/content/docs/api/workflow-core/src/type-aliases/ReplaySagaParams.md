@@ -13,13 +13,13 @@ title: "ReplaySagaParams"
 
 > `readonly` `optional` **metadata?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### payload?
 
 > `readonly` `optional` **payload?**: `unknown`
 
-***
+---
 
 ### reason?
 

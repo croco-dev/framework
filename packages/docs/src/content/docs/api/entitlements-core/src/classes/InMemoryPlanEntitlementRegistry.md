@@ -45,7 +45,7 @@ title: "InMemoryPlanEntitlementRegistry"
 
 `void`
 
-***
+---
 
 ### findRule()
 
@@ -69,7 +69,7 @@ title: "InMemoryPlanEntitlementRegistry"
 
 [`PlanEntitlementRegistry`](/api/entitlements-core/src/classes/planentitlementregistry/).[`findRule`](/api/entitlements-core/src/classes/planentitlementregistry/#findrule)
 
-***
+---
 
 ### findRuleByPlanVersion()
 
@@ -97,7 +97,7 @@ title: "InMemoryPlanEntitlementRegistry"
 
 [`PlanEntitlementRegistry`](/api/entitlements-core/src/classes/planentitlementregistry/).[`findRuleByPlanVersion`](/api/entitlements-core/src/classes/planentitlementregistry/#findrulebyplanversion)
 
-***
+---
 
 ### getEntitlements()
 
@@ -117,7 +117,7 @@ title: "InMemoryPlanEntitlementRegistry"
 
 [`PlanEntitlementRegistry`](/api/entitlements-core/src/classes/planentitlementregistry/).[`getEntitlements`](/api/entitlements-core/src/classes/planentitlementregistry/#getentitlements)
 
-***
+---
 
 ### getEntitlementsByPlanVersion()
 
@@ -141,7 +141,7 @@ title: "InMemoryPlanEntitlementRegistry"
 
 [`PlanEntitlementRegistry`](/api/entitlements-core/src/classes/planentitlementregistry/).[`getEntitlementsByPlanVersion`](/api/entitlements-core/src/classes/planentitlementregistry/#getentitlementsbyplanversion)
 
-***
+---
 
 ### register()
 

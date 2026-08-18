@@ -13,7 +13,7 @@ Creates a type-safe registry for generating and validating prefixed GIDs.
 
 ### T
 
-`T` *extends* `Record`\<`string`, `string`\>
+`T` _extends_ `Record`\<`string`, `string`\>
 
 ## Parameters
 

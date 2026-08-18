@@ -43,7 +43,7 @@ Tenant-scoped operation, repository/query boundary, RLS evidence, and leak fixtu
 
 `void`
 
-***
+---
 
 ### assertRlsEvidence()
 
@@ -67,7 +67,7 @@ Tenant-scoped operation, repository/query boundary, RLS evidence, and leak fixtu
 
 `void`
 
-***
+---
 
 ### createRepositoryBoundary()
 
@@ -83,7 +83,7 @@ Tenant-scoped operation, repository/query boundary, RLS evidence, and leak fixtu
 
 [`TenantRepositoryBoundary`](/api/tenant-core/src/type-aliases/tenantrepositoryboundary/)
 
-***
+---
 
 ### enforce()
 
@@ -109,7 +109,7 @@ Tenant-scoped operation, repository/query boundary, RLS evidence, and leak fixtu
 
 `Promise`\<`TResult`\>
 
-***
+---
 
 ### enforceQuery()
 
@@ -135,7 +135,7 @@ Tenant-scoped operation, repository/query boundary, RLS evidence, and leak fixtu
 
 `Promise`\<`TResult`\>
 
-***
+---
 
 ### requireOperation()
 

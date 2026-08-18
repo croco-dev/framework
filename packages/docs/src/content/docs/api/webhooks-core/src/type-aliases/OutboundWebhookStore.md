@@ -31,7 +31,7 @@ title: "OutboundWebhookStore"
 
 `Promise`\<[`OutboundWebhookDelivery`](/api/webhooks-core/src/type-aliases/outboundwebhookdelivery/) \| `undefined`\>
 
-***
+---
 
 ### commitEvent()
 
@@ -53,7 +53,7 @@ readonly [`OutboundWebhookEndpoint`](/api/webhooks-core/src/type-aliases/outboun
 
 `Promise`\<[`OutboundWebhookCommitResult`](/api/webhooks-core/src/type-aliases/outboundwebhookcommitresult/)\>
 
-***
+---
 
 ### createReplay()
 
@@ -83,7 +83,7 @@ readonly [`OutboundWebhookEndpoint`](/api/webhooks-core/src/type-aliases/outboun
 
 `Promise`\<[`OutboundWebhookDelivery`](/api/webhooks-core/src/type-aliases/outboundwebhookdelivery/)\>
 
-***
+---
 
 ### getDelivery()
 
@@ -103,7 +103,7 @@ readonly [`OutboundWebhookEndpoint`](/api/webhooks-core/src/type-aliases/outboun
 
 `Promise`\<[`OutboundWebhookDelivery`](/api/webhooks-core/src/type-aliases/outboundwebhookdelivery/) \| `undefined`\>
 
-***
+---
 
 ### getEvent()
 
@@ -123,7 +123,7 @@ readonly [`OutboundWebhookEndpoint`](/api/webhooks-core/src/type-aliases/outboun
 
 `Promise`\<[`OutboundWebhookEvent`](/api/webhooks-core/src/type-aliases/outboundwebhookevent/) \| `undefined`\>
 
-***
+---
 
 ### listAttempts()
 
@@ -143,7 +143,7 @@ readonly [`OutboundWebhookEndpoint`](/api/webhooks-core/src/type-aliases/outboun
 
 `Promise`\<readonly [`OutboundWebhookAttempt`](/api/webhooks-core/src/type-aliases/outboundwebhookattempt/)[]\>
 
-***
+---
 
 ### listDeliveries()
 
@@ -163,7 +163,7 @@ readonly [`OutboundWebhookEndpoint`](/api/webhooks-core/src/type-aliases/outboun
 
 `Promise`\<readonly [`OutboundWebhookDelivery`](/api/webhooks-core/src/type-aliases/outboundwebhookdelivery/)[]\>
 
-***
+---
 
 ### listUnpublishedIntents()
 
@@ -179,7 +179,7 @@ readonly [`OutboundWebhookEndpoint`](/api/webhooks-core/src/type-aliases/outboun
 
 `Promise`\<readonly [`OutboundWebhookDispatchIntent`](/api/webhooks-core/src/type-aliases/outboundwebhookdispatchintent/)[]\>
 
-***
+---
 
 ### markIntentPublished()
 
@@ -203,7 +203,7 @@ readonly [`OutboundWebhookEndpoint`](/api/webhooks-core/src/type-aliases/outboun
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### recordAttempt()
 
@@ -233,7 +233,7 @@ readonly [`OutboundWebhookEndpoint`](/api/webhooks-core/src/type-aliases/outboun
 
 `Promise`\<[`OutboundWebhookDelivery`](/api/webhooks-core/src/type-aliases/outboundwebhookdelivery/)\>
 
-***
+---
 
 ### releaseDeliveryClaim()
 
@@ -253,7 +253,7 @@ readonly [`OutboundWebhookEndpoint`](/api/webhooks-core/src/type-aliases/outboun
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### scheduleDelivery()
 

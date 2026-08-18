@@ -33,7 +33,7 @@ title: "TenantRepositoryBoundary"
 
 `Promise`\<`TResult`\>
 
-***
+---
 
 ### read()
 
@@ -59,7 +59,7 @@ title: "TenantRepositoryBoundary"
 
 `Promise`\<`TResult`\>
 
-***
+---
 
 ### write()
 

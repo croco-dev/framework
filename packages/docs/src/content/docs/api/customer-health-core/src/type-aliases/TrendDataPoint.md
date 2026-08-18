@@ -13,13 +13,13 @@ title: "TrendDataPoint"
 
 > **date**: `Date`
 
-***
+---
 
 ### score
 
 > **score**: `number`
 
-***
+---
 
 ### status
 

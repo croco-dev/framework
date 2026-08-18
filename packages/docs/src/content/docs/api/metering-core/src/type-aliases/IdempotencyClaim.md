@@ -11,6 +11,6 @@ title: "IdempotencyClaim"
 
 ## Type Declaration
 
-### \[IDEMPOTENCY\_CLAIM\]
+### \[IDEMPOTENCY_CLAIM\]
 
-> `readonly` **\[IDEMPOTENCY\_CLAIM\]**: `"IdempotencyClaim"`
+> `readonly` **\[IDEMPOTENCY_CLAIM\]**: `"IdempotencyClaim"`

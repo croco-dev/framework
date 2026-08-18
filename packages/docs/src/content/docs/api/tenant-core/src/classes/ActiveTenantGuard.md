@@ -53,7 +53,7 @@ True if allowed, false otherwise
 
 [`TenantGuard`](/api/tenant-core/src/interfaces/tenantguard/).[`canAccess`](/api/tenant-core/src/interfaces/tenantguard/#canaccess)
 
-***
+---
 
 ### getName()
 

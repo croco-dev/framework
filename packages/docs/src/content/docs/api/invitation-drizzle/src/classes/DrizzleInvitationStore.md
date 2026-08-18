@@ -65,7 +65,7 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`activateEmailInvitation`](/api/invitation-core/src/classes/invitationstore/#activateemailinvitation)
 
-***
+---
 
 ### claimEmailInvitationEvent()
 
@@ -97,7 +97,7 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`claimEmailInvitationEvent`](/api/invitation-core/src/classes/invitationstore/#claimemailinvitationevent)
 
-***
+---
 
 ### claimEmailInvitationNotification()
 
@@ -129,7 +129,7 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`claimEmailInvitationNotification`](/api/invitation-core/src/classes/invitationstore/#claimemailinvitationnotification)
 
-***
+---
 
 ### compareAndSetStatus()
 
@@ -171,7 +171,7 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`compareAndSetStatus`](/api/invitation-core/src/classes/invitationstore/#compareandsetstatus)
 
-***
+---
 
 ### completeEmailInvitationEvent()
 
@@ -199,7 +199,7 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`completeEmailInvitationEvent`](/api/invitation-core/src/classes/invitationstore/#completeemailinvitationevent)
 
-***
+---
 
 ### completeEmailInvitationNotification()
 
@@ -227,7 +227,7 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`completeEmailInvitationNotification`](/api/invitation-core/src/classes/invitationstore/#completeemailinvitationnotification)
 
-***
+---
 
 ### countPendingByTenant()
 
@@ -253,7 +253,7 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`countPendingByTenant`](/api/invitation-core/src/classes/invitationstore/#countpendingbytenant)
 
-***
+---
 
 ### createEmailInvitation()
 
@@ -273,7 +273,7 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`createEmailInvitation`](/api/invitation-core/src/classes/invitationstore/#createemailinvitation)
 
-***
+---
 
 ### deleteExpiredEmailInvitationCreations()
 
@@ -293,7 +293,7 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`deleteExpiredEmailInvitationCreations`](/api/invitation-core/src/classes/invitationstore/#deleteexpiredemailinvitationcreations)
 
-***
+---
 
 ### findAllByTenant()
 
@@ -315,7 +315,7 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`findAllByTenant`](/api/invitation-core/src/classes/invitationstore/#findallbytenant)
 
-***
+---
 
 ### findById()
 
@@ -337,7 +337,7 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`findById`](/api/invitation-core/src/classes/invitationstore/#findbyid)
 
-***
+---
 
 ### findByTenantAndEmail()
 
@@ -363,7 +363,7 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`findByTenantAndEmail`](/api/invitation-core/src/classes/invitationstore/#findbytenantandemail)
 
-***
+---
 
 ### findByTokenHash()
 
@@ -385,7 +385,7 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`findByTokenHash`](/api/invitation-core/src/classes/invitationstore/#findbytokenhash)
 
-***
+---
 
 ### findEmailInvitationCreation()
 
@@ -409,7 +409,7 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`findEmailInvitationCreation`](/api/invitation-core/src/classes/invitationstore/#findemailinvitationcreation)
 
-***
+---
 
 ### releaseEmailInvitationEvent()
 
@@ -437,7 +437,7 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`releaseEmailInvitationEvent`](/api/invitation-core/src/classes/invitationstore/#releaseemailinvitationevent)
 
-***
+---
 
 ### releaseEmailInvitationNotification()
 
@@ -465,7 +465,7 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`releaseEmailInvitationNotification`](/api/invitation-core/src/classes/invitationstore/#releaseemailinvitationnotification)
 
-***
+---
 
 ### save()
 
@@ -487,7 +487,7 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`save`](/api/invitation-core/src/classes/invitationstore/#save)
 
-***
+---
 
 ### updateStatus()
 

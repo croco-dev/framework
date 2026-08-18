@@ -13,19 +13,19 @@ title: "MetaOutputContractOptions"
 
 > `readonly` **clientEntry**: `string`
 
-***
+---
 
 ### presetName
 
 > `readonly` **presetName**: `string`
 
-***
+---
 
 ### rscEntry
 
 > `readonly` **rscEntry**: `string`
 
-***
+---
 
 ### ssrEntry
 

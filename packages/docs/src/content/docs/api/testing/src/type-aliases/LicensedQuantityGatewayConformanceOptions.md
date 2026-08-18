@@ -17,25 +17,25 @@ title: "LicensedQuantityGatewayConformanceOptions"
 
 [`LicensedQuantityGateway`](/api/billing-core/src/interfaces/licensedquantitygateway/) \| `Promise`\<[`LicensedQuantityGateway`](/api/billing-core/src/interfaces/licensedquantitygateway/)\>
 
-***
+---
 
 ### externalSubscriptionId
 
 > `readonly` **externalSubscriptionId**: `string`
 
-***
+---
 
 ### firstQuantity
 
 > `readonly` **firstQuantity**: `number`
 
-***
+---
 
 ### initialQuantity
 
 > `readonly` **initialQuantity**: `number`
 
-***
+---
 
 ### newerQuantity
 

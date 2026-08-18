@@ -41,7 +41,7 @@ title: "RoleRegistry"
 
 [`RoleDefinition`](/api/auth-core/src/type-aliases/roledefinition/) \| `undefined`
 
-***
+---
 
 ### getRolePermissions()
 
@@ -65,7 +65,7 @@ title: "RoleRegistry"
 
 [`AbstractRoleRegistry`](/api/auth-core/src/classes/abstractroleregistry/).[`getRolePermissions`](/api/auth-core/src/classes/abstractroleregistry/#getrolepermissions)
 
-***
+---
 
 ### register()
 

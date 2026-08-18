@@ -17,7 +17,7 @@ Runtime options for a single task execution.
 
 Optional execution-level idempotency key for deduplicating this task run.
 
-***
+---
 
 ### metadata?
 
@@ -25,7 +25,7 @@ Optional execution-level idempotency key for deduplicating this task run.
 
 Optional execution metadata for inspection and operations views.
 
-***
+---
 
 ### parentId?
 

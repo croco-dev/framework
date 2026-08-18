@@ -13,19 +13,19 @@ title: "HttpRequestBodyTooLargeProblemOptions"
 
 > `readonly` **detail**: `string`
 
-***
+---
 
 ### instance
 
 > `readonly` **instance**: `string`
 
-***
+---
 
 ### limit
 
 > `readonly` **limit**: `number`
 
-***
+---
 
 ### status
 

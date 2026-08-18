@@ -15,7 +15,7 @@ title: "CreateEmailInvitationInput"
 
 > **email**: `string`
 
-***
+---
 
 ### expiresInDays?
 
@@ -23,25 +23,25 @@ title: "CreateEmailInvitationInput"
 
 Positive integer number of calendar days. Fractional days are not supported.
 
-***
+---
 
 ### idempotencyKey
 
 > **idempotencyKey**: `string`
 
-***
+---
 
 ### inviterId
 
 > **inviterId**: `string`
 
-***
+---
 
 ### role
 
 > **role**: [`MembershipRole`](/api/membership-core/src/type-aliases/membershiprole/)
 
-***
+---
 
 ### tenantId
 

@@ -19,7 +19,7 @@ title: "AdminDataTablePageChangeEvent"
 
 > `readonly` **pagination**: [`PaginationParams`](/api/pagination-core/src/type-aliases/paginationparams/)
 
-***
+---
 
 ### state
 

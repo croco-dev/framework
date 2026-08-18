@@ -13,13 +13,13 @@ title: "PlanReleaseDiagnostic"
 
 > `readonly` **code**: `string`
 
-***
+---
 
 ### evidenceLevel
 
 > `readonly` **evidenceLevel**: `"credential-free-structural"` \| `"remote-provider-preflight"`
 
-***
+---
 
 ### location
 
@@ -33,13 +33,13 @@ title: "PlanReleaseDiagnostic"
 
 > `readonly` **path**: `string`
 
-***
+---
 
 ### message
 
 > `readonly` **message**: `string`
 
-***
+---
 
 ### recovery
 
@@ -57,13 +57,13 @@ title: "PlanReleaseDiagnostic"
 
 > `readonly` **label**: `string`
 
-***
+---
 
 ### severity
 
 > `readonly` **severity**: `"error"` \| `"warning"`
 
-***
+---
 
 ### source
 

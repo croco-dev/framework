@@ -37,7 +37,7 @@ title: "PlanReleaseService"
 
 `Promise`\<[`PlanRelease`](/api/billing-core/src/type-aliases/planrelease/)\>
 
-***
+---
 
 ### cancelPublish()
 
@@ -53,7 +53,7 @@ title: "PlanReleaseService"
 
 `Promise`\<[`PlanRelease`](/api/billing-core/src/type-aliases/planrelease/)\>
 
-***
+---
 
 ### createDraft()
 
@@ -69,7 +69,7 @@ title: "PlanReleaseService"
 
 `Promise`\<[`PlanRelease`](/api/billing-core/src/type-aliases/planrelease/)\>
 
-***
+---
 
 ### deliverPendingEvents()
 
@@ -85,7 +85,7 @@ title: "PlanReleaseService"
 
 `Promise`\<[`PlanReleaseEventDeliveryResult`](/api/billing-core/src/type-aliases/planreleaseeventdeliveryresult/)\>
 
-***
+---
 
 ### publishNow()
 
@@ -101,7 +101,7 @@ title: "PlanReleaseService"
 
 `Promise`\<[`PlanRelease`](/api/billing-core/src/type-aliases/planrelease/)\>
 
-***
+---
 
 ### returnToDraft()
 
@@ -117,7 +117,7 @@ title: "PlanReleaseService"
 
 `Promise`\<[`PlanRelease`](/api/billing-core/src/type-aliases/planrelease/)\>
 
-***
+---
 
 ### schedulePublish()
 
@@ -133,7 +133,7 @@ title: "PlanReleaseService"
 
 `Promise`\<[`PlanRelease`](/api/billing-core/src/type-aliases/planrelease/)\>
 
-***
+---
 
 ### submitReview()
 
@@ -149,7 +149,7 @@ title: "PlanReleaseService"
 
 `Promise`\<[`PlanRelease`](/api/billing-core/src/type-aliases/planrelease/)\>
 
-***
+---
 
 ### supersede()
 
@@ -165,7 +165,7 @@ title: "PlanReleaseService"
 
 `Promise`\<[`PlanRelease`](/api/billing-core/src/type-aliases/planrelease/)\>
 
-***
+---
 
 ### updateDraft()
 

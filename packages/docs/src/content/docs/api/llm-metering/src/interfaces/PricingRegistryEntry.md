@@ -23,7 +23,7 @@ title: "PricingRegistryEntry"
 
 `ModelPricing.currency`
 
-***
+---
 
 ### effectiveDate?
 
@@ -35,7 +35,7 @@ title: "PricingRegistryEntry"
 
 `ModelPricing.effectiveDate`
 
-***
+---
 
 ### inputPricePerToken
 
@@ -47,7 +47,7 @@ title: "PricingRegistryEntry"
 
 `ModelPricing.inputPricePerToken`
 
-***
+---
 
 ### modelId
 
@@ -55,7 +55,7 @@ title: "PricingRegistryEntry"
 
 제공자 안에서 사용하는 모델 식별자입니다.
 
-***
+---
 
 ### outputPricePerToken
 
@@ -67,7 +67,7 @@ title: "PricingRegistryEntry"
 
 `ModelPricing.outputPricePerToken`
 
-***
+---
 
 ### provider
 
@@ -75,7 +75,7 @@ title: "PricingRegistryEntry"
 
 LLM 제공자 식별자입니다.
 
-***
+---
 
 ### source?
 

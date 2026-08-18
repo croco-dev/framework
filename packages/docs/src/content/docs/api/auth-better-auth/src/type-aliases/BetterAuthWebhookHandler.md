@@ -25,7 +25,7 @@ Better Auth 이벤트 타입별 웹훅 핸들러 맵입니다.
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### session.revoked?
 
@@ -41,7 +41,7 @@ Better Auth 이벤트 타입별 웹훅 핸들러 맵입니다.
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### user.created?
 
@@ -57,7 +57,7 @@ Better Auth 이벤트 타입별 웹훅 핸들러 맵입니다.
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### user.deleted?
 
@@ -73,7 +73,7 @@ Better Auth 이벤트 타입별 웹훅 핸들러 맵입니다.
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### user.updated?
 

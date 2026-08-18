@@ -15,7 +15,7 @@ Defines the trial duration and whether activation requires a payment method.
 
 > `readonly` **days**: `number`
 
-***
+---
 
 ### requiresPaymentMethod
 

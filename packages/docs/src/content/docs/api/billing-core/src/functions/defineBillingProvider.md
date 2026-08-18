@@ -13,7 +13,7 @@ Explicit billing provider capability profiles and runtime composition.
 
 ### Profile
 
-`Profile` *extends* [`BillingProviderProfile`](/api/billing-core/src/type-aliases/billingproviderprofile/)
+`Profile` _extends_ [`BillingProviderProfile`](/api/billing-core/src/type-aliases/billingproviderprofile/)
 
 ## Parameters
 

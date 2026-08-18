@@ -15,7 +15,7 @@ Parameters for creating a new execution.
 
 Optional idempotency key for deduplication
 
-***
+---
 
 ### legacyIdempotencyKeys?
 
@@ -30,7 +30,7 @@ different durably persisted payload is an explicit idempotency conflict.
 Legacy and replacement writers must not run concurrently because lookup and creation
 across two different keys cannot be made atomic by the ExecutionStore contract.
 
-***
+---
 
 ### logs?
 
@@ -38,7 +38,7 @@ across two different keys cannot be made atomic by the ExecutionStore contract.
 
 Initial log entries
 
-***
+---
 
 ### maxAttempts?
 
@@ -46,7 +46,7 @@ Initial log entries
 
 Maximum retry attempts (default: 1)
 
-***
+---
 
 ### metadata?
 
@@ -54,7 +54,7 @@ Maximum retry attempts (default: 1)
 
 Optional metadata
 
-***
+---
 
 ### parentId?
 
@@ -62,7 +62,7 @@ Optional metadata
 
 Optional parent execution ID for nested executions
 
-***
+---
 
 ### payload?
 
@@ -70,7 +70,7 @@ Optional parent execution ID for nested executions
 
 Optional payload data
 
-***
+---
 
 ### replayOf?
 
@@ -78,7 +78,7 @@ Optional payload data
 
 Optional original execution ID when this execution is a replay
 
-***
+---
 
 ### scheduledFor?
 
@@ -86,7 +86,7 @@ Optional original execution ID when this execution is a replay
 
 Optional scheduled start time
 
-***
+---
 
 ### timeout?
 
@@ -94,7 +94,7 @@ Optional scheduled start time
 
 Timeout in milliseconds (default: no timeout)
 
-***
+---
 
 ### type
 

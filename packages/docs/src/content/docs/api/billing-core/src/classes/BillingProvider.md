@@ -11,7 +11,7 @@ Explicit billing provider capability profiles and runtime composition.
 
 ### Profile
 
-`Profile` *extends* [`BillingProviderProfile`](/api/billing-core/src/type-aliases/billingproviderprofile/) = [`BillingProviderProfile`](/api/billing-core/src/type-aliases/billingproviderprofile/)
+`Profile` _extends_ [`BillingProviderProfile`](/api/billing-core/src/type-aliases/billingproviderprofile/) = [`BillingProviderProfile`](/api/billing-core/src/type-aliases/billingproviderprofile/)
 
 ## Constructors
 
@@ -49,7 +49,7 @@ Explicit billing provider capability profiles and runtime composition.
 
 ##### Capability
 
-`Capability` *extends* `"usage"` \| `"checkout"` \| `"licensed-quantity"`
+`Capability` _extends_ `"usage"` \| `"checkout"` \| `"licensed-quantity"`
 
 #### Parameters
 
@@ -61,7 +61,7 @@ Explicit billing provider capability profiles and runtime composition.
 
 `BillingProviderCapabilityMap`\[`Capability`\]
 
-***
+---
 
 ### supports()
 

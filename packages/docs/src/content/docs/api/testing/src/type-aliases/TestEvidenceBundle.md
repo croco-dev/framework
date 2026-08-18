@@ -13,25 +13,25 @@ title: "TestEvidenceBundle"
 
 > `readonly` **missingArtifacts**: readonly [`TestEvidenceMissingArtifact`](/api/testing/src/type-aliases/testevidencemissingartifact/)[]
 
-***
+---
 
 ### records
 
 > `readonly` **records**: readonly [`TestEvidenceRecord`](/api/testing/src/type-aliases/testevidencerecord/)[]
 
-***
+---
 
 ### schemaVersion
 
-> `readonly` **schemaVersion**: *typeof* [`TEST_EVIDENCE_SCHEMA_VERSION`](/api/testing/src/variables/test_evidence_schema_version/)
+> `readonly` **schemaVersion**: _typeof_ [`TEST_EVIDENCE_SCHEMA_VERSION`](/api/testing/src/variables/test_evidence_schema_version/)
 
-***
+---
 
 ### status
 
 > `readonly` **status**: `"passed"` \| `"failed"`
 
-***
+---
 
 ### summary
 

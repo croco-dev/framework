@@ -9,6 +9,6 @@ title: "CreditExpiryCursor"
 
 ## Type Declaration
 
-### \[CREDIT\_EXPIRY\_CURSOR\]
+### \[CREDIT_EXPIRY_CURSOR\]
 
-> `readonly` **\[CREDIT\_EXPIRY\_CURSOR\]**: `true`
+> `readonly` **\[CREDIT_EXPIRY_CURSOR\]**: `true`

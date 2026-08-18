@@ -13,7 +13,7 @@ title: "PolicyFailurePropagationEntry"
 
 > `readonly` **failurePropagation**: [`PolicyFailurePropagation`](/api/framework-context/src/type-aliases/policyfailurepropagation/)
 
-***
+---
 
 ### kind
 

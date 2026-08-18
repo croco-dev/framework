@@ -13,7 +13,7 @@ title: "WebhookReliabilityConsoleProps"
 
 > `readonly` `optional` **filter?**: [`WebhookDeliveryOperationsFilter`](/api/admin-core/src/type-aliases/webhookdeliveryoperationsfilter/)
 
-***
+---
 
 ### onAcknowledgeSecret?
 
@@ -23,7 +23,7 @@ title: "WebhookReliabilityConsoleProps"
 
 `void`
 
-***
+---
 
 ### onAction?
 
@@ -39,7 +39,7 @@ title: "WebhookReliabilityConsoleProps"
 
 `void`
 
-***
+---
 
 ### onSelectDelivery?
 
@@ -55,7 +55,7 @@ title: "WebhookReliabilityConsoleProps"
 
 `void`
 
-***
+---
 
 ### onSelectEndpoint?
 
@@ -71,19 +71,19 @@ title: "WebhookReliabilityConsoleProps"
 
 `void`
 
-***
+---
 
 ### selectedDeliveryId?
 
 > `readonly` `optional` **selectedDeliveryId?**: `string`
 
-***
+---
 
 ### selectedEndpointId?
 
 > `readonly` `optional` **selectedEndpointId?**: `string`
 
-***
+---
 
 ### state
 

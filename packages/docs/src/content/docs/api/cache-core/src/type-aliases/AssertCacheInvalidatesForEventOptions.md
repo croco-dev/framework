@@ -13,13 +13,13 @@ title: "AssertCacheInvalidatesForEventOptions"
 
 > `readonly` **eventName**: `string`
 
-***
+---
 
 ### expectedInvalidations
 
 > `readonly` **expectedInvalidations**: readonly [`CacheInvalidationManifestOperation`](/api/cache-core/src/type-aliases/cacheinvalidationmanifestoperation/)[]
 
-***
+---
 
 ### manifest
 

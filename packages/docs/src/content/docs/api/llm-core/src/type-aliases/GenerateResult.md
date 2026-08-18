@@ -17,7 +17,7 @@ title: "GenerateResult"
 
 메타데이터
 
-***
+---
 
 ### text
 
@@ -25,7 +25,7 @@ title: "GenerateResult"
 
 생성된 텍스트
 
-***
+---
 
 ### usage
 

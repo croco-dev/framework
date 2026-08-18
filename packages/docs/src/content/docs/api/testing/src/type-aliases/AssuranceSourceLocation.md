@@ -13,19 +13,19 @@ title: "AssuranceSourceLocation"
 
 > `readonly` `optional` **column?**: `number`
 
-***
+---
 
 ### line?
 
 > `readonly` `optional` **line?**: `number`
 
-***
+---
 
 ### path
 
 > `readonly` **path**: `string`
 
-***
+---
 
 ### symbol?
 

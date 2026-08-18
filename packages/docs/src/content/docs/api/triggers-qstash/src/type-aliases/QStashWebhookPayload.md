@@ -17,7 +17,7 @@ Webhook request payload from QStash.
 
 Target class name to execute.
 
-***
+---
 
 ### cronExpression
 
@@ -25,7 +25,7 @@ Target class name to execute.
 
 Cron expression for this schedule.
 
-***
+---
 
 ### methodName
 
@@ -33,7 +33,7 @@ Cron expression for this schedule.
 
 Target method name to execute.
 
-***
+---
 
 ### options?
 
@@ -61,7 +61,7 @@ Additional options from the
 
 decorator.
 
-***
+---
 
 ### scheduleId
 
@@ -69,7 +69,7 @@ decorator.
 
 Schedule ID that triggered this webhook.
 
-***
+---
 
 ### timestamp
 
@@ -77,7 +77,7 @@ Schedule ID that triggered this webhook.
 
 Timestamp when the webhook was triggered.
 
-***
+---
 
 ### triggerName?
 

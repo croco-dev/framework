@@ -13,13 +13,13 @@ title: "BillableUsageClaimOptions"
 
 > `readonly` **leaseDurationMs**: `number`
 
-***
+---
 
 ### now?
 
 > `readonly` `optional` **now?**: `Date`
 
-***
+---
 
 ### ownerId
 

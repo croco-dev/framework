@@ -37,7 +37,7 @@ title: "AuditLogRepository"
 
 `Promise`\<[`AuditLogEntry`](/api/audit-core/src/type-aliases/auditlogentry/)\>
 
-***
+---
 
 ### find()
 

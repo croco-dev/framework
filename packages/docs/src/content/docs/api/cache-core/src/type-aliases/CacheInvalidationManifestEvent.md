@@ -13,7 +13,7 @@ title: "CacheInvalidationManifestEvent"
 
 > `readonly` **eventName**: `string`
 
-***
+---
 
 ### invalidates
 

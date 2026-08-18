@@ -13,7 +13,7 @@ title: "DurableIsrCacheStoreProfileOptions"
 
 > `readonly` `optional` **label?**: `string`
 
-***
+---
 
 ### workerSafe?
 

@@ -16,7 +16,7 @@ quota, usage, and provider status administration.
 
 ### TValues
 
-`TValues` *extends* `object`
+`TValues` _extends_ `object`
 
 ### TResult
 

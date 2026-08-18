@@ -11,4 +11,4 @@ title: "LambdaEvent"
 
 ### TRequestContext
 
-`TRequestContext` *extends* `APIGatewayEventRequestContextV2` = [`LambdaRequestContext`](/api/transports-http/src/type-aliases/lambdarequestcontext/)
+`TRequestContext` _extends_ `APIGatewayEventRequestContextV2` = [`LambdaRequestContext`](/api/transports-http/src/type-aliases/lambdarequestcontext/)

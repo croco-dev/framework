@@ -39,7 +39,7 @@ Persists and converges licensed-quantity reconciliation intents against a provid
 
 `Promise`\<[`SubscriptionQuantitySnapshot`](/api/billing-core/src/type-aliases/subscriptionquantitysnapshot/)\>
 
-***
+---
 
 ### getDiagnostics()
 
@@ -55,7 +55,7 @@ Persists and converges licensed-quantity reconciliation intents against a provid
 
 `Promise`\<[`SubscriptionQuantityDiagnostics`](/api/billing-core/src/type-aliases/subscriptionquantitydiagnostics/)\>
 
-***
+---
 
 ### reconcile()
 
@@ -71,7 +71,7 @@ Persists and converges licensed-quantity reconciliation intents against a provid
 
 `Promise`\<[`SubscriptionQuantitySnapshot`](/api/billing-core/src/type-aliases/subscriptionquantitysnapshot/)\>
 
-***
+---
 
 ### repair()
 

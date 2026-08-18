@@ -19,13 +19,13 @@ title: "CursorPage"
 
 > **data**: `T`[]
 
-***
+---
 
 ### hasMore
 
 > **hasMore**: `boolean`
 
-***
+---
 
 ### nextCursor
 

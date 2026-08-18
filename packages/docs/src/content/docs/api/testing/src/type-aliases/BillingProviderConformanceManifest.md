@@ -13,19 +13,19 @@ title: "BillingProviderConformanceManifest"
 
 > `readonly` **capabilityEvidence**: readonly [`BillingProviderConformanceCapabilityEvidence`](/api/testing/src/type-aliases/billingproviderconformancecapabilityevidence/)[]
 
-***
+---
 
 ### caseNames
 
 > `readonly` **caseNames**: readonly `string`[]
 
-***
+---
 
 ### providerName
 
 > `readonly` **providerName**: `string`
 
-***
+---
 
 ### version
 

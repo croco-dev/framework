@@ -11,19 +11,19 @@ title: "RouteProblemDeclaration"
 
 ### TProblem
 
-`TProblem` *extends* [`Problem`](/api/problems-core/src/classes/problem/) = [`Problem`](/api/problems-core/src/classes/problem/)
+`TProblem` _extends_ [`Problem`](/api/problems-core/src/classes/problem/) = [`Problem`](/api/problems-core/src/classes/problem/)
 
 ### Code
 
-`Code` *extends* `string` = `RouteProblemCode`\<`TProblem`\>
+`Code` _extends_ `string` = `RouteProblemCode`\<`TProblem`\>
 
 ### Category
 
-`Category` *extends* [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/) = `RouteProblemCategory`\<`TProblem`\>
+`Category` _extends_ [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/) = `RouteProblemCategory`\<`TProblem`\>
 
 ### Status
 
-`Status` *extends* `number` = [`RouteProblemStatus`](/api/protocols-rest/src/type-aliases/routeproblemstatus/)\<`Category`\>
+`Status` _extends_ `number` = [`RouteProblemStatus`](/api/protocols-rest/src/type-aliases/routeproblemstatus/)\<`Category`\>
 
 ## Properties
 
@@ -31,31 +31,31 @@ title: "RouteProblemDeclaration"
 
 > `readonly` **category**: `Category`
 
-***
+---
 
 ### code
 
 > `readonly` **code**: `Code`
 
-***
+---
 
 ### description?
 
 > `readonly` `optional` **description?**: `string`
 
-***
+---
 
 ### problem
 
 > `readonly` **problem**: [`ProblemConstructor`](/api/protocols-rest/src/type-aliases/problemconstructor/)\<`TProblem`\>
 
-***
+---
 
 ### status
 
 > `readonly` **status**: `Status`
 
-***
+---
 
 ### type?
 

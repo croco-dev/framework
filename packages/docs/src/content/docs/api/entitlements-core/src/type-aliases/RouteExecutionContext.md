@@ -17,7 +17,7 @@ title: "RouteExecutionContext"
 
 `unknown`
 
-***
+---
 
 ### getHandler()
 
@@ -27,7 +27,7 @@ title: "RouteExecutionContext"
 
 `string` \| `symbol`
 
-***
+---
 
 ### getHttpContext()?
 
@@ -37,7 +37,7 @@ title: "RouteExecutionContext"
 
 \{ `req`: \{ `params`: `Record`\<`string`, `string`\>; \}; `get`: `T` \| `undefined`; `param`: `string` \| `undefined`; \} \| `null`
 
-***
+---
 
 ### getRequest()
 

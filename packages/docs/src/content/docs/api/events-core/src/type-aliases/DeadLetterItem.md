@@ -13,7 +13,7 @@ title: "DeadLetterItem"
 
 ### TEvent
 
-`TEvent` *extends* [`DomainEvent`](/api/events-core/src/classes/domainevent/) = [`DomainEvent`](/api/events-core/src/classes/domainevent/)
+`TEvent` _extends_ [`DomainEvent`](/api/events-core/src/classes/domainevent/) = [`DomainEvent`](/api/events-core/src/classes/domainevent/)
 
 ## Properties
 
@@ -23,7 +23,7 @@ title: "DeadLetterItem"
 
 원본 이벤트
 
-***
+---
 
 ### failedAt
 
@@ -31,7 +31,7 @@ title: "DeadLetterItem"
 
 실패 시간
 
-***
+---
 
 ### handlerId?
 
@@ -39,7 +39,7 @@ title: "DeadLetterItem"
 
 핸들러 식별자 (어떤 핸들러에서 실패했는지)
 
-***
+---
 
 ### lastError?
 
@@ -47,7 +47,7 @@ title: "DeadLetterItem"
 
 마지막 에러 메시지
 
-***
+---
 
 ### metadata?
 
@@ -55,7 +55,7 @@ title: "DeadLetterItem"
 
 추가 메타데이터
 
-***
+---
 
 ### reason
 
@@ -63,7 +63,7 @@ title: "DeadLetterItem"
 
 실패 원인
 
-***
+---
 
 ### retryCount
 

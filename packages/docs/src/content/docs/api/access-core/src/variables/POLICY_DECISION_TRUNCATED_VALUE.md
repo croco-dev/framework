@@ -5,4 +5,4 @@ prev: false
 title: "POLICY_DECISION_TRUNCATED_VALUE"
 ---
 
-> `const` **POLICY\_DECISION\_TRUNCATED\_VALUE**: `"[Truncated]"` = `"[Truncated]"`
+> `const` **POLICY_DECISION_TRUNCATED_VALUE**: `"[Truncated]"` = `"[Truncated]"`

@@ -41,7 +41,7 @@ Whether the active callback still accepts hooks and preserves their delivery evi
 
 [`TransactionContext`](/api/framework-context/src/interfaces/transactioncontext/).[`canRegisterAfterCommit`](/api/framework-context/src/interfaces/transactioncontext/#canregisteraftercommit)
 
-***
+---
 
 ### flushAfterCommitHooks()
 
@@ -51,7 +51,7 @@ Whether the active callback still accepts hooks and preserves their delivery evi
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### getPendingAfterCommitHookCount()
 
@@ -61,7 +61,7 @@ Whether the active callback still accepts hooks and preserves their delivery evi
 
 `number`
 
-***
+---
 
 ### isInTransaction()
 
@@ -75,7 +75,7 @@ Whether the active callback still accepts hooks and preserves their delivery evi
 
 [`TransactionContext`](/api/framework-context/src/interfaces/transactioncontext/).[`isInTransaction`](/api/framework-context/src/interfaces/transactioncontext/#isintransaction)
 
-***
+---
 
 ### onAfterCommit()
 
@@ -95,7 +95,7 @@ Whether the active callback still accepts hooks and preserves their delivery evi
 
 [`TransactionContext`](/api/framework-context/src/interfaces/transactioncontext/).[`onAfterCommit`](/api/framework-context/src/interfaces/transactioncontext/#onaftercommit)
 
-***
+---
 
 ### runInTransaction()
 

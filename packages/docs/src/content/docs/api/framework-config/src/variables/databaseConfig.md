@@ -17,9 +17,9 @@ title: "databaseConfig"
 
 > **server**: `object`
 
-#### server.DATABASE\_URL
+#### server.DATABASE_URL
 
-> **DATABASE\_URL**: `ZodString`
+> **DATABASE_URL**: `ZodString`
 
 ### shared
 

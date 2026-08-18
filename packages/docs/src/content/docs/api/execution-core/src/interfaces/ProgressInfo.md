@@ -15,7 +15,7 @@ Progress information for long-running executions.
 
 Current progress value
 
-***
+---
 
 ### message?
 
@@ -23,7 +23,7 @@ Current progress value
 
 Optional progress message
 
-***
+---
 
 ### percent?
 
@@ -31,7 +31,7 @@ Optional progress message
 
 Calculated percentage (0-100) - auto-calculated if not provided
 
-***
+---
 
 ### total
 

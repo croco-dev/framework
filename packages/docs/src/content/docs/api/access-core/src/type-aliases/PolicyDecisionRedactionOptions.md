@@ -13,13 +13,13 @@ title: "PolicyDecisionRedactionOptions"
 
 > `readonly` `optional` **maxDepth?**: `number`
 
-***
+---
 
 ### maxStringLength?
 
 > `readonly` `optional` **maxStringLength?**: `number`
 
-***
+---
 
 ### sensitiveKeyPattern?
 

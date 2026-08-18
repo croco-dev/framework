@@ -31,7 +31,7 @@ title: "TestingTelemetryCapture"
 
 `void`
 
-***
+---
 
 ### run()
 

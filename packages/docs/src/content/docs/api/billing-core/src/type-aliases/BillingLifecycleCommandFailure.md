@@ -15,25 +15,25 @@ billing account, invoice, order, plan, subscription 도메인 타입입니다.
 
 > `readonly` **attempt**: `number`
 
-***
+---
 
 ### code
 
 > `readonly` **code**: `string`
 
-***
+---
 
 ### detail
 
 > `readonly` **detail**: `string`
 
-***
+---
 
 ### occurredAt
 
 > `readonly` **occurredAt**: `Date`
 
-***
+---
 
 ### stage
 

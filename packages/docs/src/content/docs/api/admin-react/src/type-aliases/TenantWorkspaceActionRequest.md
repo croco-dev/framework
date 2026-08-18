@@ -13,13 +13,13 @@ title: "TenantWorkspaceActionRequest"
 
 > `readonly` **action**: [`AdminAction`](/api/admin-core/src/type-aliases/adminaction/)
 
-***
+---
 
 ### possibleProblems
 
 > `readonly` **possibleProblems**: [`AdminAction`](/api/admin-core/src/type-aliases/adminaction/)\[`"problems"`\]
 
-***
+---
 
 ### requiredInput
 

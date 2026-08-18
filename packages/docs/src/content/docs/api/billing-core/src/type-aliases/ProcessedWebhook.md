@@ -15,13 +15,13 @@ billing account, invoice, order, plan, subscription 도메인 타입입니다.
 
 > **eventId**: `string`
 
-***
+---
 
 ### eventType
 
 > **eventType**: `string`
 
-***
+---
 
 ### processedAt
 

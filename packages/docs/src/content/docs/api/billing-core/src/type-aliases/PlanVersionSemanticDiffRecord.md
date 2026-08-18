@@ -13,13 +13,13 @@ title: "PlanVersionSemanticDiffRecord"
 
 > `readonly` **after**: `unknown`
 
-***
+---
 
 ### before
 
 > `readonly` **before**: `unknown`
 
-***
+---
 
 ### field
 

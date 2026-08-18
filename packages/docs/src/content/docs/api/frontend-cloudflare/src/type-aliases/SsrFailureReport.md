@@ -15,31 +15,31 @@ Redacted request context and original failure delivered to an application report
 
 > `readonly` **boundary**: [`SsrFailureBoundary`](/api/frontend-cloudflare/src/type-aliases/ssrfailureboundary/)
 
-***
+---
 
 ### code
 
 > `readonly` **code**: [`SsrFailureCode`](/api/frontend-cloudflare/src/type-aliases/ssrfailurecode/)
 
-***
+---
 
 ### correlationId?
 
 > `readonly` `optional` **correlationId?**: `string`
 
-***
+---
 
 ### error
 
 > `readonly` **error**: `unknown`
 
-***
+---
 
 ### method
 
 > `readonly` **method**: `string`
 
-***
+---
 
 ### pathname
 

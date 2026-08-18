@@ -49,7 +49,7 @@ title: "DocumentIndexedEvent"
 
 > `readonly` **documentId**: `string`
 
-***
+---
 
 ### eventId
 
@@ -59,7 +59,7 @@ title: "DocumentIndexedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventId`](/api/events-core/src/classes/domainevent/#eventid)
 
-***
+---
 
 ### eventName
 
@@ -69,13 +69,13 @@ title: "DocumentIndexedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventName`](/api/events-core/src/classes/domainevent/#eventname)
 
-***
+---
 
 ### indexName
 
 > `readonly` **indexName**: `string`
 
-***
+---
 
 ### metadata
 
@@ -85,19 +85,19 @@ title: "DocumentIndexedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`metadata`](/api/events-core/src/classes/domainevent/#metadata)
 
-***
+---
 
 ### payload
 
 > `readonly` **payload**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### tenantId
 
 > `readonly` **tenantId**: `string`
 
-***
+---
 
 ### timestamp
 
@@ -107,7 +107,7 @@ title: "DocumentIndexedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`timestamp`](/api/events-core/src/classes/domainevent/#timestamp)
 
-***
+---
 
 ### eventName
 

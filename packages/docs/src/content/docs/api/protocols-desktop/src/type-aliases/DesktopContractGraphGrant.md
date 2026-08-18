@@ -13,43 +13,43 @@ title: "DesktopContractGraphGrant"
 
 > `readonly` **access**: `"read"` \| `"write"`
 
-***
+---
 
 ### contractId
 
 > `readonly` **contractId**: `string`
 
-***
+---
 
 ### id
 
 > `readonly` **id**: `string`
 
-***
+---
 
 ### key
 
 > `readonly` **key**: `string`
 
-***
+---
 
 ### lifetime
 
 > `readonly` **lifetime**: `"command"` \| `"window"` \| `"session"`
 
-***
+---
 
 ### resource
 
 > `readonly` **resource**: `"file"` \| `"directory"`
 
-***
+---
 
 ### scope
 
 > `readonly` **scope**: `"exact"` \| `"descendant"`
 
-***
+---
 
 ### sourceLocation?
 

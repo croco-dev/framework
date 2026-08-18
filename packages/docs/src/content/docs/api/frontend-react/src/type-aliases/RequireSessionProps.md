@@ -13,13 +13,13 @@ title: "RequireSessionProps"
 
 > `readonly` **children**: `ReactNode` \| ((`state`) => `ReactNode`)
 
-***
+---
 
 ### fallback?
 
 > `readonly` `optional` **fallback?**: [`FrontendAuthGateFallback`](/api/frontend-react/src/type-aliases/frontendauthgatefallback/)
 
-***
+---
 
 ### tenantRequired?
 

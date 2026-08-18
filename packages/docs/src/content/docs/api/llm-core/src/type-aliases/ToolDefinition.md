@@ -17,7 +17,7 @@ title: "ToolDefinition"
 
 툴 설명
 
-***
+---
 
 ### name
 
@@ -25,7 +25,7 @@ title: "ToolDefinition"
 
 툴 이름
 
-***
+---
 
 ### parameters
 

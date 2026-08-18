@@ -13,11 +13,11 @@ Explicit billing provider capability profiles and runtime composition.
 
 ### ProviderName
 
-`ProviderName` *extends* `string`
+`ProviderName` _extends_ `string`
 
 ### Capabilities
 
-`Capabilities` *extends* [`BillingProviderCapabilityProfile`](/api/billing-core/src/type-aliases/billingprovidercapabilityprofile/)
+`Capabilities` _extends_ [`BillingProviderCapabilityProfile`](/api/billing-core/src/type-aliases/billingprovidercapabilityprofile/)
 
 ## Parameters
 

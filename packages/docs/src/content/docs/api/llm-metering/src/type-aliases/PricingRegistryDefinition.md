@@ -17,7 +17,7 @@ title: "PricingRegistryDefinition"
 
 레지스트리 가격이 적용되기 시작하는 날짜입니다.
 
-***
+---
 
 ### entries
 
@@ -25,7 +25,7 @@ title: "PricingRegistryDefinition"
 
 provider/model 단위 가격 항목 목록입니다.
 
-***
+---
 
 ### notes?
 
@@ -33,7 +33,7 @@ provider/model 단위 가격 항목 목록입니다.
 
 운영자가 참고할 추가 설명입니다.
 
-***
+---
 
 ### source?
 
@@ -41,7 +41,7 @@ provider/model 단위 가격 항목 목록입니다.
 
 레지스트리 전체 가격 데이터의 출처입니다.
 
-***
+---
 
 ### version
 

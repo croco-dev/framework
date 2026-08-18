@@ -38,13 +38,13 @@ Tracks retry state across attempts.
 
 > `readonly` **args**: `unknown`[]
 
-***
+---
 
 ### maxAttempts
 
 > `readonly` **maxAttempts**: `number`
 
-***
+---
 
 ### methodName
 
@@ -62,7 +62,7 @@ Tracks retry state across attempts.
 
 `number`
 
-***
+---
 
 ### elapsedTimeMs
 
@@ -74,7 +74,7 @@ Tracks retry state across attempts.
 
 `number`
 
-***
+---
 
 ### exhausted
 
@@ -86,7 +86,7 @@ Tracks retry state across attempts.
 
 `boolean`
 
-***
+---
 
 ### lastError
 
@@ -98,7 +98,7 @@ Tracks retry state across attempts.
 
 `Error` \| `null`
 
-***
+---
 
 ### remainingAttempts
 
@@ -132,7 +132,7 @@ Tracks retry state across attempts.
 
 `T` \| `undefined`
 
-***
+---
 
 ### incrementAttempt()
 
@@ -142,7 +142,7 @@ Tracks retry state across attempts.
 
 `void`
 
-***
+---
 
 ### reset()
 
@@ -152,7 +152,7 @@ Tracks retry state across attempts.
 
 `void`
 
-***
+---
 
 ### setAttribute()
 
@@ -172,7 +172,7 @@ Tracks retry state across attempts.
 
 `void`
 
-***
+---
 
 ### setExhausted()
 
@@ -182,7 +182,7 @@ Tracks retry state across attempts.
 
 `void`
 
-***
+---
 
 ### setLastError()
 

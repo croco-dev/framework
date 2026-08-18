@@ -31,7 +31,7 @@ title: "PostHogClient"
 
 `PostHog`
 
-***
+---
 
 ### shutdown()
 

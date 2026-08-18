@@ -13,13 +13,13 @@ title: "ListInboxRecordsOptions"
 
 > `optional` **consumerId?**: `string`
 
-***
+---
 
 ### limit?
 
 > `optional` **limit?**: `number`
 
-***
+---
 
 ### status?
 

@@ -15,7 +15,7 @@ title: "FrontendTelemetryBridge"
 
 > `readonly` **correlationId**: `string`
 
-***
+---
 
 ### createHeaders
 
@@ -31,13 +31,13 @@ title: "FrontendTelemetryBridge"
 
 `Record`\<`string`, `string`\>
 
-***
+---
 
 ### interactionId
 
 > `readonly` **interactionId**: `string`
 
-***
+---
 
 ### record
 
@@ -53,7 +53,7 @@ title: "FrontendTelemetryBridge"
 
 `void` \| `Promise`\<`void`\>
 
-***
+---
 
 ### traceparent
 

@@ -13,25 +13,25 @@ title: "RedisTestConnection"
 
 > `readonly` **client**: `Redis`
 
-***
+---
 
 ### host
 
 > `readonly` **host**: `string`
 
-***
+---
 
 ### keyPrefix
 
 > `readonly` **keyPrefix**: `string`
 
-***
+---
 
 ### port
 
 > `readonly` **port**: `number`
 
-***
+---
 
 ### url
 

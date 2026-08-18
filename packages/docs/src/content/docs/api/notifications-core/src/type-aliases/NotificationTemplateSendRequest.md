@@ -13,19 +13,19 @@ title: "NotificationTemplateSendRequest"
 
 > `readonly` `optional` **metadata?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### template
 
 > `readonly` **template**: [`NotificationTemplateRef`](/api/notifications-core/src/type-aliases/notificationtemplateref/)
 
-***
+---
 
 ### to
 
 > `readonly` **to**: `string`
 
-***
+---
 
 ### variables?
 

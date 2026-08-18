@@ -19,15 +19,15 @@ title: "DesktopMutationDefinition"
 
 ### TEffects
 
-`TEffects` *extends* readonly [`AnyDesktopEffect`](/api/protocols-desktop/src/type-aliases/anydesktopeffect/)[] = readonly \[\]
+`TEffects` _extends_ readonly [`AnyDesktopEffect`](/api/protocols-desktop/src/type-aliases/anydesktopeffect/)[] = readonly \[\]
 
 ### TEvents
 
-`TEvents` *extends* readonly `string`[] = readonly \[\]
+`TEvents` _extends_ readonly `string`[] = readonly \[\]
 
 ### TProblems
 
-`TProblems` *extends* readonly [`DesktopProblemReference`](/api/protocols-desktop/src/type-aliases/desktopproblemreference/)[] = readonly \[\]
+`TProblems` _extends_ readonly [`DesktopProblemReference`](/api/protocols-desktop/src/type-aliases/desktopproblemreference/)[] = readonly \[\]
 
 ## Properties
 
@@ -35,37 +35,37 @@ title: "DesktopMutationDefinition"
 
 > `readonly` **definitionType**: `"command"`
 
-***
+---
 
 ### effects
 
 > `readonly` **effects**: `TEffects`
 
-***
+---
 
 ### events
 
 > `readonly` **events**: `TEvents`
 
-***
+---
 
 ### input
 
 > `readonly` **input**: `TInputSchema`
 
-***
+---
 
 ### kind
 
 > `readonly` **kind**: `"mutation"`
 
-***
+---
 
 ### output
 
 > `readonly` **output**: `TOutputSchema`
 
-***
+---
 
 ### problems
 

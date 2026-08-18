@@ -11,25 +11,25 @@ title: "ParamMetadata"
 
 > **index**: `number`
 
-***
+---
 
 ### name?
 
 > `optional` **name?**: `string`
 
-***
+---
 
 ### pipes?
 
 > `optional` **pipes?**: ([`PipeTransformConstructor`](/api/protocols-rest/src/type-aliases/pipetransformconstructor/) \| [`PipeTransform`](/api/protocols-rest/src/interfaces/pipetransform/)\<`unknown`, `unknown`\>)[]
 
-***
+---
 
 ### sourceLocation?
 
 > `optional` **sourceLocation?**: [`RouteContractSourceLocation`](/api/protocols-rest/src/type-aliases/routecontractsourcelocation/)
 
-***
+---
 
 ### type
 

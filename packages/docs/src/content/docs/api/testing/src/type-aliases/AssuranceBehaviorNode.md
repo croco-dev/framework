@@ -13,31 +13,31 @@ title: "AssuranceBehaviorNode"
 
 > `readonly` **artifact**: `string`
 
-***
+---
 
 ### fingerprint?
 
 > `readonly` `optional` **fingerprint?**: `string`
 
-***
+---
 
 ### id
 
 > `readonly` **id**: `string`
 
-***
+---
 
 ### kind
 
 > `readonly` **kind**: [`AssuranceBehaviorKind`](/api/testing/src/type-aliases/assurancebehaviorkind/)
 
-***
+---
 
 ### label
 
 > `readonly` **label**: `string`
 
-***
+---
 
 ### source?
 

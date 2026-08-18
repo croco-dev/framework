@@ -37,7 +37,7 @@ title: "InvitationDeclinedEvent"
 
 > `readonly` **data**: `InvitationDeclinedEventData`
 
-***
+---
 
 ### eventId
 
@@ -47,7 +47,7 @@ title: "InvitationDeclinedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventId`](/api/events-core/src/classes/domainevent/#eventid)
 
-***
+---
 
 ### eventName
 
@@ -57,7 +57,7 @@ title: "InvitationDeclinedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventName`](/api/events-core/src/classes/domainevent/#eventname)
 
-***
+---
 
 ### metadata
 
@@ -67,7 +67,7 @@ title: "InvitationDeclinedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`metadata`](/api/events-core/src/classes/domainevent/#metadata)
 
-***
+---
 
 ### timestamp
 
@@ -77,7 +77,7 @@ title: "InvitationDeclinedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`timestamp`](/api/events-core/src/classes/domainevent/#timestamp)
 
-***
+---
 
 ### eventName
 

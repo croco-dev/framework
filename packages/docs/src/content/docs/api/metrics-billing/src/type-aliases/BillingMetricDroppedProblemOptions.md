@@ -13,25 +13,25 @@ title: "BillingMetricDroppedProblemOptions"
 
 > `readonly` **eventKey**: `string`
 
-***
+---
 
 ### eventName
 
 > `readonly` **eventName**: `string`
 
-***
+---
 
 ### reason
 
 > `readonly` **reason**: [`BillingMetricDropReason`](/api/metrics-billing/src/type-aliases/billingmetricdropreason/)
 
-***
+---
 
 ### resourceId?
 
 > `readonly` `optional` **resourceId?**: `string`
 
-***
+---
 
 ### tenantId
 

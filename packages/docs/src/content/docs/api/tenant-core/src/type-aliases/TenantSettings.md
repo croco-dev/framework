@@ -15,31 +15,31 @@ Tenant settings
 
 > `optional` **features?**: `string`[]
 
-***
+---
 
 ### limits?
 
 > `optional` **limits?**: `Record`\<`string`, `number`\>
 
-***
+---
 
 ### locale?
 
 > `optional` **locale?**: `string`
 
-***
+---
 
 ### metadata?
 
 > `optional` **metadata?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### theme?
 
 > `optional` **theme?**: `string`
 
-***
+---
 
 ### timezone?
 

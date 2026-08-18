@@ -39,7 +39,7 @@ Clerk 조직, 멤버십, 초대를 관리하는 서비스입니다.
 
 `Promise`\<[`ClerkOrganization`](/api/auth-clerk/src/type-aliases/clerkorganization/)\>
 
-***
+---
 
 ### createOrganizationInvitation()
 
@@ -55,7 +55,7 @@ Clerk 조직, 멤버십, 초대를 관리하는 서비스입니다.
 
 `Promise`\<[`ClerkOrganizationInvitation`](/api/auth-clerk/src/type-aliases/clerkorganizationinvitation/)\>
 
-***
+---
 
 ### createOrganizationMembership()
 
@@ -71,7 +71,7 @@ Clerk 조직, 멤버십, 초대를 관리하는 서비스입니다.
 
 `Promise`\<[`ClerkOrganizationMembership`](/api/auth-clerk/src/type-aliases/clerkorganizationmembership/)\>
 
-***
+---
 
 ### deleteOrganization()
 
@@ -87,7 +87,7 @@ Clerk 조직, 멤버십, 초대를 관리하는 서비스입니다.
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### deleteOrganizationMembership()
 
@@ -107,7 +107,7 @@ Clerk 조직, 멤버십, 초대를 관리하는 서비스입니다.
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### getOrganization()
 
@@ -123,7 +123,7 @@ Clerk 조직, 멤버십, 초대를 관리하는 서비스입니다.
 
 `Promise`\<[`ClerkOrganization`](/api/auth-clerk/src/type-aliases/clerkorganization/) \| `null`\>
 
-***
+---
 
 ### getOrganizationBySlug()
 
@@ -139,7 +139,7 @@ Clerk 조직, 멤버십, 초대를 관리하는 서비스입니다.
 
 `Promise`\<[`ClerkOrganization`](/api/auth-clerk/src/type-aliases/clerkorganization/) \| `null`\>
 
-***
+---
 
 ### getOrganizationInvitationList()
 
@@ -155,7 +155,7 @@ Clerk 조직, 멤버십, 초대를 관리하는 서비스입니다.
 
 `Promise`\<\{ `invitations`: [`ClerkOrganizationInvitation`](/api/auth-clerk/src/type-aliases/clerkorganizationinvitation/)[]; `totalCount`: `number`; \}\>
 
-***
+---
 
 ### getOrganizationList()
 
@@ -171,7 +171,7 @@ Clerk 조직, 멤버십, 초대를 관리하는 서비스입니다.
 
 `Promise`\<[`OrganizationListResult`](/api/auth-clerk/src/type-aliases/organizationlistresult/)\>
 
-***
+---
 
 ### getOrganizationMembershipList()
 
@@ -197,7 +197,7 @@ Clerk 조직, 멤버십, 초대를 관리하는 서비스입니다.
 
 `Promise`\<\{ `memberships`: [`ClerkOrganizationMembership`](/api/auth-clerk/src/type-aliases/clerkorganizationmembership/)[]; `totalCount`: `number`; \}\>
 
-***
+---
 
 ### revokeOrganizationInvitation()
 
@@ -217,7 +217,7 @@ Clerk 조직, 멤버십, 초대를 관리하는 서비스입니다.
 
 `Promise`\<[`ClerkOrganizationInvitation`](/api/auth-clerk/src/type-aliases/clerkorganizationinvitation/)\>
 
-***
+---
 
 ### updateOrganization()
 
@@ -237,7 +237,7 @@ Clerk 조직, 멤버십, 초대를 관리하는 서비스입니다.
 
 `Promise`\<[`ClerkOrganization`](/api/auth-clerk/src/type-aliases/clerkorganization/)\>
 
-***
+---
 
 ### updateOrganizationMembership()
 

@@ -5,10 +5,10 @@ prev: false
 title: "ProblemFormGlobalProblem"
 ---
 
-> **ProblemFormGlobalProblem**\<`Problem`\> = \[`Problem`\] *extends* \[`never`\] ? `never` : `Problem` *extends* [`ProblemDeclaration`](/api/frontend-problems/src/type-aliases/problemdeclaration/) ? `object` : `never`
+> **ProblemFormGlobalProblem**\<`Problem`\> = \[`Problem`\] _extends_ \[`never`\] ? `never` : `Problem` _extends_ [`ProblemDeclaration`](/api/frontend-problems/src/type-aliases/problemdeclaration/) ? `object` : `never`
 
 ## Type Parameters
 
 ### Problem
 
-`Problem` *extends* [`ProblemDeclaration`](/api/frontend-problems/src/type-aliases/problemdeclaration/)
+`Problem` _extends_ [`ProblemDeclaration`](/api/frontend-problems/src/type-aliases/problemdeclaration/)

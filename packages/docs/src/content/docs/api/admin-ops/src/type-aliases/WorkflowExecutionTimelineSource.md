@@ -13,13 +13,13 @@ title: "WorkflowExecutionTimelineSource"
 
 > `readonly` `optional` **completedAt?**: `Date` \| `string`
 
-***
+---
 
 ### createdAt
 
 > `readonly` **createdAt**: `Date` \| `string`
 
-***
+---
 
 ### error?
 
@@ -37,43 +37,43 @@ title: "WorkflowExecutionTimelineSource"
 
 > `readonly` `optional` **retryable?**: `boolean`
 
-***
+---
 
 ### id
 
 > `readonly` **id**: `string`
 
-***
+---
 
 ### metadata?
 
 > `readonly` `optional` **metadata?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### startedAt?
 
 > `readonly` `optional` **startedAt?**: `Date` \| `string`
 
-***
+---
 
 ### status?
 
 > `readonly` `optional` **status?**: `string`
 
-***
+---
 
 ### steps?
 
 > `readonly` `optional` **steps?**: readonly `object`[]
 
-***
+---
 
 ### tenantId?
 
 > `readonly` `optional` **tenantId?**: `string`
 
-***
+---
 
 ### workflow
 

@@ -19,13 +19,13 @@ title: "ServerActionOutputContract"
 
 > `readonly` `optional` **description?**: `string`
 
-***
+---
 
 ### example?
 
 > `readonly` `optional` **example?**: `TOutput`
 
-***
+---
 
 ### schema?
 

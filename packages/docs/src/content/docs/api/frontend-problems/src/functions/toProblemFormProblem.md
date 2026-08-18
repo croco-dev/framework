@@ -11,11 +11,11 @@ title: "toProblemFormProblem"
 
 ### FieldName
 
-`FieldName` *extends* `string`
+`FieldName` _extends_ `string`
 
 ### Problem
 
-`Problem` *extends* [`ProblemDeclaration`](/api/frontend-problems/src/type-aliases/problemdeclaration/)\<`string`, `string`, `number`\>
+`Problem` _extends_ [`ProblemDeclaration`](/api/frontend-problems/src/type-aliases/problemdeclaration/)\<`string`, `string`, `number`\>
 
 ## Parameters
 

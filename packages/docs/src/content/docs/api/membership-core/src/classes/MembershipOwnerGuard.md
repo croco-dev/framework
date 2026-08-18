@@ -42,7 +42,7 @@ Validation-only owner checks cannot enforce invariants under concurrency. Use
 
 `Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/)[]\>
 
-***
+---
 
 ### ~~isLastOwner()~~
 
@@ -66,7 +66,7 @@ Validation-only owner checks cannot enforce invariants under concurrency. Use
 
 `Promise`\<`boolean`\>
 
-***
+---
 
 ### ~~validateLastOwner()~~
 
@@ -90,7 +90,7 @@ Validation-only owner checks cannot enforce invariants under concurrency. Use
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### ~~validateOwnerMutation()~~
 

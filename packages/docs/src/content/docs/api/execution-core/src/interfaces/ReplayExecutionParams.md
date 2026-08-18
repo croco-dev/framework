@@ -15,7 +15,7 @@ Parameters for replaying a failed execution.
 
 Optional metadata merged before system replay metadata
 
-***
+---
 
 ### payload?
 
@@ -23,7 +23,7 @@ Optional metadata merged before system replay metadata
 
 Optional payload override. Defaults to the original execution payload.
 
-***
+---
 
 ### reason?
 

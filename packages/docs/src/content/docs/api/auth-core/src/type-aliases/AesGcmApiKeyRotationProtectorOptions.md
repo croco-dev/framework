@@ -13,7 +13,7 @@ title: "AesGcmApiKeyRotationProtectorOptions"
 
 > **activeKeyId**: `string`
 
-***
+---
 
 ### keys
 

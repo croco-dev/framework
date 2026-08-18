@@ -13,7 +13,7 @@ title: "DomainEventTimelineExtension"
 
 > `readonly` **event**: [`DomainEventTimelineSource`](/api/admin-ops/src/type-aliases/domaineventtimelinesource/)
 
-***
+---
 
 ### source
 

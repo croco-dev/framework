@@ -25,7 +25,7 @@ title: "CrocoModule"
 
 [`ModuleGraphManifest`](/api/framework-module/src/type-aliases/modulegraphmanifest/)
 
-***
+---
 
 ### initialize()
 
@@ -35,7 +35,7 @@ title: "CrocoModule"
 
 `Promise`\<[`ModuleContext`](/api/framework-module/src/classes/modulecontext/)\>
 
-***
+---
 
 ### reset()
 
@@ -45,7 +45,7 @@ title: "CrocoModule"
 
 `void`
 
-***
+---
 
 ### shutdown()
 
@@ -55,7 +55,7 @@ title: "CrocoModule"
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### use()
 

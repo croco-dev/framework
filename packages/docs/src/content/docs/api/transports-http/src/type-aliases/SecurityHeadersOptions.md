@@ -15,43 +15,43 @@ title: "SecurityHeadersOptions"
 
 > `optional` **contentSecurityPolicy?**: `boolean` \| `string`
 
-***
+---
 
 ### contentTypeOptions?
 
 > `optional` **contentTypeOptions?**: `boolean`
 
-***
+---
 
 ### frameOptions?
 
 > `optional` **frameOptions?**: `boolean` \| `"DENY"` \| `"SAMEORIGIN"` \| `"ALLOW-FROM"`
 
-***
+---
 
 ### frameOptionsAllowFrom?
 
 > `optional` **frameOptionsAllowFrom?**: `string`
 
-***
+---
 
 ### permissionsPolicy?
 
 > `optional` **permissionsPolicy?**: `boolean` \| `string`
 
-***
+---
 
 ### referrerPolicy?
 
 > `optional` **referrerPolicy?**: `boolean` \| `ReferrerPolicyValue`
 
-***
+---
 
 ### strictTransportSecurity?
 
 > `optional` **strictTransportSecurity?**: `boolean` \| \{ `includeSubDomains?`: `boolean`; `maxAge`: `number`; \}
 
-***
+---
 
 ### xssProtection?
 

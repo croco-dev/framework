@@ -15,7 +15,7 @@ title: "MiddlewareShortCircuit"
 
 > `readonly` **\_\_crocoMiddlewareShortCircuit**: `true`
 
-***
+---
 
 ### reason
 

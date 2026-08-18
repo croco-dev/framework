@@ -15,13 +15,13 @@ title: "Permission"
 
 > **action**: [`PermissionAction`](/api/auth-core/src/type-aliases/permissionaction/)
 
-***
+---
 
 ### resource
 
 > **resource**: `string`
 
-***
+---
 
 ### resourceId?
 

@@ -13,7 +13,7 @@ title: "OpenAiInputMessage"
 
 > `readonly` **content**: `string`
 
-***
+---
 
 ### role
 

@@ -11,7 +11,7 @@ title: "routePathParamsSchema"
 
 ### TContract
 
-`TContract` *extends* [`RouteContractWithParams`](/api/protocols-rest/src/type-aliases/routecontractwithparams/)
+`TContract` _extends_ [`RouteContractWithParams`](/api/protocols-rest/src/type-aliases/routecontractwithparams/)
 
 ## Parameters
 

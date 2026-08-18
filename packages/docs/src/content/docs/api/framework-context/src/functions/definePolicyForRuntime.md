@@ -11,11 +11,11 @@ title: "definePolicyForRuntime"
 
 ### TPlatform
 
-`TPlatform` *extends* [`RuntimePlatform`](/api/framework-context/src/type-aliases/runtimeplatform/)
+`TPlatform` _extends_ [`RuntimePlatform`](/api/framework-context/src/type-aliases/runtimeplatform/)
 
 ### TPolicy
 
-`TPolicy` *extends* [`RuntimePolicy`](/api/framework-context/src/type-aliases/runtimepolicy/)
+`TPolicy` _extends_ [`RuntimePolicy`](/api/framework-context/src/type-aliases/runtimepolicy/)
 
 ## Parameters
 

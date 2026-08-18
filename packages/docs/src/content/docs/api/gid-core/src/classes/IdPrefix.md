@@ -11,7 +11,7 @@ Generates and validates GIDs for a specific prefix.
 
 ### TPrefix
 
-`TPrefix` *extends* `string` = `string`
+`TPrefix` _extends_ `string` = `string`
 
 ## Constructors
 
@@ -39,7 +39,7 @@ Generates and validates GIDs for a specific prefix.
 
 [`PrefixedId`](/api/gid-core/src/type-aliases/prefixedid/)\<`TPrefix`\>
 
-***
+---
 
 ### getExpectedLength()
 
@@ -49,7 +49,7 @@ Generates and validates GIDs for a specific prefix.
 
 `number`
 
-***
+---
 
 ### getPrefix()
 
@@ -59,7 +59,7 @@ Generates and validates GIDs for a specific prefix.
 
 `TPrefix`
 
-***
+---
 
 ### validate()
 
@@ -75,7 +75,7 @@ Generates and validates GIDs for a specific prefix.
 
 `id is PrefixedId<TPrefix>`
 
-***
+---
 
 ### getLength()
 

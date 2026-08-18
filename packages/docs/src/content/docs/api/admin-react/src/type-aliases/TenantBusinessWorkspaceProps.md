@@ -13,13 +13,13 @@ title: "TenantBusinessWorkspaceProps"
 
 > `readonly` `optional` **actionResult?**: [`TenantWorkspaceActionResult`](/api/admin-react/src/type-aliases/tenantworkspaceactionresult/)
 
-***
+---
 
 ### activeSection?
 
 > `readonly` `optional` **activeSection?**: [`TenantWorkspaceSectionId`](/api/admin-core/src/type-aliases/tenantworkspacesectionid/)
 
-***
+---
 
 ### onAction?
 
@@ -35,7 +35,7 @@ title: "TenantBusinessWorkspaceProps"
 
 `void`
 
-***
+---
 
 ### onRefreshSource?
 
@@ -51,7 +51,7 @@ title: "TenantBusinessWorkspaceProps"
 
 `void`
 
-***
+---
 
 ### onSectionChange?
 
@@ -67,7 +67,7 @@ title: "TenantBusinessWorkspaceProps"
 
 `void`
 
-***
+---
 
 ### renderExtension?
 
@@ -83,7 +83,7 @@ title: "TenantBusinessWorkspaceProps"
 
 `ReactNode`
 
-***
+---
 
 ### state
 

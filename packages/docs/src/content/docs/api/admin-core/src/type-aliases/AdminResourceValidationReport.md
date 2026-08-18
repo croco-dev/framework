@@ -13,13 +13,13 @@ title: "AdminResourceValidationReport"
 
 > `readonly` **diagnostics**: readonly [`AdminResourceDiagnostic`](/api/admin-core/src/type-aliases/adminresourcediagnostic/)[]
 
-***
+---
 
 ### resourceKind?
 
 > `readonly` `optional` **resourceKind?**: `string`
 
-***
+---
 
 ### valid
 

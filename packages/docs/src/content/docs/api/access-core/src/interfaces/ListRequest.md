@@ -11,19 +11,19 @@ title: "ListRequest"
 
 > `optional` **object?**: `` `${string}:${string}` ``
 
-***
+---
 
 ### relation?
 
 > `optional` **relation?**: `string`
 
-***
+---
 
 ### subject?
 
 > `optional` **subject?**: `Subject`
 
-***
+---
 
 ### tenantId
 

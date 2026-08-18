@@ -13,25 +13,25 @@ title: "DesktopContractGraphContract"
 
 > `readonly` **commandIds**: readonly `string`[]
 
-***
+---
 
 ### eventIds
 
 > `readonly` **eventIds**: readonly `string`[]
 
-***
+---
 
 ### grantIds
 
 > `readonly` **grantIds**: readonly `string`[]
 
-***
+---
 
 ### id
 
 > `readonly` **id**: `string`
 
-***
+---
 
 ### sourceLocation?
 

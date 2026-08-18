@@ -15,13 +15,13 @@ title: "AuditIntegrityMetadata"
 
 > **algorithm**: `string`
 
-***
+---
 
 ### hash
 
 > **hash**: `string`
 
-***
+---
 
 ### timestamp
 

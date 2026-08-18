@@ -13,25 +13,25 @@ title: "ErrorRecord"
 
 > `readonly` `optional` **cause?**: `string`
 
-***
+---
 
 ### code
 
 > `readonly` **code**: `string`
 
-***
+---
 
 ### component
 
 > `readonly` **component**: `string`
 
-***
+---
 
 ### message
 
 > `readonly` **message**: `string`
 
-***
+---
 
 ### timestamp
 

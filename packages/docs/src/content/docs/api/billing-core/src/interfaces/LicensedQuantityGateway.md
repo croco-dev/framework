@@ -21,7 +21,7 @@ title: "LicensedQuantityGateway"
 
 `Promise`\<[`LicensedQuantityObservation`](/api/billing-core/src/type-aliases/licensedquantityobservation/)\>
 
-***
+---
 
 ### setQuantity()
 

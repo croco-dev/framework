@@ -5,4 +5,4 @@ prev: false
 title: "ScenarioFailureKind"
 ---
 
-> **ScenarioFailureKind** = *typeof* `SCENARIO_FAILURE_KINDS`\[`number`\]
+> **ScenarioFailureKind** = _typeof_ `SCENARIO_FAILURE_KINDS`\[`number`\]

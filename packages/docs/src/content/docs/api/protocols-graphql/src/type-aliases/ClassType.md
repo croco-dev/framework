@@ -19,8 +19,8 @@ Matches a [`class`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refe
 
 ### T
 
-`T` *extends* `object` = `object`
+`T` _extends_ `object` = `object`
 
 ### Arguments
 
-`Arguments` *extends* `unknown`[] = `any`[]
+`Arguments` _extends_ `unknown`[] = `any`[]

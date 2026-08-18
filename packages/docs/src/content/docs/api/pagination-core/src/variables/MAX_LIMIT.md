@@ -5,4 +5,4 @@ prev: false
 title: "MAX_LIMIT"
 ---
 
-> `const` **MAX\_LIMIT**: `100` = `100`
+> `const` **MAX_LIMIT**: `100` = `100`

@@ -13,25 +13,25 @@ title: "ModuleGraphModule"
 
 > `readonly` **controllers**: readonly `string`[]
 
-***
+---
 
 ### exports
 
 > `readonly` **exports**: readonly `string`[]
 
-***
+---
 
 ### imports
 
 > `readonly` **imports**: readonly `string`[]
 
-***
+---
 
 ### name
 
 > `readonly` **name**: `string`
 
-***
+---
 
 ### providers
 

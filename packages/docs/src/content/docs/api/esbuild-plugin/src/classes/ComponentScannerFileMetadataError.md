@@ -43,7 +43,7 @@ title: "ComponentScannerFileMetadataError"
 
 [`ComponentScannerError`](/api/esbuild-plugin/src/classes/componentscannererror/).[`cause`](/api/esbuild-plugin/src/classes/componentscannererror/#cause)
 
-***
+---
 
 ### filePath
 
@@ -53,7 +53,7 @@ title: "ComponentScannerFileMetadataError"
 
 [`ComponentScannerError`](/api/esbuild-plugin/src/classes/componentscannererror/).[`filePath`](/api/esbuild-plugin/src/classes/componentscannererror/#filepath)
 
-***
+---
 
 ### message
 
@@ -63,7 +63,7 @@ title: "ComponentScannerFileMetadataError"
 
 [`ComponentScannerError`](/api/esbuild-plugin/src/classes/componentscannererror/).[`message`](/api/esbuild-plugin/src/classes/componentscannererror/#message)
 
-***
+---
 
 ### name
 
@@ -73,7 +73,7 @@ title: "ComponentScannerFileMetadataError"
 
 [`ComponentScannerError`](/api/esbuild-plugin/src/classes/componentscannererror/).[`name`](/api/esbuild-plugin/src/classes/componentscannererror/#name)
 
-***
+---
 
 ### stack?
 
@@ -83,7 +83,7 @@ title: "ComponentScannerFileMetadataError"
 
 [`ComponentScannerError`](/api/esbuild-plugin/src/classes/componentscannererror/).[`stack`](/api/esbuild-plugin/src/classes/componentscannererror/#stack)
 
-***
+---
 
 ### stackTraceLimit
 
@@ -116,7 +116,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack;  // Similar to `new Error().stack`
+myObject.stack; // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -171,7 +171,7 @@ a();
 
 [`ComponentScannerError`](/api/esbuild-plugin/src/classes/componentscannererror/).[`captureStackTrace`](/api/esbuild-plugin/src/classes/componentscannererror/#capturestacktrace)
 
-***
+---
 
 ### prepareStackTrace()
 

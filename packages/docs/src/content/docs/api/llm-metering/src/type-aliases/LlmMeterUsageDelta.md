@@ -17,7 +17,7 @@ title: "LlmMeterUsageDelta"
 
 변화량이 적용될 메트릭 식별자입니다.
 
-***
+---
 
 ### operation
 
@@ -27,7 +27,7 @@ title: "LlmMeterUsageDelta"
 값으로 사용하며 스트리밍이나 통합 코드는 stream 같은 추가 작업 이름을 문자열 확장값으로
 전달할 수 있습니다.
 
-***
+---
 
 ### value
 

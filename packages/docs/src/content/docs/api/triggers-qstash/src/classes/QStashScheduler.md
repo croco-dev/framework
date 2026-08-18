@@ -13,11 +13,13 @@ This scheduler reads
 
 metadata from triggerRegistry and syncs
 the schedules with QStash. It handles:
+
 - Creating new schedules for
 
 ## Cron
 
 decorated methods
+
 - Updating existing schedules when cron expressions change
 - Deleting schedules that are no longer in code
 - Generating unique schedule IDs based on target class and method name
@@ -62,7 +64,7 @@ Useful for testing and debugging.
 
 [`CronTriggerMetadata`](/api/triggers-core/src/type-aliases/crontriggermetadata/) \| `undefined`
 
-***
+---
 
 ### sync()
 

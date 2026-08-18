@@ -23,7 +23,7 @@ title: "BatchInviteResult"
 
 > **error**: `string`
 
-***
+---
 
 ### successful
 

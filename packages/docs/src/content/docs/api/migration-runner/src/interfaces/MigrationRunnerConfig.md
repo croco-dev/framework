@@ -11,7 +11,7 @@ title: "MigrationRunnerConfig"
 
 > **migrationsDir**: `string`
 
-***
+---
 
 ### tableName?
 

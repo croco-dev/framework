@@ -13,7 +13,7 @@ title: "ValidationIssue"
 
 > **message**: `string`
 
-***
+---
 
 ### path
 

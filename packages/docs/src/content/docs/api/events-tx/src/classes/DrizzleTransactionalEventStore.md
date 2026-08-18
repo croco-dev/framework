@@ -11,11 +11,11 @@ Drizzle query-client implementation for the transactional outbox/inbox store.
 
 ### TDb
 
-`TDb` *extends* [`DrizzleTransactionalEventStoreDb`](/api/events-tx/src/type-aliases/drizzletransactionaleventstoredb/)
+`TDb` _extends_ [`DrizzleTransactionalEventStoreDb`](/api/events-tx/src/type-aliases/drizzletransactionaleventstoredb/)
 
 ### TClient
 
-`TClient` *extends* [`DrizzleTransactionalEventStoreDb`](/api/events-tx/src/type-aliases/drizzletransactionaleventstoredb/) = `TDb`
+`TClient` _extends_ [`DrizzleTransactionalEventStoreDb`](/api/events-tx/src/type-aliases/drizzletransactionaleventstoredb/) = `TDb`
 
 ## Implements
 
@@ -61,7 +61,7 @@ Drizzle query-client implementation for the transactional outbox/inbox store.
 
 [`TransactionalEventStore`](/api/events-tx/src/interfaces/transactionaleventstore/).[`appendOutbox`](/api/events-tx/src/interfaces/transactionaleventstore/#appendoutbox)
 
-***
+---
 
 ### claimOutboxBatch()
 
@@ -85,7 +85,7 @@ Drizzle query-client implementation for the transactional outbox/inbox store.
 
 [`TransactionalEventStore`](/api/events-tx/src/interfaces/transactionaleventstore/).[`claimOutboxBatch`](/api/events-tx/src/interfaces/transactionaleventstore/#claimoutboxbatch)
 
-***
+---
 
 ### findInboxRecord()
 
@@ -113,7 +113,7 @@ Drizzle query-client implementation for the transactional outbox/inbox store.
 
 [`TransactionalEventStore`](/api/events-tx/src/interfaces/transactionaleventstore/).[`findInboxRecord`](/api/events-tx/src/interfaces/transactionaleventstore/#findinboxrecord)
 
-***
+---
 
 ### findOutboxById()
 
@@ -137,7 +137,7 @@ Drizzle query-client implementation for the transactional outbox/inbox store.
 
 [`TransactionalEventStore`](/api/events-tx/src/interfaces/transactionaleventstore/).[`findOutboxById`](/api/events-tx/src/interfaces/transactionaleventstore/#findoutboxbyid)
 
-***
+---
 
 ### findOutboxByIdempotencyKey()
 
@@ -161,7 +161,7 @@ Drizzle query-client implementation for the transactional outbox/inbox store.
 
 [`TransactionalEventStore`](/api/events-tx/src/interfaces/transactionaleventstore/).[`findOutboxByIdempotencyKey`](/api/events-tx/src/interfaces/transactionaleventstore/#findoutboxbyidempotencykey)
 
-***
+---
 
 ### listInboxRecords()
 
@@ -185,7 +185,7 @@ Drizzle query-client implementation for the transactional outbox/inbox store.
 
 [`TransactionalEventStore`](/api/events-tx/src/interfaces/transactionaleventstore/).[`listInboxRecords`](/api/events-tx/src/interfaces/transactionaleventstore/#listinboxrecords)
 
-***
+---
 
 ### listOutboxMessages()
 
@@ -209,7 +209,7 @@ Drizzle query-client implementation for the transactional outbox/inbox store.
 
 [`TransactionalEventStore`](/api/events-tx/src/interfaces/transactionaleventstore/).[`listOutboxMessages`](/api/events-tx/src/interfaces/transactionaleventstore/#listoutboxmessages)
 
-***
+---
 
 ### markInboxFailed()
 
@@ -233,7 +233,7 @@ Drizzle query-client implementation for the transactional outbox/inbox store.
 
 [`TransactionalEventStore`](/api/events-tx/src/interfaces/transactionaleventstore/).[`markInboxFailed`](/api/events-tx/src/interfaces/transactionaleventstore/#markinboxfailed)
 
-***
+---
 
 ### markInboxProcessed()
 
@@ -257,7 +257,7 @@ Drizzle query-client implementation for the transactional outbox/inbox store.
 
 [`TransactionalEventStore`](/api/events-tx/src/interfaces/transactionaleventstore/).[`markInboxProcessed`](/api/events-tx/src/interfaces/transactionaleventstore/#markinboxprocessed)
 
-***
+---
 
 ### markOutboxDeadLettered()
 
@@ -281,7 +281,7 @@ Drizzle query-client implementation for the transactional outbox/inbox store.
 
 [`TransactionalEventStore`](/api/events-tx/src/interfaces/transactionaleventstore/).[`markOutboxDeadLettered`](/api/events-tx/src/interfaces/transactionaleventstore/#markoutboxdeadlettered)
 
-***
+---
 
 ### markOutboxFailed()
 
@@ -305,7 +305,7 @@ Drizzle query-client implementation for the transactional outbox/inbox store.
 
 [`TransactionalEventStore`](/api/events-tx/src/interfaces/transactionaleventstore/).[`markOutboxFailed`](/api/events-tx/src/interfaces/transactionaleventstore/#markoutboxfailed)
 
-***
+---
 
 ### markOutboxPublished()
 
@@ -329,7 +329,7 @@ Drizzle query-client implementation for the transactional outbox/inbox store.
 
 [`TransactionalEventStore`](/api/events-tx/src/interfaces/transactionaleventstore/).[`markOutboxPublished`](/api/events-tx/src/interfaces/transactionaleventstore/#markoutboxpublished)
 
-***
+---
 
 ### startInboxProcessing()
 

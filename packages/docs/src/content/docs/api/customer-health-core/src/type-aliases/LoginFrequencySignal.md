@@ -13,19 +13,19 @@ title: "LoginFrequencySignal"
 
 > **activeDays**: `number`
 
-***
+---
 
 ### loginsPerDay
 
 > **loginsPerDay**: `number`
 
-***
+---
 
 ### totalDays
 
 > **totalDays**: `number`
 
-***
+---
 
 ### type
 

@@ -43,7 +43,7 @@ title: "EventPublisher"
 
 `void`
 
-***
+---
 
 ### publishMany()
 
@@ -59,7 +59,7 @@ title: "EventPublisher"
 
 `Promise`\<`PublishResult`\<[`DomainEvent`](/api/events-core/src/classes/domainevent/)\>[]\>
 
-***
+---
 
 ### publishManyParallel()
 
@@ -75,7 +75,7 @@ title: "EventPublisher"
 
 `Promise`\<`PublishResult`\<[`DomainEvent`](/api/events-core/src/classes/domainevent/)\>[]\>
 
-***
+---
 
 ### publishNow()
 

@@ -51,7 +51,7 @@ title: "ImpersonationService"
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### getImpersonator()
 
@@ -67,7 +67,7 @@ title: "ImpersonationService"
 
 `string` \| `null`
 
-***
+---
 
 ### getTargetUser()
 
@@ -83,7 +83,7 @@ title: "ImpersonationService"
 
 `string` \| `null`
 
-***
+---
 
 ### isImpersonating()
 
@@ -99,7 +99,7 @@ title: "ImpersonationService"
 
 `context is ImpersonationContext`
 
-***
+---
 
 ### start()
 

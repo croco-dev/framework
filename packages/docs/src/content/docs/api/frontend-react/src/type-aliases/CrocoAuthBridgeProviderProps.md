@@ -13,7 +13,7 @@ title: "CrocoAuthBridgeProviderProps"
 
 > `readonly` `optional` **children?**: `ReactNode`
 
-***
+---
 
 ### value
 

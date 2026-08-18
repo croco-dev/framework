@@ -37,7 +37,7 @@ title: "WebhookGateway"
 
 `Promise`\<[`WebhookGatewayResult`](/api/webhooks-core/src/type-aliases/webhookgatewayresult/)\>
 
-***
+---
 
 ### replay()
 

@@ -13,25 +13,25 @@ title: "SetLicensedQuantityInput"
 
 > `readonly` **externalSubscriptionId**: `string`
 
-***
+---
 
 ### operationId
 
 > `readonly` **operationId**: `string`
 
-***
+---
 
 ### quantity
 
 > `readonly` **quantity**: `number`
 
-***
+---
 
 ### reconciliationId
 
 > `readonly` **reconciliationId**: `string`
 
-***
+---
 
 ### sourceVersion
 

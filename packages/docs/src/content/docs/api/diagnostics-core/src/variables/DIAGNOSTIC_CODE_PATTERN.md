@@ -5,4 +5,4 @@ prev: false
 title: "DIAGNOSTIC_CODE_PATTERN"
 ---
 
-> `const` **DIAGNOSTIC\_CODE\_PATTERN**: `RegExp`
+> `const` **DIAGNOSTIC_CODE_PATTERN**: `RegExp`

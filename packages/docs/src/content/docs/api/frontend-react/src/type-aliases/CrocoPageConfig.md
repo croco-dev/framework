@@ -32,13 +32,13 @@ usePageData 훅과 createCrocoPageConfig 함수을 제공한다.
 
 > `optional` **title?**: `string`
 
-***
+---
 
 ### mode
 
 > **mode**: [`RenderMode`](/api/meta-vite/src/type-aliases/rendermode/)
 
-***
+---
 
 ### revalidateMs?
 

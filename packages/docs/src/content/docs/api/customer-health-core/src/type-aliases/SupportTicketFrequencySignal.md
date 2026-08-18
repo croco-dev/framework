@@ -13,25 +13,25 @@ title: "SupportTicketFrequencySignal"
 
 > **avgResolutionTime**: `number`
 
-***
+---
 
 ### openTickets
 
 > **openTickets**: `number`
 
-***
+---
 
 ### resolvedTickets
 
 > **resolvedTickets**: `number`
 
-***
+---
 
 ### ticketsPerUser
 
 > **ticketsPerUser**: `number`
 
-***
+---
 
 ### type
 

@@ -19,19 +19,19 @@ title: "AdminDataTableListQuery"
 
 > `readonly` **filters**: readonly [`AdminDataTableFilter`](/api/admin-react/src/type-aliases/admindatatablefilter/)\<`TData`\>[]
 
-***
+---
 
 ### pagination?
 
 > `readonly` `optional` **pagination?**: [`PaginationParams`](/api/pagination-core/src/type-aliases/paginationparams/)
 
-***
+---
 
 ### search?
 
 > `readonly` `optional` **search?**: [`SearchQuery`](/api/search-core/src/type-aliases/searchquery/)
 
-***
+---
 
 ### sorting
 

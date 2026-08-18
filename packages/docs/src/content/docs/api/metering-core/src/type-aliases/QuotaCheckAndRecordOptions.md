@@ -19,31 +19,31 @@ Quota 검증 및 기록 작업의 옵션과 결과를 정의합니다.
 
 > **allowOverQuota**: `boolean`
 
-***
+---
 
 ### meterId
 
 > **meterId**: `string`
 
-***
+---
 
 ### quota
 
 > **quota**: `number`
 
-***
+---
 
 ### tenantId
 
 > **tenantId**: `string`
 
-***
+---
 
 ### usageRecord
 
 > **usageRecord**: [`UsageRecord`](/api/metering-core/src/type-aliases/usagerecord/)
 
-***
+---
 
 ### value
 

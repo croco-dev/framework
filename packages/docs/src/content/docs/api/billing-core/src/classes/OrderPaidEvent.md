@@ -53,13 +53,13 @@ title: "OrderPaidEvent"
 
 > `readonly` **amount**: `number`
 
-***
+---
 
 ### currency
 
 > `readonly` **currency**: `string`
 
-***
+---
 
 ### eventId
 
@@ -69,7 +69,7 @@ title: "OrderPaidEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventId`](/api/events-core/src/classes/domainevent/#eventid)
 
-***
+---
 
 ### eventName
 
@@ -79,13 +79,13 @@ title: "OrderPaidEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventName`](/api/events-core/src/classes/domainevent/#eventname)
 
-***
+---
 
 ### externalOrderId
 
 > `readonly` **externalOrderId**: `string`
 
-***
+---
 
 ### metadata
 
@@ -95,19 +95,19 @@ title: "OrderPaidEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`metadata`](/api/events-core/src/classes/domainevent/#metadata)
 
-***
+---
 
 ### reason
 
 > `readonly` **reason**: [`OrderPaymentReason`](/api/billing-core/src/type-aliases/orderpaymentreason/)
 
-***
+---
 
 ### tenantId
 
 > `readonly` **tenantId**: `string`
 
-***
+---
 
 ### timestamp
 
@@ -117,7 +117,7 @@ title: "OrderPaidEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`timestamp`](/api/events-core/src/classes/domainevent/#timestamp)
 
-***
+---
 
 ### eventName
 

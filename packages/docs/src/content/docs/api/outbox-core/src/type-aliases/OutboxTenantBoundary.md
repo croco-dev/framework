@@ -13,7 +13,7 @@ title: "OutboxTenantBoundary"
 
 > `readonly` `optional` **isolationKey?**: `string`
 
-***
+---
 
 ### tenantId
 

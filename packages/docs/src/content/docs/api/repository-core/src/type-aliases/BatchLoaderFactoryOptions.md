@@ -45,7 +45,7 @@ The keys to load
 
 Array of values (may contain nulls or Errors for partial failures)
 
-***
+---
 
 ### name
 

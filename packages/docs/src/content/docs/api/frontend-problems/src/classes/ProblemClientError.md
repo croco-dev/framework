@@ -43,7 +43,7 @@ title: "ProblemClientError"
 
 `Error.cause`
 
-***
+---
 
 ### message
 
@@ -53,7 +53,7 @@ title: "ProblemClientError"
 
 `Error.message`
 
-***
+---
 
 ### name
 
@@ -63,19 +63,19 @@ title: "ProblemClientError"
 
 `Error.name`
 
-***
+---
 
 ### problem
 
 > `readonly` **problem**: [`ProblemDetails`](/api/frontend-problems/src/type-aliases/problemdetails/)
 
-***
+---
 
 ### response
 
 > `readonly` **response**: `Response`
 
-***
+---
 
 ### stack?
 
@@ -85,7 +85,7 @@ title: "ProblemClientError"
 
 `Error.stack`
 
-***
+---
 
 ### stackTraceLimit
 
@@ -118,7 +118,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack;  // Similar to `new Error().stack`
+myObject.stack; // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -173,7 +173,7 @@ a();
 
 `Error.captureStackTrace`
 
-***
+---
 
 ### prepareStackTrace()
 

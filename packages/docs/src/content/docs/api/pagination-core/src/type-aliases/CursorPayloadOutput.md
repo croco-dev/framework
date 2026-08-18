@@ -5,4 +5,4 @@ prev: false
 title: "CursorPayloadOutput"
 ---
 
-> **CursorPayloadOutput** = `z.output`\<*typeof* [`CursorPayloadSchema`](/api/pagination-core/src/variables/cursorpayloadschema/)\>
+> **CursorPayloadOutput** = `z.output`\<_typeof_ [`CursorPayloadSchema`](/api/pagination-core/src/variables/cursorpayloadschema/)\>

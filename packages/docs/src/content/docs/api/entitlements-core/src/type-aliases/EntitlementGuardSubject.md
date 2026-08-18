@@ -13,7 +13,7 @@ title: "EntitlementGuardSubject"
 
 > `readonly` **id**: `string`
 
-***
+---
 
 ### type
 

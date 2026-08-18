@@ -13,31 +13,31 @@ title: "DesktopWireSchemaDiagnostic"
 
 > `readonly` **code**: [`DesktopWireSchemaDiagnosticCode`](/api/protocols-desktop/src/type-aliases/desktopwireschemadiagnosticcode/)
 
-***
+---
 
 ### contractMember
 
 > `readonly` **contractMember**: `string`
 
-***
+---
 
 ### message
 
 > `readonly` **message**: `string`
 
-***
+---
 
 ### recovery
 
 > `readonly` **recovery**: `string`
 
-***
+---
 
 ### schemaPath
 
 > `readonly` **schemaPath**: readonly `string`[]
 
-***
+---
 
 ### sourceLocation?
 

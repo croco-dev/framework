@@ -13,13 +13,13 @@ title: "ContractMetadataOwner"
 
 > `readonly` **controllerName**: `string`
 
-***
+---
 
 ### methodName?
 
 > `readonly` `optional` **methodName?**: `string`
 
-***
+---
 
 ### routeId?
 

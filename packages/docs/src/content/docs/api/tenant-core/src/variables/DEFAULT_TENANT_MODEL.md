@@ -5,6 +5,6 @@ prev: false
 title: "DEFAULT_TENANT_MODEL"
 ---
 
-> `const` **DEFAULT\_TENANT\_MODEL**: `"org"`
+> `const` **DEFAULT_TENANT_MODEL**: `"org"`
 
 Tenant model manifest, compatibility, playbook, and migration helpers.

@@ -21,12 +21,12 @@ title: "BoundDesktopGrant"
 
 ### TGrant
 
-`TGrant` *extends* [`KeyedDesktopGrant`](/api/protocols-desktop/src/type-aliases/keyeddesktopgrant/) = [`KeyedDesktopGrant`](/api/protocols-desktop/src/type-aliases/keyeddesktopgrant/)
+`TGrant` _extends_ [`KeyedDesktopGrant`](/api/protocols-desktop/src/type-aliases/keyeddesktopgrant/) = [`KeyedDesktopGrant`](/api/protocols-desktop/src/type-aliases/keyeddesktopgrant/)
 
 ### TContractKey
 
-`TContractKey` *extends* `string` = `string`
+`TContractKey` _extends_ `string` = `string`
 
 ### TMemberKey
 
-`TMemberKey` *extends* `string` = `TGrant`\[`"memberKey"`\]
+`TMemberKey` _extends_ `string` = `TGrant`\[`"memberKey"`\]

@@ -5,7 +5,7 @@ prev: false
 title: "InferDesktopAppWindows"
 ---
 
-> **InferDesktopAppWindows**\<`TApp`\> = `TApp` *extends* `object` ? `TWindows` : `never`
+> **InferDesktopAppWindows**\<`TApp`\> = `TApp` _extends_ `object` ? `TWindows` : `never`
 
 ## Type Parameters
 

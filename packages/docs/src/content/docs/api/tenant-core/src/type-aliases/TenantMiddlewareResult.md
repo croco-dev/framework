@@ -15,7 +15,7 @@ tenant 미들웨어 계약과 결과 타입입니다.
 
 > **context**: [`Context`](/api/framework-context/src/classes/context/)
 
-***
+---
 
 ### tenantId
 

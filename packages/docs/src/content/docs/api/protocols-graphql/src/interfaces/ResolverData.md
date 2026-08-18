@@ -9,7 +9,7 @@ title: "ResolverData"
 
 ### TContextType
 
-`TContextType` *extends* `object` = `object`
+`TContextType` _extends_ `object` = `object`
 
 ## Properties
 
@@ -17,19 +17,19 @@ title: "ResolverData"
 
 > **args**: `ArgsDictionary`
 
-***
+---
 
 ### context
 
 > **context**: `TContextType`
 
-***
+---
 
 ### info
 
 > **info**: `GraphQLResolveInfo`
 
-***
+---
 
 ### root
 

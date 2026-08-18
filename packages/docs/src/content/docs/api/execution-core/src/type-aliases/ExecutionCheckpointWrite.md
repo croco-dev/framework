@@ -13,7 +13,7 @@ title: "ExecutionCheckpointWrite"
 
 > `readonly` **key**: `string`
 
-***
+---
 
 ### value
 

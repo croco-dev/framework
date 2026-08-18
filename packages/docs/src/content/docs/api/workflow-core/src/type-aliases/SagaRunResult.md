@@ -13,31 +13,31 @@ title: "SagaRunResult"
 
 > `readonly` **definition**: [`SagaDefinition`](/api/workflow-core/src/type-aliases/sagadefinition/)
 
-***
+---
 
 ### execution
 
 > `readonly` **execution**: [`SagaExecution`](/api/workflow-core/src/type-aliases/sagaexecution/)
 
-***
+---
 
 ### executionId
 
 > `readonly` **executionId**: `string`
 
-***
+---
 
 ### result?
 
 > `readonly` `optional` **result?**: `unknown`
 
-***
+---
 
 ### reused
 
 > `readonly` **reused**: `boolean`
 
-***
+---
 
 ### steps
 

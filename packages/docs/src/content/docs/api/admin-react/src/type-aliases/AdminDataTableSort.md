@@ -19,13 +19,13 @@ title: "AdminDataTableSort"
 
 > `readonly` **direction**: [`AdminDataTableSortDirection`](/api/admin-react/src/type-aliases/admindatatablesortdirection/)
 
-***
+---
 
 ### field?
 
 > `readonly` `optional` **field?**: [`AdminDataTableField`](/api/admin-react/src/type-aliases/admindatatablefield/)\<`TData`\> \| `string`
 
-***
+---
 
 ### id
 

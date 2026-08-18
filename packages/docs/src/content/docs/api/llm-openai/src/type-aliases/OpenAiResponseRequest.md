@@ -13,49 +13,49 @@ title: "OpenAiResponseRequest"
 
 > `readonly` **input**: `string` \| readonly [`OpenAiInputMessage`](/api/llm-openai/src/type-aliases/openaiinputmessage/)[]
 
-***
+---
 
 ### instructions?
 
 > `readonly` `optional` **instructions?**: `string`
 
-***
+---
 
-### max\_output\_tokens?
+### max_output_tokens?
 
-> `readonly` `optional` **max\_output\_tokens?**: `number`
+> `readonly` `optional` **max_output_tokens?**: `number`
 
-***
+---
 
 ### model
 
 > `readonly` **model**: `string`
 
-***
+---
 
 ### stop?
 
 > `readonly` `optional` **stop?**: readonly `string`[]
 
-***
+---
 
 ### store?
 
 > `readonly` `optional` **store?**: `boolean`
 
-***
+---
 
 ### stream?
 
 > `readonly` `optional` **stream?**: `boolean`
 
-***
+---
 
 ### temperature?
 
 > `readonly` `optional` **temperature?**: `number`
 
-***
+---
 
 ### text?
 
@@ -65,13 +65,13 @@ title: "OpenAiResponseRequest"
 
 > `readonly` **format**: `OpenAiTextFormat`
 
-***
+---
 
-### tool\_choice?
+### tool_choice?
 
-> `readonly` `optional` **tool\_choice?**: `"auto"`
+> `readonly` `optional` **tool_choice?**: `"auto"`
 
-***
+---
 
 ### tools?
 

@@ -13,31 +13,31 @@ title: "PlanReleaseActionRequest"
 
 > `readonly` **actionId**: `string`
 
-***
+---
 
 ### actorId?
 
 > `readonly` `optional` **actorId?**: `string`
 
-***
+---
 
 ### expectedReleaseRevision
 
 > `readonly` **expectedReleaseRevision**: `number`
 
-***
+---
 
 ### idempotencyKey?
 
 > `readonly` `optional` **idempotencyKey?**: `string`
 
-***
+---
 
 ### reason?
 
 > `readonly` `optional` **reason?**: `string`
 
-***
+---
 
 ### scheduledFor?
 

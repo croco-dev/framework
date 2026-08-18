@@ -19,37 +19,37 @@ title: "TenantWorkspaceField"
 
 > `readonly` **id**: `string`
 
-***
+---
 
 ### label
 
 > `readonly` **label**: `string`
 
-***
+---
 
 ### maskedValue?
 
 > `readonly` `optional` **maskedValue?**: `TValue`
 
-***
+---
 
 ### requiredPermissions?
 
 > `readonly` `optional` **requiredPermissions?**: readonly `string`[]
 
-***
+---
 
 ### sensitive?
 
 > `readonly` `optional` **sensitive?**: `boolean`
 
-***
+---
 
 ### value?
 
 > `readonly` `optional` **value?**: `TValue`
 
-***
+---
 
 ### visibility
 

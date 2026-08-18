@@ -13,37 +13,37 @@ title: "OutboxRelayBatchResult"
 
 > **claimed**: `number`
 
-***
+---
 
 ### deadLettered
 
 > **deadLettered**: `number`
 
-***
+---
 
 ### poisoned
 
 > **poisoned**: `number`
 
-***
+---
 
 ### published
 
 > **published**: `number`
 
-***
+---
 
 ### results
 
 > **results**: [`OutboxRelayMessageResult`](/api/events-tx/src/type-aliases/outboxrelaymessageresult/)[]
 
-***
+---
 
 ### scheduledRetry
 
 > **scheduledRetry**: `number`
 
-***
+---
 
 ### staleClaimed
 

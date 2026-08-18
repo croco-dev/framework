@@ -13,25 +13,25 @@ title: "DiagnosticSourceLocation"
 
 > `readonly` `optional` **column?**: `number`
 
-***
+---
 
 ### file?
 
 > `readonly` `optional` **file?**: `string`
 
-***
+---
 
 ### line?
 
 > `readonly` `optional` **line?**: `number`
 
-***
+---
 
 ### packageName?
 
 > `readonly` `optional` **packageName?**: `string`
 
-***
+---
 
 ### symbol?
 

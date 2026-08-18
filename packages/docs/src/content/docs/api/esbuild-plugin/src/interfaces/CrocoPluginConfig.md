@@ -23,13 +23,13 @@ title: "CrocoPluginConfig"
 
 > `optional` **outFile?**: `string`
 
-***
+---
 
 ### reflectMetadata?
 
 > `optional` **reflectMetadata?**: `boolean`
 
-***
+---
 
 ### scan?
 
@@ -51,7 +51,7 @@ title: "CrocoPluginConfig"
 
 > `optional` **exclude?**: `string`[]
 
-***
+---
 
 ### watch?
 

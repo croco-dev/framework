@@ -13,19 +13,19 @@ title: "AdminGeneratedRequestMetadata"
 
 > `readonly` **body**: [`AdminGeneratedSchemaPresence`](/api/admin-generated/src/type-aliases/admingeneratedschemapresence/)
 
-***
+---
 
 ### headers
 
 > `readonly` **headers**: [`AdminGeneratedSchemaPresence`](/api/admin-generated/src/type-aliases/admingeneratedschemapresence/)
 
-***
+---
 
 ### path
 
 > `readonly` **path**: [`AdminGeneratedSchemaPresence`](/api/admin-generated/src/type-aliases/admingeneratedschemapresence/)
 
-***
+---
 
 ### query
 

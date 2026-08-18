@@ -13,25 +13,25 @@ title: "HealthStatus"
 
 > `readonly` **component**: `string`
 
-***
+---
 
 ### details?
 
 > `readonly` `optional` **details?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### lastChecked
 
 > `readonly` **lastChecked**: `string`
 
-***
+---
 
 ### message?
 
 > `readonly` `optional` **message?**: `string`
 
-***
+---
 
 ### status
 

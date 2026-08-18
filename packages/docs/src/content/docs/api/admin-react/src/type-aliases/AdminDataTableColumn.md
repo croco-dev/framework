@@ -33,31 +33,31 @@ title: "AdminDataTableColumn"
 
 `TValue`
 
-***
+---
 
 ### field?
 
 > `readonly` `optional` **field?**: [`AdminDataTableField`](/api/admin-react/src/type-aliases/admindatatablefield/)\<`TData`\>
 
-***
+---
 
 ### filterable?
 
 > `readonly` `optional` **filterable?**: `boolean`
 
-***
+---
 
 ### header
 
 > `readonly` **header**: `string`
 
-***
+---
 
 ### id
 
 > `readonly` **id**: `string`
 
-***
+---
 
 ### render?
 
@@ -73,13 +73,13 @@ title: "AdminDataTableColumn"
 
 `ReactNode`
 
-***
+---
 
 ### sortable?
 
 > `readonly` `optional` **sortable?**: `boolean`
 
-***
+---
 
 ### width?
 

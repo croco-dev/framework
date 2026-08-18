@@ -45,7 +45,7 @@ title: "OnboardingManager"
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### getStatus()
 
@@ -61,7 +61,7 @@ title: "OnboardingManager"
 
 `Promise`\<[`OnboardingState`](/api/onboarding-core/src/interfaces/onboardingstate/)\>
 
-***
+---
 
 ### register()
 

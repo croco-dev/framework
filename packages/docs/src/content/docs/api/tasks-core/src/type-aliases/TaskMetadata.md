@@ -17,7 +17,7 @@ Task metadata stored by the decorator.
 
 Method name (string or symbol)
 
-***
+---
 
 ### name
 
@@ -25,7 +25,7 @@ Method name (string or symbol)
 
 Task name
 
-***
+---
 
 ### options?
 
@@ -33,7 +33,7 @@ Task name
 
 Options provided to decorator
 
-***
+---
 
 ### target
 

@@ -13,7 +13,7 @@ title: "AuditTimelineExtension"
 
 > `readonly` **entry**: [`AuditTimelineSource`](/api/admin-ops/src/type-aliases/audittimelinesource/)
 
-***
+---
 
 ### source
 

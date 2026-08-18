@@ -13,31 +13,31 @@ title: "JobFailurePolicy"
 
 > `readonly` **needsAttention**: `boolean`
 
-***
+---
 
 ### reason
 
 > `readonly` **reason**: `string`
 
-***
+---
 
 ### recoveryAction
 
 > `readonly` **recoveryAction**: `string`
 
-***
+---
 
 ### replayable
 
 > `readonly` **replayable**: `boolean`
 
-***
+---
 
 ### retryable
 
 > `readonly` **retryable**: `boolean`
 
-***
+---
 
 ### state
 

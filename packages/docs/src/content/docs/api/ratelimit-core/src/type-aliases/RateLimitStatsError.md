@@ -15,7 +15,7 @@ title: "RateLimitStatsError"
 
 > **message**: `string`
 
-***
+---
 
 ### name
 

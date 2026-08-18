@@ -20,7 +20,7 @@ Combines page IR with resolved module references for the render core.
 
 `Promise`\<\{ `default`: `React.ComponentType`\<[`RenderRouteComponentProps`](/api/meta-vite/src/type-aliases/renderroutecomponentprops/)\>; \}\>
 
-***
+---
 
 ### head?
 
@@ -30,19 +30,19 @@ Combines page IR with resolved module references for the render core.
 
 [`HeadMetadata`](/api/meta-vite/src/type-aliases/headmetadata/)
 
-***
+---
 
 ### mode
 
 > **mode**: [`RenderMode`](/api/meta-vite/src/type-aliases/rendermode/)
 
-***
+---
 
 ### path
 
 > **path**: `string`
 
-***
+---
 
 ### revalidateMs?
 

@@ -17,7 +17,7 @@ Task reference for identifying tasks.
 
 Method name
 
-***
+---
 
 ### name
 
@@ -25,7 +25,7 @@ Method name
 
 Task name
 
-***
+---
 
 ### target
 

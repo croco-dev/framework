@@ -39,7 +39,7 @@ Clerk 사용자 조회, 생성, 수정, 밴 관리를 제공하는 서비스입�
 
 `Promise`\<[`ClerkUser`](/api/auth-clerk/src/type-aliases/clerkuser/)\>
 
-***
+---
 
 ### createUser()
 
@@ -55,7 +55,7 @@ Clerk 사용자 조회, 생성, 수정, 밴 관리를 제공하는 서비스입�
 
 `Promise`\<[`ClerkUser`](/api/auth-clerk/src/type-aliases/clerkuser/)\>
 
-***
+---
 
 ### deleteUser()
 
@@ -71,7 +71,7 @@ Clerk 사용자 조회, 생성, 수정, 밴 관리를 제공하는 서비스입�
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### getUser()
 
@@ -87,7 +87,7 @@ Clerk 사용자 조회, 생성, 수정, 밴 관리를 제공하는 서비스입�
 
 `Promise`\<[`ClerkUser`](/api/auth-clerk/src/type-aliases/clerkuser/) \| `null`\>
 
-***
+---
 
 ### getUserList()
 
@@ -103,7 +103,7 @@ Clerk 사용자 조회, 생성, 수정, 밴 관리를 제공하는 서비스입�
 
 `Promise`\<[`UserListResult`](/api/auth-clerk/src/type-aliases/userlistresult/)\>
 
-***
+---
 
 ### unbanUser()
 
@@ -119,7 +119,7 @@ Clerk 사용자 조회, 생성, 수정, 밴 관리를 제공하는 서비스입�
 
 `Promise`\<[`ClerkUser`](/api/auth-clerk/src/type-aliases/clerkuser/)\>
 
-***
+---
 
 ### updateUser()
 
@@ -139,7 +139,7 @@ Clerk 사용자 조회, 생성, 수정, 밴 관리를 제공하는 서비스입�
 
 `Promise`\<[`ClerkUser`](/api/auth-clerk/src/type-aliases/clerkuser/)\>
 
-***
+---
 
 ### updateUserMetadata()
 

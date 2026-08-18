@@ -5,10 +5,10 @@ prev: false
 title: "MeterRecordInput"
 ---
 
-> **MeterRecordInput**\<`Meter`\> = `Meter` *extends* [`MeterRef`](/api/metering-core/src/type-aliases/meterref/)\<`string`, infer Aggregation, `string`, infer Dimensions, infer Billing\> ? `object` & `MeterDimensionsInput`\<`Dimensions`\> & `MeterEventInput`\<`Billing`\> & `MeterValueInput`\<`Aggregation`\> : `never`
+> **MeterRecordInput**\<`Meter`\> = `Meter` _extends_ [`MeterRef`](/api/metering-core/src/type-aliases/meterref/)\<`string`, infer Aggregation, `string`, infer Dimensions, infer Billing\> ? `object` & `MeterDimensionsInput`\<`Dimensions`\> & `MeterEventInput`\<`Billing`\> & `MeterValueInput`\<`Aggregation`\> : `never`
 
 ## Type Parameters
 
 ### Meter
 
-`Meter` *extends* [`MeterRef`](/api/metering-core/src/type-aliases/meterref/)
+`Meter` _extends_ [`MeterRef`](/api/metering-core/src/type-aliases/meterref/)

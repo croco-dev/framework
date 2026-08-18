@@ -13,13 +13,13 @@ title: "WorkflowTaskStep"
 
 > `readonly` `optional` **input?**: [`WorkflowStepInputResolver`](/api/workflow-core/src/type-aliases/workflowstepinputresolver/)
 
-***
+---
 
 ### name
 
 > `readonly` **name**: `string`
 
-***
+---
 
 ### task
 
