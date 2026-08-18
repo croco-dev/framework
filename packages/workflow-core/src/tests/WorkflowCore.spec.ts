@@ -203,6 +203,14 @@ function getSubscriptionId(payload: unknown): string {
   return String(payload.subscriptionId);
 }
 
+function getSharedId(payload: unknown): string {
+  if (typeof payload !== "object" || payload === null || !("id" in payload)) {
+    throw new TestWorkflowProblem("id is required");
+  }
+
+  return String(payload.id);
+}
+
 async function waitForWorkflowExecution(manager: ExecutionManagerImpl): Promise<Execution> {
   for (let attempt = 0; attempt < 20; attempt++) {
     const [execution] = await manager.list({ type: "workflow" });
@@ -982,6 +990,54 @@ describe("workflow-core", () => {
       }),
     );
     expect(executionManager.start).not.toHaveBeenCalled();
+  });
+
+  it("creates distinct executions for different workflows sharing the same caller idempotency key", async () => {
+    const executedTasks: string[] = [];
+
+    @Component()
+    class CrossTasks {
+      @Task({ name: "cross.task-a" })
+      taskA(): string {
+        executedTasks.push("task-a");
+        return "result-a";
+      }
+
+      @Task({ name: "cross.task-b" })
+      taskB(): string {
+        executedTasks.push("task-b");
+        return "result-b";
+      }
+    }
+
+    @Component()
+    class CrossWorkflows {
+      @Workflow({
+        name: "cross-workflow-a",
+        steps: ["cross.task-a"],
+        idempotencyKey: ({ payload }) => `shared:${getSharedId(payload)}`,
+      })
+      workflowA(): void {}
+
+      @Workflow({
+        name: "cross-workflow-b",
+        steps: ["cross.task-b"],
+        idempotencyKey: ({ payload }) => `shared:${getSharedId(payload)}`,
+      })
+      workflowB(): void {}
+    }
+
+    Container.set(CrossTasks, new CrossTasks());
+    Container.set(CrossWorkflows, new CrossWorkflows());
+    const runner = new WorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+
+    const first = await runner.execute("cross-workflow-a", { id: "same" });
+    const second = await runner.execute("cross-workflow-b", { id: "same" });
+
+    expect(first.reused).toBe(false);
+    expect(second.reused).toBe(false);
+    expect(first.executionId).not.toBe(second.executionId);
+    expect(executedTasks).toEqual(["task-a", "task-b"]);
   });
 
   it("emits workflow telemetry span attributes and lifecycle events", async () => {

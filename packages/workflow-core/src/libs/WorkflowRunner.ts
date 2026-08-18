@@ -50,6 +50,28 @@ function createStepExecutionIdempotencyKey(
   return `workflow-step:${workflowExecutionId}:${stepIndex}:${stepName}`;
 }
 
+async function resolveExecutionIdempotency(
+  workflowName: string,
+  resolvedKey: string | undefined,
+): Promise<{ idempotencyKey?: string; legacyIdempotencyKeys?: readonly string[] }> {
+  if (resolvedKey === undefined) return {};
+
+  const scope = JSON.stringify({
+    workflowName,
+    idempotencyKey: resolvedKey,
+    version: 2,
+  });
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", new TextEncoder().encode(scope));
+  const fingerprint = Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+
+  return {
+    idempotencyKey: `workflow:v2:${fingerprint}`,
+    legacyIdempotencyKeys: [resolvedKey],
+  };
+}
+
 function toExecutionError(error: unknown) {
   return {
     message: error instanceof Error ? error.message : String(error),
@@ -114,14 +136,18 @@ export class WorkflowRunner {
     const workflow = this.getWorkflow(workflowName);
     setWorkflowTelemetryAttributes(span, workflow);
 
-    const idempotencyKey = this.resolveIdempotencyKey(workflow, payload);
-    const invocationId = idempotencyKey ? createInvocationId(workflow.name) : undefined;
+    const resolvedKey = this.resolveIdempotencyKey(workflow, payload);
+    const idempotency = await resolveExecutionIdempotency(workflow.name, resolvedKey);
+    const invocationId = idempotency.idempotencyKey ? createInvocationId(workflow.name) : undefined;
     const execution = await this.executionManager.create({
       type: "workflow",
       payload,
       maxAttempts: workflow.options.maxAttempts,
       timeout: workflow.options.timeout,
-      idempotencyKey,
+      idempotencyKey: idempotency.idempotencyKey,
+      ...(idempotency.legacyIdempotencyKeys === undefined
+        ? {}
+        : { legacyIdempotencyKeys: idempotency.legacyIdempotencyKeys }),
       metadata: {
         workflowName: workflow.name,
         workflowMethod: workflow.methodName,
@@ -134,10 +160,10 @@ export class WorkflowRunner {
     const canResumeRetryingExecution =
       execution.status === "retrying" && execution.metadata?.workflowName === workflow.name;
     span.setAttribute("workflow.execution.id", execution.id);
-    span.setAttribute("workflow.idempotent", idempotencyKey !== undefined);
+    span.setAttribute("workflow.idempotent", idempotency.idempotencyKey !== undefined);
 
     if (
-      idempotencyKey !== undefined &&
+      idempotency.idempotencyKey !== undefined &&
       execution.metadata?.workflowInvocationId !== invocationId &&
       !canResumeRetryingExecution
     ) {
