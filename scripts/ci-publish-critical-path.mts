@@ -106,6 +106,7 @@ export function evaluatePublishCriticalPath(
   options: {
     readonly commands?: readonly EvidenceCommand[];
     readonly workflow?: string;
+    readonly testLaneRunnerSource?: string;
   } = {},
 ): CriticalPathEvaluation {
   const commands = options.commands ?? createVerificationManifest("publish");
@@ -133,7 +134,8 @@ export function evaluatePublishCriticalPath(
   if (byId.get("typecheck")?.command.includes("--only")) {
     diagnostics.push("typecheck must retain its declared build dependencies on a clean checkout");
   }
-  const testLaneRunner = readFileSync(resolve("scripts/test-lane-runner.mts"), "utf8");
+  const testLaneRunner =
+    options.testLaneRunnerSource ?? readFileSync(resolve("scripts/test-lane-runner.mts"), "utf8");
   if (/"test",\s*"--only",/.test(testLaneRunner)) {
     diagnostics.push("fast test lane must retain its declared build dependencies on a clean checkout");
   }

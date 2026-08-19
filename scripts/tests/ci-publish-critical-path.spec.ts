@@ -67,4 +67,16 @@ describe("publish validate critical path", () => {
       "typecheck must retain its declared build dependencies on a clean checkout",
     );
   });
+
+  it("fails when the fast test lane skips the build graph required by a clean checkout", () => {
+    const evaluation = evaluatePublishCriticalPath({
+      commands: createVerificationManifest("publish"),
+      workflow: readFileSync(resolve(ROOT_DIR, ".github/workflows/ci.yml"), "utf8"),
+      testLaneRunnerSource: 'return ["turbo", "run", "test", "--only",];',
+    });
+
+    expect(evaluation.diagnostics).toContain(
+      "fast test lane must retain its declared build dependencies on a clean checkout",
+    );
+  });
 });
