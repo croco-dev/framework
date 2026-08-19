@@ -137,7 +137,9 @@ export function evaluatePublishCriticalPath(
   const testLaneRunner =
     options.testLaneRunnerSource ?? readFileSync(resolve("scripts/test-lane-runner.mts"), "utf8");
   if (/"test",\s*"--only",/.test(testLaneRunner)) {
-    diagnostics.push("fast test lane must retain its declared build dependencies on a clean checkout");
+    diagnostics.push(
+      "fast test lane must retain its declared build dependencies on a clean checkout",
+    );
   }
   if (!advisoryMatrixRemainsAvailable) {
     diagnostics.push("the complete ecosystem-advisory matrix must remain manually executable");
