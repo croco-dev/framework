@@ -98,17 +98,42 @@ describe("createMetaFetchHandler", () => {
     await expect(response.text()).resolves.toContain("Rendered through registry");
   });
 
-  it("falls back to page handler when the API handler throws", async () => {
+  it("propagates API handler exceptions instead of falling back to page handler", async () => {
+    const pageHandler = vi.fn(async () => new Response("should not reach"));
     const handler = createMetaFetchHandler({
       apiHandler: async () => {
         throw new Error("api failed");
       },
-      pageHandler: async () => new Response("fallback-after-error"),
+      pageHandler,
+    });
+
+    await expect(handler(new Request("https://example.com/page"))).rejects.toThrow("api failed");
+    expect(pageHandler).not.toHaveBeenCalled();
+  });
+
+  it("preserves the original error instance when the API handler throws", async () => {
+    const originalError = new Error("boom");
+    const handler = createMetaFetchHandler({
+      apiHandler: async () => {
+        throw originalError;
+      },
+      pageHandler: async () => new Response("nope"),
+    });
+
+    await expect(handler(new Request("https://example.com/page"))).rejects.toBe(originalError);
+  });
+
+  it("still falls back to page handler when API handler returns explicit unhandled result", async () => {
+    const pageHandler = vi.fn(async () => new Response("page-ok"));
+    const handler = createMetaFetchHandler({
+      apiHandler: async () => ({ handled: false as const }),
+      pageHandler,
     });
 
     const response = await handler(new Request("https://example.com/page"));
 
-    await expect(response.text()).resolves.toBe("fallback-after-error");
+    await expect(response.text()).resolves.toBe("page-ok");
+    expect(pageHandler).toHaveBeenCalledOnce();
   });
 });
 
