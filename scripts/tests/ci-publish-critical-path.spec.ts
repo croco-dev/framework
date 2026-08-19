@@ -94,5 +94,6 @@ describe("publish validate critical path", () => {
     expect(evaluation.diagnostics).not.toContain(
       "fast test lane must retain its declared build dependencies on a clean checkout",
     );
+    expect(evaluation).toMatchObject({ status: "passed", diagnostics: [] });
   });
 });
