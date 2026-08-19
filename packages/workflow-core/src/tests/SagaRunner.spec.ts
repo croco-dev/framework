@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   SagaDefinitionProblem,
   SagaExecutionFailedProblem,
+  SagaFinalizationProblem,
   InMemorySagaStore,
   SagaListPaginationProblem,
   SagaRunner,
@@ -381,6 +382,155 @@ describe("SagaRunner", () => {
       expect.objectContaining({
         status: "failed",
         outboxMessages: [],
+      }),
+    );
+  });
+
+  it("does not compensate successful steps when the final completed-status write fails", async () => {
+    const delegate = new InMemorySagaStore();
+    let rejectFinalWrite = true;
+    const store: SagaStore = {
+      create: (params) => delegate.create(params),
+      findById: (id) => delegate.findById(id),
+      findByIdempotencyKey: (sagaName, key) => delegate.findByIdempotencyKey(sagaName, key),
+      list: (options) => delegate.list(options),
+      update: (id, data) => {
+        if (rejectFinalWrite && data.status === "completed") {
+          rejectFinalWrite = false;
+          throw new ProviderProblem("completion store unavailable");
+        }
+        return delegate.update(id, data);
+      },
+    };
+    const effects: string[] = [];
+    const definition: SagaDefinition = {
+      name: "finalization-store-failure",
+      steps: [
+        {
+          id: "charge",
+          run: () => {
+            effects.push("charge");
+            return { charged: true };
+          },
+          compensate: () => {
+            effects.push("refund");
+            return { refunded: true };
+          },
+        },
+      ],
+    };
+    const runner = new SagaRunner(store);
+
+    const problem = await runner.execute(definition, {}).catch((error: unknown) => error);
+
+    expect(problem).toBeInstanceOf(SagaFinalizationProblem);
+    expect(problem).toHaveProperty("code", "workflow-core/saga-finalization-failed");
+    expect(effects).toEqual(["charge"]);
+    const [execution] = await runner.listExecutions({ sagaName: definition.name });
+    expect(execution.status).toBe("completing");
+    expect(execution.steps[0]).toEqual(
+      expect.objectContaining({
+        status: "completed",
+        result: { charged: true },
+      }),
+    );
+  });
+
+  it("finalizes a completion-failed saga on idempotent retry without rerunning steps", async () => {
+    const delegate = new InMemorySagaStore();
+    let rejectFinalWrite = true;
+    const store: SagaStore = {
+      create: (params) => delegate.create(params),
+      findById: (id) => delegate.findById(id),
+      findByIdempotencyKey: (sagaName, key) => delegate.findByIdempotencyKey(sagaName, key),
+      list: (options) => delegate.list(options),
+      update: (id, data) => {
+        if (rejectFinalWrite && data.status === "completed") {
+          rejectFinalWrite = false;
+          throw new ProviderProblem("completion store unavailable");
+        }
+        return delegate.update(id, data);
+      },
+    };
+    const effects: string[] = [];
+    const definition: SagaDefinition = {
+      name: "finalization-idempotent-retry",
+      idempotencyKey: ({ payload }) => `finalization-retry:${getOrderId(payload)}`,
+      steps: [
+        {
+          id: "charge",
+          run: () => {
+            effects.push("charge");
+            return { charged: true };
+          },
+          compensate: () => {
+            effects.push("refund");
+            return { refunded: true };
+          },
+        },
+      ],
+    };
+    const runner = new SagaRunner(store);
+
+    await expect(runner.execute(definition, { orderId: "ord_123" })).rejects.toThrow(
+      SagaFinalizationProblem,
+    );
+
+    const retried = await runner.execute(definition, { orderId: "ord_123" });
+
+    expect(effects).toEqual(["charge"]);
+    expect(retried.reused).toBe(true);
+    expect(retried.execution.status).toBe("completed");
+    expect(retried.result).toEqual({
+      sagaName: "finalization-idempotent-retry",
+      steps: [{ stepId: "charge", result: { charged: true } }],
+    });
+    const [execution] = await runner.listExecutions({ sagaName: definition.name });
+    expect(execution.status).toBe("completed");
+  });
+
+  it("keeps successful steps durable when the completing marker itself fails", async () => {
+    const delegate = new InMemorySagaStore();
+    const store: SagaStore = {
+      create: (params) => delegate.create(params),
+      findById: (id) => delegate.findById(id),
+      findByIdempotencyKey: (sagaName, key) => delegate.findByIdempotencyKey(sagaName, key),
+      list: (options) => delegate.list(options),
+      update: (id, data) => {
+        if (data.status === "completing" || data.status === "completed") {
+          throw new ProviderProblem("completion store unavailable");
+        }
+        return delegate.update(id, data);
+      },
+    };
+    const effects: string[] = [];
+    const definition: SagaDefinition = {
+      name: "completing-marker-failure",
+      steps: [
+        {
+          id: "charge",
+          run: () => {
+            effects.push("charge");
+            return { charged: true };
+          },
+          compensate: () => {
+            effects.push("refund");
+            return { refunded: true };
+          },
+        },
+      ],
+    };
+    const runner = new SagaRunner(store);
+
+    await expect(runner.execute(definition, {})).rejects.toThrow(SagaFinalizationProblem);
+
+    expect(effects).toEqual(["charge"]);
+    const [execution] = await runner.listExecutions({ sagaName: definition.name });
+    expect(execution.status).toBe("running");
+    expect(execution.steps[0]).toEqual(
+      expect.objectContaining({
+        status: "completed",
+        result: { charged: true },
       }),
     );
   });

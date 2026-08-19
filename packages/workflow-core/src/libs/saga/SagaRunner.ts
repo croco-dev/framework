@@ -3,6 +3,7 @@ import {
   SagaDefinitionProblem,
   SagaExecutionFailedProblem,
   SagaExecutionNotFoundProblem,
+  SagaFinalizationProblem,
   SagaReplayProblem,
 } from "../problems/WorkflowProblems";
 import { InMemorySagaStore } from "./InMemorySagaStore";
@@ -12,6 +13,7 @@ import type {
   ReplaySagaParams,
   SagaDefinition,
   SagaExecution,
+  SagaExecutionStatus,
   SagaFailure,
   SagaOutboxRecord,
   SagaRunResult,
@@ -215,9 +217,12 @@ export class SagaRunner {
     execution: SagaExecution,
     span: SagaTelemetrySpan,
   ): Promise<SagaRunResult> {
-    const recovered = isOutboxDispatchableStatus(execution.status)
-      ? await this.dispatchOutbox(definition, execution.id)
-      : execution;
+    const recovered =
+      execution.status === "completing"
+        ? await this.finalizeExecution(definition, execution, span)
+        : isOutboxDispatchableStatus(execution.status)
+          ? await this.dispatchOutbox(definition, execution.id)
+          : execution;
 
     if (recovered.status === "failed" || recovered.status === "compensated") {
       this.throwStoredExecutionFailure(definition.name, recovered);
@@ -261,12 +266,48 @@ export class SagaRunner {
         current = await this.getExecution(current.id);
         previousResults.push(executed.result);
       }
+    } catch (error) {
+      return this.failExecution(definition, current.id, error, span);
+    }
 
-      const result = {
+    const dispatched = await this.finalizeExecution(definition, current, span);
+
+    return {
+      executionId: dispatched.id,
+      definition,
+      execution: dispatched,
+      steps: previousResults,
+      result: {
         sagaName: definition.name,
         steps: previousResults,
-      };
-      const completed = await this.store.update(current.id, {
+      },
+      reused: false,
+    };
+  }
+
+  /**
+   * Persists the final completed status once every step has succeeded. A store
+   * failure here is not a business failure: completed work must not be
+   * compensated, and the durable `completing` status plus step records remain
+   * the source of truth for reconciliation.
+   */
+  private async finalizeExecution(
+    definition: SagaDefinition,
+    execution: SagaExecution,
+    span: SagaTelemetrySpan,
+  ): Promise<SagaExecution> {
+    const result = {
+      sagaName: definition.name,
+      steps: this.toStepResults(execution),
+    };
+    let durableStatus: SagaExecutionStatus = execution.status;
+
+    try {
+      if (execution.status === "running") {
+        await this.store.update(execution.id, { status: "completing" });
+        durableStatus = "completing";
+      }
+      const completed = await this.store.update(execution.id, {
         status: "completed",
         result,
         completedAt: new Date(),
@@ -276,48 +317,52 @@ export class SagaRunner {
         "saga.execution.id": completed.id,
         "saga.execution.status": completed.status,
       });
-
-      const dispatched = await this.dispatchOutbox(definition, completed.id);
-
-      return {
-        executionId: dispatched.id,
-        definition,
-        execution: dispatched,
-        steps: previousResults,
-        result,
-        reused: false,
-      };
     } catch (error) {
-      const persisted = await this.getExecution(current.id);
-      if (persisted.status === "completed") {
-        throw error;
-      }
-
       const failure = toSagaFailure(error);
-      const compensated = await this.compensateCompletedSteps(definition, current.id, failure);
-      const finalStatus =
-        compensated.compensatedStepCount > 0 && compensated.compensationFailures.length === 0
-          ? "compensated"
-          : "failed";
-      const failed = await this.store.update(current.id, {
-        status: finalStatus,
-        error: failure,
-        compensationFailures: compensated.compensationFailures,
-        completedAt: new Date(),
-      });
-      span.addEvent("saga.execution.failed", {
+      span.addEvent("saga.execution.finalization_failed", {
         "saga.name": definition.name,
-        "saga.execution.id": failed.id,
-        "saga.execution.status": failed.status,
+        "saga.execution.id": execution.id,
+        "saga.execution.status": durableStatus,
         "saga.error.message": failure.message,
-        "saga.compensation.failure_count": compensated.compensationFailures.length,
       });
-
-      throw new SagaExecutionFailedProblem(definition.name, failed.id, failure, {
-        status: failed.status,
-        compensationFailures: compensated.compensationFailures,
+      throw new SagaFinalizationProblem(definition.name, execution.id, failure, {
+        status: durableStatus,
       });
     }
+
+    return this.dispatchOutbox(definition, execution.id);
+  }
+
+  private async failExecution(
+    definition: SagaDefinition,
+    executionId: string,
+    error: unknown,
+    span: SagaTelemetrySpan,
+  ): Promise<never> {
+    const failure = toSagaFailure(error);
+    const compensated = await this.compensateCompletedSteps(definition, executionId, failure);
+    const finalStatus =
+      compensated.compensatedStepCount > 0 && compensated.compensationFailures.length === 0
+        ? "compensated"
+        : "failed";
+    const failed = await this.store.update(executionId, {
+      status: finalStatus,
+      error: failure,
+      compensationFailures: compensated.compensationFailures,
+      completedAt: new Date(),
+    });
+    span.addEvent("saga.execution.failed", {
+      "saga.name": definition.name,
+      "saga.execution.id": failed.id,
+      "saga.execution.status": failed.status,
+      "saga.error.message": failure.message,
+      "saga.compensation.failure_count": compensated.compensationFailures.length,
+    });
+
+    throw new SagaExecutionFailedProblem(definition.name, failed.id, failure, {
+      status: failed.status,
+      compensationFailures: compensated.compensationFailures,
+    });
   }
 
   private async runStep(

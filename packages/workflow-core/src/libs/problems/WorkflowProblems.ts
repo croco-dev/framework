@@ -165,3 +165,30 @@ export class SagaExecutionFailedProblem extends Problem {
     );
   }
 }
+
+export class SagaFinalizationProblem extends Problem {
+  constructor(
+    sagaName: string,
+    executionId: string,
+    failure: SagaFailure,
+    options: {
+      readonly status: SagaExecutionStatus;
+    },
+  ) {
+    super(
+      "workflow-core/saga-finalization-failed",
+      ProblemCategory.InternalServerError,
+      `Saga '${sagaName}' finished every step at execution '${executionId}' but could not persist the finalization status: ${failure.message}`,
+      {
+        extensions: {
+          sagaName,
+          executionId,
+          sagaStatus: options.status,
+          originalFailureCode: failure.code,
+          originalFailureMessage: failure.message,
+          retryable: true,
+        },
+      },
+    );
+  }
+}
