@@ -106,6 +106,7 @@ export function evaluatePublishCriticalPath(
   options: {
     readonly commands?: readonly EvidenceCommand[];
     readonly workflow?: string;
+    readonly testLaneRunnerSource?: string;
   } = {},
 ): CriticalPathEvaluation {
   const commands = options.commands ?? createVerificationManifest("publish");
@@ -133,9 +134,15 @@ export function evaluatePublishCriticalPath(
   if (byId.get("typecheck")?.command.includes("--only")) {
     diagnostics.push("typecheck must retain its declared build dependencies on a clean checkout");
   }
-  const testLaneRunner = readFileSync(resolve("scripts/test-lane-runner.mts"), "utf8");
-  if (!/"test",\s*"--only",/.test(testLaneRunner)) {
-    diagnostics.push("fast test lane must not repeat the prerequisite build graph");
+  const testLaneRunner =
+    options.testLaneRunnerSource ?? readFileSync(resolve("scripts/test-lane-runner.mts"), "utf8");
+  // Exclude `--only` anywhere in the turbo command arguments between "test" and
+  // the `--` Vitest pass-through separator, not only immediately after "test".
+  const fastTurboArgs = /"turbo",\s*"run",\s*"test",([\s\S]*?)"--",/.exec(testLaneRunner)?.[1];
+  if (fastTurboArgs !== undefined && /"--only",/.test(fastTurboArgs)) {
+    diagnostics.push(
+      "fast test lane must retain its declared build dependencies on a clean checkout",
+    );
   }
   if (!advisoryMatrixRemainsAvailable) {
     diagnostics.push("the complete ecosystem-advisory matrix must remain manually executable");
