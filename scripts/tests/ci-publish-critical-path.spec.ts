@@ -69,13 +69,29 @@ describe("publish validate critical path", () => {
   });
 
   it("fails when the fast test lane skips the build graph required by a clean checkout", () => {
+    // --only is placed after another argument to prove detection is not
+    // limited to the position immediately after "test".
     const evaluation = evaluatePublishCriticalPath({
       commands: createVerificationManifest("publish"),
       workflow: readFileSync(resolve(ROOT_DIR, ".github/workflows/ci.yml"), "utf8"),
-      testLaneRunnerSource: 'return ["turbo", "run", "test", "--only",];',
+      testLaneRunnerSource:
+        'return ["turbo", "run", "test", "--concurrency=4", "--only", "--", "--maxWorkers=1"];',
     });
 
     expect(evaluation.diagnostics).toContain(
+      "fast test lane must retain its declared build dependencies on a clean checkout",
+    );
+  });
+
+  it("accepts a fast test lane that retains its build graph on a clean checkout", () => {
+    const evaluation = evaluatePublishCriticalPath({
+      commands: createVerificationManifest("publish"),
+      workflow: readFileSync(resolve(ROOT_DIR, ".github/workflows/ci.yml"), "utf8"),
+      testLaneRunnerSource:
+        'return ["turbo", "run", "test", "--concurrency=4", "--", "--maxWorkers=1"];',
+    });
+
+    expect(evaluation.diagnostics).not.toContain(
       "fast test lane must retain its declared build dependencies on a clean checkout",
     );
   });
