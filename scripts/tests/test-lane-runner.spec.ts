@@ -14,6 +14,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   createFastPackageTurboArguments,
   createTestLanePlan,
+  hasFailedBuildTask,
   readCompletedPlaywrightPaths,
   readCompletedVitestPaths,
   readVitestFailureDetails,
@@ -71,6 +72,24 @@ describe("test lane runner", () => {
 
   const exactScript = (command: { readonly paths: readonly string[] }, lane: string): string =>
     `vitest run ${command.paths.join(" ")}`;
+
+  it("identifies failed build tasks for the one-shot lane retry", () => {
+    expect(hasFailedBuildTask(undefined)).toBe(false);
+    expect(hasFailedBuildTask({ tasks: [] })).toBe(false);
+    expect(
+      hasFailedBuildTask({
+        tasks: [
+          { package: "@croco/a", task: "test", execution: { exitCode: 1 } },
+          { package: "@croco/a", task: "build", cache: { status: "HIT" } },
+        ],
+      }),
+    ).toBe(false);
+    expect(
+      hasFailedBuildTask({
+        tasks: [{ package: "@croco/b", task: "build", execution: { exitCode: 1 } }],
+      }),
+    ).toBe(true);
+  });
 
   it("groups exact inventory paths by workspace and owner deterministically", () => {
     expect(createTestLanePlan(inventory, "integration")).toEqual([

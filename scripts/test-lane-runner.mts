@@ -329,6 +329,19 @@ export function readTurboRunSummary(rootDir: string, output: string): TurboRunSu
   return newest ? (JSON.parse(readFileSync(newest.path, "utf8")) as TurboRunSummary) : undefined;
 }
 
+/**
+ * True when a turbo run failed at least one package BUILD task. build tasks can
+ * fail transiently under resource contention (tsup's declaration worker misses
+ * a dependency dist that is mid-rebuild), unlike hard test failures, so the
+ * fast lane retries once only in that case.
+ */
+export function hasFailedBuildTask(summary: TurboRunSummary | undefined): boolean {
+  if (!summary?.tasks) return false;
+  return summary.tasks.some(
+    (task) => task.task === "build" && (task.execution?.exitCode ?? 0) !== 0,
+  );
+}
+
 export function readTurboTestTaskEvidence(
   rootDir: string,
   command: TestLaneCommand,
@@ -456,23 +469,35 @@ function defaultRunner(
         if (packageCommands.length === 0) {
           packageResult = { exitCode: 0, durationMs: 0 };
         } else {
-          const result = spawnSync(
-            "pnpm",
-            createFastPackageTurboArguments(rootDir, packageCommands),
-            { cwd: rootDir, env: process.env, encoding: "utf8" },
-          );
-          process.stdout.write(result.stdout ?? "");
-          process.stderr.write(result.stderr ?? "");
-          const cache = /Cached:\s+(\d+) cached,\s+(\d+) total/.exec(result.stdout ?? "");
+          const runTurbo = (): { readonly result: typeof spawnSync; readonly output: string } => {
+            const result = spawnSync(
+              "pnpm",
+              createFastPackageTurboArguments(rootDir, packageCommands),
+              { cwd: rootDir, env: process.env, encoding: "utf8" },
+            );
+            process.stdout.write(result.stdout ?? "");
+            process.stderr.write(result.stderr ?? "");
+            return { result, output: `${result.stdout ?? ""}\n${result.stderr ?? ""}` };
+          };
+
+          const first = runTurbo();
+          let latest = first;
+          const firstSummary = readTurboRunSummary(rootDir, first.output);
+          if ((first.result.status ?? 1) !== 0 && hasFailedBuildTask(firstSummary)) {
+            // Retry once: a build task can fail transiently when tsup's
+            // declaration worker resolves a dependency dist that a concurrent
+            // --clean rebuild left without its .d.ts yet. The second run
+            // replays the completed dependency dist atomically from the turbo
+            // cache, so the retry converges without masking real test failures.
+            latest = runTurbo();
+          }
+          const cache = /Cached:\s+(\d+) cached,\s+(\d+) total/.exec(latest.result.stdout ?? "");
           packageResult = {
-            exitCode: result.status ?? 1,
+            exitCode: latest.result.status ?? 1,
             durationMs: Date.now() - startedAt,
             cacheStatus: cache && cache[1] === cache[2] ? "hit" : "miss",
           };
-          const summary = readTurboRunSummary(
-            rootDir,
-            `${result.stdout ?? ""}\n${result.stderr ?? ""}`,
-          );
+          const summary = readTurboRunSummary(rootDir, latest.output);
           for (const packageCommand of packageCommands) {
             const packageName = resolveTurboPackageFilters(rootDir, [packageCommand])[0];
             const evidence = readTurboTestTaskEvidence(
