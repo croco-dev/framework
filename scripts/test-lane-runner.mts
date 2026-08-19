@@ -83,11 +83,13 @@ export function createFastPackageTurboArguments(
 ): string[] {
   const concurrency = Math.max(1, Math.min(MAX_FAST_PACKAGE_PROCESSES, availableParallelism()));
 
+  // Do not pass --only: the test task declares build + ^build in turbo.json, and
+  // skipping those leaves dependency dist/ absent on a cold Turbo cache, which
+  // breaks workspace package resolution in every test that imports a built entry.
   return [
     "turbo",
     "run",
     "test",
-    "--only",
     `--concurrency=${concurrency}`,
     ...resolveTurboPackageFilters(rootDir, packageCommands).map(
       (packageName) => `--filter=${packageName}`,

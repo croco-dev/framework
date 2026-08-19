@@ -50,7 +50,7 @@ const inventory: TestInventory = {
 };
 
 describe("test lane runner", () => {
-  it("bounds fast package processes and Vitest workers without repeating the build graph", () => {
+  it("bounds fast package processes and Vitest workers while resolving the build graph", () => {
     const root = resolve(import.meta.dirname, "../..");
     const args = createFastPackageTurboArguments(root, [
       {
@@ -61,7 +61,7 @@ describe("test lane runner", () => {
       },
     ]);
 
-    expect(args).toContain("--only");
+    expect(args).not.toContain("--only");
     expect(args).toContain("--maxWorkers=1");
     expect(args).toContain("--filter=@croco/events-core");
     expect(args.find((argument) => argument.startsWith("--concurrency="))).toMatch(
