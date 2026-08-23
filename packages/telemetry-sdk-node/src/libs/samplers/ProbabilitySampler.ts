@@ -12,8 +12,12 @@ class ProbabilitySampler implements Sampler {
   private readonly threshold: number;
 
   constructor(options: ProbabilitySamplerOptions) {
-    if (options.probability < 0 || options.probability > 1) {
-      throw new SamplerProblem("Probability must be between 0 and 1");
+    if (
+      !Number.isFinite(options.probability) ||
+      options.probability < 0 ||
+      options.probability > 1
+    ) {
+      throw new SamplerProblem("Probability must be a finite number between 0 and 1");
     }
     this.probability = options.probability;
     this.threshold = Math.floor(options.probability * (0xffffffff + 1));
