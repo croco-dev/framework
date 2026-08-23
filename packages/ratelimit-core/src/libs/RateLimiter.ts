@@ -1,5 +1,6 @@
 import type { KeyContext, RateLimitKeyBuilder } from "./RateLimitKeyBuilder";
 import type { RateLimitStore } from "./RateLimitStore";
+import { RateLimitUnexpectedPolicyProblem } from "./problems/RateLimitConfigProblems";
 import type {
   FixedWindowPolicy,
   RateLimitPolicy,
@@ -118,8 +119,7 @@ export class RateLimiter<TContext = KeyContext> {
     const storeError = normalizeStoreError(error);
     this.onStoreError?.(storeError);
 
-    const limit =
-      policy.algorithm === "token-bucket" ? (policy as TokenBucketPolicy).capacity : policy.limit;
+    const limit = getDegradedLimit(policy);
     const resetAtMs = now + getDegradedResetIntervalMs(policy);
 
     if (failOpen) {
@@ -145,12 +145,33 @@ export class RateLimiter<TContext = KeyContext> {
 }
 
 function getDegradedResetIntervalMs(policy: RateLimitPolicy): number {
-  if (policy.algorithm === "token-bucket") {
-    const tokenBucketPolicy = policy as TokenBucketPolicy;
-    return tokenBucketPolicy.refillIntervalMs / tokenBucketPolicy.refillRate;
+  switch (policy.algorithm) {
+    case undefined:
+    case "fixed":
+    case "sliding":
+      return policy.windowMs;
+    case "token-bucket":
+      return policy.refillIntervalMs / policy.refillRate;
+    default:
+      return assertNever(policy);
   }
+}
 
-  return policy.windowMs;
+function getDegradedLimit(policy: RateLimitPolicy): number {
+  switch (policy.algorithm) {
+    case undefined:
+    case "fixed":
+    case "sliding":
+      return policy.limit;
+    case "token-bucket":
+      return policy.capacity;
+    default:
+      return assertNever(policy);
+  }
+}
+
+function assertNever(value: never): never {
+  throw new RateLimitUnexpectedPolicyProblem("policy", value);
 }
 
 function normalizeStoreError(error: unknown): Error {

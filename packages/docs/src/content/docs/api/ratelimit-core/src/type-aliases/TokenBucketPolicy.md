@@ -23,6 +23,12 @@ title: "TokenBucketPolicy"
 
 ---
 
+### limit?
+
+> `optional` **limit?**: `never`
+
+---
+
 ### name
 
 > **name**: `string`
@@ -38,3 +44,9 @@ title: "TokenBucketPolicy"
 ### refillRate
 
 > **refillRate**: `number`
+
+---
+
+### windowMs?
+
+> `optional` **windowMs?**: `never`

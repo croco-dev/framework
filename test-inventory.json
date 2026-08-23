@@ -2795,6 +2795,12 @@
       "owner": "@croco/ratelimit-core"
     },
     {
+      "path": "packages/ratelimit-core/src/tests/PublishedPolicyTypes.spec.ts",
+      "lane": "published",
+      "qualifiers": [],
+      "owner": "@croco/ratelimit-core"
+    },
+    {
       "path": "packages/ratelimit-core/src/tests/RateLimit.spec.ts",
       "lane": "fast",
       "qualifiers": [],

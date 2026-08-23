@@ -13,7 +13,7 @@ title: "RateLimitDecoratorOptions"
 
 ### algorithm?
 
-> `optional` **algorithm?**: [`RateLimitAlgorithm`](/api/ratelimit-core/src/type-aliases/ratelimitalgorithm/)
+> `optional` **algorithm?**: `"fixed"` \| `"sliding"`
 
 ---
 

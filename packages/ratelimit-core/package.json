@@ -35,7 +35,8 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "lint": "oxlint .",
-    "test": "vitest run",
+    "test": "vitest run --exclude src/tests/PublishedPolicyTypes.spec.ts",
+    "test:published": "vitest run src/tests/PublishedPolicyTypes.spec.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

@@ -1,12 +1,13 @@
 import { RateLimitWindowProblem } from "./problems/RateLimitConfigProblems";
 
-export type RateLimitAlgorithm = "fixed" | "sliding" | "token-bucket";
-
 export type FixedWindowPolicy = {
   name: string;
   algorithm: "fixed";
   limit: number;
   windowMs: number;
+  capacity?: never;
+  refillRate?: never;
+  refillIntervalMs?: never;
 };
 
 export type SlidingWindowPolicy = {
@@ -14,6 +15,9 @@ export type SlidingWindowPolicy = {
   algorithm: "sliding";
   limit: number;
   windowMs: number;
+  capacity?: never;
+  refillRate?: never;
+  refillIntervalMs?: never;
 };
 
 export type TokenBucketPolicy = {
@@ -22,18 +26,27 @@ export type TokenBucketPolicy = {
   capacity: number;
   refillRate: number;
   refillIntervalMs: number;
+  limit?: never;
+  windowMs?: never;
+};
+
+export type LegacyFixedWindowPolicy = {
+  name: string;
+  algorithm?: never;
+  limit: number;
+  windowMs: number;
+  capacity?: never;
+  refillRate?: never;
+  refillIntervalMs?: never;
 };
 
 export type RateLimitPolicy =
   | FixedWindowPolicy
   | SlidingWindowPolicy
   | TokenBucketPolicy
-  | {
-      name: string;
-      limit: number;
-      windowMs: number;
-      algorithm?: RateLimitAlgorithm;
-    };
+  | LegacyFixedWindowPolicy;
+
+export type RateLimitAlgorithm = Exclude<RateLimitPolicy["algorithm"], undefined>;
 
 export type FixedWindowRefundReceipt = {
   algorithm: "fixed";
@@ -91,14 +104,6 @@ export type RateLimiterOptions = {
   keySegments: KeySegment[];
   failOpen?: boolean;
   onStoreError?: (error: Error) => void;
-};
-
-export type RateLimitDecoratorOptions = {
-  limit?: number;
-  window?: string;
-  policy?: string;
-  algorithm?: RateLimitAlgorithm;
-  key?: (context: unknown) => string;
 };
 
 export type RateLimitMiddlewareOptions = {

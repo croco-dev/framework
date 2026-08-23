@@ -68,11 +68,17 @@ rate-limited 트래픽을 중단하세요. 그 기간이 지나 기존 limiter s
 
 - `createFixedWindowPolicy`, `createSlidingWindowPolicy`, `createTokenBucketPolicy`
 - `createRateLimitMiddleware`, HTTP 미들웨어 생성 헬퍼입니다.
-- `@RateLimit`, 메서드 데코레이터 기반 보호 기능입니다.
+- `@RateLimit`, fixed/sliding window 메서드 데코레이터 기반 보호 기능입니다. Token bucket은
+  `createTokenBucketPolicy`와 `RateLimiter`를 사용해 완전한 정책을 전달합니다.
+
+`RateLimitPolicy`의 명시적 `algorithm`은 해당 알고리즘의 전체 필드를 요구합니다. 기존처럼 `algorithm`을
+생략한 `{ name, limit, windowMs }` 입력은 `LegacyFixedWindowPolicy`로 유지되지만, 명시적 discriminator와
+섞을 수 없습니다. `RateLimitAlgorithm` 변수로 정책을 동적으로 만들 때는 먼저 `switch`로 알고리즘을
+좁힌 뒤 각 분기에서 완전한 `FixedWindowPolicy`, `SlidingWindowPolicy`, `TokenBucketPolicy`를 생성하세요.
 
 ### 주요 타입과 문제 타입
 
-- `RateLimitPolicy`, `RateLimitResult`, `RateLimitRefundReceipt`, `RateLimitRefundResult`, `RateLimitStats`, `RateLimitAlgorithm`
+- `RateLimitPolicy`, `LegacyFixedWindowPolicy`, `RateLimitResult`, `RateLimitRefundReceipt`, `RateLimitRefundResult`, `RateLimitStats`, `RateLimitAlgorithm`
 - `RateLimitDecoratorOptions`, `RateLimitMetadata`, `RateLimitHeaders`, `HttpContext`
 - 문제 타입: `RateLimitExceededProblem`, `RateLimitWindowProblem`, `RateLimitKeyBuilderProblem`
 - refund 미지원 저장소 문제 타입: `RateLimitRefundUnsupportedProblem`

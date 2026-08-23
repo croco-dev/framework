@@ -123,7 +123,7 @@ export abstract class FixedWindowStore extends DistributedRateLimitStore {
       throw new RateLimitRefundUnsupportedProblem();
     }
 
-    return this.refundFixedWindow(key, policy as FixedWindowPolicy, receipt);
+    return this.refundFixedWindow(key, policy, receipt);
   }
 
   protected async refundFixedWindow(
@@ -334,7 +334,7 @@ export abstract class TokenBucketStore extends DistributedRateLimitStore {
       throw new RateLimitRefundUnsupportedProblem();
     }
 
-    return this.refundTokenBucket(key, policy as TokenBucketPolicy, receipt);
+    return this.refundTokenBucket(key, policy, receipt);
   }
 
   protected async refundTokenBucket(

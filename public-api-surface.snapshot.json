@@ -23583,6 +23583,11 @@
               "source": "./libs/RateLimitKeyBuilder"
             },
             {
+              "name": "LegacyFixedWindowPolicy",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
               "name": "MiddlewareFunction",
               "exportKind": "named",
               "source": "./libs/middleware/rateLimitMiddleware"

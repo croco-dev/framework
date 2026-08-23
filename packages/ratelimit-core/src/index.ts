@@ -99,6 +99,7 @@ export {
   isFixedWindowPolicy,
   isSlidingWindowPolicy,
   isTokenBucketPolicy,
+  type LegacyFixedWindowPolicy,
   parseWindowMs,
   type RateLimitAlgorithm,
   type RateLimitMiddlewareOptions,
