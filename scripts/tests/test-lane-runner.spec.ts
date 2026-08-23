@@ -21,6 +21,7 @@ import {
   readVitestFailureDetails,
   readTurboRunSummary,
   readTurboTestTaskEvidence,
+  redactLiveResourceValues,
   resolveTurboPackageFilters,
   runTestLane,
 } from "../test-lane-runner.mts";
@@ -335,6 +336,23 @@ describe("test lane runner", () => {
     rmSync(root, { recursive: true, force: true });
   });
 
+  it("redacts complete and comma-delimited live resource values", () => {
+    const environment = {
+      POLAR_PRODUCT_ID: "product-secret",
+      POLAR_PRICE_IDS: "price-one, price-two",
+    };
+
+    expect(
+      redactLiveResourceValues(
+        "product-secret is missing price-one and price-two from price-one, price-two",
+        ["POLAR_PRODUCT_ID", "POLAR_PRICE_IDS"],
+        environment,
+      ),
+    ).toBe(
+      "[REDACTED:POLAR_PRODUCT_ID] is missing [REDACTED:POLAR_PRICE_IDS] and [REDACTED:POLAR_PRICE_IDS] from [REDACTED:POLAR_PRICE_IDS]",
+    );
+  });
+
   it("rejects skipped or partially completed Playwright specs", () => {
     const root = mkdtempSync(join(tmpdir(), "croco-playwright-report-"));
     const reportPath = join(root, "playwright.json");
@@ -536,6 +554,51 @@ describe("test lane runner", () => {
       message: "repo:ci: scripts/tests/repo.spec.ts > reports the failing assertion",
     });
     expect(report.commands[0]).not.toHaveProperty("failureDetails");
+  });
+
+  it("redacts configured live resource values from lane diagnostics", () => {
+    vi.stubEnv("POLAR_PRODUCT_ID", "product-secret");
+    vi.stubEnv("POLAR_PRICE_IDS", "price-one,price-two");
+    vi.stubEnv("POLAR_USAGE_EXTERNAL_CUSTOMER_ID", "customer-secret");
+    try {
+      const report = runTestLane({
+        inventory: {
+          version: 1,
+          exceptions: [],
+          tests: [
+            {
+              path: "packages/billing-polar/src/tests/PolarLiveSmoke.spec.ts",
+              lane: "live",
+              qualifiers: [],
+              owner: "@croco/billing-polar",
+            },
+          ],
+        },
+        lane: "live",
+        allowLive: true,
+        liveCredentialsAvailable: true,
+        runner: () => ({
+          exitCode: 1,
+          durationMs: 5,
+          executedPaths: [],
+          failureDetails: [
+            "product-secret mapping omitted price-one and price-two for customer-secret",
+          ],
+        }),
+        scriptResolver: exactScript,
+      });
+      const rendered = JSON.stringify(report);
+
+      expect(rendered).not.toContain("product-secret");
+      expect(rendered).not.toContain("price-one");
+      expect(rendered).not.toContain("price-two");
+      expect(rendered).not.toContain("customer-secret");
+      expect(rendered).toContain("[REDACTED:POLAR_PRODUCT_ID]");
+      expect(rendered).toContain("[REDACTED:POLAR_PRICE_IDS]");
+      expect(rendered).toContain("[REDACTED:POLAR_USAGE_EXTERNAL_CUSTOMER_ID]");
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it("fails closed for live runs without explicit credential provisioning", () => {

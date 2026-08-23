@@ -1,6 +1,16 @@
 {
   "@croco/auth-drizzle": ["AUTH_POSTGRES_URL"],
-  "@croco/billing-polar": ["POLAR_ACCESS_TOKEN", "POLAR_WEBHOOK_SECRET", "POLAR_ORGANIZATION_ID"],
+  "@croco/billing-polar": [
+    "POLAR_ACCESS_TOKEN",
+    "POLAR_ORGANIZATION_ID",
+    "POLAR_PRICE_IDS",
+    "POLAR_PRODUCT_ID",
+    "POLAR_USAGE_EVENT_ID",
+    "POLAR_USAGE_EVENT_NAME",
+    "POLAR_USAGE_EXTERNAL_CUSTOMER_ID",
+    "POLAR_USAGE_METER_ID",
+    "POLAR_WEBHOOK_SECRET"
+  ],
   "@croco/credits-drizzle": ["CREDITS_POSTGRES_URL"],
   "@croco/execution-drizzle": ["EXECUTION_POSTGRES_URL"],
   "@croco/llm-openai": ["OPENAI_API_KEY"],

@@ -76,6 +76,36 @@ const MAX_FAST_PACKAGE_PROCESSES = 4;
 const MAX_ROOT_VITEST_WORKERS = 2;
 const MAX_FAILURE_DETAILS = 8;
 const MAX_FAILURE_DETAIL_LENGTH = 2_000;
+const MAX_LIVE_TEST_OUTPUT_BYTES = 10 * 1024 * 1024;
+
+type LiveResourceRequirements = Readonly<Record<string, readonly string[]>>;
+
+export function redactLiveResourceValues(
+  text: string,
+  resourceNames: readonly string[],
+  environment: Readonly<Record<string, string | undefined>> = process.env,
+): string {
+  const replacements = resourceNames
+    .flatMap((name) => {
+      const value = environment[name];
+      if (!value) return [];
+      return [
+        ...new Set([
+          value,
+          ...value
+            .split(",")
+            .map((part) => part.trim())
+            .filter(Boolean),
+        ]),
+      ].map((candidate) => ({ candidate, replacement: `[REDACTED:${name}]` }));
+    })
+    .sort((left, right) => right.candidate.length - left.candidate.length);
+
+  return replacements.reduce(
+    (redacted, { candidate, replacement }) => redacted.split(candidate).join(replacement),
+    text,
+  );
+}
 
 export function createFastPackageTurboArguments(
   rootDir: string,
@@ -433,6 +463,7 @@ function defaultRunner(
   lane: TestLaneReport["lane"],
   plan: readonly TestLaneCommand[],
   resolveScript: TestLaneScriptResolver,
+  liveResourceRequirements: LiveResourceRequirements,
 ): TestLaneCommandRunner {
   if (lane === "fast") {
     let packageResult:
@@ -527,21 +558,42 @@ function defaultRunner(
       const reportPath = resolve(reportDirectory, "vitest.json");
       const playwright = resolveScript(command, lane)?.includes("playwright test") ?? false;
       const startedAt = Date.now();
-      const result = spawnSync(
-        command.command[0],
-        [
-          ...command.command.slice(1),
-          "--reporter=json",
-          ...(playwright ? [] : [`--outputFile=${reportPath}`]),
-        ],
-        {
-          cwd: resolve(rootDir, command.cwd),
-          env: playwright
-            ? { ...process.env, PLAYWRIGHT_JSON_OUTPUT_FILE: reportPath }
-            : process.env,
-          stdio: "inherit",
-        },
-      );
+      const args = [
+        ...command.command.slice(1),
+        "--reporter=json",
+        ...(playwright ? [] : [`--outputFile=${reportPath}`]),
+      ];
+      const environment = playwright
+        ? { ...process.env, PLAYWRIGHT_JSON_OUTPUT_FILE: reportPath }
+        : process.env;
+      const result =
+        lane === "live"
+          ? spawnSync(command.command[0], args, {
+              cwd: resolve(rootDir, command.cwd),
+              env: environment,
+              encoding: "utf8",
+              maxBuffer: MAX_LIVE_TEST_OUTPUT_BYTES,
+            })
+          : spawnSync(command.command[0], args, {
+              cwd: resolve(rootDir, command.cwd),
+              env: environment,
+              stdio: "inherit",
+            });
+      if (lane === "live") {
+        const resourceNames = liveResourceRequirements[command.owner] ?? [];
+        process.stdout.write(
+          redactLiveResourceValues(
+            typeof result.stdout === "string" ? result.stdout : "",
+            resourceNames,
+          ),
+        );
+        process.stderr.write(
+          redactLiveResourceValues(
+            typeof result.stderr === "string" ? result.stderr : "",
+            resourceNames,
+          ),
+        );
+      }
       return {
         exitCode: result.status ?? 1,
         durationMs: Date.now() - startedAt,
@@ -646,14 +698,17 @@ export function runTestLane(options: {
     });
   }
   const rootDir = options.rootDir ?? ROOT_DIR;
+  const liveResourceRequirements: LiveResourceRequirements =
+    options.lane === "live"
+      ? (JSON.parse(
+          readFileSync(resolve(rootDir, "config/live-test-resources.json"), "utf8"),
+        ) as LiveResourceRequirements)
+      : {};
   if (options.lane === "live" && options.allowLive && options.liveCredentialsAvailable !== true) {
-    const requirements = JSON.parse(
-      readFileSync(resolve(rootDir, "config/live-test-resources.json"), "utf8"),
-    ) as Readonly<Record<string, readonly string[]>>;
     const missing = plan.flatMap(({ owner }) =>
-      requirements[owner] === undefined
+      liveResourceRequirements[owner] === undefined
         ? [`${owner}:<undeclared>`]
-        : requirements[owner]
+        : liveResourceRequirements[owner]
             .filter((name) => !process.env[name])
             .map((name) => `${owner}:${name}`),
     );
@@ -676,7 +731,9 @@ export function runTestLane(options: {
       diagnostics.push({ code: "TEST_LANE_SCRIPT_DRIFT", message: error });
     }
   }
-  const runner = options.runner ?? defaultRunner(rootDir, options.lane, plan, resolveScript);
+  const runner =
+    options.runner ??
+    defaultRunner(rootDir, options.lane, plan, resolveScript, liveResourceRequirements);
   const commandFailureDetails: { readonly owner: string; readonly details: readonly string[] }[] =
     [];
   const commands =
@@ -685,7 +742,18 @@ export function runTestLane(options: {
       : plan.map((command): TestLaneCommandResult => {
           const { failureDetails = [], ...result } = runner(command);
           if (failureDetails.length > 0) {
-            commandFailureDetails.push({ owner: command.owner, details: failureDetails });
+            commandFailureDetails.push({
+              owner: command.owner,
+              details:
+                options.lane === "live"
+                  ? failureDetails.map((detail) =>
+                      redactLiveResourceValues(
+                        detail,
+                        liveResourceRequirements[command.owner] ?? [],
+                      ),
+                    )
+                  : failureDetails,
+            });
           }
           const executedPaths = [...new Set(result.executedPaths ?? [])].sort(compareText);
           const complete = JSON.stringify(executedPaths) === JSON.stringify(command.paths);

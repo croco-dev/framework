@@ -361,6 +361,13 @@ POLAR_ENVIRONMENT=sandbox \
 pnpm --filter @croco/billing-polar test -- src/tests/PolarLiveSmoke.spec.ts
 ```
 
+scheduled live lane은 위 세 smoke 그룹의 모든 값을 같은 이름의 repository secret에서 주입합니다.
+`POLAR_PRODUCT_ID`와 `POLAR_PRICE_IDS`는 mapping 조회에만 사용하는 read-only 입력입니다.
+`POLAR_USAGE_EXTERNAL_CUSTOMER_ID`, `POLAR_USAGE_EVENT_NAME`, `POLAR_USAGE_METER_ID`는 사전에 만든
+certification 리소스를 가리키며, `POLAR_USAGE_EVENT_ID`는 재실행마다 바꾸지 않는 전용 replay-safe identity여야
+합니다. 설정이 빠지면 lane runner는 누락된 변수 이름만 보고하고 값은 출력하지 않은 채 Polar lane 실행을
+거부합니다.
+
 ## 의존성
 
 | 패키지                     | 버전 | 설명                           |
