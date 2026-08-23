@@ -1,6 +1,7 @@
 import { Container } from "@croco/framework-context";
 import type { NotificationPayload, NotificationResult } from "@croco/notifications-core";
 import { NotificationChannel } from "@croco/notifications-core";
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import { recordError, recordEvent } from "@croco/telemetry-api";
 import type { CreateEmailResponse, Resend } from "resend";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -14,6 +15,16 @@ import { ResendDiagnosticsProvider } from "../libs/ResendDiagnosticsProvider";
 import { ResendProvider } from "../libs/ResendProvider";
 
 type MockResendClient = InstanceType<typeof Resend>;
+
+class TestNotificationAssertionProblem extends Problem {
+  constructor() {
+    super(
+      "TEST_NOTIFICATION_ASSERTION_FAILED",
+      ProblemCategory.InternalServerError,
+      "Expected notification delivery to fail",
+    );
+  }
+}
 
 // Mock resend package
 vi.mock("resend", () => {
@@ -1067,7 +1078,7 @@ function expectFailedNotificationResult(
   expect(result.success).toBe(false);
 
   if (result.success) {
-    throw new Error("Expected notification delivery to fail");
+    throw new TestNotificationAssertionProblem();
   }
 }
 
