@@ -46,10 +46,10 @@ const DRIZZLE_PACKAGE_SUFFIX = "-drizzle";
 const REFLECT_METADATA_PACKAGE = "reflect-metadata";
 const REFLECT_METADATA_IMPORT_RE =
   /^\s*import\s+(?:[^'"]+\s+from\s+)?["']reflect-metadata["']\s*;?/m;
-const PACKAGE_MANAGER_COMMANDS = new Set(["npm", "pnpm"]);
+const PACKAGE_MANAGER_COMMANDS = new Set(["bun", "npm", "pnpm", "yarn"]);
 const PACKAGE_MANAGER_EXEC_COMMANDS = new Set(["dlx", "exec"]);
 const PACKAGE_MANAGER_RUN_COMMANDS = new Set(["run", "run-script"]);
-const SHELL_COMMANDS = new Set(["bash", "sh", "zsh"]);
+const SHELL_COMMANDS = new Set(["ash", "bash", "dash", "ksh", "sh", "zsh"]);
 const EXECUTABLE_OPTIONS_WITH_VALUES = new Set([
   "--cache",
   "--call",
