@@ -5890,6 +5890,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "CacheKeyArgumentProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/CacheDecoratorProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "CacheStore",
               "exportKind": "named",
               "source": "./libs/CacheStore",

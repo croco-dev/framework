@@ -17,6 +17,23 @@ export class CacheDecoratorConfigProblem extends Problem {
   }
 }
 
+export class CacheKeyArgumentProblem extends Problem {
+  readonly code = "cache-core/cache-key-argument-unsupported";
+  readonly category = ProblemCategory.ValidationError;
+
+  constructor(
+    readonly path: string,
+    readonly reason: string,
+  ) {
+    super(
+      "cache-core/cache-key-argument-unsupported",
+      ProblemCategory.ValidationError,
+      `Cache key argument at '${path}' ${reason}.`,
+      { extensions: { path, reason } },
+    );
+  }
+}
+
 export type CacheInvalidationDiagnostic = {
   readonly code: string;
   readonly message: string;

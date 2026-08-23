@@ -123,6 +123,7 @@ This cookbook documents 655 public Croco Problem codes. The deterministic JSON r
 | [`billing/webhook-already-processed`](#billing-webhook-already-processed)                                                             | Conflict              |    409 | conditional   | safe-message  | active    |       1 |
 | [`billing/webhook-event-intents-pending`](#billing-webhook-event-intents-pending)                                                     | Conflict              |    409 | conditional   | safe-message  | active    |       1 |
 | [`BLOCKED_DURING_IMPERSONATION`](#blocked-during-impersonation)                                                                       | Forbidden             |    403 | not-retryable | safe-message  | active    |       1 |
+| [`cache-core/cache-key-argument-unsupported`](#cache-core-cache-key-argument-unsupported)                                             | ValidationError       |    422 | not-retryable | public        | active    |       1 |
 | [`cache-core/invalid-configuration`](#cache-core-invalid-configuration)                                                               | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`cache-core/invalid-decorator-config`](#cache-core-invalid-decorator-config)                                                         | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`cache-core/invalid-ttl`](#cache-core-invalid-ttl)                                                                                   | ValidationError       |    422 | not-retryable | public        | active    |       1 |
@@ -2651,6 +2652,24 @@ Sources:
 
 - `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:84:3` (problem-class)
 
+<a id="cache-core-cache-key-argument-unsupported"></a>
+
+## `cache-core/cache-key-argument-unsupported`
+
+- Category: `ValidationError`
+- HTTP status: `422` Validation Error
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The request or generated contract failed schema or semantic validation.
+- User action: Fix the invalid fields and retry with schema-conformant input.
+- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts:21:3` (problem-class)
+
 <a id="cache-core-invalid-configuration"></a>
 
 ## `cache-core/invalid-configuration`
@@ -2721,7 +2740,7 @@ Sources:
 
 Sources:
 
-- `packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts:102:3` (problem-class)
+- `packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts:119:3` (problem-class)
 
 <a id="cache-core-invalidation-capability-unsupported"></a>
 
@@ -2739,7 +2758,7 @@ Sources:
 
 Sources:
 
-- `packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts:55:3` (problem-class)
+- `packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts:72:3` (problem-class)
 
 <a id="cache-core-invalidation-event-unknown"></a>
 
@@ -2757,7 +2776,7 @@ Sources:
 
 Sources:
 
-- `packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts:41:3` (problem-class)
+- `packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts:58:3` (problem-class)
 
 <a id="cache-core-invalidation-failed"></a>
 
@@ -2775,7 +2794,7 @@ Sources:
 
 Sources:
 
-- `packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts:72:3` (problem-class)
+- `packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts:89:3` (problem-class)
 
 <a id="cache-core-invalidation-graph-invalid"></a>
 
@@ -2793,7 +2812,7 @@ Sources:
 
 Sources:
 
-- `packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts:27:3` (problem-class)
+- `packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts:44:3` (problem-class)
 
 <a id="circuit-breaker-open"></a>
 

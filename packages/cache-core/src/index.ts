@@ -61,6 +61,7 @@ export { CacheEvict, type CacheEvictOptions } from "./libs/decorators/CacheEvict
 export { InMemoryCacheStore, type InMemoryCacheStoreOptions } from "./libs/InMemoryCacheStore";
 export {
   CacheDecoratorConfigProblem,
+  CacheKeyArgumentProblem,
   CacheInvalidationAssertionProblem,
   CacheInvalidationFailedProblem,
   type CacheInvalidationDiagnostic,

@@ -144,6 +144,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`WebhookProcessingProblem`](/api/billing-polar/src/classes/webhookprocessingproblem/)
 - [`WebhookValidationProblem`](/api/billing-polar/src/classes/webhookvalidationproblem/)
 - [`CacheDecoratorConfigProblem`](/api/cache-core/src/classes/cachedecoratorconfigproblem/)
+- [`CacheKeyArgumentProblem`](/api/cache-core/src/classes/cachekeyargumentproblem/)
 - [`CacheInvalidationAssertionProblem`](/api/cache-core/src/classes/cacheinvalidationassertionproblem/)
 - [`CacheInvalidationFailedProblem`](/api/cache-core/src/classes/cacheinvalidationfailedproblem/)
 - [`CacheInvalidationGraphProblem`](/api/cache-core/src/classes/cacheinvalidationgraphproblem/)
