@@ -578,6 +578,72 @@ describe("OpenAiLlmModel", () => {
   });
 
   it.each([
+    ["generate", (model: OpenAiLlmModel) => model.generate({ prompt: "x" })],
+    [
+      "generateObject",
+      (model: OpenAiLlmModel) => model.generateObject({ prompt: "x", schema: {} }),
+    ],
+    ["callTool", (model: OpenAiLlmModel) => model.callTool({ prompt: "x", tools: [] })],
+  ])(
+    "rejects incomplete buffered responses from %s with the upstream reason",
+    async (_name, invoke) => {
+      const response: OpenAiResponse = {
+        output_text: "partial answer",
+        output_parsed: { partial: true },
+        output: [
+          {
+            type: "function_call",
+            name: "lookup",
+            arguments: "{}",
+          },
+        ],
+        status: "incomplete",
+        incomplete_details: { reason: "max_output_tokens" },
+        usage: {
+          input_tokens: 2,
+          output_tokens: 1,
+          total_tokens: 3,
+        },
+      };
+      const model = new OpenAiLlmModel({
+        modelId: MODEL_ID,
+        transport: createStaticResponseTransport(response),
+      });
+
+      await expect(invoke(model)).rejects.toMatchObject({
+        code: OpenAiInvalidResponseProblem.CODE,
+        extensions: expect.objectContaining({
+          operation: _name,
+          reason: "max_output_tokens",
+        }),
+      });
+    },
+  );
+
+  it("rejects an incomplete stream after preserving previously yielded deltas", async () => {
+    const model = new OpenAiLlmModel({
+      modelId: MODEL_ID,
+      transport: createStaticResponseTransport(
+        createTextResponse("unused", MODEL_ID),
+        createIncompleteStream(),
+      ),
+    });
+    const iterator = model.stream({ prompt: "x" })[Symbol.asyncIterator]();
+
+    await expect(iterator.next()).resolves.toEqual({
+      done: false,
+      value: { delta: "partial" },
+    });
+    await expect(iterator.next()).rejects.toMatchObject({
+      code: OpenAiInvalidResponseProblem.CODE,
+      extensions: expect.objectContaining({
+        operation: "stream",
+        reason: "max_output_tokens",
+      }),
+    });
+  });
+
+  it.each([
     [
       "a missing function name",
       { type: "function_call", arguments: '{"id":"123"}' } as const,
@@ -714,6 +780,28 @@ async function* createStream(signal?: AbortSignal): AsyncIterable<OpenAiStreamEv
     yield event;
     await Promise.resolve();
   }
+}
+
+async function* createIncompleteStream(): AsyncIterable<OpenAiStreamEvent> {
+  yield { type: "response.output_text.delta", delta: "partial" };
+  yield {
+    type: "response.incomplete",
+    response: {
+      status: "incomplete",
+      incomplete_details: { reason: "max_output_tokens" },
+    },
+  };
+}
+
+function createStaticResponseTransport(
+  response: OpenAiResponse,
+  stream: AsyncIterable<OpenAiStreamEvent> = createStream(),
+): OpenAiTransport {
+  return {
+    createResponse: async () => response,
+    streamResponse: async () => stream,
+    createEmbedding: async () => ({ data: [], usage: null }),
+  };
 }
 
 function createEmbedding(input: string): number[] {
