@@ -1245,6 +1245,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
         packagePath: ["apps", "web"],
         args: ["presentation:smoke"],
       },
+      { label: "test", packagePath: ["libs", "shared", "utils-env"], args: ["test"] },
     ],
   },
   {
@@ -1295,6 +1296,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
         packagePath: ["ssr-worker"],
         args: ["presentation:smoke"],
       },
+      { label: "test", packagePath: ["libs", "shared", "utils-env"], args: ["test"] },
     ],
   },
   {
@@ -1837,8 +1839,17 @@ const smokeCases = selectableSmokeCases.filter(
 export function getGeneratedSmokeDependencyCaseInputs(): readonly {
   readonly name: string;
   readonly args: readonly string[];
+  readonly validations: readonly Pick<SmokeValidation, "args" | "label" | "packagePath">[];
 }[] {
-  return smokeCases.map(({ name, args }) => ({ name, args }));
+  return smokeCases.map(({ name, args, validations }) => ({
+    name,
+    args,
+    validations: validations.map(({ args: validationArgs, label, packagePath }) => ({
+      args: validationArgs,
+      label,
+      packagePath,
+    })),
+  }));
 }
 
 if (isMainModule()) {
