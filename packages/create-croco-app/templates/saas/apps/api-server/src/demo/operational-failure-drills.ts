@@ -370,29 +370,30 @@ function createRouteValidationScenario(): OperationalFailureDrillScenario {
       provenance,
       recoveryAction: ROUTE_VALIDATION_RECOVERY,
     },
-    run: async () => {
-      const app = createCrocoApp();
-      const response = await app.fetch(
-        new Request("http://localhost/ops/jobs/failure-drill/cancel", {
-          method: "POST",
-          headers: {
-            "content-type": "application/json",
-            "x-forwarded-for": "127.0.0.1",
-          },
-          body: JSON.stringify({ reason: 42 }),
-        }),
-      );
-      const problem = normalizeHttpProblemEvidence(await readProblemResponse(response));
-      if (!Array.isArray(problem.issues) || problem.issues.length === 0) {
-        throw new Error("Generated route validation did not expose structured issues.");
-      }
-      return {
-        kind: "problem",
-        problem,
-        provenance,
-        recoveryAction: ROUTE_VALIDATION_RECOVERY,
-      };
-    },
+    run: () =>
+      runWithLoopbackTelemetry(async () => {
+        const app = createCrocoApp();
+        const response = await app.fetch(
+          new Request("http://localhost/ops/jobs/failure-drill/cancel", {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+              "x-forwarded-for": "127.0.0.1",
+            },
+            body: JSON.stringify({ reason: 42 }),
+          }),
+        );
+        const problem = normalizeHttpProblemEvidence(await readProblemResponse(response));
+        if (!Array.isArray(problem.issues) || problem.issues.length === 0) {
+          throw new Error("Generated route validation did not expose structured issues.");
+        }
+        return {
+          kind: "problem",
+          problem,
+          provenance,
+          recoveryAction: ROUTE_VALIDATION_RECOVERY,
+        };
+      }),
   };
 }
 
@@ -437,35 +438,38 @@ function createRateLimitScenario(): OperationalFailureDrillScenario {
       provenance,
       recoveryAction: RATE_LIMIT_RECOVERY,
     },
-    run: async () => {
-      const app = createCrocoApp();
-      const request = () =>
-        new Request("http://localhost/ops/jobs?limit=0", {
-          headers: { "x-forwarded-for": "127.0.0.1" },
-        });
-      for (let attempt = 0; attempt < 100; attempt += 1) {
-        const allowed = await app.fetch(request());
-        if (allowed.status !== 200) {
-          throw new Error(`Rate-limit fixture request ${attempt + 1} returned ${allowed.status}.`);
+    run: () =>
+      runWithLoopbackTelemetry(async () => {
+        const app = createCrocoApp();
+        const request = () =>
+          new Request("http://localhost/ops/jobs?limit=0", {
+            headers: { "x-forwarded-for": "127.0.0.1" },
+          });
+        for (let attempt = 0; attempt < 100; attempt += 1) {
+          const allowed = await app.fetch(request());
+          if (allowed.status !== 200) {
+            throw new Error(
+              `Rate-limit fixture request ${attempt + 1} returned ${allowed.status}.`,
+            );
+          }
         }
-      }
-      const response = await app.fetch(request());
-      const rawProblem = normalizeHttpProblemEvidence(await readProblemResponse(response));
-      const diagnostics = readRateLimitHeaderEvidence(response);
-      const problem = {
-        ...rawProblem,
-        resetAt: NORMALIZED_RESET_AT,
-        retryAfterSeconds: NORMALIZED_RETRY_AFTER_SECONDS,
-      } satisfies ProblemDetails;
+        const response = await app.fetch(request());
+        const rawProblem = normalizeHttpProblemEvidence(await readProblemResponse(response));
+        const diagnostics = readRateLimitHeaderEvidence(response);
+        const problem = {
+          ...rawProblem,
+          resetAt: NORMALIZED_RESET_AT,
+          retryAfterSeconds: NORMALIZED_RETRY_AFTER_SECONDS,
+        } satisfies ProblemDetails;
 
-      return {
-        kind: "problem",
-        problem,
-        diagnostics: [diagnostics],
-        provenance,
-        recoveryAction: RATE_LIMIT_RECOVERY,
-      };
-    },
+        return {
+          kind: "problem",
+          problem,
+          diagnostics: [diagnostics],
+          provenance,
+          recoveryAction: RATE_LIMIT_RECOVERY,
+        };
+      }),
   };
 }
 
@@ -711,6 +715,33 @@ async function closeServer(server: Server): Promise<void> {
   await new Promise<void>((resolveClose, rejectClose) => {
     server.close((error) => (error ? rejectClose(error) : resolveClose()));
   });
+}
+
+async function runWithLoopbackTelemetry<T>(run: () => Promise<T>): Promise<T> {
+  const server = createServer((_request, response) => {
+    response.writeHead(200);
+    response.end();
+  });
+  await listenOnLoopback(server);
+  const address = server.address() as AddressInfo;
+
+  try {
+    await TelemetryRuntime.reset();
+    await TelemetryRuntime.getInstance().init({
+      serviceName: "croco-generated-failure-drill",
+      trace: {
+        enabled: true,
+        exporterUrl: `http://127.0.0.1:${address.port}/v1/traces`,
+      },
+    });
+    return await run();
+  } finally {
+    try {
+      await TelemetryRuntime.reset();
+    } finally {
+      await closeServer(server);
+    }
+  }
 }
 
 function resolveProjectRoot(): string {

@@ -29,6 +29,8 @@ export {
   TelemetryBatchConfigurationProblem,
   TelemetryForceFlushUnsupportedProblem,
   TelemetryInitializationConflictProblem,
+  TelemetryShutdownTimeoutInvalidProblem,
+  TelemetryShutdownTimeoutProblem,
 } from "./libs/problems/TelemetryProblems";
 export type {
   TelemetryBatchConfigurationConstraint,

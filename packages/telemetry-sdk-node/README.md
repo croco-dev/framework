@@ -151,6 +151,16 @@ Lambda에서는 handler 작업이 끝난 뒤 `forceFlush()` 결과를 확인하�
 종료는 `completed`, 명시적 비활성화는 `skipped`, SDK가 없는 pre-init 상태는 `unsupported`입니다. `shutdown()`이
 `completed`를 반환한 뒤에는 새 `init()` 호출로 trace runtime을 다시 시작할 수 있습니다.
 
+`shutdown(timeoutMillis)`은 기본 30초 안에 한 번의 SDK 종료를 완료해야 합니다. 1부터 `2_147_483_647`까지의 정수만
+허용되며, 동시 호출자는 첫 호출이 시작한 같은 종료 결과를 기다립니다. 종료 중 `init()`은 충돌 Problem으로 실패하고
+`forceFlush()`는 종료 결과를 먼저 기다립니다. `telemetry-sdk-node/shutdown-timeout` 이후의 `shutdown()` 재호출은 새 SDK
+종료를 시작하지 않고 이미 진행 중인 teardown을 새 제한 시간으로 다시 기다립니다. teardown이 완료된 뒤에는
+OpenTelemetry 전역 provider와 instrumentation을 해제하므로 같은 프로세스에서 다시 초기화할 수 있습니다.
+
+SDK 자체가 종료를 거부해 `TELEMETRY_RUNTIME_ERROR`가 발생한 경우에는 upstream의 일회성 종료 결과가 고정됩니다. 이
+상태에서는 `shutdown()`, `forceFlush()`, `reset()`이 같은 실패를 보존하고 `init()`도 거부합니다. 원인을 해결한 뒤
+프로세스를 다시 시작해야 하며, 런타임은 이 실패를 `completed`로 바꾸거나 두 번째 SDK 종료를 시작하지 않습니다.
+
 ## API 레퍼런스
 
 - `TelemetryRuntime`: `init`, `forceFlush`, `shutdown`, `isInitialized`, `isEnabled`, `getConfig`
@@ -158,7 +168,7 @@ Lambda에서는 handler 작업이 끝난 뒤 `forceFlush()` 결과를 확인하�
 - `ProbabilitySampler`: 확률 기반 샘플링 구현체
 - 자동 계측: `normalizeAutoInstrumentationConfig`, `LAMBDA_DEFAULT_MODULES`, `NODE_DEFAULT_MODULES`
 - Problem: `OtlpEndpointRequiredProblem`, `SamplerProblem`, `TelemetryAutoInstrumentationProblem`,
-  `TelemetryBatchConfigurationProblem`
+  `TelemetryBatchConfigurationProblem`, `TelemetryShutdownTimeoutInvalidProblem`, `TelemetryShutdownTimeoutProblem`
 - 타입: `TelemetryConfig`, `TraceConfig`, `ForceFlushResult`, `ShutdownResult`, `TelemetryLifecycleSkipReason`,
   `TelemetryBatchConfigurationField`, `TelemetryBatchConfigurationConstraint`
 

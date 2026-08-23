@@ -1,5 +1,9 @@
+import { metrics, ProxyTracerProvider, trace } from "@opentelemetry/api";
+import { logs } from "@opentelemetry/api-logs";
+import type { Instrumentation } from "@opentelemetry/instrumentation";
 import type { NodeSDK } from "@opentelemetry/sdk-node";
 import type { BatchSpanProcessor, Sampler } from "@opentelemetry/sdk-trace-base";
+import type { TracerProvider } from "@opentelemetry/api";
 import {
   ATTR_DEPLOYMENT_ENVIRONMENT_NAME,
   SEMRESATTRS_SERVICE_NAME,
@@ -18,6 +22,9 @@ import {
   TelemetryBatchConfigurationProblem,
   TelemetryInitializationConflictProblem,
   TelemetryRuntimeProblem,
+  TelemetryShutdownTimeoutInvalidProblem,
+  TelemetryShutdownTimeoutProblem,
+  MAX_TELEMETRY_SHUTDOWN_TIMEOUT_MS,
 } from "./libs/problems/TelemetryProblems";
 import { resolveDeploymentEnvironment } from "./libs/resources/DeploymentEnvironment";
 import type {
@@ -31,9 +38,16 @@ class TelemetryRuntime {
   private processor: BatchSpanProcessor | null = null;
   private initialized = false;
   private initPromise: Promise<void> | null = null;
+  private shutdownPromise: Promise<ShutdownResult> | null = null;
+  private sdkShutdownPromise: Promise<void> | null = null;
+  private shutdownFailure: TelemetryRuntimeProblem | TelemetryShutdownTimeoutProblem | null = null;
   private config: TelemetryConfig | null = null;
   private configFingerprint: string | null = null;
   private enabledAutoInstrumentationModules: string[] = [];
+  private activeInstrumentations: Instrumentation[] = [];
+  private ownsTracerProvider = false;
+  private ownsMeterProvider = false;
+  private ownsLoggerProvider = false;
   private readonly fingerprintIdentities = new WeakMap<object, number>();
   private nextFingerprintIdentity = 1;
 
@@ -77,6 +91,10 @@ class TelemetryRuntime {
     }
 
     validateBatchSpanProcessorConfig(config);
+
+    if (this.shutdownPromise || this.shutdownFailure) {
+      throw new TelemetryInitializationConflictProblem(this.getInitializationState());
+    }
 
     const requestedConfig = snapshotTelemetryConfig(config);
     const requestedFingerprint = this.createConfigFingerprint(requestedConfig);
@@ -169,13 +187,25 @@ class TelemetryRuntime {
           instrumentations: resolvedInstrumentation.instrumentations,
         });
 
+        const tracerProviderBefore = getTracerProviderIdentity();
+        const meterProviderBefore = metrics.getMeterProvider();
+        const loggerProviderBefore = logs.getLoggerProvider();
+
         this.sdk.start();
+        this.ownsTracerProvider = getTracerProviderIdentity() !== tracerProviderBefore;
+        this.ownsMeterProvider = metrics.getMeterProvider() !== meterProviderBefore;
+        this.ownsLoggerProvider = logs.getLoggerProvider() !== loggerProviderBefore;
+        this.activeInstrumentations = resolvedInstrumentation.instrumentations;
         this.enabledAutoInstrumentationModules = resolvedInstrumentation.enabledModules;
         this.initialized = true;
       } catch (error) {
         this.initialized = false;
         this.sdk = null;
         this.processor = null;
+        this.activeInstrumentations = [];
+        this.ownsTracerProvider = false;
+        this.ownsMeterProvider = false;
+        this.ownsLoggerProvider = false;
         this.enabledAutoInstrumentationModules = [];
         if (
           error instanceof OtlpEndpointRequiredProblem ||
@@ -200,6 +230,14 @@ class TelemetryRuntime {
   }
 
   async forceFlush(timeoutMillis?: number): Promise<ForceFlushResult> {
+    const pendingShutdown = this.shutdownPromise;
+    if (pendingShutdown) {
+      await pendingShutdown;
+    }
+    if (this.shutdownFailure) {
+      throw this.shutdownFailure;
+    }
+
     const pendingInit = this.initPromise;
     if (pendingInit) {
       try {
@@ -253,7 +291,38 @@ class TelemetryRuntime {
     }
   }
 
-  async shutdown(): Promise<ShutdownResult> {
+  async shutdown(timeoutMillis?: number): Promise<ShutdownResult> {
+    if (this.shutdownPromise) {
+      return this.shutdownPromise;
+    }
+
+    if (this.shutdownFailure instanceof TelemetryRuntimeProblem) {
+      throw this.shutdownFailure;
+    }
+
+    const effectiveTimeout = timeoutMillis === undefined ? 30000 : timeoutMillis;
+    if (
+      !Number.isSafeInteger(effectiveTimeout) ||
+      effectiveTimeout <= 0 ||
+      effectiveTimeout > MAX_TELEMETRY_SHUTDOWN_TIMEOUT_MS
+    ) {
+      throw new TelemetryShutdownTimeoutInvalidProblem(effectiveTimeout);
+    }
+
+    this.initialized = false;
+    const shutdownPromise = Promise.resolve().then(() => this.performShutdown(effectiveTimeout));
+    this.shutdownPromise = shutdownPromise;
+
+    try {
+      return await shutdownPromise;
+    } finally {
+      if (this.shutdownPromise === shutdownPromise) {
+        this.shutdownPromise = null;
+      }
+    }
+  }
+
+  private async performShutdown(timeoutMillis: number): Promise<ShutdownResult> {
     const pendingInit = this.initPromise;
     if (pendingInit) {
       try {
@@ -265,27 +334,77 @@ class TelemetryRuntime {
       }
     }
 
+    this.initialized = false;
+
     if (!this.sdk) {
       const reason = this.getDisabledLifecycleReason();
-      this.initialized = false;
       this.initPromise = null;
+      this.shutdownFailure = null;
       this.clearInitializationContract();
       return reason
         ? { outcome: "skipped", reason }
         : { outcome: "unsupported", reason: "not-initialized" };
     }
 
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
     try {
-      await this.sdk.shutdown();
+      const sdkShutdownPromise = this.sdkShutdownPromise ?? this.sdk.shutdown();
+      this.sdkShutdownPromise = sdkShutdownPromise;
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(
+          () => reject(new TelemetryShutdownTimeoutProblem(timeoutMillis)),
+          timeoutMillis,
+        );
+      });
+
+      await Promise.race([sdkShutdownPromise, timeoutPromise]);
+      this.cleanupOpenTelemetryState();
       this.sdk = null;
       this.processor = null;
+      this.sdkShutdownPromise = null;
+      this.activeInstrumentations = [];
+      this.ownsTracerProvider = false;
+      this.ownsMeterProvider = false;
+      this.ownsLoggerProvider = false;
       this.enabledAutoInstrumentationModules = [];
-      this.initialized = false;
       this.initPromise = null;
+      this.shutdownFailure = null;
       this.clearInitializationContract();
       return { outcome: "completed" };
     } catch (error) {
-      throw this.createRuntimeProblem("shutdown", error);
+      const problem =
+        error instanceof TelemetryShutdownTimeoutProblem
+          ? error
+          : this.createRuntimeProblem("shutdown", error);
+      this.shutdownFailure = problem;
+      throw problem;
+    } finally {
+      if (timeoutId !== undefined) {
+        clearTimeout(timeoutId);
+      }
+    }
+  }
+
+  private cleanupOpenTelemetryState(): void {
+    const failures: unknown[] = [];
+    const cleanupOperations: Array<() => void> = [
+      ...this.activeInstrumentations.map((instrumentation) => () => instrumentation.disable()),
+      ...(this.ownsTracerProvider ? [() => trace.disable()] : []),
+      ...(this.ownsMeterProvider ? [() => metrics.disable()] : []),
+      ...(this.ownsLoggerProvider ? [() => logs.disable()] : []),
+    ];
+
+    for (const cleanup of cleanupOperations) {
+      try {
+        cleanup();
+      } catch (error) {
+        failures.push(error);
+      }
+    }
+
+    if (failures.length > 0) {
+      throw new TelemetryRuntimeProblem("shutdown", failures[0]);
     }
   }
 
@@ -326,7 +445,21 @@ class TelemetryRuntime {
     return null;
   }
 
-  private getInitializationState(): "disabled" | "initialized" | "initializing" {
+  private getInitializationState():
+    | "disabled"
+    | "initialized"
+    | "initializing"
+    | "shutting-down"
+    | "shutdown-timed-out"
+    | "shutdown-failed" {
+    if (this.shutdownPromise) {
+      return "shutting-down";
+    }
+    if (this.shutdownFailure) {
+      return this.shutdownFailure instanceof TelemetryShutdownTimeoutProblem
+        ? "shutdown-timed-out"
+        : "shutdown-failed";
+    }
     if (this.initPromise) {
       return "initializing";
     }
@@ -410,6 +543,11 @@ class TelemetryRuntime {
     this.fingerprintIdentities.set(value, identity);
     return identity;
   }
+}
+
+function getTracerProviderIdentity(): TracerProvider {
+  const provider = trace.getTracerProvider();
+  return provider instanceof ProxyTracerProvider ? provider.getDelegate() : provider;
 }
 
 const MAX_BATCH_PROCESSOR_INTEGER = 2_147_483_647;
