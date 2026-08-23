@@ -15,6 +15,8 @@ export {
 export {
   PostHogAnalyticsCaptureProblem,
   PostHogAnalyticsFlushProblem,
+  PostHogAnalyticsGroupProblem,
+  PostHogAnalyticsIdentifyProblem,
   PostHogAnalyticsReadinessProblem,
 } from "./libs/problems/PostHogAnalyticsProblems";
 export type {

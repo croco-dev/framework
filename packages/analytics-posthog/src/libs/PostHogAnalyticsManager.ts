@@ -6,6 +6,8 @@ import { PostHogClient } from "@croco/integrations-posthog";
 import {
   PostHogAnalyticsCaptureProblem,
   PostHogAnalyticsFlushProblem,
+  PostHogAnalyticsGroupProblem,
+  PostHogAnalyticsIdentifyProblem,
 } from "./problems/PostHogAnalyticsProblems";
 
 export type PostHogAnalyticsManagerOptions = {
@@ -37,20 +39,14 @@ export class PostHogAnalyticsManager extends AnalyticsManager {
     const distinctId = this.getDistinctId(properties);
     const groups = this.getGroups(properties);
 
-    try {
-      const result = this.posthogClient.getClient().capture({
+    this.invokeProvider({ name: "capture", event }, () =>
+      this.posthogClient.getClient().capture({
         distinctId,
         event,
         properties,
         groups,
-      });
-
-      Promise.resolve(result).catch((error: unknown) => {
-        this.logCaptureFailure(event, error);
-      });
-    } catch (error) {
-      this.logCaptureFailure(event, error);
-    }
+      }),
+    );
   }
 
   identify(distinctId: string, properties?: Record<string, unknown>): void {
@@ -59,10 +55,12 @@ export class PostHogAnalyticsManager extends AnalyticsManager {
       return;
     }
 
-    this.posthogClient.getClient().identify({
-      distinctId,
-      properties,
-    });
+    this.invokeProvider({ name: "identify" }, () =>
+      this.posthogClient.getClient().identify({
+        distinctId,
+        properties,
+      }),
+    );
   }
 
   group(groupType: string, groupKey: string, properties?: Record<string, unknown>): void {
@@ -71,11 +69,13 @@ export class PostHogAnalyticsManager extends AnalyticsManager {
       return;
     }
 
-    this.posthogClient.getClient().groupIdentify({
-      groupType,
-      groupKey,
-      properties,
-    });
+    this.invokeProvider({ name: "group" }, () =>
+      this.posthogClient.getClient().groupIdentify({
+        groupType,
+        groupKey,
+        properties,
+      }),
+    );
   }
 
   async flush(): Promise<void> {
@@ -122,15 +122,25 @@ export class PostHogAnalyticsManager extends AnalyticsManager {
     return undefined;
   }
 
-  private logCaptureFailure(event: string, error: unknown): void {
-    const problem = new PostHogAnalyticsCaptureProblem(
-      event,
-      error instanceof Error ? error : undefined,
-    );
-    this.getLogger().warn("PostHog capture failed", {
-      event,
+  private invokeProvider(operation: PostHogAnalyticsOperation, invocation: () => unknown): void {
+    try {
+      const result = invocation();
+      void Promise.resolve(result).catch((error: unknown) => {
+        this.logProviderFailure(operation, error);
+      });
+    } catch (error) {
+      this.logProviderFailure(operation, error);
+    }
+  }
+
+  private logProviderFailure(operation: PostHogAnalyticsOperation, error: unknown): void {
+    const problemCode = createProviderFailureProblem(operation, error).code;
+    this.getLogger().warn(`PostHog ${operation.name} failed`, {
+      ...(operation.name === "capture"
+        ? { event: operation.event }
+        : { operation: operation.name }),
       ...createSafeErrorLogMetadata(error),
-      problemCode: problem.code,
+      problemCode,
     });
   }
 
@@ -161,6 +171,24 @@ type SafePostHogErrorLogMetadata = {
   readonly upstreamStatus?: number;
 };
 
+type PostHogAnalyticsOperation =
+  | { readonly name: "capture"; readonly event: string }
+  | { readonly name: "identify" }
+  | { readonly name: "group" };
+
+function createProviderFailureProblem(operation: PostHogAnalyticsOperation, error: unknown) {
+  const cause = toErrorCause(error);
+
+  switch (operation.name) {
+    case "capture":
+      return new PostHogAnalyticsCaptureProblem(operation.event, cause);
+    case "identify":
+      return new PostHogAnalyticsIdentifyProblem(cause);
+    case "group":
+      return new PostHogAnalyticsGroupProblem(cause);
+  }
+}
+
 function createSafeErrorLogMetadata(error: unknown): SafePostHogErrorLogMetadata {
   if (!error || typeof error !== "object") {
     return { errorType: typeof error };
@@ -179,27 +207,31 @@ function createSafeErrorLogMetadata(error: unknown): SafePostHogErrorLogMetadata
 }
 
 function getErrorName(error: object): string | undefined {
-  if (error instanceof Error) {
-    return error.name;
-  }
-
   return getErrorStringProperty(error, "name");
 }
 
 function getErrorStringProperty(error: object, key: string): string | undefined {
-  if (!(key in error)) {
+  try {
+    const value = Reflect.get(error, key);
+    return typeof value === "string" ? value : undefined;
+  } catch {
     return undefined;
   }
-
-  const value = (error as Record<string, unknown>)[key];
-  return typeof value === "string" ? value : undefined;
 }
 
 function getErrorNumberProperty(error: object, key: string): number | undefined {
-  if (!(key in error)) {
+  try {
+    const value = Reflect.get(error, key);
+    return typeof value === "number" ? value : undefined;
+  } catch {
     return undefined;
   }
+}
 
-  const value = (error as Record<string, unknown>)[key];
-  return typeof value === "number" ? value : undefined;
+function toErrorCause(error: unknown): Error | undefined {
+  try {
+    return error instanceof Error ? error : undefined;
+  } catch {
+    return undefined;
+  }
 }

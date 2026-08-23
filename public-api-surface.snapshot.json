@@ -2813,6 +2813,18 @@
               "declarationKind": "class"
             },
             {
+              "name": "PostHogAnalyticsGroupProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/PostHogAnalyticsProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "PostHogAnalyticsIdentifyProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/PostHogAnalyticsProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "PostHogAnalyticsManager",
               "exportKind": "named",
               "source": "./libs/PostHogAnalyticsManager",
