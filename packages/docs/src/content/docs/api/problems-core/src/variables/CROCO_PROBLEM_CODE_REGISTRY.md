@@ -5,7 +5,7 @@ prev: false
 title: "CROCO_PROBLEM_CODE_REGISTRY"
 ---
 
-> `const` **CROCO_PROBLEM_CODE_REGISTRY**: `object`
+> `const` **CROCO\_PROBLEM\_CODE\_REGISTRY**: `object`
 
 ## Type Declaration
 
