@@ -10,8 +10,8 @@ title: "PageDataProvider"
 React provider for the Croco page data pattern.
 
 Place this provider at the browser hydration or SSR entrypoint so descendants
-can call `usePageData<T>()` for route data and `usePageMeta()` for title,
-description, and original URL metadata.
+can call the optional, required, or parsed page data hook for route data and
+`usePageMeta()` for title, description, and original URL metadata.
 
 ## Example
 

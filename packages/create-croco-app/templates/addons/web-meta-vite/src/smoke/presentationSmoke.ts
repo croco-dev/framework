@@ -4,7 +4,7 @@ import type { ReactElement } from "react";
 import { hydrateRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 
-import { PageDataProvider, usePageData, usePageMeta } from "@croco/frontend-react";
+import { PageDataProvider, usePageMeta, useRequiredPageData } from "@croco/frontend-react";
 import {
   createIsrMiddleware,
   createMetaFetchHandler,
@@ -62,7 +62,7 @@ function readRuntimeEnvValue(context: RuntimeContext | undefined, key: string): 
 }
 
 function SmokePage(): ReactElement {
-  const data = usePageData<{
+  const data = useRequiredPageData<{
     readonly envValue: string;
     readonly message: string;
     readonly platform: string;
@@ -82,12 +82,8 @@ type HydrationPageData = {
 };
 
 function HydratedPage() {
-  const data = usePageData<HydrationPageData>();
+  const data = useRequiredPageData<HydrationPageData>();
   const meta = usePageMeta();
-
-  if (!data) {
-    throw new Error("Generated page data was not available during hydration");
-  }
 
   return createElement(
     "main",
@@ -282,7 +278,7 @@ async function main(): Promise<void> {
   );
   assert(
     pageHtml.includes("page-data:hydrated:node:node-env:/"),
-    `Generated page data flow did not render through usePageData, got '${pageHtml}'`,
+    `Generated page data flow did not render through useRequiredPageData, got '${pageHtml}'`,
   );
 
   await expectText(
