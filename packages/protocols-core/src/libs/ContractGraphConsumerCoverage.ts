@@ -443,7 +443,10 @@ function compareEntitlementFingerprints(
     readonly feature: string;
   },
 ): number {
-  return compareStrings(JSON.stringify(left), JSON.stringify(right));
+  const serializedLeft = JSON.stringify(left);
+  const serializedRight = JSON.stringify(right);
+
+  return serializedLeft < serializedRight ? -1 : serializedLeft > serializedRight ? 1 : 0;
 }
 
 function hasRouteField(route: ContractGraphRoute, field: ContractGraphConsumerRouteField): boolean {

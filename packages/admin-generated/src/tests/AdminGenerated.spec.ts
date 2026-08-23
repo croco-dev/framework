@@ -16,7 +16,7 @@ import {
   Query,
   ResponseSchema,
 } from "@croco/protocols-rest";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import {
   AdminGeneratedContractProblem,
@@ -421,6 +421,29 @@ export const adminResources = [
     expect(generateAdminResourceSourceFromContractGraph(reorderedGraph)).toBe(
       generateAdminResourceSourceFromContractGraph(graph),
     );
+  });
+
+  it("should order entitlement requirements without consulting the runtime locale", () => {
+    @Controller("/reports")
+    class ReportsController {
+      @Get("/")
+      @RequiresEntitlement({ feature: "ä.reports" })
+      @RequiresEntitlement({ feature: "z.reports" })
+      listReports(): void {}
+    }
+
+    const graph = buildContractGraph([ReportsController]);
+    const localeCompare = vi.spyOn(String.prototype, "localeCompare").mockImplementation(() => {
+      throw new Error("localeCompare must not affect entitlement ordering");
+    });
+
+    try {
+      expect(
+        createAdminGeneratedArtifact(graph).resources[0]?.operations.list?.entitlements,
+      ).toEqual([{ feature: "z.reports" }, { feature: "ä.reports" }]);
+    } finally {
+      localeCompare.mockRestore();
+    }
   });
 
   it("should fail ambiguous or unsupported route shapes with stable diagnostics", () => {
