@@ -186,6 +186,10 @@ function jobSection(workflow: string, job: string, nextJob: string): string {
   return start === -1 ? "" : workflow.slice(start + 1, end === -1 ? undefined : end + 1);
 }
 
+function jobCondition(job: string): string | undefined {
+  return /^\s*if:\s*(.+)$/m.exec(job)?.[1]?.trim();
+}
+
 function turboTasks(command: readonly string[]): readonly string[] {
   const turboIndex = command.findIndex(
     (argument, index) => argument === "turbo" && command[index + 1] === "run",
@@ -270,12 +274,8 @@ export function findCiPerformanceBudgetViolations(
   if (!validate.includes('args+=(--base "$VERIFICATION_BASE" --head HEAD)')) {
     violations.push("pull-request and trunk validation must both use the changed-file scope");
   }
-  if (
-    !docsSync.includes(
-      "if: github.event_name != 'pull_request' && needs.changes.outputs.api-source == 'true'",
-    )
-  ) {
-    violations.push("full generated API documentation drift checks must stay off package PRs");
+  if (jobCondition(docsSync) !== "needs.changes.outputs.api-source == 'true'") {
+    violations.push("generated API documentation drift checks must follow API-source changes");
   }
   if (
     !validate.includes("--sample-output ci-reports/ci-performance/raw-sample.json") ||
