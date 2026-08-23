@@ -454,64 +454,105 @@ describe("MetadataStorage", () => {
     expect(MetadataStorage.has(TEST_KEY, Target)).toBe(false);
   });
 
-  it("should reset target indexes when clearing metadata", () => {
-    type InspectableMetadataStorage = {
-      define: <T>(key: symbol, target: object, value: T, propertyKey?: string | symbol) => void;
-      clear: () => void;
-      getAll: <T>(
-        key: symbol,
-      ) => Array<{ target: object; propertyKey?: string | symbol; value: T }>;
-      makeKey: (key: symbol, target: object, propertyKey?: string | symbol) => string;
-    };
-
+  it("should remove all indexed metadata when clearing", () => {
     class FirstTarget {}
     class SecondTarget {}
+    const secondKey = Symbol("second");
 
-    const inspectableStorage = MetadataStorage as unknown as InspectableMetadataStorage;
+    MetadataStorage.define(TEST_KEY, FirstTarget, "first");
+    MetadataStorage.define(secondKey, SecondTarget, "second", "member");
 
-    inspectableStorage.define(TEST_KEY, FirstTarget, "first");
-    expect(inspectableStorage.makeKey(TEST_KEY, FirstTarget)).toContain("::1::");
+    MetadataStorage.clear();
 
-    inspectableStorage.clear();
-
-    inspectableStorage.define(TEST_KEY, SecondTarget, "second");
-
-    expect(inspectableStorage.getAll<string>(TEST_KEY)).toEqual([
-      { target: SecondTarget, propertyKey: undefined, value: "second" },
-    ]);
-    expect(inspectableStorage.makeKey(TEST_KEY, SecondTarget)).toContain("::1::");
+    expect(MetadataStorage.getAll(TEST_KEY)).toEqual([]);
+    expect(MetadataStorage.getAll(secondKey)).toEqual([]);
+    expect(MetadataStorage.has(TEST_KEY, FirstTarget)).toBe(false);
+    expect(MetadataStorage.has(secondKey, SecondTarget, "member")).toBe(false);
   });
 
   it("should keep distinct symbols with same description isolated", () => {
-    type InspectableMetadataStorage = {
-      define: <T>(key: symbol, target: object, value: T, propertyKey?: string | symbol) => void;
-      get: <T>(key: symbol, target: object, propertyKey?: string | symbol) => T | undefined;
-      getAll: <T>(
-        key: symbol,
-      ) => Array<{ target: object; propertyKey?: string | symbol; value: T }>;
-      makeKey: (key: symbol, target: object, propertyKey?: string | symbol) => string;
-    };
-
     class Target {}
 
     const firstKey = Symbol("duplicate");
     const secondKey = Symbol("duplicate");
-    const inspectableStorage = MetadataStorage as unknown as InspectableMetadataStorage;
 
-    inspectableStorage.define(firstKey, Target, "first-value");
-    inspectableStorage.define(secondKey, Target, "second-value");
+    MetadataStorage.define(firstKey, Target, "first-value");
+    MetadataStorage.define(secondKey, Target, "second-value");
 
-    expect(inspectableStorage.get(firstKey, Target)).toBe("first-value");
-    expect(inspectableStorage.get(secondKey, Target)).toBe("second-value");
-    expect(inspectableStorage.getAll<string>(firstKey)).toEqual([
+    expect(MetadataStorage.get(firstKey, Target)).toBe("first-value");
+    expect(MetadataStorage.get(secondKey, Target)).toBe("second-value");
+    expect(MetadataStorage.getAll<string>(firstKey)).toStrictEqual([
       { target: Target, propertyKey: undefined, value: "first-value" },
     ]);
-    expect(inspectableStorage.getAll<string>(secondKey)).toEqual([
+    expect(MetadataStorage.getAll<string>(secondKey)).toStrictEqual([
       { target: Target, propertyKey: undefined, value: "second-value" },
     ]);
-    expect(inspectableStorage.makeKey(firstKey, Target)).not.toBe(
-      inspectableStorage.makeKey(secondKey, Target),
-    );
+  });
+
+  it("should keep distinct property symbols with the same description isolated", () => {
+    class Target {}
+
+    const firstProperty = Symbol("member");
+    const secondProperty = Symbol("member");
+
+    MetadataStorage.define(TEST_KEY, Target, "first-value", firstProperty);
+    MetadataStorage.define(TEST_KEY, Target, "second-value", secondProperty);
+
+    expect(MetadataStorage.get(TEST_KEY, Target, firstProperty)).toBe("first-value");
+    expect(MetadataStorage.get(TEST_KEY, Target, secondProperty)).toBe("second-value");
+    expect(MetadataStorage.has(TEST_KEY, Target, firstProperty)).toBe(true);
+    expect(MetadataStorage.has(TEST_KEY, Target, secondProperty)).toBe(true);
+    expect(MetadataStorage.getAll<string>(TEST_KEY)).toStrictEqual([
+      { target: Target, propertyKey: firstProperty, value: "first-value" },
+      { target: Target, propertyKey: secondProperty, value: "second-value" },
+    ]);
+
+    expect(MetadataStorage.delete(TEST_KEY, Target, firstProperty)).toBe(true);
+
+    expect(MetadataStorage.has(TEST_KEY, Target, firstProperty)).toBe(false);
+    expect(MetadataStorage.get(TEST_KEY, Target, secondProperty)).toBe("second-value");
+    expect(MetadataStorage.getAll<string>(TEST_KEY)).toStrictEqual([
+      { target: Target, propertyKey: secondProperty, value: "second-value" },
+    ]);
+    expect(MetadataStorage.getAllForTarget<string>(TEST_KEY, Target)).toStrictEqual([
+      { propertyKey: secondProperty, value: "second-value" },
+    ]);
+  });
+
+  it("should keep class metadata separate from an empty-string property", () => {
+    class Target {}
+
+    MetadataStorage.define(TEST_KEY, Target, "class-value");
+    MetadataStorage.define(TEST_KEY, Target, "empty-property-value", "");
+
+    expect(MetadataStorage.get(TEST_KEY, Target)).toBe("class-value");
+    expect(MetadataStorage.get(TEST_KEY, Target, "")).toBe("empty-property-value");
+    expect(MetadataStorage.has(TEST_KEY, Target)).toBe(true);
+    expect(MetadataStorage.has(TEST_KEY, Target, "")).toBe(true);
+    expect(MetadataStorage.getAll<string>(TEST_KEY)).toStrictEqual([
+      { target: Target, propertyKey: undefined, value: "class-value" },
+      { target: Target, propertyKey: "", value: "empty-property-value" },
+    ]);
+
+    expect(MetadataStorage.delete(TEST_KEY, Target, "")).toBe(true);
+
+    expect(MetadataStorage.get(TEST_KEY, Target)).toBe("class-value");
+    expect(MetadataStorage.has(TEST_KEY, Target, "")).toBe(false);
+  });
+
+  it("should preserve literal string property keys", () => {
+    class Target {}
+
+    MetadataStorage.define(TEST_KEY, Target, "first-value", "member::name");
+    MetadataStorage.define(TEST_KEY, Target, "second-value", "member");
+    MetadataStorage.define(TEST_KEY, Target, "updated-first-value", "member::name");
+
+    expect(MetadataStorage.get(TEST_KEY, Target, "member::name")).toBe("updated-first-value");
+    expect(MetadataStorage.get(TEST_KEY, Target, "member")).toBe("second-value");
+    expect(MetadataStorage.getAllForTarget<string>(TEST_KEY, Target)).toStrictEqual([
+      { propertyKey: "member::name", value: "updated-first-value" },
+      { propertyKey: "member", value: "second-value" },
+    ]);
   });
 });
 
