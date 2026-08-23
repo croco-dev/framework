@@ -3611,6 +3611,12 @@
       "owner": "@croco/transports-http"
     },
     {
+      "path": "packages/transports-http/src/tests/NodeServeStaticSecurity.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/transports-http"
+    },
+    {
       "path": "packages/transports-http/src/tests/OperationalEndpoints.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
