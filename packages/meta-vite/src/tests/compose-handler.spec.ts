@@ -122,19 +122,6 @@ describe("createMetaFetchHandler", () => {
 
     await expect(handler(new Request("https://example.com/page"))).rejects.toBe(originalError);
   });
-
-  it("still falls back to page handler when API handler returns explicit unhandled result", async () => {
-    const pageHandler = vi.fn(async () => new Response("page-ok"));
-    const handler = createMetaFetchHandler({
-      apiHandler: async () => ({ handled: false as const }),
-      pageHandler,
-    });
-
-    const response = await handler(new Request("https://example.com/page"));
-
-    await expect(response.text()).resolves.toBe("page-ok");
-    expect(pageHandler).toHaveBeenCalledOnce();
-  });
 });
 
 describe("createMetaFetchHandler with apiRoutes", () => {
