@@ -17,6 +17,7 @@ import {
   markWorkspacePackageClosureBuilt,
   assertGeneratedPresentationProfileMatchesCatalog,
   createSaasMonetizationCanarySource,
+  getGeneratedSmokeDependencyCaseInputs,
   hasCompleteTapTestEvidence,
   prepareGeneratedUnitEvidenceCapture,
   readCommandOutputSegment,
@@ -1188,6 +1189,22 @@ describe("create-croco-app-generated-smoke dependency resolution", () => {
 });
 
 describe("create-croco-app generated smoke matrix", () => {
+  it("executes generated tests for Meta Vite smoke cases", () => {
+    const cases = new Map(
+      getGeneratedSmokeDependencyCaseInputs().map((smokeCase) => [smokeCase.name, smokeCase]),
+    );
+    const generatedTestValidation = {
+      args: ["test"],
+      label: "test",
+      packagePath: ["libs", "shared", "utils-env"],
+    };
+
+    expect(cases.get("meta-vite-web")?.validations).toContainEqual(generatedTestValidation);
+    expect(cases.get("meta-vite-fullstack-workers")?.validations).toContainEqual(
+      generatedTestValidation,
+    );
+  });
+
   it("keeps REST SPA contract canaries selectable in the blocking tier", () => {
     expect(
       GENERATED_SMOKE_MATRIX_CASES.find(({ name }) => name === "rest-spa-contracts")?.tier,
