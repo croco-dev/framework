@@ -57,6 +57,7 @@ const frameworkContextPackageAliases = isFrameworkContextPackageRun
 const testingPackageAliases = isTestingPackageRun
   ? {
       "@croco/testing/drizzle": resolve(currentWorkingDirectory, "src/drizzle.ts"),
+      "@croco/testing/notifications": resolve(currentWorkingDirectory, "src/notifications.ts"),
       "@croco/testing": resolve(currentWorkingDirectory, "src/index.ts"),
     }
   : {};
