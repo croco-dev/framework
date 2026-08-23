@@ -7,7 +7,9 @@ import { join } from "node:path";
 import { serve, type ServerType } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+
+import { Container } from "@croco/framework-context";
 
 type StaticResponse = {
   readonly status: number;
@@ -18,6 +20,10 @@ type StaticResponse = {
 describe("Hono Node serveStatic security boundary", () => {
   const servers: ServerType[] = [];
   const staticRoots: string[] = [];
+
+  beforeEach(() => {
+    Container.reset();
+  });
 
   afterEach(async () => {
     await Promise.all([
@@ -52,7 +58,7 @@ describe("Hono Node serveStatic security boundary", () => {
 
     const address = server.address();
     if (address === null || typeof address === "string") {
-      throw new Error("Expected the Hono Node test server to listen on a TCP address.");
+      expect.fail("Expected the Hono Node test server to listen on a TCP address.");
     }
 
     const authorized = await requestPath(address.port, "/static/admin/secret.txt");
