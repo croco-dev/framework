@@ -30,7 +30,7 @@ Implementations must make the absence check and create one atomic operation acro
 
 `Promise`\<[`TenantMappingClaimResult`](/api/auth-clerk/src/type-aliases/tenantmappingclaimresult/)\>
 
-***
+---
 
 ### delete()
 
@@ -46,7 +46,7 @@ Implementations must make the absence check and create one atomic operation acro
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### get()
 

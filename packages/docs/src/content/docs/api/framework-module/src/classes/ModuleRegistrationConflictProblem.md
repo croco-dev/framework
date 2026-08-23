@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "UnexpectedTenantMappingClaimProblem"
+title: "ModuleRegistrationConflictProblem"
 ---
 
-Tenant mapping store가 claim 계약에 없는 결과를 반환했을 때 발생하는 Problem입니다.
+RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다.
 
 ## Extends
 
@@ -15,17 +15,17 @@ Tenant mapping store가 claim 계약에 없는 결과를 반환했을 때 발생
 
 ### Constructor
 
-> **new UnexpectedTenantMappingClaimProblem**(`claim`): `UnexpectedTenantMappingClaimProblem`
+> **new ModuleRegistrationConflictProblem**(`registryState`): `ModuleRegistrationConflictProblem`
 
 #### Parameters
 
-##### claim
+##### registryState
 
-`never`
+`"initialized"` \| `"initializing"` \| `"shutting-down"`
 
 #### Returns
 
-`UnexpectedTenantMappingClaimProblem`
+`ModuleRegistrationConflictProblem`
 
 #### Overrides
 
@@ -35,9 +35,9 @@ Tenant mapping store가 claim 계약에 없는 결과를 반환했을 때 발생
 
 ### category
 
-> `readonly` **category**: [`InternalServerError`](/api/problems-core/src/enumerations/problemcategory/#internalservererror) = `ProblemCategory.InternalServerError`
+> `readonly` **category**: [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
 
-#### Overrides
+#### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`category`](/api/problems-core/src/classes/problem/#category)
 
@@ -55,9 +55,9 @@ Tenant mapping store가 claim 계약에 없는 결과를 반환했을 때 발생
 
 ### code
 
-> `readonly` **code**: `"auth-clerk/unexpected-tenant-mapping-claim"` = `"auth-clerk/unexpected-tenant-mapping-claim"`
+> `readonly` **code**: `string`
 
-#### Overrides
+#### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`code`](/api/problems-core/src/classes/problem/#code)
 
@@ -110,6 +110,12 @@ Tenant mapping store가 claim 계약에 없는 결과를 반환했을 때 발생
 #### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`name`](/api/problems-core/src/classes/problem/#name)
+
+---
+
+### registryState
+
+> `readonly` **registryState**: `"initialized"` \| `"initializing"` \| `"shutting-down"`
 
 ---
 

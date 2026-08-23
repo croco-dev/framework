@@ -1926,6 +1926,17 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "framework-module/registration-lifecycle-conflict": recovery({
+    cause:
+      "Module registration was attempted while the registry was initializing, initialized, or shutting down.",
+    userAction:
+      "Call CrocoModule.shutdown() or CrocoModule.reset(), then register and initialize the new module graph.",
+    operatorAction:
+      "Inspect module lifecycle ownership and ensure graph registration occurs only while the registry is idle.",
+    retryability: "not-retryable",
+    redactionPolicy: "safe-message",
+    severity: "warning",
+  }),
   "auth-clerk/webhook-delivery-failed": recovery({
     cause:
       "The idempotency store contains a terminal failure for this Clerk deliveryId and eventType.",

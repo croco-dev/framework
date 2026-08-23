@@ -1,6 +1,11 @@
 import { Container, Token } from "typedi";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { CrocoModule, ModuleDiagnosticsProvider, ModuleLifecycleProblem } from "../index";
+import {
+  CrocoModule,
+  ModuleDiagnosticsProvider,
+  ModuleLifecycleProblem,
+  ModuleRegistrationConflictProblem,
+} from "../index";
 import type { ServiceMetadata } from "typedi";
 import type { ModuleOptions } from "../types";
 
@@ -336,6 +341,94 @@ describe("module initialization rollback", () => {
     expect(start).toHaveBeenCalledTimes(1);
   });
 
+  it("rejects registration after initialization without changing the active graph", async () => {
+    const setup = vi.fn();
+    const start = vi.fn();
+    const lateSetup = vi.fn();
+    CrocoModule.use({ name: "app", setup, start });
+
+    const activeContext = await CrocoModule.initialize();
+    let failure: unknown;
+    try {
+      CrocoModule.use({ name: "late", setup: lateSetup });
+    } catch (error) {
+      failure = error;
+    }
+
+    expect(failure).toBeInstanceOf(ModuleRegistrationConflictProblem);
+    expect(failure).toMatchObject({
+      code: "framework-module/registration-lifecycle-conflict",
+      extensions: {
+        registryState: "initialized",
+        recoveryAction:
+          "Call CrocoModule.shutdown() or CrocoModule.reset() before registering modules.",
+      },
+    });
+
+    await expect(CrocoModule.initialize()).resolves.toBe(activeContext);
+    expect(setup).toHaveBeenCalledTimes(1);
+    expect(start).toHaveBeenCalledTimes(1);
+    expect(lateSetup).not.toHaveBeenCalled();
+
+    const health = await new ModuleDiagnosticsProvider().getHealth();
+    expect(health.details).toMatchObject({
+      registeredModuleCount: 1,
+      initializedModuleCount: 1,
+      modules: [{ name: "app", phase: "started" }],
+    });
+  });
+
+  it("rejects synchronous registration from an initialization hook", async () => {
+    let failure: unknown;
+    const lateSetup = vi.fn();
+    CrocoModule.use({
+      name: "app",
+      setup: () => {
+        try {
+          CrocoModule.use({ name: "late", setup: lateSetup });
+        } catch (error) {
+          failure = error;
+        }
+      },
+    });
+
+    await CrocoModule.initialize();
+
+    expect(failure).toBeInstanceOf(ModuleRegistrationConflictProblem);
+    expect(failure).toMatchObject({
+      code: "framework-module/registration-lifecycle-conflict",
+      extensions: { registryState: "initializing" },
+    });
+    expect(lateSetup).not.toHaveBeenCalled();
+
+    const health = await new ModuleDiagnosticsProvider().getHealth();
+    expect(health.details).toMatchObject({
+      registeredModuleCount: 1,
+      initializedModuleCount: 1,
+      modules: [{ name: "app", phase: "started" }],
+    });
+  });
+
+  it("allows a fresh graph to be registered after reset", async () => {
+    const staleSetup = vi.fn();
+    const freshSetup = vi.fn();
+    CrocoModule.use({ name: "stale", setup: staleSetup });
+    await CrocoModule.initialize();
+
+    CrocoModule.reset();
+    CrocoModule.use({ name: "fresh", setup: freshSetup });
+    await CrocoModule.initialize();
+
+    expect(staleSetup).toHaveBeenCalledTimes(1);
+    expect(freshSetup).toHaveBeenCalledTimes(1);
+    const health = await new ModuleDiagnosticsProvider().getHealth();
+    expect(health.details).toMatchObject({
+      registeredModuleCount: 1,
+      initializedModuleCount: 1,
+      modules: [{ name: "fresh", phase: "started" }],
+    });
+  });
+
   it("shares one failed attempt, compensates once, and leaves shutdown inactive", async () => {
     const cause = new Error("bootstrap failed");
     const setup = vi.fn();
@@ -386,6 +479,38 @@ describe("module initialization rollback", () => {
     expect(health.details).toMatchObject({ initializedModuleCount: 0 });
   });
 
+  it("rejects registration while shutdown is in flight", async () => {
+    let releaseShutdown: (() => void) | undefined;
+    const shutdownGate = new Promise<void>((resolve) => {
+      releaseShutdown = resolve;
+    });
+    const lateSetup = vi.fn();
+    CrocoModule.use({ name: "app", shutdown: () => shutdownGate });
+    await CrocoModule.initialize();
+
+    const stopping = CrocoModule.shutdown();
+    let failure: unknown;
+    try {
+      CrocoModule.use({ name: "late", setup: lateSetup });
+    } catch (error) {
+      failure = error;
+    }
+    releaseShutdown?.();
+    await stopping;
+
+    expect(failure).toMatchObject({
+      code: "framework-module/registration-lifecycle-conflict",
+      extensions: { registryState: "shutting-down" },
+    });
+    expect(lateSetup).not.toHaveBeenCalled();
+    const health = await new ModuleDiagnosticsProvider().getHealth();
+    expect(health.details).toMatchObject({
+      registeredModuleCount: 1,
+      initializedModuleCount: 0,
+      modules: [{ name: "app", phase: "stopped" }],
+    });
+  });
+
   it("fences an initialization attempt when the registry is reset", async () => {
     let releaseSetup: (() => void) | undefined;
     const setupGate = new Promise<void>((resolve) => {
@@ -396,6 +521,7 @@ describe("module initialization rollback", () => {
 
     const initialization = CrocoModule.initialize();
     CrocoModule.reset();
+    CrocoModule.use({ name: "fresh", setup: () => undefined });
     releaseSetup?.();
 
     await expect(initialization).rejects.toThrow(
@@ -403,7 +529,6 @@ describe("module initialization rollback", () => {
     );
     expect(shutdown).toHaveBeenCalledTimes(1);
 
-    CrocoModule.use({ name: "fresh", setup: () => undefined });
     await expect(CrocoModule.initialize()).resolves.toBeDefined();
     const health = await new ModuleDiagnosticsProvider().getHealth();
     expect(health.details).toMatchObject({

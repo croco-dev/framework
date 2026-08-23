@@ -115,6 +115,11 @@ cleanup errors through its ordered `cleanupFailures` extension. Provider
 registrations and overwritten container values are restored to their exact
 pre-attempt state, so callers can retry initialization explicitly.
 
+Module registration is accepted only while the registry is idle. Calls made during
+initialization, after initialization, or while shutdown is running fail with
+`ModuleRegistrationConflictProblem` before changing the registered graph. Call
+`CrocoModule.shutdown()` or `CrocoModule.reset()` before registering a new graph.
+
 ## Dynamic Modules And Presets
 
 Dynamic modules should return `ModuleOptions` from a factory and can be wrapped

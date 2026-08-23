@@ -52,6 +52,7 @@ export {
   ModuleProviderOwnershipProblem,
   ModuleProviderVisibilityProblem,
   ModuleProviderWriteProblem,
+  ModuleRegistrationConflictProblem,
 } from "./problems";
 export type {
   CrocoModule as CrocoModuleDefinition,

@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 667,
+  problemCount: 668,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -8020,7 +8020,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 89,
+          line: 105,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8051,7 +8051,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 111,
+          line: 127,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8082,7 +8082,41 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 127,
+          line: 143,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "framework-module/registration-lifecycle-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#framework-module-registration-lifecycle-conflict",
+      recovery: {
+        cause:
+          "Module registration was attempted while the registry was initializing, initialized, or shutting down.",
+        userAction:
+          "Call CrocoModule.shutdown() or CrocoModule.reset(), then register and initialize the new module graph.",
+        operatorAction:
+          "Inspect module lifecycle ownership and ensure graph registration occurs only while the registry is idle.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/framework-module/src/problems.ts",
+          line: 78,
           column: 5,
           kind: "problem-constructor",
         },
