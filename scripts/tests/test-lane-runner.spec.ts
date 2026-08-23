@@ -411,6 +411,86 @@ describe("test lane runner", () => {
     rmSync(root, { recursive: true, force: true });
   });
 
+  it("relocates only complete unambiguous cached Vitest evidence", () => {
+    const root = mkdtempSync(join(tmpdir(), "croco-relocated-turbo-evidence-"));
+    const workspace = "packages/a";
+    const workspaceRoot = join(root, workspace);
+    const reportPath = join(workspaceRoot, ".turbo/croco-test-evidence.json");
+    const expectedPath = "src/tests/one.spec.ts";
+    mkdirSync(join(workspaceRoot, ".turbo"), { recursive: true });
+    mkdirSync(join(workspaceRoot, "src/tests"), { recursive: true });
+    writeFileSync(join(workspaceRoot, expectedPath), "export {};\n");
+    const command = {
+      owner: "@croco/a",
+      cwd: workspace,
+      paths: [expectedPath],
+      command: ["pnpm", "run", "test"],
+    } as const;
+    const summary = {
+      tasks: [
+        {
+          package: "@croco/a",
+          task: "test",
+          hash: "task-hash",
+          cliArguments: ["--reporter=json", "--outputFile=.turbo/croco-test-evidence.json"],
+          execution: { exitCode: 0 },
+          cache: { status: "HIT" },
+        },
+      ],
+    } as const;
+    const writeReport = (names: readonly string[]) =>
+      writeFileSync(
+        reportPath,
+        JSON.stringify({
+          testResults: names.map((name) => ({
+            name,
+            status: "passed",
+            assertionResults: [{ status: "passed" }],
+          })),
+        }),
+      );
+
+    writeReport([`/relocated/worktree/${workspace}/${expectedPath}`]);
+    expect(readTurboTestTaskEvidence(root, command, "@croco/a", summary)).toMatchObject({
+      executedPaths: [expectedPath],
+      executionState: "reused",
+      cacheHash: "task-hash",
+    });
+
+    writeReport([`C:\\relocated\\worktree\\packages\\a\\src\\tests\\one.spec.ts`]);
+    expect(readTurboTestTaskEvidence(root, command, "@croco/a", summary)).toMatchObject({
+      executedPaths: [expectedPath],
+      executionState: "reused",
+      cacheHash: "task-hash",
+    });
+
+    expect(
+      readTurboTestTaskEvidence(root, command, "@croco/a", {
+        tasks: [{ ...summary.tasks[0], cache: { status: "MISS" } }],
+      }),
+    ).toBeUndefined();
+
+    writeReport([`/relocated/worktree/packages/not-a/${expectedPath}`]);
+    expect(readTurboTestTaskEvidence(root, command, "@croco/a", summary)).toBeUndefined();
+
+    writeReport([`/relocated/worktree/${workspace}/${expectedPath}`]);
+    expect(
+      readTurboTestTaskEvidence(
+        root,
+        { ...command, paths: [expectedPath, expectedPath] },
+        "@croco/a",
+        summary,
+      ),
+    ).toBeUndefined();
+
+    writeReport([
+      `/relocated/worktree/${workspace}/${expectedPath}`,
+      `/relocated/worktree/${workspace}/src/tests/unrelated.spec.ts`,
+    ]);
+    expect(readTurboTestTaskEvidence(root, command, "@croco/a", summary)).toBeUndefined();
+    rmSync(root, { recursive: true, force: true });
+  });
+
   it("keeps incomplete cached evidence invalid from a cold run through the next warm run", () => {
     const root = mkdtempSync(join(tmpdir(), "croco-turbo-evidence-"));
     const workspace = "packages/a";
