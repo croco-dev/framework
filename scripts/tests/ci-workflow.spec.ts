@@ -27,6 +27,10 @@ const WORKFLOW_JOBS = (WORKFLOW_DOCUMENT.toJS() as { readonly jobs?: unknown }).
 if (typeof WORKFLOW_JOBS !== "object" || WORKFLOW_JOBS === null || Array.isArray(WORKFLOW_JOBS)) {
   throw new Error("ci.yml must declare a jobs mapping");
 }
+const DOCS_SYNC_JOB = (WORKFLOW_JOBS as Readonly<Record<string, unknown>>)["docs-sync-check"];
+if (typeof DOCS_SYNC_JOB !== "object" || DOCS_SYNC_JOB === null || Array.isArray(DOCS_SYNC_JOB)) {
+  throw new Error("ci.yml must declare the docs-sync-check job as a mapping");
+}
 const WORKFLOWS = Object.fromEntries(
   readdirSync(resolve(ROOT_DIR, ".github/workflows"))
     .filter((path) => /\.ya?ml$/.test(path))
@@ -60,6 +64,14 @@ function workflowJob(id: string): string {
   const job = WORKFLOW_DOCUMENT.getIn(["jobs", id], true);
   if (!isNode(job) || !job.range) throw new Error(`ci.yml ${id} job has no source range`);
   return WORKFLOW.slice(job.range[0], job.range[1]);
+}
+
+function workflowJobCondition(id: string): unknown {
+  const job = (WORKFLOW_JOBS as Readonly<Record<string, unknown>>)[id];
+  if (typeof job !== "object" || job === null || Array.isArray(job)) {
+    throw new Error(`ci.yml ${id} job must be a mapping`);
+  }
+  return (job as Readonly<Record<string, unknown>>).if;
 }
 
 const VALIDATE_JOB = workflowJob("validate");
@@ -260,12 +272,13 @@ describe("Phase B cacheable verification shadow", () => {
     expect(workflowJob("split-validation-shadow")).toContain('node-version-file: ".nvmrc"');
   });
 
-  it("keeps the monolithic validate job authoritative while running four advisory peer producers", () => {
+  it("keeps the monolithic validate job authoritative while isolating advisory peers to manual experiments", () => {
     expect(VALIDATE_JOB).toContain("needs: changes");
     expect(VALIDATE_JOB).not.toContain("ci-cacheable-lanes:producer");
     for (const jobId of producerJobs) {
       const job = workflowJob(jobId);
       expect(job).toContain("needs: changes");
+      expect(workflowJobCondition(jobId)).toBe("github.event_name == 'workflow_dispatch'");
       expect(job).toContain("scripts/ci-cacheable-experiment-identity.mts");
       expect(job).toContain("scripts/ci-cacheable-lane-runner.mts");
       expect(job).toContain("if: always()");
@@ -278,6 +291,9 @@ describe("Phase B cacheable verification shadow", () => {
       ...producerJobs.map((jobId) => workflowJob(jobId)),
       workflowJob("split-validation-shadow"),
     ].join("\n");
+    expect(workflowJobCondition("split-validation-shadow")).toBe(
+      "always() && github.event_name == 'workflow_dispatch' && needs.changes.result == 'success'",
+    );
     expect(findWorkflowVerificationViolations(cacheableJobs, ROOT_DIR)).toEqual([]);
   });
 
@@ -837,6 +853,9 @@ describe("CI verification profile contract", () => {
     expect(WORKFLOW).toContain("- 'packages/*/README.md'");
     expect(WORKFLOW).toContain("run: pnpm docs:api:check");
     expect(WORKFLOW).toContain("--exclude-path '(^|/)packages/docs/README\\.md$'");
+    expect((DOCS_SYNC_JOB as Readonly<Record<string, unknown>>).if).toBe(
+      "needs.changes.outputs.api-source == 'true'",
+    );
   });
 
   it("runs independent CI surfaces in parallel and restores content-addressed Turbo state", () => {
@@ -863,8 +882,8 @@ describe("CI verification profile contract", () => {
     expect(REAL_RESOURCE_JOB).toContain("permissions:\n      contents: read");
     expect(VALIDATE_JOB).not.toContain("membership-postgres:");
     expect(VALIDATE_JOB).not.toContain("Verify typed TestKernel resources");
-    expect(WORKFLOW).toContain(
-      "docs-sync-check:\n    needs: changes\n    if: github.event_name != 'pull_request' && needs.changes.outputs.api-source == 'true'",
+    expect((DOCS_SYNC_JOB as Readonly<Record<string, unknown>>).if).toBe(
+      "needs.changes.outputs.api-source == 'true'",
     );
   });
 });

@@ -696,6 +696,7 @@ jobs:
 
   core-verification:
     needs: changes
+    if: github.event_name == 'workflow_dispatch'
     continue-on-error: true
     runs-on: ubuntu-latest
     timeout-minutes: 90
@@ -793,6 +794,7 @@ jobs:
 
   generated-apps:
     needs: changes
+    if: github.event_name == 'workflow_dispatch'
     continue-on-error: true
     runs-on: ubuntu-latest
     timeout-minutes: 90
@@ -880,6 +882,7 @@ jobs:
 
   package-artifacts:
     needs: changes
+    if: github.event_name == 'workflow_dispatch'
     continue-on-error: true
     runs-on: ubuntu-latest
     timeout-minutes: 90
@@ -967,6 +970,7 @@ jobs:
 
   coverage-security:
     needs: changes
+    if: github.event_name == 'workflow_dispatch'
     continue-on-error: true
     runs-on: ubuntu-latest
     timeout-minutes: 90
@@ -1077,7 +1081,7 @@ jobs:
 
   split-validation-shadow:
     needs: [changes, core-verification, generated-apps, package-artifacts, coverage-security]
-    if: always() && needs.changes.result == 'success'
+    if: always() && github.event_name == 'workflow_dispatch' && needs.changes.result == 'success'
     continue-on-error: true
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -1400,7 +1404,7 @@ jobs:
 
   docs-sync-check:
     needs: changes
-    if: github.event_name != 'pull_request' && needs.changes.outputs.api-source == 'true'
+    if: needs.changes.outputs.api-source == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

@@ -89,6 +89,111 @@ describe("pull-request CI performance budget", () => {
     expect(violations).toContain("Windows scaffold must not be triggered by every package change");
   });
 
+  it("rejects API documentation checks that run for unrelated pull requests", () => {
+    const mutant = WORKFLOW.replace(
+      "if: needs.changes.outputs.api-source == 'true'",
+      "if: needs.changes.outputs.api-source == 'true' || github.event_name == 'pull_request'",
+    );
+
+    expect(mutant).not.toBe(WORKFLOW);
+    expect(
+      findCiPerformanceBudgetViolations({
+        maintenancePullRequestManifest: MAINTENANCE_PR_MANIFEST,
+        ordinaryPullRequestManifest: ORDINARY_PR_MANIFEST,
+        workflow: mutant,
+      }),
+    ).toContain("generated API documentation drift checks must follow API-source changes");
+  });
+
+  it.each([
+    [
+      "core-verification",
+      "  core-verification:\n    needs: changes\n    if: github.event_name == 'workflow_dispatch'",
+      "  core-verification:\n    needs: changes",
+    ],
+    [
+      "generated-apps",
+      "  generated-apps:\n    needs: changes\n    if: github.event_name == 'workflow_dispatch'",
+      "  generated-apps:\n    needs: changes",
+    ],
+    [
+      "package-artifacts",
+      "  package-artifacts:\n    needs: changes\n    if: github.event_name == 'workflow_dispatch'",
+      "  package-artifacts:\n    needs: changes",
+    ],
+    [
+      "coverage-security",
+      "  coverage-security:\n    needs: changes\n    if: github.event_name == 'workflow_dispatch'",
+      "  coverage-security:\n    needs: changes",
+    ],
+    [
+      "split-validation-shadow",
+      "if: always() && github.event_name == 'workflow_dispatch' && needs.changes.result == 'success'",
+      "if: always() && needs.changes.result == 'success'",
+    ],
+  ] as const)("rejects automatic %s cacheable experiments", (job, marker, replacement) => {
+    const mutant = WORKFLOW.replace(marker, replacement);
+
+    expect(mutant).not.toBe(WORKFLOW);
+    expect(
+      findCiPerformanceBudgetViolations({
+        maintenancePullRequestManifest: MAINTENANCE_PR_MANIFEST,
+        ordinaryPullRequestManifest: ORDINARY_PR_MANIFEST,
+        workflow: mutant,
+      }),
+    ).toContain(`${job} cacheable CI experiment must stay off automatic change runs`);
+  });
+
+  it.each([
+    "github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'",
+    "github.event_name == 'workflow_dispatch' || github.event_name == 'push'",
+    "github.event_name == 'workflow_dispatch' || true",
+  ])("rejects an expanded cacheable experiment condition: %s", (condition) => {
+    const mutant = WORKFLOW.replace(
+      "if: github.event_name == 'workflow_dispatch'",
+      `if: ${condition}`,
+    );
+
+    expect(mutant).not.toBe(WORKFLOW);
+    expect(
+      findCiPerformanceBudgetViolations({
+        maintenancePullRequestManifest: MAINTENANCE_PR_MANIFEST,
+        ordinaryPullRequestManifest: ORDINARY_PR_MANIFEST,
+        workflow: mutant,
+      }),
+    ).toContain("core-verification cacheable CI experiment must stay off automatic change runs");
+  });
+
+  it.each([
+    [
+      "comment",
+      "if: github.event_name == 'pull_request' # github.event_name == 'workflow_dispatch'",
+      undefined,
+    ],
+    [
+      "step",
+      "if: github.event_name == 'pull_request'",
+      "      - name: Resolve cacheable experiment identity\n        if: github.event_name == 'workflow_dispatch'\n        id: split_identity",
+    ],
+  ] as const)("rejects a manual-only marker confined to a %s", (_location, jobIf, step) => {
+    let mutant = WORKFLOW.replace("if: github.event_name == 'workflow_dispatch'", jobIf);
+    if (step) {
+      mutant = mutant.replace(
+        "      - name: Resolve cacheable experiment identity\n        id: split_identity",
+        step,
+      );
+    }
+
+    expect(mutant).not.toBe(WORKFLOW);
+    expect(
+      findCiPerformanceBudgetViolations({
+        maintenancePullRequestManifest: MAINTENANCE_PR_MANIFEST,
+        ordinaryPullRequestManifest: ORDINARY_PR_MANIFEST,
+        workflow: mutant,
+      }),
+    ).toContain("core-verification cacheable CI experiment must stay off automatic change runs");
+  });
+
   it("rejects an unfiltered ordinary package validation graph", () => {
     const manifest = ORDINARY_PR_MANIFEST.map((command) =>
       command.id === "build"

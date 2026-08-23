@@ -1,9 +1,17 @@
+import { execFileSync, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { discoverProblemCodes, runProblemRegistryCheck } from "../problem-registry.mts";
+import { findBranchProtectionPolicyViolations } from "../branch-protection-policy.mts";
+import {
+  createProblemCodeRegistry,
+  createProblemRegistryArtifacts,
+  discoverProblemCodes,
+  formatProblemRegistryArtifacts,
+  runProblemRegistryCheck,
+} from "../problem-registry.mts";
 import type { ProblemCodeRegistry } from "../problem-registry.mts";
 
 const tempRepos: string[] = [];
@@ -91,6 +99,92 @@ describe("problem-registry.mts", () => {
     expect(generatedRegistrySource).toContain("export type CrocoProblemDetails");
     expect(checkResult.status).toBe("pass");
   });
+
+  it("invalidates stale checks before validating a concurrent generated-state merge candidate", () => {
+    const repo = createTempRepo();
+    writeProblemFactories(
+      repo,
+      "packages/base/src/problems.ts",
+      Array.from(
+        { length: 640 },
+        (_, index) => `middle/problem-number-${String(index).padStart(3, "0")}`,
+      ),
+    );
+    expect(writeProblemRegistryFixtureArtifacts(repo)).toEqual(
+      expect.objectContaining({ problemCount: 640 }),
+    );
+    runGit(repo, "init", "--initial-branch=trunk");
+    runGit(repo, "config", "user.email", "fixture@croco.dev");
+    runGit(repo, "config", "user.name", "Croco fixture");
+    commitAll(repo, "base generated state");
+    const originalBaseOid = runGit(repo, "rev-parse", "HEAD");
+
+    runGit(repo, "switch", "--create", "first-problem");
+    writeProblemFactories(repo, "packages/first/src/problems.ts", ["a/first"]);
+    const firstRegistry = writeProblemRegistryFixtureArtifacts(repo);
+    expect(firstRegistry.problemCount).toBe(641);
+    expect(firstRegistry.problems).toHaveLength(641);
+    expect(runProblemRegistryCheck(repo, "check", { baseRegistry: null })).toEqual(
+      expect.objectContaining({ status: "pass", discoveryCount: 641, problemCount: 641 }),
+    );
+    commitAll(repo, "first generated state");
+    const advancedBaseOid = runGit(repo, "rev-parse", "HEAD");
+
+    runGit(repo, "switch", "--create", "second-problem", originalBaseOid);
+    writeProblemFactories(repo, "packages/second/src/problems.ts", ["z/second"]);
+    const secondRegistry = writeProblemRegistryFixtureArtifacts(repo);
+    expect(secondRegistry.problemCount).toBe(641);
+    expect(secondRegistry.problems).toHaveLength(641);
+    expect(runProblemRegistryCheck(repo, "check", { baseRegistry: null })).toEqual(
+      expect.objectContaining({ status: "pass", discoveryCount: 641, problemCount: 641 }),
+    );
+    commitAll(repo, "second generated state");
+    const secondHeadOid = runGit(repo, "rev-parse", "HEAD");
+
+    runGit(repo, "switch", "trunk");
+    runGit(repo, "merge", "--ff-only", "first-problem");
+    expect(runGit(repo, "rev-parse", "HEAD")).toBe(advancedBaseOid);
+    expect(originalBaseOid).not.toBe(advancedBaseOid);
+    expect(
+      findBranchProtectionPolicyViolations({
+        strict: true,
+        checks: [
+          { context: "docs-sync-check", app_id: 15368 },
+          { context: "validate", app_id: 15368 },
+        ],
+      }),
+    ).toEqual([]);
+
+    const merge = spawnSync("git", ["merge", "--no-commit", "--no-ff", secondHeadOid], {
+      cwd: repo,
+      encoding: "utf-8",
+    });
+    expect({ status: merge.status, stderr: merge.stderr, stdout: merge.stdout }).toEqual(
+      expect.objectContaining({ status: 0 }),
+    );
+    expect(readRegistry(repo)).toEqual(
+      expect.objectContaining({
+        problemCount: 641,
+        problems: expect.arrayContaining([
+          expect.objectContaining({ code: "a/first" }),
+          expect.objectContaining({ code: "z/second" }),
+        ]),
+      }),
+    );
+    expect(readRegistry(repo).problems).toHaveLength(642);
+
+    const statusBeforeCheck = runGit(repo, "status", "--porcelain=v1");
+    const candidateResult = runProblemRegistryCheck(repo, "check", { baseRegistry: null });
+    expect(candidateResult).toEqual(
+      expect.objectContaining({ status: "fail", discoveryCount: 642, problemCount: 642 }),
+    );
+    expect(candidateResult.diagnostics).toEqual([
+      "docs/problem-code-registry.json drift detected; run pnpm problem-registry:write.",
+      "packages/docs/src/content/docs/en/reference/problem-recovery-cookbook.md drift detected; run pnpm problem-registry:write.",
+      "packages/problems-core/src/generated/problem-code-registry.ts drift detected; run pnpm problem-registry:write.",
+    ]);
+    expect(runGit(repo, "status", "--porcelain=v1")).toBe(statusBeforeCheck);
+  }, 30_000);
 
   it("publishes runtime-configurable status policy in generated contracts", () => {
     const repo = createTempRepo();
@@ -1107,6 +1201,42 @@ function writeFile(repo: string, path: string, content: string): void {
   const absolutePath = join(repo, path);
   mkdirSync(dirname(absolutePath), { recursive: true });
   writeFileSync(absolutePath, content);
+}
+
+function writeProblemFactories(repo: string, path: string, codes: readonly string[]): void {
+  writeFile(
+    repo,
+    path,
+    [
+      'import { ProblemFactory } from "@croco/problems-core";',
+      ...codes.map(
+        (code, index) =>
+          `export function problem${index}() { return ProblemFactory.badRequest("${code}"); }`,
+      ),
+      "",
+    ].join("\n"),
+  );
+}
+
+function writeProblemRegistryFixtureArtifacts(repo: string): ProblemCodeRegistry {
+  const registry = createProblemCodeRegistry(discoverProblemCodes(repo));
+
+  for (const [path, content] of formatProblemRegistryArtifacts(
+    createProblemRegistryArtifacts(registry),
+  )) {
+    writeFile(repo, path, content);
+  }
+
+  return registry;
+}
+
+function runGit(repo: string, ...arguments_: readonly string[]): string {
+  return execFileSync("git", arguments_, { cwd: repo, encoding: "utf-8" }).trim();
+}
+
+function commitAll(repo: string, message: string): void {
+  runGit(repo, "add", ".");
+  runGit(repo, "commit", "--message", message);
 }
 
 function setupDeprecatedAlphaRemovedRegistry(deprecation: Record<string, unknown>): string {
