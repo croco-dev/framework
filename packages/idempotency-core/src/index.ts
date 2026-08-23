@@ -33,10 +33,13 @@ export {
   IdempotencyReservationNotFoundProblem,
   IdempotencyReservationStateProblem,
   InvalidIdempotencyKeyProblem,
+  InvalidIdempotencySnapshotProblem,
   InvalidIdempotencyTtlProblem,
 } from "./libs/problems/IdempotencyProblems";
 export type {
   IdempotencyDiagnosticCode,
+  IdempotencySnapshotField,
+  InvalidIdempotencySnapshotProblemOptions,
   IdempotencyTtlConstraint,
   InvalidIdempotencyTtlProblemOptions,
 } from "./libs/problems/IdempotencyProblems";

@@ -34,6 +34,13 @@ const result = await coordinator.execute({ key, ttlMs: 86_400_000 }, async () =>
 ```
 
 동일 key와 동일 fingerprint는 완료된 응답을 replay합니다. 동일 key에 다른 fingerprint가 들어오면 `IdempotencyConflictProblem`으로 실패합니다.
+`InMemoryIdempotencyStore`는 응답과 metadata를 structured clone snapshot으로 저장하고 각 조회에서도 새 snapshot을 반환하므로
+호출자 mutation이 이후 replay를 변경하지 않습니다. stable structured clone으로 타입과 값을 보존할 수 없는 값은
+상태 변경 전에 `InvalidIdempotencySnapshotProblem`으로 실패합니다.
+안정적인 snapshot을 위해 plain object, array, Date, Map, Set, RegExp, ArrayBuffer 및 일반 typed array를 지원하며,
+structured clone이 `lastIndex`를 초기화하므로 모든 RegExp는 `lastIndex`가 `0`일 때만 지원하며,
+실행된 global 또는 sticky RegExp에서 이 제한이 주로 드러납니다.
+공유 메모리, Buffer, 사용자 class instance, accessor와 symbol property는 명시적으로 거부합니다.
 
 TTL이 설정된 in-flight reservation은 `expiresAt` 직전까지만 완료할 수 있습니다. 만료 시각부터 `commit`과 `fail`은
 `IdempotencyReservationExpiredProblem`으로 거부되며, 새 `reserve`가 발급한 reservation만 상태를 전이할 수 있습니다.
@@ -96,6 +103,7 @@ for (const testCase of suite.cases) {
 - `IdempotencyConflictProblem`: 동일 key와 다른 fingerprint 충돌을 표준 Problem으로 표현합니다.
 - `IdempotencyReservationExpiredProblem`: 만료된 reservation의 완료 시도를 안전한 진단 시각과 함께 표현합니다.
 - `InvalidIdempotencyTtlProblem`: 잘못된 TTL과 위반한 validation constraint를 표준 Problem으로 표현합니다.
+- `InvalidIdempotencySnapshotProblem`: in-memory snapshot으로 보존할 수 없는 응답 또는 metadata를 표준 Problem으로 표현합니다.
 
 ## 라이선스
 

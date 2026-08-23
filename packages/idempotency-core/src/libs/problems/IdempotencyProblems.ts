@@ -3,6 +3,7 @@ import { Problem, ProblemCategory, type ProblemOptions } from "@croco/problems-c
 export const IDEMPOTENCY_DIAGNOSTIC_CODES = {
   keyConflict: "idempotency-core/key-conflict",
   invalidKey: "idempotency-core/invalid-key",
+  invalidSnapshot: "idempotency-core/invalid-snapshot",
   invalidTtl: "idempotency-core/invalid-ttl",
   reservationExpired: "idempotency-core/reservation-expired",
   reservationNotFound: "idempotency-core/reservation-not-found",
@@ -17,12 +18,15 @@ type IdempotencyProblemOptions = {
   readonly category: ProblemCategory;
   readonly detail: string;
   readonly extensions?: Record<string, unknown>;
+  readonly cause?: Error;
 };
 
 class IdempotencyProblem extends Problem {
   constructor(options: IdempotencyProblemOptions) {
-    const problemOptions: ProblemOptions =
-      options.extensions === undefined ? {} : { extensions: options.extensions };
+    const problemOptions: ProblemOptions = {
+      ...(options.extensions === undefined ? {} : { extensions: options.extensions }),
+      ...(options.cause === undefined ? {} : { cause: options.cause }),
+    };
 
     super(options.code, options.category, options.detail, problemOptions);
   }
@@ -55,6 +59,29 @@ export class InvalidIdempotencyKeyProblem extends IdempotencyProblem {
       category: ProblemCategory.BadRequest,
       detail: `Invalid idempotency key: ${reason}`,
       extensions,
+    });
+  }
+}
+
+export type IdempotencySnapshotField = "metadata" | "problem" | "record" | "response";
+
+export type InvalidIdempotencySnapshotProblemOptions = {
+  readonly field: IdempotencySnapshotField;
+  readonly cause?: Error;
+};
+
+/** Raised when a value cannot be captured with the structured clone algorithm. */
+export class InvalidIdempotencySnapshotProblem extends IdempotencyProblem {
+  constructor(options: InvalidIdempotencySnapshotProblemOptions) {
+    super({
+      code: IDEMPOTENCY_DIAGNOSTIC_CODES.invalidSnapshot,
+      category: ProblemCategory.ValidationError,
+      detail: `Idempotency ${options.field} must support stable structured cloning`,
+      extensions: {
+        field: options.field,
+        constraint: "stable-structured-clone-compatible",
+      },
+      ...(options.cause === undefined ? {} : { cause: options.cause }),
     });
   }
 }

@@ -13,6 +13,10 @@ title: "IDEMPOTENCY_DIAGNOSTIC_CODES"
 
 > `readonly` **invalidKey**: `"idempotency-core/invalid-key"` = `"idempotency-core/invalid-key"`
 
+### invalidSnapshot
+
+> `readonly` **invalidSnapshot**: `"idempotency-core/invalid-snapshot"` = `"idempotency-core/invalid-snapshot"`
+
 ### invalidTtl
 
 > `readonly` **invalidTtl**: `"idempotency-core/invalid-ttl"` = `"idempotency-core/invalid-ttl"`
