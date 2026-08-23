@@ -411,6 +411,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`IndexNotFoundProblem`](/api/search-core/src/classes/indexnotfoundproblem/)
 - [`MissingTenantProblem`](/api/search-core/src/classes/missingtenantproblem/)
 - [`SearchCapabilityUnavailableProblem`](/api/search-core/src/classes/searchcapabilityunavailableproblem/)
+- [`SearchableIndexConflictProblem`](/api/search-core/src/classes/searchableindexconflictproblem/)
 - [`SearchSyncIdentityConflictProblem`](/api/search-core/src/classes/searchsyncidentityconflictproblem/)
 - [`StrategyUnavailableProblem`](/api/search-core/src/classes/strategyunavailableproblem/)
 - [`TransformNotFoundProblem`](/api/search-core/src/classes/transformnotfoundproblem/)

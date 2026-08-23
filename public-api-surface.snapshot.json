@@ -24644,6 +24644,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "SearchableIndexConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/SearchProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "SearchCapabilityUnavailableProblem",
               "exportKind": "named",
               "source": "./libs/problems/SearchProblems",
@@ -24731,12 +24737,22 @@
               "source": "./libs/transforms/textTransforms"
             },
             {
+              "name": "SearchableIndexDeclaration",
+              "exportKind": "named",
+              "source": "./libs/decorators/Searchable"
+            },
+            {
               "name": "SearchableMetadata",
               "exportKind": "named",
               "source": "./libs/decorators/Searchable"
             },
             {
               "name": "SearchableOptions",
+              "exportKind": "named",
+              "source": "./libs/decorators/Searchable"
+            },
+            {
+              "name": "SearchableSourceLocation",
               "exportKind": "named",
               "source": "./libs/decorators/Searchable"
             },

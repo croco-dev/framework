@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 654,
+  problemCount: 655,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -8671,7 +8671,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/search-core/src/libs/problems/SearchProblems.ts",
-          line: 57,
+          line: 91,
           column: 5,
           kind: "problem-constructor",
         },
@@ -11753,7 +11753,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/search-core/src/libs/problems/SearchProblems.ts",
-          line: 5,
+          line: 39,
           column: 5,
           kind: "problem-constructor",
         },
@@ -15265,7 +15265,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/search-core/src/libs/problems/SearchProblems.ts",
-          line: 65,
+          line: 99,
           column: 5,
           kind: "problem-constructor",
         },
@@ -15304,6 +15304,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "search-core/searchable-index-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#search-core-searchable-index-conflict",
+      recovery: {
+        cause: "More than one searchable metadata declaration owns the same index name.",
+        userAction:
+          "Give every searchable declaration a unique index name, then restart registration.",
+        operatorAction:
+          "Use extensions.declarations to find both conflicting source locations and remove or rename one declaration.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/search-core/src/libs/problems/SearchProblems.ts",
+          line: 7,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
       code: "search-core/sync-identity-conflict",
       category: "Conflict",
       status: 409,
@@ -15329,7 +15361,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/search-core/src/libs/problems/SearchProblems.ts",
-          line: 23,
+          line: 57,
           column: 5,
           kind: "problem-constructor",
         },
@@ -15360,7 +15392,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/search-core/src/libs/problems/SearchProblems.ts",
-          line: 35,
+          line: 69,
           column: 3,
           kind: "problem-class",
         },
@@ -16335,7 +16367,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/search-core/src/libs/problems/SearchProblems.ts",
-          line: 44,
+          line: 78,
           column: 5,
           kind: "problem-constructor",
         },

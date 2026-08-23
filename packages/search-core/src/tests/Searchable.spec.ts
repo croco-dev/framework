@@ -1,5 +1,6 @@
 import "reflect-metadata";
-import { describe, expect, it } from "vitest";
+import { MetadataStorage } from "@croco/framework-context";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
   getSearchableMetadata,
   isSearchable,
@@ -8,6 +9,10 @@ import {
 } from "../libs/decorators/Searchable";
 
 describe("@Searchable decorator", () => {
+  beforeEach(() => {
+    MetadataStorage.clear();
+  });
+
   describe("basic usage", () => {
     it("should store metadata on class", () => {
       @Searchable()
@@ -70,6 +75,11 @@ describe("@Searchable decorator", () => {
         index: "products",
         autoSync: true,
         target: ProductEntity,
+        sourceLocation: expect.objectContaining({
+          path: expect.stringContaining("Searchable.spec.ts"),
+          line: expect.any(Number),
+          column: expect.any(Number),
+        }),
       });
     });
   });
@@ -120,6 +130,52 @@ describe("@Searchable decorator", () => {
       expect(productMetadata?.autoSync).toBe(true);
       expect(orderMetadata?.index).toBe("orders");
       expect(orderMetadata?.autoSync).toBe(false);
+    });
+
+    it("should reject equivalent duplicate index declarations independently of registration order", () => {
+      class AlphaEntity {}
+      class ZetaEntity {}
+
+      const registerAlpha = (): void => {
+        Searchable({ index: "shared" })(AlphaEntity);
+      };
+      const registerZeta = (): void => {
+        Searchable({ index: "shared" })(ZetaEntity);
+      };
+      const registerInOrder = (registrations: readonly (() => void)[]): unknown => {
+        MetadataStorage.clear();
+        try {
+          registrations.forEach((register) => register());
+          return undefined;
+        } catch (error) {
+          return error;
+        }
+      };
+
+      const alphaFirst = registerInOrder([registerAlpha, registerZeta]);
+      const zetaFirst = registerInOrder([registerZeta, registerAlpha]);
+
+      expect(alphaFirst).toMatchObject({
+        code: "search-core/searchable-index-conflict",
+        extensions: {
+          indexName: "shared",
+          declarations: [
+            {
+              targetName: "AlphaEntity",
+              sourceLocation: expect.objectContaining({
+                path: expect.stringContaining("Searchable.spec.ts"),
+              }),
+            },
+            {
+              targetName: "ZetaEntity",
+              sourceLocation: expect.objectContaining({
+                path: expect.stringContaining("Searchable.spec.ts"),
+              }),
+            },
+          ],
+        },
+      });
+      expect(zetaFirst).toEqual(alphaFirst);
     });
   });
 });

@@ -1,7 +1,7 @@
 import type { Constructor, ILogger } from "@croco/framework-context";
 import { Container, Context, LOGGER_TOKEN, MetadataStorage } from "@croco/framework-context";
 import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
-import type { SearchableMetadata } from "../libs/decorators/Searchable";
+import { Searchable, type SearchableMetadata } from "../libs/decorators/Searchable";
 import {
   DocumentDeletedEvent,
   DocumentIndexedEvent,
@@ -20,6 +20,7 @@ describe("SearchAutoSync", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    MetadataStorage.clear();
     Container.reset();
     Container.remove(LOGGER_TOKEN);
 
@@ -77,6 +78,73 @@ describe("SearchAutoSync", () => {
     expect(subscribeCalls).toContain(DocumentIndexedEvent.eventName);
     expect(subscribeCalls).toContain(DocumentDeletedEvent.eventName);
   });
+
+  it("should compile unique metadata registered before and after the first event", async () => {
+    class User {}
+    class Order {}
+    Searchable({ index: "users", autoSync: true })(User);
+
+    await searchAutoSync.handle(
+      new DocumentIndexedEvent("users", "user-1", "tenant-1", { name: "John" }),
+    );
+    Searchable({ index: "orders", autoSync: true })(Order);
+    await searchAutoSync.handle(new DocumentDeletedEvent("orders", "order-1", "tenant-1"));
+
+    expect(searchEngine.indexDocument).toHaveBeenCalledTimes(1);
+    expect(searchEngine.deleteDocument).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    [
+      { targetName: "AlphaEntity", path: "/app/alpha.ts", line: 10 },
+      { targetName: "ZetaEntity", path: "/app/zeta.ts", line: 20 },
+    ],
+    [
+      { targetName: "ZetaEntity", path: "/app/zeta.ts", line: 20 },
+      { targetName: "AlphaEntity", path: "/app/alpha.ts", line: 10 },
+    ],
+  ])(
+    "should reject duplicate index metadata before processing for registration order %#",
+    async (...declarations) => {
+      vi.spyOn(MetadataStorage, "getAll").mockReturnValue(
+        declarations.map(({ targetName, path, line }) => {
+          const target = { [targetName]: class {} }[targetName];
+          return {
+            target,
+            value: {
+              index: "shared",
+              autoSync: true,
+              target,
+              sourceLocation: { path, line, column: 1 },
+            } as SearchableMetadata,
+          };
+        }),
+      );
+
+      await expect(
+        searchAutoSync.handle(
+          new DocumentIndexedEvent("shared", "document-1", "tenant-1", { name: "Test" }),
+        ),
+      ).rejects.toMatchObject({
+        code: "search-core/searchable-index-conflict",
+        extensions: {
+          indexName: "shared",
+          declarations: [
+            {
+              targetName: "AlphaEntity",
+              sourceLocation: { path: "/app/alpha.ts", line: 10, column: 1 },
+            },
+            {
+              targetName: "ZetaEntity",
+              sourceLocation: { path: "/app/zeta.ts", line: 20, column: 1 },
+            },
+          ],
+        },
+      });
+      expect(searchEngine.indexDocument).not.toHaveBeenCalled();
+      expect(eventBusMock.publishNow).not.toHaveBeenCalled();
+    },
+  );
 
   describe("handle DocumentIndexedEvent", () => {
     it("should index document when autoSync is true", async () => {

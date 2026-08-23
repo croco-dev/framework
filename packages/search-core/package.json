@@ -41,7 +41,8 @@
     "build": "tsup src/index.ts src/ko/index.ts --format esm --dts",
     "lint": "oxlint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run --exclude src/tests/PublishedSearchable.spec.ts",
+    "test:published": "vitest run src/tests/PublishedSearchable.spec.ts"
   },
   "dependencies": {
     "@croco/framework-context": "workspace:*",

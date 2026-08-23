@@ -3041,6 +3041,12 @@
       "owner": "@croco/search-core"
     },
     {
+      "path": "packages/search-core/src/tests/PublishedSearchable.spec.ts",
+      "lane": "published",
+      "qualifiers": [],
+      "owner": "@croco/search-core"
+    },
+    {
       "path": "packages/search-core/src/tests/SearchAutoSync.spec.ts",
       "lane": "fast",
       "qualifiers": [],

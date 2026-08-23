@@ -3,12 +3,45 @@ import { describe, expect, it } from "vitest";
 import {
   IndexNotFoundProblem,
   MissingTenantProblem,
+  SearchableIndexConflictProblem,
   SearchSyncIdentityConflictProblem,
   StrategyUnavailableProblem,
   TransformNotFoundProblem,
 } from "../libs/problems/SearchProblems";
 
 describe("SearchProblems", () => {
+  describe("SearchableIndexConflictProblem", () => {
+    it("exposes deterministic declaration evidence", () => {
+      const problem = new SearchableIndexConflictProblem("users", [
+        {
+          targetName: "ZetaEntity",
+          sourceLocation: { path: "/app/zeta.ts", line: 20, column: 3 },
+        },
+        {
+          targetName: "AlphaEntity",
+          sourceLocation: { path: "/app/alpha.ts", line: 10, column: 2 },
+        },
+      ]);
+
+      expect(problem.code).toBe("search-core/searchable-index-conflict");
+      expect(problem.category).toBe(ProblemCategory.Conflict);
+      expect(problem.status).toBe(409);
+      expect(problem.extensions).toEqual({
+        indexName: "users",
+        declarations: [
+          {
+            targetName: "AlphaEntity",
+            sourceLocation: { path: "/app/alpha.ts", line: 10, column: 2 },
+          },
+          {
+            targetName: "ZetaEntity",
+            sourceLocation: { path: "/app/zeta.ts", line: 20, column: 3 },
+          },
+        ],
+      });
+    });
+  });
+
   describe("MissingTenantProblem", () => {
     it("has correct code and category", () => {
       const problem = new MissingTenantProblem("search");
