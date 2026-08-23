@@ -9,6 +9,9 @@ import { findWorkflowVerificationViolations } from "../workflow-verification-con
 
 const rootDir = resolve(__dirname, "../..");
 const workflow = readFileSync(resolve(rootDir, ".github/workflows/release.yml"), "utf8");
+const packageJson = JSON.parse(readFileSync(resolve(rootDir, "package.json"), "utf8")) as {
+  readonly scripts: Readonly<Record<string, string>>;
+};
 
 type WorkflowStep = {
   readonly env?: Record<string, unknown>;
@@ -41,7 +44,10 @@ type ReleaseWorkflow = {
 const releaseAuthorityCondition =
   "github.ref == 'refs/heads/trunk' && needs.release_ref_guard.outputs.verified_sha == github.sha";
 const releaseActionCondition = `${releaseAuthorityCondition} && steps.release_execution.outputs.should_run_changesets_action == 'true'`;
-const releaseMutationCondition = `${releaseActionCondition} && steps.current_trunk.outputs.is_current == 'true'`;
+const releaseTokenCondition = `${releaseActionCondition} && (steps.release_execution.outputs.should_run_verification != 'true' || steps.release_spine_evidence.outcome == 'success')`;
+const releaseVerifiedPublishCondition = `${releaseActionCondition} && steps.release_execution.outputs.should_run_verification == 'true' && steps.release_spine_evidence.outcome == 'success'`;
+const releaseVersionCondition = `${releaseActionCondition} && steps.release_execution.outputs.should_run_verification != 'true' && steps.current_trunk.outputs.is_current == 'true'`;
+const releasePublishCondition = `${releaseVerifiedPublishCondition} && steps.current_trunk.outputs.is_current == 'true'`;
 
 function parseWorkflow(source: string): ReleaseWorkflow {
   const document = parseDocument(source, { uniqueKeys: true });
@@ -154,16 +160,19 @@ function assertReleasePrAuthenticationContract(source: string): void {
   const tokenIndex = steps.indexOf(tokenStep);
   const currentTrunkStep = stepByName(steps, "Revalidate current trunk revision");
   const currentTrunkIndex = steps.indexOf(currentTrunkStep);
-  const changesetsStep = stepByName(steps, "Create Release Pull Request or Publish");
-  const changesetsIndex = steps.indexOf(changesetsStep);
+  const versionStep = stepByName(steps, "Create Release Pull Request");
+  const versionIndex = steps.indexOf(versionStep);
+  const publishStep = stepByName(steps, "Create Release Pull Request or Publish");
+  const publishIndex = steps.indexOf(publishStep);
   expect(npmSetupIndex).toBeGreaterThan(uploadIndex);
   expect(tokenIndex).toBeGreaterThan(npmSetupIndex);
   expect(currentTrunkIndex).toBeGreaterThan(tokenIndex);
-  expect(currentTrunkIndex).toBe(changesetsIndex - 1);
-  expect(npmSetupStep.if).toBe(releaseActionCondition);
+  expect(currentTrunkIndex).toBe(versionIndex - 1);
+  expect(versionIndex).toBeLessThan(publishIndex);
+  expect(npmSetupStep.if).toBe(releaseVerifiedPublishCondition);
   expect(npmSetupStep.uses).toBe("actions/setup-node@820762786026740c76f36085b0efc47a31fe5020");
   expect(tokenStep.id).toBe("release_app_token");
-  expect(tokenStep.if).toBe(releaseActionCondition);
+  expect(tokenStep.if).toBe(releaseTokenCondition);
   expect(tokenStep.uses).toBe(
     "actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1",
   );
@@ -176,7 +185,7 @@ function assertReleasePrAuthenticationContract(source: string): void {
     "permission-pull-requests": "write",
   });
   expect(currentTrunkStep.id).toBe("current_trunk");
-  expect(currentTrunkStep.if).toBe(releaseActionCondition);
+  expect(currentTrunkStep.if).toBe(releaseTokenCondition);
   expect(currentTrunkStep.env).toEqual({
     GH_TOKEN: "${{ github.token }}",
     VERIFIED_SHA: "${{ needs.release_ref_guard.outputs.verified_sha }}",
@@ -185,13 +194,25 @@ function assertReleasePrAuthenticationContract(source: string): void {
   expect(currentTrunkStep.run).toContain('if [ "$current_trunk_sha" != "$VERIFIED_SHA" ]; then');
   expect(currentTrunkStep.run).toContain('echo "is_current=false" >> "$GITHUB_OUTPUT"');
   expect(currentTrunkStep.run).toContain('echo "is_current=true" >> "$GITHUB_OUTPUT"');
-  expect(changesetsStep.uses).toBe("changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d");
-  expect(changesetsStep.if).toBe(releaseMutationCondition);
-  expect(changesetsStep.env?.GITHUB_TOKEN).toBe("${{ steps.release_app_token.outputs.token }}");
-  expect(changesetsStep.env?.NODE_AUTH_TOKEN).toBe("${{ secrets.NPM_TOKEN }}");
+  expect(versionStep.uses).toBe("changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d");
+  expect(versionStep.if).toBe(releaseVersionCondition);
+  expect(versionStep.with).toEqual({ version: "pnpm version-packages" });
+  expect(versionStep.env).toEqual({
+    GITHUB_TOKEN: "${{ steps.release_app_token.outputs.token }}",
+    LEFTHOOK: "0",
+  });
+  expect(publishStep.uses).toBe("changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d");
+  expect(publishStep.if).toBe(releasePublishCondition);
+  expect(publishStep.with).toEqual({
+    publish: "pnpm exec changeset publish",
+    version: "pnpm version-packages",
+  });
+  expect(publishStep.env?.GITHUB_TOKEN).toBe("${{ steps.release_app_token.outputs.token }}");
+  expect(publishStep.env?.NODE_AUTH_TOKEN).toBe("${{ secrets.NPM_TOKEN }}");
+  expect(steps.filter((step) => step.uses === publishStep.uses)).toHaveLength(2);
   expect(
     steps
-      .slice(0, changesetsIndex)
+      .slice(0, publishIndex)
       .some((step) => Object.values(step.env ?? {}).includes("${{ secrets.NPM_TOKEN }}")),
   ).toBe(false);
   expect(source).not.toContain("secrets.GITHUB_TOKEN");
@@ -464,8 +485,24 @@ describe("Release PR authentication contract", () => {
       name: "Changesets defensive ref guard removed",
       mutate: (source: string) =>
         source.replace(
-          `if: ${releaseMutationCondition}\n        uses: changesets/action`,
+          `if: ${releasePublishCondition}\n        uses: changesets/action`,
           "if: steps.release_work.outputs.should_run_changesets_action == 'true'\n        uses: changesets/action",
+        ),
+    },
+    {
+      name: "publish verification success condition removed",
+      mutate: (source: string) =>
+        source.replace(
+          `if: ${releasePublishCondition}\n        uses: changesets/action`,
+          `if: ${releaseActionCondition} && steps.current_trunk.outputs.is_current == 'true'\n        uses: changesets/action`,
+        ),
+    },
+    {
+      name: "publish input added to the unverified version step",
+      mutate: (source: string) =>
+        source.replace(
+          `      - name: Create Release Pull Request\n        if: ${releaseVersionCondition}\n        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0\n        with:\n          version: pnpm version-packages`,
+          `      - name: Create Release Pull Request\n        if: ${releaseVersionCondition}\n        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0\n        with:\n          publish: pnpm exec changeset publish\n          version: pnpm version-packages`,
         ),
     },
   ])("rejects hostile authentication mutation: $name", ({ mutate }) => {
@@ -484,6 +521,19 @@ function moveTokenBeforeVerification(source: string): string {
 }
 
 describe("Release verification profile contract", () => {
+  it("keeps the root release command fail-fast and workflow-only", () => {
+    expect(packageJson.scripts.release).toBe("node scripts/release-workflow-only.mjs");
+
+    const result = spawnSync("node", ["scripts/release-workflow-only.mjs"], {
+      cwd: rootDir,
+      encoding: "utf8",
+    });
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("protected Release workflow");
+    expect(result.stderr).toContain("RELEASING.md");
+  });
+
   it("uses the shared classifier and one publish profile invocation", () => {
     expect(workflow).toContain("scripts/verification-change-classifier.mts");
     expect(workflow).toContain('--event "$GITHUB_EVENT_NAME"');
@@ -520,7 +570,7 @@ describe("Release verification profile contract", () => {
     expect(workflow).toContain(
       "uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0",
     );
-    expect(workflow).toContain(`if: ${releaseMutationCondition}`);
+    expect(workflow).toContain(`if: ${releasePublishCondition}`);
   });
 
   it("installs the browser required by publish-profile docs integration before verification", () => {

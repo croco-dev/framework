@@ -26,7 +26,6 @@
   },
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
-    "deploy": "pnpm run build && pnpm publish --no-git-checks",
     "lint": "oxlint .",
     "test": "vitest run --exclude src/tests/RealResources.spec.ts",
     "test:live": "CROCO_TEST_REAL_RESOURCES=1 vitest run src/tests/RealResources.spec.ts",

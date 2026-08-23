@@ -113,6 +113,7 @@ export const RELEASE_GATE_SUPPORT_PATHS = [
   "scripts/pnpm-audit-gzip-recovery.cjs",
   "scripts/release-gate-maintenance.mts",
   "scripts/release-spine-evidence.mts",
+  "scripts/release-workflow-only.mjs",
   "scripts/security-gitleaks-smoke.mts",
   "scripts/test-evidence-runtime.mts",
   "scripts/verification-change-classifier.mts",

@@ -98,6 +98,108 @@ describe("normalize-packages.mjs", () => {
     expect(pkg.publishConfig.exports["."].types).toBe("./dist/index.d.ts");
   });
 
+  it("removes direct registry publish scripts while preserving safe package scripts", () => {
+    const root = createTempRoot();
+    const packagePath = writePublishablePackage(root, {
+      build: "tsup",
+      deploy: "pnpm run build && pnpm publish --no-git-checks",
+    });
+
+    const result = runScript(root, "--write");
+    const pkg = JSON.parse(readFileSync(packagePath, "utf-8"));
+
+    expect(result.status).toBe(0);
+    expect(pkg.scripts).toEqual({ build: "tsup" });
+  });
+
+  it.each([
+    ["pnpm publish", "pnpm publish --access public"],
+    ["filtered pnpm publish", "pnpm --filter @croco/example publish"],
+    ["npm publish", "npm publish --provenance"],
+    ["Changesets publish", "pnpm exec changeset publish"],
+    ["npx Changesets publish", "npx changeset publish"],
+    ["environment-prefixed npm publish", "CI=1 npm publish"],
+    ["env-wrapped pnpm publish", "env CI=1 pnpm publish"],
+    ["shell-wrapped pnpm publish", "sh -c 'pnpm publish'"],
+    ["local Changesets publish", "./node_modules/.bin/changeset publish"],
+    ["Corepack pnpm publish", "corepack pnpm publish"],
+    ["versioned npx Changesets publish", "npx @changesets/cli@latest publish"],
+    ["versioned pnpm dlx Changesets publish", "pnpm dlx @changesets/cli@2.29.7 publish"],
+    ["node Changesets CLI publish", "node node_modules/@changesets/cli/bin.js publish"],
+    ["substituted pnpm publish", "echo `pnpm publish`"],
+    ["double-quoted substituted pnpm publish", 'echo "$(pnpm publish)"'],
+    ["double-quoted backtick pnpm publish", 'echo "`pnpm publish`"'],
+    ["npm exec call Changesets publish", "npm exec -c 'changeset publish'"],
+    ["npx call Changesets publish", "npx --call 'changeset publish'"],
+    ["pnpm shell-mode Changesets publish", "pnpm exec --shell-mode 'changeset publish'"],
+    [
+      "registry-configured npx Changesets publish",
+      "npx --registry https://registry.npmjs.org @changesets/cli publish",
+    ],
+    ["nested npm publish", "npm exec -- npm publish"],
+    ["nested pnpm publish", "pnpm exec pnpm publish"],
+    ["npx pnpm publish", "npx pnpm publish"],
+    ["nested shell pnpm publish", "npm exec -- sh -c 'pnpm publish'"],
+  ])("rejects a public package script that invokes %s", (_label, command) => {
+    const root = createTempRoot();
+    writePublishablePackage(root, {
+      build: "tsup",
+      release: `pnpm run build && ${command}`,
+    });
+
+    const result = runScript(root, "--check");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      "scripts.release must not publish outside the protected Changesets workflow",
+    );
+  });
+
+  it.each([
+    "npm run publish",
+    "npm exec echo publish",
+    "pnpm run docs -- publish",
+    "npx echo changeset publish",
+    "pnpm exec echo changeset publish",
+    'echo "pnpm publish"',
+    "echo '$(pnpm publish)'",
+    "echo '`pnpm publish`'",
+  ])("preserves a non-publishing script containing publish tokens: %s", (command) => {
+    const root = createTempRoot();
+    writePublishablePackage(root, {
+      release: command,
+    });
+
+    const result = runScript(root, "--check");
+
+    expect(result.status).toBe(0);
+  });
+
+  it("rejects a root script that bypasses the protected release workflow", () => {
+    const root = createTempRoot();
+    writeFileSync(
+      join(root, "package.json"),
+      `${JSON.stringify(
+        {
+          name: "croco",
+          private: true,
+          scripts: {
+            release: "changeset publish",
+          },
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    const result = runScript(root, "--check");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      "package.json: scripts.release must not publish outside the protected Changesets workflow",
+    );
+  });
+
   it("normalizes storage packages to direct dist root entrypoints", () => {
     const root = createTempRoot();
     const packagePath = writePackage(root, "storage-core", {
@@ -1341,6 +1443,30 @@ function writePackage(
   writeFileSync(packagePath, `${JSON.stringify(manifest, null, 2)}\n`);
 
   return packagePath;
+}
+
+function writePublishablePackage(root: string, scripts: Record<string, string>): string {
+  return writePackage(root, "example", {
+    name: "@croco/example",
+    version: "0.0.3",
+    files: ["dist"],
+    type: "commonjs",
+    main: "./src/index.ts",
+    types: "./src/index.ts",
+    scripts,
+    publishConfig: {
+      access: "public",
+      main: "./dist/index.js",
+      types: "./dist/index.d.ts",
+      exports: {
+        ".": {
+          import: "./dist/index.mjs",
+          require: "./dist/index.js",
+          types: "./dist/index.d.ts",
+        },
+      },
+    },
+  });
 }
 
 function writeExamplePackage(
