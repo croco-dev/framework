@@ -13,7 +13,7 @@ catalogs:
 overrides:
   typescript: 6.0.3
   '@clerk/shared': 3.47.7
-  '@hono/node-server': 1.19.10
+  '@hono/node-server': 1.19.17
   '@opentelemetry/auto-instrumentations-node': 0.78.0
   '@opentelemetry/exporter-prometheus': 0.220.0
   '@opentelemetry/propagator-jaeger': 2.9.0
@@ -2783,8 +2783,8 @@ importers:
         specifier: workspace:*
         version: link:../problems-core
       '@hono/node-server':
-        specifier: 1.19.10
-        version: 1.19.10(hono@4.12.34)
+        specifier: 1.19.17
+        version: 1.19.17(hono@4.12.34)
       hono:
         specifier: 4.12.34
         version: 4.12.34
@@ -3573,8 +3573,8 @@ importers:
         specifier: workspace:*
         version: link:../ratelimit-core
       '@hono/node-server':
-        specifier: 1.19.10
-        version: 1.19.10(hono@4.12.34)
+        specifier: 1.19.17
+        version: 1.19.17(hono@4.12.34)
       '@opentelemetry/api':
         specifier: ^1.9.0
         version: 1.9.0
@@ -5334,8 +5334,8 @@ packages:
     engines: {node: '>=6'}
     hasBin: true
 
-  '@hono/node-server@1.19.10':
-    resolution: {integrity: sha512-hZ7nOssGqRgyV3FVVQdfi+U4q02uB23bpnYpdvNXkYTRRyWx84b7yf1ans+dnJ/7h41sGL3CeQTfO+ZGxuO+Iw==}
+  '@hono/node-server@1.19.17':
+    resolution: {integrity: sha512-dSneS5qhiauZWGDCeK4o695Xd9nUNjviSZCMQrj10eetr8Uln1ucn6bbphOM6UynAMMtNIzZNSpL9vnASJwrPQ==}
     engines: {node: '>=18.14.1'}
     peerDependencies:
       hono: 4.12.34
@@ -12774,7 +12774,7 @@ snapshots:
       protobufjs: 7.6.1
       yargs: 17.7.2
 
-  '@hono/node-server@1.19.10(hono@4.12.34)':
+  '@hono/node-server@1.19.17(hono@4.12.34)':
     dependencies:
       hono: 4.12.34
 
