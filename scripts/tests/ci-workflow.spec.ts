@@ -27,6 +27,10 @@ const WORKFLOW_JOBS = (WORKFLOW_DOCUMENT.toJS() as { readonly jobs?: unknown }).
 if (typeof WORKFLOW_JOBS !== "object" || WORKFLOW_JOBS === null || Array.isArray(WORKFLOW_JOBS)) {
   throw new Error("ci.yml must declare a jobs mapping");
 }
+const DOCS_SYNC_JOB = (WORKFLOW_JOBS as Readonly<Record<string, unknown>>)["docs-sync-check"];
+if (typeof DOCS_SYNC_JOB !== "object" || DOCS_SYNC_JOB === null || Array.isArray(DOCS_SYNC_JOB)) {
+  throw new Error("ci.yml must declare the docs-sync-check job as a mapping");
+}
 const WORKFLOWS = Object.fromEntries(
   readdirSync(resolve(ROOT_DIR, ".github/workflows"))
     .filter((path) => /\.ya?ml$/.test(path))
@@ -837,6 +841,9 @@ describe("CI verification profile contract", () => {
     expect(WORKFLOW).toContain("- 'packages/*/README.md'");
     expect(WORKFLOW).toContain("run: pnpm docs:api:check");
     expect(WORKFLOW).toContain("--exclude-path '(^|/)packages/docs/README\\.md$'");
+    expect((DOCS_SYNC_JOB as Readonly<Record<string, unknown>>).if).toBe(
+      "needs.changes.outputs.api-source == 'true'",
+    );
   });
 
   it("runs independent CI surfaces in parallel and restores content-addressed Turbo state", () => {
@@ -863,8 +870,8 @@ describe("CI verification profile contract", () => {
     expect(REAL_RESOURCE_JOB).toContain("permissions:\n      contents: read");
     expect(VALIDATE_JOB).not.toContain("membership-postgres:");
     expect(VALIDATE_JOB).not.toContain("Verify typed TestKernel resources");
-    expect(WORKFLOW).toContain(
-      "docs-sync-check:\n    needs: changes\n    if: github.event_name != 'pull_request' && needs.changes.outputs.api-source == 'true'",
+    expect((DOCS_SYNC_JOB as Readonly<Record<string, unknown>>).if).toBe(
+      "needs.changes.outputs.api-source == 'true'",
     );
   });
 });

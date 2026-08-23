@@ -42,6 +42,7 @@
     "bench:check": "node --experimental-strip-types scripts/bench-threshold-check.mts",
     "bench:readiness": "node --experimental-strip-types scripts/benchmark-readiness-report.mts",
     "bench:update": "node --experimental-strip-types scripts/bench-threshold-check.mts --update-baseline",
+    "branch-protection:check": "node --experimental-strip-types scripts/branch-protection-policy.mts",
     "alpha-release:smoke": "node --experimental-strip-types scripts/verification-command.mts --id alpha-release-smoke",
     "changeset-required:check": "node --experimental-strip-types scripts/verification-command.mts --id changeset-required",
     "ci-executables:check": "node --experimental-strip-types scripts/verification-command.mts --id ci-executables",

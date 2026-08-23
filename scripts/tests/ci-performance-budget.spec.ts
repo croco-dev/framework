@@ -89,6 +89,21 @@ describe("pull-request CI performance budget", () => {
     expect(violations).toContain("Windows scaffold must not be triggered by every package change");
   });
 
+  it("rejects API documentation checks that run for unrelated pull requests", () => {
+    const mutant = WORKFLOW.replace(
+      "if: needs.changes.outputs.api-source == 'true'",
+      "if: needs.changes.outputs.api-source == 'true' || github.event_name == 'pull_request'",
+    );
+
+    expect(
+      findCiPerformanceBudgetViolations({
+        maintenancePullRequestManifest: MAINTENANCE_PR_MANIFEST,
+        ordinaryPullRequestManifest: ORDINARY_PR_MANIFEST,
+        workflow: mutant,
+      }),
+    ).toContain("generated API documentation drift checks must follow API-source changes");
+  });
+
   it("rejects an unfiltered ordinary package validation graph", () => {
     const manifest = ORDINARY_PR_MANIFEST.map((command) =>
       command.id === "build"

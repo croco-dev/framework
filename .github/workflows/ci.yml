@@ -1400,7 +1400,7 @@ jobs:
 
   docs-sync-check:
     needs: changes
-    if: github.event_name != 'pull_request' && needs.changes.outputs.api-source == 'true'
+    if: needs.changes.outputs.api-source == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
