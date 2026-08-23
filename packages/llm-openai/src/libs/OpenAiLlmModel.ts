@@ -295,6 +295,10 @@ export class OpenAiLlmModel extends LlmModel {
         throw new OpenAiInvalidResponseProblem(operation, "response contained an error payload");
       }
 
+      if (response.status === "incomplete") {
+        throw new OpenAiInvalidResponseProblem(operation, incompleteResponseReason(response));
+      }
+
       return response;
     } catch (error) {
       throw normalizeOpenAiError(error, operation);
@@ -341,6 +345,10 @@ export class OpenAiLlmModel extends LlmModel {
 
     if (event.type === "response.failed") {
       throw new OpenAiInvalidResponseProblem("stream", "stream ended with response.failed");
+    }
+
+    if (event.type === "response.incomplete") {
+      throw new OpenAiInvalidResponseProblem("stream", incompleteResponseReason(event.response));
     }
 
     return null;
@@ -525,6 +533,18 @@ function invalidFunctionCall(index: number, reason: string): OpenAiInvalidRespon
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function incompleteResponseReason(response: OpenAiResponse | undefined): string {
+  const details = response?.incomplete_details;
+  if (!isRecord(details)) {
+    return "response incomplete without a reason";
+  }
+
+  const reason = details.reason;
+  return typeof reason === "string" && reason.length > 0
+    ? reason
+    : "response incomplete without a reason";
 }
 
 function extractEmbedding(
