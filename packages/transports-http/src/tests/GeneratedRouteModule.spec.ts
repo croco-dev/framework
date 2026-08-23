@@ -4,8 +4,10 @@ import { join } from "node:path";
 import { Container } from "@croco/framework-context";
 import { compileRoutes, generateModule } from "@croco/framework-routes";
 import { ProblemFactory } from "@croco/problems-core";
+import { HttpMethod } from "@croco/protocols-rest";
 import { Hono } from "hono";
 import { describe, expect, it } from "vitest";
+import { createApp as createCrocoApp } from "../libs/CrocoApp";
 import { GeneratedRouteController } from "./fixtures/GeneratedRouteController";
 
 describe("generated route module", () => {
@@ -16,6 +18,7 @@ describe("generated route module", () => {
       const moduleUrl = new URL("./fixtures/GeneratedRouteController.ts", import.meta.url).href;
       await compileRoutes({ controllerPaths: [moduleUrl], outputDir });
       Container.set(GeneratedRouteController, {
+        all: () => new Response("all controller response"),
         get: () => new Response("generated DI controller response"),
         problem: () => {
           throw ProblemFactory.validationError("generated-problem", "generated problem");
@@ -69,6 +72,7 @@ describe("generated route module", () => {
         "utf-8",
       );
       Container.set(GeneratedRouteController, {
+        all: () => new Response("all controller response"),
         get: () => new Response("explicit controller binding response"),
         problem: () => {
           throw ProblemFactory.validationError("generated-problem", "generated problem");
@@ -83,6 +87,47 @@ describe("generated route module", () => {
 
       expect(response.status).toBe(200);
       await expect(response.text()).resolves.toBe("explicit controller binding response");
+    } finally {
+      Container.reset();
+      await rm(outputDir, { recursive: true, force: true });
+    }
+  });
+
+  it("executes @All handlers equivalently through generated and reflection registration", async () => {
+    const outputDir = await mkdtemp(join(process.cwd(), ".croco-framework-routes-all-runtime-"));
+
+    try {
+      const moduleUrl = new URL("./fixtures/GeneratedRouteController.ts", import.meta.url).href;
+      await compileRoutes({ controllerPaths: [moduleUrl], outputDir });
+      Container.set(GeneratedRouteController, new GeneratedRouteController());
+
+      const generated = await import(
+        `${new URL(`file://${join(outputDir, ".croco", "build", "routes.mjs")}`).href}?${Date.now()}`
+      );
+      const generatedApp = new Hono();
+      generated.registerRoutes(generatedApp);
+      const reflectionApp = createCrocoApp({
+        controllers: [GeneratedRouteController],
+        securityValidation: "off",
+        diValidation: "off",
+      });
+
+      const concreteHttpMethods = Object.values(HttpMethod).filter(
+        (method) => method !== HttpMethod.ALL,
+      );
+
+      for (const method of concreteHttpMethods) {
+        const generatedResponse = await generatedApp.request(
+          new Request("http://localhost/generated/all", { method }),
+        );
+        const reflectionResponse = await reflectionApp.fetch(
+          new Request("http://localhost/generated/all", { method }),
+        );
+
+        expect(generatedResponse.status).toBe(200);
+        expect(reflectionResponse.status).toBe(generatedResponse.status);
+        await expect(reflectionResponse.text()).resolves.toBe(await generatedResponse.text());
+      }
     } finally {
       Container.reset();
       await rm(outputDir, { recursive: true, force: true });

@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import { extractRouteIR } from "@croco/protocols-core";
-import { Controller, Delete, Get, Post, Put } from "@croco/protocols-rest";
+import { All, Controller, Delete, Get, Post, Put } from "@croco/protocols-rest";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { CompiledController } from "../compiler";
 import {
@@ -26,6 +26,9 @@ const routesKey = Symbol.for("croco:rest:routes");
 
 @Controller("/api")
 class UserController {
+  @All("/any")
+  handleAny(): void {}
+
   @Get("/users")
   listUsers(): void {}
 
@@ -117,6 +120,7 @@ describe("build-time vs runtime route equivalence", () => {
     const tablePairs = table.entries.map((entry) => `${entry.method} ${entry.path}`);
 
     expect([...tablePairs].sort()).toEqual([
+      "ALL /api/any",
       "DELETE /api/users/:id",
       "GET /api/users",
       "GET /api/users/:id",
