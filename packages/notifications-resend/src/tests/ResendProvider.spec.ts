@@ -86,6 +86,7 @@ describe("ResendProvider", () => {
         component: "notifications-resend",
         details: expect.objectContaining({
           provider: "resend",
+          capabilities: provider.getCapabilities(),
           hasApiKey: true,
           hasDefaultFrom: false,
           missingConfig: ["default from address"],

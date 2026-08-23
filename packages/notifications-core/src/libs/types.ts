@@ -34,12 +34,12 @@ export type NotificationProviderOutboxIntegration =
   | "unsupported";
 
 export type NotificationProviderCapabilities = {
-  providerName: string;
-  channels: readonly NotificationChannel[];
-  supportsIdempotencyKey: boolean;
-  supportsProviderTemplates: boolean;
-  supportsRenderedTemplates: boolean;
-  outboxIntegration: NotificationProviderOutboxIntegration;
+  readonly providerName: string;
+  readonly channels: readonly NotificationChannel[];
+  readonly supportsIdempotencyKey: boolean;
+  readonly supportsProviderTemplates: boolean;
+  readonly supportsRenderedTemplates: boolean;
+  readonly outboxIntegration: NotificationProviderOutboxIntegration;
 };
 
 export interface NotificationProvider {
@@ -64,7 +64,7 @@ export interface NotificationProvider {
   /**
    * Provider capability contract used by the dispatch layer.
    */
-  getCapabilities?(): NotificationProviderCapabilities;
+  getCapabilities(): NotificationProviderCapabilities;
 }
 
 export interface NotificationJobPayload extends NotificationPayload {

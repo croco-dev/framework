@@ -22,6 +22,8 @@ import {
 } from "@croco/testing";
 import * as drizzleEntrypoint from "@croco/testing/drizzle";
 import { createDrizzleProviderConformanceSuite } from "@croco/testing/drizzle";
+import * as notificationEntrypoint from "@croco/testing/notifications";
+import { createNotificationProviderConformanceSuite } from "@croco/testing/notifications";
 
 // These package tests resolve public specifiers to source; package-entrypoints:smoke covers built CJS/ESM/types consumers.
 type SuiteWithNamedCases = {
@@ -136,6 +138,43 @@ describe("@croco/testing conformance public contract", () => {
     expect(drizzleEntrypoint.createDrizzleProviderConformanceSuite).toBe(
       testingEntrypoint.createDrizzleProviderConformanceSuite,
     );
+  });
+
+  it("exports notification conformance through its isolated subpath", () => {
+    expect(Object.keys(notificationEntrypoint)).toEqual([
+      "createNotificationProviderConformanceSuite",
+    ]);
+  });
+
+  it("locks notification provider capability conformance case names", () => {
+    const suite = createNotificationProviderConformanceSuite({
+      createProvider: () => ({
+        getName: () => "test-provider",
+        getChannel: () => "EMAIL",
+        getCapabilities: () => ({
+          providerName: "test-provider",
+          channels: ["EMAIL"],
+          supportsIdempotencyKey: true,
+          supportsProviderTemplates: false,
+          supportsRenderedTemplates: true,
+          outboxIntegration: "consumer-managed",
+        }),
+      }),
+      expectedCapabilities: {
+        providerName: "test-provider",
+        channels: ["EMAIL"],
+        supportsIdempotencyKey: true,
+        supportsProviderTemplates: false,
+        supportsRenderedTemplates: true,
+        outboxIntegration: "consumer-managed",
+      },
+    });
+
+    expect(caseNames(suite)).toEqual([
+      "exposes a complete explicit notification capability profile",
+      "aligns notification capability identity with the provider contract",
+      "returns a stable notification capability profile across reads",
+    ]);
   });
 
   it("locks auth provider case names, including optional evidence cases", () => {

@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 643,
+  problemCount: 646,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -11690,7 +11690,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 80,
+          line: 135,
           column: 5,
           kind: "problem-constructor",
         },
@@ -11722,7 +11722,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 169,
+          line: 224,
           column: 5,
           kind: "problem-constructor",
         },
@@ -11753,7 +11753,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 241,
+          line: 296,
           column: 5,
           kind: "problem-constructor",
         },
@@ -11784,7 +11784,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 257,
+          line: 312,
           column: 5,
           kind: "problem-constructor",
         },
@@ -11815,7 +11815,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 224,
+          line: 279,
           column: 5,
           kind: "problem-constructor",
         },
@@ -11846,7 +11846,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 208,
+          line: 263,
           column: 5,
           kind: "problem-constructor",
         },
@@ -11877,7 +11877,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 186,
+          line: 241,
           column: 5,
           kind: "problem-constructor",
         },
@@ -11917,6 +11917,105 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "notifications-core/provider-capabilities-missing",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#notifications-core-provider-capabilities-missing",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
+          line: 80,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "notifications-core/provider-capability-channel-mismatch",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#notifications-core-provider-capability-channel-mismatch",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
+          line: 117,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "notifications-core/provider-capability-name-mismatch",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#notifications-core-provider-capability-name-mismatch",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
+          line: 96,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
       code: "notifications-core/provider-channel-mismatch",
       category: "InternalServerError",
       status: 500,
@@ -11943,7 +12042,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 102,
+          line: 157,
           column: 5,
           kind: "problem-constructor",
         },
@@ -11976,7 +12075,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 136,
+          line: 191,
           column: 5,
           kind: "problem-constructor",
         },
@@ -12041,7 +12140,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 120,
+          line: 175,
           column: 5,
           kind: "problem-constructor",
         },
@@ -12107,7 +12206,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 153,
+          line: 208,
           column: 5,
           kind: "problem-constructor",
         },
@@ -12138,7 +12237,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 273,
+          line: 328,
           column: 5,
           kind: "problem-constructor",
         },
@@ -12169,7 +12268,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 291,
+          line: 346,
           column: 5,
           kind: "problem-constructor",
         },
@@ -12200,7 +12299,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 310,
+          line: 365,
           column: 5,
           kind: "problem-constructor",
         },

@@ -1,8 +1,33 @@
-import { describe, expect, it } from "vitest";
-import { createNotificationIdempotencyKey } from "../libs/NotificationDispatch";
+import { describe, expect, it, vi } from "vitest";
+import {
+  createNotificationIdempotencyKey,
+  getNotificationProviderCapabilities,
+} from "../libs/NotificationDispatch";
 import { NotificationChannel } from "../libs/types";
+import type { NotificationProvider } from "../libs/types";
 
 describe("NotificationDispatch", () => {
+  it("should use only the provider-declared capability profile", () => {
+    const capabilities = {
+      providerName: "explicit-provider",
+      channels: [NotificationChannel.EMAIL],
+      supportsIdempotencyKey: true,
+      supportsProviderTemplates: true,
+      supportsRenderedTemplates: false,
+      outboxIntegration: "provider-managed" as const,
+    };
+    const getCapabilities = vi.fn().mockReturnValue(capabilities);
+    const provider = {
+      getName: () => "explicit-provider",
+      getChannel: () => NotificationChannel.EMAIL,
+      getCapabilities,
+      send: async () => ({ success: true }),
+    } satisfies NotificationProvider;
+
+    expect(getNotificationProviderCapabilities(provider)).toBe(capabilities);
+    expect(getCapabilities).toHaveBeenCalledTimes(1);
+  });
+
   it("should derive deterministic idempotency keys from notification identity", () => {
     const input = {
       tenantId: "tenant-1",

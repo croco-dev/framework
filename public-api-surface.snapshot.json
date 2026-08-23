@@ -18449,6 +18449,24 @@
               "declarationKind": "class"
             },
             {
+              "name": "NotificationProviderCapabilitiesMissingProblem",
+              "exportKind": "declaration",
+              "source": "./libs/problems/NotificationProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "NotificationProviderCapabilityChannelMismatchProblem",
+              "exportKind": "declaration",
+              "source": "./libs/problems/NotificationProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "NotificationProviderCapabilityNameMismatchProblem",
+              "exportKind": "declaration",
+              "source": "./libs/problems/NotificationProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "NotificationProviderChannelMismatchProblem",
               "exportKind": "declaration",
               "source": "./libs/problems/NotificationProblems",
@@ -28924,6 +28942,65 @@
               "name": "TestEvidenceRecord",
               "exportKind": "named",
               "source": "./libs/test-evidence.mjs"
+            }
+          ]
+        },
+        {
+          "exportPath": "./notifications",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["import"],
+              "target": "./dist/notifications.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/notifications.js"
+            },
+            {
+              "conditions": ["types"],
+              "target": "./dist/notifications.d.ts"
+            }
+          ],
+          "sourceEntrypoint": "packages/testing/src/notifications.ts",
+          "runtimeExports": [
+            {
+              "name": "createNotificationProviderConformanceSuite",
+              "exportKind": "named",
+              "source": "./libs/notification-provider-conformance",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "NotificationProviderCapabilityContract",
+              "exportKind": "named",
+              "source": "./libs/notification-provider-conformance"
+            },
+            {
+              "name": "NotificationProviderConformanceCase",
+              "exportKind": "named",
+              "source": "./libs/notification-provider-conformance"
+            },
+            {
+              "name": "NotificationProviderConformanceOptions",
+              "exportKind": "named",
+              "source": "./libs/notification-provider-conformance"
+            },
+            {
+              "name": "NotificationProviderConformanceSubject",
+              "exportKind": "named",
+              "source": "./libs/notification-provider-conformance"
+            },
+            {
+              "name": "NotificationProviderConformanceSuite",
+              "exportKind": "named",
+              "source": "./libs/notification-provider-conformance"
+            },
+            {
+              "name": "NotificationProviderOutboxIntegrationContract",
+              "exportKind": "named",
+              "source": "./libs/notification-provider-conformance"
             }
           ]
         },

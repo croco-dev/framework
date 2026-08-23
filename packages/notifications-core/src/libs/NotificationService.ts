@@ -4,7 +4,6 @@ import { Component } from "@croco/framework-context";
 import { TaskRunner } from "@croco/tasks-core";
 import {
   createNotificationDispatchRequest,
-  getNotificationProviderCapabilities,
   toNotificationJobPayload,
   type NotificationOutboxReference,
 } from "./NotificationDispatch";
@@ -156,7 +155,11 @@ export class NotificationService {
 
     const sendContract = this.evaluateSendContract(channel, normalizedOptions);
     const template = getPayloadTemplateRef(payload);
-    const providerCapabilities = getNotificationProviderCapabilities(provider);
+    const providerCapabilities = this.registry.getProviderCapabilities(targetProviderName);
+
+    if (providerCapabilities === undefined) {
+      throw new NotificationProviderNotRegisteredProblem(targetProviderName);
+    }
     if (
       normalizedOptions?.requireProviderIdempotency === true &&
       !providerCapabilities.supportsIdempotencyKey

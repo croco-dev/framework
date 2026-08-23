@@ -2509,6 +2509,9 @@ importers:
         specifier: workspace:*
         version: link:../telemetry-api
     devDependencies:
+      '@croco/testing':
+        specifier: workspace:*
+        version: link:../testing
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -2580,6 +2583,9 @@ importers:
         specifier: ^4.0.0
         version: 4.8.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
     devDependencies:
+      '@croco/testing':
+        specifier: workspace:*
+        version: link:../testing
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2

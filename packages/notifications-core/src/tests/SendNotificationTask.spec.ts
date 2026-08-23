@@ -27,7 +27,15 @@ describe("SendNotificationTask", () => {
 
     mockProvider = {
       getName: vi.fn().mockReturnValue("resend"),
-      getChannel: vi.fn().mockReturnValue("EMAIL"),
+      getChannel: vi.fn().mockReturnValue(NotificationChannel.EMAIL),
+      getCapabilities: vi.fn().mockReturnValue({
+        providerName: "resend",
+        channels: [NotificationChannel.EMAIL],
+        supportsIdempotencyKey: true,
+        supportsProviderTemplates: false,
+        supportsRenderedTemplates: true,
+        outboxIntegration: "consumer-managed",
+      }),
       send: vi.fn(),
     };
   });
