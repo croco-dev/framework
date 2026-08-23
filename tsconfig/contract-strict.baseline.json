@@ -2584,30 +2584,6 @@
     },
     {
       "packageName": "@croco/framework-context",
-      "file": "packages/framework-context/src/libs/MetadataStorage.ts",
-      "line": 59,
-      "column": 36,
-      "code": "TS2379",
-      "message": "Argument of type '{ key: symbol; target: MetadataTarget; propertyKey: string | symbol | undefined; value: T; }' is not assignable to parameter of type 'MetadataEntry' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
-    },
-    {
-      "packageName": "@croco/framework-context",
-      "file": "packages/framework-context/src/libs/MetadataStorage.ts",
-      "line": 74,
-      "column": 5,
-      "code": "TS2322",
-      "message": "Type '{ target: MetadataTarget; propertyKey: string | symbol | undefined; value: T; }[]' is not assignable to type '{ target: MetadataTarget; propertyKey?: string | symbol; value: T; }[]'."
-    },
-    {
-      "packageName": "@croco/framework-context",
-      "file": "packages/framework-context/src/libs/MetadataStorage.ts",
-      "line": 89,
-      "column": 5,
-      "code": "TS2322",
-      "message": "Type '{ propertyKey: string | symbol | undefined; value: T; }[]' is not assignable to type '{ propertyKey?: string | symbol; value: T; }[]'."
-    },
-    {
-      "packageName": "@croco/framework-context",
       "file": "packages/framework-context/src/libs/MiddlewareChain.ts",
       "line": 44,
       "column": 13,
