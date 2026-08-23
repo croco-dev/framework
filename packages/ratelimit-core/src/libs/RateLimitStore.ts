@@ -212,7 +212,7 @@ export abstract class FixedWindowStore extends DistributedRateLimitStore {
   }
 
   protected clearFixedWindowRefundReceipts(key?: string): void {
-    if (key) {
+    if (key !== undefined) {
       this.refundReceipts.delete(key);
       return;
     }
@@ -473,7 +473,7 @@ export abstract class TokenBucketStore extends DistributedRateLimitStore {
   }
 
   protected clearTokenBucketRefundReceipts(key?: string): void {
-    if (key) {
+    if (key !== undefined) {
       this.refundReceipts.delete(key);
       return;
     }
