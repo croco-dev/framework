@@ -10,6 +10,7 @@ import {
   ImpersonationReasonRequiredProblem,
   ImpersonationSessionNotFoundProblem,
   ImpersonationTargetNotFoundProblem,
+  InvalidImpersonationConfigurationProblem,
   NestedImpersonationProblem,
   SelfImpersonationProblem,
 } from "./problems/ImpersonationProblems";
@@ -20,6 +21,66 @@ export type ImpersonationContext = RequestContext & {
   impersonation: ImpersonationState;
 };
 
+const MAX_DATE_TIMESTAMP_MS = 8_640_000_000_000_000;
+
+function toConfigurationReceivedValue(value: unknown): number | string {
+  if (typeof value !== "number") {
+    return `non-number-${typeof value}`;
+  }
+  if (Number.isFinite(value)) {
+    return value;
+  }
+  if (Number.isNaN(value)) {
+    return "NaN";
+  }
+  return value === Number.POSITIVE_INFINITY ? "Infinity" : "-Infinity";
+}
+
+function invalidDurationProblem(value: unknown): InvalidImpersonationConfigurationProblem {
+  return new InvalidImpersonationConfigurationProblem({
+    field: "maxDurationMs",
+    constraint: "positive-safe-integer-with-representable-expiration",
+    receivedValue: toConfigurationReceivedValue(value),
+  });
+}
+
+function resolveExpiration(now: Date, maxDurationMs: number): Date {
+  const expiresAt = new Date(now.getTime() + maxDurationMs);
+  if (Number.isNaN(expiresAt.getTime())) {
+    throw invalidDurationProblem(maxDurationMs);
+  }
+  return expiresAt;
+}
+
+function assertValidImpersonationConfig(config: ImpersonationConfig): void {
+  if (
+    !Number.isSafeInteger(config.maxDurationMs) ||
+    config.maxDurationMs <= 0 ||
+    config.maxDurationMs > MAX_DATE_TIMESTAMP_MS - Date.now()
+  ) {
+    throw invalidDurationProblem(config.maxDurationMs);
+  }
+
+  if (!Array.isArray(config.blockedActions)) {
+    throw new InvalidImpersonationConfigurationProblem({
+      field: "blockedActions",
+      constraint: "array-of-non-blank-strings",
+      receivedValue: "non-array",
+    });
+  }
+
+  const invalidActionIndex = config.blockedActions.findIndex(
+    (action) => typeof action !== "string" || action.trim().length === 0,
+  );
+  if (invalidActionIndex !== -1) {
+    throw new InvalidImpersonationConfigurationProblem({
+      field: "blockedActions",
+      constraint: "array-of-non-blank-strings",
+      receivedValue: `invalid-item-at-index-${invalidActionIndex}`,
+    });
+  }
+}
+
 @Component()
 export class ImpersonationService {
   private readonly idPrefix = new IdPrefix("imp");
@@ -29,7 +90,9 @@ export class ImpersonationService {
     @Inject(ImpersonationStore.token) private readonly store: ImpersonationStore,
     @Inject(AuthProvider.token) readonly _authProvider: AuthProvider,
     @Inject(IMPERSONATION_CONFIG_TOKEN) private readonly config: ImpersonationConfig,
-  ) {}
+  ) {
+    assertValidImpersonationConfig(config);
+  }
 
   async start(
     context: RequestContext,
@@ -62,19 +125,20 @@ export class ImpersonationService {
       throw new NestedImpersonationProblem();
     }
 
-    if (this.config.requireReason && !reason) {
+    const normalizedReason = this.config.requireReason ? reason?.trim() : reason;
+    if (this.config.requireReason && !normalizedReason) {
       throw new ImpersonationReasonRequiredProblem();
     }
 
-    const sessionId = this.idPrefix.generate();
     const now = new Date();
-    const expiresAt = new Date(now.getTime() + this.config.maxDurationMs);
+    const expiresAt = resolveExpiration(now, this.config.maxDurationMs);
+    const sessionId = this.idPrefix.generate();
 
     const session: ImpersonationState = Object.freeze({
       sessionId,
       impersonatorId: principal.id,
       targetUserId,
-      reason,
+      reason: normalizedReason,
       startedAt: now,
       expiresAt,
     });

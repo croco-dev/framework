@@ -138,6 +138,10 @@ const store = new InMemoryImpersonationStore();
 | `requireReason`  | boolean  | 사칭 사유 필수 여부     |
 | `blockedActions` | string[] | 차단할 작업 목록        |
 
+`ImpersonationService`는 생성 시 `maxDurationMs`가 만료 시각을 안전하게 표현할 수 있는 양의 정수인지,
+`blockedActions`가 비어 있지 않은 작업 이름의 배열인지 검증합니다. `requireReason`이 활성화된 경우 `start()`는
+reason의 앞뒤 공백을 제거한 뒤 빈 값이면 거부하며, 정규화된 reason만 세션과 시작 이벤트에 기록합니다.
+
 ### ImpersonationState
 
 | 속성             | 타입                | 설명           |

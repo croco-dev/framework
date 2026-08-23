@@ -1,5 +1,37 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
 
+export type ImpersonationConfigurationField = "blockedActions" | "maxDurationMs";
+
+export type ImpersonationConfigurationConstraint =
+  | "array-of-non-blank-strings"
+  | "positive-safe-integer-with-representable-expiration";
+
+export type InvalidImpersonationConfigurationProblemOptions = {
+  readonly field: ImpersonationConfigurationField;
+  readonly constraint: ImpersonationConfigurationConstraint;
+  readonly receivedValue: number | string;
+};
+
+export class InvalidImpersonationConfigurationProblem extends Problem {
+  readonly code = "IMPERSONATION_CONFIGURATION_INVALID";
+  readonly category = ProblemCategory.InternalServerError;
+  readonly field: ImpersonationConfigurationField;
+  readonly constraint: ImpersonationConfigurationConstraint;
+  readonly receivedValue: number | string;
+
+  constructor(options: InvalidImpersonationConfigurationProblemOptions) {
+    super(
+      undefined,
+      undefined,
+      `Invalid impersonation configuration: ${options.field} must satisfy ${options.constraint}`,
+      { extensions: options },
+    );
+    this.field = options.field;
+    this.constraint = options.constraint;
+    this.receivedValue = options.receivedValue;
+  }
+}
+
 export class SelfImpersonationProblem extends Problem {
   readonly code = "SELF_IMPERSONATION_NOT_ALLOWED";
   readonly category = ProblemCategory.Forbidden;
