@@ -308,7 +308,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/admin-generated/src/libs/generate.ts",
-          line: 55,
+          line: 56,
           column: 5,
           kind: "problem-constructor",
         },

@@ -1427,6 +1427,7 @@ describe("buildContractGraph", () => {
           "request.headers",
           "response",
           "problems",
+          "entitlements",
           "access.guards",
           "access.roles",
         ],
@@ -1441,6 +1442,7 @@ describe("buildContractGraph", () => {
           "request.headers": "absent",
           response: "absent",
           problems: "[]",
+          entitlements: "[]",
           "access.guards": "[]",
           "access.roles": "[]",
         },
@@ -1454,6 +1456,85 @@ describe("buildContractGraph", () => {
     expect(diagnostics.map((diagnostic) => diagnostic.message)).toEqual([
       expect.stringContaining("access.guards"),
       expect.stringContaining("access.roles"),
+    ]);
+  });
+
+  it("should reject admin-generated consumers that omit or mutate entitlement metadata", () => {
+    @Controller("/reports")
+    class ReportsController {
+      @Get("/:id")
+      @RequiresEntitlement({
+        feature: "reports.read",
+        resource: { type: "report", idParam: "id" },
+      })
+      getReport(@Param("id") _id: string): void {}
+    }
+
+    const graph = buildContractGraph([ReportsController]);
+    const baseObservedRoute = {
+      routeId: "ReportsController.getReport",
+      operationId: "ReportsController_getReport",
+      consumedFields: [
+        "routeId",
+        "operationId",
+        "httpMethod",
+        "path",
+        "request.body",
+        "request.path",
+        "request.query",
+        "request.headers",
+        "response",
+        "problems",
+        "access.guards",
+        "access.roles",
+      ] as const,
+      fieldFingerprints: {
+        routeId: "ReportsController.getReport",
+        operationId: "ReportsController_getReport",
+        httpMethod: "GET",
+        path: "/reports/:id",
+        "request.body": "absent",
+        "request.path": "present",
+        "request.query": "absent",
+        "request.headers": "absent",
+        response: "absent",
+        problems: "[]",
+        "access.guards": "[]",
+        "access.roles": "[]",
+      },
+    };
+
+    const omittedDiagnostics = getContractGraphConsumerRouteCoverageDiagnostics(
+      graph,
+      "admin-generated",
+      [baseObservedRoute],
+    );
+    const mutatedDiagnostics = getContractGraphConsumerRouteCoverageDiagnostics(
+      graph,
+      "admin-generated",
+      [
+        {
+          ...baseObservedRoute,
+          consumedFields: [...baseObservedRoute.consumedFields, "entitlements"],
+          fieldFingerprints: {
+            ...baseObservedRoute.fieldFingerprints,
+            entitlements: JSON.stringify([{ feature: "reports.export" }]),
+          },
+        },
+      ],
+    );
+
+    expect(omittedDiagnostics).toEqual([
+      expect.objectContaining({
+        code: "contract-consumer-missing-generated-route-field",
+        message: expect.stringContaining("entitlements"),
+      }),
+    ]);
+    expect(mutatedDiagnostics).toEqual([
+      expect.objectContaining({
+        code: "contract-consumer-route-field-mismatch",
+        message: expect.stringContaining("entitlements"),
+      }),
     ]);
   });
 

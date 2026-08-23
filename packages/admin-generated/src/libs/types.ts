@@ -33,6 +33,18 @@ export type AdminGeneratedRequestMetadata = {
   readonly headers: AdminGeneratedSchemaPresence;
 };
 
+export type AdminGeneratedEntitlementResourceRequirement = {
+  readonly type: string;
+  readonly id?: string;
+  readonly idParam?: string;
+};
+
+export type AdminGeneratedEntitlementRequirement = {
+  readonly feature: string;
+  readonly description?: string;
+  readonly resource?: AdminGeneratedEntitlementResourceRequirement;
+};
+
 export type AdminGeneratedClientBinding = {
   readonly routeId: string;
   readonly operationId: string;
@@ -43,6 +55,7 @@ export type AdminGeneratedClientBinding = {
   readonly outputType?: string;
   readonly problemType: string;
   readonly problems: readonly AdminGeneratedProblem[];
+  readonly entitlements: readonly AdminGeneratedEntitlementRequirement[];
 };
 
 export type AdminGeneratedResourceOperation = {
@@ -60,6 +73,7 @@ export type AdminGeneratedResourceOperation = {
   readonly response: AdminGeneratedSchemaPresence;
   readonly problems: readonly AdminGeneratedProblem[];
   readonly access: ContractAccessMetadata;
+  readonly entitlements: readonly AdminGeneratedEntitlementRequirement[];
 };
 
 export type AdminGeneratedResourceAction = {
@@ -79,6 +93,7 @@ export type AdminGeneratedResourceAction = {
   readonly response: AdminGeneratedSchemaPresence;
   readonly problems: readonly AdminGeneratedProblem[];
   readonly access: ContractAccessMetadata;
+  readonly entitlements: readonly AdminGeneratedEntitlementRequirement[];
 };
 
 export type AdminGeneratedResourceConfig = {

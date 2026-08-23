@@ -13,6 +13,7 @@ import type {
   AdminGeneratedArtifact,
   AdminGeneratedClientBinding,
   AdminGeneratedDiagnostic,
+  AdminGeneratedEntitlementRequirement,
   AdminGeneratedOperationKind,
   AdminGeneratedOperationScope,
   AdminGeneratedProblem,
@@ -139,13 +140,20 @@ export function createAdminGeneratedArtifact(graph: ContractGraph): AdminGenerat
     diagnostics,
   };
 
+  assertAdminGeneratedContractGraphCoverage(graph, artifact);
+
+  return artifact;
+}
+
+export function assertAdminGeneratedContractGraphCoverage(
+  graph: ContractGraph,
+  artifact: AdminGeneratedArtifact,
+): void {
   assertContractGraphConsumerRouteCoverage(
     graph,
     "admin-generated",
     collectAdminGeneratedRoutes(artifact),
   );
-
-  return artifact;
 }
 
 export function generateAdminResourceConfigFromContractGraph(
@@ -381,6 +389,7 @@ function createResourceOperation(
     response: schemaPresence(route.outputSchema),
     problems: problemMetadata(route),
     access: route.access,
+    entitlements: entitlementMetadata(route),
   };
 }
 
@@ -405,6 +414,7 @@ function createResourceAction(
     response: schemaPresence(route.outputSchema),
     problems: problemMetadata(route),
     access: route.access,
+    entitlements: entitlementMetadata(route),
   };
 }
 
@@ -418,6 +428,7 @@ function createClientBinding(route: ContractGraphRoute): AdminGeneratedClientBin
     ...typeNameMetadata(route),
     problemType: getProblemTypeName(route),
     problems: problemMetadata(route),
+    entitlements: entitlementMetadata(route),
   };
 }
 
@@ -458,6 +469,24 @@ function problemMetadata(route: ContractGraphRoute): AdminGeneratedProblem[] {
     .sort(compareProblems);
 }
 
+function entitlementMetadata(route: ContractGraphRoute): AdminGeneratedEntitlementRequirement[] {
+  return route.entitlements
+    .map((entitlement) => ({
+      feature: entitlement.feature,
+      ...(entitlement.description ? { description: entitlement.description } : {}),
+      ...(entitlement.resource
+        ? {
+            resource: {
+              type: entitlement.resource.type,
+              ...(entitlement.resource.id ? { id: entitlement.resource.id } : {}),
+              ...(entitlement.resource.idParam ? { idParam: entitlement.resource.idParam } : {}),
+            },
+          }
+        : {}),
+    }))
+    .sort(compareEntitlements);
+}
+
 function finalizeResource(draft: ResourceDraft): AdminGeneratedResourceConfig {
   const operationEntries = [...draft.operations.entries()].sort(
     ([left], [right]) => operationRank(left) - operationRank(right),
@@ -490,6 +519,7 @@ function collectAdminGeneratedRoutes(
     "request.headers",
     "response",
     "problems",
+    "entitlements",
     "access.guards",
     "access.roles",
   ] as const satisfies readonly ContractGraphConsumerRouteField[];
@@ -510,6 +540,7 @@ function collectAdminGeneratedRoutes(
         "request.headers": getRequestFingerprint(artifact, binding.routeId, "headers"),
         response: getResponseFingerprint(artifact, binding.routeId),
         problems: JSON.stringify(binding.problems),
+        entitlements: getEntitlementsFingerprint(artifact, binding),
         "access.guards": getAccessGuardsFingerprint(artifact, binding.routeId),
         "access.roles": getAccessRolesFingerprint(artifact, binding.routeId),
       },
@@ -546,6 +577,19 @@ function getAccessRolesFingerprint(artifact: AdminGeneratedArtifact, routeId: st
   return JSON.stringify(
     [...(findGeneratedOperation(artifact, routeId)?.access.roles ?? [])].sort(compareStrings),
   );
+}
+
+function getEntitlementsFingerprint(
+  artifact: AdminGeneratedArtifact,
+  binding: AdminGeneratedClientBinding,
+): string {
+  const operation = findGeneratedOperation(artifact, binding.routeId);
+  const bindingFingerprint = JSON.stringify(binding.entitlements);
+  const operationFingerprint = JSON.stringify(operation?.entitlements);
+
+  return bindingFingerprint === operationFingerprint
+    ? bindingFingerprint
+    : JSON.stringify({ binding: binding.entitlements, operation: operation?.entitlements });
 }
 
 function findGeneratedOperation(
@@ -1067,6 +1111,13 @@ function compareActions(
 
 function compareProblems(left: AdminGeneratedProblem, right: AdminGeneratedProblem): number {
   return compareStrings(left.code, right.code) || left.status - right.status;
+}
+
+function compareEntitlements(
+  left: AdminGeneratedEntitlementRequirement,
+  right: AdminGeneratedEntitlementRequirement,
+): number {
+  return compareStrings(JSON.stringify(left), JSON.stringify(right));
 }
 
 function compareDiagnostics(

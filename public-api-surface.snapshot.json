@@ -1004,6 +1004,16 @@
               "source": "./libs/types"
             },
             {
+              "name": "AdminGeneratedEntitlementRequirement",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "AdminGeneratedEntitlementResourceRequirement",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
               "name": "AdminGeneratedOperationKind",
               "exportKind": "named",
               "source": "./libs/types"

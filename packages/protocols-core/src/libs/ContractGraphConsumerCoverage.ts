@@ -83,6 +83,7 @@ export const DEFAULT_CONTRACT_GRAPH_CONSUMERS = [
       "request.headers",
       "response",
       "problems",
+      "entitlements",
       "access.guards",
       "access.roles",
     ],
