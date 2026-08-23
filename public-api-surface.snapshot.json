@@ -21080,6 +21080,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "toRuntimeRoutePath",
+              "exportKind": "named",
+              "source": "./libs/routePath",
+              "declarationKind": "function"
+            },
+            {
               "name": "unwrapZodEffectsSchema",
               "exportKind": "named",
               "source": "./libs/SchemaDescriptor",

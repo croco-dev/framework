@@ -2615,6 +2615,12 @@
       "owner": "@croco/protocols-core"
     },
     {
+      "path": "packages/protocols-core/src/tests/RoutePath.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/protocols-core"
+    },
+    {
       "path": "packages/protocols-core/src/tests/SchemaDescriptor.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],

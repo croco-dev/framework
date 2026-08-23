@@ -9,6 +9,14 @@ title: "RouteRegistrationEntry"
 
 ## Properties
 
+### contractPath?
+
+> `readonly` `optional` **contractPath?**: `string`
+
+Authored contract path. Optional only for compatibility with v1 tables created before this field existed.
+
+---
+
 ### controllerName
 
 > `readonly` **controllerName**: `string`

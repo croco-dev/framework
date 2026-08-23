@@ -60,10 +60,27 @@ class HealthController {
   check(): void {}
 }
 
+@Controller("/cdn")
+class CatchAllController {
+  @Get("/assets/:...path")
+  getAsset(): void {}
+
+  @Get("/items/:id")
+  getItem(): void {}
+}
+
+@Controller("")
+class RootCatchAllController {
+  @Get("/:...path")
+  getRootAsset(): void {}
+}
+
 const controllers: readonly ControllerFixture[] = [
   [UserController, "/api"],
   [V2Controller, "/v2"],
   [HealthController, ""],
+  [CatchAllController, "/cdn"],
+  [RootCatchAllController, ""],
 ];
 
 function readCompiledControllers(fixtures: readonly ControllerFixture[]): CompiledController[] {
@@ -117,13 +134,33 @@ describe("build-time vs runtime route equivalence", () => {
 
   it("generates an explicit registration table with matching route method and path pairs", () => {
     const table = createRouteRegistrationTable(buildTimeControllers);
-    const tablePairs = table.entries.map((entry) => `${entry.method} ${entry.path}`);
+    const tablePairs = table.entries.map(
+      (entry) => `${entry.method} ${entry.contractPath ?? entry.path}`,
+    );
 
     expect([...tablePairs].sort()).toEqual([
       "ALL /api/any",
       "DELETE /api/users/:id",
+      "GET /:...path",
       "GET /api/users",
       "GET /api/users/:id",
+      "GET /cdn/assets/:...path",
+      "GET /cdn/items/:id",
+      "GET /health",
+      "GET /v2/items",
+      "POST /api/users",
+      "POST /v2/items/:slug",
+      "PUT /api/users/:id",
+    ]);
+
+    expect(table.entries.map((entry) => `${entry.method} ${entry.path}`).sort()).toEqual([
+      "ALL /api/any",
+      "DELETE /api/users/:id",
+      "GET /:path{.+}",
+      "GET /api/users",
+      "GET /api/users/:id",
+      "GET /cdn/assets/:path{.+}",
+      "GET /cdn/items/:id",
       "GET /health",
       "GET /v2/items",
       "POST /api/users",
@@ -138,6 +175,8 @@ describe("build-time vs runtime route equivalence", () => {
     expect(code).toContain('"path": "/api/users/:id"');
     expect(code).toContain('"path": "/v2/items/:slug"');
     expect(code).toContain('"path": "/health"');
+    expect(code).toContain('"path": "/cdn/assets/:path{.+}"');
+    expect(code).toContain('"contractPath": "/cdn/assets/:...path"');
   });
 
   it("handles empty controller lists gracefully", () => {
