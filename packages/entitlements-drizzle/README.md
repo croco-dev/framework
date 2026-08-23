@@ -36,7 +36,7 @@ const entitlements = plan
 ### DrizzlePlanEntitlementRegistry
 
 - `getEntitlements(planId)`, migration 중인 null-version legacy 규칙만 반환합니다.
-- `findRule(planId, featureKey)`, migration 중인 null-version legacy 규칙 하나를 반환합니다.
+- `findRule(planId, featureKey)`, migration 중인 null-version legacy 규칙을 반환하며 중복 결과는 실패합니다.
 - `getEntitlementsByPlanVersion(planVersionRef, expectedPlanId?)`, 고정된 버전의 모든 규칙을 반환하고 선택적으로 plan family도 검증합니다.
 - `findRuleByPlanVersion(planVersionRef, featureKey, expectedPlanId?)`, 고정된 버전의 규칙 하나를 반환하고 선택적으로 plan family도 검증합니다.
 
@@ -48,7 +48,7 @@ const entitlements = plan
 ### Schema
 
 - `planEntitlementSets`, 등록된 immutable plan version과 plan family를 저장합니다.
-- `planEntitlements`, `planVersionRef`와 기능 키 조합별 entitlement 규칙 및 `meterBilling` intent를 저장합니다.
+- `planEntitlements`, version-bound 규칙은 `planVersionRef`와 기능 키, legacy 규칙은 plan ID와 기능 키 조합별로 하나만 저장하며 `meterBilling` intent를 유지합니다.
 - `DRIZZLE_TOKEN`, 레지스트리용 Drizzle 클라이언트 토큰입니다.
 - `BILLING_STORE_TOKEN`, 구독 제공자용 빌링 스토어 토큰입니다.
 
@@ -63,6 +63,6 @@ const entitlements = plan
 5. null 행이 없음을 검증한 후 애플리케이션 migration에서 `plan_version_ref`를 `NOT NULL`로 강화할 수 있습니다.
 
 `addPlanVersionEntitlementsPostgres()`가 1단계 schema를 적용하고,
-`backfillPlanVersionEntitlementsPostgres()`가 transaction을 지원하는 client에서 운영자가 전달한 one-to-one mapping만 backfill합니다. 기존 reference가 다른 plan family에 속하거나, 같은 version에 feature rule이 중복되거나, inline quota 및 billable meter binding이 누락되면 mutation 전에 실패합니다. Legacy row가 없는 빈 entitlement set은 mapping에 `allowEmpty: true`를 명시해야만 발행됩니다.
+`backfillPlanVersionEntitlementsPostgres()`가 transaction을 지원하는 client에서 운영자가 전달한 one-to-one mapping만 backfill합니다. `addPlanVersionEntitlementsPostgres()`는 legacy `(plan_id, feature_key)` 중복을 plan과 feature identifier가 포함된 진단으로 먼저 보고한 뒤 partial unique index를 생성합니다. 기존 reference가 다른 plan family에 속하거나, 같은 version에 feature rule이 중복되거나, inline quota 및 billable meter binding이 누락되면 mutation 전에 실패합니다. Legacy row가 없는 빈 entitlement set은 mapping에 `allowEmpty: true`를 명시해야만 발행됩니다.
 
 버전 조회는 먼저 `plan_entitlement_sets`의 등록 여부를 확인합니다. 등록되지 않은 reference는 빈 entitlement set이나 최신 plan fallback으로 처리하지 않고 `entitlements-core/plan-version-not-found` Problem으로 실패합니다.

@@ -88,6 +88,7 @@ resource id는 `resource.id`로 고정하거나 `resource.idParam`을 통해 req
 - `EntitlementGuard`, 라우트 단위 entitlement 강제를 담당합니다.
 - `InMemoryPlanEntitlementRegistry`, 테스트용 플랜 규칙 저장소입니다.
 - `StaticSubscriptionProvider`, 고정 플랜 기반 구독 제공자입니다.
+- `assertEntitlementRules`, provider와 registry 경계에서 중복 및 공통 semantic invariant를 검증합니다. Legacy metered rule의 meter-derived quota는 허용합니다.
 
 ### 데코레이터와 인터페이스
 

@@ -8469,6 +8469,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "assertEntitlementRules",
+              "exportKind": "named",
+              "source": "./libs/EntitlementRuleValidation",
+              "declarationKind": "function"
+            },
+            {
               "name": "assertPlanVersionMatches",
               "exportKind": "named",
               "source": "./libs/EntitlementDefinition",

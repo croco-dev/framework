@@ -19,6 +19,28 @@ vi.mock("@croco/entitlements-core", () => ({
     readonly code = "entitlements-core/plan-version-mismatch";
     readonly status = 409;
   },
+  assertEntitlementRules: (rules: Array<Record<string, unknown>>) => {
+    const featureKeys = new Set<string>();
+    for (const rule of rules) {
+      const featureKey = String(rule.featureKey);
+      if (featureKeys.has(featureKey)) {
+        throw Object.assign(new Error(`Feature '${featureKey}' is declared more than once`), {
+          code: "entitlements-core/definition-invalid",
+          status: 400,
+        });
+      }
+      if (
+        rule.overagePolicy === "ALLOW_WITH_OVERAGE" &&
+        (rule.meterId === undefined || rule.meterBilling !== "required")
+      ) {
+        throw Object.assign(new Error("without a billing-required meter"), {
+          code: "entitlements-core/definition-invalid",
+          status: 400,
+        });
+      }
+      featureKeys.add(featureKey);
+    }
+  },
 }));
 
 import {
@@ -145,6 +167,64 @@ describe("DrizzlePlanEntitlementRegistry", () => {
 
     const rule = await registry.findRule("unknown-plan", "projects");
     expect(rule).toBeNull();
+  });
+
+  it("rejects ambiguous persisted legacy rules instead of returning a first match", async () => {
+    const duplicateRules = [
+      {
+        featureKey: "reports",
+        type: "boolean",
+        value: null,
+        meterId: null,
+        meterBilling: null,
+        quota: null,
+        overagePolicy: null,
+      },
+      {
+        featureKey: "reports",
+        type: "static",
+        value: 10,
+        meterId: null,
+        meterBilling: null,
+        quota: null,
+        overagePolicy: null,
+      },
+    ];
+    (mockDb.select as ReturnType<typeof vi.fn>).mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue(duplicateRules),
+      }),
+    });
+
+    await expect(registry.getEntitlements("pro")).rejects.toMatchObject({
+      code: "entitlements-core/definition-invalid",
+    });
+    await expect(registry.findRule("pro", "reports")).rejects.toMatchObject({
+      code: "entitlements-core/definition-invalid",
+    });
+  });
+
+  it("rejects unknown persisted meter billing instead of normalizing it away", async () => {
+    (mockDb.select as ReturnType<typeof vi.fn>).mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue([
+          {
+            featureKey: "reports",
+            type: "metered",
+            value: null,
+            meterId: "reports",
+            meterBilling: "external",
+            quota: 10,
+            overagePolicy: "block",
+          },
+        ]),
+      }),
+    });
+
+    await expect(registry.getEntitlements("pro")).rejects.toMatchObject({
+      code: "entitlements-core/definition-invalid",
+      message: expect.stringContaining("unknown meter billing 'external'"),
+    });
   });
 
   it("queries entitlement rules by immutable plan version", async () => {

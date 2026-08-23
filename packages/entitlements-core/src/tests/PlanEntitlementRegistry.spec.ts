@@ -53,6 +53,59 @@ describe("InMemoryPlanEntitlementRegistry", () => {
     expect(rule).toBeNull();
   });
 
+  it("rejects duplicate legacy feature rules before registration", async () => {
+    expect(() =>
+      registry.register("pro", [
+        { featureKey: "reports", type: "boolean" },
+        { featureKey: "reports", type: "static", value: 10 },
+      ]),
+    ).toThrow("Feature 'reports' is declared more than once");
+
+    await expect(registry.getEntitlements("pro")).resolves.toEqual([]);
+  });
+
+  it.each([
+    {
+      name: "static rules without a value",
+      rule: { featureKey: "seats", type: "static" } as EntitlementRule,
+      message: "requires a value",
+    },
+    {
+      name: "negative metered quotas",
+      rule: { featureKey: "requests", type: "metered", quota: -1 } as EntitlementRule,
+      message: "finite non-negative number",
+    },
+    {
+      name: "empty meter identifiers",
+      rule: { featureKey: "requests", type: "metered", meterId: "" } as EntitlementRule,
+      message: "Meter key must not be empty",
+    },
+    {
+      name: "billable overage without a billing-required meter",
+      rule: {
+        featureKey: "requests",
+        type: "metered",
+        meterId: "requests",
+        meterBilling: "local",
+        overagePolicy: "ALLOW_WITH_OVERAGE",
+      } as EntitlementRule,
+      message: "without a billing-required meter",
+    },
+  ])("rejects invalid legacy $name before registration", async ({ rule, message }) => {
+    expect(() => registry.register("pro", [rule])).toThrow(message);
+    await expect(registry.getEntitlements("pro")).resolves.toEqual([]);
+  });
+
+  it("preserves legacy meter-derived quotas", async () => {
+    registry.register("pro", [{ featureKey: "storage", type: "metered", meterId: "storage" }]);
+
+    await expect(registry.findRule("pro", "storage")).resolves.toMatchObject({
+      featureKey: "storage",
+      meterId: "storage",
+      type: "metered",
+    });
+  });
+
   it("keeps entitlement rules isolated by immutable plan version", async () => {
     const grandfatheredRef = planVersionRef("pro@2026-01");
     const currentRef = planVersionRef("pro@2026-07");

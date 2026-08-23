@@ -26,8 +26,9 @@ export type PlanVersionEntitlementMigrationMapping = {
 export async function addPlanVersionEntitlementsPostgres(
   db: EntitlementMigrationClient,
 ): Promise<void> {
-  await runMigration(db, async (tx) => {
-    await tx.execute(sql`
+  try {
+    await runMigration(db, async (tx) => {
+      await tx.execute(sql`
       CREATE TABLE IF NOT EXISTS plan_entitlement_sets (
         plan_version_ref TEXT PRIMARY KEY,
         plan_id TEXT NOT NULL,
@@ -36,22 +37,28 @@ export async function addPlanVersionEntitlementsPostgres(
           UNIQUE (plan_version_ref, plan_id)
       )
     `);
-    await tx.execute(
-      sql`ALTER TABLE plan_entitlements ADD COLUMN IF NOT EXISTS plan_version_ref TEXT`,
-    );
-    await tx.execute(
-      sql`ALTER TABLE plan_entitlements ADD COLUMN IF NOT EXISTS meter_billing TEXT`,
-    );
-    await tx.execute(
-      sql`CREATE INDEX IF NOT EXISTS plan_entitlements_plan_version_ref_idx
+      await tx.execute(
+        sql`ALTER TABLE plan_entitlements ADD COLUMN IF NOT EXISTS plan_version_ref TEXT`,
+      );
+      await tx.execute(
+        sql`ALTER TABLE plan_entitlements ADD COLUMN IF NOT EXISTS meter_billing TEXT`,
+      );
+      await tx.execute(
+        sql`CREATE INDEX IF NOT EXISTS plan_entitlements_plan_version_ref_idx
           ON plan_entitlements (plan_version_ref)`,
-    );
-    await tx.execute(
-      sql`CREATE UNIQUE INDEX IF NOT EXISTS plan_entitlements_version_feature_unique
+      );
+      await assertNoLegacyEntitlementConflicts(tx);
+      await tx.execute(
+        sql`CREATE UNIQUE INDEX IF NOT EXISTS plan_entitlements_legacy_plan_feature_unique
+          ON plan_entitlements (plan_id, feature_key)
+          WHERE plan_version_ref IS NULL`,
+      );
+      await tx.execute(
+        sql`CREATE UNIQUE INDEX IF NOT EXISTS plan_entitlements_version_feature_unique
           ON plan_entitlements (plan_version_ref, feature_key)
           WHERE plan_version_ref IS NOT NULL`,
-    );
-    await tx.execute(sql`
+      );
+      await tx.execute(sql`
       DO $$
       BEGIN
         IF NOT EXISTS (
@@ -67,7 +74,7 @@ export async function addPlanVersionEntitlementsPostgres(
       END
       $$
     `);
-    await tx.execute(sql`
+      await tx.execute(sql`
       DO $$
       BEGIN
         IF NOT EXISTS (
@@ -85,11 +92,52 @@ export async function addPlanVersionEntitlementsPostgres(
       END
       $$
     `);
-    await tx.execute(
-      sql`ALTER TABLE plan_entitlements
+      await tx.execute(
+        sql`ALTER TABLE plan_entitlements
           VALIDATE CONSTRAINT plan_entitlements_version_plan_fk`,
-    );
+      );
+    });
+  } catch (error) {
+    if (isPostgresUniqueViolation(error)) {
+      await assertNoLegacyEntitlementConflicts(db);
+    }
+    throw error;
+  }
+}
+
+async function assertNoLegacyEntitlementConflicts(db: EntitlementMigrationClient): Promise<void> {
+  const conflicts = readRows(
+    await db.execute(sql`
+      SELECT plan_id, feature_key, COUNT(*)::INTEGER AS duplicate_count
+      FROM plan_entitlements
+      WHERE plan_version_ref IS NULL
+      GROUP BY plan_id, feature_key
+      HAVING COUNT(*) > 1
+      ORDER BY plan_id, feature_key
+    `),
+  );
+  if (conflicts.length === 0) {
+    return;
+  }
+
+  const diagnostics = conflicts.map((conflict) => {
+    const planId =
+      typeof conflict.plan_id === "string" ? conflict.plan_id : String(conflict.plan_id);
+    const featureKey =
+      typeof conflict.feature_key === "string"
+        ? conflict.feature_key
+        : String(conflict.feature_key);
+    const duplicateCount =
+      typeof conflict.duplicate_count === "number"
+        ? conflict.duplicate_count
+        : Number(conflict.duplicate_count);
+    return `plan '${planId}', feature '${featureKey}' (${duplicateCount} rows)`;
   });
+  throw new EntitlementDefinitionProblem(
+    `Cannot enforce unique legacy entitlement rules because duplicates exist: ${diagnostics.join(
+      "; ",
+    )}.`,
+  );
 }
 
 /**
@@ -220,6 +268,21 @@ function readRows(result: unknown): Record<string, unknown>[] {
   return rows.filter(
     (row): row is Record<string, unknown> => typeof row === "object" && row !== null,
   );
+}
+
+function isPostgresUniqueViolation(error: unknown): boolean {
+  const seen = new Set<object>();
+  let current = error;
+
+  while (typeof current === "object" && current !== null && !seen.has(current)) {
+    if ("code" in current && current.code === "23505") {
+      return true;
+    }
+    seen.add(current);
+    current = "cause" in current ? current.cause : undefined;
+  }
+
+  return false;
 }
 
 function validateCandidateRows(planId: string, rows: readonly Record<string, unknown>[]): void {

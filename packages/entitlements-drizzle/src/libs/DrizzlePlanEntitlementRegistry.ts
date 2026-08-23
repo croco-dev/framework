@@ -1,5 +1,6 @@
 import type { EntitlementRule } from "@croco/entitlements-core";
 import {
+  assertEntitlementRules,
   EntitlementDefinitionProblem,
   EntitlementPlanVersionMismatchProblem,
   EntitlementPlanVersionNotFoundProblem,
@@ -61,7 +62,9 @@ export class DrizzlePlanEntitlementRegistry extends PlanEntitlementRegistry {
 
     const result = rows as PlanEntitlementsRow[];
 
-    return result.map((row) => mapEntitlementRule(row, false));
+    const rules = result.map(mapEntitlementRule);
+    assertEntitlementRules(rules);
+    return rules;
   }
 
   /**
@@ -105,8 +108,15 @@ export class DrizzlePlanEntitlementRegistry extends PlanEntitlementRegistry {
       .where(eq(planEntitlements.planVersionRef, ref));
     const result = rows as PlanEntitlementsRow[];
 
-    const rules = result.map((row) => mapEntitlementRule(row, true));
-    assertBillableOverageBindings(rules);
+    const rules = result.map(mapEntitlementRule);
+    assertEntitlementRules(rules);
+    for (const rule of rules) {
+      if (rule.type === "metered" && rule.quota === undefined) {
+        throw new EntitlementDefinitionProblem(
+          `Version-bound metered entitlement '${rule.featureKey}' requires an inline quota.`,
+        );
+      }
+    }
     return rules;
   }
 
@@ -123,20 +133,7 @@ export class DrizzlePlanEntitlementRegistry extends PlanEntitlementRegistry {
   }
 }
 
-function assertBillableOverageBindings(rules: readonly EntitlementRule[]): void {
-  for (const rule of rules) {
-    if (
-      rule.overagePolicy === "ALLOW_WITH_OVERAGE" &&
-      (rule.meterId === undefined || rule.meterBilling !== "required")
-    ) {
-      throw new EntitlementDefinitionProblem(
-        `Entitlement '${rule.featureKey}' allows billable overage without a billing-required meter.`,
-      );
-    }
-  }
-}
-
-function mapEntitlementRule(row: PlanEntitlementsRow, versionBound: boolean): EntitlementRule {
+function mapEntitlementRule(row: PlanEntitlementsRow): EntitlementRule {
   if (row.type !== "boolean" && row.type !== "metered" && row.type !== "static") {
     throw new EntitlementDefinitionProblem(
       `Persisted entitlement '${row.featureKey}' has unknown type '${row.type}'.`,
@@ -148,14 +145,14 @@ function mapEntitlementRule(row: PlanEntitlementsRow, versionBound: boolean): En
       `Persisted entitlement '${row.featureKey}' has unknown overage policy '${row.overagePolicy}'.`,
     );
   }
-  if (versionBound && row.type === "metered" && row.quota === null) {
+  if (
+    row.meterBilling !== null &&
+    row.meterBilling !== undefined &&
+    row.meterBilling !== "local" &&
+    row.meterBilling !== "required"
+  ) {
     throw new EntitlementDefinitionProblem(
-      `Version-bound metered entitlement '${row.featureKey}' requires an inline quota.`,
-    );
-  }
-  if (row.type === "static" && row.value === null) {
-    throw new EntitlementDefinitionProblem(
-      `Static entitlement '${row.featureKey}' requires a value.`,
+      `Persisted entitlement '${row.featureKey}' has unknown meter billing '${row.meterBilling}'.`,
     );
   }
 

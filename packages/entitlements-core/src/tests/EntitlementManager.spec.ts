@@ -437,7 +437,14 @@ describe("EntitlementManager", () => {
 
   it("should allow requests that exceed quota with ALLOW_WITH_OVERAGE policy", async () => {
     registry.register("pro", [
-      { featureKey: "reports", type: "metered", quota: 3, overagePolicy: "ALLOW_WITH_OVERAGE" },
+      {
+        featureKey: "reports",
+        type: "metered",
+        meterId: "reports",
+        meterBilling: "required",
+        quota: 3,
+        overagePolicy: "ALLOW_WITH_OVERAGE",
+      },
     ]);
     quotaChecker.setQuotaStatus({
       usage: 4,

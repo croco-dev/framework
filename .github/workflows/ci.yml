@@ -600,6 +600,8 @@ jobs:
               - 'packages/auth-drizzle/**'
               - 'packages/credits-core/**'
               - 'packages/credits-drizzle/**'
+              - 'packages/entitlements-core/**'
+              - 'packages/entitlements-drizzle/**'
               - 'packages/events-core/**'
               - 'packages/events-tx/**'
               - 'packages/execution-core/**'
@@ -1338,11 +1340,14 @@ jobs:
       - name: Verify persistence concurrency against PostgreSQL
         env:
           CREDITS_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
+          ENTITLEMENTS_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           EXECUTION_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           MEMBERSHIP_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
         run: |
           pnpm build --filter=@croco/credits-drizzle...
           pnpm --filter @croco/credits-drizzle test:postgres
+          pnpm build --filter=@croco/entitlements-drizzle...
+          pnpm --filter @croco/entitlements-drizzle test:postgres
           pnpm build --filter=@croco/membership-drizzle...
           pnpm --filter @croco/membership-drizzle exec vitest run src/tests/DrizzleMembershipStore.postgres.spec.ts
           pnpm build --filter=@croco/execution-drizzle...

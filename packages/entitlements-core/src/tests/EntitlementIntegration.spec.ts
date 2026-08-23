@@ -255,6 +255,7 @@ describe("EntitlementIntegration", () => {
           featureKey: "api_calls",
           type: "metered",
           meterId: "api_calls",
+          meterBilling: "required",
           quota: 100,
           overagePolicy: "ALLOW_WITH_OVERAGE",
         },

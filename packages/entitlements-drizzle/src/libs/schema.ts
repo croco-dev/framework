@@ -43,6 +43,9 @@ export const planEntitlements = pgTable(
     createdAt: timestamp("created_at").defaultNow(),
   },
   (table) => [
+    uniqueIndex("plan_entitlements_legacy_plan_feature_unique")
+      .on(table.planId, table.featureKey)
+      .where(sql`plan_version_ref IS NULL`),
     uniqueIndex("plan_entitlements_version_feature_unique")
       .on(table.planVersionRef, table.featureKey)
       .where(sql`plan_version_ref IS NOT NULL`),
