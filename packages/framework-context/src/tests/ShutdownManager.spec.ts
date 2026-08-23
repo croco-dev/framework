@@ -4,6 +4,7 @@ import { Container } from "../libs/Container";
 import { OnShutdown } from "../libs/decorators/OnShutdown";
 import { type ILogger, LOGGER_TOKEN } from "../libs/ILogger";
 import {
+  InvalidShutdownTimeoutProblem,
   OnShutdownDecoratorProblem,
   ShutdownConfigurationConflictProblem,
   ShutdownHookExecutionProblem,
@@ -29,6 +30,44 @@ describe("ShutdownManager", () => {
   });
 
   describe("getInstance", () => {
+    it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, 0, -1])(
+      "should reject invalid root timeout %s before creating the singleton",
+      (timeoutMs) => {
+        expect(() => ShutdownManager.getInstance(timeoutMs)).toThrow(InvalidShutdownTimeoutProblem);
+        expect(() => ShutdownManager.getInstance(timeoutMs)).toThrowError(
+          expect.objectContaining({
+            category: ProblemCategory.ValidationError,
+            code: "framework-context/shutdown-timeout-invalid",
+            timeoutMs,
+          }),
+        );
+
+        const manager = ShutdownManager.getInstance(100);
+
+        expect((manager as unknown as { timeoutMs: number }).timeoutMs).toBe(100);
+      },
+    );
+
+    it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, 0, -1])(
+      "should reject invalid scoped timeout %s before creating the scoped manager",
+      (timeoutMs) => {
+        const rootManager = ShutdownManager.getInstance(100);
+        const scope = Container.createScope();
+
+        scope.run(() => {
+          expect(() => ShutdownManager.getInstance(timeoutMs)).toThrow(
+            InvalidShutdownTimeoutProblem,
+          );
+
+          const scopedManager = ShutdownManager.getInstance();
+          expect(scopedManager).not.toBe(rootManager);
+          expect((scopedManager as unknown as { timeoutMs: number }).timeoutMs).toBe(100);
+          ShutdownManager.disposeCurrentScope();
+        });
+        scope.dispose();
+      },
+    );
+
     it("should return singleton instance", () => {
       const instance1 = ShutdownManager.getInstance();
       const instance2 = ShutdownManager.getInstance();
@@ -119,6 +158,39 @@ describe("ShutdownManager", () => {
   });
 
   describe("configure", () => {
+    it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, 0, -1])(
+      "should reject invalid reconfiguration %s without mutating the valid timeout",
+      (timeoutMs) => {
+        const manager = ShutdownManager.getInstance(100);
+
+        expect(() => manager.configure(timeoutMs)).toThrow(InvalidShutdownTimeoutProblem);
+        expect(() => manager.configure(timeoutMs)).toThrowError(
+          expect.objectContaining({
+            code: "framework-context/shutdown-timeout-invalid",
+            timeoutMs,
+          }),
+        );
+        expect((manager as unknown as { timeoutMs: number }).timeoutMs).toBe(100);
+        expect(() => manager.configure(100)).not.toThrow();
+      },
+    );
+
+    it("should preserve a scoped manager timeout after invalid reconfiguration", () => {
+      const rootManager = ShutdownManager.getInstance(100);
+      const scope = Container.createScope();
+
+      scope.run(() => {
+        const scopedManager = ShutdownManager.getInstance(50);
+
+        expect(() => scopedManager.configure(Number.NaN)).toThrow(InvalidShutdownTimeoutProblem);
+        expect((scopedManager as unknown as { timeoutMs: number }).timeoutMs).toBe(50);
+        expect(ShutdownManager.getInstance(50)).toBe(scopedManager);
+        expect(scopedManager).not.toBe(rootManager);
+        ShutdownManager.disposeCurrentScope();
+      });
+      scope.dispose();
+    });
+
     it("should keep registered listeners when configuration is repeated", () => {
       const manager = ShutdownManager.getInstance(100);
       const processOnSpy = vi.spyOn(process, "on");

@@ -1,6 +1,7 @@
 import { Container } from "./Container";
 import { type ILogger, LOGGER_TOKEN } from "./ILogger";
 import {
+  InvalidShutdownTimeoutProblem,
   ShutdownConfigurationConflictProblem,
   ShutdownHookExecutionProblem,
   ShutdownTimeoutProblem,
@@ -8,6 +9,12 @@ import {
 import type { ShutdownHook } from "./types";
 
 const DEFAULT_TIMEOUT_MS = 30_000;
+
+function assertValidShutdownTimeout(timeoutMs: number): void {
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+    throw new InvalidShutdownTimeoutProblem(timeoutMs);
+  }
+}
 
 export type ShutdownOptions = {
   readonly throwOnHookError?: boolean;
@@ -24,7 +31,9 @@ export class ShutdownManager {
   private signalShutdownPromise: Promise<void> | undefined;
 
   private constructor(timeoutMs?: number) {
-    this.timeoutMs = timeoutMs ?? DEFAULT_TIMEOUT_MS;
+    const resolvedTimeoutMs = timeoutMs ?? DEFAULT_TIMEOUT_MS;
+    assertValidShutdownTimeout(resolvedTimeoutMs);
+    this.timeoutMs = resolvedTimeoutMs;
     this.timeoutConfigured = timeoutMs !== undefined;
   }
 
@@ -56,6 +65,7 @@ export class ShutdownManager {
   }
 
   configure(timeoutMs: number): void {
+    assertValidShutdownTimeout(timeoutMs);
     if (this.timeoutConfigured && this.timeoutMs !== timeoutMs) {
       throw new ShutdownConfigurationConflictProblem(this.timeoutMs, timeoutMs);
     }

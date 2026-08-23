@@ -66,6 +66,20 @@ function assertNever(value: never): never {
   throw new OnShutdownDecoratorProblem("non-method", String(value));
 }
 
+/** Shutdown timeout configuration must be a finite positive duration. */
+export class InvalidShutdownTimeoutProblem extends Problem {
+  readonly code = "framework-context/shutdown-timeout-invalid";
+  readonly category = ProblemCategory.ValidationError;
+
+  constructor(readonly timeoutMs: number) {
+    super(
+      undefined,
+      undefined,
+      `Shutdown timeout must be a finite positive duration; received ${String(timeoutMs)}ms`,
+    );
+  }
+}
+
 /**
  * graceful shutdown이 제한 시간을 넘겼을 때 발생하는 Problem입니다.
  */
