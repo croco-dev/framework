@@ -89,6 +89,10 @@ describe("scheduled live test workflow", () => {
     expect(Object.keys(step?.env ?? {}).sort()).toEqual(requiredNames);
   });
 
+  it("declares the Cloudinary live-smoke opt-in as a required scheduled resource", () => {
+    expect(resources["@croco/storage-cloudinary"]).toContain("CROCO_LIVE_CLOUDINARY");
+  });
+
   it("runs reconciliation after every non-cancelled owner outcome", () => {
     const reconciliation = parsed.jobs.live.steps.find(
       ({ name }) => name === "Enforce scheduled-live evidence",
