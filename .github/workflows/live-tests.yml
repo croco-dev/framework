@@ -162,6 +162,7 @@ jobs:
           CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
           CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
           CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CROCO_LIVE_CLOUDINARY: "true"
         run: >-
           node --experimental-strip-types scripts/test-lane-runner.mts
           --lane live --allow-live --owner @croco/storage-cloudinary
