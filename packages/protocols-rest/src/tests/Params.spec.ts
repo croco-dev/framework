@@ -75,4 +75,75 @@ describe("Param decorators", () => {
     ]);
     expect(params.every((param) => param.pipes?.length === 1)).toBe(true);
   });
+
+  it("should isolate inherited metadata between controller constructors", () => {
+    class BaseController {
+      handle(@Param("id") id: string, _filter?: string) {
+        return id;
+      }
+    }
+
+    const baseParamsBefore = [...getParamsMeta(BaseController, "handle")];
+
+    class FirstController extends BaseController {
+      override handle(id: string, @Query("search") search?: string) {
+        return `${id}:${search ?? ""}`;
+      }
+    }
+
+    const firstParamsBeforeSibling = [...getParamsMeta(FirstController, "handle")];
+
+    class SecondController extends BaseController {
+      override handle(id: string, @Query("page") page?: string) {
+        return `${id}:${page ?? ""}`;
+      }
+    }
+
+    expect(getParamsMeta(BaseController, "handle")).toEqual(baseParamsBefore);
+    expect(getParamsMeta(FirstController, "handle")).toEqual(firstParamsBeforeSibling);
+    expect(
+      getParamsMeta(FirstController, "handle").map(({ index, name }) => ({ index, name })),
+    ).toEqual([
+      { index: 0, name: "id" },
+      { index: 1, name: "search" },
+    ]);
+    expect(
+      getParamsMeta(SecondController, "handle").map(({ index, name }) => ({ index, name })),
+    ).toEqual([
+      { index: 0, name: "id" },
+      { index: 1, name: "page" },
+    ]);
+  });
+
+  it("should inherit parameter metadata once while preserving decorator order and pipes", () => {
+    const idSchema = z.string().uuid();
+    const searchSchema = z.string().min(1);
+    const bodySchema = z.object({ name: z.string() });
+
+    class BaseController {
+      update(@Param("id", idSchema) id: string, _search?: string, _body?: { name: string }) {
+        return id;
+      }
+    }
+
+    class DerivedController extends BaseController {
+      override update(
+        id: string,
+        @Query("search", searchSchema) search?: string,
+        @Body(bodySchema) body?: { name: string },
+      ) {
+        return `${id}:${search ?? ""}:${body?.name ?? ""}`;
+      }
+    }
+
+    const params = getParamsMeta(DerivedController, "update");
+
+    expect(params.map(({ index, name, type }) => ({ index, name, type }))).toEqual([
+      { index: 0, name: "id", type: ParamType.PARAM },
+      { index: 2, name: undefined, type: ParamType.BODY },
+      { index: 1, name: "search", type: ParamType.QUERY },
+    ]);
+    expect(params.filter(({ index }) => index === 0)).toHaveLength(1);
+    expect(params.every((param) => param.pipes?.length === 1)).toBe(true);
+  });
 });
