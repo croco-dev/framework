@@ -120,28 +120,11 @@ export class ShutdownManager {
     this.signalShutdownPromise = this.shutdown({ throwOnHookError: true });
     void this.signalShutdownPromise.catch((error: unknown) => {
       const normalizedError = error instanceof Error ? error : new Error(String(error));
-      try {
-        if (Container.has(LOGGER_TOKEN)) {
-          const logger = Container.get(LOGGER_TOKEN) as ILogger;
-          logger.error("[ShutdownManager] Signal shutdown failed:", normalizedError);
-        } else {
-          // LOGGER_TOKEN is not registered in the DI container yet during early bootstrap.
-          // eslint-disable-next-line no-console
-          console.error("[ShutdownManager] Signal shutdown failed:", normalizedError);
-        }
-      } catch (loggingError) {
-        try {
-          // A failing logger must not turn an already observed shutdown failure into another rejection.
-          // eslint-disable-next-line no-console
-          console.error("[ShutdownManager] Signal shutdown failure logging failed:", {
-            error: normalizedError,
-            loggingError,
-          });
-        } catch {
-          // There is no remaining observable logging channel, so only the process outcome can record failure.
-          process.exitCode = 1;
-        }
-      }
+      this.logError(
+        "[ShutdownManager] Signal shutdown failed:",
+        normalizedError,
+        "[ShutdownManager] Signal shutdown failure logging failed:",
+      );
       process.exitCode = 1;
     });
   };
@@ -165,14 +148,11 @@ export class ShutdownManager {
           if (options.throwOnHookError) {
             continue;
           }
-          if (Container.has(LOGGER_TOKEN)) {
-            const logger = Container.get(LOGGER_TOKEN) as ILogger;
-            logger.error("[ShutdownManager] Hook execution failed:", normalizedError);
-          } else {
-            // LOGGER_TOKEN is not registered in the DI container yet during early bootstrap.
-            // eslint-disable-next-line no-console
-            console.error("[ShutdownManager] Hook execution failed:", normalizedError);
-          }
+          this.logError(
+            "[ShutdownManager] Hook execution failed:",
+            normalizedError,
+            "[ShutdownManager] Hook failure logging failed:",
+          );
         }
       }
     })();
@@ -180,17 +160,16 @@ export class ShutdownManager {
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
     const timeoutPromise = new Promise<never>((_, reject) => {
       timeoutId = setTimeout(() => {
+        const timeoutProblem = new ShutdownTimeoutProblem(
+          this.timeoutMs,
+          options.throwOnHookError ? failures : [],
+        );
         controller.abort();
-        if (Container.has(LOGGER_TOKEN)) {
-          const logger = Container.get(LOGGER_TOKEN) as ILogger;
-          logger.error("[ShutdownManager] Shutdown timeout exceeded.");
-        } else {
-          // LOGGER_TOKEN is not registered in the DI container yet during early bootstrap.
-          // eslint-disable-next-line no-console
-          console.error("[ShutdownManager] Shutdown timeout exceeded.");
-        }
-        reject(
-          new ShutdownTimeoutProblem(this.timeoutMs, options.throwOnHookError ? failures : []),
+        reject(timeoutProblem);
+        this.logError(
+          "[ShutdownManager] Shutdown timeout exceeded.",
+          undefined,
+          "[ShutdownManager] Shutdown timeout logging failed:",
         );
       }, this.timeoutMs);
     });
@@ -205,6 +184,50 @@ export class ShutdownManager {
         clearTimeout(timeoutId);
       }
       this.removeAllListeners();
+    }
+  }
+
+  private logError(message: string, error?: Error, loggingFailureMessage?: string): void {
+    let loggingResult: unknown;
+    try {
+      if (Container.has(LOGGER_TOKEN)) {
+        const logger = Container.get(LOGGER_TOKEN) as ILogger;
+        if (error) {
+          loggingResult = logger.error(message, error);
+        } else {
+          loggingResult = logger.error(message);
+        }
+      } else {
+        // LOGGER_TOKEN is not registered in the DI container yet during early bootstrap.
+        // eslint-disable-next-line no-console
+        loggingResult = error ? console.error(message, error) : console.error(message);
+      }
+    } catch (loggingError) {
+      this.logFallbackError(error, loggingError, loggingFailureMessage);
+      return;
+    }
+
+    void Promise.resolve(loggingResult).catch((loggingError: unknown) => {
+      this.logFallbackError(error, loggingError, loggingFailureMessage);
+    });
+  }
+
+  private logFallbackError(
+    error: Error | undefined,
+    loggingError: unknown,
+    message?: string,
+  ): void {
+    try {
+      // A failing diagnostic sink must not replace or block the lifecycle result.
+      // eslint-disable-next-line no-console
+      const fallbackResult: unknown = console.error(
+        message ?? "[ShutdownManager] Error logging failed:",
+        { error, loggingError },
+      );
+      void Promise.resolve(fallbackResult).catch(() => undefined);
+    } catch {
+      // No diagnostic channel remains; the lifecycle result is still preserved.
+      return;
     }
   }
 

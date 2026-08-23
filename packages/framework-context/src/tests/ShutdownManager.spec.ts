@@ -354,6 +354,74 @@ describe("ShutdownManager", () => {
       exitSpy.mockRestore();
     });
 
+    it.each(["synchronously", "asynchronously"] as const)(
+      "should preserve timeout rejection when the logger and fallback sink throw %s",
+      async (failureMode) => {
+        vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+
+        const loggerFailure = new Error("logger failed");
+        const fallbackFailure = new Error("fallback failed");
+        const logger = {
+          error: vi.fn(() => {
+            if (failureMode === "synchronously") {
+              throw loggerFailure;
+            }
+            return Promise.reject(loggerFailure);
+          }),
+        } as unknown as ILogger;
+        const consoleError = vi.spyOn(console, "error").mockImplementation(() => {
+          if (failureMode === "synchronously") {
+            throw fallbackFailure;
+          }
+          return Promise.reject(fallbackFailure);
+        });
+        const uncaughtException = vi.fn();
+        const unhandledRejection = vi.fn();
+        process.on("uncaughtException", uncaughtException);
+        process.on("unhandledRejection", unhandledRejection);
+        Container.set(LOGGER_TOKEN, logger);
+
+        const manager = ShutdownManager.getInstance(100);
+        const abortStates: boolean[] = [];
+        manager.register({
+          onShutdown: async (signal?: AbortSignal) => {
+            signal?.addEventListener("abort", () => {
+              abortStates.push(signal.aborted);
+            });
+            await new Promise(() => {});
+          },
+        });
+
+        let rejectionCount = 0;
+        const shutdownResult = manager.shutdown().catch((error: unknown) => {
+          rejectionCount += 1;
+          return error;
+        });
+
+        try {
+          await vi.advanceTimersByTimeAsync(100);
+          const problem = await shutdownResult;
+          await new Promise<void>((resolve) => setImmediate(resolve));
+
+          expect(problem).toBeInstanceOf(ShutdownTimeoutProblem);
+          expect(rejectionCount).toBe(1);
+          expect(abortStates).toEqual([true]);
+          expect(logger.error).toHaveBeenCalledWith("[ShutdownManager] Shutdown timeout exceeded.");
+          expect(consoleError).toHaveBeenCalledWith(
+            "[ShutdownManager] Shutdown timeout logging failed:",
+            { error: undefined, loggingError: loggerFailure },
+          );
+          expect(uncaughtException).not.toHaveBeenCalled();
+          expect(unhandledRejection).not.toHaveBeenCalled();
+        } finally {
+          process.off("uncaughtException", uncaughtException);
+          process.off("unhandledRejection", unhandledRejection);
+          consoleError.mockRestore();
+          vi.useRealTimers();
+        }
+      },
+    );
+
     it("should abort active hooks when timeout is exceeded", async () => {
       vi.useFakeTimers();
 
