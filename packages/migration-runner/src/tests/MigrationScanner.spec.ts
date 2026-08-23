@@ -53,7 +53,7 @@ describe("MigrationScanner", () => {
     } satisfies Partial<MigrationFileLoadProblem>);
   });
 
-  it.runIf(process.platform === "win32")("loads a Windows path containing spaces", async () => {
+  it("loads a path containing spaces", async () => {
     const { migrationFile, migrationsDir } = createMigrationDirectory();
 
     const files = await new MigrationScanner(migrationsDir).scan();

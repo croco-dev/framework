@@ -322,11 +322,12 @@ function createFastLaneReport(
         exitCode: 0,
         durationMs: 1,
         executedPaths: [testPath],
+        skippedFiles: [],
         executionState: "executed" as const,
       };
     });
   return {
-    schemaVersion: "croco.test-lane-report/v1",
+    schemaVersion: "croco.test-lane-report/v2",
     inventoryVersion: 1,
     inventoryDigest: inventoryDigest(fixtureInventory),
     lane: "fast",
@@ -335,6 +336,7 @@ function createFastLaneReport(
     executedPaths: commands.flatMap(({ cwd, executedPaths }) =>
       executedPaths.map((path) => `${cwd}/${path}`),
     ),
+    skippedFiles: [],
     status: "passed",
     diagnostics: [],
     commands,

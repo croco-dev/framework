@@ -72,7 +72,7 @@ function successfulRunner(rootDir: string): CommandRunner {
       mkdirSync(dirname(path), { recursive: true });
       const contents = artifact.path.endsWith("published-test-lane.json")
         ? JSON.stringify({
-            schemaVersion: "croco.test-lane-report/v1",
+            schemaVersion: "croco.test-lane-report/v2",
             inventoryVersion: 1,
             inventoryDigest: DIGEST,
             lane: "published",
@@ -80,6 +80,7 @@ function successfulRunner(rootDir: string): CommandRunner {
             selectedOwners: ["fixture"],
             status: "passed",
             executedPaths: ["fixture.spec.ts"],
+            skippedFiles: [],
             diagnostics: [],
             commands: [
               {
@@ -92,6 +93,7 @@ function successfulRunner(rootDir: string): CommandRunner {
                 durationMs: 1,
                 cacheStatus: "miss",
                 executedPaths: ["fixture.spec.ts"],
+                skippedFiles: [],
                 executionState: "executed",
               },
             ],
@@ -121,7 +123,7 @@ function invalidPublishedLaneRunner(rootDir: string): CommandRunner {
       if (!artifact.path.endsWith("published-test-lane.json")) continue;
       writeFileSync(
         join(rootDir, artifact.path),
-        `${JSON.stringify({ schemaVersion: "croco.test-lane-report/v1" })}\n`,
+        `${JSON.stringify({ schemaVersion: "croco.test-lane-report/v2" })}\n`,
       );
     }
     return result;

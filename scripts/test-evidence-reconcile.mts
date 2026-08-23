@@ -13,6 +13,7 @@ import {
   validateGeneratedMaterialization,
 } from "./test-inventory.mts";
 import type { TestLane, TestProfile } from "./test-inventory.mts";
+import type { TestLaneReport, TestLaneSkippedFile } from "./test-lane-runner.mts";
 import type {
   MaterializationEvidence,
   TestInventory,
@@ -20,33 +21,43 @@ import type {
   TestInventoryEvidenceReport,
 } from "./test-inventory.mts";
 
-export type LaneReport = {
-  readonly schemaVersion: "croco.test-lane-report/v1";
-  readonly inventoryVersion: 1;
-  readonly inventoryDigest: string;
-  readonly lane: Exclude<TestLane, "generated-app">;
-  readonly allowLive: boolean;
-  readonly selectedOwners: readonly string[];
-  readonly status: "passed" | "failed";
-  readonly executedPaths: readonly string[];
-  readonly diagnostics: readonly { readonly code: string; readonly message: string }[];
-  readonly commands: readonly {
-    readonly owner: string;
-    readonly cwd: string;
-    readonly paths: readonly string[];
-    readonly command: readonly string[];
-    readonly status: "passed" | "failed";
-    readonly exitCode: number;
-    readonly durationMs: number;
-    readonly cacheStatus?: "hit" | "miss";
-    readonly executedPaths: readonly string[];
-    readonly executionState?: "executed" | "reused";
-    readonly cacheHash?: string;
-  }[];
-};
+export type LaneReport = TestLaneReport;
 
 function isStringArray(value: unknown): value is readonly string[] {
   return Array.isArray(value) && value.every((entry) => typeof entry === "string");
+}
+
+function isSkippedFileArray(value: unknown): value is readonly TestLaneSkippedFile[] {
+  return (
+    Array.isArray(value) &&
+    value.every((entry) => {
+      if (!entry || typeof entry !== "object") return false;
+      const file = entry as Record<string, unknown>;
+      return (
+        typeof file.path === "string" &&
+        (file.status === "partially-executed" ||
+          file.status === "skipped" ||
+          file.status === "failed-with-skips") &&
+        typeof file.passedAssertions === "number" &&
+        Number.isInteger(file.passedAssertions) &&
+        file.passedAssertions >= 0 &&
+        Array.isArray(file.skippedAssertions) &&
+        file.skippedAssertions.length > 0 &&
+        file.skippedAssertions.every(
+          (assertion) =>
+            Boolean(assertion) &&
+            typeof assertion === "object" &&
+            typeof (assertion as Record<string, unknown>).name === "string" &&
+            ["skipped", "todo", "pending", "disabled"].includes(
+              (assertion as Record<string, unknown>).status as string,
+            ),
+        ) &&
+        ((file.status === "partially-executed" && file.passedAssertions > 0) ||
+          (file.status === "skipped" && file.passedAssertions === 0) ||
+          file.status === "failed-with-skips")
+      );
+    })
+  );
 }
 
 const MATERIALIZATION_EVIDENCE_FIELDS = [
@@ -82,7 +93,7 @@ export function assertLaneReportShape(value: unknown): asserts value is LaneRepo
     throw new Error("Test lane evidence has an invalid report shape");
   const report = value as Record<string, unknown>;
   if (
-    report.schemaVersion !== "croco.test-lane-report/v1" ||
+    report.schemaVersion !== "croco.test-lane-report/v2" ||
     report.inventoryVersion !== 1 ||
     typeof report.inventoryDigest !== "string" ||
     !TEST_LANES.includes(report.lane as TestLane) ||
@@ -91,6 +102,7 @@ export function assertLaneReportShape(value: unknown): asserts value is LaneRepo
     !isStringArray(report.selectedOwners) ||
     (report.status !== "passed" && report.status !== "failed") ||
     !isStringArray(report.executedPaths) ||
+    !isSkippedFileArray(report.skippedFiles) ||
     !Array.isArray(report.diagnostics) ||
     !report.diagnostics.every(
       (diagnostic) =>
@@ -128,6 +140,15 @@ export function assertLaneReportShape(value: unknown): asserts value is LaneRepo
         command.cacheStatus !== "miss") ||
       !isStringArray(command.executedPaths) ||
       command.executedPaths.some((path) => !(command.paths as readonly string[]).includes(path)) ||
+      !isSkippedFileArray(command.skippedFiles) ||
+      command.skippedFiles.some(
+        ({ path }) =>
+          !(command.paths as readonly string[]).includes(path) ||
+          (command.executedPaths as readonly string[]).includes(path),
+      ) ||
+      new Set(command.skippedFiles.map(({ path }) => path)).size !== command.skippedFiles.length ||
+      (command.exitCode === 0 &&
+        command.skippedFiles.some(({ status }) => status === "failed-with-skips")) ||
       (command.executionState !== "executed" && command.executionState !== "reused") ||
       ((command.executionState === "reused" || command.cacheHash !== undefined) &&
         (typeof command.cacheHash !== "string" || command.cacheHash.length === 0))
@@ -137,8 +158,12 @@ export function assertLaneReportShape(value: unknown): asserts value is LaneRepo
     if (
       (command.status === "passed" &&
         (command.exitCode !== 0 ||
+          command.skippedFiles.length > 0 ||
           JSON.stringify(command.executedPaths) !== JSON.stringify(command.paths))) ||
-      (command.status === "failed" && command.exitCode === 0)
+      (command.status === "failed" &&
+        command.exitCode === 0 &&
+        command.skippedFiles.length === 0 &&
+        JSON.stringify(command.executedPaths) === JSON.stringify(command.paths))
     ) {
       throw new Error("Test lane evidence has an invalid command result");
     }
@@ -152,11 +177,24 @@ export function assertLaneReportShape(value: unknown): asserts value is LaneRepo
   if (JSON.stringify(report.executedPaths) !== JSON.stringify(executedPaths)) {
     throw new Error("Test lane evidence has inconsistent executed paths");
   }
+  const skippedFiles = (report.commands as LaneReport["commands"])
+    .flatMap(({ cwd, skippedFiles }) =>
+      skippedFiles.map((file) => ({
+        ...file,
+        path: cwd === "." ? file.path : `${cwd}/${file.path}`,
+      })),
+    )
+    .sort((left, right) => left.path.localeCompare(right.path));
+  if (JSON.stringify(report.skippedFiles) !== JSON.stringify(skippedFiles)) {
+    throw new Error("Test lane evidence has inconsistent skipped files");
+  }
   const commands = report.commands as LaneReport["commands"];
   const diagnostics = report.diagnostics as LaneReport["diagnostics"];
   if (
     (report.status === "passed" &&
-      (commands.some(({ status }) => status !== "passed") || diagnostics.length > 0)) ||
+      (commands.some(({ status }) => status !== "passed") ||
+        report.skippedFiles.length > 0 ||
+        diagnostics.length > 0)) ||
     (report.status === "failed" &&
       commands.every(({ status }) => status === "passed") &&
       diagnostics.length === 0)
