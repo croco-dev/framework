@@ -86,7 +86,7 @@ export class ResendProvider implements NotificationProvider {
 
       return {
         success: false,
-        error: validationProblem,
+        problem: validationProblem,
       };
     }
 
@@ -141,7 +141,7 @@ export class ResendProvider implements NotificationProvider {
 
         return {
           success: false,
-          error: problem,
+          problem,
           providerResponse: data,
         };
       }
@@ -163,7 +163,7 @@ export class ResendProvider implements NotificationProvider {
 
       return {
         success: false,
-        error: problem,
+        problem,
         providerResponse: cause.providerResponse,
       };
     }

@@ -7,6 +7,7 @@ import type {
 } from "@croco/execution-core";
 import type { ILogger } from "@croco/framework-context";
 import { Container } from "@croco/framework-context";
+import { Problem } from "@croco/problems-core";
 import { recordError } from "@croco/telemetry-api";
 import {
   TaskExecutionTimeoutProblem,
@@ -65,6 +66,14 @@ async function resolveExecutionIdempotency(
 
 function normalizeThrownError(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error));
+}
+
+function isTaskErrorRetryable(error: Error): boolean {
+  if ("retryable" in error) {
+    return Boolean(error.retryable);
+  }
+
+  return error instanceof Problem && error.extensions?.retryable === true;
 }
 
 class TaskFailureRecordingAggregateError extends Error {
@@ -395,7 +404,7 @@ export class TaskRunner {
       const taskError = normalizeThrownError(error);
       const executionError = {
         message: taskError.message,
-        retryable: "retryable" in taskError ? Boolean(taskError.retryable) : false,
+        retryable: isTaskErrorRetryable(taskError),
         code: "code" in taskError ? String(taskError.code) : undefined,
         stack: taskError.stack,
       };

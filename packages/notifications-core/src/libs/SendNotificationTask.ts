@@ -1,12 +1,11 @@
 import { Component } from "@croco/framework-context";
-import { Problem } from "@croco/problems-core";
 import { Task } from "@croco/tasks-core";
 import { recordError, recordEvent } from "@croco/telemetry-api";
+import type { Problem } from "@croco/problems-core";
 // Runtime value required for constructor metadata.
 // oxlint-disable-next-line typescript/consistent-type-imports
 import { NotificationProviderRegistry } from "./NotificationProviderRegistry";
 import {
-  NotificationDeliveryFailedProblem,
   NotificationProviderNotFoundProblem,
   NotificationSendMaxAttemptsInvalidProblem,
 } from "./problems/NotificationProblems";
@@ -59,10 +58,8 @@ export class SendNotificationTask {
         : await provider.send(notificationPayload, { idempotencyKey });
 
     if (!result.success) {
-      const problem = normalizeNotificationDeliveryProblem(providerName, result.error);
-
-      recordNotificationDispatchFailure(payload, problem);
-      throw problem;
+      recordNotificationDispatchFailure(payload, result.problem);
+      throw result.problem;
     }
 
     recordNotificationDispatchSuccess(payload);
@@ -80,17 +77,6 @@ function toProviderPayload(payload: NotificationJobPayload): NotificationPayload
     ...(payload.locale === undefined ? {} : { locale: payload.locale }),
     ...(payload.variables === undefined ? {} : { variables: payload.variables }),
   };
-}
-
-function normalizeNotificationDeliveryProblem(
-  providerName: string,
-  error: Error | undefined,
-): Problem {
-  if (error instanceof Problem) {
-    return error;
-  }
-
-  return new NotificationDeliveryFailedProblem(providerName, error);
 }
 
 function recordNotificationDispatchSuccess(payload: NotificationJobPayload): void {

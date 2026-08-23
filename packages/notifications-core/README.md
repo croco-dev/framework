@@ -53,6 +53,29 @@ await notificationService.send(
 );
 ```
 
+## Provider results
+
+Providers return a discriminated `NotificationResult`. Successful delivery may include a provider message ID,
+while failed delivery must include a Croco `Problem`. Provider-native responses remain available as optional
+diagnostic evidence on either branch.
+
+```typescript
+import type { NotificationProvider, NotificationResult } from "@croco/notifications-core";
+
+async function deliver(provider: NotificationProvider): Promise<NotificationResult> {
+  const result = await provider.send({
+    to: "user@example.com",
+    content: "Hello from Croco",
+  });
+
+  if (!result.success) {
+    throw result.problem;
+  }
+
+  return result;
+}
+```
+
 ## Verification
 
 ```bash

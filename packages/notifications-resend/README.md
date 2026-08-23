@@ -128,6 +128,8 @@ pnpm --filter @croco/notifications-resend test -- ResendLiveSmoke
 ## 동작 메모
 
 - 재시도 대상 오류는 408, 425, 429, 5xx와 일부 네트워크 오류입니다.
+- 실패 결과는 `success: false`와 정규화된 `problem`을 함께 반환하며, 호출자는 해당 Problem의
+  `extensions.retryable`을 사용해 재시도 가능성을 분류할 수 있습니다.
 - `content`를 Resend HTML 본문으로 보냅니다. 템플릿 렌더링은 `@croco/notifications-core`에서 수행합니다.
 - 모든 요청은 idempotency key를 붙여 전송합니다. 호출자가 key를 넘기면 그 값을 사용하고, 직접 provider 호출에서 key가 없으면 호환용 고유 key를 생성합니다.
 

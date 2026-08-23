@@ -1,6 +1,7 @@
 import type { Execution, ExecutionAttemptManager, ExecutionManager } from "@croco/execution-core";
 import type { ILogger } from "@croco/framework-context";
 import { Component, Container, MetadataStorage } from "@croco/framework-context";
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import * as telemetry from "@croco/telemetry-api";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Task } from "../libs/decorators/Task";
@@ -500,6 +501,44 @@ describe("TaskRunner", () => {
       "exec-123",
       expect.objectContaining({
         message: "Retryable error",
+        retryable: true,
+      }),
+    );
+  });
+
+  it("should extract retryability from Problem extensions", async () => {
+    class RetryableTaskProblem extends Problem {
+      constructor() {
+        super(
+          "tasks-core/retryable-test-failure",
+          ProblemCategory.InternalServerError,
+          "Retryable Problem",
+          { extensions: { retryable: true } },
+        );
+      }
+    }
+
+    const problem = new RetryableTaskProblem();
+
+    @Component()
+    class ProblemTaskHandler {
+      @Task({ name: "retryable-problem-task" })
+      async failWithProblem(): Promise<never> {
+        throw problem;
+      }
+    }
+
+    Container.set(ProblemTaskHandler, new ProblemTaskHandler());
+    registry.collectFromMetadata();
+    const runner = new TaskRunner(mockExecutionManager, registry);
+
+    await expect(runner.execute("retryable-problem-task", {})).rejects.toBe(problem);
+
+    expect(mockExecutionManager.fail).toHaveBeenCalledWith(
+      "exec-123",
+      expect.objectContaining({
+        code: "tasks-core/retryable-test-failure",
+        message: "Retryable Problem",
         retryable: true,
       }),
     );
