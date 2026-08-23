@@ -291,13 +291,7 @@ export abstract class TokenBucketStore extends DistributedRateLimitStore {
       };
     }
 
-    const timePassed = now - bucket.lastRefill;
-    const tokensToAdd = Math.floor((timePassed / intervalMs) * policy.refillRate);
-
-    if (tokensToAdd > 0) {
-      bucket.tokens = Math.min(policy.capacity, bucket.tokens + tokensToAdd);
-      bucket.lastRefill = now;
-    }
+    this.refillTokenBucket(bucket, policy, now);
 
     const success = bucket.tokens >= 1;
 
@@ -312,9 +306,7 @@ export abstract class TokenBucketStore extends DistributedRateLimitStore {
     await this.setBucket(key, bucket, ttlMs);
 
     const timeUntilNextToken = intervalMs / policy.refillRate;
-    const resetAtMs = success
-      ? now + timeUntilNextToken
-      : now + (1 - bucket.tokens) * timeUntilNextToken;
+    const resetAtMs = Math.max(now, bucket.lastRefill + timeUntilNextToken);
 
     return {
       success,
@@ -349,11 +341,10 @@ export abstract class TokenBucketStore extends DistributedRateLimitStore {
     const now = this.now();
     const intervalMs = policy.refillIntervalMs;
     const ttlMs = (policy.capacity * intervalMs) / policy.refillRate;
-    const resetAtMs = now + intervalMs / policy.refillRate;
     let bucket = await this.getBucket(key);
 
     if (!this.consumeTokenBucketRefundReceipt(key, receipt, now)) {
-      return this.createTokenBucketRefundResult(key, policy, bucket, ttlMs, resetAtMs, false);
+      return this.createTokenBucketRefundResult(key, policy, bucket, ttlMs, now, false);
     }
 
     if (!bucket) {
@@ -361,27 +352,23 @@ export abstract class TokenBucketStore extends DistributedRateLimitStore {
         success: true,
         limit: policy.capacity,
         remaining: policy.capacity,
-        resetAtMs,
+        resetAtMs: now + intervalMs / policy.refillRate,
         refunded: false,
       };
     }
 
-    const timePassed = now - bucket.lastRefill;
-    const tokensToAdd = Math.floor((timePassed / intervalMs) * policy.refillRate);
-
-    if (tokensToAdd > 0) {
-      bucket.tokens = Math.min(policy.capacity, bucket.tokens + tokensToAdd);
+    this.refillTokenBucket(bucket, policy, now);
+    bucket.tokens = Math.min(policy.capacity, bucket.tokens + 1);
+    if (bucket.tokens === policy.capacity) {
       bucket.lastRefill = now;
     }
-
-    bucket.tokens = Math.min(policy.capacity, bucket.tokens + 1);
     await this.setBucket(key, bucket, ttlMs);
 
     return {
       success: true,
       limit: policy.capacity,
       remaining: Math.floor(bucket.tokens),
-      resetAtMs,
+      resetAtMs: Math.max(now, bucket.lastRefill + intervalMs / policy.refillRate),
       refunded: true,
     };
   }
@@ -391,7 +378,7 @@ export abstract class TokenBucketStore extends DistributedRateLimitStore {
     policy: TokenBucketPolicy,
     bucket: TokenBucketEntry | null,
     ttlMs: number,
-    resetAtMs: number,
+    now: number,
     refunded: boolean,
   ): Promise<RateLimitRefundResult> {
     if (!bucket) {
@@ -399,19 +386,12 @@ export abstract class TokenBucketStore extends DistributedRateLimitStore {
         success: true,
         limit: policy.capacity,
         remaining: policy.capacity,
-        resetAtMs,
+        resetAtMs: now + policy.refillIntervalMs / policy.refillRate,
         refunded,
       };
     }
 
-    const now = this.now();
-    const tokensToAdd = Math.floor(
-      ((now - bucket.lastRefill) / policy.refillIntervalMs) * policy.refillRate,
-    );
-
-    if (tokensToAdd > 0) {
-      bucket.tokens = Math.min(policy.capacity, bucket.tokens + tokensToAdd);
-      bucket.lastRefill = now;
+    if (this.refillTokenBucket(bucket, policy, now)) {
       await this.setBucket(key, bucket, ttlMs);
     }
 
@@ -419,9 +399,39 @@ export abstract class TokenBucketStore extends DistributedRateLimitStore {
       success: true,
       limit: policy.capacity,
       remaining: Math.floor(bucket.tokens),
-      resetAtMs,
+      resetAtMs: Math.max(now, bucket.lastRefill + policy.refillIntervalMs / policy.refillRate),
       refunded,
     };
+  }
+
+  private refillTokenBucket(
+    bucket: TokenBucketEntry,
+    policy: TokenBucketPolicy,
+    now: number,
+  ): boolean {
+    if (bucket.tokens >= policy.capacity) {
+      const tokensChanged = bucket.tokens !== policy.capacity;
+      bucket.tokens = policy.capacity;
+      if (now <= bucket.lastRefill) {
+        return tokensChanged;
+      }
+
+      bucket.lastRefill = now;
+      return true;
+    }
+
+    const timePassed = now - bucket.lastRefill;
+    const tokensToAdd = Math.floor((timePassed / policy.refillIntervalMs) * policy.refillRate);
+    if (tokensToAdd <= 0) {
+      return false;
+    }
+
+    bucket.tokens = Math.min(policy.capacity, bucket.tokens + tokensToAdd);
+    bucket.lastRefill =
+      bucket.tokens === policy.capacity
+        ? now
+        : bucket.lastRefill + (tokensToAdd * policy.refillIntervalMs) / policy.refillRate;
+    return true;
   }
 
   private recordTokenBucketRefundReceipt(
