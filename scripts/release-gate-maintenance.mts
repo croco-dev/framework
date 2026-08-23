@@ -4,6 +4,7 @@ export const RELEASE_GATE_TEST_PATHS = [
   "scripts/tests/architecture-policy-check.spec.ts",
   "scripts/tests/bench-threshold-check.spec.ts",
   "scripts/tests/benchmark-workflow.spec.ts",
+  "scripts/tests/branch-protection-policy.spec.ts",
   "scripts/tests/changeset-required-check.spec.ts",
   "scripts/tests/ci-executable-policy.spec.ts",
   "scripts/tests/ci-performance-budget.spec.ts",
@@ -32,6 +33,7 @@ export const RELEASE_GATE_TEST_PATHS = [
   "scripts/tests/release-spine-evidence.spec.ts",
   "scripts/tests/release-version-sync.spec.ts",
   "scripts/tests/release-workflow.spec.ts",
+  "scripts/tests/repository-policy-audit-workflow.spec.ts",
   "scripts/tests/security-allowlist-metadata-check.spec.ts",
   "scripts/tests/spine-promotion-check.spec.ts",
   "scripts/tests/static-misuse-check.spec.ts",
@@ -95,6 +97,8 @@ export const RELEASE_GATE_ENTRYPOINT_PATHS = [
 ] as const;
 
 export const RELEASE_GATE_SUPPORT_PATHS = [
+  "scripts/branch-protection-policy.json",
+  "scripts/branch-protection-policy.mts",
   "scripts/certification-policy.mts",
   "scripts/ci-cacheable-failure-injection.mts",
   "scripts/create-croco-app-generated-smoke-dependencies.mts",
@@ -145,6 +149,7 @@ export const RELEASE_GATE_WORKFLOW_PATHS = [
   ".github/workflows/ci.yml",
   ".github/workflows/live-tests.yml",
   ".github/workflows/release.yml",
+  ".github/workflows/repository-policy-audit.yml",
 ] as const;
 
 export const RELEASE_GATE_POLICY_INPUT_PATHS = [

@@ -35,6 +35,8 @@ const ROOT_SCRIPT_RECOVERY = {
     "Update code or intentionally update the circular dependency allowlist",
   "architecture-policy:check": "Fix the reported architecture violation",
   "bench:check": "pnpm bench:update",
+  "branch-protection:check":
+    "Apply scripts/branch-protection-policy.json and restore the audited required workflows",
   "changeset-required:check": "pnpm changeset or revert the publishable change",
   check: "Use the failing check output to run its explicit writer or fix command",
   "ci-executables:check": "Pin the reported executable to an immutable reviewed source",
@@ -73,12 +75,7 @@ export const ROOT_VERIFICATION_POLICY = Object.fromEntries(
     {
       classification: "repository-guarded",
       owner: `root package script ${name}`,
-      nonmutationEvidence:
-        name === "docs:api:check"
-          ? "Generation, sanitization, and formatting run in an isolated temporary workspace"
-          : name.startsWith("verify:") || name === "check"
-            ? "The shared verification manifest guards mutation-prone leaf commands at their authoritative definition"
-            : "The authoritative workflow invocation or root audit runs through tracked-files:guard",
+      nonmutationEvidence: rootNonmutationEvidence(name),
       recoveryCommand,
     } satisfies VerificationPolicy,
   ]),
@@ -291,12 +288,39 @@ function isAllowedWorkflowInvocation(path: VerificationPath): boolean {
   if (["verify:publish", "verify:repo", "verify:spine"].includes(path.name)) {
     return path.command === `pnpm ${path.name}` || path.command.startsWith(`pnpm ${path.name} `);
   }
-  if (["audit:read-only", "docs:api:check", "verification-policy:check"].includes(path.name))
+  if (
+    [
+      "audit:read-only",
+      "branch-protection:check",
+      "docs:api:check",
+      "test-inventory:check",
+      "verification-policy:check",
+    ].includes(path.name)
+  )
     return path.command === `pnpm ${path.name}`;
   return (
     path.command.startsWith("pnpm tracked-files:guard --recovery ") &&
     /\s--\s+pnpm\s/.test(path.command)
   );
+}
+
+function rootNonmutationEvidence(name: string): string {
+  if (name === "branch-protection:check") {
+    return "The command performs authenticated GitHub GET requests and reads committed policy/workflow files without changing repository or GitHub state";
+  }
+  if (name === "test-inventory:check") {
+    return "Check mode compares discoveries with the committed inventory and writes reports only when an explicit output path is supplied";
+  }
+  if (name === "verification-policy:check") {
+    return "The verification dispatcher guards the policy command and the policy itself only reads repository files";
+  }
+  if (name === "docs:api:check") {
+    return "Generation, sanitization, and formatting run in an isolated temporary workspace";
+  }
+  if (name.startsWith("verify:") || name === "check") {
+    return "The shared verification manifest guards mutation-prone leaf commands at their authoritative definition";
+  }
+  return "The authoritative workflow invocation or root audit runs through tracked-files:guard";
 }
 
 export function findUnclassifiedVerificationPaths(

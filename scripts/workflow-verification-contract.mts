@@ -21,6 +21,7 @@ const GITLEAKS_PRODUCTION_COMMAND =
   'docker run --rm -v "$PWD:/repo" "${{ env.GITLEAKS_IMAGE }}" detect --source /repo --redact --no-banner --log-opts=HEAD --report-format sarif --report-path /repo/ci-reports/security/gitleaks.sarif > ci-reports/security/gitleaks.txt 2>&1';
 const GITLEAKS_RENOVATE_DIRECTIVE =
   "# renovate: datasource=docker depName=ghcr.io/gitleaks/gitleaks";
+const REPOSITORY_CONTRACT_TEST_COMMAND = "pnpm exec vitest run";
 export const TRUSTED_GITLEAKS_IMAGE =
   "ghcr.io/gitleaks/gitleaks:v8.23.0@sha256:b4b81841085b4060054a71155500a340e3d2e2a5995c186546649e3efd80b84e";
 const ALLOWED_WRITE_PERMISSIONS = new Set([
@@ -68,6 +69,10 @@ export const ACTIONS_ONLY_WORKFLOW_COMMAND_ALLOWLIST = [
   "pnpm --filter @croco/testing test",
   "pnpm --filter @croco/testing build",
   "pnpm create-croco-app:smoke -- --tier ecosystem-advisory",
+  "pnpm branch-protection:check",
+  REPOSITORY_CONTRACT_TEST_COMMAND,
+  "pnpm test-inventory:check",
+  "pnpm verification-policy:check",
   "pnpm verify:publish",
   GITLEAKS_PRODUCTION_COMMAND,
 ] as const;
@@ -122,7 +127,7 @@ function normalizeInvocation(command: string): string {
 }
 
 function matchesArgvPrefix(command: string, allowed: string): boolean {
-  if (allowed === GITLEAKS_PRODUCTION_COMMAND) {
+  if (allowed === GITLEAKS_PRODUCTION_COMMAND || allowed === REPOSITORY_CONTRACT_TEST_COMMAND) {
     return command === allowed;
   }
   return command === allowed || command.startsWith(`${allowed} `);
