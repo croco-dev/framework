@@ -5,20 +5,21 @@ import {
   type RateLimitMetadata,
   ROUTE_GUARDS_METADATA_KEY,
 } from "../guards/RateLimitGuard";
-import { parseWindowMs, type RateLimitAlgorithm, type RateLimitPolicy } from "../types";
+import { RateLimitUnexpectedPolicyProblem } from "../problems/RateLimitConfigProblems";
+import { parseWindowMs, type FixedWindowPolicy, type SlidingWindowPolicy } from "../types";
 
 const DEFAULTS = {
   limit: 100,
   window: "1m",
   policyName: "default",
-  algorithm: "sliding" as RateLimitAlgorithm,
-};
+  algorithm: "sliding",
+} as const;
 
 export type RateLimitDecoratorOptions = {
   limit?: number;
   window?: string;
   policy?: string;
-  algorithm?: RateLimitAlgorithm;
+  algorithm?: "fixed" | "sliding";
   key?: (context: unknown) => string;
 };
 
@@ -28,12 +29,11 @@ export function RateLimit(options: RateLimitDecoratorOptions = {}): MethodDecora
     propertyKey: string | symbol,
     descriptor: PropertyDescriptor,
   ): PropertyDescriptor => {
-    const policy: RateLimitPolicy = {
-      name: options.policy ?? `${String(propertyKey)}-${DEFAULTS.policyName}`,
-      algorithm: options.algorithm ?? DEFAULTS.algorithm,
-      limit: options.limit ?? DEFAULTS.limit,
-      windowMs: parseWindowMs(options.window ?? DEFAULTS.window),
-    };
+    const name = options.policy ?? `${String(propertyKey)}-${DEFAULTS.policyName}`;
+    const limit = options.limit ?? DEFAULTS.limit;
+    const windowMs = parseWindowMs(options.window ?? DEFAULTS.window);
+    const algorithm = options.algorithm ?? DEFAULTS.algorithm;
+    const policy = createWindowPolicy(algorithm, name, limit, windowMs);
 
     const metadata: RateLimitMetadata = {
       policy,
@@ -60,4 +60,24 @@ export function RateLimit(options: RateLimitDecoratorOptions = {}): MethodDecora
 
     return descriptor;
   };
+}
+
+function createWindowPolicy(
+  algorithm: "fixed" | "sliding",
+  name: string,
+  limit: number,
+  windowMs: number,
+): FixedWindowPolicy | SlidingWindowPolicy {
+  switch (algorithm) {
+    case "fixed":
+      return { name, algorithm, limit, windowMs };
+    case "sliding":
+      return { name, algorithm, limit, windowMs };
+    default:
+      return assertNever(algorithm);
+  }
+}
+
+function assertNever(value: never): never {
+  throw new RateLimitUnexpectedPolicyProblem("decorator", value);
 }

@@ -17,6 +17,12 @@ title: "FixedWindowPolicy"
 
 ---
 
+### capacity?
+
+> `optional` **capacity?**: `never`
+
+---
+
 ### limit
 
 > **limit**: `number`
@@ -26,6 +32,18 @@ title: "FixedWindowPolicy"
 ### name
 
 > **name**: `string`
+
+---
+
+### refillIntervalMs?
+
+> `optional` **refillIntervalMs?**: `never`
+
+---
+
+### refillRate?
+
+> `optional` **refillRate?**: `never`
 
 ---
 

@@ -404,10 +404,11 @@ class FakeRateLimitStore extends RateLimitStore {
     receipt?: RateLimitRefundReceipt,
   ): Promise<RateLimitRefundResult> {
     if (!receipt || this.refunded || policy.algorithm !== "fixed") {
+      const limit = typeof policy.limit === "number" ? policy.limit : 0;
       return {
         success: true,
-        limit: "limit" in policy ? policy.limit : 0,
-        remaining: "limit" in policy ? policy.limit : 0,
+        limit,
+        remaining: limit,
         resetAtMs: Date.now(),
         refunded: false,
       };

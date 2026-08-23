@@ -47,3 +47,12 @@ export class RateLimitRefundUnsupportedProblem extends Problem {
     );
   }
 }
+
+export class RateLimitUnexpectedPolicyProblem extends Problem {
+  readonly code = "ratelimit-core/unexpected-policy";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(source: "decorator" | "policy", value: never) {
+    super(undefined, undefined, `Unexpected rate-limit ${source} value: ${String(value)}`);
+  }
+}

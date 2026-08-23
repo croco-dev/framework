@@ -50,6 +50,26 @@ describe("@RateLimit decorator", () => {
     }
   });
 
+  it("should store an explicit fixed-window policy", () => {
+    class TestController {
+      @RateLimit({ algorithm: "fixed", limit: 10, window: "5m" })
+      limitedMethod() {}
+    }
+
+    const instance = new TestController();
+    const metadata = Reflect.getMetadata(
+      RATE_LIMIT_METADATA_KEY,
+      instance.limitedMethod,
+    ) as RateLimitMetadata;
+
+    expect(metadata.policy).toEqual({
+      name: "limitedMethod-default",
+      algorithm: "fixed",
+      limit: 10,
+      windowMs: 300000,
+    });
+  });
+
   it("should store metadata with custom policy name", () => {
     class TestController {
       @RateLimit({ policy: "premium-tier", limit: 1000, window: "1h" })
