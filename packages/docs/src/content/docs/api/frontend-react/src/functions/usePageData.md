@@ -5,10 +5,13 @@ prev: false
 title: "usePageData"
 ---
 
-> **usePageData**\<`T`\>(): `T`
+> **usePageData**\<`T`\>(): `T` \| `undefined`
 
-SSR로 전달된 페이지 데이터에 타입 안전 접근을 제공한다.
+SSR로 전달된 페이지 데이터에 선택적으로 접근한다.
 App entry에서 PageDataProvider로 래핑 필요.
+
+이 훅은 hydration payload를 검증하지 않는다. 런타임 검증이 필요하면
+`useParsedPageData()`를 사용한다.
 
 ## Type Parameters
 
@@ -18,6 +21,6 @@ App entry에서 PageDataProvider로 래핑 필요.
 
 ## Returns
 
-`T`
+`T` \| `undefined`
 
-페이지 데이터 (타입 T로 캐스팅)
+페이지 데이터 또는 provider/data가 없을 때 undefined

@@ -1,8 +1,8 @@
 import React from "react";
-import { usePageData } from "@croco/frontend-react";
+import { useRequiredPageData } from "@croco/frontend-react";
 
 export default function Page() {
-  const { message } = usePageData<{ message: string }>();
+  const { message } = useRequiredPageData<{ message: string }>();
 
   return (
     <div>

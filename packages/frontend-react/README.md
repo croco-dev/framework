@@ -12,10 +12,10 @@ React에서 명시적으로 표현하는 provider-neutral bridge를 제공합니
 
 이 패키지의 beta runtime claim은 package test와 generated-app smoke가 함께 검증합니다.
 
-- `pnpm --filter @croco/frontend-react test`는 `PageDataProvider`, `usePageData`, `usePageMeta`,
+- `pnpm --filter @croco/frontend-react test`는 `PageDataProvider`, page data access hooks, `usePageMeta`,
   auth bridge, Problem UI primitive를 React render path에서 검증합니다.
 - `pnpm create-croco-app:smoke meta-vite-web meta-vite-fullstack-workers`는 generated
-  meta-vite 앱에서 `PageDataProvider`/`usePageData` 데이터 흐름, meta 전달, hydration root,
+  meta-vite 앱에서 `PageDataProvider`/required page data 흐름, meta 전달, hydration root,
   그리고 Cloudflare Worker fullstack smoke를 검증합니다.
 - API reference는 `packages/docs/src/content/docs/api/frontend-react/`에서 생성됩니다.
 
@@ -55,7 +55,7 @@ export const data: CrocoDataFn<{ message: string }> = async () => {
 
 ### React에서 데이터 사용
 
-`usePageData` 훅으로 타입 안전하게 데이터에 접근합니다:
+`usePageData` 훅은 provider 또는 data가 없는 상태를 `undefined`로 드러냅니다:
 
 ```typescript
 // pages/index/+Page.tsx
@@ -63,6 +63,44 @@ import { usePageData } from '@croco/frontend-react';
 
 export default function Page() {
   const data = usePageData<{ message: string }>();
+
+  if (!data) {
+    return <div role="alert">Page data unavailable</div>;
+  }
+
+  return <div>{data.message}</div>;
+}
+```
+
+SSR/hydration 경계에서 data가 반드시 있어야 하는 컴포넌트는 `useRequiredPageData`를 사용합니다.
+누락 시 `PageDataUnavailableProblem`이 provider와 data 설정을 확인하라는 복구 메시지와 함께 발생합니다:
+
+```typescript
+import { useRequiredPageData } from '@croco/frontend-react';
+
+export default function Page() {
+  const data = useRequiredPageData<{ message: string }>();
+
+  return <div>{data.message}</div>;
+}
+```
+
+신뢰할 수 없는 hydration payload는 schema library와 구조적으로 호환되는 parser를 전달해 검증합니다.
+data가 없으면 parser를 호출하지 않고 `undefined`를 반환하며, parser가 던진 validation failure는 그대로 전파합니다:
+
+```typescript
+import { useParsedPageData } from '@croco/frontend-react';
+
+declare const pageDataSchema: {
+  parse(input: unknown): { message: string };
+};
+
+export default function ParsedPage() {
+  const data = useParsedPageData(pageDataSchema);
+
+  if (!data) {
+    return <div role="alert">Page data unavailable</div>;
+  }
 
   return <div>{data.message}</div>;
 }
@@ -78,7 +116,8 @@ export default function Page() {
 현재 package/runtime evidence는 아래 profile을 기준으로 합니다:
 
 - package test: `pnpm --filter @croco/frontend-react test`
-  - `usePageData`/`usePageMeta`가 React render path에서 page data와 meta를 노출하는지 검증합니다.
+  - optional/required/parsed page data hooks와 `usePageMeta`가 React render path에서 page data와 meta를
+    노출하는지 검증합니다.
   - `createCrocoPageConfig`의 `mode`가 `@croco/meta-vite` `RenderMode`와 호환되고, route `path`
     registration을 config helper에 섞지 않는지 검증합니다.
 - generated fullstack smoke: `CROCO_GENERATED_SMOKE_CASES=meta-vite-fullstack-workers pnpm create-croco-app:smoke`
@@ -92,7 +131,8 @@ export default function Page() {
 
 Unsupported states:
 
-- `PageDataProvider` 없이 `usePageData<T>()`를 호출하면 `undefined`를 반환합니다. 앱은 이 상태를
+- `PageDataProvider` 없이 `usePageData<T>()` 또는 `useParsedPageData(parser)`를 호출하면 `undefined`를
+  반환합니다. `useRequiredPageData<T>()`는 `PageDataUnavailableProblem`을 던집니다. 앱은 누락 상태를
   성공 data payload로 취급하지 않아야 합니다.
 - 이 패키지는 직접 DOM을 만들거나 `hydrateRoot`를 호출하지 않습니다. Browser hydration bootstrap은
   generated app entrypoint 또는 앱별 `@croco/meta-vite` runtime wiring에서 소유해야 합니다.
@@ -206,13 +246,27 @@ meta-vite page config helper의 기본값을 제공합니다.
 
 ### `usePageData<T>()`
 
-`PageDataProvider`로 전달된 SSR page data에 타입 안전 접근을 제공합니다.
+`PageDataProvider`로 전달된 SSR page data에 선택적으로 접근합니다. 이 훅은 payload를 검증하지 않습니다.
 
 **제네릭:**
 
 - `T` - 페이지 데이터 타입 (기본값: `unknown`)
 
+**반환값:** `T | undefined`
+
+### `useRequiredPageData<T>()`
+
+provider의 `data`가 반드시 존재해야 하는 SSR/hydration 경계에서 사용합니다. data가 없으면
+`PageDataUnavailableProblem`을 던지고, 있으면 `T`로 반환합니다. 이 훅은 payload를 검증하지 않습니다.
+
 **반환값:** `T`
+
+### `useParsedPageData<T>(parser)`
+
+`{ parse(input: unknown): T }` 구조의 parser로 page data를 검증합니다. data가 있을 때만 parser를 호출하고,
+validation failure를 변환하거나 숨기지 않습니다.
+
+**반환값:** `T | undefined`
 
 ### `useSessionGate(requirements?)`
 

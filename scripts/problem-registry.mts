@@ -1975,6 +1975,17 @@ const recoveryMetadataByCode = {
     redactionPolicy: "public",
     severity: "error",
   }),
+  "frontend-react/page-data-unavailable": recovery({
+    cause:
+      "A component required page data, but PageDataProvider was missing or its data value was undefined.",
+    userAction:
+      "Do not retry the unchanged render; ensure the component is inside PageDataProvider with a defined data value.",
+    operatorAction:
+      "Inspect the SSR and hydration entrypoint, then wire PageDataProvider with the route page data before rendering the component.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "error",
+  }),
   "testing/contract-generation-unsupported": recovery({
     cause:
       "Automatic contract-case generation encountered a schema shape outside its deterministic supported subset.",

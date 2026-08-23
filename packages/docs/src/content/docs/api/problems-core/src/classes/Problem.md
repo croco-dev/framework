@@ -228,6 +228,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`ModuleProviderOwnershipProblem`](/api/framework-module/src/classes/moduleproviderownershipproblem/)
 - [`ModuleProviderVisibilityProblem`](/api/framework-module/src/classes/moduleprovidervisibilityproblem/)
 - [`ModuleProviderWriteProblem`](/api/framework-module/src/classes/moduleproviderwriteproblem/)
+- [`PageDataUnavailableProblem`](/api/frontend-react/src/classes/pagedataunavailableproblem/)
 - [`MissingCloudflareVitePluginProblem`](/api/frontend-vite/src/classes/missingcloudflarevitepluginproblem/)
 - [`InvalidIdPrefixProblem`](/api/gid-core/src/classes/invalididprefixproblem/)
 - [`IdPrefixProblem`](/api/gid-core/src/classes/idprefixproblem/)
