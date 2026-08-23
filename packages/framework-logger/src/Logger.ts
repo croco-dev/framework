@@ -6,7 +6,16 @@ import { Component, Context } from "@croco/framework-context";
 import { trace } from "@opentelemetry/api";
 import pino, { type Logger as PinoLogger } from "pino";
 import { LogLevel } from "./LogLevel";
+import { sanitizeLogRecord } from "./sanitizeLogRecord";
 import type { LogContext } from "./types";
+
+function isError(value: unknown): value is Error {
+  try {
+    return value instanceof Error;
+  } catch {
+    return false;
+  }
+}
 
 @Component({ scope: "singleton" })
 export class Logger implements ILogger {
@@ -41,6 +50,12 @@ export class Logger implements ILogger {
         ],
         remove: true,
       },
+      formatters: {
+        log: sanitizeLogRecord,
+      },
+      serializers: {
+        err: (error: unknown) => error,
+      },
       base: isProduction ? undefined : { pid: process.pid },
     });
   }
@@ -54,7 +69,7 @@ export class Logger implements ILogger {
    * Create a child logger with bound context
    */
   child(bindings: LogContext): ILogger {
-    return Logger.fromPino(this.config, this.logger.child(bindings));
+    return Logger.fromPino(this.config, this.logger.child(sanitizeLogRecord(bindings)));
   }
 
   private getContext(): LogContext {
@@ -76,31 +91,35 @@ export class Logger implements ILogger {
     return context;
   }
 
+  private getLogContext(context?: LogContext): LogContext {
+    return context ? { ...this.getContext(), ...sanitizeLogRecord(context) } : this.getContext();
+  }
+
   debug(message: string, context?: LogContext): void {
-    this.logger.debug({ ...this.getContext(), ...context }, message);
+    this.logger.debug(this.getLogContext(context), message);
   }
 
   info(message: string, context?: LogContext): void {
-    this.logger.info({ ...this.getContext(), ...context }, message);
+    this.logger.info(this.getLogContext(context), message);
   }
 
   warn(message: string, context?: LogContext): void {
-    this.logger.warn({ ...this.getContext(), ...context }, message);
+    this.logger.warn(this.getLogContext(context), message);
   }
 
   error(message: string, context?: LogContext | Error): void {
-    if (context instanceof Error) {
+    if (isError(context)) {
       this.logger.error({ ...this.getContext(), err: context }, message);
     } else {
-      this.logger.error({ ...this.getContext(), ...context }, message);
+      this.logger.error(this.getLogContext(context), message);
     }
   }
 
   fatal(message: string, context?: LogContext | Error): void {
-    if (context instanceof Error) {
+    if (isError(context)) {
       this.logger.fatal({ ...this.getContext(), err: context }, message);
     } else {
-      this.logger.fatal({ ...this.getContext(), ...context }, message);
+      this.logger.fatal(this.getLogContext(context), message);
     }
   }
 }

@@ -1505,6 +1505,12 @@
       "owner": "@croco/framework-logger"
     },
     {
+      "path": "packages/framework-logger/src/tests/LoggerRedaction.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/framework-logger"
+    },
+    {
       "path": "packages/framework-module/src/tests/ModuleGraphManifest.spec.ts",
       "lane": "fast",
       "qualifiers": [],
