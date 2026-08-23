@@ -25,7 +25,6 @@ import type {
 } from "@croco/llm-core";
 import type {
   OpenAiEmbeddingResponse,
-  OpenAiFunctionCallOutput,
   OpenAiInputMessage,
   OpenAiLlmModelConfig,
   OpenAiOutputItem,
@@ -482,41 +481,46 @@ function mapEmbeddingUsage(usage: OpenAiUsage | null | undefined, operation: str
 function extractToolCalls(
   output: readonly OpenAiOutputItem[],
 ): Array<{ readonly name: string; readonly arguments: Record<string, unknown> }> {
-  return output.flatMap((item) => {
-    if (!isFunctionCallOutput(item)) {
+  return output.flatMap((item, index) => {
+    if (item.type !== "function_call") {
       return [];
     }
 
-    const rawArguments = typeof item.arguments === "string" ? item.arguments : "{}";
-    try {
-      const parsedArguments = JSON.parse(rawArguments) as unknown;
-      if (!isRecord(parsedArguments)) {
-        throw new OpenAiInvalidResponseProblem(
-          "callTool",
-          `tool arguments for ${item.name} were not an object`,
-        );
-      }
-
-      return [
-        {
-          name: item.name,
-          arguments: parsedArguments,
-        },
-      ];
-    } catch (error) {
-      if (error instanceof OpenAiInvalidResponseProblem) {
-        throw error;
-      }
-
-      throw new OpenAiInvalidResponseProblem("callTool", `invalid tool arguments for ${item.name}`);
+    const name = "name" in item ? item.name : undefined;
+    if (typeof name !== "string" || name.trim().length === 0) {
+      throw invalidFunctionCall(index, "missing or blank name");
     }
+
+    const rawArguments = "arguments" in item ? item.arguments : undefined;
+    if (typeof rawArguments !== "string") {
+      throw invalidFunctionCall(index, "missing string arguments");
+    }
+
+    let parsedArguments: unknown;
+    try {
+      parsedArguments = JSON.parse(rawArguments) as unknown;
+    } catch {
+      throw invalidFunctionCall(index, "arguments were not valid JSON");
+    }
+
+    if (!isRecord(parsedArguments)) {
+      throw invalidFunctionCall(index, "arguments were not an object");
+    }
+
+    return [
+      {
+        name,
+        arguments: parsedArguments,
+      },
+    ];
   });
 }
 
-function isFunctionCallOutput(
-  item: OpenAiOutputItem,
-): item is OpenAiFunctionCallOutput & { readonly name: string } {
-  return item.type === "function_call" && "name" in item && typeof item.name === "string";
+function invalidFunctionCall(index: number, reason: string): OpenAiInvalidResponseProblem {
+  return new OpenAiInvalidResponseProblem(
+    "callTool",
+    `function call at output index ${index}: ${reason}`,
+  );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

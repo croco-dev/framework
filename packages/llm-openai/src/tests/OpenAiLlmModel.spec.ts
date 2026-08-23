@@ -9,6 +9,7 @@ import {
 import type {
   OpenAiEmbeddingRequest,
   OpenAiEmbeddingResponse,
+  OpenAiOutputItem,
   OpenAiRequestOptions,
   OpenAiResponse,
   OpenAiResponseRequest,
@@ -118,23 +119,16 @@ class FailingOpenAiTransport extends MockOpenAiTransport {
   }
 }
 
-class InvalidToolArgumentsTransport extends MockOpenAiTransport {
+class ToolOutputTransport extends MockOpenAiTransport {
+  constructor(private readonly output: readonly OpenAiOutputItem[]) {
+    super();
+  }
+
   override async createResponse(request: OpenAiResponseRequest): Promise<OpenAiResponse> {
     return {
       ...createTextResponse("", request.model),
       output_text: undefined,
-      output: [
-        {
-          type: "function_call",
-          name: "lookup",
-          arguments: "[]",
-        },
-      ],
-      usage: {
-        input_tokens: 1,
-        output_tokens: 0,
-        total_tokens: 1,
-      },
+      output: this.output,
     };
   }
 }
@@ -583,10 +577,73 @@ describe("OpenAiLlmModel", () => {
     );
   });
 
-  it("rejects non-object tool argument payloads with Croco Problems", async () => {
+  it.each([
+    [
+      "a missing function name",
+      { type: "function_call", arguments: '{"id":"123"}' } as const,
+      "function call at output index 0: missing or blank name",
+    ],
+    [
+      "a blank function name",
+      { type: "function_call", name: "   ", arguments: '{"id":"123"}' } as const,
+      "function call at output index 0: missing or blank name",
+    ],
+    [
+      "missing arguments",
+      { type: "function_call", name: "lookup" } as const,
+      "function call at output index 0: missing string arguments",
+    ],
+    [
+      "invalid JSON arguments",
+      { type: "function_call", name: "lookup", arguments: "{" } as const,
+      "function call at output index 0: arguments were not valid JSON",
+    ],
+    [
+      "non-object arguments",
+      { type: "function_call", name: "lookup", arguments: "[]" } as const,
+      "function call at output index 0: arguments were not an object",
+    ],
+  ])("rejects function calls with %s", async (_case, output, reason) => {
     const model = new OpenAiLlmModel({
       modelId: MODEL_ID,
-      transport: new InvalidToolArgumentsTransport(),
+      transport: new ToolOutputTransport([output]),
+    });
+
+    const result = model.callTool({
+      prompt: "Use tool",
+      tools: [
+        {
+          name: "lookup",
+          description: "Lookup a value",
+          parameters: {},
+        },
+      ],
+    });
+
+    await expect(result).rejects.toMatchObject({
+      code: OpenAiInvalidResponseProblem.CODE,
+      extensions: {
+        operation: "callTool",
+        provider: "openai",
+        reason,
+      },
+    });
+  });
+
+  it("preserves valid function calls while ignoring non-tool output items", async () => {
+    const model = new OpenAiLlmModel({
+      modelId: MODEL_ID,
+      transport: new ToolOutputTransport([
+        {
+          type: "message",
+          content: [{ type: "output_text", text: "Calling lookup" }],
+        },
+        {
+          type: "function_call",
+          name: "lookup",
+          arguments: '{"id":"123"}',
+        },
+      ]),
     });
 
     await expect(
@@ -600,7 +657,14 @@ describe("OpenAiLlmModel", () => {
           },
         ],
       }),
-    ).rejects.toThrow(OpenAiInvalidResponseProblem);
+    ).resolves.toMatchObject({
+      toolCalls: [
+        {
+          name: "lookup",
+          arguments: { id: "123" },
+        },
+      ],
+    });
   });
 });
 
