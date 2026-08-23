@@ -17,7 +17,7 @@ import type { Context as HonoContext } from "hono";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { HTTP_CONTEXT_KEYS } from "../libs/contextKeys";
 import { HttpContext } from "../libs/HttpContext";
-import { telemetryMiddleware } from "../libs/middleware/telemetry";
+import { parseTraceParent, telemetryMiddleware } from "../libs/middleware/telemetry";
 
 class TestProblem extends Problem {
   constructor() {
@@ -372,4 +372,35 @@ describe("TelemetryMiddleware", () => {
       }),
     );
   });
+});
+
+describe("parseTraceParent", () => {
+  it.each([
+    "00-00000000000000000000000000000000-2222222222222222-01",
+    "00-11111111111111111111111111111111-0000000000000000-01",
+  ])("should reject all-zero trace identifiers in %s", (header) => {
+    expect(parseTraceParent(header)).toBeNull();
+  });
+
+  it.each([
+    {
+      header: "00-11111111111111111111111111111111-2222222222222222-01",
+      traceId: "11111111111111111111111111111111",
+      spanId: "2222222222222222",
+    },
+    {
+      header: "00-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-BBBBBBBBBBBBBBBB-01",
+      traceId: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      spanId: "BBBBBBBBBBBBBBBB",
+    },
+  ])(
+    "should preserve valid nonzero hexadecimal identifiers in $header",
+    ({ header, traceId, spanId }) => {
+      expect(parseTraceParent(header)).toEqual({
+        traceId,
+        spanId,
+        traceFlags: 1,
+      });
+    },
+  );
 });

@@ -869,6 +869,25 @@ describe("CrocoApp", () => {
     });
   });
 
+  it.each([
+    "00-00000000000000000000000000000000-00f067aa0ba902b7-01",
+    "00-4bf92f3577b34da6a3ce929d0e0e4736-0000000000000000-01",
+  ])(
+    "should not install an all-zero traceparent identifier in the request context",
+    async (traceparent) => {
+      const app = createApp({ controllers: [TestController] });
+
+      const response = await app.fetch(
+        new Request("http://localhost/api/runtime-context", {
+          headers: { traceparent },
+        }),
+      );
+
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toMatchObject({ traceId: null });
+    },
+  );
+
   it("should include Node traceparent and request id metadata in Problem responses", async () => {
     const app = createApp({ controllers: [TestController] });
     const traceId = "4bf92f3577b34da6a3ce929d0e0e4736";
