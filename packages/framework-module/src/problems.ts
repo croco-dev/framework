@@ -19,6 +19,25 @@ export class InvalidModuleDefinitionProblem extends Problem {
   }
 }
 
+export class ModuleDuplicateNameProblem extends Problem {
+  constructor(
+    moduleName: string,
+    firstPath: readonly string[],
+    conflictingPath: readonly string[],
+  ) {
+    const formatPath = (path: readonly string[]) => path.join(" → ");
+
+    super(
+      "framework-module/duplicate-module-name",
+      ProblemCategory.Conflict,
+      `Distinct module definitions share the name '${moduleName}': '${formatPath(firstPath)}' and '${formatPath(conflictingPath)}'.`,
+      {
+        extensions: { moduleName, firstPath, conflictingPath },
+      },
+    );
+  }
+}
+
 export class ModuleCircularDependencyProblem extends Problem {
   constructor(cycle: readonly string[]) {
     const path = cycle.join(" → ");

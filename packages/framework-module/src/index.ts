@@ -47,6 +47,7 @@ export { ModuleDiagnosticsProvider } from "./libs/diagnostics/ModuleDiagnosticsP
 export {
   InvalidModuleDefinitionProblem,
   ModuleCircularDependencyProblem,
+  ModuleDuplicateNameProblem,
   ModuleLifecycleProblem,
   ModuleProviderOwnershipProblem,
   ModuleProviderVisibilityProblem,
