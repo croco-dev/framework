@@ -1,11 +1,11 @@
-import { usePageData } from "@croco/frontend-react";
+import { useRequiredPageData } from "@croco/frontend-react";
 
 type HomePageData = {
   readonly message: string;
 };
 
 export default function Page() {
-  const { message } = usePageData<HomePageData>();
+  const { message } = useRequiredPageData<HomePageData>();
 
   return (
     <main>

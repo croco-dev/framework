@@ -12683,6 +12683,12 @@
               "declarationKind": "const"
             },
             {
+              "name": "PageDataUnavailableProblem",
+              "exportKind": "named",
+              "source": "./libs/hooks/usePageData",
+              "declarationKind": "class"
+            },
+            {
               "name": "ProblemBoundary",
               "exportKind": "named",
               "source": "./libs/problemUi",
@@ -12749,9 +12755,21 @@
               "declarationKind": "function"
             },
             {
+              "name": "useParsedPageData",
+              "exportKind": "named",
+              "source": "./libs/hooks/usePageData",
+              "declarationKind": "function"
+            },
+            {
               "name": "usePermissionGate",
               "exportKind": "named",
               "source": "./libs/authBridge",
+              "declarationKind": "function"
+            },
+            {
+              "name": "useRequiredPageData",
+              "exportKind": "named",
+              "source": "./libs/hooks/usePageData",
               "declarationKind": "function"
             },
             {

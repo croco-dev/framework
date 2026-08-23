@@ -12,5 +12,4 @@ generated entrypoint to Croco page hooks.
 
 App code normally wraps the root component with `PageDataProvider` instead of
 reading this context directly. Advanced integrations can provide the same
-shape when they bridge a custom renderer into `usePageData()` or
-`usePageMeta()`.
+shape when they bridge a custom renderer into Croco page data hooks.

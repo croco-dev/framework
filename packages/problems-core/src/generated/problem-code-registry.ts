@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 641,
+  problemCount: 643,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -7804,6 +7804,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 204,
           column: 3,
           kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "frontend-react/page-data-unavailable",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#frontend-react-page-data-unavailable",
+      recovery: {
+        cause:
+          "A component required page data, but PageDataProvider was missing or its data value was undefined.",
+        userAction:
+          "Do not retry the unchanged render; ensure the component is inside PageDataProvider with a defined data value.",
+        operatorAction:
+          "Inspect the SSR and hydration entrypoint, then wire PageDataProvider with the route page data before rendering the component.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/frontend-react/src/libs/hooks/usePageData.ts",
+          line: 46,
+          column: 5,
+          kind: "problem-constructor",
         },
       ],
     },
