@@ -51,6 +51,12 @@ jobs:
         env:
           POLAR_ACCESS_TOKEN: ${{ secrets.POLAR_ACCESS_TOKEN }}
           POLAR_ORGANIZATION_ID: ${{ secrets.POLAR_ORGANIZATION_ID }}
+          POLAR_PRICE_IDS: ${{ secrets.POLAR_PRICE_IDS }}
+          POLAR_PRODUCT_ID: ${{ secrets.POLAR_PRODUCT_ID }}
+          POLAR_USAGE_EVENT_ID: ${{ secrets.POLAR_USAGE_EVENT_ID }}
+          POLAR_USAGE_EVENT_NAME: ${{ secrets.POLAR_USAGE_EVENT_NAME }}
+          POLAR_USAGE_EXTERNAL_CUSTOMER_ID: ${{ secrets.POLAR_USAGE_EXTERNAL_CUSTOMER_ID }}
+          POLAR_USAGE_METER_ID: ${{ secrets.POLAR_USAGE_METER_ID }}
           POLAR_WEBHOOK_SECRET: ${{ secrets.POLAR_WEBHOOK_SECRET }}
         run: >-
           node --experimental-strip-types scripts/test-lane-runner.mts

@@ -6,6 +6,10 @@ import { PolarBillingDiagnosticsProvider } from "../libs/PolarBillingDiagnostics
 import { POLAR_BILLING_PROVIDER_PROFILE } from "../libs/PolarBillingProviderProfile";
 import { inspectPolarContractMappingDrift } from "../libs/PolarContractMappingPreflight";
 import { bindPolarUsageMeter, PolarUsageBillingGateway } from "../libs/PolarUsageBillingGateway";
+import {
+  findMissingPolarLiveSmokeResources,
+  POLAR_LIVE_SMOKE_RESOURCE_GROUPS,
+} from "./polarLiveSmokeResources";
 import type { PolarConfig } from "../types";
 
 const liveEnvironment = process.env.POLAR_ENVIRONMENT === "production" ? "production" : "sandbox";
@@ -16,13 +20,9 @@ const liveConfig: PolarConfig = {
   organizationId: process.env.POLAR_ORGANIZATION_ID,
 };
 
-const missingLiveSmokeEnv = [
-  ["POLAR_ACCESS_TOKEN", liveConfig.accessToken],
-  ["POLAR_WEBHOOK_SECRET", liveConfig.webhookSecret],
-  ["POLAR_ORGANIZATION_ID", liveConfig.organizationId],
-]
-  .filter(([, value]) => typeof value !== "string" || value.length === 0)
-  .map(([name]) => name);
+const missingLiveSmokeEnv = findMissingPolarLiveSmokeResources(
+  POLAR_LIVE_SMOKE_RESOURCE_GROUPS.readiness,
+);
 
 describe("Polar live smoke", () => {
   it.skipIf(missingLiveSmokeEnv.length > 0)(
@@ -65,13 +65,9 @@ describe("Polar live smoke", () => {
     },
   );
 
-  const missingMappingEnv = [
-    ["POLAR_ACCESS_TOKEN", liveConfig.accessToken],
-    ["POLAR_PRODUCT_ID", process.env.POLAR_PRODUCT_ID],
-    ["POLAR_PRICE_IDS", process.env.POLAR_PRICE_IDS],
-  ]
-    .filter(([, value]) => typeof value !== "string" || value.length === 0)
-    .map(([name]) => name);
+  const missingMappingEnv = findMissingPolarLiveSmokeResources(
+    POLAR_LIVE_SMOKE_RESOURCE_GROUPS.mapping,
+  );
 
   it.skipIf(missingMappingEnv.length > 0)(
     "compares graph-derived product mappings through an opt-in read-only Polar preflight",
@@ -117,16 +113,9 @@ describe("Polar live smoke", () => {
     },
   );
 
-  const missingUsageSmokeEnv = [
-    ["POLAR_ACCESS_TOKEN", liveConfig.accessToken],
-    ["POLAR_WEBHOOK_SECRET", liveConfig.webhookSecret],
-    ["POLAR_USAGE_EXTERNAL_CUSTOMER_ID", process.env.POLAR_USAGE_EXTERNAL_CUSTOMER_ID],
-    ["POLAR_USAGE_EVENT_NAME", process.env.POLAR_USAGE_EVENT_NAME],
-    ["POLAR_USAGE_EVENT_ID", process.env.POLAR_USAGE_EVENT_ID],
-    ["POLAR_USAGE_METER_ID", process.env.POLAR_USAGE_METER_ID],
-  ]
-    .filter(([, value]) => typeof value !== "string" || value.length === 0)
-    .map(([name]) => name);
+  const missingUsageSmokeEnv = findMissingPolarLiveSmokeResources(
+    POLAR_LIVE_SMOKE_RESOURCE_GROUPS.usage,
+  );
 
   it.skipIf(missingUsageSmokeEnv.length > 0)(
     "certifies a deliberate real usage event with a replay-safe external identity",

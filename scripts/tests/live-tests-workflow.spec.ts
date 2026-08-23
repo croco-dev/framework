@@ -3,6 +3,8 @@ import { resolve } from "node:path";
 import { parse } from "yaml";
 import { describe, expect, it } from "vitest";
 
+import { POLAR_LIVE_SMOKE_RESOURCE_GROUPS } from "../../packages/billing-polar/src/tests/polarLiveSmokeResources";
+
 const workflow = readFileSync(
   resolve(import.meta.dirname, "../../.github/workflows/live-tests.yml"),
   "utf8",
@@ -73,6 +75,18 @@ describe("scheduled live test workflow", () => {
         expect(step?.env?.[name], `${owner}:${name}`).toBe(expected);
       }
     }
+  });
+
+  it("keeps every Polar smoke prerequisite aligned with its inventory and workflow step", () => {
+    const requiredNames = [
+      ...new Set(Object.values(POLAR_LIVE_SMOKE_RESOURCE_GROUPS).flat()),
+    ].sort();
+    const step = parsed.jobs.live.steps.find(({ run }) =>
+      run?.includes("--owner @croco/billing-polar"),
+    );
+
+    expect([...(resources["@croco/billing-polar"] ?? [])].sort()).toEqual(requiredNames);
+    expect(Object.keys(step?.env ?? {}).sort()).toEqual(requiredNames);
   });
 
   it("runs reconciliation after every non-cancelled owner outcome", () => {
