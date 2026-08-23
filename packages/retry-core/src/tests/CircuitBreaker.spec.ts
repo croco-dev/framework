@@ -241,26 +241,40 @@ describe("CircuitBreaker", () => {
   });
 
   describe("동시성 버그 회귀", () => {
-    it("CLOSED 상태에서 동시 요청은 직렬화되지 않고 병렬로 처리되어야 한다", async () => {
-      const breaker = createBreaker({ failureThreshold: 10 });
-      const fn = vi.fn(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 100));
-        return "ok";
+    it("CLOSED 상태에서는 실패 임계값보다 많은 동시 성공 요청도 모두 실행해야 한다", async () => {
+      const breaker = createBreaker({ failureThreshold: 3 });
+      let releaseWork!: (value: string) => void;
+      const work = new Promise<string>((resolve) => {
+        releaseWork = resolve;
       });
+      const fn = vi.fn(async () => work);
 
-      const startedAt = Date.now();
-      const results = await Promise.all([
-        breaker.execute(fn),
-        breaker.execute(fn),
-        breaker.execute(fn),
-        breaker.execute(fn),
-        breaker.execute(fn),
+      const executions = Array.from({ length: 5 }, () => breaker.execute(fn));
+      const settled = Promise.allSettled(executions);
+
+      let admissionError: unknown;
+      try {
+        await vi.waitFor(() => expect(fn).toHaveBeenCalledTimes(5));
+      } catch (error) {
+        admissionError = error;
+      }
+
+      releaseWork("ok");
+      const outcomes = await settled;
+
+      if (admissionError) {
+        throw admissionError;
+      }
+
+      expect(outcomes).toEqual([
+        { status: "fulfilled", value: "ok" },
+        { status: "fulfilled", value: "ok" },
+        { status: "fulfilled", value: "ok" },
+        { status: "fulfilled", value: "ok" },
+        { status: "fulfilled", value: "ok" },
       ]);
-      const elapsed = Date.now() - startedAt;
-
-      expect(results).toEqual(["ok", "ok", "ok", "ok", "ok"]);
-      expect(fn).toHaveBeenCalledTimes(5);
-      expect(elapsed).toBeLessThan(200);
+      expect(await breaker.getFailureCount()).toBe(0);
+      expect(await breaker.getState()).toBe(CircuitState.CLOSED);
     });
 
     it("BUG-12 HALF_OPEN 상태에서 동시 요청 수 제한", async () => {
@@ -322,35 +336,56 @@ describe("CircuitBreaker", () => {
         rejectThird = reject;
       });
 
+      let rejectFourth!: (reason?: unknown) => void;
+      const fourthWork = new Promise<never>((_resolve, reject) => {
+        rejectFourth = reject;
+      });
+      for (const work of [firstWork, secondWork, thirdWork, fourthWork]) {
+        void work.catch(() => undefined);
+      }
+
       const fn = vi
         .fn<() => Promise<string>>()
-        .mockImplementation(async () =>
-          Promise.reject(new Error("BUG-13 unexpected-fourth-execution")),
-        )
         .mockImplementationOnce(async () => firstWork)
         .mockImplementationOnce(async () => secondWork)
-        .mockImplementationOnce(async () => thirdWork);
+        .mockImplementationOnce(async () => thirdWork)
+        .mockImplementationOnce(async () => fourthWork);
 
       const first = breaker.execute(fn);
       const second = breaker.execute(fn);
       const third = breaker.execute(fn);
       const fourth = breaker.execute(fn);
+      const settled = Promise.allSettled([first, second, third, fourth]);
+
+      let admissionError: unknown;
+      try {
+        await vi.waitFor(() => expect(fn).toHaveBeenCalledTimes(4));
+      } catch (error) {
+        admissionError = error;
+      }
 
       rejectFirst(new Error("BUG-13 fail-1"));
       rejectSecond(new Error("BUG-13 fail-2"));
       rejectThird(new Error("BUG-13 fail-3"));
+      rejectFourth(new Error("BUG-13 fail-4"));
+
+      await settled;
+
+      if (admissionError) {
+        throw admissionError;
+      }
 
       await expect(first).rejects.toThrow("BUG-13 fail-1");
       await expect(second).rejects.toThrow("BUG-13 fail-2");
       await expect(third).rejects.toThrow("BUG-13 fail-3");
-      await expect(fourth).rejects.toThrow(CircuitBreakerOpenProblem);
+      await expect(fourth).rejects.toThrow("BUG-13 fail-4");
 
-      expect(fn).toHaveBeenCalledTimes(3);
+      expect(fn).toHaveBeenCalledTimes(4);
       expect(await breaker.getFailureCount()).toBe(3);
       expect(await breaker.getState()).toBe(CircuitState.OPEN);
     });
 
-    it("BUG-88 CLOSED 슬롯 중복 해제 시에도 임계값 판정이 느슨해지지 않아야 한다", async () => {
+    it("CLOSED 상태에서도 실제 실패 카운트가 임계값이면 실행을 거부해야 한다", async () => {
       let currentState = CircuitState.CLOSED;
       let failureCount = 0;
       let lockCallCount = 0;
