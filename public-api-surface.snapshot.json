@@ -18889,6 +18889,12 @@
           "sourceEntrypoint": "packages/onboarding-core/src/index.ts",
           "runtimeExports": [
             {
+              "name": "createOnboardingStoreConformanceSuite",
+              "exportKind": "named",
+              "source": "./libs/conformance",
+              "declarationKind": "function"
+            },
+            {
               "name": "InMemoryOnboardingStore",
               "exportKind": "named",
               "source": "./libs/OnboardingStore",
@@ -18983,6 +18989,21 @@
               "source": "./libs/types"
             },
             {
+              "name": "OnboardingStoreConformanceCase",
+              "exportKind": "named",
+              "source": "./libs/conformance"
+            },
+            {
+              "name": "OnboardingStoreConformanceOptions",
+              "exportKind": "named",
+              "source": "./libs/conformance"
+            },
+            {
+              "name": "OnboardingStoreConformanceSuite",
+              "exportKind": "named",
+              "source": "./libs/conformance"
+            },
+            {
               "name": "StepState",
               "exportKind": "named",
               "source": "./libs/types"
@@ -19021,6 +19042,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "addOnboardingLifecycleFields",
+              "exportKind": "named",
+              "source": "./migrations/addOnboardingLifecycleFields",
+              "declarationKind": "function"
+            },
+            {
               "name": "DRIZZLE_TOKEN",
               "exportKind": "named",
               "source": "./libs/DrizzleOnboardingStore",
@@ -19042,6 +19069,12 @@
               "name": "removeCompletionStepIdentity",
               "exportKind": "named",
               "source": "./migrations/addCompletionStepIdentity",
+              "declarationKind": "function"
+            },
+            {
+              "name": "removeOnboardingLifecycleFields",
+              "exportKind": "named",
+              "source": "./migrations/addOnboardingLifecycleFields",
               "declarationKind": "function"
             }
           ],

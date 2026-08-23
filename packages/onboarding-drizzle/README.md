@@ -38,6 +38,8 @@ const state = await store.getState("tenant-1", "user-1", "welcome-tour");
   전체 완료 전이를 원자적으로 적용합니다. PostgreSQL 트랜잭션 오류는 트랜잭션 소유자에게 그대로 전달됩니다.
 - 기존 데이터베이스는 `addCompletionStepIdentity(db)` migration을 적용해 완료 전이를 일으킨 단계 식별자를
   저장해야 합니다.
+- 기존 데이터베이스는 `addOnboardingLifecycleFields(db)` migration을 적용해 lifecycle 필드를 nullable 컬럼으로
+  추가해야 합니다. 기존 행은 알 수 없는 상태를 그대로 나타내도록 세 필드를 `NULL`로 유지합니다.
 
 ### 타입과 스키마
 
@@ -45,3 +47,4 @@ const state = await store.getState("tenant-1", "user-1", "welcome-tour");
 - `OnboardingStateRow`, 온보딩 상태 행 타입입니다.
 - `DRIZZLE_TOKEN`, 온보딩 저장소용 DB 토큰입니다.
 - `onboardingStates`, 온보딩 상태 스키마입니다.
+- `addOnboardingLifecycleFields`, 기존 테이블에 nullable lifecycle 필드를 추가하는 migration입니다.

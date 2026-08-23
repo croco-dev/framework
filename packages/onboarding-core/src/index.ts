@@ -3,6 +3,13 @@ export { OnboardingManager } from "./libs/OnboardingManager";
 export { InMemoryOnboardingStore, OnboardingStore } from "./libs/OnboardingStore";
 
 export {
+  createOnboardingStoreConformanceSuite,
+  type OnboardingStoreConformanceCase,
+  type OnboardingStoreConformanceOptions,
+  type OnboardingStoreConformanceSuite,
+} from "./libs/conformance";
+
+export {
   OnboardingContextRequiredProblem,
   OnboardingDefinitionNotFoundProblem,
   OnboardingStepCompletionConflictProblem,

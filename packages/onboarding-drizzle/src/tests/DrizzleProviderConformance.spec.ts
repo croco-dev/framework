@@ -18,6 +18,9 @@ const onboardingState: OnboardingState = {
   },
   isCompleted: false,
   completedAt: undefined,
+  status: "in_progress",
+  startedAt: new Date("2026-01-01T00:00:00.000Z"),
+  currentStepId: "workspace-created",
 };
 
 const onboardingRow = {
@@ -27,6 +30,10 @@ const onboardingRow = {
   steps: onboardingState.steps,
   isCompleted: onboardingState.isCompleted,
   completedAt: null,
+  status: onboardingState.status,
+  startedAt: onboardingState.startedAt,
+  currentStepId: onboardingState.currentStepId,
+  completionStepId: null,
   createdAt: new Date("2026-01-01T00:00:00.000Z"),
   updatedAt: new Date("2026-01-01T00:00:00.000Z"),
 };
@@ -80,6 +87,9 @@ describe("onboarding-drizzle provider conformance", () => {
                   "steps",
                   "isCompleted",
                   "completedAt",
+                  "status",
+                  "startedAt",
+                  "currentStepId",
                   "completionStepId",
                   "createdAt",
                   "updatedAt",
@@ -159,8 +169,7 @@ describe("onboarding-drizzle provider conformance", () => {
 
               const state = await store.getState("tenant-a", "user-1", "default");
 
-              expect(state?.steps).toEqual(onboardingState.steps);
-              expect(state?.isCompleted).toBe(false);
+              expect(state).toEqual(onboardingState);
             },
           },
         ],

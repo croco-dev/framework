@@ -1,5 +1,8 @@
 import "reflect-metadata";
-import type { OnboardingState } from "@croco/onboarding-core";
+import {
+  createOnboardingStoreConformanceSuite,
+  type OnboardingState,
+} from "@croco/onboarding-core";
 import type { TxManager } from "@croco/tx-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { DrizzleOnboardingClient } from "../libs/DrizzleOnboardingStore";
@@ -47,6 +50,35 @@ describe("DrizzleOnboardingStore", () => {
     expect(mockDb.select).toHaveBeenCalled();
   });
 
+  it("should load every public lifecycle field", async () => {
+    const startedAt = new Date("2026-08-20T00:00:00.000Z");
+    mockDb.select.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue([
+            {
+              steps: { "step-1": { completed: false } },
+              isCompleted: false,
+              completedAt: null,
+              status: "in_progress",
+              startedAt,
+              currentStepId: "step-1",
+            },
+          ]),
+        }),
+      }),
+    });
+
+    await expect(store.getState("tenant-1", "user-1", "onboarding-1")).resolves.toEqual({
+      steps: { "step-1": { completed: false } },
+      isCompleted: false,
+      completedAt: undefined,
+      status: "in_progress",
+      startedAt,
+      currentStepId: "step-1",
+    });
+  });
+
   it("should save state using insert on conflict", async () => {
     const onConflictDoUpdate = vi.fn().mockResolvedValue(undefined);
     const values = vi.fn().mockReturnValue({ onConflictDoUpdate });
@@ -55,14 +87,51 @@ describe("DrizzleOnboardingStore", () => {
       steps: { "step-1": { completed: true } },
       isCompleted: false,
       completedAt: undefined,
+      status: "in_progress",
+      startedAt: new Date("2026-08-20T00:00:00.000Z"),
+      currentStepId: "step-2",
     };
 
     await store.saveState("tenant-1", "user-1", "onboarding-1", newState);
 
     expect(mockDb.insert).toHaveBeenCalled();
-    expect(values).toHaveBeenCalledWith(expect.objectContaining({ completionStepId: null }));
+    expect(values).toHaveBeenCalledWith(
+      expect.objectContaining({
+        completionStepId: null,
+        status: newState.status,
+        startedAt: newState.startedAt,
+        currentStepId: newState.currentStepId,
+      }),
+    );
     expect(onConflictDoUpdate).toHaveBeenCalledWith(
-      expect.objectContaining({ set: expect.objectContaining({ completionStepId: null }) }),
+      expect.objectContaining({
+        set: expect.objectContaining({
+          completionStepId: null,
+          status: newState.status,
+          startedAt: newState.startedAt,
+          currentStepId: newState.currentStepId,
+        }),
+      }),
+    );
+  });
+
+  it("should clear omitted lifecycle fields on update", async () => {
+    const onConflictDoUpdate = vi.fn().mockResolvedValue(undefined);
+    const values = vi.fn().mockReturnValue({ onConflictDoUpdate });
+    mockDb.insert.mockReturnValue({ values });
+
+    await store.saveState("tenant-1", "user-1", "onboarding-1", {
+      steps: {},
+      isCompleted: false,
+    });
+
+    expect(values).toHaveBeenCalledWith(
+      expect.objectContaining({ status: null, startedAt: null, currentStepId: null }),
+    );
+    expect(onConflictDoUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        set: expect.objectContaining({ status: null, startedAt: null, currentStepId: null }),
+      }),
     );
   });
 
@@ -73,6 +142,9 @@ describe("DrizzleOnboardingStore", () => {
         steps: { "step-1": { completed: true, completedAt } },
         isCompleted: true,
         completedAt,
+        status: "in_progress",
+        startedAt: new Date("2026-08-12T00:00:00.000Z"),
+        currentStepId: "step-1",
         onboardingCompleted: true,
       },
     ]);
@@ -99,6 +171,9 @@ describe("DrizzleOnboardingStore", () => {
         steps: { "step-1": { completed: true, completedAt } },
         isCompleted: true,
         completedAt,
+        status: "in_progress",
+        startedAt: new Date("2026-08-12T00:00:00.000Z"),
+        currentStepId: "step-1",
       },
     });
     expect(onConflictDoUpdate).toHaveBeenCalledWith(
@@ -149,3 +224,39 @@ describe("DrizzleOnboardingStore", () => {
     ).rejects.toBe(transactionConflict);
   });
 });
+
+describe("DrizzleOnboardingStore conformance", () => {
+  const conformance = createOnboardingStoreConformanceSuite({
+    createStore: () => createStatefulStore(),
+  });
+
+  for (const testCase of conformance.cases) {
+    // oxlint-disable-next-line jest/valid-title -- exported conformance cases own stable names
+    it(testCase.name, testCase.run);
+  }
+});
+
+function createStatefulStore(): DrizzleOnboardingStore {
+  let row: Record<string, unknown> | undefined;
+  const db = {
+    select: vi.fn().mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn(async () => (row ? [row] : [])),
+        }),
+      }),
+    }),
+    insert: vi.fn().mockReturnValue({
+      values: vi.fn((values: Record<string, unknown>) => ({
+        onConflictDoUpdate: vi.fn(async ({ set }: { set: Record<string, unknown> }) => {
+          row = row ? { ...row, ...set } : { ...values };
+        }),
+      })),
+    }),
+  };
+
+  return new DrizzleOnboardingStore(
+    db as unknown as DrizzleOnboardingClient,
+    { getClient: vi.fn().mockReturnValue(null) } as unknown as TxManager<DrizzleOnboardingClient>,
+  );
+}
