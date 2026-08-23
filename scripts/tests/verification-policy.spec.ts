@@ -67,6 +67,23 @@ describe("verification policy", () => {
     });
   });
 
+  it("classifies the live branch protection audit as an intrinsically read-only check", () => {
+    const [discovery] = discoverRootVerificationScripts(
+      JSON.stringify({
+        scripts: {
+          "branch-protection:check":
+            "node --experimental-strip-types scripts/branch-protection-policy.mts",
+        },
+      }),
+    );
+
+    expect(discovery && classifyVerificationPath(discovery)).toMatchObject({
+      classification: "repository-guarded",
+      nonmutationEvidence: expect.stringContaining("GitHub GET requests"),
+      recoveryCommand: expect.stringContaining("branch-protection-policy.json"),
+    });
+  });
+
   it("fails closed for a new workflow verification command", () => {
     const discoveries = discoverWorkflowVerificationCommands({
       ".github/workflows/synthetic.yml": "steps:\n  - run: pnpm synthetic:check",

@@ -291,7 +291,7 @@ describe("verification manifest", () => {
     expect(
       createHash("sha256").update(JSON.stringify(manifests)).digest("hex"),
       "The pre-split monolithic manifest changed; update this digest only after intentionally verifying the new serialized commands.",
-    ).toBe("147630644eb8dbc526d24e4680dd96cbaefbd85ac5a267629171089978e05a7f");
+    ).toBe("905eaf4587e59903d18949339e4e0d72152e5fb8ad81be7190d7f1a1a64332b4");
   });
 
   it("classifies every dependency edge and every cross-lane edge for synthesis", () => {
@@ -1053,7 +1053,7 @@ describe("verification manifest", () => {
       readFileSync(resolve(__dirname, "../../package.json"), "utf8"),
     ) as { scripts?: Record<string, string> };
 
-    expect(RELEASE_GATE_TEST_PATHS).toHaveLength(49);
+    expect(RELEASE_GATE_TEST_PATHS).toHaveLength(51);
     expect(RELEASE_GATE_TEST_PATHS).toEqual([...RELEASE_GATE_TEST_PATHS].sort());
     expect(RELEASE_GATE_ENTRYPOINT_PATHS).toEqual([...RELEASE_GATE_ENTRYPOINT_PATHS].sort());
     expect(RELEASE_GATE_FIXTURE_PATHS).toEqual([...RELEASE_GATE_FIXTURE_PATHS].sort());
@@ -1197,6 +1197,8 @@ describe("verification manifest", () => {
       "scripts/tests/ci-performance-budget.spec.ts",
       "scripts/tests/release-workflow.spec.ts",
       "scripts/tests/turbo-task-contract.spec.ts",
+      "scripts/tests/branch-protection-policy.spec.ts",
+      "scripts/tests/repository-policy-audit-workflow.spec.ts",
       "scripts/tests/verification-policy.spec.ts",
       "scripts/tests/test-inventory.spec.ts",
       "scripts/tests/test-lane-runner.spec.ts",

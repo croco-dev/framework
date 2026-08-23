@@ -35,14 +35,55 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  repository-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Setup pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: ".nvmrc"
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Check authoritative test inventory
+        run: pnpm test-inventory:check
+      - name: Check verification policy
+        run: pnpm verification-policy:check
+      - name: Run repository contract tests
+        run: >-
+          pnpm exec vitest run
+          scripts/tests/test-inventory.spec.ts
+          scripts/tests/verification-policy.spec.ts
+          scripts/tests/branch-protection-policy.spec.ts
+          scripts/tests/ci-workflow.spec.ts
+          scripts/tests/repository-policy-audit-workflow.spec.ts
+
   validate:
     needs: changes
+    if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
       NPM_CONFIG_PROVENANCE: "true"
 
     steps:
+      - name: Require successful change classification
+        shell: bash
+        env:
+          CHANGE_CLASSIFICATION_RESULT: ${{ needs.changes.result }}
+        run: |
+          if [ "$CHANGE_CLASSIFICATION_RESULT" != "success" ]; then
+            echo "::error::Change classification concluded $CHANGE_CLASSIFICATION_RESULT; validate cannot authorize this revision."
+            exit 1
+          fi
+
       - name: Start validate performance measurement
         shell: bash
         run: echo "CROCO_VALIDATE_MEASUREMENT_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)" >> "$GITHUB_ENV"
@@ -1404,20 +1445,41 @@ jobs:
 
   docs-sync-check:
     needs: changes
-    if: needs.changes.outputs.api-source == 'true'
+    if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
+      - name: Require successful change classification
+        shell: bash
+        env:
+          CHANGE_CLASSIFICATION_RESULT: ${{ needs.changes.result }}
+          API_SOURCE_RESULT: ${{ needs.changes.outputs.api-source }}
+        run: |
+          if [ "$CHANGE_CLASSIFICATION_RESULT" != "success" ]; then
+            echo "::error::Change classification concluded $CHANGE_CLASSIFICATION_RESULT; docs-sync-check cannot authorize this revision."
+            exit 1
+          fi
+          if [ "$API_SOURCE_RESULT" != "true" ] && [ "$API_SOURCE_RESULT" != "false" ]; then
+            echo "::error::API source classification is missing or invalid; docs-sync-check cannot authorize this revision."
+            exit 1
+          fi
+      - name: Record documentation contract applicability
+        if: needs.changes.outputs.api-source != 'true'
+        run: echo "No API documentation source changed; the documentation drift build is not applicable."
       - name: Checkout
+        if: needs.changes.outputs.api-source == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Setup pnpm
+        if: needs.changes.outputs.api-source == 'true'
         uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
       - name: Setup Node.js
+        if: needs.changes.outputs.api-source == 'true'
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: ".nvmrc"
           cache: pnpm
       - name: Restore Turbo cache
+        if: needs.changes.outputs.api-source == 'true'
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .turbo
@@ -1427,8 +1489,10 @@ jobs:
             turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-
             turbo-${{ runner.os }}-
       - name: Install dependencies
+        if: needs.changes.outputs.api-source == 'true'
         run: pnpm install --frozen-lockfile
       - name: Build docs and check for drift
+        if: needs.changes.outputs.api-source == 'true'
         run: pnpm docs:api:check
 
   docs-build:

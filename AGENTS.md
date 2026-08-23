@@ -45,6 +45,11 @@ Croco는 런타임에서 추측하게 하지 않고, 빌드타임에 의도를 �
 - **Generated, not hand-wired**: client, OpenAPI/RPC, docs examples, registration table, package catalog 같은 glue code는 수동 동기화보다 generation과 drift gate를 우선한다.
 - **Production path first**: 예제와 preset은 배포, runtime limitation, telemetry flush, CI quality gate, migration, compatibility, zero-credential smoke를 먼저 통과해야 한다.
 - **Composable boundaries**: adapter, middleware graph, policy, runtime capability, package layering 경계를 명확히 하며 core package가 provider/runtime 구현체에 오염되지 않게 한다.
+- **Operational simplicity**: 같은 결과를 낼 수 있다면 새 GitHub App, credential, secret,
+  environment, workflow, cron, 외부 서비스, 비상 경로를 추가하지 않는다. 운영 구성을 늘릴
+  때는 기존 수단으로 해결할 수 없는 이유와 검증 가능한 이득이 있어야 하며, 권한 범위뿐
+  아니라 설치, 승인, rotation, 관측, 장애 복구, 폐기까지 포함한 총 운영비용이 더 작은
+  설계를 선택한다.
 
 ## Code Style
 

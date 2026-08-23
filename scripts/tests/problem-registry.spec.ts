@@ -4,7 +4,10 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { findBranchProtectionPolicyViolations } from "../branch-protection-policy.mts";
+import {
+  findBranchProtectionPolicyViolations,
+  readExpectedBranchProtectionPolicy,
+} from "../branch-protection-policy.mts";
 import {
   createProblemCodeRegistry,
   createProblemRegistryArtifacts,
@@ -147,10 +150,18 @@ describe("problem-registry.mts", () => {
     expect(originalBaseOid).not.toBe(advancedBaseOid);
     expect(
       findBranchProtectionPolicyViolations({
-        strict: true,
-        checks: [
-          { context: "docs-sync-check", app_id: 15368 },
-          { context: "validate", app_id: 15368 },
+        branch: "trunk",
+        classicProtection: null,
+        defaultBranch: "trunk",
+        effectiveRules: (
+          readExpectedBranchProtectionPolicy().rules as readonly Record<string, unknown>[]
+        ).map((rule) => ({ ...structuredClone(rule), ruleset_id: 21_250_891 })),
+        rulesets: [
+          {
+            ...structuredClone(readExpectedBranchProtectionPolicy()),
+            id: 21_250_891,
+            source_type: "Repository",
+          },
         ],
       }),
     ).toEqual([]);

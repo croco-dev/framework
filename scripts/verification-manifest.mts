@@ -506,6 +506,8 @@ const repoOnly = (
       "scripts/tests/ci-performance-budget.spec.ts",
       "scripts/tests/release-workflow.spec.ts",
       "scripts/tests/turbo-task-contract.spec.ts",
+      "scripts/tests/branch-protection-policy.spec.ts",
+      "scripts/tests/repository-policy-audit-workflow.spec.ts",
       "scripts/tests/verification-policy.spec.ts",
       "scripts/tests/test-inventory.spec.ts",
       "scripts/tests/test-lane-runner.spec.ts",
