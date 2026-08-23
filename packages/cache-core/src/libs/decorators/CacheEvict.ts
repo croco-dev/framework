@@ -12,7 +12,7 @@ export interface CacheEvictOptions<V = unknown> {
 function resolveEvictionPrefix(options: CacheEvictOptions<unknown>, methodName: string): string {
   if (options.namespace === undefined) {
     throw new CacheDecoratorConfigProblem(
-      `@CacheEvict requires "namespace" when "key" is not provided (method: ${methodName})`,
+      `@CacheEvict requires "namespace" when neither "key" nor "allEntries: true" is provided (method: ${methodName})`,
     );
   }
 
@@ -33,6 +33,7 @@ export function CacheEvict<V = unknown>(options: CacheEvictOptions<V>): MethodDe
         : undefined;
 
     descriptor.value = async function (this: unknown, ...args: unknown[]): Promise<unknown> {
+      const argumentKey = prefix === undefined ? undefined : createCacheKey(prefix, args);
       const result = await originalMethod.apply(this, args);
 
       if (options.allEntries === true) {
@@ -50,8 +51,8 @@ export function CacheEvict<V = unknown>(options: CacheEvictOptions<V>): MethodDe
         return result;
       }
 
-      if (prefix !== undefined) {
-        await options.store.delete(createCacheKey(prefix, args));
+      if (argumentKey !== undefined) {
+        await options.store.delete(argumentKey);
       }
 
       return result;

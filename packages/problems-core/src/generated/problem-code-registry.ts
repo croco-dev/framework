@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 655,
+  problemCount: 656,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -3453,7 +3453,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts",
-          line: 21,
+          line: 22,
           column: 3,
           kind: "problem-class",
         },
@@ -3580,7 +3580,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts",
-          line: 119,
+          line: 120,
           column: 3,
           kind: "problem-class",
         },
@@ -3613,7 +3613,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts",
-          line: 72,
+          line: 73,
           column: 3,
           kind: "problem-class",
         },
@@ -3643,7 +3643,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts",
-          line: 58,
+          line: 59,
           column: 3,
           kind: "problem-class",
         },
@@ -3675,7 +3675,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts",
-          line: 89,
+          line: 90,
           column: 3,
           kind: "problem-class",
         },
@@ -3705,7 +3705,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts",
-          line: 44,
+          line: 45,
           column: 3,
           kind: "problem-class",
         },

@@ -107,13 +107,26 @@ describe("cache-core public exports", () => {
       "cache-core/invalid-configuration",
     );
     expect(new InvalidCacheTtlProblem(-1).code).toBe("cache-core/invalid-ttl");
-    expect(new CacheKeyArgumentProblem("arguments[0]", "is unsupported").code).toBe(
-      "cache-core/cache-key-argument-unsupported",
-    );
     expect(MAX_CACHE_ENTRIES).toBe(Number.MAX_SAFE_INTEGER);
     expect(MAX_CACHE_TIMER_DELAY_MS).toBe(2_147_483_647);
     expect(numericOption).toBe("maxEntries");
     expect(distributedLock).toBeUndefined();
+  });
+
+  it("exports the complete CacheKeyArgumentProblem contract", () => {
+    const problem = new CacheKeyArgumentProblem("arguments[0]", "is unsupported");
+
+    expect(problem.code).toBe("cache-core/cache-key-argument-unsupported");
+    expect(problem.detail).toBe("Cache key argument at 'arguments[0]' is unsupported.");
+    expect(problem.path).toBe("arguments[0]");
+    expect(problem.reason).toBe("is unsupported");
+    expect(problem.extensions).toEqual({ path: "arguments[0]", reason: "is unsupported" });
+    expect(problem.toJSON()).toMatchObject({
+      code: "cache-core/cache-key-argument-unsupported",
+      detail: "Cache key argument at 'arguments[0]' is unsupported.",
+      path: "arguments[0]",
+      reason: "is unsupported",
+    });
   });
 
   it("exports cache invalidation graph contracts from the package root", () => {

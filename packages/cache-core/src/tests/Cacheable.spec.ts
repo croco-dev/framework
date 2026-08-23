@@ -369,17 +369,17 @@ describe("@CacheEvict", () => {
     expect(await cache.get("order:789")).toBe("data3");
   });
 
-  it("clears all entries with allEntries option", async () => {
+  it("clears all entries without encoding method arguments", async () => {
     await cache.set("key1", "value1");
     await cache.set("key2", "value2");
 
     class TestService {
       @CacheEvict({ store: cache, allEntries: true })
-      async clearAll(): Promise<void> {}
+      async clearAll(_unsupported: Date): Promise<void> {}
     }
 
     const service = new TestService();
-    await service.clearAll();
+    await service.clearAll(new Date("2026-01-01T00:00:00.000Z"));
 
     expect(await cache.get("key1")).toBeUndefined();
     expect(await cache.get("key2")).toBeUndefined();
@@ -401,7 +401,7 @@ describe("@CacheEvict", () => {
     expect(await cache.get(createCacheKey("stable-service:updateData", ["456"]))).toBe("cached2");
   });
 
-  it("throws when neither namespace nor key is provided", () => {
+  it("throws when namespace, key, and allEntries are all omitted", () => {
     expect(() => {
       class TestService {
         @CacheEvict({ store: cache })
@@ -409,7 +409,29 @@ describe("@CacheEvict", () => {
       }
 
       return TestService;
-    }).toThrow('@CacheEvict requires "namespace" when "key" is not provided (method: updateData)');
+    }).toThrow(
+      '@CacheEvict requires "namespace" when neither "key" nor "allEntries: true" is provided (method: updateData)',
+    );
+  });
+
+  it("rejects unsupported argument graphs before executing the method", async () => {
+    let methodCalls = 0;
+
+    class TestService {
+      @CacheEvict({ store: cache, namespace: "stable-service" })
+      async updateData(_unsupported: Date): Promise<void> {
+        methodCalls++;
+      }
+    }
+
+    const service = new TestService();
+
+    await expect(service.updateData(new Date("2026-01-01T00:00:00.000Z"))).rejects.toMatchObject({
+      code: "cache-core/cache-key-argument-unsupported",
+      path: "arguments[0]",
+      reason: "is not a plain object",
+    } satisfies Partial<CacheKeyArgumentProblem>);
+    expect(methodCalls).toBe(0);
   });
 
   it("propagates delete errors for argument-based namespace eviction", async () => {
