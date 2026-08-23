@@ -13857,6 +13857,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "InvalidImpersonationConfigurationProblem",
+              "exportKind": "declaration",
+              "source": "./libs/problems/ImpersonationProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "NestedImpersonationProblem",
               "exportKind": "declaration",
               "source": "./libs/problems/ImpersonationProblems",
@@ -13913,6 +13919,18 @@
               "declarationKind": "type"
             },
             {
+              "name": "ImpersonationConfigurationConstraint",
+              "exportKind": "declaration",
+              "source": "./libs/problems/ImpersonationProblems",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ImpersonationConfigurationField",
+              "exportKind": "declaration",
+              "source": "./libs/problems/ImpersonationProblems",
+              "declarationKind": "type"
+            },
+            {
               "name": "ImpersonationPrincipal",
               "exportKind": "declaration",
               "source": "./libs/interfaces",
@@ -13922,6 +13940,12 @@
               "name": "ImpersonationState",
               "exportKind": "declaration",
               "source": "./libs/types",
+              "declarationKind": "type"
+            },
+            {
+              "name": "InvalidImpersonationConfigurationProblemOptions",
+              "exportKind": "declaration",
+              "source": "./libs/problems/ImpersonationProblems",
               "declarationKind": "type"
             },
             {

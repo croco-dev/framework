@@ -280,6 +280,7 @@ This cookbook documents 641 public Croco Problem codes. The deterministic JSON r
 | [`idempotency-core/reservation-expired`](#idempotency-core-reservation-expired)                                                       | Conflict              |    409 | conditional   | safe-message  | active    |       1 |
 | [`idempotency-core/reservation-not-found`](#idempotency-core-reservation-not-found)                                                   | Conflict              |    409 | conditional   | safe-message  | active    |       1 |
 | [`idempotency-core/reservation-state`](#idempotency-core-reservation-state)                                                           | Conflict              |    409 | conditional   | safe-message  | active    |       1 |
+| [`IMPERSONATION_CONFIGURATION_INVALID`](#impersonation-configuration-invalid)                                                         | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`IMPERSONATION_IDENTITY_CONFLICT`](#impersonation-identity-conflict)                                                                 | Forbidden             |    403 | not-retryable | safe-message  | active    |       1 |
 | [`IMPERSONATION_REASON_REQUIRED`](#impersonation-reason-required)                                                                     | BadRequest            |    400 | not-retryable | public        | active    |       1 |
 | [`IMPERSONATION_SESSION_NOT_FOUND`](#impersonation-session-not-found)                                                                 | NotFound              |    404 | not-retryable | public        | active    |       1 |
@@ -2581,7 +2582,7 @@ Sources:
 
 Sources:
 
-- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:49:3` (problem-class)
+- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:81:3` (problem-class)
 
 <a id="cache-core-invalid-configuration"></a>
 
@@ -5463,6 +5464,24 @@ Sources:
 
 - `packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts:120:11` (problem-metadata)
 
+<a id="impersonation-configuration-invalid"></a>
+
+## `IMPERSONATION_CONFIGURATION_INVALID`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:16:3` (problem-class)
+
 <a id="impersonation-identity-conflict"></a>
 
 ## `IMPERSONATION_IDENTITY_CONFLICT`
@@ -5479,7 +5498,7 @@ Sources:
 
 Sources:
 
-- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:13:3` (problem-class)
+- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:45:3` (problem-class)
 
 <a id="impersonation-reason-required"></a>
 
@@ -5497,7 +5516,7 @@ Sources:
 
 Sources:
 
-- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:40:3` (problem-class)
+- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:72:3` (problem-class)
 
 <a id="impersonation-session-not-found"></a>
 
@@ -5515,7 +5534,7 @@ Sources:
 
 Sources:
 
-- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:58:3` (problem-class)
+- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:90:3` (problem-class)
 
 <a id="impersonation-target-not-found"></a>
 
@@ -5533,7 +5552,7 @@ Sources:
 
 Sources:
 
-- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:22:3` (problem-class)
+- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:54:3` (problem-class)
 
 <a id="index-not-found"></a>
 
@@ -7351,7 +7370,7 @@ Sources:
 
 Sources:
 
-- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:31:3` (problem-class)
+- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:63:3` (problem-class)
 
 <a id="notifications-core-default-provider-conflict"></a>
 
@@ -9439,7 +9458,7 @@ Sources:
 
 Sources:
 
-- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:4:3` (problem-class)
+- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:36:3` (problem-class)
 
 <a id="starter-invalid-environment"></a>
 

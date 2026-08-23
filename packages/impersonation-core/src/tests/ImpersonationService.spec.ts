@@ -3,10 +3,12 @@ import type { DomainEvent, EventBus, EventSubscription } from "@croco/events-cor
 import { EventBusConfig } from "@croco/events-core";
 import type { RequestContext } from "@croco/framework-context";
 import { Container } from "@croco/framework-context";
-import { beforeEach, describe, expect, it } from "vitest";
+import { ProblemCategory } from "@croco/problems-core";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ImpersonationStartedEvent } from "../libs/events";
 import { ImpersonationService } from "../libs/ImpersonationService";
 import { AuthProvider, type ImpersonationPrincipal, ImpersonationStore } from "../libs/interfaces";
+import { InvalidImpersonationConfigurationProblem } from "../libs/problems/ImpersonationProblems";
 import type { ImpersonationConfig, ImpersonationState } from "../libs/types";
 
 class MockEventBus implements EventBus {
@@ -99,6 +101,68 @@ describe("ImpersonationService", () => {
     expect(store.saveCount).toBe(0);
     expect(eventBus.events).toHaveLength(0);
   };
+
+  describe("configuration", () => {
+    it.each([
+      [0, 0],
+      [-1, -1],
+      [0.5, 0.5],
+      [Number.NaN, "NaN"],
+      [Number.POSITIVE_INFINITY, "Infinity"],
+      [Number.NEGATIVE_INFINITY, "-Infinity"],
+      [Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER],
+      [Number.MAX_SAFE_INTEGER + 1, Number.MAX_SAFE_INTEGER + 1],
+      ["60000" as unknown as number, "non-number-string"],
+    ])("rejects invalid maxDurationMs %s before use", (maxDurationMs, receivedValue) => {
+      expect(
+        () =>
+          new ImpersonationService(store, authProvider, {
+            ...config,
+            maxDurationMs,
+          }),
+      ).toThrowError(
+        expect.objectContaining({
+          code: "IMPERSONATION_CONFIGURATION_INVALID",
+          category: ProblemCategory.InternalServerError,
+          field: "maxDurationMs",
+          constraint: "positive-safe-integer-with-representable-expiration",
+          receivedValue,
+        }),
+      );
+      expectNoStartSideEffects();
+    });
+
+    it.each(["", "   "])("rejects a blank blocked action %# before use", (blockedAction) => {
+      expect(
+        () =>
+          new ImpersonationService(store, authProvider, {
+            ...config,
+            blockedActions: ["deleteUser", blockedAction],
+          }),
+      ).toThrowError(InvalidImpersonationConfigurationProblem);
+      expectNoStartSideEffects();
+    });
+
+    it.each([["deleteUser" as unknown as string[]], [["deleteUser", 42] as unknown as string[]]])(
+      "rejects malformed blockedActions %# before use",
+      (blockedActions) => {
+        expect(
+          () =>
+            new ImpersonationService(store, authProvider, {
+              ...config,
+              blockedActions,
+            }),
+        ).toThrowError(
+          expect.objectContaining({
+            code: "IMPERSONATION_CONFIGURATION_INVALID",
+            field: "blockedActions",
+            constraint: "array-of-non-blank-strings",
+          }),
+        );
+        expectNoStartSideEffects();
+      },
+    );
+  });
 
   describe("start", () => {
     it("rejects anonymous direct calls before target lookup or side effects", async () => {
@@ -237,10 +301,73 @@ describe("ImpersonationService", () => {
       expectNoStartSideEffects();
     });
 
+    it("rejects a whitespace-only required reason without persistence or publication", async () => {
+      config = { ...config, requireReason: true };
+      service = new ImpersonationService(store, authProvider, config);
+
+      await expect(service.start(context("admin-1"), "user-123", " \t\n ")).rejects.toMatchObject({
+        code: "IMPERSONATION_REASON_REQUIRED",
+      });
+
+      expectNoStartSideEffects();
+    });
+
+    it("stores and publishes a normalized required reason", async () => {
+      config = { ...config, requireReason: true };
+      service = new ImpersonationService(store, authProvider, config);
+
+      const result = await service.start(context("admin-1"), "user-123", "  Support request  ");
+
+      expect(result.reason).toBe("Support request");
+      expect((await store.find(result.sessionId))?.reason).toBe("Support request");
+      expect((eventBus.events[0] as ImpersonationStartedEvent).session.reason).toBe(
+        "Support request",
+      );
+    });
+
+    it("rejects a duration that becomes unrepresentable before persistence or publication", async () => {
+      vi.useFakeTimers();
+      try {
+        vi.setSystemTime(new Date(0));
+        service = new ImpersonationService(store, authProvider, {
+          ...config,
+          maxDurationMs: 8_640_000_000_000_000,
+        });
+        vi.setSystemTime(new Date(1));
+
+        await expect(service.start(context("admin-1"), "user-123")).rejects.toMatchObject({
+          code: "IMPERSONATION_CONFIGURATION_INVALID",
+          field: "maxDurationMs",
+        });
+
+        expectNoStartSideEffects();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it("allows an optional reason to remain absent", async () => {
       const result = await service.start(context("admin-1"), "user-123");
 
       expect(result.reason).toBeUndefined();
+    });
+
+    it("preserves a supplied optional reason in returned, stored, and published session data", async () => {
+      const reason = "  Optional support note  ";
+
+      const result = await service.start(context("admin-1"), "user-123", reason);
+
+      expect(result.reason).toBe(reason);
+      expect((await store.find(result.sessionId))?.reason).toBe(reason);
+      expect((eventBus.events[0] as ImpersonationStartedEvent).session.reason).toBe(reason);
+    });
+
+    it("preserves a supplied empty optional reason in returned, stored, and published session data", async () => {
+      const result = await service.start(context("admin-1"), "user-123", "");
+
+      expect(result.reason).toBe("");
+      expect((await store.find(result.sessionId))?.reason).toBe("");
+      expect((eventBus.events[0] as ImpersonationStartedEvent).session.reason).toBe("");
     });
 
     it("calculates the exact configured duration", async () => {
