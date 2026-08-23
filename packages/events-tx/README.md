@@ -67,7 +67,7 @@ await consumer.handle(message, async (outboxMessage) => {
 });
 ```
 
-Inbox records are keyed by `consumerId` and message idempotency key. Processed records and processing records with an active lease return `duplicate`. Failed records and processing records whose `lockedUntil` lease has expired can be claimed again.
+Inbox records are keyed by the exact `(consumerId, message idempotency key)` tuple; punctuation in either field does not change that identity boundary. Processed records and processing records with an active lease return `duplicate`. Failed records and processing records whose `lockedUntil` lease has expired can be claimed again.
 
 Each accepted start returns an `attempts` claim. Direct store callers must pass that value as `expectedAttempts` when marking the record processed or failed:
 

@@ -1057,6 +1057,69 @@ describe("createEventBusOutboxPublisher", () => {
 });
 
 describe("TransactionalEventStore conformance", () => {
+  it("keeps delimiter-colliding inbox identities independent", async () => {
+    const fixture = createOutboxFixture();
+    const now = fixture.clock.now();
+    const firstIdentity = {
+      consumerId: "a:b",
+      messageId: "message-first",
+      inboxKey: "c",
+      eventType: "first.event",
+    };
+    const secondIdentity = {
+      consumerId: "a",
+      messageId: "message-second",
+      inboxKey: "b:c",
+      eventType: "second.event",
+    };
+    const firstInput = {
+      ...firstIdentity,
+      now,
+    };
+    const secondInput = {
+      ...secondIdentity,
+      now,
+    };
+
+    const first = await fixture.store.startInboxProcessing(firstInput);
+    const second = await fixture.store.startInboxProcessing(secondInput);
+    const exactDuplicate = await fixture.store.startInboxProcessing(secondInput);
+
+    expect(first).toMatchObject({ status: "started", record: firstIdentity });
+    expect(second).toMatchObject({ status: "started", record: secondIdentity });
+    expect(exactDuplicate).toMatchObject({ status: "duplicate", record: secondIdentity });
+
+    await fixture.store.markInboxProcessed({
+      consumerId: firstInput.consumerId,
+      inboxKey: firstInput.inboxKey,
+      expectedAttempts: first.record.attempts,
+      now,
+    });
+    await fixture.store.markInboxFailed({
+      consumerId: secondInput.consumerId,
+      inboxKey: secondInput.inboxKey,
+      expectedAttempts: second.record.attempts,
+      now,
+      error: { name: "Error", message: "second failed" },
+      reason: "second failed",
+    });
+
+    await expect(
+      fixture.store.findInboxRecord(firstInput.consumerId, firstInput.inboxKey),
+    ).resolves.toMatchObject({
+      ...firstIdentity,
+      status: "processed",
+    });
+    await expect(
+      fixture.store.findInboxRecord(secondInput.consumerId, secondInput.inboxKey),
+    ).resolves.toMatchObject({
+      ...secondIdentity,
+      status: "failed",
+      failureReason: "second failed",
+    });
+    await expect(fixture.store.listInboxRecords()).resolves.toHaveLength(2);
+  });
+
   it("provides deterministic append, claim, publish, and inbox state transitions", async () => {
     const fixture = createOutboxFixture();
     const message = await appendMessage(fixture);
@@ -1677,6 +1740,102 @@ describe("TransactionalEventStore conformance", () => {
 });
 
 describe("DrizzleTransactionalEventStore", () => {
+  it("keeps delimiter-colliding inbox identities independent", async () => {
+    const now = new Date("2026-01-01T00:00:00.000Z");
+    const firstIdentity = {
+      consumerId: "a:b",
+      messageId: "message-first",
+      inboxKey: "c",
+      eventType: "first.event",
+    };
+    const secondIdentity = {
+      consumerId: "a",
+      messageId: "message-second",
+      inboxKey: "b:c",
+      eventType: "second.event",
+    };
+    const first = inboxRowValues(firstIdentity);
+    const second = inboxRowValues(secondIdentity);
+    const processedFirst = inboxRowValues({ ...firstIdentity, status: "processed" });
+    const failedSecond = inboxRowValues({
+      ...secondIdentity,
+      status: "failed",
+      failureReason: "second failed",
+    });
+    const proxy = createInboxProxyDb([
+      [],
+      [first],
+      [],
+      [second],
+      [second],
+      [first],
+      [processedFirst],
+      [second],
+      [failedSecond],
+      [processedFirst],
+      [failedSecond],
+    ]);
+    const store = new DrizzleTransactionalEventStore({ db: proxy.db });
+
+    const firstStart = await store.startInboxProcessing({ ...firstIdentity, now });
+    const secondStart = await store.startInboxProcessing({ ...secondIdentity, now });
+    const exactDuplicate = await store.startInboxProcessing({ ...secondIdentity, now });
+
+    expect(firstStart).toMatchObject({ status: "started", record: firstIdentity });
+    expect(secondStart).toMatchObject({ status: "started", record: secondIdentity });
+    expect(exactDuplicate).toMatchObject({ status: "duplicate", record: secondIdentity });
+
+    await store.markInboxProcessed({
+      consumerId: firstIdentity.consumerId,
+      inboxKey: firstIdentity.inboxKey,
+      expectedAttempts: firstStart.record.attempts,
+      now,
+    });
+    await store.markInboxFailed({
+      consumerId: secondIdentity.consumerId,
+      inboxKey: secondIdentity.inboxKey,
+      expectedAttempts: secondStart.record.attempts,
+      now,
+      error: { name: "Error", message: "second failed" },
+      reason: "second failed",
+    });
+
+    await expect(
+      store.findInboxRecord(firstIdentity.consumerId, firstIdentity.inboxKey),
+    ).resolves.toMatchObject({ ...firstIdentity, status: "processed" });
+    await expect(
+      store.findInboxRecord(secondIdentity.consumerId, secondIdentity.inboxKey),
+    ).resolves.toMatchObject({
+      ...secondIdentity,
+      status: "failed",
+      failureReason: "second failed",
+    });
+    const selectParameters = proxy.queries
+      .filter(({ sql }) => sql.startsWith("select"))
+      .map(({ params }) => params.slice(0, 2));
+    expect(selectParameters).toEqual([
+      [firstIdentity.consumerId, firstIdentity.inboxKey],
+      [secondIdentity.consumerId, secondIdentity.inboxKey],
+      [secondIdentity.consumerId, secondIdentity.inboxKey],
+      [firstIdentity.consumerId, firstIdentity.inboxKey],
+      [secondIdentity.consumerId, secondIdentity.inboxKey],
+      [firstIdentity.consumerId, firstIdentity.inboxKey],
+      [secondIdentity.consumerId, secondIdentity.inboxKey],
+    ]);
+    const insertQueries = proxy.queries.filter(({ sql }) => sql.startsWith("insert"));
+    expect(insertQueries).toHaveLength(2);
+    for (const { sql } of insertQueries) {
+      expect(sql).toContain('on conflict ("consumer_id","inbox_key") do nothing');
+    }
+    const updateParameters = proxy.queries
+      .filter(({ sql }) => sql.startsWith("update"))
+      .map(({ params }) => params.slice(-5, -3));
+    expect(updateParameters).toEqual([
+      [firstIdentity.consumerId, firstIdentity.inboxKey],
+      [secondIdentity.consumerId, secondIdentity.inboxKey],
+    ]);
+  });
+
   it("uses the transaction client passed by tx-core context instead of the root db", async () => {
     const rootDb = createMockDrizzleDb({ failInsert: true });
     const txDb = createMockDrizzleDb();
