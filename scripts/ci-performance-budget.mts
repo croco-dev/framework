@@ -5,6 +5,8 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
+import { parse as parseYaml } from "yaml";
+
 import { parseCacheableFailureClass } from "./ci-cacheable-failure-injection.mts";
 import { createVerificationManifest } from "./verification-manifest.mts";
 import type { EvidenceCommand } from "./release-spine-evidence.mts";
@@ -176,6 +178,17 @@ const BUILD_ARTIFACT_MAINTENANCE_CHECKS = [
   "spine-promotion",
 ] as const;
 
+const CACHEABLE_CI_EXPERIMENT_JOBS = [
+  ["core-verification", "github.event_name == 'workflow_dispatch'"],
+  ["generated-apps", "github.event_name == 'workflow_dispatch'"],
+  ["package-artifacts", "github.event_name == 'workflow_dispatch'"],
+  ["coverage-security", "github.event_name == 'workflow_dispatch'"],
+  [
+    "split-validation-shadow",
+    "always() && github.event_name == 'workflow_dispatch' && needs.changes.result == 'success'",
+  ],
+] as const;
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 function jobSection(workflow: string, job: string, nextJob: string): string {
@@ -186,8 +199,22 @@ function jobSection(workflow: string, job: string, nextJob: string): string {
   return start === -1 ? "" : workflow.slice(start + 1, end === -1 ? undefined : end + 1);
 }
 
-function jobCondition(job: string): string | undefined {
-  return /^\s*if:\s*(.+)$/m.exec(job)?.[1]?.trim();
+function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function workflowJobs(workflow: string): Readonly<Record<string, unknown>> {
+  try {
+    const parsed: unknown = parseYaml(workflow);
+    return isRecord(parsed) && isRecord(parsed.jobs) ? parsed.jobs : {};
+  } catch {
+    return {};
+  }
+}
+
+function workflowJobCondition(jobs: Readonly<Record<string, unknown>>, job: string): unknown {
+  const definition = jobs[job];
+  return isRecord(definition) ? definition.if : undefined;
 }
 
 function turboTasks(command: readonly string[]): readonly string[] {
@@ -234,7 +261,7 @@ export function findCiPerformanceBudgetViolations(
   const ecosystemAdvisory = jobSection(input.workflow, "ecosystem-advisory", "real-resource-tests");
   const realResources = jobSection(input.workflow, "real-resource-tests", "windows-scaffold");
   const windowsScaffold = jobSection(input.workflow, "windows-scaffold", "docs-sync-check");
-  const docsSync = jobSection(input.workflow, "docs-sync-check", "docs-build");
+  const jobs = workflowJobs(input.workflow);
   const byId = new Map(input.ordinaryPullRequestManifest.map((command) => [command.id, command]));
   const maintenanceById = new Map(
     input.maintenancePullRequestManifest.map((command) => [command.id, command]),
@@ -248,6 +275,11 @@ export function findCiPerformanceBudgetViolations(
     )
   ) {
     violations.push("ecosystem advisory smoke must stay off automatic change runs");
+  }
+  for (const [job, expectedCondition] of CACHEABLE_CI_EXPERIMENT_JOBS) {
+    if (workflowJobCondition(jobs, job) !== expectedCondition) {
+      violations.push(`${job} cacheable CI experiment must stay off automatic change runs`);
+    }
   }
   if (changes.includes("- 'packages/**'"))
     violations.push("Windows scaffold must not be triggered by every package change");
@@ -274,7 +306,9 @@ export function findCiPerformanceBudgetViolations(
   if (!validate.includes('args+=(--base "$VERIFICATION_BASE" --head HEAD)')) {
     violations.push("pull-request and trunk validation must both use the changed-file scope");
   }
-  if (jobCondition(docsSync) !== "needs.changes.outputs.api-source == 'true'") {
+  if (
+    workflowJobCondition(jobs, "docs-sync-check") !== "needs.changes.outputs.api-source == 'true'"
+  ) {
     violations.push("generated API documentation drift checks must follow API-source changes");
   }
   if (

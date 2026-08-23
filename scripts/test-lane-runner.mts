@@ -184,10 +184,7 @@ function relativeExistingPath(workspaceRoot: string, absolutePath: string): stri
   }
 }
 
-export function readCompletedVitestPaths(
-  reportPath: string,
-  workspaceRoot: string,
-): readonly string[] {
+function completedVitestNames(reportPath: string): readonly string[] {
   const report = JSON.parse(readFileSync(reportPath, "utf8")) as VitestJsonReport;
   return (report.testResults ?? [])
     .filter(
@@ -199,18 +196,81 @@ export function readCompletedVitestPaths(
           (assertion) => assertion.status === "passed" || assertion.status === "skipped",
         ),
     )
-    .flatMap(({ name }) => {
-      if (!name) return [];
-      const absoluteName = isAbsolute(name) ? name : resolve(workspaceRoot, name);
-      if (absoluteName === workspaceRoot || absoluteName.startsWith(`${workspaceRoot}${sep}`)) {
-        return [relative(workspaceRoot, absoluteName).split(sep).join("/")];
-      }
-      const existingRelative = existsSync(absoluteName)
-        ? relativeExistingPath(workspaceRoot, absoluteName)
-        : undefined;
-      return existingRelative ? [existingRelative] : [];
-    })
+    .flatMap(({ name }) => (name ? [name] : []));
+}
+
+function isPortableAbsolutePath(path: string): boolean {
+  return (
+    isAbsolute(path) ||
+    path.startsWith("/") ||
+    /^[A-Za-z]:[\\/]/u.test(path) ||
+    path.startsWith("\\\\")
+  );
+}
+
+function localVitestPath(name: string, workspaceRoot: string): string | undefined {
+  const absoluteName = isAbsolute(name)
+    ? name
+    : isPortableAbsolutePath(name)
+      ? undefined
+      : resolve(workspaceRoot, name);
+  if (!absoluteName) return undefined;
+  if (absoluteName === workspaceRoot || absoluteName.startsWith(`${workspaceRoot}${sep}`)) {
+    return relative(workspaceRoot, absoluteName).split(sep).join("/");
+  }
+  return existsSync(absoluteName) ? relativeExistingPath(workspaceRoot, absoluteName) : undefined;
+}
+
+export function readCompletedVitestPaths(
+  reportPath: string,
+  workspaceRoot: string,
+): readonly string[] {
+  return completedVitestNames(reportPath)
+    .flatMap((name) => localVitestPath(name, workspaceRoot) ?? [])
     .sort(compareText);
+}
+
+function readPortableTurboVitestPaths(
+  reportPath: string,
+  workspaceRoot: string,
+  workspacePath: string,
+  expectedPaths: readonly string[],
+  allowRelocation: boolean,
+): readonly string[] | undefined {
+  const normalizedWorkspacePath = workspacePath
+    .replaceAll("\\", "/")
+    .replace(/^\.\//u, "")
+    .replace(/\/$/u, "");
+  const paths: string[] = [];
+  for (const name of completedVitestNames(reportPath)) {
+    const localPath = localVitestPath(name, workspaceRoot);
+    if (localPath) {
+      paths.push(localPath);
+      continue;
+    }
+    if (!allowRelocation) return undefined;
+
+    const normalizedName = name.replaceAll("\\", "/");
+    const matches = expectedPaths.filter((expectedPath) => {
+      const normalizedExpected = expectedPath.replaceAll("\\", "/");
+      const expectedSuffix =
+        normalizedWorkspacePath === "" || normalizedWorkspacePath === "."
+          ? normalizedExpected
+          : `${normalizedWorkspacePath}/${normalizedExpected}`;
+      const currentPath = resolve(workspaceRoot, expectedPath);
+      const insideWorkspace =
+        currentPath !== workspaceRoot && currentPath.startsWith(`${workspaceRoot}${sep}`);
+      return (
+        insideWorkspace &&
+        existsSync(currentPath) &&
+        (normalizedName === expectedSuffix || normalizedName.endsWith(`/${expectedSuffix}`))
+      );
+    });
+    const match = matches[0];
+    if (matches.length !== 1 || match === undefined) return undefined;
+    paths.push(match);
+  }
+  return paths.sort(compareText);
 }
 
 export function readVitestFailureDetails(
@@ -398,8 +458,16 @@ export function readTurboTestTaskEvidence(
   ) {
     return undefined;
   }
+  const executedPaths = readPortableTurboVitestPaths(
+    reportPath,
+    resolve(rootDir, command.cwd),
+    command.cwd,
+    command.paths,
+    task.cache?.status === "HIT",
+  );
+  if (!executedPaths) return undefined;
   return {
-    executedPaths: readCompletedVitestPaths(reportPath, resolve(rootDir, command.cwd)),
+    executedPaths,
     executionState: task.cache?.status === "HIT" ? "reused" : "executed",
     cacheHash: task.hash,
   };
