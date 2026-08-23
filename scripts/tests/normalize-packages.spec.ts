@@ -103,6 +103,7 @@ describe("normalize-packages.mjs", () => {
     const packagePath = writePublishablePackage(root, {
       build: "tsup",
       deploy: "pnpm run build && pnpm publish --no-git-checks",
+      release: "changeset publish",
     });
 
     const result = runScript(root, "--write");
@@ -110,6 +111,10 @@ describe("normalize-packages.mjs", () => {
 
     expect(result.status).toBe(0);
     expect(pkg.scripts).toEqual({ build: "tsup" });
+    expect(result.stdout).toContain("Removed direct publish script @croco/example: scripts.deploy");
+    expect(result.stdout).toContain(
+      "Removed direct publish script @croco/example: scripts.release",
+    );
   });
 
   it.each([
@@ -117,6 +122,7 @@ describe("normalize-packages.mjs", () => {
     ["filtered pnpm publish", "pnpm --filter @croco/example publish"],
     ["npm publish", "npm publish --provenance"],
     ["Changesets publish", "pnpm exec changeset publish"],
+    ["option-terminated Changesets publish", "changeset -- publish"],
     ["npx Changesets publish", "npx changeset publish"],
     ["environment-prefixed npm publish", "CI=1 npm publish"],
     ["env-wrapped pnpm publish", "env CI=1 pnpm publish"],
@@ -126,6 +132,40 @@ describe("normalize-packages.mjs", () => {
     ["versioned npx Changesets publish", "npx @changesets/cli@latest publish"],
     ["versioned pnpm dlx Changesets publish", "pnpm dlx @changesets/cli@2.29.7 publish"],
     ["node Changesets CLI publish", "node node_modules/@changesets/cli/bin.js publish"],
+    ["option-prefixed Changesets publish", "changeset --tag next publish"],
+    ["equals-option Changesets publish", "changeset --tag=next publish"],
+    ["snapshot Changesets publish", "changeset --snapshot beta publish"],
+    [
+      "snapshot-template Changesets publish",
+      "changeset --snapshotPrereleaseTemplate {tag} publish",
+    ],
+    ["boolean-value Changesets publish", "changeset --verbose false publish"],
+    ["negated-boolean Changesets publish", "changeset --no-verbose publish"],
+    ["negated-aliased-boolean Changesets publish", "changeset --no-git-tag publish"],
+    ["negated-snapshot Changesets publish", "changeset --no-snapshot publish"],
+    ["generic-option Changesets publish", "changeset --unknown value publish"],
+    ["bundled-option Changesets publish", "changeset -xv publish"],
+    [
+      "double-brace snapshot-template Changesets publish",
+      "changeset --snapshotPrereleaseTemplate {{tag}} publish",
+    ],
+    ["substituted-option Changesets publish", "changeset --tag $(printf next) publish"],
+    ["backtick-option Changesets publish", "changeset --tag `printf next` publish"],
+    [
+      "nested-substituted-option Changesets publish",
+      "changeset --tag ${TAG:-$(printf next)} publish",
+    ],
+    [
+      "option-prefixed node Changesets publish",
+      "node node_modules/@changesets/cli/bin.js --tag next publish",
+    ],
+    [
+      "verbose node Changesets publish",
+      "node node_modules/@changesets/cli/bin.js --verbose publish",
+    ],
+    ["line-continued Changesets publish", "changeset \\" + "\n" + "publish"],
+    ["CRLF-line-continued Changesets publish", "changeset \\" + "\r\n" + "publish"],
+    ["grouped Changesets publish", "{ changeset publish; }"],
     ["substituted pnpm publish", "echo `pnpm publish`"],
     ["double-quoted substituted pnpm publish", 'echo "$(pnpm publish)"'],
     ["double-quoted backtick pnpm publish", 'echo "`pnpm publish`"'],
@@ -149,7 +189,32 @@ describe("normalize-packages.mjs", () => {
 
     const result = runScript(root, "--check");
 
+    expect(result.status, result.stderr).toBe(1);
+    expect(result.stdout, result.stderr).toContain(
+      "scripts.release must not publish outside the protected Changesets workflow",
+    );
+  });
+
+  it("rejects a private workspace package script that invokes Changesets publish", () => {
+    const root = createTempRoot();
+    writePackage(
+      root,
+      "private-release-tool",
+      {
+        name: "@croco/private-release-tool",
+        private: true,
+        version: "0.0.0",
+        scripts: {
+          release: "changeset publish",
+        },
+      },
+      { sourceIndex: false },
+    );
+
+    const result = runScript(root, "--check");
+
     expect(result.status).toBe(1);
+    expect(result.stdout).toContain("private-release-tool/package.json");
     expect(result.stdout).toContain(
       "scripts.release must not publish outside the protected Changesets workflow",
     );
@@ -161,6 +226,11 @@ describe("normalize-packages.mjs", () => {
     "pnpm run docs -- publish",
     "npx echo changeset publish",
     "pnpm exec echo changeset publish",
+    "changeset --help publish",
+    "changeset -- --tag value publish",
+    "changeset --snapshot publish",
+    "changeset --tag publish status",
+    "node node_modules/@changesets/cli/bin.js --tag publish status",
     'echo "pnpm publish"',
     "echo '$(pnpm publish)'",
     "echo '`pnpm publish`'",

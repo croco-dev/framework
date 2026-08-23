@@ -63,6 +63,27 @@ const EXECUTABLE_OPTIONS_WITH_VALUES = new Set([
   "-p",
 ]);
 const EXECUTABLE_SCRIPT_OPTIONS = new Set(["--call", "--shell-mode", "-c"]);
+const CHANGESET_BOOLEAN_OPTIONS = new Set([
+  "--empty",
+  "--git-tag",
+  "--gitTag",
+  "--open",
+  "--since-master",
+  "--sinceMaster",
+  "--verbose",
+  "-v",
+]);
+const CHANGESET_STRING_OPTIONS = new Set([
+  "--ignore",
+  "--otp",
+  "--output",
+  "--since",
+  "--snapshot",
+  "--snapshotPrereleaseTemplate",
+  "--snapshot-prerelease-template",
+  "--tag",
+  "-o",
+]);
 const DRIZZLE_ORM_DEPENDENCY_SECTIONS = [
   "dependencies",
   "devDependencies",
@@ -118,6 +139,7 @@ function main() {
     for (const violation of validateWorkspacePackagePolicy(pkg, {
       internalPeerDependencyRangeExceptions,
       internalWorkspacePackageNames,
+      packageScriptsWillBeNormalized: mode.write && pkg.private !== true,
       usedInternalPeerDependencyRangeExceptions,
     })) {
       violations.push(`${relativePath}: ${violation}`);
@@ -280,6 +302,9 @@ function normalizePackageScripts(pkg) {
 
   for (const [scriptName, command] of Object.entries(pkg.scripts)) {
     if (isDirectPublishCommand(command)) {
+      if (mode.write) {
+        console.log(`- Removed direct publish script ${pkg.name}: scripts.${scriptName}`);
+      }
       delete pkg.scripts[scriptName];
     }
   }
@@ -626,6 +651,9 @@ function validateWorkspacePackagePolicy(pkg, policyContext) {
   const violations = [];
   validateInternalDependencyRangePolicy(pkg, policyContext, violations);
   validateBoundedPublishedPeerDependencies(pkg, violations);
+  if (!policyContext.packageScriptsWillBeNormalized) {
+    violations.push(...validatePackageScripts(pkg));
+  }
   return violations;
 }
 
@@ -663,8 +691,6 @@ function validatePackage(pkg, pkgPath, rootDir, context = {}) {
   if (pkg.publishConfig?.files) {
     violations.push("publishConfig.files is not allowed; use root files instead");
   }
-
-  violations.push(...validatePackageScripts(pkg));
 
   if (!FILES_EXEMPTIONS.has(pkg.name)) {
     const expectedFiles = expectedFilesFor(pkg.name);
@@ -866,9 +892,29 @@ function tokenizeShellCommands(script) {
   for (let index = 0; index < script.length; index++) {
     const character = script[index];
     if (escaped) {
-      token += character;
+      if (character === "\r" && script[index + 1] === "\n") {
+        index++;
+      } else if (character !== "\n" && character !== "\r") {
+        token += character;
+      }
       escaped = false;
       continue;
+    }
+    if (quote !== "'" && character === "`") {
+      const closingIndex = findClosingBacktick(script, index + 1);
+      if (closingIndex >= 0) {
+        token += "__command_substitution__";
+        index = closingIndex;
+        continue;
+      }
+    }
+    if (quote !== "'" && character === "$" && script[index + 1] === "(") {
+      const substitution = readParenthesizedCommand(script, index + 2);
+      if (substitution) {
+        token += "__command_substitution__";
+        index = substitution.closingIndex;
+        continue;
+      }
     }
     if (character === "\\" && quote !== "'") {
       escaped = true;
@@ -893,7 +939,14 @@ function tokenizeShellCommands(script) {
       }
       continue;
     }
-    if ("`;&|(){}".includes(character)) {
+    if (
+      (character === "{" || character === "}") &&
+      (token.length > 0 || !isStandaloneShellBrace(script, index))
+    ) {
+      token += character;
+      continue;
+    }
+    if (";&|(){}".includes(character)) {
       pushCommand();
       if ((character === "&" || character === "|") && script[index + 1] === character) {
         index++;
@@ -905,6 +958,12 @@ function tokenizeShellCommands(script) {
   pushCommand();
 
   return commands;
+}
+
+function isStandaloneShellBrace(script, index) {
+  const isBoundary = (character) =>
+    character === undefined || /\s/.test(character) || "`;&|()".includes(character);
+  return isBoundary(script[index - 1]) && isBoundary(script[index + 1]);
 }
 
 function isDirectPublishInvocation(tokens) {
@@ -949,11 +1008,11 @@ function isDirectPublishInvocation(tokens) {
   }
 
   if (isChangesetExecutable(tokens[index])) {
-    return tokens[index + 1] === "publish";
+    return firstChangesetPositionalArgument(tokens.slice(index + 1)) === "publish";
   }
 
   if (executable === "node" && isChangesetNodeEntrypoint(tokens[index + 1])) {
-    return tokens[index + 2] === "publish";
+    return firstChangesetPositionalArgument(tokens.slice(index + 2)) === "publish";
   }
 
   if (executable === "npx") {
@@ -1014,6 +1073,72 @@ function isChangesetNodeEntrypoint(value) {
     value.includes("/@changesets/cli/") &&
     /^(?:bin|cli)(?:\.[cm]?js)?$/.test(executableName(value))
   );
+}
+
+function firstChangesetPositionalArgument(values) {
+  for (let index = 0; index < values.length; index++) {
+    const value = values[index];
+    if (typeof value !== "string") {
+      continue;
+    }
+    if (value === "--") {
+      return values[index + 1];
+    }
+
+    const separatorIndex = value.indexOf("=");
+    const option = separatorIndex >= 0 ? value.slice(0, separatorIndex) : value;
+    if (/^-[^-].+/.test(option)) {
+      const finalOption = `-${option.at(-1)}`;
+      if (
+        separatorIndex < 0 &&
+        !CHANGESET_BOOLEAN_OPTIONS.has(finalOption) &&
+        typeof values[index + 1] === "string" &&
+        !values[index + 1].startsWith("-")
+      ) {
+        index++;
+      } else if (
+        separatorIndex < 0 &&
+        CHANGESET_BOOLEAN_OPTIONS.has(finalOption) &&
+        (values[index + 1] === "true" || values[index + 1] === "false")
+      ) {
+        index++;
+      }
+      continue;
+    }
+    const booleanOption = option.startsWith("--no-") ? `--${option.slice(5)}` : option;
+    if (
+      CHANGESET_BOOLEAN_OPTIONS.has(booleanOption) ||
+      (option.startsWith("--no-") && booleanOption === "--snapshot")
+    ) {
+      if (separatorIndex < 0 && (values[index + 1] === "true" || values[index + 1] === "false")) {
+        index++;
+      }
+      continue;
+    }
+    if (CHANGESET_STRING_OPTIONS.has(option)) {
+      if (
+        separatorIndex < 0 &&
+        typeof values[index + 1] === "string" &&
+        !values[index + 1].startsWith("-")
+      ) {
+        index++;
+      }
+      continue;
+    }
+    if (value.startsWith("-")) {
+      if (
+        separatorIndex < 0 &&
+        typeof values[index + 1] === "string" &&
+        !values[index + 1].startsWith("-")
+      ) {
+        index++;
+      }
+      continue;
+    }
+    return value;
+  }
+
+  return undefined;
 }
 
 function firstExecutableArgumentIndex(values) {
