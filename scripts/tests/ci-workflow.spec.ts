@@ -8,6 +8,10 @@ import {
   CACHEABLE_FAILURE_CLASSES,
   CACHEABLE_FAILURE_COMMAND,
 } from "../ci-cacheable-failure-injection.mts";
+import {
+  findRequiredWorkflowContextCollisionViolations,
+  findRequiredWorkflowPolicyViolations,
+} from "../branch-protection-policy.mts";
 import { createVerificationManifest, getVerificationCommand } from "../verification-manifest.mts";
 import { ensureSarif, GITLEAKS_CORE_ARGS } from "../security-gitleaks-smoke.mts";
 import {
@@ -75,6 +79,7 @@ function workflowJobCondition(id: string): unknown {
 }
 
 const VALIDATE_JOB = workflowJob("validate");
+const REPOSITORY_CONTRACTS_JOB = workflowJob("repository-contracts");
 const REAL_RESOURCE_JOB = workflowJob("real-resource-tests");
 const SECRET_SCAN = (() => {
   const start = VALIDATE_JOB.indexOf("- name: Secret scan blocking report");
@@ -413,6 +418,149 @@ describe("Phase B cacheable verification shadow", () => {
 });
 
 describe("CI verification profile contract", () => {
+  it("keeps every required check present, blocking, and unskippable", () => {
+    expect(findRequiredWorkflowPolicyViolations(WORKFLOW)).toEqual([]);
+    expect(findRequiredWorkflowContextCollisionViolations(WORKFLOWS)).toEqual([]);
+    expect(findWorkflowVerificationViolations(REPOSITORY_CONTRACTS_JOB, ROOT_DIR)).toEqual([]);
+  });
+
+  it("fails closed when required workflow jobs or commands can disappear or skip", () => {
+    const mutations = [
+      WORKFLOW.replace("  repository-contracts:\n", "  repository-contracts-renamed:\n"),
+      WORKFLOW.replace(
+        "  repository-contracts:\n    runs-on:",
+        "  repository-contracts:\n    if: false\n    runs-on:",
+      ),
+      WORKFLOW.replace(
+        "  repository-contracts:\n    runs-on:",
+        "  repository-contracts:\n    name: decoy-contract\n    runs-on:",
+      ),
+      WORKFLOW.replace(
+        "  repository-contracts:\n    runs-on:",
+        "  repository-contracts:\n    strategy:\n      matrix:\n        shard: [1]\n    runs-on:",
+      ),
+      WORKFLOW.replace(
+        "  repository-contracts:\n    runs-on:",
+        "  repository-contracts:\n    defaults:\n      run:\n        shell: true {0}\n    runs-on:",
+      ),
+      WORKFLOW.replace(
+        "  repository-contracts:\n    runs-on:",
+        "  repository-contracts:\n    env:\n      NODE_OPTIONS: --import ./scripts/bypass.mjs\n    runs-on:",
+      ),
+      WORKFLOW.replace(
+        "      - name: Check authoritative test inventory",
+        '      - name: Inject process preload\n        run: echo "NODE_OPTIONS=--import ./scripts/bypass.mjs" >> "$GITHUB_ENV"\n      - name: Check authoritative test inventory',
+      ),
+      WORKFLOW.replace(
+        "  repository-contracts:\n    runs-on: ubuntu-latest",
+        "  repository-contracts:\n    runs-on: self-hosted",
+      ),
+      WORKFLOW.replace(
+        "env:\n  # renovate:",
+        "env:\n  NODE_OPTIONS: --import ./scripts/bypass.mjs\n  # renovate:",
+      ),
+      WORKFLOW.replace(
+        "concurrency:\n  group: ci-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.ref }}",
+        "concurrency:\n  group: ci-global",
+      ),
+      WORKFLOW.replace(
+        "  pull_request:\n    branches:\n      - trunk",
+        "  pull_request:\n    branches:\n      - trunk\n    paths:\n      - 'packages/**'",
+      ),
+      WORKFLOW.replace(
+        "  pull_request:\n    branches:\n      - trunk",
+        "  pull_request:\n    branches:\n      - trunk\n    types: [opened]",
+      ),
+      WORKFLOW.replace("      api-source: ${{ steps.filter.outputs.api-source }}\n", ""),
+      WORKFLOW.replace("            api-source:\n", "            api-source-removed:\n"),
+      WORKFLOW.replace("run: pnpm test-inventory:check", "run: echo inventory omitted"),
+      WORKFLOW.replace(
+        "      - name: Run repository contract tests\n        run:",
+        "      - name: Run repository contract tests\n        if: false\n        run:",
+      ),
+      WORKFLOW.replace(
+        "          scripts/tests/repository-policy-audit-workflow.spec.ts",
+        "          scripts/tests/repository-policy-audit-workflow.spec.ts || true",
+      ),
+      WORKFLOW.replace(
+        "  validate:\n    needs: changes\n    if: ${{ always() }}",
+        "  validate:\n    needs: changes\n    if: needs.changes.result == 'success'",
+      ),
+      WORKFLOW.replace(
+        '    env:\n      NPM_CONFIG_PROVENANCE: "true"',
+        '    env:\n      NPM_CONFIG_PROVENANCE: "true"\n      NODE_OPTIONS: --import ./scripts/bypass.mjs',
+      ),
+      WORKFLOW.replace(
+        "  docs-sync-check:\n    needs: changes\n    if: ${{ always() }}\n    runs-on:",
+        "  docs-sync-check:\n    needs: changes\n    if: ${{ always() }}\n    env:\n      BASH_ENV: ./scripts/bypass.sh\n    runs-on:",
+      ),
+      WORKFLOW.replace(
+        "      - name: Run selected verification profile\n        id:",
+        "      - name: Run selected verification profile\n        if: false\n        id:",
+      ),
+      WORKFLOW.replace(
+        '          node --experimental-strip-types scripts/release-spine-evidence.mts "${args[@]}"',
+        '          node --experimental-strip-types scripts/release-spine-evidence.mts "${args[@]}" || true',
+      ),
+      WORKFLOW.replace(
+        "      - name: Build docs and check for drift\n        if: needs.changes.outputs.api-source == 'true'",
+        "      - name: Build docs and check for drift\n        if: false",
+      ),
+      WORKFLOW.replace(
+        "      - name: Require successful change classification",
+        "      - name: Allow failed change classification",
+      ),
+      WORKFLOW.replace(
+        "      - name: Require successful change classification\n        shell: bash",
+        "      - name: Require successful change classification\n        continue-on-error: true\n        shell: bash",
+      ),
+      WORKFLOW.replace("          exit 1\n", "          exit 1 || true\n"),
+    ];
+
+    for (const mutation of mutations) {
+      expect(findRequiredWorkflowPolicyViolations(mutation)).not.toEqual([]);
+    }
+  });
+
+  it.each([
+    [
+      "an added validate step",
+      WORKFLOW.replace(
+        "      - name: Start validate performance measurement",
+        '      - name: Inject validate environment\n        run: echo "BASH_ENV=./scripts/bypass.sh" >> "$GITHUB_ENV"\n\n      - name: Start validate performance measurement',
+      ),
+    ],
+    [
+      "a validate environment-file rewrite",
+      WORKFLOW.replace(
+        'run: echo "CROCO_VALIDATE_MEASUREMENT_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)" >> "$GITHUB_ENV"',
+        'run: echo "NODE_OPTIONS=--import ./scripts/bypass.mjs" >> "$GITHUB_ENV"',
+      ),
+    ],
+    [
+      "a docs PATH rewrite",
+      WORKFLOW.replace(
+        'run: echo "No API documentation source changed; the documentation drift build is not applicable."',
+        'run: echo "./scripts" >> "$GITHUB_PATH"',
+      ),
+    ],
+  ])("rejects %s in a protected required job", (_name, mutation) => {
+    expect(mutation).not.toBe(WORKFLOW);
+    expect(findRequiredWorkflowPolicyViolations(mutation)).toContainEqual(
+      expect.stringContaining("BRANCH_POLICY_WORKFLOW_EXECUTION_OVERRIDE"),
+    );
+  });
+
+  it("rejects another workflow that can emit a reserved required context", () => {
+    expect(
+      findRequiredWorkflowContextCollisionViolations({
+        ...WORKFLOWS,
+        "spoof.yml":
+          "name: Spoof\non: pull_request\npermissions:\n  contents: read\njobs:\n  decoy:\n    name: repository-contracts\n    runs-on: ubuntu-latest\n    steps: []\n",
+      }),
+    ).toContainEqual(expect.stringContaining("BRANCH_POLICY_WORKFLOW_CONTEXT_COLLISION"));
+  });
+
   it("allows the selected profile and full changed-test shadow suite to finish", () => {
     expect(VALIDATE_JOB).toContain("    timeout-minutes: 90");
   });
@@ -853,9 +1001,7 @@ describe("CI verification profile contract", () => {
     expect(WORKFLOW).toContain("- 'packages/*/README.md'");
     expect(WORKFLOW).toContain("run: pnpm docs:api:check");
     expect(WORKFLOW).toContain("--exclude-path '(^|/)packages/docs/README\\.md$'");
-    expect((DOCS_SYNC_JOB as Readonly<Record<string, unknown>>).if).toBe(
-      "needs.changes.outputs.api-source == 'true'",
-    );
+    expect((DOCS_SYNC_JOB as Readonly<Record<string, unknown>>).if).toBe("${{ always() }}");
   });
 
   it("runs independent CI surfaces in parallel and restores content-addressed Turbo state", () => {
@@ -882,8 +1028,6 @@ describe("CI verification profile contract", () => {
     expect(REAL_RESOURCE_JOB).toContain("permissions:\n      contents: read");
     expect(VALIDATE_JOB).not.toContain("membership-postgres:");
     expect(VALIDATE_JOB).not.toContain("Verify typed TestKernel resources");
-    expect((DOCS_SYNC_JOB as Readonly<Record<string, unknown>>).if).toBe(
-      "needs.changes.outputs.api-source == 'true'",
-    );
+    expect((DOCS_SYNC_JOB as Readonly<Record<string, unknown>>).if).toBe("${{ always() }}");
   });
 });

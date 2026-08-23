@@ -217,6 +217,15 @@ function workflowJobCondition(jobs: Readonly<Record<string, unknown>>, job: stri
   return isRecord(definition) ? definition.if : undefined;
 }
 
+function workflowJobSteps(
+  jobs: Readonly<Record<string, unknown>>,
+  job: string,
+): readonly Readonly<Record<string, unknown>>[] {
+  const definition = jobs[job];
+  if (!isRecord(definition) || !Array.isArray(definition.steps)) return [];
+  return definition.steps.filter(isRecord);
+}
+
 function turboTasks(command: readonly string[]): readonly string[] {
   const turboIndex = command.findIndex(
     (argument, index) => argument === "turbo" && command[index + 1] === "run",
@@ -306,8 +315,24 @@ export function findCiPerformanceBudgetViolations(
   if (!validate.includes('args+=(--base "$VERIFICATION_BASE" --head HEAD)')) {
     violations.push("pull-request and trunk validation must both use the changed-file scope");
   }
+  const docsSyncHeavySteps = new Set([
+    "Checkout",
+    "Setup pnpm",
+    "Setup Node.js",
+    "Restore Turbo cache",
+    "Install dependencies",
+    "Build docs and check for drift",
+  ]);
+  const docsSyncSteps = workflowJobSteps(jobs, "docs-sync-check");
   if (
-    workflowJobCondition(jobs, "docs-sync-check") !== "needs.changes.outputs.api-source == 'true'"
+    workflowJobCondition(jobs, "docs-sync-check") !== "${{ always() }}" ||
+    docsSyncSteps.filter((step) => docsSyncHeavySteps.has(String(step.name))).length !==
+      docsSyncHeavySteps.size ||
+    docsSyncSteps.some(
+      (step) =>
+        docsSyncHeavySteps.has(String(step.name)) &&
+        step.if !== "needs.changes.outputs.api-source == 'true'",
+    )
   ) {
     violations.push("generated API documentation drift checks must follow API-source changes");
   }
