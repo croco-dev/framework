@@ -7,6 +7,7 @@ import { parse as parseYaml } from "yaml";
 import { generate } from "../generator.js";
 import { getExternalCrocoPackageRange } from "../helpers/croco-ranges.js";
 import { mergeInto, replaceGithubExpressions } from "../helpers/fs.js";
+import { InvalidCliOptionProblem } from "../libs/problems/InvalidCliOptionProblem.js";
 import { InvalidGoalOptionProblem } from "../libs/problems/InvalidGoalOptionProblem.js";
 import { normalizeNonInteractiveOptions, parseCliOptions } from "../options.js";
 import type { GeneratorOptions } from "../types.js";
@@ -557,6 +558,36 @@ describe("E2E: generate()", () => {
       code: "create-croco-app/invalid-goal-option",
     });
     expect(existsSync(testDir)).toBe(false);
+  });
+
+  it("rejects escaping web app paths before creating any directory", async () => {
+    const targetDir = join(testDir, "workspace");
+    const outsideDir = join(testDir, "outside");
+    const options: GeneratorOptions = {
+      projectName: "secure-fullstack",
+      scope: "@test",
+      preset: "ddd-fullstack",
+      webApps: ["../../outside"],
+      api: "trpc",
+      apiHosting: "standalone",
+      db: [],
+      agentRules: false,
+      installDeps: false,
+      initGit: false,
+    };
+
+    let error: unknown;
+    try {
+      await generate(targetDir, options);
+    } catch (err) {
+      error = err;
+    }
+
+    expect(error).toBeInstanceOf(InvalidCliOptionProblem);
+    expect(error).toMatchObject({ code: "create-croco-app/invalid-cli-option" });
+    expect(existsSync(testDir)).toBe(false);
+    expect(existsSync(targetDir)).toBe(false);
+    expect(existsSync(outsideDir)).toBe(false);
   });
 
   it(
