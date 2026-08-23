@@ -3171,9 +3171,21 @@ function excludeUndefinedType(type: string): string {
   return unionTypes(type.split(" | ").filter((member) => member !== "undefined"));
 }
 
+function escapeTypeScriptString(value: string): string {
+  return value
+    .replace(/\\/g, "\\\\")
+    .replace(/'/g, "\\'")
+    .replace(/`/g, "\\`")
+    .replace(/\$\{/g, "\\${")
+    .replace(/\r/g, "\\r")
+    .replace(/\n/g, "\\n")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
+}
+
 function literalValueToTypeScript(value: unknown): string {
   if (typeof value === "string") {
-    return `'${value.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`;
+    return `'${escapeTypeScriptString(value)}'`;
   }
 
   if (typeof value === "number" || typeof value === "boolean") {
@@ -3256,7 +3268,7 @@ function formatObjectKey(key: string): string {
     return key;
   }
 
-  return `'${key.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`;
+  return `'${escapeTypeScriptString(key)}'`;
 }
 
 function isJavaScriptIdentifier(value: string): boolean {
@@ -3267,15 +3279,24 @@ function getPathExpression(route: GeneratedClientRoute): string {
   const pathParams = getContractPathParams(route.path);
 
   if (pathParams.length === 0) {
-    return `'${route.path}'`;
+    return literalValueToTypeScript(route.path);
   }
 
   const paramsByToken = new Map(pathParams.map((param) => [param.token, param.name]));
-  const pathExpression = route.path.replace(/:([^/]+)/g, (tokenWithPrefix, token: string) => {
-    const name = paramsByToken.get(token);
+  const pathExpression = route.path
+    .split(/(:[^/]+)/g)
+    .map((part) => {
+      if (part.startsWith(":")) {
+        const name = paramsByToken.get(part.slice(1));
 
-    return name ? `\${encodeURIComponent(String(${getPathInputAccessor(name)}))}` : tokenWithPrefix;
-  });
+        if (name) {
+          return `\${encodeURIComponent(String(${getPathInputAccessor(name)}))}`;
+        }
+      }
+
+      return escapeTypeScriptString(part);
+    })
+    .join("");
 
   return `\`${pathExpression}\``;
 }

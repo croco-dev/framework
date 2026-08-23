@@ -254,6 +254,7 @@ const MIXED_NATIVE_ENUM = {
 
 describe("generateClientFiles", () => {
   beforeEach(() => {
+    fs.rmSync(TEMP_DIR, { recursive: true, force: true });
     fs.mkdirSync(TEMP_DIR, { recursive: true });
   });
 
@@ -2006,6 +2007,136 @@ void handleMissingProblemBranch;
       "const request = createRpcClientRequest(userContractRoutes[0], 'query', path, { method: 'GET' }, options);",
     );
     expect(content).toContain("readOptionalJsonResponse(response, request.telemetry)");
+  });
+
+  it(
+    "should escape static and parameterized route paths into valid TypeScript string literals",
+    () => {
+      const staticRoute = (methodName: string, routePath: string): RouteIR => ({
+        controllerName: "VectorController",
+        methodName,
+        httpMethod: "GET",
+        path: routePath,
+        routeContract: null,
+        params: [],
+        inputSchema: null,
+        inputSchemas: EMPTY_INPUT_SCHEMAS,
+        outputSchema: null,
+        domain: null,
+      });
+      const routes: RouteIR[] = [
+        staticRoute("apostrophe", "/users/o'clock"),
+        staticRoute("backslash", "/users/tea\\pot"),
+        staticRoute("backtick", "/users/tick`tock"),
+        staticRoute("interpolation", "/users/${literal}"),
+        staticRoute("lineBreaks", "/lines/a\r\nb"),
+        staticRoute("separators", "/lines/se\u2028p\u2029arator"),
+        {
+          controllerName: "VectorController",
+          methodName: "apostropheParam",
+          httpMethod: "GET",
+          path: "/users/o'clock/:id",
+          routeContract: null,
+          params: [{ kind: "path", name: "id", schema: null }],
+          inputSchema: null,
+          inputSchemas: PATH_INPUT_SCHEMAS,
+          outputSchema: null,
+          domain: null,
+        },
+        {
+          controllerName: "VectorController",
+          methodName: "backtickParam",
+          httpMethod: "GET",
+          path: "/tick`tock/:id",
+          routeContract: null,
+          params: [{ kind: "path", name: "id", schema: null }],
+          inputSchema: null,
+          inputSchemas: PATH_INPUT_SCHEMAS,
+          outputSchema: null,
+          domain: null,
+        },
+      ];
+
+      const files = generateClientFiles(routes, TEMP_DIR);
+
+      const content = fs.readFileSync(files[0], "utf-8");
+      expect(content).toContain(
+        "createRpcClientRequest(vectorContractRoutes[0], 'query', '/users/o\\'clock', { method: 'GET' }, options);",
+      );
+      expect(content).toContain(
+        "createRpcClientRequest(vectorContractRoutes[1], 'query', '/users/tea\\\\pot', { method: 'GET' }, options);",
+      );
+      expect(content).toContain(
+        "createRpcClientRequest(vectorContractRoutes[2], 'query', '/users/tick\\`tock', { method: 'GET' }, options);",
+      );
+      expect(content).toContain(
+        "createRpcClientRequest(vectorContractRoutes[3], 'query', '/users/\\${literal}', { method: 'GET' }, options);",
+      );
+      expect(content).toContain(
+        "createRpcClientRequest(vectorContractRoutes[4], 'query', '/lines/a\\r\\nb', { method: 'GET' }, options);",
+      );
+      expect(content).toContain(
+        "createRpcClientRequest(vectorContractRoutes[5], 'query', '/lines/se\\u2028p\\u2029arator', { method: 'GET' }, options);",
+      );
+      expect(content).toContain(
+        "const path = `/users/o\\'clock/${encodeURIComponent(String(input.path.id))}`;",
+      );
+      expect(content).toContain(
+        "const path = `/tick\\`tock/${encodeURIComponent(String(input.path.id))}`;",
+      );
+      assertGeneratedPackageTypechecks([
+        "index.ts",
+        "rpc.ts",
+        ...files.map((filePath) => path.basename(filePath)),
+      ]);
+    },
+    GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS,
+  );
+
+  it("should preserve runtime request path bytes for escaped static and parameterized routes", async () => {
+    const routes: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "list",
+        httpMethod: "GET",
+        path: "/users/o'clock",
+        routeContract: null,
+        params: [],
+        inputSchema: null,
+        inputSchemas: EMPTY_INPUT_SCHEMAS,
+        outputSchema: null,
+        domain: null,
+      },
+      {
+        controllerName: "UserController",
+        methodName: "get",
+        httpMethod: "GET",
+        path: "/users/o'clock/:id",
+        routeContract: null,
+        params: [{ kind: "path", name: "id", schema: null }],
+        inputSchema: null,
+        inputSchemas: PATH_INPUT_SCHEMAS,
+        outputSchema: null,
+        domain: null,
+      },
+    ];
+    const fetchCalls: { readonly url: string; readonly init: RequestInit }[] = [];
+
+    generateClientFiles(routes, TEMP_DIR);
+    const { userClient } = loadGeneratedUserClientSupport(async (url, init) => {
+      fetchCalls.push({ url, init });
+
+      return new Response(null, { status: 204 });
+    });
+
+    await userClient.getResult({ path: { id: "42" } });
+    // Generated static-route members are not part of the shared support type.
+    const clientWithStaticMember = userClient as unknown as {
+      readonly list: () => Promise<unknown>;
+    };
+    await clientWithStaticMember.list();
+
+    expect(fetchCalls.map(({ url }) => url)).toEqual(["/users/o'clock/42", "/users/o'clock"]);
   });
 
   it("should not rewrite path parameters with matching prefixes", () => {
