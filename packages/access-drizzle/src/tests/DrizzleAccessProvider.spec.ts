@@ -88,8 +88,8 @@ describe("DrizzleAccessProvider", () => {
         object: "document:doc1",
       });
 
-      expect(allowedResult.allowed).toBe(true);
-      expect(deniedResult.allowed).toBe(false);
+      expect(allowedResult).toEqual({ decision: "allow", allowed: true });
+      expect(deniedResult).toEqual({ decision: "deny", allowed: false });
     });
 
     it("should normalize string allowed values", async () => {

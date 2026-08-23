@@ -134,15 +134,15 @@ export class InMemoryAccessProvider implements AccessProvider {
   private readonly tuples = new Map<string, RelationTuple>();
 
   async check(request: CheckRequest): Promise<CheckResult> {
-    return {
-      allowed: this.tuples.has(
-        relationKey(request.tenantId, {
-          object: request.object,
-          relation: request.relation,
-          subject: request.subject,
-        }),
-      ),
-    };
+    const allowed = this.tuples.has(
+      relationKey(request.tenantId, {
+        object: request.object,
+        relation: request.relation,
+        subject: request.subject,
+      }),
+    );
+
+    return allowed ? { decision: "allow", allowed: true } : { decision: "deny", allowed: false };
   }
 
   async grant(request: GrantRequest): Promise<void> {

@@ -9,7 +9,7 @@ title: "AccessProvider"
 
 ### check()
 
-> **check**(`request`): `Promise`\<[`CheckResult`](/api/access-core/src/interfaces/checkresult/)\>
+> **check**(`request`): `Promise`\<[`CheckResult`](/api/access-core/src/type-aliases/checkresult/)\>
 
 #### Parameters
 
@@ -19,7 +19,7 @@ title: "AccessProvider"
 
 #### Returns
 
-`Promise`\<[`CheckResult`](/api/access-core/src/interfaces/checkresult/)\>
+`Promise`\<[`CheckResult`](/api/access-core/src/type-aliases/checkresult/)\>
 
 ---
 

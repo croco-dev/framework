@@ -79,12 +79,18 @@ class DocumentController {
 ### 3. 프로그래밍 방식 접근 제어
 
 ```typescript
-await accessEngine.check({
+const result = await accessEngine.check({
   tenantId: "tenant-123",
   subject: "user:456",
   relation: "editor",
   object: "document:123",
 });
+
+if (result.decision === "allow") {
+  // result.allowed is statically true
+} else {
+  // deny and abstain both carry allowed: false
+}
 
 await accessEngine.grant({
   tenantId: "tenant-123",
@@ -117,6 +123,9 @@ const permissions = await accessEngine.list({
 #### `check(request: CheckRequest): Promise<CheckResult>`
 
 주체가 리소스에 대한 특정 관계를 가지고 있는지 확인합니다.
+`decision`이 권한 판단의 기준이며 `allowed`는 호환성을 위한 리터럴 필드입니다. `allow`는 항상
+`allowed: true`, `deny`와 `abstain`은 항상 `allowed: false`를 반환하므로 두 필드가 서로 모순될 수
+없습니다. 공급자 구현체도 세 결정 중 하나를 명시적으로 반환해야 합니다.
 
 #### `grant(request: GrantRequest): Promise<void>`
 

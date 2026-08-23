@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 648,
+  problemCount: 649,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -62,6 +62,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 17,
           column: 5,
           kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "access-core/invalid-provider-result",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#access-core-invalid-provider-result",
+      recovery: {
+        cause:
+          "AccessProvider.check() returned a result without a supported authoritative decision.",
+        userAction:
+          "Do not retry the unchanged operation; report the access provider and version to the service operator.",
+        operatorAction:
+          "Fix or upgrade the AccessProvider implementation so check() returns allow, deny, or abstain with the matching compatibility boolean.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/access-core/src/libs/AccessEngine.ts",
+          line: 107,
+          column: 10,
+          kind: "problem-factory",
         },
       ],
     },
@@ -3325,7 +3358,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 81,
+          line: 84,
           column: 3,
           kind: "problem-class",
         },
@@ -8390,7 +8423,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 16,
+          line: 19,
           column: 3,
           kind: "problem-class",
         },
@@ -8420,7 +8453,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 45,
+          line: 48,
           column: 3,
           kind: "problem-class",
         },
@@ -8451,7 +8484,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 72,
+          line: 75,
           column: 3,
           kind: "problem-class",
         },
@@ -8482,7 +8515,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 90,
+          line: 93,
           column: 3,
           kind: "problem-class",
         },
@@ -8513,7 +8546,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 54,
+          line: 57,
           column: 3,
           kind: "problem-class",
         },
@@ -11657,7 +11690,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 63,
+          line: 66,
           column: 3,
           kind: "problem-class",
         },
@@ -15420,7 +15453,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 36,
+          line: 39,
           column: 3,
           kind: "problem-class",
         },

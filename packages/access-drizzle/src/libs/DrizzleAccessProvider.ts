@@ -130,7 +130,8 @@ export class DrizzleAccessProvider implements AccessProvider {
     );
 
     const firstRow = result.rows[0] as AllowedRow | undefined;
-    return { allowed: normalizeAllowedValue(firstRow?.allowed) };
+    const allowed = normalizeAllowedValue(firstRow?.allowed);
+    return allowed ? { decision: "allow", allowed: true } : { decision: "deny", allowed: false };
   }
 
   /**
