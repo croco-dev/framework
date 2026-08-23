@@ -89,6 +89,22 @@ function createMockTracer(mockSpan: Span): Tracer {
   } as Tracer;
 }
 
+function createTracedAsyncIterable<ReturnType>(
+  iterable: AsyncIterable<ReturnType>,
+  mockSpan: Span,
+): AsyncIterable<ReturnType> {
+  vi.spyOn(tracerModule, "getTracer").mockReturnValue(createMockTracer(mockSpan));
+
+  class TestService {
+    stream(): AsyncIterable<ReturnType> {
+      return iterable;
+    }
+  }
+
+  decorateMethodWithTrace(TestService.prototype, "stream", { name: "async-iterable-operation" });
+  return new TestService().stream();
+}
+
 describe("Trace", () => {
   it("should return descriptor when value is undefined", () => {
     const descriptor: PropertyDescriptor = { writable: true, enumerable: true, configurable: true };
@@ -287,6 +303,243 @@ describe("Trace", () => {
 
     const second = getTraceOptions(TestService.prototype, "run");
     expect(second?.attributes).toEqual({ stable: "yes" });
+  });
+});
+
+describe("Trace async iterable lifecycle", () => {
+  it("should allow the acquired iterator to be consumed as an async iterable", async () => {
+    const mockSpan = createMockSpan();
+    const iterable: AsyncIterable<number> = {
+      async *[Symbol.asyncIterator]() {
+        yield 1;
+      },
+    };
+
+    const iterator = createTracedAsyncIterable(iterable, mockSpan.span)[Symbol.asyncIterator]();
+    const values: number[] = [];
+
+    for await (const value of iterator) {
+      values.push(value);
+    }
+
+    expect(values).toEqual([1]);
+    expect(iterator[Symbol.asyncIterator]()).toBe(iterator);
+    expect(mockSpan.end).toHaveBeenCalledTimes(1);
+  });
+
+  it("should end the span once when the consumer cancels before iteration starts", async () => {
+    const mockSpan = createMockSpan();
+    const createIterator = vi.fn(
+      (): AsyncIterator<number> => ({
+        next: vi.fn(async (): Promise<IteratorResult<number>> => ({ done: false, value: 1 })),
+      }),
+    );
+    const iterable: AsyncIterable<number> = {
+      [Symbol.asyncIterator]: createIterator,
+    };
+
+    const iterator = createTracedAsyncIterable(iterable, mockSpan.span)[Symbol.asyncIterator]();
+
+    await expect(iterator.return?.()).resolves.toEqual({ done: true, value: undefined });
+
+    expect(createIterator).not.toHaveBeenCalled();
+    expect(mockSpan.end).toHaveBeenCalledTimes(1);
+  });
+
+  it("should record iterator acquisition failure and end the span once", async () => {
+    const mockSpan = createMockSpan();
+    const acquisitionError = new Error("iterator acquisition failed");
+    const iterable: AsyncIterable<number> = {
+      [Symbol.asyncIterator]() {
+        throw acquisitionError;
+      },
+    };
+
+    const iterator = createTracedAsyncIterable(iterable, mockSpan.span)[Symbol.asyncIterator]();
+
+    await expect(iterator.next()).rejects.toBe(acquisitionError);
+
+    expect(mockSpan.recordException).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "iterator acquisition failed" }),
+    );
+    expect(mockSpan.end).toHaveBeenCalledTimes(1);
+  });
+
+  it("should end the span once after normal completion without cleaning up again", async () => {
+    const mockSpan = createMockSpan();
+    const cleanup = vi.fn(
+      async (): Promise<IteratorResult<number>> => ({ done: true, value: undefined }),
+    );
+    const iterable: AsyncIterable<number> = {
+      [Symbol.asyncIterator]() {
+        let yielded = false;
+
+        return {
+          next: vi.fn(async (): Promise<IteratorResult<number>> => {
+            if (yielded) {
+              return { done: true, value: undefined };
+            }
+
+            yielded = true;
+            return { done: false, value: 1 };
+          }),
+          return: cleanup,
+        };
+      },
+    };
+
+    const values: number[] = [];
+    for await (const value of createTracedAsyncIterable(iterable, mockSpan.span)) {
+      values.push(value);
+    }
+
+    expect(values).toEqual([1]);
+    expect(cleanup).not.toHaveBeenCalled();
+    expect(mockSpan.end).toHaveBeenCalledTimes(1);
+  });
+
+  it("should preserve the active span while iterating and resolving consumer cancellation", async () => {
+    const mockSpan = createMockSpan();
+    const observedSpans: Array<Span | undefined> = [];
+    const cleanup = vi.fn(async (): Promise<IteratorResult<number>> => {
+      observedSpans.push(trace.getSpan(context.active()));
+      return { done: true, value: undefined };
+    });
+    const iterable: AsyncIterable<number> = {
+      [Symbol.asyncIterator]() {
+        return {
+          next: vi.fn(async (): Promise<IteratorResult<number>> => {
+            observedSpans.push(trace.getSpan(context.active()));
+            return { done: false, value: 1 };
+          }),
+          return: cleanup,
+        };
+      },
+    };
+
+    const iterator = createTracedAsyncIterable(iterable, mockSpan.span)[Symbol.asyncIterator]();
+
+    await expect(iterator.next()).resolves.toEqual({ done: false, value: 1 });
+    await expect(iterator.return?.()).resolves.toEqual({ done: true, value: undefined });
+
+    expect(observedSpans).toEqual([mockSpan.span, mockSpan.span]);
+    expect(cleanup).toHaveBeenCalledTimes(1);
+    expect(mockSpan.recordException).not.toHaveBeenCalled();
+    expect(mockSpan.end).toHaveBeenCalledTimes(1);
+  });
+
+  it("should record and propagate cleanup rejection while ending the span once", async () => {
+    const mockSpan = createMockSpan();
+    const cleanupError = new Error("cleanup failed");
+    const cleanup = vi.fn(async (): Promise<IteratorResult<number>> => {
+      throw cleanupError;
+    });
+    const iterable: AsyncIterable<number> = {
+      [Symbol.asyncIterator]() {
+        return {
+          next: vi.fn(async (): Promise<IteratorResult<number>> => ({ done: false, value: 1 })),
+          return: cleanup,
+        };
+      },
+    };
+
+    const iterator = createTracedAsyncIterable(iterable, mockSpan.span)[Symbol.asyncIterator]();
+
+    await expect(iterator.next()).resolves.toEqual({ done: false, value: 1 });
+    await expect(iterator.return?.()).rejects.toBe(cleanupError);
+
+    expect(cleanup).toHaveBeenCalledTimes(1);
+    expect(mockSpan.recordException).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "cleanup failed" }),
+    );
+    expect(mockSpan.end).toHaveBeenCalledTimes(1);
+  });
+
+  it("should record and propagate cleanup lookup failure while ending the span once", async () => {
+    const mockSpan = createMockSpan();
+    const cleanupError = new Error("cleanup lookup failed");
+    const iterable: AsyncIterable<number> = {
+      [Symbol.asyncIterator]() {
+        return {
+          next: vi.fn(async (): Promise<IteratorResult<number>> => ({ done: false, value: 1 })),
+          get return(): AsyncIterator<number>["return"] {
+            throw cleanupError;
+          },
+        };
+      },
+    };
+
+    const iterator = createTracedAsyncIterable(iterable, mockSpan.span)[Symbol.asyncIterator]();
+
+    await expect(iterator.next()).resolves.toEqual({ done: false, value: 1 });
+    await expect(iterator.return?.()).rejects.toBe(cleanupError);
+
+    expect(mockSpan.recordException).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "cleanup lookup failed" }),
+    );
+    expect(mockSpan.end).toHaveBeenCalledTimes(1);
+  });
+
+  it("should record iteration failure and end the span after successful cleanup", async () => {
+    const mockSpan = createMockSpan();
+    const iterationError = new Error("iteration failed");
+    const cleanup = vi.fn(
+      async (): Promise<IteratorResult<number>> => ({ done: true, value: undefined }),
+    );
+    const iterable: AsyncIterable<number> = {
+      [Symbol.asyncIterator]() {
+        return {
+          next: vi.fn(async (): Promise<IteratorResult<number>> => {
+            throw iterationError;
+          }),
+          return: cleanup,
+        };
+      },
+    };
+
+    const iterator = createTracedAsyncIterable(iterable, mockSpan.span)[Symbol.asyncIterator]();
+
+    await expect(iterator.next()).rejects.toBe(iterationError);
+
+    expect(cleanup).toHaveBeenCalledTimes(1);
+    expect(mockSpan.recordException).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "iteration failed" }),
+    );
+    expect(mockSpan.end).toHaveBeenCalledTimes(1);
+  });
+
+  it("should preserve iteration failure precedence while recording cleanup rejection", async () => {
+    const mockSpan = createMockSpan();
+    const iterationError = new Error("iteration failed");
+    const cleanupError = new Error("cleanup failed");
+    const cleanup = vi.fn(async (): Promise<IteratorResult<number>> => {
+      throw cleanupError;
+    });
+    const iterable: AsyncIterable<number> = {
+      [Symbol.asyncIterator]() {
+        return {
+          next: vi.fn(async (): Promise<IteratorResult<number>> => {
+            throw iterationError;
+          }),
+          return: cleanup,
+        };
+      },
+    };
+
+    const iterator = createTracedAsyncIterable(iterable, mockSpan.span)[Symbol.asyncIterator]();
+
+    await expect(iterator.next()).rejects.toBe(iterationError);
+
+    expect(cleanup).toHaveBeenCalledTimes(1);
+    expect(mockSpan.recordException).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ message: "iteration failed" }),
+    );
+    expect(mockSpan.recordException).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ message: "cleanup failed" }),
+    );
+    expect(mockSpan.end).toHaveBeenCalledTimes(1);
   });
 });
 
