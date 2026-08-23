@@ -8,7 +8,7 @@ import { MAX_LOG_NESTING_DEPTH } from "../sanitizeLogRecord";
 
 type LogRecord = Record<string, unknown>;
 
-function createCapturedLogger(): { logger: Logger; records: () => LogRecord[] } {
+function createCapturedLogger(): { logger: Logger; raw: () => string; records: () => LogRecord[] } {
   const chunks: string[] = [];
   const destination = new Writable({
     write(chunk: Buffer, _encoding, callback) {
@@ -26,6 +26,7 @@ function createCapturedLogger(): { logger: Logger; records: () => LogRecord[] } 
 
   return {
     logger,
+    raw: () => chunks.join(""),
     records: () =>
       chunks
         .join("")
@@ -36,13 +37,9 @@ function createCapturedLogger(): { logger: Logger; records: () => LogRecord[] } 
   };
 }
 
-function serialized(records: LogRecord[]): string {
-  return JSON.stringify(records);
-}
-
 describe("Logger serialized redaction", () => {
   it("removes sensitive keys case-insensitively from nested objects and arrays", () => {
-    const { logger, records } = createCapturedLogger();
+    const { logger, raw, records } = createCapturedLogger();
 
     Context.run({ requestId: "req-2057", traceId: "trace-2057" }, () => {
       logger.info("request received", {
@@ -62,17 +59,19 @@ describe("Logger serialized redaction", () => {
           { Cookie: "array-cookie", status: 202 },
         ],
         callbackUrl: new URL("https://example.com/callback"),
+        eventSequence: 9007199254740993n,
       });
     });
 
     const output = records();
-    const bytes = serialized(output);
+    const bytes = raw();
     expect(bytes).not.toContain("root-password");
     expect(bytes).not.toContain("nested-password");
     expect(bytes).not.toContain("nested-token");
     expect(bytes).not.toContain("nested-authorization");
     expect(bytes).not.toContain("array-secret");
     expect(bytes).not.toContain("array-cookie");
+    expect(bytes).toContain('"eventSequence":"9007199254740993"');
     expect(output[0]).toMatchObject({
       requestId: "req-2057",
       traceId: "trace-2057",
@@ -82,11 +81,12 @@ describe("Logger serialized redaction", () => {
       },
       providers: [{ operation: "charge" }, { status: 202 }],
       callbackUrl: "https://example.com/callback",
+      eventSequence: "9007199254740993",
     });
   });
 
   it("redacts nested child bindings without removing correlation fields", () => {
-    const { logger, records } = createCapturedLogger();
+    const { logger, raw, records } = createCapturedLogger();
     const child = logger.child({
       requestId: "child-request-id",
       provider: { TOKEN: "child-token", accountId: "acct-2057" },
@@ -95,7 +95,7 @@ describe("Logger serialized redaction", () => {
     child.info("child event", { operation: "authorize" });
 
     const output = records();
-    expect(serialized(output)).not.toContain("child-token");
+    expect(raw()).not.toContain("child-token");
     expect(output[0]).toMatchObject({
       requestId: "child-request-id",
       provider: { accountId: "acct-2057" },
@@ -104,7 +104,7 @@ describe("Logger serialized redaction", () => {
   });
 
   it("prevents Error metadata from reintroducing sensitive values", () => {
-    const { logger, records } = createCapturedLogger();
+    const { logger, raw, records } = createCapturedLogger();
     let getterCalls = 0;
     const error = Object.assign(new Error("provider failed"), {
       metadata: { secret: "error-secret", provider: "payments" },
@@ -121,7 +121,7 @@ describe("Logger serialized redaction", () => {
     logger.error("provider request failed", error);
 
     const output = records();
-    const bytes = serialized(output);
+    const bytes = raw();
     expect(bytes).not.toContain("error-secret");
     expect(bytes).not.toContain("error-authorization");
     expect(bytes).not.toContain("error-cookie");
@@ -137,7 +137,7 @@ describe("Logger serialized redaction", () => {
   });
 
   it("preserves cause and aggregate Error diagnostics", () => {
-    const { logger, records } = createCapturedLogger();
+    const { logger, raw, records } = createCapturedLogger();
     const nestedError = Object.assign(new Error("nested failure"), { token: "nested-token" });
     const error = Object.assign(new Error("aggregate failure"), { errors: [nestedError] });
     Object.defineProperty(error, "cause", { value: new Error("provider cause") });
@@ -145,7 +145,7 @@ describe("Logger serialized redaction", () => {
     logger.error("aggregate request failed", error);
 
     const output = records();
-    expect(serialized(output)).not.toContain("nested-token");
+    expect(raw()).not.toContain("nested-token");
     expect(output[0]).toMatchObject({
       err: {
         message: "aggregate failure: provider cause",
@@ -161,7 +161,7 @@ describe("Logger serialized redaction", () => {
   });
 
   it("sanitizes circular and custom serialization values without an unredacted fallback", () => {
-    const { logger, records } = createCapturedLogger();
+    const { logger, raw, records } = createCapturedLogger();
     const circular: Record<string, unknown> = {
       operation: "circular-check",
       token: "circular-token",
@@ -191,7 +191,7 @@ describe("Logger serialized redaction", () => {
     ).not.toThrow();
 
     const output = records();
-    const bytes = serialized(output);
+    const bytes = raw();
     expect(bytes).not.toContain("circular-token");
     expect(bytes).not.toContain("custom-password");
     expect(bytes).not.toContain("accessor-secret");
@@ -205,7 +205,7 @@ describe("Logger serialized redaction", () => {
   });
 
   it("does not execute top-level context getters before sanitization", () => {
-    const { logger, records } = createCapturedLogger();
+    const { logger, raw, records } = createCapturedLogger();
     let getterCalls = 0;
     const context = Object.defineProperty({ operation: "getter-check" }, "provider", {
       enumerable: true,
@@ -221,7 +221,7 @@ describe("Logger serialized redaction", () => {
 
     const output = records();
     expect(getterCalls).toBe(0);
-    expect(serialized(output)).not.toContain("top-level-getter-secret");
+    expect(raw()).not.toContain("top-level-getter-secret");
     expect(output[0]).toMatchObject({ requestId: "getter-request-id", operation: "getter-check" });
   });
 
@@ -243,7 +243,7 @@ describe("Logger serialized redaction", () => {
   });
 
   it("truncates branches beyond the supported nesting depth without leaking their values", () => {
-    const { logger, records } = createCapturedLogger();
+    const { logger, raw, records } = createCapturedLogger();
     const deepContext: Record<string, unknown> = {};
     let cursor = deepContext;
 
@@ -257,7 +257,7 @@ describe("Logger serialized redaction", () => {
     logger.info("deep context", { deepContext });
 
     const output = records();
-    const bytes = serialized(output);
+    const bytes = raw();
     expect(bytes).not.toContain("deep-password");
     expect(bytes).not.toContain("too-deep");
     expect(bytes).toContain("[Truncated]");

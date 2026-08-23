@@ -209,6 +209,7 @@ function sanitizeValue(value: unknown, depth: number, ancestors: WeakSet<object>
 
     switch (typeof value) {
       case "bigint":
+        return value.toString();
       case "boolean":
       case "number":
       case "string":

@@ -17,6 +17,29 @@ function isError(value: unknown): value is Error {
   }
 }
 
+function mergeLogContext(base: LogContext, context: LogContext): LogContext {
+  const merged = { ...base };
+
+  try {
+    for (const [key, descriptor] of Object.entries(Object.getOwnPropertyDescriptors(context))) {
+      if (!descriptor.enumerable || !("value" in descriptor)) {
+        continue;
+      }
+
+      Object.defineProperty(merged, key, {
+        configurable: true,
+        enumerable: true,
+        value: descriptor.value,
+        writable: true,
+      });
+    }
+  } catch {
+    merged.context = "[Unserializable]";
+  }
+
+  return merged;
+}
+
 @Component({ scope: "singleton" })
 export class Logger implements ILogger {
   private logger: PinoLogger;
@@ -92,7 +115,8 @@ export class Logger implements ILogger {
   }
 
   private getLogContext(context?: LogContext): LogContext {
-    return context ? { ...this.getContext(), ...sanitizeLogRecord(context) } : this.getContext();
+    const base = this.getContext();
+    return context ? mergeLogContext(base, context) : base;
   }
 
   debug(message: string, context?: LogContext): void {
