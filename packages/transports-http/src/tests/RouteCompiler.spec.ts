@@ -123,6 +123,37 @@ describe("RouteCompiler", () => {
     expect(routes[2].method).toBe("POST");
   });
 
+  it("should compile catch-all paths with stable parameter names", () => {
+    @Controller("/assets")
+    class AssetsController {
+      @Get("/:...path")
+      getAsset(@Param("path") path: string) {
+        return { path };
+      }
+
+      @Get("/items/:id")
+      getItem(@Param("id") id: string) {
+        return { id };
+      }
+    }
+
+    @Controller()
+    class RootAssetsController {
+      @Get("/:...path")
+      getAsset(@Param("path") path: string) {
+        return { path };
+      }
+    }
+
+    const routes = createCompiler().compile([AssetsController, RootAssetsController]);
+
+    expect(routes.map((route) => route.path)).toEqual([
+      "/assets/:path{.+}",
+      "/assets/items/:id",
+      "/:path{.+}",
+    ]);
+  });
+
   it("should skip non-controller classes", () => {
     class NotAController {
       @Get()

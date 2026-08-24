@@ -133,6 +133,37 @@ describe("generated route module", () => {
       await rm(outputDir, { recursive: true, force: true });
     }
   });
+
+  it("preserves catch-all parameter matching in generated route modules", async () => {
+    const outputDir = await mkdtemp(join(process.cwd(), ".croco-framework-routes-catch-all-"));
+
+    try {
+      const moduleUrl = new URL("./fixtures/GeneratedCatchAllController.ts", import.meta.url).href;
+      await compileRoutes({ controllerPaths: [moduleUrl], outputDir });
+
+      const generated = await import(
+        `${new URL(`file://${join(outputDir, ".croco", "build", "routes.mjs")}`).href}?${Date.now()}`
+      );
+      const app = new Hono();
+      generated.registerRoutes(app);
+
+      const prefixedResponse = await app.request(
+        "http://localhost/generated/assets/icons/logo.svg",
+      );
+      const ordinaryResponse = await app.request("http://localhost/generated/items/42");
+      const rootResponse = await app.request("http://localhost/public/fonts/inter.woff2");
+
+      expect(prefixedResponse.status).toBe(200);
+      await expect(prefixedResponse.text()).resolves.toBe("icons/logo.svg");
+      expect(ordinaryResponse.status).toBe(200);
+      await expect(ordinaryResponse.text()).resolves.toBe("42");
+      expect(rootResponse.status).toBe(200);
+      await expect(rootResponse.text()).resolves.toBe("public/fonts/inter.woff2");
+    } finally {
+      Container.reset();
+      await rm(outputDir, { recursive: true, force: true });
+    }
+  });
 });
 
 function hasProblemStatus(error: unknown): error is { readonly status: number } {
