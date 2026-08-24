@@ -1326,8 +1326,8 @@ describe("verification manifest", () => {
       ]),
     );
     for (const id of [
-      "package-bins-smoke",
       "test",
+      "package-bins-smoke",
       "generated-app-smoke",
       "alpha-release-smoke",
       "integration-test-lane",
