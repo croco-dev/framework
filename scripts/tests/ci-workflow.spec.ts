@@ -164,6 +164,46 @@ describe("workflow token permissions", () => {
       reason: "jobs.changes must grant contents: read and pull-requests: read",
     });
   });
+
+  it.each([
+    [
+      "an untrusted pull_request_target trigger",
+      (workflow: string) => workflow.replace("  workflow_run:\n", "  pull_request_target:\n"),
+    ],
+    [
+      "a PR-head comment publisher checkout",
+      (workflow: string) =>
+        workflow.replace(
+          "          ref: ${{ github.workflow_sha }}",
+          "          ref: ${{ github.event.pull_request.head.sha }}",
+        ),
+    ],
+    [
+      "persisted checkout credentials",
+      (workflow: string) =>
+        workflow.replace(
+          "      - name: Checkout trusted comment publisher\n        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n        with:\n          ref: ${{ github.workflow_sha }}\n          persist-credentials: false",
+          "      - name: Checkout trusted comment publisher\n        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n        with:\n          ref: ${{ github.workflow_sha }}\n          persist-credentials: true",
+        ),
+    ],
+    [
+      "an additional write-job command",
+      (workflow: string) =>
+        workflow.replace(
+          "      - name: Comment PR with benchmark results",
+          "      - name: Execute pull request code\n        run: node untrusted.mjs\n      - name: Comment PR with benchmark results",
+        ),
+    ],
+  ])("rejects benchmark comment boundary drift from %s", (_name, mutate) => {
+    const benchmark = WORKFLOWS["benchmark-comment.yml"] ?? "";
+    const mutated = mutate(benchmark);
+    expect(mutated).not.toBe(benchmark);
+    expect(findWorkflowPermissionViolations({ "benchmark-comment.yml": mutated })).toContainEqual({
+      path: "benchmark-comment.yml",
+      reason:
+        "jobs.comment write access must use the trusted workflow_run artifact publisher boundary",
+    });
+  });
 });
 
 describe("CI executable supply chain", () => {
@@ -559,6 +599,20 @@ describe("CI verification profile contract", () => {
           "name: Spoof\non: pull_request\npermissions:\n  contents: read\njobs:\n  decoy:\n    name: repository-contracts\n    runs-on: ubuntu-latest\n    steps: []\n",
       }),
     ).toContainEqual(expect.stringContaining("BRANCH_POLICY_WORKFLOW_CONTEXT_COLLISION"));
+  });
+
+  it("requires benchmark.yml to remain the sole benchmark-gate authority", () => {
+    const benchmark = WORKFLOWS["benchmark.yml"] ?? "";
+    const mutation = benchmark.replace("  benchmark-gate:\n", "  benchmark-gate-removed:\n");
+    expect(mutation).not.toBe(benchmark);
+    expect(
+      findRequiredWorkflowContextCollisionViolations({
+        ...WORKFLOWS,
+        "benchmark.yml": mutation,
+      }),
+    ).toContainEqual(
+      expect.stringContaining("benchmark.yml must declare required status job benchmark-gate"),
+    );
   });
 
   it("allows the selected profile and full changed-test shadow suite to finish", () => {

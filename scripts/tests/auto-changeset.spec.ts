@@ -102,7 +102,9 @@ describe("auto-changeset.mts", () => {
     expect(changeset).toContain("'@croco/telemetry-sdk-node': minor");
     expect(changeset).not.toContain("'@croco/framework-context': minor");
     expect(changeset).not.toContain("'create-croco-app': minor");
-    expect(git(repo, ["log", "-1", "--format=%s"])).toBe("chore: add changeset [skip ci]");
+    const commitSubject = git(repo, ["log", "-1", "--format=%s"]);
+    expect(commitSubject).toBe("chore: add changeset");
+    expect(commitSubject).not.toMatch(/\[(?:skip ci|ci skip|no ci|skip actions|actions skip)\]/i);
   });
 
   it("detects fix commit → patch bump", () => {

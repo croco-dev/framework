@@ -16,6 +16,7 @@ const CHECKOUT_ACTION = "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90
 const PNPM_SETUP_ACTION = "pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271";
 const NODE_SETUP_ACTION = "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020";
 export const REQUIRED_BRANCH_PROTECTION_CHECKS = [
+  { context: "benchmark-gate", integrationId: 15368 },
   { context: "docs-sync-check", integrationId: 15368 },
   { context: "repository-contracts", integrationId: 15368 },
   { context: "validate", integrationId: 15368 },
@@ -25,11 +26,18 @@ const REQUIRED_ACTIONS_CHECK_CONTEXTS = [
   "repository-contracts",
   "validate",
 ] as const;
+const REQUIRED_CONTEXT_WORKFLOWS = {
+  "benchmark-gate": "benchmark.yml",
+  "docs-sync-check": "ci.yml",
+  "repository-contracts": "ci.yml",
+  validate: "ci.yml",
+} as const;
 const REQUIRED_REPOSITORY_CONTRACT_TESTS = [
   "scripts/tests/test-inventory.spec.ts",
   "scripts/tests/verification-policy.spec.ts",
   "scripts/tests/branch-protection-policy.spec.ts",
   "scripts/tests/ci-workflow.spec.ts",
+  "scripts/tests/benchmark-workflow.spec.ts",
   "scripts/tests/repository-policy-audit-workflow.spec.ts",
 ] as const;
 const REQUIRED_REPOSITORY_CONTRACT_TEST_COMMAND = [
@@ -983,6 +991,13 @@ export function findRequiredWorkflowContextCollisionViolations(
   authoritativePath = "ci.yml",
 ): readonly string[] {
   const requiredContexts = new Set(REQUIRED_BRANCH_PROTECTION_CHECKS.map(({ context }) => context));
+  const authoritativeWorkflows: Readonly<Record<string, string>> = {
+    ...REQUIRED_CONTEXT_WORKFLOWS,
+    "docs-sync-check": authoritativePath,
+    "repository-contracts": authoritativePath,
+    validate: authoritativePath,
+  };
+  const observedAuthoritativeContexts = new Set<string>();
   const violations: string[] = [];
   for (const [path, source] of Object.entries(workflows)) {
     let workflow: unknown;
@@ -999,8 +1014,11 @@ export function findRequiredWorkflowContextCollisionViolations(
     for (const [jobId, value] of Object.entries(jobs)) {
       if (!isRecord(value)) continue;
       const displayName = typeof value.name === "string" ? value.name : jobId;
-      const authoritative = path === authoritativePath && requiredContexts.has(jobId);
-      if (authoritative) continue;
+      const authoritative = authoritativeWorkflows[jobId] === path;
+      if (authoritative) {
+        observedAuthoritativeContexts.add(jobId);
+        continue;
+      }
       if (
         displayName.includes("${{") ||
         requiredContexts.has(displayName) ||
@@ -1013,6 +1031,16 @@ export function findRequiredWorkflowContextCollisionViolations(
           ),
         );
       }
+    }
+  }
+  for (const context of requiredContexts) {
+    if (!observedAuthoritativeContexts.has(context)) {
+      violations.push(
+        policyDiagnostic(
+          "BRANCH_POLICY_WORKFLOW_JOB_MISSING",
+          `${authoritativeWorkflows[context]} must declare required status job ${context}`,
+        ),
+      );
     }
   }
   return violations;

@@ -291,7 +291,7 @@ describe("verification manifest", () => {
     expect(
       createHash("sha256").update(JSON.stringify(manifests)).digest("hex"),
       "The pre-split monolithic manifest changed; update this digest only after intentionally verifying the new serialized commands.",
-    ).toBe("905eaf4587e59903d18949339e4e0d72152e5fb8ad81be7190d7f1a1a64332b4");
+    ).toBe("683cc63b86f72a855f0f63f4b101cf4e7dd5361483d10f577f13c8388c79ac0f");
   });
 
   it("classifies every dependency edge and every cross-lane edge for synthesis", () => {
@@ -1269,6 +1269,7 @@ describe("verification manifest", () => {
     );
     const expectedDependencies: Readonly<Record<string, readonly string[]>> = {
       "architecture-policy": ["architecture-policy-runtime"],
+      "benchmark-thresholds": ["verification-contract-tests"],
       build: ["architecture-policy-runtime"],
       "package-entrypoints-smoke": ["build", "typecheck", "generated-app-smoke"],
       "package-bins-smoke": ["build"],

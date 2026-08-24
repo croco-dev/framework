@@ -14,6 +14,7 @@ export type VerificationEvent = "pull_request" | "push" | "workflow_dispatch";
 export type VerificationWorkflow = "ci" | "release";
 
 export type VerificationClassification = {
+  readonly allowPendingReleaseMetadata: boolean;
   readonly profile: VerificationProfile | null;
   readonly shouldRunVerification: boolean;
   readonly shouldUpdateReleasePr: boolean;
@@ -51,7 +52,12 @@ function classifyPath(path: string): PathKind {
     )
   )
     return "spine";
-  if (path === ".github/renovate.json" || path.startsWith(".github/workflows/")) return "publish";
+  if (
+    path === ".github/actionlint.yaml" ||
+    path === ".github/renovate.json" ||
+    path.startsWith(".github/workflows/")
+  )
+    return "publish";
   if (MANIFEST_IMPLEMENTATION_PATHS.has(path)) return "publish";
   if (
     /^scripts\/(verification-[^/]+|workflow-verification-contract|release-spine-evidence)\.mts$/.test(
@@ -89,6 +95,7 @@ export function classifyVerificationChanges(
 ): VerificationClassification {
   if (event === "workflow_dispatch") {
     return {
+      allowPendingReleaseMetadata: workflow === "ci",
       profile: "publish",
       shouldRunVerification: true,
       shouldUpdateReleasePr: workflow === "release",
@@ -119,6 +126,7 @@ export function classifyVerificationChanges(
   if (workflow === "ci") {
     const ciProfile = strongest ?? "repo";
     return {
+      allowPendingReleaseMetadata: true,
       profile: ciProfile,
       shouldRunVerification: true,
       shouldUpdateReleasePr: false,
@@ -129,6 +137,7 @@ export function classifyVerificationChanges(
 
   if (event === "pull_request") {
     return {
+      allowPendingReleaseMetadata: true,
       profile: strongest ?? "repo",
       shouldRunVerification: true,
       shouldUpdateReleasePr: false,
@@ -146,6 +155,7 @@ export function classifyVerificationChanges(
   const hasMaintenance = kinds.some(({ kind }) => kind === "publish") && !hasPublishCandidate;
   const profile = hasPublishCandidate || hasMaintenance ? "publish" : null;
   return {
+    allowPendingReleaseMetadata: hasMaintenance && !hasPublishCandidate,
     profile,
     shouldRunVerification: profile !== null,
     shouldUpdateReleasePr: hasChangeset,
@@ -229,6 +239,7 @@ function main(): void {
       : changedFiles(options.base ?? "HEAD^", options.head ?? "HEAD");
   const result = classifyVerificationChanges(options.event, files, options.workflow);
   const outputs = {
+    allow_pending_release_metadata: String(result.allowPendingReleaseMetadata),
     profile: result.profile ?? "",
     should_run_verification: String(result.shouldRunVerification),
     should_update_release_pr: String(result.shouldUpdateReleasePr),

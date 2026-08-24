@@ -1330,6 +1330,7 @@ const PACKAGE_QUALITY_STATUS_PREREQUISITES = [
 
 const VERIFICATION_DEPENDENCIES: Readonly<Record<string, readonly string[]>> = {
   "architecture-policy": ["architecture-policy-runtime"],
+  "benchmark-thresholds": ["verification-contract-tests"],
   build: ["architecture-policy-runtime"],
   "quick-start-lambda-smoke": ["build"],
   "first-success": ["build"],
@@ -1361,6 +1362,7 @@ export type VerificationDependencyClassification = "physical-local" | "logical-s
 
 type VerificationDependencyEdge =
   | "architecture-policy->architecture-policy-runtime"
+  | "benchmark-thresholds->verification-contract-tests"
   | "build->architecture-policy-runtime"
   | "quick-start-lambda-smoke->build"
   | "first-success->build"
@@ -1404,6 +1406,7 @@ type VerificationDependencyEdge =
 
 export const VERIFICATION_DEPENDENCY_CLASSIFICATION = {
   "architecture-policy->architecture-policy-runtime": ["physical-local"],
+  "benchmark-thresholds->verification-contract-tests": ["physical-local"],
   "build->architecture-policy-runtime": ["physical-local"],
   "quick-start-lambda-smoke->build": ["physical-local"],
   "first-success->build": ["physical-local"],

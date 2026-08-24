@@ -13,6 +13,7 @@ permissions:
 concurrency:
   group: release
   cancel-in-progress: false
+  queue: max
 
 jobs:
   release_ref_guard:
@@ -55,8 +56,33 @@ jobs:
           persist-credentials: false
           ref: ${{ needs.release_ref_guard.outputs.verified_sha }}
 
+      - name: Inspect current trunk release state
+        id: release_state
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERIFIED_SHA: ${{ needs.release_ref_guard.outputs.verified_sha }}
+        run: |
+          set -euo pipefail
+          current_trunk_sha=$(gh api \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/git/ref/heads/trunk" \
+            --jq '.object.sha')
+          if [[ ! "$current_trunk_sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error title=Invalid live trunk SHA::GitHub did not return an immutable 40-character SHA for refs/heads/trunk."
+            exit 1
+          fi
+          if [ "$current_trunk_sha" != "$VERIFIED_SHA" ]; then
+            echo "::notice title=Superseded Release run::Skipping release work for stale revision $VERIFIED_SHA; current trunk is $current_trunk_sha."
+            echo "is_current=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "is_current=true" >> "$GITHUB_OUTPUT"
+
       - name: Select release work and verification profile
         id: release_work
+        if: steps.release_state.outputs.is_current == 'true'
         shell: bash
         env:
           EVENT_BEFORE: ${{ github.event.before }}
@@ -73,8 +99,29 @@ jobs:
           node --experimental-strip-types scripts/verification-change-classifier.mts "${args[@]}"
           echo "base=$base" >> "$GITHUB_OUTPUT"
 
+      - name: Setup pnpm
+        if: steps.release_state.outputs.is_current == 'true'
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+
+      - name: Setup Node.js
+        if: steps.release_state.outputs.is_current == 'true'
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: ".nvmrc"
+          cache: "pnpm"
+
+      - name: Resolve cumulative release execution
+        id: release_execution
+        if: steps.release_state.outputs.is_current == 'true'
+        shell: bash
+        run: |
+          node --experimental-strip-types scripts/release-reconciliation-state.mts \
+            --classified-verification "${{ steps.release_work.outputs.should_run_verification }}" \
+            --classified-changesets-action "${{ steps.release_work.outputs.should_run_changesets_action }}" \
+            --github-output "$GITHUB_OUTPUT"
+
       - name: Verify release PR automation credentials
-        if: github.ref == 'refs/heads/trunk' && needs.release_ref_guard.outputs.verified_sha == github.sha && steps.release_work.outputs.should_run_changesets_action == 'true'
+        if: github.ref == 'refs/heads/trunk' && needs.release_ref_guard.outputs.verified_sha == github.sha && steps.release_execution.outputs.should_run_changesets_action == 'true'
         shell: bash
         env:
           RELEASE_APP_CLIENT_ID: ${{ vars.RELEASE_APP_CLIENT_ID }}
@@ -92,20 +139,8 @@ jobs:
             exit 1
           fi
 
-      - name: Setup pnpm
-        if: steps.release_work.outputs.should_run_verification == 'true' || steps.release_work.outputs.should_run_changesets_action == 'true'
-        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
-
-      - name: Setup Node.js
-        if: steps.release_work.outputs.should_run_verification == 'true' || steps.release_work.outputs.should_run_changesets_action == 'true'
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version-file: ".nvmrc"
-          cache: "pnpm"
-          registry-url: "https://registry.npmjs.org"
-
       - name: Restore Turbo cache
-        if: steps.release_work.outputs.should_run_verification == 'true' || steps.release_work.outputs.should_run_changesets_action == 'true'
+        if: steps.release_execution.outputs.should_run_verification == 'true' || steps.release_execution.outputs.should_run_changesets_action == 'true'
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .turbo
@@ -116,24 +151,31 @@ jobs:
             turbo-${{ runner.os }}-
 
       - name: Install dependencies
-        if: steps.release_work.outputs.should_run_verification == 'true' || steps.release_work.outputs.should_run_changesets_action == 'true'
+        if: steps.release_execution.outputs.should_run_verification == 'true' || steps.release_execution.outputs.should_run_changesets_action == 'true'
         run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        if: steps.release_execution.outputs.should_run_verification == 'true'
+        run: pnpm --dir packages/docs run playwright:install
 
       # Release reruns the complete publish profile as defense in depth. Tokens,
       # provenance permissions, summaries, uploads, and Changesets remain Actions-owned.
       - name: Release publish verification
         id: release_spine_evidence
-        if: steps.release_work.outputs.should_run_verification == 'true'
+        if: steps.release_execution.outputs.should_run_verification == 'true'
         shell: bash
         run: |
           args=(--output-dir ci-reports/release)
+          if [ "${{ steps.release_work.outputs.allow_pending_release_metadata }}" = "true" ]; then
+            args+=(--allow-pending-release-metadata)
+          fi
           if [ "$GITHUB_EVENT_NAME" != "workflow_dispatch" ]; then
             args+=(--base "${{ steps.release_work.outputs.base }}" --head HEAD)
           fi
           pnpm verify:publish -- "${args[@]}"
 
       - name: Publish release spine evidence summary
-        if: always() && steps.release_work.outputs.should_run_verification == 'true'
+        if: always() && steps.release_execution.outputs.should_run_verification == 'true'
         shell: bash
         run: |
           if [ -f ci-reports/release/spine-evidence.md ]; then
@@ -143,7 +185,7 @@ jobs:
           fi
 
       - name: Upload release spine evidence
-        if: always() && steps.release_work.outputs.should_run_verification == 'true'
+        if: always() && steps.release_execution.outputs.should_run_verification == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: release-spine-evidence
@@ -151,9 +193,16 @@ jobs:
           include-hidden-files: true
           if-no-files-found: warn
 
+      - name: Configure Node.js for npm publishing
+        if: github.ref == 'refs/heads/trunk' && needs.release_ref_guard.outputs.verified_sha == github.sha && steps.release_execution.outputs.should_run_changesets_action == 'true'
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: ".nvmrc"
+          registry-url: "https://registry.npmjs.org"
+
       - name: Mint release PR GitHub App token
         id: release_app_token
-        if: github.ref == 'refs/heads/trunk' && needs.release_ref_guard.outputs.verified_sha == github.sha && steps.release_work.outputs.should_run_changesets_action == 'true'
+        if: github.ref == 'refs/heads/trunk' && needs.release_ref_guard.outputs.verified_sha == github.sha && steps.release_execution.outputs.should_run_changesets_action == 'true'
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
@@ -163,8 +212,33 @@ jobs:
           permission-contents: write
           permission-pull-requests: write
 
+      - name: Revalidate current trunk revision
+        id: current_trunk
+        if: github.ref == 'refs/heads/trunk' && needs.release_ref_guard.outputs.verified_sha == github.sha && steps.release_execution.outputs.should_run_changesets_action == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERIFIED_SHA: ${{ needs.release_ref_guard.outputs.verified_sha }}
+        run: |
+          set -euo pipefail
+          current_trunk_sha=$(gh api \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/git/ref/heads/trunk" \
+            --jq '.object.sha')
+          if [[ ! "$current_trunk_sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error title=Invalid live trunk SHA::GitHub did not return an immutable 40-character SHA for refs/heads/trunk."
+            exit 1
+          fi
+          if [ "$current_trunk_sha" != "$VERIFIED_SHA" ]; then
+            echo "::notice title=Superseded Release run::Skipping Changesets mutation for stale revision $VERIFIED_SHA; current trunk is $current_trunk_sha."
+            echo "is_current=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "is_current=true" >> "$GITHUB_OUTPUT"
+
       - name: Create Release Pull Request or Publish
-        if: github.ref == 'refs/heads/trunk' && needs.release_ref_guard.outputs.verified_sha == github.sha && steps.release_work.outputs.should_run_changesets_action == 'true'
+        if: github.ref == 'refs/heads/trunk' && needs.release_ref_guard.outputs.verified_sha == github.sha && steps.release_execution.outputs.should_run_changesets_action == 'true' && steps.current_trunk.outputs.is_current == 'true'
         uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
         with:
           publish: pnpm exec changeset publish

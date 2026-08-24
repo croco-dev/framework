@@ -332,7 +332,7 @@ function createChangeset(
 
 function stageAndCommit(changesetPath: string): void {
   runGit(["add", changesetPath]);
-  runGit(["commit", "--no-verify", "-m", "chore: add changeset [skip ci]"]);
+  runGit(["commit", "--no-verify", "-m", "chore: add changeset"]);
 }
 
 function main(): void {

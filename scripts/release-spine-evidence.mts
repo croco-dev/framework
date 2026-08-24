@@ -1447,26 +1447,31 @@ export async function runReleaseSpineEvidence(
 
     if (!interruptionSignal) {
       let skippedAny = false;
-      const checksById = new Map(report.checks.map((check) => [check.id, check]));
-      for (const [index, command] of commands.entries()) {
-        if (report.checks[index]?.status !== "pending") continue;
-        const dependencyChecks = (command.dependsOn ?? []).map((id) => checksById.get(id));
-        if (
-          dependencyChecks.some(
-            (check) => check?.status === "pending" || check?.status === "running",
-          )
-        ) {
-          continue;
+      while (true) {
+        let skippedThisPass = false;
+        const checksById = new Map(report.checks.map((check) => [check.id, check]));
+        for (const [index, command] of commands.entries()) {
+          if (report.checks[index]?.status !== "pending") continue;
+          const dependencyChecks = (command.dependsOn ?? []).map((id) => checksById.get(id));
+          if (
+            dependencyChecks.some(
+              (check) => check?.status === "pending" || check?.status === "running",
+            )
+          ) {
+            continue;
+          }
+          const reason = skippedPrerequisiteReason(command, checksById);
+          if (!reason) continue;
+          report = updateCheck(report, index, {
+            ...report.checks[index],
+            completedAt: clock.nowIso(),
+            failureReason: reason,
+            status: "skipped_prerequisite",
+          });
+          skippedAny = true;
+          skippedThisPass = true;
         }
-        const reason = skippedPrerequisiteReason(command, checksById);
-        if (!reason) continue;
-        report = updateCheck(report, index, {
-          ...report.checks[index],
-          completedAt: clock.nowIso(),
-          failureReason: reason,
-          status: "skipped_prerequisite",
-        });
-        skippedAny = true;
+        if (!skippedThisPass) break;
       }
       if (skippedAny) checkpoint();
 

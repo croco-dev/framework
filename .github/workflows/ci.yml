@@ -63,6 +63,7 @@ jobs:
           scripts/tests/verification-policy.spec.ts
           scripts/tests/branch-protection-policy.spec.ts
           scripts/tests/ci-workflow.spec.ts
+          scripts/tests/benchmark-workflow.spec.ts
           scripts/tests/repository-policy-audit-workflow.spec.ts
 
   validate:

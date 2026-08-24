@@ -21,6 +21,19 @@ function formatDiff(actual, expected) {
 }
 
 /**
+ * @param {unknown} value
+ */
+function escapeMarkdownCell(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll("@", "&#64;")
+    .replaceAll("|", "&#124;")
+    .replaceAll(/\r?\n/g, " ");
+}
+
+/**
  * @param {{ thresholdStatus?: string; baselineStatus?: string }} report
  */
 function statusEmoji(report) {
@@ -34,7 +47,7 @@ function statusEmoji(report) {
  */
 function statusNotes(report) {
   const notes = [report.thresholdSkipReason, report.baselineSkipReason].filter(Boolean);
-  return notes.length > 0 ? notes.join("<br>") : "-";
+  return notes.length > 0 ? notes.map(escapeMarkdownCell).join("<br>") : "-";
 }
 
 /**
@@ -47,11 +60,11 @@ export function buildCommentBody(result, sha) {
       const threshold = r.threshold ? formatDuration(r.threshold) : "-";
       const baseline = r.baseline ? formatDuration(r.baseline) : "-";
       const baselineDiff = formatDiff(r.p75, r.baseline);
-      return `| ${r.name} | ${formatDuration(r.p75)} | ${threshold} | ${baseline} | ${baselineDiff} | ${statusEmoji(r)} | ${statusNotes(r)} |`;
+      return `| ${escapeMarkdownCell(r.name)} | ${formatDuration(r.p75)} | ${threshold} | ${baseline} | ${baselineDiff} | ${statusEmoji(r)} | ${statusNotes(r)} |`;
     })
     .join("\n");
   const gateFailures = Array.isArray(result.gateFailures) ? result.gateFailures : [];
-  const failureLines = gateFailures.map((failure) => `- ${failure}`);
+  const failureLines = gateFailures.map((failure) => `- ${escapeMarkdownCell(failure)}`);
 
   const summary = result.allPassed ? "✅ All benchmarks passed" : "❌ Some benchmarks failed";
 
@@ -74,45 +87,66 @@ const COMMENT_MARKER = "<!-- benchmark-results -->";
 
 /**
  * Called by actions/github-script.
- * @param {{ github: any; context: any }} args
+ * @param {{ github: any; owner: string; repo: string; issueNumber: number; sha: string; resultPath?: string }} args
  */
-export async function run({ github, context }) {
-  if (!context.issue?.number) {
-    console.log("Not a PR context, skipping comment");
-    return;
-  }
-
+export async function run({
+  github,
+  owner,
+  repo,
+  issueNumber,
+  sha,
+  resultPath = "benchmark-result.json",
+}) {
   let result;
   try {
-    result = JSON.parse(readFileSync("benchmark-result.json", "utf-8"));
+    result = JSON.parse(readFileSync(resultPath, "utf-8"));
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error(`Failed to read benchmark-result.json: ${message}`);
-    return;
+    throw new Error(`Failed to read ${resultPath}: ${message}`);
   }
 
-  const body = buildCommentBody(result, context.sha);
+  const body = buildCommentBody(result, sha);
 
-  const { data: comments } = await github.rest.issues.listComments({
-    owner: context.repo.owner,
-    repo: context.repo.repo,
-    issue_number: context.issue.number,
+  const { data: pullRequest } = await github.rest.pulls.get({
+    owner,
+    repo,
+    pull_number: issueNumber,
+  });
+  if (
+    pullRequest.state !== "open" ||
+    pullRequest.base?.repo?.full_name !== `${owner}/${repo}` ||
+    pullRequest.base?.ref !== "trunk" ||
+    pullRequest.head?.sha !== sha
+  ) {
+    throw new Error(`Benchmark result targets stale or ineligible pull request revision ${sha}.`);
+  }
+
+  const comments = await github.paginate(github.rest.issues.listComments, {
+    owner,
+    repo,
+    issue_number: issueNumber,
+    per_page: 100,
   });
 
-  const existing = comments.find((c) => c.body?.includes(COMMENT_MARKER));
+  const existing = comments.find(
+    (comment) =>
+      comment.user?.login === "github-actions[bot]" &&
+      comment.user?.type === "Bot" &&
+      comment.body?.includes(COMMENT_MARKER),
+  );
 
   if (existing) {
     await github.rest.issues.updateComment({
-      owner: context.repo.owner,
-      repo: context.repo.repo,
+      owner,
+      repo,
       comment_id: existing.id,
       body,
     });
   } else {
     await github.rest.issues.createComment({
-      owner: context.repo.owner,
-      repo: context.repo.repo,
-      issue_number: context.issue.number,
+      owner,
+      repo,
+      issue_number: issueNumber,
       body,
     });
   }
