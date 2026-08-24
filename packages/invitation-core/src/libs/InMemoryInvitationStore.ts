@@ -7,18 +7,21 @@ import type {
   InvitationStatus,
 } from "./types";
 
+const snapshotInvitation = (invitation: Invitation): Invitation => structuredClone(invitation);
+
 export class InMemoryInvitationStore extends InvitationStore {
   private readonly storage = new Map<string, Invitation>();
   private readonly emailCreations = new Map<string, EmailInvitationCreation>();
 
   async findById(id: string): Promise<Invitation | null> {
-    return this.storage.get(id) ?? null;
+    const invitation = this.storage.get(id);
+    return invitation ? snapshotInvitation(invitation) : null;
   }
 
   async findByTokenHash(tokenHash: string): Promise<Invitation | null> {
     for (const invitation of this.storage.values()) {
       if (invitation.tokenHash === tokenHash) {
-        return invitation;
+        return snapshotInvitation(invitation);
       }
     }
 
@@ -28,7 +31,7 @@ export class InMemoryInvitationStore extends InvitationStore {
   async findByTenantAndEmail(tenantId: string, email: string): Promise<Invitation | null> {
     for (const invitation of this.storage.values()) {
       if (invitation.tenantId === tenantId && invitation.email === email) {
-        return invitation;
+        return snapshotInvitation(invitation);
       }
     }
 
@@ -36,12 +39,15 @@ export class InMemoryInvitationStore extends InvitationStore {
   }
 
   async findAllByTenant(tenantId: string): Promise<Invitation[]> {
-    return [...this.storage.values()].filter((invitation) => invitation.tenantId === tenantId);
+    return [...this.storage.values()]
+      .filter((invitation) => invitation.tenantId === tenantId)
+      .map(snapshotInvitation);
   }
 
   async save(invitation: Invitation): Promise<Invitation> {
-    this.storage.set(invitation.id, invitation);
-    return invitation;
+    const stored = snapshotInvitation(invitation);
+    this.storage.set(stored.id, stored);
+    return snapshotInvitation(stored);
   }
 
   async createEmailInvitation(
@@ -218,13 +224,13 @@ export class InMemoryInvitationStore extends InvitationStore {
       return null;
     }
 
-    const updated: Invitation = {
+    const updated = snapshotInvitation({
       ...invitation,
       status,
-    };
+    });
 
     this.storage.set(id, updated);
-    return updated;
+    return snapshotInvitation(updated);
   }
 
   async compareAndSetStatus(
@@ -239,14 +245,14 @@ export class InMemoryInvitationStore extends InvitationStore {
       return null;
     }
 
-    const updated: Invitation = {
+    const updated = snapshotInvitation({
       ...invitation,
       status: desired,
       acceptedAt: meta.acceptedAt ?? invitation.acceptedAt,
-    };
+    });
 
     this.storage.set(id, updated);
-    return updated;
+    return snapshotInvitation(updated);
   }
 
   async countPendingByTenant(tenantId: string, since: Date): Promise<number> {

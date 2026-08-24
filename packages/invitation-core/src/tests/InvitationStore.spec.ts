@@ -2,6 +2,23 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { InMemoryInvitationStore } from "../libs/InMemoryInvitationStore";
 import type { Invitation } from "../libs/types";
 
+type InvitationReader = (store: InMemoryInvitationStore) => Promise<Invitation | null>;
+
+const mutateInvitation = (invitation: Invitation): void => {
+  invitation.id = "mutated-invitation";
+  invitation.tenantId = "mutated-tenant";
+  invitation.inviterId = "mutated-inviter";
+  invitation.email = "mutated@croco.dev";
+  invitation.tokenHash = "mutated-token-hash";
+  invitation.type = "link";
+  invitation.role = "admin";
+  invitation.status = "revoked";
+  invitation.expiresAt.setTime(Date.parse("2040-01-01T00:00:00.000Z"));
+  invitation.acceptedAt?.setTime(Date.parse("2040-01-02T00:00:00.000Z"));
+  invitation.revokedAt?.setTime(Date.parse("2040-01-03T00:00:00.000Z"));
+  invitation.createdAt.setTime(Date.parse("2040-01-04T00:00:00.000Z"));
+};
+
 describe("InMemoryInvitationStore", () => {
   let store!: InMemoryInvitationStore;
 
@@ -103,6 +120,103 @@ describe("InMemoryInvitationStore", () => {
     const invitation = await store.findById("inv-1");
 
     expect(invitation?.status).toBe("revoked");
+  });
+
+  it("should isolate stored invitations from save inputs and outputs", async () => {
+    const input = createInvitation({
+      acceptedAt: new Date("2026-01-02T00:00:00.000Z"),
+      revokedAt: new Date("2026-01-03T00:00:00.000Z"),
+    });
+    const expected = structuredClone(input);
+
+    const saved = await store.save(input);
+    mutateInvitation(input);
+
+    expect(await store.findById(expected.id)).toEqual(expected);
+
+    mutateInvitation(saved);
+
+    const stored = await store.findById(expected.id);
+    expect(stored).toEqual(expected);
+    expect(stored).not.toBe(saved);
+    expect(stored?.expiresAt).not.toBe(input.expiresAt);
+    expect(stored?.acceptedAt).not.toBe(input.acceptedAt);
+    expect(stored?.revokedAt).not.toBe(input.revokedAt);
+    expect(stored?.createdAt).not.toBe(input.createdAt);
+  });
+
+  const readers: ReadonlyArray<readonly [string, InvitationReader]> = [
+    ["findById", (invitationStore) => invitationStore.findById("inv-1")],
+    ["findByTokenHash", (invitationStore) => invitationStore.findByTokenHash("hash-1")],
+    [
+      "findByTenantAndEmail",
+      (invitationStore) => invitationStore.findByTenantAndEmail("tenant-1", "member@croco.dev"),
+    ],
+    [
+      "findAllByTenant",
+      async (invitationStore) => (await invitationStore.findAllByTenant("tenant-1"))[0] ?? null,
+    ],
+  ];
+
+  it.each(readers)("should isolate %s outputs from stored invitations", async (_name, read) => {
+    const original = createInvitation({
+      acceptedAt: new Date("2026-01-02T00:00:00.000Z"),
+      revokedAt: new Date("2026-01-03T00:00:00.000Z"),
+    });
+    const expected = structuredClone(original);
+    await store.save(original);
+
+    const result = await read(store);
+    expect(result).not.toBeNull();
+    if (!result) {
+      return;
+    }
+    mutateInvitation(result);
+
+    expect(await store.findById(expected.id)).toEqual(expected);
+  });
+
+  it("should isolate updateStatus outputs from stored invitations", async () => {
+    await store.save(
+      createInvitation({
+        acceptedAt: new Date("2026-01-02T00:00:00.000Z"),
+        revokedAt: new Date("2026-01-03T00:00:00.000Z"),
+      }),
+    );
+
+    const updated = await store.updateStatus("tenant-1", "inv-1", "accepted");
+    expect(updated).not.toBeNull();
+    if (!updated) {
+      return;
+    }
+    const expected = structuredClone(updated);
+    mutateInvitation(updated);
+
+    expect(await store.findById(expected.id)).toEqual(expected);
+  });
+
+  it("should isolate compare-and-set inputs and outputs from stored invitations", async () => {
+    await store.save(
+      createInvitation({
+        acceptedAt: new Date("2026-01-02T00:00:00.000Z"),
+        revokedAt: new Date("2026-01-03T00:00:00.000Z"),
+      }),
+    );
+    const acceptedAt = new Date("2026-01-04T00:00:00.000Z");
+
+    const updated = await store.compareAndSetStatus("tenant-1", "inv-1", "pending", "accepted", {
+      acceptedAt,
+    });
+    expect(updated).not.toBeNull();
+    if (!updated) {
+      return;
+    }
+    const expected = structuredClone(updated);
+
+    acceptedAt.setTime(Date.parse("2041-01-01T00:00:00.000Z"));
+    mutateInvitation(updated);
+
+    expect(await store.findById(expected.id)).toEqual(expected);
   });
 
   it("should replay one durable creation for a tenant-scoped idempotency key", async () => {
