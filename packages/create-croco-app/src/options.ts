@@ -1,5 +1,5 @@
 import { DEFAULT_TENANT_MODEL } from "@croco/tenant-core/tenant-model";
-import { validateProjectName } from "./helpers/validate.js";
+import { parseWebAppNames, validateProjectName, validateWebAppNames } from "./helpers/validate.js";
 import {
   readGoal,
   resolveGoalOptions,
@@ -65,10 +65,7 @@ export function parseCliOptions(
     cliOptions.apiHosting = rawOptions.apiHosting as GeneratorOptions["apiHosting"];
   }
   if (typeof rawOptions.webApps === "string") {
-    cliOptions.webApps = rawOptions.webApps
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
+    cliOptions.webApps = parseWebAppNames(rawOptions.webApps);
   }
   if (typeof rawOptions.backendDeploy === "string") {
     cliOptions.backendDeploy = rawOptions.backendDeploy as GeneratorOptions["backendDeploy"];
@@ -115,6 +112,8 @@ export function validateCliOptions(cliOptions: Partial<GeneratorOptions>): void 
     );
   }
 
+  if (cliOptions.webApps !== undefined) assertValidWebAppNames(cliOptions.webApps);
+
   if (cliOptions.goal !== undefined) validateGoalCliOptions(cliOptions);
   if (cliOptions.preset !== undefined) readChoice("preset", cliOptions.preset, PRESETS);
   if (cliOptions.saasProviderProfile !== undefined) {
@@ -160,6 +159,8 @@ export function validateResolvedOptions(options: GeneratorOptions): void {
       "--scope",
     );
   }
+
+  assertValidWebAppNames(options.webApps);
 
   readChoice("preset", options.preset, PRESETS);
   if (options.goal) readGoal(options.goal);
@@ -634,6 +635,17 @@ function throwInvalidProjectName(detail: string): never {
     detail,
     "Choose a project name with lowercase letters, numbers, hyphens, or underscores.",
     "directory",
+  );
+}
+
+export function assertValidWebAppNames(webApps: readonly string[]): void {
+  const detail = validateWebAppNames(webApps);
+  if (!detail) return;
+
+  throwInvalidCliOption(
+    detail,
+    "Use unique lowercase letters, numbers, hyphens, or underscores without path separators or reserved names.",
+    "--web-apps",
   );
 }
 
