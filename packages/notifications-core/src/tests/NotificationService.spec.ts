@@ -23,7 +23,14 @@ import {
   NotificationProviderNotRegisteredProblem,
 } from "../libs/problems/NotificationProblems";
 import { NotificationChannel } from "../libs/types";
-import { createProvider, type MockNotificationProvider } from "./__fixtures__/mockProvider";
+import {
+  createConsumerManagedRenderedCapabilities,
+  createProvider,
+  type MockNotificationProvider,
+} from "./__fixtures__/mockProvider";
+
+const createRenderedProvider = (name: string, channel: NotificationChannel) =>
+  createProvider(name, channel, createConsumerManagedRenderedCapabilities(name, channel));
 
 const createExecutionManager = (): ExecutionManager => ({
   get: vi.fn(async () => {
@@ -97,7 +104,7 @@ describe("NotificationService", () => {
     taskRunner = new TaskRunner(createExecutionManager(), new TaskRegistry());
     executeSpy = vi.spyOn(taskRunner, "execute").mockResolvedValue(undefined);
     service = new NotificationService(taskRunner, registry);
-    emailProvider = createProvider("email-provider", NotificationChannel.EMAIL);
+    emailProvider = createRenderedProvider("email-provider", NotificationChannel.EMAIL);
   });
 
   describe("registerProvider()", () => {
@@ -105,7 +112,8 @@ describe("NotificationService", () => {
       service.registerProvider(emailProvider);
 
       expect(emailProvider.getName).toHaveBeenCalledTimes(1);
-      expect(emailProvider.getChannel).not.toHaveBeenCalled();
+      expect(emailProvider.getChannel).toHaveBeenCalledTimes(1);
+      expect(emailProvider.getCapabilities).toHaveBeenCalledTimes(1);
     });
 
     it("should register provider as default when isDefault is true", () => {
@@ -113,6 +121,7 @@ describe("NotificationService", () => {
 
       expect(emailProvider.getName).toHaveBeenCalledTimes(1);
       expect(emailProvider.getChannel).toHaveBeenCalledTimes(1);
+      expect(emailProvider.getCapabilities).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -196,8 +205,42 @@ describe("NotificationService", () => {
       });
     });
 
+    it("should dispatch with the capability snapshot validated at registration", async () => {
+      const capabilities = {
+        providerName: "snapshot-provider",
+        channels: [NotificationChannel.EMAIL],
+        supportsIdempotencyKey: false,
+        supportsProviderTemplates: false,
+        supportsRenderedTemplates: true,
+        outboxIntegration: "consumer-managed" as const,
+      };
+      const provider = createProvider("snapshot-provider", NotificationChannel.EMAIL, capabilities);
+      service.registerProvider(provider, true);
+
+      capabilities.providerName = "mutated-provider";
+      capabilities.supportsIdempotencyKey = true;
+      capabilities.channels.push(NotificationChannel.SMS);
+
+      await service.send(
+        NotificationChannel.EMAIL,
+        { to: "test@example.com", content: "Test Content" },
+        createSendOptions(NotificationChannel.EMAIL),
+      );
+
+      expect(executeSpy.mock.calls[0]?.[1]).toMatchObject({
+        dispatchContext: {
+          providerCapabilities: {
+            providerName: "snapshot-provider",
+            channels: [NotificationChannel.EMAIL],
+            supportsIdempotencyKey: false,
+          },
+        },
+      });
+      expect(provider.getCapabilities).toHaveBeenCalledTimes(1);
+    });
+
     it("should use specified provider name when it matches the requested channel", async () => {
-      const smsProvider = createProvider("sms-provider", NotificationChannel.SMS);
+      const smsProvider = createRenderedProvider("sms-provider", NotificationChannel.SMS);
 
       service.registerProvider(emailProvider, true);
       service.registerProvider(smsProvider);
@@ -252,7 +295,7 @@ describe("NotificationService", () => {
     });
 
     it("should use provider name from options when it matches the requested channel", async () => {
-      const smsProvider = createProvider("sms-provider", NotificationChannel.SMS);
+      const smsProvider = createRenderedProvider("sms-provider", NotificationChannel.SMS);
 
       service.registerProvider(emailProvider, true);
       service.registerProvider(smsProvider);
@@ -279,7 +322,7 @@ describe("NotificationService", () => {
     });
 
     it("should send notification with empty-string default provider name", async () => {
-      const unnamedProvider = createProvider("", NotificationChannel.EMAIL);
+      const unnamedProvider = createRenderedProvider("", NotificationChannel.EMAIL);
 
       service.registerProvider(unnamedProvider, true);
 
@@ -306,7 +349,7 @@ describe("NotificationService", () => {
     });
 
     it("should use explicit empty-string provider name when it matches the requested channel", async () => {
-      const unnamedProvider = createProvider("", NotificationChannel.EMAIL);
+      const unnamedProvider = createRenderedProvider("", NotificationChannel.EMAIL);
 
       service.registerProvider(emailProvider, true);
       service.registerProvider(unnamedProvider);
@@ -676,7 +719,7 @@ describe("NotificationService", () => {
     });
 
     it("should throw error when specified provider channel does not match requested channel", async () => {
-      const smsProvider = createProvider("sms-provider", NotificationChannel.SMS);
+      const smsProvider = createRenderedProvider("sms-provider", NotificationChannel.SMS);
 
       service.registerProvider(emailProvider, true);
       service.registerProvider(smsProvider);

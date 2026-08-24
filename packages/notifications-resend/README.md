@@ -51,6 +51,10 @@ await provider.send({
 `@croco/notifications-core`에서 렌더링된 `content`를 Resend HTML 본문으로 전송하며,
 `templateId`, `templateVersion`, `locale`은 dispatch/telemetry evidence로 보존합니다.
 
+`ResendProvider.getCapabilities()`는 email, idempotency key, rendered template, consumer-managed outbox
+프로필을 명시적으로 선언합니다. `NotificationProviderRegistry`는 등록 시 이 프로필의 provider 이름과
+채널을 검증하며, dispatch는 추론된 기본값을 사용하지 않습니다.
+
 ## Runtime configuration
 
 | 값                   | 필수 | 설명                                                     |

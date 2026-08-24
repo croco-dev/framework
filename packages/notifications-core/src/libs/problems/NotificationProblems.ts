@@ -75,6 +75,61 @@ export class NotificationProviderAlreadyRegisteredProblem extends Problem {
   }
 }
 
+export class NotificationProviderCapabilitiesMissingProblem extends Problem {
+  constructor(providerName: string) {
+    super(
+      "notifications-core/provider-capabilities-missing",
+      ProblemCategory.InternalServerError,
+      `Provider ${providerName} must declare an explicit capability profile`,
+      {
+        extensions: {
+          providerName,
+          retryable: false,
+        },
+      },
+    );
+  }
+}
+
+export class NotificationProviderCapabilityNameMismatchProblem extends Problem {
+  constructor(providerName: string, capabilityProviderName: string) {
+    super(
+      "notifications-core/provider-capability-name-mismatch",
+      ProblemCategory.InternalServerError,
+      `Provider ${providerName} declares capability profile for ${capabilityProviderName}`,
+      {
+        extensions: {
+          providerName,
+          capabilityProviderName,
+          retryable: false,
+        },
+      },
+    );
+  }
+}
+
+export class NotificationProviderCapabilityChannelMismatchProblem extends Problem {
+  constructor(
+    providerName: string,
+    providerChannel: NotificationChannel,
+    capabilityChannels: readonly NotificationChannel[],
+  ) {
+    super(
+      "notifications-core/provider-capability-channel-mismatch",
+      ProblemCategory.InternalServerError,
+      `Provider ${providerName} capability profile does not include channel ${providerChannel}`,
+      {
+        extensions: {
+          providerName,
+          providerChannel,
+          capabilityChannels,
+          retryable: false,
+        },
+      },
+    );
+  }
+}
+
 export class NotificationDefaultProviderConflictProblem extends Problem {
   constructor(channel: NotificationChannel, existingProviderName: string, providerName: string) {
     super(

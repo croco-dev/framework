@@ -21,6 +21,7 @@
       "@croco/storage-core": ["../storage-core/src/index.ts"],
       "@croco/telemetry-api": ["../telemetry-api/src/index.ts"],
       "@croco/testing/drizzle": ["./src/drizzle.ts"],
+      "@croco/testing/notifications": ["./src/notifications.ts"],
       "@croco/testing": ["./src/index.ts"],
       "@croco/transports-http": ["../transports-http/src/index.ts"]
     }

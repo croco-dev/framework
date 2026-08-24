@@ -961,6 +961,8 @@
           "rendered template send",
           "retry",
           "idempotency key",
+          "explicit capability profile",
+          "shared capability conformance",
           "safe diagnostics",
           "redacted upstream Problems",
           "optional live smoke"

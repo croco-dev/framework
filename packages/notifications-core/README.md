@@ -19,6 +19,30 @@ implement the shared interface while application code uses `NotificationService`
 - Notification channel, payload, provider, job, and result types.
 - Notification Problems for provider and delivery failures.
 
+Every provider must declare its complete capability profile. Registration rejects a profile whose
+`providerName` differs from `getName()` or whose `channels` omit `getChannel()`. The registry retains the
+validated profile for dispatch; it never infers template, idempotency, or outbox behavior. Provider integrations
+can expose that same explicit profile through their diagnostics, and certification suites can inspect it through
+`getCapabilities()`.
+
+```typescript
+import { NotificationChannel, type NotificationProvider } from "@croco/notifications-core";
+
+const provider: NotificationProvider = {
+  getName: () => "example-email",
+  getChannel: () => NotificationChannel.EMAIL,
+  getCapabilities: () => ({
+    providerName: "example-email",
+    channels: [NotificationChannel.EMAIL],
+    supportsIdempotencyKey: false,
+    supportsProviderTemplates: false,
+    supportsRenderedTemplates: true,
+    outboxIntegration: "consumer-managed",
+  }),
+  send: async () => ({ success: true }),
+};
+```
+
 ## Usage
 
 ```typescript

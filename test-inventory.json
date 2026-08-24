@@ -2321,6 +2321,12 @@
       "owner": "@croco/notifications-core"
     },
     {
+      "path": "packages/notifications-core/src/tests/NotificationProviderConformance.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/notifications-core"
+    },
+    {
       "path": "packages/notifications-core/src/tests/NotificationProviderRegistry.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -2355,6 +2361,12 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/notifications-react-email"
+    },
+    {
+      "path": "packages/notifications-resend/src/tests/NotificationProviderConformance.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/notifications-resend"
     },
     {
       "path": "packages/notifications-resend/src/tests/ResendLiveSmoke.spec.ts",

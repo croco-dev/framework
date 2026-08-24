@@ -37,20 +37,7 @@ export type NotificationIdempotencyKeyInput = {
 export function getNotificationProviderCapabilities(
   provider: NotificationProvider,
 ): NotificationProviderCapabilities {
-  const declaredCapabilities = provider.getCapabilities?.();
-
-  if (declaredCapabilities !== undefined) {
-    return declaredCapabilities;
-  }
-
-  return {
-    providerName: provider.getName(),
-    channels: [provider.getChannel()],
-    supportsIdempotencyKey: false,
-    supportsProviderTemplates: false,
-    supportsRenderedTemplates: true,
-    outboxIntegration: "consumer-managed",
-  };
+  return provider.getCapabilities();
 }
 
 export function createNotificationDispatchRequest(
