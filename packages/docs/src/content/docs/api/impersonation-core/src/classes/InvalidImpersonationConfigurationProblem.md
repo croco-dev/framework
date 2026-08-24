@@ -5,7 +5,7 @@ prev: false
 title: "InvalidImpersonationConfigurationProblem"
 ---
 
-RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다.
+유효하지 않은 impersonation 설정으로 런타임 초기화를 진행할 수 없을 때 발생합니다.
 
 ## Extends
 

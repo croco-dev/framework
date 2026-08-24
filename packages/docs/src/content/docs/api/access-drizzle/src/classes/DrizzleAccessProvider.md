@@ -33,7 +33,7 @@ Drizzle 실행 클라이언트를 주입해 접근 제어 저장소를 초기화
 
 ### check()
 
-> **check**(`request`): `Promise`\<[`CheckResult`](/api/access-core/src/interfaces/checkresult/)\>
+> **check**(`request`): `Promise`\<[`CheckResult`](/api/access-core/src/type-aliases/checkresult/)\>
 
 요청한 관계가 직접 또는 재귀 관계를 통해 허용되는지 확인합니다.
 
@@ -45,7 +45,7 @@ Drizzle 실행 클라이언트를 주입해 접근 제어 저장소를 초기화
 
 #### Returns
 
-`Promise`\<[`CheckResult`](/api/access-core/src/interfaces/checkresult/)\>
+`Promise`\<[`CheckResult`](/api/access-core/src/type-aliases/checkresult/)\>
 
 #### Implementation of
 

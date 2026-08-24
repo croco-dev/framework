@@ -126,7 +126,7 @@ describe("AccessGuard", () => {
       id: "doc-1",
     });
 
-    vi.spyOn(mockAccessEngine, "check").mockResolvedValue({ allowed: false });
+    vi.spyOn(mockAccessEngine, "check").mockResolvedValue({ decision: "deny", allowed: false });
 
     const result = accessGuard.canActivate(context);
 
@@ -143,6 +143,24 @@ describe("AccessGuard", () => {
         ruleId: "access:document:editor",
       }),
     );
+  });
+
+  it("should treat abstain as not allowed", async () => {
+    class TestController {
+      @Access("document", "editor")
+      protectedMethod() {}
+    }
+    const context = createMockContext(TestController, "protectedMethod", mockUser, mockTenantId, {
+      id: "doc-1",
+    });
+
+    vi.spyOn(mockAccessEngine, "check").mockResolvedValue({
+      decision: "abstain",
+      allowed: false,
+      reason: "Policy could not decide",
+    });
+
+    await expect(accessGuard.canActivate(context)).rejects.toThrow(ForbiddenProblem);
   });
 
   it("should include the decision id when access check fails", async () => {
@@ -162,7 +180,11 @@ describe("AccessGuard", () => {
       tenantId: mockTenantId,
     });
 
-    vi.spyOn(mockAccessEngine, "check").mockResolvedValue({ allowed: false, trace });
+    vi.spyOn(mockAccessEngine, "check").mockResolvedValue({
+      decision: "deny",
+      allowed: false,
+      trace,
+    });
 
     await expect(accessGuard.canActivate(context)).rejects.toMatchObject({
       extensions: {
@@ -180,7 +202,7 @@ describe("AccessGuard", () => {
       id: "doc-1",
     });
 
-    vi.spyOn(mockAccessEngine, "check").mockResolvedValue({ allowed: true });
+    vi.spyOn(mockAccessEngine, "check").mockResolvedValue({ decision: "allow", allowed: true });
 
     const result = await accessGuard.canActivate(context);
     expect(result).toBe(true);
@@ -204,7 +226,7 @@ describe("AccessGuard", () => {
       documentId: "doc-123",
     });
 
-    vi.spyOn(mockAccessEngine, "check").mockResolvedValue({ allowed: true });
+    vi.spyOn(mockAccessEngine, "check").mockResolvedValue({ decision: "allow", allowed: true });
 
     const result = await accessGuard.canActivate(context);
     expect(result).toBe(true);
@@ -229,7 +251,7 @@ describe("AccessGuard", () => {
       documentId: "doc-from-documentId",
     });
 
-    vi.spyOn(mockAccessEngine, "check").mockResolvedValue({ allowed: true });
+    vi.spyOn(mockAccessEngine, "check").mockResolvedValue({ decision: "allow", allowed: true });
 
     const result = await accessGuard.canActivate(context);
     expect(result).toBe(true);
@@ -270,7 +292,7 @@ describe("AccessGuard", () => {
       rawParams: { id: "doc-from-http" },
     });
 
-    vi.spyOn(mockAccessEngine, "check").mockResolvedValue({ allowed: true });
+    vi.spyOn(mockAccessEngine, "check").mockResolvedValue({ decision: "allow", allowed: true });
 
     const result = await accessGuard.canActivate(context);
     expect(result).toBe(true);
@@ -297,7 +319,7 @@ describe("AccessGuard", () => {
       ctxTenantId: "tenant-from-context",
     });
 
-    vi.spyOn(mockAccessEngine, "check").mockResolvedValue({ allowed: true });
+    vi.spyOn(mockAccessEngine, "check").mockResolvedValue({ decision: "allow", allowed: true });
 
     const result = await accessGuard.canActivate(context);
     expect(result).toBe(true);
@@ -323,7 +345,7 @@ describe("AccessGuard", () => {
       rawParams: { id: "doc-context-fallback" },
     });
 
-    vi.spyOn(mockAccessEngine, "check").mockResolvedValue({ allowed: true });
+    vi.spyOn(mockAccessEngine, "check").mockResolvedValue({ decision: "allow", allowed: true });
 
     await Context.run({ requestId: "req-1", tenantId: "tenant-from-request-context" }, async () => {
       const result = await accessGuard.canActivate(context);

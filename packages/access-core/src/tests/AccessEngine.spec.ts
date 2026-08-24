@@ -4,6 +4,7 @@ import { AccessEngine } from "../libs/AccessEngine";
 import type { AccessProvider } from "../libs/interfaces/AccessProvider";
 import type {
   CheckRequest,
+  CheckResult,
   GrantRequest,
   ListRequest,
   RelationTuple,
@@ -44,7 +45,7 @@ describe("AccessEngine", () => {
         relation: "viewer",
         object: "document:document-1",
       };
-      vi.mocked(mockProvider.check).mockResolvedValue({ allowed: false });
+      vi.mocked(mockProvider.check).mockResolvedValue({ decision: "deny", allowed: false });
 
       const result = await accessEngine.check(request);
 
@@ -67,7 +68,7 @@ describe("AccessEngine", () => {
         relation: "editor",
         object: "document:document-1",
       };
-      vi.mocked(mockProvider.check).mockResolvedValue({ allowed: true });
+      vi.mocked(mockProvider.check).mockResolvedValue({ decision: "allow", allowed: true });
 
       const result = await accessEngine.check(request);
 
@@ -86,7 +87,7 @@ describe("AccessEngine", () => {
         relation: "viewer",
         object: "document:document-1",
       };
-      vi.mocked(mockProvider.check).mockResolvedValue({ allowed: true });
+      vi.mocked(mockProvider.check).mockResolvedValue({ decision: "allow", allowed: true });
 
       const result = await accessEngine.check(request);
 
@@ -116,6 +117,73 @@ describe("AccessEngine", () => {
       });
     });
 
+    it("should normalize the compatibility boolean from the provider decision", async () => {
+      const request: CheckRequest = {
+        tenantId: "tenant-1",
+        subject: "user:user-1",
+        relation: "viewer",
+        object: "document:document-1",
+      };
+      const contradictoryRuntimeResult = {
+        decision: "deny",
+        allowed: true,
+      } as unknown as CheckResult;
+      vi.mocked(mockProvider.check).mockResolvedValue(contradictoryRuntimeResult);
+
+      const result = await accessEngine.check(request);
+
+      expect(result).toMatchObject({
+        decision: "deny",
+        allowed: false,
+        trace: { result: "deny" },
+      });
+    });
+
+    it("should reject provider results without an authoritative decision", async () => {
+      const request: CheckRequest = {
+        tenantId: "tenant-1",
+        subject: "user:user-1",
+        relation: "viewer",
+        object: "document:document-1",
+      };
+      vi.mocked(mockProvider.check).mockResolvedValue({ allowed: true } as unknown as CheckResult);
+
+      await expect(accessEngine.check(request)).rejects.toMatchObject({
+        code: "access-core/invalid-provider-result",
+      });
+    });
+
+    it("should reject provider results with an unsupported decision", async () => {
+      const request: CheckRequest = {
+        tenantId: "tenant-1",
+        subject: "user:user-1",
+        relation: "viewer",
+        object: "document:document-1",
+      };
+      vi.mocked(mockProvider.check).mockResolvedValue({
+        decision: "unsupported",
+        allowed: false,
+      } as unknown as CheckResult);
+
+      await expect(accessEngine.check(request)).rejects.toMatchObject({
+        code: "access-core/invalid-provider-result",
+      });
+    });
+
+    it.each([null, undefined])("should reject a %s provider result", async (providerResult) => {
+      const request: CheckRequest = {
+        tenantId: "tenant-1",
+        subject: "user:user-1",
+        relation: "viewer",
+        object: "document:document-1",
+      };
+      vi.mocked(mockProvider.check).mockResolvedValue(providerResult as unknown as CheckResult);
+
+      await expect(accessEngine.check(request)).rejects.toMatchObject({
+        code: "access-core/invalid-provider-result",
+      });
+    });
+
     it("should record a trace through the configured audit sink", async () => {
       const request: CheckRequest = {
         tenantId: "tenant-1",
@@ -135,7 +203,7 @@ describe("AccessEngine", () => {
         recordPolicyDecisionTrace: vi.fn(async () => undefined),
       };
       accessEngine = new AccessEngine(mockProvider, { traceSink });
-      vi.mocked(mockProvider.check).mockResolvedValue({ allowed: false });
+      vi.mocked(mockProvider.check).mockResolvedValue({ decision: "deny", allowed: false });
 
       const result = await accessEngine.check(request);
 

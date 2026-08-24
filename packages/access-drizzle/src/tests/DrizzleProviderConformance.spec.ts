@@ -142,6 +142,7 @@ describe("access-drizzle provider conformance", () => {
               });
 
               expect(result.allowed).toBe(false);
+              expect(result.decision).toBe("deny");
               expect(execute).toHaveBeenCalledTimes(1);
             },
           },
@@ -165,7 +166,7 @@ describe("access-drizzle provider conformance", () => {
                     relation: "viewer",
                     object: "document:missing",
                   }),
-                ).resolves.toEqual({ allowed: false });
+                ).resolves.toEqual({ decision: "deny", allowed: false });
               },
             },
           ],

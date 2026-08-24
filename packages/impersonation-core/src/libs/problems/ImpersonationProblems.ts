@@ -12,6 +12,9 @@ export type InvalidImpersonationConfigurationProblemOptions = {
   readonly receivedValue: number | string;
 };
 
+/**
+ * 유효하지 않은 impersonation 설정으로 런타임 초기화를 진행할 수 없을 때 발생합니다.
+ */
 export class InvalidImpersonationConfigurationProblem extends Problem {
   readonly code = "IMPERSONATION_CONFIGURATION_INVALID";
   readonly category = ProblemCategory.InternalServerError;
