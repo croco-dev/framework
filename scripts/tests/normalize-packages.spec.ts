@@ -1521,27 +1521,7 @@ function writePackage(
 }
 
 function writePublishablePackage(root: string, scripts: Record<string, string>): string {
-  return writePackage(root, "example", {
-    name: "@croco/example",
-    version: "0.0.3",
-    files: ["dist"],
-    type: "commonjs",
-    main: "./src/index.ts",
-    types: "./src/index.ts",
-    scripts,
-    publishConfig: {
-      access: "public",
-      main: "./dist/index.js",
-      types: "./dist/index.d.ts",
-      exports: {
-        ".": {
-          import: "./dist/index.mjs",
-          require: "./dist/index.js",
-          types: "./dist/index.d.ts",
-        },
-      },
-    },
-  });
+  return writePackage(root, "example", publishablePackage("@croco/example", { scripts }));
 }
 
 function writeExamplePackage(

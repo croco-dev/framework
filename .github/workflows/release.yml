@@ -114,10 +114,13 @@ jobs:
         id: release_execution
         if: steps.release_state.outputs.is_current == 'true'
         shell: bash
+        env:
+          CLASSIFIED_CHANGESETS_ACTION: ${{ steps.release_work.outputs.should_run_changesets_action }}
+          CLASSIFIED_VERIFICATION: ${{ steps.release_work.outputs.should_run_verification }}
         run: |
           node --experimental-strip-types scripts/release-reconciliation-state.mts \
-            --classified-verification "${{ steps.release_work.outputs.should_run_verification }}" \
-            --classified-changesets-action "${{ steps.release_work.outputs.should_run_changesets_action }}" \
+            --classified-verification "$CLASSIFIED_VERIFICATION" \
+            --classified-changesets-action "$CLASSIFIED_CHANGESETS_ACTION" \
             --github-output "$GITHUB_OUTPUT"
 
       - name: Verify release PR automation credentials
@@ -164,13 +167,16 @@ jobs:
         id: release_spine_evidence
         if: steps.release_execution.outputs.should_run_verification == 'true'
         shell: bash
+        env:
+          ALLOW_PENDING_RELEASE_METADATA: ${{ steps.release_work.outputs.allow_pending_release_metadata }}
+          RELEASE_BASE: ${{ steps.release_work.outputs.base }}
         run: |
           args=(--output-dir ci-reports/release)
-          if [ "${{ steps.release_work.outputs.allow_pending_release_metadata }}" = "true" ]; then
+          if [ "$ALLOW_PENDING_RELEASE_METADATA" = "true" ]; then
             args+=(--allow-pending-release-metadata)
           fi
           if [ "$GITHUB_EVENT_NAME" != "workflow_dispatch" ]; then
-            args+=(--base "${{ steps.release_work.outputs.base }}" --head HEAD)
+            args+=(--base "$RELEASE_BASE" --head HEAD)
           fi
           pnpm verify:publish -- "${args[@]}"
 

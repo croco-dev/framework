@@ -292,21 +292,24 @@ function runCurrentTrunkGuard(currentSha: string, verifiedSha = "a".repeat(40)) 
     releaseSteps(parseWorkflow(workflow)),
     "Revalidate current trunk revision",
   );
-  const result = spawnSync("bash", ["-c", String(guardStep.run)], {
-    encoding: "utf8",
-    env: {
-      ...process.env,
-      CURRENT_TRUNK_SHA: currentSha,
-      GH_TOKEN: "test-token",
-      GITHUB_OUTPUT: output,
-      GITHUB_REPOSITORY: "croco/framework",
-      PATH: `${fixtureDir}:${process.env.PATH ?? ""}`,
-      VERIFIED_SHA: verifiedSha,
-    },
-  });
-  const githubOutput = result.status === 0 ? readFileSync(output, "utf8") : "";
-  rmSync(fixtureDir, { recursive: true, force: true });
-  return { ...result, githubOutput };
+  try {
+    const result = spawnSync("bash", ["-c", String(guardStep.run)], {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        CURRENT_TRUNK_SHA: currentSha,
+        GH_TOKEN: "test-token",
+        GITHUB_OUTPUT: output,
+        GITHUB_REPOSITORY: "croco/framework",
+        PATH: `${fixtureDir}:${process.env.PATH ?? ""}`,
+        VERIFIED_SHA: verifiedSha,
+      },
+    });
+    const githubOutput = result.status === 0 ? readFileSync(output, "utf8") : "";
+    return { ...result, githubOutput };
+  } finally {
+    rmSync(fixtureDir, { recursive: true, force: true });
+  }
 }
 
 describe("Release PR authentication contract", () => {
@@ -506,7 +509,9 @@ describe("Release PR authentication contract", () => {
         ),
     },
   ])("rejects hostile authentication mutation: $name", ({ mutate }) => {
-    expect(() => assertReleasePrAuthenticationContract(mutate(workflow))).toThrow();
+    const mutant = mutate(workflow);
+    expect(mutant).not.toBe(workflow);
+    expect(() => assertReleasePrAuthenticationContract(mutant)).toThrow();
   });
 });
 
@@ -540,14 +545,12 @@ describe("Release verification profile contract", () => {
     expect(workflow).toContain("--workflow release");
     expect(workflow).toContain('echo "base=$base" >> "$GITHUB_OUTPUT"');
     expect(workflow).toContain(
-      'if [ "$GITHUB_EVENT_NAME" != "workflow_dispatch" ]; then\n            args+=(--base "${{ steps.release_work.outputs.base }}" --head HEAD)',
+      'if [ "$GITHUB_EVENT_NAME" != "workflow_dispatch" ]; then\n            args+=(--base "$RELEASE_BASE" --head HEAD)',
     );
     expect(workflow).toContain('pnpm verify:publish -- "${args[@]}"');
     expect(workflow.match(/verify:publish/g)).toHaveLength(1);
     expect(workflow).not.toContain("test:release-gates");
-    expect(workflow).toContain(
-      'if [ "${{ steps.release_work.outputs.allow_pending_release_metadata }}" = "true" ]; then',
-    );
+    expect(workflow).toContain('if [ "$ALLOW_PENDING_RELEASE_METADATA" = "true" ]; then');
     expect(workflow).toContain("args+=(--allow-pending-release-metadata)");
   });
 
@@ -591,10 +594,17 @@ describe("Release verification profile contract", () => {
     expect(releaseExecutionStep.if).toBe("steps.release_state.outputs.is_current == 'true'");
     expect(releaseExecutionStep.run).toContain("scripts/release-reconciliation-state.mts");
     expect(releaseExecutionStep.run).toContain(
-      '--classified-verification "${{ steps.release_work.outputs.should_run_verification }}"',
+      '--classified-verification "$CLASSIFIED_VERIFICATION"',
     );
     expect(releaseExecutionStep.run).toContain(
-      '--classified-changesets-action "${{ steps.release_work.outputs.should_run_changesets_action }}"',
+      '--classified-changesets-action "$CLASSIFIED_CHANGESETS_ACTION"',
+    );
+    expect(releaseExecutionStep.run).not.toContain("${{");
+    expect(releaseExecutionStep.env?.CLASSIFIED_VERIFICATION).toBe(
+      "${{ steps.release_work.outputs.should_run_verification }}",
+    );
+    expect(releaseExecutionStep.env?.CLASSIFIED_CHANGESETS_ACTION).toBe(
+      "${{ steps.release_work.outputs.should_run_changesets_action }}",
     );
     expect(playwrightStep.if).toBe(
       "steps.release_execution.outputs.should_run_verification == 'true'",
@@ -602,6 +612,11 @@ describe("Release verification profile contract", () => {
     expect(verificationStep.if).toBe(
       "steps.release_execution.outputs.should_run_verification == 'true'",
     );
+    expect(verificationStep.run).not.toContain("${{");
+    expect(verificationStep.env?.ALLOW_PENDING_RELEASE_METADATA).toBe(
+      "${{ steps.release_work.outputs.allow_pending_release_metadata }}",
+    );
+    expect(verificationStep.env?.RELEASE_BASE).toBe("${{ steps.release_work.outputs.base }}");
     expect(releaseExecutionIndex).toBeGreaterThan(setupNodeIndex);
     expect(releaseExecutionIndex).toBeLessThan(installDependenciesIndex);
     expect(playwrightIndex).toBeGreaterThan(releaseExecutionIndex);
