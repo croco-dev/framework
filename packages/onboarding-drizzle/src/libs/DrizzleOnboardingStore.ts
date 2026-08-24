@@ -74,6 +74,9 @@ export class DrizzleOnboardingStore extends OnboardingStore {
       steps: row.steps as OnboardingState["steps"],
       isCompleted: row.isCompleted,
       completedAt: row.completedAt ?? undefined,
+      status: row.status ?? undefined,
+      startedAt: row.startedAt ?? undefined,
+      currentStepId: row.currentStepId ?? undefined,
     };
   }
 
@@ -97,6 +100,9 @@ export class DrizzleOnboardingStore extends OnboardingStore {
         steps: state.steps,
         isCompleted: state.isCompleted,
         completedAt: state.completedAt,
+        status: state.status ?? null,
+        startedAt: state.startedAt ?? null,
+        currentStepId: state.currentStepId ?? null,
         completionStepId: null,
       })
       .onConflictDoUpdate({
@@ -105,6 +111,9 @@ export class DrizzleOnboardingStore extends OnboardingStore {
           steps: state.steps,
           isCompleted: state.isCompleted,
           completedAt: state.completedAt,
+          status: state.status ?? null,
+          startedAt: state.startedAt ?? null,
+          currentStepId: state.currentStepId ?? null,
           completionStepId: null,
           updatedAt: new Date(),
         },
@@ -180,6 +189,9 @@ export class DrizzleOnboardingStore extends OnboardingStore {
         steps: onboardingStates.steps,
         isCompleted: onboardingStates.isCompleted,
         completedAt: onboardingStates.completedAt,
+        status: onboardingStates.status,
+        startedAt: onboardingStates.startedAt,
+        currentStepId: onboardingStates.currentStepId,
         onboardingCompleted: sql<boolean>`coalesce(
           ${onboardingStates.completionStepId} = ${input.stepId},
           false
@@ -196,6 +208,9 @@ export class DrizzleOnboardingStore extends OnboardingStore {
         steps: row.steps as OnboardingState["steps"],
         isCompleted: row.isCompleted,
         completedAt: row.completedAt ?? undefined,
+        status: row.status ?? undefined,
+        startedAt: row.startedAt ?? undefined,
+        currentStepId: row.currentStepId ?? undefined,
       },
       onboardingCompleted: row.onboardingCompleted,
     };

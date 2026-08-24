@@ -2375,6 +2375,12 @@
       "owner": "@croco/onboarding-core"
     },
     {
+      "path": "packages/onboarding-core/src/tests/OnboardingStoreConformance.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/onboarding-core"
+    },
+    {
       "path": "packages/onboarding-drizzle/src/tests/DrizzleOnboardingStore.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -2382,6 +2388,12 @@
     },
     {
       "path": "packages/onboarding-drizzle/src/tests/DrizzleProviderConformance.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/onboarding-drizzle"
+    },
+    {
+      "path": "packages/onboarding-drizzle/src/tests/OnboardingLifecycleFieldsMigration.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/onboarding-drizzle"

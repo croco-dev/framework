@@ -1,4 +1,4 @@
-import type { OnboardingState } from "@croco/onboarding-core";
+import type { OnboardingState, OnboardingStatus } from "@croco/onboarding-core";
 import { boolean, jsonb, pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
 
 /**
@@ -14,6 +14,9 @@ export const onboardingStates = pgTable(
     steps: jsonb("steps").$type<OnboardingState["steps"]>().notNull().default({}),
     isCompleted: boolean("is_completed").notNull().default(false),
     completedAt: timestamp("completed_at"),
+    status: text("status").$type<OnboardingStatus>(),
+    startedAt: timestamp("started_at"),
+    currentStepId: text("current_step_id"),
     completionStepId: text("completion_step_id"),
 
     createdAt: timestamp("created_at").defaultNow().notNull(),
