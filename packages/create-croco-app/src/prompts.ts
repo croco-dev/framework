@@ -6,7 +6,12 @@ import {
 } from "@croco/tenant-core/tenant-model";
 import pc from "picocolors";
 import { GOAL_SPECS, readGoal, resolveGoalOptions } from "./goals.js";
-import { assertUiCompatibility, assertUiPresetCompatibility } from "./options.js";
+import { parseWebAppNames } from "./helpers/validate.js";
+import {
+  assertUiCompatibility,
+  assertUiPresetCompatibility,
+  assertValidWebAppNames,
+} from "./options.js";
 import {
   DEFAULT_SAAS_PROVIDER_PROFILE,
   SAAS_PROVIDER_PROFILE_CHOICES,
@@ -296,10 +301,8 @@ export async function runPrompts(cliArgs: Partial<GeneratorOptions>): Promise<Ge
       p.cancel("Operation cancelled");
       process.exit(0);
     }
-    webApps = (webAppsInput as string)
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
+    webApps = parseWebAppNames(webAppsInput as string);
+    assertValidWebAppNames(webApps);
   }
 
   // 5. api type

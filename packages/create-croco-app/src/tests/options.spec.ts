@@ -3,6 +3,7 @@ import { existsSync, rmSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createProgram } from "../cli.js";
 import { createCreateCrocoAppProgram } from "../cli-program.js";
+import { InvalidCliOptionProblem } from "../libs/problems/InvalidCliOptionProblem.js";
 import { InvalidGoalOptionProblem } from "../libs/problems/InvalidGoalOptionProblem.js";
 import {
   normalizeNonInteractiveOptions,
@@ -179,6 +180,100 @@ describe("noninteractive CLI option validation", () => {
     expect(() => normalizeNonInteractiveOptions(cliOptions)).toThrow(
       'Invalid --api value "rest". Expected graphql or trpc.',
     );
+  });
+
+  it.each([
+    "../../outside",
+    "/tmp/outside",
+    "C:\\outside",
+    "D:/outside",
+    "\\\\server\\share",
+    "nested/app",
+    "nested\\app",
+    ".",
+    "..",
+    "web\u0000app",
+    "con",
+    "node_modules",
+    "Admin",
+  ])("rejects unsafe or non-portable --web-apps name %j with a stable Problem", (webApp) => {
+    const cliOptions = parseCliOptions("my-fullstack", {
+      preset: "ddd-fullstack",
+      scope: "@test",
+      api: "trpc",
+      webApps: webApp,
+      install: false,
+      git: false,
+    });
+
+    let error: unknown;
+    try {
+      validateCliOptions(cliOptions);
+    } catch (err) {
+      error = err;
+    }
+
+    expect(error).toBeInstanceOf(InvalidCliOptionProblem);
+    expect(error).toMatchObject({
+      code: "create-croco-app/invalid-cli-option",
+      extensions: {
+        option: "--web-apps",
+        recovery: expect.stringContaining("lowercase"),
+      },
+    });
+  });
+
+  it.each([
+    ["web,,admin", "Web app names cannot contain empty entries"],
+    ["web, web", 'Duplicate web app name "web"'],
+  ])("rejects invalid normalized --web-apps lists from %j", (webApps, detail) => {
+    const cliOptions = parseCliOptions("my-fullstack", {
+      preset: "ddd-fullstack",
+      scope: "@test",
+      api: "trpc",
+      webApps,
+      install: false,
+      git: false,
+    });
+
+    expect(() => validateCliOptions(cliOptions)).toThrow(detail);
+  });
+
+  it("rejects unsafe resolved web app names before generation", () => {
+    expect(() =>
+      validateResolvedOptions({
+        projectName: "my-fullstack",
+        scope: "@test",
+        preset: "ddd-fullstack",
+        webApps: ["../../outside"],
+        api: "trpc",
+        apiHosting: "standalone",
+        db: [],
+        agentRules: false,
+        installDeps: false,
+        initGit: false,
+      }),
+    ).toThrow('Invalid web app name "../../outside"');
+  });
+
+  it.each([
+    [[""], "Web app names cannot contain empty entries"],
+    [["web", "web"], 'Duplicate web app name "web"'],
+  ])("rejects invalid resolved web app lists %j", (webApps, detail) => {
+    expect(() =>
+      validateResolvedOptions({
+        projectName: "my-fullstack",
+        scope: "@test",
+        preset: "ddd-fullstack",
+        webApps,
+        api: "trpc",
+        apiHosting: "standalone",
+        db: [],
+        agentRules: false,
+        installDeps: false,
+        initGit: false,
+      }),
+    ).toThrow(detail);
   });
 
   it("normalizes an explicit Astryx profile for Vite SPA generation", () => {
