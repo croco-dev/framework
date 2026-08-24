@@ -33,6 +33,66 @@ describe("InMemoryHealthScoreStore", () => {
     expect(await store.findLatest("tenant-1")).toEqual(first);
     expect(await store.listPendingEventIntents("tenant-1")).toEqual([firstIntent]);
   });
+
+  it("returns isolated snapshots from period history queries", async () => {
+    const store = new InMemoryHealthScoreStore();
+    const submitted = score(90, "healthy", "2026-03-15T10:00:00Z");
+    submitted.signals = [
+      {
+        category: "usage",
+        name: "nested-signal",
+        value: 90,
+        weight: 1,
+        rawValue: { nested: { count: 9 } },
+        collectedAt: new Date("2026-03-15T09:59:00Z"),
+      },
+    ];
+
+    await expect(store.saveTransition(submitted, null, [])).resolves.toEqual({ committed: true });
+    const committed = structuredClone(submitted);
+    const history = await store.findHistoryByPeriod(
+      "tenant-1",
+      "day",
+      new Date("2026-03-15T00:00:00Z"),
+      new Date("2026-03-16T00:00:00Z"),
+    );
+
+    expect(history).toEqual([committed]);
+    const result = history[0];
+    if (result) {
+      result.calculatedAt.setTime(0);
+      result.categoryScores.usage = -1;
+      result.signals[0]?.collectedAt.setTime(0);
+      const rawValue = result.signals[0]?.rawValue as { nested: { count: number } } | undefined;
+      if (rawValue) rawValue.nested.count = -1;
+    }
+
+    await expect(store.findLatest("tenant-1")).resolves.toEqual(committed);
+  });
+
+  it("does not assign or consume a transition version when snapshot creation fails", async () => {
+    const store = new InMemoryHealthScoreStore();
+    const uncloneable = score(90, "healthy", "2026-03-15T10:00:00Z");
+    uncloneable.signals = [
+      {
+        category: "usage",
+        name: "uncloneable-signal",
+        value: 90,
+        weight: 1,
+        rawValue: () => "not cloneable",
+        collectedAt: new Date("2026-03-15T09:59:00Z"),
+      },
+    ];
+
+    await expect(store.saveTransition(uncloneable, null, [])).rejects.toThrow();
+    expect(uncloneable.transitionVersion).toBeUndefined();
+    await expect(store.findLatest("tenant-1")).resolves.toBeNull();
+    await expect(store.listPendingEventIntents("tenant-1")).resolves.toEqual([]);
+
+    const valid = score(80, "healthy", "2026-03-15T11:00:00Z");
+    await expect(store.saveTransition(valid, null, [])).resolves.toEqual({ committed: true });
+    expect(valid.transitionVersion).toBe("1");
+  });
 });
 
 function score(

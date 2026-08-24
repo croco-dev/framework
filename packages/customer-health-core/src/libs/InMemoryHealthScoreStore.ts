@@ -1,4 +1,5 @@
 import { Component } from "@croco/framework-context";
+import { cloneTenantHealthScore } from "./healthScoreSnapshot";
 import { HealthScoreStore } from "./interfaces";
 import { cloneHealthTransitionEventIntent } from "./eventIntent";
 import type { HealthTransitionEventIntent } from "./eventIntent";
@@ -23,18 +24,24 @@ export class InMemoryHealthScoreStore extends HealthScoreStore {
     const history = this.store.get(tenantId) ?? [];
     const latest = history.at(-1) ?? null;
     if (!matchesPrevious(latest, previous)) {
-      return { committed: false, latest };
+      return { committed: false, latest: latest ? cloneTenantHealthScore(latest) : null };
     }
     for (const intent of eventIntents) {
       if (this.eventIntents.has(intent.eventId)) {
         throw new HealthEventIntentConflictProblem(intent.eventId);
       }
     }
-    score.transitionVersion = String(++this.transitionSequence);
-    history.push(score);
+    const transitionSequence = this.transitionSequence + 1;
+    const transitionVersion = String(transitionSequence);
+    const committedScore = cloneTenantHealthScore({ ...score, transitionVersion });
+    const committedEventIntents = eventIntents.map(cloneHealthTransitionEventIntent);
+
+    this.transitionSequence = transitionSequence;
+    score.transitionVersion = transitionVersion;
+    history.push(committedScore);
     this.store.set(tenantId, history);
-    for (const intent of eventIntents) {
-      this.eventIntents.set(intent.eventId, cloneHealthTransitionEventIntent(intent));
+    for (const intent of committedEventIntents) {
+      this.eventIntents.set(intent.eventId, intent);
     }
     return { committed: true };
   }
@@ -60,7 +67,8 @@ export class InMemoryHealthScoreStore extends HealthScoreStore {
     if (!history || history.length === 0) {
       return null;
     }
-    return history[history.length - 1] ?? null;
+    const latest = history[history.length - 1];
+    return latest ? cloneTenantHealthScore(latest) : null;
   }
 
   async findHistory(tenantId: string, limit: number): Promise<TenantHealthScore[]> {
@@ -68,7 +76,7 @@ export class InMemoryHealthScoreStore extends HealthScoreStore {
     if (limit <= 0) {
       return [];
     }
-    return history.slice(-limit).reverse();
+    return history.slice(-limit).reverse().map(cloneTenantHealthScore);
   }
 
   async findHistoryByPeriod(
@@ -78,9 +86,9 @@ export class InMemoryHealthScoreStore extends HealthScoreStore {
     endDate: Date,
   ): Promise<TenantHealthScore[]> {
     const history = this.store.get(tenantId) ?? [];
-    return history.filter(
-      (score) => score.calculatedAt >= startDate && score.calculatedAt <= endDate,
-    );
+    return history
+      .filter((score) => score.calculatedAt >= startDate && score.calculatedAt <= endDate)
+      .map(cloneTenantHealthScore);
   }
 }
 

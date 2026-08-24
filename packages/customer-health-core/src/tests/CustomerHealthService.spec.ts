@@ -88,6 +88,37 @@ describe("CustomerHealthService", () => {
     expect(mockEventPublisher.publishIdempotently).not.toHaveBeenCalled();
   });
 
+  it("keeps stored history isolated from mutation of the committed service result", async () => {
+    const rawValue = { nested: { count: 8 } };
+    const profile: HealthScoreProfile = {
+      id: "profile-1",
+      name: "Default Profile",
+      weights: { usage: 1, business: 1, engagement: 1 },
+      thresholds: { healthy: 80, atRisk: 60 },
+    };
+    mockRegistry.addProvider("usage", [
+      {
+        category: "usage",
+        name: "api_calls",
+        value: 80,
+        weight: 1,
+        rawValue,
+        collectedAt: new Date("2026-03-15T10:00:00Z"),
+      },
+    ]);
+
+    const committed = await service.calculateAndStore("tenant-1", profile);
+    const stored = structuredClone(committed);
+
+    committed.transitionVersion = "mutated";
+    committed.categoryScores.usage = -1;
+    committed.calculatedAt.setTime(0);
+    committed.signals[0]?.collectedAt.setTime(0);
+    rawValue.nested.count = -1;
+
+    await expect(service.getLatest("tenant-1")).resolves.toEqual(stored);
+  });
+
   it("should detect status change from healthy to at_risk and publish event", async () => {
     const healthySignals: HealthSignal[] = [
       {
