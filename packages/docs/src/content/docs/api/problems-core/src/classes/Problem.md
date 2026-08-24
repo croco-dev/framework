@@ -353,6 +353,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`ResendRetryableUpstreamProblem`](/api/notifications-resend/src/classes/resendretryableupstreamproblem/)
 - [`ResendTerminalUpstreamProblem`](/api/notifications-resend/src/classes/resendterminalupstreamproblem/)
 - [`ResendValidationProblem`](/api/notifications-resend/src/classes/resendvalidationproblem/)
+- [`DuplicateOnboardingDefinitionProblem`](/api/onboarding-core/src/classes/duplicateonboardingdefinitionproblem/)
 - [`OnboardingContextRequiredProblem`](/api/onboarding-core/src/classes/onboardingcontextrequiredproblem/)
 - [`OnboardingDefinitionNotFoundProblem`](/api/onboarding-core/src/classes/onboardingdefinitionnotfoundproblem/)
 - [`OnboardingStepCompletionConflictProblem`](/api/onboarding-core/src/classes/onboardingstepcompletionconflictproblem/)

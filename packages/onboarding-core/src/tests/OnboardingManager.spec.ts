@@ -1,10 +1,12 @@
 import "reflect-metadata";
 import type { AnalyticsManager } from "@croco/analytics-core";
 import { Context } from "@croco/framework-context";
+import { ProblemCategory } from "@croco/problems-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { OnboardingManager } from "../libs/OnboardingManager";
 import { InMemoryOnboardingStore, OnboardingStore } from "../libs/OnboardingStore";
 import {
+  DuplicateOnboardingDefinitionProblem,
   OnboardingContextRequiredProblem,
   OnboardingDefinitionNotFoundProblem,
   OnboardingStepCompletionConflictProblem,
@@ -90,6 +92,78 @@ describe("OnboardingManager", () => {
     analytics = mockAnalytics;
 
     manager.register(sampleDefinition);
+  });
+
+  it("should reject duplicate definition IDs with stable configuration details", () => {
+    let duplicateProblem: unknown;
+
+    try {
+      manager.register({
+        id: sampleDefinition.id,
+        steps: [{ id: "replacement-step", title: "Replacement" }],
+      });
+    } catch (problem) {
+      duplicateProblem = problem;
+    }
+
+    expect(duplicateProblem).toBeInstanceOf(DuplicateOnboardingDefinitionProblem);
+    expect(duplicateProblem).toMatchObject({
+      code: "onboarding/duplicate-definition-registration",
+      category: ProblemCategory.InternalServerError,
+      detail: "Onboarding definition 'welcome-tour' is already registered",
+      extensions: {
+        onboardingId: "welcome-tour",
+        retryable: false,
+      },
+    });
+  });
+
+  it("should preserve original completion requirements and analytics after a collision", async () => {
+    expect(() =>
+      manager.register({
+        id: sampleDefinition.id,
+        steps: [{ id: "step-1", title: "Replacement Welcome", required: true }],
+      }),
+    ).toThrow(DuplicateOnboardingDefinitionProblem);
+
+    await Context.run(
+      { requestId: "req-duplicate", user: { id: "user-1" }, tenantId: "tenant-1" },
+      async () => {
+        await manager.completeStep("welcome-tour", "step-1");
+
+        expect(analytics.capture).not.toHaveBeenCalledWith(
+          "onboarding_completed",
+          expect.anything(),
+        );
+        expect(analytics.capture).toHaveBeenCalledWith("onboarding_step_completed", {
+          onboardingId: "welcome-tour",
+          stepId: "step-1",
+          stepTitle: "Welcome",
+        });
+
+        await manager.completeStep("welcome-tour", "step-2");
+
+        const status = await manager.getStatus("welcome-tour");
+        expect(status.isCompleted).toBe(true);
+      },
+    );
+  });
+
+  it("should register and complete unique definitions independently", async () => {
+    manager.register({
+      id: "product-tour",
+      steps: [{ id: "tour-step", title: "Product Tour", required: true }],
+    });
+
+    await Context.run(
+      { requestId: "req-unique", user: { id: "user-1" }, tenantId: "tenant-1" },
+      async () => {
+        await manager.completeStep("product-tour", "tour-step");
+
+        const status = await manager.getStatus("product-tour");
+        expect(status.isCompleted).toBe(true);
+      },
+    );
   });
 
   it("should capture event when a step is completed", async () => {
