@@ -35,7 +35,6 @@ export class CircuitBreaker {
   private readonly halfOpenRequests: number;
   private readonly stateStore: CircuitBreakerStateStore;
   private readonly fallback: CircuitBreakerFallback | undefined;
-  private _closedActiveCount = 0;
 
   constructor(options: CircuitBreakerOptions) {
     const failureThreshold = options.failureThreshold ?? 5;
@@ -131,26 +130,22 @@ export class CircuitBreaker {
   }
 
   private async handleClosed<T>(fn: () => Promise<T>): Promise<T> {
-    const canExecute = await this.tryAcquireClosedExecution();
+    const canExecute = await this.canExecuteClosed();
     if (!canExecute) {
       return this.rejectOpenCircuit();
     }
 
+    let result: T;
     try {
-      let result: T;
-      try {
-        result = await fn();
-      } catch (error) {
-        const err = error instanceof Error ? error : new Error(String(error));
-        await this.recordClosedFailure();
-        throw err;
-      }
-
-      await this.recordSuccessBookkeeping(CircuitState.CLOSED, () => this.recordClosedSuccess());
-      return result;
-    } finally {
-      this.releaseClosedExecutionSlot();
+      result = await fn();
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      await this.recordClosedFailure();
+      throw err;
     }
+
+    await this.recordSuccessBookkeeping(CircuitState.CLOSED, () => this.recordClosedSuccess());
+    return result;
   }
 
   private async recordSuccessBookkeeping(
@@ -177,19 +172,9 @@ export class CircuitBreaker {
     }
   }
 
-  private async tryAcquireClosedExecution(): Promise<boolean> {
+  private async canExecuteClosed(): Promise<boolean> {
     const failureCount = await this.stateStore.getFailureCount(this.circuitId);
-    const projected = failureCount + this._closedActiveCount;
-    if (projected >= this.failureThreshold) {
-      return false;
-    }
-
-    this._closedActiveCount += 1;
-    return true;
-  }
-
-  private releaseClosedExecutionSlot(): void {
-    this._closedActiveCount = Math.max(0, this._closedActiveCount - 1);
+    return failureCount < this.failureThreshold;
   }
 
   private async recordClosedSuccess(): Promise<void> {
