@@ -1453,6 +1453,7 @@ export const VERIFICATION_DEPENDENCY_CLASSIFICATION = {
 
 const WORKSPACE_ARTIFACT_CONCURRENCY_GROUP = new Set([
   "typecheck",
+  "test",
   "package-bins-smoke",
   "generated-app-smoke",
   "alpha-release-smoke",
