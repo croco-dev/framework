@@ -33,7 +33,7 @@
     {
       "package": "@croco/onboarding-core",
       "file": "packages/onboarding-core/src/libs/OnboardingManager.ts",
-      "line": 99,
+      "line": 104,
       "excerpt": "} catch {",
       "reason": "Analytics delivery is best-effort after onboarding state has already been persisted.",
       "owner": "framework-error-handling",
