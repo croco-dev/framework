@@ -15,6 +15,7 @@ import { fileURLToPath } from "node:url";
 import {
   DIRECT_DIST_ENTRYPOINT_PACKAGES,
   ENTRYPOINT_EXEMPTIONS,
+  effectivePublishManifest,
   fieldMatchesPath,
   findPackageJsonFiles,
   packageHasSourceEntrypoint,
@@ -358,7 +359,7 @@ function buildPrerequisiteDiagnosticsFor(
 }
 
 function packageHasBuildArtifacts(packageInfo: PackageInfo): boolean {
-  const requiredArtifacts = publishArtifactTargets(packageInfo.sourceManifest.publishConfig);
+  const requiredArtifacts = publishArtifactTargetsFor(packageInfo);
   return (
     requiredArtifacts.length > 0 &&
     requiredArtifacts.every(({ target }) =>
@@ -368,21 +369,23 @@ function packageHasBuildArtifacts(packageInfo: PackageInfo): boolean {
 }
 
 function missingPublishArtifacts(packageInfo: PackageInfo): PublishArtifactTarget[] {
-  return publishArtifactTargets(packageInfo.sourceManifest.publishConfig).filter(
+  return publishArtifactTargetsFor(packageInfo).filter(
     ({ target }) => !existsSync(join(packageInfo.packageDir, target.slice(2))),
   );
 }
 
-function publishArtifactTargets(
-  publishConfig: Readonly<Record<string, unknown>> | undefined,
-): PublishArtifactTarget[] {
-  if (!publishConfig) {
-    return [];
-  }
+function publishArtifactTargetsFor(packageInfo: PackageInfo): PublishArtifactTarget[] {
+  return publishArtifactTargets(
+    effectivePublishManifest(packageInfo.sourceManifest) as Readonly<Record<string, unknown>>,
+  );
+}
 
+function publishArtifactTargets(
+  publishManifest: Readonly<Record<string, unknown>>,
+): PublishArtifactTarget[] {
   const targets: PublishArtifactTarget[] = [];
   for (const fieldName of ["main", "module", "types", "typings", "exports", "bin"] as const) {
-    collectPublishArtifactTargets(publishConfig[fieldName], fieldName, targets);
+    collectPublishArtifactTargets(publishManifest[fieldName], fieldName, targets);
   }
   return targets.sort((left, right) => left.fieldName.localeCompare(right.fieldName));
 }

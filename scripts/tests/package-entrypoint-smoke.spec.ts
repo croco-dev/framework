@@ -170,6 +170,24 @@ describe("package-entrypoint-smoke.mts", () => {
     );
   });
 
+  it("checks source entrypoints when publishConfig only contains publish metadata", () => {
+    const root = createTempRoot();
+    writeImportablePackage(root, "source-entrypoints", {
+      publishConfig: { access: "public" },
+      sourceMain: "./dist/index.js",
+      sourceTypes: "./dist/index.d.ts",
+    });
+    rmSync(join(root, "packages", "source-entrypoints", "dist", "index.js"));
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("Package entrypoint smoke build prerequisite failed:");
+    expect(result.stdout).toContain(
+      "@croco/source-entrypoints: main points to missing file ./dist/index.js",
+    );
+  });
+
   it("fails when an export map points at a missing runtime entrypoint", () => {
     const root = createTempRoot();
     writeImportablePackage(root, "invalid-export", {
@@ -535,6 +553,9 @@ function writeImportablePackage(
     readonly importTarget?: string;
     readonly packageName?: string;
     readonly peerDependencies?: Record<string, string>;
+    readonly publishConfig?: Record<string, unknown>;
+    readonly sourceMain?: string;
+    readonly sourceTypes?: string;
     readonly typesTarget?: string;
   } = {},
 ): void {
@@ -567,20 +588,22 @@ function writeImportablePackage(
         dependencies: options.dependencies,
         files: ["dist"],
         type: "commonjs",
-        main: "./src/index.ts",
-        types: "./src/index.ts",
-        publishConfig: {
-          access: "public",
-          main: "./dist/index.js",
-          types: options.typesTarget ?? "./dist/index.d.ts",
-          exports: options.exportsValue ?? {
-            ".": {
-              import: options.importTarget ?? "./dist/index.mjs",
-              require: "./dist/index.js",
-              types: options.typesTarget ?? "./dist/index.d.ts",
+        main: options.sourceMain ?? "./src/index.ts",
+        types: options.sourceTypes ?? "./src/index.ts",
+        publishConfig:
+          options.publishConfig ??
+          ({
+            access: "public",
+            main: "./dist/index.js",
+            types: options.typesTarget ?? "./dist/index.d.ts",
+            exports: options.exportsValue ?? {
+              ".": {
+                import: options.importTarget ?? "./dist/index.mjs",
+                require: "./dist/index.js",
+                types: options.typesTarget ?? "./dist/index.d.ts",
+              },
             },
-          },
-        },
+          } satisfies Record<string, unknown>),
       },
       null,
       2,

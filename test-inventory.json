@@ -2429,6 +2429,12 @@
       "owner": "@croco/notifications-resend"
     },
     {
+      "path": "packages/onboarding-core/src/tests/InMemoryOnboardingStore.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/onboarding-core"
+    },
+    {
       "path": "packages/onboarding-core/src/tests/OnboardingManager.spec.ts",
       "lane": "fast",
       "qualifiers": [],
