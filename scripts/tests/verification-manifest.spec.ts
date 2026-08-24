@@ -251,6 +251,10 @@ describe("verification manifest", () => {
       createVerificationManifest("publish").find(({ id }) => id === "spine-bundle-size")?.command,
     ).toEqual(["node", "--experimental-strip-types", "scripts/package-quality-report.mts"]);
     expect(
+      createVerificationManifest("publish").find(({ id }) => id === "package-entrypoints-smoke")
+        ?.command,
+    ).toContain("--build-missing");
+    expect(
       createVerificationManifest("repo").find(({ id }) => id === "test-inventory"),
     ).toMatchObject({
       command: expect.arrayContaining([
@@ -291,7 +295,7 @@ describe("verification manifest", () => {
     expect(
       createHash("sha256").update(JSON.stringify(manifests)).digest("hex"),
       "The pre-split monolithic manifest changed; update this digest only after intentionally verifying the new serialized commands.",
-    ).toBe("bb8a530b880cd32f80b089212b2796a2c552b9a7e019a57a056725474462bc07");
+    ).toBe("c40232da6d1429b22d43e73af614f62674fcf2ff4ba4239fc68ae4665da78e8c");
   });
 
   it("classifies every dependency edge and every cross-lane edge for synthesis", () => {
@@ -1348,11 +1352,16 @@ describe("verification manifest", () => {
     ]);
     expect(byId.get("typecheck")?.concurrencyGroups).toEqual(["workspace-artifacts"]);
     expect(byId.get("package-entrypoints-smoke")?.concurrencyGroups).toEqual([
+      "workspace-artifacts",
       "package-entrypoints",
     ]);
     expect(byId.get("integration-test-lane")?.concurrencyGroups).toEqual([
       "workspace-artifacts",
       "package-entrypoints",
+      "test-integration",
+    ]);
+    expect(byId.get("published-test-lane")?.concurrencyGroups).toEqual([
+      "workspace-artifacts",
       "test-integration",
     ]);
     expect(byId.get("release-gate-tests")?.concurrencyGroups).toBeUndefined();
