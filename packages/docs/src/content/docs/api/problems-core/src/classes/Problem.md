@@ -260,6 +260,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`InvitationRateLimitExceededProblem`](/api/invitation-core/src/classes/invitationratelimitexceededproblem/)
 - [`DuplicateLifecycleRuleProblem`](/api/lifecycle-core/src/classes/duplicatelifecycleruleproblem/)
 - [`LifecycleActionAdapterProblem`](/api/lifecycle-core/src/classes/lifecycleactionadapterproblem/)
+- [`LifecycleRunEvidenceProblem`](/api/lifecycle-core/src/classes/lifecyclerunevidenceproblem/)
 - [`LifecycleRunFinalizationProblem`](/api/lifecycle-core/src/classes/lifecyclerunfinalizationproblem/)
 - [`LifecycleRuleActionContractProblem`](/api/lifecycle-core/src/classes/lifecycleruleactioncontractproblem/)
 - [`LifecycleRuleCommandConflictProblem`](/api/lifecycle-core/src/classes/lifecyclerulecommandconflictproblem/)

@@ -78,7 +78,7 @@ Distributed adapters must enforce both constraints in one shared transaction.
 
 ### finalizeDispatch()
 
-> **finalizeDispatch**(`run`): `Promise`\<\{ `finalized`: `false`; `reason`: `"dispatch_not_found"`; \} \| \{ `finalized`: `false`; `reason`: `"dispatch_fence_mismatch"`; \} \| \{ `finalized`: `true`; `reason?`: `undefined`; \}\>
+> **finalizeDispatch**(`run`): `Promise`\<\{ `finalized`: `false`; `reason`: `"dispatch_not_found"` \| `"dispatch_fence_mismatch"`; \} \| \{ `finalized`: `true`; \}\>
 
 Replaces an indeterminate run with reconciled action evidence using the run id as a fence.
 A false result must retain the current claim and run evidence.
@@ -91,7 +91,7 @@ A false result must retain the current claim and run evidence.
 
 #### Returns
 
-`Promise`\<\{ `finalized`: `false`; `reason`: `"dispatch_not_found"`; \} \| \{ `finalized`: `false`; `reason`: `"dispatch_fence_mismatch"`; \} \| \{ `finalized`: `true`; `reason?`: `undefined`; \}\>
+`Promise`\<\{ `finalized`: `false`; `reason`: `"dispatch_not_found"` \| `"dispatch_fence_mismatch"`; \} \| \{ `finalized`: `true`; \}\>
 
 #### Implementation of
 
