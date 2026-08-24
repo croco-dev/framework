@@ -3,6 +3,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ContractGraphDiagnosticError } from "@croco/protocols-core";
+import { HttpMethod } from "@croco/protocols-rest";
 import { afterAll, describe, expect, it, vi } from "vitest";
 import type { CompiledController } from "../compiler";
 import {
@@ -15,6 +16,12 @@ import {
 
 const ROUTE_ARTIFACT_TEST_TIMEOUT_MS = 30_000;
 vi.setConfig({ testTimeout: ROUTE_ARTIFACT_TEST_TIMEOUT_MS });
+
+function readGeneratedMethodRegistrationLines(code: string): string[] {
+  return code
+    .split("\n")
+    .filter((line) => line.startsWith('    case "') || line.startsWith("      app."));
+}
 
 describe("compiler", () => {
   afterAll(() => {
@@ -75,6 +82,27 @@ describe("compiler", () => {
     expect(code).toContain('import * as frameworkContext from "@croco/framework-context";');
     expect(code).toContain('"id": "SampleController.hello"');
     expect(code).toContain('"id": "SampleController.createUser"');
+  });
+
+  it("keeps table validation and generated registration in sync with public REST methods", () => {
+    const publicMethods = Object.values(HttpMethod);
+    const controllers: readonly CompiledController[] = [
+      {
+        basePath: "/methods",
+        className: "MethodController",
+        routes: publicMethods.map((method) => ({
+          method,
+          path: `/${method.toLowerCase()}`,
+          handlerName: method.toLowerCase(),
+        })),
+      },
+    ];
+
+    const table = createRouteRegistrationTable(controllers);
+    const code = generateRouteRegistrationCode(controllers);
+
+    expect(table.entries.map((entry) => entry.method)).toEqual(publicMethods);
+    expect(readGeneratedMethodRegistrationLines(code)).toMatchSnapshot();
   });
 
   it("handles empty controller list", () => {
@@ -244,6 +272,38 @@ describe("compiler", () => {
           expect.objectContaining({ kind: "event.handler", id: "UserCreatedHandler" }),
         ]),
       });
+    } finally {
+      await rm(outputDir, { recursive: true, force: true });
+    }
+  });
+
+  it("writes generated route artifacts for an @All controller", async () => {
+    const outputDir = await mkdtemp(join(tmpdir(), "croco-framework-routes-all-"));
+
+    try {
+      const moduleUrl = new URL("./fixtures/AllController.ts", import.meta.url).href;
+
+      await compileRoutes({ controllerPaths: [moduleUrl], sourcePaths: [moduleUrl], outputDir });
+
+      const code = await readFile(join(outputDir, ".croco", "build", "routes.mjs"), "utf-8");
+      const table = JSON.parse(
+        await readFile(
+          join(outputDir, ".croco", "build", "route-registration-table.json"),
+          "utf-8",
+        ),
+      );
+
+      expect(table.entries).toEqual([
+        expect.objectContaining({
+          id: "AllController.handle",
+          method: "ALL",
+          path: "/hooks",
+        }),
+      ]);
+      expect(code).toContain('case "ALL":');
+      expect(code).toContain(
+        "app.all(route.path, createGeneratedRouteHandler(route, additionalControllerBindings));",
+      );
     } finally {
       await rm(outputDir, { recursive: true, force: true });
     }

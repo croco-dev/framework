@@ -1,11 +1,12 @@
 import {
-  assertContractGraphHasNoErrors,
   buildContractGraph,
   ContractGraphDiagnosticError,
+  getContractGraphErrors,
   type ContractDiagnostic,
   type ContractGraph,
   type Constructor,
 } from "@croco/protocols-core";
+import { HttpMethod } from "@croco/protocols-rest";
 import { createFrameworkManifestFromIntentMap } from "./framework-manifest";
 import type { CompiledRouteInfo } from "./metadata-reader";
 import { createProjectIntentMap } from "./intent-map";
@@ -50,7 +51,39 @@ export type GeneratedControllerBinding = {
 const ROUTE_REGISTRATION_TABLE_VERSION: RouteRegistrationTableVersion =
   "croco.route-registration-table.v1";
 const ROUTE_REGISTRATION_CATEGORY: RouteRegistrationCategory = "http.controller";
-const SUPPORTED_ROUTE_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"];
+type RouteRegistrationAdapterMethods = {
+  readonly [Method in HttpMethod]: Lowercase<Method>;
+};
+const ROUTE_METHOD_ADAPTERS = {
+  [HttpMethod.GET]: "get",
+  [HttpMethod.POST]: "post",
+  [HttpMethod.PUT]: "put",
+  [HttpMethod.PATCH]: "patch",
+  [HttpMethod.DELETE]: "delete",
+  [HttpMethod.OPTIONS]: "options",
+  [HttpMethod.HEAD]: "head",
+  [HttpMethod.ALL]: "all",
+} as const satisfies RouteRegistrationAdapterMethods;
+const SUPPORTED_ROUTE_METHODS = new Set<string>(Object.keys(ROUTE_METHOD_ADAPTERS));
+const ALL_METHOD_GENERATED_CONTRACT_DIAGNOSTIC_CODE = "contract-route-unsupported-all-method";
+
+function assertRouteRegistrationContractGraphHasNoErrors(contractGraph: ContractGraph): void {
+  const allRouteIds = new Set(
+    contractGraph.routes
+      .filter((route) => route.httpMethod.toUpperCase() === HttpMethod.ALL)
+      .map((route) => route.routeId),
+  );
+  const blockingDiagnostics = getContractGraphErrors(contractGraph).filter(
+    (diagnostic) =>
+      diagnostic.code !== ALL_METHOD_GENERATED_CONTRACT_DIAGNOSTIC_CODE ||
+      diagnostic.routeId === undefined ||
+      !allRouteIds.has(diagnostic.routeId),
+  );
+
+  if (blockingDiagnostics.length > 0) {
+    throw new ContractGraphDiagnosticError(blockingDiagnostics);
+  }
+}
 
 function joinRoutePath(basePath: string, routePath: string): string {
   const cleanBase = basePath.endsWith("/") ? basePath.slice(0, -1) : basePath;
@@ -66,7 +99,7 @@ export function createRouteRegistrationTable(
   contractGraph?: ContractGraph,
 ): RouteRegistrationTable {
   if (contractGraph) {
-    assertContractGraphHasNoErrors(contractGraph);
+    assertRouteRegistrationContractGraphHasNoErrors(contractGraph);
   }
 
   const table: RouteRegistrationTable = {
@@ -179,41 +212,13 @@ export function generateModuleFromRouteRegistrationTable(
   lines.push("");
   lines.push("function registerGeneratedRoute(app, route, additionalControllerBindings) {");
   lines.push("  switch (route.method) {");
-  lines.push('    case "GET":');
-  lines.push(
-    "      app.get(route.path, createGeneratedRouteHandler(route, additionalControllerBindings));",
-  );
-  lines.push("      return;");
-  lines.push('    case "POST":');
-  lines.push(
-    "      app.post(route.path, createGeneratedRouteHandler(route, additionalControllerBindings));",
-  );
-  lines.push("      return;");
-  lines.push('    case "PUT":');
-  lines.push(
-    "      app.put(route.path, createGeneratedRouteHandler(route, additionalControllerBindings));",
-  );
-  lines.push("      return;");
-  lines.push('    case "PATCH":');
-  lines.push(
-    "      app.patch(route.path, createGeneratedRouteHandler(route, additionalControllerBindings));",
-  );
-  lines.push("      return;");
-  lines.push('    case "DELETE":');
-  lines.push(
-    "      app.delete(route.path, createGeneratedRouteHandler(route, additionalControllerBindings));",
-  );
-  lines.push("      return;");
-  lines.push('    case "OPTIONS":');
-  lines.push(
-    "      app.options(route.path, createGeneratedRouteHandler(route, additionalControllerBindings));",
-  );
-  lines.push("      return;");
-  lines.push('    case "HEAD":');
-  lines.push(
-    "      app.head(route.path, createGeneratedRouteHandler(route, additionalControllerBindings));",
-  );
-  lines.push("      return;");
+  for (const [method, adapterMethod] of Object.entries(ROUTE_METHOD_ADAPTERS)) {
+    lines.push(`    case ${JSON.stringify(method)}:`);
+    lines.push(
+      `      app.${adapterMethod}(route.path, createGeneratedRouteHandler(route, additionalControllerBindings));`,
+    );
+    lines.push("      return;");
+  }
   lines.push("    default:");
   lines.push("      throw new RouteRegistrationTableError(route);");
   lines.push("  }");
@@ -253,7 +258,7 @@ export async function compileRoutes(options: CompileRoutesOptions): Promise<void
   }
 
   const contractGraph = buildContractGraph(controllerConstructors);
-  assertContractGraphHasNoErrors(contractGraph);
+  assertRouteRegistrationContractGraphHasNoErrors(contractGraph);
 
   const controllers = readControllersMetadataFromConstructors(controllerConstructors);
   const routeRegistrationTable = createRouteRegistrationTable(controllers, contractGraph);
@@ -428,7 +433,7 @@ function compareStrings(left: string, right: string): number {
 
 function validateSupportedMethods(table: RouteRegistrationTable): ContractDiagnostic[] {
   return table.entries
-    .filter((entry) => !SUPPORTED_ROUTE_METHODS.includes(entry.method))
+    .filter((entry) => !SUPPORTED_ROUTE_METHODS.has(entry.method))
     .map((entry) =>
       createRouteRegistrationDiagnostic(
         entry,

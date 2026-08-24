@@ -1,0 +1,22 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`compiler > keeps table validation and generated registration in sync with public REST methods 1`] = `
+[
+  "    case "GET":",
+  "      app.get(route.path, createGeneratedRouteHandler(route, additionalControllerBindings));",
+  "    case "POST":",
+  "      app.post(route.path, createGeneratedRouteHandler(route, additionalControllerBindings));",
+  "    case "PUT":",
+  "      app.put(route.path, createGeneratedRouteHandler(route, additionalControllerBindings));",
+  "    case "PATCH":",
+  "      app.patch(route.path, createGeneratedRouteHandler(route, additionalControllerBindings));",
+  "    case "DELETE":",
+  "      app.delete(route.path, createGeneratedRouteHandler(route, additionalControllerBindings));",
+  "    case "OPTIONS":",
+  "      app.options(route.path, createGeneratedRouteHandler(route, additionalControllerBindings));",
+  "    case "HEAD":",
+  "      app.head(route.path, createGeneratedRouteHandler(route, additionalControllerBindings));",
+  "    case "ALL":",
+  "      app.all(route.path, createGeneratedRouteHandler(route, additionalControllerBindings));",
+]
+`;
