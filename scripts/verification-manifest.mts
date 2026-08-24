@@ -1476,7 +1476,11 @@ function withSchedulingContract(command: EvidenceCommand): EvidenceCommand {
   const concurrencyGroups = [
     ...(writesWorkspaceArtifacts ? ["workspace-artifacts"] : []),
     ...(PACKAGE_ENTRYPOINT_CONCURRENCY_GROUP.has(command.id) ? ["package-entrypoints"] : []),
-    ...(["test", "integration-test-lane"].includes(command.id) ? ["test-integration"] : []),
+    ...(["test", "integration-test-lane", "published-test-lane", "core-coverage"].includes(
+      command.id,
+    )
+      ? ["test-integration"]
+      : []),
   ];
   return {
     ...command,

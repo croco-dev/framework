@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import { CurrentApiKey, CurrentPrincipal, User } from "@croco/auth-core";
 import type {
   BillingGateway,
   BillingLifecycleGatewayOptions,
@@ -20,7 +21,7 @@ import { Container, Context, Token, TRANSACTION_CONTEXT_TOKEN } from "@croco/fra
 import type { GenerateParams, GenerateResult } from "@croco/llm-core";
 import { InMemoryLlmModel } from "@croco/llm-core";
 import { Problem, ProblemCategory, ProblemFactory } from "@croco/problems-core";
-import { Controller, Get, Param } from "@croco/protocols-rest";
+import { Controller, Get, Param, Query, REST_PARAMS_KEY } from "@croco/protocols-rest";
 import type {
   RateLimitPolicy,
   RateLimitRefundReceipt,
@@ -540,6 +541,82 @@ function greetingProviders(prefix = "Hello") {
 describe("@croco/testing", () => {
   beforeEach(() => {
     Container.reset();
+  });
+
+  it("isolates mixed REST and auth parameter metadata across controller inheritance", () => {
+    type StoredParamMetadata = {
+      readonly type: string;
+      readonly index: number;
+      readonly name?: string;
+    };
+    const readParams = (controller: object): StoredParamMetadata[] => {
+      const paramsMap = Reflect.getMetadata(REST_PARAMS_KEY, controller) as
+        | Map<string | symbol, StoredParamMetadata[]>
+        | undefined;
+
+      return [...(paramsMap?.get("handle") ?? [])];
+    };
+
+    class RestBaseController {
+      handle(@Param("id") id: string, _principal?: unknown, _apiKey?: unknown, _user?: unknown) {
+        return id;
+      }
+    }
+
+    const restBaseBefore = readParams(RestBaseController);
+
+    class FirstAuthController extends RestBaseController {
+      override handle(
+        id: string,
+        @CurrentPrincipal() _principal?: unknown,
+        @CurrentApiKey() _apiKey?: unknown,
+        @User() _user?: unknown,
+      ) {
+        return id;
+      }
+    }
+
+    const firstAuthBeforeSibling = readParams(FirstAuthController);
+
+    class SecondAuthController extends RestBaseController {
+      override handle(id: string, @CurrentApiKey() _apiKey?: unknown) {
+        return id;
+      }
+    }
+
+    expect(readParams(RestBaseController)).toEqual(restBaseBefore);
+    expect(readParams(FirstAuthController)).toEqual(firstAuthBeforeSibling);
+    expect(readParams(FirstAuthController).map(({ index, type }) => ({ index, type }))).toEqual([
+      { index: 0, type: "param" },
+      { index: 3, type: "user" },
+      { index: 2, type: "apikey" },
+      { index: 1, type: "principal" },
+    ]);
+    expect(readParams(SecondAuthController).map(({ index, type }) => ({ index, type }))).toEqual([
+      { index: 0, type: "param" },
+      { index: 1, type: "apikey" },
+    ]);
+
+    class AuthBaseController {
+      handle(@CurrentPrincipal() _principal: unknown, _id?: string, _search?: string) {}
+    }
+
+    const authBaseBefore = readParams(AuthBaseController);
+
+    class RestDerivedController extends AuthBaseController {
+      override handle(
+        _principal: unknown,
+        @Param("id") _id?: string,
+        @Query("search") _search?: string,
+      ) {}
+    }
+
+    expect(readParams(AuthBaseController)).toEqual(authBaseBefore);
+    expect(readParams(RestDerivedController).map(({ index, type }) => ({ index, type }))).toEqual([
+      { index: 0, type: "principal" },
+      { index: 2, type: "query" },
+      { index: 1, type: "param" },
+    ]);
   });
 
   it("creates an isolated app that injects controller requests without manual bootstrap", async () => {

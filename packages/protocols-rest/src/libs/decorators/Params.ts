@@ -26,15 +26,26 @@ function createParamDecorator(type: ParamType) {
     return (target: object, propertyKey: string | symbol | undefined, parameterIndex: number) => {
       if (!propertyKey) return;
 
-      const existingParams: Map<string | symbol, ParamMetadata[]> =
-        Reflect.getMetadata(REST_PARAMS_KEY, target.constructor) || new Map();
+      const ownParams = Reflect.getOwnMetadata(REST_PARAMS_KEY, target.constructor) as
+        | Map<string | symbol, ParamMetadata[]>
+        | undefined;
+      const inheritedParams = ownParams
+        ? undefined
+        : (Reflect.getMetadata(REST_PARAMS_KEY, target.constructor) as
+            | Map<string | symbol, ParamMetadata[]>
+            | undefined);
+      const existingParams =
+        ownParams ??
+        new Map(
+          [...(inheritedParams ?? [])].map(([methodName, params]) => [methodName, [...params]]),
+        );
 
       const methodParams = existingParams.get(propertyKey) || [];
 
       const param: ParamMetadata = {
         type,
         index: parameterIndex,
-        name,
+        ...(name === undefined ? {} : { name }),
         ...(sourceLocation ? { sourceLocation } : {}),
       };
 
@@ -42,9 +53,7 @@ function createParamDecorator(type: ParamType) {
         param.pipes = [new ValidationPipe(schema)];
       }
 
-      methodParams.push(param);
-
-      existingParams.set(propertyKey, methodParams);
+      existingParams.set(propertyKey, [...methodParams, param]);
       Reflect.defineMetadata(REST_PARAMS_KEY, existingParams, target.constructor);
     };
   };
