@@ -86,7 +86,7 @@ export class AccessGuard implements Guard<AccessExecutionContext> {
       sourceLocation: metadata.sourceLocation,
     });
 
-    if (!result.allowed) {
+    if (result.decision !== "allow") {
       throw new ForbiddenProblem(`Access denied to ${objectId}`, result.trace?.decisionId);
     }
 

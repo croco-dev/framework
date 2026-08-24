@@ -1896,6 +1896,16 @@ const recoveryMetadataByCategory = {
 } as const satisfies Record<ProblemCategory, ProblemRecoveryMetadata>;
 
 const recoveryMetadataByCode = {
+  "access-core/invalid-provider-result": recovery({
+    cause: "AccessProvider.check() returned a result without a supported authoritative decision.",
+    userAction:
+      "Do not retry the unchanged operation; report the access provider and version to the service operator.",
+    operatorAction:
+      "Fix or upgrade the AccessProvider implementation so check() returns allow, deny, or abstain with the matching compatibility boolean.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "auth-clerk/webhook-delivery-failed": recovery({
     cause:
       "The idempotency store contains a terminal failure for this Clerk deliveryId and eventType.",

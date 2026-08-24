@@ -32,6 +32,11 @@ const result = await engine.check({
   relation: "editor",
   subject: "user:1",
 });
+
+// DrizzleAccessProvider returns an explicit allow or deny decision.
+if (result.decision === "allow") {
+  // result.allowed is true
+}
 ```
 
 재귀 탐색은 `member` 관계를 사용해 요청 주체에서 `group:*` 또는 `role:*` 객체로 이동한 뒤,

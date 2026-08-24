@@ -109,7 +109,7 @@ describe("Guard Chain Integration (RBAC OR ReBAC)", () => {
     const rbacResult = rbacGuard.canActivate(context);
     expect(rbacResult).toBe(true);
 
-    vi.spyOn(mockAccessEngine, "check").mockResolvedValue({ allowed: false });
+    vi.spyOn(mockAccessEngine, "check").mockResolvedValue({ decision: "deny", allowed: false });
     await expect(accessGuard.canActivate(context)).rejects.toThrow(ForbiddenProblem);
 
     const finalResult = rbacResult || false;
@@ -130,7 +130,7 @@ describe("Guard Chain Integration (RBAC OR ReBAC)", () => {
     const rbacResult = rbacGuard.canActivate(context);
     expect(rbacResult).toBe(false);
 
-    vi.spyOn(mockAccessEngine, "check").mockResolvedValue({ allowed: true });
+    vi.spyOn(mockAccessEngine, "check").mockResolvedValue({ decision: "allow", allowed: true });
 
     const rebacResult = await accessGuard.canActivate(context);
     expect(rebacResult).toBe(true);
@@ -171,7 +171,7 @@ describe("Guard Chain Integration (RBAC OR ReBAC)", () => {
     const rbacResult = rbacGuard.canActivate(context);
     expect(rbacResult).toBe(true);
 
-    vi.spyOn(mockAccessEngine, "check").mockResolvedValue({ allowed: true });
+    vi.spyOn(mockAccessEngine, "check").mockResolvedValue({ decision: "allow", allowed: true });
     const rebacResult = await accessGuard.canActivate(context);
     expect(rebacResult).toBe(true);
 
@@ -193,7 +193,7 @@ describe("Guard Chain Integration (RBAC OR ReBAC)", () => {
     const rbacResult = rbacGuard.canActivate(context);
     expect(rbacResult).toBe(true);
 
-    vi.spyOn(mockAccessEngine, "check").mockResolvedValue({ allowed: false });
+    vi.spyOn(mockAccessEngine, "check").mockResolvedValue({ decision: "deny", allowed: false });
     await expect(accessGuard.canActivate(context)).rejects.toThrow(ForbiddenProblem);
 
     const finalResult = rbacResult || false;

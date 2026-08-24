@@ -32,6 +32,12 @@
       "owner": "@croco/access-core"
     },
     {
+      "path": "packages/access-core/src/tests/CheckResult.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/access-core"
+    },
+    {
       "path": "packages/access-core/src/tests/GuardChain.spec.ts",
       "lane": "fast",
       "qualifiers": [],

@@ -1,8 +1,4 @@
-import type {
-  PolicyDecisionResult,
-  PolicyDecisionSourceLocation,
-  PolicyDecisionTrace,
-} from "./PolicyDecisionTrace.js";
+import type { PolicyDecisionSourceLocation, PolicyDecisionTrace } from "./PolicyDecisionTrace.js";
 
 export type ResourceObject = `${string}:${string}`;
 
@@ -26,12 +22,25 @@ export interface CheckRequest {
   inputs?: Record<string, unknown>;
 }
 
-export interface CheckResult {
-  allowed: boolean;
-  decision?: PolicyDecisionResult;
-  reason?: string;
-  trace?: PolicyDecisionTrace;
-}
+export type CheckResult =
+  | {
+      readonly decision: "allow";
+      readonly allowed: true;
+      readonly reason?: string;
+      readonly trace?: PolicyDecisionTrace;
+    }
+  | {
+      readonly decision: "deny";
+      readonly allowed: false;
+      readonly reason?: string;
+      readonly trace?: PolicyDecisionTrace;
+    }
+  | {
+      readonly decision: "abstain";
+      readonly allowed: false;
+      readonly reason?: string;
+      readonly trace?: PolicyDecisionTrace;
+    };
 
 export interface GrantRequest {
   tenantId: string;
