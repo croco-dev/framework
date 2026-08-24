@@ -406,6 +406,10 @@ describe("test lane runner", () => {
                 file: "e2e/skipped.spec.ts",
                 tests: [{ results: [{ status: "skipped" }] }],
               },
+              {
+                file: "e2e/partial.spec.ts",
+                tests: [{ results: [{ status: "passed" }] }, { results: [{ status: "skipped" }] }],
+              },
             ],
           },
         ],

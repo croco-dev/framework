@@ -92,7 +92,7 @@ const MAX_ROOT_VITEST_WORKERS = 2;
 const MAX_FAILURE_DETAILS = 8;
 const MAX_FAILURE_DETAIL_LENGTH = 2_000;
 const MAX_LIVE_TEST_OUTPUT_BYTES = 10 * 1024 * 1024;
-const SKIPPED_ASSERTION_STATUSES = ["skipped", "todo", "pending", "disabled"] as const;
+export const SKIPPED_ASSERTION_STATUSES = ["skipped", "todo", "pending", "disabled"] as const;
 
 type LiveResourceRequirements = Readonly<Record<string, readonly string[]>>;
 
@@ -272,12 +272,33 @@ export function readVitestExecutionEvidence(
   readonly skippedFiles: readonly TestLaneSkippedFile[];
 } {
   const report = JSON.parse(readFileSync(reportPath, "utf8")) as VitestJsonReport;
+  return (
+    collectVitestEvidence(report, (name) => localVitestPath(name, workspaceRoot), "ignore") ?? {
+      executedPaths: [],
+      skippedFiles: [],
+    }
+  );
+}
+
+function collectVitestEvidence(
+  report: VitestJsonReport,
+  resolvePath: (name: string) => string | undefined,
+  unresolvedPathPolicy: "ignore" | "reject",
+):
+  | {
+      readonly executedPaths: readonly string[];
+      readonly skippedFiles: readonly TestLaneSkippedFile[];
+    }
+  | undefined {
   const executedPaths: string[] = [];
   const skippedFiles: TestLaneSkippedFile[] = [];
   for (const { name, status, assertionResults } of report.testResults ?? []) {
     if (!assertionResults?.length || !name) continue;
-    const path = localVitestPath(name, workspaceRoot);
-    if (!path) continue;
+    const path = resolvePath(name);
+    if (!path) {
+      if (unresolvedPathPolicy === "reject") return undefined;
+      continue;
+    }
     if (
       status === "passed" &&
       assertionResults.every((assertion) => assertion.status === "passed")
@@ -341,32 +362,18 @@ function readPortableTurboVitestEvidence(
     .replace(/^\.\//u, "")
     .replace(/\/$/u, "");
   const report = JSON.parse(readFileSync(reportPath, "utf8")) as VitestJsonReport;
-  const executedPaths: string[] = [];
-  const skippedFiles: TestLaneSkippedFile[] = [];
-  for (const { name, status, assertionResults } of report.testResults ?? []) {
-    if (!assertionResults?.length || !name) continue;
-    const path = portableTurboVitestPath(
-      name,
-      workspaceRoot,
-      normalizedWorkspacePath,
-      expectedPaths,
-      allowRelocation,
-    );
-    if (!path) return undefined;
-    if (
-      status === "passed" &&
-      assertionResults.every((assertion) => assertion.status === "passed")
-    ) {
-      executedPaths.push(path);
-      continue;
-    }
-    const skippedFile = skippedVitestFile(status, assertionResults, path);
-    if (skippedFile) skippedFiles.push(skippedFile);
-  }
-  return {
-    executedPaths: [...new Set(executedPaths)].sort(compareText),
-    skippedFiles: skippedFiles.sort((left, right) => compareText(left.path, right.path)),
-  };
+  return collectVitestEvidence(
+    report,
+    (name) =>
+      portableTurboVitestPath(
+        name,
+        workspaceRoot,
+        normalizedWorkspacePath,
+        expectedPaths,
+        allowRelocation,
+      ),
+    "reject",
+  );
 }
 
 export function readVitestFailureDetails(
@@ -418,11 +425,9 @@ export function readCompletedPlaywrightPaths(
     ...(suite.specs ?? []).flatMap(({ file, tests }) =>
       file &&
       Boolean(tests?.length) &&
-      tests?.some(({ results }) => results?.some(({ status }) => status === "passed")) &&
       tests?.every(
         ({ results }) =>
-          Boolean(results?.length) &&
-          results?.every(({ status }) => status === "passed" || status === "skipped"),
+          Boolean(results?.length) && results?.every(({ status }) => status === "passed"),
       )
         ? [
             relative(workspaceRoot, isAbsolute(file) ? file : resolve(workspaceRoot, file))

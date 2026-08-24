@@ -271,6 +271,35 @@ describe("test evidence reconciliation", () => {
     ).toThrow("Test lane evidence is failed");
   });
 
+  it("accepts producer-ordered skipped files with mixed-case paths", () => {
+    const valid = laneReport([]);
+    const skippedFiles = ["src/tests/Z.spec.ts", "src/tests/a.spec.ts"].map((path) => ({
+      path,
+      status: "skipped" as const,
+      passedAssertions: 0,
+      skippedAssertions: [{ name: "requires credentials", status: "skipped" as const }],
+    }));
+    const failed = {
+      ...valid,
+      status: "failed" as const,
+      skippedFiles: skippedFiles.map((file) => ({ ...file, path: `packages/a/${file.path}` })),
+      diagnostics: [
+        { code: "TEST_LANE_EXECUTION_SKIPPED", message: "@croco/a: skipped assertion" },
+      ],
+      commands: [
+        {
+          ...valid.commands[0],
+          status: "failed" as const,
+          paths: skippedFiles.map(({ path }) => path),
+          executedPaths: [],
+          skippedFiles,
+        },
+      ],
+    };
+
+    expect(() => assertLaneReportShape(failed)).not.toThrow();
+  });
+
   it("rejects failed lane evidence that credits an unplanned path", () => {
     const valid = laneReport(["packages/a/src/tests/other.spec.ts"]);
     const failed = {

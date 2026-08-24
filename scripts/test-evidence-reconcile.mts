@@ -12,6 +12,7 @@ import {
   TEST_PROFILES,
   validateGeneratedMaterialization,
 } from "./test-inventory.mts";
+import { SKIPPED_ASSERTION_STATUSES } from "./test-lane-runner.mts";
 import type { TestLane, TestProfile } from "./test-inventory.mts";
 import type { TestLaneReport, TestLaneSkippedFile } from "./test-lane-runner.mts";
 import type {
@@ -22,6 +23,10 @@ import type {
 } from "./test-inventory.mts";
 
 export type LaneReport = TestLaneReport;
+
+function compareText(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
 
 function isStringArray(value: unknown): value is readonly string[] {
   return Array.isArray(value) && value.every((entry) => typeof entry === "string");
@@ -48,8 +53,8 @@ function isSkippedFileArray(value: unknown): value is readonly TestLaneSkippedFi
             Boolean(assertion) &&
             typeof assertion === "object" &&
             typeof (assertion as Record<string, unknown>).name === "string" &&
-            ["skipped", "todo", "pending", "disabled"].includes(
-              (assertion as Record<string, unknown>).status as string,
+            SKIPPED_ASSERTION_STATUSES.some(
+              (status) => status === (assertion as Record<string, unknown>).status,
             ),
         ) &&
         ((file.status === "partially-executed" && file.passedAssertions > 0) ||
@@ -173,7 +178,7 @@ export function assertLaneReportShape(value: unknown): asserts value is LaneRepo
     .flatMap(({ cwd, executedPaths }) =>
       executedPaths.map((path) => (cwd === "." ? path : `${cwd}/${path}`)),
     )
-    .sort();
+    .sort(compareText);
   if (JSON.stringify(report.executedPaths) !== JSON.stringify(executedPaths)) {
     throw new Error("Test lane evidence has inconsistent executed paths");
   }
@@ -184,7 +189,7 @@ export function assertLaneReportShape(value: unknown): asserts value is LaneRepo
         path: cwd === "." ? file.path : `${cwd}/${file.path}`,
       })),
     )
-    .sort((left, right) => left.path.localeCompare(right.path));
+    .sort((left, right) => compareText(left.path, right.path));
   if (JSON.stringify(report.skippedFiles) !== JSON.stringify(skippedFiles)) {
     throw new Error("Test lane evidence has inconsistent skipped files");
   }
