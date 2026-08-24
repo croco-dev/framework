@@ -11,6 +11,7 @@ import {
   compileRoutes,
   createRouteRegistrationTable,
   generateModule,
+  generateModuleFromRouteRegistrationTable,
   generateRouteRegistrationCode,
 } from "../compiler";
 
@@ -62,6 +63,7 @@ describe("compiler", () => {
           id: "SampleController.hello",
           method: "GET",
           path: "/api/hello",
+          contractPath: "/api/hello",
           controllerName: "SampleController",
           controllerPath: "/api",
           handlerName: "hello",
@@ -70,6 +72,7 @@ describe("compiler", () => {
           id: "SampleController.createUser",
           method: "POST",
           path: "/api/users",
+          contractPath: "/api/users",
           controllerName: "SampleController",
           controllerPath: "/api",
           handlerName: "createUser",
@@ -133,6 +136,96 @@ describe("compiler", () => {
     expect(() => createRouteRegistrationTable(duplicateControllers)).toThrow(
       "route-registration-duplicate-endpoint",
     );
+  });
+
+  it("keeps authored catch-all paths in duplicate diagnostics", () => {
+    const duplicateControllers: readonly CompiledController[] = [
+      {
+        basePath: "/api",
+        className: "FirstController",
+        routes: [{ method: "GET", path: "/:...path", handlerName: "first" }],
+      },
+      {
+        basePath: "/api",
+        className: "SecondController",
+        routes: [{ method: "GET", path: "/:...path", handlerName: "second" }],
+      },
+    ];
+
+    try {
+      createRouteRegistrationTable(duplicateControllers);
+      expect.unreachable("expected duplicate route diagnostics");
+    } catch (error) {
+      expect(error).toBeInstanceOf(ContractGraphDiagnosticError);
+      const diagnosticError = error as ContractGraphDiagnosticError;
+      expect(diagnosticError.diagnostics).toEqual([
+        expect.objectContaining({
+          code: "route-registration-duplicate-endpoint",
+          path: "/api/:...path",
+          message:
+            "Route registration 'SecondController.second' authored as GET /api/:...path " +
+            "duplicates route 'FirstController.first' authored as GET /api/:...path.",
+        }),
+      ]);
+    }
+  });
+
+  it("rejects a runtime path that does not match its authored contract path", () => {
+    const mismatchedTable = {
+      version: "croco.route-registration-table.v1" as const,
+      category: "http.controller" as const,
+      entries: [
+        {
+          id: "AssetsController.getAsset",
+          method: "GET",
+          path: "/:path{.+}",
+          contractPath: "/safe",
+          controllerName: "AssetsController",
+          controllerPath: "",
+          handlerName: "getAsset",
+        },
+      ],
+    };
+
+    expect(() => assertRouteRegistrationTable(mismatchedTable)).toThrow(
+      "route-registration-runtime-path-mismatch",
+    );
+    expect(() => assertRouteRegistrationTable(mismatchedTable)).toThrow(
+      "does not match its authored contract path '/safe'",
+    );
+
+    expect(() =>
+      assertRouteRegistrationTable({
+        ...mismatchedTable,
+        entries: [
+          {
+            ...mismatchedTable.entries[0],
+            path: "/:...path",
+            contractPath: "/:...path",
+          },
+        ],
+      }),
+    ).toThrow("route-registration-runtime-path-mismatch");
+  });
+
+  it("normalizes legacy v1 table paths while retaining their authored value", () => {
+    const code = generateModuleFromRouteRegistrationTable({
+      version: "croco.route-registration-table.v1",
+      category: "http.controller",
+      entries: [
+        {
+          id: "AssetsController.getAsset",
+          method: "GET",
+          path: "/assets/:...path",
+          controllerName: "AssetsController",
+          controllerPath: "/assets",
+          handlerName: "getAsset",
+        },
+      ],
+    });
+
+    expect(code).toContain('"path": "/assets/:path{.+}"');
+    expect(code).toContain('"contractPath": "/assets/:...path"');
   });
 
   it("rejects missing route registrations against a contract graph", () => {

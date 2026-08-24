@@ -164,6 +164,7 @@ type IntentMapRouteRegistrationEntry = {
   readonly id: string;
   readonly method: string;
   readonly path: string;
+  readonly contractPath?: string;
   readonly controllerName: string;
   readonly controllerPath: string;
   readonly handlerName: string;
@@ -409,11 +410,11 @@ function createRouteFromRegistrationEntry(
   return {
     id: entry.id,
     method: entry.method,
-    path: entry.path,
+    path: entry.contractPath ?? entry.path,
     controllerId: entry.controllerName,
     handlerName: entry.handlerName,
     ...(controller?.source ? { source: controller.source } : {}),
-    description: `${entry.method} ${entry.path} handled by ${entry.controllerName}.${entry.handlerName}.`,
+    description: `${entry.method} ${entry.contractPath ?? entry.path} handled by ${entry.controllerName}.${entry.handlerName}.`,
   };
 }
 

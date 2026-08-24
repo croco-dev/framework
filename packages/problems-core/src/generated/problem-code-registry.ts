@@ -18159,7 +18159,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/RouteCompiler.ts",
-          line: 119,
+          line: 120,
           column: 15,
           kind: "problem-factory",
         },
@@ -18326,7 +18326,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/RouteCompiler.ts",
-          line: 71,
+          line: 72,
           column: 11,
           kind: "problem-factory",
         },
@@ -18460,7 +18460,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/RouteCompiler.ts",
-          line: 194,
+          line: 195,
           column: 17,
           kind: "problem-factory",
         },

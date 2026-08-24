@@ -2,6 +2,7 @@ import type { Guard, ILogger } from "@croco/framework-context";
 import { ProblemFactory } from "@croco/problems-core";
 import {
   extractRouteIR,
+  toRuntimeRoutePath,
   type RouteContractSourceLocation,
   type RouteIR,
 } from "@croco/protocols-core";
@@ -131,7 +132,7 @@ export class RouteCompiler {
     routeIR: RouteIR,
     options: CompileOptions,
   ): RouteCompilerEntry {
-    const fullPath = this.toRuntimeRoutePath(this.joinPaths("", routeIR.path));
+    const fullPath = toRuntimeRoutePath(this.joinPaths("", routeIR.path));
     const createPipeInstance = (pipe: Constructor<PipeTransform>): PipeTransform =>
       instantiateProvider(pipe, options.container);
 
@@ -256,14 +257,6 @@ export class RouteCompiler {
     const result = `${cleanBase}${cleanPath}`.replace(/\/+/g, "/");
     // trailing slash 제거 (루트 제외)
     return result.length > 1 && result.endsWith("/") ? result.slice(0, -1) : result || "/";
-  }
-
-  private toRuntimeRoutePath(path: string): string {
-    return path.replace(/:([^/]+)/g, (token, paramToken: string) => {
-      const name = paramToken.replace(/^\.\.\./, "");
-
-      return name === paramToken || name.length === 0 ? token : `:${name}{.+}`;
-    });
   }
 
   private formatDuplicateRouteDetail(
