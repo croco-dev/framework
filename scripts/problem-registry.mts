@@ -2132,6 +2132,26 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "telemetry-sdk-node/shutdown-timeout": recovery({
+    cause:
+      "The OpenTelemetry SDK did not complete exporter teardown within the configured shutdown deadline.",
+    userAction:
+      "Do not reinitialize telemetry yet; retry shutdown after the stalled exporter or SDK teardown has been investigated.",
+    operatorAction:
+      "Inspect exporter and SDK shutdown diagnostics for the reported timeoutMillis, then retry shutdown() to rejoin the same pending teardown before reinitializing.",
+    retryability: "conditional",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
+  "telemetry-sdk-node/shutdown-timeout-invalid": recovery({
+    cause: "Telemetry shutdown received a timeout outside the supported integer millisecond range.",
+    userAction: "Retry shutdown with an integer timeout from 1 through 2147483647 milliseconds.",
+    operatorAction:
+      "Correct the shutdown timeout at the lifecycle owner before invoking TelemetryRuntime.shutdown().",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
   "transports-graphql/body-limit-invalid-configuration": recovery({
     cause: "The GraphQL server was configured with an invalid request body byte boundary.",
     userAction: "Ask the operator to correct the service configuration before retrying.",

@@ -81,7 +81,13 @@ title: "TelemetryRuntime"
 
 ### shutdown()
 
-> **shutdown**(): `Promise`\<[`ShutdownResult`](/api/telemetry-sdk-node/src/type-aliases/shutdownresult/)\>
+> **shutdown**(`timeoutMillis?`): `Promise`\<[`ShutdownResult`](/api/telemetry-sdk-node/src/type-aliases/shutdownresult/)\>
+
+#### Parameters
+
+##### timeoutMillis?
+
+`number`
 
 #### Returns
 
