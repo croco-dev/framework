@@ -137,6 +137,10 @@ const health = await diagnostics.getHealth();
 - `analytics-posthog/capture-failed`: `capture()` 호출이 PostHog SDK로 전달되었지만
   provider가 거부했습니다. 로그의 event name과 provider 상태를 확인하고 필요하면 같은
   business event를 재전송합니다.
+- `analytics-posthog/identify-failed`: `identify()` 호출이 PostHog SDK에서 실패했습니다.
+  호출자에게 실패를 전파하지 않으며 식별자와 속성은 로그에 남기지 않습니다.
+- `analytics-posthog/group-failed`: `group()` 호출이 PostHog SDK에서 실패했습니다.
+  호출자에게 실패를 전파하지 않으며 그룹 키와 속성은 로그에 남기지 않습니다.
 - `analytics-posthog/readiness-failed`: injected readiness check가 upstream 장애를 감지한
   상태입니다. health details의 `upstreamCode`/`upstreamStatus`를 확인하고 provider 복구
   후 재시도합니다.

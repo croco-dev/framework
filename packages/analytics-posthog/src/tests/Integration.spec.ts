@@ -110,6 +110,20 @@ describe("PostHog Integration", () => {
     });
   });
 
+  it("should preserve synchronous capture failure containment", () => {
+    vi.spyOn(postHogClient.getClient(), "capture").mockImplementationOnce(() => {
+      throw new Error("capture failed synchronously");
+    });
+
+    expect(() => analyticsManager.capture("sync-failed-event")).not.toThrow();
+
+    expect(logger.warn).toHaveBeenCalledWith("PostHog capture failed", {
+      event: "sync-failed-event",
+      errorName: "Error",
+      problemCode: "analytics-posthog/capture-failed",
+    });
+  });
+
   it("should not leak PostHog secrets when logging capture failures", async () => {
     const secretError = Object.assign(
       new Error("Authorization: Bearer secret ph_secret should not be logged"),
@@ -186,6 +200,114 @@ describe("PostHog Integration", () => {
       groupKey: "tenant-123",
       properties: { seats: 10 },
     });
+  });
+
+  it("should contain synchronous identify and group failures", () => {
+    const client = postHogClient.getClient();
+    vi.spyOn(client, "identify").mockImplementationOnce(() => {
+      throw Object.assign(new Error("identify provider secret"), {
+        code: "IDENTIFY_FAILED",
+        status: 503,
+      });
+    });
+    vi.spyOn(client, "groupIdentify").mockImplementationOnce(() => {
+      throw Object.assign(new Error("group provider secret"), {
+        code: "GROUP_FAILED",
+        statusCode: 504,
+      });
+    });
+
+    expect(() =>
+      analyticsManager.identify("user-secret", { authorization: "identify-property-secret" }),
+    ).not.toThrow();
+    expect(() =>
+      analyticsManager.group("tenant", "group-secret", { apiKey: "group-property-secret" }),
+    ).not.toThrow();
+
+    expect(logger.warn).toHaveBeenNthCalledWith(1, "PostHog identify failed", {
+      operation: "identify",
+      errorName: "Error",
+      upstreamCode: "IDENTIFY_FAILED",
+      upstreamStatus: 503,
+      problemCode: "analytics-posthog/identify-failed",
+    });
+    expect(logger.warn).toHaveBeenNthCalledWith(2, "PostHog group failed", {
+      operation: "group",
+      errorName: "Error",
+      upstreamCode: "GROUP_FAILED",
+      upstreamStatus: 504,
+      problemCode: "analytics-posthog/group-failed",
+    });
+    const loggedFailures = JSON.stringify(vi.mocked(logger.warn).mock.calls);
+    expect(loggedFailures).not.toContain("provider secret");
+    expect(loggedFailures).not.toContain("user-secret");
+    expect(loggedFailures).not.toContain("group-secret");
+    expect(loggedFailures).not.toContain("property-secret");
+  });
+
+  it("should contain synchronous failures with uninspectable rejection metadata", () => {
+    const rejection = createUninspectableRejection();
+    Object.defineProperty(postHogClient.getClient(), "identify", {
+      configurable: true,
+      value: () => {
+        throw rejection;
+      },
+    });
+
+    expect(() => analyticsManager.identify("user-secret")).not.toThrow();
+
+    expect(logger.warn).toHaveBeenCalledOnce();
+    expect(logger.warn).toHaveBeenCalledWith("PostHog identify failed", {
+      operation: "identify",
+      problemCode: "analytics-posthog/identify-failed",
+    });
+  });
+
+  it("should observe asynchronous identify and group rejections exactly once", async () => {
+    const client = postHogClient.getClient();
+    vi.spyOn(client, "identify").mockRejectedValueOnce(new Error("identify rejected"));
+    vi.spyOn(client, "groupIdentify").mockRejectedValueOnce(new Error("group rejected"));
+
+    analyticsManager.identify("user-123");
+    analyticsManager.group("tenant", "tenant-123");
+
+    await Promise.resolve();
+
+    expect(logger.warn).toHaveBeenCalledTimes(2);
+    expect(logger.warn).toHaveBeenCalledWith("PostHog identify failed", {
+      operation: "identify",
+      errorName: "Error",
+      problemCode: "analytics-posthog/identify-failed",
+    });
+    expect(logger.warn).toHaveBeenCalledWith("PostHog group failed", {
+      operation: "group",
+      errorName: "Error",
+      problemCode: "analytics-posthog/group-failed",
+    });
+  });
+
+  it("should contain asynchronous failures with uninspectable rejection metadata", async () => {
+    const unhandledRejection = vi.fn();
+    process.once("unhandledRejection", unhandledRejection);
+    vi.spyOn(postHogClient.getClient(), "groupIdentify").mockRejectedValueOnce(
+      createUninspectableRejection(),
+    );
+
+    try {
+      analyticsManager.group("tenant", "group-secret");
+      await new Promise<void>((resolve) => {
+        setImmediate(resolve);
+      });
+
+      expect(logger.warn).toHaveBeenCalledOnce();
+      expect(logger.warn).toHaveBeenCalledWith("PostHog group failed", {
+        operation: "group",
+        problemCode: "analytics-posthog/group-failed",
+      });
+      expect(unhandledRejection).not.toHaveBeenCalled();
+    } finally {
+      process.removeListener("unhandledRejection", unhandledRejection);
+    }
   });
 
   it("should flush buffered PostHog events through shutdown", async () => {
@@ -424,3 +546,17 @@ describe("PostHog Integration", () => {
     );
   });
 });
+
+function createUninspectableRejection(): object {
+  return new Proxy(
+    {},
+    {
+      get() {
+        throw new Error("provider metadata getter failed");
+      },
+      getPrototypeOf() {
+        throw new Error("provider prototype inspection failed");
+      },
+    },
+  );
+}

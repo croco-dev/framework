@@ -15,6 +15,34 @@ export class PostHogAnalyticsCaptureProblem extends Problem {
   }
 }
 
+export class PostHogAnalyticsIdentifyProblem extends Problem {
+  readonly code = "analytics-posthog/identify-failed";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(cause?: Error) {
+    super(undefined, undefined, "PostHog analytics identify failed", {
+      cause,
+      extensions: {
+        provider: "posthog",
+      },
+    });
+  }
+}
+
+export class PostHogAnalyticsGroupProblem extends Problem {
+  readonly code = "analytics-posthog/group-failed";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(cause?: Error) {
+    super(undefined, undefined, "PostHog analytics group failed", {
+      cause,
+      extensions: {
+        provider: "posthog",
+      },
+    });
+  }
+}
+
 export class PostHogAnalyticsFlushProblem extends Problem {
   readonly code = "analytics-posthog/flush-failed";
   readonly category = ProblemCategory.InternalServerError;
