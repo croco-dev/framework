@@ -138,6 +138,19 @@ describe("package-entrypoint-smoke.mts", () => {
     expect(result.stdout).not.toContain("no ESM import target found");
   });
 
+  it("fails early when a required build artifact is absent from a non-empty dist directory", () => {
+    const root = createTempRoot();
+    writeImportablePackage(root, "partial-build");
+    rmSync(join(root, "packages", "partial-build", "dist", "index.js"));
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("Package entrypoint smoke build prerequisite failed:");
+    expect(result.stdout).toContain("@croco/partial-build (packages/partial-build/dist)");
+    expect(result.stdout).not.toContain("points to missing file");
+  });
+
   it("fails when an export map points at a missing runtime entrypoint", () => {
     const root = createTempRoot();
     writeImportablePackage(root, "invalid-export", {

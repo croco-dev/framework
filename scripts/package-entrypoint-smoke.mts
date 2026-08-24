@@ -291,7 +291,7 @@ function parseArgs(args: readonly string[]): {
 
 function buildMissingPackages(rootDir: string, packageInfos: readonly PackageInfo[]): void {
   const missingPackageNames = packageInfos
-    .filter((packageInfo) => !packageHasBuildArtifacts(packageInfo.packageDir))
+    .filter((packageInfo) => !packageHasBuildArtifacts(packageInfo))
     .map((packageInfo) => packageInfo.packageName);
   if (missingPackageNames.length === 0) {
     return;
@@ -320,7 +320,7 @@ function buildPrerequisiteDiagnosticsFor(
   packageInfos: readonly PackageInfo[],
 ): string[] {
   const missingBuildArtifacts = packageInfos.filter(
-    (packageInfo) => !packageHasBuildArtifacts(packageInfo.packageDir),
+    (packageInfo) => !packageHasBuildArtifacts(packageInfo),
   );
 
   if (missingBuildArtifacts.length === 0) {
@@ -346,17 +346,13 @@ function buildPrerequisiteDiagnosticsFor(
   ];
 }
 
-function packageHasBuildArtifacts(packageDir: string): boolean {
-  const distDir = join(packageDir, "dist");
-  if (!existsSync(distDir)) {
-    return false;
-  }
-
-  try {
-    return readdirSync(distDir).length > 0;
-  } catch {
-    return false;
-  }
+function packageHasBuildArtifacts(packageInfo: PackageInfo): boolean {
+  const publishMain = packageInfo.sourceManifest.publishConfig?.main;
+  return (
+    typeof publishMain === "string" &&
+    publishMain.startsWith("./dist/") &&
+    existsSync(join(packageInfo.packageDir, publishMain.slice(2)))
+  );
 }
 
 function printBuildPrerequisiteFailure(diagnostics: readonly string[]): void {
