@@ -19,9 +19,21 @@ describe("published HTTP listen contract", () => {
 
       try {
         const packages = [
-          { name: "@croco/transports-http", tarballPrefix: "croco-transports-http-" },
-          { name: "@croco/preset-node", tarballPrefix: "croco-preset-node-" },
-          { name: "@croco/preset-lambda", tarballPrefix: "croco-preset-lambda-" },
+          {
+            name: "@croco/transports-http",
+            tarballPrefix: "croco-transports-http-",
+            usesNodeServer: true,
+          },
+          {
+            name: "@croco/preset-node",
+            tarballPrefix: "croco-preset-node-",
+            usesNodeServer: true,
+          },
+          {
+            name: "@croco/preset-lambda",
+            tarballPrefix: "croco-preset-lambda-",
+            usesNodeServer: false,
+          },
         ] as const;
 
         for (const packageInfo of packages) {
@@ -36,21 +48,16 @@ describe("published HTTP listen contract", () => {
             run("tar", ["-xOf", tarball, "package/package.json"], rootDir).stdout,
           ) as {
             dependencies?: Record<string, string>;
+            devDependencies?: Record<string, string>;
           };
 
           expect(packedManifest.dependencies?.hono).toBe("^4.12.34");
+
+          if (packageInfo.usesNodeServer) {
+            expect(packedManifest.dependencies?.["@hono/node-server"]).toBe("^1.19.17");
+            expect(packedManifest.devDependencies?.["@hono/node-server"]).toBeUndefined();
+          }
         }
-
-        const transportsHttpTarball = findTarball(packRoot, "croco-transports-http-");
-        const packedManifest = JSON.parse(
-          run("tar", ["-xOf", transportsHttpTarball, "package/package.json"], rootDir).stdout,
-        ) as {
-          dependencies?: Record<string, string>;
-          devDependencies?: Record<string, string>;
-        };
-
-        expect(packedManifest.dependencies?.["@hono/node-server"]).toBe("^1.19.10");
-        expect(packedManifest.devDependencies?.["@hono/node-server"]).toBeUndefined();
       } finally {
         rmSync(packRoot, { force: true, recursive: true });
       }

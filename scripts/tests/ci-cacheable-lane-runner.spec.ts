@@ -271,6 +271,7 @@ describe("cacheable producer lane planning", () => {
       corePlan.commands.find((command) => command.id === "typecheck")?.concurrencyGroups,
     ).toEqual(["workspace-artifacts"]);
     expect(corePlan.commands.find((command) => command.id === "test")?.concurrencyGroups).toEqual([
+      "workspace-artifacts",
       "test-integration",
     ]);
     expect(
