@@ -514,7 +514,7 @@ describe("@Retryable", () => {
     }
   });
 
-  it("shares same-id concurrent admission across decorated calls", async () => {
+  it("admits same-id healthy concurrent decorated calls beyond the failure threshold", async () => {
     const first = createDeferred<void>();
     const second = createDeferred<void>();
     const entered: number[] = [];
@@ -544,15 +544,15 @@ describe("@Retryable", () => {
     const secondCall = service.doWork(2);
 
     await vi.waitFor(() => expect(entered).toEqual([1, 2]));
-    await expect(service.doWork(3)).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
-    expect(entered).toEqual([1, 2]);
+    await expect(service.doWork(3)).resolves.toBeUndefined();
+    expect(entered).toEqual([1, 2, 3]);
 
     first.resolve();
     second.resolve();
     await expect(firstCall).resolves.toBeUndefined();
     await expect(secondCall).resolves.toBeUndefined();
     await expect(service.doWork(4)).resolves.toBeUndefined();
-    expect(entered).toEqual([1, 2, 4]);
+    expect(entered).toEqual([1, 2, 3, 4]);
   });
 
   it("uses a supplied state store without resetting it during registry churn", async () => {
@@ -696,7 +696,7 @@ describe("@Retryable", () => {
     }
   });
 
-  it("releases cached closed admission exactly once when a store lock rejects", async () => {
+  it("keeps later healthy calls admissible when failure bookkeeping cannot acquire the store lock", async () => {
     class RejectFirstLockStore extends InMemoryCircuitBreakerStateStore {
       private shouldReject = true;
 
@@ -749,8 +749,8 @@ describe("@Retryable", () => {
 
     const thirdCall = service.doWork(3);
     await vi.waitFor(() => expect(entered).toEqual([1, 2, 3]));
-    await expect(service.doWork(4)).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
-    expect(entered).toEqual([1, 2, 3]);
+    await expect(service.doWork(4)).resolves.toBeUndefined();
+    expect(entered).toEqual([1, 2, 3, 4]);
 
     first.resolve();
     third.resolve();
