@@ -18449,6 +18449,24 @@
               "declarationKind": "class"
             },
             {
+              "name": "NotificationProviderCapabilitiesMissingProblem",
+              "exportKind": "declaration",
+              "source": "./libs/problems/NotificationProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "NotificationProviderCapabilityChannelMismatchProblem",
+              "exportKind": "declaration",
+              "source": "./libs/problems/NotificationProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "NotificationProviderCapabilityNameMismatchProblem",
+              "exportKind": "declaration",
+              "source": "./libs/problems/NotificationProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "NotificationProviderChannelMismatchProblem",
               "exportKind": "declaration",
               "source": "./libs/problems/NotificationProblems",
@@ -18610,7 +18628,7 @@
               "name": "NotificationResult",
               "exportKind": "declaration",
               "source": "./libs/types",
-              "declarationKind": "interface"
+              "declarationKind": "type"
             },
             {
               "name": "NotificationSendContractOptions",
@@ -18889,6 +18907,12 @@
           "sourceEntrypoint": "packages/onboarding-core/src/index.ts",
           "runtimeExports": [
             {
+              "name": "createOnboardingStoreConformanceSuite",
+              "exportKind": "named",
+              "source": "./libs/conformance",
+              "declarationKind": "function"
+            },
+            {
               "name": "InMemoryOnboardingStore",
               "exportKind": "named",
               "source": "./libs/OnboardingStore",
@@ -18983,6 +19007,21 @@
               "source": "./libs/types"
             },
             {
+              "name": "OnboardingStoreConformanceCase",
+              "exportKind": "named",
+              "source": "./libs/conformance"
+            },
+            {
+              "name": "OnboardingStoreConformanceOptions",
+              "exportKind": "named",
+              "source": "./libs/conformance"
+            },
+            {
+              "name": "OnboardingStoreConformanceSuite",
+              "exportKind": "named",
+              "source": "./libs/conformance"
+            },
+            {
               "name": "StepState",
               "exportKind": "named",
               "source": "./libs/types"
@@ -19021,6 +19060,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "addOnboardingLifecycleFields",
+              "exportKind": "named",
+              "source": "./migrations/addOnboardingLifecycleFields",
+              "declarationKind": "function"
+            },
+            {
               "name": "DRIZZLE_TOKEN",
               "exportKind": "named",
               "source": "./libs/DrizzleOnboardingStore",
@@ -19042,6 +19087,12 @@
               "name": "removeCompletionStepIdentity",
               "exportKind": "named",
               "source": "./migrations/addCompletionStepIdentity",
+              "declarationKind": "function"
+            },
+            {
+              "name": "removeOnboardingLifecycleFields",
+              "exportKind": "named",
+              "source": "./migrations/addOnboardingLifecycleFields",
               "declarationKind": "function"
             }
           ],
@@ -28924,6 +28975,65 @@
               "name": "TestEvidenceRecord",
               "exportKind": "named",
               "source": "./libs/test-evidence.mjs"
+            }
+          ]
+        },
+        {
+          "exportPath": "./notifications",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["import"],
+              "target": "./dist/notifications.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/notifications.js"
+            },
+            {
+              "conditions": ["types"],
+              "target": "./dist/notifications.d.ts"
+            }
+          ],
+          "sourceEntrypoint": "packages/testing/src/notifications.ts",
+          "runtimeExports": [
+            {
+              "name": "createNotificationProviderConformanceSuite",
+              "exportKind": "named",
+              "source": "./libs/notification-provider-conformance",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "NotificationProviderCapabilityContract",
+              "exportKind": "named",
+              "source": "./libs/notification-provider-conformance"
+            },
+            {
+              "name": "NotificationProviderConformanceCase",
+              "exportKind": "named",
+              "source": "./libs/notification-provider-conformance"
+            },
+            {
+              "name": "NotificationProviderConformanceOptions",
+              "exportKind": "named",
+              "source": "./libs/notification-provider-conformance"
+            },
+            {
+              "name": "NotificationProviderConformanceSubject",
+              "exportKind": "named",
+              "source": "./libs/notification-provider-conformance"
+            },
+            {
+              "name": "NotificationProviderConformanceSuite",
+              "exportKind": "named",
+              "source": "./libs/notification-provider-conformance"
+            },
+            {
+              "name": "NotificationProviderOutboxIntegrationContract",
+              "exportKind": "named",
+              "source": "./libs/notification-provider-conformance"
             }
           ]
         },

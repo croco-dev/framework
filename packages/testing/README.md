@@ -70,6 +70,7 @@ test.expectClean();
 | `createProviderConformanceMatrixSuite(config)`        | Validates provider profile manifests for required capabilities, optional unsupported reasons, and method evidence.                           |
 | `createLlmProviderConformanceSuite(config)`           | Reusable LLM provider contract cases for mocked or live provider fixtures.                                                                   |
 | `createBillingProviderConformanceSuite(config)`       | Builds runner-neutral billing gateway and webhook conformance cases for provider packages.                                                   |
+| `createNotificationProviderConformanceSuite(config)`  | Verifies explicit notification provider capability profiles through `@croco/testing/notifications`.                                          |
 | `createUpstashRedisMeteringConformanceSuite(config)`  | Reusable Upstash Redis metering cases for config, usage storage, idempotency, upstream errors, and live-smoke gating.                        |
 | `createUpstashRedisRateLimitConformanceSuite(config)` | Reusable Upstash Redis rate-limit cases for config, errors, refund idempotency, and live-smoke gating.                                       |
 | `createQStashTaskConformanceSuite(config)`            | Reusable QStash task publish cases for config, validation, idempotency, upstream errors, and live-smoke gating.                              |
@@ -341,8 +342,9 @@ message that includes the affected methods.
 ### Conformance Compatibility Contract
 
 The conformance helpers are a public package contract for downstream provider packages. The root
-`@croco/testing` entrypoint exports every conformance helper, and `@croco/testing/drizzle` exports
-the Drizzle-specific helper pair for packages that only need Drizzle contracts.
+`@croco/testing` entrypoint exports general conformance helpers, `@croco/testing/drizzle` exports
+the Drizzle-specific helper pair, and `@croco/testing/notifications` exports notification capability
+conformance without loading unrelated provider contracts.
 
 Downstream packages may depend on:
 
@@ -375,6 +377,12 @@ The auth provider helper currently covers:
   invalid credentials, malformed provider payloads, redacted upstream auth failures, signed webhook
   success/failure, malformed webhook payloads, provider organization to Croco tenant evidence,
   missing/ready diagnostics output, and explicit no-credential live-smoke gates.
+
+The notification provider helper currently covers:
+
+- `createNotificationProviderConformanceSuite()` for providers implementing
+  `@croco/notifications-core/NotificationProvider`: explicit complete capability profiles,
+  provider-name and channel consistency, and stable profile reads for diagnostics and certification.
 
 The serverless provider helpers currently cover:
 

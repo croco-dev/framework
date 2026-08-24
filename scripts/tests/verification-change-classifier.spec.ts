@@ -17,6 +17,7 @@ describe("verification change classifier", () => {
     [["scripts/test-evidence-runtime.mts"], "publish"],
     [["scripts/ci-executable-policy.mts"], "publish"],
     [["scripts/tests/ci-executable-policy.spec.ts"], "publish"],
+    [[".github/actionlint.yaml"], "publish"],
     [[".github/renovate.json"], "publish"],
     [[".github/workflows/ci.yml"], "publish"],
     [[".changeset/new.md"], "repo"],
@@ -36,12 +37,14 @@ describe("verification change classifier", () => {
 
   it("routes trunk changesets, candidates, maintenance, and docs independently", () => {
     expect(classifyVerificationChanges("push", [".changeset/new.md"])).toMatchObject({
+      allowPendingReleaseMetadata: false,
       profile: null,
       shouldUpdateReleasePr: true,
       shouldRunChangesetsAction: true,
     });
     expect(classifyVerificationChanges("push", ["packages/retry-core/package.json"])).toMatchObject(
       {
+        allowPendingReleaseMetadata: false,
         profile: "publish",
         shouldRunVerification: true,
         shouldUpdateReleasePr: false,
@@ -51,19 +54,23 @@ describe("verification change classifier", () => {
     expect(
       classifyVerificationChanges("push", ["scripts/release-spine-evidence.mts"]),
     ).toMatchObject({
+      allowPendingReleaseMetadata: true,
       profile: "publish",
       shouldRunVerification: true,
       shouldRunChangesetsAction: false,
     });
     expect(classifyVerificationChanges("push", ["docs/guide.md"])).toMatchObject({
+      allowPendingReleaseMetadata: false,
       profile: null,
       shouldRunVerification: false,
+      shouldRunChangesetsAction: false,
     });
   });
 
-  it("keeps the workflow action hardening change set out of Changesets publishing", () => {
+  it("keeps workflow hardening out of diff-local Changesets publishing", () => {
     expect(
       classifyVerificationChanges("push", [
+        ".github/actionlint.yaml",
         ".github/renovate.json",
         ".github/workflows/benchmark.yml",
         ".github/workflows/ci.yml",
@@ -74,6 +81,7 @@ describe("verification change classifier", () => {
         "scripts/tests/verification-change-classifier.spec.ts",
       ]),
     ).toMatchObject({
+      allowPendingReleaseMetadata: true,
       profile: "publish",
       shouldRunVerification: true,
       shouldUpdateReleasePr: false,
@@ -147,12 +155,14 @@ describe("verification change classifier", () => {
       shouldRunChangesetsAction: true,
     });
     expect(classifyVerificationChanges("workflow_dispatch", [])).toMatchObject({
+      allowPendingReleaseMetadata: false,
       profile: "publish",
       shouldRunVerification: true,
       shouldUpdateReleasePr: true,
       shouldRunChangesetsAction: true,
     });
     expect(classifyVerificationChanges("workflow_dispatch", [], "ci")).toMatchObject({
+      allowPendingReleaseMetadata: true,
       profile: "publish",
       shouldRunVerification: true,
       shouldUpdateReleasePr: false,

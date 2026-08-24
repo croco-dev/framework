@@ -45,7 +45,11 @@ await manager.completeStep("welcome-tour", "step-1");
 온보딩 상태 저장소의 추상 클래스입니다. 커스텀 구현체를 만들거나 `InMemoryOnboardingStore`를 사용할 수 있습니다.
 
 ```typescript
-import { OnboardingStore, InMemoryOnboardingStore } from "@croco/onboarding-core";
+import {
+  createOnboardingStoreConformanceSuite,
+  InMemoryOnboardingStore,
+  OnboardingStore,
+} from "@croco/onboarding-core";
 
 // 인메모리 저장소 (테스트용)
 const store = new InMemoryOnboardingStore();
@@ -77,6 +81,18 @@ class MyOnboardingStore extends OnboardingStore {
   ): Promise<CompleteOnboardingStepResult> {
     // 단계 상태와 전체 완료 전이를 원자적으로 적용
   }
+}
+```
+
+커스텀 저장소는 동일한 lifecycle-field 계약을 검증하는 conformance suite를 실행할 수 있습니다.
+
+```typescript
+import { it } from "vitest";
+
+const suite = createOnboardingStoreConformanceSuite({ createStore: () => new MyOnboardingStore() });
+
+for (const testCase of suite.cases) {
+  it(testCase.name, testCase.run);
 }
 ```
 

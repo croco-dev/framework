@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -21,6 +21,7 @@ type WorkflowStep = {
 };
 
 type ReleaseWorkflow = {
+  readonly concurrency?: unknown;
   readonly jobs?: {
     readonly release_ref_guard?: {
       readonly outputs?: Record<string, unknown>;
@@ -39,6 +40,8 @@ type ReleaseWorkflow = {
 
 const releaseAuthorityCondition =
   "github.ref == 'refs/heads/trunk' && needs.release_ref_guard.outputs.verified_sha == github.sha";
+const releaseActionCondition = `${releaseAuthorityCondition} && steps.release_execution.outputs.should_run_changesets_action == 'true'`;
+const releaseMutationCondition = `${releaseActionCondition} && steps.current_trunk.outputs.is_current == 'true'`;
 
 function parseWorkflow(source: string): ReleaseWorkflow {
   const document = parseDocument(source, { uniqueKeys: true });
@@ -86,6 +89,11 @@ function assertReleasePrAuthenticationContract(source: string): void {
     contents: "read",
     "id-token": "write",
   });
+  expect(parsedWorkflow.concurrency).toEqual({
+    group: "release",
+    "cancel-in-progress": false,
+    queue: "max",
+  });
 
   const guardJob = parsedWorkflow.jobs?.release_ref_guard;
   expect(guardJob?.permissions).toEqual({ contents: "read" });
@@ -106,15 +114,32 @@ function assertReleasePrAuthenticationContract(source: string): void {
 
   const steps = releaseSteps(parsedWorkflow);
   const checkoutStep = stepByName(steps, "Checkout");
+  const checkoutIndex = steps.indexOf(checkoutStep);
   expect(checkoutStep.with?.ref).toBe("${{ needs.release_ref_guard.outputs.verified_sha }}");
+  const releaseStateStep = stepByName(steps, "Inspect current trunk release state");
+  const releaseStateIndex = steps.indexOf(releaseStateStep);
+  const releaseWorkStep = stepByName(steps, "Select release work and verification profile");
+  const releaseWorkIndex = steps.indexOf(releaseWorkStep);
+  expect(releaseStateIndex).toBe(checkoutIndex + 1);
+  expect(releaseWorkIndex).toBe(releaseStateIndex + 1);
+  expect(releaseStateStep.id).toBe("release_state");
+  expect(releaseStateStep.env).toEqual({
+    GH_TOKEN: "${{ github.token }}",
+    VERIFIED_SHA: "${{ needs.release_ref_guard.outputs.verified_sha }}",
+  });
+  expect(releaseStateStep.run).toContain('echo "is_current=false" >> "$GITHUB_OUTPUT"');
+  expect(releaseWorkStep.if).toBe("steps.release_state.outputs.is_current == 'true'");
   const credentialStep = stepByName(steps, "Verify release PR automation credentials");
   const setupIndex = steps.findIndex((step) => step.name === "Setup pnpm");
-  const credentialIndex = steps.indexOf(credentialStep);
-  expect(credentialIndex).toBeGreaterThan(-1);
-  expect(credentialIndex).toBeLessThan(setupIndex);
-  expect(credentialStep.if).toBe(
-    `${releaseAuthorityCondition} && steps.release_work.outputs.should_run_changesets_action == 'true'`,
+  const releaseExecutionIndex = steps.findIndex(
+    (step) => step.name === "Resolve cumulative release execution",
   );
+  const credentialIndex = steps.indexOf(credentialStep);
+  const installIndex = steps.findIndex((step) => step.name === "Install dependencies");
+  expect(releaseExecutionIndex).toBeGreaterThan(setupIndex);
+  expect(credentialIndex).toBeGreaterThan(releaseExecutionIndex);
+  expect(credentialIndex).toBeLessThan(installIndex);
+  expect(credentialStep.if).toBe(releaseActionCondition);
   expect(credentialStep.env).toEqual({
     RELEASE_APP_CLIENT_ID: "${{ vars.RELEASE_APP_CLIENT_ID }}",
     RELEASE_APP_PRIVATE_KEY: "${{ secrets.RELEASE_APP_PRIVATE_KEY }}",
@@ -123,16 +148,22 @@ function assertReleasePrAuthenticationContract(source: string): void {
   expect(credentialStep.run).toContain("RELEASING.md");
 
   const uploadIndex = steps.findIndex((step) => step.name === "Upload release spine evidence");
+  const npmSetupStep = stepByName(steps, "Configure Node.js for npm publishing");
+  const npmSetupIndex = steps.indexOf(npmSetupStep);
   const tokenStep = stepByName(steps, "Mint release PR GitHub App token");
   const tokenIndex = steps.indexOf(tokenStep);
+  const currentTrunkStep = stepByName(steps, "Revalidate current trunk revision");
+  const currentTrunkIndex = steps.indexOf(currentTrunkStep);
   const changesetsStep = stepByName(steps, "Create Release Pull Request or Publish");
   const changesetsIndex = steps.indexOf(changesetsStep);
-  expect(tokenIndex).toBeGreaterThan(uploadIndex);
-  expect(tokenIndex).toBeLessThan(changesetsIndex);
+  expect(npmSetupIndex).toBeGreaterThan(uploadIndex);
+  expect(tokenIndex).toBeGreaterThan(npmSetupIndex);
+  expect(currentTrunkIndex).toBeGreaterThan(tokenIndex);
+  expect(currentTrunkIndex).toBe(changesetsIndex - 1);
+  expect(npmSetupStep.if).toBe(releaseActionCondition);
+  expect(npmSetupStep.uses).toBe("actions/setup-node@820762786026740c76f36085b0efc47a31fe5020");
   expect(tokenStep.id).toBe("release_app_token");
-  expect(tokenStep.if).toBe(
-    `${releaseAuthorityCondition} && steps.release_work.outputs.should_run_changesets_action == 'true'`,
-  );
+  expect(tokenStep.if).toBe(releaseActionCondition);
   expect(tokenStep.uses).toBe(
     "actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1",
   );
@@ -144,11 +175,25 @@ function assertReleasePrAuthenticationContract(source: string): void {
     "permission-contents": "write",
     "permission-pull-requests": "write",
   });
+  expect(currentTrunkStep.id).toBe("current_trunk");
+  expect(currentTrunkStep.if).toBe(releaseActionCondition);
+  expect(currentTrunkStep.env).toEqual({
+    GH_TOKEN: "${{ github.token }}",
+    VERIFIED_SHA: "${{ needs.release_ref_guard.outputs.verified_sha }}",
+  });
+  expect(currentTrunkStep.run).toContain('"/repos/${GITHUB_REPOSITORY}/git/ref/heads/trunk"');
+  expect(currentTrunkStep.run).toContain('if [ "$current_trunk_sha" != "$VERIFIED_SHA" ]; then');
+  expect(currentTrunkStep.run).toContain('echo "is_current=false" >> "$GITHUB_OUTPUT"');
+  expect(currentTrunkStep.run).toContain('echo "is_current=true" >> "$GITHUB_OUTPUT"');
   expect(changesetsStep.uses).toBe("changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d");
-  expect(changesetsStep.if).toBe(
-    `${releaseAuthorityCondition} && steps.release_work.outputs.should_run_changesets_action == 'true'`,
-  );
+  expect(changesetsStep.if).toBe(releaseMutationCondition);
   expect(changesetsStep.env?.GITHUB_TOKEN).toBe("${{ steps.release_app_token.outputs.token }}");
+  expect(changesetsStep.env?.NODE_AUTH_TOKEN).toBe("${{ secrets.NPM_TOKEN }}");
+  expect(
+    steps
+      .slice(0, changesetsIndex)
+      .some((step) => Object.values(step.env ?? {}).includes("${{ secrets.NPM_TOKEN }}")),
+  ).toBe(false);
   expect(source).not.toContain("secrets.GITHUB_TOKEN");
   expect(source).not.toMatch(/permission-(?:actions|workflows):/);
 }
@@ -183,6 +228,64 @@ function runCredentialPreflight(clientId?: string, privateKey?: string) {
     encoding: "utf8",
     env,
   });
+}
+
+function runReleaseState(currentSha: string) {
+  const fixtureDir = mkdtempSync(resolve(tmpdir(), "release-state-"));
+  const output = resolve(fixtureDir, "github-output");
+  const ghPath = resolve(fixtureDir, "gh");
+  writeFileSync(ghPath, '#!/usr/bin/env bash\nprintf "%s\\n" "$CURRENT_TRUNK_SHA"\n');
+  chmodSync(ghPath, 0o755);
+  const stateStep = stepByName(
+    releaseSteps(parseWorkflow(workflow)),
+    "Inspect current trunk release state",
+  );
+  try {
+    const result = spawnSync("bash", ["-c", String(stateStep.run)], {
+      cwd: fixtureDir,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        CURRENT_TRUNK_SHA: currentSha,
+        GH_TOKEN: "test-token",
+        GITHUB_OUTPUT: output,
+        GITHUB_REPOSITORY: "croco/framework",
+        PATH: `${fixtureDir}:${process.env.PATH ?? ""}`,
+        VERIFIED_SHA: "a".repeat(40),
+      },
+    });
+    const githubOutput = result.status === 0 ? readFileSync(output, "utf8") : "";
+    return { ...result, githubOutput };
+  } finally {
+    rmSync(fixtureDir, { recursive: true, force: true });
+  }
+}
+
+function runCurrentTrunkGuard(currentSha: string, verifiedSha = "a".repeat(40)) {
+  const fixtureDir = mkdtempSync(resolve(tmpdir(), "release-current-trunk-"));
+  const output = resolve(fixtureDir, "github-output");
+  const ghPath = resolve(fixtureDir, "gh");
+  writeFileSync(ghPath, '#!/usr/bin/env bash\nprintf "%s\\n" "$CURRENT_TRUNK_SHA"\n');
+  chmodSync(ghPath, 0o755);
+  const guardStep = stepByName(
+    releaseSteps(parseWorkflow(workflow)),
+    "Revalidate current trunk revision",
+  );
+  const result = spawnSync("bash", ["-c", String(guardStep.run)], {
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      CURRENT_TRUNK_SHA: currentSha,
+      GH_TOKEN: "test-token",
+      GITHUB_OUTPUT: output,
+      GITHUB_REPOSITORY: "croco/framework",
+      PATH: `${fixtureDir}:${process.env.PATH ?? ""}`,
+      VERIFIED_SHA: verifiedSha,
+    },
+  });
+  const githubOutput = result.status === 0 ? readFileSync(output, "utf8") : "";
+  rmSync(fixtureDir, { recursive: true, force: true });
+  return { ...result, githubOutput };
 }
 
 describe("Release PR authentication contract", () => {
@@ -272,6 +375,34 @@ describe("Release PR authentication contract", () => {
     expect(result.stderr).toBe("");
   });
 
+  it("skips superseded runs before setup and admits only the current trunk run", () => {
+    const stale = runReleaseState("b".repeat(40));
+    const current = runReleaseState("a".repeat(40));
+
+    expect(stale.status).toBe(0);
+    expect(stale.githubOutput).toBe("is_current=false\n");
+    expect(current.status).toBe(0);
+    expect(current.githubOutput).toBe("is_current=true\n");
+  });
+
+  it("allows only the release run for the current live trunk revision to mutate", () => {
+    const current = runCurrentTrunkGuard("a".repeat(40));
+    const stale = runCurrentTrunkGuard("b".repeat(40));
+
+    expect(current.status).toBe(0);
+    expect(current.githubOutput).toBe("is_current=true\n");
+    expect(stale.status).toBe(0);
+    expect(stale.githubOutput).toBe("is_current=false\n");
+    expect(stale.stdout).toContain("Superseded Release run");
+  });
+
+  it("fails closed when the live trunk API does not return an immutable SHA", () => {
+    const result = runCurrentTrunkGuard("not-a-sha");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("Invalid live trunk SHA");
+  });
+
   it("rejects a token step moved after Changesets", () => {
     const tokenStart = workflow.indexOf("      - name: Mint release PR GitHub App token");
     const changesetsStart = workflow.indexOf(
@@ -333,7 +464,7 @@ describe("Release PR authentication contract", () => {
       name: "Changesets defensive ref guard removed",
       mutate: (source: string) =>
         source.replace(
-          `if: ${releaseAuthorityCondition} && steps.release_work.outputs.should_run_changesets_action == 'true'\n        uses: changesets/action`,
+          `if: ${releaseMutationCondition}\n        uses: changesets/action`,
           "if: steps.release_work.outputs.should_run_changesets_action == 'true'\n        uses: changesets/action",
         ),
     },
@@ -364,7 +495,10 @@ describe("Release verification profile contract", () => {
     expect(workflow).toContain('pnpm verify:publish -- "${args[@]}"');
     expect(workflow.match(/verify:publish/g)).toHaveLength(1);
     expect(workflow).not.toContain("test:release-gates");
-    expect(workflow).not.toContain("--allow-pending-release-metadata");
+    expect(workflow).toContain(
+      'if [ "${{ steps.release_work.outputs.allow_pending_release_metadata }}" = "true" ]; then',
+    );
+    expect(workflow).toContain("args+=(--allow-pending-release-metadata)");
   });
 
   it("runs every strict publish gate on manual dispatch", () => {
@@ -375,16 +509,53 @@ describe("Release verification profile contract", () => {
   });
 
   it("keeps provenance authority and Changesets publishing in Actions", () => {
+    const steps = releaseSteps(parseWorkflow(workflow));
+    const setupNodeStep = stepByName(steps, "Setup Node.js");
+    const npmSetupStep = stepByName(steps, "Configure Node.js for npm publishing");
     expect(workflow).toContain("id-token: write");
     expect(workflow).toContain('NPM_CONFIG_PROVENANCE: "true"');
-    expect(workflow).toContain('registry-url: "https://registry.npmjs.org"');
+    expect(setupNodeStep.with?.["registry-url"]).toBeUndefined();
+    expect(npmSetupStep.with?.["registry-url"]).toBe("https://registry.npmjs.org");
     expect(workflow).toContain("NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}");
     expect(workflow).toContain(
       "uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0",
     );
-    expect(workflow).toContain(
-      `if: ${releaseAuthorityCondition} && steps.release_work.outputs.should_run_changesets_action == 'true'`,
+    expect(workflow).toContain(`if: ${releaseMutationCondition}`);
+  });
+
+  it("installs the browser required by publish-profile docs integration before verification", () => {
+    const steps = releaseSteps(parseWorkflow(workflow));
+    const installDependenciesIndex = steps.findIndex(
+      (step) => step.name === "Install dependencies",
     );
+    const setupNodeIndex = steps.findIndex((step) => step.name === "Setup Node.js");
+    const playwrightStep = stepByName(steps, "Install Playwright Chromium");
+    const playwrightIndex = steps.indexOf(playwrightStep);
+    const releaseExecutionStep = stepByName(steps, "Resolve cumulative release execution");
+    const releaseExecutionIndex = steps.indexOf(releaseExecutionStep);
+    const verificationStep = stepByName(steps, "Release publish verification");
+    const verificationIndex = steps.indexOf(verificationStep);
+
+    expect(playwrightStep.run).toBe("pnpm --dir packages/docs run playwright:install");
+    expect(releaseExecutionStep.id).toBe("release_execution");
+    expect(releaseExecutionStep.if).toBe("steps.release_state.outputs.is_current == 'true'");
+    expect(releaseExecutionStep.run).toContain("scripts/release-reconciliation-state.mts");
+    expect(releaseExecutionStep.run).toContain(
+      '--classified-verification "${{ steps.release_work.outputs.should_run_verification }}"',
+    );
+    expect(releaseExecutionStep.run).toContain(
+      '--classified-changesets-action "${{ steps.release_work.outputs.should_run_changesets_action }}"',
+    );
+    expect(playwrightStep.if).toBe(
+      "steps.release_execution.outputs.should_run_verification == 'true'",
+    );
+    expect(verificationStep.if).toBe(
+      "steps.release_execution.outputs.should_run_verification == 'true'",
+    );
+    expect(releaseExecutionIndex).toBeGreaterThan(setupNodeIndex);
+    expect(releaseExecutionIndex).toBeLessThan(installDependenciesIndex);
+    expect(playwrightIndex).toBeGreaterThan(releaseExecutionIndex);
+    expect(playwrightIndex).toBeLessThan(verificationIndex);
   });
 
   it("preserves release report and artifact compatibility paths", () => {

@@ -14,6 +14,7 @@ import { type RetryPolicy, RetryTemplate } from "@croco/retry-core";
 import { recordError, recordEvent } from "@croco/telemetry-api";
 import { type CreateEmailOptions, type CreateEmailResponse, Resend } from "resend";
 import { isResendEmailAddress, validateResendConfig, type ResendConfig } from "./ResendConfig";
+import { RESEND_PROVIDER_CAPABILITIES } from "./ResendCapabilities";
 import {
   createResendErrorContext,
   isRetryableResendError,
@@ -65,14 +66,7 @@ export class ResendProvider implements NotificationProvider {
   }
 
   getCapabilities(): NotificationProviderCapabilities {
-    return {
-      providerName: this.getName(),
-      channels: [this.getChannel()],
-      supportsIdempotencyKey: true,
-      supportsProviderTemplates: false,
-      supportsRenderedTemplates: true,
-      outboxIntegration: "consumer-managed",
-    };
+    return RESEND_PROVIDER_CAPABILITIES;
   }
 
   async send(
@@ -86,7 +80,7 @@ export class ResendProvider implements NotificationProvider {
 
       return {
         success: false,
-        error: validationProblem,
+        problem: validationProblem,
       };
     }
 
@@ -141,7 +135,7 @@ export class ResendProvider implements NotificationProvider {
 
         return {
           success: false,
-          error: problem,
+          problem,
           providerResponse: data,
         };
       }
@@ -163,7 +157,7 @@ export class ResendProvider implements NotificationProvider {
 
       return {
         success: false,
-        error: problem,
+        problem,
         providerResponse: cause.providerResponse,
       };
     }

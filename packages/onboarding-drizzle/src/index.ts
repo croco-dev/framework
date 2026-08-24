@@ -15,3 +15,7 @@ export {
   removeCompletionStepIdentity,
 } from "./migrations/addCompletionStepIdentity";
 export type { OnboardingMigrationClient } from "./migrations/addCompletionStepIdentity";
+export {
+  addOnboardingLifecycleFields,
+  removeOnboardingLifecycleFields,
+} from "./migrations/addOnboardingLifecycleFields";

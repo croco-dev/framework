@@ -7,9 +7,9 @@ title: "NotificationProvider"
 
 ## Methods
 
-### getCapabilities()?
+### getCapabilities()
 
-> `optional` **getCapabilities**(): [`NotificationProviderCapabilities`](/api/notifications-core/src/type-aliases/notificationprovidercapabilities/)
+> **getCapabilities**(): [`NotificationProviderCapabilities`](/api/notifications-core/src/type-aliases/notificationprovidercapabilities/)
 
 Provider capability contract used by the dispatch layer.
 
@@ -45,7 +45,7 @@ Provider identifier (e.g., 'resend', 'twilio')
 
 ### send()
 
-> **send**(`payload`, `options?`): `Promise`\<[`NotificationResult`](/api/notifications-core/src/interfaces/notificationresult/)\>
+> **send**(`payload`, `options?`): `Promise`\<[`NotificationResult`](/api/notifications-core/src/type-aliases/notificationresult/)\>
 
 Send a notification via this provider
 
@@ -61,4 +61,4 @@ Send a notification via this provider
 
 #### Returns
 
-`Promise`\<[`NotificationResult`](/api/notifications-core/src/interfaces/notificationresult/)\>
+`Promise`\<[`NotificationResult`](/api/notifications-core/src/type-aliases/notificationresult/)\>

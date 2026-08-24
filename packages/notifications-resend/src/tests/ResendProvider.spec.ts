@@ -1,6 +1,7 @@
 import { Container } from "@croco/framework-context";
-import type { NotificationPayload } from "@croco/notifications-core";
+import type { NotificationPayload, NotificationResult } from "@croco/notifications-core";
 import { NotificationChannel } from "@croco/notifications-core";
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import { recordError, recordEvent } from "@croco/telemetry-api";
 import type { CreateEmailResponse, Resend } from "resend";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -14,6 +15,16 @@ import { ResendDiagnosticsProvider } from "../libs/ResendDiagnosticsProvider";
 import { ResendProvider } from "../libs/ResendProvider";
 
 type MockResendClient = InstanceType<typeof Resend>;
+
+class TestNotificationAssertionProblem extends Problem {
+  constructor() {
+    super(
+      "TEST_NOTIFICATION_ASSERTION_FAILED",
+      ProblemCategory.InternalServerError,
+      "Expected notification delivery to fail",
+    );
+  }
+}
 
 // Mock resend package
 vi.mock("resend", () => {
@@ -86,6 +97,7 @@ describe("ResendProvider", () => {
         component: "notifications-resend",
         details: expect.objectContaining({
           provider: "resend",
+          capabilities: provider.getCapabilities(),
           hasApiKey: true,
           hasDefaultFrom: false,
           missingConfig: ["default from address"],
@@ -279,7 +291,7 @@ describe("ResendProvider", () => {
 
       const result = await provider.send(payload);
 
-      expect(result.success).toBe(true);
+      expectSuccessfulNotificationResult(result);
       expect(result.messageId).toBe("msg-123");
       expect(mockResendClient.emails.send).toHaveBeenCalledWith(
         {
@@ -399,9 +411,9 @@ describe("ResendProvider", () => {
 
       const result = await provider.send(payload);
 
-      expect(result.success).toBe(false);
-      expect(result.error).toBeInstanceOf(ResendTerminalUpstreamProblem);
-      expect(result.error?.message).toBe("Invalid API key");
+      expectFailedNotificationResult(result);
+      expect(result.problem).toBeInstanceOf(ResendTerminalUpstreamProblem);
+      expect(result.problem.message).toBe("Invalid API key");
       expect(result.providerResponse).toEqual(mockErrorResponse);
       expect(mockResendClient.emails.send).toHaveBeenCalledTimes(1);
       expect(recordEvent).toHaveBeenCalledWith(
@@ -439,7 +451,7 @@ describe("ResendProvider", () => {
 
       const result = await provider.send(payload);
 
-      expect(result.success).toBe(true);
+      expectSuccessfulNotificationResult(result);
       expect(result.messageId).toBe("msg-123");
       expect(mockResendClient.emails.send).toHaveBeenCalledTimes(2);
 
@@ -475,7 +487,7 @@ describe("ResendProvider", () => {
 
       const result = await provider.send(payload, { idempotencyKey: "fixed-key" });
 
-      expect(result.success).toBe(true);
+      expectSuccessfulNotificationResult(result);
       expect(mockResendClient.emails.send).toHaveBeenCalledTimes(2);
       expect(vi.mocked(mockResendClient.emails.send).mock.calls[0]?.[1]).toEqual({
         idempotencyKey: "fixed-key",
@@ -504,7 +516,7 @@ describe("ResendProvider", () => {
 
       const result = await provider.send(payload);
 
-      expect(result.success).toBe(true);
+      expectSuccessfulNotificationResult(result);
       expect(result.messageId).toBe("msg-123");
       expect(mockResendClient.emails.send).toHaveBeenCalledTimes(2);
     });
@@ -527,9 +539,9 @@ describe("ResendProvider", () => {
 
       const result = await provider.send(payload);
 
-      expect(result.success).toBe(false);
-      expect(result.error).toBeInstanceOf(ResendIdempotencyConflictProblem);
-      expect(result.error?.message).toBe("Invalid idempotency key reuse");
+      expectFailedNotificationResult(result);
+      expect(result.problem).toBeInstanceOf(ResendIdempotencyConflictProblem);
+      expect(result.problem.message).toBe("Invalid idempotency key reuse");
       expect(result.providerResponse).toEqual(invalidIdempotentRequestResponse);
       expect(mockResendClient.emails.send).toHaveBeenCalledTimes(1);
       expect(recordEvent).toHaveBeenCalledWith(
@@ -552,9 +564,9 @@ describe("ResendProvider", () => {
 
       const result = await provider.send(payload);
 
-      expect(result.success).toBe(false);
-      expect(result.error).toBeInstanceOf(ResendTerminalUpstreamProblem);
-      expect(result.error?.message).toBe("Network connection failed");
+      expectFailedNotificationResult(result);
+      expect(result.problem).toBeInstanceOf(ResendTerminalUpstreamProblem);
+      expect(result.problem.message).toBe("Network connection failed");
       expect(recordEvent).toHaveBeenCalledWith(
         "notifications.resend.send.failed",
         expect.objectContaining({
@@ -575,9 +587,9 @@ describe("ResendProvider", () => {
 
       const result = await provider.send(payload, { idempotencyKey: "fixed-key" });
 
-      expect(result.success).toBe(false);
-      expect(result.error).toBeInstanceOf(ResendValidationProblem);
-      expect(result.error?.message).toBe(
+      expectFailedNotificationResult(result);
+      expect(result.problem).toBeInstanceOf(ResendValidationProblem);
+      expect(result.problem.message).toBe(
         "Resend recipient must be an email address or name-address value",
       );
       expect(mockResendClient.emails.send).not.toHaveBeenCalled();
@@ -613,9 +625,9 @@ describe("ResendProvider", () => {
       const serializedTelemetry = JSON.stringify(vi.mocked(recordEvent).mock.calls);
       const recordedErrors = getRecordedErrorMessages();
 
-      expect(result.success).toBe(false);
-      expect(result.error).toBeInstanceOf(ResendValidationProblem);
-      expect(result.error?.message).toBe(
+      expectFailedNotificationResult(result);
+      expect(result.problem).toBeInstanceOf(ResendValidationProblem);
+      expect(result.problem.message).toBe(
         "Rejected [redacted] with subject [redacted] and body [redacted] using idempotency-key=[redacted] and apiKey=[redacted]",
       );
       expect(serializedTelemetry).not.toContain("recipient@example.com");
@@ -666,8 +678,8 @@ describe("ResendProvider", () => {
       const firstResult = await provider.send(payload, { idempotencyKey: "fixed-key" });
       const secondResult = await provider.send(payload, { idempotencyKey: "fixed-key" });
 
-      expect(firstResult.success).toBe(true);
-      expect(secondResult.success).toBe(true);
+      expectSuccessfulNotificationResult(firstResult);
+      expectSuccessfulNotificationResult(secondResult);
       expect(firstResult.messageId).toBe("msg-duplicate");
       expect(secondResult.messageId).toBe("msg-duplicate");
       expect(mockResendClient.emails.send).toHaveBeenCalledTimes(2);
@@ -702,7 +714,7 @@ describe("ResendProvider", () => {
 
       const result = await provider.send(payload);
 
-      expect(result.success).toBe(true);
+      expectSuccessfulNotificationResult(result);
       expect(result.providerResponse).toEqual(mockSuccessResponse);
     });
 
@@ -745,7 +757,7 @@ describe("ResendProvider", () => {
 
       const result = await provider.send(payload);
 
-      expect(result.success).toBe(true);
+      expectSuccessfulNotificationResult(result);
       expect(result.messageId).toBe("msg-123");
       expect(mockResendClient.emails.send).toHaveBeenCalledWith(
         {
@@ -803,9 +815,9 @@ describe("ResendProvider", () => {
 
       const result = await provider.send(payload);
 
-      expect(result.success).toBe(false);
-      expect(result.error).toBeInstanceOf(ResendValidationProblem);
-      expect(result.error?.message).toBe("Missing variable: name");
+      expectFailedNotificationResult(result);
+      expect(result.problem).toBeInstanceOf(ResendValidationProblem);
+      expect(result.problem.message).toBe("Missing variable: name");
       expect(result.providerResponse).toEqual(templateErrorResponse);
     });
 
@@ -836,12 +848,7 @@ describe("ResendProvider", () => {
       const results = await provider.sendBatch(payloads);
 
       expect(results).toHaveLength(3);
-      expect(results[0].success).toBe(true);
-      expect(results[0].messageId).toBe("msg-1");
-      expect(results[1].success).toBe(true);
-      expect(results[1].messageId).toBe("msg-2");
-      expect(results[2].success).toBe(true);
-      expect(results[2].messageId).toBe("msg-3");
+      expect(getSuccessfulMessageIds(results)).toEqual(["msg-1", "msg-2", "msg-3"]);
       expect(mockResendClient.emails.send).toHaveBeenCalledTimes(3);
     });
 
@@ -947,7 +954,7 @@ describe("ResendProvider", () => {
       const results = await provider.sendBatch(payloads);
 
       expect(maxActiveSends).toBeLessThanOrEqual(5);
-      expect(results.map((result) => result.messageId)).toEqual(
+      expect(getSuccessfulMessageIds(results)).toEqual(
         payloads.map((_, index) => `msg-${index + 1}`),
       );
       expect(mockResendClient.emails.send).toHaveBeenCalledTimes(payloads.length);
@@ -980,7 +987,7 @@ describe("ResendProvider", () => {
 
       expect(results).toHaveLength(6);
       expect(mockResendClient.emails.send).toHaveBeenCalledTimes(6);
-      expect(results.map((result) => result.messageId)).toEqual(
+      expect(getSuccessfulMessageIds(results)).toEqual(
         Array.from({ length: 6 }, (_, index) => `msg-user${index + 1}@example.com`),
       );
     });
@@ -1025,7 +1032,7 @@ describe("ResendProvider", () => {
 
       expect(maxActiveSends).toBeLessThanOrEqual(5);
       expect(mockResendClient.emails.send).toHaveBeenCalledTimes(payloads.length * 2);
-      expect(results.map((result) => result.messageId)).toEqual(
+      expect(getSuccessfulMessageIds(results)).toEqual(
         payloads.map((_, index) => `msg-${index + 1}`),
       );
     });
@@ -1051,8 +1058,7 @@ describe("ResendProvider", () => {
       const results = await provider.sendBatch(payloads);
 
       expect(results).toHaveLength(1);
-      expect(results[0].success).toBe(true);
-      expect(results[0].messageId).toBe("msg-123");
+      expect(getSuccessfulMessageIds(results)).toEqual(["msg-123"]);
       expect(mockResendClient.emails.send).toHaveBeenCalledTimes(1);
     });
   });
@@ -1065,4 +1071,31 @@ function getRecordedErrorMessages(): string {
       error instanceof Error ? `${error.name}:${error.message}` : String(error),
     )
     .join("\n");
+}
+
+function expectFailedNotificationResult(
+  result: NotificationResult,
+): asserts result is Extract<NotificationResult, { success: false }> {
+  expect(result.success).toBe(false);
+
+  if (result.success) {
+    throw new TestNotificationAssertionProblem();
+  }
+}
+
+function expectSuccessfulNotificationResult(
+  result: NotificationResult,
+): asserts result is Extract<NotificationResult, { success: true }> {
+  expect(result.success).toBe(true);
+
+  if (!result.success) {
+    throw result.problem;
+  }
+}
+
+function getSuccessfulMessageIds(results: NotificationResult[]): Array<string | undefined> {
+  return results.map((result) => {
+    expectSuccessfulNotificationResult(result);
+    return result.messageId;
+  });
 }

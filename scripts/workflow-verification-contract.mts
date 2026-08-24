@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
@@ -25,13 +26,14 @@ const REPOSITORY_CONTRACT_TEST_COMMAND = "pnpm exec vitest run";
 export const TRUSTED_GITLEAKS_IMAGE =
   "ghcr.io/gitleaks/gitleaks:v8.23.0@sha256:b4b81841085b4060054a71155500a340e3d2e2a5995c186546649e3efd80b84e";
 const ALLOWED_WRITE_PERMISSIONS = new Set([
-  "benchmark.yml:jobs.benchmark:pull-requests",
+  "benchmark-comment.yml:jobs.comment:pull-requests",
   "release.yml:workflow:id-token",
 ]);
 
 export const ACTIONS_ONLY_WORKFLOW_COMMAND_ALLOWLIST = [
   'node -e \'const fs = require("node:fs"); fs.writeFileSync("ci-reports/package-quality/spine-promotion-run.json", JSON.stringify({ commitSha: process.env.SPINE_PROMOTION_COMMIT_SHA, runId: process.env.SPINE_PROMOTION_RUN_ID, runAttempt: process.env.SPINE_PROMOTION_RUN_ATTEMPT, startedAt: new Date().toISOString() }, null, 2) + "\\n")\'',
   "node --experimental-strip-types scripts/verification-change-classifier.mts",
+  "node --experimental-strip-types scripts/release-reconciliation-state.mts",
   "node --experimental-strip-types scripts/changed-test-plan-shadow.mts",
   "node --experimental-strip-types scripts/changed-test-full-suite-status.mts",
   "node --experimental-strip-types scripts/release-spine-evidence.mts",
@@ -137,6 +139,21 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function hasExactKeys(record: Record<string, unknown> | null, keys: readonly string[]): boolean {
+  return (
+    record !== null &&
+    JSON.stringify(Object.keys(record).sort()) === JSON.stringify([...keys].sort())
+  );
+}
+
+function normalizedScript(value: string): string {
+  return value
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join("\n");
+}
+
 function workflowName(path: string): string {
   return path.split("/").at(-1) ?? path;
 }
@@ -160,6 +177,124 @@ function inspectPermissionScope(
   }
 
   return violations;
+}
+
+function scriptDigest(value: string): string {
+  return createHash("sha256").update(normalizedScript(value)).digest("hex");
+}
+
+function inspectBenchmarkCommentBoundary(
+  path: string,
+  workflow: Record<string, unknown>,
+): readonly WorkflowPermissionViolation[] {
+  if (workflowName(path) !== "benchmark-comment.yml") return [];
+
+  const triggers = isPlainRecord(workflow.on) ? workflow.on : null;
+  const workflowRun = isPlainRecord(triggers?.workflow_run) ? triggers.workflow_run : null;
+  const topPermissions = isPlainRecord(workflow.permissions) ? workflow.permissions : null;
+  const concurrency = isPlainRecord(workflow.concurrency) ? workflow.concurrency : null;
+  const jobs = isPlainRecord(workflow.jobs) ? workflow.jobs : null;
+  const comment = isPlainRecord(jobs?.comment) ? jobs.comment : null;
+  const permissions = isPlainRecord(comment?.permissions) ? comment.permissions : null;
+  const steps = Array.isArray(comment?.steps) ? comment.steps : [];
+  const checkout = isPlainRecord(steps[0]) ? steps[0] : null;
+  const checkoutWith = isPlainRecord(checkout?.with) ? checkout.with : null;
+  const metadata = isPlainRecord(steps[1]) ? steps[1] : null;
+  const metadataEnvironment = isPlainRecord(metadata?.env) ? metadata.env : null;
+  const metadataScript = typeof metadata?.run === "string" ? metadata.run : "";
+  const download = isPlainRecord(steps[2]) ? steps[2] : null;
+  const downloadWith = isPlainRecord(download?.with) ? download.with : null;
+  const artifactValidation = isPlainRecord(steps[3]) ? steps[3] : null;
+  const artifactValidationScript =
+    typeof artifactValidation?.run === "string" ? artifactValidation.run : "";
+  const publish = isPlainRecord(steps[4]) ? steps[4] : null;
+  const publishWith = isPlainRecord(publish?.with) ? publish.with : null;
+  const publishScript = typeof publishWith?.script === "string" ? publishWith.script : "";
+
+  const valid =
+    workflow.name === "Benchmark Comment Publisher" &&
+    hasExactKeys(workflow, ["name", "on", "permissions", "concurrency", "jobs"]) &&
+    hasExactKeys(triggers, ["workflow_run"]) &&
+    workflowRun !== null &&
+    hasExactKeys(workflowRun, ["workflows", "types"]) &&
+    JSON.stringify(workflowRun.workflows) === JSON.stringify(["Performance Benchmark"]) &&
+    JSON.stringify(workflowRun.types) === JSON.stringify(["completed"]) &&
+    triggers?.pull_request === undefined &&
+    triggers?.pull_request_target === undefined &&
+    topPermissions !== null &&
+    JSON.stringify(topPermissions) === JSON.stringify({ actions: "read", contents: "read" }) &&
+    concurrency !== null &&
+    JSON.stringify(concurrency) ===
+      JSON.stringify({
+        group:
+          "benchmark-comment-${{ github.event.workflow_run.pull_requests[0].number || github.event.workflow_run.id }}",
+        "cancel-in-progress": true,
+      }) &&
+    jobs !== null &&
+    hasExactKeys(jobs, ["comment"]) &&
+    comment !== null &&
+    hasExactKeys(comment, ["if", "runs-on", "timeout-minutes", "permissions", "steps"]) &&
+    comment.if ===
+      "${{ github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.pull_requests[0].number }}" &&
+    comment["runs-on"] === "ubuntu-latest" &&
+    comment["timeout-minutes"] === 5 &&
+    permissions !== null &&
+    JSON.stringify(permissions) ===
+      JSON.stringify({ actions: "read", contents: "read", "pull-requests": "write" }) &&
+    steps.length === 5 &&
+    hasExactKeys(metadata, ["name", "id", "shell", "env", "run"]) &&
+    metadata?.name === "Validate source run and current pull request" &&
+    metadata.id === "source" &&
+    metadata.shell === "bash" &&
+    metadataEnvironment !== null &&
+    JSON.stringify(metadataEnvironment) ===
+      JSON.stringify({
+        GH_TOKEN: "${{ github.token }}",
+        SOURCE_PULL_NUMBER: "${{ github.event.workflow_run.pull_requests[0].number }}",
+        SOURCE_RUN_ATTEMPT: "${{ github.event.workflow_run.run_attempt }}",
+        SOURCE_RUN_ID: "${{ github.event.workflow_run.id }}",
+      }) &&
+    scriptDigest(metadataScript) ===
+      "7283eae51b003c11678cbbd1857bf43537961651c21149406d3f44890fd143a5" &&
+    hasExactKeys(checkout, ["name", "uses", "with"]) &&
+    checkout?.name === "Checkout trusted comment publisher" &&
+    checkout?.uses === "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1" &&
+    checkoutWith?.ref === "${{ github.workflow_sha }}" &&
+    checkoutWith["persist-credentials"] === false &&
+    hasExactKeys(checkoutWith, ["ref", "persist-credentials"]) &&
+    hasExactKeys(download, ["name", "if", "uses", "with"]) &&
+    download?.name === "Download exact benchmark readiness report" &&
+    download.if === "steps.source.outputs.should_comment == 'true'" &&
+    download?.uses === "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c" &&
+    downloadWith?.name ===
+      "benchmark-readiness-report-${{ github.event.workflow_run.id }}-${{ github.event.workflow_run.run_attempt }}" &&
+    downloadWith.path === "benchmark-comment-input" &&
+    downloadWith["github-token"] === "${{ github.token }}" &&
+    downloadWith["run-id"] === "${{ github.event.workflow_run.id }}" &&
+    hasExactKeys(downloadWith, ["name", "path", "github-token", "run-id"]) &&
+    hasExactKeys(artifactValidation, ["name", "if", "shell", "run"]) &&
+    artifactValidation?.name === "Validate untrusted benchmark artifact" &&
+    artifactValidation.if === "steps.source.outputs.should_comment == 'true'" &&
+    artifactValidation.shell === "bash" &&
+    scriptDigest(artifactValidationScript) ===
+      "0968c52c45439932137ac929bcd5c2c5950673737f7e4ba438c6aca124bddd38" &&
+    hasExactKeys(publish, ["name", "if", "uses", "with"]) &&
+    publish?.name === "Comment PR with benchmark results" &&
+    publish.if === "steps.source.outputs.should_comment == 'true'" &&
+    publish?.uses === "actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3" &&
+    hasExactKeys(publishWith, ["script"]) &&
+    scriptDigest(publishScript) ===
+      "f1b4eb20613cd272cc4996826d5077d911697541e6a4516948f933286f97a767";
+
+  return valid
+    ? []
+    : [
+        {
+          path,
+          reason:
+            "jobs.comment write access must use the trusted workflow_run artifact publisher boundary",
+        },
+      ];
 }
 
 export function findWorkflowPermissionViolations(
@@ -219,6 +354,8 @@ export function findWorkflowPermissionViolations(
         violations.push(...inspectPermissionScope(path, `jobs.${jobName}`, job.permissions));
       }
     }
+
+    violations.push(...inspectBenchmarkCommentBoundary(path, workflow));
 
     if (workflowName(path) === "ci.yml") {
       const changes = workflow.jobs.changes;

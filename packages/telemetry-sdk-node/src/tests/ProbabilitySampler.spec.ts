@@ -1,6 +1,7 @@
-import { ROOT_CONTEXT, SpanKind } from "@opentelemetry/api";
+import { ROOT_CONTEXT, SpanKind, TraceFlags, trace } from "@opentelemetry/api";
 import { SamplingDecision } from "@opentelemetry/sdk-trace-base";
 import { beforeEach, describe, expect, it } from "vitest";
+import { SamplerProblem } from "../libs/problems/TelemetryProblems";
 import { ProbabilitySampler } from "../libs/samplers/ProbabilitySampler";
 
 describe("ProbabilitySampler", () => {
@@ -20,10 +21,21 @@ describe("ProbabilitySampler", () => {
       expect(sampler.toString()).toBe("ProbabilitySampler{1}");
     });
 
-    it("should throw error for invalid probability", () => {
-      expect(() => new ProbabilitySampler({ probability: -0.1 })).toThrow();
-      expect(() => new ProbabilitySampler({ probability: 1.1 })).toThrow();
-    });
+    it.each([Number.NaN, Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY, -0.1, 1.1])(
+      "should reject invalid probability %s with a typed Problem",
+      (probability) => {
+        expect(() => new ProbabilitySampler({ probability })).toThrow(SamplerProblem);
+
+        try {
+          new ProbabilitySampler({ probability });
+        } catch (problem) {
+          expect(problem).toMatchObject({
+            code: "TELEMETRY_SAMPLER_INVALID_CONFIG",
+            detail: "Probability must be a finite number between 0 and 1",
+          });
+        }
+      },
+    );
   });
 
   describe("shouldSample", () => {
@@ -76,6 +88,26 @@ describe("ProbabilitySampler", () => {
       );
 
       expect(result.decision).toBe(SamplingDecision.NOT_RECORD);
+    });
+
+    it("should preserve a valid sampled parent decision", () => {
+      const neverSampler = new ProbabilitySampler({ probability: 0 });
+      const sampledParentContext = trace.setSpanContext(ROOT_CONTEXT, {
+        traceId: "00000000000000000000000000000001",
+        spanId: "0000000000000001",
+        traceFlags: TraceFlags.SAMPLED,
+      });
+
+      const result = neverSampler.shouldSample(
+        sampledParentContext,
+        "00000000000000000000000000000002",
+        "test-span",
+        SpanKind.INTERNAL,
+        {},
+        [],
+      );
+
+      expect(result.decision).toBe(SamplingDecision.RECORD_AND_SAMPLED);
     });
 
     describe("BUG-08 64비트 TraceID에서 정밀도 유지", () => {

@@ -32,6 +32,10 @@
         "do_not_enforce_on_create": false,
         "required_status_checks": [
           {
+            "context": "benchmark-gate",
+            "integration_id": 15368
+          },
+          {
             "context": "docs-sync-check",
             "integration_id": 15368
           },

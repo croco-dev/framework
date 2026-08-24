@@ -79,7 +79,7 @@ Provider identifier (e.g., 'resend', 'twilio')
 
 ### send()
 
-> **send**(`payload`, `options?`): `Promise`\<[`NotificationResult`](/api/notifications-core/src/interfaces/notificationresult/)\>
+> **send**(`payload`, `options?`): `Promise`\<[`NotificationResult`](/api/notifications-core/src/type-aliases/notificationresult/)\>
 
 Send a notification via this provider
 
@@ -95,7 +95,7 @@ Send a notification via this provider
 
 #### Returns
 
-`Promise`\<[`NotificationResult`](/api/notifications-core/src/interfaces/notificationresult/)\>
+`Promise`\<[`NotificationResult`](/api/notifications-core/src/type-aliases/notificationresult/)\>
 
 #### Implementation of
 
@@ -105,7 +105,7 @@ Send a notification via this provider
 
 ### sendBatch()
 
-> **sendBatch**(`payloads`): `Promise`\<[`NotificationResult`](/api/notifications-core/src/interfaces/notificationresult/)[]\>
+> **sendBatch**(`payloads`): `Promise`\<[`NotificationResult`](/api/notifications-core/src/type-aliases/notificationresult/)[]\>
 
 #### Parameters
 
@@ -115,4 +115,4 @@ Send a notification via this provider
 
 #### Returns
 
-`Promise`\<[`NotificationResult`](/api/notifications-core/src/interfaces/notificationresult/)[]\>
+`Promise`\<[`NotificationResult`](/api/notifications-core/src/type-aliases/notificationresult/)[]\>

@@ -5,6 +5,7 @@ import {
   validateResendConfig,
   type ResendConfig,
 } from "./ResendConfig";
+import { RESEND_PROVIDER_CAPABILITIES } from "./ResendCapabilities";
 import {
   normalizeResendProblem,
   sanitizeResendDiagnosticText,
@@ -36,7 +37,10 @@ export class ResendDiagnosticsProvider implements DiagnosticsProvider {
   ) {}
 
   async getHealth(signal?: AbortSignal): Promise<HealthStatus> {
-    const baseDetails = createSafeResendConfigDetails(this.config);
+    const baseDetails = {
+      ...createSafeResendConfigDetails(this.config),
+      capabilities: RESEND_PROVIDER_CAPABILITIES,
+    };
     let validConfig: ResendConfig;
 
     try {

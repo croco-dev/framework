@@ -44,11 +44,11 @@ export function parseTraceParent(header: string | null): TraceParent | null {
     return null;
   }
 
-  if (!/^[0-9a-f]{32}$/i.test(traceId)) {
+  if (!/^[0-9a-f]{32}$/i.test(traceId) || traceId === "00000000000000000000000000000000") {
     return null;
   }
 
-  if (!/^[0-9a-f]{16}$/i.test(parentId)) {
+  if (!/^[0-9a-f]{16}$/i.test(parentId) || parentId === "0000000000000000") {
     return null;
   }
 

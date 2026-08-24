@@ -2321,7 +2321,19 @@
       "owner": "@croco/notifications-core"
     },
     {
+      "path": "packages/notifications-core/src/tests/NotificationProviderConformance.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/notifications-core"
+    },
+    {
       "path": "packages/notifications-core/src/tests/NotificationProviderRegistry.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/notifications-core"
+    },
+    {
+      "path": "packages/notifications-core/src/tests/NotificationResult.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/notifications-core"
@@ -2357,6 +2369,12 @@
       "owner": "@croco/notifications-react-email"
     },
     {
+      "path": "packages/notifications-resend/src/tests/NotificationProviderConformance.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/notifications-resend"
+    },
+    {
       "path": "packages/notifications-resend/src/tests/ResendLiveSmoke.spec.ts",
       "lane": "live",
       "qualifiers": [],
@@ -2375,6 +2393,12 @@
       "owner": "@croco/onboarding-core"
     },
     {
+      "path": "packages/onboarding-core/src/tests/OnboardingStoreConformance.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/onboarding-core"
+    },
+    {
       "path": "packages/onboarding-drizzle/src/tests/DrizzleOnboardingStore.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -2382,6 +2406,12 @@
     },
     {
       "path": "packages/onboarding-drizzle/src/tests/DrizzleProviderConformance.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/onboarding-drizzle"
+    },
+    {
+      "path": "packages/onboarding-drizzle/src/tests/OnboardingLifecycleFieldsMigration.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/onboarding-drizzle"
@@ -4187,6 +4217,12 @@
       "owner": "repo:ci"
     },
     {
+      "path": "scripts/tests/release-reconciliation-state.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:ci"
+    },
+    {
       "path": "scripts/tests/release-spine-evidence.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -4308,6 +4344,12 @@
     },
     {
       "path": "scripts/tests/verify-circular-allowlist.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:ci"
+    },
+    {
+      "path": "scripts/tests/version-packages.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "repo:ci"
