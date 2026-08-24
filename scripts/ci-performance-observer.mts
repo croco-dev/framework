@@ -135,6 +135,7 @@ type FastLaneReport = {
   readonly status: string;
   readonly inventoryDigest: string;
   readonly diagnostics: readonly unknown[];
+  readonly skippedFiles: readonly unknown[];
   readonly commands: readonly FastLaneCommand[];
 };
 
@@ -361,7 +362,12 @@ function parseVerificationReport(value: unknown): VerificationReport {
 }
 
 function parseFastLane(value: unknown): FastLaneReport {
-  if (!isRecord(value) || !Array.isArray(value.commands) || !Array.isArray(value.diagnostics)) {
+  if (
+    !isRecord(value) ||
+    !Array.isArray(value.commands) ||
+    !Array.isArray(value.diagnostics) ||
+    !Array.isArray(value.skippedFiles)
+  ) {
     throw new Error("fast-lane evidence has an invalid schema");
   }
   const commands = value.commands.map((candidate, index) => {
@@ -385,6 +391,7 @@ function parseFastLane(value: unknown): FastLaneReport {
     status: requiredString(value.status, "fast-lane status"),
     inventoryDigest: requiredString(value.inventoryDigest, "fast-lane inventoryDigest"),
     diagnostics: value.diagnostics,
+    skippedFiles: value.skippedFiles,
     commands,
   };
 }
@@ -884,10 +891,11 @@ export function createCiPerformanceObservation(
     "verification check IDs",
   );
   if (
-    fastLane.schemaVersion !== "croco.test-lane-report/v1" ||
+    fastLane.schemaVersion !== "croco.test-lane-report/v2" ||
     fastLane.lane !== "fast" ||
     fastLane.status !== "passed" ||
-    fastLane.diagnostics.length !== 0
+    fastLane.diagnostics.length !== 0 ||
+    fastLane.skippedFiles.length !== 0
   ) {
     throw new Error("fast-lane evidence is not a successful current-inventory attestation");
   }

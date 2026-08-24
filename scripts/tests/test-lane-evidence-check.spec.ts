@@ -8,7 +8,7 @@ const REQUIRED_PATH = "scripts/tests/verification-manifest.spec.ts";
 function report(overrides: Record<string, unknown> = {}): unknown {
   const digest = inventoryDigest(readTestInventory().inventory);
   return {
-    schemaVersion: "croco.test-lane-report/v1",
+    schemaVersion: "croco.test-lane-report/v2",
     inventoryVersion: 1,
     inventoryDigest: digest,
     lane: "fast",
@@ -16,6 +16,7 @@ function report(overrides: Record<string, unknown> = {}): unknown {
     selectedOwners: ["repo:ci"],
     status: "passed",
     executedPaths: [REQUIRED_PATH],
+    skippedFiles: [],
     diagnostics: [],
     commands: [
       {
@@ -27,6 +28,7 @@ function report(overrides: Record<string, unknown> = {}): unknown {
         exitCode: 0,
         durationMs: 1,
         executedPaths: [REQUIRED_PATH],
+        skippedFiles: [],
         executionState: "executed",
       },
     ],

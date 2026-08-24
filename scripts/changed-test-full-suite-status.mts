@@ -7,16 +7,18 @@ import { createTestLanePlan } from "./test-lane-runner.mts";
 import { inventoryDigest, readTestInventory } from "./test-inventory.mts";
 
 type FullSuiteLaneReport = {
-  readonly schemaVersion: "croco.test-lane-report/v1";
+  readonly schemaVersion: "croco.test-lane-report/v2";
   readonly inventoryDigest: string;
   readonly lane: "fast";
   readonly status: "passed" | "failed";
   readonly executedPaths: readonly string[];
+  readonly skippedFiles: readonly unknown[];
   readonly commands: readonly {
     readonly owner: string;
     readonly cwd: string;
     readonly paths: readonly string[];
     readonly executedPaths: readonly string[];
+    readonly skippedFiles: readonly unknown[];
     readonly status: "passed" | "failed";
     readonly exitCode: number;
     readonly executionState?: "executed" | "reused";
@@ -37,10 +39,12 @@ export function assertChangedTestFullSuiteEvidence(
   );
   if (diagnostics.length > 0) throw new Error("The test inventory is invalid.");
   if (
-    report.schemaVersion !== "croco.test-lane-report/v1" ||
+    report.schemaVersion !== "croco.test-lane-report/v2" ||
     report.lane !== "fast" ||
     report.status !== "passed" ||
-    report.inventoryDigest !== inventoryDigest(inventory)
+    report.inventoryDigest !== inventoryDigest(inventory) ||
+    !Array.isArray(report.skippedFiles) ||
+    report.skippedFiles.length > 0
   ) {
     throw new Error("Changed-test full-suite evidence is failed, stale, or uses the wrong lane.");
   }
@@ -57,6 +61,8 @@ export function assertChangedTestFullSuiteEvidence(
       command.status !== "passed" ||
       command.exitCode !== 0 ||
       JSON.stringify(command.executedPaths) !== JSON.stringify(command.paths) ||
+      !Array.isArray(command.skippedFiles) ||
+      command.skippedFiles.length > 0 ||
       !command.executionState ||
       (command.cwd !== "." && (!command.cacheHash || command.cacheHash.length === 0))
     ) {
@@ -152,7 +158,7 @@ export function writeChangedTestFullSuiteStatus(
       {
         kind: "report",
         path: relativeReportPath,
-        schemaVersion: "croco.test-lane-report/v1",
+        schemaVersion: "croco.test-lane-report/v2",
       },
     ],
     metadata: {

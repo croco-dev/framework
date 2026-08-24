@@ -21,7 +21,7 @@ const inventory: TestInventory = {
 
 function laneReport(executedPaths: readonly string[] = []) {
   return {
-    schemaVersion: "croco.test-lane-report/v1" as const,
+    schemaVersion: "croco.test-lane-report/v2" as const,
     inventoryVersion: 1 as const,
     inventoryDigest: inventoryDigest(inventory),
     lane: "fast" as const,
@@ -29,6 +29,7 @@ function laneReport(executedPaths: readonly string[] = []) {
     selectedOwners: [],
     status: "passed" as const,
     executedPaths,
+    skippedFiles: [],
     diagnostics: [],
     commands: [
       {
@@ -40,6 +41,7 @@ function laneReport(executedPaths: readonly string[] = []) {
         exitCode: 0,
         durationMs: 1,
         executedPaths: ["src/tests/a.spec.ts"],
+        skippedFiles: [],
         executionState: "executed" as const,
         cacheHash: "task-hash",
       },
@@ -236,6 +238,66 @@ describe("test evidence reconciliation", () => {
     expect(() =>
       reconcileTestEvidence({ inventory, profile: "ordinary", reports: [failed as never] }),
     ).toThrow("Test lane evidence is failed");
+  });
+
+  it("preserves skipped assertion evidence while refusing to reconcile it as completed", () => {
+    const valid = laneReport([]);
+    const skippedFile = {
+      path: "src/tests/a.spec.ts",
+      status: "partially-executed" as const,
+      passedAssertions: 1,
+      skippedAssertions: [{ name: "requires database credentials", status: "skipped" as const }],
+    };
+    const failed = {
+      ...valid,
+      status: "failed" as const,
+      skippedFiles: [{ ...skippedFile, path: "packages/a/src/tests/a.spec.ts" }],
+      diagnostics: [
+        { code: "TEST_LANE_EXECUTION_SKIPPED", message: "@croco/a: skipped assertion" },
+      ],
+      commands: [
+        {
+          ...valid.commands[0],
+          status: "failed" as const,
+          executedPaths: [],
+          skippedFiles: [skippedFile],
+        },
+      ],
+    };
+
+    expect(() => assertLaneReportShape(failed)).not.toThrow();
+    expect(() =>
+      reconcileTestEvidence({ inventory, profile: "ordinary", reports: [failed] }),
+    ).toThrow("Test lane evidence is failed");
+  });
+
+  it("accepts producer-ordered skipped files with mixed-case paths", () => {
+    const valid = laneReport([]);
+    const skippedFiles = ["src/tests/Z.spec.ts", "src/tests/a.spec.ts"].map((path) => ({
+      path,
+      status: "skipped" as const,
+      passedAssertions: 0,
+      skippedAssertions: [{ name: "requires credentials", status: "skipped" as const }],
+    }));
+    const failed = {
+      ...valid,
+      status: "failed" as const,
+      skippedFiles: skippedFiles.map((file) => ({ ...file, path: `packages/a/${file.path}` })),
+      diagnostics: [
+        { code: "TEST_LANE_EXECUTION_SKIPPED", message: "@croco/a: skipped assertion" },
+      ],
+      commands: [
+        {
+          ...valid.commands[0],
+          status: "failed" as const,
+          paths: skippedFiles.map(({ path }) => path),
+          executedPaths: [],
+          skippedFiles,
+        },
+      ],
+    };
+
+    expect(() => assertLaneReportShape(failed)).not.toThrow();
   });
 
   it("rejects failed lane evidence that credits an unplanned path", () => {
