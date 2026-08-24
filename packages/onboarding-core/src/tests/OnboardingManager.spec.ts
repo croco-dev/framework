@@ -9,6 +9,7 @@ import {
   DuplicateOnboardingDefinitionProblem,
   OnboardingContextRequiredProblem,
   OnboardingDefinitionNotFoundProblem,
+  OnboardingStateSnapshotUnsupportedProblem,
   OnboardingStepCompletionConflictProblem,
   OnboardingStepNotFoundProblem,
 } from "../libs/problems/OnboardingProblems";
@@ -66,6 +67,277 @@ class ConflictingOnboardingStore extends OnboardingStore {
     throw new Error("unexpected save");
   }
 }
+
+describe("InMemoryOnboardingStore snapshot ownership", () => {
+  it("should reject metadata that cannot become an independent snapshot", async () => {
+    const store = new InMemoryOnboardingStore();
+    const sharedBytes = new Uint8Array(new SharedArrayBuffer(1));
+    const hostileProxy = new Proxy(
+      {},
+      {
+        getPrototypeOf: () => {
+          throw new Error("raw proxy failure");
+        },
+      },
+    );
+    const errorWithSharedCause = new Error("metadata");
+    Object.defineProperty(errorWithSharedCause, "cause", {
+      value: new SharedArrayBuffer(1),
+    });
+    const arrayWithSharedProperty: unknown[] = [];
+    Object.defineProperty(arrayWithSharedProperty, "shared", {
+      enumerable: true,
+      value: new SharedArrayBuffer(1),
+    });
+    const accessorMetadata = Object.defineProperty({}, "value", {
+      enumerable: true,
+      get: () => "caller-owned",
+    });
+    const hiddenAccessorMetadata = Object.defineProperty({}, "value", {
+      get: () => "caller-owned",
+    });
+    const disguisedSharedBuffer = new SharedArrayBuffer(1);
+    Object.setPrototypeOf(disguisedSharedBuffer, Object.prototype);
+    const disguisedWebAssemblyMemory = new WebAssembly.Memory({
+      initial: 1,
+      maximum: 1,
+      shared: true,
+    });
+    Object.setPrototypeOf(disguisedWebAssemblyMemory, Object.prototype);
+    class CustomDate extends Date {}
+    class CustomArray<T> extends Array<T> {}
+    class CustomBytes extends Uint8Array {}
+    const dateWithAccessor = Object.defineProperty(new Date(), "value", {
+      get: () => "caller-owned",
+    });
+    const bufferWithHiddenProperty = Object.defineProperty(new ArrayBuffer(1), "value", {
+      value: "caller-owned",
+    });
+    const viewWithSymbolProperty = Object.defineProperty(new Uint8Array(1), Symbol("value"), {
+      enumerable: true,
+      value: "caller-owned",
+    });
+    const dateWithEnumerableProperty = Object.defineProperty(new Date(), "value", {
+      enumerable: true,
+      value: "caller-owned",
+    });
+    const bufferWithEnumerableProperty = Object.defineProperty(new ArrayBuffer(1), "value", {
+      enumerable: true,
+      value: "caller-owned",
+    });
+    const dataViewWithEnumerableProperty = Object.defineProperty(
+      new DataView(new ArrayBuffer(1)),
+      "value",
+      {
+        enumerable: true,
+        value: "caller-owned",
+      },
+    );
+    const typedArrayWithEnumerableProperty = Object.defineProperty(new Uint8Array(1), "value", {
+      enumerable: true,
+      value: "caller-owned",
+    });
+    const forgedTypedArray = new Uint8Array(1);
+    Object.setPrototypeOf(
+      forgedTypedArray,
+      Object.create(Object.getPrototypeOf(Uint8Array.prototype)),
+    );
+    const unsupportedValues: ReadonlyArray<readonly [string, unknown]> = [
+      ["function", () => "caller-owned"],
+      ["shared-memory", sharedBytes],
+      ["error-cause", errorWithSharedCause],
+      ["webassembly-memory", new WebAssembly.Memory({ initial: 1, maximum: 1, shared: true })],
+      ["hostile-proxy", hostileProxy],
+      ["array-shared-property", arrayWithSharedProperty],
+      ["accessor", accessorMetadata],
+      ["hidden-accessor", hiddenAccessorMetadata],
+      ["disguised-shared-memory", disguisedSharedBuffer],
+      ["disguised-webassembly-memory", disguisedWebAssemblyMemory],
+      ["custom-date", new CustomDate()],
+      ["custom-array", new CustomArray()],
+      ["custom-view", new CustomBytes()],
+      ["date-accessor", dateWithAccessor],
+      ["array-buffer-hidden-property", bufferWithHiddenProperty],
+      ["view-symbol-property", viewWithSymbolProperty],
+      ["date-enumerable-property", dateWithEnumerableProperty],
+      ["array-buffer-enumerable-property", bufferWithEnumerableProperty],
+      ["data-view-enumerable-property", dataViewWithEnumerableProperty],
+      ["typed-array-enumerable-property", typedArrayWithEnumerableProperty],
+      ["forged-typed-array-prototype", forgedTypedArray],
+    ];
+
+    for (const [onboardingId, value] of unsupportedValues) {
+      await expect(
+        store.saveState("tenant-1", "user-1", onboardingId, {
+          steps: {
+            "step-1": {
+              completed: false,
+              metadata: { value },
+            },
+          },
+          isCompleted: false,
+        }),
+      ).rejects.toThrow(OnboardingStateSnapshotUnsupportedProblem);
+      await expect(store.getState("tenant-1", "user-1", onboardingId)).resolves.toBeNull();
+    }
+
+    const ownedBytes = new Uint8Array([1, 2, 3]);
+    await expect(
+      store.saveState("tenant-1", "user-1", "supported-binary-metadata", {
+        steps: {
+          "step-1": {
+            completed: false,
+            metadata: { bytes: ownedBytes },
+          },
+        },
+        isCompleted: false,
+      }),
+    ).resolves.toBeUndefined();
+    ownedBytes[0] = 9;
+    const binaryState = await store.getState("tenant-1", "user-1", "supported-binary-metadata");
+    expect(binaryState?.steps["step-1"]?.metadata?.["bytes"]).toEqual(new Uint8Array([1, 2, 3]));
+    sharedBytes[0] = 1;
+  });
+
+  it("should isolate saved state and loaded snapshots including nested metadata and dates", async () => {
+    const store = new InMemoryOnboardingStore();
+    const stepCompletedAt = new Date("2026-01-02T00:00:00.000Z");
+    const onboardingCompletedAt = new Date("2026-01-03T00:00:00.000Z");
+    const startedAt = new Date("2026-01-01T00:00:00.000Z");
+    const metadataUpdatedAt = new Date("2026-01-01T12:00:00.000Z");
+    const metadata = {
+      profile: { displayName: "Original", updatedAt: metadataUpdatedAt },
+      flags: ["initial"],
+    };
+    const stepState = {
+      completed: true,
+      completedAt: stepCompletedAt,
+      metadata,
+    };
+    const savedState: OnboardingState = {
+      steps: { "step-1": stepState },
+      isCompleted: true,
+      completedAt: onboardingCompletedAt,
+      status: "completed",
+      startedAt,
+      currentStepId: "step-1",
+    };
+
+    await store.saveState("tenant-1", "user-1", "welcome-tour", savedState);
+
+    stepState.completed = false;
+    stepCompletedAt.setUTCFullYear(2030);
+    onboardingCompletedAt.setUTCFullYear(2030);
+    startedAt.setUTCFullYear(2030);
+    metadata.profile.displayName = "Mutated input";
+    metadataUpdatedAt.setUTCFullYear(2030);
+    metadata.flags.push("mutated-input");
+    savedState.isCompleted = false;
+
+    const loadedState = await store.getState("tenant-1", "user-1", "welcome-tour");
+    expect(loadedState).toEqual({
+      steps: {
+        "step-1": {
+          completed: true,
+          completedAt: new Date("2026-01-02T00:00:00.000Z"),
+          metadata: {
+            profile: {
+              displayName: "Original",
+              updatedAt: new Date("2026-01-01T12:00:00.000Z"),
+            },
+            flags: ["initial"],
+          },
+        },
+      },
+      isCompleted: true,
+      completedAt: new Date("2026-01-03T00:00:00.000Z"),
+      status: "completed",
+      startedAt: new Date("2026-01-01T00:00:00.000Z"),
+      currentStepId: "step-1",
+    });
+
+    if (!loadedState) {
+      throw new Error("expected saved onboarding state");
+    }
+    const loadedStep = loadedState.steps["step-1"];
+    if (!loadedStep) {
+      throw new Error("expected saved onboarding step");
+    }
+    const loadedMetadata = loadedStep.metadata as typeof metadata;
+    loadedStep.completed = false;
+    loadedStep.completedAt?.setUTCFullYear(2040);
+    loadedMetadata.profile.displayName = "Mutated output";
+    loadedMetadata.profile.updatedAt.setUTCFullYear(2040);
+    loadedMetadata.flags.push("mutated-output");
+    loadedState.isCompleted = false;
+    loadedState.completedAt?.setUTCFullYear(2040);
+    loadedState.startedAt?.setUTCFullYear(2040);
+
+    await expect(store.getState("tenant-1", "user-1", "welcome-tour")).resolves.toEqual({
+      steps: {
+        "step-1": {
+          completed: true,
+          completedAt: new Date("2026-01-02T00:00:00.000Z"),
+          metadata: {
+            profile: {
+              displayName: "Original",
+              updatedAt: new Date("2026-01-01T12:00:00.000Z"),
+            },
+            flags: ["initial"],
+          },
+        },
+      },
+      isCompleted: true,
+      completedAt: new Date("2026-01-03T00:00:00.000Z"),
+      status: "completed",
+      startedAt: new Date("2026-01-01T00:00:00.000Z"),
+      currentStepId: "step-1",
+    });
+  });
+
+  it("should isolate successful completion results and their completion timestamp", async () => {
+    const store = new InMemoryOnboardingStore();
+    const stepMetadata = { nested: { source: "stored" } };
+    await store.saveState("tenant-1", "user-1", "welcome-tour", {
+      steps: { "step-1": { completed: false, metadata: stepMetadata } },
+      isCompleted: false,
+    });
+    const completedAt = new Date("2026-02-01T00:00:00.000Z");
+
+    const result = await store.completeStep("tenant-1", "user-1", "welcome-tour", {
+      stepId: "step-1",
+      completedAt,
+      requiredStepIds: ["step-1"],
+    });
+
+    expect(result.status).toBe("completed");
+    if (result.status !== "completed") {
+      throw new Error("expected successful onboarding step completion");
+    }
+    const resultStep = result.state.steps["step-1"];
+    if (!resultStep) {
+      throw new Error("expected completed onboarding step");
+    }
+    resultStep.completed = false;
+    (resultStep.metadata as typeof stepMetadata).nested.source = "mutated result";
+    resultStep.completedAt?.setUTCFullYear(2030);
+    result.state.isCompleted = false;
+    result.state.completedAt?.setUTCFullYear(2030);
+    completedAt.setUTCFullYear(2040);
+
+    await expect(store.getState("tenant-1", "user-1", "welcome-tour")).resolves.toEqual({
+      steps: {
+        "step-1": {
+          completed: true,
+          completedAt: new Date("2026-02-01T00:00:00.000Z"),
+          metadata: { nested: { source: "stored" } },
+        },
+      },
+      isCompleted: true,
+      completedAt: new Date("2026-02-01T00:00:00.000Z"),
+    });
+  });
+});
 
 describe("OnboardingManager", () => {
   let manager!: OnboardingManager;
@@ -180,6 +452,58 @@ describe("OnboardingManager", () => {
           }),
         );
       },
+    );
+  });
+
+  it("should isolate getStatus mutations from persisted progress and analytics", async () => {
+    const store = new InMemoryOnboardingStore();
+    const managerWithSavedState = new OnboardingManager(store, analytics);
+    managerWithSavedState.register(sampleDefinition);
+    await store.saveState("tenant-1", "user-1", "welcome-tour", {
+      steps: {
+        "step-1": {
+          completed: false,
+          metadata: { nested: { source: "stored" } },
+        },
+      },
+      isCompleted: false,
+      startedAt: new Date("2026-03-01T00:00:00.000Z"),
+    });
+
+    await Context.run(
+      { requestId: "req-snapshot", user: { id: "user-1" }, tenantId: "tenant-1" },
+      async () => {
+        const exposedStatus = await managerWithSavedState.getStatus("welcome-tour");
+        const exposedStep = exposedStatus.steps["step-1"];
+        if (!exposedStep) {
+          throw new Error("expected saved onboarding step");
+        }
+        exposedStep.completed = true;
+        (exposedStep.metadata as { nested: { source: string } }).nested.source = "caller";
+        exposedStatus.isCompleted = true;
+        exposedStatus.completedAt = new Date("2026-03-02T00:00:00.000Z");
+        exposedStatus.startedAt?.setUTCFullYear(2030);
+
+        expect(analytics.capture).not.toHaveBeenCalled();
+        await expect(managerWithSavedState.getStatus("welcome-tour")).resolves.toEqual({
+          steps: {
+            "step-1": {
+              completed: false,
+              metadata: { nested: { source: "stored" } },
+            },
+          },
+          isCompleted: false,
+          startedAt: new Date("2026-03-01T00:00:00.000Z"),
+        });
+
+        await managerWithSavedState.completeStep("welcome-tour", "step-1");
+      },
+    );
+
+    expect(analytics.capture).toHaveBeenCalledTimes(1);
+    expect(analytics.capture).toHaveBeenCalledWith(
+      "onboarding_step_completed",
+      expect.objectContaining({ onboardingId: "welcome-tour", stepId: "step-1" }),
     );
   });
 

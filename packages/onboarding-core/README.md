@@ -96,6 +96,12 @@ for (const testCase of suite.cases) {
 }
 ```
 
+`InMemoryOnboardingStore`는 저장 입력과 조회·완료 결과를 각각 독립적인 스냅샷으로 보관합니다.
+`StepState.metadata`는 primitive, 배열, plain record, `Date`, 비공유 `ArrayBuffer`와 그 view만 포함할 수
+있습니다. 함수, accessor, symbol 또는 non-enumerable own property, 지원 내장 타입에 덧붙인 own
+property, 사용자 정의 인스턴스, `SharedArrayBuffer`와 공유 메모리 view는 독립적인 스냅샷을 보장할
+수 없으므로 `OnboardingStateSnapshotUnsupportedProblem`으로 거부됩니다.
+
 ## API
 
 ### OnboardingManager
@@ -180,6 +186,7 @@ interface OnboardingContext {
 - `OnboardingDefinitionNotFoundProblem` - 정의를 찾을 수 없을 때
 - `OnboardingStepNotFoundProblem` - 단계를 찾을 수 없을 때
 - `OnboardingContextRequiredProblem` - 컨텍스트가 필요할 때
+- `OnboardingStateSnapshotUnsupportedProblem` - 인메모리 상태 메타데이터가 독립적으로 복사될 수 없거나 공유 메모리를 포함할 때
 
 ## Context 요구사항
 
