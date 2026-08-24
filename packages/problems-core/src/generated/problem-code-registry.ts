@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 646,
+  problemCount: 648,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -16461,7 +16461,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts",
-          line: 130,
+          line: 181,
           column: 3,
           kind: "problem-class",
         },
@@ -16589,6 +16589,73 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts",
           line: 117,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "telemetry-sdk-node/shutdown-timeout",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#telemetry-sdk-node-shutdown-timeout",
+      recovery: {
+        cause:
+          "The OpenTelemetry SDK did not complete exporter teardown within the configured shutdown deadline.",
+        userAction:
+          "Do not reinitialize telemetry yet; retry shutdown after the stalled exporter or SDK teardown has been investigated.",
+        operatorAction:
+          "Inspect exporter and SDK shutdown diagnostics for the reported timeoutMillis, then retry shutdown() to rejoin the same pending teardown before reinitializing.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts",
+          line: 167,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "telemetry-sdk-node/shutdown-timeout-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#telemetry-sdk-node-shutdown-timeout-invalid",
+      recovery: {
+        cause:
+          "Telemetry shutdown received a timeout outside the supported integer millisecond range.",
+        userAction:
+          "Retry shutdown with an integer timeout from 1 through 2147483647 milliseconds.",
+        operatorAction:
+          "Correct the shutdown timeout at the lifecycle owner before invoking TelemetryRuntime.shutdown().",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts",
+          line: 147,
           column: 3,
           kind: "problem-class",
         },

@@ -1,3 +1,5 @@
+import { trace } from "@opentelemetry/api";
+import type { Tracer, TracerProvider } from "@opentelemetry/api";
 import type { Instrumentation } from "@opentelemetry/instrumentation";
 import { ATTR_DEPLOYMENT_ENVIRONMENT_NAME } from "@opentelemetry/semantic-conventions";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -945,7 +947,351 @@ describe("TelemetryRuntime", () => {
     Object.assign(runtime, { sdk });
 
     await expect(runtime.shutdown()).rejects.toThrow("Telemetry shutdown failed: shutdown failed");
-    Object.assign(runtime, { sdk: null, processor: null, initialized: false, initPromise: null });
+    Object.assign(runtime, {
+      sdk: null,
+      processor: null,
+      initialized: false,
+      initPromise: null,
+      sdkShutdownPromise: null,
+      shutdownFailure: null,
+    });
+  });
+
+  it("should preserve every OpenTelemetry cleanup failure", async () => {
+    const firstFailure = new Error("first cleanup failed");
+    const secondFailure = new Error("second cleanup failed");
+    const sdk = {
+      shutdown: vi.fn().mockResolvedValue(undefined),
+    };
+    const activeInstrumentations = [
+      {
+        disable: vi.fn(() => {
+          throw firstFailure;
+        }),
+      },
+      {
+        disable: vi.fn(() => {
+          throw secondFailure;
+        }),
+      },
+    ] as unknown as Instrumentation[];
+    Object.assign(runtime, { sdk, activeInstrumentations, initialized: true });
+
+    const problem = await runtime.shutdown().then(
+      () => undefined,
+      (error: unknown) => error,
+    );
+
+    expect(problem).toBeInstanceOf(TelemetryRuntimeProblem);
+    const cause = (problem as { cause?: unknown }).cause;
+    expect(cause).toMatchObject({ failures: [firstFailure, secondFailure] });
+    Object.assign(runtime, {
+      sdk: null,
+      processor: null,
+      initialized: false,
+      activeInstrumentations: [],
+      initPromise: null,
+      sdkShutdownPromise: null,
+      shutdownFailure: null,
+    });
+  });
+
+  it.each([
+    [0, "0"],
+    [-1, "-1"],
+    [1.5, "1.5"],
+    [Number.NaN, "NaN"],
+    [Number.POSITIVE_INFINITY, "Infinity"],
+    [2_147_483_648, "2147483648"],
+    [null, "null"],
+    ["100", "[non-numeric string]"],
+    [{ timeout: 100 }, "[non-numeric object]"],
+  ] as const)(
+    "should reject invalid shutdown timeout %s before invoking the SDK",
+    async (timeoutMillis, receivedValue) => {
+      const sdk = {
+        shutdown: vi.fn().mockResolvedValue(undefined),
+      };
+      Object.assign(runtime, { sdk, initialized: true });
+
+      await expect(runtime.shutdown(timeoutMillis as number)).rejects.toMatchObject({
+        code: "telemetry-sdk-node/shutdown-timeout-invalid",
+        receivedValue,
+      });
+      expect(sdk.shutdown).not.toHaveBeenCalled();
+
+      Object.assign(runtime, { sdk: null, initialized: false });
+    },
+  );
+
+  it("should preserve an application-owned global tracer provider during shutdown", async () => {
+    const externalTracer = {} as Tracer;
+    const externalProvider = {
+      getTracer: vi.fn(() => externalTracer),
+    } as TracerProvider;
+    expect(trace.setGlobalTracerProvider(externalProvider)).toBe(true);
+
+    try {
+      await runtime.init({
+        serviceName: "external-provider-coexistence",
+        trace: { exporterUrl: "http://collector:4318/v1/traces" },
+      });
+      expect(trace.getTracer("external-before-shutdown")).toBe(externalTracer);
+
+      await expect(runtime.shutdown(100)).resolves.toEqual({ outcome: "completed" });
+
+      expect(trace.getTracer("external-after-shutdown")).toBe(externalTracer);
+    } finally {
+      trace.disable();
+    }
+  });
+
+  it("should rejoin one stalled SDK shutdown after timeout and reset the singleton", async () => {
+    vi.useFakeTimers();
+    const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout");
+    let completeShutdown!: () => void;
+    const sdkShutdownPromise = new Promise<void>((resolve) => {
+      completeShutdown = resolve;
+    });
+    const sdk = {
+      shutdown: vi.fn(() => sdkShutdownPromise),
+    };
+    Object.assign(runtime, { sdk, initialized: true });
+
+    let shutdownError: unknown;
+    void runtime.shutdown(10).catch((error: unknown) => {
+      shutdownError = error;
+    });
+    await vi.advanceTimersByTimeAsync(10);
+
+    expect(shutdownError).toMatchObject({
+      code: "telemetry-sdk-node/shutdown-timeout",
+      timeoutMillis: 10,
+    });
+    await expect(
+      runtime.init({ serviceName: "blocked-reinit", enabled: false }),
+    ).rejects.toMatchObject({
+      code: "telemetry-sdk-node/init-configuration-conflict",
+      runtimeState: "shutdown-timed-out",
+    });
+    expect(clearTimeoutSpy).toHaveBeenCalledTimes(1);
+    expect(vi.getTimerCount()).toBe(0);
+
+    completeShutdown();
+    await TelemetryRuntime.reset();
+
+    expect(sdk.shutdown).toHaveBeenCalledTimes(1);
+    expect(clearTimeoutSpy).toHaveBeenCalledTimes(2);
+    expect(vi.getTimerCount()).toBe(0);
+    expect(TelemetryRuntime.getInstance()).not.toBe(runtime);
+    clearTimeoutSpy.mockRestore();
+  });
+
+  it("should apply the 30000ms default shutdown timeout", async () => {
+    vi.useFakeTimers();
+    let completeShutdown!: () => void;
+    const sdkShutdownPromise = new Promise<void>((resolve) => {
+      completeShutdown = resolve;
+    });
+    const sdk = {
+      shutdown: vi.fn(() => sdkShutdownPromise),
+    };
+    Object.assign(runtime, { sdk, initialized: true });
+
+    let shutdownError: unknown;
+    void runtime.shutdown().catch((error: unknown) => {
+      shutdownError = error;
+    });
+    await vi.advanceTimersByTimeAsync(29_999);
+    expect(shutdownError).toBeUndefined();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(shutdownError).toMatchObject({
+      code: "telemetry-sdk-node/shutdown-timeout",
+      timeoutMillis: 30_000,
+    });
+
+    completeShutdown();
+    await expect(runtime.shutdown(100)).resolves.toEqual({ outcome: "completed" });
+    expect(sdk.shutdown).toHaveBeenCalledTimes(1);
+  });
+
+  it("should make concurrent shutdown callers join one SDK operation and result", async () => {
+    const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout");
+    let completeShutdown!: () => void;
+    const sdkShutdownPromise = new Promise<void>((resolve) => {
+      completeShutdown = resolve;
+    });
+    const sdk = {
+      shutdown: vi.fn(() => sdkShutdownPromise),
+    };
+    Object.assign(runtime, { sdk, initialized: true });
+
+    const shutdowns = [
+      runtime.shutdown(100),
+      runtime.shutdown(),
+      runtime.shutdown(1),
+      runtime.shutdown(0),
+      runtime.shutdown(Number.NaN),
+    ];
+    await Promise.resolve();
+    completeShutdown();
+    const results = await Promise.all(shutdowns);
+    expect(results).toEqual(Array.from({ length: 5 }, () => ({ outcome: "completed" })));
+    for (const result of results.slice(1)) {
+      expect(result).toBe(results[0]);
+    }
+    expect(sdk.shutdown).toHaveBeenCalledTimes(1);
+    expect(clearTimeoutSpy).toHaveBeenCalledTimes(1);
+    clearTimeoutSpy.mockRestore();
+  });
+
+  it("should make concurrent shutdown callers observe the same failure", async () => {
+    const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout");
+    const failure = new Error("shutdown failed");
+    const sdk = {
+      shutdown: vi.fn().mockRejectedValue(failure),
+    };
+    Object.assign(runtime, { sdk, initialized: true });
+
+    const results = await Promise.allSettled([
+      runtime.shutdown(100),
+      runtime.shutdown(100),
+      runtime.shutdown(100),
+    ]);
+    const reasons = results.map((result) => (result.status === "rejected" ? result.reason : null));
+
+    Object.assign(runtime, {
+      sdk: null,
+      processor: null,
+      initialized: false,
+      shutdownFailure: null,
+    });
+
+    expect(sdk.shutdown).toHaveBeenCalledTimes(1);
+    expect(reasons[0]).toBeInstanceOf(TelemetryRuntimeProblem);
+    expect(reasons[1]).toBe(reasons[0]);
+    expect(reasons[2]).toBe(reasons[0]);
+    expect(clearTimeoutSpy).toHaveBeenCalledTimes(1);
+    clearTimeoutSpy.mockRestore();
+  });
+
+  it("should publish the shared shutdown before invoking a reentrant SDK", async () => {
+    let reentrantShutdown: Promise<unknown> | undefined;
+    const sdk = {
+      shutdown: vi.fn(() => {
+        reentrantShutdown = runtime.shutdown(1);
+        return Promise.resolve();
+      }),
+    };
+    Object.assign(runtime, { sdk, initialized: true });
+
+    const result = await runtime.shutdown(100);
+    await expect(reentrantShutdown).resolves.toBe(result);
+    expect(sdk.shutdown).toHaveBeenCalledTimes(1);
+  });
+
+  it("should reject init while shutdown is in progress and permit it after shutdown", async () => {
+    const config = {
+      serviceName: "shutdown-race-service",
+      enabled: true,
+      trace: { enabled: true, exporterUrl: "http://collector:4318/v1/traces" },
+    };
+    await runtime.init(config);
+
+    let completeShutdown!: () => void;
+    const sdk = {
+      shutdown: vi.fn(
+        () =>
+          new Promise<void>((resolve) => {
+            completeShutdown = resolve;
+          }),
+      ),
+    };
+    Object.assign(runtime, { sdk });
+
+    const shutdownPromise = runtime.shutdown(100);
+    await expect(runtime.init(config)).rejects.toMatchObject({
+      code: "telemetry-sdk-node/init-configuration-conflict",
+      runtimeState: "shutting-down",
+    });
+
+    completeShutdown();
+    await expect(shutdownPromise).resolves.toEqual({ outcome: "completed" });
+    await expect(runtime.init(config)).resolves.toBeUndefined();
+  });
+
+  it("should make forceFlush join an in-progress shutdown", async () => {
+    let completeShutdown!: () => void;
+    const sdk = {
+      shutdown: vi.fn(
+        () =>
+          new Promise<void>((resolve) => {
+            completeShutdown = resolve;
+          }),
+      ),
+    };
+    const processor = {
+      forceFlush: vi.fn().mockResolvedValue(undefined),
+    };
+    Object.assign(runtime, { sdk, processor, initialized: true });
+
+    const shutdownPromise = runtime.shutdown(100);
+    const flushPromise = runtime.forceFlush();
+    await Promise.resolve();
+    expect(processor.forceFlush).not.toHaveBeenCalled();
+
+    completeShutdown();
+    await expect(shutdownPromise).resolves.toEqual({ outcome: "completed" });
+    await expect(flushPromise).resolves.toEqual({
+      outcome: "unsupported",
+      reason: "not-initialized",
+      flushedSpans: 0,
+    });
+  });
+
+  it("should preserve an SDK shutdown rejection as terminal until process restart", async () => {
+    const config = {
+      serviceName: "shutdown-retry-service",
+      enabled: true,
+      trace: { enabled: true, exporterUrl: "http://collector:4318/v1/traces" },
+    };
+    await runtime.init(config);
+
+    const sdk = {
+      shutdown: vi
+        .fn<() => Promise<void>>()
+        .mockRejectedValue(new Error("exporter teardown failed")),
+    };
+    Object.assign(runtime, { sdk });
+
+    let shutdownFailure: unknown;
+    try {
+      await runtime.shutdown(100);
+    } catch (error) {
+      shutdownFailure = error;
+    }
+    expect(shutdownFailure).toMatchObject({
+      message: "Telemetry shutdown failed: exporter teardown failed",
+    });
+    expect(runtime.isInitialized()).toBe(false);
+    await expect(runtime.forceFlush()).rejects.toBe(shutdownFailure);
+    await expect(runtime.init(config)).rejects.toMatchObject({
+      code: "telemetry-sdk-node/init-configuration-conflict",
+      runtimeState: "shutdown-failed",
+    });
+
+    await expect(runtime.shutdown(100)).rejects.toBe(shutdownFailure);
+    await expect(TelemetryRuntime.reset()).rejects.toBe(shutdownFailure);
+    expect(TelemetryRuntime.getInstance()).toBe(runtime);
+    expect(sdk.shutdown).toHaveBeenCalledTimes(1);
+
+    Object.assign(runtime, {
+      sdk: null,
+      processor: null,
+      initialized: false,
+      sdkShutdownPromise: null,
+      shutdownFailure: null,
+    });
   });
 
   it("lifecycle outcomes should preserve an in-flight initialization failure through shutdown", async () => {

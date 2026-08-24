@@ -1102,6 +1102,11 @@ function checkSaasStructure() {
   );
   checkFileContains(
     "saas",
+    ["apps", "api-server", "src", "demo", "operational-failure-drills.ts"],
+    /runWithLoopbackTelemetry[\s\S]*TelemetryRuntime\.reset\(\)[\s\S]*TelemetryRuntime\.getInstance\(\)\.init/,
+  );
+  checkFileContains(
+    "saas",
     ["apps", "api-server", "src", "demo", "ops-smoke.ts"],
     /@croco\/cli\/ops/,
   );

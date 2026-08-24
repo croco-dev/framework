@@ -9,7 +9,7 @@ import { TelemetryRuntime } from "../runtime";
 type NamedInstrumentation = Instrumentation & { instrumentationName: string };
 
 function instrumentation(name: string): NamedInstrumentation {
-  return { instrumentationName: name } as NamedInstrumentation;
+  return { instrumentationName: name, disable: vi.fn() } as unknown as NamedInstrumentation;
 }
 
 const runtimeMocks = vi.hoisted(() => ({
@@ -17,7 +17,7 @@ const runtimeMocks = vi.hoisted(() => ({
   getNodeAutoInstrumentations: vi.fn((configs: Record<string, { enabled?: boolean }>) =>
     Object.entries(configs)
       .filter(([, config]) => config.enabled !== false)
-      .map(([name]) => ({ instrumentationName: name }) as NamedInstrumentation),
+      .map(([name]) => instrumentation(name)),
   ),
 }));
 

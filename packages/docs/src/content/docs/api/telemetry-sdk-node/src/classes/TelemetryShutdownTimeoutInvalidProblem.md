@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "TelemetryInitializationConflictProblem"
+title: "TelemetryShutdownTimeoutInvalidProblem"
 ---
 
-A TelemetryRuntime initialization request conflicts with the configuration already owned by the singleton.
+Telemetry shutdown received an unsupported timeout value.
 
 ## Extends
 
@@ -15,17 +15,17 @@ A TelemetryRuntime initialization request conflicts with the configuration alrea
 
 ### Constructor
 
-> **new TelemetryInitializationConflictProblem**(`runtimeState`): `TelemetryInitializationConflictProblem`
+> **new TelemetryShutdownTimeoutInvalidProblem**(`timeoutMillis`): `TelemetryShutdownTimeoutInvalidProblem`
 
 #### Parameters
 
-##### runtimeState
+##### timeoutMillis
 
-`"disabled"` \| `"initialized"` \| `"initializing"` \| `"shutting-down"` \| `"shutdown-timed-out"` \| `"shutdown-failed"`
+`number`
 
 #### Returns
 
-`TelemetryInitializationConflictProblem`
+`TelemetryShutdownTimeoutInvalidProblem`
 
 #### Overrides
 
@@ -35,7 +35,7 @@ A TelemetryRuntime initialization request conflicts with the configuration alrea
 
 ### category
 
-> `readonly` **category**: [`Conflict`](/api/problems-core/src/enumerations/problemcategory/#conflict) = `ProblemCategory.Conflict`
+> `readonly` **category**: [`ValidationError`](/api/problems-core/src/enumerations/problemcategory/#validationerror) = `ProblemCategory.ValidationError`
 
 #### Overrides
 
@@ -55,7 +55,7 @@ A TelemetryRuntime initialization request conflicts with the configuration alrea
 
 ### code
 
-> `readonly` **code**: `"telemetry-sdk-node/init-configuration-conflict"` = `"telemetry-sdk-node/init-configuration-conflict"`
+> `readonly` **code**: `"telemetry-sdk-node/shutdown-timeout-invalid"` = `"telemetry-sdk-node/shutdown-timeout-invalid"`
 
 #### Overrides
 
@@ -113,9 +113,9 @@ A TelemetryRuntime initialization request conflicts with the configuration alrea
 
 ---
 
-### runtimeState
+### receivedValue
 
-> `readonly` **runtimeState**: `"disabled"` \| `"initialized"` \| `"initializing"` \| `"shutting-down"` \| `"shutdown-timed-out"` \| `"shutdown-failed"`
+> `readonly` **receivedValue**: `string`
 
 ---
 

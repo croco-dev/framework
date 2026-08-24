@@ -25913,6 +25913,18 @@
               "exportKind": "named",
               "source": "./runtime",
               "declarationKind": "class"
+            },
+            {
+              "name": "TelemetryShutdownTimeoutInvalidProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/TelemetryProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "TelemetryShutdownTimeoutProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/TelemetryProblems",
+              "declarationKind": "class"
             }
           ],
           "typeExports": [

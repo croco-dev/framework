@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "TelemetryInitializationConflictProblem"
+title: "TelemetryShutdownTimeoutProblem"
 ---
 
-A TelemetryRuntime initialization request conflicts with the configuration already owned by the singleton.
+The OpenTelemetry SDK did not complete shutdown within the configured bound.
 
 ## Extends
 
@@ -15,17 +15,17 @@ A TelemetryRuntime initialization request conflicts with the configuration alrea
 
 ### Constructor
 
-> **new TelemetryInitializationConflictProblem**(`runtimeState`): `TelemetryInitializationConflictProblem`
+> **new TelemetryShutdownTimeoutProblem**(`timeoutMillis`): `TelemetryShutdownTimeoutProblem`
 
 #### Parameters
 
-##### runtimeState
+##### timeoutMillis
 
-`"disabled"` \| `"initialized"` \| `"initializing"` \| `"shutting-down"` \| `"shutdown-timed-out"` \| `"shutdown-failed"`
+`number`
 
 #### Returns
 
-`TelemetryInitializationConflictProblem`
+`TelemetryShutdownTimeoutProblem`
 
 #### Overrides
 
@@ -35,7 +35,7 @@ A TelemetryRuntime initialization request conflicts with the configuration alrea
 
 ### category
 
-> `readonly` **category**: [`Conflict`](/api/problems-core/src/enumerations/problemcategory/#conflict) = `ProblemCategory.Conflict`
+> `readonly` **category**: [`InternalServerError`](/api/problems-core/src/enumerations/problemcategory/#internalservererror) = `ProblemCategory.InternalServerError`
 
 #### Overrides
 
@@ -55,7 +55,7 @@ A TelemetryRuntime initialization request conflicts with the configuration alrea
 
 ### code
 
-> `readonly` **code**: `"telemetry-sdk-node/init-configuration-conflict"` = `"telemetry-sdk-node/init-configuration-conflict"`
+> `readonly` **code**: `"telemetry-sdk-node/shutdown-timeout"` = `"telemetry-sdk-node/shutdown-timeout"`
 
 #### Overrides
 
@@ -113,12 +113,6 @@ A TelemetryRuntime initialization request conflicts with the configuration alrea
 
 ---
 
-### runtimeState
-
-> `readonly` **runtimeState**: `"disabled"` \| `"initialized"` \| `"initializing"` \| `"shutting-down"` \| `"shutdown-timed-out"` \| `"shutdown-failed"`
-
----
-
 ### stack?
 
 > `optional` **stack?**: `string`
@@ -126,6 +120,12 @@ A TelemetryRuntime initialization request conflicts with the configuration alrea
 #### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`stack`](/api/problems-core/src/classes/problem/#stack)
+
+---
+
+### timeoutMillis
+
+> `readonly` **timeoutMillis**: `number`
 
 ---
 

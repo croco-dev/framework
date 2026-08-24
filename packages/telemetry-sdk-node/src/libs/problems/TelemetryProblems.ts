@@ -117,11 +117,62 @@ export class TelemetryInitializationConflictProblem extends Problem {
   readonly code = "telemetry-sdk-node/init-configuration-conflict";
   readonly category = ProblemCategory.Conflict;
 
-  constructor(readonly runtimeState: "disabled" | "initialized" | "initializing") {
+  constructor(
+    readonly runtimeState:
+      | "disabled"
+      | "initialized"
+      | "initializing"
+      | "shutting-down"
+      | "shutdown-timed-out"
+      | "shutdown-failed",
+  ) {
+    const detail =
+      runtimeState === "shutting-down"
+        ? "TelemetryRuntime cannot initialize while shutdown is in progress; wait for shutdown() to settle."
+        : runtimeState === "shutdown-timed-out"
+          ? "TelemetryRuntime cannot initialize while SDK teardown is still pending; retry shutdown() before reinitializing."
+          : runtimeState === "shutdown-failed"
+            ? "TelemetryRuntime cannot initialize after SDK shutdown failed; restart the process after resolving the reported cause."
+            : `TelemetryRuntime cannot apply a different configuration while the runtime is ${runtimeState}; call shutdown() before reconfiguring.`;
+    super("telemetry-sdk-node/init-configuration-conflict", ProblemCategory.Conflict, detail);
+  }
+}
+
+export const MAX_TELEMETRY_SHUTDOWN_TIMEOUT_MS = 2_147_483_647;
+
+/**
+ * Telemetry shutdown received an unsupported timeout value.
+ */
+export class TelemetryShutdownTimeoutInvalidProblem extends Problem {
+  readonly code = "telemetry-sdk-node/shutdown-timeout-invalid";
+  readonly category = ProblemCategory.ValidationError;
+  readonly receivedValue: string;
+
+  constructor(timeoutMillis: number) {
+    const receivedValue = serializeTelemetryBatchValue(timeoutMillis);
     super(
-      "telemetry-sdk-node/init-configuration-conflict",
-      ProblemCategory.Conflict,
-      `TelemetryRuntime cannot apply a different configuration while the runtime is ${runtimeState}; call shutdown() before reconfiguring.`,
+      "telemetry-sdk-node/shutdown-timeout-invalid",
+      ProblemCategory.ValidationError,
+      `Telemetry shutdown timeout must be an integer between 1 and ${MAX_TELEMETRY_SHUTDOWN_TIMEOUT_MS} milliseconds; received ${receivedValue}`,
+      { extensions: { receivedValue } },
+    );
+    this.receivedValue = receivedValue;
+  }
+}
+
+/**
+ * The OpenTelemetry SDK did not complete shutdown within the configured bound.
+ */
+export class TelemetryShutdownTimeoutProblem extends Problem {
+  readonly code = "telemetry-sdk-node/shutdown-timeout";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(readonly timeoutMillis: number) {
+    super(
+      "telemetry-sdk-node/shutdown-timeout",
+      ProblemCategory.InternalServerError,
+      `Telemetry shutdown timed out after ${timeoutMillis}ms; retry shutdown() to rejoin the pending SDK teardown before reinitializing.`,
+      { extensions: { timeoutMillis } },
     );
   }
 }

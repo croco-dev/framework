@@ -8,6 +8,8 @@ import {
   TelemetryForceFlushUnsupportedProblem,
   TelemetryInitializationConflictProblem,
   TelemetryRuntimeProblem,
+  TelemetryShutdownTimeoutInvalidProblem,
+  TelemetryShutdownTimeoutProblem,
 } from "../libs/problems/TelemetryProblems";
 
 describe("TelemetryBatchConfigurationProblem", () => {
@@ -141,6 +143,63 @@ describe("TelemetryInitializationConflictProblem", () => {
       "TelemetryRuntime cannot apply a different configuration while the runtime is initializing; call shutdown() before reconfiguring.",
     );
   });
+
+  it.each([
+    [
+      "shutting-down",
+      "TelemetryRuntime cannot initialize while shutdown is in progress; wait for shutdown() to settle.",
+    ],
+    [
+      "shutdown-timed-out",
+      "TelemetryRuntime cannot initialize while SDK teardown is still pending; retry shutdown() before reinitializing.",
+    ],
+    [
+      "shutdown-failed",
+      "TelemetryRuntime cannot initialize after SDK shutdown failed; restart the process after resolving the reported cause.",
+    ],
+  ] as const)("describes the %s recovery boundary", (runtimeState, detail) => {
+    const problem = new TelemetryInitializationConflictProblem(runtimeState);
+
+    expect(problem).toMatchObject({
+      code: "telemetry-sdk-node/init-configuration-conflict",
+      runtimeState,
+      detail,
+    });
+  });
+});
+
+describe("Telemetry shutdown timeout Problems", () => {
+  it("exposes an actionable timeout with stable extensions", () => {
+    const problem = new TelemetryShutdownTimeoutProblem(250);
+
+    expect(problem).toMatchObject({
+      code: "telemetry-sdk-node/shutdown-timeout",
+      category: "InternalServerError",
+      timeoutMillis: 250,
+      detail:
+        "Telemetry shutdown timed out after 250ms; retry shutdown() to rejoin the pending SDK teardown before reinitializing.",
+      extensions: { timeoutMillis: 250 },
+    });
+  });
+
+  it.each([
+    [0, "0"],
+    [Number.NaN, "NaN"],
+    [Number.POSITIVE_INFINITY, "Infinity"],
+  ])(
+    "serializes invalid caller configuration %s as stable evidence",
+    (timeoutMillis, receivedValue) => {
+      const problem = new TelemetryShutdownTimeoutInvalidProblem(timeoutMillis);
+
+      expect(problem).toMatchObject({
+        code: "telemetry-sdk-node/shutdown-timeout-invalid",
+        category: "ValidationError",
+        receivedValue,
+        extensions: { receivedValue },
+      });
+      expect(JSON.stringify(problem.toJSON())).toContain(`"receivedValue":"${receivedValue}"`);
+    },
+  );
 });
 
 describe("TelemetryForceFlushUnsupportedProblem", () => {
