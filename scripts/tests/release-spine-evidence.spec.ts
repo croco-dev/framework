@@ -844,6 +844,34 @@ describe("release-spine-evidence.mts", () => {
     );
   });
 
+  it("terminalizes transitive prerequisite failures without pending checks", async () => {
+    const repo = createTempRepo();
+    const report = await runReleaseSpineEvidence({
+      rootDir: repo,
+      outputDir: join(repo, "out"),
+      totalTimeoutMs: 1_000,
+      maxConcurrency: 3,
+      commands: [
+        createCommand("build"),
+        createCommand("package", { dependsOn: ["build"] }),
+        createCommand("publish", { dependsOn: ["package"] }),
+      ],
+      runner: async (command) =>
+        command.id === "build" ? { ...okResult(command.id), status: 2 } : okResult(command.id),
+    });
+
+    expect(report.status).toBe("failed");
+    expect(report.checks.map(({ status }) => status)).toEqual([
+      "failed",
+      "skipped_prerequisite",
+      "skipped_prerequisite",
+    ]);
+    expect(report.summary.pending).toBe(0);
+    expect(report.checks[2]?.failureReason).toBe(
+      "Skipped because prerequisite check(s) did not pass: package (skipped_prerequisite).",
+    );
+  });
+
   it("starts a dependent only after its prerequisite completes", async () => {
     const repo = createTempRepo();
     const events: string[] = [];
@@ -1247,13 +1275,13 @@ describe("release-spine-evidence.mts", () => {
           "-e",
           "process.stdout.write('before timeout'); setTimeout(() => undefined, 10_000)",
         ],
-        timeoutMs: 200,
+        timeoutMs: 2_000,
       },
       {
         cwd: repo,
         stderrPath,
         stdoutPath,
-        timeoutMs: 200,
+        timeoutMs: 2_000,
       },
     );
 

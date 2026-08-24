@@ -3,51 +3,80 @@ name: Performance Benchmark
 on:
   pull_request:
     branches: [trunk]
-    paths:
-      - "packages/*/src/**"
-      - "benchmarks/**"
-      - "ci-reports/benchmark/**"
-      - "scripts/bench-threshold-check.mts"
-      - "scripts/benchmark-readiness-report.mts"
-      - "scripts/post-benchmark-comment.mjs"
-      - "scripts/tests/**"
-      - "package.json"
-      - "vitest.config.ts"
-      - "vitest.config.bench.ts"
-      - "tsconfig.json"
-      - "pnpm-lock.yaml"
-      - ".github/workflows/benchmark.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: benchmark-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 env:
   BENCHMARK_GATE_MODE: enforce
 
 jobs:
+  classify:
+    name: classify
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      applicable: ${{ steps.changed.outputs.applicable }}
+    steps:
+      - name: Classify benchmark changes
+        id: changed
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            if (context.eventName === 'workflow_dispatch') {
+              core.setOutput('applicable', 'true');
+              return;
+            }
+
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              per_page: 100,
+            });
+            const applicable = files.some(({ filename }) =>
+              /^packages\/[^/]+\/src\//.test(filename) ||
+              filename.startsWith('benchmarks/') ||
+              filename.startsWith('ci-reports/benchmark/') ||
+              filename === 'scripts/bench-threshold-check.mts' ||
+              filename === 'scripts/benchmark-readiness-report.mts' ||
+              filename === 'scripts/post-benchmark-comment.mjs' ||
+              filename.startsWith('scripts/tests/') ||
+              filename === 'package.json' ||
+              filename === 'vitest.config.ts' ||
+              filename === 'vitest.config.bench.ts' ||
+              filename === 'tsconfig.json' ||
+              filename === 'pnpm-lock.yaml' ||
+              filename === '.github/workflows/benchmark.yml'
+            );
+            core.setOutput('applicable', String(applicable));
+
   benchmark:
+    name: benchmark
+    needs: classify
+    if: needs.classify.outputs.applicable == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: read
-      pull-requests: write
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Checkout pull request revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
       - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: ".nvmrc"
-          cache: "pnpm"
-      - name: Restore Turbo cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: .turbo
-          key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-${{ github.job }}-${{ github.sha }}
-          restore-keys: |
-            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-${{ github.job }}-
-            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-
-            turbo-${{ runner.os }}-
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - name: Run benchmarks with threshold check
@@ -74,20 +103,56 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: benchmark-readiness-report
+          name: benchmark-readiness-report-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             benchmark-result.json
             ci-reports/benchmark/summary.md
             ci-reports/benchmark/latest-five-green-runs.md
           if-no-files-found: warn
-      - name: Comment PR with benchmark results
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
-        if: github.event_name == 'pull_request'
-        continue-on-error: true
-        with:
-          script: |
-            const { run } = await import('${{ github.workspace }}/scripts/post-benchmark-comment.mjs');
-            await run({ github, context });
       - name: Fail if benchmark enforcement failed
         if: env.BENCHMARK_GATE_MODE == 'enforce' && (steps.bench.outcome == 'failure' || steps.readiness.outcome == 'failure')
         run: exit 1
+
+  benchmark-gate:
+    name: benchmark-gate
+    needs: [classify, benchmark]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Require current pull request revision
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const { data: pullRequest } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+            });
+            if (pullRequest.head.sha !== context.payload.pull_request.head.sha) {
+              core.setFailed(`Benchmark evidence targets stale revision ${context.payload.pull_request.head.sha}; current head is ${pullRequest.head.sha}.`);
+            }
+      - name: Enforce benchmark result
+        shell: bash
+        env:
+          CLASSIFY_RESULT: ${{ needs.classify.result }}
+          BENCHMARK_APPLICABLE: ${{ needs.classify.outputs.applicable }}
+          BENCHMARK_RESULT: ${{ needs.benchmark.result }}
+        run: |
+          if [ "$CLASSIFY_RESULT" != "success" ]; then
+            echo "::error::Benchmark change classification did not succeed."
+            exit 1
+          fi
+          if [ "$BENCHMARK_APPLICABLE" != "true" ]; then
+            echo "No benchmark-relevant files changed; benchmark gate passes as not applicable."
+            exit 0
+          fi
+          if [ "$BENCHMARK_RESULT" != "success" ]; then
+            echo "::error::Benchmark verification concluded $BENCHMARK_RESULT."
+            exit 1
+          fi
+          echo "Benchmark verification passed for the current pull request revision."

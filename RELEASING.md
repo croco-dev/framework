@@ -111,6 +111,13 @@ If an artifact is compromised, revoked, or unexpectedly repointed:
    - "Version Packages" PR을 `trunk`로 머지하면, 배포 파이프라인이 트리거되어 npm에 패키지를 배포합니다.
    - 배포 후 GitHub Release 태그가 자동으로 생성됩니다.
 
+Release 실행은 하나의 보존형 큐로 직렬화합니다. 대기 중 최신 `trunk`가 바뀐 실행은 의존성 설치
+전에 종료하고, 현재 실행은 push diff뿐 아니라 남아 있는 raw changeset과 npm의 정확한 workspace
+package version 공개 상태를 함께 검사합니다. 이전 Version Packages 실행이 밀려도 미공개 버전이
+발견되면 현재 SHA에서 publish verification을 다시 실행한 뒤 Changesets를 호출합니다. raw
+changeset이 남아 있으면 publish 대신 Version Packages PR 재조정 경로를 유지합니다. Changesets
+직전에는 `trunk` SHA를 다시 확인하여 검증 이후 새 push가 생긴 실행의 변경 작업도 건너뜁니다.
+
 ### Version Packages GitHub App runbook
 
 The Changesets action authenticates with a short-lived installation token so that checks run on
@@ -334,13 +341,16 @@ pnpm changeset status
 
 ### Dry-run (사전 검증)
 
-실제 배포 전에 버전이 어떻게 변경될지 미리 확인하고 싶다면:
+실제 파일을 변경하지 않고 pending Changeset의 예정 버전과 현재 릴리즈 메타데이터 drift를
+확인하려면:
 
 ```bash
 pnpm version-packages --dry-run
 ```
 
-(참고: `package.json` 스크립트에 따라 명령어가 다를 수 있습니다. 기본은 `changeset version --dry-run` 입니다.)
+이 명령은 `changeset status`와 `package-manifests:check`, `release-version-sync:check`,
+`docs:catalog:check`만 실행합니다. 실제 버전 및 생성 파일 갱신은 인자 없는
+`pnpm version-packages`에서만 수행합니다.
 
 ---
 

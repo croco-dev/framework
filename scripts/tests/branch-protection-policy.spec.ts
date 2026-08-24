@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import {
   findBranchProtectionPolicyViolations,
   readExpectedBranchProtectionPolicy,
+  requiredBranchProtectionChecks,
 } from "../branch-protection-policy.mts";
 
 type MutableRecord = Record<string, unknown>;
@@ -69,6 +70,13 @@ function parameters(ruleset: MutableRecord, type: string): MutableRecord {
 }
 
 describe("branch-protection-policy.mts", () => {
+  it("requires the stable benchmark gate from the GitHub Actions integration", () => {
+    expect(requiredBranchProtectionChecks(EXPECTED_POLICY)).toContainEqual({
+      context: "benchmark-gate",
+      integrationId: 15368,
+    });
+  });
+
   it.each([
     [
       "required check",
