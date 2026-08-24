@@ -68,119 +68,174 @@ class ConflictingOnboardingStore extends OnboardingStore {
   }
 }
 
-describe("InMemoryOnboardingStore snapshot ownership", () => {
-  it("should reject metadata that cannot become an independent snapshot", async () => {
-    const store = new InMemoryOnboardingStore();
-    const sharedBytes = new Uint8Array(new SharedArrayBuffer(1));
-    const hostileProxy = new Proxy(
-      {},
-      {
-        getPrototypeOf: () => {
-          throw new Error("raw proxy failure");
+const unsupportedSnapshotCases: ReadonlyArray<readonly [string, () => unknown]> = [
+  ["function", () => () => "caller-owned"],
+  ["shared-memory", () => new Uint8Array(new SharedArrayBuffer(1))],
+  [
+    "error-cause",
+    () => {
+      const error = new Error("metadata");
+      Object.defineProperty(error, "cause", { value: new SharedArrayBuffer(1) });
+      return error;
+    },
+  ],
+  ["webassembly-memory", () => new WebAssembly.Memory({ initial: 1, maximum: 1, shared: true })],
+  [
+    "hostile-proxy",
+    () =>
+      new Proxy(
+        {},
+        {
+          getPrototypeOf: () => {
+            throw new Error("raw proxy failure");
+          },
         },
-      },
-    );
-    const errorWithSharedCause = new Error("metadata");
-    Object.defineProperty(errorWithSharedCause, "cause", {
-      value: new SharedArrayBuffer(1),
-    });
-    const arrayWithSharedProperty: unknown[] = [];
-    Object.defineProperty(arrayWithSharedProperty, "shared", {
-      enumerable: true,
-      value: new SharedArrayBuffer(1),
-    });
-    const accessorMetadata = Object.defineProperty({}, "value", {
-      enumerable: true,
-      get: () => "caller-owned",
-    });
-    const hiddenAccessorMetadata = Object.defineProperty({}, "value", {
-      get: () => "caller-owned",
-    });
-    const disguisedSharedBuffer = new SharedArrayBuffer(1);
-    Object.setPrototypeOf(disguisedSharedBuffer, Object.prototype);
-    const disguisedWebAssemblyMemory = new WebAssembly.Memory({
-      initial: 1,
-      maximum: 1,
-      shared: true,
-    });
-    Object.setPrototypeOf(disguisedWebAssemblyMemory, Object.prototype);
-    class CustomDate extends Date {}
-    class CustomArray<T> extends Array<T> {}
-    class CustomBytes extends Uint8Array {}
-    const dateWithAccessor = Object.defineProperty(new Date(), "value", {
-      get: () => "caller-owned",
-    });
-    const bufferWithHiddenProperty = Object.defineProperty(new ArrayBuffer(1), "value", {
-      value: "caller-owned",
-    });
-    const viewWithSymbolProperty = Object.defineProperty(new Uint8Array(1), Symbol("value"), {
-      enumerable: true,
-      value: "caller-owned",
-    });
-    const dateWithEnumerableProperty = Object.defineProperty(new Date(), "value", {
-      enumerable: true,
-      value: "caller-owned",
-    });
-    const bufferWithEnumerableProperty = Object.defineProperty(new ArrayBuffer(1), "value", {
-      enumerable: true,
-      value: "caller-owned",
-    });
-    const dataViewWithEnumerableProperty = Object.defineProperty(
-      new DataView(new ArrayBuffer(1)),
-      "value",
-      {
+      ),
+  ],
+  [
+    "array-shared-property",
+    () =>
+      Object.defineProperty([], "shared", {
+        enumerable: true,
+        value: new SharedArrayBuffer(1),
+      }),
+  ],
+  [
+    "accessor",
+    () =>
+      Object.defineProperty({}, "value", {
+        enumerable: true,
+        get: () => "caller-owned",
+      }),
+  ],
+  [
+    "hidden-accessor",
+    () =>
+      Object.defineProperty({}, "value", {
+        get: () => "caller-owned",
+      }),
+  ],
+  [
+    "disguised-shared-memory",
+    () => {
+      const value = new SharedArrayBuffer(1);
+      Object.setPrototypeOf(value, Object.prototype);
+      return value;
+    },
+  ],
+  [
+    "disguised-webassembly-memory",
+    () => {
+      const value = new WebAssembly.Memory({ initial: 1, maximum: 1, shared: true });
+      Object.setPrototypeOf(value, Object.prototype);
+      return value;
+    },
+  ],
+  [
+    "custom-date",
+    () => {
+      class CustomDate extends Date {}
+      return new CustomDate();
+    },
+  ],
+  [
+    "custom-array",
+    () => {
+      class CustomArray<T> extends Array<T> {}
+      return new CustomArray();
+    },
+  ],
+  [
+    "custom-view",
+    () => {
+      class CustomBytes extends Uint8Array {}
+      return new CustomBytes();
+    },
+  ],
+  [
+    "date-accessor",
+    () =>
+      Object.defineProperty(new Date(), "value", {
+        get: () => "caller-owned",
+      }),
+  ],
+  [
+    "array-buffer-hidden-property",
+    () => Object.defineProperty(new ArrayBuffer(1), "value", { value: "caller-owned" }),
+  ],
+  [
+    "view-symbol-property",
+    () =>
+      Object.defineProperty(new Uint8Array(1), Symbol("value"), {
         enumerable: true,
         value: "caller-owned",
-      },
-    );
-    const typedArrayWithEnumerableProperty = Object.defineProperty(new Uint8Array(1), "value", {
-      enumerable: true,
-      value: "caller-owned",
-    });
-    const forgedTypedArray = new Uint8Array(1);
-    Object.setPrototypeOf(
-      forgedTypedArray,
-      Object.create(Object.getPrototypeOf(Uint8Array.prototype)),
-    );
-    const unsupportedValues: ReadonlyArray<readonly [string, unknown]> = [
-      ["function", () => "caller-owned"],
-      ["shared-memory", sharedBytes],
-      ["error-cause", errorWithSharedCause],
-      ["webassembly-memory", new WebAssembly.Memory({ initial: 1, maximum: 1, shared: true })],
-      ["hostile-proxy", hostileProxy],
-      ["array-shared-property", arrayWithSharedProperty],
-      ["accessor", accessorMetadata],
-      ["hidden-accessor", hiddenAccessorMetadata],
-      ["disguised-shared-memory", disguisedSharedBuffer],
-      ["disguised-webassembly-memory", disguisedWebAssemblyMemory],
-      ["custom-date", new CustomDate()],
-      ["custom-array", new CustomArray()],
-      ["custom-view", new CustomBytes()],
-      ["date-accessor", dateWithAccessor],
-      ["array-buffer-hidden-property", bufferWithHiddenProperty],
-      ["view-symbol-property", viewWithSymbolProperty],
-      ["date-enumerable-property", dateWithEnumerableProperty],
-      ["array-buffer-enumerable-property", bufferWithEnumerableProperty],
-      ["data-view-enumerable-property", dataViewWithEnumerableProperty],
-      ["typed-array-enumerable-property", typedArrayWithEnumerableProperty],
-      ["forged-typed-array-prototype", forgedTypedArray],
-    ];
+      }),
+  ],
+  [
+    "date-enumerable-property",
+    () =>
+      Object.defineProperty(new Date(), "value", {
+        enumerable: true,
+        value: "caller-owned",
+      }),
+  ],
+  [
+    "array-buffer-enumerable-property",
+    () =>
+      Object.defineProperty(new ArrayBuffer(1), "value", {
+        enumerable: true,
+        value: "caller-owned",
+      }),
+  ],
+  [
+    "data-view-enumerable-property",
+    () =>
+      Object.defineProperty(new DataView(new ArrayBuffer(1)), "value", {
+        enumerable: true,
+        value: "caller-owned",
+      }),
+  ],
+  [
+    "typed-array-enumerable-property",
+    () =>
+      Object.defineProperty(new Uint8Array(1), "value", {
+        enumerable: true,
+        value: "caller-owned",
+      }),
+  ],
+  [
+    "forged-typed-array-prototype",
+    () => {
+      const value = new Uint8Array(1);
+      Object.setPrototypeOf(value, Object.create(Object.getPrototypeOf(Uint8Array.prototype)));
+      return value;
+    },
+  ],
+];
 
-    for (const [onboardingId, value] of unsupportedValues) {
+describe("InMemoryOnboardingStore snapshot ownership", () => {
+  it.each(unsupportedSnapshotCases)(
+    "should reject %s metadata that cannot become an independent snapshot",
+    async (onboardingId, createValue) => {
+      const store = new InMemoryOnboardingStore();
+
       await expect(
         store.saveState("tenant-1", "user-1", onboardingId, {
           steps: {
             "step-1": {
               completed: false,
-              metadata: { value },
+              metadata: { value: createValue() },
             },
           },
           isCompleted: false,
         }),
       ).rejects.toThrow(OnboardingStateSnapshotUnsupportedProblem);
       await expect(store.getState("tenant-1", "user-1", onboardingId)).resolves.toBeNull();
-    }
+    },
+  );
 
+  it("should isolate supported binary metadata", async () => {
+    const store = new InMemoryOnboardingStore();
     const ownedBytes = new Uint8Array([1, 2, 3]);
     await expect(
       store.saveState("tenant-1", "user-1", "supported-binary-metadata", {
@@ -196,7 +251,6 @@ describe("InMemoryOnboardingStore snapshot ownership", () => {
     ownedBytes[0] = 9;
     const binaryState = await store.getState("tenant-1", "user-1", "supported-binary-metadata");
     expect(binaryState?.steps["step-1"]?.metadata?.["bytes"]).toEqual(new Uint8Array([1, 2, 3]));
-    sharedBytes[0] = 1;
   });
 
   it("should isolate saved state and loaded snapshots including nested metadata and dates", async () => {

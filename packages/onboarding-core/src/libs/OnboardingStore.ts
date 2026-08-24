@@ -34,13 +34,21 @@ const SUPPORTED_ARRAY_BUFFER_VIEW_PROTOTYPES = new Set<object>(
 function snapshotOnboardingState(state: OnboardingState): OnboardingState {
   try {
     assertIndependentlyCloneable(state);
-    const snapshot = structuredClone(state);
+    const snapshot = cloneStoredSnapshot(state);
     assertIndependentlyCloneable(snapshot);
     return snapshot;
   } catch (cause) {
     if (cause instanceof OnboardingStateSnapshotUnsupportedProblem) {
       throw cause;
     }
+    throw new OnboardingStateSnapshotUnsupportedProblem(cause instanceof Error ? cause : undefined);
+  }
+}
+
+function cloneStoredSnapshot(state: OnboardingState): OnboardingState {
+  try {
+    return structuredClone(state);
+  } catch (cause) {
     throw new OnboardingStateSnapshotUnsupportedProblem(cause instanceof Error ? cause : undefined);
   }
 }
@@ -178,7 +186,7 @@ export class InMemoryOnboardingStore extends OnboardingStore {
   ): Promise<OnboardingState | null> {
     const key = this.getKey(tenantId, userId, onboardingId);
     const state = this.storage.get(key);
-    return state ? snapshotOnboardingState(state) : null;
+    return state ? cloneStoredSnapshot(state) : null;
   }
 
   async saveState(
@@ -229,7 +237,7 @@ export class InMemoryOnboardingStore extends OnboardingStore {
     this.storage.set(key, storedState);
     return {
       status: "completed",
-      state: snapshotOnboardingState(storedState),
+      state: cloneStoredSnapshot(storedState),
       onboardingCompleted,
     };
   }
