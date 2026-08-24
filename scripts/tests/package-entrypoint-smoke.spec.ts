@@ -134,7 +134,9 @@ describe("package-entrypoint-smoke.mts", () => {
     expect(result.stdout).toContain("1 public package(s) are missing build artifacts under dist.");
     expect(result.stdout).toContain("Run pnpm build before pnpm package-entrypoints:smoke.");
     expect(result.stdout).toContain("@croco/unbuilt (packages/unbuilt/dist)");
-    expect(result.stdout).not.toContain("points to missing file");
+    expect(result.stdout).toContain(
+      '@croco/unbuilt: exports["."].types points to missing file ./dist/index.d.ts',
+    );
     expect(result.stdout).not.toContain("no ESM import target found");
   });
 
@@ -148,7 +150,24 @@ describe("package-entrypoint-smoke.mts", () => {
     expect(result.status).toBe(1);
     expect(result.stdout).toContain("Package entrypoint smoke build prerequisite failed:");
     expect(result.stdout).toContain("@croco/partial-build (packages/partial-build/dist)");
-    expect(result.stdout).not.toContain("points to missing file");
+    expect(result.stdout).toContain(
+      "@croco/partial-build: main points to missing file ./dist/index.js",
+    );
+  });
+
+  it("fails early when a declaration artifact is absent from an otherwise complete dist directory", () => {
+    const root = createTempRoot();
+    writeImportablePackage(root, "partial-types");
+    rmSync(join(root, "packages", "partial-types", "dist", "index.d.ts"));
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("Package entrypoint smoke build prerequisite failed:");
+    expect(result.stdout).toContain("@croco/partial-types (packages/partial-types/dist)");
+    expect(result.stdout).toContain(
+      '@croco/partial-types: exports["."].types points to missing file ./dist/index.d.ts',
+    );
   });
 
   it("fails when an export map points at a missing runtime entrypoint", () => {

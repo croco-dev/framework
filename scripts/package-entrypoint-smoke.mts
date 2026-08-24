@@ -77,6 +77,11 @@ type PackageSmokeResult = {
   readonly typesCount: number;
 };
 
+type PublishArtifactTarget = {
+  readonly fieldName: string;
+  readonly target: string;
+};
+
 type DecoratorMetadataSmokeContract = {
   readonly defaults?: Readonly<Record<string, boolean | number | string>>;
   readonly injections?: Readonly<Record<string, number>>;
@@ -343,16 +348,67 @@ function buildPrerequisiteDiagnosticsFor(
     `${missingBuildArtifacts.length} public package(s) are missing build artifacts under dist.`,
     "Run pnpm build before pnpm package-entrypoints:smoke.",
     `Missing packages: ${packageList}.`,
+    ...missingBuildArtifacts.flatMap((packageInfo) =>
+      missingPublishArtifacts(packageInfo).map(
+        ({ fieldName, target }) =>
+          `${packageInfo.packageName}: ${fieldName} points to missing file ${target}`,
+      ),
+    ),
   ];
 }
 
 function packageHasBuildArtifacts(packageInfo: PackageInfo): boolean {
-  const publishMain = packageInfo.sourceManifest.publishConfig?.main;
+  const requiredArtifacts = publishArtifactTargets(packageInfo.sourceManifest.publishConfig);
   return (
-    typeof publishMain === "string" &&
-    publishMain.startsWith("./dist/") &&
-    existsSync(join(packageInfo.packageDir, publishMain.slice(2)))
+    requiredArtifacts.length > 0 &&
+    requiredArtifacts.every(({ target }) =>
+      existsSync(join(packageInfo.packageDir, target.slice(2))),
+    )
   );
+}
+
+function missingPublishArtifacts(packageInfo: PackageInfo): PublishArtifactTarget[] {
+  return publishArtifactTargets(packageInfo.sourceManifest.publishConfig).filter(
+    ({ target }) => !existsSync(join(packageInfo.packageDir, target.slice(2))),
+  );
+}
+
+function publishArtifactTargets(
+  publishConfig: Readonly<Record<string, unknown>> | undefined,
+): PublishArtifactTarget[] {
+  if (!publishConfig) {
+    return [];
+  }
+
+  const targets: PublishArtifactTarget[] = [];
+  for (const fieldName of ["main", "module", "types", "typings", "exports", "bin"] as const) {
+    collectPublishArtifactTargets(publishConfig[fieldName], fieldName, targets);
+  }
+  return targets.sort((left, right) => left.fieldName.localeCompare(right.fieldName));
+}
+
+function collectPublishArtifactTargets(
+  value: unknown,
+  fieldName: string,
+  targets: PublishArtifactTarget[],
+): void {
+  if (typeof value === "string") {
+    if (value.startsWith("./dist/")) {
+      targets.push({ fieldName, target: value });
+    }
+    return;
+  }
+
+  if (!value || typeof value !== "object") {
+    return;
+  }
+
+  for (const [propertyName, nestedValue] of Object.entries(value)) {
+    const nestedFieldName = /^[A-Za-z_$][\w$]*$/.test(propertyName)
+      ? `${fieldName}.${propertyName}`
+      : `${fieldName}[${JSON.stringify(propertyName)}]`;
+    collectPublishArtifactTargets(nestedValue, nestedFieldName, targets);
+  }
 }
 
 function printBuildPrerequisiteFailure(diagnostics: readonly string[]): void {
