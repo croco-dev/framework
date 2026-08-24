@@ -3176,14 +3176,6 @@
     },
     {
       "packageName": "@croco/protocols-rest",
-      "file": "packages/protocols-rest/src/libs/decorators/Params.ts",
-      "line": 34,
-      "column": 13,
-      "code": "TS2375",
-      "message": "Type '{ sourceLocation?: RouteContractSourceLocation; type: ParamType; index: number; name: string | undefined; }' is not assignable to type 'ParamMetadata' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
-    },
-    {
-      "packageName": "@croco/protocols-rest",
       "file": "packages/protocols-rest/src/libs/guards/AuthGuard.ts",
       "line": 116,
       "column": 9,
