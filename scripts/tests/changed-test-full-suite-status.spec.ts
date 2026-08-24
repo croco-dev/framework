@@ -20,11 +20,12 @@ const inventory: TestInventory = {
 
 function laneReport(overrides: Record<string, unknown> = {}) {
   return {
-    schemaVersion: "croco.test-lane-report/v1" as const,
+    schemaVersion: "croco.test-lane-report/v2" as const,
     inventoryDigest: inventoryDigest(inventory),
     lane: "fast" as const,
     status: "passed" as const,
     executedPaths: ["packages/a/src/tests/A.spec.ts"],
+    skippedFiles: [],
     commands: [
       {
         owner: "@croco/a",
@@ -38,6 +39,7 @@ function laneReport(overrides: Record<string, unknown> = {}) {
         cacheHash: "task-hash",
         executionState: "reused",
         executedPaths: ["src/tests/A.spec.ts"],
+        skippedFiles: [],
       },
     ],
     allowLive: false,
@@ -150,6 +152,37 @@ describe("changed-test-full-suite-status", () => {
       expect(() =>
         assertChangedTestFullSuiteEvidence(laneReport({ commands: [command] }), directory),
       ).toThrow("incomplete or unhashed");
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a report that exposes skipped assertion evidence", () => {
+    const directory = fixtureRoot();
+    try {
+      const skippedFile = {
+        path: "src/tests/A.spec.ts",
+        status: "partially-executed",
+        passedAssertions: 1,
+        skippedAssertions: [{ name: "requires service credentials", status: "skipped" }],
+      };
+      const report = laneReport({
+        status: "failed",
+        executedPaths: [],
+        skippedFiles: [{ ...skippedFile, path: "packages/a/src/tests/A.spec.ts" }],
+        commands: [
+          {
+            ...laneReport().commands[0],
+            status: "failed",
+            executedPaths: [],
+            skippedFiles: [skippedFile],
+          },
+        ],
+      });
+
+      expect(() => assertChangedTestFullSuiteEvidence(report, directory)).toThrow(
+        "failed, stale, or uses the wrong lane",
+      );
     } finally {
       rmSync(directory, { recursive: true, force: true });
     }

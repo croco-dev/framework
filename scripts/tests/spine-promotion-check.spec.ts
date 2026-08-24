@@ -734,11 +734,12 @@ function writeReleaseCheckpoint(
     status: "passed",
     cacheStatus: "miss",
     executedPaths: command.paths,
+    skippedFiles: [],
     executionState: "executed",
     cacheHash: `cache-${command.owner}`,
   }));
   writeJson(join(repo, fastTestLaneReportPath), {
-    schemaVersion: "croco.test-lane-report/v1",
+    schemaVersion: "croco.test-lane-report/v2",
     inventoryVersion: 1,
     inventoryDigest: inventoryDigest(inventory),
     lane: "fast",
@@ -749,6 +750,7 @@ function writeReleaseCheckpoint(
         executedPaths.map((path) => (cwd === "." ? path : `${cwd}/${path}`)),
       )
       .sort(),
+    skippedFiles: [],
     status: "passed",
     diagnostics: [],
     commands,

@@ -160,7 +160,7 @@ describe("generated test execution evidence", () => {
     ).toBe(false);
   });
 
-  it("rejects all-skipped generated files while accepting platform-conditional skips", () => {
+  it("rejects partially or entirely skipped generated files", () => {
     const projectDir = createTempRoot();
     const vitestReport = join(projectDir, "vitest.json");
     const playwrightReport = join(projectDir, "playwright.json");
@@ -202,7 +202,6 @@ describe("generated test execution evidence", () => {
     );
 
     expect(readCompletedVitestPaths(vitestReport, projectDir)).toEqual([
-      "src/tests/partial.spec.ts",
       "src/tests/passed.spec.ts",
     ]);
     expect(readCompletedPlaywrightPaths(playwrightReport, projectDir)).toEqual([

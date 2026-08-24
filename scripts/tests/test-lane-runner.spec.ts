@@ -18,6 +18,7 @@ import {
   hasFailedBuildTask,
   readCompletedPlaywrightPaths,
   readCompletedVitestPaths,
+  readVitestExecutionEvidence,
   readVitestFailureDetails,
   readTurboRunSummary,
   readTurboTestTaskEvidence,
@@ -249,7 +250,7 @@ describe("test lane runner", () => {
     });
   });
 
-  it("accepts platform-conditional skips but rejects all-skipped test files", () => {
+  it("credits only Vitest files whose assertions all passed", () => {
     const root = mkdtempSync(join(tmpdir(), "croco-lane-report-"));
     const reportPath = join(root, "vitest.json");
     writeFileSync(
@@ -264,21 +265,56 @@ describe("test lane runner", () => {
           {
             name: join(root, "src/tests/partial.spec.ts"),
             status: "passed",
-            assertionResults: [{ status: "passed" }, { status: "skipped" }],
+            assertionResults: [
+              { status: "passed", fullName: "partial passes" },
+              { status: "skipped", fullName: "partial needs credentials" },
+              { status: "todo", fullName: "partial needs implementation" },
+            ],
           },
           {
             name: join(root, "src/tests/all-skipped.spec.ts"),
             status: "passed",
-            assertionResults: [{ status: "skipped" }],
+            assertionResults: [{ status: "skipped", title: "needs Linux" }],
+          },
+          {
+            name: join(root, "src/tests/failed.spec.ts"),
+            status: "failed",
+            assertionResults: [
+              { status: "failed", fullName: "fails loudly" },
+              { status: "skipped", fullName: "failure skips cleanup" },
+            ],
           },
         ],
       }),
     );
 
-    expect(readCompletedVitestPaths(reportPath, root)).toEqual([
-      "src/tests/partial.spec.ts",
-      "src/tests/passed.spec.ts",
-    ]);
+    expect(readCompletedVitestPaths(reportPath, root)).toEqual(["src/tests/passed.spec.ts"]);
+    expect(readVitestExecutionEvidence(reportPath, root)).toEqual({
+      executedPaths: ["src/tests/passed.spec.ts"],
+      skippedFiles: [
+        {
+          path: "src/tests/all-skipped.spec.ts",
+          passedAssertions: 0,
+          skippedAssertions: [{ name: "needs Linux", status: "skipped" }],
+          status: "skipped",
+        },
+        {
+          path: "src/tests/failed.spec.ts",
+          passedAssertions: 0,
+          skippedAssertions: [{ name: "failure skips cleanup", status: "skipped" }],
+          status: "failed-with-skips",
+        },
+        {
+          path: "src/tests/partial.spec.ts",
+          passedAssertions: 1,
+          skippedAssertions: [
+            { name: "partial needs credentials", status: "skipped" },
+            { name: "partial needs implementation", status: "todo" },
+          ],
+          status: "partially-executed",
+        },
+      ],
+    });
     rmSync(root, { recursive: true, force: true });
   });
 
@@ -369,6 +405,10 @@ describe("test lane runner", () => {
               {
                 file: "e2e/skipped.spec.ts",
                 tests: [{ results: [{ status: "skipped" }] }],
+              },
+              {
+                file: "e2e/partial.spec.ts",
+                tests: [{ results: [{ status: "passed" }] }, { results: [{ status: "skipped" }] }],
               },
             ],
           },
@@ -464,6 +504,33 @@ describe("test lane runner", () => {
       cacheHash: "task-hash",
     });
 
+    writeFileSync(
+      reportPath,
+      JSON.stringify({
+        testResults: [
+          {
+            name: `/relocated/worktree/${workspace}/${expectedPath}`,
+            status: "passed",
+            assertionResults: [
+              { status: "passed" },
+              { fullName: "requires Linux", status: "skipped" },
+            ],
+          },
+        ],
+      }),
+    );
+    expect(readTurboTestTaskEvidence(root, command, "@croco/a", summary)).toMatchObject({
+      executedPaths: [],
+      skippedFiles: [
+        {
+          path: expectedPath,
+          passedAssertions: 1,
+          skippedAssertions: [{ name: "requires Linux", status: "skipped" }],
+          status: "partially-executed",
+        },
+      ],
+    });
+
     expect(
       readTurboTestTaskEvidence(root, command, "@croco/a", {
         tasks: [{ ...summary.tasks[0], cache: { status: "MISS" } }],
@@ -535,24 +602,37 @@ describe("test lane runner", () => {
         ],
       });
       expect(evidence?.executedPaths).toEqual(["src/tests/one.spec.ts"]);
+      expect(evidence?.skippedFiles).toEqual([
+        {
+          path: "src/tests/two.spec.ts",
+          passedAssertions: 0,
+          skippedAssertions: [{ name: "<unnamed assertion 1>", status: "skipped" }],
+          status: "skipped",
+        },
+      ]);
       expect(evidence?.executionState).toBe(cacheStatus === "HIT" ? "reused" : "executed");
-      expect(
-        runTestLane({
-          inventory: {
-            version: 1,
-            exceptions: [],
-            tests: command.paths.map((path) => ({
-              path: `${workspace}/${path}`,
-              lane: "fast" as const,
-              qualifiers: [],
-              owner: "@croco/a",
-            })),
-          },
-          lane: "fast",
-          runner: () => ({ exitCode: 0, durationMs: 1, ...evidence }),
-          scriptResolver: exactScript,
-        }).status,
-      ).toBe("failed");
+      const report = runTestLane({
+        inventory: {
+          version: 1,
+          exceptions: [],
+          tests: command.paths.map((path) => ({
+            path: `${workspace}/${path}`,
+            lane: "fast" as const,
+            qualifiers: [],
+            owner: "@croco/a",
+          })),
+        },
+        lane: "fast",
+        runner: () => ({ exitCode: 0, durationMs: 1, ...evidence }),
+        scriptResolver: exactScript,
+      });
+      expect(report.status).toBe("failed");
+      expect(report.skippedFiles).toEqual([
+        expect.objectContaining({ path: "packages/a/src/tests/two.spec.ts", status: "skipped" }),
+      ]);
+      expect(report.diagnostics).toContainEqual(
+        expect.objectContaining({ code: "TEST_LANE_EXECUTION_SKIPPED" }),
+      );
     }
     rmSync(root, { recursive: true, force: true });
   });

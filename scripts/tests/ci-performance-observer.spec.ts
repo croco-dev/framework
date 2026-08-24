@@ -169,11 +169,12 @@ function injectedVerification(
 
 function fastLane(overrides: Readonly<Record<string, unknown>> = {}) {
   return jsonEvidence({
-    schemaVersion: "croco.test-lane-report/v1",
+    schemaVersion: "croco.test-lane-report/v2",
     lane: "fast",
     status: "passed",
     inventoryDigest: INVENTORY_MODEL_DIGEST,
     diagnostics: [],
+    skippedFiles: [],
     commands: [
       { owner: "@croco/example", status: "passed", cacheStatus: "hit" },
       { owner: "repo:ci", status: "passed", cacheStatus: "miss" },
@@ -528,6 +529,25 @@ describe("CI performance observer", () => {
     ]) {
       expect(digest).toMatch(/^[0-9a-f]{64}$/);
     }
+  });
+
+  it("rejects fast-lane performance evidence that contains skipped files", () => {
+    expect(() =>
+      createCiPerformanceObservation(
+        createInput({
+          fastLane: fastLane({
+            skippedFiles: [
+              {
+                path: "packages/example/src/tests/Live.spec.ts",
+                status: "partially-executed",
+                passedAssertions: 1,
+                skippedAssertions: [{ name: "requires credentials", status: "skipped" }],
+              },
+            ],
+          }),
+        }),
+      ),
+    ).toThrow("fast-lane evidence is not a successful current-inventory attestation");
   });
 
   it.each(CACHEABLE_FAILURE_CLASSES.filter((value) => value !== "none"))(
