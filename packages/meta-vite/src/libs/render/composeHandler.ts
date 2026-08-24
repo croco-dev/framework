@@ -69,13 +69,7 @@ export function createMetaFetchHandler(options: MetaFetchHandlerOptions): CrocoF
 
     // Legacy apiHandler flow (backward compatibility)
     if (options.apiHandler) {
-      let apiResult: CrocoApiHandlerResult;
-
-      try {
-        apiResult = await options.apiHandler(request, context);
-      } catch {
-        apiResult = { handled: false };
-      }
+      const apiResult = await options.apiHandler(request, context);
 
       if (apiResult.handled) {
         return apiResult.response;
