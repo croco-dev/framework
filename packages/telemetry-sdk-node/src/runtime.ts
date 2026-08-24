@@ -404,7 +404,11 @@ class TelemetryRuntime {
     }
 
     if (failures.length > 0) {
-      throw new TelemetryRuntimeProblem("shutdown", failures[0]);
+      const cause =
+        failures.length === 1
+          ? failures[0]
+          : Object.assign(new Error("Telemetry cleanup failed"), { failures: [...failures] });
+      throw new TelemetryRuntimeProblem("shutdown", cause);
     }
   }
 

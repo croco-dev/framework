@@ -957,6 +957,45 @@ describe("TelemetryRuntime", () => {
     });
   });
 
+  it("should preserve every OpenTelemetry cleanup failure", async () => {
+    const firstFailure = new Error("first cleanup failed");
+    const secondFailure = new Error("second cleanup failed");
+    const sdk = {
+      shutdown: vi.fn().mockResolvedValue(undefined),
+    };
+    const activeInstrumentations = [
+      {
+        disable: vi.fn(() => {
+          throw firstFailure;
+        }),
+      },
+      {
+        disable: vi.fn(() => {
+          throw secondFailure;
+        }),
+      },
+    ] as unknown as Instrumentation[];
+    Object.assign(runtime, { sdk, activeInstrumentations, initialized: true });
+
+    const problem = await runtime.shutdown().then(
+      () => undefined,
+      (error: unknown) => error,
+    );
+
+    expect(problem).toBeInstanceOf(TelemetryRuntimeProblem);
+    const cause = (problem as { cause?: unknown }).cause;
+    expect(cause).toMatchObject({ failures: [firstFailure, secondFailure] });
+    Object.assign(runtime, {
+      sdk: null,
+      processor: null,
+      initialized: false,
+      activeInstrumentations: [],
+      initPromise: null,
+      sdkShutdownPromise: null,
+      shutdownFailure: null,
+    });
+  });
+
   it.each([
     [0, "0"],
     [-1, "-1"],
