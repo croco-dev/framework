@@ -1,5 +1,6 @@
 import {
   createHealthScoreStoreConformanceSuite,
+  type HealthSignal,
   type HealthTransitionEventIntent,
   type TenantHealthScore,
 } from "@croco/customer-health-core";
@@ -168,7 +169,7 @@ function createTransaction(
 }
 
 function createStatefulClient(): DrizzleHealthClient {
-  const rows: Array<TenantHealthScore & { transitionSequence: bigint }> = [];
+  const rows: StatefulScoreRow[] = [];
   let transitionSequence = BigInt(0);
   const select = () => ({
     from: () => ({
@@ -182,7 +183,7 @@ function createStatefulClient(): DrizzleHealthClient {
             if (!transitionSequenceDescending) {
               throw new Error("Expected transition sequence descending order");
             }
-            const ordered = [...rows];
+            const ordered = structuredClone(rows);
             ordered.reverse();
             return Promise.resolve(ordered.slice(0, limit));
           },
@@ -199,7 +200,11 @@ function createStatefulClient(): DrizzleHealthClient {
         return {
           returning: () => {
             transitionSequence += BigInt(1);
-            rows.push({ ...value, transitionSequence });
+            rows.push({
+              ...structuredClone(value),
+              signals: serializeHealthSignals(value.signals),
+              transitionSequence,
+            });
             return Promise.resolve([{ transitionSequence }]);
           },
         };
@@ -208,6 +213,28 @@ function createStatefulClient(): DrizzleHealthClient {
     transaction: async (run: (tx: DrizzleHealthClient) => Promise<unknown>) => run(client),
   } as unknown as DrizzleHealthClient;
   return client;
+}
+
+type StatefulScoreRow = Omit<TenantHealthScore, "signals"> & {
+  signals: SerializedHealthSignal[];
+  transitionSequence: bigint;
+};
+
+type SerializedHealthSignal = Omit<HealthSignal, "collectedAt"> & {
+  collectedAt: string;
+};
+
+function serializeHealthSignals(signals: readonly HealthSignal[]): SerializedHealthSignal[] {
+  return signals.map((signal) => ({
+    ...signal,
+    rawValue: serializeJsonValue(signal.rawValue),
+    collectedAt: signal.collectedAt.toISOString(),
+  }));
+}
+
+function serializeJsonValue(value: unknown): unknown {
+  const serialized = JSON.stringify(value);
+  return serialized === undefined ? undefined : (JSON.parse(serialized) as unknown);
 }
 
 function containsQueryChunk(value: unknown, target: unknown): boolean {
