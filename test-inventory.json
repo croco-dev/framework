@@ -2333,6 +2333,12 @@
       "owner": "@croco/notifications-core"
     },
     {
+      "path": "packages/notifications-core/src/tests/NotificationResult.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/notifications-core"
+    },
+    {
       "path": "packages/notifications-core/src/tests/NotificationService.spec.ts",
       "lane": "fast",
       "qualifiers": [],

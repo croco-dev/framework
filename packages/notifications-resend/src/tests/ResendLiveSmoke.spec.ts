@@ -35,6 +35,11 @@ describe("Resend live smoke", () => {
       );
 
       expect(result.success).toBe(true);
+
+      if (!result.success) {
+        throw result.problem;
+      }
+
       expect(result.messageId).toEqual(expect.any(String));
     },
   );

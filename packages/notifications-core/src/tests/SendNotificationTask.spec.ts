@@ -1,6 +1,7 @@
+import type { Execution, ExecutionManager } from "@croco/execution-core";
 import { Container, MetadataStorage } from "@croco/framework-context";
 import { Problem } from "@croco/problems-core";
-import { TASK_METADATA_KEY, type TaskMetadata } from "@croco/tasks-core";
+import { TASK_METADATA_KEY, TaskRegistry, TaskRunner, type TaskMetadata } from "@croco/tasks-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NotificationProviderRegistry } from "../libs/NotificationProviderRegistry";
 import { NotificationService } from "../libs/NotificationService";
@@ -54,7 +55,7 @@ describe("SendNotificationTask", () => {
     });
 
     it("should send notification successfully", async () => {
-      const mockResult = { success: true, messageId: "msg-123" };
+      const mockResult = { success: true, messageId: "msg-123" } as const;
       vi.mocked(mockProvider.send).mockResolvedValue(mockResult);
 
       const payload: NotificationJobPayload = {
@@ -74,7 +75,7 @@ describe("SendNotificationTask", () => {
     });
 
     it("should include metadata in provider send call", async () => {
-      const mockResult = { success: true, messageId: "msg-123" };
+      const mockResult = { success: true, messageId: "msg-123" } as const;
       vi.mocked(mockProvider.send).mockResolvedValue(mockResult);
 
       const payload: NotificationJobPayload = {
@@ -94,7 +95,7 @@ describe("SendNotificationTask", () => {
     });
 
     it("should pass idempotency key to provider send options", async () => {
-      const mockResult = { success: true, messageId: "msg-123" };
+      const mockResult = { success: true, messageId: "msg-123" } as const;
       vi.mocked(mockProvider.send).mockResolvedValue(mockResult);
 
       const payload: NotificationJobPayload = {
@@ -116,7 +117,7 @@ describe("SendNotificationTask", () => {
     });
 
     it("should keep dispatch metadata out of provider send payload", async () => {
-      const mockResult = { success: true, messageId: "msg-123" };
+      const mockResult = { success: true, messageId: "msg-123" } as const;
       vi.mocked(mockProvider.send).mockResolvedValue(mockResult);
 
       const payload: NotificationJobPayload = {
@@ -161,7 +162,7 @@ describe("SendNotificationTask", () => {
     });
 
     it("should include templateId and variables in provider send call", async () => {
-      const mockResult = { success: true, messageId: "msg-123" };
+      const mockResult = { success: true, messageId: "msg-123" } as const;
       vi.mocked(mockProvider.send).mockResolvedValue(mockResult);
 
       const payload: NotificationJobPayload = {
@@ -196,7 +197,8 @@ describe("SendNotificationTask", () => {
 
     it("should throw error when provider send fails", async () => {
       const mockError = new Error("API Error");
-      const mockResult = { success: false, error: mockError };
+      const providerProblem = new NotificationDeliveryFailedProblem("resend", mockError);
+      const mockResult = { success: false, problem: providerProblem } as const;
       vi.mocked(mockProvider.send).mockResolvedValue(mockResult);
 
       const payload: NotificationJobPayload = {
@@ -205,41 +207,8 @@ describe("SendNotificationTask", () => {
         content: "Test Content",
       };
 
-      await expect(task.handle(payload)).rejects.toMatchObject({
-        code: "notifications-core/delivery-failed",
-        cause: mockError,
-      });
-    });
-
-    it("should throw error when provider returns failure without error details", async () => {
-      const mockResult = { success: false };
-      vi.mocked(mockProvider.send).mockResolvedValue(mockResult);
-
-      const payload: NotificationJobPayload = {
-        providerName: "resend",
-        to: "test@example.com",
-        content: "Test Content",
-      };
-
-      await expect(task.handle(payload)).rejects.toBeInstanceOf(NotificationDeliveryFailedProblem);
-    });
-
-    it("should mark fallback delivery failures as retryable", async () => {
-      const mockResult = { success: false };
-      vi.mocked(mockProvider.send).mockResolvedValue(mockResult);
-
-      const payload: NotificationJobPayload = {
-        providerName: "resend",
-        to: "test@example.com",
-        content: "Test Content",
-      };
-
-      await expect(task.handle(payload)).rejects.toMatchObject({
-        extensions: {
-          providerName: "resend",
-          retryable: true,
-        },
-      });
+      await expect(task.handle(payload)).rejects.toBe(providerProblem);
+      expect(providerProblem.cause).toBe(mockError);
     });
 
     it("should preserve provider problem errors for upstream retry classification", async () => {
@@ -259,7 +228,7 @@ describe("SendNotificationTask", () => {
       }
 
       const providerProblem = new RetryableProviderProblem();
-      const mockResult = { success: false, error: providerProblem };
+      const mockResult = { success: false, problem: providerProblem } as const;
       vi.mocked(mockProvider.send).mockResolvedValue(mockResult);
 
       const payload: NotificationJobPayload = {
@@ -271,8 +240,78 @@ describe("SendNotificationTask", () => {
       await expect(task.handle(payload)).rejects.toBe(providerProblem);
     });
 
+    it("should record returned Problem retryability through TaskRunner", async () => {
+      class RetryableProviderProblem extends Problem {
+        constructor() {
+          super(
+            "notifications-core/provider-temporary-failure",
+            "InternalServerError" as never,
+            "Temporary failure",
+            { extensions: { retryable: true } },
+          );
+        }
+      }
+
+      const providerProblem = new RetryableProviderProblem();
+      vi.mocked(mockProvider.send).mockResolvedValue({ success: false, problem: providerProblem });
+
+      const payload: NotificationJobPayload = {
+        providerName: "resend",
+        to: "test@example.com",
+        content: "Test Content",
+      };
+      const pendingExecution: Execution = {
+        id: "notification-execution",
+        type: "send-notification",
+        status: "pending",
+        payload,
+        attempts: 0,
+        maxAttempts: 3,
+        createdAt: new Date(),
+      };
+      const runningExecution: Execution = {
+        ...pendingExecution,
+        status: "running",
+        attempts: 1,
+        startedAt: new Date(),
+      };
+      const executionManager: ExecutionManager = {
+        get: vi.fn().mockResolvedValue(runningExecution),
+        create: vi.fn().mockResolvedValue(pendingExecution),
+        start: vi.fn().mockResolvedValue(runningExecution),
+        complete: vi.fn().mockResolvedValue(runningExecution),
+        fail: vi.fn().mockResolvedValue(runningExecution),
+        cancel: vi.fn().mockResolvedValue(runningExecution),
+        retry: vi.fn().mockResolvedValue(runningExecution),
+        updateProgress: vi.fn().mockResolvedValue(runningExecution),
+        checkpoint: vi.fn().mockResolvedValue(runningExecution),
+        timeout: vi.fn().mockResolvedValue(runningExecution),
+        reconcileTimedOut: vi.fn().mockResolvedValue({ scanned: 0, timedOut: 0 }),
+      };
+      const taskRegistry = new TaskRegistry();
+      const metadata: TaskMetadata = {
+        name: "send-notification",
+        options: { maxAttempts: 3 },
+        target: SendNotificationTask,
+        methodName: "handle",
+      };
+      taskRegistry.register("send-notification", SendNotificationTask, "handle", metadata);
+      Container.set(SendNotificationTask, task);
+      const runner = new TaskRunner(executionManager, taskRegistry);
+
+      await expect(runner.execute("send-notification", payload)).rejects.toBe(providerProblem);
+
+      expect(executionManager.fail).toHaveBeenCalledWith(
+        "notification-execution",
+        expect.objectContaining({
+          code: "notifications-core/provider-temporary-failure",
+          retryable: true,
+        }),
+      );
+    });
+
     it("should handle optional subject field", async () => {
-      const mockResult = { success: true, messageId: "msg-123" };
+      const mockResult = { success: true, messageId: "msg-123" } as const;
       vi.mocked(mockProvider.send).mockResolvedValue(mockResult);
 
       const payload: NotificationJobPayload = {
@@ -298,7 +337,7 @@ describe("SendNotificationTask", () => {
         } as never,
         registry,
       );
-      const mockResult = { success: true, messageId: "msg-123" };
+      const mockResult = { success: true, messageId: "msg-123" } as const;
       vi.mocked(mockProvider.send).mockResolvedValue(mockResult);
 
       service.registerProvider(mockProvider as never, true);

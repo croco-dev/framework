@@ -18628,7 +18628,7 @@
               "name": "NotificationResult",
               "exportKind": "declaration",
               "source": "./libs/types",
-              "declarationKind": "interface"
+              "declarationKind": "type"
             },
             {
               "name": "NotificationSendContractOptions",

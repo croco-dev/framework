@@ -1,3 +1,5 @@
+import type { Problem } from "@croco/problems-core";
+
 export enum NotificationChannel {
   EMAIL = "EMAIL",
   SMS = "SMS",
@@ -17,12 +19,26 @@ export interface NotificationPayload {
   variables?: Record<string, unknown>;
 }
 
-export interface NotificationResult {
-  success: boolean;
-  messageId?: string;
-  providerResponse?: unknown;
-  error?: Error;
-}
+/**
+ * Provider delivery outcome. Providers normalize failures into a Croco Problem
+ * before returning so callers can classify retryability without inventing
+ * missing failure evidence.
+ */
+export type NotificationResult =
+  | {
+      success: true;
+      messageId?: string;
+      providerResponse?: unknown;
+      problem?: never;
+      error?: never;
+    }
+  | {
+      success: false;
+      problem: Problem;
+      providerResponse?: unknown;
+      messageId?: never;
+      error?: never;
+    };
 
 export type NotificationSendOptions = {
   idempotencyKey?: string;
