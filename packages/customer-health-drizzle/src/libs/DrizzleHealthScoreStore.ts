@@ -1,4 +1,5 @@
 import type {
+  HealthSignal,
   HealthTransitionEventIntent,
   TenantHealthScore,
   TrendPeriod,
@@ -26,10 +27,14 @@ type TenantHealthScoreRow = {
   overallScore: number;
   status: "healthy" | "at_risk" | "critical";
   categoryScores: Record<string, number>;
-  signals: unknown[];
+  signals: StoredHealthSignal[];
   trend: "improving" | "stable" | "declining";
   previousScore: number | null;
   calculatedAt: Date;
+};
+
+type StoredHealthSignal = Omit<HealthSignal, "collectedAt"> & {
+  collectedAt: Date | string;
 };
 
 /**
@@ -187,20 +192,24 @@ export class DrizzleHealthScoreStore extends HealthScoreStore {
       transitionVersion: String(row.transitionSequence),
       overallScore: row.overallScore,
       status: row.status,
-      categoryScores: row.categoryScores as Record<"usage" | "business" | "engagement", number>,
-      signals: row.signals as Array<{
-        category: "usage" | "business" | "engagement";
-        name: string;
-        value: number;
-        weight: number;
-        rawValue: unknown;
-        collectedAt: Date;
-      }>,
+      categoryScores: structuredClone(row.categoryScores) as TenantHealthScore["categoryScores"],
+      signals: row.signals.map((signal) => ({
+        category: signal.category,
+        name: signal.name,
+        value: signal.value,
+        weight: signal.weight,
+        rawValue: structuredClone(signal.rawValue),
+        collectedAt: cloneStoredDate(signal.collectedAt),
+      })),
       trend: row.trend,
       previousScore: row.previousScore ?? undefined,
-      calculatedAt: row.calculatedAt,
+      calculatedAt: new Date(row.calculatedAt.getTime()),
     };
   }
+}
+
+function cloneStoredDate(value: Date | string): Date {
+  return value instanceof Date ? new Date(value.getTime()) : new Date(value);
 }
 
 function matchesPrevious(
