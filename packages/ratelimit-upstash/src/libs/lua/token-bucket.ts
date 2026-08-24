@@ -1,3 +1,5 @@
+import { tokenBucketRefillLua } from "./token-bucket-refill";
+
 export const tokenBucketLua = `
 local key = KEYS[1]
 local receiptKey = KEYS[2]
@@ -8,6 +10,8 @@ local refillRate = tonumber(ARGV[4])
 local ttl = tonumber(ARGV[5])
 local receiptId = ARGV[6]
 local receiptExpiresAt = tonumber(ARGV[7])
+
+${tokenBucketRefillLua}
 
 local bucketData = redis.call('GET', key)
 
@@ -26,13 +30,7 @@ else
   lastRefill = now
 end
 
-local timePassed = now - lastRefill
-local tokensToAdd = math.floor((timePassed / intervalMs) * refillRate)
-
-if tokensToAdd > 0 then
-  tokens = math.min(capacity, tokens + tokensToAdd)
-  lastRefill = now
-end
+tokens, lastRefill = refillTokenBucket(tokens, lastRefill)
 
 local success = 0
 local remaining = tokens
@@ -46,7 +44,8 @@ if tokens >= 1 then
   redis.call('EXPIRE', receiptKey, ttl)
 end
 
-redis.call('SET', key, tokens .. ':' .. lastRefill, 'EX', ttl)
+local serializedLastRefill = serializeRefillCursor(lastRefill)
+redis.call('SET', key, tokens .. ':' .. serializedLastRefill, 'EX', ttl)
 
-return {success, tokens, remaining}
+return {success, tokens, remaining, serializedLastRefill}
 `;

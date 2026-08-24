@@ -262,15 +262,13 @@ export class UpstashTokenBucketStore extends TokenBucketStore {
           refundReceipt.expiresAtMs,
         ],
       ),
-    )) as [number, number, number];
+    )) as [number, number, number, string];
 
     const success = result[0] === 1;
     const remaining = result[2];
 
     const timeUntilNextToken = policy.refillIntervalMs / policy.refillRate;
-    const resetAtMs = success
-      ? now + timeUntilNextToken
-      : now + (1 - remaining) * timeUntilNextToken;
+    const resetAtMs = Math.max(now, Number(result[3]) + timeUntilNextToken);
 
     return {
       success,
@@ -305,7 +303,7 @@ export class UpstashTokenBucketStore extends TokenBucketStore {
         [redisKey, receiptKey],
         [now, policy.capacity, policy.refillIntervalMs, policy.refillRate, ttlSeconds, receipt.id],
       ),
-    )) as [number, number, number];
+    )) as [number, number, number, string];
 
     const refunded = result[0] === 1;
     if (refunded) {
@@ -316,7 +314,7 @@ export class UpstashTokenBucketStore extends TokenBucketStore {
       success: true,
       limit: policy.capacity,
       remaining: result[2],
-      resetAtMs: now + policy.refillIntervalMs / policy.refillRate,
+      resetAtMs: Math.max(now, Number(result[3]) + policy.refillIntervalMs / policy.refillRate),
       refunded,
     };
   }
