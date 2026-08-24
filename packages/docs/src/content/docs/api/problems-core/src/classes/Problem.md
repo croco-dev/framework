@@ -70,6 +70,8 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`AdminGeneratedContractProblem`](/api/admin-generated/src/classes/admingeneratedcontractproblem/)
 - [`PostHogAnalyticsCaptureProblem`](/api/analytics-posthog/src/classes/posthoganalyticscaptureproblem/)
 - [`PostHogAnalyticsFlushProblem`](/api/analytics-posthog/src/classes/posthoganalyticsflushproblem/)
+- [`PostHogAnalyticsGroupProblem`](/api/analytics-posthog/src/classes/posthoganalyticsgroupproblem/)
+- [`PostHogAnalyticsIdentifyProblem`](/api/analytics-posthog/src/classes/posthoganalyticsidentifyproblem/)
 - [`PostHogAnalyticsReadinessProblem`](/api/analytics-posthog/src/classes/posthoganalyticsreadinessproblem/)
 - [`AuditableDecoratorProblem`](/api/audit-core/src/classes/auditabledecoratorproblem/)
 - [`ClerkWebhookDeliveryFailedProblem`](/api/auth-clerk/src/classes/clerkwebhookdeliveryfailedproblem/)
