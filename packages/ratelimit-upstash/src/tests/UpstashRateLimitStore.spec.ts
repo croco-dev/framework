@@ -10,6 +10,9 @@ import {
   UpstashSlidingWindowStore,
   UpstashTokenBucketStore,
 } from "../libs/UpstashRateLimitStore";
+import { tokenBucketLua } from "../libs/lua/token-bucket";
+import { tokenBucketRefillLua } from "../libs/lua/token-bucket-refill";
+import { tokenBucketRefundLua } from "../libs/lua/token-bucket-refund";
 
 type ConformanceScenario = "allow" | "deny" | "retryable-upstream" | "terminal-upstream";
 const UPSTASH_REDIS_LIVE_ENV = [
@@ -501,7 +504,7 @@ describe("UpstashTokenBucketStore", () => {
   });
 
   it("should allow requests when tokens available", async () => {
-    mockRedis.eval.mockResolvedValue([1, 9, 9]);
+    mockRedis.eval.mockResolvedValue([1, 9, 9, String(Date.now())]);
 
     const policy = createTokenBucketPolicy("test", 10, 1, 1000);
     const result = await store.check("test-key", policy);
@@ -512,7 +515,7 @@ describe("UpstashTokenBucketStore", () => {
   });
 
   it("should deny requests when no tokens available", async () => {
-    mockRedis.eval.mockResolvedValue([0, 0, 0]);
+    mockRedis.eval.mockResolvedValue([0, 0, 0, String(Date.now())]);
 
     const policy = createTokenBucketPolicy("test", 10, 1, 1000);
     const result = await store.check("test-key", policy);
@@ -522,7 +525,7 @@ describe("UpstashTokenBucketStore", () => {
   });
 
   it("should track stats", async () => {
-    mockRedis.eval.mockResolvedValue([1, 9, 9]);
+    mockRedis.eval.mockResolvedValue([1, 9, 9, String(Date.now())]);
 
     const policy = createTokenBucketPolicy("test", 10, 1, 1000);
     await store.check("test-key", policy);
@@ -535,9 +538,9 @@ describe("UpstashTokenBucketStore", () => {
 
   it("should refund quota and stats", async () => {
     mockRedis.eval
-      .mockResolvedValueOnce([1, 9, 9])
-      .mockResolvedValueOnce([1, 10, 10])
-      .mockResolvedValueOnce([0, 10, 10]);
+      .mockResolvedValueOnce([1, 9, 9, String(Date.now())])
+      .mockResolvedValueOnce([1, 10, 10, String(Date.now())])
+      .mockResolvedValueOnce([0, 10, 10, String(Date.now())]);
 
     const policy = createTokenBucketPolicy("test", 10, 1, 1000);
     const check = await store.check("test-key", policy);
@@ -571,9 +574,9 @@ describe("UpstashTokenBucketStore", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
     mockRedis.eval
-      .mockResolvedValueOnce([1, 9, 9])
-      .mockResolvedValueOnce([1, 9, 9])
-      .mockResolvedValueOnce([0, 9, 9]);
+      .mockResolvedValueOnce([1, 9, 9, String(Date.now())])
+      .mockResolvedValueOnce([1, 9, 9, String(Date.now())])
+      .mockResolvedValueOnce([0, 9, 9, String(Date.now())]);
 
     const policy = createTokenBucketPolicy("test", 10, 1, 1000);
     const staleCheck = await store.check("test-key", policy);
@@ -595,6 +598,19 @@ describe("UpstashTokenBucketStore", () => {
       [expect.any(Number), 10, 1000, 1, 11, staleReceipt.id],
     );
     expect(await store.getStats()).toEqual({ allowed: 2, denied: 0, total: 2 });
+
+    vi.useRealTimers();
+  });
+
+  it("should derive the next token boundary from the Lua refill cursor", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1500);
+    mockRedis.eval.mockResolvedValue([1, 0, 0, "1000.5"]);
+
+    const policy = createTokenBucketPolicy("test", 2, 1, 1000);
+    const result = await store.check("test-key", policy);
+
+    expect(result.resetAtMs).toBe(2000.5);
 
     vi.useRealTimers();
   });
@@ -647,7 +663,7 @@ describe("UpstashTokenBucketStore", () => {
   });
 
   it("should track denied stats", async () => {
-    mockRedis.eval.mockResolvedValue([0, 0, 0]);
+    mockRedis.eval.mockResolvedValue([0, 0, 0, String(Date.now())]);
 
     const policy = createTokenBucketPolicy("test", 10, 1, 1000);
     await store.check("test-key", policy);
@@ -656,5 +672,30 @@ describe("UpstashTokenBucketStore", () => {
     expect(stats.total).toBe(1);
     expect(stats.allowed).toBe(0);
     expect(stats.denied).toBe(1);
+  });
+});
+
+describe("token bucket Lua refill contract", () => {
+  it("should preserve fractional time below capacity in consume and refund scripts", () => {
+    const fractionalCursorAdvance =
+      "currentLastRefill = currentLastRefill + (tokensToAdd * intervalMs) / refillRate";
+
+    expect(tokenBucketRefillLua).toContain(fractionalCursorAdvance);
+    expect(tokenBucketLua).toContain(fractionalCursorAdvance);
+    expect(tokenBucketRefundLua).toContain(fractionalCursorAdvance);
+    expect(tokenBucketLua).toContain("return {success, tokens, remaining, serializedLastRefill}");
+    expect(tokenBucketRefundLua).toContain("return {1, tokens, tokens, serializedLastRefill}");
+    expect(tokenBucketRefillLua).toContain("string.format('%.17g', refillCursor)");
+  });
+
+  it("should discard overflow time at full capacity and after a refund fills the bucket", () => {
+    expect(tokenBucketRefillLua).toContain("if currentTokens >= capacity then");
+    expect(tokenBucketRefillLua).toContain(
+      "local nextLastRefill = math.max(currentLastRefill, now)",
+    );
+    expect(tokenBucketRefillLua).toContain(
+      "if currentTokens == capacity then\n    currentLastRefill = now",
+    );
+    expect(tokenBucketRefundLua).toContain("if tokens == capacity then\n  lastRefill = now");
   });
 });

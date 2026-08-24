@@ -288,6 +288,100 @@ describe("InMemoryRateLimitStore", () => {
     tokenStore.close();
   });
 
+  it("should preserve fractional refill time while the token bucket is below capacity", async () => {
+    let now = 0;
+    const tokenPolicy: TokenBucketPolicy = {
+      name: "token-fractional-refill",
+      algorithm: "token-bucket",
+      capacity: 2,
+      refillRate: 1,
+      refillIntervalMs: 1000,
+    };
+    const tokenStore = new TokenBucketInMemoryStore({ now: () => now, pruneIntervalMs: 0 });
+
+    const initialResults = [
+      await tokenStore.check("user:fractional", tokenPolicy),
+      await tokenStore.check("user:fractional", tokenPolicy),
+    ];
+
+    now = 1500;
+    const firstRefill = await tokenStore.check("user:fractional", tokenPolicy);
+
+    now = 2000;
+    const secondRefill = await tokenStore.check("user:fractional", tokenPolicy);
+
+    expect(initialResults.map((result) => result.success)).toEqual([true, true]);
+    expect(firstRefill.success).toBe(true);
+    expect(firstRefill.resetAtMs).toBe(2000);
+    expect(secondRefill.success).toBe(true);
+
+    tokenStore.close();
+  });
+
+  it("should discard refill time accumulated while the token bucket is full", async () => {
+    let now = 0;
+    const tokenPolicy: TokenBucketPolicy = {
+      name: "token-full-boundary",
+      algorithm: "token-bucket",
+      capacity: 1,
+      refillRate: 1,
+      refillIntervalMs: 1000,
+    };
+    const tokenStore = new TokenBucketInMemoryStore({ now: () => now, pruneIntervalMs: 0 });
+
+    const initial = await tokenStore.check("user:full", tokenPolicy);
+    await tokenStore.refund("user:full", tokenPolicy, initial.refundReceipt);
+
+    now = 500;
+    const consumedFromFullBucket = await tokenStore.check("user:full", tokenPolicy);
+
+    now = 1000;
+    const earlyRetry = await tokenStore.check("user:full", tokenPolicy);
+
+    now = 1500;
+    const refilledRetry = await tokenStore.check("user:full", tokenPolicy);
+
+    expect(consumedFromFullBucket.success).toBe(true);
+    expect(earlyRetry.success).toBe(false);
+    expect(refilledRetry.success).toBe(true);
+
+    tokenStore.close();
+  });
+
+  it("should preserve fractional refill time through token bucket refunds", async () => {
+    let now = 0;
+    const tokenPolicy: TokenBucketPolicy = {
+      name: "token-refund-fractional-refill",
+      algorithm: "token-bucket",
+      capacity: 4,
+      refillRate: 1,
+      refillIntervalMs: 1000,
+    };
+    const tokenStore = new TokenBucketInMemoryStore({ now: () => now, pruneIntervalMs: 0 });
+    const refundableCheck = await tokenStore.check("user:refund-fractional", tokenPolicy);
+
+    for (let index = 1; index < tokenPolicy.capacity; index++) {
+      await tokenStore.check("user:refund-fractional", tokenPolicy);
+    }
+
+    now = 1500;
+    const refund = await tokenStore.refund(
+      "user:refund-fractional",
+      tokenPolicy,
+      refundableCheck.refundReceipt,
+    );
+
+    now = 2000;
+    const checkAfterRefund = await tokenStore.check("user:refund-fractional", tokenPolicy);
+
+    expect(refund.refunded).toBe(true);
+    expect(refund.remaining).toBe(2);
+    expect(checkAfterRefund.success).toBe(true);
+    expect(checkAfterRefund.remaining).toBe(2);
+
+    tokenStore.close();
+  });
+
   describe("SlidingWindowInMemoryStore custom windowMs", () => {
     let slidingStore!: SlidingWindowInMemoryStore;
     const customWindowPolicy: SlidingWindowPolicy = {
