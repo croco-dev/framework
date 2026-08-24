@@ -26,6 +26,13 @@ export class WebhookEventRouter<TEvents extends WebhookEventCatalog = WebhookEve
       EventResult<TEvents, TType>
     >,
   ): this {
+    if (this.handlers.has(eventType)) {
+      throw new WebhookGatewayConfigurationProblem(
+        `handler already registered for event type '${eventType}'`,
+        { eventType },
+      );
+    }
+
     this.handlers.set(eventType, handler as WebhookEventHandler<WebhookEvent, unknown>);
     return this;
   }
