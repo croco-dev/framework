@@ -98,17 +98,29 @@ describe("createMetaFetchHandler", () => {
     await expect(response.text()).resolves.toContain("Rendered through registry");
   });
 
-  it("falls back to page handler when the API handler throws", async () => {
+  it("propagates API handler exceptions instead of falling back to page handler", async () => {
+    const pageHandler = vi.fn(async () => new Response("should not reach"));
     const handler = createMetaFetchHandler({
       apiHandler: async () => {
         throw new Error("api failed");
       },
-      pageHandler: async () => new Response("fallback-after-error"),
+      pageHandler,
     });
 
-    const response = await handler(new Request("https://example.com/page"));
+    await expect(handler(new Request("https://example.com/page"))).rejects.toThrow("api failed");
+    expect(pageHandler).not.toHaveBeenCalled();
+  });
 
-    await expect(response.text()).resolves.toBe("fallback-after-error");
+  it("preserves the original error instance when the API handler throws", async () => {
+    const originalError = new Error("boom");
+    const handler = createMetaFetchHandler({
+      apiHandler: async () => {
+        throw originalError;
+      },
+      pageHandler: async () => new Response("nope"),
+    });
+
+    await expect(handler(new Request("https://example.com/page"))).rejects.toBe(originalError);
   });
 });
 
