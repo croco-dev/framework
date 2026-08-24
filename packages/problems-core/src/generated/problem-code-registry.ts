@@ -9352,7 +9352,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
-          line: 210,
+          line: 228,
           column: 5,
           kind: "problem-constructor",
         },
@@ -9383,7 +9383,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
-          line: 193,
+          line: 211,
           column: 5,
           kind: "problem-constructor",
         },
@@ -9414,7 +9414,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
-          line: 228,
+          line: 246,
           column: 5,
           kind: "problem-constructor",
         },
@@ -9447,7 +9447,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
-          line: 175,
+          line: 193,
           column: 5,
           kind: "problem-constructor",
         },
@@ -9477,7 +9477,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
-          line: 122,
+          line: 140,
           column: 5,
           kind: "problem-constructor",
         },
@@ -9539,7 +9539,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
-          line: 138,
+          line: 156,
           column: 5,
           kind: "problem-constructor",
         },
@@ -9569,7 +9569,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
-          line: 104,
+          line: 122,
           column: 5,
           kind: "problem-constructor",
         },
@@ -9602,7 +9602,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
-          line: 158,
+          line: 176,
           column: 5,
           kind: "problem-constructor",
         },
@@ -9632,7 +9632,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
-          line: 86,
+          line: 104,
           column: 5,
           kind: "problem-constructor",
         },
@@ -9649,6 +9649,36 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         userAction: "Verify the identifier and refresh the resource list before retrying.",
         operatorAction:
           "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
+          line: 86,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "lifecycle-core/run-evidence-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#lifecycle-core-run-evidence-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
         retryability: "not-retryable",
         redactionPolicy: "public",
         telemetry: {

@@ -62,6 +62,24 @@ export class LifecycleRunFinalizationProblem extends Problem {
   }
 }
 
+/** Indicates that lifecycle run evidence contains values that cannot be stored as a snapshot. */
+export class LifecycleRunEvidenceProblem extends Problem {
+  constructor(runId: string, actionId: string) {
+    super(
+      "lifecycle-core/run-evidence-invalid",
+      ProblemCategory.ValidationError,
+      `Lifecycle run '${runId}' action '${actionId}' contains unsupported evidence`,
+      {
+        extensions: {
+          runId,
+          actionId,
+          retryable: false,
+        },
+      },
+    );
+  }
+}
+
 /** Indicates that the requested lifecycle rule version is not registered. */
 export class UnknownLifecycleRuleVersionProblem extends Problem {
   constructor(ruleId: string, version: string) {

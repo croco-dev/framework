@@ -3,6 +3,7 @@ import {
   InMemoryLifecycleActionSink,
   InMemoryLifecycleRunStore,
   LifecycleDiagnosticsProvider,
+  LifecycleRunEvidenceProblem,
   LifecycleRuleEvaluator,
   LifecycleRuleRegistry,
   WebhookLifecycleActionAdapter,
@@ -227,7 +228,9 @@ describe("InMemoryLifecycleRunStore snapshot ownership", () => {
       ],
     });
 
-    await expect(store.claim(createClaim("run-1", "claim-1"), dispatchingRun)).rejects.toThrow();
+    await expect(store.claim(createClaim("run-1", "claim-1"), dispatchingRun)).rejects.toThrow(
+      LifecycleRunEvidenceProblem,
+    );
     await expect(store.list()).resolves.toEqual([]);
 
     await expect(

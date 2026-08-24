@@ -1,4 +1,7 @@
-import { LifecycleRunFinalizationProblem } from "./problems/LifecycleProblems";
+import {
+  LifecycleRunEvidenceProblem,
+  LifecycleRunFinalizationProblem,
+} from "./problems/LifecycleProblems";
 import type {
   LifecycleActionResult,
   LifecycleFinalizedRun,
@@ -42,7 +45,22 @@ function snapshotClaim(
   };
 }
 
-function snapshotActionResult(result: LifecycleActionResult): LifecycleActionResult {
+function snapshotMetadata(
+  metadata: Record<string, unknown>,
+  runId: string,
+  actionId: string,
+): Record<string, unknown> {
+  try {
+    return structuredClone(metadata);
+  } catch (error) {
+    if (error instanceof Error && error.name === "DataCloneError") {
+      throw new LifecycleRunEvidenceProblem(runId, actionId);
+    }
+    throw error;
+  }
+}
+
+function snapshotActionResult(result: LifecycleActionResult, runId: string): LifecycleActionResult {
   const error = result.error;
   const metadata = result.metadata;
   return {
@@ -52,7 +70,7 @@ function snapshotActionResult(result: LifecycleActionResult): LifecycleActionRes
     ...(result.message !== undefined ? { message: result.message } : {}),
     ...(result.emissionId !== undefined ? { emissionId: result.emissionId } : {}),
     ...(error ? { error: { ...error } } : {}),
-    ...(metadata ? { metadata: structuredClone(metadata) } : {}),
+    ...(metadata ? { metadata: snapshotMetadata(metadata, runId, result.actionId) } : {}),
   };
 }
 
@@ -101,7 +119,7 @@ function snapshotRun(run: LifecycleRun, identity = snapshotRunIdentity(run)): Li
     severity: run.severity,
     status: run.status,
     ...(run.skipReason !== undefined ? { skipReason: run.skipReason } : {}),
-    actionResults: run.actionResults.map(snapshotActionResult),
+    actionResults: run.actionResults.map((result) => snapshotActionResult(result, identity.id)),
     ...(error ? { error: { ...error } } : {}),
     startedAt: new Date(run.startedAt.getTime()),
     completedAt: new Date(run.completedAt.getTime()),
