@@ -72,7 +72,17 @@ export async function registerController(
     );
   }
 
-  const importResult = reconcileImport(sourceFile, options.importPath, options.className);
+  const registeredIdentifier = findRegisteredControllerIdentifier(sourceFile, options.className);
+  if (!registeredIdentifier) {
+    return unsupportedResult(options, "Could not resolve the controller registration identifier.");
+  }
+
+  const importResult = reconcileImport(
+    sourceFile,
+    options.importPath,
+    options.className,
+    registeredIdentifier,
+  );
   if (importResult === "conflicting-binding") {
     return unsupportedResult(
       options,
@@ -116,6 +126,81 @@ function addToActiveRegistration(sourceFile: SourceFile, className: string): Upd
   }
 
   return "not-found";
+}
+
+function findRegisteredControllerIdentifier(
+  sourceFile: SourceFile,
+  className: string,
+): Identifier | undefined {
+  for (const call of sourceFile.getDescendantsOfKind(SyntaxKind.CallExpression)) {
+    const expression = call.getExpression();
+    if (Node.isPropertyAccessExpression(expression) && expression.getName() === "addControllers") {
+      const identifier = findIdentifierInCallArray(call, className);
+      if (identifier) return identifier;
+    }
+
+    if (Node.isIdentifier(expression) && expression.getText() === "createApp") {
+      const identifier = findIdentifierInCreateAppControllers(call, className);
+      if (identifier) return identifier;
+    }
+  }
+
+  return undefined;
+}
+
+function findIdentifierInCallArray(
+  call: CallExpression,
+  className: string,
+): Identifier | undefined {
+  const argument = call.getArguments()[0];
+  return Node.isArrayLiteralExpression(argument)
+    ? findIdentifierInArray(argument, className)
+    : undefined;
+}
+
+function findIdentifierInCreateAppControllers(
+  call: CallExpression,
+  className: string,
+): Identifier | undefined {
+  const options = call.getArguments()[0];
+  if (!options || !Node.isObjectLiteralExpression(options)) return undefined;
+
+  const controllers = options.getProperty("controllers");
+  if (Node.isPropertyAssignment(controllers)) {
+    const initializer = controllers.getInitializer();
+    if (Node.isArrayLiteralExpression(initializer)) {
+      return findIdentifierInArray(initializer, className);
+    }
+
+    if (Node.isIdentifier(initializer)) {
+      return findIdentifierInNamedArray(call.getSourceFile(), initializer.getText(), className);
+    }
+  }
+
+  return Node.isShorthandPropertyAssignment(controllers)
+    ? findIdentifierInNamedArray(call.getSourceFile(), controllers.getName(), className)
+    : undefined;
+}
+
+function findIdentifierInNamedArray(
+  sourceFile: SourceFile,
+  identifierName: string,
+  className: string,
+): Identifier | undefined {
+  const initializer = sourceFile.getVariableDeclaration(identifierName)?.getInitializer();
+  return Node.isArrayLiteralExpression(initializer)
+    ? findIdentifierInArray(initializer, className)
+    : undefined;
+}
+
+function findIdentifierInArray(
+  arrayLiteral: ArrayLiteralExpression,
+  className: string,
+): Identifier | undefined {
+  const element = arrayLiteral
+    .getElements()
+    .find((candidate) => Node.isIdentifier(candidate) && candidate.getText() === className);
+  return Node.isIdentifier(element) ? element : undefined;
 }
 
 function addToCallArray(call: CallExpression, className: string): UpdateResult {
@@ -290,6 +375,7 @@ function reconcileImport(
   sourceFile: SourceFile,
   importPath: string,
   className: string,
+  registeredIdentifier: Identifier,
 ): ImportUpdateResult {
   const importDeclarations = sourceFile
     .getImportDeclarations()
@@ -320,8 +406,11 @@ function reconcileImport(
     }
   }
 
-  const localDeclarations = sourceFile.getLocal(className)?.getDeclarations() ?? [];
-  const hasNonImportDeclaration = localDeclarations.some(
+  const bindingDeclarations = [
+    ...(sourceFile.getLocal(className)?.getDeclarations() ?? []),
+    ...(registeredIdentifier.getSymbol()?.getDeclarations() ?? []),
+  ];
+  const hasNonImportDeclaration = bindingDeclarations.some(
     (declaration) => !declaration.getFirstAncestorByKind(SyntaxKind.ImportDeclaration),
   );
 

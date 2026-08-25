@@ -152,6 +152,26 @@ app.listen({ port: 3000 });
     expect(after).toBe(before);
   });
 
+  it("reports a nested controller binding conflict without changing the file", async () => {
+    await writeFixture(`
+import { createCrocoApp } from '@foo/bar';
+import { BarController } from './domains/bar/BarController';
+
+function bootstrap(BarController: unknown) {
+  const app = createCrocoApp();
+  app.addControllers([BarController]);
+  app.listen({ port: 3000 });
+}
+`);
+    const before = await readFixture();
+
+    const result = await registerBarController();
+    const after = await readFixture();
+
+    expect(result.status).toBe("unsupported-pattern");
+    expect(after).toBe(before);
+  });
+
   it.each([
     [
       "a correct import has a wrong-source duplicate",
