@@ -17,6 +17,7 @@ import {
   InvalidModuleDefinitionProblem,
   formatModuleProviderOwnershipDetail,
   ModuleCircularDependencyProblem,
+  ModuleDuplicateNameProblem,
   ModuleLifecycleProblem,
   ModuleProviderOwnershipProblem,
   ModuleProviderVisibilityProblem,
@@ -86,6 +87,7 @@ class CapturedTypediInjectionToken extends Error {
 }
 
 const registeredModules = new Map<string, CrocoModuleInternal>();
+const moduleSources = new WeakMap<ModuleOptions, ModuleOptions>();
 const moduleStates = new Map<string, ModuleRuntimeState>();
 const IGNORED_CONSTRUCTOR_DEPENDENCIES = new Set<unknown>([
   Array,
@@ -105,6 +107,15 @@ export function registerModule(module: ModuleOptions): void {
   const [snapshot] = collectModules([module]);
   if (!snapshot) {
     throw new InvalidModuleDefinitionProblem("Module graph must contain a root module.");
+  }
+
+  const existing = registeredModules.get(snapshot.name);
+  if (existing && getModuleSource(existing) !== getModuleSource(snapshot)) {
+    throw new ModuleDuplicateNameProblem(
+      snapshot.name,
+      [`${existing.name} (previously registered)`],
+      [`${snapshot.name} (newly registered)`],
+    );
   }
 
   registeredModules.set(snapshot.name, snapshot);
@@ -591,13 +602,25 @@ function createModuleGraphProvider(
 }
 
 function collectModules(rootModules: readonly ModuleOptions[]): ModuleOptions[] {
-  const modules = new Map<string, ModuleOptions>();
+  const modules = new Map<
+    string,
+    {
+      readonly source: ModuleOptions;
+      readonly snapshot: ModuleOptions & { imports: ModuleOptions[] };
+      readonly path: readonly string[];
+    }
+  >();
 
-  const visit = (module: ModuleOptions): ModuleOptions => {
+  const visit = (module: ModuleOptions, path: readonly string[]): ModuleOptions => {
     const name = module.name;
+    const source = getModuleSource(module);
     const existing = modules.get(name);
     if (existing) {
-      return existing;
+      if (existing.source !== source) {
+        throw new ModuleDuplicateNameProblem(name, existing.path, path);
+      }
+
+      return existing.snapshot;
     }
 
     const sourceImports = module.imports;
@@ -618,18 +641,27 @@ function collectModules(rootModules: readonly ModuleOptions[]): ModuleOptions[] 
       ...(shutdown ? { shutdown } : {}),
     };
 
-    modules.set(name, snapshot);
-    snapshot.imports.push(...Array.from(sourceImports ?? [], visit));
+    modules.set(name, { source, snapshot, path });
+    moduleSources.set(snapshot, source);
+    snapshot.imports.push(
+      ...Array.from(sourceImports ?? [], (importedModule) =>
+        visit(importedModule, [...path, importedModule.name]),
+      ),
+    );
     validateModule(snapshot);
 
     return snapshot;
   };
 
   for (const module of rootModules) {
-    visit(module);
+    visit(module, [module.name]);
   }
 
-  return Array.from(modules.values());
+  return Array.from(modules.values(), ({ snapshot }) => snapshot);
+}
+
+function getModuleSource(module: ModuleOptions): ModuleOptions {
+  return moduleSources.get(module) ?? module;
 }
 
 function snapshotProvider(provider: ModuleProvider): ModuleProvider {

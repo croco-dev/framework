@@ -11662,6 +11662,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "ModuleDuplicateNameProblem",
+              "exportKind": "named",
+              "source": "./problems",
+              "declarationKind": "class"
+            },
+            {
               "name": "ModuleLifecycleProblem",
               "exportKind": "named",
               "source": "./problems",

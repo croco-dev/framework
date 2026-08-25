@@ -231,6 +231,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`ShutdownTimeoutProblem`](/api/framework-context/src/classes/shutdowntimeoutproblem/)
 - [`InvalidModuleDefinitionProblem`](/api/framework-module/src/classes/invalidmoduledefinitionproblem/)
 - [`ModuleCircularDependencyProblem`](/api/framework-module/src/classes/modulecirculardependencyproblem/)
+- [`ModuleDuplicateNameProblem`](/api/framework-module/src/classes/moduleduplicatenameproblem/)
 - [`ModuleLifecycleProblem`](/api/framework-module/src/classes/modulelifecycleproblem/)
 - [`ModuleProviderOwnershipProblem`](/api/framework-module/src/classes/moduleproviderownershipproblem/)
 - [`ModuleProviderVisibilityProblem`](/api/framework-module/src/classes/moduleprovidervisibilityproblem/)
