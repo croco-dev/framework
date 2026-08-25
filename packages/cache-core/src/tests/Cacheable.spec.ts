@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CacheStore } from "../libs/CacheStore";
+import { createCacheKey } from "../libs/cacheKey";
 import { Cacheable } from "../libs/decorators/Cacheable";
 import { CacheEvict } from "../libs/decorators/CacheEvict";
 import { InMemoryCacheStore } from "../libs/InMemoryCacheStore";
+import type { CacheKeyArgumentProblem } from "../libs/problems/CacheDecoratorProblems";
 
 describe("@Cacheable", () => {
   let cache!: InMemoryCacheStore<string>;
@@ -82,6 +84,130 @@ describe("@Cacheable", () => {
     expect(callCount).toBe(2);
   });
 
+  it("distinguishes argument values that JSON serialization conflates", async () => {
+    let callCount = 0;
+
+    class TestService {
+      @Cacheable({ store: cache, namespace: "test-service" })
+      async getData(value: unknown): Promise<string> {
+        callCount++;
+        return `result-${callCount}-${typeof value}`;
+      }
+    }
+
+    const service = new TestService();
+    const sparse: unknown[] = [];
+    sparse.length = 1;
+    const values = [
+      undefined,
+      null,
+      "1",
+      1,
+      true,
+      0,
+      -0,
+      Number.NaN,
+      Number.POSITIVE_INFINITY,
+      Number.NEGATIVE_INFINITY,
+      {},
+      { value: undefined },
+      [undefined],
+      [null],
+      sparse,
+    ];
+
+    for (const value of values) {
+      const first = await service.getData(value);
+      const second = await service.getData(value);
+
+      expect(second).toBe(first);
+    }
+
+    expect(callCount).toBe(values.length);
+  });
+
+  it("uses one stable key for equivalent objects regardless of insertion order", async () => {
+    let callCount = 0;
+
+    class TestService {
+      @Cacheable({ store: cache, namespace: "test-service" })
+      async getData(value: object): Promise<string> {
+        callCount++;
+        return JSON.stringify(value);
+      }
+    }
+
+    const service = new TestService();
+
+    await service.getData({ first: 1, second: 2 });
+    await service.getData({ second: 2, first: 1 });
+
+    expect(callCount).toBe(1);
+  });
+
+  it("rejects cyclic and unsupported argument graphs with a typed Problem", async () => {
+    class TestService {
+      @Cacheable({ store: cache, namespace: "test-service" })
+      async getData(_value: unknown): Promise<string> {
+        return "result";
+      }
+    }
+
+    const cyclic: { self?: unknown } = {};
+    cyclic.self = cyclic;
+    const service = new TestService();
+
+    await expect(service.getData(cyclic)).rejects.toMatchObject({
+      code: "cache-core/cache-key-argument-unsupported",
+      path: 'arguments[0]["self"]',
+      reason: "contains a cyclic reference",
+    } satisfies Partial<CacheKeyArgumentProblem>);
+    await expect(service.getData(new Date("2026-01-01T00:00:00.000Z"))).rejects.toMatchObject({
+      code: "cache-core/cache-key-argument-unsupported",
+      path: "arguments[0]",
+      reason: "is not a plain object",
+    } satisfies Partial<CacheKeyArgumentProblem>);
+
+    const accessor: unknown[] = [];
+    Object.defineProperty(accessor, 0, { enumerable: true, get: () => "value" });
+
+    await expect(service.getData(accessor)).rejects.toMatchObject({
+      code: "cache-core/cache-key-argument-unsupported",
+      path: "arguments[0][0]",
+      reason: "is not an enumerable data property",
+    } satisfies Partial<CacheKeyArgumentProblem>);
+
+    let deep: unknown = "leaf";
+    for (let depth = 0; depth < 101; depth++) {
+      deep = [deep];
+    }
+
+    await expect(service.getData(deep)).rejects.toMatchObject({
+      code: "cache-core/cache-key-argument-unsupported",
+      reason: "exceeds the maximum supported depth of 100",
+    } satisfies Partial<CacheKeyArgumentProblem>);
+
+    const oversizedSparse: unknown[] = [];
+    oversizedSparse.length = 10_000;
+
+    await expect(service.getData(oversizedSparse)).rejects.toMatchObject({
+      code: "cache-core/cache-key-argument-unsupported",
+      path: "arguments[0]",
+      reason: "exceeds the maximum supported size of 10000 values",
+    } satisfies Partial<CacheKeyArgumentProblem>);
+
+    const firstSparse: unknown[] = [];
+    firstSparse.length = 6_000;
+    const secondSparse: unknown[] = [];
+    secondSparse.length = 6_000;
+
+    await expect(service.getData([firstSparse, secondSparse])).rejects.toMatchObject({
+      code: "cache-core/cache-key-argument-unsupported",
+      path: "arguments[0][1]",
+      reason: "exceeds the maximum supported size of 10000 values",
+    } satisfies Partial<CacheKeyArgumentProblem>);
+  });
+
   it("respects TTL", async () => {
     vi.useFakeTimers();
     let callCount = 0;
@@ -119,7 +245,7 @@ describe("@Cacheable", () => {
     const service = new TestService();
     await service.getData("123");
 
-    const cached = await cache.get('custom:prefix:["123"]');
+    const cached = await cache.get(createCacheKey("custom:prefix", ["123"]));
     expect(cached).toBe("data-123");
   });
 
@@ -150,7 +276,7 @@ describe("@Cacheable", () => {
     const service = new TestService();
     await service.getData("123");
 
-    expect(await cache.get('stable-service:getData:["123"]')).toBe("data-123");
+    expect(await cache.get(createCacheKey("stable-service:getData", ["123"]))).toBe("data-123");
   });
 
   it("prefers keyPrefix over namespace", async () => {
@@ -164,8 +290,8 @@ describe("@Cacheable", () => {
     const service = new TestService();
     await service.getData("123");
 
-    expect(await cache.get('custom:prefix:["123"]')).toBe("data-123");
-    expect(await cache.get('stable-service:getData:["123"]')).toBeUndefined();
+    expect(await cache.get(createCacheKey("custom:prefix", ["123"]))).toBe("data-123");
+    expect(await cache.get(createCacheKey("stable-service:getData", ["123"]))).toBeUndefined();
   });
 
   it("throws when neither namespace nor keyPrefix is provided", () => {
@@ -191,10 +317,10 @@ describe("@CacheEvict", () => {
     cache = new InMemoryCacheStore<string>({ maxEntries: 1000 });
   });
 
-  it("evicts cache by pattern after method execution", async () => {
-    await cache.set('test-service:updateData:["123"]', "cached");
-    await cache.set('test-service:updateData:["456"]', "cached2");
-    await cache.set('OtherService:getData:["123"]', "other");
+  it("evicts the cache entry for the method arguments after execution", async () => {
+    await cache.set(createCacheKey("test-service:updateData", ["123"]), "cached");
+    await cache.set(createCacheKey("test-service:updateData", ["456"]), "cached2");
+    await cache.set(createCacheKey("OtherService:getData", ["123"]), "other");
 
     class TestService {
       @CacheEvict({ store: cache, namespace: "test-service" })
@@ -204,9 +330,9 @@ describe("@CacheEvict", () => {
     const service = new TestService();
     await service.updateData("123");
 
-    expect(await cache.get('test-service:updateData:["123"]')).toBeUndefined();
-    expect(await cache.get('test-service:updateData:["456"]')).toBeUndefined();
-    expect(await cache.get('OtherService:getData:["123"]')).toBe("other");
+    expect(await cache.get(createCacheKey("test-service:updateData", ["123"]))).toBeUndefined();
+    expect(await cache.get(createCacheKey("test-service:updateData", ["456"]))).toBe("cached2");
+    expect(await cache.get(createCacheKey("OtherService:getData", ["123"]))).toBe("other");
   });
 
   it("evicts specific key", async () => {
@@ -243,25 +369,25 @@ describe("@CacheEvict", () => {
     expect(await cache.get("order:789")).toBe("data3");
   });
 
-  it("clears all entries with allEntries option", async () => {
+  it("clears all entries without encoding method arguments", async () => {
     await cache.set("key1", "value1");
     await cache.set("key2", "value2");
 
     class TestService {
       @CacheEvict({ store: cache, allEntries: true })
-      async clearAll(): Promise<void> {}
+      async clearAll(_unsupported: Date): Promise<void> {}
     }
 
     const service = new TestService();
-    await service.clearAll();
+    await service.clearAll(new Date("2026-01-01T00:00:00.000Z"));
 
     expect(await cache.get("key1")).toBeUndefined();
     expect(await cache.get("key2")).toBeUndefined();
   });
 
-  it("uses namespace for default eviction patterns", async () => {
-    await cache.set('stable-service:updateData:["123"]', "cached");
-    await cache.set('stable-service:updateData:["456"]', "cached2");
+  it("uses namespace for default argument-based eviction keys", async () => {
+    await cache.set(createCacheKey("stable-service:updateData", []), "cached");
+    await cache.set(createCacheKey("stable-service:updateData", ["456"]), "cached2");
 
     class TestService {
       @CacheEvict({ store: cache, namespace: "stable-service" })
@@ -271,11 +397,11 @@ describe("@CacheEvict", () => {
     const service = new TestService();
     await service.updateData();
 
-    expect(await cache.get('stable-service:updateData:["123"]')).toBeUndefined();
-    expect(await cache.get('stable-service:updateData:["456"]')).toBeUndefined();
+    expect(await cache.get(createCacheKey("stable-service:updateData", []))).toBeUndefined();
+    expect(await cache.get(createCacheKey("stable-service:updateData", ["456"]))).toBe("cached2");
   });
 
-  it("throws when neither namespace nor key is provided", () => {
+  it("throws when namespace, key, and allEntries are all omitted", () => {
     expect(() => {
       class TestService {
         @CacheEvict({ store: cache })
@@ -283,10 +409,32 @@ describe("@CacheEvict", () => {
       }
 
       return TestService;
-    }).toThrow('@CacheEvict requires "namespace" when "key" is not provided (method: updateData)');
+    }).toThrow(
+      '@CacheEvict requires "namespace" when neither "key" nor "allEntries: true" is provided (method: updateData)',
+    );
   });
 
-  it("propagates invalidatePattern errors for namespace eviction", async () => {
+  it("rejects unsupported argument graphs before executing the method", async () => {
+    let methodCalls = 0;
+
+    class TestService {
+      @CacheEvict({ store: cache, namespace: "stable-service" })
+      async updateData(_unsupported: Date): Promise<void> {
+        methodCalls++;
+      }
+    }
+
+    const service = new TestService();
+
+    await expect(service.updateData(new Date("2026-01-01T00:00:00.000Z"))).rejects.toMatchObject({
+      code: "cache-core/cache-key-argument-unsupported",
+      path: "arguments[0]",
+      reason: "is not a plain object",
+    } satisfies Partial<CacheKeyArgumentProblem>);
+    expect(methodCalls).toBe(0);
+  });
+
+  it("propagates delete errors for argument-based namespace eviction", async () => {
     const unsupportedStore: CacheStore<string> = {
       get: async () => undefined,
       set: async () => undefined,
@@ -300,8 +448,8 @@ describe("@CacheEvict", () => {
       pruneExpired: async () => 0,
     };
 
-    const deleteByPatternSpy = vi
-      .spyOn(unsupportedStore, "invalidatePattern")
+    const deleteSpy = vi
+      .spyOn(unsupportedStore, "delete")
       .mockRejectedValueOnce(new Error("not supported"));
 
     class TestService {
@@ -313,7 +461,7 @@ describe("@CacheEvict", () => {
 
     await expect(service.updateData()).rejects.toThrow("not supported");
 
-    deleteByPatternSpy.mockRestore();
+    deleteSpy.mockRestore();
   });
 
   it("propagates invalidatePattern errors for wildcard key eviction", async () => {
@@ -400,6 +548,35 @@ describe("@Cacheable with @CacheEvict integration", () => {
     await service.updateUser("123");
 
     await service.getUser("123");
+    expect(fetchCount).toBe(2);
+  });
+
+  it("derives the same key for population and argument-based eviction", async () => {
+    let fetchCount = 0;
+
+    class CachedService {
+      @Cacheable({ store: cache, namespace: "shared-service" })
+      async getData(input: object): Promise<string> {
+        fetchCount++;
+        return `result-${fetchCount}-${JSON.stringify(input)}`;
+      }
+    }
+
+    class EvictingService {
+      @CacheEvict({ store: cache, namespace: "shared-service" })
+      async getData(_input: object): Promise<void> {}
+    }
+
+    const cached = new CachedService();
+    const evicting = new EvictingService();
+
+    await cached.getData({ first: 1, second: 2 });
+    await cached.getData({ second: 2, first: 1 });
+    expect(fetchCount).toBe(1);
+
+    await evicting.getData({ second: 2, first: 1 });
+    await cached.getData({ first: 1, second: 2 });
+
     expect(fetchCount).toBe(2);
   });
 });

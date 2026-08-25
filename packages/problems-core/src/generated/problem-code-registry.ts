@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 655,
+  problemCount: 656,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -3429,6 +3429,37 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "cache-core/cache-key-argument-unsupported",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#cache-core-cache-key-argument-unsupported",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts",
+          line: 22,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "cache-core/invalid-configuration",
       category: "InternalServerError",
       status: 500,
@@ -3549,7 +3580,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts",
-          line: 102,
+          line: 120,
           column: 3,
           kind: "problem-class",
         },
@@ -3582,7 +3613,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts",
-          line: 55,
+          line: 73,
           column: 3,
           kind: "problem-class",
         },
@@ -3612,7 +3643,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts",
-          line: 41,
+          line: 59,
           column: 3,
           kind: "problem-class",
         },
@@ -3644,7 +3675,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts",
-          line: 72,
+          line: 90,
           column: 3,
           kind: "problem-class",
         },
@@ -3674,7 +3705,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts",
-          line: 27,
+          line: 45,
           column: 3,
           kind: "problem-class",
         },

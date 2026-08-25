@@ -142,6 +142,14 @@ class UserService {
 }
 ```
 
+인자 기반 기본 키는 문자열, boolean, 모든 number 값(`NaN`, 양·음의 무한대 포함), `null`, `undefined`, 배열,
+plain object를 타입 태그와 정렬된 object key로 canonical encoding합니다. 따라서 서로 다른 값은 충돌하지 않고,
+삽입 순서만 다른 동등한 plain object는 같은 키를 사용합니다. 순환 참조, class instance, function, symbol, bigint처럼
+지원하지 않는 인자 그래프는 `CacheKeyArgumentProblem`으로 실패합니다. 지원 graph는 최대 100단계와 10,000개 값으로
+제한되며, 이 한도를 넘는 입력도 같은 typed Problem으로 실패합니다. 명시적 `key`가 없는 `@CacheEvict`는 같은
+namespace, method name, 인자 encoder로 단일 cache entry를 제거합니다. 여러 entry를 제거하려면 wildcard `key` 또는
+`allEntries`를 사용합니다.
+
 ## API 요약
 
 ### 타입

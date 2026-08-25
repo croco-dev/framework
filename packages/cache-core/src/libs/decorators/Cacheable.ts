@@ -1,4 +1,5 @@
 import type { CacheStore } from "../CacheStore";
+import { createCacheKey } from "../cacheKey";
 import { CacheDecoratorConfigProblem } from "../problems/CacheDecoratorProblems";
 
 export interface CacheableOptions<V = unknown> {
@@ -22,10 +23,6 @@ function resolveCachePrefix(options: CacheableOptions<unknown>, methodName: stri
   return `${options.namespace}:${methodName}`;
 }
 
-function generateCacheKey(prefix: string, args: unknown[]): string {
-  return `${prefix}:${JSON.stringify(args)}`;
-}
-
 export function Cacheable<V = unknown>(options: CacheableOptions<V>): MethodDecorator {
   return (
     _target: object,
@@ -37,7 +34,7 @@ export function Cacheable<V = unknown>(options: CacheableOptions<V>): MethodDeco
     const prefix = resolveCachePrefix(options, methodName);
 
     descriptor.value = async function (this: unknown, ...args: unknown[]): Promise<V | undefined> {
-      const cacheKey = generateCacheKey(prefix, args);
+      const cacheKey = createCacheKey(prefix, args);
 
       return options.store.getOrSet(
         cacheKey,
