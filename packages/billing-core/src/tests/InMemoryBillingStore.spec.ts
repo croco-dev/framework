@@ -63,6 +63,29 @@ describe("InMemoryBillingStore", () => {
       expect(await store.findAccountByExternalId("ext-cust-1")).toBeNull();
     });
 
+    it("should move lookup indices when the saved account object is mutated before re-saving", async () => {
+      const account: BillingAccount = {
+        id: "account-1",
+        tenantId: "tenant-1",
+        externalCustomerId: "ext-cust-1",
+        email: "original@example.com",
+        createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      };
+
+      await store.saveAccount(account);
+      Object.assign(account, {
+        tenantId: "tenant-2",
+        externalCustomerId: "ext-cust-2",
+        email: "moved@example.com",
+      });
+      await store.saveAccount(account);
+
+      expect(await store.findAccountByTenantId("tenant-1")).toBeNull();
+      expect(await store.findAccountByExternalId("ext-cust-1")).toBeNull();
+      expect(await store.findAccountByTenantId("tenant-2")).toEqual(account);
+      expect(await store.findAccountByExternalId("ext-cust-2")).toEqual(account);
+    });
+
     it("should reject a tenant collision before changing either account", async () => {
       const existingAccount: BillingAccount = {
         id: "account-1",
