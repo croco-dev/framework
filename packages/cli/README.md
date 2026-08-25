@@ -64,6 +64,18 @@ Creates a single source file under `apps/api-server/src/`:
 - `croco migrate up` runs pending migrations via `@croco/migration-runner`
 - `croco migrate down` rolls back migrations
 - `croco migrate status` shows executed and pending migration status
+- `--cwd <path>` runs the delegated migration command from that directory, so relative migration paths and configuration resolve from the selected workspace.
+- `--dryRun` on `up` and `down` is translated to the migration runner's `--dry-run` flag exactly once.
+
+The wrapper accepts the migration runner's existing `--dir` (`-d`), `--connection` (`-c`), `--table`, and
+`--dialect` options. `up` and `down` also accept `--target` (`-t`), while `down` accepts `--count` (`-n`).
+`migrate` does not support `--overwrite`; unsupported options fail before the child command starts.
+
+```bash
+croco migrate up --cwd ./apps/api-server --dir ./migrations --dryRun
+croco migrate down --cwd ./apps/api-server --count 1
+croco migrate status --cwd ./apps/api-server
+```
 
 ### upgrade — Version Migration Assistant
 
@@ -208,9 +220,10 @@ return a non-zero exit code when any reported job needs operator attention.
 - Add `--metrics` to include optional `/metrics` in the report.
 - `croco ops status http://localhost:3000 --json` reads the same operational surface for inspection and includes `/metrics` by default.
 
-## Global Options
+## Shared Command Options
 
-All commands support these options:
+Commands expose only the options that have a defined meaning for their operation. File-generating commands
+commonly share these options:
 
 | Option        | Type      | Description                                  |
 | ------------- | --------- | -------------------------------------------- |
