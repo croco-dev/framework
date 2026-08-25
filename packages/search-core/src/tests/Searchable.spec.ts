@@ -1,13 +1,25 @@
 import "reflect-metadata";
-import { describe, expect, it } from "vitest";
+import { Container, MetadataStorage } from "@croco/framework-context";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
   getSearchableMetadata,
   isSearchable,
   SEARCHABLE_METADATA,
   Searchable,
 } from "../libs/decorators/Searchable";
+import {
+  compileSearchableMetadataRegistry,
+  findSearchableSourceLocation,
+} from "../libs/decorators/SearchableMetadataRegistry";
+import { SearchableIndexConflictProblem } from "../libs/problems/SearchProblems";
+
+import type { SearchableIndexDeclaration } from "../libs/decorators/Searchable";
 
 describe("@Searchable decorator", () => {
+  beforeEach(() => {
+    Container.reset();
+  });
+
   describe("basic usage", () => {
     it("should store metadata on class", () => {
       @Searchable()
@@ -70,6 +82,11 @@ describe("@Searchable decorator", () => {
         index: "products",
         autoSync: true,
         target: ProductEntity,
+        sourceLocation: expect.objectContaining({
+          path: expect.stringContaining("Searchable.spec.ts"),
+          line: expect.any(Number),
+          column: expect.any(Number),
+        }),
       });
     });
   });
@@ -120,6 +137,114 @@ describe("@Searchable decorator", () => {
       expect(productMetadata?.autoSync).toBe(true);
       expect(orderMetadata?.index).toBe("orders");
       expect(orderMetadata?.autoSync).toBe(false);
+    });
+
+    it("should reject equivalent duplicate index declarations independently of registration order", () => {
+      class AlphaEntity {}
+      class ZetaEntity {}
+
+      const registerAlpha = (): void => {
+        Searchable({ index: "shared" })(AlphaEntity);
+      };
+      const registerZeta = (): void => {
+        Searchable({ index: "shared" })(ZetaEntity);
+      };
+      const registerInOrder = (registrations: readonly (() => void)[]): unknown => {
+        MetadataStorage.clear();
+        try {
+          registrations.forEach((register) => register());
+          return undefined;
+        } catch (error) {
+          return error;
+        }
+      };
+
+      const alphaFirst = registerInOrder([registerAlpha, registerZeta]);
+      const zetaFirst = registerInOrder([registerZeta, registerAlpha]);
+
+      expect(alphaFirst).toMatchObject({
+        code: "search-core/searchable-index-conflict",
+        extensions: {
+          indexName: "shared",
+          declarations: [
+            {
+              targetName: "AlphaEntity",
+              sourceLocation: expect.objectContaining({
+                path: expect.stringContaining("Searchable.spec.ts"),
+              }),
+            },
+            {
+              targetName: "ZetaEntity",
+              sourceLocation: expect.objectContaining({
+                path: expect.stringContaining("Searchable.spec.ts"),
+              }),
+            },
+          ],
+        },
+      });
+      expect(zetaFirst).toEqual(alphaFirst);
+    });
+
+    it("should capture each application location when reusing a decorator", () => {
+      const decorate = Searchable({ index: "shared" });
+      class AlphaEntity {}
+      class ZetaEntity {}
+
+      decorate(AlphaEntity);
+
+      let conflict: SearchableIndexConflictProblem | undefined;
+      try {
+        decorate(ZetaEntity);
+      } catch (error) {
+        if (!(error instanceof SearchableIndexConflictProblem)) throw error;
+        conflict = error;
+      }
+
+      expect(conflict).toBeDefined();
+      const declarations = conflict?.extensions?.declarations as
+        | readonly SearchableIndexDeclaration[]
+        | undefined;
+      expect(declarations?.map((declaration) => declaration.targetName)).toEqual([
+        "AlphaEntity",
+        "ZetaEntity",
+      ]);
+      expect(
+        new Set(declarations?.map((declaration) => declaration.sourceLocation?.line)).size,
+      ).toBe(2);
+    });
+
+    it("should select the first conflicting index by code-unit order", () => {
+      for (const [index, target] of [
+        ["ä", class UmlautOne {}],
+        ["z", class ZetaOne {}],
+        ["ä", class UmlautTwo {}],
+        ["z", class ZetaTwo {}],
+      ] as const) {
+        MetadataStorage.define(SEARCHABLE_METADATA, target, {
+          index,
+          autoSync: false,
+          target,
+        });
+      }
+
+      expect(compileSearchableMetadataRegistry).toThrowError(
+        expect.objectContaining({
+          code: "search-core/searchable-index-conflict",
+          extensions: expect.objectContaining({ indexName: "z" }),
+        }),
+      );
+    });
+  });
+
+  describe("source locations", () => {
+    it.each([
+      ["Unix", "at applyDecorator (/app/models/User.ts:12:34)", "/app/models/User.ts"],
+      ["file URL", "at applyDecorator (file:///app/models/User.ts:12:34)", "/app/models/User.ts"],
+      ["Windows", "at applyDecorator (C:\\app\\models\\User.ts:12:34)", "C:\\app\\models\\User.ts"],
+    ])("should parse %s V8 stack frames", (_kind, frame, path) => {
+      const stack = ["Error", "at SearchableMetadataRegistry (/internal.ts:1:1)", frame].join("\n");
+
+      expect(findSearchableSourceLocation(stack)).toEqual({ path, line: 12, column: 34 });
     });
   });
 });

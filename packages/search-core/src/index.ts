@@ -12,7 +12,12 @@ export { SEARCH_FIELD_METADATA, SEARCHABLE_METADATA } from "./libs/decorators/co
 /**
  * 검색 대상 클래스에 사용하는 메타데이터와 옵션 타입입니다.
  */
-export type { SearchableMetadata, SearchableOptions } from "./libs/decorators/Searchable";
+export type {
+  SearchableIndexDeclaration,
+  SearchableMetadata,
+  SearchableOptions,
+  SearchableSourceLocation,
+} from "./libs/decorators/Searchable";
 
 /**
  * 클래스를 검색 인덱스와 연결하는 데코레이터와 메타데이터 조회 유틸리티입니다.
@@ -41,6 +46,7 @@ export {
   IndexNotFoundProblem,
   MissingTenantProblem,
   SearchCapabilityUnavailableProblem,
+  SearchableIndexConflictProblem,
   SearchSyncIdentityConflictProblem,
   StrategyUnavailableProblem,
   TransformNotFoundProblem,

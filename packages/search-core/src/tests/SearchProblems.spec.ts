@@ -1,14 +1,76 @@
+import { Container } from "@croco/framework-context";
 import { ProblemCategory } from "@croco/problems-core";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
   IndexNotFoundProblem,
   MissingTenantProblem,
+  SearchableIndexConflictProblem,
   SearchSyncIdentityConflictProblem,
   StrategyUnavailableProblem,
   TransformNotFoundProblem,
 } from "../libs/problems/SearchProblems";
 
 describe("SearchProblems", () => {
+  beforeEach(() => {
+    Container.reset();
+  });
+
+  describe("SearchableIndexConflictProblem", () => {
+    it("exposes deterministic declaration evidence", () => {
+      const problem = new SearchableIndexConflictProblem("users", [
+        {
+          targetName: "ZetaEntity",
+          sourceLocation: { path: "/app/zeta.ts", line: 20, column: 3 },
+        },
+        {
+          targetName: "AlphaEntity",
+          sourceLocation: { path: "/app/alpha.ts", line: 10, column: 2 },
+        },
+      ]);
+
+      expect(problem.code).toBe("search-core/searchable-index-conflict");
+      expect(problem.category).toBe(ProblemCategory.Conflict);
+      expect(problem.status).toBe(409);
+      expect(problem.extensions).toEqual({
+        indexName: "users",
+        declarations: [
+          {
+            targetName: "AlphaEntity",
+            sourceLocation: { path: "/app/alpha.ts", line: 10, column: 2 },
+          },
+          {
+            targetName: "ZetaEntity",
+            sourceLocation: { path: "/app/zeta.ts", line: 20, column: 3 },
+          },
+        ],
+      });
+    });
+
+    it("sorts declaration paths by locale-independent code units", () => {
+      const problem = new SearchableIndexConflictProblem("users", [
+        {
+          targetName: "UmlautEntity",
+          sourceLocation: { path: "/app/ä.ts", line: 10, column: 2 },
+        },
+        {
+          targetName: "ZetaEntity",
+          sourceLocation: { path: "/app/z.ts", line: 10, column: 2 },
+        },
+      ]);
+
+      expect(problem.extensions?.declarations).toEqual([
+        {
+          targetName: "ZetaEntity",
+          sourceLocation: { path: "/app/z.ts", line: 10, column: 2 },
+        },
+        {
+          targetName: "UmlautEntity",
+          sourceLocation: { path: "/app/ä.ts", line: 10, column: 2 },
+        },
+      ]);
+    });
+  });
+
   describe("MissingTenantProblem", () => {
     it("has correct code and category", () => {
       const problem = new MissingTenantProblem("search");

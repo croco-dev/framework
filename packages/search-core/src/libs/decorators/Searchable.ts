@@ -1,26 +1,30 @@
 import { MetadataStorage } from "@croco/framework-context";
 import { SEARCHABLE_METADATA } from "./constants";
+import {
+  assertSearchableIndexAvailable,
+  findSearchableSourceLocation,
+} from "./SearchableMetadataRegistry";
+import type { SearchableMetadata, SearchableOptions } from "./SearchableTypes";
 
-export type SearchableOptions = {
-  index?: string;
-  autoSync?: boolean;
-};
-
-export type SearchableMetadata = {
-  index: string;
-  autoSync: boolean;
-  target: Function;
-};
+export type {
+  SearchableIndexDeclaration,
+  SearchableMetadata,
+  SearchableOptions,
+  SearchableSourceLocation,
+} from "./SearchableTypes";
 
 export { SEARCHABLE_METADATA };
 
 export function Searchable(options: SearchableOptions = {}): ClassDecorator {
   return (target: Function) => {
+    const sourceLocation = findSearchableSourceLocation(new Error().stack);
     const metadata: SearchableMetadata = {
       index: options.index ?? target.name.toLowerCase(),
       autoSync: options.autoSync ?? false,
       target,
+      ...(sourceLocation ? { sourceLocation } : {}),
     };
+    assertSearchableIndexAvailable(metadata);
     MetadataStorage.define(SEARCHABLE_METADATA, target, metadata);
   };
 }

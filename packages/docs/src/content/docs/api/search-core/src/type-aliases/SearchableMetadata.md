@@ -23,6 +23,12 @@ title: "SearchableMetadata"
 
 ---
 
+### sourceLocation?
+
+> `optional` **sourceLocation?**: [`SearchableSourceLocation`](/api/search-core/src/type-aliases/searchablesourcelocation/)
+
+---
+
 ### target
 
 > **target**: `Function`

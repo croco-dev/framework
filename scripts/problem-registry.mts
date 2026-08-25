@@ -2334,6 +2334,15 @@ const recoveryMetadataByCode = {
     redactionPolicy: "safe-message",
     severity: "warning",
   }),
+  "search-core/searchable-index-conflict": recovery({
+    cause: "More than one searchable metadata declaration owns the same index name.",
+    userAction: "Give every searchable declaration a unique index name, then restart registration.",
+    operatorAction:
+      "Use extensions.declarations to find both conflicting source locations and remove or rename one declaration.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "outbox-core/failure-metadata-missing": recovery({
     cause:
       "A dispatcher attempted to mark an outbox record failed without the required retry metadata extensions.",

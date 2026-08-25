@@ -1,13 +1,8 @@
 import type { EventHandler } from "@croco/events-core";
 import { RegisterEventHandler } from "@croco/events-core";
-import {
-  Container,
-  Context,
-  type ILogger,
-  LOGGER_TOKEN,
-  MetadataStorage,
-} from "@croco/framework-context";
-import { SEARCHABLE_METADATA, type SearchableMetadata } from "../decorators/Searchable";
+import { Container, Context, type ILogger, LOGGER_TOKEN } from "@croco/framework-context";
+import type { SearchableMetadata } from "../decorators/Searchable";
+import { compileSearchableMetadataRegistry } from "../decorators/SearchableMetadataRegistry";
 import { DocumentDeletedEvent, DocumentIndexedEvent, SearchSyncFailedEvent } from "../events";
 import { SearchSyncIdentityConflictProblem } from "../problems/SearchProblems";
 
@@ -224,8 +219,6 @@ export class SearchAutoSync implements EventHandler<DocumentIndexedEvent | Docum
   }
 
   private getSearchableMetadata(indexName: string): SearchableMetadata | undefined {
-    const allMetadata = MetadataStorage.getAll<SearchableMetadata>(SEARCHABLE_METADATA);
-    const entry = allMetadata.find((m) => m.value.index === indexName);
-    return entry?.value;
+    return compileSearchableMetadataRegistry().get(indexName);
   }
 }
