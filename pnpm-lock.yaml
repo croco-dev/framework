@@ -708,6 +708,9 @@ importers:
       '@croco/execution-core':
         specifier: workspace:*
         version: link:../execution-core
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
     devDependencies:
       tsup:
         specifier: ^8.0.0

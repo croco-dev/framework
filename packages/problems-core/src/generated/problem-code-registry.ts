@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 657,
+  problemCount: 658,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -1872,6 +1872,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 11,
           column: 5,
           kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "batch-core/invalid-chunk-size",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#batch-core-invalid-chunk-size",
+      recovery: {
+        cause:
+          "The batch Step or QStash execution configured chunkSize outside the positive safe-integer domain.",
+        userAction: "Set chunkSize to a positive safe integer, then restart the batch execution.",
+        operatorAction:
+          "Inspect receivedChunkSize and the Step or QStash execution configuration before restarting execution.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/batch-core/src/libs/ChunkSize.ts",
+          line: 5,
+          column: 3,
+          kind: "problem-class",
         },
       ],
     },

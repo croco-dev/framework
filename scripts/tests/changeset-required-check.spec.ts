@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -1222,6 +1222,33 @@ describe("changeset-required-check.mts", () => {
       ".changeset/public-api-snapshot.md",
       "---\n'@croco/public': patch\n---\n\nUpdate public API snapshot.\n",
       "chore: add public api changeset",
+    );
+
+    const result = runScript(repo);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain(
+      "changeset-required: changed changesets cover all affected publishable packages (passing)",
+    );
+  });
+
+  it("reads public API snapshots larger than the default subprocess buffer", () => {
+    const repo = createTempRepo();
+    checkoutBranch(repo, "fix/large-public-api-snapshot");
+    writePublicApiSnapshot(
+      repo,
+      Array.from({ length: 8_000 }, (_, index) => `export${index}`),
+    );
+    expect(statSync(join(repo, "public-api-surface.snapshot.json")).size).toBeGreaterThan(
+      1024 * 1024,
+    );
+    git(repo, ["add", "public-api-surface.snapshot.json"]);
+    git(repo, ["commit", "-m", "fix: expand public api snapshot"]);
+    commitFile(
+      repo,
+      ".changeset/large-public-api-snapshot.md",
+      "---\n'@croco/public': patch\n---\n\nExpand the public API snapshot.\n",
+      "chore: add large public api changeset",
     );
 
     const result = runScript(repo);

@@ -32,7 +32,8 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@croco/execution-core": "workspace:*"
+    "@croco/execution-core": "workspace:*",
+    "@croco/problems-core": "workspace:*"
   },
   "devDependencies": {
     "tsup": "^8.0.0",

@@ -4,6 +4,7 @@ import {
   type ExecutionInspectionManager,
   type ExecutionManager,
 } from "@croco/execution-core";
+import { assertValidChunkSize } from "./ChunkSize";
 import type { Checkpointable } from "./interfaces/ItemReader";
 import type { Step } from "./Step";
 import { createStepExecutionError } from "./StepFailure";
@@ -27,6 +28,7 @@ export class ChunkExecutor {
     step: Step<I, O>,
     options: ChunkExecutorOptions = {},
   ): Promise<void> {
+    assertValidChunkSize(step.chunkSize);
     const execution = await this.resolveExecution(executionId, options);
 
     // 2. Restore checkpoint if available

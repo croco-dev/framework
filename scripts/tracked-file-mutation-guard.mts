@@ -14,6 +14,7 @@ import {
 import { dirname, resolve } from "node:path";
 
 export const TRACKED_FILE_MUTATION_EXIT_CODE = 86;
+const GIT_MAX_BUFFER_BYTES = 16 * 1024 * 1024;
 
 type WorktreeState =
   | { readonly kind: "file"; readonly content: Buffer; readonly mode: number }
@@ -32,7 +33,14 @@ export type TrackedFileChange = {
 };
 
 function git(root: string, args: readonly string[]): Buffer {
-  const result = spawnSync("git", ["-C", root, ...args], { encoding: "buffer" });
+  const result = spawnSync("git", ["-C", root, ...args], {
+    encoding: "buffer",
+    maxBuffer: GIT_MAX_BUFFER_BYTES,
+  });
+  if (result.error)
+    throw new Error(`git ${args.join(" ")} failed: ${result.error.message}`, {
+      cause: result.error,
+    });
   if (result.status !== 0)
     throw new Error(`git ${args.join(" ")} failed: ${result.stderr.toString("utf8").trim()}`);
   return result.stdout;

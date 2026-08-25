@@ -523,8 +523,9 @@ describe("QStashChunkExecutor continuation execution", () => {
       await expect(
         harness.executor.executeChunk(execution.id, createStep(reader, writer, chunkSize)),
       ).rejects.toMatchObject({
-        code: "batch-qstash/invalid-publish-request",
-        detail: `QStash batch step.chunkSize must be a positive safe integer; received ${String(chunkSize)}.`,
+        code: "batch-core/invalid-chunk-size",
+        detail: `Batch step.chunkSize must be a positive safe integer; received ${String(chunkSize)}.`,
+        receivedChunkSize: String(chunkSize),
       });
 
       expect(claim).not.toHaveBeenCalled();

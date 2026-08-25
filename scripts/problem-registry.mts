@@ -1906,6 +1906,16 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "batch-core/invalid-chunk-size": recovery({
+    cause:
+      "The batch Step or QStash execution configured chunkSize outside the positive safe-integer domain.",
+    userAction: "Set chunkSize to a positive safe integer, then restart the batch execution.",
+    operatorAction:
+      "Inspect receivedChunkSize and the Step or QStash execution configuration before restarting execution.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
   "auth-clerk/webhook-delivery-failed": recovery({
     cause:
       "The idempotency store contains a terminal failure for this Clerk deliveryId and eventType.",
