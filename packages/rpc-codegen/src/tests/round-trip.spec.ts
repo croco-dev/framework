@@ -109,7 +109,13 @@ describe("rpc-codegen round trip", () => {
       path.join(outDir, "rpc.ts"),
       path.join(outDir, "index.ts"),
     ]);
-    expect(fs.readdirSync(outDir).sort()).toEqual(["index.ts", "order.ts", "rpc.ts", "user.ts"]);
+    expect(fs.readdirSync(outDir).sort()).toEqual([
+      ".croco-rpc-codegen.json",
+      "index.ts",
+      "order.ts",
+      "rpc.ts",
+      "user.ts",
+    ]);
 
     const userContent = fs.readFileSync(path.join(outDir, "user.ts"), "utf-8");
     const orderContent = fs.readFileSync(path.join(outDir, "order.ts"), "utf-8");

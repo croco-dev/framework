@@ -1,0 +1,5 @@
+{
+  "schemaVersion": "croco.rpc-codegen-ownership.v1",
+  "files": ["index.ts"],
+  "directories": []
+}

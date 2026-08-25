@@ -121,6 +121,19 @@ class RpcCodegenUnsupportedFormSchemaProblem extends Problem {
   }
 }
 
+const GENERATED_CLIENT_OWNERSHIP_SCHEMA_VERSION = "croco.rpc-codegen-ownership.v1";
+const GENERATED_CLIENT_OWNERSHIP_MANIFEST_NAME = ".croco-rpc-codegen.json";
+const MAX_LEGACY_GENERATED_FILE_BYTES = 16 * 1024 * 1024;
+
+type GeneratedClientOwnership = {
+  readonly files: readonly string[];
+  readonly directories: readonly string[];
+};
+
+type GeneratedClientOwnershipManifest = GeneratedClientOwnership & {
+  readonly schemaVersion: typeof GENERATED_CLIENT_OWNERSHIP_SCHEMA_VERSION;
+};
+
 export function generateClientFilesFromContractGraph(
   graph: ContractGraph,
   outDir: string,
@@ -128,15 +141,18 @@ export function generateClientFilesFromContractGraph(
 ): string[] {
   assertContractGraphHasNoErrors(graph);
 
-  const files = generateClientFiles([...graph.routes], outDir, options);
+  const files = emitClientFiles([...graph.routes], outDir, options);
+  const generatedContents = new Map(files.map((file) => [file.filePath, file.content]));
 
   assertContractGraphConsumerRouteCoverage(
     graph,
     "rpc-client",
-    collectGeneratedRpcConsumerRoutes(files),
+    collectGeneratedRpcConsumerRoutes([...generatedContents.keys()], generatedContents),
   );
 
-  return files;
+  writeGeneratedClientFiles(files, outDir);
+
+  return files.map((file) => file.filePath);
 }
 
 export function generateClientFiles(
@@ -146,6 +162,39 @@ export function generateClientFiles(
 ): string[] {
   const files = emitClientFiles(routes, outDir, options);
 
+  writeGeneratedClientFiles(files, outDir);
+
+  return files.map((file) => file.filePath);
+}
+
+function writeGeneratedClientFiles(files: readonly GeneratedClientFile[], outDir: string): void {
+  const previousOwnership = readGeneratedClientOwnershipManifest(outDir);
+  const currentOwnedPaths = collectOwnedOutputPaths(files, outDir);
+  const currentOwnedDirectories = collectOwnedOutputDirectories(
+    currentOwnedPaths,
+    previousOwnership.directories,
+    outDir,
+  );
+  const staleOwnedPaths = previousOwnership.files.filter(
+    (filePath) => !currentOwnedPaths.has(filePath),
+  );
+  const staleOwnedDirectories = previousOwnership.directories.filter(
+    (directory) => !currentOwnedDirectories.has(directory),
+  );
+
+  assertNoUnownedOutputCollisions(files, outDir, previousOwnership.files);
+  assertOwnedOutputDirectoriesCanBeRemoved(outDir, staleOwnedDirectories);
+
+  for (const filePath of staleOwnedPaths) {
+    assertOwnedFilePathDoesNotTraverseSymlink(outDir, filePath);
+  }
+
+  for (const filePath of staleOwnedPaths) {
+    removeOwnedOutputFile(outDir, filePath);
+  }
+
+  removeOwnedOutputDirectories(outDir, staleOwnedDirectories);
+
   fs.mkdirSync(outDir, { recursive: true });
 
   for (const file of files) {
@@ -153,7 +202,10 @@ export function generateClientFiles(
     fs.writeFileSync(file.filePath, file.content);
   }
 
-  return files.map((file) => file.filePath);
+  fs.writeFileSync(
+    getGeneratedClientOwnershipManifestPath(outDir),
+    serializeGeneratedClientOwnershipManifest(currentOwnedPaths, currentOwnedDirectories),
+  );
 }
 
 function emitClientFiles(
@@ -768,7 +820,10 @@ function parseGeneratedProblemDeclaration(declaration: string): {
   for (const match of declaration.matchAll(fieldPattern)) {
     const name = match[1];
     const rawValue = match[2];
-    fields.set(name, parseGeneratedProblemValue(rawValue));
+
+    if (name && rawValue) {
+      fields.set(name, parseGeneratedProblemValue(rawValue));
+    }
   }
 
   return {
@@ -3562,6 +3617,7 @@ function compareClientFiles(
   outDir: string,
 ): readonly GeneratedClientDrift[] {
   const expectedPaths = new Set(expectedFiles.map((file) => path.resolve(file.filePath)));
+  const ownership = readGeneratedClientOwnershipManifest(outDir);
   const drifts: GeneratedClientDrift[] = [];
 
   for (const file of expectedFiles) {
@@ -3578,8 +3634,10 @@ function compareClientFiles(
     }
   }
 
-  for (const filePath of collectOutputFiles(outDir)) {
-    if (!expectedPaths.has(path.resolve(filePath))) {
+  for (const ownedPath of ownership.files) {
+    const filePath = resolveOwnedOutputPath(outDir, ownedPath);
+
+    if (fs.existsSync(filePath) && !expectedPaths.has(path.resolve(filePath))) {
       drifts.push({ filePath, status: "unexpected" });
     }
   }
@@ -3589,16 +3647,433 @@ function compareClientFiles(
   );
 }
 
-function collectOutputFiles(directory: string): string[] {
-  if (!fs.existsSync(directory)) {
+function collectOwnedOutputPaths(
+  files: readonly GeneratedClientFile[],
+  outDir: string,
+): ReadonlySet<string> {
+  const outputRoot = path.resolve(outDir);
+  const portablePaths = new Map<string, string>();
+  const ownedPaths: string[] = [];
+
+  for (const file of files) {
+    const ownedPath = getOwnedOutputPath(file.filePath, outputRoot);
+
+    if (!ownedPath) {
+      continue;
+    }
+
+    if (ownedPath.toLowerCase() === GENERATED_CLIENT_OWNERSHIP_MANIFEST_NAME) {
+      throw new RpcCodegenContractProblem(
+        `Generated output path '${file.filePath}' conflicts with the reserved ownership manifest. Choose a different frontend action manifest path.`,
+      );
+    }
+
+    const portablePath = ownedPath.toLowerCase();
+    const existingPath = portablePaths.get(portablePath);
+
+    if (existingPath && existingPath !== ownedPath) {
+      throw new RpcCodegenContractProblem(
+        `Generated output paths '${existingPath}' and '${ownedPath}' differ only by case and cannot be emitted portably. Rename one route domain.`,
+      );
+    }
+
+    portablePaths.set(portablePath, ownedPath);
+    ownedPaths.push(ownedPath);
+  }
+
+  return new Set(ownedPaths.sort());
+}
+
+function readGeneratedClientOwnershipManifest(outDir: string): GeneratedClientOwnership {
+  const manifestPath = getGeneratedClientOwnershipManifestPath(outDir);
+  const manifestStat = fs.lstatSync(manifestPath, { throwIfNoEntry: false });
+
+  if (!manifestStat) {
+    return { files: collectLegacyGeneratedClientPaths(outDir), directories: [] };
+  }
+
+  if (manifestStat.isSymbolicLink()) {
+    throw new RpcCodegenContractProblem(
+      `Generated output ownership manifest '${manifestPath}' must not be a symbolic link. Replace it with a regular file before regenerating the RPC client.`,
+    );
+  }
+
+  let manifest: unknown;
+
+  try {
+    manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  } catch {
+    throw new RpcCodegenContractProblem(
+      `Cannot read generated output ownership manifest '${manifestPath}'. Remove the invalid manifest and regenerate the RPC client.`,
+    );
+  }
+
+  if (!isGeneratedClientOwnershipManifest(manifest)) {
+    throw new RpcCodegenContractProblem(
+      `Generated output ownership manifest '${manifestPath}' is invalid. Remove the invalid manifest and regenerate the RPC client.`,
+    );
+  }
+
+  return {
+    files: collectValidatedOwnedManifestEntries(manifest.files, "path", manifestPath),
+    directories: collectValidatedOwnedManifestEntries(
+      manifest.directories,
+      "directory",
+      manifestPath,
+    ),
+  };
+}
+
+function collectValidatedOwnedManifestEntries(
+  entries: readonly string[],
+  entryKind: "path" | "directory",
+  manifestPath: string,
+): readonly string[] {
+  const uniqueEntries = new Set<string>();
+
+  for (const entry of entries) {
+    assertSafeOwnedOutputPath(entry, manifestPath);
+
+    if (uniqueEntries.has(entry)) {
+      throw new RpcCodegenContractProblem(
+        `Generated output ownership manifest '${manifestPath}' contains duplicate ${entryKind} '${entry}'. Remove the invalid manifest and regenerate the RPC client.`,
+      );
+    }
+
+    uniqueEntries.add(entry);
+  }
+
+  return [...uniqueEntries].sort();
+}
+
+function assertNoUnownedOutputCollisions(
+  files: readonly GeneratedClientFile[],
+  outDir: string,
+  previousOwnedPaths: readonly string[],
+): void {
+  for (const file of files) {
+    const ownedPath = getOwnedOutputPath(file.filePath, outDir);
+
+    if (!ownedPath) {
+      continue;
+    }
+
+    assertOwnedFilePathDoesNotTraverseSymlink(outDir, ownedPath);
+
+    const existingStat = fs.lstatSync(file.filePath, { throwIfNoEntry: false });
+
+    if (
+      !existingStat ||
+      isPreviouslyOwnedFile(file.filePath, ownedPath, outDir, previousOwnedPaths)
+    ) {
+      continue;
+    }
+
+    const actual = normalizeGeneratedContent(fs.readFileSync(file.filePath, "utf8"));
+    const expected = normalizeGeneratedContent(file.content);
+
+    if (actual === expected) {
+      continue;
+    }
+
+    throw new RpcCodegenContractProblem(
+      `Generated output path '${file.filePath}' already contains an unrelated file. Move that file or choose a different RPC client output directory before regenerating.`,
+    );
+  }
+}
+
+function isPreviouslyOwnedFile(
+  filePath: string,
+  ownedPath: string,
+  outDir: string,
+  previousOwnedPaths: readonly string[],
+): boolean {
+  if (previousOwnedPaths.includes(ownedPath)) {
+    return true;
+  }
+
+  const currentStat = fs.statSync(filePath);
+
+  return previousOwnedPaths.some((previousOwnedPath) => {
+    const previousPath = resolveOwnedOutputPath(outDir, previousOwnedPath);
+    const previousStat = fs.statSync(previousPath, { throwIfNoEntry: false });
+
+    return previousStat?.dev === currentStat.dev && previousStat.ino === currentStat.ino;
+  });
+}
+
+function getOwnedOutputPath(filePath: string, outDir: string): string | null {
+  const relativePath = path.relative(path.resolve(outDir), path.resolve(filePath));
+
+  if (
+    relativePath === "" ||
+    path.isAbsolute(relativePath) ||
+    relativePath.startsWith(`..${path.sep}`)
+  ) {
+    return null;
+  }
+
+  return relativePath.split(path.sep).join("/");
+}
+
+function collectLegacyGeneratedClientPaths(outDir: string): readonly string[] {
+  const rpcPath = path.join(outDir, "rpc.ts");
+  const indexPath = path.join(outDir, "index.ts");
+  const rpcContent = readLegacyGeneratedCandidate(rpcPath);
+  const indexContent = readLegacyGeneratedCandidate(indexPath);
+
+  if (!rpcContent && !indexContent) {
     return [];
   }
 
-  return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-    const entryPath = path.join(directory, entry.name);
+  if (!rpcContent || !indexContent || !isLegacyRpcSupport(rpcContent)) {
+    throw new RpcCodegenContractProblem(
+      `Cannot recover generated output ownership in '${outDir}' because the legacy rpc.ts and index.ts topology is incomplete. Restore both generated files or remove the legacy generated outputs before regenerating.`,
+    );
+  }
 
-    return entry.isDirectory() ? collectOutputFiles(entryPath) : [entryPath];
-  });
+  const exportedModules = parseLegacyGeneratedIndex(indexContent);
+
+  if (!exportedModules) {
+    throw new RpcCodegenContractProblem(
+      `Cannot recover generated output ownership in '${outDir}' because the legacy index.ts is not a complete generated RPC client barrel. Restore the generated index or remove the legacy generated outputs before regenerating.`,
+    );
+  }
+
+  const ownedPaths = new Set(["index.ts", "rpc.ts"]);
+
+  for (const moduleName of exportedModules) {
+    const fileName = `${moduleName}.ts`;
+    const content = readLegacyGeneratedCandidate(path.join(outDir, fileName));
+
+    if (!content || !isLegacyGeneratedModule(fileName, content)) {
+      throw new RpcCodegenContractProblem(
+        `Cannot recover generated output ownership in '${outDir}' because index.ts references incomplete generated module '${fileName}'. Restore that generated file or remove the legacy generated outputs before regenerating.`,
+      );
+    }
+
+    ownedPaths.add(fileName);
+  }
+
+  return [...ownedPaths].sort();
+}
+
+function readLegacyGeneratedCandidate(filePath: string): string | null {
+  const stats = fs.lstatSync(filePath, { throwIfNoEntry: false });
+
+  if (!stats?.isFile() || stats.size > MAX_LEGACY_GENERATED_FILE_BYTES) {
+    return null;
+  }
+
+  return fs.readFileSync(filePath, "utf8");
+}
+
+function isLegacyRpcSupport(content: string): boolean {
+  return (
+    content.includes("export type RpcClientRequestOptions =") &&
+    content.includes("export function createRpcClientRequest(") &&
+    hasLegacyRpcProblemRuntime(content)
+  );
+}
+
+function hasLegacyRpcProblemRuntime(content: string): boolean {
+  const hasInlineProblemRuntime = content.includes(
+    "export class RpcClientProblemError extends Error",
+  );
+  const hasFrontendProblemRuntime =
+    content.includes("ProblemClientError as RpcClientProblemError,") &&
+    content.includes("from '@croco/frontend-problems';");
+
+  return hasInlineProblemRuntime || hasFrontendProblemRuntime;
+}
+
+function parseLegacyGeneratedIndex(content: string): readonly string[] | null {
+  const lines = content.split("\n").filter((line) => line.length > 0);
+
+  if (lines[0] !== "export * from './rpc';") {
+    return null;
+  }
+
+  const modules = new Set<string>();
+
+  for (const line of lines.slice(1)) {
+    const match =
+      /^export (?:\{[^}]+\}|\* as [A-Za-z_$][\w$]*) from '\.\/([A-Za-z0-9_$-]+)';$/.exec(line);
+
+    if (!match?.[1]) {
+      return null;
+    }
+
+    modules.add(match[1]);
+  }
+
+  return [...modules].filter((moduleName) => moduleName !== "rpc").sort();
+}
+
+function isLegacyGeneratedModule(fileName: string, content: string): boolean {
+  if (fileName === "manifest-source.ts") {
+    return (
+      content.includes("export const crocoManifestBundleSource = {") &&
+      content.includes("schemaVersion: 'croco.rpc.manifest-source.v1'")
+    );
+  }
+
+  return (
+    content.includes("from './rpc';") &&
+    /export const [A-Za-z_$][\w$]*ContractRoutes = \[/.test(content) &&
+    /export const [A-Za-z_$][\w$]*Client = \{/.test(content)
+  );
+}
+
+function isGeneratedClientOwnershipManifest(
+  manifest: unknown,
+): manifest is GeneratedClientOwnershipManifest {
+  if (typeof manifest !== "object" || manifest === null) {
+    return false;
+  }
+
+  const candidate = manifest as Record<string, unknown>;
+  const files = candidate["files"];
+  const directories = candidate["directories"];
+
+  return (
+    candidate["schemaVersion"] === GENERATED_CLIENT_OWNERSHIP_SCHEMA_VERSION &&
+    Array.isArray(files) &&
+    files.every((filePath) => typeof filePath === "string") &&
+    Array.isArray(directories) &&
+    directories.every((directory) => typeof directory === "string")
+  );
+}
+
+function collectOwnedOutputDirectories(
+  ownedPaths: ReadonlySet<string>,
+  previousOwnedDirectories: readonly string[],
+  outDir: string,
+): ReadonlySet<string> {
+  const previousDirectories = new Set(previousOwnedDirectories);
+  const ownedDirectories = new Set<string>();
+
+  for (const ownedPath of ownedPaths) {
+    let directory = path.posix.dirname(ownedPath);
+
+    while (directory !== ".") {
+      const directoryPath = resolveOwnedOutputPath(outDir, directory);
+
+      if (
+        previousDirectories.has(directory) ||
+        !fs.lstatSync(directoryPath, { throwIfNoEntry: false })
+      ) {
+        ownedDirectories.add(directory);
+      }
+
+      directory = path.posix.dirname(directory);
+    }
+  }
+
+  return ownedDirectories;
+}
+
+function assertSafeOwnedOutputPath(filePath: string, manifestPath: string): void {
+  if (
+    filePath.length === 0 ||
+    filePath.includes("\\") ||
+    path.posix.isAbsolute(filePath) ||
+    filePath === ".." ||
+    filePath.startsWith("../") ||
+    path.posix.normalize(filePath) !== filePath ||
+    filePath === GENERATED_CLIENT_OWNERSHIP_MANIFEST_NAME
+  ) {
+    throw new RpcCodegenContractProblem(
+      `Generated output ownership manifest '${manifestPath}' contains unsafe path '${filePath}'. Remove the invalid manifest and regenerate the RPC client.`,
+    );
+  }
+}
+
+function assertOwnedFilePathDoesNotTraverseSymlink(outDir: string, filePath: string): void {
+  let currentPath = path.resolve(outDir);
+  const manifestPath = getGeneratedClientOwnershipManifestPath(outDir);
+  const segments = filePath.split("/");
+
+  for (const segment of segments.slice(0, -1)) {
+    currentPath = path.join(currentPath, segment);
+    const currentStat = fs.lstatSync(currentPath, { throwIfNoEntry: false });
+
+    if (currentStat?.isSymbolicLink()) {
+      throw new RpcCodegenContractProblem(
+        `Generated output ownership manifest '${manifestPath}' path '${filePath}' traverses symbolic link '${currentPath}'. Replace the symbolic link with an output directory before regenerating the RPC client.`,
+      );
+    }
+
+    if (currentStat && !currentStat.isDirectory()) {
+      throw new RpcCodegenContractProblem(
+        `Generated output ownership manifest '${manifestPath}' path '${filePath}' traverses non-directory '${currentPath}'. Replace it with an output directory before regenerating the RPC client.`,
+      );
+    }
+  }
+
+  const ownedPath = resolveOwnedOutputPath(outDir, filePath);
+  const ownedPathStat = fs.lstatSync(ownedPath, { throwIfNoEntry: false });
+
+  if (ownedPathStat?.isSymbolicLink()) {
+    throw new RpcCodegenContractProblem(
+      `Generated output ownership manifest '${manifestPath}' path '${filePath}' must not be a symbolic link. Replace it with a regular output file before regenerating the RPC client.`,
+    );
+  }
+
+  if (ownedPathStat?.isDirectory()) {
+    throw new RpcCodegenContractProblem(
+      `Generated output ownership manifest '${manifestPath}' path '${filePath}' refers to a directory. Remove the invalid manifest and regenerate the RPC client.`,
+    );
+  }
+}
+
+function removeOwnedOutputFile(outDir: string, filePath: string): void {
+  const absolutePath = resolveOwnedOutputPath(outDir, filePath);
+
+  fs.rmSync(absolutePath, { force: true });
+}
+
+function removeOwnedOutputDirectories(outDir: string, directories: readonly string[]): void {
+  for (const directory of [...directories].sort((left, right) => right.length - left.length)) {
+    const directoryPath = resolveOwnedOutputPath(outDir, directory);
+
+    if (fs.existsSync(directoryPath) && fs.readdirSync(directoryPath).length === 0) {
+      fs.rmdirSync(directoryPath);
+    }
+  }
+}
+
+function assertOwnedOutputDirectoriesCanBeRemoved(
+  outDir: string,
+  directories: readonly string[],
+): void {
+  const manifestPath = getGeneratedClientOwnershipManifestPath(outDir);
+
+  for (const directory of directories) {
+    assertSafeOwnedOutputPath(directory, manifestPath);
+    assertOwnedFilePathDoesNotTraverseSymlink(outDir, `${directory}/.croco-owned-directory`);
+  }
+}
+
+function resolveOwnedOutputPath(outDir: string, filePath: string): string {
+  return path.join(path.resolve(outDir), ...filePath.split("/"));
+}
+
+function getGeneratedClientOwnershipManifestPath(outDir: string): string {
+  return path.join(outDir, GENERATED_CLIENT_OWNERSHIP_MANIFEST_NAME);
+}
+
+function serializeGeneratedClientOwnershipManifest(
+  ownedPaths: ReadonlySet<string>,
+  ownedDirectories: ReadonlySet<string>,
+): string {
+  const manifest: GeneratedClientOwnershipManifest = {
+    schemaVersion: GENERATED_CLIENT_OWNERSHIP_SCHEMA_VERSION,
+    files: [...ownedPaths].sort(),
+    directories: [...ownedDirectories].sort(),
+  };
+
+  return `${JSON.stringify(manifest, null, 2)}\n`;
 }
 
 function normalizeGeneratedContent(content: string): string {

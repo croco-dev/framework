@@ -179,6 +179,14 @@ function checkSpaBeSplitStructure() {
 
   checkFileExists("spa-be-split", "libs", "shared", "provider-rpc", "package.json.hbs");
   checkFileExists("spa-be-split", "libs", "shared", "provider-rpc", "tsconfig.json.hbs");
+  checkFileExists(
+    "spa-be-split",
+    "libs",
+    "shared",
+    "provider-rpc",
+    "src",
+    ".croco-rpc-codegen.json",
+  );
 
   const rootPackageJson = readJsonTemplate("spa-be-split", "package.json.hbs");
   expect(rootPackageJson).toMatchObject({
@@ -748,6 +756,7 @@ function checkSaasStructure() {
   checkFileExists("saas", "apps", "api-server", "src", "tests", "FileBillableUsageJournal.spec.ts");
   checkFileExists("saas", "apps", "api-server", "src", "demo", "ops-smoke.ts");
   checkFileExists("saas", "libs", "shared", "provider-rpc", "package.json.hbs");
+  checkFileExists("saas", "libs", "shared", "provider-rpc", "src", ".croco-rpc-codegen.json");
 
   const rootPackageJson = readJsonTemplate("saas", "package.json.hbs");
   expect(rootPackageJson).toMatchObject({
