@@ -2,7 +2,7 @@ import React from "react";
 import type { RuntimeContext } from "@croco/meta-vite";
 
 type PageProps = {
-  readonly request: Request;
+  readonly request?: Request;
   readonly context?: RuntimeContext;
 };
 

@@ -149,7 +149,7 @@ function createHydrationRoot(serverHtml: string): HTMLElement {
   const rootElement = window.document.getElementById("root");
   assert(rootElement, "Hydration smoke root was not created");
 
-  return rootElement;
+  return rootElement as unknown as HTMLElement;
 }
 
 async function assertBrowserHydrationSmoke(): Promise<void> {
@@ -208,7 +208,7 @@ function createExecutionContext(): ExecutionContext {
   return {
     waitUntil: () => {},
     passThroughOnException: () => {},
-  };
+  } as unknown as ExecutionContext;
 }
 
 async function readFirstChunk(response: Response): Promise<string> {
@@ -333,7 +333,7 @@ async function main(): Promise<void> {
 
   const missingAssets = {
     fetch: async () => new Response("missing", { status: 404 }),
-  } as Fetcher;
+  } as unknown as Fetcher;
   const apiBinding = {
     fetch: async (request: Request) => {
       const pathname = new URL(request.url).pathname;
@@ -350,7 +350,7 @@ async function main(): Promise<void> {
         traceparent: request.headers.get("traceparent"),
       });
     },
-  } as Fetcher;
+  } as unknown as Fetcher;
   const workerEnv: SsrWorkerEnv = {
     ASSETS: missingAssets,
     API_WORKER: apiBinding,
@@ -363,7 +363,7 @@ async function main(): Promise<void> {
       ...workerEnv,
       ASSETS: {
         fetch: async () => new Response("served by ASSETS", { status: 200 }),
-      } as Fetcher,
+      } as unknown as Fetcher,
     },
     createExecutionContext(),
   );
@@ -446,7 +446,7 @@ async function main(): Promise<void> {
   const apiWorker = {
     fetch: async (request: Request) =>
       Response.json({ ok: true, pathname: new URL(request.url).pathname }),
-  };
+  } as unknown as Fetcher;
   const assets = {
     fetch: async (request: Request) => {
       const pathname = new URL(request.url).pathname;
@@ -457,11 +457,8 @@ async function main(): Promise<void> {
 
       return new Response("missing", { status: 404 });
     },
-  };
-  const executionContext = {
-    passThroughOnException() {},
-    waitUntil(_promise: Promise<unknown>) {},
-  };
+  } as unknown as Fetcher;
+  const executionContext = createExecutionContext();
 
   await expectText(
     await workerHandler(
@@ -507,7 +504,7 @@ async function main(): Promise<void> {
   const streamingHandler = createSsrHandler({
     renderServer: {
       handle: async () => new Response(createStream("streamed worker page")),
-    },
+    } as unknown as RenderServer,
   });
   const workerStreamingResponse = await streamingHandler(
     new Request("https://presentation.test/stream"),

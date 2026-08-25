@@ -11,12 +11,15 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { GOAL_SPECS } from "../../packages/create-croco-app/src/goals.ts";
+import { SUPPORTED_CREATE_CROCO_APP_CHOICES } from "../../packages/create-croco-app/src/supported-options.ts";
 import {
   assertGeneratedBrowserWorkflowLeastPrivilege,
   assertGeneratedVerificationValidationsAreReadOnly,
   markWorkspacePackageClosureBuilt,
   assertGeneratedPresentationProfileMatchesCatalog,
   createSaasMonetizationCanarySource,
+  getGeneratedGoalSmokeCaseInputs,
   getGeneratedSmokeDependencyCaseInputs,
   hasCompleteTapTestEvidence,
   prepareGeneratedUnitEvidenceCapture,
@@ -1188,6 +1191,43 @@ describe("create-croco-app-generated-smoke dependency resolution", () => {
 });
 
 describe("create-croco-app generated smoke matrix", () => {
+  it("executes every supported goal manifest and declared quality gate", () => {
+    const goalCases = new Map(
+      getGeneratedGoalSmokeCaseInputs().map((smokeCase) => [smokeCase.goal, smokeCase]),
+    );
+
+    expect([...goalCases.keys()]).toEqual(SUPPORTED_CREATE_CROCO_APP_CHOICES.goals);
+    for (const goal of SUPPORTED_CREATE_CROCO_APP_CHOICES.goals) {
+      const smokeCase = goalCases.get(goal);
+      expect(smokeCase?.name).toBe(`goal-${goal}`);
+      expect(smokeCase?.manifest).toEqual({
+        ...GOAL_SPECS[goal].manifest,
+        projectName: `goal-${goal}`,
+        scope: "@smoke",
+      });
+      for (const qualityGate of GOAL_SPECS[goal].manifest.qualityGates) {
+        expect(smokeCase?.executedQualityGates, `${goal} ${qualityGate}`).toContain(qualityGate);
+      }
+    }
+  });
+
+  it("installs Chromium before browser-backed goal tests", () => {
+    const cases = new Map(
+      getGeneratedSmokeDependencyCaseInputs().map((smokeCase) => [smokeCase.name, smokeCase]),
+    );
+
+    for (const caseName of ["goal-spa-backend-split", "goal-internal-tool"]) {
+      const validations = cases.get(caseName)?.validations ?? [];
+      const chromiumInstallIndex = validations.findIndex(
+        ({ args }) => args?.[0] === "test:browser:install",
+      );
+      const testIndex = validations.findIndex(({ args }) => args?.[0] === "test");
+
+      expect(chromiumInstallIndex, caseName).toBeGreaterThanOrEqual(0);
+      expect(testIndex, caseName).toBeGreaterThan(chromiumInstallIndex);
+    }
+  });
+
   it("executes generated tests for Meta Vite smoke cases", () => {
     const cases = new Map(
       getGeneratedSmokeDependencyCaseInputs().map((smokeCase) => [smokeCase.name, smokeCase]),
@@ -1221,6 +1261,10 @@ describe("create-croco-app generated smoke matrix", () => {
         ({ name }) => name,
       ),
     ).toEqual([
+      "goal-saas-api",
+      "goal-spa-backend-split",
+      "goal-worker",
+      "goal-internal-tool",
       "graphql-lambda-api",
       "graphql-vite-spa-docker",
       "meta-vite-fullstack-workers",
@@ -1230,7 +1274,7 @@ describe("create-croco-app generated smoke matrix", () => {
     ]);
     expect(
       GENERATED_SMOKE_MATRIX_CASES.filter(({ tier }) => tier === "ecosystem-advisory"),
-    ).toHaveLength(12);
+    ).toHaveLength(11);
     const graphqlLambdaApiCase: SmokeMatrixCaseDefinition | undefined =
       GENERATED_SMOKE_MATRIX_CASES.find(({ name }) => name === "graphql-lambda-api");
     expect(graphqlLambdaApiCase?.advisory).toBeUndefined();
@@ -1251,6 +1295,10 @@ describe("create-croco-app generated smoke matrix", () => {
     });
 
     expect(selection.cases.map(({ name }) => name)).toEqual([
+      "goal-saas-api",
+      "goal-spa-backend-split",
+      "goal-worker",
+      "goal-internal-tool",
       "graphql-lambda-api",
       "graphql-vite-spa-docker",
       "meta-vite-fullstack-workers",
@@ -1283,7 +1331,7 @@ describe("create-croco-app generated smoke matrix", () => {
     );
     const advisory = createGeneratedSmokeMatrixTierReport(
       "ecosystem-advisory",
-      [{ name: "goal-saas-api", status: "passed" }],
+      [{ name: "graphql-standalone-api", status: "passed" }],
       {
         filteredRun: true,
         previousReport: firstAdvisory,
@@ -1296,7 +1344,9 @@ describe("create-croco-app generated smoke matrix", () => {
     );
 
     expect(advisory.cases.find(({ name }) => name === "blank-basic")?.status).toBe("failed");
-    expect(advisory.cases.find(({ name }) => name === "goal-saas-api")?.status).toBe("passed");
+    expect(advisory.cases.find(({ name }) => name === "graphql-standalone-api")?.status).toBe(
+      "passed",
+    );
     expect(aggregate.release.status).toBe("passed");
     expect(aggregate.status).toBe("failed");
     expect(renderGeneratedSmokeMatrixReport(advisory)).toContain(

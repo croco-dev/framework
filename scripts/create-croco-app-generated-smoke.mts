@@ -68,6 +68,7 @@ import {
 import { assertGeneratedSmokeCaseDependencyMapping } from "./create-croco-app-generated-smoke-dependencies.mts";
 import { inventoryDigest, readTestInventory } from "./test-inventory.mts";
 import { readCompletedPlaywrightPaths, readCompletedVitestPaths } from "./test-lane-runner.mts";
+import type { AppGoal } from "../packages/create-croco-app/src/types.ts";
 import type { MaterializationEvidence, TestInventoryEntry } from "./test-inventory.mts";
 
 const DEFAULT_TENANT_MODEL = "org";
@@ -859,9 +860,12 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
           path: "croco.app.json",
           matches: {
             schemaVersion: 1,
+            projectName: "goal-saas-api",
+            scope: "@smoke",
             goal: "saas-api",
             preset: "saas",
             runtimeTarget: "node",
+            protocol: "rest",
             providers: [
               "in-memory-tenant",
               "in-memory-auth",
@@ -869,18 +873,33 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
               "in-memory-metering",
               "in-memory-events",
             ],
+            storage: ["in-memory-demo"],
+            auth: "tenant-demo",
+            billing: "demo",
+            tenantModel: "org",
+            telemetry: "opentelemetry-otlp",
+            deploymentPreset: "node-api",
+            qualityGates: [
+              "install",
+              "typecheck",
+              "build",
+              "test",
+              "contract:verify",
+              "demo:smoke",
+              "failure-drill:smoke",
+            ],
           },
         },
       },
       runtimeCapabilityManifestValidation("node"),
-      { label: "contract snapshot", args: ["contract:snapshot"] },
+      { label: "contract:snapshot", args: ["contract:snapshot"] },
       {
-        label: "contract codegen",
+        label: "codegen",
         args: ["codegen"],
         paths: ["croco.project-map.json", "openapi.json", "libs/shared/provider-rpc/src/saas.ts"],
       },
       {
-        label: "contract verification",
+        label: "contract:verify",
         readOnly: true,
         recovery: "pnpm codegen",
         args: ["contract:verify"],
@@ -889,9 +908,9 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
       { label: "typecheck", args: ["typecheck"] },
       { label: "build", args: ["build"] },
       { label: "test", args: ["test"] },
-      { label: "demo flow", args: ["demo:smoke"] },
+      { label: "demo:smoke", args: ["demo:smoke"] },
       {
-        label: "failure drill smoke",
+        label: "failure-drill:smoke",
         args: ["failure-drill:smoke"],
         paths: [
           "ci-reports/failure-drills/operational.json",
@@ -924,6 +943,156 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
             ],
           },
         },
+      },
+    ],
+  },
+  {
+    name: "goal-spa-backend-split",
+    args: ["--goal", "spa-backend-split", "--scope", "@smoke", "--no-install", "--no-git"],
+    runtimeTarget: "node",
+    matrixTargets: ["spa-be-split"],
+    validations: [
+      {
+        label: "manifest",
+        json: {
+          path: "croco.app.json",
+          matches: {
+            schemaVersion: 1,
+            projectName: "goal-spa-backend-split",
+            scope: "@smoke",
+            goal: "spa-backend-split",
+            preset: "production-app",
+            runtimeTarget: "node",
+            protocol: "rest-rpc-client",
+            providers: ["in-memory-repository", "in-memory-events", "generated-rpc-client"],
+            storage: ["in-memory-demo"],
+            auth: "none",
+            billing: "none",
+            telemetry: "opentelemetry-otlp",
+            deploymentPreset: "lambda-spa",
+            qualityGates: [
+              "install",
+              "dev:smoke",
+              "lint",
+              "test",
+              "typecheck",
+              "build",
+              "contract:verify",
+            ],
+          },
+        },
+      },
+      runtimeCapabilityManifestValidation("node"),
+      { label: "dev:smoke", args: ["dev:smoke"] },
+      { label: "Chromium install", args: ["test:browser:install"] },
+      { label: "test", args: ["test"] },
+      { label: "typecheck", args: ["typecheck"] },
+      { label: "build", args: ["build"] },
+      { label: "contract:snapshot", args: ["contract:snapshot"] },
+      {
+        label: "codegen",
+        args: ["codegen"],
+        paths: ["croco.project-map.json", "openapi.json", "libs/shared/provider-rpc/src/user.ts"],
+      },
+      {
+        label: "contract:verify",
+        readOnly: true,
+        recovery: "pnpm codegen",
+        args: ["contract:verify"],
+      },
+    ],
+  },
+  {
+    name: "goal-worker",
+    args: ["--goal", "worker", "--scope", "@smoke", "--no-install", "--no-git"],
+    runtimeTarget: "cloudflare-workers",
+    matrixTargets: ["base-ddd"],
+    validations: [
+      {
+        label: "manifest",
+        json: {
+          path: "croco.app.json",
+          matches: {
+            schemaVersion: 1,
+            projectName: "goal-worker",
+            scope: "@smoke",
+            goal: "worker",
+            preset: "ddd-vike-fullstack",
+            runtimeTarget: "cloudflare-workers",
+            protocol: "rest",
+            providers: ["cloudflare-workers", "meta-vite"],
+            storage: [],
+            auth: "none",
+            billing: "none",
+            telemetry: "none",
+            deploymentPreset: "cloudflare-workers",
+            qualityGates: ["install", "typecheck", "build", "ssr-worker:presentation:smoke"],
+          },
+        },
+      },
+      runtimeCapabilityManifestValidation("cloudflare-workers"),
+      { label: "typecheck", args: ["typecheck"] },
+      { label: "build", args: ["build"] },
+      {
+        label: "ssr-worker:presentation:smoke",
+        packagePath: ["ssr-worker"],
+        args: ["presentation:smoke"],
+      },
+    ],
+  },
+  {
+    name: "goal-internal-tool",
+    args: ["--goal", "internal-tool", "--scope", "@smoke", "--no-install", "--no-git"],
+    runtimeTarget: "node",
+    matrixTargets: ["admin-console", "spa-be-split"],
+    validations: [
+      {
+        label: "manifest",
+        json: {
+          path: "croco.app.json",
+          matches: {
+            schemaVersion: 1,
+            projectName: "goal-internal-tool",
+            scope: "@smoke",
+            goal: "internal-tool",
+            preset: "admin-console",
+            runtimeTarget: "node",
+            protocol: "rest-rpc-client",
+            providers: ["in-memory-admin-data", "generated-rpc-client"],
+            storage: ["in-memory-demo"],
+            auth: "admin-demo",
+            billing: "none",
+            telemetry: "opentelemetry-otlp",
+            deploymentPreset: "lambda-spa",
+            qualityGates: [
+              "install",
+              "admin:smoke",
+              "lint",
+              "test",
+              "typecheck",
+              "build",
+              "contract:verify",
+            ],
+          },
+        },
+      },
+      runtimeCapabilityManifestValidation("node"),
+      { label: "admin:smoke", args: ["admin:smoke"] },
+      { label: "Chromium install", args: ["test:browser:install"] },
+      { label: "test", args: ["test"] },
+      { label: "typecheck", args: ["typecheck"] },
+      { label: "build", args: ["build"] },
+      { label: "contract:snapshot", args: ["contract:snapshot"] },
+      {
+        label: "codegen",
+        args: ["codegen"],
+        paths: ["croco.project-map.json", "openapi.json", "libs/shared/provider-rpc/src/admin.ts"],
+      },
+      {
+        label: "contract:verify",
+        readOnly: true,
+        recovery: "pnpm codegen",
+        args: ["contract:verify"],
       },
     ],
   },
@@ -1850,6 +2019,38 @@ export function getGeneratedSmokeDependencyCaseInputs(): readonly {
       packagePath,
     })),
   }));
+}
+
+export function getGeneratedGoalSmokeCaseInputs(): readonly {
+  readonly goal: AppGoal;
+  readonly name: string;
+  readonly manifest: Readonly<Record<string, unknown>>;
+  readonly executedQualityGates: readonly string[];
+}[] {
+  return smokeCases.flatMap((smokeCase) => {
+    const goal = readFlagValue(smokeCase.args, "--goal");
+    if (!isSupportedGoal(goal)) return [];
+
+    const manifest = smokeCase.validations.find(
+      (validation) => validation.json?.path === "croco.app.json",
+    )?.json?.matches;
+    if (!manifest) {
+      throw new Error(`Generated goal smoke case ${smokeCase.name} has no manifest validation`);
+    }
+
+    const executedQualityGates = [
+      "install",
+      ...smokeCase.validations.flatMap((validation) => {
+        const command = validation.args?.[0];
+        if (!command) return [];
+        return validation.packagePath?.length
+          ? [`${validation.packagePath.join("/")}:${command}`]
+          : [command];
+      }),
+    ];
+
+    return [{ goal, name: smokeCase.name, manifest, executedQualityGates }];
+  });
 }
 
 if (isMainModule()) {
@@ -3508,6 +3709,7 @@ function compareGraphQLOperations(
 function assertSmokeCoverage(cases: readonly SmokeCase[]): void {
   const coverage = readSmokeCoverage(cases);
 
+  assertCovers("goals", SUPPORTED_CREATE_CROCO_APP_CHOICES.goals, coverage.goals);
   assertCovers("presets", SUPPORTED_CREATE_CROCO_APP_CHOICES.presets, coverage.presets);
   assertCovers("apis", SUPPORTED_CREATE_CROCO_APP_CHOICES.apis, coverage.apis);
   assertCovers("api-hosting", SUPPORTED_CREATE_CROCO_APP_CHOICES.apiHosting, coverage.apiHosting);
@@ -3549,7 +3751,7 @@ function printSmokeCoverageSummary(cases: readonly SmokeCase[]): void {
     `create-croco-app-generated-smoke: matrix cases ${cases.map(({ name }) => name).join(", ")}`,
   );
   console.log(
-    `create-croco-app-generated-smoke: matrix covers presets=${coverage.presets.join(", ")}; apis=${coverage.apis.join(", ")}; api-hosting=${coverage.apiHosting.join(", ")}; backend-deploy=${coverage.backendDeploys.join(", ")}; frontend-deploy=${coverage.frontendDeploys.join(", ")}; ui=${coverage.uiProfiles.join(", ")}; db=${coverage.databases.join(", ")}; saas-profile=${coverage.saasProviderProfiles.join(", ")}; tenant-model=${coverage.tenantModels.join(", ")}`,
+    `create-croco-app-generated-smoke: matrix covers goals=${coverage.goals.join(", ")}; presets=${coverage.presets.join(", ")}; apis=${coverage.apis.join(", ")}; api-hosting=${coverage.apiHosting.join(", ")}; backend-deploy=${coverage.backendDeploys.join(", ")}; frontend-deploy=${coverage.frontendDeploys.join(", ")}; ui=${coverage.uiProfiles.join(", ")}; db=${coverage.databases.join(", ")}; saas-profile=${coverage.saasProviderProfiles.join(", ")}; tenant-model=${coverage.tenantModels.join(", ")}`,
   );
   console.log(
     `create-croco-app-generated-smoke: runtime capability manifests ${coverage.runtimeCapabilityManifests.join(", ")}`,
@@ -3563,6 +3765,7 @@ function printSmokeCoverageSummary(cases: readonly SmokeCase[]): void {
 }
 
 function readSmokeCoverage(cases: readonly SmokeCase[]): {
+  readonly goals: readonly string[];
   readonly presets: readonly string[];
   readonly apis: readonly string[];
   readonly apiHosting: readonly string[];
@@ -3575,6 +3778,7 @@ function readSmokeCoverage(cases: readonly SmokeCase[]): {
   readonly runtimeCapabilityManifests: readonly RuntimeCapabilitySmokePlatform[];
 } {
   return {
+    goals: readCoveredValues(cases, "--goal", SUPPORTED_CREATE_CROCO_APP_CHOICES.goals),
     presets: readCoveredValues(cases, "--preset", SUPPORTED_CREATE_CROCO_APP_CHOICES.presets),
     apis: readCoveredValues(cases, "--api", SUPPORTED_CREATE_CROCO_APP_CHOICES.apis),
     apiHosting: readCoveredValues(
@@ -3604,6 +3808,10 @@ function readSmokeCoverage(cases: readonly SmokeCase[]): {
     tenantModels: readCoveredTenantModels(cases),
     runtimeCapabilityManifests: readRuntimeCapabilityManifestCoverage(cases),
   };
+}
+
+function isSupportedGoal(value: string | undefined): value is AppGoal {
+  return SUPPORTED_CREATE_CROCO_APP_CHOICES.goals.some((goal) => goal === value);
 }
 
 function readCoveredTenantModels(cases: readonly SmokeCase[]): readonly string[] {
