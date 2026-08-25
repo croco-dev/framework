@@ -30,6 +30,7 @@ export type RegisterControllerResult =
     };
 
 type UpdateResult = "updated" | "updated-idempotent" | "unsupported-pattern" | "not-found";
+type ImportUpdateResult = "updated" | "updated-idempotent" | "conflicting-binding";
 
 export async function registerController(
   options: RegisterControllerOptions,
@@ -71,17 +72,27 @@ export async function registerController(
     );
   }
 
-  if (finalResult === "updated") {
-    addImport(sourceFile, options.importPath, options.className);
+  const importResult = reconcileImport(sourceFile, options.importPath, options.className);
+  if (importResult === "conflicting-binding") {
+    return unsupportedResult(
+      options,
+      `Controller identifier "${options.className}" is already bound and cannot be imported from "${options.importPath}".`,
+    );
+  }
+
+  const status =
+    finalResult === "updated" || importResult === "updated" ? "updated" : "updated-idempotent";
+
+  if (status === "updated") {
     sourceFile.organizeImports();
   }
 
-  if (!options.dryRun && finalResult === "updated") {
+  if (!options.dryRun && status === "updated") {
     await writeFile(options.entryPath, sourceFile.getFullText(), "utf-8");
   }
 
   return {
-    status: finalResult,
+    status,
     importPath: options.importPath,
     className: options.className,
   };
@@ -275,23 +286,67 @@ function unsupportedResult(
   };
 }
 
-function addImport(sourceFile: SourceFile, importPath: string, className: string): void {
-  const importDeclaration = sourceFile
+function reconcileImport(
+  sourceFile: SourceFile,
+  importPath: string,
+  className: string,
+): ImportUpdateResult {
+  const importDeclarations = sourceFile
     .getImportDeclarations()
-    .find((declaration) => declaration.getModuleSpecifierValue() === importPath);
+    .filter((declaration) => declaration.getModuleSpecifierValue() === importPath);
+
+  let localImportCount = 0;
+  let hasExpectedImport = false;
+  for (const declaration of sourceFile.getImportDeclarations()) {
+    if (declaration.getDefaultImport()?.getText() === className) {
+      localImportCount += 1;
+    }
+
+    if (declaration.getNamespaceImport()?.getText() === className) {
+      localImportCount += 1;
+    }
+
+    for (const namedImport of declaration.getNamedImports()) {
+      const localName = namedImport.getAliasNode()?.getText() ?? namedImport.getName();
+      if (localName !== className) continue;
+
+      localImportCount += 1;
+      hasExpectedImport =
+        hasExpectedImport ||
+        (!declaration.isTypeOnly() &&
+          !namedImport.isTypeOnly() &&
+          namedImport.getName() === className &&
+          declaration.getModuleSpecifierValue() === importPath);
+    }
+  }
+
+  const localDeclarations = sourceFile.getLocal(className)?.getDeclarations() ?? [];
+  const hasNonImportDeclaration = localDeclarations.some(
+    (declaration) => !declaration.getFirstAncestorByKind(SyntaxKind.ImportDeclaration),
+  );
+
+  if (localImportCount > 0) {
+    return localImportCount === 1 && hasExpectedImport && !hasNonImportDeclaration
+      ? "updated-idempotent"
+      : "conflicting-binding";
+  }
+
+  if (hasNonImportDeclaration) {
+    return "conflicting-binding";
+  }
+
+  const importDeclaration = importDeclarations.find(
+    (declaration) => !declaration.isTypeOnly() && !declaration.getNamespaceImport(),
+  );
 
   if (!importDeclaration) {
     sourceFile.addImportDeclaration({
       namedImports: [className],
       moduleSpecifier: importPath,
     });
-    return;
-  }
-
-  const hasImport = importDeclaration
-    .getNamedImports()
-    .some((namedImport) => namedImport.getName() === className);
-  if (!hasImport) {
+  } else {
     importDeclaration.addNamedImport(className);
   }
+
+  return "updated";
 }
