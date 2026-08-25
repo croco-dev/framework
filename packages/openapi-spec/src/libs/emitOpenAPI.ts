@@ -292,18 +292,18 @@ function toResponseConfig(
   return {
     ...defaultResponses,
     ...toDeclaredProblemResponseConfig(route, problemDetailsRef),
-    200: {
-      description: "Successful response",
-      ...(outputSchema
-        ? {
-            content: {
-              "application/json": {
-                schema: outputSchema,
-              },
-            },
-          }
-        : {}),
-    },
+    ...(outputSchema
+      ? {
+          200: {
+            description: "Successful response",
+            content: { "application/json": { schema: outputSchema } },
+          },
+        }
+      : {
+          204: {
+            description: "No content",
+          },
+        }),
   };
 }
 
