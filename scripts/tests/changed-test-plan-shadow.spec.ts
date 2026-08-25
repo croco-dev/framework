@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -224,7 +225,7 @@ describe("changed-test-plan-shadow", () => {
     expect(readJsonAtRevision("missing-shadow-assurance-fixture.json", "HEAD")).toBeUndefined();
     expect(() =>
       readJsonAtRevision("public-api-surface.snapshot.json", "invalid-shadow-revision"),
-    ).toThrow("Unable to read assurance artifact");
+    ).toThrow(/Unable to read assurance artifact.*invalid object name/s);
 
     const directory = mkdtempSync(resolve(ROOT, ".changed-test-shadow-"));
     const relativePath = `${directory.slice(ROOT.length + 1)}/invalid.json`;
@@ -239,20 +240,22 @@ describe("changed-test-plan-shadow", () => {
   });
 
   it("reads assurance artifacts larger than Node's default child-process buffer", () => {
-    const path = "large-shadow-assurance-fixture.json";
-    const content = JSON.stringify({ payload: "x".repeat(1024 * 1024) });
-    const blob = execFileSync("git", ["hash-object", "-w", "--stdin"], {
-      cwd: ROOT,
-      encoding: "utf8",
-      input: content,
-    }).trim();
-    const tree = execFileSync("git", ["mktree"], {
-      cwd: ROOT,
-      encoding: "utf8",
-      input: `100644 blob ${blob}\t${path}\n`,
-    }).trim();
+    withGitTreeArtifact("x".repeat(1024 * 1024), (path, tree) => {
+      expect(readJsonAtRevision(path, tree)).toEqual({ payload: "x".repeat(1024 * 1024) });
+    });
+  });
 
-    expect(readJsonAtRevision(path, tree)).toEqual({ payload: "x".repeat(1024 * 1024) });
+  it("reports bounded Git buffer exhaustion instead of treating the artifact as missing", () => {
+    withGitTreeArtifact("x".repeat(17 * 1024 * 1024), (path, tree) => {
+      try {
+        readJsonAtRevision(path, tree);
+        throw new Error("Expected the bounded Git reader to reject the oversized artifact");
+      } catch (error) {
+        expect(error).toBeInstanceOf(Error);
+        expect((error as Error).message).toContain("ENOBUFS");
+        expect((error as Error).cause).toMatchObject({ code: "ENOBUFS" });
+      }
+    });
   });
 
   it("reports the malformed evidence or baseline path and preserves the parse cause", () => {
@@ -273,3 +276,33 @@ describe("changed-test-plan-shadow", () => {
     }
   });
 });
+
+function withGitTreeArtifact(
+  payload: string,
+  assertion: (path: string, tree: string) => void,
+): void {
+  const directory = mkdtempSync(resolve(tmpdir(), "croco-changed-test-shadow-"));
+  const objectDirectory = resolve(directory, "objects");
+  mkdirSync(objectDirectory);
+  const previousObjectDirectory = process.env["GIT_OBJECT_DIRECTORY"];
+  process.env["GIT_OBJECT_DIRECTORY"] = objectDirectory;
+  const path = "large-shadow-assurance-fixture.json";
+  try {
+    const content = JSON.stringify({ payload });
+    const blob = execFileSync("git", ["hash-object", "-w", "--stdin"], {
+      cwd: ROOT,
+      encoding: "utf8",
+      input: content,
+    }).trim();
+    const tree = execFileSync("git", ["mktree"], {
+      cwd: ROOT,
+      encoding: "utf8",
+      input: `100644 blob ${blob}\t${path}\n`,
+    }).trim();
+    assertion(path, tree);
+  } finally {
+    if (previousObjectDirectory === undefined) delete process.env["GIT_OBJECT_DIRECTORY"];
+    else process.env["GIT_OBJECT_DIRECTORY"] = previousObjectDirectory;
+    rmSync(directory, { recursive: true, force: true });
+  }
+}
