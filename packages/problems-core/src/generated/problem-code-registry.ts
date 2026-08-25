@@ -4141,7 +4141,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/src/cli-result.ts",
-          line: 34,
+          line: 59,
           column: 3,
           kind: "problem-class",
         },

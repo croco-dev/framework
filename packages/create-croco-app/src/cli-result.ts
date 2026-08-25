@@ -1,4 +1,9 @@
 import { Problem, ProblemCategory, type ProblemDetails } from "@croco/problems-core";
+import { lstatSync, readdirSync } from "node:fs";
+import {
+  readStagingCleanupFailure,
+  type StagingCleanupFailure,
+} from "./generation-failure-evidence.js";
 import {
   GENERATED_NODE_ENGINE_RANGE,
   GENERATED_NODE_VERSION,
@@ -26,9 +31,29 @@ export type CreateCrocoAppFailureResult = {
   readonly unexpected: boolean;
   readonly diagnostic: ProblemDetails;
   readonly recovery?: string;
+  readonly destination?: CreateCrocoAppDestinationState;
+  readonly retryCommand?: CreateCrocoAppRetryCommand;
+  readonly diagnosticCommand?: CreateCrocoAppRetryCommand;
+  readonly stagingCleanup?: StagingCleanupFailure;
 };
 
 export type CreateCrocoAppResult = CreateCrocoAppSuccessResult | CreateCrocoAppFailureResult;
+
+export type CreateCrocoAppDestinationState = {
+  readonly targetDir: string;
+  readonly state: "absent" | "empty" | "occupied" | "unavailable";
+  readonly untouched: boolean;
+};
+
+export type CreateCrocoAppRetryCommand = {
+  readonly command: "create-croco-app";
+  readonly args: readonly string[];
+};
+
+export type CreateCrocoAppFailureContext = {
+  readonly targetDir: string;
+  readonly retryCommand: CreateCrocoAppRetryCommand;
+};
 
 class UnexpectedCliFailureProblem extends Problem {
   readonly code = "create-croco-app/unexpected-failure";
@@ -73,9 +98,13 @@ export function createSuccessResult(
   };
 }
 
-export function createFailureResult(error: unknown): CreateCrocoAppFailureResult {
+export function createFailureResult(
+  error: unknown,
+  context?: CreateCrocoAppFailureContext,
+): CreateCrocoAppFailureResult {
   const problem = toCliProblem(error);
   const recovery = readRecovery(problem.extensions);
+  const stagingCleanup = readStagingCleanupFailure(error);
 
   return {
     ok: false,
@@ -83,6 +112,25 @@ export function createFailureResult(error: unknown): CreateCrocoAppFailureResult
     unexpected: problem instanceof UnexpectedCliFailureProblem,
     diagnostic: problem.toJSON(),
     ...(recovery ? { recovery } : {}),
+    ...(stagingCleanup ? { stagingCleanup } : {}),
+    ...(context
+      ? {
+          destination: inspectDestination(context.targetDir),
+          retryCommand: context.retryCommand,
+          ...(context.retryCommand.args.includes("--json")
+            ? { diagnosticCommand: withoutJsonOutput(context.retryCommand) }
+            : {}),
+        }
+      : {}),
+  };
+}
+
+function withoutJsonOutput(command: CreateCrocoAppRetryCommand): CreateCrocoAppRetryCommand {
+  const args = command.args.at(-1) === "--json" ? command.args.slice(0, -1) : [...command.args];
+
+  return {
+    command: command.command,
+    args,
   };
 }
 
@@ -110,6 +158,10 @@ export function formatHumanFailure(result: CreateCrocoAppFailureResult): string 
 
   if (result.recovery) {
     lines.push(`Recovery: ${result.recovery}`);
+  }
+
+  if (result.stagingCleanup) {
+    lines.push(`Staging cleanup: ${result.stagingCleanup.detail}`);
   }
 
   return `\n${lines.join("\n")}`;
@@ -162,6 +214,27 @@ function readRecovery(extensions: Problem["extensions"]): string | undefined {
   const recovery = extensions?.recovery;
 
   return typeof recovery === "string" ? recovery : undefined;
+}
+
+function inspectDestination(targetDir: string): CreateCrocoAppDestinationState {
+  try {
+    const stats = lstatSync(targetDir);
+    if (!stats.isDirectory()) {
+      return { targetDir, state: "occupied", untouched: false };
+    }
+
+    const state = readdirSync(targetDir).length === 0 ? "empty" : "occupied";
+    return { targetDir, state, untouched: state === "empty" };
+  } catch (error) {
+    if (isNodeError(error) && error.code === "ENOENT") {
+      return { targetDir, state: "absent", untouched: true };
+    }
+    return { targetDir, state: "unavailable", untouched: false };
+  }
+}
+
+function isNodeError(error: unknown): error is NodeJS.ErrnoException {
+  return error instanceof Error;
 }
 
 function formatNextStepCommand(step: CreateCrocoAppNextStep, platform: NodeJS.Platform): string {

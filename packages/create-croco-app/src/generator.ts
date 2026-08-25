@@ -1,4 +1,5 @@
-import { execSync } from "node:child_process";
+import { execSync, spawn } from "node:child_process";
+import type { SpawnOptions } from "node:child_process";
 import {
   DEFAULT_TENANT_MODEL,
   createTenantModelManifest,
@@ -10,15 +11,9 @@ import {
   stringifyRuntimeCapabilityManifest,
 } from "@croco/framework-context";
 import type { KnownRuntimePlatform } from "@croco/framework-context";
-import {
-  copyFileSync,
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  readdirSync,
-  writeFileSync,
-} from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { recordStagingCleanupFailure } from "./generation-failure-evidence.js";
 import { writeGoalManifest } from "./goals.js";
 import { mergeInto } from "./helpers/fs.js";
 import { rewriteExternalCrocoWorkspaceRanges } from "./helpers/manifest-normalizer.js";
@@ -38,7 +33,6 @@ import {
   installWebGraphql,
   installWebTrpc,
 } from "./installers/index.js";
-import { DirectoryNotEmptyProblem } from "./libs/problems/DirectoryNotEmptyProblem.js";
 import { PnpmCommandProblem } from "./libs/problems/PnpmCommandProblem.js";
 import {
   SAAS_GENERATED_NODE_ENGINE_RANGE,
@@ -59,58 +53,104 @@ import {
   renderSaasSecretsChecklist,
 } from "./saas-provider-profiles.js";
 import { TEMPLATES_DIR } from "./template-path.js";
+import {
+  createStagingDirectory,
+  publishStagedProject,
+  removeOwnedStagingDirectory,
+} from "./staging.js";
 import type { GeneratorOptions } from "./types.js";
 import type { SaasProviderProfileManifest } from "./saas-provider-profiles.js";
 
-export async function generate(targetDir: string, options: GeneratorOptions): Promise<void> {
+export type GeneratorExecutionOptions = {
+  readonly outputMode: "human" | "json";
+};
+
+const DEFAULT_EXECUTION_OPTIONS: GeneratorExecutionOptions = { outputMode: "human" };
+
+export async function generate(
+  targetDir: string,
+  options: GeneratorOptions,
+  executionOptions: GeneratorExecutionOptions = DEFAULT_EXECUTION_OPTIONS,
+): Promise<void> {
   assertSupportedNodeVersion();
   validateResolvedOptions(options);
 
+  const resolvedTarget = resolve(targetDir);
+  const stagingDir = createStagingDirectory(resolvedTarget);
+  let failed = false;
+  let published = false;
+  let primaryError: unknown;
+
+  try {
+    await generateProject(stagingDir, options, executionOptions);
+    publishStagedProject(stagingDir, resolvedTarget);
+    published = true;
+  } catch (error) {
+    failed = true;
+    primaryError = error;
+  }
+
+  if (published) {
+    return;
+  }
+
+  try {
+    removeOwnedStagingDirectory(stagingDir);
+  } catch (cleanupError) {
+    if (!failed) {
+      throw cleanupError;
+    }
+    recordStagingCleanupFailure(primaryError, cleanupError);
+  }
+
+  if (failed) {
+    throw primaryError;
+  }
+}
+
+async function generateProject(
+  targetDir: string,
+  options: GeneratorOptions,
+  executionOptions: GeneratorExecutionOptions,
+): Promise<void> {
   const vars = { projectName: options.projectName, scope: options.scope };
   const isLegacyVikeFullstackPreset = options.preset === "ddd-vike-fullstack";
 
-  // Step 1: targetDir 정규화 및 생성 (non-empty 체크)
-  const resolvedTarget = resolve(targetDir);
-  if (existsSync(resolvedTarget) && readdirSync(resolvedTarget).length > 0) {
-    throw new DirectoryNotEmptyProblem(resolvedTarget);
-  }
-  mkdirSync(resolvedTarget, { recursive: true });
-
   // Step 2: root workspace baseline + 프리셋 분기
-  mergeInto(join(TEMPLATES_DIR, "blank"), resolvedTarget, vars);
+  mergeInto(join(TEMPLATES_DIR, "blank"), targetDir, vars);
 
   if (options.preset === "saas" || options.preset === "ai-saas") {
-    mergeInto(join(TEMPLATES_DIR, "saas"), resolvedTarget, vars);
+    mergeInto(join(TEMPLATES_DIR, "saas"), targetDir, vars);
     if (options.preset === "ai-saas") {
-      mergeInto(join(TEMPLATES_DIR, "ai-saas"), resolvedTarget, vars);
+      mergeInto(join(TEMPLATES_DIR, "ai-saas"), targetDir, vars);
     }
-    writeSaasProviderProfileArtifacts(resolvedTarget, options);
+    writeSaasProviderProfileArtifacts(targetDir, options);
     if (options.agentRules) {
-      installAgentRules(resolvedTarget, vars);
+      installAgentRules(targetDir, vars);
     }
-    await finalize(resolvedTarget, options);
+    await finalize(targetDir, options, executionOptions);
     return;
   }
 
   if (options.preset === "production-app" || options.preset === "admin-console") {
-    mergeInto(join(TEMPLATES_DIR, "spa-be-split"), resolvedTarget, vars);
+    mergeInto(join(TEMPLATES_DIR, "spa-be-split"), targetDir, vars);
     if (options.preset === "admin-console") {
-      mergeInto(join(TEMPLATES_DIR, "admin-console"), resolvedTarget, vars);
+      mergeInto(join(TEMPLATES_DIR, "admin-console"), targetDir, vars);
     }
     if (options.agentRules) {
-      installAgentRules(resolvedTarget, vars);
+      installAgentRules(targetDir, vars);
     }
-    await finalize(resolvedTarget, options);
+    await finalize(targetDir, options, executionOptions);
     return;
   }
 
   if (options.preset !== "blank") {
-    mergeInto(join(TEMPLATES_DIR, "base-ddd"), resolvedTarget, vars);
+    mergeInto(join(TEMPLATES_DIR, "base-ddd"), targetDir, vars);
   }
 
   // 이하 단계들은 blank preset에서는 스킵
   if (options.preset === "blank") {
-    await finalize(resolvedTarget, options);
+    await finalize(targetDir, options, executionOptions);
     return;
   }
 
@@ -118,15 +158,15 @@ export async function generate(targetDir: string, options: GeneratorOptions): Pr
   if (!isLegacyVikeFullstackPreset) {
     if (options.api === "graphql") {
       if (options.apiHosting === "standalone") {
-        installGraphqlStandalone(resolvedTarget, vars);
+        installGraphqlStandalone(targetDir, vars);
       } else {
-        installGraphqlNextjs(resolvedTarget, vars);
+        installGraphqlNextjs(targetDir, vars);
       }
     } else if (options.api === "trpc") {
       if (options.apiHosting === "standalone") {
-        installTrpcStandalone(resolvedTarget, vars);
+        installTrpcStandalone(targetDir, vars);
       } else {
-        installTrpcNextjs(resolvedTarget, vars);
+        installTrpcNextjs(targetDir, vars);
       }
     }
   }
@@ -139,7 +179,7 @@ export async function generate(targetDir: string, options: GeneratorOptions): Pr
     (options.preset === "ddd-fullstack" || options.apiHosting === "nextjs")
   ) {
     if (options.ui === undefined) {
-      installSharedUi(resolvedTarget, vars);
+      installSharedUi(targetDir, vars);
     }
   }
 
@@ -154,9 +194,9 @@ export async function generate(targetDir: string, options: GeneratorOptions): Pr
   ) {
     for (const webAppName of options.webApps) {
       if (options.api === "graphql") {
-        installWebGraphql(resolvedTarget, webAppName, vars);
+        installWebGraphql(targetDir, webAppName, vars);
       } else if (options.api === "trpc") {
-        installWebTrpc(resolvedTarget, webAppName, vars);
+        installWebTrpc(targetDir, webAppName, vars);
       }
     }
   }
@@ -164,32 +204,32 @@ export async function generate(targetDir: string, options: GeneratorOptions): Pr
   // Step 6: backend deploy
   if (!isLegacyVikeFullstackPreset) {
     if (options.backendDeploy === "docker") {
-      installDocker(resolvedTarget, {
+      installDocker(targetDir, {
         ...vars,
         api: options.api,
         frontendDeploy: options.frontendDeploy,
         webApps: options.webApps,
       });
     } else if (options.backendDeploy === "lambda") {
-      installLambda(resolvedTarget, { ...vars, api: options.api });
+      installLambda(targetDir, { ...vars, api: options.api });
     }
   }
 
   // Step 7: frontend deploy
   if (options.frontendDeploy === "cloudflare-meta-vite" && isLegacyVikeFullstackPreset) {
-    installFrontendDeploy(resolvedTarget, undefined, {
+    installFrontendDeploy(targetDir, undefined, {
       ...vars,
       preset: options.preset,
       frontendDeploy: options.frontendDeploy,
     });
   } else if (options.frontendDeploy && hasWebApps) {
     for (const webAppName of options.webApps) {
-      installFrontendDeploy(resolvedTarget, webAppName, {
+      installFrontendDeploy(targetDir, webAppName, {
         ...vars,
         preset: options.preset,
         frontendDeploy: options.frontendDeploy,
       });
-      installUiProfile(resolvedTarget, webAppName, {
+      installUiProfile(targetDir, webAppName, {
         ...vars,
         frontendDeploy: options.frontendDeploy,
         ...(options.ui === undefined ? {} : { ui: options.ui }),
@@ -199,18 +239,18 @@ export async function generate(targetDir: string, options: GeneratorOptions): Pr
 
   // Step 8: DB addons
   if (options.db.includes("mongodb")) {
-    installMongodb(resolvedTarget, vars);
+    installMongodb(targetDir, vars);
   }
   if (options.db.includes("redis")) {
-    installRedis(resolvedTarget, vars);
+    installRedis(targetDir, vars);
   }
 
   // Step 9: agent-rules
   if (options.agentRules) {
-    installAgentRules(resolvedTarget, vars);
+    installAgentRules(targetDir, vars);
   }
 
-  await finalize(resolvedTarget, options);
+  await finalize(targetDir, options, executionOptions);
 }
 
 function writeSaasProviderProfileArtifacts(targetDir: string, options: GeneratorOptions): void {
@@ -456,7 +496,11 @@ function writeSaasProviderPackageDependencies(
   writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
 }
 
-async function finalize(targetDir: string, options: GeneratorOptions): Promise<void> {
+async function finalize(
+  targetDir: string,
+  options: GeneratorOptions,
+  executionOptions: GeneratorExecutionOptions,
+): Promise<void> {
   rewriteExternalCrocoWorkspaceRanges(targetDir);
   const saasPreset = isSaasPreset(options.preset);
   writeGeneratedNodeRuntimeContract(
@@ -481,7 +525,7 @@ async function finalize(targetDir: string, options: GeneratorOptions): Promise<v
 
   // Step 12: pnpm install
   if (options.installDeps) {
-    installPnpmDependencies(targetDir);
+    await installPnpmDependencies(targetDir, executionOptions);
   }
 }
 
@@ -511,29 +555,74 @@ function resolveRuntimeCapabilityPlatform(options: GeneratorOptions): KnownRunti
   return "node";
 }
 
-function installPnpmDependencies(targetDir: string): void {
-  try {
-    execSync("pnpm --version", { stdio: "ignore" });
-  } catch (error) {
-    throw new PnpmCommandProblem("availability-check", "pnpm --version", error);
-  }
+async function installPnpmDependencies(
+  targetDir: string,
+  executionOptions: GeneratorExecutionOptions,
+): Promise<void> {
+  await runPnpmCommand(
+    "availability-check",
+    "pnpm --version",
+    targetDir,
+    executionOptions,
+    "ignore",
+  );
+  await runPnpmCommand(
+    "dependency-install",
+    "pnpm install --no-frozen-lockfile",
+    targetDir,
+    executionOptions,
+    "inherit",
+  );
+  await runPnpmCommand(
+    "lockfile-validation",
+    "pnpm install --lockfile-only --frozen-lockfile",
+    targetDir,
+    executionOptions,
+    "inherit",
+  );
+}
 
-  try {
-    execSync("pnpm install --no-frozen-lockfile", { cwd: targetDir, stdio: "inherit" });
-  } catch (error) {
-    throw new PnpmCommandProblem("dependency-install", "pnpm install --no-frozen-lockfile", error);
-  }
+function runPnpmCommand(
+  stage: ConstructorParameters<typeof PnpmCommandProblem>[0],
+  command: string,
+  targetDir: string,
+  executionOptions: GeneratorExecutionOptions,
+  humanStdio: "ignore" | "inherit",
+): Promise<void> {
+  const jsonMode = executionOptions.outputMode === "json";
+  const spawnOptions: SpawnOptions = {
+    cwd: targetDir,
+    shell: true,
+    stdio: jsonMode ? ["ignore", "ignore", "ignore"] : ["ignore", humanStdio, humanStdio],
+  };
 
-  try {
-    execSync("pnpm install --lockfile-only --frozen-lockfile", {
-      cwd: targetDir,
-      stdio: "inherit",
+  return new Promise((resolveCommand, rejectCommand) => {
+    const child = spawn(command, spawnOptions);
+    let settled = false;
+
+    child.once("error", (error) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      rejectCommand(new PnpmCommandProblem(stage, command, error));
     });
-  } catch (error) {
-    throw new PnpmCommandProblem(
-      "lockfile-validation",
-      "pnpm install --lockfile-only --frozen-lockfile",
-      error,
-    );
-  }
+
+    child.once("close", (code, signal) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+
+      if (code === 0) {
+        resolveCommand();
+        return;
+      }
+
+      const exitDetail = signal ? `signal ${signal}` : `exit code ${code ?? "unknown"}`;
+      rejectCommand(
+        new PnpmCommandProblem(stage, command, new Error(`${command} failed with ${exitDetail}`)),
+      );
+    });
+  });
 }

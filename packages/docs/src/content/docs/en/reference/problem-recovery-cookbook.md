@@ -3072,7 +3072,7 @@ Sources:
 
 Sources:
 
-- `packages/create-croco-app/src/cli-result.ts:34:3` (problem-class)
+- `packages/create-croco-app/src/cli-result.ts:59:3` (problem-class)
 
 <a id="create-croco-app-unsupported-node-version"></a>
 

@@ -3731,7 +3731,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/cli-result.ts",
-      "line": 162,
+      "line": 214,
       "column": 32,
       "code": "TS4111",
       "message": "Property 'recovery' comes from an index signature, so it must be accessed with ['recovery']."
@@ -3747,32 +3747,32 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/cli-result.ts",
-      "line": 38,
+      "line": 63,
       "column": 41,
       "code": "TS2379",
       "message": "Argument of type '{ cause: Error | undefined; extensions: { recovery: string; }; }' is not assignable to parameter of type 'ProblemOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
     },
     {
       "packageName": "create-croco-app",
-      "file": "packages/create-croco-app/src/cli.ts",
-      "line": 16,
-      "column": 37,
-      "code": "TS4111",
-      "message": "Property 'json' comes from an index signature, so it must be accessed with ['json']."
+      "file": "packages/create-croco-app/src/generator.ts",
+      "line": 12,
+      "column": 8,
+      "code": "TS6059",
+      "message": "File 'packages/framework-context/src/index.ts' is not under 'rootDir' 'packages/create-croco-app/src'. 'rootDir' is expected to contain all source files."
     },
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/generator.ts",
-      "line": 167,
-      "column": 37,
+      "line": 207,
+      "column": 32,
       "code": "TS2379",
       "message": "Argument of type '{ api: \"graphql\" | \"trpc\" | undefined; frontendDeploy: \"docker\" | \"opennext\" | \"vercel\" | \"cloudflare-meta-vite\" | \"vite-spa\" | undefined; webApps: string[]; projectName: string; scope: string; }' is not assignable to parameter of type 'Pick<GeneratorOptions, \"scope\" | \"projectName\" | \"webApps\" | \"api\" | \"frontendDeploy\">' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
     },
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/generator.ts",
-      "line": 174,
-      "column": 37,
+      "line": 214,
+      "column": 32,
       "code": "TS2379",
       "message": "Argument of type '{ api: \"graphql\" | \"trpc\" | undefined; projectName: string; scope: string; }' is not assignable to parameter of type 'Pick<GeneratorOptions, \"scope\" | \"projectName\" | \"api\">' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
     },

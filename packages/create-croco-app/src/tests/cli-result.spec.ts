@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   createFailureResult,
@@ -109,6 +112,44 @@ describe("CLI result contract", () => {
     expect(formatHumanFailure(result)).toContain(
       "Unexpected error [create-croco-app/unexpected-failure]",
     );
+  });
+
+  it("does not classify inaccessible destination paths as untouched", () => {
+    const testRoot = mkdtempSync(join(tmpdir(), "croco-destination-state-"));
+    const blockingFile = join(testRoot, "not-a-directory");
+    const targetDir = join(blockingFile, "child");
+    writeFileSync(blockingFile, "occupied\n");
+
+    try {
+      const result = createFailureResult(new Error("write failed"), {
+        targetDir,
+        retryCommand: { command: "create-croco-app", args: [targetDir] },
+      });
+
+      expect(result.destination).toEqual({
+        targetDir,
+        state: "unavailable",
+        untouched: false,
+      });
+    } finally {
+      rmSync(testRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("removes only the trailing JSON flag from the diagnostic command", () => {
+    const targetDir = join(tmpdir(), "croco-json-diagnostic-command");
+    const result = createFailureResult(new Error("write failed"), {
+      targetDir,
+      retryCommand: {
+        command: "create-croco-app",
+        args: [targetDir, "--scope", "--json", "--json"],
+      },
+    });
+
+    expect(result.diagnosticCommand).toEqual({
+      command: "create-croco-app",
+      args: [targetDir, "--scope", "--json"],
+    });
   });
 });
 
