@@ -38,6 +38,25 @@ describe("tracked-file-mutation-guard", () => {
     expect(run(repo, ["node", "-e", "process.exit(0)"]).status).toBe(0);
     expect(run(repo, ["node", "-e", "process.exit(23)"]).status).toBe(23);
   });
+  it("snapshots tracked file listings larger than the default subprocess buffer", () => {
+    const repo = createRepository();
+    const bulkDir = join(repo, "bulk");
+    mkdirSync(bulkDir);
+    for (let index = 0; index < 5_000; index++) {
+      const name = `${String(index).padStart(5, "0")}-${"x".repeat(160)}.txt`;
+      writeFileSync(join(bulkDir, name), "");
+    }
+    git(repo, ["add", "bulk"]);
+    git(repo, ["commit", "-m", "large tracked file listing"]);
+    const listing = spawnSync("git", ["ls-files", "--stage", "-z"], {
+      cwd: repo,
+      encoding: "buffer",
+      maxBuffer: 16 * 1024 * 1024,
+    });
+    expect(listing.stdout.length).toBeGreaterThan(1024 * 1024);
+
+    expect(run(repo, ["node", "-e", "process.exit(0)"]).status).toBe(0);
+  });
   it("detects rewrite and reports recovery", () => {
     const repo = createRepository();
     const result = run(repo, [

@@ -92,6 +92,7 @@ const supportedChangesetBumpTypes: ReadonlySet<string> = new Set([
   "patch",
   "none",
 ]);
+const gitMaxBufferBytes = 16 * 1024 * 1024;
 const semverPattern = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
 const internalVersionRangePattern =
   /^(?:workspace:)?(?:[\^~])?\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$|^workspace:\*$/;
@@ -104,7 +105,14 @@ function runGit(rootDir: string, args: readonly string[]): string {
   const result = spawnSync("git", [...args], {
     cwd: rootDir,
     encoding: "utf-8",
+    maxBuffer: gitMaxBufferBytes,
   });
+
+  if (result.error) {
+    throw new Error(`git ${args.join(" ")} failed: ${result.error.message}`, {
+      cause: result.error,
+    });
+  }
 
   if (result.status !== 0) {
     throw new Error(result.stderr.trim() || `git ${args.join(" ")} failed`);
