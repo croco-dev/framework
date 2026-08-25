@@ -41,8 +41,24 @@ describe("migrate command", () => {
       ["migrate", "up", "--overwrite", "--bogus"],
     ],
     [
+      ["--dir", "migrations", "migrate", "up"],
+      ["migrate", "up", "--dir", "migrations"],
+    ],
+    [
+      ["-d", "migrations", "migrate", "status"],
+      ["migrate", "status", "-d", "migrations"],
+    ],
+    [
+      ["migrate", "--target", "20260826", "up"],
+      ["migrate", "up", "--target", "20260826"],
+    ],
+    [
       ["--cwd", "migrate", "up"],
       ["migrate", "up", "--cwd"],
+    ],
+    [
+      ["--dir", "migrate", "up"],
+      ["migrate", "up", "--dir"],
     ],
     [
       ["--cwd", "migrate", "--bogus", "up"],
@@ -55,6 +71,10 @@ describe("migrate command", () => {
     [
       ["migrate", "--cwd", "up", "up"],
       ["migrate", "up", "--cwd", "up"],
+    ],
+    [
+      ["--dir", "migrate", "--cwd", "up"],
+      ["migrate", "up", "--cwd"],
     ],
   ])("should move root migrate options across the subcommand boundary", (rawArgs, expected) => {
     expect(normalizeMigrateRootArgs(rawArgs)).toEqual(expected);
@@ -211,6 +231,40 @@ describe("migrate command", () => {
 
       expect(errors).toEqual([message]);
       expect(exitCodes).toEqual([1]);
+      expect(spawnCalls).toBe(0);
+    },
+  );
+
+  it.each([
+    {
+      expected: ["migrate", "up", "--cwd"],
+      message: "Option --cwd requires a value",
+      rawArgs: ["--dir", "migrate", "--cwd", "up"],
+    },
+    {
+      expected: ["migrate", "up", "--target"],
+      message: "Option --target requires a value",
+      rawArgs: ["--target", "migrate", "up", "--dir"],
+    },
+  ])(
+    "should reject malformed command-token values before spawning the child: $rawArgs",
+    ({ expected, message, rawArgs }) => {
+      const normalizedArgs = normalizeMigrateRootArgs(rawArgs);
+      const errors: string[] = [];
+      let spawnCalls = 0;
+
+      expect(normalizedArgs).toEqual(expected);
+
+      runMigrateCommand("up", normalizedArgs.slice(2), {
+        spawn: () => {
+          spawnCalls++;
+          return new EventEmitter() as unknown as ChildProcess;
+        },
+        setExitCode: () => undefined,
+        writeError: (message) => errors.push(message),
+      });
+
+      expect(errors).toEqual([message]);
       expect(spawnCalls).toBe(0);
     },
   );

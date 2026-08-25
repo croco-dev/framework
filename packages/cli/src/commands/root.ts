@@ -1,13 +1,16 @@
 import { defineCommand, runCommand } from "citty";
 import type { SubCommandsDef } from "citty";
 import { doctor } from "./doctor.js";
-import { migrate } from "./migrate.js";
+import {
+  isMigrateCommand,
+  migrate,
+  migrateArgumentsAreValid,
+  migrateOptionConsumesNextArgument,
+} from "./migrate.js";
 import { GLOBAL_OPTIONS } from "./options.js";
 
 type LoadedCommand = Awaited<Extract<SubCommandsDef[string], Promise<unknown>>>;
 type CommandLoader = () => Promise<LoadedCommand>;
-
-const MIGRATE_SUBCOMMANDS = new Set(["up", "down", "status"]);
 
 export function createCrocoCommand() {
   return defineCommand({
@@ -96,24 +99,39 @@ export function normalizeMigrateRootArgs(rawArgs: readonly string[]): string[] {
     const subcommandIndex = findMigrateSubcommandIndex(rawArgs, migrateIndex);
     if (subcommandIndex !== undefined) {
       const subcommand = rawArgs[subcommandIndex];
-      if (subcommand === undefined) {
+      if (subcommand === undefined || !isMigrateCommand(subcommand)) {
         return [...rawArgs];
       }
       const prefixArgs = rawArgs.slice(0, migrateIndex);
       const parentArgs = rawArgs.slice(migrateIndex + 1, subcommandIndex);
       const leafArgs = rawArgs.slice(subcommandIndex + 1);
-      const rootCwdConsumedAsCommand = rawArgs[migrateIndex - 1] === "--cwd";
-      const parentCwdConsumedAsCommand = rawArgs[subcommandIndex - 1] === "--cwd";
+      const rootConsumedOption = rawArgs[migrateIndex - 1];
+      const parentConsumedOption = rawArgs[subcommandIndex - 1];
+      const rootOptionConsumedAsCommand =
+        rootConsumedOption !== undefined && migrateOptionConsumesNextArgument(rootConsumedOption);
+      const parentOptionConsumedAsCommand =
+        parentConsumedOption !== undefined &&
+        migrateOptionConsumesNextArgument(parentConsumedOption);
 
-      if (rootCwdConsumedAsCommand || parentCwdConsumedAsCommand) {
+      if (rootOptionConsumedAsCommand || parentOptionConsumedAsCommand) {
         const movedArgs = [...prefixArgs, ...parentArgs].filter(
           (_, index, args) =>
             !(
-              (rootCwdConsumedAsCommand && index === prefixArgs.length - 1) ||
-              (parentCwdConsumedAsCommand && index === args.length - 1)
+              (rootOptionConsumedAsCommand && index === prefixArgs.length - 1) ||
+              (parentOptionConsumedAsCommand && index === args.length - 1)
             ),
         );
-        return ["migrate", subcommand, ...leafArgs, ...movedArgs, "--cwd"];
+        const consumedOption = parentOptionConsumedAsCommand
+          ? parentConsumedOption
+          : rootConsumedOption;
+        if (consumedOption === undefined) {
+          return [...rawArgs];
+        }
+
+        const normalizedArgs = [...leafArgs, ...movedArgs, consumedOption];
+        return migrateArgumentsAreValid(subcommand, normalizedArgs)
+          ? ["migrate", subcommand, consumedOption]
+          : ["migrate", subcommand, ...normalizedArgs];
       }
 
       return ["migrate", subcommand, ...prefixArgs, ...parentArgs, ...leafArgs];
@@ -124,60 +142,48 @@ export function normalizeMigrateRootArgs(rawArgs: readonly string[]): string[] {
 }
 
 function findRootMigrateIndex(rawArgs: readonly string[]): number | undefined {
-  for (let index = 0; index < rawArgs.length; index++) {
-    const argument = rawArgs[index];
-    if (argument === "--cwd") {
-      index++;
-      continue;
-    }
-
-    if (argument?.startsWith("-")) {
-      continue;
-    }
-
-    if (argument === "migrate") {
-      return index;
-    }
-    break;
-  }
-
-  const cittyCommandIndex = rawArgs.findIndex((argument) => !argument.startsWith("-"));
-  if (rawArgs[cittyCommandIndex] === "migrate") {
-    return cittyCommandIndex;
-  }
-
-  return undefined;
+  return findCommandIndex(rawArgs, 0, (argument) => argument === "migrate");
 }
 
 function findMigrateSubcommandIndex(
   rawArgs: readonly string[],
   migrateIndex: number,
 ): number | undefined {
-  for (let index = migrateIndex + 1; index < rawArgs.length; index++) {
+  return findCommandIndex(rawArgs, migrateIndex + 1, isMigrateCommand);
+}
+
+function findCommandIndex(
+  rawArgs: readonly string[],
+  startIndex: number,
+  matchesCommand: (argument: string) => boolean,
+): number | undefined {
+  for (let index = startIndex; index < rawArgs.length; index++) {
     const argument = rawArgs[index];
-    if (argument === "--cwd") {
+    if (argument === undefined) {
+      continue;
+    }
+
+    if (migrateOptionConsumesNextArgument(argument)) {
       index++;
       continue;
     }
 
-    if (argument?.startsWith("-")) {
+    if (argument.startsWith("-")) {
       continue;
     }
 
-    if (MIGRATE_SUBCOMMANDS.has(argument ?? "")) {
+    if (matchesCommand(argument)) {
       return index;
     }
     break;
   }
 
-  const cittySubcommandIndex = rawArgs.findIndex(
-    (argument, index) => index > migrateIndex && !argument.startsWith("-"),
+  const cittyCommandIndex = rawArgs.findIndex(
+    (argument, index) => index >= startIndex && !argument.startsWith("-"),
   );
-  if (MIGRATE_SUBCOMMANDS.has(rawArgs[cittySubcommandIndex] ?? "")) {
-    return cittySubcommandIndex;
-  }
-
-  return undefined;
+  return cittyCommandIndex !== -1 && matchesCommand(rawArgs[cittyCommandIndex] ?? "")
+    ? cittyCommandIndex
+    : undefined;
 }
 
 function lazyCommand(name: string, description: string, loadCommand: CommandLoader): LoadedCommand {

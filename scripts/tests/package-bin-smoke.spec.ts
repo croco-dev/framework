@@ -1,9 +1,17 @@
 import { spawnSync } from "node:child_process";
-import { linkSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  linkSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { replaceInstalledPackageFile } from "../package-bin-smoke.mts";
+import { replaceInstalledPackageFile, restoreInstalledPackageFile } from "../package-bin-smoke.mts";
 
 const scriptPath = resolve(__dirname, "../package-bin-smoke.mts");
 const tempRoots: string[] = [];
@@ -29,11 +37,17 @@ describe("package-bin-smoke.mts", () => {
     writeFileSync(sourcePath, "original\n");
     linkSync(sourcePath, installedPath);
 
-    replaceInstalledPackageFile(root, installedPath, "stub\n");
+    const replacement = replaceInstalledPackageFile(root, installedPath, "stub\n");
 
     expect(readFileSync(sourcePath, "utf8")).toBe("original\n");
     expect(readFileSync(installedPath, "utf8")).toBe("stub\n");
     expect(readFileSync(`${installedPath}.croco-bin-smoke-original`, "utf8")).toBe("original\n");
+
+    restoreInstalledPackageFile(replacement);
+
+    expect(readFileSync(sourcePath, "utf8")).toBe("original\n");
+    expect(readFileSync(installedPath, "utf8")).toBe("original\n");
+    expect(existsSync(`${installedPath}.croco-bin-smoke-original`)).toBe(false);
   });
 
   it(

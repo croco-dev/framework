@@ -83,6 +83,11 @@ type PackageSmokeResult = {
   readonly packageName: string;
 };
 
+type InstalledPackageFileReplacement = {
+  readonly installedPath: string;
+  readonly originalPath: string;
+};
+
 type RunResult = {
   readonly stderr: string;
   readonly stdout: string;
@@ -410,53 +415,62 @@ function runPackageBinSmoke(
   for (const binTarget of binTargets) {
     for (const smokeCommand of smokeCommandsFor(binTarget, packageInfo)) {
       writeSmokeFixtureFiles(packageSmokeRoot, smokeCommand.fixtureFiles ?? []);
-      writeSmokePackageFixtureFiles(packageSmokeRoot, smokeCommand.packageFixtureFiles ?? []);
-      const allowedChildPaths = smokeCommand.allowedChildPackageFile
-        ? installedPackageFilePaths(packageSmokeRoot, smokeCommand.allowedChildPackageFile)
-        : [];
-      const result = run(
-        installedBinPath(packageSmokeRoot, binTarget.commandName),
-        smokeCommand.args,
+      const replacements = writeSmokePackageFixtureFiles(
         packageSmokeRoot,
-        {
-          expectedExitCode: smokeCommand.expectedExitCode,
-          env: smokeCommandEnvironment(packageSmokeRoot, networkGuardPath, allowedChildPaths),
-          label: `${packageInfo.packageName}: ${binTarget.commandName} ${smokeCommand.args.join(" ")}`,
-        },
+        smokeCommand.packageFixtureFiles ?? [],
       );
-      const output = `${result.stdout}\n${result.stderr}`;
-      if (!output.includes(smokeCommand.expectedOutput)) {
-        throw new Error(
-          [
-            `${packageInfo.packageName}: ${binTarget.commandName} ${smokeCommand.args.join(" ")} did not print expected output`,
-            `Expected to include: ${smokeCommand.expectedOutput}`,
-            result.stdout.trim(),
-            result.stderr.trim(),
-          ]
-            .filter(Boolean)
-            .join("\n"),
+      try {
+        const allowedChildPaths = smokeCommand.allowedChildPackageFile
+          ? installedPackageFilePaths(packageSmokeRoot, smokeCommand.allowedChildPackageFile)
+          : [];
+        const result = run(
+          installedBinPath(packageSmokeRoot, binTarget.commandName),
+          smokeCommand.args,
+          packageSmokeRoot,
+          {
+            expectedExitCode: smokeCommand.expectedExitCode,
+            env: smokeCommandEnvironment(packageSmokeRoot, networkGuardPath, allowedChildPaths),
+            label: `${packageInfo.packageName}: ${binTarget.commandName} ${smokeCommand.args.join(" ")}`,
+          },
         );
-      }
-
-      for (const unexpectedOutput of smokeCommand.unexpectedOutputs ?? []) {
-        if (output.includes(unexpectedOutput)) {
+        const output = `${result.stdout}\n${result.stderr}`;
+        if (!output.includes(smokeCommand.expectedOutput)) {
           throw new Error(
-            `${packageInfo.packageName}: ${binTarget.commandName} ${smokeCommand.args.join(" ")} unexpectedly printed ${unexpectedOutput}`,
+            [
+              `${packageInfo.packageName}: ${binTarget.commandName} ${smokeCommand.args.join(" ")} did not print expected output`,
+              `Expected to include: ${smokeCommand.expectedOutput}`,
+              result.stdout.trim(),
+              result.stderr.trim(),
+            ]
+              .filter(Boolean)
+              .join("\n"),
           );
         }
-      }
 
-      for (const expectedPath of smokeCommand.expectedPaths ?? []) {
-        if (!existsSync(join(packageSmokeRoot, expectedPath))) {
-          throw new Error(
-            `${packageInfo.packageName}: ${binTarget.commandName} ${smokeCommand.args.join(" ")} did not create ${expectedPath}`,
-          );
+        for (const unexpectedOutput of smokeCommand.unexpectedOutputs ?? []) {
+          if (output.includes(unexpectedOutput)) {
+            throw new Error(
+              `${packageInfo.packageName}: ${binTarget.commandName} ${smokeCommand.args.join(" ")} unexpectedly printed ${unexpectedOutput}`,
+            );
+          }
+        }
+
+        for (const expectedPath of smokeCommand.expectedPaths ?? []) {
+          if (!existsSync(join(packageSmokeRoot, expectedPath))) {
+            throw new Error(
+              `${packageInfo.packageName}: ${binTarget.commandName} ${smokeCommand.args.join(" ")} did not create ${expectedPath}`,
+            );
+          }
+        }
+
+        console.log(
+          `package-bin-smoke: ${packageInfo.packageName} ${binTarget.commandName} ${smokeCommand.args.join(" ")}`,
+        );
+      } finally {
+        for (const replacement of [...replacements].reverse()) {
+          restoreInstalledPackageFile(replacement);
         }
       }
-
-      console.log(
-        `package-bin-smoke: ${packageInfo.packageName} ${binTarget.commandName} ${smokeCommand.args.join(" ")}`,
-      );
     }
   }
 }
@@ -491,17 +505,28 @@ function writeSmokeFixtureFiles(
 function writeSmokePackageFixtureFiles(
   packageSmokeRoot: string,
   fixtureFiles: readonly SmokePackageFixtureFile[],
-): void {
-  for (const fixtureFile of fixtureFiles) {
-    const installedPaths = installedPackageFilePaths(packageSmokeRoot, fixtureFile);
-    if (installedPaths.length === 0) {
-      throw new Error(
-        `${fixtureFile.packageName}: installed package file ${fixtureFile.path} was not found`,
-      );
+): InstalledPackageFileReplacement[] {
+  const replacements: InstalledPackageFileReplacement[] = [];
+  try {
+    for (const fixtureFile of fixtureFiles) {
+      const installedPaths = installedPackageFilePaths(packageSmokeRoot, fixtureFile);
+      if (installedPaths.length === 0) {
+        throw new Error(
+          `${fixtureFile.packageName}: installed package file ${fixtureFile.path} was not found`,
+        );
+      }
+      for (const installedPath of installedPaths) {
+        replacements.push(
+          replaceInstalledPackageFile(packageSmokeRoot, installedPath, fixtureFile.contents),
+        );
+      }
     }
-    for (const installedPath of installedPaths) {
-      replaceInstalledPackageFile(packageSmokeRoot, installedPath, fixtureFile.contents);
+    return replacements;
+  } catch (error) {
+    for (const replacement of [...replacements].reverse()) {
+      restoreInstalledPackageFile(replacement);
     }
+    throw error;
   }
 }
 
@@ -509,11 +534,26 @@ export function replaceInstalledPackageFile(
   packageSmokeRoot: string,
   filePath: string,
   contents: string,
-): void {
+): InstalledPackageFileReplacement {
   const smokeLocalPath = smokeLocalRealpath(packageSmokeRoot, filePath);
   const originalPath = `${smokeLocalPath}.croco-bin-smoke-original`;
   renameSync(smokeLocalPath, originalPath);
-  writeFileSync(smokeLocalPath, contents);
+  try {
+    writeFileSync(smokeLocalPath, contents);
+  } catch (error) {
+    rmSync(smokeLocalPath, { force: true });
+    renameSync(originalPath, smokeLocalPath);
+    throw error;
+  }
+  return { installedPath: smokeLocalPath, originalPath };
+}
+
+export function restoreInstalledPackageFile(replacement: InstalledPackageFileReplacement): void {
+  if (!existsSync(replacement.originalPath)) {
+    throw new Error(`package-bin-smoke/original-fixture-missing: ${replacement.originalPath}`);
+  }
+  rmSync(replacement.installedPath, { force: true });
+  renameSync(replacement.originalPath, replacement.installedPath);
 }
 
 function installedPackageFilePaths(
@@ -783,7 +823,7 @@ function smokeCommandsFor(
           expectedOutput: '"code": "create-croco-app/project-created"',
         },
       ];
-    case "croco":
+    case "croco": {
       const migrationRunnerInstalled =
         typeof packageInfo.sourceManifest.dependencies?.["@croco/migration-runner"] === "string";
       return [
@@ -823,6 +863,19 @@ function smokeCommandsFor(
           fixtureFiles: migrationWrapperFixtureFiles(),
           expectedOutput: "croco-migrate-wrapper-contract-ok",
         },
+        ...(migrationRunnerInstalled
+          ? [
+              {
+                allowedChildPackageFile: {
+                  packageName: "@croco/migration-runner",
+                  path: "dist/cli.js",
+                },
+                args: ["migrate", "status"],
+                expectedExitCode: 1,
+                expectedOutput: "migration-runner/database-url-required",
+              },
+            ]
+          : []),
         {
           args: ["--overwrite", "migrate", "up"],
           expectedExitCode: 1,
@@ -834,6 +887,7 @@ function smokeCommandsFor(
           expectedOutput: "Unknown option: --bogus",
         },
       ];
+    }
     case "croco-openapi-spec":
       return [
         {

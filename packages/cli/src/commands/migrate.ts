@@ -196,6 +196,37 @@ export function resolveMigrationRunnerBinFromEntry(entry: string): string {
   return resolveCliBinFromEntry(entry);
 }
 
+export function isMigrateCommand(argument: string): argument is MigrateCommand {
+  return ALL_MIGRATE_COMMANDS.some((command) => command === argument);
+}
+
+export function migrateOptionConsumesNextArgument(argument: string): boolean {
+  if (argument.startsWith("--")) {
+    const separator = argument.indexOf("=");
+    const optionName = argument.slice(2, separator === -1 ? undefined : separator);
+    const spec = allMigrationOptionEntries().find(
+      ([name, candidate]) => name === optionName || candidate.longAliases?.includes(optionName),
+    )?.[1];
+    return spec?.type === "string" && separator === -1;
+  }
+
+  if (argument.startsWith("-") && argument !== "-") {
+    const spec = allMigrationOptionEntries().find(
+      ([, candidate]) => candidate.alias === argument.slice(1, 2),
+    )?.[1];
+    return spec?.type === "string" && argument.length === 2;
+  }
+
+  return false;
+}
+
+export function migrateArgumentsAreValid(
+  command: MigrateCommand,
+  rawArgs: readonly string[],
+): boolean {
+  return parseMigrationOptions(command, rawArgs).ok;
+}
+
 function migrationArgsFor(command: MigrateCommand): ArgsDef {
   return Object.fromEntries(
     migrationOptionEntries(command).map(([name, spec]) => [
@@ -303,7 +334,15 @@ function parseMigrationOptions(
         return { message: `Unknown option: ${token}`, ok: false };
       }
 
-      const [name] = option;
+      const [name, spec] = option;
+      if (spec.type === "boolean") {
+        if (token.length > 2) {
+          return { message: `Unknown option: ${token}`, ok: false };
+        }
+        values[name] = true;
+        continue;
+      }
+
       const inlineValue = token.length > 2 ? token.slice(2) : undefined;
       const value = inlineValue ?? rawArgs[index + 1];
       if (value === undefined) {
@@ -325,7 +364,9 @@ function parseMigrationOptions(
 function migrationOptionEntries(
   command: MigrateCommand,
 ): [MigrationOptionName, MigrationOptionSpec][] {
-  return (
-    Object.entries(MIGRATION_OPTION_SPECS) as [MigrationOptionName, MigrationOptionSpec][]
-  ).filter(([, spec]) => spec.commands.includes(command));
+  return allMigrationOptionEntries().filter(([, spec]) => spec.commands.includes(command));
+}
+
+function allMigrationOptionEntries(): [MigrationOptionName, MigrationOptionSpec][] {
+  return Object.entries(MIGRATION_OPTION_SPECS) as [MigrationOptionName, MigrationOptionSpec][];
 }
