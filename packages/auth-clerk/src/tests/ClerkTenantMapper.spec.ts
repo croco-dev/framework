@@ -1,10 +1,30 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ClerkTenantMapper,
+  InMemoryTenantMappingStore,
   type ClerkTenantRequest,
+  type TenantMappingClaimResult,
   type TenantMappingStore,
 } from "../libs/ClerkTenantMapper";
-import { DuplicateTenantMappingProblem } from "../libs/problems/ClerkProblems";
+import { createTenantMappingStoreConformanceSuite } from "../libs/conformance";
+import {
+  DuplicateTenantMappingProblem,
+  UnexpectedTenantMappingClaimProblem,
+} from "../libs/problems/ClerkProblems";
+
+describe("TenantMappingStore conformance", () => {
+  const conformance = createTenantMappingStoreConformanceSuite({
+    createStores: () => {
+      const mappings = new Map<string, string>();
+      return [new InMemoryTenantMappingStore(mappings), new InMemoryTenantMappingStore(mappings)];
+    },
+  });
+
+  it.each(conformance.cases.map((testCase) => [testCase.name, testCase.run] as const))(
+    "%s",
+    async (_name, run) => run(),
+  );
+});
 
 describe("ClerkTenantMapper", () => {
   describe("InMemory Store", () => {
@@ -66,6 +86,39 @@ describe("ClerkTenantMapper", () => {
       await expect(mapper.resolve("org_123")).resolves.toBe("tenant_abc");
     });
 
+    it("should keep one winner under conflicting concurrent registrations", async () => {
+      const results = await Promise.allSettled([
+        mapper.register("org_123", "tenant_abc"),
+        mapper.register("org_123", "tenant_xyz"),
+      ]);
+
+      expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+      const rejected = results.find((result) => result.status === "rejected");
+      expect(rejected?.status).toBe("rejected");
+      if (rejected?.status === "rejected") {
+        expect(rejected.reason).toBeInstanceOf(DuplicateTenantMappingProblem);
+      }
+
+      const authoritativeTenantId = await mapper.resolve("org_123");
+      expect(["tenant_abc", "tenant_xyz"]).toContain(authoritativeTenantId);
+      const conflictingTenantId =
+        authoritativeTenantId === "tenant_abc" ? "tenant_xyz" : "tenant_abc";
+      await expect(mapper.register("org_123", conflictingTenantId)).rejects.toBeInstanceOf(
+        DuplicateTenantMappingProblem,
+      );
+      await expect(mapper.resolve("org_123")).resolves.toBe(authoritativeTenantId);
+    });
+
+    it("should keep concurrent same-tenant registrations idempotent", async () => {
+      await expect(
+        Promise.all([
+          mapper.register("org_123", "tenant_abc"),
+          mapper.register("org_123", "tenant_abc"),
+        ]),
+      ).resolves.toEqual([undefined, undefined]);
+      await expect(mapper.resolve("org_123")).resolves.toBe("tenant_abc");
+    });
+
     it("should return null if request has no orgId", async () => {
       const request: ClerkTenantRequest = {
         user: {
@@ -88,7 +141,7 @@ describe("ClerkTenantMapper", () => {
     beforeEach(() => {
       mockStore = {
         get: vi.fn(),
-        set: vi.fn(),
+        claim: vi.fn(),
         delete: vi.fn(),
       };
       mapper = new ClerkTenantMapper(mockStore);
@@ -101,13 +154,14 @@ describe("ClerkTenantMapper", () => {
       expect(mockStore.get).toHaveBeenCalledWith("org_xyz");
     });
 
-    it("should use custom store for set", async () => {
-      vi.mocked(mockStore.get).mockResolvedValue(null);
+    it("should use custom store for an atomic claim", async () => {
+      vi.mocked(mockStore.claim).mockResolvedValue({
+        outcome: "created",
+      });
 
       await mapper.register("org_xyz", "tenant_xyz");
 
-      expect(mockStore.get).toHaveBeenCalledWith("org_xyz");
-      expect(mockStore.set).toHaveBeenCalledWith("org_xyz", "tenant_xyz");
+      expect(mockStore.claim).toHaveBeenCalledWith("org_xyz", "tenant_xyz");
     });
 
     it("should use custom store for delete", async () => {
@@ -116,21 +170,33 @@ describe("ClerkTenantMapper", () => {
     });
 
     it("should allow idempotent registration for an existing custom store mapping", async () => {
-      vi.mocked(mockStore.get).mockResolvedValue("tenant_xyz");
+      vi.mocked(mockStore.claim).mockResolvedValue({
+        outcome: "existing",
+        tenantId: "tenant_xyz",
+      });
 
       await expect(mapper.register("org_xyz", "tenant_xyz")).resolves.toBeUndefined();
-
-      expect(mockStore.set).not.toHaveBeenCalled();
     });
 
     it("should fail fast when a custom store mapping would be overwritten", async () => {
-      vi.mocked(mockStore.get).mockResolvedValue("tenant_abc");
+      vi.mocked(mockStore.claim).mockResolvedValue({
+        outcome: "existing",
+        tenantId: "tenant_abc",
+      });
 
       await expect(mapper.register("org_xyz", "tenant_xyz")).rejects.toBeInstanceOf(
         DuplicateTenantMappingProblem,
       );
+    });
 
-      expect(mockStore.set).not.toHaveBeenCalled();
+    it("should fail fast when a custom store returns an invalid claim result", async () => {
+      vi.mocked(mockStore.claim).mockResolvedValue({
+        outcome: "invalid",
+      } as unknown as TenantMappingClaimResult);
+
+      await expect(mapper.register("org_xyz", "tenant_xyz")).rejects.toBeInstanceOf(
+        UnexpectedTenantMappingClaimProblem,
+      );
     });
   });
 });

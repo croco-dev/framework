@@ -86,6 +86,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`ClerkTokenVerificationUpstreamProblem`](/api/auth-clerk/src/classes/clerktokenverificationupstreamproblem/)
 - [`DuplicateTenantMappingProblem`](/api/auth-clerk/src/classes/duplicatetenantmappingproblem/)
 - [`InvalidWebhookPayloadProblem`](/api/auth-clerk/src/classes/invalidwebhookpayloadproblem/)
+- [`UnexpectedTenantMappingClaimProblem`](/api/auth-clerk/src/classes/unexpectedtenantmappingclaimproblem/)
 - [`WebhookVerificationProblem`](/api/auth-clerk/src/classes/webhookverificationproblem/)
 - [`ApiKeyRotationProtectionProblem`](/api/auth-core/src/classes/apikeyrotationprotectionproblem/)
 - [`ApiKeyCreationFailedProblem`](/api/auth-core/src/classes/apikeycreationfailedproblem/)

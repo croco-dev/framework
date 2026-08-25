@@ -1916,6 +1916,16 @@ const recoveryMetadataByCode = {
     redactionPolicy: "public",
     severity: "info",
   }),
+  "auth-clerk/unexpected-tenant-mapping-claim": recovery({
+    cause: "TenantMappingStore.claim() returned a result outside the supported claim contract.",
+    userAction:
+      "Do not retry the unchanged operation; report the tenant mapping store and version to the service operator.",
+    operatorAction:
+      "Fix or upgrade the TenantMappingStore implementation so claim() returns created or existing with the authoritative tenant ID.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "auth-clerk/webhook-delivery-failed": recovery({
     cause:
       "The idempotency store contains a terminal failure for this Clerk deliveryId and eventType.",

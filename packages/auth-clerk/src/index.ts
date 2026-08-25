@@ -46,11 +46,22 @@ export { ClerkSessionProvider } from "./libs/ClerkSessionProvider";
 /**
  * Clerk tenant 매핑에 필요한 공개 타입입니다.
  */
-export type { ClerkTenantRequest, TenantMappingStore } from "./libs/ClerkTenantMapper";
+export type {
+  ClerkTenantRequest,
+  TenantMappingClaimResult,
+  TenantMappingStore,
+} from "./libs/ClerkTenantMapper";
 /**
  * Clerk 조직 ID와 Croco tenant ID를 매핑하는 매퍼입니다.
  */
 export { ClerkTenantMapper } from "./libs/ClerkTenantMapper";
+
+export {
+  createTenantMappingStoreConformanceSuite,
+  type TenantMappingStoreConformanceCase,
+  type TenantMappingStoreConformanceOptions,
+  type TenantMappingStoreConformanceSuite,
+} from "./libs/conformance";
 
 /**
  * Clerk 사용자 관리에 필요한 공개 타입입니다.
@@ -83,6 +94,7 @@ export {
   createClerkTokenVerificationProblem,
   DuplicateTenantMappingProblem,
   InvalidWebhookPayloadProblem,
+  UnexpectedTenantMappingClaimProblem,
   WebhookVerificationProblem,
 } from "./libs/problems/ClerkProblems";
 

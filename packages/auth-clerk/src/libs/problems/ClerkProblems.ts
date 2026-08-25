@@ -141,6 +141,18 @@ export class DuplicateTenantMappingProblem extends Problem {
 }
 
 /**
+ * Tenant mapping store가 claim 계약에 없는 결과를 반환했을 때 발생하는 Problem입니다.
+ */
+export class UnexpectedTenantMappingClaimProblem extends Problem {
+  readonly code = "auth-clerk/unexpected-tenant-mapping-claim";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(claim: never) {
+    super(undefined, undefined, `Unexpected tenant mapping claim result: ${String(claim)}`);
+  }
+}
+
+/**
  * Clerk 조직 멤버십 응답에 publicUserData가 없을 때 발생하는 Problem입니다.
  */
 export class ClerkPublicUserDataMissingProblem extends Problem {

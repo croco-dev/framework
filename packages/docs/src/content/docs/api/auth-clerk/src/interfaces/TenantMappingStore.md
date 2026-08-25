@@ -9,6 +9,29 @@ Clerk tenant 매핑에 필요한 공개 타입입니다.
 
 ## Methods
 
+### claim()
+
+> **claim**(`externalOrgId`, `tenantId`): `Promise`\<[`TenantMappingClaimResult`](/api/auth-clerk/src/type-aliases/tenantmappingclaimresult/)\>
+
+Creates the mapping only when the organization is unclaimed and returns the authoritative tenant.
+Implementations must make the absence check and create one atomic operation across processes.
+
+#### Parameters
+
+##### externalOrgId
+
+`string`
+
+##### tenantId
+
+`string`
+
+#### Returns
+
+`Promise`\<[`TenantMappingClaimResult`](/api/auth-clerk/src/type-aliases/tenantmappingclaimresult/)\>
+
+***
+
 ### delete()
 
 > **delete**(`externalOrgId`): `Promise`\<`void`\>
@@ -23,7 +46,7 @@ Clerk tenant 매핑에 필요한 공개 타입입니다.
 
 `Promise`\<`void`\>
 
----
+***
 
 ### get()
 
@@ -38,23 +61,3 @@ Clerk tenant 매핑에 필요한 공개 타입입니다.
 #### Returns
 
 `Promise`\<`string` \| `null`\>
-
----
-
-### set()
-
-> **set**(`externalOrgId`, `tenantId`): `Promise`\<`void`\>
-
-#### Parameters
-
-##### externalOrgId
-
-`string`
-
-##### tenantId
-
-`string`
-
-#### Returns
-
-`Promise`\<`void`\>
