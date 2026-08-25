@@ -6,3 +6,4 @@ export {
   generateClientFilesFromContractGraph,
 } from "./libs/generate";
 export { loadContractGraph, loadRoutes } from "./libs/loadRoutes";
+export type { LoadContractGraphOptions } from "./libs/loadRoutes";

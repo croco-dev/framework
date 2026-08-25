@@ -447,6 +447,7 @@
       "packages": [
         "admin-generated",
         "openapi-spec",
+        "protocol-codegen",
         "protocols-core",
         "protocols-desktop",
         "protocols-graphql",
@@ -580,6 +581,7 @@
         "preset-cloudflare",
         "preset-lambda",
         "preset-node",
+        "protocol-codegen",
         "protocols-core",
         "protocols-graphql",
         "protocols-trpc",

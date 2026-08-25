@@ -17,6 +17,7 @@ type CliOptions = {
   readonly bearerAuthScheme: string | null;
   readonly strictProblems: boolean;
   readonly strictSchemas: boolean;
+  readonly tsconfigPath: string | null;
   readonly failOnDiagnostics: boolean;
   readonly check: boolean;
   readonly manifestBundlePath: string | null;
@@ -57,7 +58,10 @@ export async function runCli(args: readonly string[], io: CliIo = defaultCliIo):
       import("./emitOpenAPI"),
       import("./loadControllers"),
     ]);
-  const controllers = await loadControllers(result.options.controllers);
+  const controllers = await loadControllers(
+    result.options.controllers,
+    result.options.tsconfigPath ? { tsconfigPath: result.options.tsconfigPath } : {},
+  );
   const graph = buildContractGraph(controllers, {
     strictProblemResponses: result.options.strictProblems,
     strictSchemas: result.options.strictSchemas,
@@ -132,11 +136,13 @@ export function parseArgs(args: readonly string[]): CliParseResult {
   const outputCheck = args.includes(CLI_FLAGS.boolean.outputCheck);
   const strictProblems = parseStrictProblems(args);
   const strictSchemas = parseStrictSchemas(args);
+  const tsconfigPath = getFlagValue(args, CLI_FLAGS.value.tsconfig);
 
   if (
     !controllers ||
     (!outFile && !check) ||
     (check && outputCheck) ||
+    (args.includes(CLI_FLAGS.value.tsconfig) && !tsconfigPath) ||
     strictProblems === null ||
     strictSchemas === null
   ) {
@@ -157,6 +163,7 @@ export function parseArgs(args: readonly string[]): CliParseResult {
         : null,
       strictProblems,
       strictSchemas,
+      tsconfigPath,
       failOnDiagnostics: args.includes(CLI_FLAGS.boolean.failOnDiagnostics),
       check,
       manifestBundlePath: getFlagValue(args, CLI_FLAGS.value.manifestBundle),
@@ -216,6 +223,7 @@ const CLI_FLAGS = {
     out: "--out",
     server: "--server",
     title: "--title",
+    tsconfig: "--tsconfig",
     version: "--version",
   },
   boolean: {
@@ -294,6 +302,7 @@ function printHelp(io: CliIo): void {
 Options:
   --controllers <glob>  Controller files to load
   --out <file>          OpenAPI JSON output file
+  --tsconfig <path>     Use an explicit application TypeScript config
   --title <s>           API title (default: Croco API)
   --version <s>         API version (default: 1.0.0)
   --server <url>        Server URL to include; repeat for multiple servers

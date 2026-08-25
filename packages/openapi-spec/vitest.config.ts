@@ -10,6 +10,7 @@ export default defineConfig({
       "@croco/diagnostics-core": resolve(currentDir, "../diagnostics-core/src/index.ts"),
       "@croco/framework-context": resolve(currentDir, "../framework-context/src/index.ts"),
       "@croco/problems-core": resolve(currentDir, "../problems-core/src/index.ts"),
+      "@croco/protocol-codegen": resolve(currentDir, "../protocol-codegen/src/index.ts"),
       "@croco/protocols-core": resolve(currentDir, "../protocols-core/src/index.ts"),
       "@croco/protocols-rest": resolve(currentDir, "../protocols-rest/src/index.ts"),
     },

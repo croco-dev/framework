@@ -45,6 +45,7 @@
   "dependencies": {
     "@croco/presentation-preset": "workspace:*",
     "@croco/problems-core": "workspace:*",
+    "@croco/protocol-codegen": "workspace:*",
     "@croco/protocols-core": "workspace:*",
     "prettier": "^3.0.0",
     "ts-morph": "^24.0.0"

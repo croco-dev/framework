@@ -376,6 +376,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`NodeEntryLifecycleIoProblem`](/api/preset-node/src/classes/nodeentrylifecycleioproblem/)
 - [`NodeEntryLifecycleProblem`](/api/preset-node/src/classes/nodeentrylifecycleproblem/)
 - [`ProblemRegistryValidationProblem`](/api/problems-core/src/classes/problemregistryvalidationproblem/)
+- [`ControllerProjectConfigProblem`](/api/protocol-codegen/src/classes/controllerprojectconfigproblem/)
 - [`ContractGraphDiagnosticError`](/api/protocols-core/src/classes/contractgraphdiagnosticerror/)
 - [`DesktopDefinitionProblem`](/api/protocols-desktop/src/classes/desktopdefinitionproblem/)
 - [`DesktopWireSchemaProblem`](/api/protocols-desktop/src/classes/desktopwireschemaproblem/)

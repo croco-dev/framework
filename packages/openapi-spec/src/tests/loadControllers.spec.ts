@@ -1,5 +1,6 @@
 import "reflect-metadata";
 import * as fs from "node:fs";
+import { createRequire } from "node:module";
 import * as os from "node:os";
 import * as path from "node:path";
 import { buildContractGraph } from "@croco/protocols-core";
@@ -100,6 +101,45 @@ describe("loadControllers", () => {
   );
 
   it(
+    "loads runtime path aliases with an explicit NodeNext application config",
+    async () => {
+      const tsconfigPath = path.join(tempRoot, "tsconfig.codegen.json");
+      fs.writeFileSync(path.join(tempRoot, "package.json"), JSON.stringify({ type: "module" }));
+      fs.writeFileSync(
+        tsconfigPath,
+        JSON.stringify({
+          compilerOptions: {
+            baseUrl: ".",
+            experimentalDecorators: true,
+            module: "NodeNext",
+            moduleResolution: "NodeNext",
+            paths: { "@app/*": ["src/*"] },
+            target: "ES2022",
+          },
+        }),
+      );
+      fs.writeFileSync(
+        path.join(sourceDir, "paths.ts"),
+        "export const controllerPath = '/aliased';\n",
+      );
+      fs.writeFileSync(
+        path.join(sourceDir, "AliasedController.ts"),
+        getMixedControllerSource()
+          .replace("import 'reflect-metadata';", "import { controllerPath } from '@app/paths';")
+          .replace("@Controller('/users')", "@Controller(controllerPath)"),
+      );
+
+      const controllers = await loadControllers(path.join(sourceDir, "*Controller.ts"), {
+        tsconfigPath,
+      });
+      const spec = emitOpenAPI(controllers);
+
+      expect(spec.paths?.["/aliased"]?.get?.operationId).toBe("UsersController_listUsers");
+    },
+    LOAD_CONTROLLER_TIMEOUT_MS,
+  );
+
+  it(
     "keeps emitted decorator source locations scoped to each source file",
     async () => {
       const firstDir = path.join(sourceDir, "first");
@@ -122,6 +162,29 @@ describe("loadControllers", () => {
 
       expect(sourceLocationByPath.get("/first")).toBe(firstControllerPath);
       expect(sourceLocationByPath.get("/second")).toBe(secondControllerPath);
+    },
+    LOAD_CONTROLLER_TIMEOUT_MS,
+  );
+
+  it(
+    "extends each application-resolved Zod runtime across controller roots",
+    async () => {
+      const firstDir = path.join(tempRoot, "apps", "first");
+      const secondDir = path.join(tempRoot, "apps", "second");
+      const firstControllerPath = path.join(firstDir, "src", "FirstController.ts");
+      const secondControllerPath = path.join(secondDir, "src", "SecondController.ts");
+
+      writeZodFixture(firstDir);
+      writeZodFixture(secondDir);
+      fs.mkdirSync(path.dirname(firstControllerPath), { recursive: true });
+      fs.mkdirSync(path.dirname(secondControllerPath), { recursive: true });
+      fs.writeFileSync(firstControllerPath, getDuplicateControllerSource("/first"));
+      fs.writeFileSync(secondControllerPath, getDuplicateControllerSource("/second"));
+
+      await loadControllers(path.join(tempRoot, "apps", "*", "src", "*Controller.ts"));
+
+      expect(getZodOpenApiMethod(firstControllerPath)).toBeTypeOf("function");
+      expect(getZodOpenApiMethod(secondControllerPath)).toBeTypeOf("function");
     },
     LOAD_CONTROLLER_TIMEOUT_MS,
   );
@@ -217,6 +280,20 @@ function writeProtocolsRestFixture(projectDir: string): void {
   );
   fs.writeFileSync(path.join(packageDir, "index.js"), getProtocolsRestFixtureSource());
   fs.writeFileSync(path.join(packageDir, "index.d.ts"), getProtocolsRestFixtureTypes());
+}
+
+function writeZodFixture(projectDir: string): void {
+  const workspaceRequire = createRequire(path.join(process.cwd(), "package.json"));
+  const sourceDir = path.dirname(workspaceRequire.resolve("zod/package.json"));
+  fs.cpSync(sourceDir, path.join(projectDir, "node_modules", "zod"), { recursive: true });
+}
+
+function getZodOpenApiMethod(sourcePath: string): unknown {
+  const applicationRequire = createRequire(sourcePath);
+  const zodModule = applicationRequire("zod") as {
+    readonly ZodObject: { readonly prototype: { readonly openapi?: unknown } };
+  };
+  return zodModule.ZodObject.prototype.openapi;
 }
 
 function getImportedControllerSource(): string {

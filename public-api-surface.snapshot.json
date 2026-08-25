@@ -19453,6 +19453,12 @@
               "exportKind": "named",
               "source": "./libs/emitOpenAPI",
               "declarationKind": "function"
+            },
+            {
+              "name": "loadControllers",
+              "exportKind": "named",
+              "source": "./libs/loadControllers",
+              "declarationKind": "function"
             }
           ],
           "typeExports": [
@@ -19460,6 +19466,11 @@
               "name": "EmitOpenAPIOptions",
               "exportKind": "named",
               "source": "./libs/emitOpenAPI"
+            },
+            {
+              "name": "LoadControllersOptions",
+              "exportKind": "named",
+              "source": "./libs/loadControllers"
             },
             {
               "name": "ProblemResponseConfig",
@@ -21036,6 +21047,68 @@
               "name": "TypedProblemDetails",
               "exportKind": "named",
               "source": "./libs/Problem"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "packageName": "@croco/protocol-codegen",
+      "relativeDir": "packages/protocol-codegen",
+      "entrypoints": [
+        {
+          "exportPath": ".",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/index.js"
+            },
+            {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            }
+          ],
+          "sourceEntrypoint": "packages/protocol-codegen/src/index.ts",
+          "runtimeExports": [
+            {
+              "name": "ControllerProjectConfigProblem",
+              "exportKind": "named",
+              "source": "./libs/ControllerProject",
+              "declarationKind": "class"
+            },
+            {
+              "name": "createControllerProject",
+              "exportKind": "named",
+              "source": "./libs/ControllerProject",
+              "declarationKind": "function"
+            },
+            {
+              "name": "getCommonSourceDirectory",
+              "exportKind": "named",
+              "source": "./libs/ControllerProject",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "ControllerModule",
+              "exportKind": "named",
+              "source": "./libs/ControllerProject"
+            },
+            {
+              "name": "ControllerProject",
+              "exportKind": "named",
+              "source": "./libs/ControllerProject"
+            },
+            {
+              "name": "CreateControllerProjectOptions",
+              "exportKind": "named",
+              "source": "./libs/ControllerProject"
             }
           ]
         }
@@ -24782,6 +24855,11 @@
               "name": "GenerateClientProblemRuntime",
               "exportKind": "named",
               "source": "./libs/generate"
+            },
+            {
+              "name": "LoadContractGraphOptions",
+              "exportKind": "named",
+              "source": "./libs/loadRoutes"
             }
           ]
         }

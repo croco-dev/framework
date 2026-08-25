@@ -13,6 +13,7 @@ const generationModuleImports = vi.hoisted(() => ({
   emitOpenAPI: 0,
   emitOpenAPIFromContractGraph: 0,
   loadControllers: 0,
+  lastLoadOptions: null as null | Record<string, unknown>,
   buildContractGraph: 0,
   lastBuildOptions: null as null | Record<string, unknown>,
   lastEmitOptions: null as null | Record<string, unknown>,
@@ -73,8 +74,9 @@ vi.mock("../libs/output", () => ({
 
 vi.mock("../libs/loadControllers", () => {
   return {
-    loadControllers: () => {
+    loadControllers: (_controllers: string, options: Record<string, unknown>) => {
       generationModuleImports.loadControllers += 1;
+      generationModuleImports.lastLoadOptions = options;
       return [class UsersController {}];
     },
   };
@@ -132,6 +134,7 @@ describe("openapi-spec CLI", () => {
     generationModuleImports.emitOpenAPI = 0;
     generationModuleImports.emitOpenAPIFromContractGraph = 0;
     generationModuleImports.loadControllers = 0;
+    generationModuleImports.lastLoadOptions = null;
     generationModuleImports.buildContractGraph = 0;
     generationModuleImports.lastBuildOptions = null;
     generationModuleImports.lastEmitOptions = null;
@@ -169,6 +172,7 @@ describe("openapi-spec CLI", () => {
       emitOpenAPI: 0,
       emitOpenAPIFromContractGraph: 0,
       loadControllers: 0,
+      lastLoadOptions: null,
       buildContractGraph: 0,
       lastBuildOptions: null,
       lastEmitOptions: null,
@@ -181,6 +185,10 @@ describe("openapi-spec CLI", () => {
     ["no arguments", []],
     ["missing controllers", ["--out", "openapi.json"]],
     ["missing output", ["--controllers", "src/controllers/**/*.ts"]],
+    [
+      "missing tsconfig value",
+      ["--controllers", "src/controllers/**/*.ts", "--check", "--tsconfig"],
+    ],
     [
       "conflicting schema modes",
       [
@@ -214,6 +222,7 @@ describe("openapi-spec CLI", () => {
       emitOpenAPI: 0,
       emitOpenAPIFromContractGraph: 0,
       loadControllers: 0,
+      lastLoadOptions: null,
       buildContractGraph: 0,
       lastBuildOptions: null,
       lastEmitOptions: null,
@@ -274,6 +283,22 @@ describe("openapi-spec CLI", () => {
         outFile: "-generated.json",
         title: "-internal",
       },
+    });
+  });
+
+  it("passes an explicit TypeScript config to controller loading", async () => {
+    const exitCode = await runCli([
+      "--controllers",
+      "src/**/*.ts",
+      "--out",
+      "openapi.json",
+      "--tsconfig",
+      "config/tsconfig.codegen.json",
+    ]);
+
+    expect(exitCode).toBe(0);
+    expect(generationModuleImports.lastLoadOptions).toEqual({
+      tsconfigPath: "config/tsconfig.codegen.json",
     });
   });
 
