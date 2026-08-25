@@ -1,5 +1,5 @@
 import type { Checkpointable, ItemReader, ItemWriter, Step } from "@croco/batch-core";
-import { createStepExecutionError } from "@croco/batch-core";
+import { assertValidChunkSize, createStepExecutionError } from "@croco/batch-core";
 import type {
   Execution,
   ExecutionContinuationClaim,
@@ -389,11 +389,7 @@ function validateExecutionManager(
 }
 
 function validateQStashStep<I, O>(step: QStashStep<I, O>): void {
-  if (!Number.isSafeInteger(step?.chunkSize) || step.chunkSize <= 0) {
-    throw new QStashBatchValidationProblem(
-      `QStash batch step.chunkSize must be a positive safe integer; received ${String(step?.chunkSize)}.`,
-    );
-  }
+  assertValidChunkSize(step?.chunkSize);
 
   if (!isCheckpointable(step?.reader)) {
     throw new QStashBatchConfigProblem("step.reader.checkpoint");

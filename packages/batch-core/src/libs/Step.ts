@@ -1,6 +1,7 @@
 import type { ItemProcessor } from "./interfaces/ItemProcessor";
 import type { ItemReader } from "./interfaces/ItemReader";
 import type { ItemWriter } from "./interfaces/ItemWriter";
+import { assertValidChunkSize } from "./ChunkSize";
 import type { StepFailureClassifier } from "./StepFailure";
 
 export interface StepOptions<I, O> {
@@ -21,11 +22,14 @@ export class Step<I, O> {
   public readonly classifyFailure?: StepFailureClassifier;
 
   constructor(options: StepOptions<I, O>) {
+    const chunkSize = options.chunkSize ?? 10;
+    assertValidChunkSize(chunkSize);
+
     this.name = options.name;
     this.reader = options.reader;
     this.processor = options.processor;
     this.writer = options.writer;
-    this.chunkSize = options.chunkSize ?? 10;
+    this.chunkSize = chunkSize;
     this.classifyFailure = options.classifyFailure;
   }
 }

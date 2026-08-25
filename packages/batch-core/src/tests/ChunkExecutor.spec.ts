@@ -28,6 +28,77 @@ describe("ChunkExecutor", () => {
     executor = new ChunkExecutor(executionManager);
   });
 
+  it.each([
+    0,
+    -1,
+    1.5,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    Number.NEGATIVE_INFINITY,
+    Number.MAX_SAFE_INTEGER + 1,
+  ])(
+    "rejects invalid chunk size %s before starting or performing batch work",
+    async (chunkSize) => {
+      const reader = {
+        read: vi.fn().mockResolvedValue(null),
+        getCheckpoint: vi.fn().mockReturnValue({ offset: 0 }),
+        restoreCheckpoint: vi.fn(),
+      };
+      const writer = {
+        write: vi.fn().mockResolvedValue(undefined),
+      };
+      const options = {
+        name: "invalid-chunk-step",
+        reader: reader as unknown as ItemReader<number>,
+        writer,
+        chunkSize,
+      };
+
+      expect(() => new Step<number, number>(options)).toThrow(
+        `Batch step.chunkSize must be a positive safe integer; received ${String(chunkSize)}.`,
+      );
+
+      await expect(
+        executor.execute("exec-1", options as unknown as Step<number, number>),
+      ).rejects.toMatchObject({
+        code: "batch-core/invalid-chunk-size",
+        detail: `Batch step.chunkSize must be a positive safe integer; received ${String(chunkSize)}.`,
+        receivedChunkSize: String(chunkSize),
+      });
+
+      expect(executionManager.start).not.toHaveBeenCalled();
+      expect(executionManager.checkpoint).not.toHaveBeenCalled();
+      expect(executionManager.updateProgress).not.toHaveBeenCalled();
+      expect(executionManager.complete).not.toHaveBeenCalled();
+      expect(executionManager.fail).not.toHaveBeenCalled();
+      expect(reader.read).not.toHaveBeenCalled();
+      expect(reader.getCheckpoint).not.toHaveBeenCalled();
+      expect(reader.restoreCheckpoint).not.toHaveBeenCalled();
+      expect(writer.write).not.toHaveBeenCalled();
+    },
+  );
+
+  it("defaults omitted chunk size to 10 and preserves chunk boundaries", async () => {
+    const remaining = Array.from({ length: 11 }, (_, index) => index + 1);
+    const reader = {
+      read: vi.fn(async () => remaining.shift() ?? null),
+    };
+    const writer = {
+      write: vi.fn().mockResolvedValue(undefined),
+    };
+    const step = new Step<number, number>({
+      name: "default-chunk-step",
+      reader,
+      writer,
+    });
+
+    await executor.execute("exec-1", step);
+
+    expect(step.chunkSize).toBe(10);
+    expect(writer.write).toHaveBeenNthCalledWith(1, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(writer.write).toHaveBeenNthCalledWith(2, [11]);
+  });
+
   it("should execute a simple step", async () => {
     const reader = {
       read: vi.fn().mockResolvedValueOnce(1).mockResolvedValueOnce(2).mockResolvedValueOnce(null),

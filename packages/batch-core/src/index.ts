@@ -45,6 +45,7 @@
  * ```
  */
 export * from "./libs/ChunkExecutor";
+export * from "./libs/ChunkSize";
 
 /**
  * ItemProcessor - 아이템 처리기 인터페이스

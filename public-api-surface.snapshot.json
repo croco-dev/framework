@@ -4346,6 +4346,12 @@
           "sourceEntrypoint": "packages/batch-core/src/index.ts",
           "runtimeExports": [
             {
+              "name": "assertValidChunkSize",
+              "exportKind": "declaration",
+              "source": "./libs/ChunkSize",
+              "declarationKind": "function"
+            },
+            {
               "name": "ChunkExecutor",
               "exportKind": "declaration",
               "source": "./libs/ChunkExecutor",
@@ -4356,6 +4362,12 @@
               "exportKind": "declaration",
               "source": "./libs/StepFailure",
               "declarationKind": "function"
+            },
+            {
+              "name": "InvalidBatchChunkSizeProblem",
+              "exportKind": "declaration",
+              "source": "./libs/ChunkSize",
+              "declarationKind": "class"
             },
             {
               "name": "JobBuilder",
