@@ -7,7 +7,7 @@ title: "assertValidChunkSize"
 
 > **assertValidChunkSize**(`chunkSize`): `void`
 
-Assert that a chunk size is bounded and exactly representable by JavaScript.
+Assert that a chunk size is a positive safe integer.
 
 ## Parameters
 
@@ -18,3 +18,7 @@ Assert that a chunk size is bounded and exactly representable by JavaScript.
 ## Returns
 
 `void`
+
+## Throws
+
+When `chunkSize` is non-positive or not a safe integer.

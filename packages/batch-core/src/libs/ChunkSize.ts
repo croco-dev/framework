@@ -23,7 +23,11 @@ export class InvalidBatchChunkSizeProblem extends Problem {
   }
 }
 
-/** Assert that a chunk size is bounded and exactly representable by JavaScript. */
+/**
+ * Assert that a chunk size is a positive safe integer.
+ *
+ * @throws {InvalidBatchChunkSizeProblem} When `chunkSize` is non-positive or not a safe integer.
+ */
 export function assertValidChunkSize(chunkSize: number): void {
   if (!Number.isSafeInteger(chunkSize) || chunkSize <= 0) {
     throw new InvalidBatchChunkSizeProblem(chunkSize);

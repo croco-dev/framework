@@ -1882,9 +1882,11 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       title: "Validation Error",
       cookbookPath: "/reference/problem-recovery-cookbook/#batch-core-invalid-chunk-size",
       recovery: {
-        cause: "The request or generated contract failed schema or semantic validation.",
-        userAction: "Fix the invalid fields and retry with schema-conformant input.",
-        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        cause:
+          "The batch Step or QStash execution configured chunkSize outside the positive safe-integer domain.",
+        userAction: "Set chunkSize to a positive safe integer, then restart the batch execution.",
+        operatorAction:
+          "Inspect receivedChunkSize and the Step or QStash execution configuration before restarting execution.",
         retryability: "not-retryable",
         redactionPolicy: "public",
         telemetry: {

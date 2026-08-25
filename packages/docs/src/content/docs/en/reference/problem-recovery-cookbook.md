@@ -1763,9 +1763,9 @@ Sources:
 - Retryability: `not-retryable`
 - Redaction policy: `public`
 - Lifecycle: `active`
-- Cause: The request or generated contract failed schema or semantic validation.
-- User action: Fix the invalid fields and retry with schema-conformant input.
-- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
+- Cause: The batch Step or QStash execution configured chunkSize outside the positive safe-integer domain.
+- User action: Set chunkSize to a positive safe integer, then restart the batch execution.
+- Operator action: Inspect receivedChunkSize and the Step or QStash execution configuration before restarting execution.
 - Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:
