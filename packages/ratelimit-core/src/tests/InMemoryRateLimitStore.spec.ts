@@ -78,14 +78,32 @@ describe("InMemoryRateLimitStore", () => {
     expect(result.resetAtMs).toBeLessThanOrEqual(Date.now() + 60000);
   });
 
-  it("should reset buckets when reset() is called", async () => {
-    await store.check("user:1", policy);
-    await store.check("user:1", policy);
+  it("should reset all buckets when reset() is called", async () => {
+    for (let i = 0; i < policy.limit; i++) {
+      await store.check("", policy);
+      await store.check("user:1", policy);
+    }
 
-    store.reset();
+    await store.reset();
 
-    const result = await store.check("user:1", policy);
-    expect(result.remaining).toBe(2);
+    const emptyKeyResult = await store.check("", policy);
+    const namedKeyResult = await store.check("user:1", policy);
+    expect(emptyKeyResult.remaining).toBe(2);
+    expect(namedKeyResult.remaining).toBe(2);
+  });
+
+  it('should reset only the empty-string bucket when reset("") is called', async () => {
+    for (let i = 0; i < policy.limit; i++) {
+      await store.check("", policy);
+      await store.check("user:1", policy);
+    }
+
+    await store.reset("");
+
+    const emptyKeyResult = await store.check("", policy);
+    const namedKeyResult = await store.check("user:1", policy);
+    expect(emptyKeyResult.success).toBe(true);
+    expect(namedKeyResult.success).toBe(false);
   });
 
   it("should refund sliding window quota and stats", async () => {
@@ -208,6 +226,24 @@ describe("InMemoryRateLimitStore", () => {
     expect(result.success).toBe(true);
     expect(result.remaining).toBe(0);
     expect(await fixedStore.getStats()).toEqual({ allowed: 1, denied: 0, total: 1 });
+
+    fixedStore.close();
+  });
+
+  it("should preserve other fixed-window refund receipts when resetting the empty-string key", async () => {
+    const fixedPolicy: FixedWindowPolicy = {
+      name: "fixed-empty-reset",
+      algorithm: "fixed",
+      limit: 1,
+      windowMs: 60000,
+    };
+    const fixedStore = new FixedWindowInMemoryStore({ pruneIntervalMs: 0 });
+
+    const check = await fixedStore.check("user:1", fixedPolicy);
+    await fixedStore.reset("");
+    const refund = await fixedStore.refund("user:1", fixedPolicy, check.refundReceipt);
+
+    expect(refund.refunded).toBe(true);
 
     fixedStore.close();
   });
@@ -378,6 +414,25 @@ describe("InMemoryRateLimitStore", () => {
     expect(refund.remaining).toBe(2);
     expect(checkAfterRefund.success).toBe(true);
     expect(checkAfterRefund.remaining).toBe(2);
+
+    tokenStore.close();
+  });
+
+  it("should preserve other token-bucket refund receipts when resetting the empty-string key", async () => {
+    const tokenPolicy: TokenBucketPolicy = {
+      name: "token-empty-reset",
+      algorithm: "token-bucket",
+      capacity: 1,
+      refillRate: 1,
+      refillIntervalMs: 1000,
+    };
+    const tokenStore = new TokenBucketInMemoryStore({ pruneIntervalMs: 0 });
+
+    const check = await tokenStore.check("user:1", tokenPolicy);
+    await tokenStore.reset("");
+    const refund = await tokenStore.refund("user:1", tokenPolicy, check.refundReceipt);
+
+    expect(refund.refunded).toBe(true);
 
     tokenStore.close();
   });

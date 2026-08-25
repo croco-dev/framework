@@ -332,7 +332,7 @@ export class SlidingWindowInMemoryStore extends SlidingWindowStore {
   }
 
   async reset(key?: string): Promise<void> {
-    if (key) {
+    if (key !== undefined) {
       this.windows.delete(key);
     } else {
       this.windows.clear();
