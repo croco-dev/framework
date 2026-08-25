@@ -5,4 +5,4 @@ prev: false
 title: "migrate"
 ---
 
-> `const` **migrate**: `CommandDef`\<\{ `cwd`: \{ `description`: `string`; `type`: `"string"`; \}; `dryRun`: \{ `description`: `string`; `type`: `"boolean"`; \}; `overwrite`: \{ `description`: `string`; `type`: `"boolean"`; \}; \}\>
+> `const` **migrate**: `CommandDef`\<`ArgsDef`\>
