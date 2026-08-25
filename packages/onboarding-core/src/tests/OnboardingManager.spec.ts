@@ -203,9 +203,8 @@ describe("OnboardingManager", () => {
       async () => {
         const exposedStatus = await managerWithSavedState.getStatus("welcome-tour");
         const exposedStep = exposedStatus.steps["step-1"];
-        if (!exposedStep) {
-          throw new Error("expected saved onboarding step");
-        }
+        expect(exposedStep).toBeDefined();
+        if (!exposedStep) return;
         exposedStep.completed = true;
         (exposedStep.metadata as { nested: { source: string } }).nested.source = "caller";
         exposedStatus.isCompleted = true;

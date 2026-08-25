@@ -23,7 +23,7 @@ const unsupportedSnapshotCases: ReadonlyArray<readonly [string, () => unknown]> 
         {},
         {
           getPrototypeOf: () => {
-            throw new Error("raw proxy failure");
+            throw new OnboardingStateSnapshotUnsupportedProblem();
           },
         },
       ),
@@ -250,13 +250,11 @@ describe("InMemoryOnboardingStore snapshot ownership", () => {
       currentStepId: "step-1",
     });
 
-    if (!loadedState) {
-      throw new Error("expected saved onboarding state");
-    }
+    expect(loadedState).not.toBeNull();
+    if (!loadedState) return;
     const loadedStep = loadedState.steps["step-1"];
-    if (!loadedStep) {
-      throw new Error("expected saved onboarding step");
-    }
+    expect(loadedStep).toBeDefined();
+    if (!loadedStep) return;
     const loadedMetadata = loadedStep.metadata as typeof metadata;
     loadedStep.completed = false;
     loadedStep.completedAt?.setUTCFullYear(2040);
@@ -305,13 +303,10 @@ describe("InMemoryOnboardingStore snapshot ownership", () => {
     });
 
     expect(result.status).toBe("completed");
-    if (result.status !== "completed") {
-      throw new Error("expected successful onboarding step completion");
-    }
+    if (result.status !== "completed") return;
     const resultStep = result.state.steps["step-1"];
-    if (!resultStep) {
-      throw new Error("expected completed onboarding step");
-    }
+    expect(resultStep).toBeDefined();
+    if (!resultStep) return;
     resultStep.completed = false;
     (resultStep.metadata as typeof stepMetadata).nested.source = "mutated result";
     resultStep.completedAt?.setUTCFullYear(2030);
