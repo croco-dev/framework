@@ -363,6 +363,18 @@ describe("generateClientFiles", () => {
     expect(checkGeneratedClientFiles([createBasicRoute()], TEMP_DIR)).toEqual([]);
   });
 
+  it("does not claim an unmarked empty module as generated ownership", () => {
+    const indexPath = path.join(TEMP_DIR, "index.ts");
+
+    fs.writeFileSync(indexPath, "export {};\n");
+    const before = collectDirectoryContents(TEMP_DIR);
+
+    expect(() => generateClientFiles([createBasicRoute()], TEMP_DIR)).toThrow(
+      `Cannot recover generated output ownership in '${TEMP_DIR}' because the legacy rpc.ts and index.ts topology is incomplete.`,
+    );
+    expect(collectDirectoryContents(TEMP_DIR)).toEqual(before);
+  });
+
   it("bootstraps frontend-problems generated ownership when the sidecar is missing", () => {
     const options = { problemRuntime: "frontend-problems" } as const;
     const routes = [
