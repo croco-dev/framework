@@ -236,9 +236,10 @@ export function readJsonAtRevision(path: string, revision: string | null): unkno
       : readFileSync(resolve(ROOT, path), "utf8");
   } catch (error) {
     if (isMissingArtifact(error, revision)) return undefined;
-    throw new Error(`Unable to read assurance artifact '${artifactLabel(path, revision)}'.`, {
-      cause: error,
-    });
+    throw new Error(
+      `Unable to read assurance artifact '${artifactLabel(path, revision)}'. ${errorOutput(error).trim()}`,
+      { cause: error },
+    );
   }
   try {
     return JSON.parse(content);
