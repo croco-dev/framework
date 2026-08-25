@@ -77,7 +77,7 @@ app.listen({ port: 3000 });
 
   it("adds a controller to createApp controllers options", async () => {
     await writeFixture(`
-import { createCrocoApp, createApp } from '@foo/bar';
+import { createApp } from '@croco/transports-http';
 import { FooController } from './somewhere';
 
 export function createCrocoApp() {
@@ -94,7 +94,7 @@ export function createCrocoApp() {
 
   it("adds a controller to a named createApp controllers array", async () => {
     await writeFixture(`
-import { createCrocoApp, createApp } from '@foo/bar';
+import { createApp } from '@croco/transports-http';
 import { FooController } from './somewhere';
 
 const controllers = [FooController];
@@ -244,8 +244,8 @@ await adminApi.listen({ port: 3001 });
     [
       "an unrelated factory named createApp",
       `
-function start(createApp: () => { listen(port: number): void }) {
-  const server = createApp();
+function start(createApp: (options: { controllers: unknown[] }) => { listen(port: number): void }) {
+  const server = createApp({ controllers: [] });
   server.listen(3000);
 }
 `,

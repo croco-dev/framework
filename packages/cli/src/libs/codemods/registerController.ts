@@ -3,6 +3,7 @@ import { Node, Project, QuoteKind, SyntaxKind, VariableDeclarationKind } from "t
 import type {
   ArrayLiteralExpression,
   CallExpression,
+  Identifier,
   PropertyAssignment,
   SourceFile,
   VariableDeclaration,
@@ -93,7 +94,11 @@ function addToActiveRegistration(sourceFile: SourceFile, className: string): Upd
       return addToCallArray(call, className);
     }
 
-    if (Node.isIdentifier(expression) && expression.getText() === "createApp") {
+    if (
+      Node.isIdentifier(expression) &&
+      expression.getText() === "createApp" &&
+      isSupportedCrocoAppFactory(expression)
+    ) {
       const result = addToCreateAppControllers(call, className);
       if (result !== "not-found") return result;
     }
@@ -227,6 +232,10 @@ function isSupportedCrocoAppVariable(declaration: VariableDeclaration): boolean 
   const factory = initializer.getExpression();
   if (!Node.isIdentifier(factory)) return false;
 
+  return isSupportedCrocoAppFactory(factory);
+}
+
+function isSupportedCrocoAppFactory(factory: Identifier): boolean {
   return (
     factory
       .getSymbol()
