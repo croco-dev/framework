@@ -1,10 +1,11 @@
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { registerController } from "../../libs/codemods/registerController.js";
 
 describe("registerController", () => {
-  const fixtureDir = "/tmp/opencode-croco-cli-t13-fixtures";
+  const fixtureDir = join(tmpdir(), `croco-cli-register-controller-${process.pid}`);
   const entryPath = join(fixtureDir, "app.ts");
 
   beforeEach(async () => {
@@ -118,7 +119,7 @@ export function createCrocoApp() {
 
   it("inserts addControllers before app.listen when no registration exists", async () => {
     await writeFixture(`
-import { createCrocoApp, createApp } from '@foo/bar';
+import { createCrocoApp } from './app';
 import { FooController } from './somewhere';
 
 const app = createCrocoApp();
@@ -130,6 +131,145 @@ app.listen({ port: 3000 });
 
     expect(result.status).toBe("updated");
     expect(content).toContain("app.addControllers([BarController]);\napp.listen({ port: 3000 });");
+  });
+
+  it("uses a renamed Croco app variable for fallback registration", async () => {
+    await writeFixture(`
+import { createCrocoApp } from './app';
+
+const api = createCrocoApp();
+await api.listen({ port: 3000 });
+`);
+
+    const firstResult = await registerBarController();
+    const firstContent = await readFixture();
+    const secondResult = await registerBarController();
+    const secondContent = await readFixture();
+
+    expect(firstResult.status).toBe("updated");
+    expect(secondResult.status).toBe("updated-idempotent");
+    expect(secondContent).toBe(firstContent);
+    expect(secondContent).toContain(
+      "api.addControllers([BarController]);\nawait api.listen({ port: 3000 });",
+    );
+    expect(secondContent).not.toContain("app.addControllers");
+  });
+
+  it("ignores unrelated listeners before the Croco app listener", async () => {
+    await writeFixture(`
+import { createServer } from 'node:http';
+import { createApp } from '@croco/transports-http';
+
+const server = createServer();
+const croco = createApp();
+server.listen(4000);
+await croco.listen({ port: 3000 });
+`);
+
+    const result = await registerBarController();
+    const content = await readFixture();
+
+    expect(result.status).toBe("updated");
+    expect(content).toContain("server.listen(4000);");
+    expect(content).toContain(
+      "croco.addControllers([BarController]);\nawait croco.listen({ port: 3000 });",
+    );
+    expect(content.indexOf("server.listen(4000);")).toBeLessThan(
+      content.indexOf("croco.addControllers([BarController]);"),
+    );
+  });
+
+  it("ignores a shadowed receiver with the same identifier", async () => {
+    await writeFixture(`
+import { createCrocoApp } from './app';
+
+const api = createCrocoApp();
+function startOtherServer(api: { listen(port: number): void }) {
+  api.listen(4000);
+}
+await api.listen({ port: 3000 });
+`);
+
+    const result = await registerBarController();
+    const content = await readFixture();
+
+    expect(result.status).toBe("updated");
+    expect(content).toContain("api.listen(4000);");
+    expect(content).toContain(
+      "api.addControllers([BarController]);\nawait api.listen({ port: 3000 });",
+    );
+  });
+
+  it.each([
+    [
+      "a standalone listener",
+      `
+import { listen } from 'node:net';
+
+listen(3000);
+`,
+    ],
+    [
+      "a Croco app without its own listener",
+      `
+import { createServer } from 'node:http';
+import { createCrocoApp } from './app';
+
+const server = createServer();
+const croco = createCrocoApp();
+server.listen(4000);
+`,
+    ],
+    [
+      "one Croco app with multiple listeners",
+      `
+import { createCrocoApp } from './app';
+
+const api = createCrocoApp();
+await api.listen({ port: 3000 });
+await api.listen({ port: 3001 });
+`,
+    ],
+    [
+      "ambiguous Croco app ownership",
+      `
+import { createCrocoApp } from './app';
+
+const publicApi = createCrocoApp();
+const adminApi = createCrocoApp();
+await publicApi.listen({ port: 3000 });
+await adminApi.listen({ port: 3001 });
+`,
+    ],
+    [
+      "an unrelated factory named createApp",
+      `
+function start(createApp: () => { listen(port: number): void }) {
+  const server = createApp();
+  server.listen(3000);
+}
+`,
+    ],
+    [
+      "a mutable Croco app binding",
+      `
+import { createApp } from '@croco/transports-http';
+
+let app = createApp();
+app = getOtherServer();
+app.listen(3000);
+`,
+    ],
+  ])("returns unsupported-pattern without changing %s", async (_description, fixture) => {
+    await writeFixture(fixture);
+    const before = await readFixture();
+
+    const result = await registerBarController();
+    const after = await readFixture();
+
+    expect(result.status).toBe("unsupported-pattern");
+    expect(result.status === "unsupported-pattern" ? result.hint : "").toContain("Croco app");
+    expect(after).toBe(before);
   });
 
   it("returns unsupported-pattern without changing spread registration", async () => {
