@@ -111,7 +111,8 @@ constructor(
 
 #### Methods
 
-- `register(definition: OnboardingDefinition): void` - 온보딩 정의 등록
+- `register(definition: OnboardingDefinition): void` - 온보딩 정의 등록. 같은 ID를 다시 등록하면
+  `DuplicateOnboardingDefinitionProblem`으로 실패하며 기존 정의를 유지합니다.
 - `getStatus(onboardingId: string): Promise<OnboardingState>` - 온보딩 상태 조회
 - `completeStep(onboardingId: string, stepId: string): Promise<void>` - 단계 완료 처리
 
@@ -175,6 +176,7 @@ interface OnboardingContext {
 
 ### Error Types
 
+- `DuplicateOnboardingDefinitionProblem` - 이미 등록된 정의 ID를 다시 등록할 때
 - `OnboardingDefinitionNotFoundProblem` - 정의를 찾을 수 없을 때
 - `OnboardingStepNotFoundProblem` - 단계를 찾을 수 없을 때
 - `OnboardingContextRequiredProblem` - 컨텍스트가 필요할 때

@@ -18925,6 +18925,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "DuplicateOnboardingDefinitionProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/OnboardingProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "InMemoryOnboardingStore",
               "exportKind": "named",
               "source": "./libs/OnboardingStore",

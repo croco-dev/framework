@@ -1,6 +1,25 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
 
 /**
+ * 동일한 ID의 온보딩 정의를 중복 등록할 때 발생하는 구성 Problem입니다.
+ */
+export class DuplicateOnboardingDefinitionProblem extends Problem {
+  constructor(onboardingId: string) {
+    super(
+      "onboarding/duplicate-definition-registration",
+      ProblemCategory.InternalServerError,
+      `Onboarding definition '${onboardingId}' is already registered`,
+      {
+        extensions: {
+          onboardingId,
+          retryable: false,
+        },
+      },
+    );
+  }
+}
+
+/**
  * 요청한 온보딩 정의를 찾을 수 없을 때 발생하는 Problem입니다.
  */
 export class OnboardingDefinitionNotFoundProblem extends Problem {

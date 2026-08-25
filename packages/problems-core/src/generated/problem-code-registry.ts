@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 651,
+  problemCount: 652,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -12618,7 +12618,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/onboarding-core/src/libs/problems/OnboardingProblems.ts",
-          line: 29,
+          line: 48,
           column: 3,
           kind: "problem-class",
         },
@@ -12649,9 +12649,42 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/onboarding-core/src/libs/problems/OnboardingProblems.ts",
-          line: 7,
+          line: 26,
           column: 3,
           kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "onboarding/duplicate-definition-registration",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#onboarding-duplicate-definition-registration",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/onboarding-core/src/libs/problems/OnboardingProblems.ts",
+          line: 8,
+          column: 5,
+          kind: "problem-constructor",
         },
       ],
     },
@@ -12679,7 +12712,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/onboarding-core/src/libs/problems/OnboardingProblems.ts",
-          line: 44,
+          line: 63,
           column: 3,
           kind: "problem-class",
         },
@@ -12710,7 +12743,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/onboarding-core/src/libs/problems/OnboardingProblems.ts",
-          line: 18,
+          line: 37,
           column: 3,
           kind: "problem-class",
         },

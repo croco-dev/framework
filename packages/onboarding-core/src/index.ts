@@ -10,6 +10,7 @@ export {
 } from "./libs/conformance";
 
 export {
+  DuplicateOnboardingDefinitionProblem,
   OnboardingContextRequiredProblem,
   OnboardingDefinitionNotFoundProblem,
   OnboardingStepCompletionConflictProblem,

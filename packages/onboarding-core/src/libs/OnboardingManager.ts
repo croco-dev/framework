@@ -2,6 +2,7 @@ import { AnalyticsManager } from "@croco/analytics-core"; // oxlint-disable-line
 import { Component, Context } from "@croco/framework-context";
 import { OnboardingStore } from "./OnboardingStore"; // oxlint-disable-line typescript/consistent-type-imports
 import {
+  DuplicateOnboardingDefinitionProblem,
   OnboardingContextRequiredProblem,
   OnboardingDefinitionNotFoundProblem,
   OnboardingStepCompletionConflictProblem,
@@ -21,6 +22,10 @@ export class OnboardingManager {
   ) {}
 
   register(definition: OnboardingDefinition): void {
+    if (this.definitions.has(definition.id)) {
+      throw new DuplicateOnboardingDefinitionProblem(definition.id);
+    }
+
     this.definitions.set(definition.id, definition);
   }
 
