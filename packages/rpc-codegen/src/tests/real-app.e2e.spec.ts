@@ -227,7 +227,12 @@ describe("rpc-codegen real app e2e", () => {
     if (!usersFile) {
       throw new Error("Expected generated users.ts client file.");
     }
-    expect(fs.readdirSync(outDir).sort()).toEqual(["index.ts", "rpc.ts", "users.ts"]);
+    expect(fs.readdirSync(outDir).sort()).toEqual([
+      ".croco-rpc-codegen.json",
+      "index.ts",
+      "rpc.ts",
+      "users.ts",
+    ]);
 
     const usersModule = await importGeneratedUsersClient(
       "users-real-app.mjs",

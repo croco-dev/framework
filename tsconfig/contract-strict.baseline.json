@@ -56,13 +56,6 @@
       "targetMilestone": "1.0 RC"
     },
     {
-      "packageName": "@croco/rpc-codegen",
-      "reason": "Initial strict-contract rollout captures existing route fingerprint parsing diagnostics for targeted cleanup after the gate is expanded.",
-      "owner": "@croco/core",
-      "debt": "staged-rollout",
-      "targetMilestone": "1.0 RC"
-    },
-    {
       "packageName": "@croco/transports-http",
       "reason": "Initial strict-contract rollout captures existing runtime boundary optional-field and indexed-access diagnostics for targeted cleanup after the gate is expanded.",
       "owner": "@croco/core",
@@ -3190,22 +3183,6 @@
       "column": 25,
       "code": "TS2379",
       "message": "Argument of type '{ methodName: string; exceptionType: (new (...args: unknown[]) => Error) | undefined; }' is not assignable to parameter of type 'RecoverMetadata' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
-    },
-    {
-      "packageName": "@croco/rpc-codegen",
-      "file": "packages/rpc-codegen/src/libs/generate.ts",
-      "line": 771,
-      "column": 16,
-      "code": "TS2345",
-      "message": "Argument of type 'string | undefined' is not assignable to parameter of type 'string'."
-    },
-    {
-      "packageName": "@croco/rpc-codegen",
-      "file": "packages/rpc-codegen/src/libs/generate.ts",
-      "line": 771,
-      "column": 49,
-      "code": "TS2345",
-      "message": "Argument of type 'string | undefined' is not assignable to parameter of type 'string'."
     },
     {
       "packageName": "@croco/testing",

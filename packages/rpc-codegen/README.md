@@ -25,6 +25,12 @@ await generateClientFilesFromContractGraph(graph, "./src/generated/rpc", {
 });
 ```
 
+Each successful generation records its owned output paths and created directories in
+`.croco-rpc-codegen.json`. Later generations remove only stale paths recorded by that manifest,
+including newly empty generated directories, and preserve every unrelated file under the output
+directory. Generation validates the complete client contract and ownership manifest before it
+changes the previous output.
+
 The manifest is a stable `croco.frontend-action-manifest.v1` artifact. It lets humans, CI, and
 LLM tooling inspect which generated client actions exist, which REST contract each one calls, the
 generated input/output type references, declared Problems, access metadata, entitlements, and

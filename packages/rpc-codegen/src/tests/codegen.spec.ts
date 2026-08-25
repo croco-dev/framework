@@ -283,20 +283,241 @@ describe("generateClientFiles", () => {
     ).toEqual(before);
   });
 
-  it("reports changed, missing, and unexpected generated client outputs", () => {
-    const routes = [createBasicRoute()];
+  it("reports drift only for generator-owned outputs", () => {
+    const routes = [
+      createBasicRoute(),
+      {
+        ...createBasicRoute(),
+        controllerName: "ZuluController",
+        methodName: "listZulu",
+        path: "/zulu",
+      },
+    ];
     generateClientFiles(routes, TEMP_DIR);
     fs.appendFileSync(path.join(TEMP_DIR, "user.ts"), "// drift\n");
     fs.rmSync(path.join(TEMP_DIR, "rpc.ts"));
-    fs.writeFileSync(path.join(TEMP_DIR, "Zulu.ts"), "export {};\n");
     fs.writeFileSync(path.join(TEMP_DIR, "stale.ts"), "export {};\n");
 
-    expect(checkGeneratedClientFiles(routes, TEMP_DIR)).toEqual([
-      { filePath: path.join(TEMP_DIR, "Zulu.ts"), status: "unexpected" },
+    expect(checkGeneratedClientFiles([createBasicRoute()], TEMP_DIR)).toEqual([
+      { filePath: path.join(TEMP_DIR, "index.ts"), status: "changed" },
       { filePath: path.join(TEMP_DIR, "rpc.ts"), status: "missing" },
-      { filePath: path.join(TEMP_DIR, "stale.ts"), status: "unexpected" },
       { filePath: path.join(TEMP_DIR, "user.ts"), status: "changed" },
+      { filePath: path.join(TEMP_DIR, "zulu.ts"), status: "unexpected" },
     ]);
+  });
+
+  it("prunes stale generator-owned files and empty directories while preserving unrelated files", () => {
+    const frontendActionManifestPath = path.join(TEMP_DIR, "actions", "manifest.json");
+    const unrelatedPath = path.join(TEMP_DIR, "notes", "user-authored.ts");
+    const unrelatedEmptyDirectory = path.join(TEMP_DIR, "user-empty-directory");
+    const routes = [
+      createBasicRoute(),
+      {
+        ...createBasicRoute(),
+        controllerName: "AdminController",
+        methodName: "listAdmins",
+        path: "/admins",
+      },
+    ];
+    const renamedRoute: RouteIR = {
+      ...createBasicRoute(),
+      controllerName: "AccountController",
+      methodName: "listAccounts",
+      path: "/accounts",
+    };
+
+    generateClientFiles(routes, TEMP_DIR, { frontendActionManifestPath });
+    fs.mkdirSync(path.dirname(unrelatedPath), { recursive: true });
+    fs.mkdirSync(unrelatedEmptyDirectory);
+    fs.writeFileSync(unrelatedPath, "export const owner = 'user';\n");
+
+    generateClientFiles([renamedRoute], TEMP_DIR);
+
+    expect(fs.existsSync(path.join(TEMP_DIR, "admin.ts"))).toBe(false);
+    expect(fs.existsSync(path.join(TEMP_DIR, "user.ts"))).toBe(false);
+    expect(fs.existsSync(path.join(TEMP_DIR, "account.ts"))).toBe(true);
+    expect(fs.existsSync(frontendActionManifestPath)).toBe(false);
+    expect(fs.existsSync(path.dirname(frontendActionManifestPath))).toBe(false);
+    expect(fs.readFileSync(unrelatedPath, "utf8")).toBe("export const owner = 'user';\n");
+    expect(fs.existsSync(unrelatedEmptyDirectory)).toBe(true);
+    expect(checkGeneratedClientFiles([renamedRoute], TEMP_DIR)).toEqual([]);
+  });
+
+  it("bootstraps legacy generated ownership when the sidecar is missing", () => {
+    const routes = [
+      createBasicRoute(),
+      {
+        ...createBasicRoute(),
+        controllerName: "AdminController",
+        methodName: "listAdmins",
+        path: "/admins",
+      },
+    ];
+
+    generateClientFiles(routes, TEMP_DIR);
+    fs.rmSync(path.join(TEMP_DIR, ".croco-rpc-codegen.json"));
+
+    generateClientFiles([createBasicRoute()], TEMP_DIR);
+
+    expect(fs.existsSync(path.join(TEMP_DIR, "admin.ts"))).toBe(false);
+    expect(checkGeneratedClientFiles([createBasicRoute()], TEMP_DIR)).toEqual([]);
+  });
+
+  it("bootstraps frontend-problems generated ownership when the sidecar is missing", () => {
+    const options = { problemRuntime: "frontend-problems" } as const;
+    const routes = [
+      createBasicRoute(),
+      {
+        ...createBasicRoute(),
+        controllerName: "AdminController",
+        methodName: "listAdmins",
+        path: "/admins",
+      },
+    ];
+
+    generateClientFiles(routes, TEMP_DIR, options);
+    fs.rmSync(path.join(TEMP_DIR, ".croco-rpc-codegen.json"));
+
+    generateClientFiles([createBasicRoute()], TEMP_DIR, options);
+
+    expect(fs.existsSync(path.join(TEMP_DIR, "admin.ts"))).toBe(false);
+    expect(checkGeneratedClientFiles([createBasicRoute()], TEMP_DIR, options)).toEqual([]);
+  });
+
+  it("leaves previous generated outputs intact when validation fails", () => {
+    generateClientFiles([createBasicRoute()], TEMP_DIR);
+    const before = collectDirectoryContents(TEMP_DIR);
+    const invalidRoute: RouteIR = {
+      ...createBasicRoute(),
+      controllerName: "HooksController",
+      methodName: "handleHook",
+      httpMethod: "ALL",
+      path: "/hooks/:id",
+      params: [{ kind: "path", name: "id", schema: null }],
+      inputSchemas: PATH_INPUT_SCHEMAS,
+    };
+
+    expect(() => generateClientFiles([invalidRoute], TEMP_DIR)).toThrow(
+      "Cannot generate RPC client for @All route HooksController.handleHook (/hooks/:id)",
+    );
+    expect(collectDirectoryContents(TEMP_DIR)).toEqual(before);
+  });
+
+  it("rejects a generated path that would overwrite an unrelated file", () => {
+    const unrelatedPath = path.join(TEMP_DIR, "account.ts");
+    const route: RouteIR = {
+      ...createBasicRoute(),
+      controllerName: "AccountController",
+      methodName: "listAccounts",
+      path: "/accounts",
+    };
+
+    fs.writeFileSync(unrelatedPath, "export const owner = 'user';\n");
+    const before = collectDirectoryContents(TEMP_DIR);
+
+    expect(() => generateClientFiles([route], TEMP_DIR)).toThrow(
+      `Generated output path '${unrelatedPath}' already contains an unrelated file.`,
+    );
+    expect(collectDirectoryContents(TEMP_DIR)).toEqual(before);
+  });
+
+  it("replaces case-only renamed generated files without deleting the new output", () => {
+    const previousRoute: RouteIR = {
+      ...createBasicRoute(),
+      controllerName: "APIController",
+      methodName: "listAPI",
+      path: "/api",
+    };
+    const renamedRoute: RouteIR = {
+      ...createBasicRoute(),
+      controllerName: "ApiController",
+      methodName: "listApi",
+      path: "/api",
+    };
+
+    generateClientFiles([previousRoute], TEMP_DIR);
+    generateClientFiles([renamedRoute], TEMP_DIR);
+
+    expect(fs.readdirSync(TEMP_DIR)).not.toContain("aPI.ts");
+    expect(fs.readdirSync(TEMP_DIR)).toContain("api.ts");
+    expect(checkGeneratedClientFiles([renamedRoute], TEMP_DIR)).toEqual([]);
+  });
+
+  it("rejects unsafe ownership paths without changing existing outputs", () => {
+    generateClientFiles([createBasicRoute()], TEMP_DIR);
+    const ownershipManifestPath = path.join(TEMP_DIR, ".croco-rpc-codegen.json");
+
+    fs.writeFileSync(
+      ownershipManifestPath,
+      JSON.stringify({
+        schemaVersion: "croco.rpc-codegen-ownership.v1",
+        files: ["../outside.ts"],
+        directories: [],
+      }),
+    );
+    const before = collectDirectoryContents(TEMP_DIR);
+
+    expect(() => generateClientFiles([createBasicRoute()], TEMP_DIR)).toThrow(
+      `Generated output ownership manifest '${ownershipManifestPath}' contains unsafe path '../outside.ts'.`,
+    );
+    expect(collectDirectoryContents(TEMP_DIR)).toEqual(before);
+  });
+
+  it("validates every stale target before deleting any generated file", () => {
+    const routes = [
+      createBasicRoute(),
+      {
+        ...createBasicRoute(),
+        controllerName: "AdminController",
+        methodName: "listAdmins",
+        path: "/admins",
+      },
+      {
+        ...createBasicRoute(),
+        controllerName: "ZuluController",
+        methodName: "listZulu",
+        path: "/zulu",
+      },
+    ];
+    const zuluPath = path.join(TEMP_DIR, "zulu.ts");
+
+    generateClientFiles(routes, TEMP_DIR);
+    fs.rmSync(zuluPath);
+    fs.mkdirSync(zuluPath);
+
+    expect(() => generateClientFiles([createBasicRoute()], TEMP_DIR)).toThrow(
+      `Generated output ownership manifest '${path.join(TEMP_DIR, ".croco-rpc-codegen.json")}' path 'zulu.ts' refers to a directory.`,
+    );
+    expect(fs.existsSync(path.join(TEMP_DIR, "admin.ts"))).toBe(true);
+    expect(fs.statSync(zuluPath).isDirectory()).toBe(true);
+  });
+
+  it("keeps unrelated generated-looking files outside the recorded ownership", () => {
+    const unrelatedDirectory = path.join(TEMP_DIR, "notes");
+    const unrelatedPath = path.join(unrelatedDirectory, "index.ts");
+
+    generateClientFiles([createBasicRoute()], TEMP_DIR);
+    fs.mkdirSync(unrelatedDirectory);
+    fs.writeFileSync(unrelatedPath, "export * from './rpc';\nexport * as notes from './notes';\n");
+
+    generateClientFiles([createBasicRoute()], TEMP_DIR);
+
+    expect(fs.readFileSync(unrelatedPath, "utf8")).toBe(
+      "export * from './rpc';\nexport * as notes from './notes';\n",
+    );
+  });
+
+  it("reserves the ownership manifest path without case-sensitive aliases", () => {
+    const aliasedManifestPath = path.join(TEMP_DIR, ".CROCO-RPC-CODEGEN.JSON");
+
+    expect(() =>
+      generateClientFiles([createBasicRoute()], TEMP_DIR, {
+        frontendActionManifestPath: aliasedManifestPath,
+      }),
+    ).toThrow(
+      `Generated output path '${aliasedManifestPath}' conflicts with the reserved ownership manifest.`,
+    );
+    expect(fs.readdirSync(TEMP_DIR)).toEqual([]);
   });
 
   it("should generate a GET fetch client", () => {
@@ -2955,6 +3176,19 @@ function createBasicRoute(): RouteIR {
     outputSchema: null,
     domain: null,
   };
+}
+
+function collectDirectoryContents(directory: string): ReadonlyMap<string, Buffer> {
+  return new Map(
+    fs
+      .readdirSync(directory, { recursive: true, withFileTypes: true })
+      .filter((entry) => entry.isFile())
+      .map((entry) => {
+        const filePath = path.join(entry.parentPath, entry.name);
+
+        return [path.relative(directory, filePath), fs.readFileSync(filePath)];
+      }),
+  );
 }
 
 function assertGeneratedClientTypechecks(
