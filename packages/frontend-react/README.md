@@ -272,6 +272,8 @@ validation failure를 변환하거나 숨기지 않습니다.
 
 현재 bridge 상태를 session gate union으로 평가합니다. 반환 상태는
 `loading`, `allowed`, `denied`, `unauthenticated`, `unavailable` 중 하나입니다.
+permission, entitlement, tenant requirement가 없는 session-only gate는 optional tenant provider의
+loading/unavailable 상태와 독립적으로 평가됩니다. tenant-dependent requirement는 기존 tenant 상태를 계속 반영합니다.
 
 ### `useTenant()`
 
