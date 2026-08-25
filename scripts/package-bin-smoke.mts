@@ -5,19 +5,20 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   readdirSync,
+  renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, relative, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { effectivePublishManifest, findPackageJsonFiles } from "./package-manifest-contracts.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const defaultRootDir = resolve(__dirname, "..");
-const mode = parseArgs(process.argv.slice(2));
 const spawnTimeoutMs = 180_000;
 
 type PackageJson = {
@@ -53,11 +54,14 @@ type BinTarget = {
 };
 
 type SmokeCommand = {
+  readonly allowedChildPackageFile?: SmokePackageFile;
   readonly args: readonly string[];
   readonly expectedExitCode?: number;
   readonly fixtureFiles?: readonly SmokeFixtureFile[];
+  readonly packageFixtureFiles?: readonly SmokePackageFixtureFile[];
   readonly expectedPaths?: readonly string[];
   readonly expectedOutput: string;
+  readonly unexpectedOutputs?: readonly string[];
 };
 
 type SmokeFixtureFile = {
@@ -65,9 +69,23 @@ type SmokeFixtureFile = {
   readonly path: string;
 };
 
+type SmokePackageFile = {
+  readonly packageName: string;
+  readonly path: string;
+};
+
+type SmokePackageFixtureFile = SmokePackageFile & {
+  readonly contents: string;
+};
+
 type PackageSmokeResult = {
   readonly binCount: number;
   readonly packageName: string;
+};
+
+type InstalledPackageFileReplacement = {
+  readonly installedPath: string;
+  readonly originalPath: string;
 };
 
 type RunResult = {
@@ -75,10 +93,12 @@ type RunResult = {
   readonly stdout: string;
 };
 
-main();
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+  main();
+}
 
 function main(): void {
-  const rootDir = mode.rootDir;
+  const rootDir = parseArgs(process.argv.slice(2)).rootDir;
   const packageJsonFiles = findPackageJsonFiles(join(rootDir, "packages"));
   const packageIndex = packageIndexFor(packageJsonFiles);
   const binPackages = Array.from(packageIndex.values()).filter((packageInfo) =>
@@ -377,6 +397,8 @@ function runPackageBinSmoke(
     [
       "add",
       "--prod",
+      "--virtual-store-dir",
+      "node_modules/.pnpm",
       packageInfo.tarballPath,
       ...internalPeerTarballs,
       "--ignore-scripts",
@@ -393,41 +415,62 @@ function runPackageBinSmoke(
   for (const binTarget of binTargets) {
     for (const smokeCommand of smokeCommandsFor(binTarget, packageInfo)) {
       writeSmokeFixtureFiles(packageSmokeRoot, smokeCommand.fixtureFiles ?? []);
-      const result = run(
-        installedBinPath(packageSmokeRoot, binTarget.commandName),
-        smokeCommand.args,
+      const replacements = writeSmokePackageFixtureFiles(
         packageSmokeRoot,
-        {
-          expectedExitCode: smokeCommand.expectedExitCode,
-          env: smokeCommandEnvironment(packageSmokeRoot, networkGuardPath),
-          label: `${packageInfo.packageName}: ${binTarget.commandName} ${smokeCommand.args.join(" ")}`,
-        },
+        smokeCommand.packageFixtureFiles ?? [],
       );
-      const output = `${result.stdout}\n${result.stderr}`;
-      if (!output.includes(smokeCommand.expectedOutput)) {
-        throw new Error(
-          [
-            `${packageInfo.packageName}: ${binTarget.commandName} ${smokeCommand.args.join(" ")} did not print expected output`,
-            `Expected to include: ${smokeCommand.expectedOutput}`,
-            result.stdout.trim(),
-            result.stderr.trim(),
-          ]
-            .filter(Boolean)
-            .join("\n"),
+      try {
+        const allowedChildPaths = smokeCommand.allowedChildPackageFile
+          ? installedPackageFilePaths(packageSmokeRoot, smokeCommand.allowedChildPackageFile)
+          : [];
+        const result = run(
+          installedBinPath(packageSmokeRoot, binTarget.commandName),
+          smokeCommand.args,
+          packageSmokeRoot,
+          {
+            expectedExitCode: smokeCommand.expectedExitCode,
+            env: smokeCommandEnvironment(packageSmokeRoot, networkGuardPath, allowedChildPaths),
+            label: `${packageInfo.packageName}: ${binTarget.commandName} ${smokeCommand.args.join(" ")}`,
+          },
         );
-      }
-
-      for (const expectedPath of smokeCommand.expectedPaths ?? []) {
-        if (!existsSync(join(packageSmokeRoot, expectedPath))) {
+        const output = `${result.stdout}\n${result.stderr}`;
+        if (!output.includes(smokeCommand.expectedOutput)) {
           throw new Error(
-            `${packageInfo.packageName}: ${binTarget.commandName} ${smokeCommand.args.join(" ")} did not create ${expectedPath}`,
+            [
+              `${packageInfo.packageName}: ${binTarget.commandName} ${smokeCommand.args.join(" ")} did not print expected output`,
+              `Expected to include: ${smokeCommand.expectedOutput}`,
+              result.stdout.trim(),
+              result.stderr.trim(),
+            ]
+              .filter(Boolean)
+              .join("\n"),
           );
         }
-      }
 
-      console.log(
-        `package-bin-smoke: ${packageInfo.packageName} ${binTarget.commandName} ${smokeCommand.args.join(" ")}`,
-      );
+        for (const unexpectedOutput of smokeCommand.unexpectedOutputs ?? []) {
+          if (output.includes(unexpectedOutput)) {
+            throw new Error(
+              `${packageInfo.packageName}: ${binTarget.commandName} ${smokeCommand.args.join(" ")} unexpectedly printed ${unexpectedOutput}`,
+            );
+          }
+        }
+
+        for (const expectedPath of smokeCommand.expectedPaths ?? []) {
+          if (!existsSync(join(packageSmokeRoot, expectedPath))) {
+            throw new Error(
+              `${packageInfo.packageName}: ${binTarget.commandName} ${smokeCommand.args.join(" ")} did not create ${expectedPath}`,
+            );
+          }
+        }
+
+        console.log(
+          `package-bin-smoke: ${packageInfo.packageName} ${binTarget.commandName} ${smokeCommand.args.join(" ")}`,
+        );
+      } finally {
+        for (const replacement of [...replacements].reverse()) {
+          restoreInstalledPackageFile(replacement);
+        }
+      }
     }
   }
 }
@@ -459,6 +502,95 @@ function writeSmokeFixtureFiles(
   }
 }
 
+function writeSmokePackageFixtureFiles(
+  packageSmokeRoot: string,
+  fixtureFiles: readonly SmokePackageFixtureFile[],
+): InstalledPackageFileReplacement[] {
+  const replacements: InstalledPackageFileReplacement[] = [];
+  try {
+    for (const fixtureFile of fixtureFiles) {
+      const installedPaths = installedPackageFilePaths(packageSmokeRoot, fixtureFile);
+      if (installedPaths.length === 0) {
+        throw new Error(
+          `${fixtureFile.packageName}: installed package file ${fixtureFile.path} was not found`,
+        );
+      }
+      for (const installedPath of installedPaths) {
+        replacements.push(
+          replaceInstalledPackageFile(packageSmokeRoot, installedPath, fixtureFile.contents),
+        );
+      }
+    }
+    return replacements;
+  } catch (error) {
+    for (const replacement of [...replacements].reverse()) {
+      restoreInstalledPackageFile(replacement);
+    }
+    throw error;
+  }
+}
+
+export function replaceInstalledPackageFile(
+  packageSmokeRoot: string,
+  filePath: string,
+  contents: string,
+): InstalledPackageFileReplacement {
+  const smokeLocalPath = smokeLocalRealpath(packageSmokeRoot, filePath);
+  const originalPath = `${smokeLocalPath}.croco-bin-smoke-original`;
+  renameSync(smokeLocalPath, originalPath);
+  try {
+    writeFileSync(smokeLocalPath, contents);
+  } catch (error) {
+    rmSync(smokeLocalPath, { force: true });
+    renameSync(originalPath, smokeLocalPath);
+    throw error;
+  }
+  return { installedPath: smokeLocalPath, originalPath };
+}
+
+export function restoreInstalledPackageFile(replacement: InstalledPackageFileReplacement): void {
+  if (!existsSync(replacement.originalPath)) {
+    throw new Error(`package-bin-smoke/original-fixture-missing: ${replacement.originalPath}`);
+  }
+  rmSync(replacement.installedPath, { force: true });
+  renameSync(replacement.originalPath, replacement.installedPath);
+}
+
+function installedPackageFilePaths(
+  packageSmokeRoot: string,
+  packageFile: SmokePackageFile,
+): string[] {
+  const nodeModulesPath = join(packageSmokeRoot, "node_modules");
+  const packageSegments = packageFile.packageName.split("/");
+  const packageRoots = [join(nodeModulesPath, ...packageSegments)];
+  const pnpmPath = join(nodeModulesPath, ".pnpm");
+
+  if (existsSync(pnpmPath)) {
+    for (const entry of readdirSync(pnpmPath)) {
+      packageRoots.push(join(pnpmPath, entry, "node_modules", ...packageSegments));
+    }
+  }
+
+  return Array.from(
+    new Set(
+      packageRoots
+        .map((packageRoot) => join(packageRoot, packageFile.path))
+        .filter((filePath) => existsSync(filePath))
+        .map((filePath) => smokeLocalRealpath(packageSmokeRoot, filePath)),
+    ),
+  ).sort();
+}
+
+function smokeLocalRealpath(packageSmokeRoot: string, filePath: string): string {
+  const resolvedRoot = realpathSync(packageSmokeRoot);
+  const resolvedPath = realpathSync(filePath);
+  const pathFromRoot = relative(resolvedRoot, resolvedPath);
+  if (pathFromRoot === ".." || pathFromRoot.startsWith(`..${sep}`) || isAbsolute(pathFromRoot)) {
+    throw new Error(`package-bin-smoke/fixture-path-escaped: ${resolvedPath}`);
+  }
+  return resolvedPath;
+}
+
 function writeNetworkGuard(packageSmokeRoot: string): string {
   const guardPath = join(packageSmokeRoot, ".croco-bin-smoke-network-guard.mjs");
   writeFileSync(
@@ -469,12 +601,14 @@ import dns from "node:dns";
 import http from "node:http";
 import http2 from "node:http2";
 import https from "node:https";
+import { realpathSync } from "node:fs";
 import { syncBuiltinESMExports } from "node:module";
 import net from "node:net";
 import tls from "node:tls";
 import workerThreads from "node:worker_threads";
 
 const diagnostic = "package-bin-smoke/network-disabled";
+const originalSpawn = childProcess.spawn.bind(childProcess);
 const disabled = (operation) => function disabledOperation() {
   throw new Error(diagnostic + ": " + operation);
 };
@@ -532,9 +666,26 @@ for (const { label, target } of dnsTargets) {
   }
 }
 
-for (const name of ["exec", "execFile", "fork", "spawn", "execSync", "execFileSync", "spawnSync"]) {
+for (const name of ["exec", "execFile", "fork", "execSync", "execFileSync", "spawnSync"]) {
   replace(childProcess, name, "child_process." + name);
 }
+Object.defineProperty(childProcess, "spawn", {
+  configurable: true,
+  value(command, args, options) {
+    const allowedChildren = new Set(JSON.parse(process.env.CROCO_BIN_SMOKE_ALLOWED_CHILDREN ?? "[]"));
+    if (command === process.execPath && Array.isArray(args) && typeof args[0] === "string") {
+      try {
+        if (allowedChildren.has(realpathSync(args[0]))) {
+          return originalSpawn(command, args, options);
+        }
+      } catch {
+        // The standard network-disabled diagnostic below owns rejected child processes.
+      }
+    }
+    throw new Error(diagnostic + ": child_process.spawn");
+  },
+  writable: true,
+});
 replace(workerThreads, "Worker", "worker_threads.Worker");
 
 syncBuiltinESMExports();
@@ -546,6 +697,7 @@ syncBuiltinESMExports();
 function smokeCommandEnvironment(
   packageSmokeRoot: string,
   networkGuardPath: string,
+  allowedChildPaths: readonly string[],
 ): NodeJS.ProcessEnv {
   const environment: NodeJS.ProcessEnv = {
     CI: "1",
@@ -556,6 +708,10 @@ function smokeCommandEnvironment(
     USERPROFILE: packageSmokeRoot,
     npm_config_offline: "true",
   };
+
+  if (allowedChildPaths.length > 0) {
+    environment.CROCO_BIN_SMOKE_ALLOWED_CHILDREN = JSON.stringify(allowedChildPaths);
+  }
 
   for (const name of [
     "COMSPEC",
@@ -667,13 +823,71 @@ function smokeCommandsFor(
           expectedOutput: '"code": "create-croco-app/project-created"',
         },
       ];
-    case "croco":
+    case "croco": {
+      const migrationRunnerInstalled =
+        typeof packageInfo.sourceManifest.dependencies?.["@croco/migration-runner"] === "string";
       return [
         {
           args: ["doctor", "--json"],
           expectedOutput: '"version": "croco.doctor.v1"',
         },
+        {
+          args: ["migrate", "up", "--help"],
+          expectedOutput: "--cwd=<path>",
+          unexpectedOutputs: ["--overwrite"],
+        },
+        {
+          ...(migrationRunnerInstalled
+            ? {
+                allowedChildPackageFile: {
+                  packageName: "@croco/migration-runner",
+                  path: "dist/cli.js",
+                },
+                packageFixtureFiles: migrationRunnerPackageFixtureFiles(),
+              }
+            : {}),
+          args: [
+            "--cwd",
+            "bin-smoke/migration-workspace",
+            "--dryRun",
+            "migrate",
+            "up",
+            "-d",
+            "-migrations",
+            "--target",
+            "-1",
+            "--connection",
+            "postgres://db",
+            "--dry-run",
+          ],
+          fixtureFiles: migrationWrapperFixtureFiles(),
+          expectedOutput: "croco-migrate-wrapper-contract-ok",
+        },
+        ...(migrationRunnerInstalled
+          ? [
+              {
+                allowedChildPackageFile: {
+                  packageName: "@croco/migration-runner",
+                  path: "dist/cli.js",
+                },
+                args: ["migrate", "status"],
+                expectedExitCode: 1,
+                expectedOutput: "migration-runner/database-url-required",
+              },
+            ]
+          : []),
+        {
+          args: ["--overwrite", "migrate", "up"],
+          expectedExitCode: 1,
+          expectedOutput: "Unknown option: --overwrite",
+        },
+        {
+          args: ["--cwd", "migrate", "--bogus", "up"],
+          expectedExitCode: 1,
+          expectedOutput: "Unknown option: --bogus",
+        },
       ];
+    }
     case "croco-openapi-spec":
       return [
         {
@@ -720,6 +934,49 @@ function smokeCommandsFor(
         `${packageInfo.packageName}: bin ${binTarget.commandName} is missing a functional smoke command contract`,
       );
   }
+}
+
+function migrationWrapperFixtureFiles(): readonly SmokeFixtureFile[] {
+  return [
+    {
+      path: "bin-smoke/migration-workspace/.keep",
+      contents: "",
+    },
+  ];
+}
+
+function migrationRunnerPackageFixtureFiles(): readonly SmokePackageFixtureFile[] {
+  return [
+    {
+      packageName: "@croco/migration-runner",
+      path: "dist/cli.js",
+      contents: `#!/usr/bin/env node
+const expectedArgs = [
+  "up",
+  "--dir",
+  "-migrations",
+  "--target",
+  "-1",
+  "--connection",
+  "postgres://db",
+  "--dry-run",
+];
+const actualArgs = process.argv.slice(2);
+const normalizedCwd = process.cwd().replaceAll("\\\\", "/");
+
+if (JSON.stringify(actualArgs) !== JSON.stringify(expectedArgs)) {
+  console.error(\`unexpected child argv: \${JSON.stringify(actualArgs)}\`);
+  process.exit(9);
+}
+if (!normalizedCwd.endsWith("/bin-smoke/migration-workspace")) {
+  console.error(\`unexpected child cwd: \${normalizedCwd}\`);
+  process.exit(8);
+}
+
+console.log("croco-migrate-wrapper-contract-ok");
+`,
+    },
+  ];
 }
 
 function functionalControllerFixtureFiles(): readonly SmokeFixtureFile[] {

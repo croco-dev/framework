@@ -1,8 +1,17 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  linkSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { replaceInstalledPackageFile, restoreInstalledPackageFile } from "../package-bin-smoke.mts";
 
 const scriptPath = resolve(__dirname, "../package-bin-smoke.mts");
 const tempRoots: string[] = [];
@@ -19,6 +28,26 @@ describe("package-bin-smoke.mts", () => {
     for (const root of tempRoots.splice(0)) {
       rmSync(root, { force: true, recursive: true });
     }
+  });
+
+  it("replaces an installed fixture without mutating a hardlinked source file", () => {
+    const root = createTempRoot();
+    const sourcePath = join(root, "source-cli.js");
+    const installedPath = join(root, "installed-cli.js");
+    writeFileSync(sourcePath, "original\n");
+    linkSync(sourcePath, installedPath);
+
+    const replacement = replaceInstalledPackageFile(root, installedPath, "stub\n");
+
+    expect(readFileSync(sourcePath, "utf8")).toBe("original\n");
+    expect(readFileSync(installedPath, "utf8")).toBe("stub\n");
+    expect(readFileSync(`${installedPath}.croco-bin-smoke-original`, "utf8")).toBe("original\n");
+
+    restoreInstalledPackageFile(replacement);
+
+    expect(readFileSync(sourcePath, "utf8")).toBe("original\n");
+    expect(readFileSync(installedPath, "utf8")).toBe("original\n");
+    expect(existsSync(`${installedPath}.croco-bin-smoke-original`)).toBe(false);
   });
 
   it(
@@ -203,8 +232,28 @@ describe("package-bin-smoke.mts", () => {
         packageName: "@croco/cli",
         script: [
           "#!/usr/bin/env node",
-          'if (process.argv.slice(2).join(" ") !== "doctor --json") process.exit(9);',
-          'console.log(JSON.stringify({ version: "croco.doctor.v1" }, null, 2));',
+          'const args = process.argv.slice(2).join(" ");',
+          'if (args === "doctor --json") {',
+          '  console.log(JSON.stringify({ version: "croco.doctor.v1" }, null, 2));',
+          "  process.exit(0);",
+          "}",
+          'if (args === "migrate up --help") {',
+          '  console.log("--cwd=<path>\\n--dir=<path>\\n--dryRun");',
+          "  process.exit(0);",
+          "}",
+          'if (args === "--cwd bin-smoke/migration-workspace --dryRun migrate up -d -migrations --target -1 --connection postgres://db --dry-run") {',
+          '  console.log("croco-migrate-wrapper-contract-ok");',
+          "  process.exit(0);",
+          "}",
+          'if (args === "--overwrite migrate up") {',
+          '  console.error("Unknown option: --overwrite");',
+          "  process.exit(1);",
+          "}",
+          'if (args === "--cwd migrate --bogus up") {',
+          '  console.error("Unknown option: --bogus");',
+          "  process.exit(1);",
+          "}",
+          "process.exit(9);",
           "",
         ].join("\n"),
       });
@@ -225,11 +274,14 @@ describe("package-bin-smoke.mts", () => {
 
       const result = runScript(root);
 
-      expect(result.status).toBe(0);
+      expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0);
       expect(result.stdout).toContain(
         "package-bin-smoke: create-croco-app create-croco-app bin-smoke-app --preset blank --scope @croco-smoke --no-install --no-git --json",
       );
       expect(result.stdout).toContain("package-bin-smoke: @croco/cli croco doctor --json");
+      expect(result.stdout).toContain(
+        "package-bin-smoke: @croco/cli croco --cwd bin-smoke/migration-workspace --dryRun migrate up -d -migrations --target -1 --connection postgres://db --dry-run",
+      );
       expect(result.stdout).toContain(
         "package-bin-smoke: @croco/rpc-codegen croco-rpc-codegen --controllers bin-smoke/SmokeController.ts --check --compatibility-problems --compatibility-schemas",
       );
@@ -255,6 +307,19 @@ describe("package-bin-smoke.mts", () => {
     },
     spawnTimeoutMs,
   );
+
+  it("rejects a package fixture path outside the disposable smoke root", () => {
+    const root = createTempRoot();
+    const packageSmokeRoot = join(root, "consumer");
+    const externalPath = join(root, "external-cli.js");
+    mkdirSync(packageSmokeRoot);
+    writeFileSync(externalPath, "original\n");
+
+    expect(() => replaceInstalledPackageFile(packageSmokeRoot, externalPath, "stub\n")).toThrow(
+      "package-bin-smoke/fixture-path-escaped",
+    );
+    expect(readFileSync(externalPath, "utf8")).toBe("original\n");
+  });
 });
 
 function createTempRoot(): string {

@@ -1,6 +1,12 @@
 import { defineCommand, runCommand } from "citty";
 import type { SubCommandsDef } from "citty";
 import { doctor } from "./doctor.js";
+import {
+  isMigrateCommand,
+  migrate,
+  migrateArgumentsAreValid,
+  migrateOptionConsumesNextArgument,
+} from "./migrate.js";
 import { GLOBAL_OPTIONS } from "./options.js";
 
 type LoadedCommand = Awaited<Extract<SubCommandsDef[string], Promise<unknown>>>;
@@ -57,11 +63,7 @@ export function createCrocoCommand() {
         async () => (await import("./runtimePolicy.js")).runtimePolicy as LoadedCommand,
       ),
       doctor,
-      migrate: lazyCommand(
-        "migrate",
-        "Run Croco database migrations",
-        async () => (await import("./migrate.js")).migrate as LoadedCommand,
-      ),
+      migrate,
       ops: lazyCommand(
         "ops",
         "Inspect Croco operational endpoints",
@@ -89,6 +91,99 @@ export function createCrocoCommand() {
       ),
     },
   });
+}
+
+export function normalizeMigrateRootArgs(rawArgs: readonly string[]): string[] {
+  const migrateIndex = findRootMigrateIndex(rawArgs);
+  if (migrateIndex !== undefined) {
+    const subcommandIndex = findMigrateSubcommandIndex(rawArgs, migrateIndex);
+    if (subcommandIndex !== undefined) {
+      const subcommand = rawArgs[subcommandIndex];
+      if (subcommand === undefined || !isMigrateCommand(subcommand)) {
+        return [...rawArgs];
+      }
+      const prefixArgs = rawArgs.slice(0, migrateIndex);
+      const parentArgs = rawArgs.slice(migrateIndex + 1, subcommandIndex);
+      const leafArgs = rawArgs.slice(subcommandIndex + 1);
+      const rootConsumedOption = rawArgs[migrateIndex - 1];
+      const parentConsumedOption = rawArgs[subcommandIndex - 1];
+      const rootOptionConsumedAsCommand =
+        rootConsumedOption !== undefined && migrateOptionConsumesNextArgument(rootConsumedOption);
+      const parentOptionConsumedAsCommand =
+        parentConsumedOption !== undefined &&
+        migrateOptionConsumesNextArgument(parentConsumedOption);
+
+      if (rootOptionConsumedAsCommand || parentOptionConsumedAsCommand) {
+        const movedArgs = [...prefixArgs, ...parentArgs].filter(
+          (_, index, args) =>
+            !(
+              (rootOptionConsumedAsCommand && index === prefixArgs.length - 1) ||
+              (parentOptionConsumedAsCommand && index === args.length - 1)
+            ),
+        );
+        const consumedOption = parentOptionConsumedAsCommand
+          ? parentConsumedOption
+          : rootConsumedOption;
+        if (consumedOption === undefined) {
+          return [...rawArgs];
+        }
+
+        const normalizedArgs = [...leafArgs, ...movedArgs, consumedOption];
+        return migrateArgumentsAreValid(subcommand, normalizedArgs)
+          ? ["migrate", subcommand, consumedOption]
+          : ["migrate", subcommand, ...normalizedArgs];
+      }
+
+      return ["migrate", subcommand, ...prefixArgs, ...parentArgs, ...leafArgs];
+    }
+  }
+
+  return [...rawArgs];
+}
+
+function findRootMigrateIndex(rawArgs: readonly string[]): number | undefined {
+  return findCommandIndex(rawArgs, 0, (argument) => argument === "migrate");
+}
+
+function findMigrateSubcommandIndex(
+  rawArgs: readonly string[],
+  migrateIndex: number,
+): number | undefined {
+  return findCommandIndex(rawArgs, migrateIndex + 1, isMigrateCommand);
+}
+
+function findCommandIndex(
+  rawArgs: readonly string[],
+  startIndex: number,
+  matchesCommand: (argument: string) => boolean,
+): number | undefined {
+  for (let index = startIndex; index < rawArgs.length; index++) {
+    const argument = rawArgs[index];
+    if (argument === undefined) {
+      continue;
+    }
+
+    if (migrateOptionConsumesNextArgument(argument)) {
+      index++;
+      continue;
+    }
+
+    if (argument.startsWith("-")) {
+      continue;
+    }
+
+    if (matchesCommand(argument)) {
+      return index;
+    }
+    break;
+  }
+
+  const cittyCommandIndex = rawArgs.findIndex(
+    (argument, index) => index >= startIndex && !argument.startsWith("-"),
+  );
+  return cittyCommandIndex !== -1 && matchesCommand(rawArgs[cittyCommandIndex] ?? "")
+    ? cittyCommandIndex
+    : undefined;
 }
 
 function lazyCommand(name: string, description: string, loadCommand: CommandLoader): LoadedCommand {
