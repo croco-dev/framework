@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { InMemoryBillingStore } from "../libs/InMemoryBillingStore";
 import {
+  BillingAccountTenantConflictProblem,
   WebhookAlreadyProcessedProblem,
   WebhookEventIntentsPendingProblem,
 } from "../libs/problems/BillingProblems";
@@ -33,6 +34,80 @@ describe("InMemoryBillingStore", () => {
 
       const result = await store.findAccountByTenantId("tenant-1");
       expect(result).toEqual(account);
+    });
+
+    it("should move the tenant lookup when an account is re-saved under a new tenant", async () => {
+      const originalAccount: BillingAccount = {
+        id: "account-1",
+        tenantId: "tenant-1",
+        externalCustomerId: "ext-cust-1",
+        email: "original@example.com",
+        createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      };
+      const movedAccount: BillingAccount = {
+        ...originalAccount,
+        tenantId: "tenant-2",
+        email: "moved@example.com",
+      };
+
+      await store.saveAccount(originalAccount);
+      await store.saveAccount(movedAccount);
+
+      expect(await store.findAccountByTenantId("tenant-1")).toBeNull();
+      expect(await store.findAccountByTenantId("tenant-2")).toEqual(movedAccount);
+      expect(await store.findAccountByExternalId("ext-cust-1")).toEqual(movedAccount);
+
+      await store.deleteAccount(movedAccount.id);
+
+      expect(await store.findAccountByTenantId("tenant-2")).toBeNull();
+      expect(await store.findAccountByExternalId("ext-cust-1")).toBeNull();
+    });
+
+    it("should reject a tenant collision before changing either account", async () => {
+      const existingAccount: BillingAccount = {
+        id: "account-1",
+        tenantId: "tenant-1",
+        externalCustomerId: "ext-cust-1",
+        email: "existing@example.com",
+        createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      };
+      const movingAccount: BillingAccount = {
+        id: "account-2",
+        tenantId: "tenant-2",
+        externalCustomerId: "ext-cust-2",
+        email: "moving@example.com",
+        createdAt: new Date("2026-01-02T00:00:00.000Z"),
+      };
+
+      await store.saveAccount(existingAccount);
+      await store.saveAccount(movingAccount);
+
+      const collision = store.saveAccount({
+        ...movingAccount,
+        tenantId: existingAccount.tenantId,
+        externalCustomerId: "ext-cust-3",
+      });
+
+      await expect(collision).rejects.toBeInstanceOf(BillingAccountTenantConflictProblem);
+      await expect(collision).rejects.toMatchObject({
+        category: "Conflict",
+        code: "billing/account-tenant-conflict",
+        extensions: {
+          existingAccountId: existingAccount.id,
+          requestedAccountId: movingAccount.id,
+          tenantId: existingAccount.tenantId,
+        },
+      });
+
+      expect(await store.findAccountByTenantId(existingAccount.tenantId)).toEqual(existingAccount);
+      expect(await store.findAccountByTenantId(movingAccount.tenantId)).toEqual(movingAccount);
+      expect(await store.findAccountByExternalId(existingAccount.externalCustomerId)).toEqual(
+        existingAccount,
+      );
+      expect(await store.findAccountByExternalId(movingAccount.externalCustomerId)).toEqual(
+        movingAccount,
+      );
+      expect(await store.findAccountByExternalId("ext-cust-3")).toBeNull();
     });
   });
 
@@ -76,6 +151,7 @@ describe("InMemoryBillingStore", () => {
 
       expect(await store.findAccountByExternalId("ext-cust-1")).toBeNull();
       expect(await store.findAccountByExternalId("ext-cust-2")).toEqual(updatedAccount);
+      expect(await store.findAccountByTenantId(originalAccount.tenantId)).toEqual(updatedAccount);
     });
 
     it("should delete account and clear lookup indices", async () => {

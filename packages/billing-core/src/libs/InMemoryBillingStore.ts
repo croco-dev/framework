@@ -14,6 +14,7 @@ import type {
   CommitBillingSubscriptionWebhookInput,
 } from "./BillingStore";
 import {
+  BillingAccountTenantConflictProblem,
   BillingLifecycleCommandConflictProblem,
   BillingLifecycleCommandInProgressProblem,
   WebhookEventIntentsPendingProblem,
@@ -58,6 +59,15 @@ export class InMemoryBillingStore extends BillingStore {
 
   async saveAccount(account: BillingAccount): Promise<void> {
     const existingAccount = this.accounts.get(account.id);
+    const tenantAccount = this.accountsByTenantId.get(account.tenantId);
+
+    if (tenantAccount && tenantAccount.id !== account.id) {
+      throw new BillingAccountTenantConflictProblem(account.tenantId, tenantAccount.id, account.id);
+    }
+
+    if (existingAccount && existingAccount.tenantId !== account.tenantId) {
+      this.accountsByTenantId.delete(existingAccount.tenantId);
+    }
 
     if (existingAccount && existingAccount.externalCustomerId !== account.externalCustomerId) {
       this.accountsByExternalId.delete(existingAccount.externalCustomerId);
