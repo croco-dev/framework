@@ -46,6 +46,44 @@ const DRIZZLE_PACKAGE_SUFFIX = "-drizzle";
 const REFLECT_METADATA_PACKAGE = "reflect-metadata";
 const REFLECT_METADATA_IMPORT_RE =
   /^\s*import\s+(?:[^'"]+\s+from\s+)?["']reflect-metadata["']\s*;?/m;
+const PACKAGE_MANAGER_COMMANDS = new Set(["bun", "npm", "pnpm", "yarn"]);
+const PACKAGE_MANAGER_EXEC_COMMANDS = new Set(["dlx", "exec"]);
+const PACKAGE_MANAGER_RUN_COMMANDS = new Set(["run", "run-script"]);
+const SHELL_COMMANDS = new Set(["ash", "bash", "dash", "ksh", "sh", "zsh"]);
+const EXECUTABLE_OPTIONS_WITH_VALUES = new Set([
+  "--cache",
+  "--call",
+  "--node-options",
+  "--package",
+  "--registry",
+  "--shell",
+  "--shell-mode",
+  "--userconfig",
+  "-c",
+  "-p",
+]);
+const EXECUTABLE_SCRIPT_OPTIONS = new Set(["--call", "--shell-mode", "-c"]);
+const CHANGESET_BOOLEAN_OPTIONS = new Set([
+  "--empty",
+  "--git-tag",
+  "--gitTag",
+  "--open",
+  "--since-master",
+  "--sinceMaster",
+  "--verbose",
+  "-v",
+]);
+const CHANGESET_STRING_OPTIONS = new Set([
+  "--ignore",
+  "--otp",
+  "--output",
+  "--since",
+  "--snapshot",
+  "--snapshotPrereleaseTemplate",
+  "--snapshot-prerelease-template",
+  "--tag",
+  "-o",
+]);
 const DRIZZLE_ORM_DEPENDENCY_SECTIONS = [
   "dependencies",
   "devDependencies",
@@ -67,6 +105,13 @@ function main() {
   const rootDir = mode.rootDir;
   const packageJsonFiles = findWorkspacePackageJsonFiles(rootDir);
   const violations = [];
+  const rootPackagePath = path.join(rootDir, "package.json");
+  if (fs.existsSync(rootPackagePath)) {
+    const rootPackage = JSON.parse(fs.readFileSync(rootPackagePath, "utf-8"));
+    for (const violation of validatePackageScripts(rootPackage)) {
+      violations.push(`package.json: ${violation}`);
+    }
+  }
   const workspacePackageRecords = readWorkspacePackageRecords(packageJsonFiles, rootDir);
   const workspacePackageNames = readWorkspacePackageNames(packageJsonFiles);
   const spinePackageNames = readSpinePackageNames(rootDir, workspacePackageRecords, violations);
@@ -94,6 +139,7 @@ function main() {
     for (const violation of validateWorkspacePackagePolicy(pkg, {
       internalPeerDependencyRangeExceptions,
       internalWorkspacePackageNames,
+      packageScriptsWillBeNormalized: mode.write && pkg.private !== true,
       usedInternalPeerDependencyRangeExceptions,
     })) {
       violations.push(`${relativePath}: ${violation}`);
@@ -244,7 +290,28 @@ function normalizePackage(pkg, pkgPath, rootDir, options = {}) {
     });
   }
 
+  normalizePackageScripts(normalized);
+
   return normalized;
+}
+
+function normalizePackageScripts(pkg) {
+  if (!pkg.scripts || typeof pkg.scripts !== "object" || Array.isArray(pkg.scripts)) {
+    return;
+  }
+
+  for (const [scriptName, command] of Object.entries(pkg.scripts)) {
+    if (isDirectPublishCommand(command)) {
+      if (mode.write) {
+        console.log(`- Removed direct publish script ${pkg.name}: scripts.${scriptName}`);
+      }
+      delete pkg.scripts[scriptName];
+    }
+  }
+
+  if (Object.keys(pkg.scripts).length === 0) {
+    delete pkg.scripts;
+  }
 }
 
 function withRepositoryMetadata(pkg, repository) {
@@ -584,6 +651,9 @@ function validateWorkspacePackagePolicy(pkg, policyContext) {
   const violations = [];
   validateInternalDependencyRangePolicy(pkg, policyContext, violations);
   validateBoundedPublishedPeerDependencies(pkg, violations);
+  if (!policyContext.packageScriptsWillBeNormalized) {
+    violations.push(...validatePackageScripts(pkg));
+  }
   return violations;
 }
 
@@ -666,6 +736,452 @@ function validatePackage(pkg, pkgPath, rootDir, context = {}) {
   }
 
   return violations;
+}
+
+function validatePackageScripts(pkg) {
+  const violations = [];
+  if (!pkg.scripts || typeof pkg.scripts !== "object" || Array.isArray(pkg.scripts)) {
+    return violations;
+  }
+
+  for (const [scriptName, command] of Object.entries(pkg.scripts)) {
+    if (isDirectPublishCommand(command)) {
+      violations.push(
+        `scripts.${scriptName} must not publish outside the protected Changesets workflow`,
+      );
+    }
+  }
+
+  return violations;
+}
+
+function isDirectPublishCommand(command) {
+  return (
+    typeof command === "string" &&
+    (extractCommandSubstitutions(command).some(isDirectPublishCommand) ||
+      tokenizeShellCommands(command).some(isDirectPublishInvocation))
+  );
+}
+
+function extractCommandSubstitutions(script) {
+  const substitutions = [];
+  let quote = null;
+  let escaped = false;
+
+  for (let index = 0; index < script.length; index++) {
+    const character = script[index];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (character === "\\" && quote !== "'") {
+      escaped = true;
+      continue;
+    }
+    if (character === "'" && quote !== '"') {
+      quote = quote === "'" ? null : "'";
+      continue;
+    }
+    if (character === '"' && quote !== "'") {
+      quote = quote === '"' ? null : '"';
+      continue;
+    }
+    if (quote === "'") {
+      continue;
+    }
+    if (character === "`") {
+      const closingIndex = findClosingBacktick(script, index + 1);
+      if (closingIndex >= 0) {
+        substitutions.push(script.slice(index + 1, closingIndex));
+        index = closingIndex;
+      }
+      continue;
+    }
+    if (character === "$" && script[index + 1] === "(") {
+      const substitution = readParenthesizedCommand(script, index + 2);
+      if (substitution) {
+        substitutions.push(substitution.command);
+        index = substitution.closingIndex;
+      }
+    }
+  }
+
+  return substitutions;
+}
+
+function findClosingBacktick(script, startIndex) {
+  let escaped = false;
+  for (let index = startIndex; index < script.length; index++) {
+    const character = script[index];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (character === "\\") {
+      escaped = true;
+      continue;
+    }
+    if (character === "`") {
+      return index;
+    }
+  }
+
+  return -1;
+}
+
+function readParenthesizedCommand(script, startIndex) {
+  let depth = 1;
+  let quote = null;
+  let escaped = false;
+  for (let index = startIndex; index < script.length; index++) {
+    const character = script[index];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (character === "\\" && quote !== "'") {
+      escaped = true;
+      continue;
+    }
+    if ((character === "'" || character === '"') && (!quote || quote === character)) {
+      quote = quote ? null : character;
+      continue;
+    }
+    if (quote) {
+      continue;
+    }
+    if (character === "(") {
+      depth++;
+      continue;
+    }
+    if (character === ")") {
+      depth--;
+      if (depth === 0) {
+        return {
+          closingIndex: index,
+          command: script.slice(startIndex, index),
+        };
+      }
+    }
+  }
+
+  return null;
+}
+
+function tokenizeShellCommands(script) {
+  const commands = [];
+  let tokens = [];
+  let token = "";
+  let quote = null;
+  let escaped = false;
+
+  const pushToken = () => {
+    if (token.length > 0) {
+      tokens.push(token);
+      token = "";
+    }
+  };
+  const pushCommand = () => {
+    pushToken();
+    if (tokens.length > 0) {
+      commands.push(tokens);
+      tokens = [];
+    }
+  };
+
+  for (let index = 0; index < script.length; index++) {
+    const character = script[index];
+    if (escaped) {
+      if (character === "\r" && script[index + 1] === "\n") {
+        index++;
+      } else if (character !== "\n" && character !== "\r") {
+        token += character;
+      }
+      escaped = false;
+      continue;
+    }
+    if (quote !== "'" && character === "`") {
+      const closingIndex = findClosingBacktick(script, index + 1);
+      if (closingIndex >= 0) {
+        token += "__command_substitution__";
+        index = closingIndex;
+        continue;
+      }
+    }
+    if (quote !== "'" && character === "$" && script[index + 1] === "(") {
+      const substitution = readParenthesizedCommand(script, index + 2);
+      if (substitution) {
+        token += "__command_substitution__";
+        index = substitution.closingIndex;
+        continue;
+      }
+    }
+    if (character === "\\" && quote !== "'") {
+      escaped = true;
+      continue;
+    }
+    if (quote) {
+      if (character === quote) {
+        quote = null;
+      } else {
+        token += character;
+      }
+      continue;
+    }
+    if (character === "'" || character === '"') {
+      quote = character;
+      continue;
+    }
+    if (/\s/.test(character)) {
+      pushToken();
+      if (character === "\n" || character === "\r") {
+        pushCommand();
+      }
+      continue;
+    }
+    if (
+      (character === "{" || character === "}") &&
+      (token.length > 0 || !isStandaloneShellBrace(script, index))
+    ) {
+      token += character;
+      continue;
+    }
+    if (";&|(){}".includes(character)) {
+      pushCommand();
+      if ((character === "&" || character === "|") && script[index + 1] === character) {
+        index++;
+      }
+      continue;
+    }
+    token += character;
+  }
+  pushCommand();
+
+  return commands;
+}
+
+function isStandaloneShellBrace(script, index) {
+  const isBoundary = (character) =>
+    character === undefined || /\s/.test(character) || "`;&|()".includes(character);
+  return isBoundary(script[index - 1]) && isBoundary(script[index + 1]);
+}
+
+function isDirectPublishInvocation(tokens) {
+  let index = 0;
+  while (isEnvironmentAssignment(tokens[index])) {
+    index++;
+  }
+
+  while (index < tokens.length) {
+    const name = executableName(tokens[index]);
+    if (name === "command") {
+      index++;
+      while (tokens[index]?.startsWith("-")) index++;
+      continue;
+    }
+    if (name === "env") {
+      index++;
+      while (tokens[index]?.startsWith("-") || isEnvironmentAssignment(tokens[index])) index++;
+      continue;
+    }
+    break;
+  }
+
+  let executable = executableName(tokens[index]);
+  if (executable === "corepack") {
+    index++;
+    executable = executableName(tokens[index]);
+  }
+
+  if (SHELL_COMMANDS.has(executable)) {
+    const shellCommandIndex = tokens.findIndex(
+      (value, tokenIndex) => tokenIndex > index && /^-[^-]*c/.test(value),
+    );
+    const shellCommand = tokens[shellCommandIndex + 1];
+    return shellCommandIndex >= 0 && typeof shellCommand === "string"
+      ? isDirectPublishCommand(shellCommand)
+      : false;
+  }
+
+  if (executable === "eval") {
+    return isDirectPublishCommand(tokens.slice(index + 1).join(" "));
+  }
+
+  if (isChangesetExecutable(tokens[index])) {
+    return firstChangesetPositionalArgument(tokens.slice(index + 1)) === "publish";
+  }
+
+  if (executable === "node" && isChangesetNodeEntrypoint(tokens[index + 1])) {
+    return firstChangesetPositionalArgument(tokens.slice(index + 2)) === "publish";
+  }
+
+  if (executable === "npx") {
+    const invocation = tokens.slice(index + 1);
+    if (hasDirectPublishScriptOption(invocation)) {
+      return true;
+    }
+    const executableIndex = firstExecutableArgumentIndex(invocation);
+    return executableIndex >= 0 && isDirectPublishInvocation(invocation.slice(executableIndex));
+  }
+
+  if (!PACKAGE_MANAGER_COMMANDS.has(executable)) {
+    return false;
+  }
+
+  const argumentsAfterExecutable = tokens.slice(index + 1);
+  const commandIndex = argumentsAfterExecutable.findIndex(
+    (value) =>
+      value === "publish" ||
+      PACKAGE_MANAGER_EXEC_COMMANDS.has(value) ||
+      PACKAGE_MANAGER_RUN_COMMANDS.has(value),
+  );
+  const packageManagerCommand = argumentsAfterExecutable[commandIndex];
+  if (packageManagerCommand === "publish") {
+    return true;
+  }
+  if (PACKAGE_MANAGER_RUN_COMMANDS.has(packageManagerCommand)) {
+    return false;
+  }
+  if (!PACKAGE_MANAGER_EXEC_COMMANDS.has(packageManagerCommand)) {
+    return false;
+  }
+
+  const executedArguments = argumentsAfterExecutable.slice(commandIndex + 1);
+  if (hasDirectPublishScriptOption(executedArguments)) {
+    return true;
+  }
+  const executableIndex = firstExecutableArgumentIndex(executedArguments);
+  return (
+    executableIndex >= 0 && isDirectPublishInvocation(executedArguments.slice(executableIndex))
+  );
+}
+
+function executableName(value) {
+  return typeof value === "string" ? (value.split("/").at(-1) ?? "") : "";
+}
+
+function isChangesetExecutable(value) {
+  return (
+    (typeof value === "string" && /^@changesets\/cli(?:@[^/]+)?$/.test(value)) ||
+    executableName(value) === "changeset"
+  );
+}
+
+function isChangesetNodeEntrypoint(value) {
+  return (
+    typeof value === "string" &&
+    value.includes("/@changesets/cli/") &&
+    /^(?:bin|cli)(?:\.[cm]?js)?$/.test(executableName(value))
+  );
+}
+
+function firstChangesetPositionalArgument(values) {
+  for (let index = 0; index < values.length; index++) {
+    const value = values[index];
+    if (typeof value !== "string") {
+      continue;
+    }
+    if (value === "--") {
+      return values[index + 1];
+    }
+
+    const separatorIndex = value.indexOf("=");
+    const option = separatorIndex >= 0 ? value.slice(0, separatorIndex) : value;
+    if (/^-[^-].+/.test(option)) {
+      const finalOption = `-${option.at(-1)}`;
+      if (
+        separatorIndex < 0 &&
+        !CHANGESET_BOOLEAN_OPTIONS.has(finalOption) &&
+        typeof values[index + 1] === "string" &&
+        !values[index + 1].startsWith("-")
+      ) {
+        index++;
+      } else if (
+        separatorIndex < 0 &&
+        CHANGESET_BOOLEAN_OPTIONS.has(finalOption) &&
+        (values[index + 1] === "true" || values[index + 1] === "false")
+      ) {
+        index++;
+      }
+      continue;
+    }
+    const booleanOption = option.startsWith("--no-") ? `--${option.slice(5)}` : option;
+    if (
+      CHANGESET_BOOLEAN_OPTIONS.has(booleanOption) ||
+      (option.startsWith("--no-") && booleanOption === "--snapshot")
+    ) {
+      if (separatorIndex < 0 && (values[index + 1] === "true" || values[index + 1] === "false")) {
+        index++;
+      }
+      continue;
+    }
+    if (CHANGESET_STRING_OPTIONS.has(option)) {
+      if (
+        separatorIndex < 0 &&
+        typeof values[index + 1] === "string" &&
+        !values[index + 1].startsWith("-")
+      ) {
+        index++;
+      }
+      continue;
+    }
+    if (value.startsWith("-")) {
+      if (
+        separatorIndex < 0 &&
+        typeof values[index + 1] === "string" &&
+        !values[index + 1].startsWith("-")
+      ) {
+        index++;
+      }
+      continue;
+    }
+    return value;
+  }
+
+  return undefined;
+}
+
+function firstExecutableArgumentIndex(values) {
+  for (let index = 0; index < values.length; index++) {
+    const value = values[index];
+    if (value === "--") {
+      continue;
+    }
+    if (EXECUTABLE_OPTIONS_WITH_VALUES.has(value)) {
+      index++;
+      continue;
+    }
+    if (value?.startsWith("-")) {
+      continue;
+    }
+    return index;
+  }
+
+  return -1;
+}
+
+function hasDirectPublishScriptOption(values) {
+  for (let index = 0; index < values.length; index++) {
+    const value = values[index];
+    if (typeof value !== "string") {
+      continue;
+    }
+    const separatorIndex = value.indexOf("=");
+    const option = separatorIndex >= 0 ? value.slice(0, separatorIndex) : value;
+    if (!EXECUTABLE_SCRIPT_OPTIONS.has(option)) {
+      continue;
+    }
+    const payload = separatorIndex >= 0 ? value.slice(separatorIndex + 1) : values[index + 1];
+    if (typeof payload === "string" && isDirectPublishCommand(payload)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function isEnvironmentAssignment(value) {
+  return typeof value === "string" && /^[A-Za-z_][A-Za-z0-9_]*=/.test(value);
 }
 
 function validateSpineEntrypointPolicy(pkg, context, violations) {

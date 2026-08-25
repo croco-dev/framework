@@ -27,7 +27,7 @@
     "format": "oxfmt --write . --ignore-path=.gitignore --ignore-path=.prettierignore --ignore-path=.oxfmtignore",
     "lint": "turbo lint",
     "prepare": "lefthook install",
-    "release": "pnpm build && changeset publish",
+    "release": "node scripts/release-workflow-only.mjs",
     "test": "turbo test",
     "test:release-gates": "node --experimental-strip-types scripts/verification-command.mts --id release-gate-tests",
     "test-evidence:bundle": "node --experimental-strip-types scripts/test-evidence-bundle.mts",
