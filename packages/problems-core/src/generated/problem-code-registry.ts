@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 660,
+  problemCount: 662,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -12987,7 +12987,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/openapi-spec/src/libs/loadControllers.ts",
-          line: 70,
+          line: 78,
           column: 5,
           kind: "problem-constructor",
         },
@@ -13048,7 +13048,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/openapi-spec/src/libs/loadControllers.ts",
-          line: 31,
+          line: 35,
           column: 5,
           kind: "problem-constructor",
         },
@@ -13494,6 +13494,70 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 19,
           column: 5,
           kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "protocol-codegen/controller-project-config",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#protocol-codegen-controller-project-config",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/protocol-codegen/src/libs/ControllerProject.ts",
+          line: 57,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "protocol-codegen/controller-project-state",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#protocol-codegen-controller-project-state",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/protocol-codegen/src/libs/ControllerProject.ts",
+          line: 78,
+          column: 5,
+          kind: "problem-constructor",
         },
       ],
     },
@@ -15018,7 +15082,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/rpc-codegen/src/libs/loadRoutes.ts",
-          line: 75,
+          line: 78,
           column: 5,
           kind: "problem-constructor",
         },
@@ -15079,7 +15143,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/rpc-codegen/src/libs/loadRoutes.ts",
-          line: 36,
+          line: 35,
           column: 5,
           kind: "problem-constructor",
         },

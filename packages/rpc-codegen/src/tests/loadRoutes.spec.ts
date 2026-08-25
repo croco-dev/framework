@@ -229,6 +229,42 @@ describe("loadRoutes", () => {
   );
 
   it(
+    "loads runtime path aliases with an explicit NodeNext application config",
+    async () => {
+      const tsconfigPath = path.join(tempRoot, "tsconfig.codegen.json");
+      fs.writeFileSync(path.join(tempRoot, "package.json"), JSON.stringify({ type: "module" }));
+      fs.writeFileSync(
+        tsconfigPath,
+        JSON.stringify({
+          compilerOptions: {
+            baseUrl: ".",
+            experimentalDecorators: true,
+            module: "NodeNext",
+            moduleResolution: "NodeNext",
+            paths: { "@app/*": ["src/*"] },
+            target: "ES2022",
+          },
+        }),
+      );
+      fs.writeFileSync(
+        path.join(sourceDir, "paths.ts"),
+        "export const controllerPath = '/aliased';\n",
+      );
+      fs.writeFileSync(
+        path.join(sourceDir, "AliasedController.ts"),
+        getMixedControllerSource()
+          .replace("import 'reflect-metadata';", "import { controllerPath } from '@app/paths';")
+          .replace("@Controller('/users')", "@Controller(controllerPath)"),
+      );
+
+      const routes = await loadRoutes(path.join(sourceDir, "*Controller.ts"), { tsconfigPath });
+
+      expect(routes).toContainEqual(expect.objectContaining({ path: "/aliased" }));
+    },
+    LOAD_ROUTES_TIMEOUT_MS,
+  );
+
+  it(
     "fails before importing emitted controllers when controller TypeScript has errors",
     async () => {
       const controllerPath = path.join(sourceDir, "BrokenController.ts");

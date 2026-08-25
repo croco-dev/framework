@@ -1,13 +1,17 @@
 import * as fs from "node:fs";
+import { createRequire } from "node:module";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
+import { extendZodWithOpenApi } from "@asteasolutions/zod-to-openapi";
 import { Problem, ProblemCategory } from "@croco/problems-core";
+import { createControllerProject } from "@croco/protocol-codegen";
 import {
   type Constructor,
   discoverControllerConstructors,
   type RouteContractSourceLocation,
 } from "@croco/protocols-core";
-import { type Decorator, type Diagnostic, Node, Project, type SourceFile, ts } from "ts-morph";
+import { type Decorator, type Diagnostic, Node, type SourceFile, ts } from "ts-morph";
+import type { z } from "zod";
 
 type Controller = Constructor;
 
@@ -63,6 +67,10 @@ type RestParamMetadata = {
   readonly sourceLocation?: RouteContractSourceLocation;
 };
 
+export type LoadControllersOptions = {
+  readonly tsconfigPath?: string;
+};
+
 class ControllerTypeScriptDiagnosticsProblem extends Problem {
   readonly diagnostics: readonly ControllerTypeScriptDiagnostic[];
 
@@ -82,41 +90,35 @@ class ControllerTypeScriptDiagnosticsProblem extends Problem {
   }
 }
 
-export async function loadControllers(glob: string): Promise<Controller[]> {
-  const project = new Project({
-    compilerOptions: {
-      module: ts.ModuleKind.CommonJS,
-      target: ts.ScriptTarget.ES2020,
-      experimentalDecorators: true,
-      emitDecoratorMetadata: true,
-      noEmitOnError: true,
-      skipLibCheck: true,
-    },
+export async function loadControllers(
+  glob: string,
+  options: LoadControllersOptions = {},
+): Promise<Controller[]> {
+  const controllerProject = createControllerProject({
+    controllers: glob,
+    ...(options.tsconfigPath ? { tsconfigPath: options.tsconfigPath } : {}),
   });
-  project.addSourceFilesAtPaths(glob);
-  const sourceFiles = project.getSourceFiles();
-
-  if (sourceFiles.length === 0) {
-    throw new NoRestControllersFoundProblem(glob);
-  }
-
-  const sourceLocations = collectControllerSourceLocations(sourceFiles);
-  const rootDir = getCommonSourceDir(getProgramEmitSourceFilePaths(project, sourceFiles));
-  const emitDir = fs.mkdtempSync(
-    path.join(getModuleResolutionRoot(rootDir), ".croco-openapi-spec-"),
-  );
-  writeCommonJsPackageBoundary(emitDir);
-  project.compilerOptions.set({ rootDir, outDir: emitDir });
 
   try {
-    assertNoControllerTypeScriptErrors(project, sourceFiles, glob);
-    project.emitSync();
+    const { controllerSourceFiles: sourceFiles } = controllerProject;
+    const firstSourceFile = sourceFiles[0];
+
+    if (!firstSourceFile) {
+      throw new NoRestControllersFoundProblem(glob);
+    }
+
+    const sourceLocations = collectControllerSourceLocations(sourceFiles);
+    assertNoControllerTypeScriptErrors(
+      controllerProject.getPreEmitDiagnostics(),
+      sourceFiles,
+      glob,
+    );
+    await extendApplicationZodRuntimes(sourceFiles.map((sourceFile) => sourceFile.getFilePath()));
+    controllerProject.emit();
     const controllers: Controller[] = [];
 
     for (const sourceFile of sourceFiles) {
-      const moduleExports = await importEmittedModule(
-        getEmittedFilePath(rootDir, emitDir, sourceFile),
-      );
+      const moduleExports = await controllerProject.importModule(sourceFile);
       const discoveredControllers = discoverControllerConstructors(moduleExports);
 
       const sourceFileLocations = sourceLocations.get(sourceFile.getFilePath());
@@ -134,8 +136,57 @@ export async function loadControllers(glob: string): Promise<Controller[]> {
 
     return controllers;
   } finally {
-    fs.rmSync(emitDir, { recursive: true, force: true });
+    controllerProject.dispose();
   }
+}
+
+async function extendApplicationZodRuntimes(sourcePaths: readonly string[]): Promise<void> {
+  const extendedPackages = new Set<string>();
+
+  for (const sourcePath of sourcePaths) {
+    const applicationRequire = createRequire(sourcePath);
+    let packageJsonPath: string;
+
+    try {
+      packageJsonPath = applicationRequire.resolve("zod/package.json");
+    } catch {
+      continue;
+    }
+
+    if (extendedPackages.has(packageJsonPath)) continue;
+    extendedPackages.add(packageJsonPath);
+
+    extendZodModule(applicationRequire("zod") as unknown);
+    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8")) as {
+      readonly exports?: {
+        readonly "."?: { readonly import?: unknown };
+      };
+    };
+    const importPath = packageJson.exports?.["."]?.import;
+    if (typeof importPath !== "string") continue;
+    const esmModule = (await import(
+      pathToFileURL(path.resolve(path.dirname(packageJsonPath), importPath)).href
+    )) as unknown;
+    extendZodModule(esmModule);
+  }
+}
+
+function extendZodModule(moduleExports: unknown): void {
+  if (!moduleExports || typeof moduleExports !== "object") return;
+  const candidate = moduleExports as { readonly z?: unknown };
+  const zodNamespace = candidate.z;
+  if (!zodNamespace || typeof zodNamespace !== "object") return;
+  const zodConstructors = zodNamespace as {
+    readonly ZodObject?: unknown;
+    readonly ZodType?: unknown;
+  };
+  if (
+    typeof zodConstructors.ZodObject !== "function" ||
+    typeof zodConstructors.ZodType !== "function"
+  ) {
+    return;
+  }
+  extendZodWithOpenApi(zodNamespace as typeof z);
 }
 
 function collectControllerSourceLocations(
@@ -285,29 +336,6 @@ function toSourceLocation(decorator: Decorator): RouteContractSourceLocation {
   };
 }
 
-async function importEmittedModule(filePath: string): Promise<Record<string, unknown>> {
-  return (await import(pathToFileURL(filePath).href)) as Record<string, unknown>;
-}
-
-function writeCommonJsPackageBoundary(emitDir: string): void {
-  fs.writeFileSync(path.join(emitDir, "package.json"), JSON.stringify({ type: "commonjs" }));
-}
-
-function getProgramEmitSourceFilePaths(
-  project: Project,
-  sourceFiles: readonly SourceFile[],
-): string[] {
-  const sourceFilePaths = project
-    .getProgram()
-    .compilerObject.getSourceFiles()
-    .map((sourceFile) => sourceFile.fileName)
-    .filter(isEmittableProjectSourcePath);
-
-  return sourceFilePaths.length > 0
-    ? sourceFilePaths
-    : sourceFiles.map((sourceFile) => sourceFile.getFilePath());
-}
-
 export function getCommonSourceDir(sourceFilePaths: readonly string[]): string {
   const dirs = sourceFilePaths.map((sourceFilePath) =>
     toCommonDirPath(path.dirname(path.normalize(sourceFilePath))),
@@ -353,39 +381,13 @@ function isWindowsDriveRootedPath(parts: readonly string[]): boolean {
   return /^[A-Za-z]:$/.test(parts[0] ?? "");
 }
 
-function getModuleResolutionRoot(sourceDir: string): string {
-  let currentDir = sourceDir;
-
-  while (true) {
-    if (fs.existsSync(path.join(currentDir, "node_modules"))) {
-      return currentDir;
-    }
-
-    const parentDir = path.dirname(currentDir);
-    if (parentDir === currentDir) {
-      return process.cwd();
-    }
-
-    currentDir = parentDir;
-  }
-}
-
-function getEmittedFilePath(rootDir: string, emitDir: string, sourceFile: SourceFile): string {
-  const relativePath = path
-    .relative(rootDir, sourceFile.getFilePath())
-    .replace(/\.[cm]?tsx?$/, ".js");
-
-  return path.join(emitDir, relativePath);
-}
-
 function assertNoControllerTypeScriptErrors(
-  project: Project,
+  projectDiagnostics: readonly Diagnostic[],
   sourceFiles: readonly SourceFile[],
   glob: string,
 ): void {
   const sourceFilePaths = new Set(sourceFiles.map((sourceFile) => sourceFile.getFilePath()));
-  const diagnostics = project
-    .getPreEmitDiagnostics()
+  const diagnostics = projectDiagnostics
     .filter((diagnostic) => isControllerTypeScriptError(diagnostic, sourceFilePaths))
     .map(toControllerTypeScriptDiagnostic);
 
@@ -457,12 +459,6 @@ function formatDiagnosticLocation(diagnostic: ControllerTypeScriptDiagnostic): s
 
 export function isNodeModulesPath(filePath: string): boolean {
   return filePath.split(/[\\/]/).includes("node_modules");
-}
-
-function isEmittableProjectSourcePath(filePath: string): boolean {
-  return (
-    /\.[cm]?tsx?$/.test(filePath) && !/\.d\.[cm]?ts$/.test(filePath) && !isNodeModulesPath(filePath)
-  );
 }
 
 function getNoRestControllersFoundMessage(glob: string): string {

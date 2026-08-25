@@ -177,6 +177,7 @@ Search: CROCO_ROUTE_004, missing path param, @Param, route contract
 | `CROCO_RUNTIME_CAPABILITY_001` | runtime              | error    | 선택 runtime이 필요한 capability를 지원하지 않음 | runtime 변경, requirement 제거, supported adapter로 이동       |
 | `CROCO_BUILD_002`              | build-time           | error    | generated artifact가 source와 drift됨            | package-specific write command 실행 후 diff 검토               |
 | `CROCO_BUILD_003`              | build-time           | error    | controller source에 TypeScript 오류가 있음       | controller type error 수정 후 contract 재실행                  |
+| `CROCO_BUILD_004`              | build-time           | error    | application tsconfig를 읽거나 해석할 수 없음     | config 경로/내용 수정 또는 `--tsconfig`로 유효한 config 지정   |
 | `CROCO_HTTP_SECURITY_001`      | runtime              | error    | HTTP bootstrap에 필수 security middleware가 없음 | security headers, CORS, body limit, rate limit middleware 등록 |
 | `CROCO_HTTP_SECURITY_002`      | runtime              | error    | 지원하지 않는 security capability를 선언함       | supported capability literal로 수정                            |
 | `CROCO_HTTP_MIDDLEWARE_001`    | runtime              | error    | HTTP middleware가 pipeline 계약을 완료하지 않음  | `next()`, `Response`, 또는 `shortCircuit(reason)` 반환         |
@@ -293,6 +294,11 @@ Fix: package-specific write command를 실행하고 generated diff를 검토한 
 
 Cause: RPC/OpenAPI contract loader가 import하려는 controller source에 TypeScript diagnostic이 있습니다. 이 상태에서 emitted JavaScript를 import하면 type-safe source contract가 아닌 깨진 source에서 contract artifact가 생성될 수 있습니다.
 Fix: 출력된 source file, line/column, `TS####` diagnostic을 기준으로 controller type error를 수정한 뒤 `contract:check`, `contract:openapi`, `contract:client`를 다시 실행합니다.
+
+### `CROCO_BUILD_004`
+
+Cause: RPC/OpenAPI contract loader가 명시적으로 선택했거나 controller 입력에서 자동 탐색한 application tsconfig가 없거나, 읽을 수 없거나, TypeScript가 해석할 수 없습니다. 이 상태에서는 application과 codegen이 서로 다른 compiler contract를 사용할 수 있습니다.
+Fix: 출력된 절대 config 경로와 `reason` evidence를 확인해 파일 접근 또는 config 내용을 수정합니다. 자동 탐색과 다른 config가 필요하면 두 CLI의 `--tsconfig <path>`에 application typecheck가 사용하는 config를 지정한 뒤 contract generation을 다시 실행합니다.
 
 ### `CROCO_HTTP_SECURITY_001`
 

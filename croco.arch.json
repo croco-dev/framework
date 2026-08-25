@@ -79,6 +79,7 @@
       "packages": [
         "@croco/admin-generated",
         "@croco/openapi-spec",
+        "@croco/protocol-codegen",
         "@croco/protocols-core",
         "@croco/protocols-graphql",
         "@croco/protocols-rest",

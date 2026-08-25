@@ -894,6 +894,8 @@ function smokeCommandsFor(
           args: [
             "--controllers",
             "bin-smoke/SmokeController.ts",
+            "--tsconfig",
+            "bin-smoke/tsconfig.json",
             "--check",
             "--compatibility-problems",
             "--compatibility-schemas",
@@ -908,6 +910,8 @@ function smokeCommandsFor(
           args: [
             "--controllers",
             "bin-smoke/SmokeController.ts",
+            "--tsconfig",
+            "bin-smoke/tsconfig.json",
             "--check",
             "--compatibility-problems",
             "--compatibility-schemas",
@@ -981,6 +985,22 @@ console.log("croco-migrate-wrapper-contract-ok");
 
 function functionalControllerFixtureFiles(): readonly SmokeFixtureFile[] {
   return [
+    {
+      path: "bin-smoke/tsconfig.json",
+      contents: `${JSON.stringify(
+        {
+          compilerOptions: {
+            experimentalDecorators: true,
+            module: "NodeNext",
+            moduleResolution: "NodeNext",
+            target: "ES2022",
+          },
+          include: ["*.ts"],
+        },
+        null,
+        2,
+      )}\n`,
+    },
     {
       path: "bin-smoke/SmokeController.ts",
       contents: `const metadata = Reflect as typeof Reflect & {

@@ -9,6 +9,7 @@
       "@croco/framework-logger": ["../framework-logger/src/index.ts"],
       "@croco/health-core": ["../health-core/src/index.ts"],
       "@croco/problems-core": ["../problems-core/src/index.ts"],
+      "@croco/protocol-codegen": ["../protocol-codegen/src/index.ts"],
       "@croco/protocols-core": ["../protocols-core/src/index.ts"],
       "@croco/protocols-rest": ["../protocols-rest/src/index.ts"],
       "@croco/ratelimit-core": ["../ratelimit-core/src/index.ts"],

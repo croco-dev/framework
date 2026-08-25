@@ -382,7 +382,7 @@ Follow-up work is tracked in GitHub Issues and in [Croco 1.0 Spine](docs/release
 
 > 이 섹션은 `pnpm docs:catalog:write`로 생성됩니다. 패키지 이름과 경로는 `packages/*/package.json`에서 읽고, 그룹/성숙도는 `docs/package-catalog.json`에서 관리합니다.
 
-현재 카탈로그는 **117개 public package**를 추적합니다. Private package 2개는 publish 카탈로그에서 제외됩니다. 문서 커버리지 상세는 [docs/package-docs-report.md](docs/package-docs-report.md)를 확인하세요.
+현재 카탈로그는 **118개 public package**를 추적합니다. Private package 2개는 publish 카탈로그에서 제외됩니다. 문서 커버리지 상세는 [docs/package-docs-report.md](docs/package-docs-report.md)를 확인하세요.
 
 ### Croco 1.0 Spine
 
@@ -430,7 +430,7 @@ Current 1.0 spine status: 18 spine packages; 10 production-ready, 8 beta, 0 alph
 | Domain       | Business-domain APIs and package-level abstractions                                        |        31 |
 | Provider     | Concrete datastore, SaaS provider, and external service adapters                           |        27 |
 | Integration  | Analytics, feature-flag, and observability integrations                                    |         5 |
-| Protocol     | API protocol definitions and code generation                                               |         8 |
+| Protocol     | API protocol definitions and code generation                                               |         9 |
 | Transport    | Runtime adapters that execute protocol routes                                              |         3 |
 | Presentation | Frontend, SSR, and presentation-layer adapters                                             |         9 |
 | Tooling      | CLIs, scaffolds, presets, migration tools, and build-time helpers                          |        10 |
@@ -442,7 +442,7 @@ Adapter 경계와 공식 우선순위, compatibility certification checklist는 
 | 상태                | 의미                                | 전체 public 패키지 수 |
 | ------------------- | ----------------------------------- | --------------------: |
 | 🟢 production-ready | 안정화, 적극 사용 권장              |                    24 |
-| 🟡 beta             | 기능 완성, 실사용 검증 중           |                    77 |
+| 🟡 beta             | 기능 완성, 실사용 검증 중           |                    78 |
 | 🔴 alpha/WIP        | 개발 중, 사용 시 주의 필요          |                    16 |
 | ⚠️ deprecated       | 대체 패키지 존재, 마이그레이션 권장 |                     0 |
 
@@ -598,6 +598,7 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | `@croco/presentation-preset`           | Presentation | `packages/presentation-preset`           | README, API, tests |
 | `@croco/ui-astryx`                     | Presentation | `packages/ui-astryx`                     | README, API, tests |
 | `@croco/openapi-spec`                  | Protocol     | `packages/openapi-spec`                  | README, API, tests |
+| `@croco/protocol-codegen`              | Protocol     | `packages/protocol-codegen`              | README, API, tests |
 | `@croco/protocols-core`                | Protocol     | `packages/protocols-core`                | README, API, tests |
 | `@croco/protocols-graphql`             | Protocol     | `packages/protocols-graphql`             | README, API, tests |
 | `@croco/protocols-trpc`                | Protocol     | `packages/protocols-trpc`                | README, API, tests |

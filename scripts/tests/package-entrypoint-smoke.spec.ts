@@ -73,6 +73,18 @@ describe("package-entrypoint-smoke.mts", () => {
     expect(result.stdout).toContain("✓ @croco/styled: esm 1, cjs 1, types 2");
   });
 
+  it("reads packed runtime entrypoints larger than the Node default output buffer", () => {
+    const root = createTempRoot();
+    writeImportablePackage(root, "large-entrypoint", {
+      cjsContent: `exports.padding = "${"a".repeat(2 * 1024 * 1024)}";\nexports.value = "ok";\n`,
+    });
+
+    const result = runScript(root);
+
+    expect(result.status, result.stderr || result.stdout).toBe(0);
+    expect(result.stdout).toContain("✓ @croco/large-entrypoint: esm 1, cjs 1, types 1");
+  });
+
   it("requires the root package manager pin for isolated consumers", () => {
     const root = createTempRoot({ packageManager: false });
     writeImportablePackage(root, "valid");

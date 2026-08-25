@@ -17,6 +17,7 @@ type CliOptions = {
   readonly reactQuery: boolean;
   readonly strictProblems: boolean;
   readonly strictSchemas: boolean;
+  readonly tsconfigPath: string | null;
   readonly failOnDiagnostics: boolean;
   readonly check: boolean;
 };
@@ -54,6 +55,7 @@ export async function runCli(args: readonly string[], io: CliIo = defaultCliIo):
   const graph = await loadContractGraph(result.options.controllers, {
     strictProblemResponses: result.options.strictProblems,
     strictSchemas: result.options.strictSchemas,
+    ...(result.options.tsconfigPath ? { tsconfigPath: result.options.tsconfigPath } : {}),
   });
 
   if (result.options.check) {
@@ -141,6 +143,7 @@ export function parseArgs(args: readonly string[]): CliParseResult {
   const strictProblems = parseStrictProblems(args);
   const strictSchemas = parseStrictSchemas(args);
   const problemRuntime = parseProblemRuntime(args);
+  const tsconfigPath = getFlagValue(args, CLI_FLAGS.value.tsconfig);
 
   if (
     !controllers ||
@@ -148,6 +151,7 @@ export function parseArgs(args: readonly string[]): CliParseResult {
     (frontendActionManifestCheck && !frontendActionManifestPath) ||
     (frontendActionManifestCheck && outputCheck) ||
     (check && outputCheck) ||
+    (args.includes(CLI_FLAGS.value.tsconfig) && !tsconfigPath) ||
     strictProblems === null ||
     strictSchemas === null ||
     !problemRuntime
@@ -168,6 +172,7 @@ export function parseArgs(args: readonly string[]): CliParseResult {
       reactQuery: args.includes(CLI_FLAGS.boolean.reactQuery),
       strictProblems,
       strictSchemas,
+      tsconfigPath,
       failOnDiagnostics: args.includes(CLI_FLAGS.boolean.failOnDiagnostics),
       check,
     },
@@ -202,6 +207,7 @@ const CLI_FLAGS = {
     manifestBundle: "--manifest-bundle",
     out: "--out",
     problemRuntime: "--problem-runtime",
+    tsconfig: "--tsconfig",
   },
   boolean: {
     check: "--check",
@@ -306,6 +312,7 @@ function printHelp(io: CliIo): void {
 Options:
   --controllers <glob>  Controller files to load
   --out <dir>           Output directory for generated clients
+  --tsconfig <path>     Use an explicit application TypeScript config
   --react-query         Generate React Query hooks
   --problem-runtime     Generate inline helpers or import @croco/frontend-problems
   --frontend-action-manifest <path>

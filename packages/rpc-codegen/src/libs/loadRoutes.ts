@@ -1,7 +1,6 @@
-import * as fs from "node:fs";
 import * as path from "node:path";
-import { pathToFileURL } from "node:url";
 import { Problem, ProblemCategory } from "@croco/problems-core";
+import { createControllerProject } from "@croco/protocol-codegen";
 import {
   type BuildContractGraphOptions,
   buildContractGraph,
@@ -14,7 +13,7 @@ import {
   type RouteContractSourceLocation,
   type RouteIR,
 } from "@croco/protocols-core";
-import { type Decorator, type Diagnostic, Node, Project, type SourceFile, ts } from "ts-morph";
+import { type Decorator, type Diagnostic, Node, type SourceFile, ts } from "ts-morph";
 
 const CONTROLLER_TYPESCRIPT_DIAGNOSTIC_CODE = "CROCO_BUILD_003";
 const REST_ROUTES_KEY = Symbol.for("croco:rest:routes");
@@ -68,6 +67,10 @@ type RestParamMetadata = {
   readonly sourceLocation?: RouteContractSourceLocation;
 };
 
+export type LoadContractGraphOptions = BuildContractGraphOptions & {
+  readonly tsconfigPath?: string;
+};
+
 class ControllerTypeScriptDiagnosticsProblem extends Problem {
   readonly diagnostics: readonly ControllerTypeScriptDiagnostic[];
 
@@ -89,52 +92,42 @@ class ControllerTypeScriptDiagnosticsProblem extends Problem {
 
 export async function loadRoutes(
   glob: string,
-  options: BuildContractGraphOptions = {},
+  options: LoadContractGraphOptions = {},
 ): Promise<RouteIR[]> {
   return [...(await loadContractGraph(glob, options)).routes];
 }
 
 export async function loadContractGraph(
   glob: string,
-  options: BuildContractGraphOptions = {},
+  options: LoadContractGraphOptions = {},
 ): Promise<ContractGraph> {
-  const project = new Project({
-    compilerOptions: {
-      module: ts.ModuleKind.CommonJS,
-      target: ts.ScriptTarget.ES2020,
-      experimentalDecorators: true,
-      emitDecoratorMetadata: true,
-      noEmitOnError: true,
-      skipLibCheck: true,
-    },
+  const { tsconfigPath, ...contractOptions } = options;
+  const controllerProject = createControllerProject({
+    controllers: glob,
+    ...(tsconfigPath ? { tsconfigPath } : {}),
   });
-  project.addSourceFilesAtPaths(glob);
-  const sourceFiles = project.getSourceFiles();
-
-  if (sourceFiles.length === 0) {
-    throw new NoRestControllersFoundProblem(glob);
-  }
-
-  const rootDir = getCommonSourceDir(getProgramEmitSourceFilePaths(project, sourceFiles));
-  const sourceLocations = collectControllerSourceLocations(sourceFiles, rootDir);
-  const emitDir = fs.mkdtempSync(
-    path.join(getModuleResolutionRoot(rootDir), ".croco-rpc-codegen-"),
-  );
-  writeCommonJsPackageBoundary(emitDir);
-  project.compilerOptions.set({ rootDir, outDir: emitDir });
 
   try {
-    assertNoControllerTypeScriptErrors(project, sourceFiles, glob);
-    project.emitSync();
+    const { controllerSourceFiles: sourceFiles, sourceRoot } = controllerProject;
+
+    if (sourceFiles.length === 0) {
+      throw new NoRestControllersFoundProblem(glob);
+    }
+
+    const sourceLocations = collectControllerSourceLocations(sourceFiles, sourceRoot);
+    assertNoControllerTypeScriptErrors(
+      controllerProject.getPreEmitDiagnostics(),
+      sourceFiles,
+      glob,
+    );
+    controllerProject.emit();
     const controllerConstructors: Constructor[] = [];
     const monetizationInputs: ContractMonetizationInput[] = [];
     const monetizationDiagnostics: ContractDiagnostic[] = [];
     let controllerCount = 0;
 
     for (const sourceFile of sourceFiles) {
-      const moduleExports = await importEmittedModule(
-        getEmittedFilePath(rootDir, emitDir, sourceFile),
-      );
+      const moduleExports = await controllerProject.importModule(sourceFile);
       const controllers = discoverControllerConstructors(moduleExports);
       monetizationInputs.push(
         ...Object.values(moduleExports)
@@ -172,16 +165,16 @@ export async function loadContractGraph(
     }
 
     const monetization = mergeMonetizationInputs(
-      ...(options.monetization ? [options.monetization] : []),
+      ...(contractOptions.monetization ? [contractOptions.monetization] : []),
       ...monetizationInputs,
     );
     return buildContractGraph(controllerConstructors, {
-      ...options,
+      ...contractOptions,
       ...(monetization ? { monetization } : {}),
       ...(monetizationDiagnostics.length > 0 ? { monetizationDiagnostics } : {}),
     });
   } finally {
-    fs.rmSync(emitDir, { recursive: true, force: true });
+    controllerProject.dispose();
   }
 }
 
@@ -355,29 +348,6 @@ function toSourceLocation(decorator: Decorator, sourceRoot: string): RouteContra
   };
 }
 
-async function importEmittedModule(filePath: string): Promise<Record<string, unknown>> {
-  return (await import(pathToFileURL(filePath).href)) as Record<string, unknown>;
-}
-
-function writeCommonJsPackageBoundary(emitDir: string): void {
-  fs.writeFileSync(path.join(emitDir, "package.json"), JSON.stringify({ type: "commonjs" }));
-}
-
-function getProgramEmitSourceFilePaths(
-  project: Project,
-  sourceFiles: readonly SourceFile[],
-): string[] {
-  const sourceFilePaths = project
-    .getProgram()
-    .compilerObject.getSourceFiles()
-    .map((sourceFile) => sourceFile.fileName)
-    .filter(isEmittableProjectSourcePath);
-
-  return sourceFilePaths.length > 0
-    ? sourceFilePaths
-    : sourceFiles.map((sourceFile) => sourceFile.getFilePath());
-}
-
 export function getCommonSourceDir(sourceFilePaths: readonly string[]): string {
   const dirs = sourceFilePaths.map((sourceFilePath) =>
     toCommonDirPath(path.dirname(path.normalize(sourceFilePath))),
@@ -423,39 +393,13 @@ function isWindowsDriveRootedPath(parts: readonly string[]): boolean {
   return /^[A-Za-z]:$/.test(parts[0] ?? "");
 }
 
-function getModuleResolutionRoot(sourceDir: string): string {
-  let currentDir = sourceDir;
-
-  while (true) {
-    if (fs.existsSync(path.join(currentDir, "node_modules"))) {
-      return currentDir;
-    }
-
-    const parentDir = path.dirname(currentDir);
-    if (parentDir === currentDir) {
-      return process.cwd();
-    }
-
-    currentDir = parentDir;
-  }
-}
-
-function getEmittedFilePath(rootDir: string, emitDir: string, sourceFile: SourceFile): string {
-  const relativePath = path
-    .relative(rootDir, sourceFile.getFilePath())
-    .replace(/\.[cm]?tsx?$/, ".js");
-
-  return path.join(emitDir, relativePath);
-}
-
 function assertNoControllerTypeScriptErrors(
-  project: Project,
+  projectDiagnostics: readonly Diagnostic[],
   sourceFiles: readonly SourceFile[],
   glob: string,
 ): void {
   const sourceFilePaths = new Set(sourceFiles.map((sourceFile) => sourceFile.getFilePath()));
-  const diagnostics = project
-    .getPreEmitDiagnostics()
+  const diagnostics = projectDiagnostics
     .filter((diagnostic) => isControllerTypeScriptError(diagnostic, sourceFilePaths))
     .map(toControllerTypeScriptDiagnostic);
 
@@ -527,12 +471,6 @@ function formatDiagnosticLocation(diagnostic: ControllerTypeScriptDiagnostic): s
 
 export function isNodeModulesPath(filePath: string): boolean {
   return filePath.split(/[\\/]/).includes("node_modules");
-}
-
-function isEmittableProjectSourcePath(filePath: string): boolean {
-  return (
-    /\.[cm]?tsx?$/.test(filePath) && !/\.d\.[cm]?ts$/.test(filePath) && !isNodeModulesPath(filePath)
-  );
 }
 
 function getNoRestControllersFoundMessage(glob: string): string {

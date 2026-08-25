@@ -27,6 +27,11 @@ describe("published RPC codegen CLI", () => {
         );
         run(
           "pnpm",
+          ["--filter", "@croco/protocol-codegen", "pack", "--pack-destination", packRoot],
+          rootDir,
+        );
+        run(
+          "pnpm",
           ["--filter", "@croco/protocols-core", "pack", "--pack-destination", packRoot],
           rootDir,
         );
@@ -47,6 +52,7 @@ describe("published RPC codegen CLI", () => {
         );
 
         const problemsCoreTarball = findTarball(packRoot, "croco-problems-core-");
+        const protocolCodegenTarball = findTarball(packRoot, "croco-protocol-codegen-");
         const protocolsCoreTarball = findTarball(packRoot, "croco-protocols-core-");
         const frameworkPresetTarball = findTarball(packRoot, "croco-framework-preset-");
         const presentationPresetTarball = findTarball(packRoot, "croco-presentation-preset-");
@@ -81,6 +87,7 @@ describe("published RPC codegen CLI", () => {
           "@croco/framework-preset": `file:${frameworkPresetTarball}`,
           "@croco/presentation-preset": `file:${presentationPresetTarball}`,
           "@croco/problems-core": `file:${problemsCoreTarball}`,
+          "@croco/protocol-codegen": `file:${protocolCodegenTarball}`,
           "@croco/protocols-core": `file:${protocolsCoreTarball}`,
         });
 
@@ -108,6 +115,11 @@ function ensureBuilt(): void {
       buildArgs: ["--filter", "@croco/protocols-core", "build"],
       files: ["index.js", "index.d.ts"],
       root: join(rootDir, "packages", "protocols-core"),
+    },
+    {
+      buildArgs: ["--filter", "@croco/protocol-codegen", "build"],
+      files: ["index.js", "index.d.ts"],
+      root: join(rootDir, "packages", "protocol-codegen"),
     },
     {
       buildArgs: ["--filter", "@croco/framework-preset", "build"],

@@ -174,6 +174,10 @@ describe("rpc-codegen CLI", () => {
     ["missing controllers", ["--out", "client"]],
     ["missing output", ["--controllers", "src/controllers/**/*.ts"]],
     [
+      "missing tsconfig value",
+      ["--controllers", "src/controllers/**/*.ts", "--check", "--tsconfig"],
+    ],
+    [
       "invalid Problem runtime",
       ["--controllers", "src/controllers/**/*.ts", "--out", "client", "--problem-runtime", "other"],
     ],
@@ -272,6 +276,24 @@ describe("rpc-codegen CLI", () => {
       options: {
         outDir: "-generated",
       },
+    });
+  });
+
+  it("passes an explicit TypeScript config to contract loading", async () => {
+    const exitCode = await runCli([
+      "--controllers",
+      "src/**/*.ts",
+      "--out",
+      "client",
+      "--tsconfig",
+      "config/tsconfig.codegen.json",
+    ]);
+
+    expect(exitCode).toBe(0);
+    expect(generationModuleImports.lastLoadOptions).toEqual({
+      strictProblemResponses: true,
+      strictSchemas: true,
+      tsconfigPath: "config/tsconfig.codegen.json",
     });
   });
 

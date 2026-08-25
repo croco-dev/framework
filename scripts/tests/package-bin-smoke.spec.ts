@@ -69,7 +69,7 @@ describe("package-bin-smoke.mts", () => {
           'import net from "node:net";',
           'import { Worker } from "node:worker_threads";',
           'import { message } from "@croco/bin-bridge";',
-          'if (process.argv.slice(2).join(" ") !== "--controllers bin-smoke/SmokeController.ts --check --compatibility-problems --compatibility-schemas") {',
+          'if (process.argv.slice(2).join(" ") !== "--controllers bin-smoke/SmokeController.ts --tsconfig bin-smoke/tsconfig.json --check --compatibility-problems --compatibility-schemas") {',
           '  console.error("unexpected command");',
           "  process.exit(1);",
           "}",
@@ -119,7 +119,7 @@ describe("package-bin-smoke.mts", () => {
 
       expect(result.status).toBe(0);
       expect(result.stdout).toContain(
-        "package-bin-smoke: @croco/bin-tool croco-openapi-spec --controllers bin-smoke/SmokeController.ts --check --compatibility-problems --compatibility-schemas",
+        "package-bin-smoke: @croco/bin-tool croco-openapi-spec --controllers bin-smoke/SmokeController.ts --tsconfig bin-smoke/tsconfig.json --check --compatibility-problems --compatibility-schemas",
       );
       expect(result.stdout).toContain("summary checkedPackages=1 checkedBins=1");
     },
@@ -162,7 +162,7 @@ describe("package-bin-smoke.mts", () => {
 
       expect(result.status).toBe(1);
       expect(`${result.stdout}\n${result.stderr}`).toContain(
-        "@croco/bin-tool: croco-openapi-spec --controllers bin-smoke/SmokeController.ts --check --compatibility-problems --compatibility-schemas",
+        "@croco/bin-tool: croco-openapi-spec --controllers bin-smoke/SmokeController.ts --tsconfig bin-smoke/tsconfig.json --check --compatibility-problems --compatibility-schemas",
       );
       expect(`${result.stdout}\n${result.stderr}`).toContain("startup failed");
     },
@@ -264,7 +264,7 @@ describe("package-bin-smoke.mts", () => {
         script: [
           "#!/usr/bin/env node",
           'import { readFileSync } from "node:fs";',
-          'if (process.argv.slice(2).join(" ") !== "--controllers bin-smoke/SmokeController.ts --check --compatibility-problems --compatibility-schemas") process.exit(9);',
+          'if (process.argv.slice(2).join(" ") !== "--controllers bin-smoke/SmokeController.ts --tsconfig bin-smoke/tsconfig.json --check --compatibility-problems --compatibility-schemas") process.exit(9);',
           "if (process.env.CROCO_BIN_SMOKE_SENTINEL_CREDENTIAL !== undefined) process.exit(8);",
           'if (!readFileSync("bin-smoke/SmokeController.ts", "utf8").includes("SmokeController")) process.exit(7);',
           'console.log("Contract graph check passed for 1 route(s) across 1 controller(s).");',
@@ -283,7 +283,7 @@ describe("package-bin-smoke.mts", () => {
         "package-bin-smoke: @croco/cli croco --cwd bin-smoke/migration-workspace --dryRun migrate up -d -migrations --target -1 --connection postgres://db --dry-run",
       );
       expect(result.stdout).toContain(
-        "package-bin-smoke: @croco/rpc-codegen croco-rpc-codegen --controllers bin-smoke/SmokeController.ts --check --compatibility-problems --compatibility-schemas",
+        "package-bin-smoke: @croco/rpc-codegen croco-rpc-codegen --controllers bin-smoke/SmokeController.ts --tsconfig bin-smoke/tsconfig.json --check --compatibility-problems --compatibility-schemas",
       );
       expect(result.stdout).toContain("summary checkedPackages=3 checkedBins=3");
     },

@@ -761,6 +761,7 @@ jobs:
               - 'packages/preset-lambda/src/**'
               - 'packages/preset-node/src/**'
               - 'packages/problems-core/src/**'
+              - 'packages/protocol-codegen/src/**'
               - 'packages/protocols-core/src/**'
               - 'packages/protocols-desktop/src/**'
               - 'packages/protocols-graphql/src/**'

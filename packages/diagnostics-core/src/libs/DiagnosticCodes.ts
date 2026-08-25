@@ -301,6 +301,31 @@ export const CROCO_DIAGNOSTIC_CODE_DEFINITIONS = [
       },
     ],
   },
+  {
+    code: "CROCO_BUILD_004",
+    category: "build-time",
+    severity: "error",
+    title: "Application TypeScript config cannot be loaded",
+    cause:
+      "Protocol contract generation selected an application tsconfig that is missing, unreadable, or invalid, so controller analysis cannot use the application's compiler contract.",
+    action:
+      "Fix the reported config path or pass --tsconfig with a readable, valid application tsconfig, then run contract generation again.",
+    docs: "docs/troubleshooting/diagnostics.md#croco_build_004",
+    searchKeywords: [
+      "CROCO_BUILD_004",
+      "tsconfig",
+      "protocol codegen",
+      "RPC codegen",
+      "OpenAPI generation",
+    ],
+    fixExamples: [
+      {
+        label: "Select the application TypeScript config explicitly",
+        command: "croco-rpc-codegen --controllers 'src/**/*.ts' --tsconfig tsconfig.json --check",
+        note: "Use the same config that typechecks the matched application controllers.",
+      },
+    ],
+  },
   createCliDiagnosticCodeDefinition({
     code: "CROCO_CLI_DOCTOR_001",
     category: "build-time",

@@ -26,6 +26,7 @@ const __dirname = dirname(__filename);
 const defaultRootDir = resolve(__dirname, "..");
 const mode = parseArgs(process.argv.slice(2));
 const spawnTimeoutMs = 180_000;
+const spawnMaxBufferBytes = 16 * 1024 * 1024;
 const nodeBuiltinModules = new Set([
   ...builtinModules,
   ...builtinModules.map((moduleName) => `node:${moduleName}`),
@@ -692,6 +693,7 @@ function packedFileExists(tarballPath: string, entryPath: string, rootDir: strin
   const result = spawnSync("tar", ["-tf", tarballPath, entryPath], {
     cwd: rootDir,
     encoding: "utf-8",
+    maxBuffer: spawnMaxBufferBytes,
     stdio: "pipe",
     timeout: spawnTimeoutMs,
   });
@@ -1597,6 +1599,7 @@ function run(
     cwd,
     encoding: "utf-8",
     env: { ...process.env, DATABASE_URL: "" },
+    maxBuffer: spawnMaxBufferBytes,
     stdio: "pipe",
     timeout: options.timeoutMs ?? spawnTimeoutMs,
   });

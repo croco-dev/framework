@@ -15,7 +15,7 @@ title: "loadContractGraph"
 
 ### options?
 
-[`BuildContractGraphOptions`](/api/protocols-core/src/type-aliases/buildcontractgraphoptions/) = `{}`
+[`LoadContractGraphOptions`](/api/rpc-codegen/src/type-aliases/loadcontractgraphoptions/) = `{}`
 
 ## Returns
 
