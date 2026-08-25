@@ -5,6 +5,12 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
+import {
+  createFrontendActionManifest,
+  mergeFrontendActionManifests,
+  type FrontendActionManifestEntry,
+} from "@croco/presentation-preset";
+
 import { createServerAction, createServerActionRegistry } from "../libs/actions/serverActions";
 import {
   checkMetaViteFrontendActionManifestFile,
@@ -119,6 +125,48 @@ describe("createMetaViteFrontendActionManifestFromRegistry", () => {
 
     expect(manifest.actions[0]?.invalidates).toEqual([]);
     expect(serializeMetaViteFrontendActionManifest(manifest)).toContain('"invalidates": []');
+  });
+
+  it("composes REST producer actions with registered server actions", () => {
+    const serverActionRegistry = createServerActionRegistry();
+    createServerAction(
+      {
+        name: "signup",
+        handler: async () => ({ ok: true, data: {} }),
+      },
+      serverActionRegistry,
+    );
+    const restAction: FrontendActionManifestEntry = {
+      id: "rest:UsersController.list",
+      source: {
+        kind: "rest-rpc-route",
+        packageName: "@croco/rpc-codegen",
+        routeId: "UsersController.list",
+      },
+      method: "GET",
+      path: "/users",
+      input: { kind: "none" },
+      output: { kind: "none" },
+      problems: [],
+      permissions: { guards: [], roles: [], entitlements: [] },
+      invalidates: [],
+    };
+
+    const manifest = mergeFrontendActionManifests([
+      {
+        source: "@croco/rpc-codegen",
+        manifest: createFrontendActionManifest([restAction]),
+      },
+      {
+        source: "@croco/meta-vite",
+        manifest: createMetaViteFrontendActionManifestFromRegistry({ serverActionRegistry }),
+      },
+    ]);
+
+    expect(manifest.actions.map(({ id }) => id)).toEqual([
+      "rest:UsersController.list",
+      "server-action:signup",
+    ]);
   });
 
   it("writes byte-stable manifest JSON and reports drift", async () => {

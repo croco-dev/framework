@@ -2,11 +2,13 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import {
   createFrontendActionManifest,
+  mergeFrontendActionManifests,
   serializeFrontendActionManifest,
   type FrontendActionEntitlement,
   type FrontendActionInputLocation,
   type FrontendActionManifest,
   type FrontendActionManifestEntry,
+  type FrontendActionManifestMergeInput,
   type FrontendActionMetadataReference,
   type FrontendActionPermissionMetadata,
   type FrontendActionProblem,
@@ -38,6 +40,7 @@ import {
 } from "@croco/protocols-core";
 
 export type GenerateClientOptions = {
+  readonly frontendActionManifestInputs?: readonly FrontendActionManifestMergeInput[];
   readonly frontendActionManifestPath?: string;
   readonly manifestBundlePath?: string;
   readonly problemRuntime?: GenerateClientProblemRuntime;
@@ -215,6 +218,12 @@ function emitClientFiles(
 ): readonly GeneratedClientFile[] {
   assertGeneratedClientRoutes(routes);
 
+  if (options.frontendActionManifestInputs && !options.frontendActionManifestPath) {
+    throw new RpcCodegenContractProblem(
+      "frontendActionManifestInputs requires frontendActionManifestPath so the aggregate has one explicit destination.",
+    );
+  }
+
   const domainRouteGroups = groupRoutesByDomain(routes);
   const domainFiles = domainRouteGroups.map((domainRoutes) => {
     const content = generateDomainClient(domainRoutes, options);
@@ -239,7 +248,15 @@ function emitClientFiles(
   const frontendActionManifestFile = options.frontendActionManifestPath
     ? {
         filePath: options.frontendActionManifestPath,
-        content: serializeFrontendActionManifest(createFrontendActionManifestFromRoutes(routes)),
+        content: serializeFrontendActionManifest(
+          mergeFrontendActionManifests([
+            ...(options.frontendActionManifestInputs ?? []),
+            {
+              source: "@croco/rpc-codegen",
+              manifest: createFrontendActionManifestFromRoutes(routes),
+            },
+          ]),
+        ),
       }
     : null;
   const files: readonly GeneratedClientFile[] = [

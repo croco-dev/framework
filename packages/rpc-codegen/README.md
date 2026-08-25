@@ -19,9 +19,15 @@ React Query contracts without hand-maintained glue code.
 
 ```typescript
 import { generateClientFilesFromContractGraph } from "@croco/rpc-codegen";
+import { createMetaViteFrontendActionManifestFromRegistry } from "@croco/meta-vite";
+
+const metaViteManifest = createMetaViteFrontendActionManifestFromRegistry({
+  serverActionRegistry,
+});
 
 await generateClientFilesFromContractGraph(graph, "./src/generated/rpc", {
   frontendActionManifestPath: "./src/generated/frontend-action-manifest.json",
+  frontendActionManifestInputs: [{ source: "@croco/meta-vite", manifest: metaViteManifest }],
 });
 ```
 
@@ -31,12 +37,17 @@ including newly empty generated directories, and preserve every unrelated file u
 directory. Generation validates the complete client contract and ownership manifest before it
 changes the previous output.
 
+This call is the single manifest writer for the workspace: RPC routes are added automatically and
+the supplied Meta Vite manifest contributes registered server actions. Do not run a second writer
+against the same destination. Schema mismatches and conflicting duplicate action IDs fail before
+the destination is replaced.
+
 The manifest is a stable `croco.frontend-action-manifest.v1` artifact. It lets humans, CI, and
 LLM tooling inspect which generated client actions exist, which REST contract each one calls, the
 generated input/output type references, declared Problems, access metadata, entitlements, and
 mutation invalidation hints.
 
-CLI usage:
+When REST RPC is the only manifest producer, the CLI can generate and check the artifact directly:
 
 ```bash
 croco-rpc-codegen \
@@ -45,13 +56,38 @@ croco-rpc-codegen \
   --frontend-action-manifest src/generated/frontend-action-manifest.json
 ```
 
-CI drift gate:
-
 ```bash
 croco-rpc-codegen \
   --controllers "src/controllers/**/*.ts" \
   --frontend-action-manifest src/generated/frontend-action-manifest.json \
   --frontend-action-manifest-check
+```
+
+For a composed manifest, CI must reconstruct the same producer set used by generation before checking drift:
+
+```typescript
+import { createMetaViteFrontendActionManifestFromRegistry } from "@croco/meta-vite";
+import {
+  checkFrontendActionManifestFile,
+  mergeFrontendActionManifests,
+} from "@croco/presentation-preset";
+import { createFrontendActionManifestFromContractGraph } from "@croco/rpc-codegen";
+
+const expected = mergeFrontendActionManifests([
+  {
+    source: "@croco/meta-vite",
+    manifest: createMetaViteFrontendActionManifestFromRegistry({ serverActionRegistry }),
+  },
+  { source: "@croco/rpc-codegen", manifest: createFrontendActionManifestFromContractGraph(graph) },
+]);
+const drift = await checkFrontendActionManifestFile(
+  expected,
+  "./src/generated/frontend-action-manifest.json",
+);
+
+if (!drift.ok) {
+  process.exitCode = 1;
+}
 ```
 
 Generated clients accept an optional `RpcClientRequestOptions` argument. Browser apps can pass a

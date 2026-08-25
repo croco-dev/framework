@@ -438,6 +438,8 @@ This cookbook documents 662 public Croco Problem codes. The deterministic JSON r
 | [`outbox-core/record-id-conflict`](#outbox-core-record-id-conflict)                                                                   | Conflict              |    409 | not-retryable | safe-message  | active    |       1 |
 | [`outbox-core/unit-of-work-context-invalid`](#outbox-core-unit-of-work-context-invalid)                                               | InternalServerError   |    500 | not-retryable | operator-only | active    |       1 |
 | [`OWNERSHIP_TRANSFER_REQUIRED`](#ownership-transfer-required)                                                                         | Forbidden             |    403 | not-retryable | safe-message  | active    |       1 |
+| [`presentation-preset/frontend-action-manifest-duplicate-conflict`](#presentation-preset-frontend-action-manifest-duplicate-conflict) | Conflict              |    409 | conditional   | safe-message  | active    |       1 |
+| [`presentation-preset/frontend-action-manifest-invalid`](#presentation-preset-frontend-action-manifest-invalid)                       | ValidationError       |    422 | not-retryable | public        | active    |       1 |
 | [`preset-node/invalid-close-timeout`](#preset-node-invalid-close-timeout)                                                             | BadRequest            |    400 | not-retryable | public        | active    |       1 |
 | [`preset-node/lifecycle-conflict`](#preset-node-lifecycle-conflict)                                                                   | Conflict              |    409 | not-retryable | safe-message  | active    |       1 |
 | [`preset-node/lifecycle-io-failed`](#preset-node-lifecycle-io-failed)                                                                 | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
@@ -8328,6 +8330,42 @@ Sources:
 
 - `packages/membership-core/src/libs/problems/MembershipProblems.ts:65:5` (problem-constructor)
 
+<a id="presentation-preset-frontend-action-manifest-duplicate-conflict"></a>
+
+## `presentation-preset/frontend-action-manifest-duplicate-conflict`
+
+- Category: `Conflict`
+- HTTP status: `409` Conflict
+- Retryability: `conditional`
+- Redaction policy: `safe-message`
+- Lifecycle: `active`
+- Cause: The request conflicts with current state or an idempotency constraint.
+- User action: Refresh state, resolve the conflict, and retry with the updated intent.
+- Operator action: Inspect concurrent writes, idempotency keys, and uniqueness constraints.
+- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/presentation-preset/src/frontend-action-manifest.ts:477:5` (problem-constructor)
+
+<a id="presentation-preset-frontend-action-manifest-invalid"></a>
+
+## `presentation-preset/frontend-action-manifest-invalid`
+
+- Category: `ValidationError`
+- HTTP status: `422` Validation Error
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The request or generated contract failed schema or semantic validation.
+- User action: Fix the invalid fields and retry with schema-conformant input.
+- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/presentation-preset/src/frontend-action-manifest.ts:467:5` (problem-constructor)
+
 <a id="preset-node-invalid-close-timeout"></a>
 
 ## `preset-node/invalid-close-timeout`
@@ -9370,7 +9408,7 @@ Sources:
 
 Sources:
 
-- `packages/rpc-codegen/src/libs/generate.ts:110:5` (problem-constructor)
+- `packages/rpc-codegen/src/libs/generate.ts:113:5` (problem-constructor)
 
 <a id="rpc-codegen-no-rest-controllers-found"></a>
 
@@ -9406,7 +9444,7 @@ Sources:
 
 Sources:
 
-- `packages/rpc-codegen/src/libs/generate.ts:116:5` (problem-constructor)
+- `packages/rpc-codegen/src/libs/generate.ts:119:5` (problem-constructor)
 
 <a id="saas-demo-billable-usage-failed"></a>
 

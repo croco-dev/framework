@@ -9,6 +9,12 @@ title: "GenerateClientOptions"
 
 ## Properties
 
+### frontendActionManifestInputs?
+
+> `readonly` `optional` **frontendActionManifestInputs?**: readonly [`FrontendActionManifestMergeInput`](/api/presentation-preset/src/type-aliases/frontendactionmanifestmergeinput/)[]
+
+---
+
 ### frontendActionManifestPath?
 
 > `readonly` `optional` **frontendActionManifestPath?**: `string`

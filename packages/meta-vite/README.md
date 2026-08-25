@@ -167,6 +167,10 @@ const manifest = createMetaViteFrontendActionManifestFromRegistry({
 await writeMetaViteFrontendActionManifest(manifest, "dist/frontend-action-manifest.json");
 ```
 
+When the same workspace also generates REST RPC actions, pass this manifest through
+`GenerateClientOptions.frontendActionManifestInputs` and let `@croco/rpc-codegen` write the one
+combined artifact. The RPC codegen README contains the complete single-writer example.
+
 Server actions can declare cache invalidation hints that are emitted to both the route manifest and
 the shared `croco.frontend-action-manifest.v1` artifact:
 

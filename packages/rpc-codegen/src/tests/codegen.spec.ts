@@ -1,6 +1,10 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as vm from "node:vm";
+import {
+  createFrontendActionManifest,
+  type FrontendActionManifestEntry,
+} from "@croco/presentation-preset";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import {
   CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE,
@@ -795,6 +799,66 @@ describe("generateClientFiles", () => {
       }
       "
     `);
+  });
+
+  it("composes additional producer actions into the generated frontend action manifest", () => {
+    const manifestPath = path.join(TEMP_DIR, "frontend-action-manifest.json");
+    const metaViteAction: FrontendActionManifestEntry = {
+      id: "server-action:signup",
+      source: {
+        kind: "meta-vite-server-action",
+        packageName: "@croco/meta-vite",
+        actionName: "signup",
+      },
+      method: "POST",
+      path: "/api/action/signup",
+      input: { kind: "none" },
+      output: { kind: "none" },
+      problems: [],
+      permissions: { guards: [], roles: [], entitlements: [] },
+      invalidates: [],
+    };
+
+    generateClientFiles([createBasicRoute()], TEMP_DIR, {
+      frontendActionManifestPath: manifestPath,
+      frontendActionManifestInputs: [
+        {
+          source: "@croco/meta-vite",
+          manifest: createFrontendActionManifest([metaViteAction]),
+        },
+      ],
+    });
+
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8")) as {
+      readonly actions: readonly { readonly id: string }[];
+    };
+    expect(manifest.actions.map(({ id }) => id)).toEqual([
+      "rest:UserController.list",
+      "server-action:signup",
+    ]);
+  });
+
+  it("preserves an existing manifest when an additional producer schema is incompatible", () => {
+    const manifestPath = path.join(TEMP_DIR, "frontend-action-manifest.json");
+    const existing = "existing manifest\n";
+    fs.writeFileSync(manifestPath, existing);
+
+    expect(() =>
+      generateClientFiles([createBasicRoute()], TEMP_DIR, {
+        frontendActionManifestPath: manifestPath,
+        frontendActionManifestInputs: [
+          {
+            source: "legacy producer",
+            manifest: { schemaVersion: "croco.frontend-action-manifest.v0", actions: [] },
+          },
+        ],
+      }),
+    ).toThrow(
+      expect.objectContaining({
+        code: "presentation-preset/frontend-action-manifest-invalid",
+      }),
+    );
+    expect(fs.readFileSync(manifestPath, "utf-8")).toBe(existing);
   });
 
   it("should import the shared frontend Problem runtime when configured", () => {
