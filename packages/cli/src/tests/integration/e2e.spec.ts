@@ -68,7 +68,7 @@ describe("container-fullstack generator e2e", () => {
     expect(pageContent).toContain("export default function DashboardPage");
     expect(routeContent).toContain("defineRoute");
     expect(routeContent).toContain("satisfies PageRouteDefinition");
-    expect(routeContent).toContain("path: '/dashboard'");
+    expect(routeContent).toContain('path: "/dashboard"');
   });
 
   it("should create an explicit SPA legacy frontend-vite page", async () => {
