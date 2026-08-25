@@ -27,6 +27,11 @@ export type {
 } from "./libs/EntitlementRequirement";
 
 /**
+ * provider와 registry 경계에서 entitlement rule set의 공통 semantic invariant를 검증합니다.
+ */
+export { assertEntitlementRules } from "./libs/EntitlementRuleValidation";
+
+/**
  * 타입 안전하고 버전 고정된 entitlement 정의를 만드는 공개 계약입니다.
  */
 export {

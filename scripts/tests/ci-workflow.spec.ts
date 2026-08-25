@@ -798,6 +798,9 @@ describe("CI verification profile contract", () => {
       "CREDITS_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership",
     );
     expect(REAL_RESOURCE_JOB).toContain(
+      "ENTITLEMENTS_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership",
+    );
+    expect(REAL_RESOURCE_JOB).toContain(
       "EXECUTION_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership",
     );
     expect(REAL_RESOURCE_JOB).toContain(
@@ -805,12 +808,20 @@ describe("CI verification profile contract", () => {
     );
     expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/credits-drizzle...");
     expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/credits-drizzle test:postgres");
+    expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/entitlements-drizzle...");
+    expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/entitlements-drizzle test:postgres");
     expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/execution-drizzle...");
     expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/execution-drizzle test:postgres");
     expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/membership-drizzle...");
     expect(REAL_RESOURCE_JOB).toContain(
       "pnpm --filter @croco/membership-drizzle exec vitest run src/tests/DrizzleMembershipStore.postgres.spec.ts",
     );
+  });
+
+  it("routes entitlement persistence changes to the real PostgreSQL invariant suite", () => {
+    expect(WORKFLOW).toContain("              - 'packages/entitlements-core/**'");
+    expect(WORKFLOW).toContain("              - 'packages/entitlements-drizzle/**'");
+    expect(WORKFLOW).toContain("              - 'packages/entitlements-drizzle/src/**'");
   });
 
   it("routes credit persistence changes to the real PostgreSQL conformance suite", () => {

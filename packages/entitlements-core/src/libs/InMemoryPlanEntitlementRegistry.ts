@@ -2,6 +2,7 @@ import { Component } from "@croco/framework-context";
 import type { PlanVersionRef } from "@croco/billing-core";
 import { legacyPlanVersionRef } from "./EntitlementDefinition";
 import { getLegacyPlanId } from "./EntitlementDefinition";
+import { assertEntitlementRules } from "./EntitlementRuleValidation";
 import { PlanEntitlementRegistry } from "./interfaces";
 import {
   EntitlementDefinitionProblem,
@@ -25,12 +26,14 @@ export class InMemoryPlanEntitlementRegistry extends PlanEntitlementRegistry {
   register(planId: string, rules: EntitlementRule[]): void;
   register(definitionOrPlanId: PlanEntitlements | string, rules?: EntitlementRule[]): void {
     if (typeof definitionOrPlanId === "string") {
+      const legacyRules = rules ?? [];
       const ref = legacyPlanVersionRef(definitionOrPlanId);
       if (this.registry.has(ref)) throw new EntitlementPlanVersionAlreadyRegisteredProblem(ref);
+      assertEntitlementRules(legacyRules);
       this.registry.set(ref, {
         planId: definitionOrPlanId,
         planVersionRef: ref,
-        entitlements: Object.freeze((rules ?? []).map((rule) => Object.freeze({ ...rule }))),
+        entitlements: Object.freeze(legacyRules.map((rule) => Object.freeze({ ...rule }))),
       });
       return;
     }
@@ -38,6 +41,7 @@ export class InMemoryPlanEntitlementRegistry extends PlanEntitlementRegistry {
     if (this.registry.has(definition.planVersionRef)) {
       throw new EntitlementPlanVersionAlreadyRegisteredProblem(definition.planVersionRef);
     }
+    assertEntitlementRules(definition.entitlements);
     if (getLegacyPlanId(definition.planVersionRef) === null) assertVersionBoundRules(definition);
 
     this.registry.set(definition.planVersionRef, {
@@ -95,27 +99,11 @@ export class InMemoryPlanEntitlementRegistry extends PlanEntitlementRegistry {
 }
 
 function assertVersionBoundRules(definition: PlanEntitlements): void {
-  const features = new Set<string>();
   for (const rule of definition.entitlements) {
-    if (features.has(rule.featureKey)) {
-      throw new EntitlementDefinitionProblem(
-        `Feature '${rule.featureKey}' is declared more than once for one plan version.`,
-      );
-    }
-    if (
-      rule.type === "metered" &&
-      rule.overagePolicy === "ALLOW_WITH_OVERAGE" &&
-      (rule.meterId === undefined || rule.meterBilling !== "required")
-    ) {
-      throw new EntitlementDefinitionProblem(
-        `Entitlement '${rule.featureKey}' allows billable overage without a billing-required meter.`,
-      );
-    }
     if (rule.type === "metered" && rule.quota === undefined) {
       throw new EntitlementDefinitionProblem(
         `Version-bound metered entitlement '${rule.featureKey}' requires an inline quota.`,
       );
     }
-    features.add(rule.featureKey);
   }
 }

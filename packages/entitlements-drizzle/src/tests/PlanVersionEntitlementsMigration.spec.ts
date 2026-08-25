@@ -1,4 +1,6 @@
 import { planVersionRef } from "@croco/billing-core";
+import { PgDialect } from "drizzle-orm/pg-core";
+import type { SQL } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import {
   addPlanVersionEntitlementsPostgres,
@@ -8,13 +10,13 @@ import {
 
 describe("plan-version entitlement migrations", () => {
   it("adds version schema before applying an explicit backfill mapping", async () => {
-    let executeCall = 0;
-    const execute = vi.fn(async () => {
-      executeCall += 1;
-      if (executeCall === 13) {
+    const dialect = new PgDialect();
+    const execute = vi.fn(async (query: SQL) => {
+      const statement = dialect.sqlToQuery(query).sql;
+      if (statement.includes("SELECT id, feature_key")) {
         return { rows: [validCandidateRow()] };
       }
-      if (executeCall === 15) {
+      if (statement.includes("UPDATE plan_entitlements")) {
         return { rows: [{ id: "entitlement-1" }] };
       }
       return { rows: [] };
@@ -37,7 +39,38 @@ describe("plan-version entitlement migrations", () => {
     ]);
 
     expect(transactionCalls).toHaveBeenCalledTimes(2);
-    expect(execute).toHaveBeenCalledTimes(15);
+    expect(
+      execute.mock.calls.some(([query]) =>
+        dialect.sqlToQuery(query).sql.includes("plan_entitlements_legacy_plan_feature_unique"),
+      ),
+    ).toBe(true);
+  });
+
+  it("reports legacy duplicate plan and feature identifiers before creating the index", async () => {
+    const dialect = new PgDialect();
+    const statements: string[] = [];
+    const execute = vi.fn(async (query: SQL) => {
+      const statement = dialect.sqlToQuery(query).sql;
+      statements.push(statement);
+      if (statement.includes("GROUP BY plan_id, feature_key")) {
+        return {
+          rows: [{ plan_id: "pro", feature_key: "reports", duplicate_count: 2 }],
+        };
+      }
+      return { rows: [] };
+    });
+    const transaction: NonNullable<EntitlementMigrationClient["transaction"]> = async <T>(
+      migrate: (tx: EntitlementMigrationClient) => Promise<T>,
+    ): Promise<T> => migrate({ execute });
+
+    await expect(addPlanVersionEntitlementsPostgres({ execute, transaction })).rejects.toThrow(
+      "plan 'pro', feature 'reports' (2 rows)",
+    );
+    expect(
+      statements.some((statement) =>
+        statement.includes("plan_entitlements_legacy_plan_feature_unique"),
+      ),
+    ).toBe(false);
   });
 
   it("rejects ambiguous or legacy mappings instead of selecting a version", async () => {

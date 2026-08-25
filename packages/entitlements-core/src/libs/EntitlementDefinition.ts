@@ -5,6 +5,7 @@ import {
   EntitlementDefinitionProblem,
   EntitlementPlanVersionMismatchProblem,
 } from "./problems/EntitlementProblems";
+import { assertEntitlementRules } from "./EntitlementRuleValidation";
 import type {
   EntitlementRule,
   OveragePolicy,
@@ -113,7 +114,7 @@ export function definePlanEntitlements(definition: PlanEntitlementDefinition): P
   assertNonEmpty("Plan version reference", definition.planVersionRef);
 
   const entitlements = definition.entitlements.map(normalizeEntitlementDefinition);
-  assertUniqueFeatures(entitlements);
+  assertEntitlementRules(entitlements);
 
   return Object.freeze({
     planId: definition.planId,
@@ -153,8 +154,8 @@ export function migrateLegacyPlanEntitlements(
     );
   }
 
+  assertEntitlementRules(legacy.entitlements);
   const entitlements = legacy.entitlements.map(normalizeLegacyRule);
-  assertUniqueFeatures(entitlements);
   assertVersionBoundRules(entitlements);
 
   return Object.freeze({
@@ -267,31 +268,12 @@ function normalizeLegacyRule(rule: EntitlementRule): VersionBoundEntitlementRule
   });
 }
 
-function assertUniqueFeatures(entitlements: readonly EntitlementRule[]): void {
-  const featureKeys = new Set<string>();
-  for (const entitlement of entitlements) {
-    if (featureKeys.has(entitlement.featureKey)) {
-      throw new EntitlementDefinitionProblem(
-        `Feature '${entitlement.featureKey}' is declared more than once for one plan version.`,
-      );
-    }
-    featureKeys.add(entitlement.featureKey);
-  }
-}
-
 function assertVersionBoundRules(entitlements: readonly EntitlementRule[]): void {
+  assertEntitlementRules(entitlements);
   for (const entitlement of entitlements) {
     if (entitlement.type === "metered" && entitlement.quota === undefined) {
       throw new EntitlementDefinitionProblem(
         `Version-bound metered entitlement '${entitlement.featureKey}' requires an inline quota.`,
-      );
-    }
-    if (
-      entitlement.overagePolicy === "ALLOW_WITH_OVERAGE" &&
-      (entitlement.meterId === undefined || entitlement.meterBilling !== "required")
-    ) {
-      throw new EntitlementDefinitionProblem(
-        `Entitlement '${entitlement.featureKey}' allows billable overage without a billing-required meter.`,
       );
     }
   }

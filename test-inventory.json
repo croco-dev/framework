@@ -1211,6 +1211,12 @@
       "owner": "@croco/entitlements-drizzle"
     },
     {
+      "path": "packages/entitlements-drizzle/src/tests/LegacyEntitlementRules.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/entitlements-drizzle"
+    },
+    {
       "path": "packages/entitlements-drizzle/src/tests/PlanVersionEntitlementsMigration.spec.ts",
       "lane": "fast",
       "qualifiers": [],

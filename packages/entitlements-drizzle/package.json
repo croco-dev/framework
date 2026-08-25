@@ -27,7 +27,9 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "lint": "oxlint .",
-    "test": "vitest run",
+    "test": "vitest run --exclude src/tests/LegacyEntitlementRules.postgres.spec.ts",
+    "test:live": "vitest run src/tests/LegacyEntitlementRules.postgres.spec.ts",
+    "test:postgres": "vitest run src/tests/LegacyEntitlementRules.postgres.spec.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -39,7 +41,9 @@
   "devDependencies": {
     "@croco/problems-core": "workspace:*",
     "@croco/testing": "workspace:*",
+    "@types/pg": "8.20.0",
     "drizzle-orm": "catalog:",
+    "pg": "8.22.0",
     "reflect-metadata": "^0.2.2"
   },
   "peerDependencies": {
