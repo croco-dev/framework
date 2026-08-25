@@ -584,6 +584,12 @@
       "owner": "@croco/cli"
     },
     {
+      "path": "packages/cli/src/tests/applicationIntentEvidence.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/cli"
+    },
+    {
       "path": "packages/cli/src/tests/architecturePolicyCheck.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
@@ -1416,6 +1422,12 @@
     },
     {
       "path": "packages/framework-context/src/libs/Middleware.test.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/framework-context"
+    },
+    {
+      "path": "packages/framework-context/src/tests/ApplicationIntentManifest.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
       "owner": "@croco/framework-context"

@@ -1,25 +1,13 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { DEFAULT_TENANT_MODEL, type TenantModelName } from "@croco/tenant-core/tenant-model";
+import { APPLICATION_INTENT_GOAL_CONTRACTS } from "@croco/framework-context";
+import type { ApplicationIntentManifest } from "@croco/framework-context";
 import { InvalidGoalOptionProblem } from "./libs/problems/InvalidGoalOptionProblem.js";
 import type { AppGoal, GeneratorOptions } from "./types.js";
 
-export type GoalManifest = {
-  readonly schemaVersion: 1;
-  readonly projectName: string;
-  readonly scope: string;
-  readonly goal: AppGoal;
-  readonly preset: GeneratorOptions["preset"];
-  readonly runtimeTarget: "node" | "cloudflare-workers";
-  readonly protocol: "rest" | "rest-rpc-client";
-  readonly providers: readonly string[];
-  readonly storage: readonly string[];
-  readonly auth: "none" | "tenant-demo" | "admin-demo";
-  readonly billing: "none" | "demo";
+export type GoalManifest = Omit<ApplicationIntentManifest, "tenantModel"> & {
   readonly tenantModel?: TenantModelName;
-  readonly telemetry: "opentelemetry-otlp" | "none";
-  readonly deploymentPreset: string;
-  readonly qualityGates: readonly string[];
 };
 
 type GoalSpec = {
@@ -42,35 +30,7 @@ export const GOAL_SPECS = {
       tenantModel: DEFAULT_TENANT_MODEL,
       agentRules: true,
     },
-    manifest: {
-      schemaVersion: 1,
-      goal: "saas-api",
-      preset: "saas",
-      runtimeTarget: "node",
-      protocol: "rest",
-      providers: [
-        "in-memory-tenant",
-        "in-memory-auth",
-        "in-memory-billing",
-        "in-memory-metering",
-        "in-memory-events",
-      ],
-      storage: ["in-memory-demo"],
-      auth: "tenant-demo",
-      billing: "demo",
-      tenantModel: DEFAULT_TENANT_MODEL,
-      telemetry: "opentelemetry-otlp",
-      deploymentPreset: "node-api",
-      qualityGates: [
-        "install",
-        "typecheck",
-        "build",
-        "test",
-        "contract:verify",
-        "demo:smoke",
-        "failure-drill:smoke",
-      ],
-    },
+    manifest: APPLICATION_INTENT_GOAL_CONTRACTS["saas-api"],
   },
   "spa-backend-split": {
     label: "SPA + Backend Split",
@@ -83,28 +43,7 @@ export const GOAL_SPECS = {
       db: [],
       agentRules: true,
     },
-    manifest: {
-      schemaVersion: 1,
-      goal: "spa-backend-split",
-      preset: "production-app",
-      runtimeTarget: "node",
-      protocol: "rest-rpc-client",
-      providers: ["in-memory-repository", "in-memory-events", "generated-rpc-client"],
-      storage: ["in-memory-demo"],
-      auth: "none",
-      billing: "none",
-      telemetry: "opentelemetry-otlp",
-      deploymentPreset: "lambda-spa",
-      qualityGates: [
-        "install",
-        "dev:smoke",
-        "lint",
-        "test",
-        "typecheck",
-        "build",
-        "contract:verify",
-      ],
-    },
+    manifest: APPLICATION_INTENT_GOAL_CONTRACTS["spa-backend-split"],
   },
   worker: {
     label: "Worker",
@@ -118,20 +57,7 @@ export const GOAL_SPECS = {
       db: [],
       agentRules: true,
     },
-    manifest: {
-      schemaVersion: 1,
-      goal: "worker",
-      preset: "ddd-vike-fullstack",
-      runtimeTarget: "cloudflare-workers",
-      protocol: "rest",
-      providers: ["cloudflare-workers", "meta-vite"],
-      storage: [],
-      auth: "none",
-      billing: "none",
-      telemetry: "none",
-      deploymentPreset: "cloudflare-workers",
-      qualityGates: ["install", "typecheck", "build", "ssr-worker:presentation:smoke"],
-    },
+    manifest: APPLICATION_INTENT_GOAL_CONTRACTS.worker,
   },
   "internal-tool": {
     label: "Internal Tool",
@@ -144,28 +70,7 @@ export const GOAL_SPECS = {
       db: [],
       agentRules: true,
     },
-    manifest: {
-      schemaVersion: 1,
-      goal: "internal-tool",
-      preset: "admin-console",
-      runtimeTarget: "node",
-      protocol: "rest-rpc-client",
-      providers: ["in-memory-admin-data", "generated-rpc-client"],
-      storage: ["in-memory-demo"],
-      auth: "admin-demo",
-      billing: "none",
-      telemetry: "opentelemetry-otlp",
-      deploymentPreset: "lambda-spa",
-      qualityGates: [
-        "install",
-        "admin:smoke",
-        "lint",
-        "test",
-        "typecheck",
-        "build",
-        "contract:verify",
-      ],
-    },
+    manifest: APPLICATION_INTENT_GOAL_CONTRACTS["internal-tool"],
   },
 } as const satisfies Record<AppGoal, GoalSpec>;
 

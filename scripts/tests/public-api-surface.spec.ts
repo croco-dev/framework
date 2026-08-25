@@ -283,6 +283,7 @@ describe("public-api-surface.mts", () => {
         'export { Context } from "./libs/Context";',
         'export { definePolicy } from "./libs/RuntimePolicy";',
         'export { createRuntimeCapabilityManifest } from "./libs/runtimeCapabilities";',
+        'export { validateApplicationIntentManifest } from "./libs/ApplicationIntentManifest";',
         'export { RuntimeInspector } from "./libs/RuntimeInspector";',
         'export { MiddlewareChain } from "./libs/Middleware";',
         'export { ShutdownManager } from "./libs/ShutdownManager";',
@@ -304,6 +305,7 @@ describe("public-api-surface.mts", () => {
       "context",
       "runtime-policy",
       "runtime-capability",
+      "application-intent",
       "runtime-inspector",
       "middleware",
       "shutdown",
@@ -316,6 +318,10 @@ describe("public-api-surface.mts", () => {
         expect.objectContaining({
           compatibilityGroup: "runtime-capability",
           name: "createRuntimeCapabilityManifest",
+        }),
+        expect.objectContaining({
+          compatibilityGroup: "application-intent",
+          name: "validateApplicationIntentManifest",
         }),
         expect.objectContaining({
           compatibilityGroup: "runtime-inspector",
@@ -393,6 +399,25 @@ describe("public-api-surface.mts", () => {
     expect(result.stdout).toContain(
       "public API compatibility contract for @croco/framework-context does not classify UnreviewedRuntimePolicyExport from ./libs/RuntimePolicy",
     );
+  }, 20000);
+
+  it("writes formatted public API snapshots larger than the spawnSync default buffer", () => {
+    const repo = createTempRepo();
+    writePackage(
+      repo,
+      "alpha",
+      "@croco/alpha",
+      Array.from(
+        { length: 8_000 },
+        (_, index) => `export const publicValue${index} = ${index};`,
+      ).join("\n"),
+    );
+
+    const result = runScript(repo, "--write");
+    const snapshot = readFileSync(join(repo, "public-api-surface.snapshot.json"), "utf-8");
+
+    expect(result.status).toBe(0);
+    expect(snapshot.length).toBeGreaterThan(1024 * 1024);
   }, 20000);
 
   it("reports compatibility group metadata changes as public API drift", () => {

@@ -37,6 +37,15 @@ export const CLI_DIAGNOSTIC_CODES = {
   doctorBundleSizeBaselineMissing: "CROCO_DOCTOR_BUNDLE_SIZE_BASELINE_MISSING",
   doctorBenchmarkVarianceEvidenceMissing: "CROCO_DOCTOR_BENCHMARK_VARIANCE_EVIDENCE_MISSING",
   doctorSecurityAllowlistMetadataInvalid: "CROCO_DOCTOR_SECURITY_ALLOWLIST_METADATA_INVALID",
+  doctorAppManifestJsonInvalid: "CROCO_DOCTOR_APP_MANIFEST_JSON_INVALID",
+  doctorAppManifestShapeInvalid: "CROCO_DOCTOR_APP_MANIFEST_SHAPE_INVALID",
+  doctorAppManifestVersionUnsupported: "CROCO_DOCTOR_APP_MANIFEST_VERSION_UNSUPPORTED",
+  doctorAppManifestGoalUnsupported: "CROCO_DOCTOR_APP_MANIFEST_GOAL_UNSUPPORTED",
+  doctorAppManifestGoalContractMismatch: "CROCO_DOCTOR_APP_MANIFEST_GOAL_CONTRACT_MISMATCH",
+  doctorAppManifestRuntimeUnsupported: "CROCO_DOCTOR_APP_MANIFEST_RUNTIME_UNSUPPORTED",
+  doctorAppManifestProviderUnsupported: "CROCO_DOCTOR_APP_MANIFEST_PROVIDER_UNSUPPORTED",
+  doctorAppManifestValueUnsupported: "CROCO_DOCTOR_APP_MANIFEST_VALUE_UNSUPPORTED",
+  doctorAppManifestWorkspaceDrift: "CROCO_DOCTOR_APP_MANIFEST_WORKSPACE_DRIFT",
   usageDashboardTenantRequired: "CROCO_CLI_USAGE_DASHBOARD_001",
   usageDashboardTenantNotFound: "CROCO_CLI_USAGE_DASHBOARD_002",
   usageDashboardMeterNotFound: "CROCO_CLI_USAGE_DASHBOARD_003",
@@ -126,6 +135,15 @@ type CliNonLegacyDiagnosticKey =
   | "doctorBundleSizeBaselineMissing"
   | "doctorBenchmarkVarianceEvidenceMissing"
   | "doctorSecurityAllowlistMetadataInvalid"
+  | "doctorAppManifestJsonInvalid"
+  | "doctorAppManifestShapeInvalid"
+  | "doctorAppManifestVersionUnsupported"
+  | "doctorAppManifestGoalUnsupported"
+  | "doctorAppManifestGoalContractMismatch"
+  | "doctorAppManifestRuntimeUnsupported"
+  | "doctorAppManifestProviderUnsupported"
+  | "doctorAppManifestValueUnsupported"
+  | "doctorAppManifestWorkspaceDrift"
   | "projectMapFrameworkManifestDiagnostic"
   | "projectMapContractGraphDiagnostic";
 export type CliStaticLegacyDiagnosticKey = Exclude<CliDiagnosticKey, CliNonLegacyDiagnosticKey>;

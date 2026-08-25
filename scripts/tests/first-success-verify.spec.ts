@@ -14,6 +14,7 @@ const createCrocoAppVerificationBundle = resolve(
   __dirname,
   "../../packages/create-croco-app/dist/verification.js",
 );
+const problemsCoreBundle = resolve(__dirname, "../../packages/problems-core/dist/index.mjs");
 const tempRoots: string[] = [];
 const validCreateCommand =
   "npx create-croco-app@latest my-saas-api --goal saas-api --scope @myorg --no-install --no-git";
@@ -72,9 +73,9 @@ type FixtureOptions = {
 
 describe("first-success-verify.mts", () => {
   beforeAll(() => {
-    if (existsSync(createCrocoAppVerificationBundle)) return;
+    if (existsSync(createCrocoAppVerificationBundle) && existsSync(problemsCoreBundle)) return;
 
-    const result = spawnSync("pnpm", ["build", "--filter=create-croco-app"], {
+    const result = spawnSync("pnpm", ["--filter", "create-croco-app...", "build"], {
       cwd: resolve(__dirname, "../.."),
       encoding: "utf-8",
     });

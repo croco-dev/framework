@@ -10439,6 +10439,17 @@
           ]
         },
         {
+          "id": "application-intent",
+          "title": "Application intent manifest",
+          "owner": "Generated application contract owner",
+          "breakingChangePolicy": "Manifest versions, supported intent values, validation issue kinds, and goal contracts require a versioned migration when changed incompatibly.",
+          "coverage": [
+            "public-api:check grouped snapshot",
+            "create-croco-app goal manifest generation",
+            "croco doctor application intent diagnostics"
+          ]
+        },
+        {
           "id": "runtime-inspector",
           "title": "Runtime inspector",
           "owner": "Runtime inspector owner",
@@ -10484,6 +10495,97 @@
           ],
           "sourceEntrypoint": "packages/framework-context/src/index.ts",
           "runtimeExports": [
+            {
+              "name": "APPLICATION_INTENT_AUTH_OPTIONS",
+              "exportKind": "named",
+              "source": "./libs/ApplicationIntentManifest",
+              "declarationKind": "const",
+              "compatibilityGroup": "application-intent"
+            },
+            {
+              "name": "APPLICATION_INTENT_BILLING_OPTIONS",
+              "exportKind": "named",
+              "source": "./libs/ApplicationIntentManifest",
+              "declarationKind": "const",
+              "compatibilityGroup": "application-intent"
+            },
+            {
+              "name": "APPLICATION_INTENT_DEPLOYMENT_PRESETS",
+              "exportKind": "named",
+              "source": "./libs/ApplicationIntentManifest",
+              "declarationKind": "const",
+              "compatibilityGroup": "application-intent"
+            },
+            {
+              "name": "APPLICATION_INTENT_GOAL_CONTRACTS",
+              "exportKind": "named",
+              "source": "./libs/ApplicationIntentManifest",
+              "declarationKind": "const",
+              "compatibilityGroup": "application-intent"
+            },
+            {
+              "name": "APPLICATION_INTENT_GOALS",
+              "exportKind": "named",
+              "source": "./libs/ApplicationIntentManifest",
+              "declarationKind": "const",
+              "compatibilityGroup": "application-intent"
+            },
+            {
+              "name": "APPLICATION_INTENT_MANIFEST_SCHEMA_VERSION",
+              "exportKind": "named",
+              "source": "./libs/ApplicationIntentManifest",
+              "declarationKind": "const",
+              "compatibilityGroup": "application-intent"
+            },
+            {
+              "name": "APPLICATION_INTENT_PRESETS",
+              "exportKind": "named",
+              "source": "./libs/ApplicationIntentManifest",
+              "declarationKind": "const",
+              "compatibilityGroup": "application-intent"
+            },
+            {
+              "name": "APPLICATION_INTENT_PROTOCOLS",
+              "exportKind": "named",
+              "source": "./libs/ApplicationIntentManifest",
+              "declarationKind": "const",
+              "compatibilityGroup": "application-intent"
+            },
+            {
+              "name": "APPLICATION_INTENT_PROVIDERS",
+              "exportKind": "named",
+              "source": "./libs/ApplicationIntentManifest",
+              "declarationKind": "const",
+              "compatibilityGroup": "application-intent"
+            },
+            {
+              "name": "APPLICATION_INTENT_QUALITY_GATES",
+              "exportKind": "named",
+              "source": "./libs/ApplicationIntentManifest",
+              "declarationKind": "const",
+              "compatibilityGroup": "application-intent"
+            },
+            {
+              "name": "APPLICATION_INTENT_RUNTIME_TARGETS",
+              "exportKind": "named",
+              "source": "./libs/ApplicationIntentManifest",
+              "declarationKind": "const",
+              "compatibilityGroup": "application-intent"
+            },
+            {
+              "name": "APPLICATION_INTENT_STORAGE_OPTIONS",
+              "exportKind": "named",
+              "source": "./libs/ApplicationIntentManifest",
+              "declarationKind": "const",
+              "compatibilityGroup": "application-intent"
+            },
+            {
+              "name": "APPLICATION_INTENT_TELEMETRY_OPTIONS",
+              "exportKind": "named",
+              "source": "./libs/ApplicationIntentManifest",
+              "declarationKind": "const",
+              "compatibilityGroup": "application-intent"
+            },
             {
               "name": "assertPolicyRuntimeCapabilities",
               "exportKind": "named",
@@ -10992,9 +11094,112 @@
               "source": "./libs/TransactionContext",
               "declarationKind": "const",
               "compatibilityGroup": "context"
+            },
+            {
+              "name": "validateApplicationIntentManifest",
+              "exportKind": "named",
+              "source": "./libs/ApplicationIntentManifest",
+              "declarationKind": "function",
+              "compatibilityGroup": "application-intent"
             }
           ],
           "typeExports": [
+            {
+              "name": "ApplicationIntentAuth",
+              "exportKind": "named",
+              "source": "./libs/ApplicationIntentManifest",
+              "compatibilityGroup": "application-intent"
+            },
+            {
+              "name": "ApplicationIntentBilling",
+              "exportKind": "named",
+              "source": "./libs/ApplicationIntentManifest",
+              "compatibilityGroup": "application-intent"
+            },
+            {
+              "name": "ApplicationIntentDeploymentPreset",
+              "exportKind": "named",
+              "source": "./libs/ApplicationIntentManifest",
+              "compatibilityGroup": "application-intent"
+            },
+            {
+              "name": "ApplicationIntentGoal",
+              "exportKind": "named",
+              "source": "./libs/ApplicationIntentManifest",
+              "compatibilityGroup": "application-intent"
+            },
+            {
+              "name": "ApplicationIntentGoalContract",
+              "exportKind": "named",
+              "source": "./libs/ApplicationIntentManifest",
+              "compatibilityGroup": "application-intent"
+            },
+            {
+              "name": "ApplicationIntentManifest",
+              "exportKind": "named",
+              "source": "./libs/ApplicationIntentManifest",
+              "compatibilityGroup": "application-intent"
+            },
+            {
+              "name": "ApplicationIntentManifestIssue",
+              "exportKind": "named",
+              "source": "./libs/ApplicationIntentManifest",
+              "compatibilityGroup": "application-intent"
+            },
+            {
+              "name": "ApplicationIntentManifestIssueKind",
+              "exportKind": "named",
+              "source": "./libs/ApplicationIntentManifest",
+              "compatibilityGroup": "application-intent"
+            },
+            {
+              "name": "ApplicationIntentManifestValidation",
+              "exportKind": "named",
+              "source": "./libs/ApplicationIntentManifest",
+              "compatibilityGroup": "application-intent"
+            },
+            {
+              "name": "ApplicationIntentPreset",
+              "exportKind": "named",
+              "source": "./libs/ApplicationIntentManifest",
+              "compatibilityGroup": "application-intent"
+            },
+            {
+              "name": "ApplicationIntentProtocol",
+              "exportKind": "named",
+              "source": "./libs/ApplicationIntentManifest",
+              "compatibilityGroup": "application-intent"
+            },
+            {
+              "name": "ApplicationIntentProvider",
+              "exportKind": "named",
+              "source": "./libs/ApplicationIntentManifest",
+              "compatibilityGroup": "application-intent"
+            },
+            {
+              "name": "ApplicationIntentQualityGate",
+              "exportKind": "named",
+              "source": "./libs/ApplicationIntentManifest",
+              "compatibilityGroup": "application-intent"
+            },
+            {
+              "name": "ApplicationIntentRuntimeTarget",
+              "exportKind": "named",
+              "source": "./libs/ApplicationIntentManifest",
+              "compatibilityGroup": "application-intent"
+            },
+            {
+              "name": "ApplicationIntentStorage",
+              "exportKind": "named",
+              "source": "./libs/ApplicationIntentManifest",
+              "compatibilityGroup": "application-intent"
+            },
+            {
+              "name": "ApplicationIntentTelemetry",
+              "exportKind": "named",
+              "source": "./libs/ApplicationIntentManifest",
+              "compatibilityGroup": "application-intent"
+            },
             {
               "name": "CompileRequestPipelineGraphOptions",
               "exportKind": "named",

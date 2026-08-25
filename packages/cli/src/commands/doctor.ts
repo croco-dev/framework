@@ -4,9 +4,20 @@ import { dirname, join, relative, resolve } from "node:path";
 import { defineCommand } from "citty";
 import { Node, Project, SyntaxKind } from "ts-morph";
 import type * as Morph from "ts-morph";
-import { isKnownRuntimePlatform } from "@croco/framework-context";
-import type { KnownRuntimePlatform } from "@croco/framework-context";
+import {
+  isKnownRuntimePlatform,
+  validateApplicationIntentManifest,
+} from "@croco/framework-context";
+import type {
+  ApplicationIntentManifestIssueKind,
+  KnownRuntimePlatform,
+} from "@croco/framework-context";
 import { PROJECT_MANIFEST_BUNDLE_ARTIFACTS } from "@croco/protocols-core";
+import {
+  getApplicationIntentProviderPackage,
+  getApplicationIntentQualityGateEvidence,
+  getApplicationIntentRuntimePackage,
+} from "../libs/applicationIntentEvidence.js";
 import { WORKSPACE_MAX_DEPTH } from "../libs/constants.js";
 import { parseCoreCoveragePackageFilters } from "../libs/coreCoverageFilters.js";
 import { CLI_DIAGNOSTIC_CODES, CLI_LEGACY_DIAGNOSTIC_CODES } from "../libs/diagnosticCodes.js";
@@ -158,6 +169,7 @@ const requiredSaasProviderCapabilities = [
   "webhookVerification",
 ] as const;
 const defaultContractGraphSnapshotPath = "contract-graph.snapshot.json";
+const DEFAULT_APPLICATION_INTENT_MANIFEST_PATH = "croco.app.json";
 const defaultProjectManifestBundlePath = ".croco/manifest";
 const defaultProblemRegistryPath = "docs/problem-code-registry.json";
 const defaultProblemCookbookPath =
@@ -304,6 +316,7 @@ export function runDoctor(options: RunDoctorOptions = {}): DoctorReport {
     providerCertificationCheck(rootDir, workspace.packages),
     repositoryCoreBoundaryCheck(rootDir),
     lambdaTelemetryFlushCheck(rootDir, workspace.packages),
+    applicationIntentManifestCheck(rootDir, workspace.packages),
   ];
   const diagnostics = checks.flatMap((check) => check.diagnostics);
 
@@ -384,6 +397,212 @@ function workspaceDiscoveryCheck(
     diagnostics,
     note: `${workspace.packages.length} package(s) discovered from ${relative(rootDir, join(rootDir, "pnpm-workspace.yaml"))}`,
   };
+}
+
+function applicationIntentManifestCheck(
+  rootDir: string,
+  packages: readonly DoctorPackage[],
+): DoctorCheckResult {
+  const checkId = "application-intent-manifest";
+  const manifestPath = join(rootDir, DEFAULT_APPLICATION_INTENT_MANIFEST_PATH);
+  if (!existsSync(manifestPath)) {
+    return {
+      id: checkId,
+      title: "Application intent manifest",
+      status: "skipped",
+      diagnostics: [],
+      note: `${DEFAULT_APPLICATION_INTENT_MANIFEST_PATH} was not found; custom workspaces do not require it.`,
+    };
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(readFileSync(manifestPath, "utf-8")) as unknown;
+  } catch (error) {
+    return applicationIntentManifestFailure(
+      checkId,
+      CLI_DIAGNOSTIC_CODES.doctorAppManifestJsonInvalid,
+      `${DEFAULT_APPLICATION_INTENT_MANIFEST_PATH} is not valid JSON: ${error instanceof Error ? error.message : String(error)}`,
+      "Restore valid JSON or regenerate the workspace with create-croco-app, then rerun croco doctor.",
+    );
+  }
+
+  const validation = validateApplicationIntentManifest(parsed);
+  if (!validation.ok) {
+    const diagnostics = validation.issues.map((issue) => ({
+      code: applicationIntentManifestIssueCode(issue.kind),
+      severity: "error" as const,
+      checkId,
+      cause:
+        issue.kind === "goal-contract-mismatch"
+          ? `${DEFAULT_APPLICATION_INTENT_MANIFEST_PATH}.${issue.field} is ${formatDiagnosticValue(issue.actual)}, but goal ${formatDiagnosticValue(parsed && typeof parsed === "object" && "goal" in parsed ? parsed.goal : undefined)} requires ${formatDiagnosticValue(issue.expected)}.`
+          : `${DEFAULT_APPLICATION_INTENT_MANIFEST_PATH}.${issue.field} has unsupported or invalid value ${formatDiagnosticValue(issue.actual)}.`,
+      location: { file: DEFAULT_APPLICATION_INTENT_MANIFEST_PATH },
+      action:
+        issue.kind === "version-unsupported"
+          ? "Upgrade croco doctor to a version that supports this manifest, or regenerate the workspace with the current create-croco-app version."
+          : "Restore a supported generated manifest value or regenerate the workspace with create-croco-app, then rerun croco doctor.",
+    }));
+
+    return {
+      id: checkId,
+      title: "Application intent manifest",
+      status: "fail",
+      diagnostics,
+      note: `${diagnostics.length} application intent manifest issue(s) found.`,
+    };
+  }
+
+  const manifest = validation.manifest;
+  const declaredPackages = new Set([
+    ...packages.map((workspacePackage) => workspacePackage.name),
+    ...collectDeclaredDependencies(rootDir, packages).map((dependency) => dependency.name),
+  ]);
+  const diagnostics: DoctorDiagnostic[] = [];
+  const requiredRuntimePackage = getApplicationIntentRuntimePackage(manifest.runtimeTarget);
+  if (!declaredPackages.has(requiredRuntimePackage)) {
+    diagnostics.push(
+      applicationIntentWorkspaceDrift(
+        checkId,
+        "runtimeTarget",
+        manifest.runtimeTarget,
+        `package ${requiredRuntimePackage} in workspace package names or package.json dependency fields`,
+      ),
+    );
+  }
+
+  manifest.providers.forEach((provider, index) => {
+    const requiredPackage = getApplicationIntentProviderPackage(
+      provider,
+      manifest.scope,
+      manifest.goal,
+    );
+    if (!declaredPackages.has(requiredPackage)) {
+      diagnostics.push(
+        applicationIntentWorkspaceDrift(
+          checkId,
+          `providers[${index}]`,
+          provider,
+          `package ${requiredPackage} in workspace package names or package.json dependency fields`,
+        ),
+      );
+    }
+  });
+
+  const rootPackage = readJsonObject(join(rootDir, "package.json"));
+  const rootManifest = rootPackage.kind === "valid" ? rootPackage.value : {};
+  const scripts = readRootScripts(rootDir);
+  manifest.qualityGates.forEach((qualityGate, index) => {
+    const evidence = getApplicationIntentQualityGateEvidence(qualityGate);
+    const workspacePackageName =
+      evidence.kind === "workspace-script"
+        ? `${manifest.scope}${evidence.packageNameSuffix}`
+        : undefined;
+
+    const workspacePackage = packages.find((pkg) => pkg.name === workspacePackageName);
+    const workspaceScripts = workspacePackage
+      ? readPackageScriptsAt(join(workspacePackage.absoluteDir, "package.json"))
+      : {};
+    const evidencePath =
+      evidence.kind === "package-manager"
+        ? "package.json#packageManager"
+        : evidence.kind === "root-script"
+          ? `package.json#scripts.${evidence.script}`
+          : `${workspacePackage?.relativeDir ?? `*${evidence.packageNameSuffix}`}/package.json#scripts.${evidence.script}`;
+    const evidencePresent =
+      evidence.kind === "package-manager"
+        ? readOptionalString(rootManifest["packageManager"]) !== null
+        : evidence.kind === "root-script"
+          ? scripts[evidence.script] !== undefined
+          : workspaceScripts[evidence.script] !== undefined;
+    if (!evidencePresent) {
+      diagnostics.push(
+        applicationIntentWorkspaceDrift(
+          checkId,
+          `qualityGates[${index}]`,
+          qualityGate,
+          evidencePath,
+        ),
+      );
+    }
+  });
+
+  return {
+    id: checkId,
+    title: "Application intent manifest",
+    status: diagnostics.length > 0 ? "fail" : "pass",
+    diagnostics,
+    note:
+      diagnostics.length > 0
+        ? `${diagnostics.length} workspace drift issue(s) found for declared application intent.`
+        : `Goal '${manifest.goal}' manifest and workspace evidence are aligned.`,
+  };
+}
+
+function applicationIntentManifestFailure(
+  checkId: string,
+  code: CliDiagnosticCode,
+  cause: string,
+  action: string,
+): DoctorCheckResult {
+  const diagnostic: DoctorDiagnostic = {
+    code,
+    severity: "error",
+    checkId,
+    cause,
+    location: { file: DEFAULT_APPLICATION_INTENT_MANIFEST_PATH },
+    action,
+  };
+  return {
+    id: checkId,
+    title: "Application intent manifest",
+    status: "fail",
+    diagnostics: [diagnostic],
+    note: "The application intent manifest could not be validated.",
+  };
+}
+
+function applicationIntentManifestIssueCode(
+  kind: ApplicationIntentManifestIssueKind,
+): CliDiagnosticCode {
+  switch (kind) {
+    case "shape-invalid":
+      return CLI_DIAGNOSTIC_CODES.doctorAppManifestShapeInvalid;
+    case "version-unsupported":
+      return CLI_DIAGNOSTIC_CODES.doctorAppManifestVersionUnsupported;
+    case "goal-unsupported":
+      return CLI_DIAGNOSTIC_CODES.doctorAppManifestGoalUnsupported;
+    case "goal-contract-mismatch":
+      return CLI_DIAGNOSTIC_CODES.doctorAppManifestGoalContractMismatch;
+    case "runtime-unsupported":
+      return CLI_DIAGNOSTIC_CODES.doctorAppManifestRuntimeUnsupported;
+    case "provider-unsupported":
+      return CLI_DIAGNOSTIC_CODES.doctorAppManifestProviderUnsupported;
+    case "value-unsupported":
+      return CLI_DIAGNOSTIC_CODES.doctorAppManifestValueUnsupported;
+  }
+}
+
+function applicationIntentWorkspaceDrift(
+  checkId: string,
+  manifestField: string,
+  declaredValue: string,
+  evidence: string,
+): DoctorDiagnostic {
+  return {
+    code: CLI_DIAGNOSTIC_CODES.doctorAppManifestWorkspaceDrift,
+    severity: "error",
+    checkId,
+    cause: `${DEFAULT_APPLICATION_INTENT_MANIFEST_PATH}.${manifestField} declares '${declaredValue}', but required workspace evidence is missing: ${evidence}.`,
+    location: { file: DEFAULT_APPLICATION_INTENT_MANIFEST_PATH },
+    action:
+      "Restore the generated package selection or root quality-gate script, or regenerate the workspace from croco.app.json intent, then rerun croco doctor.",
+  };
+}
+
+function formatDiagnosticValue(value: unknown): string {
+  const serialized = JSON.stringify(value);
+  return serialized === undefined ? String(value) : serialized;
 }
 
 function workspaceVersionConsistencyCheck(
@@ -3829,7 +4048,11 @@ function formatCommandOutput(stdout: string | null, stderr: string | null): stri
 }
 
 function readRootScripts(rootDir: string): Record<string, string> {
-  const rootPackage = readJsonObject(join(rootDir, "package.json"));
+  return readPackageScriptsAt(join(rootDir, "package.json"));
+}
+
+function readPackageScriptsAt(packageJsonPath: string): Record<string, string> {
+  const rootPackage = readJsonObject(packageJsonPath);
   if (rootPackage.kind === "invalid" || !isRecord(rootPackage.value)) {
     return {};
   }

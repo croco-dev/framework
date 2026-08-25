@@ -194,6 +194,41 @@ export { LOGGER_TOKEN } from "./libs/ILogger";
  */
 export { MiddlewareChain } from "./libs/Middleware";
 
+export type {
+  ApplicationIntentAuth,
+  ApplicationIntentBilling,
+  ApplicationIntentDeploymentPreset,
+  ApplicationIntentGoal,
+  ApplicationIntentGoalContract,
+  ApplicationIntentManifest,
+  ApplicationIntentManifestIssue,
+  ApplicationIntentManifestIssueKind,
+  ApplicationIntentManifestValidation,
+  ApplicationIntentPreset,
+  ApplicationIntentProtocol,
+  ApplicationIntentProvider,
+  ApplicationIntentQualityGate,
+  ApplicationIntentRuntimeTarget,
+  ApplicationIntentStorage,
+  ApplicationIntentTelemetry,
+} from "./libs/ApplicationIntentManifest";
+export {
+  APPLICATION_INTENT_AUTH_OPTIONS,
+  APPLICATION_INTENT_BILLING_OPTIONS,
+  APPLICATION_INTENT_DEPLOYMENT_PRESETS,
+  APPLICATION_INTENT_GOALS,
+  APPLICATION_INTENT_GOAL_CONTRACTS,
+  APPLICATION_INTENT_MANIFEST_SCHEMA_VERSION,
+  APPLICATION_INTENT_PRESETS,
+  APPLICATION_INTENT_PROTOCOLS,
+  APPLICATION_INTENT_PROVIDERS,
+  APPLICATION_INTENT_QUALITY_GATES,
+  APPLICATION_INTENT_RUNTIME_TARGETS,
+  APPLICATION_INTENT_STORAGE_OPTIONS,
+  APPLICATION_INTENT_TELEMETRY_OPTIONS,
+  validateApplicationIntentManifest,
+} from "./libs/ApplicationIntentManifest";
+
 export {
   assertPolicyTableRuntimeCapabilities,
   assertPolicyTableRuntimeCapabilityManifest,
