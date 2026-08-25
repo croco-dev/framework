@@ -1211,6 +1211,23 @@ describe("create-croco-app generated smoke matrix", () => {
     }
   });
 
+  it("installs Chromium before browser-backed goal tests", () => {
+    const cases = new Map(
+      getGeneratedSmokeDependencyCaseInputs().map((smokeCase) => [smokeCase.name, smokeCase]),
+    );
+
+    for (const caseName of ["goal-spa-backend-split", "goal-internal-tool"]) {
+      const validations = cases.get(caseName)?.validations ?? [];
+      const chromiumInstallIndex = validations.findIndex(
+        ({ args }) => args?.[0] === "test:browser:install",
+      );
+      const testIndex = validations.findIndex(({ args }) => args?.[0] === "test");
+
+      expect(chromiumInstallIndex, caseName).toBeGreaterThanOrEqual(0);
+      expect(testIndex, caseName).toBeGreaterThan(chromiumInstallIndex);
+    }
+  });
+
   it("executes generated tests for Meta Vite smoke cases", () => {
     const cases = new Map(
       getGeneratedSmokeDependencyCaseInputs().map((smokeCase) => [smokeCase.name, smokeCase]),
