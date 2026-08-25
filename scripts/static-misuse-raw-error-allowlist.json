@@ -438,7 +438,7 @@
     {
       "package": "@croco/protocols-core",
       "file": "packages/protocols-core/src/libs/ContractGraphConsumerCoverage.ts",
-      "line": 592,
+      "line": 596,
       "excerpt": "throw new Error(`Unknown contract graph consumer '${consumerId}'.`);",
       "reason": "Reviewed pre-existing internal runtime assertion; future user-facing failures in this file must use Problem-shaped or diagnostic-coded errors.",
       "owner": "framework-error-handling",

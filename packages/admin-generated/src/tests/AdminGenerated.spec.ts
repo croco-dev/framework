@@ -16,14 +16,43 @@ import {
   Query,
   ResponseSchema,
 } from "@croco/protocols-rest";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import {
   AdminGeneratedContractProblem,
+  assertAdminGeneratedContractGraphCoverage,
   createAdminGeneratedArtifact,
   generateAdminResourceFilesFromContractGraph,
   generateAdminResourceSourceFromContractGraph,
 } from "../libs/generate";
+
+const ENTITLEMENT_REQUIREMENTS_KEY = Symbol.for("croco:entitlements:requirements");
+
+type EntitlementRequirement = {
+  readonly feature: string;
+  readonly description?: string;
+  readonly resource?: {
+    readonly type: string;
+    readonly id?: string;
+    readonly idParam?: string;
+  };
+};
+
+function RequiresEntitlement(requirement: EntitlementRequirement): MethodDecorator {
+  return (target, propertyKey) => {
+    const existing =
+      (Reflect.getOwnMetadata(ENTITLEMENT_REQUIREMENTS_KEY, target, propertyKey) as
+        | readonly EntitlementRequirement[]
+        | undefined) ?? [];
+
+    Reflect.defineMetadata(
+      ENTITLEMENT_REQUIREMENTS_KEY,
+      [...existing, requirement],
+      target,
+      propertyKey,
+    );
+  };
+}
 
 const userSchema = z.object({
   email: z.string(),
@@ -188,7 +217,8 @@ export const adminClientBindings = {
         description: 'User\\'s "profile" path C:\\\\users',
         type: 'https://example.com/problems/user\\'s-"missing"'
       }
-    ]
+    ],
+    entitlements: []
   }
 } as const;
 
@@ -231,7 +261,8 @@ export const adminResources = [
         access: {
           guards: [],
           roles: []
-        }
+        },
+        entitlements: []
       }
     },
     actions: []
@@ -266,6 +297,153 @@ export const adminResources = [
       "projectsControllerList",
       "usersControllerList",
     ]);
+  });
+
+  it("should preserve normalized entitlement requirements across every generated route surface", () => {
+    @Controller("/reports")
+    class ReportsController {
+      @Get("/")
+      listReports(): void {}
+
+      @Get("/:id")
+      @RequiresEntitlement({
+        feature: "reports.read",
+        description: "Read report data.",
+        resource: { type: "report", idParam: "id" },
+      })
+      getReport(@Param("id") _id: string): void {}
+
+      @Post("/:id/export")
+      @RequiresEntitlement({ feature: "reports.export" })
+      @RequiresEntitlement({
+        feature: "reports.read",
+        resource: { type: "report", idParam: "id" },
+      })
+      exportReport(@Param("id") _id: string): void {}
+    }
+
+    const graph = buildContractGraph([ReportsController]);
+    const artifact = createAdminGeneratedArtifact(graph);
+    const resource = artifact.resources[0];
+    const detailEntitlements = [
+      {
+        feature: "reports.read",
+        description: "Read report data.",
+        resource: { type: "report", idParam: "id" },
+      },
+    ];
+    const actionEntitlements = [
+      { feature: "reports.export" },
+      { feature: "reports.read", resource: { type: "report", idParam: "id" } },
+    ];
+
+    expect(resource?.operations.list?.entitlements).toEqual([]);
+    expect(artifact.clientBindings.reportsControllerListReports?.entitlements).toEqual([]);
+    expect(resource?.operations.detail?.entitlements).toEqual(detailEntitlements);
+    expect(artifact.clientBindings.reportsControllerGetReport?.entitlements).toEqual(
+      detailEntitlements,
+    );
+    expect(resource?.actions[0]?.entitlements).toEqual(actionEntitlements);
+    expect(artifact.clientBindings.reportsControllerExportReport?.entitlements).toEqual(
+      actionEntitlements,
+    );
+
+    const detail = resource?.operations.detail;
+    const action = resource?.actions[0];
+    const detailBinding = artifact.clientBindings.reportsControllerGetReport;
+
+    expect(detail).toBeDefined();
+    expect(action).toBeDefined();
+    expect(detailBinding).toBeDefined();
+
+    if (!resource || !detail || !action || !detailBinding) {
+      return;
+    }
+
+    const withMutatedDetail = {
+      ...artifact,
+      resources: [
+        {
+          ...resource,
+          operations: {
+            ...resource.operations,
+            detail: { ...detail, entitlements: [] },
+          },
+        },
+      ],
+    };
+    const withMutatedAction = {
+      ...artifact,
+      resources: [
+        {
+          ...resource,
+          actions: [{ ...action, entitlements: [] }],
+        },
+      ],
+    };
+    const withMutatedBinding = {
+      ...artifact,
+      clientBindings: {
+        ...artifact.clientBindings,
+        reportsControllerGetReport: { ...detailBinding, entitlements: [] },
+      },
+    };
+
+    expect(() => assertAdminGeneratedContractGraphCoverage(graph, withMutatedDetail)).toThrow(
+      "contract-consumer-route-field-mismatch",
+    );
+    expect(() => assertAdminGeneratedContractGraphCoverage(graph, withMutatedAction)).toThrow(
+      "contract-consumer-route-field-mismatch",
+    );
+    expect(() => assertAdminGeneratedContractGraphCoverage(graph, withMutatedBinding)).toThrow(
+      "contract-consumer-route-field-mismatch",
+    );
+  });
+
+  it("should generate identical entitlement artifacts when route requirements are reordered", () => {
+    @Controller("/reports")
+    class ReportsController {
+      @Get("/")
+      @RequiresEntitlement({ feature: "reports.read" })
+      @RequiresEntitlement({ feature: "reports.export" })
+      listReports(): void {}
+    }
+
+    const graph = buildContractGraph([ReportsController]);
+    const reorderedGraph = {
+      ...graph,
+      routes: graph.routes.map((route) => ({
+        ...route,
+        entitlements: [...route.entitlements].reverse(),
+      })),
+    };
+
+    expect(generateAdminResourceSourceFromContractGraph(reorderedGraph)).toBe(
+      generateAdminResourceSourceFromContractGraph(graph),
+    );
+  });
+
+  it("should order entitlement requirements without consulting the runtime locale", () => {
+    @Controller("/reports")
+    class ReportsController {
+      @Get("/")
+      @RequiresEntitlement({ feature: "ä.reports" })
+      @RequiresEntitlement({ feature: "z.reports" })
+      listReports(): void {}
+    }
+
+    const graph = buildContractGraph([ReportsController]);
+    const localeCompare = vi.spyOn(String.prototype, "localeCompare").mockImplementation(() => {
+      throw new Error("localeCompare must not affect entitlement ordering");
+    });
+
+    try {
+      expect(
+        createAdminGeneratedArtifact(graph).resources[0]?.operations.list?.entitlements,
+      ).toEqual([{ feature: "z.reports" }, { feature: "ä.reports" }]);
+    } finally {
+      localeCompare.mockRestore();
+    }
   });
 
   it("should fail ambiguous or unsupported route shapes with stable diagnostics", () => {

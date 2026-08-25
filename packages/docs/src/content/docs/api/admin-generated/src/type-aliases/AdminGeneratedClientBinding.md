@@ -9,6 +9,12 @@ title: "AdminGeneratedClientBinding"
 
 ## Properties
 
+### entitlements
+
+> `readonly` **entitlements**: readonly [`AdminGeneratedEntitlementRequirement`](/api/admin-generated/src/type-aliases/admingeneratedentitlementrequirement/)[]
+
+---
+
 ### httpMethod
 
 > `readonly` **httpMethod**: `string`

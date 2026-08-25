@@ -10,6 +10,8 @@ export type {
   AdminGeneratedArtifact,
   AdminGeneratedClientBinding,
   AdminGeneratedDiagnostic,
+  AdminGeneratedEntitlementRequirement,
+  AdminGeneratedEntitlementResourceRequirement,
   AdminGeneratedOperationKind,
   AdminGeneratedOperationScope,
   AdminGeneratedProblem,
