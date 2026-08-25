@@ -91,8 +91,13 @@ in the plan.
 
 - `croco doctor --json` finds the nearest `pnpm-workspace.yaml`, discovers workspace packages, and prints a machine-readable report for CI.
 - `croco doctor apps/api-server` runs the same checks from a specific workspace path.
-- Doctor checks workspace dependency ranges, installed/built Croco spine packages, ContractGraph snapshots, ProblemRegistry artifacts, runtime capability manifests, HTTP security middleware, DI graph manifests, provider profile certification, repository-core boundaries, and Lambda telemetry flush evidence.
+- Doctor checks workspace dependency ranges, installed/built Croco spine packages, ContractGraph snapshots, ProblemRegistry artifacts, runtime capability manifests, HTTP security middleware, DI graph manifests, provider profile certification, repository-core boundaries, Lambda telemetry flush evidence, and optional `croco.app.json` application intent.
 - Failures emit stable `CROCO_DOCTOR_*` diagnostic codes with cause, source location, and recovery action. Legacy slash-form codes remain in JSON as `legacyCode` only where they existed before.
+
+When `croco.app.json` exists, the additive `application-intent-manifest` check validates its versioned
+schema and supported goal, runtime, provider, and quality-gate vocabulary. It then verifies declared
+runtime/provider packages and root or workspace package scripts. Hand-authored workspaces without the
+manifest report this check as `skipped`; doctor never creates or rewrites the manifest.
 
 #### `croco.doctor.v1` JSON contract
 
@@ -151,6 +156,15 @@ Current stable doctor diagnostic codes are:
 - `CROCO_DOCTOR_PROVIDER_PACKAGE_MISSING`
 - `CROCO_DOCTOR_PROVIDER_CERTIFICATION_GAP`
 - `CROCO_DOCTOR_PROVIDER_CERTIFICATION_DOCUMENTED`
+- `CROCO_DOCTOR_APP_MANIFEST_JSON_INVALID`
+- `CROCO_DOCTOR_APP_MANIFEST_SHAPE_INVALID`
+- `CROCO_DOCTOR_APP_MANIFEST_VERSION_UNSUPPORTED`
+- `CROCO_DOCTOR_APP_MANIFEST_GOAL_UNSUPPORTED`
+- `CROCO_DOCTOR_APP_MANIFEST_GOAL_CONTRACT_MISMATCH`
+- `CROCO_DOCTOR_APP_MANIFEST_RUNTIME_UNSUPPORTED`
+- `CROCO_DOCTOR_APP_MANIFEST_PROVIDER_UNSUPPORTED`
+- `CROCO_DOCTOR_APP_MANIFEST_VALUE_UNSUPPORTED`
+- `CROCO_DOCTOR_APP_MANIFEST_WORKSPACE_DRIFT`
 
 In this repository, `pnpm run doctor` builds the CLI and runs `croco doctor` against the current workspace.
 

@@ -189,6 +189,13 @@ describe("doctor", () => {
             "status": "pass",
             "title": "Lambda telemetry flush boundary",
           },
+          {
+            "diagnostics": [],
+            "id": "application-intent-manifest",
+            "note": "croco.app.json was not found; custom workspaces do not require it.",
+            "status": "skipped",
+            "title": "Application intent manifest",
+          },
         ],
         "diagnostics": [],
         "packageCount": 2,
@@ -245,6 +252,171 @@ describe("doctor", () => {
         "version": "croco.doctor.v1",
       }
     `);
+  });
+
+  it("passes the application intent manifest check for a healthy generated workspace", () => {
+    const repo = createWorkerGoalWorkspace();
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.checks).toContainEqual(
+      expect.objectContaining({
+        id: "application-intent-manifest",
+        status: "pass",
+        diagnostics: [],
+      }),
+    );
+  });
+
+  it("checks workspace quality-gate scripts on the manifest scope package", () => {
+    const repo = createWorkerGoalWorkspace();
+    writeWorkspacePackage(repo, "packages/ssr-worker", "@test/ssr-worker");
+    writeWorkspacePackage(repo, "packages/a-ssr-worker", "@other/ssr-worker", {
+      scripts: {
+        "presentation:smoke": "tsx src/smoke/presentationSmoke.ts",
+      },
+    });
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "CROCO_DOCTOR_APP_MANIFEST_WORKSPACE_DRIFT",
+        cause: expect.stringContaining(
+          "packages/ssr-worker/package.json#scripts.presentation:smoke",
+        ),
+      }),
+    );
+  });
+
+  it("skips the application intent manifest check for a custom workspace", () => {
+    const repo = createCrocoWorkspace();
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.checks).toContainEqual(
+      expect.objectContaining({
+        id: "application-intent-manifest",
+        status: "skipped",
+        diagnostics: [],
+      }),
+    );
+  });
+
+  it("reports malformed application intent JSON with a stable diagnostic", () => {
+    const repo = createWorkerGoalWorkspace();
+    writeFile(repo, "croco.app.json", "{ not json");
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "CROCO_DOCTOR_APP_MANIFEST_JSON_INVALID",
+        checkId: "application-intent-manifest",
+        location: { file: "croco.app.json" },
+      }),
+    );
+  });
+
+  it("reports unsupported application intent manifest versions with a stable diagnostic", () => {
+    const repo = createWorkerGoalWorkspace({ manifest: { schemaVersion: 2 } });
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "CROCO_DOCTOR_APP_MANIFEST_VERSION_UNSUPPORTED",
+        cause: expect.stringContaining("schemaVersion"),
+        location: { file: "croco.app.json" },
+      }),
+    );
+  });
+
+  it.each([
+    ["goal", "unknown-goal", "CROCO_DOCTOR_APP_MANIFEST_GOAL_UNSUPPORTED"],
+    ["runtimeTarget", "unknown-runtime", "CROCO_DOCTOR_APP_MANIFEST_RUNTIME_UNSUPPORTED"],
+    [
+      "providers",
+      ["cloudflare-workers", "unknown-provider"],
+      "CROCO_DOCTOR_APP_MANIFEST_PROVIDER_UNSUPPORTED",
+    ],
+  ])(
+    "reports unsupported application intent %s values with a distinct stable diagnostic",
+    (field, value, code) => {
+      const repo = createWorkerGoalWorkspace({ manifest: { [field]: value } });
+
+      const report = runDoctor({ cwd: repo });
+
+      expect(report.diagnostics).toContainEqual(
+        expect.objectContaining({
+          code,
+          cause: expect.stringContaining(`croco.app.json.${field}`),
+          location: { file: "croco.app.json" },
+        }),
+      );
+    },
+  );
+
+  it("reports supported values that contradict the selected goal contract", () => {
+    const repo = createWorkerGoalWorkspace({ manifest: { goal: "saas-api" } });
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "CROCO_DOCTOR_APP_MANIFEST_GOAL_CONTRACT_MISMATCH",
+        cause: expect.stringMatching(/croco\.app\.json\.runtimeTarget.*saas-api.*node/),
+        location: { file: "croco.app.json" },
+      }),
+    );
+  });
+
+  it("identifies the manifest field and package evidence when declared provider intent drifts", () => {
+    const repo = createWorkerGoalWorkspace({ includeMetaVite: false });
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "CROCO_DOCTOR_APP_MANIFEST_WORKSPACE_DRIFT",
+        cause: expect.stringMatching(
+          /croco\.app\.json\.providers\[1\].*@croco\/meta-vite.*package\.json/,
+        ),
+        location: { file: "croco.app.json" },
+      }),
+    );
+  });
+
+  it("requires the concrete in-memory events adapter declared by generated application intent", () => {
+    const repo = createSpaBackendSplitGoalWorkspace({ includeEventsInmemory: false });
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "CROCO_DOCTOR_APP_MANIFEST_WORKSPACE_DRIFT",
+        cause: expect.stringMatching(
+          /croco\.app\.json\.providers\[1\].*@croco\/events-inmemory.*package\.json/,
+        ),
+        location: { file: "croco.app.json" },
+      }),
+    );
+  });
+
+  it("identifies the manifest field and root script evidence when a declared quality gate drifts", () => {
+    const repo = createWorkerGoalWorkspace({ includeBuildScript: false });
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "CROCO_DOCTOR_APP_MANIFEST_WORKSPACE_DRIFT",
+        cause: expect.stringMatching(
+          /croco\.app\.json\.qualityGates\[2\].*package\.json#scripts\.build/,
+        ),
+        location: { file: "croco.app.json" },
+      }),
+    );
   });
 
   it("discovers packages from inline workspace arrays and excludes negated globs", () => {
@@ -913,6 +1085,7 @@ describe("doctor", () => {
       "provider-certification",
       "repository-core-boundary",
       "lambda-telemetry-flush",
+      "application-intent-manifest",
     ]);
   });
 
@@ -3055,6 +3228,94 @@ function createCrocoWorkspace(): string {
   const repo = createTempRepo();
   writeFile(repo, "pnpm-workspace.yaml", "packages:\n  - packages/*\n");
   writeRootPackage(repo);
+  return repo;
+}
+
+function createWorkerGoalWorkspace(
+  options: {
+    readonly includeBuildScript?: boolean;
+    readonly includeMetaVite?: boolean;
+    readonly manifest?: Record<string, unknown>;
+  } = {},
+): string {
+  const repo = createCrocoWorkspace();
+  writeRootPackage(repo, {
+    scripts: {
+      typecheck: "turbo typecheck",
+      ...(options.includeBuildScript === false ? {} : { build: "turbo build" }),
+    },
+  });
+  writeWorkspacePackage(repo, "packages/api-worker", "@test/api-worker", {
+    dependencies: {
+      "@croco/transports-cloudflare-workers": "workspace:*",
+    },
+  });
+  writeWorkspacePackage(repo, "packages/ssr-worker", "@test/ssr-worker", {
+    scripts: {
+      "presentation:smoke": "tsx src/smoke/presentationSmoke.ts",
+    },
+    dependencies: options.includeMetaVite === false ? {} : { "@croco/meta-vite": "workspace:*" },
+  });
+  writeJson(repo, "croco.app.json", {
+    schemaVersion: 1,
+    projectName: "worker-app",
+    scope: "@test",
+    goal: "worker",
+    preset: "ddd-vike-fullstack",
+    runtimeTarget: "cloudflare-workers",
+    protocol: "rest",
+    providers: ["cloudflare-workers", "meta-vite"],
+    storage: [],
+    auth: "none",
+    billing: "none",
+    telemetry: "none",
+    deploymentPreset: "cloudflare-workers",
+    qualityGates: ["install", "typecheck", "build", "ssr-worker:presentation:smoke"],
+    ...options.manifest,
+  });
+  return repo;
+}
+
+function createSpaBackendSplitGoalWorkspace(
+  options: { readonly includeEventsInmemory?: boolean } = {},
+): string {
+  const repo = createCrocoWorkspace();
+  writeRootPackage(repo, {
+    scripts: {
+      "dev:smoke": "tsx scripts/dev-smoke.ts",
+      lint: "oxlint .",
+      test: "vitest run",
+      typecheck: "turbo typecheck",
+      build: "turbo build",
+      "contract:verify": "tsx scripts/contract-verify.ts",
+    },
+  });
+  writeWorkspacePackage(repo, "packages/api", "@test/api", {
+    dependencies: {
+      "@croco/transports-http": "workspace:*",
+      "@croco/repository-core": "workspace:*",
+      ...(options.includeEventsInmemory === false
+        ? {}
+        : { "@croco/events-inmemory": "workspace:*" }),
+      "@test/provider-rpc": "workspace:*",
+    },
+  });
+  writeJson(repo, "croco.app.json", {
+    schemaVersion: 1,
+    projectName: "spa-app",
+    scope: "@test",
+    goal: "spa-backend-split",
+    preset: "production-app",
+    runtimeTarget: "node",
+    protocol: "rest-rpc-client",
+    providers: ["in-memory-repository", "in-memory-events", "generated-rpc-client"],
+    storage: ["in-memory-demo"],
+    auth: "none",
+    billing: "none",
+    telemetry: "opentelemetry-otlp",
+    deploymentPreset: "lambda-spa",
+    qualityGates: ["install", "dev:smoke", "lint", "test", "typecheck", "build", "contract:verify"],
+  });
   return repo;
 }
 

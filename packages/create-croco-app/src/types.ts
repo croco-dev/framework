@@ -1,6 +1,7 @@
 import type { TenantModelName } from "@croco/tenant-core/tenant-model";
+import type { ApplicationIntentGoal } from "@croco/framework-context";
 
-export type AppGoal = "saas-api" | "spa-backend-split" | "worker" | "internal-tool";
+export type AppGoal = ApplicationIntentGoal;
 
 export type GeneratorOptions = {
   projectName: string;
