@@ -86,12 +86,7 @@ function resolveCommit(rootDir: string, ref: string, label: string): string {
   );
 }
 
-function assertPullRequestParents(
-  rootDir: string,
-  baseSha: string,
-  headSha: string,
-  candidateSha: string,
-): void {
+function pullRequestParents(rootDir: string, candidateSha: string): readonly [string, string] {
   const [commit, ...parents] = gitOutput(
     rootDir,
     ["rev-list", "--parents", "-n", "1", candidateSha],
@@ -106,6 +101,21 @@ function assertPullRequestParents(
       `Pull-request candidate ${candidateSha} must be a two-parent merge commit`,
     );
   }
+
+  const [baseSha, headSha] = parents;
+  return [
+    fullCommitOid(baseSha, "candidate base parent SHA"),
+    fullCommitOid(headSha, "candidate head parent SHA"),
+  ];
+}
+
+function assertPullRequestParents(
+  rootDir: string,
+  baseSha: string,
+  headSha: string,
+  candidateSha: string,
+): void {
+  const parents = pullRequestParents(rootDir, candidateSha);
   if (parents[0] !== baseSha || parents[1] !== headSha) {
     throw new VerificationProblem(
       "VERIFICATION_CANDIDATE_PARENT_MISMATCH",
@@ -202,9 +212,38 @@ export function resolveVerificationIdentity(
       "Pull-request event base SHA must be a full non-null 40-character commit OID",
     );
   }
-  const baseSha = usableEventBase
+  let baseSha = usableEventBase
     ? fullCommitOid(options.eventBaseSha, "event base SHA")
     : resolveCommit(options.rootDir, `${candidateSha}^`, "candidate parent");
+
+  if (options.eventName === "pull_request") {
+    const eventBaseSha = baseSha;
+    const [candidateBaseSha, candidateHeadSha] = pullRequestParents(options.rootDir, candidateSha);
+    if (candidateHeadSha !== headSha) {
+      throw new VerificationProblem(
+        "VERIFICATION_CANDIDATE_PARENT_MISMATCH",
+        "contract",
+        `Pull-request candidate ${candidateSha} head parent must equal event head ${headSha}`,
+      );
+    }
+    const mergeBaseSha = fullCommitOid(
+      gitOutput(
+        options.rootDir,
+        ["merge-base", eventBaseSha, candidateBaseSha],
+        "VERIFICATION_EVENT_BASE_ANCESTRY_READ_FAILED",
+        "Reading the event and candidate base merge base",
+      ),
+      "event and candidate base merge base",
+    );
+    if (mergeBaseSha !== eventBaseSha) {
+      throw new VerificationProblem(
+        "VERIFICATION_EVENT_BASE_NOT_ANCESTOR",
+        "contract",
+        `Pull-request event base ${eventBaseSha} must be an ancestor of candidate base ${candidateBaseSha}`,
+      );
+    }
+    baseSha = candidateBaseSha;
+  }
 
   return assertVerificationIdentity({
     rootDir: options.rootDir,
