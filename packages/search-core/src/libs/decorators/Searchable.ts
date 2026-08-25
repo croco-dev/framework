@@ -16,9 +16,8 @@ export type {
 export { SEARCHABLE_METADATA };
 
 export function Searchable(options: SearchableOptions = {}): ClassDecorator {
-  const sourceLocation = findSearchableSourceLocation(new Error().stack);
-
   return (target: Function) => {
+    const sourceLocation = findSearchableSourceLocation(new Error().stack);
     const metadata: SearchableMetadata = {
       index: options.index ?? target.name.toLowerCase(),
       autoSync: options.autoSync ?? false,

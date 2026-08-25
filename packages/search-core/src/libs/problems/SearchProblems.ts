@@ -1,4 +1,5 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
+import { compareCodeUnits } from "../compareCodeUnits";
 
 import type { SearchableIndexDeclaration } from "../decorators/SearchableTypes";
 
@@ -24,14 +25,14 @@ function compareSearchableIndexDeclarations(
 ): number {
   const leftLocation = left.sourceLocation;
   const rightLocation = right.sourceLocation;
-  const pathOrder = (leftLocation?.path ?? "").localeCompare(rightLocation?.path ?? "");
+  const pathOrder = compareCodeUnits(leftLocation?.path ?? "", rightLocation?.path ?? "");
   if (pathOrder !== 0) return pathOrder;
 
   const lineOrder = (leftLocation?.line ?? 0) - (rightLocation?.line ?? 0);
   if (lineOrder !== 0) return lineOrder;
 
   const columnOrder = (leftLocation?.column ?? 0) - (rightLocation?.column ?? 0);
-  return columnOrder === 0 ? left.targetName.localeCompare(right.targetName) : columnOrder;
+  return columnOrder === 0 ? compareCodeUnits(left.targetName, right.targetName) : columnOrder;
 }
 
 export class MissingTenantProblem extends Problem {

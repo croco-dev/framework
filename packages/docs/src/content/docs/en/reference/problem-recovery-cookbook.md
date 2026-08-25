@@ -5673,7 +5673,7 @@ Sources:
 
 Sources:
 
-- `packages/search-core/src/libs/problems/SearchProblems.ts:91:5` (problem-constructor)
+- `packages/search-core/src/libs/problems/SearchProblems.ts:92:5` (problem-constructor)
 
 <a id="integrations-posthog-missing-config"></a>
 
@@ -7455,7 +7455,7 @@ Sources:
 
 Sources:
 
-- `packages/search-core/src/libs/problems/SearchProblems.ts:39:5` (problem-constructor)
+- `packages/search-core/src/libs/problems/SearchProblems.ts:40:5` (problem-constructor)
 
 <a id="model-not-found"></a>
 
@@ -9453,7 +9453,7 @@ Sources:
 
 Sources:
 
-- `packages/search-core/src/libs/problems/SearchProblems.ts:99:5` (problem-constructor)
+- `packages/search-core/src/libs/problems/SearchProblems.ts:100:5` (problem-constructor)
 
 <a id="search-drizzle-invalid-row"></a>
 
@@ -9489,7 +9489,7 @@ Sources:
 
 Sources:
 
-- `packages/search-core/src/libs/problems/SearchProblems.ts:7:5` (problem-constructor)
+- `packages/search-core/src/libs/problems/SearchProblems.ts:8:5` (problem-constructor)
 
 <a id="search-core-sync-identity-conflict"></a>
 
@@ -9507,7 +9507,7 @@ Sources:
 
 Sources:
 
-- `packages/search-core/src/libs/problems/SearchProblems.ts:57:5` (problem-constructor)
+- `packages/search-core/src/libs/problems/SearchProblems.ts:58:5` (problem-constructor)
 
 <a id="search-core-transform-not-found"></a>
 
@@ -9525,7 +9525,7 @@ Sources:
 
 Sources:
 
-- `packages/search-core/src/libs/problems/SearchProblems.ts:69:3` (problem-class)
+- `packages/search-core/src/libs/problems/SearchProblems.ts:70:3` (problem-class)
 
 <a id="search-meilisearch-index-not-found"></a>
 
@@ -10083,7 +10083,7 @@ Sources:
 
 Sources:
 
-- `packages/search-core/src/libs/problems/SearchProblems.ts:78:5` (problem-constructor)
+- `packages/search-core/src/libs/problems/SearchProblems.ts:79:5` (problem-constructor)
 
 <a id="structured-output-error"></a>
 

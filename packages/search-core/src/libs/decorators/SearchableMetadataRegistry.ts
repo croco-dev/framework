@@ -1,4 +1,5 @@
 import { MetadataStorage } from "@croco/framework-context";
+import { compareCodeUnits } from "../compareCodeUnits";
 import { SearchableIndexConflictProblem } from "../problems/SearchProblems";
 import { SEARCHABLE_METADATA } from "./constants";
 
@@ -50,7 +51,7 @@ export function compileSearchableMetadataRegistry(): ReadonlyMap<string, Searcha
 
   const conflictingIndex = [...metadataByIndex.entries()]
     .filter(([, declarations]) => declarations.length > 1)
-    .sort(([left], [right]) => left.localeCompare(right))[0];
+    .sort(([left], [right]) => compareCodeUnits(left, right))[0];
 
   if (conflictingIndex) {
     const [indexName, metadata] = conflictingIndex;
@@ -74,9 +75,9 @@ function toSearchableIndexDeclaration(metadata: SearchableMetadata): SearchableI
 
 function parseStackSourceLocation(line: string): SearchableSourceLocation | undefined {
   const trimmed = line.trim();
-  const match =
-    trimmed.match(/\(?((?:file:\/\/)?\/.*):(\d+):(\d+)\)?$/) ??
-    trimmed.match(/\(?([A-Za-z]:\\.*):(\d+):(\d+)\)?$/);
+  const match = trimmed.match(
+    /^(?:(?:.*\()|(?:at\s+))?((?:file:\/\/)?\/.*|[A-Za-z]:\\.*):(\d+):(\d+)\)?$/,
+  );
   if (!match) {
     return undefined;
   }

@@ -1,5 +1,6 @@
+import { Container } from "@croco/framework-context";
 import { ProblemCategory } from "@croco/problems-core";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
   IndexNotFoundProblem,
   MissingTenantProblem,
@@ -10,6 +11,10 @@ import {
 } from "../libs/problems/SearchProblems";
 
 describe("SearchProblems", () => {
+  beforeEach(() => {
+    Container.reset();
+  });
+
   describe("SearchableIndexConflictProblem", () => {
     it("exposes deterministic declaration evidence", () => {
       const problem = new SearchableIndexConflictProblem("users", [
@@ -39,6 +44,30 @@ describe("SearchProblems", () => {
           },
         ],
       });
+    });
+
+    it("sorts declaration paths by locale-independent code units", () => {
+      const problem = new SearchableIndexConflictProblem("users", [
+        {
+          targetName: "UmlautEntity",
+          sourceLocation: { path: "/app/ä.ts", line: 10, column: 2 },
+        },
+        {
+          targetName: "ZetaEntity",
+          sourceLocation: { path: "/app/z.ts", line: 10, column: 2 },
+        },
+      ]);
+
+      expect(problem.extensions?.declarations).toEqual([
+        {
+          targetName: "ZetaEntity",
+          sourceLocation: { path: "/app/z.ts", line: 10, column: 2 },
+        },
+        {
+          targetName: "UmlautEntity",
+          sourceLocation: { path: "/app/ä.ts", line: 10, column: 2 },
+        },
+      ]);
     });
   });
 

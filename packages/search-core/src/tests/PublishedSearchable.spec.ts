@@ -11,7 +11,8 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { Container } from "@croco/framework-context";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import type { SearchableIndexDeclaration } from "../libs/decorators/Searchable";
 
@@ -20,6 +21,10 @@ const rootDir = resolve(packageDir, "../..");
 const timeoutMs = 300_000;
 
 describe("published @Searchable decorator", () => {
+  beforeEach(() => {
+    Container.reset();
+  });
+
   it(
     "reports consumer declaration locations independently of registration order",
     () => {
@@ -116,7 +121,7 @@ function pack(packageName: string, prefix: string, destination: string): string 
   const filename = readdirSync(destination).find(
     (entry) => entry.startsWith(prefix) && entry.endsWith(".tgz"),
   );
-  if (!filename) throw new Error(`Missing packed tarball with prefix ${prefix}`);
+  if (!filename) expect.fail(`Missing packed tarball with prefix ${prefix}`);
   return join(destination, filename);
 }
 
@@ -137,7 +142,7 @@ function writeConsumer(consumerPath: string): void {
       "  if (!(error instanceof SearchableIndexConflictProblem)) throw error;",
       "  declarations = error.extensions.declarations;",
       "}",
-      'if (!declarations) throw new Error("Expected a searchable index conflict");',
+      'if (!declarations) { process.stderr.write("Expected a searchable index conflict\\n"); process.exit(1); }',
       "process.stdout.write(JSON.stringify(declarations));",
       "",
     ].join("\n"),
@@ -156,11 +161,10 @@ function run(command: string, arguments_: readonly string[], cwd: string): strin
     maxBuffer: 16 * 1024 * 1024,
     timeout: timeoutMs,
   });
-  if (result.error) throw result.error;
-  if (result.status !== 0) {
-    throw new Error(
-      `${command} ${arguments_.join(" ")} failed:\n${result.stdout}\n${result.stderr}`,
-    );
-  }
+  expect(result.error, result.error?.message).toBeUndefined();
+  expect(
+    result.status,
+    `${command} ${arguments_.join(" ")} failed:\n${result.stdout}\n${result.stderr}`,
+  ).toBe(0);
   return result.stdout;
 }

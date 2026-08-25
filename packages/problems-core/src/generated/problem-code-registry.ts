@@ -8671,7 +8671,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/search-core/src/libs/problems/SearchProblems.ts",
-          line: 91,
+          line: 92,
           column: 5,
           kind: "problem-constructor",
         },
@@ -11753,7 +11753,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/search-core/src/libs/problems/SearchProblems.ts",
-          line: 39,
+          line: 40,
           column: 5,
           kind: "problem-constructor",
         },
@@ -15265,7 +15265,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/search-core/src/libs/problems/SearchProblems.ts",
-          line: 99,
+          line: 100,
           column: 5,
           kind: "problem-constructor",
         },
@@ -15329,7 +15329,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/search-core/src/libs/problems/SearchProblems.ts",
-          line: 7,
+          line: 8,
           column: 5,
           kind: "problem-constructor",
         },
@@ -15361,7 +15361,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/search-core/src/libs/problems/SearchProblems.ts",
-          line: 57,
+          line: 58,
           column: 5,
           kind: "problem-constructor",
         },
@@ -15392,7 +15392,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/search-core/src/libs/problems/SearchProblems.ts",
-          line: 69,
+          line: 70,
           column: 3,
           kind: "problem-class",
         },
@@ -16367,7 +16367,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/search-core/src/libs/problems/SearchProblems.ts",
-          line: 78,
+          line: 79,
           column: 5,
           kind: "problem-constructor",
         },
