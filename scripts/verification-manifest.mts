@@ -580,6 +580,7 @@ const repoOnly = (
       "pnpm problem-registry:write",
       "scripts/problem-registry.mts",
       "--check",
+      ...(context.base ? ["--base", context.base] : []),
     ),
     timeoutMs: minutes(5),
   },

@@ -70,6 +70,7 @@ const ASSURANCE_ARTIFACT_PATHS = {
 
 export type ChangedTestShadowOptions = {
   readonly base: string;
+  readonly head: string;
   readonly fullEvidence: string;
   readonly outputDirectory: string;
   readonly observationWindow: number;
@@ -90,6 +91,7 @@ export function parseChangedTestShadowArgs(args: readonly string[]): ChangedTest
   if (!fullEvidence) throw new Error("--full-evidence requires a test evidence bundle.");
   return {
     base,
+    head: flag(args, "--head") ?? "HEAD",
     fullEvidence,
     outputDirectory: flag(args, "--output") ?? "ci-reports/changed-test-plan",
     observationWindow: positiveInteger(flag(args, "--observation-window") ?? "20"),
@@ -107,10 +109,12 @@ export async function writeChangedTestShadowReport(
   runtime.assertTestEvidenceBundle(evidenceValue);
   const headGraph = graphAtRevision(runtime, null);
   const baseGraph = graphAtRevision(runtime, options.base);
-  const head = git(["rev-parse", "HEAD"]).trim();
-  const changedFiles = git(["diff", "--name-only", options.base, "HEAD"])
-    .split("\n")
-    .filter(Boolean);
+  const head = git(["rev-parse", options.head]).trim();
+  const checkedHead = git(["rev-parse", "HEAD"]).trim();
+  if (checkedHead !== head) {
+    throw new Error(`Checked revision ${checkedHead} does not match requested head ${head}.`);
+  }
+  const changedFiles = git(["diff", "--name-only", options.base, head]).split("\n").filter(Boolean);
   const plan = runtime.createChangedTestPlan({
     base: options.base,
     head,

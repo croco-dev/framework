@@ -323,7 +323,10 @@ describe("pull-request CI performance budget", () => {
   });
 
   it("rejects restoring full-spine validation on trunk pushes", () => {
-    const mutant = WORKFLOW.replace('args+=(--base "$VERIFICATION_BASE" --head HEAD)', "");
+    const mutant = WORKFLOW.replace(
+      'args+=(--base "$VERIFICATION_BASE" --head "$VERIFICATION_CANDIDATE")',
+      "",
+    );
 
     expect(
       findCiPerformanceBudgetViolations({

@@ -43,6 +43,7 @@ const tempRepos: string[] = [];
 
 describe("release-spine-evidence.mts", () => {
   afterEach(() => {
+    vi.unstubAllEnvs();
     for (const repo of tempRepos.splice(0)) {
       rmSync(repo, { force: true, recursive: true });
     }
@@ -1314,6 +1315,63 @@ describe("release-spine-evidence.mts", () => {
 
   it("uses safe bounded CLI concurrency by default", () => {
     expect(parseArgs([]).maxConcurrency).toBe(2);
+  });
+
+  it("records immutable base, head, and candidate OIDs in verification evidence", async () => {
+    const repo = createTempRepo();
+    const baseSha = "a".repeat(40);
+    const headSha = "b".repeat(40);
+    const candidateSha = "c".repeat(40);
+    vi.stubEnv("GITHUB_SHA", candidateSha);
+
+    const report = await runReleaseSpineEvidence({
+      rootDir: repo,
+      outputDir: join(repo, "out"),
+      totalTimeoutMs: 1_000,
+      commands: [createCommand("identity-evidence")],
+      verificationBaseSha: baseSha,
+      verificationHeadSha: headSha,
+      verificationCandidateSha: candidateSha,
+      runner: () => okResult("passed"),
+    });
+
+    expect(report.provenance.verificationIdentity).toEqual({
+      baseSha,
+      headSha,
+      candidateSha,
+    });
+    expect(readFileSync(join(repo, "out", "spine-evidence.md"), "utf8")).toContain(
+      `- Merge candidate: \`${candidateSha}\``,
+    );
+  });
+
+  it("rejects incomplete immutable verification evidence identity", async () => {
+    expect(() => parseArgs(["--verification-base-sha", "a".repeat(40)])).not.toThrow();
+    await expect(
+      runReleaseSpineEvidence({
+        rootDir: createTempRepo(),
+        outputDir: "out",
+        totalTimeoutMs: 1_000,
+        commands: [],
+        verificationBaseSha: "a".repeat(40),
+      }),
+    ).rejects.toMatchObject({ code: "INCOMPLETE_VERIFICATION_IDENTITY" });
+  });
+
+  it("rejects verification evidence for a candidate other than the GitHub revision", async () => {
+    vi.stubEnv("GITHUB_SHA", "d".repeat(40));
+
+    await expect(
+      runReleaseSpineEvidence({
+        rootDir: createTempRepo(),
+        outputDir: "out",
+        totalTimeoutMs: 1_000,
+        commands: [],
+        verificationBaseSha: "a".repeat(40),
+        verificationHeadSha: "b".repeat(40),
+        verificationCandidateSha: "c".repeat(40),
+      }),
+    ).rejects.toMatchObject({ code: "VERIFICATION_CANDIDATE_PROVENANCE_MISMATCH" });
   });
 
   it("keeps default repository verification evidence outside the worktree", () => {

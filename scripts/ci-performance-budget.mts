@@ -312,7 +312,7 @@ export function findCiPerformanceBudgetViolations(
   ) {
     violations.push("real-resource services must not start in the ordinary validate job");
   }
-  if (!validate.includes('args+=(--base "$VERIFICATION_BASE" --head HEAD)')) {
+  if (!validate.includes('args+=(--base "$VERIFICATION_BASE" --head "$VERIFICATION_CANDIDATE")')) {
     violations.push("pull-request and trunk validation must both use the changed-file scope");
   }
   const docsSyncHeavySteps = new Set([

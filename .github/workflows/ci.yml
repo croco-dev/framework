@@ -36,13 +36,28 @@ concurrency:
 
 jobs:
   repository-contracts:
+    needs: changes
+    if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
+      - name: Verify immutable candidate checkout
+        env:
+          VERIFICATION_BASE: ${{ needs.changes.outputs.base }}
+          VERIFICATION_CANDIDATE: ${{ needs.changes.outputs.candidate }}
+          VERIFICATION_HEAD: ${{ needs.changes.outputs.head }}
+        run: >-
+          node --experimental-strip-types scripts/ci-verification-identity.mts assert
+          --event "$GITHUB_EVENT_NAME"
+          --base "$VERIFICATION_BASE"
+          --head "$VERIFICATION_HEAD"
+          --candidate "$VERIFICATION_CANDIDATE"
+          --checkout HEAD
       - name: Setup pnpm
         uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
       - name: Setup Node.js
@@ -63,6 +78,7 @@ jobs:
           scripts/tests/verification-policy.spec.ts
           scripts/tests/branch-protection-policy.spec.ts
           scripts/tests/ci-workflow.spec.ts
+          scripts/tests/ci-verification-identity.spec.ts
           scripts/tests/benchmark-workflow.spec.ts
           scripts/tests/repository-policy-audit-workflow.spec.ts
 
@@ -94,6 +110,19 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Verify immutable candidate checkout
+        env:
+          VERIFICATION_BASE: ${{ needs.changes.outputs.base }}
+          VERIFICATION_CANDIDATE: ${{ needs.changes.outputs.candidate }}
+          VERIFICATION_HEAD: ${{ needs.changes.outputs.head }}
+        run: >-
+          node --experimental-strip-types scripts/ci-verification-identity.mts assert
+          --event "$GITHUB_EVENT_NAME"
+          --base "$VERIFICATION_BASE"
+          --head "$VERIFICATION_HEAD"
+          --candidate "$VERIFICATION_CANDIDATE"
+          --checkout HEAD
 
       - name: Initialize beta spine promotion evidence
         env:
@@ -232,12 +261,28 @@ jobs:
           path: ci-reports/security
           if-no-files-found: warn
 
+      - name: Reverify immutable candidate worktree
+        env:
+          VERIFICATION_BASE: ${{ needs.changes.outputs.base }}
+          VERIFICATION_CANDIDATE: ${{ needs.changes.outputs.candidate }}
+          VERIFICATION_HEAD: ${{ needs.changes.outputs.head }}
+        run: >-
+          node --experimental-strip-types scripts/ci-verification-identity.mts assert
+          --event "$GITHUB_EVENT_NAME"
+          --base "$VERIFICATION_BASE"
+          --head "$VERIFICATION_HEAD"
+          --candidate "$VERIFICATION_CANDIDATE"
+          --checkout HEAD
+          --worktree
+
       - name: Run selected verification profile
         id: verification_profile
         shell: bash
         env:
           CROCO_TEST_EVIDENCE_DIR: ${{ github.workspace }}/ci-reports/test-evidence/records
           VERIFICATION_BASE: ${{ needs.changes.outputs.base }}
+          VERIFICATION_CANDIDATE: ${{ needs.changes.outputs.candidate }}
+          VERIFICATION_HEAD: ${{ needs.changes.outputs.head }}
           VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}
         run: |
           args=(--profile "$VERIFICATION_PROFILE" --allow-pending-release-metadata)
@@ -246,7 +291,10 @@ jobs:
           else
             args+=(--output-dir "ci-reports/verification/${VERIFICATION_PROFILE}")
           fi
-          args+=(--base "$VERIFICATION_BASE" --head HEAD)
+          args+=(--base "$VERIFICATION_BASE" --head "$VERIFICATION_CANDIDATE")
+          args+=(--verification-base-sha "$VERIFICATION_BASE")
+          args+=(--verification-head-sha "$VERIFICATION_HEAD")
+          args+=(--verification-candidate-sha "$VERIFICATION_CANDIDATE")
           if [ "$CROCO_CACHEABLE_FAILURE_CLASS" != "none" ]; then
             args+=(--full-selection)
             args+=(--inject-failure "$CROCO_CACHEABLE_FAILURE_CLASS")
@@ -362,9 +410,11 @@ jobs:
         if: ${{ !cancelled() && github.event_name == 'pull_request' && hashFiles('ci-reports/changed-test-plan/full-evidence/bundle.json') != '' }}
         env:
           VERIFICATION_BASE: ${{ needs.changes.outputs.base }}
+          VERIFICATION_CANDIDATE: ${{ needs.changes.outputs.candidate }}
         run: |
           node --experimental-strip-types scripts/changed-test-plan-shadow.mts \
             --base "$VERIFICATION_BASE" \
+            --head "$VERIFICATION_CANDIDATE" \
             --full-evidence ci-reports/changed-test-plan/full-evidence/bundle.json \
             --output ci-reports/changed-test-plan
           cat ci-reports/changed-test-plan/summary.md >> "$GITHUB_STEP_SUMMARY"
@@ -537,7 +587,6 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
-      pull-requests: read
     outputs:
       docs: ${{ steps.filter.outputs.docs }}
       api-source: ${{ steps.filter.outputs.api-source }}
@@ -545,6 +594,8 @@ jobs:
       windows-scaffold: ${{ steps.filter.outputs.windows_scaffold }}
       profile: ${{ steps.verification.outputs.profile }}
       base: ${{ steps.verification.outputs.base }}
+      head: ${{ steps.verification.outputs.head }}
+      candidate: ${{ steps.verification.outputs.candidate }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -554,25 +605,34 @@ jobs:
         id: verification
         shell: bash
         env:
-          BASE_REF: ${{ github.base_ref }}
-          EVENT_BEFORE: ${{ github.event.before }}
+          EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          EVENT_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           EVENT_NAME: ${{ github.event_name }}
         run: |
-          if [ "$EVENT_NAME" = "pull_request" ]; then
-            base="origin/$BASE_REF"
-          else
-            base="$EVENT_BEFORE"
-            if [ -z "$base" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then
-              base="HEAD^"
-            fi
-          fi
+          node --experimental-strip-types scripts/ci-verification-identity.mts resolve \
+            --event "$EVENT_NAME" \
+            --event-base "$EVENT_BASE_SHA" \
+            --event-head "$EVENT_HEAD_SHA" \
+            --candidate "$GITHUB_SHA" \
+            --checkout HEAD \
+            --output ci-reports/verification-identity.json
+          base=$(node -e 'process.stdout.write(JSON.parse(require("node:fs").readFileSync("ci-reports/verification-identity.json", "utf8")).baseSha)')
+          head=$(node -e 'process.stdout.write(JSON.parse(require("node:fs").readFileSync("ci-reports/verification-identity.json", "utf8")).headSha)')
+          candidate=$(node -e 'process.stdout.write(JSON.parse(require("node:fs").readFileSync("ci-reports/verification-identity.json", "utf8")).candidateSha)')
           node --experimental-strip-types scripts/verification-change-classifier.mts \
-            --event "$GITHUB_EVENT_NAME" --workflow ci --base "$base" --head HEAD --github-output "$GITHUB_OUTPUT"
-          echo "base=$base" >> "$GITHUB_OUTPUT"
-      - uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
+            --event "$GITHUB_EVENT_NAME" --workflow ci --base "$base" --head "$candidate" --github-output "$GITHUB_OUTPUT"
+          {
+            echo "base=$base"
+            echo "head=$head"
+            echo "candidate=$candidate"
+          } >> "$GITHUB_OUTPUT"
+      - name: Classify immutable changed paths
         id: filter
-        with:
-          filters: |
+        shell: bash
+        env:
+          VERIFICATION_BASE: ${{ steps.verification.outputs.base }}
+          VERIFICATION_CANDIDATE: ${{ steps.verification.outputs.candidate }}
+          PATH_FILTERS: |
             docs:
               - 'README.md'
               - 'docs/**/*.md'
@@ -737,6 +797,11 @@ jobs:
               - 'packages/workflow-core/src/**'
               - 'packages/docs/astro.config.mjs'
               - 'packages/docs/tsconfig.typedoc.json'
+        run: >-
+          node --experimental-strip-types scripts/verification-change-classifier.mts
+          --event "$GITHUB_EVENT_NAME" --workflow ci
+          --base "$VERIFICATION_BASE" --head "$VERIFICATION_CANDIDATE"
+          --filters "$PATH_FILTERS" --github-output "$GITHUB_OUTPUT"
 
   core-verification:
     needs: changes
@@ -752,6 +817,15 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Verify immutable candidate checkout
+        env:
+          VERIFICATION_BASE: ${{ needs.changes.outputs.base }}
+          VERIFICATION_CANDIDATE: ${{ needs.changes.outputs.candidate }}
+          VERIFICATION_HEAD: ${{ needs.changes.outputs.head }}
+        run: >-
+          node --experimental-strip-types scripts/ci-verification-identity.mts assert
+          --event "$GITHUB_EVENT_NAME" --base "$VERIFICATION_BASE" --head "$VERIFICATION_HEAD"
+          --candidate "$VERIFICATION_CANDIDATE" --checkout HEAD
       - name: Setup pnpm
         uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
       - name: Setup Node.js
@@ -775,12 +849,15 @@ jobs:
         id: split_identity
         env:
           VERIFICATION_BASE: ${{ needs.changes.outputs.base }}
+          VERIFICATION_CANDIDATE: ${{ needs.changes.outputs.candidate }}
+          VERIFICATION_HEAD: ${{ needs.changes.outputs.head }}
           VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}
         run: |
           node --experimental-strip-types scripts/ci-cacheable-experiment-identity.mts \
-            --commit-sha "$GITHUB_SHA" \
+            --commit-sha "$VERIFICATION_CANDIDATE" \
             --base "$VERIFICATION_BASE" \
-            --head HEAD \
+            --head "$VERIFICATION_CANDIDATE" \
+            --pull-request-head "$VERIFICATION_HEAD" \
             --run-id "$GITHUB_RUN_ID" \
             --run-attempt "$GITHUB_RUN_ATTEMPT" \
             --profile "$VERIFICATION_PROFILE" \
@@ -803,6 +880,7 @@ jobs:
           EXACT_CACHE_HIT: ${{ steps.exact_receipts.outputs.cache-hit }}
           TRUSTED_CACHE: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
           VERIFICATION_BASE: ${{ needs.changes.outputs.base }}
+          VERIFICATION_CANDIDATE: ${{ needs.changes.outputs.candidate }}
           VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}
         run: |
           cache_args=()
@@ -824,7 +902,7 @@ jobs:
             --profile "$VERIFICATION_PROFILE" \
             --root . \
             --base "$VERIFICATION_BASE" \
-            --head HEAD \
+            --head "$VERIFICATION_CANDIDATE" \
             "${failure_args[@]}" \
             "${cache_args[@]}"
       - name: Upload core verification producer evidence
@@ -850,6 +928,15 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Verify immutable candidate checkout
+        env:
+          VERIFICATION_BASE: ${{ needs.changes.outputs.base }}
+          VERIFICATION_CANDIDATE: ${{ needs.changes.outputs.candidate }}
+          VERIFICATION_HEAD: ${{ needs.changes.outputs.head }}
+        run: >-
+          node --experimental-strip-types scripts/ci-verification-identity.mts assert
+          --event "$GITHUB_EVENT_NAME" --base "$VERIFICATION_BASE" --head "$VERIFICATION_HEAD"
+          --candidate "$VERIFICATION_CANDIDATE" --checkout HEAD
       - name: Setup pnpm
         uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
       - name: Setup Node.js
@@ -873,11 +960,13 @@ jobs:
         id: split_identity
         env:
           VERIFICATION_BASE: ${{ needs.changes.outputs.base }}
+          VERIFICATION_CANDIDATE: ${{ needs.changes.outputs.candidate }}
+          VERIFICATION_HEAD: ${{ needs.changes.outputs.head }}
           VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}
         run: |
           node --experimental-strip-types scripts/ci-cacheable-experiment-identity.mts \
-            --commit-sha "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" \
-            --base "$VERIFICATION_BASE" --head HEAD \
+            --commit-sha "$VERIFICATION_CANDIDATE" --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --base "$VERIFICATION_BASE" --head "$VERIFICATION_CANDIDATE" --pull-request-head "$VERIFICATION_HEAD" \
             --profile "$VERIFICATION_PROFILE" --runner-os "$RUNNER_OS" --runner-arch "$RUNNER_ARCH" \
             --runner-label ubuntu-latest --pnpm-version "$(pnpm --version)" \
             --output ci-reports/cacheable-ci/identity.json
@@ -895,6 +984,7 @@ jobs:
           EXACT_CACHE_HIT: ${{ steps.exact_receipts.outputs.cache-hit }}
           TRUSTED_CACHE: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
           VERIFICATION_BASE: ${{ needs.changes.outputs.base }}
+          VERIFICATION_CANDIDATE: ${{ needs.changes.outputs.candidate }}
           VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}
         run: |
           cache_args=()
@@ -912,7 +1002,7 @@ jobs:
           fi
           node --experimental-strip-types scripts/ci-cacheable-lane-runner.mts \
             --identity ci-reports/cacheable-ci/identity.json --lane generated-apps \
-            --profile "$VERIFICATION_PROFILE" --root . --base "$VERIFICATION_BASE" --head HEAD \
+            --profile "$VERIFICATION_PROFILE" --root . --base "$VERIFICATION_BASE" --head "$VERIFICATION_CANDIDATE" \
             "${failure_args[@]}" \
             "${cache_args[@]}"
       - name: Upload generated apps producer evidence
@@ -938,6 +1028,15 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Verify immutable candidate checkout
+        env:
+          VERIFICATION_BASE: ${{ needs.changes.outputs.base }}
+          VERIFICATION_CANDIDATE: ${{ needs.changes.outputs.candidate }}
+          VERIFICATION_HEAD: ${{ needs.changes.outputs.head }}
+        run: >-
+          node --experimental-strip-types scripts/ci-verification-identity.mts assert
+          --event "$GITHUB_EVENT_NAME" --base "$VERIFICATION_BASE" --head "$VERIFICATION_HEAD"
+          --candidate "$VERIFICATION_CANDIDATE" --checkout HEAD
       - name: Setup pnpm
         uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
       - name: Setup Node.js
@@ -959,11 +1058,13 @@ jobs:
         id: split_identity
         env:
           VERIFICATION_BASE: ${{ needs.changes.outputs.base }}
+          VERIFICATION_CANDIDATE: ${{ needs.changes.outputs.candidate }}
+          VERIFICATION_HEAD: ${{ needs.changes.outputs.head }}
           VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}
         run: |
           node --experimental-strip-types scripts/ci-cacheable-experiment-identity.mts \
-            --commit-sha "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" \
-            --base "$VERIFICATION_BASE" --head HEAD \
+            --commit-sha "$VERIFICATION_CANDIDATE" --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --base "$VERIFICATION_BASE" --head "$VERIFICATION_CANDIDATE" --pull-request-head "$VERIFICATION_HEAD" \
             --profile "$VERIFICATION_PROFILE" --runner-os "$RUNNER_OS" --runner-arch "$RUNNER_ARCH" \
             --runner-label ubuntu-latest --pnpm-version "$(pnpm --version)" \
             --output ci-reports/cacheable-ci/identity.json
@@ -981,6 +1082,7 @@ jobs:
           EXACT_CACHE_HIT: ${{ steps.exact_receipts.outputs.cache-hit }}
           TRUSTED_CACHE: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
           VERIFICATION_BASE: ${{ needs.changes.outputs.base }}
+          VERIFICATION_CANDIDATE: ${{ needs.changes.outputs.candidate }}
           VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}
         run: |
           cache_args=()
@@ -999,7 +1101,7 @@ jobs:
           fi
           node --experimental-strip-types scripts/ci-cacheable-lane-runner.mts \
             --identity ci-reports/cacheable-ci/identity.json --lane package-artifacts \
-            --profile "$VERIFICATION_PROFILE" --root . --base "$VERIFICATION_BASE" --head HEAD \
+            --profile "$VERIFICATION_PROFILE" --root . --base "$VERIFICATION_BASE" --head "$VERIFICATION_CANDIDATE" \
             "${lane_args[@]}" \
             "${failure_args[@]}" \
             "${cache_args[@]}"
@@ -1028,6 +1130,15 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Verify immutable candidate checkout
+        env:
+          VERIFICATION_BASE: ${{ needs.changes.outputs.base }}
+          VERIFICATION_CANDIDATE: ${{ needs.changes.outputs.candidate }}
+          VERIFICATION_HEAD: ${{ needs.changes.outputs.head }}
+        run: >-
+          node --experimental-strip-types scripts/ci-verification-identity.mts assert
+          --event "$GITHUB_EVENT_NAME" --base "$VERIFICATION_BASE" --head "$VERIFICATION_HEAD"
+          --candidate "$VERIFICATION_CANDIDATE" --checkout HEAD
       - name: Setup pnpm
         uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
       - name: Setup Node.js
@@ -1048,11 +1159,13 @@ jobs:
       - name: Create split verification identity
         env:
           VERIFICATION_BASE: ${{ needs.changes.outputs.base }}
+          VERIFICATION_CANDIDATE: ${{ needs.changes.outputs.candidate }}
+          VERIFICATION_HEAD: ${{ needs.changes.outputs.head }}
           VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}
         run: |
           node --experimental-strip-types scripts/ci-cacheable-experiment-identity.mts \
-            --commit-sha "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" \
-            --base "$VERIFICATION_BASE" --head HEAD \
+            --commit-sha "$VERIFICATION_CANDIDATE" --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --base "$VERIFICATION_BASE" --head "$VERIFICATION_CANDIDATE" --pull-request-head "$VERIFICATION_HEAD" \
             --profile "$VERIFICATION_PROFILE" --runner-os "$RUNNER_OS" --runner-arch "$RUNNER_ARCH" \
             --runner-label ubuntu-latest --pnpm-version "$(pnpm --version)" \
             --output ci-reports/cacheable-ci/identity.json
@@ -1084,6 +1197,7 @@ jobs:
       - name: Run coverage and security producer
         env:
           VERIFICATION_BASE: ${{ needs.changes.outputs.base }}
+          VERIFICATION_CANDIDATE: ${{ needs.changes.outputs.candidate }}
           VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}
         run: |
           failure_args=()
@@ -1095,7 +1209,7 @@ jobs:
           fi
           node --experimental-strip-types scripts/ci-cacheable-lane-runner.mts \
             --identity ci-reports/cacheable-ci/identity.json --lane coverage-security \
-            --profile "$VERIFICATION_PROFILE" --root . --base "$VERIFICATION_BASE" --head HEAD \
+            --profile "$VERIFICATION_PROFILE" --root . --base "$VERIFICATION_BASE" --head "$VERIFICATION_CANDIDATE" \
             --security-results ci-reports/security/security-physical.json \
             --security-artifact ci-reports/security/security-physical.json \
             --security-artifact ci-reports/security/pnpm-audit-prod.txt \
@@ -1137,6 +1251,15 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Verify immutable candidate checkout
+        env:
+          VERIFICATION_BASE: ${{ needs.changes.outputs.base }}
+          VERIFICATION_CANDIDATE: ${{ needs.changes.outputs.candidate }}
+          VERIFICATION_HEAD: ${{ needs.changes.outputs.head }}
+        run: >-
+          node --experimental-strip-types scripts/ci-verification-identity.mts assert
+          --event "$GITHUB_EVENT_NAME" --base "$VERIFICATION_BASE" --head "$VERIFICATION_HEAD"
+          --candidate "$VERIFICATION_CANDIDATE" --checkout HEAD
       - name: Setup pnpm
         uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
       - name: Setup Node.js
@@ -1149,11 +1272,13 @@ jobs:
       - name: Create split verification identity
         env:
           VERIFICATION_BASE: ${{ needs.changes.outputs.base }}
+          VERIFICATION_CANDIDATE: ${{ needs.changes.outputs.candidate }}
+          VERIFICATION_HEAD: ${{ needs.changes.outputs.head }}
           VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}
         run: |
           node --experimental-strip-types scripts/ci-cacheable-experiment-identity.mts \
-            --commit-sha "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" \
-            --base "$VERIFICATION_BASE" --head HEAD \
+            --commit-sha "$VERIFICATION_CANDIDATE" --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --base "$VERIFICATION_BASE" --head "$VERIFICATION_CANDIDATE" --pull-request-head "$VERIFICATION_HEAD" \
             --profile "$VERIFICATION_PROFILE" --runner-os "$RUNNER_OS" --runner-arch "$RUNNER_ARCH" \
             --runner-label ubuntu-latest --pnpm-version "$(pnpm --version)" \
             --output ci-reports/cacheable-ci/identity.json
@@ -1180,6 +1305,7 @@ jobs:
       - name: Assemble immutable split verification input
         env:
           VERIFICATION_BASE: ${{ needs.changes.outputs.base }}
+          VERIFICATION_CANDIDATE: ${{ needs.changes.outputs.candidate }}
         run: |
           selection_args=()
           if [ "$CROCO_CACHEABLE_FAILURE_CLASS" != "none" ]; then
@@ -1187,7 +1313,7 @@ jobs:
           fi
           node --experimental-strip-types scripts/ci-synthesis-input.mts \
             --identity ci-reports/cacheable-ci/identity.json \
-            --base "$VERIFICATION_BASE" --head HEAD \
+            --base "$VERIFICATION_BASE" --head "$VERIFICATION_CANDIDATE" \
             --producer-dir core-verification=incoming/core-verification \
             --producer-dir generated-apps=incoming/generated-apps \
             --producer-dir package-artifacts=incoming/package-artifacts \
@@ -1475,6 +1601,19 @@ jobs:
       - name: Checkout
         if: needs.changes.outputs.api-source == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify immutable candidate checkout
+        if: needs.changes.outputs.api-source == 'true'
+        env:
+          VERIFICATION_BASE: ${{ needs.changes.outputs.base }}
+          VERIFICATION_CANDIDATE: ${{ needs.changes.outputs.candidate }}
+          VERIFICATION_HEAD: ${{ needs.changes.outputs.head }}
+        run: >-
+          node --experimental-strip-types scripts/ci-verification-identity.mts assert
+          --event "$GITHUB_EVENT_NAME" --base "$VERIFICATION_BASE" --head "$VERIFICATION_HEAD"
+          --candidate "$VERIFICATION_CANDIDATE" --checkout HEAD
       - name: Setup pnpm
         if: needs.changes.outputs.api-source == 'true'
         uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
@@ -1497,6 +1636,16 @@ jobs:
       - name: Install dependencies
         if: needs.changes.outputs.api-source == 'true'
         run: pnpm install --frozen-lockfile
+      - name: Reverify immutable candidate worktree
+        if: needs.changes.outputs.api-source == 'true'
+        env:
+          VERIFICATION_BASE: ${{ needs.changes.outputs.base }}
+          VERIFICATION_CANDIDATE: ${{ needs.changes.outputs.candidate }}
+          VERIFICATION_HEAD: ${{ needs.changes.outputs.head }}
+        run: >-
+          node --experimental-strip-types scripts/ci-verification-identity.mts assert
+          --event "$GITHUB_EVENT_NAME" --base "$VERIFICATION_BASE" --head "$VERIFICATION_HEAD"
+          --candidate "$VERIFICATION_CANDIDATE" --checkout HEAD --worktree
       - name: Build docs and check for drift
         if: needs.changes.outputs.api-source == 'true'
         run: pnpm docs:api:check

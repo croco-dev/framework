@@ -1,6 +1,14 @@
+import { execFileSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { RELEASE_GATE_MAINTENANCE_PATHS } from "../release-gate-maintenance.mts";
-import { classifyVerificationChanges } from "../verification-change-classifier.mts";
+import {
+  classifyVerificationChanges,
+  classifyVerificationPathFilters,
+  readVerificationChangedFiles,
+} from "../verification-change-classifier.mts";
 import {
   createVerificationManifest,
   verificationImplementationPaths,
@@ -8,6 +16,67 @@ import {
 import { formatVerificationProblem, VerificationProblem } from "../verification-problem.mts";
 
 describe("verification change classifier", () => {
+  it("keeps both sides of a rename out of a watched path", () => {
+    const root = mkdtempSync(join(tmpdir(), "croco-verification-classifier-"));
+    try {
+      execFileSync("git", ["init", "--initial-branch=trunk"], { cwd: root });
+      execFileSync("git", ["config", "user.email", "fixture@croco.dev"], { cwd: root });
+      execFileSync("git", ["config", "user.name", "Croco fixture"], { cwd: root });
+      mkdirSync(join(root, "packages", "foo", "src"), { recursive: true });
+      writeFileSync(join(root, "packages", "foo", "src", "api.ts"), "export {};\n");
+      execFileSync("git", ["add", "."], { cwd: root });
+      execFileSync("git", ["commit", "--message", "base"], { cwd: root });
+      const base = execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: root,
+        encoding: "utf8",
+      }).trim();
+      mkdirSync(join(root, "archive"));
+      execFileSync("git", ["mv", "packages/foo/src/api.ts", "archive/api.ts"], { cwd: root });
+      execFileSync("git", ["commit", "--message", "rename"], { cwd: root });
+      const head = execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: root,
+        encoding: "utf8",
+      }).trim();
+
+      const files = readVerificationChangedFiles(base, head, root);
+
+      expect(files).toEqual(expect.arrayContaining(["packages/foo/src/api.ts", "archive/api.ts"]));
+      expect(
+        classifyVerificationPathFilters(files, "api-source:\n  - 'packages/*/src/**'"),
+      ).toEqual({ "api-source": true });
+    } finally {
+      rmSync(root, { force: true, recursive: true });
+    }
+  });
+
+  it("classifies exact immutable diff paths with the workflow glob subset", () => {
+    expect(
+      classifyVerificationPathFilters(
+        ["docs/guides/start.md", "packages/retry-core/src/index.ts", ".github/workflows/ci.yml"],
+        [
+          "docs:",
+          "  - 'README.md'",
+          "  - 'docs/**/*.md'",
+          "package_source:",
+          "  - 'packages/*/src/**'",
+          "workflow:",
+          "  - '.github/workflows/ci.yml'",
+          "unmatched:",
+          "  - 'examples/**'",
+        ].join("\n"),
+      ),
+    ).toEqual({ docs: true, package_source: true, workflow: true, unmatched: false });
+  });
+
+  it("fails closed for empty or non-string path filter definitions", () => {
+    expect(() => classifyVerificationPathFilters(["docs/guide.md"], "docs: []")).toThrow(
+      expect.objectContaining({ code: "INVALID_VERIFICATION_PATH_FILTERS" }),
+    );
+    expect(() => classifyVerificationPathFilters(["docs/guide.md"], "docs: [1]")).toThrow(
+      expect.objectContaining({ code: "INVALID_VERIFICATION_PATH_FILTERS" }),
+    );
+  });
+
   it.each([
     [["docs/guide.md"], "repo"],
     [["docs-backup/guide.md"], "spine"],

@@ -260,8 +260,10 @@ export function createCacheableExperimentIdentityFromRepository(args: readonly s
   const verificationProfile = profile(requiredOption(args, "--profile"));
   const baseRef = requiredOption(args, "--base");
   const headRef = requiredOption(args, "--head");
+  const pullRequestHeadRef = requiredOption(args, "--pull-request-head");
   const baseSha = resolveCommitSha(rootDir, baseRef);
   const headSha = resolveCommitSha(rootDir, headRef);
+  const pullRequestHeadSha = resolveCommitSha(rootDir, pullRequestHeadRef);
   const commitSha = requiredOption(args, "--commit-sha");
   if (headSha !== commitSha) {
     throw new VerificationProblem(
@@ -269,6 +271,24 @@ export function createCacheableExperimentIdentityFromRepository(args: readonly s
       "input",
       "--commit-sha must match the resolved --head commit",
     );
+  }
+  if (pullRequestHeadSha !== headSha) {
+    const parents = gitOutput(
+      rootDir,
+      ["rev-list", "--parents", "-n", "1", headSha],
+      "CANDIDATE_PARENT_RESOLUTION_FAILED",
+      `Reading candidate parents for ${headSha}`,
+    )
+      .trim()
+      .split(/\s+/)
+      .slice(1);
+    if (parents.length !== 2 || parents[0] !== baseSha || parents[1] !== pullRequestHeadSha) {
+      throw new VerificationProblem(
+        "CACHEABLE_CANDIDATE_IDENTITY_MISMATCH",
+        "contract",
+        "--head must be the merge candidate whose parents equal --base and --pull-request-head",
+      );
+    }
   }
   const changedFiles = readChangedFiles(rootDir, baseSha, headSha);
   const identity = createCacheableExperimentIdentity({

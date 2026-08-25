@@ -129,6 +129,11 @@ export type ReleaseSpineEvidenceReport = {
     readonly commitSha: string;
     readonly runAttempt: string;
     readonly runId: string;
+    readonly verificationIdentity?: {
+      readonly baseSha: string;
+      readonly headSha: string;
+      readonly candidateSha: string;
+    };
   };
   readonly rootDir: string;
   readonly status: "running" | "passed" | "failed" | "timed_out" | "interrupted";
@@ -196,6 +201,9 @@ type Options = {
   readonly profile?: VerificationProfile;
   readonly base?: string;
   readonly head?: string;
+  readonly verificationBaseSha?: string;
+  readonly verificationHeadSha?: string;
+  readonly verificationCandidateSha?: string;
   readonly testEvidencePath?: string;
   readonly injectedFailure?: CacheableFailureClass;
   readonly fullSelection?: boolean;
@@ -1150,6 +1158,7 @@ export async function runReleaseSpineEvidence(
   const rootDir = resolve(options.rootDir);
   const unresolvedCommands = options.commands ?? createReleaseSpineCommands(options);
   const commitSha = process.env.GITHUB_SHA ?? readCurrentCommitOrUnknown(rootDir);
+  const verificationIdentity = verificationIdentityFromOptions(options, commitSha);
   const commands = options.testEvidencePath
     ? reuseTestEvidence(
         unresolvedCommands,
@@ -1201,6 +1210,7 @@ export async function runReleaseSpineEvidence(
     commitSha,
     runAttempt: process.env.GITHUB_RUN_ATTEMPT ?? "1",
     runId: process.env.GITHUB_RUN_ID ?? generatedAt,
+    ...(verificationIdentity ? { verificationIdentity } : {}),
   };
   const runStartedAtMs = clock.nowMs();
   let report = createInitialReport({
@@ -1648,6 +1658,7 @@ function formatOutputSection(label: string, value: string): readonly string[] {
 }
 
 export function buildReleaseSpineEvidenceMarkdown(report: ReleaseSpineEvidenceReport): string {
+  const verificationIdentity = report.provenance.verificationIdentity;
   const lines = [
     "# Release Spine Evidence",
     "",
@@ -1658,6 +1669,13 @@ export function buildReleaseSpineEvidenceMarkdown(report: ReleaseSpineEvidenceRe
     `- Output directory: \`${toPosixPath(report.outputDir)}\``,
     `- Profile: \`${report.profile}\``,
     `- Commit: \`${report.provenance.commitSha}\``,
+    ...(verificationIdentity
+      ? [
+          `- Verification base: \`${verificationIdentity.baseSha}\``,
+          `- Pull-request head: \`${verificationIdentity.headSha}\``,
+          `- Merge candidate: \`${verificationIdentity.candidateSha}\``,
+        ]
+      : []),
     `- Run: \`${report.provenance.runId}\` attempt \`${report.provenance.runAttempt}\``,
     `- Total timeout: ${formatTimeout(report.totalTimeoutMs)}`,
     `- Checks: ${report.summary.passed}/${report.summary.total} passed, ${report.summary.notApplicable} not applicable, ${report.summary.failed} failed, ${report.summary.timedOut} timed out, ${report.summary.interrupted} interrupted, ${report.summary.skippedAfterTimeout} skipped after timeout, ${report.summary.skippedPrerequisite} skipped by prerequisite`,
@@ -1779,6 +1797,9 @@ export function parseArgs(args: readonly string[] = argv.slice(2)): Options {
   let profileWasExplicit = false;
   let base: string | undefined;
   let head: string | undefined;
+  let verificationBaseSha: string | undefined;
+  let verificationHeadSha: string | undefined;
+  let verificationCandidateSha: string | undefined;
   let allowPendingReleaseMetadata = false;
   let testEvidencePath: string | undefined;
   let injectedFailure: CacheableFailureClass = "none";
@@ -1917,6 +1938,26 @@ export function parseArgs(args: readonly string[] = argv.slice(2)): Options {
       continue;
     }
 
+    if (
+      arg === "--verification-base-sha" ||
+      arg === "--verification-head-sha" ||
+      arg === "--verification-candidate-sha"
+    ) {
+      const value = args[index + 1];
+      if (!value) {
+        throw new VerificationProblem(
+          "MISSING_VERIFICATION_IDENTITY_SHA",
+          "input",
+          `${arg} requires a full commit OID`,
+        );
+      }
+      if (arg === "--verification-base-sha") verificationBaseSha = value;
+      else if (arg === "--verification-head-sha") verificationHeadSha = value;
+      else verificationCandidateSha = value;
+      index++;
+      continue;
+    }
+
     throw new VerificationProblem("UNKNOWN_VERIFICATION_OPTION", "input", `Unknown option: ${arg}`);
   }
 
@@ -1938,9 +1979,54 @@ export function parseArgs(args: readonly string[] = argv.slice(2)): Options {
     profile,
     base,
     head,
+    verificationBaseSha,
+    verificationHeadSha,
+    verificationCandidateSha,
     testEvidencePath,
     injectedFailure,
     fullSelection,
+  };
+}
+
+function verificationIdentityFromOptions(
+  options: Pick<
+    Options,
+    "verificationBaseSha" | "verificationHeadSha" | "verificationCandidateSha"
+  >,
+  commitSha: string,
+): NonNullable<ReleaseSpineEvidenceReport["provenance"]["verificationIdentity"]> | null {
+  const values = [
+    options.verificationBaseSha,
+    options.verificationHeadSha,
+    options.verificationCandidateSha,
+  ];
+  if (values.every((value) => value === undefined)) return null;
+  if (values.some((value) => value === undefined)) {
+    throw new VerificationProblem(
+      "INCOMPLETE_VERIFICATION_IDENTITY",
+      "input",
+      "Verification base, head, and candidate SHAs must be provided together",
+    );
+  }
+  const [baseSha, headSha, candidateSha] = values as [string, string, string];
+  if (![baseSha, headSha, candidateSha].every((value) => /^[0-9a-f]{40}$/i.test(value))) {
+    throw new VerificationProblem(
+      "INVALID_VERIFICATION_IDENTITY_SHA",
+      "input",
+      "Verification base, head, and candidate SHAs must be full 40-character commit OIDs",
+    );
+  }
+  if (candidateSha.toLowerCase() !== commitSha.toLowerCase()) {
+    throw new VerificationProblem(
+      "VERIFICATION_CANDIDATE_PROVENANCE_MISMATCH",
+      "contract",
+      `Verification candidate ${candidateSha} does not match evidence commit ${commitSha}`,
+    );
+  }
+  return {
+    baseSha: baseSha.toLowerCase(),
+    headSha: headSha.toLowerCase(),
+    candidateSha: candidateSha.toLowerCase(),
   };
 }
 

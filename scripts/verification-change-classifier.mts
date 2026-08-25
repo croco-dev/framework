@@ -22,6 +22,8 @@ export type VerificationClassification = {
   readonly reason: string;
 };
 
+export type VerificationPathFilterResults = Readonly<Record<string, boolean>>;
+
 type PathKind = "repo" | "spine" | "publish" | "changeset" | "unknown-release";
 
 const PROFILE_STRENGTH: Record<VerificationProfile, number> = { repo: 1, spine: 2, publish: 3 };
@@ -176,6 +178,7 @@ type CliOptions = {
   readonly base?: string;
   readonly head?: string;
   readonly githubOutput?: string;
+  readonly filters?: string;
 };
 
 function parseArgs(args: readonly string[]): CliOptions {
@@ -184,6 +187,7 @@ function parseArgs(args: readonly string[]): CliOptions {
   let base: string | undefined;
   let head: string | undefined;
   let githubOutput: string | undefined;
+  let filters: string | undefined;
   for (let index = 0; index < args.length; index++) {
     const flag = args[index];
     const value = args[index + 1];
@@ -215,29 +219,117 @@ function parseArgs(args: readonly string[]): CliOptions {
       index++;
       continue;
     }
+    if (flag === "--filters" && value) {
+      filters = value;
+      index++;
+      continue;
+    }
     throw new VerificationProblem(
       "INVALID_VERIFICATION_CLASSIFIER_OPTION",
       "input",
       `Unknown or incomplete option: ${flag}`,
     );
   }
-  return { event, workflow, base, head, githubOutput };
+  return { event, workflow, base, head, githubOutput, filters };
 }
 
-function changedFiles(base: string, head: string): readonly string[] {
-  return execFileSync("git", ["diff", "--name-only", base, head], { encoding: "utf8" })
-    .trim()
-    .split("\n")
+export function readVerificationChangedFiles(
+  base: string,
+  head: string,
+  rootDir = process.cwd(),
+): readonly string[] {
+  return execFileSync("git", ["diff", "--no-renames", "--name-only", "-z", base, head], {
+    cwd: rootDir,
+    encoding: "utf8",
+  })
+    .split("\0")
     .filter(Boolean);
+}
+
+function globPattern(pattern: string): RegExp {
+  let source = "^";
+  for (let index = 0; index < pattern.length; index++) {
+    const character = pattern[index];
+    if (character !== "*") {
+      source += /[\\^$.*+?()[\]{}|]/.test(character ?? "") ? `\\${character}` : character;
+      continue;
+    }
+    if (pattern[index + 1] !== "*") {
+      source += "[^/]*";
+      continue;
+    }
+    index++;
+    if (pattern[index + 1] === "/") {
+      index++;
+      source += "(?:.*/)?";
+    } else {
+      source += ".*";
+    }
+  }
+  return new RegExp(`${source}$`);
+}
+
+export function classifyVerificationPathFilters(
+  files: readonly string[],
+  filtersSource: string,
+): VerificationPathFilterResults {
+  const parsed = new Map<string, string[]>();
+  let currentName: string | undefined;
+  for (const line of filtersSource.split(/\r?\n/)) {
+    if (line.trim() === "") continue;
+    const mapping = /^([A-Za-z0-9_-]+):\s*$/.exec(line);
+    if (mapping) {
+      currentName = mapping[1];
+      if (!currentName || parsed.has(currentName)) {
+        throw new VerificationProblem(
+          "INVALID_VERIFICATION_PATH_FILTERS",
+          "input",
+          `Verification path filter names must be unique: ${currentName ?? ""}`,
+        );
+      }
+      parsed.set(currentName, []);
+      continue;
+    }
+    const sequenceItem = /^\s+-\s+(['"])(.*)\1\s*$/.exec(line);
+    if (!sequenceItem || !currentName || sequenceItem[2] === "") {
+      throw new VerificationProblem(
+        "INVALID_VERIFICATION_PATH_FILTERS",
+        "input",
+        "Verification path filters must be a mapping of names to quoted glob sequences",
+      );
+    }
+    parsed.get(currentName)?.push(sequenceItem[2]);
+  }
+  if (parsed.size === 0) {
+    throw new VerificationProblem(
+      "INVALID_VERIFICATION_PATH_FILTERS",
+      "input",
+      "Verification path filters must be a non-empty mapping",
+    );
+  }
+  return Object.fromEntries(
+    [...parsed].map(([name, value]) => {
+      if (value.length === 0) {
+        throw new VerificationProblem(
+          "INVALID_VERIFICATION_PATH_FILTERS",
+          "input",
+          `Verification path filter ${name} must contain non-empty string globs`,
+        );
+      }
+      const patterns = value.map(globPattern);
+      return [name, files.some((file) => patterns.some((pattern) => pattern.test(file)))] as const;
+    }),
+  );
 }
 
 function main(): void {
   const options = parseArgs(argv.slice(2));
-  const files =
-    options.event === "workflow_dispatch"
-      ? []
-      : changedFiles(options.base ?? "HEAD^", options.head ?? "HEAD");
+  const diffFiles = readVerificationChangedFiles(options.base ?? "HEAD^", options.head ?? "HEAD");
+  const files = options.event === "workflow_dispatch" ? [] : diffFiles;
   const result = classifyVerificationChanges(options.event, files, options.workflow);
+  const pathFilters = options.filters
+    ? classifyVerificationPathFilters(diffFiles, options.filters)
+    : {};
   const outputs = {
     allow_pending_release_metadata: String(result.allowPendingReleaseMetadata),
     profile: result.profile ?? "",
@@ -245,6 +337,9 @@ function main(): void {
     should_update_release_pr: String(result.shouldUpdateReleasePr),
     should_run_changesets_action: String(result.shouldRunChangesetsAction),
     reason: result.reason,
+    ...Object.fromEntries(
+      Object.entries(pathFilters).map(([name, matched]) => [name, String(matched)]),
+    ),
   };
   const lines = Object.entries(outputs)
     .map(([key, value]) => `${key}=${value}`)
