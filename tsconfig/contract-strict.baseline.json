@@ -70,13 +70,6 @@
       "targetMilestone": "1.0 RC"
     },
     {
-      "packageName": "@croco/telemetry-api",
-      "reason": "Full-spine strict-contract enrollment captures existing diagnostics for targeted hardening before the 1.0 RC gate.",
-      "owner": "@croco/telemetry",
-      "debt": "staged-rollout",
-      "targetMilestone": "1.0 RC"
-    },
-    {
       "packageName": "@croco/tx-core",
       "reason": "Full-spine strict-contract enrollment captures existing diagnostics for targeted hardening before the 1.0 RC gate.",
       "owner": "@croco/transactions",
@@ -3213,14 +3206,6 @@
       "column": 49,
       "code": "TS2345",
       "message": "Argument of type 'string | undefined' is not assignable to parameter of type 'string'."
-    },
-    {
-      "packageName": "@croco/telemetry-api",
-      "file": "packages/telemetry-api/src/libs/decorators/Trace.ts",
-      "line": 55,
-      "column": 3,
-      "code": "TS2375",
-      "message": "Type '{ name: string | undefined; attributes: { [attributeKey: string]: AttributeValue | undefined; } | undefined; }' is not assignable to type 'TraceDecoratorOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
     },
     {
       "packageName": "@croco/testing",

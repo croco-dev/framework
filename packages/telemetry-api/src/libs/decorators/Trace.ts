@@ -1,4 +1,4 @@
-import { type Attributes, context, type Span, trace } from "@opentelemetry/api";
+import { type Attributes, context, type Context, type Span, trace } from "@opentelemetry/api";
 import { recordError } from "../span.js";
 import { getTracer } from "../tracer.js";
 
@@ -18,18 +18,64 @@ function isAsyncIterable<ReturnType>(value: unknown): value is AsyncIterable<Ret
   return typeof value === "object" && value !== null && Symbol.asyncIterator in value;
 }
 
+async function finalizeAsyncIterator<ReturnType>(
+  iterator: AsyncIterator<ReturnType> | undefined,
+  isDone: boolean,
+  hasIterationError: boolean,
+  spanContext: Context,
+  span: Span,
+  endSpan: () => void,
+): Promise<void> {
+  try {
+    if (!iterator || isDone) {
+      return;
+    }
+
+    try {
+      const cleanup = iterator.return;
+      if (!cleanup) {
+        return;
+      }
+
+      await context.with(spanContext, () => cleanup.call(iterator));
+    } catch (error) {
+      recordError(error, span);
+
+      if (!hasIterationError) {
+        throw error;
+      }
+    }
+  } finally {
+    endSpan();
+  }
+}
+
 function traceAsyncIterable<ReturnType>(
   iterable: AsyncIterable<ReturnType>,
   span: Span,
 ): AsyncIterable<ReturnType> {
-  return (async function* () {
+  let hasStarted = false;
+  let hasEnded = false;
+  const endSpan = (): void => {
+    if (hasEnded) {
+      return;
+    }
+
+    hasEnded = true;
+    span.end();
+  };
+  const generator: AsyncGenerator<ReturnType, unknown, unknown> = (async function* () {
     const spanContext = trace.setSpan(context.active(), span);
-    const iterator = iterable[Symbol.asyncIterator]();
+    let iterator: AsyncIterator<ReturnType> | undefined;
     let isDone = false;
+    let hasIterationError = false;
 
     try {
+      const activeIterator = iterable[Symbol.asyncIterator]();
+      iterator = activeIterator;
+
       while (true) {
-        const result = await context.with(spanContext, () => iterator.next());
+        const result = await context.with(spanContext, () => activeIterator.next());
 
         if (result.done) {
           isDone = true;
@@ -39,22 +85,50 @@ function traceAsyncIterable<ReturnType>(
         yield await context.with(spanContext, async () => result.value);
       }
     } catch (error) {
+      hasIterationError = true;
       recordError(error, span);
       throw error;
     } finally {
-      if (!isDone && iterator.return) {
-        await context.with(spanContext, () => iterator.return?.());
-      }
-
-      span.end();
+      await finalizeAsyncIterator(iterator, isDone, hasIterationError, spanContext, span, endSpan);
     }
   })();
+
+  const tracedIterator: AsyncIterableIterator<ReturnType, unknown, unknown> = {
+    [Symbol.asyncIterator]() {
+      return tracedIterator;
+    },
+    next(value?: unknown) {
+      hasStarted = true;
+      return generator.next(value);
+    },
+    return(value?: unknown) {
+      if (!hasStarted) {
+        endSpan();
+      }
+
+      return generator.return(value);
+    },
+    throw(error?: unknown) {
+      if (!hasStarted) {
+        recordError(error, span);
+        endSpan();
+      }
+
+      return generator.throw(error);
+    },
+  };
+
+  return {
+    [Symbol.asyncIterator]() {
+      return tracedIterator;
+    },
+  };
 }
 
 function cloneOptions(options: TraceDecoratorOptions): TraceDecoratorOptions {
   return {
-    name: options.name,
-    attributes: options.attributes ? { ...options.attributes } : undefined,
+    ...(options.name === undefined ? {} : { name: options.name }),
+    ...(options.attributes === undefined ? {} : { attributes: { ...options.attributes } }),
   };
 }
 
