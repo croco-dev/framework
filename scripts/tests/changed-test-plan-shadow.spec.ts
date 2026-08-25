@@ -26,6 +26,7 @@ describe("changed-test-plan-shadow", () => {
       ]),
     ).toEqual({
       base: "origin/trunk",
+      head: "HEAD",
       fullEvidence: "ci-reports/full/bundle.json",
       outputDirectory: "ci-reports/changed-test-plan",
       observationWindow: 20,

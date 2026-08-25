@@ -33,6 +33,7 @@ const ALLOWED_WRITE_PERMISSIONS = new Set([
 export const ACTIONS_ONLY_WORKFLOW_COMMAND_ALLOWLIST = [
   'node -e \'const fs = require("node:fs"); fs.writeFileSync("ci-reports/package-quality/spine-promotion-run.json", JSON.stringify({ commitSha: process.env.SPINE_PROMOTION_COMMIT_SHA, runId: process.env.SPINE_PROMOTION_RUN_ID, runAttempt: process.env.SPINE_PROMOTION_RUN_ATTEMPT, startedAt: new Date().toISOString() }, null, 2) + "\\n")\'',
   "node --experimental-strip-types scripts/verification-change-classifier.mts",
+  "node --experimental-strip-types scripts/ci-verification-identity.mts",
   "node --experimental-strip-types scripts/release-reconciliation-state.mts",
   "node --experimental-strip-types scripts/changed-test-plan-shadow.mts",
   "node --experimental-strip-types scripts/changed-test-full-suite-status.mts",
@@ -365,11 +366,11 @@ export function findWorkflowPermissionViolations(
       if (
         !isPlainRecord(changesPermissions) ||
         changesPermissions.contents !== "read" ||
-        changesPermissions["pull-requests"] !== "read"
+        Object.keys(changesPermissions).length !== 1
       ) {
         violations.push({
           path,
-          reason: "jobs.changes must grant contents: read and pull-requests: read",
+          reason: "jobs.changes must grant only contents: read for local immutable path filtering",
         });
       }
     }

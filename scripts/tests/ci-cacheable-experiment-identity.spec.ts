@@ -65,6 +65,85 @@ function createRepositoryFixture(): {
   return { root, baseSha, headSha };
 }
 
+function createPullRequestRepositoryFixture(): {
+  readonly root: string;
+  readonly baseSha: string;
+  readonly pullRequestHeadSha: string;
+  readonly candidateSha: string;
+} {
+  const root = mkdtempSync(join(tmpdir(), "croco-cacheable-pr-identity-"));
+  mkdirSync(join(root, ".github", "workflows"), { recursive: true });
+  writeFileSync(
+    join(root, "package.json"),
+    JSON.stringify({ packageManager: "pnpm@11.9.0", devDependencies: { turbo: "2.10.2" } }),
+  );
+  writeFileSync(join(root, ".github", "workflows", "ci.yml"), "name: CI\n");
+  writeFileSync(
+    join(root, "test-inventory.json"),
+    JSON.stringify({ version: 1, tests: [], exceptions: [] }),
+  );
+  execFileSync("git", ["init", "--initial-branch=trunk"], { cwd: root });
+  execFileSync("git", ["config", "user.email", "ci@example.invalid"], { cwd: root });
+  execFileSync("git", ["config", "user.name", "CI"], { cwd: root });
+  execFileSync("git", ["add", "."], { cwd: root });
+  execFileSync("git", ["commit", "-m", "base"], { cwd: root });
+  const baseSha = execFileSync("git", ["rev-parse", "HEAD"], {
+    cwd: root,
+    encoding: "utf8",
+  }).trim();
+  execFileSync("git", ["switch", "--create", "pull-request"], { cwd: root });
+  writeFileSync(join(root, "changed.txt"), "changed\n");
+  execFileSync("git", ["add", "changed.txt"], { cwd: root });
+  execFileSync("git", ["commit", "-m", "head"], { cwd: root });
+  const pullRequestHeadSha = execFileSync("git", ["rev-parse", "HEAD"], {
+    cwd: root,
+    encoding: "utf8",
+  }).trim();
+  execFileSync("git", ["switch", "--detach", baseSha], { cwd: root });
+  execFileSync("git", ["merge", "--no-ff", "--no-edit", pullRequestHeadSha], { cwd: root });
+  const candidateSha = execFileSync("git", ["rev-parse", "HEAD"], {
+    cwd: root,
+    encoding: "utf8",
+  }).trim();
+  return { root, baseSha, pullRequestHeadSha, candidateSha };
+}
+
+function repositoryIdentityArgs(
+  root: string,
+  baseSha: string,
+  candidateSha: string,
+  pullRequestHeadSha: string,
+): readonly string[] {
+  return [
+    "--root",
+    root,
+    "--commit-sha",
+    candidateSha,
+    "--base",
+    baseSha,
+    "--head",
+    candidateSha,
+    "--pull-request-head",
+    pullRequestHeadSha,
+    "--run-id",
+    "99",
+    "--run-attempt",
+    "1",
+    "--profile",
+    "publish",
+    "--runner-os",
+    "Linux",
+    "--runner-arch",
+    "X64",
+    "--runner-label",
+    "ubuntu-latest",
+    "--node-version",
+    "v24.5.0",
+    "--pnpm-version",
+    "11.9.0",
+  ];
+}
+
 describe("cacheable CI experiment identity", () => {
   it("matches the observer toolchain and input digest contract", () => {
     const toolchainDigest = digestParts([
@@ -155,6 +234,8 @@ describe("cacheable CI experiment identity", () => {
       baseSha,
       "--head",
       headSha,
+      "--pull-request-head",
+      headSha,
       "--run-id",
       "99",
       "--run-attempt",
@@ -198,6 +279,8 @@ describe("cacheable CI experiment identity", () => {
         baseSha,
         "--head",
         headSha,
+        "--pull-request-head",
+        headSha,
         "--run-id",
         "99",
         "--run-attempt",
@@ -216,6 +299,27 @@ describe("cacheable CI experiment identity", () => {
         "11.9.0",
       ]),
     ).toThrow(expect.objectContaining({ code: "COMMIT_SHA_MISMATCH", category: "input" }));
+  });
+
+  it("validates the merge candidate parent count and order", () => {
+    const { root, baseSha, pullRequestHeadSha, candidateSha } =
+      createPullRequestRepositoryFixture();
+
+    expect(
+      createCacheableExperimentIdentityFromRepository(
+        repositoryIdentityArgs(root, baseSha, candidateSha, pullRequestHeadSha),
+      ).identity.commitSha,
+    ).toBe(candidateSha);
+    expect(() =>
+      createCacheableExperimentIdentityFromRepository(
+        repositoryIdentityArgs(root, pullRequestHeadSha, candidateSha, baseSha),
+      ),
+    ).toThrow(expect.objectContaining({ code: "CACHEABLE_CANDIDATE_IDENTITY_MISMATCH" }));
+    expect(() =>
+      createCacheableExperimentIdentityFromRepository(
+        repositoryIdentityArgs(root, baseSha, pullRequestHeadSha, baseSha),
+      ),
+    ).toThrow(expect.objectContaining({ code: "CACHEABLE_CANDIDATE_IDENTITY_MISMATCH" }));
   });
 
   it("reports Git identity failures with stable Problems", () => {

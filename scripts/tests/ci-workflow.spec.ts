@@ -152,16 +152,19 @@ describe("workflow token permissions", () => {
     });
   });
 
-  it("keeps pull request path filtering readable", () => {
+  it("keeps immutable local path filtering least-privileged", () => {
     const ciWorkflow = WORKFLOWS["ci.yml"] ?? "";
     const mutant = {
-      "ci.yml": ciWorkflow.replace("      pull-requests: read\n", ""),
+      "ci.yml": ciWorkflow.replace(
+        "      contents: read\n",
+        "      contents: read\n      pull-requests: read\n",
+      ),
     };
 
     expect(mutant["ci.yml"]).not.toBe(ciWorkflow);
     expect(findWorkflowPermissionViolations(mutant)).toContainEqual({
       path: "ci.yml",
-      reason: "jobs.changes must grant contents: read and pull-requests: read",
+      reason: "jobs.changes must grant only contents: read for local immutable path filtering",
     });
   });
 
@@ -468,32 +471,32 @@ describe("CI verification profile contract", () => {
     const mutations = [
       WORKFLOW.replace("  repository-contracts:\n", "  repository-contracts-renamed:\n"),
       WORKFLOW.replace(
-        "  repository-contracts:\n    runs-on:",
-        "  repository-contracts:\n    if: false\n    runs-on:",
+        "  repository-contracts:\n    needs: changes\n    if: ${{ always() }}\n    runs-on:",
+        "  repository-contracts:\n    needs: changes\n    if: false\n    runs-on:",
       ),
       WORKFLOW.replace(
-        "  repository-contracts:\n    runs-on:",
-        "  repository-contracts:\n    name: decoy-contract\n    runs-on:",
+        "  repository-contracts:\n    needs: changes\n    if: ${{ always() }}\n    runs-on:",
+        "  repository-contracts:\n    needs: changes\n    if: ${{ always() }}\n    name: decoy-contract\n    runs-on:",
       ),
       WORKFLOW.replace(
-        "  repository-contracts:\n    runs-on:",
-        "  repository-contracts:\n    strategy:\n      matrix:\n        shard: [1]\n    runs-on:",
+        "  repository-contracts:\n    needs: changes\n    if: ${{ always() }}\n    runs-on:",
+        "  repository-contracts:\n    needs: changes\n    if: ${{ always() }}\n    strategy:\n      matrix:\n        shard: [1]\n    runs-on:",
       ),
       WORKFLOW.replace(
-        "  repository-contracts:\n    runs-on:",
-        "  repository-contracts:\n    defaults:\n      run:\n        shell: true {0}\n    runs-on:",
+        "  repository-contracts:\n    needs: changes\n    if: ${{ always() }}\n    runs-on:",
+        "  repository-contracts:\n    needs: changes\n    if: ${{ always() }}\n    defaults:\n      run:\n        shell: true {0}\n    runs-on:",
       ),
       WORKFLOW.replace(
-        "  repository-contracts:\n    runs-on:",
-        "  repository-contracts:\n    env:\n      NODE_OPTIONS: --import ./scripts/bypass.mjs\n    runs-on:",
+        "  repository-contracts:\n    needs: changes\n    if: ${{ always() }}\n    runs-on:",
+        "  repository-contracts:\n    needs: changes\n    if: ${{ always() }}\n    env:\n      NODE_OPTIONS: --import ./scripts/bypass.mjs\n    runs-on:",
       ),
       WORKFLOW.replace(
         "      - name: Check authoritative test inventory",
         '      - name: Inject process preload\n        run: echo "NODE_OPTIONS=--import ./scripts/bypass.mjs" >> "$GITHUB_ENV"\n      - name: Check authoritative test inventory',
       ),
       WORKFLOW.replace(
-        "  repository-contracts:\n    runs-on: ubuntu-latest",
-        "  repository-contracts:\n    runs-on: self-hosted",
+        "  repository-contracts:\n    needs: changes\n    if: ${{ always() }}\n    runs-on: ubuntu-latest",
+        "  repository-contracts:\n    needs: changes\n    if: ${{ always() }}\n    runs-on: self-hosted",
       ),
       WORKFLOW.replace(
         "env:\n  # renovate:",
@@ -513,6 +516,46 @@ describe("CI verification profile contract", () => {
       ),
       WORKFLOW.replace("      api-source: ${{ steps.filter.outputs.api-source }}\n", ""),
       WORKFLOW.replace("            api-source:\n", "            api-source-removed:\n"),
+      WORKFLOW.replace(
+        "node --experimental-strip-types scripts/ci-verification-identity.mts resolve \\",
+        "true \\",
+      ),
+      WORKFLOW.replace(
+        "  changes:\n    runs-on: ubuntu-latest",
+        "  changes:\n    runs-on: ubuntu-latest\n    defaults:\n      run:\n        shell: true {0}",
+      ),
+      WORKFLOW.replace(
+        "      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n        with:\n          fetch-depth: 0\n          persist-credentials: false\n      - name: Select verification profile",
+        "      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n        with:\n          fetch-depth: 0\n          persist-credentials: false\n          ref: trunk\n      - name: Select verification profile",
+      ),
+      WORKFLOW.replace(
+        "      - name: Classify immutable changed paths",
+        "      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n        with:\n          fetch-depth: 0\n          persist-credentials: false\n          ref: trunk\n      - name: Classify immutable changed paths",
+      ),
+      WORKFLOW.replace(
+        "node --experimental-strip-types scripts/ci-verification-identity.mts assert",
+        "true",
+      ),
+      WORKFLOW.replace(
+        "      - name: Initialize beta spine promotion evidence",
+        "      - name: Rebind validate checkout\n        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1\n        with:\n          fetch-depth: 0\n          persist-credentials: false\n          ref: trunk\n\n      - name: Initialize beta spine promotion evidence",
+      ),
+      WORKFLOW.replace(
+        "      - name: Initialize beta spine promotion evidence",
+        "      - name: Rebind validate worktree\n        run: git checkout --detach origin/trunk\n\n      - name: Initialize beta spine promotion evidence",
+      ),
+      WORKFLOW.replace(
+        "      - name: Setup pnpm\n        if: needs.changes.outputs.api-source == 'true'\n        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271",
+        "      - name: Rebind docs checkout\n        if: needs.changes.outputs.api-source == 'true'\n        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1\n        with:\n          fetch-depth: 0\n          persist-credentials: false\n          ref: trunk\n      - name: Setup pnpm\n        if: needs.changes.outputs.api-source == 'true'\n        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271",
+      ),
+      WORKFLOW.replace(
+        "      - name: Setup pnpm\n        if: needs.changes.outputs.api-source == 'true'\n        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271",
+        "      - name: Rebind docs worktree\n        if: needs.changes.outputs.api-source == 'true'\n        run: git switch --detach origin/trunk\n      - name: Setup pnpm\n        if: needs.changes.outputs.api-source == 'true'\n        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271",
+      ),
+      WORKFLOW.replace(
+        '--base "$VERIFICATION_BASE" --head "$VERIFICATION_CANDIDATE"',
+        "--base origin/trunk --head HEAD",
+      ),
       WORKFLOW.replace("run: pnpm test-inventory:check", "run: echo inventory omitted"),
       WORKFLOW.replace(
         "      - name: Run repository contract tests\n        run:",
@@ -539,6 +582,18 @@ describe("CI verification profile contract", () => {
         "      - name: Run selected verification profile\n        if: false\n        id:",
       ),
       WORKFLOW.replace(
+        "      - name: Reverify immutable candidate worktree",
+        "      - name: Omit immutable candidate worktree reverification",
+      ),
+      WORKFLOW.replace(
+        "      - name: Run selected verification profile",
+        "      - name: Rebind validate index\n        run: git read-tree --reset -u origin/trunk\n\n      - name: Run selected verification profile",
+      ),
+      WORKFLOW.replace(
+        "      - name: Build docs and check for drift",
+        "      - name: Rebind docs index\n        if: needs.changes.outputs.api-source == 'true'\n        run: git read-tree --reset -u origin/trunk\n      - name: Build docs and check for drift",
+      ),
+      WORKFLOW.replace(
         '          node --experimental-strip-types scripts/release-spine-evidence.mts "${args[@]}"',
         '          node --experimental-strip-types scripts/release-spine-evidence.mts "${args[@]}" || true',
       ),
@@ -557,8 +612,8 @@ describe("CI verification profile contract", () => {
       WORKFLOW.replace("          exit 1\n", "          exit 1 || true\n"),
     ];
 
-    for (const mutation of mutations) {
-      expect(findRequiredWorkflowPolicyViolations(mutation)).not.toEqual([]);
+    for (const [index, mutation] of mutations.entries()) {
+      expect(findRequiredWorkflowPolicyViolations(mutation), `mutation ${index}`).not.toEqual([]);
     }
   });
 
@@ -659,12 +714,23 @@ describe("CI verification profile contract", () => {
     expect(WORKFLOW).not.toContain(
       'if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then\n            args+=(--allow-pending-release-metadata)',
     );
-    expect(WORKFLOW).toContain('args+=(--base "$VERIFICATION_BASE" --head HEAD)');
+    expect(WORKFLOW).toContain(
+      'args+=(--base "$VERIFICATION_BASE" --head "$VERIFICATION_CANDIDATE")',
+    );
+    expect(WORKFLOW).toContain('args+=(--verification-base-sha "$VERIFICATION_BASE")');
+    expect(WORKFLOW).toContain('args+=(--verification-head-sha "$VERIFICATION_HEAD")');
+    expect(WORKFLOW).toContain('args+=(--verification-candidate-sha "$VERIFICATION_CANDIDATE")');
     expect(WORKFLOW).not.toContain('if [ "$GITHUB_EVENT_NAME" != "workflow_dispatch" ]');
     expect(WORKFLOW).toContain(
       'if [ "$CROCO_CACHEABLE_FAILURE_CLASS" != "none" ]; then\n            args+=(--full-selection)\n            args+=(--inject-failure "$CROCO_CACHEABLE_FAILURE_CLASS")',
     );
     expect(WORKFLOW).toContain("VERIFICATION_BASE: ${{ needs.changes.outputs.base }}");
+    expect(WORKFLOW).toContain("VERIFICATION_HEAD: ${{ needs.changes.outputs.head }}");
+    expect(WORKFLOW).toContain("VERIFICATION_CANDIDATE: ${{ needs.changes.outputs.candidate }}");
+    expect(WORKFLOW).toContain("name: Classify immutable changed paths");
+    expect(WORKFLOW).toContain('--filters "$PATH_FILTERS" --github-output "$GITHUB_OUTPUT"');
+    expect(WORKFLOW).not.toContain("dorny/paths-filter");
+    expect(WORKFLOW).not.toContain('base="origin/$BASE_REF"');
     expect(WORKFLOW).not.toContain("test:release-gates");
   });
 

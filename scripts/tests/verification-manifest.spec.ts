@@ -226,6 +226,30 @@ const expectedLaneIds = {
 } as const;
 
 describe("verification manifest", () => {
+  it("passes the exact verification base to Problem registry checks", () => {
+    const baseSha = "a".repeat(40);
+    const command = createVerificationManifest("repo", {
+      base: baseSha,
+      changedFiles: ["scripts/problem-registry.mts"],
+      head: "b".repeat(40),
+    }).find(({ id }) => id === "problem-registry");
+
+    expect(command?.command).toEqual([
+      "node",
+      "--experimental-strip-types",
+      "scripts/tracked-file-mutation-guard.mts",
+      "--recovery",
+      "pnpm problem-registry:write",
+      "--",
+      "node",
+      "--experimental-strip-types",
+      "scripts/problem-registry.mts",
+      "--check",
+      "--base",
+      baseSha,
+    ]);
+  });
+
   it("discovers static, dynamic, and side-effect relative imports", () => {
     expect(
       releaseGateImportSpecifiers(`
@@ -291,7 +315,7 @@ describe("verification manifest", () => {
     expect(
       createHash("sha256").update(JSON.stringify(manifests)).digest("hex"),
       "The pre-split monolithic manifest changed; update this digest only after intentionally verifying the new serialized commands.",
-    ).toBe("bb8a530b880cd32f80b089212b2796a2c552b9a7e019a57a056725474462bc07");
+    ).toBe("53e28a7c00a0d5ac2ae7d192fcce2ffa09c6c7e4e1453cdc6b7746eb43012220");
   });
 
   it("classifies every dependency edge and every cross-lane edge for synthesis", () => {
@@ -1053,7 +1077,7 @@ describe("verification manifest", () => {
       readFileSync(resolve(__dirname, "../../package.json"), "utf8"),
     ) as { scripts?: Record<string, string> };
 
-    expect(RELEASE_GATE_TEST_PATHS).toHaveLength(51);
+    expect(RELEASE_GATE_TEST_PATHS).toHaveLength(52);
     expect(RELEASE_GATE_TEST_PATHS).toEqual([...RELEASE_GATE_TEST_PATHS].sort());
     expect(RELEASE_GATE_ENTRYPOINT_PATHS).toEqual([...RELEASE_GATE_ENTRYPOINT_PATHS].sort());
     expect(RELEASE_GATE_FIXTURE_PATHS).toEqual([...RELEASE_GATE_FIXTURE_PATHS].sort());

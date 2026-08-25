@@ -197,6 +197,63 @@ describe("problem-registry.mts", () => {
     expect(runGit(repo, "status", "--porcelain=v1")).toBe(statusBeforeCheck);
   }, 30_000);
 
+  it("keeps queued candidates on their exact Problem registry base after trunk advances", () => {
+    const repo = createTempRepo();
+    writeProblemFactories(repo, "packages/base/src/problems.ts", ["base/original"]);
+    writeProblemRegistryFixtureArtifacts(repo);
+    runGit(repo, "init", "--initial-branch=trunk");
+    runGit(repo, "config", "user.email", "fixture@croco.dev");
+    runGit(repo, "config", "user.name", "Croco fixture");
+    commitAll(repo, "old base");
+    const oldBaseOid = runGit(repo, "rev-parse", "HEAD");
+
+    runGit(repo, "switch", "--create", "old-candidate");
+    writeProblemFactories(repo, "packages/candidate/src/problems.ts", ["candidate/existing"]);
+    writeProblemRegistryFixtureArtifacts(repo);
+    commitAll(repo, "old candidate");
+    const oldCandidateOid = runGit(repo, "rev-parse", "HEAD");
+
+    runGit(repo, "switch", "trunk");
+    writeProblemFactories(repo, "packages/new-base/src/problems.ts", ["base/new"]);
+    writeProblemRegistryFixtureArtifacts(repo);
+    commitAll(repo, "advance trunk");
+    const newBaseOid = runGit(repo, "rev-parse", "HEAD");
+
+    runGit(repo, "switch", "--detach", oldCandidateOid);
+    expect(runProblemRegistryCheck(repo, "check", { baseRef: oldBaseOid })).toEqual(
+      expect.objectContaining({ status: "pass", discoveryCount: 2, problemCount: 2 }),
+    );
+    expect(runProblemRegistryCheck(repo, "check", { baseRef: "trunk" })).toEqual(
+      expect.objectContaining({
+        status: "fail",
+        diagnostics: expect.arrayContaining([
+          expect.stringContaining(
+            "Problem code 'base/new' is registered but has no corresponding implementation",
+          ),
+        ]),
+      }),
+    );
+
+    runGit(repo, "switch", "--create", "current-candidate", newBaseOid);
+    writeProblemFactories(repo, "packages/candidate/src/problems.ts", ["candidate/existing"]);
+    writeProblemRegistryFixtureArtifacts(repo);
+    expect(runProblemRegistryCheck(repo, "check", { baseRef: newBaseOid })).toEqual(
+      expect.objectContaining({ status: "pass", discoveryCount: 3, problemCount: 3 }),
+    );
+
+    rmSync(join(repo, "packages/new-base"), { force: true, recursive: true });
+    writeProblemRegistryFixtureArtifacts(repo);
+    const removal = runProblemRegistryCheck(repo, "check", { baseRef: newBaseOid });
+    expect(removal.status).toBe("fail");
+    expect(removal.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining(
+          "Problem code 'base/new' is registered but has no corresponding implementation",
+        ),
+      ]),
+    );
+  });
+
   it("publishes runtime-configurable status policy in generated contracts", () => {
     const repo = createTempRepo();
     writeFile(

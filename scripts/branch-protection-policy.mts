@@ -37,6 +37,7 @@ const REQUIRED_REPOSITORY_CONTRACT_TESTS = [
   "scripts/tests/verification-policy.spec.ts",
   "scripts/tests/branch-protection-policy.spec.ts",
   "scripts/tests/ci-workflow.spec.ts",
+  "scripts/tests/ci-verification-identity.spec.ts",
   "scripts/tests/benchmark-workflow.spec.ts",
   "scripts/tests/repository-policy-audit-workflow.spec.ts",
 ] as const;
@@ -53,12 +54,15 @@ const CI_WORKFLOW_CONCURRENCY = {
   group: "ci-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.ref }}",
   "cancel-in-progress": true,
 } as const;
+const WORKTREE_MUTATING_GIT_COMMAND =
+  /\bgit(?:\s+(?:-[A-Za-z]\s+\S+|--[a-z-]+(?:=\S+)?))*\s+(?:checkout|switch|reset|restore|clean|read-tree|update-index|sparse-checkout|apply|stash|merge|rebase|cherry-pick|am|revert)\b/;
 const AUDIT_WORKFLOW_CONCURRENCY = {
   group: "repository-policy-audit",
   "cancel-in-progress": false,
 } as const;
 const REPOSITORY_CONTRACT_STEP_NAMES = [
   "Checkout",
+  "Verify immutable candidate checkout",
   "Setup pnpm",
   "Setup Node.js",
   "Install dependencies",
@@ -66,6 +70,41 @@ const REPOSITORY_CONTRACT_STEP_NAMES = [
   "Check verification policy",
   "Run repository contract tests",
 ] as const;
+const VERIFICATION_IDENTITY_ENVIRONMENT = {
+  VERIFICATION_BASE: "${{ needs.changes.outputs.base }}",
+  VERIFICATION_CANDIDATE: "${{ needs.changes.outputs.candidate }}",
+  VERIFICATION_HEAD: "${{ needs.changes.outputs.head }}",
+} as const;
+const EXPECTED_VERIFICATION_IDENTITY_ASSERT = [
+  "node --experimental-strip-types scripts/ci-verification-identity.mts assert",
+  '--event "$GITHUB_EVENT_NAME"',
+  '--base "$VERIFICATION_BASE"',
+  '--head "$VERIFICATION_HEAD"',
+  '--candidate "$VERIFICATION_CANDIDATE"',
+  "--checkout HEAD",
+].join(" ");
+const EXPECTED_VERIFICATION_WORKTREE_ASSERT = `${EXPECTED_VERIFICATION_IDENTITY_ASSERT} --worktree`;
+const EXPECTED_VERIFICATION_IDENTITY_RESOLVE = [
+  "node --experimental-strip-types scripts/ci-verification-identity.mts resolve \\",
+  '--event "$EVENT_NAME" \\',
+  '--event-base "$EVENT_BASE_SHA" \\',
+  '--event-head "$EVENT_HEAD_SHA" \\',
+  '--candidate "$GITHUB_SHA" \\',
+  "--checkout HEAD \\",
+  "--output ci-reports/verification-identity.json",
+  'base=$(node -e \'process.stdout.write(JSON.parse(require("node:fs").readFileSync("ci-reports/verification-identity.json", "utf8")).baseSha)\')',
+  'head=$(node -e \'process.stdout.write(JSON.parse(require("node:fs").readFileSync("ci-reports/verification-identity.json", "utf8")).headSha)\')',
+  'candidate=$(node -e \'process.stdout.write(JSON.parse(require("node:fs").readFileSync("ci-reports/verification-identity.json", "utf8")).candidateSha)\')',
+  "node --experimental-strip-types scripts/verification-change-classifier.mts \\",
+  '--event "$GITHUB_EVENT_NAME" --workflow ci --base "$base" --head "$candidate" --github-output "$GITHUB_OUTPUT"',
+  '{ echo "base=$base" echo "head=$head" echo "candidate=$candidate" } >> "$GITHUB_OUTPUT"',
+].join(" ");
+const EXPECTED_IMMUTABLE_PATH_FILTER = [
+  "node --experimental-strip-types scripts/verification-change-classifier.mts",
+  '--event "$GITHUB_EVENT_NAME" --workflow ci',
+  '--base "$VERIFICATION_BASE" --head "$VERIFICATION_CANDIDATE"',
+  '--filters "$PATH_FILTERS" --github-output "$GITHUB_OUTPUT"',
+].join(" ");
 const EXPECTED_VALIDATE_RUN = [
   'args=(--profile "$VERIFICATION_PROFILE" --allow-pending-release-metadata)',
   'if [ "$VERIFICATION_PROFILE" = "spine" ]; then',
@@ -73,7 +112,10 @@ const EXPECTED_VALIDATE_RUN = [
   "else",
   'args+=(--output-dir "ci-reports/verification/${VERIFICATION_PROFILE}")',
   "fi",
-  'args+=(--base "$VERIFICATION_BASE" --head HEAD)',
+  'args+=(--base "$VERIFICATION_BASE" --head "$VERIFICATION_CANDIDATE")',
+  'args+=(--verification-base-sha "$VERIFICATION_BASE")',
+  'args+=(--verification-head-sha "$VERIFICATION_HEAD")',
+  'args+=(--verification-candidate-sha "$VERIFICATION_CANDIDATE")',
   'if [ "$CROCO_CACHEABLE_FAILURE_CLASS" != "none" ]; then',
   "args+=(--full-selection)",
   'args+=(--inject-failure "$CROCO_CACHEABLE_FAILURE_CLASS")',
@@ -541,6 +583,81 @@ function namedStep(job: JsonRecord | undefined, name: string): JsonRecord | unde
   return jobSteps(job).find((step) => step.name === name);
 }
 
+function inspectVerificationIdentityAssertion(
+  job: JsonRecord | undefined,
+  id: string,
+  condition?: string,
+): readonly string[] {
+  const steps = jobSteps(job);
+  const checkout = namedStep(job, "Checkout");
+  const step = namedStep(job, "Verify immutable candidate checkout");
+  const checkoutIndex = steps.indexOf(checkout ?? {});
+  const assertionIndex = steps.indexOf(step ?? {});
+  const checkoutSteps = steps.filter(
+    (candidate) =>
+      typeof candidate.uses === "string" && candidate.uses.startsWith("actions/checkout@"),
+  );
+  const mutatesWorktreeAfterAssertion = steps
+    .slice(assertionIndex + 1)
+    .some((candidate) => WORKTREE_MUTATING_GIT_COMMAND.test(normalizedRun(candidate) ?? ""));
+  const checkoutKeys =
+    condition === undefined ? ["name", "uses", "with"] : ["name", "if", "uses", "with"];
+  const expectedKeys =
+    condition === undefined ? ["name", "env", "run"] : ["name", "if", "env", "run"];
+  if (
+    !hasExactKeys(checkout, checkoutKeys) ||
+    checkout?.if !== condition ||
+    checkout?.uses !== CHECKOUT_ACTION ||
+    !hasExactRecord(recordValue(checkout, "with"), {
+      "fetch-depth": 0,
+      "persist-credentials": false,
+    }) ||
+    checkoutSteps.length !== 1 ||
+    assertionIndex !== checkoutIndex + 1 ||
+    mutatesWorktreeAfterAssertion ||
+    !hasExactKeys(step, expectedKeys) ||
+    step?.if !== condition ||
+    !hasExactRecord(recordValue(step, "env"), VERIFICATION_IDENTITY_ENVIRONMENT) ||
+    normalizedRun(step ?? {}) !== EXPECTED_VERIFICATION_IDENTITY_ASSERT
+  ) {
+    return [
+      policyDiagnostic(
+        "BRANCH_POLICY_WORKFLOW_IDENTITY_ASSERTION_DRIFT",
+        `${id} must fail closed on the exact immutable base, head, candidate, and checkout identity`,
+      ),
+    ];
+  }
+  return [];
+}
+
+function inspectVerificationConsumptionBoundary(
+  job: JsonRecord | undefined,
+  id: string,
+  consumerName: string,
+  condition?: string,
+): readonly string[] {
+  const steps = jobSteps(job);
+  const assertion = namedStep(job, "Reverify immutable candidate worktree");
+  const consumer = namedStep(job, consumerName);
+  const expectedKeys =
+    condition === undefined ? ["name", "env", "run"] : ["name", "if", "env", "run"];
+  if (
+    !hasExactKeys(assertion, expectedKeys) ||
+    assertion?.if !== condition ||
+    !hasExactRecord(recordValue(assertion, "env"), VERIFICATION_IDENTITY_ENVIRONMENT) ||
+    normalizedRun(assertion ?? {}) !== EXPECTED_VERIFICATION_WORKTREE_ASSERT ||
+    steps.indexOf(consumer ?? {}) !== steps.indexOf(assertion ?? {}) + 1
+  ) {
+    return [
+      policyDiagnostic(
+        "BRANCH_POLICY_WORKFLOW_CONSUMPTION_IDENTITY_DRIFT",
+        `${id} must reverify the immutable candidate worktree immediately before ${consumerName}`,
+      ),
+    ];
+  }
+  return [];
+}
+
 function inspectPolicyAuditJob(job: JsonRecord | undefined, owner: string): readonly string[] {
   const violations: string[] = [];
   const steps = jobSteps(job);
@@ -757,7 +874,7 @@ function inspectRepositoryContractJob(job: JsonRecord | undefined): readonly str
   const violations: string[] = [];
   const steps = jobSteps(job);
   if (
-    !hasExactKeys(job, ["runs-on", "timeout-minutes", "steps"]) ||
+    !hasExactKeys(job, ["needs", "if", "runs-on", "timeout-minutes", "steps"]) ||
     job?.["runs-on"] !== "ubuntu-latest" ||
     job?.["timeout-minutes"] !== 15 ||
     JSON.stringify(steps.map((step) => step.name)) !==
@@ -771,13 +888,17 @@ function inspectRepositoryContractJob(job: JsonRecord | undefined): readonly str
     );
   }
   const checkout = namedStep(job, "Checkout");
+  const identity = inspectVerificationIdentityAssertion(job, "repository-contracts");
   const pnpm = namedStep(job, "Setup pnpm");
   const node = namedStep(job, "Setup Node.js");
   const install = namedStep(job, "Install dependencies");
   if (
     !hasExactKeys(checkout, ["name", "uses", "with"]) ||
     checkout?.uses !== CHECKOUT_ACTION ||
-    !hasExactRecord(recordValue(checkout, "with"), { "persist-credentials": false }) ||
+    !hasExactRecord(recordValue(checkout, "with"), {
+      "fetch-depth": 0,
+      "persist-credentials": false,
+    }) ||
     !hasExactKeys(pnpm, ["name", "uses"]) ||
     pnpm?.uses !== PNPM_SETUP_ACTION ||
     !hasExactKeys(node, ["name", "uses", "with"]) ||
@@ -796,6 +917,7 @@ function inspectRepositoryContractJob(job: JsonRecord | undefined): readonly str
       ),
     );
   }
+  violations.push(...identity);
   const inventory = namedStep(job, "Check authoritative test inventory");
   const verification = namedStep(job, "Check verification policy");
   const tests = namedStep(job, "Run repository contract tests");
@@ -877,8 +999,12 @@ export function findRequiredWorkflowPolicyViolations(source: string): readonly s
 
   const changes = recordValue(jobs, "changes");
   const changeOutputs = recordValue(changes, "outputs");
-  const filterStep = jobSteps(changes).find((step) => step.id === "filter");
-  const filterSource = recordValue(filterStep, "with")?.filters;
+  const changeSteps = jobSteps(changes);
+  const changesCheckout = changeSteps[0];
+  const verificationStep = namedStep(changes, "Select verification profile");
+  const filterStep = changeSteps.find((step) => step.id === "filter");
+  const filterEnvironment = recordValue(filterStep, "env");
+  const filterSource = filterEnvironment?.PATH_FILTERS;
   let filters: unknown;
   try {
     filters = typeof filterSource === "string" ? parseYaml(filterSource) : undefined;
@@ -886,7 +1012,55 @@ export function findRequiredWorkflowPolicyViolations(source: string): readonly s
     filters = undefined;
   }
   if (
+    !hasExactKeys(changes, ["runs-on", "timeout-minutes", "permissions", "outputs", "steps"]) ||
+    changes?.["runs-on"] !== "ubuntu-latest" ||
+    changes?.["timeout-minutes"] !== 5 ||
+    !hasExactRecord(recordValue(changes, "permissions"), { contents: "read" }) ||
+    changeSteps.length !== 3 ||
+    changeSteps[1] !== verificationStep ||
+    changeSteps[2] !== filterStep
+  ) {
+    violations.push(
+      policyDiagnostic(
+        "BRANCH_POLICY_WORKFLOW_CHANGE_JOB_SHAPE_DRIFT",
+        "changes must retain its isolated runner and exact checkout, resolver, and filter sequence",
+      ),
+    );
+  }
+  if (
+    !hasExactKeys(changesCheckout, ["uses", "with"]) ||
+    changesCheckout?.uses !== CHECKOUT_ACTION ||
+    !hasExactRecord(recordValue(changesCheckout, "with"), {
+      "fetch-depth": 0,
+      "persist-credentials": false,
+    })
+  ) {
+    violations.push(
+      policyDiagnostic(
+        "BRANCH_POLICY_WORKFLOW_CHANGE_CHECKOUT_DRIFT",
+        "changes must check out the workflow candidate with full history and without credentials",
+      ),
+    );
+  }
+  if (
+    !hasExactKeys(changeOutputs, [
+      "docs",
+      "api-source",
+      "real-resources",
+      "windows-scaffold",
+      "profile",
+      "base",
+      "head",
+      "candidate",
+    ]) ||
+    changeOutputs?.docs !== "${{ steps.filter.outputs.docs }}" ||
     changeOutputs?.["api-source"] !== "${{ steps.filter.outputs.api-source }}" ||
+    changeOutputs?.["real-resources"] !== "${{ steps.filter.outputs.real_resources }}" ||
+    changeOutputs?.["windows-scaffold"] !== "${{ steps.filter.outputs.windows_scaffold }}" ||
+    changeOutputs?.profile !== "${{ steps.verification.outputs.profile }}" ||
+    changeOutputs?.base !== "${{ steps.verification.outputs.base }}" ||
+    changeOutputs?.head !== "${{ steps.verification.outputs.head }}" ||
+    changeOutputs?.candidate !== "${{ steps.verification.outputs.candidate }}" ||
     !isRecord(filters) ||
     !Array.isArray(filters["api-source"]) ||
     filters["api-source"].length === 0
@@ -895,6 +1069,45 @@ export function findRequiredWorkflowPolicyViolations(source: string): readonly s
       policyDiagnostic(
         "BRANCH_POLICY_WORKFLOW_CHANGE_OUTPUT_DRIFT",
         "changes must expose the non-empty api-source filter through steps.filter.outputs.api-source",
+      ),
+    );
+  }
+  if (
+    !hasExactKeys(verificationStep, ["name", "id", "shell", "env", "run"]) ||
+    verificationStep?.id !== "verification" ||
+    verificationStep?.shell !== "bash" ||
+    !hasExactRecord(recordValue(verificationStep, "env"), {
+      EVENT_BASE_SHA: "${{ github.event.pull_request.base.sha || github.event.before }}",
+      EVENT_HEAD_SHA: "${{ github.event.pull_request.head.sha || github.sha }}",
+      EVENT_NAME: "${{ github.event_name }}",
+    }) ||
+    normalizedRun(verificationStep ?? {}) !== EXPECTED_VERIFICATION_IDENTITY_RESOLVE
+  ) {
+    violations.push(
+      policyDiagnostic(
+        "BRANCH_POLICY_WORKFLOW_IDENTITY_RESOLVER_DRIFT",
+        "changes must resolve and expose the exact immutable base, head, and candidate identity",
+      ),
+    );
+  }
+  if (
+    !hasExactKeys(filterStep, ["name", "id", "shell", "env", "run"]) ||
+    filterStep?.id !== "filter" ||
+    filterStep?.shell !== "bash" ||
+    !hasExactKeys(filterEnvironment, [
+      "VERIFICATION_BASE",
+      "VERIFICATION_CANDIDATE",
+      "PATH_FILTERS",
+    ]) ||
+    filterEnvironment?.VERIFICATION_BASE !== "${{ steps.verification.outputs.base }}" ||
+    filterEnvironment?.VERIFICATION_CANDIDATE !== "${{ steps.verification.outputs.candidate }}" ||
+    typeof filterSource !== "string" ||
+    normalizedRun(filterStep ?? {}) !== EXPECTED_IMMUTABLE_PATH_FILTER
+  ) {
+    violations.push(
+      policyDiagnostic(
+        "BRANCH_POLICY_WORKFLOW_PATH_FILTER_IDENTITY_DRIFT",
+        "changes must run the local path classifier against the exact base and candidate",
       ),
     );
   }
@@ -910,7 +1123,9 @@ export function findRequiredWorkflowPolicyViolations(source: string): readonly s
     }
   }
 
-  violations.push(...inspectRequiredJob(jobs, "repository-contracts", undefined, undefined));
+  violations.push(
+    ...inspectRequiredJob(jobs, "repository-contracts", "changes", "${{ always() }}"),
+  );
   const repositoryContracts = recordValue(jobs, "repository-contracts");
   if (repositoryContracts) {
     violations.push(...inspectRepositoryContractJob(repositoryContracts));
@@ -942,6 +1157,13 @@ export function findRequiredWorkflowPolicyViolations(source: string): readonly s
         ),
       );
     }
+    violations.push(
+      ...inspectVerificationIdentityAssertion(
+        recordValue(jobs, id),
+        id,
+        id === "docs-sync-check" ? "needs.changes.outputs.api-source == 'true'" : undefined,
+      ),
+    );
   }
   const validateStep = namedStep(
     recordValue(jobs, "validate"),
@@ -955,6 +1177,8 @@ export function findRequiredWorkflowPolicyViolations(source: string): readonly s
     !hasExactRecord(recordValue(validateStep, "env"), {
       CROCO_TEST_EVIDENCE_DIR: "${{ github.workspace }}/ci-reports/test-evidence/records",
       VERIFICATION_BASE: "${{ needs.changes.outputs.base }}",
+      VERIFICATION_CANDIDATE: "${{ needs.changes.outputs.candidate }}",
+      VERIFICATION_HEAD: "${{ needs.changes.outputs.head }}",
       VERIFICATION_PROFILE: "${{ needs.changes.outputs.profile }}",
     }) ||
     validateRun !== EXPECTED_VALIDATE_RUN
@@ -966,6 +1190,13 @@ export function findRequiredWorkflowPolicyViolations(source: string): readonly s
       ),
     );
   }
+  violations.push(
+    ...inspectVerificationConsumptionBoundary(
+      recordValue(jobs, "validate"),
+      "validate",
+      "Run selected verification profile",
+    ),
+  );
   const docsStep = namedStep(
     recordValue(jobs, "docs-sync-check"),
     "Build docs and check for drift",
@@ -983,6 +1214,14 @@ export function findRequiredWorkflowPolicyViolations(source: string): readonly s
       ),
     );
   }
+  violations.push(
+    ...inspectVerificationConsumptionBoundary(
+      recordValue(jobs, "docs-sync-check"),
+      "docs-sync-check",
+      "Build docs and check for drift",
+      "needs.changes.outputs.api-source == 'true'",
+    ),
+  );
   return [...new Set(violations)];
 }
 
