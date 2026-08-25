@@ -13640,6 +13640,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "InvalidIdempotencySnapshotProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/IdempotencyProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "InvalidIdempotencyTtlProblem",
               "exportKind": "named",
               "source": "./libs/problems/IdempotencyProblems",
@@ -13773,6 +13779,11 @@
               "source": "./libs/types"
             },
             {
+              "name": "IdempotencySnapshotField",
+              "exportKind": "named",
+              "source": "./libs/problems/IdempotencyProblems"
+            },
+            {
               "name": "IdempotencyStore",
               "exportKind": "named",
               "source": "./libs/types"
@@ -13806,6 +13817,11 @@
               "name": "InMemoryIdempotencyStoreOptions",
               "exportKind": "named",
               "source": "./libs/InMemoryIdempotencyStore"
+            },
+            {
+              "name": "InvalidIdempotencySnapshotProblemOptions",
+              "exportKind": "named",
+              "source": "./libs/problems/IdempotencyProblems"
             },
             {
               "name": "InvalidIdempotencyTtlProblemOptions",
