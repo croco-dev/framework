@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -235,6 +236,23 @@ describe("changed-test-plan-shadow", () => {
     } finally {
       rmSync(directory, { recursive: true, force: true });
     }
+  });
+
+  it("reads assurance artifacts larger than Node's default child-process buffer", () => {
+    const path = "large-shadow-assurance-fixture.json";
+    const content = JSON.stringify({ payload: "x".repeat(1024 * 1024) });
+    const blob = execFileSync("git", ["hash-object", "-w", "--stdin"], {
+      cwd: ROOT,
+      encoding: "utf8",
+      input: content,
+    }).trim();
+    const tree = execFileSync("git", ["mktree"], {
+      cwd: ROOT,
+      encoding: "utf8",
+      input: `100644 blob ${blob}\t${path}\n`,
+    }).trim();
+
+    expect(readJsonAtRevision(path, tree)).toEqual({ payload: "x".repeat(1024 * 1024) });
   });
 
   it("reports the malformed evidence or baseline path and preserves the parse cause", () => {

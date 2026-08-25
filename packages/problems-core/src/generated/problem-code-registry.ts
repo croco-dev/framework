@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 658,
+  problemCount: 660,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -1876,6 +1876,36 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "batch-core/duplicate-step-name",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#batch-core-duplicate-step-name",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/batch-core/src/libs/problems/BatchStepProblems.ts",
+          line: 23,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "batch-core/invalid-chunk-size",
       category: "ValidationError",
       status: 422,
@@ -1902,6 +1932,36 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/batch-core/src/libs/ChunkSize.ts",
           line: 5,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "batch-core/invalid-step-name",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#batch-core-invalid-step-name",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/batch-core/src/libs/problems/BatchStepProblems.ts",
+          line: 4,
           column: 3,
           kind: "problem-class",
         },

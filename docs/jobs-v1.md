@@ -109,6 +109,9 @@ preserved legacy schedules, and mutations that were actually sent to QStash.
 ## Batch Checkpoints
 
 `@croco/batch-core` stores checkpoints under a per-step key such as `import-users.cursor`.
+Step names must contain a non-whitespace character and remain unique within each built job so these
+checkpoint identities cannot collide. Invalid names fail during `Step` construction, and duplicate
+names fail when `JobBuilder.build()` validates the complete job.
 Single-step jobs keep the default behavior and complete the execution when the step finishes.
 Multi-step jobs should keep the parent execution open for intermediate steps:
 

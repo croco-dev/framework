@@ -239,6 +239,30 @@ describe("QStashChunkExecutor continuation execution", () => {
     });
   });
 
+  it("keeps unique step cursor and processed-count checkpoints independent", async () => {
+    const harness = createHarness();
+    const execution = await harness.createExecution();
+    await harness.store.update(execution.id, {
+      checkpoints: {
+        "extract.cursor": { cursor: 4 },
+        "extract.processedCount": 4,
+      },
+    });
+
+    const result = await harness.executor.executeChunk(execution.id, {
+      ...createStep(createCheckpointReader([5, 6]), createWriter(), 1),
+      name: "load",
+    });
+
+    expect(result).toEqual({ hasMore: true, processedCount: 1 });
+    expect((await harness.manager.get(execution.id)).checkpoints).toEqual({
+      "extract.cursor": { cursor: 4 },
+      "extract.processedCount": 4,
+      "load.cursor": { cursor: 1 },
+      "load.processedCount": 1,
+    });
+  });
+
   it("uses a distinct idempotency token for each execution's first chunk", async () => {
     const harness = createHarness();
     const firstExecution = await harness.createExecution();
@@ -531,6 +555,32 @@ describe("QStashChunkExecutor continuation execution", () => {
       expect(claim).not.toHaveBeenCalled();
       expect(stage).not.toHaveBeenCalled();
       expect(complete).not.toHaveBeenCalled();
+      expect(reader.read).not.toHaveBeenCalled();
+      expect(reader.getCheckpoint).not.toHaveBeenCalled();
+      expect(reader.restoreCheckpoint).not.toHaveBeenCalled();
+      expect(writer.write).not.toHaveBeenCalled();
+      expect(writer.writeIdempotent).not.toHaveBeenCalled();
+      expect(harness.publishJSON).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["", "   ", "\t\n"])(
+    "rejects a blank step name %j before claiming execution state",
+    async (name) => {
+      const harness = createHarness();
+      const execution = await harness.createExecution();
+      const claim = vi.spyOn(harness.manager, "claimContinuation");
+      const reader = createCheckpointReader([1]);
+      const writer = createWriter();
+
+      await expect(
+        harness.executor.executeChunk(execution.id, {
+          ...createStep(reader, writer),
+          name,
+        }),
+      ).rejects.toMatchObject({ code: "batch-core/invalid-step-name" });
+
+      expect(claim).not.toHaveBeenCalled();
       expect(reader.read).not.toHaveBeenCalled();
       expect(reader.getCheckpoint).not.toHaveBeenCalled();
       expect(reader.restoreCheckpoint).not.toHaveBeenCalled();

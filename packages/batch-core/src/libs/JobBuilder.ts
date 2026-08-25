@@ -1,3 +1,8 @@
+import {
+  assertValidBatchStepName,
+  DuplicateBatchStepNameProblem,
+} from "./problems/BatchStepProblems";
+
 import type { Step } from "./Step";
 
 export interface Job {
@@ -26,6 +31,15 @@ export class JobBuilder {
   }
 
   build(): Job {
+    const stepNames = new Set<string>();
+    for (const step of this.steps) {
+      assertValidBatchStepName(step.name);
+      if (stepNames.has(step.name)) {
+        throw new DuplicateBatchStepNameProblem(step.name);
+      }
+      stepNames.add(step.name);
+    }
+
     return {
       name: this.name,
       steps: [...this.steps],

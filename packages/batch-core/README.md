@@ -75,6 +75,9 @@ const userStep = new Step({
 const job = new JobBuilder("daily-user-batch").start(userStep).build();
 ```
 
+Step 이름은 비어 있거나 공백만으로 구성될 수 없으며, 하나의 Job 안에서 checkpoint identity로
+유일해야 합니다. `JobBuilder.build()`는 중복 이름을 실행 또는 persistence side effect 전에 거부합니다.
+
 ### 3. 실패 재시도 분류
 
 기본적으로 Step 실행 중 발생한 오류는 재시도 가능한 실패로 기록됩니다. 검증 오류처럼 재시도해도 해결되지 않는 실패는 `classifyFailure`로 분류할 수 있습니다.

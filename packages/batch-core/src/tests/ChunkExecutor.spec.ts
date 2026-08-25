@@ -99,6 +99,30 @@ describe("ChunkExecutor", () => {
     expect(writer.write).toHaveBeenNthCalledWith(2, [11]);
   });
 
+  it.each(["", "   ", "\t\n"])(
+    "should reject a structurally supplied blank step name %j before execution starts",
+    async (name) => {
+      const read = vi.fn().mockResolvedValue(null);
+      const write = vi.fn().mockResolvedValue(undefined);
+
+      await expect(
+        executor.execute("exec-1", {
+          name,
+          reader: { read },
+          writer: { write },
+          chunkSize: 1,
+        } as Step<unknown, unknown>),
+      ).rejects.toMatchObject({ code: "batch-core/invalid-step-name" });
+
+      expect(executionManager.start).not.toHaveBeenCalled();
+      expect(read).not.toHaveBeenCalled();
+      expect(write).not.toHaveBeenCalled();
+      expect(executionManager.checkpoint).not.toHaveBeenCalled();
+      expect(executionManager.complete).not.toHaveBeenCalled();
+      expect(executionManager.fail).not.toHaveBeenCalled();
+    },
+  );
+
   it("should execute a simple step", async () => {
     const reader = {
       read: vi.fn().mockResolvedValueOnce(1).mockResolvedValueOnce(2).mockResolvedValueOnce(null),
