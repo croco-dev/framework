@@ -4346,6 +4346,12 @@
           "sourceEntrypoint": "packages/batch-core/src/index.ts",
           "runtimeExports": [
             {
+              "name": "assertValidBatchStepName",
+              "exportKind": "declaration",
+              "source": "./libs/problems/BatchStepProblems",
+              "declarationKind": "function"
+            },
+            {
               "name": "assertValidChunkSize",
               "exportKind": "declaration",
               "source": "./libs/ChunkSize",
@@ -4364,9 +4370,21 @@
               "declarationKind": "function"
             },
             {
+              "name": "DuplicateBatchStepNameProblem",
+              "exportKind": "declaration",
+              "source": "./libs/problems/BatchStepProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "InvalidBatchChunkSizeProblem",
               "exportKind": "declaration",
               "source": "./libs/ChunkSize",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InvalidBatchStepNameProblem",
+              "exportKind": "declaration",
+              "source": "./libs/problems/BatchStepProblems",
               "declarationKind": "class"
             },
             {

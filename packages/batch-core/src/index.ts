@@ -165,6 +165,7 @@ export * from "./libs/interfaces/ItemWriter";
  * ```
  */
 export * from "./libs/JobBuilder";
+export * from "./libs/problems/BatchStepProblems";
 export * from "./libs/StepFailure";
 
 /**

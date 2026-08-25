@@ -163,6 +163,7 @@ type PublicApiCompatibilityContract = {
 };
 
 const snapshotFileName = "public-api-surface.snapshot.json";
+const FORMATTER_MAX_BUFFER_BYTES = 16 * 1024 * 1024;
 const reportDirectory = join("ci-reports", "package-quality");
 const reportFileName = "public-api-diff.md";
 const summaryFileName = "public-api-summary.json";
@@ -1993,9 +1994,12 @@ function writeFormattedSnapshot(path: string, value: PublicApiSnapshot): void {
       cwd: scriptRootDir,
       encoding: "utf-8",
       input: content,
+      maxBuffer: FORMATTER_MAX_BUFFER_BYTES,
     },
   );
 
+  if (result.error)
+    throw new Error(`oxfmt failed for ${path}: ${result.error.message}`, { cause: result.error });
   if (result.status !== 0) {
     throw new Error(result.stderr.trim() || result.stdout.trim() || `oxfmt failed for ${path}`);
   }

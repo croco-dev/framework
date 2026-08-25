@@ -13,6 +13,7 @@ import type {
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const RUNTIME = resolve(ROOT, "packages/testing/dist/executable-assurance.mjs");
+const GIT_MAX_BUFFER_BYTES = 16 * 1024 * 1024;
 
 type PlannerRuntime = {
   readonly assertChangedTestSelectionBaseline: (
@@ -296,7 +297,11 @@ Product test failures and selection misses remain advisory in shadow mode. Plann
 }
 
 function git(args: readonly string[]): string {
-  return execFileSync("git", [...args], { cwd: ROOT, encoding: "utf8" });
+  return execFileSync("git", [...args], {
+    cwd: ROOT,
+    encoding: "utf8",
+    maxBuffer: GIT_MAX_BUFFER_BYTES,
+  });
 }
 
 function flag(args: readonly string[], name: string): string | null {

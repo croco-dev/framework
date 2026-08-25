@@ -1,5 +1,9 @@
+import {
+  assertValidBatchStepName,
+  assertValidChunkSize,
+  createStepExecutionError,
+} from "@croco/batch-core";
 import type { Checkpointable, ItemReader, ItemWriter, Step } from "@croco/batch-core";
-import { assertValidChunkSize, createStepExecutionError } from "@croco/batch-core";
 import type {
   Execution,
   ExecutionContinuationClaim,
@@ -389,6 +393,7 @@ function validateExecutionManager(
 }
 
 function validateQStashStep<I, O>(step: QStashStep<I, O>): void {
+  assertValidBatchStepName(step?.name);
   assertValidChunkSize(step?.chunkSize);
 
   if (!isCheckpointable(step?.reader)) {

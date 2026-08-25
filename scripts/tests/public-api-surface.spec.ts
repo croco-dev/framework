@@ -360,6 +360,24 @@ describe("public-api-surface.mts", () => {
     );
   }, 20000);
 
+  it("writes snapshots larger than the default subprocess buffer", () => {
+    const repo = createTempRepo();
+    writePackage(
+      repo,
+      "alpha",
+      "@croco/alpha",
+      Array.from({ length: 10_000 }, (_, index) => `export const value${index} = ${index};`).join(
+        "\n",
+      ),
+    );
+
+    const result = runScript(repo, "--write");
+    const snapshot = readFileSync(join(repo, "public-api-surface.snapshot.json"));
+
+    expect(result.status).toBe(0);
+    expect(snapshot.byteLength).toBeGreaterThan(1024 * 1024);
+  }, 30_000);
+
   it("fails configured grouped packages when a known source exports a new unclassified symbol", () => {
     const repo = createTempRepo();
     writePackage(
