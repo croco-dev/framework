@@ -865,7 +865,10 @@ const spineOnly = (
       id: "package-entrypoints-smoke",
       label: "Package entrypoint smoke",
       category: "package-smoke",
-      command: nodeScript("scripts/package-entrypoint-smoke.mts", "--build-missing"),
+      command: nodeScript(
+        "scripts/package-entrypoint-smoke.mts",
+        ...(changeScoped ? ["--build-missing"] : []),
+      ),
       timeoutMs: minutes(15),
       applicable: entrypointsApplicable,
     },

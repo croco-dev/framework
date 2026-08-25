@@ -892,7 +892,7 @@ describe("release-spine-evidence.mts", () => {
     expect(events).toEqual(["start:first", "end:first", "start:second", "end:second"]);
   });
 
-  it("serializes fast tests with workspace artifact consumers before integration", async () => {
+  it("locks integration against fast tests and workspace artifacts without serializing independent work", async () => {
     const repo = createTempRepo();
     const runtimeGate = createDeferred<void>();
     const buildGate = createDeferred<void>();
@@ -954,16 +954,15 @@ describe("release-spine-evidence.mts", () => {
     expect(events).not.toContain("start:test");
     typecheckGate.resolve(undefined);
 
-    await vi.waitFor(() => expect(events).toContain("start:package-entrypoints-smoke"));
-    expect(events).not.toContain("start:test");
-    expect(events).not.toContain("start:integration-test-lane");
-    entrypointGate.resolve(undefined);
     await vi.waitFor(() => {
-      expect(events).toContain("end:package-entrypoints-smoke");
       expect(events).toContain("start:test");
+      expect(events).toContain("start:package-entrypoints-smoke");
     });
     expect(events).not.toContain("start:integration-test-lane");
     testGate.resolve(undefined);
+    await vi.waitFor(() => expect(events).toContain("end:test"));
+    expect(events).not.toContain("start:integration-test-lane");
+    entrypointGate.resolve(undefined);
 
     const report = await execution;
     expect(report.status).toBe("passed");
@@ -975,8 +974,11 @@ describe("release-spine-evidence.mts", () => {
     expect(events.indexOf("end:generated-app-smoke")).toBeLessThan(
       events.indexOf("start:typecheck"),
     );
-    expect(events.indexOf("end:package-entrypoints-smoke")).toBeLessThan(
-      events.indexOf("start:test"),
+    expect(events.indexOf("start:test")).toBeLessThan(
+      events.indexOf("end:package-entrypoints-smoke"),
+    );
+    expect(events.indexOf("start:package-entrypoints-smoke")).toBeLessThan(
+      events.indexOf("end:test"),
     );
     expect(events.indexOf("end:test")).toBeLessThan(events.indexOf("start:integration-test-lane"));
     expect(events.indexOf("end:package-entrypoints-smoke")).toBeLessThan(
