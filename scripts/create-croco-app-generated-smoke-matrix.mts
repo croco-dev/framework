@@ -88,13 +88,11 @@ export const GENERATED_SMOKE_MATRIX_CASES = [
   },
   {
     name: "goal-saas-api",
-    tier: "ecosystem-advisory",
-    advisory: {
-      owner: "create-croco-app SaaS goal owner",
-      recoveryAction:
-        "CROCO_GENERATED_SMOKE_CASES=goal-saas-api pnpm create-croco-app:smoke; inspect the SaaS goal manifest, runtime capability, typecheck, build, test, and failure-drill contracts.",
-    },
+    tier: "spine-blocking",
   },
+  { name: "goal-spa-backend-split", tier: "spine-blocking" },
+  { name: "goal-worker", tier: "spine-blocking" },
+  { name: "goal-internal-tool", tier: "spine-blocking" },
   {
     name: "graphql-standalone-api",
     tier: "ecosystem-advisory",

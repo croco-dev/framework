@@ -22,6 +22,9 @@ const WORKSPACE_DEPENDENCY_FIELDS = [
 const CASE_TEMPLATE_ROOTS = {
   "blank-basic": ["blank"],
   "goal-saas-api": ["saas"],
+  "goal-spa-backend-split": ["spa-be-split"],
+  "goal-worker": ["base-ddd", "addons/web-meta-vite-fullstack"],
+  "goal-internal-tool": ["spa-be-split", "admin-console"],
   "graphql-standalone-api": [
     "base-ddd",
     "addons/graphql-standalone",
