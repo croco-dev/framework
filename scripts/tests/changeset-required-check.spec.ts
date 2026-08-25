@@ -1,7 +1,15 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { delimiter, dirname, join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 const scriptPath = resolve(__dirname, "../changeset-required-check.mts");
@@ -1259,6 +1267,31 @@ describe("changeset-required-check.mts", () => {
     );
   });
 
+  it("reports Git signal terminations", () => {
+    const repo = createTempRepo();
+    const bin = join(repo, "fake-bin");
+    const fakeGit = join(bin, "git");
+    mkdirSync(bin);
+    writeFileSync(fakeGit, "#!/bin/sh\necho before-signal >&2\nkill -TERM $$\n");
+    chmodSync(fakeGit, 0o755);
+
+    const result = runScript(repo, {
+      env: { PATH: `${bin}${delimiter}${process.env.PATH ?? ""}` },
+    });
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("before-signal");
+    expect(result.stdout).toContain("terminated by SIGTERM");
+  });
+
+  it("reports Git spawn failures without dereferencing missing output", () => {
+    const result = runScript(createTempRepo(), { env: { PATH: "" } });
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("spawnSync git ENOENT");
+    expect(result.stdout).not.toContain("TypeError");
+  });
+
   it("fails when a public API snapshot change has an unrelated changeset", () => {
     const repo = createTempRepo();
     checkoutBranch(repo, "fix/public-api-snapshot-unrelated-changeset");
@@ -1708,7 +1741,7 @@ function writeFile(repo: string, fileName: string, content: string): void {
 
 function runScript(repo: string, options: RunScriptOptions = {}): ScriptResult {
   const result = spawnSync(
-    "node",
+    process.execPath,
     ["--experimental-strip-types", scriptPath, "--root", repo, "--base", "trunk", "--head", "HEAD"],
     {
       encoding: "utf-8",

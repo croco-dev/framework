@@ -13306,7 +13306,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/presentation-preset/src/frontend-action-manifest.ts",
-          line: 477,
+          line: 498,
           column: 5,
           kind: "problem-constructor",
         },
@@ -13337,7 +13337,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/presentation-preset/src/frontend-action-manifest.ts",
-          line: 467,
+          line: 488,
           column: 5,
           kind: "problem-constructor",
         },

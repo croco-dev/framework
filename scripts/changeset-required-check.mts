@@ -115,7 +115,12 @@ function runGit(rootDir: string, args: readonly string[]): string {
   }
 
   if (result.status !== 0) {
-    throw new Error(result.stderr.trim() || `git ${args.join(" ")} failed`);
+    const details = [
+      result.stderr?.trim(),
+      result.signal ? `terminated by ${result.signal}` : undefined,
+    ].filter((detail): detail is string => Boolean(detail));
+    const suffix = details.length > 0 ? `: ${details.join("; ")}` : "";
+    throw new Error(`git ${args.join(" ")} failed${suffix}`);
   }
 
   return result.stdout.trim();

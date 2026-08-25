@@ -227,25 +227,27 @@ function validateMergeInput(input: FrontendActionManifestMergeInput): {
     throw new FrontendActionManifestInvalidProblem("Manifest producer source must not be empty.");
   }
 
-  if (!isRecordWithKeys(input.manifest, ["schemaVersion", "actions"])) {
+  const manifest = normalizeJsonValue(input.manifest, input.source);
+
+  if (!isRecordWithKeys(manifest, ["schemaVersion", "actions"])) {
     throw new FrontendActionManifestInvalidProblem(
       `Manifest from ${quote(input.source)} must be an object.`,
     );
   }
 
-  if (input.manifest.schemaVersion !== FRONTEND_ACTION_MANIFEST_SCHEMA_VERSION) {
+  if (manifest.schemaVersion !== FRONTEND_ACTION_MANIFEST_SCHEMA_VERSION) {
     throw new FrontendActionManifestInvalidProblem(
-      `Manifest from ${quote(input.source)} uses schema version ${quote(String(input.manifest.schemaVersion))}; expected ${quote(FRONTEND_ACTION_MANIFEST_SCHEMA_VERSION)}.`,
+      `Manifest from ${quote(input.source)} uses schema version ${quote(String(manifest.schemaVersion))}; expected ${quote(FRONTEND_ACTION_MANIFEST_SCHEMA_VERSION)}.`,
     );
   }
 
-  if (!Array.isArray(input.manifest.actions)) {
+  if (!Array.isArray(manifest.actions)) {
     throw new FrontendActionManifestInvalidProblem(
       `Manifest from ${quote(input.source)} must contain an actions array.`,
     );
   }
 
-  for (const [index, action] of input.manifest.actions.entries()) {
+  for (const [index, action] of manifest.actions.entries()) {
     if (!isFrontendActionManifestEntry(action)) {
       throw new FrontendActionManifestInvalidProblem(
         `Manifest from ${quote(input.source)} contains an invalid action at index ${index}.`,
@@ -253,7 +255,26 @@ function validateMergeInput(input: FrontendActionManifestMergeInput): {
     }
   }
 
-  return { source: input.source, manifest: input.manifest as FrontendActionManifest };
+  return { source: input.source, manifest: manifest as FrontendActionManifest };
+}
+
+function normalizeJsonValue(value: unknown, source: string): unknown {
+  let serialized: string | undefined;
+  try {
+    serialized = JSON.stringify(value);
+  } catch {
+    throw new FrontendActionManifestInvalidProblem(
+      `Manifest from ${quote(source)} must be serializable as JSON.`,
+    );
+  }
+
+  if (serialized === undefined) {
+    throw new FrontendActionManifestInvalidProblem(
+      `Manifest from ${quote(source)} must be serializable as JSON.`,
+    );
+  }
+
+  return JSON.parse(serialized) as unknown;
 }
 
 function isFrontendActionManifestEntry(value: unknown): value is FrontendActionManifestEntry {

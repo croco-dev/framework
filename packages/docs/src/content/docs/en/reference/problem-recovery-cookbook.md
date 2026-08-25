@@ -8346,7 +8346,7 @@ Sources:
 
 Sources:
 
-- `packages/presentation-preset/src/frontend-action-manifest.ts:477:5` (problem-constructor)
+- `packages/presentation-preset/src/frontend-action-manifest.ts:498:5` (problem-constructor)
 
 <a id="presentation-preset-frontend-action-manifest-invalid"></a>
 
@@ -8364,7 +8364,7 @@ Sources:
 
 Sources:
 
-- `packages/presentation-preset/src/frontend-action-manifest.ts:467:5` (problem-constructor)
+- `packages/presentation-preset/src/frontend-action-manifest.ts:488:5` (problem-constructor)
 
 <a id="preset-node-invalid-close-timeout"></a>
 

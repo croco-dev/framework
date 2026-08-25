@@ -10,7 +10,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { delimiter, join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { TRACKED_FILE_MUTATION_EXIT_CODE } from "../tracked-file-mutation-guard.mts";
 
@@ -56,6 +56,57 @@ describe("tracked-file-mutation-guard", () => {
     expect(listing.stdout.length).toBeGreaterThan(1024 * 1024);
 
     expect(run(repo, ["node", "-e", "process.exit(0)"]).status).toBe(0);
+  });
+  it("reports Git signal terminations", () => {
+    const repo = createRepository();
+    const bin = join(repo, "fake-bin");
+    const fakeGit = join(bin, "git");
+    mkdirSync(bin);
+    writeFileSync(fakeGit, "#!/bin/sh\necho before-signal >&2\nkill -TERM $$\n");
+    chmodSync(fakeGit, 0o755);
+
+    const result = spawnSync(
+      process.execPath,
+      [
+        "--experimental-strip-types",
+        script,
+        "--recovery",
+        "pnpm fixture:write",
+        "--",
+        "node",
+        "-e",
+        "process.exit(0)",
+      ],
+      {
+        cwd: repo,
+        encoding: "utf8",
+        env: { ...process.env, PATH: `${bin}${delimiter}${process.env.PATH ?? ""}` },
+      },
+    );
+
+    expect(result.status).toBe(TRACKED_FILE_MUTATION_EXIT_CODE);
+    expect(result.stderr).toContain("before-signal");
+    expect(result.stderr).toContain("terminated by SIGTERM");
+  });
+  it("reports Git spawn failures without dereferencing missing output", () => {
+    const result = spawnSync(
+      process.execPath,
+      [
+        "--experimental-strip-types",
+        script,
+        "--recovery",
+        "pnpm fixture:write",
+        "--",
+        "node",
+        "-e",
+        "process.exit(0)",
+      ],
+      { cwd: createRepository(), encoding: "utf8", env: { ...process.env, PATH: "" } },
+    );
+
+    expect(result.status).toBe(TRACKED_FILE_MUTATION_EXIT_CODE);
+    expect(result.stderr).toContain("spawnSync git ENOENT");
+    expect(result.stderr).not.toContain("TypeError");
   });
   it("detects rewrite and reports recovery", () => {
     const repo = createRepository();

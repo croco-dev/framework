@@ -237,6 +237,45 @@ describe("FrontendActionManifest", () => {
     }
   });
 
+  it("rejects manifests whose JSON-normalized form violates the schema", () => {
+    const inheritedAction = Object.create(action) as unknown;
+
+    expect(() =>
+      mergeFrontendActionManifests([
+        {
+          source: "inherited producer",
+          manifest: {
+            schemaVersion: FRONTEND_ACTION_MANIFEST_SCHEMA_VERSION,
+            actions: [inheritedAction],
+          },
+        },
+      ]),
+    ).toThrow(
+      expect.objectContaining({
+        code: "presentation-preset/frontend-action-manifest-invalid",
+        detail: expect.stringContaining(
+          'Manifest from "inherited producer" contains an invalid action at index 0.',
+        ),
+      }),
+    );
+  });
+
+  it("reports non-serializable manifests as validation Problems", () => {
+    const manifest = createFrontendActionManifest([action]) as {
+      readonly actions: readonly FrontendActionManifestEntry[];
+      readonly schemaVersion: typeof FRONTEND_ACTION_MANIFEST_SCHEMA_VERSION;
+      circular?: unknown;
+    };
+    manifest.circular = manifest;
+
+    expect(() => mergeFrontendActionManifests([{ source: "circular producer", manifest }])).toThrow(
+      expect.objectContaining({
+        code: "presentation-preset/frontend-action-manifest-invalid",
+        detail: 'Manifest from "circular producer" must be serializable as JSON.',
+      }),
+    );
+  });
+
   it("writes a combined artifact that passes the drift assertion with every producer action", async () => {
     const directory = await mkdtemp(join(tmpdir(), "croco-frontend-action-manifest-combined-"));
     const outputPath = join(directory, "frontend-action-manifest.json");
