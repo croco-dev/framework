@@ -61,7 +61,7 @@ class UnexpectedCliFailureProblem extends Problem {
 
   constructor(detail: string, cause?: Error) {
     super(undefined, undefined, detail, {
-      cause,
+      ...(cause ? { cause } : {}),
       extensions: {
         recovery:
           "Inspect the unexpected error, fix the underlying cause, and rerun create-croco-app.",
@@ -117,16 +117,14 @@ export function createFailureResult(
       ? {
           destination: inspectDestination(context.targetDir),
           retryCommand: context.retryCommand,
-          ...(context.retryCommand.args.includes("--json")
-            ? { diagnosticCommand: withoutJsonOutput(context.retryCommand) }
-            : {}),
+          diagnosticCommand: withoutJsonOutput(context.retryCommand),
         }
       : {}),
   };
 }
 
 function withoutJsonOutput(command: CreateCrocoAppRetryCommand): CreateCrocoAppRetryCommand {
-  const args = command.args.at(-1) === "--json" ? command.args.slice(0, -1) : [...command.args];
+  const args = command.args.filter((arg) => arg !== "--json");
 
   return {
     command: command.command,
@@ -146,7 +144,10 @@ export function formatHumanSuccess(
   ].join("\n");
 }
 
-export function formatHumanFailure(result: CreateCrocoAppFailureResult): string {
+export function formatHumanFailure(
+  result: CreateCrocoAppFailureResult,
+  platform: NodeJS.Platform = process.platform,
+): string {
   const detail =
     typeof result.diagnostic.detail === "string"
       ? result.diagnostic.detail
@@ -162,6 +163,20 @@ export function formatHumanFailure(result: CreateCrocoAppFailureResult): string 
 
   if (result.stagingCleanup) {
     lines.push(`Staging cleanup: ${result.stagingCleanup.detail}`);
+  }
+
+  if (result.destination) {
+    lines.push(
+      `Destination: ${result.destination.targetDir} (${result.destination.state}, untouched: ${result.destination.untouched ? "yes" : "no"})`,
+    );
+  }
+
+  if (result.retryCommand) {
+    lines.push(`Retry command: ${formatCommand(result.retryCommand, platform)}`);
+  }
+
+  if (result.diagnosticCommand) {
+    lines.push(`Diagnostic command: ${formatCommand(result.diagnosticCommand, platform)}`);
   }
 
   return `\n${lines.join("\n")}`;
@@ -246,6 +261,10 @@ function formatNextStepCommand(step: CreateCrocoAppNextStep, platform: NodeJS.Pl
   ].join(" ");
 }
 
+function formatCommand(command: CreateCrocoAppRetryCommand, platform: NodeJS.Platform): string {
+  return [command.command, ...command.args.map((arg) => quoteShellArg(arg, platform))].join(" ");
+}
+
 function quoteShellArg(value: string, platform: NodeJS.Platform): string {
   if (platform === "win32") {
     return quoteWindowsCommandArg(value);
@@ -263,5 +282,26 @@ function quotePosixShellArg(value: string): string {
 }
 
 function quoteWindowsCommandArg(value: string): string {
-  return /^[A-Za-z0-9_@%+=:,./-]+$/.test(value) ? value : `"${value}"`;
+  if (/^[A-Za-z0-9_@%+=:,./-]+$/.test(value)) {
+    return value;
+  }
+
+  let quoted = '"';
+  let pendingBackslashes = 0;
+
+  for (const character of value) {
+    if (character === "\\") {
+      pendingBackslashes += 1;
+      continue;
+    }
+
+    if (character === '"') {
+      quoted += `${"\\".repeat(pendingBackslashes * 2 + 1)}"`;
+    } else {
+      quoted += `${"\\".repeat(pendingBackslashes)}${character}`;
+    }
+    pendingBackslashes = 0;
+  }
+
+  return `${quoted}${"\\".repeat(pendingBackslashes * 2)}"`;
 }

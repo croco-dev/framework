@@ -185,10 +185,7 @@ function verifyJsonFailureOutput(consumerRoot: string): void {
     [
       "const args = process.argv.slice(2);",
       "const failure = process.env.CROCO_FAKE_PNPM_FAILURE;",
-      'const { readdirSync, unlinkSync, writeSync } = await import("node:fs");',
-      'for (const entry of readdirSync(".")) {',
-      '  if (entry.startsWith(".croco-pnpm-")) unlinkSync(entry);',
-      "}",
+      'const { writeSync } = await import("node:fs");',
       'if (args[0] === "--version") { console.log("11.9.0"); process.exit(0); }',
       'if (failure === "dependency-install" && args.includes("--no-frozen-lockfile")) {',
       '  writeSync(2, "x".repeat(1_100_000));',

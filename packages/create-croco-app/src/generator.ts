@@ -100,7 +100,7 @@ export async function generate(
     if (!failed) {
       throw cleanupError;
     }
-    recordStagingCleanupFailure(primaryError, cleanupError);
+    primaryError = recordStagingCleanupFailure(primaryError, cleanupError);
   }
 
   if (failed) {

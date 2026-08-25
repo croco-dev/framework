@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { PassThrough } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createFailureResult } from "../cli-result.js";
+import { recordStagingCleanupFailure } from "../generation-failure-evidence.js";
 import { PnpmCommandProblem } from "../libs/problems/PnpmCommandProblem.js";
 import type * as stagingModule from "../staging.js";
 import type { GeneratorOptions } from "../types.js";
@@ -90,4 +91,22 @@ describe("generate() staging cleanup evidence", () => {
 
     expect(cleanupMock).not.toHaveBeenCalled();
   });
+
+  it.each(["primitive failure", null, 42])(
+    "preserves cleanup evidence for a primitive primary failure: %s",
+    (primaryError) => {
+      const recordedError = recordStagingCleanupFailure(
+        primaryError,
+        new Error("staging directory is locked"),
+      );
+
+      expect(createFailureResult(recordedError)).toMatchObject({
+        unexpected: true,
+        stagingCleanup: {
+          ok: false,
+          detail: "Error: staging directory is locked",
+        },
+      });
+    },
+  );
 });

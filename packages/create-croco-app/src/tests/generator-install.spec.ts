@@ -1,3 +1,4 @@
+import { EventEmitter } from "node:events";
 import {
   existsSync,
   mkdirSync,
@@ -5,10 +6,11 @@ import {
   readFileSync,
   readdirSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { PassThrough } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DirectoryNotEmptyProblem } from "../libs/problems/DirectoryNotEmptyProblem.js";
@@ -64,7 +66,8 @@ describe("generate() pnpm install contract", () => {
 
     const installDir = spawnMock.mock.calls[1]?.[1]?.cwd as string;
 
-    expect(installDir).toMatch(new RegExp(`^${testRoot}/\\.croco-stage-${process.pid}-`));
+    expect(dirname(installDir)).toBe(testRoot);
+    expect(basename(installDir).startsWith(`.croco-stage-${process.pid}-`)).toBe(true);
     expect(installDir).not.toBe(testDir);
     expect(spawnMock.mock.calls).toEqual([
       ["pnpm --version", { cwd: installDir, shell: true, stdio: ["ignore", "ignore", "ignore"] }],
@@ -99,7 +102,8 @@ describe("generate() pnpm install contract", () => {
 
     const gitDir = execSyncMock.mock.calls[0]?.[1]?.cwd as string;
     expect(execSyncMock).toHaveBeenCalledWith("git init", { cwd: gitDir, stdio: "ignore" });
-    expect(gitDir).toMatch(new RegExp(`^${testRoot}/\\.croco-stage-${process.pid}-`));
+    expect(dirname(gitDir)).toBe(testRoot);
+    expect(basename(gitDir).startsWith(`.croco-stage-${process.pid}-`)).toBe(true);
     expect(gitDir).not.toBe(testDir);
     expect(existsSync(join(testDir, "package.json"))).toBe(true);
   });
@@ -204,6 +208,29 @@ describe("generate() pnpm install contract", () => {
     expect(findStagingDirectories(testDir)).toEqual([]);
   });
 
+  it("rejects an existing file target with a structured Problem", async () => {
+    const { generate } = await import("../generator.js");
+    writeFileSync(testDir, "keep me\n");
+
+    const error = await generate(testDir, baseOptions).catch((cause: unknown) => cause);
+
+    expect(error).toBeInstanceOf(DirectoryNotEmptyProblem);
+    expect(readFileSync(testDir, "utf8")).toBe("keep me\n");
+    expect(findStagingDirectories(testDir)).toEqual([]);
+  });
+
+  it.runIf(process.platform !== "win32")(
+    "publishes the target with normal directory permissions",
+    async () => {
+      const { generate } = await import("../generator.js");
+      const expectedMode = 0o777 & ~process.umask();
+
+      await generate(testDir, baseOptions);
+
+      expect(statSync(testDir).mode & 0o777).toBe(expectedMode);
+    },
+  );
+
   it("supports target names near the filesystem component limit", async () => {
     const { generate } = await import("../generator.js");
     const longTargetDir = join(testRoot, "a".repeat(240));
@@ -257,4 +284,3 @@ describe("generate() pnpm install contract", () => {
 function findStagingDirectories(targetDir: string): string[] {
   return readdirSync(dirname(targetDir)).filter((entry) => entry.startsWith(".croco-stage-"));
 }
-import { EventEmitter } from "node:events";

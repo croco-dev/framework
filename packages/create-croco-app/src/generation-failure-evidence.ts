@@ -5,18 +5,17 @@ export type StagingCleanupFailure = {
 
 const cleanupFailures = new WeakMap<object, StagingCleanupFailure>();
 
-export function recordStagingCleanupFailure(primaryError: unknown, cleanupError: unknown): void {
-  if (
-    (typeof primaryError !== "object" || primaryError === null) &&
-    typeof primaryError !== "function"
-  ) {
-    return;
-  }
+export function recordStagingCleanupFailure(primaryError: unknown, cleanupError: unknown): object {
+  const recordedError = isWeakMapKey(primaryError)
+    ? primaryError
+    : new Error(describeError(primaryError));
 
-  cleanupFailures.set(primaryError, {
+  cleanupFailures.set(recordedError, {
     ok: false,
     detail: describeError(cleanupError),
   });
+
+  return recordedError;
 }
 
 export function readStagingCleanupFailure(error: unknown): StagingCleanupFailure | undefined {
@@ -29,4 +28,8 @@ export function readStagingCleanupFailure(error: unknown): StagingCleanupFailure
 
 function describeError(error: unknown): string {
   return error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+}
+
+function isWeakMapKey(value: unknown): value is object {
+  return (typeof value === "object" && value !== null) || typeof value === "function";
 }
