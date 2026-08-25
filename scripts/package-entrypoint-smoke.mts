@@ -739,9 +739,16 @@ function readPackedJson(tarballPath: string, entryPath: string, rootDir: string)
 }
 
 function readPackedFile(tarballPath: string, entryPath: string, rootDir: string): string {
-  return run("tar", ["-xOf", tarballPath, entryPath], rootDir, {
-    label: `${tarballPath}: read ${entryPath}`,
-  }).stdout;
+  const extractRoot = mkdtempSync(join(tmpdir(), "croco-packed-file-"));
+
+  try {
+    run("tar", ["-xf", tarballPath, "-C", extractRoot, entryPath], rootDir, {
+      label: `${tarballPath}: extract ${entryPath}`,
+    });
+    return readFileSync(join(extractRoot, entryPath), "utf-8");
+  } finally {
+    rmSync(extractRoot, { force: true, recursive: true });
+  }
 }
 
 function packedFileExists(tarballPath: string, entryPath: string, rootDir: string): boolean {

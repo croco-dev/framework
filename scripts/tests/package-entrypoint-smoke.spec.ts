@@ -450,6 +450,18 @@ describe("package-entrypoint-smoke.mts", () => {
     expect(result.stdout).toContain("✓ @croco/prefix: esm 1, cjs 1, types 1");
   });
 
+  it("reads packed entrypoints larger than the child process output buffer", () => {
+    const root = createTempRoot();
+    writeImportablePackage(root, "large-entrypoint", {
+      cjsContent: `exports.value = "${"x".repeat(1_100_000)}";\n`,
+    });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("✓ @croco/large-entrypoint: esm 1, cjs 1, types 1");
+  });
+
   it("does not resolve dependencies from package-local node_modules", () => {
     const root = createTempRoot();
     writeImportablePackage(root, "package-local-dependency", {
