@@ -48,6 +48,7 @@ export { WebhookLifecycleActionAdapter } from "./libs/WebhookLifecycleActionAdap
 export {
   DuplicateLifecycleRuleProblem,
   LifecycleActionAdapterProblem,
+  LifecycleRunEvidenceProblem,
   LifecycleRunFinalizationProblem,
   LifecycleRuleActionContractProblem,
   LifecycleRuleCommandConflictProblem,

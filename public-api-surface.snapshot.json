@@ -14814,6 +14814,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "LifecycleRunEvidenceProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/LifecycleProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "LifecycleRunFinalizationProblem",
               "exportKind": "named",
               "source": "./libs/problems/LifecycleProblems",
