@@ -17,7 +17,7 @@ title: "ProblemClientExternalFailure"
 
 ### error
 
-> `readonly` **error**: [`ProblemResponseError`](/api/frontend-problems/src/classes/problemresponseerror/) \| [`ProblemClientError`](/api/frontend-problems/src/classes/problemclienterror/)
+> `readonly` **error**: [`ProblemResponseError`](/api/frontend-problems/src/classes/problemresponseerror/) \| [`ProblemClientError`](/api/frontend-problems/src/classes/problemclienterror/) \| [`ProblemStatusMismatchError`](/api/frontend-problems/src/classes/problemstatusmismatcherror/)
 
 ---
 
