@@ -120,7 +120,8 @@ describe("rpc-codegen round trip", () => {
     const userContent = fs.readFileSync(path.join(outDir, "user.ts"), "utf-8");
     const orderContent = fs.readFileSync(path.join(outDir, "order.ts"), "utf-8");
 
-    expect(userContent).toContain("export const userClient = {");
+    expect(userContent).toContain("export function createUserClient(config: RpcClientConfig = {})");
+    expect(userContent).toContain("export const userClient = createUserClient();");
     expect(userContent).toContain(
       "listUsers: (options?: RpcClientRequestOptions): Promise<unknown | undefined> =>",
     );
@@ -128,9 +129,12 @@ describe("rpc-codegen round trip", () => {
       "createUser: (input: CreateUserInput, options?: RpcClientRequestOptions): Promise<unknown | undefined> =>",
     );
     expect(userContent).toContain(
-      "const request = createRpcClientRequest(userContractRoutes[1], 'mutation', '/users', { method: 'POST', body: JSON.stringify(input), headers: { 'Content-Type': 'application/json' } }, options);",
+      "const request = createRpcClientRequest(userContractRoutes[1], 'mutation', '/users', { method: 'POST', body: JSON.stringify(input), headers: { 'Content-Type': 'application/json' } }, options, config);",
     );
-    expect(orderContent).toContain("export const orderClient = {");
+    expect(orderContent).toContain(
+      "export function createOrderClient(config: RpcClientConfig = {})",
+    );
+    expect(orderContent).toContain("export const orderClient = createOrderClient();");
     expect(orderContent).toContain(
       "listOrders: (options?: RpcClientRequestOptions): Promise<unknown | undefined> =>",
     );
@@ -163,6 +167,116 @@ describe("rpc-codegen round trip", () => {
       method: "POST",
       body: JSON.stringify({ name: "Bob" }),
       headers: { "Content-Type": "application/json" },
+    });
+  });
+
+  it("creates isolated clients with configured transport defaults and request precedence", async () => {
+    const routeIRs: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "getCurrentUser",
+        httpMethod: "GET",
+        path: "/me",
+        routeContract: null,
+        params: [{ kind: "header", name: "x-precedence", schema: null }],
+        inputSchema: null,
+        inputSchemas: {
+          body: null,
+          path: null,
+          query: null,
+          headers: z.object({ "x-precedence": z.string() }) as any,
+        },
+        outputSchema: null,
+        domain: "user",
+      },
+      {
+        controllerName: "UserController",
+        methodName: "createUser",
+        httpMethod: "POST",
+        path: "/users",
+        routeContract: null,
+        params: [{ kind: "body", name: "", schema: null }],
+        inputSchema: null,
+        inputSchemas: BODY_INPUT_SCHEMAS,
+        outputSchema: null,
+        domain: "user",
+      },
+    ];
+
+    const files = generateClientFiles(routeIRs, outDir);
+    const userContent = fs.readFileSync(files[0], "utf-8");
+    const userModule = await importGeneratedClient("user-configured.ts", userContent);
+    const globalFetch = vi.fn(async () => new Response(null, { status: 204 }));
+    const configuredFetch = vi.fn(async () => new Response(null, { status: 204 }));
+    const signal = new AbortController().signal;
+    const client = userModule.createUserClient({
+      baseUrl: "https://api.example.com/v1/",
+      fetch: configuredFetch,
+      headers: {
+        Authorization: "Bearer default",
+        "x-precedence": "default",
+      },
+      request: {
+        cache: "no-store",
+        credentials: "include",
+      },
+      telemetry: {
+        createHeaders: () => ({
+          traceparent: "00-00000000000000000000000000000001-0000000000000001-01",
+          "x-precedence": "telemetry",
+        }),
+      },
+    });
+
+    vi.stubGlobal("fetch", globalFetch);
+
+    await client.getCurrentUser(
+      { headers: { "x-precedence": "route" } },
+      {
+        headers: {
+          authorization: "Bearer request",
+          "x-precedence": "request",
+        },
+        request: { credentials: "omit" },
+        signal,
+      },
+    );
+    await client.getCurrentUser({ headers: { "x-precedence": "route" } });
+    await client.createUser({ name: "Ada" });
+
+    expect(globalFetch).not.toHaveBeenCalled();
+    expect(configuredFetch).toHaveBeenNthCalledWith(1, "https://api.example.com/me", {
+      method: "GET",
+      cache: "no-store",
+      credentials: "omit",
+      headers: {
+        authorization: "Bearer request",
+        traceparent: "00-00000000000000000000000000000001-0000000000000001-01",
+        "x-precedence": "request",
+      },
+      signal,
+    });
+    expect(configuredFetch).toHaveBeenNthCalledWith(2, "https://api.example.com/me", {
+      method: "GET",
+      cache: "no-store",
+      credentials: "include",
+      headers: {
+        Authorization: "Bearer default",
+        traceparent: "00-00000000000000000000000000000001-0000000000000001-01",
+        "x-precedence": "telemetry",
+      },
+    });
+    expect(configuredFetch).toHaveBeenNthCalledWith(3, "https://api.example.com/users", {
+      method: "POST",
+      cache: "no-store",
+      credentials: "include",
+      body: JSON.stringify({ name: "Ada" }),
+      headers: {
+        Authorization: "Bearer default",
+        "Content-Type": "application/json",
+        traceparent: "00-00000000000000000000000000000001-0000000000000001-01",
+        "x-precedence": "telemetry",
+      },
     });
   });
 
@@ -1345,6 +1459,22 @@ async function importGeneratedClient(fileName: string, source: string) {
   fs.writeFileSync(modulePath, output.outputText);
 
   return import(pathToFileURL(modulePath).href) as Promise<{
+    readonly createUserClient: (config?: {
+      readonly baseUrl?: string;
+      readonly fetch?: (url: string, init: RequestInit) => Promise<Response>;
+      readonly headers?: HeadersInit;
+      readonly request?: Omit<RequestInit, "body" | "headers" | "method" | "signal">;
+      readonly telemetry?: unknown;
+    }) => {
+      readonly createUser: (
+        input: { readonly name: string },
+        options?: unknown,
+      ) => Promise<unknown>;
+      readonly getCurrentUser: (
+        input: { readonly headers: { readonly "x-precedence": string } },
+        options?: unknown,
+      ) => Promise<unknown>;
+    };
     readonly userClient: {
       readonly listUsers: () => Promise<unknown>;
       readonly createUser: (
