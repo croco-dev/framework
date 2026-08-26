@@ -5401,7 +5401,7 @@ Sources:
 
 Sources:
 
-- `packages/frontend-problems/src/index.ts:206:3` (problem-class)
+- `packages/frontend-problems/src/index.ts:220:3` (problem-class)
 
 <a id="frontend-react-page-data-unavailable"></a>
 

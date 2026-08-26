@@ -4,6 +4,7 @@ import {
   ProblemClientError,
   ProblemFetchUnavailableError,
   ProblemResponseError,
+  ProblemStatusMismatchError,
   assertProblemExhaustive,
   fetchProblemJson,
   handleJsonResponse,
@@ -113,6 +114,63 @@ describe("frontend Problem client runtime", () => {
     } else {
       throw new Error("Expected external failure for undeclared Problem.");
     }
+  });
+
+  it("rejects HTTP and Problem status mismatches for direct responses", async () => {
+    const response = jsonResponse(userNotFoundProblem, 500);
+    const request = handleJsonResponse(response);
+
+    await expect(request).rejects.toBeInstanceOf(ProblemStatusMismatchError);
+    await expect(request).rejects.toMatchObject({
+      httpStatus: 500,
+      name: "ProblemStatusMismatchError",
+      problemStatus: 404,
+      response,
+    });
+    await expect(request).rejects.toThrow(
+      "Problem response status mismatch: HTTP 500, Problem 404",
+    );
+  });
+
+  it("keeps HTTP and Problem status mismatches external for generated-client results", async () => {
+    const response = jsonResponse(userNotFoundProblem, 500);
+    const result = await handleJsonResult<{ readonly id: string }, DeclaredProblem>(
+      response,
+      declaredProblems,
+    );
+
+    expect(result).toMatchObject({
+      ok: false,
+      kind: "external",
+      body: userNotFoundProblem,
+      error: {
+        httpStatus: 500,
+        name: "ProblemStatusMismatchError",
+        problemStatus: 404,
+      },
+      response,
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok && result.kind === "external") {
+      expect(result.error).toBeInstanceOf(ProblemStatusMismatchError);
+    }
+  });
+
+  it("keeps HTTP and Problem status mismatches external for generic Problem results", async () => {
+    const response = jsonResponse(userNotFoundProblem, 500);
+    const result = await readJsonProblemResult(response);
+
+    expect(result).toMatchObject({
+      ok: false,
+      kind: "external",
+      body: userNotFoundProblem,
+      error: {
+        httpStatus: 500,
+        name: "ProblemStatusMismatchError",
+        problemStatus: 404,
+      },
+      response,
+    });
   });
 
   it("returns generic Problem failures for shared fetch wrappers", async () => {

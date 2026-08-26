@@ -35,6 +35,15 @@ type GeneratedRpcProblemErrorConstructor = new (
   readonly problem: Record<string, unknown>;
   readonly response: Response;
 };
+type GeneratedRpcStatusMismatchErrorConstructor = new (
+  response: Response,
+  problemStatus: number,
+) => Error & {
+  readonly httpStatus: number;
+  readonly problemStatus: number;
+  readonly response: Response;
+};
+type GeneratedRpcHandleJsonResponse = (response: Response, telemetry?: unknown) => Promise<unknown>;
 type GeneratedRpcHandleJsonResult = (
   response: Response,
   declaredProblems?: readonly {
@@ -914,6 +923,7 @@ describe("generateClientFiles", () => {
 
     expect(rpcContent).toContain("} from '@croco/frontend-problems';");
     expect(rpcContent).toContain("ProblemClientError as RpcClientProblemError");
+    expect(rpcContent).toContain("ProblemStatusMismatchError as RpcClientStatusMismatchError");
     expect(rpcContent).toContain("ProblemDeclaration as RpcDeclaredProblem");
     expect(rpcContent).not.toContain("export class RpcClientProblemError extends Error");
     expect(rpcContent).not.toContain("function isRpcProblemDetails");
@@ -2133,6 +2143,70 @@ void handleMissingProblemBranch;
       ok: false,
       kind: "external",
       body: problemBody,
+    });
+  });
+
+  it("should reject HTTP and Problem status mismatches in direct and Result clients", async () => {
+    const routes: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "get",
+        httpMethod: "GET",
+        path: "/users/:id",
+        routeContract: null,
+        params: [{ kind: "path", name: "id", schema: null }],
+        inputSchema: null,
+        inputSchemas: PATH_INPUT_SCHEMAS,
+        outputSchema: z.object({ id: z.string(), name: z.string() }) as any,
+        problemResponses: [
+          {
+            code: "USER_NOT_FOUND",
+            category: ProblemCategory.NotFound,
+            status: 404,
+          },
+        ],
+        domain: null,
+      },
+    ];
+    const problemBody = {
+      type: "about:blank",
+      title: "Not Found",
+      status: 404,
+      code: "USER_NOT_FOUND",
+      detail: "User missing",
+    };
+    const declaration = { code: "USER_NOT_FOUND", category: "NotFound", status: 404 };
+
+    generateClientFiles(routes, TEMP_DIR);
+    const { handleJsonResponse, handleJsonResult, RpcClientStatusMismatchError } =
+      loadGeneratedRpcSupport();
+    const directResponse = new Response(JSON.stringify(problemBody), { status: 500 });
+    const directRequest = handleJsonResponse(directResponse);
+
+    await expect(directRequest).rejects.toBeInstanceOf(RpcClientStatusMismatchError);
+    await expect(directRequest).rejects.toMatchObject({
+      httpStatus: 500,
+      name: "RpcClientStatusMismatchError",
+      problemStatus: 404,
+      response: directResponse,
+    });
+
+    const resultResponse = new Response(JSON.stringify(problemBody), { status: 500 });
+    const result = (await handleJsonResult(resultResponse, [declaration])) as Record<
+      string,
+      unknown
+    >;
+
+    expect(result).toMatchObject({
+      ok: false,
+      kind: "external",
+      body: problemBody,
+      error: {
+        httpStatus: 500,
+        name: "RpcClientStatusMismatchError",
+        problemStatus: 404,
+      },
+      response: resultResponse,
     });
   });
 
@@ -3402,6 +3476,8 @@ function assertGeneratedPackageTypechecks(fileNames: readonly string[]): void {
 function loadGeneratedRpcSupport(): {
   readonly RpcQueryKeyInputError: RpcQueryKeyInputProblemConstructor;
   readonly RpcClientProblemError: GeneratedRpcProblemErrorConstructor;
+  readonly RpcClientStatusMismatchError: GeneratedRpcStatusMismatchErrorConstructor;
+  readonly handleJsonResponse: GeneratedRpcHandleJsonResponse;
   readonly handleJsonResult: GeneratedRpcHandleJsonResult;
   readonly serializeRpcQueryKeyInput: (value: unknown) => unknown;
 } {
@@ -3409,17 +3485,24 @@ function loadGeneratedRpcSupport(): {
 
   const RpcQueryKeyInputError = rpcModule.RpcQueryKeyInputError;
   const RpcClientProblemError = rpcModule.RpcClientProblemError;
+  const RpcClientStatusMismatchError = rpcModule.RpcClientStatusMismatchError;
+  const handleJsonResponse = rpcModule.handleJsonResponse;
   const handleJsonResult = rpcModule.handleJsonResult;
   const serializeRpcQueryKeyInput = rpcModule.serializeRpcQueryKeyInput;
 
   expect(RpcQueryKeyInputError).toBeTypeOf("function");
   expect(RpcClientProblemError).toBeTypeOf("function");
+  expect(RpcClientStatusMismatchError).toBeTypeOf("function");
+  expect(handleJsonResponse).toBeTypeOf("function");
   expect(handleJsonResult).toBeTypeOf("function");
   expect(serializeRpcQueryKeyInput).toBeTypeOf("function");
 
   return {
     RpcQueryKeyInputError: RpcQueryKeyInputError as RpcQueryKeyInputProblemConstructor,
     RpcClientProblemError: RpcClientProblemError as GeneratedRpcProblemErrorConstructor,
+    RpcClientStatusMismatchError:
+      RpcClientStatusMismatchError as GeneratedRpcStatusMismatchErrorConstructor,
+    handleJsonResponse: handleJsonResponse as GeneratedRpcHandleJsonResponse,
     handleJsonResult: handleJsonResult as GeneratedRpcHandleJsonResult,
     serializeRpcQueryKeyInput: serializeRpcQueryKeyInput as (value: unknown) => unknown,
   };

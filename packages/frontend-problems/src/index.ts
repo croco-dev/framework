@@ -62,7 +62,7 @@ export type ProblemFetchProblemFailure<Problem extends ProblemDeclaration = Prob
 export type ProblemClientExternalFailure = {
   readonly ok: false;
   readonly kind: "external";
-  readonly error: ProblemResponseError | ProblemClientError;
+  readonly error: ProblemResponseError | ProblemClientError | ProblemStatusMismatchError;
   readonly response: Response;
   readonly body?: unknown;
 };
@@ -199,6 +199,20 @@ export class ProblemResponseError extends Error {
     this.response = response;
     this.body = body;
     this.cause = cause;
+  }
+}
+
+export class ProblemStatusMismatchError extends Error {
+  readonly response: Response;
+  readonly httpStatus: number;
+  readonly problemStatus: number;
+
+  constructor(response: Response, problemStatus: number) {
+    super(`Problem response status mismatch: HTTP ${response.status}, Problem ${problemStatus}`);
+    this.name = "ProblemStatusMismatchError";
+    this.response = response;
+    this.httpStatus = response.status;
+    this.problemStatus = problemStatus;
   }
 }
 
@@ -411,6 +425,18 @@ export async function readDeclaredProblemErrorResult<Problem extends ProblemDecl
   const problem = parseProblemDetails(bodyResult.body);
 
   if (problem) {
+    const statusMismatch = createProblemStatusMismatchError(response, problem);
+
+    if (statusMismatch) {
+      return {
+        ok: false,
+        kind: "external",
+        error: statusMismatch,
+        response,
+        body: bodyResult.body,
+      };
+    }
+
     const declaration = findProblemDeclaration(problem, declaredProblems);
 
     if (declaration) {
@@ -468,6 +494,18 @@ export async function readProblemErrorResult<
       ok: false,
       kind: "external",
       error: new ProblemResponseError(response, bodyResult.body),
+      response,
+      body: bodyResult.body,
+    };
+  }
+
+  const statusMismatch = createProblemStatusMismatchError(response, problem);
+
+  if (statusMismatch) {
+    return {
+      ok: false,
+      kind: "external",
+      error: statusMismatch,
       response,
       body: bodyResult.body,
     };
@@ -595,10 +633,25 @@ async function rejectErrorResponse(response: Response): Promise<never> {
   const problem = parseProblemDetails(bodyResult.body);
 
   if (problem) {
+    const statusMismatch = createProblemStatusMismatchError(response, problem);
+
+    if (statusMismatch) {
+      throw statusMismatch;
+    }
+
     throw new ProblemClientError(problem, response);
   }
 
   throw new ProblemResponseError(response, bodyResult.body);
+}
+
+function createProblemStatusMismatchError(
+  response: Response,
+  problem: ProblemDetails,
+): ProblemStatusMismatchError | undefined {
+  return response.status === problem.status
+    ? undefined
+    : new ProblemStatusMismatchError(response, problem.status);
 }
 
 async function readJsonBody(
