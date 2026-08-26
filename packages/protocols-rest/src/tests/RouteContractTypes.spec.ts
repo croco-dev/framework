@@ -492,6 +492,43 @@ const responseLessContract = defineRouteContract({
 
 const selectResponseContract: boolean = true;
 const mixedResponseContract = selectResponseContract ? responseContract : responseLessContract;
+const responseContractUnion = selectResponseContract
+  ? defineRouteContract({
+      method: HttpMethod.GET,
+      path: "/union-id",
+      response: z.object({ id: z.string() }),
+    })
+  : defineRouteContract({
+      method: HttpMethod.GET,
+      path: "/union-name",
+      response: z.object({ name: z.string() }),
+    });
+const schemaUnionResponseContract = defineRouteContract({
+  method: HttpMethod.GET,
+  path: "/schema-union",
+  response: z.union([z.string(), z.number()]),
+});
+
+class NominalResponse {
+  readonly #brand = true;
+
+  constructor(readonly value: string) {}
+
+  isNominal(): boolean {
+    return this.#brand;
+  }
+}
+
+const nominalResponseContract = defineRouteContract({
+  method: HttpMethod.GET,
+  path: "/nominal-response",
+  response: z.instanceof(NominalResponse),
+});
+const nominalArrayResponseContract = defineRouteContract({
+  method: HttpMethod.GET,
+  path: "/nominal-array-response",
+  response: z.array(z.instanceof(NominalResponse)),
+});
 
 const responseContractsByMethod = {
   all: defineRouteContract({ method: HttpMethod.ALL, path: "/all", response: z.string() }),
@@ -516,6 +553,92 @@ const responseContractsByMethod = {
     response: z.unknown(),
   }),
 };
+
+const anyAndStringResponseContract = selectResponseContract
+  ? defineRouteContract({
+      method: HttpMethod.GET,
+      path: "/any-response",
+      response: z.any(),
+    })
+  : responseContractsByMethod.get;
+
+const readonlyArrayResponseContract = defineRouteContract({
+  method: HttpMethod.GET,
+  path: "/readonly-array",
+  response: z.object({
+    items: z.array(z.object({ id: z.string() })),
+    tuple: z.tuple([z.string(), z.number()]),
+  }),
+});
+
+const readonlyRestTupleResponseContract = defineRouteContract({
+  method: HttpMethod.GET,
+  path: "/readonly-rest-tuple",
+  response: z.tuple([z.string()]).rest(z.number()),
+});
+
+describe("readonly handler return arrays", () => {
+  it("preserves response shape while accepting readonly array inputs", () => {
+    expectTypeOf<RouteHandlerReturn<typeof readonlyArrayResponseContract>>().toEqualTypeOf<{
+      items: { id: string }[];
+      tuple: [string, number];
+    }>();
+
+    const handlerReturn = {
+      items: Object.freeze([{ id: "user_1" }]),
+      tuple: ["ok", 1] as const,
+    } as const;
+
+    expect(validateResponse(readonlyArrayResponseContract.response, handlerReturn)).toEqual({
+      items: [{ id: "user_1" }],
+      tuple: ["ok", 1],
+    });
+  });
+
+  it("preserves variadic tuple prefixes while accepting readonly tuples", () => {
+    expectTypeOf<RouteHandlerReturn<typeof readonlyRestTupleResponseContract>>().toEqualTypeOf<
+      [string, ...number[]]
+    >();
+
+    const handlerReturn = ["ok", 1, 2] as const;
+
+    expect(validateResponse(readonlyRestTupleResponseContract.response, handlerReturn)).toEqual([
+      "ok",
+      1,
+      2,
+    ]);
+  });
+});
+
+describe("nominal handler returns", () => {
+  it("preserves the response schema's instance identity", () => {
+    expectTypeOf<
+      RouteHandlerReturn<typeof nominalResponseContract>
+    >().toEqualTypeOf<NominalResponse>();
+    expect(() =>
+      validateResponse(nominalResponseContract.response, {
+        value: "not-an-instance",
+        isNominal: () => true,
+      }),
+    ).toThrow();
+  });
+
+  it("accepts readonly arrays without erasing element identity", () => {
+    const handlerReturn = Object.freeze([new NominalResponse("ok")]);
+
+    expect(validateResponse(nominalArrayResponseContract.response, handlerReturn)).toEqual([
+      handlerReturn[0],
+    ]);
+  });
+});
+
+// @ts-expect-error RouteHandlerReturn must preserve z.instanceof nominal identity.
+const invalidNominalHandlerReturn: RouteHandlerReturn<typeof nominalResponseContract> = {
+  value: "not-an-instance",
+  isNominal: () => true,
+};
+
+void invalidNominalHandlerReturn;
 
 // @ts-expect-error routeParam only accepts names declared by the route path and params schema.
 routeParam(responseContract, "userId");
@@ -577,6 +700,44 @@ class ValidContractMethodController {
   @Get(mixedResponseContract)
   mixedResponse(): z.input<typeof userSchema> {
     return { id: "user_1", name: "Ada" };
+  }
+
+  @Get(responseContractUnion)
+  responseUnion(): { id: string; name: string } {
+    return { id: "user_1", name: "Ada" };
+  }
+
+  @Get(schemaUnionResponseContract)
+  schemaUnion(): string {
+    return "accepted by one branch of the response schema";
+  }
+
+  @Get(anyAndStringResponseContract)
+  anyAndStringResponseUnion(): string {
+    return "accepted by every runtime contract member";
+  }
+
+  @Get(nominalResponseContract)
+  nominalResponse(): NominalResponse {
+    return new NominalResponse("ok");
+  }
+
+  @Get(nominalArrayResponseContract)
+  nominalArrayResponse(): readonly NominalResponse[] {
+    return [new NominalResponse("ok")];
+  }
+
+  @Get(readonlyArrayResponseContract)
+  readonlyArrays(): {
+    readonly items: readonly { readonly id: string }[];
+    readonly tuple: readonly [string, number];
+  } {
+    return { items: [{ id: "user_1" }], tuple: ["ok", 1] };
+  }
+
+  @Get(readonlyRestTupleResponseContract)
+  readonlyRestTuple(): readonly [string, ...number[]] {
+    return ["ok", 1, 2];
   }
 
   @Get("/loose")
@@ -672,6 +833,54 @@ class InvalidContractMethodController {
   @Get(mixedResponseContract)
   invalidMixedResponse(): number {
     return 1;
+  }
+
+  // @ts-expect-error a response-bearing union requires a return accepted by every member.
+  @Get(responseContractUnion)
+  invalidResponseUnion(): { id: string } {
+    return { id: "user_1" };
+  }
+
+  // @ts-expect-error a value outside a single response schema's union remains invalid.
+  @Get(schemaUnionResponseContract)
+  invalidSchemaUnion(): boolean {
+    return true;
+  }
+
+  // @ts-expect-error z.any in one runtime contract member must not erase another member's return contract.
+  @Get(anyAndStringResponseContract)
+  invalidAnyAndStringResponseUnion(): number {
+    return 1;
+  }
+
+  // @ts-expect-error readonly-array normalization must not erase nominal instance identity.
+  @Get(nominalResponseContract)
+  invalidNominalResponse(): { readonly value: string; readonly isNominal: () => boolean } {
+    return { value: "not-an-instance", isNominal: () => true };
+  }
+
+  // @ts-expect-error readonly-array normalization must preserve each element's nominal identity.
+  @Get(nominalArrayResponseContract)
+  invalidNominalArrayResponse(): readonly {
+    readonly value: string;
+    readonly isNominal: () => boolean;
+  }[] {
+    return [{ value: "not-an-instance", isNominal: () => true }];
+  }
+
+  // @ts-expect-error readonly compatibility must preserve tuple length and element types.
+  @Get(readonlyArrayResponseContract)
+  invalidReadonlyTuple(): {
+    readonly items: readonly { readonly id: string }[];
+    readonly tuple: readonly [string];
+  } {
+    return { items: [{ id: "user_1" }], tuple: ["missing-number"] };
+  }
+
+  // @ts-expect-error readonly compatibility must preserve a variadic tuple's fixed prefix.
+  @Get(readonlyRestTupleResponseContract)
+  invalidReadonlyRestTuple(): readonly [number, ...number[]] {
+    return [1, 2];
   }
 
   // @ts-expect-error generic return annotations cannot prove a stable handler-return value.

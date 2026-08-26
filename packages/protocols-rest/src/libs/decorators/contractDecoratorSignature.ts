@@ -1,3 +1,9 @@
+import type {
+  RouteContractSpec,
+  RouteContractWithResponse,
+  RouteHandlerReturn,
+} from "../types/RouteContract";
+
 type AnyMethod = (...args: never[]) => unknown;
 
 declare const contractMethodDecoratorBrand: unique symbol;
@@ -30,6 +36,20 @@ type MethodAt<Target, Key extends PropertyKey> =
 
 type AwaitedReturn<Method extends AnyMethod> = Awaited<ReturnType<Method>>;
 
+type MutableHandlerReturnArrays<Value> = Value extends readonly unknown[]
+  ? { -readonly [Index in keyof Value]: MutableHandlerReturnArrays<Value[Index]> }
+  : Value extends AnyMethod
+    ? Value
+    : Value extends object
+      ? Value & { [Key in keyof Value]: MutableHandlerReturnArrays<Value[Key]> }
+      : Value;
+
+type IsAcceptedHandlerReturn<Actual, Expected> = [Actual] extends [Expected]
+  ? true
+  : [MutableHandlerReturnArrays<Actual>] extends [Expected]
+    ? true
+    : false;
+
 type AcceptsHandlerReturn<Method extends AnyMethod, Expected> =
   IsGenericOrOverloaded<Method> extends true
     ? false
@@ -39,9 +59,18 @@ type AcceptsHandlerReturn<Method extends AnyMethod, Expected> =
         ? false
         : IsVoid<AwaitedReturn<Method>> extends true
           ? false
-          : [AwaitedReturn<Method>] extends [Expected]
-            ? true
-            : false;
+          : IsAcceptedHandlerReturn<AwaitedReturn<Method>, Expected>;
+
+type AcceptsEveryContractReturn<
+  Method extends AnyMethod,
+  TContract extends RouteContractSpec,
+> = false extends (
+  TContract extends RouteContractWithResponse
+    ? AcceptsHandlerReturn<Method, RouteHandlerReturn<TContract>>
+    : true
+)
+  ? false
+  : true;
 
 type TupleIndexes<Values extends readonly unknown[]> =
   Exclude<keyof Values, keyof (readonly unknown[])> extends infer Index
@@ -69,16 +98,16 @@ type AcceptedParameterIndexes<Method, Expected> = Method extends (
 type IsStaticTarget<Target> = Target extends { readonly prototype: object } ? true : false;
 
 /** Ensures the decorated sync or async return annotation fits the contract handler-return slot. */
-export type ContractMethodDecorator<Expected> = {
+export type ContractMethodDecorator<TContract extends RouteContractSpec> = {
   <Target extends object, Key extends PropertyKey>(
     target: Target &
       Record<Key, AnyMethod> &
       (IsStaticTarget<Target> extends true ? never : unknown),
     propertyKey: Key,
     descriptor: TypedPropertyDescriptor<MethodAt<Target, Key>> &
-      (AcceptsHandlerReturn<MethodAt<Target, Key>, Expected> extends true ? unknown : never),
+      (AcceptsEveryContractReturn<MethodAt<Target, Key>, TContract> extends true ? unknown : never),
   ): void;
-  readonly [contractMethodDecoratorBrand]?: Expected;
+  readonly [contractMethodDecoratorBrand]?: TContract;
 };
 
 /** Ensures the parsed contract output is assignable to the decorated parameter annotation. */
