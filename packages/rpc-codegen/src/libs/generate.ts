@@ -1067,15 +1067,16 @@ export async function handleJsonResponse<T = unknown>(
   response: Response,
   telemetry?: RpcTelemetryRequestState,
 ): Promise<T> {
+  let data: T;
   try {
-    const data = await handleProblemJsonResponse<T>(response);
-    recordRpcTelemetrySuccess(response, telemetry);
-
-    return data;
+    data = await handleProblemJsonResponse<T>(response);
   } catch (error) {
     recordRpcTelemetryProblemRuntimeError(error, response, telemetry);
     throw error;
   }
+
+  recordRpcTelemetrySuccess(response, telemetry);
+  return data;
 }
 
 export async function handleJsonResult<
@@ -1087,10 +1088,13 @@ export async function handleJsonResult<
   telemetry?: RpcTelemetryRequestState,
 ): Promise<RpcClientResult<T, Problem>> {
   let result: RpcClientResult<T, Problem>;
-
   try {
     result = await handleProblemJsonResult<T, Problem>(response, declaredProblems);
   } catch (error) {
+    if (isRpcAbortError(error)) {
+      return handleRpcRequestError(error, telemetry);
+    }
+
     return handleRpcResponseResultError(error, response, telemetry);
   }
 
@@ -1102,15 +1106,16 @@ export async function readOptionalJsonResponse(
   response: Response,
   telemetry?: RpcTelemetryRequestState,
 ): Promise<unknown | undefined> {
+  let data: unknown | undefined;
   try {
-    const data = await readProblemOptionalJsonResponse(response);
-    recordRpcTelemetrySuccess(response, telemetry);
-
-    return data;
+    data = await readProblemOptionalJsonResponse(response);
   } catch (error) {
     recordRpcTelemetryProblemRuntimeError(error, response, telemetry);
     throw error;
   }
+
+  recordRpcTelemetrySuccess(response, telemetry);
+  return data;
 }
 
 export async function readOptionalJsonResult<Problem extends RpcDeclaredProblem = never>(
@@ -1119,10 +1124,13 @@ export async function readOptionalJsonResult<Problem extends RpcDeclaredProblem 
   telemetry?: RpcTelemetryRequestState,
 ): Promise<RpcClientResult<unknown | undefined, Problem>> {
   let result: RpcClientResult<unknown | undefined, Problem>;
-
   try {
     result = await readProblemOptionalJsonResult<Problem>(response, declaredProblems);
   } catch (error) {
+    if (isRpcAbortError(error)) {
+      return handleRpcRequestError(error, telemetry);
+    }
+
     return handleRpcResponseResultError(error, response, telemetry);
   }
 
@@ -1135,6 +1143,10 @@ function recordRpcTelemetryProblemRuntimeError(
   response: Response,
   telemetry?: RpcTelemetryRequestState,
 ): void {
+  if (isRpcAbortError(error)) {
+    return handleRpcRequestError(error, telemetry);
+  }
+
   if (error instanceof RpcClientProblemError) {
     recordRpcTelemetryProblem(error.problem, undefined, response, telemetry);
     return;
@@ -1343,12 +1355,14 @@ export class RpcClientProblemError extends Error {
 export class RpcClientResponseError extends Error {
   readonly response: Response;
   readonly body?: unknown;
+  readonly cause?: unknown;
 
-  constructor(response: Response, body?: unknown) {
+  constructor(response: Response, body?: unknown, cause?: unknown) {
     super(\`RPC request failed with HTTP \${response.status}\`);
     this.name = 'RpcClientResponseError';
     this.response = response;
     this.body = body;
+    this.cause = cause;
   }
 }
 
@@ -1373,15 +1387,26 @@ export async function handleJsonResponse<T = unknown>(
     return rejectErrorResponse(response, telemetry);
   }
 
+  let data: T;
   try {
-    const data = (await response.json()) as T;
-    recordRpcTelemetrySuccess(response, telemetry);
+    data = (await response.json()) as T;
+  } catch (cause) {
+    if (isRpcAbortError(cause)) {
+      return handleRpcRequestError(cause, telemetry);
+    }
 
-    return data;
-  } catch (error) {
-    recordRpcTelemetryExternal(error, response, telemetry);
-    throw error;
+    if (cause instanceof SyntaxError) {
+      const error = new RpcClientResponseError(response, undefined, cause);
+      recordRpcTelemetryExternal(error, response, telemetry);
+      throw error;
+    }
+
+    recordRpcTelemetryExternal(cause, response, telemetry);
+    throw cause;
   }
+
+  recordRpcTelemetrySuccess(response, telemetry);
+  return data;
 }
 
 export async function handleJsonResult<
@@ -1397,11 +1422,18 @@ export async function handleJsonResult<
   }
 
   let data: T;
-
   try {
     data = (await response.json()) as T;
-  } catch (error) {
-    return handleRpcResponseResultError(error, response, telemetry);
+  } catch (cause) {
+    if (isRpcAbortError(cause)) {
+      return handleRpcRequestError(cause, telemetry);
+    }
+
+    return handleRpcResponseResultError(
+      cause instanceof SyntaxError ? new RpcClientResponseError(response, undefined, cause) : cause,
+      response,
+      telemetry,
+    );
   }
 
   const result: RpcClientResult<T, Problem> = { ok: true, data, response };
@@ -1423,22 +1455,29 @@ export async function readOptionalJsonResponse(
     return undefined;
   }
 
-  const body = await response.text();
+  let body: string | undefined;
+  let data: unknown | undefined;
+  try {
+    body = await response.text();
+  } catch (cause) {
+    if (isRpcAbortError(cause)) {
+      return handleRpcRequestError(cause, telemetry);
+    }
 
-  if (body.length === 0) {
-    recordRpcTelemetrySuccess(response, telemetry);
-    return undefined;
+    recordRpcTelemetryExternal(cause, response, telemetry);
+    throw cause;
   }
 
   try {
-    const data = JSON.parse(body) as unknown;
-    recordRpcTelemetrySuccess(response, telemetry);
-
-    return data;
-  } catch (error) {
+    data = body.length === 0 ? undefined : (JSON.parse(body) as unknown);
+  } catch (cause) {
+    const error = new RpcClientResponseError(response, body, cause);
     recordRpcTelemetryExternal(error, response, telemetry);
     throw error;
   }
+
+  recordRpcTelemetrySuccess(response, telemetry);
+  return data;
 }
 
 export async function readOptionalJsonResult<Problem extends RpcDeclaredProblem = never>(
@@ -1461,8 +1500,12 @@ export async function readOptionalJsonResult<Problem extends RpcDeclaredProblem 
 
   try {
     body = await response.text();
-  } catch (error) {
-    return handleRpcResponseResultError(error, response, telemetry);
+  } catch (cause) {
+    if (isRpcAbortError(cause)) {
+      return handleRpcRequestError(cause, telemetry);
+    }
+
+    return handleRpcResponseResultError(cause, response, telemetry);
   }
 
   if (body.length === 0) {
@@ -1476,7 +1519,8 @@ export async function readOptionalJsonResult<Problem extends RpcDeclaredProblem 
 
   try {
     data = JSON.parse(body) as unknown;
-  } catch (error) {
+  } catch (cause) {
+    const error = new RpcClientResponseError(response, body, cause);
     return handleRpcResponseResultError(error, response, telemetry);
   }
 
@@ -2735,7 +2779,7 @@ function generateClientMethod(
     return `  ${route.methodName}: (${requestOptions}): ${returnType} => {
     const path = ${getPathExpression(route)};
 ${getQueryStatements(route)}    const request = createRpcClientRequest(${routeMetadata}, '${routeKind}', ${getUrlExpression(route)}, ${fetchOptions}, options);
-    return fetch(request.url, request.init).then((response) => ${response}).catch((error) => handleRpcRequestError(error, request.telemetry));
+    return fetch(request.url, request.init).catch((error) => handleRpcRequestError(error, request.telemetry)).then((response) => ${response});
   },
   ${getResultMethodName(route)}: (${requestOptions}): ${resultReturnType} => {
     const path = ${getPathExpression(route)};
@@ -2746,7 +2790,7 @@ ${getQueryStatements(route)}    const request = createRpcClientRequest(${routeMe
 
   return `  ${route.methodName}: (${requestOptions}): ${returnType} => {
     const request = createRpcClientRequest(${routeMetadata}, '${routeKind}', ${getPathExpression(route)}, ${fetchOptions}, options);
-    return fetch(request.url, request.init).then((response) => ${response}).catch((error) => handleRpcRequestError(error, request.telemetry));
+    return fetch(request.url, request.init).catch((error) => handleRpcRequestError(error, request.telemetry)).then((response) => ${response});
   },
   ${getResultMethodName(route)}: (${requestOptions}): ${resultReturnType} => {
     const request = createRpcClientRequest(${routeMetadata}, '${routeKind}', ${getPathExpression(route)}, ${fetchOptions}, options);

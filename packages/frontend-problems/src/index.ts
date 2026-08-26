@@ -191,12 +191,14 @@ export class ProblemClientError extends Error {
 export class ProblemResponseError extends Error {
   readonly response: Response;
   readonly body?: unknown;
+  readonly cause?: unknown;
 
-  constructor(response: Response, body?: unknown) {
+  constructor(response: Response, body?: unknown, cause?: unknown) {
     super(`Problem-aware request failed with HTTP ${response.status}`);
     this.name = "ProblemResponseError";
     this.response = response;
     this.body = body;
+    this.cause = cause;
   }
 }
 
@@ -207,6 +209,24 @@ export class ProblemFetchUnavailableError extends Problem {
   constructor() {
     super(undefined, undefined, "Problem-aware fetch requires globalThis.fetch or options.fetch.");
   }
+}
+
+function toExternalJsonFailure(
+  cause: unknown,
+  response: Response,
+  body?: string,
+): ProblemClientExternalFailure {
+  if (isAbortError(cause) || !(cause instanceof SyntaxError)) {
+    throw cause;
+  }
+
+  return {
+    ok: false,
+    kind: "external",
+    error: new ProblemResponseError(response, body, cause),
+    response,
+    ...(body === undefined ? {} : { body }),
+  };
 }
 
 export async function fetchProblemJson<
@@ -251,7 +271,19 @@ export async function handleJsonResponse<T = unknown>(response: Response): Promi
     return rejectErrorResponse(response);
   }
 
-  return response.json() as Promise<T>;
+  try {
+    return (await response.json()) as T;
+  } catch (cause) {
+    if (isAbortError(cause)) {
+      throw cause;
+    }
+
+    if (cause instanceof SyntaxError) {
+      throw new ProblemResponseError(response, undefined, cause);
+    }
+
+    throw cause;
+  }
 }
 
 export async function handleJsonResult<T = unknown, Problem extends ProblemDeclaration = never>(
@@ -262,7 +294,11 @@ export async function handleJsonResult<T = unknown, Problem extends ProblemDecla
     return readDeclaredProblemErrorResult(response, declaredProblems);
   }
 
-  return { ok: true, data: (await response.json()) as T, response };
+  try {
+    return { ok: true, data: (await response.json()) as T, response };
+  } catch (cause) {
+    return toExternalJsonFailure(cause, response);
+  }
 }
 
 export async function readJsonProblemResult<
@@ -276,7 +312,11 @@ export async function readJsonProblemResult<
     return readProblemErrorResult(response, declaredProblems);
   }
 
-  return { ok: true, data: (await response.json()) as T, response };
+  try {
+    return { ok: true, data: (await response.json()) as T, response };
+  } catch (cause) {
+    return toExternalJsonFailure(cause, response);
+  }
 }
 
 export async function readOptionalJsonResponse(response: Response): Promise<unknown | undefined> {
@@ -294,7 +334,11 @@ export async function readOptionalJsonResponse(response: Response): Promise<unkn
     return undefined;
   }
 
-  return JSON.parse(body) as unknown;
+  try {
+    return JSON.parse(body) as unknown;
+  } catch (cause) {
+    throw new ProblemResponseError(response, body, cause);
+  }
 }
 
 export async function readOptionalJsonResult<Problem extends ProblemDeclaration = never>(
@@ -315,7 +359,11 @@ export async function readOptionalJsonResult<Problem extends ProblemDeclaration 
     return { ok: true, data: undefined, response };
   }
 
-  return { ok: true, data: JSON.parse(body) as unknown, response };
+  try {
+    return { ok: true, data: JSON.parse(body) as unknown, response };
+  } catch (cause) {
+    return toExternalJsonFailure(cause, response, body);
+  }
 }
 
 export async function readOptionalJsonProblemResult<
@@ -338,7 +386,11 @@ export async function readOptionalJsonProblemResult<
     return { ok: true, data: undefined, response };
   }
 
-  return { ok: true, data: JSON.parse(body) as unknown, response };
+  try {
+    return { ok: true, data: JSON.parse(body) as unknown, response };
+  } catch (cause) {
+    return toExternalJsonFailure(cause, response, body);
+  }
 }
 
 export async function readDeclaredProblemErrorResult<Problem extends ProblemDeclaration>(
@@ -468,6 +520,10 @@ export function assertProblemExhaustive(problem: never): never {
   const suffix = typeof value?.code === "string" ? `: ${value.code}` : "";
 
   throw new Error(`Unhandled Problem variant${suffix}`);
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === "AbortError";
 }
 
 export function toProblemFormProblem<FieldName extends string, Problem extends ProblemDeclaration>(

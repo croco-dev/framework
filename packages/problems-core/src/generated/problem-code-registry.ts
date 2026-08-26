@@ -8179,7 +8179,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/frontend-problems/src/index.ts",
-          line: 204,
+          line: 206,
           column: 3,
           kind: "problem-class",
         },
