@@ -2,13 +2,27 @@ import "reflect-metadata";
 import { HttpMethod as HttpMethodEnum, REST_ROUTES_KEY } from "../constants";
 import { captureRestDecoratorSourceLocation } from "../sourceLocation";
 import type { RouteMetadata } from "../types";
-import type { RouteContractSpec } from "../types/RouteContract";
+import type {
+  RouteContractSpec,
+  RouteContractWithResponse,
+  RouteHandlerReturn,
+} from "../types/RouteContract";
+import type { ContractMethodDecorator } from "./contractDecoratorSignature";
 
 type RouteContractForMethod<Method extends HttpMethodEnum> = RouteContractSpec<Method>;
+type ResponseContractMember<TContract extends RouteContractSpec> =
+  TContract extends RouteContractWithResponse ? TContract : never;
+type ContractRouteDecorator<TContract extends RouteContractSpec> = [
+  ResponseContractMember<TContract>,
+] extends [never]
+  ? MethodDecorator
+  : ContractMethodDecorator<RouteHandlerReturn<ResponseContractMember<TContract>>>;
 
 type HttpMethodDecoratorFactory<Method extends HttpMethodEnum> = {
   (path?: string): MethodDecorator;
-  <const TContract extends RouteContractForMethod<Method>>(contract: TContract): MethodDecorator;
+  <const TContract extends RouteContractForMethod<Method>>(
+    contract: TContract,
+  ): ContractRouteDecorator<TContract>;
 };
 
 function createMethodDecorator<const Method extends HttpMethodEnum>(

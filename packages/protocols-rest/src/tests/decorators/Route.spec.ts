@@ -91,7 +91,9 @@ describe("Route decorators", () => {
       class UserController {
         @Get(getUserContract)
         @ResponseSchema(getUserContract)
-        getUser() {}
+        getUser(): z.input<typeof userSchema> {
+          return { id: "user_1", name: "Ada" };
+        }
       }
 
       const routes = Reflect.getMetadata(REST_ROUTES_KEY, UserController) as RouteMetadata[];
@@ -103,6 +105,52 @@ describe("Route decorators", () => {
         contract: getUserContract,
       });
       expect(Reflect.getMetadata(RESPONSE_SCHEMA_KEY, UserController, "getUser")).toBe(userSchema);
+    });
+
+    it("should preserve contract route inheritance and decorator application order", () => {
+      const contract = defineRouteContract({
+        method: HttpMethod.GET,
+        path: "/order",
+        response: z.string(),
+      });
+      const routeVisibility: boolean[] = [];
+      const observeRouteMetadata = (): MethodDecorator => (target, propertyKey, descriptor) => {
+        const routes = Reflect.getOwnMetadata(REST_ROUTES_KEY, target.constructor) as
+          | RouteMetadata[]
+          | undefined;
+        routeVisibility.push(routes?.some((route) => route.methodName === propertyKey) ?? false);
+        return descriptor;
+      };
+
+      class BaseController {
+        @observeRouteMetadata()
+        @Get(contract)
+        routeVisibleToOuterDecorator(): string {
+          return "base";
+        }
+
+        @Get(contract)
+        @observeRouteMetadata()
+        routeHiddenFromInnerDecorator(): string {
+          return "base";
+        }
+      }
+
+      class ChildController extends BaseController {
+        override routeVisibleToOuterDecorator(): "child" {
+          return "child";
+        }
+      }
+
+      const baseRoutes = Reflect.getMetadata(REST_ROUTES_KEY, BaseController) as RouteMetadata[];
+      const inheritedRoutes = Reflect.getMetadata(
+        REST_ROUTES_KEY,
+        ChildController,
+      ) as RouteMetadata[];
+
+      expect(routeVisibility).toEqual([true, false]);
+      expect(inheritedRoutes).toBe(baseRoutes);
+      expect(inheritedRoutes.map((route) => route.contract)).toEqual([contract, contract]);
     });
   });
 

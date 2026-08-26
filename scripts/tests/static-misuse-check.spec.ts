@@ -657,6 +657,662 @@ describe("static-misuse-check.mts", () => {
     );
   });
 
+  it("flags response-bearing route contracts on single-overload method implementations", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/protocols-rest/src/controllers/UsersController.ts",
+      [
+        'import { defineRouteContract, Get, HttpMethod } from "@croco/protocols-rest";',
+        "const getUser = defineRouteContract({ method: HttpMethod.GET, path: '/users/:id', response: schema() });",
+        "export class UsersController {",
+        "  getUser(): string;",
+        "  @Get(getUser)",
+        "  getUser(): string | number { return 1; }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const result = findResult(repo, "rest-overloaded-contract-route-decorator-boundary");
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        code: "CROCO_STATIC_REST_OVERLOADED_CONTRACT_ROUTE_DECORATOR_BOUNDARY",
+        status: "fail",
+      }),
+    );
+    expect(result?.diagnostics).toEqual([
+      expect.objectContaining({
+        file: "packages/protocols-rest/src/controllers/UsersController.ts",
+        line: 5,
+        message: expect.stringContaining("hides the decorated implementation return annotation"),
+      }),
+    ]);
+  });
+
+  it("resolves namespace decorators, contract factory aliases, and response spreads", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/protocols-rest/src/controllers/SpreadUsersController.ts",
+      [
+        'import { defineRouteContract as define, HttpMethod } from "@croco/protocols-rest";',
+        'import * as rest from "@croco/protocols-rest";',
+        "const responseOptions = { response: schema() };",
+        "const getUser = define({ method: HttpMethod.GET, path: '/users/:id', ...responseOptions });",
+        "export class UsersController {",
+        "  getUser(): string;",
+        "  @rest.Get(getUser)",
+        "  getUser(): string | number { return 1; }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const result = findResult(repo, "rest-overloaded-contract-route-decorator-boundary");
+
+    expect(result?.diagnostics).toEqual([
+      expect.objectContaining({
+        line: 7,
+        message: expect.stringContaining("response-bearing route contracts"),
+      }),
+    ]);
+  });
+
+  it("rejects call-initialized response spreads", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/protocols-rest/src/controllers/AssignedUsersController.ts",
+      [
+        'import { defineRouteContract, Get, HttpMethod } from "@croco/protocols-rest";',
+        "const responseOptions = Object.assign({}, { response: schema() });",
+        "const getUser = defineRouteContract({ method: HttpMethod.GET, path: '/users/:id', ...responseOptions });",
+        "export class UsersController {",
+        "  getUser(): string;",
+        "  @Get(getUser)",
+        "  getUser(): string | number { return 1; }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const result = findResult(repo, "rest-overloaded-contract-route-decorator-boundary");
+
+    expect(result?.diagnostics).toEqual([
+      expect.objectContaining({
+        line: 6,
+        message: expect.stringContaining("response-bearing route contracts"),
+      }),
+    ]);
+  });
+
+  it("resolves namespace and decorator factory alias chains", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/protocols-rest/src/controllers/AliasedUsersController.ts",
+      [
+        'import { defineRouteContract, HttpMethod } from "@croco/protocols-rest";',
+        'import * as rest from "@croco/protocols-rest";',
+        "const routes = rest;",
+        "const Read = rest.Get;",
+        "const { Get } = routes;",
+        "const getUser = defineRouteContract({ method: HttpMethod.GET, path: '/users/:id', response: schema() });",
+        "const route = rest.Get(getUser);",
+        "const decorators = { route };",
+        "export class UsersController {",
+        "  namespaceAlias(): string;",
+        "  @routes.Get(getUser)",
+        "  namespaceAlias(): string | number { return 1; }",
+        "  factoryAlias(): string;",
+        "  @Read(getUser)",
+        "  factoryAlias(): string | number { return 1; }",
+        "  destructuredAlias(): string;",
+        "  @Get(getUser)",
+        "  destructuredAlias(): string | number { return 1; }",
+        "  propertyBound(): string;",
+        "  @decorators.route",
+        "  propertyBound(): string | number { return 1; }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const result = findResult(repo, "rest-overloaded-contract-route-decorator-boundary");
+
+    expect(result?.diagnostics).toEqual([
+      expect.objectContaining({ line: 11 }),
+      expect.objectContaining({ line: 14 }),
+      expect.objectContaining({ line: 17 }),
+      expect.objectContaining({ line: 20 }),
+    ]);
+  });
+
+  it("resolves package barrel re-exports and function-local namespace destructuring", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/protocols-rest/src/controllers/routes.ts",
+      'export * from "@croco/protocols-rest";\n',
+    );
+    writeFile(
+      repo,
+      "packages/protocols-rest/src/controllers/BarrelUsersController.ts",
+      [
+        'import { defineRouteContract, HttpMethod } from "@croco/protocols-rest";',
+        'import * as rest from "@croco/protocols-rest";',
+        'import { Get, Get as Read } from "./routes";',
+        "const getUser = defineRouteContract({ method: HttpMethod.GET, path: '/users/:id', response: schema() });",
+        "export function createControllers() {",
+        "  const routes = rest;",
+        "  const { Get } = routes;",
+        "  class UsersController {",
+        "    barrel(): string;",
+        "    @Read(getUser)",
+        "    barrel(): string | number { return 1; }",
+        "    local(): string;",
+        "    @Get(getUser)",
+        "    local(): string | number { return 1; }",
+        "  }",
+        "  return UsersController;",
+        "}",
+        "export function unrelated(Get: (value: unknown) => MethodDecorator) {",
+        "  class OtherController {",
+        "    route(): string;",
+        "    @Get({ response: schema() })",
+        "    route(): string | number { return 1; }",
+        "  }",
+        "  return OtherController;",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const result = findResult(repo, "rest-overloaded-contract-route-decorator-boundary");
+
+    expect(result?.diagnostics).toEqual([
+      expect.objectContaining({ line: 10 }),
+      expect.objectContaining({ line: 13 }),
+    ]);
+  });
+
+  it("uses lexical symbols for function-local route aliases and contracts", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/protocols-rest/src/controllers/LocalUsersController.ts",
+      [
+        'import { defineRouteContract, Get, HttpMethod } from "@croco/protocols-rest";',
+        'import * as rest from "@croco/protocols-rest";',
+        "export function createControllers() {",
+        "  const responseContract = defineRouteContract({ method: HttpMethod.GET, path: '/users', response: schema() });",
+        "  const responseLess = defineRouteContract({ method: HttpMethod.GET, path: '/health' });",
+        "  const base = { query: schema() };",
+        "  const spreadResponseLess = defineRouteContract({ method: HttpMethod.GET, path: '/spread', ...base });",
+        "  const response = undefined;",
+        "  const undefinedResponse = defineRouteContract({ method: HttpMethod.GET, path: '/undefined', response });",
+        "  const define = defineRouteContract;",
+        "  const aliasedResponseLess = define({ method: HttpMethod.GET, path: '/aliased' });",
+        "  const ConditionalRead = true ? Get : Get;",
+        "  const Read = rest.Get;",
+        "  const route = Get(responseContract);",
+        "  const decorators = { route };",
+        "  class UsersController {",
+        "    factory(): string;",
+        "    @Read(responseContract)",
+        "    factory(): string | number { return 1; }",
+        "    bound(): string;",
+        "    @route",
+        "    bound(): string | number { return 1; }",
+        "    property(): string;",
+        "    @decorators.route",
+        "    property(): string | number { return 1; }",
+        "    conditional(): string;",
+        "    @ConditionalRead(responseContract)",
+        "    conditional(): string | number { return 1; }",
+        "    loose(): string;",
+        "    @Get(responseLess)",
+        "    loose(): string | number { return 1; }",
+        "    spread(): string;",
+        "    @Get(spreadResponseLess)",
+        "    spread(): string | number { return 1; }",
+        "    undefinedResponse(): string;",
+        "    @Get(undefinedResponse)",
+        "    undefinedResponse(): string | number { return 1; }",
+        "    aliasedResponseLess(): string;",
+        "    @Get(aliasedResponseLess)",
+        "    aliasedResponseLess(): string | number { return 1; }",
+        "  }",
+        "  return UsersController;",
+        "}",
+        "export function unrelated(Get: (value: unknown) => MethodDecorator) {",
+        "  class OtherController {",
+        "    route(): string;",
+        "    @Get({ response: schema() })",
+        "    route(): string | number { return 1; }",
+        "  }",
+        "  return OtherController;",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const result = findResult(repo, "rest-overloaded-contract-route-decorator-boundary");
+
+    expect(result?.diagnostics).toEqual([
+      expect.objectContaining({ line: 18 }),
+      expect.objectContaining({ line: 21 }),
+      expect.objectContaining({ line: 24 }),
+      expect.objectContaining({ line: 27 }),
+    ]);
+  });
+
+  it("resolves literal element-access route decorators", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/protocols-rest/src/controllers/ElementUsersController.ts",
+      [
+        'import { defineRouteContract, Get, HttpMethod } from "@croco/protocols-rest";',
+        'import * as rest from "@croco/protocols-rest";',
+        "const getUser = defineRouteContract({ method: HttpMethod.GET, path: '/users', response: schema() });",
+        "const decorators = [Get(getUser)] as const;",
+        "export class UsersController {",
+        "  namespace(): string;",
+        "  @(rest['Get'](getUser))",
+        "  namespace(): string | number { return 1; }",
+        "  bound(): string;",
+        "  @(decorators[0])",
+        "  bound(): string | number { return 1; }",
+        "  'quoted'(): string;",
+        "  @Get(getUser)",
+        "  quoted(): string | number { return 1; }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const result = findResult(repo, "rest-overloaded-contract-route-decorator-boundary");
+
+    expect(result?.diagnostics).toEqual([
+      expect.objectContaining({ line: 7 }),
+      expect.objectContaining({ line: 10 }),
+      expect.objectContaining({ line: 13 }),
+    ]);
+  });
+
+  it("normalizes computed overload names and follows definite factory assignments", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/protocols-rest/src/controllers/AssignedUsersController.ts",
+      [
+        'import { defineRouteContract, Get, HttpMethod } from "@croco/protocols-rest";',
+        "const responseContract = defineRouteContract({ method: HttpMethod.GET, path: '/users', response: schema() });",
+        "const responseLessA = defineRouteContract({ method: HttpMethod.GET, path: '/a' });",
+        "const responseLessB = defineRouteContract({ method: HttpMethod.GET, path: '/b' });",
+        "const conditionalResponseLess = true ? responseLessA : responseLessB;",
+        "let Read: typeof Get;",
+        "Read = Get;",
+        "export class UsersController {",
+        "  ['value'](): string;",
+        "  @Get(responseContract)",
+        "  value(): string | number { return 1; }",
+        "  assigned(): string;",
+        "  @Read(responseContract)",
+        "  assigned(): string | number { return 1; }",
+        "  conditional(): string;",
+        "  @Get(conditionalResponseLess)",
+        "  conditional(): string | number { return 1; }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const result = findResult(repo, "rest-overloaded-contract-route-decorator-boundary");
+
+    expect(result?.diagnostics).toEqual([
+      expect.objectContaining({ line: 10 }),
+      expect.objectContaining({ line: 13 }),
+    ]);
+  });
+
+  it("fails closed for Object.assign when Object is shadowed", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/protocols-rest/src/controllers/ShadowedObjectController.ts",
+      [
+        'import { defineRouteContract, Get, HttpMethod } from "@croco/protocols-rest";',
+        "const Object = { assign: (..._values: object[]) => ({ response: schema() }) };",
+        "const options = Object.assign({}, {});",
+        "const getUser = defineRouteContract({ method: HttpMethod.GET, path: '/users/:id', ...options });",
+        "export class UsersController {",
+        "  getUser(): string;",
+        "  @Get(getUser)",
+        "  getUser(): string | number { return 1; }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const result = findResult(repo, "rest-overloaded-contract-route-decorator-boundary");
+
+    expect(result?.diagnostics).toEqual([
+      expect.objectContaining({
+        line: 7,
+        message: expect.stringContaining("unresolved non-string route contract"),
+      }),
+    ]);
+  });
+
+  it("resolves prebound and namespace-destructured route decorators", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/protocols-rest/src/controllers/BoundUsersController.ts",
+      [
+        'import { defineRouteContract, Get as Read, HttpMethod } from "@croco/protocols-rest";',
+        'import * as rest from "@croco/protocols-rest";',
+        "const { Get } = rest;",
+        "const getUser = defineRouteContract({ method: HttpMethod.GET, path: '/users/:id', response: schema() });",
+        "const boundRoute = Read(getUser);",
+        "export class UsersController {",
+        "  bound(): string;",
+        "  @boundRoute",
+        "  bound(): string | number { return 1; }",
+        "  destructured(): string;",
+        "  @Get(getUser)",
+        "  destructured(): string | number { return 1; }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const result = findResult(repo, "rest-overloaded-contract-route-decorator-boundary");
+
+    expect(result?.diagnostics).toEqual([
+      expect.objectContaining({ line: 8 }),
+      expect.objectContaining({ line: 11 }),
+    ]);
+  });
+
+  it("resolves chained prebound decorators and nested conditional factory aliases", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/protocols-rest/src/controllers/ChainedUsersController.ts",
+      [
+        'import { defineRouteContract, Get, HttpMethod } from "@croco/protocols-rest";',
+        "const responseContract = defineRouteContract({ method: HttpMethod.GET, path: '/users', response: schema() });",
+        "const route = Get(responseContract);",
+        "const aliasedRoute = route;",
+        "const Read = true ? (false ? Get : Get) : Get;",
+        "const conditionalRoute = true ? route : aliasedRoute;",
+        "const decorators = [route] as const;",
+        "const decoratorAliases = decorators;",
+        "export class UsersController {",
+        "  bound(): string;",
+        "  @aliasedRoute",
+        "  bound(): string | number { return 1; }",
+        "  conditional(): string;",
+        "  @Read(responseContract)",
+        "  conditional(): string | number { return 1; }",
+        "  conditionalBound(): string;",
+        "  @conditionalRoute",
+        "  conditionalBound(): string | number { return 1; }",
+        "  collectionAlias(): string;",
+        "  @(decoratorAliases[0])",
+        "  collectionAlias(): string | number { return 1; }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const result = findResult(repo, "rest-overloaded-contract-route-decorator-boundary");
+
+    expect(result?.diagnostics).toEqual([
+      expect.objectContaining({ line: 11 }),
+      expect.objectContaining({ line: 14 }),
+      expect.objectContaining({ line: 17 }),
+      expect.objectContaining({ line: 20 }),
+    ]);
+  });
+
+  it("uses the strict decorator type marker through generic identity wrappers", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/protocols-rest/src/libs/decorators/contractDecoratorSignature.ts",
+      [
+        'declare module "@croco/protocols-rest" {',
+        "  const contractMethodDecoratorBrand: unique symbol;",
+        "  export const HttpMethod: { readonly GET: 'GET' };",
+        "  export function defineRouteContract<const Contract extends object>(contract: Contract): Contract;",
+        "  type ResponseMember<Contract> = Contract extends { response: unknown } ? Contract : never;",
+        "  type StrictDecorator<Expected> = MethodDecorator & { readonly [contractMethodDecoratorBrand]?: Expected };",
+        "  type RouteDecorator<Contract> = [ResponseMember<Contract>] extends [never] ? MethodDecorator : StrictDecorator<ResponseMember<Contract>>;",
+        "  export function Get<const Contract extends object>(contract: Contract): RouteDecorator<Contract>;",
+        "}",
+        "declare function schema(): unknown;",
+        "",
+      ].join("\n"),
+    );
+    writeFile(
+      repo,
+      "packages/protocols-rest/src/controllers/WrappedUsersController.ts",
+      [
+        'import { defineRouteContract, Get, HttpMethod } from "@croco/protocols-rest";',
+        "const responseContract = defineRouteContract({ method: HttpMethod.GET, path: '/users', response: schema() });",
+        "const responseLess = defineRouteContract({ method: HttpMethod.GET, path: '/health' });",
+        "const mixed = true ? responseContract : responseLess;",
+        "const identity = <Value>(value: Value): Value => value;",
+        "const route = identity(Get(responseContract));",
+        "const custom = Object.assign((..._args: unknown[]) => undefined, { __crocoContractMethodDecorator: 'unrelated' });",
+        "export class UsersController {",
+        "  value(): string;",
+        "  @route",
+        "  value(): string | number { return 1; }",
+        "  health(): string;",
+        "  @Get(identity(responseLess))",
+        "  health(): string | number { return 1; }",
+        "  mixed(): string;",
+        "  @Get(identity(mixed))",
+        "  mixed(): string | number { return 1; }",
+        "  custom(): string;",
+        "  @custom",
+        "  custom(): string | number { return 1; }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const result = findResult(repo, "rest-overloaded-contract-route-decorator-boundary");
+
+    expect(result?.diagnostics).toEqual([
+      expect.objectContaining({ line: 10 }),
+      expect.objectContaining({ line: 16 }),
+    ]);
+  });
+
+  it("rejects unresolved non-string routes on overloaded methods", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/protocols-rest/src/controllers/DynamicUsersController.ts",
+      [
+        'import { Get } from "@croco/protocols-rest";',
+        "declare const dynamicContract: object;",
+        "export class UsersController {",
+        "  getUser(): string;",
+        "  @Get(dynamicContract)",
+        "  getUser(): string | number { return 1; }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const result = findResult(repo, "rest-overloaded-contract-route-decorator-boundary");
+
+    expect(result?.diagnostics).toEqual([
+      expect.objectContaining({
+        line: 5,
+        message: expect.stringContaining("unresolved non-string route contract"),
+      }),
+    ]);
+  });
+
+  it("allows loose and response-less route decorators on overloaded methods", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/protocols-rest/src/controllers/paths.ts",
+      "export type ImportedRoutePath = string;\n",
+    );
+    writeFile(
+      repo,
+      "packages/protocols-rest/src/controllers/LooseUsersController.ts",
+      [
+        'import { defineRouteContract, Get, HttpMethod } from "@croco/protocols-rest";',
+        'import type { ImportedRoutePath } from "./paths";',
+        "const responseLess = defineRouteContract({ method: HttpMethod.GET, path: '/users' });",
+        "const explicitUndefined = defineRouteContract({ method: HttpMethod.GET, path: '/explicit', response: undefined });",
+        "const responseKey = 'response';",
+        "const computedUndefined = defineRouteContract({ method: HttpMethod.GET, path: '/computed', [responseKey]: undefined });",
+        "const responseLessOptions = Object.assign({}, { query: schema() });",
+        "const assignedResponseLess = defineRouteContract({ method: HttpMethod.GET, path: '/assigned', ...responseLessOptions });",
+        "const repeatedBase = { query: schema() };",
+        "const repeatedSpread = defineRouteContract({ method: HttpMethod.GET, path: '/repeated-spread', ...repeatedBase, ...repeatedBase });",
+        "const repeatedAssignedOptions = Object.assign({}, repeatedBase, repeatedBase);",
+        "const repeatedAssigned = defineRouteContract({ method: HttpMethod.GET, path: '/repeated-assigned', ...repeatedAssignedOptions });",
+        "type RoutePath = string;",
+        "type BrandedRoutePath = string & { readonly __brand: 'RoutePath' };",
+        "declare const aliasedPath: RoutePath;",
+        "declare const brandedPath: BrandedRoutePath;",
+        "declare const importedPath: ImportedRoutePath;",
+        "declare const dynamicPath: string;",
+        "declare const segment: string;",
+        "declare function routePath(): string;",
+        "interface Paths { users: string }",
+        "declare const paths: Paths;",
+        "const arrowPath = (): string => '/arrow';",
+        "export class UsersController {",
+        "  loose(): string;",
+        '  @Get("/users")',
+        "  loose(): string | number { return 1; }",
+        "  responseLess(): string;",
+        "  @Get(responseLess)",
+        "  responseLess(): string | number { return 1; }",
+        "  explicitUndefined(): string;",
+        "  @Get(explicitUndefined)",
+        "  explicitUndefined(): string | number { return 1; }",
+        "  computedUndefined(): string;",
+        "  @Get(computedUndefined)",
+        "  computedUndefined(): string | number { return 1; }",
+        "  inlineResponseLess(): string;",
+        "  @Get(defineRouteContract({ method: HttpMethod.GET, path: '/inline' }))",
+        "  inlineResponseLess(): string | number { return 1; }",
+        "  dynamicString(): string;",
+        "  @Get(dynamicPath)",
+        "  dynamicString(): string | number { return 1; }",
+        "  templateString(): string;",
+        "  @Get(`/users/${segment}`)",
+        "  templateString(): string | number { return 1; }",
+        "  aliasedString(): string;",
+        "  @Get(aliasedPath)",
+        "  aliasedString(): string | number { return 1; }",
+        "  functionString(): string;",
+        "  @Get(routePath())",
+        "  functionString(): string | number { return 1; }",
+        "  propertyString(): string;",
+        "  @Get(paths.users)",
+        "  propertyString(): string | number { return 1; }",
+        "  importedString(): string;",
+        "  @Get(importedPath)",
+        "  importedString(): string | number { return 1; }",
+        "  arrowString(): string;",
+        "  @Get(arrowPath())",
+        "  arrowString(): string | number { return 1; }",
+        "  brandedString(): string;",
+        "  @Get(brandedPath)",
+        "  brandedString(): string | number { return 1; }",
+        "  stringConstructor(): string;",
+        "  @Get(String('/users'))",
+        "  stringConstructor(): string | number { return 1; }",
+        "  stringMethod(): string;",
+        "  @Get('/users'.toUpperCase())",
+        "  stringMethod(): string | number { return 1; }",
+        "  assignedResponseLess(): string;",
+        "  @Get(assignedResponseLess)",
+        "  assignedResponseLess(): string | number { return 1; }",
+        "  repeatedSpread(): string;",
+        "  @Get(repeatedSpread)",
+        "  repeatedSpread(): string | number { return 1; }",
+        "  repeatedAssigned(): string;",
+        "  @Get(repeatedAssigned)",
+        "  repeatedAssigned(): string | number { return 1; }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const result = findResult(repo, "rest-overloaded-contract-route-decorator-boundary");
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        diagnostics: [],
+        status: "pass",
+      }),
+    );
+  });
+
+  it("allows response-less contracts through properties, elements, and inline conditionals", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/protocols-rest/src/controllers/IndirectHealthController.ts",
+      [
+        'import { defineRouteContract, Get, HttpMethod } from "@croco/protocols-rest";',
+        "const healthA = defineRouteContract({ method: HttpMethod.GET, path: '/health/a' });",
+        "const healthB = defineRouteContract({ method: HttpMethod.GET, path: '/health/b' });",
+        "const routes = { health: healthA };",
+        "const routeList = [healthA] as const;",
+        "const routeAliases = routeList;",
+        "let assignedAliases: typeof routeList;",
+        "assignedAliases = routeList;",
+        "export class HealthController {",
+        "  property(): string;",
+        "  @Get(routes.health)",
+        "  property(): string | number { return 1; }",
+        "  element(): string;",
+        "  @Get(routeList[0])",
+        "  element(): string | number { return 1; }",
+        "  aliasedElement(): string;",
+        "  @Get(routeAliases[0])",
+        "  aliasedElement(): string | number { return 1; }",
+        "  assignedElement(): string;",
+        "  @Get(assignedAliases[0])",
+        "  assignedElement(): string | number { return 1; }",
+        "  conditional(): string;",
+        "  @Get(true ? healthA : healthB)",
+        "  conditional(): string | number { return 1; }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const result = findResult(repo, "rest-overloaded-contract-route-decorator-boundary");
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        diagnostics: [],
+        status: "pass",
+      }),
+    );
+  });
+
   it("flags raw built-in Error throws in production package source", () => {
     const repo = createTempRepo();
     writeFile(

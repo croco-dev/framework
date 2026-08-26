@@ -137,12 +137,13 @@ import {
   HttpMethod,
   Param,
   Post,
-  type RouteMethodReturn,
 } from "@croco/protocols-rest";
 import { z } from "zod";
 
 const userSchema = z.object({ id: z.string(), name: z.string() });
 const createUserSchema = z.object({ name: z.string() });
+type User = z.input<typeof userSchema>;
+type CreateUser = z.output<typeof createUserSchema>;
 
 const getUser = defineRouteContract({
   method: HttpMethod.GET,
@@ -161,12 +162,12 @@ const createUser = defineRouteContract({
 @Controller("/users")
 class UserController {
   @Get(getUser)
-  find(@Param(getUser, "id") id: string): RouteMethodReturn<typeof getUser> {
+  find(@Param(getUser, "id") id: string): User {
     return { id, name: "Ada" };
   }
 
   @Post(createUser)
-  create(@Body(createUser) body: { name: string }): RouteMethodReturn<typeof createUser> {
+  create(@Body(createUser) body: CreateUser): User {
     return { id: "user-1", name: body.name };
   }
 }
@@ -187,9 +188,11 @@ Route contract 타입은 Zod schema의 입력과 출력을 다음 네 라이프�
 
 응답 schema는 컨트롤러가 반환한 pre-transform 값을 `validateResponse` 또는 schema parsing 경계에서 검증하고 변환합니다. `@croco/transports-http`는 컨트롤러 반환 직후 이 경계를 적용하며, 다른 전송 adapter는 동일한 응답 검증 경계를 명시적으로 설치해야 합니다. OpenAPI와 RPC 생성기는 같은 contract schema metadata를 소비하며 JSON으로 안전하게 표현할 수 없는 transform은 기존 strict schema diagnostic으로 거부합니다.
 
-계약 기반 파라미터 데코레이터는 public instance method 전용입니다. constructor, static, private, protected method는 controller parameter metadata의 안정적인 소유 경계를 제공하지 않으므로 거부합니다. generic method도 concrete annotation을 제공하지 않으므로 typecheck에서 거부합니다. overloaded method는 TypeScript가 decorated implementation annotation을 숨기므로 `static-misuse:check`에서 거부합니다. 이 대상이 필요하면 generic/overload가 아닌 public method를 얇은 controller adapter로 두고 내부 메서드에 위임하세요.
+계약 기반 파라미터 데코레이터는 public instance method 전용입니다. constructor, static, private, protected method는 controller parameter metadata의 안정적인 소유 경계를 제공하지 않으므로 거부합니다. generic method도 concrete annotation을 제공하지 않으므로 typecheck에서 거부합니다. overloaded method는 TypeScript가 decorated implementation annotation을 숨기므로 계약 기반 파라미터와 response-bearing HTTP 데코레이터를 `static-misuse:check`에서 거부합니다. 이 대상이 필요하면 generic/overload가 아닌 public method를 얇은 controller adapter로 두고 내부 메서드에 위임하세요.
 
-`@Get(createUser)`처럼 HTTP 메서드가 맞지 않거나 `@Param(getUser, "userId")`처럼 path에 없는 이름, response schema와 맞지 않는 반환 타입은 typecheck 단계에서 실패합니다. 기존 `@Query("page", z.coerce.number())` 같은 string/schema 오버로드는 호환성 경로로 유지되어 파라미터 주석을 제한하지 않습니다. `RouteParam`, `RouteQueryParam`, `RouteBody`는 고급 타입 조합과 기존 코드 호환을 위해 계속 제공됩니다. `RouteContract.path`는 `/users/:id` 같은 최종 경로이며, `@Controller("/users")`는 컨트롤러 그룹/런타임 prefix로 유지됩니다. 런타임 값 검증과 metadata 형식은 기존처럼 Zod schema와 pipe가 담당합니다. Route contract는 아직 headers schema를 소유하지 않으므로 `@Header`는 명시적 schema를 받는 기존 경로를 유지하며 네 슬롯의 aggregate request 타입에는 headers가 포함되지 않습니다.
+response schema가 있는 contract를 `@Get`, `@Post` 같은 HTTP 데코레이터에 전달하면 동기·비동기 메서드의 실제 반환 주석을 `RouteHandlerReturn`과 대조합니다. response transform은 wire 출력이 아니라 handler-return 입력을 기준으로 검사합니다. 반환 주석의 `any`, `never`, `void`는 strict 검사를 우회하거나 반환값을 숨기므로 허용하지 않습니다. `unknown`은 response schema의 handler-return 슬롯이 `unknown`을 받는 경우에만 허용합니다. response schema가 없는 contract에는 검증할 반환 계약이 없으므로 기존 broad 경로를 유지합니다.
+
+`@Get(createUser)`처럼 HTTP 메서드가 맞지 않거나 `@Param(getUser, "userId")`처럼 path에 없는 이름, response schema와 맞지 않는 반환 타입은 typecheck 단계에서 실패합니다. 기존 `@Get("/users")`와 `@Query("page", z.coerce.number())` 같은 string/schema 오버로드는 호환성 경로로 유지되어 메서드 반환이나 파라미터 주석을 제한하지 않습니다. `RouteMethodReturn`, `RouteParam`, `RouteQueryParam`, `RouteBody`는 고급 타입 조합과 기존 코드 호환을 위해 계속 제공됩니다. `RouteContract.path`는 `/users/:id` 같은 최종 경로이며, `@Controller("/users")`는 컨트롤러 그룹/런타임 prefix로 유지됩니다. 런타임 값 검증과 metadata 형식은 기존처럼 Zod schema와 pipe가 담당합니다. Route contract는 아직 headers schema를 소유하지 않으므로 `@Header`는 명시적 schema를 받는 기존 경로를 유지하며 네 슬롯의 aggregate request 타입에는 headers가 포함되지 않습니다.
 
 ### 기존 라우트 설정 타입에서 마이그레이션
 

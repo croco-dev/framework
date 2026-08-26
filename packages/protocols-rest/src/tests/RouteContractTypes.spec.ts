@@ -2,14 +2,20 @@ import { Problem, ProblemCategory } from "@croco/problems-core";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { z } from "zod";
 import {
+  All,
   Body,
+  Delete,
   defineRouteContract,
   defineRouteProblem,
   Get,
+  Head,
   HttpMethod,
+  Options,
   Param,
+  Patch,
   Post,
   ProblemResponse,
+  Put,
   Query,
   ResponseSchema,
   type RouteBody,
@@ -473,6 +479,44 @@ const postContractForNegativeTest = defineRouteContract({
   response: userSchema,
 });
 
+const transformedResponseContract = defineRouteContract({
+  method: HttpMethod.GET,
+  path: "/transformed-response",
+  response: z.string().transform((value) => value.length),
+});
+
+const responseLessContract = defineRouteContract({
+  method: HttpMethod.GET,
+  path: "/response-less",
+});
+
+const selectResponseContract: boolean = true;
+const mixedResponseContract = selectResponseContract ? responseContract : responseLessContract;
+
+const responseContractsByMethod = {
+  all: defineRouteContract({ method: HttpMethod.ALL, path: "/all", response: z.string() }),
+  delete: defineRouteContract({
+    method: HttpMethod.DELETE,
+    path: "/delete",
+    response: z.string(),
+  }),
+  get: defineRouteContract({ method: HttpMethod.GET, path: "/get", response: z.string() }),
+  head: defineRouteContract({ method: HttpMethod.HEAD, path: "/head", response: z.string() }),
+  options: defineRouteContract({
+    method: HttpMethod.OPTIONS,
+    path: "/options",
+    response: z.string(),
+  }),
+  patch: defineRouteContract({ method: HttpMethod.PATCH, path: "/patch", response: z.string() }),
+  post: defineRouteContract({ method: HttpMethod.POST, path: "/post", response: z.string() }),
+  put: defineRouteContract({ method: HttpMethod.PUT, path: "/put", response: z.string() }),
+  unknown: defineRouteContract({
+    method: HttpMethod.GET,
+    path: "/unknown",
+    response: z.unknown(),
+  }),
+};
+
 // @ts-expect-error routeParam only accepts names declared by the route path and params schema.
 routeParam(responseContract, "userId");
 
@@ -487,7 +531,180 @@ void invalidResponseHandler;
 class InvalidMethodController {
   // @ts-expect-error @Get cannot consume a POST route contract.
   @Get(postContractForNegativeTest)
-  invalidMethod(): void {}
+  invalidMethod(): z.input<typeof userSchema> {
+    return { id: "user_1", name: "Ada" };
+  }
+}
+
+const methodObserver: MethodDecorator = () => undefined;
+
+class ValidContractMethodController {
+  @Get(responseContractsByMethod.get)
+  sync(): string {
+    return "ok";
+  }
+
+  @Get(responseContractsByMethod.get)
+  async async(): Promise<string> {
+    return "ok";
+  }
+
+  @Get(transformedResponseContract)
+  transformed(): RouteHandlerReturn<typeof transformedResponseContract> {
+    return "before-transform";
+  }
+
+  @Get(responseContractsByMethod.unknown)
+  unknownHandlerSlot(): unknown {
+    return Symbol("accepted by unknown response schema");
+  }
+
+  @methodObserver
+  @Get(responseContractsByMethod.get)
+  strictDecoratorAppliedFirst(): string {
+    return "ok";
+  }
+
+  @Get(responseContractsByMethod.get)
+  @methodObserver
+  strictDecoratorAppliedLast(): string {
+    return "ok";
+  }
+
+  @Get(responseLessContract)
+  responseLess(): void {}
+
+  @Get(mixedResponseContract)
+  mixedResponse(): z.input<typeof userSchema> {
+    return { id: "user_1", name: "Ada" };
+  }
+
+  @Get("/loose")
+  stringRouteRemainsLoose(): number {
+    return 1;
+  }
+}
+
+class InvalidContractMethodController {
+  // @ts-expect-error contract-bound GET methods must return the response handler type.
+  @Get(responseContractsByMethod.get)
+  invalidGet(): number {
+    return 1;
+  }
+
+  // @ts-expect-error contract-bound POST methods must return the response handler type.
+  @Post(responseContractsByMethod.post)
+  invalidPost(): number {
+    return 1;
+  }
+
+  // @ts-expect-error contract-bound PUT methods must return the response handler type.
+  @Put(responseContractsByMethod.put)
+  invalidPut(): number {
+    return 1;
+  }
+
+  // @ts-expect-error contract-bound PATCH methods must return the response handler type.
+  @Patch(responseContractsByMethod.patch)
+  invalidPatch(): number {
+    return 1;
+  }
+
+  // @ts-expect-error contract-bound DELETE methods must return the response handler type.
+  @Delete(responseContractsByMethod.delete)
+  invalidDelete(): number {
+    return 1;
+  }
+
+  // @ts-expect-error contract-bound OPTIONS methods must return the response handler type.
+  @Options(responseContractsByMethod.options)
+  invalidOptions(): number {
+    return 1;
+  }
+
+  // @ts-expect-error contract-bound HEAD methods must return the response handler type.
+  @Head(responseContractsByMethod.head)
+  invalidHead(): number {
+    return 1;
+  }
+
+  // @ts-expect-error contract-bound ALL methods must return the response handler type.
+  @All(responseContractsByMethod.all)
+  invalidAll(): number {
+    return 1;
+  }
+
+  // @ts-expect-error async controller returns use the awaited annotation.
+  @Get(responseContractsByMethod.get)
+  async invalidAsync(): Promise<number> {
+    return 1;
+  }
+
+  // @ts-expect-error response transforms validate the handler-return input, not the wire output.
+  @Get(transformedResponseContract)
+  invalidTransformed(): number {
+    return 1;
+  }
+
+  // @ts-expect-error any cannot bypass contract-bound return validation.
+  @Get(responseContractsByMethod.get)
+  invalidAny(): any {
+    return "hidden";
+  }
+
+  // @ts-expect-error unknown is not accepted by a narrower response handler slot.
+  @Get(responseContractsByMethod.get)
+  invalidUnknown(): unknown {
+    return "hidden";
+  }
+
+  // @ts-expect-error void hides the response value required by the contract.
+  @Get(responseContractsByMethod.get)
+  invalidVoid(): void {}
+
+  // @ts-expect-error never cannot vacuously satisfy a response contract.
+  @Get(responseContractsByMethod.get)
+  invalidNever(): never {
+    throw new Error("type fixture only");
+  }
+
+  // @ts-expect-error a mixed union must validate every response-bearing contract member.
+  @Get(mixedResponseContract)
+  invalidMixedResponse(): number {
+    return 1;
+  }
+
+  // @ts-expect-error generic return annotations cannot prove a stable handler-return value.
+  @Get(responseContractsByMethod.get)
+  invalidGeneric<Value extends string>(value: Value): Value {
+    return value;
+  }
+
+  invalidOverload(value: string): string;
+  invalidOverload(value: number): number;
+  // @ts-expect-error overloaded implementations do not expose the decorated return annotation.
+  @Get(responseContractsByMethod.get)
+  invalidOverload(value: string | number): string | number {
+    return value;
+  }
+
+  // @ts-expect-error contract-bound route methods require a public instance method target.
+  @Get(responseContractsByMethod.get)
+  protected invalidProtected(): string {
+    return "hidden";
+  }
+
+  // @ts-expect-error contract-bound route methods require a public instance method target.
+  @Get(responseContractsByMethod.get)
+  private invalidPrivate(): string {
+    return "hidden";
+  }
+
+  // @ts-expect-error static targets do not own controller route metadata.
+  @Get(responseContractsByMethod.get)
+  static invalidStatic(): string {
+    return "hidden";
+  }
 }
 
 class InvalidBodyController {
@@ -498,6 +715,8 @@ class InvalidBodyController {
 }
 
 void InvalidMethodController;
+void ValidContractMethodController;
+void InvalidContractMethodController;
 void InvalidBodyController;
 
 class ValidContractParameterController {
