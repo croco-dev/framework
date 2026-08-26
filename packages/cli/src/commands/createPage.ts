@@ -44,7 +44,7 @@ export async function runCreatePage(
 
   const pageName = normalize(name, "pascal");
   const kebab = normalize(name, "kebab");
-  const routeUrlPath = options.path ?? `/${kebab}`;
+  const routeUrlPath = assertPageRoutePath(options.path ?? `/${kebab}`);
   const workspace = await detect(cwd);
 
   if (!workspace.root || !workspace.hasConsoleWeb) {
@@ -179,5 +179,22 @@ function logWriteResult(result: WriteResult): void {
     }
   } else if (result.status === "exists-no-overwrite") {
     console.log(`Skipped (exists): ${result.path}`);
+  }
+}
+
+function assertPageRoutePath(path: string): string {
+  if (path.length === 0 || !path.startsWith("/")) {
+    throw new InvalidPageRoutePathError(path);
+  }
+
+  return path;
+}
+
+class InvalidPageRoutePathError extends Error {
+  readonly code = "CROCO_CLI_PAGE_ROUTE_PATH_INVALID";
+
+  constructor(path: string) {
+    super(`Invalid route path: ${JSON.stringify(path)}. Route paths must start with '/'.`);
+    this.name = "InvalidPageRoutePathError";
   }
 }

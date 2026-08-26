@@ -37,7 +37,7 @@ describe("runCreatePage", () => {
     expect(pageContent).not.toContain("CrocoDataFn");
     expect(routeContent).not.toContain("routeConfig");
     expect(routeContent).not.toContain("Component: Page");
-    expect(routeContent).toContain("path: '/dashboard'");
+    expect(routeContent).toContain('path: "/dashboard"');
   });
 
   it(
@@ -50,51 +50,56 @@ describe("runCreatePage", () => {
       const pagePath = path.join(pageDir, "Page.tsx");
       const routePath = path.join(pageDir, "route.ts");
 
-      const project = new Project({
-        useInMemoryFileSystem: true,
-        compilerOptions: {
-          jsx: ts.JsxEmit.Preserve,
-          strict: true,
-          target: ts.ScriptTarget.ES2022,
-        },
-      });
-      project.createSourceFile(
-        "/types/jsx.d.ts",
-        `declare namespace JSX {
-  type Element = unknown;
+      await expectGeneratedRouteToTypecheckAndPreservePath(pagePath, routePath, "/dashboard");
+    },
+    COMPILER_CONTRACT_TEST_TIMEOUT_MS,
+  );
 
-  interface IntrinsicElements {
-    main: unknown;
-    h1: unknown;
-    p: unknown;
-  }
-}
-`,
-      );
-      project.createSourceFile(
-        "/types/meta-vite.d.ts",
-        `declare module '@croco/meta-vite' {
-  export type RenderRouteComponentProps = {
-    readonly request: Request;
-    readonly context?: unknown;
-  };
+  it.each([
+    { label: "ordinary paths", routePath: "/ordinary", emittedPath: 'path: "/ordinary"' },
+    {
+      label: "apostrophes",
+      routePath: "/author's-page",
+      emittedPath: 'path: "/author\'s-page"',
+    },
+    {
+      label: "double quotes",
+      routePath: '/quoted/"draft"',
+      emittedPath: 'path: "/quoted/\\"draft\\""',
+    },
+    {
+      label: "backslashes",
+      routePath: "/files\\draft",
+      emittedPath: 'path: "/files\\\\draft"',
+    },
+    {
+      label: "Unicode line separators",
+      routePath: "/lines/se\u2028p\u2029arator",
+      emittedPath: 'path: "/lines/se\\u2028p\\u2029arator"',
+    },
+  ])(
+    "should emit $label as exact TypeScript literals in SPA and SSR routes",
+    async ({ routePath, emittedPath }) => {
+      for (const mode of ["spa", "ssr"] as const) {
+        const cwd = await createWorkspace({
+          consoleWebManifest: consoleWebManifest([
+            mode === "spa" ? "@croco/frontend-vite" : "@croco/meta-vite",
+          ]),
+        });
 
-  export type PageRouteDefinition = {
-    readonly path: string;
-    readonly component: (props: RenderRouteComponentProps) => JSX.Element;
-    readonly mode?: 'ssr' | 'ssg' | 'isr' | 'rsc';
-  };
+        await runCreatePage("EscapedPath", { cwd, mode, path: routePath });
+        const pageDir = path.join(cwd, "apps", "console-web", "pages", "escaped-path");
+        const pagePath = path.join(pageDir, "Page.tsx");
+        const generatedRoutePath = path.join(pageDir, "route.ts");
+        const routeContent = await fs.readFile(generatedRoutePath, "utf-8");
 
-  export function defineRoute(route: PageRouteDefinition): PageRouteDefinition;
-}
-`,
-      );
-      project.createSourceFile(pagePath, await fs.readFile(pagePath, "utf-8"));
-      project.createSourceFile(routePath, await fs.readFile(routePath, "utf-8"));
-
-      const diagnostics = project.getPreEmitDiagnostics();
-
-      expect(project.formatDiagnosticsWithColorAndContext(diagnostics)).toBe("");
+        expect(routeContent).toContain(emittedPath);
+        await expectGeneratedRouteToTypecheckAndPreservePath(
+          pagePath,
+          generatedRoutePath,
+          routePath,
+        );
+      }
     },
     COMPILER_CONTRACT_TEST_TIMEOUT_MS,
   );
@@ -116,7 +121,7 @@ describe("runCreatePage", () => {
     expect(routeContent).not.toContain("@croco/meta-vite");
     expect(routeContent).not.toContain("defineRoute");
     expect(routeContent).not.toContain("react-router");
-    expect(routeContent).toContain("path: '/settings-panel'");
+    expect(routeContent).toContain('path: "/settings-panel"');
   });
 
   it("should keep SSR generated imports declared by scaffold manifests", async () => {
@@ -185,7 +190,79 @@ describe("runCreatePage", () => {
       "Invalid name: 123Dashboard",
     );
   });
+
+  it.each(["", "relative/path"])(
+    "should reject invalid route path %j before writing files",
+    async (routePath) => {
+      const cwd = await createWorkspace();
+
+      await expect(runCreatePage("InvalidPath", { cwd, path: routePath })).rejects.toThrow(
+        `Invalid route path: ${JSON.stringify(routePath)}. Route paths must start with '/'.`,
+      );
+      await expect(
+        fs.access(path.join(cwd, "apps", "console-web", "pages", "invalid-path")),
+      ).rejects.toThrow();
+    },
+  );
 });
+
+async function expectGeneratedRouteToTypecheckAndPreservePath(
+  pagePath: string,
+  routePath: string,
+  expectedPath: string,
+): Promise<void> {
+  const project = new Project({
+    useInMemoryFileSystem: true,
+    compilerOptions: {
+      jsx: ts.JsxEmit.Preserve,
+      strict: true,
+      target: ts.ScriptTarget.ES2022,
+    },
+  });
+  project.createSourceFile(
+    "/types/jsx.d.ts",
+    `declare namespace JSX {
+  type Element = unknown;
+
+  interface IntrinsicElements {
+    main: unknown;
+    h1: unknown;
+    p: unknown;
+  }
+}
+`,
+  );
+  project.createSourceFile(
+    "/types/meta-vite.d.ts",
+    `declare module '@croco/meta-vite' {
+  export type RenderRouteComponentProps = {
+    readonly request: Request;
+    readonly context?: unknown;
+  };
+
+  export type PageRouteDefinition = {
+    readonly path: string;
+    readonly component: (props: RenderRouteComponentProps) => JSX.Element;
+    readonly mode?: 'ssr' | 'ssg' | 'isr' | 'rsc';
+  };
+
+  export function defineRoute(route: PageRouteDefinition): PageRouteDefinition;
+}
+`,
+  );
+  project.createSourceFile(pagePath, await fs.readFile(pagePath, "utf-8"));
+  const routeSource = project.createSourceFile(routePath, await fs.readFile(routePath, "utf-8"));
+
+  const diagnostics = project.getPreEmitDiagnostics();
+  const pathProperty = routeSource
+    .getDescendantsOfKind(ts.SyntaxKind.PropertyAssignment)
+    .find((property) => property.getName() === "path");
+
+  expect(project.formatDiagnosticsWithColorAndContext(diagnostics)).toBe("");
+  expect(
+    pathProperty?.getInitializerIfKindOrThrow(ts.SyntaxKind.StringLiteral).getLiteralValue(),
+  ).toBe(expectedPath);
+}
 
 async function createWorkspace(options: { consoleWebManifest?: string } = {}): Promise<string> {
   const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "croco-cli-page-"));
