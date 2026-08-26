@@ -1,4 +1,5 @@
 ---
+"@croco/problems-core": patch
 "@croco/transports-http": patch
 ---
 
