@@ -5,9 +5,11 @@ prev: false
 title: "ProblemStatusMismatchError"
 ---
 
+RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다.
+
 ## Extends
 
-- `Error`
+- [`Problem`](/api/problems-core/src/classes/problem/)
 
 ## Constructors
 
@@ -31,17 +33,57 @@ title: "ProblemStatusMismatchError"
 
 #### Overrides
 
-`Error.constructor`
+`Problem.constructor`
 
 ## Properties
 
+### category
+
+> `readonly` **category**: [`InternalServerError`](/api/problems-core/src/enumerations/problemcategory/#internalservererror) = `ProblemCategory.InternalServerError`
+
+#### Overrides
+
+[`Problem`](/api/problems-core/src/classes/problem/).[`category`](/api/problems-core/src/classes/problem/#category)
+
+---
+
 ### cause?
 
-> `optional` **cause?**: `unknown`
+> `readonly` `optional` **cause?**: `Error`
 
 #### Inherited from
 
-`Error.cause`
+[`Problem`](/api/problems-core/src/classes/problem/).[`cause`](/api/problems-core/src/classes/problem/#cause)
+
+---
+
+### code
+
+> `readonly` **code**: `"frontend-problems/status-mismatch"` = `"frontend-problems/status-mismatch"`
+
+#### Overrides
+
+[`Problem`](/api/problems-core/src/classes/problem/).[`code`](/api/problems-core/src/classes/problem/#code)
+
+---
+
+### detail?
+
+> `readonly` `optional` **detail?**: `string`
+
+#### Inherited from
+
+[`Problem`](/api/problems-core/src/classes/problem/).[`detail`](/api/problems-core/src/classes/problem/#detail)
+
+---
+
+### extensions?
+
+> `readonly` `optional` **extensions?**: [`ProblemExtensions`](/api/problems-core/src/type-aliases/problemextensions/)
+
+#### Inherited from
+
+[`Problem`](/api/problems-core/src/classes/problem/).[`extensions`](/api/problems-core/src/classes/problem/#extensions)
 
 ---
 
@@ -51,13 +93,23 @@ title: "ProblemStatusMismatchError"
 
 ---
 
+### instance?
+
+> `readonly` `optional` **instance?**: `string`
+
+#### Inherited from
+
+[`Problem`](/api/problems-core/src/classes/problem/).[`instance`](/api/problems-core/src/classes/problem/#instance)
+
+---
+
 ### message
 
 > **message**: `string`
 
 #### Inherited from
 
-`Error.message`
+[`Problem`](/api/problems-core/src/classes/problem/).[`message`](/api/problems-core/src/classes/problem/#message)
 
 ---
 
@@ -67,7 +119,7 @@ title: "ProblemStatusMismatchError"
 
 #### Inherited from
 
-`Error.name`
+[`Problem`](/api/problems-core/src/classes/problem/).[`name`](/api/problems-core/src/classes/problem/#name)
 
 ---
 
@@ -89,7 +141,17 @@ title: "ProblemStatusMismatchError"
 
 #### Inherited from
 
-`Error.stack`
+[`Problem`](/api/problems-core/src/classes/problem/).[`stack`](/api/problems-core/src/classes/problem/#stack)
+
+---
+
+### type
+
+> `readonly` **type**: `string`
+
+#### Inherited from
+
+[`Problem`](/api/problems-core/src/classes/problem/).[`type`](/api/problems-core/src/classes/problem/#type)
 
 ---
 
@@ -109,9 +171,55 @@ not capture any frames.
 
 #### Inherited from
 
-`Error.stackTraceLimit`
+[`Problem`](/api/problems-core/src/classes/problem/).[`stackTraceLimit`](/api/problems-core/src/classes/problem/#stacktracelimit)
+
+## Accessors
+
+### status
+
+#### Get Signature
+
+> **get** **status**(): `number`
+
+##### Returns
+
+`number`
+
+#### Inherited from
+
+[`Problem`](/api/problems-core/src/classes/problem/).[`status`](/api/problems-core/src/classes/problem/#status)
+
+---
+
+### title
+
+#### Get Signature
+
+> **get** **title**(): `string`
+
+##### Returns
+
+`string`
+
+#### Inherited from
+
+[`Problem`](/api/problems-core/src/classes/problem/).[`title`](/api/problems-core/src/classes/problem/#title)
 
 ## Methods
+
+### toJSON()
+
+> **toJSON**(): [`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
+
+#### Returns
+
+[`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
+
+#### Inherited from
+
+[`Problem`](/api/problems-core/src/classes/problem/).[`toJSON`](/api/problems-core/src/classes/problem/#tojson)
+
+---
 
 ### captureStackTrace()
 
@@ -177,7 +285,7 @@ a();
 
 #### Inherited from
 
-`Error.captureStackTrace`
+[`Problem`](/api/problems-core/src/classes/problem/).[`captureStackTrace`](/api/problems-core/src/classes/problem/#capturestacktrace)
 
 ---
 
@@ -205,4 +313,4 @@ https://v8.dev/docs/stack-trace-api#customizing-stack-traces
 
 #### Inherited from
 
-`Error.prepareStackTrace`
+[`Problem`](/api/problems-core/src/classes/problem/).[`prepareStackTrace`](/api/problems-core/src/classes/problem/#preparestacktrace)

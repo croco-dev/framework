@@ -1,5 +1,6 @@
 ---
 "@croco/frontend-problems": patch
+"@croco/problems-core": patch
 "@croco/rpc-codegen": patch
 ---
 

@@ -1,4 +1,4 @@
-import { ProblemCategory } from "@croco/problems-core";
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import {
   ProblemClientError,
@@ -122,11 +122,15 @@ describe("frontend Problem client runtime", () => {
 
     await expect(request).rejects.toBeInstanceOf(ProblemStatusMismatchError);
     await expect(request).rejects.toMatchObject({
+      category: ProblemCategory.InternalServerError,
+      code: "frontend-problems/status-mismatch",
       httpStatus: 500,
       name: "ProblemStatusMismatchError",
       problemStatus: 404,
       response,
+      status: 500,
     });
+    await expect(request).rejects.toBeInstanceOf(Problem);
     await expect(request).rejects.toThrow(
       "Problem response status mismatch: HTTP 500, Problem 404",
     );
@@ -144,15 +148,19 @@ describe("frontend Problem client runtime", () => {
       kind: "external",
       body: userNotFoundProblem,
       error: {
+        category: ProblemCategory.InternalServerError,
+        code: "frontend-problems/status-mismatch",
         httpStatus: 500,
         name: "ProblemStatusMismatchError",
         problemStatus: 404,
+        status: 500,
       },
       response,
     });
     expect(result.ok).toBe(false);
     if (!result.ok && result.kind === "external") {
       expect(result.error).toBeInstanceOf(ProblemStatusMismatchError);
+      expect(result.error).toBeInstanceOf(Problem);
     }
   });
 

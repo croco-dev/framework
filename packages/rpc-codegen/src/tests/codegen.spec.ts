@@ -38,7 +38,7 @@ type GeneratedRpcProblemErrorConstructor = new (
 type GeneratedRpcStatusMismatchErrorConstructor = new (
   response: Response,
   problemStatus: number,
-) => Error & {
+) => Problem & {
   readonly httpStatus: number;
   readonly problemStatus: number;
   readonly response: Response;
@@ -2185,11 +2185,15 @@ void handleMissingProblemBranch;
 
     await expect(directRequest).rejects.toBeInstanceOf(RpcClientStatusMismatchError);
     await expect(directRequest).rejects.toMatchObject({
+      category: ProblemCategory.InternalServerError,
+      code: "rpc-codegen/status-mismatch",
       httpStatus: 500,
       name: "RpcClientStatusMismatchError",
       problemStatus: 404,
       response: directResponse,
+      status: 500,
     });
+    await expect(directRequest).rejects.toBeInstanceOf(Problem);
 
     const resultResponse = new Response(JSON.stringify(problemBody), { status: 500 });
     const result = (await handleJsonResult(resultResponse, [declaration])) as Record<
@@ -2202,9 +2206,12 @@ void handleMissingProblemBranch;
       kind: "external",
       body: problemBody,
       error: {
+        category: ProblemCategory.InternalServerError,
+        code: "rpc-codegen/status-mismatch",
         httpStatus: 500,
         name: "RpcClientStatusMismatchError",
         problemStatus: 404,
+        status: 500,
       },
       response: resultResponse,
     });

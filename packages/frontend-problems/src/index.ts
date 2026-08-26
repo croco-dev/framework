@@ -202,14 +202,19 @@ export class ProblemResponseError extends Error {
   }
 }
 
-export class ProblemStatusMismatchError extends Error {
+export class ProblemStatusMismatchError extends Problem {
+  readonly code = "frontend-problems/status-mismatch";
+  readonly category = ProblemCategory.InternalServerError;
   readonly response: Response;
   readonly httpStatus: number;
   readonly problemStatus: number;
 
   constructor(response: Response, problemStatus: number) {
-    super(`Problem response status mismatch: HTTP ${response.status}, Problem ${problemStatus}`);
-    this.name = "ProblemStatusMismatchError";
+    super(
+      undefined,
+      undefined,
+      `Problem response status mismatch: HTTP ${response.status}, Problem ${problemStatus}`,
+    );
     this.response = response;
     this.httpStatus = response.status;
     this.problemStatus = problemStatus;

@@ -1400,14 +1400,19 @@ export class RpcClientResponseError extends Error {
   }
 }
 
-export class RpcClientStatusMismatchError extends Error {
+export class RpcClientStatusMismatchError extends Problem {
+  readonly code = 'rpc-codegen/status-mismatch';
+  readonly category = ProblemCategory.InternalServerError;
   readonly response: Response;
   readonly httpStatus: number;
   readonly problemStatus: number;
 
   constructor(response: Response, problemStatus: number) {
-    super(\`RPC Problem status mismatch: HTTP \${response.status}, Problem \${problemStatus}\`);
-    this.name = 'RpcClientStatusMismatchError';
+    super(
+      undefined,
+      undefined,
+      \`RPC Problem status mismatch: HTTP \${response.status}, Problem \${problemStatus}\`,
+    );
     this.response = response;
     this.httpStatus = response.status;
     this.problemStatus = problemStatus;
