@@ -564,32 +564,104 @@ describe("CrocoLambdaAdapter waitUntil draining", () => {
     expect(flush).toHaveBeenCalledOnce();
   });
 
-  it("turns a throwing rejection logger into a flush failure and still runs external flush", async () => {
-    const loggerError = new Error("logger failed");
-    const logger = {
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(() => {
-        throw loggerError;
-      }),
-      debug: vi.fn(),
-    } as unknown as ILogger & { error: ReturnType<typeof vi.fn> };
-    const flush = vi.fn().mockResolvedValue(undefined);
-    const app = new Hono();
-    app.get("/test", (context) => {
-      getRuntimeContextInitFromEnv(context.env)?.waitUntil?.(
-        Promise.reject(new Error("task failed")),
-      );
-      return context.json({ ok: true });
-    });
+  it.each(["synchronously", "asynchronously"] as const)(
+    "preserves a successful response when rejection reporting sinks fail %s",
+    async (failureMode) => {
+      const loggerError = new Error("logger failed");
+      const consoleSinkError = new Error("console failed");
+      const consoleError = vi.spyOn(console, "error").mockImplementation(() => {
+        if (failureMode === "synchronously") {
+          throw consoleSinkError;
+        }
+        return Promise.reject(consoleSinkError);
+      });
+      const logger = {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(() => {
+          if (failureMode === "synchronously") {
+            throw loggerError;
+          }
+          return Promise.reject(loggerError);
+        }),
+        debug: vi.fn(),
+      } as unknown as ILogger & { error: ReturnType<typeof vi.fn> };
+      const flush = vi.fn().mockResolvedValue(undefined);
+      const unhandledRejections: unknown[] = [];
+      const onUnhandledRejection = (reason: unknown) => {
+        unhandledRejections.push(reason);
+      };
+      process.on("unhandledRejection", onUnhandledRejection);
+      const app = new Hono();
+      app.get("/test", (context) => {
+        getRuntimeContextInitFromEnv(context.env)?.waitUntil?.(
+          Promise.reject(new Error("task failed")),
+        );
+        return context.json({ ok: true });
+      });
 
-    await expect(
-      new CrocoLambdaAdapter(app).createHandler({ logger, flush })(
-        createLambdaEvent(),
-        createLambdaContext(),
-      ),
-    ).rejects.toBe(loggerError);
-    expect(logger.error).toHaveBeenCalledOnce();
-    expect(flush).toHaveBeenCalledOnce();
-  });
+      try {
+        const response = await new CrocoLambdaAdapter(app).createHandler({ logger, flush })(
+          createLambdaEvent(),
+          createLambdaContext(),
+        );
+        await new Promise<void>((resolve) => setImmediate(resolve));
+
+        expect(response.statusCode).toBe(200);
+        expect(logger.error).toHaveBeenCalledOnce();
+        expect(consoleError).toHaveBeenCalledOnce();
+        expect(consoleError).toHaveBeenCalledWith("Lambda waitUntil rejection reporting failed", {
+          taskIndex: 0,
+          reason: expect.objectContaining({ message: "task failed" }),
+          reportingError: loggerError,
+        });
+        expect(flush).toHaveBeenCalledOnce();
+        expect(unhandledRejections).toEqual([]);
+      } finally {
+        process.off("unhandledRejection", onUnhandledRejection);
+      }
+    },
+  );
+
+  it.each(["synchronously", "asynchronously"] as const)(
+    "preserves a successful response when the console rejection sink fails %s",
+    async (failureMode) => {
+      const consoleError = vi.spyOn(console, "error").mockImplementation(() => {
+        if (failureMode === "synchronously") {
+          throw new Error("console failed");
+        }
+        return Promise.reject(new Error("console failed"));
+      });
+      const unhandledRejections: unknown[] = [];
+      const onUnhandledRejection = (reason: unknown) => {
+        unhandledRejections.push(reason);
+      };
+      process.on("unhandledRejection", onUnhandledRejection);
+      const app = new Hono();
+      app.get("/test", (context) => {
+        getRuntimeContextInitFromEnv(context.env)?.waitUntil?.(
+          Promise.reject(new Error("task failed")),
+        );
+        return context.json({ ok: true });
+      });
+
+      try {
+        const response = await new CrocoLambdaAdapter(app).createHandler()(
+          createLambdaEvent(),
+          createLambdaContext(),
+        );
+        await new Promise<void>((resolve) => setImmediate(resolve));
+
+        expect(response.statusCode).toBe(200);
+        expect(consoleError).toHaveBeenCalledOnce();
+        expect(consoleError).toHaveBeenCalledWith(
+          "Lambda waitUntil task rejected",
+          expect.objectContaining({ message: "task failed" }),
+        );
+        expect(unhandledRejections).toEqual([]);
+      } finally {
+        process.off("unhandledRejection", onUnhandledRejection);
+      }
+    },
+  );
 });

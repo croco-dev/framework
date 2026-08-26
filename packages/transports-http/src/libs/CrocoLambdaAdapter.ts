@@ -97,6 +97,8 @@ export type LambdaHandlerOptions = {
 };
 
 const WAIT_UNTIL_REJECTION_MESSAGE = "Lambda waitUntil task rejected";
+const WAIT_UNTIL_REJECTION_REPORTING_FAILURE_MESSAGE =
+  "Lambda waitUntil rejection reporting failed";
 const LAMBDA_FLUSH_BOUNDARY_ERROR_CODE = "transports-http/lambda-flush-boundary-failed";
 const LAMBDA_EVENT_INVALID_CODE = "transports-http/lambda-event-invalid";
 const LAMBDA_WAIT_UNTIL_DEADLINE_ERROR_CODE = "transports-http/lambda-wait-until-deadline-exceeded";
@@ -117,6 +119,17 @@ type ValidatedApiGatewayV2Event = {
   path: string;
   queryString: string;
 };
+
+function writeWaitUntilDiagnostic(message: string, context: unknown): void {
+  let reportingResult: unknown;
+  try {
+    reportingResult = console.error(message, context);
+  } catch {
+    return;
+  }
+
+  void Promise.resolve(reportingResult).catch(() => undefined);
+}
 
 class LambdaFlushBoundaryError extends Error {
   readonly code = LAMBDA_FLUSH_BOUNDARY_ERROR_CODE;
@@ -260,15 +273,34 @@ function reportWaitUntilRejections(
     }
 
     task.rejectionReported = true;
-    if (logger) {
-      logger.error(WAIT_UNTIL_REJECTION_MESSAGE, {
+    const reason = task.result.reason;
+    if (!logger) {
+      writeWaitUntilDiagnostic(WAIT_UNTIL_REJECTION_MESSAGE, reason);
+      continue;
+    }
+
+    let reportingResult: unknown;
+    try {
+      reportingResult = logger.error(WAIT_UNTIL_REJECTION_MESSAGE, {
         taskIndex: task.index,
-        reason: task.result.reason,
+        reason,
+      });
+    } catch (reportingError) {
+      writeWaitUntilDiagnostic(WAIT_UNTIL_REJECTION_REPORTING_FAILURE_MESSAGE, {
+        taskIndex: task.index,
+        reason,
+        reportingError,
       });
       continue;
     }
 
-    console.error(WAIT_UNTIL_REJECTION_MESSAGE, task.result.reason);
+    void Promise.resolve(reportingResult).catch((reportingError: unknown) => {
+      writeWaitUntilDiagnostic(WAIT_UNTIL_REJECTION_REPORTING_FAILURE_MESSAGE, {
+        taskIndex: task.index,
+        reason,
+        reportingError,
+      });
+    });
   }
 }
 
