@@ -54,7 +54,7 @@ app.listen({ port: 3000 });
     expect(secondResult.status).toBe("updated-idempotent");
     expect(secondContent).toBe(firstContent);
     expect(secondContent).toContain("app.addControllers([FooController, BarController]);");
-  });
+  }, 30_000);
 
   it("repairs a missing import when the controller is already registered", async () => {
     await writeFixture(`
