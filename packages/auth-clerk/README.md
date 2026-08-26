@@ -66,6 +66,11 @@ await mapper.register("org_123", "tenant_123");
 const tenantId = await mapper.resolve("org_123");
 ```
 
+Custom `TenantMappingStore` adapters must implement `claim()` with a database uniqueness constraint
+or compare-and-set operation. The absence check and insert must be atomic across processes; `set()`
+is no longer part of the store contract. Run `createTenantMappingStoreConformanceSuite()` with two
+separate clients that share one backing namespace before using an adapter in production.
+
 ### 5. 웹훅 처리
 
 ```typescript
@@ -160,5 +165,6 @@ pnpm public-api:check
 - `ClerkAuthDiagnosticsConfig`, `ClerkAuthDiagnosticsOptions`
 - `ClerkUser`, `CreateClerkUserInput`, `UpdateClerkUserInput`
 - `ClerkOrganization`, `CreateOrganizationInput`, `CreateInvitationInput`
-- `ClerkTenantRequest`, `TenantMappingStore`
+- `ClerkTenantRequest`, `TenantMappingClaimResult`, `TenantMappingStore`
+- `createTenantMappingStoreConformanceSuite`와 관련 conformance 타입
 - `WebhookHandlerOptions`, `WebhookEventHandler`, `WebhookEventType`, `ClerkWebhookDeliveryOutcome`

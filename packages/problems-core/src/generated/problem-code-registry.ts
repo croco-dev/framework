@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 666,
+  problemCount: 667,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -1336,7 +1336,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 159,
+          line: 171,
           column: 5,
           kind: "problem-constructor",
         },
@@ -1428,7 +1428,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 147,
+          line: 159,
           column: 3,
           kind: "problem-class",
         },
@@ -1492,6 +1492,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
           line: 98,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "auth-clerk/unexpected-tenant-mapping-claim",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#auth-clerk-unexpected-tenant-mapping-claim",
+      recovery: {
+        cause: "TenantMappingStore.claim() returned a result outside the supported claim contract.",
+        userAction:
+          "Do not retry the unchanged operation; report the tenant mapping store and version to the service operator.",
+        operatorAction:
+          "Fix or upgrade the TenantMappingStore implementation so claim() returns created or existing with the authoritative tenant ID.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
+          line: 147,
           column: 3,
           kind: "problem-class",
         },

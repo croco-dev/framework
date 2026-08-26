@@ -3606,6 +3606,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "createTenantMappingStoreConformanceSuite",
+              "exportKind": "named",
+              "source": "./libs/conformance",
+              "declarationKind": "function"
+            },
+            {
               "name": "DuplicateTenantMappingProblem",
               "exportKind": "named",
               "source": "./libs/problems/ClerkProblems",
@@ -3613,6 +3619,12 @@
             },
             {
               "name": "InvalidWebhookPayloadProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/ClerkProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "UnexpectedTenantMappingClaimProblem",
               "exportKind": "named",
               "source": "./libs/problems/ClerkProblems",
               "declarationKind": "class"
@@ -3736,9 +3748,29 @@
               "source": "./libs/ClerkOrganizationService"
             },
             {
+              "name": "TenantMappingClaimResult",
+              "exportKind": "named",
+              "source": "./libs/ClerkTenantMapper"
+            },
+            {
               "name": "TenantMappingStore",
               "exportKind": "named",
               "source": "./libs/ClerkTenantMapper"
+            },
+            {
+              "name": "TenantMappingStoreConformanceCase",
+              "exportKind": "named",
+              "source": "./libs/conformance"
+            },
+            {
+              "name": "TenantMappingStoreConformanceOptions",
+              "exportKind": "named",
+              "source": "./libs/conformance"
+            },
+            {
+              "name": "TenantMappingStoreConformanceSuite",
+              "exportKind": "named",
+              "source": "./libs/conformance"
             },
             {
               "name": "UpdateClerkUserInput",
