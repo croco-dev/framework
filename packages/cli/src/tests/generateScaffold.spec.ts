@@ -74,7 +74,9 @@ async function createWorkspace(options: { consoleWeb?: boolean } = {}): Promise<
   );
   await fs.writeFile(
     path.join(cwd, "apps", "api-server", "src", "index.ts"),
-    `const app = createCrocoApp();
+    `import { createApp } from "@croco/transports-http";
+
+const app = createApp();
 app.listen({ port: 3000 });
 `,
   );

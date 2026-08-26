@@ -1,10 +1,12 @@
 import { readFile, writeFile } from "node:fs/promises";
-import { Node, Project, QuoteKind, SyntaxKind } from "ts-morph";
+import { Node, Project, QuoteKind, SyntaxKind, VariableDeclarationKind } from "ts-morph";
 import type {
   ArrayLiteralExpression,
   CallExpression,
+  Identifier,
   PropertyAssignment,
   SourceFile,
+  VariableDeclaration,
 } from "ts-morph";
 
 export type RegisterControllerOptions = {
@@ -63,7 +65,10 @@ export async function registerController(
   }
 
   if (finalResult === "unsupported-pattern") {
-    return unsupportedResult(options, "Controller registration uses unsupported array syntax.");
+    return unsupportedResult(
+      options,
+      "Could not identify one Croco app variable and its listen call. Use one variable initialized by createApp() or createCrocoApp() and call listen through that variable.",
+    );
   }
 
   if (finalResult === "updated") {
@@ -89,7 +94,11 @@ function addToActiveRegistration(sourceFile: SourceFile, className: string): Upd
       return addToCallArray(call, className);
     }
 
-    if (Node.isIdentifier(expression) && expression.getText() === "createApp") {
+    if (
+      Node.isIdentifier(expression) &&
+      expression.getText() === "createApp" &&
+      isSupportedCrocoAppFactory(expression)
+    ) {
       const result = addToCreateAppControllers(call, className);
       if (result !== "not-found") return result;
     }
@@ -186,25 +195,72 @@ function addCommentedRegistration(sourceFile: SourceFile, className: string): Up
 }
 
 function addRegistrationBeforeListen(sourceFile: SourceFile, className: string): UpdateResult {
-  const listenCall = sourceFile
+  const appVariables = sourceFile
+    .getVariableDeclarations()
+    .filter((declaration) => isSupportedCrocoAppVariable(declaration));
+
+  if (appVariables.length !== 1) return "unsupported-pattern";
+
+  const appVariable = appVariables[0];
+  if (!appVariable) return "unsupported-pattern";
+
+  const receiverName = appVariable.getName();
+  const listenCalls = sourceFile
     .getDescendantsOfKind(SyntaxKind.CallExpression)
-    .find((call) => isListenCall(call));
+    .filter((call) => isListenCallOnReceiver(call, appVariable));
 
-  const statement = listenCall?.getFirstAncestorByKind(SyntaxKind.ExpressionStatement);
-  if (!statement) return "not-found";
+  if (listenCalls.length !== 1) return "unsupported-pattern";
 
-  statement.replaceWithText(`app.addControllers([${className}]);\n${statement.getText()}`);
+  const statement = listenCalls[0]?.getFirstAncestorByKind(SyntaxKind.ExpressionStatement);
+  if (!statement) return "unsupported-pattern";
+
+  statement.replaceWithText(
+    `${receiverName}.addControllers([${className}]);\n${statement.getText()}`,
+  );
   return "updated";
 }
 
-function isListenCall(call: CallExpression): boolean {
-  const expression = call.getExpression();
-
-  if (Node.isIdentifier(expression)) {
-    return expression.getText() === "listen";
+function isSupportedCrocoAppVariable(declaration: VariableDeclaration): boolean {
+  if (declaration.getVariableStatement()?.getDeclarationKind() !== VariableDeclarationKind.Const) {
+    return false;
   }
 
-  return Node.isPropertyAccessExpression(expression) && expression.getName() === "listen";
+  const name = declaration.getNameNode();
+  const initializer = declaration.getInitializer();
+  if (!Node.isIdentifier(name) || !Node.isCallExpression(initializer)) return false;
+
+  const factory = initializer.getExpression();
+  if (!Node.isIdentifier(factory)) return false;
+
+  return isSupportedCrocoAppFactory(factory);
+}
+
+function isSupportedCrocoAppFactory(factory: Identifier): boolean {
+  return (
+    factory
+      .getSymbol()
+      ?.getDeclarations()
+      .some((factoryDeclaration) => {
+        if (!Node.isImportSpecifier(factoryDeclaration)) return false;
+
+        const importedName = factoryDeclaration.getName();
+        const moduleSpecifier = factoryDeclaration.getImportDeclaration().getModuleSpecifierValue();
+        return (
+          (importedName === "createApp" && moduleSpecifier === "@croco/transports-http") ||
+          (importedName === "createCrocoApp" && moduleSpecifier.startsWith("."))
+        );
+      }) === true
+  );
+}
+
+function isListenCallOnReceiver(call: CallExpression, appVariable: VariableDeclaration): boolean {
+  const expression = call.getExpression();
+  if (!Node.isPropertyAccessExpression(expression) || expression.getName() !== "listen") {
+    return false;
+  }
+
+  const receiver = expression.getExpression();
+  return Node.isIdentifier(receiver) && receiver.getSymbol() === appVariable.getSymbol();
 }
 
 function unsupportedResult(
