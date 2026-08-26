@@ -585,5 +585,29 @@ describe("ErrorHandler", () => {
       expect(logger.error).toHaveBeenCalledOnce();
       expect(logger.error).toHaveBeenCalledWith("Unhandled error:", originalError);
     });
+
+    it("should consume a rejected logger promise while returning the sanitized response", async () => {
+      const originalError = new Error("request failed");
+      const loggingError = new Error("async log sink unavailable");
+      const rejectedLogging = Promise.reject(loggingError);
+      const catchSpy = vi.spyOn(rejectedLogging, "catch");
+      const asyncLogger = {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(() => rejectedLogging),
+        debug: vi.fn(),
+      } as unknown as Logger;
+      const handler = new ErrorHandler(asyncLogger);
+
+      try {
+        const response = handler.handleError(originalError, mockCtx);
+
+        expect(response.status).toBe(500);
+        expect(catchSpy).toHaveBeenCalledOnce();
+        expect(asyncLogger.error).toHaveBeenCalledWith("Unhandled error:", originalError);
+      } finally {
+        await rejectedLogging.catch(() => undefined);
+      }
+    });
   });
 });
