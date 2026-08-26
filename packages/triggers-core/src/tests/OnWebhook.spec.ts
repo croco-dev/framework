@@ -1,5 +1,7 @@
+import { ProblemCategory } from "@croco/problems-core";
 import { beforeEach, describe, expect, it } from "vitest";
 import { OnWebhook, WEBHOOK_METADATA_KEY } from "../libs/decorators/OnWebhook";
+import { defineWebhookTrigger } from "../libs/TriggerRef";
 import { TriggerRegistry } from "../libs/TriggerRegistry";
 import type { WebhookTriggerMetadata } from "../libs/types";
 
@@ -24,9 +26,32 @@ describe("@OnWebhook decorator", () => {
     expect(metadata.methodName).toBe("handleStripeWebhook");
   });
 
+  it("should derive the existing metadata shape from a typed webhook reference", () => {
+    const stripeWebhook = defineWebhookTrigger<Request, Response>()("/webhooks/stripe", "post");
+
+    class TestWebhookHandler {
+      @OnWebhook(stripeWebhook, { auth: true })
+      async handleStripeWebhook(request: Request): Promise<Response> {
+        return new Response(request.url);
+      }
+    }
+
+    const triggers = TriggerRegistry.getInstance().getTriggers(TestWebhookHandler.prototype);
+    const [metadata] = Array.from(triggers.values());
+
+    expect(metadata).toEqual({
+      type: "webhook",
+      path: "/webhooks/stripe",
+      method: "POST",
+      methodName: "handleStripeWebhook",
+      options: { auth: true },
+      target: TestWebhookHandler.prototype,
+    });
+  });
+
   it("should normalize HTTP method to uppercase", () => {
     class TestWebhookHandler {
-      @OnWebhook("/webhooks/github", "post")
+      @OnWebhook("/webhooks/github", "pOsT")
       async handleGithub(): Promise<void> {}
     }
 
@@ -34,6 +59,35 @@ describe("@OnWebhook decorator", () => {
     const [metadata] = Array.from(triggers.values());
 
     expect((metadata as WebhookTriggerMetadata).method).toBe("POST");
+  });
+
+  it("should preserve supported string-typed methods", () => {
+    const method: string = "post";
+
+    class TestWebhookHandler {
+      @OnWebhook("/webhooks/configured", method)
+      async handleConfigured(): Promise<void> {}
+    }
+
+    const triggers = TriggerRegistry.getInstance().getTriggers(TestWebhookHandler.prototype);
+    const [metadata] = Array.from(triggers.values());
+
+    expect((metadata as WebhookTriggerMetadata).method).toBe("POST");
+  });
+
+  it("should reject unsupported string-typed methods at runtime", () => {
+    const method: string = "TRACE";
+
+    try {
+      OnWebhook("/webhooks/configured", method);
+      expect.unreachable("Expected an unsupported webhook method Problem");
+    } catch (error) {
+      expect(error).toMatchObject({
+        code: "triggers-core/unsupported-webhook-method",
+        category: ProblemCategory.ValidationError,
+        detail: "Unsupported webhook HTTP method 'TRACE'",
+      });
+    }
   });
 
   it("should store custom options", () => {

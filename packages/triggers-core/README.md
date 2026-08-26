@@ -41,6 +41,40 @@ export class ReportScheduler {
 }
 ```
 
+### 타입이 지정된 Event/Webhook 트리거
+
+`defineEventTrigger`와 `defineWebhookTrigger`는 registry가 읽을 수 있는 이름·경로·HTTP method를
+직렬화 가능한 reference로 만들고, 데코레이터가 handler의 첫 인자와 반환 타입을 컴파일 단계에서
+검증하게 합니다. 기존 문자열 event와 path/method 호출도 호환성을 위해 계속 지원됩니다.
+
+```typescript
+import { defineEventTrigger, defineWebhookTrigger, OnEvent, OnWebhook } from "@croco/triggers-core";
+
+type OrderPlaced = {
+  orderId: string;
+};
+
+const orderPlaced = defineEventTrigger<OrderPlaced>()("OrderPlaced");
+const stripeWebhook = defineWebhookTrigger<Request, Response>()("/webhooks/stripe", "POST");
+
+class OrderTriggers {
+  @OnEvent(orderPlaced)
+  async recordOrder(event: OrderPlaced): Promise<void> {
+    console.log(event.orderId);
+  }
+
+  @OnWebhook(stripeWebhook)
+  async receiveStripe(request: Request): Promise<Response> {
+    const payload = await request.json();
+    return Response.json(payload);
+  }
+}
+```
+
+지원하지 않는 HTTP method나 reference 계약과 일치하지 않는 handler payload/result는 `typecheck`에서
+거부됩니다. 기존 코드에서 설정값을 `string`으로 전달하는 경우도 계속 지원하며, 실제 값이 지원되지
+않는 method라면 decorator 등록 시 `triggers-core/unsupported-webhook-method` Problem으로 실패합니다.
+
 ### 트리거 등록 확인
 
 `triggerRegistry`를 통해 등록된 모든 트리거 정보를 조회할 수 있습니다. 이는 인프라(EventBridge Scheduler 등) 프로비저닝 시 유용합니다.

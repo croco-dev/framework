@@ -15,6 +15,9 @@ export { OnWebhook, WEBHOOK_METADATA_KEY } from "./libs/decorators/OnWebhook";
 /** Trigger registry APIs and shared metadata key. */
 export { TRIGGER_METADATA_KEY, TriggerRegistry, triggerRegistry } from "./libs/TriggerRegistry";
 
+/** Serializable typed trigger references. */
+export { defineEventTrigger, defineWebhookTrigger } from "./libs/TriggerRef";
+
 /** Trigger metadata and option types. */
 export type {
   AnyTriggerMetadata,
@@ -27,3 +30,5 @@ export type {
   WebhookOptions,
   WebhookTriggerMetadata,
 } from "./libs/types";
+
+export type { EventTriggerRef, WebhookHttpMethod, WebhookTriggerRef } from "./libs/TriggerRef";

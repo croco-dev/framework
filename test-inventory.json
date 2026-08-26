@@ -3815,6 +3815,12 @@
       "owner": "@croco/triggers-core"
     },
     {
+      "path": "packages/triggers-core/src/tests/TriggerRefTypes.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/triggers-core"
+    },
+    {
       "path": "packages/triggers-core/src/tests/TriggerRegistry.spec.ts",
       "lane": "fast",
       "qualifiers": [],

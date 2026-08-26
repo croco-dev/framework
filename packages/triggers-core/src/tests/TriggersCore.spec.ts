@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import { CRON_METADATA_KEY, Cron } from "../libs/decorators/Cron";
 import { EVENT_METADATA_KEY, OnEvent } from "../libs/decorators/OnEvent";
 import { OnWebhook, WEBHOOK_METADATA_KEY } from "../libs/decorators/OnWebhook";
+import { defineEventTrigger, defineWebhookTrigger } from "../libs/TriggerRef";
 import { TRIGGER_METADATA_KEY, TriggerRegistry, triggerRegistry } from "../libs/TriggerRegistry";
+import type { EventTriggerRef, WebhookHttpMethod, WebhookTriggerRef } from "../libs/TriggerRef";
 import type {
   AnyTriggerMetadata,
   CronOptions,
@@ -34,6 +36,25 @@ describe("@croco/triggers-core package exports", () => {
 
   it("should export OnWebhook decorator", () => {
     expect(typeof OnWebhook).toBe("function");
+  });
+
+  it("should export typed trigger reference factories", () => {
+    expect(typeof defineEventTrigger).toBe("function");
+    expect(typeof defineWebhookTrigger).toBe("function");
+  });
+
+  it("should export typed trigger reference contracts", () => {
+    const event: EventTriggerRef<{ id: string }, void> = defineEventTrigger<{ id: string }>()(
+      "EntityCreated",
+    );
+    const webhook: WebhookTriggerRef<Request, Response> = defineWebhookTrigger<Request, Response>()(
+      "/webhooks/entity",
+      "POST",
+    );
+    const method: WebhookHttpMethod = webhook.method;
+
+    expect(event.name).toBe("EntityCreated");
+    expect(method).toBe("POST");
   });
 
   it("should export WEBHOOK_METADATA_KEY symbol", () => {

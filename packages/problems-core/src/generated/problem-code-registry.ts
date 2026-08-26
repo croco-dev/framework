@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 670,
+  problemCount: 671,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -19286,6 +19286,37 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 121,
           column: 17,
           kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "triggers-core/unsupported-webhook-method",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#triggers-core-unsupported-webhook-method",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/triggers-core/src/libs/TriggerRef.ts",
+          line: 37,
+          column: 5,
+          kind: "problem-constructor",
         },
       ],
     },
