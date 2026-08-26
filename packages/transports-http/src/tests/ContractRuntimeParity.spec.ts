@@ -66,6 +66,12 @@ const NestedWidgetResponseSchema = z.object({
   color: z.enum(["blue", "green"]),
 });
 
+const OPTIONAL_REQUEST_BODY_SCHEMA = z.object({ value: z.string() }).optional();
+const DEFAULT_REQUEST_BODY_SCHEMA = z.object({ value: z.string() }).default({ value: "default" });
+const CATCH_REQUEST_BODY_SCHEMA = z.object({ value: z.string() }).catch({ value: "caught" });
+const REQUIRED_REQUEST_BODY_SCHEMA = z.object({ value: z.string() });
+const NULLABLE_REQUIRED_REQUEST_BODY_SCHEMA = REQUIRED_REQUEST_BODY_SCHEMA.nullable();
+
 const WidgetResponseSchema = z.object({
   id: z.string(),
   mode: z.enum(["merge", "replace"]),
@@ -191,6 +197,52 @@ class NestedBodyValidationController {
   @ResponseSchema(NestedWidgetResponseSchema)
   createNestedWidget(@Body(NestedWidgetBodySchema) body: NestedWidgetBody): NestedWidgetResponse {
     return { color: body.metadata.color };
+  }
+}
+
+@Controller("/contract-parity/omitted-body")
+class OmittedBodyController {
+  @Post("/catch")
+  caught(@Body(CATCH_REQUEST_BODY_SCHEMA) body: z.infer<typeof CATCH_REQUEST_BODY_SCHEMA>): {
+    value: string;
+  } {
+    return body;
+  }
+}
+
+@Controller("/contract-parity/omitted-body")
+class OmittedBodyContractController {
+  @Post("/optional")
+  optional(
+    @Body(OPTIONAL_REQUEST_BODY_SCHEMA) body: z.infer<typeof OPTIONAL_REQUEST_BODY_SCHEMA>,
+  ): {
+    value: string;
+  } {
+    return { value: body?.value ?? "omitted" };
+  }
+
+  @Post("/default")
+  defaulted(@Body(DEFAULT_REQUEST_BODY_SCHEMA) body: z.infer<typeof DEFAULT_REQUEST_BODY_SCHEMA>): {
+    value: string;
+  } {
+    return body;
+  }
+
+  @Post("/required")
+  required(
+    @Body(REQUIRED_REQUEST_BODY_SCHEMA) body: z.infer<typeof REQUIRED_REQUEST_BODY_SCHEMA>,
+  ): {
+    value: string;
+  } {
+    return body;
+  }
+
+  @Post("/nullable-required")
+  nullableRequired(
+    @Body(NULLABLE_REQUIRED_REQUEST_BODY_SCHEMA)
+    body: z.infer<typeof NULLABLE_REQUIRED_REQUEST_BODY_SCHEMA>,
+  ): { value: string | null } {
+    return { value: body?.value ?? null };
   }
 }
 
@@ -703,6 +755,67 @@ describe("REST contract-to-runtime parity", () => {
         }),
       ]),
     );
+  });
+
+  it("keeps omitted request-body runtime behavior aligned with OpenAPI requiredness", async () => {
+    const omittedBodyApp = createApp({
+      controllers: [OmittedBodyController, OmittedBodyContractController],
+      securityValidation: "off",
+    });
+    const omittedBodyGraph = buildContractGraph([OmittedBodyContractController]);
+    assertContractGraphHasNoErrors(omittedBodyGraph);
+    const spec = emitOpenAPIFromContractGraph(omittedBodyGraph);
+
+    const cases = [
+      { path: "optional", required: false, expectedBody: { value: "omitted" } },
+      { path: "default", required: false, expectedBody: { value: "default" } },
+      { path: "catch", expectedBody: { value: "caught" } },
+      { path: "required", required: true, expectedStatus: 422 },
+      { path: "nullable-required", required: true, expectedStatus: 422 },
+    ] as const;
+
+    for (const testCase of cases) {
+      if ("required" in testCase) {
+        const operation = spec.paths?.[`/contract-parity/omitted-body/${testCase.path}`]?.post;
+        expect(operation?.requestBody).toMatchObject({ required: testCase.required });
+      }
+
+      const response = await omittedBodyApp.fetch(
+        new Request(`http://localhost/contract-parity/omitted-body/${testCase.path}`, {
+          method: "POST",
+        }),
+      );
+
+      if ("expectedBody" in testCase) {
+        expect(response.status).toBe(200);
+        expect(await response.json()).toEqual(testCase.expectedBody);
+      } else {
+        expect(response.status).toBe(testCase.expectedStatus);
+        expect(await response.json()).toMatchObject({
+          code: "protocols-rest/request-validation-failed",
+          status: 422,
+          issues: [expect.objectContaining({ path: "body.value" })],
+        });
+      }
+    }
+
+    const malformedResponse = await omittedBodyApp.fetch(
+      new Request("http://localhost/contract-parity/omitted-body/optional", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{",
+      }),
+    );
+    expect(malformedResponse.status).toBe(422);
+    expect(await malformedResponse.json()).toMatchObject({
+      code: "protocols-rest/request-validation-failed",
+      issues: [
+        {
+          path: "body.value",
+          message: "Request body must contain valid JSON",
+        },
+      ],
+    });
   });
 
   it("keeps generated OpenAPI and RPC artifacts aligned with the validation matrix", async () => {

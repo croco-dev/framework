@@ -6,8 +6,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Container, type ILogger, LOGGER_TOKEN } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
-import { Controller, Get, Post, Raw, RequestValidationProblem } from "@croco/protocols-rest";
+import { Body, Controller, Get, Post, Raw, RequestValidationProblem } from "@croco/protocols-rest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 import { createApp, type CrocoApp } from "../libs/CrocoApp";
 import { startServer } from "../libs/adapters/NodeAdapter";
 import { ErrorHandler } from "../libs/ErrorHandler";
@@ -38,6 +39,43 @@ class NodeSmokeController {
   @Post("/echo")
   async echo(@Raw() raw: { req: { raw: Request } }) {
     return { body: await raw.req.raw.text() };
+  }
+}
+
+const OPTIONAL_NODE_BODY_SCHEMA = z.object({ value: z.string() }).optional();
+const DEFAULT_NODE_BODY_SCHEMA = z.object({ value: z.string() }).default({ value: "default" });
+const CATCH_NODE_BODY_SCHEMA = z.object({ value: z.string() }).catch({ value: "caught" });
+const REQUIRED_NODE_BODY_SCHEMA = z.object({ value: z.string() });
+const NULLABLE_REQUIRED_NODE_BODY_SCHEMA = REQUIRED_NODE_BODY_SCHEMA.nullable();
+
+@Controller("/node-omitted-body")
+class NodeOmittedBodyController {
+  @Post("/optional")
+  optional(@Body(OPTIONAL_NODE_BODY_SCHEMA) body: z.infer<typeof OPTIONAL_NODE_BODY_SCHEMA>) {
+    return { value: body?.value ?? "omitted" };
+  }
+
+  @Post("/default")
+  defaulted(@Body(DEFAULT_NODE_BODY_SCHEMA) body: z.infer<typeof DEFAULT_NODE_BODY_SCHEMA>) {
+    return body;
+  }
+
+  @Post("/catch")
+  caught(@Body(CATCH_NODE_BODY_SCHEMA) body: z.infer<typeof CATCH_NODE_BODY_SCHEMA>) {
+    return body;
+  }
+
+  @Post("/required")
+  required(@Body(REQUIRED_NODE_BODY_SCHEMA) body: z.infer<typeof REQUIRED_NODE_BODY_SCHEMA>) {
+    return body;
+  }
+
+  @Post("/nullable-required")
+  nullableRequired(
+    @Body(NULLABLE_REQUIRED_NODE_BODY_SCHEMA)
+    body: z.infer<typeof NULLABLE_REQUIRED_NODE_BODY_SCHEMA>,
+  ) {
+    return body;
   }
 }
 
@@ -184,6 +222,45 @@ describe("NodeAdapter real server smoke", () => {
       status: 413,
       limit: 4,
     });
+  });
+
+  it("preserves zero-byte request bodies for schema validation over a real Node socket", async () => {
+    const app = createApp({
+      controllers: [NodeOmittedBodyController],
+      securityValidation: "off",
+      diValidation: "off",
+    });
+    const server = await app.listen(0);
+    servers.push(server);
+    await waitForListening(server, "omitted body server");
+    const baseUrl = getBaseUrl(server, "omitted body server");
+
+    const cases = [
+      { path: "optional", expectedBody: { value: "omitted" } },
+      { path: "default", expectedBody: { value: "default" } },
+      { path: "catch", expectedBody: { value: "caught" } },
+      { path: "required", expectedStatus: 422 },
+      { path: "nullable-required", expectedStatus: 422 },
+    ] as const;
+
+    for (const testCase of cases) {
+      const response = await fetchWithTimeout(
+        `${baseUrl}/node-omitted-body/${testCase.path}`,
+        `POST /node-omitted-body/${testCase.path}`,
+        { method: "POST" },
+      );
+
+      if ("expectedBody" in testCase) {
+        expect(response.status).toBe(200);
+        expect(await response.json()).toEqual(testCase.expectedBody);
+      } else {
+        expect(response.status).toBe(testCase.expectedStatus);
+        expect(await response.json()).toMatchObject({
+          code: "protocols-rest/request-validation-failed",
+          issues: [expect.objectContaining({ path: "body.value" })],
+        });
+      }
+    }
   });
 
   it("drains a keep-alive request, closes the listener, then runs the shutdown hook on SIGTERM", async () => {
@@ -411,14 +488,18 @@ function getBaseUrl(server: NodeServerHandle, description: string): string {
   return `http://${hostname}:${address.port}`;
 }
 
-async function fetchWithTimeout(url: string, description: string): Promise<Response> {
+async function fetchWithTimeout(
+  url: string,
+  description: string,
+  init: RequestInit = {},
+): Promise<Response> {
   const controller = new AbortController();
   const timeout = setTimeout(() => {
     controller.abort(new Error(`${description} timed out after ${LIFECYCLE_TIMEOUT_MS}ms.`));
   }, LIFECYCLE_TIMEOUT_MS);
 
   try {
-    return await fetch(url, { signal: controller.signal });
+    return await fetch(url, { ...init, signal: controller.signal });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(`${description} failed for ${url}: ${message}`);
