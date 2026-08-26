@@ -30,6 +30,7 @@ export type RegisterControllerResult =
     };
 
 type UpdateResult = "updated" | "updated-idempotent" | "unsupported-pattern" | "not-found";
+type ImportUpdateResult = "updated" | "updated-idempotent" | "conflicting-binding";
 
 export async function registerController(
   options: RegisterControllerOptions,
@@ -71,17 +72,37 @@ export async function registerController(
     );
   }
 
-  if (finalResult === "updated") {
-    addImport(sourceFile, options.importPath, options.className);
+  const registeredIdentifier = findRegisteredControllerIdentifier(sourceFile, options.className);
+  if (!registeredIdentifier) {
+    return unsupportedResult(options, "Could not resolve the controller registration identifier.");
+  }
+
+  const importResult = reconcileImport(
+    sourceFile,
+    options.importPath,
+    options.className,
+    registeredIdentifier,
+  );
+  if (importResult === "conflicting-binding") {
+    return unsupportedResult(
+      options,
+      `Controller identifier "${options.className}" is already bound and cannot be imported from "${options.importPath}".`,
+    );
+  }
+
+  const status =
+    finalResult === "updated" || importResult === "updated" ? "updated" : "updated-idempotent";
+
+  if (status === "updated") {
     sourceFile.organizeImports();
   }
 
-  if (!options.dryRun && finalResult === "updated") {
+  if (!options.dryRun && status === "updated") {
     await writeFile(options.entryPath, sourceFile.getFullText(), "utf-8");
   }
 
   return {
-    status: finalResult,
+    status,
     importPath: options.importPath,
     className: options.className,
   };
@@ -105,6 +126,81 @@ function addToActiveRegistration(sourceFile: SourceFile, className: string): Upd
   }
 
   return "not-found";
+}
+
+function findRegisteredControllerIdentifier(
+  sourceFile: SourceFile,
+  className: string,
+): Identifier | undefined {
+  for (const call of sourceFile.getDescendantsOfKind(SyntaxKind.CallExpression)) {
+    const expression = call.getExpression();
+    if (Node.isPropertyAccessExpression(expression) && expression.getName() === "addControllers") {
+      const identifier = findIdentifierInCallArray(call, className);
+      if (identifier) return identifier;
+    }
+
+    if (Node.isIdentifier(expression) && expression.getText() === "createApp") {
+      const identifier = findIdentifierInCreateAppControllers(call, className);
+      if (identifier) return identifier;
+    }
+  }
+
+  return undefined;
+}
+
+function findIdentifierInCallArray(
+  call: CallExpression,
+  className: string,
+): Identifier | undefined {
+  const argument = call.getArguments()[0];
+  return Node.isArrayLiteralExpression(argument)
+    ? findIdentifierInArray(argument, className)
+    : undefined;
+}
+
+function findIdentifierInCreateAppControllers(
+  call: CallExpression,
+  className: string,
+): Identifier | undefined {
+  const options = call.getArguments()[0];
+  if (!options || !Node.isObjectLiteralExpression(options)) return undefined;
+
+  const controllers = options.getProperty("controllers");
+  if (Node.isPropertyAssignment(controllers)) {
+    const initializer = controllers.getInitializer();
+    if (Node.isArrayLiteralExpression(initializer)) {
+      return findIdentifierInArray(initializer, className);
+    }
+
+    if (Node.isIdentifier(initializer)) {
+      return findIdentifierInNamedArray(call.getSourceFile(), initializer.getText(), className);
+    }
+  }
+
+  return Node.isShorthandPropertyAssignment(controllers)
+    ? findIdentifierInNamedArray(call.getSourceFile(), controllers.getName(), className)
+    : undefined;
+}
+
+function findIdentifierInNamedArray(
+  sourceFile: SourceFile,
+  identifierName: string,
+  className: string,
+): Identifier | undefined {
+  const initializer = sourceFile.getVariableDeclaration(identifierName)?.getInitializer();
+  return Node.isArrayLiteralExpression(initializer)
+    ? findIdentifierInArray(initializer, className)
+    : undefined;
+}
+
+function findIdentifierInArray(
+  arrayLiteral: ArrayLiteralExpression,
+  className: string,
+): Identifier | undefined {
+  const element = arrayLiteral
+    .getElements()
+    .find((candidate) => Node.isIdentifier(candidate) && candidate.getText() === className);
+  return Node.isIdentifier(element) ? element : undefined;
 }
 
 function addToCallArray(call: CallExpression, className: string): UpdateResult {
@@ -275,23 +371,71 @@ function unsupportedResult(
   };
 }
 
-function addImport(sourceFile: SourceFile, importPath: string, className: string): void {
-  const importDeclaration = sourceFile
+function reconcileImport(
+  sourceFile: SourceFile,
+  importPath: string,
+  className: string,
+  registeredIdentifier: Identifier,
+): ImportUpdateResult {
+  const importDeclarations = sourceFile
     .getImportDeclarations()
-    .find((declaration) => declaration.getModuleSpecifierValue() === importPath);
+    .filter((declaration) => declaration.getModuleSpecifierValue() === importPath);
+
+  let localImportCount = 0;
+  let hasExpectedImport = false;
+  for (const declaration of sourceFile.getImportDeclarations()) {
+    if (declaration.getDefaultImport()?.getText() === className) {
+      localImportCount += 1;
+    }
+
+    if (declaration.getNamespaceImport()?.getText() === className) {
+      localImportCount += 1;
+    }
+
+    for (const namedImport of declaration.getNamedImports()) {
+      const localName = namedImport.getAliasNode()?.getText() ?? namedImport.getName();
+      if (localName !== className) continue;
+
+      localImportCount += 1;
+      hasExpectedImport =
+        hasExpectedImport ||
+        (!declaration.isTypeOnly() &&
+          !namedImport.isTypeOnly() &&
+          namedImport.getName() === className &&
+          declaration.getModuleSpecifierValue() === importPath);
+    }
+  }
+
+  const bindingDeclarations = [
+    ...(sourceFile.getLocal(className)?.getDeclarations() ?? []),
+    ...(registeredIdentifier.getSymbol()?.getDeclarations() ?? []),
+  ];
+  const hasNonImportDeclaration = bindingDeclarations.some(
+    (declaration) => !declaration.getFirstAncestorByKind(SyntaxKind.ImportDeclaration),
+  );
+
+  if (localImportCount > 0) {
+    return localImportCount === 1 && hasExpectedImport && !hasNonImportDeclaration
+      ? "updated-idempotent"
+      : "conflicting-binding";
+  }
+
+  if (hasNonImportDeclaration) {
+    return "conflicting-binding";
+  }
+
+  const importDeclaration = importDeclarations.find(
+    (declaration) => !declaration.isTypeOnly() && !declaration.getNamespaceImport(),
+  );
 
   if (!importDeclaration) {
     sourceFile.addImportDeclaration({
       namedImports: [className],
       moduleSpecifier: importPath,
     });
-    return;
-  }
-
-  const hasImport = importDeclaration
-    .getNamedImports()
-    .some((namedImport) => namedImport.getName() === className);
-  if (!hasImport) {
+  } else {
     importDeclaration.addNamedImport(className);
   }
+
+  return "updated";
 }
