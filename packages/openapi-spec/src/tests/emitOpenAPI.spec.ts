@@ -529,6 +529,58 @@ describe("emitOpenAPI", () => {
     });
   });
 
+  it("should derive request body requiredness from schema optionality", () => {
+    const requiredBodySchema = z.object({ value: z.string() });
+    const optionalBodySchema = requiredBodySchema.optional();
+    const nullableBodySchema = requiredBodySchema.nullable();
+    const refinedRequiredBodySchema = optionalBodySchema.refine((body) => body !== undefined);
+
+    @Controller("/request-body-requiredness")
+    class RequestBodyRequirednessController {
+      @Post("/required")
+      required(@Body(requiredBodySchema) _body: z.infer<typeof requiredBodySchema>): void {}
+
+      @Post("/optional")
+      optional(@Body(optionalBodySchema) _body: z.infer<typeof optionalBodySchema>): void {}
+
+      @Post("/nullable-required")
+      nullableRequired(@Body(nullableBodySchema) _body: z.infer<typeof nullableBodySchema>): void {}
+
+      @Post("/refined-required")
+      refinedRequired(
+        @Body(refinedRequiredBodySchema) _body: z.infer<typeof refinedRequiredBodySchema>,
+      ): void {}
+
+      @Post("/absent")
+      absent(): void {}
+    }
+
+    const spec = emitOpenAPI([RequestBodyRequirednessController]);
+
+    expect(spec.paths?.["/request-body-requiredness/required"]?.post?.requestBody).toMatchObject({
+      required: true,
+    });
+    expect(spec.paths?.["/request-body-requiredness/optional"]?.post?.requestBody).toMatchObject({
+      required: false,
+    });
+    expect(
+      spec.paths?.["/request-body-requiredness/nullable-required"]?.post?.requestBody,
+    ).toMatchObject({
+      required: true,
+      content: {
+        "application/json": {
+          schema: expect.objectContaining({ type: ["object", "null"] }),
+        },
+      },
+    });
+    expect(
+      spec.paths?.["/request-body-requiredness/refined-required"]?.post?.requestBody,
+    ).toMatchObject({
+      required: true,
+    });
+    expect(spec.paths?.["/request-body-requiredness/absent"]?.post?.requestBody).toBeUndefined();
+  });
+
   it("should emit response content for declared response schemas", () => {
     const orderSchema = z.object({
       id: z.string().uuid(),

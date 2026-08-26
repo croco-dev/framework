@@ -382,15 +382,15 @@ function toRequestConfig(route: ContractGraphRoute): RouteConfig["request"] {
   const params = toZodObject(route.params.filter((param) => param.kind === "path"));
   const query = toZodObject(route.params.filter((param) => param.kind === "query"));
   const headers = toZodObject(route.params.filter((param) => param.kind === "header"));
-  const bodySchema = unwrapZodEffectsSchema(
-    route.inputSchema ?? route.params.find((param) => param.kind === "body")?.schema,
-  );
+  const declaredBodySchema =
+    route.inputSchema ?? route.params.find((param) => param.kind === "body")?.schema;
+  const bodySchema = unwrapZodEffectsSchema(declaredBodySchema);
 
   return {
     ...(bodySchema
       ? {
           body: {
-            required: true,
+            required: isRequiredOpenAPIRequestBody(declaredBodySchema),
             content: {
               "application/json": {
                 schema: bodySchema,
@@ -675,4 +675,8 @@ function isRequiredOpenAPIParameter(kind: ParamIR["kind"], schema: ParamIR["sche
   const declaredSchema = unwrapZodEffectsSchema(schema);
 
   return declaredSchema ? !declaredSchema.isOptional() : false;
+}
+
+function isRequiredOpenAPIRequestBody(schema: ParamIR["schema"] | undefined): boolean {
+  return schema ? !schema.isOptional() : false;
 }
