@@ -202,6 +202,9 @@ export class ProblemResponseError extends Error {
   }
 }
 
+/**
+ * HTTP 응답 상태와 Problem 상태가 일치하지 않는 프로토콜 실패입니다.
+ */
 export class ProblemStatusMismatchError extends Problem {
   readonly code = "frontend-problems/status-mismatch";
   readonly category = ProblemCategory.InternalServerError;

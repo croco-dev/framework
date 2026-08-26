@@ -5,7 +5,7 @@ prev: false
 title: "ProblemStatusMismatchError"
 ---
 
-RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다.
+HTTP 응답 상태와 Problem 상태가 일치하지 않는 프로토콜 실패입니다.
 
 ## Extends
 
