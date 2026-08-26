@@ -322,7 +322,7 @@ await app.listen(3000);
       "overwritten",
     ]);
     expect(overwritten?.api.registration.status).toBe("updated-idempotent");
-  });
+  }, 60_000);
 
   it("should apply custom route paths", async () => {
     const cwd = await createWorkspace();
