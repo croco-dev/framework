@@ -1325,6 +1325,12 @@
       "owner": "@croco/events-core"
     },
     {
+      "path": "packages/events-core/src/tests/RegisterEventHandler.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/events-core"
+    },
+    {
       "path": "packages/events-inmemory/src/tests/InMemoryEventBus.spec.ts",
       "lane": "fast",
       "qualifiers": [],

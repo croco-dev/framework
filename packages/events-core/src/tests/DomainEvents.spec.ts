@@ -160,7 +160,7 @@ describe("EventBusConfig", () => {
 
     @RegisterEventHandler(TestEvent)
     class DecoratorTestHandler implements EventHandler<TestEvent> {
-      async handle(): Promise<void> {}
+      async handle(_event: TestEvent): Promise<void> {}
     }
 
     config.setEventBus(mockEventBus);
@@ -184,7 +184,7 @@ describe("EventBusConfig", () => {
 
     @RegisterEventHandler(AnotherTestEvent)
     class StartTestHandler implements EventHandler<AnotherTestEvent> {
-      async handle(): Promise<void> {}
+      async handle(_event: AnotherTestEvent): Promise<void> {}
     }
 
     config.setEventBus(mockEventBus);

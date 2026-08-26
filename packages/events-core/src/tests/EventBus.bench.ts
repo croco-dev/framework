@@ -50,43 +50,43 @@ class BenchHandler implements EventHandler<BenchEvent> {
 
 @RegisterEventHandler(BenchEvent)
 class BenchHandler1 implements EventHandler<BenchEvent> {
-  async handle(): Promise<void> {}
+  async handle(_event: BenchEvent): Promise<void> {}
 }
 @RegisterEventHandler(BenchEvent)
 class BenchHandler2 implements EventHandler<BenchEvent> {
-  async handle(): Promise<void> {}
+  async handle(_event: BenchEvent): Promise<void> {}
 }
 @RegisterEventHandler(BenchEvent)
 class BenchHandler3 implements EventHandler<BenchEvent> {
-  async handle(): Promise<void> {}
+  async handle(_event: BenchEvent): Promise<void> {}
 }
 @RegisterEventHandler(BenchEvent)
 class BenchHandler4 implements EventHandler<BenchEvent> {
-  async handle(): Promise<void> {}
+  async handle(_event: BenchEvent): Promise<void> {}
 }
 @RegisterEventHandler(BenchEvent)
 class BenchHandler5 implements EventHandler<BenchEvent> {
-  async handle(): Promise<void> {}
+  async handle(_event: BenchEvent): Promise<void> {}
 }
 @RegisterEventHandler(BenchEvent)
 class BenchHandler6 implements EventHandler<BenchEvent> {
-  async handle(): Promise<void> {}
+  async handle(_event: BenchEvent): Promise<void> {}
 }
 @RegisterEventHandler(BenchEvent)
 class BenchHandler7 implements EventHandler<BenchEvent> {
-  async handle(): Promise<void> {}
+  async handle(_event: BenchEvent): Promise<void> {}
 }
 @RegisterEventHandler(BenchEvent)
 class BenchHandler8 implements EventHandler<BenchEvent> {
-  async handle(): Promise<void> {}
+  async handle(_event: BenchEvent): Promise<void> {}
 }
 @RegisterEventHandler(BenchEvent)
 class BenchHandler9 implements EventHandler<BenchEvent> {
-  async handle(): Promise<void> {}
+  async handle(_event: BenchEvent): Promise<void> {}
 }
 @RegisterEventHandler(BenchEvent)
 class BenchHandler10 implements EventHandler<BenchEvent> {
-  async handle(): Promise<void> {}
+  async handle(_event: BenchEvent): Promise<void> {}
 }
 
 const predefinedHandlers = [
