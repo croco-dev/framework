@@ -2,9 +2,16 @@ import type { EventBus } from "@croco/events-core";
 import { Container } from "@croco/framework-context";
 import type { MeteringService } from "@croco/metering-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { AiMetered, setLlmMeteringService } from "../../libs/decorators/AiMetered";
+import {
+  AiMetered,
+  runWithLlmMeteringService,
+  setLlmMeteringService,
+} from "../../libs/decorators/AiMetered";
 import { LlmMeteringService } from "../../libs/LlmMeteringService";
-import { LlmMeteringRecordFailedProblem } from "../../libs/problems/LlmMeteringProblems";
+import {
+  LlmMeteringRecordFailedProblem,
+  LlmMeteringServiceRequiredProblem,
+} from "../../libs/problems/LlmMeteringProblems";
 
 describe("@AiMetered decorator", () => {
   let mockMeteringService!: MeteringService;
@@ -329,12 +336,33 @@ describe("@AiMetered decorator", () => {
       await expect(consumeStream()).rejects.toThrow(LlmMeteringRecordFailedProblem);
     });
 
-    it("should work when LlmMeteringService is not set", async () => {
-      // Clear service
-      setLlmMeteringService(null as unknown as LlmMeteringService);
+    it("should fail before the original method runs when LlmMeteringService is not set", async () => {
+      setLlmMeteringService(null);
+      const originalMethod = vi.fn().mockResolvedValue({
+        text: "Response",
+        usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
+        metadata: { modelId: "gpt-4", provider: "openai" },
+      });
 
       class TestService {
         @AiMetered()
+        async generate() {
+          return originalMethod();
+        }
+      }
+
+      const service = new TestService();
+
+      await expect(service.generate()).rejects.toThrow(LlmMeteringServiceRequiredProblem);
+      expect(originalMethod).not.toHaveBeenCalled();
+      expect(mockMeteringService.record).not.toHaveBeenCalled();
+    });
+
+    it("should skip metering only when the decorator explicitly disables it", async () => {
+      setLlmMeteringService(null);
+
+      class TestService {
+        @AiMetered({ metering: "disabled" })
         async generate() {
           return {
             text: "Response",
@@ -344,11 +372,108 @@ describe("@AiMetered decorator", () => {
         }
       }
 
-      const service = new TestService();
-      const result = await service.generate();
+      const result = await new TestService().generate();
 
-      // Should return result without metering
       expect(result.text).toBe("Response");
+      expect(mockMeteringService.record).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("scoped metering service", () => {
+    it("should isolate concurrent tenant executions", async () => {
+      const firstMeteringService = {
+        record: vi.fn().mockResolvedValue({ id: "first-record", tenantId: "tenant-1" }),
+        getUsage: vi.fn().mockResolvedValue(0),
+      } as unknown as MeteringService;
+      const secondMeteringService = {
+        record: vi.fn().mockResolvedValue({ id: "second-record", tenantId: "tenant-2" }),
+        getUsage: vi.fn().mockResolvedValue(0),
+      } as unknown as MeteringService;
+      const firstLlmMeteringService = new LlmMeteringService({
+        meteringService: firstMeteringService,
+        eventBus: mockEventBus,
+      });
+      const secondLlmMeteringService = new LlmMeteringService({
+        meteringService: secondMeteringService,
+        eventBus: mockEventBus,
+      });
+
+      class TestService {
+        constructor(readonly tenantId: string) {}
+
+        @AiMetered()
+        async generate(prompt: string) {
+          await Promise.resolve();
+          return {
+            text: prompt,
+            usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
+            metadata: { modelId: "gpt-4", provider: "openai" },
+          };
+        }
+      }
+
+      await Promise.all([
+        runWithLlmMeteringService(firstLlmMeteringService, () =>
+          new TestService("tenant-1").generate("first"),
+        ),
+        runWithLlmMeteringService(secondLlmMeteringService, () =>
+          new TestService("tenant-2").generate("second"),
+        ),
+      ]);
+
+      expect(firstMeteringService.record).toHaveBeenCalledTimes(3);
+      expect(firstMeteringService.record).toHaveBeenCalledWith(
+        expect.objectContaining({ tenantId: "tenant-1" }),
+      );
+      expect(secondMeteringService.record).toHaveBeenCalledTimes(3);
+      expect(secondMeteringService.record).toHaveBeenCalledWith(
+        expect.objectContaining({ tenantId: "tenant-2" }),
+      );
+      expect(mockMeteringService.record).not.toHaveBeenCalled();
+    });
+
+    it("should preserve the creation scope service until streaming completes", async () => {
+      const scopedMeteringService = {
+        record: vi.fn().mockResolvedValue({ id: "scoped-record", tenantId: "tenant-scoped" }),
+        getUsage: vi.fn().mockResolvedValue(0),
+      } as unknown as MeteringService;
+      const scopedLlmMeteringService = new LlmMeteringService({
+        meteringService: scopedMeteringService,
+        eventBus: mockEventBus,
+      });
+
+      class TestService {
+        tenantId = "tenant-scoped";
+
+        @AiMetered()
+        stream() {
+          return this.createStream();
+        }
+
+        private async *createStream() {
+          yield {
+            delta: "done",
+            usage: {
+              promptTokens: 5,
+              completionTokens: 7,
+              totalTokens: 12,
+            },
+          };
+        }
+      }
+
+      const stream = await runWithLlmMeteringService(scopedLlmMeteringService, () =>
+        new TestService().stream(),
+      );
+
+      for await (const _chunk of stream) {
+        // Consume outside the scope that created the stream.
+      }
+
+      expect(scopedMeteringService.record).toHaveBeenCalledTimes(3);
+      expect(scopedMeteringService.record).toHaveBeenCalledWith(
+        expect.objectContaining({ tenantId: "tenant-scoped" }),
+      );
       expect(mockMeteringService.record).not.toHaveBeenCalled();
     });
   });

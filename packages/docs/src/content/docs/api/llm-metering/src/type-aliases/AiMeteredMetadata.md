@@ -69,6 +69,12 @@ title: "AiMeteredMetadata"
 
 ---
 
+### metering
+
+> **metering**: `"required"` \| `"disabled"`
+
+---
+
 ### tenantId?
 
 > `optional` **tenantId?**: `string`

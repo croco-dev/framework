@@ -1,5 +1,15 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
 
+export class LlmMeteringServiceRequiredProblem extends Problem {
+  constructor() {
+    super(
+      "llm-metering/service-required",
+      ProblemCategory.InternalServerError,
+      "LlmMeteringService is required for @AiMetered; configure a service or explicitly disable metering",
+    );
+  }
+}
+
 export class LlmMeteringRecordFailedProblem extends Problem {
   constructor(operation: string, meterIds: string[], cause: unknown) {
     const causeError = cause instanceof Error ? cause : new Error(String(cause));

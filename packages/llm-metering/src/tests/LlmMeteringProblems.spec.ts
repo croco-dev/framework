@@ -3,11 +3,23 @@ import { describe, expect, it } from "vitest";
 import {
   LlmCostLimitExceededProblem,
   LlmMeteringRecordFailedProblem,
+  LlmMeteringServiceRequiredProblem,
   LlmQuotaExceededProblem,
   PricingNotFoundProblem,
 } from "../libs/problems/LlmMeteringProblems";
 
 describe("LlmMeteringProblems", () => {
+  describe("LlmMeteringServiceRequiredProblem", () => {
+    it("should expose a stable recovery-oriented problem", () => {
+      const problem = new LlmMeteringServiceRequiredProblem();
+
+      expect(problem.code).toBe("llm-metering/service-required");
+      expect(problem.category).toBe(ProblemCategory.InternalServerError);
+      expect(problem.status).toBe(500);
+      expect(problem.detail).toContain("configure a service or explicitly disable metering");
+    });
+  });
+
   describe("LlmQuotaExceededProblem", () => {
     it("should create problem with quota exceeded details", () => {
       const problem = new LlmQuotaExceededProblem("llm.prompt_tokens", 15000, 10000);

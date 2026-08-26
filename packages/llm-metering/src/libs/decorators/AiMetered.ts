@@ -1,11 +1,19 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { createHash } from "node:crypto";
 import "reflect-metadata";
 import type { LlmMeteringService } from "../LlmMeteringService";
+import { LlmMeteringServiceRequiredProblem } from "../problems/LlmMeteringProblems";
 import { createMeteredAsyncIterable, isAsyncIterable } from "../streamMetering";
 
 export const AI_METERED_METADATA_KEY = Symbol("llm-meter:ai-metered");
 
 export type AiMeteredOptions = {
+  /**
+   * 계량 service가 필요한지 또는 의도적으로 비활성화했는지 지정합니다.
+   *
+   * @defaultValue "required"
+   */
+  metering?: "required" | "disabled";
   /**
    * LlmMeteringService에서 자동으로 추출하므로 생략 가능
    */
@@ -39,6 +47,7 @@ export type AiMeteredOptions = {
 };
 
 export type AiMeteredMetadata = {
+  metering: "required" | "disabled";
   tenantId?: string;
   usageExtractor?: (
     args: unknown[],
@@ -56,8 +65,8 @@ export type AiMeteredMetadata = {
   metadataExtractor?: (args: unknown[], result: unknown) => Record<string, unknown> | undefined;
 };
 
-// LlmMeteringService 인스턴스를 저장할 전역 변수
 let llmMeteringServiceInstance: LlmMeteringService | null = null;
+const llmMeteringServiceScope = new AsyncLocalStorage<LlmMeteringService>();
 
 function normalizeForIdempotency(value: unknown, seen: WeakSet<object>): unknown {
   if (
@@ -122,8 +131,15 @@ function createDefaultIdempotencyKey(propertyKey: string | symbol, args: unknown
 /**
  * LlmMeteringService 인스턴스 설정 (앱 부트스트랩에서 호출)
  */
-export function setLlmMeteringService(service: LlmMeteringService): void {
+export function setLlmMeteringService(service: LlmMeteringService | null): void {
   llmMeteringServiceInstance = service;
+}
+
+/**
+ * 지정한 실행 범위에서 사용할 LlmMeteringService를 바인딩합니다.
+ */
+export function runWithLlmMeteringService<T>(service: LlmMeteringService, fn: () => T): T {
+  return llmMeteringServiceScope.run(service, fn);
 }
 
 /**
@@ -131,6 +147,19 @@ export function setLlmMeteringService(service: LlmMeteringService): void {
  */
 export function getLlmMeteringService(): LlmMeteringService | null {
   return llmMeteringServiceInstance;
+}
+
+function resolveLlmMeteringService(metering: "required" | "disabled"): LlmMeteringService | null {
+  if (metering === "disabled") {
+    return null;
+  }
+
+  const service = llmMeteringServiceScope.getStore() ?? llmMeteringServiceInstance;
+  if (!service) {
+    throw new LlmMeteringServiceRequiredProblem();
+  }
+
+  return service;
 }
 
 /**
@@ -167,6 +196,7 @@ export function AiMetered(options: AiMeteredOptions = {}): MethodDecorator {
     const originalMethod = descriptor.value;
 
     const metadata: AiMeteredMetadata = {
+      metering: options.metering ?? "required",
       tenantId: options.tenantId,
       usageExtractor: options.usageExtractor,
       embeddingUsageExtractor: options.embeddingUsageExtractor,
@@ -178,11 +208,11 @@ export function AiMetered(options: AiMeteredOptions = {}): MethodDecorator {
     Reflect.defineMetadata(AI_METERED_METADATA_KEY, metadata, _target, propertyKey);
 
     descriptor.value = async function (...args: unknown[]): Promise<unknown> {
+      const service = resolveLlmMeteringService(metadata.metering);
+
       // 원본 메서드 실행
       const result = await originalMethod.apply(this, args);
 
-      // LlmMeteringService가 설정되어 있으면 기록
-      const service = getLlmMeteringService();
       if (!service) {
         return result;
       }

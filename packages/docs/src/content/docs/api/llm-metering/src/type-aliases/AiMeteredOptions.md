@@ -75,6 +75,20 @@ idempotencyKey 추출기
 
 ---
 
+### metering?
+
+> `optional` **metering?**: `"required"` \| `"disabled"`
+
+계량 service가 필요한지 또는 의도적으로 비활성화했는지 지정합니다.
+
+#### Default Value
+
+```ts
+"required";
+```
+
+---
+
 ### tenantId?
 
 > `optional` **tenantId?**: `string`

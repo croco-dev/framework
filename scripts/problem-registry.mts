@@ -1970,6 +1970,17 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "llm-metering/service-required": recovery({
+    cause:
+      "@AiMetered required usage recording, but no scoped or global LlmMeteringService was configured.",
+    userAction:
+      "Do not retry the unchanged operation; ask the service operator to configure LLM metering or explicitly disable it for an intentionally unmetered method.",
+    operatorAction:
+      'Bind LlmMeteringService at bootstrap with setLlmMeteringService(), bind it per execution with runWithLlmMeteringService(), or set @AiMetered({ metering: "disabled" }) only when skipping usage recording is intentional.',
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "billing/checkout-idempotency-drift": recovery({
     cause:
       "The generated billing drill detected more than one committed checkout after response-loss retries completed.",
