@@ -2,6 +2,7 @@ import { ProblemCategory } from "@croco/problems-core";
 import { describe, expect, it } from "vitest";
 import {
   DuplicateTaskRegistrationProblem,
+  InvalidTaskReferenceProblem,
   TaskExecutionTimeoutProblem,
   TaskNotFoundProblem,
   TaskRunnerDIFailureProblem,
@@ -25,6 +26,18 @@ describe("TasksProblems", () => {
 
     expect(serialized).toMatchObject({
       taskName: "task-123",
+      retryable: false,
+    });
+  });
+
+  it("should create InvalidTaskReferenceProblem with drift evidence", () => {
+    const problem = new InvalidTaskReferenceProblem("task-123", "Registry metadata changed");
+
+    expect(problem.code).toBe("tasks-core/task-reference-invalid");
+    expect(problem.category).toBe(ProblemCategory.InternalServerError);
+    expect(problem.toJSON()).toMatchObject({
+      taskName: "task-123",
+      reason: "Registry metadata changed",
       retryable: false,
     });
   });

@@ -27521,6 +27521,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "InvalidTaskReferenceProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/TasksProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "TASK_METADATA_KEY",
               "exportKind": "named",
               "source": "./libs/decorators/Task",

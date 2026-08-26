@@ -24,6 +24,23 @@ export class DuplicateTaskRegistrationProblem extends Problem {
   }
 }
 
+export class InvalidTaskReferenceProblem extends Problem {
+  constructor(taskName: string, reason: string) {
+    super(
+      "tasks-core/task-reference-invalid",
+      ProblemCategory.InternalServerError,
+      `Invalid task reference '${taskName}': ${reason}`,
+      {
+        extensions: {
+          taskName,
+          reason,
+          retryable: false,
+        },
+      },
+    );
+  }
+}
+
 export class TaskRunnerDIFailureProblem extends Problem {
   constructor(taskName: string, cause: string) {
     super(

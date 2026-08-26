@@ -2488,6 +2488,17 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "tasks-core/task-reference-invalid": recovery({
+    cause:
+      "A typed task reference is missing its factory contract or no longer matches the registered handler metadata.",
+    userAction:
+      "Do not retry the unchanged reference; create it again with taskRef() after correcting the task declaration or registration.",
+    operatorAction:
+      "Verify that the task name, target, and method match the current @Task metadata and registry entry.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "outbox-core/failure-metadata-missing": recovery({
     cause:
       "A dispatcher attempted to mark an outbox record failed without the required retry metadata extensions.",

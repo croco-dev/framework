@@ -517,6 +517,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`TestResourceConfigurationProblem`](/api/testing-resources/src/classes/testresourceconfigurationproblem/)
 - [`TestResourceLifecycleProblem`](/api/testing-resources/src/classes/testresourcelifecycleproblem/)
 - [`DuplicateTaskRegistrationProblem`](/api/tasks-core/src/classes/duplicatetaskregistrationproblem/)
+- [`InvalidTaskReferenceProblem`](/api/tasks-core/src/classes/invalidtaskreferenceproblem/)
 - [`TaskExecutionTimeoutProblem`](/api/tasks-core/src/classes/taskexecutiontimeoutproblem/)
 - [`TaskNotFoundProblem`](/api/tasks-core/src/classes/tasknotfoundproblem/)
 - [`TaskRunnerDIFailureProblem`](/api/tasks-core/src/classes/taskrunnerdifailureproblem/)

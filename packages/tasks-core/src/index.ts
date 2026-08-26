@@ -8,6 +8,7 @@ export { TASK_METADATA_KEY, Task } from "./libs/decorators/Task";
  */
 export {
   DuplicateTaskRegistrationProblem,
+  InvalidTaskReferenceProblem,
   TaskExecutionTimeoutProblem,
   TaskNotFoundProblem,
   TaskRunnerDIFailureProblem,

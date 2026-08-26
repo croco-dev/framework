@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 722,
+  problemCount: 723,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -18547,7 +18547,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tasks-core/src/libs/problems/TasksProblems.ts",
-          line: 50,
+          line: 67,
           column: 5,
           kind: "problem-constructor",
         },
@@ -18585,6 +18585,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "tasks-core/task-reference-invalid",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#tasks-core-task-reference-invalid",
+      recovery: {
+        cause:
+          "A typed task reference is missing its factory contract or no longer matches the registered handler metadata.",
+        userAction:
+          "Do not retry the unchanged reference; create it again with taskRef() after correcting the task declaration or registration.",
+        operatorAction:
+          "Verify that the task name, target, and method match the current @Task metadata and registry entry.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/tasks-core/src/libs/problems/TasksProblems.ts",
+          line: 29,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
       code: "tasks-core/task-runner-di-failure",
       category: "InternalServerError",
       status: 500,
@@ -18610,7 +18643,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tasks-core/src/libs/problems/TasksProblems.ts",
-          line: 29,
+          line: 46,
           column: 5,
           kind: "problem-constructor",
         },

@@ -10,6 +10,7 @@ import {
   TaskNotFoundProblem,
   TaskRunnerDIFailureProblem,
 } from "../libs/problems/TasksProblems";
+import { taskRef } from "../libs/taskRef";
 import { TaskRegistry } from "../libs/TaskRegistry";
 import { TaskRunner } from "../libs/TaskRunner";
 import type { TaskExecutionContext, TaskMetadata } from "../libs/types";
@@ -168,6 +169,32 @@ describe("TaskRunner", () => {
     await expect(runner.executeTracked("test-task", { data: "test" })).resolves.toEqual({
       executionId: "exec-123",
       result: "processed: test",
+    });
+  });
+
+  it("should execute typed task references without changing runtime semantics", async () => {
+    @Component({ scope: "singleton" })
+    class TypedTaskHandler {
+      @Task({ name: "typed-task" })
+      async handle(payload: { value: number }): Promise<{ doubled: number }> {
+        return { doubled: payload.value * 2 };
+      }
+    }
+
+    Container.set(TypedTaskHandler, new TypedTaskHandler());
+    registry.collectFromMetadata();
+    const runner = new TaskRunner(mockExecutionManager, registry);
+    const reference = taskRef(TypedTaskHandler, "handle");
+
+    const result = await runner.execute(reference, { value: 21 });
+
+    expect(result).toEqual({ doubled: 42 });
+    expect(mockExecutionManager.create).toHaveBeenCalledWith({
+      type: "typed-task",
+      payload: { value: 21 },
+      maxAttempts: undefined,
+      timeout: undefined,
+      idempotencyKey: undefined,
     });
   });
 
