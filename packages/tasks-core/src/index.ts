@@ -19,6 +19,11 @@ export {
 export { TaskRegistry } from "./libs/TaskRegistry";
 
 /**
+ * 타입이 보존되는 태스크 참조를 생성합니다.
+ */
+export { taskRef } from "./libs/taskRef";
+
+/**
  * 등록된 태스크를 실행 시스템과 연결해 실행하는 러너입니다.
  */
 export { TaskRunner } from "./libs/TaskRunner";
@@ -32,6 +37,9 @@ export type {
   TaskMetadata,
   TaskOptions,
   TaskReference,
+  TaskReferenceName,
+  TaskReferencePayload,
+  TaskReferenceResult,
   TaskTimeoutRetryPolicy,
 } from "./libs/types";
 

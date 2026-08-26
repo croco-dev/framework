@@ -26052,6 +26052,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "taskRef",
+              "exportKind": "named",
+              "source": "./libs/taskRef",
+              "declarationKind": "function"
+            },
+            {
               "name": "TaskRegistry",
               "exportKind": "named",
               "source": "./libs/TaskRegistry",
@@ -26098,6 +26104,21 @@
             },
             {
               "name": "TaskReference",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "TaskReferenceName",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "TaskReferencePayload",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "TaskReferenceResult",
               "exportKind": "named",
               "source": "./libs/types"
             },
@@ -31896,6 +31917,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "defineWorkflow",
+              "exportKind": "named",
+              "source": "./libs/defineWorkflow",
+              "declarationKind": "function"
+            },
+            {
               "name": "DuplicateWorkflowRegistrationProblem",
               "exportKind": "named",
               "source": "./libs/problems/WorkflowProblems",
@@ -32154,6 +32181,31 @@
               "name": "SagaStore",
               "exportKind": "named",
               "source": "./libs/saga/types"
+            },
+            {
+              "name": "TypedWorkflowOptions",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "TypedWorkflowReference",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "TypedWorkflowRunResult",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "WorkflowBuilder",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "WorkflowCompletionResult",
+              "exportKind": "named",
+              "source": "./libs/types"
             },
             {
               "name": "WorkflowDefinition",

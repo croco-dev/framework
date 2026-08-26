@@ -1,29 +1,44 @@
 import type { AnyTriggerMetadata } from "@croco/triggers-core";
+import type {
+  TaskReference,
+  TaskReferenceName,
+  TaskReferencePayload,
+  TaskReferenceResult,
+} from "@croco/tasks-core";
 
-export type WorkflowIdempotencyContext = {
+declare const TYPED_WORKFLOW_CONTRACT: unique symbol;
+
+export type WorkflowIdempotencyContext<TPayload = unknown> = {
   readonly workflow: WorkflowDefinition;
-  readonly payload: unknown;
+  readonly payload: TPayload;
 };
 
-export type WorkflowIdempotencyResolver = (
-  context: WorkflowIdempotencyContext,
+export type WorkflowIdempotencyResolver<TPayload = unknown> = (
+  context: WorkflowIdempotencyContext<TPayload>,
 ) => string | undefined;
 
-export type WorkflowStepContext = {
+export type WorkflowStepContext<
+  TPayload = unknown,
+  TPreviousResults extends readonly WorkflowStepResult[] = readonly WorkflowStepResult[],
+> = {
   readonly workflow: WorkflowDefinition;
   readonly workflowExecutionId: string;
-  readonly payload: unknown;
+  readonly payload: TPayload;
   readonly step: WorkflowTaskStep;
-  readonly previousResults: readonly WorkflowStepResult[];
+  readonly previousResults: TPreviousResults;
 };
 
-export type WorkflowStepInputResolver = (context: WorkflowStepContext) => unknown;
+export type WorkflowStepInputResolver<
+  TPayload = unknown,
+  TPreviousResults extends readonly WorkflowStepResult[] = readonly WorkflowStepResult[],
+  TInput = unknown,
+> = (context: WorkflowStepContext<TPayload, TPreviousResults>) => TInput;
 
 export type WorkflowTaskStepDeclaration =
   | string
   | {
       readonly name?: string;
-      readonly task: string;
+      readonly task: string | TaskReference;
       readonly input?: WorkflowStepInputResolver;
     };
 
@@ -64,10 +79,21 @@ export type WorkflowDefinition = {
   };
 };
 
-export type WorkflowStepResult = {
-  readonly step: string;
-  readonly task: string;
-  readonly result: unknown;
+export type WorkflowStepResult<
+  TStep extends string = string,
+  TTask extends string = string,
+  TResult = unknown,
+> = {
+  readonly step: TStep;
+  readonly task: TTask;
+  readonly result: TResult;
+};
+
+export type WorkflowCompletionResult<
+  TSteps extends readonly WorkflowStepResult[] = readonly WorkflowStepResult[],
+> = {
+  readonly workflowName: string;
+  readonly steps: TSteps;
 };
 
 export type WorkflowRunResult = {
@@ -77,3 +103,74 @@ export type WorkflowRunResult = {
   readonly result?: unknown;
   readonly reused: boolean;
 };
+
+type TypedWorkflowRunResultCommon = {
+  readonly executionId: string;
+  readonly workflow: WorkflowDefinition;
+};
+
+export type TypedWorkflowRunResult<TSteps extends readonly WorkflowStepResult[]> =
+  | (TypedWorkflowRunResultCommon & {
+      readonly steps: TSteps;
+      readonly result: WorkflowCompletionResult<TSteps>;
+      readonly reused: false;
+    })
+  | (TypedWorkflowRunResultCommon & {
+      readonly steps: readonly [];
+      readonly result?: unknown;
+      readonly reused: true;
+    });
+
+export type TypedWorkflowReference<
+  TPayload,
+  TSteps extends readonly WorkflowStepResult[],
+> = WorkflowOptions & {
+  readonly name: string;
+  readonly [TYPED_WORKFLOW_CONTRACT]?: {
+    readonly payload: TPayload;
+    readonly steps: TSteps;
+  };
+};
+
+export type TypedWorkflowOptions<TPayload> = Omit<
+  WorkflowOptions,
+  "steps" | "idempotencyKey" | "name"
+> & {
+  readonly name: string;
+  readonly idempotencyKey?: string | WorkflowIdempotencyResolver<TPayload>;
+};
+
+type WorkflowStepResolverArguments<
+  TPayload,
+  TPreviousResults extends readonly WorkflowStepResult[],
+  TTask extends TaskReference,
+> = [TPayload] extends [TaskReferencePayload<TTask>]
+  ? [input?: WorkflowStepInputResolver<TPayload, TPreviousResults, TaskReferencePayload<TTask>>]
+  : [input: WorkflowStepInputResolver<TPayload, TPreviousResults, TaskReferencePayload<TTask>>];
+
+type WorkflowStepResultsWith<
+  TPreviousResults extends readonly WorkflowStepResult[],
+  TStep extends string,
+  TTask extends TaskReference,
+> = readonly [
+  ...TPreviousResults,
+  WorkflowStepResult<TStep, TaskReferenceName<TTask>, TaskReferenceResult<TTask>>,
+];
+
+export interface WorkflowBuilder<TPayload, TPreviousResults extends readonly WorkflowStepResult[]> {
+  step<TTask extends TaskReference>(
+    task: TTask,
+    ...resolver: WorkflowStepResolverArguments<TPayload, TPreviousResults, TTask>
+  ): WorkflowBuilder<
+    TPayload,
+    WorkflowStepResultsWith<TPreviousResults, TaskReferenceName<TTask>, TTask>
+  >;
+
+  step<const TName extends string, TTask extends TaskReference>(
+    name: TName,
+    task: TTask,
+    ...resolver: WorkflowStepResolverArguments<TPayload, TPreviousResults, TTask>
+  ): WorkflowBuilder<TPayload, WorkflowStepResultsWith<TPreviousResults, TName, TTask>>;
+
+  build(): TypedWorkflowReference<TPayload, TPreviousResults>;
+}

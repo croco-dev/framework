@@ -13,6 +13,8 @@ import {
 } from "./problems/WorkflowProblems";
 import { WorkflowRegistry } from "./WorkflowRegistry";
 import type {
+  TypedWorkflowReference,
+  TypedWorkflowRunResult,
   WorkflowDefinition,
   WorkflowRunResult,
   WorkflowStepContext,
@@ -119,8 +121,17 @@ export class WorkflowRunner {
     ),
   ) {}
 
-  async execute(workflowName: string, payload: unknown): Promise<WorkflowRunResult> {
-    return withSpan(async (span) => this.executeWithTelemetry(workflowName, payload, span), {
+  async execute<TPayload, TSteps extends readonly WorkflowStepResult[]>(
+    workflow: TypedWorkflowReference<TPayload, TSteps>,
+    payload: NoInfer<TPayload>,
+  ): Promise<TypedWorkflowRunResult<TSteps>>;
+  async execute(workflowName: string, payload: unknown): Promise<WorkflowRunResult>;
+  async execute(
+    workflowOrName: string | TypedWorkflowReference<unknown, readonly WorkflowStepResult[]>,
+    payload: unknown,
+  ): Promise<WorkflowRunResult> {
+    const workflowName = typeof workflowOrName === "string" ? workflowOrName : workflowOrName.name;
+    return withSpan(async (span) => this.executeWithTelemetry(workflowOrName, payload, span), {
       name: `workflow:${workflowName}`,
       attributes: {
         "workflow.name": workflowName,
@@ -129,11 +140,11 @@ export class WorkflowRunner {
   }
 
   private async executeWithTelemetry(
-    workflowName: string,
+    workflowReference: string | TypedWorkflowReference<unknown, readonly WorkflowStepResult[]>,
     payload: unknown,
     span: WorkflowTelemetrySpan,
   ): Promise<WorkflowRunResult> {
-    const workflow = this.getWorkflow(workflowName);
+    const workflow = this.getWorkflow(workflowReference);
     setWorkflowTelemetryAttributes(span, workflow);
 
     const resolvedKey = this.resolveIdempotencyKey(workflow, payload);
@@ -297,8 +308,14 @@ export class WorkflowRunner {
     return this.executionManager.replay(executionId, params);
   }
 
-  private getWorkflow(name: string): WorkflowDefinition {
-    const workflow = this.registry.get(name);
+  private getWorkflow(
+    reference: string | TypedWorkflowReference<unknown, readonly WorkflowStepResult[]>,
+  ): WorkflowDefinition {
+    const name = typeof reference === "string" ? reference : reference.name;
+    const workflow =
+      typeof reference === "string"
+        ? this.registry.get(reference)
+        : this.registry.getByReference(reference);
     if (!workflow) {
       throw new WorkflowNotFoundProblem(name);
     }

@@ -1,4 +1,5 @@
 export { WORKFLOW_METADATA_KEY, Workflow } from "./libs/decorators/Workflow";
+export { defineWorkflow } from "./libs/defineWorkflow";
 export {
   DuplicateWorkflowRegistrationProblem,
   SagaDefinitionProblem,
@@ -59,6 +60,8 @@ export type {
 } from "./libs/diagnostics/WorkflowDiagnosticsProvider";
 export type {
   WorkflowDefinition,
+  WorkflowBuilder,
+  WorkflowCompletionResult,
   WorkflowIdempotencyContext,
   WorkflowIdempotencyResolver,
   WorkflowMetadata,
@@ -69,4 +72,7 @@ export type {
   WorkflowStepResult,
   WorkflowTaskStep,
   WorkflowTaskStepDeclaration,
+  TypedWorkflowOptions,
+  TypedWorkflowReference,
+  TypedWorkflowRunResult,
 } from "./libs/types";

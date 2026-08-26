@@ -31,17 +31,33 @@ export type TaskOptions = {
 
 export type TaskTimeoutRetryPolicy = "after_settlement" | "fenced" | "idempotent";
 
+declare const TASK_REFERENCE_CONTRACT: unique symbol;
+
 /**
- * Task reference for identifying tasks.
+ * Task reference for identifying tasks while preserving the handler contract.
  */
-export type TaskReference = {
+export type TaskReference<TPayload = unknown, TResult = unknown, TName extends string = string> = {
   /** Task name */
-  name: string;
+  name: TName;
   /** Target class constructor */
   target: object;
   /** Method name */
   methodName: string;
+  /** Type-only task handler contract. */
+  readonly [TASK_REFERENCE_CONTRACT]?: {
+    readonly payload: TPayload;
+    readonly result: TResult;
+  };
 };
+
+export type TaskReferencePayload<TReference extends TaskReference> =
+  TReference extends TaskReference<infer TPayload, unknown, string> ? TPayload : never;
+
+export type TaskReferenceResult<TReference extends TaskReference> =
+  TReference extends TaskReference<unknown, infer TResult, string> ? TResult : never;
+
+export type TaskReferenceName<TReference extends TaskReference> =
+  TReference extends TaskReference<unknown, unknown, infer TName> ? TName : never;
 
 /**
  * Runtime options for a single task execution.
