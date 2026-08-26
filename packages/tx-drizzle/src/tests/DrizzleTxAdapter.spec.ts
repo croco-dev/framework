@@ -679,6 +679,79 @@ describe("RlsTxAdapter", () => {
       expect(dbWithoutExecute.transaction).toHaveBeenCalledTimes(1);
       expect(runQuery).not.toHaveBeenCalled();
     });
+
+    it("should preserve the unsupported execute problem when diagnostic logging fails", async () => {
+      const dbWithoutExecute = createMockRlsDrizzleDbWithoutExecute();
+      const tenantProvider = {
+        getTenantId: vi.fn((): string | null => "tenant-123"),
+      };
+      const loggingFailure = new Error("logger write failed");
+      const logger = {
+        error: vi.fn(() => {
+          throw loggingFailure;
+        }),
+        info: vi.fn(),
+      };
+      const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+      const adapter = createRlsTxAdapter(
+        dbWithoutExecute as unknown as Parameters<typeof createRlsTxAdapter>[0],
+        tenantProvider,
+        { logger },
+      );
+      const runQuery = vi.fn(async () => "result");
+
+      try {
+        let thrown: unknown;
+        try {
+          await adapter.transaction(runQuery);
+        } catch (cause) {
+          thrown = cause;
+        }
+
+        expect(thrown).toBeInstanceOf(RlsExecuteUnsupportedProblem);
+        expect(thrown).toMatchObject({
+          code: "tx-drizzle/rls-execute-unsupported",
+          detail:
+            "Transaction client does not support execute(), cannot set RLS key 'app.current_tenant'",
+        });
+        expect(logger.error).toHaveBeenCalledTimes(1);
+        expect(consoleError).toHaveBeenCalledWith(
+          "[RlsTxAdapter] Failed to log unsupported execute problem",
+          { loggingFailure, problem: thrown },
+        );
+        expect(dbWithoutExecute.transaction).toHaveBeenCalledTimes(1);
+        expect(runQuery).not.toHaveBeenCalled();
+      } finally {
+        consoleError.mockRestore();
+      }
+    });
+
+    it("should check execute support before requested debug logging", async () => {
+      const dbWithoutExecute = createMockRlsDrizzleDbWithoutExecute();
+      const tenantProvider = {
+        getTenantId: vi.fn((): string | null => "tenant-123"),
+      };
+      const logger = {
+        error: vi.fn(),
+        info: vi.fn(() => {
+          throw new Error("logger write failed");
+        }),
+      };
+      const adapter = createRlsTxAdapter(
+        dbWithoutExecute as unknown as Parameters<typeof createRlsTxAdapter>[0],
+        tenantProvider,
+        { debug: true, logger },
+      );
+      const runQuery = vi.fn(async () => "result");
+
+      await expect(adapter.transaction(runQuery)).rejects.toBeInstanceOf(
+        RlsExecuteUnsupportedProblem,
+      );
+      expect(logger.error).toHaveBeenCalledTimes(1);
+      expect(logger.info).not.toHaveBeenCalled();
+      expect(dbWithoutExecute.transaction).toHaveBeenCalledTimes(1);
+      expect(runQuery).not.toHaveBeenCalled();
+    });
   });
 
   describe("savepoint", () => {

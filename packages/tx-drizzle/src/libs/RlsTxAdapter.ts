@@ -94,6 +94,39 @@ function resolveLogger(options: RlsOptions): RlsLogger | null {
   return null;
 }
 
+function logUnsupportedExecute(
+  logger: RlsLogger | null,
+  problem: RlsExecuteUnsupportedProblem,
+): void {
+  if (!logger) {
+    return;
+  }
+
+  const reportLoggingFailure = (loggingFailure: unknown): void => {
+    let fallbackResult: unknown;
+    try {
+      fallbackResult = console.error("[RlsTxAdapter] Failed to log unsupported execute problem", {
+        loggingFailure,
+        problem,
+      });
+    } catch {
+      return;
+    }
+
+    void Promise.resolve(fallbackResult).catch(() => undefined);
+  };
+
+  let loggingResult: unknown;
+  try {
+    loggingResult = logger.error(`[RlsTxAdapter] ${problem.detail}`);
+  } catch (loggingFailure) {
+    reportLoggingFailure(loggingFailure);
+    return;
+  }
+
+  void Promise.resolve(loggingResult).catch(reportLoggingFailure);
+}
+
 export function createRlsTxAdapter<TDb extends DrizzleDb>(
   db: TDb,
   tenantProvider: RlsTenantProvider,
@@ -113,19 +146,19 @@ export function createRlsTxAdapter<TDb extends DrizzleDb>(
 
       return baseAdapter.transaction(
         async (tx) => {
+          // Drizzle transaction client usually has .execute
+          if (!supportsExecute(tx)) {
+            const problem = new RlsExecuteUnsupportedProblem(configKey);
+            logUnsupportedExecute(logger, problem);
+            throw problem;
+          }
+
           if (options.debug) {
             try {
               await logger?.info(`[RlsTxAdapter] Setting ${configKey} = '${tenantId}'`);
             } catch (cause) {
               throw new RlsDebugLoggingProblem("write", cause);
             }
-          }
-
-          // Drizzle transaction client usually has .execute
-          if (!supportsExecute(tx)) {
-            const problem = new RlsExecuteUnsupportedProblem(configKey);
-            logger?.error(`[RlsTxAdapter] ${problem.detail}`);
-            throw problem;
           }
 
           await tx.execute(sql`select set_config(${configKey}, ${tenantId}, true)`);
