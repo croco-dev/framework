@@ -212,10 +212,12 @@ describe("rpc-codegen round trip", () => {
     const client = userModule.createUserClient({
       baseUrl: "https://api.example.com/v1/",
       fetch: configuredFetch,
-      headers: {
-        Authorization: "Bearer default",
-        "x-precedence": "default",
-      },
+      headers: [
+        ["Authorization", "Bearer default"],
+        ["x-precedence", "default"],
+        ["x-tag", "default-a"],
+        ["X-Tag", "default-b"],
+      ],
       request: {
         cache: "no-store",
         credentials: "include",
@@ -233,10 +235,12 @@ describe("rpc-codegen round trip", () => {
     await client.getCurrentUser(
       { headers: { "x-precedence": "route" } },
       {
-        headers: {
-          authorization: "Bearer request",
-          "x-precedence": "request",
-        },
+        headers: [
+          ["authorization", "Bearer request"],
+          ["x-precedence", "request"],
+          ["x-tag", "request-a"],
+          ["X-Tag", "request-b"],
+        ],
         request: { credentials: "omit" },
         signal,
       },
@@ -253,6 +257,7 @@ describe("rpc-codegen round trip", () => {
         authorization: "Bearer request",
         traceparent: "00-00000000000000000000000000000001-0000000000000001-01",
         "x-precedence": "request",
+        "X-Tag": "request-a, request-b",
       },
       signal,
     });
@@ -264,6 +269,7 @@ describe("rpc-codegen round trip", () => {
         Authorization: "Bearer default",
         traceparent: "00-00000000000000000000000000000001-0000000000000001-01",
         "x-precedence": "telemetry",
+        "X-Tag": "default-a, default-b",
       },
     });
     expect(configuredFetch).toHaveBeenNthCalledWith(3, "https://api.example.com/users", {
@@ -276,6 +282,7 @@ describe("rpc-codegen round trip", () => {
         "Content-Type": "application/json",
         traceparent: "00-00000000000000000000000000000001-0000000000000001-01",
         "x-precedence": "telemetry",
+        "X-Tag": "default-a, default-b",
       },
     });
   });

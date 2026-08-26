@@ -2071,8 +2071,19 @@ function mergeRpcHeaders(
     }
 
     if (Array.isArray(source)) {
+      const tupleHeaders = new Map<string, { readonly name: string; readonly value: string }>();
+
       for (const [key, value] of source) {
-        setHeader(key, value);
+        const normalizedKey = key.toLowerCase();
+        const previous = tupleHeaders.get(normalizedKey);
+        tupleHeaders.set(normalizedKey, {
+          name: key,
+          value: previous ? previous.value + ', ' + value : value,
+        });
+      }
+
+      for (const { name, value } of tupleHeaders.values()) {
+        setHeader(name, value);
       }
       continue;
     }
