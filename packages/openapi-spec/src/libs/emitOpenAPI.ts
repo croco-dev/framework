@@ -288,22 +288,22 @@ function toResponseConfig(
   problemDetailsRef: OpenAPIReference,
 ): RouteResponses {
   const outputSchema = unwrapZodEffectsSchema(route.outputSchema);
-
-  return {
+  const responses = {
     ...defaultResponses,
     ...toDeclaredProblemResponseConfig(route, problemDetailsRef),
-    200: {
-      description: "Successful response",
-      ...(outputSchema
-        ? {
-            content: {
-              "application/json": {
-                schema: outputSchema,
-              },
-            },
-          }
-        : {}),
-    },
+  };
+  if (!outputSchema) delete responses[200];
+
+  return {
+    ...responses,
+    ...(outputSchema
+      ? {
+          200: {
+            description: "Successful response",
+            content: { "application/json": { schema: outputSchema } },
+          },
+        }
+      : { 204: { description: "No content" } }),
   };
 }
 

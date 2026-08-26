@@ -131,6 +131,21 @@ describe("OpenAPI round trip", () => {
   it("should validate generated operations against real runtime responses", async () => {
     @Controller("/round-trip")
     class RoundTripController {
+      @Post("/:tenantId/widgets/:widgetId/archive")
+      @ProblemResponse({
+        code: "testing/widget-not-found",
+        category: ProblemCategory.NotFound,
+        description: "Fixture widget is not available.",
+      })
+      archiveWidget(
+        @Param("tenantId", z.string().min(1)) _tenantId: string,
+        @Param("widgetId", z.string().min(1)) widgetId: string,
+      ): void {
+        if (widgetId === "missing") {
+          throw new RoundTripWidgetNotFoundProblem(widgetId);
+        }
+      }
+
       @Post("/:tenantId/widgets/:widgetId")
       @ResponseSchema(roundTripResponseSchema)
       @ProblemResponse({
@@ -279,6 +294,39 @@ describe("OpenAPI round trip", () => {
       "application/problem+json",
       problemBody,
     );
+
+    const archivePath = "/round-trip/{tenantId}/widgets/{widgetId}/archive";
+    const archiveOperation = readOperation(spec, "post", archivePath);
+    const archiveResponse = await app.fetch(
+      createRequestFromOperation(archiveOperation, archivePath, {
+        method: "post",
+        pathParams: {
+          tenantId: "acme",
+          widgetId: "widget-1",
+        },
+      }),
+    );
+
+    expect(archiveResponse.status).toBe(204);
+    expect(await archiveResponse.text()).toBe("");
+    expect(archiveOperation.responses?.[200]).toBeUndefined();
+    expect(archiveOperation.responses?.[204]).toEqual({ description: "No content" });
+    expect(archiveOperation.responses?.[204]).not.toHaveProperty("content");
+    expect(archiveOperation.responses?.[404]).toMatchObject({
+      content: {
+        "application/problem+json": {
+          schema: { $ref: "#/components/schemas/ProblemDetails" },
+        },
+      },
+      "x-croco-problems": [
+        {
+          category: "NotFound",
+          code: "testing/widget-not-found",
+          description: "Fixture widget is not available.",
+          status: 404,
+        },
+      ],
+    });
   });
 });
 

@@ -821,6 +821,9 @@ describe("emitOpenAPI", () => {
     const spec = emitOpenAPI([SessionsController], {
       problemResponses: [{ status: 401, description: "Authentication required" }],
       defaultResponses: {
+        200: {
+          description: "Inherited success response",
+        },
         429: {
           description: "Too many requests",
         },
@@ -840,7 +843,8 @@ describe("emitOpenAPI", () => {
       },
     });
     expect(responses?.[429]).toEqual({ description: "Too many requests" });
-    expect(responses?.[200]).toEqual({ description: "Successful response" });
+    expect(responses?.[200]).toBeUndefined();
+    expect(responses?.[204]).toEqual({ description: "No content" });
   });
 
   it("should document route-declared Problem codes under derived HTTP statuses", () => {
@@ -916,7 +920,7 @@ describe("emitOpenAPI", () => {
     });
   });
 
-  it("should preserve generic success responses without a response schema", () => {
+  it("should emit no-content success responses without a response schema", () => {
     @Controller("/health")
     class HealthController {
       @Get("/")
@@ -925,9 +929,11 @@ describe("emitOpenAPI", () => {
 
     const spec = emitOpenAPI([HealthController]);
 
-    expect(spec.paths?.["/health"]?.get?.responses?.[200]).toEqual({
-      description: "Successful response",
-    });
+    const responses = spec.paths?.["/health"]?.get?.responses;
+
+    expect(responses?.[200]).toBeUndefined();
+    expect(responses?.[204]).toEqual({ description: "No content" });
+    expect(responses?.[204]).not.toHaveProperty("content");
   });
 
   it("should reject @All routes with a generated-contract diagnostic", () => {
