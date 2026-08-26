@@ -391,46 +391,82 @@ export class PipelineRunner {
       ...(input.result !== undefined ? { resultType: getValueType(input.result) } : {}),
     };
 
-    this.logger?.warn(HTTP_FILTER_FAILURE_DIAGNOSTIC_CODE, details);
+    this.recordFilterDiagnosticSink("logger", () => {
+      this.logger?.warn(HTTP_FILTER_FAILURE_DIAGNOSTIC_CODE, details);
+    });
 
-    const inspector = this.getRuntimeInspector();
-    if (inspector) {
-      recordRuntimeInspectionEvent(inspector, {
-        kind: "diagnostic",
-        outcome: "failed",
-        name: HTTP_FILTER_FAILURE_DIAGNOSTIC_CODE,
-        details,
-      });
-    }
+    this.recordFilterDiagnosticSink("inspector", () => {
+      const inspector = this.getRuntimeInspector();
+      if (!inspector) {
+        return;
+      }
+
+      recordRuntimeInspectionEvent(
+        inspector,
+        {
+          kind: "diagnostic",
+          outcome: "failed",
+          name: HTTP_FILTER_FAILURE_DIAGNOSTIC_CODE,
+          details,
+        },
+        (error) => {
+          this.reportFilterDiagnosticSinkFailure("inspector", error);
+        },
+      );
+    });
 
     const span = trace.getActiveSpan();
     if (!span) {
       return;
     }
 
-    span.addEvent("croco.http.exception_filter.failed", {
-      "croco.diagnostic.code": HTTP_FILTER_FAILURE_DIAGNOSTIC_CODE,
-      "croco.http.exception_filter.index": input.filterIndex,
-      "croco.http.exception_filter.name": details.filter,
-      "croco.http.exception_filter.reason": input.reason,
-      "croco.error.original.name": details.originalErrorName,
-      ...(details.originalProblemCode
-        ? { "croco.problem.original.code": details.originalProblemCode }
-        : {}),
-      ...(details.originalProblemCategory
-        ? { "croco.problem.original.category": details.originalProblemCategory }
-        : {}),
-      ...(details.originalProblemStatus
-        ? { "croco.problem.original.status": details.originalProblemStatus }
-        : {}),
-      ...(details.filterErrorName ? { "croco.error.filter.name": details.filterErrorName } : {}),
-      ...(details.resultType
-        ? { "croco.http.exception_filter.result_type": details.resultType }
-        : {}),
+    this.recordFilterDiagnosticSink("span.addEvent", () => {
+      span.addEvent("croco.http.exception_filter.failed", {
+        "croco.diagnostic.code": HTTP_FILTER_FAILURE_DIAGNOSTIC_CODE,
+        "croco.http.exception_filter.index": input.filterIndex,
+        "croco.http.exception_filter.name": details.filter,
+        "croco.http.exception_filter.reason": input.reason,
+        "croco.error.original.name": details.originalErrorName,
+        ...(details.originalProblemCode
+          ? { "croco.problem.original.code": details.originalProblemCode }
+          : {}),
+        ...(details.originalProblemCategory
+          ? { "croco.problem.original.category": details.originalProblemCategory }
+          : {}),
+        ...(details.originalProblemStatus
+          ? { "croco.problem.original.status": details.originalProblemStatus }
+          : {}),
+        ...(details.filterErrorName ? { "croco.error.filter.name": details.filterErrorName } : {}),
+        ...(details.resultType
+          ? { "croco.http.exception_filter.result_type": details.resultType }
+          : {}),
+      });
     });
 
     if (input.filterError !== undefined) {
-      span.recordException(toTelemetryException(input.filterError));
+      this.recordFilterDiagnosticSink("span.recordException", () => {
+        span.recordException(toTelemetryException(input.filterError));
+      });
+    }
+  }
+
+  private recordFilterDiagnosticSink(sink: FilterDiagnosticSink, record: () => void): void {
+    try {
+      record();
+    } catch (error) {
+      this.reportFilterDiagnosticSinkFailure(sink, error);
+    }
+  }
+
+  private reportFilterDiagnosticSinkFailure(sink: FilterDiagnosticSink, error: unknown): void {
+    try {
+      console.warn("Exception filter diagnostic sink failed", {
+        diagnosticCode: HTTP_FILTER_FAILURE_DIAGNOSTIC_CODE,
+        sink,
+        errorName: getErrorName(error),
+      });
+    } catch {
+      return;
     }
   }
 
@@ -475,6 +511,8 @@ export class PipelineRunner {
     });
   }
 }
+
+type FilterDiagnosticSink = "logger" | "inspector" | "span.addEvent" | "span.recordException";
 
 function getErrorName(error: unknown): string {
   return error instanceof Error ? error.name : typeof error;

@@ -648,6 +648,194 @@ describe("PipelineRunner", () => {
     );
   });
 
+  it("should let a later filter handle the original error when every diagnostic sink throws", async () => {
+    const diagnosticFailures = {
+      logger: new Error("logger failed"),
+      inspector: new Error("inspector failed"),
+      spanEvent: new Error("span event failed"),
+      spanException: new Error("span exception failed"),
+    };
+    logger.warn.mockImplementation(() => {
+      throw diagnosticFailures.logger;
+    });
+
+    const inspector = new RuntimeInspector();
+    const recordEvent = vi.spyOn(inspector, "recordEvent").mockImplementation((input) => {
+      if (input.kind === "diagnostic") {
+        throw diagnosticFailures.inspector;
+      }
+    });
+    Container.set(DEV_INSPECTOR_TOKEN, inspector);
+
+    const span = createMockSpan();
+    span.addEvent.mockImplementation(() => {
+      throw diagnosticFailures.spanEvent;
+    });
+    span.recordException.mockImplementation(() => {
+      throw diagnosticFailures.spanException;
+    });
+    const getActiveSpan = vi.spyOn(trace, "getActiveSpan").mockReturnValue(span);
+    const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => {
+      throw new Error("diagnostic fallback failed");
+    });
+
+    const runner = createRunner();
+    const execContext = new HttpExecutionContext(
+      createMockHttpContext(),
+      class TestController {},
+      "handler",
+    );
+    const originalProblem = ProblemFactory.badRequest("BAD_REQUEST", "original");
+    const brokenFilter: ExceptionFilter<unknown, HttpExecutionContext> = {
+      catch: vi.fn().mockImplementation(() => {
+        throw new Error("filter failed");
+      }),
+    };
+    const handlingFilter: ExceptionFilter<unknown, HttpExecutionContext> = {
+      catch: vi.fn().mockReturnValue(filterResponse(422, { code: "HANDLED_AFTER_FAILURE" })),
+    };
+
+    try {
+      const result = await runner.run(
+        execContext,
+        async () => {
+          throw originalProblem;
+        },
+        {
+          guards: [],
+          interceptors: [],
+          filters: [brokenFilter, handlingFilter],
+        },
+      );
+
+      expect(handlingFilter.catch).toHaveBeenCalledWith(originalProblem, execContext);
+      expect(result).toBeInstanceOf(Response);
+      expect((result as Response).status).toBe(422);
+      expect(await (result as Response).json()).toEqual({ code: "HANDLED_AFTER_FAILURE" });
+      expect(recordEvent).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: "diagnostic", name: "CROCO_HTTP_FILTER_001" }),
+      );
+      expect(span.addEvent).toHaveBeenCalledOnce();
+      expect(span.recordException).toHaveBeenCalledOnce();
+      expect(consoleWarn).toHaveBeenCalledTimes(4);
+      expect(consoleWarn.mock.calls.map(([, details]) => details)).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ sink: "logger", errorName: "Error" }),
+          expect.objectContaining({ sink: "inspector", errorName: "Error" }),
+          expect.objectContaining({ sink: "span.addEvent", errorName: "Error" }),
+          expect.objectContaining({ sink: "span.recordException", errorName: "Error" }),
+        ]),
+      );
+    } finally {
+      getActiveSpan.mockRestore();
+      consoleWarn.mockRestore();
+    }
+  });
+
+  it("should let a later filter handle the original error when inspector resolution throws", async () => {
+    const inspectorFailure = new Error("inspector resolution failed");
+    const getOptional = vi
+      .spyOn(Container, "getOptional")
+      .mockReturnValueOnce(undefined)
+      .mockImplementation(() => {
+        throw inspectorFailure;
+      });
+    const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const runner = createRunner();
+    const execContext = new HttpExecutionContext(
+      createMockHttpContext(),
+      class TestController {},
+      "handler",
+    );
+    const originalProblem = ProblemFactory.badRequest("BAD_REQUEST", "original");
+    const brokenFilter: ExceptionFilter<unknown, HttpExecutionContext> = {
+      catch: vi.fn().mockImplementation(() => {
+        throw new Error("filter failed");
+      }),
+    };
+    const handlingFilter: ExceptionFilter<unknown, HttpExecutionContext> = {
+      catch: vi.fn().mockReturnValue(filterResponse(422, { code: "HANDLED_AFTER_FAILURE" })),
+    };
+
+    try {
+      const result = await runner.run(
+        execContext,
+        async () => {
+          throw originalProblem;
+        },
+        {
+          guards: [],
+          interceptors: [],
+          filters: [brokenFilter, handlingFilter],
+        },
+      );
+
+      expect(handlingFilter.catch).toHaveBeenCalledWith(originalProblem, execContext);
+      expect(result).toBeInstanceOf(Response);
+      expect((result as Response).status).toBe(422);
+      expect(await (result as Response).json()).toEqual({ code: "HANDLED_AFTER_FAILURE" });
+      expect(consoleWarn).toHaveBeenCalledWith(
+        "Exception filter diagnostic sink failed",
+        expect.objectContaining({ sink: "inspector", errorName: "Error" }),
+      );
+    } finally {
+      getOptional.mockRestore();
+      consoleWarn.mockRestore();
+    }
+  });
+
+  it("should preserve the original fallback response when filter diagnostics throw", async () => {
+    logger.warn.mockImplementation(() => {
+      throw new Error("logger failed");
+    });
+    const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const runner = createRunner();
+    const execContext = new HttpExecutionContext(
+      createMockHttpContext(),
+      class TestController {},
+      "handler",
+    );
+    const originalProblem = new CustomStatusProblem("preserved fallback");
+    const filters: ExceptionFilter<unknown, HttpExecutionContext>[] = [
+      {
+        catch: vi.fn().mockImplementation(() => {
+          throw new Error("first filter failed");
+        }),
+      },
+      {
+        catch: vi.fn().mockImplementation(() => {
+          throw new Error("second filter failed");
+        }),
+      },
+    ];
+
+    try {
+      const result = await runner.run(
+        execContext,
+        async () => {
+          throw originalProblem;
+        },
+        {
+          guards: [],
+          interceptors: [],
+          filters,
+        },
+      );
+
+      expect(filters[0]?.catch).toHaveBeenCalledWith(originalProblem, execContext);
+      expect(filters[1]?.catch).toHaveBeenCalledWith(originalProblem, execContext);
+      expect(result).toBeInstanceOf(Response);
+      expect((result as Response).status).toBe(418);
+      expect(await (result as Response).json()).toMatchObject({
+        code: "test/custom-status",
+        detail: "preserved fallback",
+        status: 418,
+      });
+    } finally {
+      consoleWarn.mockRestore();
+    }
+  });
+
   it("should redact Problem Details returned from async exception filters", async () => {
     const runner = createRunner();
     const httpContext = createMockHttpContext();
