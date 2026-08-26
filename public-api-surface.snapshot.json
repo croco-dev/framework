@@ -19983,6 +19983,12 @@
               "declarationKind": "const"
             },
             {
+              "name": "mergeFrontendActionManifests",
+              "exportKind": "named",
+              "source": "./frontend-action-manifest",
+              "declarationKind": "function"
+            },
+            {
               "name": "OutputContractValidator",
               "exportKind": "named",
               "source": "./output-contract-validator",
@@ -19996,6 +20002,12 @@
             },
             {
               "name": "writeFrontendActionManifest",
+              "exportKind": "named",
+              "source": "./frontend-action-manifest",
+              "declarationKind": "function"
+            },
+            {
+              "name": "writeMergedFrontendActionManifest",
               "exportKind": "named",
               "source": "./frontend-action-manifest",
               "declarationKind": "function"
@@ -20059,6 +20071,11 @@
             },
             {
               "name": "FrontendActionManifestEntry",
+              "exportKind": "named",
+              "source": "./frontend-action-manifest"
+            },
+            {
+              "name": "FrontendActionManifestMergeInput",
               "exportKind": "named",
               "source": "./frontend-action-manifest"
             },

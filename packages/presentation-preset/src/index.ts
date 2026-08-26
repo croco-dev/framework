@@ -17,8 +17,10 @@ export {
   checkFrontendActionManifestFile,
   createFrontendActionManifest,
   FRONTEND_ACTION_MANIFEST_SCHEMA_VERSION,
+  mergeFrontendActionManifests,
   serializeFrontendActionManifest,
   writeFrontendActionManifest,
+  writeMergedFrontendActionManifest,
 } from "./frontend-action-manifest";
 export type {
   FrontendActionEntitlement,
@@ -28,6 +30,7 @@ export type {
   FrontendActionManifest,
   FrontendActionManifestDrift,
   FrontendActionManifestEntry,
+  FrontendActionManifestMergeInput,
   FrontendActionManifestSourceKind,
   FrontendActionMetadataReference,
   FrontendActionPermissionMetadata,

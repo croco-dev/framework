@@ -17,9 +17,15 @@ Each action entry records:
 - available permission metadata (`guards`, `roles`, `entitlements`)
 - cache invalidation hints such as query-key prefixes
 
+Use `mergeFrontendActionManifests()` when more than one producer contributes actions. Each input
+has an explicit producer source for conflict diagnostics. The merge validates every manifest,
+deduplicates canonically equivalent action definitions, rejects conflicting duplicate IDs, and sorts the
+combined result so input order cannot change the serialized bytes. `writeMergedFrontendActionManifest()`
+performs the same validation before replacing the destination.
+
 Use `serializeFrontendActionManifest()` for byte-stable JSON, `writeFrontendActionManifest()` to
-write build artifacts, and `checkFrontendActionManifestFile()` in CI to fail on committed manifest
-drift without rewriting the file.
+write a single-producer build artifact, and `checkFrontendActionManifestFile()` in CI to
+fail on committed manifest drift without rewriting the file.
 
 ## Supported Runtime Profiles
 

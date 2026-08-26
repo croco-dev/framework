@@ -2746,6 +2746,9 @@ importers:
       '@croco/framework-preset':
         specifier: workspace:*
         version: link:../framework-preset
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
     devDependencies:
       '@croco/preset-cloudflare':
         specifier: workspace:*

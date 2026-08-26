@@ -223,6 +223,9 @@ describe("changed-test-plan-shadow", () => {
 
   it("distinguishes a missing Git path from invalid revisions and malformed JSON", () => {
     expect(readJsonAtRevision("missing-shadow-assurance-fixture.json", "HEAD")).toBeUndefined();
+    expect(readJsonAtRevision("public-api-surface.snapshot.json", "HEAD")).toMatchObject({
+      schemaVersion: 2,
+    });
     expect(() =>
       readJsonAtRevision("public-api-surface.snapshot.json", "invalid-shadow-revision"),
     ).toThrow(/Unable to read assurance artifact.*invalid object name/s);

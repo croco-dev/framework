@@ -33,7 +33,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@croco/framework-preset": "workspace:*"
+    "@croco/framework-preset": "workspace:*",
+    "@croco/problems-core": "workspace:*"
   },
   "devDependencies": {
     "@croco/preset-cloudflare": "workspace:*",
