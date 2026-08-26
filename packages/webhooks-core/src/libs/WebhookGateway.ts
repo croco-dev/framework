@@ -428,7 +428,9 @@ function assertConfiguration(options: WebhookGatewayOptions): void {
   if (!["fail", "ignore", "report"].includes(options.unknownEventPolicy)) {
     throw new WebhookGatewayConfigurationProblem(
       "unknownEventPolicy must be one of 'fail', 'ignore', or 'report'",
-      { unknownEventPolicy: options.unknownEventPolicy },
+      options.unknownEventPolicy === undefined
+        ? {}
+        : { unknownEventPolicy: options.unknownEventPolicy },
     );
   }
 

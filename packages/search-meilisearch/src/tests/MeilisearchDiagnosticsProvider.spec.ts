@@ -1,8 +1,31 @@
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import { describe, expect, it, vi } from "vitest";
 import { MeilisearchDiagnosticsProvider } from "../libs/MeilisearchDiagnosticsProvider";
-import { TenantTokenNotConfiguredProblem } from "../libs/problems/MeilisearchProblems";
 
 const SECRET_SAMPLE = "super-secret-token";
+
+class TestMeilisearchDiagnosticProblem extends Problem {
+  constructor() {
+    super(
+      "search-meilisearch/tenant-token-not-configured",
+      ProblemCategory.InternalServerError,
+      "Tenant token options are not configured",
+      {
+        extensions: {
+          accessKey: SECRET_SAMPLE,
+          apiKey: SECRET_SAMPLE,
+          cookie: SECRET_SAMPLE,
+          endpoint: `https://search.example?apiKey=${SECRET_SAMPLE}`,
+          nested: {
+            access_token: SECRET_SAMPLE,
+            token: SECRET_SAMPLE,
+          },
+          provider: "meilisearch",
+        },
+      },
+    );
+  }
+}
 
 const mocks = vi.hoisted(() => {
   const client = {
@@ -123,18 +146,7 @@ describe("MeilisearchDiagnosticsProvider", () => {
       },
       {
         readinessCheck: async () => {
-          const problem = new TenantTokenNotConfiguredProblem();
-          Object.assign(problem.extensions ?? {}, {
-            accessKey: SECRET_SAMPLE,
-            apiKey: SECRET_SAMPLE,
-            cookie: SECRET_SAMPLE,
-            endpoint: `https://search.example?apiKey=${SECRET_SAMPLE}`,
-            nested: {
-              access_token: SECRET_SAMPLE,
-              token: SECRET_SAMPLE,
-            },
-          });
-          throw problem;
+          throw new TestMeilisearchDiagnosticProblem();
         },
       },
     );
@@ -185,7 +197,7 @@ describe("MeilisearchDiagnosticsProvider", () => {
         liveCheck: "failed",
         problemCode: "search-meilisearch/retryable-upstream",
         retryable: true,
-        status: 503,
+        upstreamStatus: 503,
       }),
       status: "degraded",
     });

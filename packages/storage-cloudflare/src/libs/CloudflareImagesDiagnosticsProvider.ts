@@ -59,7 +59,7 @@ export class CloudflareImagesValidationProblem extends Problem {
       ProblemCategory.ValidationError,
       `${detail} during ${context.operation}`,
       {
-        extensions: context,
+        extensions: toCloudflareImagesExtensions(context),
       },
     );
   }
@@ -73,7 +73,7 @@ export class CloudflareImagesRetryableUpstreamProblem extends Problem {
       `Cloudflare Images upstream request failed retryably during ${context.operation}`,
       {
         extensions: {
-          ...context,
+          ...toCloudflareImagesExtensions(context),
           retryable: true,
         },
       },
@@ -89,7 +89,7 @@ export class CloudflareImagesTerminalUpstreamProblem extends Problem {
       `Cloudflare Images upstream request failed terminally during ${context.operation}`,
       {
         extensions: {
-          ...context,
+          ...toCloudflareImagesExtensions(context),
           retryable: false,
         },
       },
@@ -313,6 +313,19 @@ function isRetryableUpstreamError(context: CloudflareImagesErrorContext): boolea
     context.upstreamCode === "ETIMEDOUT" ||
     context.upstreamCode === "UND_ERR_CONNECT_TIMEOUT"
   );
+}
+
+function toCloudflareImagesExtensions(
+  context: CloudflareImagesErrorContext,
+): Record<string, unknown> {
+  return {
+    provider: context.provider,
+    operation: context.operation,
+    ...(context.key !== undefined && { key: context.key }),
+    ...(context.status !== undefined && { upstreamStatus: context.status }),
+    ...(context.upstreamCode !== undefined && { upstreamCode: context.upstreamCode }),
+    ...(context.retryable !== undefined && { retryable: context.retryable }),
+  };
 }
 
 function validatePositiveInteger(value: unknown, label: string): void {

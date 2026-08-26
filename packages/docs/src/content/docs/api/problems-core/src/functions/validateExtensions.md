@@ -25,4 +25,4 @@ title: "validateExtensions"
 
 ## Throws
 
-extensions가 객체가 아닌 경우
+extensions가 JSON-safe plain object가 아닌 경우

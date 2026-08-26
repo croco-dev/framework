@@ -205,7 +205,7 @@ async function performInitializeModules(): Promise<ModuleContext> {
     resetActiveRuntimeState();
 
     if (error instanceof ModuleLifecycleProblem) {
-      attachModuleCleanupFailures(error, cleanupFailures);
+      throw attachModuleCleanupFailures(error, cleanupFailures);
     }
     throw error;
   }
@@ -278,8 +278,7 @@ async function performShutdownModules(): Promise<void> {
   }
 
   if (firstFailure) {
-    attachModuleCleanupFailures(firstFailure, cleanupFailures);
-    throw firstFailure;
+    throw attachModuleCleanupFailures(firstFailure, cleanupFailures);
   }
 }
 

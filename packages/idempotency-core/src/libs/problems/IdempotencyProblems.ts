@@ -152,7 +152,7 @@ export class IdempotencyReservationStateProblem extends IdempotencyProblem {
         storageKey: options.storageKey,
         expected: options.expected,
         actual: options.actual,
-        reservationId: options.reservationId,
+        ...(options.reservationId === undefined ? {} : { reservationId: options.reservationId }),
       },
     });
   }

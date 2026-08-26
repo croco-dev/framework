@@ -360,7 +360,7 @@ describe("AdminResource", () => {
       fields: [],
       identity: {},
       kind: "empty",
-      label: "Empty",
+      label: "",
       list: { fields: [] },
       scope: "tenant",
       source: "croco",
@@ -376,9 +376,24 @@ describe("AdminResource", () => {
         throw error;
       }
 
+      expect(
+        error.diagnostics.find(
+          (diagnostic) => diagnostic.code === ADMIN_CORE_DIAGNOSTIC_CODES.resourceLabelRequired,
+        ),
+      ).toEqual({
+        code: ADMIN_CORE_DIAGNOSTIC_CODES.resourceLabelRequired,
+        message: "Admin resource label is required",
+        path: "label",
+        resourceKind: "empty",
+        severity: "error",
+        target: "resource",
+      });
       expect(error.toJSON()).toMatchObject({
         code: "admin-core/resource-validation-failed",
         diagnostics: expect.arrayContaining([
+          expect.objectContaining({
+            code: ADMIN_CORE_DIAGNOSTIC_CODES.resourceLabelRequired,
+          }),
           expect.objectContaining({
             code: ADMIN_CORE_DIAGNOSTIC_CODES.identityIdFieldRequired,
           }),

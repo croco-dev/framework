@@ -467,7 +467,7 @@ describe("Meilisearch provider conformance", () => {
       expect(problem.extensions).toMatchObject({
         operation: "search",
         retryable: true,
-        status: 503,
+        upstreamStatus: 503,
       });
     });
 
@@ -485,7 +485,7 @@ describe("Meilisearch provider conformance", () => {
       expect(problem.extensions).toMatchObject({
         operation: "search",
         retryable: false,
-        status: 401,
+        upstreamStatus: 401,
       });
     });
 

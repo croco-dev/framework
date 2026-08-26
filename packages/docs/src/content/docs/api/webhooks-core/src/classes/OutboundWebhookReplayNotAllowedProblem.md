@@ -13,7 +13,7 @@ title: "OutboundWebhookReplayNotAllowedProblem"
 
 ### Constructor
 
-> **new OutboundWebhookReplayNotAllowedProblem**(`deliveryId`, `status`): `OutboundWebhookReplayNotAllowedProblem`
+> **new OutboundWebhookReplayNotAllowedProblem**(`deliveryId`, `deliveryStatus`): `OutboundWebhookReplayNotAllowedProblem`
 
 #### Parameters
 
@@ -21,7 +21,7 @@ title: "OutboundWebhookReplayNotAllowedProblem"
 
 `string`
 
-##### status
+##### deliveryStatus
 
 `string`
 

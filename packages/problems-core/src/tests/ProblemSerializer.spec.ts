@@ -130,6 +130,43 @@ describe("ProblemSerializer", () => {
         errors: [{ field: "email", message: "Invalid email" }],
       });
     });
+
+    it("should reject extension accessors without invoking them", () => {
+      let getterCalls = 0;
+      const details = Object.defineProperty(
+        {
+          type: "about:blank",
+          title: "Bad Request",
+          status: 400,
+          code: "INVALID_EXTENSION",
+        },
+        "secret",
+        {
+          enumerable: true,
+          get() {
+            getterCalls++;
+            throw new Error("getter must not run");
+          },
+        },
+      );
+
+      expect(() => ProblemSerializer.serialize(details)).toThrow(
+        expect.objectContaining({ code: "problems-core/invalid-extensions" }),
+      );
+      expect(getterCalls).toBe(0);
+    });
+
+    it("should preserve a __proto__ extension as nested own JSON data", () => {
+      const details = JSON.parse(
+        '{"type":"about:blank","title":"Bad Request","status":400,"code":"PROTO_EXTENSION","__proto__":{"polluted":true}}',
+      );
+      const serialized = ProblemSerializer.serialize(details);
+
+      expect(Object.getPrototypeOf(serialized.extensions)).toBe(Object.prototype);
+      expect(Object.hasOwn(serialized.extensions ?? {}, "__proto__")).toBe(true);
+      expect(serialized.extensions?.__proto__).toEqual({ polluted: true });
+      expect(JSON.parse(JSON.stringify(serialized))).toEqual(serialized);
+    });
   });
 
   describe("deserialize", () => {
@@ -191,6 +228,84 @@ describe("ProblemSerializer", () => {
       expect(details.status).toBe(422);
       expect(details.code).toBe("VALIDATION_FAILED");
       expect(details.errors).toEqual([{ field: "email", message: "Invalid email" }]);
+    });
+
+    it.each(["type", "title", "status", "detail", "instance", "code"])(
+      'should reject the reserved extension key "%s"',
+      (key) => {
+        expect(() =>
+          ProblemSerializer.deserialize({
+            type: "about:blank",
+            title: "Bad Request",
+            status: 400,
+            code: "INVALID_EXTENSION",
+            extensions: { [key]: "override" },
+          }),
+        ).toThrow(expect.objectContaining({ code: "problems-core/invalid-extensions" }));
+      },
+    );
+
+    it("should preserve a __proto__ extension as own JSON data", () => {
+      const extensions = JSON.parse('{"__proto__":{"polluted":true}}') as Record<string, unknown>;
+      const details = ProblemSerializer.deserialize({
+        type: "about:blank",
+        title: "Bad Request",
+        status: 400,
+        code: "PROTO_EXTENSION",
+        extensions,
+      });
+
+      expect(Object.getPrototypeOf(details)).toBe(Object.prototype);
+      expect(Object.hasOwn(details, "__proto__")).toBe(true);
+      expect(details.__proto__).toEqual({ polluted: true });
+      expect(JSON.parse(JSON.stringify(details))).toEqual(details);
+    });
+
+    it("should reject nested extension accessors without invoking them", () => {
+      let getterCalls = 0;
+      const extensions = Object.defineProperty({}, "secret", {
+        enumerable: true,
+        get() {
+          getterCalls++;
+          throw new Error("getter must not run");
+        },
+      });
+
+      expect(() =>
+        ProblemSerializer.deserialize({
+          type: "about:blank",
+          title: "Bad Request",
+          status: 400,
+          code: "INVALID_EXTENSION",
+          extensions,
+        }),
+      ).toThrow(expect.objectContaining({ code: "problems-core/invalid-extensions" }));
+      expect(getterCalls).toBe(0);
+    });
+
+    it("should reject an extensions accessor without invoking it", () => {
+      let getterCalls = 0;
+      const serialized = Object.defineProperty(
+        {
+          type: "about:blank",
+          title: "Bad Request",
+          status: 400,
+          code: "INVALID_EXTENSION",
+        },
+        "extensions",
+        {
+          enumerable: true,
+          get() {
+            getterCalls++;
+            throw new Error("getter must not run");
+          },
+        },
+      );
+
+      expect(() => ProblemSerializer.deserialize(serialized)).toThrow(
+        expect.objectContaining({ code: "problems-core/parse-error" }),
+      );
+      expect(getterCalls).toBe(0);
     });
   });
 
@@ -315,6 +430,71 @@ describe("ProblemSerializer", () => {
 
       expect(ProblemSerializer.fromJson(JSON.parse(JSON.stringify(problem)))).toEqual(problem);
     });
+
+    it("should preserve a __proto__ extension without invoking the prototype setter", () => {
+      const json = JSON.parse(
+        '{"type":"about:blank","title":"Bad Request","status":400,"code":"PROTO_EXTENSION","__proto__":{"polluted":true}}',
+      );
+      const details = ProblemSerializer.fromJson(json);
+
+      expect(Object.getPrototypeOf(details)).toBe(Object.prototype);
+      expect(Object.hasOwn(details, "__proto__")).toBe(true);
+      expect(details.__proto__).toEqual({ polluted: true });
+      expect(JSON.parse(JSON.stringify(details))).toEqual(details);
+    });
+
+    it("should reject extension accessors without invoking them", () => {
+      let getterCalls = 0;
+      const json = Object.defineProperty(
+        {
+          type: "about:blank",
+          title: "Bad Request",
+          status: 400,
+          code: "INVALID_EXTENSION",
+        },
+        "secret",
+        {
+          enumerable: true,
+          get() {
+            getterCalls++;
+            throw new Error("getter must not run");
+          },
+        },
+      );
+
+      expect(() => ProblemSerializer.fromJson(json)).toThrow(
+        expect.objectContaining({ code: "problems-core/invalid-extensions" }),
+      );
+      expect(getterCalls).toBe(0);
+    });
+
+    it("should inspect proxy data descriptors without invoking get traps", () => {
+      let getCalls = 0;
+      const json = new Proxy(
+        {
+          type: "about:blank",
+          title: "Bad Request",
+          status: 400,
+          code: "PROXY_DETAILS",
+          traceId: "trace-123",
+        },
+        {
+          get() {
+            getCalls++;
+            throw new Error("get trap must not run");
+          },
+        },
+      );
+
+      expect(ProblemSerializer.fromJson(json)).toEqual({
+        type: "about:blank",
+        title: "Bad Request",
+        status: 400,
+        code: "PROXY_DETAILS",
+        traceId: "trace-123",
+      });
+      expect(getCalls).toBe(0);
+    });
   });
 });
 
@@ -336,6 +516,81 @@ describe("ProblemExtensions validation", () => {
       expect(() => validateExtensions(123)).toThrow();
       expect(() => validateExtensions(null)).toThrow();
       expect(() => validateExtensions(undefined)).toThrow();
+      expect(() => validateExtensions([])).toThrow();
+    });
+
+    it.each([
+      ["undefined", { value: undefined }],
+      ["BigInt", { value: BigInt(1) }],
+      ["symbol", { value: Symbol("invalid") }],
+      ["function", { value: () => undefined }],
+      ["non-finite number", { value: Number.NaN }],
+      ["non-plain container", { value: new Map() }],
+    ])("should reject nested %s values with a stable Problem", (_case, extensions) => {
+      expect(() => validateExtensions(extensions)).toThrow(
+        expect.objectContaining({ code: "problems-core/invalid-extensions" }),
+      );
+    });
+
+    it("should reject cyclic extension graphs with a stable Problem", () => {
+      const extensions: Record<string, unknown> = {};
+      extensions.self = extensions;
+
+      expect(() => validateExtensions(extensions)).toThrow(
+        expect.objectContaining({ code: "problems-core/invalid-extensions" }),
+      );
+    });
+
+    it("should reject accessors without invoking them", () => {
+      let getterCalls = 0;
+      const extensions = Object.defineProperty({}, "secret", {
+        enumerable: true,
+        get() {
+          getterCalls++;
+          throw new Error("getter must not run");
+        },
+      });
+
+      expect(() => validateExtensions(extensions)).toThrow(
+        expect.objectContaining({ code: "problems-core/invalid-extensions" }),
+      );
+      expect(getterCalls).toBe(0);
+    });
+
+    it("should contain hostile inspection failures as a stable Problem", () => {
+      const extensions = new Proxy(
+        {},
+        {
+          ownKeys() {
+            throw new Error("inspection failed");
+          },
+        },
+      );
+
+      expect(() => validateExtensions(extensions)).toThrow(
+        expect.objectContaining({ code: "problems-core/invalid-extensions" }),
+      );
+    });
+
+    it("should contain revoked Proxy inspection failures as a stable Problem", () => {
+      const { proxy, revoke } = Proxy.revocable({}, {});
+      revoke();
+
+      expect(() => validateExtensions(proxy)).toThrow(
+        expect.objectContaining({ code: "problems-core/invalid-extensions" }),
+      );
+    });
+
+    it("should return a detached JSON-safe copy", () => {
+      const extensions = {
+        context: { attempts: [1, 2], active: true, note: null },
+      };
+
+      const result = validateExtensions(extensions);
+      extensions.context.attempts.push(3);
+
+      expect(result).toEqual({ context: { attempts: [1, 2], active: true, note: null } });
+      expect(JSON.parse(JSON.stringify(result))).toEqual(result);
     });
   });
 
@@ -350,6 +605,7 @@ describe("ProblemExtensions validation", () => {
       expect(isValidExtensions(123)).toBe(false);
       expect(isValidExtensions(null)).toBe(false);
       expect(isValidExtensions(undefined)).toBe(false);
+      expect(isValidExtensions({ value: BigInt(1) })).toBe(false);
     });
   });
 });

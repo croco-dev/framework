@@ -17,6 +17,8 @@ import {
   type ContractGeneratedCase,
   type ContractLifecycleObservation,
   type ContractLifecycleOutcome,
+  ContractInvariantProblem,
+  ContractRuntimeMismatchProblem,
   createContractCaseArbitrary,
   runContractFuzz,
   runContractRuntimeDifferential,
@@ -110,7 +112,120 @@ function lifecycleFor(
   >;
 }
 
+function nestedEvidence(depth: number): unknown {
+  let value: unknown = "leaf";
+  for (let index = 0; index < depth; index += 1) {
+    value = { value };
+  }
+  return value;
+}
+
 describe("contract testing", () => {
+  it.each([
+    [
+      "ownKeys",
+      new Proxy(
+        {},
+        {
+          ownKeys() {
+            throw new Error("inspection failed");
+          },
+        },
+      ),
+    ],
+    [
+      "getOwnPropertyDescriptor",
+      new Proxy(
+        {},
+        {
+          ownKeys: () => ["evidence"],
+          getOwnPropertyDescriptor() {
+            throw new Error("inspection failed");
+          },
+        },
+      ),
+    ],
+  ])("contains top-level extension %s traps in the intended Problem", (_trap, extensions) => {
+    const problem = new ContractRuntimeMismatchProblem("runtime mismatch", extensions);
+
+    expect(problem).toMatchObject({
+      code: "testing/contract-runtime-mismatch",
+      extensions: {
+        unsupportedEvidence: {
+          evidenceFormat: "unsupported-extensions-v1",
+          reason: "inspection-failed",
+        },
+      },
+    });
+  });
+
+  it.each([
+    [
+      "wide object",
+      Object.fromEntries(Array.from({ length: 10_001 }, (_, index) => [`key-${index}`, index])),
+    ],
+    [
+      "nested aggregate",
+      {
+        left: Array.from({ length: 5_000 }, (_, index) => index),
+        right: Array.from({ length: 5_000 }, (_, index) => index),
+      },
+    ],
+  ])("contains %s evidence beyond the Problem node budget", (_case, extensions) => {
+    const problem = new ContractInvariantProblem("oversized evidence", extensions);
+
+    expect(problem).toMatchObject({
+      code: "testing/contract-invariant-failed",
+      extensions: {
+        unsupportedEvidence: {
+          evidenceFormat: "unsupported-extensions-v1",
+          reason: "size-limit",
+        },
+      },
+    });
+  });
+
+  it("represents symbol-keyed extensions as unsupported evidence", () => {
+    const extensions: Record<string | symbol, unknown> = { capability: "flush" };
+    extensions[Symbol("secret")] = "hidden";
+    const problem = new ContractRuntimeMismatchProblem("runtime mismatch", extensions);
+
+    expect(problem).toMatchObject({
+      code: "testing/contract-runtime-mismatch",
+      extensions: {
+        unsupportedEvidence: {
+          evidenceFormat: "unsupported-extensions-v1",
+          reason: "symbol-key",
+        },
+      },
+    });
+  });
+
+  it("keeps the deepest supported extension evidence structural", () => {
+    const problem = new ContractRuntimeMismatchProblem("runtime mismatch", {
+      outcome: nestedEvidence(99),
+    });
+
+    expect(problem.code).toBe("testing/contract-runtime-mismatch");
+    expect(problem.extensions).toHaveProperty("outcome");
+    expect(problem.extensions).not.toHaveProperty("unsupportedEvidence");
+  });
+
+  it("tags extension evidence beyond the supported depth without replacing the Problem", () => {
+    const problem = new ContractRuntimeMismatchProblem("runtime mismatch", {
+      outcome: nestedEvidence(100),
+    });
+
+    expect(problem).toMatchObject({
+      code: "testing/contract-runtime-mismatch",
+      extensions: {
+        outcome: {
+          evidenceFormat: "canonical-v1",
+        },
+      },
+    });
+  });
+
   it("defines bounded deterministic PR, nightly, and manual profiles", () => {
     expect(CONTRACT_TEST_PROFILES).toEqual({
       pr: { numRuns: 32, seed: 1489 },
@@ -901,6 +1016,43 @@ describe("contract testing", () => {
         ],
       }),
     ).rejects.toThrow("reported lifecycle 'flush' as failed");
+  });
+
+  it("preserves the runtime mismatch Problem when malformed evidence is not JSON data", async () => {
+    const node = createRuntimeCapabilityManifest("node");
+    const lambda = createRuntimeCapabilityManifest("lambda");
+    const malformed = lifecycleFor(lambda);
+    malformed.flush = {
+      supported: true,
+      outcome: new Map([["unexpected", "outcome"]]) as unknown as ContractLifecycleOutcome,
+    };
+
+    const problem = await runContractRuntimeDifferential({
+      route,
+      testCase: validCase,
+      targets: [
+        {
+          runtime: "node",
+          capabilities: node,
+          execute: () => ({ ...successObservation, lifecycle: lifecycleFor(node) }),
+        },
+        {
+          runtime: "lambda",
+          capabilities: lambda,
+          execute: () => ({ ...successObservation, lifecycle: malformed }),
+        },
+      ],
+    }).catch((error: unknown) => error);
+
+    expect(problem).toMatchObject({
+      code: "testing/contract-runtime-mismatch",
+      extensions: {
+        capability: "flush",
+        outcome: {
+          evidenceFormat: "canonical-v1",
+        },
+      },
+    });
   });
 
   it("rejects equal lifecycle outcomes when manifests declare opposite support", async () => {

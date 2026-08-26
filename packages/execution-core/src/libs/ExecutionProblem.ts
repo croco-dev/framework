@@ -70,7 +70,26 @@ export class ExecutionProblem extends Problem {
     detail?: string,
     evidence?: ExecutionContinuationConflictEvidence,
   ) {
-    super(code, category, detail, evidence ? { extensions: { ...evidence } } : undefined);
+    super(
+      code,
+      category,
+      detail,
+      evidence === undefined
+        ? undefined
+        : {
+            extensions: {
+              ...(evidence.currentWorkerId === undefined
+                ? {}
+                : { currentWorkerId: evidence.currentWorkerId }),
+              ...(evidence.currentLeaseExpiresAt === undefined
+                ? {}
+                : { currentLeaseExpiresAt: evidence.currentLeaseExpiresAt }),
+              ...(evidence.currentStatus === undefined
+                ? {}
+                : { currentStatus: evidence.currentStatus }),
+            },
+          },
+    );
     this.evidence = evidence;
   }
 }

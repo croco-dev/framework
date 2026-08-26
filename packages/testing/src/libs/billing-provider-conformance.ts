@@ -1094,7 +1094,7 @@ function assertUsageFailureFixture(
 ): void {
   if (fixture.kind === "http-429" || fixture.kind === "http-5xx") {
     assert.equal(
-      problem.extensions?.["status"],
+      problem.extensions?.["upstreamStatus"],
       fixture.status,
       `Usage billing Problem must preserve the safe HTTP status for ${fixture.kind} classification.`,
     );

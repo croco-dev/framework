@@ -1,5 +1,9 @@
 import { ProblemCategory } from "./ProblemCategory";
 import { ProblemCategoryMapper } from "./ProblemCategoryMapper";
+import {
+  copyProblemExtensions,
+  copyValidatedProblemExtensions,
+} from "./validators/copyProblemExtensions";
 import type { ProblemExtensions } from "./ProblemExtensions";
 
 export type ProblemOptions = {
@@ -56,7 +60,10 @@ export abstract class Problem extends Error {
     this.detail = detail;
     this.type = options?.type ?? "about:blank";
     this.instance = options?.instance;
-    this.extensions = options?.extensions;
+    const extensions = options?.extensions;
+    if (extensions !== undefined) {
+      this.extensions = copyExtensionsOrThrow(extensions);
+    }
     this.name = new.target.name;
 
     if (options?.cause && this.cause === undefined) {
@@ -103,10 +110,48 @@ export abstract class Problem extends Error {
       result.instance = this.instance;
     }
 
-    if (this.extensions) {
-      Object.assign(result, this.extensions);
+    const extensions = readProblemExtensions(this);
+    if (extensions !== undefined) {
+      copyValidatedProblemExtensions(result, copyExtensionsOrThrow(extensions));
     }
 
     return result;
   }
+}
+
+export class InvalidExtensionsProblem extends Problem {
+  readonly code = "problems-core/invalid-extensions";
+  readonly category = ProblemCategory.BadRequest;
+
+  constructor(path = "extensions", reason = "must contain only JSON-safe data") {
+    super(undefined, undefined, `Invalid Problem extensions at ${path}: ${reason}`);
+  }
+}
+
+function copyExtensionsOrThrow(extensions: unknown): ProblemExtensions {
+  const result = copyProblemExtensions(extensions);
+  if (!result.ok) {
+    throw new InvalidExtensionsProblem(result.path, result.reason);
+  }
+  return result.value;
+}
+
+function readProblemExtensions(problem: Problem): unknown {
+  let descriptor: PropertyDescriptor | undefined;
+
+  try {
+    descriptor = Object.getOwnPropertyDescriptor(problem, "extensions");
+  } catch {
+    throw new InvalidExtensionsProblem("extensions", "could not be inspected safely");
+  }
+
+  if (descriptor === undefined) {
+    return undefined;
+  }
+
+  if (!("value" in descriptor)) {
+    throw new InvalidExtensionsProblem("extensions", "must be a data property");
+  }
+
+  return descriptor.value;
 }

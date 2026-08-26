@@ -34,6 +34,20 @@ describe("LlmMeteringProblems", () => {
       expect(problem.extensions?.currentUsage).toBe(15000);
       expect(problem.extensions?.quota).toBe(10000);
     });
+
+    it("should serialize non-finite quota evidence as strings", () => {
+      const problem = new LlmQuotaExceededProblem(
+        "llm.prompt_tokens",
+        Number.NaN,
+        Number.POSITIVE_INFINITY,
+      );
+
+      expect(problem.toJSON()).toMatchObject({
+        currentUsage: "NaN",
+        quota: "Infinity",
+      });
+      expect(() => JSON.stringify(problem)).not.toThrow();
+    });
   });
 
   describe("LlmCostLimitExceededProblem", () => {

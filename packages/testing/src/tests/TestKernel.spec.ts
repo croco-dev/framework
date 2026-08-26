@@ -2,6 +2,7 @@ import "reflect-metadata";
 import { EventBusConfig } from "@croco/events-core";
 import { Component, Container, Context, ShutdownManager, Token } from "@croco/framework-context";
 import { Controller, Get } from "@croco/protocols-rest";
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import {
   createApp,
   declareSecurityMiddlewareCapabilities,
@@ -504,7 +505,24 @@ describe("TestKernel", () => {
   });
 
   it("preserves structured resource cleanup evidence when bootstrap also fails", async () => {
-    let cleanupFailure!: TestKernelResourceFidelityProblem;
+    class ResourceCleanupProblem extends Problem {
+      constructor() {
+        super(
+          "testing/test-kernel-resource-fidelity",
+          ProblemCategory.InternalServerError,
+          "Resource cleanup failed.",
+          {
+            extensions: {
+              logs: ["container cleanup failed"],
+              recovery: "stop the retained container",
+              stage: "cleanup",
+            },
+          },
+        );
+      }
+    }
+
+    const cleanupFailure = new ResourceCleanupProblem();
     const resource: TestResource<FakeResourceConnection> = {
       id: "cleanup-evidence",
       async start() {
@@ -524,22 +542,6 @@ describe("TestKernel", () => {
         };
       },
     };
-    cleanupFailure = new TestKernelResourceFidelityProblem(
-      { kind: "outbox", resource },
-      {
-        id: resource.id,
-        image: "example.invalid/resource@sha256:abc",
-        isolation: "database-per-worker",
-        kind: "fake",
-        mode: "rollback",
-      },
-    );
-    Object.assign(cleanupFailure.extensions ?? {}, {
-      logs: ["container cleanup failed"],
-      recovery: "stop the retained container",
-      stage: "cleanup",
-    });
-
     let thrown: unknown;
     try {
       await createTestKernel({

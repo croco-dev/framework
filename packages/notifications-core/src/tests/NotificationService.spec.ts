@@ -32,6 +32,28 @@ import {
 const createRenderedProvider = (name: string, channel: NotificationChannel) =>
   createProvider(name, channel, createConsumerManagedRenderedCapabilities(name, channel));
 
+describe("NotificationPreferenceDeniedProblem", () => {
+  it("omits an absent preference rule id from serialized extensions", () => {
+    const problem = new NotificationPreferenceDeniedProblem({
+      context: {
+        tenantId: "tenant-1",
+        userId: "user-1",
+        channel: NotificationChannel.EMAIL,
+        topic: "billing.invoice-ready",
+      },
+      reason: "user-opted-out",
+      evaluationKey: "tenant-1:user-1:email:billing.invoice-ready",
+    });
+
+    expect(problem.extensions).not.toHaveProperty("ruleId");
+    expect(() => JSON.stringify(problem)).not.toThrow();
+    expect(problem.toJSON()).toMatchObject({
+      code: "notifications-core/preference-denied",
+      evaluationKey: "tenant-1:user-1:email:billing.invoice-ready",
+    });
+  });
+});
+
 const createExecutionManager = (): ExecutionManager => ({
   get: vi.fn(async () => {
     throw new Error("not used in NotificationService tests");

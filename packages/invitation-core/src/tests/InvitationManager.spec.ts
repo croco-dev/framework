@@ -868,6 +868,17 @@ describe("InvitationManager", () => {
     ).rejects.toBeInstanceOf(InvitationInvalidStatusProblem);
   });
 
+  it("should expose invitation status without overriding the Problem status", () => {
+    const problem = new InvitationInvalidStatusProblem("inv-1", "revoked", "accept");
+
+    expect(problem.toJSON()).toMatchObject({
+      invitationId: "inv-1",
+      invitationStatus: "revoked",
+      operation: "accept",
+      status: 409,
+    });
+  });
+
   it("should decline pending invitation", async () => {
     await store.save(createInvitation("decline-token"));
 

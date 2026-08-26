@@ -1,7 +1,12 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { RuntimeCapabilityManifest, RuntimeCapabilityName } from "@croco/framework-context";
-import { Problem, ProblemCategory, ProblemSerializer } from "@croco/problems-core";
+import {
+  Problem,
+  ProblemCategory,
+  ProblemSerializer,
+  validateExtensions,
+} from "@croco/problems-core";
 import {
   getZodObjectShape,
   isZodArraySchema,
@@ -187,7 +192,7 @@ export class ContractInvariantProblem extends Problem {
       "testing/contract-invariant-failed",
       ProblemCategory.ValidationError,
       detail,
-      extensions === undefined ? {} : { extensions },
+      extensions === undefined ? {} : { extensions: projectContractProblemExtensions(extensions) },
     );
   }
 }
@@ -199,9 +204,79 @@ export class ContractRuntimeMismatchProblem extends Problem {
       "testing/contract-runtime-mismatch",
       ProblemCategory.ValidationError,
       detail,
-      extensions === undefined ? {} : { extensions },
+      extensions === undefined ? {} : { extensions: projectContractProblemExtensions(extensions) },
     );
   }
+}
+
+const MAX_PROBLEM_EVIDENCE_NODES = 10_000;
+const RESERVED_PROBLEM_EXTENSION_KEYS = new Set([
+  "type",
+  "title",
+  "status",
+  "detail",
+  "instance",
+  "code",
+]);
+
+function projectContractProblemExtensions(
+  extensions: Record<string, unknown>,
+): Record<string, unknown> {
+  try {
+    const keys = Reflect.ownKeys(extensions);
+    if (keys.length > MAX_PROBLEM_EVIDENCE_NODES - 1) {
+      return unsupportedProblemExtensions("size-limit");
+    }
+    if (keys.some((key) => typeof key !== "string")) {
+      return unsupportedProblemExtensions("symbol-key");
+    }
+    if (keys.some((key) => RESERVED_PROBLEM_EXTENSION_KEYS.has(key as string))) {
+      return unsupportedProblemExtensions("reserved-key");
+    }
+
+    const projected: Record<string, unknown> = {};
+    for (const key of keys as string[]) {
+      const descriptor = Object.getOwnPropertyDescriptor(extensions, key);
+      const projection =
+        descriptor && descriptor.enumerable && "value" in descriptor
+          ? projectContractProblemEvidence(descriptor.value)
+          : { evidenceFormat: "unsupported-v1", valueType: "accessor" };
+      Object.defineProperty(projected, key, {
+        configurable: true,
+        enumerable: true,
+        value: projection,
+        writable: true,
+      });
+    }
+    try {
+      return validateExtensions(projected);
+    } catch {
+      return unsupportedProblemExtensions("size-limit");
+    }
+  } catch {
+    return unsupportedProblemExtensions("inspection-failed");
+  }
+}
+
+function projectContractProblemEvidence(value: unknown): unknown {
+  try {
+    return validateExtensions({ value })["value"];
+  } catch {
+    try {
+      return { evidenceFormat: "canonical-v1", value: stableSerialize(value) };
+    } catch {
+      return { evidenceFormat: "unsupported-v1", valueType: typeof value };
+    }
+  }
+}
+
+function unsupportedProblemExtensions(reason: string): Record<string, unknown> {
+  return {
+    unsupportedEvidence: {
+      evidenceFormat: "unsupported-extensions-v1",
+      reason,
+    },
+  };
 }
 
 class ContractExecutionProblem extends Problem {
@@ -978,7 +1053,11 @@ function compareLifecycle(
     ) {
       throw new ContractRuntimeMismatchProblem(
         `Lifecycle '${capability}' reported an equal outcome between '${baseline.runtime}' and '${target.runtime}' despite opposite manifest support.`,
-        { capability, baseline: left, actual: right },
+        {
+          capability,
+          baselineOutcome: stableSerialize(left),
+          actualOutcome: stableSerialize(right),
+        },
       );
     }
     if (stableSerialize(baselineLifecycle[capability]) === stableSerialize(lifecycle[capability])) {
@@ -990,7 +1069,11 @@ function compareLifecycle(
     }
     throw new ContractRuntimeMismatchProblem(
       `Undeclared lifecycle mismatch for '${capability}' between '${baseline.runtime}' and '${target.runtime}'.`,
-      { capability, baseline: left, actual: right },
+      {
+        capability,
+        baselineOutcome: stableSerialize(left),
+        actualOutcome: stableSerialize(right),
+      },
     );
   }
 }
@@ -1045,7 +1128,7 @@ function normalizeLifecycleOutcome(
   if (outcome.status === "failed") {
     throw new ContractRuntimeMismatchProblem(
       `Runtime '${runtime}' reported lifecycle '${capability}' as failed.`,
-      { capability, outcome },
+      { capability, outcome: stableSerialize(outcome) },
     );
   }
   if (supported !== (outcome.status === "succeeded")) {
@@ -1074,10 +1157,12 @@ function assertEqual(
   left: unknown,
   right: unknown,
 ): void {
-  if (stableSerialize(left) !== stableSerialize(right)) {
+  const baselineCanonical = stableSerialize(left);
+  const actualCanonical = stableSerialize(right);
+  if (baselineCanonical !== actualCanonical) {
     throw new ContractRuntimeMismatchProblem(
       `Runtime '${runtime}' differs from '${baseline}' for ${label}.`,
-      { baseline: left, actual: right, label },
+      { baselineCanonical, actualCanonical, label },
     );
   }
 }
@@ -1115,7 +1200,7 @@ function serializeCanonical(value: unknown, context: CanonicalSerializationConte
   if (typeof value === "symbol" || typeof value === "function") {
     throw new ContractInvariantProblem(
       `Canonical contract comparison does not support ${typeof value} values.`,
-      { type: typeof value },
+      { valueType: typeof value },
     );
   }
 

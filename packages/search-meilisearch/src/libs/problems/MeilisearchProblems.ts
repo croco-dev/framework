@@ -63,8 +63,7 @@ export class MeilisearchInvalidRequestProblem extends Problem {
       `${detail} during ${context.operation}`,
       {
         extensions: {
-          provider: "meilisearch",
-          ...context,
+          ...toMeilisearchExtensions(context),
           retryable: false,
         },
       },
@@ -83,8 +82,7 @@ export class MeilisearchIndexNotFoundProblem extends Problem {
       `Meilisearch index was not found during ${context.operation}`,
       {
         extensions: {
-          provider: "meilisearch",
-          ...context,
+          ...toMeilisearchExtensions(context),
           retryable: false,
         },
       },
@@ -103,8 +101,7 @@ export class MeilisearchRetryableUpstreamProblem extends Problem {
       `Meilisearch upstream request failed retryably during ${context.operation}: ${message}`,
       {
         extensions: {
-          provider: "meilisearch",
-          ...context,
+          ...toMeilisearchExtensions(context),
           retryable: true,
         },
       },
@@ -123,8 +120,7 @@ export class MeilisearchTerminalUpstreamProblem extends Problem {
       `Meilisearch upstream request failed terminally during ${context.operation}: ${message}`,
       {
         extensions: {
-          provider: "meilisearch",
-          ...context,
+          ...toMeilisearchExtensions(context),
           retryable: false,
         },
       },
@@ -280,6 +276,18 @@ function isValidationError(context: MeilisearchErrorContext): boolean {
     context.status === 422 ||
     (context.status === undefined && (code.startsWith("invalid_") || code.startsWith("missing_")))
   );
+}
+
+function toMeilisearchExtensions(context: MeilisearchErrorContext): Record<string, unknown> {
+  return {
+    provider: "meilisearch",
+    operation: context.operation,
+    ...(context.indexName !== undefined && { indexName: context.indexName }),
+    ...(context.documentId !== undefined && { documentId: context.documentId }),
+    ...(context.status !== undefined && { upstreamStatus: context.status }),
+    ...(context.upstreamCode !== undefined && { upstreamCode: context.upstreamCode }),
+    ...(context.retryable !== undefined && { retryable: context.retryable }),
+  };
 }
 
 function getMeilisearchErrorMessage(error: unknown): string {

@@ -80,12 +80,12 @@ describe("MeilisearchProblems", () => {
     expect(retryable.detail).not.toContain(SECRET_SAMPLE);
     expect(retryable.extensions).toMatchObject({
       retryable: true,
-      status: 503,
+      upstreamStatus: 503,
     });
     expect(terminal).toBeInstanceOf(MeilisearchTerminalUpstreamProblem);
     expect(terminal.extensions).toMatchObject({
       retryable: false,
-      status: 401,
+      upstreamStatus: 401,
     });
   });
 

@@ -38,12 +38,16 @@ export class LlmQuotaExceededProblem extends Problem {
       {
         extensions: {
           meterId,
-          currentUsage,
-          quota,
+          currentUsage: numberEvidence(currentUsage),
+          quota: numberEvidence(quota),
         },
       },
     );
   }
+}
+
+function numberEvidence(value: number): number | string {
+  return Number.isFinite(value) ? value : String(value);
 }
 
 export class LlmCostLimitExceededProblem extends Problem {

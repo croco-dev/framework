@@ -1,17 +1,19 @@
+import { InvalidExtensionsProblem } from "../Problem";
+import { copyProblemExtensions } from "./copyProblemExtensions";
 import type { ProblemExtensions } from "../ProblemExtensions";
-import { InvalidExtensionsProblem } from "../problems/InvalidExtensionsProblem";
 
 /**
  * 확장 필드를 검증하고 ProblemExtensions 타입으로 변환합니다.
  * @param extensions - 검증할 확장 필드 객체
  * @returns 검증된 ProblemExtensions
- * @throws {InvalidExtensionsProblem} extensions가 객체가 아닌 경우
+ * @throws {InvalidExtensionsProblem} extensions가 JSON-safe plain object가 아닌 경우
  */
 export function validateExtensions(extensions: unknown): ProblemExtensions {
-  if (typeof extensions !== "object" || extensions === null) {
-    throw new InvalidExtensionsProblem();
+  const result = copyProblemExtensions(extensions);
+  if (!result.ok) {
+    throw new InvalidExtensionsProblem(result.path, result.reason);
   }
-  return extensions as ProblemExtensions;
+  return result.value;
 }
 
 /**
@@ -20,5 +22,5 @@ export function validateExtensions(extensions: unknown): ProblemExtensions {
  * @returns 유효성 여부
  */
 export function isValidExtensions(extensions: unknown): boolean {
-  return typeof extensions === "object" && extensions !== null;
+  return copyProblemExtensions(extensions).ok;
 }

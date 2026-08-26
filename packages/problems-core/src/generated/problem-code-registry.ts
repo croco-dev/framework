@@ -5729,7 +5729,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/MessageContracts.ts",
-          line: 401,
+          line: 407,
           column: 5,
           kind: "problem-constructor",
         },
@@ -5762,7 +5762,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/MessageContracts.ts",
-          line: 390,
+          line: 396,
           column: 5,
           kind: "problem-constructor",
         },
@@ -5793,7 +5793,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/MessageContracts.ts",
-          line: 412,
+          line: 418,
           column: 5,
           kind: "problem-constructor",
         },
@@ -6923,7 +6923,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 157,
+          line: 176,
           column: 12,
           kind: "problem-constructor",
         },
@@ -6955,7 +6955,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 149,
+          line: 168,
           column: 12,
           kind: "problem-constructor",
         },
@@ -6987,7 +6987,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 141,
+          line: 160,
           column: 12,
           kind: "problem-constructor",
         },
@@ -7017,7 +7017,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 93,
+          line: 112,
           column: 12,
           kind: "problem-constructor",
         },
@@ -7047,7 +7047,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 132,
+          line: 151,
           column: 12,
           kind: "problem-constructor",
         },
@@ -7079,7 +7079,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 121,
+          line: 140,
           column: 12,
           kind: "problem-constructor",
         },
@@ -7109,7 +7109,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 97,
+          line: 116,
           column: 12,
           kind: "problem-constructor",
         },
@@ -7139,7 +7139,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 165,
+          line: 184,
           column: 12,
           kind: "problem-constructor",
         },
@@ -7200,7 +7200,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 113,
+          line: 132,
           column: 12,
           kind: "problem-constructor",
         },
@@ -7230,7 +7230,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 105,
+          line: 124,
           column: 12,
           kind: "problem-constructor",
         },
@@ -7261,7 +7261,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 89,
+          line: 108,
           column: 12,
           kind: "problem-constructor",
         },
@@ -8019,7 +8019,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 61,
+          line: 70,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8051,7 +8051,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 105,
+          line: 129,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8082,7 +8082,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 127,
+          line: 151,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8113,7 +8113,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 143,
+          line: 167,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8147,7 +8147,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 78,
+          line: 103,
           column: 5,
           kind: "problem-constructor",
         },
@@ -10318,7 +10318,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-metering/src/libs/problems/LlmMeteringProblems.ts",
-          line: 51,
+          line: 55,
           column: 5,
           kind: "problem-constructor",
         },
@@ -10349,7 +10349,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-metering/src/libs/problems/LlmMeteringProblems.ts",
-          line: 68,
+          line: 72,
           column: 3,
           kind: "problem-class",
         },
@@ -10379,7 +10379,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-metering/src/libs/problems/LlmMeteringProblems.ts",
-          line: 81,
+          line: 85,
           column: 5,
           kind: "problem-constructor",
         },
@@ -13650,8 +13650,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       },
       sources: [
         {
-          file: "packages/problems-core/src/libs/problems/InvalidExtensionsProblem.ts",
-          line: 5,
+          file: "packages/problems-core/src/libs/Problem.ts",
+          line: 123,
           column: 3,
           kind: "problem-class",
         },
@@ -15049,7 +15049,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-resend/src/libs/problems/ResendNotificationProblem.ts",
-          line: 87,
+          line: 97,
           column: 5,
           kind: "problem-constructor",
         },
@@ -15893,7 +15893,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/search-meilisearch/src/libs/problems/MeilisearchProblems.ts",
-          line: 80,
+          line: 79,
           column: 5,
           kind: "problem-constructor",
         },
@@ -15987,7 +15987,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/search-meilisearch/src/libs/problems/MeilisearchProblems.ts",
-          line: 100,
+          line: 98,
           column: 5,
           kind: "problem-constructor",
         },
@@ -16020,7 +16020,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/search-meilisearch/src/libs/problems/MeilisearchProblems.ts",
-          line: 140,
+          line: 136,
           column: 5,
           kind: "problem-constructor",
         },
@@ -16052,7 +16052,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/search-meilisearch/src/libs/problems/MeilisearchProblems.ts",
-          line: 120,
+          line: 117,
           column: 5,
           kind: "problem-constructor",
         },
@@ -17853,7 +17853,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/contract-testing.ts",
-          line: 209,
+          line: 284,
           column: 5,
           kind: "problem-constructor",
         },
@@ -17886,7 +17886,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/contract-testing.ts",
-          line: 174,
+          line: 179,
           column: 5,
           kind: "problem-constructor",
         },
@@ -17919,7 +17919,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/contract-testing.ts",
-          line: 186,
+          line: 191,
           column: 5,
           kind: "problem-constructor",
         },
@@ -17952,7 +17952,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/contract-testing.ts",
-          line: 198,
+          line: 203,
           column: 5,
           kind: "problem-constructor",
         },

@@ -106,7 +106,7 @@ export class CacheInvalidationFailedProblem extends Problem {
         cause: cause instanceof Error ? cause : undefined,
         extensions: {
           adapterName,
-          causeCode,
+          ...(causeCode === undefined ? {} : { causeCode }),
           causeMessage,
           eventName,
           operation,

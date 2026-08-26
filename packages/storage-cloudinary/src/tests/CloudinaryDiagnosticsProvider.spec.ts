@@ -150,7 +150,7 @@ describe("CloudinaryDiagnosticsProvider", () => {
       extensions: {
         provider: "cloudinary",
         operation: "readiness",
-        status: 429,
+        upstreamStatus: 429,
         upstreamCode: "RATE_LIMITED",
         retryable: true,
       },
