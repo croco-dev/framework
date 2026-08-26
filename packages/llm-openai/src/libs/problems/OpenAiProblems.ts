@@ -2,7 +2,7 @@ import { Problem, ProblemCategory } from "@croco/problems-core";
 
 type OpenAiErrorMetadata = {
   readonly operation: string;
-  readonly status?: number;
+  readonly upstreamStatus?: number;
   readonly requestId?: string;
   readonly upstreamCode?: string;
 };
@@ -162,7 +162,7 @@ export function normalizeOpenAiError(error: unknown, operation: string): Problem
   const status = numberValue(candidate.status);
   const metadata: OpenAiErrorMetadata = {
     operation,
-    ...(status !== undefined ? { status } : {}),
+    ...(status !== undefined ? { upstreamStatus: status } : {}),
     ...requestIdExtension(candidate),
     ...upstreamCodeExtension(candidate),
   };
@@ -195,7 +195,7 @@ function toExtensions(
   return {
     operation: metadata.operation,
     provider: "openai",
-    ...(metadata.status !== undefined ? { status: metadata.status } : {}),
+    ...(metadata.upstreamStatus !== undefined ? { upstreamStatus: metadata.upstreamStatus } : {}),
     ...(metadata.requestId !== undefined ? { requestId: metadata.requestId } : {}),
     ...(metadata.upstreamCode !== undefined ? { upstreamCode: metadata.upstreamCode } : {}),
     ...(metadata.retryAfter !== undefined ? { retryAfter: metadata.retryAfter } : {}),

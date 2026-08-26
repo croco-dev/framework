@@ -237,6 +237,9 @@ describe("MessageContracts", () => {
     expect(() => noBinding.registerRenderer(NoBindingRenderer)).toThrow(
       MessageRendererMessageMissingProblem,
     );
+    expect(
+      new MessageRendererMessageMissingProblem("NoBindingRenderer", undefined).toJSON(),
+    ).not.toHaveProperty("messageId");
 
     @Renders(TrialEnding)
     class MissingPushRenderer {

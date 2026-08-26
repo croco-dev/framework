@@ -657,8 +657,13 @@ function validateKnownField(
 function createDiagnostic(
   input: Omit<AdminResourceDiagnostic, "severity">,
 ): AdminResourceDiagnostic {
+  const { actionId, fieldId, problemCode, resourceKind, ...required } = input;
   return {
-    ...input,
+    ...required,
+    ...(actionId === undefined ? {} : { actionId }),
+    ...(fieldId === undefined ? {} : { fieldId }),
+    ...(problemCode === undefined ? {} : { problemCode }),
+    ...(resourceKind === undefined ? {} : { resourceKind }),
     severity: "error",
   };
 }

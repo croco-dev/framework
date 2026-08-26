@@ -196,7 +196,7 @@ class TestingUsageBillingProblem extends Problem {
       {
         extensions: {
           retryable,
-          ...(context.status === undefined ? {} : { status: context.status }),
+          ...(context.status === undefined ? {} : { upstreamStatus: context.status }),
           ...(context.upstreamCode === undefined ? {} : { upstreamCode: context.upstreamCode }),
         },
       },

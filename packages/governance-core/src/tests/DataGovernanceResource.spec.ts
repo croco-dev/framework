@@ -404,9 +404,22 @@ describe("DataGovernanceResource", () => {
     expect(codes).toContain(DATA_GOVERNANCE_DIAGNOSTIC_CODES.capabilityAuditRequired);
     expect(codes).toContain(DATA_GOVERNANCE_DIAGNOSTIC_CODES.problemCodeRequired);
 
-    expect(() => assertDataGovernanceResourcesValid([invalid])).toThrow(
-      DataGovernanceValidationProblem,
-    );
+    let validationProblem: DataGovernanceValidationProblem | undefined;
+    try {
+      assertDataGovernanceResourcesValid([invalid]);
+    } catch (error) {
+      expect(error).toBeInstanceOf(DataGovernanceValidationProblem);
+      validationProblem = error as DataGovernanceValidationProblem;
+    }
+
+    expect(validationProblem).toBeDefined();
+    expect(() => JSON.stringify(validationProblem)).not.toThrow();
+    expect(validationProblem?.toJSON()).toMatchObject({
+      code: "governance-core/resource-validation-failed",
+      diagnostics: report.diagnostics.map((diagnostic) =>
+        Object.fromEntries(Object.entries(diagnostic).filter(([, value]) => value !== undefined)),
+      ),
+    });
   });
 
   it("rejects malformed capability statuses without advertising support in the Data Map", () => {

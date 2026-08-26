@@ -3996,7 +3996,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/MessageContracts.ts:401:5` (problem-constructor)
+- `packages/engagement-core/src/libs/MessageContracts.ts:407:5` (problem-constructor)
 
 <a id="engagement-core-renderer-channel-missing"></a>
 
@@ -4014,7 +4014,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/MessageContracts.ts:390:5` (problem-constructor)
+- `packages/engagement-core/src/libs/MessageContracts.ts:396:5` (problem-constructor)
 
 <a id="engagement-core-renderer-channel-undeclared"></a>
 
@@ -4032,7 +4032,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/MessageContracts.ts:412:5` (problem-constructor)
+- `packages/engagement-core/src/libs/MessageContracts.ts:418:5` (problem-constructor)
 
 <a id="engagement-core-renderer-message-missing"></a>
 
@@ -4680,7 +4680,7 @@ Sources:
 
 Sources:
 
-- `packages/execution-core/src/libs/ExecutionProblem.ts:157:12` (problem-constructor)
+- `packages/execution-core/src/libs/ExecutionProblem.ts:176:12` (problem-constructor)
 
 <a id="execution-attempt-fencing-unsupported"></a>
 
@@ -4698,7 +4698,7 @@ Sources:
 
 Sources:
 
-- `packages/execution-core/src/libs/ExecutionProblem.ts:149:12` (problem-constructor)
+- `packages/execution-core/src/libs/ExecutionProblem.ts:168:12` (problem-constructor)
 
 <a id="execution-checkpoint-store-conformance"></a>
 
@@ -4716,7 +4716,7 @@ Sources:
 
 Sources:
 
-- `packages/execution-core/src/libs/ExecutionProblem.ts:141:12` (problem-constructor)
+- `packages/execution-core/src/libs/ExecutionProblem.ts:160:12` (problem-constructor)
 
 <a id="execution-conflict"></a>
 
@@ -4734,7 +4734,7 @@ Sources:
 
 Sources:
 
-- `packages/execution-core/src/libs/ExecutionProblem.ts:93:12` (problem-constructor)
+- `packages/execution-core/src/libs/ExecutionProblem.ts:112:12` (problem-constructor)
 
 <a id="execution-continuation-conflict"></a>
 
@@ -4752,7 +4752,7 @@ Sources:
 
 Sources:
 
-- `packages/execution-core/src/libs/ExecutionProblem.ts:132:12` (problem-constructor)
+- `packages/execution-core/src/libs/ExecutionProblem.ts:151:12` (problem-constructor)
 
 <a id="execution-continuation-unsupported"></a>
 
@@ -4770,7 +4770,7 @@ Sources:
 
 Sources:
 
-- `packages/execution-core/src/libs/ExecutionProblem.ts:121:12` (problem-constructor)
+- `packages/execution-core/src/libs/ExecutionProblem.ts:140:12` (problem-constructor)
 
 <a id="execution-idempotency-conflict"></a>
 
@@ -4788,7 +4788,7 @@ Sources:
 
 Sources:
 
-- `packages/execution-core/src/libs/ExecutionProblem.ts:97:12` (problem-constructor)
+- `packages/execution-core/src/libs/ExecutionProblem.ts:116:12` (problem-constructor)
 
 <a id="execution-indeterminate-retry-blocked"></a>
 
@@ -4806,7 +4806,7 @@ Sources:
 
 Sources:
 
-- `packages/execution-core/src/libs/ExecutionProblem.ts:165:12` (problem-constructor)
+- `packages/execution-core/src/libs/ExecutionProblem.ts:184:12` (problem-constructor)
 
 <a id="execution-invalid-continuation-lease-duration"></a>
 
@@ -4842,7 +4842,7 @@ Sources:
 
 Sources:
 
-- `packages/execution-core/src/libs/ExecutionProblem.ts:113:12` (problem-constructor)
+- `packages/execution-core/src/libs/ExecutionProblem.ts:132:12` (problem-constructor)
 
 <a id="execution-max-retries-exceeded"></a>
 
@@ -4860,7 +4860,7 @@ Sources:
 
 Sources:
 
-- `packages/execution-core/src/libs/ExecutionProblem.ts:105:12` (problem-constructor)
+- `packages/execution-core/src/libs/ExecutionProblem.ts:124:12` (problem-constructor)
 
 <a id="execution-not-found"></a>
 
@@ -4878,7 +4878,7 @@ Sources:
 
 Sources:
 
-- `packages/execution-core/src/libs/ExecutionProblem.ts:89:12` (problem-constructor)
+- `packages/execution-core/src/libs/ExecutionProblem.ts:108:12` (problem-constructor)
 
 <a id="forbidden"></a>
 
@@ -5310,7 +5310,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-module/src/problems.ts:61:5` (problem-constructor)
+- `packages/framework-module/src/problems.ts:70:5` (problem-constructor)
 
 <a id="framework-module-provider-not-visible"></a>
 
@@ -5328,7 +5328,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-module/src/problems.ts:105:5` (problem-constructor)
+- `packages/framework-module/src/problems.ts:129:5` (problem-constructor)
 
 <a id="framework-module-provider-ownership-conflict"></a>
 
@@ -5346,7 +5346,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-module/src/problems.ts:127:5` (problem-constructor)
+- `packages/framework-module/src/problems.ts:151:5` (problem-constructor)
 
 <a id="framework-module-provider-write-not-owned"></a>
 
@@ -5364,7 +5364,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-module/src/problems.ts:143:5` (problem-constructor)
+- `packages/framework-module/src/problems.ts:167:5` (problem-constructor)
 
 <a id="framework-module-registration-lifecycle-conflict"></a>
 
@@ -5382,7 +5382,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-module/src/problems.ts:78:5` (problem-constructor)
+- `packages/framework-module/src/problems.ts:103:5` (problem-constructor)
 
 <a id="frontend-problems-fetch-unavailable"></a>
 
@@ -6642,7 +6642,7 @@ Sources:
 
 Sources:
 
-- `packages/llm-metering/src/libs/problems/LlmMeteringProblems.ts:51:5` (problem-constructor)
+- `packages/llm-metering/src/libs/problems/LlmMeteringProblems.ts:55:5` (problem-constructor)
 
 <a id="llm-metering-pricing-not-found"></a>
 
@@ -6660,7 +6660,7 @@ Sources:
 
 Sources:
 
-- `packages/llm-metering/src/libs/problems/LlmMeteringProblems.ts:68:3` (problem-class)
+- `packages/llm-metering/src/libs/problems/LlmMeteringProblems.ts:72:3` (problem-class)
 
 <a id="llm-metering-pricing-registry-conflict"></a>
 
@@ -6678,7 +6678,7 @@ Sources:
 
 Sources:
 
-- `packages/llm-metering/src/libs/problems/LlmMeteringProblems.ts:81:5` (problem-constructor)
+- `packages/llm-metering/src/libs/problems/LlmMeteringProblems.ts:85:5` (problem-constructor)
 
 <a id="llm-metering-quota-exceeded"></a>
 
@@ -8550,7 +8550,7 @@ Sources:
 
 Sources:
 
-- `packages/problems-core/src/libs/problems/InvalidExtensionsProblem.ts:5:3` (problem-class)
+- `packages/problems-core/src/libs/Problem.ts:123:3` (problem-class)
 
 <a id="problems-core-parse-error"></a>
 
@@ -9342,7 +9342,7 @@ Sources:
 
 Sources:
 
-- `packages/notifications-resend/src/libs/problems/ResendNotificationProblem.ts:87:5` (problem-constructor)
+- `packages/notifications-resend/src/libs/problems/ResendNotificationProblem.ts:97:5` (problem-constructor)
 
 <a id="retry-aborted"></a>
 
@@ -9828,7 +9828,7 @@ Sources:
 
 Sources:
 
-- `packages/search-meilisearch/src/libs/problems/MeilisearchProblems.ts:80:5` (problem-constructor)
+- `packages/search-meilisearch/src/libs/problems/MeilisearchProblems.ts:79:5` (problem-constructor)
 
 <a id="search-meilisearch-invalid-request"></a>
 
@@ -9882,7 +9882,7 @@ Sources:
 
 Sources:
 
-- `packages/search-meilisearch/src/libs/problems/MeilisearchProblems.ts:100:5` (problem-constructor)
+- `packages/search-meilisearch/src/libs/problems/MeilisearchProblems.ts:98:5` (problem-constructor)
 
 <a id="search-meilisearch-tenant-token-not-configured"></a>
 
@@ -9900,7 +9900,7 @@ Sources:
 
 Sources:
 
-- `packages/search-meilisearch/src/libs/problems/MeilisearchProblems.ts:140:5` (problem-constructor)
+- `packages/search-meilisearch/src/libs/problems/MeilisearchProblems.ts:136:5` (problem-constructor)
 
 <a id="search-meilisearch-terminal-upstream"></a>
 
@@ -9918,7 +9918,7 @@ Sources:
 
 Sources:
 
-- `packages/search-meilisearch/src/libs/problems/MeilisearchProblems.ts:120:5` (problem-constructor)
+- `packages/search-meilisearch/src/libs/problems/MeilisearchProblems.ts:117:5` (problem-constructor)
 
 <a id="seat-limit-exceeded"></a>
 
@@ -10944,7 +10944,7 @@ Sources:
 
 Sources:
 
-- `packages/testing/src/libs/contract-testing.ts:209:5` (problem-constructor)
+- `packages/testing/src/libs/contract-testing.ts:284:5` (problem-constructor)
 
 <a id="testing-contract-generation-unsupported"></a>
 
@@ -10962,7 +10962,7 @@ Sources:
 
 Sources:
 
-- `packages/testing/src/libs/contract-testing.ts:174:5` (problem-constructor)
+- `packages/testing/src/libs/contract-testing.ts:179:5` (problem-constructor)
 
 <a id="testing-contract-invariant-failed"></a>
 
@@ -10980,7 +10980,7 @@ Sources:
 
 Sources:
 
-- `packages/testing/src/libs/contract-testing.ts:186:5` (problem-constructor)
+- `packages/testing/src/libs/contract-testing.ts:191:5` (problem-constructor)
 
 <a id="testing-contract-runtime-mismatch"></a>
 
@@ -10998,7 +10998,7 @@ Sources:
 
 Sources:
 
-- `packages/testing/src/libs/contract-testing.ts:198:5` (problem-constructor)
+- `packages/testing/src/libs/contract-testing.ts:203:5` (problem-constructor)
 
 <a id="testing-scenario-contract-invalid"></a>
 

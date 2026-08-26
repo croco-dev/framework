@@ -35,6 +35,12 @@ describe("GraphQLProblems", () => {
     expect(problem.extensions).toEqual({ field: "email" });
   });
 
+  it("should reject extensions that attempt to replace core Problem fields", () => {
+    expect(
+      () => new GraphQLValidationProblem("VALIDATION_ERROR", "Invalid input", { status: 500 }),
+    ).toThrow('extensions["status"]');
+  });
+
   it("should create authorization problem with correct category", () => {
     const problem = new GraphQLAuthorizationProblem("ACCESS_DENIED", "Access denied");
 
@@ -93,10 +99,6 @@ describe("ErrorConverter", () => {
       requestId: "request-golden-graphql",
       traceId: "trace-golden-graphql",
       diagnostics: "provider-secret",
-      code: "override-attempt",
-      status: 500,
-      title: "Override attempt",
-      type: "https://example.com/override",
     });
     const error = problemToGraphQLError(problem, ["Mutation", "createUser"]);
 

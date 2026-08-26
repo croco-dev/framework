@@ -26,6 +26,28 @@ class TestNotificationAssertionProblem extends Problem {
   }
 }
 
+class TestResendDiagnosticProblem extends Problem {
+  constructor() {
+    super(
+      "notifications-resend/terminal-upstream",
+      ProblemCategory.InternalServerError,
+      "failed with apiKey=re_leaked-key",
+      {
+        extensions: {
+          apiKey: "re_leaked-key",
+          nested: {
+            token: "secret-token",
+            safe: "kept",
+          },
+          operation: "readiness",
+          provider: "resend",
+          retryable: false,
+        },
+      },
+    );
+  }
+}
+
 // Mock resend package
 vi.mock("resend", () => {
   const emailsSendMock = vi.fn();
@@ -197,7 +219,7 @@ describe("ResendProvider", () => {
           liveCheck: "failed",
           problemCode: "notifications-resend/retryable-upstream",
           upstreamCode: "rate_limit_exceeded",
-          status: 429,
+          upstreamStatus: 429,
           retryable: true,
         }),
       });
@@ -207,24 +229,7 @@ describe("ResendProvider", () => {
     it("should sanitize thrown Problem messages and extensions in live readiness failures", async () => {
       const diagnostics = new ResendDiagnosticsProvider(mockConfig, {
         readinessCheck: async () => {
-          const problem = new ResendTerminalUpstreamProblem(
-            {
-              provider: "resend",
-              operation: "readiness",
-              retryable: false,
-            },
-            "failed with apiKey=re_leaked-key",
-          );
-
-          Object.assign(problem.extensions as Record<string, unknown>, {
-            apiKey: "re_leaked-key",
-            nested: {
-              token: "secret-token",
-              safe: "kept",
-            },
-          });
-
-          throw problem;
+          throw new TestResendDiagnosticProblem();
         },
       });
 

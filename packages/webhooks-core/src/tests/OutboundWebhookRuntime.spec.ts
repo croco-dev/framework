@@ -195,6 +195,18 @@ describe("OutboundWebhookRuntime", () => {
     },
   );
 
+  it("records HTTP evidence under a non-reserved extension key", () => {
+    const result = classifyOutboundWebhookOutcome("delivery_1", { kind: "http", status: 503 });
+
+    expect(result).toMatchObject({
+      policy: "retryable",
+      problem: { extensions: { upstreamStatus: 503 } },
+    });
+    if ("problem" in result) {
+      expect(result.problem.extensions).not.toHaveProperty("status");
+    }
+  });
+
   it("bounds retries and marks the delivery dead at max attempts", async () => {
     const store = new InMemoryOutboundWebhookStore();
     let now = new Date(START);

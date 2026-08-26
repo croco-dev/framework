@@ -104,12 +104,12 @@ export class OutboundWebhookAcceptanceUnknownProblem extends OutboundWebhookProb
 }
 
 export class OutboundWebhookReplayNotAllowedProblem extends OutboundWebhookProblem {
-  constructor(deliveryId: string, status: string) {
+  constructor(deliveryId: string, deliveryStatus: string) {
     super(
       OUTBOUND_WEBHOOK_DIAGNOSTIC_CODES.replayNotAllowed,
       ProblemCategory.Conflict,
-      `Outbound webhook delivery '${deliveryId}' cannot be replayed from status '${status}'`,
-      { deliveryId, status },
+      `Outbound webhook delivery '${deliveryId}' cannot be replayed from status '${deliveryStatus}'`,
+      { deliveryId, deliveryStatus },
     );
   }
 }

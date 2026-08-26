@@ -249,7 +249,7 @@ export class NotificationPreferenceDeniedProblem extends Problem {
           channel: decision.context.channel,
           topic: decision.context.topic,
           reason: decision.reason,
-          ruleId: decision.ruleId,
+          ...(decision.ruleId === undefined ? {} : { ruleId: decision.ruleId }),
           evaluationKey: decision.evaluationKey,
           retryable: false,
         },

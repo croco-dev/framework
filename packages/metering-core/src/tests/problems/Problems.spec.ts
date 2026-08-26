@@ -130,6 +130,7 @@ describe("Problems", () => {
       const problem = new RedisProblem("SET");
 
       expect(problem.detail).toContain("Unknown error");
+      expect(problem.toJSON()).not.toHaveProperty("originalMessage");
     });
 
     it("should create with deterministic response diagnostics", () => {

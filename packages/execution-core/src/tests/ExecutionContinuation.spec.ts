@@ -428,6 +428,16 @@ describe("ExecutionManagerImpl continuation claims", () => {
     },
   );
 
+  it("omits absent continuation conflict evidence from Problem serialization", () => {
+    const problem = ExecutionProblems.continuationConflict("claim lost", {
+      currentWorkerId: undefined,
+      currentStatus: "running",
+    });
+
+    expect(problem.toJSON()).toMatchObject({ currentStatus: "running" });
+    expect(problem.toJSON()).not.toHaveProperty("currentWorkerId");
+  });
+
   it("atomically starts the first attempt and records deterministic claim evidence", async () => {
     const { create, manager } = createHarness();
     const execution = await create();

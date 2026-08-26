@@ -15,7 +15,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 ### Constructor
 
-> **new ModuleLifecycleProblem**(`moduleName`, `phase`, `cause`): `ModuleLifecycleProblem`
+> **new ModuleLifecycleProblem**(`moduleName`, `phase`, `cause`, `cleanupFailures?`): `ModuleLifecycleProblem`
 
 #### Parameters
 
@@ -30,6 +30,10 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 ##### cause
 
 `unknown`
+
+##### cleanupFailures?
+
+readonly `ModuleCleanupFailure`[] = `[]`
 
 #### Returns
 
@@ -204,6 +208,22 @@ not capture any frames.
 #### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`toJSON`](/api/problems-core/src/classes/problem/#tojson)
+
+---
+
+### withCleanupFailures()
+
+> **withCleanupFailures**(`cleanupFailures`): `ModuleLifecycleProblem`
+
+#### Parameters
+
+##### cleanupFailures
+
+readonly `ModuleCleanupFailure`[]
+
+#### Returns
+
+`ModuleLifecycleProblem`
 
 ---
 

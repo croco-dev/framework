@@ -3139,7 +3139,7 @@
     {
       "packageName": "@croco/problems-core",
       "file": "packages/problems-core/src/libs/Problem.ts",
-      "line": 56,
+      "line": 60,
       "column": 5,
       "code": "TS2412",
       "message": "Type 'string | undefined' is not assignable to type 'string' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the type of the target."
@@ -3147,18 +3147,10 @@
     {
       "packageName": "@croco/problems-core",
       "file": "packages/problems-core/src/libs/Problem.ts",
-      "line": 58,
+      "line": 62,
       "column": 5,
       "code": "TS2412",
       "message": "Type 'string | undefined' is not assignable to type 'string' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the type of the target."
-    },
-    {
-      "packageName": "@croco/problems-core",
-      "file": "packages/problems-core/src/libs/Problem.ts",
-      "line": 59,
-      "column": 5,
-      "code": "TS2412",
-      "message": "Type 'ProblemExtensions | undefined' is not assignable to type 'ProblemExtensions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the type of the target."
     },
     {
       "packageName": "@croco/protocols-rest",

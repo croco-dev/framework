@@ -380,7 +380,13 @@ export class MessageRendererMessageMissingProblem extends Problem {
       messageId === undefined
         ? `Renderer ${rendererName} is not decorated with @Renders()`
         : `Renderer ${rendererName} is bound to unregistered message ${messageId}`,
-      { extensions: { rendererName, messageId, retryable: false } },
+      {
+        extensions: {
+          rendererName,
+          ...(messageId !== undefined ? { messageId } : {}),
+          retryable: false,
+        },
+      },
     );
   }
 }

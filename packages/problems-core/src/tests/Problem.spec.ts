@@ -1,3 +1,4 @@
+import { runInNewContext } from "node:vm";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import {
   assertProblemExhaustive,
@@ -31,6 +32,12 @@ class ValidationProblem extends Problem {
 class UnauthorizedProblem extends Problem {
   constructor() {
     super("UNAUTHORIZED", ProblemCategory.Unauthorized, "Authentication required");
+  }
+}
+
+class ExtensionProblem extends Problem {
+  constructor(extensions: Record<string, unknown>) {
+    super("EXTENSION_FAILURE", ProblemCategory.BadRequest, "Extension failure", { extensions });
   }
 }
 
@@ -113,6 +120,136 @@ describe("Problem", () => {
       CrocoProblemStatus<"transports-graphql/request-body-too-large">
     >().toEqualTypeOf<413>();
     expect(configuredDetails.status).toBe(422);
+  });
+
+  it.each(["type", "title", "status", "detail", "instance", "code"])(
+    'should reject the reserved extension key "%s" before serialization',
+    (key) => {
+      expect(() => new ExtensionProblem({ [key]: "override" })).toThrow(
+        expect.objectContaining({ code: "problems-core/invalid-extensions" }),
+      );
+    },
+  );
+
+  it("should retain nested JSON-safe extensions without sharing mutable input", () => {
+    const extensions = {
+      errors: [{ field: "email", messages: ["invalid", null] }],
+      retryable: false,
+    };
+    const problem = new ExtensionProblem(extensions);
+
+    extensions.errors[0].field = "mutated";
+    expect(Reflect.set(problem.extensions?.errors as object, "unsafe", BigInt(1))).toBe(false);
+
+    expect(problem.toJSON()).toEqual({
+      type: "about:blank",
+      title: "Bad Request",
+      status: 400,
+      detail: "Extension failure",
+      code: "EXTENSION_FAILURE",
+      errors: [{ field: "email", messages: ["invalid", null] }],
+      retryable: false,
+    });
+    expect(JSON.parse(JSON.stringify(problem))).toEqual(problem.toJSON());
+  });
+
+  it("should accept plain extension objects created in another realm", () => {
+    const extensions = runInNewContext(
+      '({ source: "generated-client", nested: { safe: true } })',
+    ) as unknown as Record<string, unknown>;
+
+    expect(new ExtensionProblem(extensions).toJSON()).toMatchObject({
+      nested: { safe: true },
+      source: "generated-client",
+    });
+  });
+
+  it.each([
+    [
+      "host Object constructor",
+      () => {
+        const prototype = Object.create(null) as Record<string, unknown>;
+        Object.defineProperty(prototype, "constructor", { value: Object });
+        return Object.assign(Object.create(prototype) as Record<string, unknown>, { safe: true });
+      },
+    ],
+    [
+      "fake Object constructor",
+      () => {
+        const prototype = Object.create(null) as Record<string, unknown>;
+        const FakeObject = function Object() {};
+        FakeObject.prototype = prototype;
+        Object.defineProperty(prototype, "constructor", { value: FakeObject });
+        return Object.assign(Object.create(prototype) as Record<string, unknown>, { safe: true });
+      },
+    ],
+  ])("should reject custom prototypes with a spoofed %s", (_case, createExtensions) => {
+    expect(() => new ExtensionProblem(createExtensions())).toThrow(
+      expect.objectContaining({ code: "problems-core/invalid-extensions" }),
+    );
+  });
+
+  it("should preserve a __proto__ extension as JSON data without mutating the result prototype", () => {
+    const extensions = JSON.parse('{"__proto__":{"polluted":true}}') as Record<string, unknown>;
+    const details = new ExtensionProblem(extensions).toJSON();
+
+    expect(Object.getPrototypeOf(details)).toBe(Object.prototype);
+    expect(Object.hasOwn(details, "__proto__")).toBe(true);
+    expect(details.__proto__).toEqual({ polluted: true });
+    expect(JSON.parse(JSON.stringify(details))).toEqual(details);
+  });
+
+  it("should reject reserved keys introduced after construction", () => {
+    const problem = new ExtensionProblem({ safe: true });
+    Object.defineProperty(problem, "extensions", {
+      configurable: true,
+      enumerable: true,
+      value: { status: 299 },
+      writable: true,
+    });
+
+    expect(() => problem.toJSON()).toThrow(
+      expect.objectContaining({ code: "problems-core/invalid-extensions" }),
+    );
+  });
+
+  it("should reject an extension accessor introduced after construction without invoking it", () => {
+    let getterCalls = 0;
+    const problem = new ExtensionProblem({ safe: true });
+    Object.defineProperty(problem, "extensions", {
+      configurable: true,
+      enumerable: true,
+      get() {
+        getterCalls++;
+        throw new Error("getter must not run");
+      },
+    });
+
+    expect(() => problem.toJSON()).toThrow(
+      expect.objectContaining({ code: "problems-core/invalid-extensions" }),
+    );
+    expect(getterCalls).toBe(0);
+  });
+
+  it("should contain extension proxy traps introduced after construction", () => {
+    const problem = new ExtensionProblem({ safe: true });
+    Object.defineProperty(problem, "extensions", {
+      configurable: true,
+      enumerable: true,
+      value: new Proxy(
+        {},
+        {
+          ownKeys() {
+            throw new Error("inspection failed");
+          },
+        },
+      ),
+      writable: true,
+    });
+
+    expect(() => problem.toJSON()).toThrow(
+      expect.objectContaining({ code: "problems-core/invalid-extensions" }),
+    );
   });
 });
 

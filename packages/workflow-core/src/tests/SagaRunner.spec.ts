@@ -76,6 +76,38 @@ function createMockTracer(spanNames: string[], span: Span): Tracer {
   } as Tracer;
 }
 
+describe("Saga Problems", () => {
+  it("omits absent primary and compensation failure codes", () => {
+    const problem = new SagaExecutionFailedProblem(
+      "billing",
+      "execution-1",
+      { message: "charge failed", retryable: false },
+      {
+        status: "failed",
+        compensationFailures: [{ message: "refund failed", retryable: true }],
+      },
+    );
+
+    expect(problem.extensions).not.toHaveProperty("originalFailureCode");
+    expect(problem.extensions?.compensationFailures).toEqual([
+      { message: "refund failed", retryable: true },
+    ]);
+    expect(() => JSON.stringify(problem)).not.toThrow();
+  });
+
+  it("omits an absent finalization failure code", () => {
+    const problem = new SagaFinalizationProblem(
+      "billing",
+      "execution-1",
+      { message: "store unavailable", retryable: true },
+      { status: "completing" },
+    );
+
+    expect(problem.extensions).not.toHaveProperty("originalFailureCode");
+    expect(() => JSON.stringify(problem)).not.toThrow();
+  });
+});
+
 describe("SagaRunner", () => {
   beforeEach(() => {
     vi.restoreAllMocks();

@@ -56,6 +56,10 @@ ProblemDetails
 
 필수 필드가 없거나 타입이 잘못된 경우
 
+#### Throws
+
+확장 필드가 JSON-safe하지 않은 경우
+
 ### serialize()
 
 > **serialize**(`problem`): `SerializedProblem`

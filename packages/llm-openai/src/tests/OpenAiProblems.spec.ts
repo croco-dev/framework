@@ -54,4 +54,11 @@ describe("OpenAI Problem normalization", () => {
       });
     },
   );
+
+  it("records the provider status under a non-reserved extension key", () => {
+    const problem = normalizeOpenAiError({ status: 503 }, "generate");
+
+    expect(problem.extensions).toMatchObject({ upstreamStatus: 503 });
+    expect(problem.extensions).not.toHaveProperty("status");
+  });
 });

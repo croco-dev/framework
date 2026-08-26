@@ -54,7 +54,16 @@ export class ModuleCircularDependencyProblem extends Problem {
 }
 
 export class ModuleLifecycleProblem extends Problem {
-  constructor(moduleName: string, phase: ModuleLifecyclePhase, cause: unknown) {
+  private readonly lifecycleCause: unknown;
+  private readonly lifecycleModuleName: string;
+  private readonly lifecyclePhase: ModuleLifecyclePhase;
+
+  constructor(
+    moduleName: string,
+    phase: ModuleLifecyclePhase,
+    cause: unknown,
+    cleanupFailures: readonly ModuleCleanupFailure[] = [],
+  ) {
     const causeMessage = cause instanceof Error ? cause.message : String(cause);
     const causeOption = cause instanceof Error ? { cause } : {};
 
@@ -64,8 +73,24 @@ export class ModuleLifecycleProblem extends Problem {
       `Module '${moduleName}' failed during ${phase}: ${causeMessage}`,
       {
         ...causeOption,
-        extensions: { moduleName, phase },
+        extensions: {
+          moduleName,
+          phase,
+          ...(cleanupFailures.length === 0 ? {} : { cleanupFailures }),
+        },
       },
+    );
+    this.lifecycleCause = cause;
+    this.lifecycleModuleName = moduleName;
+    this.lifecyclePhase = phase;
+  }
+
+  withCleanupFailures(cleanupFailures: readonly ModuleCleanupFailure[]): ModuleLifecycleProblem {
+    return new ModuleLifecycleProblem(
+      this.lifecycleModuleName,
+      this.lifecyclePhase,
+      this.lifecycleCause,
+      cleanupFailures,
     );
   }
 }
@@ -89,13 +114,12 @@ export class ModuleRegistrationConflictProblem extends Problem {
 export function attachModuleCleanupFailures(
   problem: ModuleLifecycleProblem,
   cleanupFailures: readonly ModuleCleanupFailure[],
-): void {
+): ModuleLifecycleProblem {
   if (cleanupFailures.length === 0) {
-    return;
+    return problem;
   }
 
-  const extensions = problem.extensions as Record<string, unknown>;
-  extensions.cleanupFailures = cleanupFailures;
+  return problem.withCleanupFailures(cleanupFailures);
 }
 
 export class ModuleProviderVisibilityProblem extends Problem {

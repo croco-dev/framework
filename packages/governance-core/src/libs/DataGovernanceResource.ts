@@ -105,7 +105,7 @@ export class DataGovernanceValidationProblem extends Problem {
       `Data governance resources have ${report.diagnostics.length} invalid contract diagnostic(s)`,
       {
         extensions: {
-          diagnostics: report.diagnostics,
+          diagnostics: report.diagnostics.map(toProblemDiagnostic),
         },
       },
     );
@@ -836,6 +836,23 @@ function toArtifactDiagnostic(
     path: diagnostic.path,
     message: diagnostic.message,
     ...(diagnostic.resourceKind ? { resourceKind: diagnostic.resourceKind } : {}),
+  };
+}
+
+function toProblemDiagnostic(diagnostic: DataGovernanceDiagnostic): DataGovernanceDiagnostic {
+  return {
+    code: diagnostic.code,
+    severity: diagnostic.severity,
+    target: diagnostic.target,
+    message: diagnostic.message,
+    path: diagnostic.path,
+    ...(diagnostic.resourceKind !== undefined ? { resourceKind: diagnostic.resourceKind } : {}),
+    ...(diagnostic.fieldId !== undefined ? { fieldId: diagnostic.fieldId } : {}),
+    ...(diagnostic.retentionPolicyId !== undefined
+      ? { retentionPolicyId: diagnostic.retentionPolicyId }
+      : {}),
+    ...(diagnostic.capability !== undefined ? { capability: diagnostic.capability } : {}),
+    ...(diagnostic.problemCode !== undefined ? { problemCode: diagnostic.problemCode } : {}),
   };
 }
 

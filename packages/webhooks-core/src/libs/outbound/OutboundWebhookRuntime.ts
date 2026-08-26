@@ -393,14 +393,14 @@ export function classifyOutboundWebhookOutcome(
       return {
         policy: "retryable",
         problem: new OutboundWebhookRetryableProblem(deliveryId, `HTTP ${outcome.status}`, {
-          status: outcome.status,
+          upstreamStatus: outcome.status,
         }),
       };
     }
     return {
       policy: "permanent",
       problem: new OutboundWebhookPermanentProblem(deliveryId, `HTTP ${outcome.status}`, {
-        status: outcome.status,
+        upstreamStatus: outcome.status,
       }),
     };
   }
@@ -416,7 +416,7 @@ export function classifyOutboundWebhookOutcome(
       problem: new OutboundWebhookPermanentProblem(
         deliveryId,
         `HTTP ${outcome.status} redirect was not followed`,
-        { status: outcome.status },
+        { upstreamStatus: outcome.status },
       ),
     };
   }

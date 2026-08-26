@@ -1038,7 +1038,7 @@ describe("TelemetryRuntime", () => {
       });
       expect(trace.getTracer("external-before-shutdown")).toBe(externalTracer);
 
-      await expect(runtime.shutdown(100)).resolves.toEqual({ outcome: "completed" });
+      await expect(runtime.shutdown()).resolves.toEqual({ outcome: "completed" });
 
       expect(trace.getTracer("external-after-shutdown")).toBe(externalTracer);
     } finally {

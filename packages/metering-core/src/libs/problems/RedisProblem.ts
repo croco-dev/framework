@@ -12,7 +12,7 @@ export class RedisProblem extends Problem {
       {
         extensions: {
           operation,
-          originalMessage,
+          ...(originalMessage === undefined ? {} : { originalMessage }),
         },
       },
     );

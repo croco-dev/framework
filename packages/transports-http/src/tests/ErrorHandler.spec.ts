@@ -75,9 +75,11 @@ describe("ErrorHandler", () => {
 
   describe("RFC 7807 Standard Field Protection", () => {
     it("should protect standard fields from extensions override", async () => {
-      const problem = new TestProblem({
-        detail: "Test error",
-        extensions: {
+      const problem = new TestProblem({ detail: "Test error" });
+      Object.defineProperty(problem, "extensions", {
+        configurable: true,
+        enumerable: true,
+        value: {
           type: "https://malicious.example.com/error",
           title: "Hacked Title",
           status: 999,
@@ -87,6 +89,7 @@ describe("ErrorHandler", () => {
           issues: ["safe-field"],
           metadata: { secret: "operator-only" },
         },
+        writable: true,
       });
 
       const response = errorHandler.handleError(problem, mockCtx);
@@ -245,10 +248,7 @@ describe("ErrorHandler", () => {
     });
 
     it("should correctly map Problem category to HTTP status", async () => {
-      const problem = new TestProblem({
-        detail: "Not found",
-        extensions: { status: 404 },
-      });
+      const problem = new TestProblem({ detail: "Not found" });
 
       const response = errorHandler.handleError(problem, mockCtx);
       expect(response.status).toBe(400);

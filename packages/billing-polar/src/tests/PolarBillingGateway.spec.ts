@@ -377,7 +377,7 @@ describe("PolarBillingGateway", () => {
         code: "billing-polar/retryable-upstream",
         extensions: expect.objectContaining({
           operation: "ensureCustomer.lookup",
-          status: 429,
+          upstreamStatus: 429,
         }),
       });
       expect(mockCreateCustomer).not.toHaveBeenCalled();

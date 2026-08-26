@@ -1142,4 +1142,20 @@ describe("InMemoryIdempotencyStore", () => {
       }),
     ).rejects.toThrow(IdempotencyReservationStateProblem);
   });
+
+  it("serializes reservation state Problems without an absent reservation id", () => {
+    const problem = new IdempotencyReservationStateProblem({
+      storageKey: "tenant:operation:key",
+      expected: "reserved",
+      actual: "missing",
+    });
+
+    expect(problem.extensions).toEqual({
+      storageKey: "tenant:operation:key",
+      expected: "reserved",
+      actual: "missing",
+    });
+    expect(problem.toJSON()).not.toHaveProperty("reservationId");
+    expect(() => JSON.stringify(problem)).not.toThrow();
+  });
 });

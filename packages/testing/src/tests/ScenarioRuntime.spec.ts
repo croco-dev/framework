@@ -257,8 +257,11 @@ describe("ScenarioRuntime", () => {
   });
 
   it("preserves the original boundary Problem when reporting its details fails", async () => {
-    const original = ProblemFactory.internalServerError("provider/unsafe", "unsafe", {
-      extensions: { unsafe: new Map() },
+    const original = ProblemFactory.internalServerError("provider/unsafe", "unsafe");
+    Object.defineProperty(original, "extensions", {
+      configurable: true,
+      enumerable: true,
+      value: { unsafe: new Map() },
     });
     const scenario = createScenarioRuntime({ scenarioId: "reporting-failure" });
 
@@ -274,13 +277,11 @@ describe("ScenarioRuntime", () => {
     }
 
     expect(received).toBe(original);
-    expect(original.cause).toBeInstanceOf(ScenarioContractProblem);
+    expect(original.cause).toMatchObject({ code: "problems-core/invalid-extensions" });
   });
 
-  it("omits undefined object properties while rejecting undefined array entries", async () => {
-    const optional = ProblemFactory.internalServerError("provider/optional", "optional", {
-      extensions: { omitted: undefined },
-    });
+  it("omits absent optional properties while rejecting undefined extension values", async () => {
+    const optional = ProblemFactory.internalServerError("provider/optional", "optional");
     const scenario = createScenarioRuntime({ scenarioId: "optional-problem-property" })
       .at("provider.call", "provider", terminalFailure(optional))
       .expectProblem("provider/optional");
@@ -290,16 +291,10 @@ describe("ScenarioRuntime", () => {
 
     expect(report.problems[0]).not.toHaveProperty("omitted");
     expect(() =>
-      createScenarioRuntime({ scenarioId: "invalid-array-entry" }).at(
-        "provider.call",
-        "provider",
-        terminalFailure(
-          ProblemFactory.internalServerError("provider/invalid-array", "invalid", {
-            extensions: { values: [undefined] },
-          }),
-        ),
-      ),
-    ).toThrow("JSON-compatible");
+      ProblemFactory.internalServerError("provider/invalid-array", "invalid", {
+        extensions: { values: [undefined] },
+      }),
+    ).toThrow("unsupported type 'undefined'");
   });
 
   it("rejects malformed replay steps and non-serializable Problem evidence", async () => {
@@ -341,7 +336,7 @@ describe("ScenarioRuntime", () => {
             }),
           ),
         ),
-      ).toThrow(/JSON-compatible|plain JSON objects/);
+      ).toThrow(/Invalid Problem extensions|JSON-compatible|plain JSON objects/);
     }
 
     const timed = createScenarioRuntime({ scenarioId: "invalid-replay-time" }).at(

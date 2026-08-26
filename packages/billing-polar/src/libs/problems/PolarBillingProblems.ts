@@ -40,7 +40,7 @@ export class PolarValidationProblem extends Problem {
       ProblemCategory.ValidationError,
       `${detail} during ${context.operation}`,
       {
-        extensions: context,
+        extensions: toPolarExtensions(context),
       },
     );
   }
@@ -109,7 +109,7 @@ export class PolarCustomerNotFoundProblem extends Problem {
       ProblemCategory.NotFound,
       `Polar customer was not found during ${context.operation}`,
       {
-        extensions: context,
+        extensions: toPolarExtensions(context),
       },
     );
   }
@@ -122,7 +122,7 @@ export class PolarSubscriptionNotFoundProblem extends Problem {
       ProblemCategory.NotFound,
       `Polar subscription was not found during ${context.operation}`,
       {
-        extensions: context,
+        extensions: toPolarExtensions(context),
       },
     );
   }
@@ -136,7 +136,7 @@ export class PolarRetryableUpstreamProblem extends Problem {
       `Polar upstream request failed retryably during ${context.operation}`,
       {
         extensions: {
-          ...context,
+          ...toPolarExtensions(context),
           retryable: true,
         },
       },
@@ -152,7 +152,7 @@ export class PolarTerminalUpstreamProblem extends Problem {
       `Polar upstream request failed terminally during ${context.operation}`,
       {
         extensions: {
-          ...context,
+          ...toPolarExtensions(context),
           retryable: false,
         },
       },
@@ -276,6 +276,16 @@ function isRetryableUpstreamError(context: PolarBillingErrorContext): boolean {
     context.upstreamCode === "RequestTimeoutError" ||
     context.upstreamCode === "RequestAbortedError"
   );
+}
+
+function toPolarExtensions(context: PolarBillingErrorContext): Record<string, unknown> {
+  return {
+    provider: context.provider,
+    operation: context.operation,
+    ...(context.status !== undefined && { upstreamStatus: context.status }),
+    ...(context.upstreamCode !== undefined && { upstreamCode: context.upstreamCode }),
+    ...(context.retryable !== undefined && { retryable: context.retryable }),
+  };
 }
 
 function asRecord(value: unknown): PolarErrorRecord | undefined {

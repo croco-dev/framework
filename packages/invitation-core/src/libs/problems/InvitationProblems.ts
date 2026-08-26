@@ -101,7 +101,7 @@ export class InvitationInvalidStatusProblem extends Problem {
       undefined,
       `Cannot ${operation} invitation '${invitationId}' with status '${status}'`,
       {
-        extensions: { invitationId, status, operation },
+        extensions: { invitationId, invitationStatus: status, operation },
       },
     );
   }

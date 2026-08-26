@@ -221,6 +221,24 @@ describe("Cache Invalidation Graph", () => {
     expect(telemetry.recordEvent).not.toHaveBeenCalled();
   });
 
+  it("serializes invalidation failures without a cause code for non-Problem causes", () => {
+    const problem = new CacheInvalidationFailedProblem(
+      "user.updated",
+      "memory-cache",
+      { id: "user-by-id", kind: "key", key: "user:1" },
+      new Error("cache unavailable"),
+    );
+
+    expect(problem.extensions).toEqual({
+      adapterName: "memory-cache",
+      causeMessage: "cache unavailable",
+      eventName: "user.updated",
+      operation: { id: "user-by-id", kind: "key", key: "user:1" },
+    });
+    expect(problem.toJSON()).not.toHaveProperty("causeCode");
+    expect(() => JSON.stringify(problem)).not.toThrow();
+  });
+
   it("does not let telemetry event failures change successful invalidation", async () => {
     const cache = new InMemoryCacheStore<string>({ maxEntries: 1000 });
     const manifest = assertCacheInvalidationGraphValid(

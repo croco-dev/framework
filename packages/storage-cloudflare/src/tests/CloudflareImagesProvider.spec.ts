@@ -387,7 +387,7 @@ describe("CloudflareImagesProvider", () => {
           code,
           extensions: {
             operation: "get",
-            status,
+            upstreamStatus: status,
             ...(retryable !== undefined && { retryable }),
           },
         });

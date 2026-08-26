@@ -77,7 +77,7 @@ export class CloudinaryValidationProblem extends Problem {
       ProblemCategory.ValidationError,
       `${detail} during ${context.operation}`,
       {
-        extensions: context,
+        extensions: toCloudinaryStorageExtensions(context),
       },
     );
   }
@@ -91,7 +91,7 @@ export class CloudinaryRetryableUpstreamProblem extends Problem {
       `Cloudinary upstream request failed retryably during ${context.operation}`,
       {
         extensions: {
-          ...context,
+          ...toCloudinaryStorageExtensions(context),
           retryable: true,
         },
       },
@@ -107,7 +107,7 @@ export class CloudinaryTerminalUpstreamProblem extends Problem {
       `Cloudinary upstream request failed terminally during ${context.operation}`,
       {
         extensions: {
-          ...context,
+          ...toCloudinaryStorageExtensions(context),
           retryable: false,
         },
       },
@@ -374,6 +374,19 @@ function isValidationError(context: CloudinaryStorageErrorContext): boolean {
     context.status === 403 ||
     context.status === 422
   );
+}
+
+function toCloudinaryStorageExtensions(
+  context: CloudinaryStorageErrorContext,
+): Record<string, unknown> {
+  return {
+    provider: context.provider,
+    operation: context.operation,
+    ...(context.key !== undefined && { key: context.key }),
+    ...(context.status !== undefined && { upstreamStatus: context.status }),
+    ...(context.upstreamCode !== undefined && { upstreamCode: context.upstreamCode }),
+    ...(context.retryable !== undefined && { retryable: context.retryable }),
+  };
 }
 
 function validateUploadIntentTtl(value: unknown): void {

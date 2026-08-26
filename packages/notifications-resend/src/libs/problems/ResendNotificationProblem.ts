@@ -39,7 +39,7 @@ export class ResendValidationProblem extends Problem {
   ) {
     super("notifications-resend/validation-failed", ProblemCategory.ValidationError, detail, {
       extensions: {
-        ...context,
+        ...toResendExtensions(context),
         retryable: false,
       },
     });
@@ -53,7 +53,7 @@ export class ResendIdempotencyConflictProblem extends Problem {
   ) {
     super("notifications-resend/idempotency-conflict", ProblemCategory.Conflict, detail, {
       extensions: {
-        ...context,
+        ...toResendExtensions(context),
         retryable: false,
       },
     });
@@ -64,7 +64,7 @@ export class ResendRetryableUpstreamProblem extends Problem {
   constructor(context: ResendErrorContext, detail = "Resend upstream request failed retryably") {
     super("notifications-resend/retryable-upstream", ProblemCategory.InternalServerError, detail, {
       extensions: {
-        ...context,
+        ...toResendExtensions(context),
         retryable: true,
       },
     });
@@ -75,11 +75,21 @@ export class ResendTerminalUpstreamProblem extends Problem {
   constructor(context: ResendErrorContext, detail = "Resend upstream request failed terminally") {
     super("notifications-resend/terminal-upstream", ProblemCategory.InternalServerError, detail, {
       extensions: {
-        ...context,
+        ...toResendExtensions(context),
         retryable: false,
       },
     });
   }
+}
+
+function toResendExtensions(context: ResendErrorContext): Record<string, unknown> {
+  return {
+    provider: context.provider,
+    operation: context.operation,
+    ...(context.retryable !== undefined && { retryable: context.retryable }),
+    ...(context.status !== undefined && { upstreamStatus: context.status }),
+    ...(context.upstreamCode !== undefined && { upstreamCode: context.upstreamCode }),
+  };
 }
 
 export class ResendNotificationProblem extends Problem {
