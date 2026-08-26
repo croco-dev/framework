@@ -36,6 +36,25 @@ export class BillingAccountNotFoundProblem extends Problem {
   }
 }
 
+export class BillingAccountTenantConflictProblem extends Problem {
+  readonly code = "billing/account-tenant-conflict";
+  readonly category = ProblemCategory.Conflict;
+  constructor(tenantId: string, existingAccountId: string, requestedAccountId: string) {
+    super(
+      undefined,
+      undefined,
+      `Tenant '${tenantId}' already belongs to billing account '${existingAccountId}'`,
+      {
+        extensions: {
+          tenantId,
+          existingAccountId,
+          requestedAccountId,
+        },
+      },
+    );
+  }
+}
+
 export class WebhookAlreadyProcessedProblem extends Problem {
   readonly code = "billing/webhook-already-processed";
   readonly category = ProblemCategory.Conflict;

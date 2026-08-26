@@ -14,6 +14,7 @@ import type {
   CommitBillingSubscriptionWebhookInput,
 } from "./BillingStore";
 import {
+  BillingAccountTenantConflictProblem,
   BillingLifecycleCommandConflictProblem,
   BillingLifecycleCommandInProgressProblem,
   WebhookEventIntentsPendingProblem,
@@ -49,23 +50,35 @@ export class InMemoryBillingStore extends BillingStore {
   }
 
   async findAccountByTenantId(tenantId: string): Promise<BillingAccount | null> {
-    return this.accountsByTenantId.get(tenantId) ?? null;
+    const account = this.accountsByTenantId.get(tenantId);
+    return account ? cloneAccount(account) : null;
   }
 
   async findAccountByExternalId(externalCustomerId: string): Promise<BillingAccount | null> {
-    return this.accountsByExternalId.get(externalCustomerId) ?? null;
+    const account = this.accountsByExternalId.get(externalCustomerId);
+    return account ? cloneAccount(account) : null;
   }
 
   async saveAccount(account: BillingAccount): Promise<void> {
     const existingAccount = this.accounts.get(account.id);
+    const tenantAccount = this.accountsByTenantId.get(account.tenantId);
+
+    if (tenantAccount && tenantAccount.id !== account.id) {
+      throw new BillingAccountTenantConflictProblem(account.tenantId, tenantAccount.id, account.id);
+    }
+
+    if (existingAccount && existingAccount.tenantId !== account.tenantId) {
+      this.accountsByTenantId.delete(existingAccount.tenantId);
+    }
 
     if (existingAccount && existingAccount.externalCustomerId !== account.externalCustomerId) {
       this.accountsByExternalId.delete(existingAccount.externalCustomerId);
     }
 
-    this.accounts.set(account.id, account);
-    this.accountsByTenantId.set(account.tenantId, account);
-    this.accountsByExternalId.set(account.externalCustomerId, account);
+    const storedAccount = Object.freeze(cloneAccount(account));
+    this.accounts.set(account.id, storedAccount);
+    this.accountsByTenantId.set(account.tenantId, storedAccount);
+    this.accountsByExternalId.set(account.externalCustomerId, storedAccount);
   }
 
   async deleteAccount(billingAccountId: string): Promise<void> {
@@ -463,6 +476,13 @@ function cloneWebhookEventIntent(intent: BillingWebhookEventIntent): BillingWebh
   return {
     event: structuredClone(intent.event),
     publishedAt: intent.publishedAt ? new Date(intent.publishedAt) : null,
+  };
+}
+
+function cloneAccount(account: BillingAccount): BillingAccount {
+  return {
+    ...account,
+    createdAt: new Date(account.createdAt),
   };
 }
 

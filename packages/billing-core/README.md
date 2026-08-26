@@ -131,7 +131,9 @@ annual.toString();
 ### 이벤트와 문제 타입
 
 - 이벤트: `OrderPaidEvent`, `PlanChangedEvent`, `SubscriptionActivatedEvent`, `SubscriptionCanceledEvent`, `SubscriptionPastDueEvent`, `SubscriptionRevokedEvent`
-- 문제 타입: `BillingAccountNotFoundProblem`, `BillingCheckoutCreationProblem`, `BillingCheckoutInProgressProblem`, `ProviderCapabilityUnavailableProblem`, `SubscriptionNotFoundProblem`, `InvalidMoneyAmountProblem`
+- 문제 타입: `BillingAccountNotFoundProblem`, `BillingAccountTenantConflictProblem`,
+  `BillingCheckoutCreationProblem`, `BillingCheckoutInProgressProblem`,
+  `ProviderCapabilityUnavailableProblem`, `SubscriptionNotFoundProblem`, `InvalidMoneyAmountProblem`
 
 ## 구현 포인트
 

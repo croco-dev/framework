@@ -4601,6 +4601,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "BillingAccountTenantConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/BillingProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "BillingCheckoutCreationProblem",
               "exportKind": "named",
               "source": "./libs/problems/BillingProblems",

@@ -242,6 +242,7 @@ export type {
  */
 export {
   BillingAccountNotFoundProblem,
+  BillingAccountTenantConflictProblem,
   BillingCheckoutCreationProblem,
   BillingCheckoutInProgressProblem,
   BillingLifecycleCommandConflictProblem,
