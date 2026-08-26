@@ -15714,6 +15714,12 @@
           "sourceEntrypoint": "packages/llm-core/src/index.ts",
           "runtimeExports": [
             {
+              "name": "clearLlmService",
+              "exportKind": "named",
+              "source": "./libs/decorators/Llm",
+              "declarationKind": "function"
+            },
+            {
               "name": "EmbeddingError",
               "exportKind": "named",
               "source": "./libs/problems/LlmServiceProblem",
@@ -15727,6 +15733,12 @@
             },
             {
               "name": "getLlmMetadata",
+              "exportKind": "named",
+              "source": "./libs/decorators/Llm",
+              "declarationKind": "function"
+            },
+            {
+              "name": "getLlmService",
               "exportKind": "named",
               "source": "./libs/decorators/Llm",
               "declarationKind": "function"
@@ -15868,6 +15880,12 @@
               "exportKind": "named",
               "source": "./libs/problems/LlmServiceProblem",
               "declarationKind": "class"
+            },
+            {
+              "name": "runWithLlmService",
+              "exportKind": "named",
+              "source": "./libs/decorators/Llm",
+              "declarationKind": "function"
             },
             {
               "name": "setLlmService",

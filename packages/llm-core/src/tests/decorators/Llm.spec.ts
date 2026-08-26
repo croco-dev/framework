@@ -1,11 +1,15 @@
 import "reflect-metadata";
 import { Container } from "@croco/framework-context";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { LLM_METADATA_KEY, Llm, setLlmService } from "../../libs/decorators/Llm";
+import { clearLlmService, getLlmService, runWithLlmService, setLlmService } from "../../index";
+import { LLM_METADATA_KEY, Llm } from "../../libs/decorators/Llm";
 import type { LlmService } from "../../libs/LlmService";
-import { InvalidLlmPromptProblem } from "../../libs/problems/LlmProblems";
+import {
+  InvalidLlmPromptProblem,
+  LlmServiceNotInitializedProblem,
+} from "../../libs/problems/LlmProblems";
 import type { LlmMetadata } from "../../libs/types";
-import type { LlmInvocationOptions } from "../../libs/decorators/Llm";
+import type { LlmInvocationOptions } from "../../index";
 
 describe("@Llm Decorator", () => {
   let mockLlmService!: LlmService;
@@ -31,6 +35,7 @@ describe("@Llm Decorator", () => {
 
   beforeEach(() => {
     Container.reset();
+    clearLlmService();
 
     // Mock LlmService 생성
     mockLlmService = {
@@ -146,6 +151,89 @@ describe("@Llm Decorator", () => {
       vi.mocked(mockLlmService.generate).mockRejectedValueOnce(error);
 
       await expect(testService.generateText("Test")).rejects.toThrow("LLM service error");
+    });
+
+    it("should preserve the not-initialized Problem without a scoped or default service", async () => {
+      clearLlmService();
+
+      await expect(testService.generateText("Test")).rejects.toBeInstanceOf(
+        LlmServiceNotInitializedProblem,
+      );
+    });
+  });
+
+  describe("runWithLlmService", () => {
+    function createScopedService(name: string): LlmService {
+      return {
+        generate: vi.fn().mockImplementation(async (params) => ({
+          text: `${name}: ${params.prompt}`,
+          usage: {
+            promptTokens: 1,
+            completionTokens: 1,
+            totalTokens: 2,
+          },
+          metadata: { modelId: params.modelId ?? "default" },
+        })),
+      } as unknown as LlmService;
+    }
+
+    it("should prefer the scoped service over the process default", async () => {
+      const scopedService = createScopedService("scoped");
+
+      const result = await runWithLlmService(scopedService, () => testService.generateText("Test"));
+
+      expect(result).toBe("scoped: Test");
+      expect(scopedService.generate).toHaveBeenCalledTimes(1);
+      expect(mockLlmService.generate).not.toHaveBeenCalled();
+      expect(getLlmService()).toBe(mockLlmService);
+    });
+
+    it("should isolate simultaneous execution scopes across async boundaries", async () => {
+      const firstService = createScopedService("first");
+      const secondService = createScopedService("second");
+      let releaseScopes!: () => void;
+      const scopesReady = new Promise<void>((resolve) => {
+        releaseScopes = resolve;
+      });
+
+      const firstResult = runWithLlmService(firstService, async () => {
+        await scopesReady;
+        return testService.generateText("one");
+      });
+      const secondResult = runWithLlmService(secondService, async () => {
+        await scopesReady;
+        return testService.generateText("two");
+      });
+
+      releaseScopes();
+
+      await expect(Promise.all([firstResult, secondResult])).resolves.toEqual([
+        "first: one",
+        "second: two",
+      ]);
+      expect(firstService.generate).toHaveBeenCalledTimes(1);
+      expect(secondService.generate).toHaveBeenCalledTimes(1);
+      expect(mockLlmService.generate).not.toHaveBeenCalled();
+    });
+
+    it("should restore the outer service after a nested scope ends", async () => {
+      const outerService = createScopedService("outer");
+      const innerService = createScopedService("inner");
+
+      const results = await runWithLlmService(outerService, async () => {
+        const beforeInner = await testService.generateText("before");
+        const inner = await runWithLlmService(innerService, () =>
+          testService.generateText("inside"),
+        );
+        await Promise.resolve();
+        const afterInner = await testService.generateText("after");
+        return [beforeInner, inner, afterInner];
+      });
+
+      expect(results).toEqual(["outer: before", "inner: inside", "outer: after"]);
+      expect(outerService.generate).toHaveBeenCalledTimes(2);
+      expect(innerService.generate).toHaveBeenCalledTimes(1);
+      expect(getLlmService()).toBe(mockLlmService);
     });
   });
 });

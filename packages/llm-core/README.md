@@ -52,8 +52,9 @@ const llmService = new LlmService(registry, eventBus, { completionEventIntentSto
 ```
 
 ```ts
-import { Llm, setLlmService } from "@croco/llm-core";
+import { Llm, runWithLlmService, setLlmService } from "@croco/llm-core";
 
+// 앱 부트스트랩에서 프로세스 기본값을 명시합니다.
 setLlmService(llmService);
 
 class AssistantService {
@@ -62,7 +63,17 @@ class AssistantService {
     return prompt;
   }
 }
+
+// 요청 또는 tenant별 서비스는 전역 기본값을 변경하지 않고 실행 scope에 바인딩합니다.
+const result = await runWithLlmService(tenantLlmService, () =>
+  new AssistantService().summarize("요약할 내용"),
+);
 ```
+
+`@Llm`은 현재 실행 scope의 서비스를 먼저 사용하고, scope가 없으면 `setLlmService`로 설정한 프로세스
+기본값을 사용합니다. 둘 다 없으면 `LlmServiceNotInitializedProblem`으로 실패합니다. 기존
+`setLlmService` 호출은 부트스트랩 기본값으로 계속 동작하지만, 요청별 교체에는
+`runWithLlmService`를 사용해야 합니다.
 
 ## API 레퍼런스
 
@@ -77,7 +88,8 @@ class AssistantService {
 ### 데코레이터와 헬퍼
 
 - `@Llm`, 메서드 호출을 LLM 생성으로 연결합니다.
-- `setLlmService`, `getLlmService`, 데코레이터용 전역 서비스를 관리합니다.
+- `runWithLlmService`, 요청 또는 실행별 서비스를 비동기 scope에 격리합니다.
+- `setLlmService`, `getLlmService`, `clearLlmService`, 프로세스 기본값과 현재 scope의 서비스를 관리합니다.
 - `getLlmMetadata`, 메서드에 등록된 LLM 메타데이터를 조회합니다.
 
 ### 주요 타입

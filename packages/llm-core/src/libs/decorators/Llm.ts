@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import "reflect-metadata";
 import type { LlmService } from "../LlmService";
 import { InvalidLlmPromptProblem, LlmServiceNotInitializedProblem } from "../problems/LlmProblems";
@@ -21,21 +22,33 @@ export type LlmInvocationOptions = {
 
 export type LlmMethodMetadata = LlmMetadata;
 
-// LlmService 인스턴스를 저장할 전역 변수 (DI 컨테이너에서 설정)
 let llmServiceInstance: LlmService | null = null;
+const llmServiceScope = new AsyncLocalStorage<LlmService>();
 
 /**
- * LlmService 인스턴스 설정 (앱 부트스트랩에서 호출)
+ * 프로세스 기본 LlmService 인스턴스 설정 (앱 부트스트랩에서 호출)
+ *
+ * 요청 또는 실행별 서비스는 전역 기본값을 변경하지 않고 `runWithLlmService`로 설정해야 합니다.
  */
 export function setLlmService(service: LlmService): void {
   llmServiceInstance = service;
 }
 
+/** 프로세스 기본 LlmService 인스턴스를 제거합니다. */
+export function clearLlmService(): void {
+  llmServiceInstance = null;
+}
+
+/** 주어진 콜백과 그 비동기 하위 작업에서 사용할 LlmService를 설정합니다. */
+export function runWithLlmService<T>(service: LlmService, fn: () => T): T {
+  return llmServiceScope.run(service, fn);
+}
+
 /**
- * LlmService 인스턴스 조회
+ * 현재 실행 scope의 LlmService를 조회하고, scope가 없으면 프로세스 기본값을 반환합니다.
  */
 export function getLlmService(): LlmService | null {
-  return llmServiceInstance;
+  return llmServiceScope.getStore() ?? llmServiceInstance;
 }
 
 /**
