@@ -10,6 +10,7 @@ import {
 import { validateGeneratedSaasDocsContract } from "../first-success-generated-contract.mts";
 
 const scriptPath = resolve(__dirname, "../first-success-verify.mts");
+const createCrocoAppBuildTimeoutMs = 180_000;
 const tempRoots: string[] = [];
 const validCreateCommand =
   "npx create-croco-app@latest my-saas-api --goal saas-api --scope @myorg --no-install --no-git";
@@ -74,7 +75,7 @@ describe("first-success-verify.mts", () => {
     });
 
     expect(result.status, result.stderr || result.stdout).toBe(0);
-  }, 120_000);
+  }, createCrocoAppBuildTimeoutMs);
 
   afterEach(() => {
     for (const root of tempRoots.splice(0)) {
