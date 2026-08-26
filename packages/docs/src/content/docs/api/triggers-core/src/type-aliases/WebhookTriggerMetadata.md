@@ -13,7 +13,7 @@ Webhook trigger metadata.
 
 ### method
 
-> `readonly` **method**: `string`
+> `readonly` **method**: [`WebhookHttpMethod`](/api/triggers-core/src/type-aliases/webhookhttpmethod/)
 
 ### options?
 

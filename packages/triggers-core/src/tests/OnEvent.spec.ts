@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { EVENT_METADATA_KEY, OnEvent } from "../libs/decorators/OnEvent";
+import { defineEventTrigger } from "../libs/TriggerRef";
 import { TriggerRegistry } from "../libs/TriggerRegistry";
 import type { EventTriggerMetadata } from "../libs/types";
 
@@ -21,6 +22,28 @@ describe("@OnEvent decorator", () => {
     expect(metadata.type).toBe("event");
     expect((metadata as EventTriggerMetadata).event).toBe("OrderPlaced");
     expect(metadata.methodName).toBe("handleOrderPlaced");
+  });
+
+  it("should derive the existing metadata shape from a typed event reference", () => {
+    const orderPlaced = defineEventTrigger<{ orderId: string }>()("OrderPlaced");
+
+    class TestEventHandler {
+      @OnEvent(orderPlaced)
+      async handleOrderPlaced(event: { orderId: string }): Promise<void> {
+        void event;
+      }
+    }
+
+    const triggers = TriggerRegistry.getInstance().getTriggers(TestEventHandler.prototype);
+    const [metadata] = Array.from(triggers.values());
+
+    expect(metadata).toEqual({
+      type: "event",
+      event: "OrderPlaced",
+      methodName: "handleOrderPlaced",
+      options: {},
+      target: TestEventHandler.prototype,
+    });
   });
 
   it("should store custom options", () => {

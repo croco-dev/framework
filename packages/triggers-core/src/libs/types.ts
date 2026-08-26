@@ -1,3 +1,5 @@
+import type { WebhookHttpMethod } from "./TriggerRef";
+
 /**
  * Trigger types supported by the triggers-core package.
  */
@@ -36,7 +38,7 @@ export type EventTriggerMetadata = TriggerMetadata & {
 export type WebhookTriggerMetadata = TriggerMetadata & {
   readonly type: "webhook";
   readonly path: string;
-  readonly method: string;
+  readonly method: WebhookHttpMethod;
   readonly options?: WebhookOptions;
 };
 

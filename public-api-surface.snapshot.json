@@ -30600,6 +30600,18 @@
               "declarationKind": "function"
             },
             {
+              "name": "defineEventTrigger",
+              "exportKind": "named",
+              "source": "./libs/TriggerRef",
+              "declarationKind": "function"
+            },
+            {
+              "name": "defineWebhookTrigger",
+              "exportKind": "named",
+              "source": "./libs/TriggerRef",
+              "declarationKind": "function"
+            },
+            {
               "name": "EVENT_METADATA_KEY",
               "exportKind": "named",
               "source": "./libs/decorators/OnEvent",
@@ -30669,6 +30681,11 @@
               "source": "./libs/types"
             },
             {
+              "name": "EventTriggerRef",
+              "exportKind": "named",
+              "source": "./libs/TriggerRef"
+            },
+            {
               "name": "TriggerMetadata",
               "exportKind": "named",
               "source": "./libs/types"
@@ -30679,6 +30696,11 @@
               "source": "./libs/types"
             },
             {
+              "name": "WebhookHttpMethod",
+              "exportKind": "named",
+              "source": "./libs/TriggerRef"
+            },
+            {
               "name": "WebhookOptions",
               "exportKind": "named",
               "source": "./libs/types"
@@ -30687,6 +30709,11 @@
               "name": "WebhookTriggerMetadata",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "WebhookTriggerRef",
+              "exportKind": "named",
+              "source": "./libs/TriggerRef"
             }
           ]
         }
