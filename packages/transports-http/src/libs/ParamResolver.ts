@@ -101,8 +101,13 @@ class ParamResolverEngine {
   }
 
   private async parseBody(ctx: CrocoHttpContext): Promise<unknown> {
+    if (ctx.raw.req.raw.body === null) {
+      return undefined;
+    }
+
     try {
-      return await ctx.json();
+      const body = await ctx.raw.req.text();
+      return body.length === 0 ? undefined : JSON.parse(body);
     } catch {
       throw new RequestValidationProblem("body", [
         {

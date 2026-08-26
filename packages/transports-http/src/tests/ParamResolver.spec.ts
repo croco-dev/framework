@@ -6,13 +6,19 @@ import { z } from "zod";
 import { ParamResolver } from "../libs/ParamResolver";
 import type { CrocoHttpContext } from "../libs/types";
 
-function createMockHttpContext(json: CrocoHttpContext["json"]): CrocoHttpContext {
-  const request = new Request("http://localhost/test");
+function createMockHttpContext(
+  json: CrocoHttpContext["json"],
+  request = new Request("http://localhost/test", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
+  }),
+): CrocoHttpContext {
   const store = new Map<string, unknown>();
 
   return {
     req: {
-      method: "POST",
+      method: request.method,
       url: request.url,
       path: "/test",
       params: {},
@@ -26,8 +32,9 @@ function createMockHttpContext(json: CrocoHttpContext["json"]): CrocoHttpContext
     raw: {
       req: {
         raw: request,
+        text: vi.fn(() => request.text()),
       },
-    } as CrocoHttpContext["raw"],
+    } as unknown as CrocoHttpContext["raw"],
     param: vi.fn(),
     query: vi.fn(),
     header: vi.fn(),
@@ -82,20 +89,21 @@ describe("ParamResolver", () => {
     }
 
     const parsedBody = { name: "croco" };
-    const json = vi.fn(async () => {
-      if (json.mock.calls.length > 1) {
-        throw new TypeError("Body already read");
-      }
-      return parsedBody;
+    const request = new Request("http://localhost/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(parsedBody),
     });
+    const json = vi.fn();
 
     const resolver = new ParamResolver();
-    const ctx = createMockHttpContext(json as CrocoHttpContext["json"]);
+    const ctx = createMockHttpContext(json as CrocoHttpContext["json"], request);
 
     const args = await resolver.resolveParams(ctx, TestController, "create");
 
     expect(args).toEqual([parsedBody, parsedBody]);
-    expect(json).toHaveBeenCalledTimes(1);
+    expect(ctx.raw.req.text).toHaveBeenCalledTimes(1);
+    expect(json).not.toHaveBeenCalled();
   });
 
   it("동일 요청 컨텍스트에서 resolveParams를 다시 호출해도 body 캐시를 재사용", async () => {
@@ -104,16 +112,22 @@ describe("ParamResolver", () => {
     }
 
     const parsedBody = { id: "1" };
-    const json = vi.fn(async () => parsedBody);
+    const request = new Request("http://localhost/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(parsedBody),
+    });
+    const json = vi.fn();
 
     const resolver = new ParamResolver();
-    const ctx = createMockHttpContext(json as CrocoHttpContext["json"]);
+    const ctx = createMockHttpContext(json as CrocoHttpContext["json"], request);
 
     await resolver.resolveParams(ctx, TestController, "create");
     const args = await resolver.resolveParams(ctx, TestController, "create");
 
     expect(args).toEqual([parsedBody, parsedBody]);
-    expect(json).toHaveBeenCalledTimes(1);
+    expect(ctx.raw.req.text).toHaveBeenCalledTimes(1);
+    expect(json).not.toHaveBeenCalled();
   });
 
   it("body parse failure도 캐시해 같은 요청에서 다시 읽지 않음", async () => {
@@ -121,12 +135,15 @@ describe("ParamResolver", () => {
       create(@Body() _first: unknown, @Body() _second: unknown) {}
     }
 
-    const json = vi.fn(async () => {
-      throw new SyntaxError("Unexpected end of JSON input");
+    const request = new Request("http://localhost/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{",
     });
+    const json = vi.fn();
 
     const resolver = new ParamResolver();
-    const ctx = createMockHttpContext(json as CrocoHttpContext["json"]);
+    const ctx = createMockHttpContext(json as CrocoHttpContext["json"], request);
     const expectedProblem = {
       code: "protocols-rest/request-validation-failed",
       issues: [
@@ -140,12 +157,58 @@ describe("ParamResolver", () => {
     await expect(resolver.resolveParams(ctx, TestController, "create")).rejects.toMatchObject(
       expectedProblem,
     );
-    expect(json).toHaveBeenCalledTimes(1);
+    expect(ctx.raw.req.text).toHaveBeenCalledTimes(1);
+    expect(json).not.toHaveBeenCalled();
 
     await expect(resolver.resolveParams(ctx, TestController, "create")).rejects.toMatchObject(
       expectedProblem,
     );
-    expect(json).toHaveBeenCalledTimes(1);
+    expect(ctx.raw.req.text).toHaveBeenCalledTimes(1);
+  });
+
+  it("represents an omitted request body as undefined and caches the omission", async () => {
+    class TestController {
+      create(@Body() _first: unknown, @Body() _second: unknown) {}
+    }
+
+    const json = vi.fn(async () => {
+      throw new SyntaxError("Unexpected end of JSON input");
+    });
+    const request = new Request("http://localhost/test", { method: "POST" });
+    const resolver = new ParamResolver();
+    const ctx = createMockHttpContext(json as CrocoHttpContext["json"], request);
+
+    await expect(resolver.resolveParams(ctx, TestController, "create")).resolves.toEqual([
+      undefined,
+      undefined,
+    ]);
+    await expect(resolver.resolveParams(ctx, TestController, "create")).resolves.toEqual([
+      undefined,
+      undefined,
+    ]);
+    expect(json).not.toHaveBeenCalled();
+    expect(ctx.raw.req.text).not.toHaveBeenCalled();
+  });
+
+  it("parses a present body independently of the HTTP method", async () => {
+    class TestController {
+      remove(@Body() _body: unknown) {}
+    }
+
+    const parsedBody = { id: "widget-1" };
+    const json = vi.fn();
+    const request = new Request("http://localhost/test", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(parsedBody),
+    });
+    const ctx = createMockHttpContext(json as CrocoHttpContext["json"], request);
+
+    await expect(new ParamResolver().resolveParams(ctx, TestController, "remove")).resolves.toEqual(
+      [parsedBody],
+    );
+    expect(ctx.raw.req.text).toHaveBeenCalledTimes(1);
+    expect(json).not.toHaveBeenCalled();
   });
 
   it("같은 인자 슬롯에 중복된 parameter metadata가 있으면 fail fast", async () => {

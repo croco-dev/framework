@@ -468,7 +468,7 @@ describe("Framework integration", () => {
     ]);
   });
 
-  it("serializes empty required JSON body failures as Problem Details", async () => {
+  it("validates zero-byte required JSON bodies through the declared schema", async () => {
     const response = await app.fetch(
       new Request("http://localhost/framework/integration/widgets", {
         method: "POST",
@@ -485,7 +485,7 @@ describe("Framework integration", () => {
     expect(problem.issues).toEqual([
       {
         path: "body.value",
-        message: "Request body must contain valid JSON",
+        message: "Required",
       },
     ]);
   });
