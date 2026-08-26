@@ -114,12 +114,82 @@ export class Context {
 
           return result;
         } catch (error) {
-          const normalizedError = error instanceof Error ? error : new Error(String(error));
+          const normalizedError = Context.normalizeRequestError(error);
 
-          await hooks.onRequestError?.(context, normalizedError);
+          await Context.runRequestErrorHook(context, hooks, normalizedError);
           throw error;
         }
       },
     );
+  }
+
+  private static normalizeRequestError(error: unknown): Error {
+    try {
+      if (error instanceof Error) {
+        return error;
+      }
+
+      return new Error(String(error));
+    } catch {
+      return new Error("Non-Error request failure");
+    }
+  }
+
+  private static async runRequestErrorHook(
+    context: RequestContext,
+    hooks: LifecycleHooks<RequestContext>,
+    primaryError: Error,
+  ): Promise<void> {
+    try {
+      await hooks.onRequestError?.(context, primaryError);
+    } catch (hookError) {
+      Context.reportRequestErrorHookFailure(context, primaryError, hookError);
+    }
+  }
+
+  private static reportRequestErrorHookFailure(
+    context: RequestContext,
+    primaryError: Error,
+    hookError: unknown,
+  ): void {
+    const details = { primaryError, hookError };
+    let reported = false;
+
+    try {
+      if (context.runtimeInspector) {
+        context.runtimeInspector.recordEvent({
+          requestId: context.requestId,
+          kind: "error",
+          outcome: "failed",
+          name: "lifecycle.onRequestError",
+          details,
+        });
+        reported = true;
+      }
+    } catch {
+      reported = false;
+    }
+    if (reported) {
+      return;
+    }
+
+    try {
+      if (context.runtime?.logger) {
+        context.runtime.logger.error("onRequestError hook failed", details);
+        reported = true;
+      }
+    } catch {
+      reported = false;
+    }
+    if (reported) {
+      return;
+    }
+
+    try {
+      // eslint-disable-next-line no-console
+      console.error("[Context] onRequestError hook failed");
+    } catch {
+      return;
+    }
   }
 }

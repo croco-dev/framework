@@ -400,6 +400,123 @@ describe("Context", () => {
 
       expect(onRequestError).toHaveBeenCalledWith({ requestId: "middleware-err-2" }, originalError);
     });
+
+    it("should preserve the original Error when onRequestError rejects", async () => {
+      const recordEvent = vi.fn();
+      const originalError = new Error("request failed");
+      const hookError = new Error("error hook failed");
+      const context = {
+        requestId: "middleware-err-3",
+        runtimeInspector: { recordEvent },
+      };
+
+      await expect(
+        Context.runWithMiddleware(
+          context,
+          [],
+          {
+            onRequestError: async () => {
+              throw hookError;
+            },
+          },
+          async () => {
+            throw originalError;
+          },
+        ),
+      ).rejects.toBe(originalError);
+
+      expect(recordEvent).toHaveBeenCalledWith({
+        requestId: "middleware-err-3",
+        kind: "error",
+        outcome: "failed",
+        name: "lifecycle.onRequestError",
+        details: {
+          primaryError: originalError,
+          hookError,
+        },
+      });
+    });
+
+    it.each([
+      ["string", "non-error request failure", "non-error request failure"],
+      ["non-coercible object", Object.create(null), "Non-Error request failure"],
+      [
+        "hostile proxy",
+        new Proxy(
+          {},
+          {
+            getPrototypeOf: () => {
+              throw new Error("prototype unavailable");
+            },
+          },
+        ),
+        "Non-Error request failure",
+      ],
+    ])(
+      "should preserve a %s thrown value when onRequestError rejects",
+      async (_case, thrownValue, diagnosticMessage) => {
+        const recordEvent = vi.fn();
+        const hookError = new Error("error hook failed");
+
+        await expect(
+          Context.runWithMiddleware(
+            {
+              requestId: "middleware-err-4",
+              runtimeInspector: { recordEvent },
+            },
+            [],
+            {
+              onRequestError: () => {
+                throw hookError;
+              },
+            },
+            async () => {
+              throw thrownValue;
+            },
+          ),
+        ).rejects.toBe(thrownValue);
+
+        expect(recordEvent).toHaveBeenCalledWith(
+          expect.objectContaining({
+            details: {
+              primaryError: expect.objectContaining({ message: diagnosticMessage }),
+              hookError,
+            },
+          }),
+        );
+      },
+    );
+
+    it("should not expose raw failures through the console diagnostic fallback", async () => {
+      const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+      const originalError = new Error("request failed with password=primary-secret");
+      const hookError = new Error("hook failed with token=hook-secret");
+
+      try {
+        await expect(
+          Context.runWithMiddleware(
+            { requestId: "middleware-err-5" },
+            [],
+            {
+              onRequestError: () => {
+                throw hookError;
+              },
+            },
+            async () => {
+              throw originalError;
+            },
+          ),
+        ).rejects.toBe(originalError);
+
+        expect(consoleError).toHaveBeenCalledExactlyOnceWith(
+          "[Context] onRequestError hook failed",
+        );
+        expect(JSON.stringify(consoleError.mock.calls)).not.toContain("primary-secret");
+        expect(JSON.stringify(consoleError.mock.calls)).not.toContain("hook-secret");
+      } finally {
+        consoleError.mockRestore();
+      }
+    });
   });
 });
 
