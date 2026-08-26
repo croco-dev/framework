@@ -13,7 +13,7 @@ title: "ProblemResponseError"
 
 ### Constructor
 
-> **new ProblemResponseError**(`response`, `body?`): `ProblemResponseError`
+> **new ProblemResponseError**(`response`, `body?`, `cause?`): `ProblemResponseError`
 
 #### Parameters
 
@@ -22,6 +22,10 @@ title: "ProblemResponseError"
 `Response`
 
 ##### body?
+
+`unknown`
+
+##### cause?
 
 `unknown`
 
@@ -43,9 +47,9 @@ title: "ProblemResponseError"
 
 ### cause?
 
-> `optional` **cause?**: `unknown`
+> `readonly` `optional` **cause?**: `unknown`
 
-#### Inherited from
+#### Overrides
 
 `Error.cause`
 

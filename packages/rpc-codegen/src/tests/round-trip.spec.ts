@@ -166,7 +166,7 @@ describe("rpc-codegen round trip", () => {
     });
   });
 
-  it("resolves no-output clients for 204 and empty success responses", async () => {
+  it("normalizes successful no-output response bodies without regressing empty responses", async () => {
     const routeIRs: RouteIR[] = [
       {
         controllerName: "HealthController",
@@ -204,6 +204,30 @@ describe("rpc-codegen round trip", () => {
         outputSchema: null,
         domain: "health",
       },
+      {
+        controllerName: "HealthController",
+        methodName: "status",
+        httpMethod: "GET",
+        path: "/health/status",
+        routeContract: null,
+        params: [],
+        inputSchema: null,
+        inputSchemas: EMPTY_INPUT_SCHEMAS,
+        outputSchema: null,
+        domain: "health",
+      },
+      {
+        controllerName: "HealthController",
+        methodName: "malformed",
+        httpMethod: "GET",
+        path: "/health/malformed",
+        routeContract: null,
+        params: [],
+        inputSchema: null,
+        inputSchemas: EMPTY_INPUT_SCHEMAS,
+        outputSchema: null,
+        domain: "health",
+      },
     ];
 
     const files = generateClientFiles(routeIRs, outDir);
@@ -219,6 +243,14 @@ describe("rpc-codegen round trip", () => {
         return new Response("", { status: 500 });
       }
 
+      if (url === "/health/status") {
+        return jsonResponse({ ready: true });
+      }
+
+      if (url === "/health/malformed") {
+        return textResponse("{not-json", 200);
+      }
+
       return new Response("", { status: 200 });
     });
 
@@ -228,13 +260,186 @@ describe("rpc-codegen round trip", () => {
     expect(rpcContent).toContain("async function rejectErrorResponse(");
     await expect(healthModule.healthClient.health()).resolves.toBeUndefined();
     await expect(healthModule.healthClient.clear()).resolves.toBeUndefined();
+    await expect(healthModule.healthClient.status()).resolves.toEqual({ ready: true });
     await expect(healthModule.healthClient.fail()).rejects.toThrow(
       "RPC request failed with HTTP 500",
+    );
+    const malformedError = await getRejectedError(healthModule.healthClient.malformed());
+    expect(malformedError).toMatchObject({
+      name: "RpcClientResponseError",
+      response: expect.objectContaining({ status: 200 }),
+    });
+    expect((malformedError as { readonly cause?: unknown }).cause).toBeInstanceOf(SyntaxError);
+
+    const malformedResult = await healthModule.healthClient.malformedResult();
+    expect(malformedResult).toMatchObject({
+      ok: false,
+      kind: "external",
+      response: expect.objectContaining({ status: 200 }),
+      error: expect.objectContaining({ name: "RpcClientResponseError" }),
+    });
+    if (malformedResult.ok || malformedResult.kind !== "external") {
+      expect.fail("Expected an external failure result.");
+    }
+    expect((malformedResult.error as { readonly cause?: unknown }).cause).toBeInstanceOf(
+      SyntaxError,
     );
     expect(fetchMock).toHaveBeenCalledWith("/health", { method: "GET" });
     expect(fetchMock).toHaveBeenCalledWith("/health/cache", { method: "POST" });
     expect(fetchMock).toHaveBeenCalledWith("/health/fail", { method: "GET" });
+    expect(fetchMock).toHaveBeenCalledWith("/health/status", { method: "GET" });
+    expect(fetchMock).toHaveBeenCalledWith("/health/malformed", { method: "GET" });
   });
+
+  it.each(["inline", "frontend-problems"] as const)(
+    "preserves response body cancellation with the %s problem runtime",
+    async (problemRuntime) => {
+      const routeIRs: RouteIR[] = [
+        {
+          controllerName: "HealthController",
+          methodName: "requiredAbort",
+          httpMethod: "GET",
+          path: "/health/required-abort",
+          routeContract: null,
+          params: [],
+          inputSchema: null,
+          inputSchemas: EMPTY_INPUT_SCHEMAS,
+          outputSchema: z.object({ ready: z.boolean() }) as unknown as RouteIR["outputSchema"],
+          domain: "health",
+        },
+        {
+          controllerName: "HealthController",
+          methodName: "optionalAbort",
+          httpMethod: "GET",
+          path: "/health/optional-abort",
+          routeContract: null,
+          params: [],
+          inputSchema: null,
+          inputSchemas: EMPTY_INPUT_SCHEMAS,
+          outputSchema: null,
+          domain: "health",
+        },
+      ];
+      const files = generateClientFiles(routeIRs, outDir, { problemRuntime });
+      const healthContent = fs.readFileSync(files[0], "utf-8");
+      const healthModule = await importGeneratedClient(
+        `health-response-abort-${problemRuntime}.ts`,
+        healthContent,
+      );
+      const events: Record<string, unknown>[] = [];
+      const telemetry = {
+        record: (event: Record<string, unknown>) => {
+          events.push(event);
+        },
+      };
+      const cases = [
+        {
+          createResponse: unreadableJsonResponse,
+          invoke: (options: unknown) => healthModule.healthClient.requiredAbort(options),
+        },
+        {
+          createResponse: unreadableJsonResponse,
+          invoke: (options: unknown) => healthModule.healthClient.requiredAbortResult(options),
+        },
+        {
+          createResponse: unreadableTextResponse,
+          invoke: (options: unknown) => healthModule.healthClient.optionalAbort(options),
+        },
+        {
+          createResponse: unreadableTextResponse,
+          invoke: (options: unknown) => healthModule.healthClient.optionalAbortResult(options),
+        },
+      ];
+
+      for (const testCase of cases) {
+        events.length = 0;
+        const abort = createAbortError();
+        vi.stubGlobal(
+          "fetch",
+          vi.fn(async () => testCase.createResponse(abort)),
+        );
+
+        await expect(testCase.invoke({ telemetry })).rejects.toBe(abort);
+        expect(events.map((event) => event.kind)).toEqual([
+          "rpc.request.started",
+          "rpc.request.cancelled",
+        ]);
+      }
+    },
+  );
+
+  it.each(["inline", "frontend-problems"] as const)(
+    "keeps successful response telemetry failures separate with the %s problem runtime",
+    async (problemRuntime) => {
+      const routeIRs: RouteIR[] = [
+        {
+          controllerName: "HealthController",
+          methodName: "requiredTelemetry",
+          httpMethod: "GET",
+          path: "/health/required-telemetry",
+          routeContract: null,
+          params: [],
+          inputSchema: null,
+          inputSchemas: EMPTY_INPUT_SCHEMAS,
+          outputSchema: z.object({ ready: z.boolean() }) as unknown as RouteIR["outputSchema"],
+          domain: "health",
+        },
+        {
+          controllerName: "HealthController",
+          methodName: "optionalTelemetry",
+          httpMethod: "GET",
+          path: "/health/optional-telemetry",
+          routeContract: null,
+          params: [],
+          inputSchema: null,
+          inputSchemas: EMPTY_INPUT_SCHEMAS,
+          outputSchema: null,
+          domain: "health",
+        },
+      ];
+      const files = generateClientFiles(routeIRs, outDir, { problemRuntime });
+      const healthContent = fs.readFileSync(files[0], "utf-8");
+      const healthModule = await importGeneratedClient(
+        `health-telemetry-failure-${problemRuntime}.ts`,
+        healthContent,
+      );
+      const cases = [
+        {
+          invoke: (options: unknown) => healthModule.healthClient.requiredTelemetry(options),
+        },
+        {
+          invoke: (options: unknown) => healthModule.healthClient.requiredTelemetryResult(options),
+        },
+        {
+          invoke: (options: unknown) => healthModule.healthClient.optionalTelemetry(options),
+        },
+        {
+          invoke: (options: unknown) => healthModule.healthClient.optionalTelemetryResult(options),
+        },
+      ];
+
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => jsonResponse({ ready: true })),
+      );
+
+      for (const testCase of cases) {
+        const events: string[] = [];
+        const telemetryError = new Error("telemetry unavailable");
+        const telemetry = {
+          record: (event: Record<string, unknown>) => {
+            events.push(String(event.kind));
+            if (event.kind === "rpc.request.succeeded") {
+              throw telemetryError;
+            }
+          },
+        };
+
+        await expect(testCase.invoke({ telemetry })).rejects.toBe(telemetryError);
+        expect(events).toEqual(["rpc.request.started", "rpc.request.succeeded"]);
+      }
+    },
+  );
 
   it("generates path and query inputs that can call a mocked server", async () => {
     const routeIRs: RouteIR[] = [
@@ -407,6 +612,10 @@ describe("rpc-codegen round trip", () => {
         );
       }
 
+      if (url === "/users/malformed?search=malformed-secret") {
+        return textResponse("{not-json", 200);
+      }
+
       return new Response(null, { status: 204 });
     });
 
@@ -509,6 +718,47 @@ describe("rpc-codegen round trip", () => {
     expect(events[1]).not.toHaveProperty("url");
     expect(JSON.stringify(events)).not.toContain("external-secret");
     expect(JSON.stringify(events)).not.toContain("external private detail");
+
+    events.length = 0;
+
+    const malformedError = await getRejectedError(
+      userModule.userClient.getUser(
+        { path: { id: "malformed" }, query: { search: "malformed-secret" } },
+        { telemetry },
+      ),
+    );
+    expect(malformedError).toMatchObject({
+      name: "RpcClientResponseError",
+      response: expect.objectContaining({ status: 200 }),
+    });
+    expect((malformedError as { readonly cause?: unknown }).cause).toBeInstanceOf(SyntaxError);
+    expect(events.map((event) => event.kind)).toEqual([
+      "rpc.request.started",
+      "rpc.request.external_failure",
+    ]);
+
+    events.length = 0;
+
+    const malformedResult = await userModule.userClient.getUserResult(
+      { path: { id: "malformed" }, query: { search: "malformed-secret" } },
+      { telemetry },
+    );
+    expect(malformedResult).toMatchObject({
+      ok: false,
+      kind: "external",
+      response: expect.objectContaining({ status: 200 }),
+      error: expect.objectContaining({ name: "RpcClientResponseError" }),
+    });
+    if (malformedResult.ok || malformedResult.kind !== "external") {
+      expect.fail("Expected an external failure result.");
+    }
+    expect((malformedResult.error as { readonly cause?: unknown }).cause).toBeInstanceOf(
+      SyntaxError,
+    );
+    expect(events.map((event) => event.kind)).toEqual([
+      "rpc.request.started",
+      "rpc.request.external_failure",
+    ]);
 
     events.length = 0;
 
@@ -1076,7 +1326,8 @@ async function importGeneratedClient(fileName: string, source: string) {
     },
     reportDiagnostics: true,
   });
-  const output = ts.transpileModule(source.replace("from './rpc';", "from './rpc.mjs';"), {
+  const rpcFileName = `rpc-${fileName.replace(/\.ts$/, "")}.mjs`;
+  const output = ts.transpileModule(source.replace("from './rpc';", `from './${rpcFileName}';`), {
     compilerOptions: {
       module: ts.ModuleKind.ES2022,
       target: ts.ScriptTarget.ES2022,
@@ -1089,7 +1340,8 @@ async function importGeneratedClient(fileName: string, source: string) {
 
   const modulePath = path.join(moduleDir, fileName.replace(/\.ts$/, ".mjs"));
   writeProblemsCoreRuntime(moduleDir);
-  fs.writeFileSync(path.join(moduleDir, "rpc.mjs"), rpcOutput.outputText);
+  writeFrontendProblemsRuntime(moduleDir);
+  fs.writeFileSync(path.join(moduleDir, rpcFileName), rpcOutput.outputText);
   fs.writeFileSync(modulePath, output.outputText);
 
   return import(pathToFileURL(modulePath).href) as Promise<{
@@ -1154,6 +1406,35 @@ async function importGeneratedClient(fileName: string, source: string) {
       readonly health: () => Promise<unknown>;
       readonly clear: () => Promise<unknown>;
       readonly fail: () => Promise<unknown>;
+      readonly status: () => Promise<unknown>;
+      readonly malformed: () => Promise<unknown>;
+      readonly malformedResult: () => Promise<
+        | { readonly ok: true; readonly data: unknown; readonly response: Response }
+        | {
+            readonly ok: false;
+            readonly kind: "external";
+            readonly error: Error;
+            readonly response: Response;
+          }
+      >;
+      readonly unreadable: (options?: unknown) => Promise<unknown>;
+      readonly unreadableResult: (options?: unknown) => Promise<
+        | { readonly ok: true; readonly data: unknown; readonly response: Response }
+        | {
+            readonly ok: false;
+            readonly kind: "external";
+            readonly error: Error;
+            readonly response: Response;
+          }
+      >;
+      readonly requiredAbort: (options?: unknown) => Promise<unknown>;
+      readonly requiredAbortResult: (options?: unknown) => Promise<unknown>;
+      readonly optionalAbort: (options?: unknown) => Promise<unknown>;
+      readonly optionalAbortResult: (options?: unknown) => Promise<unknown>;
+      readonly requiredTelemetry: (options?: unknown) => Promise<unknown>;
+      readonly requiredTelemetryResult: (options?: unknown) => Promise<unknown>;
+      readonly optionalTelemetry: (options?: unknown) => Promise<unknown>;
+      readonly optionalTelemetryResult: (options?: unknown) => Promise<unknown>;
     };
   }>;
 }
@@ -1194,6 +1475,31 @@ export class Problem extends Error {
   );
 }
 
+function writeFrontendProblemsRuntime(parentDir: string): void {
+  const packageDir = path.join(parentDir, "node_modules", "@croco", "frontend-problems");
+  const source = fs.readFileSync(
+    path.resolve(import.meta.dirname, "../../../frontend-problems/src/index.ts"),
+    "utf-8",
+  );
+  const output = ts.transpileModule(source, {
+    compilerOptions: {
+      module: ts.ModuleKind.ES2022,
+      target: ts.ScriptTarget.ES2022,
+    },
+    reportDiagnostics: true,
+  });
+
+  expect(output.diagnostics).toEqual([]);
+  expect(output.outputText).not.toMatch(/\bfrom\s+["']\.{1,2}\//);
+  expect(output.outputText).not.toMatch(/\bimport\s*(?:\(\s*)?["']\.{1,2}\//);
+  fs.mkdirSync(packageDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(packageDir, "package.json"),
+    JSON.stringify({ type: "module", exports: "./index.mjs" }),
+  );
+  fs.writeFileSync(path.join(packageDir, "index.mjs"), output.outputText);
+}
+
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -1206,6 +1512,33 @@ function textResponse(body: string, status: number): Response {
     status,
     headers: { "content-type": "text/plain" },
   });
+}
+
+function unreadableTextResponse(cause: unknown): Response {
+  const response = new Response("unreadable", { status: 200 });
+  Object.defineProperty(response, "text", {
+    configurable: true,
+    value: async () => Promise.reject(cause),
+  });
+
+  return response;
+}
+
+function unreadableJsonResponse(cause: unknown): Response {
+  const response = new Response("unreadable", { status: 200 });
+  Object.defineProperty(response, "json", {
+    configurable: true,
+    value: async () => Promise.reject(cause),
+  });
+
+  return response;
+}
+
+function createAbortError(): Error {
+  const error = new Error("The operation was aborted.");
+  error.name = "AbortError";
+
+  return error;
 }
 
 async function getRejectedError(promise: Promise<unknown>): Promise<unknown> {

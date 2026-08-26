@@ -100,7 +100,7 @@ describe("rpc-codegen e2e", () => {
       "const request = createRpcClientRequest(testContractRoutes[0], 'query', url, { method: 'GET', headers: serializeHeaders(input.headers) }, options);",
     );
     expect(content).toContain(
-      "return fetch(request.url, request.init).then((response) => readOptionalJsonResponse(response, request.telemetry)).catch((error) => handleRpcRequestError(error, request.telemetry));",
+      "return fetch(request.url, request.init).catch((error) => handleRpcRequestError(error, request.telemetry)).then((response) => readOptionalJsonResponse(response, request.telemetry));",
     );
     expect(content).toContain(
       "return fetch(request.url, request.init).then((response) => readOptionalJsonResult<GetUserProblem>(response, getUserProblemDeclarations, request.telemetry), (error) => handleRpcRequestResultError(error, request.telemetry));",

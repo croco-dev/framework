@@ -6,10 +6,13 @@ import {
   ProblemResponseError,
   assertProblemExhaustive,
   fetchProblemJson,
+  handleJsonResponse,
   handleJsonResult,
   isProblemDetails,
   parseProblemDetails,
   readJsonProblemResult,
+  readOptionalJsonResponse,
+  readOptionalJsonResult,
   readOptionalJsonProblemResult,
   toProblemFormProblem,
   type ProblemClientResult,
@@ -161,6 +164,94 @@ describe("frontend Problem client runtime", () => {
     });
   });
 
+  it("normalizes malformed successful JSON into typed response failures", async () => {
+    const requiredThrowingResponse = textResponse("{not-json", 200);
+    const requiredError = await captureRejectedValue(handleJsonResponse(requiredThrowingResponse));
+
+    expect(requiredError).toBeInstanceOf(ProblemResponseError);
+    expect(requiredError).toMatchObject({ response: requiredThrowingResponse });
+    expect((requiredError as { readonly cause?: unknown }).cause).toBeInstanceOf(SyntaxError);
+
+    const requiredResultResponse = textResponse("{not-json", 200);
+    const requiredResult = await handleJsonResult(requiredResultResponse);
+    expect(requiredResult).toMatchObject({
+      ok: false,
+      kind: "external",
+      response: requiredResultResponse,
+      error: expect.any(ProblemResponseError),
+    });
+    if (requiredResult.ok || requiredResult.kind !== "external") {
+      expect.fail("Expected an external failure result.");
+    }
+    expect((requiredResult.error as { readonly cause?: unknown }).cause).toBeInstanceOf(
+      SyntaxError,
+    );
+
+    const optionalThrowingResponse = textResponse("{not-json", 200);
+    const optionalError = await captureRejectedValue(
+      readOptionalJsonResponse(optionalThrowingResponse),
+    );
+    expect(optionalError).toBeInstanceOf(ProblemResponseError);
+    expect((optionalError as { readonly cause?: unknown }).cause).toBeInstanceOf(SyntaxError);
+
+    const optionalResultResponse = textResponse("{not-json", 200);
+    const optionalResult = await readOptionalJsonResult(optionalResultResponse);
+    expect(optionalResult).toMatchObject({
+      ok: false,
+      kind: "external",
+      response: optionalResultResponse,
+      body: "{not-json",
+      error: expect.any(ProblemResponseError),
+    });
+    if (optionalResult.ok || optionalResult.kind !== "external") {
+      expect.fail("Expected an external failure result.");
+    }
+    expect((optionalResult.error as { readonly cause?: unknown }).cause).toBeInstanceOf(
+      SyntaxError,
+    );
+
+    const genericRequiredResponse = textResponse("{not-json", 200);
+    const genericRequiredResult = await readJsonProblemResult(genericRequiredResponse);
+    expect(genericRequiredResult).toMatchObject({
+      ok: false,
+      kind: "external",
+      response: genericRequiredResponse,
+      error: expect.any(ProblemResponseError),
+    });
+
+    const genericOptionalResponse = textResponse("{not-json", 200);
+    const genericOptionalResult = await readOptionalJsonProblemResult(genericOptionalResponse);
+    expect(genericOptionalResult).toMatchObject({
+      ok: false,
+      kind: "external",
+      response: genericOptionalResponse,
+      body: "{not-json",
+      error: expect.any(ProblemResponseError),
+    });
+  });
+
+  it("preserves response body cancellation identity for throwing and Result helpers", async () => {
+    const requiredThrowingAbort = createAbortError();
+    await expect(handleJsonResponse(unreadableJsonResponse(requiredThrowingAbort))).rejects.toBe(
+      requiredThrowingAbort,
+    );
+
+    const requiredResultAbort = createAbortError();
+    await expect(handleJsonResult(unreadableJsonResponse(requiredResultAbort))).rejects.toBe(
+      requiredResultAbort,
+    );
+
+    const optionalThrowingAbort = createAbortError();
+    await expect(
+      readOptionalJsonResponse(unreadableTextResponse(optionalThrowingAbort)),
+    ).rejects.toBe(optionalThrowingAbort);
+
+    const optionalResultAbort = createAbortError();
+    await expect(readOptionalJsonResult(unreadableTextResponse(optionalResultAbort))).rejects.toBe(
+      optionalResultAbort,
+    );
+  });
+
   it("throws a stable coded error when no fetch implementation is available", async () => {
     const originalFetch = globalThis.fetch;
 
@@ -248,6 +339,40 @@ function jsonResponse(body: unknown, status = 200): Response {
     headers: { "Content-Type": "application/json" },
     status,
   });
+}
+
+function textResponse(body: string, status: number): Response {
+  return new Response(body, {
+    headers: { "Content-Type": "text/plain" },
+    status,
+  });
+}
+
+function unreadableTextResponse(cause: unknown): Response {
+  const response = new Response("unreadable", { status: 200 });
+  Object.defineProperty(response, "text", {
+    configurable: true,
+    value: async () => Promise.reject(cause),
+  });
+
+  return response;
+}
+
+function unreadableJsonResponse(cause: unknown): Response {
+  const response = new Response("unreadable", { status: 200 });
+  Object.defineProperty(response, "json", {
+    configurable: true,
+    value: async () => Promise.reject(cause),
+  });
+
+  return response;
+}
+
+function createAbortError(): Error {
+  const error = new Error("The operation was aborted.");
+  error.name = "AbortError";
+
+  return error;
 }
 
 async function captureRejectedValue(promise: Promise<unknown>): Promise<unknown> {
