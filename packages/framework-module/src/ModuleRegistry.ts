@@ -22,6 +22,7 @@ import {
   ModuleProviderOwnershipProblem,
   ModuleProviderVisibilityProblem,
   ModuleProviderWriteProblem,
+  ModuleRegistrationConflictProblem,
 } from "./problems";
 import type {
   ModuleCleanupFailure,
@@ -101,9 +102,16 @@ let isInitialized = false;
 let initializedModules: ModuleOptions[] = [];
 let activeContext: ModuleContext | null = null;
 let initializationPromise: Promise<ModuleContext> | null = null;
+let isInitializing = false;
+let activeShutdownOperations = 0;
 let registryGeneration = 0;
 
 export function registerModule(module: ModuleOptions): void {
+  const conflictState = getRegistrationConflictState();
+  if (conflictState) {
+    throw new ModuleRegistrationConflictProblem(conflictState);
+  }
+
   const [snapshot] = collectModules([module]);
   if (!snapshot) {
     throw new InvalidModuleDefinitionProblem("Module graph must contain a root module.");
@@ -132,6 +140,7 @@ export function initializeModules(): Promise<ModuleContext> {
     return initializationPromise;
   }
 
+  isInitializing = true;
   const attempt = performInitializeModules();
   initializationPromise = attempt;
   void attempt.then(
@@ -208,6 +217,15 @@ async function performInitializeModules(): Promise<ModuleContext> {
 }
 
 export async function shutdownModules(): Promise<void> {
+  activeShutdownOperations += 1;
+  try {
+    await performShutdownModules();
+  } finally {
+    activeShutdownOperations -= 1;
+  }
+}
+
+async function performShutdownModules(): Promise<void> {
   if (initializationPromise) {
     try {
       await initializationPromise;
@@ -270,6 +288,7 @@ export function resetModules(): void {
   registeredModules.clear();
   moduleStates.clear();
   isInitialized = false;
+  isInitializing = false;
   initializedModules = [];
   activeContext = null;
 }
@@ -295,7 +314,25 @@ export function getRegisteredModules(): readonly ModuleDiagnosticsSnapshot[] {
 function clearInitializationPromise(attempt: Promise<ModuleContext>): void {
   if (initializationPromise === attempt) {
     initializationPromise = null;
+    isInitializing = false;
   }
+}
+
+function getRegistrationConflictState():
+  | "initialized"
+  | "initializing"
+  | "shutting-down"
+  | undefined {
+  if (activeShutdownOperations > 0) {
+    return "shutting-down";
+  }
+  if (isInitializing) {
+    return "initializing";
+  }
+  if (isInitialized || activeContext) {
+    return "initialized";
+  }
+  return undefined;
 }
 
 async function compensateInitialization(

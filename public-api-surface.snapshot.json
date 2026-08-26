@@ -11965,6 +11965,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "ModuleRegistrationConflictProblem",
+              "exportKind": "named",
+              "source": "./problems",
+              "declarationKind": "class"
+            },
+            {
               "name": "stringifyModuleGraphManifest",
               "exportKind": "named",
               "source": "./ModuleRegistry",

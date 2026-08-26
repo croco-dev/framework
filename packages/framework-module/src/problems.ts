@@ -70,6 +70,22 @@ export class ModuleLifecycleProblem extends Problem {
   }
 }
 
+export class ModuleRegistrationConflictProblem extends Problem {
+  constructor(readonly registryState: "initialized" | "initializing" | "shutting-down") {
+    const recoveryAction =
+      "Call CrocoModule.shutdown() or CrocoModule.reset() before registering modules.";
+
+    super(
+      "framework-module/registration-lifecycle-conflict",
+      ProblemCategory.Conflict,
+      `Module registration is unavailable while the registry is ${registryState}. ${recoveryAction}`,
+      {
+        extensions: { registryState, recoveryAction },
+      },
+    );
+  }
+}
+
 export function attachModuleCleanupFailures(
   problem: ModuleLifecycleProblem,
   cleanupFailures: readonly ModuleCleanupFailure[],
