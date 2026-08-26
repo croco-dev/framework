@@ -510,6 +510,11 @@ function checkAdminConsoleStructure() {
   checkFileContains(
     "admin-console",
     ["apps", "console-web", "src", "App.tsx.hbs"],
+    /result\.error instanceof Error \? result\.error\.message : String\(result\.error\)/,
+  );
+  checkFileContains(
+    "admin-console",
+    ["apps", "console-web", "src", "App.tsx.hbs"],
     /TenantWorkspaceDemo key=\{selectedTenantId\}/,
   );
   checkFileContains(

@@ -74,7 +74,7 @@ describe("rpc-codegen e2e", () => {
     const content = fs.readFileSync(files[0], "utf-8");
     const rpcContent = fs.readFileSync(path.join(outDir, "rpc.ts"), "utf-8");
     expect(content).toContain(
-      "import { createRpcClientRequest, handleRpcRequestError, handleJsonResponse, handleJsonResult, readOptionalJsonResponse, readOptionalJsonResult, toRpcFormProblem, serializeRpcQueryKeyInput, type RpcClientRequestOptions, type RpcClientResult, type RpcDeclaredProblem, type RpcDomainProblem, type RpcFormFieldProblem, type RpcFormGlobalProblem, type RpcFormModel, type RpcProblemDetailsFor, type RpcValidationProblem } from './rpc';",
+      "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, handleJsonResponse, handleJsonResult, readOptionalJsonResponse, readOptionalJsonResult, toRpcFormProblem, serializeRpcQueryKeyInput, type RpcClientRequestOptions, type RpcClientResult, type RpcDeclaredProblem, type RpcDomainProblem, type RpcFormFieldProblem, type RpcFormGlobalProblem, type RpcFormModel, type RpcProblemDetailsFor, type RpcValidationProblem } from './rpc';",
     );
     expect(content).toContain(
       "export type GetUserInput = { path: { id: string; }; query: { include?: string | undefined; }; headers: { 'x-request-id': string; }; };",
@@ -103,7 +103,7 @@ describe("rpc-codegen e2e", () => {
       "return fetch(request.url, request.init).then((response) => readOptionalJsonResponse(response, request.telemetry)).catch((error) => handleRpcRequestError(error, request.telemetry));",
     );
     expect(content).toContain(
-      "return fetch(request.url, request.init).then((response) => readOptionalJsonResult<GetUserProblem>(response, getUserProblemDeclarations, request.telemetry)).catch((error) => handleRpcRequestError(error, request.telemetry));",
+      "return fetch(request.url, request.init).then((response) => readOptionalJsonResult<GetUserProblem>(response, getUserProblemDeclarations, request.telemetry), (error) => handleRpcRequestResultError(error, request.telemetry));",
     );
     expect(content).toContain(
       "const request = createRpcClientRequest(testContractRoutes[1], 'mutation', '/users', { method: 'POST', body: JSON.stringify(input), headers: { 'Content-Type': 'application/json' } }, options);",
