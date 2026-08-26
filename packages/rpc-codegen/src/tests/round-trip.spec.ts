@@ -524,7 +524,187 @@ describe("rpc-codegen round trip", () => {
     ]);
   });
 
-  it("records cancelled generated client requests without masking the abort", async () => {
+  it("returns generated Result request failures without changing throwing methods", async () => {
+    const routeIRs: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "getUser",
+        httpMethod: "GET",
+        path: "/users/:id",
+        routeContract: null,
+        params: [{ kind: "path", name: "id", schema: null }],
+        inputSchema: null,
+        inputSchemas: {
+          body: null,
+          path: z.object({ id: z.string() }) as any,
+          query: null,
+          headers: null,
+        },
+        outputSchema: z.object({ id: z.string(), name: z.string() }) as any,
+        domain: "user",
+      },
+    ];
+
+    const files = generateClientFiles(routeIRs, outDir);
+    const userContent = fs.readFileSync(files[0], "utf-8");
+    const userModule = await importGeneratedClient("user-network-failure.ts", userContent);
+    const events: Record<string, unknown>[] = [];
+    const networkError = new TypeError("fetch failed");
+    const telemetry = {
+      record: (event: Record<string, unknown>) => {
+        events.push(event);
+      },
+    };
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw networkError;
+      }),
+    );
+
+    await expect(userModule.userClient.getUser({ path: { id: "1" } }, { telemetry })).rejects.toBe(
+      networkError,
+    );
+    expect(events.map((event) => event.kind)).toEqual([
+      "rpc.request.started",
+      "rpc.request.external_failure",
+    ]);
+
+    events.length = 0;
+
+    await expect(
+      userModule.userClient.getUserResult({ path: { id: "1" } }, { telemetry }),
+    ).resolves.toEqual({
+      ok: false,
+      kind: "external",
+      error: networkError,
+    });
+    expect(events.map((event) => event.kind)).toEqual([
+      "rpc.request.started",
+      "rpc.request.external_failure",
+    ]);
+  });
+
+  it("returns generated Result body-stream failures with the available response", async () => {
+    const routeIRs: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "getUser",
+        httpMethod: "GET",
+        path: "/users/:id",
+        routeContract: null,
+        params: [{ kind: "path", name: "id", schema: null }],
+        inputSchema: null,
+        inputSchemas: {
+          body: null,
+          path: z.object({ id: z.string() }) as any,
+          query: null,
+          headers: null,
+        },
+        outputSchema: z.object({ id: z.string(), name: z.string() }) as any,
+        domain: "user",
+      },
+    ];
+
+    const files = generateClientFiles(routeIRs, outDir);
+    const userContent = fs.readFileSync(files[0], "utf-8");
+    const userModule = await importGeneratedClient("user-body-stream-failure.ts", userContent);
+    const response = new Response(null, { status: 200 });
+    const bodyError = new TypeError("terminated");
+    const events: Record<string, unknown>[] = [];
+    const telemetry = {
+      record: (event: Record<string, unknown>) => {
+        events.push(event);
+      },
+    };
+
+    const jsonSpy = vi.spyOn(response, "json").mockRejectedValue(bodyError);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => response),
+    );
+
+    await expect(
+      userModule.userClient.getUserResult({ path: { id: "1" } }, { telemetry }),
+    ).resolves.toEqual({
+      ok: false,
+      kind: "external",
+      error: bodyError,
+      response,
+    });
+    expect(events.map((event) => event.kind)).toEqual([
+      "rpc.request.started",
+      "rpc.request.external_failure",
+    ]);
+    expect(events[1]).toMatchObject({ status: 200, errorName: "TypeError" });
+
+    const telemetryError = new Error("telemetry unavailable");
+    let telemetryCallCount = 0;
+    jsonSpy.mockResolvedValue({ id: "1", name: "Alice" });
+
+    await expect(
+      userModule.userClient.getUserResult(
+        { path: { id: "1" } },
+        {
+          telemetry: {
+            record: () => {
+              telemetryCallCount += 1;
+              if (telemetryCallCount === 2) {
+                throw telemetryError;
+              }
+            },
+          },
+        },
+      ),
+    ).rejects.toBe(telemetryError);
+  });
+
+  it("returns generated optional Result text-stream failures with the available response", async () => {
+    const routeIRs: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "deleteUser",
+        httpMethod: "DELETE",
+        path: "/users/:id",
+        routeContract: null,
+        params: [{ kind: "path", name: "id", schema: null }],
+        inputSchema: null,
+        inputSchemas: {
+          body: null,
+          path: z.object({ id: z.string() }) as any,
+          query: null,
+          headers: null,
+        },
+        outputSchema: null,
+        domain: "user",
+      },
+    ];
+
+    const files = generateClientFiles(routeIRs, outDir);
+    const userContent = fs.readFileSync(files[0], "utf-8");
+    const userModule = await importGeneratedClient(
+      "user-optional-body-stream-failure.ts",
+      userContent,
+    );
+    const response = new Response(null, { status: 200 });
+    const bodyError = new TypeError("terminated");
+
+    vi.spyOn(response, "text").mockRejectedValue(bodyError);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => response),
+    );
+
+    await expect(userModule.userClient.deleteUserResult({ path: { id: "1" } })).resolves.toEqual({
+      ok: false,
+      kind: "external",
+      error: bodyError,
+      response,
+    });
+  });
+
+  it("records cancelled generated client requests for throwing and Result methods", async () => {
     const routeIRs: RouteIR[] = [
       {
         controllerName: "UserController",
@@ -559,19 +739,34 @@ describe("rpc-codegen round trip", () => {
       }),
     );
 
-    await expect(
-      userModule.userClient.getUser(
-        { path: { id: "1" } },
-        {
-          telemetry: {
-            record: (event: Record<string, unknown>) => {
-              events.push(event);
-            },
-          },
-        },
-      ),
-    ).rejects.toBe(abort);
+    const telemetry = {
+      record: (event: Record<string, unknown>) => {
+        events.push(event);
+      },
+    };
 
+    await expect(userModule.userClient.getUser({ path: { id: "1" } }, { telemetry })).rejects.toBe(
+      abort,
+    );
+
+    expect(events.map((event) => event.kind)).toEqual([
+      "rpc.request.started",
+      "rpc.request.cancelled",
+    ]);
+    expect(events[1]).toMatchObject({
+      errorName: "AbortError",
+    });
+    expect(events[1]).not.toHaveProperty("errorMessage");
+
+    events.length = 0;
+
+    await expect(
+      userModule.userClient.getUserResult({ path: { id: "1" } }, { telemetry }),
+    ).resolves.toEqual({
+      ok: false,
+      kind: "external",
+      error: abort,
+    });
     expect(events.map((event) => event.kind)).toEqual([
       "rpc.request.started",
       "rpc.request.cancelled",
@@ -783,7 +978,10 @@ describe("rpc-codegen round trip", () => {
     });
     expect(result.ok).toBe(false);
     if (!result.ok && result.kind === "external") {
-      expect(result.error.name).toBe("RpcClientProblemError");
+      expect(result.error).toBeInstanceOf(Error);
+      if (result.error instanceof Error) {
+        expect(result.error.name).toBe("RpcClientProblemError");
+      }
     }
   });
 
@@ -933,11 +1131,15 @@ async function importGeneratedClient(fileName: string, source: string) {
         | {
             readonly ok: false;
             readonly kind: "external";
-            readonly error: { readonly name: string };
-            readonly response: Response;
+            readonly error: unknown;
+            readonly response?: Response;
             readonly body?: unknown;
           }
       >;
+      readonly deleteUserResult: (
+        input: { readonly path: { readonly id: string } },
+        options?: unknown,
+      ) => Promise<unknown>;
       readonly getCurrentUser: (
         input: {
           readonly headers: {

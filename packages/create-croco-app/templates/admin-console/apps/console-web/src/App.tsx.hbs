@@ -306,7 +306,7 @@ export default function App() {
     } else {
       setProblem({
         code: 'admin-console/external-failure',
-        detail: result.error.message,
+        detail: result.error instanceof Error ? result.error.message : String(result.error),
         recovery: 'Check the API server logs and retry the operation.',
       });
     }

@@ -932,7 +932,11 @@ export type CrocoManifestBundleSource = typeof crocoManifestBundleSource;
 }
 
 function getResponseHelperImports(options: ResponseHelperOptions): string {
-  const helpers: string[] = ["createRpcClientRequest", "handleRpcRequestError"];
+  const helpers: string[] = [
+    "createRpcClientRequest",
+    "handleRpcRequestError",
+    "handleRpcRequestResultError",
+  ];
 
   if (options.hasOutputRoutes) {
     helpers.push("handleJsonResponse");
@@ -987,10 +991,8 @@ import {
 } from '@croco/frontend-problems';
 
 import type {
-  ProblemClientExternalFailure as RpcClientExternalFailure,
-  ProblemClientFailure as RpcClientFailure,
+  ProblemClientExternalFailure as RpcClientResponseFailure,
   ProblemClientProblemFailure as RpcClientProblemFailure,
-  ProblemClientResult as RpcClientResult,
   ProblemClientSuccess as RpcClientSuccess,
   ProblemDeclaration as RpcDeclaredProblem,
   ProblemDetails as RpcProblemDetails,
@@ -1016,10 +1018,7 @@ export {
 };
 
 export type {
-  ProblemClientExternalFailure as RpcClientExternalFailure,
-  ProblemClientFailure as RpcClientFailure,
   ProblemClientProblemFailure as RpcClientProblemFailure,
-  ProblemClientResult as RpcClientResult,
   ProblemClientSuccess as RpcClientSuccess,
   ProblemDeclaration as RpcDeclaredProblem,
   ProblemDetails as RpcProblemDetails,
@@ -1036,6 +1035,31 @@ export type {
   ProblemFormProblem as RpcFormProblem,
   ProblemValidationDeclaration as RpcValidationProblem,
 } from '@croco/frontend-problems';
+
+export type RpcClientExternalFailure =
+  | RpcClientResponseFailure
+  | {
+      readonly ok: false;
+      readonly kind: 'external';
+      readonly error: unknown;
+      readonly response: Response;
+      readonly body?: undefined;
+    }
+  | {
+      readonly ok: false;
+      readonly kind: 'external';
+      readonly error: unknown;
+      readonly response?: undefined;
+      readonly body?: undefined;
+    };
+
+export type RpcClientFailure<Problem extends RpcDeclaredProblem = never> =
+  | ([Problem] extends [never] ? never : RpcClientProblemFailure<Problem>)
+  | RpcClientExternalFailure;
+
+export type RpcClientResult<T, Problem extends RpcDeclaredProblem = never> =
+  | RpcClientSuccess<T>
+  | RpcClientFailure<Problem>;
 ${generateRpcQueryKeySupport(false)}
 ${generateRpcTelemetrySupport()}
 
@@ -1062,9 +1086,15 @@ export async function handleJsonResult<
   declaredProblems: readonly Problem[] = [],
   telemetry?: RpcTelemetryRequestState,
 ): Promise<RpcClientResult<T, Problem>> {
-  const result = await handleProblemJsonResult<T, Problem>(response, declaredProblems);
-  recordRpcTelemetryResult(result, telemetry);
+  let result: RpcClientResult<T, Problem>;
 
+  try {
+    result = await handleProblemJsonResult<T, Problem>(response, declaredProblems);
+  } catch (error) {
+    return handleRpcResponseResultError(error, response, telemetry);
+  }
+
+  recordRpcTelemetryResult(result, telemetry);
   return result;
 }
 
@@ -1088,9 +1118,15 @@ export async function readOptionalJsonResult<Problem extends RpcDeclaredProblem 
   declaredProblems: readonly Problem[] = [],
   telemetry?: RpcTelemetryRequestState,
 ): Promise<RpcClientResult<unknown | undefined, Problem>> {
-  const result = await readProblemOptionalJsonResult<Problem>(response, declaredProblems);
-  recordRpcTelemetryResult(result, telemetry);
+  let result: RpcClientResult<unknown | undefined, Problem>;
 
+  try {
+    result = await readProblemOptionalJsonResult<Problem>(response, declaredProblems);
+  } catch (error) {
+    return handleRpcResponseResultError(error, response, telemetry);
+  }
+
+  recordRpcTelemetryResult(result, telemetry);
   return result;
 }
 
@@ -1161,13 +1197,21 @@ export type RpcClientProblemFailure<Problem extends RpcDeclaredProblem> =
       }
     : never;
 
-export type RpcClientExternalFailure = {
-  readonly ok: false;
-  readonly kind: 'external';
-  readonly error: RpcClientResponseError | RpcClientProblemError;
-  readonly response: Response;
-  readonly body?: unknown;
-};
+export type RpcClientExternalFailure =
+  | {
+      readonly ok: false;
+      readonly kind: 'external';
+      readonly error: unknown;
+      readonly response: Response;
+      readonly body?: unknown;
+    }
+  | {
+      readonly ok: false;
+      readonly kind: 'external';
+      readonly error: unknown;
+      readonly response?: undefined;
+      readonly body?: undefined;
+    };
 
 export type RpcClientFailure<Problem extends RpcDeclaredProblem = never> =
   | ([Problem] extends [never] ? never : RpcClientProblemFailure<Problem>)
@@ -1352,15 +1396,18 @@ export async function handleJsonResult<
     return readErrorResult(response, declaredProblems, telemetry);
   }
 
-  try {
-    const result: RpcClientResult<T, Problem> = { ok: true, data: (await response.json()) as T, response };
-    recordRpcTelemetryResult(result, telemetry);
+  let data: T;
 
-    return result;
+  try {
+    data = (await response.json()) as T;
   } catch (error) {
-    recordRpcTelemetryExternal(error, response, telemetry);
-    throw error;
+    return handleRpcResponseResultError(error, response, telemetry);
   }
+
+  const result: RpcClientResult<T, Problem> = { ok: true, data, response };
+  recordRpcTelemetryResult(result, telemetry);
+
+  return result;
 }
 
 export async function readOptionalJsonResponse(
@@ -1410,7 +1457,13 @@ export async function readOptionalJsonResult<Problem extends RpcDeclaredProblem 
     return result;
   }
 
-  const body = await response.text();
+  let body: string;
+
+  try {
+    body = await response.text();
+  } catch (error) {
+    return handleRpcResponseResultError(error, response, telemetry);
+  }
 
   if (body.length === 0) {
     const result: RpcClientResult<unknown | undefined, Problem> = { ok: true, data: undefined, response };
@@ -1419,15 +1472,18 @@ export async function readOptionalJsonResult<Problem extends RpcDeclaredProblem 
     return result;
   }
 
-  try {
-    const result: RpcClientResult<unknown | undefined, Problem> = { ok: true, data: JSON.parse(body) as unknown, response };
-    recordRpcTelemetryResult(result, telemetry);
+  let data: unknown;
 
-    return result;
+  try {
+    data = JSON.parse(body) as unknown;
   } catch (error) {
-    recordRpcTelemetryExternal(error, response, telemetry);
-    throw error;
+    return handleRpcResponseResultError(error, response, telemetry);
   }
+
+  const result: RpcClientResult<unknown | undefined, Problem> = { ok: true, data, response };
+  recordRpcTelemetryResult(result, telemetry);
+
+  return result;
 }
 
 export function assertExhaustiveProblem(problem: never): never {
@@ -1829,15 +1885,39 @@ export function handleRpcRequestError(
   error: unknown,
   telemetry?: RpcTelemetryRequestState,
 ): never {
+  const failure = handleRpcRequestResultError(error, telemetry);
+  throw failure.error;
+}
+
+export function handleRpcRequestResultError(
+  error: unknown,
+  telemetry?: RpcTelemetryRequestState,
+): RpcClientExternalFailure {
   if (isRpcAbortError(error)) {
     recordRpcTelemetryEvent(telemetry, 'rpc.request.cancelled', describeRpcError(error));
     recordRpcMutationTelemetryEvent(telemetry, 'rpc.mutation.cancelled', describeRpcError(error));
-    throw error;
+  } else {
+    recordRpcTelemetryEvent(telemetry, 'rpc.request.external_failure', describeRpcError(error));
+    recordRpcMutationTelemetryEvent(telemetry, 'rpc.mutation.external_failure', describeRpcError(error));
   }
 
-  recordRpcTelemetryEvent(telemetry, 'rpc.request.external_failure', describeRpcError(error));
-  recordRpcMutationTelemetryEvent(telemetry, 'rpc.mutation.external_failure', describeRpcError(error));
-  throw error;
+  return { ok: false, kind: 'external', error };
+}
+
+function handleRpcResponseResultError(
+  error: unknown,
+  response: Response,
+  telemetry?: RpcTelemetryRequestState,
+): RpcClientExternalFailure {
+  if (isRpcAbortError(error)) {
+    const event = { status: response.status, ...describeRpcError(error) };
+    recordRpcTelemetryEvent(telemetry, 'rpc.request.cancelled', event);
+    recordRpcMutationTelemetryEvent(telemetry, 'rpc.mutation.cancelled', event);
+  } else {
+    recordRpcTelemetryExternal(error, response, telemetry);
+  }
+
+  return { ok: false, kind: 'external', error, response };
 }
 
 function createRpcTelemetryRequestContext(
@@ -1905,7 +1985,13 @@ function recordRpcTelemetryResult<Problem extends RpcDeclaredProblem>(
     return;
   }
 
-  recordRpcTelemetryExternal(result.error, result.response, telemetry);
+  if (result.response) {
+    recordRpcTelemetryExternal(result.error, result.response, telemetry);
+    return;
+  }
+
+  recordRpcTelemetryEvent(telemetry, 'rpc.request.external_failure', describeRpcError(result.error));
+  recordRpcMutationTelemetryEvent(telemetry, 'rpc.mutation.external_failure', describeRpcError(result.error));
 }
 
 function recordRpcTelemetrySuccess(
@@ -2654,7 +2740,7 @@ ${getQueryStatements(route)}    const request = createRpcClientRequest(${routeMe
   ${getResultMethodName(route)}: (${requestOptions}): ${resultReturnType} => {
     const path = ${getPathExpression(route)};
 ${getQueryStatements(route)}    const request = createRpcClientRequest(${routeMetadata}, '${routeKind}', ${getUrlExpression(route)}, ${fetchOptions}, options);
-    return fetch(request.url, request.init).then((response) => ${resultResponse}).catch((error) => handleRpcRequestError(error, request.telemetry));
+    return fetch(request.url, request.init).then((response) => ${resultResponse}, (error) => handleRpcRequestResultError(error, request.telemetry));
   },`;
   }
 
@@ -2664,7 +2750,7 @@ ${getQueryStatements(route)}    const request = createRpcClientRequest(${routeMe
   },
   ${getResultMethodName(route)}: (${requestOptions}): ${resultReturnType} => {
     const request = createRpcClientRequest(${routeMetadata}, '${routeKind}', ${getPathExpression(route)}, ${fetchOptions}, options);
-    return fetch(request.url, request.init).then((response) => ${resultResponse}).catch((error) => handleRpcRequestError(error, request.telemetry));
+    return fetch(request.url, request.init).then((response) => ${resultResponse}, (error) => handleRpcRequestResultError(error, request.telemetry));
   },`;
 }
 

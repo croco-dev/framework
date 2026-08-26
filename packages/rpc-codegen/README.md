@@ -112,6 +112,11 @@ const result = await userClient.getUserResult(
 );
 ```
 
+Generated `*Result` methods resolve network and cancellation failures as
+`{ ok: false, kind: "external", error }`. Those failures have no `response`; HTTP-backed external
+failures continue to include one. The equivalent throwing methods preserve the rejected `fetch`
+error.
+
 Generated query arrays are serialized as repeated query keys. Generated header arrays accept
 readonly arrays and serialize them as comma-separated header values, matching Croco HTTP runtime
 validation and OpenAPI parameter serialization.
