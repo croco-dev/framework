@@ -34,6 +34,94 @@ function renderWithState(state: FrontendAuthBridgeState, element: React.ReactEle
 }
 
 describe("frontend auth bridge", () => {
+  it("isolates optional session gates from every tenant provider state", () => {
+    const tenantProblem = createFrontendProblemDetails({
+      code: "tenant/provider-unavailable",
+      status: 503,
+      title: "Tenant provider unavailable",
+    });
+    const tenantStates: readonly [
+      state: FrontendTenantState,
+      requiredKind: FrontendAuthGateState["kind"],
+    ][] = [
+      [{ kind: "loading" }, "loading"],
+      [{ kind: "unavailable", problem: tenantProblem }, "unavailable"],
+      [{ kind: "missing" }, "unavailable"],
+      [{ kind: "available", tenant }, "allowed"],
+    ];
+
+    for (const [tenantState, requiredKind] of tenantStates) {
+      const state = createFrontendAuthBridgeState({ session, tenant: tenantState });
+      const defaultOptionalGate = evaluateSessionGateState(state);
+      const explicitOptionalGate = evaluateSessionGateState(state, { tenantRequired: false });
+      const requiredGate = evaluateSessionGateState(state, { tenantRequired: true });
+
+      expect(defaultOptionalGate.kind).toBe("allowed");
+      expect(explicitOptionalGate.kind).toBe("allowed");
+      expect(requiredGate.kind).toBe(requiredKind);
+    }
+  });
+
+  it("keeps tenant provider dependencies for permission and entitlement gates", () => {
+    const tenantProblem = createFrontendProblemDetails({
+      code: "tenant/provider-unavailable",
+      status: 503,
+      title: "Tenant provider unavailable",
+    });
+    const tenantStates: readonly [
+      state: FrontendTenantState,
+      expectedKind: FrontendAuthGateState["kind"],
+    ][] = [
+      [{ kind: "loading" }, "loading"],
+      [{ kind: "unavailable", problem: tenantProblem }, "unavailable"],
+      [{ kind: "missing" }, "allowed"],
+      [{ kind: "available", tenant }, "allowed"],
+    ];
+
+    for (const [tenantState, expectedKind] of tenantStates) {
+      const state = createFrontendAuthBridgeState({
+        entitlements: [{ featureKey: "billing.pro", granted: true }],
+        permissions: [{ granted: true, permission: "billing:read" }],
+        session,
+        tenant: tenantState,
+      });
+
+      expect(
+        evaluateSessionGateState(state, {
+          permissions: ["billing:read"],
+          tenantRequired: false,
+        }).kind,
+      ).toBe(expectedKind);
+      expect(
+        evaluateSessionGateState(state, {
+          entitlements: ["billing.pro"],
+          tenantRequired: false,
+        }).kind,
+      ).toBe(expectedKind);
+    }
+  });
+
+  it("keeps session loading and unauthenticated states ahead of tenant evaluation", () => {
+    const tenantProblem = createFrontendProblemDetails({
+      code: "tenant/provider-unavailable",
+      status: 503,
+      title: "Tenant provider unavailable",
+    });
+    const loadingState = createFrontendAuthBridgeState({
+      session: { kind: "loading" },
+      tenant: { kind: "unavailable", problem: tenantProblem },
+    });
+    const unauthenticatedState = createFrontendAuthBridgeState({
+      session: { kind: "unauthenticated" },
+      tenant: { kind: "loading" },
+    });
+
+    expect(evaluateSessionGateState(loadingState, { tenantRequired: true }).kind).toBe("loading");
+    expect(evaluateSessionGateState(unauthenticatedState, { tenantRequired: true }).kind).toBe(
+      "unauthenticated",
+    );
+  });
+
   it("renders permission-gated content only when session, tenant, permission, and entitlement checks are allowed", () => {
     const state = createFrontendAuthBridgeState({
       entitlements: [{ featureKey: "billing.pro", granted: true, source: "generated-client" }],

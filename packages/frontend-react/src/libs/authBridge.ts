@@ -336,7 +336,11 @@ export function evaluateSessionGateState(
     };
   }
 
-  const tenantGate = evaluateTenantRequirement(state.tenant, requirements.tenantRequired);
+  const tenantGate = evaluateTenantRequirement(
+    state.tenant,
+    requirements.tenantRequired,
+    requiredPermissions.length > 0 || requiredEntitlements.length > 0,
+  );
   if (tenantGate.kind === "loading") {
     return {
       kind: "loading",
@@ -535,6 +539,7 @@ function normalizeEntitlementState(input: FrontendAuthBridgeStateInput): Fronten
 function evaluateTenantRequirement(
   tenant: FrontendTenantState,
   tenantRequired: boolean | undefined,
+  hasTenantDependentRequirements: boolean,
 ):
   | {
       readonly kind: "available";
@@ -549,6 +554,17 @@ function evaluateTenantRequirement(
       readonly problem: ProblemDetails;
       readonly recoveryActions?: readonly FrontendRecoveryAction[];
     } {
+  if (!tenantRequired && !hasTenantDependentRequirements) {
+    return tenant.kind === "available"
+      ? {
+          kind: "available",
+          tenant: tenant.tenant,
+        }
+      : {
+          kind: "available",
+        };
+  }
+
   if (tenant.kind === "loading") {
     return {
       kind: "loading",
