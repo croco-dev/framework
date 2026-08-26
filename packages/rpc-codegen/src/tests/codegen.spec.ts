@@ -644,6 +644,27 @@ describe("generateClientFiles", () => {
     expect(content).not.toContain("deprecation");
   });
 
+  it("leaves existing generated outputs byte-for-byte unchanged when graph coverage fails", () => {
+    generateClientFiles([createBasicRoute()], TEMP_DIR);
+    const before = collectDirectoryContents(TEMP_DIR);
+    const graph = createDuplicateRouteIdContractGraph();
+
+    expect(() => generateClientFilesFromContractGraph(graph, TEMP_DIR)).toThrow(
+      "contract-consumer-duplicate-route",
+    );
+    expect(collectDirectoryContents(TEMP_DIR)).toEqual(before);
+  });
+
+  it("does not create an output directory before failed graph coverage validation", () => {
+    const outDir = path.join(TEMP_DIR, "missing-output");
+    const graph = createDuplicateRouteIdContractGraph();
+
+    expect(() => generateClientFilesFromContractGraph(graph, outDir)).toThrow(
+      "contract-consumer-duplicate-route",
+    );
+    expect(fs.existsSync(outDir)).toBe(false);
+  });
+
   it("should emit a deterministic frontend action manifest for REST RPC routes", () => {
     const manifestPath = path.join(TEMP_DIR, "frontend-action-manifest.json");
     const graph: ContractGraph = {
@@ -3251,6 +3272,48 @@ function createBasicRoute(): RouteIR {
     inputSchemas: EMPTY_INPUT_SCHEMAS,
     outputSchema: null,
     domain: null,
+  };
+}
+
+function createDuplicateRouteIdContractGraph(): ContractGraph {
+  const userRoute = {
+    ...createBasicRoute(),
+    routeId: "SharedRoute.list",
+    operationId: "UserController_list",
+    controllerPath: "/users",
+    access: { guards: [], roles: [] },
+    entitlements: [],
+    problemResponses: [],
+  };
+  const accountRoute = {
+    ...userRoute,
+    controllerName: "AccountController",
+    methodName: "listAccounts",
+    operationId: "AccountController_listAccounts",
+    path: "/accounts",
+    controllerPath: "/accounts",
+  };
+
+  return {
+    version: "croco.contract-graph.v1",
+    controllers: [
+      {
+        name: userRoute.controllerName,
+        path: userRoute.controllerPath,
+        guards: [],
+        roles: [],
+        routeIds: [userRoute.routeId],
+      },
+      {
+        name: accountRoute.controllerName,
+        path: accountRoute.controllerPath,
+        guards: [],
+        roles: [],
+        routeIds: [accountRoute.routeId],
+      },
+    ],
+    routes: [userRoute, accountRoute],
+    diagnostics: [],
   };
 }
 
