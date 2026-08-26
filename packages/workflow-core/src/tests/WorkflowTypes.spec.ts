@@ -23,8 +23,8 @@ class BillingTasks {
   }
 }
 
-const fetchSubscription = taskRef(BillingTasks, "fetchSubscription", "billing.fetch-subscription");
-const syncEntitlements = taskRef(BillingTasks, "syncEntitlements", "billing.sync-entitlements");
+const FETCH_SUBSCRIPTION = taskRef(BillingTasks, "fetchSubscription", "billing.fetch-subscription");
+const SYNC_ENTITLEMENTS = taskRef(BillingTasks, "syncEntitlements", "billing.sync-entitlements");
 
 type ExpectedSteps = readonly [
   {
@@ -42,15 +42,15 @@ type ExpectedSteps = readonly [
   },
 ];
 
-const billingWorkflow = defineWorkflow<WorkflowPayload>({
+const BILLING_WORKFLOW = defineWorkflow<WorkflowPayload>({
   name: "billing.synchronize",
   idempotencyKey: ({ payload }) => {
     expectTypeOf(payload).toEqualTypeOf<WorkflowPayload>();
     return `billing:${payload.subscriptionId}`;
   },
 })
-  .step(fetchSubscription)
-  .step("sync", syncEntitlements, ({ payload, previousResults }) => {
+  .step(FETCH_SUBSCRIPTION)
+  .step("sync", SYNC_ENTITLEMENTS, ({ payload, previousResults }) => {
     expectTypeOf(payload).toEqualTypeOf<WorkflowPayload>();
     expectTypeOf(previousResults).toEqualTypeOf<
       readonly [
@@ -69,7 +69,7 @@ const billingWorkflow = defineWorkflow<WorkflowPayload>({
   .build();
 
 function assertRunnerInference(runner: WorkflowRunner): void {
-  const run = runner.execute(billingWorkflow, { subscriptionId: "sub_123" });
+  const run = runner.execute(BILLING_WORKFLOW, { subscriptionId: "sub_123" });
   const legacyRun = runner.execute("billing.legacy", { arbitrary: true });
 
   void run.then((result) => {
@@ -93,26 +93,26 @@ function assertRunnerInference(runner: WorkflowRunner): void {
 function negativeTypeFixtures(): void {
   defineWorkflow<WorkflowPayload>({ name: "billing.missing-input" })
     // @ts-expect-error workflow payload cannot be passed directly to this task
-    .step(syncEntitlements);
+    .step(SYNC_ENTITLEMENTS);
 
   defineWorkflow<WorkflowPayload>({ name: "billing.invalid" })
-    .step(fetchSubscription)
+    .step(FETCH_SUBSCRIPTION)
     // @ts-expect-error resolver output must match the referenced task payload
-    .step(syncEntitlements, () => ({ subscriptionId: 42 }));
+    .step(SYNC_ENTITLEMENTS, () => ({ subscriptionId: 42 }));
 
   const runner = null as unknown as WorkflowRunner;
   const widePayload: { readonly subscriptionId: string | number } = { subscriptionId: 42 };
   // @ts-expect-error workflow payload must match the typed definition
-  void runner.execute(billingWorkflow, { subscriptionId: 42 });
+  void runner.execute(BILLING_WORKFLOW, { subscriptionId: 42 });
   // @ts-expect-error payload inference must not widen the workflow contract
-  void runner.execute(billingWorkflow, widePayload);
+  void runner.execute(BILLING_WORKFLOW, widePayload);
 }
 
 describe("typed workflow definitions", () => {
   it("preserves stable runtime task names", () => {
-    expect(billingWorkflow.steps).toEqual([
-      { name: "billing.fetch-subscription", task: fetchSubscription },
-      { name: "sync", task: syncEntitlements, input: expect.any(Function) },
+    expect(BILLING_WORKFLOW.steps).toEqual([
+      { name: "billing.fetch-subscription", task: FETCH_SUBSCRIPTION },
+      { name: "sync", task: SYNC_ENTITLEMENTS, input: expect.any(Function) },
     ]);
     expectTypeOf(assertRunnerInference).toBeFunction();
     expectTypeOf(negativeTypeFixtures).toBeFunction();

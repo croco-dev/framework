@@ -104,22 +104,21 @@ export type WorkflowRunResult = {
   readonly reused: boolean;
 };
 
-type TypedWorkflowRunResultCommon = {
-  readonly executionId: string;
-  readonly workflow: WorkflowDefinition;
-};
-
 export type TypedWorkflowRunResult<TSteps extends readonly WorkflowStepResult[]> =
-  | (TypedWorkflowRunResultCommon & {
+  | {
+      readonly executionId: string;
+      readonly workflow: WorkflowDefinition;
       readonly steps: TSteps;
       readonly result: WorkflowCompletionResult<TSteps>;
       readonly reused: false;
-    })
-  | (TypedWorkflowRunResultCommon & {
+    }
+  | {
+      readonly executionId: string;
+      readonly workflow: WorkflowDefinition;
       readonly steps: readonly [];
       readonly result?: unknown;
       readonly reused: true;
-    });
+    };
 
 export type TypedWorkflowReference<
   TPayload,
