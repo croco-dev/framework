@@ -315,7 +315,7 @@ describe("verification manifest", () => {
     expect(
       createHash("sha256").update(JSON.stringify(manifests)).digest("hex"),
       "The pre-split monolithic manifest changed; update this digest only after intentionally verifying the new serialized commands.",
-    ).toBe("7d7c9cab45966b6128a763863ffb7e1cf9e2342cf23b3cc048d57845987b463c");
+    ).toBe("cb03423ec9fc81ed794dae737c36cfc2b27bd32d8d9aaaf6a7acdbab64ce9428");
   });
 
   it("classifies every dependency edge and every cross-lane edge for synthesis", () => {
@@ -1364,6 +1364,7 @@ describe("verification manifest", () => {
     ]);
     expect(byId.get("published-test-lane")?.concurrencyGroups).toEqual([
       "workspace-artifacts",
+      "package-entrypoints",
       "test-integration",
     ]);
     expect(byId.get("core-coverage")?.concurrencyGroups).toEqual([

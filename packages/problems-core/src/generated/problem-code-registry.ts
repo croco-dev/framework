@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 665,
+  problemCount: 666,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -12928,6 +12928,36 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 8,
           column: 5,
           kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "onboarding/state-snapshot-unsupported",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#onboarding-state-snapshot-unsupported",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/onboarding-core/src/libs/problems/OnboardingProblems.ts",
+          line: 78,
+          column: 3,
+          kind: "problem-class",
         },
       ],
     },

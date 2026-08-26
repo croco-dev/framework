@@ -13,6 +13,7 @@ export {
   DuplicateOnboardingDefinitionProblem,
   OnboardingContextRequiredProblem,
   OnboardingDefinitionNotFoundProblem,
+  OnboardingStateSnapshotUnsupportedProblem,
   OnboardingStepCompletionConflictProblem,
   OnboardingStepNotFoundProblem,
 } from "./libs/problems/OnboardingProblems";

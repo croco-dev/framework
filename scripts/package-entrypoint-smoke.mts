@@ -15,6 +15,7 @@ import { fileURLToPath } from "node:url";
 import {
   DIRECT_DIST_ENTRYPOINT_PACKAGES,
   ENTRYPOINT_EXEMPTIONS,
+  effectivePublishManifest,
   fieldMatchesPath,
   findPackageJsonFiles,
   packageHasSourceEntrypoint,
@@ -75,6 +76,11 @@ type PackageSmokeResult = {
   readonly esmCount: number;
   readonly packageName: string;
   readonly typesCount: number;
+};
+
+type PublishArtifactTarget = {
+  readonly fieldName: string;
+  readonly target: string;
 };
 
 type DecoratorMetadataSmokeContract = {
@@ -291,7 +297,7 @@ function parseArgs(args: readonly string[]): {
 
 function buildMissingPackages(rootDir: string, packageInfos: readonly PackageInfo[]): void {
   const missingPackageNames = packageInfos
-    .filter((packageInfo) => !packageHasBuildArtifacts(packageInfo.packageDir))
+    .filter((packageInfo) => !packageHasBuildArtifacts(packageInfo))
     .map((packageInfo) => packageInfo.packageName);
   if (missingPackageNames.length === 0) {
     return;
@@ -320,7 +326,7 @@ function buildPrerequisiteDiagnosticsFor(
   packageInfos: readonly PackageInfo[],
 ): string[] {
   const missingBuildArtifacts = packageInfos.filter(
-    (packageInfo) => !packageHasBuildArtifacts(packageInfo.packageDir),
+    (packageInfo) => !packageHasBuildArtifacts(packageInfo),
   );
 
   if (missingBuildArtifacts.length === 0) {
@@ -343,19 +349,68 @@ function buildPrerequisiteDiagnosticsFor(
     `${missingBuildArtifacts.length} public package(s) are missing build artifacts under dist.`,
     "Run pnpm build before pnpm package-entrypoints:smoke.",
     `Missing packages: ${packageList}.`,
+    ...missingBuildArtifacts.flatMap((packageInfo) =>
+      missingPublishArtifacts(packageInfo).map(
+        ({ fieldName, target }) =>
+          `${packageInfo.packageName}: ${fieldName} points to missing file ${target}`,
+      ),
+    ),
   ];
 }
 
-function packageHasBuildArtifacts(packageDir: string): boolean {
-  const distDir = join(packageDir, "dist");
-  if (!existsSync(distDir)) {
-    return false;
+function packageHasBuildArtifacts(packageInfo: PackageInfo): boolean {
+  const requiredArtifacts = publishArtifactTargetsFor(packageInfo);
+  return (
+    requiredArtifacts.length > 0 &&
+    requiredArtifacts.every(({ target }) =>
+      existsSync(join(packageInfo.packageDir, target.slice(2))),
+    )
+  );
+}
+
+function missingPublishArtifacts(packageInfo: PackageInfo): PublishArtifactTarget[] {
+  return publishArtifactTargetsFor(packageInfo).filter(
+    ({ target }) => !existsSync(join(packageInfo.packageDir, target.slice(2))),
+  );
+}
+
+function publishArtifactTargetsFor(packageInfo: PackageInfo): PublishArtifactTarget[] {
+  return publishArtifactTargets(
+    effectivePublishManifest(packageInfo.sourceManifest) as Readonly<Record<string, unknown>>,
+  );
+}
+
+function publishArtifactTargets(
+  publishManifest: Readonly<Record<string, unknown>>,
+): PublishArtifactTarget[] {
+  const targets: PublishArtifactTarget[] = [];
+  for (const fieldName of ["main", "module", "types", "typings", "exports", "bin"] as const) {
+    collectPublishArtifactTargets(publishManifest[fieldName], fieldName, targets);
+  }
+  return targets.sort((left, right) => left.fieldName.localeCompare(right.fieldName));
+}
+
+function collectPublishArtifactTargets(
+  value: unknown,
+  fieldName: string,
+  targets: PublishArtifactTarget[],
+): void {
+  if (typeof value === "string") {
+    if (value.startsWith("./dist/")) {
+      targets.push({ fieldName, target: value });
+    }
+    return;
   }
 
-  try {
-    return readdirSync(distDir).length > 0;
-  } catch {
-    return false;
+  if (!value || typeof value !== "object") {
+    return;
+  }
+
+  for (const [propertyName, nestedValue] of Object.entries(value)) {
+    const nestedFieldName = /^[A-Za-z_$][\w$]*$/.test(propertyName)
+      ? `${fieldName}.${propertyName}`
+      : `${fieldName}[${JSON.stringify(propertyName)}]`;
+    collectPublishArtifactTargets(nestedValue, nestedFieldName, targets);
   }
 }
 
@@ -684,9 +739,16 @@ function readPackedJson(tarballPath: string, entryPath: string, rootDir: string)
 }
 
 function readPackedFile(tarballPath: string, entryPath: string, rootDir: string): string {
-  return run("tar", ["-xOf", tarballPath, entryPath], rootDir, {
-    label: `${tarballPath}: read ${entryPath}`,
-  }).stdout;
+  const extractRoot = mkdtempSync(join(tmpdir(), "croco-packed-file-"));
+
+  try {
+    run("tar", ["-xf", tarballPath, "-C", extractRoot, entryPath], rootDir, {
+      label: `${tarballPath}: extract ${entryPath}`,
+    });
+    return readFileSync(join(extractRoot, entryPath), "utf-8");
+  } finally {
+    rmSync(extractRoot, { force: true, recursive: true });
+  }
 }
 
 function packedFileExists(tarballPath: string, entryPath: string, rootDir: string): boolean {

@@ -183,6 +183,57 @@ describe("OnboardingManager", () => {
     );
   });
 
+  it("should isolate getStatus mutations from persisted progress and analytics", async () => {
+    const store = new InMemoryOnboardingStore();
+    const managerWithSavedState = new OnboardingManager(store, analytics);
+    managerWithSavedState.register(sampleDefinition);
+    await store.saveState("tenant-1", "user-1", "welcome-tour", {
+      steps: {
+        "step-1": {
+          completed: false,
+          metadata: { nested: { source: "stored" } },
+        },
+      },
+      isCompleted: false,
+      startedAt: new Date("2026-03-01T00:00:00.000Z"),
+    });
+
+    await Context.run(
+      { requestId: "req-snapshot", user: { id: "user-1" }, tenantId: "tenant-1" },
+      async () => {
+        const exposedStatus = await managerWithSavedState.getStatus("welcome-tour");
+        const exposedStep = exposedStatus.steps["step-1"];
+        expect(exposedStep).toBeDefined();
+        if (!exposedStep) return;
+        exposedStep.completed = true;
+        (exposedStep.metadata as { nested: { source: string } }).nested.source = "caller";
+        exposedStatus.isCompleted = true;
+        exposedStatus.completedAt = new Date("2026-03-02T00:00:00.000Z");
+        exposedStatus.startedAt?.setUTCFullYear(2030);
+
+        expect(analytics.capture).not.toHaveBeenCalled();
+        await expect(managerWithSavedState.getStatus("welcome-tour")).resolves.toEqual({
+          steps: {
+            "step-1": {
+              completed: false,
+              metadata: { nested: { source: "stored" } },
+            },
+          },
+          isCompleted: false,
+          startedAt: new Date("2026-03-01T00:00:00.000Z"),
+        });
+
+        await managerWithSavedState.completeStep("welcome-tour", "step-1");
+      },
+    );
+
+    expect(analytics.capture).toHaveBeenCalledTimes(1);
+    expect(analytics.capture).toHaveBeenCalledWith(
+      "onboarding_step_completed",
+      expect.objectContaining({ onboardingId: "welcome-tour", stepId: "step-1" }),
+    );
+  });
+
   it("should capture completion event when all required steps are done", async () => {
     await Context.run(
       { requestId: "req-2", user: { id: "user-1" }, tenantId: "tenant-1" },

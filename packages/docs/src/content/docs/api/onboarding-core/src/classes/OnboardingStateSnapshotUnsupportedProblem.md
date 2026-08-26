@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "BillingAccountTenantConflictProblem"
+title: "OnboardingStateSnapshotUnsupportedProblem"
 ---
 
-billing 도메인에서 사용하는 Problem 하위 타입들입니다.
+온보딩 상태 메타데이터를 독립적인 저장소 스냅샷으로 복사할 수 없을 때 발생하는 Problem입니다.
 
 ## Extends
 
@@ -15,25 +15,17 @@ billing 도메인에서 사용하는 Problem 하위 타입들입니다.
 
 ### Constructor
 
-> **new BillingAccountTenantConflictProblem**(`tenantId`, `existingAccountId`, `requestedAccountId`): `BillingAccountTenantConflictProblem`
+> **new OnboardingStateSnapshotUnsupportedProblem**(`cause?`): `OnboardingStateSnapshotUnsupportedProblem`
 
 #### Parameters
 
-##### tenantId
+##### cause?
 
-`string`
-
-##### existingAccountId
-
-`string`
-
-##### requestedAccountId
-
-`string`
+`Error`
 
 #### Returns
 
-`BillingAccountTenantConflictProblem`
+`OnboardingStateSnapshotUnsupportedProblem`
 
 #### Overrides
 
@@ -43,7 +35,7 @@ billing 도메인에서 사용하는 Problem 하위 타입들입니다.
 
 ### category
 
-> `readonly` **category**: [`Conflict`](/api/problems-core/src/enumerations/problemcategory/#conflict) = `ProblemCategory.Conflict`
+> `readonly` **category**: [`ValidationError`](/api/problems-core/src/enumerations/problemcategory/#validationerror) = `ProblemCategory.ValidationError`
 
 #### Overrides
 
@@ -63,7 +55,7 @@ billing 도메인에서 사용하는 Problem 하위 타입들입니다.
 
 ### code
 
-> `readonly` **code**: `"billing/account-tenant-conflict"` = `"billing/account-tenant-conflict"`
+> `readonly` **code**: `"onboarding/state-snapshot-unsupported"` = `"onboarding/state-snapshot-unsupported"`
 
 #### Overrides
 

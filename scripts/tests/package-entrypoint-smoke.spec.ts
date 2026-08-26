@@ -134,8 +134,58 @@ describe("package-entrypoint-smoke.mts", () => {
     expect(result.stdout).toContain("1 public package(s) are missing build artifacts under dist.");
     expect(result.stdout).toContain("Run pnpm build before pnpm package-entrypoints:smoke.");
     expect(result.stdout).toContain("@croco/unbuilt (packages/unbuilt/dist)");
-    expect(result.stdout).not.toContain("points to missing file");
+    expect(result.stdout).toContain(
+      '@croco/unbuilt: exports["."].types points to missing file ./dist/index.d.ts',
+    );
     expect(result.stdout).not.toContain("no ESM import target found");
+  });
+
+  it("fails early when a required build artifact is absent from a non-empty dist directory", () => {
+    const root = createTempRoot();
+    writeImportablePackage(root, "partial-build");
+    rmSync(join(root, "packages", "partial-build", "dist", "index.js"));
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("Package entrypoint smoke build prerequisite failed:");
+    expect(result.stdout).toContain("@croco/partial-build (packages/partial-build/dist)");
+    expect(result.stdout).toContain(
+      "@croco/partial-build: main points to missing file ./dist/index.js",
+    );
+  });
+
+  it("fails early when a declaration artifact is absent from an otherwise complete dist directory", () => {
+    const root = createTempRoot();
+    writeImportablePackage(root, "partial-types");
+    rmSync(join(root, "packages", "partial-types", "dist", "index.d.ts"));
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("Package entrypoint smoke build prerequisite failed:");
+    expect(result.stdout).toContain("@croco/partial-types (packages/partial-types/dist)");
+    expect(result.stdout).toContain(
+      '@croco/partial-types: exports["."].types points to missing file ./dist/index.d.ts',
+    );
+  });
+
+  it("checks source entrypoints when publishConfig only contains publish metadata", () => {
+    const root = createTempRoot();
+    writeImportablePackage(root, "source-entrypoints", {
+      publishConfig: { access: "public" },
+      sourceMain: "./dist/index.js",
+      sourceTypes: "./dist/index.d.ts",
+    });
+    rmSync(join(root, "packages", "source-entrypoints", "dist", "index.js"));
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("Package entrypoint smoke build prerequisite failed:");
+    expect(result.stdout).toContain(
+      "@croco/source-entrypoints: main points to missing file ./dist/index.js",
+    );
   });
 
   it("fails when an export map points at a missing runtime entrypoint", () => {
@@ -400,6 +450,18 @@ describe("package-entrypoint-smoke.mts", () => {
     expect(result.stdout).toContain("✓ @croco/prefix: esm 1, cjs 1, types 1");
   });
 
+  it("reads packed entrypoints larger than the child process output buffer", () => {
+    const root = createTempRoot();
+    writeImportablePackage(root, "large-entrypoint", {
+      cjsContent: `exports.value = "${"x".repeat(1_100_000)}";\n`,
+    });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("✓ @croco/large-entrypoint: esm 1, cjs 1, types 1");
+  });
+
   it("does not resolve dependencies from package-local node_modules", () => {
     const root = createTempRoot();
     writeImportablePackage(root, "package-local-dependency", {
@@ -503,6 +565,9 @@ function writeImportablePackage(
     readonly importTarget?: string;
     readonly packageName?: string;
     readonly peerDependencies?: Record<string, string>;
+    readonly publishConfig?: Record<string, unknown>;
+    readonly sourceMain?: string;
+    readonly sourceTypes?: string;
     readonly typesTarget?: string;
   } = {},
 ): void {
@@ -535,20 +600,22 @@ function writeImportablePackage(
         dependencies: options.dependencies,
         files: ["dist"],
         type: "commonjs",
-        main: "./src/index.ts",
-        types: "./src/index.ts",
-        publishConfig: {
-          access: "public",
-          main: "./dist/index.js",
-          types: options.typesTarget ?? "./dist/index.d.ts",
-          exports: options.exportsValue ?? {
-            ".": {
-              import: options.importTarget ?? "./dist/index.mjs",
-              require: "./dist/index.js",
-              types: options.typesTarget ?? "./dist/index.d.ts",
+        main: options.sourceMain ?? "./src/index.ts",
+        types: options.sourceTypes ?? "./src/index.ts",
+        publishConfig:
+          options.publishConfig ??
+          ({
+            access: "public",
+            main: "./dist/index.js",
+            types: options.typesTarget ?? "./dist/index.d.ts",
+            exports: options.exportsValue ?? {
+              ".": {
+                import: options.importTarget ?? "./dist/index.mjs",
+                require: "./dist/index.js",
+                types: options.typesTarget ?? "./dist/index.d.ts",
+              },
             },
-          },
-        },
+          } satisfies Record<string, unknown>),
       },
       null,
       2,

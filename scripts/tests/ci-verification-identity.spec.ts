@@ -43,6 +43,28 @@ function createPullRequestCandidate(): {
   return { root, baseSha, headSha, candidateSha };
 }
 
+function createPullRequestCandidateAfterBaseAdvance(): {
+  readonly root: string;
+  readonly eventBaseSha: string;
+  readonly candidateBaseSha: string;
+  readonly headSha: string;
+  readonly candidateSha: string;
+} {
+  const root = mkdtempSync(join(tmpdir(), "croco-ci-verification-identity-"));
+  repositories.push(root);
+  git(root, "init", "--initial-branch=trunk");
+  git(root, "config", "user.email", "fixture@croco.dev");
+  git(root, "config", "user.name", "Croco fixture");
+  const eventBaseSha = commit(root, "base.txt", "base\n", "base");
+  git(root, "switch", "--create", "pull-request");
+  const headSha = commit(root, "head.txt", "head\n", "head");
+  git(root, "switch", "trunk");
+  const candidateBaseSha = commit(root, "new-base.txt", "new base\n", "advance trunk");
+  git(root, "merge", "--no-ff", "--no-edit", headSha);
+  const candidateSha = git(root, "rev-parse", "HEAD");
+  return { root, eventBaseSha, candidateBaseSha, headSha, candidateSha };
+}
+
 describe("immutable CI verification identity", () => {
   afterEach(() => {
     for (const repository of repositories.splice(0)) {
@@ -75,6 +97,44 @@ describe("immutable CI verification identity", () => {
         checkoutRef: "HEAD",
       }),
     ).toEqual(identity);
+  });
+
+  it("binds to an immutable merge candidate whose base advanced after the event", () => {
+    const { root, eventBaseSha, candidateBaseSha, headSha, candidateSha } =
+      createPullRequestCandidateAfterBaseAdvance();
+
+    expect(
+      resolveVerificationIdentity({
+        rootDir: root,
+        eventName: "pull_request",
+        eventBaseSha,
+        eventHeadSha: headSha,
+        candidateRef: candidateSha,
+      }),
+    ).toEqual({
+      schemaVersion: "croco.ci-verification-identity/v1",
+      eventName: "pull_request",
+      baseSha: candidateBaseSha,
+      headSha,
+      candidateSha,
+    });
+  });
+
+  it("rejects a candidate base outside the event base history", () => {
+    const { root, baseSha, headSha, candidateSha } = createPullRequestCandidate();
+    git(root, "switch", "--detach", baseSha);
+    const divergentBaseSha = commit(root, "divergent.txt", "divergent\n", "divergent");
+    git(root, "switch", "--detach", candidateSha);
+
+    expect(() =>
+      resolveVerificationIdentity({
+        rootDir: root,
+        eventName: "pull_request",
+        eventBaseSha: divergentBaseSha,
+        eventHeadSha: headSha,
+        candidateRef: candidateSha,
+      }),
+    ).toThrow(expect.objectContaining({ code: "VERIFICATION_EVENT_BASE_NOT_ANCESTOR" }));
   });
 
   it("rejects a merge candidate whose parents do not match the event identity", () => {

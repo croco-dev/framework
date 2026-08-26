@@ -19246,6 +19246,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "OnboardingStateSnapshotUnsupportedProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/OnboardingProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "OnboardingStepCompletionConflictProblem",
               "exportKind": "named",
               "source": "./libs/problems/OnboardingProblems",

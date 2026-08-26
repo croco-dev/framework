@@ -1468,6 +1468,7 @@ const WORKSPACE_ARTIFACT_CONCURRENCY_GROUP = new Set([
 const PACKAGE_ENTRYPOINT_CONCURRENCY_GROUP = new Set([
   "package-entrypoints-smoke",
   "integration-test-lane",
+  "published-test-lane",
 ]);
 
 function withSchedulingContract(command: EvidenceCommand): EvidenceCommand {

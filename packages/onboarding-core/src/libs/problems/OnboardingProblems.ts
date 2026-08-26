@@ -70,3 +70,19 @@ export class OnboardingStepCompletionConflictProblem extends Problem {
     );
   }
 }
+
+/**
+ * 온보딩 상태 메타데이터를 독립적인 저장소 스냅샷으로 복사할 수 없을 때 발생하는 Problem입니다.
+ */
+export class OnboardingStateSnapshotUnsupportedProblem extends Problem {
+  readonly code = "onboarding/state-snapshot-unsupported";
+  readonly category = ProblemCategory.ValidationError;
+  constructor(cause?: Error) {
+    super(
+      undefined,
+      undefined,
+      "Onboarding state metadata must contain independently cloneable values and cannot contain shared memory",
+      cause ? { cause } : undefined,
+    );
+  }
+}
