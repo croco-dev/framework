@@ -436,6 +436,113 @@ describe("workflow-core", () => {
     ).rejects.toThrow("typed workflow reference does not match the registered definition");
   });
 
+  it("validates the typed task contract before resuming persisted step results", async () => {
+    type BillingPayload = { readonly subscriptionId: string };
+    let syncAttempts = 0;
+
+    class RetryableTypedSyncProblem extends Problem {
+      readonly retryable = true;
+
+      constructor() {
+        super(
+          "workflow-core/test-retryable-typed-sync",
+          ProblemCategory.InternalServerError,
+          "typed sync retryable outage",
+        );
+      }
+    }
+
+    @Component()
+    class TypedRetryTasks {
+      @Task({ name: "billing.typed-retry-fetch" })
+      fetch(payload: BillingPayload): { readonly subscriptionId: string; readonly plan: string } {
+        return { subscriptionId: payload.subscriptionId, plan: "pro" };
+      }
+
+      @Task({ name: "billing.typed-retry-sync", maxAttempts: 2 })
+      sync(payload: { readonly subscriptionId: string; readonly plan: string }): {
+        readonly synchronized: string;
+      } {
+        syncAttempts += 1;
+        if (syncAttempts === 1) {
+          throw new RetryableTypedSyncProblem();
+        }
+        return { synchronized: payload.subscriptionId };
+      }
+    }
+
+    const fetchTask = taskRef(TypedRetryTasks, "fetch", "billing.typed-retry-fetch");
+    const syncTask = taskRef(TypedRetryTasks, "sync", "billing.typed-retry-sync");
+    const definition = defineWorkflow<BillingPayload>({
+      name: "billing-typed-retry",
+      maxAttempts: 2,
+      idempotencyKey: ({ payload }) => `billing-typed-retry:${payload.subscriptionId}`,
+    })
+      .step(fetchTask)
+      .step(syncTask, ({ previousResults }) => previousResults[0].result)
+      .build();
+
+    @Component()
+    class TypedRetryWorkflows {
+      @Workflow(definition)
+      synchronize(): void {}
+    }
+
+    Container.set(TypedRetryTasks, new TypedRetryTasks());
+    Container.set(TypedRetryWorkflows, new TypedRetryWorkflows());
+    const runner = new WorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+
+    await expect(runner.execute(definition, { subscriptionId: "sub_123" })).rejects.toThrow(
+      "typed sync retryable outage",
+    );
+
+    const originalFetch = TypedRetryTasks.prototype.fetch;
+    Object.defineProperty(TypedRetryTasks.prototype, "fetch", {
+      configurable: true,
+      value: (payload: BillingPayload) => ({
+        subscriptionId: payload.subscriptionId,
+        tier: "enterprise",
+      }),
+      writable: true,
+    });
+
+    try {
+      await expect(runner.execute(definition, { subscriptionId: "sub_123" })).rejects.toThrow(
+        "has a different typed workflow contract",
+      );
+      expect(syncAttempts).toBe(1);
+    } finally {
+      Object.defineProperty(TypedRetryTasks.prototype, "fetch", {
+        configurable: true,
+        value: originalFetch,
+        writable: true,
+      });
+    }
+
+    const retried = await runner.execute(definition, { subscriptionId: "sub_123" });
+    const [workflowExecution] = await manager.list({ type: "workflow" });
+
+    expect(retried).toEqual(
+      expect.objectContaining({
+        executionId: workflowExecution.id,
+        reused: false,
+        steps: [
+          expect.objectContaining({ result: { subscriptionId: "sub_123", plan: "pro" } }),
+          expect.objectContaining({ result: { synchronized: "sub_123" } }),
+        ],
+      }),
+    );
+    expect(workflowExecution).toEqual(
+      expect.objectContaining({
+        status: "completed",
+        attempts: 2,
+        metadata: expect.objectContaining({
+          workflowContractFingerprint: expect.stringMatching(/^workflow-contract:v1:[a-f0-9]{64}$/),
+        }),
+      }),
+    );
+  });
+
   it("rejects typed task references that do not match the registered handler", () => {
     type BillingPayload = { readonly subscriptionId: string };
 

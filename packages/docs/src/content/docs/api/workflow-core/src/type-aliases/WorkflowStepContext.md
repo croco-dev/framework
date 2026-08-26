@@ -5,19 +5,29 @@ prev: false
 title: "WorkflowStepContext"
 ---
 
-> **WorkflowStepContext** = `object`
+> **WorkflowStepContext**\<`TPayload`, `TPreviousResults`\> = `object`
+
+## Type Parameters
+
+### TPayload
+
+`TPayload` = `unknown`
+
+### TPreviousResults
+
+`TPreviousResults` _extends_ readonly [`WorkflowStepResult`](/api/workflow-core/src/type-aliases/workflowstepresult/)[] = readonly [`WorkflowStepResult`](/api/workflow-core/src/type-aliases/workflowstepresult/)[]
 
 ## Properties
 
 ### payload
 
-> `readonly` **payload**: `unknown`
+> `readonly` **payload**: `TPayload`
 
 ---
 
 ### previousResults
 
-> `readonly` **previousResults**: readonly [`WorkflowStepResult`](/api/workflow-core/src/type-aliases/workflowstepresult/)[]
+> `readonly` **previousResults**: `TPreviousResults`
 
 ---
 

@@ -93,7 +93,10 @@ await runner.execute("billing-webhook", { subscriptionId: "sub_123" });
 
 Retryable workflow failures use the parent execution's `maxAttempts`. If a retryable failure leaves an
 idempotent workflow in `retrying`, calling `execute()` again with the same idempotency key resumes the
-same parent execution for the next attempt instead of returning it as a reused execution.
+same parent execution for the next attempt instead of returning it as a reused execution. Typed workflows
+persist a fingerprint of their workflow, resolver, and registered task-handler contracts. A retry resumes
+only when that fingerprint still matches, so persisted step results cannot cross a deployment that changed
+the typed contract. Legacy string workflows retain their existing retry behavior.
 
 ## Operations
 
