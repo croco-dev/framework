@@ -90,9 +90,39 @@ if (!drift.ok) {
 }
 ```
 
-Generated clients accept an optional `RpcClientRequestOptions` argument. Browser apps can pass a
-provider-neutral telemetry bridge from `@croco/telemetry-api` to attach correlation headers and
-record request lifecycle events without replacing `fetch`.
+Every generated domain exports a client factory for instance-scoped transport policy. `baseUrl`
+uses standard URL resolution, `fetch` replaces the global implementation for every domain method,
+`headers` supplies shared headers, and `request` supplies default `RequestInit` fields such as
+credentials or cache policy. The existing static client export remains available and behaves like
+`createUserClient()` with no configuration.
+
+```typescript
+import { createUserClient } from "./generated/rpc";
+
+const userClient = createUserClient({
+  baseUrl: "https://api.example.com",
+  fetch: authenticatedFetch,
+  headers: { "x-client-version": "web-1" },
+  request: { credentials: "include" },
+});
+
+await userClient.getUser(
+  { path: { id: "user-1" } },
+  {
+    headers: { "x-request-id": "request-1" },
+    request: { cache: "no-store" },
+    signal,
+  },
+);
+```
+
+Request initialization applies client defaults first and per-request overrides second while route
+method and body fields remain generator-owned. Headers merge case-insensitively in this order:
+client defaults, generated route headers, telemetry headers, then explicit per-request headers.
+
+Generated clients also accept telemetry defaults in the factory or an optional
+`RpcClientRequestOptions` argument per call. Browser apps can pass a provider-neutral telemetry
+bridge from `@croco/telemetry-api` to attach correlation headers and record request lifecycle events.
 
 ```typescript
 import { createFrontendTelemetryBridge } from "@croco/telemetry-api";
@@ -132,6 +162,17 @@ Generated React Query hooks and mutation factories expose the same path through 
 ```typescript
 useGetUser({ path: { id: "user-1" } }, { rpc: { telemetry } });
 useCreateUser({ rpc: { telemetry } });
+```
+
+React Query option factories can bind to a configured client instance while the existing static
+factories continue to use the generated static client:
+
+```typescript
+import { createUserClient, userRpc } from "./generated/rpc";
+
+const userClient = createUserClient({ baseUrl: "https://api.example.com" });
+const userQueries = userRpc.createUserQueries(userClient);
+const userMutations = userRpc.createUserMutations(userClient);
 ```
 
 ## Verification

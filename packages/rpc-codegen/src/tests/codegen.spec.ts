@@ -561,13 +561,14 @@ describe("generateClientFiles", () => {
     ]);
     const content = fs.readFileSync(files[0], "utf-8");
     const rpcContent = fs.readFileSync(path.join(TEMP_DIR, "rpc.ts"), "utf-8");
-    expect(content).toContain("export const userClient = {");
+    expect(content).toContain("export function createUserClient(config: RpcClientConfig = {})");
+    expect(content).toContain("export const userClient = createUserClient();");
     expect(content).toContain("export const userContractRoutes = [");
     expect(content).toContain(
       "{ routeId: 'UserController.list', operationId: 'UserController_list', methodName: 'list', method: 'GET', path: '/users' }",
     );
     expect(content).toContain(
-      "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, readOptionalJsonResponse, readOptionalJsonResult, type RpcClientRequestOptions, type RpcClientResult, type RpcDeclaredProblem, type RpcProblemDetailsFor } from './rpc';",
+      "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, readOptionalJsonResponse, readOptionalJsonResult, type RpcClientConfig, type RpcClientRequestOptions, type RpcClientResult, type RpcDeclaredProblem, type RpcProblemDetailsFor } from './rpc';",
     );
     expect(rpcContent).toContain("export class RpcClientProblemError extends Error");
     expect(rpcContent).toContain("export class RpcClientResponseError extends Error");
@@ -577,7 +578,7 @@ describe("generateClientFiles", () => {
       "list: (options?: RpcClientRequestOptions): Promise<unknown | undefined> => {",
     );
     expect(content).toContain(
-      "const request = createRpcClientRequest(userContractRoutes[0], 'query', '/users', { method: 'GET' }, options);",
+      "const request = createRpcClientRequest(userContractRoutes[0], 'query', '/users', { method: 'GET' }, options, config);",
     );
     expect(content).toContain(
       "readOptionalJsonResult<ListProblem>(response, listProblemDeclarations, request.telemetry)",
@@ -917,7 +918,7 @@ describe("generateClientFiles", () => {
     expect(rpcContent).not.toContain("export class RpcClientProblemError extends Error");
     expect(rpcContent).not.toContain("function isRpcProblemDetails");
     expect(content).toContain(
-      "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, handleJsonResponse, handleJsonResult, toRpcFormProblem, serializeRpcQueryKeyInput, type RpcClientRequestOptions, type RpcClientResult, type RpcDeclaredProblem, type RpcDomainProblem, type RpcFormFieldProblem, type RpcFormGlobalProblem, type RpcFormModel, type RpcProblemDetailsFor, type RpcValidationProblem } from './rpc';",
+      "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, handleJsonResponse, handleJsonResult, toRpcFormProblem, serializeRpcQueryKeyInput, type RpcClientConfig, type RpcClientRequestOptions, type RpcClientResult, type RpcDeclaredProblem, type RpcDomainProblem, type RpcFormFieldProblem, type RpcFormGlobalProblem, type RpcFormModel, type RpcProblemDetailsFor, type RpcValidationProblem } from './rpc';",
     );
     expect(content).toContain("export type CreateUserResult = RpcClientResult");
     assertGeneratedPackageTypechecks(["index.ts", "rpc.ts", "user.ts"]);
@@ -1147,7 +1148,7 @@ describe("generateClientFiles", () => {
       "create: (input: CreateInput, options?: RpcClientRequestOptions): Promise<unknown | undefined> =>",
     );
     expect(content).toContain(
-      "const request = createRpcClientRequest(userContractRoutes[0], 'mutation', '/users', { method: 'POST', body: JSON.stringify(input), headers: { 'Content-Type': 'application/json' } }, options);",
+      "const request = createRpcClientRequest(userContractRoutes[0], 'mutation', '/users', { method: 'POST', body: JSON.stringify(input), headers: { 'Content-Type': 'application/json' } }, options, config);",
     );
   });
 
@@ -1236,7 +1237,7 @@ describe("generateClientFiles", () => {
     expect(fs.existsSync(path.join(TEMP_DIR, "user.ts"))).toBe(true);
     expect(fs.existsSync(path.join(TEMP_DIR, "order.ts"))).toBe(true);
     expect(fs.readFileSync(path.join(TEMP_DIR, "index.ts"), "utf-8")).toBe(
-      "export * from './rpc';\nexport { orderClient, orderContractRoutes, orderKeys } from './order';\nexport { userClient, userContractRoutes, userKeys } from './user';\nexport * as orderRpc from './order';\nexport * as userRpc from './user';\n",
+      "export * from './rpc';\nexport { createOrderClient, orderClient, orderContractRoutes, orderKeys } from './order';\nexport { createUserClient, userClient, userContractRoutes, userKeys } from './user';\nexport type { OrderClient } from './order';\nexport type { UserClient } from './user';\nexport * as orderRpc from './order';\nexport * as userRpc from './user';\n",
     );
   });
 
@@ -1384,13 +1385,17 @@ export type CrocoManifestBundleSource = typeof crocoManifestBundleSource;
     const content = fs.readFileSync(files[0], "utf-8");
     expect(content).toContain("import { useMutation } from '@tanstack/react-query';");
     expect(content).toContain("import type { UseMutationOptions } from '@tanstack/react-query';");
-    expect(content).toContain("export const userMutations = {");
+    expect(content).toContain(
+      "export function createUserMutations(client: UserClient = userClient)",
+    );
     expect(content).toContain(
       "create: (rpc?: RpcClientRequestOptions): CreateMutationFactory => ({",
     );
     expect(content).toContain(
       "createResult: (rpc?: RpcClientRequestOptions): CreateResultMutationFactory => ({",
     );
+    expect(content).toContain("export const userMutations = createUserMutations();");
+    expect(content).toContain("mutationFn: (input: CreateInput) => client.create(input, rpc)");
     expect(content).toContain("export function useCreate<TContext = unknown>");
     expect(content).toContain("export function useCreateResult<TContext = unknown>");
     expect(content).toContain(
@@ -1445,8 +1450,9 @@ export type CrocoManifestBundleSource = typeof crocoManifestBundleSource;
         "create: { route: userContractRoutes[1], invalidates: [userKeys.all()] },",
       );
       expect(indexContent).toContain(
-        "export { userClient, userContractRoutes, userKeys, userInvalidationManifest } from './user';",
+        "export { createUserClient, userClient, userContractRoutes, userKeys, userInvalidationManifest } from './user';",
       );
+      expect(indexContent).toContain("export type { UserClient } from './user';");
       assertGeneratedClientTypechecks(`${content}
 const listKey = userKeys.list({ query: { page: '1' } });
 const createInvalidationKey = userInvalidationManifest.create.invalidates[0];
@@ -1988,7 +1994,7 @@ void handleMissingProblemBranch;
 `;
 
       expect(content).toContain(
-        "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, handleJsonResponse, handleJsonResult, serializeRpcQueryKeyInput, type RpcClientRequestOptions, type RpcClientResult, type RpcDeclaredProblem, type RpcProblemDetailsFor } from './rpc';",
+        "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, handleJsonResponse, handleJsonResult, serializeRpcQueryKeyInput, type RpcClientConfig, type RpcClientRequestOptions, type RpcClientResult, type RpcDeclaredProblem, type RpcProblemDetailsFor } from './rpc';",
       );
       expect(content).toContain(
         "export type GetProblem = RpcDeclaredProblem<'USER_NOT_FOUND', 'NotFound', 404> | RpcDeclaredProblem<'USER_FORBIDDEN', 'Forbidden', 403>;",
@@ -2324,7 +2330,7 @@ void handleMissingProblemBranch;
       "const path = `/users/${encodeURIComponent(String(input.path.id))}`;",
     );
     expect(content).toContain(
-      "const request = createRpcClientRequest(userContractRoutes[0], 'query', path, { method: 'GET' }, options);",
+      "const request = createRpcClientRequest(userContractRoutes[0], 'query', path, { method: 'GET' }, options, config);",
     );
     expect(content).toContain("readOptionalJsonResponse(response, request.telemetry)");
   });
@@ -2381,22 +2387,22 @@ void handleMissingProblemBranch;
 
       const content = fs.readFileSync(files[0], "utf-8");
       expect(content).toContain(
-        "createRpcClientRequest(vectorContractRoutes[0], 'query', '/users/o\\'clock', { method: 'GET' }, options);",
+        "createRpcClientRequest(vectorContractRoutes[0], 'query', '/users/o\\'clock', { method: 'GET' }, options, config);",
       );
       expect(content).toContain(
-        "createRpcClientRequest(vectorContractRoutes[1], 'query', '/users/tea\\\\pot', { method: 'GET' }, options);",
+        "createRpcClientRequest(vectorContractRoutes[1], 'query', '/users/tea\\\\pot', { method: 'GET' }, options, config);",
       );
       expect(content).toContain(
-        "createRpcClientRequest(vectorContractRoutes[2], 'query', '/users/tick\\`tock', { method: 'GET' }, options);",
+        "createRpcClientRequest(vectorContractRoutes[2], 'query', '/users/tick\\`tock', { method: 'GET' }, options, config);",
       );
       expect(content).toContain(
-        "createRpcClientRequest(vectorContractRoutes[3], 'query', '/users/\\${literal}', { method: 'GET' }, options);",
+        "createRpcClientRequest(vectorContractRoutes[3], 'query', '/users/\\${literal}', { method: 'GET' }, options, config);",
       );
       expect(content).toContain(
-        "createRpcClientRequest(vectorContractRoutes[4], 'query', '/lines/a\\r\\nb', { method: 'GET' }, options);",
+        "createRpcClientRequest(vectorContractRoutes[4], 'query', '/lines/a\\r\\nb', { method: 'GET' }, options, config);",
       );
       expect(content).toContain(
-        "createRpcClientRequest(vectorContractRoutes[5], 'query', '/lines/se\\u2028p\\u2029arator', { method: 'GET' }, options);",
+        "createRpcClientRequest(vectorContractRoutes[5], 'query', '/lines/se\\u2028p\\u2029arator', { method: 'GET' }, options, config);",
       );
       expect(content).toContain(
         "const path = `/users/o\\'clock/${encodeURIComponent(String(input.path.id))}`;",
@@ -2575,7 +2581,7 @@ void handleMissingProblemBranch;
     expect(content).toContain("const query = serializeQueryParams(input.query);");
     expect(content).toContain("const url = query ? `${path}?${query}` : path;");
     expect(content).toContain(
-      "const request = createRpcClientRequest(userContractRoutes[0], 'query', url, { method: 'GET' }, options);",
+      "const request = createRpcClientRequest(userContractRoutes[0], 'query', url, { method: 'GET' }, options, config);",
     );
     expect(content).toContain("readOptionalJsonResponse(response, request.telemetry)");
   });
@@ -2608,7 +2614,7 @@ void handleMissingProblemBranch;
     expect(content).toContain("serialized[key] = serializedValues.join(', ');");
     expect(content).toContain("const path = '/users';");
     expect(content).toContain(
-      "const request = createRpcClientRequest(userContractRoutes[0], 'query', path, { method: 'GET', headers: serializeHeaders(input.headers) }, options);",
+      "const request = createRpcClientRequest(userContractRoutes[0], 'query', path, { method: 'GET', headers: serializeHeaders(input.headers) }, options, config);",
     );
   });
 
@@ -2638,7 +2644,7 @@ void handleMissingProblemBranch;
       "export type CreateInput = { body: { name: string; }; headers: { 'x-request-id': string; }; };",
     );
     expect(content).toContain(
-      "const request = createRpcClientRequest(userContractRoutes[0], 'mutation', path, { method: 'POST', body: JSON.stringify(input.body), headers: { ...serializeHeaders(input.headers), 'Content-Type': 'application/json' } }, options);",
+      "const request = createRpcClientRequest(userContractRoutes[0], 'mutation', path, { method: 'POST', body: JSON.stringify(input.body), headers: { ...serializeHeaders(input.headers), 'Content-Type': 'application/json' } }, options, config);",
     );
   });
 
@@ -2696,7 +2702,10 @@ void handleMissingProblemBranch;
       expect(content).toContain(
         "import type { UseMutationOptions, UseQueryOptions } from '@tanstack/react-query';",
       );
-      expect(content).toContain("export const userQueries = {");
+      expect(content).toContain(
+        "export function createUserQueries(client: UserClient = userClient)",
+      );
+      expect(content).toContain("export const userQueries = createUserQueries();");
       expect(content).toContain("export type GetQueryKey = ReturnType<typeof userKeys.get>;");
       expect(content).toContain("queryKey: userKeys.get(input, cacheScope),");
       expect(content).toContain(
@@ -2706,9 +2715,12 @@ void handleMissingProblemBranch;
       expect(content).toContain(
         "getResult: (input: GetInput, cacheScope?: unknown, rpc?: RpcClientRequestOptions): GetResultQueryFactory => ({",
       );
-      expect(content).toContain("queryFn: () => userClient.getResult(input, rpc),");
+      expect(content).toContain("queryFn: () => client.getResult(input, rpc),");
       expect(content).toContain("export function useGetResult<TData = GetResult>");
-      expect(content).toContain("export const userMutations = {");
+      expect(content).toContain(
+        "export function createUserMutations(client: UserClient = userClient)",
+      );
+      expect(content).toContain("export const userMutations = createUserMutations();");
       expect(content).toContain(
         "createResult: (rpc?: RpcClientRequestOptions): CreateResultMutationFactory => ({",
       );
@@ -2724,6 +2736,14 @@ const getInput: GetInput = {
   query: { page: '1' },
   headers: { authorization: 'Bearer token' },
 };
+const configuredClient = createUserClient({
+  baseUrl: 'https://api.example.com',
+  fetch: async () => new Response(null, { status: 204 }),
+  headers: { authorization: 'Bearer default' },
+  request: { credentials: 'include' },
+});
+const configuredQueries = createUserQueries(configuredClient);
+const configuredMutations = createUserMutations(configuredClient);
 const getFactory = userQueries.get(getInput, 'tenant:user-1');
 const getKey: GetQueryKey = getFactory.queryKey;
 const getResultFactory = userQueries.getResult(getInput, 'tenant:user-1');
@@ -2765,6 +2785,11 @@ const createFactory = userMutations.create();
 const createPromise: Promise<unknown | undefined> = createFactory.mutationFn(createInput);
 const createResultFactory = userMutations.createResult();
 const createResultPromise: Promise<CreateResult> = createResultFactory.mutationFn(createInput);
+const configuredGetResultFactory: GetResultQueryFactory = configuredQueries.getResult(
+  getInput,
+  'tenant:user-1',
+);
+const configuredCreateResultFactory: CreateResultMutationFactory = configuredMutations.createResult();
 const createHook = useCreate({
   onSuccess: (data, variables) => {
     const response: unknown | undefined = data;
@@ -2789,6 +2814,8 @@ void selectedNameData;
 void resultSelection;
 void createPromise;
 void createResultPromise;
+void configuredGetResultFactory;
+void configuredCreateResultFactory;
 void createHook;
 void createResultHook;
 `);
@@ -2827,7 +2854,7 @@ void createResultHook;
         "export type ListInput = { query: { active?: boolean | undefined; deletedAt: string | null; page: number; search?: string | undefined; tags: string[]; }; };",
       );
       expect(content).toContain(
-        "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, readOptionalJsonResponse, readOptionalJsonResult, serializeRpcQueryKeyInput, type RpcClientRequestOptions, type RpcClientResult, type RpcDeclaredProblem, type RpcProblemDetailsFor } from './rpc';",
+        "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, readOptionalJsonResponse, readOptionalJsonResult, serializeRpcQueryKeyInput, type RpcClientConfig, type RpcClientRequestOptions, type RpcClientResult, type RpcDeclaredProblem, type RpcProblemDetailsFor } from './rpc';",
       );
       assertGeneratedClientTypechecks(`${content}
 const result: Promise<unknown | undefined> = userClient.list({
@@ -2956,7 +2983,7 @@ void result;
 
       const content = fs.readFileSync(files[0], "utf-8");
       expect(content).toContain(
-        "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, handleJsonResponse, handleJsonResult, toRpcFormProblem, serializeRpcQueryKeyInput, type RpcClientRequestOptions, type RpcClientResult, type RpcDeclaredProblem, type RpcDomainProblem, type RpcFormFieldProblem, type RpcFormGlobalProblem, type RpcFormModel, type RpcProblemDetailsFor, type RpcValidationProblem } from './rpc';",
+        "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, handleJsonResponse, handleJsonResult, toRpcFormProblem, serializeRpcQueryKeyInput, type RpcClientConfig, type RpcClientRequestOptions, type RpcClientResult, type RpcDeclaredProblem, type RpcDomainProblem, type RpcFormFieldProblem, type RpcFormGlobalProblem, type RpcFormModel, type RpcProblemDetailsFor, type RpcValidationProblem } from './rpc';",
       );
       expect(content).toContain(
         "export type CreateFormFieldName = 'name' | 'email' | 'role' | 'receiveUpdates' | 'retryCount';",
@@ -3259,7 +3286,7 @@ void updateResult;
     expect(content).toContain("const query = serializeQueryParams(input.query);");
     expect(content).toContain("const url = query ? `${path}?${query}` : path;");
     expect(content).toContain(
-      "const request = createRpcClientRequest(userContractRoutes[0], 'mutation', url, { method: 'PATCH', body: JSON.stringify(input.body), headers: { 'Content-Type': 'application/json' } }, options);",
+      "const request = createRpcClientRequest(userContractRoutes[0], 'mutation', url, { method: 'PATCH', body: JSON.stringify(input.body), headers: { 'Content-Type': 'application/json' } }, options, config);",
     );
   });
 });
@@ -3398,7 +3425,7 @@ function loadGeneratedRpcSupport(): {
   };
 }
 
-function loadGeneratedRpcModule(): Record<string, unknown> {
+function loadGeneratedRpcModule(fetchImpl?: GeneratedClientFetch): Record<string, unknown> {
   const rpcSource = fs.readFileSync(path.join(TEMP_DIR, "rpc.ts"), "utf-8");
   const outputText = ts.transpileModule(rpcSource, {
     compilerOptions: {
@@ -3408,6 +3435,7 @@ function loadGeneratedRpcModule(): Record<string, unknown> {
   }).outputText;
   const context = {
     exports: {} as Record<string, unknown>,
+    ...(fetchImpl ? { fetch: fetchImpl } : {}),
     require(specifier: string): Record<string, unknown> {
       expect(specifier).toBe("@croco/problems-core");
 
@@ -3423,7 +3451,7 @@ function loadGeneratedRpcModule(): Record<string, unknown> {
 function loadGeneratedUserClientSupport(
   fetchImpl: GeneratedClientFetch,
 ): GeneratedUserClientSupport {
-  const rpcModule = loadGeneratedRpcModule();
+  const rpcModule = loadGeneratedRpcModule(fetchImpl);
   const userSource = fs.readFileSync(path.join(TEMP_DIR, "user.ts"), "utf-8");
   const outputText = ts.transpileModule(userSource, {
     compilerOptions: {

@@ -557,6 +557,8 @@ function groupRoutesByDomain(routes: readonly GeneratedClientRoute[]): DomainRou
 
 function generateDomainClient(domainRoutes: DomainRoutes, options: GenerateClientOptions): string {
   const clientName = `${domainRoutes.domain}Client`;
+  const clientTypeName = `${toPascalCase(domainRoutes.domain)}Client`;
+  const clientFactoryName = `create${clientTypeName}`;
   const inputTypes = domainRoutes.routes.map(generateInputType).filter((type) => type.length > 0);
   const outputTypes = domainRoutes.routes.map(generateOutputType).filter((type) => type.length > 0);
   const problemTypes = domainRoutes.routes.map(generateProblemTypes);
@@ -616,6 +618,12 @@ function generateDomainClient(domainRoutes: DomainRoutes, options: GenerateClien
     : "";
   const clientMethods = domainRoutes.routes
     .map((route, index) => generateClientMethod(route, domainRoutes.domain, index))
+    .map((method) =>
+      method
+        .split("\n")
+        .map((line) => `  ${line}`)
+        .join("\n"),
+    )
     .join("\n");
   const imports = options.reactQuery ? generateReactQueryImports(domainRoutes) : "";
   const hooks = options.reactQuery ? `\n${generateReactQueryHooks(domainRoutes, clientName)}` : "";
@@ -630,9 +638,15 @@ ${routeMetadata}
 ${queryKeys}
 ${invalidationManifest}
 ${queryHelpers}${headerHelpers}
-export const ${clientName} = {
+export function ${clientFactoryName}(config: RpcClientConfig = {}) {
+  return {
 ${clientMethods}
-};
+  };
+}
+
+export type ${clientTypeName} = ReturnType<typeof ${clientFactoryName}>;
+
+export const ${clientName} = ${clientFactoryName}();
 ${hooks}`;
 }
 
@@ -790,9 +804,11 @@ function collectGeneratedRpcConsumedFields(): ContractGraphConsumerRouteField[] 
 }
 
 function getGeneratedMethodBlock(content: string, methodName: string): string {
-  const methodMarker = `  ${methodName}:`;
-  const resultMarker = `  ${methodName}Result:`;
-  const clientStart = content.search(/\nexport const [A-Za-z_$][A-Za-z0-9_$]*Client = \{\n/);
+  const methodMarker = `    ${methodName}:`;
+  const resultMarker = `    ${methodName}Result:`;
+  const clientStart = content.search(
+    /\nexport function create[A-Za-z_$][A-Za-z0-9_$]*Client\(config: RpcClientConfig = \{\}\) \{\n/,
+  );
   const searchStart = clientStart === -1 ? 0 : clientStart;
   const methodStart = content.indexOf(methodMarker, searchStart);
   const resultStart = content.indexOf(resultMarker, methodStart);
@@ -803,7 +819,7 @@ function getGeneratedMethodBlock(content: string, methodName: string): string {
 
   const nextRouteStart = content
     .slice(resultStart + resultMarker.length)
-    .search(/\n  [A-Za-z_$][A-Za-z0-9_$]*:/);
+    .search(/\n    [A-Za-z_$][A-Za-z0-9_$]*:/);
 
   if (nextRouteStart === -1) {
     return content.slice(methodStart);
@@ -890,7 +906,9 @@ function generateClientIndex(
   options: GenerateClientOptions = {},
 ): string {
   const clientExports = domainRoutes.map((domainRoute) => {
+    const clientTypeName = `${toPascalCase(domainRoute.domain)}Client`;
     const exports = [
+      `create${clientTypeName}`,
       `${domainRoute.domain}Client`,
       `${domainRoute.domain}ContractRoutes`,
       getQueryKeysName(domainRoute),
@@ -901,6 +919,10 @@ function generateClientIndex(
 
     return `export { ${exports.join(", ")} } from './${domainRoute.domain}';`;
   });
+  const clientTypeExports = domainRoutes.map(
+    (domainRoute) =>
+      `export type { ${toPascalCase(domainRoute.domain)}Client } from './${domainRoute.domain}';`,
+  );
   const namespaceExports = domainRoutes.map(
     (domainRoute) => `export * as ${domainRoute.domain}Rpc from './${domainRoute.domain}';`,
   );
@@ -909,7 +931,12 @@ function generateClientIndex(
     : null;
 
   return `export * from './rpc';
-${[...clientExports, ...namespaceExports, ...(manifestSourceExport ? [manifestSourceExport] : [])].join("\n")}
+${[
+  ...clientExports,
+  ...clientTypeExports,
+  ...namespaceExports,
+  ...(manifestSourceExport ? [manifestSourceExport] : []),
+].join("\n")}
 `;
 }
 
@@ -956,7 +983,12 @@ function getResponseHelperImports(options: ResponseHelperOptions): string {
     helpers.push("serializeRpcQueryKeyInput");
   }
 
-  helpers.push("type RpcClientRequestOptions", "type RpcClientResult", "type RpcDeclaredProblem");
+  helpers.push(
+    "type RpcClientConfig",
+    "type RpcClientRequestOptions",
+    "type RpcClientResult",
+    "type RpcDeclaredProblem",
+  );
 
   if (options.hasFormRoutes) {
     helpers.push(
@@ -1866,13 +1898,27 @@ export type RpcTelemetryBridge = {
   readonly record?: (event: RpcTelemetryEvent) => void;
 };
 
+export type RpcClientFetch = (url: string, init: RequestInit) => Promise<Response>;
+
+export type RpcClientRequestDefaults = Omit<
+  RequestInit,
+  'body' | 'headers' | 'method' | 'signal'
+>;
+
 export type RpcClientRequestOptions = {
   readonly telemetry?: RpcTelemetryBridge;
   readonly interactionId?: string;
   readonly correlationId?: string;
   readonly traceparent?: string;
   readonly attempt?: number;
+  readonly headers?: HeadersInit;
+  readonly request?: RpcClientRequestDefaults;
   readonly signal?: AbortSignal;
+};
+
+export type RpcClientConfig = RpcClientRequestOptions & {
+  readonly baseUrl?: string;
+  readonly fetch?: RpcClientFetch;
 };
 
 export type RpcTelemetryRequestState = RpcTelemetryRequestContext & {
@@ -1883,6 +1929,7 @@ export type RpcTelemetryRequestState = RpcTelemetryRequestContext & {
 export type RpcClientRequest = {
   readonly url: string;
   readonly init: RequestInit;
+  readonly fetch: RpcClientFetch;
   readonly telemetry?: RpcTelemetryRequestState;
 };
 
@@ -1892,29 +1939,39 @@ export function createRpcClientRequest(
   url: string,
   init: RequestInit,
   options: RpcClientRequestOptions = {},
+  config: RpcClientConfig = {},
 ): RpcClientRequest {
-  const context = createRpcTelemetryRequestContext(route, routeKind, options);
-  const telemetryHeaders = options.telemetry?.createHeaders?.(context);
-  const headers = mergeRpcHeaders(init.headers, telemetryHeaders);
+  const effectiveOptions: RpcClientRequestOptions = { ...config, ...options };
+  const context = createRpcTelemetryRequestContext(route, routeKind, effectiveOptions);
+  const telemetryHeaders = effectiveOptions.telemetry?.createHeaders?.(context);
+  const headers = mergeRpcHeaders(config.headers, init.headers, telemetryHeaders, options.headers);
   const requestInit: RequestInit = {
+    ...config.request,
+    ...options.request,
     ...init,
     ...(headers ? { headers } : {}),
-    ...(options.signal ? { signal: options.signal } : {}),
+    ...(effectiveOptions.signal ? { signal: effectiveOptions.signal } : {}),
+  };
+  const fetchImpl = config.fetch ?? fetch;
+  const request = {
+    url: config.baseUrl === undefined ? url : new URL(url, config.baseUrl).toString(),
+    init: requestInit,
+    fetch: (requestUrl: string, fetchInit: RequestInit) => fetchImpl(requestUrl, fetchInit),
   };
 
-  if (!options.telemetry) {
-    return { url, init: requestInit };
+  if (!effectiveOptions.telemetry) {
+    return request;
   }
 
   const telemetry: RpcTelemetryRequestState = {
     ...context,
-    telemetry: options.telemetry,
+    telemetry: effectiveOptions.telemetry,
     startedAt: nowRpcTelemetry(),
   };
 
   recordRpcTelemetryEvent(telemetry, 'rpc.request.started');
 
-  if ((options.attempt ?? 1) > 1) {
+  if ((effectiveOptions.attempt ?? 1) > 1) {
     recordRpcTelemetryEvent(telemetry, 'rpc.request.retry');
   }
 
@@ -1922,7 +1979,7 @@ export function createRpcClientRequest(
     recordRpcTelemetryEvent(telemetry, 'rpc.mutation.started');
   }
 
-  return { url, init: requestInit, telemetry };
+  return { ...request, telemetry };
 }
 
 export function handleRpcRequestError(
@@ -1987,6 +2044,19 @@ function mergeRpcHeaders(
   ...sources: readonly (HeadersInit | Record<string, string> | undefined)[]
 ): Record<string, string> | undefined {
   const headers: Record<string, string> = {};
+  const headerNames = new Map<string, string>();
+
+  const setHeader = (key: string, value: string): void => {
+    const normalizedKey = key.toLowerCase();
+    const previousKey = headerNames.get(normalizedKey);
+
+    if (previousKey && previousKey !== key) {
+      delete headers[previousKey];
+    }
+
+    headers[key] = value;
+    headerNames.set(normalizedKey, key);
+  };
 
   for (const source of sources) {
     if (!source) {
@@ -1995,20 +2065,31 @@ function mergeRpcHeaders(
 
     if (typeof Headers !== 'undefined' && source instanceof Headers) {
       source.forEach((value, key) => {
-        headers[key] = value;
+        setHeader(key, value);
       });
       continue;
     }
 
     if (Array.isArray(source)) {
+      const tupleHeaders = new Map<string, { readonly name: string; readonly value: string }>();
+
       for (const [key, value] of source) {
-        headers[key] = value;
+        const normalizedKey = key.toLowerCase();
+        const previous = tupleHeaders.get(normalizedKey);
+        tupleHeaders.set(normalizedKey, {
+          name: key,
+          value: previous ? previous.value + ', ' + value : value,
+        });
+      }
+
+      for (const { name, value } of tupleHeaders.values()) {
+        setHeader(name, value);
       }
       continue;
     }
 
     for (const [key, value] of Object.entries(source)) {
-      headers[key] = String(value);
+      setHeader(key, String(value));
     }
   }
 
@@ -2778,23 +2859,23 @@ function generateClientMethod(
   if (hasStructuredInput(route)) {
     return `  ${route.methodName}: (${requestOptions}): ${returnType} => {
     const path = ${getPathExpression(route)};
-${getQueryStatements(route)}    const request = createRpcClientRequest(${routeMetadata}, '${routeKind}', ${getUrlExpression(route)}, ${fetchOptions}, options);
-    return fetch(request.url, request.init).catch((error) => handleRpcRequestError(error, request.telemetry)).then((response) => ${response});
+${getQueryStatements(route)}    const request = createRpcClientRequest(${routeMetadata}, '${routeKind}', ${getUrlExpression(route)}, ${fetchOptions}, options, config);
+    return request.fetch(request.url, request.init).catch((error) => handleRpcRequestError(error, request.telemetry)).then((response) => ${response});
   },
   ${getResultMethodName(route)}: (${requestOptions}): ${resultReturnType} => {
     const path = ${getPathExpression(route)};
-${getQueryStatements(route)}    const request = createRpcClientRequest(${routeMetadata}, '${routeKind}', ${getUrlExpression(route)}, ${fetchOptions}, options);
-    return fetch(request.url, request.init).then((response) => ${resultResponse}, (error) => handleRpcRequestResultError(error, request.telemetry));
+${getQueryStatements(route)}    const request = createRpcClientRequest(${routeMetadata}, '${routeKind}', ${getUrlExpression(route)}, ${fetchOptions}, options, config);
+    return request.fetch(request.url, request.init).then((response) => ${resultResponse}, (error) => handleRpcRequestResultError(error, request.telemetry));
   },`;
   }
 
   return `  ${route.methodName}: (${requestOptions}): ${returnType} => {
-    const request = createRpcClientRequest(${routeMetadata}, '${routeKind}', ${getPathExpression(route)}, ${fetchOptions}, options);
-    return fetch(request.url, request.init).catch((error) => handleRpcRequestError(error, request.telemetry)).then((response) => ${response});
+    const request = createRpcClientRequest(${routeMetadata}, '${routeKind}', ${getPathExpression(route)}, ${fetchOptions}, options, config);
+    return request.fetch(request.url, request.init).catch((error) => handleRpcRequestError(error, request.telemetry)).then((response) => ${response});
   },
   ${getResultMethodName(route)}: (${requestOptions}): ${resultReturnType} => {
-    const request = createRpcClientRequest(${routeMetadata}, '${routeKind}', ${getPathExpression(route)}, ${fetchOptions}, options);
-    return fetch(request.url, request.init).then((response) => ${resultResponse}, (error) => handleRpcRequestResultError(error, request.telemetry));
+    const request = createRpcClientRequest(${routeMetadata}, '${routeKind}', ${getPathExpression(route)}, ${fetchOptions}, options, config);
+    return request.fetch(request.url, request.init).then((response) => ${resultResponse}, (error) => handleRpcRequestResultError(error, request.telemetry));
   },`;
 }
 
@@ -2948,11 +3029,17 @@ function generateReactQueryFactories(
     return "";
   }
 
-  const entries = routes.map((route) => generateReactQueryFactoryEntry(domain, route, clientName));
+  const entries = routes.map((route) => generateReactQueryFactoryEntry(domain, route, "client"));
+  const clientTypeName = `${toPascalCase(domain)}Client`;
+  const factoryName = `create${toPascalCase(domain)}Queries`;
 
-  return `export const ${domain}Queries = {
+  return `export function ${factoryName}(client: ${clientTypeName} = ${clientName}) {
+  return {
 ${entries.join("\n")}
-};`;
+  };
+}
+
+export const ${domain}Queries = ${factoryName}();`;
 }
 
 function generateReactQueryFactoryEntry(
@@ -2983,11 +3070,17 @@ function generateReactMutationFactories(
     return "";
   }
 
-  const entries = routes.map((route) => generateReactMutationFactoryEntry(route, clientName));
+  const entries = routes.map((route) => generateReactMutationFactoryEntry(route, "client"));
+  const clientTypeName = `${toPascalCase(domain)}Client`;
+  const factoryName = `create${toPascalCase(domain)}Mutations`;
 
-  return `export const ${domain}Mutations = {
+  return `export function ${factoryName}(client: ${clientTypeName} = ${clientName}) {
+  return {
 ${entries.join("\n")}
-};`;
+  };
+}
+
+export const ${domain}Mutations = ${factoryName}();`;
 }
 
 function generateReactMutationFactoryEntry(
@@ -4045,7 +4138,9 @@ function parseLegacyGeneratedIndex(content: string): readonly string[] | null {
 
   for (const line of lines.slice(1)) {
     const match =
-      /^export (?:\{[^}]+\}|\* as [A-Za-z_$][\w$]*) from '\.\/([A-Za-z0-9_$-]+)';$/.exec(line);
+      /^export (?:type )?(?:\{[^}]+\}|\* as [A-Za-z_$][\w$]*) from '\.\/([A-Za-z0-9_$-]+)';$/.exec(
+        line,
+      );
 
     if (!match?.[1]) {
       return null;
@@ -4068,7 +4163,11 @@ function isLegacyGeneratedModule(fileName: string, content: string): boolean {
   return (
     content.includes("from './rpc';") &&
     /export const [A-Za-z_$][\w$]*ContractRoutes = \[/.test(content) &&
-    /export const [A-Za-z_$][\w$]*Client = \{/.test(content)
+    (/export const [A-Za-z_$][\w$]*Client = \{/.test(content) ||
+      (/export function create[A-Za-z_$][\w$]*Client\(config: RpcClientConfig = \{\}\)/.test(
+        content,
+      ) &&
+        /export const [A-Za-z_$][\w$]*Client = create[A-Za-z_$][\w$]*Client\(\);/.test(content)))
   );
 }
 
