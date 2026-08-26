@@ -50,6 +50,7 @@ type LineDetector = {
 };
 
 type SyntaxDetectorContext = {
+  readonly checker?: ts.TypeChecker;
   readonly rule: StaticMisuseRule;
   readonly rootDir: string;
   readonly relativeFile: string;
@@ -263,11 +264,32 @@ const restOverloadedParameterDecoratorRule: StaticMisuseRule = {
   includeFile: isProductionPackageSourceFile,
 };
 
+const restOverloadedContractRouteDecoratorRule: StaticMisuseRule = {
+  id: "rest-overloaded-contract-route-decorator-boundary",
+  code: "CROCO_STATIC_REST_OVERLOADED_CONTRACT_ROUTE_DECORATOR_BOUNDARY",
+  title: "Overloaded REST methods cannot use response-bearing route contracts",
+  targetDir: "packages",
+  description:
+    "TypeScript hides an overloaded method implementation signature from legacy method decorator types. A response-bearing route decorator could therefore validate a public overload instead of the decorated implementation return annotation.",
+  limitation:
+    "This syntax-aware rule is scoped to production packages/*/src files. It follows local and relative contract declarations, aliases, namespace imports, and object spreads. An overloaded method must use a statically provable string route or response-less contract; unresolved non-string contracts require the documented non-overloaded controller adapter policy.",
+  recovery:
+    "Move the response-bearing route contract decorator to a non-overloaded public instance controller method and delegate to the overloaded implementation.",
+  detectors: [],
+  syntaxDetectors: [
+    {
+      detect: detectOverloadedRestContractRouteDecorators,
+    },
+  ],
+  includeFile: isProductionPackageSourceFile,
+};
+
 const STATIC_MISUSE_RULES: readonly StaticMisuseRule[] = [
   repositoryBoundaryRule,
   restGeneratedContractRule,
   restDecoratorContractGraphRule,
   restOverloadedParameterDecoratorRule,
+  restOverloadedContractRouteDecoratorRule,
   rawErrorRuntimeBoundaryRule,
   emptyCatchRuntimeBoundaryRule,
 ];
@@ -338,14 +360,14 @@ function detectOverloadedRestParameterDecorators({
             (member): member is ts.MethodDeclaration =>
               ts.isMethodDeclaration(member) && member.body === undefined,
           )
-          .map((member) => member.name.getText(sourceFile)),
+          .map((member) => getStaticMemberName(member.name, sourceFile)),
       );
 
       for (const member of node.members) {
         if (
           !ts.isMethodDeclaration(member) ||
           member.body === undefined ||
-          !overloadNames.has(member.name.getText(sourceFile))
+          !overloadNames.has(getStaticMemberName(member.name, sourceFile))
         ) {
           continue;
         }
@@ -381,6 +403,391 @@ function detectOverloadedRestParameterDecorators({
   visit(sourceFile);
 
   return diagnostics;
+}
+
+function getStaticMemberName(name: ts.PropertyName, sourceFile: ts.SourceFile): string {
+  if (ts.isComputedPropertyName(name)) {
+    const expression = unwrapExpression(name.expression);
+    if (expression && (ts.isStringLiteralLike(expression) || ts.isNumericLiteral(expression))) {
+      return expression.text;
+    }
+  }
+  return ts.isIdentifier(name) || ts.isStringLiteralLike(name) || ts.isNumericLiteral(name)
+    ? name.text
+    : name.getText(sourceFile);
+}
+
+function detectOverloadedRestContractRouteDecorators({
+  checker,
+  rootDir,
+  rule,
+  sourceFile,
+}: SyntaxDetectorContext): readonly StaticMisuseDiagnostic[] {
+  const diagnostics: StaticMisuseDiagnostic[] = [];
+
+  function addDiagnostic(
+    decorator: ts.Decorator,
+    responsePresence: Exclude<ContractResponsePresence, "absent">,
+  ): void {
+    const start = sourceFile.getLineAndCharacterOfPosition(decorator.getStart(sourceFile));
+    diagnostics.push({
+      action:
+        "Expose a non-overloaded public instance controller method with the response-bearing route contract decorator and delegate to the overloaded method.",
+      code: rule.code,
+      column: start.character + 1,
+      excerpt: (sourceFile.text.split(/\r?\n/)[start.line] ?? "").trim(),
+      file: getRelativeSourceFile(rootDir, sourceFile),
+      line: start.line + 1,
+      message:
+        responsePresence === "present"
+          ? "Overloaded REST method implementations cannot use response-bearing route contracts because TypeScript hides the decorated implementation return annotation."
+          : "Overloaded REST method implementations cannot use an unresolved non-string route contract because its response presence cannot be proven before TypeScript hides the decorated implementation return annotation.",
+      ruleId: rule.id,
+    });
+  }
+
+  function visit(node: ts.Node): void {
+    if (ts.isClassLike(node)) {
+      const overloadNames = new Set(
+        node.members
+          .filter(
+            (member): member is ts.MethodDeclaration =>
+              ts.isMethodDeclaration(member) && member.body === undefined,
+          )
+          .map((member) => getStaticMemberName(member.name, sourceFile)),
+      );
+
+      for (const member of node.members) {
+        if (
+          !ts.isMethodDeclaration(member) ||
+          member.body === undefined ||
+          !overloadNames.has(getStaticMemberName(member.name, sourceFile))
+        ) {
+          continue;
+        }
+
+        const brandedDecoratorPositions = new Set<number>();
+        if (checker) {
+          for (const decorator of ts.getDecorators(member) ?? []) {
+            if (
+              !isContractMethodDecoratorType(
+                checker.getTypeAtLocation(decorator.expression),
+                checker,
+              )
+            ) {
+              continue;
+            }
+            brandedDecoratorPositions.add(decorator.getStart(sourceFile));
+            addDiagnostic(decorator, "present");
+          }
+        }
+        const routeDecorators = getOverloadedRouteDecorators(member, sourceFile, rootDir, checker);
+
+        for (const decorator of routeDecorators) {
+          if (brandedDecoratorPositions.has(decorator.decorator.getStart(sourceFile))) {
+            continue;
+          }
+          if (
+            isDefinitelyLooseRouteCall(decorator.call, decorator.callSourceFile, rootDir, checker)
+          ) {
+            continue;
+          }
+
+          const responsePresence = classifyRouteDecoratorResponsePresence(
+            decorator.call,
+            decorator.callSourceFile,
+            rootDir,
+            checker,
+          );
+          if (responsePresence === "absent") {
+            continue;
+          }
+
+          addDiagnostic(decorator.decorator, responsePresence);
+        }
+      }
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+
+  return diagnostics;
+}
+
+function isContractMethodDecoratorType(
+  type: ts.Type,
+  checker: ts.TypeChecker,
+  seen: Set<ts.Type> = new Set(),
+): boolean {
+  if (seen.has(type)) {
+    return false;
+  }
+  seen.add(type);
+  if (
+    checker
+      .getPropertiesOfType(type)
+      .some((property) => isContractMethodDecoratorMarker(property, checker))
+  ) {
+    return true;
+  }
+  return type.isUnionOrIntersection()
+    ? type.types.some((member) => isContractMethodDecoratorType(member, checker, seen))
+    : false;
+}
+
+function isContractMethodDecoratorMarker(property: ts.Symbol, checker: ts.TypeChecker): boolean {
+  return (property.declarations ?? []).some((declaration) => {
+    if (!ts.isPropertySignature(declaration) || !ts.isComputedPropertyName(declaration.name)) {
+      return false;
+    }
+    const markerName = unwrapExpression(declaration.name.expression);
+    if (!markerName || !ts.isIdentifier(markerName)) {
+      return false;
+    }
+    const markerSymbol = checker.getSymbolAtLocation(markerName);
+    if (!markerSymbol) {
+      return false;
+    }
+    const resolvedMarker =
+      (markerSymbol.flags & ts.SymbolFlags.Alias) !== 0
+        ? checker.getAliasedSymbol(markerSymbol)
+        : markerSymbol;
+    return (resolvedMarker.declarations ?? []).some((markerDeclaration) => {
+      if (
+        !ts.isVariableDeclaration(markerDeclaration) ||
+        !ts.isIdentifier(markerDeclaration.name) ||
+        markerDeclaration.name.text !== "contractMethodDecoratorBrand" ||
+        !markerDeclaration.type ||
+        !ts.isTypeOperatorNode(markerDeclaration.type) ||
+        markerDeclaration.type.operator !== ts.SyntaxKind.UniqueKeyword ||
+        markerDeclaration.type.type.kind !== ts.SyntaxKind.SymbolKeyword
+      ) {
+        return false;
+      }
+      const markerFile = toPosixPath(markerDeclaration.getSourceFile().fileName);
+      return (
+        markerFile.endsWith(
+          "/packages/protocols-rest/src/libs/decorators/contractDecoratorSignature.ts",
+        ) || /\/packages\/protocols-rest\/dist\/index\.d\.[cm]?ts$/.test(markerFile)
+      );
+    });
+  });
+}
+
+function getOverloadedRouteDecorators(
+  node: ts.MethodDeclaration,
+  sourceFile: ts.SourceFile,
+  rootDir: string,
+  checker?: ts.TypeChecker,
+): readonly OverloadedRouteDecoratorUse[] {
+  return (ts.getDecorators(node) ?? []).flatMap((decorator) => {
+    const resolved = resolveRouteDecoratorApplication(
+      decorator.expression,
+      sourceFile,
+      rootDir,
+      checker,
+    );
+    return resolved && ROUTE_DECORATORS.has(resolved.name) ? [{ ...resolved, decorator }] : [];
+  });
+}
+
+function resolveRouteDecoratorApplication(
+  expression: ts.Expression,
+  sourceFile: ts.SourceFile,
+  rootDir: string,
+  checker?: ts.TypeChecker,
+): Omit<OverloadedRouteDecoratorUse, "decorator"> | null {
+  return resolveRouteDecoratorExpression(expression, sourceFile, rootDir, checker, new Set());
+}
+
+function resolveRouteDecoratorExpression(
+  expression: ts.Expression,
+  sourceFile: ts.SourceFile,
+  rootDir: string,
+  checker: ts.TypeChecker | undefined,
+  seen: Set<string>,
+): Omit<OverloadedRouteDecoratorUse, "decorator"> | null {
+  const value = unwrapExpression(expression);
+  if (!value) {
+    return null;
+  }
+  const identity = `${value.getSourceFile().fileName}#${value.getStart(value.getSourceFile())}`;
+  if (seen.has(identity)) {
+    return null;
+  }
+  seen.add(identity);
+  if (ts.isConditionalExpression(value)) {
+    const applications = [value.whenTrue, value.whenFalse]
+      .map((branch) =>
+        resolveRouteDecoratorExpression(branch, sourceFile, rootDir, checker, new Set(seen)),
+      )
+      .filter(
+        (application): application is Omit<OverloadedRouteDecoratorUse, "decorator"> =>
+          application !== null,
+      );
+    return (
+      applications.find(
+        (application) =>
+          !isDefinitelyLooseRouteCall(
+            application.call,
+            application.callSourceFile,
+            rootDir,
+            checker,
+          ) &&
+          classifyRouteDecoratorResponsePresence(
+            application.call,
+            application.callSourceFile,
+            rootDir,
+            checker,
+          ) !== "absent",
+      ) ??
+      applications[0] ??
+      null
+    );
+  }
+  if (ts.isCallExpression(value)) {
+    const name = resolveRestDecoratorName(value.expression, sourceFile, rootDir, checker);
+    return name ? { call: value, callSourceFile: sourceFile, name } : null;
+  }
+  const initializer = resolveStaticInitializer(value, sourceFile, rootDir, checker);
+  return initializer
+    ? resolveRouteDecoratorExpression(
+        initializer,
+        initializer.getSourceFile(),
+        rootDir,
+        checker,
+        seen,
+      )
+    : null;
+}
+
+function resolveStaticInitializer(
+  expression: ts.Expression,
+  sourceFile: ts.SourceFile,
+  rootDir: string,
+  checker?: ts.TypeChecker,
+  seen: Set<string> = new Set(),
+): ts.Expression | null {
+  if (ts.isIdentifier(expression)) {
+    const resolved = resolveExpressionDeclaration(expression, sourceFile, rootDir, checker);
+    if (!resolved || !ts.isVariableDeclaration(resolved.declaration)) {
+      return null;
+    }
+    const assignment = resolved.declaration.initializer
+      ? null
+      : findLatestVariableAssignment(
+          resolved.declaration,
+          expression.getStart(sourceFile),
+          resolved.sourceFile,
+          checker,
+        );
+    return unwrapExpression(resolved.declaration.initializer ?? assignment);
+  }
+  if (ts.isElementAccessExpression(expression)) {
+    const collection = resolveCollectionInitializer(
+      expression.expression,
+      sourceFile,
+      rootDir,
+      checker,
+      seen,
+    );
+    const argument = unwrapExpression(expression.argumentExpression);
+    if (!collection || !argument) {
+      return null;
+    }
+    if (ts.isArrayLiteralExpression(collection) && ts.isNumericLiteral(argument)) {
+      return unwrapExpression(collection.elements[Number(argument.text)]);
+    }
+    if (ts.isObjectLiteralExpression(collection) && ts.isStringLiteralLike(argument)) {
+      const collectionSourceFile = collection.getSourceFile();
+      const property = collection.properties.find(
+        (candidate): candidate is ts.PropertyAssignment | ts.ShorthandPropertyAssignment =>
+          (ts.isPropertyAssignment(candidate) || ts.isShorthandPropertyAssignment(candidate)) &&
+          candidate.name.getText(collectionSourceFile).replace(/^['"]|['"]$/g, "") ===
+            argument.text,
+      );
+      if (!property) {
+        return null;
+      }
+      return ts.isPropertyAssignment(property)
+        ? unwrapExpression(property.initializer)
+        : resolveShorthandInitializer(property, collectionSourceFile, rootDir, checker);
+    }
+    return null;
+  }
+  if (!ts.isPropertyAccessExpression(expression)) {
+    return null;
+  }
+  const resolved = resolveExpressionDeclaration(expression, sourceFile, rootDir, checker);
+  if (resolved && ts.isPropertyAssignment(resolved.declaration)) {
+    return unwrapExpression(resolved.declaration.initializer);
+  }
+  if (resolved && ts.isShorthandPropertyAssignment(resolved.declaration)) {
+    return resolveShorthandInitializer(resolved.declaration, resolved.sourceFile, rootDir, checker);
+  }
+  const objectLiteral = resolveCollectionInitializer(
+    expression.expression,
+    sourceFile,
+    rootDir,
+    checker,
+    seen,
+  );
+  if (!objectLiteral || !ts.isObjectLiteralExpression(objectLiteral)) {
+    return null;
+  }
+  const objectSourceFile = objectLiteral.getSourceFile();
+  const property = objectLiteral.properties.find(
+    (candidate): candidate is ts.PropertyAssignment | ts.ShorthandPropertyAssignment =>
+      (ts.isPropertyAssignment(candidate) || ts.isShorthandPropertyAssignment(candidate)) &&
+      candidate.name.getText(objectSourceFile) === expression.name.text,
+  );
+  if (!property) {
+    return null;
+  }
+  return ts.isPropertyAssignment(property)
+    ? unwrapExpression(property.initializer)
+    : resolveShorthandInitializer(property, objectSourceFile, rootDir, checker);
+}
+
+function resolveCollectionInitializer(
+  expression: ts.Expression,
+  sourceFile: ts.SourceFile,
+  rootDir: string,
+  checker: ts.TypeChecker | undefined,
+  seen: Set<string>,
+): ts.ArrayLiteralExpression | ts.ObjectLiteralExpression | null {
+  const value = unwrapExpression(expression);
+  if (!value) {
+    return null;
+  }
+  if (ts.isArrayLiteralExpression(value) || ts.isObjectLiteralExpression(value)) {
+    return value;
+  }
+  const identity = `${value.getSourceFile().fileName}#${value.getStart(value.getSourceFile())}`;
+  if (seen.has(identity)) {
+    return null;
+  }
+  seen.add(identity);
+  const initializer = resolveStaticInitializer(value, sourceFile, rootDir, checker, seen);
+  return initializer
+    ? resolveCollectionInitializer(initializer, initializer.getSourceFile(), rootDir, checker, seen)
+    : null;
+}
+
+function resolveShorthandInitializer(
+  property: ts.ShorthandPropertyAssignment,
+  sourceFile: ts.SourceFile,
+  rootDir: string,
+  checker?: ts.TypeChecker,
+): ts.Expression | null {
+  const valueSymbol = checker?.getShorthandAssignmentValueSymbol(property);
+  const declaration = valueSymbol?.valueDeclaration ?? valueSymbol?.declarations?.[0];
+  if (declaration && ts.isVariableDeclaration(declaration)) {
+    return unwrapExpression(declaration.initializer);
+  }
+  return resolveStaticInitializer(property.name, sourceFile, rootDir, checker);
 }
 
 function isContractBoundRestParameterDecorator(
@@ -557,6 +964,13 @@ type RestDecoratorUse = {
   readonly name: string;
   readonly relativeFile: string;
   readonly sourceFile: ts.SourceFile;
+};
+
+type OverloadedRouteDecoratorUse = {
+  readonly call: ts.CallExpression;
+  readonly callSourceFile: ts.SourceFile;
+  readonly decorator: ts.Decorator;
+  readonly name: string;
 };
 
 function detectRestDecoratorContractGraph({
@@ -855,26 +1269,310 @@ function getInheritedMethodContextsForClass(
 }
 
 function resolveRestDecoratorName(
-  expression: ts.LeftHandSideExpression,
+  expression: ts.Expression,
+  sourceFile: ts.SourceFile,
+  rootDir: string,
+  checker?: ts.TypeChecker,
+  seen: Set<string> = new Set(),
+): string | null {
+  const value = unwrapExpression(expression);
+  if (!value) {
+    return null;
+  }
+  if (ts.isConditionalExpression(value)) {
+    const trueName = resolveRestDecoratorName(
+      value.whenTrue,
+      sourceFile,
+      rootDir,
+      checker,
+      new Set(seen),
+    );
+    const falseName = resolveRestDecoratorName(
+      value.whenFalse,
+      sourceFile,
+      rootDir,
+      checker,
+      new Set(seen),
+    );
+    return trueName === falseName ? trueName : null;
+  }
+  if (ts.isElementAccessExpression(value)) {
+    const name = value.argumentExpression ? getStaticString(value.argumentExpression) : null;
+    return name && isRestNamespaceExpression(value.expression, sourceFile, rootDir, checker, seen)
+      ? name
+      : null;
+  }
+  if (ts.isPropertyAccessExpression(value)) {
+    return isRestNamespaceExpression(value.expression, sourceFile, rootDir, checker, seen)
+      ? value.name.text
+      : null;
+  }
+
+  if (ts.isIdentifier(value)) {
+    const namespaceBinding = checker
+      ? null
+      : resolveRestNamespaceBinding(value.text, sourceFile, rootDir);
+    if (namespaceBinding) {
+      return namespaceBinding;
+    }
+    const resolved = resolveExpressionDeclaration(value, sourceFile, rootDir, checker);
+    if (!resolved) {
+      return checker ? null : resolveRestBarrelImportName(value.text, sourceFile, rootDir);
+    }
+    if (ts.isVariableDeclaration(resolved.declaration)) {
+      const identity = `${resolved.sourceFile.fileName}#${resolved.declaration.name.getText(resolved.sourceFile)}`;
+      if (seen.has(identity)) {
+        return null;
+      }
+      seen.add(identity);
+      const assignment = resolved.declaration.initializer
+        ? null
+        : findLatestVariableAssignment(
+            resolved.declaration,
+            value.getStart(sourceFile),
+            resolved.sourceFile,
+            checker,
+          );
+      const initializer = unwrapExpression(resolved.declaration.initializer ?? assignment);
+      return initializer
+        ? resolveRestDecoratorName(initializer, resolved.sourceFile, rootDir, checker, seen)
+        : null;
+    }
+    if (ts.isBindingElement(resolved.declaration)) {
+      const variableDeclaration = resolved.declaration.parent.parent;
+      return ts.isVariableDeclaration(variableDeclaration) && variableDeclaration.initializer
+        ? isRestNamespaceExpression(
+            variableDeclaration.initializer,
+            resolved.sourceFile,
+            rootDir,
+            checker,
+            seen,
+          )
+          ? (resolved.declaration.propertyName?.getText(resolved.sourceFile) ??
+            resolved.declaration.name.getText(resolved.sourceFile))
+          : null
+        : null;
+    }
+    if (ts.isExportDeclaration(resolved.declaration)) {
+      return ts.isStringLiteral(resolved.declaration.moduleSpecifier) &&
+        resolved.declaration.moduleSpecifier.text === "@croco/protocols-rest"
+        ? value.text
+        : null;
+    }
+    if (ts.isExportSpecifier(resolved.declaration)) {
+      const exportDeclaration = resolved.declaration.parent.parent;
+      return ts.isExportDeclaration(exportDeclaration) &&
+        ts.isStringLiteral(exportDeclaration.moduleSpecifier) &&
+        exportDeclaration.moduleSpecifier.text === "@croco/protocols-rest"
+        ? (resolved.declaration.propertyName?.text ?? resolved.declaration.name.text)
+        : null;
+    }
+    if (!ts.isImportSpecifier(resolved.declaration)) {
+      return null;
+    }
+    const barrelName = resolveRestBarrelImportName(value.text, sourceFile, rootDir);
+    if (barrelName) {
+      return barrelName;
+    }
+    const importDeclaration = resolved.declaration.parent.parent.parent;
+    if (
+      !ts.isImportDeclaration(importDeclaration) ||
+      !ts.isStringLiteral(importDeclaration.moduleSpecifier) ||
+      importDeclaration.moduleSpecifier.text !== "@croco/protocols-rest"
+    ) {
+      return null;
+    }
+    return resolved.declaration.propertyName?.text ?? resolved.declaration.name.text;
+  }
+
+  return null;
+}
+
+function resolveRestBarrelImportName(
+  name: string,
   sourceFile: ts.SourceFile,
   rootDir: string,
 ): string | null {
-  if (!ts.isIdentifier(expression)) {
-    return null;
+  for (const statement of sourceFile.statements) {
+    if (
+      !ts.isImportDeclaration(statement) ||
+      !ts.isStringLiteral(statement.moduleSpecifier) ||
+      !statement.moduleSpecifier.text.startsWith(".") ||
+      !statement.importClause?.namedBindings ||
+      !ts.isNamedImports(statement.importClause.namedBindings)
+    ) {
+      continue;
+    }
+    const specifier = statement.importClause.namedBindings.elements.find(
+      (candidate) => candidate.name.text === name,
+    );
+    if (!specifier) {
+      continue;
+    }
+    const importedFile = resolveRelativeModule(
+      sourceFile.fileName,
+      statement.moduleSpecifier.text,
+      rootDir,
+    );
+    const importedSource = importedFile ? readSourceFile(importedFile) : null;
+    if (!importedSource) {
+      return null;
+    }
+    const originalName = specifier.propertyName?.text ?? specifier.name.text;
+    const origin = resolveExportedDeclaration(originalName, importedSource, rootDir, new Set());
+    if (origin && ts.isExportDeclaration(origin.declaration)) {
+      return originalName;
+    }
   }
-  const resolved = resolveIdentifierDeclaration(expression.text, sourceFile, rootDir, new Set());
-  if (!resolved || !ts.isImportSpecifier(resolved.declaration)) {
-    return null;
+  return null;
+}
+
+function isRestNamespaceExpression(
+  expression: ts.Expression,
+  sourceFile: ts.SourceFile,
+  rootDir: string,
+  checker: ts.TypeChecker | undefined,
+  seen: Set<string>,
+): boolean {
+  const value = unwrapExpression(expression);
+  if (!value || !ts.isIdentifier(value)) {
+    return false;
   }
-  const importDeclaration = resolved.declaration.parent.parent.parent;
-  if (
-    !ts.isImportDeclaration(importDeclaration) ||
-    !ts.isStringLiteral(importDeclaration.moduleSpecifier) ||
-    importDeclaration.moduleSpecifier.text !== "@croco/protocols-rest"
-  ) {
-    return null;
+  if (isRestNamespaceImport(value.text, sourceFile)) {
+    return true;
   }
-  return resolved.declaration.propertyName?.text ?? resolved.declaration.name.text;
+  const localDeclaration = checker
+    ? null
+    : findNearestVariableDeclaration(value.text, sourceFile, value.getStart(sourceFile));
+  const resolved = localDeclaration
+    ? { declaration: localDeclaration, sourceFile }
+    : resolveExpressionDeclaration(value, sourceFile, rootDir, checker);
+  if (resolved && ts.isNamespaceImport(resolved.declaration)) {
+    const importDeclaration = resolved.declaration.parent.parent;
+    return (
+      ts.isImportDeclaration(importDeclaration) &&
+      ts.isStringLiteral(importDeclaration.moduleSpecifier) &&
+      importDeclaration.moduleSpecifier.text === "@croco/protocols-rest"
+    );
+  }
+  if (!resolved || !ts.isVariableDeclaration(resolved.declaration)) {
+    return false;
+  }
+  const identity = `${resolved.sourceFile.fileName}#${resolved.declaration.name.getText(resolved.sourceFile)}`;
+  if (seen.has(identity)) {
+    return false;
+  }
+  seen.add(identity);
+  const initializer = resolved.declaration.initializer;
+  return initializer
+    ? isRestNamespaceExpression(initializer, resolved.sourceFile, rootDir, checker, seen)
+    : false;
+}
+
+function findNearestVariableDeclaration(
+  name: string,
+  sourceFile: ts.SourceFile,
+  before: number,
+): ts.VariableDeclaration | null {
+  let nearest: ts.VariableDeclaration | null = null;
+
+  function visit(node: ts.Node): void {
+    if (node.getStart(sourceFile) >= before) {
+      return;
+    }
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.name.text === name &&
+      (!nearest || node.getStart(sourceFile) > nearest.getStart(sourceFile))
+    ) {
+      nearest = node;
+    }
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+  return nearest;
+}
+
+function findLatestVariableAssignment(
+  declaration: ts.VariableDeclaration,
+  before: number,
+  sourceFile: ts.SourceFile,
+  checker?: ts.TypeChecker,
+): ts.Expression | null {
+  let latest: ts.BinaryExpression | null = null;
+
+  function visit(node: ts.Node): void {
+    if (node.getStart(sourceFile) >= before) {
+      return;
+    }
+    if (
+      ts.isBinaryExpression(node) &&
+      node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+      ts.isIdentifier(node.left)
+    ) {
+      const assigned = checker
+        ? resolveExpressionDeclaration(node.left, sourceFile, sourceFile.fileName, checker)
+        : null;
+      const sameDeclaration = checker
+        ? assigned?.declaration === declaration
+        : ts.isIdentifier(declaration.name) && node.left.text === declaration.name.text;
+      if (sameDeclaration && (!latest || node.getStart(sourceFile) > latest.getStart(sourceFile))) {
+        latest = node;
+      }
+    }
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+  return latest?.right ?? null;
+}
+
+function resolveRestNamespaceBinding(
+  name: string,
+  sourceFile: ts.SourceFile,
+  rootDir: string,
+): string | null {
+  let resolvedName: string | null = null;
+
+  function visit(node: ts.Node): void {
+    if (resolvedName) {
+      return;
+    }
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isObjectBindingPattern(node.name) &&
+      node.initializer &&
+      isRestNamespaceExpression(node.initializer, sourceFile, rootDir, undefined, new Set())
+    ) {
+      const binding = node.name.elements.find(
+        (element) => ts.isIdentifier(element.name) && element.name.text === name,
+      );
+      if (binding) {
+        resolvedName =
+          binding.propertyName?.getText(sourceFile) ?? binding.name.getText(sourceFile);
+        return;
+      }
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+  return resolvedName;
+}
+
+function isRestNamespaceImport(name: string, sourceFile: ts.SourceFile): boolean {
+  return sourceFile.statements.some(
+    (statement) =>
+      ts.isImportDeclaration(statement) &&
+      ts.isStringLiteral(statement.moduleSpecifier) &&
+      statement.moduleSpecifier.text === "@croco/protocols-rest" &&
+      statement.importClause?.namedBindings !== undefined &&
+      ts.isNamespaceImport(statement.importClause.namedBindings) &&
+      statement.importClause.namedBindings.name.text === name,
+  );
 }
 
 function resolveDecoratorContract(
@@ -900,11 +1598,28 @@ function resolveDecoratorContract(
 }
 
 function isDefinitelyLooseRoute(decorator: RestDecoratorUse, rootDir: string): boolean {
-  const argument = decorator.call.arguments[0];
+  return isDefinitelyLooseRouteCall(decorator.call, decorator.sourceFile, rootDir);
+}
+
+function isDefinitelyLooseRouteCall(
+  call: ts.CallExpression,
+  sourceFile: ts.SourceFile,
+  rootDir: string,
+  checker?: ts.TypeChecker,
+): boolean {
+  const argument = call.arguments[0];
   return (
     argument === undefined ||
-    resolveStaticString(argument, decorator.sourceFile, rootDir, new Set())
+    (checker ? isDefinitelyStringType(checker.getTypeAtLocation(argument), checker) : false) ||
+    resolveStaticString(argument, sourceFile, rootDir, new Set())
   );
+}
+
+function isDefinitelyStringType(type: ts.Type, checker: ts.TypeChecker): boolean {
+  if ((type.flags & (ts.TypeFlags.Any | ts.TypeFlags.Unknown | ts.TypeFlags.Never)) !== 0) {
+    return false;
+  }
+  return checker.isTypeAssignableTo(type, checker.getStringType());
 }
 
 function resolveStaticString(
@@ -917,7 +1632,7 @@ function resolveStaticString(
   if (!value) {
     return false;
   }
-  if (ts.isStringLiteralLike(value)) {
+  if (ts.isStringLiteralLike(value) || ts.isTemplateExpression(value)) {
     return true;
   }
   if (!ts.isIdentifier(value)) {
@@ -926,6 +1641,12 @@ function resolveStaticString(
   const resolved = resolveExpressionDeclaration(value, sourceFile, rootDir);
   if (!resolved || !ts.isVariableDeclaration(resolved.declaration)) {
     return false;
+  }
+  if (
+    resolved.declaration.type?.kind === ts.SyntaxKind.StringKeyword ||
+    resolved.declaration.type?.kind === ts.SyntaxKind.TemplateLiteralType
+  ) {
+    return true;
   }
   const identity = `${resolved.sourceFile.fileName}#${resolved.declaration.name.getText(resolved.sourceFile)}`;
   if (seen.has(identity)) {
@@ -941,13 +1662,17 @@ function resolveContractReference(
   expression: ts.Expression,
   sourceFile: ts.SourceFile,
   rootDir: string,
+  checker?: ts.TypeChecker,
 ): ContractReference | null {
-  const resolved = resolveExpressionDeclaration(expression, sourceFile, rootDir);
+  const resolved = resolveExpressionDeclaration(expression, sourceFile, rootDir, checker);
   if (!resolved || !ts.isVariableDeclaration(resolved.declaration)) {
     return null;
   }
   const initializer = unwrapExpression(resolved.declaration.initializer);
-  if (!initializer || !isRouteContractInitializer(initializer)) {
+  if (
+    !initializer ||
+    !isRouteContractInitializer(initializer, resolved.sourceFile, rootDir, checker)
+  ) {
     return null;
   }
   const name = resolved.declaration.name.getText(resolved.sourceFile);
@@ -957,16 +1682,426 @@ function resolveContractReference(
   };
 }
 
-function isRouteContractInitializer(expression: ts.Expression): boolean {
+function isRouteContractInitializer(
+  expression: ts.Expression,
+  sourceFile: ts.SourceFile,
+  rootDir: string,
+  checker?: ts.TypeChecker,
+): boolean {
   if (ts.isCallExpression(expression)) {
-    const callee = expression.expression;
-    return ts.isIdentifier(callee) && callee.text === "defineRouteContract";
+    return (
+      resolveRestDecoratorName(expression.expression, sourceFile, rootDir, checker) ===
+      "defineRouteContract"
+    );
   }
   return (
     ts.isObjectLiteralExpression(expression) &&
     expression.properties.some((property) => property.name?.getText() === "method") &&
     expression.properties.some((property) => property.name?.getText() === "path")
   );
+}
+
+type ContractResponsePresence = "present" | "absent" | "unresolved";
+type ObjectResponsePresence = ContractResponsePresence | "not-found";
+
+function classifyRouteDecoratorResponsePresence(
+  call: ts.CallExpression,
+  sourceFile: ts.SourceFile,
+  rootDir: string,
+  checker?: ts.TypeChecker,
+): ContractResponsePresence {
+  const argumentExpression = call.arguments[0];
+  if (argumentExpression && checker) {
+    const semanticPresence = classifyContractResponseType(
+      checker.getTypeAtLocation(argumentExpression),
+      argumentExpression,
+      checker,
+    );
+    if (semanticPresence !== "unresolved") {
+      return semanticPresence;
+    }
+  }
+  return argumentExpression
+    ? classifyRouteContractExpressionResponsePresence(
+        argumentExpression,
+        sourceFile,
+        rootDir,
+        checker,
+        new Set(),
+      )
+    : "unresolved";
+}
+
+function classifyContractResponseType(
+  type: ts.Type,
+  location: ts.Node,
+  checker: ts.TypeChecker,
+): ContractResponsePresence {
+  if ((type.flags & (ts.TypeFlags.Any | ts.TypeFlags.Unknown | ts.TypeFlags.Never)) !== 0) {
+    return "unresolved";
+  }
+  if (type.isUnion()) {
+    const memberPresence = type.types.map((member) =>
+      classifyContractResponseType(member, location, checker),
+    );
+    return memberPresence.some((presence) => presence === "present")
+      ? "present"
+      : memberPresence.every((presence) => presence === "absent")
+        ? "absent"
+        : "unresolved";
+  }
+  if (!checker.getPropertyOfType(type, "method") || !checker.getPropertyOfType(type, "path")) {
+    return "unresolved";
+  }
+  const response = checker.getPropertyOfType(type, "response");
+  if (!response) {
+    return "absent";
+  }
+  const responseType = checker.getTypeOfSymbolAtLocation(response, location);
+  if ((responseType.flags & (ts.TypeFlags.Any | ts.TypeFlags.Unknown)) !== 0) {
+    return "unresolved";
+  }
+  const responseTypes = responseType.isUnion() ? responseType.types : [responseType];
+  return responseTypes.every(
+    (member) => (member.flags & (ts.TypeFlags.Undefined | ts.TypeFlags.Never)) !== 0,
+  )
+    ? "absent"
+    : "present";
+}
+
+function classifyRouteContractExpressionResponsePresence(
+  expression: ts.Expression,
+  sourceFile: ts.SourceFile,
+  rootDir: string,
+  checker: ts.TypeChecker | undefined,
+  seen: Set<string>,
+): ContractResponsePresence {
+  const value = unwrapExpression(expression);
+  if (!value) {
+    return "unresolved";
+  }
+  const identity = `${value.getSourceFile().fileName}#${value.getStart(value.getSourceFile())}`;
+  if (seen.has(identity)) {
+    return "unresolved";
+  }
+  seen.add(identity);
+
+  const contract = resolveContractReference(value, sourceFile, rootDir, checker);
+  if (contract) {
+    return classifyContractResponsePresence(contract, rootDir, checker);
+  }
+  if (ts.isConditionalExpression(value)) {
+    const branchPresence = [value.whenTrue, value.whenFalse].map((branch) =>
+      classifyRouteContractExpressionResponsePresence(
+        branch,
+        sourceFile,
+        rootDir,
+        checker,
+        new Set(seen),
+      ),
+    );
+    return branchPresence.every((presence) => presence === "absent")
+      ? "absent"
+      : branchPresence.some((presence) => presence === "present")
+        ? "present"
+        : "unresolved";
+  }
+
+  const initializer = resolveStaticInitializer(value, sourceFile, rootDir, checker);
+  if (initializer) {
+    return classifyRouteContractExpressionResponsePresence(
+      initializer,
+      initializer.getSourceFile(),
+      rootDir,
+      checker,
+      seen,
+    );
+  }
+
+  const objectLiteral = ts.isCallExpression(value)
+    ? resolveRestDecoratorName(value.expression, sourceFile, rootDir, checker) ===
+      "defineRouteContract"
+      ? unwrapExpression(value.arguments[0])
+      : null
+    : value;
+  if (!objectLiteral || !ts.isObjectLiteralExpression(objectLiteral)) {
+    return "unresolved";
+  }
+  const presence = classifyObjectResponsePresence(
+    objectLiteral,
+    sourceFile,
+    rootDir,
+    new Set(),
+    checker,
+  );
+  return presence === "not-found" ? "absent" : presence;
+}
+
+function classifyContractResponsePresence(
+  contract: ContractReference,
+  rootDir: string,
+  checker?: ts.TypeChecker,
+): ContractResponsePresence {
+  if (!ts.isVariableDeclaration(contract.declaration)) {
+    return "unresolved";
+  }
+  const initializer = unwrapExpression(contract.declaration.initializer);
+  if (!initializer) {
+    return "unresolved";
+  }
+  const objectLiteral = ts.isCallExpression(initializer)
+    ? unwrapExpression(initializer.arguments[0])
+    : initializer;
+  if (!objectLiteral || !ts.isObjectLiteralExpression(objectLiteral)) {
+    return "unresolved";
+  }
+  const presence = classifyObjectResponsePresence(
+    objectLiteral,
+    contract.sourceFile,
+    rootDir,
+    new Set(),
+    checker,
+  );
+  return presence === "not-found" ? "absent" : presence;
+}
+
+function classifyObjectResponsePresence(
+  objectLiteral: ts.ObjectLiteralExpression,
+  sourceFile: ts.SourceFile,
+  rootDir: string,
+  seen: Set<string>,
+  checker?: ts.TypeChecker,
+): ObjectResponsePresence {
+  for (const property of [...objectLiteral.properties].reverse()) {
+    if (ts.isSpreadAssignment(property)) {
+      const spreadPresence = classifySpreadResponsePresence(
+        property.expression,
+        sourceFile,
+        rootDir,
+        new Set(seen),
+        checker,
+      );
+      if (spreadPresence !== "not-found") {
+        return spreadPresence;
+      }
+      continue;
+    }
+
+    if (!property.name) {
+      continue;
+    }
+    const staticName = resolveStaticPropertyName(
+      property.name,
+      sourceFile,
+      rootDir,
+      new Set(seen),
+      checker,
+    );
+    if (staticName === null) {
+      return "unresolved";
+    }
+    if (staticName !== "response") {
+      continue;
+    }
+
+    if (ts.isPropertyAssignment(property)) {
+      return classifyResponseValue(
+        property.initializer,
+        sourceFile,
+        rootDir,
+        new Set(seen),
+        checker,
+      );
+    }
+    if (ts.isShorthandPropertyAssignment(property)) {
+      return classifyResponseValue(property.name, sourceFile, rootDir, new Set(seen), checker);
+    }
+    return "unresolved";
+  }
+
+  return "not-found";
+}
+
+function resolveStaticPropertyName(
+  name: ts.PropertyName,
+  sourceFile: ts.SourceFile,
+  rootDir: string,
+  seen: Set<string>,
+  checker?: ts.TypeChecker,
+): string | null {
+  if (ts.isIdentifier(name) || ts.isStringLiteralLike(name) || ts.isNumericLiteral(name)) {
+    return name.text;
+  }
+  if (!ts.isComputedPropertyName(name)) {
+    return null;
+  }
+  const expression = unwrapExpression(name.expression);
+  if (!expression) {
+    return null;
+  }
+  if (ts.isStringLiteralLike(expression) || ts.isNumericLiteral(expression)) {
+    return expression.text;
+  }
+  if (!ts.isIdentifier(expression)) {
+    return null;
+  }
+  const resolved = resolveExpressionDeclaration(expression, sourceFile, rootDir, checker);
+  if (!resolved || !ts.isVariableDeclaration(resolved.declaration)) {
+    return null;
+  }
+  const identity = `${resolved.sourceFile.fileName}#${resolved.declaration.name.getText(resolved.sourceFile)}`;
+  if (seen.has(identity)) {
+    return null;
+  }
+  seen.add(identity);
+  const initializer = unwrapExpression(resolved.declaration.initializer);
+  return initializer && (ts.isStringLiteralLike(initializer) || ts.isNumericLiteral(initializer))
+    ? initializer.text
+    : null;
+}
+
+function classifySpreadResponsePresence(
+  expression: ts.Expression,
+  sourceFile: ts.SourceFile,
+  rootDir: string,
+  seen: Set<string>,
+  checker?: ts.TypeChecker,
+): ObjectResponsePresence {
+  const value = unwrapExpression(expression);
+  if (!value) {
+    return "unresolved";
+  }
+  if (ts.isObjectLiteralExpression(value)) {
+    return classifyObjectResponsePresence(value, sourceFile, rootDir, seen, checker);
+  }
+  const resolved = resolveExpressionDeclaration(value, sourceFile, rootDir, checker);
+  if (!resolved || !ts.isVariableDeclaration(resolved.declaration)) {
+    return "unresolved";
+  }
+  const identity = `${resolved.sourceFile.fileName}#${resolved.declaration.name.getText(resolved.sourceFile)}`;
+  if (seen.has(identity)) {
+    return "unresolved";
+  }
+  seen.add(identity);
+  const initializer = unwrapExpression(resolved.declaration.initializer);
+  if (!initializer) {
+    return "unresolved";
+  }
+  if (
+    ts.isCallExpression(initializer) &&
+    isObjectAssignCall(initializer, resolved.sourceFile, rootDir, checker)
+  ) {
+    return classifyObjectAssignResponsePresence(
+      initializer,
+      resolved.sourceFile,
+      rootDir,
+      seen,
+      checker,
+    );
+  }
+  const spreadObject =
+    ts.isCallExpression(initializer) &&
+    resolveRestDecoratorName(initializer.expression, resolved.sourceFile, rootDir, checker) ===
+      "defineRouteContract"
+      ? unwrapExpression(initializer.arguments[0])
+      : initializer;
+  return spreadObject && ts.isObjectLiteralExpression(spreadObject)
+    ? classifyObjectResponsePresence(spreadObject, resolved.sourceFile, rootDir, seen, checker)
+    : "unresolved";
+}
+
+function isObjectAssignCall(
+  call: ts.CallExpression,
+  sourceFile: ts.SourceFile,
+  rootDir: string,
+  checker?: ts.TypeChecker,
+): boolean {
+  if (
+    !ts.isPropertyAccessExpression(call.expression) ||
+    !ts.isIdentifier(call.expression.expression) ||
+    call.expression.expression.text !== "Object" ||
+    call.expression.name.text !== "assign"
+  ) {
+    return false;
+  }
+  const objectBinding = resolveExpressionDeclaration(
+    call.expression.expression,
+    sourceFile,
+    rootDir,
+    checker,
+  );
+  return !objectBinding || objectBinding.sourceFile.isDeclarationFile;
+}
+
+function classifyObjectAssignResponsePresence(
+  call: ts.CallExpression,
+  sourceFile: ts.SourceFile,
+  rootDir: string,
+  seen: Set<string>,
+  checker?: ts.TypeChecker,
+): ObjectResponsePresence {
+  for (const argument of [...call.arguments].reverse()) {
+    const value = unwrapExpression(argument);
+    if (!value) {
+      return "unresolved";
+    }
+    if (ts.isObjectLiteralExpression(value)) {
+      const presence = classifyObjectResponsePresence(
+        value,
+        sourceFile,
+        rootDir,
+        new Set(seen),
+        checker,
+      );
+      if (presence !== "not-found") {
+        return presence;
+      }
+      continue;
+    }
+    const presence = classifySpreadResponsePresence(
+      value,
+      sourceFile,
+      rootDir,
+      new Set(seen),
+      checker,
+    );
+    if (presence !== "not-found") {
+      return presence;
+    }
+  }
+  return "not-found";
+}
+
+function classifyResponseValue(
+  expression: ts.Expression,
+  sourceFile: ts.SourceFile,
+  rootDir: string,
+  seen: Set<string>,
+  checker?: ts.TypeChecker,
+): ContractResponsePresence {
+  const value = unwrapExpression(expression);
+  if (!value) {
+    return "unresolved";
+  }
+  if ((ts.isIdentifier(value) && value.text === "undefined") || ts.isVoidExpression(value)) {
+    return "absent";
+  }
+  if (!ts.isIdentifier(value)) {
+    return "present";
+  }
+  const resolved = resolveExpressionDeclaration(value, sourceFile, rootDir, checker);
+  if (!resolved || !ts.isVariableDeclaration(resolved.declaration)) {
+    return "unresolved";
+  }
+  const identity = `${resolved.sourceFile.fileName}#${resolved.declaration.name.getText(resolved.sourceFile)}`;
+  if (seen.has(identity)) {
+    return "unresolved";
+  }
+  seen.add(identity);
+  const initializer = resolved.declaration.initializer;
+  return initializer
+    ? classifyResponseValue(initializer, resolved.sourceFile, rootDir, seen, checker)
+    : "unresolved";
 }
 
 function resolveContractResponse(contract: ContractReference, rootDir: string): string | null {
@@ -1084,9 +2219,33 @@ function resolveExpressionDeclaration(
   expression: ts.Expression,
   sourceFile: ts.SourceFile,
   rootDir: string,
+  checker?: ts.TypeChecker,
 ): ResolvedDeclaration | null {
   const value = unwrapExpression(expression);
-  if (!value || !ts.isIdentifier(value)) {
+  if (!value) {
+    return null;
+  }
+  if (checker) {
+    const symbol = checker.getSymbolAtLocation(value);
+    if (symbol) {
+      const target =
+        (symbol.flags & ts.SymbolFlags.Alias) !== 0 ? checker.getAliasedSymbol(symbol) : symbol;
+      let declaration =
+        target.valueDeclaration ??
+        target.declarations?.[0] ??
+        symbol.valueDeclaration ??
+        symbol.declarations?.[0];
+      if (declaration && ts.isShorthandPropertyAssignment(declaration)) {
+        const valueSymbol = checker.getShorthandAssignmentValueSymbol(declaration);
+        declaration =
+          valueSymbol?.valueDeclaration ?? valueSymbol?.declarations?.[0] ?? declaration;
+      }
+      if (declaration) {
+        return { declaration, sourceFile: declaration.getSourceFile() };
+      }
+    }
+  }
+  if (!ts.isIdentifier(value)) {
     return null;
   }
   return resolveIdentifierDeclaration(value.text, sourceFile, rootDir, new Set());
@@ -1197,6 +2356,9 @@ function resolveExportedDeclaration(
       if (!statement.moduleSpecifier || !ts.isStringLiteral(statement.moduleSpecifier)) {
         continue;
       }
+      if (statement.moduleSpecifier.text === "@croco/protocols-rest") {
+        return { declaration: statement, sourceFile };
+      }
       const exportedFile = resolveRelativeModule(
         sourceFile.fileName,
         statement.moduleSpecifier.text,
@@ -1229,6 +2391,9 @@ function resolveExportedDeclaration(
     }
     if (!ts.isStringLiteral(statement.moduleSpecifier)) {
       return null;
+    }
+    if (statement.moduleSpecifier.text === "@croco/protocols-rest") {
+      return { declaration: specifier, sourceFile };
     }
     const exportedFile = resolveRelativeModule(
       sourceFile.fileName,
@@ -1760,7 +2925,27 @@ function scanRule(rootDir: string, rule: StaticMisuseRule): StaticMisuseRuleResu
   }
 
   const allowlist = loadAllowlist(rootDir, rule);
-  const diagnostics = walkSourceFiles(targetDir).flatMap((filePath) => {
+  const filePaths = walkSourceFiles(targetDir);
+  const programFilePaths = filePaths.filter((filePath) => {
+    const relativeFile = toPosixPath(relative(rootDir, filePath));
+    return !rule.includeFile || rule.includeFile(relativeFile);
+  });
+  const program =
+    rule.id === restOverloadedContractRouteDecoratorRule.id
+      ? ts.createProgram(programFilePaths, {
+          allowJs: true,
+          experimentalDecorators: true,
+          lib: ["lib.es2022.d.ts"],
+          module: ts.ModuleKind.ESNext,
+          moduleResolution: ts.ModuleResolutionKind.Bundler,
+          noEmit: true,
+          skipLibCheck: true,
+          target: ts.ScriptTarget.Latest,
+          types: [],
+        })
+      : null;
+  const checker = program?.getTypeChecker();
+  const diagnostics = filePaths.flatMap((filePath) => {
     const source = readFileSync(filePath, "utf-8");
     const lines = source.split(/\r?\n/);
     const relativeFile = toPosixPath(relative(rootDir, filePath));
@@ -1808,15 +2993,18 @@ function scanRule(rootDir: string, rule: StaticMisuseRule): StaticMisuseRuleResu
 
     const syntaxDiagnostics =
       rule.syntaxDetectors?.flatMap((detector) => {
-        const sourceFile = ts.createSourceFile(
-          relativeFile,
-          source,
-          ts.ScriptTarget.Latest,
-          true,
-          getScriptKind(relativeFile),
-        );
+        const sourceFile =
+          program?.getSourceFile(filePath) ??
+          ts.createSourceFile(
+            relativeFile,
+            source,
+            ts.ScriptTarget.Latest,
+            true,
+            getScriptKind(relativeFile),
+          );
 
         return detector.detect({
+          checker,
           lines,
           relativeFile,
           rootDir,

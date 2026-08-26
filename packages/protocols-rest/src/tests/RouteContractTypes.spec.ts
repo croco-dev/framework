@@ -2,14 +2,20 @@ import { Problem, ProblemCategory } from "@croco/problems-core";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { z } from "zod";
 import {
+  All,
   Body,
+  Delete,
   defineRouteContract,
   defineRouteProblem,
   Get,
+  Head,
   HttpMethod,
+  Options,
   Param,
+  Patch,
   Post,
   ProblemResponse,
+  Put,
   Query,
   ResponseSchema,
   type RouteBody,
@@ -473,6 +479,167 @@ const postContractForNegativeTest = defineRouteContract({
   response: userSchema,
 });
 
+const transformedResponseContract = defineRouteContract({
+  method: HttpMethod.GET,
+  path: "/transformed-response",
+  response: z.string().transform((value) => value.length),
+});
+
+const responseLessContract = defineRouteContract({
+  method: HttpMethod.GET,
+  path: "/response-less",
+});
+
+const selectResponseContract: boolean = true;
+const mixedResponseContract = selectResponseContract ? responseContract : responseLessContract;
+const responseContractUnion = selectResponseContract
+  ? defineRouteContract({
+      method: HttpMethod.GET,
+      path: "/union-id",
+      response: z.object({ id: z.string() }),
+    })
+  : defineRouteContract({
+      method: HttpMethod.GET,
+      path: "/union-name",
+      response: z.object({ name: z.string() }),
+    });
+const schemaUnionResponseContract = defineRouteContract({
+  method: HttpMethod.GET,
+  path: "/schema-union",
+  response: z.union([z.string(), z.number()]),
+});
+
+class NominalResponse {
+  readonly #brand = true;
+
+  constructor(readonly value: string) {}
+
+  isNominal(): boolean {
+    return this.#brand;
+  }
+}
+
+const nominalResponseContract = defineRouteContract({
+  method: HttpMethod.GET,
+  path: "/nominal-response",
+  response: z.instanceof(NominalResponse),
+});
+const nominalArrayResponseContract = defineRouteContract({
+  method: HttpMethod.GET,
+  path: "/nominal-array-response",
+  response: z.array(z.instanceof(NominalResponse)),
+});
+
+const responseContractsByMethod = {
+  all: defineRouteContract({ method: HttpMethod.ALL, path: "/all", response: z.string() }),
+  delete: defineRouteContract({
+    method: HttpMethod.DELETE,
+    path: "/delete",
+    response: z.string(),
+  }),
+  get: defineRouteContract({ method: HttpMethod.GET, path: "/get", response: z.string() }),
+  head: defineRouteContract({ method: HttpMethod.HEAD, path: "/head", response: z.string() }),
+  options: defineRouteContract({
+    method: HttpMethod.OPTIONS,
+    path: "/options",
+    response: z.string(),
+  }),
+  patch: defineRouteContract({ method: HttpMethod.PATCH, path: "/patch", response: z.string() }),
+  post: defineRouteContract({ method: HttpMethod.POST, path: "/post", response: z.string() }),
+  put: defineRouteContract({ method: HttpMethod.PUT, path: "/put", response: z.string() }),
+  unknown: defineRouteContract({
+    method: HttpMethod.GET,
+    path: "/unknown",
+    response: z.unknown(),
+  }),
+};
+
+const anyAndStringResponseContract = selectResponseContract
+  ? defineRouteContract({
+      method: HttpMethod.GET,
+      path: "/any-response",
+      response: z.any(),
+    })
+  : responseContractsByMethod.get;
+
+const readonlyArrayResponseContract = defineRouteContract({
+  method: HttpMethod.GET,
+  path: "/readonly-array",
+  response: z.object({
+    items: z.array(z.object({ id: z.string() })),
+    tuple: z.tuple([z.string(), z.number()]),
+  }),
+});
+
+const readonlyRestTupleResponseContract = defineRouteContract({
+  method: HttpMethod.GET,
+  path: "/readonly-rest-tuple",
+  response: z.tuple([z.string()]).rest(z.number()),
+});
+
+describe("readonly handler return arrays", () => {
+  it("preserves response shape while accepting readonly array inputs", () => {
+    expectTypeOf<RouteHandlerReturn<typeof readonlyArrayResponseContract>>().toEqualTypeOf<{
+      items: { id: string }[];
+      tuple: [string, number];
+    }>();
+
+    const handlerReturn = {
+      items: Object.freeze([{ id: "user_1" }]),
+      tuple: ["ok", 1] as const,
+    } as const;
+
+    expect(validateResponse(readonlyArrayResponseContract.response, handlerReturn)).toEqual({
+      items: [{ id: "user_1" }],
+      tuple: ["ok", 1],
+    });
+  });
+
+  it("preserves variadic tuple prefixes while accepting readonly tuples", () => {
+    expectTypeOf<RouteHandlerReturn<typeof readonlyRestTupleResponseContract>>().toEqualTypeOf<
+      [string, ...number[]]
+    >();
+
+    const handlerReturn = ["ok", 1, 2] as const;
+
+    expect(validateResponse(readonlyRestTupleResponseContract.response, handlerReturn)).toEqual([
+      "ok",
+      1,
+      2,
+    ]);
+  });
+});
+
+describe("nominal handler returns", () => {
+  it("preserves the response schema's instance identity", () => {
+    expectTypeOf<
+      RouteHandlerReturn<typeof nominalResponseContract>
+    >().toEqualTypeOf<NominalResponse>();
+    expect(() =>
+      validateResponse(nominalResponseContract.response, {
+        value: "not-an-instance",
+        isNominal: () => true,
+      }),
+    ).toThrow();
+  });
+
+  it("accepts readonly arrays without erasing element identity", () => {
+    const handlerReturn = Object.freeze([new NominalResponse("ok")]);
+
+    expect(validateResponse(nominalArrayResponseContract.response, handlerReturn)).toEqual([
+      handlerReturn[0],
+    ]);
+  });
+});
+
+// @ts-expect-error RouteHandlerReturn must preserve z.instanceof nominal identity.
+const invalidNominalHandlerReturn: RouteHandlerReturn<typeof nominalResponseContract> = {
+  value: "not-an-instance",
+  isNominal: () => true,
+};
+
+void invalidNominalHandlerReturn;
+
 // @ts-expect-error routeParam only accepts names declared by the route path and params schema.
 routeParam(responseContract, "userId");
 
@@ -487,7 +654,266 @@ void invalidResponseHandler;
 class InvalidMethodController {
   // @ts-expect-error @Get cannot consume a POST route contract.
   @Get(postContractForNegativeTest)
-  invalidMethod(): void {}
+  invalidMethod(): z.input<typeof userSchema> {
+    return { id: "user_1", name: "Ada" };
+  }
+}
+
+const methodObserver: MethodDecorator = () => undefined;
+
+class ValidContractMethodController {
+  @Get(responseContractsByMethod.get)
+  sync(): string {
+    return "ok";
+  }
+
+  @Get(responseContractsByMethod.get)
+  async async(): Promise<string> {
+    return "ok";
+  }
+
+  @Get(transformedResponseContract)
+  transformed(): RouteHandlerReturn<typeof transformedResponseContract> {
+    return "before-transform";
+  }
+
+  @Get(responseContractsByMethod.unknown)
+  unknownHandlerSlot(): unknown {
+    return Symbol("accepted by unknown response schema");
+  }
+
+  @methodObserver
+  @Get(responseContractsByMethod.get)
+  strictDecoratorAppliedFirst(): string {
+    return "ok";
+  }
+
+  @Get(responseContractsByMethod.get)
+  @methodObserver
+  strictDecoratorAppliedLast(): string {
+    return "ok";
+  }
+
+  @Get(responseLessContract)
+  responseLess(): void {}
+
+  @Get(mixedResponseContract)
+  mixedResponse(): z.input<typeof userSchema> {
+    return { id: "user_1", name: "Ada" };
+  }
+
+  @Get(responseContractUnion)
+  responseUnion(): { id: string; name: string } {
+    return { id: "user_1", name: "Ada" };
+  }
+
+  @Get(schemaUnionResponseContract)
+  schemaUnion(): string {
+    return "accepted by one branch of the response schema";
+  }
+
+  @Get(anyAndStringResponseContract)
+  anyAndStringResponseUnion(): string {
+    return "accepted by every runtime contract member";
+  }
+
+  @Get(nominalResponseContract)
+  nominalResponse(): NominalResponse {
+    return new NominalResponse("ok");
+  }
+
+  @Get(nominalArrayResponseContract)
+  nominalArrayResponse(): readonly NominalResponse[] {
+    return [new NominalResponse("ok")];
+  }
+
+  @Get(readonlyArrayResponseContract)
+  readonlyArrays(): {
+    readonly items: readonly { readonly id: string }[];
+    readonly tuple: readonly [string, number];
+  } {
+    return { items: [{ id: "user_1" }], tuple: ["ok", 1] };
+  }
+
+  @Get(readonlyRestTupleResponseContract)
+  readonlyRestTuple(): readonly [string, ...number[]] {
+    return ["ok", 1, 2];
+  }
+
+  @Get("/loose")
+  stringRouteRemainsLoose(): number {
+    return 1;
+  }
+}
+
+class InvalidContractMethodController {
+  // @ts-expect-error contract-bound GET methods must return the response handler type.
+  @Get(responseContractsByMethod.get)
+  invalidGet(): number {
+    return 1;
+  }
+
+  // @ts-expect-error contract-bound POST methods must return the response handler type.
+  @Post(responseContractsByMethod.post)
+  invalidPost(): number {
+    return 1;
+  }
+
+  // @ts-expect-error contract-bound PUT methods must return the response handler type.
+  @Put(responseContractsByMethod.put)
+  invalidPut(): number {
+    return 1;
+  }
+
+  // @ts-expect-error contract-bound PATCH methods must return the response handler type.
+  @Patch(responseContractsByMethod.patch)
+  invalidPatch(): number {
+    return 1;
+  }
+
+  // @ts-expect-error contract-bound DELETE methods must return the response handler type.
+  @Delete(responseContractsByMethod.delete)
+  invalidDelete(): number {
+    return 1;
+  }
+
+  // @ts-expect-error contract-bound OPTIONS methods must return the response handler type.
+  @Options(responseContractsByMethod.options)
+  invalidOptions(): number {
+    return 1;
+  }
+
+  // @ts-expect-error contract-bound HEAD methods must return the response handler type.
+  @Head(responseContractsByMethod.head)
+  invalidHead(): number {
+    return 1;
+  }
+
+  // @ts-expect-error contract-bound ALL methods must return the response handler type.
+  @All(responseContractsByMethod.all)
+  invalidAll(): number {
+    return 1;
+  }
+
+  // @ts-expect-error async controller returns use the awaited annotation.
+  @Get(responseContractsByMethod.get)
+  async invalidAsync(): Promise<number> {
+    return 1;
+  }
+
+  // @ts-expect-error response transforms validate the handler-return input, not the wire output.
+  @Get(transformedResponseContract)
+  invalidTransformed(): number {
+    return 1;
+  }
+
+  // @ts-expect-error any cannot bypass contract-bound return validation.
+  @Get(responseContractsByMethod.get)
+  invalidAny(): any {
+    return "hidden";
+  }
+
+  // @ts-expect-error unknown is not accepted by a narrower response handler slot.
+  @Get(responseContractsByMethod.get)
+  invalidUnknown(): unknown {
+    return "hidden";
+  }
+
+  // @ts-expect-error void hides the response value required by the contract.
+  @Get(responseContractsByMethod.get)
+  invalidVoid(): void {}
+
+  // @ts-expect-error never cannot vacuously satisfy a response contract.
+  @Get(responseContractsByMethod.get)
+  invalidNever(): never {
+    throw new Error("type fixture only");
+  }
+
+  // @ts-expect-error a mixed union must validate every response-bearing contract member.
+  @Get(mixedResponseContract)
+  invalidMixedResponse(): number {
+    return 1;
+  }
+
+  // @ts-expect-error a response-bearing union requires a return accepted by every member.
+  @Get(responseContractUnion)
+  invalidResponseUnion(): { id: string } {
+    return { id: "user_1" };
+  }
+
+  // @ts-expect-error a value outside a single response schema's union remains invalid.
+  @Get(schemaUnionResponseContract)
+  invalidSchemaUnion(): boolean {
+    return true;
+  }
+
+  // @ts-expect-error z.any in one runtime contract member must not erase another member's return contract.
+  @Get(anyAndStringResponseContract)
+  invalidAnyAndStringResponseUnion(): number {
+    return 1;
+  }
+
+  // @ts-expect-error readonly-array normalization must not erase nominal instance identity.
+  @Get(nominalResponseContract)
+  invalidNominalResponse(): { readonly value: string; readonly isNominal: () => boolean } {
+    return { value: "not-an-instance", isNominal: () => true };
+  }
+
+  // @ts-expect-error readonly-array normalization must preserve each element's nominal identity.
+  @Get(nominalArrayResponseContract)
+  invalidNominalArrayResponse(): readonly {
+    readonly value: string;
+    readonly isNominal: () => boolean;
+  }[] {
+    return [{ value: "not-an-instance", isNominal: () => true }];
+  }
+
+  // @ts-expect-error readonly compatibility must preserve tuple length and element types.
+  @Get(readonlyArrayResponseContract)
+  invalidReadonlyTuple(): {
+    readonly items: readonly { readonly id: string }[];
+    readonly tuple: readonly [string];
+  } {
+    return { items: [{ id: "user_1" }], tuple: ["missing-number"] };
+  }
+
+  // @ts-expect-error readonly compatibility must preserve a variadic tuple's fixed prefix.
+  @Get(readonlyRestTupleResponseContract)
+  invalidReadonlyRestTuple(): readonly [number, ...number[]] {
+    return [1, 2];
+  }
+
+  // @ts-expect-error generic return annotations cannot prove a stable handler-return value.
+  @Get(responseContractsByMethod.get)
+  invalidGeneric<Value extends string>(value: Value): Value {
+    return value;
+  }
+
+  invalidOverload(value: string): string;
+  invalidOverload(value: number): number;
+  // @ts-expect-error overloaded implementations do not expose the decorated return annotation.
+  @Get(responseContractsByMethod.get)
+  invalidOverload(value: string | number): string | number {
+    return value;
+  }
+
+  // @ts-expect-error contract-bound route methods require a public instance method target.
+  @Get(responseContractsByMethod.get)
+  protected invalidProtected(): string {
+    return "hidden";
+  }
+
+  // @ts-expect-error contract-bound route methods require a public instance method target.
+  @Get(responseContractsByMethod.get)
+  private invalidPrivate(): string {
+    return "hidden";
+  }
+
+  // @ts-expect-error static targets do not own controller route metadata.
+  @Get(responseContractsByMethod.get)
+  static invalidStatic(): string {
+    return "hidden";
+  }
 }
 
 class InvalidBodyController {
@@ -498,6 +924,8 @@ class InvalidBodyController {
 }
 
 void InvalidMethodController;
+void ValidContractMethodController;
+void InvalidContractMethodController;
 void InvalidBodyController;
 
 class ValidContractParameterController {
