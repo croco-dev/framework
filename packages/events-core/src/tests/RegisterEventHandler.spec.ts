@@ -24,6 +24,16 @@ class PaymentCaptured extends DomainEvent {
   }
 }
 
+class UnionOrderCreated extends DomainEvent {
+  readonly kind = "order";
+}
+
+class UnionPaymentCaptured extends DomainEvent {
+  readonly kind = "payment";
+}
+
+const UnionEventClass: new () => UnionOrderCreated | UnionPaymentCaptured = UnionOrderCreated;
+
 @RegisterEventHandler(OrderCreated, { eventName: "order.created.v2" })
 class OrderCreatedHandler implements EventHandler<OrderCreated> {
   handle(_event: OrderCreated): void {}
@@ -56,6 +66,30 @@ class OverloadedPriorityOrderCreatedHandler implements EventHandler<PriorityOrde
   handle(_event: PriorityOrderCreated): void;
   handle(): void;
   handle(_event?: PriorityOrderCreated): void {}
+}
+
+// @ts-expect-error Dispatch supplies only the event, so a required second argument is incompatible.
+@RegisterEventHandler(OrderCreated)
+class RequiredContextOrderCreatedHandler implements EventHandler<OrderCreated> {
+  handle(): void;
+  handle(_event: OrderCreated, _context: string): void;
+  handle(_event?: OrderCreated, _context?: string): void {}
+}
+
+@RegisterEventHandler(OrderCreated)
+class OptionalContextOrderCreatedHandler implements EventHandler<OrderCreated> {
+  handle(_event: OrderCreated, _context?: string): void {}
+}
+
+// @ts-expect-error A handler for one member cannot subscribe to an event constructor union.
+@RegisterEventHandler(UnionEventClass)
+class UnionOrderOnlyHandler implements EventHandler<UnionOrderCreated> {
+  handle(_event: UnionOrderCreated): void {}
+}
+
+@RegisterEventHandler(UnionEventClass)
+class UnionEventHandler implements EventHandler<UnionOrderCreated | UnionPaymentCaptured> {
+  handle(_event: UnionOrderCreated | UnionPaymentCaptured): void {}
 }
 
 @RegisterEventHandler(OrderCreated)

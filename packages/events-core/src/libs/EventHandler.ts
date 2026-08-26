@@ -59,9 +59,10 @@ type EventHandlerParameterTuples<THandlerClass extends AnyEventHandlerClass> = F
   OverloadUnion<InstanceType<THandlerClass>["handle"]>
 >;
 
-type FirstEventHandlerParameter<TParameters extends unknown[]> = TParameters extends []
-  ? never
-  : TParameters[0];
+type EventHandlerParameterTupleAccepting<
+  TParameters extends unknown[],
+  TEvent extends DomainEvent,
+> = TParameters extends unknown[] ? ([TEvent] extends TParameters ? TParameters : never) : never;
 
 type StrictEventHandler<TEvent extends DomainEvent> = {
   handle: (event: TEvent) => Promise<void> | void;
@@ -71,13 +72,18 @@ type CompatibleEventHandlerClass<
   THandlerClass extends AnyEventHandlerClass,
   TEvent extends DomainEvent,
 > = THandlerClass &
-  (TEvent extends FirstEventHandlerParameter<EventHandlerParameterTuples<NoInfer<THandlerClass>>>
-    ? unknown
-    : InstanceType<THandlerClass>["handle"] extends () => unknown
+  ([
+    EventHandlerParameterTupleAccepting<
+      EventHandlerParameterTuples<NoInfer<THandlerClass>>,
+      TEvent
+    >,
+  ] extends [never]
+    ? InstanceType<THandlerClass>["handle"] extends () => unknown
       ? never
       : InstanceType<THandlerClass> extends StrictEventHandler<TEvent>
         ? unknown
-        : never);
+        : never
+    : unknown);
 
 const EVENT_HANDLER_SUBSCRIPTION_METADATA = Symbol("events-core:event-handler-subscription");
 
