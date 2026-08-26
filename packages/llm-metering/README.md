@@ -35,7 +35,7 @@ await metering.recordUsage({
 ```
 
 ```ts
-import { AiMetered, setLlmMeteringService } from "@croco/llm-metering";
+import { AiMetered, runWithLlmMeteringService, setLlmMeteringService } from "@croco/llm-metering";
 
 setLlmMeteringService(metering);
 
@@ -45,7 +45,13 @@ class LlmFacade {
     return llmService.generate({ modelId: "default", prompt: "안녕" });
   }
 }
+
+await runWithLlmMeteringService(metering, () => new LlmFacade().generate());
 ```
+
+`@AiMetered`는 기본적으로 계량 service를 요구합니다. 계량하지 않는 호출은
+`@AiMetered({ metering: "disabled" })`로 의도를 명시해야 합니다. 동시 tenant 요청은
+`runWithLlmMeteringService()`로 요청별 service를 바인딩하며, 전역 service보다 실행 scope가 우선합니다.
 
 ## API 레퍼런스
 
@@ -57,7 +63,8 @@ class LlmFacade {
 ### 데코레이터와 유틸리티
 
 - `@AiMetered`, 메서드 결과에서 사용량을 추출해 자동 기록합니다.
-- `setLlmMeteringService`, `getLlmMeteringService`, 데코레이터용 전역 서비스를 관리합니다.
+- `setLlmMeteringService`, `getLlmMeteringService`, 데코레이터용 전역 기본 service를 관리합니다.
+- `runWithLlmMeteringService`, 동시 실행별 service를 격리합니다.
 - `createMeteredAsyncIterable`, 스트리밍 완료 시 사용량을 기록합니다.
 - `extractUsageFromChunk`, 청크에서 usage와 모델 정보를 추출합니다.
 

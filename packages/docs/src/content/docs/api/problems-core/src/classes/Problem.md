@@ -307,6 +307,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`OpenAiValidationProblem`](/api/llm-openai/src/classes/openaivalidationproblem/)
 - [`LlmCostLimitExceededProblem`](/api/llm-metering/src/classes/llmcostlimitexceededproblem/)
 - [`LlmMeteringRecordFailedProblem`](/api/llm-metering/src/classes/llmmeteringrecordfailedproblem/)
+- [`LlmMeteringServiceRequiredProblem`](/api/llm-metering/src/classes/llmmeteringservicerequiredproblem/)
 - [`LlmQuotaExceededProblem`](/api/llm-metering/src/classes/llmquotaexceededproblem/)
 - [`PricingNotFoundProblem`](/api/llm-metering/src/classes/pricingnotfoundproblem/)
 - [`PricingRegistryConflictProblem`](/api/llm-metering/src/classes/pricingregistryconflictproblem/)

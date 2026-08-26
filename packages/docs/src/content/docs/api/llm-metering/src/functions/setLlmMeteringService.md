@@ -13,7 +13,7 @@ LlmMeteringService 인스턴스 설정 (앱 부트스트랩에서 호출)
 
 ### service
 
-[`LlmMeteringService`](/api/llm-metering/src/classes/llmmeteringservice/)
+[`LlmMeteringService`](/api/llm-metering/src/classes/llmmeteringservice/) \| `null`
 
 ## Returns
 

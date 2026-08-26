@@ -16,6 +16,7 @@ export {
   AiMetered,
   getAiMeteredMetadata,
   getLlmMeteringService,
+  runWithLlmMeteringService,
   setLlmMeteringService,
 } from "./libs/decorators/AiMetered";
 
@@ -54,6 +55,7 @@ export { defaultPricingTable, PricingTable, samplePricingRegistry } from "./libs
 export {
   LlmCostLimitExceededProblem,
   LlmMeteringRecordFailedProblem,
+  LlmMeteringServiceRequiredProblem,
   LlmQuotaExceededProblem,
   PricingNotFoundProblem,
   PricingRegistryConflictProblem,

@@ -16173,6 +16173,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "LlmMeteringServiceRequiredProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/LlmMeteringProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "LlmQuotaExceededProblem",
               "exportKind": "named",
               "source": "./libs/problems/LlmMeteringProblems",
@@ -16207,6 +16213,12 @@
               "exportKind": "named",
               "source": "./libs/types",
               "declarationKind": "const"
+            },
+            {
+              "name": "runWithLlmMeteringService",
+              "exportKind": "named",
+              "source": "./libs/decorators/AiMetered",
+              "declarationKind": "function"
             },
             {
               "name": "samplePricingRegistry",

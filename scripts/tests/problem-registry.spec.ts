@@ -345,6 +345,43 @@ describe("problem-registry.mts", () => {
     expect(problem?.recovery.telemetry.attributes).not.toContain("receivedValue");
   });
 
+  it("publishes non-retryable recovery metadata for required LLM metering", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/llm-metering/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        "export class LlmMeteringServiceRequiredProblem extends Problem {",
+        "  constructor() {",
+        '    super("llm-metering/service-required", ProblemCategory.InternalServerError);',
+        "  }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    expect(runProblemRegistryCheck(repo, "write").status).toBe("pass");
+    const registry = readRegistry(repo);
+    const problem = registry.problems.find(({ code }) => code === "llm-metering/service-required");
+
+    expect(problem?.recovery).toEqual({
+      cause:
+        "@AiMetered required usage recording, but no scoped or global LlmMeteringService was configured.",
+      userAction:
+        "Do not retry the unchanged operation; ask the service operator to configure LLM metering or explicitly disable it for an intentionally unmetered method.",
+      operatorAction:
+        'Bind LlmMeteringService at bootstrap with setLlmMeteringService(), bind it per execution with runWithLlmMeteringService(), or set @AiMetered({ metering: "disabled" }) only when skipping usage recording is intentional.',
+      retryability: "not-retryable",
+      redactionPolicy: "operator-only",
+      telemetry: {
+        eventName: "croco.problem.error",
+        severity: "error",
+        attributes: ["problem.code", "problem.category", "problem.status"],
+      },
+    });
+  });
+
   it("publishes non-retryable recovery metadata for invalid auth route targets", () => {
     const repo = createTempRepo();
     writeFile(

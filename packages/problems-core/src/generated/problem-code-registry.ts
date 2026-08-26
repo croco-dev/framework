@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 669,
+  problemCount: 670,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -10318,7 +10318,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-metering/src/libs/problems/LlmMeteringProblems.ts",
-          line: 41,
+          line: 51,
           column: 5,
           kind: "problem-constructor",
         },
@@ -10349,7 +10349,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-metering/src/libs/problems/LlmMeteringProblems.ts",
-          line: 58,
+          line: 68,
           column: 3,
           kind: "problem-class",
         },
@@ -10379,7 +10379,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-metering/src/libs/problems/LlmMeteringProblems.ts",
-          line: 71,
+          line: 81,
           column: 5,
           kind: "problem-constructor",
         },
@@ -10409,7 +10409,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-metering/src/libs/problems/LlmMeteringProblems.ts",
-          line: 24,
+          line: 34,
           column: 5,
           kind: "problem-constructor",
         },
@@ -10441,7 +10441,40 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-metering/src/libs/problems/LlmMeteringProblems.ts",
-          line: 7,
+          line: 17,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "llm-metering/service-required",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#llm-metering-service-required",
+      recovery: {
+        cause:
+          "@AiMetered required usage recording, but no scoped or global LlmMeteringService was configured.",
+        userAction:
+          "Do not retry the unchanged operation; ask the service operator to configure LLM metering or explicitly disable it for an intentionally unmetered method.",
+        operatorAction:
+          'Bind LlmMeteringService at bootstrap with setLlmMeteringService(), bind it per execution with runWithLlmMeteringService(), or set @AiMetered({ metering: "disabled" }) only when skipping usage recording is intentional.',
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/llm-metering/src/libs/problems/LlmMeteringProblems.ts",
+          line: 5,
           column: 5,
           kind: "problem-constructor",
         },
