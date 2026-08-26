@@ -15,7 +15,7 @@ const PNPM_COMMAND_FAILURES: Record<
     code: "create-croco-app/dependency-install-failed",
     detail: "pnpm could not install the generated workspace dependencies.",
     recovery:
-      "Resolve the pnpm installation error shown above and rerun create-croco-app, or rerun with --no-install and install dependencies manually.",
+      "Run the reported diagnostic command to inspect the pnpm error, then rerun create-croco-app, or rerun with --no-install and install dependencies manually.",
   },
   "lockfile-validation": {
     code: "create-croco-app/lockfile-validation-failed",

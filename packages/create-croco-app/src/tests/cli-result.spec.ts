@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   createFailureResult,
@@ -108,6 +111,101 @@ describe("CLI result contract", () => {
     });
     expect(formatHumanFailure(result)).toContain(
       "Unexpected error [create-croco-app/unexpected-failure]",
+    );
+  });
+
+  it("does not classify inaccessible destination paths as untouched", () => {
+    const testRoot = mkdtempSync(join(tmpdir(), "croco-destination-state-"));
+    const blockingFile = join(testRoot, "not-a-directory");
+    const targetDir = join(blockingFile, "child");
+    writeFileSync(blockingFile, "occupied\n");
+
+    try {
+      const result = createFailureResult(new Error("write failed"), {
+        targetDir,
+        retryCommand: { command: "create-croco-app", args: [targetDir] },
+      });
+
+      expect(result.destination).toEqual({
+        targetDir,
+        state: "unavailable",
+        untouched: false,
+      });
+    } finally {
+      rmSync(testRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("removes every JSON flag from the diagnostic command", () => {
+    const targetDir = join(tmpdir(), "croco-json-diagnostic-command");
+    const result = createFailureResult(new Error("write failed"), {
+      targetDir,
+      retryCommand: {
+        command: "create-croco-app",
+        args: [targetDir, "--scope", "--json", "--json"],
+      },
+    });
+
+    expect(result.diagnosticCommand).toEqual({
+      command: "create-croco-app",
+      args: [targetDir, "--scope"],
+    });
+  });
+
+  it("includes a diagnostic command for human-mode retries", () => {
+    const targetDir = join(tmpdir(), "croco-human-diagnostic-command");
+    const retryCommand = {
+      command: "create-croco-app" as const,
+      args: [targetDir, "--scope", "@test"],
+    };
+
+    const result = createFailureResult(new Error("write failed"), {
+      targetDir,
+      retryCommand,
+    });
+
+    expect(result.diagnosticCommand).toEqual(retryCommand);
+  });
+
+  it("formats destination and copyable recovery commands for human failures", () => {
+    const targetDir = "/tmp/Owen's Croco App";
+    const result = createFailureResult(new Error("write failed"), {
+      targetDir,
+      retryCommand: {
+        command: "create-croco-app",
+        args: [targetDir, "--scope", "@test", "--json"],
+      },
+    });
+
+    expect(formatHumanFailure(result, "linux")).toContain(
+      `Destination: ${targetDir} (absent, untouched: yes)`,
+    );
+    expect(formatHumanFailure(result, "linux")).toContain(
+      "Retry command: create-croco-app '/tmp/Owen'\\''s Croco App' --scope @test --json",
+    );
+    expect(formatHumanFailure(result, "linux")).toContain(
+      "Diagnostic command: create-croco-app '/tmp/Owen'\\''s Croco App' --scope @test",
+    );
+    expect(formatHumanFailure(result, "win32")).toContain(
+      'Retry command: create-croco-app "/tmp/Owen\'s Croco App" --scope @test --json',
+    );
+  });
+
+  it("preserves Windows paths with quotes and trailing backslashes", () => {
+    const targetDir = 'C:\\work\\Croco "App"\\';
+    const result = createFailureResult(new Error("write failed"), {
+      targetDir,
+      retryCommand: {
+        command: "create-croco-app",
+        args: [targetDir, "--json"],
+      },
+    });
+
+    expect(formatHumanFailure(result, "win32")).toContain(
+      'Retry command: create-croco-app "C:\\work\\Croco \\"App\\"\\\\" --json',
+    );
+    expect(formatHumanFailure(result, "win32")).toContain(
+      'Diagnostic command: create-croco-app "C:\\work\\Croco \\"App\\"\\\\"',
     );
   });
 });

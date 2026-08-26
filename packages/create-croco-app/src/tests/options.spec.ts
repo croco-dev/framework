@@ -5,6 +5,7 @@ import { createProgram } from "../cli.js";
 import { createCreateCrocoAppProgram } from "../cli-program.js";
 import { InvalidCliOptionProblem } from "../libs/problems/InvalidCliOptionProblem.js";
 import { InvalidGoalOptionProblem } from "../libs/problems/InvalidGoalOptionProblem.js";
+import { PnpmCommandProblem } from "../libs/problems/PnpmCommandProblem.js";
 import {
   normalizeNonInteractiveOptions,
   parseCliOptions,
@@ -618,6 +619,7 @@ describe("noninteractive CLI option validation", () => {
         projectName: targetDir.split("/").at(-1),
         db: [],
       }),
+      { outputMode: "human" },
     );
   });
 
@@ -705,6 +707,55 @@ describe("noninteractive CLI option validation", () => {
         },
       });
       expect(existsSync(targetDir)).toBe(false);
+    } finally {
+      exitSpy.mockRestore();
+      errorSpy.mockRestore();
+      rmSync(targetDir, { recursive: true, force: true });
+    }
+  });
+
+  it("prints retryable destination state for JSON generation failures", async () => {
+    const targetDir = `/tmp/croco-json-retry-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation((code) => {
+      throw new Error(`process.exit: ${String(code)}`);
+    });
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    generateMock.mockRejectedValueOnce(
+      new PnpmCommandProblem(
+        "dependency-install",
+        "pnpm install --no-frozen-lockfile",
+        new Error(),
+      ),
+    );
+
+    try {
+      const program = createProgram();
+
+      await expect(
+        program.parseAsync(
+          [targetDir, "--preset", "blank", "--scope", "@test", "--no-git", "--json"],
+          { from: "user" },
+        ),
+      ).rejects.toThrow("process.exit: 1");
+
+      const result = JSON.parse(String(errorSpy.mock.calls[0]?.[0])) as Record<string, unknown>;
+      expect(result).toMatchObject({
+        ok: false,
+        code: "create-croco-app/dependency-install-failed",
+        destination: {
+          targetDir,
+          state: "absent",
+          untouched: true,
+        },
+        retryCommand: {
+          command: "create-croco-app",
+          args: [targetDir, "--preset", "blank", "--scope", "@test", "--no-git", "--json"],
+        },
+        diagnosticCommand: {
+          command: "create-croco-app",
+          args: [targetDir, "--preset", "blank", "--scope", "@test", "--no-git"],
+        },
+      });
     } finally {
       exitSpy.mockRestore();
       errorSpy.mockRestore();
