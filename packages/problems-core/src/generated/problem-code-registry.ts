@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 668,
+  problemCount: 669,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -7798,7 +7798,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/problems/ShutdownProblems.ts",
-          line: 97,
+          line: 111,
           column: 3,
           kind: "problem-class",
         },
@@ -7831,7 +7831,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/problems/ShutdownProblems.ts",
-          line: 112,
+          line: 126,
           column: 3,
           kind: "problem-class",
         },
@@ -7863,7 +7863,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/problems/ShutdownProblems.ts",
-          line: 73,
+          line: 87,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "framework-context/shutdown-timeout-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#framework-context-shutdown-timeout-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/framework-context/src/libs/problems/ShutdownProblems.ts",
+          line: 71,
           column: 3,
           kind: "problem-class",
         },

@@ -10883,6 +10883,13 @@
               "compatibilityGroup": "di"
             },
             {
+              "name": "InvalidShutdownTimeoutProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/ShutdownProblems",
+              "declarationKind": "class",
+              "compatibilityGroup": "shutdown"
+            },
+            {
               "name": "isKnownRuntimePlatform",
               "exportKind": "named",
               "source": "./libs/runtimeCapabilities",

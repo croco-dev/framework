@@ -230,6 +230,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`PolicyConflictProblem`](/api/framework-context/src/classes/policyconflictproblem/)
 - [`PolicyDefinitionProblem`](/api/framework-context/src/classes/policydefinitionproblem/)
 - [`PipelineGraphProblem`](/api/framework-context/src/classes/pipelinegraphproblem/)
+- [`InvalidShutdownTimeoutProblem`](/api/framework-context/src/classes/invalidshutdowntimeoutproblem/)
 - [`OnShutdownDecoratorProblem`](/api/framework-context/src/classes/onshutdowndecoratorproblem/)
 - [`ShutdownConfigurationConflictProblem`](/api/framework-context/src/classes/shutdownconfigurationconflictproblem/)
 - [`ShutdownHookExecutionProblem`](/api/framework-context/src/classes/shutdownhookexecutionproblem/)

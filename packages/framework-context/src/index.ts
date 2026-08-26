@@ -308,6 +308,7 @@ export {
 } from "./libs/problems/RuntimePolicyProblems";
 export { PipelineGraphProblem } from "./libs/problems/PipelineGraphProblems";
 export {
+  InvalidShutdownTimeoutProblem,
   OnShutdownDecoratorProblem,
   ShutdownConfigurationConflictProblem,
   ShutdownHookExecutionProblem,

@@ -76,6 +76,8 @@ surfaced as unhandled promise rejections. Successful shutdown leaves the existin
 
 `ShutdownManager`는 프로세스 singleton입니다. `getInstance()`로 암시적 기본 timeout이 생성된 뒤에는
 `getInstance(timeoutMs)` 또는 `configure(timeoutMs)`로 한 번 명시적 timeout을 고정할 수 있습니다.
+timeout은 유한한 양수여야 하며, 잘못된 값은 manager 상태가 변경되기 전에
+`InvalidShutdownTimeoutProblem`으로 거부됩니다.
 서로 다른 명시적 timeout을 다시 전달하면 `ShutdownConfigurationConflictProblem`이 발생합니다.
 테스트나 독립 런타임에서는 `ShutdownManager.reset()`으로 기존 signal listener와 훅을 정리한 뒤 새 singleton을
 생성하세요.
@@ -95,7 +97,7 @@ surfaced as unhandled promise rejections. Successful shutdown leaves the existin
 - `MiddlewareChain`: onion 패턴 미들웨어 실행
 - `ShutdownManager`, `OnShutdown`: graceful shutdown 훅 수집과 실행
 - `LOGGER_TOKEN`, `TRANSACTION_CONTEXT_TOKEN`: 공용 DI 토큰
-- `CircularDependencyProblem`, `MiddlewareProblem`, `RuntimeInspectorConfigurationProblem`, `ShutdownConfigurationConflictProblem`, `ShutdownTimeoutProblem`: 기반 계층 Problem 타입
+- `CircularDependencyProblem`, `MiddlewareProblem`, `RuntimeInspectorConfigurationProblem`, `InvalidShutdownTimeoutProblem`, `ShutdownConfigurationConflictProblem`, `ShutdownTimeoutProblem`: 기반 계층 Problem 타입
 
 ## 의존성 그래프 sourceLocation 진단
 
