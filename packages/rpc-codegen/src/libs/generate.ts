@@ -959,53 +959,54 @@ export type CrocoManifestBundleSource = typeof crocoManifestBundleSource;
 }
 
 function getResponseHelperImports(options: ResponseHelperOptions): string {
-  const helpers: string[] = [
+  const valueHelpers: string[] = [
     "createRpcClientRequest",
     "handleRpcRequestError",
     "handleRpcRequestResultError",
   ];
 
   if (options.hasOutputRoutes) {
-    helpers.push("handleJsonResponse");
-    helpers.push("handleJsonResult");
+    valueHelpers.push("handleJsonResponse");
+    valueHelpers.push("handleJsonResult");
   }
 
   if (options.hasNoOutputRoutes) {
-    helpers.push("readOptionalJsonResponse");
-    helpers.push("readOptionalJsonResult");
+    valueHelpers.push("readOptionalJsonResponse");
+    valueHelpers.push("readOptionalJsonResult");
   }
 
   if (options.hasFormRoutes) {
-    helpers.push("toRpcFormProblem");
+    valueHelpers.push("toRpcFormProblem");
   }
 
   if (options.hasQueryKeyInputs) {
-    helpers.push("serializeRpcQueryKeyInput");
+    valueHelpers.push("serializeRpcQueryKeyInput");
   }
 
-  helpers.push(
-    "type RpcClientConfig",
-    "type RpcClientRequestOptions",
-    "type RpcClientResult",
-    "type RpcDeclaredProblem",
-  );
+  const typeHelpers = [
+    "RpcClientConfig",
+    "RpcClientRequestOptions",
+    "RpcClientResult",
+    "RpcDeclaredProblem",
+  ];
 
   if (options.hasFormRoutes) {
-    helpers.push(
-      "type RpcDomainProblem",
-      "type RpcFormFieldProblem",
-      "type RpcFormGlobalProblem",
-      "type RpcFormModel",
+    typeHelpers.push(
+      "RpcDomainProblem",
+      "RpcFormFieldProblem",
+      "RpcFormGlobalProblem",
+      "RpcFormModel",
     );
   }
 
-  helpers.push("type RpcProblemDetailsFor");
+  typeHelpers.push("RpcProblemDetailsFor");
 
   if (options.hasFormRoutes) {
-    helpers.push("type RpcValidationProblem");
+    typeHelpers.push("RpcValidationProblem");
   }
 
-  return helpers.length === 0 ? "" : `import { ${helpers.join(", ")} } from './rpc';\n`;
+  return `import { ${valueHelpers.join(", ")} } from './rpc';
+import type { ${typeHelpers.join(", ")} } from './rpc';\n`;
 }
 
 function generateRpcSupport(options: GenerateClientOptions = {}): string {

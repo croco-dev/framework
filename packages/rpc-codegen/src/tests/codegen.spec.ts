@@ -577,7 +577,7 @@ describe("generateClientFiles", () => {
       "{ routeId: 'UserController.list', operationId: 'UserController_list', methodName: 'list', method: 'GET', path: '/users' }",
     );
     expect(content).toContain(
-      "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, readOptionalJsonResponse, readOptionalJsonResult, type RpcClientConfig, type RpcClientRequestOptions, type RpcClientResult, type RpcDeclaredProblem, type RpcProblemDetailsFor } from './rpc';",
+      "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, readOptionalJsonResponse, readOptionalJsonResult } from './rpc';\nimport type { RpcClientConfig, RpcClientRequestOptions, RpcClientResult, RpcDeclaredProblem, RpcProblemDetailsFor } from './rpc';",
     );
     expect(rpcContent).toContain("export class RpcClientProblemError extends Error");
     expect(rpcContent).toContain("export class RpcClientResponseError extends Error");
@@ -928,7 +928,7 @@ describe("generateClientFiles", () => {
     expect(rpcContent).not.toContain("export class RpcClientProblemError extends Error");
     expect(rpcContent).not.toContain("function isRpcProblemDetails");
     expect(content).toContain(
-      "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, handleJsonResponse, handleJsonResult, toRpcFormProblem, serializeRpcQueryKeyInput, type RpcClientConfig, type RpcClientRequestOptions, type RpcClientResult, type RpcDeclaredProblem, type RpcDomainProblem, type RpcFormFieldProblem, type RpcFormGlobalProblem, type RpcFormModel, type RpcProblemDetailsFor, type RpcValidationProblem } from './rpc';",
+      "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, handleJsonResponse, handleJsonResult, toRpcFormProblem, serializeRpcQueryKeyInput } from './rpc';\nimport type { RpcClientConfig, RpcClientRequestOptions, RpcClientResult, RpcDeclaredProblem, RpcDomainProblem, RpcFormFieldProblem, RpcFormGlobalProblem, RpcFormModel, RpcProblemDetailsFor, RpcValidationProblem } from './rpc';",
     );
     expect(content).toContain("export type CreateUserResult = RpcClientResult");
     assertGeneratedPackageTypechecks(["index.ts", "rpc.ts", "user.ts"]);
@@ -2004,7 +2004,7 @@ void handleMissingProblemBranch;
 `;
 
       expect(content).toContain(
-        "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, handleJsonResponse, handleJsonResult, serializeRpcQueryKeyInput, type RpcClientConfig, type RpcClientRequestOptions, type RpcClientResult, type RpcDeclaredProblem, type RpcProblemDetailsFor } from './rpc';",
+        "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, handleJsonResponse, handleJsonResult, serializeRpcQueryKeyInput } from './rpc';\nimport type { RpcClientConfig, RpcClientRequestOptions, RpcClientResult, RpcDeclaredProblem, RpcProblemDetailsFor } from './rpc';",
       );
       expect(content).toContain(
         "export type GetProblem = RpcDeclaredProblem<'USER_NOT_FOUND', 'NotFound', 404> | RpcDeclaredProblem<'USER_FORBIDDEN', 'Forbidden', 403>;",
@@ -2157,7 +2157,7 @@ void handleMissingProblemBranch;
         params: [{ kind: "path", name: "id", schema: null }],
         inputSchema: null,
         inputSchemas: PATH_INPUT_SCHEMAS,
-        outputSchema: z.object({ id: z.string(), name: z.string() }) as any,
+        outputSchema: z.object({ id: z.string(), name: z.string() }),
         problemResponses: [
           {
             code: "USER_NOT_FOUND",
@@ -2935,7 +2935,7 @@ void createResultHook;
         "export type ListInput = { query: { active?: boolean | undefined; deletedAt: string | null; page: number; search?: string | undefined; tags: string[]; }; };",
       );
       expect(content).toContain(
-        "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, readOptionalJsonResponse, readOptionalJsonResult, serializeRpcQueryKeyInput, type RpcClientConfig, type RpcClientRequestOptions, type RpcClientResult, type RpcDeclaredProblem, type RpcProblemDetailsFor } from './rpc';",
+        "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, readOptionalJsonResponse, readOptionalJsonResult, serializeRpcQueryKeyInput } from './rpc';\nimport type { RpcClientConfig, RpcClientRequestOptions, RpcClientResult, RpcDeclaredProblem, RpcProblemDetailsFor } from './rpc';",
       );
       assertGeneratedClientTypechecks(`${content}
 const result: Promise<unknown | undefined> = userClient.list({
@@ -3064,7 +3064,7 @@ void result;
 
       const content = fs.readFileSync(files[0], "utf-8");
       expect(content).toContain(
-        "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, handleJsonResponse, handleJsonResult, toRpcFormProblem, serializeRpcQueryKeyInput, type RpcClientConfig, type RpcClientRequestOptions, type RpcClientResult, type RpcDeclaredProblem, type RpcDomainProblem, type RpcFormFieldProblem, type RpcFormGlobalProblem, type RpcFormModel, type RpcProblemDetailsFor, type RpcValidationProblem } from './rpc';",
+        "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, handleJsonResponse, handleJsonResult, toRpcFormProblem, serializeRpcQueryKeyInput } from './rpc';\nimport type { RpcClientConfig, RpcClientRequestOptions, RpcClientResult, RpcDeclaredProblem, RpcDomainProblem, RpcFormFieldProblem, RpcFormGlobalProblem, RpcFormModel, RpcProblemDetailsFor, RpcValidationProblem } from './rpc';",
       );
       expect(content).toContain(
         "export type CreateFormFieldName = 'name' | 'email' | 'role' | 'receiveUpdates' | 'retryCount';",
