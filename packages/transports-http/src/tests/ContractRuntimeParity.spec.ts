@@ -66,11 +66,11 @@ const NestedWidgetResponseSchema = z.object({
   color: z.enum(["blue", "green"]),
 });
 
-const OptionalRequestBodySchema = z.object({ value: z.string() }).optional();
-const DefaultRequestBodySchema = z.object({ value: z.string() }).default({ value: "default" });
-const CatchRequestBodySchema = z.object({ value: z.string() }).catch({ value: "caught" });
-const RequiredRequestBodySchema = z.object({ value: z.string() });
-const NullableRequiredRequestBodySchema = RequiredRequestBodySchema.nullable();
+const OPTIONAL_REQUEST_BODY_SCHEMA = z.object({ value: z.string() }).optional();
+const DEFAULT_REQUEST_BODY_SCHEMA = z.object({ value: z.string() }).default({ value: "default" });
+const CATCH_REQUEST_BODY_SCHEMA = z.object({ value: z.string() }).catch({ value: "caught" });
+const REQUIRED_REQUEST_BODY_SCHEMA = z.object({ value: z.string() });
+const NULLABLE_REQUIRED_REQUEST_BODY_SCHEMA = REQUIRED_REQUEST_BODY_SCHEMA.nullable();
 
 const WidgetResponseSchema = z.object({
   id: z.string(),
@@ -202,15 +202,8 @@ class NestedBodyValidationController {
 
 @Controller("/contract-parity/omitted-body")
 class OmittedBodyController {
-  @Post("/default")
-  defaulted(@Body(DefaultRequestBodySchema) body: z.infer<typeof DefaultRequestBodySchema>): {
-    value: string;
-  } {
-    return body;
-  }
-
   @Post("/catch")
-  caught(@Body(CatchRequestBodySchema) body: z.infer<typeof CatchRequestBodySchema>): {
+  caught(@Body(CATCH_REQUEST_BODY_SCHEMA) body: z.infer<typeof CATCH_REQUEST_BODY_SCHEMA>): {
     value: string;
   } {
     return body;
@@ -220,14 +213,25 @@ class OmittedBodyController {
 @Controller("/contract-parity/omitted-body")
 class OmittedBodyContractController {
   @Post("/optional")
-  optional(@Body(OptionalRequestBodySchema) body: z.infer<typeof OptionalRequestBodySchema>): {
+  optional(
+    @Body(OPTIONAL_REQUEST_BODY_SCHEMA) body: z.infer<typeof OPTIONAL_REQUEST_BODY_SCHEMA>,
+  ): {
     value: string;
   } {
     return { value: body?.value ?? "omitted" };
   }
 
+  @Post("/default")
+  defaulted(@Body(DEFAULT_REQUEST_BODY_SCHEMA) body: z.infer<typeof DEFAULT_REQUEST_BODY_SCHEMA>): {
+    value: string;
+  } {
+    return body;
+  }
+
   @Post("/required")
-  required(@Body(RequiredRequestBodySchema) body: z.infer<typeof RequiredRequestBodySchema>): {
+  required(
+    @Body(REQUIRED_REQUEST_BODY_SCHEMA) body: z.infer<typeof REQUIRED_REQUEST_BODY_SCHEMA>,
+  ): {
     value: string;
   } {
     return body;
@@ -235,8 +239,8 @@ class OmittedBodyContractController {
 
   @Post("/nullable-required")
   nullableRequired(
-    @Body(NullableRequiredRequestBodySchema)
-    body: z.infer<typeof NullableRequiredRequestBodySchema>,
+    @Body(NULLABLE_REQUIRED_REQUEST_BODY_SCHEMA)
+    body: z.infer<typeof NULLABLE_REQUIRED_REQUEST_BODY_SCHEMA>,
   ): { value: string | null } {
     return { value: body?.value ?? null };
   }
@@ -764,7 +768,7 @@ describe("REST contract-to-runtime parity", () => {
 
     const cases = [
       { path: "optional", required: false, expectedBody: { value: "omitted" } },
-      { path: "default", expectedBody: { value: "default" } },
+      { path: "default", required: false, expectedBody: { value: "default" } },
       { path: "catch", expectedBody: { value: "caught" } },
       { path: "required", required: true, expectedStatus: 422 },
       { path: "nullable-required", required: true, expectedStatus: 422 },

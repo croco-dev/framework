@@ -42,37 +42,38 @@ class NodeSmokeController {
   }
 }
 
-const OptionalNodeBodySchema = z.object({ value: z.string() }).optional();
-const DefaultNodeBodySchema = z.object({ value: z.string() }).default({ value: "default" });
-const CatchNodeBodySchema = z.object({ value: z.string() }).catch({ value: "caught" });
-const RequiredNodeBodySchema = z.object({ value: z.string() });
-const NullableRequiredNodeBodySchema = RequiredNodeBodySchema.nullable();
+const OPTIONAL_NODE_BODY_SCHEMA = z.object({ value: z.string() }).optional();
+const DEFAULT_NODE_BODY_SCHEMA = z.object({ value: z.string() }).default({ value: "default" });
+const CATCH_NODE_BODY_SCHEMA = z.object({ value: z.string() }).catch({ value: "caught" });
+const REQUIRED_NODE_BODY_SCHEMA = z.object({ value: z.string() });
+const NULLABLE_REQUIRED_NODE_BODY_SCHEMA = REQUIRED_NODE_BODY_SCHEMA.nullable();
 
 @Controller("/node-omitted-body")
 class NodeOmittedBodyController {
   @Post("/optional")
-  optional(@Body(OptionalNodeBodySchema) body: z.infer<typeof OptionalNodeBodySchema>) {
+  optional(@Body(OPTIONAL_NODE_BODY_SCHEMA) body: z.infer<typeof OPTIONAL_NODE_BODY_SCHEMA>) {
     return { value: body?.value ?? "omitted" };
   }
 
   @Post("/default")
-  defaulted(@Body(DefaultNodeBodySchema) body: z.infer<typeof DefaultNodeBodySchema>) {
+  defaulted(@Body(DEFAULT_NODE_BODY_SCHEMA) body: z.infer<typeof DEFAULT_NODE_BODY_SCHEMA>) {
     return body;
   }
 
   @Post("/catch")
-  caught(@Body(CatchNodeBodySchema) body: z.infer<typeof CatchNodeBodySchema>) {
+  caught(@Body(CATCH_NODE_BODY_SCHEMA) body: z.infer<typeof CATCH_NODE_BODY_SCHEMA>) {
     return body;
   }
 
   @Post("/required")
-  required(@Body(RequiredNodeBodySchema) body: z.infer<typeof RequiredNodeBodySchema>) {
+  required(@Body(REQUIRED_NODE_BODY_SCHEMA) body: z.infer<typeof REQUIRED_NODE_BODY_SCHEMA>) {
     return body;
   }
 
   @Post("/nullable-required")
   nullableRequired(
-    @Body(NullableRequiredNodeBodySchema) body: z.infer<typeof NullableRequiredNodeBodySchema>,
+    @Body(NULLABLE_REQUIRED_NODE_BODY_SCHEMA)
+    body: z.infer<typeof NULLABLE_REQUIRED_NODE_BODY_SCHEMA>,
   ) {
     return body;
   }
