@@ -292,23 +292,18 @@ function toResponseConfig(
     ...defaultResponses,
     ...toDeclaredProblemResponseConfig(route, problemDetailsRef),
   };
+  if (!outputSchema) delete responses[200];
 
-  if (outputSchema) {
-    return {
-      ...responses,
-      200: {
-        description: "Successful response",
-        content: { "application/json": { schema: outputSchema } },
-      },
-    };
-  }
-
-  delete responses[200];
   return {
     ...responses,
-    204: {
-      description: "No content",
-    },
+    ...(outputSchema
+      ? {
+          200: {
+            description: "Successful response",
+            content: { "application/json": { schema: outputSchema } },
+          },
+        }
+      : { 204: { description: "No content" } }),
   };
 }
 
