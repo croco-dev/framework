@@ -3,7 +3,7 @@ import { Container, Context as FrameworkContext, LOGGER_TOKEN } from "@croco/fra
 import type { Logger } from "@croco/framework-logger";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import { HttpExceptionFilter } from "@croco/protocols-rest";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { HTTP_CONTEXT_KEYS } from "../libs/contextKeys";
 import { ErrorHandler } from "../libs/ErrorHandler";
 import { HttpRequestBodyTooLargeProblem } from "../libs/problems/HttpRequestBodyProblems";
@@ -537,6 +537,77 @@ describe("ErrorHandler", () => {
       });
       expect(JSON.stringify(body)).not.toContain("secret-tenant");
       expect(JSON.stringify(body)).not.toContain("secret-provider-token");
+    });
+  });
+
+  describe("handleGenericError", () => {
+    it("should return the sanitized 500 response when logging throws", async () => {
+      const originalError = new Error("database password: secret-password");
+      const loggingError = new Error("log sink unavailable");
+      const throwingLogger = {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(() => {
+          throw loggingError;
+        }),
+        debug: vi.fn(),
+      } as unknown as Logger;
+      const handler = new ErrorHandler(throwingLogger);
+
+      const response = handler.handleError(originalError, mockCtx);
+      const body = await response.json();
+
+      expect(response.status).toBe(500);
+      expect(body).toEqual({
+        type: "about:blank",
+        title: "Internal Server Error",
+        status: 500,
+        detail: "An internal error occurred",
+      });
+      expect(throwingLogger.error).toHaveBeenCalledOnce();
+      expect(throwingLogger.error).toHaveBeenCalledWith("Unhandled error:", originalError);
+      expect(JSON.stringify(body)).not.toContain(originalError.message);
+      expect(JSON.stringify(body)).not.toContain(loggingError.message);
+    });
+
+    it("should report the original error through a healthy logger", () => {
+      const originalError = new Error("request failed");
+      const logger = {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        debug: vi.fn(),
+      } as unknown as Logger;
+      const handler = new ErrorHandler(logger);
+
+      handler.handleError(originalError, mockCtx);
+
+      expect(logger.error).toHaveBeenCalledOnce();
+      expect(logger.error).toHaveBeenCalledWith("Unhandled error:", originalError);
+    });
+
+    it("should consume a rejected logger promise while returning the sanitized response", async () => {
+      const originalError = new Error("request failed");
+      const loggingError = new Error("async log sink unavailable");
+      const rejectedLogging = Promise.reject(loggingError);
+      const catchSpy = vi.spyOn(rejectedLogging, "catch");
+      const asyncLogger = {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(() => rejectedLogging),
+        debug: vi.fn(),
+      } as unknown as Logger;
+      const handler = new ErrorHandler(asyncLogger);
+
+      try {
+        const response = handler.handleError(originalError, mockCtx);
+
+        expect(response.status).toBe(500);
+        expect(catchSpy).toHaveBeenCalledOnce();
+        expect(asyncLogger.error).toHaveBeenCalledWith("Unhandled error:", originalError);
+      } finally {
+        await rejectedLogging.catch(() => undefined);
+      }
     });
   });
 });

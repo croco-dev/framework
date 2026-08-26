@@ -85,7 +85,7 @@ export class ErrorHandler {
   }
 
   private handleGenericError(error: Error, ctx: CrocoHttpContext): Response {
-    this.logger.error("Unhandled error:", error);
+    this.safelyReportUnhandledError(error);
 
     return ctx.jsonResponse(
       {
@@ -97,6 +97,17 @@ export class ErrorHandler {
       },
       500,
     );
+  }
+
+  private safelyReportUnhandledError(error: Error): void {
+    let loggingResult: unknown;
+    try {
+      loggingResult = this.logger.error("Unhandled error:", error);
+    } catch {
+      return;
+    }
+
+    void Promise.resolve(loggingResult).catch(() => undefined);
   }
 
   private createFailureMetadata(ctx: CrocoHttpContext): FailureMetadata {
