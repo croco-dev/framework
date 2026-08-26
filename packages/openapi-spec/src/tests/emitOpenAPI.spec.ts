@@ -769,6 +769,9 @@ describe("emitOpenAPI", () => {
     const spec = emitOpenAPI([SessionsController], {
       problemResponses: [{ status: 401, description: "Authentication required" }],
       defaultResponses: {
+        200: {
+          description: "Inherited success response",
+        },
         429: {
           description: "Too many requests",
         },
