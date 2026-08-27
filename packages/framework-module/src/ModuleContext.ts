@@ -6,6 +6,9 @@ import type { ModuleToken } from "./types/ModuleToken";
 
 export type ModuleContextOptions = {
   readonly moduleName?: string;
+  readonly rejectUnknownProvider?: boolean;
+  readonly validateRuntime?: () => void;
+  readonly resolveProvider?: <T>(token: ModuleToken<T>) => T;
   readonly canAccessToken?: (moduleName: string, token: ModuleToken<unknown>) => boolean;
   readonly isKnownToken?: (token: ModuleToken<unknown>) => boolean;
   readonly validateProviderWrite?: (
@@ -22,6 +25,9 @@ export type ModuleContextOptions = {
 export class ModuleContext {
   private readonly container: ContainerInstance;
   private readonly moduleName?: string;
+  private readonly rejectUnknownProvider: boolean;
+  private readonly validateRuntime?: () => void;
+  private readonly resolveProvider?: <T>(token: ModuleToken<T>) => T;
   private readonly canAccessToken?: (moduleName: string, token: ModuleToken<unknown>) => boolean;
   private readonly isKnownToken?: (token: ModuleToken<unknown>) => boolean;
   private readonly validateProviderWrite?: (
@@ -40,6 +46,9 @@ export class ModuleContext {
   constructor(container: ContainerInstance, options: ModuleContextOptions = {}) {
     this.container = container;
     this.moduleName = options.moduleName;
+    this.rejectUnknownProvider = options.rejectUnknownProvider ?? false;
+    this.validateRuntime = options.validateRuntime;
+    this.resolveProvider = options.resolveProvider;
     this.canAccessToken = options.canAccessToken;
     this.isKnownToken = options.isKnownToken;
     this.validateProviderWrite = options.validateProviderWrite;
@@ -48,18 +57,27 @@ export class ModuleContext {
   }
 
   get<T>(token: ModuleToken<T>): T {
+    this.validateRuntime?.();
     this.assertTokenVisible(token);
+
+    if (this.resolveProvider) {
+      return this.resolveProvider(token);
+    }
 
     return this.container.get(FrameworkContainer.toTypeDIServiceIdentifier(token));
   }
 
   set<T>(token: ModuleToken<T>, value: T): void {
+    this.validateRuntime?.();
     this.validateProviderWrite?.(this.moduleName, token);
     this.container.set(FrameworkContainer.toTypeDIServiceIdentifier(token), value);
   }
 
   private assertTokenVisible<T>(token: ModuleToken<T>): void {
     if (!this.moduleName) {
+      if (this.rejectUnknownProvider && !this.isKnownToken?.(token)) {
+        throw new ModuleProviderVisibilityProblem("<root>", token);
+      }
       return;
     }
 
@@ -69,6 +87,10 @@ export class ModuleContext {
         return;
       }
 
+      throw new ModuleProviderVisibilityProblem(this.moduleName, token);
+    }
+
+    if (this.rejectUnknownProvider) {
       throw new ModuleProviderVisibilityProblem(this.moduleName, token);
     }
 

@@ -1,11 +1,16 @@
 import type { DiagnosticsProvider, HealthStatus } from "@croco/diagnostics-core";
-import { getRegisteredModules } from "../../ModuleRegistry";
+import { defaultModuleRuntime } from "../../ModuleRegistry";
+import type { ModuleRuntime } from "../../ModuleRegistry";
 
 export class ModuleDiagnosticsProvider implements DiagnosticsProvider {
   readonly name = "modules";
 
+  constructor(
+    private readonly runtime: Pick<ModuleRuntime, "getRegisteredModules"> = defaultModuleRuntime,
+  ) {}
+
   async getHealth(): Promise<HealthStatus> {
-    const modules = getRegisteredModules();
+    const modules = this.runtime.getRegisteredModules();
     const initializedCount = modules.filter((m) => m.initialized).length;
     const totalCount = modules.length;
     const details = {

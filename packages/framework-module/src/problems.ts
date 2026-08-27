@@ -98,7 +98,7 @@ export class ModuleLifecycleProblem extends Problem {
 export class ModuleRegistrationConflictProblem extends Problem {
   constructor(readonly registryState: "initialized" | "initializing" | "shutting-down") {
     const recoveryAction =
-      "Call CrocoModule.shutdown() or CrocoModule.reset() before registering modules.";
+      "Call shutdown() or reset() on the owning module runtime before registering modules.";
 
     super(
       "framework-module/registration-lifecycle-conflict",
@@ -107,6 +107,42 @@ export class ModuleRegistrationConflictProblem extends Problem {
       {
         extensions: { registryState, recoveryAction },
       },
+    );
+  }
+}
+
+export class ModuleRuntimeDisposedProblem extends Problem {
+  constructor() {
+    super(
+      "framework-module/runtime-disposed",
+      ProblemCategory.Conflict,
+      "Module runtime has been disposed and cannot be reused. Create a new module runtime.",
+    );
+  }
+}
+
+export class ModuleRuntimeResetConflictProblem extends Problem {
+  constructor(readonly runtimeState: "initializing" | "shutting-down") {
+    const recoveryAction =
+      "Wait for the active lifecycle operation to finish before resetting the module runtime.";
+
+    super(
+      "framework-module/runtime-reset-conflict",
+      ProblemCategory.Conflict,
+      `Module runtime reset is unavailable while the runtime is ${runtimeState}. ${recoveryAction}`,
+      {
+        extensions: { runtimeState, recoveryAction },
+      },
+    );
+  }
+}
+
+export class ModuleRuntimeStaleContextProblem extends Problem {
+  constructor() {
+    super(
+      "framework-module/runtime-context-stale",
+      ProblemCategory.Conflict,
+      "Module context belongs to a previous runtime graph. Initialize the current graph and use its context.",
     );
   }
 }
@@ -131,6 +167,22 @@ export class ModuleProviderVisibilityProblem extends Problem {
       ProblemCategory.InternalServerError,
       `Module '${moduleName}' cannot access provider '${provider}'. Export it from an imported module or register it locally.`,
       {
+        extensions: { moduleName, provider },
+      },
+    );
+  }
+}
+
+export class ModuleProviderUnavailableProblem extends Problem {
+  constructor(moduleName: string, token: ModuleToken<unknown>, cause?: Error) {
+    const provider = getModuleTokenLabel(token);
+
+    super(
+      "framework-module/provider-unavailable",
+      ProblemCategory.InternalServerError,
+      `Module '${moduleName}' cannot resolve provider '${provider}' from the current runtime. Bind the provider and all of its dependencies within this runtime.`,
+      {
+        ...(cause ? { cause } : {}),
         extensions: { moduleName, provider },
       },
     );

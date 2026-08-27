@@ -11950,6 +11950,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "createModuleRuntime",
+              "exportKind": "named",
+              "source": "./ModuleRegistry",
+              "declarationKind": "function"
+            },
+            {
               "name": "detectCircularDependency",
               "exportKind": "named",
               "source": "./CircularDependencyDetector",
@@ -11998,6 +12004,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "ModuleProviderUnavailableProblem",
+              "exportKind": "named",
+              "source": "./problems",
+              "declarationKind": "class"
+            },
+            {
               "name": "ModuleProviderVisibilityProblem",
               "exportKind": "named",
               "source": "./problems",
@@ -12011,6 +12023,24 @@
             },
             {
               "name": "ModuleRegistrationConflictProblem",
+              "exportKind": "named",
+              "source": "./problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ModuleRuntimeDisposedProblem",
+              "exportKind": "named",
+              "source": "./problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ModuleRuntimeResetConflictProblem",
+              "exportKind": "named",
+              "source": "./problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ModuleRuntimeStaleContextProblem",
               "exportKind": "named",
               "source": "./problems",
               "declarationKind": "class"
@@ -12103,6 +12133,11 @@
               "name": "ModuleProviderFactory",
               "exportKind": "named",
               "source": "./types"
+            },
+            {
+              "name": "ModuleRuntime",
+              "exportKind": "named",
+              "source": "./ModuleRegistry"
             },
             {
               "name": "ModuleRuntimePhase",

@@ -13,7 +13,13 @@ title: "ModuleDiagnosticsProvider"
 
 ### Constructor
 
-> **new ModuleDiagnosticsProvider**(): `ModuleDiagnosticsProvider`
+> **new ModuleDiagnosticsProvider**(`runtime?`): `ModuleDiagnosticsProvider`
+
+#### Parameters
+
+##### runtime?
+
+`Pick`\<[`ModuleRuntime`](/api/framework-module/src/interfaces/moduleruntime/), `"getRegisteredModules"`\> = `defaultModuleRuntime`
 
 #### Returns
 

@@ -13,15 +13,15 @@ Creates a runtime task reference whose payload and result types are inferred fro
 
 ### TTarget
 
-`TTarget` *extends* `object`
+`TTarget` _extends_ `object`
 
 ### TMethodName
 
-`TMethodName` *extends* `string`
+`TMethodName` _extends_ `string`
 
 ### TName
 
-`TName` *extends* `string`
+`TName` _extends_ `string`
 
 ## Parameters
 

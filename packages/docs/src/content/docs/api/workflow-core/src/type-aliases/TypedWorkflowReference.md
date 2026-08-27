@@ -9,15 +9,15 @@ title: "TypedWorkflowReference"
 
 ## Type Declaration
 
-### \[TYPED\_WORKFLOW\_CONTRACT\]?
+### \[TYPED_WORKFLOW_CONTRACT\]?
 
-> `readonly` `optional` **\[TYPED\_WORKFLOW\_CONTRACT\]?**: `object`
+> `readonly` `optional` **\[TYPED_WORKFLOW_CONTRACT\]?**: `object`
 
-#### \[TYPED\_WORKFLOW\_CONTRACT\].payload
+#### \[TYPED_WORKFLOW_CONTRACT\].payload
 
 > `readonly` **payload**: `TPayload`
 
-#### \[TYPED\_WORKFLOW\_CONTRACT\].steps
+#### \[TYPED_WORKFLOW_CONTRACT\].steps
 
 > `readonly` **steps**: `TSteps`
 
@@ -33,4 +33,4 @@ title: "TypedWorkflowReference"
 
 ### TSteps
 
-`TSteps` *extends* readonly [`WorkflowStepResult`](/api/workflow-core/src/type-aliases/workflowstepresult/)[]
+`TSteps` _extends_ readonly [`WorkflowStepResult`](/api/workflow-core/src/type-aliases/workflowstepresult/)[]

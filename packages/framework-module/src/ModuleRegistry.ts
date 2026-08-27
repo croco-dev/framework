@@ -1,4 +1,4 @@
-import { Container } from "typedi";
+import { Container, ServiceNotFoundError } from "typedi";
 import type {
   Constructable,
   ContainerInstance,
@@ -20,9 +20,13 @@ import {
   ModuleDuplicateNameProblem,
   ModuleLifecycleProblem,
   ModuleProviderOwnershipProblem,
+  ModuleProviderUnavailableProblem,
   ModuleProviderVisibilityProblem,
   ModuleProviderWriteProblem,
   ModuleRegistrationConflictProblem,
+  ModuleRuntimeDisposedProblem,
+  ModuleRuntimeResetConflictProblem,
+  ModuleRuntimeStaleContextProblem,
 } from "./problems";
 import type {
   ModuleCleanupFailure,
@@ -56,6 +60,7 @@ type ModuleRuntimeState = {
 type ContainerServiceMetadataAccess = {
   readonly services: ServiceMetadata<unknown>[];
   readonly destroyServiceInstance: (service: ServiceMetadata<unknown>) => void;
+  readonly getServiceValue: <T>(service: ServiceMetadata<T>) => T;
 };
 
 type ContainerServiceMetadataRecordSnapshot = {
@@ -80,6 +85,25 @@ type ModuleProviderOwnershipConflict = {
   readonly owners: readonly string[];
 };
 
+type ModuleRegistryState = {
+  readonly registeredModules: Map<string, CrocoModuleInternal>;
+  readonly moduleSources: WeakMap<ModuleOptions, ModuleOptions>;
+  readonly moduleStates: Map<string, ModuleRuntimeState>;
+  readonly container: ContainerInstance;
+  readonly containerId?: string;
+  readonly rejectGlobalProviderFallback: boolean;
+  isInitialized: boolean;
+  initializedModules: ModuleOptions[];
+  activeContext: ModuleContext | null;
+  initializationPromise: Promise<ModuleContext> | null;
+  shutdownPromise: Promise<void> | null;
+  isInitializing: boolean;
+  activeShutdownOperations: number;
+  registryGeneration: number;
+  disposed: boolean;
+  disposePromise: Promise<void> | null;
+};
+
 class CapturedTypediInjectionToken extends Error {
   constructor(readonly token: ModuleToken<unknown>) {
     super("Captured TypeDI injection token");
@@ -87,9 +111,6 @@ class CapturedTypediInjectionToken extends Error {
   }
 }
 
-const registeredModules = new Map<string, CrocoModuleInternal>();
-const moduleSources = new WeakMap<ModuleOptions, ModuleOptions>();
-const moduleStates = new Map<string, ModuleRuntimeState>();
 const IGNORED_CONSTRUCTOR_DEPENDENCIES = new Set<unknown>([
   Array,
   Boolean,
@@ -98,27 +119,179 @@ const IGNORED_CONSTRUCTOR_DEPENDENCIES = new Set<unknown>([
   Promise,
   String,
 ]);
-let isInitialized = false;
-let initializedModules: ModuleOptions[] = [];
-let activeContext: ModuleContext | null = null;
-let initializationPromise: Promise<ModuleContext> | null = null;
-let isInitializing = false;
-let activeShutdownOperations = 0;
-let registryGeneration = 0;
+let moduleRuntimeSequence = 0;
+export interface ModuleRuntime extends AsyncDisposable {
+  use(module: ModuleOptions): void;
+  initialize(): Promise<ModuleContext>;
+  shutdown(): Promise<void>;
+  reset(): void;
+  dispose(): Promise<void>;
+  createGraphManifest(): ModuleGraphManifest;
+  getRegisteredModules(): readonly ModuleDiagnosticsSnapshot[];
+}
+
+class ModuleRuntimeImplementation implements ModuleRuntime {
+  constructor(private readonly state: ModuleRegistryState) {}
+
+  use(module: ModuleOptions): void {
+    assertRuntimeAvailable(this.state);
+    registerModuleInState(this.state, module);
+  }
+
+  initialize(): Promise<ModuleContext> {
+    try {
+      assertRuntimeAvailable(this.state);
+      return initializeModulesInState(this.state);
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  }
+
+  shutdown(): Promise<void> {
+    try {
+      assertRuntimeAvailable(this.state);
+      return shutdownModulesInState(this.state);
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  }
+
+  reset(): void {
+    assertRuntimeAvailable(this.state);
+    assertRuntimeResetAvailable(this.state);
+    resetModulesInState(this.state);
+  }
+
+  async dispose(): Promise<void> {
+    if (this.state.disposed) {
+      return;
+    }
+
+    if (!this.state.disposePromise) {
+      this.state.disposePromise = disposeModuleRuntime(this.state);
+    }
+
+    await this.state.disposePromise;
+  }
+
+  createGraphManifest(): ModuleGraphManifest {
+    assertRuntimeAvailable(this.state);
+    return createModuleGraphManifestInState(this.state);
+  }
+
+  getRegisteredModules(): readonly ModuleDiagnosticsSnapshot[] {
+    assertRuntimeAvailable(this.state);
+    return getRegisteredModulesInState(this.state);
+  }
+
+  async [Symbol.asyncDispose](): Promise<void> {
+    await this.dispose();
+  }
+}
+
+function createModuleRegistryState(containerId?: string): ModuleRegistryState {
+  const container = Container.of(containerId);
+  if (containerId) {
+    makeContainerResolutionRuntimeLocal(container);
+  }
+
+  return {
+    registeredModules: new Map(),
+    moduleSources: new WeakMap(),
+    moduleStates: new Map(),
+    container,
+    ...(containerId ? { containerId } : {}),
+    rejectGlobalProviderFallback: Boolean(containerId),
+    isInitialized: false,
+    initializedModules: [],
+    activeContext: null,
+    initializationPromise: null,
+    shutdownPromise: null,
+    isInitializing: false,
+    activeShutdownOperations: 0,
+    registryGeneration: 0,
+    disposed: false,
+    disposePromise: null,
+  };
+}
+
+const defaultModuleRuntimeState = createModuleRegistryState();
+export const defaultModuleRuntime: ModuleRuntime = new ModuleRuntimeImplementation(
+  defaultModuleRuntimeState,
+);
+
+export function createModuleRuntime(): ModuleRuntime {
+  const containerId = `croco-module-runtime-${++moduleRuntimeSequence}`;
+  return new ModuleRuntimeImplementation(createModuleRegistryState(containerId));
+}
+
+function assertRuntimeAvailable(state: ModuleRegistryState): void {
+  if (state.disposed || state.disposePromise) {
+    throw new ModuleRuntimeDisposedProblem();
+  }
+}
+
+function assertRuntimeResetAvailable(state: ModuleRegistryState): void {
+  if (!state.rejectGlobalProviderFallback) {
+    return;
+  }
+  if (state.activeShutdownOperations > 0) {
+    throw new ModuleRuntimeResetConflictProblem("shutting-down");
+  }
+  if (state.isInitializing) {
+    throw new ModuleRuntimeResetConflictProblem("initializing");
+  }
+}
+
+function assertRuntimeContextAvailable(
+  state: ModuleRegistryState,
+  expectedGeneration: number,
+): void {
+  if (state.disposed) {
+    throw new ModuleRuntimeDisposedProblem();
+  }
+
+  if (state.registryGeneration !== expectedGeneration) {
+    throw new ModuleRuntimeStaleContextProblem();
+  }
+}
+
+async function disposeModuleRuntime(state: ModuleRegistryState): Promise<void> {
+  try {
+    await shutdownModulesInState(state);
+  } finally {
+    try {
+      resetModulesInState(state);
+      if (state.containerId) {
+        Container.reset(state.containerId);
+      }
+    } finally {
+      state.disposed = true;
+    }
+  }
+}
 
 export function registerModule(module: ModuleOptions): void {
-  const conflictState = getRegistrationConflictState();
+  defaultModuleRuntime.use(module);
+}
+
+function registerModuleInState(state: ModuleRegistryState, module: ModuleOptions): void {
+  const conflictState = getRegistrationConflictState(state);
   if (conflictState) {
     throw new ModuleRegistrationConflictProblem(conflictState);
   }
 
-  const [snapshot] = collectModules([module]);
+  const [snapshot] = collectModules([module], state.moduleSources);
   if (!snapshot) {
     throw new InvalidModuleDefinitionProblem("Module graph must contain a root module.");
   }
 
-  const existing = registeredModules.get(snapshot.name);
-  if (existing && getModuleSource(existing) !== getModuleSource(snapshot)) {
+  const existing = state.registeredModules.get(snapshot.name);
+  if (
+    existing &&
+    getModuleSource(existing, state.moduleSources) !==
+      getModuleSource(snapshot, state.moduleSources)
+  ) {
     throw new ModuleDuplicateNameProblem(
       snapshot.name,
       [`${existing.name} (previously registered)`],
@@ -126,73 +299,77 @@ export function registerModule(module: ModuleOptions): void {
     );
   }
 
-  registeredModules.set(snapshot.name, snapshot);
-  moduleStates.set(snapshot.name, createModuleState(snapshot));
-  isInitialized = false;
+  state.registeredModules.set(snapshot.name, snapshot);
+  state.moduleStates.set(snapshot.name, createModuleState(snapshot));
+  state.isInitialized = false;
 }
 
 export function initializeModules(): Promise<ModuleContext> {
-  if (isInitialized && activeContext) {
-    return Promise.resolve(activeContext);
+  return defaultModuleRuntime.initialize();
+}
+
+function initializeModulesInState(state: ModuleRegistryState): Promise<ModuleContext> {
+  if (state.isInitialized && state.activeContext) {
+    return Promise.resolve(state.activeContext);
   }
 
-  if (initializationPromise) {
-    return initializationPromise;
+  if (state.initializationPromise) {
+    return state.initializationPromise;
   }
 
-  isInitializing = true;
-  const attempt = performInitializeModules();
-  initializationPromise = attempt;
+  state.isInitializing = true;
+  const attempt = performInitializeModules(state);
+  state.initializationPromise = attempt;
   void attempt.then(
-    () => clearInitializationPromise(attempt),
-    () => clearInitializationPromise(attempt),
+    () => clearInitializationPromise(state, attempt),
+    () => clearInitializationPromise(state, attempt),
   );
   return attempt;
 }
 
-async function performInitializeModules(): Promise<ModuleContext> {
-  const attemptGeneration = registryGeneration;
-  const modules = collectModules(Array.from(registeredModules.values()));
+async function performInitializeModules(state: ModuleRegistryState): Promise<ModuleContext> {
+  const attemptGeneration = state.registryGeneration;
+  const modules = collectModules(Array.from(state.registeredModules.values()), state.moduleSources);
   detectCircularDependency(modules);
   assertUnambiguousProviderOwnership(modules);
 
   const sortedModules = sortModules(modules);
-  const container = Container.of(undefined);
-  const context = createRootContext(container);
+  const container = state.container;
+  const context = createRootContext(state, container);
   const containerSnapshot = snapshotContainerServices(container, sortedModules);
   const compensationStack: ModuleOptions[] = [];
 
-  moduleStates.clear();
+  state.moduleStates.clear();
   for (const module of sortedModules) {
-    moduleStates.set(module.name, createModuleState(module));
+    state.moduleStates.set(module.name, createModuleState(module));
   }
 
   try {
     for (const module of sortedModules) {
       compensationStack.push(module);
-      const moduleContext = createModuleContext(module.name, container);
-      await runLifecycle(module, "setup", async () => {
-        await registerProviders(module, moduleContext, container);
+      const moduleContext = createModuleContext(state, module.name, container);
+      await runLifecycle(state, module, "setup", async () => {
+        await registerProviders(state, module, moduleContext, container);
         await module.setup?.(moduleContext);
       });
     }
 
     for (const module of sortedModules) {
-      const moduleContext = createModuleContext(module.name, container);
-      await runLifecycle(module, "start", async () => {
+      const moduleContext = createModuleContext(state, module.name, container);
+      await runLifecycle(state, module, "start", async () => {
         await module.start?.(moduleContext);
       });
 
-      const state = moduleStates.get(module.name);
-      if (state) {
-        state.phase = "started";
-        state.initialized = true;
-        state.lastError = undefined;
-        state.cleanupFailures = undefined;
+      const moduleState = state.moduleStates.get(module.name);
+      if (moduleState) {
+        moduleState.phase = "started";
+        moduleState.initialized = true;
+        moduleState.lastError = undefined;
+        moduleState.cleanupFailures = undefined;
       }
     }
 
-    if (registryGeneration !== attemptGeneration) {
+    if (state.registryGeneration !== attemptGeneration) {
       throw new ModuleLifecycleProblem(
         "<registry>",
         "setup",
@@ -200,9 +377,14 @@ async function performInitializeModules(): Promise<ModuleContext> {
       );
     }
   } catch (error) {
-    const cleanupFailures = await compensateInitialization(compensationStack, container, error);
+    const cleanupFailures = await compensateInitialization(
+      state,
+      compensationStack,
+      container,
+      error,
+    );
     restoreContainerServices(container, containerSnapshot);
-    resetActiveRuntimeState();
+    resetActiveRuntimeState(state);
 
     if (error instanceof ModuleLifecycleProblem) {
       throw attachModuleCleanupFailures(error, cleanupFailures);
@@ -210,53 +392,66 @@ async function performInitializeModules(): Promise<ModuleContext> {
     throw error;
   }
 
-  isInitialized = true;
-  initializedModules = sortedModules;
-  activeContext = context;
+  state.isInitialized = true;
+  state.initializedModules = sortedModules;
+  state.activeContext = context;
   return context;
 }
 
 export async function shutdownModules(): Promise<void> {
-  activeShutdownOperations += 1;
+  await defaultModuleRuntime.shutdown();
+}
+
+async function shutdownModulesInState(state: ModuleRegistryState): Promise<void> {
+  if (state.shutdownPromise) {
+    return state.shutdownPromise;
+  }
+
+  state.activeShutdownOperations += 1;
+  const attempt = performShutdownModules(state);
+  state.shutdownPromise = attempt;
   try {
-    await performShutdownModules();
+    await attempt;
   } finally {
-    activeShutdownOperations -= 1;
+    if (state.shutdownPromise === attempt) {
+      state.shutdownPromise = null;
+      state.activeShutdownOperations -= 1;
+    }
   }
 }
 
-async function performShutdownModules(): Promise<void> {
-  if (initializationPromise) {
+async function performShutdownModules(state: ModuleRegistryState): Promise<void> {
+  if (state.initializationPromise) {
     try {
-      await initializationPromise;
+      await state.initializationPromise;
     } catch {
       return;
     }
   }
 
-  if (!activeContext) {
+  if (!state.activeContext) {
     return;
   }
 
-  const modules = [...initializedModules].reverse();
-  const container = Container.of(undefined);
+  const modules = [...state.initializedModules].reverse();
+  const container = state.container;
   const cleanupFailures: ModuleCleanupFailure[] = [];
   let firstFailure: ModuleLifecycleProblem | undefined;
 
   try {
     for (const module of modules) {
       try {
-        const moduleContext = createModuleContext(module.name, container);
-        await runLifecycle(module, "shutdown", async () => {
+        const moduleContext = createModuleContext(state, module.name, container);
+        await runLifecycle(state, module, "shutdown", async () => {
           await module.shutdown?.(moduleContext);
         });
 
-        const state = moduleStates.get(module.name);
-        if (state) {
-          state.phase = "stopped";
-          state.initialized = false;
-          state.lastError = undefined;
-          state.cleanupFailures = undefined;
+        const moduleState = state.moduleStates.get(module.name);
+        if (moduleState) {
+          moduleState.phase = "stopped";
+          moduleState.initialized = false;
+          moduleState.lastError = undefined;
+          moduleState.cleanupFailures = undefined;
         }
       } catch (error) {
         const problem =
@@ -267,14 +462,14 @@ async function performShutdownModules(): Promise<void> {
         cleanupFailures.push(failure);
         firstFailure ??= problem;
 
-        const state = moduleStates.get(module.name);
-        if (state) {
-          state.cleanupFailures = [failure];
+        const moduleState = state.moduleStates.get(module.name);
+        if (moduleState) {
+          moduleState.cleanupFailures = [failure];
         }
       }
     }
   } finally {
-    resetActiveRuntimeState();
+    resetActiveRuntimeState(state);
   }
 
   if (firstFailure) {
@@ -283,58 +478,73 @@ async function performShutdownModules(): Promise<void> {
 }
 
 export function resetModules(): void {
-  registryGeneration += 1;
-  registeredModules.clear();
-  moduleStates.clear();
-  isInitialized = false;
-  isInitializing = false;
-  initializedModules = [];
-  activeContext = null;
+  defaultModuleRuntime.reset();
+}
+
+function resetModulesInState(state: ModuleRegistryState): void {
+  state.registryGeneration += 1;
+  state.registeredModules.clear();
+  state.moduleStates.clear();
+  state.isInitialized = false;
+  state.isInitializing = false;
+  state.initializedModules = [];
+  state.activeContext = null;
+  if (state.containerId) {
+    state.container.reset({ strategy: "resetServices" });
+  }
 }
 
 export function isModuleInitialized(): boolean {
-  return isInitialized;
+  return defaultModuleRuntimeState.isInitialized;
 }
 
 export function getRegisteredModules(): readonly ModuleDiagnosticsSnapshot[] {
-  return Array.from(moduleStates.values()).map((state) => ({
-    name: state.module.name,
-    initialized: state.initialized,
-    phase: state.phase,
-    imports: state.module.imports?.map((module) => module.name) ?? [],
-    providers: Array.from(state.providers).map(getModuleTokenLabel),
-    exports: Array.from(state.exports).map(getModuleTokenLabel),
-    controllers: Array.from(state.controllers).map(getModuleTokenLabel),
-    lastError: state.lastError,
-    cleanupFailures: state.cleanupFailures,
+  return defaultModuleRuntime.getRegisteredModules();
+}
+
+function getRegisteredModulesInState(
+  state: ModuleRegistryState,
+): readonly ModuleDiagnosticsSnapshot[] {
+  return Array.from(state.moduleStates.values()).map((moduleState) => ({
+    name: moduleState.module.name,
+    initialized: moduleState.initialized,
+    phase: moduleState.phase,
+    imports: moduleState.module.imports?.map((module) => module.name) ?? [],
+    providers: Array.from(moduleState.providers).map(getModuleTokenLabel),
+    exports: Array.from(moduleState.exports).map(getModuleTokenLabel),
+    controllers: Array.from(moduleState.controllers).map(getModuleTokenLabel),
+    lastError: moduleState.lastError,
+    cleanupFailures: moduleState.cleanupFailures,
   }));
 }
 
-function clearInitializationPromise(attempt: Promise<ModuleContext>): void {
-  if (initializationPromise === attempt) {
-    initializationPromise = null;
-    isInitializing = false;
+function clearInitializationPromise(
+  state: ModuleRegistryState,
+  attempt: Promise<ModuleContext>,
+): void {
+  if (state.initializationPromise === attempt) {
+    state.initializationPromise = null;
+    state.isInitializing = false;
   }
 }
 
-function getRegistrationConflictState():
-  | "initialized"
-  | "initializing"
-  | "shutting-down"
-  | undefined {
-  if (activeShutdownOperations > 0) {
+function getRegistrationConflictState(
+  state: ModuleRegistryState,
+): "initialized" | "initializing" | "shutting-down" | undefined {
+  if (state.activeShutdownOperations > 0) {
     return "shutting-down";
   }
-  if (isInitializing) {
+  if (state.isInitializing) {
     return "initializing";
   }
-  if (isInitialized || activeContext) {
+  if (state.isInitialized || state.activeContext) {
     return "initialized";
   }
   return undefined;
 }
 
 async function compensateInitialization(
+  registryState: ModuleRegistryState,
   modules: readonly ModuleOptions[],
   container: ContainerInstance,
   primaryError: unknown,
@@ -347,27 +557,27 @@ async function compensateInitialization(
       : undefined;
 
   for (const module of [...modules].reverse()) {
-    const state = moduleStates.get(module.name);
-    if (state) {
-      state.phase = "rollback";
-      state.initialized = false;
+    const moduleState = registryState.moduleStates.get(module.name);
+    if (moduleState) {
+      moduleState.phase = "rollback";
+      moduleState.initialized = false;
     }
 
     try {
-      await module.shutdown?.(createModuleContext(module.name, container));
-      if (state) {
-        state.phase = "stopped";
+      await module.shutdown?.(createModuleContext(registryState, module.name, container));
+      if (moduleState) {
+        moduleState.phase = "stopped";
       }
     } catch (error) {
       const problem = new ModuleLifecycleProblem(module.name, "shutdown", error);
       const failure = createModuleCleanupFailure(problem, module.name);
       failures.push(failure);
-      if (state) {
-        state.phase = "failed";
+      if (moduleState) {
+        moduleState.phase = "failed";
         if (module.name !== primaryModuleName) {
-          state.lastError = problem.message;
+          moduleState.lastError = problem.message;
         }
-        state.cleanupFailures = [failure];
+        moduleState.cleanupFailures = [failure];
       }
     }
   }
@@ -387,10 +597,10 @@ function createModuleCleanupFailure(
   };
 }
 
-function resetActiveRuntimeState(): void {
-  isInitialized = false;
-  initializedModules = [];
-  activeContext = null;
+function resetActiveRuntimeState(state: ModuleRegistryState): void {
+  state.isInitialized = false;
+  state.initializedModules = [];
+  state.activeContext = null;
 }
 
 function snapshotContainerServices(
@@ -458,6 +668,37 @@ function getContainerServices(container: ContainerInstance): ServiceMetadata<unk
   return getContainerServiceMetadataAccess(container).services;
 }
 
+function makeContainerResolutionRuntimeLocal(container: ContainerInstance): void {
+  container.get = <T>(identifier: ServiceIdentifier<T>): T => {
+    const service = getContainerServices(container).find(
+      (candidate) => candidate.id === identifier,
+    );
+    if (!service) {
+      throw new ServiceNotFoundError(identifier);
+    }
+
+    return resolveContainerService(container, service as ServiceMetadata<T>);
+  };
+
+  container.getMany = <T>(identifier: ServiceIdentifier<T>): T[] =>
+    getContainerServices(container)
+      .filter((service) => service.id === identifier)
+      .map((service) => resolveContainerService(container, service as ServiceMetadata<T>));
+}
+
+function resolveContainerService<T>(container: ContainerInstance, service: ServiceMetadata<T>): T {
+  const initialValue = service.value;
+  try {
+    return getContainerServiceMetadataAccess(container).getServiceValue(service);
+  } catch (error) {
+    if (service.value !== initialValue) {
+      destroyContainerService(container, service);
+      service.value = initialValue;
+    }
+    throw error;
+  }
+}
+
 function destroyContainerService(
   container: ContainerInstance,
   service: ServiceMetadata<unknown>,
@@ -471,7 +712,8 @@ function getContainerServiceMetadataAccess(
   const candidate = container as unknown as Partial<ContainerServiceMetadataAccess>;
   if (
     !Array.isArray(candidate.services) ||
-    typeof candidate.destroyServiceInstance !== "function"
+    typeof candidate.destroyServiceInstance !== "function" ||
+    typeof candidate.getServiceValue !== "function"
   ) {
     throw new ModuleLifecycleProblem(
       "<registry>",
@@ -484,11 +726,24 @@ function getContainerServiceMetadataAccess(
 }
 
 export function createModuleGraphManifest(
-  rootModules: readonly ModuleOptions[] = Array.from(registeredModules.values()),
+  rootModules: readonly ModuleOptions[] = Array.from(
+    defaultModuleRuntimeState.registeredModules.values(),
+  ),
 ): ModuleGraphManifest {
-  const modules = collectModules(rootModules);
+  return createModuleGraphManifestInState(defaultModuleRuntimeState, rootModules);
+}
+
+function createModuleGraphManifestInState(
+  state: ModuleRegistryState,
+  rootModules: readonly ModuleOptions[] = Array.from(state.registeredModules.values()),
+): ModuleGraphManifest {
+  const modules = collectModules(rootModules, state.moduleSources);
   const states = new Map(modules.map((module) => [module.name, createModuleState(module)]));
-  const diagnostics = createModuleGraphDiagnostics(modules, states);
+  const diagnostics = createModuleGraphDiagnostics(
+    modules,
+    states,
+    state.rejectGlobalProviderFallback,
+  );
 
   return {
     version: "croco.module-graph.manifest.v1",
@@ -528,6 +783,7 @@ function validateModule(module: ModuleOptions): void {
 function createModuleGraphDiagnostics(
   modules: readonly ModuleOptions[],
   states: ReadonlyMap<string, ModuleRuntimeState>,
+  rejectUnknownProvider = false,
 ): ModuleGraphDiagnostic[] {
   const diagnostics: ModuleGraphDiagnostic[] = [];
 
@@ -575,6 +831,7 @@ function createModuleGraphDiagnostics(
         module.name,
         providerClass,
         states,
+        rejectUnknownProvider,
       )) {
         const provider = getModuleTokenLabel(failure.token);
         diagnostics.push({
@@ -637,7 +894,10 @@ function createModuleGraphProvider(
   };
 }
 
-function collectModules(rootModules: readonly ModuleOptions[]): ModuleOptions[] {
+function collectModules(
+  rootModules: readonly ModuleOptions[],
+  moduleSources: WeakMap<ModuleOptions, ModuleOptions>,
+): ModuleOptions[] {
   const modules = new Map<
     string,
     {
@@ -649,7 +909,7 @@ function collectModules(rootModules: readonly ModuleOptions[]): ModuleOptions[] 
 
   const visit = (module: ModuleOptions, path: readonly string[]): ModuleOptions => {
     const name = module.name;
-    const source = getModuleSource(module);
+    const source = getModuleSource(module, moduleSources);
     const existing = modules.get(name);
     if (existing) {
       if (existing.source !== source) {
@@ -696,7 +956,10 @@ function collectModules(rootModules: readonly ModuleOptions[]): ModuleOptions[] 
   return Array.from(modules.values(), ({ snapshot }) => snapshot);
 }
 
-function getModuleSource(module: ModuleOptions): ModuleOptions {
+function getModuleSource(
+  module: ModuleOptions,
+  moduleSources: WeakMap<ModuleOptions, ModuleOptions>,
+): ModuleOptions {
   return moduleSources.get(module) ?? module;
 }
 
@@ -802,29 +1065,62 @@ function createModuleState(module: ModuleOptions): ModuleRuntimeState {
   };
 }
 
-function createRootContext(container: ReturnType<typeof Container.of>): ModuleContext {
+function createRootContext(
+  state: ModuleRegistryState,
+  container: ReturnType<typeof Container.of>,
+): ModuleContext {
+  const contextGeneration = state.registryGeneration;
+
   return new ModuleContext(container, {
-    validateProviderWrite: validateProviderWrite,
+    validateRuntime: () => assertRuntimeContextAvailable(state, contextGeneration),
+    rejectUnknownProvider: state.rejectGlobalProviderFallback,
+    ...(state.rejectGlobalProviderFallback
+      ? {
+          resolveProvider: <T>(token: ModuleToken<T>) =>
+            resolveRuntimeProvider(container, "<root>", token),
+        }
+      : {}),
+    isKnownToken: (token) => isKnownTokenInStates(token, state.moduleStates),
+    validateProviderWrite: (moduleName, token) => {
+      validateProviderWrite(state, moduleName, token);
+    },
   });
 }
 
 function createModuleContext(
+  state: ModuleRegistryState,
   moduleName: string,
   container: ReturnType<typeof Container.of>,
 ): ModuleContext {
+  const contextGeneration = state.registryGeneration;
+
   return new ModuleContext(container, {
     moduleName,
-    canAccessToken: canAccessToken,
-    isKnownToken: isKnownToken,
-    validateProviderWrite: validateProviderWrite,
-    validateClassProvider: validateClassProviderVisibility,
+    validateRuntime: () => assertRuntimeContextAvailable(state, contextGeneration),
+    rejectUnknownProvider: state.rejectGlobalProviderFallback,
+    ...(state.rejectGlobalProviderFallback
+      ? {
+          resolveProvider: <T>(token: ModuleToken<T>) =>
+            resolveRuntimeProvider(container, moduleName, token),
+        }
+      : {}),
+    canAccessToken: (ownerModuleName, token) =>
+      canAccessTokenInStates(ownerModuleName, token, state.moduleStates),
+    isKnownToken: (token) => isKnownTokenInStates(token, state.moduleStates),
+    validateProviderWrite: (ownerModuleName, token) => {
+      validateProviderWrite(state, ownerModuleName, token);
+    },
+    validateClassProvider: (ownerModuleName, providerClass) => {
+      validateClassProviderVisibility(state, ownerModuleName, providerClass);
+    },
     validateProviderAccess: (ownerModuleName, token) => {
-      validateProviderAccess(ownerModuleName, token, container);
+      validateProviderAccess(state, ownerModuleName, token, container);
     },
   });
 }
 
 async function registerProviders(
+  state: ModuleRegistryState,
   module: ModuleOptions,
   context: ModuleContext,
   container: ReturnType<typeof Container.of>,
@@ -832,8 +1128,8 @@ async function registerProviders(
   for (const provider of module.providers ?? []) {
     if (!isProviderDefinition(provider)) {
       if (isConstructorToken(provider)) {
-        validateClassProviderVisibility(module.name, provider);
-        validateProviderWrite(module.name, provider);
+        validateClassProviderVisibility(state, module.name, provider);
+        validateProviderWrite(state, module.name, provider);
         container.set({
           id: FrameworkContainer.toTypeDIServiceIdentifier(provider),
           type: toTypediConstructable(provider),
@@ -842,11 +1138,12 @@ async function registerProviders(
       continue;
     }
 
-    await registerProviderDefinition(module.name, provider, context, container);
+    await registerProviderDefinition(state, module.name, provider, context, container);
   }
 }
 
 async function registerProviderDefinition<T>(
+  state: ModuleRegistryState,
   moduleName: string,
   provider: ModuleProviderDefinition<T>,
   context: ModuleContext,
@@ -860,8 +1157,8 @@ async function registerProviderDefinition<T>(
   }
 
   if ("useClass" in provider) {
-    validateClassProviderVisibility(moduleName, provider.useClass);
-    validateProviderWrite(moduleName, token);
+    validateClassProviderVisibility(state, moduleName, provider.useClass);
+    validateProviderWrite(state, moduleName, token);
     container.set({
       id: FrameworkContainer.toTypeDIServiceIdentifier(token),
       type: toTypediConstructable(provider.useClass),
@@ -872,31 +1169,34 @@ async function registerProviderDefinition<T>(
   context.set(token, await provider.useFactory(context));
 }
 
-function validateProviderWrite(moduleName: string | undefined, token: ModuleToken<unknown>): void {
+function validateProviderWrite(
+  state: ModuleRegistryState,
+  moduleName: string | undefined,
+  token: ModuleToken<unknown>,
+): void {
   if (!moduleName) {
     throw new ModuleProviderWriteProblem("<root>", token);
   }
 
-  const normalizedToken = normalizeTokenInStates(token, moduleStates);
-  if (hasEquivalentToken(moduleStates.get(moduleName)?.providers, normalizedToken)) {
+  const normalizedToken = normalizeTokenInStates(token, state.moduleStates);
+  if (hasEquivalentToken(state.moduleStates.get(moduleName)?.providers, normalizedToken)) {
     return;
   }
 
   throw new ModuleProviderWriteProblem(
     moduleName,
     normalizedToken,
-    getDeclaredProviderOwner(normalizedToken),
+    getDeclaredProviderOwner(state, normalizedToken),
   );
 }
 
-function getDeclaredProviderOwner(token: ModuleToken<unknown>): string | undefined {
-  return Array.from(moduleStates.entries()).find(([, state]) =>
-    hasEquivalentToken(state.providers, token),
+function getDeclaredProviderOwner(
+  state: ModuleRegistryState,
+  token: ModuleToken<unknown>,
+): string | undefined {
+  return Array.from(state.moduleStates.entries()).find(([, moduleState]) =>
+    hasEquivalentToken(moduleState.providers, token),
   )?.[0];
-}
-
-function isKnownToken(token: ModuleToken<unknown>): boolean {
-  return isKnownTokenInStates(token, moduleStates);
 }
 
 function isKnownTokenInStates(
@@ -909,10 +1209,6 @@ function isKnownTokenInStates(
       hasEquivalentToken(state.providers, normalizedToken) ||
       hasEquivalentToken(state.exports, normalizedToken),
   );
-}
-
-function canAccessToken(moduleName: string, token: ModuleToken<unknown>): boolean {
-  return canAccessTokenInStates(moduleName, token, moduleStates);
 }
 
 function canAccessTokenInStates(
@@ -936,11 +1232,12 @@ function canAccessTokenInStates(
 }
 
 function validateProviderAccess(
+  state: ModuleRegistryState,
   moduleName: string,
   token: ModuleToken<unknown>,
   container: ContainerInstance,
 ): void {
-  const provider = getAccessibleClassProvider(moduleName, token);
+  const provider = getAccessibleClassProvider(moduleName, token, state.moduleStates);
   if (!provider) {
     if (hasUndeclaredTypediClassProvider(container, token)) {
       throw new ModuleProviderVisibilityProblem(moduleName, token);
@@ -949,13 +1246,13 @@ function validateProviderAccess(
     return;
   }
 
-  validateClassProviderVisibility(provider.moduleName, provider.providerClass);
+  validateClassProviderVisibility(state, provider.moduleName, provider.providerClass);
 }
 
 function getAccessibleClassProvider(
   moduleName: string,
   token: ModuleToken<unknown>,
-  states: ReadonlyMap<string, ModuleRuntimeState> = moduleStates,
+  states: ReadonlyMap<string, ModuleRuntimeState>,
 ): {
   readonly moduleName: string;
   readonly providerClass: Constructor<unknown>;
@@ -989,10 +1286,16 @@ function getAccessibleClassProvider(
 }
 
 function validateClassProviderVisibility<T>(
+  state: ModuleRegistryState,
   moduleName: string,
   providerClass: Constructor<T>,
 ): void {
-  const failure = getClassProviderVisibilityFailures(moduleName, providerClass, moduleStates)[0];
+  const failure = getClassProviderVisibilityFailures(
+    moduleName,
+    providerClass,
+    state.moduleStates,
+    state.rejectGlobalProviderFallback,
+  )[0];
 
   if (failure) {
     throw new ModuleProviderVisibilityProblem(moduleName, failure.token);
@@ -1003,6 +1306,7 @@ function getClassProviderVisibilityFailures<T>(
   moduleName: string,
   providerClass: Constructor<T>,
   states: ReadonlyMap<string, ModuleRuntimeState>,
+  rejectUnknownProvider = false,
 ): ModuleProviderVisibilityFailure[] {
   const failures: ModuleProviderVisibilityFailure[] = [];
   const dependencies = getConstructorDependencies(providerClass);
@@ -1013,9 +1317,10 @@ function getClassProviderVisibilityFailures<T>(
     }
 
     const dependencyToken = dependency as ModuleToken<unknown>;
+    const known = isKnownTokenInStates(dependencyToken, states);
     if (
-      isKnownTokenInStates(dependencyToken, states) &&
-      !canAccessTokenInStates(moduleName, dependencyToken, states)
+      (known && !canAccessTokenInStates(moduleName, dependencyToken, states)) ||
+      (!known && rejectUnknownProvider)
     ) {
       failures.push({ moduleName, providerClass, token: dependencyToken });
     }
@@ -1023,9 +1328,10 @@ function getClassProviderVisibilityFailures<T>(
 
   for (const dependency of getTypediHandlerDependencies(providerClass)) {
     const dependencyToken = normalizeTokenInStates(dependency, states);
+    const known = isKnownTokenInStates(dependencyToken, states);
     if (
-      isKnownTokenInStates(dependencyToken, states) &&
-      !canAccessTokenInStates(moduleName, dependencyToken, states)
+      (known && !canAccessTokenInStates(moduleName, dependencyToken, states)) ||
+      (!known && rejectUnknownProvider)
     ) {
       failures.push({ moduleName, providerClass, token: dependencyToken });
     }
@@ -1121,6 +1427,22 @@ function getTypediServiceMetadata(
   return services.find((service) => service.id === identifier);
 }
 
+function resolveRuntimeProvider<T>(
+  container: ContainerInstance,
+  moduleName: string,
+  token: ModuleToken<T>,
+): T {
+  try {
+    return container.get(FrameworkContainer.toTypeDIServiceIdentifier(token));
+  } catch (error) {
+    if (error instanceof ServiceNotFoundError) {
+      throw new ModuleProviderUnavailableProblem(moduleName, token, error);
+    }
+
+    throw error;
+  }
+}
+
 function getClassProviderEntry(
   provider: ModuleProviderDefinition | ModuleToken<unknown>,
 ): readonly [ModuleToken<unknown>, Constructor<unknown>] | null {
@@ -1192,23 +1514,24 @@ function createTypediDependencyProbe(): ContainerInstance {
 }
 
 async function runLifecycle(
+  registryState: ModuleRegistryState,
   module: ModuleOptions,
   phase: ModuleLifecyclePhase,
   run: () => Promise<void>,
 ): Promise<void> {
-  const state = moduleStates.get(module.name);
-  if (state) {
-    state.phase = phase;
+  const moduleState = registryState.moduleStates.get(module.name);
+  if (moduleState) {
+    moduleState.phase = phase;
   }
 
   try {
     await run();
   } catch (error) {
     const problem = new ModuleLifecycleProblem(module.name, phase, error);
-    if (state) {
-      state.phase = "failed";
-      state.initialized = false;
-      state.lastError = problem.message;
+    if (moduleState) {
+      moduleState.phase = "failed";
+      moduleState.initialized = false;
+      moduleState.lastError = problem.message;
     }
     throw problem;
   }
