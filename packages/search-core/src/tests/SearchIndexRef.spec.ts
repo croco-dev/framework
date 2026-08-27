@@ -8,7 +8,13 @@ import type {
   SearchIndexDocumentInput,
   SearchIndexQuery,
 } from "../libs/SearchIndexRef";
-import type { IndexConfig, SearchDocument, SearchQuery, SearchResult } from "../libs/types";
+import type {
+  IndexConfig,
+  SearchDocument,
+  SearchOperationOptions,
+  SearchQuery,
+  SearchResult,
+} from "../libs/types";
 
 interface ProductDocument {
   id: string;
@@ -89,17 +95,26 @@ describe("SearchIndexRef", () => {
     vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-1");
 
     const service = new SearchService({ engine });
-    const result = await service.search(PRODUCT_INDEX, {
-      query: "croco",
-      filters: { status: "active" },
-      sort: [{ field: "price", order: "asc" }],
-    });
+    const options = { signal: new AbortController().signal };
+    const result = await service.search(
+      PRODUCT_INDEX,
+      {
+        query: "croco",
+        filters: { status: "active" },
+        sort: [{ field: "price", order: "asc" }],
+      },
+      options,
+    );
 
-    expect(search).toHaveBeenCalledWith("products", {
-      query: "croco",
-      filters: { status: "active", tenantId: "tenant-1" },
-      sort: [{ field: "price", order: "asc" }],
-    });
+    expect(search).toHaveBeenCalledWith(
+      "products",
+      {
+        query: "croco",
+        filters: { status: "active", tenantId: "tenant-1" },
+        sort: [{ field: "price", order: "asc" }],
+      },
+      options,
+    );
     expectTypeOf(result.hits).toEqualTypeOf<
       { document: ProductDocument; score?: number; highlights?: Record<string, string[]> }[]
     >();
@@ -125,37 +140,54 @@ describe("SearchIndexRef", () => {
     vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-1");
 
     const service = new SearchService({ engine });
-    await service.indexDocument(PRODUCT_INDEX, {
-      id: "product-1",
-      name: "Croco",
-      status: "active",
-      price: 100,
-    });
-    await service.bulkIndex(PRODUCT_INDEX, [
+    const options = { signal: new AbortController().signal };
+    await service.indexDocument(
+      PRODUCT_INDEX,
       {
-        id: "product-2",
-        name: "Croco Plus",
-        status: "archived",
-        price: 200,
+        id: "product-1",
+        name: "Croco",
+        status: "active",
+        price: 100,
       },
-    ]);
+      options,
+    );
+    await service.bulkIndex(
+      PRODUCT_INDEX,
+      [
+        {
+          id: "product-2",
+          name: "Croco Plus",
+          status: "archived",
+          price: 200,
+        },
+      ],
+      options,
+    );
 
-    expect(indexDocument).toHaveBeenCalledWith("products", {
-      id: "product-1",
-      tenantId: "tenant-1",
-      name: "Croco",
-      status: "active",
-      price: 100,
-    });
-    expect(bulkIndex).toHaveBeenCalledWith("products", [
+    expect(indexDocument).toHaveBeenCalledWith(
+      "products",
       {
-        id: "product-2",
+        id: "product-1",
         tenantId: "tenant-1",
-        name: "Croco Plus",
-        status: "archived",
-        price: 200,
+        name: "Croco",
+        status: "active",
+        price: 100,
       },
-    ]);
+      options,
+    );
+    expect(bulkIndex).toHaveBeenCalledWith(
+      "products",
+      [
+        {
+          id: "product-2",
+          tenantId: "tenant-1",
+          name: "Croco Plus",
+          status: "archived",
+          price: 200,
+        },
+      ],
+      options,
+    );
   });
 
   it("lets engines use typed references without changing adapter primitives", async () => {
@@ -172,8 +204,12 @@ describe("SearchIndexRef", () => {
         fuzzySearch: false,
       };
 
-      async search<T>(index: string, query: SearchQuery): Promise<SearchResult<T>> {
-        search(index, query);
+      async search<T>(
+        index: string,
+        query: SearchQuery,
+        options?: SearchOperationOptions,
+      ): Promise<SearchResult<T>> {
+        search(index, query, options);
         return {
           hits: [] as { document: T }[],
           total: 0,
@@ -182,12 +218,20 @@ describe("SearchIndexRef", () => {
         };
       }
 
-      async indexDocument(index: string, document: SearchDocument): Promise<void> {
-        indexDocument(index, document);
+      async indexDocument(
+        index: string,
+        document: SearchDocument,
+        options?: SearchOperationOptions,
+      ): Promise<void> {
+        indexDocument(index, document, options);
       }
       async deleteDocument(_index: string, _documentId: string): Promise<void> {}
-      async bulkIndex(index: string, documents: SearchDocument[]): Promise<void> {
-        bulkIndex(index, documents);
+      async bulkIndex(
+        index: string,
+        documents: SearchDocument[],
+        options?: SearchOperationOptions,
+      ): Promise<void> {
+        bulkIndex(index, documents, options);
       }
       async createIndex(config: IndexConfig): Promise<void> {
         createIndex(config);
@@ -196,48 +240,73 @@ describe("SearchIndexRef", () => {
     }
 
     const engine = new MockSearchEngine();
-    const result = await engine.searchIndex(PRODUCT_INDEX, {
-      query: "croco",
-      filters: { status: "active" },
-    });
-    await engine.indexDocumentAt(PRODUCT_INDEX, {
-      id: "product-1",
-      tenantId: "tenant-1",
-      name: "Croco",
-      status: "active",
-      price: 100,
-    });
-    await engine.bulkIndexAt(PRODUCT_INDEX, [
+    const options = { signal: new AbortController().signal };
+    const result = await engine.searchIndex(
+      PRODUCT_INDEX,
       {
-        id: "product-2",
-        tenantId: "tenant-1",
-        name: "Croco Plus",
-        status: "archived",
-        price: 200,
+        query: "croco",
+        filters: { status: "active" },
       },
-    ]);
+      options,
+    );
+    await engine.indexDocumentAt(
+      PRODUCT_INDEX,
+      {
+        id: "product-1",
+        tenantId: "tenant-1",
+        name: "Croco",
+        status: "active",
+        price: 100,
+      },
+      options,
+    );
+    await engine.bulkIndexAt(
+      PRODUCT_INDEX,
+      [
+        {
+          id: "product-2",
+          tenantId: "tenant-1",
+          name: "Croco Plus",
+          status: "archived",
+          price: 200,
+        },
+      ],
+      options,
+    );
     await engine.createIndex(PRODUCT_INDEX);
 
-    expect(search).toHaveBeenCalledWith("products", {
-      query: "croco",
-      filters: { status: "active" },
-    });
-    expect(indexDocument).toHaveBeenCalledWith("products", {
-      id: "product-1",
-      tenantId: "tenant-1",
-      name: "Croco",
-      status: "active",
-      price: 100,
-    });
-    expect(bulkIndex).toHaveBeenCalledWith("products", [
+    expect(search).toHaveBeenCalledWith(
+      "products",
       {
-        id: "product-2",
-        tenantId: "tenant-1",
-        name: "Croco Plus",
-        status: "archived",
-        price: 200,
+        query: "croco",
+        filters: { status: "active" },
       },
-    ]);
+      options,
+    );
+    expect(indexDocument).toHaveBeenCalledWith(
+      "products",
+      {
+        id: "product-1",
+        tenantId: "tenant-1",
+        name: "Croco",
+        status: "active",
+        price: 100,
+      },
+      options,
+    );
+    expect(bulkIndex).toHaveBeenCalledWith(
+      "products",
+      [
+        {
+          id: "product-2",
+          tenantId: "tenant-1",
+          name: "Croco Plus",
+          status: "archived",
+          price: 200,
+        },
+      ],
+      options,
+    );
     expect(createIndex).toHaveBeenCalledWith(PRODUCT_INDEX);
     expectTypeOf(result).toEqualTypeOf<SearchResult<ProductDocument>>();
   });

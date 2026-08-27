@@ -46,6 +46,7 @@ export {
   IndexNotFoundProblem,
   MissingTenantProblem,
   SearchCapabilityUnavailableProblem,
+  SearchOperationAbortedProblem,
   SearchTransformRegistrationConflictProblem,
   SearchableIndexConflictProblem,
   SearchSyncIdentityConflictProblem,
@@ -74,6 +75,11 @@ export type {
   SearchIndexQuery,
   SearchIndexRef,
 } from "./libs/SearchIndexRef";
+
+/**
+ * 검색 I/O가 시작되기 전에 caller cancellation을 검증합니다.
+ */
+export { throwIfSearchOperationAborted } from "./libs/SearchOperation";
 
 /**
  * SearchService 생성에 필요한 의존성 타입입니다.
@@ -139,6 +145,8 @@ export type {
   SearchEngineCapabilities,
   SearchFieldConfig,
   SearchHit,
+  SearchOperation,
+  SearchOperationOptions,
   SearchQuery,
   SearchResult,
 } from "./libs/types";

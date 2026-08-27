@@ -29,7 +29,7 @@ tenant 격리를 자동 적용하는 상위 검색 서비스입니다.
 
 #### Call Signature
 
-> **bulkIndex**\<`TReference`\>(`index`, `documents`): `Promise`\<`void`\>
+> **bulkIndex**\<`TReference`\>(`index`, `documents`, `options?`): `Promise`\<`void`\>
 
 ##### Type Parameters
 
@@ -47,13 +47,17 @@ tenant 격리를 자동 적용하는 상위 검색 서비스입니다.
 
 [`SearchIndexDocumentInput`](/api/search-core/src/type-aliases/searchindexdocumentinput/)\<`TReference`\>[]
 
+###### options?
+
+[`SearchOperationOptions`](/api/search-core/src/type-aliases/searchoperationoptions/)
+
 ##### Returns
 
 `Promise`\<`void`\>
 
 #### Call Signature
 
-> **bulkIndex**(`index`, `documents`): `Promise`\<`void`\>
+> **bulkIndex**(`index`, `documents`, `options?`): `Promise`\<`void`\>
 
 ##### Parameters
 
@@ -65,7 +69,31 @@ tenant 격리를 자동 적용하는 상위 검색 서비스입니다.
 
 `DocumentInput`[]
 
+###### options?
+
+[`SearchOperationOptions`](/api/search-core/src/type-aliases/searchoperationoptions/)
+
 ##### Returns
+
+`Promise`\<`void`\>
+
+---
+
+### createIndex()
+
+> **createIndex**(`config`, `options?`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### config
+
+[`IndexConfig`](/api/search-core/src/type-aliases/indexconfig/)
+
+##### options?
+
+[`SearchOperationOptions`](/api/search-core/src/type-aliases/searchoperationoptions/) = `{}`
+
+#### Returns
 
 `Promise`\<`void`\>
 
@@ -75,7 +103,7 @@ tenant 격리를 자동 적용하는 상위 검색 서비스입니다.
 
 #### Call Signature
 
-> **deleteDocument**(`index`, `documentId`): `Promise`\<`void`\>
+> **deleteDocument**(`index`, `documentId`, `options?`): `Promise`\<`void`\>
 
 ##### Parameters
 
@@ -87,13 +115,17 @@ tenant 격리를 자동 적용하는 상위 검색 서비스입니다.
 
 `string`
 
+###### options?
+
+[`SearchOperationOptions`](/api/search-core/src/type-aliases/searchoperationoptions/)
+
 ##### Returns
 
 `Promise`\<`void`\>
 
 #### Call Signature
 
-> **deleteDocument**(`index`, `documentId`): `Promise`\<`void`\>
+> **deleteDocument**(`index`, `documentId`, `options?`): `Promise`\<`void`\>
 
 ##### Parameters
 
@@ -105,7 +137,31 @@ tenant 격리를 자동 적용하는 상위 검색 서비스입니다.
 
 `string`
 
+###### options?
+
+[`SearchOperationOptions`](/api/search-core/src/type-aliases/searchoperationoptions/)
+
 ##### Returns
+
+`Promise`\<`void`\>
+
+---
+
+### deleteIndex()
+
+> **deleteIndex**(`name`, `options?`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### name
+
+`string`
+
+##### options?
+
+[`SearchOperationOptions`](/api/search-core/src/type-aliases/searchoperationoptions/) = `{}`
+
+#### Returns
 
 `Promise`\<`void`\>
 
@@ -115,7 +171,7 @@ tenant 격리를 자동 적용하는 상위 검색 서비스입니다.
 
 #### Call Signature
 
-> **indexDocument**\<`TReference`\>(`index`, `document`): `Promise`\<`void`\>
+> **indexDocument**\<`TReference`\>(`index`, `document`, `options?`): `Promise`\<`void`\>
 
 ##### Type Parameters
 
@@ -133,13 +189,17 @@ tenant 격리를 자동 적용하는 상위 검색 서비스입니다.
 
 [`SearchIndexDocumentInput`](/api/search-core/src/type-aliases/searchindexdocumentinput/)\<`TReference`\>
 
+###### options?
+
+[`SearchOperationOptions`](/api/search-core/src/type-aliases/searchoperationoptions/)
+
 ##### Returns
 
 `Promise`\<`void`\>
 
 #### Call Signature
 
-> **indexDocument**(`index`, `document`): `Promise`\<`void`\>
+> **indexDocument**(`index`, `document`, `options?`): `Promise`\<`void`\>
 
 ##### Parameters
 
@@ -151,6 +211,10 @@ tenant 격리를 자동 적용하는 상위 검색 서비스입니다.
 
 `DocumentInput`
 
+###### options?
+
+[`SearchOperationOptions`](/api/search-core/src/type-aliases/searchoperationoptions/)
+
 ##### Returns
 
 `Promise`\<`void`\>
@@ -161,7 +225,7 @@ tenant 격리를 자동 적용하는 상위 검색 서비스입니다.
 
 #### Call Signature
 
-> **search**\<`TReference`, `TQuery`\>(`index`, `query`): `Promise`\<[`SearchResult`](/api/search-core/src/type-aliases/searchresult/)\<[`SearchIndexDocument`](/api/search-core/src/type-aliases/searchindexdocument/)\<`TReference`\>\>\>
+> **search**\<`TReference`, `TQuery`\>(`index`, `query`, `options?`): `Promise`\<[`SearchResult`](/api/search-core/src/type-aliases/searchresult/)\<[`SearchIndexDocument`](/api/search-core/src/type-aliases/searchindexdocument/)\<`TReference`\>\>\>
 
 ##### Type Parameters
 
@@ -183,13 +247,17 @@ tenant 격리를 자동 적용하는 상위 검색 서비스입니다.
 
 `TQuery` & `SearchIndexQueryInput`\<`TReference`, `TQuery`\>
 
+###### options?
+
+[`SearchOperationOptions`](/api/search-core/src/type-aliases/searchoperationoptions/)
+
 ##### Returns
 
 `Promise`\<[`SearchResult`](/api/search-core/src/type-aliases/searchresult/)\<[`SearchIndexDocument`](/api/search-core/src/type-aliases/searchindexdocument/)\<`TReference`\>\>\>
 
 #### Call Signature
 
-> **search**\<`T`\>(`index`, `query`): `Promise`\<[`SearchResult`](/api/search-core/src/type-aliases/searchresult/)\<`T`\>\>
+> **search**\<`T`\>(`index`, `query`, `options?`): `Promise`\<[`SearchResult`](/api/search-core/src/type-aliases/searchresult/)\<`T`\>\>
 
 ##### Type Parameters
 
@@ -206,6 +274,10 @@ tenant 격리를 자동 적용하는 상위 검색 서비스입니다.
 ###### query
 
 [`SearchQuery`](/api/search-core/src/type-aliases/searchquery/)
+
+###### options?
+
+[`SearchOperationOptions`](/api/search-core/src/type-aliases/searchoperationoptions/)
 
 ##### Returns
 

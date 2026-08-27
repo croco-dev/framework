@@ -6,9 +6,12 @@ import {
   type SearchDocument,
   SearchEngine,
   type SearchEngineCapabilities,
+  type SearchOperation,
+  type SearchOperationOptions,
   type SearchQuery,
   type SearchResult,
   StrategyUnavailableProblem,
+  throwIfSearchOperationAborted,
 } from "@croco/search-core";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { InvalidSearchRowProblem } from "./problems/InvalidSearchRowProblem";
@@ -45,12 +48,18 @@ export class DrizzleSearchEngine extends SearchEngine {
   /**
    * 인덱스와 쿼리를 받아 검색 결과를 반환합니다.
    */
-  async search<T>(index: string, query: SearchQuery): Promise<SearchResult<T>> {
-    await this.ensureCapable();
+  async search<T>(
+    index: string,
+    query: SearchQuery,
+    options: SearchOperationOptions = {},
+  ): Promise<SearchResult<T>> {
+    await this.ensureCapable("search", options);
     const tenantId = this.getTenantId("search");
 
     const sql = this.strategy.buildSearchQuery(index, query, tenantId);
+    throwIfSearchOperationAborted("search", options);
     const result = await this.db.execute(sql);
+    throwIfSearchOperationAborted("search", options);
 
     const hits = result.rows.map((row) => {
       if (!isSearchResultRow(row)) {
@@ -77,48 +86,68 @@ export class DrizzleSearchEngine extends SearchEngine {
   /**
    * 단일 문서를 인덱스에 저장합니다.
    */
-  async indexDocument(index: string, document: SearchDocument): Promise<void> {
-    await this.ensureCapable();
+  async indexDocument(
+    index: string,
+    document: SearchDocument,
+    options: SearchOperationOptions = {},
+  ): Promise<void> {
+    await this.ensureCapable("indexDocument", options);
     const tenantId = this.getTenantId("indexDocument");
 
     const sql = this.strategy.buildIndexQuery(index, document, tenantId);
+    throwIfSearchOperationAborted("indexDocument", options);
     await this.db.execute(sql);
+    throwIfSearchOperationAborted("indexDocument", options);
   }
 
   /**
    * 문서 ID로 인덱스에서 문서를 삭제합니다.
    */
-  async deleteDocument(index: string, documentId: string): Promise<void> {
-    await this.ensureCapable();
+  async deleteDocument(
+    index: string,
+    documentId: string,
+    options: SearchOperationOptions = {},
+  ): Promise<void> {
+    await this.ensureCapable("deleteDocument", options);
     const tenantId = this.getTenantId("deleteDocument");
 
     const sql = this.strategy.buildDeleteQuery(index, documentId, tenantId);
+    throwIfSearchOperationAborted("deleteDocument", options);
     await this.db.execute(sql);
+    throwIfSearchOperationAborted("deleteDocument", options);
   }
 
   /**
    * 여러 문서를 순차적으로 인덱싱합니다.
    */
-  async bulkIndex(index: string, documents: SearchDocument[]): Promise<void> {
-    await this.ensureCapable();
+  async bulkIndex(
+    index: string,
+    documents: SearchDocument[],
+    options: SearchOperationOptions = {},
+  ): Promise<void> {
+    await this.ensureCapable("bulkIndex", options);
+    const tenantId = this.getTenantId("bulkIndex");
     for (const doc of documents) {
-      await this.indexDocument(index, doc);
+      throwIfSearchOperationAborted("bulkIndex", options);
+      const sql = this.strategy.buildIndexQuery(index, doc, tenantId);
+      await this.db.execute(sql);
+      throwIfSearchOperationAborted("bulkIndex", options);
     }
   }
 
   /**
    * Drizzle 검색 엔진에서 지원하지 않는 인덱스 생성 API입니다.
    */
-  async createIndex(_config: IndexConfig): Promise<void> {
-    await this.ensureCapable();
+  async createIndex(_config: IndexConfig, options: SearchOperationOptions = {}): Promise<void> {
+    await this.ensureCapable("createIndex", options);
     throw new SearchCapabilityUnavailableProblem("createIndex", "DrizzleSearchEngine");
   }
 
   /**
    * Drizzle 검색 엔진에서 지원하지 않는 인덱스 삭제 API입니다.
    */
-  async deleteIndex(_name: string): Promise<void> {
-    await this.ensureCapable();
+  async deleteIndex(_name: string, options: SearchOperationOptions = {}): Promise<void> {
+    await this.ensureCapable("deleteIndex", options);
     throw new SearchCapabilityUnavailableProblem("deleteIndex", "DrizzleSearchEngine");
   }
 
@@ -132,7 +161,11 @@ export class DrizzleSearchEngine extends SearchEngine {
     }
   }
 
-  private async ensureCapable(): Promise<void> {
+  private async ensureCapable(
+    operation: SearchOperation,
+    options: SearchOperationOptions,
+  ): Promise<void> {
+    throwIfSearchOperationAborted(operation, options);
     try {
       if (!this.capabilityCheck) {
         this.capabilityCheck = this.checkStrategy();
@@ -141,12 +174,14 @@ export class DrizzleSearchEngine extends SearchEngine {
       await this.capabilityCheck;
     } catch (error) {
       this.capabilityCheck = null;
+      throwIfSearchOperationAborted(operation, options);
 
       if (error instanceof StrategyUnavailableProblem) {
         throw error;
       }
       throw new StrategyUnavailableProblem(this.strategy.constructor.name, String(error));
     }
+    throwIfSearchOperationAborted(operation, options);
   }
 
   private getTenantId(operation: string): string {
