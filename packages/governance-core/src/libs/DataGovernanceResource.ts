@@ -4,8 +4,6 @@ import { RetentionPolicyViolationProblem } from "./problems/DataGovernanceProble
 import type {
   DataClassificationTag,
   DataGovernanceAuditDescriptor,
-  DataGovernanceField,
-  DataGovernanceProblemContract,
   DataGovernanceResource,
   DataMapArtifact,
   DataMapCapability,
@@ -15,7 +13,6 @@ import type {
   DataMapResource,
   DataMapSummary,
   DataRetentionPolicy,
-  DataSubjectCapabilityDeclaration,
   RetentionPolicyCheck,
 } from "./types";
 
@@ -32,6 +29,9 @@ const DEFAULT_DATA_MAP_PATH = ".croco/build/data-map.json";
 const CLASSIFICATION_TAG_SET = new Set<string>(DATA_CLASSIFICATION_TAGS);
 
 export const DATA_GOVERNANCE_DIAGNOSTIC_CODES = {
+  arrayShapeInvalid: "governance-core/array-shape-invalid",
+  objectShapeInvalid: "governance-core/object-shape-invalid",
+  valueInvalid: "governance-core/value-invalid",
   resourceKindRequired: "governance-core/resource-kind-required",
   resourceLabelRequired: "governance-core/resource-label-required",
   resourceScopeRequired: "governance-core/resource-scope-required",
@@ -92,12 +92,36 @@ export type DataGovernanceValidationReport = {
   readonly diagnostics: readonly DataGovernanceDiagnostic[];
 };
 
+type UnknownRecord = Readonly<Record<string, unknown>>;
+
 type DataSubjectCapabilityCandidate = {
-  readonly status?: string;
-  readonly handlerId?: string;
-  readonly reason?: string;
-  readonly audit?: DataGovernanceAuditDescriptor;
-  readonly problems?: readonly DataGovernanceProblemContract[];
+  readonly status?: unknown;
+  readonly handlerId?: unknown;
+  readonly reason?: unknown;
+  readonly audit?: UnknownRecord;
+  readonly problems: readonly UnknownRecord[];
+  readonly metadata?: unknown;
+};
+
+type NormalizedDataGovernanceResource = {
+  readonly kind?: unknown;
+  readonly label?: unknown;
+  readonly scope?: unknown;
+  readonly subject: UnknownRecord;
+  readonly fields: readonly UnknownRecord[];
+  readonly retentionPolicies: readonly UnknownRecord[];
+  readonly subjectRequests?: {
+    readonly export?: DataSubjectCapabilityCandidate;
+    readonly delete?: DataSubjectCapabilityCandidate;
+  };
+  readonly problems: readonly UnknownRecord[];
+  readonly description?: unknown;
+  readonly metadata?: unknown;
+};
+
+type DataGovernanceInspection = {
+  readonly report: DataGovernanceValidationReport;
+  readonly resources: readonly NormalizedDataGovernanceResource[];
 };
 
 export class DataGovernanceValidationProblem extends Problem {
@@ -127,14 +151,7 @@ export function defineDataGovernanceResource<const TResource extends DataGoverna
 export function validateDataGovernanceResources(
   resources: readonly DataGovernanceResource[],
 ): DataGovernanceValidationReport {
-  const diagnostics = resources.flatMap((resource, resourceIndex) =>
-    validateResource(resource, resourceIndex),
-  );
-
-  return {
-    valid: diagnostics.length === 0,
-    diagnostics: diagnostics.sort(compareDiagnostics),
-  };
+  return inspectDataGovernanceResources(resources).report;
 }
 
 export function assertDataGovernanceResourcesValid<
@@ -153,8 +170,12 @@ export function createDataMapArtifact(
   resources: readonly DataGovernanceResource[],
   options: { readonly artifactPath?: string } = {},
 ): DataMapArtifact {
-  const report = validateDataGovernanceResources(resources);
-  const dataMapResources = resources.map(toDataMapResource).sort(compareDataMapResources);
+  const { report, resources: normalizedResources } = inspectDataGovernanceResources(resources);
+  const dataMapResources = normalizedResources
+    .map((resource, resourceIndex) =>
+      toDataMapResource(resource, resourceIndex, report.diagnostics),
+    )
+    .sort(compareDataMapResources);
   const summary = createSummary(dataMapResources, report.diagnostics);
 
   return {
@@ -216,23 +237,189 @@ export function assertRetentionPolicySatisfied(check: RetentionPolicyCheck): voi
   }
 }
 
-function validateResource(
-  resource: DataGovernanceResource,
-  resourceIndex: number,
-): DataGovernanceDiagnostic[] {
-  const candidate = resource as Partial<DataGovernanceResource>;
-  const resourceKind = normalizeString(candidate.kind);
+function inspectDataGovernanceResources(resources: unknown): DataGovernanceInspection {
   const diagnostics: DataGovernanceDiagnostic[] = [];
+  const candidates = readArray(resources, "resources", "resource", diagnostics, true).map(
+    (resource, resourceIndex) => normalizeResource(resource, resourceIndex, diagnostics),
+  );
+
+  for (const [resourceIndex, resource] of candidates.entries()) {
+    validateResource(resource, resourceIndex, diagnostics);
+  }
+
+  diagnostics.sort(compareDiagnostics);
+
+  return {
+    report: {
+      valid: diagnostics.length === 0,
+      diagnostics,
+    },
+    resources: candidates,
+  };
+}
+
+function normalizeResource(
+  resource: unknown,
+  resourceIndex: number,
+  diagnostics: DataGovernanceDiagnostic[],
+): NormalizedDataGovernanceResource {
   const resourcePath = `resources[${resourceIndex}]`;
-  const fields = asArray(candidate.fields);
-  const retentionPolicies = asArray(candidate.retentionPolicies);
-  const retentionPolicyIds = collectRetentionPolicyIds(
-    retentionPolicies,
+  const candidate = readObject(resource, resourcePath, "resource", diagnostics, true) ?? {};
+  const resourceKind = normalizeString(candidate.kind);
+  const subject = readObject(
+    candidate.subject,
+    `${resourcePath}.subject`,
+    "subject",
+    diagnostics,
+    true,
+    resourceKind,
+  );
+  const fields = readObjectArray(
+    candidate.fields,
+    `${resourcePath}.fields`,
+    "field",
+    diagnostics,
+    true,
+    resourceKind,
+  );
+  const retentionPolicies = readObjectArray(
+    candidate.retentionPolicies,
+    `${resourcePath}.retentionPolicies`,
+    "retention",
+    diagnostics,
+    false,
+    resourceKind,
+  );
+  const subjectRequests = normalizeSubjectRequests(
+    candidate.subjectRequests,
     resourcePath,
     resourceKind,
     diagnostics,
   );
-  const fieldIds = collectFieldIds(fields, resourcePath, resourceKind, diagnostics);
+  const problems = readObjectArray(
+    candidate.problems,
+    `${resourcePath}.problems`,
+    "problem",
+    diagnostics,
+    false,
+    resourceKind,
+  );
+
+  for (const [fieldIndex, field] of fields.entries()) {
+    readArray(
+      field.classifications,
+      `${resourcePath}.fields[${fieldIndex}].classifications`,
+      "field",
+      diagnostics,
+      true,
+      resourceKind,
+    );
+  }
+
+  return {
+    kind: candidate.kind,
+    label: candidate.label,
+    scope: candidate.scope,
+    subject: subject ?? {},
+    fields,
+    retentionPolicies,
+    subjectRequests,
+    problems,
+    description: candidate.description,
+    metadata: candidate.metadata,
+  };
+}
+
+function normalizeSubjectRequests(
+  value: unknown,
+  resourcePath: string,
+  resourceKind: string | undefined,
+  diagnostics: DataGovernanceDiagnostic[],
+): NormalizedDataGovernanceResource["subjectRequests"] {
+  const path = `${resourcePath}.subjectRequests`;
+  const subjectRequests = readObject(value, path, "capability", diagnostics, false, resourceKind);
+
+  if (!subjectRequests) {
+    return undefined;
+  }
+
+  const exportCapability = normalizeCapability(
+    subjectRequests.export,
+    `${path}.export`,
+    "export",
+    resourceKind,
+    diagnostics,
+  );
+  const deleteCapability = normalizeCapability(
+    subjectRequests.delete,
+    `${path}.delete`,
+    "delete",
+    resourceKind,
+    diagnostics,
+  );
+
+  return {
+    ...(exportCapability ? { export: exportCapability } : {}),
+    ...(deleteCapability ? { delete: deleteCapability } : {}),
+  };
+}
+
+function normalizeCapability(
+  value: unknown,
+  path: string,
+  name: "export" | "delete",
+  resourceKind: string | undefined,
+  diagnostics: DataGovernanceDiagnostic[],
+): DataSubjectCapabilityCandidate | undefined {
+  const capability = readObject(value, path, "capability", diagnostics, false, resourceKind, name);
+
+  if (!capability) {
+    return undefined;
+  }
+
+  const audit = readObject(
+    capability.audit,
+    `${path}.audit`,
+    "audit",
+    diagnostics,
+    false,
+    resourceKind,
+    name,
+  );
+  const problems = readObjectArray(
+    capability.problems,
+    `${path}.problems`,
+    "problem",
+    diagnostics,
+    false,
+    resourceKind,
+    name,
+  );
+
+  return {
+    status: capability.status,
+    handlerId: capability.handlerId,
+    reason: capability.reason,
+    audit,
+    problems,
+    metadata: capability.metadata,
+  };
+}
+
+function validateResource(
+  candidate: NormalizedDataGovernanceResource,
+  resourceIndex: number,
+  diagnostics: DataGovernanceDiagnostic[],
+): void {
+  const resourceKind = normalizeString(candidate.kind);
+  const resourcePath = `resources[${resourceIndex}]`;
+  const retentionPolicyIds = collectRetentionPolicyIds(
+    candidate.retentionPolicies,
+    resourcePath,
+    resourceKind,
+    diagnostics,
+  );
+  const fieldIds = collectFieldIds(candidate.fields, resourcePath, resourceKind, diagnostics);
 
   validateRequiredString(
     `${resourcePath}.kind`,
@@ -263,7 +450,7 @@ function validateResource(
   );
   validateSubject(candidate.subject, resourcePath, resourceKind, diagnostics);
   validateFields(
-    fields,
+    candidate.fields,
     retentionPolicyIds,
     candidate.subjectRequests,
     resourcePath,
@@ -275,16 +462,28 @@ function validateResource(
   validateTenantField(
     candidate.scope,
     candidate.subject,
-    fields,
+    candidate.fields,
     resourcePath,
     resourceKind,
     diagnostics,
   );
+  validateOptionalString(
+    `${resourcePath}.description`,
+    candidate.description,
+    "resource",
+    diagnostics,
+    {
+      resourceKind,
+    },
+  );
+  validateOptionalRecord(`${resourcePath}.metadata`, candidate.metadata, "resource", diagnostics, {
+    resourceKind,
+  });
 
   if (fieldIds.size > 0) {
     validateKnownSubjectField(
       "idField",
-      candidate.subject?.idField,
+      candidate.subject.idField,
       fieldIds,
       resourcePath,
       resourceKind,
@@ -292,26 +491,24 @@ function validateResource(
     );
     validateKnownSubjectField(
       "labelField",
-      candidate.subject?.labelField,
+      candidate.subject.labelField,
       fieldIds,
       resourcePath,
       resourceKind,
       diagnostics,
     );
   }
-
-  return diagnostics;
 }
 
 function validateTenantField(
-  scope: DataGovernanceResource["scope"] | undefined,
-  subject: DataGovernanceResource["subject"] | undefined,
-  fields: readonly DataGovernanceField[],
+  scope: unknown,
+  subject: UnknownRecord,
+  fields: readonly UnknownRecord[],
   resourcePath: string,
   resourceKind: string | undefined,
   diagnostics: DataGovernanceDiagnostic[],
 ): void {
-  const tenantFieldId = subject?.tenantField;
+  const tenantFieldId = subject.tenantField;
   const normalizedTenantFieldId = normalizeString(tenantFieldId);
   if (!normalizedTenantFieldId) {
     if (normalizeString(scope) === "tenant") {
@@ -332,10 +529,10 @@ function validateTenantField(
   const tenantField = fields[tenantFieldIndex];
   if (!tenantField) {
     diagnostics.push(
-      createDiagnostic({
-        code: DATA_GOVERNANCE_DIAGNOSTIC_CODES.subjectFieldUnknown,
-        fieldId: tenantFieldId,
-        message: `Data governance subject tenantField '${tenantFieldId}' is not declared in fields`,
+        createDiagnostic({
+          code: DATA_GOVERNANCE_DIAGNOSTIC_CODES.subjectFieldUnknown,
+          fieldId: normalizedTenantFieldId,
+          message: `Data governance subject tenantField '${normalizedTenantFieldId}' is not declared in fields`,
         path: `${resourcePath}.subject.tenantField`,
         resourceKind,
         target: "subject",
@@ -353,7 +550,7 @@ function validateTenantField(
     return;
   }
 
-  if (valueType && subject?.tenantIdentifierOverride) {
+  if (valueType && isRecord(subject.tenantIdentifierOverride)) {
     validateRequiredString(
       `${resourcePath}.subject.tenantIdentifierOverride.reason`,
       subject.tenantIdentifierOverride.reason,
@@ -379,7 +576,7 @@ function validateTenantField(
 }
 
 function collectRetentionPolicyIds(
-  retentionPolicies: readonly DataRetentionPolicy[],
+  retentionPolicies: readonly UnknownRecord[],
   resourcePath: string,
   resourceKind: string | undefined,
   diagnostics: DataGovernanceDiagnostic[],
@@ -417,7 +614,11 @@ function collectRetentionPolicyIds(
       );
     }
 
-    if (!Number.isInteger(policy.durationDays) || policy.durationDays <= 0) {
+    if (
+      typeof policy.durationDays !== "number" ||
+      !Number.isInteger(policy.durationDays) ||
+      policy.durationDays <= 0
+    ) {
       diagnostics.push(
         createDiagnostic({
           code: DATA_GOVERNANCE_DIAGNOSTIC_CODES.retentionPolicyDurationInvalid,
@@ -441,7 +642,34 @@ function collectRetentionPolicyIds(
           target: "retention",
         }),
       );
+    } else {
+      validateOptionalEnum(
+        `${path}.disposition`,
+        policy.disposition,
+        ["delete", "anonymize", "archive", "manual-review"],
+        "retention",
+        diagnostics,
+        { resourceKind },
+      );
     }
+
+    validateOptionalString(`${path}.basis`, policy.basis, "retention", diagnostics, {
+      resourceKind,
+    });
+    validateOptionalString(`${path}.startsFrom`, policy.startsFrom, "retention", diagnostics, {
+      resourceKind,
+    });
+    validateOptionalEnum(
+      `${path}.legalHold`,
+      policy.legalHold,
+      ["block-delete", "preserve"],
+      "retention",
+      diagnostics,
+      { resourceKind },
+    );
+    validateOptionalRecord(`${path}.metadata`, policy.metadata, "retention", diagnostics, {
+      resourceKind,
+    });
 
     if (policyId) {
       ids.add(policyId);
@@ -452,7 +680,7 @@ function collectRetentionPolicyIds(
 }
 
 function collectFieldIds(
-  fields: readonly DataGovernanceField[],
+  fields: readonly UnknownRecord[],
   resourcePath: string,
   resourceKind: string | undefined,
   diagnostics: DataGovernanceDiagnostic[],
@@ -511,14 +739,14 @@ function collectFieldIds(
 }
 
 function validateSubject(
-  subject: DataGovernanceResource["subject"] | undefined,
+  subject: UnknownRecord,
   resourcePath: string,
   resourceKind: string | undefined,
   diagnostics: DataGovernanceDiagnostic[],
 ): void {
   validateRequiredString(
     `${resourcePath}.subject.type`,
-    subject?.type,
+    subject.type,
     DATA_GOVERNANCE_DIAGNOSTIC_CODES.subjectTypeRequired,
     "Data governance subject type is required",
     "subject",
@@ -527,9 +755,30 @@ function validateSubject(
   );
   validateRequiredString(
     `${resourcePath}.subject.idField`,
-    subject?.idField,
+    subject.idField,
     DATA_GOVERNANCE_DIAGNOSTIC_CODES.subjectIdFieldRequired,
     "Data governance subject idField is required",
+    "subject",
+    diagnostics,
+    { resourceKind },
+  );
+  validateOptionalString(
+    `${resourcePath}.subject.tenantField`,
+    subject.tenantField,
+    "subject",
+    diagnostics,
+    { resourceKind },
+  );
+  validateOptionalRecord(
+    `${resourcePath}.subject.tenantIdentifierOverride`,
+    subject.tenantIdentifierOverride,
+    "subject",
+    diagnostics,
+    { resourceKind },
+  );
+  validateOptionalString(
+    `${resourcePath}.subject.labelField`,
+    subject.labelField,
     "subject",
     diagnostics,
     { resourceKind },
@@ -537,9 +786,9 @@ function validateSubject(
 }
 
 function validateFields(
-  fields: readonly DataGovernanceField[],
+  fields: readonly UnknownRecord[],
   retentionPolicyIds: ReadonlySet<string>,
-  subjectRequests: DataGovernanceResource["subjectRequests"] | undefined,
+  subjectRequests: NormalizedDataGovernanceResource["subjectRequests"],
   resourcePath: string,
   resourceKind: string | undefined,
   diagnostics: DataGovernanceDiagnostic[],
@@ -563,12 +812,12 @@ function validateFields(
     }
 
     for (const [classificationIndex, classification] of classifications.entries()) {
-      if (!CLASSIFICATION_TAG_SET.has(classification)) {
+      if (typeof classification !== "string" || !CLASSIFICATION_TAG_SET.has(classification)) {
         diagnostics.push(
           createDiagnostic({
             code: DATA_GOVERNANCE_DIAGNOSTIC_CODES.fieldClassificationUnknown,
             fieldId,
-            message: `Unknown data classification '${classification}'`,
+            message: "Data governance field declares an unknown classification",
             path: `${path}.classifications[${classificationIndex}]`,
             resourceKind,
             target: "field",
@@ -592,6 +841,35 @@ function validateFields(
       );
     }
 
+    validateOptionalString(`${path}.label`, field.label, "field", diagnostics, {
+      resourceKind,
+    });
+    validateOptionalString(`${path}.valueType`, field.valueType, "field", diagnostics, {
+      resourceKind,
+    });
+    validateOptionalString(
+      `${path}.retentionPolicyId`,
+      field.retentionPolicyId,
+      "field",
+      diagnostics,
+      { resourceKind },
+    );
+    validateOptionalBoolean(`${path}.exported`, field.exported, "field", diagnostics, {
+      resourceKind,
+    });
+    validateOptionalBoolean(`${path}.deleted`, field.deleted, "field", diagnostics, {
+      resourceKind,
+    });
+    validateOptionalString(`${path}.source`, field.source, "field", diagnostics, {
+      resourceKind,
+    });
+    validateOptionalString(`${path}.description`, field.description, "field", diagnostics, {
+      resourceKind,
+    });
+    validateOptionalRecord(`${path}.metadata`, field.metadata, "field", diagnostics, {
+      resourceKind,
+    });
+
     validateFieldCapability(
       field,
       "exported",
@@ -614,10 +892,10 @@ function validateFields(
 }
 
 function validateFieldCapability(
-  field: DataGovernanceField,
+  field: UnknownRecord,
   flag: "exported" | "deleted",
   capabilityName: "export" | "delete",
-  capability: DataSubjectCapabilityDeclaration | undefined,
+  capability: DataSubjectCapabilityCandidate | undefined,
   fieldPath: string,
   resourceKind: string | undefined,
   diagnostics: DataGovernanceDiagnostic[],
@@ -640,7 +918,7 @@ function validateFieldCapability(
 }
 
 function validateCapabilities(
-  subjectRequests: DataGovernanceResource["subjectRequests"] | undefined,
+  subjectRequests: NormalizedDataGovernanceResource["subjectRequests"],
   resourcePath: string,
   resourceKind: string | undefined,
   diagnostics: DataGovernanceDiagnostic[],
@@ -650,7 +928,7 @@ function validateCapabilities(
 }
 
 function validateCapability(
-  capability: DataSubjectCapabilityDeclaration | undefined,
+  capability: DataSubjectCapabilityCandidate | undefined,
   name: "export" | "delete",
   resourcePath: string,
   resourceKind: string | undefined,
@@ -661,10 +939,9 @@ function validateCapability(
   }
 
   const path = `${resourcePath}.subjectRequests.${name}`;
-  const candidate = capability as DataSubjectCapabilityCandidate;
-  const status = normalizeString(candidate.status);
+  const status = capability.status;
 
-  if (!status) {
+  if (status === undefined || status === "") {
     diagnostics.push(
       createDiagnostic({
         capability: name,
@@ -675,40 +952,34 @@ function validateCapability(
         target: "capability",
       }),
     );
-    validateProblems(candidate.problems, `${path}.problems`, resourceKind, diagnostics, name);
-    return;
-  }
-
-  if (status !== "supported" && status !== "not-supported") {
+  } else if (status !== "supported" && status !== "not-supported") {
     diagnostics.push(
       createDiagnostic({
         capability: name,
         code: DATA_GOVERNANCE_DIAGNOSTIC_CODES.capabilityStatusInvalid,
-        message: `Data governance ${name} capability status '${status}' is not supported`,
+        message: `Data governance ${name} capability status is invalid`,
         path: `${path}.status`,
         resourceKind,
         target: "capability",
       }),
     );
-    validateProblems(candidate.problems, `${path}.problems`, resourceKind, diagnostics, name);
-    return;
   }
 
   if (status === "supported") {
     validateRequiredString(
       `${path}.handlerId`,
-      candidate.handlerId,
+      capability.handlerId,
       DATA_GOVERNANCE_DIAGNOSTIC_CODES.capabilityHandlerRequired,
       `Data governance ${name} capability must declare a handlerId`,
       "capability",
       diagnostics,
       { capability: name, resourceKind },
     );
-    validateAudit(candidate.audit, path, name, resourceKind, diagnostics);
-  } else {
+    validateAudit(capability.audit, path, name, resourceKind, diagnostics);
+  } else if (status === "not-supported") {
     validateRequiredString(
       `${path}.reason`,
-      candidate.reason,
+      capability.reason,
       DATA_GOVERNANCE_DIAGNOSTIC_CODES.capabilityReasonRequired,
       `Data governance ${name} capability must declare why it is not supported`,
       "capability",
@@ -717,23 +988,92 @@ function validateCapability(
     );
   }
 
-  validateProblems(candidate.problems, `${path}.problems`, resourceKind, diagnostics, name);
+  if (status !== "supported" && capability.audit) {
+    validateAudit(capability.audit, path, name, resourceKind, diagnostics);
+  }
+
+  validateProblems(capability.problems, `${path}.problems`, resourceKind, diagnostics, name);
+  validateOptionalRecord(`${path}.metadata`, capability.metadata, "capability", diagnostics, {
+    capability: name,
+    resourceKind,
+  });
 }
 
 function validateAudit(
-  audit: DataGovernanceAuditDescriptor | undefined,
+  audit: UnknownRecord | undefined,
   capabilityPath: string,
   capability: "export" | "delete",
   resourceKind: string | undefined,
   diagnostics: DataGovernanceDiagnostic[],
 ): void {
-  if (!audit || !normalizeString(audit.eventName) || !normalizeString(audit.subjectType)) {
+  if (!audit) {
     diagnostics.push(
       createDiagnostic({
         capability,
         code: DATA_GOVERNANCE_DIAGNOSTIC_CODES.capabilityAuditRequired,
-        message: `Data governance ${capability} capability audit must include eventName and subjectType`,
+        message: `Data governance ${capability} capability audit must include valid eventName, subjectType, and actor`,
         path: `${capabilityPath}.audit`,
+        resourceKind,
+        target: "audit",
+      }),
+    );
+    return;
+  }
+
+  const path = `${capabilityPath}.audit`;
+  const diagnosticCount = diagnostics.length;
+  validateRequiredValue(
+    `${path}.eventName`,
+    audit.eventName,
+    (value) => typeof value === "string" && value.trim().length > 0,
+    "audit",
+    diagnostics,
+    { capability, resourceKind },
+  );
+  validateRequiredValue(
+    `${path}.subjectType`,
+    audit.subjectType,
+    (value) => typeof value === "string" && value.trim().length > 0,
+    "audit",
+    diagnostics,
+    { capability, resourceKind },
+  );
+  validateRequiredValue(
+    `${path}.actor`,
+    audit.actor,
+    (value) => value === "required" || value === "optional" || value === "system",
+    "audit",
+    diagnostics,
+    { capability, resourceKind },
+  );
+  validateOptionalEnum(
+    `${path}.reason`,
+    audit.reason,
+    ["required", "optional"],
+    "audit",
+    diagnostics,
+    { capability, resourceKind },
+  );
+  validateOptionalEnum(
+    `${path}.idempotencyKey`,
+    audit.idempotencyKey,
+    ["required", "optional"],
+    "audit",
+    diagnostics,
+    { capability, resourceKind },
+  );
+  validateOptionalRecord(`${path}.metadata`, audit.metadata, "audit", diagnostics, {
+    capability,
+    resourceKind,
+  });
+
+  if (diagnostics.length > diagnosticCount) {
+    diagnostics.push(
+      createDiagnostic({
+        capability,
+        code: DATA_GOVERNANCE_DIAGNOSTIC_CODES.capabilityAuditRequired,
+        message: `Data governance ${capability} capability audit must include valid eventName, subjectType, and actor`,
+        path,
         resourceKind,
         target: "audit",
       }),
@@ -743,7 +1083,7 @@ function validateAudit(
 
 function validateKnownSubjectField(
   fieldName: "idField" | "tenantField" | "labelField",
-  fieldId: string | undefined,
+  fieldId: unknown,
   fieldIds: ReadonlySet<string>,
   resourcePath: string,
   resourceKind: string | undefined,
@@ -767,17 +1107,16 @@ function validateKnownSubjectField(
 }
 
 function validateProblems(
-  problems: readonly DataGovernanceProblemContract[] | undefined,
+  problems: readonly UnknownRecord[],
   path: string,
   resourceKind: string | undefined,
   diagnostics: DataGovernanceDiagnostic[],
   capability?: "export" | "delete",
 ): void {
-  const contracts = asArray(problems);
   const codes = new Set<string>();
   const duplicateCodes = new Set<string>();
 
-  for (const [index, problem] of contracts.entries()) {
+  for (const [index, problem] of problems.entries()) {
     const problemCode = normalizeString(problem.code);
 
     if (!problemCode) {
@@ -791,10 +1130,7 @@ function validateProblems(
           target: "problem",
         }),
       );
-      continue;
-    }
-
-    if (codes.has(problemCode) && !duplicateCodes.has(problemCode)) {
+    } else if (codes.has(problemCode) && !duplicateCodes.has(problemCode)) {
       duplicateCodes.add(problemCode);
       diagnostics.push(
         createDiagnostic({
@@ -809,13 +1145,55 @@ function validateProblems(
       );
     }
 
-    codes.add(problemCode);
+    if (problemCode) {
+      codes.add(problemCode);
+    }
+
+    const problemPath = `${path}[${index}]`;
+    validateOptionalString(`${problemPath}.category`, problem.category, "problem", diagnostics, {
+      capability,
+      resourceKind,
+    });
+    validateOptionalNumber(`${problemPath}.status`, problem.status, "problem", diagnostics, {
+      capability,
+      resourceKind,
+    });
+    validateOptionalString(`${problemPath}.title`, problem.title, "problem", diagnostics, {
+      capability,
+      resourceKind,
+    });
+    validateOptionalString(`${problemPath}.detail`, problem.detail, "problem", diagnostics, {
+      capability,
+      resourceKind,
+    });
+    validateOptionalBoolean(`${problemPath}.retryable`, problem.retryable, "problem", diagnostics, {
+      capability,
+      resourceKind,
+    });
+    validateOptionalRecord(`${problemPath}.metadata`, problem.metadata, "problem", diagnostics, {
+      capability,
+      resourceKind,
+    });
   }
 }
 
-function toDataMapResource(resource: DataGovernanceResource): DataMapResource {
-  const exportCapability = toDataMapCapability("export", resource.subjectRequests?.export);
-  const deleteCapability = toDataMapCapability("delete", resource.subjectRequests?.delete);
+function toDataMapResource(
+  resource: NormalizedDataGovernanceResource,
+  resourceIndex: number,
+  diagnostics: readonly DataGovernanceDiagnostic[],
+): DataMapResource {
+  const exportPath = `resources[${resourceIndex}].subjectRequests.export`;
+  const deletePath = `resources[${resourceIndex}].subjectRequests.delete`;
+  const exportCapability = toDataMapCapability(
+    "export",
+    resource.subjectRequests?.export,
+    !hasDiagnosticAtPath(diagnostics, exportPath),
+  );
+  const deleteCapability = toDataMapCapability(
+    "delete",
+    resource.subjectRequests?.delete,
+    !hasDiagnosticAtPath(diagnostics, deletePath),
+  );
   const fields = resource.fields
     .map((field) =>
       toDataMapField(
@@ -825,19 +1203,22 @@ function toDataMapResource(resource: DataGovernanceResource): DataMapResource {
       ),
     )
     .sort(compareDataMapFields);
-  const retentionPolicies = [...(resource.retentionPolicies ?? [])].sort(compareRetentionPolicies);
+  const retentionPolicies = resource.retentionPolicies
+    .map(toDataRetentionPolicy)
+    .sort(compareRetentionPolicies);
   const problems = dedupeProblems([
-    ...normalizeProblemContracts(resource.problems ?? []),
+    ...normalizeProblemContracts(resource.problems),
     ...exportCapability.problems,
     ...deleteCapability.problems,
     ...(retentionPolicies.length > 0 ? [defaultRetentionViolationProblem()] : []),
   ]);
+  const description = stringValue(resource.description);
 
   return {
-    kind: resource.kind,
-    label: resource.label,
-    scope: resource.scope,
-    subject: resource.subject,
+    kind: stringValue(resource.kind) ?? "",
+    label: stringValue(resource.label) ?? "",
+    scope: (stringValue(resource.scope) ?? "") as DataMapResource["scope"],
+    subject: toDataSubjectIdentity(resource.subject),
     classifications: collectClassifications(fields),
     fields,
     retentionPolicies,
@@ -846,31 +1227,91 @@ function toDataMapResource(resource: DataGovernanceResource): DataMapResource {
       delete: deleteCapability,
     },
     problems,
-    ...(resource.description ? { description: resource.description } : {}),
+    ...(description ? { description } : {}),
   };
 }
 
 function toDataMapField(
-  field: DataGovernanceField,
+  field: UnknownRecord,
   exportSupported: boolean,
   deleteSupported: boolean,
 ): DataMapField {
+  const classifications = asArray(field.classifications).filter(isDataClassificationTag);
+  const label = stringValue(field.label);
+  const valueType = stringValue(field.valueType);
+  const retentionPolicyId = stringValue(field.retentionPolicyId);
+  const source = stringValue(field.source);
+  const description = stringValue(field.description);
+
   return {
-    id: field.id,
-    classifications: sortClassifications(field.classifications),
+    id: stringValue(field.id) ?? "",
+    classifications: sortClassifications(classifications),
     exported: exportSupported && field.exported !== false,
     deleted: deleteSupported && field.deleted !== false,
-    ...(field.label ? { label: field.label } : {}),
-    ...(field.valueType ? { valueType: field.valueType } : {}),
-    ...(field.retentionPolicyId ? { retentionPolicyId: field.retentionPolicyId } : {}),
-    ...(field.source ? { source: field.source } : {}),
-    ...(field.description ? { description: field.description } : {}),
+    ...(label ? { label } : {}),
+    ...(valueType ? { valueType: valueType as DataMapField["valueType"] } : {}),
+    ...(retentionPolicyId ? { retentionPolicyId } : {}),
+    ...(source ? { source } : {}),
+    ...(description ? { description } : {}),
+  };
+}
+
+function toDataSubjectIdentity(subject: UnknownRecord): DataMapResource["subject"] {
+  const type = stringValue(subject.type) ?? "";
+  const idField = stringValue(subject.idField) ?? "";
+  const tenantField = stringValue(subject.tenantField);
+  const labelField = stringValue(subject.labelField);
+
+  if (
+    type &&
+    idField &&
+    (subject.tenantField === undefined || typeof subject.tenantField === "string") &&
+    (subject.labelField === undefined || typeof subject.labelField === "string")
+  ) {
+    return subject as DataMapResource["subject"];
+  }
+
+  return {
+    type,
+    idField,
+    ...(tenantField ? { tenantField } : {}),
+    ...(labelField ? { labelField } : {}),
+  };
+}
+
+function toDataRetentionPolicy(policy: UnknownRecord): DataRetentionPolicy {
+  const id = stringValue(policy.id) ?? "";
+  const durationDays = typeof policy.durationDays === "number" ? policy.durationDays : 0;
+  const disposition = isDataRetentionDisposition(policy.disposition)
+    ? policy.disposition
+    : "manual-review";
+
+  if (isDataRetentionPolicy(policy)) {
+    return policy as DataRetentionPolicy;
+  }
+
+  const basis = stringValue(policy.basis);
+  const startsFrom = stringValue(policy.startsFrom);
+  const legalHold =
+    policy.legalHold === "block-delete" || policy.legalHold === "preserve"
+      ? policy.legalHold
+      : undefined;
+
+  return {
+    id,
+    durationDays,
+    disposition,
+    ...(basis ? { basis } : {}),
+    ...(startsFrom ? { startsFrom } : {}),
+    ...(legalHold ? { legalHold } : {}),
+    ...(isRecord(policy.metadata) ? { metadata: policy.metadata } : {}),
   };
 }
 
 function toDataMapCapability(
   name: "export" | "delete",
-  capability: DataSubjectCapabilityDeclaration | undefined,
+  capability: DataSubjectCapabilityCandidate | undefined,
+  valid: boolean,
 ): DataMapCapability {
   if (!capability) {
     return {
@@ -880,50 +1321,83 @@ function toDataMapCapability(
     };
   }
 
-  const candidate = capability as DataSubjectCapabilityCandidate;
+  const status = capability.status;
+  const handlerId = normalizeString(capability.handlerId);
+  const reason = normalizeString(capability.reason);
+  const audit = isDataGovernanceAuditDescriptor(capability.audit) ? capability.audit : undefined;
+  const problems = normalizeProblemContracts(capability.problems);
 
-  if (candidate.status === "not-supported") {
+  if (status === "not-supported") {
     return {
       status: "not-supported",
-      ...(candidate.reason ? { reason: candidate.reason } : {}),
-      ...(candidate.audit ? { audit: candidate.audit } : {}),
-      problems: dedupeProblems([
-        defaultUnsupportedCapabilityProblem(name),
-        ...normalizeProblemContracts(candidate.problems ?? []),
-      ]),
+      ...(reason ? { reason: stringValue(capability.reason) } : {}),
+      ...(audit ? { audit } : {}),
+      problems: dedupeProblems([defaultUnsupportedCapabilityProblem(name), ...problems]),
     };
   }
 
-  if (candidate.status === "supported") {
+  if (status === "supported" && valid && handlerId && audit) {
     return {
       status: "supported",
-      ...(candidate.handlerId ? { handlerId: candidate.handlerId } : {}),
-      ...(candidate.audit ? { audit: candidate.audit } : {}),
-      problems: normalizeProblemContracts(candidate.problems ?? []).sort(compareProblems),
+      handlerId: stringValue(capability.handlerId),
+      audit,
+      problems: problems.sort(compareProblems),
+    };
+  }
+
+  if (status === "supported") {
+    return {
+      status: "not-supported",
+      reason: "Capability declaration is invalid",
+      problems: dedupeProblems([defaultUnsupportedCapabilityProblem(name), ...problems]),
     };
   }
 
   return {
     status: "not-supported",
-    reason: candidate.status
-      ? `Capability status '${candidate.status}' is invalid`
-      : "Capability status is not declared",
+    reason:
+      status === undefined || status === ""
+        ? "Capability status is not declared"
+        : "Capability status is invalid",
     problems: [defaultUnsupportedCapabilityProblem(name)],
   };
 }
 
-function normalizeProblemContracts(
-  problems: readonly DataGovernanceProblemContract[],
-): DataMapProblemContract[] {
-  return problems.map((problem) => ({
-    code: problem.code,
-    category: problem.category ?? "InternalServerError",
-    status: problem.status ?? 500,
-    title: problem.title ?? "Internal Server Error",
-    ...(problem.detail ? { detail: problem.detail } : {}),
-    ...(problem.retryable !== undefined ? { retryable: problem.retryable } : {}),
-    ...(problem.metadata ? { metadata: problem.metadata } : {}),
-  }));
+function hasDiagnosticAtPath(
+  diagnostics: readonly DataGovernanceDiagnostic[],
+  path: string,
+): boolean {
+  return diagnostics.some(
+    (diagnostic) =>
+      diagnostic.path === path ||
+      diagnostic.path.startsWith(`${path}.`) ||
+      diagnostic.path.startsWith(`${path}[`),
+  );
+}
+
+function normalizeProblemContracts(problems: readonly UnknownRecord[]): DataMapProblemContract[] {
+  return problems.flatMap((problem) => {
+    const code = normalizeString(problem.code);
+    if (!code) {
+      return [];
+    }
+
+    const category = stringValue(problem.category);
+    const title = stringValue(problem.title);
+    const detail = stringValue(problem.detail);
+
+    return [
+      {
+        code: stringValue(problem.code) ?? code,
+        category: category ?? "InternalServerError",
+        status: typeof problem.status === "number" ? problem.status : 500,
+        title: title ?? "Internal Server Error",
+        ...(detail ? { detail } : {}),
+        ...(typeof problem.retryable === "boolean" ? { retryable: problem.retryable } : {}),
+        ...(isRecord(problem.metadata) ? { metadata: problem.metadata } : {}),
+      },
+    ];
+  });
 }
 
 function defaultUnsupportedCapabilityProblem(
@@ -1032,9 +1506,133 @@ function createDiagnostic(
   };
 }
 
+function readArray(
+  value: unknown,
+  path: string,
+  target: DataGovernanceDiagnosticTarget,
+  diagnostics: DataGovernanceDiagnostic[],
+  required: boolean,
+  resourceKind?: string,
+  capability?: "export" | "delete",
+): readonly unknown[] {
+  if (Array.isArray(value)) {
+    return Array.from(value);
+  }
+
+  if (value !== undefined || required) {
+    diagnostics.push(
+      createDiagnostic({
+        capability,
+        code: DATA_GOVERNANCE_DIAGNOSTIC_CODES.arrayShapeInvalid,
+        message: `Data governance value at '${path}' must be an array`,
+        path,
+        resourceKind,
+        target,
+      }),
+    );
+  }
+
+  return [];
+}
+
+function readObject(
+  value: unknown,
+  path: string,
+  target: DataGovernanceDiagnosticTarget,
+  diagnostics: DataGovernanceDiagnostic[],
+  required: boolean,
+  resourceKind?: string,
+  capability?: "export" | "delete",
+): UnknownRecord | undefined {
+  if (isRecord(value)) {
+    return value;
+  }
+
+  if (value !== undefined || required) {
+    diagnostics.push(
+      createDiagnostic({
+        capability,
+        code: DATA_GOVERNANCE_DIAGNOSTIC_CODES.objectShapeInvalid,
+        message: `Data governance value at '${path}' must be an object`,
+        path,
+        resourceKind,
+        target,
+      }),
+    );
+  }
+
+  return undefined;
+}
+
+function readObjectArray(
+  value: unknown,
+  path: string,
+  target: DataGovernanceDiagnosticTarget,
+  diagnostics: DataGovernanceDiagnostic[],
+  required: boolean,
+  resourceKind?: string,
+  capability?: "export" | "delete",
+): readonly UnknownRecord[] {
+  return readArray(value, path, target, diagnostics, required, resourceKind, capability).map(
+    (entry, index) =>
+      readObject(entry, `${path}[${index}]`, target, diagnostics, true, resourceKind, capability) ??
+      {},
+  );
+}
+
+function isRecord(value: unknown): value is UnknownRecord {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function stringValue(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
+function isDataClassificationTag(value: unknown): value is DataClassificationTag {
+  return typeof value === "string" && CLASSIFICATION_TAG_SET.has(value);
+}
+
+function isDataGovernanceAuditDescriptor(
+  value: UnknownRecord | undefined,
+): value is DataGovernanceAuditDescriptor {
+  return Boolean(
+    value &&
+    normalizeString(value.eventName) &&
+    normalizeString(value.subjectType) &&
+    (value.actor === "required" || value.actor === "optional" || value.actor === "system") &&
+    (value.reason === undefined || value.reason === "required" || value.reason === "optional") &&
+    (value.idempotencyKey === undefined ||
+      value.idempotencyKey === "required" ||
+      value.idempotencyKey === "optional") &&
+    (value.metadata === undefined || isRecord(value.metadata)),
+  );
+}
+
+function isDataRetentionPolicy(value: UnknownRecord): value is DataRetentionPolicy {
+  return Boolean(
+    normalizeString(value.id) &&
+    typeof value.durationDays === "number" &&
+    Number.isInteger(value.durationDays) &&
+    value.durationDays > 0 &&
+    isDataRetentionDisposition(value.disposition) &&
+    (value.basis === undefined || typeof value.basis === "string") &&
+    (value.startsFrom === undefined || typeof value.startsFrom === "string") &&
+    (value.legalHold === undefined ||
+      value.legalHold === "block-delete" ||
+      value.legalHold === "preserve") &&
+    (value.metadata === undefined || isRecord(value.metadata)),
+  );
+}
+
+function isDataRetentionDisposition(value: unknown): value is DataRetentionPolicy["disposition"] {
+  return (
+    value === "delete" || value === "anonymize" || value === "archive" || value === "manual-review"
+  );
+}
+
 function validateRequiredString(
   path: string,
-  value: string | undefined,
+  value: unknown,
   code: DataGovernanceDiagnosticCode,
   message: string,
   target: DataGovernanceDiagnosticTarget,
@@ -1056,12 +1654,131 @@ function validateRequiredString(
   );
 }
 
-function normalizeString(value: string | undefined): string | undefined {
-  const normalized = value?.trim();
+type DiagnosticContext = Pick<DataGovernanceDiagnostic, "capability" | "resourceKind">;
+
+function validateRequiredValue(
+  path: string,
+  value: unknown,
+  isValid: (candidate: unknown) => boolean,
+  target: DataGovernanceDiagnosticTarget,
+  diagnostics: DataGovernanceDiagnostic[],
+  context: DiagnosticContext = {},
+): void {
+  if (isValid(value)) {
+    return;
+  }
+
+  diagnostics.push(
+    createDiagnostic({
+      ...context,
+      code: DATA_GOVERNANCE_DIAGNOSTIC_CODES.valueInvalid,
+      message: `Data governance value at '${path}' has an invalid type or value`,
+      path,
+      target,
+    }),
+  );
+}
+
+function validateOptionalValue(
+  path: string,
+  value: unknown,
+  isValid: (candidate: unknown) => boolean,
+  target: DataGovernanceDiagnosticTarget,
+  diagnostics: DataGovernanceDiagnostic[],
+  context: DiagnosticContext = {},
+): void {
+  if (value === undefined) {
+    return;
+  }
+
+  validateRequiredValue(path, value, isValid, target, diagnostics, context);
+}
+
+function validateOptionalString(
+  path: string,
+  value: unknown,
+  target: DataGovernanceDiagnosticTarget,
+  diagnostics: DataGovernanceDiagnostic[],
+  context: DiagnosticContext = {},
+): void {
+  validateOptionalValue(
+    path,
+    value,
+    (candidate) => typeof candidate === "string",
+    target,
+    diagnostics,
+    context,
+  );
+}
+
+function validateOptionalBoolean(
+  path: string,
+  value: unknown,
+  target: DataGovernanceDiagnosticTarget,
+  diagnostics: DataGovernanceDiagnostic[],
+  context: DiagnosticContext = {},
+): void {
+  validateOptionalValue(
+    path,
+    value,
+    (candidate) => typeof candidate === "boolean",
+    target,
+    diagnostics,
+    context,
+  );
+}
+
+function validateOptionalNumber(
+  path: string,
+  value: unknown,
+  target: DataGovernanceDiagnosticTarget,
+  diagnostics: DataGovernanceDiagnostic[],
+  context: DiagnosticContext = {},
+): void {
+  validateOptionalValue(
+    path,
+    value,
+    (candidate) => typeof candidate === "number" && Number.isFinite(candidate),
+    target,
+    diagnostics,
+    context,
+  );
+}
+
+function validateOptionalRecord(
+  path: string,
+  value: unknown,
+  target: DataGovernanceDiagnosticTarget,
+  diagnostics: DataGovernanceDiagnostic[],
+  context: DiagnosticContext = {},
+): void {
+  validateOptionalValue(path, value, isRecord, target, diagnostics, context);
+}
+
+function validateOptionalEnum(
+  path: string,
+  value: unknown,
+  allowedValues: readonly unknown[],
+  target: DataGovernanceDiagnosticTarget,
+  diagnostics: DataGovernanceDiagnostic[],
+  context: DiagnosticContext = {},
+): void {
+  validateOptionalValue(
+    path,
+    value,
+    (candidate) => allowedValues.includes(candidate),
+    target,
+    diagnostics,
+    context,
+  );
+}
+
+function normalizeString(value: unknown): string | undefined {
+  const normalized = typeof value === "string" ? value.trim() : undefined;
   return normalized && normalized.length > 0 ? normalized : undefined;
 }
 
-function asArray<T>(value: readonly T[] | undefined): readonly T[] {
+function asArray(value: unknown): readonly unknown[] {
   return Array.isArray(value) ? value : [];
 }
 
