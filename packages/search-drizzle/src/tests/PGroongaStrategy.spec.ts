@@ -18,8 +18,8 @@ describe("PGroongaStrategy", () => {
   describe("buildSearchQuery", () => {
     it("should build correct search query", () => {
       const query = { query: "test query" };
-      const sqlObj = strategy.buildSearchQuery("users", query, "tenant-123");
-      const sqlString = sqlObj.toQuery({
+      const plan = strategy.buildSearchQuery("users", query, "tenant-123");
+      const sqlString = plan.rows.toQuery({
         escapeName: (x: string) => `"${x}"`,
         escapeParam: () => "$1",
         escapeString: (x: string) => `'${x}'`,
@@ -34,6 +34,19 @@ describe("PGroongaStrategy", () => {
       expect(sqlString).toContain('"tenant_id" = $1');
       expect(sqlString).toContain("ORDER BY pgroonga_score(tableoid, ctid) DESC");
       expect(sqlString).not.toContain("ORDER BY score DESC");
+
+      const totalSqlString = plan.total.toQuery({
+        escapeName: (x: string) => `"${x}"`,
+        escapeParam: () => "$1",
+        escapeString: (x: string) => `'${x}'`,
+        casing: new CasingCache(),
+      }).sql;
+
+      expect(totalSqlString).toContain("SELECT COUNT(*)::double precision AS total");
+      expect(totalSqlString).toContain('FROM "users"');
+      expect(totalSqlString).toContain('"search_vector" &@~ $1');
+      expect(totalSqlString).toContain('"tenant_id" = $1');
+      expect(totalSqlString).not.toContain("ORDER BY");
     });
   });
 

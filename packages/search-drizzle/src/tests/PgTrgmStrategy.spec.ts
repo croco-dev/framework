@@ -31,9 +31,9 @@ describe("PgTrgmStrategy", () => {
   describe("buildSearchQuery", () => {
     it("should build correct search query", () => {
       const query = { query: "test query" };
-      const sqlObj = strategy.buildSearchQuery("users", query, "tenant-123");
+      const plan = strategy.buildSearchQuery("users", query, "tenant-123");
 
-      const sqlString = sqlObj.toQuery({
+      const sqlString = plan.rows.toQuery({
         escapeName: (x: string) => `"${x}"`,
         escapeParam: () => "$1",
         escapeString: (x: string) => `'${x}'`,
@@ -48,6 +48,19 @@ describe("PgTrgmStrategy", () => {
       expect(sqlString).toContain('ORDER BY similarity("search_vector", $1) DESC');
       expect(sqlString).not.toContain("ORDER BY score DESC");
       expect(sqlString.match(/similarity\("search_vector", \$1\)/g)).toHaveLength(3);
+
+      const totalSqlString = plan.total.toQuery({
+        escapeName: (x: string) => `"${x}"`,
+        escapeParam: () => "$1",
+        escapeString: (x: string) => `'${x}'`,
+        casing: new CasingCache(),
+      }).sql;
+
+      expect(totalSqlString).toContain("SELECT COUNT(*)::double precision AS total");
+      expect(totalSqlString).toContain('FROM "users"');
+      expect(totalSqlString).toContain('"tenant_id" = $1');
+      expect(totalSqlString).toContain('similarity("search_vector", $1) > $1');
+      expect(totalSqlString).not.toContain("ORDER BY");
     });
   });
 

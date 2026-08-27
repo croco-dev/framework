@@ -2,7 +2,7 @@ import type { SearchDocument, SearchEngineCapabilities, SearchQuery } from "@cro
 import { type SQL, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { SEARCH_SCORE_ALIAS } from "../searchScore";
-import type { SearchStrategy } from "../types";
+import type { SearchQueryPlan, SearchStrategy } from "../types";
 
 /**
  * `pg_search` 확장을 이용한 전문 검색 전략입니다.
@@ -20,20 +20,25 @@ export class PgSearchStrategy implements SearchStrategy {
   /**
    * `pg_search` 문법을 사용하는 검색 SQL을 생성합니다.
    */
-  buildSearchQuery(table: string, query: SearchQuery, tenantId: string): SQL {
+  buildSearchQuery(table: string, query: SearchQuery, tenantId: string): SearchQueryPlan {
     const tableIdentifier = sql.identifier(table);
-    const tenantIdParam = sql.param(tenantId);
-    const queryParam = sql.param(query.query);
     const idIdentifier = sql.identifier("id");
+    const predicate = this.buildSearchPredicate(table, query, tenantId);
     const scoreAlias = sql.identifier(SEARCH_SCORE_ALIAS);
     const scoreExpression = sql`paradedb.score(${idIdentifier})`;
 
-    return sql`
-      SELECT *, ${scoreExpression} AS ${scoreAlias} FROM ${tableIdentifier}
-      WHERE ${tableIdentifier} @@@ ${queryParam}
-      AND "tenant_id" = ${tenantIdParam}
-      ORDER BY ${scoreExpression} DESC
-    `;
+    return {
+      rows: sql`
+        SELECT *, ${scoreExpression} AS ${scoreAlias} FROM ${tableIdentifier}
+        WHERE ${predicate}
+        ORDER BY ${scoreExpression} DESC
+      `,
+      total: sql`
+        SELECT COUNT(*)::double precision AS total
+        FROM ${tableIdentifier}
+        WHERE ${predicate}
+      `,
+    };
   }
 
   /**
@@ -93,5 +98,9 @@ export class PgSearchStrategy implements SearchStrategy {
       vectorSearch: false,
       fuzzySearch: true,
     };
+  }
+
+  private buildSearchPredicate(table: string, query: SearchQuery, tenantId: string): SQL {
+    return sql`${sql.identifier(table)} @@@ ${sql.param(query.query)} AND "tenant_id" = ${sql.param(tenantId)}`;
   }
 }

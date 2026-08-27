@@ -137,7 +137,10 @@ describe("search-drizzle provider conformance", () => {
               (Context.getTenantId as Mock).mockReturnValue("tenant-a");
               const strategy = createStrategy();
               const db = {
-                execute: vi.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
+                execute: vi
+                  .fn()
+                  .mockResolvedValueOnce({ rows: [], rowCount: 0 })
+                  .mockResolvedValueOnce({ rows: [{ total: 0 }], rowCount: 1 }),
               } as unknown as NodePgDatabase<Record<string, never>>;
               const engine = new DrizzleSearchEngine(db, strategy);
 

@@ -2,7 +2,7 @@ import type { SearchDocument, SearchEngineCapabilities, SearchQuery } from "@cro
 import { type SQL, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { SEARCH_SCORE_ALIAS } from "../searchScore";
-import type { SearchStrategy } from "../types";
+import type { SearchQueryPlan, SearchStrategy } from "../types";
 
 /**
  * `pgroonga` 확장을 이용한 고성능 검색 전략입니다.
@@ -11,21 +11,25 @@ export class PGroongaStrategy implements SearchStrategy {
   /**
    * PGroonga 연산자를 사용하는 검색 SQL을 생성합니다.
    */
-  buildSearchQuery(table: string, query: SearchQuery, tenantId: string): SQL {
+  buildSearchQuery(table: string, query: SearchQuery, tenantId: string): SearchQueryPlan {
     const tableIdentifier = sql.identifier(table);
-    const tenantIdParam = sql.param(tenantId);
-    const queryParam = sql.param(query.query);
-    const searchVectorIdentifier = sql.identifier("search_vector");
+    const predicate = this.buildSearchPredicate(query, tenantId);
     const scoreAlias = sql.identifier(SEARCH_SCORE_ALIAS);
     const scoreExpression = sql`pgroonga_score(tableoid, ctid)`;
 
-    return sql`
-      SELECT *, ${scoreExpression} AS ${scoreAlias}
-      FROM ${tableIdentifier}
-      WHERE ${searchVectorIdentifier} &@~ ${queryParam}
-      AND "tenant_id" = ${tenantIdParam}
-      ORDER BY ${scoreExpression} DESC
-    `;
+    return {
+      rows: sql`
+        SELECT *, ${scoreExpression} AS ${scoreAlias}
+        FROM ${tableIdentifier}
+        WHERE ${predicate}
+        ORDER BY ${scoreExpression} DESC
+      `,
+      total: sql`
+        SELECT COUNT(*)::double precision AS total
+        FROM ${tableIdentifier}
+        WHERE ${predicate}
+      `,
+    };
   }
 
   /**
@@ -85,5 +89,10 @@ export class PGroongaStrategy implements SearchStrategy {
       vectorSearch: false,
       fuzzySearch: true,
     };
+  }
+
+  private buildSearchPredicate(query: SearchQuery, tenantId: string): SQL {
+    const searchVectorIdentifier = sql.identifier("search_vector");
+    return sql`${searchVectorIdentifier} &@~ ${sql.param(query.query)} AND "tenant_id" = ${sql.param(tenantId)}`;
   }
 }

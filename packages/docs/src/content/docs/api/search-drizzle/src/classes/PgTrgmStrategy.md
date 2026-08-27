@@ -95,7 +95,7 @@ title: "PgTrgmStrategy"
 
 ### buildSearchQuery()
 
-> **buildSearchQuery**(`table`, `query`, `tenantId`): `SQL`
+> **buildSearchQuery**(`table`, `query`, `tenantId`): [`SearchQueryPlan`](/api/search-drizzle/src/type-aliases/searchqueryplan/)
 
 trigram similarity 기반 검색 SQL을 생성합니다.
 
@@ -115,7 +115,7 @@ trigram similarity 기반 검색 SQL을 생성합니다.
 
 #### Returns
 
-`SQL`
+[`SearchQueryPlan`](/api/search-drizzle/src/type-aliases/searchqueryplan/)
 
 #### Implementation of
 

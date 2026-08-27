@@ -95,7 +95,7 @@ title: "PgSearchStrategy"
 
 ### buildSearchQuery()
 
-> **buildSearchQuery**(`table`, `query`, `tenantId`): `SQL`
+> **buildSearchQuery**(`table`, `query`, `tenantId`): [`SearchQueryPlan`](/api/search-drizzle/src/type-aliases/searchqueryplan/)
 
 `pg_search` 문법을 사용하는 검색 SQL을 생성합니다.
 
@@ -115,7 +115,7 @@ title: "PgSearchStrategy"
 
 #### Returns
 
-`SQL`
+[`SearchQueryPlan`](/api/search-drizzle/src/type-aliases/searchqueryplan/)
 
 #### Implementation of
 

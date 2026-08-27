@@ -85,7 +85,7 @@ title: "PGroongaStrategy"
 
 ### buildSearchQuery()
 
-> **buildSearchQuery**(`table`, `query`, `tenantId`): `SQL`
+> **buildSearchQuery**(`table`, `query`, `tenantId`): [`SearchQueryPlan`](/api/search-drizzle/src/type-aliases/searchqueryplan/)
 
 PGroonga 연산자를 사용하는 검색 SQL을 생성합니다.
 
@@ -105,7 +105,7 @@ PGroonga 연산자를 사용하는 검색 SQL을 생성합니다.
 
 #### Returns
 
-`SQL`
+[`SearchQueryPlan`](/api/search-drizzle/src/type-aliases/searchqueryplan/)
 
 #### Implementation of
 

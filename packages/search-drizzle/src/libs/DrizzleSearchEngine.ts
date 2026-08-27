@@ -42,6 +42,20 @@ function parseSearchScore(value: unknown): number {
   throw new InvalidSearchRowProblem("expected score as a finite number or numeric string");
 }
 
+function readSearchTotal(rows: readonly unknown[]): number {
+  const row = rows[0];
+  if (!isSearchResultRow(row)) {
+    throw new InvalidSearchRowProblem("expected total count result");
+  }
+
+  const total = row.total;
+  if (typeof total !== "number" || !Number.isSafeInteger(total) || total < 0) {
+    throw new InvalidSearchRowProblem("expected a non-negative safe integer total");
+  }
+
+  return total;
+}
+
 /**
  * PostgreSQL 검색 전략을 사용해 문서 검색을 수행하는 Drizzle 검색 엔진입니다.
  */
@@ -77,9 +91,9 @@ export class DrizzleSearchEngine extends SearchEngine {
     await this.ensureCapable("search", options);
     const tenantId = this.getTenantId("search");
 
-    const sql = this.strategy.buildSearchQuery(index, query, tenantId);
+    const plan = this.strategy.buildSearchQuery(index, query, tenantId);
     throwIfSearchOperationAborted("search", options);
-    const result = await this.db.execute(sql);
+    const result = await this.db.execute(plan.rows);
     throwIfSearchOperationAborted("search", options);
 
     const hits = result.rows.map((row) => {
@@ -98,9 +112,13 @@ export class DrizzleSearchEngine extends SearchEngine {
       };
     });
 
+    throwIfSearchOperationAborted("search", options);
+    const totalResult = await this.db.execute(plan.total);
+    throwIfSearchOperationAborted("search", options);
+
     return {
       hits,
-      total: result.rowCount || 0,
+      total: readSearchTotal(totalResult.rows),
       query,
       processingTimeMs: 0,
     };
