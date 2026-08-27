@@ -1,6 +1,7 @@
 import type { SearchDocument, SearchEngineCapabilities, SearchQuery } from "@croco/search-core";
 import { type SQL, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { SEARCH_SCORE_ALIAS } from "../searchScore";
 import type { SearchStrategy } from "../types";
 
 /**
@@ -24,10 +25,11 @@ export class PgTrgmStrategy implements SearchStrategy {
     const tenantIdParam = sql.param(tenantId);
     const queryParam = sql.param(query.query);
     const thresholdParam = sql.param(this.similarityThreshold);
+    const scoreAlias = sql.identifier(SEARCH_SCORE_ALIAS);
     const scoreExpression = sql`similarity("search_vector", ${queryParam})`;
 
     return sql`
-      SELECT *, ${scoreExpression} AS score FROM ${tableIdentifier}
+      SELECT *, ${scoreExpression} AS ${scoreAlias} FROM ${tableIdentifier}
       WHERE "tenant_id" = ${tenantIdParam}
       AND ${scoreExpression} > ${thresholdParam}
       ORDER BY ${scoreExpression} DESC

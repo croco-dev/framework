@@ -26,11 +26,14 @@ describe("PGroongaStrategy", () => {
         casing: new CasingCache(),
       }).sql;
 
-      expect(sqlString).toContain("SELECT *, pgroonga_score(tableoid, ctid) AS score");
+      expect(sqlString).toContain(
+        'SELECT *, pgroonga_score(tableoid, ctid) AS "__croco_search_score"',
+      );
       expect(sqlString).toContain('FROM "users"');
       expect(sqlString).toContain('"search_vector" &@~ $1');
       expect(sqlString).toContain('"tenant_id" = $1');
-      expect(sqlString).toContain("ORDER BY score DESC");
+      expect(sqlString).toContain("ORDER BY pgroonga_score(tableoid, ctid) DESC");
+      expect(sqlString).not.toContain("ORDER BY score DESC");
     });
   });
 

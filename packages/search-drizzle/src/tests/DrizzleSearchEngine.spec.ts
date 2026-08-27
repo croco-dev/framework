@@ -119,26 +119,27 @@ describe("DrizzleSearchEngine", () => {
 
   it("should preserve zero score from search result", async () => {
     executeMock.mockResolvedValueOnce({
-      rows: [{ id: "doc-1", score: 0 }],
-      rowCount: 1,
-    });
-
-    engine = new DrizzleSearchEngine(mockDb, strategy);
-    const result = await engine.search<{ id: string; score: number }>("users", { query: "test" });
-
-    expect(result.hits[0]?.score).toBe(0);
-  });
-
-  it("should normalize numeric string scores from the database", async () => {
-    executeMock.mockResolvedValueOnce({
-      rows: [{ id: "doc-1", score: "0.625" }],
+      rows: [{ id: "doc-1", __croco_search_score: 0 }],
       rowCount: 1,
     });
 
     engine = new DrizzleSearchEngine(mockDb, strategy);
     const result = await engine.search<{ id: string }>("users", { query: "test" });
 
+    expect(result.hits[0]?.score).toBe(0);
+  });
+
+  it("should normalize numeric string scores without replacing document fields", async () => {
+    executeMock.mockResolvedValueOnce({
+      rows: [{ id: "doc-1", score: 42, __croco_search_score: "0.625" }],
+      rowCount: 1,
+    });
+
+    engine = new DrizzleSearchEngine(mockDb, strategy);
+    const result = await engine.search<{ id: string; score: number }>("users", { query: "test" });
+
     expect(result.hits[0]?.score).toBe(0.625);
+    expect(result.hits[0]?.document).toEqual({ id: "doc-1", score: 42 });
   });
 
   it.each([
@@ -152,7 +153,7 @@ describe("DrizzleSearchEngine", () => {
     ["non-finite string", "Infinity"],
   ])("should reject %s score data", async (_case, score) => {
     executeMock.mockResolvedValueOnce({
-      rows: [{ id: "doc-1", score }],
+      rows: [{ id: "doc-1", __croco_search_score: score }],
       rowCount: 1,
     });
 
@@ -180,7 +181,7 @@ describe("DrizzleSearchEngine", () => {
 
   it("should map search rows through strategy mapper when provided", async () => {
     executeMock.mockResolvedValueOnce({
-      rows: [{ id: "doc-1", title: "raw title", score: 0.8 }],
+      rows: [{ id: "doc-1", title: "raw title", __croco_search_score: 0.8 }],
       rowCount: 1,
     });
 
@@ -195,7 +196,6 @@ describe("DrizzleSearchEngine", () => {
     expect(mockStrategy.mapSearchRow).toHaveBeenCalledWith({
       id: "doc-1",
       title: "raw title",
-      score: 0.8,
     });
     expect(result.hits[0]?.document).toEqual({ id: "doc-1", title: "RAW TITLE" });
     expect(result.hits[0]?.score).toBe(0.8);
