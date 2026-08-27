@@ -1,8 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { Buffer as NodeBuffer } from "node:buffer";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { decodeCursor, encodeCursor } from "../libs/cursor";
 import { InvalidCursorProblem } from "../libs/problems";
+import type { CursorPayload } from "../libs/types";
 
 describe("cursor", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("should roundtrip encode and decode", () => {
     const payload = { v: 1, id: "usr_01HXYZ" };
     const encoded = encodeCursor(payload);
@@ -24,6 +30,37 @@ describe("cursor", () => {
     expect(decoded).toEqual(payload);
   });
 
+  it("should preserve compatibility with Node base64url cursors", () => {
+    const payload = { v: 1, id: "사용자_🐊", createdAt: "2026-08-27T12:34:56.000Z" };
+    const nodeCursor = NodeBuffer.from(JSON.stringify(payload), "utf-8").toString("base64url");
+
+    expect(encodeCursor(payload)).toBe(nodeCursor);
+    expect(decodeCursor(nodeCursor)).toEqual(payload);
+    expect(NodeBuffer.from(encodeCursor(payload), "base64url").toString("utf-8")).toBe(
+      JSON.stringify(payload),
+    );
+  });
+
+  it("should roundtrip without the Node Buffer global", () => {
+    vi.stubGlobal("Buffer", undefined);
+    const payload = { v: 1, id: "edge_🐊" };
+
+    const encoded = encodeCursor(payload);
+
+    expect(encoded).toBe("eyJ2IjoxLCJpZCI6ImVkZ2Vf8J-QiiJ9");
+    expect(decodeCursor(encoded)).toEqual(payload);
+  });
+
+  it("should reject payloads that do not serialize to JSON", () => {
+    const payload = {
+      v: 1,
+      id: "invalid",
+      toJSON: () => undefined,
+    } as unknown as CursorPayload;
+
+    expect(() => encodeCursor(payload)).toThrow(InvalidCursorProblem);
+  });
+
   it("should throw InvalidCursorProblem for malformed Base64", () => {
     expect(() => decodeCursor("not-base64!!!")).toThrow(InvalidCursorProblem);
   });
@@ -33,7 +70,7 @@ describe("cursor", () => {
   });
 
   it("should throw InvalidCursorProblem for JSON without v field", () => {
-    const invalidJson = Buffer.from(JSON.stringify({ id: "test" })).toString("base64url");
+    const invalidJson = NodeBuffer.from(JSON.stringify({ id: "test" })).toString("base64url");
     expect(() => decodeCursor(invalidJson)).toThrow(InvalidCursorProblem);
   });
 

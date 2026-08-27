@@ -7,7 +7,18 @@ import type { CursorPayload } from "./types";
  */
 export function encodeCursor(payload: CursorPayload): string {
   const json = JSON.stringify(payload);
-  return Buffer.from(json).toString("base64url");
+  if (typeof json !== "string") {
+    throw new InvalidCursorProblem("Cursor payload is not JSON-serializable");
+  }
+
+  const bytes = new TextEncoder().encode(json);
+  let binary = "";
+
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 /**
@@ -19,9 +30,16 @@ export function decodeCursor(cursor: string): CursorPayload {
     throw new InvalidCursorProblem("Cursor is empty or not a string");
   }
 
+  const base64 = toPaddedBase64(cursor);
+  if (base64 === undefined) {
+    throw new InvalidCursorProblem("Cursor is not valid Base64");
+  }
+
   let json: string;
   try {
-    json = Buffer.from(cursor, "base64url").toString("utf-8");
+    const binary = atob(base64);
+    const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+    json = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
   } catch {
     throw new InvalidCursorProblem("Cursor is not valid Base64");
   }
@@ -52,4 +70,27 @@ export function decodeCursor(cursor: string): CursorPayload {
   }
 
   return p as CursorPayload;
+}
+
+function toPaddedBase64(cursor: string): string | undefined {
+  if (!/^[A-Za-z0-9+/_-]*={0,2}$/.test(cursor)) {
+    return undefined;
+  }
+
+  const paddingIndex = cursor.indexOf("=");
+  const unpadded = paddingIndex === -1 ? cursor : cursor.slice(0, paddingIndex);
+  const remainder = unpadded.length % 4;
+
+  if (remainder === 1) {
+    return undefined;
+  }
+
+  const requiredPadding = (4 - remainder) % 4;
+  const existingPadding = cursor.length - unpadded.length;
+
+  if (existingPadding !== 0 && existingPadding !== requiredPadding) {
+    return undefined;
+  }
+
+  return `${unpadded.replace(/-/g, "+").replace(/_/g, "/")}${"=".repeat(requiredPadding)}`;
 }
