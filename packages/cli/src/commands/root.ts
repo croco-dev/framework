@@ -2,17 +2,27 @@ import { defineCommand, runCommand } from "citty";
 import type { SubCommandsDef } from "citty";
 import { doctor } from "./doctor.js";
 import {
+  createMigrateCommand,
   isMigrateCommand,
   migrate,
   migrateArgumentsAreValid,
   migrateOptionConsumesNextArgument,
 } from "./migrate.js";
 import { GLOBAL_OPTIONS } from "./options.js";
+import type { MigrateCommandResult } from "./migrate.js";
 
 type LoadedCommand = Awaited<Extract<SubCommandsDef[string], Promise<unknown>>>;
 type CommandLoader = () => Promise<LoadedCommand>;
+type CreateCrocoCommandOptions = {
+  readonly onMigrateResult?: (result: MigrateCommandResult) => Promise<void> | void;
+};
 
-export function createCrocoCommand() {
+export function createCrocoCommand(options: CreateCrocoCommandOptions = {}) {
+  const migrateCommand =
+    options.onMigrateResult === undefined
+      ? migrate
+      : createMigrateCommand({ onResult: options.onMigrateResult });
+
   return defineCommand({
     meta: {
       name: "croco",
@@ -63,7 +73,7 @@ export function createCrocoCommand() {
         async () => (await import("./runtimePolicy.js")).runtimePolicy as LoadedCommand,
       ),
       doctor,
-      migrate,
+      migrate: migrateCommand,
       ops: lazyCommand(
         "ops",
         "Inspect Croco operational endpoints",

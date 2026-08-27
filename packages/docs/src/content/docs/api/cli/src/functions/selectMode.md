@@ -5,7 +5,7 @@ prev: false
 title: "selectMode"
 ---
 
-> **selectMode**(`options`): `Promise`\<`string`\>
+> **selectMode**(`options`): `Promise`\<[`PromptResult`](/api/cli/src/type-aliases/promptresult/)\<`string`\>\>
 
 ## Parameters
 
@@ -15,4 +15,4 @@ title: "selectMode"
 
 ## Returns
 
-`Promise`\<`string`\>
+`Promise`\<[`PromptResult`](/api/cli/src/type-aliases/promptresult/)\<`string`\>\>

@@ -5,7 +5,7 @@ prev: false
 title: "textInput"
 ---
 
-> **textInput**(`message`, `validate?`): `Promise`\<`string`\>
+> **textInput**(`message`, `validate?`): `Promise`\<[`PromptResult`](/api/cli/src/type-aliases/promptresult/)\<`string`\>\>
 
 ## Parameters
 
@@ -19,4 +19,4 @@ title: "textInput"
 
 ## Returns
 
-`Promise`\<`string`\>
+`Promise`\<[`PromptResult`](/api/cli/src/type-aliases/promptresult/)\<`string`\>\>

@@ -6649,6 +6649,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "runMigrateCommand",
+              "exportKind": "named",
+              "source": "./commands/migrate",
+              "declarationKind": "function"
+            },
+            {
               "name": "runOpsCheck",
               "exportKind": "named",
               "source": "./commands/ops",
@@ -6851,6 +6857,21 @@
               "source": "./commands/jobs"
             },
             {
+              "name": "MigrateCommand",
+              "exportKind": "named",
+              "source": "./commands/migrate"
+            },
+            {
+              "name": "MigrateCommandResult",
+              "exportKind": "named",
+              "source": "./commands/migrate"
+            },
+            {
+              "name": "MigrationRunnerSpawn",
+              "exportKind": "named",
+              "source": "./commands/migrate"
+            },
+            {
               "name": "OpsEndpointName",
               "exportKind": "named",
               "source": "./commands/ops"
@@ -6876,6 +6897,11 @@
               "source": "./commands/ops"
             },
             {
+              "name": "PromptResult",
+              "exportKind": "named",
+              "source": "./libs/prompts"
+            },
+            {
               "name": "RunDoctorOptions",
               "exportKind": "named",
               "source": "./commands/doctor"
@@ -6884,6 +6910,11 @@
               "name": "RunJobsOptions",
               "exportKind": "named",
               "source": "./commands/jobs"
+            },
+            {
+              "name": "RunMigrateCommandOptions",
+              "exportKind": "named",
+              "source": "./commands/migrate"
             },
             {
               "name": "RunOpsStatusOptions",

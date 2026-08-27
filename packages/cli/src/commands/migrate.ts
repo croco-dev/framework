@@ -13,6 +13,24 @@ export type MigrationRunnerSpawn = (
   args: string[],
   options: SpawnOptions,
 ) => ChildProcess;
+export type MigrateCommandResult =
+  | {
+      readonly exitCode: 0;
+      readonly status: "completed";
+    }
+  | {
+      readonly exitCode: number;
+      readonly message?: string;
+      readonly reason: "invalid-arguments" | "launch-failed" | "runner-exit";
+      readonly status: "failed";
+    };
+export type RunMigrateCommandOptions = {
+  readonly resolveBin?: () => string;
+  readonly spawn?: MigrationRunnerSpawn;
+};
+export type CreateMigrateCommandOptions = {
+  readonly onResult?: (result: MigrateCommandResult) => Promise<void> | void;
+};
 
 type MigrationOptionName = keyof typeof MIGRATION_OPTION_SPECS;
 type MigrationOptionValue = boolean | string;
@@ -102,89 +120,93 @@ const MIGRATION_OPTION_SPECS = {
   },
 } as const satisfies Record<string, MigrationOptionSpec>;
 
-const migrateUp = defineCommand({
-  meta: {
-    name: "up",
-    description: "Run pending migrations",
-  },
-  args: migrationArgsFor("up"),
-  run({ rawArgs }) {
-    runMigrateCommand("up", rawArgs);
-  },
-});
+export function createMigrateCommand(options: CreateMigrateCommandOptions = {}) {
+  const createSubcommand = (command: MigrateCommand, description: string) =>
+    defineCommand({
+      meta: {
+        name: command,
+        description,
+      },
+      args: migrationArgsFor(command),
+      async run({ rawArgs }) {
+        const result = await runMigrateCommand(command, rawArgs);
+        await options.onResult?.(result);
+        return result;
+      },
+    });
 
-const migrateDown = defineCommand({
-  meta: {
-    name: "down",
-    description: "Rollback migrations",
-  },
-  args: migrationArgsFor("down"),
-  run({ rawArgs }) {
-    runMigrateCommand("down", rawArgs);
-  },
-});
+  return defineCommand({
+    meta: {
+      name: "migrate",
+      description: "Manage database migrations",
+    },
+    subCommands: {
+      up: createSubcommand("up", "Run pending migrations"),
+      down: createSubcommand("down", "Rollback migrations"),
+      status: createSubcommand("status", "Show migration status"),
+    },
+  });
+}
 
-const migrateStatus = defineCommand({
-  meta: {
-    name: "status",
-    description: "Show migration status",
-  },
-  args: migrationArgsFor("status"),
-  run({ rawArgs }) {
-    runMigrateCommand("status", rawArgs);
-  },
-});
+export const migrate = createMigrateCommand();
 
-export const migrate = defineCommand({
-  meta: {
-    name: "migrate",
-    description: "Manage database migrations",
-  },
-  subCommands: {
-    up: migrateUp,
-    down: migrateDown,
-    status: migrateStatus,
-  },
-});
-
-export function runMigrateCommand(
+export async function runMigrateCommand(
   command: MigrateCommand,
-  rawArgs: string[],
-  options: {
-    readonly resolveBin?: () => string;
-    readonly spawn?: MigrationRunnerSpawn;
-    readonly setExitCode?: (code: number) => void;
-    readonly writeError?: (message: string) => void;
-  } = {},
-): void {
+  rawArgs: readonly string[],
+  options: RunMigrateCommandOptions = {},
+): Promise<MigrateCommandResult> {
   const resolveBin = options.resolveBin ?? resolveMigrationRunnerBin;
   const spawnChild = options.spawn ?? spawn;
-  const setExitCode =
-    options.setExitCode ??
-    ((code: number) => {
-      process.exitCode = code;
-    });
-  const writeError = options.writeError ?? ((message: string) => console.error(message));
   const invocation = buildMigrationRunnerInvocation(command, rawArgs);
 
   if (!invocation.ok) {
-    writeError(invocation.message);
-    setExitCode(1);
-    return;
+    return {
+      exitCode: 1,
+      message: invocation.message,
+      reason: "invalid-arguments",
+      status: "failed",
+    };
   }
 
-  const child = spawnChild(process.execPath, [resolveBin(), command, ...invocation.args], {
-    ...(invocation.cwd === undefined ? {} : { cwd: invocation.cwd }),
-    stdio: "inherit",
-  });
+  let child: ChildProcess;
+  try {
+    child = spawnChild(process.execPath, [resolveBin(), command, ...invocation.args], {
+      ...(invocation.cwd === undefined ? {} : { cwd: invocation.cwd }),
+      stdio: "inherit",
+    });
+  } catch (error) {
+    return {
+      exitCode: 1,
+      message: error instanceof Error ? error.message : String(error),
+      reason: "launch-failed",
+      status: "failed",
+    };
+  }
 
-  child.on("exit", (code) => {
-    setExitCode(code ?? 1);
-  });
+  return new Promise((resolve) => {
+    const settle = (result: MigrateCommandResult): void => {
+      child.off("exit", onExit);
+      child.off("error", onError);
+      resolve(result);
+    };
+    const onExit = (code: number | null): void => {
+      settle(
+        code === 0
+          ? { exitCode: 0, status: "completed" }
+          : { exitCode: code ?? 1, reason: "runner-exit", status: "failed" },
+      );
+    };
+    const onError = (error: Error): void => {
+      settle({
+        exitCode: 1,
+        message: error.message,
+        reason: "launch-failed",
+        status: "failed",
+      });
+    };
 
-  child.on("error", (error) => {
-    writeError(error.message);
-    setExitCode(1);
+    child.once("exit", onExit);
+    child.once("error", onError);
   });
 }
 
