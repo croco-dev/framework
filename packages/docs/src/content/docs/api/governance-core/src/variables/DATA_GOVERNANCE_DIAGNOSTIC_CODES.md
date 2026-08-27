@@ -9,6 +9,10 @@ title: "DATA_GOVERNANCE_DIAGNOSTIC_CODES"
 
 ## Type Declaration
 
+### arrayShapeInvalid
+
+> `readonly` **arrayShapeInvalid**: `"governance-core/array-shape-invalid"` = `"governance-core/array-shape-invalid"`
+
 ### capabilityAuditRequired
 
 > `readonly` **capabilityAuditRequired**: `"governance-core/capability-audit-required"` = `"governance-core/capability-audit-required"`
@@ -56,6 +60,10 @@ title: "DATA_GOVERNANCE_DIAGNOSTIC_CODES"
 ### fieldRetentionPolicyUnknown
 
 > `readonly` **fieldRetentionPolicyUnknown**: `"governance-core/field-retention-policy-unknown"` = `"governance-core/field-retention-policy-unknown"`
+
+### objectShapeInvalid
+
+> `readonly` **objectShapeInvalid**: `"governance-core/object-shape-invalid"` = `"governance-core/object-shape-invalid"`
 
 ### problemCodeDuplicate
 
@@ -116,3 +124,7 @@ title: "DATA_GOVERNANCE_DIAGNOSTIC_CODES"
 ### subjectTypeRequired
 
 > `readonly` **subjectTypeRequired**: `"governance-core/subject-type-required"` = `"governance-core/subject-type-required"`
+
+### valueInvalid
+
+> `readonly` **valueInvalid**: `"governance-core/value-invalid"` = `"governance-core/value-invalid"`
