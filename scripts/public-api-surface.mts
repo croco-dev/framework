@@ -591,6 +591,7 @@ const frameworkContextCompatibilityContract = {
             "OnShutdownDecoratorProblem",
             "ShutdownConfigurationConflictProblem",
             "ShutdownHookExecutionProblem",
+            "ShutdownHookRegistrationClosedProblem",
             "ShutdownTimeoutProblem",
           ],
         },

@@ -232,20 +232,97 @@ describe("ShutdownManager", () => {
       expect((manager as unknown as { hooks: ShutdownHook[] }).hooks).toContain(hook);
     });
 
-    it("should not register hook during shutdown", async () => {
+    it("should reject hook registration during shutdown without retaining the hook", async () => {
       const manager = ShutdownManager.getInstance();
-      const hook1: ShutdownHook = {
-        onShutdown: vi.fn().mockImplementation(async () => {
-          const hook2: ShutdownHook = { onShutdown: vi.fn() };
-          manager.register(hook2);
-        }),
+      let releaseShutdown: (() => void) | undefined;
+      const activeHook: ShutdownHook = {
+        onShutdown: () =>
+          new Promise<void>((resolve) => {
+            releaseShutdown = resolve;
+          }),
       };
+      const lateHook: ShutdownHook = { onShutdown: vi.fn() };
 
-      manager.register(hook1);
-      await manager.shutdown();
+      manager.register(activeHook);
+      const shutdownPromise = manager.shutdown();
+
+      expect(() => manager.register(lateHook)).toThrowError(
+        expect.objectContaining({
+          code: "framework-context/shutdown-hook-registration-closed",
+          category: ProblemCategory.Conflict,
+          lifecycleState: "shutting-down",
+          extensions: {
+            lifecycleState: "shutting-down",
+            recoveryAction:
+              "Reset ShutdownManager, acquire the new manager, and register hooks before its shutdown starts.",
+          },
+        }),
+      );
+
+      releaseShutdown?.();
+      await shutdownPromise;
 
       const hooks = (manager as unknown as { hooks: ShutdownHook[] }).hooks;
       expect(hooks).toHaveLength(1);
+      expect(hooks).not.toContain(lateHook);
+    });
+
+    it("should keep a shutting-down instance closed when reset starts a new lifecycle", async () => {
+      const shuttingDownManager = ShutdownManager.getInstance();
+      let releaseShutdown: (() => void) | undefined;
+      shuttingDownManager.register({
+        onShutdown: () =>
+          new Promise<void>((resolve) => {
+            releaseShutdown = resolve;
+          }),
+      });
+      const shutdownPromise = shuttingDownManager.shutdown();
+
+      ShutdownManager.reset();
+
+      const lateHook: ShutdownHook = { onShutdown: vi.fn() };
+      expect(() => shuttingDownManager.register(lateHook)).toThrowError(
+        expect.objectContaining({
+          code: "framework-context/shutdown-hook-registration-closed",
+          lifecycleState: "shutting-down",
+        }),
+      );
+      expect((shuttingDownManager as unknown as { hooks: ShutdownHook[] }).hooks).not.toContain(
+        lateHook,
+      );
+
+      const nextManager = ShutdownManager.getInstance();
+      const nextHook: ShutdownHook = { onShutdown: vi.fn() };
+      expect(() => nextManager.register(nextHook)).not.toThrow();
+      expect((nextManager as unknown as { hooks: ShutdownHook[] }).hooks).toEqual([nextHook]);
+
+      releaseShutdown?.();
+      await shutdownPromise;
+    });
+
+    it("should reject hook registration after shutdown without retaining the hook", async () => {
+      const manager = ShutdownManager.getInstance();
+      const registeredHook: ShutdownHook = { onShutdown: vi.fn() };
+      const lateHook: ShutdownHook = { onShutdown: vi.fn() };
+
+      manager.register(registeredHook);
+      await manager.shutdown();
+
+      expect(() => manager.register(lateHook)).toThrowError(
+        expect.objectContaining({
+          code: "framework-context/shutdown-hook-registration-closed",
+          category: ProblemCategory.Conflict,
+          lifecycleState: "shut-down",
+          extensions: {
+            lifecycleState: "shut-down",
+            recoveryAction:
+              "Reset ShutdownManager, acquire the new manager, and register hooks before its shutdown starts.",
+          },
+        }),
+      );
+
+      const hooks = (manager as unknown as { hooks: ShutdownHook[] }).hooks;
+      expect(hooks).toEqual([registeredHook]);
     });
   });
 
@@ -588,6 +665,28 @@ describe("OnShutdown decorator", () => {
       const instance = Container.get(MyService);
       expect(instance.shutdownCalled).toBe(true);
       expect(instance.receivedSignal).toBeInstanceOf(AbortSignal);
+    });
+
+    it("should surface the manager registration failure after shutdown", async () => {
+      const manager = ShutdownManager.getInstance();
+      await manager.shutdown();
+
+      expect(() => {
+        @OnShutdown()
+        class LateService implements ShutdownHook {
+          async onShutdown(): Promise<void> {}
+        }
+
+        void LateService;
+      }).toThrowError(
+        expect.objectContaining({
+          code: "framework-context/shutdown-hook-registration-closed",
+          category: ProblemCategory.Conflict,
+          lifecycleState: "shut-down",
+        }),
+      );
+
+      expect((manager as unknown as { hooks: ShutdownHook[] }).hooks).toHaveLength(0);
     });
   });
 

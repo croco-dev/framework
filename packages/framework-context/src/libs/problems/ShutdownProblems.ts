@@ -120,6 +120,28 @@ export class ShutdownConfigurationConflictProblem extends Problem {
 }
 
 /**
+ * shutdown 시작 후 새 훅을 등록하려고 할 때 발생하는 Problem입니다.
+ */
+export class ShutdownHookRegistrationClosedProblem extends Problem {
+  readonly code = "framework-context/shutdown-hook-registration-closed";
+  readonly category = ProblemCategory.Conflict;
+
+  constructor(readonly lifecycleState: "shutting-down" | "shut-down") {
+    const recoveryAction =
+      "Reset ShutdownManager, acquire the new manager, and register hooks before its shutdown starts.";
+
+    super(
+      "framework-context/shutdown-hook-registration-closed",
+      ProblemCategory.Conflict,
+      `Shutdown hook registration is closed because the lifecycle is ${lifecycleState}. ${recoveryAction}`,
+      {
+        extensions: { lifecycleState, recoveryAction },
+      },
+    );
+  }
+}
+
+/**
  * shutdown hook failures must be surfaced to lifecycle owners that request strict cleanup evidence.
  */
 export class ShutdownHookExecutionProblem extends Problem {

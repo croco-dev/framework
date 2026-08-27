@@ -312,6 +312,7 @@ export {
   OnShutdownDecoratorProblem,
   ShutdownConfigurationConflictProblem,
   ShutdownHookExecutionProblem,
+  ShutdownHookRegistrationClosedProblem,
   ShutdownTimeoutProblem,
 } from "./libs/problems/ShutdownProblems";
 export type { OnShutdownDecoratorFailureReason } from "./libs/problems/ShutdownProblems";

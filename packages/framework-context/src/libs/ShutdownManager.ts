@@ -4,11 +4,14 @@ import {
   InvalidShutdownTimeoutProblem,
   ShutdownConfigurationConflictProblem,
   ShutdownHookExecutionProblem,
+  ShutdownHookRegistrationClosedProblem,
   ShutdownTimeoutProblem,
 } from "./problems/ShutdownProblems";
 import type { ShutdownHook } from "./types";
 
 const DEFAULT_TIMEOUT_MS = 30_000;
+
+type ShutdownLifecycleState = "accepting-hooks" | "shutting-down" | "shut-down";
 
 function assertValidShutdownTimeout(timeoutMs: number): void {
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
@@ -24,7 +27,7 @@ export class ShutdownManager {
   private static instance: ShutdownManager | undefined;
   private static readonly scopedInstances = new Map<string, ShutdownManager>();
   private hooks: ShutdownHook[] = [];
-  private isShuttingDown = false;
+  private lifecycleState: ShutdownLifecycleState = "accepting-hooks";
   private timeoutMs: number;
   private timeoutConfigured: boolean;
   private listenersRegistered = false;
@@ -86,7 +89,6 @@ export class ShutdownManager {
     if (manager) {
       manager.removeAllListeners();
       manager.hooks = [];
-      manager.isShuttingDown = false;
       manager.signalShutdownPromise = undefined;
     }
     for (const scopedManager of ShutdownManager.scopedInstances.values()) {
@@ -107,8 +109,8 @@ export class ShutdownManager {
   }
 
   register(hook: ShutdownHook): void {
-    if (this.isShuttingDown) {
-      return;
+    if (this.lifecycleState !== "accepting-hooks") {
+      throw new ShutdownHookRegistrationClosedProblem(this.lifecycleState);
     }
     this.hooks.push(hook);
   }
@@ -140,10 +142,10 @@ export class ShutdownManager {
   };
 
   async shutdown(options: ShutdownOptions = {}): Promise<void> {
-    if (this.isShuttingDown) {
+    if (this.lifecycleState !== "accepting-hooks") {
       return;
     }
-    this.isShuttingDown = true;
+    this.lifecycleState = "shutting-down";
 
     const reversedHooks = [...this.hooks].reverse();
     const controller = new AbortController();
@@ -190,6 +192,7 @@ export class ShutdownManager {
         throw new ShutdownHookExecutionProblem(failures);
       }
     } finally {
+      this.lifecycleState = "shut-down";
       if (timeoutId !== undefined) {
         clearTimeout(timeoutId);
       }

@@ -235,6 +235,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`OnShutdownDecoratorProblem`](/api/framework-context/src/classes/onshutdowndecoratorproblem/)
 - [`ShutdownConfigurationConflictProblem`](/api/framework-context/src/classes/shutdownconfigurationconflictproblem/)
 - [`ShutdownHookExecutionProblem`](/api/framework-context/src/classes/shutdownhookexecutionproblem/)
+- [`ShutdownHookRegistrationClosedProblem`](/api/framework-context/src/classes/shutdownhookregistrationclosedproblem/)
 - [`ShutdownTimeoutProblem`](/api/framework-context/src/classes/shutdowntimeoutproblem/)
 - [`InvalidModuleDefinitionProblem`](/api/framework-module/src/classes/invalidmoduledefinitionproblem/)
 - [`ModuleCircularDependencyProblem`](/api/framework-module/src/classes/modulecirculardependencyproblem/)

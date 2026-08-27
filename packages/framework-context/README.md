@@ -79,6 +79,8 @@ surfaced as unhandled promise rejections. Successful shutdown leaves the existin
 timeout은 유한한 양수여야 하며, 잘못된 값은 manager 상태가 변경되기 전에
 `InvalidShutdownTimeoutProblem`으로 거부됩니다.
 서로 다른 명시적 timeout을 다시 전달하면 `ShutdownConfigurationConflictProblem`이 발생합니다.
+종료가 시작된 뒤 새 훅을 등록하면 현재 lifecycle 상태와 복구 행동을 포함한
+`ShutdownHookRegistrationClosedProblem`이 발생하며, 거부된 훅은 보관되지 않습니다.
 테스트나 독립 런타임에서는 `ShutdownManager.reset()`으로 기존 signal listener와 훅을 정리한 뒤 새 singleton을
 생성하세요.
 
@@ -97,7 +99,7 @@ timeout은 유한한 양수여야 하며, 잘못된 값은 manager 상태가 변
 - `MiddlewareChain`: onion 패턴 미들웨어 실행
 - `ShutdownManager`, `OnShutdown`: graceful shutdown 훅 수집과 실행
 - `LOGGER_TOKEN`, `TRANSACTION_CONTEXT_TOKEN`: 공용 DI 토큰
-- `CircularDependencyProblem`, `MiddlewareProblem`, `RuntimeInspectorConfigurationProblem`, `InvalidShutdownTimeoutProblem`, `ShutdownConfigurationConflictProblem`, `ShutdownTimeoutProblem`: 기반 계층 Problem 타입
+- `CircularDependencyProblem`, `MiddlewareProblem`, `RuntimeInspectorConfigurationProblem`, `InvalidShutdownTimeoutProblem`, `ShutdownConfigurationConflictProblem`, `ShutdownHookRegistrationClosedProblem`, `ShutdownTimeoutProblem`: 기반 계층 Problem 타입
 
 ## 의존성 그래프 sourceLocation 진단
 

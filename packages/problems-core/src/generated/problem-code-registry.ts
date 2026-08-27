@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 675,
+  problemCount: 676,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -7822,6 +7822,40 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         telemetry: {
           eventName: "croco.problem.error",
           severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/framework-context/src/libs/problems/ShutdownProblems.ts",
+          line: 148,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "framework-context/shutdown-hook-registration-closed",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#framework-context-shutdown-hook-registration-closed",
+      recovery: {
+        cause:
+          "Shutdown hook registration was attempted after the current manager started shutting down.",
+        userAction:
+          "Reset ShutdownManager, acquire the new manager, and register hooks before its shutdown starts.",
+        operatorAction:
+          "Register services and decorators during bootstrap, and do not reuse a manager reference after reset.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
           attributes: ["problem.code", "problem.category", "problem.status"],
         },
       },

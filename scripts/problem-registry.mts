@@ -1926,6 +1926,17 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "framework-context/shutdown-hook-registration-closed": recovery({
+    cause:
+      "Shutdown hook registration was attempted after the current manager started shutting down.",
+    userAction:
+      "Reset ShutdownManager, acquire the new manager, and register hooks before its shutdown starts.",
+    operatorAction:
+      "Register services and decorators during bootstrap, and do not reuse a manager reference after reset.",
+    retryability: "not-retryable",
+    redactionPolicy: "safe-message",
+    severity: "warning",
+  }),
   "framework-module/registration-lifecycle-conflict": recovery({
     cause:
       "Module registration was attempted while the registry was initializing, initialized, or shutting down.",
