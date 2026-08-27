@@ -5,11 +5,15 @@ prev: false
 title: "RegisterEventHandler"
 ---
 
-> **RegisterEventHandler**\<`TArgs`\>(`eventClass`, `options?`): \<`T`\>(`f`) => `void`
+> **RegisterEventHandler**\<`TEvent`, `TArgs`\>(`eventClass`, `options?`): \<`T`\>(`f`) => `void`
 
 이벤트 클래스와 핸들러 클래스를 연결하는 데코레이터입니다.
 
 ## Type Parameters
+
+### TEvent
+
+`TEvent` _extends_ [`DomainEvent`](/api/events-core/src/classes/domainevent/)
 
 ### TArgs
 
@@ -19,7 +23,7 @@ title: "RegisterEventHandler"
 
 ### eventClass
 
-`DomainEventClass`\<`TArgs`\>
+`DomainEventClass`\<`TEvent`, `TArgs`\>
 
 ### options?
 

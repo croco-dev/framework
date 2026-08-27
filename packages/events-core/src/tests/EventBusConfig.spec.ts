@@ -360,7 +360,7 @@ describe("EventBusConfig", () => {
 
       @RegisterEventHandler(TestEvent)
       class DecoratedHandler implements EventHandler<TestEvent> {
-        async handle(): Promise<void> {}
+        async handle(_event: TestEvent): Promise<void> {}
       }
 
       await config.start({ handlers: [DecoratedHandler] });
@@ -470,7 +470,7 @@ describe("EventBusConfig", () => {
 
       @RegisterEventHandler(TestEvent)
       class DecoratedHandler implements EventHandler<TestEvent> {
-        async handle(): Promise<void> {}
+        async handle(_event: TestEvent): Promise<void> {}
       }
 
       await config.start({ handlers: [DecoratedHandler] });
