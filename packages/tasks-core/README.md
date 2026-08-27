@@ -44,6 +44,25 @@ const processor = new ImageProcessor();
 await processor.resizeImage({ imageUrl: "http://...", width: 100 });
 ```
 
+### 타입이 보존되는 태스크 참조
+
+`taskRef()`는 태스크 핸들러의 payload와 반환 타입을 보존하는 런타임 참조를 만듭니다. 세 번째 인자에는
+`@Task`에 등록한 안정적인 태스크 이름을 사용합니다. `@croco/workflow-core`의 `defineWorkflow()`에 이 참조를
+전달하면 step 입력과 결과 타입이 핸들러에서 추론됩니다.
+
+```typescript
+import { Task, taskRef } from "@croco/tasks-core";
+
+class BillingTasks {
+  @Task({ name: "billing.synchronize" })
+  async synchronize(payload: { subscriptionId: string }) {
+    return { synchronized: payload.subscriptionId };
+  }
+}
+
+const synchronizeTask = taskRef(BillingTasks, "synchronize", "billing.synchronize");
+```
+
 ### 실행 제한 시간과 협력적 취소
 
 `TaskRunner`로 실행할 때 `timeout`은 실행 저장소에 기록된 `startedAt + timeout` 기준으로 강제됩니다.

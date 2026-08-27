@@ -8,11 +8,14 @@ import type {
 import { TaskRunner } from "@croco/tasks-core";
 import { withSpan } from "@croco/telemetry-api";
 import {
+  WorkflowDefinitionProblem,
   WorkflowNotFoundProblem,
   WorkflowReplayUnsupportedProblem,
 } from "./problems/WorkflowProblems";
 import { WorkflowRegistry } from "./WorkflowRegistry";
 import type {
+  TypedWorkflowReference,
+  TypedWorkflowRunResult,
   WorkflowDefinition,
   WorkflowRunResult,
   WorkflowStepContext,
@@ -50,6 +53,13 @@ function createStepExecutionIdempotencyKey(
   return `workflow-step:${workflowExecutionId}:${stepIndex}:${stepName}`;
 }
 
+async function sha256(value: string): Promise<string> {
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 async function resolveExecutionIdempotency(
   workflowName: string,
   resolvedKey: string | undefined,
@@ -61,10 +71,7 @@ async function resolveExecutionIdempotency(
     idempotencyKey: resolvedKey,
     version: 2,
   });
-  const digest = await globalThis.crypto.subtle.digest("SHA-256", new TextEncoder().encode(scope));
-  const fingerprint = Array.from(new Uint8Array(digest))
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
+  const fingerprint = await sha256(scope);
 
   return {
     idempotencyKey: `workflow:v2:${fingerprint}`,
@@ -119,8 +126,17 @@ export class WorkflowRunner {
     ),
   ) {}
 
-  async execute(workflowName: string, payload: unknown): Promise<WorkflowRunResult> {
-    return withSpan(async (span) => this.executeWithTelemetry(workflowName, payload, span), {
+  async execute<TPayload, TSteps extends readonly WorkflowStepResult[]>(
+    workflow: TypedWorkflowReference<TPayload, TSteps>,
+    payload: NoInfer<TPayload>,
+  ): Promise<TypedWorkflowRunResult<TSteps>>;
+  async execute(workflowName: string, payload: unknown): Promise<WorkflowRunResult>;
+  async execute(
+    workflowOrName: string | TypedWorkflowReference<unknown, readonly WorkflowStepResult[]>,
+    payload: unknown,
+  ): Promise<WorkflowRunResult> {
+    const workflowName = typeof workflowOrName === "string" ? workflowOrName : workflowOrName.name;
+    return withSpan(async (span) => this.executeWithTelemetry(workflowOrName, payload, span), {
       name: `workflow:${workflowName}`,
       attributes: {
         "workflow.name": workflowName,
@@ -129,12 +145,17 @@ export class WorkflowRunner {
   }
 
   private async executeWithTelemetry(
-    workflowName: string,
+    workflowReference: string | TypedWorkflowReference<unknown, readonly WorkflowStepResult[]>,
     payload: unknown,
     span: WorkflowTelemetrySpan,
   ): Promise<WorkflowRunResult> {
-    const workflow = this.getWorkflow(workflowName);
+    const workflow = this.getWorkflow(workflowReference);
     setWorkflowTelemetryAttributes(span, workflow);
+
+    const workflowContractFingerprint =
+      typeof workflowReference === "string"
+        ? undefined
+        : await this.createWorkflowContractFingerprint(workflow);
 
     const resolvedKey = this.resolveIdempotencyKey(workflow, payload);
     const idempotency = await resolveExecutionIdempotency(workflow.name, resolvedKey);
@@ -153,12 +174,23 @@ export class WorkflowRunner {
         workflowMethod: workflow.methodName,
         workflowSteps: workflow.steps.map((step) => step.name),
         workflowTriggers: workflow.triggers.map((trigger) => trigger.type),
+        ...(workflowContractFingerprint !== undefined ? { workflowContractFingerprint } : {}),
         ...(invocationId !== undefined ? { workflowInvocationId: invocationId } : {}),
       },
     });
     const executionAttributes = getExecutionTelemetryAttributes(workflow, execution);
     const canResumeRetryingExecution =
       execution.status === "retrying" && execution.metadata?.workflowName === workflow.name;
+    if (
+      canResumeRetryingExecution &&
+      workflowContractFingerprint !== undefined &&
+      execution.metadata?.workflowContractFingerprint !== workflowContractFingerprint
+    ) {
+      throw new WorkflowDefinitionProblem(
+        workflow.name,
+        `retrying execution '${execution.id}' has a different typed workflow contract`,
+      );
+    }
     span.setAttribute("workflow.execution.id", execution.id);
     span.setAttribute("workflow.idempotent", idempotency.idempotencyKey !== undefined);
 
@@ -297,8 +329,14 @@ export class WorkflowRunner {
     return this.executionManager.replay(executionId, params);
   }
 
-  private getWorkflow(name: string): WorkflowDefinition {
-    const workflow = this.registry.get(name);
+  private getWorkflow(
+    reference: string | TypedWorkflowReference<unknown, readonly WorkflowStepResult[]>,
+  ): WorkflowDefinition {
+    const name = typeof reference === "string" ? reference : reference.name;
+    const workflow =
+      typeof reference === "string"
+        ? this.registry.get(reference)
+        : this.registry.getByReference(reference);
     if (!workflow) {
       throw new WorkflowNotFoundProblem(name);
     }
@@ -316,6 +354,56 @@ export class WorkflowRunner {
     }
 
     return resolver;
+  }
+
+  private async createWorkflowContractFingerprint(workflow: WorkflowDefinition): Promise<string> {
+    const steps = workflow.steps.map((step) => {
+      const task = this.registry.taskRegistry.get(step.task);
+      if (task === undefined) {
+        throw new WorkflowDefinitionProblem(
+          workflow.name,
+          `step '${step.name}' references unknown task '${step.task}'`,
+        );
+      }
+
+      const target = task.target as { readonly name?: string; readonly prototype?: object };
+      const prototype = target.prototype as Record<string, unknown> | undefined;
+      const handler = prototype?.[task.methodName];
+      if (typeof handler !== "function") {
+        throw new WorkflowDefinitionProblem(
+          workflow.name,
+          `step '${step.name}' task '${step.task}' has no callable registered handler`,
+        );
+      }
+
+      return {
+        name: step.name,
+        task: step.task,
+        input: step.input === undefined ? null : Function.prototype.toString.call(step.input),
+        handler: Function.prototype.toString.call(handler),
+        target: target.name ?? null,
+        methodName: task.methodName,
+        options: {
+          maxAttempts: task.metadata.options?.maxAttempts ?? null,
+          timeout: task.metadata.options?.timeout ?? null,
+          idempotencyKey: task.metadata.options?.idempotencyKey ?? null,
+          timeoutRetry: task.metadata.options?.timeoutRetry ?? null,
+        },
+      };
+    });
+    const contract = JSON.stringify({
+      version: 1,
+      name: workflow.name,
+      maxAttempts: workflow.options.maxAttempts ?? null,
+      timeout: workflow.options.timeout ?? null,
+      idempotencyResolver:
+        typeof workflow.options.idempotencyKey === "function"
+          ? Function.prototype.toString.call(workflow.options.idempotencyKey)
+          : (workflow.options.idempotencyKey ?? null),
+      steps,
+    });
+
+    return `workflow-contract:v1:${await sha256(contract)}`;
   }
 
   private resolveStepInput(

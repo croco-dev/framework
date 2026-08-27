@@ -5,22 +5,36 @@ prev: false
 title: "WorkflowStepResult"
 ---
 
-> **WorkflowStepResult** = `object`
+> **WorkflowStepResult**\<`TStep`, `TTask`, `TResult`\> = `object`
+
+## Type Parameters
+
+### TStep
+
+`TStep` _extends_ `string` = `string`
+
+### TTask
+
+`TTask` _extends_ `string` = `string`
+
+### TResult
+
+`TResult` = `unknown`
 
 ## Properties
 
 ### result
 
-> `readonly` **result**: `unknown`
+> `readonly` **result**: `TResult`
 
 ---
 
 ### step
 
-> `readonly` **step**: `string`
+> `readonly` **step**: `TStep`
 
 ---
 
 ### task
 
-> `readonly` **task**: `string`
+> `readonly` **task**: `TTask`

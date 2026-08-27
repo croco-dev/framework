@@ -7,8 +7,10 @@ import {
   WorkflowDefinitionProblem,
 } from "./problems/WorkflowProblems";
 import type {
+  TypedWorkflowReference,
   WorkflowDefinition,
   WorkflowMetadata,
+  WorkflowStepResult,
   WorkflowTaskStep,
   WorkflowTaskStepDeclaration,
 } from "./types";
@@ -38,7 +40,7 @@ export class WorkflowRegistry {
 
     for (const entry of MetadataStorage.getAll<WorkflowMetadata>(WORKFLOW_METADATA_KEY)) {
       registry.register(
-        WorkflowRegistry.createDefinition(entry.value, triggerEntries.get(entry.value.target)),
+        registry.createDefinition(entry.value, triggerEntries.get(entry.value.target)),
       );
     }
 
@@ -56,6 +58,41 @@ export class WorkflowRegistry {
 
   get(name: string): WorkflowDefinition | undefined {
     return this.workflows.get(name);
+  }
+
+  getByReference(
+    reference: TypedWorkflowReference<unknown, readonly WorkflowStepResult[]>,
+  ): WorkflowDefinition | undefined {
+    const workflow = this.get(reference.name);
+    if (workflow === undefined) {
+      return undefined;
+    }
+
+    const referencedSteps = reference.steps.map((step) => this.normalizeStep(reference.name, step));
+    const matches =
+      workflow.description === reference.description &&
+      workflow.options.maxAttempts === reference.maxAttempts &&
+      workflow.options.timeout === reference.timeout &&
+      workflow.options.idempotencyKey === reference.idempotencyKey &&
+      workflow.steps.length === referencedSteps.length &&
+      workflow.steps.every((step, index) => {
+        const referencedStep = referencedSteps[index];
+        return (
+          referencedStep !== undefined &&
+          step.name === referencedStep.name &&
+          step.task === referencedStep.task &&
+          step.input === referencedStep.input
+        );
+      });
+
+    if (!matches) {
+      throw new WorkflowDefinitionProblem(
+        reference.name,
+        "typed workflow reference does not match the registered definition",
+      );
+    }
+
+    return workflow;
   }
 
   getAll(): WorkflowDefinition[] {
@@ -77,7 +114,7 @@ export class WorkflowRegistry {
     }
   }
 
-  private static createDefinition(
+  private createDefinition(
     metadata: WorkflowMetadata,
     triggerEntries?: Map<string | symbol, AnyTriggerMetadata>,
   ): WorkflowDefinition {
@@ -89,9 +126,7 @@ export class WorkflowRegistry {
       description: metadata.description,
       target: metadata.target,
       methodName,
-      steps: metadata.options.steps.map((step) =>
-        WorkflowRegistry.normalizeStep(metadata.name, step),
-      ),
+      steps: metadata.options.steps.map((step) => this.normalizeStep(metadata.name, step)),
       triggers: trigger ? [trigger] : [],
       options: {
         maxAttempts: metadata.options.maxAttempts,
@@ -101,10 +136,7 @@ export class WorkflowRegistry {
     };
   }
 
-  private static normalizeStep(
-    workflowName: string,
-    step: WorkflowTaskStepDeclaration,
-  ): WorkflowTaskStep {
+  private normalizeStep(workflowName: string, step: WorkflowTaskStepDeclaration): WorkflowTaskStep {
     if (typeof step === "string") {
       return {
         name: step,
@@ -112,13 +144,34 @@ export class WorkflowRegistry {
       };
     }
 
-    if (step.task.length === 0) {
+    const taskName = typeof step.task === "string" ? step.task : step.task.name;
+    if (taskName.length === 0) {
       throw new WorkflowDefinitionProblem(workflowName, "workflow step task must not be empty");
     }
 
+    if (typeof step.task !== "string") {
+      const registeredTask = this.taskRegistry.get(taskName);
+      const stepName = step.name ?? taskName;
+      if (registeredTask === undefined) {
+        throw new WorkflowDefinitionProblem(
+          workflowName,
+          `step '${stepName}' references unknown task '${taskName}'`,
+        );
+      }
+      if (
+        registeredTask.target !== step.task.target ||
+        registeredTask.methodName !== step.task.methodName
+      ) {
+        throw new WorkflowDefinitionProblem(
+          workflowName,
+          `step '${stepName}' task reference '${taskName}' does not match the registered handler`,
+        );
+      }
+    }
+
     return {
-      name: step.name ?? step.task,
-      task: step.task,
+      name: step.name ?? taskName,
+      task: taskName,
       input: step.input,
     };
   }

@@ -59,6 +59,22 @@ title: "WorkflowRegistry"
 
 ---
 
+### getByReference()
+
+> **getByReference**(`reference`): [`WorkflowDefinition`](/api/workflow-core/src/type-aliases/workflowdefinition/) \| `undefined`
+
+#### Parameters
+
+##### reference
+
+[`TypedWorkflowReference`](/api/workflow-core/src/type-aliases/typedworkflowreference/)\<`unknown`, readonly [`WorkflowStepResult`](/api/workflow-core/src/type-aliases/workflowstepresult/)[]\>
+
+#### Returns
+
+[`WorkflowDefinition`](/api/workflow-core/src/type-aliases/workflowdefinition/) \| `undefined`
+
+---
+
 ### has()
 
 > **has**(`name`): `boolean`

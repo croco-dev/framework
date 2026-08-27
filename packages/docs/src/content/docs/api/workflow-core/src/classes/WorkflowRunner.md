@@ -53,19 +53,49 @@ title: "WorkflowRunner"
 
 ### execute()
 
+#### Call Signature
+
+> **execute**\<`TPayload`, `TSteps`\>(`workflow`, `payload`): `Promise`\<[`TypedWorkflowRunResult`](/api/workflow-core/src/type-aliases/typedworkflowrunresult/)\<`TSteps`\>\>
+
+##### Type Parameters
+
+###### TPayload
+
+`TPayload`
+
+###### TSteps
+
+`TSteps` _extends_ readonly [`WorkflowStepResult`](/api/workflow-core/src/type-aliases/workflowstepresult/)[]
+
+##### Parameters
+
+###### workflow
+
+[`TypedWorkflowReference`](/api/workflow-core/src/type-aliases/typedworkflowreference/)\<`TPayload`, `TSteps`\>
+
+###### payload
+
+`NoInfer`\<`TPayload`\>
+
+##### Returns
+
+`Promise`\<[`TypedWorkflowRunResult`](/api/workflow-core/src/type-aliases/typedworkflowrunresult/)\<`TSteps`\>\>
+
+#### Call Signature
+
 > **execute**(`workflowName`, `payload`): `Promise`\<[`WorkflowRunResult`](/api/workflow-core/src/type-aliases/workflowrunresult/)\>
 
-#### Parameters
+##### Parameters
 
-##### workflowName
+###### workflowName
 
 `string`
 
-##### payload
+###### payload
 
 `unknown`
 
-#### Returns
+##### Returns
 
 `Promise`\<[`WorkflowRunResult`](/api/workflow-core/src/type-aliases/workflowrunresult/)\>
 

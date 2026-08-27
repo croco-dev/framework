@@ -5,13 +5,19 @@ prev: false
 title: "WorkflowIdempotencyContext"
 ---
 
-> **WorkflowIdempotencyContext** = `object`
+> **WorkflowIdempotencyContext**\<`TPayload`\> = `object`
+
+## Type Parameters
+
+### TPayload
+
+`TPayload` = `unknown`
 
 ## Properties
 
 ### payload
 
-> `readonly` **payload**: `unknown`
+> `readonly` **payload**: `TPayload`
 
 ---
 

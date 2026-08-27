@@ -3293,6 +3293,12 @@
       "owner": "@croco/tasks-core"
     },
     {
+      "path": "packages/tasks-core/src/tests/TaskReferenceTypes.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/tasks-core"
+    },
+    {
       "path": "packages/tasks-core/src/tests/TaskRegistry.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -3984,6 +3990,12 @@
     },
     {
       "path": "packages/workflow-core/src/tests/WorkflowCore.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/workflow-core"
+    },
+    {
+      "path": "packages/workflow-core/src/tests/WorkflowTypes.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/workflow-core"
