@@ -69,6 +69,31 @@ describe("createCursorCodec", () => {
     );
   });
 
+  it("should report distinct schema issue paths without invalid values", () => {
+    expect(() =>
+      compoundCursorCodec.decode(encodeRawCursor({ v: 1, id: "private-id", createdAt: 123 })),
+    ).toThrow(
+      expect.objectContaining({
+        detail: "Cursor payload does not match the schema: createdAt",
+      }),
+    );
+
+    const rootCodec = createCursorCodec(compoundCursorSchema.refine(() => false));
+    expect(() =>
+      rootCodec.decode(
+        encodeRawCursor({
+          v: 1,
+          id: "private-id",
+          createdAt: "2026-08-27T10:00:00.000Z",
+        }),
+      ),
+    ).toThrow(
+      expect.objectContaining({
+        detail: "Cursor payload does not match the schema: (root)",
+      }),
+    );
+  });
+
   it("should validate payloads before encoding", () => {
     expect(() =>
       compoundCursorCodec.encode({

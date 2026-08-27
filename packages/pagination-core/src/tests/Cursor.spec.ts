@@ -31,7 +31,7 @@ describe("cursor", () => {
   });
 
   it("should preserve compatibility with Node base64url cursors", () => {
-    const payload = { v: 1, id: "사용자_🐊", createdAt: "2026-08-27T12:34:56.000Z" };
+    const payload = { createdAt: "2026-08-27T12:34:56.000Z", v: 1, id: "사용자_🐊" };
     const nodeCursor = NodeBuffer.from(JSON.stringify(payload), "utf-8").toString("base64url");
 
     expect(encodeCursor(payload)).toBe(nodeCursor);
@@ -74,9 +74,11 @@ describe("cursor", () => {
     expect(() => decodeCursor(invalidJson)).toThrow(InvalidCursorProblem);
   });
 
-  it("should throw InvalidCursorProblem for unsupported version", () => {
+  it("should throw InvalidCursorProblem for unsupported version during encoding and decoding", () => {
     const payload = { v: 99, id: "test" };
-    const encoded = encodeCursor(payload);
+    expect(() => encodeCursor(payload)).toThrow(InvalidCursorProblem);
+
+    const encoded = NodeBuffer.from(JSON.stringify(payload)).toString("base64url");
     expect(() => decodeCursor(encoded)).toThrow(InvalidCursorProblem);
   });
 

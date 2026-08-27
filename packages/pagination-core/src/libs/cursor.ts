@@ -1,7 +1,6 @@
-import type { z } from "zod";
+import { z } from "zod";
 import { CURSOR_VERSION } from "./constants";
 import { InvalidCursorProblem } from "./problems";
-import { CursorPayloadSchema } from "./schemas";
 import type { CursorPayload } from "./types";
 
 type CursorBasePayload = {
@@ -149,6 +148,13 @@ function isJsonRoundTripEqual(
   }
 }
 
+function formatIssuePaths(error: z.ZodError): string {
+  const paths = error.issues.map((issue) =>
+    issue.path.length === 0 ? "(root)" : issue.path.map(String).join("."),
+  );
+  return [...new Set(paths)].join(", ");
+}
+
 function encodeWithSchema<TSchema extends z.ZodType<CursorBasePayload, CursorBasePayload>>(
   schema: TSchema,
   payload: z.output<TSchema>,
@@ -156,7 +162,9 @@ function encodeWithSchema<TSchema extends z.ZodType<CursorBasePayload, CursorBas
   try {
     const encoded = schema.safeEncode(payload);
     if (!encoded.success) {
-      throw new InvalidCursorProblem("Cursor payload does not match the schema");
+      throw new InvalidCursorProblem(
+        `Cursor payload does not match the schema: ${formatIssuePaths(encoded.error)}`,
+      );
     }
     return encoded.data;
   } catch (error) {
@@ -174,7 +182,9 @@ function decodeWithSchema<TSchema extends z.ZodType<CursorBasePayload, CursorBas
   try {
     const decoded = schema.safeDecode(payload as z.input<TSchema>);
     if (!decoded.success) {
-      throw new InvalidCursorProblem("Cursor payload does not match the schema");
+      throw new InvalidCursorProblem(
+        `Cursor payload does not match the schema: ${formatIssuePaths(decoded.error)}`,
+      );
     }
     return decoded.data;
   } catch (error) {
@@ -215,13 +225,13 @@ export function createCursorCodec<
   };
 }
 
-const defaultCursorCodec = createCursorCodec(CursorPayloadSchema.loose());
+const defaultCursorCodec = createCursorCodec(z.custom<CursorPayload>());
 
 /**
  * Encode a cursor payload to URL-safe Base64 string
  */
 export function encodeCursor(payload: CursorPayload): string {
-  return serializeCursor(payload);
+  return defaultCursorCodec.encode(payload);
 }
 
 /**
