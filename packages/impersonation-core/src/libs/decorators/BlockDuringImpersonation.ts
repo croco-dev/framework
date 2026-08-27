@@ -1,5 +1,6 @@
 import { resolveImpersonationContext } from "@croco/audit-core";
 import { Context } from "@croco/framework-context";
+import { resolveImpersonationConfig } from "../ImpersonationConfig";
 import { BlockedDuringImpersonationProblem } from "../problems/ImpersonationProblems";
 
 type MethodDecorator = (
@@ -17,8 +18,15 @@ export function BlockDuringImpersonation(): MethodDecorator {
     const original = descriptor.value;
     descriptor.value = async function (...args: unknown[]) {
       const context = Context.get();
-      if (resolveImpersonationContext(context).status !== "absent") {
-        throw new BlockedDuringImpersonationProblem(String(propertyKey));
+      const impersonation = resolveImpersonationContext(context);
+      if (impersonation.status !== "absent") {
+        const action = String(propertyKey);
+        if (
+          impersonation.status === "invalid" ||
+          resolveImpersonationConfig().blockedActions.includes(action)
+        ) {
+          throw new BlockedDuringImpersonationProblem(action);
+        }
       }
       return original.apply(this, args);
     };

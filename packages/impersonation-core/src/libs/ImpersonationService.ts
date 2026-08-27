@@ -5,13 +5,16 @@ import type { RequestContext } from "@croco/framework-context";
 import { Component, Inject } from "@croco/framework-context";
 import { IdPrefix } from "@croco/gid-core";
 import { ImpersonationEndedEvent, ImpersonationStartedEvent } from "./events";
+import {
+  assertValidImpersonationConfig,
+  invalidImpersonationDurationProblem,
+} from "./ImpersonationConfig";
 import { AuthProvider, ImpersonationStore } from "./interfaces";
 import {
   ImpersonationIdentityConflictProblem,
   ImpersonationReasonRequiredProblem,
   ImpersonationSessionNotFoundProblem,
   ImpersonationTargetNotFoundProblem,
-  InvalidImpersonationConfigurationProblem,
   NestedImpersonationProblem,
   SelfImpersonationProblem,
 } from "./problems/ImpersonationProblems";
@@ -22,64 +25,12 @@ export type ImpersonationContext = RequestContext & {
   impersonation: ImpersonationState;
 };
 
-const MAX_DATE_TIMESTAMP_MS = 8_640_000_000_000_000;
-
-function toConfigurationReceivedValue(value: unknown): number | string {
-  if (typeof value !== "number") {
-    return `non-number-${typeof value}`;
-  }
-  if (Number.isFinite(value)) {
-    return value;
-  }
-  if (Number.isNaN(value)) {
-    return "NaN";
-  }
-  return value === Number.POSITIVE_INFINITY ? "Infinity" : "-Infinity";
-}
-
-function invalidDurationProblem(value: unknown): InvalidImpersonationConfigurationProblem {
-  return new InvalidImpersonationConfigurationProblem({
-    field: "maxDurationMs",
-    constraint: "positive-safe-integer-with-representable-expiration",
-    receivedValue: toConfigurationReceivedValue(value),
-  });
-}
-
 function resolveExpiration(now: Date, maxDurationMs: number): Date {
   const expiresAt = new Date(now.getTime() + maxDurationMs);
   if (Number.isNaN(expiresAt.getTime())) {
-    throw invalidDurationProblem(maxDurationMs);
+    throw invalidImpersonationDurationProblem(maxDurationMs);
   }
   return expiresAt;
-}
-
-function assertValidImpersonationConfig(config: ImpersonationConfig): void {
-  if (
-    !Number.isSafeInteger(config.maxDurationMs) ||
-    config.maxDurationMs <= 0 ||
-    config.maxDurationMs > MAX_DATE_TIMESTAMP_MS - Date.now()
-  ) {
-    throw invalidDurationProblem(config.maxDurationMs);
-  }
-
-  if (!Array.isArray(config.blockedActions)) {
-    throw new InvalidImpersonationConfigurationProblem({
-      field: "blockedActions",
-      constraint: "array-of-non-blank-strings",
-      receivedValue: "non-array",
-    });
-  }
-
-  const invalidActionIndex = config.blockedActions.findIndex(
-    (action) => typeof action !== "string" || action.trim().length === 0,
-  );
-  if (invalidActionIndex !== -1) {
-    throw new InvalidImpersonationConfigurationProblem({
-      field: "blockedActions",
-      constraint: "array-of-non-blank-strings",
-      receivedValue: `invalid-item-at-index-${invalidActionIndex}`,
-    });
-  }
 }
 
 @Component()

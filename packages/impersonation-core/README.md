@@ -79,15 +79,24 @@ await eventPublisher.publish(event);
 
 ### BlockDuringImpersonation 데코레이터
 
-사칭 중 특정 작업을 차단합니다.
+사칭 중 `blockedActions`에 등록된 작업만 차단합니다. 작업 식별자는 데코레이터가 붙은 메서드 이름이며 정확히 일치해야
+합니다. 설정은 `IMPERSONATION_CONFIG_TOKEN`으로 등록해야 하며, 설정이 없거나 식별자에 공백이 있거나 중복되면
+`IMPERSONATION_CONFIGURATION_INVALID`로 실패합니다.
 
 ```typescript
-import { BlockDuringImpersonation } from "@croco/impersonation-core";
+import { Container } from "@croco/framework-context";
+import { BlockDuringImpersonation, IMPERSONATION_CONFIG_TOKEN } from "@croco/impersonation-core";
+
+Container.set(IMPERSONATION_CONFIG_TOKEN, {
+  maxDurationMs: 30 * 60 * 1000,
+  requireReason: true,
+  blockedActions: ["deleteUser"],
+});
 
 class UserService {
   @BlockDuringImpersonation()
   async deleteUser(userId: string) {
-    // 사칭 중에는 이 메서드 실행 불가
+    // blockedActions에 deleteUser가 있으므로 사칭 중에는 실행 불가
   }
 }
 ```
@@ -141,8 +150,11 @@ actor별 세션을 원자적으로 생성합니다. 같은 actor의 동시 요�
 | `blockedActions` | string[] | 차단할 작업 목록        |
 
 `ImpersonationService`는 생성 시 `maxDurationMs`가 만료 시각을 안전하게 표현할 수 있는 양의 정수인지,
-`blockedActions`가 비어 있지 않은 작업 이름의 배열인지 검증합니다. `requireReason`이 활성화된 경우 `start()`는
-reason의 앞뒤 공백을 제거한 뒤 빈 값이면 거부하며, 정규화된 reason만 세션과 시작 이벤트에 기록합니다.
+`requireReason`이 불리언인지, `blockedActions`가 공백 없이 정규화된 고유 작업 이름의 배열인지 검증합니다.
+`BlockDuringImpersonation`은 사칭 중에
+데코레이터가 붙은 메서드 이름이 이 목록에 있을 때만 작업을 거부합니다. 차단 경계가 같은 설정을 읽을 수 있도록
+`IMPERSONATION_CONFIG_TOKEN`으로 설정을 등록해야 합니다. `requireReason`이 활성화된 경우 `start()`는 reason의 앞뒤
+공백을 제거한 뒤 빈 값이면 거부하며, 정규화된 reason만 세션과 시작 이벤트에 기록합니다.
 
 ### ImpersonationState
 
@@ -168,9 +180,10 @@ reason의 앞뒤 공백을 제거한 뒤 빈 값이면 거부하며, 정규화�
 
 ```typescript
 import "reflect-metadata";
-import type { RequestContext } from "@croco/framework-context";
+import { Container, type RequestContext } from "@croco/framework-context";
 import {
   AuthProvider,
+  IMPERSONATION_CONFIG_TOKEN,
   ImpersonationService,
   InMemoryImpersonationStore,
 } from "@croco/impersonation-core";
@@ -198,6 +211,7 @@ const config = {
   blockedActions: ["deleteUser", "updatePassword"],
 };
 
+Container.set(IMPERSONATION_CONFIG_TOKEN, config);
 const service = new ImpersonationService(store, authProvider, config);
 
 const requestContext: RequestContext = {

@@ -1,10 +1,19 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
 
-export type ImpersonationConfigurationField = "blockedActions" | "maxDurationMs";
+export type ImpersonationConfigurationField =
+  | "blockedActions"
+  | "configuration"
+  | "maxDurationMs"
+  | "requireReason";
 
 export type ImpersonationConfigurationConstraint =
   | "array-of-non-blank-strings"
-  | "positive-safe-integer-with-representable-expiration";
+  | "boolean"
+  | "normalized-action-identifiers"
+  | "object"
+  | "positive-safe-integer-with-representable-expiration"
+  | "registered"
+  | "unique-action-identifiers";
 
 export type InvalidImpersonationConfigurationProblemOptions = {
   readonly field: ImpersonationConfigurationField;
