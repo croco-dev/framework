@@ -21,7 +21,7 @@ Creates a runtime task reference whose payload and result types are inferred fro
 
 #### TMethodName
 
-`TMethodName` _extends_ `string`
+`TMethodName` _extends_ `TaskMethodName`\<`TTarget`\>
 
 ### Parameters
 
@@ -51,7 +51,7 @@ Creates a runtime task reference whose payload and result types are inferred fro
 
 #### TMethodName
 
-`TMethodName` _extends_ `string`
+`TMethodName` _extends_ `TaskMethodName`\<`TTarget`\>
 
 #### TName
 

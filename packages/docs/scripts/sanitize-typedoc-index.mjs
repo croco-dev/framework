@@ -96,6 +96,17 @@ const frontendReactDocs = [
     ],
   },
 ];
+const tasksCoreDocs = [
+  {
+    path: apiDocsPath("tasks-core/src/functions/taskRef.md"),
+    replacements: [
+      [
+        "`TMethodName` *extends* `string`",
+        "`TMethodName` *extends* `TaskMethodName`\\<`TTarget`\\>",
+      ],
+    ],
+  },
+];
 const routeContractDocs = [
   {
     path: apiDocsPath("protocols-rest/src/functions/Body.md"),
@@ -244,6 +255,7 @@ export async function sanitizeTypeDocIndex() {
   await sanitizePolicyExecutionPlan();
   await sanitizeRestRouteContractDocs();
   await sanitizeFrontendReactDocs();
+  await sanitizeTasksCoreDocs();
 }
 
 async function sanitizeApiIndex() {
@@ -307,6 +319,12 @@ async function sanitizeRestRouteContractDocs() {
 async function sanitizeFrontendReactDocs() {
   await Promise.all(
     frontendReactDocs.map(({ path, replacements }) => sanitizeMarkdown(path, replacements)),
+  );
+}
+
+async function sanitizeTasksCoreDocs() {
+  await Promise.all(
+    tasksCoreDocs.map(({ path, replacements }) => sanitizeMarkdown(path, replacements)),
   );
 }
 

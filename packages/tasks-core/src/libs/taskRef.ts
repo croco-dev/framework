@@ -56,16 +56,10 @@ function createTaskReference<TPayload, TResult, TName extends string>(
 /**
  * Creates a runtime task reference whose payload and result types are inferred from the handler.
  */
-export function taskRef<
-  TTarget extends object,
-  TMethodName extends TaskMethodName<TTarget>,
->(
+export function taskRef<TTarget extends object, TMethodName extends TaskMethodName<TTarget>>(
   target: TaskTarget<TTarget>,
   methodName: TMethodName,
-): TaskReference<
-  TaskMethodPayload<TTarget[TMethodName]>,
-  TaskMethodResult<TTarget[TMethodName]>
->;
+): TaskReference<TaskMethodPayload<TTarget[TMethodName]>, TaskMethodResult<TTarget[TMethodName]>>;
 export function taskRef<
   TTarget extends object,
   TMethodName extends TaskMethodName<TTarget>,
@@ -83,10 +77,7 @@ export function taskRef<TTarget extends object, TMethodName extends TaskMethodNa
   target: TaskTarget<TTarget>,
   methodName: TMethodName,
   name?: string,
-): TaskReference<
-  TaskMethodPayload<TTarget[TMethodName]>,
-  TaskMethodResult<TTarget[TMethodName]>
-> {
+): TaskReference<TaskMethodPayload<TTarget[TMethodName]>, TaskMethodResult<TTarget[TMethodName]>> {
   if (name !== undefined) {
     return createTaskReference(target, methodName, name);
   }

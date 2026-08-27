@@ -8,11 +8,16 @@ export { TASK_METADATA_KEY, Task } from "./libs/decorators/Task";
  */
 export {
   DuplicateTaskRegistrationProblem,
-  InvalidTaskReferenceProblem,
   TaskExecutionTimeoutProblem,
   TaskNotFoundProblem,
   TaskRunnerDIFailureProblem,
 } from "./libs/problems/TasksProblems";
+
+/**
+ * `@Task` 메타데이터가 없거나 일치하지 않거나, 참조가 `taskRef` factory 계약을 위반하거나,
+ * 등록된 handler 메타데이터와 참조가 달라졌을 때 발생합니다.
+ */
+export { InvalidTaskReferenceProblem } from "./libs/problems/TasksProblems";
 
 /**
  * 태스크 메타데이터를 수집하고 조회하는 전역 레지스트리입니다.

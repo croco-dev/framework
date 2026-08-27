@@ -71,6 +71,12 @@ describe("taskRef", () => {
 
     expectTypeOf(execute).returns.toEqualTypeOf<Promise<{ doubled: number }>>();
     expectTypeOf(rejectInvalidPayload).returns.toEqualTypeOf<Promise<{ doubled: number }>>();
+    expectTypeOf<
+      TaskReferencePayload<TaskReference<never, { doubled: number }>>
+    >().toEqualTypeOf<never>();
+    expectTypeOf<TaskReferenceResult<TaskReference<never, { doubled: number }>>>().toEqualTypeOf<{
+      doubled: number;
+    }>();
   });
 
   it("rejects handler signatures that TaskRunner cannot invoke", () => {

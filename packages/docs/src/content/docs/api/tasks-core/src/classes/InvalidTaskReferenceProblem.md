@@ -5,7 +5,8 @@ prev: false
 title: "InvalidTaskReferenceProblem"
 ---
 
-등록되지 않은 태스크 실행 시 발생하는 Problem 하위 타입입니다.
+`@Task` 메타데이터가 없거나 일치하지 않거나, 참조가 `taskRef` factory 계약을 위반하거나,
+등록된 handler 메타데이터와 참조가 달라졌을 때 발생합니다.
 
 ## Extends
 

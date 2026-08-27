@@ -3479,6 +3479,12 @@
       "owner": "@croco/tasks-core"
     },
     {
+      "path": "packages/tasks-core/src/tests/TaskReference.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/tasks-core"
+    },
+    {
       "path": "packages/tasks-core/src/tests/TaskReferenceTypes.spec.ts",
       "lane": "fast",
       "qualifiers": [],
