@@ -35,7 +35,7 @@ pnpm add @croco/frontend-react
 // pages/index/route.ts
 import { createCrocoPageConfig } from "@croco/frontend-react";
 
-export default createCrocoPageConfig({ ssr: true });
+export default createCrocoPageConfig({ mode: "ssr", path: "/" });
 ```
 
 ### 데이터 전송
@@ -118,8 +118,8 @@ export default function ParsedPage() {
 - package test: `pnpm --filter @croco/frontend-react test`
   - optional/required/parsed page data hooks와 `usePageMeta`가 React render path에서 page data와 meta를
     노출하는지 검증합니다.
-  - `createCrocoPageConfig`의 `mode`가 `@croco/meta-vite` `RenderMode`와 호환되고, route `path`
-    registration을 config helper에 섞지 않는지 검증합니다.
+  - `createCrocoPageConfig`가 `@croco/meta-vite`의 mode, path, head, 초 단위 revalidate 계약을
+    route registration 경계까지 손실 없이 전달하는지 검증합니다.
 - generated fullstack smoke: `CROCO_GENERATED_SMOKE_CASES=meta-vite-fullstack-workers pnpm create-croco-app:smoke`
   - `ddd-vike-fullstack` compatibility preset name과 `--frontend-deploy cloudflare-meta-vite`
     generated profile에서 `@croco/meta-vite` page/API/action/ISR smoke를 실행합니다.
@@ -136,8 +136,8 @@ Unsupported states:
   성공 data payload로 취급하지 않아야 합니다.
 - 이 패키지는 직접 DOM을 만들거나 `hydrateRoot`를 호출하지 않습니다. Browser hydration bootstrap은
   generated app entrypoint 또는 앱별 `@croco/meta-vite` runtime wiring에서 소유해야 합니다.
-- `createCrocoPageConfig`의 `path` 옵션은 route registration source of truth가 아닙니다. Route path는
-  `@croco/meta-vite` `defineRoute()` 또는 generated route manifest에서 선언해야 합니다.
+- `createCrocoPageConfig`는 `path`를 canonical route config에 포함합니다. 이 config를
+  `@croco/meta-vite` `defineRoute()` 또는 generated route manifest 입력에 그대로 결합해야 합니다.
 - 검증된 generated profile 밖에서 custom Vite/React adapter를 조합하는 경우, 동일한 hydration
   mismatch visibility check를 앱 smoke에 추가한 뒤 runtime claim을 확장해야 합니다.
 
@@ -228,19 +228,33 @@ export function AppBoundary({ children }: { children: ReactNode }) {
 
 ### `createCrocoPageConfig(options?)`
 
-meta-vite page config helper의 기본값을 제공합니다.
+meta-vite page route의 canonical config를 생성합니다. 반환값은 `defineRoute()` 입력과 직접 결합할 수 있으며,
+ISR 재검증 시간은 `revalidateSeconds`로 받아 meta-vite의 초 단위 `revalidate`에 그대로 전달합니다.
 
 **옵션:**
 
-- `ssr?: boolean` - SSR 활성화 여부 (기본값: `true`)
+- `mode?: "ssr" | "ssg" | "isr" | "rsc"` - render mode (기본값: `"ssr"`)
+- `path?: string` - route path
+- `head?: () => HeadMetadata` - title, description, OpenGraph title, canonical URL metadata
+- `revalidateSeconds?: number` - ISR 재검증 주기(초)
+
+기존 `ssr` boolean과 밀리초 단위 `revalidate` 입력은 deprecated입니다. `ssr: false`는 `mode: "ssg"`로,
+`revalidate: 60_000`은 `revalidateSeconds: 60`으로 이전하세요. Deprecated 입력은 canonical 입력과 함께
+사용할 수 없으며, helper는 밀리초 값을 초로 한 번 변환한 뒤 반환합니다.
 
 **반환값:**
 
 ```typescript
 {
+  path?: string;
   mode: "ssr" | "ssg" | "isr" | "rsc";
-  head?: () => { title?: string; description?: string };
-  revalidateMs?: number;
+  head?: () => {
+    title?: string;
+    description?: string;
+    ogTitle?: string;
+    canonical?: string;
+  };
+  revalidate?: number;
 }
 ```
 
