@@ -84,6 +84,64 @@ describe("PostHogFeatureManager", () => {
         expect.objectContaining({ groups: { team: "team-abc" } }),
       );
     });
+
+    it("should use an explicit tenantId for tenant-only evaluation", async () => {
+      mockPostHog.isFeatureEnabled.mockResolvedValue(true);
+
+      const result = await featureManager.isEnabled("tenant-feature", {
+        tenantId: "tenant-1",
+      });
+
+      expect(result).toBe(true);
+      expect(mockPostHog.isFeatureEnabled).toHaveBeenCalledWith(
+        "tenant-feature",
+        "tenant:tenant-1",
+        expect.objectContaining({ groups: { tenant: "tenant-1" } }),
+      );
+    });
+
+    it("should prefer explicit tenantId over the ambient tenant", async () => {
+      mockPostHog.isFeatureEnabled.mockResolvedValue(true);
+
+      await Context.run({ requestId: "", tenantId: "ambient-tenant" }, async () => {
+        await featureManager.isEnabled("tenant-feature", { tenantId: "explicit-tenant" });
+      });
+
+      expect(mockPostHog.isFeatureEnabled).toHaveBeenCalledWith(
+        "tenant-feature",
+        "tenant:explicit-tenant",
+        expect.objectContaining({ groups: { tenant: "explicit-tenant" } }),
+      );
+    });
+
+    it("should keep request identity while using an explicit tenant group", async () => {
+      mockPostHog.isFeatureEnabled.mockResolvedValue(true);
+
+      await Context.run({ requestId: "req-1", tenantId: "ambient-tenant" }, async () => {
+        await featureManager.isEnabled("tenant-feature", { tenantId: "explicit-tenant" });
+      });
+
+      expect(mockPostHog.isFeatureEnabled).toHaveBeenCalledWith(
+        "tenant-feature",
+        "anonymous:req-1",
+        expect.objectContaining({ groups: { tenant: "explicit-tenant" } }),
+      );
+    });
+
+    it.each(["", " ", 123])(
+      "should not send invalid explicit tenant id %j to PostHog",
+      async (tenantId) => {
+        mockPostHog.isFeatureEnabled.mockResolvedValue(true);
+
+        await featureManager.isEnabled("tenant-feature", { tenantId });
+
+        expect(mockPostHog.isFeatureEnabled).toHaveBeenCalledWith(
+          "tenant-feature",
+          "anonymous",
+          expect.objectContaining({ groups: undefined, personProperties: undefined }),
+        );
+      },
+    );
   });
 
   describe("getVariant", () => {
@@ -126,6 +184,21 @@ describe("PostHogFeatureManager", () => {
       const result = await featureManager.getVariant("unknown-flag");
 
       expect(result).toBe(false);
+    });
+
+    it("should use an explicit tenantId for tenant-only evaluation", async () => {
+      mockPostHog.getFeatureFlag.mockResolvedValue("variant-a");
+
+      const result = await featureManager.getVariant("tenant-variant", {
+        tenantId: "tenant-1",
+      });
+
+      expect(result).toBe("variant-a");
+      expect(mockPostHog.getFeatureFlag).toHaveBeenCalledWith(
+        "tenant-variant",
+        "tenant:tenant-1",
+        expect.objectContaining({ groups: { tenant: "tenant-1" } }),
+      );
     });
   });
 
