@@ -12,6 +12,25 @@ provides generated-app smoke coverage for the supported presets.
 - `--json` output - machine-readable result and diagnostic contract for automation.
 - `create-croco-app/dist/verification.js` - programmatic parsing, runtime validation, generation,
   and separate raw, normalized, and resolved option types.
+- `create-croco-app/programmatic` - side-effect-free generation and option resolution.
+
+Importing either `create-croco-app` or `create-croco-app/programmatic` does not parse arguments,
+write files, print output, or terminate the process. Programmatic consumers can resolve the same
+noninteractive options as the CLI and then call the generator directly:
+
+```ts
+import { generate, normalizeNonInteractiveOptions } from "create-croco-app/programmatic";
+
+const options = normalizeNonInteractiveOptions({
+  projectName: "my-app",
+  scope: "@myorg",
+  preset: "blank",
+  installDeps: false,
+  initGit: false,
+});
+
+await generate("./my-app", options, { outputMode: "human" });
+```
 
 ## Usage
 

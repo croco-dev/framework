@@ -1,8 +1,8 @@
-import type { TenantModelName } from "@croco/tenant-core/tenant-model";
-import type { ApplicationIntentGoal } from "@croco/framework-context";
 import type { SaasProviderProfileName } from "./saas-provider-profiles.js";
 
-export type AppGoal = ApplicationIntentGoal;
+export type AppGoal = "saas-api" | "spa-backend-split" | "worker" | "internal-tool";
+
+export type TenantModelName = "single" | "org" | "workspace" | "shared-schema" | "rls-backed";
 
 export type GeneratorPreset =
   | "ddd-fullstack"

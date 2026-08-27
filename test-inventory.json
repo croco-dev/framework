@@ -806,6 +806,12 @@
       "owner": "create-croco-app"
     },
     {
+      "path": "packages/create-croco-app/src/tests/ProgrammaticEntry.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "create-croco-app"
+    },
+    {
       "path": "packages/create-croco-app/src/tests/PublishedCli.spec.ts",
       "lane": "published",
       "qualifiers": [],

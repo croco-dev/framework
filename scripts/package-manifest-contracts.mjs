@@ -1,11 +1,29 @@
 import fs from "node:fs";
 import path from "node:path";
 
-export const ENTRYPOINT_EXEMPTIONS = new Map([
-  ["create-croco-app", "Bin-only project generator; importing it would execute the CLI."],
-]);
+export const ENTRYPOINT_EXEMPTIONS = new Map();
 
 export const FILES_EXEMPTIONS = new Map();
+
+export const BUNDLED_RUNTIME_DEPENDENCY_EXEMPTIONS = new Map([
+  [
+    "create-croco-app",
+    new Map([
+      [
+        "@croco/framework-context",
+        "The published generator bundles framework intent and runtime capability helpers through tsup.noExternal.",
+      ],
+      [
+        "@croco/tenant-core",
+        "The published generator bundles tenant model helpers through tsup.noExternal.",
+      ],
+    ]),
+  ],
+]);
+
+export function bundledRuntimeDependencyNamesFor(packageName) {
+  return new Set(BUNDLED_RUNTIME_DEPENDENCY_EXEMPTIONS.get(packageName)?.keys() ?? []);
+}
 
 export const DIRECT_DIST_ENTRYPOINT_EXCEPTIONS = new Map([
   [
