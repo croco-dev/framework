@@ -24,8 +24,8 @@ const userGovernance = defineDataGovernanceResource({
     type: "user",
   },
   fields: [
-    { id: "id", classifications: ["operational"] },
-    { id: "tenantId", classifications: ["operational"] },
+    { id: "id", classifications: ["operational"], valueType: "identifier" },
+    { id: "tenantId", classifications: ["operational"], valueType: "identifier" },
     { id: "email", classifications: ["pii"], retentionPolicyId: "account-retention" },
     { id: "billingCustomerId", classifications: ["billing", "sensitive"] },
   ],
@@ -55,6 +55,12 @@ const userGovernance = defineDataGovernanceResource({
 assertDataGovernanceResourcesValid([userGovernance]);
 const dataMap = createDataMapArtifact([userGovernance]);
 ```
+
+Tenant-scoped resources must declare `subject.tenantField`. The referenced field
+must be present in `fields` with `valueType: "identifier"`. A custom identifier
+value type must declare `tenantIdentifierOverride` with a non-empty `reason`; the
+override belongs to `subject` and is preserved in the generated Data Map. Global
+and system resources do not require a tenant field.
 
 ## Data Map artifacts
 

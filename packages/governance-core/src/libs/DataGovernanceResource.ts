@@ -37,6 +37,10 @@ export const DATA_GOVERNANCE_DIAGNOSTIC_CODES = {
   resourceScopeRequired: "governance-core/resource-scope-required",
   subjectTypeRequired: "governance-core/subject-type-required",
   subjectIdFieldRequired: "governance-core/subject-id-field-required",
+  subjectTenantFieldRequired: "governance-core/subject-tenant-field-required",
+  subjectTenantFieldTypeInvalid: "governance-core/subject-tenant-field-type-invalid",
+  subjectTenantIdentifierOverrideReasonRequired:
+    "governance-core/subject-tenant-identifier-override-reason-required",
   subjectFieldUnknown: "governance-core/subject-field-unknown",
   fieldRequired: "governance-core/field-required",
   fieldIdRequired: "governance-core/field-id-required",
@@ -268,19 +272,19 @@ function validateResource(
   );
   validateCapabilities(candidate.subjectRequests, resourcePath, resourceKind, diagnostics);
   validateProblems(candidate.problems, `${resourcePath}.problems`, resourceKind, diagnostics);
+  validateTenantField(
+    candidate.scope,
+    candidate.subject,
+    fields,
+    resourcePath,
+    resourceKind,
+    diagnostics,
+  );
 
   if (fieldIds.size > 0) {
     validateKnownSubjectField(
       "idField",
       candidate.subject?.idField,
-      fieldIds,
-      resourcePath,
-      resourceKind,
-      diagnostics,
-    );
-    validateKnownSubjectField(
-      "tenantField",
-      candidate.subject?.tenantField,
       fieldIds,
       resourcePath,
       resourceKind,
@@ -297,6 +301,81 @@ function validateResource(
   }
 
   return diagnostics;
+}
+
+function validateTenantField(
+  scope: DataGovernanceResource["scope"] | undefined,
+  subject: DataGovernanceResource["subject"] | undefined,
+  fields: readonly DataGovernanceField[],
+  resourcePath: string,
+  resourceKind: string | undefined,
+  diagnostics: DataGovernanceDiagnostic[],
+): void {
+  const tenantFieldId = subject?.tenantField;
+  const normalizedTenantFieldId = normalizeString(tenantFieldId);
+  if (!normalizedTenantFieldId) {
+    if (normalizeString(scope) === "tenant") {
+      diagnostics.push(
+        createDiagnostic({
+          code: DATA_GOVERNANCE_DIAGNOSTIC_CODES.subjectTenantFieldRequired,
+          message: "Tenant-scoped data governance resources must declare subject.tenantField",
+          path: `${resourcePath}.subject.tenantField`,
+          resourceKind,
+          target: "subject",
+        }),
+      );
+    }
+    return;
+  }
+
+  const tenantFieldIndex = fields.findIndex((field) => field.id === tenantFieldId);
+  const tenantField = fields[tenantFieldIndex];
+  if (!tenantField) {
+    diagnostics.push(
+      createDiagnostic({
+        code: DATA_GOVERNANCE_DIAGNOSTIC_CODES.subjectFieldUnknown,
+        fieldId: tenantFieldId,
+        message: `Data governance subject tenantField '${tenantFieldId}' is not declared in fields`,
+        path: `${resourcePath}.subject.tenantField`,
+        resourceKind,
+        target: "subject",
+      }),
+    );
+    return;
+  }
+
+  if (normalizeString(scope) !== "tenant") {
+    return;
+  }
+
+  const valueType = normalizeString(tenantField.valueType);
+  if (tenantField.valueType === "identifier") {
+    return;
+  }
+
+  if (valueType && subject?.tenantIdentifierOverride) {
+    validateRequiredString(
+      `${resourcePath}.subject.tenantIdentifierOverride.reason`,
+      subject.tenantIdentifierOverride.reason,
+      DATA_GOVERNANCE_DIAGNOSTIC_CODES.subjectTenantIdentifierOverrideReasonRequired,
+      `Tenant field '${normalizedTenantFieldId}' identifier override must declare a reason`,
+      "field",
+      diagnostics,
+      { fieldId: normalizedTenantFieldId, resourceKind },
+    );
+    return;
+  }
+
+  diagnostics.push(
+    createDiagnostic({
+      code: DATA_GOVERNANCE_DIAGNOSTIC_CODES.subjectTenantFieldTypeInvalid,
+      fieldId: normalizedTenantFieldId,
+      message: `Tenant field '${normalizedTenantFieldId}' must declare valueType 'identifier'`,
+      path: `${resourcePath}.fields[${tenantFieldIndex}].valueType`,
+      resourceKind,
+      target: "field",
+    }),
+  );
 }
 
 function collectRetentionPolicyIds(
@@ -960,7 +1039,7 @@ function validateRequiredString(
   message: string,
   target: DataGovernanceDiagnosticTarget,
   diagnostics: DataGovernanceDiagnostic[],
-  context: Pick<DataGovernanceDiagnostic, "capability" | "resourceKind"> = {},
+  context: Pick<DataGovernanceDiagnostic, "capability" | "fieldId" | "resourceKind"> = {},
 ): void {
   if (normalizeString(value)) {
     return;

@@ -48,6 +48,7 @@ export type {
   DataSubjectExportResult,
   DataSubjectIdentity,
   DataSubjectRequestAuditEvidence,
+  DataTenantIdentifierOverride,
   NonEmptyArray,
   RetentionPolicyCheck,
 } from "./libs/types";

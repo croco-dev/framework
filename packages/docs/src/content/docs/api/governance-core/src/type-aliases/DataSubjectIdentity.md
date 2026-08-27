@@ -27,6 +27,12 @@ title: "DataSubjectIdentity"
 
 ---
 
+### tenantIdentifierOverride?
+
+> `readonly` `optional` **tenantIdentifierOverride?**: [`DataTenantIdentifierOverride`](/api/governance-core/src/type-aliases/datatenantidentifieroverride/)
+
+---
+
 ### type
 
 > `readonly` **type**: `string`
