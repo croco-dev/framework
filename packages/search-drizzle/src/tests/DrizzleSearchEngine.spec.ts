@@ -185,6 +185,32 @@ describe("DrizzleSearchEngine", () => {
     expect(executeMock).toHaveBeenCalled();
   });
 
+  it("should delegate every bulk document through indexDocument", async () => {
+    engine = new DrizzleSearchEngine(mockDb, strategy);
+    const documents = [
+      { id: "1", tenantId: "tenant-123" },
+      { id: "2", tenantId: "tenant-123" },
+    ];
+    const options = { signal: new AbortController().signal };
+    const indexDocument = vi.spyOn(engine, "indexDocument");
+
+    await engine.bulkIndex("users", documents, options);
+
+    expect(indexDocument).toHaveBeenNthCalledWith(1, "users", documents[0], options);
+    expect(indexDocument).toHaveBeenNthCalledWith(2, "users", documents[1], options);
+  });
+
+  it("should preserve an empty bulk index as a tenant-independent no-op", async () => {
+    (Context.getTenantId as Mock).mockReturnValue(undefined);
+    engine = new DrizzleSearchEngine(mockDb, strategy);
+
+    await expect(engine.bulkIndex("users", [])).resolves.toBeUndefined();
+
+    expect(mockStrategy.checkCapability).toHaveBeenCalledOnce();
+    expect(Context.getTenantId).not.toHaveBeenCalled();
+    expect(executeMock).not.toHaveBeenCalled();
+  });
+
   it("should reject every pre-aborted operation before capability or database I/O", async () => {
     engine = new DrizzleSearchEngine(mockDb, strategy);
     const controller = new AbortController();

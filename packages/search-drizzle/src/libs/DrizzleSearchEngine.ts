@@ -126,11 +126,14 @@ export class DrizzleSearchEngine extends SearchEngine {
     options: SearchOperationOptions = {},
   ): Promise<void> {
     await this.ensureCapable("bulkIndex", options);
-    const tenantId = this.getTenantId("bulkIndex");
     for (const doc of documents) {
       throwIfSearchOperationAborted("bulkIndex", options);
-      const sql = this.strategy.buildIndexQuery(index, doc, tenantId);
-      await this.db.execute(sql);
+      try {
+        await this.indexDocument(index, doc, options);
+      } catch (error) {
+        throwIfSearchOperationAborted("bulkIndex", options);
+        throw error;
+      }
       throwIfSearchOperationAborted("bulkIndex", options);
     }
   }
