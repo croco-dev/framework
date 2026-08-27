@@ -15812,11 +15812,13 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       title: "Bad Request",
       cookbookPath: "/reference/problem-recovery-cookbook/#search-core-operation-aborted",
       recovery: {
-        cause: "The caller sent malformed input or unsupported request options.",
-        userAction: "Correct the request input and retry after validation passes.",
+        cause:
+          "The caller's AbortSignal was already aborted or became aborted while the search operation was in flight.",
+        userAction:
+          "Handle the cancellation and retry only when the operation is still needed, using a new non-aborted AbortSignal.",
         operatorAction:
-          "Inspect validation details and request logs; do not retry unchanged input.",
-        retryability: "not-retryable",
+          "Inspect the caller cancellation source and extensions.operation; do not treat the cancellation as an input-validation failure.",
+        retryability: "conditional",
         redactionPolicy: "public",
         telemetry: {
           eventName: "croco.problem.info",

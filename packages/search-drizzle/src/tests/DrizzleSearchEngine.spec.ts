@@ -41,6 +41,19 @@ const mockDb = {
   execute: executeMock,
 } as unknown as NodePgDatabase<Record<string, never>>;
 
+function createDeferred<T>(): {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+} {
+  let resolve = (_value: T): void => {
+    throw new Error("Deferred resolver was not initialized");
+  };
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}
+
 describe("DrizzleSearchEngine", () => {
   let engine!: DrizzleSearchEngine;
 
@@ -286,12 +299,8 @@ describe("DrizzleSearchEngine", () => {
   });
 
   it("should preserve a successful shared capability check when one caller aborts", async () => {
-    let resolveCapability!: (value: boolean) => void;
-    mockStrategy.checkCapability.mockReturnValueOnce(
-      new Promise<boolean>((resolve) => {
-        resolveCapability = resolve;
-      }),
-    );
+    const capability = createDeferred<boolean>();
+    mockStrategy.checkCapability.mockReturnValueOnce(capability.promise);
     engine = new DrizzleSearchEngine(mockDb, strategy);
     const controller = new AbortController();
 
@@ -303,7 +312,7 @@ describe("DrizzleSearchEngine", () => {
     const activeSearch = engine.search("users", { query: "active" });
     await vi.waitFor(() => expect(mockStrategy.checkCapability).toHaveBeenCalledOnce());
     controller.abort(new Error("request closed"));
-    resolveCapability(true);
+    capability.resolve(true);
 
     await expect(cancelledSearch).rejects.toBeInstanceOf(SearchOperationAbortedProblem);
     await expect(activeSearch).resolves.toMatchObject({ total: 0 });

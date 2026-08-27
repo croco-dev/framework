@@ -518,7 +518,7 @@ This cookbook documents 674 public Croco Problem codes. The deterministic JSON r
 | [`saas-demo/tenant-not-found`](#saas-demo-tenant-not-found)                                                                           | NotFound              |    404 | not-retryable | public        | active    |       1 |
 | [`SEARCH_CAPABILITY_UNAVAILABLE`](#search-capability-unavailable)                                                                     | NotImplemented        |    501 | not-retryable | public        | active    |       1 |
 | [`SEARCH_DRIZZLE_INVALID_ROW`](#search-drizzle-invalid-row)                                                                           | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
-| [`search-core/operation-aborted`](#search-core-operation-aborted)                                                                     | BadRequest            |    400 | not-retryable | public        | active    |       1 |
+| [`search-core/operation-aborted`](#search-core-operation-aborted)                                                                     | BadRequest            |    400 | conditional   | public        | active    |       1 |
 | [`search-core/searchable-index-conflict`](#search-core-searchable-index-conflict)                                                     | Conflict              |    409 | not-retryable | operator-only | active    |       1 |
 | [`search-core/sync-identity-conflict`](#search-core-sync-identity-conflict)                                                           | Conflict              |    409 | conditional   | safe-message  | active    |       1 |
 | [`search-core/transform-not-found`](#search-core-transform-not-found)                                                                 | NotFound              |    404 | not-retryable | public        | active    |       1 |
@@ -9786,12 +9786,12 @@ Sources:
 
 - Category: `BadRequest`
 - HTTP status: `400` Bad Request
-- Retryability: `not-retryable`
+- Retryability: `conditional`
 - Redaction policy: `public`
 - Lifecycle: `active`
-- Cause: The caller sent malformed input or unsupported request options.
-- User action: Correct the request input and retry after validation passes.
-- Operator action: Inspect validation details and request logs; do not retry unchanged input.
+- Cause: The caller's AbortSignal was already aborted or became aborted while the search operation was in flight.
+- User action: Handle the cancellation and retry only when the operation is still needed, using a new non-aborted AbortSignal.
+- Operator action: Inspect the caller cancellation source and extensions.operation; do not treat the cancellation as an input-validation failure.
 - Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:
