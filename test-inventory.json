@@ -3293,6 +3293,12 @@
       "owner": "@croco/storage-core"
     },
     {
+      "path": "packages/storage-core/src/tests/problems/StorageOperationAbortedProblem.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/storage-core"
+    },
+    {
       "path": "packages/storage-core/src/tests/problems/StorageProblem.spec.ts",
       "lane": "fast",
       "qualifiers": [],

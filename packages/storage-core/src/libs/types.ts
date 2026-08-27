@@ -3,9 +3,32 @@ export type StorageStream = ReadableStream<Uint8Array>;
 export type StorageBody = Uint8Array | StorageStream;
 
 /**
+ * 모든 비동기 스토리지 연산이 공유하는 호출 옵션입니다.
+ */
+export type StorageOperationOptions = {
+  /**
+   * 호출자 취소 신호입니다. 이미 취소된 신호는 원격 연산을 시작하기 전에 거부됩니다.
+   */
+  readonly signal?: AbortSignal;
+};
+
+/**
+ * 취소 가능한 스토리지 연산 이름입니다.
+ */
+export type StorageOperation =
+  | "put"
+  | "get"
+  | "getStream"
+  | "delete"
+  | "exists"
+  | "getSignedUrl"
+  | "getMetadata"
+  | "getUploadIntent";
+
+/**
  * 파일 업로드 옵션
  */
-export type PutOptions = {
+export type PutOptions = StorageOperationOptions & {
   /**
    * Content-Type (MIME type)
    */
@@ -30,11 +53,21 @@ export type PutOptions = {
 /**
  * 서명된 URL 생성 옵션
  */
-export type SignedUrlOptions = {
+export type SignedUrlOptions = StorageOperationOptions & {
   /**
    * URL 만료 시간 (초 단위). 1초 이상 604,800초(7일) 이하의 안전한 정수여야 합니다.
    */
   expiresIn: number;
+};
+
+/**
+ * 클라이언트 직접 업로드 의도 생성 옵션입니다.
+ */
+export type UploadIntentOptions = StorageOperationOptions & {
+  /**
+   * 업로드 의도 만료 시간 (초 단위)
+   */
+  ttlInSeconds?: number;
 };
 
 /**
@@ -154,7 +187,7 @@ export type StorageProvider = {
    * @returns 파일 바이트
    * @throws FileNotFoundProblem - 파일이 존재하지 않을 때
    */
-  get(key: string): Promise<Uint8Array>;
+  get(key: string, options?: StorageOperationOptions): Promise<Uint8Array>;
 
   /**
    * 파일 스트림 다운로드
@@ -163,21 +196,23 @@ export type StorageProvider = {
    * @returns Web 읽기 가능 스트림
    * @throws FileNotFoundProblem - 파일이 존재하지 않을 때
    */
-  getStream(key: string): Promise<StorageStream>;
+  getStream(key: string, options?: StorageOperationOptions): Promise<StorageStream>;
 
   /**
    * 파일 삭제
    *
    * @param key - 파일 식별자
+   * @param options - 공통 연산 옵션
    */
-  delete(key: string): Promise<void>;
+  delete(key: string, options?: StorageOperationOptions): Promise<void>;
 
   /**
    * 파일 존재 여부 확인
    *
    * @param key - 파일 식별자
+   * @param options - 공통 연산 옵션
    */
-  exists(key: string): Promise<boolean>;
+  exists(key: string, options?: StorageOperationOptions): Promise<boolean>;
 
   /**
    * 공개 URL 반환
@@ -200,10 +235,11 @@ export type StorageProvider = {
    * 객체 메타데이터 조회
    *
    * @param key - 파일 식별자
+   * @param options - 공통 연산 옵션
    * @returns 객체 메타데이터
    * @throws FileNotFoundProblem - 파일이 존재하지 않을 때
    */
-  getMetadata(key: string): Promise<ObjectMetadata>;
+  getMetadata(key: string, options?: StorageOperationOptions): Promise<ObjectMetadata>;
 };
 
 /**
@@ -228,7 +264,8 @@ export type ImageProvider = {
    * 클라이언트 직접 업로드를 위한 의도 생성 (선택)
    *
    * @param key - 업로드할 파일 식별자
+   * @param options - 만료 시간과 공통 연산 옵션
    * @returns 업로드 의도 정보
    */
-  getUploadIntent?(key: string, options?: { ttlInSeconds?: number }): Promise<UploadIntent>;
+  getUploadIntent?(key: string, options?: UploadIntentOptions): Promise<UploadIntent>;
 };

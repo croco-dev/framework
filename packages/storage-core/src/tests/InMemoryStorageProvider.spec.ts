@@ -7,6 +7,7 @@ import { InMemoryStorageProvider } from "../libs/InMemoryStorageProvider";
 import { FileNotFoundProblem } from "../libs/problems/FileNotFoundProblem";
 import { InvalidKeyProblem } from "../libs/problems/InvalidKeyProblem";
 import { readStorageStream } from "../libs/storageBody";
+import { StorageOperationAbortedProblem } from "../libs/problems/StorageOperationAbortedProblem";
 
 const INVALID_SIGNED_URL_EXPIRY_MESSAGE = `Signed URL expiry must be a positive safe integer no greater than ${MAX_SIGNED_URL_EXPIRY_SECONDS} seconds`;
 
@@ -85,6 +86,112 @@ describe("InMemoryStorageProvider", () => {
       await expect(provider.put("invalid//key", Buffer.from("data"))).rejects.toThrow(
         InvalidKeyProblem,
       );
+    });
+
+    it("스트림 업로드 중 취소되면 원인을 보존하고 객체를 저장하지 않음", async () => {
+      const controller = new AbortController();
+      const reason = new Error("request deadline reached");
+      const source = new ReadableStream<Uint8Array>({ pull() {} });
+
+      const upload = provider.put("test/aborted-stream.txt", source, {
+        signal: controller.signal,
+      });
+      controller.abort(reason);
+
+      await expect(upload).rejects.toMatchObject({
+        cause: reason,
+        code: "STORAGE_OPERATION_ABORTED",
+        extensions: {
+          key: "test/aborted-stream.txt",
+          operation: "put",
+        },
+      });
+      await expect(provider.exists("test/aborted-stream.txt")).resolves.toBe(false);
+    });
+
+    it("스트림 업로드 중 non-Error 취소 사유도 cause chain에 보존", async () => {
+      const controller = new AbortController();
+      const reason = { deadline: 5000, source: "request" };
+      const source = new ReadableStream<Uint8Array>({ pull() {} });
+
+      const upload = provider.put("test/structured-abort.txt", source, {
+        signal: controller.signal,
+      });
+      controller.abort(reason);
+
+      await expect(upload).rejects.toSatisfy((error: unknown) => {
+        if (!(error instanceof StorageOperationAbortedProblem) || !(error.cause instanceof Error)) {
+          return false;
+        }
+
+        return Reflect.get(error.cause, "cause") === reason;
+      });
+      await expect(provider.exists("test/structured-abort.txt")).resolves.toBe(false);
+    });
+
+    it("호출자 signal 없이 발생한 AbortError를 취소 Problem으로 오분류하지 않음", async () => {
+      const sourceError = new DOMException("provider stream aborted", "AbortError");
+      const source = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.error(sourceError);
+        },
+      });
+
+      await expect(provider.put("test/provider-abort.txt", source)).rejects.toMatchObject({
+        cause: sourceError,
+        code: "STORAGE_UPLOAD_FAILED",
+      });
+    });
+  });
+
+  describe("operation cancellation", () => {
+    it("이미 취소된 signal을 모든 비동기 연산에서 동일한 Problem으로 거부", async () => {
+      await provider.put("test/cancellation.txt", Buffer.from("content"));
+      const controller = new AbortController();
+      const reason = new Error("caller disconnected");
+      controller.abort(reason);
+
+      const operations = [
+        provider.put("test/new.txt", Buffer.from("new"), { signal: controller.signal }),
+        provider.get("test/cancellation.txt", { signal: controller.signal }),
+        provider.getStream("test/cancellation.txt", { signal: controller.signal }),
+        provider.delete("test/cancellation.txt", { signal: controller.signal }),
+        provider.exists("test/cancellation.txt", { signal: controller.signal }),
+        provider.getSignedUrl("test/cancellation.txt", {
+          expiresIn: 60,
+          signal: controller.signal,
+        }),
+        provider.getMetadata("test/cancellation.txt", { signal: controller.signal }),
+      ];
+
+      for (const operation of operations) {
+        await expect(operation).rejects.toBeInstanceOf(StorageOperationAbortedProblem);
+        await expect(operation).rejects.toMatchObject({
+          cause: reason,
+          code: "STORAGE_OPERATION_ABORTED",
+        });
+      }
+
+      await expect(provider.get("test/cancellation.txt")).resolves.toEqual(Buffer.from("content"));
+      await expect(provider.exists("test/new.txt")).resolves.toBe(false);
+    });
+
+    it.each([
+      ["primitive", "shutdown deadline"],
+      ["structured", { source: "request", deadline: 5000 }],
+    ])("%s abort reason을 Error cause에 손실 없이 보존", async (_name, reason) => {
+      const controller = new AbortController();
+      controller.abort(reason);
+
+      const operation = provider.get("test/cancellation.txt", { signal: controller.signal });
+
+      await expect(operation).rejects.toSatisfy((error: unknown) => {
+        if (!(error instanceof StorageOperationAbortedProblem) || !(error.cause instanceof Error)) {
+          return false;
+        }
+
+        return Reflect.get(error.cause, "cause") === reason;
+      });
     });
   });
 

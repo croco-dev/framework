@@ -6,7 +6,9 @@ import {
   MAX_SIGNED_URL_EXPIRY_SECONDS,
   readStorageStream,
   storageStreamFromBytes,
+  StorageOperationAbortedProblem,
   type ObjectMetadata,
+  type StorageOperation,
   type StorageProvider,
 } from "@croco/storage-core";
 
@@ -185,6 +187,42 @@ export function createStorageProviderConformanceSuite(
                 return true;
               },
             );
+          }
+        },
+      },
+      {
+        name: "rejects pre-aborted operations before provider I/O with preserved evidence",
+        run: async () => {
+          const provider = await createProvider();
+          const key = createKey("pre-aborted");
+          const controller = new AbortController();
+          const reason = new Error("storage conformance cancellation");
+          controller.abort(reason);
+
+          const operations: readonly [StorageOperation, () => Promise<unknown>][] = [
+            [
+              "put",
+              () => provider.put(key, Buffer.from("cancelled"), { signal: controller.signal }),
+            ],
+            ["get", () => provider.get(key, { signal: controller.signal })],
+            ["getStream", () => provider.getStream(key, { signal: controller.signal })],
+            ["delete", () => provider.delete(key, { signal: controller.signal })],
+            ["exists", () => provider.exists(key, { signal: controller.signal })],
+            [
+              "getSignedUrl",
+              () => provider.getSignedUrl(key, { expiresIn: 60, signal: controller.signal }),
+            ],
+            ["getMetadata", () => provider.getMetadata(key, { signal: controller.signal })],
+          ];
+
+          for (const [operation, execute] of operations) {
+            await assert.rejects(execute, (error: unknown) => {
+              assert.ok(error instanceof StorageOperationAbortedProblem);
+              assert.equal(error.cause, reason);
+              assert.equal(error.extensions?.["operation"], operation);
+              assert.equal(error.extensions?.["key"], key);
+              return true;
+            });
           }
         },
       },

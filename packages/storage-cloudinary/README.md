@@ -52,14 +52,15 @@ const response = await fetch(intent.uploadUrl, {
 
 ## 설정
 
-| 옵션            | 설명                                      |
-| --------------- | ----------------------------------------- |
-| `cloudName`     | Cloudinary 클라우드 이름                  |
-| `apiKey`        | API 키                                    |
-| `apiSecret`     | API 시크릿                                |
-| `secure`        | HTTPS 사용 여부, 기본값은 `true`          |
-| `uploadBaseUrl` | 업로드 인텐트 생성 시 사용할 API 기준 URL |
-| `ttl`           | 업로드 인텐트 만료 시간, 1-3600초         |
+| 옵션            | 설명                                              |
+| --------------- | ------------------------------------------------- |
+| `cloudName`     | Cloudinary 클라우드 이름                          |
+| `apiKey`        | API 키                                            |
+| `apiSecret`     | API 시크릿                                        |
+| `secure`        | HTTPS 사용 여부, 기본값은 `true`                  |
+| `uploadBaseUrl` | 업로드 인텐트 생성 시 사용할 API 기준 URL         |
+| `apiBaseUrl`    | 서버 측 Cloudinary API 요청에 사용할 API 기준 URL |
+| `ttl`           | 업로드 인텐트 만료 시간, 1-3600초                 |
 
 ## API 레퍼런스
 

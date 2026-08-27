@@ -3,6 +3,7 @@ import {
   FileNotFoundProblem,
   MAX_SIGNED_URL_EXPIRY_SECONDS,
   storageStreamFromBytes,
+  StorageOperationAbortedProblem,
   UploadFailedProblem,
 } from "@croco/storage-core";
 import { createStorageProviderConformanceSuite } from "@croco/testing";
@@ -94,6 +95,83 @@ describe("CloudflareImagesProvider", () => {
     it("should initialize with custom domain", () => {
       const newProvider = new CloudflareImagesProvider(mockOptionsWithCustomDomain);
       expect(newProvider).not.toBeUndefined();
+    });
+  });
+
+  describe("operation cancellation", () => {
+    it("rejects every async operation before provider work starts when signal is pre-aborted", async () => {
+      const controller = new AbortController();
+      const reason = new Error("request was cancelled");
+      controller.abort(reason);
+
+      const operations = [
+        () => provider.put("test.jpg", Buffer.from("image"), { signal: controller.signal }),
+        () => provider.get("test.jpg", { signal: controller.signal }),
+        () => provider.getStream("test.jpg", { signal: controller.signal }),
+        () => provider.delete("test.jpg", { signal: controller.signal }),
+        () => provider.exists("test.jpg", { signal: controller.signal }),
+        () =>
+          provider.getSignedUrl("test.jpg", {
+            expiresIn: 60,
+            signal: controller.signal,
+          }),
+        () => provider.getMetadata("test.jpg", { signal: controller.signal }),
+        () => provider.getUploadIntent("test.jpg", { signal: controller.signal }),
+      ];
+
+      for (const operation of operations) {
+        await expect(operation()).rejects.toBeInstanceOf(StorageOperationAbortedProblem);
+        await expect(operation()).rejects.toMatchObject({
+          cause: reason,
+          code: "STORAGE_OPERATION_ABORTED",
+        });
+      }
+
+      expect(mockFetch).not.toHaveBeenCalled();
+      expect(mockCryptoImportKey).not.toHaveBeenCalled();
+      expect(mockCryptoSign).not.toHaveBeenCalled();
+    });
+
+    it("passes signal to fetch and preserves an in-flight abort reason", async () => {
+      const controller = new AbortController();
+      const reason = new Error("shutdown deadline reached");
+      mockFetch.mockImplementationOnce(
+        async (_input: string, init: RequestInit) =>
+          await new Promise<Response>((_resolve, reject) => {
+            init.signal?.addEventListener("abort", () => reject(init.signal?.reason), {
+              once: true,
+            });
+          }),
+      );
+
+      const download = provider.get("test.jpg", { signal: controller.signal });
+      await vi.waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
+      controller.abort(reason);
+
+      await expect(download).rejects.toMatchObject({
+        cause: reason,
+        code: "STORAGE_OPERATION_ABORTED",
+        extensions: {
+          key: "test.jpg",
+          operation: "get",
+        },
+      });
+      expect((mockFetch.mock.calls[0]?.[1] as RequestInit).signal).toBe(controller.signal);
+    });
+
+    it("aborts stream collection before an upload request is created", async () => {
+      const controller = new AbortController();
+      const reason = new Error("upload cancelled");
+      const source = new ReadableStream<Uint8Array>({ pull() {} });
+
+      const upload = provider.put("test.jpg", source, { signal: controller.signal });
+      controller.abort(reason);
+
+      await expect(upload).rejects.toMatchObject({
+        cause: reason,
+        code: "STORAGE_OPERATION_ABORTED",
+      });
+      expect(mockFetch).not.toHaveBeenCalled();
     });
   });
 

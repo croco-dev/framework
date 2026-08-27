@@ -1,5 +1,5 @@
+import { BaseStorageProvider } from "./BaseStorageProvider";
 import { FileNotFoundProblem } from "./problems/FileNotFoundProblem";
-import { InvalidKeyProblem } from "./problems/InvalidKeyProblem";
 import { UploadFailedProblem } from "./problems/UploadFailedProblem";
 import { validateSignedUrlExpiry } from "./signedUrlExpiry";
 import { readStorageBody, storageStreamFromBytes } from "./storageBody";
@@ -8,8 +8,8 @@ import type {
   PutOptions,
   SignedUrlOptions,
   StorageBody,
-  StorageProvider,
   StorageStream,
+  StorageOperationOptions,
 } from "./types";
 
 type StoredObject = {
@@ -23,19 +23,25 @@ type StoredObject = {
  * Map을 사용하여 파일을 메모리에 저장합니다. 실제 운영 환경에서는 사용하지 말고
  * 테스트나 개발 환경에서만 사용하세요.
  */
-export class InMemoryStorageProvider implements StorageProvider {
+export class InMemoryStorageProvider extends BaseStorageProvider {
   private storage = new Map<string, StoredObject>();
   private baseUrl: string;
 
   constructor(baseUrl: string = "https://example.com") {
+    super();
     this.baseUrl = baseUrl;
   }
 
   async put(key: string, data: StorageBody, options?: PutOptions): Promise<void> {
+    this.assertOperationNotAborted(options, "put", key);
     this.validateKey(key);
 
     try {
-      const bytes = await readStorageBody(data);
+      const body =
+        data instanceof Uint8Array ? data : this.bindOperationSignal(data, options, "put", key);
+      const bytes = await readStorageBody(body);
+
+      this.assertOperationNotAborted(options, "put", key);
 
       const metadata: ObjectMetadata = {
         size: bytes.byteLength,
@@ -46,11 +52,17 @@ export class InMemoryStorageProvider implements StorageProvider {
 
       this.storage.set(key, { data: bytes, metadata });
     } catch (error) {
-      throw new UploadFailedProblem(key, error instanceof Error ? error.message : "Unknown error");
+      this.rethrowOperationAbort(error, options, "put", key);
+      throw new UploadFailedProblem(
+        key,
+        error instanceof Error ? error.message : "Unknown error",
+        error instanceof Error ? error : undefined,
+      );
     }
   }
 
-  async get(key: string): Promise<Uint8Array> {
+  async get(key: string, options?: StorageOperationOptions): Promise<Uint8Array> {
+    this.assertOperationNotAborted(options, "get", key);
     this.validateKey(key);
 
     const object = this.storage.get(key);
@@ -62,7 +74,8 @@ export class InMemoryStorageProvider implements StorageProvider {
     return object.data;
   }
 
-  async getStream(key: string): Promise<StorageStream> {
+  async getStream(key: string, options?: StorageOperationOptions): Promise<StorageStream> {
+    this.assertOperationNotAborted(options, "getStream", key);
     this.validateKey(key);
 
     const object = this.storage.get(key);
@@ -71,10 +84,11 @@ export class InMemoryStorageProvider implements StorageProvider {
       throw new FileNotFoundProblem(key);
     }
 
-    return storageStreamFromBytes(object.data);
+    return this.bindOperationSignal(storageStreamFromBytes(object.data), options, "getStream", key);
   }
 
-  async delete(key: string): Promise<void> {
+  async delete(key: string, options?: StorageOperationOptions): Promise<void> {
+    this.assertOperationNotAborted(options, "delete", key);
     this.validateKey(key);
 
     if (!this.storage.has(key)) {
@@ -84,7 +98,8 @@ export class InMemoryStorageProvider implements StorageProvider {
     this.storage.delete(key);
   }
 
-  async exists(key: string): Promise<boolean> {
+  async exists(key: string, options?: StorageOperationOptions): Promise<boolean> {
+    this.assertOperationNotAborted(options, "exists", key);
     this.validateKey(key);
 
     return this.storage.has(key);
@@ -97,6 +112,7 @@ export class InMemoryStorageProvider implements StorageProvider {
   }
 
   async getSignedUrl(key: string, options: SignedUrlOptions): Promise<string> {
+    this.assertOperationNotAborted(options, "getSignedUrl", key);
     this.validateKey(key);
     const expiresIn = validateSignedUrlExpiry(options.expiresIn);
 
@@ -108,7 +124,8 @@ export class InMemoryStorageProvider implements StorageProvider {
     return `${this.baseUrl}/${key}?expires=${expiresAt}`;
   }
 
-  async getMetadata(key: string): Promise<ObjectMetadata> {
+  async getMetadata(key: string, options?: StorageOperationOptions): Promise<ObjectMetadata> {
+    this.assertOperationNotAborted(options, "getMetadata", key);
     this.validateKey(key);
 
     const object = this.storage.get(key);
@@ -123,20 +140,6 @@ export class InMemoryStorageProvider implements StorageProvider {
         lastModified: new Date(),
       }
     );
-  }
-
-  private validateKey(key: string): void {
-    if (!key || typeof key !== "string") {
-      throw new InvalidKeyProblem(key, "Key must be a non-empty string");
-    }
-
-    if (key.startsWith("/") || key.endsWith("/")) {
-      throw new InvalidKeyProblem(key, "Key must not start or end with /");
-    }
-
-    if (key.includes("//")) {
-      throw new InvalidKeyProblem(key, "Key must not contain //");
-    }
   }
 
   clear(): void {

@@ -47,7 +47,7 @@ AWS S3 SDK를 사용하여 R2와 통신합니다.
 
 ### delete()
 
-> **delete**(`key`): `Promise`\<`void`\>
+> **delete**(`key`, `options?`): `Promise`\<`void`\>
 
 파일 삭제
 
@@ -59,6 +59,12 @@ AWS S3 SDK를 사용하여 R2와 통신합니다.
 
 파일 식별자
 
+##### options?
+
+[`StorageOperationOptions`](/api/storage-core/src/type-aliases/storageoperationoptions/)
+
+공통 연산 옵션
+
 #### Returns
 
 `Promise`\<`void`\>
@@ -67,11 +73,11 @@ AWS S3 SDK를 사용하여 R2와 통신합니다.
 
 [`BaseStorageProvider`](/api/storage-core/src/classes/basestorageprovider/).[`delete`](/api/storage-core/src/classes/basestorageprovider/#delete)
 
----
+***
 
 ### exists()
 
-> **exists**(`key`): `Promise`\<`boolean`\>
+> **exists**(`key`, `options?`): `Promise`\<`boolean`\>
 
 파일 존재 여부 확인
 
@@ -83,19 +89,25 @@ AWS S3 SDK를 사용하여 R2와 통신합니다.
 
 파일 식별자
 
+##### options?
+
+[`StorageOperationOptions`](/api/storage-core/src/type-aliases/storageoperationoptions/)
+
+공통 연산 옵션
+
 #### Returns
 
 `Promise`\<`boolean`\>
 
-#### Inherited from
+#### Overrides
 
 [`BaseStorageProvider`](/api/storage-core/src/classes/basestorageprovider/).[`exists`](/api/storage-core/src/classes/basestorageprovider/#exists)
 
----
+***
 
 ### get()
 
-> **get**(`key`): `Promise`\<`Uint8Array`\<`ArrayBufferLike`\>\>
+> **get**(`key`, `options?`): `Promise`\<`Uint8Array`\<`ArrayBufferLike`\>\>
 
 파일 다운로드
 
@@ -106,6 +118,10 @@ AWS S3 SDK를 사용하여 R2와 통신합니다.
 `string`
 
 파일 식별자
+
+##### options?
+
+[`StorageOperationOptions`](/api/storage-core/src/type-aliases/storageoperationoptions/)
 
 #### Returns
 
@@ -121,11 +137,11 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 [`BaseStorageProvider`](/api/storage-core/src/classes/basestorageprovider/).[`get`](/api/storage-core/src/classes/basestorageprovider/#get)
 
----
+***
 
 ### getMetadata()
 
-> **getMetadata**(`key`): `Promise`\<[`ObjectMetadata`](/api/storage-core/src/type-aliases/objectmetadata/)\>
+> **getMetadata**(`key`, `options?`): `Promise`\<[`ObjectMetadata`](/api/storage-core/src/type-aliases/objectmetadata/)\>
 
 객체 메타데이터 조회
 
@@ -136,6 +152,12 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 `string`
 
 파일 식별자
+
+##### options?
+
+[`StorageOperationOptions`](/api/storage-core/src/type-aliases/storageoperationoptions/)
+
+공통 연산 옵션
 
 #### Returns
 
@@ -151,7 +173,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 [`BaseStorageProvider`](/api/storage-core/src/classes/basestorageprovider/).[`getMetadata`](/api/storage-core/src/classes/basestorageprovider/#getmetadata)
 
----
+***
 
 ### getPublicUrl()
 
@@ -177,7 +199,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 [`BaseStorageProvider`](/api/storage-core/src/classes/basestorageprovider/).[`getPublicUrl`](/api/storage-core/src/classes/basestorageprovider/#getpublicurl)
 
----
+***
 
 ### getSignedUrl()
 
@@ -209,11 +231,11 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 [`BaseStorageProvider`](/api/storage-core/src/classes/basestorageprovider/).[`getSignedUrl`](/api/storage-core/src/classes/basestorageprovider/#getsignedurl)
 
----
+***
 
 ### getStream()
 
-> **getStream**(`key`): `Promise`\<[`StorageStream`](/api/storage-core/src/type-aliases/storagestream/)\>
+> **getStream**(`key`, `options?`): `Promise`\<[`StorageStream`](/api/storage-core/src/type-aliases/storagestream/)\>
 
 파일 스트림 다운로드
 
@@ -224,6 +246,10 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 `string`
 
 파일 식별자
+
+##### options?
+
+[`StorageOperationOptions`](/api/storage-core/src/type-aliases/storageoperationoptions/)
 
 #### Returns
 
@@ -239,7 +265,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 [`BaseStorageProvider`](/api/storage-core/src/classes/basestorageprovider/).[`getStream`](/api/storage-core/src/classes/basestorageprovider/#getstream)
 
----
+***
 
 ### put()
 

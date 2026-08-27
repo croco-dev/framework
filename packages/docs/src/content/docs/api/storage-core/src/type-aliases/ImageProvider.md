@@ -42,7 +42,7 @@ CDN에서 실시간으로 이미지를 변환하고 반환합니다.
 
 변환된 이미지의 공개 URL
 
----
+***
 
 ### getUploadIntent()?
 
@@ -60,9 +60,9 @@ CDN에서 실시간으로 이미지를 변환하고 반환합니다.
 
 ##### options?
 
-###### ttlInSeconds?
+[`UploadIntentOptions`](/api/storage-core/src/type-aliases/uploadintentoptions/)
 
-`number`
+만료 시간과 공통 연산 옵션
 
 #### Returns
 

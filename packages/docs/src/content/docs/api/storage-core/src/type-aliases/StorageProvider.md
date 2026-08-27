@@ -15,7 +15,7 @@ title: "StorageProvider"
 
 ### delete()
 
-> **delete**(`key`): `Promise`\<`void`\>
+> **delete**(`key`, `options?`): `Promise`\<`void`\>
 
 파일 삭제
 
@@ -27,15 +27,21 @@ title: "StorageProvider"
 
 파일 식별자
 
+##### options?
+
+[`StorageOperationOptions`](/api/storage-core/src/type-aliases/storageoperationoptions/)
+
+공통 연산 옵션
+
 #### Returns
 
 `Promise`\<`void`\>
 
----
+***
 
 ### exists()
 
-> **exists**(`key`): `Promise`\<`boolean`\>
+> **exists**(`key`, `options?`): `Promise`\<`boolean`\>
 
 파일 존재 여부 확인
 
@@ -47,15 +53,21 @@ title: "StorageProvider"
 
 파일 식별자
 
+##### options?
+
+[`StorageOperationOptions`](/api/storage-core/src/type-aliases/storageoperationoptions/)
+
+공통 연산 옵션
+
 #### Returns
 
 `Promise`\<`boolean`\>
 
----
+***
 
 ### get()
 
-> **get**(`key`): `Promise`\<`Uint8Array`\<`ArrayBufferLike`\>\>
+> **get**(`key`, `options?`): `Promise`\<`Uint8Array`\<`ArrayBufferLike`\>\>
 
 파일 다운로드
 
@@ -67,6 +79,10 @@ title: "StorageProvider"
 
 파일 식별자
 
+##### options?
+
+[`StorageOperationOptions`](/api/storage-core/src/type-aliases/storageoperationoptions/)
+
 #### Returns
 
 `Promise`\<`Uint8Array`\<`ArrayBufferLike`\>\>
@@ -77,11 +93,11 @@ title: "StorageProvider"
 
 FileNotFoundProblem - 파일이 존재하지 않을 때
 
----
+***
 
 ### getMetadata()
 
-> **getMetadata**(`key`): `Promise`\<[`ObjectMetadata`](/api/storage-core/src/type-aliases/objectmetadata/)\>
+> **getMetadata**(`key`, `options?`): `Promise`\<[`ObjectMetadata`](/api/storage-core/src/type-aliases/objectmetadata/)\>
 
 객체 메타데이터 조회
 
@@ -93,6 +109,12 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 파일 식별자
 
+##### options?
+
+[`StorageOperationOptions`](/api/storage-core/src/type-aliases/storageoperationoptions/)
+
+공통 연산 옵션
+
 #### Returns
 
 `Promise`\<[`ObjectMetadata`](/api/storage-core/src/type-aliases/objectmetadata/)\>
@@ -103,7 +125,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 FileNotFoundProblem - 파일이 존재하지 않을 때
 
----
+***
 
 ### getPublicUrl()
 
@@ -125,7 +147,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 공개 액세스 가능한 URL
 
----
+***
 
 ### getSignedUrl()
 
@@ -153,11 +175,11 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 서명된 URL
 
----
+***
 
 ### getStream()
 
-> **getStream**(`key`): `Promise`\<[`StorageStream`](/api/storage-core/src/type-aliases/storagestream/)\>
+> **getStream**(`key`, `options?`): `Promise`\<[`StorageStream`](/api/storage-core/src/type-aliases/storagestream/)\>
 
 파일 스트림 다운로드
 
@@ -169,6 +191,10 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 파일 식별자
 
+##### options?
+
+[`StorageOperationOptions`](/api/storage-core/src/type-aliases/storageoperationoptions/)
+
 #### Returns
 
 `Promise`\<[`StorageStream`](/api/storage-core/src/type-aliases/storagestream/)\>
@@ -179,7 +205,7 @@ Web 읽기 가능 스트림
 
 FileNotFoundProblem - 파일이 존재하지 않을 때
 
----
+***
 
 ### put()
 
