@@ -14304,6 +14304,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "ImpersonationSessionActorMismatchProblem",
+              "exportKind": "declaration",
+              "source": "./libs/problems/ImpersonationProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "ImpersonationSessionNotFoundProblem",
               "exportKind": "declaration",
               "source": "./libs/problems/ImpersonationProblems",
@@ -14399,6 +14405,12 @@
               "name": "ImpersonationPrincipal",
               "exportKind": "declaration",
               "source": "./libs/interfaces",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ImpersonationRevocationResult",
+              "exportKind": "declaration",
+              "source": "./libs/types",
               "declarationKind": "type"
             },
             {

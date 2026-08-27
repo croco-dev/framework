@@ -5,12 +5,16 @@ import type { RequestContext } from "@croco/framework-context";
 import { Container } from "@croco/framework-context";
 import { ProblemCategory } from "@croco/problems-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ImpersonationStartedEvent } from "../libs/events";
+import { ImpersonationEndedEvent, ImpersonationStartedEvent } from "../libs/events";
 import { ImpersonationService } from "../libs/ImpersonationService";
 import { InMemoryImpersonationStore } from "../libs/InMemoryImpersonationStore";
 import { AuthProvider, type ImpersonationPrincipal, ImpersonationStore } from "../libs/interfaces";
 import { InvalidImpersonationConfigurationProblem } from "../libs/problems/ImpersonationProblems";
-import type { ImpersonationConfig, ImpersonationState } from "../libs/types";
+import type {
+  ImpersonationConfig,
+  ImpersonationRevocationResult,
+  ImpersonationState,
+} from "../libs/types";
 
 class MockEventBus implements EventBus {
   readonly events: DomainEvent[] = [];
@@ -31,6 +35,8 @@ class MockEventBus implements EventBus {
 class MockImpersonationStore extends ImpersonationStore {
   private readonly sessions = new Map<string, ImpersonationState>();
   createCount = 0;
+  revokeAttemptCount = 0;
+  revokeCount = 0;
 
   async createIfNoActiveSession(session: ImpersonationState) {
     for (const existing of this.sessions.values()) {
@@ -56,8 +62,19 @@ class MockImpersonationStore extends ImpersonationStore {
     return null;
   }
 
-  async revoke(sessionId: string): Promise<void> {
+  async revoke(sessionId: string, impersonatorId: string): Promise<ImpersonationRevocationResult> {
+    this.revokeAttemptCount++;
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      return { outcome: "not-found" };
+    }
+    if (session.impersonatorId !== impersonatorId) {
+      return { outcome: "actor-mismatch" };
+    }
+
+    this.revokeCount++;
     this.sessions.delete(sessionId);
+    return { outcome: "revoked", session };
   }
 }
 
@@ -465,18 +482,127 @@ describe("ImpersonationService", () => {
   });
 
   describe("end", () => {
-    it("revokes an existing session", async () => {
+    const startSession = async (): Promise<ImpersonationState> => {
       const session = await service.start(context("admin-1"), "user-123");
+      eventBus.clear();
+      return session;
+    };
 
-      await service.end(session.sessionId);
+    const expectNoEndSideEffects = async (sessionId: string): Promise<void> => {
+      expect(store.revokeCount).toBe(0);
+      expect(await store.find(sessionId)).not.toBeNull();
+      expect(eventBus.events).toHaveLength(0);
+    };
 
+    it("rejects unauthenticated callers before a store revocation attempt", async () => {
+      const session = await startSession();
+      authProvider.principal = null;
+
+      await expect(service.end(context(), session.sessionId)).rejects.toMatchObject({
+        code: "UNAUTHORIZED",
+      });
+
+      expect(store.revokeAttemptCount).toBe(0);
+      await expectNoEndSideEffects(session.sessionId);
+    });
+
+    it("rejects callers without global manage permission before a store revocation attempt", async () => {
+      const session = await startSession();
+      authProvider.principal = {
+        id: "admin-1",
+        permissions: ["impersonation:read"],
+      };
+
+      await expect(service.end(context("admin-1"), session.sessionId)).rejects.toMatchObject({
+        code: "FORBIDDEN",
+      });
+
+      expect(store.revokeAttemptCount).toBe(0);
+      await expectNoEndSideEffects(session.sessionId);
+    });
+
+    it("rejects scoped manage permission before a store revocation attempt", async () => {
+      const session = await startSession();
+      authProvider.principal = {
+        id: "admin-1",
+        permissions: ["impersonation:manage:tenant-1"],
+      };
+
+      await expect(service.end(context("admin-1"), session.sessionId)).rejects.toMatchObject({
+        code: "FORBIDDEN",
+      });
+
+      expect(store.revokeAttemptCount).toBe(0);
+      await expectNoEndSideEffects(session.sessionId);
+    });
+
+    it("rejects contradictory context identity before a store revocation attempt", async () => {
+      const session = await startSession();
+
+      await expect(service.end(context("forged-admin"), session.sessionId)).rejects.toMatchObject({
+        code: "IMPERSONATION_IDENTITY_CONFLICT",
+      });
+
+      expect(store.revokeAttemptCount).toBe(0);
+      await expectNoEndSideEffects(session.sessionId);
+    });
+
+    it("rejects a different privileged actor without revoking or publishing", async () => {
+      const session = await startSession();
+      authProvider.principal = {
+        id: "admin-2",
+        permissions: ["impersonation:manage"],
+      };
+
+      await expect(service.end(context("admin-2"), session.sessionId)).rejects.toMatchObject({
+        code: "IMPERSONATION_SESSION_ACTOR_MISMATCH",
+      });
+
+      expect(store.revokeAttemptCount).toBe(1);
+      await expectNoEndSideEffects(session.sessionId);
+    });
+
+    it("revokes once and publishes for the authenticated impersonator", async () => {
+      const session = await startSession();
+
+      await service.end(context("admin-1"), session.sessionId);
+
+      expect(store.revokeCount).toBe(1);
       expect(await store.find(session.sessionId)).toBeNull();
+      expect(eventBus.events).toHaveLength(1);
+      expect(eventBus.events[0]).toBeInstanceOf(ImpersonationEndedEvent);
+      expect((eventBus.events[0] as ImpersonationEndedEvent).session).toEqual(session);
+    });
+
+    it("revokes and publishes once when authorized endings race", async () => {
+      const session = await startSession();
+
+      const results = await Promise.allSettled([
+        service.end(context("admin-1"), session.sessionId),
+        service.end(context("admin-1"), session.sessionId),
+      ]);
+
+      expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+      expect(results.filter((result) => result.status === "rejected")).toEqual([
+        expect.objectContaining({
+          reason: expect.objectContaining({ code: "IMPERSONATION_SESSION_NOT_FOUND" }),
+        }),
+      ]);
+      expect(store.revokeAttemptCount).toBe(2);
+      expect(store.revokeCount).toBe(1);
+      expect(await store.find(session.sessionId)).toBeNull();
+      expect(eventBus.events).toHaveLength(1);
+      expect(eventBus.events[0]).toBeInstanceOf(ImpersonationEndedEvent);
     });
 
     it("rejects a missing session", async () => {
-      await expect(service.end("non-existent-session")).rejects.toMatchObject({
+      await expect(service.end(context("admin-1"), "non-existent-session")).rejects.toMatchObject({
         code: "IMPERSONATION_SESSION_NOT_FOUND",
       });
+
+      expect(store.revokeAttemptCount).toBe(1);
+      expect(store.revokeCount).toBe(0);
+      expect(eventBus.events).toHaveLength(0);
     });
   });
 

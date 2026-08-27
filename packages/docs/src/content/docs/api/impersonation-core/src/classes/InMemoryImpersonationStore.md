@@ -101,7 +101,7 @@ or equivalent compare-and-set that replaces an expired owner in the same operati
 
 ### revoke()
 
-> **revoke**(`sessionId`): `Promise`\<`void`\>
+> **revoke**(`sessionId`, `impersonatorId`): `Promise`\<[`ImpersonationRevocationResult`](/api/impersonation-core/src/type-aliases/impersonationrevocationresult/)\>
 
 #### Parameters
 
@@ -109,9 +109,13 @@ or equivalent compare-and-set that replaces an expired owner in the same operati
 
 `string`
 
+##### impersonatorId
+
+`string`
+
 #### Returns
 
-`Promise`\<`void`\>
+`Promise`\<[`ImpersonationRevocationResult`](/api/impersonation-core/src/type-aliases/impersonationrevocationresult/)\>
 
 #### Overrides
 

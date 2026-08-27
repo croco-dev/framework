@@ -1,7 +1,7 @@
 import { Component } from "@croco/framework-context";
 import { ImpersonationStore } from "./interfaces";
 import type { ImpersonationSessionCreateResult } from "./interfaces";
-import type { ImpersonationState } from "./types";
+import type { ImpersonationRevocationResult, ImpersonationState } from "./types";
 
 @Component()
 export class InMemoryImpersonationStore extends ImpersonationStore {
@@ -44,11 +44,21 @@ export class InMemoryImpersonationStore extends ImpersonationStore {
     return session;
   }
 
-  async revoke(sessionId: string): Promise<void> {
+  async revoke(sessionId: string, impersonatorId: string): Promise<ImpersonationRevocationResult> {
     const session = this.sessions.get(sessionId);
-    if (session) {
-      this.deleteSession(session);
+    if (!session) {
+      return { outcome: "not-found" };
     }
+    if (this.isExpired(session)) {
+      this.deleteSession(session);
+      return { outcome: "not-found" };
+    }
+    if (session.impersonatorId !== impersonatorId) {
+      return { outcome: "actor-mismatch" };
+    }
+
+    this.deleteSession(session);
+    return { outcome: "revoked", session };
   }
 
   private isExpired(session: ImpersonationState): boolean {

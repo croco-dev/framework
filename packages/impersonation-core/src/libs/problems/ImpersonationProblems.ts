@@ -106,3 +106,12 @@ export class ImpersonationSessionNotFoundProblem extends Problem {
     super(undefined, undefined, `Impersonation session not found: ${sessionId}`);
   }
 }
+
+export class ImpersonationSessionActorMismatchProblem extends Problem {
+  readonly code = "IMPERSONATION_SESSION_ACTOR_MISMATCH";
+  readonly category = ProblemCategory.Forbidden;
+
+  constructor() {
+    super(undefined, undefined, "Authenticated actor cannot end this impersonation session");
+  }
+}

@@ -303,6 +303,7 @@ This cookbook documents 681 public Croco Problem codes. The deterministic JSON r
 | [`IMPERSONATION_CONFIGURATION_INVALID`](#impersonation-configuration-invalid)                                                         | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`IMPERSONATION_IDENTITY_CONFLICT`](#impersonation-identity-conflict)                                                                 | Forbidden             |    403 | not-retryable | safe-message  | active    |       1 |
 | [`IMPERSONATION_REASON_REQUIRED`](#impersonation-reason-required)                                                                     | BadRequest            |    400 | not-retryable | public        | active    |       1 |
+| [`IMPERSONATION_SESSION_ACTOR_MISMATCH`](#impersonation-session-actor-mismatch)                                                       | Forbidden             |    403 | not-retryable | safe-message  | active    |       1 |
 | [`IMPERSONATION_SESSION_NOT_FOUND`](#impersonation-session-not-found)                                                                 | NotFound              |    404 | not-retryable | public        | active    |       1 |
 | [`IMPERSONATION_TARGET_NOT_FOUND`](#impersonation-target-not-found)                                                                   | NotFound              |    404 | not-retryable | public        | active    |       1 |
 | [`INDEX_NOT_FOUND`](#index-not-found)                                                                                                 | NotFound              |    404 | not-retryable | public        | active    |       1 |
@@ -5916,6 +5917,24 @@ Sources:
 Sources:
 
 - `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:84:3` (problem-class)
+
+<a id="impersonation-session-actor-mismatch"></a>
+
+## `IMPERSONATION_SESSION_ACTOR_MISMATCH`
+
+- Category: `Forbidden`
+- HTTP status: `403` Forbidden
+- Retryability: `not-retryable`
+- Redaction policy: `safe-message`
+- Lifecycle: `active`
+- Cause: The authenticated caller is not allowed to perform the requested action.
+- User action: Request the required permission or choose an allowed action.
+- Operator action: Review policy, role, tenant, entitlement, and impersonation context.
+- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:102:3` (problem-class)
 
 <a id="impersonation-session-not-found"></a>
 

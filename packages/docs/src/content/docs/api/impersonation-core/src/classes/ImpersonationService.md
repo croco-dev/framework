@@ -39,9 +39,13 @@ title: "ImpersonationService"
 
 ### end()
 
-> **end**(`sessionId`): `Promise`\<`void`\>
+> **end**(`context`, `sessionId`): `Promise`\<`void`\>
 
 #### Parameters
+
+##### context
+
+[`RequestContext`](/api/framework-context/src/interfaces/requestcontext/)
 
 ##### sessionId
 
