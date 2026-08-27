@@ -247,6 +247,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`ModuleProviderWriteProblem`](/api/framework-module/src/classes/moduleproviderwriteproblem/)
 - [`ModuleRegistrationConflictProblem`](/api/framework-module/src/classes/moduleregistrationconflictproblem/)
 - [`ModuleRuntimeDisposedProblem`](/api/framework-module/src/classes/moduleruntimedisposedproblem/)
+- [`ModuleRuntimeResetConflictProblem`](/api/framework-module/src/classes/moduleruntimeresetconflictproblem/)
 - [`ModuleRuntimeStaleContextProblem`](/api/framework-module/src/classes/moduleruntimestalecontextproblem/)
 - [`PageDataUnavailableProblem`](/api/frontend-react/src/classes/pagedataunavailableproblem/)
 - [`MissingCloudflareVitePluginProblem`](/api/frontend-vite/src/classes/missingcloudflarevitepluginproblem/)

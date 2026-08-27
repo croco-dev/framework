@@ -12034,6 +12034,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "ModuleRuntimeResetConflictProblem",
+              "exportKind": "named",
+              "source": "./problems",
+              "declarationKind": "class"
+            },
+            {
               "name": "ModuleRuntimeStaleContextProblem",
               "exportKind": "named",
               "source": "./problems",

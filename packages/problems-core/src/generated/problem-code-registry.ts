@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 679,
+  problemCount: 680,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -8085,7 +8085,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 149,
+          line: 165,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8116,7 +8116,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 187,
+          line: 203,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8148,7 +8148,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 164,
+          line: 180,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8179,7 +8179,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 203,
+          line: 219,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8243,7 +8243,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 126,
+          line: 142,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8274,6 +8274,36 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/framework-module/src/problems.ts",
           line: 116,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "framework-module/runtime-reset-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#framework-module-runtime-reset-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/framework-module/src/problems.ts",
+          line: 129,
           column: 5,
           kind: "problem-constructor",
         },

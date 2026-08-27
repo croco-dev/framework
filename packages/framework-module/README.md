@@ -81,7 +81,9 @@ container.
 
 `shutdown()` runs lifecycle cleanup and leaves the registered graph reusable.
 `reset()` synchronously clears the graph without running shutdown hooks. Call
-`shutdown()` first when cleanup is required. `dispose()` joins in-flight
+`shutdown()` first when cleanup is required. An isolated runtime rejects reset
+while initialization or shutdown is still active; wait for that operation to
+finish before resetting. `dispose()` joins in-flight
 initialization or shutdown, runs remaining shutdown hooks once, releases the
 owned container even when cleanup fails, and permanently closes the runtime.
 Contexts from a graph cleared by `reset()` throw

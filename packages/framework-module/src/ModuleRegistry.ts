@@ -25,6 +25,7 @@ import {
   ModuleProviderWriteProblem,
   ModuleRegistrationConflictProblem,
   ModuleRuntimeDisposedProblem,
+  ModuleRuntimeResetConflictProblem,
   ModuleRuntimeStaleContextProblem,
 } from "./problems";
 import type {
@@ -157,6 +158,7 @@ class ModuleRuntimeImplementation implements ModuleRuntime {
 
   reset(): void {
     assertRuntimeAvailable(this.state);
+    assertRuntimeResetAvailable(this.state);
     resetModulesInState(this.state);
   }
 
@@ -226,6 +228,18 @@ export function createModuleRuntime(): ModuleRuntime {
 function assertRuntimeAvailable(state: ModuleRegistryState): void {
   if (state.disposed || state.disposePromise) {
     throw new ModuleRuntimeDisposedProblem();
+  }
+}
+
+function assertRuntimeResetAvailable(state: ModuleRegistryState): void {
+  if (!state.rejectGlobalProviderFallback) {
+    return;
+  }
+  if (state.activeShutdownOperations > 0) {
+    throw new ModuleRuntimeResetConflictProblem("shutting-down");
+  }
+  if (state.isInitializing) {
+    throw new ModuleRuntimeResetConflictProblem("initializing");
   }
 }
 
@@ -725,7 +739,11 @@ function createModuleGraphManifestInState(
 ): ModuleGraphManifest {
   const modules = collectModules(rootModules, state.moduleSources);
   const states = new Map(modules.map((module) => [module.name, createModuleState(module)]));
-  const diagnostics = createModuleGraphDiagnostics(modules, states);
+  const diagnostics = createModuleGraphDiagnostics(
+    modules,
+    states,
+    state.rejectGlobalProviderFallback,
+  );
 
   return {
     version: "croco.module-graph.manifest.v1",
@@ -765,6 +783,7 @@ function validateModule(module: ModuleOptions): void {
 function createModuleGraphDiagnostics(
   modules: readonly ModuleOptions[],
   states: ReadonlyMap<string, ModuleRuntimeState>,
+  rejectUnknownProvider = false,
 ): ModuleGraphDiagnostic[] {
   const diagnostics: ModuleGraphDiagnostic[] = [];
 
@@ -812,6 +831,7 @@ function createModuleGraphDiagnostics(
         module.name,
         providerClass,
         states,
+        rejectUnknownProvider,
       )) {
         const provider = getModuleTokenLabel(failure.token);
         diagnostics.push({

@@ -54,6 +54,7 @@ export {
   ModuleProviderWriteProblem,
   ModuleRegistrationConflictProblem,
   ModuleRuntimeDisposedProblem,
+  ModuleRuntimeResetConflictProblem,
   ModuleRuntimeStaleContextProblem,
 } from "./problems";
 export type {

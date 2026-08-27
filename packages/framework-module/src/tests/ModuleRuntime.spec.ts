@@ -7,7 +7,9 @@ import {
   ModuleLifecycleProblem,
   ModuleProviderUnavailableProblem,
   ModuleProviderVisibilityProblem,
+  ModuleRegistrationConflictProblem,
   ModuleRuntimeDisposedProblem,
+  ModuleRuntimeResetConflictProblem,
   ModuleRuntimeStaleContextProblem,
 } from "../index";
 
@@ -142,6 +144,34 @@ describe("ModuleRuntime", () => {
     await runtime.dispose();
   });
 
+  it("reports unknown class dependencies in isolated runtime manifests", async () => {
+    class UnknownDependency {}
+
+    class RuntimeService {
+      constructor(readonly dependency: UnknownDependency) {}
+    }
+    Reflect.defineMetadata("design:paramtypes", [UnknownDependency], RuntimeService);
+
+    const runtime = createModuleRuntime();
+    runtime.use({ name: "app", providers: [RuntimeService] });
+
+    expect(runtime.createGraphManifest()).toMatchObject({
+      status: "failed",
+      diagnostics: [
+        {
+          code: "framework-module/provider-not-visible",
+          moduleName: "app",
+          token: "UnknownDependency",
+          path: ["app", "RuntimeService", "UnknownDependency"],
+        },
+      ],
+    });
+    await expect(runtime.initialize()).rejects.toMatchObject({
+      cause: expect.any(ModuleProviderVisibilityProblem),
+    });
+    await runtime.dispose();
+  });
+
   it("keeps constructor and property injection inside the runtime container", async () => {
     const constructorToken = new Token<string>("constructor-config");
     const propertyToken = new Token<string>("property-config");
@@ -263,6 +293,83 @@ describe("ModuleRuntime", () => {
     expect(() => previousRootContext.get(serviceToken)).toThrow(ModuleRuntimeStaleContextProblem);
     expect(readLifecycleContext).toThrow(ModuleRuntimeStaleContextProblem);
     expect(currentRootContext.get(serviceToken)).toBe("second");
+    await runtime.dispose();
+  });
+
+  it("rejects reset while lifecycle work can still mutate the runtime", async () => {
+    let finishSetup: (() => void) | undefined;
+    let markSetupStarted: (() => void) | undefined;
+    const setupBarrier = new Promise<void>((resolve) => {
+      finishSetup = resolve;
+    });
+    const setupStarted = new Promise<void>((resolve) => {
+      markSetupStarted = resolve;
+    });
+    const calls: string[] = [];
+    const runtime = createModuleRuntime();
+
+    runtime.use({
+      name: "app",
+      setup: async () => {
+        calls.push("old:setup");
+        markSetupStarted?.();
+        await setupBarrier;
+      },
+      start: () => {
+        calls.push("old:start");
+      },
+    });
+
+    const initialization = runtime.initialize();
+    await setupStarted;
+    expect(() => runtime.reset()).toThrow(ModuleRuntimeResetConflictProblem);
+    expect(() => runtime.use({ name: "app", setup: () => undefined })).toThrow(
+      ModuleRegistrationConflictProblem,
+    );
+
+    finishSetup?.();
+    await initialization;
+    runtime.reset();
+    runtime.use({
+      name: "app",
+      start: () => {
+        calls.push("fresh:start");
+      },
+    });
+    await runtime.initialize();
+
+    expect(calls).toEqual(["old:setup", "old:start", "fresh:start"]);
+    await runtime.dispose();
+  });
+
+  it("rejects reset until active shutdown finishes", async () => {
+    let finishShutdown: (() => void) | undefined;
+    let markShutdownStarted: (() => void) | undefined;
+    const shutdownBarrier = new Promise<void>((resolve) => {
+      finishShutdown = resolve;
+    });
+    const shutdownStarted = new Promise<void>((resolve) => {
+      markShutdownStarted = resolve;
+    });
+    const runtime = createModuleRuntime();
+
+    runtime.use({
+      name: "app",
+      shutdown: async () => {
+        markShutdownStarted?.();
+        await shutdownBarrier;
+      },
+    });
+    await runtime.initialize();
+
+    const shutdown = runtime.shutdown();
+    await shutdownStarted;
+    expect(() => runtime.reset()).toThrow(ModuleRuntimeResetConflictProblem);
+
+    finishShutdown?.();
+    await shutdown;
+    runtime.reset();
+    expect(runtime.getRegisteredModules()).toEqual([]);
     await runtime.dispose();
   });
 

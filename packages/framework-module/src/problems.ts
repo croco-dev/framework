@@ -121,6 +121,22 @@ export class ModuleRuntimeDisposedProblem extends Problem {
   }
 }
 
+export class ModuleRuntimeResetConflictProblem extends Problem {
+  constructor(readonly runtimeState: "initializing" | "shutting-down") {
+    const recoveryAction =
+      "Wait for the active lifecycle operation to finish before resetting the module runtime.";
+
+    super(
+      "framework-module/runtime-reset-conflict",
+      ProblemCategory.Conflict,
+      `Module runtime reset is unavailable while the runtime is ${runtimeState}. ${recoveryAction}`,
+      {
+        extensions: { runtimeState, recoveryAction },
+      },
+    );
+  }
+}
+
 export class ModuleRuntimeStaleContextProblem extends Problem {
   constructor() {
     super(
