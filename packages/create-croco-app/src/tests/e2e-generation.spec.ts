@@ -10,7 +10,7 @@ import { mergeInto, replaceGithubExpressions } from "../helpers/fs.js";
 import { InvalidCliOptionProblem } from "../libs/problems/InvalidCliOptionProblem.js";
 import { InvalidGoalOptionProblem } from "../libs/problems/InvalidGoalOptionProblem.js";
 import { normalizeNonInteractiveOptions, parseCliOptions } from "../options.js";
-import type { GeneratorOptions } from "../types.js";
+import type { GeneratorOptions, NormalizedGeneratorOptions } from "../types.js";
 
 const DEPENDENCY_FIELDS = [
   "dependencies",
@@ -533,7 +533,7 @@ describe("E2E: generate()", () => {
   });
 
   it("rejects mismatched goal generator options before creating the target directory", async () => {
-    const options: GeneratorOptions = {
+    const options: NormalizedGeneratorOptions = {
       projectName: "mismatched-goal",
       scope: "@test",
       goal: "saas-api",
@@ -548,7 +548,7 @@ describe("E2E: generate()", () => {
 
     let error: unknown;
     try {
-      await generate(testDir, options);
+      await generate(testDir, options as GeneratorOptions);
     } catch (err) {
       error = err;
     }
@@ -2616,6 +2616,8 @@ describe("E2E: generate()", () => {
         projectName: "my-ai-saas",
         scope: "@test",
         preset: "ai-saas",
+        saasProviderProfile: "saas-node-postgres",
+        tenantModel: "org",
         webApps: [],
         apiHosting: "standalone",
         db: [],

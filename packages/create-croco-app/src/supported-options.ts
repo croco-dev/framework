@@ -1,4 +1,15 @@
-import type { GeneratorOptions } from "./types.js";
+import type { TenantModelName } from "@croco/tenant-core/tenant-model";
+import type { SaasProviderProfileName } from "./saas-provider-profiles.js";
+import type {
+  AppGoal,
+  GeneratorApi,
+  GeneratorApiHosting,
+  GeneratorBackendDeploy,
+  GeneratorDatabase,
+  GeneratorFrontendDeploy,
+  GeneratorPreset,
+  GeneratorUiProfile,
+} from "./types.js";
 
 export const SUPPORTED_CREATE_CROCO_APP_CHOICES = {
   presets: [
@@ -21,16 +32,16 @@ export const SUPPORTED_CREATE_CROCO_APP_CHOICES = {
   uiProfiles: ["none", "astryx"],
   databases: ["postgres", "mongodb", "redis"],
 } as const satisfies {
-  readonly presets: readonly GeneratorOptions["preset"][];
-  readonly goals: readonly NonNullable<GeneratorOptions["goal"]>[];
-  readonly saasProviderProfiles: readonly NonNullable<GeneratorOptions["saasProviderProfile"]>[];
-  readonly tenantModels: readonly NonNullable<GeneratorOptions["tenantModel"]>[];
-  readonly apis: readonly NonNullable<GeneratorOptions["api"]>[];
-  readonly apiHosting: readonly GeneratorOptions["apiHosting"][];
-  readonly backendDeploys: readonly NonNullable<GeneratorOptions["backendDeploy"]>[];
-  readonly frontendDeploys: readonly NonNullable<GeneratorOptions["frontendDeploy"]>[];
-  readonly uiProfiles: readonly NonNullable<GeneratorOptions["ui"]>[];
-  readonly databases: readonly GeneratorOptions["db"][number][];
+  readonly presets: readonly GeneratorPreset[];
+  readonly goals: readonly AppGoal[];
+  readonly saasProviderProfiles: readonly SaasProviderProfileName[];
+  readonly tenantModels: readonly TenantModelName[];
+  readonly apis: readonly GeneratorApi[];
+  readonly apiHosting: readonly GeneratorApiHosting[];
+  readonly backendDeploys: readonly GeneratorBackendDeploy[];
+  readonly frontendDeploys: readonly GeneratorFrontendDeploy[];
+  readonly uiProfiles: readonly GeneratorUiProfile[];
+  readonly databases: readonly GeneratorDatabase[];
 };
 
 export const CREATE_CROCO_APP_COMPATIBILITY_CHOICES = {
@@ -44,13 +55,10 @@ export const CREATE_CROCO_APP_COMPATIBILITY_CHOICES = {
   },
 } as const satisfies {
   readonly presets: {
-    readonly [preset in Extract<GeneratorOptions["preset"], "ddd-vike-fullstack">]: {
+    readonly [preset in Extract<GeneratorPreset, "ddd-vike-fullstack">]: {
       readonly status: "legacy-compatibility-name";
       readonly currentRuntime: "@croco/meta-vite";
-      readonly requiredFrontendDeploy: Extract<
-        NonNullable<GeneratorOptions["frontendDeploy"]>,
-        "cloudflare-meta-vite"
-      >;
+      readonly requiredFrontendDeploy: Extract<GeneratorFrontendDeploy, "cloudflare-meta-vite">;
       readonly migrationTarget: string;
     };
   };

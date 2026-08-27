@@ -8,8 +8,9 @@ import {
   formatHumanFailure,
   formatHumanSuccess,
 } from "../cli-result.js";
+import { validateResolvedOptions } from "../options.js";
 import { DirectoryNotEmptyProblem } from "../libs/problems/DirectoryNotEmptyProblem.js";
-import type { GeneratorOptions } from "../types.js";
+import type { GeneratorOptions, NormalizedGeneratorOptions } from "../types.js";
 
 describe("CLI result contract", () => {
   it("formats successful generation with target directory and next commands", () => {
@@ -210,8 +211,8 @@ describe("CLI result contract", () => {
   });
 });
 
-function createOptions(overrides: Partial<GeneratorOptions> = {}): GeneratorOptions {
-  return {
+function createOptions(overrides: NormalizedGeneratorOptions = {}): GeneratorOptions {
+  const options: NormalizedGeneratorOptions = {
     projectName: "my-app",
     scope: "@test",
     preset: "blank",
@@ -223,4 +224,11 @@ function createOptions(overrides: Partial<GeneratorOptions> = {}): GeneratorOpti
     initGit: false,
     ...overrides,
   };
+
+  if (options.preset === "saas" || options.preset === "ai-saas") {
+    options.saasProviderProfile ??= "saas-node-postgres";
+    options.tenantModel ??= "org";
+  }
+
+  return validateResolvedOptions(options);
 }

@@ -1,10 +1,10 @@
-import { Problem } from "@croco/problems-core";
 import { existsSync, rmSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createProgram } from "../cli.js";
 import { createCreateCrocoAppProgram } from "../cli-program.js";
 import { InvalidCliOptionProblem } from "../libs/problems/InvalidCliOptionProblem.js";
 import { InvalidGoalOptionProblem } from "../libs/problems/InvalidGoalOptionProblem.js";
+import { InvalidSaasPresetOptionProblem } from "../libs/problems/InvalidSaasPresetOptionProblem.js";
 import { PnpmCommandProblem } from "../libs/problems/PnpmCommandProblem.js";
 import {
   normalizeNonInteractiveOptions,
@@ -874,9 +874,22 @@ describe("noninteractive CLI option validation", () => {
       git: false,
     });
 
-    expect(() => normalizeNonInteractiveOptions(cliOptions)).toThrow(
-      "--saas-profile is only supported with the saas and ai-saas presets",
-    );
+    let error: unknown;
+    try {
+      normalizeNonInteractiveOptions(cliOptions);
+    } catch (err) {
+      error = err;
+    }
+
+    expect(error).toBeInstanceOf(InvalidCliOptionProblem);
+    expect(error).toMatchObject({
+      code: "create-croco-app/invalid-cli-option",
+      detail: "--saas-profile is only supported with the saas and ai-saas presets",
+      extensions: {
+        option: "--saas-profile",
+        recovery: "Remove --saas-profile or choose --preset saas or --preset ai-saas.",
+      },
+    });
   });
 
   it("fails before generation when a SaaS provider profile lacks a required capability", () => {
@@ -950,7 +963,15 @@ describe("noninteractive CLI option validation", () => {
     } catch (err) {
       error = err;
     }
-    expect(error).toBeInstanceOf(Problem);
+    expect(error).toBeInstanceOf(InvalidSaasPresetOptionProblem);
+    expect(error).toMatchObject({
+      code: "create-croco-app/invalid-saas-preset-option",
+      detail: "--api is not supported with the saas preset",
+      extensions: {
+        recovery:
+          "Remove the unsupported SaaS option or choose a non-SaaS preset that supports it.",
+      },
+    });
   });
 
   it.each([

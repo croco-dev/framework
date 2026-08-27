@@ -2,7 +2,15 @@ import { copyFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { renderHandlebars } from "../helpers/fs.js";
 import { TEMPLATES_DIR } from "../template-path.js";
-import type { GeneratorOptions } from "../types.js";
+import type { GeneratorApi, GeneratorFrontendDeploy } from "../types.js";
+
+type DockerInstallerOptions = {
+  readonly projectName: string;
+  readonly scope: string;
+  readonly api: GeneratorApi;
+  readonly frontendDeploy?: GeneratorFrontendDeploy;
+  readonly webApps: readonly string[];
+};
 
 function copyDockerTemplate(src: string, dest: string, context: Record<string, unknown>): void {
   mkdirSync(dirname(dest), { recursive: true });
@@ -14,10 +22,7 @@ function copyDockerFile(src: string, dest: string): void {
   copyFileSync(src, dest);
 }
 
-export function installDocker(
-  targetDir: string,
-  options: Pick<GeneratorOptions, "projectName" | "scope" | "api" | "frontendDeploy" | "webApps">,
-): void {
+export function installDocker(targetDir: string, options: DockerInstallerOptions): void {
   const addonDir = join(TEMPLATES_DIR, "addons/docker");
   const apiAppName = options.api === "graphql" ? "graphql-api" : "api";
   const context = {

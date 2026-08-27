@@ -2,7 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { mergeInto } from "../helpers/fs.js";
 import { TEMPLATES_DIR } from "../template-path.js";
-import type { GeneratorOptions } from "../types.js";
+import type { GeneratorUiProfile } from "../types.js";
 
 type GeneratedUiProfileMetadata = {
   readonly name: "none" | "astryx";
@@ -38,16 +38,20 @@ const UI_METADATA = {
     maturity: "beta",
     generatedAppSmokeCase: "graphql-vite-spa-astryx",
   },
-} as const satisfies Record<NonNullable<GeneratorOptions["ui"]>, GeneratedUiProfileMetadata>;
+} as const satisfies Record<GeneratorUiProfile, GeneratedUiProfileMetadata>;
+
+type UiProfileInstallerOptions = {
+  readonly projectName: string;
+  readonly scope: string;
+  readonly frontendDeploy: "vite-spa";
+  readonly ui: GeneratorUiProfile;
+};
 
 export function installUiProfile(
   targetDir: string,
   webAppName: string,
-  options: Pick<GeneratorOptions, "projectName" | "scope" | "frontendDeploy" | "ui">,
+  options: UiProfileInstallerOptions,
 ): void {
-  if (!options.ui) return;
-  if (options.frontendDeploy !== "vite-spa") return;
-
   const appTargetDir = join(targetDir, "apps", webAppName);
   const metadata = UI_METADATA[options.ui];
   const profile: GeneratedPresentationProfile = {

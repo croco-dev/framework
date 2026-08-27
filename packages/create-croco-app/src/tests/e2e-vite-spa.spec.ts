@@ -2,7 +2,7 @@ import { existsSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { generate } from "../generator.js";
-import type { GeneratorOptions } from "../types.js";
+import type { GeneratorOptions, NormalizedGeneratorOptions } from "../types.js";
 
 describe("E2E Vite SPA: generate()", () => {
   let testDir: string;
@@ -112,7 +112,7 @@ describe("E2E Vite SPA: generate()", () => {
   });
 
   it("rejects incompatible programmatic UI generation before writing files", async () => {
-    const options: GeneratorOptions = {
+    const options: NormalizedGeneratorOptions = {
       projectName: "invalid-astryx-runtime",
       scope: "@test",
       preset: "ddd-fullstack",
@@ -127,7 +127,7 @@ describe("E2E Vite SPA: generate()", () => {
       initGit: false,
     };
 
-    await expect(generate(testDir, options)).rejects.toThrow(
+    await expect(generate(testDir, options as GeneratorOptions)).rejects.toThrow(
       "--ui is currently only supported with --frontend-deploy vite-spa",
     );
     expect(existsSync(testDir)).toBe(false);

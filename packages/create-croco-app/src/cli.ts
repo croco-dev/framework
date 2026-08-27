@@ -8,12 +8,12 @@ import {
 } from "./cli-result.js";
 import { createCreateCrocoAppProgram } from "./cli-program.js";
 import { InvalidCliOptionProblem } from "./libs/problems/InvalidCliOptionProblem.js";
-import type { GeneratorOptions } from "./types.js";
+import type { GeneratorOptions, RawCliOptions } from "./types.js";
 import type { CreateCrocoAppFailureContext, CreateCrocoAppRetryCommand } from "./cli-result.js";
 
 export function createProgram(): ReturnType<typeof createCreateCrocoAppProgram> {
   return createCreateCrocoAppProgram().action(
-    async (directory: string | undefined, rawOptions: Record<string, string | boolean>) => {
+    async (directory: string | undefined, rawOptions: RawCliOptions) => {
       const outputJson = rawOptions["json"] === true;
       let failureContext: CreateCrocoAppFailureContext | undefined;
 
@@ -91,7 +91,7 @@ const RETRY_STRING_OPTIONS = [
 
 function createRetryCommand(
   targetDir: string,
-  rawOptions: Record<string, string | boolean>,
+  rawOptions: RawCliOptions,
 ): CreateCrocoAppRetryCommand {
   const args = [targetDir];
 

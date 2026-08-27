@@ -10,6 +10,8 @@ provides generated-app smoke coverage for the supported presets.
 
 - `create-croco-app` binary - interactive and scripted project generation.
 - `--json` output - machine-readable result and diagnostic contract for automation.
+- `create-croco-app/dist/verification.js` - programmatic parsing, runtime validation, generation,
+  and separate raw, normalized, and resolved option types.
 
 ## Usage
 

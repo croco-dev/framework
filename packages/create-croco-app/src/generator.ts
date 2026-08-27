@@ -1,7 +1,6 @@
 import { execSync, spawn } from "node:child_process";
 import type { SpawnOptions } from "node:child_process";
 import {
-  DEFAULT_TENANT_MODEL,
   createTenantModelManifest,
   createTenantModelManifestSchema,
   renderTenantModelPlaybook,
@@ -42,7 +41,6 @@ import {
 } from "./node-runtime.js";
 import { isSaasPreset, validateResolvedOptions } from "./options.js";
 import {
-  DEFAULT_SAAS_PROVIDER_PROFILE,
   assertSaasProviderTenantModelCompatibility,
   assertSaasProviderProfileCapabilities,
   createSaasProviderProfileManifest,
@@ -173,11 +171,7 @@ async function generateProject(
 
   // Step 4: shared/ui (standalone fullstack or nextjs hosting에서 웹앱 있을 때)
   const hasWebApps = options.webApps.length > 0;
-  if (
-    !isLegacyVikeFullstackPreset &&
-    hasWebApps &&
-    (options.preset === "ddd-fullstack" || options.apiHosting === "nextjs")
-  ) {
+  if (!isLegacyVikeFullstackPreset && hasWebApps && options.preset === "ddd-fullstack") {
     if (options.ui === undefined) {
       installSharedUi(targetDir, vars);
     }
@@ -207,7 +201,7 @@ async function generateProject(
       installDocker(targetDir, {
         ...vars,
         api: options.api,
-        frontendDeploy: options.frontendDeploy,
+        ...(options.frontendDeploy === undefined ? {} : { frontendDeploy: options.frontendDeploy }),
         webApps: options.webApps,
       });
     } else if (options.backendDeploy === "lambda") {
@@ -229,11 +223,13 @@ async function generateProject(
         preset: options.preset,
         frontendDeploy: options.frontendDeploy,
       });
-      installUiProfile(targetDir, webAppName, {
-        ...vars,
-        frontendDeploy: options.frontendDeploy,
-        ...(options.ui === undefined ? {} : { ui: options.ui }),
-      });
+      if (options.frontendDeploy === "vite-spa" && options.ui !== undefined) {
+        installUiProfile(targetDir, webAppName, {
+          ...vars,
+          frontendDeploy: options.frontendDeploy,
+          ui: options.ui,
+        });
+      }
     }
   }
 
@@ -253,11 +249,12 @@ async function generateProject(
   await finalize(targetDir, options, executionOptions);
 }
 
-function writeSaasProviderProfileArtifacts(targetDir: string, options: GeneratorOptions): void {
-  const profile = getSaasProviderProfileDefinition(
-    options.saasProviderProfile ?? DEFAULT_SAAS_PROVIDER_PROFILE,
-  );
-  const tenantModel = options.tenantModel ?? DEFAULT_TENANT_MODEL;
+function writeSaasProviderProfileArtifacts(
+  targetDir: string,
+  options: Extract<GeneratorOptions, { preset: "saas" | "ai-saas" }>,
+): void {
+  const profile = getSaasProviderProfileDefinition(options.saasProviderProfile);
+  const tenantModel = options.tenantModel;
   assertSaasProviderProfileCapabilities(profile);
   assertSaasProviderTenantModelCompatibility(profile, tenantModel);
 
