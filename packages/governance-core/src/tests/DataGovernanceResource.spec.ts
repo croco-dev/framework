@@ -745,7 +745,7 @@ describe("DataGovernanceResource", () => {
           unexpected: "remove",
         },
       ],
-      scope: "tenant",
+      scope: "global",
       subject: {
         idField: "id",
         labelField: "",

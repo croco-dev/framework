@@ -530,10 +530,10 @@ function validateTenantField(
   const tenantField = fields[tenantFieldIndex];
   if (!tenantField) {
     diagnostics.push(
-        createDiagnostic({
-          code: DATA_GOVERNANCE_DIAGNOSTIC_CODES.subjectFieldUnknown,
-          fieldId: normalizedTenantFieldId,
-          message: `Data governance subject tenantField '${normalizedTenantFieldId}' is not declared in fields`,
+      createDiagnostic({
+        code: DATA_GOVERNANCE_DIAGNOSTIC_CODES.subjectFieldUnknown,
+        fieldId: normalizedTenantFieldId,
+        message: `Data governance subject tenantField '${normalizedTenantFieldId}' is not declared in fields`,
         path: `${resourcePath}.subject.tenantField`,
         resourceKind,
         target: "subject",
@@ -1271,6 +1271,11 @@ function toDataSubjectIdentity(subject: UnknownRecord): DataMapResource["subject
       const field = stringValue(value);
       if (field !== undefined) {
         identity[key] = field;
+      }
+    } else if (key === "tenantIdentifierOverride" && isRecord(value)) {
+      const reason = stringValue(value.reason);
+      if (reason !== undefined) {
+        identity.tenantIdentifierOverride = { reason };
       }
     }
   }
