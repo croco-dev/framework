@@ -1,4 +1,3 @@
-import { Readable } from "node:stream";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   InvalidSignedUrlExpiryProblem,
@@ -7,6 +6,7 @@ import {
 import { InMemoryStorageProvider } from "../libs/InMemoryStorageProvider";
 import { FileNotFoundProblem } from "../libs/problems/FileNotFoundProblem";
 import { InvalidKeyProblem } from "../libs/problems/InvalidKeyProblem";
+import { readStorageStream } from "../libs/storageBody";
 
 const INVALID_SIGNED_URL_EXPIRY_MESSAGE = `Signed URL expiry must be a positive safe integer no greater than ${MAX_SIGNED_URL_EXPIRY_SECONDS} seconds`;
 
@@ -37,12 +37,18 @@ describe("InMemoryStorageProvider", () => {
       expect(result).toEqual(buffer);
     });
 
-    it("Readable 스트림으로 파일 업로드 성공", async () => {
-      const stream = Readable.from(Buffer.from("Stream content"));
+    it("Web ReadableStream으로 파일 업로드 성공", async () => {
+      const data = new TextEncoder().encode("Stream content");
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(data);
+          controller.close();
+        },
+      });
       await provider.put("test/stream.txt", stream);
 
       const result = await provider.get("test/stream.txt");
-      expect(result).toEqual(Buffer.from("Stream content"));
+      expect(result).toEqual(data);
     });
 
     it("메타데이터 함께 저장", async () => {
@@ -106,13 +112,8 @@ describe("InMemoryStorageProvider", () => {
       await provider.put("test/stream.txt", buffer);
 
       const stream = await provider.getStream("test/stream.txt");
-      expect(stream).toBeInstanceOf(Readable);
-
-      const chunks: Buffer[] = [];
-      for await (const chunk of stream) {
-        chunks.push(chunk as Buffer);
-      }
-      expect(Buffer.concat(chunks)).toEqual(buffer);
+      expect(stream).toBeInstanceOf(ReadableStream);
+      expect(await readStorageStream(stream)).toEqual(new Uint8Array(buffer));
     });
 
     it("존재하지 않는 파일 스트림 조회 시 FileNotFoundProblem throw", async () => {

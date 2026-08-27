@@ -1,10 +1,11 @@
-import type { Readable } from "node:stream";
 import { Component } from "@croco/framework-context";
 import { ProblemFactory } from "@croco/problems-core";
 import type {
   ImageProvider,
   PutOptions,
   SignedUrlOptions,
+  StorageBody,
+  StorageStream,
   TransformOptions,
   UploadIntent,
 } from "@croco/storage-core";
@@ -34,6 +35,35 @@ type CloudflareImagesRuntimeResponse = {
   readonly result?: Record<string, unknown> | null;
   readonly success: boolean;
 };
+
+function copyToArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  return copy.buffer;
+}
+
+function normalizeDownloadStream(stream: StorageStream, key: string): StorageStream {
+  const reader = stream.getReader();
+
+  return new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      try {
+        const result = await reader.read();
+        if (result.done) {
+          controller.close();
+          return;
+        }
+
+        controller.enqueue(result.value);
+      } catch (error) {
+        controller.error(normalizeCloudflareImagesError(error, { key, operation: "get" }));
+      }
+    },
+    async cancel(reason) {
+      await reader.cancel(reason);
+    },
+  });
+}
 
 /**
  * Cloudflare Images를 이용해 파일 저장과 이미지 변환 URL 생성을 제공하는 구현체입니다.
@@ -65,39 +95,25 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
     }
   }
 
-  async put(key: string, data: Buffer | Readable, options?: PutOptions): Promise<void> {
+  async put(key: string, data: StorageBody, options?: PutOptions): Promise<void> {
     this.validateKey(key);
     this.validateUploadImageId(key);
 
     const formData = new FormData();
     formData.append("id", key);
 
-    let file: File | Blob;
-    if (Buffer.isBuffer(data)) {
-      const uint8Array = new Uint8Array(data);
-      file = new File([uint8Array], key, {
+    let file: Blob;
+    if (data instanceof Uint8Array) {
+      file = new Blob([copyToArrayBuffer(data)], {
         type: options?.contentType ?? "application/octet-stream",
       });
     } else {
       const maxUploadBytes = this.options.maxUploadBytes ?? DEFAULT_MAX_UPLOAD_BYTES;
-      const chunks: Buffer[] = [];
+      const chunks: ArrayBuffer[] = [];
       let totalBytes = 0;
 
       for await (const chunk of data) {
-        let bufferChunk: Buffer;
-        if (Buffer.isBuffer(chunk)) {
-          bufferChunk = chunk;
-        } else if (chunk instanceof Uint8Array) {
-          bufferChunk = Buffer.from(chunk);
-        } else if (chunk instanceof ArrayBuffer) {
-          bufferChunk = Buffer.from(chunk);
-        } else if (typeof chunk === "string") {
-          bufferChunk = Buffer.from(chunk);
-        } else {
-          this.throwUploadFailed(key, "Cloudflare upload stream contains unsupported chunk type");
-        }
-
-        totalBytes += bufferChunk.length;
+        totalBytes += chunk.byteLength;
         if (totalBytes > maxUploadBytes) {
           this.throwUploadFailed(
             key,
@@ -105,17 +121,15 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
           );
         }
 
-        chunks.push(bufferChunk);
+        chunks.push(copyToArrayBuffer(chunk));
       }
 
-      const buffer = Buffer.concat(chunks);
-      const uint8Array = new Uint8Array(buffer);
-      file = new File([uint8Array], key, {
+      file = new Blob(chunks, {
         type: options?.contentType ?? "application/octet-stream",
       });
     }
 
-    formData.append("file", file);
+    formData.append("file", file, key);
 
     const response = await this.fetchCloudflare(this.apiBaseUrl, {
       init: {
@@ -163,7 +177,7 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
     }
   }
 
-  async get(key: string): Promise<Buffer> {
+  async getStream(key: string): Promise<StorageStream> {
     this.validateKey(key);
 
     const response = await this.fetchCloudflare(
@@ -191,11 +205,14 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
       });
     }
 
-    try {
-      return Buffer.from(await response.arrayBuffer());
-    } catch (error) {
-      throw normalizeCloudflareImagesError(error, { key, operation: "get" });
+    if (response.body === null) {
+      throw normalizeCloudflareImagesError(
+        { message: "Cloudflare response body is missing" },
+        { key, operation: "get" },
+      );
     }
+
+    return normalizeDownloadStream(response.body, key);
   }
 
   async delete(key: string): Promise<void> {

@@ -20,7 +20,7 @@ const provider = new CloudinaryProvider({
   secure: true,
 });
 
-await provider.put("uploads/hero.jpg", Buffer.from("image"), {
+await provider.put("uploads/hero.jpg", new TextEncoder().encode("image"), {
   contentType: "image/jpeg",
   metadata: { owner: "team-a" },
 });

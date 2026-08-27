@@ -550,8 +550,14 @@ function normalizeEntrypointFields(pkg, options = {}) {
   }
 
   if (options.directDistRoot) {
+    const publishedSubpaths = Object.fromEntries(
+      Object.entries(normalizeObject(pkg.publishConfig.exports)).filter(
+        ([subpath]) => subpath !== ".",
+      ),
+    );
     pkg.publishConfig.exports = {
       ".": directDistPublishedRootExportFor(pkg),
+      ...publishedSubpaths,
     };
     pkg.main = pkg.publishConfig.main;
     pkg.types = pkg.publishConfig.types;

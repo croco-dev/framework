@@ -9,6 +9,8 @@ cloud providers depend on these stable contracts.
 ## Public API
 
 - `StorageProvider` and `ImageProvider` contracts.
+- `StorageBody` and `StorageStream` - runtime-neutral byte and Web Stream contracts.
+- `storageStreamFromBytes`, `readStorageStream`, and `readStorageBody` - portable conversions.
 - `BaseStorageProvider` - base class for provider implementations.
 - `InMemoryStorageProvider` - test and local-development implementation.
 - `validateSignedUrlExpiry` and `MAX_SIGNED_URL_EXPIRY_SECONDS` - the shared signed-URL lifetime
@@ -25,6 +27,24 @@ const storage = new InMemoryStorageProvider();
 await storage.put("avatars/user-1.png", new Uint8Array());
 const object = await storage.get("avatars/user-1.png");
 ```
+
+`get()` explicitly buffers an object into `Uint8Array`. Use `getStream()` for large objects so the
+provider can preserve its native streaming path.
+
+## Node stream interop
+
+The default entrypoint does not reference Node declarations. Node applications can opt into the
+separate `@croco/storage-core/node` entrypoint when they need `node:stream` conversion:
+
+```typescript
+import { createReadStream } from "node:fs";
+import { nodeReadableToStorageStream, storageStreamToNodeReadable } from "@croco/storage-core/node";
+
+await storage.put("uploads/video.mp4", nodeReadableToStorageStream(createReadStream("video.mp4")));
+const download = storageStreamToNodeReadable(await storage.getStream("uploads/video.mp4"));
+```
+
+Node `Buffer` values remain valid buffered bodies because `Buffer` extends `Uint8Array`.
 
 ## Signed URL expiry
 

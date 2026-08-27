@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 674,
+  problemCount: 675,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -3922,7 +3922,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts",
-          line: 61,
+          line: 91,
           column: 13,
           kind: "problem-factory",
         },
@@ -3954,7 +3954,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts",
-          line: 304,
+          line: 321,
           column: 13,
           kind: "problem-factory",
         },
@@ -3987,7 +3987,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts",
-          line: 391,
+          line: 408,
           column: 13,
           kind: "problem-factory",
         },
@@ -16404,6 +16404,37 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "STORAGE_INVALID_NODE_BODY",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#storage-invalid-node-body",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/storage-core/src/libs/problems/InvalidNodeStorageBodyProblem.ts",
+          line: 5,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "STORAGE_INVALID_SIGNED_URL_EXPIRY",
       category: "BadRequest",
       status: 400,
@@ -16746,7 +16777,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/storage-cloudinary/src/libs/CloudinaryProvider.ts",
-          line: 345,
+          line: 377,
           column: 13,
           kind: "problem-factory",
         },
@@ -16903,7 +16934,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts",
-          line: 337,
+          line: 354,
           column: 13,
           kind: "problem-factory",
         },

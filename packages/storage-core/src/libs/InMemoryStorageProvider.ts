@@ -1,13 +1,19 @@
-import type { Readable } from "node:stream";
-import { Readable as ReadableImpl } from "node:stream";
 import { FileNotFoundProblem } from "./problems/FileNotFoundProblem";
 import { InvalidKeyProblem } from "./problems/InvalidKeyProblem";
 import { UploadFailedProblem } from "./problems/UploadFailedProblem";
 import { validateSignedUrlExpiry } from "./signedUrlExpiry";
-import type { ObjectMetadata, PutOptions, SignedUrlOptions, StorageProvider } from "./types";
+import { readStorageBody, storageStreamFromBytes } from "./storageBody";
+import type {
+  ObjectMetadata,
+  PutOptions,
+  SignedUrlOptions,
+  StorageBody,
+  StorageProvider,
+  StorageStream,
+} from "./types";
 
 type StoredObject = {
-  data: Buffer;
+  data: Uint8Array;
   metadata?: ObjectMetadata;
 };
 
@@ -25,36 +31,26 @@ export class InMemoryStorageProvider implements StorageProvider {
     this.baseUrl = baseUrl;
   }
 
-  async put(key: string, data: Buffer | Readable, options?: PutOptions): Promise<void> {
+  async put(key: string, data: StorageBody, options?: PutOptions): Promise<void> {
     this.validateKey(key);
 
     try {
-      let buffer: Buffer;
-
-      if (Buffer.isBuffer(data)) {
-        buffer = data;
-      } else {
-        const chunks: Buffer[] = [];
-        for await (const chunk of data) {
-          chunks.push(chunk);
-        }
-        buffer = Buffer.concat(chunks);
-      }
+      const bytes = await readStorageBody(data);
 
       const metadata: ObjectMetadata = {
-        size: buffer.length,
+        size: bytes.byteLength,
         contentType: options?.contentType,
         lastModified: new Date(),
         metadata: options?.metadata,
       };
 
-      this.storage.set(key, { data: buffer, metadata });
+      this.storage.set(key, { data: bytes, metadata });
     } catch (error) {
       throw new UploadFailedProblem(key, error instanceof Error ? error.message : "Unknown error");
     }
   }
 
-  async get(key: string): Promise<Buffer> {
+  async get(key: string): Promise<Uint8Array> {
     this.validateKey(key);
 
     const object = this.storage.get(key);
@@ -66,7 +62,7 @@ export class InMemoryStorageProvider implements StorageProvider {
     return object.data;
   }
 
-  async getStream(key: string): Promise<Readable> {
+  async getStream(key: string): Promise<StorageStream> {
     this.validateKey(key);
 
     const object = this.storage.get(key);
@@ -75,7 +71,7 @@ export class InMemoryStorageProvider implements StorageProvider {
       throw new FileNotFoundProblem(key);
     }
 
-    return ReadableImpl.from(object.data);
+    return storageStreamFromBytes(object.data);
   }
 
   async delete(key: string): Promise<void> {

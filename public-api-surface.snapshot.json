@@ -25946,10 +25946,28 @@
               "declarationKind": "const"
             },
             {
+              "name": "readStorageBody",
+              "exportKind": "named",
+              "source": "./libs/storageBody",
+              "declarationKind": "function"
+            },
+            {
+              "name": "readStorageStream",
+              "exportKind": "named",
+              "source": "./libs/storageBody",
+              "declarationKind": "function"
+            },
+            {
               "name": "StorageProblem",
               "exportKind": "named",
               "source": "./libs/problems/StorageProblem",
               "declarationKind": "class"
+            },
+            {
+              "name": "storageStreamFromBytes",
+              "exportKind": "named",
+              "source": "./libs/storageBody",
+              "declarationKind": "function"
             },
             {
               "name": "UploadFailedProblem",
@@ -25986,7 +26004,17 @@
               "source": "./libs/types"
             },
             {
+              "name": "StorageBody",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
               "name": "StorageProvider",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "StorageStream",
               "exportKind": "named",
               "source": "./libs/types"
             },
@@ -26001,6 +26029,52 @@
               "source": "./libs/types"
             }
           ]
+        },
+        {
+          "exportPath": "./node",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/node.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/node.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/node.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/storage-core/src/node.ts",
+          "runtimeExports": [
+            {
+              "name": "InvalidNodeStorageBodyProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/InvalidNodeStorageBodyProblem",
+              "declarationKind": "class"
+            },
+            {
+              "name": "nodeReadableToStorageStream",
+              "exportKind": "named",
+              "source": "./libs/nodeInterop",
+              "declarationKind": "function"
+            },
+            {
+              "name": "nodeStorageBody",
+              "exportKind": "named",
+              "source": "./libs/nodeInterop",
+              "declarationKind": "function"
+            },
+            {
+              "name": "storageStreamToNodeReadable",
+              "exportKind": "named",
+              "source": "./libs/nodeInterop",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": []
         }
       ]
     },

@@ -1,4 +1,12 @@
+import { once } from "node:events";
+import { createServer } from "node:http";
 import { Readable } from "node:stream";
+import type {
+  PutObjectCommand as AwsPutObjectCommand,
+  PutObjectCommandInput,
+  S3Client as AwsS3Client,
+  S3ClientConfig,
+} from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import type { ConfigService } from "@croco/framework-config";
 import { Container } from "@croco/framework-context";
@@ -7,8 +15,12 @@ import {
   DeleteFailedProblem,
   FileNotFoundProblem,
   MAX_SIGNED_URL_EXPIRY_SECONDS,
+  readStorageBody,
+  readStorageStream,
   UploadFailedProblem,
 } from "@croco/storage-core";
+import type { StorageStream } from "@croco/storage-core";
+import { nodeReadableToStorageStream, storageStreamToNodeReadable } from "@croco/storage-core/node";
 import { createStorageProviderConformanceSuite } from "@croco/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EmptyR2BodyProblem } from "../libs/problems/EmptyR2BodyProblem";
@@ -23,8 +35,8 @@ const mockClientConstructor = vi.fn();
 
 vi.mock("@aws-sdk/client-s3", () => ({
   S3Client: class {
-    constructor() {
-      mockClientConstructor();
+    constructor(options: unknown) {
+      mockClientConstructor(options);
     }
 
     send = mockSend;
@@ -54,15 +66,20 @@ type MockS3Command = {
     readonly name: string;
   };
   readonly input: {
-    readonly Body?: Buffer | Readable;
+    readonly Body?: Uint8Array | Readable;
     readonly ContentType?: string;
     readonly Key?: string;
     readonly Metadata?: Record<string, string>;
   };
 };
 
+type ActualS3Module = {
+  readonly PutObjectCommand: new (input: PutObjectCommandInput) => AwsPutObjectCommand;
+  readonly S3Client: new (config: S3ClientConfig) => AwsS3Client;
+};
+
 type StoredR2Object = {
-  readonly data: Buffer;
+  readonly data: Uint8Array;
   readonly contentType?: string;
   readonly lastModified: Date;
   readonly metadata?: Record<string, string>;
@@ -128,6 +145,12 @@ describe("R2StorageProvider", () => {
   });
 
   describe("constructor", () => {
+    it("configures streaming uploads without optional checksum calculation", () => {
+      expect(mockClientConstructor).toHaveBeenCalledWith(
+        expect.objectContaining({ requestChecksumCalculation: "WHEN_REQUIRED" }),
+      );
+    });
+
     it("rejects blank configuration before constructing an R2 client", () => {
       mockClientConstructor.mockClear();
       vi.mocked(configService.get).mockImplementation((key: string) => {
@@ -318,28 +341,14 @@ describe("R2StorageProvider", () => {
 
   describe("getStream", () => {
     it("should return a readable stream from S3", async () => {
-      const mockBody = Readable.from([Buffer.from("stream")]);
       mockSend.mockResolvedValue({
-        Body: mockBody,
+        Body: createMockR2Body([new TextEncoder().encode("stream")]),
       });
 
       const stream = await provider.getStream("test/file.txt");
-      const chunks: Buffer[] = [];
-      for await (const chunk of stream) {
-        if (Buffer.isBuffer(chunk)) {
-          chunks.push(chunk);
-          continue;
-        }
 
-        if (typeof chunk === "string") {
-          chunks.push(Buffer.from(chunk));
-          continue;
-        }
-
-        chunks.push(Buffer.from([Number(chunk)]));
-      }
-
-      expect(Buffer.concat(chunks)).toEqual(Buffer.from("stream"));
+      expect(stream).toBeInstanceOf(ReadableStream);
+      await expect(readStorageStream(stream)).resolves.toEqual(new TextEncoder().encode("stream"));
     });
 
     it("should throw FileNotFoundProblem when S3 returns 404", async () => {
@@ -364,20 +373,23 @@ describe("R2StorageProvider", () => {
   });
 
   describe("get", () => {
-    it("should buffer a small object into a Buffer", async () => {
+    it("should buffer a small object into a Uint8Array", async () => {
       mockSend.mockResolvedValue({
-        Body: Readable.from([Buffer.from("hello "), Buffer.from("world")]),
+        Body: createMockR2Body([
+          new TextEncoder().encode("hello "),
+          new TextEncoder().encode("world"),
+        ]),
       });
 
-      const buffer = await provider.get("test/file.txt");
+      const bytes = await provider.get("test/file.txt");
 
-      expect(buffer).toEqual(Buffer.from("hello world"));
+      expect(bytes).toEqual(new TextEncoder().encode("hello world"));
     });
 
     it("should throw R2ObjectTooLargeProblem when buffered bytes exceed the limit", async () => {
-      const oversizedChunk = Buffer.alloc(6 * 1024 * 1024, "a");
+      const oversizedChunk = new Uint8Array(6 * 1024 * 1024);
       mockSend.mockResolvedValue({
-        Body: Readable.from([oversizedChunk, oversizedChunk]),
+        Body: createMockR2Body([oversizedChunk, oversizedChunk]),
       });
 
       const getPromise = provider.get("test/file.txt");
@@ -392,12 +404,12 @@ describe("R2StorageProvider", () => {
       mockSend
         .mockRejectedValueOnce({ $metadata: { httpStatusCode: 503 }, name: "ServiceUnavailable" })
         .mockResolvedValueOnce({
-          Body: Readable.from([Buffer.from("hello world")]),
+          Body: createMockR2Body([new TextEncoder().encode("hello world")]),
         });
 
-      const buffer = await provider.get("test/file.txt");
+      const bytes = await provider.get("test/file.txt");
 
-      expect(buffer).toEqual(Buffer.from("hello world"));
+      expect(bytes).toEqual(new TextEncoder().encode("hello world"));
       expect(mockSend).toHaveBeenCalledTimes(2);
     });
   });
@@ -419,16 +431,83 @@ describe("R2StorageProvider", () => {
       expect(mockSend).toHaveBeenCalledTimes(2);
     });
 
-    it("should not retry readable stream uploads on transient failures", async () => {
+    it("should not retry Web stream uploads on transient failures", async () => {
       mockSend.mockRejectedValueOnce({
         $metadata: { httpStatusCode: 503 },
         name: "ServiceUnavailable",
       });
 
       await expect(
-        provider.put("test/file.txt", Readable.from([Buffer.from("data")])),
+        provider.put("test/file.txt", createStorageStream([new TextEncoder().encode("data")])),
       ).rejects.toThrow(UploadFailedProblem);
       expect(mockSend).toHaveBeenCalledTimes(1);
+    });
+
+    it("adapts Web stream uploads to the Node AWS transport without buffering", async () => {
+      mockSend.mockImplementation(async (command: MockS3Command) => {
+        const body = command.input.Body;
+
+        expect(body).toBeInstanceOf(Readable);
+        await expect(readBody(body as Readable)).resolves.toEqual(
+          new TextEncoder().encode("streamed data"),
+        );
+        return {};
+      });
+
+      await expect(
+        provider.put(
+          "test/file.txt",
+          createStorageStream([
+            new TextEncoder().encode("streamed "),
+            new TextEncoder().encode("data"),
+          ]),
+        ),
+      ).resolves.toBeUndefined();
+    });
+
+    it("sends an unknown-length stream through the real S3 middleware and Node transport", async () => {
+      const receivedChunks: Uint8Array[] = [];
+      const server = createServer(async (request, response) => {
+        for await (const chunk of request) {
+          receivedChunks.push(chunk);
+        }
+        response.statusCode = 200;
+        response.end();
+      });
+
+      server.listen(0, "127.0.0.1");
+      await once(server, "listening");
+      const address = server.address();
+      if (address === null || typeof address === "string") {
+        throw new Error("Local S3 test server did not expose a TCP address");
+      }
+
+      const actualS3 = await vi.importActual<ActualS3Module>("@aws-sdk/client-s3");
+      const client = new actualS3.S3Client({
+        credentials: { accessKeyId: "test", secretAccessKey: "test" },
+        endpoint: `http://127.0.0.1:${address.port}`,
+        forcePathStyle: true,
+        region: "auto",
+        requestChecksumCalculation: "WHEN_REQUIRED",
+      });
+
+      try {
+        await client.send(
+          new actualS3.PutObjectCommand({
+            Body: storageStreamToNodeReadable(
+              createStorageStream([new TextEncoder().encode("streamed data")]),
+            ),
+            Bucket: "test-bucket",
+            Key: "test/file.txt",
+          }),
+        );
+      } finally {
+        client.destroy();
+        server.close();
+        await once(server, "close");
+      }
+
+      expect(new TextDecoder().decode(Buffer.concat(receivedChunks))).toContain("streamed data");
     });
   });
 
@@ -542,7 +621,7 @@ function useInMemoryR2Backend(): void {
       }
 
       return {
-        Body: Readable.from([object.data]),
+        Body: createMockR2Body([object.data]),
       };
     }
 
@@ -570,15 +649,25 @@ function useInMemoryR2Backend(): void {
   });
 }
 
-async function readBody(body: Buffer | Readable): Promise<Buffer> {
-  if (Buffer.isBuffer(body)) {
-    return body;
-  }
+async function readBody(body: Uint8Array | Readable): Promise<Uint8Array> {
+  return readStorageBody(body instanceof Uint8Array ? body : nodeReadableToStorageStream(body));
+}
 
-  const chunks: Buffer[] = [];
-  for await (const chunk of body) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-  }
+function createMockR2Body(chunks: readonly Uint8Array[]): {
+  transformToWebStream(): StorageStream;
+} {
+  return {
+    transformToWebStream: () => createStorageStream(chunks),
+  };
+}
 
-  return Buffer.concat(chunks);
+function createStorageStream(chunks: readonly Uint8Array[]): StorageStream {
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      for (const chunk of chunks) {
+        controller.enqueue(chunk);
+      }
+      controller.close();
+    },
+  });
 }

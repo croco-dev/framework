@@ -3,6 +3,7 @@
   "extends": "../../tsconfig/tsconfig.node.json",
   "compilerOptions": {
     "paths": {
+      "@croco/storage-core/node": ["../storage-core/src/node.ts"],
       "@croco/testing": ["../testing/src/libs/provider-conformance.ts"]
     }
   },

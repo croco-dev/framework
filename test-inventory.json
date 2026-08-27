@@ -3251,6 +3251,18 @@
       "owner": "@croco/storage-core"
     },
     {
+      "path": "packages/storage-core/src/tests/NodeInterop.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/storage-core"
+    },
+    {
+      "path": "packages/storage-core/src/tests/PublishedTypes.spec.ts",
+      "lane": "published",
+      "qualifiers": [],
+      "owner": "@croco/storage-core"
+    },
+    {
       "path": "packages/storage-core/src/tests/SignedUrlExpiry.spec.ts",
       "lane": "fast",
       "qualifiers": [],

@@ -11,6 +11,7 @@ export default defineConfig({
       "@croco/framework-context": resolve(currentDir, "../framework-context/src/index.ts"),
       "@croco/problems-core": resolve(currentDir, "../problems-core/src/index.ts"),
       "@croco/retry-core": resolve(currentDir, "../retry-core/src/index.ts"),
+      "@croco/storage-core/node": resolve(currentDir, "../storage-core/src/node.ts"),
       "@croco/storage-core": resolve(currentDir, "../storage-core/src/index.ts"),
       "@croco/telemetry-api": resolve(currentDir, "../telemetry-api/src/index.ts"),
       "@croco/testing": resolve(currentDir, "../testing/src/libs/provider-conformance.ts"),

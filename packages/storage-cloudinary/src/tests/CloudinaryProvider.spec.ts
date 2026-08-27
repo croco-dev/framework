@@ -12,6 +12,7 @@ import {
   FileNotFoundProblem,
   InvalidKeyProblem,
   MAX_SIGNED_URL_EXPIRY_SECONDS,
+  storageStreamFromBytes,
 } from "@croco/storage-core";
 import { createStorageProviderConformanceSuite } from "@croco/testing";
 import { v2 as cloudinary } from "cloudinary";
@@ -167,8 +168,8 @@ describe("CloudinaryProvider", () => {
       );
     });
 
-    it("should upload readable stream data successfully", async () => {
-      const { PassThrough, Readable } = await import("node:stream");
+    it("should upload Web ReadableStream data successfully", async () => {
+      const { PassThrough } = await import("node:stream");
       const mockUploadStream = vi.fn(
         (_options: unknown, callback: (error: Error | undefined, result: unknown) => void) => {
           const destination = new PassThrough();
@@ -183,7 +184,7 @@ describe("CloudinaryProvider", () => {
         mockUploadStream as unknown as UploadStream,
       );
 
-      const stream = Readable.from(Buffer.from("test data"));
+      const stream = storageStreamFromBytes(Buffer.from("test data"));
 
       await expect(provider.put("test-key", stream)).resolves.not.toThrow();
     });
@@ -376,18 +377,19 @@ describe("CloudinaryProvider", () => {
         () => destination as unknown as ReturnType<UploadStream>,
       );
 
-      const source = new PassThrough();
+      const source = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.error(new Error("Stream broken"));
+        },
+      });
       const putPromise = provider.put("test-key", source);
-
-      source.emit("error", new Error("Stream broken"));
 
       await expect(putPromise).rejects.toMatchObject({
         code: "storage-cloudinary/terminal-upstream",
       });
     });
 
-    it("should not retry readable stream uploads on transient callback errors", async () => {
-      const { Readable } = await import("node:stream");
+    it("should not retry Web ReadableStream uploads on transient callback errors", async () => {
       const mockUploadStream = vi.fn(
         (_options: unknown, callback: (error: Error | undefined, result: unknown) => void) => {
           callback(
@@ -409,7 +411,7 @@ describe("CloudinaryProvider", () => {
       );
 
       await expect(
-        provider.put("test-key", Readable.from(Buffer.from("test data"))),
+        provider.put("test-key", storageStreamFromBytes(Buffer.from("test data"))),
       ).rejects.toMatchObject({
         code: "storage-cloudinary/retryable-upstream",
       });
@@ -443,16 +445,11 @@ describe("CloudinaryProvider", () => {
 
   describe("get()", () => {
     it("should fetch resource successfully", async () => {
-      const mockResponse = {
-        ok: true,
-        arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(10)),
-      };
-
-      vi.mocked(global.fetch).mockResolvedValue(mockResponse as unknown as Response);
+      vi.mocked(global.fetch).mockResolvedValue(new Response(new Uint8Array(10)));
 
       const result = await provider.get("test-key");
 
-      expect(result).toBeInstanceOf(Buffer);
+      expect(result).toBeInstanceOf(Uint8Array);
       expect(global.fetch).toHaveBeenCalledWith(
         "https://res.cloudinary.com/test-cloud/image/upload/test-key",
       );
@@ -490,17 +487,36 @@ describe("CloudinaryProvider", () => {
       });
     });
 
+    it("should normalize a response body read failure", async () => {
+      vi.mocked(global.fetch).mockResolvedValue(
+        new Response(
+          new ReadableStream<Uint8Array>({
+            pull(controller) {
+              controller.error(
+                Object.assign(new Error("connection reset"), { code: "ECONNRESET" }),
+              );
+            },
+          }),
+        ),
+      );
+
+      await expect(provider.get("test-key")).rejects.toMatchObject({
+        code: "storage-cloudinary/retryable-upstream",
+        extensions: {
+          key: "test-key",
+          operation: "get",
+        },
+      });
+    });
+
     it("should retry transient fetch failures before succeeding", async () => {
       vi.mocked(global.fetch)
         .mockResolvedValueOnce({ ok: false, status: 503 } as unknown as Response)
-        .mockResolvedValueOnce({
-          ok: true,
-          arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(4)),
-        } as unknown as Response);
+        .mockResolvedValueOnce(new Response(new Uint8Array(4)));
 
       const result = await provider.get("test-key");
 
-      expect(result).toBeInstanceOf(Buffer);
+      expect(result).toBeInstanceOf(Uint8Array);
       expect(global.fetch).toHaveBeenCalledTimes(2);
     });
 
@@ -518,17 +534,11 @@ describe("CloudinaryProvider", () => {
 
   describe("getStream()", () => {
     it("should return readable stream", async () => {
-      const mockResponse = {
-        ok: true,
-        arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(10)),
-      };
-
-      vi.mocked(global.fetch).mockResolvedValue(mockResponse as unknown as Response);
+      vi.mocked(global.fetch).mockResolvedValue(new Response(new Uint8Array(10)));
 
       const stream = await provider.getStream("test-key");
 
-      expect(stream).not.toBeUndefined();
-      expect(stream.pipe).not.toBeUndefined();
+      expect(stream).toBeInstanceOf(ReadableStream);
     });
   });
 
@@ -1109,8 +1119,17 @@ describe("CloudinaryProvider", () => {
     );
 
     it("should reject an unsupported readable stream before consuming bytes", async () => {
-      const { Readable } = await import("node:stream");
-      const stream = Readable.from(Buffer.from("video data"));
+      let consumed = false;
+      const stream = new ReadableStream<Uint8Array>(
+        {
+          pull(controller) {
+            consumed = true;
+            controller.enqueue(Buffer.from("video data"));
+            controller.close();
+          },
+        },
+        { highWaterMark: 0 },
+      );
 
       await expect(
         provider.put("test-key", stream, { contentType: "video/mp4" }),
@@ -1118,7 +1137,7 @@ describe("CloudinaryProvider", () => {
         code: "storage-cloudinary/validation-failed",
       });
 
-      expect(stream.readableDidRead).toBe(false);
+      expect(consumed).toBe(false);
       expect(cloudinary.uploader.upload_stream).not.toHaveBeenCalled();
     });
 
@@ -1130,7 +1149,7 @@ describe("CloudinaryProvider", () => {
       await provider.put(key, data, { contentType: "image/png" });
 
       const reconstructedProvider = new CloudinaryProvider(mockConfig);
-      await expect(reconstructedProvider.get(key)).resolves.toEqual(data);
+      await expect(reconstructedProvider.get(key)).resolves.toEqual(new Uint8Array(data));
       await expect(reconstructedProvider.exists(key)).resolves.toBe(true);
       await expect(reconstructedProvider.getMetadata(key)).resolves.toMatchObject({
         size: data.length,
