@@ -17,10 +17,15 @@ describe("migrate command", () => {
     expect(Object.keys(migrate.subCommands ?? {})).toEqual(["up", "down", "status"]);
   });
 
-  it("should expose the real migrate command to root help resolution", () => {
+  it("should expose the migrate command to root help resolution", () => {
     const rootSubCommands = createCrocoCommand().subCommands as Record<string, CommandDef>;
 
-    expect(rootSubCommands.migrate).toBe(migrate);
+    expect(rootSubCommands.migrate?.meta).toEqual(migrate.meta);
+    expect(Object.keys(rootSubCommands.migrate?.subCommands ?? {})).toEqual([
+      "up",
+      "down",
+      "status",
+    ]);
   });
 
   it.each([
@@ -134,7 +139,7 @@ describe("migrate command", () => {
           spawn: spawnMigrationRunner,
         },
       );
-      child.emit("exit", 0);
+      child.emit("close", 0);
 
       expect(calls).toEqual([
         {
@@ -207,8 +212,66 @@ describe("migrate command", () => {
         options: { cwd: "/workspace/app", stdio: "inherit" },
       },
     ]);
-    child.emit("exit", 0);
+    child.emit("close", 0);
     await expect(result).resolves.toEqual({ exitCode: 0, status: "completed" });
+  });
+
+  it("should drain injected output before returning the migration exit code", async () => {
+    const stdout = new EventEmitter();
+    const stderr = new EventEmitter();
+    const child = Object.assign(new EventEmitter(), { stdout, stderr }) as unknown as ChildProcess;
+    const output: string[] = [];
+    const errors: string[] = [];
+
+    const result = runMigrateCommand("status", [], {
+      resolveBin: () => "/pkg/dist/cli.js",
+      spawn: () => child,
+      stdout: (message) => output.push(message),
+      stderr: (message) => errors.push(message),
+    });
+    stdout.emit("data", "status\n");
+    stderr.emit("data", "warning\n");
+    child.emit("close", 7);
+
+    await expect(result).resolves.toEqual({
+      exitCode: 7,
+      reason: "runner-exit",
+      status: "failed",
+    });
+    expect(output).toEqual(["status\n"]);
+    expect(errors).toEqual(["warning\n"]);
+  });
+
+  it("should pass injected cwd, env, and output streams to the migration runner", async () => {
+    const child = new EventEmitter() as unknown as ChildProcess;
+    const calls: SpawnCall[] = [];
+    const env = { DATABASE_URL: "postgres://db" };
+    const result = runMigrateCommand("status", [], {
+      cwd: "/workspace/app",
+      env,
+      resolveBin: () => "/pkg/dist/cli.js",
+      spawn: (command, args, options) => {
+        calls.push({ command, args, options });
+        return child;
+      },
+      stdout: () => undefined,
+      stderr: () => undefined,
+    });
+
+    child.emit("close", 0);
+
+    await expect(result).resolves.toEqual({ exitCode: 0, status: "completed" });
+    expect(calls).toEqual([
+      {
+        command: process.execPath,
+        args: ["/pkg/dist/cli.js", "status"],
+        options: {
+          cwd: "/workspace/app",
+          env,
+          stdio: ["inherit", "pipe", "pipe"],
+        },
+      },
+    ]);
   });
 
   it.each<[MigrateCommand, string[], string]>([
@@ -284,6 +347,7 @@ describe("migrate command", () => {
       spawn: spawnMigrationRunner,
     });
     child.emit("error", new Error("spawn failed"));
+    child.emit("close", 0);
 
     await expect(result).resolves.toEqual({
       exitCode: 1,
@@ -317,7 +381,7 @@ describe("migrate command", () => {
       spawn: () => child,
     });
 
-    child.emit("exit", 7);
+    child.emit("close", 7);
 
     await expect(result).resolves.toEqual({
       exitCode: 7,

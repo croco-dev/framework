@@ -5,6 +5,7 @@ import { registerController } from "../libs/codemods/registerController.js";
 import type { RegisterControllerResult } from "../libs/codemods/registerController.js";
 import type { WriteResult } from "../libs/fileWriter.js";
 import { write as fileWriterWrite } from "../libs/fileWriter.js";
+import { getCrocoCommandRuntime } from "../libs/cliRuntime.js";
 import { assertGeneratedImportDependencies } from "../libs/generatedImportContract.js";
 import { normalize, validate } from "../libs/naming.js";
 import { detect } from "../libs/workspace.js";
@@ -28,7 +29,12 @@ export async function runCreateDomain(
   name: string,
   options: RunCreateDomainOptions = {},
 ): Promise<RunCreateDomainResult | null> {
-  const { dryRun = false, overwrite = false, cwd = process.cwd(), register = true } = options;
+  const {
+    dryRun = false,
+    overwrite = false,
+    cwd = getCrocoCommandRuntime().cwd,
+    register = true,
+  } = options;
 
   if (!validate(name)) {
     throw new Error(`Invalid name: ${name}`);
@@ -39,7 +45,7 @@ export async function runCreateDomain(
   const workspace = await detect(cwd);
 
   if (!workspace.root || !workspace.hasApiServer) {
-    console.log("No Croco workspace detected. Run from a Croco project.");
+    getCrocoCommandRuntime().stdout("No Croco workspace detected. Run from a Croco project.");
     return null;
   }
 
@@ -246,16 +252,16 @@ function logCreateDomainResult(result: RunCreateDomainResult | null): void {
 
 function logWriteResult(result: WriteResult): void {
   if (result.status === "created") {
-    console.log(`Created: ${result.path}`);
+    getCrocoCommandRuntime().stdout(`Created: ${result.path}`);
   } else if (result.status === "overwritten") {
-    console.log(`Overwritten: ${result.path}`);
+    getCrocoCommandRuntime().stdout(`Overwritten: ${result.path}`);
   } else if (result.status === "skipped-dry-run") {
-    console.log(`[Dry run] Would create: ${result.path}`);
+    getCrocoCommandRuntime().stdout(`[Dry run] Would create: ${result.path}`);
     if (result.diff) {
-      console.log(result.diff);
+      getCrocoCommandRuntime().stdout(result.diff);
     }
   } else if (result.status === "exists-no-overwrite") {
-    console.log(`Skipped (exists): ${result.path}`);
+    getCrocoCommandRuntime().stdout(`Skipped (exists): ${result.path}`);
   }
 }
 
@@ -263,9 +269,9 @@ function logRegistrationResult(result: RegisterControllerResult | null): void {
   if (!result) return;
 
   if (result.status === "unsupported-pattern") {
-    console.log(`Skipped controller registration: ${result.hint}`);
+    getCrocoCommandRuntime().stdout(`Skipped controller registration: ${result.hint}`);
     return;
   }
 
-  console.log(`Registered controller: ${result.className}`);
+  getCrocoCommandRuntime().stdout(`Registered controller: ${result.className}`);
 }

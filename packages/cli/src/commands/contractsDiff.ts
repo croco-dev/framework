@@ -14,6 +14,7 @@ import {
   type ContractGraphSnapshot,
 } from "@croco/protocols-core";
 import { GLOBAL_OPTIONS } from "./options.js";
+import { getCrocoCommandRuntime } from "../libs/cliRuntime.js";
 
 export type ContractsDiffIo = {
   readonly stdout: (message: string) => void;
@@ -43,14 +44,17 @@ type ContractsDiffParseResult =
   | { readonly kind: "invalid"; readonly message: string }
   | { readonly kind: "run"; readonly options: ContractsDiffOptions };
 
-const defaultIo: ContractsDiffIo = {
-  stdout: (message) => console.log(message),
-  stderr: (message) => console.error(message),
-  readFile: (path) => readFileSync(path, "utf8"),
-  writeFile: (path, content) => writeFileSync(path, content),
-  mkdir: (path) => mkdirSync(path, { recursive: true }),
-  cwd: process.cwd(),
-};
+function createDefaultIo(): ContractsDiffIo {
+  const runtime = getCrocoCommandRuntime();
+  return {
+    stdout: runtime.stdout,
+    stderr: runtime.stderr,
+    readFile: (path) => readFileSync(path, "utf8"),
+    writeFile: (path, content) => writeFileSync(path, content),
+    mkdir: (path) => mkdirSync(path, { recursive: true }),
+    cwd: runtime.cwd,
+  };
+}
 
 export const contractsDiff = defineCommand({
   meta: {
@@ -90,7 +94,7 @@ export const contractsDiff = defineCommand({
     },
   },
   async run({ rawArgs }) {
-    process.exitCode = await runContractsDiff(rawArgs);
+    getCrocoCommandRuntime().setExitCode(await runContractsDiff(rawArgs));
   },
 });
 
@@ -102,7 +106,7 @@ export async function runContractsDiff(
   } = {},
 ): Promise<number> {
   const parsed = parseContractsDiffArgs(args);
-  const io = { ...defaultIo, ...options.io };
+  const io = { ...createDefaultIo(), ...options.io };
 
   if (parsed.kind === "help") {
     printContractsDiffHelp(io);

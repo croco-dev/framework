@@ -7,6 +7,7 @@ import {
   getStableCliDiagnosticCodeForLegacyCode,
 } from "../libs/diagnosticCodes.js";
 import { GLOBAL_OPTIONS } from "./options.js";
+import { getCrocoCommandRuntime } from "../libs/cliRuntime.js";
 
 type DiCheckStatus = "passed" | "failed";
 
@@ -59,14 +60,17 @@ const DI_GRAPH_LEGACY_DIAGNOSTIC_CODES = new Map<string, string>([
   ["framework-context/di-unknown-provider", "CROCO_DI_004"],
 ]);
 
-const defaultIo: DiCheckIo = {
-  stdout: (message) => console.log(message),
-  stderr: (message) => console.error(message),
-  readFile: (path) => readFileSync(path, "utf-8"),
-  writeFile: (path, content) => writeFileSync(path, content),
-  mkdir: (path) => mkdirSync(path, { recursive: true }),
-  cwd: process.cwd(),
-};
+function createDefaultIo(): DiCheckIo {
+  const runtime = getCrocoCommandRuntime();
+  return {
+    stdout: runtime.stdout,
+    stderr: runtime.stderr,
+    readFile: (path) => readFileSync(path, "utf-8"),
+    writeFile: (path, content) => writeFileSync(path, content),
+    mkdir: (path) => mkdirSync(path, { recursive: true }),
+    cwd: runtime.cwd,
+  };
+}
 
 export const diCheck = defineCommand({
   meta: {
@@ -77,7 +81,7 @@ export const diCheck = defineCommand({
     ...GLOBAL_OPTIONS,
   },
   async run({ rawArgs }) {
-    process.exitCode = await runDiCheck(rawArgs);
+    getCrocoCommandRuntime().setExitCode(await runDiCheck(rawArgs));
   },
 });
 
@@ -86,7 +90,7 @@ export async function runDiCheck(
   options: { readonly io?: Partial<DiCheckIo> } = {},
 ): Promise<number> {
   const parsed = parseDiCheckArgs(args);
-  const io = { ...defaultIo, ...options.io };
+  const io = { ...createDefaultIo(), ...options.io };
 
   if (parsed.kind === "help") {
     printDiCheckHelp(io);

@@ -7,6 +7,8 @@ import {
   resolveOpenapiSpecBinFromEntry,
   runOpenapiSpec,
 } from "../commands/codegenOpenapi.js";
+import { createCrocoCommandRuntime } from "../libs/cliRuntime.js";
+import { getDelegatedCommandRuntimeOptions } from "../libs/delegatedCommand.js";
 
 describe("codegenOpenapi", () => {
   it("should resolve a workspace source package entry to the built OpenAPI CLI", () => {
@@ -39,7 +41,7 @@ describe("codegenOpenapi", () => {
       setExitCode: (code) => exitCodes.push(code),
       spawn: spawnOpenapi,
     });
-    child.emit("exit", 7);
+    child.emit("close", 7);
 
     expect(calls).toEqual([
       {
@@ -69,6 +71,65 @@ describe("codegenOpenapi", () => {
     expect(errors).toEqual(["spawn failed"]);
     expect(exitCodes).toEqual([1]);
   });
+
+  it("should drain injected output before returning the child exit code", async () => {
+    const stdout = new EventEmitter();
+    const stderr = new EventEmitter();
+    const child = Object.assign(new EventEmitter(), { stdout, stderr }) as unknown as ChildProcess;
+    const calls: SpawnCall[] = [];
+    const output: string[] = [];
+    const errors: string[] = [];
+
+    const result = runOpenapiSpec(["--check"], {
+      resolveBin: () => "/pkg/dist/cli.js",
+      spawn: (command, args, options) => {
+        calls.push({ command, args, options });
+        return child;
+      },
+      stdout: (message) => output.push(message),
+      stderr: (message) => errors.push(message),
+    });
+    stdout.emit("data", "generated\n");
+    stderr.emit("data", "warning\n");
+    child.emit("close", 7);
+
+    await expect(result).resolves.toBe(7);
+    expect(calls.at(0)?.options.stdio).toEqual(["inherit", "pipe", "pipe"]);
+    expect(output).toEqual(["generated\n"]);
+    expect(errors).toEqual(["warning\n"]);
+  });
+
+  it.each([
+    {
+      dependencies: { stdout: () => undefined },
+      expectedStdio: ["inherit", "pipe", "inherit"],
+      label: "stdout only",
+    },
+    {
+      dependencies: { stderr: () => undefined },
+      expectedStdio: ["inherit", "inherit", "pipe"],
+      label: "stderr only",
+    },
+  ])(
+    "should pipe $label when delegating from the root runtime",
+    ({ dependencies, expectedStdio }) => {
+      const child = new EventEmitter() as unknown as ChildProcess;
+      const calls: SpawnCall[] = [];
+      const runtime = createCrocoCommandRuntime(dependencies);
+
+      runOpenapiSpec(["--check"], {
+        ...getDelegatedCommandRuntimeOptions(runtime),
+        resolveBin: () => "/pkg/dist/cli.js",
+        spawn: (command, args, options) => {
+          calls.push({ command, args, options });
+          return child;
+        },
+      });
+
+      expect(calls.at(0)?.options.stdio).toEqual(expectedStdio);
+      child.emit("close", 0);
+    },
+  );
 });
 
 type SpawnCall = {

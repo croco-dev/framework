@@ -1,3 +1,5 @@
+import { getCrocoCommandRuntime } from "./cliRuntime.js";
+
 export class NoTtyError extends Error {
   constructor() {
     super("TTY required for interactive prompts. Use --dry-run or provide values via flags.");
@@ -15,7 +17,7 @@ export type PromptResult<T> =
     };
 
 function ensureTty(): void {
-  if (!process.stdout.isTTY) throw new NoTtyError();
+  if (!getCrocoCommandRuntime().isTTY) throw new NoTtyError();
 }
 
 export async function confirmOverwrite(path: string): Promise<PromptResult<boolean>> {

@@ -2,6 +2,7 @@ import { defineCommand } from "citty";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import { CLI_DIAGNOSTIC_CODES, withLegacyCode } from "../libs/diagnosticCodes.js";
 import { GLOBAL_OPTIONS } from "./options.js";
+import { getCrocoCommandRuntime } from "../libs/cliRuntime.js";
 
 const DEFAULT_TIMEOUT_MS = 5000;
 const DEFAULT_TOKEN_HEADER = "X-Diagnostics-Token";
@@ -200,8 +201,10 @@ const list = defineCommand({
       },
     );
 
-    console.log(args.json ? JSON.stringify(report, null, 2) : formatJobsListReport(report));
-    process.exitCode = getJobsListExitCode(report);
+    getCrocoCommandRuntime().stdout(
+      args.json ? JSON.stringify(report, null, 2) : formatJobsListReport(report),
+    );
+    getCrocoCommandRuntime().setExitCode(getJobsListExitCode(report));
   },
 });
 
@@ -241,8 +244,10 @@ const show = defineCommand({
       tokenHeader: typeof args.tokenHeader === "string" ? args.tokenHeader : DEFAULT_TOKEN_HEADER,
     });
 
-    console.log(args.json ? JSON.stringify(job, null, 2) : formatJobDetails(job));
-    process.exitCode = getJobExitCode(job);
+    getCrocoCommandRuntime().stdout(
+      args.json ? JSON.stringify(job, null, 2) : formatJobDetails(job),
+    );
+    getCrocoCommandRuntime().setExitCode(getJobExitCode(job));
   },
 });
 
@@ -282,7 +287,9 @@ const logs = defineCommand({
       tokenHeader: typeof args.tokenHeader === "string" ? args.tokenHeader : DEFAULT_TOKEN_HEADER,
     });
 
-    console.log(args.json ? JSON.stringify(entries, null, 2) : formatJobLogs(entries));
+    getCrocoCommandRuntime().stdout(
+      args.json ? JSON.stringify(entries, null, 2) : formatJobLogs(entries),
+    );
   },
 });
 
@@ -333,8 +340,10 @@ const cancel = defineCommand({
       },
     );
 
-    console.log(args.json ? JSON.stringify(job, null, 2) : formatJobDetails(job));
-    process.exitCode = getJobExitCode(job);
+    getCrocoCommandRuntime().stdout(
+      args.json ? JSON.stringify(job, null, 2) : formatJobDetails(job),
+    );
+    getCrocoCommandRuntime().setExitCode(getJobExitCode(job));
   },
 });
 
@@ -385,8 +394,10 @@ const replay = defineCommand({
       },
     );
 
-    console.log(args.json ? JSON.stringify(job, null, 2) : formatJobDetails(job));
-    process.exitCode = getJobExitCode(job);
+    getCrocoCommandRuntime().stdout(
+      args.json ? JSON.stringify(job, null, 2) : formatJobDetails(job),
+    );
+    getCrocoCommandRuntime().setExitCode(getJobExitCode(job));
   },
 });
 
@@ -673,8 +684,9 @@ function readJobsTarget(value: unknown): string {
   if (typeof value === "string" && value.length > 0) {
     return value;
   }
-  if (typeof process.env.CROCO_JOBS_URL === "string" && process.env.CROCO_JOBS_URL.length > 0) {
-    return process.env.CROCO_JOBS_URL;
+  const jobsUrl = getCrocoCommandRuntime().env.CROCO_JOBS_URL;
+  if (typeof jobsUrl === "string" && jobsUrl.length > 0) {
+    return jobsUrl;
   }
 
   throw new MissingJobsTargetUrlProblem();

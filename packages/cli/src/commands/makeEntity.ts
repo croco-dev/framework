@@ -2,6 +2,7 @@ import { defineCommand } from "citty";
 import { join } from "node:path";
 import type { WriteResult } from "../libs/fileWriter.js";
 import { write as fileWriterWrite } from "../libs/fileWriter.js";
+import { getCrocoCommandRuntime } from "../libs/cliRuntime.js";
 import { normalize, validate } from "../libs/naming.js";
 import { detect } from "../libs/workspace.js";
 import { GLOBAL_OPTIONS } from "./options.js";
@@ -21,7 +22,7 @@ export async function generateEntity(
   name: string,
   options: GenerateEntityOptions = {},
 ): Promise<GenerateEntityResult | null> {
-  const { dryRun = false, overwrite = false, cwd = process.cwd() } = options;
+  const { dryRun = false, overwrite = false, cwd = getCrocoCommandRuntime().cwd } = options;
 
   if (!validate(name)) {
     throw new Error(`Invalid name: ${name}`);
@@ -31,7 +32,7 @@ export async function generateEntity(
   const workspace = await detect(cwd);
 
   if (!workspace.root || !workspace.hasApiServer) {
-    console.log("No Croco workspace detected. Run from a Croco project.");
+    getCrocoCommandRuntime().stdout("No Croco workspace detected. Run from a Croco project.");
     return null;
   }
 
@@ -87,15 +88,15 @@ function logWriteResult(result: GenerateEntityResult | null): void {
   if (!result) return;
 
   if (result.status === "created") {
-    console.log(`Created: ${result.path}`);
+    getCrocoCommandRuntime().stdout(`Created: ${result.path}`);
   } else if (result.status === "overwritten") {
-    console.log(`Overwritten: ${result.path}`);
+    getCrocoCommandRuntime().stdout(`Overwritten: ${result.path}`);
   } else if (result.status === "skipped-dry-run") {
-    console.log(`[Dry run] Would create: ${result.path}`);
+    getCrocoCommandRuntime().stdout(`[Dry run] Would create: ${result.path}`);
     if (result.diff) {
-      console.log(result.diff);
+      getCrocoCommandRuntime().stdout(result.diff);
     }
   } else if (result.status === "exists-no-overwrite") {
-    console.log(`Skipped (exists): ${result.path}`);
+    getCrocoCommandRuntime().stdout(`Skipped (exists): ${result.path}`);
   }
 }

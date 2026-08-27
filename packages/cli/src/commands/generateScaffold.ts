@@ -1,4 +1,5 @@
 import { defineCommand } from "citty";
+import { getCrocoCommandRuntime } from "../libs/cliRuntime.js";
 import { runCreateDomain } from "./createDomain.js";
 import type { PageMode, RunCreatePageResult } from "./createPage.js";
 import { runCreatePage } from "./createPage.js";
@@ -24,7 +25,7 @@ export async function runGenerateScaffold(
   const {
     dryRun = false,
     overwrite = false,
-    cwd = process.cwd(),
+    cwd = getCrocoCommandRuntime().cwd,
     register = true,
     mode = "ssr",
   } = options;

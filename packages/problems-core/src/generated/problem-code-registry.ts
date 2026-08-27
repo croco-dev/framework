@@ -4761,7 +4761,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/cli/src/commands/jobs.ts",
-          line: 88,
+          line: 89,
           column: 5,
           kind: "problem-constructor",
         },
@@ -4792,7 +4792,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/cli/src/commands/jobs.ts",
-          line: 99,
+          line: 100,
           column: 5,
           kind: "problem-constructor",
         },
@@ -4823,7 +4823,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/cli/src/commands/jobs.ts",
-          line: 110,
+          line: 111,
           column: 5,
           kind: "problem-constructor",
         },
@@ -4853,7 +4853,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/cli/src/commands/jobs.ts",
-          line: 137,
+          line: 138,
           column: 49,
           kind: "problem-metadata",
         },
@@ -4884,7 +4884,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/cli/src/commands/jobs.ts",
-          line: 132,
+          line: 133,
           column: 63,
           kind: "problem-metadata",
         },
@@ -4977,7 +4977,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/cli/src/commands/generateUsageDashboard.ts",
-          line: 24,
+          line: 25,
           column: 5,
           kind: "problem-constructor",
         },

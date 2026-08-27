@@ -72,6 +72,7 @@ export {
   runtimePolicyCheck,
 } from "./commands/runtimePolicy";
 export { GLOBAL_OPTIONS } from "./commands/options";
+export { createCrocoCommand, runCroco } from "./commands/root";
 
 export type { DiCheckDiagnostic, DiCheckIo, DiCheckReport } from "./commands/diCheck";
 export type {
@@ -80,6 +81,8 @@ export type {
   DiGraphModuleLoader,
 } from "./commands/diGraph";
 export type { ArchitecturePolicyCheckIo } from "./commands/architecturePolicy";
+export type { CrocoRunResult } from "./commands/root";
+export type { CrocoCommandDependencies } from "./libs/cliRuntime";
 
 export type {
   DoctorCheckResult,

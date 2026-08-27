@@ -1,29 +1,86 @@
-import { defineCommand, runCommand } from "citty";
-import type { SubCommandsDef } from "citty";
+import { defineCommand, renderUsage, runCommand } from "citty";
+import type { ArgsDef, CommandContext, CommandDef, Resolvable, SubCommandsDef } from "citty";
+import {
+  createCrocoCommandRuntime,
+  isCrocoCommandExit,
+  runWithCrocoCommandRuntime,
+} from "../libs/cliRuntime.js";
+import type { CrocoCommandDependencies, CrocoCommandRuntime } from "../libs/cliRuntime.js";
+import { getDelegatedCommandRuntimeOptions } from "../libs/delegatedCommand.js";
 import { doctor } from "./doctor.js";
 import {
   createMigrateCommand,
   isMigrateCommand,
-  migrate,
   migrateArgumentsAreValid,
   migrateOptionConsumesNextArgument,
 } from "./migrate.js";
 import { GLOBAL_OPTIONS } from "./options.js";
-import type { MigrateCommandResult } from "./migrate.js";
 
 type LoadedCommand = Awaited<Extract<SubCommandsDef[string], Promise<unknown>>>;
 type CommandLoader = () => Promise<LoadedCommand>;
-type CreateCrocoCommandOptions = {
-  readonly onMigrateResult?: (result: MigrateCommandResult) => Promise<void> | void;
+
+export type CrocoRunResult = {
+  readonly exitCode: number;
 };
 
-export function createCrocoCommand(options: CreateCrocoCommandOptions = {}) {
-  const migrateCommand =
-    options.onMigrateResult === undefined
-      ? migrate
-      : createMigrateCommand({ onResult: options.onMigrateResult });
+export function createCrocoCommand(
+  dependencies: CrocoCommandDependencies = {},
+): CommandDef<typeof GLOBAL_OPTIONS> {
+  return createBoundCrocoCommand(createCrocoCommandRuntime(dependencies));
+}
 
-  return defineCommand({
+export async function runCroco(
+  argv: readonly string[],
+  dependencies: CrocoCommandDependencies = {},
+): Promise<CrocoRunResult> {
+  const runtime = createCrocoCommandRuntime(dependencies);
+  const command = createBoundCrocoCommand(runtime);
+  const rawArgs = normalizeMigrateRootArgs(argv);
+
+  try {
+    if (rawArgs.includes("--help") || rawArgs.includes("-h")) {
+      runtime.stdout(`${await renderHelpUsage(command, rawArgs)}\n`);
+      return toRunResult(runtime.getExitCode());
+    }
+
+    if (rawArgs.length === 1 && rawArgs[0] === "--version") {
+      const meta = await resolveValue(command.meta);
+      if (!meta?.version) {
+        throw createCliError("No version specified", "E_NO_VERSION");
+      }
+      runtime.stdout(meta.version);
+      return toRunResult(runtime.getExitCode());
+    }
+
+    await runCommand(command, { rawArgs });
+    return toRunResult(runtime.getExitCode());
+  } catch (error) {
+    if (isCrocoCommandExit(error)) {
+      return toRunResult(error.exitCode);
+    }
+
+    if (isCliError(error)) {
+      runtime.stdout(`${await renderHelpUsage(command, rawArgs)}\n`);
+      runtime.stderr(error.message);
+    } else {
+      runtime.stderr(error instanceof Error ? (error.stack ?? error.message) : String(error));
+    }
+
+    return toRunResult(1);
+  }
+}
+
+function createBoundCrocoCommand(runtime: CrocoCommandRuntime): CommandDef<typeof GLOBAL_OPTIONS> {
+  const migrateCommand = createMigrateCommand({
+    runOptions: getDelegatedCommandRuntimeOptions(runtime),
+    onResult(result) {
+      if (result.status === "failed" && result.message !== undefined) {
+        runtime.stderr(result.message);
+      }
+      runtime.setExitCode(result.exitCode);
+    },
+  });
+  const command = defineCommand({
     meta: {
       name: "croco",
       description: "Croco framework CLI",
@@ -101,6 +158,8 @@ export function createCrocoCommand(options: CreateCrocoCommandOptions = {}) {
       ),
     },
   });
+
+  return bindCommandRuntime(command, runtime);
 }
 
 export function normalizeMigrateRootArgs(rawArgs: readonly string[]): string[] {
@@ -207,4 +266,137 @@ function lazyCommand(name: string, description: string, loadCommand: CommandLoad
       await runCommand(command, { rawArgs, data });
     },
   }) as LoadedCommand;
+}
+
+function bindCommandRuntime<T extends ArgsDef>(
+  command: CommandDef<T>,
+  runtime: CrocoCommandRuntime,
+): CommandDef<T> {
+  const subCommands = bindResolvableSubCommands(command.subCommands, runtime);
+  const setup = bindCommandHook(command.setup, runtime);
+  const cleanup = bindCommandHook(command.cleanup, runtime);
+  const run = bindCommandHook(command.run, runtime);
+
+  return {
+    ...command,
+    ...(subCommands === undefined ? {} : { subCommands }),
+    ...(setup === undefined ? {} : { setup }),
+    ...(cleanup === undefined ? {} : { cleanup }),
+    ...(run === undefined ? {} : { run }),
+  };
+}
+
+function bindResolvableSubCommands(
+  subCommands: Resolvable<SubCommandsDef> | undefined,
+  runtime: CrocoCommandRuntime,
+): Resolvable<SubCommandsDef> | undefined {
+  if (subCommands === undefined) {
+    return undefined;
+  }
+  if (typeof subCommands === "function") {
+    return async () => bindSubCommands(await resolveRequiredValue(subCommands), runtime);
+  }
+  if (isPromise(subCommands)) {
+    return subCommands.then((resolved) => bindSubCommands(resolved, runtime));
+  }
+  return bindSubCommands(subCommands, runtime);
+}
+
+function bindSubCommands(
+  subCommands: SubCommandsDef,
+  runtime: CrocoCommandRuntime,
+): SubCommandsDef {
+  return Object.fromEntries(
+    Object.entries(subCommands).map(([name, command]) => [
+      name,
+      bindResolvableCommand(command, runtime),
+    ]),
+  );
+}
+
+function bindResolvableCommand(
+  command: SubCommandsDef[string],
+  runtime: CrocoCommandRuntime,
+): SubCommandsDef[string] {
+  if (typeof command === "function") {
+    return async () => bindCommandRuntime(await resolveRequiredValue(command), runtime);
+  }
+  if (isPromise(command)) {
+    return command.then((resolved) => bindCommandRuntime(resolved, runtime));
+  }
+  return bindCommandRuntime(command, runtime);
+}
+
+function bindCommandHook<T extends ArgsDef>(
+  hook: ((context: CommandContext<T>) => unknown | Promise<unknown>) | undefined,
+  runtime: CrocoCommandRuntime,
+): ((context: CommandContext<T>) => unknown | Promise<unknown>) | undefined {
+  if (hook === undefined) {
+    return undefined;
+  }
+
+  return (context) => runWithCrocoCommandRuntime(runtime, () => hook(context));
+}
+
+async function renderHelpUsage<T extends ArgsDef>(
+  command: CommandDef<T>,
+  rawArgs: readonly string[],
+  parentMeta?: Awaited<ReturnType<typeof resolveCommandMeta>>,
+): Promise<string> {
+  const subCommands = await resolveValue(command.subCommands);
+  if (subCommands !== undefined && Object.keys(subCommands).length > 0) {
+    const subCommandIndex = rawArgs.findIndex((argument) => !argument.startsWith("-"));
+    const subCommandName = rawArgs[subCommandIndex];
+    const subCommand =
+      subCommandName === undefined ? undefined : await resolveValue(subCommands[subCommandName]);
+    if (subCommand !== undefined) {
+      return renderHelpUsage(
+        subCommand,
+        rawArgs.slice(subCommandIndex + 1),
+        await resolveCommandMeta(command),
+      );
+    }
+  }
+
+  const parent = parentMeta === undefined ? undefined : defineCommand<T>({ meta: parentMeta });
+  return renderUsage(command, parent);
+}
+
+async function resolveCommandMeta<T extends ArgsDef>(command: CommandDef<T>) {
+  return resolveValue(command.meta);
+}
+
+async function resolveRequiredValue<T>(value: Resolvable<T>): Promise<T> {
+  const resolved = await resolveValue(value);
+  if (resolved === undefined) {
+    throw createCliError("Expected command definition to resolve", "E_COMMAND_RESOLUTION");
+  }
+  return resolved;
+}
+
+async function resolveValue<T>(value: Resolvable<T> | undefined): Promise<T | undefined> {
+  if (typeof value === "function") {
+    return (value as () => T | Promise<T>)();
+  }
+  return value;
+}
+
+function isPromise<T>(value: T | Promise<T>): value is Promise<T> {
+  return typeof value === "object" && value !== null && "then" in value;
+}
+
+function isCliError(error: unknown): error is Error & { readonly code: string } {
+  return (
+    error instanceof Error &&
+    error.name === "CLIError" &&
+    typeof (error as Error & { readonly code?: unknown }).code === "string"
+  );
+}
+
+function createCliError(message: string, code: string): Error & { readonly code: string } {
+  return Object.assign(new Error(message), { name: "CLIError", code });
+}
+
+function toRunResult(exitCode: number): CrocoRunResult {
+  return { exitCode };
 }

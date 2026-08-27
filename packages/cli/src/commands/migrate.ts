@@ -3,6 +3,7 @@ import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import type { ArgsDef } from "citty";
 import type { ChildProcess, SpawnOptions } from "node:child_process";
+import { getDelegatedCommandStdio } from "../libs/delegatedCommand.js";
 import { resolveCliBinFromEntry } from "./resolveCliBin.js";
 
 const require = createRequire(import.meta.url);
@@ -25,11 +26,16 @@ export type MigrateCommandResult =
       readonly status: "failed";
     };
 export type RunMigrateCommandOptions = {
+  readonly cwd?: string;
+  readonly env?: Readonly<Record<string, string | undefined>>;
   readonly resolveBin?: () => string;
   readonly spawn?: MigrationRunnerSpawn;
+  readonly stderr?: (message: string) => void;
+  readonly stdout?: (message: string) => void;
 };
 export type CreateMigrateCommandOptions = {
   readonly onResult?: (result: MigrateCommandResult) => Promise<void> | void;
+  readonly runOptions?: RunMigrateCommandOptions;
 };
 
 type MigrationOptionName = keyof typeof MIGRATION_OPTION_SPECS;
@@ -129,7 +135,7 @@ export function createMigrateCommand(options: CreateMigrateCommandOptions = {}) 
       },
       args: migrationArgsFor(command),
       async run({ rawArgs }) {
-        const result = await runMigrateCommand(command, rawArgs);
+        const result = await runMigrateCommand(command, rawArgs, options.runOptions);
         await options.onResult?.(result);
         return result;
       },
@@ -171,8 +177,11 @@ export async function runMigrateCommand(
   let child: ChildProcess;
   try {
     child = spawnChild(process.execPath, [resolveBin(), command, ...invocation.args], {
-      ...(invocation.cwd === undefined ? {} : { cwd: invocation.cwd }),
-      stdio: "inherit",
+      ...((invocation.cwd ?? options.cwd) === undefined
+        ? {}
+        : { cwd: invocation.cwd ?? options.cwd }),
+      ...(options.env === undefined ? {} : { env: options.env }),
+      stdio: getDelegatedCommandStdio(options),
     });
   } catch (error) {
     return {
@@ -183,30 +192,32 @@ export async function runMigrateCommand(
     };
   }
 
+  child.stdout?.on("data", (chunk) => options.stdout?.(String(chunk)));
+  child.stderr?.on("data", (chunk) => options.stderr?.(String(chunk)));
+
   return new Promise((resolve) => {
+    let settled = false;
     const settle = (result: MigrateCommandResult): void => {
-      child.off("exit", onExit);
-      child.off("error", onError);
+      if (settled) return;
+      settled = true;
       resolve(result);
     };
-    const onExit = (code: number | null): void => {
-      settle(
-        code === 0
-          ? { exitCode: 0, status: "completed" }
-          : { exitCode: code ?? 1, reason: "runner-exit", status: "failed" },
-      );
-    };
-    const onError = (error: Error): void => {
+
+    child.on("error", (error) => {
       settle({
         exitCode: 1,
         message: error.message,
         reason: "launch-failed",
         status: "failed",
       });
-    };
-
-    child.once("exit", onExit);
-    child.once("error", onError);
+    });
+    child.on("close", (code) => {
+      settle(
+        code === 0
+          ? { exitCode: 0, status: "completed" }
+          : { exitCode: code ?? 1, reason: "runner-exit", status: "failed" },
+      );
+    });
   });
 }
 

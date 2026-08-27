@@ -39,7 +39,7 @@ describe("codegenRpc", () => {
       spawn: spawnRpc,
       setExitCode: (code) => exitCodes.push(code),
     });
-    child.emit("exit", 7);
+    child.emit("close", 7);
 
     expect(calls).toEqual([
       {
@@ -68,6 +68,33 @@ describe("codegenRpc", () => {
 
     expect(errors).toEqual(["spawn failed"]);
     expect(exitCodes).toEqual([1]);
+  });
+
+  it("should drain injected output before returning the child exit code", async () => {
+    const stdout = new EventEmitter();
+    const stderr = new EventEmitter();
+    const child = Object.assign(new EventEmitter(), { stdout, stderr }) as unknown as ChildProcess;
+    const calls: SpawnCall[] = [];
+    const output: string[] = [];
+    const errors: string[] = [];
+
+    const result = runRpcCodegen(["--check"], {
+      resolveBin: () => "/pkg/dist/cli.js",
+      spawn: (command, args, options) => {
+        calls.push({ command, args, options });
+        return child;
+      },
+      stdout: (message) => output.push(message),
+      stderr: (message) => errors.push(message),
+    });
+    stdout.emit("data", "generated\n");
+    stderr.emit("data", "warning\n");
+    child.emit("close", 7);
+
+    await expect(result).resolves.toBe(7);
+    expect(calls.at(0)?.options.stdio).toEqual(["inherit", "pipe", "pipe"]);
+    expect(output).toEqual(["generated\n"]);
+    expect(errors).toEqual(["warning\n"]);
   });
 });
 

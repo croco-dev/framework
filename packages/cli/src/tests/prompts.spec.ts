@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NoTtyError, confirmOverwrite, selectMode, textInput } from "../libs/prompts.js";
+import { createCrocoCommandRuntime, runWithCrocoCommandRuntime } from "../libs/cliRuntime.js";
 
 const promptMocks = vi.hoisted(() => ({
   cancel: Symbol("cancel"),
@@ -38,6 +39,17 @@ describe("confirmOverwrite", () => {
 
   it("should throw NoTtyError when not in TTY", async () => {
     await expect(confirmOverwrite("/tmp/file.ts")).rejects.toThrow(NoTtyError);
+  });
+
+  it("should use the injected TTY capability", async () => {
+    setTty(true);
+
+    await expect(
+      runWithCrocoCommandRuntime(createCrocoCommandRuntime({ isTTY: false }), () =>
+        confirmOverwrite("/tmp/file.ts"),
+      ),
+    ).rejects.toThrow(NoTtyError);
+    expect(promptMocks.confirm).not.toHaveBeenCalled();
   });
 
   it("should return cancellation without exiting the process", async () => {

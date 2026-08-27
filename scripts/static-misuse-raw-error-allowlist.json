@@ -42,7 +42,7 @@
     {
       "package": "@croco/cli",
       "file": "packages/cli/src/commands/contractsDiff.ts",
-      "line": 249,
+      "line": 253,
       "excerpt": "throw new Error(`${path} is not a croco.contract-graph.snapshot.v1 JSON snapshot.`);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
       "owner": "framework-error-handling",
@@ -51,7 +51,7 @@
     {
       "package": "@croco/cli",
       "file": "packages/cli/src/commands/createDomain.ts",
-      "line": 34,
+      "line": 40,
       "excerpt": "throw new Error(`Invalid name: ${name}`);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
       "owner": "framework-error-handling",
@@ -60,7 +60,7 @@
     {
       "package": "@croco/cli",
       "file": "packages/cli/src/commands/createPage.ts",
-      "line": 39,
+      "line": 45,
       "excerpt": "throw new Error(`Invalid name: ${name}`);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
       "owner": "framework-error-handling",
@@ -69,7 +69,7 @@
     {
       "package": "@croco/cli",
       "file": "packages/cli/src/commands/createPage.ts",
-      "line": 42,
+      "line": 48,
       "excerpt": "throw new Error(`Invalid page mode: ${mode}`);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
       "owner": "framework-error-handling",
@@ -78,7 +78,7 @@
     {
       "package": "@croco/cli",
       "file": "packages/cli/src/commands/createPage.ts",
-      "line": 59,
+      "line": 65,
       "excerpt": "throw new Error(",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
       "owner": "framework-error-handling",
@@ -87,7 +87,7 @@
     {
       "package": "@croco/cli",
       "file": "packages/cli/src/commands/createPage.ts",
-      "line": 132,
+      "line": 138,
       "excerpt": "throw new Error(`Invalid page mode: ${String(value)}`);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
       "owner": "framework-error-handling",
@@ -96,7 +96,7 @@
     {
       "package": "@croco/cli",
       "file": "packages/cli/src/commands/generateScaffold.ts",
-      "line": 33,
+      "line": 34,
       "excerpt": "throw new Error(\"Scaffold generation failed: domain generation failed.\");",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
       "owner": "framework-error-handling",
@@ -105,7 +105,7 @@
     {
       "package": "@croco/cli",
       "file": "packages/cli/src/commands/generateScaffold.ts",
-      "line": 39,
+      "line": 40,
       "excerpt": "throw new Error(\"page generation failed\");",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
       "owner": "framework-error-handling",
@@ -114,7 +114,7 @@
     {
       "package": "@croco/cli",
       "file": "packages/cli/src/commands/generateScaffold.ts",
-      "line": 43,
+      "line": 44,
       "excerpt": "throw new Error(",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
       "owner": "framework-error-handling",
@@ -123,7 +123,7 @@
     {
       "package": "@croco/cli",
       "file": "packages/cli/src/commands/generateScaffold.ts",
-      "line": 86,
+      "line": 87,
       "excerpt": "throw new Error(`Invalid page mode: ${String(value)}`);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
       "owner": "framework-error-handling",
@@ -132,7 +132,7 @@
     {
       "package": "@croco/cli",
       "file": "packages/cli/src/commands/makeController.ts",
-      "line": 28,
+      "line": 29,
       "excerpt": "throw new Error(`Invalid name: ${name}`);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
       "owner": "framework-error-handling",
@@ -141,7 +141,7 @@
     {
       "package": "@croco/cli",
       "file": "packages/cli/src/commands/makeEntity.ts",
-      "line": 27,
+      "line": 28,
       "excerpt": "throw new Error(`Invalid name: ${name}`);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
       "owner": "framework-error-handling",
@@ -150,7 +150,7 @@
     {
       "package": "@croco/cli",
       "file": "packages/cli/src/commands/makeEvent.ts",
-      "line": 28,
+      "line": 29,
       "excerpt": "throw new Error(`Invalid name: ${name}`);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
       "owner": "framework-error-handling",
@@ -159,7 +159,7 @@
     {
       "package": "@croco/cli",
       "file": "packages/cli/src/commands/makeListener.ts",
-      "line": 28,
+      "line": 29,
       "excerpt": "throw new Error(`Invalid name: ${name}`);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
       "owner": "framework-error-handling",
@@ -168,7 +168,7 @@
     {
       "package": "@croco/cli",
       "file": "packages/cli/src/commands/makeRepository.ts",
-      "line": 28,
+      "line": 29,
       "excerpt": "throw new Error(`Invalid name: ${name}`);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
       "owner": "framework-error-handling",
@@ -177,7 +177,7 @@
     {
       "package": "@croco/cli",
       "file": "packages/cli/src/commands/projectMap.ts",
-      "line": 1411,
+      "line": 1415,
       "excerpt": "throw new Error(",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
       "owner": "framework-error-handling",
@@ -186,7 +186,7 @@
     {
       "package": "@croco/cli",
       "file": "packages/cli/src/commands/projectMap.ts",
-      "line": 1429,
+      "line": 1433,
       "excerpt": "throw new Error(`Missing Contract Graph snapshot '${manifestPath}'.`);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
       "owner": "framework-error-handling",
@@ -195,7 +195,7 @@
     {
       "package": "@croco/cli",
       "file": "packages/cli/src/commands/projectMap.ts",
-      "line": 1438,
+      "line": 1442,
       "excerpt": "throw new Error(",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
       "owner": "framework-error-handling",
@@ -204,7 +204,7 @@
     {
       "package": "@croco/cli",
       "file": "packages/cli/src/commands/projectMap.ts",
-      "line": 1456,
+      "line": 1460,
       "excerpt": "throw new Error(`Missing runtime policy manifest '${manifestPath}'.`);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
       "owner": "framework-error-handling",
@@ -213,7 +213,7 @@
     {
       "package": "@croco/cli",
       "file": "packages/cli/src/commands/projectMap.ts",
-      "line": 1478,
+      "line": 1482,
       "excerpt": "throw new Error(`Missing provider profile manifest '${manifestPath}'.`);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
       "owner": "framework-error-handling",
@@ -222,7 +222,7 @@
     {
       "package": "@croco/cli",
       "file": "packages/cli/src/commands/projectMap.ts",
-      "line": 1516,
+      "line": 1520,
       "excerpt": "throw new Error(`Runtime policy manifest at ${manifestPath} must be a JSON object.`);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
       "owner": "framework-error-handling",
@@ -231,7 +231,7 @@
     {
       "package": "@croco/cli",
       "file": "packages/cli/src/commands/projectMap.ts",
-      "line": 1612,
+      "line": 1616,
       "excerpt": "throw new Error(`Unable to read JSON '${path}': ${message}`);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
       "owner": "framework-error-handling",
@@ -240,7 +240,7 @@
     {
       "package": "@croco/cli",
       "file": "packages/cli/src/commands/runtimePolicy.ts",
-      "line": 195,
+      "line": 199,
       "excerpt": "throw new Error(`Runtime policy manifest at ${manifestPath} must be a JSON object.`);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
       "owner": "framework-error-handling",
@@ -249,7 +249,7 @@
     {
       "package": "@croco/cli",
       "file": "packages/cli/src/commands/runtimePolicy.ts",
-      "line": 216,
+      "line": 220,
       "excerpt": "throw new Error(\"Runtime policy manifest must contain table.plans or plans.\");",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
       "owner": "framework-error-handling",
@@ -258,7 +258,7 @@
     {
       "package": "@croco/cli",
       "file": "packages/cli/src/commands/upgrade.ts",
-      "line": 319,
+      "line": 323,
       "excerpt": "throw new Error(`Upgrade target '${path}' does not exist.`);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
       "owner": "framework-error-handling",

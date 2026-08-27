@@ -2,6 +2,7 @@ import { defineCommand } from "citty";
 import { dirname, join } from "node:path";
 import type { WriteResult } from "../libs/fileWriter.js";
 import { write as fileWriterWrite } from "../libs/fileWriter.js";
+import { getCrocoCommandRuntime } from "../libs/cliRuntime.js";
 import {
   assertGeneratedImportDependencies,
   hasManifestDependency,
@@ -33,7 +34,12 @@ export async function runCreatePage(
   name: string,
   options: RunCreatePageOptions = {},
 ): Promise<RunCreatePageResult | null> {
-  const { dryRun = false, overwrite = false, cwd = process.cwd(), mode = "ssr" } = options;
+  const {
+    dryRun = false,
+    overwrite = false,
+    cwd = getCrocoCommandRuntime().cwd,
+    mode = "ssr",
+  } = options;
 
   if (!validate(name)) {
     throw new Error(`Invalid name: ${name}`);
@@ -48,7 +54,7 @@ export async function runCreatePage(
   const workspace = await detect(cwd);
 
   if (!workspace.root || !workspace.hasConsoleWeb) {
-    console.log("No Croco workspace detected. Run from a Croco project.");
+    getCrocoCommandRuntime().stdout("No Croco workspace detected. Run from a Croco project.");
     return null;
   }
 
@@ -169,16 +175,16 @@ function logWriteResults(result: RunCreatePageResult | null): void {
 
 function logWriteResult(result: WriteResult): void {
   if (result.status === "created") {
-    console.log(`Created: ${result.path}`);
+    getCrocoCommandRuntime().stdout(`Created: ${result.path}`);
   } else if (result.status === "overwritten") {
-    console.log(`Overwritten: ${result.path}`);
+    getCrocoCommandRuntime().stdout(`Overwritten: ${result.path}`);
   } else if (result.status === "skipped-dry-run") {
-    console.log(`[Dry run] Would create: ${result.path}`);
+    getCrocoCommandRuntime().stdout(`[Dry run] Would create: ${result.path}`);
     if (result.diff) {
-      console.log(result.diff);
+      getCrocoCommandRuntime().stdout(result.diff);
     }
   } else if (result.status === "exists-no-overwrite") {
-    console.log(`Skipped (exists): ${result.path}`);
+    getCrocoCommandRuntime().stdout(`Skipped (exists): ${result.path}`);
   }
 }
 

@@ -9,6 +9,7 @@ import type {
 } from "@croco/framework-context";
 import { Container } from "@croco/framework-context";
 import { defineCommand } from "citty";
+import { getCrocoCommandRuntime } from "../libs/cliRuntime.js";
 
 const DEFAULT_MANIFEST_PATH = ".croco/build/di-graph.manifest.json";
 const VALUE_FLAGS = new Set(["--write", "--module", "--bootstrap", "--roots"]);
@@ -58,13 +59,16 @@ type DiGraphParseResult =
   | { readonly kind: "invalid"; readonly message: string }
   | { readonly kind: "run"; readonly options: DiGraphOptions };
 
-const defaultIo: DiGraphIo = {
-  stdout: (message) => console.log(message),
-  stderr: (message) => console.error(message),
-  writeFile: (path, content) => writeFileSync(path, content),
-  mkdir: (path) => mkdirSync(path, { recursive: true }),
-  cwd: process.cwd(),
-};
+function createDefaultIo(): DiGraphIo {
+  const runtime = getCrocoCommandRuntime();
+  return {
+    stdout: runtime.stdout,
+    stderr: runtime.stderr,
+    writeFile: (path, content) => writeFileSync(path, content),
+    mkdir: (path) => mkdirSync(path, { recursive: true }),
+    cwd: runtime.cwd,
+  };
+}
 
 const defaultLoadModule: DiGraphModuleLoader = async (modulePath, cwd) =>
   (await import(pathToFileURL(resolvePath(modulePath, cwd)).href)) as Record<string, unknown>;
@@ -105,7 +109,7 @@ export const diGraph = defineCommand({
     },
   },
   async run({ rawArgs }) {
-    process.exitCode = await runDiGraph(rawArgs);
+    getCrocoCommandRuntime().setExitCode(await runDiGraph(rawArgs));
   },
 });
 
@@ -118,7 +122,7 @@ export async function runDiGraph(
   } = {},
 ): Promise<number> {
   const parsed = parseDiGraphArgs(args);
-  const io = { ...defaultIo, ...options.io };
+  const io = { ...createDefaultIo(), ...options.io };
   const loadModule = options.loadModule ?? defaultLoadModule;
   // Custom module loaders are usually test fixtures; without a matching framework-context loader, fall back to the CLI Container.
   const loadFrameworkContext =
