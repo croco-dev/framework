@@ -120,3 +120,61 @@ export class ImpersonationSessionActorMismatchProblem extends Problem {
     super(undefined, undefined, "Authenticated actor cannot end this impersonation session");
   }
 }
+
+export type ImpersonationLifecyclePublicationStage = "publish" | "acknowledge" | "predecessor";
+
+export class ImpersonationLifecyclePublicationProblem extends Problem {
+  readonly code = "IMPERSONATION_LIFECYCLE_PUBLICATION_PENDING";
+  readonly category = ProblemCategory.InternalServerError;
+  readonly reconciliationState = "pending" as const;
+
+  constructor(
+    readonly sessionId: string,
+    readonly eventId: string,
+    readonly lifecycle: "started" | "ended",
+    readonly stage: ImpersonationLifecyclePublicationStage,
+    cause: Error,
+  ) {
+    super(
+      undefined,
+      undefined,
+      `Impersonation session '${sessionId}' committed, but lifecycle event '${eventId}' requires reconciliation`,
+      {
+        cause,
+        extensions: {
+          eventId,
+          lifecycle,
+          reconciliationState: "pending",
+          sessionId,
+          stage,
+        },
+      },
+    );
+  }
+}
+
+export class ImpersonationEventIntentConflictProblem extends Problem {
+  readonly code = "impersonation-core/event-intent-conflict";
+  readonly category = ProblemCategory.Conflict;
+
+  constructor(eventId: string) {
+    super(
+      undefined,
+      undefined,
+      `Impersonation lifecycle event intent '${eventId}' conflicts with the stored session state`,
+    );
+  }
+}
+
+export class InvalidImpersonationEventIntentLimitProblem extends Problem {
+  readonly code = "impersonation-core/event-intent-limit-invalid";
+  readonly category = ProblemCategory.ValidationError;
+
+  constructor(limit: number) {
+    super(
+      undefined,
+      undefined,
+      `Impersonation lifecycle event intent limit must be an integer between 1 and 1000; received ${limit}`,
+    );
+  }
+}

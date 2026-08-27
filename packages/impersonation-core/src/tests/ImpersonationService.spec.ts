@@ -1,81 +1,69 @@
 import "reflect-metadata";
-import type { DomainEvent, EventBus, EventSubscription } from "@croco/events-core";
-import { EventBusConfig } from "@croco/events-core";
 import type { RequestContext } from "@croco/framework-context";
 import { Container } from "@croco/framework-context";
 import { ProblemCategory } from "@croco/problems-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ImpersonationEndedEvent, ImpersonationStartedEvent } from "../libs/events";
-import { ImpersonationService } from "../libs/ImpersonationService";
-import { InMemoryImpersonationStore } from "../libs/InMemoryImpersonationStore";
-import { AuthProvider, ImpersonationStore } from "../libs/interfaces";
-import type { ImpersonationPrincipal } from "../libs/interfaces";
-import { InvalidImpersonationConfigurationProblem } from "../libs/problems/ImpersonationProblems";
+import {
+  createImpersonationEndedEventIntent,
+  createImpersonationStartedEventIntent,
+} from "../libs/eventIntent";
 import type {
-  ImpersonationConfig,
-  ImpersonationRevocationResult,
-  ImpersonationState,
-} from "../libs/types";
+  ImpersonationEndedEventIntent,
+  ImpersonationStartedEventIntent,
+} from "../libs/eventIntent";
+import { ImpersonationEndedEvent, ImpersonationStartedEvent } from "../libs/events";
+import { InMemoryImpersonationStore } from "../libs/InMemoryImpersonationStore";
+import { ImpersonationService } from "../libs/ImpersonationService";
+import {
+  AuthProvider,
+  ImpersonationLifecycleEventPublisher,
+  type ImpersonationPrincipal,
+} from "../libs/interfaces";
+import { InvalidImpersonationConfigurationProblem } from "../libs/problems/ImpersonationProblems";
+import type { ImpersonationConfig, ImpersonationState } from "../libs/types";
 
-class MockEventBus implements EventBus {
-  readonly events: DomainEvent[] = [];
+type ImpersonationLifecycleEvent = ImpersonationStartedEvent | ImpersonationEndedEvent;
 
-  async publish(event: DomainEvent): Promise<void> {
+class MockLifecycleEventPublisher extends ImpersonationLifecycleEventPublisher {
+  readonly attempts: ImpersonationLifecycleEvent[] = [];
+  readonly events: ImpersonationLifecycleEvent[] = [];
+  readonly deliveredIds = new Set<string>();
+  nextFailure: Error | undefined;
+
+  async publishIdempotently(event: ImpersonationLifecycleEvent): Promise<void> {
+    this.attempts.push(event);
+    if (this.nextFailure) {
+      const failure = this.nextFailure;
+      this.nextFailure = undefined;
+      throw failure;
+    }
+    if (this.deliveredIds.has(event.eventId)) return;
+    this.deliveredIds.add(event.eventId);
     this.events.push(event);
   }
-
-  subscribe(_subscription: EventSubscription): void {}
-
-  unsubscribe(_subscription: EventSubscription): void {}
 
   clear(): void {
     this.events.length = 0;
   }
 }
 
-class MockImpersonationStore extends ImpersonationStore {
-  private readonly sessions = new Map<string, ImpersonationState>();
-  createCount = 0;
-  revokeAttemptCount = 0;
-  revokeCount = 0;
+class MockImpersonationStore extends InMemoryImpersonationStore {
+  commitStartCount = 0;
+  commitEndAttemptCount = 0;
+  commitEndCount = 0;
 
-  async createIfNoActiveSession(session: ImpersonationState) {
-    for (const existing of this.sessions.values()) {
-      if (existing.impersonatorId === session.impersonatorId) {
-        return { status: "active-session-exists" } as const;
-      }
-    }
-    this.createCount++;
-    this.sessions.set(session.sessionId, session);
-    return { status: "created" } as const;
+  override async commitStart(intent: ImpersonationStartedEventIntent) {
+    this.commitStartCount += 1;
+    return super.commitStart(intent);
   }
 
-  async find(sessionId: string): Promise<ImpersonationState | null> {
-    return this.sessions.get(sessionId) ?? null;
-  }
-
-  async findByImpersonator(impersonatorId: string): Promise<ImpersonationState | null> {
-    for (const session of this.sessions.values()) {
-      if (session.impersonatorId === impersonatorId) {
-        return session;
-      }
+  override async commitEnd(intent: ImpersonationEndedEventIntent, impersonatorId: string) {
+    this.commitEndAttemptCount += 1;
+    const result = await super.commitEnd(intent, impersonatorId);
+    if (result === "committed" || result === "committed-start-pending") {
+      this.commitEndCount += 1;
     }
-    return null;
-  }
-
-  async revoke(sessionId: string, impersonatorId: string): Promise<ImpersonationRevocationResult> {
-    this.revokeAttemptCount++;
-    const session = this.sessions.get(sessionId);
-    if (!session) {
-      return { outcome: "not-found" };
-    }
-    if (session.impersonatorId !== impersonatorId) {
-      return { outcome: "actor-mismatch" };
-    }
-
-    this.revokeCount++;
-    this.sessions.delete(sessionId);
-    return { outcome: "revoked", session };
+    return result;
   }
 }
 
@@ -101,7 +89,7 @@ describe("ImpersonationService", () => {
   let service!: ImpersonationService;
   let store!: MockImpersonationStore;
   let authProvider!: MockAuthProvider;
-  let eventBus!: MockEventBus;
+  let eventPublisher!: MockLifecycleEventPublisher;
   let config!: ImpersonationConfig;
   const context = (userId?: string): RequestContext => ({
     requestId: "req-1",
@@ -110,8 +98,7 @@ describe("ImpersonationService", () => {
 
   beforeEach(() => {
     Container.reset();
-    eventBus = new MockEventBus();
-    EventBusConfig.getInstance().setEventBus(eventBus);
+    eventPublisher = new MockLifecycleEventPublisher();
     store = new MockImpersonationStore();
     authProvider = new MockAuthProvider();
     config = {
@@ -119,12 +106,12 @@ describe("ImpersonationService", () => {
       requireReason: false,
       blockedActions: [],
     };
-    service = new ImpersonationService(store, authProvider, config);
+    service = new ImpersonationService(store, authProvider, config, eventPublisher);
   });
 
   const expectNoStartSideEffects = (): void => {
-    expect(store.createCount).toBe(0);
-    expect(eventBus.events).toHaveLength(0);
+    expect(store.commitStartCount).toBe(0);
+    expect(eventPublisher.events).toHaveLength(0);
   };
 
   describe("configuration", () => {
@@ -141,10 +128,15 @@ describe("ImpersonationService", () => {
     ])("rejects invalid maxDurationMs %s before use", (maxDurationMs, receivedValue) => {
       expect(
         () =>
-          new ImpersonationService(store, authProvider, {
-            ...config,
-            maxDurationMs,
-          }),
+          new ImpersonationService(
+            store,
+            authProvider,
+            {
+              ...config,
+              maxDurationMs,
+            },
+            eventPublisher,
+          ),
       ).toThrowError(
         expect.objectContaining({
           code: "IMPERSONATION_CONFIGURATION_INVALID",
@@ -160,10 +152,15 @@ describe("ImpersonationService", () => {
     it.each(["", "   "])("rejects a blank blocked action %# before use", (blockedAction) => {
       expect(
         () =>
-          new ImpersonationService(store, authProvider, {
-            ...config,
-            blockedActions: ["deleteUser", blockedAction],
-          }),
+          new ImpersonationService(
+            store,
+            authProvider,
+            {
+              ...config,
+              blockedActions: ["deleteUser", blockedAction],
+            },
+            eventPublisher,
+          ),
       ).toThrowError(InvalidImpersonationConfigurationProblem);
       expectNoStartSideEffects();
     });
@@ -182,10 +179,15 @@ describe("ImpersonationService", () => {
     ])("rejects invalid action identifiers %# before use", (invalidConfig) => {
       expect(
         () =>
-          new ImpersonationService(store, authProvider, {
-            ...config,
-            blockedActions: invalidConfig.blockedActions,
-          }),
+          new ImpersonationService(
+            store,
+            authProvider,
+            {
+              ...config,
+              blockedActions: invalidConfig.blockedActions,
+            },
+            eventPublisher,
+          ),
       ).toThrowError(
         expect.objectContaining({
           code: "IMPERSONATION_CONFIGURATION_INVALID",
@@ -205,10 +207,15 @@ describe("ImpersonationService", () => {
     ])("rejects invalid requireReason %# before use", (requireReason, receivedValue) => {
       expect(
         () =>
-          new ImpersonationService(store, authProvider, {
-            ...config,
-            requireReason: requireReason as unknown as boolean,
-          }),
+          new ImpersonationService(
+            store,
+            authProvider,
+            {
+              ...config,
+              requireReason: requireReason as unknown as boolean,
+            },
+            eventPublisher,
+          ),
       ).toThrowError(
         expect.objectContaining({
           code: "IMPERSONATION_CONFIGURATION_INVALID",
@@ -225,10 +232,15 @@ describe("ImpersonationService", () => {
       (blockedActions) => {
         expect(
           () =>
-            new ImpersonationService(store, authProvider, {
-              ...config,
-              blockedActions,
-            }),
+            new ImpersonationService(
+              store,
+              authProvider,
+              {
+                ...config,
+                blockedActions,
+              },
+              eventPublisher,
+            ),
         ).toThrowError(
           expect.objectContaining({
             code: "IMPERSONATION_CONFIGURATION_INVALID",
@@ -328,9 +340,90 @@ describe("ImpersonationService", () => {
         reason: "Support request",
       });
       expect(await store.find(result.sessionId)).toEqual(result);
-      expect(eventBus.events).toHaveLength(1);
-      expect(eventBus.events[0]).toBeInstanceOf(ImpersonationStartedEvent);
-      expect((eventBus.events[0] as ImpersonationStartedEvent).session).toEqual(result);
+      expect(eventPublisher.events).toHaveLength(1);
+      expect(eventPublisher.events[0]).toBeInstanceOf(ImpersonationStartedEvent);
+      expect((eventPublisher.events[0] as ImpersonationStartedEvent).session).toEqual(result);
+    });
+
+    it("keeps a recoverable started-event intent when publication fails", async () => {
+      eventPublisher.nextFailure = new Error("publisher unavailable");
+
+      await expect(service.start(context("admin-1"), "user-123")).rejects.toMatchObject({
+        code: "IMPERSONATION_LIFECYCLE_PUBLICATION_PENDING",
+        lifecycle: "started",
+        reconciliationState: "pending",
+        stage: "publish",
+      });
+
+      const active = await store.findByImpersonator("admin-1");
+      expect(active).not.toBeNull();
+      const pending = await store.listPendingLifecycleEventIntents();
+      expect(pending).toHaveLength(1);
+      expect(pending[0]).toMatchObject({
+        eventId: `impersonation.session.started:${active?.sessionId}`,
+        kind: "started",
+        session: active,
+      });
+      await expect(service.getLifecycleDiagnostics()).resolves.toMatchObject({
+        status: "reconciliation_required",
+        pendingEvents: [
+          {
+            code: "impersonation-core/lifecycle-event-pending",
+            lifecycle: "started",
+            sessionId: active?.sessionId,
+          },
+        ],
+      });
+
+      await expect(service.publishPendingEvents()).resolves.toBe(1);
+      expect(eventPublisher.events).toHaveLength(1);
+      expect(eventPublisher.events[0]?.eventId).toBe(pending[0]?.eventId);
+      expect(eventPublisher.events[0]?.timestamp).toEqual(pending[0]?.occurredAt);
+      await expect(store.listPendingLifecycleEventIntents()).resolves.toEqual([]);
+      await expect(service.getLifecycleDiagnostics()).resolves.toMatchObject({
+        status: "healthy",
+        pendingEvents: [],
+      });
+    });
+
+    it("reuses event identity when acknowledgement fails after publication", async () => {
+      const acknowledge = vi.spyOn(store, "markLifecycleEventPublished");
+      acknowledge.mockRejectedValueOnce(new Error("acknowledgement unavailable"));
+
+      await expect(service.start(context("admin-1"), "user-123")).rejects.toMatchObject({
+        code: "IMPERSONATION_LIFECYCLE_PUBLICATION_PENDING",
+        lifecycle: "started",
+        stage: "acknowledge",
+      });
+      const firstAttempt = eventPublisher.attempts[0];
+      expect(eventPublisher.events).toHaveLength(1);
+
+      acknowledge.mockRestore();
+      await expect(service.publishPendingEvents()).resolves.toBe(1);
+
+      const retried = eventPublisher.attempts[1];
+      expect(retried?.eventId).toBe(firstAttempt?.eventId);
+      expect(retried?.timestamp).toEqual(firstAttempt?.timestamp);
+      expect(eventPublisher.events).toHaveLength(1);
+      await expect(store.listPendingLifecycleEventIntents()).resolves.toEqual([]);
+    });
+
+    it("deduplicates concurrent pending-event dispatch by stable event identity", async () => {
+      eventPublisher.nextFailure = new Error("publisher unavailable");
+      await expect(service.start(context("admin-1"), "user-123")).rejects.toMatchObject({
+        code: "IMPERSONATION_LIFECYCLE_PUBLICATION_PENDING",
+      });
+
+      const results = await Promise.all([
+        service.publishPendingEvents(),
+        service.publishPendingEvents(),
+      ]);
+
+      expect(results).toEqual([1, 1]);
+      expect(eventPublisher.attempts).toHaveLength(3);
+      expect(new Set(eventPublisher.attempts.map(({ eventId }) => eventId)).size).toBe(1);
+      expect(eventPublisher.events).toHaveLength(1);
+      await expect(store.listPendingLifecycleEventIntents()).resolves.toEqual([]);
     });
 
     it("keeps the verified actor immutable in returned, stored, and published session data", async () => {
@@ -339,7 +432,7 @@ describe("ImpersonationService", () => {
       expect(Object.isFrozen(result)).toBe(true);
       expect(Reflect.set(result, "impersonatorId", "forged-admin")).toBe(false);
       expect((await store.find(result.sessionId))?.impersonatorId).toBe("admin-1");
-      expect((eventBus.events[0] as ImpersonationStartedEvent).session.impersonatorId).toBe(
+      expect((eventPublisher.events[0] as ImpersonationStartedEvent).session.impersonatorId).toBe(
         "admin-1",
       );
     });
@@ -357,19 +450,26 @@ describe("ImpersonationService", () => {
 
     it("rejects nested impersonation for the verified principal", async () => {
       await service.start(context("admin-1"), "user-123");
-      eventBus.clear();
-      store.createCount = 0;
+      eventPublisher.clear();
+      store.commitStartCount = 0;
 
       await expect(service.start(context("admin-1"), "user-456")).rejects.toMatchObject({
         code: "NESTED_IMPERSONATION_NOT_ALLOWED",
       });
 
-      expectNoStartSideEffects();
+      expect(store.commitStartCount).toBe(1);
+      expect(eventPublisher.events).toHaveLength(0);
     });
 
     it("allows only one concurrent start for the same verified principal", async () => {
       const concurrentStore = new InMemoryImpersonationStore();
-      service = new ImpersonationService(concurrentStore, authProvider, config);
+      const concurrentPublisher = new MockLifecycleEventPublisher();
+      service = new ImpersonationService(
+        concurrentStore,
+        authProvider,
+        config,
+        concurrentPublisher,
+      );
 
       const results = await Promise.allSettled([
         service.start(context("admin-1"), "user-123"),
@@ -389,12 +489,12 @@ describe("ImpersonationService", () => {
         code: "NESTED_IMPERSONATION_NOT_ALLOWED",
       });
       expect(await concurrentStore.findByImpersonator("admin-1")).toEqual(fulfilled[0]?.value);
-      expect(eventBus.events).toHaveLength(1);
+      expect(concurrentPublisher.events).toHaveLength(1);
     });
 
     it("rejects a missing required reason without persistence or publication", async () => {
       config = { ...config, requireReason: true };
-      service = new ImpersonationService(store, authProvider, config);
+      service = new ImpersonationService(store, authProvider, config, eventPublisher);
 
       await expect(service.start(context("admin-1"), "user-123")).rejects.toMatchObject({
         code: "IMPERSONATION_REASON_REQUIRED",
@@ -405,7 +505,7 @@ describe("ImpersonationService", () => {
 
     it("rejects a whitespace-only required reason without persistence or publication", async () => {
       config = { ...config, requireReason: true };
-      service = new ImpersonationService(store, authProvider, config);
+      service = new ImpersonationService(store, authProvider, config, eventPublisher);
 
       await expect(service.start(context("admin-1"), "user-123", " \t\n ")).rejects.toMatchObject({
         code: "IMPERSONATION_REASON_REQUIRED",
@@ -416,13 +516,13 @@ describe("ImpersonationService", () => {
 
     it("stores and publishes a normalized required reason", async () => {
       config = { ...config, requireReason: true };
-      service = new ImpersonationService(store, authProvider, config);
+      service = new ImpersonationService(store, authProvider, config, eventPublisher);
 
       const result = await service.start(context("admin-1"), "user-123", "  Support request  ");
 
       expect(result.reason).toBe("Support request");
       expect((await store.find(result.sessionId))?.reason).toBe("Support request");
-      expect((eventBus.events[0] as ImpersonationStartedEvent).session.reason).toBe(
+      expect((eventPublisher.events[0] as ImpersonationStartedEvent).session.reason).toBe(
         "Support request",
       );
     });
@@ -431,10 +531,15 @@ describe("ImpersonationService", () => {
       vi.useFakeTimers();
       try {
         vi.setSystemTime(new Date(0));
-        service = new ImpersonationService(store, authProvider, {
-          ...config,
-          maxDurationMs: 8_640_000_000_000_000,
-        });
+        service = new ImpersonationService(
+          store,
+          authProvider,
+          {
+            ...config,
+            maxDurationMs: 8_640_000_000_000_000,
+          },
+          eventPublisher,
+        );
         vi.setSystemTime(new Date(1));
 
         await expect(service.start(context("admin-1"), "user-123")).rejects.toMatchObject({
@@ -461,7 +566,7 @@ describe("ImpersonationService", () => {
 
       expect(result.reason).toBe(reason);
       expect((await store.find(result.sessionId))?.reason).toBe(reason);
-      expect((eventBus.events[0] as ImpersonationStartedEvent).session.reason).toBe(reason);
+      expect((eventPublisher.events[0] as ImpersonationStartedEvent).session.reason).toBe(reason);
     });
 
     it("preserves a supplied empty optional reason in returned, stored, and published session data", async () => {
@@ -469,12 +574,12 @@ describe("ImpersonationService", () => {
 
       expect(result.reason).toBe("");
       expect((await store.find(result.sessionId))?.reason).toBe("");
-      expect((eventBus.events[0] as ImpersonationStartedEvent).session.reason).toBe("");
+      expect((eventPublisher.events[0] as ImpersonationStartedEvent).session.reason).toBe("");
     });
 
     it("calculates the exact configured duration", async () => {
       config = { ...config, maxDurationMs: 60_000 };
-      service = new ImpersonationService(store, authProvider, config);
+      service = new ImpersonationService(store, authProvider, config, eventPublisher);
 
       const result = await service.start(context("admin-1"), "user-123");
 
@@ -485,14 +590,14 @@ describe("ImpersonationService", () => {
   describe("end", () => {
     const startSession = async (): Promise<ImpersonationState> => {
       const session = await service.start(context("admin-1"), "user-123");
-      eventBus.clear();
+      eventPublisher.clear();
       return session;
     };
 
     const expectNoEndSideEffects = async (sessionId: string): Promise<void> => {
-      expect(store.revokeCount).toBe(0);
+      expect(store.commitEndCount).toBe(0);
       expect(await store.find(sessionId)).not.toBeNull();
-      expect(eventBus.events).toHaveLength(0);
+      expect(eventPublisher.events).toHaveLength(0);
     };
 
     it("rejects unauthenticated callers before a store revocation attempt", async () => {
@@ -503,7 +608,7 @@ describe("ImpersonationService", () => {
         code: "UNAUTHORIZED",
       });
 
-      expect(store.revokeAttemptCount).toBe(0);
+      expect(store.commitEndAttemptCount).toBe(0);
       await expectNoEndSideEffects(session.sessionId);
     });
 
@@ -518,7 +623,7 @@ describe("ImpersonationService", () => {
         code: "FORBIDDEN",
       });
 
-      expect(store.revokeAttemptCount).toBe(0);
+      expect(store.commitEndAttemptCount).toBe(0);
       await expectNoEndSideEffects(session.sessionId);
     });
 
@@ -533,7 +638,7 @@ describe("ImpersonationService", () => {
         code: "FORBIDDEN",
       });
 
-      expect(store.revokeAttemptCount).toBe(0);
+      expect(store.commitEndAttemptCount).toBe(0);
       await expectNoEndSideEffects(session.sessionId);
     });
 
@@ -544,7 +649,7 @@ describe("ImpersonationService", () => {
         code: "IMPERSONATION_IDENTITY_CONFLICT",
       });
 
-      expect(store.revokeAttemptCount).toBe(0);
+      expect(store.commitEndAttemptCount).toBe(0);
       await expectNoEndSideEffects(session.sessionId);
     });
 
@@ -559,7 +664,7 @@ describe("ImpersonationService", () => {
         code: "IMPERSONATION_SESSION_ACTOR_MISMATCH",
       });
 
-      expect(store.revokeAttemptCount).toBe(1);
+      expect(store.commitEndAttemptCount).toBe(1);
       await expectNoEndSideEffects(session.sessionId);
     });
 
@@ -568,11 +673,11 @@ describe("ImpersonationService", () => {
 
       await service.end(context("admin-1"), session.sessionId);
 
-      expect(store.revokeCount).toBe(1);
+      expect(store.commitEndCount).toBe(1);
       expect(await store.find(session.sessionId)).toBeNull();
-      expect(eventBus.events).toHaveLength(1);
-      expect(eventBus.events[0]).toBeInstanceOf(ImpersonationEndedEvent);
-      expect((eventBus.events[0] as ImpersonationEndedEvent).session).toEqual(session);
+      expect(eventPublisher.events).toHaveLength(1);
+      expect(eventPublisher.events[0]).toBeInstanceOf(ImpersonationEndedEvent);
+      expect((eventPublisher.events[0] as ImpersonationEndedEvent).session).toEqual(session);
     });
 
     it("revokes and publishes once when authorized endings race", async () => {
@@ -589,11 +694,70 @@ describe("ImpersonationService", () => {
           reason: expect.objectContaining({ code: "IMPERSONATION_SESSION_NOT_FOUND" }),
         }),
       ]);
-      expect(store.revokeAttemptCount).toBe(2);
-      expect(store.revokeCount).toBe(1);
+      expect(store.commitEndAttemptCount).toBe(2);
+      expect(store.commitEndCount).toBe(1);
       expect(await store.find(session.sessionId)).toBeNull();
-      expect(eventBus.events).toHaveLength(1);
-      expect(eventBus.events[0]).toBeInstanceOf(ImpersonationEndedEvent);
+      expect(eventPublisher.events).toHaveLength(1);
+      expect(eventPublisher.events[0]).toBeInstanceOf(ImpersonationEndedEvent);
+    });
+
+    it("retains recoverable termination evidence when publication fails", async () => {
+      const session = await service.start(context("admin-1"), "user-123");
+      eventPublisher.clear();
+      eventPublisher.nextFailure = new Error("publisher unavailable");
+
+      await expect(service.end(context("admin-1"), session.sessionId)).rejects.toMatchObject({
+        code: "IMPERSONATION_LIFECYCLE_PUBLICATION_PENDING",
+        eventId: `impersonation.session.ended:${session.sessionId}`,
+        lifecycle: "ended",
+        reconciliationState: "pending",
+        sessionId: session.sessionId,
+        stage: "publish",
+      });
+
+      await expect(store.find(session.sessionId)).resolves.toBeNull();
+      const pending = await store.listPendingLifecycleEventIntents();
+      expect(pending).toHaveLength(1);
+      expect(pending[0]).toMatchObject({ kind: "ended", session });
+
+      await expect(service.publishPendingEvents()).resolves.toBe(1);
+      expect(eventPublisher.events).toHaveLength(1);
+      expect(eventPublisher.events[0]).toBeInstanceOf(ImpersonationEndedEvent);
+      expect(eventPublisher.events[0]?.eventId).toBe(pending[0]?.eventId);
+      expect((eventPublisher.events[0] as ImpersonationEndedEvent).session).toEqual(session);
+      await expect(store.find(session.sessionId)).resolves.toBeNull();
+      await expect(store.listPendingLifecycleEventIntents()).resolves.toEqual([]);
+    });
+
+    it("publishes a recovered start before an end committed while start is pending", async () => {
+      eventPublisher.nextFailure = new Error("publisher unavailable");
+      await expect(service.start(context("admin-1"), "user-123")).rejects.toMatchObject({
+        code: "IMPERSONATION_LIFECYCLE_PUBLICATION_PENDING",
+        lifecycle: "started",
+        stage: "publish",
+      });
+      const active = await store.findByImpersonator("admin-1");
+
+      await expect(
+        service.end(context("admin-1"), active?.sessionId ?? "missing-session"),
+      ).rejects.toMatchObject({
+        code: "IMPERSONATION_LIFECYCLE_PUBLICATION_PENDING",
+        lifecycle: "ended",
+        stage: "predecessor",
+      });
+      await expect(store.listPendingLifecycleEventIntents()).resolves.toMatchObject([
+        { kind: "started", session: { sessionId: active?.sessionId } },
+        { kind: "ended", session: { sessionId: active?.sessionId } },
+      ]);
+
+      await expect(service.publishPendingEvents()).resolves.toBe(2);
+
+      expect(eventPublisher.events.map((event) => event.eventName)).toEqual([
+        "impersonation.session.started",
+        "impersonation.session.ended",
+      ]);
+      expect(new Set(eventPublisher.events.map((event) => event.eventId)).size).toBe(2);
+      await expect(store.listPendingLifecycleEventIntents()).resolves.toEqual([]);
     });
 
     it("rejects a missing session", async () => {
@@ -601,9 +765,138 @@ describe("ImpersonationService", () => {
         code: "IMPERSONATION_SESSION_NOT_FOUND",
       });
 
-      expect(store.revokeAttemptCount).toBe(1);
-      expect(store.revokeCount).toBe(0);
-      expect(eventBus.events).toHaveLength(0);
+      expect(store.commitEndAttemptCount).toBe(0);
+      expect(store.commitEndCount).toBe(0);
+      expect(eventPublisher.events).toHaveLength(0);
+    });
+  });
+
+  describe("atomic lifecycle transitions", () => {
+    const session = (sessionId: string, impersonatorId = "admin-1"): ImpersonationState =>
+      Object.freeze({
+        sessionId,
+        impersonatorId,
+        targetUserId: "user-123",
+        startedAt: new Date("2026-08-28T00:00:00.000Z"),
+        expiresAt: new Date("2026-08-28T01:00:00.000Z"),
+      });
+
+    it("commits only one concurrent start for an impersonator", async () => {
+      vi.useFakeTimers();
+      try {
+        vi.setSystemTime(new Date("2026-08-28T00:30:00.000Z"));
+        const first = createImpersonationStartedEventIntent(session("imp-first"));
+        const second = createImpersonationStartedEventIntent(session("imp-second"));
+
+        const results = await Promise.all([store.commitStart(first), store.commitStart(second)]);
+
+        expect(results.sort()).toEqual(["committed", "impersonator-active"]);
+        expect(await store.findByImpersonator("admin-1")).toMatchObject({
+          sessionId: "imp-first",
+        });
+        await expect(store.listPendingLifecycleEventIntents()).resolves.toEqual([first]);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("commits only one concurrent end and retains one intent", async () => {
+      vi.useFakeTimers();
+      try {
+        vi.setSystemTime(new Date("2026-08-28T00:30:00.000Z"));
+        const active = session("imp-active");
+        await store.commitStart(createImpersonationStartedEventIntent(active));
+        await store.markLifecycleEventPublished(
+          `impersonation.session.started:${active.sessionId}`,
+        );
+        const ended = createImpersonationEndedEventIntent(
+          active,
+          new Date("2026-08-28T00:45:00.000Z"),
+        );
+
+        const results = await Promise.all([
+          store.commitEnd(ended, active.impersonatorId),
+          store.commitEnd(ended, active.impersonatorId),
+        ]);
+
+        expect(results.sort()).toEqual(["committed", "session-not-found"]);
+        await expect(store.find(active.sessionId)).resolves.toBeNull();
+        await expect(store.listPendingLifecycleEventIntents()).resolves.toEqual([ended]);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("publishes each start before its end when the clock moves backwards", async () => {
+      vi.useFakeTimers();
+      try {
+        vi.setSystemTime(new Date("2026-08-28T00:30:00.000Z"));
+        const later = session("imp-later", "admin-later");
+        const earlier = Object.freeze({
+          ...session("imp-earlier", "admin-earlier"),
+          startedAt: new Date("2026-08-27T23:59:00.000Z"),
+        });
+        await store.commitStart(createImpersonationStartedEventIntent(later));
+        await store.commitStart(createImpersonationStartedEventIntent(earlier));
+        await store.commitEnd(
+          createImpersonationEndedEventIntent(later, new Date("2026-08-27T23:58:00.000Z")),
+          later.impersonatorId,
+        );
+
+        await service.publishPendingEvents(1);
+        await service.publishPendingEvents(1);
+        await service.publishPendingEvents(1);
+
+        expect(eventPublisher.events.map((event) => event.eventId)).toEqual([
+          "impersonation.session.started:imp-earlier",
+          "impersonation.session.started:imp-later",
+          "impersonation.session.ended:imp-later",
+        ]);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("rejects a duplicate session ID without corrupting either actor claim", async () => {
+      vi.useFakeTimers();
+      try {
+        vi.setSystemTime(new Date("2026-08-28T00:30:00.000Z"));
+        const first = session("imp-shared", "admin-first");
+        const conflicting = session("imp-shared", "admin-second");
+        await store.commitStart(createImpersonationStartedEventIntent(first));
+
+        await expect(
+          store.commitStart(createImpersonationStartedEventIntent(conflicting)),
+        ).rejects.toMatchObject({ code: "impersonation-core/event-intent-conflict" });
+
+        await expect(store.find("imp-shared")).resolves.toEqual(first);
+        await expect(store.findByImpersonator("admin-first")).resolves.toEqual(first);
+        await expect(store.findByImpersonator("admin-second")).resolves.toBeNull();
+
+        await store.commitEnd(
+          createImpersonationEndedEventIntent(first, new Date("2026-08-28T00:45:00.000Z")),
+          first.impersonatorId,
+        );
+        await expect(
+          store.commitStart(createImpersonationStartedEventIntent(conflicting)),
+        ).rejects.toMatchObject({ code: "impersonation-core/event-intent-conflict" });
+
+        const second = session("imp-second", "admin-second");
+        await expect(
+          store.commitStart(createImpersonationStartedEventIntent(second)),
+        ).resolves.toBe("committed");
+        await expect(store.findByImpersonator("admin-first")).resolves.toBeNull();
+        await expect(store.findByImpersonator("admin-second")).resolves.toEqual(second);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("uses idempotent acknowledgement and validates pending-list bounds", async () => {
+      await expect(store.markLifecycleEventPublished("missing-event")).resolves.toBeUndefined();
+      await expect(store.listPendingLifecycleEventIntents(0)).rejects.toMatchObject({
+        code: "impersonation-core/event-intent-limit-invalid",
+      });
     });
   });
 

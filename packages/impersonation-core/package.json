@@ -48,7 +48,6 @@
     "reflect-metadata": "^0.2.2"
   },
   "devDependencies": {
-    "@croco/events-inmemory": "workspace:*",
     "tsup": "^8.0.0",
     "typescript": "^5.7.0",
     "vitest": "4.1.8"

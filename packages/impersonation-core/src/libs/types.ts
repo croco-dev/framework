@@ -9,11 +9,6 @@ export type ImpersonationState = {
   readonly expiresAt: Date;
 };
 
-export type ImpersonationRevocationResult =
-  | { readonly outcome: "revoked"; readonly session: ImpersonationState }
-  | { readonly outcome: "not-found" }
-  | { readonly outcome: "actor-mismatch" };
-
 export type ImpersonationConfig = {
   maxDurationMs: number;
   requireReason: boolean;

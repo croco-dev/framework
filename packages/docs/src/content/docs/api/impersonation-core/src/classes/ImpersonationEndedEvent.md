@@ -15,13 +15,21 @@ title: "ImpersonationEndedEvent"
 
 ### Constructor
 
-> **new ImpersonationEndedEvent**(`session`): `ImpersonationEndedEvent`
+> **new ImpersonationEndedEvent**(`session`, `eventId?`, `occurredAt?`): `ImpersonationEndedEvent`
 
 #### Parameters
 
 ##### session
 
 [`ImpersonationState`](/api/impersonation-core/src/type-aliases/impersonationstate/)
+
+##### eventId?
+
+`string`
+
+##### occurredAt?
+
+`Date`
 
 #### Returns
 

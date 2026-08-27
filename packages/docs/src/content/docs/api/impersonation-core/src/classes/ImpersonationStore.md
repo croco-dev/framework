@@ -27,23 +27,47 @@ title: "ImpersonationStore"
 
 ## Methods
 
-### createIfNoActiveSession()
+### commitEnd()
 
-> `abstract` **createIfNoActiveSession**(`session`): `Promise`\<[`ImpersonationSessionCreateResult`](/api/impersonation-core/src/type-aliases/impersonationsessioncreateresult/)\>
+> `abstract` **commitEnd**(`intent`, `impersonatorId`): `Promise`\<`"committed"` \| `"actor-mismatch"` \| `"committed-start-pending"` \| `"session-not-found"`\>
 
-Atomically claims the session's impersonator and persists the session when no active session
-owns that actor key. Persistent stores must enforce this boundary with a uniqueness constraint
-or equivalent compare-and-set that replaces an expired owner in the same operation.
+Atomically revokes the active session and persists its pending ended-event intent.
+Returns `committed-start-pending` when the started-event intent still requires publication.
 
 #### Parameters
 
-##### session
+##### intent
 
-[`ImpersonationState`](/api/impersonation-core/src/type-aliases/impersonationstate/)
+[`ImpersonationEndedEventIntent`](/api/impersonation-core/src/type-aliases/impersonationendedeventintent/)
+
+##### impersonatorId
+
+`string`
 
 #### Returns
 
-`Promise`\<[`ImpersonationSessionCreateResult`](/api/impersonation-core/src/type-aliases/impersonationsessioncreateresult/)\>
+`Promise`\<`"committed"` \| `"actor-mismatch"` \| `"committed-start-pending"` \| `"session-not-found"`\>
+
+---
+
+### commitStart()
+
+> `abstract` **commitStart**(`intent`): `Promise`\<`"committed"` \| `"impersonator-active"`\>
+
+Atomically claims the session's impersonator, persists the active session, and records its
+pending started-event intent. Persistent stores must enforce unique session IDs and the actor
+claim with uniqueness constraints or equivalent compare-and-set operations that replace an
+expired actor claim in the same operation.
+
+#### Parameters
+
+##### intent
+
+[`ImpersonationStartedEventIntent`](/api/impersonation-core/src/type-aliases/impersonationstartedeventintent/)
+
+#### Returns
+
+`Promise`\<`"committed"` \| `"impersonator-active"`\>
 
 ---
 
@@ -79,20 +103,36 @@ or equivalent compare-and-set that replaces an expired owner in the same operati
 
 ---
 
-### revoke()
+### listPendingLifecycleEventIntents()
 
-> `abstract` **revoke**(`sessionId`, `impersonatorId`): `Promise`\<[`ImpersonationRevocationResult`](/api/impersonation-core/src/type-aliases/impersonationrevocationresult/)\>
+> `abstract` **listPendingLifecycleEventIntents**(`limit?`): `Promise`\<readonly [`ImpersonationLifecycleEventIntent`](/api/impersonation-core/src/type-aliases/impersonationlifecycleeventintent/)[]\>
+
+Lists oldest intents first and preserves started-before-ended ordering for each session.
 
 #### Parameters
 
-##### sessionId
+##### limit?
 
-`string`
+`number`
 
-##### impersonatorId
+#### Returns
+
+`Promise`\<readonly [`ImpersonationLifecycleEventIntent`](/api/impersonation-core/src/type-aliases/impersonationlifecycleeventintent/)[]\>
+
+---
+
+### markLifecycleEventPublished()
+
+> `abstract` **markLifecycleEventPublished**(`eventId`): `Promise`\<`void`\>
+
+Idempotently acknowledges a published event intent.
+
+#### Parameters
+
+##### eventId
 
 `string`
 
 #### Returns
 
-`Promise`\<[`ImpersonationRevocationResult`](/api/impersonation-core/src/type-aliases/impersonationrevocationresult/)\>
+`Promise`\<`void`\>

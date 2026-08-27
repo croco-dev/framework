@@ -1,5 +1,9 @@
 import { Container } from "@croco/framework-context";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  createImpersonationEndedEventIntent,
+  createImpersonationStartedEventIntent,
+} from "../libs/eventIntent";
 import { InMemoryImpersonationStore } from "../libs/InMemoryImpersonationStore";
 import type { ImpersonationStore } from "../libs/interfaces";
 import type { ImpersonationState } from "../libs/types";
@@ -35,11 +39,13 @@ function impersonationStoreConformance(createStore: () => ImpersonationStore): v
       const candidates = [session("imp-first", "admin-1"), session("imp-second", "admin-1")];
 
       const results = await Promise.all(
-        candidates.map((candidate) => store.createIfNoActiveSession(candidate)),
+        candidates.map((candidate) =>
+          store.commitStart(createImpersonationStartedEventIntent(candidate)),
+        ),
       );
 
-      expect(results.filter(({ status }) => status === "created")).toHaveLength(1);
-      expect(results.filter(({ status }) => status === "active-session-exists")).toHaveLength(1);
+      expect(results.filter((result) => result === "committed")).toHaveLength(1);
+      expect(results.filter((result) => result === "impersonator-active")).toHaveLength(1);
       expect(candidates).toContainEqual(await store.findByImpersonator("admin-1"));
     });
 
@@ -48,24 +54,39 @@ function impersonationStoreConformance(createStore: () => ImpersonationStore): v
       vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
       const store = createStore();
 
-      const results = await Promise.all([
-        store.createIfNoActiveSession(session("imp-admin-1", "admin-1")),
-        store.createIfNoActiveSession(session("imp-admin-2", "admin-2")),
-      ]);
+      const results = await Promise.all(
+        [session("imp-admin-1", "admin-1"), session("imp-admin-2", "admin-2")].map((candidate) =>
+          store.commitStart(createImpersonationStartedEventIntent(candidate)),
+        ),
+      );
 
-      expect(results).toEqual([{ status: "created" }, { status: "created" }]);
+      expect(results).toEqual(["committed", "committed"]);
       expect((await store.findByImpersonator("admin-1"))?.sessionId).toBe("imp-admin-1");
       expect((await store.findByImpersonator("admin-2"))?.sessionId).toBe("imp-admin-2");
     });
 
-    it("replaces an expired session without allowing stale revocation to remove the replacement", async () => {
+    it("reports a conflicting lifecycle event identity", async () => {
+      const store = createStore();
+      const intent = createImpersonationStartedEventIntent(session("imp-conflict", "admin-1"));
+
+      await expect(
+        store.commitStart({ ...intent, eventId: "impersonation.session.started:other-session" }),
+      ).rejects.toMatchObject({
+        category: "Conflict",
+        detail:
+          "Impersonation lifecycle event intent 'impersonation.session.started:other-session' conflicts with the stored session state",
+      });
+    });
+
+    it("replaces an expired session without allowing a stale end to remove the replacement", async () => {
       vi.useFakeTimers();
       const store = createStore();
       const expiresAt = new Date("2026-01-01T00:01:00.000Z");
+      const expired = session("imp-expired", "admin-1", expiresAt);
       vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
-      await expect(
-        store.createIfNoActiveSession(session("imp-expired", "admin-1", expiresAt)),
-      ).resolves.toEqual({ status: "created" });
+      await expect(store.commitStart(createImpersonationStartedEventIntent(expired))).resolves.toBe(
+        "committed",
+      );
 
       vi.setSystemTime(expiresAt);
       const replacements = [
@@ -73,50 +94,61 @@ function impersonationStoreConformance(createStore: () => ImpersonationStore): v
         session("imp-replacement-2", "admin-1"),
       ];
       const results = await Promise.all(
-        replacements.map((candidate) => store.createIfNoActiveSession(candidate)),
+        replacements.map((candidate) =>
+          store.commitStart(createImpersonationStartedEventIntent(candidate)),
+        ),
       );
-      const winnerIndex = results.findIndex(({ status }) => status === "created");
+      const winnerIndex = results.findIndex((result) => result === "committed");
 
       expect(winnerIndex).not.toBe(-1);
-      expect(results.filter(({ status }) => status === "created")).toHaveLength(1);
-      await expect(store.revoke("imp-expired", "admin-1")).resolves.toEqual({
-        outcome: "not-found",
-      });
+      expect(results.filter((result) => result === "committed")).toHaveLength(1);
+      await expect(
+        store.commitEnd(
+          createImpersonationEndedEventIntent(expired, expiresAt),
+          expired.impersonatorId,
+        ),
+      ).resolves.toBe("session-not-found");
       expect(await store.findByImpersonator("admin-1")).toEqual(replacements[winnerIndex]);
     });
 
-    it("does not revoke a session for a different actor", async () => {
+    it("does not commit an end intent for a different actor", async () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
       const store = createStore();
       const activeSession = session("imp-owner", "admin-1");
-      await store.createIfNoActiveSession(activeSession);
+      const intent = createImpersonationStartedEventIntent(activeSession);
+      await store.commitStart(intent);
 
-      await expect(store.revoke(activeSession.sessionId, "admin-2")).resolves.toEqual({
-        outcome: "actor-mismatch",
-      });
+      await expect(
+        store.commitEnd(createImpersonationEndedEventIntent(activeSession, new Date()), "admin-2"),
+      ).resolves.toBe("actor-mismatch");
       await expect(store.find(activeSession.sessionId)).resolves.toEqual(activeSession);
       await expect(store.findByImpersonator(activeSession.impersonatorId)).resolves.toEqual(
         activeSession,
       );
+      await expect(store.listPendingLifecycleEventIntents()).resolves.toEqual([intent]);
     });
 
-    it("returns one revoked result when authorized revocations race", async () => {
+    it("returns one committed result when authorized endings race", async () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
       const store = createStore();
       const activeSession = session("imp-race", "admin-1");
-      await store.createIfNoActiveSession(activeSession);
+      const started = createImpersonationStartedEventIntent(activeSession);
+      await store.commitStart(started);
+      await store.markLifecycleEventPublished(started.eventId);
+      const ended = createImpersonationEndedEventIntent(activeSession, new Date());
 
       const results = await Promise.all([
-        store.revoke(activeSession.sessionId, activeSession.impersonatorId),
-        store.revoke(activeSession.sessionId, activeSession.impersonatorId),
+        store.commitEnd(ended, activeSession.impersonatorId),
+        store.commitEnd(ended, activeSession.impersonatorId),
       ]);
 
-      expect(results).toContainEqual({ outcome: "revoked", session: activeSession });
-      expect(results).toContainEqual({ outcome: "not-found" });
+      expect(results).toContain("committed");
+      expect(results).toContain("session-not-found");
       await expect(store.find(activeSession.sessionId)).resolves.toBeNull();
       await expect(store.findByImpersonator(activeSession.impersonatorId)).resolves.toBeNull();
+      await expect(store.listPendingLifecycleEventIntents()).resolves.toEqual([ended]);
     });
 
     it("treats an expired session as not found", async () => {
@@ -125,12 +157,15 @@ function impersonationStoreConformance(createStore: () => ImpersonationStore): v
       vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
       const store = createStore();
       const expiredSession = session("imp-expired", "admin-1", expiresAt);
-      await store.createIfNoActiveSession(expiredSession);
+      await store.commitStart(createImpersonationStartedEventIntent(expiredSession));
 
       vi.setSystemTime(expiresAt);
       await expect(
-        store.revoke(expiredSession.sessionId, expiredSession.impersonatorId),
-      ).resolves.toEqual({ outcome: "not-found" });
+        store.commitEnd(
+          createImpersonationEndedEventIntent(expiredSession, expiresAt),
+          expiredSession.impersonatorId,
+        ),
+      ).resolves.toBe("session-not-found");
       await expect(store.find(expiredSession.sessionId)).resolves.toBeNull();
       await expect(store.findByImpersonator(expiredSession.impersonatorId)).resolves.toBeNull();
     });

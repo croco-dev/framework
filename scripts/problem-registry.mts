@@ -2003,6 +2003,17 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  IMPERSONATION_LIFECYCLE_PUBLICATION_PENDING: recovery({
+    cause:
+      "The impersonation session mutation committed, but its lifecycle event remains pending at the reported publish, acknowledge, or predecessor stage.",
+    userAction:
+      "Do not repeat the original session mutation; ask the service operator to reconcile the pending lifecycle event.",
+    operatorAction:
+      "Inspect the Problem reconciliationState and stage, call getLifecycleDiagnostics() to confirm reconciliation_required, then call publishPendingEvents() to replay and acknowledge the stored intent.",
+    retryability: "conditional",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "llm-metering/service-required": recovery({
     cause:
       "@AiMetered required usage recording, but no scoped or global LlmMeteringService was configured.",

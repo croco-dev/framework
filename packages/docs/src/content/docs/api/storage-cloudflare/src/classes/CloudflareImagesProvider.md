@@ -65,7 +65,7 @@ Cloudflare Images를 이용해 파일 저장과 이미지 변환 URL 생성을 �
 
 [`BaseStorageProvider`](/api/storage-core/src/classes/basestorageprovider/).[`delete`](/api/storage-core/src/classes/basestorageprovider/#delete)
 
-***
+---
 
 ### exists()
 
@@ -95,7 +95,7 @@ Cloudflare Images를 이용해 파일 저장과 이미지 변환 URL 생성을 �
 
 [`BaseStorageProvider`](/api/storage-core/src/classes/basestorageprovider/).[`exists`](/api/storage-core/src/classes/basestorageprovider/#exists)
 
-***
+---
 
 ### get()
 
@@ -129,7 +129,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 [`BaseStorageProvider`](/api/storage-core/src/classes/basestorageprovider/).[`get`](/api/storage-core/src/classes/basestorageprovider/#get)
 
-***
+---
 
 ### getMetadata()
 
@@ -165,7 +165,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 [`BaseStorageProvider`](/api/storage-core/src/classes/basestorageprovider/).[`getMetadata`](/api/storage-core/src/classes/basestorageprovider/#getmetadata)
 
-***
+---
 
 ### getPublicUrl()
 
@@ -191,7 +191,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 [`BaseStorageProvider`](/api/storage-core/src/classes/basestorageprovider/).[`getPublicUrl`](/api/storage-core/src/classes/basestorageprovider/#getpublicurl)
 
-***
+---
 
 ### getSignedUrl()
 
@@ -223,7 +223,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 [`BaseStorageProvider`](/api/storage-core/src/classes/basestorageprovider/).[`getSignedUrl`](/api/storage-core/src/classes/basestorageprovider/#getsignedurl)
 
-***
+---
 
 ### getStream()
 
@@ -257,7 +257,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 [`BaseStorageProvider`](/api/storage-core/src/classes/basestorageprovider/).[`getStream`](/api/storage-core/src/classes/basestorageprovider/#getstream)
 
-***
+---
 
 ### getTransformUrl()
 
@@ -291,7 +291,7 @@ CDN에서 실시간으로 이미지를 변환하고 반환합니다.
 
 `ImageProvider.getTransformUrl`
 
-***
+---
 
 ### getUploadIntent()
 
@@ -323,7 +323,7 @@ CDN에서 실시간으로 이미지를 변환하고 반환합니다.
 
 `ImageProvider.getUploadIntent`
 
-***
+---
 
 ### put()
 
