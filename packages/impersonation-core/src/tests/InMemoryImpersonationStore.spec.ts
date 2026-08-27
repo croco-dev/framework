@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { Container } from "@croco/framework-context";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { InMemoryImpersonationStore } from "../libs/InMemoryImpersonationStore";
 import type { ImpersonationStore } from "../libs/interfaces";
 import type { ImpersonationState } from "../libs/types";
@@ -19,6 +20,10 @@ function session(
 
 function impersonationStoreConformance(createStore: () => ImpersonationStore): void {
   describe("ImpersonationStore conformance", () => {
+    beforeEach(() => {
+      Container.reset();
+    });
+
     afterEach(() => {
       vi.useRealTimers();
     });
