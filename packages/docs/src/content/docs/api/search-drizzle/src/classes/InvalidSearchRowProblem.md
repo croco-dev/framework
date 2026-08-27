@@ -5,7 +5,7 @@ prev: false
 title: "InvalidSearchRowProblem"
 ---
 
-검색 결과 행이 객체 형태가 아닐 때 발생하는 문제입니다.
+검색 결과 행이 기대한 형태가 아닐 때 발생하는 문제입니다.
 
 ## Extends
 
@@ -15,9 +15,15 @@ title: "InvalidSearchRowProblem"
 
 ### Constructor
 
-> **new InvalidSearchRowProblem**(): `InvalidSearchRowProblem`
+> **new InvalidSearchRowProblem**(`reason?`): `InvalidSearchRowProblem`
 
 잘못된 검색 결과 행 문제를 생성합니다.
+
+#### Parameters
+
+##### reason?
+
+`string` = `"expected object result"`
 
 #### Returns
 

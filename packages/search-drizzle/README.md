@@ -63,4 +63,4 @@ await engine.indexDocument(
 - `DRIZZLE_TOKEN`, 검색 엔진용 Drizzle 주입 토큰입니다.
 - `SearchStrategy`, 전략 구현 계약입니다.
 - `SearchResultRow`, 검색 결과 행 타입입니다.
-- `InvalidSearchRowProblem`, 검색 결과가 객체가 아닐 때 던지는 문제입니다.
+- `InvalidSearchRowProblem`, 검색 결과 행의 형태나 관련도 점수가 유효하지 않을 때 던지는 문제입니다.

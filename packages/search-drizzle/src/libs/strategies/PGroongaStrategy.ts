@@ -1,6 +1,7 @@
 import type { SearchDocument, SearchEngineCapabilities, SearchQuery } from "@croco/search-core";
 import { type SQL, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { SEARCH_SCORE_ALIAS } from "../searchScore";
 import type { SearchStrategy } from "../types";
 
 /**
@@ -15,13 +16,15 @@ export class PGroongaStrategy implements SearchStrategy {
     const tenantIdParam = sql.param(tenantId);
     const queryParam = sql.param(query.query);
     const searchVectorIdentifier = sql.identifier("search_vector");
+    const scoreAlias = sql.identifier(SEARCH_SCORE_ALIAS);
+    const scoreExpression = sql`pgroonga_score(tableoid, ctid)`;
 
     return sql`
-      SELECT *, pgroonga_score(tableoid, ctid) AS score
+      SELECT *, ${scoreExpression} AS ${scoreAlias}
       FROM ${tableIdentifier}
       WHERE ${searchVectorIdentifier} &@~ ${queryParam}
       AND "tenant_id" = ${tenantIdParam}
-      ORDER BY score DESC
+      ORDER BY ${scoreExpression} DESC
     `;
   }
 

@@ -15,10 +15,31 @@ import {
 } from "@croco/search-core";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { InvalidSearchRowProblem } from "./problems/InvalidSearchRowProblem";
+import { SEARCH_SCORE_ALIAS } from "./searchScore";
 import { DRIZZLE_TOKEN, type SearchResultRow, type SearchStrategy } from "./types";
 
 function isSearchResultRow(value: unknown): value is SearchResultRow {
   return typeof value === "object" && value !== null;
+}
+
+const NUMERIC_SCORE_PATTERN = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
+
+function parseSearchScore(value: unknown): number {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim();
+    if (NUMERIC_SCORE_PATTERN.test(normalized)) {
+      const score = Number(normalized);
+      if (Number.isFinite(score)) {
+        return score;
+      }
+    }
+  }
+
+  throw new InvalidSearchRowProblem("expected score as a finite number or numeric string");
 }
 
 /**
@@ -66,8 +87,10 @@ export class DrizzleSearchEngine extends SearchEngine {
         throw new InvalidSearchRowProblem();
       }
 
-      const mappedDocument = this.strategy.mapSearchRow?.<T>(row) ?? (row as unknown as T);
-      const score = typeof row.score === "number" ? row.score : 1;
+      const { [SEARCH_SCORE_ALIAS]: rawScore, ...documentRow } = row;
+      const score = parseSearchScore(rawScore);
+      const mappedDocument =
+        this.strategy.mapSearchRow?.<T>(documentRow) ?? (documentRow as unknown as T);
 
       return {
         score,

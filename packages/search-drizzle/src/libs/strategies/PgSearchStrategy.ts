@@ -1,6 +1,7 @@
 import type { SearchDocument, SearchEngineCapabilities, SearchQuery } from "@croco/search-core";
 import { type SQL, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { SEARCH_SCORE_ALIAS } from "../searchScore";
 import type { SearchStrategy } from "../types";
 
 /**
@@ -24,12 +25,14 @@ export class PgSearchStrategy implements SearchStrategy {
     const tenantIdParam = sql.param(tenantId);
     const queryParam = sql.param(query.query);
     const idIdentifier = sql.identifier("id");
+    const scoreAlias = sql.identifier(SEARCH_SCORE_ALIAS);
+    const scoreExpression = sql`paradedb.score(${idIdentifier})`;
 
     return sql`
-      SELECT * FROM ${tableIdentifier}
+      SELECT *, ${scoreExpression} AS ${scoreAlias} FROM ${tableIdentifier}
       WHERE ${tableIdentifier} @@@ ${queryParam}
       AND "tenant_id" = ${tenantIdParam}
-      ORDER BY paradedb.score(${idIdentifier}) DESC
+      ORDER BY ${scoreExpression} DESC
     `;
   }
 
