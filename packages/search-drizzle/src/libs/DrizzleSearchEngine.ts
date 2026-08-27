@@ -21,6 +21,26 @@ function isSearchResultRow(value: unknown): value is SearchResultRow {
   return typeof value === "object" && value !== null;
 }
 
+const NUMERIC_SCORE_PATTERN = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
+
+function parseSearchScore(value: unknown): number {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim();
+    if (NUMERIC_SCORE_PATTERN.test(normalized)) {
+      const score = Number(normalized);
+      if (Number.isFinite(score)) {
+        return score;
+      }
+    }
+  }
+
+  throw new InvalidSearchRowProblem("expected score as a finite number or numeric string");
+}
+
 /**
  * PostgreSQL 검색 전략을 사용해 문서 검색을 수행하는 Drizzle 검색 엔진입니다.
  */
@@ -66,8 +86,8 @@ export class DrizzleSearchEngine extends SearchEngine {
         throw new InvalidSearchRowProblem();
       }
 
+      const score = parseSearchScore(row.score);
       const mappedDocument = this.strategy.mapSearchRow?.<T>(row) ?? (row as unknown as T);
-      const score = typeof row.score === "number" ? row.score : 1;
 
       return {
         score,

@@ -24,12 +24,13 @@ export class PgTrgmStrategy implements SearchStrategy {
     const tenantIdParam = sql.param(tenantId);
     const queryParam = sql.param(query.query);
     const thresholdParam = sql.param(this.similarityThreshold);
+    const scoreExpression = sql`similarity("search_vector", ${queryParam})`;
 
     return sql`
-      SELECT * FROM ${tableIdentifier}
+      SELECT *, ${scoreExpression} AS score FROM ${tableIdentifier}
       WHERE "tenant_id" = ${tenantIdParam}
-      AND similarity("search_vector", ${queryParam}) > ${thresholdParam}
-      ORDER BY similarity("search_vector", ${queryParam}) DESC
+      AND ${scoreExpression} > ${thresholdParam}
+      ORDER BY ${scoreExpression} DESC
     `;
   }
 

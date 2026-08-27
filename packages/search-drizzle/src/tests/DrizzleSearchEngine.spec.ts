@@ -129,6 +129,41 @@ describe("DrizzleSearchEngine", () => {
     expect(result.hits[0]?.score).toBe(0);
   });
 
+  it("should normalize numeric string scores from the database", async () => {
+    executeMock.mockResolvedValueOnce({
+      rows: [{ id: "doc-1", score: "0.625" }],
+      rowCount: 1,
+    });
+
+    engine = new DrizzleSearchEngine(mockDb, strategy);
+    const result = await engine.search<{ id: string }>("users", { query: "test" });
+
+    expect(result.hits[0]?.score).toBe(0.625);
+  });
+
+  it.each([
+    ["missing", undefined],
+    ["null", null],
+    ["blank", ""],
+    ["whitespace-only", "   "],
+    ["non-numeric", "not-a-number"],
+    ["NaN", Number.NaN],
+    ["non-finite number", Number.POSITIVE_INFINITY],
+    ["non-finite string", "Infinity"],
+  ])("should reject %s score data", async (_case, score) => {
+    executeMock.mockResolvedValueOnce({
+      rows: [{ id: "doc-1", score }],
+      rowCount: 1,
+    });
+
+    engine = new DrizzleSearchEngine(mockDb, strategy);
+
+    await expect(engine.search("users", { query: "test" })).rejects.toMatchObject({
+      code: "SEARCH_DRIZZLE_INVALID_ROW",
+    });
+    expect(mockStrategy.mapSearchRow).not.toHaveBeenCalled();
+  });
+
   it("should throw when search returns non-object rows", async () => {
     executeMock.mockResolvedValueOnce({
       rows: [null],

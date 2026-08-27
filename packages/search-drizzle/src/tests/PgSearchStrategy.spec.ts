@@ -52,8 +52,10 @@ describe("PgSearchStrategy", () => {
       // Expecting ParadeDB BM25 syntax: table @@@ 'query'
       expect(sqlString).toContain('"users" @@@ $1');
       expect(sqlString).toContain('"tenant_id" = $1');
-      // Expecting ordering by score
+      expect(sqlString).toContain('SELECT *, paradedb.score("id") AS score');
       expect(sqlString).toContain('ORDER BY paradedb.score("id") DESC');
+      expect(sqlString).not.toContain("ORDER BY score DESC");
+      expect(sqlString.match(/paradedb\.score\("id"\)/g)).toHaveLength(2);
     });
   });
 

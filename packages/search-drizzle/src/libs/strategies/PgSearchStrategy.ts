@@ -24,12 +24,13 @@ export class PgSearchStrategy implements SearchStrategy {
     const tenantIdParam = sql.param(tenantId);
     const queryParam = sql.param(query.query);
     const idIdentifier = sql.identifier("id");
+    const scoreExpression = sql`paradedb.score(${idIdentifier})`;
 
     return sql`
-      SELECT * FROM ${tableIdentifier}
+      SELECT *, ${scoreExpression} AS score FROM ${tableIdentifier}
       WHERE ${tableIdentifier} @@@ ${queryParam}
       AND "tenant_id" = ${tenantIdParam}
-      ORDER BY paradedb.score(${idIdentifier}) DESC
+      ORDER BY ${scoreExpression} DESC
     `;
   }
 

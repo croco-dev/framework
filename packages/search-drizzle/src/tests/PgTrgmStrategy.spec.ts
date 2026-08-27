@@ -42,7 +42,10 @@ describe("PgTrgmStrategy", () => {
 
       expect(sqlString).toContain('similarity("search_vector", $1) > $1');
       expect(sqlString).toContain('"tenant_id" = $1');
+      expect(sqlString).toContain('SELECT *, similarity("search_vector", $1) AS score');
       expect(sqlString).toContain('ORDER BY similarity("search_vector", $1) DESC');
+      expect(sqlString).not.toContain("ORDER BY score DESC");
+      expect(sqlString.match(/similarity\("search_vector", \$1\)/g)).toHaveLength(3);
     });
   });
 
