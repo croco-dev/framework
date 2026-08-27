@@ -171,9 +171,10 @@ export function createDataMapArtifact(
   options: { readonly artifactPath?: string } = {},
 ): DataMapArtifact {
   const { report, resources: normalizedResources } = inspectDataGovernanceResources(resources);
+  const invalidCapabilityPaths = collectInvalidCapabilityPaths(report.diagnostics);
   const dataMapResources = normalizedResources
     .map((resource, resourceIndex) =>
-      toDataMapResource(resource, resourceIndex, report.diagnostics),
+      toDataMapResource(resource, resourceIndex, invalidCapabilityPaths),
     )
     .sort(compareDataMapResources);
   const summary = createSummary(dataMapResources, report.diagnostics);
@@ -1072,7 +1073,7 @@ function validateAudit(
       createDiagnostic({
         capability,
         code: DATA_GOVERNANCE_DIAGNOSTIC_CODES.capabilityAuditRequired,
-        message: `Data governance ${capability} capability audit must include valid eventName, subjectType, and actor`,
+        message: `Data governance ${capability} capability audit declaration is invalid`,
         path,
         resourceKind,
         target: "audit",
@@ -1180,19 +1181,19 @@ function validateProblems(
 function toDataMapResource(
   resource: NormalizedDataGovernanceResource,
   resourceIndex: number,
-  diagnostics: readonly DataGovernanceDiagnostic[],
+  invalidCapabilityPaths: ReadonlySet<string>,
 ): DataMapResource {
   const exportPath = `resources[${resourceIndex}].subjectRequests.export`;
   const deletePath = `resources[${resourceIndex}].subjectRequests.delete`;
   const exportCapability = toDataMapCapability(
     "export",
     resource.subjectRequests?.export,
-    !hasDiagnosticAtPath(diagnostics, exportPath),
+    !invalidCapabilityPaths.has(exportPath),
   );
   const deleteCapability = toDataMapCapability(
     "delete",
     resource.subjectRequests?.delete,
-    !hasDiagnosticAtPath(diagnostics, deletePath),
+    !invalidCapabilityPaths.has(deletePath),
   );
   const fields = resource.fields
     .map((field) =>
@@ -1246,8 +1247,8 @@ function toDataMapField(
   return {
     id: stringValue(field.id) ?? "",
     classifications: sortClassifications(classifications),
-    exported: exportSupported && field.exported !== false,
-    deleted: deleteSupported && field.deleted !== false,
+    exported: exportSupported && booleanFlagValue(field.exported),
+    deleted: deleteSupported && booleanFlagValue(field.deleted),
     ...(label ? { label } : {}),
     ...(valueType ? { valueType: valueType as DataMapField["valueType"] } : {}),
     ...(retentionPolicyId ? { retentionPolicyId } : {}),
@@ -1256,56 +1257,57 @@ function toDataMapField(
   };
 }
 
-function toDataSubjectIdentity(subject: UnknownRecord): DataMapResource["subject"] {
-  const type = stringValue(subject.type) ?? "";
-  const idField = stringValue(subject.idField) ?? "";
-  const tenantField = stringValue(subject.tenantField);
-  const labelField = stringValue(subject.labelField);
+function booleanFlagValue(value: unknown): boolean {
+  return value === undefined || value === true;
+}
 
-  if (
-    type &&
-    idField &&
-    (subject.tenantField === undefined || typeof subject.tenantField === "string") &&
-    (subject.labelField === undefined || typeof subject.labelField === "string")
-  ) {
-    return subject as DataMapResource["subject"];
+function toDataSubjectIdentity(subject: UnknownRecord): DataMapResource["subject"] {
+  const identity: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(subject)) {
+    if (key === "type" || key === "idField") {
+      identity[key] = stringValue(value) ?? "";
+    } else if (key === "tenantField" || key === "labelField") {
+      const field = stringValue(value);
+      if (field !== undefined) {
+        identity[key] = field;
+      }
+    }
   }
 
-  return {
-    type,
-    idField,
-    ...(tenantField ? { tenantField } : {}),
-    ...(labelField ? { labelField } : {}),
-  };
+  identity.type ??= "";
+  identity.idField ??= "";
+
+  return identity as DataMapResource["subject"];
 }
 
 function toDataRetentionPolicy(policy: UnknownRecord): DataRetentionPolicy {
-  const id = stringValue(policy.id) ?? "";
-  const durationDays = typeof policy.durationDays === "number" ? policy.durationDays : 0;
-  const disposition = isDataRetentionDisposition(policy.disposition)
-    ? policy.disposition
-    : "manual-review";
+  const retentionPolicy: Record<string, unknown> = {};
 
-  if (isDataRetentionPolicy(policy)) {
-    return policy as DataRetentionPolicy;
+  for (const [key, value] of Object.entries(policy)) {
+    if (key === "id") {
+      retentionPolicy.id = stringValue(value) ?? "";
+    } else if (key === "durationDays") {
+      retentionPolicy.durationDays = typeof value === "number" ? value : 0;
+    } else if (key === "disposition") {
+      retentionPolicy.disposition = isDataRetentionDisposition(value) ? value : "manual-review";
+    } else if (key === "basis" || key === "startsFrom") {
+      const field = stringValue(value);
+      if (field !== undefined) {
+        retentionPolicy[key] = field;
+      }
+    } else if (key === "legalHold" && (value === "block-delete" || value === "preserve")) {
+      retentionPolicy.legalHold = value;
+    } else if (key === "metadata" && isRecord(value)) {
+      retentionPolicy.metadata = value;
+    }
   }
 
-  const basis = stringValue(policy.basis);
-  const startsFrom = stringValue(policy.startsFrom);
-  const legalHold =
-    policy.legalHold === "block-delete" || policy.legalHold === "preserve"
-      ? policy.legalHold
-      : undefined;
+  retentionPolicy.id ??= "";
+  retentionPolicy.durationDays ??= 0;
+  retentionPolicy.disposition ??= "manual-review";
 
-  return {
-    id,
-    durationDays,
-    disposition,
-    ...(basis ? { basis } : {}),
-    ...(startsFrom ? { startsFrom } : {}),
-    ...(legalHold ? { legalHold } : {}),
-    ...(isRecord(policy.metadata) ? { metadata: policy.metadata } : {}),
-  };
+  return retentionPolicy as DataRetentionPolicy;
 }
 
 function toDataMapCapability(
@@ -1363,16 +1365,21 @@ function toDataMapCapability(
   };
 }
 
-function hasDiagnosticAtPath(
+function collectInvalidCapabilityPaths(
   diagnostics: readonly DataGovernanceDiagnostic[],
-  path: string,
-): boolean {
-  return diagnostics.some(
-    (diagnostic) =>
-      diagnostic.path === path ||
-      diagnostic.path.startsWith(`${path}.`) ||
-      diagnostic.path.startsWith(`${path}[`),
-  );
+): ReadonlySet<string> {
+  const paths = new Set<string>();
+
+  for (const diagnostic of diagnostics) {
+    const match = /^(resources\[\d+\]\.subjectRequests\.(?:export|delete))(?:$|\.|\[)/.exec(
+      diagnostic.path,
+    );
+    if (match?.[1]) {
+      paths.add(match[1]);
+    }
+  }
+
+  return paths;
 }
 
 function normalizeProblemContracts(problems: readonly UnknownRecord[]): DataMapProblemContract[] {
@@ -1604,22 +1611,6 @@ function isDataGovernanceAuditDescriptor(
     (value.idempotencyKey === undefined ||
       value.idempotencyKey === "required" ||
       value.idempotencyKey === "optional") &&
-    (value.metadata === undefined || isRecord(value.metadata)),
-  );
-}
-
-function isDataRetentionPolicy(value: UnknownRecord): value is DataRetentionPolicy {
-  return Boolean(
-    normalizeString(value.id) &&
-    typeof value.durationDays === "number" &&
-    Number.isInteger(value.durationDays) &&
-    value.durationDays > 0 &&
-    isDataRetentionDisposition(value.disposition) &&
-    (value.basis === undefined || typeof value.basis === "string") &&
-    (value.startsFrom === undefined || typeof value.startsFrom === "string") &&
-    (value.legalHold === undefined ||
-      value.legalHold === "block-delete" ||
-      value.legalHold === "preserve") &&
     (value.metadata === undefined || isRecord(value.metadata)),
   );
 }

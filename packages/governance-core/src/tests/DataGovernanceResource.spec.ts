@@ -624,6 +624,39 @@ describe("DataGovernanceResource", () => {
     `);
   });
 
+  it("fails closed for malformed field capability flags without disabling valid capabilities", () => {
+    const malformed = {
+      ...userResource,
+      fields: [
+        { ...userResource.fields[0], deleted: 0, exported: "false" },
+        ...userResource.fields.slice(1),
+        { classifications: ["operational"], id: "tenantId", valueType: "identifier" },
+      ],
+    } as unknown as DataGovernanceResource;
+
+    const report = validateDataGovernanceResources([malformed]);
+    const artifact = createDataMapArtifact([malformed]);
+
+    expect(report.diagnostics).toEqual(
+      expect.arrayContaining(
+        ["deleted", "exported"].map((field) =>
+          expect.objectContaining({
+            code: DATA_GOVERNANCE_DIAGNOSTIC_CODES.valueInvalid,
+            path: `resources[0].fields[0].${field}`,
+          }),
+        ),
+      ),
+    );
+    expect(artifact.resources[0]?.capabilities).toMatchObject({
+      delete: { status: "supported" },
+      export: { status: "supported" },
+    });
+    expect(artifact.resources[0]?.fields.find((field) => field.id === "id")).toMatchObject({
+      deleted: false,
+      exported: false,
+    });
+  });
+
   it("rejects field flags that advertise unsupported resource capabilities", () => {
     const contradictoryResource = defineDataGovernanceResource({
       fields: [
@@ -695,6 +728,52 @@ describe("DataGovernanceResource", () => {
     expect(createHash("sha256").update(stringifyDataMapArtifact(artifact)).digest("hex")).toBe(
       "f6348744e38565340edde9726b0b237757fb4166af0a376d38bd61dcf52b36d2",
     );
+  });
+
+  it("projects subject and retention artifacts onto their supported schema fields", () => {
+    const resource = {
+      fields: [{ classifications: ["operational"], id: "id" }],
+      kind: "projected-schema",
+      label: "Projected schema",
+      retentionPolicies: [
+        {
+          basis: "",
+          disposition: "delete",
+          durationDays: 30,
+          id: "projected-retention",
+          startsFrom: "",
+          unexpected: "remove",
+        },
+      ],
+      scope: "tenant",
+      subject: {
+        idField: "id",
+        labelField: "",
+        tenantField: "",
+        type: "user",
+        unexpected: "remove",
+      },
+    } as unknown as DataGovernanceResource;
+
+    expect(validateDataGovernanceResources([resource])).toEqual({ diagnostics: [], valid: true });
+
+    const artifact = createDataMapArtifact([resource]);
+
+    expect(artifact.resources[0]?.subject).toEqual({
+      idField: "id",
+      labelField: "",
+      tenantField: "",
+      type: "user",
+    });
+    expect(artifact.resources[0]?.retentionPolicies).toEqual([
+      {
+        basis: "",
+        disposition: "delete",
+        durationDays: 30,
+        id: "projected-retention",
+        startsFrom: "",
+      },
+    ]);
   });
 
   it("reports invalid governance contracts with stable diagnostics and a typed Problem", () => {
@@ -1206,6 +1285,42 @@ describe("DataGovernanceResource", () => {
       expect(artifact.summary.exportSupported).toBe(0);
     },
   );
+
+  it("summarizes invalid audit declarations without misidentifying valid required fields", () => {
+    const exportCapability = userResource.subjectRequests?.export;
+    const malformed = {
+      ...userResource,
+      fields: [
+        ...userResource.fields,
+        { classifications: ["operational"], id: "tenantId", valueType: "identifier" },
+      ],
+      subjectRequests: {
+        export: {
+          ...exportCapability,
+          audit: {
+            ...exportCapability?.audit,
+            reason: "sometimes",
+          },
+        },
+      },
+    } as unknown as DataGovernanceResource;
+
+    const report = validateDataGovernanceResources([malformed]);
+
+    expect(report.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: DATA_GOVERNANCE_DIAGNOSTIC_CODES.valueInvalid,
+        path: "resources[0].subjectRequests.export.audit.reason",
+      }),
+    );
+    expect(report.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: DATA_GOVERNANCE_DIAGNOSTIC_CODES.capabilityAuditRequired,
+        message: "Data governance export capability audit declaration is invalid",
+        path: "resources[0].subjectRequests.export.audit",
+      }),
+    );
+  });
 
   it("surfaces runtime Problems for unsupported export/delete and retention violations with audit evidence", () => {
     const exportProblem = new UnsupportedDataExportProblem({
