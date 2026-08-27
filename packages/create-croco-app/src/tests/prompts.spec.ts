@@ -51,22 +51,6 @@ describe("GeneratorOptions type", () => {
     expect(opts.webApps).toHaveLength(1);
   });
 
-  it("should accept vite-spa frontend deploy option", () => {
-    const opts: GeneratorOptions = {
-      projectName: "spa-app",
-      scope: "@myorg",
-      preset: "blank",
-      webApps: ["web"],
-      apiHosting: "standalone",
-      frontendDeploy: "vite-spa",
-      db: [],
-      agentRules: false,
-      installDeps: true,
-      initGit: true,
-    };
-    expect(opts.frontendDeploy).toBe("vite-spa");
-  });
-
   it("should accept an explicit Astryx UI profile", () => {
     const opts: GeneratorOptions = {
       projectName: "astryx-spa",

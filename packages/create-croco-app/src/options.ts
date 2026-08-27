@@ -13,7 +13,7 @@ import {
   getSaasProviderProfileDefinition,
 } from "./saas-provider-profiles.js";
 import { SUPPORTED_CREATE_CROCO_APP_CHOICES } from "./supported-options.js";
-import type { GeneratorOptions } from "./types.js";
+import type { GeneratorOptions, NormalizedGeneratorOptions, RawCliOptions } from "./types.js";
 
 const PRESETS = SUPPORTED_CREATE_CROCO_APP_CHOICES.presets;
 const APIS = SUPPORTED_CREATE_CROCO_APP_CHOICES.apis;
@@ -36,66 +36,66 @@ type ChoiceName =
   | "saas-profile"
   | "tenant-model";
 
-type RawCliOptions = Record<string, string | boolean | undefined>;
 type SaasPreset = Extract<GeneratorOptions["preset"], "saas" | "ai-saas">;
 type ProductionPreset = Extract<GeneratorOptions["preset"], "production-app" | "admin-console">;
 
 export function parseCliOptions(
   directory: string | undefined,
   rawOptions: RawCliOptions,
-): Partial<GeneratorOptions> {
-  const cliOptions: Partial<GeneratorOptions> = {};
+): NormalizedGeneratorOptions {
+  const cliOptions: NormalizedGeneratorOptions = {};
 
   if (directory) cliOptions.projectName = directory.split(/[\\/]/).at(-1) ?? directory;
-  if (typeof rawOptions.goal === "string")
-    cliOptions.goal = rawOptions.goal as GeneratorOptions["goal"];
-  if (typeof rawOptions.preset === "string")
-    cliOptions.preset = rawOptions.preset as GeneratorOptions["preset"];
-  if (typeof rawOptions.scope === "string") cliOptions.scope = rawOptions.scope;
-  if (typeof rawOptions.saasProfile === "string") {
-    cliOptions.saasProviderProfile =
-      rawOptions.saasProfile as GeneratorOptions["saasProviderProfile"];
+  if (typeof rawOptions["goal"] === "string")
+    cliOptions.goal = rawOptions["goal"] as GeneratorOptions["goal"];
+  if (typeof rawOptions["preset"] === "string")
+    cliOptions.preset = rawOptions["preset"] as GeneratorOptions["preset"];
+  if (typeof rawOptions["scope"] === "string") cliOptions.scope = rawOptions["scope"];
+  if (typeof rawOptions["saasProfile"] === "string") {
+    cliOptions.saasProviderProfile = rawOptions[
+      "saasProfile"
+    ] as GeneratorOptions["saasProviderProfile"];
   }
-  if (typeof rawOptions.tenantModel === "string") {
-    cliOptions.tenantModel = rawOptions.tenantModel as GeneratorOptions["tenantModel"];
+  if (typeof rawOptions["tenantModel"] === "string") {
+    cliOptions.tenantModel = rawOptions["tenantModel"] as GeneratorOptions["tenantModel"];
   }
-  if (typeof rawOptions.api === "string")
-    cliOptions.api = rawOptions.api as GeneratorOptions["api"];
-  if (typeof rawOptions.apiHosting === "string") {
-    cliOptions.apiHosting = rawOptions.apiHosting as GeneratorOptions["apiHosting"];
+  if (typeof rawOptions["api"] === "string")
+    cliOptions.api = rawOptions["api"] as GeneratorOptions["api"];
+  if (typeof rawOptions["apiHosting"] === "string") {
+    cliOptions.apiHosting = rawOptions["apiHosting"] as GeneratorOptions["apiHosting"];
   }
-  if (typeof rawOptions.webApps === "string") {
-    cliOptions.webApps = parseWebAppNames(rawOptions.webApps);
+  if (typeof rawOptions["webApps"] === "string") {
+    cliOptions.webApps = parseWebAppNames(rawOptions["webApps"]);
   }
-  if (typeof rawOptions.backendDeploy === "string") {
-    cliOptions.backendDeploy = rawOptions.backendDeploy as GeneratorOptions["backendDeploy"];
+  if (typeof rawOptions["backendDeploy"] === "string") {
+    cliOptions.backendDeploy = rawOptions["backendDeploy"] as GeneratorOptions["backendDeploy"];
   }
-  if (typeof rawOptions.frontendDeploy === "string") {
-    cliOptions.frontendDeploy = rawOptions.frontendDeploy as GeneratorOptions["frontendDeploy"];
+  if (typeof rawOptions["frontendDeploy"] === "string") {
+    cliOptions.frontendDeploy = rawOptions["frontendDeploy"] as GeneratorOptions["frontendDeploy"];
   }
   if (typeof rawOptions["ui"] === "string") {
     cliOptions.ui = rawOptions["ui"] as NonNullable<GeneratorOptions["ui"]>;
   }
-  if (typeof rawOptions.db === "string") {
-    cliOptions.db = rawOptions.db
+  if (typeof rawOptions["db"] === "string") {
+    cliOptions.db = rawOptions["db"]
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean) as GeneratorOptions["db"];
   }
-  if (rawOptions.agentRules === false) cliOptions.agentRules = false;
-  if (rawOptions.install === false) cliOptions.installDeps = false;
-  if (rawOptions.git === false) cliOptions.initGit = false;
+  if (rawOptions["agentRules"] === false) cliOptions.agentRules = false;
+  if (rawOptions["install"] === false) cliOptions.installDeps = false;
+  if (rawOptions["git"] === false) cliOptions.initGit = false;
 
   return cliOptions;
 }
 
-export function isNonInteractiveOptions(cliOptions: Partial<GeneratorOptions>): boolean {
+export function isNonInteractiveOptions(cliOptions: NormalizedGeneratorOptions): boolean {
   return (
     (!!cliOptions.goal || !!cliOptions.preset) && !!cliOptions.scope && !!cliOptions.projectName
   );
 }
 
-export function validateCliOptions(cliOptions: Partial<GeneratorOptions>): void {
+export function validateCliOptions(cliOptions: NormalizedGeneratorOptions): void {
   if (cliOptions.projectName !== undefined) {
     const error = validateProjectName(cliOptions.projectName);
     if (error) throwInvalidProjectName(error);
@@ -145,8 +145,17 @@ export function validateCliOptions(cliOptions: Partial<GeneratorOptions>): void 
   }
 }
 
-export function validateResolvedOptions(options: GeneratorOptions): void {
-  const error = validateProjectName(options.projectName);
+export function validateResolvedOptions(options: NormalizedGeneratorOptions): GeneratorOptions {
+  const projectName = requireOption(options.projectName, "Project name is required");
+  const preset = requireOption(options.preset, "Project preset is required");
+  const webApps = requireOption(options.webApps, "Resolved web apps are required");
+  const apiHosting = requireOption(options.apiHosting, "Resolved API hosting is required");
+  const db = requireOption(options.db, "Resolved databases are required");
+  requireOption(options.agentRules, "Resolved agent rules are required");
+  requireOption(options.installDeps, "Resolved install preference is required");
+  requireOption(options.initGit, "Resolved git preference is required");
+
+  const error = validateProjectName(projectName);
   if (error) throwInvalidProjectName(error);
 
   if (!options.scope) {
@@ -160,21 +169,21 @@ export function validateResolvedOptions(options: GeneratorOptions): void {
     );
   }
 
-  assertValidWebAppNames(options.webApps);
+  assertValidWebAppNames(webApps);
 
-  readChoice("preset", options.preset, PRESETS);
+  readChoice("preset", preset, PRESETS);
   if (options.goal) readGoal(options.goal);
   if (options.saasProviderProfile) {
     readChoice("saas-profile", options.saasProviderProfile, SAAS_PROVIDER_PROFILES);
   }
-  readChoice("api-hosting", options.apiHosting, API_HOSTING);
+  readChoice("api-hosting", apiHosting, API_HOSTING);
   if (options.api) readChoice("api", options.api, APIS);
   if (options.backendDeploy) readChoice("backend-deploy", options.backendDeploy, BACKEND_DEPLOYS);
   if (options.frontendDeploy)
     readChoice("frontend-deploy", options.frontendDeploy, FRONTEND_DEPLOYS);
   if (options.ui) readChoice("ui", options.ui, UI_PROFILES);
-  for (const db of options.db) {
-    readChoice("db", db, DATABASES);
+  for (const database of db) {
+    readChoice("db", database, DATABASES);
   }
 
   assertUiCompatibility(options);
@@ -197,21 +206,22 @@ export function validateResolvedOptions(options: GeneratorOptions): void {
   if (options.preset === "blank") {
     validateResolvedGoalOptions(options);
     if (options.api) throwUnsupportedPresetOption("--api", "blank");
+    if (apiHosting !== "standalone") throwUnsupportedPresetOption("--api-hosting", "blank");
     if (options.backendDeploy) throwUnsupportedPresetOption("--backend-deploy", "blank");
     if (options.frontendDeploy) throwUnsupportedPresetOption("--frontend-deploy", "blank");
-    if (options.webApps.length > 0) {
+    if (webApps.length > 0) {
       throwUnsupportedPresetOption("--web-apps", "blank");
     }
-    if (options.db.length > 0) {
+    if (db.length > 0) {
       throwUnsupportedPresetOption("--db", "blank");
     }
-    return;
+    return options as GeneratorOptions;
   }
 
   if (options.preset === "ddd-api") {
     validateResolvedGoalOptions(options);
     if (!options.api) throwMissingApi();
-    if (options.webApps.length > 0) {
+    if (webApps.length > 0) {
       throwInvalidCliOption(
         "--web-apps is only supported with the ddd-fullstack preset",
         "Remove --web-apps or choose --preset ddd-fullstack.",
@@ -232,25 +242,30 @@ export function validateResolvedOptions(options: GeneratorOptions): void {
         "--frontend-deploy",
       );
     }
-    return;
+    return options as GeneratorOptions;
   }
 
   if (isSaasPreset(options.preset)) {
     validateResolvedGoalOptions(options);
+    requireOption(
+      options.saasProviderProfile,
+      "Resolved --saas-profile is required for SaaS presets",
+    );
+    requireOption(options.tenantModel, "Resolved --tenant-model is required for SaaS presets");
     assertSaasOptions(options, options.preset);
-    return;
+    return options as GeneratorOptions;
   }
 
   if (isProductionPreset(options.preset)) {
     validateResolvedGoalOptions(options);
     assertProductionOptions(options, options.preset);
-    return;
+    return options as GeneratorOptions;
   }
 
   if (options.preset === "ddd-fullstack") {
     validateResolvedGoalOptions(options);
     if (!options.api) throwMissingApi();
-    if (options.apiHosting === "nextjs" && options.webApps.length !== 1) {
+    if (apiHosting === "nextjs" && webApps.length !== 1) {
       throwInvalidCliOption(
         "--api-hosting nextjs requires exactly one web app",
         "Pass exactly one --web-apps value or use --api-hosting standalone.",
@@ -264,10 +279,17 @@ export function validateResolvedOptions(options: GeneratorOptions): void {
         "--backend-deploy",
       );
     }
-    return;
+    return options as GeneratorOptions;
   }
 
   validateResolvedGoalOptions(options);
+  if (apiHosting !== "standalone") {
+    throwInvalidCliOption(
+      "--api-hosting nextjs is only supported with ddd-fullstack",
+      "Use --api-hosting standalone or choose --preset ddd-fullstack.",
+      "--api-hosting",
+    );
+  }
   if (options.frontendDeploy !== "cloudflare-meta-vite") {
     throwInvalidCliOption(
       "ddd-vike-fullstack only supports --frontend-deploy cloudflare-meta-vite",
@@ -275,10 +297,12 @@ export function validateResolvedOptions(options: GeneratorOptions): void {
       "--frontend-deploy",
     );
   }
+
+  return options as GeneratorOptions;
 }
 
 export function normalizeNonInteractiveOptions(
-  cliOptions: Partial<GeneratorOptions>,
+  cliOptions: NormalizedGeneratorOptions,
 ): GeneratorOptions {
   validateCliOptions(cliOptions);
 
@@ -288,9 +312,7 @@ export function normalizeNonInteractiveOptions(
     const goal = readGoal(cliOptions.goal);
     const options = resolveGoalOptions(projectName, scope, goal, cliOptions);
 
-    validateResolvedOptions(options);
-
-    return options;
+    return validateResolvedOptions(options);
   }
 
   const preset = readChoice(
@@ -302,7 +324,7 @@ export function normalizeNonInteractiveOptions(
   if (preset === "blank") {
     assertBlankOptions(cliOptions);
 
-    return {
+    return validateResolvedOptions({
       projectName,
       scope,
       preset,
@@ -312,13 +334,13 @@ export function normalizeNonInteractiveOptions(
       agentRules: cliOptions.agentRules ?? false,
       installDeps: cliOptions.installDeps ?? true,
       initGit: cliOptions.initGit ?? true,
-    };
+    });
   }
 
   if (isSaasPreset(preset)) {
     assertSaasOptions(cliOptions, preset);
 
-    return {
+    return validateResolvedOptions({
       projectName,
       scope,
       preset,
@@ -330,13 +352,13 @@ export function normalizeNonInteractiveOptions(
       agentRules: cliOptions.agentRules ?? true,
       installDeps: cliOptions.installDeps ?? true,
       initGit: cliOptions.initGit ?? true,
-    };
+    });
   }
 
   if (isProductionPreset(preset)) {
     assertProductionOptions(cliOptions, preset);
 
-    return {
+    return validateResolvedOptions({
       projectName,
       scope,
       preset,
@@ -346,7 +368,7 @@ export function normalizeNonInteractiveOptions(
       agentRules: cliOptions.agentRules ?? true,
       installDeps: cliOptions.installDeps ?? true,
       initGit: cliOptions.initGit ?? true,
-    };
+    });
   }
 
   const db = cliOptions.db ?? [];
@@ -372,7 +394,7 @@ export function normalizeNonInteractiveOptions(
           APIS,
         );
 
-  const options: GeneratorOptions = {
+  const options: NormalizedGeneratorOptions = {
     projectName,
     scope,
     preset,
@@ -390,12 +412,10 @@ export function normalizeNonInteractiveOptions(
     initGit: cliOptions.initGit ?? true,
   };
 
-  validateResolvedOptions(options);
-
-  return options;
+  return validateResolvedOptions(options);
 }
 
-function assertBlankOptions(cliOptions: Partial<GeneratorOptions>): void {
+function assertBlankOptions(cliOptions: NormalizedGeneratorOptions): void {
   if (cliOptions.saasProviderProfile) {
     throwInvalidCliOption(
       "--saas-profile is only supported with the saas and ai-saas presets",
@@ -435,7 +455,7 @@ function isProductionPreset(
   return preset === "production-app" || preset === "admin-console";
 }
 
-function assertSaasOptions(options: Partial<GeneratorOptions>, preset: SaasPreset): void {
+function assertSaasOptions(options: NormalizedGeneratorOptions, preset: SaasPreset): void {
   const presetName = preset;
   const saasProviderProfile = options.saasProviderProfile ?? DEFAULT_SAAS_PROVIDER_PROFILE;
   getSaasProviderProfileDefinition(saasProviderProfile);
@@ -470,7 +490,7 @@ function assertSaasOptions(options: Partial<GeneratorOptions>, preset: SaasPrese
 }
 
 function assertProductionOptions(
-  options: Partial<GeneratorOptions>,
+  options: NormalizedGeneratorOptions,
   preset: ProductionPreset,
 ): void {
   if (options.saasProviderProfile) {
@@ -584,7 +604,7 @@ function normalizeFrontendDeploy(
   return frontendDeploy;
 }
 
-export function assertUiCompatibility(options: Partial<GeneratorOptions>): void {
+export function assertUiCompatibility(options: NormalizedGeneratorOptions): void {
   if (!options.ui) return;
 
   if (options.frontendDeploy !== "vite-spa") {
@@ -596,7 +616,7 @@ export function assertUiCompatibility(options: Partial<GeneratorOptions>): void 
   }
 }
 
-export function assertUiPresetCompatibility(options: Partial<GeneratorOptions>): void {
+export function assertUiPresetCompatibility(options: NormalizedGeneratorOptions): void {
   if (!options.ui || options.preset === undefined || options.preset === "ddd-fullstack") return;
 
   throwInvalidCliOption(

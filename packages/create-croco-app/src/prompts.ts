@@ -11,14 +11,15 @@ import {
   assertUiCompatibility,
   assertUiPresetCompatibility,
   assertValidWebAppNames,
+  validateResolvedOptions,
 } from "./options.js";
 import {
   DEFAULT_SAAS_PROVIDER_PROFILE,
   SAAS_PROVIDER_PROFILE_CHOICES,
 } from "./saas-provider-profiles.js";
-import type { GeneratorOptions } from "./types.js";
+import type { GeneratorOptions, NormalizedGeneratorOptions } from "./types.js";
 
-export async function runPrompts(cliArgs: Partial<GeneratorOptions>): Promise<GeneratorOptions> {
+export async function runPrompts(cliArgs: NormalizedGeneratorOptions): Promise<GeneratorOptions> {
   p.intro(pc.bgCyan(pc.black(" create-croco-app ")));
 
   // 1. projectName
@@ -209,7 +210,7 @@ export async function runPrompts(cliArgs: Partial<GeneratorOptions>): Promise<Ge
             options: SAAS_PROVIDER_PROFILE_CHOICES.map((value) => ({
               value,
               label: value,
-              hint: value === DEFAULT_SAAS_PROVIDER_PROFILE ? "Node/Postgres default" : undefined,
+              ...(value === DEFAULT_SAAS_PROVIDER_PROFILE ? { hint: "Node/Postgres default" } : {}),
             })),
           })))
         : undefined;
@@ -268,7 +269,7 @@ export async function runPrompts(cliArgs: Partial<GeneratorOptions>): Promise<Ge
     }
 
     p.outro(pc.green("✓ Project configuration complete"));
-    return {
+    const options: NormalizedGeneratorOptions = {
       projectName: projectName as string,
       scope: scope as string,
       preset: preset as "production-app" | "admin-console" | "saas" | "ai-saas",
@@ -287,6 +288,8 @@ export async function runPrompts(cliArgs: Partial<GeneratorOptions>): Promise<Ge
       installDeps: installDeps as boolean,
       initGit: initGit as boolean,
     };
+
+    return validateResolvedOptions(options);
   }
 
   // 4. webApps (fullstack only)
@@ -472,7 +475,7 @@ export async function runPrompts(cliArgs: Partial<GeneratorOptions>): Promise<Ge
 
   p.outro(pc.green("✓ Project configuration complete"));
 
-  return {
+  const options: NormalizedGeneratorOptions = {
     projectName: projectName as string,
     scope: scope as string,
     preset: preset as GeneratorOptions["preset"],
@@ -487,4 +490,6 @@ export async function runPrompts(cliArgs: Partial<GeneratorOptions>): Promise<Ge
     installDeps: installDeps as boolean,
     initGit: initGit as boolean,
   };
+
+  return validateResolvedOptions(options);
 }

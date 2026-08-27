@@ -2,15 +2,20 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { mergeInto, renderHandlebars } from "../helpers/fs.js";
 import { TEMPLATES_DIR } from "../template-path.js";
-import type { GeneratorOptions } from "../types.js";
+import type { GeneratorFrontendDeploy } from "../types.js";
+
+type FrontendDeployInstallerOptions = {
+  readonly projectName: string;
+  readonly scope: string;
+  readonly preset: "ddd-fullstack" | "ddd-vike-fullstack";
+  readonly frontendDeploy: GeneratorFrontendDeploy;
+};
 
 export function installFrontendDeploy(
   targetDir: string,
   webAppName: string | undefined,
-  options: Pick<GeneratorOptions, "projectName" | "scope" | "preset" | "frontendDeploy">,
+  options: FrontendDeployInstallerOptions,
 ): void {
-  if (!options.frontendDeploy) return;
-
   const appTargetDir = join(targetDir, "apps", webAppName ?? "web");
 
   if (options.frontendDeploy === "vite-spa") {

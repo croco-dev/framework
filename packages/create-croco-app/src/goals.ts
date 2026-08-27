@@ -4,17 +4,25 @@ import { DEFAULT_TENANT_MODEL, type TenantModelName } from "@croco/tenant-core/t
 import { APPLICATION_INTENT_GOAL_CONTRACTS } from "@croco/framework-context";
 import type { ApplicationIntentManifest } from "@croco/framework-context";
 import { InvalidGoalOptionProblem } from "./libs/problems/InvalidGoalOptionProblem.js";
-import type { AppGoal, GeneratorOptions } from "./types.js";
+import { DEFAULT_SAAS_PROVIDER_PROFILE } from "./saas-provider-profiles.js";
+import type { AppGoal, GeneratorOptions, NormalizedGeneratorOptions } from "./types.js";
 
 export type GoalManifest = Omit<ApplicationIntentManifest, "tenantModel"> & {
   readonly tenantModel?: TenantModelName;
 };
 
-type GoalSpec = {
+type GoalSpec<Goal extends AppGoal> = {
   readonly label: string;
   readonly hint: string;
-  readonly options: Omit<GeneratorOptions, "projectName" | "scope" | "installDeps" | "initGit">;
+  readonly options: Omit<
+    Extract<GeneratorOptions, { goal: Goal }>,
+    "projectName" | "scope" | "installDeps" | "initGit"
+  >;
   readonly manifest: Omit<GoalManifest, "projectName" | "scope">;
+};
+
+type GoalSpecs = {
+  readonly [Goal in AppGoal]: GoalSpec<Goal>;
 };
 
 export const GOAL_SPECS = {
@@ -27,6 +35,7 @@ export const GOAL_SPECS = {
       webApps: [],
       apiHosting: "standalone",
       db: [],
+      saasProviderProfile: DEFAULT_SAAS_PROVIDER_PROFILE,
       tenantModel: DEFAULT_TENANT_MODEL,
       agentRules: true,
     },
@@ -72,7 +81,7 @@ export const GOAL_SPECS = {
     },
     manifest: APPLICATION_INTENT_GOAL_CONTRACTS["internal-tool"],
   },
-} as const satisfies Record<AppGoal, GoalSpec>;
+} as const satisfies GoalSpecs;
 
 export function formatGoalChoices(): string {
   return Object.keys(GOAL_SPECS).join(", ");
@@ -96,7 +105,7 @@ export function resolveGoalOptions(
   projectName: string,
   scope: string,
   goal: AppGoal,
-  cliOptions: Partial<GeneratorOptions>,
+  cliOptions: NormalizedGeneratorOptions,
 ): GeneratorOptions {
   assertGoalDoesNotMixStackOptions(goal, cliOptions);
 
@@ -109,10 +118,10 @@ export function resolveGoalOptions(
     agentRules: cliOptions.agentRules ?? spec.options.agentRules,
     installDeps: cliOptions.installDeps ?? true,
     initGit: cliOptions.initGit ?? true,
-  };
+  } as GeneratorOptions;
 }
 
-export function validateGoalCliOptions(options: Partial<GeneratorOptions>): void {
+export function validateGoalCliOptions(options: NormalizedGeneratorOptions): void {
   if (!options.goal) return;
 
   assertGoalDoesNotMixStackOptions(readGoal(options.goal), options);
@@ -138,10 +147,10 @@ export function writeGoalManifest(targetDir: string, options: GeneratorOptions):
   writeFileSync(join(targetDir, "croco.app.json"), `${JSON.stringify(manifest, null, 2)}\n`);
 }
 
-export function validateResolvedGoalOptions(options: GeneratorOptions): void {
+export function validateResolvedGoalOptions(options: NormalizedGeneratorOptions): void {
   if (!options.goal) return;
 
-  const expectedOptions: GoalSpec["options"] = GOAL_SPECS[options.goal].options;
+  const expectedOptions: NormalizedGeneratorOptions = GOAL_SPECS[options.goal].options;
   const mismatches: string[] = [];
 
   if (options.preset !== expectedOptions.preset) mismatches.push("preset");
@@ -150,9 +159,14 @@ export function validateResolvedGoalOptions(options: GeneratorOptions): void {
   if (options.backendDeploy !== expectedOptions.backendDeploy) mismatches.push("backendDeploy");
   if (options.frontendDeploy !== expectedOptions.frontendDeploy) mismatches.push("frontendDeploy");
   if (options.ui !== expectedOptions.ui) mismatches.push("ui");
+  if (options.saasProviderProfile !== expectedOptions.saasProviderProfile) {
+    mismatches.push("saasProviderProfile");
+  }
   if (options.tenantModel !== expectedOptions.tenantModel) mismatches.push("tenantModel");
-  if (!sameStringArray(options.webApps, expectedOptions.webApps)) mismatches.push("webApps");
-  if (!sameStringArray(options.db, expectedOptions.db)) mismatches.push("db");
+  if (!sameStringArray(options.webApps ?? [], expectedOptions.webApps ?? [])) {
+    mismatches.push("webApps");
+  }
+  if (!sameStringArray(options.db ?? [], expectedOptions.db ?? [])) mismatches.push("db");
 
   if (mismatches.length === 0) return;
 
@@ -163,7 +177,10 @@ export function validateResolvedGoalOptions(options: GeneratorOptions): void {
   );
 }
 
-function assertGoalDoesNotMixStackOptions(goal: AppGoal, options: Partial<GeneratorOptions>): void {
+function assertGoalDoesNotMixStackOptions(
+  goal: AppGoal,
+  options: NormalizedGeneratorOptions,
+): void {
   const unsupportedOptions: string[] = [];
 
   if (options.preset) unsupportedOptions.push("--preset");

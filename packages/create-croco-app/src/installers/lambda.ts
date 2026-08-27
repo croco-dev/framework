@@ -2,12 +2,15 @@ import { join } from "node:path";
 import { mergeInto } from "../helpers/fs.js";
 import { mergePackageJson } from "../helpers/pkg-json.js";
 import { TEMPLATES_DIR } from "../template-path.js";
-import type { GeneratorOptions } from "../types.js";
+import type { GeneratorApi } from "../types.js";
 
-export function installLambda(
-  targetDir: string,
-  options: Pick<GeneratorOptions, "projectName" | "scope" | "api">,
-): void {
+type LambdaInstallerOptions = {
+  readonly projectName: string;
+  readonly scope: string;
+  readonly api: GeneratorApi;
+};
+
+export function installLambda(targetDir: string, options: LambdaInstallerOptions): void {
   const addonDir = join(TEMPLATES_DIR, "addons/lambda");
   mergeInto(addonDir, targetDir, {
     projectName: options.projectName,
