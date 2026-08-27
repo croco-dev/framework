@@ -28,6 +28,7 @@ describe("@Auditable", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
     Container.reset();
   });
@@ -768,6 +769,142 @@ describe("@Auditable", () => {
         "[Auditable] Failed to write audit log",
         expect.objectContaining({
           error: "audit persistence failed",
+        }),
+      );
+    });
+  });
+
+  describe("impersonation context", () => {
+    const nowTimestamp = Date.parse("2026-08-28T00:00:00.000Z");
+
+    function activeState(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+      return {
+        sessionId: "imp-1",
+        impersonatorId: "admin-1",
+        targetUserId: "user-1",
+        startedAt: new Date(nowTimestamp),
+        expiresAt: new Date(nowTimestamp + 60_000),
+        ...overrides,
+      };
+    }
+
+    async function captureAuditEntry(
+      impersonation: unknown,
+      contextOverride?: RequestContextStub,
+    ): Promise<Omit<AuditLogEntry, "id" | "createdAt"> | undefined> {
+      const createSpy = vi.fn(async (entry: Omit<AuditLogEntry, "id" | "createdAt">) =>
+        createPersistedEntry(entry),
+      );
+      const repository = {
+        create: createSpy,
+        find: vi.fn(),
+      } as unknown as AuditLogRepository;
+
+      vi.spyOn(Container, "get").mockReturnValue(repository);
+      vi.spyOn(Context, "get").mockReturnValue(
+        contextOverride ??
+          ({
+            requestId: "req-impersonation",
+            tenantId: "tenant-impersonation",
+            user: { id: "actor-1" },
+            impersonation,
+          } as RequestContextStub),
+      );
+
+      class TestService {
+        @Auditable({
+          action: "project.read",
+          resourceType: "Project",
+          throwOnFailure: true,
+        })
+        async read(): Promise<void> {}
+      }
+
+      await new TestService().read();
+
+      expect(createSpy).toHaveBeenCalledTimes(1);
+      return createSpy.mock.calls[0]?.[0];
+    }
+
+    it("should attribute active impersonation to the impersonator", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(nowTimestamp);
+
+      const entry = await captureAuditEntry(activeState());
+
+      expect(entry).toEqual(
+        expect.objectContaining({
+          actorId: "admin-1",
+          metadata: {
+            impersonation: true,
+            impersonatorId: "admin-1",
+            targetUserId: "user-1",
+          },
+        }),
+      );
+    });
+
+    it.each([
+      ["a truthy non-object", true],
+      ["a string", "active"],
+      ["a partial object", { sessionId: "imp-1" }],
+      ["a blank identifier", activeState({ impersonatorId: "   " })],
+      ["a serialized timestamp", activeState({ startedAt: new Date(nowTimestamp).toISOString() })],
+      ["an invalid date", activeState({ expiresAt: new Date("invalid") })],
+      [
+        "a future session",
+        activeState({
+          startedAt: new Date(nowTimestamp + 1),
+          expiresAt: new Date(nowTimestamp + 60_000),
+        }),
+      ],
+      ["a reversed interval", activeState({ expiresAt: new Date(nowTimestamp - 1) })],
+      ["a session expiring now", activeState({ expiresAt: new Date(nowTimestamp) })],
+      [
+        "a throwing accessor",
+        Object.defineProperty(activeState(), "sessionId", {
+          get: () => {
+            throw new Error("untrusted accessor");
+          },
+        }),
+      ],
+    ])("should ignore %s", async (_description, impersonation) => {
+      vi.useFakeTimers();
+      vi.setSystemTime(nowTimestamp);
+
+      const entry = await captureAuditEntry(impersonation);
+
+      expect(entry).toEqual(
+        expect.objectContaining({
+          actorId: "actor-1",
+          metadata: {},
+        }),
+      );
+    });
+
+    it("should ignore a throwing context accessor", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(nowTimestamp);
+      const context = Object.defineProperty(
+        {
+          requestId: "req-impersonation",
+          tenantId: "tenant-impersonation",
+          user: { id: "actor-1" },
+        },
+        "impersonation",
+        {
+          get: () => {
+            throw new Error("untrusted context accessor");
+          },
+        },
+      );
+
+      const entry = await captureAuditEntry(undefined, context);
+
+      expect(entry).toEqual(
+        expect.objectContaining({
+          actorId: "actor-1",
+          metadata: {},
         }),
       );
     });

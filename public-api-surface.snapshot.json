@@ -3099,6 +3099,12 @@
               "exportKind": "named",
               "source": "./libs/AuditErrorHandler",
               "declarationKind": "function"
+            },
+            {
+              "name": "resolveActiveImpersonationContext",
+              "exportKind": "named",
+              "source": "./libs/impersonationState",
+              "declarationKind": "function"
             }
           ],
           "typeExports": [

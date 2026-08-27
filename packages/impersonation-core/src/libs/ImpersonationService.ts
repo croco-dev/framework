@@ -1,4 +1,5 @@
 import { ForbiddenProblem, hasPermission, UnauthorizedProblem } from "@croco/auth-core";
+import { resolveActiveImpersonationContext } from "@croco/audit-core";
 import { EventBusConfig, EventPublisher } from "@croco/events-core";
 import type { RequestContext } from "@croco/framework-context";
 import { Component, Inject } from "@croco/framework-context";
@@ -162,20 +163,14 @@ export class ImpersonationService {
   }
 
   isImpersonating(context: RequestContext): context is ImpersonationContext {
-    return "impersonation" in context;
+    return resolveActiveImpersonationContext(context) !== null;
   }
 
   getImpersonator(context: RequestContext): string | null {
-    if (this.isImpersonating(context)) {
-      return context.impersonation.impersonatorId;
-    }
-    return null;
+    return resolveActiveImpersonationContext(context)?.impersonatorId ?? null;
   }
 
   getTargetUser(context: RequestContext): string | null {
-    if (this.isImpersonating(context)) {
-      return context.impersonation.targetUserId;
-    }
-    return null;
+    return resolveActiveImpersonationContext(context)?.targetUserId ?? null;
   }
 }
