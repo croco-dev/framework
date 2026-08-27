@@ -63,7 +63,7 @@ PostgreSQL 검색 전략이 구현해야 하는 계약입니다.
 
 ### buildSearchQuery()
 
-> **buildSearchQuery**(`table`, `query`, `tenantId`): `SQL`
+> **buildSearchQuery**(`table`, `query`, `tenantId`): [`SearchQueryPlan`](/api/search-drizzle/src/type-aliases/searchqueryplan/)
 
 검색 SQL을 생성합니다.
 
@@ -83,7 +83,7 @@ PostgreSQL 검색 전략이 구현해야 하는 계약입니다.
 
 #### Returns
 
-`SQL`
+[`SearchQueryPlan`](/api/search-drizzle/src/type-aliases/searchqueryplan/)
 
 ---
 

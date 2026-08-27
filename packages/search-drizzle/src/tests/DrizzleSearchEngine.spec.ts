@@ -35,6 +35,8 @@ const mockStrategy = {
 const strategy = mockStrategy as unknown as SearchStrategy;
 
 const executeMock = vi.fn();
+const mockRowsSql = { toSQL: () => ({ sql: "SELECT 1", params: [] }) };
+const mockTotalSql = { toSQL: () => ({ sql: "SELECT COUNT(*)", params: [] }) };
 
 // Mock DB
 const mockDb = {
@@ -58,14 +60,16 @@ describe("DrizzleSearchEngine", () => {
       highlight: false,
     });
     mockStrategy.mapSearchRow.mockReset();
+    executeMock.mockReset();
 
     // Mock SQL return
-    const mockSql = { toSQL: () => ({ sql: "SELECT 1", params: [] }) };
-    mockStrategy.buildSearchQuery.mockReturnValue(mockSql);
-    mockStrategy.buildIndexQuery.mockReturnValue(mockSql);
-    mockStrategy.buildDeleteQuery.mockReturnValue(mockSql);
+    mockStrategy.buildSearchQuery.mockReturnValue({ rows: mockRowsSql, total: mockTotalSql });
+    mockStrategy.buildIndexQuery.mockReturnValue(mockRowsSql);
+    mockStrategy.buildDeleteQuery.mockReturnValue(mockRowsSql);
 
-    executeMock.mockResolvedValue({ rows: [] });
+    executeMock.mockImplementation(async (query) =>
+      query === mockTotalSql ? { rows: [{ total: 0 }] } : { rows: [] },
+    );
   });
 
   it("should check capability on first use", async () => {
@@ -163,6 +167,49 @@ describe("DrizzleSearchEngine", () => {
       code: "SEARCH_DRIZZLE_INVALID_ROW",
     });
     expect(mockStrategy.mapSearchRow).not.toHaveBeenCalled();
+  });
+
+  it("should return the full matching total for a partial page", async () => {
+    executeMock
+      .mockResolvedValueOnce({
+        rows: [{ id: "doc-2", __croco_search_score: 0.8 }],
+        rowCount: 1,
+      })
+      .mockResolvedValueOnce({
+        rows: [{ total: 3 }],
+        rowCount: 1,
+      });
+
+    engine = new DrizzleSearchEngine(mockDb, strategy);
+    const result = await engine.search("users", { query: "test", limit: 1, offset: 1 });
+
+    expect(result.total).toBe(3);
+    expect(result.hits).toHaveLength(1);
+    expect(executeMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("should retain the full matching total for an empty page beyond the last result", async () => {
+    executeMock
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 })
+      .mockResolvedValueOnce({ rows: [{ total: 3 }], rowCount: 1 });
+
+    engine = new DrizzleSearchEngine(mockDb, strategy);
+    const result = await engine.search("users", { query: "test", limit: 1, offset: 10 });
+
+    expect(result).toMatchObject({ hits: [], total: 3 });
+    expect(executeMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("should reject malformed total count rows", async () => {
+    executeMock
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ total: "3" }] });
+
+    engine = new DrizzleSearchEngine(mockDb, strategy);
+
+    await expect(engine.search("users", { query: "test" })).rejects.toThrow(
+      "Invalid search row: expected a non-negative safe integer total",
+    );
   });
 
   it("should throw when search returns non-object rows", async () => {
@@ -293,7 +340,7 @@ describe("DrizzleSearchEngine", () => {
     expect(executeMock).toHaveBeenCalledTimes(1);
   });
 
-  it("should not return a successful search when the final database call observes an abort", async () => {
+  it("should not execute the total query when the hit query observes an abort", async () => {
     engine = new DrizzleSearchEngine(mockDb, strategy);
     const controller = new AbortController();
     const reason = new Error("request closed");
@@ -309,6 +356,46 @@ describe("DrizzleSearchEngine", () => {
       cause: reason,
       extensions: { operation: "search" },
     });
+    expect(executeMock).toHaveBeenCalledOnce();
+  });
+
+  it("should not execute the total query when row mapping aborts the search", async () => {
+    engine = new DrizzleSearchEngine(mockDb, strategy);
+    const controller = new AbortController();
+    const reason = new Error("request closed");
+    executeMock.mockResolvedValueOnce({ rows: [{ id: "doc-1", __croco_search_score: 0.8 }] });
+    mockStrategy.mapSearchRow.mockImplementationOnce(() => {
+      controller.abort(reason);
+      return { id: "doc-1" };
+    });
+
+    await expect(
+      engine.search("users", { query: "test" }, { signal: controller.signal }),
+    ).rejects.toMatchObject({
+      code: "search-core/operation-aborted",
+      cause: reason,
+      extensions: { operation: "search" },
+    });
+    expect(executeMock).toHaveBeenCalledOnce();
+  });
+
+  it("should not return a successful search when the total query observes an abort", async () => {
+    engine = new DrizzleSearchEngine(mockDb, strategy);
+    const controller = new AbortController();
+    const reason = new Error("request closed");
+    executeMock.mockResolvedValueOnce({ rows: [] }).mockImplementationOnce(async () => {
+      controller.abort(reason);
+      return { rows: [{ total: 0 }] };
+    });
+
+    await expect(
+      engine.search("users", { query: "test" }, { signal: controller.signal }),
+    ).rejects.toMatchObject({
+      code: "search-core/operation-aborted",
+      cause: reason,
+      extensions: { operation: "search" },
+    });
+    expect(executeMock).toHaveBeenCalledTimes(2);
   });
 
   it("should reject every database operation aborted during its final write", async () => {

@@ -58,9 +58,14 @@ await engine.indexDocument(
 - `PgSearchStrategy`, `pg_search` 기반 전문 검색 전략입니다.
 - `PGroongaStrategy`, `pgroonga` 기반 검색 전략입니다.
 
+각 전략의 `buildSearchQuery()`는 동일한 검색 및 테넌트 조건으로 행 조회와 전체 건수 조회를 구성한
+`SearchQueryPlan`을 반환합니다. `SearchResult.total`은 limit/offset 적용 전 전체 일치 건수이며, 결과 행이 없는 페이지에서도
+유지됩니다.
+
 ### 타입과 문제
 
 - `DRIZZLE_TOKEN`, 검색 엔진용 Drizzle 주입 토큰입니다.
 - `SearchStrategy`, 전략 구현 계약입니다.
+- `SearchQueryPlan`, 결과 행 SQL과 전체 건수 SQL을 함께 표현하는 전략 결과 타입입니다.
 - `SearchResultRow`, 검색 결과 행 타입입니다.
-- `InvalidSearchRowProblem`, 검색 결과 행의 형태나 관련도 점수가 유효하지 않을 때 던지는 문제입니다.
+- `InvalidSearchRowProblem`, 검색 결과 행, 관련도 점수 또는 전체 건수 행이 유효하지 않을 때 던지는 문제입니다.

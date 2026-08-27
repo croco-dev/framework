@@ -25570,6 +25570,12 @@
           ],
           "typeExports": [
             {
+              "name": "SearchQueryPlan",
+              "exportKind": "declaration",
+              "source": "./libs/types",
+              "declarationKind": "type"
+            },
+            {
               "name": "SearchResultRow",
               "exportKind": "declaration",
               "source": "./libs/types",

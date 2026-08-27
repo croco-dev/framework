@@ -13,13 +13,21 @@ export const DRIZZLE_TOKEN = "DRIZZLE_TOKEN";
 export type SearchResultRow = Record<string, unknown>;
 
 /**
+ * 검색 결과 행과 전체 일치 건수를 조회하는 SQL 계획입니다.
+ */
+export type SearchQueryPlan = {
+  rows: SQL;
+  total: SQL;
+};
+
+/**
  * PostgreSQL 검색 전략이 구현해야 하는 계약입니다.
  */
 export interface SearchStrategy {
   /**
    * 검색 SQL을 생성합니다.
    */
-  buildSearchQuery(table: string, query: SearchQuery, tenantId: string): SQL;
+  buildSearchQuery(table: string, query: SearchQuery, tenantId: string): SearchQueryPlan;
 
   /**
    * 문서 색인 SQL을 생성합니다.

@@ -1,7 +1,7 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
 
 /**
- * 검색 결과 행이 기대한 형태가 아닐 때 발생하는 문제입니다.
+ * 검색 결과 행, 관련도 점수 또는 전체 건수 행이 예상한 형태가 아닐 때 발생하는 문제입니다.
  */
 export class InvalidSearchRowProblem extends Problem {
   readonly code = "SEARCH_DRIZZLE_INVALID_ROW";

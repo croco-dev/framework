@@ -2,7 +2,7 @@ import type { SearchDocument, SearchEngineCapabilities, SearchQuery } from "@cro
 import { type SQL, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { SEARCH_SCORE_ALIAS } from "../searchScore";
-import type { SearchStrategy } from "../types";
+import type { SearchQueryPlan, SearchStrategy } from "../types";
 
 /**
  * `pg_trgm` 확장을 이용한 유사도 검색 전략입니다.
@@ -20,20 +20,25 @@ export class PgTrgmStrategy implements SearchStrategy {
   /**
    * trigram similarity 기반 검색 SQL을 생성합니다.
    */
-  buildSearchQuery(table: string, query: SearchQuery, tenantId: string): SQL {
+  buildSearchQuery(table: string, query: SearchQuery, tenantId: string): SearchQueryPlan {
     const tableIdentifier = sql.identifier(table);
-    const tenantIdParam = sql.param(tenantId);
+    const predicate = this.buildSearchPredicate(query, tenantId);
     const queryParam = sql.param(query.query);
-    const thresholdParam = sql.param(this.similarityThreshold);
     const scoreAlias = sql.identifier(SEARCH_SCORE_ALIAS);
     const scoreExpression = sql`similarity("search_vector", ${queryParam})`;
 
-    return sql`
-      SELECT *, ${scoreExpression} AS ${scoreAlias} FROM ${tableIdentifier}
-      WHERE "tenant_id" = ${tenantIdParam}
-      AND ${scoreExpression} > ${thresholdParam}
-      ORDER BY ${scoreExpression} DESC
-    `;
+    return {
+      rows: sql`
+        SELECT *, ${scoreExpression} AS ${scoreAlias} FROM ${tableIdentifier}
+        WHERE ${predicate}
+        ORDER BY ${scoreExpression} DESC
+      `,
+      total: sql`
+        SELECT COUNT(*)::double precision AS total
+        FROM ${tableIdentifier}
+        WHERE ${predicate}
+      `,
+    };
   }
 
   /**
@@ -93,5 +98,9 @@ export class PgTrgmStrategy implements SearchStrategy {
       vectorSearch: false,
       fuzzySearch: true,
     };
+  }
+
+  private buildSearchPredicate(query: SearchQuery, tenantId: string): SQL {
+    return sql`"tenant_id" = ${sql.param(tenantId)} AND similarity("search_vector", ${sql.param(query.query)}) > ${sql.param(this.similarityThreshold)}`;
   }
 }
