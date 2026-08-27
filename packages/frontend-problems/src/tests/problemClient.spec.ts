@@ -1,9 +1,10 @@
-import { ProblemCategory } from "@croco/problems-core";
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import {
   ProblemClientError,
   ProblemFetchUnavailableError,
   ProblemResponseError,
+  ProblemStatusMismatchError,
   assertProblemExhaustive,
   fetchProblemJson,
   handleJsonResponse,
@@ -113,6 +114,71 @@ describe("frontend Problem client runtime", () => {
     } else {
       throw new Error("Expected external failure for undeclared Problem.");
     }
+  });
+
+  it("rejects HTTP and Problem status mismatches for direct responses", async () => {
+    const response = jsonResponse(userNotFoundProblem, 500);
+    const request = handleJsonResponse(response);
+
+    await expect(request).rejects.toBeInstanceOf(ProblemStatusMismatchError);
+    await expect(request).rejects.toMatchObject({
+      category: ProblemCategory.InternalServerError,
+      code: "frontend-problems/status-mismatch",
+      httpStatus: 500,
+      name: "ProblemStatusMismatchError",
+      problemStatus: 404,
+      response,
+      status: 500,
+    });
+    await expect(request).rejects.toBeInstanceOf(Problem);
+    await expect(request).rejects.toThrow(
+      "Problem response status mismatch: HTTP 500, Problem 404",
+    );
+  });
+
+  it("keeps HTTP and Problem status mismatches external for generated-client results", async () => {
+    const response = jsonResponse(userNotFoundProblem, 500);
+    const result = await handleJsonResult<{ readonly id: string }, DeclaredProblem>(
+      response,
+      declaredProblems,
+    );
+
+    expect(result).toMatchObject({
+      ok: false,
+      kind: "external",
+      body: userNotFoundProblem,
+      error: {
+        category: ProblemCategory.InternalServerError,
+        code: "frontend-problems/status-mismatch",
+        httpStatus: 500,
+        name: "ProblemStatusMismatchError",
+        problemStatus: 404,
+        status: 500,
+      },
+      response,
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok && result.kind === "external") {
+      expect(result.error).toBeInstanceOf(ProblemStatusMismatchError);
+      expect(result.error).toBeInstanceOf(Problem);
+    }
+  });
+
+  it("keeps HTTP and Problem status mismatches external for generic Problem results", async () => {
+    const response = jsonResponse(userNotFoundProblem, 500);
+    const result = await readJsonProblemResult(response);
+
+    expect(result).toMatchObject({
+      ok: false,
+      kind: "external",
+      body: userNotFoundProblem,
+      error: {
+        httpStatus: 500,
+        name: "ProblemStatusMismatchError",
+        problemStatus: 404,
+      },
+      response,
+    });
   });
 
   it("returns generic Problem failures for shared fetch wrappers", async () => {

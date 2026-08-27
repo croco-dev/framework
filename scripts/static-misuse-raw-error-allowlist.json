@@ -357,7 +357,7 @@
     {
       "package": "@croco/frontend-problems",
       "file": "packages/frontend-problems/src/index.ts",
-      "line": 522,
+      "line": 568,
       "excerpt": "throw new Error(`Unhandled Problem variant${suffix}`);",
       "reason": "Internal exhaustive/programmer assertion retained as a reviewed exception while user-facing runtime validation paths use coded errors.",
       "owner": "framework-error-handling",
@@ -447,7 +447,7 @@
     {
       "package": "@croco/rpc-codegen",
       "file": "packages/rpc-codegen/src/libs/generate.ts",
-      "line": 1569,
+      "line": 1591,
       "excerpt": "throw new Error(\\`Unhandled RPC Problem variant\\${suffix}\\`);",
       "reason": "Internal exhaustive/programmer assertion retained as a reviewed exception while user-facing runtime validation paths use coded errors.",
       "owner": "framework-error-handling",

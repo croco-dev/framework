@@ -17,6 +17,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`ArchitecturePolicyManifestJsonParseProblem`](/api/architecture-policy/src/classes/architecturepolicymanifestjsonparseproblem/)
 - [`ArchitecturePolicyManifestSchemaVersionProblem`](/api/architecture-policy/src/classes/architecturepolicymanifestschemaversionproblem/)
 - [`ArchitecturePolicyPackageJsonParseProblem`](/api/architecture-policy/src/classes/architecturepolicypackagejsonparseproblem/)
+- [`ProblemStatusMismatchError`](/api/frontend-problems/src/classes/problemstatusmismatcherror/)
 - [`ProblemFetchUnavailableError`](/api/frontend-problems/src/classes/problemfetchunavailableerror/)
 - [`BetterAuthAuthenticationProblem`](/api/auth-better-auth/src/classes/betterauthauthenticationproblem/)
 - [`BetterAuthNotInitializedProblem`](/api/auth-better-auth/src/classes/betterauthnotinitializedproblem/)

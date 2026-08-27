@@ -959,53 +959,54 @@ export type CrocoManifestBundleSource = typeof crocoManifestBundleSource;
 }
 
 function getResponseHelperImports(options: ResponseHelperOptions): string {
-  const helpers: string[] = [
+  const valueHelpers: string[] = [
     "createRpcClientRequest",
     "handleRpcRequestError",
     "handleRpcRequestResultError",
   ];
 
   if (options.hasOutputRoutes) {
-    helpers.push("handleJsonResponse");
-    helpers.push("handleJsonResult");
+    valueHelpers.push("handleJsonResponse");
+    valueHelpers.push("handleJsonResult");
   }
 
   if (options.hasNoOutputRoutes) {
-    helpers.push("readOptionalJsonResponse");
-    helpers.push("readOptionalJsonResult");
+    valueHelpers.push("readOptionalJsonResponse");
+    valueHelpers.push("readOptionalJsonResult");
   }
 
   if (options.hasFormRoutes) {
-    helpers.push("toRpcFormProblem");
+    valueHelpers.push("toRpcFormProblem");
   }
 
   if (options.hasQueryKeyInputs) {
-    helpers.push("serializeRpcQueryKeyInput");
+    valueHelpers.push("serializeRpcQueryKeyInput");
   }
 
-  helpers.push(
-    "type RpcClientConfig",
-    "type RpcClientRequestOptions",
-    "type RpcClientResult",
-    "type RpcDeclaredProblem",
-  );
+  const typeHelpers = [
+    "RpcClientConfig",
+    "RpcClientRequestOptions",
+    "RpcClientResult",
+    "RpcDeclaredProblem",
+  ];
 
   if (options.hasFormRoutes) {
-    helpers.push(
-      "type RpcDomainProblem",
-      "type RpcFormFieldProblem",
-      "type RpcFormGlobalProblem",
-      "type RpcFormModel",
+    typeHelpers.push(
+      "RpcDomainProblem",
+      "RpcFormFieldProblem",
+      "RpcFormGlobalProblem",
+      "RpcFormModel",
     );
   }
 
-  helpers.push("type RpcProblemDetailsFor");
+  typeHelpers.push("RpcProblemDetailsFor");
 
   if (options.hasFormRoutes) {
-    helpers.push("type RpcValidationProblem");
+    typeHelpers.push("RpcValidationProblem");
   }
 
-  return helpers.length === 0 ? "" : `import { ${helpers.join(", ")} } from './rpc';\n`;
+  return `import { ${valueHelpers.join(", ")} } from './rpc';
+import type { ${typeHelpers.join(", ")} } from './rpc';\n`;
 }
 
 function generateRpcSupport(options: GenerateClientOptions = {}): string {
@@ -1014,6 +1015,7 @@ function generateRpcSupport(options: GenerateClientOptions = {}): string {
 import {
   ProblemClientError as RpcClientProblemError,
   ProblemResponseError as RpcClientResponseError,
+  ProblemStatusMismatchError as RpcClientStatusMismatchError,
   assertProblemExhaustive as assertExhaustiveProblem,
   handleJsonResponse as handleProblemJsonResponse,
   handleJsonResult as handleProblemJsonResult,
@@ -1045,6 +1047,7 @@ import type {
 export {
   RpcClientProblemError,
   RpcClientResponseError,
+  RpcClientStatusMismatchError,
   assertExhaustiveProblem,
   toRpcFormProblem,
 };
@@ -1398,6 +1401,25 @@ export class RpcClientResponseError extends Error {
   }
 }
 
+export class RpcClientStatusMismatchError extends Problem {
+  readonly code = 'rpc-codegen/status-mismatch';
+  readonly category = ProblemCategory.InternalServerError;
+  readonly response: Response;
+  readonly httpStatus: number;
+  readonly problemStatus: number;
+
+  constructor(response: Response, problemStatus: number) {
+    super(
+      undefined,
+      undefined,
+      \`RPC Problem status mismatch: HTTP \${response.status}, Problem \${problemStatus}\`,
+    );
+    this.response = response;
+    this.httpStatus = response.status;
+    this.problemStatus = problemStatus;
+  }
+}
+
 export class RpcQueryKeyInputError extends Problem {
   readonly code = 'rpc-codegen/query-key-input-unsupported';
   readonly category = ProblemCategory.ValidationError;
@@ -1659,6 +1681,13 @@ async function rejectErrorResponse(
   }
 
   if (isRpcProblemDetails(body)) {
+    const statusMismatch = createRpcStatusMismatchError(response, body);
+
+    if (statusMismatch) {
+      recordRpcTelemetryExternal(statusMismatch, response, telemetry);
+      throw statusMismatch;
+    }
+
     const error = new RpcClientProblemError(body, response);
     recordRpcTelemetryProblem(body, undefined, response, telemetry);
     throw error;
@@ -1692,6 +1721,21 @@ async function readErrorResult<Problem extends RpcDeclaredProblem>(
   }
 
   if (isRpcProblemDetails(body)) {
+    const statusMismatch = createRpcStatusMismatchError(response, body);
+
+    if (statusMismatch) {
+      const result: RpcClientFailure<Problem> = {
+        ok: false,
+        kind: 'external',
+        error: statusMismatch,
+        response,
+        body,
+      };
+      recordRpcTelemetryResult(result, telemetry);
+
+      return result;
+    }
+
     const declaration = findDeclaredProblem(body, declaredProblems);
 
     if (declaration) {
@@ -1818,6 +1862,15 @@ function findDeclaredProblem<Problem extends RpcDeclaredProblem>(
   return declaredProblems.find(
     (declaration) => declaration.code === problem.code && declaration.status === problem.status,
   );
+}
+
+function createRpcStatusMismatchError(
+  response: Response,
+  problem: RpcProblemDetails,
+): RpcClientStatusMismatchError | undefined {
+  return response.status === problem.status
+    ? undefined
+    : new RpcClientStatusMismatchError(response, problem.status);
 }
 
 function isRpcProblemDetails(value: unknown): value is RpcProblemDetails {

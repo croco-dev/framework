@@ -12686,6 +12686,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "ProblemStatusMismatchError",
+              "exportKind": "declaration",
+              "source": null,
+              "declarationKind": "class"
+            },
+            {
               "name": "readDeclaredProblemErrorResult",
               "exportKind": "declaration",
               "source": null,

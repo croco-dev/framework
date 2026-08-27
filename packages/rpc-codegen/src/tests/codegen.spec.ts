@@ -35,6 +35,15 @@ type GeneratedRpcProblemErrorConstructor = new (
   readonly problem: Record<string, unknown>;
   readonly response: Response;
 };
+type GeneratedRpcStatusMismatchErrorConstructor = new (
+  response: Response,
+  problemStatus: number,
+) => Problem & {
+  readonly httpStatus: number;
+  readonly problemStatus: number;
+  readonly response: Response;
+};
+type GeneratedRpcHandleJsonResponse = (response: Response, telemetry?: unknown) => Promise<unknown>;
 type GeneratedRpcHandleJsonResult = (
   response: Response,
   declaredProblems?: readonly {
@@ -568,7 +577,7 @@ describe("generateClientFiles", () => {
       "{ routeId: 'UserController.list', operationId: 'UserController_list', methodName: 'list', method: 'GET', path: '/users' }",
     );
     expect(content).toContain(
-      "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, readOptionalJsonResponse, readOptionalJsonResult, type RpcClientConfig, type RpcClientRequestOptions, type RpcClientResult, type RpcDeclaredProblem, type RpcProblemDetailsFor } from './rpc';",
+      "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, readOptionalJsonResponse, readOptionalJsonResult } from './rpc';\nimport type { RpcClientConfig, RpcClientRequestOptions, RpcClientResult, RpcDeclaredProblem, RpcProblemDetailsFor } from './rpc';",
     );
     expect(rpcContent).toContain("export class RpcClientProblemError extends Error");
     expect(rpcContent).toContain("export class RpcClientResponseError extends Error");
@@ -914,11 +923,12 @@ describe("generateClientFiles", () => {
 
     expect(rpcContent).toContain("} from '@croco/frontend-problems';");
     expect(rpcContent).toContain("ProblemClientError as RpcClientProblemError");
+    expect(rpcContent).toContain("ProblemStatusMismatchError as RpcClientStatusMismatchError");
     expect(rpcContent).toContain("ProblemDeclaration as RpcDeclaredProblem");
     expect(rpcContent).not.toContain("export class RpcClientProblemError extends Error");
     expect(rpcContent).not.toContain("function isRpcProblemDetails");
     expect(content).toContain(
-      "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, handleJsonResponse, handleJsonResult, toRpcFormProblem, serializeRpcQueryKeyInput, type RpcClientConfig, type RpcClientRequestOptions, type RpcClientResult, type RpcDeclaredProblem, type RpcDomainProblem, type RpcFormFieldProblem, type RpcFormGlobalProblem, type RpcFormModel, type RpcProblemDetailsFor, type RpcValidationProblem } from './rpc';",
+      "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, handleJsonResponse, handleJsonResult, toRpcFormProblem, serializeRpcQueryKeyInput } from './rpc';\nimport type { RpcClientConfig, RpcClientRequestOptions, RpcClientResult, RpcDeclaredProblem, RpcDomainProblem, RpcFormFieldProblem, RpcFormGlobalProblem, RpcFormModel, RpcProblemDetailsFor, RpcValidationProblem } from './rpc';",
     );
     expect(content).toContain("export type CreateUserResult = RpcClientResult");
     assertGeneratedPackageTypechecks(["index.ts", "rpc.ts", "user.ts"]);
@@ -1994,7 +2004,7 @@ void handleMissingProblemBranch;
 `;
 
       expect(content).toContain(
-        "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, handleJsonResponse, handleJsonResult, serializeRpcQueryKeyInput, type RpcClientConfig, type RpcClientRequestOptions, type RpcClientResult, type RpcDeclaredProblem, type RpcProblemDetailsFor } from './rpc';",
+        "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, handleJsonResponse, handleJsonResult, serializeRpcQueryKeyInput } from './rpc';\nimport type { RpcClientConfig, RpcClientRequestOptions, RpcClientResult, RpcDeclaredProblem, RpcProblemDetailsFor } from './rpc';",
       );
       expect(content).toContain(
         "export type GetProblem = RpcDeclaredProblem<'USER_NOT_FOUND', 'NotFound', 404> | RpcDeclaredProblem<'USER_FORBIDDEN', 'Forbidden', 403>;",
@@ -2133,6 +2143,77 @@ void handleMissingProblemBranch;
       ok: false,
       kind: "external",
       body: problemBody,
+    });
+  });
+
+  it("should reject HTTP and Problem status mismatches in direct and Result clients", async () => {
+    const routes: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "get",
+        httpMethod: "GET",
+        path: "/users/:id",
+        routeContract: null,
+        params: [{ kind: "path", name: "id", schema: null }],
+        inputSchema: null,
+        inputSchemas: PATH_INPUT_SCHEMAS,
+        outputSchema: z.object({ id: z.string(), name: z.string() }),
+        problemResponses: [
+          {
+            code: "USER_NOT_FOUND",
+            category: ProblemCategory.NotFound,
+            status: 404,
+          },
+        ],
+        domain: null,
+      },
+    ];
+    const problemBody = {
+      type: "about:blank",
+      title: "Not Found",
+      status: 404,
+      code: "USER_NOT_FOUND",
+      detail: "User missing",
+    };
+    const declaration = { code: "USER_NOT_FOUND", category: "NotFound", status: 404 };
+
+    generateClientFiles(routes, TEMP_DIR);
+    const { handleJsonResponse, handleJsonResult, RpcClientStatusMismatchError } =
+      loadGeneratedRpcSupport();
+    const directResponse = new Response(JSON.stringify(problemBody), { status: 500 });
+    const directRequest = handleJsonResponse(directResponse);
+
+    await expect(directRequest).rejects.toBeInstanceOf(RpcClientStatusMismatchError);
+    await expect(directRequest).rejects.toMatchObject({
+      category: ProblemCategory.InternalServerError,
+      code: "rpc-codegen/status-mismatch",
+      httpStatus: 500,
+      name: "RpcClientStatusMismatchError",
+      problemStatus: 404,
+      response: directResponse,
+      status: 500,
+    });
+    await expect(directRequest).rejects.toBeInstanceOf(Problem);
+
+    const resultResponse = new Response(JSON.stringify(problemBody), { status: 500 });
+    const result = (await handleJsonResult(resultResponse, [declaration])) as Record<
+      string,
+      unknown
+    >;
+
+    expect(result).toMatchObject({
+      ok: false,
+      kind: "external",
+      body: problemBody,
+      error: {
+        category: ProblemCategory.InternalServerError,
+        code: "rpc-codegen/status-mismatch",
+        httpStatus: 500,
+        name: "RpcClientStatusMismatchError",
+        problemStatus: 404,
+        status: 500,
+      },
+      response: resultResponse,
     });
   });
 
@@ -2854,7 +2935,7 @@ void createResultHook;
         "export type ListInput = { query: { active?: boolean | undefined; deletedAt: string | null; page: number; search?: string | undefined; tags: string[]; }; };",
       );
       expect(content).toContain(
-        "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, readOptionalJsonResponse, readOptionalJsonResult, serializeRpcQueryKeyInput, type RpcClientConfig, type RpcClientRequestOptions, type RpcClientResult, type RpcDeclaredProblem, type RpcProblemDetailsFor } from './rpc';",
+        "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, readOptionalJsonResponse, readOptionalJsonResult, serializeRpcQueryKeyInput } from './rpc';\nimport type { RpcClientConfig, RpcClientRequestOptions, RpcClientResult, RpcDeclaredProblem, RpcProblemDetailsFor } from './rpc';",
       );
       assertGeneratedClientTypechecks(`${content}
 const result: Promise<unknown | undefined> = userClient.list({
@@ -2983,7 +3064,7 @@ void result;
 
       const content = fs.readFileSync(files[0], "utf-8");
       expect(content).toContain(
-        "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, handleJsonResponse, handleJsonResult, toRpcFormProblem, serializeRpcQueryKeyInput, type RpcClientConfig, type RpcClientRequestOptions, type RpcClientResult, type RpcDeclaredProblem, type RpcDomainProblem, type RpcFormFieldProblem, type RpcFormGlobalProblem, type RpcFormModel, type RpcProblemDetailsFor, type RpcValidationProblem } from './rpc';",
+        "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, handleJsonResponse, handleJsonResult, toRpcFormProblem, serializeRpcQueryKeyInput } from './rpc';\nimport type { RpcClientConfig, RpcClientRequestOptions, RpcClientResult, RpcDeclaredProblem, RpcDomainProblem, RpcFormFieldProblem, RpcFormGlobalProblem, RpcFormModel, RpcProblemDetailsFor, RpcValidationProblem } from './rpc';",
       );
       expect(content).toContain(
         "export type CreateFormFieldName = 'name' | 'email' | 'role' | 'receiveUpdates' | 'retryCount';",
@@ -3402,6 +3483,8 @@ function assertGeneratedPackageTypechecks(fileNames: readonly string[]): void {
 function loadGeneratedRpcSupport(): {
   readonly RpcQueryKeyInputError: RpcQueryKeyInputProblemConstructor;
   readonly RpcClientProblemError: GeneratedRpcProblemErrorConstructor;
+  readonly RpcClientStatusMismatchError: GeneratedRpcStatusMismatchErrorConstructor;
+  readonly handleJsonResponse: GeneratedRpcHandleJsonResponse;
   readonly handleJsonResult: GeneratedRpcHandleJsonResult;
   readonly serializeRpcQueryKeyInput: (value: unknown) => unknown;
 } {
@@ -3409,17 +3492,24 @@ function loadGeneratedRpcSupport(): {
 
   const RpcQueryKeyInputError = rpcModule.RpcQueryKeyInputError;
   const RpcClientProblemError = rpcModule.RpcClientProblemError;
+  const RpcClientStatusMismatchError = rpcModule.RpcClientStatusMismatchError;
+  const handleJsonResponse = rpcModule.handleJsonResponse;
   const handleJsonResult = rpcModule.handleJsonResult;
   const serializeRpcQueryKeyInput = rpcModule.serializeRpcQueryKeyInput;
 
   expect(RpcQueryKeyInputError).toBeTypeOf("function");
   expect(RpcClientProblemError).toBeTypeOf("function");
+  expect(RpcClientStatusMismatchError).toBeTypeOf("function");
+  expect(handleJsonResponse).toBeTypeOf("function");
   expect(handleJsonResult).toBeTypeOf("function");
   expect(serializeRpcQueryKeyInput).toBeTypeOf("function");
 
   return {
     RpcQueryKeyInputError: RpcQueryKeyInputError as RpcQueryKeyInputProblemConstructor,
     RpcClientProblemError: RpcClientProblemError as GeneratedRpcProblemErrorConstructor,
+    RpcClientStatusMismatchError:
+      RpcClientStatusMismatchError as GeneratedRpcStatusMismatchErrorConstructor,
+    handleJsonResponse: handleJsonResponse as GeneratedRpcHandleJsonResponse,
     handleJsonResult: handleJsonResult as GeneratedRpcHandleJsonResult,
     serializeRpcQueryKeyInput: serializeRpcQueryKeyInput as (value: unknown) => unknown,
   };
