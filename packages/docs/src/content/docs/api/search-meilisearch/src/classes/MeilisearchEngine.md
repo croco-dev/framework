@@ -62,7 +62,7 @@ Token 기반 DI를 지원하며, 모든 구현체는 이 abstract class를 상�
 
 ### bulkIndex()
 
-> **bulkIndex**(`indexName`, `documents`): `Promise`\<`void`\>
+> **bulkIndex**(`indexName`, `documents`, `options?`): `Promise`\<`void`\>
 
 대량 문서 인덱싱
 
@@ -78,6 +78,10 @@ Token 기반 DI를 지원하며, 모든 구현체는 이 abstract class를 상�
 
 인덱싱할 문서 목록
 
+##### options?
+
+[`SearchOperationOptions`](/api/search-core/src/type-aliases/searchoperationoptions/) = `{}`
+
 #### Returns
 
 `Promise`\<`void`\>
@@ -90,7 +94,7 @@ Token 기반 DI를 지원하며, 모든 구현체는 이 abstract class를 상�
 
 ### bulkIndexAt()
 
-> **bulkIndexAt**\<`TReference`\>(`index`, `documents`): `Promise`\<`void`\>
+> **bulkIndexAt**\<`TReference`\>(`index`, `documents`, `options?`): `Promise`\<`void`\>
 
 타입이 지정된 인덱스 참조에 여러 문서를 인덱싱합니다.
 
@@ -110,6 +114,10 @@ Token 기반 DI를 지원하며, 모든 구현체는 이 abstract class를 상�
 
 readonly [`SearchIndexDocument`](/api/search-core/src/type-aliases/searchindexdocument/)\<`TReference`\>[]
 
+##### options?
+
+[`SearchOperationOptions`](/api/search-core/src/type-aliases/searchoperationoptions/)
+
 #### Returns
 
 `Promise`\<`void`\>
@@ -122,7 +130,7 @@ readonly [`SearchIndexDocument`](/api/search-core/src/type-aliases/searchindexdo
 
 ### createIndex()
 
-> **createIndex**(`config`): `Promise`\<`void`\>
+> **createIndex**(`config`, `options?`): `Promise`\<`void`\>
 
 인덱스 생성
 
@@ -133,6 +141,10 @@ readonly [`SearchIndexDocument`](/api/search-core/src/type-aliases/searchindexdo
 [`IndexConfig`](/api/search-core/src/type-aliases/indexconfig/)
 
 인덱스 설정
+
+##### options?
+
+[`SearchOperationOptions`](/api/search-core/src/type-aliases/searchoperationoptions/) = `{}`
 
 #### Returns
 
@@ -146,7 +158,7 @@ readonly [`SearchIndexDocument`](/api/search-core/src/type-aliases/searchindexdo
 
 ### deleteDocument()
 
-> **deleteDocument**(`indexName`, `documentId`): `Promise`\<`void`\>
+> **deleteDocument**(`indexName`, `documentId`, `options?`): `Promise`\<`void`\>
 
 문서 삭제
 
@@ -162,6 +174,10 @@ readonly [`SearchIndexDocument`](/api/search-core/src/type-aliases/searchindexdo
 
 문서 ID
 
+##### options?
+
+[`SearchOperationOptions`](/api/search-core/src/type-aliases/searchoperationoptions/) = `{}`
+
 #### Returns
 
 `Promise`\<`void`\>
@@ -174,7 +190,7 @@ readonly [`SearchIndexDocument`](/api/search-core/src/type-aliases/searchindexdo
 
 ### deleteIndex()
 
-> **deleteIndex**(`name`): `Promise`\<`void`\>
+> **deleteIndex**(`name`, `options?`): `Promise`\<`void`\>
 
 인덱스 삭제
 
@@ -185,6 +201,10 @@ readonly [`SearchIndexDocument`](/api/search-core/src/type-aliases/searchindexdo
 `string`
 
 인덱스 이름
+
+##### options?
+
+[`SearchOperationOptions`](/api/search-core/src/type-aliases/searchoperationoptions/) = `{}`
 
 #### Returns
 
@@ -218,7 +238,7 @@ readonly [`SearchIndexDocument`](/api/search-core/src/type-aliases/searchindexdo
 
 ### indexDocument()
 
-> **indexDocument**(`indexName`, `document`): `Promise`\<`void`\>
+> **indexDocument**(`indexName`, `document`, `options?`): `Promise`\<`void`\>
 
 문서 인덱싱
 
@@ -234,6 +254,10 @@ readonly [`SearchIndexDocument`](/api/search-core/src/type-aliases/searchindexdo
 
 인덱싱할 문서
 
+##### options?
+
+[`SearchOperationOptions`](/api/search-core/src/type-aliases/searchoperationoptions/) = `{}`
+
 #### Returns
 
 `Promise`\<`void`\>
@@ -246,7 +270,7 @@ readonly [`SearchIndexDocument`](/api/search-core/src/type-aliases/searchindexdo
 
 ### indexDocumentAt()
 
-> **indexDocumentAt**\<`TReference`\>(`index`, `document`): `Promise`\<`void`\>
+> **indexDocumentAt**\<`TReference`\>(`index`, `document`, `options?`): `Promise`\<`void`\>
 
 타입이 지정된 인덱스 참조에 문서를 인덱싱합니다.
 
@@ -266,6 +290,10 @@ readonly [`SearchIndexDocument`](/api/search-core/src/type-aliases/searchindexdo
 
 [`SearchIndexDocument`](/api/search-core/src/type-aliases/searchindexdocument/)\<`TReference`\>
 
+##### options?
+
+[`SearchOperationOptions`](/api/search-core/src/type-aliases/searchoperationoptions/)
+
 #### Returns
 
 `Promise`\<`void`\>
@@ -278,7 +306,7 @@ readonly [`SearchIndexDocument`](/api/search-core/src/type-aliases/searchindexdo
 
 ### search()
 
-> **search**\<`T`\>(`indexName`, `query`): `Promise`\<[`SearchResult`](/api/search-core/src/type-aliases/searchresult/)\<`T`\>\>
+> **search**\<`T`\>(`indexName`, `query`, `options?`): `Promise`\<[`SearchResult`](/api/search-core/src/type-aliases/searchresult/)\<`T`\>\>
 
 검색 실행
 
@@ -300,6 +328,10 @@ readonly [`SearchIndexDocument`](/api/search-core/src/type-aliases/searchindexdo
 
 검색 쿼리
 
+##### options?
+
+[`SearchOperationOptions`](/api/search-core/src/type-aliases/searchoperationoptions/) = `{}`
+
 #### Returns
 
 `Promise`\<[`SearchResult`](/api/search-core/src/type-aliases/searchresult/)\<`T`\>\>
@@ -314,7 +346,7 @@ readonly [`SearchIndexDocument`](/api/search-core/src/type-aliases/searchindexdo
 
 ### searchIndex()
 
-> **searchIndex**\<`TReference`, `TQuery`\>(`index`, `query`): `Promise`\<[`SearchResult`](/api/search-core/src/type-aliases/searchresult/)\<[`SearchIndexDocument`](/api/search-core/src/type-aliases/searchindexdocument/)\<`TReference`\>\>\>
+> **searchIndex**\<`TReference`, `TQuery`\>(`index`, `query`, `options?`): `Promise`\<[`SearchResult`](/api/search-core/src/type-aliases/searchresult/)\<[`SearchIndexDocument`](/api/search-core/src/type-aliases/searchindexdocument/)\<`TReference`\>\>\>
 
 타입이 지정된 인덱스 참조로 검색을 실행합니다.
 
@@ -337,6 +369,10 @@ readonly [`SearchIndexDocument`](/api/search-core/src/type-aliases/searchindexdo
 ##### query
 
 `TQuery` & `SearchIndexQueryInput`\<`TReference`, `TQuery`\>
+
+##### options?
+
+[`SearchOperationOptions`](/api/search-core/src/type-aliases/searchoperationoptions/)
 
 #### Returns
 

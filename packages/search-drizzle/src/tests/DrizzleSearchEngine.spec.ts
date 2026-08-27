@@ -1,5 +1,9 @@
 import { Container, Context } from "@croco/framework-context";
-import { SearchCapabilityUnavailableProblem, StrategyUnavailableProblem } from "@croco/search-core";
+import {
+  SearchCapabilityUnavailableProblem,
+  SearchOperationAbortedProblem,
+  StrategyUnavailableProblem,
+} from "@croco/search-core";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import { DrizzleSearchEngine } from "../libs/DrizzleSearchEngine";
@@ -179,6 +183,157 @@ describe("DrizzleSearchEngine", () => {
 
     expect(mockStrategy.buildDeleteQuery).toHaveBeenCalledWith("users", "1", "tenant-123");
     expect(executeMock).toHaveBeenCalled();
+  });
+
+  it("should delegate every bulk document through indexDocument", async () => {
+    engine = new DrizzleSearchEngine(mockDb, strategy);
+    const documents = [
+      { id: "1", tenantId: "tenant-123" },
+      { id: "2", tenantId: "tenant-123" },
+    ];
+    const options = { signal: new AbortController().signal };
+    const indexDocument = vi.spyOn(engine, "indexDocument");
+
+    await engine.bulkIndex("users", documents, options);
+
+    expect(indexDocument).toHaveBeenNthCalledWith(1, "users", documents[0], options);
+    expect(indexDocument).toHaveBeenNthCalledWith(2, "users", documents[1], options);
+  });
+
+  it("should preserve an empty bulk index as a tenant-independent no-op", async () => {
+    (Context.getTenantId as Mock).mockReturnValue(undefined);
+    engine = new DrizzleSearchEngine(mockDb, strategy);
+
+    await expect(engine.bulkIndex("users", [])).resolves.toBeUndefined();
+
+    expect(mockStrategy.checkCapability).toHaveBeenCalledOnce();
+    expect(Context.getTenantId).not.toHaveBeenCalled();
+    expect(executeMock).not.toHaveBeenCalled();
+  });
+
+  it("should reject every pre-aborted operation before capability or database I/O", async () => {
+    engine = new DrizzleSearchEngine(mockDb, strategy);
+    const controller = new AbortController();
+    controller.abort(new Error("request closed"));
+    const options = { signal: controller.signal };
+    const operations = [
+      () => engine.search("users", { query: "test" }, options),
+      () => engine.indexDocument("users", { id: "1", tenantId: "tenant-123" }, options),
+      () => engine.deleteDocument("users", "1", options),
+      () => engine.bulkIndex("users", [{ id: "1", tenantId: "tenant-123" }], options),
+      () => engine.createIndex({ name: "users" }, options),
+      () => engine.deleteIndex("users", options),
+    ];
+
+    for (const operation of operations) {
+      await expect(operation()).rejects.toBeInstanceOf(SearchOperationAbortedProblem);
+    }
+
+    expect(mockStrategy.checkCapability).not.toHaveBeenCalled();
+    expect(executeMock).not.toHaveBeenCalled();
+  });
+
+  it("should stop bulk indexing before the next database write after abort", async () => {
+    engine = new DrizzleSearchEngine(mockDb, strategy);
+    const controller = new AbortController();
+    executeMock.mockImplementationOnce(async () => {
+      controller.abort(new Error("request closed"));
+      return { rows: [] };
+    });
+
+    await expect(
+      engine.bulkIndex(
+        "users",
+        [
+          { id: "1", tenantId: "tenant-123" },
+          { id: "2", tenantId: "tenant-123" },
+        ],
+        { signal: controller.signal },
+      ),
+    ).rejects.toMatchObject({
+      code: "search-core/operation-aborted",
+      extensions: { operation: "bulkIndex" },
+    });
+
+    expect(executeMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("should not return a successful search when the final database call observes an abort", async () => {
+    engine = new DrizzleSearchEngine(mockDb, strategy);
+    const controller = new AbortController();
+    const reason = new Error("request closed");
+    executeMock.mockImplementationOnce(async () => {
+      controller.abort(reason);
+      return { rows: [], rowCount: 0 };
+    });
+
+    await expect(
+      engine.search("users", { query: "test" }, { signal: controller.signal }),
+    ).rejects.toMatchObject({
+      code: "search-core/operation-aborted",
+      cause: reason,
+      extensions: { operation: "search" },
+    });
+  });
+
+  it("should reject every database operation aborted during its final write", async () => {
+    const operations = [
+      {
+        operation: "indexDocument",
+        run: (options: { signal: AbortSignal }) =>
+          engine.indexDocument("users", { id: "1", tenantId: "tenant-123" }, options),
+      },
+      {
+        operation: "deleteDocument",
+        run: (options: { signal: AbortSignal }) => engine.deleteDocument("users", "1", options),
+      },
+      {
+        operation: "bulkIndex",
+        run: (options: { signal: AbortSignal }) =>
+          engine.bulkIndex("users", [{ id: "1", tenantId: "tenant-123" }], options),
+      },
+    ] as const;
+
+    for (const { operation, run } of operations) {
+      engine = new DrizzleSearchEngine(mockDb, strategy);
+      const controller = new AbortController();
+      const reason = new Error("request closed");
+      executeMock.mockImplementationOnce(async () => {
+        controller.abort(reason);
+        return { rows: [] };
+      });
+
+      await expect(run({ signal: controller.signal })).rejects.toMatchObject({
+        code: "search-core/operation-aborted",
+        cause: reason,
+        extensions: { operation },
+      });
+    }
+  });
+
+  it("should preserve a successful shared capability check when one caller aborts", async () => {
+    let resolveCapability: ((value: boolean) => void) | undefined;
+    const capability = new Promise<boolean>((resolve) => {
+      resolveCapability = resolve;
+    });
+    mockStrategy.checkCapability.mockReturnValueOnce(capability);
+    engine = new DrizzleSearchEngine(mockDb, strategy);
+    const controller = new AbortController();
+
+    const cancelledSearch = engine.search(
+      "users",
+      { query: "cancelled" },
+      { signal: controller.signal },
+    );
+    const activeSearch = engine.search("users", { query: "active" });
+    await vi.waitFor(() => expect(mockStrategy.checkCapability).toHaveBeenCalledOnce());
+    controller.abort(new Error("request closed"));
+    resolveCapability?.(true);
+
+    await expect(cancelledSearch).rejects.toBeInstanceOf(SearchOperationAbortedProblem);
+    await expect(activeSearch).resolves.toMatchObject({ total: 0 });
+    await expect(engine.search("users", { query: "later" })).resolves.toMatchObject({ total: 0 });
+    expect(mockStrategy.checkCapability).toHaveBeenCalledOnce();
   });
 
   it("should fail fast for unsupported createIndex capability", async () => {

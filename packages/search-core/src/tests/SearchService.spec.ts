@@ -1,6 +1,9 @@
 import { Context } from "@croco/framework-context";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { MissingTenantProblem } from "../libs/problems/SearchProblems";
+import {
+  MissingTenantProblem,
+  SearchOperationAbortedProblem,
+} from "../libs/problems/SearchProblems";
 import type { SearchEngine } from "../libs/SearchEngine";
 import { SearchService } from "../libs/SearchService";
 import type { SearchDocument, SearchQuery, SearchResult } from "../libs/types";
@@ -51,10 +54,11 @@ describe("SearchService", () => {
         processingTimeMs: 10,
       };
       vi.mocked(mockEngine.search).mockResolvedValue(mockResult);
+      const options = { signal: new AbortController().signal };
 
-      const result = await searchService.search("test-index", query);
+      const result = await searchService.search("test-index", query, options);
 
-      expect(mockEngine.search).toHaveBeenCalledWith("test-index", expectedQuery);
+      expect(mockEngine.search).toHaveBeenCalledWith("test-index", expectedQuery, options);
       expect(result).toEqual(mockResult);
     });
   });
@@ -74,11 +78,12 @@ describe("SearchService", () => {
 
       const document = { id: "doc-1", data: "test" };
       vi.mocked(mockEngine.indexDocument).mockResolvedValue(undefined);
+      const options = { signal: new AbortController().signal };
 
-      await searchService.indexDocument("test-index", document);
+      await searchService.indexDocument("test-index", document, options);
 
       const expectedDoc: SearchDocument = { ...document, tenantId };
-      expect(mockEngine.indexDocument).toHaveBeenCalledWith("test-index", expectedDoc);
+      expect(mockEngine.indexDocument).toHaveBeenCalledWith("test-index", expectedDoc, options);
     });
   });
 
@@ -96,10 +101,11 @@ describe("SearchService", () => {
       vi.spyOn(Context, "getTenantId").mockReturnValue(tenantId);
 
       vi.mocked(mockEngine.deleteDocument).mockResolvedValue(undefined);
+      const options = { signal: new AbortController().signal };
 
-      await searchService.deleteDocument("test-index", "doc-1");
+      await searchService.deleteDocument("test-index", "doc-1", options);
 
-      expect(mockEngine.deleteDocument).toHaveBeenCalledWith("test-index", "doc-1");
+      expect(mockEngine.deleteDocument).toHaveBeenCalledWith("test-index", "doc-1", options);
     });
   });
 
@@ -121,11 +127,52 @@ describe("SearchService", () => {
         { id: "doc-2", data: "test2" },
       ];
       vi.mocked(mockEngine.bulkIndex).mockResolvedValue(undefined);
+      const options = { signal: new AbortController().signal };
 
-      await searchService.bulkIndex("test-index", documents);
+      await searchService.bulkIndex("test-index", documents, options);
 
       const expectedDocs: SearchDocument[] = documents.map((doc) => ({ ...doc, tenantId }));
-      expect(mockEngine.bulkIndex).toHaveBeenCalledWith("test-index", expectedDocs);
+      expect(mockEngine.bulkIndex).toHaveBeenCalledWith("test-index", expectedDocs, options);
     });
+  });
+
+  describe("index management", () => {
+    it("should forward create and delete index options without requiring tenant context", async () => {
+      vi.spyOn(Context, "getTenantId").mockReturnValue(null);
+      const options = { signal: new AbortController().signal };
+      const config = { name: "products", primaryKey: "id" };
+
+      await searchService.createIndex(config, options);
+      await searchService.deleteIndex("products", options);
+
+      expect(mockEngine.createIndex).toHaveBeenCalledWith(config, options);
+      expect(mockEngine.deleteIndex).toHaveBeenCalledWith("products", options);
+    });
+  });
+
+  it("should reject every pre-aborted operation before calling the engine", async () => {
+    vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-123");
+    const controller = new AbortController();
+    controller.abort(new Error("request closed"));
+    const options = { signal: controller.signal };
+    const operations = [
+      () => searchService.search("test-index", { query: "test" }, options),
+      () => searchService.indexDocument("test-index", { id: "doc-1" }, options),
+      () => searchService.deleteDocument("test-index", "doc-1", options),
+      () => searchService.bulkIndex("test-index", [{ id: "doc-1" }], options),
+      () => searchService.createIndex({ name: "test-index" }, options),
+      () => searchService.deleteIndex("test-index", options),
+    ];
+
+    for (const operation of operations) {
+      await expect(operation()).rejects.toBeInstanceOf(SearchOperationAbortedProblem);
+    }
+
+    expect(mockEngine.search).not.toHaveBeenCalled();
+    expect(mockEngine.indexDocument).not.toHaveBeenCalled();
+    expect(mockEngine.deleteDocument).not.toHaveBeenCalled();
+    expect(mockEngine.bulkIndex).not.toHaveBeenCalled();
+    expect(mockEngine.createIndex).not.toHaveBeenCalled();
+    expect(mockEngine.deleteIndex).not.toHaveBeenCalled();
   });
 });

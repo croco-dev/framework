@@ -25109,6 +25109,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "SearchOperationAbortedProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/SearchProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "SearchService",
               "exportKind": "named",
               "source": "./libs/SearchService",
@@ -25149,6 +25155,12 @@
               "exportKind": "named",
               "source": "./libs/transforms/textTransforms",
               "declarationKind": "const"
+            },
+            {
+              "name": "throwIfSearchOperationAborted",
+              "exportKind": "named",
+              "source": "./libs/SearchOperation",
+              "declarationKind": "function"
             },
             {
               "name": "TransformNotFoundProblem",
@@ -25273,6 +25285,16 @@
               "name": "SearchIndexRef",
               "exportKind": "named",
               "source": "./libs/SearchIndexRef"
+            },
+            {
+              "name": "SearchOperation",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "SearchOperationOptions",
+              "exportKind": "named",
+              "source": "./libs/types"
             },
             {
               "name": "SearchQuery",

@@ -35,11 +35,16 @@ class UserModel {
 }
 
 const searchService = new SearchService({ engine: searchEngine });
-const result = await searchService.search(USERS, {
-  query: "홍길동",
-  filters: { status: "active" },
-  sort: [{ field: "createdAt", order: "desc" }],
-});
+const controller = new AbortController();
+const result = await searchService.search(
+  USERS,
+  {
+    query: "홍길동",
+    filters: { status: "active" },
+    sort: [{ field: "createdAt", order: "desc" }],
+  },
+  { signal: controller.signal },
+);
 // result.hits[number].document는 UserDocument로 추론됩니다.
 ```
 
@@ -86,18 +91,20 @@ void chosung;
 ### 주요 타입
 
 - `SearchIndexRef`, `SearchIndexQuery`, `SearchIndexDocument`, `SearchIndexDocumentInput`
-- `SearchQuery`, `SearchResult`, `SearchHit`, `SearchDocument`
+- `SearchQuery`, `SearchResult`, `SearchHit`, `SearchDocument`, `SearchOperationOptions`
 - `IndexConfig`, `SearchFieldConfig`, `SearchDerivedFieldConfig`, `SearchEngineCapabilities`
 - `SearchableOptions`, `SearchFieldOptions`, `DeriveOptions`, `SearchTransformRef`
 
 ### 이벤트와 문제 타입
 
 - 이벤트: `DocumentIndexedEvent`, `DocumentDeletedEvent`, `SearchSyncFailedEvent`
-- 문제 타입: `MissingTenantProblem`, `SearchSyncIdentityConflictProblem`, `IndexNotFoundProblem`, `StrategyUnavailableProblem`, `TransformNotFoundProblem`, `SearchTransformRegistrationConflictProblem`, `SearchCapabilityUnavailableProblem`
+- 문제 타입: `SearchOperationAbortedProblem`, `MissingTenantProblem`, `SearchSyncIdentityConflictProblem`, `IndexNotFoundProblem`, `StrategyUnavailableProblem`, `TransformNotFoundProblem`, `SearchTransformRegistrationConflictProblem`, `SearchCapabilityUnavailableProblem`
 
 ## 구현 포인트
 
 - 검색 엔진은 tenantId 기반 격리를 기본으로 가정합니다.
+- `SearchEngine`과 `SearchService`의 모든 I/O 메서드는 `SearchOperationOptions.signal`을 동일한 호출의 provider
+  작업에 전달합니다. 이미 취소된 호출은 `search-core/operation-aborted` Problem으로 provider I/O 전에 실패합니다.
 - `autoSync`를 사용하면 이벤트 기반으로 인덱스 갱신을 자동화할 수 있습니다.
 - `./ko` 서브패스로 한국어 전용 초성, 자모 변환 도구를 별도 import 할 수 있습니다.
 

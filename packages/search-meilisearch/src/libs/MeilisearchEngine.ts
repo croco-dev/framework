@@ -3,10 +3,17 @@ import type {
   IndexConfig,
   SearchDocument,
   SearchEngineCapabilities,
+  SearchOperation,
+  SearchOperationOptions,
   SearchQuery,
   SearchResult,
 } from "@croco/search-core";
-import { MissingTenantProblem, SearchEngine } from "@croco/search-core";
+import {
+  MissingTenantProblem,
+  SearchEngine,
+  SearchOperationAbortedProblem,
+  throwIfSearchOperationAborted,
+} from "@croco/search-core";
 import { MeiliSearch } from "meilisearch";
 import { validateMeilisearchOptions } from "./MeilisearchConfig";
 import {
@@ -42,7 +49,12 @@ export class MeilisearchEngine extends SearchEngine {
     });
   }
 
-  async search<T>(indexName: string, query: SearchQuery): Promise<SearchResult<T>> {
+  async search<T>(
+    indexName: string,
+    query: SearchQuery,
+    options: SearchOperationOptions = {},
+  ): Promise<SearchResult<T>> {
+    const client = this.getOperationClient("search", options);
     this.validateIndexName(indexName, "search");
     const tenantId = this.getTenantId("search");
 
@@ -51,7 +63,7 @@ export class MeilisearchEngine extends SearchEngine {
 
     const sortArray = this.transformSort(query.sort);
 
-    const index = this.client.index(indexName);
+    const index = client.index(indexName);
     const result = await this.runOperation(
       "search",
       () =>
@@ -62,6 +74,7 @@ export class MeilisearchEngine extends SearchEngine {
           sort: sortArray,
         }),
       { indexName },
+      { operation: "search", options },
     );
 
     return {
@@ -72,20 +85,38 @@ export class MeilisearchEngine extends SearchEngine {
     };
   }
 
-  async indexDocument(indexName: string, document: SearchDocument): Promise<void> {
+  async indexDocument(
+    indexName: string,
+    document: SearchDocument,
+    options: SearchOperationOptions = {},
+  ): Promise<void> {
+    const client = this.getOperationClient("indexDocument", options);
     this.validateIndexName(indexName, "indexDocument");
     this.validateDocument(document, "indexDocument");
     const tenantId = this.getTenantId("indexDocument");
-    const index = this.client.index(indexName);
+    const index = client.index(indexName);
     const task = await this.runOperation(
       "indexDocument",
       () => index.addDocuments([{ ...document, tenantId, _tenantId: tenantId }]),
       { documentId: document.id, indexName },
+      { operation: "indexDocument", options },
     );
-    await this.waitForTask("indexDocument", task, { documentId: document.id, indexName });
+    await this.waitForTask(
+      "indexDocument",
+      "indexDocument",
+      task,
+      client,
+      { documentId: document.id, indexName },
+      options,
+    );
   }
 
-  async bulkIndex(indexName: string, documents: SearchDocument[]): Promise<void> {
+  async bulkIndex(
+    indexName: string,
+    documents: SearchDocument[],
+    options: SearchOperationOptions = {},
+  ): Promise<void> {
+    const client = this.getOperationClient("bulkIndex", options);
     this.validateIndexName(indexName, "bulkIndex");
     for (const document of documents) {
       this.validateDocument(document, "bulkIndex");
@@ -96,19 +127,27 @@ export class MeilisearchEngine extends SearchEngine {
     }
 
     const tenantId = this.getTenantId("bulkIndex");
-    const index = this.client.index(indexName);
+    const index = client.index(indexName);
     const docsWithTenant = documents.map((doc) => ({ ...doc, tenantId, _tenantId: tenantId }));
-    const task = await this.runOperation("bulkIndex", () => index.addDocuments(docsWithTenant), {
-      indexName,
-    });
-    await this.waitForTask("bulkIndex", task, { indexName });
+    const task = await this.runOperation(
+      "bulkIndex",
+      () => index.addDocuments(docsWithTenant),
+      { indexName },
+      { operation: "bulkIndex", options },
+    );
+    await this.waitForTask("bulkIndex", "bulkIndex", task, client, { indexName }, options);
   }
 
-  async deleteDocument(indexName: string, documentId: string): Promise<void> {
+  async deleteDocument(
+    indexName: string,
+    documentId: string,
+    options: SearchOperationOptions = {},
+  ): Promise<void> {
+    const client = this.getOperationClient("deleteDocument", options);
     this.validateIndexName(indexName, "deleteDocument");
     this.validateDocumentId(documentId, "deleteDocument");
     const tenantId = this.getTenantId("deleteDocument");
-    const index = this.client.index(indexName);
+    const index = client.index(indexName);
 
     const task = await this.runOperation(
       "deleteDocument",
@@ -117,11 +156,20 @@ export class MeilisearchEngine extends SearchEngine {
           filter: `_tenantId = "${this.escapeFilterValue(tenantId)}" AND id = "${this.escapeFilterValue(documentId)}"`,
         }),
       { documentId, indexName },
+      { operation: "deleteDocument", options },
     );
-    await this.waitForTask("deleteDocument", task, { documentId, indexName });
+    await this.waitForTask(
+      "deleteDocument",
+      "deleteDocument",
+      task,
+      client,
+      { documentId, indexName },
+      options,
+    );
   }
 
-  async createIndex(config: IndexConfig): Promise<void> {
+  async createIndex(config: IndexConfig, options: SearchOperationOptions = {}): Promise<void> {
+    const client = this.getOperationClient("createIndex", options);
     this.validateIndexName(config.name, "createIndex");
     this.validateAttributeNames(config.filterableFields, "createIndex");
     this.validateAttributeNames(config.searchableFields, "createIndex");
@@ -129,12 +177,20 @@ export class MeilisearchEngine extends SearchEngine {
 
     const createTask = await this.runOperation(
       "createIndex",
-      () => this.client.createIndex(config.name, { primaryKey: config.primaryKey || "id" }),
+      () => client.createIndex(config.name, { primaryKey: config.primaryKey || "id" }),
       { indexName: config.name },
+      { operation: "createIndex", options },
     );
-    await this.waitForTask("createIndex", createTask, { indexName: config.name });
+    await this.waitForTask(
+      "createIndex",
+      "createIndex",
+      createTask,
+      client,
+      { indexName: config.name },
+      options,
+    );
 
-    const index = this.client.index(config.name);
+    const index = client.index(config.name);
 
     const filterable = ["_tenantId", "id", ...(config.filterableFields || [])].filter(
       (field, index, fields) => fields.indexOf(field) === index,
@@ -152,18 +208,35 @@ export class MeilisearchEngine extends SearchEngine {
       "createIndex.updateSettings",
       () => index.updateSettings(settings),
       { indexName: config.name },
+      { operation: "createIndex", options },
     );
-    await this.waitForTask("createIndex.updateSettings", settingsTask, {
-      indexName: config.name,
-    });
+    await this.waitForTask(
+      "createIndex.updateSettings",
+      "createIndex",
+      settingsTask,
+      client,
+      { indexName: config.name },
+      options,
+    );
   }
 
-  async deleteIndex(name: string): Promise<void> {
+  async deleteIndex(name: string, options: SearchOperationOptions = {}): Promise<void> {
+    const client = this.getOperationClient("deleteIndex", options);
     this.validateIndexName(name, "deleteIndex");
-    const task = await this.runOperation("deleteIndex", () => this.client.deleteIndex(name), {
-      indexName: name,
-    });
-    await this.waitForTask("deleteIndex", task, { indexName: name });
+    const task = await this.runOperation(
+      "deleteIndex",
+      () => client.deleteIndex(name),
+      { indexName: name },
+      { operation: "deleteIndex", options },
+    );
+    await this.waitForTask(
+      "deleteIndex",
+      "deleteIndex",
+      task,
+      client,
+      { indexName: name },
+      options,
+    );
   }
 
   async generateTenantToken(tenantId: string, expiresAt?: Date): Promise<string> {
@@ -312,21 +385,71 @@ export class MeilisearchEngine extends SearchEngine {
   }
 
   private async runOperation<T>(
-    operation: string,
+    providerOperation: string,
     action: () => Promise<T> | T,
     context: { indexName?: string; documentId?: string },
+    cancellation?: {
+      operation: SearchOperation;
+      options: SearchOperationOptions;
+    },
   ): Promise<T> {
+    if (cancellation) {
+      throwIfSearchOperationAborted(cancellation.operation, cancellation.options);
+    }
+    let result: T;
     try {
-      return await action();
+      result = await this.awaitOperation(action(), cancellation);
     } catch (error) {
-      throw normalizeMeilisearchError(error, { operation, ...context });
+      if (cancellation?.options.signal?.aborted) {
+        throw new SearchOperationAbortedProblem(cancellation.operation, error);
+      }
+      throw normalizeMeilisearchError(error, { operation: providerOperation, ...context });
+    }
+    if (cancellation) {
+      throwIfSearchOperationAborted(cancellation.operation, cancellation.options);
+    }
+    return result;
+  }
+
+  private async awaitOperation<T>(
+    result: Promise<T> | T,
+    cancellation:
+      | {
+          operation: SearchOperation;
+          options: SearchOperationOptions;
+        }
+      | undefined,
+  ): Promise<T> {
+    const signal = cancellation?.options.signal;
+    if (!signal) {
+      return await result;
+    }
+
+    let abortListener: (() => void) | undefined;
+    const abortPromise = new Promise<never>((_, reject) => {
+      abortListener = () => reject(signal.reason);
+      signal.addEventListener("abort", abortListener, { once: true });
+      if (signal.aborted) {
+        abortListener();
+      }
+    });
+
+    try {
+      return await Promise.race([result, abortPromise]);
+    } finally {
+      if (abortListener) {
+        signal.removeEventListener("abort", abortListener);
+      }
     }
   }
 
   private async waitForTask(
-    operation: string,
+    providerOperation: string,
+    operation: SearchOperation,
     task: unknown,
+    client: MeiliSearch,
     context: { indexName?: string; documentId?: string },
+    options: SearchOperationOptions,
   ): Promise<void> {
     if (this.options.taskWait?.enabled === false) {
       return;
@@ -335,15 +458,15 @@ export class MeilisearchEngine extends SearchEngine {
     const taskUid = this.getTaskUid(task);
     if (taskUid === undefined) {
       throw new MeilisearchInvalidRequestProblem(
-        { operation, ...context, upstreamCode: "missing-task-uid" },
+        { operation: providerOperation, ...context, upstreamCode: "missing-task-uid" },
         "Meilisearch task response is missing taskUid",
       );
     }
 
     const result = await this.runOperation(
-      `${operation}.waitForTask`,
+      `${providerOperation}.waitForTask`,
       () =>
-        this.client.waitForTask(taskUid, {
+        client.waitForTask(taskUid, {
           ...(this.options.taskWait?.timeoutMs !== undefined && {
             timeOutMs: this.options.taskWait.timeoutMs,
           }),
@@ -352,11 +475,28 @@ export class MeilisearchEngine extends SearchEngine {
           }),
         }),
       context,
+      { operation, options },
     );
 
     if (this.isFailedTask(result)) {
-      throw normalizeMeilisearchError(result.error, { operation, ...context });
+      throw normalizeMeilisearchError(result.error, { operation: providerOperation, ...context });
     }
+  }
+
+  private getOperationClient(
+    operation: SearchOperation,
+    options: SearchOperationOptions,
+  ): MeiliSearch {
+    throwIfSearchOperationAborted(operation, options);
+    if (!options.signal) {
+      return this.client;
+    }
+
+    return new MeiliSearch({
+      host: this.options.host,
+      apiKey: this.options.apiKey,
+      requestConfig: { signal: options.signal },
+    });
   }
 
   private getTaskUid(task: unknown): number | undefined {

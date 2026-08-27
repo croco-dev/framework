@@ -1,5 +1,9 @@
 import { Context } from "@croco/framework-context";
-import { MissingTenantProblem, SearchService } from "@croco/search-core";
+import {
+  MissingTenantProblem,
+  SearchOperationAbortedProblem,
+  SearchService,
+} from "@croco/search-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MeilisearchEngine } from "../libs/MeilisearchEngine";
 import {
@@ -135,6 +139,121 @@ describe("Meilisearch provider conformance", () => {
       expect(mocks.constructorMock).toHaveBeenLastCalledWith({
         apiKey: "masterKey",
         host: "http://localhost:7700",
+      });
+    });
+  });
+
+  describe("caller cancellation", () => {
+    it("passes the same AbortSignal to every engine I/O client", async () => {
+      vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-1");
+      const controller = new AbortController();
+      const options = { signal: controller.signal };
+      const operations = [
+        () => engine.search("index", { query: "test" }, options),
+        () => engine.indexDocument("index", { id: "1", tenantId: "tenant-1" }, options),
+        () => engine.deleteDocument("index", "1", options),
+        () => engine.bulkIndex("index", [{ id: "1", tenantId: "tenant-1" }], options),
+        () => engine.createIndex({ name: "index" }, options),
+        () => engine.deleteIndex("index", options),
+      ];
+
+      for (const operation of operations) {
+        await operation();
+        expect(mocks.constructorMock).toHaveBeenLastCalledWith({
+          apiKey: "masterKey",
+          host: "http://localhost:7700",
+          requestConfig: { signal: controller.signal },
+        });
+      }
+    });
+
+    it("rejects every pre-aborted operation before constructing or calling a provider client", async () => {
+      vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-1");
+      const controller = new AbortController();
+      controller.abort(new Error("request closed"));
+      const options = { signal: controller.signal };
+      const constructorCalls = mocks.constructorMock.mock.calls.length;
+      const operations = [
+        () => engine.search("index", { query: "test" }, options),
+        () => engine.indexDocument("index", { id: "1", tenantId: "tenant-1" }, options),
+        () => engine.deleteDocument("index", "1", options),
+        () => engine.bulkIndex("index", [{ id: "1", tenantId: "tenant-1" }], options),
+        () => engine.createIndex({ name: "index" }, options),
+        () => engine.deleteIndex("index", options),
+      ];
+
+      for (const operation of operations) {
+        await expect(operation()).rejects.toBeInstanceOf(SearchOperationAbortedProblem);
+      }
+
+      expect(mocks.constructorMock).toHaveBeenCalledTimes(constructorCalls);
+      expect(mocks.clientMock.index).not.toHaveBeenCalled();
+      expect(mocks.clientMock.createIndex).not.toHaveBeenCalled();
+      expect(mocks.clientMock.deleteIndex).not.toHaveBeenCalled();
+    });
+
+    it("reports in-flight provider cancellation as a stable search Problem", async () => {
+      vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-1");
+      const controller = new AbortController();
+      const reason = new Error("request closed");
+      mocks.indexMock.search.mockImplementationOnce(
+        () =>
+          new Promise((_, reject) => {
+            controller.signal.addEventListener("abort", () => reject(controller.signal.reason), {
+              once: true,
+            });
+          }),
+      );
+
+      const search = engine.search("index", { query: "test" }, { signal: controller.signal });
+      controller.abort(reason);
+
+      await expect(search).rejects.toMatchObject({
+        code: "search-core/operation-aborted",
+        cause: reason,
+        extensions: { operation: "search" },
+      });
+      expect(mocks.constructorMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({ requestConfig: { signal: controller.signal } }),
+      );
+    });
+
+    it("does not return a successful search after the provider call observes an abort", async () => {
+      vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-1");
+      const controller = new AbortController();
+      const reason = new Error("request closed");
+      mocks.indexMock.search.mockImplementationOnce(async () => {
+        controller.abort(reason);
+        return { estimatedTotalHits: 0, hits: [], processingTimeMs: 0 };
+      });
+
+      await expect(
+        engine.search("index", { query: "test" }, { signal: controller.signal }),
+      ).rejects.toMatchObject({
+        code: "search-core/operation-aborted",
+        cause: reason,
+        extensions: { operation: "search" },
+      });
+    });
+
+    it("cancels promptly while task polling is waiting between provider requests", async () => {
+      vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-1");
+      const controller = new AbortController();
+      const reason = new Error("request closed");
+      mocks.clientMock.waitForTask.mockImplementationOnce(() => new Promise(() => {}));
+
+      const indexing = engine.indexDocument(
+        "index",
+        { id: "1", tenantId: "tenant-1" },
+        { signal: controller.signal },
+      );
+      await vi.waitFor(() => expect(mocks.clientMock.waitForTask).toHaveBeenCalledOnce());
+      controller.abort(reason);
+
+      await expect(indexing).rejects.toMatchObject({
+        code: "search-core/operation-aborted",
+        cause: reason,
+        extensions: { operation: "indexDocument" },
       });
     });
   });

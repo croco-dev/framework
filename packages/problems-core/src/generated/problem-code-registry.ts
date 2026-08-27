@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 673,
+  problemCount: 674,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -8984,7 +8984,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/search-core/src/libs/problems/SearchProblems.ts",
-          line: 110,
+          line: 127,
           column: 5,
           kind: "problem-constructor",
         },
@@ -12099,7 +12099,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/search-core/src/libs/problems/SearchProblems.ts",
-          line: 40,
+          line: 57,
           column: 5,
           kind: "problem-constructor",
         },
@@ -15767,7 +15767,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/search-core/src/libs/problems/SearchProblems.ts",
-          line: 118,
+          line: 135,
           column: 5,
           kind: "problem-constructor",
         },
@@ -15806,6 +15806,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "search-core/operation-aborted",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#search-core-operation-aborted",
+      recovery: {
+        cause:
+          "The caller's AbortSignal was already aborted or became aborted while the search operation was in flight.",
+        userAction:
+          "Handle the cancellation and retry only when the operation is still needed, using a new non-aborted AbortSignal.",
+        operatorAction:
+          "Inspect the caller cancellation source and extensions.operation; do not treat the cancellation as an input-validation failure.",
+        retryability: "conditional",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/search-core/src/libs/problems/SearchProblems.ts",
+          line: 11,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
       code: "search-core/searchable-index-conflict",
       category: "Conflict",
       status: 409,
@@ -15831,7 +15864,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/search-core/src/libs/problems/SearchProblems.ts",
-          line: 8,
+          line: 25,
           column: 5,
           kind: "problem-constructor",
         },
@@ -15863,7 +15896,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/search-core/src/libs/problems/SearchProblems.ts",
-          line: 58,
+          line: 75,
           column: 5,
           kind: "problem-constructor",
         },
@@ -15894,7 +15927,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/search-core/src/libs/problems/SearchProblems.ts",
-          line: 70,
+          line: 87,
           column: 3,
           kind: "problem-class",
         },
@@ -15927,7 +15960,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/search-core/src/libs/problems/SearchProblems.ts",
-          line: 79,
+          line: 96,
           column: 5,
           kind: "problem-constructor",
         },
@@ -16902,7 +16935,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/search-core/src/libs/problems/SearchProblems.ts",
-          line: 97,
+          line: 114,
           column: 5,
           kind: "problem-constructor",
         },

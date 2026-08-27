@@ -62,6 +62,8 @@ await Context.run({ requestId: "req-1", tenantId: "tenant-1" }, async () => {
 - 모든 검색과 인덱싱은 현재 `Context.getTenantId()` 값을 `_tenantId` 필드에 반영합니다.
 - tenant token은 요청한 tenant가 현재 `Context.getTenantId()`와 일치할 때만 `_tenantId` 필터 규칙을 포함해 생성됩니다.
 - tenant 정보가 없으면 `MissingTenantProblem`이 발생합니다.
+- 모든 engine I/O 메서드는 `options.signal`을 Meilisearch 요청과 task polling에 전달합니다. 취소되면 SDK polling 간격을
+  기다리지 않고 `search-core/operation-aborted` Problem으로 실패합니다.
 - `createIndex`, `indexDocument`, `bulkIndex`, `deleteDocument`, `deleteIndex`는 기본적으로
   Meilisearch task 완료를 기다린 뒤 resolve합니다. 필요하면 `taskWait.enabled: false`로
   enqueue-only 동작을 선택할 수 있습니다.

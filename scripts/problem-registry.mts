@@ -2376,6 +2376,17 @@ const recoveryMetadataByCode = {
     redactionPolicy: "safe-message",
     severity: "warning",
   }),
+  "search-core/operation-aborted": recovery({
+    cause:
+      "The caller's AbortSignal was already aborted or became aborted while the search operation was in flight.",
+    userAction:
+      "Handle the cancellation and retry only when the operation is still needed, using a new non-aborted AbortSignal.",
+    operatorAction:
+      "Inspect the caller cancellation source and extensions.operation; do not treat the cancellation as an input-validation failure.",
+    retryability: "conditional",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
   "search-core/searchable-index-conflict": recovery({
     cause: "More than one searchable metadata declaration owns the same index name.",
     userAction: "Give every searchable declaration a unique index name, then restart registration.",

@@ -16,6 +16,24 @@ export type SearchQuery = {
 };
 
 /**
+ * 검색 엔진 I/O 호출에 공통으로 적용되는 실행 옵션입니다.
+ */
+export type SearchOperationOptions = {
+  readonly signal?: AbortSignal;
+};
+
+/**
+ * 취소할 수 있는 검색 엔진 I/O 연산입니다.
+ */
+export type SearchOperation =
+  | "search"
+  | "indexDocument"
+  | "deleteDocument"
+  | "bulkIndex"
+  | "createIndex"
+  | "deleteIndex";
+
+/**
  * 검색 결과
  */
 export type SearchResult<T> = {

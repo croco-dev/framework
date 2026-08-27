@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   IndexNotFoundProblem,
   MissingTenantProblem,
+  SearchOperationAbortedProblem,
   SearchableIndexConflictProblem,
   SearchTransformRegistrationConflictProblem,
   SearchSyncIdentityConflictProblem,
@@ -85,6 +86,19 @@ describe("SearchProblems", () => {
       const problem = new MissingTenantProblem("indexing");
       expect(problem).toBeInstanceOf(Error);
       expect(problem.name).toBe("MissingTenantProblem");
+    });
+  });
+
+  describe("SearchOperationAbortedProblem", () => {
+    it("exposes a stable operation code and preserves an Error abort reason", () => {
+      const reason = new Error("request closed");
+      const problem = new SearchOperationAbortedProblem("search", reason);
+
+      expect(problem.code).toBe("search-core/operation-aborted");
+      expect(problem.category).toBe(ProblemCategory.BadRequest);
+      expect(problem.status).toBe(400);
+      expect(problem.extensions).toEqual({ operation: "search" });
+      expect(problem.cause).toBe(reason);
     });
   });
 

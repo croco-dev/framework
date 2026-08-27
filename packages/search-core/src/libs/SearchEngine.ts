@@ -9,6 +9,7 @@ import type {
   IndexConfig,
   SearchDocument,
   SearchEngineCapabilities,
+  SearchOperationOptions,
   SearchQuery,
   SearchResult,
 } from "./types";
@@ -35,7 +36,11 @@ export abstract class SearchEngine {
    * @param query - 검색 쿼리
    * @returns 검색 결과
    */
-  abstract search<T>(index: string, query: SearchQuery): Promise<SearchResult<T>>;
+  abstract search<T>(
+    index: string,
+    query: SearchQuery,
+    options?: SearchOperationOptions,
+  ): Promise<SearchResult<T>>;
 
   /**
    * 타입이 지정된 인덱스 참조로 검색을 실행합니다.
@@ -46,8 +51,9 @@ export abstract class SearchEngine {
   >(
     index: TReference,
     query: TQuery & SearchIndexQueryInput<TReference, TQuery>,
+    options?: SearchOperationOptions,
   ): Promise<SearchResult<SearchIndexDocument<TReference>>> {
-    return this.search<SearchIndexDocument<TReference>>(index.name, query);
+    return this.search<SearchIndexDocument<TReference>>(index.name, query, options);
   }
 
   /**
@@ -56,7 +62,11 @@ export abstract class SearchEngine {
    * @param index - 인덱스 이름
    * @param document - 인덱싱할 문서
    */
-  abstract indexDocument(index: string, document: SearchDocument): Promise<void>;
+  abstract indexDocument(
+    index: string,
+    document: SearchDocument,
+    options?: SearchOperationOptions,
+  ): Promise<void>;
 
   /**
    * 타입이 지정된 인덱스 참조에 문서를 인덱싱합니다.
@@ -64,8 +74,9 @@ export abstract class SearchEngine {
   indexDocumentAt<TReference extends SearchIndexRef>(
     index: TReference,
     document: SearchIndexDocument<TReference>,
+    options?: SearchOperationOptions,
   ): Promise<void> {
-    return this.indexDocument(index.name, document as SearchDocument);
+    return this.indexDocument(index.name, document as SearchDocument, options);
   }
 
   /**
@@ -74,7 +85,11 @@ export abstract class SearchEngine {
    * @param index - 인덱스 이름
    * @param documentId - 문서 ID
    */
-  abstract deleteDocument(index: string, documentId: string): Promise<void>;
+  abstract deleteDocument(
+    index: string,
+    documentId: string,
+    options?: SearchOperationOptions,
+  ): Promise<void>;
 
   /**
    * 대량 문서 인덱싱
@@ -82,7 +97,11 @@ export abstract class SearchEngine {
    * @param index - 인덱스 이름
    * @param documents - 인덱싱할 문서 목록
    */
-  abstract bulkIndex(index: string, documents: SearchDocument[]): Promise<void>;
+  abstract bulkIndex(
+    index: string,
+    documents: SearchDocument[],
+    options?: SearchOperationOptions,
+  ): Promise<void>;
 
   /**
    * 타입이 지정된 인덱스 참조에 여러 문서를 인덱싱합니다.
@@ -90,8 +109,9 @@ export abstract class SearchEngine {
   bulkIndexAt<TReference extends SearchIndexRef>(
     index: TReference,
     documents: readonly SearchIndexDocument<TReference>[],
+    options?: SearchOperationOptions,
   ): Promise<void> {
-    return this.bulkIndex(index.name, [...documents] as SearchDocument[]);
+    return this.bulkIndex(index.name, [...documents] as SearchDocument[], options);
   }
 
   /**
@@ -99,12 +119,12 @@ export abstract class SearchEngine {
    *
    * @param config - 인덱스 설정
    */
-  abstract createIndex(config: IndexConfig): Promise<void>;
+  abstract createIndex(config: IndexConfig, options?: SearchOperationOptions): Promise<void>;
 
   /**
    * 인덱스 삭제
    *
    * @param name - 인덱스 이름
    */
-  abstract deleteIndex(name: string): Promise<void>;
+  abstract deleteIndex(name: string, options?: SearchOperationOptions): Promise<void>;
 }

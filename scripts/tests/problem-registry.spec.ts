@@ -103,6 +103,32 @@ describe("problem-registry.mts", () => {
     expect(checkResult.status).toBe("pass");
   });
 
+  it("publishes cancellation-specific recovery for aborted search operations", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/search-core/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        "export class SearchOperationAbortedProblem extends Problem {",
+        "  constructor() {",
+        '    super("search-core/operation-aborted", ProblemCategory.BadRequest);',
+        "  }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const registry = createProblemCodeRegistry(discoverProblemCodes(repo));
+
+    expect(registry.problems[0]?.recovery).toMatchObject({
+      cause: expect.stringContaining("AbortSignal"),
+      userAction: expect.stringContaining("new non-aborted AbortSignal"),
+      operatorAction: expect.stringContaining("extensions.operation"),
+      retryability: "conditional",
+    });
+  });
+
   it("invalidates stale checks before validating a concurrent generated-state merge candidate", () => {
     const repo = createTempRepo();
     writeProblemFactories(

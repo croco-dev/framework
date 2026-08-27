@@ -71,7 +71,7 @@ Drizzle DB와 검색 전략을 받아 검색 엔진을 초기화합니다.
 
 ### bulkIndex()
 
-> **bulkIndex**(`index`, `documents`): `Promise`\<`void`\>
+> **bulkIndex**(`index`, `documents`, `options?`): `Promise`\<`void`\>
 
 여러 문서를 순차적으로 인덱싱합니다.
 
@@ -85,6 +85,10 @@ Drizzle DB와 검색 전략을 받아 검색 엔진을 초기화합니다.
 
 [`SearchDocument`](/api/search-core/src/type-aliases/searchdocument/)[]
 
+##### options?
+
+[`SearchOperationOptions`](/api/search-core/src/type-aliases/searchoperationoptions/) = `{}`
+
 #### Returns
 
 `Promise`\<`void`\>
@@ -97,7 +101,7 @@ Drizzle DB와 검색 전략을 받아 검색 엔진을 초기화합니다.
 
 ### bulkIndexAt()
 
-> **bulkIndexAt**\<`TReference`\>(`index`, `documents`): `Promise`\<`void`\>
+> **bulkIndexAt**\<`TReference`\>(`index`, `documents`, `options?`): `Promise`\<`void`\>
 
 타입이 지정된 인덱스 참조에 여러 문서를 인덱싱합니다.
 
@@ -117,6 +121,10 @@ Drizzle DB와 검색 전략을 받아 검색 엔진을 초기화합니다.
 
 readonly [`SearchIndexDocument`](/api/search-core/src/type-aliases/searchindexdocument/)\<`TReference`\>[]
 
+##### options?
+
+[`SearchOperationOptions`](/api/search-core/src/type-aliases/searchoperationoptions/)
+
 #### Returns
 
 `Promise`\<`void`\>
@@ -129,7 +137,7 @@ readonly [`SearchIndexDocument`](/api/search-core/src/type-aliases/searchindexdo
 
 ### createIndex()
 
-> **createIndex**(`_config`): `Promise`\<`void`\>
+> **createIndex**(`_config`, `options?`): `Promise`\<`void`\>
 
 Drizzle 검색 엔진에서 지원하지 않는 인덱스 생성 API입니다.
 
@@ -138,6 +146,10 @@ Drizzle 검색 엔진에서 지원하지 않는 인덱스 생성 API입니다.
 ##### \_config
 
 [`IndexConfig`](/api/search-core/src/type-aliases/indexconfig/)
+
+##### options?
+
+[`SearchOperationOptions`](/api/search-core/src/type-aliases/searchoperationoptions/) = `{}`
 
 #### Returns
 
@@ -151,7 +163,7 @@ Drizzle 검색 엔진에서 지원하지 않는 인덱스 생성 API입니다.
 
 ### deleteDocument()
 
-> **deleteDocument**(`index`, `documentId`): `Promise`\<`void`\>
+> **deleteDocument**(`index`, `documentId`, `options?`): `Promise`\<`void`\>
 
 문서 ID로 인덱스에서 문서를 삭제합니다.
 
@@ -165,6 +177,10 @@ Drizzle 검색 엔진에서 지원하지 않는 인덱스 생성 API입니다.
 
 `string`
 
+##### options?
+
+[`SearchOperationOptions`](/api/search-core/src/type-aliases/searchoperationoptions/) = `{}`
+
 #### Returns
 
 `Promise`\<`void`\>
@@ -177,7 +193,7 @@ Drizzle 검색 엔진에서 지원하지 않는 인덱스 생성 API입니다.
 
 ### deleteIndex()
 
-> **deleteIndex**(`_name`): `Promise`\<`void`\>
+> **deleteIndex**(`_name`, `options?`): `Promise`\<`void`\>
 
 Drizzle 검색 엔진에서 지원하지 않는 인덱스 삭제 API입니다.
 
@@ -186,6 +202,10 @@ Drizzle 검색 엔진에서 지원하지 않는 인덱스 삭제 API입니다.
 ##### \_name
 
 `string`
+
+##### options?
+
+[`SearchOperationOptions`](/api/search-core/src/type-aliases/searchoperationoptions/) = `{}`
 
 #### Returns
 
@@ -199,7 +219,7 @@ Drizzle 검색 엔진에서 지원하지 않는 인덱스 삭제 API입니다.
 
 ### indexDocument()
 
-> **indexDocument**(`index`, `document`): `Promise`\<`void`\>
+> **indexDocument**(`index`, `document`, `options?`): `Promise`\<`void`\>
 
 단일 문서를 인덱스에 저장합니다.
 
@@ -213,6 +233,10 @@ Drizzle 검색 엔진에서 지원하지 않는 인덱스 삭제 API입니다.
 
 [`SearchDocument`](/api/search-core/src/type-aliases/searchdocument/)
 
+##### options?
+
+[`SearchOperationOptions`](/api/search-core/src/type-aliases/searchoperationoptions/) = `{}`
+
 #### Returns
 
 `Promise`\<`void`\>
@@ -225,7 +249,7 @@ Drizzle 검색 엔진에서 지원하지 않는 인덱스 삭제 API입니다.
 
 ### indexDocumentAt()
 
-> **indexDocumentAt**\<`TReference`\>(`index`, `document`): `Promise`\<`void`\>
+> **indexDocumentAt**\<`TReference`\>(`index`, `document`, `options?`): `Promise`\<`void`\>
 
 타입이 지정된 인덱스 참조에 문서를 인덱싱합니다.
 
@@ -245,6 +269,10 @@ Drizzle 검색 엔진에서 지원하지 않는 인덱스 삭제 API입니다.
 
 [`SearchIndexDocument`](/api/search-core/src/type-aliases/searchindexdocument/)\<`TReference`\>
 
+##### options?
+
+[`SearchOperationOptions`](/api/search-core/src/type-aliases/searchoperationoptions/)
+
 #### Returns
 
 `Promise`\<`void`\>
@@ -257,7 +285,7 @@ Drizzle 검색 엔진에서 지원하지 않는 인덱스 삭제 API입니다.
 
 ### search()
 
-> **search**\<`T`\>(`index`, `query`): `Promise`\<[`SearchResult`](/api/search-core/src/type-aliases/searchresult/)\<`T`\>\>
+> **search**\<`T`\>(`index`, `query`, `options?`): `Promise`\<[`SearchResult`](/api/search-core/src/type-aliases/searchresult/)\<`T`\>\>
 
 인덱스와 쿼리를 받아 검색 결과를 반환합니다.
 
@@ -277,6 +305,10 @@ Drizzle 검색 엔진에서 지원하지 않는 인덱스 삭제 API입니다.
 
 [`SearchQuery`](/api/search-core/src/type-aliases/searchquery/)
 
+##### options?
+
+[`SearchOperationOptions`](/api/search-core/src/type-aliases/searchoperationoptions/) = `{}`
+
 #### Returns
 
 `Promise`\<[`SearchResult`](/api/search-core/src/type-aliases/searchresult/)\<`T`\>\>
@@ -289,7 +321,7 @@ Drizzle 검색 엔진에서 지원하지 않는 인덱스 삭제 API입니다.
 
 ### searchIndex()
 
-> **searchIndex**\<`TReference`, `TQuery`\>(`index`, `query`): `Promise`\<[`SearchResult`](/api/search-core/src/type-aliases/searchresult/)\<[`SearchIndexDocument`](/api/search-core/src/type-aliases/searchindexdocument/)\<`TReference`\>\>\>
+> **searchIndex**\<`TReference`, `TQuery`\>(`index`, `query`, `options?`): `Promise`\<[`SearchResult`](/api/search-core/src/type-aliases/searchresult/)\<[`SearchIndexDocument`](/api/search-core/src/type-aliases/searchindexdocument/)\<`TReference`\>\>\>
 
 타입이 지정된 인덱스 참조로 검색을 실행합니다.
 
@@ -312,6 +344,10 @@ Drizzle 검색 엔진에서 지원하지 않는 인덱스 삭제 API입니다.
 ##### query
 
 `TQuery` & `SearchIndexQueryInput`\<`TReference`, `TQuery`\>
+
+##### options?
+
+[`SearchOperationOptions`](/api/search-core/src/type-aliases/searchoperationoptions/)
 
 #### Returns
 

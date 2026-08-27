@@ -2,6 +2,23 @@ import { Problem, ProblemCategory } from "@croco/problems-core";
 import { compareCodeUnits } from "../compareCodeUnits";
 
 import type { SearchableIndexDeclaration } from "../decorators/SearchableTypes";
+import type { SearchOperation } from "../types";
+
+export class SearchOperationAbortedProblem extends Problem {
+  static readonly CODE = "search-core/operation-aborted";
+
+  constructor(operation: SearchOperation, cause?: unknown) {
+    super(
+      SearchOperationAbortedProblem.CODE,
+      ProblemCategory.BadRequest,
+      `Search operation aborted during ${operation}`,
+      {
+        extensions: { operation },
+        ...(cause instanceof Error && { cause }),
+      },
+    );
+  }
+}
 
 export class SearchableIndexConflictProblem extends Problem {
   constructor(indexName: string, declarations: readonly SearchableIndexDeclaration[]) {
