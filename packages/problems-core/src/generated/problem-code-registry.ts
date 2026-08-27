@@ -8565,36 +8565,34 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
-      code: "gid-core/id-type-only-property",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#gid-core-id-type-only-property",
+      code: "gid-core/duplicate-prefix",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#gid-core-duplicate-prefix",
       recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
         telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
+          eventName: "croco.problem.info",
+          severity: "info",
           attributes: ["problem.code", "problem.category", "problem.status"],
         },
       },
       lifecycle: {
-        status: "deprecated",
-        deprecation: {
-          reason: "The throwing registry type-marker property was removed.",
-          migrationNote:
-            "Replace typeof Ids.USER.Id with IdOf<typeof Ids.USER> and stop branching on gid-core/id-type-only-property.",
-          noReplacementReason:
-            "Type extraction no longer performs a runtime operation or throws a Problem.",
-        },
+        status: "active",
       },
-      sources: [],
+      sources: [
+        {
+          file: "packages/gid-core/src/libs/problems/GidProblems.ts",
+          line: 32,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
     },
     {
       code: "gid-core/invalid-id-prefix",

@@ -2,7 +2,7 @@ import type { IdOf, IdPrefixInstance, IdPrefixRegistry } from "./libs/defineIdPr
 import { defineIdPrefixes } from "./libs/defineIdPrefixes";
 import type { PrefixedId } from "./libs/IdPrefix";
 import { IdPrefix } from "./libs/IdPrefix";
-import { InvalidIdPrefixProblem } from "./libs/problems/GidProblems";
+import { DuplicateIdPrefixProblem, InvalidIdPrefixProblem } from "./libs/problems/GidProblems";
 
 /**
  * Creates a type-safe registry for generating and validating prefixed GIDs.
@@ -38,3 +38,8 @@ export type { PrefixedId };
  * Problem thrown when a GID prefix violates the canonical lowercase ASCII grammar.
  */
 export { InvalidIdPrefixProblem };
+
+/**
+ * Problem thrown when multiple registry keys use the same serialized GID prefix.
+ */
+export { DuplicateIdPrefixProblem };

@@ -3,7 +3,7 @@ import type { IdOf } from "../libs/defineIdPrefixes";
 import { defineIdPrefixes } from "../libs/defineIdPrefixes";
 import { IdPrefix } from "../libs/IdPrefix";
 import type { PrefixedId } from "../libs/IdPrefix";
-import { InvalidIdPrefixProblem } from "../libs/problems/GidProblems";
+import { DuplicateIdPrefixProblem, InvalidIdPrefixProblem } from "../libs/problems/GidProblems";
 
 describe("IdPrefix", () => {
   describe("generate", () => {
@@ -165,6 +165,33 @@ describe("defineIdPrefixes", () => {
     ).toThrow(InvalidIdPrefixProblem);
   });
 
+  it("리터럴 중복 프리픽스를 컴파일 타임에 거부한다", () => {
+    const compileTimeCheck = () => {
+      // @ts-expect-error Literal prefix values must remain unique.
+      defineIdPrefixes({ USER: "usr", ACCOUNT: "usr" } as const);
+    };
+
+    expect(compileTimeCheck).toBeTypeOf("function");
+  });
+
+  it("유한 유니온 타입의 고유 프리픽스를 허용한다", () => {
+    const userPrefix = "usr" as "usr" | "ord";
+    const accountPrefix = "ord" as "usr" | "ord";
+    const Ids = defineIdPrefixes({ USER: userPrefix, ACCOUNT: accountPrefix } as const);
+
+    expect(Ids.USER.getPrefix()).toBe("usr");
+    expect(Ids.ACCOUNT.getPrefix()).toBe("ord");
+  });
+
+  it("유한 유니온 타입의 중복 프리픽스를 런타임에 거부한다", () => {
+    const userPrefix = "usr" as "usr" | "ord";
+    const accountPrefix = "usr" as "usr" | "ord";
+
+    expect(() => defineIdPrefixes({ USER: userPrefix, ACCOUNT: accountPrefix } as const)).toThrow(
+      DuplicateIdPrefixProblem,
+    );
+  });
+
   it("IdPrefix 인스턴스들을 생성한다", () => {
     const Ids = defineIdPrefixes({
       USER: "usr",
@@ -230,5 +257,59 @@ describe("defineIdPrefixes", () => {
 
     // @ts-expect-error runtime-only entries no longer expose a type marker property
     void Ids.USER.Id;
+  });
+
+  it("계산된 동적 설정의 중복 프리픽스를 거부한다", () => {
+    const prefix = "usr";
+    const config: Record<string, string> = {
+      USER: prefix,
+      ACCOUNT: prefix,
+      ORDER: "ord",
+    };
+
+    expect(() => defineIdPrefixes(config)).toThrow(DuplicateIdPrefixProblem);
+    expect(() => defineIdPrefixes(config)).toThrow(
+      "GID prefix 'usr' is configured for both 'USER' and 'ACCOUNT'.",
+    );
+  });
+
+  it("스프레드로 조합된 동적 설정의 중복 프리픽스를 거부한다", () => {
+    const shared: Record<string, string> = { USER: "usr" };
+    const config: Record<string, string> = {
+      ...shared,
+      ACCOUNT: "usr",
+    };
+
+    expect(() => defineIdPrefixes(config)).toThrow(DuplicateIdPrefixProblem);
+  });
+
+  it("JSON에서 파생된 동적 설정의 중복 프리픽스를 거부한다", () => {
+    const config = JSON.parse('{"USER":"usr","ACCOUNT":"usr"}') as Record<string, string>;
+
+    expect(() => defineIdPrefixes(config)).toThrow(DuplicateIdPrefixProblem);
+  });
+
+  it("고유한 동적 설정은 기존과 동일하게 동작한다", () => {
+    const config: Record<string, string> = {
+      USER: "usr",
+      ORDER: "ord",
+    };
+
+    const Ids = defineIdPrefixes(config);
+
+    expect(Ids.USER?.getPrefix()).toBe("usr");
+    expect(Ids.ORDER?.getPrefix()).toBe("ord");
+    expect(Ids.USER?.validate(Ids.USER.generate())).toBe(true);
+  });
+
+  it("리터럴과 넓은 문자열 타입이 섞인 고유 설정을 허용한다", () => {
+    const userPrefix = "usr" as string;
+    const Ids = defineIdPrefixes({
+      USER: userPrefix,
+      ORDER: "ord",
+    } as const);
+
+    expect(Ids.USER.getPrefix()).toBe("usr");
+    expect(Ids.ORDER.getPrefix()).toBe("ord");
   });
 });

@@ -114,7 +114,8 @@ constructor(prefix: TPrefix)
 function defineIdPrefixes<const T extends Record<string, string>>(config: T): IdPrefixRegistry<T>;
 ```
 
-- 중복된 prefix 값이 있으면 컴파일 에러 발생
+- 리터럴 설정의 중복 prefix 값은 컴파일 타임에 거부
+- 동적으로 구성된 설정의 중복 prefix 값은 `DuplicateIdPrefixProblem`으로 거부
 - 각 key에 대해 `IdPrefixInstance`를 반환
 - `IdOf<typeof entry>`로 각 entry의 branded ID 타입을 추출
 
