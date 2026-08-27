@@ -518,7 +518,7 @@ describe("CI performance observer", () => {
       freshAttestation: true,
       stableDiagnostics: [],
     });
-    expect(observation.checkResults).toHaveLength(53);
+    expect(observation.checkResults).toHaveLength(54);
     expect(observation.securityResults).toHaveLength(5);
     for (const digest of [
       observation.toolchainDigest,
@@ -782,7 +782,7 @@ describe("CI performance observer", () => {
       operationalFailure: false,
       conclusion: "success",
     });
-    expect(synthesis?.cacheEligibleTaskIds).toHaveLength(49);
+    expect(synthesis?.cacheEligibleTaskIds).toHaveLength(50);
     expect(synthesis?.validCacheHitTaskIds).toHaveLength(4);
     expect(synthesis?.securityResults).toContainEqual({
       id: "security-upload",

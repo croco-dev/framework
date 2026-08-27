@@ -853,7 +853,7 @@ describe("cacheable CI synthesis input", () => {
     ).toThrow(/not bound by identity.inputDigest/);
   });
 
-  it("synthesizes all 53 checks and five security results without legacy workspace inputs", () => {
+  it("synthesizes all 54 checks and five security results without legacy workspace inputs", () => {
     const value = fixture();
     const input = assemble(value);
     const timestamps = ["2026-08-14T02:00:00.000Z", "2026-08-14T02:01:00.000Z"];

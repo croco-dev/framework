@@ -99,7 +99,7 @@ export function calculateVerificationCriticalPath(commands: readonly EvidenceCom
     for (const group of next.command.concurrencyGroups ?? []) activeGroups.delete(group);
   }
 
-  return now;
+  return Math.round(now * 10) / 10;
 }
 
 export function evaluatePublishCriticalPath(

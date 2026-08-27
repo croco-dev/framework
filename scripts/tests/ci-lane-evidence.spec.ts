@@ -649,10 +649,10 @@ describe("four-producer fan-in", () => {
 });
 
 describe("split-validation-shadow evidence", () => {
-  it("binds canonical transport identity and exact 53 checks plus five security records", () => {
+  it("binds canonical transport identity and exact 54 checks plus five security records", () => {
     const value = shadowEvidence();
     expect(parseSplitValidationShadowEvidence(value, synthesisExpectation)).toEqual(value);
-    expect(value.checks).toHaveLength(53);
+    expect(value.checks).toHaveLength(54);
     expect(value.security).toHaveLength(5);
     expect(value.producerBundles).toHaveLength(4);
     expect(value.blockingOutcome).toBe("passed");
