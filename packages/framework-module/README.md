@@ -41,6 +41,57 @@ Supported metadata:
 - `controllers`: transport-facing controller tokens recorded for diagnostics.
 - `setup`, `start`, `shutdown`: lifecycle hooks.
 
+## Isolated Module Runtimes
+
+Use `createModuleRuntime()` when one process hosts multiple applications, test
+fixtures, or workers that must not share module names, lifecycle state, or
+provider instances:
+
+```ts
+import {
+  createModuleRuntime,
+  defineCrocoModule,
+  ModuleDiagnosticsProvider,
+} from "@croco/framework-module";
+
+const runtime = createModuleRuntime();
+
+try {
+  runtime.use(
+    defineCrocoModule({
+      name: "app",
+      providers: [{ provide: "app.name", useValue: "worker-a" }],
+      exports: ["app.name"],
+    }),
+  );
+
+  const context = await runtime.initialize();
+  const appName = context.get("app.name");
+  const health = await new ModuleDiagnosticsProvider(runtime).getHealth();
+} finally {
+  await runtime.dispose();
+}
+```
+
+Each created runtime owns its registry, initialization and shutdown operations,
+diagnostics state, and a named TypeDI container. Resolve runtime providers through
+the `ModuleContext` returned by `initialize()` or supplied to lifecycle hooks;
+isolated runtimes do not fall back to providers in the process-global TypeDI
+container.
+
+`shutdown()` runs lifecycle cleanup and leaves the registered graph reusable.
+`reset()` synchronously clears the graph without running shutdown hooks. Call
+`shutdown()` first when cleanup is required. `dispose()` joins in-flight
+initialization or shutdown, runs remaining shutdown hooks once, releases the
+owned container even when cleanup fails, and permanently closes the runtime.
+Contexts from a graph cleared by `reset()` throw
+`ModuleRuntimeStaleContextProblem`; use the context returned when the replacement
+graph is initialized. Further runtime or context access after disposal throws
+`ModuleRuntimeDisposedProblem`.
+
+The static `CrocoModule` API remains the compatible default-runtime facade for
+applications that need only one module graph.
+
 ## Provider Visibility
 
 Providers are private to the owning module unless their token appears in

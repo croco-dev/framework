@@ -361,7 +361,7 @@ describe("module initialization rollback", () => {
       extensions: {
         registryState: "initialized",
         recoveryAction:
-          "Call CrocoModule.shutdown() or CrocoModule.reset() before registering modules.",
+          "Call shutdown() or reset() on the owning module runtime before registering modules.",
       },
     });
 

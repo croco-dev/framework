@@ -1565,6 +1565,12 @@
       "owner": "@croco/framework-module"
     },
     {
+      "path": "packages/framework-module/src/tests/ModuleRuntime.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/framework-module"
+    },
+    {
       "path": "packages/framework-module/src/tests/ProviderOwnership.spec.ts",
       "lane": "fast",
       "qualifiers": [],

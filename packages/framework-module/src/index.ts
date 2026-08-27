@@ -1,32 +1,26 @@
 import type { ModuleContext } from "./ModuleContext";
-import {
-  createModuleGraphManifest,
-  initializeModules,
-  registerModule,
-  resetModules,
-  shutdownModules,
-} from "./ModuleRegistry";
+import { defaultModuleRuntime } from "./ModuleRegistry";
 import type { ModuleOptions } from "./types";
 
 export class CrocoModule {
   static use(module: ModuleOptions): void {
-    registerModule(module);
+    defaultModuleRuntime.use(module);
   }
 
   static initialize(): Promise<ModuleContext> {
-    return initializeModules();
+    return defaultModuleRuntime.initialize();
   }
 
   static async shutdown(): Promise<void> {
-    await shutdownModules();
+    await defaultModuleRuntime.shutdown();
   }
 
   static reset(): void {
-    resetModules();
+    defaultModuleRuntime.reset();
   }
 
   static createGraphManifest() {
-    return createModuleGraphManifest();
+    return defaultModuleRuntime.createGraphManifest();
   }
 }
 
@@ -41,7 +35,12 @@ export function defineCrocoModule(module: ModuleOptions): ModuleOptions {
 }
 
 export { detectCircularDependency } from "./CircularDependencyDetector";
-export { createModuleGraphManifest, stringifyModuleGraphManifest } from "./ModuleRegistry";
+export {
+  createModuleGraphManifest,
+  createModuleRuntime,
+  stringifyModuleGraphManifest,
+} from "./ModuleRegistry";
+export type { ModuleRuntime } from "./ModuleRegistry";
 export { ModuleContext } from "./ModuleContext";
 export { ModuleDiagnosticsProvider } from "./libs/diagnostics/ModuleDiagnosticsProvider";
 export {
@@ -50,9 +49,12 @@ export {
   ModuleDuplicateNameProblem,
   ModuleLifecycleProblem,
   ModuleProviderOwnershipProblem,
+  ModuleProviderUnavailableProblem,
   ModuleProviderVisibilityProblem,
   ModuleProviderWriteProblem,
   ModuleRegistrationConflictProblem,
+  ModuleRuntimeDisposedProblem,
+  ModuleRuntimeStaleContextProblem,
 } from "./problems";
 export type {
   CrocoModule as CrocoModuleDefinition,

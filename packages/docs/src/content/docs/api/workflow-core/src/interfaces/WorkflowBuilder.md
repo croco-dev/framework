@@ -13,7 +13,7 @@ title: "WorkflowBuilder"
 
 ### TPreviousResults
 
-`TPreviousResults` *extends* readonly [`WorkflowStepResult`](/api/workflow-core/src/type-aliases/workflowstepresult/)[]
+`TPreviousResults` _extends_ readonly [`WorkflowStepResult`](/api/workflow-core/src/type-aliases/workflowstepresult/)[]
 
 ## Methods
 
@@ -25,7 +25,7 @@ title: "WorkflowBuilder"
 
 [`TypedWorkflowReference`](/api/workflow-core/src/type-aliases/typedworkflowreference/)\<`TPayload`, `TPreviousResults`\>
 
-***
+---
 
 ### step()
 
@@ -37,7 +37,7 @@ title: "WorkflowBuilder"
 
 ###### TTask
 
-`TTask` *extends* [`TaskReference`](/api/tasks-core/src/type-aliases/taskreference/)
+`TTask` _extends_ [`TaskReference`](/api/tasks-core/src/type-aliases/taskreference/)
 
 ##### Parameters
 
@@ -61,11 +61,11 @@ title: "WorkflowBuilder"
 
 ###### TName
 
-`TName` *extends* `string`
+`TName` _extends_ `string`
 
 ###### TTask
 
-`TTask` *extends* [`TaskReference`](/api/tasks-core/src/type-aliases/taskreference/)
+`TTask` _extends_ [`TaskReference`](/api/tasks-core/src/type-aliases/taskreference/)
 
 ##### Parameters
 

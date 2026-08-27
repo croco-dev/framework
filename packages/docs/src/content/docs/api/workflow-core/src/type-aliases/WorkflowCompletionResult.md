@@ -11,7 +11,7 @@ title: "WorkflowCompletionResult"
 
 ### TSteps
 
-`TSteps` *extends* readonly [`WorkflowStepResult`](/api/workflow-core/src/type-aliases/workflowstepresult/)[] = readonly [`WorkflowStepResult`](/api/workflow-core/src/type-aliases/workflowstepresult/)[]
+`TSteps` _extends_ readonly [`WorkflowStepResult`](/api/workflow-core/src/type-aliases/workflowstepresult/)[] = readonly [`WorkflowStepResult`](/api/workflow-core/src/type-aliases/workflowstepresult/)[]
 
 ## Properties
 
@@ -19,7 +19,7 @@ title: "WorkflowCompletionResult"
 
 > `readonly` **steps**: `TSteps`
 
-***
+---
 
 ### workflowName
 
