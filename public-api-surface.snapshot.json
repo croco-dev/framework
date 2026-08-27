@@ -25115,6 +25115,18 @@
               "declarationKind": "class"
             },
             {
+              "name": "SearchTransformAdapter",
+              "exportKind": "named",
+              "source": "./libs/transforms/types",
+              "declarationKind": "class"
+            },
+            {
+              "name": "SearchTransformRegistrationConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/SearchProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "SearchTransformRegistry",
               "exportKind": "named",
               "source": "./libs/transforms/SearchTransformRegistry",
@@ -25247,7 +25259,7 @@
               "source": "./libs/problems/SearchProblems"
             },
             {
-              "name": "SearchTransformAdapter",
+              "name": "SearchTransformDefinition",
               "exportKind": "named",
               "source": "./libs/transforms/types"
             },

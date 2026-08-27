@@ -73,7 +73,7 @@ title: "InMemorySearchTransformRegistry"
 
 ### get()
 
-> **get**\<`TOptions`\>(`ref`): [`SearchTransformAdapter`](/api/search-core/src/interfaces/searchtransformadapter/)\<`TOptions`\> \| `undefined`
+> **get**\<`TOptions`\>(`ref`): [`SearchTransformAdapter`](/api/search-core/src/classes/searchtransformadapter/)\<`TOptions`\> \| `undefined`
 
 #### Type Parameters
 
@@ -89,7 +89,7 @@ title: "InMemorySearchTransformRegistry"
 
 #### Returns
 
-[`SearchTransformAdapter`](/api/search-core/src/interfaces/searchtransformadapter/)\<`TOptions`\> \| `undefined`
+[`SearchTransformAdapter`](/api/search-core/src/classes/searchtransformadapter/)\<`TOptions`\> \| `undefined`
 
 #### Overrides
 
@@ -99,7 +99,7 @@ title: "InMemorySearchTransformRegistry"
 
 ### register()
 
-> **register**\<`TOptions`\>(`adapter`): `void`
+> **register**\<`TOptions`\>(`adapter`): [`SearchTransformRef`](/api/search-core/src/type-aliases/searchtransformref/)\<`TOptions`\>
 
 #### Type Parameters
 
@@ -111,11 +111,11 @@ title: "InMemorySearchTransformRegistry"
 
 ##### adapter
 
-[`SearchTransformAdapter`](/api/search-core/src/interfaces/searchtransformadapter/)\<`TOptions`\>
+[`SearchTransformAdapter`](/api/search-core/src/classes/searchtransformadapter/)\<`TOptions`\>
 
 #### Returns
 
-`void`
+[`SearchTransformRef`](/api/search-core/src/type-aliases/searchtransformref/)\<`TOptions`\>
 
 #### Overrides
 

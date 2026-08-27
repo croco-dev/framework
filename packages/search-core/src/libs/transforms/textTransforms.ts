@@ -1,4 +1,4 @@
-import type { SearchTransformRef } from "./types";
+import { createSearchTransformDefinition } from "./types";
 
 export type InitialsOptions = {
   locale?: string;
@@ -15,18 +15,7 @@ export type RomanizedOptions = {
 };
 
 export const textTransforms = {
-  initials: {
-    id: "text.initials",
-    defaultSuffix: "_initials",
-  } as SearchTransformRef<InitialsOptions>,
-
-  decomposed: {
-    id: "text.decomposed",
-    defaultSuffix: "_decomposed",
-  } as SearchTransformRef<DecomposedOptions>,
-
-  romanized: {
-    id: "text.romanized",
-    defaultSuffix: "_romanized",
-  } as SearchTransformRef<RomanizedOptions>,
+  initials: createSearchTransformDefinition<InitialsOptions>("text.initials", "_initials"),
+  decomposed: createSearchTransformDefinition<DecomposedOptions>("text.decomposed", "_decomposed"),
+  romanized: createSearchTransformDefinition<RomanizedOptions>("text.romanized", "_romanized"),
 };

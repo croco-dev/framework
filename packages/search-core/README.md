@@ -24,13 +24,22 @@ const result = await searchService.search("users", { query: "홍길동" });
 ```
 
 ```ts
-import { derive, textTransforms } from "@croco/search-core";
+import { InMemorySearchTransformRegistry, derive } from "@croco/search-core";
+import { KoreanChosungAdapter } from "@croco/search-core/ko";
 
-const derived = derive({ type: "ngram", source: "name", options: { min: 2, max: 3 } });
-const chosung = textTransforms.initials("크로코 프레임워크");
+const transforms = new InMemorySearchTransformRegistry();
+const initials = transforms.register(new KoreanChosungAdapter());
+const derived = derive(initials, { options: { locale: "ko" } });
+const chosung = transforms.apply(initials, "크로코 프레임워크", { locale: "ko" });
 void derived;
 void chosung;
 ```
+
+`register()`가 반환하는 opaque ref는 adapter의 option 타입과 런타임 등록을 함께 보존합니다. 같은 adapter
+인스턴스의 재등록은 같은 ref를 반환하고, 같은 ID를 가진 다른 adapter는
+`SearchTransformRegistrationConflictProblem`으로 거부합니다.
+`textTransforms`의 사전 정의는 `derive()`에서만 사용하며, `apply()`에는 반드시 `register()`가 반환한 ref를
+전달합니다.
 
 ## API 레퍼런스
 
@@ -57,7 +66,7 @@ void chosung;
 ### 이벤트와 문제 타입
 
 - 이벤트: `DocumentIndexedEvent`, `DocumentDeletedEvent`, `SearchSyncFailedEvent`
-- 문제 타입: `MissingTenantProblem`, `SearchSyncIdentityConflictProblem`, `IndexNotFoundProblem`, `StrategyUnavailableProblem`, `TransformNotFoundProblem`, `SearchCapabilityUnavailableProblem`
+- 문제 타입: `MissingTenantProblem`, `SearchSyncIdentityConflictProblem`, `IndexNotFoundProblem`, `StrategyUnavailableProblem`, `TransformNotFoundProblem`, `SearchTransformRegistrationConflictProblem`, `SearchCapabilityUnavailableProblem`
 
 ## 구현 포인트
 
