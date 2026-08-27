@@ -118,20 +118,22 @@ describe("migrate command", () => {
 
   it.each<MigrateCommand>(["up", "down", "status"])(
     "should delegate %s to the migration runner CLI",
-    (command) => {
+    async (command) => {
       const child = new EventEmitter() as unknown as ChildProcess;
       const calls: SpawnCall[] = [];
-      const exitCodes: number[] = [];
       const spawnMigrationRunner: MigrationRunnerSpawn = (commandPath, args, options) => {
         calls.push({ command: commandPath, args, options });
         return child;
       };
 
-      runMigrateCommand(command, ["--dir", "migrations", "--connection", "postgres://db"], {
-        resolveBin: () => "/pkg/dist/cli.js",
-        spawn: spawnMigrationRunner,
-        setExitCode: (code) => exitCodes.push(code),
-      });
+      const result = runMigrateCommand(
+        command,
+        ["--dir", "migrations", "--connection", "postgres://db"],
+        {
+          resolveBin: () => "/pkg/dist/cli.js",
+          spawn: spawnMigrationRunner,
+        },
+      );
       child.emit("exit", 0);
 
       expect(calls).toEqual([
@@ -149,11 +151,11 @@ describe("migrate command", () => {
         },
       ]);
       expect(calls.at(0)?.options).not.toHaveProperty("shell");
-      expect(exitCodes).toEqual([0]);
+      await expect(result).resolves.toEqual({ exitCode: 0, status: "completed" });
     },
   );
 
-  it("should consume cwd and translate migration options to one canonical child argv", () => {
+  it("should consume cwd and translate migration options to one canonical child argv", async () => {
     const child = new EventEmitter() as unknown as ChildProcess;
     const calls: SpawnCall[] = [];
     const spawnMigrationRunner: MigrationRunnerSpawn = (commandPath, args, options) => {
@@ -161,7 +163,7 @@ describe("migrate command", () => {
       return child;
     };
 
-    runMigrateCommand(
+    const result = runMigrateCommand(
       "up",
       [
         "--cwd",
@@ -205,6 +207,8 @@ describe("migrate command", () => {
         options: { cwd: "/workspace/app", stdio: "inherit" },
       },
     ]);
+    child.emit("exit", 0);
+    await expect(result).resolves.toEqual({ exitCode: 0, status: "completed" });
   });
 
   it.each<[MigrateCommand, string[], string]>([
@@ -214,23 +218,23 @@ describe("migrate command", () => {
     ["status", ["--target", "20260826"], "Unknown option: --target"],
   ])(
     "should reject unsupported migrate %s options before spawning the child",
-    (command, args, message) => {
-      const errors: string[] = [];
-      const exitCodes: number[] = [];
+    async (command, args, message) => {
       let spawnCalls = 0;
       const spawnMigrationRunner: MigrationRunnerSpawn = () => {
         spawnCalls++;
         return new EventEmitter() as unknown as ChildProcess;
       };
 
-      runMigrateCommand(command, args, {
+      const result = await runMigrateCommand(command, args, {
         spawn: spawnMigrationRunner,
-        setExitCode: (code) => exitCodes.push(code),
-        writeError: (message) => errors.push(message),
       });
 
-      expect(errors).toEqual([message]);
-      expect(exitCodes).toEqual([1]);
+      expect(result).toEqual({
+        exitCode: 1,
+        message,
+        reason: "invalid-arguments",
+        status: "failed",
+      });
       expect(spawnCalls).toBe(0);
     },
   );
@@ -248,43 +252,79 @@ describe("migrate command", () => {
     },
   ])(
     "should reject malformed command-token values before spawning the child: $rawArgs",
-    ({ expected, message, rawArgs }) => {
+    async ({ expected, message, rawArgs }) => {
       const normalizedArgs = normalizeMigrateRootArgs(rawArgs);
-      const errors: string[] = [];
       let spawnCalls = 0;
 
       expect(normalizedArgs).toEqual(expected);
 
-      runMigrateCommand("up", normalizedArgs.slice(2), {
+      const result = await runMigrateCommand("up", normalizedArgs.slice(2), {
         spawn: () => {
           spawnCalls++;
           return new EventEmitter() as unknown as ChildProcess;
         },
-        setExitCode: () => undefined,
-        writeError: (message) => errors.push(message),
       });
 
-      expect(errors).toEqual([message]);
+      expect(result).toEqual({
+        exitCode: 1,
+        message,
+        reason: "invalid-arguments",
+        status: "failed",
+      });
       expect(spawnCalls).toBe(0);
     },
   );
 
-  it("should report spawn errors as migration command failures", () => {
+  it("should report spawn errors as migration command failures", async () => {
     const child = new EventEmitter() as unknown as ChildProcess;
-    const errors: string[] = [];
-    const exitCodes: number[] = [];
     const spawnMigrationRunner: MigrationRunnerSpawn = () => child;
 
-    runMigrateCommand("status", [], {
+    const result = runMigrateCommand("status", [], {
       resolveBin: () => "/pkg/dist/cli.js",
       spawn: spawnMigrationRunner,
-      setExitCode: (code) => exitCodes.push(code),
-      writeError: (message) => errors.push(message),
     });
     child.emit("error", new Error("spawn failed"));
 
-    expect(errors).toEqual(["spawn failed"]);
-    expect(exitCodes).toEqual([1]);
+    await expect(result).resolves.toEqual({
+      exitCode: 1,
+      message: "spawn failed",
+      reason: "launch-failed",
+      status: "failed",
+    });
+  });
+
+  it("should return synchronous migration runner launch failures", async () => {
+    await expect(
+      runMigrateCommand("status", [], {
+        resolveBin: () => "/pkg/dist/cli.js",
+        spawn: () => {
+          throw new Error("launch failed");
+        },
+      }),
+    ).resolves.toEqual({
+      exitCode: 1,
+      message: "launch failed",
+      reason: "launch-failed",
+      status: "failed",
+    });
+  });
+
+  it("should return non-zero migration runner exits without mutating process state", async () => {
+    const child = new EventEmitter() as unknown as ChildProcess;
+    const originalExitCode = process.exitCode;
+    const result = runMigrateCommand("status", [], {
+      resolveBin: () => "/pkg/dist/cli.js",
+      spawn: () => child,
+    });
+
+    child.emit("exit", 7);
+
+    await expect(result).resolves.toEqual({
+      exitCode: 7,
+      reason: "runner-exit",
+      status: "failed",
+    });
+    expect(process.exitCode).toBe(originalExitCode);
   });
 });
 

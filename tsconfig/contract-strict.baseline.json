@@ -2441,14 +2441,6 @@
       "message": "Argument of type '{ endpoint: { readonly name: \"health\"; readonly path: \"/health\"; } | { readonly name: \"ready\"; readonly path: \"/ready\"; } | { readonly name: \"diagnostics\"; readonly path: \"/diagnostics\"; } | { ...; }; ... 5 more ...; tokenHeader: string; }' is not assignable to parameter of type '{ readonly endpoint: { readonly name: \"health\"; readonly path: \"/health\"; } | { readonly name: \"ready\"; readonly path: \"/ready\"; } | { readonly name: \"diagnostics\"; readonly path: \"/diagnostics\"; } | { ...; }; ... 5 more ...; readonly tokenHeader: string; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
     },
     {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/libs/prompts.ts",
-      "line": 34,
-      "column": 29,
-      "code": "TS2379",
-      "message": "Argument of type '{ message: string; validate: ((value: string) => string | Error | undefined) | undefined; }' is not assignable to parameter of type 'TextOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
-    },
-    {
       "packageName": "@croco/events-core",
       "file": "packages/events-core/src/libs/EventBus.ts",
       "line": 54,

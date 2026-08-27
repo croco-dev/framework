@@ -10,6 +10,7 @@ export {
 export { write as writeFile } from "./libs/fileWriter";
 export type { WriteResult, WriteStatus, WriteOptions } from "./libs/fileWriter";
 export { confirmOverwrite, selectMode, textInput, NoTtyError } from "./libs/prompts";
+export type { PromptResult } from "./libs/prompts";
 export { codegen } from "./commands/codegen";
 export { codegenOpenapi } from "./commands/codegenOpenapi";
 export { codegenRpc } from "./commands/codegenRpc";
@@ -53,7 +54,7 @@ export { makeEntity } from "./commands/makeEntity";
 export { makeEvent } from "./commands/makeEvent";
 export { makeListener } from "./commands/makeListener";
 export { makeRepository } from "./commands/makeRepository";
-export { migrate } from "./commands/migrate";
+export { migrate, runMigrateCommand } from "./commands/migrate";
 export { formatUpgradeReport, runUpgrade, upgrade } from "./commands/upgrade";
 export {
   formatOpsStatusReport,
@@ -114,6 +115,12 @@ export type {
 } from "./commands/ops";
 
 export type { RuntimePolicyCheckIo } from "./commands/runtimePolicy";
+export type {
+  MigrateCommand,
+  MigrateCommandResult,
+  MigrationRunnerSpawn,
+  RunMigrateCommandOptions,
+} from "./commands/migrate";
 export type {
   UpgradeDirent,
   UpgradeFinding,

@@ -5,7 +5,7 @@ prev: false
 title: "confirmOverwrite"
 ---
 
-> **confirmOverwrite**(`path`): `Promise`\<`boolean`\>
+> **confirmOverwrite**(`path`): `Promise`\<[`PromptResult`](/api/cli/src/type-aliases/promptresult/)\<`boolean`\>\>
 
 ## Parameters
 
@@ -15,4 +15,4 @@ title: "confirmOverwrite"
 
 ## Returns
 
-`Promise`\<`boolean`\>
+`Promise`\<[`PromptResult`](/api/cli/src/type-aliases/promptresult/)\<`boolean`\>\>
