@@ -2543,6 +2543,12 @@
       "owner": "@croco/pagination-core"
     },
     {
+      "path": "packages/pagination-core/src/tests/CursorCodec.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/pagination-core"
+    },
+    {
       "path": "packages/pagination-core/src/tests/PackageManifest.spec.ts",
       "lane": "fast",
       "qualifiers": [],

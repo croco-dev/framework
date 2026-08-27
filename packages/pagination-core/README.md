@@ -79,6 +79,42 @@ const payload = decodeCursor(cursor);
 console.log(payload); // { v: 1, id: 'usr_01HXY...' }
 ```
 
+복합 정렬 커서는 schema 한 번으로 encode 입력, decode 결과, runtime validation을 함께 정의합니다.
+
+```typescript
+import { createCursorCodec } from "@croco/pagination-core";
+import { z } from "zod";
+
+const postCursorCodec = createCursorCodec(
+  z.object({
+    v: z.literal(1),
+    id: z.string(),
+    createdAt: z.iso.datetime(),
+  }),
+);
+
+const cursor = postCursorCodec.encode({
+  v: 1,
+  id: "post_01HXY...",
+  createdAt: "2026-08-27T10:00:00.000Z",
+});
+
+const payload = postCursorCodec.decode(cursor);
+// payload: { v: 1; id: string; createdAt: string }
+```
+
+`decode`의 반환 타입은 factory에 전달한 schema output으로 고정됩니다. 지원하지 않는 version이나 schema와 맞지 않는
+payload는 `InvalidCursorProblem`으로 실패합니다. schema input은 JSON 직렬화 후에도 손실 없이 같은 값이어야 합니다.
+따라서 `z.date()` 같은 JSON 비호환 wire 타입은 직접 사용할 수 없으며, Date는 다음처럼 encode 방향을 정의한 Zod
+codec으로 표현합니다.
+
+```typescript
+const dateCodec = z.codec(z.iso.datetime(), z.date(), {
+  decode: (value) => new Date(value),
+  encode: (value) => value.toISOString(),
+});
+```
+
 ### Offset Pagination
 
 전체 데이터 수를 보여줘야 하는 관리자 페이지나 검색 결과에 적합합니다.
@@ -262,6 +298,12 @@ Base64 커서를 디코딩합니다. 유효하지 않은 커서면 `InvalidCurso
 decodeCursor("eyJ2IjoxLCJpZCI6InVzcl8wMVhYWS4uLiJ9");
 // { v: 1, id: 'usr_01HXY...' }
 ```
+
+### `createCursorCodec(schema)`
+
+`v: number`와 `id: string`을 포함하는 Zod schema로 typed compound cursor codec을 만듭니다. `encode`는 schema output만
+받고, `decode`는 같은 output 타입을 반환합니다. encode/decode validation 실패와 지원하지 않는 cursor version은
+`InvalidCursorProblem`으로 정규화됩니다.
 
 ### `parsePaginationParams(query)`
 

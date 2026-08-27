@@ -19858,6 +19858,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "createCursorCodec",
+              "exportKind": "named",
+              "source": "./libs/cursor",
+              "declarationKind": "function"
+            },
+            {
               "name": "createCursorPage",
               "exportKind": "named",
               "source": "./libs/createCursorPage",
@@ -19959,6 +19965,11 @@
               "name": "CreateCursorPageOptions",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "CursorCodec",
+              "exportKind": "named",
+              "source": "./libs/cursor"
             },
             {
               "name": "CursorPage",
