@@ -19,7 +19,7 @@ title: "derive"
 
 ### ref
 
-[`SearchTransformRef`](/api/search-core/src/type-aliases/searchtransformref/)\<`TOptions`\>
+[`SearchTransformDefinition`](/api/search-core/src/type-aliases/searchtransformdefinition/)\<`TOptions`\> \| [`SearchTransformRef`](/api/search-core/src/type-aliases/searchtransformref/)\<`TOptions`\>
 
 ### opts?
 

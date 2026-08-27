@@ -74,6 +74,24 @@ export class TransformNotFoundProblem extends Problem {
   }
 }
 
+export class SearchTransformRegistrationConflictProblem extends Problem {
+  constructor(id: string, registeredDefaultSuffix: string, attemptedDefaultSuffix: string) {
+    super(
+      "search-core/transform-registration-conflict",
+      ProblemCategory.Conflict,
+      `Search transform '${id}' is already registered to another adapter`,
+      {
+        extensions: {
+          id,
+          registeredDefaultSuffix,
+          attemptedDefaultSuffix,
+          retryable: false,
+        },
+      },
+    );
+  }
+}
+
 export class StrategyUnavailableProblem extends Problem {
   constructor(strategyName: string, reason: string) {
     super(

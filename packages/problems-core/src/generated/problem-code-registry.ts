@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 672,
+  problemCount: 673,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -8984,7 +8984,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/search-core/src/libs/problems/SearchProblems.ts",
-          line: 92,
+          line: 110,
           column: 5,
           kind: "problem-constructor",
         },
@@ -15767,7 +15767,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/search-core/src/libs/problems/SearchProblems.ts",
-          line: 100,
+          line: 118,
           column: 5,
           kind: "problem-constructor",
         },
@@ -15897,6 +15897,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 70,
           column: 3,
           kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "search-core/transform-registration-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#search-core-transform-registration-conflict",
+      recovery: {
+        cause: "More than one search transform adapter claims the same runtime ID.",
+        userAction:
+          "Remove or rename the conflicting adapter registration, then restart registration.",
+        operatorAction:
+          "Use extensions.id and the registered and attempted suffixes to locate the conflicting adapters and keep one owner for the ID.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/search-core/src/libs/problems/SearchProblems.ts",
+          line: 79,
+          column: 5,
+          kind: "problem-constructor",
         },
       ],
     },
@@ -16869,7 +16902,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/search-core/src/libs/problems/SearchProblems.ts",
-          line: 79,
+          line: 97,
           column: 5,
           kind: "problem-constructor",
         },

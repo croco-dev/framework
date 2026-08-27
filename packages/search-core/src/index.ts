@@ -46,6 +46,7 @@ export {
   IndexNotFoundProblem,
   MissingTenantProblem,
   SearchCapabilityUnavailableProblem,
+  SearchTransformRegistrationConflictProblem,
   SearchableIndexConflictProblem,
   SearchSyncIdentityConflictProblem,
   StrategyUnavailableProblem,
@@ -104,10 +105,12 @@ export type {
  */
 export { textTransforms } from "./libs/transforms/textTransforms";
 
+export { SearchTransformAdapter } from "./libs/transforms/types";
+
 /**
  * 검색 변환 어댑터와 참조 타입입니다.
  */
-export type { SearchTransformAdapter, SearchTransformRef } from "./libs/transforms/types";
+export type { SearchTransformDefinition, SearchTransformRef } from "./libs/transforms/types";
 
 /**
  * 검색 인덱스, 문서, 질의, 결과에 사용하는 핵심 타입입니다.

@@ -13,12 +13,12 @@ ngram, 자모 분해, 초성, 로마자 변환을 제공하는 텍스트 유틸�
 
 ### decomposed
 
-> **decomposed**: [`SearchTransformRef`](/api/search-core/src/type-aliases/searchtransformref/)\<[`DecomposedOptions`](/api/search-core/src/type-aliases/decomposedoptions/)\>
+> **decomposed**: [`SearchTransformDefinition`](/api/search-core/src/type-aliases/searchtransformdefinition/)\<[`DecomposedOptions`](/api/search-core/src/type-aliases/decomposedoptions/)\>
 
 ### initials
 
-> **initials**: [`SearchTransformRef`](/api/search-core/src/type-aliases/searchtransformref/)\<[`InitialsOptions`](/api/search-core/src/type-aliases/initialsoptions/)\>
+> **initials**: [`SearchTransformDefinition`](/api/search-core/src/type-aliases/searchtransformdefinition/)\<[`InitialsOptions`](/api/search-core/src/type-aliases/initialsoptions/)\>
 
 ### romanized
 
-> **romanized**: [`SearchTransformRef`](/api/search-core/src/type-aliases/searchtransformref/)\<[`RomanizedOptions`](/api/search-core/src/type-aliases/romanizedoptions/)\>
+> **romanized**: [`SearchTransformDefinition`](/api/search-core/src/type-aliases/searchtransformdefinition/)\<[`RomanizedOptions`](/api/search-core/src/type-aliases/romanizedoptions/)\>

@@ -5,6 +5,7 @@ import {
   IndexNotFoundProblem,
   MissingTenantProblem,
   SearchableIndexConflictProblem,
+  SearchTransformRegistrationConflictProblem,
   SearchSyncIdentityConflictProblem,
   StrategyUnavailableProblem,
   TransformNotFoundProblem,
@@ -115,6 +116,29 @@ describe("SearchProblems", () => {
     it("does not include extensions", () => {
       const problem = new TransformNotFoundProblem("user.name");
       expect(problem.extensions).toBeUndefined();
+    });
+  });
+
+  describe("SearchTransformRegistrationConflictProblem", () => {
+    it("exposes stable non-retryable registration conflict evidence", () => {
+      const problem = new SearchTransformRegistrationConflictProblem(
+        "text.initials",
+        "_initials",
+        "_replacement",
+      );
+
+      expect(problem.code).toBe("search-core/transform-registration-conflict");
+      expect(problem.category).toBe(ProblemCategory.Conflict);
+      expect(problem.status).toBe(409);
+      expect(problem.message).toBe(
+        "Search transform 'text.initials' is already registered to another adapter",
+      );
+      expect(problem.extensions).toEqual({
+        id: "text.initials",
+        registeredDefaultSuffix: "_initials",
+        attemptedDefaultSuffix: "_replacement",
+        retryable: false,
+      });
     });
   });
 

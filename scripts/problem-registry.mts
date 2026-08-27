@@ -2385,6 +2385,15 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "search-core/transform-registration-conflict": recovery({
+    cause: "More than one search transform adapter claims the same runtime ID.",
+    userAction: "Remove or rename the conflicting adapter registration, then restart registration.",
+    operatorAction:
+      "Use extensions.id and the registered and attempted suffixes to locate the conflicting adapters and keep one owner for the ID.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "outbox-core/failure-metadata-missing": recovery({
     cause:
       "A dispatcher attempted to mark an outbox record failed without the required retry metadata extensions.",

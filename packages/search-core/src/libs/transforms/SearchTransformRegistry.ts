@@ -1,11 +1,25 @@
 import { Token } from "@croco/framework-context";
-import { TransformNotFoundProblem } from "../problems/SearchProblems";
+import {
+  SearchTransformRegistrationConflictProblem,
+  TransformNotFoundProblem,
+} from "../problems/SearchProblems";
+import { createSearchTransformRef } from "./types";
 import type { SearchTransformAdapter, SearchTransformRef } from "./types";
+
+type SearchTransformRegistration = {
+  readonly adapter: SearchTransformAdapter;
+  readonly ref: {
+    readonly id: string;
+    readonly defaultSuffix: string;
+  };
+};
 
 export abstract class SearchTransformRegistry {
   static readonly token = new Token<SearchTransformRegistry>("SearchTransformRegistry");
 
-  abstract register<TOptions>(adapter: SearchTransformAdapter<TOptions>): void;
+  abstract register<TOptions>(
+    adapter: SearchTransformAdapter<TOptions>,
+  ): SearchTransformRef<TOptions>;
   abstract get<TOptions>(
     ref: SearchTransformRef<TOptions>,
   ): SearchTransformAdapter<TOptions> | undefined;
@@ -17,14 +31,37 @@ export abstract class SearchTransformRegistry {
 }
 
 export class InMemorySearchTransformRegistry extends SearchTransformRegistry {
-  private readonly adapters = new Map<string, SearchTransformAdapter>();
+  private readonly registrations = new Map<string, SearchTransformRegistration>();
 
-  register<TOptions>(adapter: SearchTransformAdapter<TOptions>): void {
-    this.adapters.set(adapter.id, adapter);
+  register<TOptions>(adapter: SearchTransformAdapter<TOptions>): SearchTransformRef<TOptions> {
+    const existing = this.registrations.get(adapter.id);
+    if (existing) {
+      if (existing.adapter === adapter) {
+        return existing.ref as SearchTransformRef<TOptions>;
+      }
+
+      throw new SearchTransformRegistrationConflictProblem(
+        adapter.id,
+        existing.adapter.defaultSuffix,
+        adapter.defaultSuffix,
+      );
+    }
+
+    const ref = createSearchTransformRef<TOptions>(adapter.id, adapter.defaultSuffix);
+    this.registrations.set(adapter.id, {
+      adapter: adapter as SearchTransformAdapter,
+      ref,
+    });
+    return ref;
   }
 
   get<TOptions>(ref: SearchTransformRef<TOptions>): SearchTransformAdapter<TOptions> | undefined {
-    return this.adapters.get(ref.id) as SearchTransformAdapter<TOptions> | undefined;
+    const registration = this.registrations.get(ref.id);
+    if (!registration || registration.ref !== ref) {
+      return undefined;
+    }
+
+    return registration.adapter as SearchTransformAdapter<TOptions>;
   }
 
   apply<TOptions>(ref: SearchTransformRef<TOptions>, input: string, options?: TOptions): string {
