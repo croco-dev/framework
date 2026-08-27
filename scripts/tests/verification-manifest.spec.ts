@@ -489,11 +489,31 @@ describe("verification manifest", () => {
       ...context,
       changedFiles: ["packages/protocols-rest/src/libs/decorators/HttpMethod.ts"],
     });
+    const sharedConfig = createVerificationManifest("spine", {
+      ...context,
+      changedFiles: ["tsconfig/tsconfig.node.json"],
+    });
+    const gateOnly = createVerificationManifest("spine", {
+      ...context,
+      changedFiles: ["scripts/packed-decorator-consumers.mts"],
+    });
     const unrelated = createVerificationManifest("spine", {
       ...context,
       changedFiles: ["packages/storage-s3/src/index.ts"],
     });
     expect(relevant.find(({ id }) => id === "packed-decorator-consumers")?.applicable).toBe(true);
+    expect(sharedConfig.find(({ id }) => id === "packed-decorator-consumers")?.applicable).toBe(
+      true,
+    );
+    expect(gateOnly.find(({ id }) => id === "build")?.command).toEqual(
+      expect.arrayContaining([
+        "--filter=@croco/problems-core",
+        "--filter=@croco/diagnostics-core",
+        "--filter=@croco/framework-context",
+        "--filter=@croco/protocols-core",
+        "--filter=@croco/protocols-rest",
+      ]),
+    );
     expect(unrelated.find(({ id }) => id === "packed-decorator-consumers")?.applicable).toBe(false);
   });
 

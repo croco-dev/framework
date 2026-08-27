@@ -199,6 +199,14 @@ const PACKAGE_BIN_BUILD_FILTERS = [
   "@croco/rpc-codegen",
 ] as const;
 
+const PACKED_DECORATOR_CONSUMER_BUILD_FILTERS = [
+  "@croco/problems-core",
+  "@croco/diagnostics-core",
+  "@croco/framework-context",
+  "@croco/protocols-core",
+  "@croco/protocols-rest",
+] as const;
+
 export const PUBLISH_REQUIRED_GENERATED_SMOKE_CASES = [
   ...GENERATED_SMOKE_MATRIX_CASES.filter(({ tier }) => tier === "spine-blocking").map(
     ({ name }) => name,
@@ -240,6 +248,7 @@ function affectsPackageEntrypoints(path: string): boolean {
 function affectsPackedDecoratorConsumers(path: string): boolean {
   return (
     /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|turbo\.json|\.nvmrc)$/.test(path) ||
+    path.startsWith("tsconfig/") ||
     /^packages\/(?:diagnostics-core|framework-context|problems-core|protocols-core|protocols-rest)\//.test(
       path,
     ) ||
@@ -827,6 +836,10 @@ const spineOnly = (
     context,
     affectsPackedDecoratorConsumers,
   );
+  const packedDecoratorConsumerBuildArguments =
+    changeScoped && packedDecoratorConsumersApplicable && !packageAccountability.fullEvidence
+      ? PACKED_DECORATOR_CONSUMER_BUILD_FILTERS.map((packageName) => `--filter=${packageName}`)
+      : [];
   const binsApplicable = isApplicableToChangedFiles(context, affectsPackageBins);
   const packageBinBuildArguments =
     changeScoped && binsApplicable && !packageAccountability.fullEvidence
@@ -854,6 +867,7 @@ const spineOnly = (
         "build",
         ...affectedArguments,
         ...scaffoldBuildArguments,
+        ...packedDecoratorConsumerBuildArguments,
         ...packageBinBuildArguments,
         "--summarize",
         "--continue=always",
