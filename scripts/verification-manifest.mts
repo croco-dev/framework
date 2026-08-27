@@ -60,6 +60,7 @@ const VERIFICATION_COMMAND_IDS = [
   "quick-start-lambda-smoke",
   "first-success",
   "package-entrypoints-smoke",
+  "packed-decorator-consumers",
   "package-bins-smoke",
   "generated-app-smoke",
   "alpha-release-smoke",
@@ -118,6 +119,7 @@ export const VERIFICATION_LANE_OWNERSHIP = {
   "quick-start-lambda-smoke": "core-verification",
   "first-success": "core-verification",
   "package-entrypoints-smoke": "package-artifacts",
+  "packed-decorator-consumers": "package-artifacts",
   "package-bins-smoke": "package-artifacts",
   "generated-app-smoke": "generated-apps",
   "alpha-release-smoke": "package-artifacts",
@@ -232,6 +234,17 @@ function affectsPackageEntrypoints(path: string): boolean {
     /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|turbo\.json|\.nvmrc)$/.test(path) ||
     /^packages\/(?!create-croco-app\/)[^/]+\/(?:package\.json|src\/index\.ts)$/.test(path) ||
     path === "scripts/package-entrypoint-smoke.mts"
+  );
+}
+
+function affectsPackedDecoratorConsumers(path: string): boolean {
+  return (
+    /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|turbo\.json|\.nvmrc)$/.test(path) ||
+    /^packages\/(?:diagnostics-core|framework-context|problems-core|protocols-core|protocols-rest)\//.test(
+      path,
+    ) ||
+    path === "scripts/packed-decorator-consumers.mts" ||
+    path.startsWith("scripts/fixtures/packed-decorator-consumers/")
   );
 }
 
@@ -810,6 +823,10 @@ const spineOnly = (
       ? ["--filter=create-croco-app"]
       : [];
   const entrypointsApplicable = isApplicableToChangedFiles(context, affectsPackageEntrypoints);
+  const packedDecoratorConsumersApplicable = isApplicableToChangedFiles(
+    context,
+    affectsPackedDecoratorConsumers,
+  );
   const binsApplicable = isApplicableToChangedFiles(context, affectsPackageBins);
   const packageBinBuildArguments =
     changeScoped && binsApplicable && !packageAccountability.fullEvidence
@@ -872,6 +889,14 @@ const spineOnly = (
       ),
       timeoutMs: minutes(15),
       applicable: entrypointsApplicable,
+    },
+    {
+      id: "packed-decorator-consumers",
+      label: "Packed decorator consumers",
+      category: "package-smoke",
+      command: nodeScript("scripts/packed-decorator-consumers.mts"),
+      timeoutMs: minutes(15),
+      applicable: packedDecoratorConsumersApplicable,
     },
     {
       id: "package-bins-smoke",
@@ -1336,6 +1361,7 @@ const VERIFICATION_DEPENDENCIES: Readonly<Record<string, readonly string[]>> = {
   "quick-start-lambda-smoke": ["build"],
   "first-success": ["build"],
   "package-entrypoints-smoke": ["build", "typecheck", "generated-app-smoke"],
+  "packed-decorator-consumers": ["build"],
   "package-bins-smoke": ["build"],
   "generated-app-smoke": ["build"],
   "alpha-release-smoke": ["build"],
@@ -1370,6 +1396,7 @@ type VerificationDependencyEdge =
   | "package-entrypoints-smoke->build"
   | "package-entrypoints-smoke->typecheck"
   | "package-entrypoints-smoke->generated-app-smoke"
+  | "packed-decorator-consumers->build"
   | "package-bins-smoke->build"
   | "generated-app-smoke->build"
   | "alpha-release-smoke->build"
@@ -1414,6 +1441,7 @@ export const VERIFICATION_DEPENDENCY_CLASSIFICATION = {
   "package-entrypoints-smoke->build": ["physical-local", "logical-synthesis"],
   "package-entrypoints-smoke->typecheck": ["logical-synthesis"],
   "package-entrypoints-smoke->generated-app-smoke": ["logical-synthesis"],
+  "packed-decorator-consumers->build": ["physical-local", "logical-synthesis"],
   "package-bins-smoke->build": ["physical-local", "logical-synthesis"],
   "generated-app-smoke->build": ["physical-local", "logical-synthesis"],
   "alpha-release-smoke->build": ["physical-local", "logical-synthesis"],

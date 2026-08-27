@@ -51,6 +51,8 @@ const ROOT_SCRIPT_RECOVERY = {
   "first-success:verify": "Follow the reported scaffold or documentation recovery command",
   "generated-secret-placeholders:check": "Fix the reported template placeholder",
   "package-manifests:check": "pnpm package-manifests:write",
+  "packed-decorator-consumers:check":
+    "Fix the reported packed TypeScript 6 decorator consumer regression",
   "problem-registry:check": "pnpm problem-registry:write",
   "production-ready:check": "Fix the reported production-ready package violations",
   "provider-certification:check": "Fix the reported provider certification metadata",

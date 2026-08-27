@@ -74,6 +74,7 @@ export const RELEASE_GATE_ENTRYPOINT_PATHS = [
   "scripts/package-docs-check.mts",
   "scripts/package-entrypoint-smoke.mts",
   "scripts/package-quality-report.mts",
+  "scripts/packed-decorator-consumers.mts",
   "scripts/problem-registry.mts",
   "scripts/production-ready-check.mts",
   "scripts/provenance-config-check.mts",
@@ -139,6 +140,8 @@ export const RELEASE_GATE_FIXTURE_PATHS = [
   "scripts/fixtures/decorator-signature-spike/tsconfig.declaration.json",
   "scripts/fixtures/decorator-signature-spike/tsconfig.diagnostics.json",
   "scripts/fixtures/decorator-signature-spike/tsconfig.json",
+  "scripts/fixtures/packed-decorator-consumers/negative.ts",
+  "scripts/fixtures/packed-decorator-consumers/positive.ts",
 ] as const;
 
 export const RELEASE_GATE_IMPLEMENTATION_PATHS = [

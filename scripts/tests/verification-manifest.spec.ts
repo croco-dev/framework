@@ -135,6 +135,7 @@ const spineOnlyIds = [
   "quick-start-lambda-smoke",
   "first-success",
   "package-entrypoints-smoke",
+  "packed-decorator-consumers",
   "package-bins-smoke",
   "generated-app-smoke",
   "alpha-release-smoke",
@@ -201,6 +202,7 @@ const expectedLaneIds = {
   "generated-apps": ["generated-app-smoke"],
   "package-artifacts": [
     "package-entrypoints-smoke",
+    "packed-decorator-consumers",
     "package-bins-smoke",
     "alpha-release-smoke",
     "published-test-lane",
@@ -294,12 +296,12 @@ describe("verification manifest", () => {
     });
   });
 
-  it("owns all 53 commands exactly once across the closed verification lanes", () => {
+  it("owns all 54 commands exactly once across the closed verification lanes", () => {
     const publishIds = [...repoIds, ...spineOnlyIds, ...publishOnlyIds];
     const ownedIds = Object.values(expectedLaneIds).flat();
 
-    expect(publishIds).toHaveLength(53);
-    expect(new Set(ownedIds).size).toBe(53);
+    expect(publishIds).toHaveLength(54);
+    expect(new Set(ownedIds).size).toBe(54);
     expect([...ownedIds].sort()).toEqual([...publishIds].sort());
     expect(VERIFICATION_LANE_OWNERSHIP).toEqual(
       Object.fromEntries(
@@ -315,7 +317,7 @@ describe("verification manifest", () => {
     expect(
       createHash("sha256").update(JSON.stringify(manifests)).digest("hex"),
       "The pre-split monolithic manifest changed; update this digest only after intentionally verifying the new serialized commands.",
-    ).toBe("cb03423ec9fc81ed794dae737c36cfc2b27bd32d8d9aaaf6a7acdbab64ce9428");
+    ).toBe("fc699c13ca10f8bb4ae44cd3181da74128a0bb470b8dc796e273efc3e543a5ce");
   });
 
   it("classifies every dependency edge and every cross-lane edge for synthesis", () => {
@@ -462,6 +464,37 @@ describe("verification manifest", () => {
     ]) {
       expect(manifest.find((command) => command.id === id)?.applicable, id).toBe(true);
     }
+  });
+
+  it("runs packed decorator consumers for publish and relevant package changes", () => {
+    const publishCommand = createVerificationManifest("publish").find(
+      ({ id }) => id === "packed-decorator-consumers",
+    );
+    expect(publishCommand).toMatchObject({
+      applicable: true,
+      command: ["node", "--experimental-strip-types", "scripts/packed-decorator-consumers.mts"],
+      dependsOn: ["build"],
+    });
+    expect(VERIFICATION_LANE_OWNERSHIP["packed-decorator-consumers"]).toBe("package-artifacts");
+    expect(VERIFICATION_DEPENDENCY_CLASSIFICATION["packed-decorator-consumers->build"]).toEqual([
+      "physical-local",
+      "logical-synthesis",
+    ]);
+
+    const context = {
+      base: "origin/trunk",
+      head: "HEAD",
+    } as const;
+    const relevant = createVerificationManifest("spine", {
+      ...context,
+      changedFiles: ["packages/protocols-rest/src/libs/decorators/HttpMethod.ts"],
+    });
+    const unrelated = createVerificationManifest("spine", {
+      ...context,
+      changedFiles: ["packages/storage-s3/src/index.ts"],
+    });
+    expect(relevant.find(({ id }) => id === "packed-decorator-consumers")?.applicable).toBe(true);
+    expect(unrelated.find(({ id }) => id === "packed-decorator-consumers")?.applicable).toBe(false);
   });
 
   it("selects exact inventory lane owners for ordinary changes and full lanes for publish", () => {
