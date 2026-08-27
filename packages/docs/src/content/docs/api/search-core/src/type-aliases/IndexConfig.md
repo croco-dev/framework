@@ -13,7 +13,7 @@ title: "IndexConfig"
 
 ### filterableFields?
 
-> `optional` **filterableFields?**: `string`[]
+> `optional` **filterableFields?**: readonly `string`[]
 
 ---
 
@@ -31,10 +31,10 @@ title: "IndexConfig"
 
 ### searchableFields?
 
-> `optional` **searchableFields?**: `string`[]
+> `optional` **searchableFields?**: readonly `string`[]
 
 ---
 
 ### sortableFields?
 
-> `optional` **sortableFields?**: `string`[]
+> `optional` **sortableFields?**: readonly `string`[]

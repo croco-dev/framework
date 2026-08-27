@@ -49,9 +49,9 @@ export type SearchDocument = {
 export type IndexConfig = {
   name: string;
   primaryKey?: string;
-  searchableFields?: string[];
-  filterableFields?: string[];
-  sortableFields?: string[];
+  searchableFields?: readonly string[];
+  filterableFields?: readonly string[];
+  sortableFields?: readonly string[];
 };
 
 /**

@@ -11,17 +11,43 @@ pnpm add @croco/search-core @croco/events-core
 ## 사용법
 
 ```ts
-import { SearchField, SearchService, Searchable } from "@croco/search-core";
+import { defineSearchIndex, SearchField, SearchService, Searchable } from "@croco/search-core";
+
+type UserDocument = {
+  id: string;
+  tenantId: string;
+  name: string;
+  status: "active" | "archived";
+  createdAt: number;
+};
+
+const USERS = defineSearchIndex<UserDocument>()({
+  name: "users",
+  searchableFields: ["name"],
+  filterableFields: ["status"],
+  sortableFields: ["createdAt"],
+});
 
 @Searchable({ index: "users", autoSync: true })
-class UserDocument {
+class UserModel {
   @SearchField({ searchable: true, filterable: true })
   name!: string;
 }
 
 const searchService = new SearchService({ engine: searchEngine });
-const result = await searchService.search("users", { query: "홍길동" });
+const result = await searchService.search(USERS, {
+  query: "홍길동",
+  filters: { status: "active" },
+  sort: [{ field: "createdAt", order: "desc" }],
+});
+// result.hits[number].document는 UserDocument로 추론됩니다.
 ```
+
+typed index를 점진적으로 도입하는 동안 기존 `searchService.search("users", query)`와
+`searchEngine.search("users", query)` string 경로도 그대로 사용할 수 있습니다. `SearchEngine.searchIndex(USERS,
+query)`, `SearchEngine.indexDocumentAt(USERS, document)`, `SearchEngine.bulkIndexAt(USERS, documents)`는 typed ref를
+기존 adapter의 string index 이름으로 변환합니다. typed index의 필드 선언은 readonly이며 일반 interface 문서 타입을
+지원합니다. 문자열 index signature가 있는 동적 문서는 기존 string 경로를 사용합니다.
 
 ```ts
 import { InMemorySearchTransformRegistry, derive } from "@croco/search-core";
@@ -59,6 +85,7 @@ void chosung;
 
 ### 주요 타입
 
+- `SearchIndexRef`, `SearchIndexQuery`, `SearchIndexDocument`, `SearchIndexDocumentInput`
 - `SearchQuery`, `SearchResult`, `SearchHit`, `SearchDocument`
 - `IndexConfig`, `SearchFieldConfig`, `SearchDerivedFieldConfig`, `SearchEngineCapabilities`
 - `SearchableOptions`, `SearchFieldOptions`, `DeriveOptions`, `SearchTransformRef`

@@ -25019,6 +25019,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "defineSearchIndex",
+              "exportKind": "named",
+              "source": "./libs/SearchIndexRef",
+              "declarationKind": "function"
+            },
+            {
               "name": "derive",
               "exportKind": "named",
               "source": "./libs/transforms/derive",
@@ -25237,6 +25243,36 @@
               "name": "SearchHit",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "SearchIndexDefinition",
+              "exportKind": "named",
+              "source": "./libs/SearchIndexRef"
+            },
+            {
+              "name": "SearchIndexDocument",
+              "exportKind": "named",
+              "source": "./libs/SearchIndexRef"
+            },
+            {
+              "name": "SearchIndexDocumentInput",
+              "exportKind": "named",
+              "source": "./libs/SearchIndexRef"
+            },
+            {
+              "name": "SearchIndexField",
+              "exportKind": "named",
+              "source": "./libs/SearchIndexRef"
+            },
+            {
+              "name": "SearchIndexQuery",
+              "exportKind": "named",
+              "source": "./libs/SearchIndexRef"
+            },
+            {
+              "name": "SearchIndexRef",
+              "exportKind": "named",
+              "source": "./libs/SearchIndexRef"
             },
             {
               "name": "SearchQuery",

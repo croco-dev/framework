@@ -139,11 +139,11 @@ export class MeilisearchEngine extends SearchEngine {
     const filterable = ["_tenantId", "id", ...(config.filterableFields || [])].filter(
       (field, index, fields) => fields.indexOf(field) === index,
     );
-    const sortable = config.sortableFields || [];
+    const sortable = [...(config.sortableFields || [])];
     const settings = {
       filterableAttributes: filterable,
       ...(config.searchableFields !== undefined && {
-        searchableAttributes: config.searchableFields,
+        searchableAttributes: [...config.searchableFields],
       }),
       sortableAttributes: sortable,
     };

@@ -69,6 +69,34 @@ Token 기반 DI를 지원하며, 모든 구현체는 이 abstract class를 상�
 
 ---
 
+### bulkIndexAt()
+
+> **bulkIndexAt**\<`TReference`\>(`index`, `documents`): `Promise`\<`void`\>
+
+타입이 지정된 인덱스 참조에 여러 문서를 인덱싱합니다.
+
+#### Type Parameters
+
+##### TReference
+
+`TReference` _extends_ [`SearchIndexRef`](/api/search-core/src/type-aliases/searchindexref/)
+
+#### Parameters
+
+##### index
+
+`TReference`
+
+##### documents
+
+readonly [`SearchIndexDocument`](/api/search-core/src/type-aliases/searchindexdocument/)\<`TReference`\>[]
+
+#### Returns
+
+`Promise`\<`void`\>
+
+---
+
 ### createIndex()
 
 > `abstract` **createIndex**(`config`): `Promise`\<`void`\>
@@ -161,6 +189,34 @@ Token 기반 DI를 지원하며, 모든 구현체는 이 abstract class를 상�
 
 ---
 
+### indexDocumentAt()
+
+> **indexDocumentAt**\<`TReference`\>(`index`, `document`): `Promise`\<`void`\>
+
+타입이 지정된 인덱스 참조에 문서를 인덱싱합니다.
+
+#### Type Parameters
+
+##### TReference
+
+`TReference` _extends_ [`SearchIndexRef`](/api/search-core/src/type-aliases/searchindexref/)
+
+#### Parameters
+
+##### index
+
+`TReference`
+
+##### document
+
+[`SearchIndexDocument`](/api/search-core/src/type-aliases/searchindexdocument/)\<`TReference`\>
+
+#### Returns
+
+`Promise`\<`void`\>
+
+---
+
 ### search()
 
 > `abstract` **search**\<`T`\>(`index`, `query`): `Promise`\<[`SearchResult`](/api/search-core/src/type-aliases/searchresult/)\<`T`\>\>
@@ -192,3 +248,35 @@ Token 기반 DI를 지원하며, 모든 구현체는 이 abstract class를 상�
 `Promise`\<[`SearchResult`](/api/search-core/src/type-aliases/searchresult/)\<`T`\>\>
 
 검색 결과
+
+---
+
+### searchIndex()
+
+> **searchIndex**\<`TReference`, `TQuery`\>(`index`, `query`): `Promise`\<[`SearchResult`](/api/search-core/src/type-aliases/searchresult/)\<[`SearchIndexDocument`](/api/search-core/src/type-aliases/searchindexdocument/)\<`TReference`\>\>\>
+
+타입이 지정된 인덱스 참조로 검색을 실행합니다.
+
+#### Type Parameters
+
+##### TReference
+
+`TReference` _extends_ [`SearchIndexRef`](/api/search-core/src/type-aliases/searchindexref/)
+
+##### TQuery
+
+`TQuery` _extends_ [`SearchIndexQuery`](/api/search-core/src/type-aliases/searchindexquery/)\<`NoInfer`\<`TReference`\>\>
+
+#### Parameters
+
+##### index
+
+`TReference`
+
+##### query
+
+`TQuery` & `SearchIndexQueryInput`\<`TReference`, `TQuery`\>
+
+#### Returns
+
+`Promise`\<[`SearchResult`](/api/search-core/src/type-aliases/searchresult/)\<[`SearchIndexDocument`](/api/search-core/src/type-aliases/searchindexdocument/)\<`TReference`\>\>\>
