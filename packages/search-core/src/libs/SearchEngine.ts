@@ -1,5 +1,11 @@
 import { Token } from "@croco/framework-context";
 import type {
+  SearchIndexDocument,
+  SearchIndexQuery,
+  SearchIndexQueryInput,
+  SearchIndexRef,
+} from "./SearchIndexRef";
+import type {
   IndexConfig,
   SearchDocument,
   SearchEngineCapabilities,
@@ -32,12 +38,35 @@ export abstract class SearchEngine {
   abstract search<T>(index: string, query: SearchQuery): Promise<SearchResult<T>>;
 
   /**
+   * 타입이 지정된 인덱스 참조로 검색을 실행합니다.
+   */
+  searchIndex<
+    TReference extends SearchIndexRef,
+    const TQuery extends SearchIndexQuery<NoInfer<TReference>>,
+  >(
+    index: TReference,
+    query: TQuery & SearchIndexQueryInput<TReference, TQuery>,
+  ): Promise<SearchResult<SearchIndexDocument<TReference>>> {
+    return this.search<SearchIndexDocument<TReference>>(index.name, query);
+  }
+
+  /**
    * 문서 인덱싱
    *
    * @param index - 인덱스 이름
    * @param document - 인덱싱할 문서
    */
   abstract indexDocument(index: string, document: SearchDocument): Promise<void>;
+
+  /**
+   * 타입이 지정된 인덱스 참조에 문서를 인덱싱합니다.
+   */
+  indexDocumentAt<TReference extends SearchIndexRef>(
+    index: TReference,
+    document: SearchIndexDocument<TReference>,
+  ): Promise<void> {
+    return this.indexDocument(index.name, document as SearchDocument);
+  }
 
   /**
    * 문서 삭제
@@ -54,6 +83,16 @@ export abstract class SearchEngine {
    * @param documents - 인덱싱할 문서 목록
    */
   abstract bulkIndex(index: string, documents: SearchDocument[]): Promise<void>;
+
+  /**
+   * 타입이 지정된 인덱스 참조에 여러 문서를 인덱싱합니다.
+   */
+  bulkIndexAt<TReference extends SearchIndexRef>(
+    index: TReference,
+    documents: readonly SearchIndexDocument<TReference>[],
+  ): Promise<void> {
+    return this.bulkIndex(index.name, [...documents] as SearchDocument[]);
+  }
 
   /**
    * 인덱스 생성

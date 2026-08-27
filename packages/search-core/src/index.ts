@@ -58,6 +58,23 @@ export {
 export { SearchEngine } from "./libs/SearchEngine";
 
 /**
+ * 문서와 허용 필드 계약을 유지하는 검색 인덱스 참조를 생성합니다.
+ */
+export { defineSearchIndex } from "./libs/SearchIndexRef";
+
+/**
+ * 타입 지정 검색 인덱스와 파생 질의에 사용하는 공개 타입입니다.
+ */
+export type {
+  SearchIndexDefinition,
+  SearchIndexDocument,
+  SearchIndexDocumentInput,
+  SearchIndexField,
+  SearchIndexQuery,
+  SearchIndexRef,
+} from "./libs/SearchIndexRef";
+
+/**
  * SearchService 생성에 필요한 의존성 타입입니다.
  */
 export type { SearchServiceDependencies } from "./libs/SearchService";

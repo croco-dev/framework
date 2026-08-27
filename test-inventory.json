@@ -3107,6 +3107,12 @@
       "owner": "@croco/search-core"
     },
     {
+      "path": "packages/search-core/src/tests/SearchIndexRef.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/search-core"
+    },
+    {
       "path": "packages/search-core/src/tests/SearchProblems.spec.ts",
       "lane": "fast",
       "qualifiers": [],
