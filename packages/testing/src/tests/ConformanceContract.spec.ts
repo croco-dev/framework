@@ -257,6 +257,7 @@ describe("@croco/testing conformance public contract", () => {
       "reports missing objects with deterministic not-found behavior",
       "rejects invalid storage keys consistently",
       "rejects invalid signed URL expiries with one provider-independent contract",
+      "rejects pre-aborted operations before provider I/O with preserved evidence",
       "creates public and signed URLs without leaking object contents",
     ]);
   });

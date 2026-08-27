@@ -22,7 +22,15 @@ export type CloudinaryConfig = {
    */
   secure?: boolean;
 
+  /**
+   * Upload intents use this base URL.
+   */
   uploadBaseUrl?: string;
+
+  /**
+   * Server-side Cloudinary API requests use this base URL.
+   */
+  apiBaseUrl?: string;
 
   /**
    * Upload Intent TTL (초 단위, 1-3600, 기본값: 3600)

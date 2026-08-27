@@ -11,13 +11,21 @@ Cloudinary 제공자 설정입니다.
 
 ## Properties
 
+### apiBaseUrl?
+
+> `optional` **apiBaseUrl?**: `string`
+
+Server-side Cloudinary API requests use this base URL.
+
+***
+
 ### apiKey
 
 > **apiKey**: `string`
 
 Cloudinary API Key
 
----
+***
 
 ### apiSecret
 
@@ -25,7 +33,7 @@ Cloudinary API Key
 
 Cloudinary API Secret
 
----
+***
 
 ### cloudName
 
@@ -33,7 +41,7 @@ Cloudinary API Secret
 
 Cloudinary 클라우드 이름
 
----
+***
 
 ### secure?
 
@@ -41,7 +49,7 @@ Cloudinary 클라우드 이름
 
 HTTPS 사용 여부 (기본값: true)
 
----
+***
 
 ### ttl?
 
@@ -49,8 +57,10 @@ HTTPS 사용 여부 (기본값: true)
 
 Upload Intent TTL (초 단위, 1-3600, 기본값: 3600)
 
----
+***
 
 ### uploadBaseUrl?
 
 > `optional` **uploadBaseUrl?**: `string`
+
+Upload intents use this base URL.

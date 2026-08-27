@@ -46,6 +46,29 @@ const download = storageStreamToNodeReadable(await storage.getStream("uploads/vi
 
 Node `Buffer` values remain valid buffered bodies because `Buffer` extends `Uint8Array`.
 
+## Caller cancellation
+
+Every asynchronous storage operation accepts the same `StorageOperationOptions.signal` contract.
+Method-specific options compose that contract, so uploads and signed URLs carry `signal` alongside
+their existing fields while reads, deletes, existence checks, and metadata lookups accept an
+optional operation-options argument.
+
+```typescript
+const controller = new AbortController();
+const image = new Uint8Array();
+
+await storage.put("avatars/user-1.png", image, {
+  contentType: "image/png",
+  signal: controller.signal,
+});
+
+await storage.get("avatars/user-1.png", { signal: controller.signal });
+```
+
+Pre-aborted calls fail before provider I/O. In-flight cancellation rejects with
+`StorageOperationAbortedProblem`. An `Error` reason is preserved directly as its `cause`; other
+reason values are retained as the nested cause of a normalization error.
+
 ## Signed URL expiry
 
 `SignedUrlOptions.expiresIn` is always expressed in seconds. Every provider accepts only positive

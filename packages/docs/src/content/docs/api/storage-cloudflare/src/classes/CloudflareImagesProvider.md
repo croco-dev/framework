@@ -39,7 +39,7 @@ Cloudflare Images를 이용해 파일 저장과 이미지 변환 URL 생성을 �
 
 ### delete()
 
-> **delete**(`key`): `Promise`\<`void`\>
+> **delete**(`key`, `options?`): `Promise`\<`void`\>
 
 파일 삭제
 
@@ -51,6 +51,12 @@ Cloudflare Images를 이용해 파일 저장과 이미지 변환 URL 생성을 �
 
 파일 식별자
 
+##### options?
+
+[`StorageOperationOptions`](/api/storage-core/src/type-aliases/storageoperationoptions/)
+
+공통 연산 옵션
+
 #### Returns
 
 `Promise`\<`void`\>
@@ -59,11 +65,11 @@ Cloudflare Images를 이용해 파일 저장과 이미지 변환 URL 생성을 �
 
 [`BaseStorageProvider`](/api/storage-core/src/classes/basestorageprovider/).[`delete`](/api/storage-core/src/classes/basestorageprovider/#delete)
 
----
+***
 
 ### exists()
 
-> **exists**(`key`): `Promise`\<`boolean`\>
+> **exists**(`key`, `options?`): `Promise`\<`boolean`\>
 
 파일 존재 여부 확인
 
@@ -75,6 +81,12 @@ Cloudflare Images를 이용해 파일 저장과 이미지 변환 URL 생성을 �
 
 파일 식별자
 
+##### options?
+
+[`StorageOperationOptions`](/api/storage-core/src/type-aliases/storageoperationoptions/)
+
+공통 연산 옵션
+
 #### Returns
 
 `Promise`\<`boolean`\>
@@ -83,11 +95,11 @@ Cloudflare Images를 이용해 파일 저장과 이미지 변환 URL 생성을 �
 
 [`BaseStorageProvider`](/api/storage-core/src/classes/basestorageprovider/).[`exists`](/api/storage-core/src/classes/basestorageprovider/#exists)
 
----
+***
 
 ### get()
 
-> **get**(`key`): `Promise`\<`Uint8Array`\<`ArrayBufferLike`\>\>
+> **get**(`key`, `options?`): `Promise`\<`Uint8Array`\<`ArrayBufferLike`\>\>
 
 파일 다운로드
 
@@ -98,6 +110,10 @@ Cloudflare Images를 이용해 파일 저장과 이미지 변환 URL 생성을 �
 `string`
 
 파일 식별자
+
+##### options?
+
+[`StorageOperationOptions`](/api/storage-core/src/type-aliases/storageoperationoptions/)
 
 #### Returns
 
@@ -113,11 +129,11 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 [`BaseStorageProvider`](/api/storage-core/src/classes/basestorageprovider/).[`get`](/api/storage-core/src/classes/basestorageprovider/#get)
 
----
+***
 
 ### getMetadata()
 
-> **getMetadata**(`key`): `Promise`\<\{ `contentType?`: `string`; `etag?`: `string`; `lastModified`: `Date`; `size`: `number`; \}\>
+> **getMetadata**(`key`, `options?`): `Promise`\<\{ `contentType?`: `string`; `etag?`: `string`; `lastModified`: `Date`; `size`: `number`; \}\>
 
 객체 메타데이터 조회
 
@@ -128,6 +144,12 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 `string`
 
 파일 식별자
+
+##### options?
+
+[`StorageOperationOptions`](/api/storage-core/src/type-aliases/storageoperationoptions/)
+
+공통 연산 옵션
 
 #### Returns
 
@@ -143,7 +165,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 [`BaseStorageProvider`](/api/storage-core/src/classes/basestorageprovider/).[`getMetadata`](/api/storage-core/src/classes/basestorageprovider/#getmetadata)
 
----
+***
 
 ### getPublicUrl()
 
@@ -169,7 +191,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 [`BaseStorageProvider`](/api/storage-core/src/classes/basestorageprovider/).[`getPublicUrl`](/api/storage-core/src/classes/basestorageprovider/#getpublicurl)
 
----
+***
 
 ### getSignedUrl()
 
@@ -201,11 +223,11 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 [`BaseStorageProvider`](/api/storage-core/src/classes/basestorageprovider/).[`getSignedUrl`](/api/storage-core/src/classes/basestorageprovider/#getsignedurl)
 
----
+***
 
 ### getStream()
 
-> **getStream**(`key`): `Promise`\<[`StorageStream`](/api/storage-core/src/type-aliases/storagestream/)\>
+> **getStream**(`key`, `options?`): `Promise`\<[`StorageStream`](/api/storage-core/src/type-aliases/storagestream/)\>
 
 파일 스트림 다운로드
 
@@ -216,6 +238,10 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 `string`
 
 파일 식별자
+
+##### options?
+
+[`StorageOperationOptions`](/api/storage-core/src/type-aliases/storageoperationoptions/)
 
 #### Returns
 
@@ -231,7 +257,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 [`BaseStorageProvider`](/api/storage-core/src/classes/basestorageprovider/).[`getStream`](/api/storage-core/src/classes/basestorageprovider/#getstream)
 
----
+***
 
 ### getTransformUrl()
 
@@ -265,7 +291,7 @@ CDN에서 실시간으로 이미지를 변환하고 반환합니다.
 
 `ImageProvider.getTransformUrl`
 
----
+***
 
 ### getUploadIntent()
 
@@ -283,9 +309,9 @@ CDN에서 실시간으로 이미지를 변환하고 반환합니다.
 
 ##### options?
 
-###### ttlInSeconds?
+[`UploadIntentOptions`](/api/storage-core/src/type-aliases/uploadintentoptions/)
 
-`number`
+만료 시간과 공통 연산 옵션
 
 #### Returns
 
@@ -297,7 +323,7 @@ CDN에서 실시간으로 이미지를 변환하고 반환합니다.
 
 `ImageProvider.getUploadIntent`
 
----
+***
 
 ### put()
 

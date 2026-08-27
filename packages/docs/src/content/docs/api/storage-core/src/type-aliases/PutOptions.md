@@ -5,11 +5,11 @@ prev: false
 title: "PutOptions"
 ---
 
-> **PutOptions** = `object`
+> **PutOptions** = [`StorageOperationOptions`](/api/storage-core/src/type-aliases/storageoperationoptions/) & `object`
 
 파일 업로드 옵션
 
-## Properties
+## Type Declaration
 
 ### cacheControl?
 
@@ -17,23 +17,17 @@ title: "PutOptions"
 
 Cache-Control 헤더
 
----
-
 ### contentType?
 
 > `optional` **contentType?**: `string`
 
 Content-Type (MIME type)
 
----
-
 ### isPublic?
 
 > `optional` **isPublic?**: `boolean`
 
 공개 액세스 여부
-
----
 
 ### metadata?
 

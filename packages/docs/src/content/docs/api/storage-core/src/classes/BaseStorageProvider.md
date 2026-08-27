@@ -11,6 +11,7 @@ title: "BaseStorageProvider"
 
 - [`CloudflareImagesProvider`](/api/storage-cloudflare/src/classes/cloudflareimagesprovider/)
 - [`CloudinaryProvider`](/api/storage-cloudinary/src/classes/cloudinaryprovider/)
+- [`InMemoryStorageProvider`](/api/storage-core/src/classes/inmemorystorageprovider/)
 - [`R2StorageProvider`](/api/storage-r2/src/classes/r2storageprovider/)
 
 ## Implements
@@ -31,7 +32,7 @@ title: "BaseStorageProvider"
 
 ### delete()
 
-> `abstract` **delete**(`key`): `Promise`\<`void`\>
+> `abstract` **delete**(`key`, `options?`): `Promise`\<`void`\>
 
 파일 삭제
 
@@ -43,6 +44,12 @@ title: "BaseStorageProvider"
 
 파일 식별자
 
+##### options?
+
+[`StorageOperationOptions`](/api/storage-core/src/type-aliases/storageoperationoptions/)
+
+공통 연산 옵션
+
 #### Returns
 
 `Promise`\<`void`\>
@@ -51,11 +58,11 @@ title: "BaseStorageProvider"
 
 `StorageProvider.delete`
 
----
+***
 
 ### exists()
 
-> **exists**(`key`): `Promise`\<`boolean`\>
+> **exists**(`key`, `options?`): `Promise`\<`boolean`\>
 
 파일 존재 여부 확인
 
@@ -67,6 +74,12 @@ title: "BaseStorageProvider"
 
 파일 식별자
 
+##### options?
+
+[`StorageOperationOptions`](/api/storage-core/src/type-aliases/storageoperationoptions/)
+
+공통 연산 옵션
+
 #### Returns
 
 `Promise`\<`boolean`\>
@@ -75,11 +88,11 @@ title: "BaseStorageProvider"
 
 `StorageProvider.exists`
 
----
+***
 
 ### get()
 
-> **get**(`key`): `Promise`\<`Uint8Array`\<`ArrayBufferLike`\>\>
+> **get**(`key`, `options?`): `Promise`\<`Uint8Array`\<`ArrayBufferLike`\>\>
 
 파일 다운로드
 
@@ -90,6 +103,10 @@ title: "BaseStorageProvider"
 `string`
 
 파일 식별자
+
+##### options?
+
+[`StorageOperationOptions`](/api/storage-core/src/type-aliases/storageoperationoptions/)
 
 #### Returns
 
@@ -105,11 +122,11 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 `StorageProvider.get`
 
----
+***
 
 ### getMetadata()
 
-> `abstract` **getMetadata**(`key`): `Promise`\<[`ObjectMetadata`](/api/storage-core/src/type-aliases/objectmetadata/)\>
+> `abstract` **getMetadata**(`key`, `options?`): `Promise`\<[`ObjectMetadata`](/api/storage-core/src/type-aliases/objectmetadata/)\>
 
 객체 메타데이터 조회
 
@@ -120,6 +137,12 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 `string`
 
 파일 식별자
+
+##### options?
+
+[`StorageOperationOptions`](/api/storage-core/src/type-aliases/storageoperationoptions/)
+
+공통 연산 옵션
 
 #### Returns
 
@@ -135,7 +158,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 `StorageProvider.getMetadata`
 
----
+***
 
 ### getPublicUrl()
 
@@ -161,7 +184,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 `StorageProvider.getPublicUrl`
 
----
+***
 
 ### getSignedUrl()
 
@@ -193,11 +216,11 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 `StorageProvider.getSignedUrl`
 
----
+***
 
 ### getStream()
 
-> `abstract` **getStream**(`key`): `Promise`\<[`StorageStream`](/api/storage-core/src/type-aliases/storagestream/)\>
+> `abstract` **getStream**(`key`, `options?`): `Promise`\<[`StorageStream`](/api/storage-core/src/type-aliases/storagestream/)\>
 
 파일 스트림 다운로드
 
@@ -208,6 +231,10 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 `string`
 
 파일 식별자
+
+##### options?
+
+[`StorageOperationOptions`](/api/storage-core/src/type-aliases/storageoperationoptions/)
 
 #### Returns
 
@@ -223,7 +250,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 `StorageProvider.getStream`
 
----
+***
 
 ### put()
 

@@ -13,6 +13,8 @@ import type {
   SignedUrlOptions,
   StorageBody,
   StorageStream,
+  StorageOperation,
+  StorageOperationOptions,
 } from "@croco/storage-core";
 import { BaseStorageProvider, validateSignedUrlExpiry } from "@croco/storage-core";
 import { storageStreamToNodeReadable } from "@croco/storage-core/node";
@@ -168,16 +170,6 @@ export class R2StorageProvider extends BaseStorageProvider {
   private static readonly MAX_BUFFERED_GET_BYTES = 10 * 1024 * 1024;
   private readonly client: S3Client;
   private readonly options: R2Options;
-  private readonly retryTemplate = new RetryTemplate({
-    maxAttempts: 3,
-    backoff: {
-      delay: 10,
-      multiplier: 2,
-      maxDelay: 50,
-      jitter: false,
-    },
-    retryPolicy: R2_RETRY_POLICY,
-  });
 
   constructor(
     private readonly config: ConfigService,
@@ -205,12 +197,15 @@ export class R2StorageProvider extends BaseStorageProvider {
 
   async put(key: string, data: StorageBody, options?: PutOptions): Promise<void> {
     this.validateKey(key);
+    this.assertOperationNotAborted(options, "put", key);
 
     try {
       const replayable = data instanceof Uint8Array;
-      const body = replayable ? data : storageStreamToNodeReadable(data);
       const upload = async (shouldRetry: boolean) => {
         const { PutObjectCommand } = await import("@aws-sdk/client-s3");
+        const body = replayable
+          ? data
+          : storageStreamToNodeReadable(this.bindOperationSignal(data, options, "put", key));
 
         const command = new PutObjectCommand({
           Bucket: this.options.bucket,
@@ -222,10 +217,13 @@ export class R2StorageProvider extends BaseStorageProvider {
         });
 
         const send = async () =>
-          await this.executeR2Operation(() => this.client.send(command), "Unknown upload error");
+          await this.executeR2Operation(
+            () => this.client.send(command, { abortSignal: options?.signal }),
+            "Unknown upload error",
+          );
 
         if (shouldRetry) {
-          await this.executeWithRetry(send);
+          await this.executeWithRetry(send, options, "put", key);
           return;
         }
 
@@ -233,13 +231,16 @@ export class R2StorageProvider extends BaseStorageProvider {
       };
 
       await upload(replayable);
+      this.assertOperationNotAborted(options, "put", key);
     } catch (error) {
+      this.rethrowOperationAbort(error, options, "put", key);
       this.throwUploadFailed(key, error);
     }
   }
 
-  async getStream(key: string): Promise<StorageStream> {
+  async getStream(key: string, options?: StorageOperationOptions): Promise<StorageStream> {
     this.validateKey(key);
+    this.assertOperationNotAborted(options, "getStream", key);
 
     const { GetObjectCommand } = await import("@aws-sdk/client-s3");
 
@@ -251,25 +252,43 @@ export class R2StorageProvider extends BaseStorageProvider {
     try {
       const response = await this.executeWithRetry(
         async () =>
-          await this.executeR2Operation(() => this.client.send(command), "Unknown download error"),
+          await this.executeR2Operation(
+            () => this.client.send(command, { abortSignal: options?.signal }),
+            "Unknown download error",
+          ),
+        options,
+        "getStream",
+        key,
       );
 
       if (!response.Body) {
         throw new EmptyR2BodyProblem(key);
       }
 
-      return response.Body.transformToWebStream() as StorageStream;
+      return this.bindOperationSignal(
+        response.Body.transformToWebStream() as StorageStream,
+        options,
+        "getStream",
+        key,
+      );
     } catch (error) {
+      this.rethrowOperationAbort(error, options, "getStream", key);
       return this.handleNotFoundError(key, error);
     }
   }
 
-  async get(key: string): Promise<Uint8Array> {
+  async get(key: string, options?: StorageOperationOptions): Promise<Uint8Array> {
     this.validateKey(key);
+    this.assertOperationNotAborted(options, "get", key);
 
     try {
       const chunks: Uint8Array[] = [];
-      const stream = await this.getStream(key);
+      const stream = this.bindOperationSignal(
+        await this.getStream(key, options),
+        options,
+        "get",
+        key,
+      );
       let totalBytes = 0;
 
       for await (const chunk of stream) {
@@ -290,28 +309,72 @@ export class R2StorageProvider extends BaseStorageProvider {
         offset += chunk.byteLength;
       }
 
+      this.assertOperationNotAborted(options, "get", key);
       return bytes;
     } catch (error) {
+      this.rethrowOperationAbort(error, options, "get", key);
       return this.handleNotFoundError(key, error);
     }
   }
 
-  async delete(key: string): Promise<void> {
+  async delete(key: string, options?: StorageOperationOptions): Promise<void> {
     this.validateKey(key);
+    this.assertOperationNotAborted(options, "delete", key);
 
     try {
-      await this.executeWithRetry(async () => {
-        const { DeleteObjectCommand } = await import("@aws-sdk/client-s3");
+      await this.executeWithRetry(
+        async () => {
+          const { DeleteObjectCommand } = await import("@aws-sdk/client-s3");
 
-        const command = new DeleteObjectCommand({
-          Bucket: this.options.bucket,
-          Key: key,
-        });
+          const command = new DeleteObjectCommand({
+            Bucket: this.options.bucket,
+            Key: key,
+          });
 
-        await this.executeR2Operation(() => this.client.send(command), "Unknown delete error");
-      });
+          await this.executeR2Operation(
+            () => this.client.send(command, { abortSignal: options?.signal }),
+            "Unknown delete error",
+          );
+        },
+        options,
+        "delete",
+        key,
+      );
     } catch (error) {
+      this.rethrowOperationAbort(error, options, "delete", key);
       this.throwDeleteFailed(key, error);
+    }
+  }
+
+  async exists(key: string, options?: StorageOperationOptions): Promise<boolean> {
+    this.validateKey(key);
+    this.assertOperationNotAborted(options, "exists", key);
+
+    try {
+      await this.executeWithRetry(
+        async () => {
+          const { HeadObjectCommand } = await import("@aws-sdk/client-s3");
+          const command = new HeadObjectCommand({
+            Bucket: this.options.bucket,
+            Key: key,
+          });
+
+          await this.executeR2Operation(
+            () => this.client.send(command, { abortSignal: options?.signal }),
+            "Unknown existence check error",
+          );
+        },
+        options,
+        "exists",
+        key,
+      );
+      return true;
+    } catch (error) {
+      this.rethrowOperationAbort(error, options, "exists", key);
+      if (this.isNotFoundError(error)) {
+        return false;
+      }
+      throw error;
     }
   }
 
@@ -328,6 +391,7 @@ export class R2StorageProvider extends BaseStorageProvider {
 
   async getSignedUrl(key: string, options: SignedUrlOptions): Promise<string> {
     this.validateKey(key);
+    this.assertOperationNotAborted(options, "getSignedUrl", key);
     const expiresIn = validateSignedUrlExpiry(options.expiresIn);
 
     const { GetObjectCommand } = await import("@aws-sdk/client-s3");
@@ -337,28 +401,41 @@ export class R2StorageProvider extends BaseStorageProvider {
       Key: key,
     });
 
-    return getSignedUrl(this.client, command, {
-      expiresIn,
-    });
+    try {
+      const signedUrl = await getSignedUrl(this.client, command, {
+        expiresIn,
+      });
+      this.assertOperationNotAborted(options, "getSignedUrl", key);
+      return signedUrl;
+    } catch (error) {
+      this.rethrowOperationAbort(error, options, "getSignedUrl", key);
+      throw error;
+    }
   }
 
-  async getMetadata(key: string): Promise<ObjectMetadata> {
+  async getMetadata(key: string, options?: StorageOperationOptions): Promise<ObjectMetadata> {
     this.validateKey(key);
+    this.assertOperationNotAborted(options, "getMetadata", key);
 
     try {
-      const response = await this.executeWithRetry(async () => {
-        const { HeadObjectCommand } = await import("@aws-sdk/client-s3");
+      const response = await this.executeWithRetry(
+        async () => {
+          const { HeadObjectCommand } = await import("@aws-sdk/client-s3");
 
-        const command = new HeadObjectCommand({
-          Bucket: this.options.bucket,
-          Key: key,
-        });
+          const command = new HeadObjectCommand({
+            Bucket: this.options.bucket,
+            Key: key,
+          });
 
-        return await this.executeR2Operation(
-          () => this.client.send(command),
-          "Unknown metadata error",
-        );
-      });
+          return await this.executeR2Operation(
+            () => this.client.send(command, { abortSignal: options?.signal }),
+            "Unknown metadata error",
+          );
+        },
+        options,
+        "getMetadata",
+        key,
+      );
 
       return {
         size: response.ContentLength ?? 0,
@@ -368,6 +445,7 @@ export class R2StorageProvider extends BaseStorageProvider {
         metadata: response.Metadata,
       };
     } catch (error) {
+      this.rethrowOperationAbort(error, options, "getMetadata", key);
       return this.handleNotFoundError(key, error);
     }
   }
@@ -390,8 +468,35 @@ export class R2StorageProvider extends BaseStorageProvider {
     throw error;
   }
 
-  private async executeWithRetry<T>(operation: () => Promise<T>): Promise<T> {
-    return await this.retryTemplate.execute(async () => await operation());
+  private async executeWithRetry<T>(
+    operation: () => Promise<T>,
+    options: StorageOperationOptions | undefined,
+    operationName: StorageOperation,
+    key: string,
+  ): Promise<T> {
+    const retryTemplate = new RetryTemplate({
+      maxAttempts: 3,
+      backoff: {
+        delay: 10,
+        multiplier: 2,
+        maxDelay: 50,
+        jitter: false,
+      },
+      retryPolicy: R2_RETRY_POLICY,
+      signal: options?.signal,
+    });
+
+    return await retryTemplate.execute(async () => {
+      this.assertOperationNotAborted(options, operationName, key);
+      try {
+        const result = await operation();
+        this.assertOperationNotAborted(options, operationName, key);
+        return result;
+      } catch (error) {
+        this.rethrowOperationAbort(error, options, operationName, key);
+        throw error;
+      }
+    });
   }
 
   private async executeR2Operation<T>(

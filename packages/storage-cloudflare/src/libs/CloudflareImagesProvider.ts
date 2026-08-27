@@ -6,8 +6,11 @@ import type {
   SignedUrlOptions,
   StorageBody,
   StorageStream,
+  StorageOperation,
+  StorageOperationOptions,
   TransformOptions,
   UploadIntent,
+  UploadIntentOptions,
 } from "@croco/storage-core";
 import { BaseStorageProvider, validateSignedUrlExpiry } from "@croco/storage-core";
 import {
@@ -96,159 +99,174 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
   }
 
   async put(key: string, data: StorageBody, options?: PutOptions): Promise<void> {
-    this.validateKey(key);
-    this.validateUploadImageId(key);
+    return await this.runCancellable(options, "put", key, async () => {
+      this.validateKey(key);
+      this.validateUploadImageId(key);
 
-    const formData = new FormData();
-    formData.append("id", key);
+      const formData = new FormData();
+      formData.append("id", key);
 
-    let file: Blob;
-    if (data instanceof Uint8Array) {
-      file = new Blob([copyToArrayBuffer(data)], {
-        type: options?.contentType ?? "application/octet-stream",
-      });
-    } else {
-      const maxUploadBytes = this.options.maxUploadBytes ?? DEFAULT_MAX_UPLOAD_BYTES;
-      const chunks: ArrayBuffer[] = [];
-      let totalBytes = 0;
+      let file: Blob;
+      if (data instanceof Uint8Array) {
+        file = new Blob([copyToArrayBuffer(data)], {
+          type: options?.contentType ?? "application/octet-stream",
+        });
+      } else {
+        const maxUploadBytes = this.options.maxUploadBytes ?? DEFAULT_MAX_UPLOAD_BYTES;
+        const chunks: ArrayBuffer[] = [];
+        let totalBytes = 0;
 
-      for await (const chunk of data) {
-        totalBytes += chunk.byteLength;
-        if (totalBytes > maxUploadBytes) {
-          this.throwUploadFailed(
-            key,
-            `Cloudflare upload stream exceeds maxUploadBytes(${maxUploadBytes})`,
-          );
+        const stream = this.bindOperationSignal(data, options, "put", key);
+        for await (const chunk of stream) {
+          totalBytes += chunk.byteLength;
+          if (totalBytes > maxUploadBytes) {
+            this.throwUploadFailed(
+              key,
+              `Cloudflare upload stream exceeds maxUploadBytes(${maxUploadBytes})`,
+            );
+          }
+
+          chunks.push(copyToArrayBuffer(chunk));
         }
 
-        chunks.push(copyToArrayBuffer(chunk));
+        file = new Blob(chunks, {
+          type: options?.contentType ?? "application/octet-stream",
+        });
       }
 
-      file = new Blob(chunks, {
-        type: options?.contentType ?? "application/octet-stream",
-      });
-    }
+      formData.append("file", file, key);
 
-    formData.append("file", file, key);
-
-    const response = await this.fetchCloudflare(this.apiBaseUrl, {
-      init: {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${this.options.apiToken}`,
+      const response = await this.fetchCloudflare(this.apiBaseUrl, {
+        init: {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${this.options.apiToken}`,
+          },
+          body: formData,
         },
-        body: formData,
-      },
-      key,
-      operation: "put",
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw createCloudflareImagesResponseProblem({
-        operation: "put",
         key,
-        status: response.status,
-        detail: `Cloudflare Images API error: ${errorText}`,
-      });
-    }
-
-    const result = await this.parseCloudflareImagesResponse(response, key, "put");
-
-    if (!result.success) {
-      throw createCloudflareImagesResponseProblem({
         operation: "put",
-        key,
-        upstreamCode: "validation-failed",
-        detail: `Cloudflare Images upload failed: ${result.errors.join(", ")}`,
+        signal: options?.signal,
       });
-    }
 
-    if (typeof result.result?.id !== "string" || result.result.id !== key) {
-      throw new CloudflareImagesValidationProblem(
-        {
-          provider: "cloudflare-images",
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw createCloudflareImagesResponseProblem({
           operation: "put",
           key,
-          upstreamCode: "image-id-mismatch",
-        },
-        "Cloudflare Images upload response did not preserve the requested image id",
-      );
-    }
+          status: response.status,
+          detail: `Cloudflare Images API error: ${errorText}`,
+        });
+      }
+
+      const result = await this.parseCloudflareImagesResponse(response, key, "put");
+
+      if (!result.success) {
+        throw createCloudflareImagesResponseProblem({
+          operation: "put",
+          key,
+          upstreamCode: "validation-failed",
+          detail: `Cloudflare Images upload failed: ${result.errors.join(", ")}`,
+        });
+      }
+
+      if (typeof result.result?.id !== "string" || result.result.id !== key) {
+        throw new CloudflareImagesValidationProblem(
+          {
+            provider: "cloudflare-images",
+            operation: "put",
+            key,
+            upstreamCode: "image-id-mismatch",
+          },
+          "Cloudflare Images upload response did not preserve the requested image id",
+        );
+      }
+    });
   }
 
-  async getStream(key: string): Promise<StorageStream> {
-    this.validateKey(key);
+  async getStream(key: string, options?: StorageOperationOptions): Promise<StorageStream> {
+    return await this.runCancellable(options, "getStream", key, async () => {
+      this.validateKey(key);
 
-    const response = await this.fetchCloudflare(
-      `${this.buildManagementImageUrl(key, "get")}/blob`,
-      {
+      const response = await this.fetchCloudflare(
+        `${this.buildManagementImageUrl(key, "get")}/blob`,
+        {
+          init: {
+            headers: {
+              Authorization: `Bearer ${this.options.apiToken}`,
+            },
+          },
+          key,
+          operation: "get",
+          signal: options?.signal,
+        },
+      );
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          this.throwNotFound(key);
+        }
+
+        throw createCloudflareImagesResponseProblem({
+          operation: "get",
+          key,
+          status: response.status,
+        });
+      }
+
+      if (response.body === null) {
+        throw normalizeCloudflareImagesError(
+          { message: "Cloudflare response body is missing" },
+          { key, operation: "get" },
+        );
+      }
+
+      return this.bindOperationSignal(
+        normalizeDownloadStream(response.body, key),
+        options,
+        "getStream",
+        key,
+      );
+    });
+  }
+
+  async delete(key: string, options?: StorageOperationOptions): Promise<void> {
+    return await this.runCancellable(options, "delete", key, async () => {
+      this.validateKey(key);
+
+      const response = await this.fetchCloudflare(this.buildManagementImageUrl(key, "delete"), {
         init: {
+          method: "DELETE",
           headers: {
             Authorization: `Bearer ${this.options.apiToken}`,
           },
         },
         key,
-        operation: "get",
-      },
-    );
+        operation: "delete",
+        signal: options?.signal,
+      });
 
-    if (!response.ok) {
-      if (response.status === 404) {
-        this.throwNotFound(key);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw createCloudflareImagesResponseProblem({
+          operation: "delete",
+          key,
+          status: response.status,
+          detail: `Cloudflare Images delete error: ${errorText}`,
+        });
       }
 
-      throw createCloudflareImagesResponseProblem({
-        operation: "get",
-        key,
-        status: response.status,
-      });
-    }
+      const result = await response.json();
 
-    if (response.body === null) {
-      throw normalizeCloudflareImagesError(
-        { message: "Cloudflare response body is missing" },
-        { key, operation: "get" },
-      );
-    }
-
-    return normalizeDownloadStream(response.body, key);
-  }
-
-  async delete(key: string): Promise<void> {
-    this.validateKey(key);
-
-    const response = await this.fetchCloudflare(this.buildManagementImageUrl(key, "delete"), {
-      init: {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${this.options.apiToken}`,
-        },
-      },
-      key,
-      operation: "delete",
+      if (!result.success) {
+        throw createCloudflareImagesResponseProblem({
+          operation: "delete",
+          key,
+          upstreamCode: "validation-failed",
+          detail: `Cloudflare Images delete failed: ${result.errors.join(", ")}`,
+        });
+      }
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw createCloudflareImagesResponseProblem({
-        operation: "delete",
-        key,
-        status: response.status,
-        detail: `Cloudflare Images delete error: ${errorText}`,
-      });
-    }
-
-    const result = await response.json();
-
-    if (!result.success) {
-      throw createCloudflareImagesResponseProblem({
-        operation: "delete",
-        key,
-        upstreamCode: "validation-failed",
-        detail: `Cloudflare Images delete failed: ${result.errors.join(", ")}`,
-      });
-    }
   }
 
   getPublicUrl(key: string): string {
@@ -258,76 +276,86 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
   }
 
   async getSignedUrl(key: string, options: SignedUrlOptions): Promise<string> {
-    this.validateKey(key);
-    const expiresIn = validateSignedUrlExpiry(options.expiresIn);
+    return await this.runCancellable(options, "getSignedUrl", key, async () => {
+      this.validateKey(key);
+      const expiresIn = validateSignedUrlExpiry(options.expiresIn);
 
-    const baseUrl = this.buildImageUrl(key, this.options.defaultVariant ?? "public", "signed-url");
-    const expiresAt = Math.floor(Date.now() / 1000) + expiresIn;
+      const baseUrl = this.buildImageUrl(
+        key,
+        this.options.defaultVariant ?? "public",
+        "signed-url",
+      );
+      const expiresAt = Math.floor(Date.now() / 1000) + expiresIn;
 
-    const url = new URL(baseUrl);
-    url.searchParams.set("exp", String(expiresAt));
+      const url = new URL(baseUrl);
+      url.searchParams.set("exp", String(expiresAt));
 
-    const signature = await this.generateSignature(
-      key,
-      `${url.pathname}?${url.searchParams.toString()}`,
-    );
+      const signature = await this.generateSignature(
+        key,
+        `${url.pathname}?${url.searchParams.toString()}`,
+      );
 
-    url.searchParams.set("sig", signature);
+      url.searchParams.set("sig", signature);
 
-    return url.toString();
+      return url.toString();
+    });
   }
 
   async getMetadata(
     key: string,
+    options?: StorageOperationOptions,
   ): Promise<{ size: number; contentType?: string; lastModified: Date; etag?: string }> {
-    this.validateKey(key);
+    return await this.runCancellable(options, "getMetadata", key, async () => {
+      this.validateKey(key);
 
-    const response = await this.fetchCloudflare(this.buildManagementImageUrl(key, "metadata"), {
-      init: {
-        headers: {
-          Authorization: `Bearer ${this.options.apiToken}`,
+      const response = await this.fetchCloudflare(this.buildManagementImageUrl(key, "metadata"), {
+        init: {
+          headers: {
+            Authorization: `Bearer ${this.options.apiToken}`,
+          },
         },
-      },
-      key,
-      operation: "metadata",
+        key,
+        operation: "metadata",
+        signal: options?.signal,
+      });
+
+      if (response.status === 404) {
+        this.throwNotFound(key);
+      }
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw createCloudflareImagesResponseProblem({
+          operation: "metadata",
+          key,
+          status: response.status,
+          detail: `Cloudflare Images metadata error: ${errorText}`,
+        });
+      }
+
+      const result = (await response.json()) as CloudflareImageDetails;
+
+      if (!result.success) {
+        throw createCloudflareImagesResponseProblem({
+          operation: "metadata",
+          key,
+          upstreamCode: "validation-failed",
+          detail: `Cloudflare Images metadata failed: ${result.errors.join(", ")}`,
+        });
+      }
+
+      if (!result.result) {
+        throw ProblemFactory.internalServerError(
+          "cloudflare/images-null-result",
+          "Cloudflare Images API returned null result",
+        );
+      }
+
+      return {
+        size: result.result.size ?? 0,
+        lastModified: new Date(result.result.uploaded),
+      };
     });
-
-    if (response.status === 404) {
-      this.throwNotFound(key);
-    }
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw createCloudflareImagesResponseProblem({
-        operation: "metadata",
-        key,
-        status: response.status,
-        detail: `Cloudflare Images metadata error: ${errorText}`,
-      });
-    }
-
-    const result = (await response.json()) as CloudflareImageDetails;
-
-    if (!result.success) {
-      throw createCloudflareImagesResponseProblem({
-        operation: "metadata",
-        key,
-        upstreamCode: "validation-failed",
-        detail: `Cloudflare Images metadata failed: ${result.errors.join(", ")}`,
-      });
-    }
-
-    if (!result.result) {
-      throw ProblemFactory.internalServerError(
-        "cloudflare/images-null-result",
-        "Cloudflare Images API returned null result",
-      );
-    }
-
-    return {
-      size: result.result.size ?? 0,
-      lastModified: new Date(result.result.uploaded),
-    };
   }
 
   getTransformUrl(key: string, options: TransformOptions): string {
@@ -340,99 +368,102 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
     return this.buildTransformUrlDefault(key, options);
   }
 
-  async getUploadIntent(key: string, options?: { ttlInSeconds?: number }): Promise<UploadIntent> {
-    this.validateKey(key);
-    this.validateDirectUploadImageId(key);
+  async getUploadIntent(key: string, options?: UploadIntentOptions): Promise<UploadIntent> {
+    return await this.runCancellable(options, "getUploadIntent", key, async () => {
+      this.validateKey(key);
+      this.validateDirectUploadImageId(key);
 
-    const ttl = options?.ttlInSeconds ?? this.ttl;
-    if (
-      !Number.isFinite(ttl) ||
-      !Number.isInteger(ttl) ||
-      ttl < MIN_DIRECT_UPLOAD_TTL_SECONDS ||
-      ttl > MAX_DIRECT_UPLOAD_TTL_SECONDS
-    ) {
-      throw ProblemFactory.invalidArgument(
-        "storage/invalid-upload-intent-ttl",
-        `ttlInSeconds must be an integer between ${MIN_DIRECT_UPLOAD_TTL_SECONDS} and ${MAX_DIRECT_UPLOAD_TTL_SECONDS}`,
+      const ttl = options?.ttlInSeconds ?? this.ttl;
+      if (
+        !Number.isFinite(ttl) ||
+        !Number.isInteger(ttl) ||
+        ttl < MIN_DIRECT_UPLOAD_TTL_SECONDS ||
+        ttl > MAX_DIRECT_UPLOAD_TTL_SECONDS
+      ) {
+        throw ProblemFactory.invalidArgument(
+          "storage/invalid-upload-intent-ttl",
+          `ttlInSeconds must be an integer between ${MIN_DIRECT_UPLOAD_TTL_SECONDS} and ${MAX_DIRECT_UPLOAD_TTL_SECONDS}`,
+        );
+      }
+
+      const upstreamTtl = Math.min(
+        ttl + DIRECT_UPLOAD_EXPIRY_MARGIN_SECONDS,
+        MAX_DIRECT_UPLOAD_TTL_SECONDS,
       );
-    }
+      const expiresAt = new Date(Date.now() + upstreamTtl * 1000);
+      const metadata = JSON.stringify({ originalKey: key });
+      this.validateDirectUploadMetadata(key, metadata);
+      const formData = new FormData();
+      formData.append("id", key);
+      formData.append("expiry", expiresAt.toISOString());
+      formData.append("metadata", metadata);
 
-    const upstreamTtl = Math.min(
-      ttl + DIRECT_UPLOAD_EXPIRY_MARGIN_SECONDS,
-      MAX_DIRECT_UPLOAD_TTL_SECONDS,
-    );
-    const expiresAt = new Date(Date.now() + upstreamTtl * 1000);
-    const metadata = JSON.stringify({ originalKey: key });
-    this.validateDirectUploadMetadata(key, metadata);
-    const formData = new FormData();
-    formData.append("id", key);
-    formData.append("expiry", expiresAt.toISOString());
-    formData.append("metadata", metadata);
+      const url = `https://api.cloudflare.com/client/v4/accounts/${this.options.accountId}/images/v2/direct_upload`;
 
-    const url = `https://api.cloudflare.com/client/v4/accounts/${this.options.accountId}/images/v2/direct_upload`;
-
-    const response = await this.fetchCloudflare(url, {
-      init: {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${this.options.apiToken}`,
+      const response = await this.fetchCloudflare(url, {
+        init: {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${this.options.apiToken}`,
+          },
+          body: formData,
         },
-        body: formData,
-      },
-      key,
-      operation: "upload-intent",
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw createCloudflareImagesResponseProblem({
-        operation: "upload-intent",
         key,
-        status: response.status,
-        detail: `Cloudflare Images upload intent error: ${errorText}`,
-      });
-    }
-
-    const result = await this.parseCloudflareImagesResponse(response, key, "upload-intent");
-
-    if (!result.success) {
-      throw createCloudflareImagesResponseProblem({
         operation: "upload-intent",
-        key,
-        upstreamCode: "validation-failed",
-        detail: `Cloudflare Images upload intent failed: ${result.errors.join(", ")}`,
+        signal: options?.signal,
       });
-    }
 
-    if (!result.result) {
-      throw ProblemFactory.internalServerError(
-        "cloudflare/images-upload-intent-null-result",
-        "Cloudflare Images API returned null result",
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw createCloudflareImagesResponseProblem({
+          operation: "upload-intent",
+          key,
+          status: response.status,
+          detail: `Cloudflare Images upload intent error: ${errorText}`,
+        });
+      }
+
+      const result = await this.parseCloudflareImagesResponse(response, key, "upload-intent");
+
+      if (!result.success) {
+        throw createCloudflareImagesResponseProblem({
+          operation: "upload-intent",
+          key,
+          upstreamCode: "validation-failed",
+          detail: `Cloudflare Images upload intent failed: ${result.errors.join(", ")}`,
+        });
+      }
+
+      if (!result.result) {
+        throw ProblemFactory.internalServerError(
+          "cloudflare/images-upload-intent-null-result",
+          "Cloudflare Images API returned null result",
+        );
+      }
+
+      const uploadUrl = result.result.uploadURL;
+      const imageId = result.result.id;
+      if (
+        typeof uploadUrl !== "string" ||
+        uploadUrl.length === 0 ||
+        typeof imageId !== "string" ||
+        imageId !== key ||
+        !this.isCloudflareUploadUrl(uploadUrl)
+      ) {
+        this.throwInvalidCloudflareImagesResponse(key, "upload-intent");
+      }
+
+      const publicUrl = this.buildImageUrl(
+        imageId,
+        this.options.defaultVariant ?? "public",
+        "upload-intent",
       );
-    }
-
-    const uploadUrl = result.result.uploadURL;
-    const imageId = result.result.id;
-    if (
-      typeof uploadUrl !== "string" ||
-      uploadUrl.length === 0 ||
-      typeof imageId !== "string" ||
-      imageId !== key ||
-      !this.isCloudflareUploadUrl(uploadUrl)
-    ) {
-      this.throwInvalidCloudflareImagesResponse(key, "upload-intent");
-    }
-
-    const publicUrl = this.buildImageUrl(
-      imageId,
-      this.options.defaultVariant ?? "public",
-      "upload-intent",
-    );
-    return {
-      uploadUrl,
-      publicUrl,
-      expiresAt,
-    };
+      return {
+        uploadUrl,
+        publicUrl,
+        expiresAt,
+      };
+    });
   }
 
   private isCloudflareUploadUrl(value: string): boolean {
@@ -786,15 +817,41 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
       readonly init?: RequestInit;
       readonly key: string;
       readonly operation: string;
+      readonly signal?: AbortSignal;
     },
   ): Promise<Response> {
     try {
-      return options.init === undefined ? await fetch(input) : await fetch(input, options.init);
+      const init =
+        options.signal === undefined
+          ? options.init
+          : {
+              ...options.init,
+              signal: options.signal,
+            };
+      return init === undefined ? await fetch(input) : await fetch(input, init);
     } catch (error) {
       throw normalizeCloudflareImagesError(error, {
         key: options.key,
         operation: options.operation,
       });
+    }
+  }
+
+  private async runCancellable<T>(
+    options: StorageOperationOptions | undefined,
+    operation: StorageOperation,
+    key: string,
+    execute: () => Promise<T>,
+  ): Promise<T> {
+    this.assertOperationNotAborted(options, operation, key);
+
+    try {
+      const result = await execute();
+      this.assertOperationNotAborted(options, operation, key);
+      return result;
+    } catch (error) {
+      this.rethrowOperationAbort(error, options, operation, key);
+      throw error;
     }
   }
 }

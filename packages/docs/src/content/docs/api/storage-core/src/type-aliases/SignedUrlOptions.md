@@ -5,11 +5,11 @@ prev: false
 title: "SignedUrlOptions"
 ---
 
-> **SignedUrlOptions** = `object`
+> **SignedUrlOptions** = [`StorageOperationOptions`](/api/storage-core/src/type-aliases/storageoperationoptions/) & `object`
 
 서명된 URL 생성 옵션
 
-## Properties
+## Type Declaration
 
 ### expiresIn
 

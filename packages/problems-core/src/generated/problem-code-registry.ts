@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 680,
+  problemCount: 681,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -3922,7 +3922,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts",
-          line: 91,
+          line: 94,
           column: 13,
           kind: "problem-factory",
         },
@@ -3954,8 +3954,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts",
-          line: 321,
-          column: 13,
+          line: 348,
+          column: 15,
           kind: "problem-factory",
         },
       ],
@@ -3987,8 +3987,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts",
-          line: 408,
-          column: 13,
+          line: 438,
+          column: 15,
           kind: "problem-factory",
         },
       ],
@@ -16622,6 +16622,37 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "STORAGE_OPERATION_ABORTED",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#storage-operation-aborted",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/storage-core/src/libs/problems/StorageOperationAbortedProblem.ts",
+          line: 12,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
       code: "STORAGE_R2_EMPTY_BODY",
       category: "InternalServerError",
       status: 500,
@@ -16933,7 +16964,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/storage-cloudinary/src/libs/CloudinaryProvider.ts",
-          line: 377,
+          line: 379,
           column: 13,
           kind: "problem-factory",
         },
@@ -17090,8 +17121,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts",
-          line: 354,
-          column: 13,
+          line: 383,
+          column: 15,
           kind: "problem-factory",
         },
       ],

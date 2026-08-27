@@ -49,6 +49,11 @@ export { validateSignedUrlExpiry } from "./libs/signedUrlExpiry";
 export { StorageProblem } from "./libs/problems/StorageProblem";
 
 /**
+ * 호출자 취소로 스토리지 연산이 중단되었을 때 발생하는 Problem 타입입니다.
+ */
+export { StorageOperationAbortedProblem } from "./libs/problems/StorageOperationAbortedProblem";
+
+/**
  * 파일 업로드에 실패했을 때 발생하는 Problem 타입입니다.
  */
 export { UploadFailedProblem } from "./libs/problems/UploadFailedProblem";
@@ -62,8 +67,11 @@ export type {
   PutOptions,
   SignedUrlOptions,
   StorageBody,
+  StorageOperation,
+  StorageOperationOptions,
   StorageProvider,
   StorageStream,
   TransformOptions,
   UploadIntent,
+  UploadIntentOptions,
 } from "./libs/types";

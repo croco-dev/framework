@@ -17,6 +17,7 @@ import {
   MAX_SIGNED_URL_EXPIRY_SECONDS,
   readStorageBody,
   readStorageStream,
+  StorageOperationAbortedProblem,
   UploadFailedProblem,
 } from "@croco/storage-core";
 import type { StorageStream } from "@croco/storage-core";
@@ -337,6 +338,25 @@ describe("R2StorageProvider", () => {
         expiresIn: MAX_SIGNED_URL_EXPIRY_SECONDS,
       });
     });
+
+    it("rejects when the signal aborts while presigning", async () => {
+      const controller = new AbortController();
+      const reason = new Error("presigning cancelled");
+      vi.mocked(getSignedUrl).mockImplementationOnce(async () => {
+        controller.abort(reason);
+        return "https://signed-url.example.com/test/file.txt";
+      });
+
+      const signedUrlPromise = provider.getSignedUrl("test/file.txt", {
+        expiresIn: 60,
+        signal: controller.signal,
+      });
+
+      await expect(signedUrlPromise).rejects.toMatchObject({
+        cause: reason,
+        code: "STORAGE_OPERATION_ABORTED",
+      });
+    });
   });
 
   describe("getStream", () => {
@@ -369,6 +389,25 @@ describe("R2StorageProvider", () => {
 
       await expect(streamPromise).rejects.toBeInstanceOf(EmptyR2BodyProblem);
       await expect(streamPromise).rejects.toThrow("Empty response body");
+    });
+
+    it("keeps the returned stream linked to the operation signal", async () => {
+      const controller = new AbortController();
+      const reason = new Error("stream cancelled");
+      mockSend.mockResolvedValue({
+        Body: {
+          transformToWebStream: () => new ReadableStream<Uint8Array>({ pull() {} }),
+        },
+      });
+
+      const stream = await provider.getStream("test/file.txt", { signal: controller.signal });
+      const streamRead = stream.getReader().read();
+      controller.abort(reason);
+
+      await expect(streamRead).rejects.toMatchObject({
+        cause: reason,
+        code: "STORAGE_OPERATION_ABORTED",
+      });
     });
   });
 
@@ -584,6 +623,177 @@ describe("R2StorageProvider", () => {
         metadata: undefined,
       });
       expect(mockSend).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe("cancellation", () => {
+    it("does not call the SDK or presigner for pre-aborted operations", async () => {
+      const controller = new AbortController();
+      const reason = new Error("cancelled before start");
+      controller.abort(reason);
+
+      const operations = [
+        () => provider.put("test/file.txt", Buffer.from("data"), { signal: controller.signal }),
+        () => provider.get("test/file.txt", { signal: controller.signal }),
+        () => provider.getStream("test/file.txt", { signal: controller.signal }),
+        () => provider.delete("test/file.txt", { signal: controller.signal }),
+        () => provider.exists("test/file.txt", { signal: controller.signal }),
+        () =>
+          provider.getSignedUrl("test/file.txt", {
+            expiresIn: 60,
+            signal: controller.signal,
+          }),
+        () => provider.getMetadata("test/file.txt", { signal: controller.signal }),
+      ];
+
+      for (const operation of operations) {
+        await expect(operation()).rejects.toMatchObject({
+          cause: reason,
+          code: "STORAGE_OPERATION_ABORTED",
+        });
+      }
+
+      expect(mockSend).not.toHaveBeenCalled();
+      expect(vi.mocked(getSignedUrl)).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      [
+        "put",
+        (signal: AbortSignal) => provider.put("test/file.txt", Buffer.from("data"), { signal }),
+      ],
+      ["delete", (signal: AbortSignal) => provider.delete("test/file.txt", { signal })],
+    ])("surfaces in-flight %s cancellation without failure wrappers", async (_name, operation) => {
+      const controller = new AbortController();
+      const reason = new Error("cancelled in flight");
+      mockSend.mockImplementation(
+        async (_command: unknown, requestOptions: { abortSignal?: AbortSignal }) =>
+          await new Promise((_resolve, reject) => {
+            requestOptions.abortSignal?.addEventListener(
+              "abort",
+              () => {
+                const abortError = new Error("aborted by SDK");
+                abortError.name = "AbortError";
+                reject(abortError);
+              },
+              { once: true },
+            );
+          }),
+      );
+
+      const operationPromise = operation(controller.signal);
+      await vi.waitFor(() => expect(mockSend).toHaveBeenCalledTimes(1));
+      expect(mockSend.mock.calls[0]?.[1]).toEqual({ abortSignal: controller.signal });
+      controller.abort(reason);
+
+      await expect(operationPromise).rejects.toBeInstanceOf(StorageOperationAbortedProblem);
+      await expect(operationPromise).rejects.toMatchObject({
+        cause: reason,
+        code: "STORAGE_OPERATION_ABORTED",
+      });
+    });
+
+    it("terminates the upload source when a streaming put is aborted", async () => {
+      const controller = new AbortController();
+      const reason = new Error("cancel streaming upload");
+      let resolveSourceCancellation!: (reason: unknown) => void;
+      const sourceCancellation = new Promise<unknown>((resolve) => {
+        resolveSourceCancellation = resolve;
+      });
+      const source = new ReadableStream<Uint8Array>({
+        pull() {},
+        cancel(cancellationReason) {
+          resolveSourceCancellation(cancellationReason);
+        },
+      });
+      mockSend.mockImplementation(
+        async (command: MockS3Command, requestOptions: { abortSignal?: AbortSignal }) => {
+          const body = command.input.Body;
+          if (body instanceof Readable) {
+            body.once("error", () => undefined);
+          }
+
+          return await new Promise((_resolve, reject) => {
+            requestOptions.abortSignal?.addEventListener(
+              "abort",
+              () => {
+                const abortError = new Error("aborted by SDK");
+                abortError.name = "AbortError";
+                reject(abortError);
+              },
+              { once: true },
+            );
+          });
+        },
+      );
+
+      const upload = provider.put("test/file.txt", source, { signal: controller.signal });
+      await vi.waitFor(() => expect(mockSend).toHaveBeenCalledTimes(1));
+      controller.abort(reason);
+
+      await expect(sourceCancellation).resolves.toMatchObject({
+        cause: reason,
+        code: "STORAGE_OPERATION_ABORTED",
+      });
+      await expect(upload).rejects.toMatchObject({
+        cause: reason,
+        code: "STORAGE_OPERATION_ABORTED",
+      });
+      expect(mockSend).toHaveBeenCalledTimes(1);
+    });
+
+    it("rejects immediately when the signal aborts during retry backoff", async () => {
+      const controller = new AbortController();
+      const reason = new Error("cancel during backoff");
+      let rejectFirstAttempt!: (reason: unknown) => void;
+      mockSend
+        .mockImplementationOnce(
+          async () =>
+            await new Promise((_resolve, reject) => {
+              rejectFirstAttempt = reject;
+            }),
+        )
+        .mockResolvedValueOnce({});
+
+      const putPromise = provider.put("test/file.txt", Buffer.from("data"), {
+        signal: controller.signal,
+      });
+      let rejection: unknown;
+      let settled = false;
+      void putPromise.catch((error: unknown) => {
+        rejection = error;
+        settled = true;
+      });
+
+      await vi.waitFor(() => expect(mockSend).toHaveBeenCalledTimes(1));
+      vi.useFakeTimers();
+
+      try {
+        rejectFirstAttempt({
+          $metadata: { httpStatusCode: 503 },
+          name: "ServiceUnavailable",
+        });
+
+        for (let index = 0; index < 20 && vi.getTimerCount() === 0; index += 1) {
+          await Promise.resolve();
+        }
+        expect(vi.getTimerCount()).toBe(1);
+
+        controller.abort(reason);
+        for (let index = 0; index < 20 && !settled; index += 1) {
+          await Promise.resolve();
+        }
+
+        expect(settled).toBe(true);
+        expect(rejection).toMatchObject({
+          cause: reason,
+          code: "STORAGE_OPERATION_ABORTED",
+        });
+        expect(mockSend).toHaveBeenCalledTimes(1);
+        expect(vi.getTimerCount()).toBe(0);
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 });

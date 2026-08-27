@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { Component } from "@croco/framework-context";
 import { ProblemFactory } from "@croco/problems-core";
 import type { RetryPolicy } from "@croco/retry-core";
@@ -9,10 +10,12 @@ import type {
   SignedUrlOptions,
   StorageBody,
   StorageStream,
+  StorageOperation,
+  StorageOperationOptions,
   TransformOptions,
   UploadIntent,
+  UploadIntentOptions,
 } from "@croco/storage-core";
-import { storageStreamToNodeReadable } from "@croco/storage-core/node";
 import {
   BaseStorageProvider,
   InvalidKeyProblem,
@@ -41,6 +44,8 @@ const CLOUDINARY_RETRY_POLICY: RetryPolicy = {
     return isRetryableCloudinaryStorageError(error);
   },
 };
+
+const DEFAULT_CLOUDINARY_API_BASE_URL = "https://api.cloudinary.com";
 
 type CloudinarySdkError = Error & {
   code?: string;
@@ -112,6 +117,42 @@ function firstString(...values: readonly unknown[]): string | undefined {
   return undefined;
 }
 
+function normalizeCloudinaryApiBaseUrl(value: string | undefined): string {
+  let url: URL;
+
+  try {
+    url = new URL(value ?? DEFAULT_CLOUDINARY_API_BASE_URL);
+  } catch {
+    throw new CloudinaryValidationProblem(
+      {
+        provider: "cloudinary",
+        operation: "configuration",
+        upstreamCode: "invalid-api-base-url",
+      },
+      "Cloudinary apiBaseUrl must be an absolute HTTP or HTTPS URL",
+    );
+  }
+
+  if (
+    (url.protocol !== "http:" && url.protocol !== "https:") ||
+    url.username !== "" ||
+    url.password !== "" ||
+    url.search !== "" ||
+    url.hash !== ""
+  ) {
+    throw new CloudinaryValidationProblem(
+      {
+        provider: "cloudinary",
+        operation: "configuration",
+        upstreamCode: "invalid-api-base-url",
+      },
+      "Cloudinary apiBaseUrl must be an absolute HTTP or HTTPS URL without credentials, query, or fragment",
+    );
+  }
+
+  return url.origin;
+}
+
 function normalizeDownloadStream(stream: StorageStream, key: string): StorageStream {
   const reader = stream.getReader();
 
@@ -144,8 +185,8 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
   private readonly apiKey: string;
   private readonly apiSecret: string;
   private readonly secure: boolean;
+  private readonly apiBaseUrl: string;
   private readonly uploadBaseUrl: string;
-  private readonly retryTemplate: RetryTemplate;
   private readonly ttl: number;
 
   constructor(config: CloudinaryConfig) {
@@ -154,102 +195,57 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
     this.apiKey = config.apiKey;
     this.apiSecret = config.apiSecret;
     this.secure = config.secure ?? true;
-    this.uploadBaseUrl = config.uploadBaseUrl ?? "https://api.cloudinary.com";
+    this.apiBaseUrl = normalizeCloudinaryApiBaseUrl(config.apiBaseUrl);
+    this.uploadBaseUrl = config.uploadBaseUrl ?? DEFAULT_CLOUDINARY_API_BASE_URL;
     this.ttl = config.ttl ?? 3600;
-    this.retryTemplate = new RetryTemplate({
-      maxAttempts: 3,
-      backoff: {
-        delay: 10,
-        multiplier: 2,
-        maxDelay: 50,
-        jitter: false,
-      },
-      retryPolicy: CLOUDINARY_RETRY_POLICY,
-    });
   }
 
   async put(key: string, data: StorageBody, options?: PutOptions): Promise<void> {
     this.validateKey(key);
     this.validateSupportedContentType(key, options?.contentType);
+    this.assertOperationNotAborted(options, "put", key);
 
-    const uploadOptions: Record<string, unknown> = {
-      public_id: key,
-      resource_type: "image",
-    };
-
-    if (options?.metadata) {
-      uploadOptions.context = this.formatContext(options.metadata);
-    }
-
-    const upload = async () => {
-      await this.withConfiguredCloudinary(async () => {
-        await new Promise<void>((resolve, reject) => {
-          let uploadStream: ReturnType<typeof cloudinary.uploader.upload_stream>;
-
-          try {
-            uploadStream = cloudinary.uploader.upload_stream(
-              uploadOptions,
-              (error: unknown, _result: unknown) => {
-                if (error) {
-                  reject(toCloudinarySdkError(error, "Unknown Cloudinary upload error"));
-                  return;
-                }
-
-                resolve();
-              },
-            );
-          } catch (error) {
-            reject(toCloudinarySdkError(error, "Unknown Cloudinary upload error"));
-            return;
-          }
-
-          if (data instanceof Uint8Array) {
-            uploadStream.end(data);
-            return;
-          }
-
-          const readable = storageStreamToNodeReadable(data);
-          readable.once("error", (error) => {
-            reject(error);
-          });
-
-          readable.pipe(uploadStream);
-        });
-      });
-    };
-
-    const uploadPromise = data instanceof Uint8Array ? this.executeWithRetry(upload) : upload();
+    const upload = async () => await this.uploadResource(key, data, options);
+    const uploadPromise =
+      data instanceof Uint8Array ? this.executeWithRetry(upload, options, "put", key) : upload();
 
     return uploadPromise.catch((error) => {
+      this.rethrowOperationAbort(error, options, "put", key);
       throw normalizeCloudinaryStorageError(error, { key, operation: "put" });
     });
   }
 
-  async getStream(key: string): Promise<StorageStream> {
+  async getStream(key: string, options?: StorageOperationOptions): Promise<StorageStream> {
     this.validateKey(key);
+    this.assertOperationNotAborted(options, "getStream", key);
 
     const url = this.buildDeliveryUrl(key, "image");
 
     try {
-      const response = await this.executeWithRetry(async () => {
-        const fetchedResponse = await fetch(url);
+      const response = await this.executeWithRetry(
+        async () => {
+          const fetchedResponse = await fetch(url, { signal: options?.signal });
 
-        if (!fetchedResponse.ok) {
-          if (fetchedResponse.status === 404) {
-            this.throwNotFound(key);
+          if (!fetchedResponse.ok) {
+            if (fetchedResponse.status === 404) {
+              this.throwNotFound(key);
+            }
+
+            throw normalizeCloudinaryStorageError(
+              {
+                message: `Failed to fetch file: HTTP ${fetchedResponse.status}`,
+                status: fetchedResponse.status,
+              },
+              { key, operation: "get", status: fetchedResponse.status },
+            );
           }
 
-          throw normalizeCloudinaryStorageError(
-            {
-              message: `Failed to fetch file: HTTP ${fetchedResponse.status}`,
-              status: fetchedResponse.status,
-            },
-            { key, operation: "get", status: fetchedResponse.status },
-          );
-        }
-
-        return fetchedResponse;
-      });
+          return fetchedResponse;
+        },
+        options,
+        "getStream",
+        key,
+      );
 
       if (response.body === null) {
         throw normalizeCloudinaryStorageError(
@@ -258,24 +254,28 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
         );
       }
 
-      return normalizeDownloadStream(response.body, key);
+      return this.bindOperationSignal(
+        normalizeDownloadStream(response.body, key),
+        options,
+        "getStream",
+        key,
+      );
     } catch (error) {
+      this.rethrowOperationAbort(error, options, "getStream", key);
       throw normalizeCloudinaryStorageError(error, { key, operation: "get" });
     }
   }
 
-  async delete(key: string): Promise<void> {
+  async delete(key: string, options?: StorageOperationOptions): Promise<void> {
     this.validateKey(key);
+    this.assertOperationNotAborted(options, "delete", key);
 
     try {
       const result = await this.executeWithRetry(
-        async () =>
-          await this.executeCloudinaryOperation(
-            async () =>
-              await cloudinary.uploader.destroy(key, {
-                resource_type: "image",
-              }),
-          ),
+        async () => await this.destroyResource(key, options),
+        options,
+        "delete",
+        key,
       );
 
       if (result.result !== "ok" && result.result !== "not found") {
@@ -287,6 +287,7 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
         });
       }
     } catch (error) {
+      this.rethrowOperationAbort(error, options, "delete", key);
       throw normalizeCloudinaryStorageError(error, { key, operation: "delete" });
     }
   }
@@ -301,6 +302,7 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
 
   async getSignedUrl(key: string, options: SignedUrlOptions): Promise<string> {
     this.validateKey(key);
+    this.assertOperationNotAborted(options, "getSignedUrl", key);
     const expiresIn = validateSignedUrlExpiry(options.expiresIn);
 
     const url = cloudinary.url(key, {
@@ -314,18 +316,16 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
     return url;
   }
 
-  async getMetadata(key: string): Promise<ObjectMetadata> {
+  async getMetadata(key: string, options?: StorageOperationOptions): Promise<ObjectMetadata> {
     this.validateKey(key);
+    this.assertOperationNotAborted(options, "getMetadata", key);
 
     try {
       const resource = (await this.executeWithRetry(
-        async () =>
-          await this.executeCloudinaryOperation(
-            async () =>
-              await cloudinary.api.resource(key, {
-                resource_type: "image",
-              }),
-          ),
+        async () => await this.fetchResource(key, options),
+        options,
+        "getMetadata",
+        key,
       )) as {
         bytes?: number;
         format?: string;
@@ -342,6 +342,7 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
         metadata: resource.context ? this.parseContext(resource.context) : undefined,
       };
     } catch (error) {
+      this.rethrowOperationAbort(error, options, "getMetadata", key);
       if (this.isNotFoundError(error)) {
         this.throwNotFound(key);
       }
@@ -363,8 +364,9 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
     });
   }
 
-  async getUploadIntent(key: string, options?: { ttlInSeconds?: number }): Promise<UploadIntent> {
+  async getUploadIntent(key: string, options?: UploadIntentOptions): Promise<UploadIntent> {
     this.validateKey(key);
+    this.assertOperationNotAborted(options, "getUploadIntent", key);
     if (key.slice(key.lastIndexOf("/") + 1).includes(".")) {
       throw new InvalidKeyProblem(
         key,
@@ -411,37 +413,211 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
     return `${protocol}://res.cloudinary.com/${this.cloudName}/${resourceType}/upload/${key}`;
   }
 
-  private async executeWithRetry<T>(operation: () => Promise<T>): Promise<T> {
-    return await this.retryTemplate.execute(async () => await operation());
+  private async executeWithRetry<T>(
+    operation: () => Promise<T>,
+    options: StorageOperationOptions | undefined,
+    operationName: StorageOperation,
+    key: string,
+  ): Promise<T> {
+    const retryTemplate = new RetryTemplate({
+      maxAttempts: 3,
+      backoff: {
+        delay: 10,
+        multiplier: 2,
+        maxDelay: 50,
+        jitter: false,
+      },
+      retryPolicy: CLOUDINARY_RETRY_POLICY,
+      signal: options?.signal,
+    });
+    return await retryTemplate.execute(async () => {
+      this.assertOperationNotAborted(options, operationName, key);
+      const result = await operation();
+      this.assertOperationNotAborted(options, operationName, key);
+      return result;
+    });
   }
 
-  private async executeCloudinaryOperation<T>(operation: () => Promise<T>): Promise<T> {
-    try {
-      return await this.withConfiguredCloudinary(operation);
-    } catch (error) {
-      throw toCloudinarySdkError(error, "Unknown Cloudinary error");
-    }
-  }
-
-  private getCloudinaryConfig() {
-    return {
-      cloud_name: this.cloudName,
+  private async uploadResource(
+    key: string,
+    data: StorageBody,
+    options?: PutOptions,
+  ): Promise<void> {
+    const timestamp = Math.floor(Date.now() / 1000);
+    const context = options?.metadata ? this.formatContext(options.metadata) : undefined;
+    const signedFields = {
+      ...(context === undefined ? {} : { context }),
+      public_id: key,
+      timestamp,
+    };
+    const fields = {
       api_key: this.apiKey,
-      api_secret: this.apiSecret,
-      secure: this.secure,
+      ...(context === undefined ? {} : { context }),
+      public_id: key,
+      signature: cloudinary.utils.api_sign_request(signedFields, this.apiSecret),
+      timestamp: String(timestamp),
+    };
+    const boundary = `----croco-cloudinary-${randomBytes(12).toString("hex")}`;
+    const prefix = this.buildMultipartPrefix(
+      boundary,
+      fields,
+      key,
+      options?.contentType ?? "application/octet-stream",
+    );
+    const suffix = Buffer.from(`\r\n--${boundary}--\r\n`);
+    const signal = options?.signal;
+    let body: BodyInit;
+    let duplex: "half" | undefined;
+
+    if (data instanceof Uint8Array) {
+      body = Buffer.concat([prefix, data, suffix]);
+    } else {
+      body = this.createMultipartBody(
+        prefix,
+        this.bindOperationSignal(data, options, "put", key),
+        suffix,
+      );
+      duplex = "half";
+    }
+
+    const response = await fetch(this.buildCloudinaryApiUrl("image", "upload"), {
+      body,
+      headers: { "Content-Type": `multipart/form-data; boundary=${boundary}` },
+      method: "POST",
+      signal,
+      ...(duplex === undefined ? {} : { duplex }),
+    } as RequestInit & { duplex?: "half" });
+    const result = await this.readCloudinaryResponse(response, "Cloudinary upload request failed");
+    if (typeof result !== "object" || result === null || Reflect.get(result, "public_id") !== key) {
+      const responseError = new Error(
+        "Cloudinary upload response did not confirm the requested public ID",
+      ) as CloudinarySdkError;
+      responseError.code = "invalid-upload-response";
+      throw responseError;
+    }
+    this.assertOperationNotAborted(options, "put", key);
+  }
+
+  private buildMultipartPrefix(
+    boundary: string,
+    fields: Readonly<Record<string, string>>,
+    key: string,
+    contentType: string,
+  ): Buffer {
+    const fieldParts = Object.entries(fields).map(([name, value]) =>
+      Buffer.from(
+        `--${boundary}\r\nContent-Disposition: form-data; name="${name}"\r\n\r\n${value}\r\n`,
+      ),
+    );
+    const filename = key.slice(key.lastIndexOf("/") + 1).replace(/["\r\n]/g, "_");
+    const fileHeader = Buffer.from(
+      `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${filename}"\r\nContent-Type: ${contentType}\r\n\r\n`,
+    );
+    return Buffer.concat([...fieldParts, fileHeader]);
+  }
+
+  private createMultipartBody(
+    prefix: Uint8Array,
+    source: StorageStream,
+    suffix: Uint8Array,
+  ): StorageStream {
+    const reader = source.getReader();
+    let prefixSent = false;
+
+    return new ReadableStream<Uint8Array>({
+      pull: async (controller) => {
+        if (!prefixSent) {
+          prefixSent = true;
+          controller.enqueue(prefix);
+          return;
+        }
+
+        const result = await reader.read();
+        if (!result.done) {
+          controller.enqueue(result.value);
+          return;
+        }
+
+        controller.enqueue(suffix);
+        controller.close();
+      },
+      cancel: async (reason) => {
+        await reader.cancel(reason);
+      },
+    });
+  }
+
+  private async destroyResource(
+    key: string,
+    options?: StorageOperationOptions,
+  ): Promise<{ result: string }> {
+    const timestamp = Math.floor(Date.now() / 1000);
+    const signedFields = { public_id: key, timestamp };
+    const body = new URLSearchParams({
+      api_key: this.apiKey,
+      public_id: key,
+      signature: cloudinary.utils.api_sign_request(signedFields, this.apiSecret),
+      timestamp: String(timestamp),
+    });
+    const response = await fetch(this.buildCloudinaryApiUrl("image", "destroy"), {
+      body,
+      method: "POST",
+      signal: options?.signal,
+    });
+    return (await this.readCloudinaryResponse(response, "Cloudinary destroy request failed")) as {
+      result: string;
     };
   }
 
-  private async withConfiguredCloudinary<T>(operation: () => Promise<T>): Promise<T> {
-    const previousConfig = { ...cloudinary.config() };
+  private async fetchResource(key: string, options?: StorageOperationOptions): Promise<unknown> {
+    const response = await fetch(this.buildCloudinaryApiUrl("resources", "image", "upload", key), {
+      headers: {
+        Authorization: `Basic ${Buffer.from(`${this.apiKey}:${this.apiSecret}`).toString("base64")}`,
+      },
+      signal: options?.signal,
+    });
+    return await this.readCloudinaryResponse(response, "Cloudinary resource request failed");
+  }
 
-    cloudinary.config(this.getCloudinaryConfig());
+  private buildCloudinaryApiUrl(...segments: readonly string[]): string {
+    const encodedPath = ["v1_1", this.cloudName, ...segments].map(encodeURIComponent).join("/");
+    return new URL(`/${encodedPath}`, this.apiBaseUrl).toString();
+  }
 
+  private async readCloudinaryResponse(
+    response: Response,
+    fallbackMessage: string,
+  ): Promise<unknown> {
+    let result: unknown;
     try {
-      return await operation();
-    } finally {
-      cloudinary.config(previousConfig);
+      result = await response.json();
+    } catch (error) {
+      if (response.ok) {
+        const responseError = new Error(
+          `${fallbackMessage}: expected a valid JSON response`,
+        ) as CloudinarySdkError;
+        Object.defineProperty(responseError, "cause", {
+          configurable: true,
+          value: error,
+        });
+        responseError.http_code = response.status;
+        responseError.status = response.status;
+        responseError.statusCode = response.status;
+        throw responseError;
+      }
+
+      result = undefined;
     }
+
+    if (response.ok) {
+      return result;
+    }
+
+    const error = toCloudinarySdkError(result, fallbackMessage);
+    error.http_code = response.status;
+    error.status = response.status;
+    error.statusCode = response.status;
+    throw error;
   }
 
   private buildTransformParams(options: CloudinaryTransformOptions): string | undefined {
@@ -524,7 +700,10 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
   }
 
   private validateSupportedContentType(key: string, contentType?: string): void {
-    if (contentType === undefined || contentType.toLowerCase().startsWith("image/")) {
+    if (
+      contentType === undefined ||
+      (contentType.toLowerCase().startsWith("image/") && !/[\r\n]/.test(contentType))
+    ) {
       return;
     }
 

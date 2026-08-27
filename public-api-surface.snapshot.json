@@ -26059,6 +26059,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "StorageOperationAbortedProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/StorageOperationAbortedProblem",
+              "declarationKind": "class"
+            },
+            {
               "name": "StorageProblem",
               "exportKind": "named",
               "source": "./libs/problems/StorageProblem",
@@ -26110,6 +26116,16 @@
               "source": "./libs/types"
             },
             {
+              "name": "StorageOperation",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "StorageOperationOptions",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
               "name": "StorageProvider",
               "exportKind": "named",
               "source": "./libs/types"
@@ -26126,6 +26142,11 @@
             },
             {
               "name": "UploadIntent",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "UploadIntentOptions",
               "exportKind": "named",
               "source": "./libs/types"
             }
