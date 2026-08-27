@@ -298,7 +298,7 @@ type RuntimeCapabilitySmokePlatform = "node" | "lambda" | "cloudflare-workers";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const rootDir = resolve(__dirname, "..");
-const cliPath = join(rootDir, "packages", "create-croco-app", "dist", "index.js");
+const cliPath = join(rootDir, "packages", "create-croco-app", "dist", "bin.js");
 const generatedAppTemplatesDir = join(rootDir, "packages", "create-croco-app", "templates");
 const generatedSmokeReportDir = resolve(
   process.env.CROCO_GENERATED_SMOKE_REPORT_DIR ?? join(rootDir, "ci-reports", "generated-apps"),

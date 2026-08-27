@@ -238,6 +238,8 @@ describe("generated test execution evidence", () => {
 
     expect(source).not.toContain("runExactGeneratedTest");
     expect(source).not.toContain('"--force"');
+    expect(source).toContain('"create-croco-app", "dist", "bin.js"');
+    expect(source).not.toContain('"create-croco-app", "dist", "index.js"');
     expect(source.match(/runValidation\(projectDir, smokeCase, validation/g)).toHaveLength(1);
     expect(source).toContain('validation.label === "test"');
     expect(source).toContain('validation.label === "browser journeys"');
