@@ -3,7 +3,10 @@
   "extends": "../../tsconfig/tsconfig.node.json",
   "compilerOptions": {
     "module": "esnext",
-    "moduleResolution": "bundler"
+    "moduleResolution": "bundler",
+    "paths": {
+      "@croco/storage-core/node": ["../storage-core/src/node.ts"]
+    }
   },
   "include": ["src/**/*.ts"]
 }

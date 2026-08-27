@@ -87,7 +87,7 @@ Cloudflare Images를 이용해 파일 저장과 이미지 변환 URL 생성을 �
 
 ### get()
 
-> **get**(`key`): `Promise`\<`Buffer`\<`ArrayBufferLike`\>\>
+> **get**(`key`): `Promise`\<`Uint8Array`\<`ArrayBufferLike`\>\>
 
 파일 다운로드
 
@@ -101,15 +101,15 @@ Cloudflare Images를 이용해 파일 저장과 이미지 변환 URL 생성을 �
 
 #### Returns
 
-`Promise`\<`Buffer`\<`ArrayBufferLike`\>\>
+`Promise`\<`Uint8Array`\<`ArrayBufferLike`\>\>
 
-파일 버퍼
+파일 바이트
 
 #### Throws
 
 FileNotFoundProblem - 파일이 존재하지 않을 때
 
-#### Overrides
+#### Inherited from
 
 [`BaseStorageProvider`](/api/storage-core/src/classes/basestorageprovider/).[`get`](/api/storage-core/src/classes/basestorageprovider/#get)
 
@@ -205,7 +205,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 ### getStream()
 
-> **getStream**(`key`): `Promise`\<`Readable`\>
+> **getStream**(`key`): `Promise`\<[`StorageStream`](/api/storage-core/src/type-aliases/storagestream/)\>
 
 파일 스트림 다운로드
 
@@ -219,15 +219,15 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 #### Returns
 
-`Promise`\<`Readable`\>
+`Promise`\<[`StorageStream`](/api/storage-core/src/type-aliases/storagestream/)\>
 
-읽기 가능한 스트림
+Web 읽기 가능 스트림
 
 #### Throws
 
 FileNotFoundProblem - 파일이 존재하지 않을 때
 
-#### Inherited from
+#### Overrides
 
 [`BaseStorageProvider`](/api/storage-core/src/classes/basestorageprovider/).[`getStream`](/api/storage-core/src/classes/basestorageprovider/#getstream)
 
@@ -315,9 +315,9 @@ CDN에서 실시간으로 이미지를 변환하고 반환합니다.
 
 ##### data
 
-`Buffer`\<`ArrayBufferLike`\> \| `Readable`
+[`StorageBody`](/api/storage-core/src/type-aliases/storagebody/)
 
-파일 데이터 (Buffer 또는 Readable 스트림)
+파일 데이터 또는 Web ReadableStream
 
 ##### options?
 

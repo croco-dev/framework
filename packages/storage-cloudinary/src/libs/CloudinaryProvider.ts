@@ -1,4 +1,3 @@
-import type { Readable } from "node:stream";
 import { Component } from "@croco/framework-context";
 import { ProblemFactory } from "@croco/problems-core";
 import type { RetryPolicy } from "@croco/retry-core";
@@ -8,9 +7,12 @@ import type {
   ObjectMetadata,
   PutOptions,
   SignedUrlOptions,
+  StorageBody,
+  StorageStream,
   TransformOptions,
   UploadIntent,
 } from "@croco/storage-core";
+import { storageStreamToNodeReadable } from "@croco/storage-core/node";
 import {
   BaseStorageProvider,
   InvalidKeyProblem,
@@ -110,6 +112,29 @@ function firstString(...values: readonly unknown[]): string | undefined {
   return undefined;
 }
 
+function normalizeDownloadStream(stream: StorageStream, key: string): StorageStream {
+  const reader = stream.getReader();
+
+  return new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      try {
+        const result = await reader.read();
+        if (result.done) {
+          controller.close();
+          return;
+        }
+
+        controller.enqueue(result.value);
+      } catch (error) {
+        controller.error(normalizeCloudinaryStorageError(error, { key, operation: "get" }));
+      }
+    },
+    async cancel(reason) {
+      await reader.cancel(reason);
+    },
+  });
+}
+
 /**
  * Cloudinary를 이용해 파일 저장과 이미지 변환 URL 생성을 제공하는 구현체입니다.
  */
@@ -143,7 +168,7 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
     });
   }
 
-  async put(key: string, data: Buffer | Readable, options?: PutOptions): Promise<void> {
+  async put(key: string, data: StorageBody, options?: PutOptions): Promise<void> {
     this.validateKey(key);
     this.validateSupportedContentType(key, options?.contentType);
 
@@ -178,28 +203,29 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
             return;
           }
 
-          if (Buffer.isBuffer(data)) {
+          if (data instanceof Uint8Array) {
             uploadStream.end(data);
             return;
           }
 
-          data.once("error", (error) => {
+          const readable = storageStreamToNodeReadable(data);
+          readable.once("error", (error) => {
             reject(error);
           });
 
-          data.pipe(uploadStream);
+          readable.pipe(uploadStream);
         });
       });
     };
 
-    const uploadPromise = Buffer.isBuffer(data) ? this.executeWithRetry(upload) : upload();
+    const uploadPromise = data instanceof Uint8Array ? this.executeWithRetry(upload) : upload();
 
     return uploadPromise.catch((error) => {
       throw normalizeCloudinaryStorageError(error, { key, operation: "put" });
     });
   }
 
-  async get(key: string): Promise<Buffer> {
+  async getStream(key: string): Promise<StorageStream> {
     this.validateKey(key);
 
     const url = this.buildDeliveryUrl(key, "image");
@@ -225,8 +251,14 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
         return fetchedResponse;
       });
 
-      const arrayBuffer = await response.arrayBuffer();
-      return Buffer.from(arrayBuffer);
+      if (response.body === null) {
+        throw normalizeCloudinaryStorageError(
+          { message: "Cloudinary response body is missing" },
+          { key, operation: "get" },
+        );
+      }
+
+      return normalizeDownloadStream(response.body, key);
     } catch (error) {
       throw normalizeCloudinaryStorageError(error, { key, operation: "get" });
     }

@@ -9,6 +9,11 @@ export { BaseStorageProvider } from "./libs/BaseStorageProvider";
 export { InMemoryStorageProvider } from "./libs/InMemoryStorageProvider";
 
 /**
+ * Runtime-neutral storage body conversion helpers.
+ */
+export { readStorageBody, readStorageStream, storageStreamFromBytes } from "./libs/storageBody";
+
+/**
  * 파일 삭제에 실패했을 때 발생하는 Problem 타입입니다.
  */
 export { DeleteFailedProblem } from "./libs/problems/DeleteFailedProblem";
@@ -56,7 +61,9 @@ export type {
   ObjectMetadata,
   PutOptions,
   SignedUrlOptions,
+  StorageBody,
   StorageProvider,
+  StorageStream,
   TransformOptions,
   UploadIntent,
 } from "./libs/types";

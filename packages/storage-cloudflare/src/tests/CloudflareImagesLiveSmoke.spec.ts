@@ -158,8 +158,13 @@ describe("Cloudflare Images live smoke", () => {
         expect(baseImage.subarray(0, 8)).toEqual(
           Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
         );
-        expect(baseImage.readUInt32BE(16)).toBe(1);
-        expect(baseImage.readUInt32BE(20)).toBe(1);
+        const imageHeader = new DataView(
+          baseImage.buffer,
+          baseImage.byteOffset,
+          baseImage.byteLength,
+        );
+        expect(imageHeader.getUint32(16)).toBe(1);
+        expect(imageHeader.getUint32(20)).toBe(1);
       } finally {
         if (uploaded) {
           await storageProvider.delete(key);

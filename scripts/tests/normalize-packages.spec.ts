@@ -550,6 +550,59 @@ describe("normalize-packages.mjs", () => {
     expect(pkg.publishConfig.exports).toEqual(pkg.exports);
   });
 
+  it("preserves explicit direct-dist subpath exports", () => {
+    const root = createTempRoot();
+    const packagePath = writePackage(root, "storage-core", {
+      name: "@croco/storage-core",
+      version: "0.0.3",
+      files: ["dist"],
+      type: "commonjs",
+      main: "./dist/index.js",
+      module: "./dist/index.mjs",
+      types: "./dist/index.d.ts",
+      exports: {
+        ".": {
+          types: "./dist/index.d.ts",
+          import: "./dist/index.mjs",
+          require: "./dist/index.js",
+        },
+        "./node": {
+          types: "./dist/node.d.ts",
+          import: "./dist/node.mjs",
+          require: "./dist/node.js",
+        },
+      },
+      publishConfig: {
+        access: "public",
+        main: "./dist/index.js",
+        types: "./dist/index.d.ts",
+        exports: {
+          ".": {
+            types: "./dist/index.d.ts",
+            import: "./dist/index.mjs",
+            require: "./dist/index.js",
+          },
+          "./node": {
+            types: "./dist/node.d.ts",
+            import: "./dist/node.mjs",
+            require: "./dist/node.js",
+          },
+        },
+      },
+    });
+
+    const result = runScript(root, "--write");
+    const pkg = JSON.parse(readFileSync(packagePath, "utf-8"));
+
+    expect(result.status).toBe(0);
+    expect(pkg.exports["./node"]).toEqual({
+      types: "./dist/node.d.ts",
+      import: "./dist/node.mjs",
+      require: "./dist/node.js",
+    });
+    expect(pkg.publishConfig.exports).toEqual(pkg.exports);
+  });
+
   it("skips the private docs site and allows documented public non-library package exceptions", () => {
     const root = createTempRoot();
     writePackage(

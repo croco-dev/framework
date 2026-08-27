@@ -79,7 +79,7 @@ title: "BaseStorageProvider"
 
 ### get()
 
-> `abstract` **get**(`key`): `Promise`\<`Buffer`\<`ArrayBufferLike`\>\>
+> **get**(`key`): `Promise`\<`Uint8Array`\<`ArrayBufferLike`\>\>
 
 파일 다운로드
 
@@ -93,9 +93,9 @@ title: "BaseStorageProvider"
 
 #### Returns
 
-`Promise`\<`Buffer`\<`ArrayBufferLike`\>\>
+`Promise`\<`Uint8Array`\<`ArrayBufferLike`\>\>
 
-파일 버퍼
+파일 바이트
 
 #### Throws
 
@@ -197,7 +197,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 ### getStream()
 
-> **getStream**(`key`): `Promise`\<`Readable`\>
+> `abstract` **getStream**(`key`): `Promise`\<[`StorageStream`](/api/storage-core/src/type-aliases/storagestream/)\>
 
 파일 스트림 다운로드
 
@@ -211,9 +211,9 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 #### Returns
 
-`Promise`\<`Readable`\>
+`Promise`\<[`StorageStream`](/api/storage-core/src/type-aliases/storagestream/)\>
 
-읽기 가능한 스트림
+Web 읽기 가능 스트림
 
 #### Throws
 
@@ -241,9 +241,9 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 ##### data
 
-`Buffer`\<`ArrayBufferLike`\> \| `Readable`
+[`StorageBody`](/api/storage-core/src/type-aliases/storagebody/)
 
-파일 데이터 (Buffer 또는 Readable 스트림)
+파일 데이터 또는 Web ReadableStream
 
 ##### options?
 

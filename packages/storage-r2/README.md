@@ -15,7 +15,7 @@ import { R2StorageProvider } from "@croco/storage-r2";
 
 const storage = new R2StorageProvider(configService, logger);
 
-await storage.put("images/logo.png", Buffer.from("content"), {
+await storage.put("images/logo.png", new TextEncoder().encode("content"), {
   contentType: "image/png",
 });
 
@@ -77,9 +77,10 @@ const health = await diagnostics.getHealth();
 
 ## 동작 메모
 
-- 버퍼 업로드와 다운로드는 최대 3회 재시도합니다.
+- 재사용 가능한 `Uint8Array` 업로드와 다운로드 요청은 최대 3회 재시도합니다.
+- Web `ReadableStream<Uint8Array>` 업로드는 소비 후 재사용할 수 없으므로 재시도하지 않습니다.
 - `get()`은 메모리 사용량 보호를 위해 10MB까지만 허용합니다.
-- 큰 파일은 `getStream()`을 사용하세요.
+- `getStream()`은 R2 응답을 Web Stream으로 직접 노출하므로 큰 파일을 전체 버퍼링하지 않습니다.
 
 ## 검증
 

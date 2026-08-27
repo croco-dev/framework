@@ -1,6 +1,5 @@
 // Constructor dependencies must remain runtime values for emitted design:paramtypes metadata.
 /* oxlint-disable typescript/consistent-type-imports */
-import type { Readable } from "node:stream";
 import { S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { ConfigService } from "@croco/framework-config";
@@ -8,8 +7,15 @@ import { Component } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
 import type { RetryPolicy } from "@croco/retry-core";
 import { RetryTemplate } from "@croco/retry-core";
-import type { ObjectMetadata, PutOptions, SignedUrlOptions } from "@croco/storage-core";
+import type {
+  ObjectMetadata,
+  PutOptions,
+  SignedUrlOptions,
+  StorageBody,
+  StorageStream,
+} from "@croco/storage-core";
 import { BaseStorageProvider, validateSignedUrlExpiry } from "@croco/storage-core";
+import { storageStreamToNodeReadable } from "@croco/storage-core/node";
 import { EmptyR2BodyProblem } from "./problems/EmptyR2BodyProblem";
 import { R2ObjectTooLargeProblem } from "./problems/R2ObjectTooLargeProblem";
 import { validateR2Options } from "./R2Config";
@@ -189,6 +195,7 @@ export class R2StorageProvider extends BaseStorageProvider {
     this.client = new S3Client({
       region: "auto",
       endpoint: `https://${this.options.accountId}.r2.cloudflarestorage.com`,
+      requestChecksumCalculation: "WHEN_REQUIRED",
       credentials: {
         accessKeyId: this.options.accessKeyId,
         secretAccessKey: this.options.secretAccessKey,
@@ -196,17 +203,19 @@ export class R2StorageProvider extends BaseStorageProvider {
     });
   }
 
-  async put(key: string, data: Buffer | Readable, options?: PutOptions): Promise<void> {
+  async put(key: string, data: StorageBody, options?: PutOptions): Promise<void> {
     this.validateKey(key);
 
     try {
+      const replayable = data instanceof Uint8Array;
+      const body = replayable ? data : storageStreamToNodeReadable(data);
       const upload = async (shouldRetry: boolean) => {
         const { PutObjectCommand } = await import("@aws-sdk/client-s3");
 
         const command = new PutObjectCommand({
           Bucket: this.options.bucket,
           Key: key,
-          Body: data,
+          Body: body,
           ContentType: options?.contentType,
           CacheControl: options?.cacheControl,
           Metadata: options?.metadata,
@@ -223,13 +232,13 @@ export class R2StorageProvider extends BaseStorageProvider {
         await send();
       };
 
-      await upload(Buffer.isBuffer(data));
+      await upload(replayable);
     } catch (error) {
       this.throwUploadFailed(key, error);
     }
   }
 
-  async getStream(key: string): Promise<Readable> {
+  async getStream(key: string): Promise<StorageStream> {
     this.validateKey(key);
 
     const { GetObjectCommand } = await import("@aws-sdk/client-s3");
@@ -249,34 +258,18 @@ export class R2StorageProvider extends BaseStorageProvider {
         throw new EmptyR2BodyProblem(key);
       }
 
-      return response.Body as Readable;
+      return response.Body.transformToWebStream() as StorageStream;
     } catch (error) {
       return this.handleNotFoundError(key, error);
     }
   }
 
-  async get(key: string): Promise<Buffer> {
+  async get(key: string): Promise<Uint8Array> {
     this.validateKey(key);
 
     try {
-      const { GetObjectCommand } = await import("@aws-sdk/client-s3");
-
-      const command = new GetObjectCommand({
-        Bucket: this.options.bucket,
-        Key: key,
-      });
-
-      const response = await this.executeWithRetry(
-        async () =>
-          await this.executeR2Operation(() => this.client.send(command), "Unknown download error"),
-      );
-
-      if (!response.Body) {
-        throw new EmptyR2BodyProblem(key);
-      }
-
       const chunks: Uint8Array[] = [];
-      const stream = response.Body as Readable;
+      const stream = await this.getStream(key);
       let totalBytes = 0;
 
       for await (const chunk of stream) {
@@ -289,7 +282,15 @@ export class R2StorageProvider extends BaseStorageProvider {
         chunks.push(chunk);
       }
 
-      return Buffer.concat(chunks);
+      const bytes = new Uint8Array(totalBytes);
+      let offset = 0;
+
+      for (const chunk of chunks) {
+        bytes.set(chunk, offset);
+        offset += chunk.byteLength;
+      }
+
+      return bytes;
     } catch (error) {
       return this.handleNotFoundError(key, error);
     }

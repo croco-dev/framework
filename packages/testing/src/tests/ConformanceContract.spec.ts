@@ -251,8 +251,8 @@ describe("@croco/testing conformance public contract", () => {
     });
 
     expect(caseNames(suite)).toEqual([
-      "stores and reads buffer objects with required metadata",
-      "stores and streams readable objects",
+      "stores and reads Uint8Array objects with required metadata",
+      "stores and streams ReadableStream objects",
       "deletes existing objects and reports them missing",
       "reports missing objects with deterministic not-found behavior",
       "rejects invalid storage keys consistently",

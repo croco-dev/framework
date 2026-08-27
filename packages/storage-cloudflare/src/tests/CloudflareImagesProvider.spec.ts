@@ -2,6 +2,7 @@ import { Container } from "@croco/framework-context";
 import {
   FileNotFoundProblem,
   MAX_SIGNED_URL_EXPIRY_SECONDS,
+  storageStreamFromBytes,
   UploadFailedProblem,
 } from "@croco/storage-core";
 import { createStorageProviderConformanceSuite } from "@croco/testing";
@@ -133,9 +134,8 @@ describe("CloudflareImagesProvider", () => {
       expect((request.body as FormData).get("id")).toBe("test.jpg");
     });
 
-    it("should upload file successfully with Readable stream", async () => {
-      const { Readable } = await import("node:stream");
-      const mockStream = Readable.from(Buffer.from("test-image-data"));
+    it("should upload file successfully with Web ReadableStream", async () => {
+      const mockStream = storageStreamFromBytes(Buffer.from("test-image-data"));
 
       const mockResponse = {
         ok: true,
@@ -210,13 +210,16 @@ describe("CloudflareImagesProvider", () => {
     });
 
     it("should reject an unsupported image id before consuming a stream", async () => {
-      const { Readable } = await import("node:stream");
       let consumed = false;
-      const stream = Readable.from(
-        (async function* () {
-          consumed = true;
-          yield Buffer.from("test-image-data");
-        })(),
+      const stream = new ReadableStream<Uint8Array>(
+        {
+          pull(controller) {
+            consumed = true;
+            controller.enqueue(Buffer.from("test-image-data"));
+            controller.close();
+          },
+        },
+        { highWaterMark: 0 },
       );
 
       await expect(provider.put("a".repeat(1025), stream)).rejects.toMatchObject({
@@ -230,13 +233,16 @@ describe("CloudflareImagesProvider", () => {
     });
 
     it("should reject ill-formed Unicode before consuming a stream", async () => {
-      const { Readable } = await import("node:stream");
       let consumed = false;
-      const stream = Readable.from(
-        (async function* () {
-          consumed = true;
-          yield Buffer.from("test-image-data");
-        })(),
+      const stream = new ReadableStream<Uint8Array>(
+        {
+          pull(controller) {
+            consumed = true;
+            controller.enqueue(Buffer.from("test-image-data"));
+            controller.close();
+          },
+        },
+        { highWaterMark: 0 },
       );
 
       await expect(provider.put(String.fromCharCode(0xd800), stream)).rejects.toMatchObject({
@@ -276,12 +282,21 @@ describe("CloudflareImagesProvider", () => {
     });
 
     it("should throw UploadFailedProblem when stream exceeds maxUploadBytes", async () => {
-      const { Readable } = await import("node:stream");
       const providerWithLimit = new CloudflareImagesProvider({
         ...mockOptions,
         maxUploadBytes: 4,
       });
-      const mockStream = Readable.from([Buffer.from("1234"), Buffer.from("5")]);
+      const chunks = [Buffer.from("1234"), Buffer.from("5")];
+      const mockStream = new ReadableStream<Uint8Array>({
+        pull(controller) {
+          const chunk = chunks.shift();
+          if (chunk === undefined) {
+            controller.close();
+            return;
+          }
+          controller.enqueue(chunk);
+        },
+      });
 
       await expect(providerWithLimit.put("test.jpg", mockStream)).rejects.toThrow(
         UploadFailedProblem,
@@ -342,16 +357,11 @@ describe("CloudflareImagesProvider", () => {
   describe("get", () => {
     it("should download the authenticated base image blob without using the delivery variant", async () => {
       const mockImageData = Buffer.from("mock-image-data");
-      const mockResponse = {
-        ok: true,
-        arrayBuffer: async () => new Uint8Array(mockImageData).buffer,
-      };
-
-      mockFetch.mockResolvedValueOnce(mockResponse);
+      mockFetch.mockResolvedValueOnce(new Response(mockImageData));
 
       const result = await provider.get("test-image-id");
 
-      expect(result).toEqual(mockImageData);
+      expect(result).toEqual(new Uint8Array(mockImageData));
       expect(mockFetch).toHaveBeenCalledWith(
         "https://api.cloudflare.com/client/v4/accounts/test-account-id/images/v1/test-image-id/blob",
         {
@@ -395,11 +405,17 @@ describe("CloudflareImagesProvider", () => {
     );
 
     it("should normalize a blob body read failure into a stable provider Problem", async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        arrayBuffer: async () =>
-          Promise.reject(Object.assign(new Error("connection reset"), { code: "ECONNRESET" })),
-      });
+      mockFetch.mockResolvedValueOnce(
+        new Response(
+          new ReadableStream<Uint8Array>({
+            pull(controller) {
+              controller.error(
+                Object.assign(new Error("connection reset"), { code: "ECONNRESET" }),
+              );
+            },
+          }),
+        ),
+      );
 
       const request = provider.get("test-image-id");
       await expect(request).rejects.toThrow();
@@ -417,12 +433,7 @@ describe("CloudflareImagesProvider", () => {
     it("should not use a configured custom delivery domain for base image reads", async () => {
       const providerWithCustomDomain = new CloudflareImagesProvider(mockOptionsWithCustomDomain);
       const mockImageData = Buffer.from("mock-image-data");
-      const mockResponse = {
-        ok: true,
-        arrayBuffer: async () => new Uint8Array(mockImageData).buffer,
-      };
-
-      mockFetch.mockResolvedValueOnce(mockResponse);
+      mockFetch.mockResolvedValueOnce(new Response(mockImageData));
 
       await providerWithCustomDomain.get("test-image-id");
 
@@ -437,10 +448,7 @@ describe("CloudflareImagesProvider", () => {
     });
 
     it("should encode the complete image id as one blob path parameter", async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        arrayBuffer: async () => new ArrayBuffer(0),
-      });
+      mockFetch.mockResolvedValueOnce(new Response(new Uint8Array()));
 
       await provider.get("folder/50% café?#.jpg");
 
@@ -454,19 +462,14 @@ describe("CloudflareImagesProvider", () => {
   describe("getStream", () => {
     it("should return readable stream", async () => {
       const mockImageData = Buffer.from("mock-image-data");
-      const mockResponse = {
-        ok: true,
-        arrayBuffer: async () => new Uint8Array(mockImageData).buffer,
-      };
-
-      mockFetch.mockResolvedValueOnce(mockResponse);
+      mockFetch.mockResolvedValueOnce(new Response(mockImageData));
 
       const stream = await provider.getStream("test-image-id");
 
       expect(stream).not.toBeUndefined();
-      const chunks: Buffer[] = [];
+      const chunks: Uint8Array[] = [];
       for await (const chunk of stream) {
-        chunks.push(chunk as Buffer);
+        chunks.push(chunk);
       }
       expect(Buffer.concat(chunks)).toEqual(mockImageData);
     });
@@ -1011,21 +1014,20 @@ describe("CloudflareImagesProvider", () => {
 
       await provider.put(key, data, { contentType: "image/jpeg" });
 
-      await expect(provider.get(key)).resolves.toEqual(data);
+      await expect(provider.get(key)).resolves.toEqual(new Uint8Array(data));
       await expect(provider.getMetadata(key)).resolves.toMatchObject({ size: data.length });
       await provider.delete(key);
       await expect(provider.exists(key)).resolves.toBe(false);
     });
 
     it("should use the multipart image id for stream round trips", async () => {
-      const { Readable } = await import("node:stream");
       useInMemoryCloudflareImagesBackend(mockFetch, mockOptions.accountHash);
       const key = "streams/🦊 image.jpg";
       const data = Buffer.from("stream-image-data");
 
-      await provider.put(key, Readable.from(data), { contentType: "image/jpeg" });
+      await provider.put(key, storageStreamFromBytes(data), { contentType: "image/jpeg" });
 
-      await expect(provider.get(key)).resolves.toEqual(data);
+      await expect(provider.get(key)).resolves.toEqual(new Uint8Array(data));
       await expect(provider.getMetadata(key)).resolves.toMatchObject({ size: data.length });
       await provider.delete(key);
       await expect(provider.exists(key)).resolves.toBe(false);

@@ -1,10 +1,11 @@
-import { Readable } from "node:stream";
 import * as assert from "node:assert/strict";
 import {
   FileNotFoundProblem,
   InvalidKeyProblem,
   InvalidSignedUrlExpiryProblem,
   MAX_SIGNED_URL_EXPIRY_SECONDS,
+  readStorageStream,
+  storageStreamFromBytes,
   type ObjectMetadata,
   type StorageProvider,
 } from "@croco/storage-core";
@@ -77,11 +78,11 @@ export function createStorageProviderConformanceSuite(
   return {
     cases: [
       {
-        name: "stores and reads buffer objects with required metadata",
+        name: "stores and reads Uint8Array objects with required metadata",
         run: async () => {
           const provider = await createProvider();
-          const key = createKey("buffer");
-          const data = Buffer.from("croco storage conformance buffer");
+          const key = createKey("bytes");
+          const data = encodeText("croco storage conformance bytes");
 
           await provider.put(key, data, {
             contentType: putContentType,
@@ -104,18 +105,18 @@ export function createStorageProviderConformanceSuite(
         },
       },
       {
-        name: "stores and streams readable objects",
+        name: "stores and streams ReadableStream objects",
         run: async () => {
           const provider = await createProvider();
           const key = createKey("stream");
-          const data = Buffer.from("croco storage conformance stream");
+          const data = encodeText("croco storage conformance stream");
 
-          await provider.put(key, Readable.from([data]), {
+          await provider.put(key, storageStreamFromBytes(data), {
             contentType: putContentType,
           });
 
           const stream = await provider.getStream(key);
-          assert.deepEqual(await readStream(stream), data);
+          assert.deepEqual(await readStorageStream(stream), data);
         },
       },
       {
@@ -124,7 +125,7 @@ export function createStorageProviderConformanceSuite(
           const provider = await createProvider();
           const key = createKey("delete");
 
-          await provider.put(key, Buffer.from("delete me"));
+          await provider.put(key, encodeText("delete me"));
           assert.equal(await provider.exists(key), true);
 
           await provider.delete(key);
@@ -152,10 +153,7 @@ export function createStorageProviderConformanceSuite(
           const invalidKeys = ["", "/leading-slash", "trailing-slash/", "double//slash"];
 
           for (const key of invalidKeys) {
-            await assert.rejects(
-              () => provider.put(key, Buffer.from("invalid")),
-              InvalidKeyProblem,
-            );
+            await assert.rejects(() => provider.put(key, encodeText("invalid")), InvalidKeyProblem);
             await assert.rejects(() => provider.get(key), InvalidKeyProblem);
             await assert.rejects(() => provider.getStream(key), InvalidKeyProblem);
             await assert.rejects(() => provider.delete(key), InvalidKeyProblem);
@@ -175,7 +173,7 @@ export function createStorageProviderConformanceSuite(
           const provider = await createProvider();
           const key = createKey("signed-url-expiry");
 
-          await provider.put(key, Buffer.from("signed URL expiry target"));
+          await provider.put(key, encodeText("signed URL expiry target"));
 
           for (const expiresIn of INVALID_SIGNED_URL_EXPIRY_CASES) {
             await assert.rejects(
@@ -196,7 +194,7 @@ export function createStorageProviderConformanceSuite(
           const provider = await createProvider();
           const key = createKey("url");
 
-          await provider.put(key, Buffer.from("url target"));
+          await provider.put(key, encodeText("url target"));
 
           const publicUrl = provider.getPublicUrl(key);
           assertUrlExpectation(publicUrl, options.publicUrl, {
@@ -223,30 +221,14 @@ export function createStorageProviderConformanceSuite(
   };
 }
 
-async function readStream(stream: Readable): Promise<Buffer> {
-  const chunks: Buffer[] = [];
-
-  for await (const chunk of stream) {
-    if (Buffer.isBuffer(chunk)) {
-      chunks.push(chunk);
-      continue;
-    }
-
-    if (chunk instanceof Uint8Array) {
-      chunks.push(Buffer.from(chunk));
-      continue;
-    }
-
-    chunks.push(Buffer.from(String(chunk)));
-  }
-
-  return Buffer.concat(chunks);
+function encodeText(value: string): Uint8Array {
+  return new TextEncoder().encode(value);
 }
 
 function assertStorageMetadata(
   metadata: ObjectMetadata,
   options: {
-    readonly data: Buffer;
+    readonly data: Uint8Array;
     readonly expectations: Required<NonNullable<StorageProviderConformanceOptions["metadata"]>>;
     readonly putContentType: string;
     readonly providerName: string;

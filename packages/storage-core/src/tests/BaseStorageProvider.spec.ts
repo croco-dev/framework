@@ -1,16 +1,33 @@
-import type { Readable } from "node:stream";
 import { describe, expect, it } from "vitest";
 import { BaseStorageProvider } from "../libs/BaseStorageProvider";
 import { DeleteFailedProblem } from "../libs/problems/DeleteFailedProblem";
 import { FileNotFoundProblem } from "../libs/problems/FileNotFoundProblem";
 import { UploadFailedProblem } from "../libs/problems/UploadFailedProblem";
-import type { ObjectMetadata, PutOptions, SignedUrlOptions } from "../libs/types";
+import { storageStreamFromBytes } from "../libs/storageBody";
+import type {
+  ObjectMetadata,
+  PutOptions,
+  SignedUrlOptions,
+  StorageBody,
+  StorageStream,
+} from "../libs/types";
 
 class TestStorageProvider extends BaseStorageProvider {
-  async put(_key: string, _data: Buffer | Readable, _options?: PutOptions): Promise<void> {}
+  probeMode = false;
+  streamCancelled = false;
 
-  async get(_key: string): Promise<Buffer> {
-    return Buffer.alloc(0);
+  async put(_key: string, _data: StorageBody, _options?: PutOptions): Promise<void> {}
+
+  async getStream(_key: string): Promise<StorageStream> {
+    if (this.probeMode) {
+      return new ReadableStream({
+        cancel: () => {
+          this.streamCancelled = true;
+        },
+      });
+    }
+
+    return storageStreamFromBytes(new Uint8Array([1, 2, 3]));
   }
 
   async delete(_key: string): Promise<void> {}
@@ -45,6 +62,22 @@ class TestStorageProvider extends BaseStorageProvider {
 
 describe("BaseStorageProvider", () => {
   const provider = new TestStorageProvider();
+
+  it("buffers the portable stream only for the explicit buffered get operation", async () => {
+    await expect(provider.get("test/file.bin")).resolves.toEqual(new Uint8Array([1, 2, 3]));
+  });
+
+  it("checks existence without buffering the object body", async () => {
+    provider.probeMode = true;
+    provider.streamCancelled = false;
+
+    try {
+      await expect(provider.exists("test/file.bin")).resolves.toBe(true);
+      expect(provider.streamCancelled).toBe(true);
+    } finally {
+      provider.probeMode = false;
+    }
+  });
 
   it("throwNotFound가 cause를 FileNotFoundProblem에 전달함", () => {
     const cause = new Error("missing");

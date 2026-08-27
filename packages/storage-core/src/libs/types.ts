@@ -1,4 +1,6 @@
-import type { Readable } from "node:stream";
+export type StorageStream = ReadableStream<Uint8Array>;
+
+export type StorageBody = Uint8Array | StorageStream;
 
 /**
  * 파일 업로드 옵션
@@ -140,28 +142,28 @@ export type StorageProvider = {
    * 파일 업로드
    *
    * @param key - 파일 식별자
-   * @param data - 파일 데이터 (Buffer 또는 Readable 스트림)
+   * @param data - 파일 데이터 또는 Web ReadableStream
    * @param options - 업로드 옵션
    */
-  put(key: string, data: Buffer | Readable, options?: PutOptions): Promise<void>;
+  put(key: string, data: StorageBody, options?: PutOptions): Promise<void>;
 
   /**
    * 파일 다운로드
    *
    * @param key - 파일 식별자
-   * @returns 파일 버퍼
+   * @returns 파일 바이트
    * @throws FileNotFoundProblem - 파일이 존재하지 않을 때
    */
-  get(key: string): Promise<Buffer>;
+  get(key: string): Promise<Uint8Array>;
 
   /**
    * 파일 스트림 다운로드
    *
    * @param key - 파일 식별자
-   * @returns 읽기 가능한 스트림
+   * @returns Web 읽기 가능 스트림
    * @throws FileNotFoundProblem - 파일이 존재하지 않을 때
    */
-  getStream(key: string): Promise<Readable>;
+  getStream(key: string): Promise<StorageStream>;
 
   /**
    * 파일 삭제

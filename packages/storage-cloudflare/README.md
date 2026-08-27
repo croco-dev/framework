@@ -20,7 +20,7 @@ const provider = new CloudflareImagesProvider({
   defaultVariant: "public",
 });
 
-await provider.put("avatars/user-1.jpg", Buffer.from("image"), {
+await provider.put("avatars/user-1.jpg", new TextEncoder().encode("image"), {
   contentType: "image/jpeg",
 });
 
