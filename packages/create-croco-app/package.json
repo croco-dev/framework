@@ -28,6 +28,10 @@
         "types": "./dist/programmatic.d.ts",
         "import": "./dist/programmatic.js"
       },
+      "./generator": {
+        "types": "./dist/generator.d.ts",
+        "import": "./dist/generator.js"
+      },
       "./dist/verification.js": {
         "types": "./dist/verification.d.ts",
         "import": "./dist/verification.js"

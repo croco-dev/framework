@@ -1,7 +1,13 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-  entry: ["src/bin.ts", "src/index.ts", "src/programmatic.ts", "src/verification.ts"],
+  entry: [
+    "src/bin.ts",
+    "src/generator.ts",
+    "src/index.ts",
+    "src/programmatic.ts",
+    "src/verification.ts",
+  ],
   format: ["esm"],
   target: "node22",
   clean: true,

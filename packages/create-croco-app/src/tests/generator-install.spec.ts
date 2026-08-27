@@ -59,7 +59,7 @@ describe("generate() pnpm install contract", () => {
   it("runs pnpm install when dependency installation is enabled", async () => {
     const { generate } = await import("../generator.js");
 
-    await generate(testDir, {
+    const result = await generate(testDir, {
       ...baseOptions,
       installDeps: true,
     });
@@ -84,6 +84,8 @@ describe("generate() pnpm install contract", () => {
     expect(JSON.parse(readFileSync(join(testDir, "package.json"), "utf8")).packageManager).toBe(
       "pnpm@11.9.0",
     );
+    expect(result.postActions.dependencies).toBe("installed");
+    expect(result.nextSteps).toEqual([{ command: "pnpm", args: ["dev"], cwd: testDir }]);
   }, 15_000);
 
   it("keeps --no-install as an escape hatch from pnpm", async () => {
@@ -98,7 +100,7 @@ describe("generate() pnpm install contract", () => {
   it("initializes Git inside staging before publishing the project", async () => {
     const { generate } = await import("../generator.js");
 
-    await generate(testDir, { ...baseOptions, initGit: true });
+    const result = await generate(testDir, { ...baseOptions, initGit: true });
 
     const gitDir = execSyncMock.mock.calls[0]?.[1]?.cwd as string;
     expect(execSyncMock).toHaveBeenCalledWith("git init", { cwd: gitDir, stdio: "ignore" });
@@ -106,6 +108,7 @@ describe("generate() pnpm install contract", () => {
     expect(basename(gitDir).startsWith(`.croco-stage-${process.pid}-`)).toBe(true);
     expect(gitDir).not.toBe(testDir);
     expect(existsSync(join(testDir, "package.json"))).toBe(true);
+    expect(result.postActions.git).toBe("initialized");
   });
 
   it("reports an actionable Problem when pnpm is unavailable", async () => {

@@ -33334,6 +33334,77 @@
           ]
         },
         {
+          "exportPath": "./generator",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/generator.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/generator.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/create-croco-app/src/generator.ts",
+          "runtimeExports": [
+            {
+              "name": "generate",
+              "exportKind": "declaration",
+              "source": null,
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "GeneratorExecutionOptions",
+              "exportKind": "declaration",
+              "source": null,
+              "declarationKind": "type"
+            },
+            {
+              "name": "AppGoal",
+              "exportKind": "named",
+              "source": "./types.js"
+            },
+            {
+              "name": "GenerationArtifact",
+              "exportKind": "named",
+              "source": "./generation-result.js"
+            },
+            {
+              "name": "GenerationNextStep",
+              "exportKind": "named",
+              "source": "./generation-result.js"
+            },
+            {
+              "name": "GenerationResult",
+              "exportKind": "named",
+              "source": "./generation-result.js"
+            },
+            {
+              "name": "GenerationRuntimePlatform",
+              "exportKind": "named",
+              "source": "./generation-result.js"
+            },
+            {
+              "name": "GeneratorOptions",
+              "exportKind": "named",
+              "source": "./types.js"
+            },
+            {
+              "name": "ResolvedGenerationConfiguration",
+              "exportKind": "named",
+              "source": "./generation-result.js"
+            },
+            {
+              "name": "TenantModelName",
+              "exportKind": "named",
+              "source": "./types.js"
+            }
+          ]
+        },
+        {
           "exportPath": "./programmatic",
           "kind": "code",
           "targets": [

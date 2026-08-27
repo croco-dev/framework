@@ -4,26 +4,9 @@ import {
   readStagingCleanupFailure,
   type StagingCleanupFailure,
 } from "./generation-failure-evidence.js";
-import {
-  GENERATED_NODE_ENGINE_RANGE,
-  GENERATED_NODE_VERSION,
-  SAAS_GENERATED_NODE_ENGINE_RANGE,
-  SAAS_GENERATED_NODE_VERSION,
-} from "./node-runtime.js";
-import { isSaasPreset } from "./options.js";
-import type { GeneratorOptions } from "./types.js";
+import type { GenerationNextStep, GenerationResult } from "./generator.js";
 
-export type CreateCrocoAppSuccessResult = {
-  readonly ok: true;
-  readonly code: "create-croco-app/project-created";
-  readonly targetDir: string;
-  readonly projectName: string;
-  readonly preset: GeneratorOptions["preset"];
-  readonly packageManager: "pnpm";
-  readonly nodeRequirement: string;
-  readonly nodeRecovery: string;
-  readonly nextSteps: readonly CreateCrocoAppNextStep[];
-};
+export type CreateCrocoAppSuccessResult = GenerationResult;
 
 export type CreateCrocoAppFailureResult = {
   readonly ok: false;
@@ -68,34 +51,6 @@ class UnexpectedCliFailureProblem extends Problem {
       },
     });
   }
-}
-
-export type CreateCrocoAppNextStep = {
-  readonly command: "pnpm";
-  readonly args: readonly string[];
-  readonly cwd: string;
-};
-
-export function createSuccessResult(
-  targetDir: string,
-  options: GeneratorOptions,
-): CreateCrocoAppSuccessResult {
-  const saasPreset = isSaasPreset(options.preset);
-  const nodeRequirement = saasPreset
-    ? SAAS_GENERATED_NODE_ENGINE_RANGE
-    : GENERATED_NODE_ENGINE_RANGE;
-  const nodeVersion = saasPreset ? SAAS_GENERATED_NODE_VERSION : GENERATED_NODE_VERSION;
-  return {
-    ok: true,
-    code: "create-croco-app/project-created",
-    targetDir,
-    projectName: options.projectName,
-    preset: options.preset,
-    packageManager: "pnpm",
-    nodeRequirement,
-    nodeRecovery: `Run nvm install ${nodeVersion} && nvm use ${nodeVersion}.`,
-    nextSteps: createNextStepCommands(targetDir, options),
-  };
 }
 
 export function createFailureResult(
@@ -186,33 +141,6 @@ export function formatJsonResult(result: CreateCrocoAppResult): string {
   return JSON.stringify(result, null, 2);
 }
 
-function createNextStepCommands(
-  targetDir: string,
-  options: GeneratorOptions,
-): CreateCrocoAppNextStep[] {
-  const commands: CreateCrocoAppNextStep[] = [];
-
-  if (!options.installDeps) {
-    commands.push({ command: "pnpm", args: ["install"], cwd: targetDir });
-  }
-
-  commands.push({
-    command: "pnpm",
-    args: [resolveRunScript(options)],
-    cwd: targetDir,
-  });
-
-  return commands;
-}
-
-function resolveRunScript(options: GeneratorOptions): string {
-  if (options.preset === "saas" || options.preset === "ai-saas") {
-    return "dev:api";
-  }
-
-  return "dev";
-}
-
 function toCliProblem(error: unknown): Problem {
   if (error instanceof Problem) {
     return error;
@@ -226,7 +154,7 @@ function toCliProblem(error: unknown): Problem {
 }
 
 function readRecovery(extensions: Problem["extensions"]): string | undefined {
-  const recovery = extensions?.recovery;
+  const recovery = extensions?.["recovery"];
 
   return typeof recovery === "string" ? recovery : undefined;
 }
@@ -252,7 +180,7 @@ function isNodeError(error: unknown): error is NodeJS.ErrnoException {
   return error instanceof Error;
 }
 
-function formatNextStepCommand(step: CreateCrocoAppNextStep, platform: NodeJS.Platform): string {
+function formatNextStepCommand(step: GenerationNextStep, platform: NodeJS.Platform): string {
   return [
     step.command,
     "--dir",

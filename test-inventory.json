@@ -806,6 +806,12 @@
       "owner": "@croco/cli"
     },
     {
+      "path": "packages/create-croco-app/src/tests/GenerationResult.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "create-croco-app"
+    },
+    {
       "path": "packages/create-croco-app/src/tests/GeneratorOptions.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],

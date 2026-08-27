@@ -13,6 +13,7 @@ provides generated-app smoke coverage for the supported presets.
 - `create-croco-app/dist/verification.js` - programmatic parsing, runtime validation, generation,
   and separate raw, normalized, and resolved option types.
 - `create-croco-app/programmatic` - side-effect-free generation and option resolution.
+- `create-croco-app/generator` - programmatic generation with a structured success result.
 
 Importing either `create-croco-app` or `create-croco-app/programmatic` does not parse arguments,
 write files, print output, or terminate the process. Programmatic consumers can resolve the same
@@ -29,8 +30,34 @@ const options = normalizeNonInteractiveOptions({
   initGit: false,
 });
 
-await generate("./my-app", options, { outputMode: "human" });
+const result = await generate("./my-app", options, { outputMode: "human" });
+console.log(result.targetDir, result.nextSteps);
 ```
+
+Programmatic callers receive the canonical target directory, effective configuration,
+generated contract artifacts, completed post-actions, and structured next commands:
+
+```ts
+import { generate, type GeneratorOptions, type GenerationResult } from "create-croco-app/generator";
+
+const options: GeneratorOptions = {
+  projectName: "my-app",
+  scope: "@myorg",
+  preset: "blank",
+  webApps: [],
+  apiHosting: "standalone",
+  db: [],
+  agentRules: true,
+  installDeps: false,
+  initGit: false,
+};
+
+const result: GenerationResult = await generate("./my-app", options);
+console.log(result.targetDir, result.nextSteps);
+```
+
+Generation failures still reject with the existing Problem contract; a partial scaffold is
+never returned as a successful `GenerationResult`.
 
 ## Usage
 

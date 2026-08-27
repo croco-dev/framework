@@ -3201,7 +3201,7 @@ Sources:
 
 Sources:
 
-- `packages/create-croco-app/src/cli-result.ts:58:1` (problem-class)
+- `packages/create-croco-app/src/cli-result.ts:41:1` (problem-class)
 
 <a id="create-croco-app-unsupported-node-version"></a>
 
