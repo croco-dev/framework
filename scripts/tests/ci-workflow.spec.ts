@@ -1146,6 +1146,8 @@ describe("CI verification profile contract", () => {
     expect(WORKFLOW).toContain(
       "pnpm --filter @croco/meta-vite exec vitest run src/tests/published-contract.spec.ts",
     );
+    expect(WORKFLOW).toContain('node (Join-Path $packageDir "dist/bin.js") $targetDir');
+    expect(WORKFLOW).not.toContain('node (Join-Path $packageDir "dist/index.js") $targetDir');
     expect(WORKFLOW).not.toContain("pnpm turbo run build --filter=create-croco-app... --force");
   });
 
