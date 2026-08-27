@@ -1,26 +1,44 @@
-import type { RenderMode } from "@croco/meta-vite";
+import type { PageRouteDefinition } from "@croco/meta-vite";
 
-export type CrocoPageOptions = {
-  /** SSR 렌더링 여부 (default: true) */
+/** Canonical page options aligned with the meta-vite route contract. */
+export type CanonicalCrocoPageOptions = Partial<Pick<PageRouteDefinition, "head" | "path">> & {
+  /** Rendering mode for the page route. */
+  mode?: PageRouteDefinition["mode"];
+  /** ISR revalidation interval in seconds. */
+  revalidateSeconds?: PageRouteDefinition["revalidate"];
+  ssr?: never;
+  revalidate?: never;
+};
+
+/** Deprecated page options retained for migration to the canonical route contract. */
+export type LegacyCrocoPageOptions = Partial<Pick<PageRouteDefinition, "head" | "path">> & {
+  mode?: never;
+  revalidateSeconds?: never;
+  /** @deprecated Use `mode: "ssr"` or `mode: "ssg"`. */
   ssr?: boolean;
-  /** 페이지 경로 */
-  path?: string;
-  /** head 메타데이터 반환 함수 */
-  head?: () => { title?: string; description?: string };
-  /** ISR revalidate 시간(ms) */
+  /** @deprecated This value is milliseconds. Use `revalidateSeconds` instead. */
   revalidate?: number;
 };
 
-export type CrocoPageConfig = {
-  mode: RenderMode;
-  head?: () => { title?: string; description?: string };
-  revalidateMs?: number;
-};
+/** Page configuration accepted by {@link createCrocoPageConfig}. */
+export type CrocoPageOptions = CanonicalCrocoPageOptions | LegacyCrocoPageOptions;
 
+export type CrocoPageConfig = Required<Pick<PageRouteDefinition, "mode">> &
+  Partial<Pick<PageRouteDefinition, "head" | "path" | "revalidate">>;
+
+export function createCrocoPageConfig(
+  options: CrocoPageOptions & Required<Pick<PageRouteDefinition, "path">>,
+): CrocoPageConfig & Required<Pick<PageRouteDefinition, "path">>;
+export function createCrocoPageConfig(options?: CrocoPageOptions): CrocoPageConfig;
 export function createCrocoPageConfig(options?: CrocoPageOptions): CrocoPageConfig {
+  const revalidate =
+    options?.revalidateSeconds ??
+    (options?.revalidate !== undefined ? options.revalidate / 1000 : undefined);
+
   return {
-    mode: options?.ssr === false ? "ssg" : "ssr",
-    head: options?.head,
-    revalidateMs: options?.revalidate,
+    mode: options?.mode ?? (options?.ssr === false ? "ssg" : "ssr"),
+    ...(options?.path !== undefined ? { path: options.path } : {}),
+    ...(options?.head !== undefined ? { head: options.head } : {}),
+    ...(revalidate !== undefined ? { revalidate } : {}),
   };
 }

@@ -7,7 +7,12 @@
  * page data access 훅과 createCrocoPageConfig 함수을 제공한다.
  */
 
-export type { CrocoPageConfig, CrocoPageOptions } from "./libs/createCrocoPages";
+export type {
+  CanonicalCrocoPageOptions,
+  CrocoPageConfig,
+  CrocoPageOptions,
+  LegacyCrocoPageOptions,
+} from "./libs/createCrocoPages";
 export { createCrocoPageConfig } from "./libs/createCrocoPages";
 export {
   AuthBridgeContext,

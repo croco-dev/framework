@@ -13124,6 +13124,11 @@
               "source": "./libs/authBridgeTypes"
             },
             {
+              "name": "CanonicalCrocoPageOptions",
+              "exportKind": "named",
+              "source": "./libs/createCrocoPages"
+            },
+            {
               "name": "CrocoAuthBridgeProviderProps",
               "exportKind": "named",
               "source": "./libs/authBridgeTypes"
@@ -13257,6 +13262,11 @@
               "name": "FrontendTenantState",
               "exportKind": "named",
               "source": "./libs/authBridgeTypes"
+            },
+            {
+              "name": "LegacyCrocoPageOptions",
+              "exportKind": "named",
+              "source": "./libs/createCrocoPages"
             },
             {
               "name": "ProblemBoundaryFallback",
