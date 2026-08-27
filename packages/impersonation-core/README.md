@@ -128,7 +128,9 @@ const store = new InMemoryImpersonationStore();
 
 `start`는 전달된 actor ID를 신뢰하지 않습니다. `AuthProvider.resolvePrincipal()`이 반환한 현재 principal을 사용하고,
 `impersonation:manage` 권한과 `targetExists()` 결과를 서비스 경계에서 직접 검증합니다. `context.user.id`가 존재하는
-경우 provider identity와 일치해야 하며, 모든 검증이 성공한 뒤에만 세션 저장과 시작 이벤트 발행이 수행됩니다.
+경우 provider identity와 일치해야 하며, 모든 검증이 성공한 뒤 `ImpersonationStore.createIfNoActiveSession()`으로
+actor별 세션을 원자적으로 생성합니다. 같은 actor의 동시 요청 중 하나만 성공하고 나머지는
+`NestedImpersonationProblem`으로 거부됩니다.
 
 ### ImpersonationConfig
 
@@ -219,3 +221,7 @@ console.log(isImpersonating);
 기존 `start(impersonatorId, targetUserId, reason?)` 호출은 `start(context, targetUserId, reason?)`로 변경해야 합니다.
 패키지 로컬 `AuthProvider` 구현은 `resolvePrincipal(context)`과 `targetExists(context, targetUserId)`를 제공해야 합니다.
 이는 transport guard 없이 서비스를 직접 호출하는 경로에도 동일한 인증·권한·타겟 검증을 적용하기 위한 보안 계약 변경입니다.
+
+커스텀 `ImpersonationStore` 구현은 기존 `save()` 대신 `createIfNoActiveSession()`을 구현해야 합니다. 이 연산은
+`impersonatorId`별 활성 세션의 확인과 생성을 하나의 원자적 경계로 처리해야 하며, 영속 저장소는 unique constraint나
+동등한 compare-and-set을 사용해 만료 세션 교체까지 같은 연산에서 보장해야 합니다.

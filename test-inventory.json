@@ -1739,6 +1739,12 @@
       "owner": "@croco/impersonation-core"
     },
     {
+      "path": "packages/impersonation-core/src/tests/InMemoryImpersonationStore.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/impersonation-core"
+    },
+    {
       "path": "packages/integrations-posthog/src/tests/PostHogClient.spec.ts",
       "lane": "fast",
       "qualifiers": [],

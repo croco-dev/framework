@@ -120,11 +120,6 @@ export class ImpersonationService {
       throw new ImpersonationTargetNotFoundProblem(targetUserId);
     }
 
-    const existing = await this.store.findByImpersonator(principal.id);
-    if (existing) {
-      throw new NestedImpersonationProblem();
-    }
-
     const normalizedReason = this.config.requireReason ? reason?.trim() : reason;
     if (this.config.requireReason && !normalizedReason) {
       throw new ImpersonationReasonRequiredProblem();
@@ -143,7 +138,10 @@ export class ImpersonationService {
       expiresAt,
     });
 
-    await this.store.save(session);
+    const createResult = await this.store.createIfNoActiveSession(session);
+    if (createResult.status === "active-session-exists") {
+      throw new NestedImpersonationProblem();
+    }
 
     await this.eventPublisher.publishNow(new ImpersonationStartedEvent(session));
 

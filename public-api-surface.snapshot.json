@@ -14351,6 +14351,12 @@
               "declarationKind": "type"
             },
             {
+              "name": "ImpersonationSessionCreateResult",
+              "exportKind": "declaration",
+              "source": "./libs/interfaces",
+              "declarationKind": "type"
+            },
+            {
               "name": "ImpersonationState",
               "exportKind": "declaration",
               "source": "./libs/types",
