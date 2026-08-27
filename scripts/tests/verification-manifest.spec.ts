@@ -135,9 +135,9 @@ const spineOnlyIds = [
   "quick-start-lambda-smoke",
   "first-success",
   "package-entrypoints-smoke",
-  "packed-decorator-consumers",
   "package-bins-smoke",
   "generated-app-smoke",
+  "packed-decorator-consumers",
   "alpha-release-smoke",
   "typecheck",
   "test",
@@ -317,7 +317,7 @@ describe("verification manifest", () => {
     expect(
       createHash("sha256").update(JSON.stringify(manifests)).digest("hex"),
       "The pre-split monolithic manifest changed; update this digest only after intentionally verifying the new serialized commands.",
-    ).toBe("fc699c13ca10f8bb4ae44cd3181da74128a0bb470b8dc796e273efc3e543a5ce");
+    ).toBe("eea58cec8def93391ebab82e58e537c876700179e9d23494f39876c939db0033");
   });
 
   it("classifies every dependency edge and every cross-lane edge for synthesis", () => {

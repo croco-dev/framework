@@ -25,7 +25,7 @@ class CreateUserBody {
   name!: string;
 }
 
-const getUserContract = defineRouteContract({
+const GET_USER_CONTRACT = defineRouteContract({
   method: HttpMethod.GET,
   path: "/users/:id",
   params: z.object({ id: z.coerce.number() }),
@@ -33,7 +33,7 @@ const getUserContract = defineRouteContract({
   response: z.object({ id: z.number(), name: z.string() }),
 });
 
-const createUserContract = defineRouteContract({
+const CREATE_USER_CONTRACT = defineRouteContract({
   method: HttpMethod.POST,
   path: "/users",
   body: z.object({ name: z.string() }),
@@ -42,16 +42,16 @@ const createUserContract = defineRouteContract({
 
 @Controller("/users")
 class PackedController {
-  @Get(getUserContract)
+  @Get(GET_USER_CONTRACT)
   getUser(
-    @Param(getUserContract, "id") id: number,
-    @Query(getUserContract, "view") view: "compact" | "full",
+    @Param(GET_USER_CONTRACT, "id") id: number,
+    @Query(GET_USER_CONTRACT, "view") view: "compact" | "full",
   ): UserResponse {
     return { id, name: view };
   }
 
-  @Post(createUserContract)
-  async createUser(@Body(createUserContract) body: CreateUserBody): Promise<UserResponse> {
+  @Post(CREATE_USER_CONTRACT)
+  async createUser(@Body(CREATE_USER_CONTRACT) body: CreateUserBody): Promise<UserResponse> {
     return { id: 11, name: body.name };
   }
 }
@@ -77,10 +77,10 @@ const getRoute = routes.find(({ methodName }) => methodName === "getUser");
 const postRoute = routes.find(({ methodName }) => methodName === "createUser");
 invariant(getRoute?.method === HttpMethod.GET, "GET method metadata was not preserved");
 invariant(getRoute.path === "/:id", "GET contract path was not controller-relative");
-invariant(getRoute.contract === getUserContract, "GET contract metadata was not preserved");
+invariant(getRoute.contract === GET_USER_CONTRACT, "GET contract metadata was not preserved");
 invariant(postRoute?.method === HttpMethod.POST, "POST method metadata was not preserved");
 invariant(postRoute.path === "", "POST contract path was not controller-relative");
-invariant(postRoute.contract === createUserContract, "POST contract metadata was not preserved");
+invariant(postRoute.contract === CREATE_USER_CONTRACT, "POST contract metadata was not preserved");
 
 const params = Reflect.getMetadata(REST_PARAMS_KEY, PackedController) as
   | Map<string | symbol, Array<{ index: number; name?: string; type: ParamType }>>

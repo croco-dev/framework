@@ -9,7 +9,7 @@ import {
 } from "@croco/protocols-rest";
 import { z } from "zod";
 
-const getContract = defineRouteContract({
+const GET_CONTRACT = defineRouteContract({
   method: HttpMethod.GET,
   path: "/users/:id",
   params: z.object({ id: z.coerce.number() }),
@@ -17,7 +17,7 @@ const getContract = defineRouteContract({
   response: z.object({ id: z.number() }),
 });
 
-const postContract = defineRouteContract({
+const POST_CONTRACT = defineRouteContract({
   method: HttpMethod.POST,
   path: "/users",
   body: z.object({ name: z.string() }),
@@ -26,44 +26,44 @@ const postContract = defineRouteContract({
 
 class NegativeController {
   // EXPECT_ERROR:return-type
-  @Get(getContract)
+  @Get(GET_CONTRACT)
   invalidReturn(): Promise<string> {
     return Promise.resolve("wrong");
   }
 
   validGet(
     // EXPECT_ERROR:param-type
-    @Param(getContract, "id") id: string,
+    @Param(GET_CONTRACT, "id") id: string,
     // EXPECT_ERROR:query-type
-    @Query(getContract, "view") view: number,
+    @Query(GET_CONTRACT, "view") view: number,
   ): { id: number } {
     return { id: Number(id) + view };
   }
 
-  @Post(postContract)
+  @Post(POST_CONTRACT)
   invalidBody(
     // EXPECT_ERROR:body-type
-    @Body(postContract) body: number,
+    @Body(POST_CONTRACT) body: number,
   ): { id: number } {
     return { id: body };
   }
 
   // EXPECT_ERROR:method-mismatch
-  @Get(postContract)
+  @Get(POST_CONTRACT)
   invalidMethod(): { id: number } {
     return { id: 1 };
   }
 
   invalidPathKey(
     // EXPECT_ERROR:path-key
-    @Param(getContract, "missing") value: number,
+    @Param(GET_CONTRACT, "missing") value: number,
   ): void {
     void value;
   }
 
   invalidQueryKey(
     // EXPECT_ERROR:query-key
-    @Query(getContract, "missing") value: string,
+    @Query(GET_CONTRACT, "missing") value: string,
   ): void {
     void value;
   }

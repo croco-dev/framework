@@ -16,12 +16,12 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-const rootDir = resolve(import.meta.dirname, "..");
-const fixtureRoot = join(rootDir, "scripts", "fixtures", "packed-decorator-consumers");
-const tscPath = join(rootDir, "node_modules", "typescript", "bin", "tsc");
-const timeoutMs = 180_000;
+const ROOT_DIR = resolve(import.meta.dirname, "..");
+const FIXTURE_ROOT = join(ROOT_DIR, "scripts", "fixtures", "packed-decorator-consumers");
+const TSC_PATH = join(ROOT_DIR, "node_modules", "typescript", "bin", "tsc");
+const TIMEOUT_MS = 180_000;
 
-const packedPackageNames = [
+const PACKED_PACKAGE_NAMES = [
   "@croco/problems-core",
   "@croco/diagnostics-core",
   "@croco/framework-context",
@@ -29,12 +29,12 @@ const packedPackageNames = [
   "@croco/protocols-rest",
 ] as const;
 
-const directInternalDependencyNames = [
+const DIRECT_INTERNAL_DEPENDENCY_NAMES = [
   "@croco/framework-context",
   "@croco/protocols-rest",
 ] as const;
 
-const expectedNegativeMarkers = [
+const EXPECTED_NEGATIVE_MARKERS = [
   "return-type",
   "param-type",
   "query-type",
@@ -44,7 +44,7 @@ const expectedNegativeMarkers = [
   "query-key",
 ] as const;
 
-const consumers = [
+const CONSUMERS = [
   {
     module: "NodeNext",
     moduleKind: "ESM",
@@ -97,7 +97,7 @@ export function runPackedDecoratorConsumers(): void {
     verifyPackedDeclarations(tarballs.get("@croco/protocols-rest"));
     verifyPackedDependencyClosure(tarballs);
 
-    for (const consumer of consumers) {
+    for (const consumer of CONSUMERS) {
       verifyConsumer(consumer, tarballs, temporaryRoot);
     }
 
@@ -117,18 +117,18 @@ export function runPackedDecoratorConsumers(): void {
 }
 
 function verifyTypeScriptVersion(): void {
-  if (!existsSync(tscPath)) {
-    throw new Error(`compiler: TypeScript was not found at ${tscPath}; run pnpm install`);
+  if (!existsSync(TSC_PATH)) {
+    throw new Error(`compiler: TypeScript was not found at ${TSC_PATH}; run pnpm install`);
   }
 
-  const packageJson = readJson(join(rootDir, "node_modules", "typescript", "package.json"));
+  const packageJson = readJson(join(ROOT_DIR, "node_modules", "typescript", "package.json"));
   if (packageJson.version !== "6.0.3") {
     throw new Error(
       `compiler: expected repository TypeScript 6.0.3, received ${packageJson.version}`,
     );
   }
 
-  const result = runCommand(process.execPath, [tscPath, "--version"], rootDir);
+  const result = runCommand(process.execPath, [TSC_PATH, "--version"], ROOT_DIR);
   assertSucceeded("compiler: TypeScript version", result);
   if (result.stdout.trim() !== "Version 6.0.3") {
     throw new Error(`compiler: unexpected TypeScript output: ${result.stdout.trim()}`);
@@ -139,7 +139,7 @@ function packPackages(packRoot: string): Map<string, string> {
   const tarballs = new Map<string, string>();
   mkdirSync(packRoot, { recursive: true });
 
-  for (const packageName of packedPackageNames) {
+  for (const packageName of PACKED_PACKAGE_NAMES) {
     const packageDir = workspacePackageDir(packageName);
     const packageJson = readJson(join(packageDir, "package.json"));
     if (!existsSync(join(packageDir, "dist", "index.d.ts"))) {
@@ -196,7 +196,7 @@ function verifyPackedDependencyClosure(tarballs: ReadonlyMap<string, string>): v
     const manifest = readPackedJson(tarballPath);
     const dependencies = manifest.dependencies ?? {};
     for (const [dependencyName, version] of Object.entries(dependencies)) {
-      if (version.includes("workspace:") || version.includes(rootDir)) {
+      if (version.includes("workspace:") || version.includes(ROOT_DIR)) {
         throw new Error(
           `install: ${packageName} retained repository-local dependency ${dependencyName}@${version}`,
         );
@@ -211,18 +211,18 @@ function verifyPackedDependencyClosure(tarballs: ReadonlyMap<string, string>): v
 }
 
 function verifyConsumer(
-  consumer: (typeof consumers)[number],
+  consumer: (typeof CONSUMERS)[number],
   tarballs: ReadonlyMap<string, string>,
   temporaryRoot: string,
 ): void {
   const consumerRoot = join(temporaryRoot, consumer.name);
   mkdirSync(consumerRoot, { recursive: true });
   cpSync(
-    join(fixtureRoot, consumer.positive ? "positive.ts" : "negative.ts"),
+    join(FIXTURE_ROOT, consumer.positive ? "positive.ts" : "negative.ts"),
     join(consumerRoot, "consumer.ts"),
   );
   const dependencies = Object.fromEntries([
-    ...directInternalDependencyNames.map((packageName) => [
+    ...DIRECT_INTERNAL_DEPENDENCY_NAMES.map((packageName) => [
       packageName,
       `file:${requireTarball(tarballs, packageName)}`,
     ]),
@@ -278,7 +278,7 @@ function verifyConsumer(
 
   const compile = runCommand(
     process.execPath,
-    [tscPath, "--pretty", "false", "-p", "tsconfig.json"],
+    [TSC_PATH, "--pretty", "false", "-p", "tsconfig.json"],
     consumerRoot,
   );
   if (consumer.positive) {
@@ -297,7 +297,7 @@ function verifyInstalledPackagesAreIsolated(
   consumerRoot: string,
   tarballs: ReadonlyMap<string, string>,
 ): void {
-  const pending = directInternalDependencyNames.map((packageName) => ({
+  const pending = DIRECT_INTERNAL_DEPENDENCY_NAMES.map((packageName) => ({
     installedRoot: realpathSync(join(consumerRoot, "node_modules", ...packageName.split("/"))),
     packageName,
   }));
@@ -325,11 +325,11 @@ function verifyInstalledPackagesAreIsolated(
         `install: ${packageName} was not installed through the declared dependency closure`,
       );
     }
-    if (installedRoot.startsWith(`${rootDir}/`)) {
+    if (installedRoot.startsWith(`${ROOT_DIR}/`)) {
       throw new Error(`install: ${packageName} resolved into the repository at ${installedRoot}`);
     }
     const manifestText = readFileSync(join(installedRoot, "package.json"), "utf8");
-    if (manifestText.includes("workspace:") || manifestText.includes(rootDir)) {
+    if (manifestText.includes("workspace:") || manifestText.includes(ROOT_DIR)) {
       throw new Error(
         `install: ${packageName} retained a workspace or repository-local dependency`,
       );
@@ -359,11 +359,11 @@ function verifyExpectedDiagnostics(
     expectedMarkers.set(diagnosticLine + 1, marker);
   });
 
-  const requiredMarkers = new Set<string>(expectedNegativeMarkers);
+  const requiredMarkers = new Set<string>(EXPECTED_NEGATIVE_MARKERS);
   const unexpectedMarkers = [...declaredMarkerCounts.keys()].filter(
     (marker) => !requiredMarkers.has(marker),
   );
-  const missingDeclarations = expectedNegativeMarkers.filter(
+  const missingDeclarations = EXPECTED_NEGATIVE_MARKERS.filter(
     (marker) => !declaredMarkerCounts.has(marker),
   );
   const duplicateDeclarations = [...declaredMarkerCounts.entries()]
@@ -405,7 +405,7 @@ function verifyExpectedDiagnostics(
     observedMarkerCounts.set(marker, (observedMarkerCounts.get(marker) ?? 0) + 1);
   }
 
-  const missingMarkers = expectedNegativeMarkers.filter(
+  const missingMarkers = EXPECTED_NEGATIVE_MARKERS.filter(
     (marker) => !observedMarkerCounts.has(marker),
   );
   const duplicateMarkers = [...observedMarkerCounts.entries()]
@@ -425,7 +425,7 @@ function requireTarball(tarballs: ReadonlyMap<string, string>, packageName: stri
 }
 
 function workspacePackageDir(packageName: string): string {
-  return join(rootDir, "packages", packageName.slice("@croco/".length));
+  return join(ROOT_DIR, "packages", packageName.slice("@croco/".length));
 }
 
 function readPackedJson(tarballPath: string): PackageJson {
@@ -433,7 +433,7 @@ function readPackedJson(tarballPath: string): PackageJson {
 }
 
 function readPackedFile(tarballPath: string, entryPath: string): string {
-  const result = runCommand("tar", ["-xOf", tarballPath, entryPath], rootDir);
+  const result = runCommand("tar", ["-xOf", tarballPath, entryPath], ROOT_DIR);
   assertSucceeded(`pack: extract ${entryPath}`, result);
   return result.stdout;
 }
@@ -451,7 +451,7 @@ function runCommand(command: string, arguments_: readonly string[], cwd: string)
     cwd,
     encoding: "utf8",
     maxBuffer: 64 * 1024 * 1024,
-    timeout: timeoutMs,
+    timeout: TIMEOUT_MS,
   });
   if (result.error) throw result.error;
   return { status: result.status, stderr: result.stderr, stdout: result.stdout };

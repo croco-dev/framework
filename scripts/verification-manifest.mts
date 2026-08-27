@@ -905,14 +905,6 @@ const spineOnly = (
       applicable: entrypointsApplicable,
     },
     {
-      id: "packed-decorator-consumers",
-      label: "Packed decorator consumers",
-      category: "package-smoke",
-      command: nodeScript("scripts/packed-decorator-consumers.mts"),
-      timeoutMs: minutes(15),
-      applicable: packedDecoratorConsumersApplicable,
-    },
-    {
       id: "package-bins-smoke",
       label: "Package binary smoke",
       category: "package-smoke",
@@ -962,6 +954,14 @@ const spineOnly = (
           required: true,
         },
       ],
+    },
+    {
+      id: "packed-decorator-consumers",
+      label: "Packed decorator consumers",
+      category: "package-smoke",
+      command: nodeScript("scripts/packed-decorator-consumers.mts"),
+      timeoutMs: minutes(15),
+      applicable: packedDecoratorConsumersApplicable,
     },
     {
       id: "alpha-release-smoke",

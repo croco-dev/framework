@@ -18,6 +18,7 @@ const observedDurationMinutes: Readonly<Record<string, number>> = {
   "strict-contract-typecheck": 2.4,
   "dependency-audit-policy": 0.6,
   "package-entrypoints-smoke": 6,
+  "packed-decorator-consumers": 0.5,
   "package-bins-smoke": 0.4,
   "quick-start-lambda-smoke": 2.1,
   typecheck: 4.8,
