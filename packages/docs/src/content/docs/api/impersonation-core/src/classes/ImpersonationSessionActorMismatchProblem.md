@@ -5,7 +5,9 @@ prev: false
 title: "ImpersonationSessionActorMismatchProblem"
 ---
 
-RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다.
+Indicates that an authorized caller tried to end an impersonation session started by another actor.
+
+This Forbidden problem preserves the session so only its original impersonator can terminate it.
 
 ## Extends
 

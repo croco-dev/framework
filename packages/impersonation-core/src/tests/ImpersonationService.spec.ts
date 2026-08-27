@@ -8,7 +8,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ImpersonationEndedEvent, ImpersonationStartedEvent } from "../libs/events";
 import { ImpersonationService } from "../libs/ImpersonationService";
 import { InMemoryImpersonationStore } from "../libs/InMemoryImpersonationStore";
-import { AuthProvider, type ImpersonationPrincipal, ImpersonationStore } from "../libs/interfaces";
+import { AuthProvider, ImpersonationStore } from "../libs/interfaces";
+import type { ImpersonationPrincipal } from "../libs/interfaces";
 import { InvalidImpersonationConfigurationProblem } from "../libs/problems/ImpersonationProblems";
 import type {
   ImpersonationConfig,

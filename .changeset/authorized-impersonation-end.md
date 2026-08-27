@@ -3,7 +3,7 @@
 "@croco/problems-core": patch
 ---
 
-Require the authenticated, globally authorized session impersonator to end an impersonation session without mutating denied sessions.
+Require callers to hold the exact global `impersonation:manage` permission and match the session's original impersonator before ending an impersonation session. Denied termination attempts leave the session unchanged.
 
 This changes `ImpersonationService.end(sessionId)` to `end(context, sessionId)` so termination can resolve and authorize the caller.
 
