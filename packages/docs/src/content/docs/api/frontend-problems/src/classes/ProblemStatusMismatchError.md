@@ -15,7 +15,7 @@ HTTP 응답 상태와 Problem 상태가 일치하지 않는 프로토콜 실패�
 
 ### Constructor
 
-> **new ProblemStatusMismatchError**(`response`, `problemStatus`): `ProblemStatusMismatchError`
+> **new ProblemStatusMismatchError**(`response`, `problemStatus`, `problemCode?`): `ProblemStatusMismatchError`
 
 #### Parameters
 
@@ -26,6 +26,10 @@ HTTP 응답 상태와 Problem 상태가 일치하지 않는 프로토콜 실패�
 ##### problemStatus
 
 `number`
+
+##### problemCode?
+
+`string`
 
 #### Returns
 
@@ -120,6 +124,12 @@ HTTP 응답 상태와 Problem 상태가 일치하지 않는 프로토콜 실패�
 #### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`name`](/api/problems-core/src/classes/problem/#name)
+
+---
+
+### problemCode?
+
+> `readonly` `optional` **problemCode?**: `string`
 
 ---
 
