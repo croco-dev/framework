@@ -40,6 +40,15 @@ export { AuditInterceptor } from "./libs/AuditInterceptor";
 export { AuditLogRepository } from "./libs/AuditLogRepository";
 
 /**
+ * 요청 컨텍스트의 impersonation 상태를 분류하고 활성 세션 스냅샷을 반환합니다.
+ */
+export { resolveImpersonationContext } from "./libs/impersonationState";
+export type {
+  ActiveImpersonationState,
+  ImpersonationContextResolution,
+} from "./libs/impersonationState";
+
+/**
  * 감사 로그 저장소를 DI에 등록할 때 사용하는 토큰입니다.
  */
 export { AUDIT_LOG_REPOSITORY_TOKEN } from "./libs/AuditLogRepositoryToken";

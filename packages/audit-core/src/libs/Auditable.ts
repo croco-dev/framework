@@ -2,42 +2,12 @@ import { Container, Context, type ILogger, LOGGER_TOKEN } from "@croco/framework
 import { recordError } from "@croco/telemetry-api";
 import type { AuditLogRepository } from "./AuditLogRepository";
 import { AUDIT_LOG_REPOSITORY_TOKEN } from "./AuditLogRepositoryToken";
+import { resolveImpersonationContext } from "./impersonationState";
 import { AuditableDecoratorProblem } from "./problems/AuditableDecoratorProblem";
 import { sanitizeAuditValue } from "./sanitizeAuditValue";
 import type { AuditableOptions, AuditLogEntry } from "./types";
 
 type DecoratedMethod = (...args: unknown[]) => unknown;
-
-type ImpersonationContext = {
-  impersonatorId: string;
-  targetUserId: string;
-};
-
-function getImpersonationContext(context: unknown): ImpersonationContext | undefined {
-  if (!context || typeof context !== "object") {
-    return undefined;
-  }
-
-  const ctx = context as Record<string, unknown>;
-  if (!("impersonation" in ctx)) {
-    return undefined;
-  }
-
-  const impersonation = ctx.impersonation;
-  if (!impersonation || typeof impersonation !== "object") {
-    return undefined;
-  }
-
-  const imp = impersonation as Record<string, unknown>;
-  if (typeof imp.impersonatorId !== "string" || typeof imp.targetUserId !== "string") {
-    return undefined;
-  }
-
-  return {
-    impersonatorId: imp.impersonatorId,
-    targetUserId: imp.targetUserId,
-  };
-}
 
 function extractDiffFromPayload(payload: unknown): Record<string, unknown> | null {
   if (!payload || typeof payload !== "object") {
@@ -225,22 +195,27 @@ export function Auditable(options: AuditableOptions): MethodDecorator {
         paramMetadata.resourceIdIndex !== undefined
           ? args[paramMetadata.resourceIdIndex]
           : undefined;
-      const impersonation = getImpersonationContext(context);
+      const impersonation = resolveImpersonationContext(context);
+      const activeImpersonation = impersonation.status === "active" ? impersonation.state : null;
 
       const auditConfig: AuditWriteConfig = {
         tenantId: context?.tenantId ?? "unknown",
-        actorId: impersonation?.impersonatorId ?? context?.user?.id ?? "unknown",
+        actorId:
+          activeImpersonation?.impersonatorId ??
+          (impersonation.status === "invalid" ? "unknown" : (context?.user?.id ?? "unknown")),
         action: options.action,
         resourceType: options.resourceType,
         resourceId: toResourceId(resourceIdValue, args),
         diff: extractDiffFromPayload(payloadInput),
-        metadata: impersonation
+        metadata: activeImpersonation
           ? {
               impersonation: true,
-              impersonatorId: impersonation.impersonatorId,
-              targetUserId: impersonation.targetUserId,
+              impersonatorId: activeImpersonation.impersonatorId,
+              targetUserId: activeImpersonation.targetUserId,
             }
-          : {},
+          : impersonation.status === "invalid"
+            ? { impersonation: true, invalidImpersonationContext: true }
+            : {},
         throwOnError: options.throwOnFailure,
       };
 

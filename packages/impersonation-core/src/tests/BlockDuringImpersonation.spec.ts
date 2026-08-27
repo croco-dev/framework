@@ -1,3 +1,4 @@
+import type { RequestContext } from "@croco/framework-context";
 import { Context } from "@croco/framework-context";
 import { describe, expect, it } from "vitest";
 import { BlockDuringImpersonation } from "../libs/decorators/BlockDuringImpersonation";
@@ -22,6 +23,7 @@ describe("BlockDuringImpersonation", () => {
 
   it("should throw BlockedDuringImpersonationProblem when impersonating", async () => {
     const service = new TestService();
+    const now = Date.now();
     const impersonationContext = {
       requestId: "req-1",
       user: { id: "user-1" },
@@ -29,8 +31,8 @@ describe("BlockDuringImpersonation", () => {
         sessionId: "imp_123",
         impersonatorId: "admin-1",
         targetUserId: "user-1",
-        startedAt: new Date(),
-        expiresAt: new Date(),
+        startedAt: new Date(now - 1_000),
+        expiresAt: new Date(now + 60_000),
       },
     } as ImpersonationContext;
 
@@ -39,5 +41,67 @@ describe("BlockDuringImpersonation", () => {
         return service.sensitiveOperation();
       }),
     ).rejects.toThrow(BlockedDuringImpersonationProblem);
+  });
+
+  it.each([
+    ["a truthy non-object", true],
+    ["a partial object", { sessionId: "imp_123" }],
+    [
+      "an invalid date",
+      {
+        sessionId: "imp_123",
+        impersonatorId: "admin-1",
+        targetUserId: "user-1",
+        startedAt: new Date("invalid"),
+        expiresAt: new Date(Date.now() + 60_000),
+      },
+    ],
+    [
+      "a future session",
+      {
+        sessionId: "imp_123",
+        impersonatorId: "admin-1",
+        targetUserId: "user-1",
+        startedAt: new Date(Date.now() + 60_000),
+        expiresAt: new Date(Date.now() + 120_000),
+      },
+    ],
+    [
+      "an expired session",
+      {
+        sessionId: "imp_123",
+        impersonatorId: "admin-1",
+        targetUserId: "user-1",
+        startedAt: new Date(Date.now() - 60_000),
+        expiresAt: new Date(Date.now() - 1),
+      },
+    ],
+  ])("should fail closed for %s", async (_description, impersonation) => {
+    const service = new TestService();
+    await expect(
+      Context.run({ requestId: "req-1", impersonation } as RequestContext, async () =>
+        service.sensitiveOperation(),
+      ),
+    ).rejects.toThrow(BlockedDuringImpersonationProblem);
+  });
+
+  it("should fail closed when the context accessor throws", async () => {
+    const service = new TestService();
+    const context = Object.defineProperty({ requestId: "req-1" }, "impersonation", {
+      get: () => {
+        throw new Error("untrusted context accessor");
+      },
+    }) as RequestContext;
+
+    await expect(Context.run(context, async () => service.sensitiveOperation())).rejects.toThrow(
+      BlockedDuringImpersonationProblem,
+    );
+  });
+
+  it("should allow execution when the impersonation marker is absent", async () => {
+    const service = new TestService();
+    await expect(
+      Context.run({ requestId: "req-1" }, async () => service.sensitiveOperation()),
+    ).resolves.toBe("success");
   });
 });

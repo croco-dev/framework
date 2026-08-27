@@ -3099,9 +3099,20 @@
               "exportKind": "named",
               "source": "./libs/AuditErrorHandler",
               "declarationKind": "function"
+            },
+            {
+              "name": "resolveImpersonationContext",
+              "exportKind": "named",
+              "source": "./libs/impersonationState",
+              "declarationKind": "function"
             }
           ],
           "typeExports": [
+            {
+              "name": "ActiveImpersonationState",
+              "exportKind": "named",
+              "source": "./libs/impersonationState"
+            },
             {
               "name": "AuditableOptions",
               "exportKind": "named",
@@ -3166,6 +3177,11 @@
               "name": "CallHandler",
               "exportKind": "named",
               "source": "./libs/interfaces/Interceptor"
+            },
+            {
+              "name": "ImpersonationContextResolution",
+              "exportKind": "named",
+              "source": "./libs/impersonationState"
             },
             {
               "name": "Interceptor",

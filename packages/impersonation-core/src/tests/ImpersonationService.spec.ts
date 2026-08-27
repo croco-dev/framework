@@ -429,13 +429,14 @@ describe("ImpersonationService", () => {
   });
 
   describe("context helpers", () => {
+    const now = Date.now();
     const session: ImpersonationState = {
       sessionId: "imp-123",
       impersonatorId: "admin-1",
       targetUserId: "user-123",
       reason: "Support request",
-      startedAt: new Date(),
-      expiresAt: new Date(),
+      startedAt: new Date(now - 1_000),
+      expiresAt: new Date(now + 60_000),
     };
 
     it("identifies impersonation contexts", () => {
@@ -458,6 +459,51 @@ describe("ImpersonationService", () => {
       expect(service.getTargetUser(impersonationContext)).toBe("user-123");
       expect(service.getImpersonator(context())).toBeNull();
       expect(service.getTargetUser(context())).toBeNull();
+    });
+
+    it.each([
+      ["a boolean", true],
+      ["a string", "active"],
+      ["a partial object", { sessionId: "imp-123" }],
+      ["a blank identifier", { ...session, impersonatorId: "   " }],
+      ["a non-string reason", { ...session, reason: 42 }],
+      ["a serialized timestamp", { ...session, startedAt: session.startedAt.toISOString() }],
+      ["an invalid start date", { ...session, startedAt: new Date("invalid") }],
+      ["an invalid expiration date", { ...session, expiresAt: new Date("invalid") }],
+      [
+        "an expiration before the start",
+        { ...session, expiresAt: new Date(session.startedAt.getTime() - 1) },
+      ],
+      [
+        "a session that has not started",
+        {
+          ...session,
+          startedAt: new Date(now + 60_000),
+          expiresAt: new Date(now + 120_000),
+        },
+      ],
+      ["an expired session", { ...session, expiresAt: new Date(now - 1) }],
+    ])("rejects %s as impersonation context", (_description, impersonation) => {
+      const malformedContext = {
+        requestId: "req-1",
+        impersonation,
+      } as RequestContext;
+
+      expect(service.isImpersonating(malformedContext)).toBe(false);
+      expect(service.getImpersonator(malformedContext)).toBeNull();
+      expect(service.getTargetUser(malformedContext)).toBeNull();
+    });
+
+    it("rejects a context with a throwing impersonation accessor", () => {
+      const malformedContext = Object.defineProperty({ requestId: "req-1" }, "impersonation", {
+        get: () => {
+          throw new Error("untrusted context accessor");
+        },
+      }) as RequestContext;
+
+      expect(service.isImpersonating(malformedContext)).toBe(false);
+      expect(service.getImpersonator(malformedContext)).toBeNull();
+      expect(service.getTargetUser(malformedContext)).toBeNull();
     });
   });
 });
