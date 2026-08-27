@@ -31,6 +31,7 @@ export class ShutdownManager {
   private timeoutMs: number;
   private timeoutConfigured: boolean;
   private listenersRegistered = false;
+  private shutdownPromise: Promise<void> | undefined;
   private signalShutdownPromise: Promise<void> | undefined;
 
   private constructor(timeoutMs?: number) {
@@ -89,7 +90,6 @@ export class ShutdownManager {
     if (manager) {
       manager.removeAllListeners();
       manager.hooks = [];
-      manager.signalShutdownPromise = undefined;
     }
     for (const scopedManager of ShutdownManager.scopedInstances.values()) {
       scopedManager.removeAllListeners();
@@ -129,8 +129,12 @@ export class ShutdownManager {
       return;
     }
 
-    this.signalShutdownPromise = this.shutdown({ throwOnHookError: true });
-    void this.signalShutdownPromise.catch((error: unknown) => {
+    const shutdownPromise = this.shutdown({ throwOnHookError: true });
+    if (this.signalShutdownPromise) {
+      return;
+    }
+    this.signalShutdownPromise = shutdownPromise;
+    void shutdownPromise.catch((error: unknown) => {
       const normalizedError = error instanceof Error ? error : new Error(String(error));
       this.logError(
         "[ShutdownManager] Signal shutdown failed:",
@@ -141,12 +145,23 @@ export class ShutdownManager {
     });
   };
 
-  async shutdown(options: ShutdownOptions = {}): Promise<void> {
-    if (this.lifecycleState !== "accepting-hooks") {
-      return;
+  shutdown(options: ShutdownOptions = {}): Promise<void> {
+    if (this.shutdownPromise) {
+      return this.shutdownPromise;
     }
     this.lifecycleState = "shutting-down";
+    let resolveShutdown!: () => void;
+    let rejectShutdown!: (reason?: unknown) => void;
+    const shutdownPromise = new Promise<void>((resolve, reject) => {
+      resolveShutdown = resolve;
+      rejectShutdown = reject;
+    });
+    this.shutdownPromise = shutdownPromise;
+    void this.executeShutdown(options).then(resolveShutdown, rejectShutdown);
+    return shutdownPromise;
+  }
 
+  private async executeShutdown(options: ShutdownOptions): Promise<void> {
     const reversedHooks = [...this.hooks].reverse();
     const controller = new AbortController();
     const failures: Error[] = [];

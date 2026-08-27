@@ -398,6 +398,31 @@ describe("ShutdownManager", () => {
         { error: expect.any(ShutdownHookExecutionProblem), loggingError: loggingFailure },
       );
     });
+
+    it("should observe a reentrant signal hook failure once through reset", async () => {
+      const logger = { error: vi.fn() } as unknown as ILogger;
+      Container.set(LOGGER_TOKEN, logger);
+      const manager = ShutdownManager.getInstance();
+      const hook = {
+        onShutdown: vi.fn(async () => {
+          process.emit("SIGTERM");
+          ShutdownManager.reset();
+          throw new Error("hook failed");
+        }),
+      };
+      manager.register(hook);
+      manager.listen();
+
+      process.emit("SIGTERM");
+      await vi.waitFor(() => expect(process.exitCode).toBe(1));
+
+      expect(hook.onShutdown).toHaveBeenCalledTimes(1);
+      expect(
+        logger.error.mock.calls.filter(
+          ([message]) => message === "[ShutdownManager] Signal shutdown failed:",
+        ),
+      ).toHaveLength(1);
+    });
   });
 
   describe("shutdown", () => {
@@ -473,6 +498,122 @@ describe("ShutdownManager", () => {
       expect(hook.onShutdown).toHaveBeenCalledTimes(1);
     });
 
+    it("should keep concurrent callers pending until the active shutdown completes", async () => {
+      const manager = ShutdownManager.getInstance();
+      const hookCompletion = Promise.withResolvers<void>();
+      const hook = {
+        onShutdown: vi.fn(() => hookCompletion.promise),
+      };
+      manager.register(hook);
+
+      const firstShutdown = manager.shutdown();
+      const secondShutdown = manager.shutdown();
+      let secondSettled = false;
+      void secondShutdown.finally(() => {
+        secondSettled = true;
+      });
+
+      await vi.waitFor(() => expect(hook.onShutdown).toHaveBeenCalledTimes(1));
+      expect(secondSettled).toBe(false);
+
+      hookCompletion.resolve();
+      await Promise.all([firstShutdown, secondShutdown]);
+
+      expect(secondSettled).toBe(true);
+      expect(hook.onShutdown).toHaveBeenCalledTimes(1);
+    });
+
+    it("should execute hooks once when a hook synchronously re-enters shutdown", async () => {
+      const manager = ShutdownManager.getInstance();
+      const hook = {
+        onShutdown: vi.fn(async () => {
+          void manager.shutdown();
+        }),
+      };
+      manager.register(hook);
+
+      await manager.shutdown();
+
+      expect(hook.onShutdown).toHaveBeenCalledTimes(1);
+    });
+
+    it("should execute hooks once when a hook synchronously emits a shutdown signal", async () => {
+      const manager = ShutdownManager.getInstance();
+      const hook = {
+        onShutdown: vi.fn(async () => {
+          process.emit("SIGTERM");
+        }),
+      };
+      manager.register(hook);
+      manager.listen();
+
+      process.emit("SIGTERM");
+      await vi.waitFor(() => expect(hook.onShutdown).toHaveBeenCalledTimes(1));
+      await manager.shutdown();
+
+      expect(hook.onShutdown).toHaveBeenCalledTimes(1);
+    });
+
+    it("should share the same strict hook failure across concurrent callers", async () => {
+      const manager = ShutdownManager.getInstance();
+      const hookFailure = new Error("hook failed");
+      manager.register({
+        onShutdown: async () => {
+          await Promise.resolve();
+          throw hookFailure;
+        },
+      });
+
+      const results = await Promise.allSettled([
+        manager.shutdown({ throwOnHookError: true }),
+        manager.shutdown({ throwOnHookError: true }),
+      ]);
+      const [firstResult, secondResult] = results;
+
+      expect(firstResult).toMatchObject({
+        status: "rejected",
+        reason: expect.objectContaining({
+          code: "framework-context/shutdown-hook-execution-failed",
+          extensions: {
+            failureCount: 1,
+            failures: [{ message: "hook failed", name: "Error" }],
+          },
+        }),
+      });
+      expect(secondResult.status).toBe("rejected");
+      if (firstResult.status === "fulfilled" || secondResult.status === "fulfilled") {
+        throw new Error("Expected both shutdown calls to reject");
+      }
+      expect(secondResult.reason).toBe(firstResult.reason);
+    });
+
+    it("should keep an active shutdown joinable through reset", async () => {
+      const manager = ShutdownManager.getInstance();
+      const hookCompletion = Promise.withResolvers<void>();
+      const hook = {
+        onShutdown: vi.fn(() => hookCompletion.promise),
+      };
+      manager.register(hook);
+
+      const firstShutdown = manager.shutdown();
+      ShutdownManager.reset();
+      const joinedShutdown = manager.shutdown();
+      let joinedSettled = false;
+      void joinedShutdown.finally(() => {
+        joinedSettled = true;
+      });
+
+      await vi.waitFor(() => expect(hook.onShutdown).toHaveBeenCalledTimes(1));
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(joinedSettled).toBe(false);
+
+      hookCompletion.resolve();
+      await Promise.all([firstShutdown, joinedShutdown]);
+
+      expect(hook.onShutdown).toHaveBeenCalledTimes(1);
+    });
+
     it("should reject with timeout problem after timeout", async () => {
       vi.useFakeTimers();
 
@@ -482,20 +623,23 @@ describe("ShutdownManager", () => {
       const manager = ShutdownManager.getInstance(100);
       const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
 
-      const hook: ShutdownHook = {
-        onShutdown: async () => {
+      const hook = {
+        onShutdown: vi.fn(async () => {
           await new Promise(() => {});
-        },
+        }),
       };
 
       manager.register(hook);
 
-      const shutdownPromise = manager.shutdown();
-      const rejected = expect(shutdownPromise).rejects.toBeInstanceOf(ShutdownTimeoutProblem);
+      const shutdownResult = manager.shutdown().catch((error: unknown) => error);
+      const joinedResult = manager.shutdown().catch((error: unknown) => error);
 
       await vi.advanceTimersByTimeAsync(100);
 
-      await rejected;
+      const [problem, joinedProblem] = await Promise.all([shutdownResult, joinedResult]);
+      expect(problem).toBeInstanceOf(ShutdownTimeoutProblem);
+      expect(joinedProblem).toBe(problem);
+      expect(hook.onShutdown).toHaveBeenCalledTimes(1);
       expect(mockLogger.error).toHaveBeenCalledWith("[ShutdownManager] Shutdown timeout exceeded.");
       expect(exitSpy).not.toHaveBeenCalled();
 
