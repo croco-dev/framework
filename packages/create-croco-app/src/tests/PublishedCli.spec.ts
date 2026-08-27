@@ -80,6 +80,7 @@ describe("published create-croco-app CLI", () => {
         const version = run("pnpm", ["exec", "create-croco-app", "--version"], consumerRoot);
 
         expect(version.stdout.trim()).toBe(packageVersion);
+        verifyProgrammaticImport(consumerRoot);
         verifyProgrammaticGeneration(consumerRoot);
         verifyJsonFailureOutput(consumerRoot);
       } finally {
@@ -278,6 +279,40 @@ function verifyJsonFailureOutput(consumerRoot: string): void {
     expect(JSON.parse(retried.stdout)).toMatchObject({ ok: true, targetDir });
     expect(retried.stderr).toBe("");
     expect(existsSync(join(targetDir, "package.json"))).toBe(true);
+  }
+}
+
+function verifyProgrammaticImport(consumerRoot: string): void {
+  const importRoot = mkdtempSync(join(tmpdir(), "croco-create-app-import-"));
+  const consumerPath = join(consumerRoot, "programmatic-import-consumer.mjs");
+  writeFileSync(
+    consumerPath,
+    [
+      "const rootApi = await import('create-croco-app');",
+      "const programmaticApi = await import('create-croco-app/programmatic');",
+      "if (typeof rootApi.generate !== 'function') throw new Error('missing root generate export');",
+      "if (typeof rootApi.normalizeNonInteractiveOptions !== 'function') {",
+      "  throw new Error('missing root normalizeNonInteractiveOptions export');",
+      "}",
+      "if (typeof programmaticApi.createProgram !== 'function') {",
+      "  throw new Error('missing programmatic createProgram export');",
+      "}",
+      "if (typeof programmaticApi.validateResolvedOptions !== 'function') {",
+      "  throw new Error('missing programmatic validateResolvedOptions export');",
+      "}",
+      "console.log('imported');",
+      "",
+    ].join("\n"),
+  );
+
+  try {
+    const result = run(process.execPath, [consumerPath], importRoot);
+
+    expect(result.stdout).toBe("imported\n");
+    expect(result.stderr).toBe("");
+    expect(readdirSync(importRoot)).toEqual([]);
+  } finally {
+    rmSync(importRoot, { force: true, recursive: true });
   }
 }
 

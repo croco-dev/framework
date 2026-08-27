@@ -1,6 +1,3 @@
-import { mkdtempSync, readdirSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { Command } from "commander";
 import { describe, expect, expectTypeOf, it, vi } from "vitest";
 
@@ -15,8 +12,6 @@ describe("create-croco-app programmatic entrypoints", () => {
   });
 
   it("loads without parsing arguments, writing output, or exiting", async () => {
-    const importDirectory = mkdtempSync(join(tmpdir(), "create-croco-app-import-"));
-    const originalDirectory = process.cwd();
     const parseAsync = vi.spyOn(Command.prototype, "parseAsync");
     const consoleLog = vi.spyOn(console, "log").mockImplementation(() => undefined);
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
@@ -25,7 +20,6 @@ describe("create-croco-app programmatic entrypoints", () => {
     });
 
     try {
-      process.chdir(importDirectory);
       const rootApi = await import("../index.js");
       const programmaticApi = await import("../programmatic.js");
 
@@ -37,10 +31,7 @@ describe("create-croco-app programmatic entrypoints", () => {
       expect(consoleLog).not.toHaveBeenCalled();
       expect(consoleError).not.toHaveBeenCalled();
       expect(processExit).not.toHaveBeenCalled();
-      expect(readdirSync(importDirectory)).toEqual([]);
     } finally {
-      process.chdir(originalDirectory);
-      rmSync(importDirectory, { force: true, recursive: true });
       vi.restoreAllMocks();
     }
   });
