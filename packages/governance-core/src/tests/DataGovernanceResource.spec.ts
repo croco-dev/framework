@@ -344,6 +344,163 @@ describe("DataGovernanceResource", () => {
     ]);
   });
 
+  it("aligns Data Map field flags with supported, unsupported, and mixed capabilities", () => {
+    const supportedResource = defineDataGovernanceResource({
+      fields: [
+        { classifications: ["operational"], id: "id" },
+        {
+          classifications: ["sensitive"],
+          deleted: false,
+          exported: false,
+          id: "excluded",
+        },
+      ],
+      kind: "supported",
+      label: "Supported",
+      scope: "tenant",
+      subject: { idField: "id", type: "supported" },
+      subjectRequests: userResource.subjectRequests,
+    });
+    const unsupportedResource = defineDataGovernanceResource({
+      fields: [{ classifications: ["operational"], id: "id" }],
+      kind: "unsupported",
+      label: "Unsupported",
+      scope: "tenant",
+      subject: { idField: "id", type: "unsupported" },
+    });
+    const mixedResource = defineDataGovernanceResource({
+      fields: [
+        { classifications: ["operational"], id: "id" },
+        { classifications: ["sensitive"], exported: false, id: "excluded" },
+      ],
+      kind: "mixed",
+      label: "Mixed",
+      scope: "tenant",
+      subject: { idField: "id", type: "mixed" },
+      subjectRequests: {
+        delete: { reason: "Deletion is not available", status: "not-supported" },
+        export: userResource.subjectRequests.export,
+      },
+    });
+
+    const artifact = createDataMapArtifact([unsupportedResource, supportedResource, mixedResource]);
+
+    expect(artifact.diagnostics).toEqual([]);
+    expect(
+      artifact.resources.map((resource) => ({
+        capabilities: {
+          delete: resource.capabilities.delete.status,
+          export: resource.capabilities.export.status,
+        },
+        fields: resource.fields.map(({ deleted, exported, id }) => ({ deleted, exported, id })),
+        kind: resource.kind,
+      })),
+    ).toMatchInlineSnapshot(`
+      [
+        {
+          "capabilities": {
+            "delete": "not-supported",
+            "export": "supported",
+          },
+          "fields": [
+            {
+              "deleted": false,
+              "exported": false,
+              "id": "excluded",
+            },
+            {
+              "deleted": false,
+              "exported": true,
+              "id": "id",
+            },
+          ],
+          "kind": "mixed",
+        },
+        {
+          "capabilities": {
+            "delete": "supported",
+            "export": "supported",
+          },
+          "fields": [
+            {
+              "deleted": false,
+              "exported": false,
+              "id": "excluded",
+            },
+            {
+              "deleted": true,
+              "exported": true,
+              "id": "id",
+            },
+          ],
+          "kind": "supported",
+        },
+        {
+          "capabilities": {
+            "delete": "not-supported",
+            "export": "not-supported",
+          },
+          "fields": [
+            {
+              "deleted": false,
+              "exported": false,
+              "id": "id",
+            },
+          ],
+          "kind": "unsupported",
+        },
+      ]
+    `);
+  });
+
+  it("rejects field flags that advertise unsupported resource capabilities", () => {
+    const contradictoryResource = defineDataGovernanceResource({
+      fields: [
+        {
+          classifications: ["operational"],
+          deleted: true,
+          exported: true,
+          id: "id",
+        },
+      ],
+      kind: "contradictory",
+      label: "Contradictory",
+      scope: "tenant",
+      subject: { idField: "id", type: "contradictory" },
+      subjectRequests: {
+        delete: { reason: "Deletion is not available", status: "not-supported" },
+        export: { reason: "Export is not available", status: "not-supported" },
+      },
+    });
+
+    const report = validateDataGovernanceResources([contradictoryResource]);
+
+    expect(report).toMatchObject({
+      diagnostics: [
+        {
+          capability: "delete",
+          code: DATA_GOVERNANCE_DIAGNOSTIC_CODES.fieldCapabilityUnsupported,
+          fieldId: "id",
+          path: "resources[0].fields[0].deleted",
+        },
+        {
+          capability: "export",
+          code: DATA_GOVERNANCE_DIAGNOSTIC_CODES.fieldCapabilityUnsupported,
+          fieldId: "id",
+          path: "resources[0].fields[0].exported",
+        },
+      ],
+      valid: false,
+    });
+    expect(createDataMapArtifact([contradictoryResource])).toMatchObject({
+      diagnostics: [
+        { code: DATA_GOVERNANCE_DIAGNOSTIC_CODES.fieldCapabilityUnsupported },
+        { code: DATA_GOVERNANCE_DIAGNOSTIC_CODES.fieldCapabilityUnsupported },
+      ],
+      resources: [{ fields: [{ deleted: false, exported: false, id: "id" }] }],
+    });
+  });
+
   it("reports invalid governance contracts with stable diagnostics and a typed Problem", () => {
     const invalid = {
       fields: [

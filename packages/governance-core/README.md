@@ -63,6 +63,11 @@ resources, fields, classifications, retention policies, capabilities, Problems,
 and validation diagnostics are sorted deterministically. Missing export/delete
 capabilities are represented explicitly as `not-supported` entries with stable
 Problem codes, so generated governance manifests do not rely on convention.
+Field `exported` and `deleted` flags default to the corresponding resource
+capability: supported capabilities include fields unless explicitly excluded,
+while unsupported capabilities keep every field excluded. Explicitly enabling a
+field for an unsupported capability fails resource validation with a stable
+diagnostic.
 
 `createProjectMapDataGovernanceSection()` returns a small Project Map section
 that points reviewers and tooling at the generated Data Map artifact.

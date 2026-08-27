@@ -29,6 +29,10 @@ title: "DATA_GOVERNANCE_DIAGNOSTIC_CODES"
 
 > `readonly` **capabilityStatusRequired**: `"governance-core/capability-status-required"` = `"governance-core/capability-status-required"`
 
+### fieldCapabilityUnsupported
+
+> `readonly` **fieldCapabilityUnsupported**: `"governance-core/field-capability-unsupported"` = `"governance-core/field-capability-unsupported"`
+
 ### fieldClassificationRequired
 
 > `readonly` **fieldClassificationRequired**: `"governance-core/field-classification-required"` = `"governance-core/field-classification-required"`

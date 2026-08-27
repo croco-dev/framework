@@ -43,6 +43,7 @@ export const DATA_GOVERNANCE_DIAGNOSTIC_CODES = {
   fieldIdDuplicate: "governance-core/field-id-duplicate",
   fieldClassificationRequired: "governance-core/field-classification-required",
   fieldClassificationUnknown: "governance-core/field-classification-unknown",
+  fieldCapabilityUnsupported: "governance-core/field-capability-unsupported",
   fieldRetentionPolicyUnknown: "governance-core/field-retention-policy-unknown",
   retentionPolicyIdRequired: "governance-core/retention-policy-id-required",
   retentionPolicyIdDuplicate: "governance-core/retention-policy-id-duplicate",
@@ -257,7 +258,14 @@ function validateResource(
     { resourceKind },
   );
   validateSubject(candidate.subject, resourcePath, resourceKind, diagnostics);
-  validateFields(fields, retentionPolicyIds, resourcePath, resourceKind, diagnostics);
+  validateFields(
+    fields,
+    retentionPolicyIds,
+    candidate.subjectRequests,
+    resourcePath,
+    resourceKind,
+    diagnostics,
+  );
   validateCapabilities(candidate.subjectRequests, resourcePath, resourceKind, diagnostics);
   validateProblems(candidate.problems, `${resourcePath}.problems`, resourceKind, diagnostics);
 
@@ -452,6 +460,7 @@ function validateSubject(
 function validateFields(
   fields: readonly DataGovernanceField[],
   retentionPolicyIds: ReadonlySet<string>,
+  subjectRequests: DataGovernanceResource["subjectRequests"] | undefined,
   resourcePath: string,
   resourceKind: string | undefined,
   diagnostics: DataGovernanceDiagnostic[],
@@ -503,7 +512,52 @@ function validateFields(
         }),
       );
     }
+
+    validateFieldCapability(
+      field,
+      "exported",
+      "export",
+      subjectRequests?.export,
+      path,
+      resourceKind,
+      diagnostics,
+    );
+    validateFieldCapability(
+      field,
+      "deleted",
+      "delete",
+      subjectRequests?.delete,
+      path,
+      resourceKind,
+      diagnostics,
+    );
   }
+}
+
+function validateFieldCapability(
+  field: DataGovernanceField,
+  flag: "exported" | "deleted",
+  capabilityName: "export" | "delete",
+  capability: DataSubjectCapabilityDeclaration | undefined,
+  fieldPath: string,
+  resourceKind: string | undefined,
+  diagnostics: DataGovernanceDiagnostic[],
+): void {
+  if (field[flag] !== true || capability?.status === "supported") {
+    return;
+  }
+
+  diagnostics.push(
+    createDiagnostic({
+      capability: capabilityName,
+      code: DATA_GOVERNANCE_DIAGNOSTIC_CODES.fieldCapabilityUnsupported,
+      fieldId: normalizeString(field.id),
+      message: `Data governance field cannot set ${flag} to true when the ${capabilityName} capability is not supported`,
+      path: `${fieldPath}.${flag}`,
+      resourceKind,
+      target: "field",
+    }),
+  );
 }
 
 function validateCapabilities(
@@ -681,10 +735,18 @@ function validateProblems(
 }
 
 function toDataMapResource(resource: DataGovernanceResource): DataMapResource {
-  const fields = resource.fields.map(toDataMapField).sort(compareDataMapFields);
-  const retentionPolicies = [...(resource.retentionPolicies ?? [])].sort(compareRetentionPolicies);
   const exportCapability = toDataMapCapability("export", resource.subjectRequests?.export);
   const deleteCapability = toDataMapCapability("delete", resource.subjectRequests?.delete);
+  const fields = resource.fields
+    .map((field) =>
+      toDataMapField(
+        field,
+        exportCapability.status === "supported",
+        deleteCapability.status === "supported",
+      ),
+    )
+    .sort(compareDataMapFields);
+  const retentionPolicies = [...(resource.retentionPolicies ?? [])].sort(compareRetentionPolicies);
   const problems = dedupeProblems([
     ...normalizeProblemContracts(resource.problems ?? []),
     ...exportCapability.problems,
@@ -709,12 +771,16 @@ function toDataMapResource(resource: DataGovernanceResource): DataMapResource {
   };
 }
 
-function toDataMapField(field: DataGovernanceField): DataMapField {
+function toDataMapField(
+  field: DataGovernanceField,
+  exportSupported: boolean,
+  deleteSupported: boolean,
+): DataMapField {
   return {
     id: field.id,
     classifications: sortClassifications(field.classifications),
-    exported: field.exported ?? true,
-    deleted: field.deleted ?? true,
+    exported: exportSupported && field.exported !== false,
+    deleted: deleteSupported && field.deleted !== false,
     ...(field.label ? { label: field.label } : {}),
     ...(field.valueType ? { valueType: field.valueType } : {}),
     ...(field.retentionPolicyId ? { retentionPolicyId: field.retentionPolicyId } : {}),

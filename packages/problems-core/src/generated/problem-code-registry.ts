@@ -8618,7 +8618,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/governance-core/src/libs/DataGovernanceResource.ts",
-          line: 102,
+          line: 103,
           column: 5,
           kind: "problem-constructor",
         },
