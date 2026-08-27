@@ -1,12 +1,47 @@
+import { z } from "zod";
 import { CURSOR_VERSION } from "./constants";
 import { InvalidCursorProblem } from "./problems";
 import type { CursorPayload } from "./types";
 
-/**
- * Encode a cursor payload to URL-safe Base64 string
- */
-export function encodeCursor(payload: CursorPayload): string {
-  const json = JSON.stringify(payload);
+type CursorBasePayload = {
+  v: number;
+  id: string;
+};
+
+export type CursorCodec<TSchema extends z.ZodType<CursorBasePayload, CursorBasePayload>> = {
+  /** Encode a schema output as a versioned URL-safe Base64 cursor. */
+  encode(payload: z.output<TSchema>): string;
+  /** Decode and validate a versioned cursor as the schema output. */
+  decode(cursor: string): z.output<TSchema>;
+};
+
+function assertCursorBase(payload: unknown): asserts payload is CursorBasePayload {
+  if (typeof payload !== "object" || payload === null || Array.isArray(payload)) {
+    throw new InvalidCursorProblem("Cursor payload is not an object");
+  }
+
+  const cursorPayload = payload as Record<string, unknown>;
+
+  if (!("v" in cursorPayload) || typeof cursorPayload.v !== "number") {
+    throw new InvalidCursorProblem("Cursor payload missing version field");
+  }
+
+  if (cursorPayload.v !== CURSOR_VERSION) {
+    throw new InvalidCursorProblem(`Unsupported cursor version: ${cursorPayload.v}`);
+  }
+
+  if (!("id" in cursorPayload) || typeof cursorPayload.id !== "string") {
+    throw new InvalidCursorProblem("Cursor payload missing id field");
+  }
+}
+
+function serializeCursor(payload: CursorBasePayload): string {
+  let json: string | undefined;
+  try {
+    json = JSON.stringify(payload);
+  } catch {
+    throw new InvalidCursorProblem("Cursor payload is not JSON-serializable");
+  }
   if (typeof json !== "string") {
     throw new InvalidCursorProblem("Cursor payload is not JSON-serializable");
   }
@@ -21,11 +56,7 @@ export function encodeCursor(payload: CursorPayload): string {
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-/**
- * Decode a URL-safe Base64 cursor string to payload
- * @throws InvalidCursorProblem if cursor is invalid
- */
-export function decodeCursor(cursor: string): CursorPayload {
+function deserializeCursor(cursor: string): unknown {
   if (!cursor || typeof cursor !== "string") {
     throw new InvalidCursorProblem("Cursor is empty or not a string");
   }
@@ -44,32 +75,171 @@ export function decodeCursor(cursor: string): CursorPayload {
     throw new InvalidCursorProblem("Cursor is not valid Base64");
   }
 
-  let payload: unknown;
   try {
-    payload = JSON.parse(json);
+    return JSON.parse(json) as unknown;
   } catch {
     throw new InvalidCursorProblem("Cursor payload is not valid JSON");
   }
+}
 
-  if (typeof payload !== "object" || payload === null) {
-    throw new InvalidCursorProblem("Cursor payload is not an object");
+function isJsonRoundTripEqual(
+  value: unknown,
+  wireValue: unknown,
+  seen = new WeakSet<object>(),
+): boolean {
+  try {
+    if (value === null || typeof value !== "object") {
+      return Object.is(value, wireValue);
+    }
+
+    if (wireValue === null || typeof wireValue !== "object" || seen.has(value)) {
+      return false;
+    }
+    seen.add(value);
+
+    try {
+      if (Array.isArray(value)) {
+        if (
+          !Array.isArray(wireValue) ||
+          value.length !== wireValue.length ||
+          Object.keys(value).length !== value.length ||
+          Reflect.ownKeys(value).length !== value.length + 1
+        ) {
+          return false;
+        }
+        for (let index = 0; index < value.length; index += 1) {
+          if (!Object.prototype.hasOwnProperty.call(value, index)) {
+            return false;
+          }
+        }
+        return value.every((item, index) => isJsonRoundTripEqual(item, wireValue[index], seen));
+      }
+
+      if (Array.isArray(wireValue)) {
+        return false;
+      }
+
+      const prototype = Object.getPrototypeOf(value);
+      if (prototype !== Object.prototype && prototype !== null) {
+        return false;
+      }
+
+      const keys = Object.keys(value);
+      if (Reflect.ownKeys(value).length !== keys.length) {
+        return false;
+      }
+
+      const wireKeys = Object.keys(wireValue);
+      if (
+        keys.length !== wireKeys.length ||
+        keys.some((key) => !Object.prototype.hasOwnProperty.call(wireValue, key))
+      ) {
+        return false;
+      }
+
+      const record = value as Record<string, unknown>;
+      const wireRecord = wireValue as Record<string, unknown>;
+      return keys.every((key) => isJsonRoundTripEqual(record[key], wireRecord[key], seen));
+    } finally {
+      seen.delete(value);
+    }
+  } catch {
+    return false;
   }
+}
 
-  const p = payload as Record<string, unknown>;
+function formatIssuePaths(error: z.ZodError): string {
+  const paths = error.issues.map((issue) =>
+    issue.path.length === 0 ? "(root)" : issue.path.map(String).join("."),
+  );
+  return [...new Set(paths)].join(", ");
+}
 
-  if (!("v" in p) || typeof p.v !== "number") {
-    throw new InvalidCursorProblem("Cursor payload missing version field");
+function encodeWithSchema<TSchema extends z.ZodType<CursorBasePayload, CursorBasePayload>>(
+  schema: TSchema,
+  payload: z.output<TSchema>,
+): z.input<TSchema> {
+  try {
+    const encoded = schema.safeEncode(payload);
+    if (!encoded.success) {
+      throw new InvalidCursorProblem(
+        `Cursor payload does not match the schema: ${formatIssuePaths(encoded.error)}`,
+      );
+    }
+    return encoded.data;
+  } catch (error) {
+    if (error instanceof InvalidCursorProblem) {
+      throw error;
+    }
+    throw new InvalidCursorProblem("Cursor payload does not support encoding");
   }
+}
 
-  if (!("id" in p) || typeof p.id !== "string") {
-    throw new InvalidCursorProblem("Cursor payload missing id field");
+function decodeWithSchema<TSchema extends z.ZodType<CursorBasePayload, CursorBasePayload>>(
+  schema: TSchema,
+  payload: CursorBasePayload,
+): z.output<TSchema> {
+  try {
+    const decoded = schema.safeDecode(payload as z.input<TSchema>);
+    if (!decoded.success) {
+      throw new InvalidCursorProblem(
+        `Cursor payload does not match the schema: ${formatIssuePaths(decoded.error)}`,
+      );
+    }
+    return decoded.data;
+  } catch (error) {
+    if (error instanceof InvalidCursorProblem) {
+      throw error;
+    }
+    throw new InvalidCursorProblem("Cursor payload does not support decoding");
   }
+}
 
-  if (p.v !== CURSOR_VERSION) {
-    throw new InvalidCursorProblem(`Unsupported cursor version: ${p.v}`);
-  }
+/**
+ * Create a typed cursor codec backed by a Zod schema.
+ *
+ * The schema must include the common `v` and `id` fields, and its wire input must survive a JSON
+ * roundtrip without loss. Use `z.codec(z.iso.datetime(), z.date(), ...)` for Date outputs and other
+ * bidirectional transforms so encoding produces JSON-safe wire values.
+ */
+export function createCursorCodec<
+  const TSchema extends z.ZodType<CursorBasePayload, CursorBasePayload>,
+>(schema: TSchema): CursorCodec<TSchema> {
+  return {
+    encode(payload) {
+      const encoded = encodeWithSchema(schema, payload);
+      assertCursorBase(encoded);
+      const cursor = serializeCursor(encoded);
+      const wirePayload = deserializeCursor(cursor);
+      assertCursorBase(wirePayload);
+      if (!isJsonRoundTripEqual(encoded, wirePayload)) {
+        throw new InvalidCursorProblem("Cursor payload is not JSON-safe");
+      }
+      return cursor;
+    },
+    decode(cursor) {
+      const payload = deserializeCursor(cursor);
+      assertCursorBase(payload);
+      return decodeWithSchema(schema, payload);
+    },
+  };
+}
 
-  return p as CursorPayload;
+const defaultCursorCodec = createCursorCodec(z.custom<CursorPayload>());
+
+/**
+ * Encode a cursor payload to URL-safe Base64 string
+ */
+export function encodeCursor(payload: CursorPayload): string {
+  return defaultCursorCodec.encode(payload);
+}
+
+/**
+ * Decode a URL-safe Base64 cursor string to payload
+ * @throws InvalidCursorProblem if cursor is invalid
+ */
+export function decodeCursor(cursor: string): CursorPayload {
+  return defaultCursorCodec.decode(cursor);
 }
 
 function toPaddedBase64(cursor: string): string | undefined {

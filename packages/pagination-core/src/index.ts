@@ -9,7 +9,8 @@ export { createCursorPage } from "./libs/createCursorPage";
 
 export { createOffsetPage } from "./libs/createOffsetPage";
 
-export { decodeCursor, encodeCursor } from "./libs/cursor";
+export { createCursorCodec, decodeCursor, encodeCursor } from "./libs/cursor";
+export type { CursorCodec } from "./libs/cursor";
 
 export { parsePaginationParams } from "./libs/parsePaginationParams";
 
