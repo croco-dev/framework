@@ -86,10 +86,12 @@ Feature 플래그가 활성화되어 있는지 확인합니다.
 
 **Context 자동 주입:**
 
-- `context.userId`가 있으면 사용
-- 없으면 `Context.getCurrentUser().id` 사용
-- 없으면 `Context.getRequestId()`로 익명 사용자 생성
-- 없으면 `Context.getTenantId()`로 테넌트별 식별
+- `distinctId`: `context.userId` → `Context.getCurrentUser().id` → `anonymous:<requestId>` →
+  `tenant:<context.tenantId>` → `tenant:<Context.getTenantId()>` → `anonymous`
+- `groups`: `context.groups` → `{ tenant: context.tenantId }` → `{ tenant: Context.getTenantId() }`
+
+`context.tenantId`는 문자열이고, 공백을 제거한 길이가 1 이상일 때만 명시적 테넌트로 사용합니다. 유효하지 않은 명시적
+테넌트 ID는 PostHog `personProperties`에도 전달하지 않습니다.
 
 #### `getVariant(flag: string, context?: Record<string, unknown>): Promise<string | boolean | object>`
 
@@ -104,12 +106,12 @@ Feature 플래그의 변형(variant) 값을 가져옵니다. A/B 테스트, 다�
 
 PostHog로 전달되는 컨텍스트:
 
-| 소스               | PostHog 매핑                     |
-| ------------------ | -------------------------------- |
-| `context.userId`   | `distinctId`                     |
-| `context.tenantId` | `groups.tenant`                  |
-| `context.groups`   | `groups` (전달)                  |
-| `context.*`        | `personProperties` (문자열 변환) |
+| 소스               | PostHog 매핑                                                                                        |
+| ------------------ | --------------------------------------------------------------------------------------------------- |
+| `context.userId`   | 우선적으로 `distinctId`에 사용                                                                      |
+| `context.groups`   | 우선적으로 `groups`에 사용                                                                          |
+| `context.tenantId` | 유효할 때 명시적 groups가 없으면 `groups.tenant`에, 상위 식별자가 없으면 테넌트 `distinctId`에 사용 |
+| `context.*`        | `undefined`, 객체, 함수를 제외하고 `personProperties`로 문자열 변환                                 |
 
 ## 라이선스
 

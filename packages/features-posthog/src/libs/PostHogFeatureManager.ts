@@ -57,7 +57,7 @@ export class PostHogFeatureManager extends FeatureManager {
     const requestId = Context.getRequestId();
     if (requestId) return `anonymous:${requestId}`;
 
-    const tenantId = Context.getTenantId();
+    const tenantId = this.getExplicitTenantId(context) ?? Context.getTenantId();
     if (tenantId) return `tenant:${tenantId}`;
 
     return "anonymous";
@@ -67,7 +67,7 @@ export class PostHogFeatureManager extends FeatureManager {
     const groups = this.toStringRecord(context?.groups);
     if (groups) return groups;
 
-    const tenantId = Context.getTenantId();
+    const tenantId = this.getExplicitTenantId(context) ?? Context.getTenantId();
     if (tenantId) {
       return { tenant: tenantId };
     }
@@ -76,7 +76,19 @@ export class PostHogFeatureManager extends FeatureManager {
   }
 
   private toPostHogProperties(context?: Record<string, unknown>): PostHogProperties | undefined {
-    return this.toStringRecord(context);
+    const properties = this.toStringRecord(context);
+    if (!properties) return undefined;
+
+    if (context?.tenantId !== undefined && this.getExplicitTenantId(context) === undefined) {
+      delete properties.tenantId;
+    }
+
+    return Object.keys(properties).length > 0 ? properties : undefined;
+  }
+
+  private getExplicitTenantId(context?: Record<string, unknown>): string | undefined {
+    const tenantId = context?.tenantId;
+    return typeof tenantId === "string" && tenantId.trim().length > 0 ? tenantId : undefined;
   }
 
   private toStringRecord(value: unknown): PostHogProperties | undefined {
