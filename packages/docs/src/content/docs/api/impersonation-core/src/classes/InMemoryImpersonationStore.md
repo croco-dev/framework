@@ -35,6 +35,30 @@ title: "InMemoryImpersonationStore"
 
 ## Methods
 
+### createIfNoActiveSession()
+
+> **createIfNoActiveSession**(`session`): `Promise`\<[`ImpersonationSessionCreateResult`](/api/impersonation-core/src/type-aliases/impersonationsessioncreateresult/)\>
+
+Atomically claims the session's impersonator and persists the session when no active session
+owns that actor key. Persistent stores must enforce this boundary with a uniqueness constraint
+or equivalent compare-and-set that replaces an expired owner in the same operation.
+
+#### Parameters
+
+##### session
+
+[`ImpersonationState`](/api/impersonation-core/src/type-aliases/impersonationstate/)
+
+#### Returns
+
+`Promise`\<[`ImpersonationSessionCreateResult`](/api/impersonation-core/src/type-aliases/impersonationsessioncreateresult/)\>
+
+#### Overrides
+
+[`ImpersonationStore`](/api/impersonation-core/src/classes/impersonationstore/).[`createIfNoActiveSession`](/api/impersonation-core/src/classes/impersonationstore/#createifnoactivesession)
+
+---
+
 ### find()
 
 > **find**(`sessionId`): `Promise`\<[`ImpersonationState`](/api/impersonation-core/src/type-aliases/impersonationstate/) \| `null`\>
@@ -92,23 +116,3 @@ title: "InMemoryImpersonationStore"
 #### Overrides
 
 [`ImpersonationStore`](/api/impersonation-core/src/classes/impersonationstore/).[`revoke`](/api/impersonation-core/src/classes/impersonationstore/#revoke)
-
----
-
-### save()
-
-> **save**(`session`): `Promise`\<`void`\>
-
-#### Parameters
-
-##### session
-
-[`ImpersonationState`](/api/impersonation-core/src/type-aliases/impersonationstate/)
-
-#### Returns
-
-`Promise`\<`void`\>
-
-#### Overrides
-
-[`ImpersonationStore`](/api/impersonation-core/src/classes/impersonationstore/).[`save`](/api/impersonation-core/src/classes/impersonationstore/#save)

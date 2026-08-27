@@ -7,10 +7,21 @@ export type ImpersonationPrincipal = {
   readonly permissions: readonly string[];
 };
 
+export type ImpersonationSessionCreateResult =
+  | { readonly status: "created" }
+  | { readonly status: "active-session-exists" };
+
 export abstract class ImpersonationStore {
   static readonly token = new Token<ImpersonationStore>("ImpersonationStore");
 
-  abstract save(session: ImpersonationState): Promise<void>;
+  /**
+   * Atomically claims the session's impersonator and persists the session when no active session
+   * owns that actor key. Persistent stores must enforce this boundary with a uniqueness constraint
+   * or equivalent compare-and-set that replaces an expired owner in the same operation.
+   */
+  abstract createIfNoActiveSession(
+    session: ImpersonationState,
+  ): Promise<ImpersonationSessionCreateResult>;
   abstract find(sessionId: string): Promise<ImpersonationState | null>;
   abstract findByImpersonator(impersonatorId: string): Promise<ImpersonationState | null>;
   abstract revoke(sessionId: string): Promise<void>;

@@ -7,6 +7,7 @@ import { ProblemCategory } from "@croco/problems-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ImpersonationStartedEvent } from "../libs/events";
 import { ImpersonationService } from "../libs/ImpersonationService";
+import { InMemoryImpersonationStore } from "../libs/InMemoryImpersonationStore";
 import { AuthProvider, type ImpersonationPrincipal, ImpersonationStore } from "../libs/interfaces";
 import { InvalidImpersonationConfigurationProblem } from "../libs/problems/ImpersonationProblems";
 import type { ImpersonationConfig, ImpersonationState } from "../libs/types";
@@ -29,11 +30,17 @@ class MockEventBus implements EventBus {
 
 class MockImpersonationStore extends ImpersonationStore {
   private readonly sessions = new Map<string, ImpersonationState>();
-  saveCount = 0;
+  createCount = 0;
 
-  async save(session: ImpersonationState): Promise<void> {
-    this.saveCount++;
+  async createIfNoActiveSession(session: ImpersonationState) {
+    for (const existing of this.sessions.values()) {
+      if (existing.impersonatorId === session.impersonatorId) {
+        return { status: "active-session-exists" } as const;
+      }
+    }
+    this.createCount++;
     this.sessions.set(session.sessionId, session);
+    return { status: "created" } as const;
   }
 
   async find(sessionId: string): Promise<ImpersonationState | null> {
@@ -98,7 +105,7 @@ describe("ImpersonationService", () => {
   });
 
   const expectNoStartSideEffects = (): void => {
-    expect(store.saveCount).toBe(0);
+    expect(store.createCount).toBe(0);
     expect(eventBus.events).toHaveLength(0);
   };
 
@@ -281,13 +288,38 @@ describe("ImpersonationService", () => {
     it("rejects nested impersonation for the verified principal", async () => {
       await service.start(context("admin-1"), "user-123");
       eventBus.clear();
-      store.saveCount = 0;
+      store.createCount = 0;
 
       await expect(service.start(context("admin-1"), "user-456")).rejects.toMatchObject({
         code: "NESTED_IMPERSONATION_NOT_ALLOWED",
       });
 
       expectNoStartSideEffects();
+    });
+
+    it("allows only one concurrent start for the same verified principal", async () => {
+      const concurrentStore = new InMemoryImpersonationStore();
+      service = new ImpersonationService(concurrentStore, authProvider, config);
+
+      const results = await Promise.allSettled([
+        service.start(context("admin-1"), "user-123"),
+        service.start(context("admin-1"), "user-456"),
+      ]);
+
+      const fulfilled = results.filter(
+        (result): result is PromiseFulfilledResult<ImpersonationState> =>
+          result.status === "fulfilled",
+      );
+      const rejected = results.filter(
+        (result): result is PromiseRejectedResult => result.status === "rejected",
+      );
+      expect(fulfilled).toHaveLength(1);
+      expect(rejected).toHaveLength(1);
+      expect(rejected[0]?.reason).toMatchObject({
+        code: "NESTED_IMPERSONATION_NOT_ALLOWED",
+      });
+      expect(await concurrentStore.findByImpersonator("admin-1")).toEqual(fulfilled[0]?.value);
+      expect(eventBus.events).toHaveLength(1);
     });
 
     it("rejects a missing required reason without persistence or publication", async () => {
