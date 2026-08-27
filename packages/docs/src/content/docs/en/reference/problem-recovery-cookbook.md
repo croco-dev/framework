@@ -2765,7 +2765,7 @@ Sources:
 
 Sources:
 
-- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:84:3` (problem-class)
+- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:93:3` (problem-class)
 
 <a id="cache-core-cache-key-argument-unsupported"></a>
 
@@ -5879,7 +5879,7 @@ Sources:
 
 Sources:
 
-- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:19:3` (problem-class)
+- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:28:3` (problem-class)
 
 <a id="impersonation-identity-conflict"></a>
 
@@ -5897,7 +5897,7 @@ Sources:
 
 Sources:
 
-- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:48:3` (problem-class)
+- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:57:3` (problem-class)
 
 <a id="impersonation-reason-required"></a>
 
@@ -5915,7 +5915,7 @@ Sources:
 
 Sources:
 
-- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:75:3` (problem-class)
+- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:84:3` (problem-class)
 
 <a id="impersonation-session-not-found"></a>
 
@@ -5933,7 +5933,7 @@ Sources:
 
 Sources:
 
-- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:93:3` (problem-class)
+- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:102:3` (problem-class)
 
 <a id="impersonation-target-not-found"></a>
 
@@ -5951,7 +5951,7 @@ Sources:
 
 Sources:
 
-- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:57:3` (problem-class)
+- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:66:3` (problem-class)
 
 <a id="index-not-found"></a>
 
@@ -7805,7 +7805,7 @@ Sources:
 
 Sources:
 
-- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:66:3` (problem-class)
+- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:75:3` (problem-class)
 
 <a id="notifications-core-default-provider-conflict"></a>
 
@@ -10109,7 +10109,7 @@ Sources:
 
 Sources:
 
-- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:39:3` (problem-class)
+- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:48:3` (problem-class)
 
 <a id="starter-invalid-environment"></a>
 

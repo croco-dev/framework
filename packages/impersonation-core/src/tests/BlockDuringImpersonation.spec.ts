@@ -1,9 +1,12 @@
 import type { RequestContext } from "@croco/framework-context";
-import { Context } from "@croco/framework-context";
-import { describe, expect, it } from "vitest";
+import { Container, Context } from "@croco/framework-context";
+import { ProblemCategory } from "@croco/problems-core";
+import { beforeEach, describe, expect, it } from "vitest";
 import { BlockDuringImpersonation } from "../libs/decorators/BlockDuringImpersonation";
 import type { ImpersonationContext } from "../libs/ImpersonationService";
 import { BlockedDuringImpersonationProblem } from "../libs/problems/ImpersonationProblems";
+import type { ImpersonationConfig } from "../libs/types";
+import { IMPERSONATION_CONFIG_TOKEN } from "../libs/types";
 
 describe("BlockDuringImpersonation", () => {
   class TestService {
@@ -11,20 +14,16 @@ describe("BlockDuringImpersonation", () => {
     sensitiveOperation(): string {
       return "success";
     }
+
+    @BlockDuringImpersonation()
+    allowedOperation(): string {
+      return "allowed";
+    }
   }
 
-  it("should allow execution when not impersonating", async () => {
-    const service = new TestService();
-    const result = await Context.run({ requestId: "req-1", user: { id: "user-1" } }, async () => {
-      return service.sensitiveOperation();
-    });
-    expect(result).toBe("success");
-  });
-
-  it("should throw BlockedDuringImpersonationProblem when impersonating", async () => {
-    const service = new TestService();
+  const createImpersonationContext = (): ImpersonationContext => {
     const now = Date.now();
-    const impersonationContext = {
+    return {
       requestId: "req-1",
       user: { id: "user-1" },
       impersonation: {
@@ -35,12 +34,102 @@ describe("BlockDuringImpersonation", () => {
         expiresAt: new Date(now + 60_000),
       },
     } as ImpersonationContext;
+  };
+
+  const setConfig = (blockedActions: string[]): void => {
+    const config: ImpersonationConfig = {
+      maxDurationMs: 30 * 60 * 1000,
+      requireReason: false,
+      blockedActions,
+    };
+    Container.set(IMPERSONATION_CONFIG_TOKEN, config);
+  };
+
+  beforeEach(() => {
+    Container.reset();
+  });
+
+  it("should allow execution when not impersonating", async () => {
+    const service = new TestService();
+    const result = await Context.run({ requestId: "req-1", user: { id: "user-1" } }, async () => {
+      return service.sensitiveOperation();
+    });
+    expect(result).toBe("success");
+  });
+
+  it("denies a configured action and allows an unlisted action during impersonation", async () => {
+    const service = new TestService();
+    setConfig(["sensitiveOperation"]);
 
     await expect(
-      Context.run(impersonationContext, async () => {
+      Context.run(createImpersonationContext(), async () => {
         return service.sensitiveOperation();
       }),
-    ).rejects.toThrow(BlockedDuringImpersonationProblem);
+    ).rejects.toMatchObject({
+      code: "BLOCKED_DURING_IMPERSONATION",
+      category: ProblemCategory.Forbidden,
+    });
+
+    await expect(
+      Context.run(createImpersonationContext(), async () => service.allowedOperation()),
+    ).resolves.toBe("allowed");
+  });
+
+  it("fails with a stable diagnostic when enforcement configuration is missing", async () => {
+    const service = new TestService();
+
+    await expect(
+      Context.run(createImpersonationContext(), async () => service.sensitiveOperation()),
+    ).rejects.toMatchObject({
+      code: "IMPERSONATION_CONFIGURATION_INVALID",
+      category: ProblemCategory.InternalServerError,
+      field: "configuration",
+      constraint: "registered",
+      receivedValue: "missing",
+    });
+  });
+
+  it.each([
+    {
+      blockedActions: ["sensitive Operation"],
+      constraint: "normalized-action-identifiers",
+      receivedValue: "invalid-item-at-index-0",
+    },
+    {
+      blockedActions: ["sensitiveOperation", "sensitiveOperation"],
+      constraint: "unique-action-identifiers",
+      receivedValue: "duplicate-item-at-index-1",
+    },
+  ])("fails closed for invalid action configuration %#", async (invalidConfig) => {
+    const service = new TestService();
+    setConfig(invalidConfig.blockedActions);
+
+    await expect(
+      Context.run(createImpersonationContext(), async () => service.sensitiveOperation()),
+    ).rejects.toMatchObject({
+      code: "IMPERSONATION_CONFIGURATION_INVALID",
+      field: "blockedActions",
+      constraint: invalidConfig.constraint,
+      receivedValue: invalidConfig.receivedValue,
+    });
+  });
+
+  it("fails closed when requireReason is not boolean", async () => {
+    const service = new TestService();
+    Container.set(IMPERSONATION_CONFIG_TOKEN, {
+      maxDurationMs: 30 * 60 * 1000,
+      requireReason: 0 as unknown as boolean,
+      blockedActions: ["sensitiveOperation"],
+    });
+
+    await expect(
+      Context.run(createImpersonationContext(), async () => service.sensitiveOperation()),
+    ).rejects.toMatchObject({
+      code: "IMPERSONATION_CONFIGURATION_INVALID",
+      field: "requireReason",
+      constraint: "boolean",
+      receivedValue: "non-boolean-number",
+    });
   });
 
   it.each([

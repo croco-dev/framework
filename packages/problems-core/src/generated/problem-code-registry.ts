@@ -3577,7 +3577,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 84,
+          line: 93,
           column: 3,
           kind: "problem-class",
         },
@@ -8986,7 +8986,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 19,
+          line: 28,
           column: 3,
           kind: "problem-class",
         },
@@ -9016,7 +9016,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 48,
+          line: 57,
           column: 3,
           kind: "problem-class",
         },
@@ -9047,7 +9047,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 75,
+          line: 84,
           column: 3,
           kind: "problem-class",
         },
@@ -9078,7 +9078,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 93,
+          line: 102,
           column: 3,
           kind: "problem-class",
         },
@@ -9109,7 +9109,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 57,
+          line: 66,
           column: 3,
           kind: "problem-class",
         },
@@ -12316,7 +12316,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 66,
+          line: 75,
           column: 3,
           kind: "problem-class",
         },
@@ -16366,7 +16366,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 39,
+          line: 48,
           column: 3,
           kind: "problem-class",
         },

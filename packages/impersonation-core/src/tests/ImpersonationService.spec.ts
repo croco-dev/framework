@@ -150,6 +150,58 @@ describe("ImpersonationService", () => {
       expectNoStartSideEffects();
     });
 
+    it.each([
+      {
+        blockedActions: ["delete User"],
+        constraint: "normalized-action-identifiers",
+        receivedValue: "invalid-item-at-index-0",
+      },
+      {
+        blockedActions: ["deleteUser", "deleteUser"],
+        constraint: "unique-action-identifiers",
+        receivedValue: "duplicate-item-at-index-1",
+      },
+    ])("rejects invalid action identifiers %# before use", (invalidConfig) => {
+      expect(
+        () =>
+          new ImpersonationService(store, authProvider, {
+            ...config,
+            blockedActions: invalidConfig.blockedActions,
+          }),
+      ).toThrowError(
+        expect.objectContaining({
+          code: "IMPERSONATION_CONFIGURATION_INVALID",
+          field: "blockedActions",
+          constraint: invalidConfig.constraint,
+          receivedValue: invalidConfig.receivedValue,
+        }),
+      );
+      expectNoStartSideEffects();
+    });
+
+    it.each([
+      [undefined, "non-boolean-undefined"],
+      [null, "non-boolean-null"],
+      [0, "non-boolean-number"],
+      ["true", "non-boolean-string"],
+    ])("rejects invalid requireReason %# before use", (requireReason, receivedValue) => {
+      expect(
+        () =>
+          new ImpersonationService(store, authProvider, {
+            ...config,
+            requireReason: requireReason as unknown as boolean,
+          }),
+      ).toThrowError(
+        expect.objectContaining({
+          code: "IMPERSONATION_CONFIGURATION_INVALID",
+          field: "requireReason",
+          constraint: "boolean",
+          receivedValue,
+        }),
+      );
+      expectNoStartSideEffects();
+    });
+
     it.each([["deleteUser" as unknown as string[]], [["deleteUser", 42] as unknown as string[]]])(
       "rejects malformed blockedActions %# before use",
       (blockedActions) => {
