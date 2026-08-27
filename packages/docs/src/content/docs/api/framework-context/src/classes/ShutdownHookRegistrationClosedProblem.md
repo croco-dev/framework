@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "TelemetryInitializationConflictProblem"
+title: "ShutdownHookRegistrationClosedProblem"
 ---
 
-A TelemetryRuntime initialization request conflicts with the configuration already owned by the singleton.
+shutdown 시작 후 새 훅을 등록하려고 할 때 발생하는 Problem입니다.
 
 ## Extends
 
@@ -15,17 +15,17 @@ A TelemetryRuntime initialization request conflicts with the configuration alrea
 
 ### Constructor
 
-> **new TelemetryInitializationConflictProblem**(`runtimeState`): `TelemetryInitializationConflictProblem`
+> **new ShutdownHookRegistrationClosedProblem**(`lifecycleState`): `ShutdownHookRegistrationClosedProblem`
 
 #### Parameters
 
-##### runtimeState
+##### lifecycleState
 
-`"disabled"` \| `"shutting-down"` \| `"initialized"` \| `"initializing"` \| `"shutdown-timed-out"` \| `"shutdown-failed"`
+`"shutting-down"` \| `"shut-down"`
 
 #### Returns
 
-`TelemetryInitializationConflictProblem`
+`ShutdownHookRegistrationClosedProblem`
 
 #### Overrides
 
@@ -55,7 +55,7 @@ A TelemetryRuntime initialization request conflicts with the configuration alrea
 
 ### code
 
-> `readonly` **code**: `"telemetry-sdk-node/init-configuration-conflict"` = `"telemetry-sdk-node/init-configuration-conflict"`
+> `readonly` **code**: `"framework-context/shutdown-hook-registration-closed"` = `"framework-context/shutdown-hook-registration-closed"`
 
 #### Overrides
 
@@ -93,6 +93,12 @@ A TelemetryRuntime initialization request conflicts with the configuration alrea
 
 ---
 
+### lifecycleState
+
+> `readonly` **lifecycleState**: `"shutting-down"` \| `"shut-down"`
+
+---
+
 ### message
 
 > **message**: `string`
@@ -110,12 +116,6 @@ A TelemetryRuntime initialization request conflicts with the configuration alrea
 #### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`name`](/api/problems-core/src/classes/problem/#name)
-
----
-
-### runtimeState
-
-> `readonly` **runtimeState**: `"disabled"` \| `"shutting-down"` \| `"initialized"` \| `"initializing"` \| `"shutdown-timed-out"` \| `"shutdown-failed"`
 
 ---
 

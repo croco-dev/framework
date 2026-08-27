@@ -11131,6 +11131,13 @@
               "compatibilityGroup": "shutdown"
             },
             {
+              "name": "ShutdownHookRegistrationClosedProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/ShutdownProblems",
+              "declarationKind": "class",
+              "compatibilityGroup": "shutdown"
+            },
+            {
               "name": "ShutdownManager",
               "exportKind": "named",
               "source": "./libs/ShutdownManager",
