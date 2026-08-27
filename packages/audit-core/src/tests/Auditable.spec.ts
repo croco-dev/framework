@@ -868,7 +868,7 @@ describe("@Auditable", () => {
           },
         }),
       ],
-    ])("should ignore %s", async (_description, impersonation) => {
+    ])("should avoid user attribution for %s", async (_description, impersonation) => {
       vi.useFakeTimers();
       vi.setSystemTime(nowTimestamp);
 
@@ -876,13 +876,13 @@ describe("@Auditable", () => {
 
       expect(entry).toEqual(
         expect.objectContaining({
-          actorId: "actor-1",
-          metadata: {},
+          actorId: "unknown",
+          metadata: { impersonation: true, invalidImpersonationContext: true },
         }),
       );
     });
 
-    it("should ignore a throwing context accessor", async () => {
+    it("should avoid user attribution for a throwing context accessor", async () => {
       vi.useFakeTimers();
       vi.setSystemTime(nowTimestamp);
       const context = Object.defineProperty(
@@ -903,8 +903,8 @@ describe("@Auditable", () => {
 
       expect(entry).toEqual(
         expect.objectContaining({
-          actorId: "actor-1",
-          metadata: {},
+          actorId: "unknown",
+          metadata: { impersonation: true, invalidImpersonationContext: true },
         }),
       );
     });

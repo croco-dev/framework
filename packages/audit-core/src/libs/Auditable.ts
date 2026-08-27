@@ -2,7 +2,7 @@ import { Container, Context, type ILogger, LOGGER_TOKEN } from "@croco/framework
 import { recordError } from "@croco/telemetry-api";
 import type { AuditLogRepository } from "./AuditLogRepository";
 import { AUDIT_LOG_REPOSITORY_TOKEN } from "./AuditLogRepositoryToken";
-import { resolveActiveImpersonationContext } from "./impersonationState";
+import { resolveImpersonationContext } from "./impersonationState";
 import { AuditableDecoratorProblem } from "./problems/AuditableDecoratorProblem";
 import { sanitizeAuditValue } from "./sanitizeAuditValue";
 import type { AuditableOptions, AuditLogEntry } from "./types";
@@ -195,22 +195,27 @@ export function Auditable(options: AuditableOptions): MethodDecorator {
         paramMetadata.resourceIdIndex !== undefined
           ? args[paramMetadata.resourceIdIndex]
           : undefined;
-      const impersonation = resolveActiveImpersonationContext(context);
+      const impersonation = resolveImpersonationContext(context);
+      const activeImpersonation = impersonation.status === "active" ? impersonation.state : null;
 
       const auditConfig: AuditWriteConfig = {
         tenantId: context?.tenantId ?? "unknown",
-        actorId: impersonation?.impersonatorId ?? context?.user?.id ?? "unknown",
+        actorId:
+          activeImpersonation?.impersonatorId ??
+          (impersonation.status === "invalid" ? "unknown" : (context?.user?.id ?? "unknown")),
         action: options.action,
         resourceType: options.resourceType,
         resourceId: toResourceId(resourceIdValue, args),
         diff: extractDiffFromPayload(payloadInput),
-        metadata: impersonation
+        metadata: activeImpersonation
           ? {
               impersonation: true,
-              impersonatorId: impersonation.impersonatorId,
-              targetUserId: impersonation.targetUserId,
+              impersonatorId: activeImpersonation.impersonatorId,
+              targetUserId: activeImpersonation.targetUserId,
             }
-          : {},
+          : impersonation.status === "invalid"
+            ? { impersonation: true, invalidImpersonationContext: true }
+            : {},
         throwOnError: options.throwOnFailure,
       };
 

@@ -1,4 +1,4 @@
-type ActiveImpersonationState = {
+export type ActiveImpersonationState = {
   readonly sessionId: string;
   readonly impersonatorId: string;
   readonly targetUserId: string;
@@ -6,6 +6,11 @@ type ActiveImpersonationState = {
   readonly startedAt: Date;
   readonly expiresAt: Date;
 };
+
+export type ImpersonationContextResolution =
+  | { readonly status: "absent" }
+  | { readonly status: "invalid" }
+  | { readonly status: "active"; readonly state: ActiveImpersonationState };
 
 function isNonBlankString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
@@ -62,16 +67,25 @@ function resolveActiveImpersonationState(value: unknown): ActiveImpersonationSta
   }
 }
 
-export function resolveActiveImpersonationContext(
-  context: unknown,
-): ActiveImpersonationState | null {
-  if (typeof context !== "object" || context === null) {
-    return null;
+export function resolveImpersonationContext(context: unknown): ImpersonationContextResolution {
+  if (context === null || context === undefined) {
+    return { status: "absent" };
+  }
+
+  if (typeof context !== "object") {
+    return { status: "invalid" };
   }
 
   try {
-    return resolveActiveImpersonationState((context as Record<string, unknown>).impersonation);
+    if (!("impersonation" in context)) {
+      return { status: "absent" };
+    }
+
+    const state = resolveActiveImpersonationState(
+      (context as Record<string, unknown>).impersonation,
+    );
+    return state ? { status: "active", state } : { status: "invalid" };
   } catch {
-    return null;
+    return { status: "invalid" };
   }
 }

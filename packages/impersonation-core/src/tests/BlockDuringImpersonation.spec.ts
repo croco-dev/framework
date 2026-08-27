@@ -76,17 +76,16 @@ describe("BlockDuringImpersonation", () => {
         expiresAt: new Date(Date.now() - 1),
       },
     ],
-  ])("should allow execution for %s", async (_description, impersonation) => {
+  ])("should fail closed for %s", async (_description, impersonation) => {
     const service = new TestService();
-    const result = await Context.run(
-      { requestId: "req-1", impersonation } as RequestContext,
-      async () => service.sensitiveOperation(),
-    );
-
-    expect(result).toBe("success");
+    await expect(
+      Context.run({ requestId: "req-1", impersonation } as RequestContext, async () =>
+        service.sensitiveOperation(),
+      ),
+    ).rejects.toThrow(BlockedDuringImpersonationProblem);
   });
 
-  it("should allow execution when the context accessor throws", async () => {
+  it("should fail closed when the context accessor throws", async () => {
     const service = new TestService();
     const context = Object.defineProperty({ requestId: "req-1" }, "impersonation", {
       get: () => {
@@ -94,8 +93,15 @@ describe("BlockDuringImpersonation", () => {
       },
     }) as RequestContext;
 
-    await expect(Context.run(context, async () => service.sensitiveOperation())).resolves.toBe(
-      "success",
+    await expect(Context.run(context, async () => service.sensitiveOperation())).rejects.toThrow(
+      BlockedDuringImpersonationProblem,
     );
+  });
+
+  it("should allow execution when the impersonation marker is absent", async () => {
+    const service = new TestService();
+    await expect(
+      Context.run({ requestId: "req-1" }, async () => service.sensitiveOperation()),
+    ).resolves.toBe("success");
   });
 });
