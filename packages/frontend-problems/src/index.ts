@@ -1,5 +1,13 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
 
+const MAX_RESPONSE_BODY_EXCERPT_LENGTH = 500;
+const REDACTED_RESPONSE_BODY_VALUE = "[redacted]";
+const INVALID_JSON_RESPONSE_MESSAGE = "Response body is not valid JSON.";
+const STRUCTURED_RESPONSE_SECRET_PATTERN =
+  /(?:-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?(?:-----END [A-Z ]*PRIVATE KEY-----|$)|github_pat_[a-zA-Z0-9_]{20,}|gh[pousr]_[a-zA-Z0-9]{20,}|AKIA[A-Z0-9]{16}|eyJ[a-zA-Z0-9_-]+\.eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+)/g;
+const TRAILING_STRUCTURED_RESPONSE_SECRET_PATTERN =
+  /(?:(?:github_pat_|gh[pousr]_)[a-zA-Z0-9_]*|AKIA[A-Z0-9]*|eyJ[a-zA-Z0-9_-]+\.eyJ[a-zA-Z0-9_-]+(?:\.[a-zA-Z0-9_-]*)?)$/g;
+
 export type ProblemDetails<Code extends string = string, Status extends number = number> = {
   readonly type: string;
   readonly title: string;
@@ -191,13 +199,19 @@ export class ProblemClientError extends Error {
 export class ProblemResponseError extends Error {
   readonly response: Response;
   readonly body?: unknown;
+  readonly bodyTruncated: boolean;
+  readonly contentType?: string;
   readonly cause?: unknown;
 
   constructor(response: Response, body?: unknown, cause?: unknown) {
     super(`Problem-aware request failed with HTTP ${response.status}`);
+    const evidence = createResponseBodyEvidence(body);
+
     this.name = "ProblemResponseError";
     this.response = response;
-    this.body = body;
+    this.body = evidence.body;
+    this.bodyTruncated = evidence.truncated;
+    this.contentType = response.headers.get("content-type") ?? undefined;
     this.cause = cause;
   }
 }
@@ -242,17 +256,81 @@ function toExternalJsonFailure(
   response: Response,
   body?: string,
 ): ProblemClientExternalFailure {
-  if (isAbortError(cause) || !(cause instanceof SyntaxError)) {
-    throw cause;
-  }
+  return toProblemResponseFailure(response, body, toJsonParsingCause(cause));
+}
+
+function toProblemResponseFailure(
+  response: Response,
+  body?: unknown,
+  cause?: unknown,
+): ProblemClientExternalFailure {
+  const error = new ProblemResponseError(response, body, cause);
 
   return {
     ok: false,
     kind: "external",
-    error: new ProblemResponseError(response, body, cause),
+    error,
     response,
-    ...(body === undefined ? {} : { body }),
+    ...(error.body === undefined ? {} : { body: error.body }),
   };
+}
+
+function toJsonParsingCause(cause: unknown): SyntaxError {
+  if (isAbortError(cause) || !(cause instanceof SyntaxError)) {
+    throw cause;
+  }
+
+  return new SyntaxError(INVALID_JSON_RESPONSE_MESSAGE);
+}
+
+function createResponseBodyEvidence(body: unknown): {
+  readonly body: unknown;
+  readonly truncated: boolean;
+} {
+  if (typeof body !== "string") {
+    return { body, truncated: false };
+  }
+
+  const inputTruncated = body.length > MAX_RESPONSE_BODY_EXCERPT_LENGTH;
+  const excerpt = inputTruncated ? body.slice(0, MAX_RESPONSE_BODY_EXCERPT_LENGTH - 3) : body;
+  const redacted = redactResponseBody(excerpt, inputTruncated);
+  const truncated = inputTruncated || redacted.length > MAX_RESPONSE_BODY_EXCERPT_LENGTH;
+
+  return {
+    body: truncated ? `${redacted.slice(0, MAX_RESPONSE_BODY_EXCERPT_LENGTH - 3)}...` : redacted,
+    truncated,
+  };
+}
+
+function redactResponseBody(body: string, inputTruncated: boolean): string {
+  const withoutCookies = body.replace(
+    /(["']?)(cookie|set[-_]?cookie)\1(\s*[:=]\s*)(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\r\n]+)/gi,
+    replaceSensitiveResponseValue,
+  );
+
+  const redacted = withoutCookies
+    .replace(
+      /(["']?)(authorization|proxy[-_]?authorization|credential|password|passphrase|passwd|pwd|secret|token|api[-_]?key|private[-_]?key|access[-_]?key(?:[-_]?id)?|access[-_]?token|refresh[-_]?token|client[-_]?secret|connection[-_]?string|dsn)\1(\s*[:=]\s*)(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|(?:bearer|basic|digest|apikey)\s+[^\r\n,;}\]]+|[^\r\n,;}\]]+)/gi,
+      replaceSensitiveResponseValue,
+    )
+    .replace(/\b(?:bearer|basic|digest|apikey)\s+[^\s,;}\]"']+/gi, REDACTED_RESPONSE_BODY_VALUE)
+    .replace(STRUCTURED_RESPONSE_SECRET_PATTERN, REDACTED_RESPONSE_BODY_VALUE);
+
+  return inputTruncated
+    ? redacted.replace(TRAILING_STRUCTURED_RESPONSE_SECRET_PATTERN, REDACTED_RESPONSE_BODY_VALUE)
+    : redacted;
+}
+
+function replaceSensitiveResponseValue(
+  match: string,
+  labelQuote: string,
+  label: string,
+  separator: string,
+): string {
+  const value = match.slice(labelQuote.length * 2 + label.length + separator.length);
+  const valueQuote = value.startsWith('"') || value.startsWith("'") ? value[0] : "";
+
+  return `${labelQuote}${label}${labelQuote}${separator}${valueQuote}${REDACTED_RESPONSE_BODY_VALUE}${valueQuote}`;
 }
 
 export async function fetchProblemJson<
@@ -300,15 +378,7 @@ export async function handleJsonResponse<T = unknown>(response: Response): Promi
   try {
     return (await response.json()) as T;
   } catch (cause) {
-    if (isAbortError(cause)) {
-      throw cause;
-    }
-
-    if (cause instanceof SyntaxError) {
-      throw new ProblemResponseError(response, undefined, cause);
-    }
-
-    throw cause;
+    throw new ProblemResponseError(response, undefined, toJsonParsingCause(cause));
   }
 }
 
@@ -363,7 +433,7 @@ export async function readOptionalJsonResponse(response: Response): Promise<unkn
   try {
     return JSON.parse(body) as unknown;
   } catch (cause) {
-    throw new ProblemResponseError(response, body, cause);
+    throw new ProblemResponseError(response, body, toJsonParsingCause(cause));
   }
 }
 
@@ -473,13 +543,7 @@ export async function readDeclaredProblemErrorResult<Problem extends ProblemDecl
     };
   }
 
-  return {
-    ok: false,
-    kind: "external",
-    error: new ProblemResponseError(response, bodyResult.body),
-    response,
-    body: bodyResult.body,
-  };
+  return toProblemResponseFailure(response, bodyResult.body);
 }
 
 export async function readProblemErrorResult<
@@ -502,13 +566,7 @@ export async function readProblemErrorResult<
   const problem = parseProblemDetails(bodyResult.body);
 
   if (!problem) {
-    return {
-      ok: false,
-      kind: "external",
-      error: new ProblemResponseError(response, bodyResult.body),
-      response,
-      body: bodyResult.body,
-    };
+    return toProblemResponseFailure(response, bodyResult.body);
   }
 
   const statusMismatch = createProblemStatusMismatchError(response, problem);

@@ -45,6 +45,12 @@ title: "ProblemResponseError"
 
 ---
 
+### bodyTruncated
+
+> `readonly` **bodyTruncated**: `boolean`
+
+---
+
 ### cause?
 
 > `readonly` `optional` **cause?**: `unknown`
@@ -52,6 +58,12 @@ title: "ProblemResponseError"
 #### Overrides
 
 `Error.cause`
+
+---
+
+### contentType?
+
+> `readonly` `optional` **contentType?**: `string`
 
 ---
 

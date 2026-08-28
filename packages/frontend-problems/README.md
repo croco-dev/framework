@@ -41,6 +41,11 @@ When the HTTP status and Problem body status disagree, the request fails with
 `ProblemStatusMismatchError`. Its `httpStatus`, `problemStatus`, and `problemCode`
 fields preserve the conflicting protocol evidence without entering a typed Problem branch.
 
+Optional JSON helpers treat empty and `204` success bodies as `undefined`. Malformed non-empty
+success bodies become `ProblemResponseError` failures instead of leaking a raw parser error. String
+body evidence is redacted and limited to 500 characters; `bodyTruncated` and `contentType` describe
+the preserved excerpt.
+
 ## Declared Problem unions
 
 Generated clients can pass declared route Problems to keep exhaustive unions:
