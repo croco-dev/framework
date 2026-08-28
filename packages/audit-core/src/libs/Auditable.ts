@@ -2,6 +2,8 @@ import { Container, Context, type ILogger, LOGGER_TOKEN } from "@croco/framework
 import { recordError } from "@croco/telemetry-api";
 import type { AuditLogRepository } from "./AuditLogRepository";
 import { AUDIT_LOG_REPOSITORY_TOKEN } from "./AuditLogRepositoryToken";
+import { hasAuditCoordination, markAuditWrite } from "./auditCoordination";
+import { AUDIT_METADATA_KEY } from "./constants";
 import { resolveImpersonationContext } from "./impersonationState";
 import { AuditableDecoratorProblem } from "./problems/AuditableDecoratorProblem";
 import { sanitizeAuditValue } from "./sanitizeAuditValue";
@@ -136,7 +138,7 @@ async function writeAuditLog(
   config: AuditWriteConfig,
   payload: Record<string, unknown>,
   dependencies: AuditWriteDependencies,
-): Promise<void> {
+): Promise<boolean> {
   const entry: Omit<AuditLogEntry, "id" | "createdAt"> = {
     tenantId: config.tenantId,
     actorId: config.actorId,
@@ -150,6 +152,7 @@ async function writeAuditLog(
 
   try {
     await dependencies.repository.create(entry);
+    return true;
   } catch (error) {
     safelyRecordError(error);
     safelyWarn(dependencies.logger, "[Auditable] Failed to write audit log", {
@@ -159,6 +162,30 @@ async function writeAuditLog(
     if (config.throwOnError) {
       throw error;
     }
+    return false;
+  }
+}
+
+async function writeDecoratorAuditLog(
+  config: AuditWriteConfig,
+  payload: Record<string, unknown>,
+  dependencies: AuditWriteDependencies,
+  target: object,
+  propertyKey: string | symbol,
+): Promise<void> {
+  const writePromise = writeAuditLog(config, payload, dependencies);
+
+  if (hasAuditCoordination(target, propertyKey)) {
+    if (await writePromise) {
+      markAuditWrite(target, propertyKey);
+    }
+    return;
+  }
+
+  if (config.throwOnError) {
+    await writePromise;
+  } else {
+    void writePromise;
   }
 }
 
@@ -224,6 +251,13 @@ export function Auditable(options: AuditableOptions): MethodDecorator {
     };
 
     Reflect.defineMetadata(AUDIT_PARAM_KEY, paramMetadata, target, propertyKey);
+    const interceptorMetadataTarget = typeof target === "function" ? target : target.constructor;
+    Reflect.defineMetadata(
+      AUDIT_METADATA_KEY,
+      { source: "decorator" },
+      interceptorMetadataTarget,
+      propertyKey,
+    );
 
     descriptor.value = async function (this: unknown, ...args: unknown[]): Promise<unknown> {
       const context = Context.get();
@@ -268,11 +302,13 @@ export function Auditable(options: AuditableOptions): MethodDecorator {
       } catch (error) {
         const payload = buildAuditPayload(args, payloadInput, null, getErrorMessage(error), false);
         if (dependencies) {
-          if (options.throwOnFailure) {
-            await writeAuditLog(auditConfig, payload, dependencies);
-          } else {
-            void writeAuditLog(auditConfig, payload, dependencies);
-          }
+          await writeDecoratorAuditLog(
+            auditConfig,
+            payload,
+            dependencies,
+            interceptorMetadataTarget,
+            propertyKey,
+          );
         }
 
         throw error;
@@ -286,11 +322,13 @@ export function Auditable(options: AuditableOptions): MethodDecorator {
         options.includeResult ?? false,
       );
       if (dependencies) {
-        if (options.throwOnFailure) {
-          await writeAuditLog(auditConfig, payload, dependencies);
-        } else {
-          void writeAuditLog(auditConfig, payload, dependencies);
-        }
+        await writeDecoratorAuditLog(
+          auditConfig,
+          payload,
+          dependencies,
+          interceptorMetadataTarget,
+          propertyKey,
+        );
       }
 
       return result;

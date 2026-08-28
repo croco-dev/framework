@@ -4,6 +4,7 @@ import { Container, Context, LOGGER_TOKEN } from "@croco/framework-context";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Auditable } from "../libs/Auditable";
 import type { AuditLogRepository } from "../libs/AuditLogRepository";
+import { AUDIT_METADATA_KEY } from "../libs/constants";
 import { AuditableDecoratorProblem } from "../libs/problems/AuditableDecoratorProblem";
 import type { AuditableOptions, AuditLogEntry } from "../libs/types";
 
@@ -32,6 +33,28 @@ describe("@Auditable", () => {
     vi.useRealTimers();
     vi.restoreAllMocks();
     Container.reset();
+  });
+
+  it("should publish interceptor metadata on the controller constructor and method", () => {
+    class TestController {
+      @Auditable({ action: "project.create", resourceType: "Project" })
+      create() {}
+    }
+
+    expect(Reflect.getOwnMetadata(AUDIT_METADATA_KEY, TestController, "create")).toEqual({
+      source: "decorator",
+    });
+  });
+
+  it("should publish interceptor metadata for a static method", () => {
+    class TestController {
+      @Auditable({ action: "project.create", resourceType: "Project" })
+      static create() {}
+    }
+
+    expect(Reflect.getOwnMetadata(AUDIT_METADATA_KEY, TestController, "create")).toEqual({
+      source: "decorator",
+    });
   });
 
   it("should wrap method and call AuditLogRepository.create after method execution", async () => {
