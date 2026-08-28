@@ -10497,7 +10497,25 @@
               "declarationKind": "function"
             },
             {
+              "name": "defineRuntimeEnv",
+              "exportKind": "declaration",
+              "source": "./core",
+              "declarationKind": "function"
+            },
+            {
               "name": "env",
+              "exportKind": "declaration",
+              "source": "./core",
+              "declarationKind": "const"
+            },
+            {
+              "name": "fullEnv",
+              "exportKind": "declaration",
+              "source": "./core",
+              "declarationKind": "const"
+            },
+            {
+              "name": "fullRuntimeEnvPresets",
               "exportKind": "declaration",
               "source": "./core",
               "declarationKind": "const"
@@ -10521,6 +10539,12 @@
               "declarationKind": "const"
             },
             {
+              "name": "RuntimeEnvPresetBoundaryProblem",
+              "exportKind": "declaration",
+              "source": "./libs/problems/ConfigProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "storageConfig",
               "exportKind": "declaration",
               "source": "./presets/storage",
@@ -10538,6 +10562,24 @@
               "name": "ConfigDefinition",
               "exportKind": "declaration",
               "source": "./decorators/ConfigSchema",
+              "declarationKind": "type"
+            },
+            {
+              "name": "DefineRuntimeEnvOptions",
+              "exportKind": "declaration",
+              "source": "./core",
+              "declarationKind": "type"
+            },
+            {
+              "name": "RuntimeEnv",
+              "exportKind": "declaration",
+              "source": "./core",
+              "declarationKind": "type"
+            },
+            {
+              "name": "RuntimeEnvPreset",
+              "exportKind": "declaration",
+              "source": "./core",
               "declarationKind": "type"
             }
           ]

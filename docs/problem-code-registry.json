@@ -7203,6 +7203,36 @@
       ]
     },
     {
+      "code": "framework-config/runtime-env-preset-boundary",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#framework-config-runtime-env-preset-boundary",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/framework-config/src/libs/problems/ConfigProblems.ts",
+          "line": 32,
+          "column": 3,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
       "code": "framework-context/circular-dependency",
       "category": "InternalServerError",
       "status": 500,

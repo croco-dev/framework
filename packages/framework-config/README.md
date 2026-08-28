@@ -8,7 +8,7 @@
 - 서버/클라이언트/공통 환경 변수 분리
 - 타입 안전한 환경 변수 접근 (`ConfigService`)
 - 스키마 출력 타입을 보존하는 설정 부트스트랩
-- 사전 정의된 프리셋 (app, database, redis, storage)
+- 명시적으로 합성하는 사전 정의 프리셋 (app, database, redis, storage)
 
 ## 설치
 
@@ -82,17 +82,51 @@ env.REDIS_URL;
 
 ## 프리셋 사용
 
-사전 정의된 프리셋을 사용하여 환경 변수를 구성합니다.
+기본 `env`는 애플리케이션 공통 설정만 검증합니다. 사용하는 integration preset을
+`defineRuntimeEnv`에 전달하면 선택한 환경 변수만 결과 타입과 런타임 검증에 포함됩니다.
 
 ```typescript
-import { env } from "@croco/framework-config/core";
+import { appConfig, databaseConfig, defineRuntimeEnv, env } from "@croco/framework-config";
 
 env.NODE_ENV;
 env.PORT;
-env.DATABASE_URL;
-env.REDIS_URL;
-env.R2_ACCOUNT_ID;
+
+const databaseEnv = defineRuntimeEnv({
+  presets: [appConfig, databaseConfig],
+});
+
+databaseEnv.DATABASE_URL;
+// databaseEnv.REDIS_URL; // 선택하지 않은 preset은 결과 타입에 존재하지 않습니다.
 ```
+
+preset 순서는 같은 키가 중복될 때 적용되는 우선순위를 결정하므로 tuple로 보존해야 합니다.
+별도 변수로 재사용할 때는 `as const` 또는 `satisfies`로 키와 순서를 유지합니다.
+
+```typescript
+import type { RuntimeEnvPreset } from "@croco/framework-config";
+
+const presets = [appConfig, databaseConfig] as const;
+const customPreset = {
+  server: {},
+  client: {},
+  shared: {},
+} satisfies RuntimeEnvPreset;
+```
+
+이전 `env`처럼 app, database, Redis, storage preset을 모두 검증해야 하는 애플리케이션은
+명시적인 전체 구성 export를 사용할 수 있습니다.
+
+```typescript
+import { fullEnv, fullRuntimeEnvPresets } from "@croco/framework-config";
+
+fullEnv.DATABASE_URL;
+
+// 동일한 전체 preset 집합으로 별도 env를 구성할 수도 있습니다.
+const presets = fullRuntimeEnvPresets;
+```
+
+`ConfigService`는 호환성을 위해 전체 preset 구성을 계속 사용합니다. 새 구성에서는
+`defineRuntimeEnv`가 반환한 env를 애플리케이션 경계에서 직접 주입해 사용하는 방식을 권장합니다.
 
 ## 프리셋 목록
 

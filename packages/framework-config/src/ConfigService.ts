@@ -1,13 +1,13 @@
 import { Component } from "@croco/framework-context";
-import { env } from "./core";
+import { fullEnv } from "./core";
 
 @Component({ scope: "singleton" })
 export class ConfigService {
   /**
    * Type-safe environment variable getter
    */
-  get<K extends keyof typeof env>(key: K): (typeof env)[K] {
-    return env[key];
+  get<K extends keyof typeof fullEnv>(key: K): (typeof fullEnv)[K] {
+    return fullEnv[key];
   }
 
   get isProduction(): boolean {

@@ -4,7 +4,7 @@
 export * from "./ConfigService";
 
 /**
- * 기본 preset을 조합한 공용 env 객체와 관련 API입니다.
+ * 선택한 preset을 조합하는 runtime env API와 기본 app env입니다.
  */
 export * from "./core";
 
