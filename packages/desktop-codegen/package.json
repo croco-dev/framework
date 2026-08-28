@@ -1,0 +1,49 @@
+{
+  "name": "@croco/desktop-codegen",
+  "version": "0.1.0",
+  "description": "Deterministic desktop bridge code generation for Croco applications",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/croco-dev/framework.git",
+    "directory": "packages/desktop-codegen"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "commonjs",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "publishConfig": {
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.js",
+        "types": "./dist/index.d.ts"
+      }
+    },
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
+    "lint": "oxlint .",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@croco/problems-core": "workspace:*",
+    "@croco/protocols-desktop": "workspace:*"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.1",
+    "typescript": "6.0.3",
+    "vitest": "4.1.8",
+    "zod": "^3.23.8"
+  },
+  "vitest": {
+    "include": [
+      "src/**/*.spec.ts"
+    ]
+  }
+}

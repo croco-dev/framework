@@ -1,0 +1,11 @@
+{
+  "exclude": ["node_modules"],
+  "extends": "../../tsconfig/tsconfig.node.json",
+  "compilerOptions": {
+    "paths": {
+      "@croco/problems-core": ["../problems-core/src/index.ts"],
+      "@croco/protocols-desktop": ["../protocols-desktop/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*.ts"]
+}

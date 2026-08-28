@@ -78,6 +78,7 @@
       "description": "Protocol contracts and generated protocol artifacts.",
       "packages": [
         "@croco/admin-generated",
+        "@croco/desktop-codegen",
         "@croco/openapi-spec",
         "@croco/protocol-codegen",
         "@croco/protocols-core",

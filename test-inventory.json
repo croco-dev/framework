@@ -1145,6 +1145,12 @@
       "owner": "@croco/dataloader-core"
     },
     {
+      "path": "packages/desktop-codegen/src/tests/DesktopPreloadCodegen.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/desktop-codegen"
+    },
+    {
       "path": "packages/diagnostics-core/src/tests/DiagnosticCodes.spec.ts",
       "lane": "fast",
       "qualifiers": [],

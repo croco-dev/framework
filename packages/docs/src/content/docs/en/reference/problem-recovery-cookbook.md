@@ -188,6 +188,7 @@ This cookbook documents 692 public Croco Problem codes. The deterministic JSON r
 | [`customer-health-drizzle/invalid-metering-input`](#customer-health-drizzle-invalid-metering-input)                                   | ValidationError       |    422 | not-retryable | public        | active    |       1 |
 | [`customer-health-drizzle/transition-sequence-missing`](#customer-health-drizzle-transition-sequence-missing)                         | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`dataloader-core/batch-result-length-mismatch`](#dataloader-core-batch-result-length-mismatch)                                       | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
+| [`desktop-codegen/invalid-contract-graph`](#desktop-codegen-invalid-contract-graph)                                                   | ValidationError       |    422 | not-retryable | public        | active    |       1 |
 | [`diagnostics-core/duplicate-provider`](#diagnostics-core-duplicate-provider)                                                         | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`diagnostics-core/invalid-timeout`](#diagnostics-core-invalid-timeout)                                                               | ValidationError       |    422 | not-retryable | public        | active    |       1 |
 | [`DOMAIN_AUTO_JOIN_RECOVERY_FAILED`](#domain-auto-join-recovery-failed)                                                               | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
@@ -3857,6 +3858,24 @@ Sources:
 Sources:
 
 - `packages/dataloader-core/src/libs/problems/BatchLoaderProblems.ts:4:3` (problem-class)
+
+<a id="desktop-codegen-invalid-contract-graph"></a>
+
+## `desktop-codegen/invalid-contract-graph`
+
+- Category: `ValidationError`
+- HTTP status: `422` Validation Error
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The request or generated contract failed schema or semantic validation.
+- User action: Fix the invalid fields and retry with schema-conformant input.
+- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/desktop-codegen/src/libs/generateDesktopPreloadBridges.ts:25:5` (problem-constructor)
 
 <a id="diagnostics-core-duplicate-provider"></a>
 

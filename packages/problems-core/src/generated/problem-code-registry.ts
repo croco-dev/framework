@@ -5458,6 +5458,36 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "desktop-codegen/invalid-contract-graph",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#desktop-codegen-invalid-contract-graph",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/desktop-codegen/src/libs/generateDesktopPreloadBridges.ts",
+          line: 25,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
       code: "diagnostics-core/duplicate-provider",
       category: "InternalServerError",
       status: 500,
