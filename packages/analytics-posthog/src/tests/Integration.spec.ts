@@ -409,11 +409,103 @@ describe("PostHog Integration", () => {
         hasApiKey: true,
         hasHost: false,
         hostSource: "missing",
+        configValidation: "invalid",
         liveCheck: "not_started",
         problemCode: "integrations-posthog/missing-config",
       }),
     );
     expect(JSON.stringify(health)).not.toContain("ph_secret");
+  });
+
+  it.each(["not-a-url", "ftp://posthog.example"])(
+    "should reject the same invalid PostHog host as runtime initialization: %s",
+    async (host) => {
+      vi.unstubAllEnvs();
+      const config = { apiKey: "ph_secret", host };
+      const diagnostics = new PostHogAnalyticsDiagnosticsProvider(config);
+
+      const health = await diagnostics.getHealth();
+
+      expect(health.status).toBe("unhealthy");
+      expect(health.details).toEqual(
+        expect.objectContaining({
+          hasApiKey: true,
+          hasHost: true,
+          hostSource: "config",
+          configValidation: "invalid",
+          liveCheck: "not_started",
+          problemCode: "integrations-posthog/missing-config",
+        }),
+      );
+      expect(() => new PostHogClient(config)).toThrow(health.message);
+      expect(JSON.stringify(health)).not.toContain("ph_secret");
+    },
+  );
+
+  it.each(["http://posthog.example", "https://posthog.example"])(
+    "should accept the same valid PostHog host as runtime initialization: %s",
+    async (host) => {
+      vi.unstubAllEnvs();
+      const config = { apiKey: "ph_secret", host };
+      const diagnostics = new PostHogAnalyticsDiagnosticsProvider(config);
+
+      const health = await diagnostics.getHealth();
+
+      expect(health.status).toBe("healthy");
+      expect(health.details).toEqual(
+        expect.objectContaining({
+          hasApiKey: true,
+          hasHost: true,
+          hostSource: "config",
+          configValidation: "valid",
+          liveCheck: "not_configured",
+        }),
+      );
+      expect(() => new PostHogClient(config)).not.toThrow();
+      expect(JSON.stringify(health)).not.toContain("ph_secret");
+    },
+  );
+
+  it("should validate an environment PostHog host without exposing configuration values", async () => {
+    vi.stubEnv("POSTHOG_HOST", "invalid-env-host");
+    const diagnostics = new PostHogAnalyticsDiagnosticsProvider({ apiKey: "ph_secret" });
+
+    const health = await diagnostics.getHealth();
+
+    expect(health.status).toBe("unhealthy");
+    expect(health.details).toEqual(
+      expect.objectContaining({
+        hasApiKey: true,
+        hasHost: true,
+        hostSource: "env",
+        configValidation: "invalid",
+        liveCheck: "not_started",
+      }),
+    );
+    expect(JSON.stringify(health)).not.toContain("ph_secret");
+    expect(JSON.stringify(health)).not.toContain("invalid-env-host");
+  });
+
+  it("should accept a valid environment PostHog host consistently with runtime initialization", async () => {
+    vi.stubEnv("POSTHOG_HOST", "https://env.posthog.example");
+    const config = { apiKey: "ph_secret" };
+    const diagnostics = new PostHogAnalyticsDiagnosticsProvider(config);
+
+    const health = await diagnostics.getHealth();
+
+    expect(health.status).toBe("healthy");
+    expect(health.details).toEqual(
+      expect.objectContaining({
+        hasApiKey: true,
+        hasHost: true,
+        hostSource: "env",
+        configValidation: "valid",
+        liveCheck: "not_configured",
+      }),
+    );
+    expect(() => new PostHogClient(config)).not.toThrow();
+    expect(JSON.stringify(health)).not.toContain("ph_secret");
+    expect(JSON.stringify(health)).not.toContain("https://env.posthog.example");
   });
 
   it("should report disabled diagnostics without requiring credentials", async () => {
@@ -433,6 +525,7 @@ describe("PostHog Integration", () => {
         enabled: false,
         hasApiKey: false,
         hasHost: false,
+        configValidation: "skipped",
         liveCheck: "disabled",
       }),
     );

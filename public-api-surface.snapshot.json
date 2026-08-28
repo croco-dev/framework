@@ -14526,6 +14526,12 @@
               "exportKind": "named",
               "source": "./libs/PostHogConfig",
               "declarationKind": "function"
+            },
+            {
+              "name": "validatePostHogConfig",
+              "exportKind": "named",
+              "source": "./libs/PostHogConfig",
+              "declarationKind": "function"
             }
           ],
           "typeExports": [

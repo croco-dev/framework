@@ -126,9 +126,11 @@ const diagnostics = new PostHogAnalyticsDiagnosticsProvider({
 const health = await diagnostics.getHealth();
 ```
 
-반환 details는 `hasApiKey`, `hasHost`, `hostSource`, `liveCheck`처럼 secret 값을 노출하지
-않는 boolean/source evidence만 포함합니다. `authorization`, `token`, `secret`,
-`apiKey` 이름을 가진 readiness details는 redacted 처리됩니다.
+반환 details는 `hasApiKey`, `hasHost`, `hostSource`, `configValidation`, `liveCheck`처럼
+secret 값을 노출하지 않는 boolean/source/status evidence만 포함합니다. 진단은 런타임
+클라이언트와 같은 HTTP(S) host 검증을 사용하며 네트워크 연결은 시도하지 않습니다.
+`authorization`, `token`, `secret`, `apiKey` 이름을 가진 readiness details는 redacted
+처리됩니다.
 
 ### Recovery actions
 

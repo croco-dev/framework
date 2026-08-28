@@ -15,14 +15,14 @@ export class PostHogClient {
   private client: PostHog;
 
   constructor(@Inject(POSTHOG_CONFIG_TOKEN) config: PostHogConfig) {
-    const host = validatePostHogConfig(config);
+    const validConfig = validatePostHogConfig(config);
 
     if (!config.host) {
       warnAboutEnvironmentHost();
     }
 
-    this.client = new PostHog(config.apiKey, {
-      host,
+    this.client = new PostHog(validConfig.apiKey, {
+      host: validConfig.host,
     });
   }
 

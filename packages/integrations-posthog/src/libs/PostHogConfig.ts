@@ -17,13 +17,13 @@ export const POSTHOG_CONFIG_TOKEN = new Token<Readonly<PostHogConfig>>("PostHogC
  * @returns 컨테이너에 등록된 동결 설정입니다.
  */
 export function registerPostHogConfig(config: PostHogConfig): Readonly<PostHogConfig> {
-  const host = validatePostHogConfig(config);
+  const validConfig = validatePostHogConfig(config);
 
   if (!config.host) {
     warnAboutEnvironmentHost();
   }
 
-  const registeredConfig = Object.freeze({ ...config, host });
+  const registeredConfig = Object.freeze(validConfig);
   Container.set(POSTHOG_CONFIG_TOKEN, registeredConfig);
   return registeredConfig;
 }
@@ -35,7 +35,13 @@ export function warnAboutEnvironmentHost(): void {
   );
 }
 
-export function validatePostHogConfig(config: PostHogConfig): string {
+/**
+ * PostHog 설정과 환경 기반 host를 검증하고 런타임에서 사용할 완전한 설정을 반환합니다.
+ *
+ * @param config - 검증할 부분 PostHog 설정입니다.
+ * @returns API key와 검증된 HTTP(S) host를 포함한 설정입니다.
+ */
+export function validatePostHogConfig(config: Partial<PostHogConfig>): Required<PostHogConfig> {
   if (typeof config?.apiKey !== "string" || config.apiKey.trim().length === 0) {
     throw new PostHogConfigProblem("[PostHogClient] PostHog apiKey must be a non-empty string.");
   }
@@ -60,5 +66,8 @@ export function validatePostHogConfig(config: PostHogConfig): string {
     throw new PostHogConfigProblem("[PostHogClient] PostHog host must be a valid HTTP(S) URL.");
   }
 
-  return host;
+  return {
+    apiKey: config.apiKey,
+    host,
+  };
 }

@@ -1,6 +1,6 @@
 import type { DiagnosticsProvider, HealthStatus } from "@croco/diagnostics-core";
 import type { PostHogConfig } from "@croco/integrations-posthog";
-import { PostHogConfigProblem } from "@croco/integrations-posthog";
+import { validatePostHogConfig } from "@croco/integrations-posthog";
 import { Problem } from "@croco/problems-core";
 import { PostHogAnalyticsReadinessProblem } from "./problems/PostHogAnalyticsProblems";
 
@@ -30,15 +30,13 @@ export class PostHogAnalyticsDiagnosticsProvider implements DiagnosticsProvider 
   ) {}
 
   async getHealth(signal?: AbortSignal): Promise<HealthStatus> {
-    const baseDetails = this.createSafeConfigDetails();
-
     if (this.options.enabled === false) {
       return {
         status: "degraded",
         component: this.name,
         message: "PostHog analytics is disabled by configuration; capture calls are skipped",
         details: {
-          ...baseDetails,
+          ...this.createSafeConfigDetails("skipped"),
           liveCheck: "disabled",
         },
         lastChecked: new Date().toISOString(),
@@ -48,7 +46,7 @@ export class PostHogAnalyticsDiagnosticsProvider implements DiagnosticsProvider 
     let validConfig: PostHogConfig;
 
     try {
-      validConfig = this.validateConfig();
+      validConfig = validatePostHogConfig(this.config);
     } catch (error) {
       const problem = error instanceof Problem ? error : toPostHogReadinessProblem(error);
 
@@ -57,7 +55,7 @@ export class PostHogAnalyticsDiagnosticsProvider implements DiagnosticsProvider 
         component: this.name,
         message: problem.detail,
         details: {
-          ...baseDetails,
+          ...this.createSafeConfigDetails("invalid"),
           liveCheck: "not_started",
           problemCode: problem.code,
           problemStatus: problem.status,
@@ -65,6 +63,8 @@ export class PostHogAnalyticsDiagnosticsProvider implements DiagnosticsProvider 
         lastChecked: new Date().toISOString(),
       };
     }
+
+    const baseDetails = this.createSafeConfigDetails("valid");
 
     if (!this.options.readinessCheck) {
       return {
@@ -113,37 +113,19 @@ export class PostHogAnalyticsDiagnosticsProvider implements DiagnosticsProvider 
     }
   }
 
-  private validateConfig(): PostHogConfig {
-    if (!isNonEmptyString(this.config.apiKey)) {
-      throw new PostHogConfigProblem(
-        "[PostHogAnalyticsDiagnosticsProvider] POSTHOG_API_KEY is required for PostHog analytics.",
-      );
-    }
-
+  private createSafeConfigDetails(
+    configValidation: "valid" | "invalid" | "skipped",
+  ): Record<string, unknown> {
     const envHost = process.env.POSTHOG_HOST;
     const host = this.config.host ?? envHost;
-
-    if (!isNonEmptyString(host)) {
-      throw new PostHogConfigProblem(
-        "[PostHogAnalyticsDiagnosticsProvider] PostHog host is required for data residency compliance. " +
-          "Set host in config or POSTHOG_HOST env var.",
-      );
-    }
-
-    return {
-      apiKey: this.config.apiKey,
-      host,
-    };
-  }
-
-  private createSafeConfigDetails(): Record<string, unknown> {
-    const envHost = process.env.POSTHOG_HOST;
     return {
       provider: "posthog",
       enabled: this.options.enabled !== false,
       hasApiKey: isNonEmptyString(this.config.apiKey),
-      hasHost: isNonEmptyString(this.config.host ?? envHost),
-      hostSource: this.config.host ? "config" : envHost ? "env" : "missing",
+      hasHost: isNonEmptyString(host),
+      hostSource:
+        this.config.host !== undefined ? "config" : envHost !== undefined ? "env" : "missing",
+      configValidation,
     };
   }
 }
