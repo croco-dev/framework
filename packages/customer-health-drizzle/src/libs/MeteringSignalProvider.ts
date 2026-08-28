@@ -7,7 +7,9 @@ import { Component, Inject, Token } from "@croco/framework-context";
  */
 export type UsageData = {
   tenantId: string;
+  /** Included start instant of the queried usage interval. */
   periodStart: Date;
+  /** Excluded end instant of the queried usage interval. */
   periodEnd: Date;
   usage: number;
   limit: number;
@@ -20,9 +22,15 @@ export type UsageData = {
 
 /**
  * 사용량 데이터를 제공하는 저장소 인터페이스입니다.
+ *
+ * 조회 구간은 UTC 기준 `[periodStartInclusive, periodEndExclusive)` 반개방 구간입니다.
  */
 export interface UsageStorage {
-  getUsage(tenantId: string, periodStart: Date, periodEnd: Date): Promise<UsageData>;
+  getUsage(
+    tenantId: string,
+    periodStartInclusive: Date,
+    periodEndExclusive: Date,
+  ): Promise<UsageData>;
 }
 
 /**
@@ -49,8 +57,8 @@ export class MeteringSignalProvider extends SignalProvider {
    */
   async collect(tenantId: string): Promise<HealthSignal[]> {
     const now = new Date();
-    const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const periodStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    const periodEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
 
     const usageData = await this.usageStorage.getUsage(tenantId, periodStart, periodEnd);
 

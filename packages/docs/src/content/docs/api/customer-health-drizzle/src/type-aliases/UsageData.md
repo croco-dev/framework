@@ -39,11 +39,15 @@ title: "UsageData"
 
 > **periodEnd**: `Date`
 
+Excluded end instant of the queried usage interval.
+
 ---
 
 ### periodStart
 
 > **periodStart**: `Date`
+
+Included start instant of the queried usage interval.
 
 ---
 
