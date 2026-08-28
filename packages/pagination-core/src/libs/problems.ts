@@ -1,5 +1,31 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
 
+/**
+ * Reports a repeated scalar pagination query parameter and records its field and supplied value count.
+ */
+export class AmbiguousPaginationParameterProblem extends Problem {
+  readonly code = "AMBIGUOUS_PAGINATION_PARAMETER";
+  readonly category = ProblemCategory.BadRequest;
+
+  constructor(
+    readonly field: "cursor" | "direction" | "limit" | "offset",
+    readonly valueCount: number,
+  ) {
+    super(
+      "AMBIGUOUS_PAGINATION_PARAMETER",
+      ProblemCategory.BadRequest,
+      `Pagination parameter '${field}' must be provided at most once`,
+      {
+        extensions: {
+          field,
+          reason: "repeated-value",
+          valueCount,
+        },
+      },
+    );
+  }
+}
+
 export class InvalidCursorProblem extends Problem {
   readonly code = "INVALID_CURSOR";
   readonly category = ProblemCategory.BadRequest;

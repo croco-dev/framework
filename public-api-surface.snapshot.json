@@ -20258,6 +20258,12 @@
           "sourceEntrypoint": "packages/pagination-core/src/index.ts",
           "runtimeExports": [
             {
+              "name": "AmbiguousPaginationParameterProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
               "name": "ConflictingPaginationProblem",
               "exportKind": "named",
               "source": "./libs/problems",
@@ -20456,6 +20462,11 @@
               "name": "PaginationParamsOutput",
               "exportKind": "named",
               "source": "./libs/schemas"
+            },
+            {
+              "name": "PaginationQueryInput",
+              "exportKind": "named",
+              "source": "./libs/parsePaginationParams"
             }
           ]
         }

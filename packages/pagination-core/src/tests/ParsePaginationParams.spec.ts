@@ -2,10 +2,71 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { DEFAULT_LIMIT, MAX_LIMIT, MIN_OFFSET } from "../libs/constants";
 import { parsePaginationParams } from "../libs/parsePaginationParams";
-import { ConflictingPaginationProblem, InvalidPaginationDirectionProblem } from "../libs/problems";
+import {
+  AmbiguousPaginationParameterProblem,
+  ConflictingPaginationProblem,
+  InvalidPaginationDirectionProblem,
+} from "../libs/problems";
 import { CursorParamsSchema, OffsetParamsSchema, PaginationParamsSchema } from "../libs/schemas";
 
 describe("parsePaginationParams", () => {
+  it.each([
+    { field: "cursor", values: ["abc123", "def456"] },
+    { field: "offset", values: ["10", "20"] },
+    { field: "limit", values: ["10", "20"] },
+    { field: "direction", values: ["forward", "backward"] },
+  ] as const)(
+    "should reject repeated $field values across query representations",
+    ({ field, values }) => {
+      const recordQuery = { [field]: [...values] };
+      const searchParamsQuery = new URLSearchParams();
+      for (const value of values) searchParamsQuery.append(field, value);
+
+      for (const query of [recordQuery, searchParamsQuery]) {
+        expect(() => parsePaginationParams(query)).toThrow(AmbiguousPaginationParameterProblem);
+        expect(() => parsePaginationParams(query)).toThrowError(
+          expect.objectContaining({
+            code: "AMBIGUOUS_PAGINATION_PARAMETER",
+            category: "BadRequest",
+            detail: `Pagination parameter '${field}' must be provided at most once`,
+            field,
+            valueCount: 2,
+            extensions: {
+              field,
+              reason: "repeated-value",
+              valueCount: 2,
+            },
+          }),
+        );
+      }
+    },
+  );
+
+  it.each([
+    { field: "cursor", value: "abc123" },
+    { field: "offset", value: "10" },
+    { field: "limit", value: "20" },
+    { field: "direction", value: "backward" },
+  ] as const)(
+    "should normalize one $field value across query representations",
+    ({ field, value }) => {
+      const expected = parsePaginationParams({ [field]: value });
+      const searchParamsQuery = new URLSearchParams({ [field]: value });
+
+      expect(parsePaginationParams({ [field]: [value] })).toEqual(expected);
+      expect(parsePaginationParams(searchParamsQuery)).toEqual(expected);
+    },
+  );
+
+  it("should preserve default pagination for empty record arrays and empty URLSearchParams", () => {
+    const expected = parsePaginationParams({});
+
+    expect(parsePaginationParams({ cursor: [], offset: [], limit: [], direction: [] })).toEqual(
+      expected,
+    );
+    expect(parsePaginationParams(new URLSearchParams())).toEqual(expected);
+  });
+
   it("should parse cursor mode params", () => {
     const result = parsePaginationParams({ cursor: "abc123", limit: "10" });
     expect(result.mode).toBe("cursor");
@@ -40,11 +101,6 @@ describe("parsePaginationParams", () => {
     { direction: "sideways", accepted: false },
     { direction: "", accepted: false },
     { direction: "FORWARD", accepted: false },
-    { direction: [], accepted: false },
-    { direction: ["forward"], accepted: false },
-    { direction: ["forward", "forward"], accepted: false },
-    { direction: ["forward", "backward"], accepted: false },
-    { direction: ["sideways"], accepted: false },
   ])("should match CursorParamsSchema for direction $direction", ({ direction, accepted }) => {
     const schemaResult = CursorParamsSchema.safeParse({
       cursor: "abc123",
@@ -102,7 +158,7 @@ describe("parsePaginationParams", () => {
     }
   });
 
-  it.each(["forward", "backward", "sideways", [], ["forward"], ["forward", "backward"]])(
+  it.each(["forward", "backward", "sideways", ["forward"], ["backward"], ["sideways"]])(
     "should reject direction %s in offset mode in both parser and schema",
     (direction) => {
       const schemaResult = PaginationParamsSchema.safeParse({
@@ -216,9 +272,6 @@ describe("parsePaginationParams", () => {
     { input: "1e309", limit: DEFAULT_LIMIT, offset: MIN_OFFSET },
     { input: "9007199254740992", limit: MAX_LIMIT, offset: MIN_OFFSET },
     { input: "invalid", limit: DEFAULT_LIMIT, offset: MIN_OFFSET },
-    { input: ["10"], limit: 10, offset: 10 },
-    { input: ["10", "20"], limit: DEFAULT_LIMIT, offset: MIN_OFFSET },
-    { input: [], limit: DEFAULT_LIMIT, offset: MIN_OFFSET },
   ])(
     "should normalize '$input' consistently across the parser and schemas",
     ({ input, limit, offset }) => {

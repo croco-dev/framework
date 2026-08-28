@@ -13,8 +13,10 @@ export { createCursorCodec, decodeCursor, encodeCursor } from "./libs/cursor";
 export type { CursorCodec } from "./libs/cursor";
 
 export { parsePaginationParams } from "./libs/parsePaginationParams";
+export type { PaginationQueryInput } from "./libs/parsePaginationParams";
 
 export {
+  AmbiguousPaginationParameterProblem,
   ConflictingPaginationProblem,
   InvalidCursorProblem,
   InvalidPaginationDirectionProblem,

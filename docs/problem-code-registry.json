@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 696,
+  "problemCount": 697,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -569,6 +569,36 @@
           "line": 18,
           "column": 5,
           "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "AMBIGUOUS_PAGINATION_PARAMETER",
+      "category": "BadRequest",
+      "status": 400,
+      "title": "Bad Request",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#ambiguous-pagination-parameter",
+      "recovery": {
+        "cause": "The caller sent malformed input or unsupported request options.",
+        "userAction": "Correct the request input and retry after validation passes.",
+        "operatorAction": "Inspect validation details and request logs; do not retry unchanged input.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/pagination-core/src/libs/problems.ts",
+          "line": 6,
+          "column": 1,
+          "kind": "problem-class"
         }
       ]
     },
@@ -3896,7 +3926,7 @@
       "sources": [
         {
           "file": "packages/pagination-core/src/libs/problems.ts",
-          "line": 16,
+          "line": 42,
           "column": 1,
           "kind": "problem-class"
         }
@@ -9296,7 +9326,7 @@
       "sources": [
         {
           "file": "packages/pagination-core/src/libs/problems.ts",
-          "line": 3,
+          "line": 29,
           "column": 1,
           "kind": "problem-class"
         }
@@ -9386,7 +9416,7 @@
       "sources": [
         {
           "file": "packages/pagination-core/src/libs/problems.ts",
-          "line": 39,
+          "line": 65,
           "column": 1,
           "kind": "problem-class"
         }

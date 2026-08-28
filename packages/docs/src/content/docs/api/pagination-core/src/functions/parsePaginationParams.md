@@ -11,7 +11,7 @@ title: "parsePaginationParams"
 
 ### query
 
-`Record`\<`string`, `string` \| `string`[] \| `undefined`\>
+[`PaginationQueryInput`](/api/pagination-core/src/type-aliases/paginationqueryinput/)
 
 ## Returns
 
