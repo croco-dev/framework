@@ -35,6 +35,6 @@ export { IdPrefix };
 export type { PrefixedId };
 
 /**
- * Problem thrown when a GID prefix is shorter than the supported minimum.
+ * Problem thrown when a GID prefix violates the canonical lowercase ASCII grammar.
  */
 export { InvalidIdPrefixProblem };

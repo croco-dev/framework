@@ -8620,7 +8620,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/gid-core/src/libs/problems/GidProblems.ts",
-          line: 4,
+          line: 5,
           column: 3,
           kind: "problem-class",
         },

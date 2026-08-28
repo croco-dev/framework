@@ -3,6 +3,7 @@ import type { IdOf } from "../libs/defineIdPrefixes";
 import { defineIdPrefixes } from "../libs/defineIdPrefixes";
 import { IdPrefix } from "../libs/IdPrefix";
 import type { PrefixedId } from "../libs/IdPrefix";
+import { InvalidIdPrefixProblem } from "../libs/problems/GidProblems";
 
 describe("IdPrefix", () => {
   describe("generate", () => {
@@ -94,15 +95,76 @@ describe("IdPrefix", () => {
   });
 
   describe("constructor", () => {
-    it("3자 미만 프리픽스는 에러를 던진다", () => {
-      expect(() => new IdPrefix("ab")).toThrow("at least 3 characters");
-      expect(() => new IdPrefix("a")).toThrow("at least 3 characters");
-      expect(() => new IdPrefix("")).toThrow("at least 3 characters");
+    it.each(["", "a", "ab"])("3자 미만 프리픽스 '%s'는 거부한다", (prefix) => {
+      expect(() => new IdPrefix(prefix)).toThrow(InvalidIdPrefixProblem);
+      expect(() => new IdPrefix(prefix)).toThrow("between 3 and 32 characters");
+    });
+
+    it("최소 및 최대 길이의 canonical 프리픽스를 허용한다", () => {
+      const minimumPrefix = new IdPrefix("a0z");
+      const maximumPrefixValue = "a".repeat(32);
+      const maximumPrefix = new IdPrefix(maximumPrefixValue);
+
+      expect(minimumPrefix.getPrefix()).toBe("a0z");
+      expect(minimumPrefix.validate(minimumPrefix.generate())).toBe(true);
+      expect(maximumPrefix.getPrefix()).toBe(maximumPrefixValue);
+      expect(maximumPrefix.validate(maximumPrefix.generate())).toBe(true);
+    });
+
+    it("32자를 초과하는 프리픽스를 거부한다", () => {
+      expect(() => new IdPrefix("a".repeat(33))).toThrow(InvalidIdPrefixProblem);
+      expect(() => new IdPrefix("a".repeat(33))).toThrow("between 3 and 32 characters");
+    });
+
+    it.each([
+      ["공백", "usr name"],
+      ["앞쪽 공백", " usr"],
+      ["뒤쪽 공백", "usr "],
+      ["제어 문자", "usr\n"],
+      ["NUL", "usr\u0000"],
+      ["ID 구분자", "usr_id"],
+      ["하이픈", "usr-id"],
+      ["마침표", "usr.id"],
+      ["대문자", "USR"],
+      ["비 ASCII 문자", "사용자"],
+    ])("%s를 포함한 프리픽스를 거부한다", (_caseName, prefix) => {
+      expect(() => new IdPrefix(prefix)).toThrow(InvalidIdPrefixProblem);
+      expect(() => new IdPrefix(prefix)).toThrow("lowercase ASCII letters and digits");
+    });
+
+    it("오류에는 prefix 원문을 노출하지 않고 안전한 이유 메타데이터를 남긴다", () => {
+      const unsafePrefix = "secret\nvalue";
+
+      try {
+        new IdPrefix(unsafePrefix);
+        expect.unreachable("Expected invalid prefix construction to throw");
+      } catch (error) {
+        expect(error).toBeInstanceOf(InvalidIdPrefixProblem);
+        expect(error).toMatchObject({
+          extensions: {
+            reason: "invalid-characters",
+            length: unsafePrefix.length,
+            minimumLength: 3,
+            maximumLength: 32,
+            grammar: "^[a-z0-9]{3,32}$",
+            retryable: false,
+          },
+        });
+        expect((error as InvalidIdPrefixProblem).detail).not.toContain(unsafePrefix);
+      }
     });
   });
 });
 
 describe("defineIdPrefixes", () => {
+  it("IdPrefix와 동일한 canonical 프리픽스 검증을 적용한다", () => {
+    expect(() =>
+      defineIdPrefixes({
+        USER: "usr_id",
+      } as const),
+    ).toThrow(InvalidIdPrefixProblem);
+  });
+
   it("IdPrefix 인스턴스들을 생성한다", () => {
     const Ids = defineIdPrefixes({
       USER: "usr",

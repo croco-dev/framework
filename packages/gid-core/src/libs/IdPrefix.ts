@@ -1,7 +1,7 @@
 import { ulid } from "ulid";
+import { getInvalidIdPrefixReason, MINIMUM_ID_PREFIX_LENGTH } from "./idPrefixPolicy";
 import { InvalidIdPrefixProblem } from "./problems/GidProblems";
 
-const MINIMUM_PREFIX_LENGTH = 3;
 const ULID_LENGTH = 26;
 const ULID_REGEX = /^[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{26}$/;
 
@@ -10,8 +10,10 @@ export class IdPrefix<TPrefix extends string = string> {
   private readonly expectedLength: number;
 
   constructor(prefix: TPrefix) {
-    if (prefix.length < MINIMUM_PREFIX_LENGTH) {
-      throw new InvalidIdPrefixProblem(prefix.length, MINIMUM_PREFIX_LENGTH);
+    const invalidReason = getInvalidIdPrefixReason(prefix);
+
+    if (invalidReason !== undefined) {
+      throw new InvalidIdPrefixProblem(prefix.length, MINIMUM_ID_PREFIX_LENGTH, invalidReason);
     }
 
     this.prefix = prefix;
@@ -52,8 +54,8 @@ export class IdPrefix<TPrefix extends string = string> {
     return this.expectedLength;
   }
 
-  static getLength(prefixLength = MINIMUM_PREFIX_LENGTH): number {
-    const actualPrefixLength = Math.max(prefixLength, MINIMUM_PREFIX_LENGTH);
+  static getLength(prefixLength = MINIMUM_ID_PREFIX_LENGTH): number {
+    const actualPrefixLength = Math.max(prefixLength, MINIMUM_ID_PREFIX_LENGTH);
     return actualPrefixLength + 1 + ULID_LENGTH;
   }
 }
