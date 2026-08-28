@@ -7,3 +7,8 @@ export type {
   DesktopPreloadContextBridge,
   DesktopPreloadTransport,
 } from "./libs/generateDesktopPreloadBridges";
+export {
+  DesktopRendererGenerationProblem,
+  generateDesktopRendererClients,
+} from "./libs/generateDesktopRendererClients";
+export type { DesktopRendererClientSource } from "./libs/generateDesktopRendererClients";

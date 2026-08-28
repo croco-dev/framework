@@ -1,0 +1,118 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`generateDesktopRendererClients > generates deterministic typed clients for local window capabilities only 1`] = `
+[
+  {
+    "source": "export type DesktopRendererCommandOptions = {
+  readonly signal?: AbortSignal;
+};
+
+type DesktopRendererBridge = {
+  readonly commands: {
+  };
+  readonly events: {
+  };
+};
+
+const bridge = (globalThis as typeof globalThis & {
+  readonly crocoDesktop: DesktopRendererBridge;
+}).crocoDesktop;
+
+export const desktop = Object.freeze({
+});
+",
+    "windowId": "empty",
+  },
+  {
+    "source": "import type { DesktopGrantReference, DesktopResult } from '@croco/protocols-desktop';
+
+export type DesktopRendererCommandOptions = {
+  readonly signal?: AbortSignal;
+};
+
+type DesktopRendererBridge = {
+  readonly commands: {
+    readonly ["project"]: {
+      readonly ["openGranted"]: (input: DesktopGrantReference<"file", "read", "exact", "command">, options?: DesktopRendererCommandOptions) => Promise<DesktopResult<{ readonly ["opened"]: boolean; }, never>>;
+      readonly ["readFile"]: (input: { readonly ["path"]: string; }, options?: DesktopRendererCommandOptions) => Promise<DesktopResult<{ readonly ["contents"]: string; readonly ["encoding"]: "utf16" | "utf8"; }, { readonly code: "EDITOR_FILESYSTEM_UNAVAILABLE"; readonly category: "InternalServerError" } | { readonly code: "EDITOR_FILE_NOT_FOUND"; readonly category: "NotFound"; readonly extensions?: { readonly ["reason"]: string; } }>>;
+    };
+    readonly ["system"]: {
+      readonly ["status"]: (input: {  }, options?: DesktopRendererCommandOptions) => Promise<DesktopResult<{ readonly ["ready"]: boolean | null; }, never>>;
+    };
+  };
+  readonly events: {
+    readonly ["project"]: {
+      readonly ["fileChanged"]: (callback: (payload: { readonly ["path"]: string; }) => void) => () => void;
+    };
+    readonly ["system"]: {
+      readonly ["ready"]: (callback: (payload: { readonly ["at"]: number; }) => void) => () => void;
+    };
+  };
+};
+
+const bridge = (globalThis as typeof globalThis & {
+  readonly crocoDesktop: DesktopRendererBridge;
+}).crocoDesktop;
+
+export const desktop = Object.freeze({
+  ["project"]: Object.freeze({
+    ["openGranted"]: (input: DesktopGrantReference<"file", "read", "exact", "command">, options: DesktopRendererCommandOptions = {}): Promise<DesktopResult<{ readonly ["opened"]: boolean; }, never>> =>
+      bridge.commands["project"]["openGranted"](input, options),
+    ["readFile"]: (input: { readonly ["path"]: string; }, options: DesktopRendererCommandOptions = {}): Promise<DesktopResult<{ readonly ["contents"]: string; readonly ["encoding"]: "utf16" | "utf8"; }, { readonly code: "EDITOR_FILESYSTEM_UNAVAILABLE"; readonly category: "InternalServerError" } | { readonly code: "EDITOR_FILE_NOT_FOUND"; readonly category: "NotFound"; readonly extensions?: { readonly ["reason"]: string; } }>> =>
+      bridge.commands["project"]["readFile"](input, options),
+    ["fileChanged"]: Object.freeze({
+      subscribe: (callback: (payload: { readonly ["path"]: string; }) => void): (() => void) =>
+        bridge.events["project"]["fileChanged"]((payload) => callback(payload)),
+    }),
+  }),
+  ["system"]: Object.freeze({
+    ["status"]: (input: {  }, options: DesktopRendererCommandOptions = {}): Promise<DesktopResult<{ readonly ["ready"]: boolean | null; }, never>> =>
+      bridge.commands["system"]["status"](input, options),
+    ["ready"]: Object.freeze({
+      subscribe: (callback: (payload: { readonly ["at"]: number; }) => void): (() => void) =>
+        bridge.events["system"]["ready"]((payload) => callback(payload)),
+    }),
+  }),
+});
+",
+    "windowId": "main",
+  },
+  {
+    "source": "import type { DesktopResult } from '@croco/protocols-desktop';
+
+export type DesktopRendererCommandOptions = {
+  readonly signal?: AbortSignal;
+};
+
+type DesktopRendererBridge = {
+  readonly commands: {
+    readonly ["system"]: {
+      readonly ["status"]: (input: {  }, options?: DesktopRendererCommandOptions) => Promise<DesktopResult<{ readonly ["ready"]: boolean | null; }, never>>;
+    };
+  };
+  readonly events: {
+    readonly ["system"]: {
+      readonly ["ready"]: (callback: (payload: { readonly ["at"]: number; }) => void) => () => void;
+    };
+  };
+};
+
+const bridge = (globalThis as typeof globalThis & {
+  readonly crocoDesktop: DesktopRendererBridge;
+}).crocoDesktop;
+
+export const desktop = Object.freeze({
+  ["system"]: Object.freeze({
+    ["status"]: (input: {  }, options: DesktopRendererCommandOptions = {}): Promise<DesktopResult<{ readonly ["ready"]: boolean | null; }, never>> =>
+      bridge.commands["system"]["status"](input, options),
+    ["ready"]: Object.freeze({
+      subscribe: (callback: (payload: { readonly ["at"]: number; }) => void): (() => void) =>
+        bridge.events["system"]["ready"]((payload) => callback(payload)),
+    }),
+  }),
+});
+",
+    "windowId": "settings",
+  },
+]
+`;
