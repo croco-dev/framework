@@ -5,7 +5,7 @@ prev: false
 title: "InvalidIdPrefixProblem"
 ---
 
-Problem thrown when a GID prefix is shorter than the supported minimum.
+Problem thrown when a GID prefix violates the canonical lowercase ASCII grammar.
 
 ## Extends
 
@@ -15,7 +15,7 @@ Problem thrown when a GID prefix is shorter than the supported minimum.
 
 ### Constructor
 
-> **new InvalidIdPrefixProblem**(`length`, `minimumLength`): `InvalidIdPrefixProblem`
+> **new InvalidIdPrefixProblem**(`length`, `minimumLength`, `reason?`): `InvalidIdPrefixProblem`
 
 #### Parameters
 
@@ -26,6 +26,10 @@ Problem thrown when a GID prefix is shorter than the supported minimum.
 ##### minimumLength
 
 `number`
+
+##### reason?
+
+`"invalid-length"` \| `"too-short"` \| `"too-long"` \| `"invalid-characters"`
 
 #### Returns
 
@@ -45,7 +49,7 @@ Problem thrown when a GID prefix is shorter than the supported minimum.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`category`](/api/problems-core/src/classes/problem/#category)
 
----
+***
 
 ### cause?
 
@@ -55,7 +59,7 @@ Problem thrown when a GID prefix is shorter than the supported minimum.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`cause`](/api/problems-core/src/classes/problem/#cause)
 
----
+***
 
 ### code
 
@@ -65,7 +69,7 @@ Problem thrown when a GID prefix is shorter than the supported minimum.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`code`](/api/problems-core/src/classes/problem/#code)
 
----
+***
 
 ### detail?
 
@@ -75,7 +79,7 @@ Problem thrown when a GID prefix is shorter than the supported minimum.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`detail`](/api/problems-core/src/classes/problem/#detail)
 
----
+***
 
 ### extensions?
 
@@ -85,7 +89,7 @@ Problem thrown when a GID prefix is shorter than the supported minimum.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`extensions`](/api/problems-core/src/classes/problem/#extensions)
 
----
+***
 
 ### instance?
 
@@ -95,7 +99,7 @@ Problem thrown when a GID prefix is shorter than the supported minimum.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`instance`](/api/problems-core/src/classes/problem/#instance)
 
----
+***
 
 ### message
 
@@ -105,7 +109,7 @@ Problem thrown when a GID prefix is shorter than the supported minimum.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`message`](/api/problems-core/src/classes/problem/#message)
 
----
+***
 
 ### name
 
@@ -115,7 +119,7 @@ Problem thrown when a GID prefix is shorter than the supported minimum.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`name`](/api/problems-core/src/classes/problem/#name)
 
----
+***
 
 ### stack?
 
@@ -125,7 +129,7 @@ Problem thrown when a GID prefix is shorter than the supported minimum.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`stack`](/api/problems-core/src/classes/problem/#stack)
 
----
+***
 
 ### type
 
@@ -135,7 +139,7 @@ Problem thrown when a GID prefix is shorter than the supported minimum.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`type`](/api/problems-core/src/classes/problem/#type)
 
----
+***
 
 ### stackTraceLimit
 
@@ -171,7 +175,7 @@ not capture any frames.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`status`](/api/problems-core/src/classes/problem/#status)
 
----
+***
 
 ### title
 
@@ -201,7 +205,7 @@ not capture any frames.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`toJSON`](/api/problems-core/src/classes/problem/#tojson)
 
----
+***
 
 ### captureStackTrace()
 
@@ -214,7 +218,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack; // Similar to `new Error().stack`
+myObject.stack;  // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -269,7 +273,7 @@ a();
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`captureStackTrace`](/api/problems-core/src/classes/problem/#capturestacktrace)
 
----
+***
 
 ### prepareStackTrace()
 

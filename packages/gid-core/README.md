@@ -6,7 +6,7 @@ ULID 기반 타입 안전 Prefix ID 생성 및 검증 라이브러리입니다.
 
 - **ULID 기반**: 시간순 정렬 가능하고 충돌 확률이 낮은 ULID 사용
 - **타입 안전성**: Branded Type으로 컴파일 타임에 ID 타입 검증
-- **Prefix 기반**: 도메인별로 고유한 prefix로 ID 구분 (usr*, ord*, wks\_ 등)
+- **Prefix 기반**: 도메인별로 고유한 canonical prefix로 ID 구분 (`usr`, `ord`, `wks` 등)
 - **런타임 검증**: 유효하지 않은 ID 형식을 런타임에 안전하게 거부
 
 ## 설치
@@ -92,8 +92,8 @@ function processProductId(id: unknown) {
 constructor(prefix: TPrefix)
 ```
 
-- `prefix`: 3자 이상의 문자열 (짧을수록 더 효율적)
-- `InvalidIdPrefixProblem`을 던짐 (3자 미만인 경우)
+- `prefix`: `^[a-z0-9]{3,32}$` 문법을 따르는 소문자 ASCII 영숫자 문자열
+- 문법이나 길이 정책을 위반하면 `InvalidIdPrefixProblem`을 던짐
 
 #### 메서드
 
@@ -154,7 +154,7 @@ export type PrefixedId<TPrefix extends string> = `${TPrefix}_${string}` & {
 {prefix}_{ulid}
 ```
 
-- `prefix`: 3자 이상의 사용자 정의 문자열
+- `prefix`: 소문자 ASCII 영숫자 3~32자 (`^[a-z0-9]{3,32}$`)
 - `ulid`: 26자 ULID (시간순 정렬 가능, URL-safe)
 - 전체 길이: `prefix.length + 1 + 26`
 
@@ -172,6 +172,12 @@ ID는 다음 조건을 모두 만족해야 유효합니다:
 3. 올바른 prefix로 시작
 4. 유효한 ULID 형식 (Crockford's Base32)
 
+## Prefix 마이그레이션
+
+공백, 제어 문자, `_`, `-`, `.`, 대문자, 비 ASCII 문자를 포함하거나 32자를 초과하는 기존 prefix는
+canonical grammar를 따르는 새 prefix로 변경해야 합니다. 자동 소문자 변환이나 trim은 타입에 선언된 prefix와 실제 직렬화 값이
+달라지는 것을 막기 위해 수행하지 않습니다. 이미 저장된 ID가 있다면 새 prefix로 생성하기 전에 해당 ID와 참조를 함께 마이그레이션하세요.
+
 ## 에러 처리
 
 ```typescript
@@ -183,7 +189,7 @@ try {
 } catch (error) {
   if (error instanceof InvalidIdPrefixProblem) {
     console.error(error.detail);
-    // "Prefix must be at least 3 characters long, but got 2"
+    // "Prefix must contain between 3 and 32 characters, but received length 2."
   }
 }
 ```
