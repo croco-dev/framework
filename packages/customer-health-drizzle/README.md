@@ -65,13 +65,13 @@ const providers = registry.getProviders();
 ### 신호 제공자
 
 - `BillingSignalProvider`, 구독 상태를 business 신호로 변환합니다.
-- `MeteringSignalProvider`, 사용량 데이터를 usage 신호로 변환합니다.
+- `MeteringSignalProvider`, UTC 월 시작부터 다음 달 시작 직전까지의 반개방 구간으로 사용량을 조회해 usage 신호로 변환합니다.
 - `DrizzleHealthSignalRegistry`, 기본 신호 제공자 목록을 반환합니다.
 
 ### 타입과 스키마
 
 - `SubscriptionStatus`, `SubscriptionData`, `SubscriptionStorage`, 구독 신호 타입입니다.
-- `UsageData`, `UsageStorage`, 사용량 신호 타입입니다.
+- `UsageData`, `UsageStorage`, 사용량 신호 타입입니다. `UsageStorage.getUsage`의 시작 시각은 포함하고 종료 시각은 제외합니다.
 - `DRIZZLE_TOKEN`, 건강 점수 저장소용 DB 토큰입니다.
 - `SUBSCRIPTION_STORAGE_TOKEN`, `USAGE_STORAGE_TOKEN`, 보조 저장소 토큰입니다.
 - `tenantHealthScores`, 건강 점수 스키마입니다.

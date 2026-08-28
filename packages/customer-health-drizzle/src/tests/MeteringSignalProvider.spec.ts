@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@croco/customer-health-core", () => ({
   SignalProvider: class {},
@@ -17,6 +17,10 @@ describe("MeteringSignalProvider", () => {
       getUsage: vi.fn(),
     };
     provider = new MeteringSignalProvider(mockUsageStorage);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("should have category as usage", () => {
@@ -118,5 +122,47 @@ describe("MeteringSignalProvider", () => {
     expect(signals).toHaveLength(3);
     expect(signals[1].name).toBe("feature_projects");
     expect(signals[2].name).toBe("feature_teams");
+  });
+
+  it("should query the complete current UTC month as a half-open interval", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-31T23:59:59.999Z"));
+    vi.spyOn(mockUsageStorage, "getUsage").mockResolvedValue({
+      tenantId: "tenant-1",
+      periodStart: new Date("2026-03-01T00:00:00.000Z"),
+      periodEnd: new Date("2026-04-01T00:00:00.000Z"),
+      usage: 0,
+      limit: 10,
+      features: [],
+    });
+
+    await provider.collect("tenant-1");
+
+    expect(mockUsageStorage.getUsage).toHaveBeenCalledWith(
+      "tenant-1",
+      new Date("2026-03-01T00:00:00.000Z"),
+      new Date("2026-04-01T00:00:00.000Z"),
+    );
+  });
+
+  it("should roll the UTC monthly interval into the next year", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-12-15T12:00:00.000Z"));
+    vi.spyOn(mockUsageStorage, "getUsage").mockResolvedValue({
+      tenantId: "tenant-1",
+      periodStart: new Date("2026-12-01T00:00:00.000Z"),
+      periodEnd: new Date("2027-01-01T00:00:00.000Z"),
+      usage: 0,
+      limit: 10,
+      features: [],
+    });
+
+    await provider.collect("tenant-1");
+
+    expect(mockUsageStorage.getUsage).toHaveBeenCalledWith(
+      "tenant-1",
+      new Date("2026-12-01T00:00:00.000Z"),
+      new Date("2027-01-01T00:00:00.000Z"),
+    );
   });
 });
