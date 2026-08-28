@@ -48,6 +48,9 @@ await roleRegistry.assignRole("user-1", "tenant-1", "admin");
 const activeSessions = await sessionProvider.listSessions({ userId: "user-1", status: "active" });
 ```
 
+`listSessions()`는 최신 생성 세션부터 ID로 순서를 고정하며, `totalCount`에는 페이지 크기와 무관한 전체 일치 건수를
+반환합니다.
+
 ## API 레퍼런스
 
 ### 저장소

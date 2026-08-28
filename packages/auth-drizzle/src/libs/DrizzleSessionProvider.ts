@@ -4,11 +4,17 @@ import type {
   SessionListResult,
   SessionProvider,
 } from "@croco/auth-core";
+import { AuthProviderUnavailableProblem } from "@croco/auth-core";
 import type { SQL } from "drizzle-orm";
-import { and, eq, or } from "drizzle-orm";
+import { and, count, desc, eq, or } from "drizzle-orm";
 import type { sessions as sessionsSchema } from "../schema";
 
 interface DrizzleDb {
+  select: (fields: { total: SQL<number> }) => {
+    from: (table: typeof sessionsSchema) => {
+      where: (condition?: SQL<unknown>) => Promise<{ total: number }[]>;
+    };
+  };
   update: (table: unknown) => {
     set: (data: unknown) => {
       where: (condition: SQL<unknown>) => Promise<unknown>;
@@ -21,6 +27,7 @@ interface DrizzleDb {
         where?: SQL<unknown>;
         limit?: number;
         offset?: number;
+        orderBy?: SQL<unknown>[];
       }) => Promise<unknown[]>;
     };
   };
@@ -137,7 +144,18 @@ export class DrizzleSessionProvider implements SessionProvider {
       where: whereClause,
       limit: options.limit,
       offset: options.offset,
+      orderBy: [desc(this.schema.sessions.createdAt), desc(this.schema.sessions.id)],
     });
+    const totalRows = await this.db
+      .select({ total: count() })
+      .from(this.schema.sessions)
+      .where(whereClause);
+    const totalCount = totalRows[0]?.total;
+    if (totalCount === undefined) {
+      throw new AuthProviderUnavailableProblem(
+        "Session count query did not return an aggregate row",
+      );
+    }
 
     const sessions: Session[] = [];
     for (const row of rows) {
@@ -148,7 +166,7 @@ export class DrizzleSessionProvider implements SessionProvider {
 
     return {
       sessions,
-      totalCount: sessions.length,
+      totalCount,
     };
   }
 

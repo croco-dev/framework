@@ -1,10 +1,13 @@
+import { desc } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DrizzleSessionProvider } from "../libs/DrizzleSessionProvider";
-import type { sessions as sessionsSchema } from "../schema";
+import { sessions } from "../schema";
 
 describe("DrizzleSessionProvider", () => {
   let provider!: DrizzleSessionProvider;
+  let countWhereMock!: ReturnType<typeof vi.fn>;
   let mockDb!: {
+    select: ReturnType<typeof vi.fn>;
     update: ReturnType<typeof vi.fn>;
     query: {
       sessions: {
@@ -15,7 +18,11 @@ describe("DrizzleSessionProvider", () => {
   };
 
   beforeEach(() => {
+    countWhereMock = vi.fn().mockResolvedValue([{ total: 0 }]);
     mockDb = {
+      select: vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({ where: countWhereMock }),
+      }),
       update: vi.fn(),
       query: {
         sessions: {
@@ -27,9 +34,7 @@ describe("DrizzleSessionProvider", () => {
 
     provider = new DrizzleSessionProvider(
       mockDb as unknown as ConstructorParameters<typeof DrizzleSessionProvider>[0],
-      {
-        sessions: {} as typeof sessionsSchema,
-      },
+      { sessions },
     );
   });
 
@@ -112,6 +117,7 @@ describe("DrizzleSessionProvider", () => {
       ];
 
       mockDb.query.sessions.findMany.mockResolvedValue(mockSessions);
+      countWhereMock.mockResolvedValue([{ total: 1 }]);
 
       const result = await provider.listSessions({ userId: "user-1", status: "active" });
 
@@ -204,7 +210,69 @@ describe("DrizzleSessionProvider", () => {
         where: undefined,
         limit: 10,
         offset: 20,
+        orderBy: expect.any(Array),
       });
+    });
+
+    it("should return the full matching count for a partial page", async () => {
+      mockDb.query.sessions.findMany.mockResolvedValue([
+        {
+          id: "session-2",
+          userId: "user-1",
+          clientId: "client-1",
+          status: "active",
+          createdAt: new Date("2026-01-02T00:00:00Z"),
+          updatedAt: new Date("2026-01-02T00:00:00Z"),
+        },
+      ]);
+      countWhereMock.mockResolvedValue([{ total: 3 }]);
+
+      const result = await provider.listSessions({ userId: "user-1", limit: 1, offset: 1 });
+
+      expect(result.sessions).toHaveLength(1);
+      expect(result.totalCount).toBe(3);
+    });
+
+    it("should retain the full matching count for an empty out-of-range page", async () => {
+      mockDb.query.sessions.findMany.mockResolvedValue([]);
+      countWhereMock.mockResolvedValue([{ total: 3 }]);
+
+      const result = await provider.listSessions({ userId: "user-1", limit: 1, offset: 10 });
+
+      expect(result).toEqual({ sessions: [], totalCount: 3 });
+    });
+
+    it("should reject a missing count aggregate row", async () => {
+      mockDb.query.sessions.findMany.mockResolvedValue([]);
+      countWhereMock.mockResolvedValue([]);
+
+      await expect(provider.listSessions({})).rejects.toMatchObject({
+        code: "auth-core/auth-provider-unavailable",
+        detail: "Session count query did not return an aggregate row",
+      });
+    });
+
+    it("should use the same filters for page rows and total count", async () => {
+      mockDb.query.sessions.findMany.mockResolvedValue([]);
+
+      await provider.listSessions({
+        userId: "user-1",
+        clientId: "client-1",
+        status: "active",
+      });
+
+      const findManyArgs = mockDb.query.sessions.findMany.mock.calls[0]?.[0];
+      expect(findManyArgs?.where).toBeDefined();
+      expect(countWhereMock).toHaveBeenCalledWith(findManyArgs?.where);
+    });
+
+    it("should order sessions by a stable unique tuple", async () => {
+      mockDb.query.sessions.findMany.mockResolvedValue([]);
+
+      await provider.listSessions({});
+
+      const findManyArgs = mockDb.query.sessions.findMany.mock.calls[0]?.[0];
+      expect(findManyArgs?.orderBy).toEqual([desc(sessions.createdAt), desc(sessions.id)]);
     });
 
     it("should filter out invalid rows", async () => {
