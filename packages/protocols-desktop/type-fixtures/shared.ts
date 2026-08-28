@@ -4,6 +4,7 @@ import { desktop } from "../src/libs/desktop";
 
 export const filesystem = desktop.effect({
   namespace: "filesystem",
+  access: "read",
   methods: {
     readText: desktop.effect.method<[path: string], Promise<string>>(),
   },
