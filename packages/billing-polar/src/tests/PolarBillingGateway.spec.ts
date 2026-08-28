@@ -4,6 +4,7 @@ import type { ILogger } from "@croco/framework-context";
 import { defineMeter } from "@croco/metering-core";
 import { createBillingProviderConformanceSuite } from "@croco/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type * as PolarSdk from "@polar-sh/sdk";
 import { PolarBillingGateway } from "../libs/PolarBillingGateway";
 import { POLAR_BILLING_PROVIDER_PROFILE } from "../libs/PolarBillingProviderProfile";
 import { bindPolarUsageMeter, PolarUsageBillingGateway } from "../libs/PolarUsageBillingGateway";
@@ -15,6 +16,7 @@ import {
   PolarSubscriptionNotFoundProblem,
   PolarValidationProblem,
 } from "../libs/problems/PolarBillingProblems";
+import { POLAR_LIVE_SMOKE_RESOURCE_GROUPS } from "./polarLiveSmokeResources";
 import type { PolarConfig } from "../types";
 
 const mockGetExternal = vi.fn();
@@ -25,6 +27,8 @@ const mockRevokeSubscription = vi.fn();
 const mockUpdateSubscription = vi.fn();
 const mockGetSubscription = vi.fn();
 const mockCreateCustomerSession = vi.fn();
+const mockIngestUsage = vi.fn();
+const mockListCustomerMeters = vi.fn();
 
 const mockLogger = {
   debug: vi.fn(),
@@ -54,6 +58,14 @@ vi.mock("@polar-sh/sdk", () => {
 
     readonly customerSessions = {
       create: mockCreateCustomerSession,
+    };
+
+    readonly events = {
+      ingest: mockIngestUsage,
+    };
+
+    readonly customerMeters = {
+      list: mockListCustomerMeters,
     };
 
     constructor(_options: unknown) {}
@@ -94,6 +106,46 @@ function createGateway(config: PolarConfig = baseConfig): PolarBillingGateway {
 }
 
 function createUsageGateway(config: PolarConfig = baseConfig): PolarUsageBillingGateway {
+  const acceptedEvents = new Map<
+    string,
+    { readonly billingAccountId: string; readonly value: number }
+  >();
+  mockIngestUsage.mockImplementation(async ({ events }) => {
+    const providerEvent = events[0];
+    if (!providerEvent) return { inserted: 0, duplicates: 0 };
+    if (acceptedEvents.has(providerEvent.externalId)) {
+      return { inserted: 0, duplicates: 1 };
+    }
+    acceptedEvents.set(providerEvent.externalId, {
+      billingAccountId: providerEvent.externalCustomerId,
+      value: Number(providerEvent.metadata.value),
+    });
+    return { inserted: 1, duplicates: 0 };
+  });
+  mockListCustomerMeters.mockImplementation(({ externalCustomerId }) => {
+    const value = [...acceptedEvents.values()]
+      .filter(({ billingAccountId }) => billingAccountId === externalCustomerId)
+      .reduce((total, event) => total + event.value, 0);
+    return {
+      async *[Symbol.asyncIterator]() {
+        yield {
+          result: {
+            items:
+              value === 0
+                ? []
+                : [
+                    {
+                      meterId: "polar-meter-conformance",
+                      consumedUnits: value,
+                      createdAt: new Date("2026-08-01T00:00:00.000Z"),
+                      modifiedAt: new Date("2026-08-01T00:10:00.000Z"),
+                    },
+                  ],
+          },
+        };
+      },
+    };
+  });
   return new PolarUsageBillingGateway(config, [
     bindPolarUsageMeter({
       meter: usageMeter,
@@ -101,6 +153,36 @@ function createUsageGateway(config: PolarConfig = baseConfig): PolarUsageBilling
       providerMeterId: "polar-meter-conformance",
     }),
   ]);
+}
+
+function createFailingUsageGateway(error: Error): PolarUsageBillingGateway {
+  mockIngestUsage.mockRejectedValue(error);
+  return new PolarUsageBillingGateway(baseConfig, [
+    bindPolarUsageMeter({
+      meter: usageMeter,
+      eventName: "billing_polar_conformance",
+      providerMeterId: "polar-meter-conformance",
+    }),
+  ]);
+}
+
+function createUsageFailure(rawResponse: string, properties: Record<string, unknown>): Error {
+  return Object.assign(new Error(rawResponse), properties, { rawResponse });
+}
+
+function usageEvent(
+  eventId: string,
+  value: number,
+  occurredAt: string,
+  meterId: string = usageMeter.key,
+) {
+  return {
+    billingAccountId: "account-conformance",
+    eventId,
+    meterId,
+    occurredAt: new Date(occurredAt),
+    value,
+  };
 }
 
 function createNotFoundError(): Error {
@@ -308,6 +390,134 @@ describe("PolarBillingGateway", () => {
               },
             },
           ],
+        },
+        usage: {
+          createGateway: createUsageGateway,
+          fixtures: {
+            emptyCustomerMeterStateQuery: {
+              billingAccountId: "account-without-usage",
+              meterId: usageMeter.key,
+            },
+            events: [
+              usageEvent("usage-conformance-1", 3, "2026-08-01T00:00:00.000Z"),
+              usageEvent("usage-conformance-2", 5, "2026-08-01T00:01:00.000Z"),
+            ],
+            partialBatch: {
+              events: [
+                usageEvent("usage-conformance-1", 3, "2026-08-01T00:00:00.000Z"),
+                usageEvent("usage-conformance-3", 2, "2026-08-01T00:02:00.000Z"),
+              ],
+              expectedReceipts: {
+                "usage-conformance-1": "duplicate",
+                "usage-conformance-3": "inserted",
+              },
+              maxEvents: 2,
+            },
+            customerMeterState: {
+              billingAccountId: "account-conformance",
+              meterId: usageMeter.key,
+              value: 8,
+            },
+          },
+          failureScenarios: {
+            http429: {
+              createGateway: ({ rawResponse, status }) =>
+                createFailingUsageGateway(createUsageFailure(rawResponse, { status })),
+              fixture: {
+                events: [usageEvent("usage-failure-429", 1, "2026-08-01T00:03:00.000Z")],
+                expectedProblemCode: "billing-polar/retryable-upstream",
+                kind: "http-429",
+                rawResponse: "polar-response-429-secret",
+                status: 429,
+              },
+              forbiddenValues: ["polar-response-429-secret"],
+              run: (gateway, fixture) => gateway.ingest(fixture.events),
+            },
+            http5xx: {
+              createGateway: ({ rawResponse, status }) =>
+                createFailingUsageGateway(createUsageFailure(rawResponse, { status })),
+              fixture: {
+                events: [usageEvent("usage-failure-5xx", 1, "2026-08-01T00:04:00.000Z")],
+                expectedProblemCode: "billing-polar/retryable-upstream",
+                kind: "http-5xx",
+                rawResponse: "polar-response-503-secret",
+                status: 503,
+              },
+              forbiddenValues: ["polar-response-503-secret"],
+              run: (gateway, fixture) => gateway.ingest(fixture.events),
+            },
+            timeout: {
+              createGateway: ({ rawResponse, upstreamCode }) =>
+                createFailingUsageGateway(createUsageFailure(rawResponse, { name: upstreamCode })),
+              fixture: {
+                events: [usageEvent("usage-failure-timeout", 1, "2026-08-01T00:05:00.000Z")],
+                expectedProblemCode: "billing-polar/retryable-upstream",
+                kind: "timeout",
+                rawResponse: "polar-timeout-response-secret",
+                upstreamCode: "RequestTimeoutError",
+              },
+              forbiddenValues: ["polar-timeout-response-secret"],
+              run: (gateway, fixture) => gateway.ingest(fixture.events),
+            },
+            invalidMeter: {
+              createGateway: () => createUsageGateway(),
+              fixture: {
+                events: [
+                  usageEvent(
+                    "usage-failure-invalid-meter",
+                    1,
+                    "2026-08-01T00:06:00.000Z",
+                    "missing-meter",
+                  ),
+                ],
+                expectedProblemCode: "billing-polar/usage-meter-mapping-not-found",
+                kind: "invalid-meter",
+                rawResponse: "unused-invalid-meter-response-secret",
+              },
+              forbiddenValues: ["unused-invalid-meter-response-secret"],
+              run: (gateway, fixture) => gateway.ingest(fixture.events),
+            },
+            invalidSchema: {
+              createGateway: ({ rawResponse }) =>
+                createFailingUsageGateway(
+                  createUsageFailure(rawResponse, {
+                    name: "SDKValidationError",
+                    status: 422,
+                  }),
+                ),
+              fixture: {
+                events: [usageEvent("usage-failure-invalid-schema", 1, "2026-08-01T00:07:00.000Z")],
+                expectedProblemCode: "billing-polar/validation-failed",
+                kind: "invalid-schema",
+                rawResponse: "polar-validation-response-secret",
+              },
+              forbiddenValues: ["polar-validation-response-secret"],
+              run: (gateway, fixture) => gateway.ingest(fixture.events),
+            },
+          },
+          liveSmoke: {
+            requiredEnv: POLAR_LIVE_SMOKE_RESOURCE_GROUPS.usage,
+            run: async () => {
+              const { Polar } = await vi.importActual<typeof PolarSdk>("@polar-sh/sdk");
+              const client = new Polar({
+                accessToken: process.env.POLAR_ACCESS_TOKEN ?? "",
+                server: process.env.POLAR_ENVIRONMENT === "production" ? "production" : "sandbox",
+              });
+              const receipt = await client.events.ingest({
+                events: [
+                  {
+                    externalCustomerId: process.env.POLAR_USAGE_EXTERNAL_CUSTOMER_ID ?? "",
+                    externalId: process.env.POLAR_USAGE_EVENT_ID ?? "",
+                    name: process.env.POLAR_USAGE_EVENT_NAME ?? "",
+                    organizationId: process.env.POLAR_ORGANIZATION_ID,
+                    timestamp: new Date(),
+                    metadata: { value: 1 },
+                  },
+                ],
+              });
+              expect(receipt.inserted + receipt.duplicates).toBe(1);
+            },
+          },
         },
       }).cases,
     )("$name", async ({ run }) => {
