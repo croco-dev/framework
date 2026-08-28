@@ -1,18 +1,18 @@
 import type { ModuleContext } from "./ModuleContext";
 import { defaultModuleRuntime } from "./ModuleRegistry";
-import type { ModuleOptions } from "./types";
+import type { ModuleLifecycleExecutionOptions, ModuleOptions } from "./types";
 
 export class CrocoModule {
   static use(module: ModuleOptions): void {
     defaultModuleRuntime.use(module);
   }
 
-  static initialize(): Promise<ModuleContext> {
-    return defaultModuleRuntime.initialize();
+  static initialize(options: ModuleLifecycleExecutionOptions = {}): Promise<ModuleContext> {
+    return defaultModuleRuntime.initialize(options);
   }
 
-  static async shutdown(): Promise<void> {
-    await defaultModuleRuntime.shutdown();
+  static async shutdown(options: ModuleLifecycleExecutionOptions = {}): Promise<void> {
+    await defaultModuleRuntime.shutdown(options);
   }
 
   static reset(): void {
@@ -45,8 +45,11 @@ export { ModuleContext } from "./ModuleContext";
 export { ModuleDiagnosticsProvider } from "./libs/diagnostics/ModuleDiagnosticsProvider";
 export {
   InvalidModuleDefinitionProblem,
+  InvalidModuleLifecycleDeadlineProblem,
   ModuleCircularDependencyProblem,
   ModuleDuplicateNameProblem,
+  ModuleLifecycleCancelledProblem,
+  ModuleLifecycleDeadlineExceededProblem,
   ModuleLifecycleProblem,
   ModuleProviderOwnershipProblem,
   ModuleProviderUnavailableProblem,
@@ -68,7 +71,10 @@ export type {
   ModuleGraphManifestVersion,
   ModuleGraphModule,
   ModuleGraphProvider,
+  ModuleLifecycleFailure,
   ModuleLifecycleHook,
+  ModuleLifecycleExecutionContext,
+  ModuleLifecycleExecutionOptions,
   ModuleLifecyclePhase,
   ModuleOptions,
   ModuleProvider,

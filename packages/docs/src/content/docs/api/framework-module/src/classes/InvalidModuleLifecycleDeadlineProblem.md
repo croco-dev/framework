@@ -2,7 +2,7 @@
 editUrl: false
 next: false
 prev: false
-title: "ModuleLifecycleProblem"
+title: "InvalidModuleLifecycleDeadlineProblem"
 ---
 
 RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다.
@@ -15,29 +15,21 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 ### Constructor
 
-> **new ModuleLifecycleProblem**(`moduleName`, `phase`, `cause`, `cleanupFailures?`): `ModuleLifecycleProblem`
+> **new InvalidModuleLifecycleDeadlineProblem**(`operation`, `deadline`): `InvalidModuleLifecycleDeadlineProblem`
 
 #### Parameters
 
-##### moduleName
+##### operation
 
-`string`
+`"shutdown"` \| `"initialize"`
 
-##### phase
+##### deadline
 
-[`ModuleLifecyclePhase`](/api/framework-module/src/type-aliases/modulelifecyclephase/)
-
-##### cause
-
-`unknown`
-
-##### cleanupFailures?
-
-readonly [`ModuleCleanupFailure`](/api/framework-module/src/type-aliases/modulecleanupfailure/)[] = `[]`
+`number`
 
 #### Returns
 
-`ModuleLifecycleProblem`
+`InvalidModuleLifecycleDeadlineProblem`
 
 #### Overrides
 
@@ -125,6 +117,18 @@ readonly [`ModuleCleanupFailure`](/api/framework-module/src/type-aliases/modulec
 
 ---
 
+### operation
+
+> `readonly` **operation**: `"shutdown"` \| `"initialize"`
+
+---
+
+### receivedValue
+
+> `readonly` **receivedValue**: `string`
+
+---
+
 ### stack?
 
 > `optional` **stack?**: `string`
@@ -208,22 +212,6 @@ not capture any frames.
 #### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`toJSON`](/api/problems-core/src/classes/problem/#tojson)
-
----
-
-### withCleanupFailures()
-
-> **withCleanupFailures**(`cleanupFailures`): `ModuleLifecycleProblem`
-
-#### Parameters
-
-##### cleanupFailures
-
-readonly [`ModuleCleanupFailure`](/api/framework-module/src/type-aliases/modulecleanupfailure/)[]
-
-#### Returns
-
-`ModuleLifecycleProblem`
 
 ---
 

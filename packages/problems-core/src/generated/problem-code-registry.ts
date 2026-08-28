@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 693,
+  problemCount: 696,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -8119,7 +8119,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 45,
+          line: 51,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8149,7 +8149,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 30,
+          line: 36,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8180,7 +8180,103 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 16,
+          line: 22,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "framework-module/lifecycle-cancelled",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#framework-module-lifecycle-cancelled",
+      recovery: {
+        cause: "A parent AbortSignal cancelled the module lifecycle hook before it completed.",
+        userAction:
+          "Retry only when the cancellation reason permits it and the lifecycle operation is safe to repeat.",
+        operatorAction:
+          "Inspect the parent cancellation reason and propagate AbortSignal support through cancellable lifecycle work.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/framework-module/src/problems.ts",
+          line: 119,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "framework-module/lifecycle-deadline-exceeded",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#framework-module-lifecycle-deadline-exceeded",
+      recovery: {
+        cause: "The module lifecycle hook did not complete before its absolute deadline.",
+        userAction:
+          "Retry only when the lifecycle operation is safe to repeat and the service has enough time to complete it.",
+        operatorAction:
+          "Inspect the slow lifecycle hook, reduce its work or increase the deadline, and preserve cancellation propagation.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/framework-module/src/problems.ts",
+          line: 179,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "framework-module/lifecycle-deadline-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#framework-module-lifecycle-deadline-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/framework-module/src/problems.ts",
+          line: 231,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8212,7 +8308,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 70,
+          line: 76,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8244,7 +8340,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 165,
+          line: 328,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8275,7 +8371,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 203,
+          line: 366,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8307,7 +8403,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 180,
+          line: 343,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8338,7 +8434,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 219,
+          line: 382,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8372,7 +8468,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 103,
+          line: 248,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8402,7 +8498,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 142,
+          line: 287,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8432,7 +8528,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 116,
+          line: 261,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8462,7 +8558,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 129,
+          line: 274,
           column: 5,
           kind: "problem-constructor",
         },

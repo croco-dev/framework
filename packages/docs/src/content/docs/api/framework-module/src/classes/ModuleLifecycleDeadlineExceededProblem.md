@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "ModuleLifecycleProblem"
+title: "ModuleLifecycleDeadlineExceededProblem"
 ---
 
-RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다.
+Reports that a module lifecycle hook exceeded its absolute deadline.
 
 ## Extends
 
@@ -15,7 +15,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 ### Constructor
 
-> **new ModuleLifecycleProblem**(`moduleName`, `phase`, `cause`, `cleanupFailures?`): `ModuleLifecycleProblem`
+> **new ModuleLifecycleDeadlineExceededProblem**(`moduleName`, `phase`, `deadline`, `cleanupFailures?`, `hookFailure?`): `ModuleLifecycleDeadlineExceededProblem`
 
 #### Parameters
 
@@ -27,17 +27,21 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 [`ModuleLifecyclePhase`](/api/framework-module/src/type-aliases/modulelifecyclephase/)
 
-##### cause
+##### deadline
 
-`unknown`
+`number`
 
 ##### cleanupFailures?
 
 readonly [`ModuleCleanupFailure`](/api/framework-module/src/type-aliases/modulecleanupfailure/)[] = `[]`
 
+##### hookFailure?
+
+[`ModuleLifecycleFailure`](/api/framework-module/src/type-aliases/modulelifecyclefailure/)
+
 #### Returns
 
-`ModuleLifecycleProblem`
+`ModuleLifecycleDeadlineExceededProblem`
 
 #### Overrides
 
@@ -213,7 +217,7 @@ not capture any frames.
 
 ### withCleanupFailures()
 
-> **withCleanupFailures**(`cleanupFailures`): `ModuleLifecycleProblem`
+> **withCleanupFailures**(`cleanupFailures`): `ModuleLifecycleDeadlineExceededProblem`
 
 #### Parameters
 
@@ -223,7 +227,23 @@ readonly [`ModuleCleanupFailure`](/api/framework-module/src/type-aliases/modulec
 
 #### Returns
 
-`ModuleLifecycleProblem`
+`ModuleLifecycleDeadlineExceededProblem`
+
+---
+
+### withHookFailure()
+
+> **withHookFailure**(`hookFailure`): `ModuleLifecycleDeadlineExceededProblem`
+
+#### Parameters
+
+##### hookFailure
+
+[`ModuleLifecycleFailure`](/api/framework-module/src/type-aliases/modulelifecyclefailure/)
+
+#### Returns
+
+`ModuleLifecycleDeadlineExceededProblem`
 
 ---
 

@@ -20,14 +20,17 @@ CrocoModule.use({
   imports: [databaseModule],
   providers: [UserService],
   controllers: [UserController],
-  setup: (ctx) => {
+  setup: (ctx, execution) => {
     const databaseUrl = ctx.get("database.url");
+    execution.signal.throwIfAborted();
   },
-  start: async () => {
-    await warmUserCache();
+  start: async (_ctx, { signal }) => {
+    signal.throwIfAborted();
+    await warmUserCache({ signal });
   },
-  shutdown: async () => {
-    await closeUserResources();
+  shutdown: async (_ctx, { signal, deadline }) => {
+    signal.throwIfAborted();
+    await closeUserResources({ signal });
   },
 });
 ```
@@ -155,10 +158,48 @@ Shutdown runs in reverse dependency order. Lifecycle failures are wrapped in
 `ModuleLifecycleProblem` with `moduleName` and `phase` extensions. Circular
 imports throw `ModuleCircularDependencyProblem`.
 
-Shutdown attempts every initialized module even when individual hooks fail,
-then rejects with the first `ModuleLifecycleProblem` and exposes every ordered
-failure through its `cleanupFailures` extension. Active runtime state is reset
-after all hooks complete, including failed shutdown attempts.
+Every lifecycle hook receives its existing `ModuleContext` as the first argument
+and a shared execution contract as the second argument. The execution contract
+contains the current `phase`, the same context as `moduleContext`, a child
+`AbortSignal`, and the absolute Unix-millisecond `deadline` when the operation
+has one. Existing one-argument hooks remain compatible; add the second argument
+when migrating a hook to cooperative cancellation.
+
+```ts
+const controller = new AbortController();
+const deadline = Date.now() + 30_000;
+
+await runtime.initialize({ signal: controller.signal, deadline });
+await runtime.shutdown({ signal: controller.signal, deadline });
+```
+
+The runtime composes the parent signal and deadline for each hook. The first
+observed cancellation source wins, and a hook that settles after its signal
+aborts is not recorded as successful. Parent cancellation rejects with
+`ModuleLifecycleCancelledProblem`; deadline expiry rejects with
+`ModuleLifecycleDeadlineExceededProblem`; user hook failures remain
+`ModuleLifecycleProblem`. Invalid deadlines fail before lifecycle work with
+`InvalidModuleLifecycleDeadlineProblem`. If a hook throws its own error after
+cancellation was observed, the cancellation or deadline remains the operation
+result and its `hookFailure` extension preserves the distinct
+`framework-module/lifecycle-failed` evidence.
+
+Cancellation is cooperative. Croco aborts the hook signal but awaits the hook's
+actual settlement so an orphaned hook cannot mutate module providers after
+rollback. Hooks should pass the signal into cancellable I/O and stop promptly
+when it aborts. Initialization rollback and direct shutdown still attempt every
+applicable cleanup hook in reverse order, including hooks entered after the
+operation signal has already aborted.
+
+Concurrent `initialize()` or `shutdown()` calls join the existing Promise. The
+caller that creates the operation owns its signal and deadline; later callers
+cannot replace the active operation's cancellation contract.
+
+Shutdown attempts every initialized module even when individual hooks fail or
+the operation is cancelled, then rejects with the first lifecycle execution
+Problem and exposes every ordered failure through its `cleanupFailures`
+extension. Active runtime state is reset after all hooks complete, including
+failed shutdown attempts.
 
 If `setup` or `start` fails, initialization calls `shutdown` for every module
 whose setup phase was entered, including the failing module, in reverse

@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "ModuleLifecycleProblem"
+title: "ModuleLifecycleCancelledProblem"
 ---
 
-RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다.
+Reports that a parent signal cancelled a module lifecycle hook.
 
 ## Extends
 
@@ -15,7 +15,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 ### Constructor
 
-> **new ModuleLifecycleProblem**(`moduleName`, `phase`, `cause`, `cleanupFailures?`): `ModuleLifecycleProblem`
+> **new ModuleLifecycleCancelledProblem**(`moduleName`, `phase`, `cause?`, `cleanupFailures?`, `hookFailure?`): `ModuleLifecycleCancelledProblem`
 
 #### Parameters
 
@@ -27,17 +27,21 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 [`ModuleLifecyclePhase`](/api/framework-module/src/type-aliases/modulelifecyclephase/)
 
-##### cause
+##### cause?
 
-`unknown`
+`Error`
 
 ##### cleanupFailures?
 
 readonly [`ModuleCleanupFailure`](/api/framework-module/src/type-aliases/modulecleanupfailure/)[] = `[]`
 
+##### hookFailure?
+
+[`ModuleLifecycleFailure`](/api/framework-module/src/type-aliases/modulelifecyclefailure/)
+
 #### Returns
 
-`ModuleLifecycleProblem`
+`ModuleLifecycleCancelledProblem`
 
 #### Overrides
 
@@ -213,7 +217,7 @@ not capture any frames.
 
 ### withCleanupFailures()
 
-> **withCleanupFailures**(`cleanupFailures`): `ModuleLifecycleProblem`
+> **withCleanupFailures**(`cleanupFailures`): `ModuleLifecycleCancelledProblem`
 
 #### Parameters
 
@@ -223,7 +227,23 @@ readonly [`ModuleCleanupFailure`](/api/framework-module/src/type-aliases/modulec
 
 #### Returns
 
-`ModuleLifecycleProblem`
+`ModuleLifecycleCancelledProblem`
+
+---
+
+### withHookFailure()
+
+> **withHookFailure**(`hookFailure`): `ModuleLifecycleCancelledProblem`
+
+#### Parameters
+
+##### hookFailure
+
+[`ModuleLifecycleFailure`](/api/framework-module/src/type-aliases/modulelifecyclefailure/)
+
+#### Returns
+
+`ModuleLifecycleCancelledProblem`
 
 ---
 

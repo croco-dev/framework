@@ -12156,6 +12156,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "InvalidModuleLifecycleDeadlineProblem",
+              "exportKind": "named",
+              "source": "./problems",
+              "declarationKind": "class"
+            },
+            {
               "name": "ModuleCircularDependencyProblem",
               "exportKind": "named",
               "source": "./problems",
@@ -12175,6 +12181,18 @@
             },
             {
               "name": "ModuleDuplicateNameProblem",
+              "exportKind": "named",
+              "source": "./problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ModuleLifecycleCancelledProblem",
+              "exportKind": "named",
+              "source": "./problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ModuleLifecycleDeadlineExceededProblem",
               "exportKind": "named",
               "source": "./problems",
               "declarationKind": "class"
@@ -12289,6 +12307,21 @@
             },
             {
               "name": "ModuleGraphProvider",
+              "exportKind": "named",
+              "source": "./types"
+            },
+            {
+              "name": "ModuleLifecycleExecutionContext",
+              "exportKind": "named",
+              "source": "./types"
+            },
+            {
+              "name": "ModuleLifecycleExecutionOptions",
+              "exportKind": "named",
+              "source": "./types"
+            },
+            {
+              "name": "ModuleLifecycleFailure",
               "exportKind": "named",
               "source": "./types"
             },

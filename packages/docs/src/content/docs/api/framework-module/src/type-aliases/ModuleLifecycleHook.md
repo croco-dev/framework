@@ -5,13 +5,17 @@ prev: false
 title: "ModuleLifecycleHook"
 ---
 
-> **ModuleLifecycleHook** = (`ctx`) => `void` \| `Promise`\<`void`\>
+> **ModuleLifecycleHook** = (`ctx`, `execution`) => `void` \| `Promise`\<`void`\>
 
 ## Parameters
 
 ### ctx
 
 [`ModuleContext`](/api/framework-module/src/classes/modulecontext/)
+
+### execution
+
+[`ModuleLifecycleExecutionContext`](/api/framework-module/src/type-aliases/modulelifecycleexecutioncontext/)
 
 ## Returns
 

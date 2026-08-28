@@ -29,7 +29,13 @@ title: "CrocoModule"
 
 ### initialize()
 
-> `static` **initialize**(): `Promise`\<[`ModuleContext`](/api/framework-module/src/classes/modulecontext/)\>
+> `static` **initialize**(`options?`): `Promise`\<[`ModuleContext`](/api/framework-module/src/classes/modulecontext/)\>
+
+#### Parameters
+
+##### options?
+
+[`ModuleLifecycleExecutionOptions`](/api/framework-module/src/type-aliases/modulelifecycleexecutionoptions/) = `{}`
 
 #### Returns
 
@@ -49,7 +55,13 @@ title: "CrocoModule"
 
 ### shutdown()
 
-> `static` **shutdown**(): `Promise`\<`void`\>
+> `static` **shutdown**(`options?`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### options?
+
+[`ModuleLifecycleExecutionOptions`](/api/framework-module/src/type-aliases/modulelifecycleexecutionoptions/) = `{}`
 
 #### Returns
 
