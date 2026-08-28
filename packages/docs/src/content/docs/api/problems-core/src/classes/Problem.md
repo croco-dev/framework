@@ -79,6 +79,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`PostHogAnalyticsIdentifyProblem`](/api/analytics-posthog/src/classes/posthoganalyticsidentifyproblem/)
 - [`PostHogAnalyticsReadinessProblem`](/api/analytics-posthog/src/classes/posthoganalyticsreadinessproblem/)
 - [`AuditableDecoratorProblem`](/api/audit-core/src/classes/auditabledecoratorproblem/)
+- [`AuditClientIpConfigurationProblem`](/api/audit-core/src/classes/auditclientipconfigurationproblem/)
 - [`ClerkWebhookDeliveryFailedProblem`](/api/auth-clerk/src/classes/clerkwebhookdeliveryfailedproblem/)
 - [`ClerkWebhookDeliveryInFlightProblem`](/api/auth-clerk/src/classes/clerkwebhookdeliveryinflightproblem/)
 - [`ClerkExternalServiceProblem`](/api/auth-clerk/src/classes/clerkexternalserviceproblem/)

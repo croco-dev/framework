@@ -8,16 +8,20 @@ import {
 } from "./auditCoordination";
 import { AUDIT_METADATA_KEY } from "./constants";
 import type { AuditExecutionContext, CallHandler, Interceptor } from "./interfaces/Interceptor";
+import { AuditClientIpConfigurationProblem } from "./problems/AuditClientIpConfigurationProblem";
 import type { AuditLogEntry } from "./types";
 
-type RequestHeaders = Headers | Record<string, string | undefined>;
+type RequestHeaderValue = string | readonly string[] | undefined;
 
-type HeaderValue = string | undefined;
+type RequestHeaders = Headers | Record<string, RequestHeaderValue>;
 
 type RequestLike = {
   headers?: RequestHeaders;
-  header?: Record<string, string | undefined> | ((name: string) => string | undefined);
   body?: unknown;
+  connection?: unknown;
+  raw?: unknown;
+  remoteAddress?: unknown;
+  socket?: unknown;
 };
 
 type HttpMetadata = {
@@ -32,6 +36,10 @@ type AuditableMetadata = {
   [key: string]: unknown;
 };
 
+export type AuditInterceptorOptions = {
+  readonly trustedProxyHops?: number;
+};
+
 function isHeadersInstance(headers: unknown): headers is Headers {
   return headers instanceof Headers;
 }
@@ -40,7 +48,10 @@ function hasGetMethod(headers: unknown): boolean {
   return typeof (headers as { get?: unknown }).get === "function";
 }
 
-function readHeaderValue(headers: RequestHeaders | undefined, headerName: string): HeaderValue {
+function readHeaderValue(
+  headers: RequestHeaders | undefined,
+  headerName: string,
+): string | undefined {
   if (!headers) {
     return undefined;
   }
@@ -57,40 +68,147 @@ function readHeaderValue(headers: RequestHeaders | undefined, headerName: string
     }
   }
 
-  const headerRecord = headers as Record<string, string | undefined>;
-  const direct = headerRecord[headerName];
-  if (direct) {
-    return direct;
+  const headerRecord = headers as Record<string, RequestHeaderValue>;
+  const matches = Object.entries(headerRecord).filter(([key]) => key.toLowerCase() === headerName);
+  if (matches.length !== 1) {
+    return undefined;
   }
 
-  const match = Object.entries(headerRecord).find(
-    ([key]) => key.toLowerCase() === headerName.toLowerCase(),
-  );
-  return match?.[1];
+  const value = matches[0]?.[1];
+  return typeof value === "string" ? value : undefined;
 }
 
-function extractIp(request: Request): string {
+function normalizeIpAddress(value: unknown): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const candidate = value.trim();
+  if (!candidate) {
+    return undefined;
+  }
+
+  if (!candidate.includes(":")) {
+    const octets = candidate.split(".");
+    if (octets.length !== 4) {
+      return undefined;
+    }
+
+    const isValidIpv4 = octets.every(
+      (octet) => /^(0|[1-9]\d{0,2})$/.test(octet) && Number(octet) <= 255,
+    );
+    return isValidIpv4 ? candidate : undefined;
+  }
+
+  if (!/^[0-9a-fA-F:.]+$/.test(candidate)) {
+    return undefined;
+  }
+
+  try {
+    const hostname = new URL(`http://[${candidate}]/`).hostname;
+    return hostname.startsWith("[") && hostname.endsWith("]") ? hostname.slice(1, -1) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
+function readRemoteAddress(value: unknown): string | undefined {
+  return normalizeIpAddress(asRecord(value)?.["remoteAddress"]);
+}
+
+function resolveLambdaSourceIp(): string | undefined {
+  const runtime = Context.getRuntimeContext();
+  if (runtime?.platform !== "lambda") {
+    return undefined;
+  }
+
+  const event = asRecord(runtime.native?.["event"]);
+  const requestContext = asRecord(event?.["requestContext"]);
+  const http = asRecord(requestContext?.["http"]);
+  return normalizeIpAddress(http?.["sourceIp"]);
+}
+
+function resolveHttpContextRemoteAddress(context: AuditExecutionContext): string | undefined {
+  const getHttpContext = (
+    context as AuditExecutionContext & {
+      getHttpContext?: () => unknown;
+    }
+  ).getHttpContext;
+  if (typeof getHttpContext !== "function") {
+    return undefined;
+  }
+
+  const httpContext = asRecord(getHttpContext.call(context));
+  const raw = asRecord(httpContext?.["raw"]);
+  const env = asRecord(raw?.["env"]);
+  const server = asRecord(env?.["server"]);
+  const incoming = asRecord(server?.["incoming"] ?? env?.["incoming"]);
+  return readRemoteAddress(incoming?.["socket"]);
+}
+
+function resolveRequestRemoteAddress(request: Request): string | undefined {
   const requestLike = request as RequestLike;
+  const raw = asRecord(requestLike.raw);
 
+  return (
+    readRemoteAddress(requestLike.socket) ??
+    readRemoteAddress(requestLike.connection) ??
+    readRemoteAddress(raw?.["socket"]) ??
+    normalizeIpAddress(requestLike.remoteAddress)
+  );
+}
+
+function resolveDirectIp(context: AuditExecutionContext, request: Request): string {
+  return (
+    resolveLambdaSourceIp() ??
+    resolveHttpContextRemoteAddress(context) ??
+    resolveRequestRemoteAddress(request) ??
+    "unknown"
+  );
+}
+
+function resolveForwardedIp(request: Request, trustedProxyHops: number): string | undefined {
+  const requestLike = request as RequestLike;
   const forwardedFor = readHeaderValue(requestLike.headers, "x-forwarded-for");
-  if (forwardedFor) {
-    return forwardedFor.split(",")[0]?.trim() ?? "unknown";
+  if (!forwardedFor) {
+    return undefined;
   }
 
-  if (typeof requestLike.header === "function") {
-    return requestLike.header("x-real-ip") ?? "unknown";
+  const forwardedAddresses = forwardedFor.split(",").map((candidate) => candidate.trim());
+  if (forwardedAddresses.some((candidate) => candidate.length === 0)) {
+    return undefined;
   }
 
-  if (requestLike.header && typeof requestLike.header === "object") {
-    return requestLike.header["x-real-ip"] ?? "unknown";
+  const selectedIndex = forwardedAddresses.length - trustedProxyHops;
+  if (selectedIndex < 0) {
+    return undefined;
   }
 
-  const realIp = readHeaderValue(requestLike.headers, "x-real-ip");
-  if (realIp) {
-    return realIp;
+  const trustedBoundary = forwardedAddresses.slice(selectedIndex).map(normalizeIpAddress);
+  if (trustedBoundary.some((candidate) => candidate === undefined)) {
+    return undefined;
   }
 
-  return "unknown";
+  return trustedBoundary[0];
+}
+
+function extractIp(
+  context: AuditExecutionContext,
+  request: Request,
+  trustedProxyHops: number,
+): string {
+  const directIp = resolveDirectIp(context, request);
+  if (trustedProxyHops === 0) {
+    return directIp;
+  }
+
+  return resolveForwardedIp(request, trustedProxyHops) ?? directIp;
 }
 
 function extractRequestBody(request: Request): unknown {
@@ -98,11 +216,11 @@ function extractRequestBody(request: Request): unknown {
   return requestLike.body;
 }
 
-function toHttpMetadata(context: AuditExecutionContext): HttpMetadata {
+function toHttpMetadata(context: AuditExecutionContext, trustedProxyHops: number): HttpMetadata {
   const request = context.getRequest();
   const method = context.getMethod();
   const path = context.getPath();
-  const ip = extractIp(request);
+  const ip = extractIp(context, request, trustedProxyHops);
   const body = extractRequestBody(request);
 
   const metadata: HttpMetadata = {
@@ -154,7 +272,21 @@ function resolveAuditMetadataTarget(target: object, handler: string | symbol): o
 }
 
 export class AuditInterceptor implements Interceptor<AuditExecutionContext> {
-  constructor(private readonly repository: AuditLogRepository) {}
+  private readonly trustedProxyHops: number;
+
+  constructor(
+    private readonly repository: AuditLogRepository,
+    options: AuditInterceptorOptions = {},
+  ) {
+    const trustedProxyHops = options.trustedProxyHops ?? 0;
+    if (!Number.isSafeInteger(trustedProxyHops) || trustedProxyHops < 0) {
+      throw new AuditClientIpConfigurationProblem(
+        "Audit trustedProxyHops must be a non-negative safe integer.",
+      );
+    }
+
+    this.trustedProxyHops = trustedProxyHops;
+  }
 
   private async writeAuditLog(entry: Omit<AuditLogEntry, "id" | "createdAt">): Promise<void> {
     await this.repository.create(entry);
@@ -163,7 +295,7 @@ export class AuditInterceptor implements Interceptor<AuditExecutionContext> {
   async intercept(context: AuditExecutionContext, next: CallHandler): Promise<unknown> {
     const target = context.getClass();
     const handler = context.getHandler();
-    const http = toHttpMetadata(context);
+    const http = toHttpMetadata(context, this.trustedProxyHops);
     const existingMetadata = Reflect.getMetadata(AUDIT_METADATA_KEY, target, handler) as
       | AuditableMetadata
       | undefined;

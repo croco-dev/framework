@@ -1906,6 +1906,17 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "audit-core/client-ip-policy-invalid": recovery({
+    cause:
+      "AuditInterceptor received trustedProxyHops outside the nonnegative safe-integer domain.",
+    userAction:
+      "Ask the operator to correct the audit client IP policy before the application is started again.",
+    operatorAction:
+      "Set trustedProxyHops to a nonnegative safe integer, then reconstruct AuditInterceptor and restart the service.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "batch-core/invalid-chunk-size": recovery({
     cause:
       "The batch Step or QStash execution configured chunkSize outside the positive safe-integer domain.",

@@ -8,6 +8,7 @@ import type { AuditLogRepository } from "../libs/AuditLogRepository";
 import { AUDIT_LOG_REPOSITORY_TOKEN } from "../libs/AuditLogRepositoryToken";
 import { AUDIT_METADATA_KEY } from "../libs/constants";
 import type { AuditExecutionContext, CallHandler } from "../libs/interfaces/Interceptor";
+import { AuditClientIpConfigurationProblem } from "../libs/problems/AuditClientIpConfigurationProblem";
 import type { AuditLogEntry } from "../libs/types";
 
 type RequestContextStub = {
@@ -19,14 +20,18 @@ type RequestContextStub = {
 };
 
 type MockHttpRequest = {
-  headers?: Headers | Record<string, string | undefined>;
+  headers?: Headers | Record<string, string | readonly string[] | undefined>;
   body?: unknown;
   header?: Record<string, string | undefined> | ((name: string) => string | undefined);
+  socket?: {
+    remoteAddress?: unknown;
+  };
 };
 
 type ExecutionContextInput = {
   controller: Function;
   handler: string | symbol;
+  httpContext?: unknown;
   method: string;
   path: string;
   request: MockHttpRequest;
@@ -47,6 +52,7 @@ function createExecutionContext(input: ExecutionContextInput): AuditExecutionCon
     getHandler: () => input.handler,
     getPath: () => input.path,
     getMethod: () => input.method,
+    getHttpContext: () => input.httpContext,
   } as AuditExecutionContext;
 }
 
@@ -90,7 +96,43 @@ describe("AuditInterceptor", () => {
     Container.reset();
   });
 
-  it("should extract request metadata (URL, IP, method) and persist audit log", async () => {
+  async function expectRecordedIp(
+    request: MockHttpRequest,
+    expectedIp: string,
+    trustedProxyHops: number = 0,
+    httpContext?: unknown,
+  ): Promise<void> {
+    interceptor = new AuditInterceptor(repository, { trustedProxyHops });
+
+    class ClientIpController {
+      read() {}
+    }
+
+    const context = createExecutionContext({
+      controller: ClientIpController,
+      handler: "read",
+      httpContext,
+      method: "GET",
+      path: "/client-ip",
+      request,
+    });
+
+    await interceptor.intercept(context, createCallHandler({ ok: true }));
+
+    expect(createSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadata: {
+          http: {
+            method: "GET",
+            path: "/client-ip",
+            ip: expectedIp,
+          },
+        },
+      }),
+    );
+  }
+
+  it("should ignore forwarded headers by default and persist the direct client IP", async () => {
     vi.spyOn(Context, "get").mockReturnValue({
       requestId: "req-1",
       tenantId: "tenant-1",
@@ -109,6 +151,9 @@ describe("AuditInterceptor", () => {
       request: {
         headers: {
           "x-forwarded-for": "203.0.113.10, 70.41.3.18",
+        },
+        socket: {
+          remoteAddress: "192.0.2.10",
         },
         body: { name: "croco" },
       },
@@ -133,7 +178,7 @@ describe("AuditInterceptor", () => {
           http: {
             method: "PATCH",
             path: "/projects/project-1",
-            ip: "203.0.113.10",
+            ip: "192.0.2.10",
             body: { name: "croco" },
           },
         },
@@ -831,6 +876,8 @@ describe("AuditInterceptor", () => {
       request: {
         headers: {
           "x-forwarded-for": "127.0.0.1",
+          "x-real-ip": "127.0.0.2",
+          "cf-connecting-ip": "127.0.0.3",
         },
       },
     });
@@ -848,7 +895,143 @@ describe("AuditInterceptor", () => {
         actorId: "unknown",
         action: "PublicController.health",
         resourceType: "PublicController",
+        metadata: {
+          http: {
+            method: "GET",
+            path: "/health",
+            ip: "unknown",
+          },
+        },
       }),
     );
   });
+
+  it("should resolve the rightmost forwarded address through one trusted proxy", async () => {
+    await expectRecordedIp(
+      {
+        headers: { "x-forwarded-for": "198.51.100.40, 203.0.113.20" },
+        socket: { remoteAddress: "192.0.2.20" },
+      },
+      "203.0.113.20",
+      1,
+    );
+  });
+
+  it("should resolve the direct Node address from the HTTP execution context", async () => {
+    await expectRecordedIp({ headers: { "x-forwarded-for": "203.0.113.30" } }, "192.0.2.30", 0, {
+      raw: {
+        env: {
+          incoming: {
+            socket: { remoteAddress: "192.0.2.30" },
+          },
+        },
+      },
+    });
+  });
+
+  it("should resolve the direct Lambda source without trusting forwarded headers", async () => {
+    vi.spyOn(Context, "get").mockReturnValue({
+      requestId: "req-lambda",
+      runtime: {
+        platform: "lambda",
+        native: {
+          event: {
+            requestContext: {
+              http: { sourceIp: "192.0.2.31" },
+            },
+          },
+        },
+      },
+    } as never);
+
+    await expectRecordedIp({ headers: { "x-forwarded-for": "203.0.113.31" } }, "192.0.2.31");
+  });
+
+  it("should resolve the forwarded address at the configured trusted hop boundary", async () => {
+    await expectRecordedIp(
+      {
+        headers: { "x-forwarded-for": "192.0.2.200, 198.51.100.41, 203.0.113.21" },
+        socket: { remoteAddress: "192.0.2.21" },
+      },
+      "198.51.100.41",
+      2,
+    );
+  });
+
+  it("should not let a malformed untrusted prefix degrade a valid trusted boundary", async () => {
+    await expectRecordedIp(
+      {
+        headers: { "x-forwarded-for": "attacker.example, 198.51.100.41, 203.0.113.21" },
+        socket: { remoteAddress: "192.0.2.21" },
+      },
+      "198.51.100.41",
+      2,
+    );
+  });
+
+  it("should normalize a trusted IPv6 address", async () => {
+    await expectRecordedIp(
+      {
+        headers: new Headers({
+          "X-Forwarded-For": "198.51.100.44, 2001:0db8:0000:0000:0000:0000:0000:0044",
+        }),
+        socket: { remoteAddress: "192.0.2.24" },
+      },
+      "2001:db8::44",
+      1,
+    );
+  });
+
+  it.each([
+    ["a chain shorter than the trusted boundary", "198.51.100.42"],
+    ["an empty forwarded address", "198.51.100.42, , 203.0.113.22"],
+    ["a malformed trusted suffix", "198.51.100.42, attacker.example, 203.0.113.22"],
+    ["an address with a port", "198.51.100.42:443, 203.0.113.22"],
+    ["an out-of-range IPv4 address", "999.51.100.42, 203.0.113.22"],
+  ])("should use the direct address for %s", async (_case, forwardedFor) => {
+    await expectRecordedIp(
+      {
+        headers: { "x-forwarded-for": forwardedFor },
+        socket: { remoteAddress: "192.0.2.22" },
+      },
+      "192.0.2.22",
+      2,
+    );
+  });
+
+  it("should reject ambiguous forwarded header values", async () => {
+    await expectRecordedIp(
+      {
+        headers: {
+          "x-forwarded-for": ["198.51.100.43", "203.0.113.23"],
+        },
+        socket: { remoteAddress: "192.0.2.23" },
+      },
+      "192.0.2.23",
+      1,
+    );
+  });
+
+  it("should reject duplicate case-variant forwarded header keys", async () => {
+    await expectRecordedIp(
+      {
+        headers: {
+          "X-Forwarded-For": "198.51.100.45",
+          "x-forwarded-for": "203.0.113.25",
+        },
+        socket: { remoteAddress: "192.0.2.25" },
+      },
+      "192.0.2.25",
+      1,
+    );
+  });
+
+  it.each([-1, 1.5, Number.NaN, Number.MAX_SAFE_INTEGER + 1])(
+    "should reject invalid trusted proxy hop counts (%s)",
+    (trustedProxyHops) => {
+      expect(() => new AuditInterceptor(repository, { trustedProxyHops })).toThrowError(
+        AuditClientIpConfigurationProblem,
+      );
+    },
+  );
 });

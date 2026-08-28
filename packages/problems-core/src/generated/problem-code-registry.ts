@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 684,
+  problemCount: 685,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -988,6 +988,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/audit-core/src/libs/problems/AuditableDecoratorProblem.ts",
+          line: 4,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "audit-core/client-ip-policy-invalid",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#audit-core-client-ip-policy-invalid",
+      recovery: {
+        cause:
+          "AuditInterceptor received trustedProxyHops outside the nonnegative safe-integer domain.",
+        userAction:
+          "Ask the operator to correct the audit client IP policy before the application is started again.",
+        operatorAction:
+          "Set trustedProxyHops to a nonnegative safe integer, then reconstruct AuditInterceptor and restart the service.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/audit-core/src/libs/problems/AuditClientIpConfigurationProblem.ts",
           line: 4,
           column: 3,
           kind: "problem-class",
