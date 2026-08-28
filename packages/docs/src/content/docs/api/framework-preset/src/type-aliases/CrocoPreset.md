@@ -17,13 +17,13 @@ title: "CrocoPreset"
 
 ### extend
 
-> `readonly` **extend**: (`partial`) => `CrocoPreset`
+> `readonly` **extend**: (`override`) => `CrocoPreset`
 
 #### Parameters
 
-##### partial
+##### override
 
-`Partial`\<[`CrocoPresetConfig`](/api/framework-preset/src/type-aliases/crocopresetconfig/)\>
+[`CrocoPresetOverride`](/api/framework-preset/src/type-aliases/crocopresetoverride/)
 
 #### Returns
 

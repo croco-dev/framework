@@ -12280,6 +12280,11 @@
               "source": "./types"
             },
             {
+              "name": "CrocoPresetOverride",
+              "exportKind": "named",
+              "source": "./types"
+            },
+            {
               "name": "HookMap",
               "exportKind": "named",
               "source": "./types"
