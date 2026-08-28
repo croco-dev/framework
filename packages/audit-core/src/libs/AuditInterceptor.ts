@@ -1,7 +1,11 @@
 import "reflect-metadata";
 import { Context } from "@croco/framework-context";
 import type { AuditLogRepository } from "./AuditLogRepository";
-import { createAuditCoordinationState, runWithAuditCoordination } from "./auditCoordination";
+import {
+  createAuditCoordinationState,
+  markAuditWrite,
+  runWithAuditCoordination,
+} from "./auditCoordination";
 import { AUDIT_METADATA_KEY } from "./constants";
 import type { AuditExecutionContext, CallHandler, Interceptor } from "./interfaces/Interceptor";
 import type { AuditLogEntry } from "./types";
@@ -180,7 +184,7 @@ export class AuditInterceptor implements Interceptor<AuditExecutionContext> {
         ? runWithAuditCoordination(coordination, () => next.handle())
         : next.handle());
 
-      if (coordination?.decoratorWritesAudit) {
+      if (coordination?.auditWritten) {
         return result;
       }
 
@@ -196,10 +200,13 @@ export class AuditInterceptor implements Interceptor<AuditExecutionContext> {
         diff: null,
         metadata: mergeMetadata(existingMetadata, http),
       });
+      if (coordination) {
+        markAuditWrite(coordination.target, coordination.propertyKey);
+      }
 
       return result;
     } catch (error) {
-      if (coordination?.decoratorWritesAudit) {
+      if (coordination?.auditWritten) {
         throw error;
       }
 
@@ -215,6 +222,9 @@ export class AuditInterceptor implements Interceptor<AuditExecutionContext> {
         diff: null,
         metadata: mergeMetadata(existingMetadata, http),
       });
+      if (coordination) {
+        markAuditWrite(coordination.target, coordination.propertyKey);
+      }
 
       throw error;
     }

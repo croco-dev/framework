@@ -1,7 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
 type AuditCoordinationState = {
-  decoratorWritesAudit: boolean;
+  auditWritten: boolean;
   parent?: AuditCoordinationState;
   propertyKey: string | symbol;
   target: object;
@@ -14,7 +14,7 @@ export function createAuditCoordinationState(
   propertyKey: string | symbol,
 ): AuditCoordinationState {
   const parent = auditCoordinationStorage.getStore();
-  const state = { decoratorWritesAudit: false, propertyKey, target };
+  const state = { auditWritten: false, propertyKey, target };
   return parent ? { ...state, parent } : state;
 }
 
@@ -22,11 +22,22 @@ export function runWithAuditCoordination<T>(state: AuditCoordinationState, callb
   return auditCoordinationStorage.run(state, callback);
 }
 
-export function markDecoratorAuditWrite(target: object, propertyKey: string | symbol): void {
+export function hasAuditCoordination(target: object, propertyKey: string | symbol): boolean {
   let state = auditCoordinationStorage.getStore();
   while (state) {
     if (state.target === target && state.propertyKey === propertyKey) {
-      state.decoratorWritesAudit = true;
+      return true;
+    }
+    state = state.parent;
+  }
+  return false;
+}
+
+export function markAuditWrite(target: object, propertyKey: string | symbol): void {
+  let state = auditCoordinationStorage.getStore();
+  while (state) {
+    if (state.target === target && state.propertyKey === propertyKey) {
+      state.auditWritten = true;
     }
     state = state.parent;
   }

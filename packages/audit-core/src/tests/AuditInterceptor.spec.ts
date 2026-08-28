@@ -272,6 +272,102 @@ describe("AuditInterceptor", () => {
     );
   });
 
+  it("should use interceptor coverage when the decorator audit write fails", async () => {
+    const decoratorCreateSpy = vi.fn(async () => {
+      throw new Error("decorator repository unavailable");
+    });
+    const decoratorRepository = {
+      create: decoratorCreateSpy,
+      find: vi.fn(),
+    } as unknown as AuditLogRepository;
+    Container.set(AUDIT_LOG_REPOSITORY_TOKEN, decoratorRepository);
+    Container.set(LOGGER_TOKEN, createLogger());
+    vi.spyOn(Context, "get").mockReturnValue({
+      requestId: "req-decorator-write-fallback",
+      tenantId: "tenant-write-fallback",
+      user: { id: "actor-write-fallback" },
+    } as RequestContextStub);
+
+    class TestController {
+      @Auditable({ action: "project.publish", resourceType: "Project" })
+      async publish(): Promise<{ published: boolean }> {
+        return { published: true };
+      }
+    }
+
+    const controller = new TestController();
+    const context = createExecutionContext({
+      controller: TestController,
+      handler: "publish",
+      method: "POST",
+      path: "/projects/project-3/publish",
+      request: { headers: {} },
+    });
+
+    await expect(
+      interceptor.intercept(context, {
+        handle: vi.fn(() => controller.publish()),
+      } as CallHandler),
+    ).resolves.toEqual({ published: true });
+
+    expect(decoratorCreateSpy).toHaveBeenCalledTimes(1);
+    expect(createSpy).toHaveBeenCalledTimes(1);
+    expect(createSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "TestController.publish",
+        resourceId: "/projects/project-3/publish",
+      }),
+    );
+  });
+
+  it("should use interceptor failure coverage when the decorator audit write fails", async () => {
+    const decoratorCreateSpy = vi.fn(async () => {
+      throw new Error("decorator repository unavailable");
+    });
+    const decoratorRepository = {
+      create: decoratorCreateSpy,
+      find: vi.fn(),
+    } as unknown as AuditLogRepository;
+    Container.set(AUDIT_LOG_REPOSITORY_TOKEN, decoratorRepository);
+    Container.set(LOGGER_TOKEN, createLogger());
+    vi.spyOn(Context, "get").mockReturnValue({
+      requestId: "req-decorator-failure-write-fallback",
+      tenantId: "tenant-write-fallback",
+      user: { id: "actor-write-fallback" },
+    } as RequestContextStub);
+
+    class TestController {
+      @Auditable({ action: "project.reject", resourceType: "Project" })
+      async reject(): Promise<void> {
+        throw new Error("project rejected");
+      }
+    }
+
+    const controller = new TestController();
+    const context = createExecutionContext({
+      controller: TestController,
+      handler: "reject",
+      method: "DELETE",
+      path: "/projects/project-4",
+      request: { headers: {} },
+    });
+
+    await expect(
+      interceptor.intercept(context, {
+        handle: vi.fn(() => controller.reject()),
+      } as CallHandler),
+    ).rejects.toThrow("project rejected");
+
+    expect(decoratorCreateSpy).toHaveBeenCalledTimes(1);
+    expect(createSpy).toHaveBeenCalledTimes(1);
+    expect(createSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "TestController.reject",
+        payload: { error: "project rejected" },
+      }),
+    );
+  });
+
   it("should use interceptor coverage when @Auditable dependencies are missing", async () => {
     vi.spyOn(Context, "get").mockReturnValue({
       requestId: "req-decorated-fallback",
@@ -548,6 +644,70 @@ describe("AuditInterceptor", () => {
       }),
     );
   });
+
+  it.each([
+    { label: "successful", shouldFail: false },
+    { label: "failing", shouldFail: true },
+  ])(
+    "should create one fallback entry through nested interceptors for a $label handler",
+    async ({ shouldFail }) => {
+      const decoratorCreateSpy = vi.fn(async () => {
+        throw new Error("decorator repository unavailable");
+      });
+      const decoratorRepository = {
+        create: decoratorCreateSpy,
+        find: vi.fn(),
+      } as unknown as AuditLogRepository;
+      Container.set(AUDIT_LOG_REPOSITORY_TOKEN, decoratorRepository);
+      Container.set(LOGGER_TOKEN, createLogger());
+      vi.spyOn(Context, "get").mockReturnValue({
+        requestId: "req-nested-write-fallback",
+        tenantId: "tenant-nested-write-fallback",
+        user: { id: "actor-nested-write-fallback" },
+      } as RequestContextStub);
+
+      class TestController {
+        @Auditable({ action: "project.process", resourceType: "Project" })
+        async process(): Promise<string> {
+          if (shouldFail) {
+            throw new Error("project processing failed");
+          }
+          return "processed";
+        }
+      }
+
+      const controller = new TestController();
+      const nestedInterceptor = new AuditInterceptor(repository);
+      const context = createExecutionContext({
+        controller: TestController,
+        handler: "process",
+        method: "POST",
+        path: "/projects/project-5/process",
+        request: { headers: {} },
+      });
+      const invocation = interceptor.intercept(context, {
+        handle: () =>
+          nestedInterceptor.intercept(context, {
+            handle: vi.fn(() => controller.process()),
+          }),
+      });
+
+      if (shouldFail) {
+        await expect(invocation).rejects.toThrow("project processing failed");
+      } else {
+        await expect(invocation).resolves.toBe("processed");
+      }
+
+      expect(decoratorCreateSpy).toHaveBeenCalledTimes(1);
+      expect(createSpy).toHaveBeenCalledTimes(1);
+      expect(createSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: "TestController.process",
+          ...(shouldFail ? { payload: { error: "project processing failed" } } : {}),
+        }),
+      );
+    },
+  );
 
   it("should create exactly one entry for an inherited @Auditable handler", async () => {
     Container.set(AUDIT_LOG_REPOSITORY_TOKEN, repository);
