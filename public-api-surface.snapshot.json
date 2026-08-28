@@ -8250,6 +8250,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "DiagnosticsHealthIndicator",
+              "exportKind": "named",
+              "source": "./libs/DiagnosticsHealthIndicator",
+              "declarationKind": "class"
+            },
+            {
               "name": "DuplicateDiagnosticsProviderProblem",
               "exportKind": "named",
               "source": "./libs/problems/DiagnosticsProblems",
@@ -8338,6 +8344,11 @@
               "name": "DiagnosticSeverity",
               "exportKind": "named",
               "source": "./libs/DiagnosticCodes"
+            },
+            {
+              "name": "DiagnosticsHealthIndicatorPolicy",
+              "exportKind": "named",
+              "source": "./libs/DiagnosticsHealthIndicator"
             },
             {
               "name": "DiagnosticSourceLocation",

@@ -1077,6 +1077,10 @@ importers:
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
+    devDependencies:
+      '@croco/health-core':
+        specifier: workspace:*
+        version: link:../health-core
 
   packages/docs:
     dependencies:

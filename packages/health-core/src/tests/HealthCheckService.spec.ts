@@ -273,6 +273,33 @@ describe("HealthCheckService", () => {
     }
   });
 
+  it("preserves nested details and diagnostic metadata from indicators", async () => {
+    const indicator: HealthIndicator = {
+      check: vi.fn().mockResolvedValue({
+        name: "database",
+        status: "up",
+        message: "Primary is available",
+        details: { connection: { pool: "primary", available: 4 } },
+        lastChecked: "2026-08-28T01:02:03.000Z",
+      }),
+    };
+
+    service.register(indicator);
+
+    await expect(service.check()).resolves.toEqual({
+      status: "up",
+      results: [
+        {
+          name: "database",
+          status: "up",
+          message: "Primary is available",
+          details: { connection: { pool: "primary", available: 4 } },
+          lastChecked: "2026-08-28T01:02:03.000Z",
+        },
+      ],
+    });
+  });
+
   it("should support typed error details with code", async () => {
     const indicator: HealthIndicator = {
       check: vi.fn().mockResolvedValue({

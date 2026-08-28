@@ -122,6 +122,17 @@ describe("published @croco/meta-vite contract", () => {
           peerDependencies?: Record<string, string>;
           peerDependenciesMeta?: Record<string, { optional?: boolean }>;
         };
+        const packedDiagnosticsManifest = JSON.parse(
+          run("tar", ["-xOf", tarballs.diagnosticsCore, "package/package.json"], rootDir).stdout,
+        ) as {
+          dependencies?: Record<string, string>;
+          peerDependencies?: Record<string, string>;
+        };
+        const packedDiagnosticsDeclarations = run(
+          "tar",
+          ["-xOf", tarballs.diagnosticsCore, "package/dist/index.d.ts"],
+          rootDir,
+        ).stdout;
 
         expect(packedManifest.peerDependencies?.zod).toBe("^3.23.8");
         expect(packedManifest.peerDependencies?.ioredis).toBe("5.10.1");
@@ -134,6 +145,9 @@ describe("published @croco/meta-vite contract", () => {
           require: "./dist/libs/isr/adapters/index.js",
           types: "./dist/libs/isr/adapters/index.d.ts",
         });
+        expect(packedDiagnosticsManifest.dependencies?.["@croco/health-core"]).toBeUndefined();
+        expect(packedDiagnosticsManifest.peerDependencies?.["@croco/health-core"]).toBeUndefined();
+        expect(packedDiagnosticsDeclarations).not.toContain("@croco/health-core");
 
         writeConsumerPackageJson(rootConsumerRoot, tarballs);
         installMetaViteConsumer(rootConsumerRoot, tarballs, [

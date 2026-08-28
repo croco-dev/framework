@@ -1151,6 +1151,12 @@
       "owner": "@croco/diagnostics-core"
     },
     {
+      "path": "packages/diagnostics-core/src/tests/DiagnosticsHealthIndicator.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/diagnostics-core"
+    },
+    {
       "path": "packages/diagnostics-core/src/tests/DiagnosticsIntegration.spec.ts",
       "lane": "fast",
       "qualifiers": [],
