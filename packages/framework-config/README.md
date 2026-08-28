@@ -7,7 +7,7 @@
 - Zod 스키마 기반 환경 변수 검증
 - 서버/클라이언트/공통 환경 변수 분리
 - 타입 안전한 환경 변수 접근 (`ConfigService`)
-- `@ConfigSchema` 데코레이터 기반 설정 부트스트랩
+- 스키마 출력 타입을 보존하는 설정 부트스트랩
 - 사전 정의된 프리셋 (app, database, redis, storage)
 
 ## 설치
@@ -39,27 +39,29 @@ class MyService {
 }
 ```
 
-### 2. @ConfigSchema 데코레이터 사용
+### 2. 타입 안전한 설정 부트스트랩
 
 ```typescript
-import { ConfigSchema, bootstrapConfig } from "@croco/framework-config";
+import { bootstrapConfig, defineConfig } from "@croco/framework-config";
 import { z } from "zod";
 
-@ConfigSchema(
+const appConfig = defineConfig(
   z.object({
     API_KEY: z.string().min(1),
     TIMEOUT: z.coerce.number().default(5000),
   }),
-)
-class AppConfig {
-  constructor(
-    public readonly API_KEY: string,
-    public readonly TIMEOUT: number,
-  ) {}
-}
+);
 
-const config = bootstrapConfig<AppConfig>(AppConfig);
+const config = bootstrapConfig(appConfig);
+// config: { API_KEY: string; TIMEOUT: number }
 ```
+
+`bootstrapConfig`의 반환 타입은 스키마의 출력 타입에서 자동으로 추론됩니다. `transform`, `coerce`,
+`default`가 입력 타입을 바꾸더라도 별도의 인터페이스나 generic 인수를 동기화할 필요가 없습니다.
+
+기존 `@ConfigSchema` 클래스 데코레이터는 런타임 호환을 위해 유지되지만 deprecated 상태이며,
+`bootstrapConfig(DecoratedClass)`의 반환 타입은 `unknown`입니다. `defineConfig(schema)`로 옮기면 스키마와
+정적 타입이 하나의 계약을 공유합니다.
 
 ### 3. 직접 validateConfig 사용
 

@@ -10457,6 +10457,12 @@
               "declarationKind": "const"
             },
             {
+              "name": "defineConfig",
+              "exportKind": "declaration",
+              "source": "./decorators/ConfigSchema",
+              "declarationKind": "function"
+            },
+            {
               "name": "env",
               "exportKind": "declaration",
               "source": "./core",
@@ -10493,7 +10499,14 @@
               "declarationKind": "function"
             }
           ],
-          "typeExports": []
+          "typeExports": [
+            {
+              "name": "ConfigDefinition",
+              "exportKind": "declaration",
+              "source": "./decorators/ConfigSchema",
+              "declarationKind": "type"
+            }
+          ]
         }
       ]
     },

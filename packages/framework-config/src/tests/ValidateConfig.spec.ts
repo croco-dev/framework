@@ -1,7 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "reflect-metadata";
 import { z } from "zod";
-import { bootstrapConfig, ConfigSchema, getConfigSchema } from "../decorators/ConfigSchema";
+import {
+  bootstrapConfig,
+  ConfigSchema,
+  defineConfig,
+  getConfigSchema,
+} from "../decorators/ConfigSchema";
 import { ConfigValidationProblem } from "../libs/problems/ConfigProblems";
 import { validateConfig } from "../validateConfig";
 
@@ -178,36 +183,29 @@ describe("bootstrapConfig", () => {
     vi.restoreAllMocks();
   });
 
-  it("should validate and return config for decorated class", () => {
+  it("should validate a typed config definition", () => {
     const schema = z.object({
       API_KEY: z.string(),
     });
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    class AppConfig {}
-    ConfigSchema(schema)(AppConfig);
+    const definition = defineConfig(schema);
 
     const env = {
       API_KEY: "test-api-key",
     };
 
-    const result = bootstrapConfig(AppConfig, env);
+    const result = bootstrapConfig(definition, env);
 
     expect(result).toEqual({ API_KEY: "test-api-key" });
   });
 
-  // README-style: coerce.number().default() with explicit generic (T4 scope guard)
-  it("should coerce number from string and apply default (README style)", () => {
+  it("should preserve transformed output and defaults", () => {
     const schema = z.object({
       API_KEY: z.string(),
-      TIMEOUT: z.coerce.number().default(5000),
+      TIMEOUT: z.string().transform(Number).default(5000),
     });
+    const definition = defineConfig(schema);
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    class AppConfig {}
-    ConfigSchema(schema)(AppConfig);
-
-    const config = bootstrapConfig<AppConfig>(AppConfig, {
+    const config = bootstrapConfig(definition, {
       API_KEY: "sk_test",
       TIMEOUT: "3000",
     });
@@ -220,11 +218,9 @@ describe("bootstrapConfig", () => {
       TIMEOUT: z.coerce.number().default(5000),
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    class AppConfig {}
-    ConfigSchema(schema)(AppConfig);
+    const definition = defineConfig(schema);
 
-    const config = bootstrapConfig<AppConfig>(AppConfig, {
+    const config = bootstrapConfig(definition, {
       API_KEY: "sk_test",
     });
     expect(config).toEqual({ API_KEY: "sk_test", TIMEOUT: 5000 });
@@ -236,6 +232,19 @@ describe("bootstrapConfig", () => {
     expect(() => bootstrapConfig(PlainConfig, {})).toThrow(
       "No config schema found for 'PlainConfig'",
     );
+  });
+
+  it("should keep decorated classes available as a deprecated runtime path", () => {
+    const schema = z.object({
+      API_KEY: z.string(),
+    });
+
+    class AppConfig {}
+    ConfigSchema(schema)(AppConfig);
+
+    expect(bootstrapConfig(AppConfig, { API_KEY: "test-api-key" })).toEqual({
+      API_KEY: "test-api-key",
+    });
   });
 
   it("should throw when validation fails", () => {

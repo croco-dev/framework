@@ -5,24 +5,48 @@ prev: false
 title: "bootstrapConfig"
 ---
 
-> **bootstrapConfig**\<`T`\>(`target`, `env?`): `T`
+## Call Signature
 
-## Type Parameters
+> **bootstrapConfig**\<`TSchema`\>(`definition`, `env?`): `output`\<`TSchema`\>
 
-### T
+### Type Parameters
 
-`T`
+#### TSchema
 
-## Parameters
+`TSchema` _extends_ `ZodType`\<`unknown`, `unknown`, `$ZodTypeInternals`\<`unknown`, `unknown`\>\>
 
-### target
+### Parameters
 
-`Constructor`
+#### definition
 
-### env?
+[`ConfigDefinition`](/api/framework-config/src/type-aliases/configdefinition/)\<`TSchema`\>
+
+#### env?
 
 `Record`\<`string`, `string` \| `undefined`\>
 
-## Returns
+### Returns
 
-`T`
+`output`\<`TSchema`\>
+
+## Call Signature
+
+> **bootstrapConfig**(`target`, `env?`): `unknown`
+
+:::caution[Deprecated]
+Use `defineConfig(schema)` and pass the returned definition to `bootstrapConfig`.
+:::
+
+### Parameters
+
+#### target
+
+`Constructor`
+
+#### env?
+
+`Record`\<`string`, `string` \| `undefined`\>
+
+### Returns
+
+`unknown`
