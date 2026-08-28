@@ -181,7 +181,7 @@ describe("AuditInterceptor", () => {
       @Auditable({
         action: "project.create",
         resourceType: "Project",
-        resourceIdParam: "resourceId",
+        resourceIdIndex: 0,
         throwOnFailure: true,
       })
       async create(resourceId: string): Promise<{ created: boolean }> {
@@ -235,7 +235,7 @@ describe("AuditInterceptor", () => {
       @Auditable({
         action: "project.delete",
         resourceType: "Project",
-        resourceIdParam: "resourceId",
+        resourceIdIndex: 0,
         throwOnFailure: true,
       })
       async remove(resourceId: string): Promise<void> {
@@ -522,7 +522,7 @@ describe("AuditInterceptor", () => {
       @Auditable({
         action: "project.update",
         resourceType: "Project",
-        resourceIdParam: "resourceId",
+        resourceIdIndex: 0,
       })
       async update(resourceId: unknown): Promise<unknown> {
         return resourceId;
