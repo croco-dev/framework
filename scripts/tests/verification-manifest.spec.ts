@@ -33,6 +33,7 @@ import {
   selectGeneratedTestPathsForSmokeCases,
 } from "../create-croco-app-generated-smoke-dependencies.mts";
 import { getGeneratedSmokeDependencyCaseInputs } from "../create-croco-app-generated-smoke.mts";
+import { assertPackedDependencyClosure } from "../packed-decorator-consumers.mts";
 import { readTestInventory } from "../test-inventory.mts";
 import { generate } from "../../packages/create-croco-app/src/generator.ts";
 import {
@@ -515,6 +516,48 @@ describe("verification manifest", () => {
       ]),
     );
     expect(unrelated.find(({ id }) => id === "packed-decorator-consumers")?.applicable).toBe(false);
+  });
+
+  it.each(["dependencies", "optionalDependencies", "peerDependencies"] as const)(
+    "rejects local protocols in packed %s",
+    (section) => {
+      for (const protocol of ["workspace:", "file:", "link:", "portal:"]) {
+        expect(() =>
+          assertPackedDependencyClosure(
+            "@croco/source",
+            { [section]: { external: `${protocol}../external` } },
+            new Set(),
+          ),
+        ).toThrow(`repository-local ${section} entry external@${protocol}../external`);
+      }
+    },
+  );
+
+  it.each(["dependencies", "optionalDependencies", "peerDependencies"] as const)(
+    "rejects unpacked internal packages in packed %s",
+    (section) => {
+      expect(() =>
+        assertPackedDependencyClosure(
+          "@croco/source",
+          { [section]: { "@croco/missing": "1.0.0" } },
+          new Set(["@croco/source"]),
+        ),
+      ).toThrow(`unpacked internal ${section} entry @croco/missing`);
+    },
+  );
+
+  it("accepts registry dependencies and packed internal packages", () => {
+    expect(() =>
+      assertPackedDependencyClosure(
+        "@croco/source",
+        {
+          dependencies: { "@croco/packed": "1.0.0", external: "^2.0.0" },
+          optionalDependencies: { optional: "~3.0.0" },
+          peerDependencies: { peer: ">=4" },
+        },
+        new Set(["@croco/source", "@croco/packed"]),
+      ),
+    ).not.toThrow();
   });
 
   it("selects exact inventory lane owners for ordinary changes and full lanes for publish", () => {

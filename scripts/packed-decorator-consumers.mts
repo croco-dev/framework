@@ -21,6 +21,10 @@ const FIXTURE_ROOT = join(ROOT_DIR, "scripts", "fixtures", "packed-decorator-con
 const TSC_PATH = join(ROOT_DIR, "node_modules", "typescript", "bin", "tsc");
 const TIMEOUT_MS = 180_000;
 
+const DEPENDENCY_SECTIONS = ["dependencies", "optionalDependencies", "peerDependencies"] as const;
+
+const LOCAL_DEPENDENCY_PROTOCOLS = ["workspace:", "file:", "link:", "portal:"] as const;
+
 const PACKED_PACKAGE_NAMES = [
   "@croco/problems-core",
   "@croco/diagnostics-core",
@@ -84,6 +88,8 @@ type CommandResult = {
 type PackageJson = {
   readonly dependencies?: Readonly<Record<string, string>>;
   readonly name?: string;
+  readonly optionalDependencies?: Readonly<Record<string, string>>;
+  readonly peerDependencies?: Readonly<Record<string, string>>;
   readonly version?: string;
   readonly [key: string]: unknown;
 };
@@ -95,7 +101,7 @@ export function runPackedDecoratorConsumers(): void {
     verifyTypeScriptVersion();
     const tarballs = packPackages(join(temporaryRoot, "packs"));
     verifyPackedDeclarations(tarballs.get("@croco/protocols-rest"));
-    verifyPackedDependencyClosure(tarballs);
+    verifyPackedDependencyClosures(tarballs);
 
     for (const consumer of CONSUMERS) {
       verifyConsumer(consumer, tarballs, temporaryRoot);
@@ -103,7 +109,7 @@ export function runPackedDecoratorConsumers(): void {
 
     console.log("packed-decorator-consumers: declarations: strict decorator overloads preserved");
     console.log(
-      "packed-decorator-consumers: install: 5 packed internal packages, no workspace paths",
+      "packed-decorator-consumers: install: 5 packed internal packages, no local dependency references",
     );
     console.log(
       "packed-decorator-consumers: ESM: positive build/runtime and 7 negative markers passed",
@@ -191,22 +197,34 @@ function verifyPackedDeclarations(tarballPath: string | undefined): void {
   }
 }
 
-function verifyPackedDependencyClosure(tarballs: ReadonlyMap<string, string>): void {
-  for (const [packageName, tarballPath] of tarballs) {
-    const manifest = readPackedJson(tarballPath);
-    const dependencies = manifest.dependencies ?? {};
-    for (const [dependencyName, version] of Object.entries(dependencies)) {
-      if (version.includes("workspace:") || version.includes(ROOT_DIR)) {
+export function assertPackedDependencyClosure(
+  packageName: string,
+  manifest: PackageJson,
+  packedPackageNames: ReadonlySet<string>,
+): void {
+  for (const section of DEPENDENCY_SECTIONS) {
+    for (const [dependencyName, version] of Object.entries(manifest[section] ?? {})) {
+      if (
+        LOCAL_DEPENDENCY_PROTOCOLS.some((protocol) => version.startsWith(protocol)) ||
+        version.includes(ROOT_DIR)
+      ) {
         throw new Error(
-          `install: ${packageName} retained repository-local dependency ${dependencyName}@${version}`,
+          `install: ${packageName} retained repository-local ${section} entry ${dependencyName}@${version}`,
         );
       }
-      if (dependencyName.startsWith("@croco/") && !tarballs.has(dependencyName)) {
+      if (dependencyName.startsWith("@croco/") && !packedPackageNames.has(dependencyName)) {
         throw new Error(
-          `install: ${packageName} requires unpacked internal dependency ${dependencyName}`,
+          `install: ${packageName} requires unpacked internal ${section} entry ${dependencyName}`,
         );
       }
     }
+  }
+}
+
+function verifyPackedDependencyClosures(tarballs: ReadonlyMap<string, string>): void {
+  const packedPackageNames = new Set(tarballs.keys());
+  for (const [packageName, tarballPath] of tarballs) {
+    assertPackedDependencyClosure(packageName, readPackedJson(tarballPath), packedPackageNames);
   }
 }
 
@@ -297,6 +315,7 @@ function verifyInstalledPackagesAreIsolated(
   consumerRoot: string,
   tarballs: ReadonlyMap<string, string>,
 ): void {
+  const packedPackageNames = new Set(tarballs.keys());
   const pending = DIRECT_INTERNAL_DEPENDENCY_NAMES.map((packageName) => ({
     installedRoot: realpathSync(join(consumerRoot, "node_modules", ...packageName.split("/"))),
     packageName,
@@ -309,7 +328,11 @@ function verifyInstalledPackagesAreIsolated(
     installedPackages.set(current.packageName, current.installedRoot);
 
     const manifest = readJson(join(current.installedRoot, "package.json"));
-    for (const dependencyName of Object.keys(manifest.dependencies ?? {})) {
+    assertPackedDependencyClosure(current.packageName, manifest, packedPackageNames);
+    const dependencyNames = DEPENDENCY_SECTIONS.flatMap((section) =>
+      Object.keys(manifest[section] ?? {}),
+    );
+    for (const dependencyName of dependencyNames) {
       if (!dependencyName.startsWith("@croco/") || installedPackages.has(dependencyName)) continue;
       const dependencyRoot = realpathSync(
         join(current.installedRoot, "..", dependencyName.slice("@croco/".length)),
@@ -327,12 +350,6 @@ function verifyInstalledPackagesAreIsolated(
     }
     if (installedRoot.startsWith(`${ROOT_DIR}/`)) {
       throw new Error(`install: ${packageName} resolved into the repository at ${installedRoot}`);
-    }
-    const manifestText = readFileSync(join(installedRoot, "package.json"), "utf8");
-    if (manifestText.includes("workspace:") || manifestText.includes(ROOT_DIR)) {
-      throw new Error(
-        `install: ${packageName} retained a workspace or repository-local dependency`,
-      );
     }
   }
 }

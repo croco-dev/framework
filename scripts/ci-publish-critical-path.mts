@@ -11,6 +11,7 @@ import type { EvidenceCommand } from "./release-spine-evidence.mts";
 
 const TARGET_MINUTES = 45;
 const MAX_CONCURRENCY = 2;
+const MILLISECONDS_PER_MINUTE = 60_000;
 
 const observedDurationMinutes: Readonly<Record<string, number>> = {
   "architecture-policy-runtime": 0.4,
@@ -57,7 +58,10 @@ function durationMinutes(command: EvidenceCommand): number {
   return observedDurationMinutes[command.id] ?? 0.2;
 }
 
-export function calculateVerificationCriticalPath(commands: readonly EvidenceCommand[]): number {
+export function calculateVerificationCriticalPath(
+  commands: readonly EvidenceCommand[],
+  durationOverrides: Readonly<Record<string, number>> = {},
+): number {
   const applicable = commands.filter((command) => command.applicable !== false);
   const completed = new Map(
     commands
@@ -81,7 +85,14 @@ export function calculateVerificationCriticalPath(commands: readonly EvidenceCom
       }
       pending.splice(index, 1);
       for (const group of concurrencyGroups) activeGroups.add(group);
-      active.push({ command, completedAt: now + durationMinutes(command) });
+      active.push({
+        command,
+        completedAt:
+          now +
+          Math.round(
+            (durationOverrides[command.id] ?? durationMinutes(command)) * MILLISECONDS_PER_MINUTE,
+          ),
+      });
       started = true;
     }
 
@@ -100,19 +111,23 @@ export function calculateVerificationCriticalPath(commands: readonly EvidenceCom
     for (const group of next.command.concurrencyGroups ?? []) activeGroups.delete(group);
   }
 
-  return Math.round(now * 10) / 10;
+  return now / MILLISECONDS_PER_MINUTE;
 }
 
 export function evaluatePublishCriticalPath(
   options: {
     readonly commands?: readonly EvidenceCommand[];
+    readonly durationOverrides?: Readonly<Record<string, number>>;
     readonly workflow?: string;
     readonly testLaneRunnerSource?: string;
   } = {},
 ): CriticalPathEvaluation {
   const commands = options.commands ?? createVerificationManifest("publish");
   const workflow = options.workflow ?? readFileSync(resolve(".github/workflows/ci.yml"), "utf8");
-  const verificationMinutes = calculateVerificationCriticalPath(commands);
+  const verificationMinutes = calculateVerificationCriticalPath(
+    commands,
+    options.durationOverrides,
+  );
   const advisoryMatrixRemainsAvailable = /ecosystem-advisory:[\s\S]*--tier ecosystem-advisory/.test(
     workflow,
   );
