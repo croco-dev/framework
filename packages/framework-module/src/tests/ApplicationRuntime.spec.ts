@@ -1,4 +1,5 @@
 import { Container, Inject, Token } from "typedi";
+import type { ServiceMetadata } from "typedi";
 import { beforeEach, describe, expect, it } from "vitest";
 import { Container as FrameworkContainer } from "@croco/framework-context";
 import {
@@ -227,6 +228,43 @@ describe("ApplicationRuntime", () => {
     await runtime.dispose();
   });
 
+  it("recognizes value and factory providers before initialization without executing factories", async () => {
+    const valueToken = new Token<string>("pre-initialize-value");
+    const factoryToken = new Token<string>("pre-initialize-factory");
+    let factoryCalls = 0;
+    const runtime = createApplicationRuntime({
+      modules: [
+        {
+          name: "app",
+          providers: [
+            { provide: valueToken, useValue: "value" },
+            {
+              provide: factoryToken,
+              useFactory: () => {
+                factoryCalls += 1;
+                return "factory";
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const manifest = runtime.createGraphManifest();
+
+    expect(manifest.status).toBe("ready");
+    expect(manifest.dependencyGraph.diagnostics).toEqual([]);
+    expect(manifest.dependencyGraph.providers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ token: "Token<pre-initialize-value>", dependencies: [] }),
+        expect.objectContaining({ token: "Token<pre-initialize-factory>", dependencies: [] }),
+      ]),
+    );
+    expect(factoryCalls).toBe(0);
+
+    await runtime.dispose();
+  });
+
   it("emits constructor edges for class and token-bound class providers", async () => {
     class Repository {}
     const configToken = new Token<string>("config");
@@ -342,5 +380,48 @@ describe("ApplicationRuntime", () => {
       extensions: { cleanupFailures: [expect.objectContaining({ moduleName: "app" })] },
     });
     expect(() => runtime.run(() => undefined)).toThrow("has already been disposed");
+  });
+
+  it("releases its TypeDI scope after persistent rollback and disposal cleanup failures", async () => {
+    const token = new Token<object>("failing-provider-cleanup");
+    const baseline = {};
+    const runtime = createApplicationRuntime({
+      modules: [
+        {
+          name: "app",
+          providers: [{ provide: token, useValue: {} }],
+          setup: () => {
+            throw new Error("startup failed");
+          },
+        },
+      ],
+    });
+    runtime.run(() => FrameworkContainer.set(token, baseline));
+    const container = Container.of(runtime.scopeId) as unknown as {
+      destroyServiceInstance: (service: ServiceMetadata<unknown>) => void;
+    };
+    container.destroyServiceInstance = (service) => {
+      if (service.id === token) {
+        throw new Error("provider cleanup failed");
+      }
+    };
+
+    await expect(runtime.initialize()).rejects.toMatchObject({
+      code: "framework-module/lifecycle-failed",
+      extensions: {
+        cleanupFailures: [
+          expect.objectContaining({ moduleName: "<registry>" }),
+          expect.objectContaining({ moduleName: "<application-runtime>" }),
+        ],
+      },
+    });
+    expect(() => runtime.run(() => undefined)).toThrow("has already been disposed");
+    await expect(runtime.initialize()).rejects.toThrow("has already been disposed");
+    const typeDIRegistry = Container as unknown as {
+      instances: readonly { readonly id: string }[];
+    };
+    expect(typeDIRegistry.instances.some((instance) => instance.id === runtime.scopeId)).toBe(
+      false,
+    );
   });
 });

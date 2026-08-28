@@ -1,4 +1,5 @@
 import { Container as TypeDIContainer, Token } from "typedi";
+import type { ServiceMetadata } from "typedi";
 import { beforeEach, describe, expect, it } from "vitest";
 import { Component, Container } from "../index";
 
@@ -46,6 +47,78 @@ describe("ContainerScope", () => {
       expect(Container.getComponentMetadata(AttemptComponent)).toBeUndefined();
     });
     scope.dispose();
+  });
+
+  it("restores metadata and reports cleanup failures when provider destruction fails", async () => {
+    const attemptToken = new Token<object>("attempt-with-failing-cleanup");
+    const scope = Container.createScope();
+    const container = TypeDIContainer.of(scope.id) as unknown as {
+      destroyServiceInstance: (service: ServiceMetadata<unknown>) => void;
+    };
+    const destroyServiceInstance = container.destroyServiceInstance.bind(container);
+    let failCleanup = true;
+    container.destroyServiceInstance = (service) => {
+      if (service.id === attemptToken && failCleanup) {
+        failCleanup = false;
+        throw new Error("provider cleanup failed");
+      }
+      destroyServiceInstance(service);
+    };
+
+    await expect(
+      scope.runWithRollback(async () => {
+        Container.set(attemptToken, {});
+        throw new Error("bootstrap failed");
+      }),
+    ).rejects.toMatchObject({
+      code: "framework-context/container-scope-rollback-failed",
+      extensions: {
+        cleanupFailures: [expect.objectContaining({ message: "provider cleanup failed" })],
+      },
+    });
+
+    expect(scope.run(() => Container.has(attemptToken))).toBe(false);
+    scope.dispose();
+  });
+
+  it("continues disposing providers after an earlier provider cleanup fails", () => {
+    const firstToken = new Token<object>("first-disposal");
+    const secondToken = new Token<object>("second-disposal");
+    const scope = Container.createScope();
+    const container = TypeDIContainer.of(scope.id) as unknown as {
+      destroyServiceInstance: (service: ServiceMetadata<unknown>) => void;
+    };
+    const destroyServiceInstance = container.destroyServiceInstance.bind(container);
+    const destroyed: unknown[] = [];
+    container.destroyServiceInstance = (service) => {
+      destroyed.push(service.id);
+      if (service.id === firstToken) {
+        throw new Error("first provider cleanup failed");
+      }
+      destroyServiceInstance(service);
+    };
+
+    scope.run(() => {
+      Container.set(firstToken, {});
+      Container.set(secondToken, {});
+    });
+
+    expect(() => scope.dispose()).toThrow(
+      expect.objectContaining({
+        code: "framework-context/container-scope-disposal-failed",
+        extensions: {
+          cleanupFailures: [expect.objectContaining({ message: "first provider cleanup failed" })],
+        },
+      }),
+    );
+    expect(destroyed).toEqual([firstToken, secondToken]);
+    expect(
+      (
+        TypeDIContainer as unknown as {
+          instances: Array<{ id: string }>;
+        }
+      ).instances.some((instance) => instance.id === scope.id),
+    ).toBe(false);
   });
 
   it("commits successful attempts", async () => {

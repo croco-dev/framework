@@ -428,12 +428,25 @@ async function performInitializeModules(
       error,
       options,
     );
-    restoreContainerServices(container, containerSnapshot);
+    cleanupFailures.push(
+      ...restoreContainerServices(container, containerSnapshot).map((restoreError) =>
+        createModuleCleanupFailure(
+          new ModuleLifecycleProblem("<registry>", "shutdown", restoreError),
+          "<registry>",
+        ),
+      ),
+    );
     state.registryGeneration += 1;
     resetActiveRuntimeState(state);
 
     if (isModuleLifecycleExecutionProblem(error)) {
       throw attachModuleCleanupFailures(error, cleanupFailures);
+    }
+    if (cleanupFailures.length > 0) {
+      throw attachModuleCleanupFailures(
+        new ModuleLifecycleProblem("<registry>", "setup", error),
+        cleanupFailures,
+      );
     }
     throw error;
   }
@@ -712,7 +725,7 @@ function snapshotContainerServices(
 function restoreContainerServices(
   container: ContainerInstance,
   snapshot: ContainerServiceMetadataSnapshot,
-): void {
+): readonly unknown[] {
   const services = getContainerServices(container);
   const originalRecords = new Map(
     snapshot.affectedRecords.map((record) => [record.reference, record]),
@@ -720,11 +733,16 @@ function restoreContainerServices(
   const currentAffectedRecords = services.filter((service) =>
     snapshot.affectedIdentifiers.has(service.id),
   );
+  const cleanupFailures: unknown[] = [];
 
   for (const service of currentAffectedRecords) {
     const original = originalRecords.get(service);
     if (!original || service.value !== original.values.value) {
-      destroyContainerService(container, service);
+      try {
+        destroyContainerService(container, service);
+      } catch (error) {
+        cleanupFailures.push(error);
+      }
     }
   }
 
@@ -745,6 +763,7 @@ function restoreContainerServices(
     ...currentUnrelatedRecords.filter((service) => !originalServices.has(service)),
   );
   services.splice(0, services.length, ...restoredOrder);
+  return cleanupFailures;
 }
 
 function getContainerServices(container: ContainerInstance): ServiceMetadata<unknown>[] {

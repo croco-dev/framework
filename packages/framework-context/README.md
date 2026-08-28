@@ -47,6 +47,9 @@ rejects, provider values, component registrations, lazy providers, token identit
 state are restored to their exact pre-attempt baseline. Successful callbacks commit their scoped
 changes. This is used by application runtimes to support clean startup retry without deleting values
 seeded before initialization.
+Nested rollback calls join the active transaction, so an outer failure restores changes made by the
+entire nested operation. Concurrent rollback calls on the same scope are serialized in invocation
+order and cannot observe or retain another failed attempt's state.
 
 Provider adapters that write directly to TypeDI can use
 `Container.toTypeDIServiceIdentifier(token)` to share the same identifier as the

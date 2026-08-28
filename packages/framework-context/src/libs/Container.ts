@@ -92,11 +92,30 @@ type ContainerScopeRollbackTransaction = {
 };
 const containerScopeRollbackStorage = new AsyncLocalStorage<ContainerScopeRollbackTransaction>();
 
-class CapturedTypeDIInjectionToken extends Error {
-  constructor(readonly token: TokenIdentifier<unknown>) {
-    super("Captured TypeDI injection token");
-    Object.setPrototypeOf(this, new.target.prototype);
-  }
+type TypeDIInjectionProbeResult = {
+  token?: TokenIdentifier<unknown>;
+};
+
+type ContainerScopeCleanupFailure = {
+  readonly phase: "dispose" | "rollback";
+  readonly code:
+    | "framework-context/container-scope-disposal-cleanup-failed"
+    | "framework-context/container-scope-rollback-cleanup-failed";
+  readonly message: string;
+};
+
+function createContainerScopeCleanupFailure(
+  error: unknown,
+  phase: ContainerScopeCleanupFailure["phase"],
+): ContainerScopeCleanupFailure {
+  return {
+    phase,
+    code:
+      phase === "dispose"
+        ? "framework-context/container-scope-disposal-cleanup-failed"
+        : "framework-context/container-scope-rollback-cleanup-failed",
+    message: error instanceof Error ? error.message : String(error),
+  };
 }
 
 function createContainerScopeDisposedProblem(scopeId: string): Problem {
@@ -174,8 +193,28 @@ export class ContainerScope implements AsyncDisposable {
     this.state.tokenIdentityOwners.clear();
     this.state.tokens.clear();
     delete this.state.lastResolutionTrace;
-    this.state.instance.reset({ strategy: "resetServices" });
-    TypeDIContainer.reset(this.id);
+    const access = this.getServiceAccess();
+    const cleanupFailures: ContainerScopeCleanupFailure[] = [];
+    try {
+      for (const service of access.services.slice()) {
+        try {
+          access.destroyServiceInstance(service);
+        } catch (error) {
+          cleanupFailures.push(createContainerScopeCleanupFailure(error, "dispose"));
+        }
+      }
+    } finally {
+      access.services.splice(0, access.services.length);
+      TypeDIContainer.reset(this.id);
+    }
+
+    if (cleanupFailures.length > 0) {
+      throw ProblemFactory.internalServerError(
+        "framework-context/container-scope-disposal-failed",
+        `Container scope '${this.id}' was released after provider cleanup failed.`,
+        { extensions: { cleanupFailures } },
+      );
+    }
   }
 
   [Symbol.dispose](): void {
@@ -208,16 +247,23 @@ export class ContainerScope implements AsyncDisposable {
     };
   }
 
-  private restoreSnapshot(snapshot: ContainerScopeSnapshot): void {
+  private restoreSnapshot(
+    snapshot: ContainerScopeSnapshot,
+  ): readonly ContainerScopeCleanupFailure[] {
     const access = this.getServiceAccess();
     const originalRecords = new Map(
       snapshot.services.map((record) => [record.reference, record.values]),
     );
+    const cleanupFailures: ContainerScopeCleanupFailure[] = [];
 
     for (const service of access.services) {
       const original = originalRecords.get(service);
       if (!original || service.value !== original.value) {
-        access.destroyServiceInstance(service);
+        try {
+          access.destroyServiceInstance(service);
+        } catch (error) {
+          cleanupFailures.push(createContainerScopeCleanupFailure(error, "rollback"));
+        }
       }
     }
     for (const { reference, values } of snapshot.services) {
@@ -251,6 +297,7 @@ export class ContainerScope implements AsyncDisposable {
     }
     this.state.nextComponentRegistrationOrder = snapshot.nextComponentRegistrationOrder;
     this.state.validated = snapshot.validated;
+    return cleanupFailures;
   }
 
   private async executeWithRollback<T>(fn: () => Promise<T>): Promise<T> {
@@ -265,7 +312,17 @@ export class ContainerScope implements AsyncDisposable {
         containerScopeStorage.run(this.state, fn),
       );
     } catch (error) {
-      this.restoreSnapshot(snapshot);
+      const cleanupFailures = this.restoreSnapshot(snapshot);
+      if (cleanupFailures.length > 0) {
+        throw ProblemFactory.internalServerError(
+          "framework-context/container-scope-rollback-failed",
+          `Container scope '${this.id}' could not cleanly roll back the failed transaction. Dispose this scope and create a new one.`,
+          {
+            ...(error instanceof Error ? { cause: error } : {}),
+            extensions: { cleanupFailures },
+          },
+        );
+      }
       throw error;
     } finally {
       transaction.active = false;
@@ -500,6 +557,7 @@ export class Container {
 
   static createDependencyGraphManifest(
     options: {
+      readonly knownProviders?: ReadonlySet<TokenIdentifier<unknown>>;
       readonly providerConstructors?: ReadonlyMap<TokenIdentifier<unknown>, Constructor<unknown>>;
       readonly rejectUnknownProviders?: boolean;
       readonly roots?: readonly TokenIdentifier<unknown>[];
@@ -513,6 +571,7 @@ export class Container {
         root,
         undefined,
         options.providerConstructors,
+        options.knownProviders,
         options.rejectUnknownProviders,
       ),
     );
@@ -1401,6 +1460,7 @@ export class Container {
     token: TokenIdentifier<T>,
     status?: DependencyResolutionTraceStatus,
     providerConstructors?: ReadonlyMap<TokenIdentifier<unknown>, Constructor<unknown>>,
+    knownProviders?: ReadonlySet<TokenIdentifier<unknown>>,
     rejectUnknownProviders = false,
   ): DependencyResolutionTrace {
     const steps: DependencyResolutionStep[] = [];
@@ -1410,6 +1470,7 @@ export class Container {
       steps,
       undefined,
       providerConstructors,
+      knownProviders,
       rejectUnknownProviders,
     );
     return {
@@ -1425,6 +1486,7 @@ export class Container {
     steps: DependencyResolutionStep[],
     edge?: Pick<DependencyResolutionStep, "dependencyOf" | "dependencyOfId" | "parameterIndex">,
     providerConstructors?: ReadonlyMap<TokenIdentifier<unknown>, Constructor<unknown>>,
+    knownProviders?: ReadonlySet<TokenIdentifier<unknown>>,
     rejectUnknownProviders = false,
   ): void {
     const nextPath = [...path, token as TokenIdentifier<unknown>];
@@ -1445,6 +1507,7 @@ export class Container {
           },
           rejectUnknownProviders,
           providerConstructors?.has(token as TokenIdentifier<unknown>),
+          knownProviders?.has(token as TokenIdentifier<unknown>),
         ),
       );
       return;
@@ -1463,6 +1526,7 @@ export class Container {
           },
           rejectUnknownProviders,
           providerConstructors?.has(token as TokenIdentifier<unknown>),
+          knownProviders?.has(token as TokenIdentifier<unknown>),
         ),
       );
       return;
@@ -1474,6 +1538,7 @@ export class Container {
       edge,
       rejectUnknownProviders,
       providerConstructors?.has(token as TokenIdentifier<unknown>),
+      knownProviders?.has(token as TokenIdentifier<unknown>),
     );
     steps.push(step);
 
@@ -1510,6 +1575,7 @@ export class Container {
             parameterIndex,
           },
           providerConstructors,
+          knownProviders,
           rejectUnknownProviders,
         );
       },
@@ -1550,25 +1616,22 @@ export class Container {
       return undefined;
     }
 
-    try {
-      handler.value(Container.createTypeDIInjectionProbe());
-    } catch (error) {
-      if (error instanceof CapturedTypeDIInjectionToken) {
-        return error.token;
-      }
-      throw error;
-    }
-
-    return undefined;
+    const result: TypeDIInjectionProbeResult = {};
+    handler.value(Container.createTypeDIInjectionProbe(result));
+    return result.token;
   }
 
-  private static createTypeDIInjectionProbe(): TypeDIContainerInstance {
+  private static createTypeDIInjectionProbe(
+    result: TypeDIInjectionProbeResult,
+  ): TypeDIContainerInstance {
     return {
       get: <T>(identifier: ServiceIdentifier<T>): T => {
-        throw new CapturedTypeDIInjectionToken(identifier as TokenIdentifier<unknown>);
+        result.token = identifier as TokenIdentifier<unknown>;
+        return undefined as T;
       },
       getMany: <T>(identifier: ServiceIdentifier<T>): T[] => {
-        throw new CapturedTypeDIInjectionToken(identifier as TokenIdentifier<unknown>);
+        result.token = identifier as TokenIdentifier<unknown>;
+        return [];
       },
     } as TypeDIContainerInstance;
   }
@@ -1579,12 +1642,14 @@ export class Container {
     overrides: Partial<DependencyResolutionStep> = {},
     rejectUnknownProviders = false,
     knownProvider = false,
+    knownLeafProvider = false,
   ): DependencyResolutionStep {
     const described = Container.describeToken(token);
     const selection = Container.describeProviderSelection(
       token,
       rejectUnknownProviders,
       knownProvider,
+      knownLeafProvider,
     );
     const pathTokens = [...path, token as TokenIdentifier<unknown>];
     return {
@@ -1609,6 +1674,7 @@ export class Container {
     token: TokenIdentifier<T>,
     rejectUnknownProviders = false,
     knownProvider = false,
+    knownLeafProvider = false,
   ): {
     provider: DependencyProviderKind;
     status: DependencyResolutionStepStatus;
@@ -1651,6 +1717,15 @@ export class Container {
         provider: "registered-value",
         status: "selected",
         reason: "Explicit provider value registered with Container.set().",
+      };
+    }
+
+    if (knownLeafProvider) {
+      return {
+        provider: "registered-value",
+        status: "selected",
+        reason:
+          "Application runtime value or factory provider is declared by the module lifecycle.",
       };
     }
 

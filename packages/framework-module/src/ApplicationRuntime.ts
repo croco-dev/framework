@@ -7,8 +7,13 @@ import {
 } from "@croco/framework-context";
 import { createModuleRuntimeForContainer, type ModuleRuntime } from "./ModuleRegistry";
 import { getProviderToken, isConstructorToken, isProviderDefinition } from "./moduleTokens";
-import { ModuleLifecycleProblem } from "./problems";
-import type { ModuleDiagnosticsSnapshot, ModuleGraphManifest, ModuleOptions } from "./types";
+import { attachModuleCleanupFailures, ModuleLifecycleProblem } from "./problems";
+import type {
+  ModuleCleanupFailure,
+  ModuleDiagnosticsSnapshot,
+  ModuleGraphManifest,
+  ModuleOptions,
+} from "./types";
 
 export type ApplicationRuntimeOptions = {
   readonly modules?: readonly ModuleOptions[];
@@ -32,6 +37,7 @@ export class ApplicationRuntime implements AsyncDisposable {
     TokenIdentifier<unknown>,
     Constructor<unknown>
   >();
+  private readonly graphLeafProviders = new Set<TokenIdentifier<unknown>>();
   private readonly graphRoots = new Set<TokenIdentifier<unknown>>();
   private disposal: Promise<void> | undefined;
   private initialization: Promise<void> | undefined;
@@ -71,7 +77,11 @@ export class ApplicationRuntime implements AsyncDisposable {
       await this.containerScope.runWithRollback(() => this.moduleRuntime.initialize());
     } catch (error) {
       if (this.hasCleanupFailures(error)) {
-        await this.dispose();
+        try {
+          await this.dispose();
+        } catch (disposalError) {
+          throw this.attachDisposalFailure(error, disposalError);
+        }
       }
       throw error;
     }
@@ -107,6 +117,7 @@ export class ApplicationRuntime implements AsyncDisposable {
     return this.containerScope.run(() => {
       const moduleGraph = this.moduleRuntime.createGraphManifest();
       const dependencyGraph = Container.createDependencyGraphManifest({
+        knownProviders: this.graphLeafProviders,
         providerConstructors: this.graphProviderConstructors,
         rejectUnknownProviders: true,
         roots: options.roots ?? [...this.graphRoots],
@@ -157,6 +168,8 @@ export class ApplicationRuntime implements AsyncDisposable {
       if (isProviderDefinition(provider)) {
         if ("useClass" in provider) {
           this.graphProviderConstructors.set(token, provider.useClass);
+        } else {
+          this.graphLeafProviders.add(token);
         }
       } else if (isConstructorToken(provider)) {
         this.graphProviderConstructors.set(token, provider);
@@ -175,11 +188,42 @@ export class ApplicationRuntime implements AsyncDisposable {
   }
 
   private hasCleanupFailures(error: unknown): boolean {
-    return (
-      error instanceof ModuleLifecycleProblem &&
-      Array.isArray(error.extensions?.cleanupFailures) &&
-      error.extensions.cleanupFailures.length > 0
-    );
+    if (!(error instanceof Error) || !("extensions" in error)) {
+      return false;
+    }
+
+    const extensions = error.extensions;
+    if (!extensions || typeof extensions !== "object" || !("cleanupFailures" in extensions)) {
+      return false;
+    }
+
+    return Array.isArray(extensions.cleanupFailures) && extensions.cleanupFailures.length > 0;
+  }
+
+  private attachDisposalFailure(error: unknown, disposalError: unknown): ModuleLifecycleProblem {
+    const disposalCode =
+      disposalError instanceof ModuleLifecycleProblem
+        ? disposalError.code
+        : disposalError instanceof Error &&
+            "code" in disposalError &&
+            typeof disposalError.code === "string"
+          ? disposalError.code
+          : "framework-module/application-runtime-disposal-failed";
+    const failure: ModuleCleanupFailure = {
+      moduleName: "<application-runtime>",
+      phase: "shutdown",
+      code: disposalCode,
+      message: disposalError instanceof Error ? disposalError.message : String(disposalError),
+    };
+
+    if (error instanceof ModuleLifecycleProblem) {
+      const existingFailures = Array.isArray(error.extensions?.cleanupFailures)
+        ? (error.extensions.cleanupFailures as unknown as ModuleCleanupFailure[])
+        : [];
+      return attachModuleCleanupFailures(error, [...existingFailures, failure]);
+    }
+
+    return new ModuleLifecycleProblem("<application-runtime>", "shutdown", error, [failure]);
   }
 
   private async disposeOnce(): Promise<void> {
