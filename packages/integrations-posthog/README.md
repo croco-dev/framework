@@ -12,6 +12,8 @@ PostHog through the Croco integration layer.
 - `PostHogConfig` - configuration type for API key and host settings.
 - `POSTHOG_CONFIG_TOKEN` - typed DI token for PostHog configuration.
 - `registerPostHogConfig` - validates and registers configuration before client resolution.
+- `validatePostHogConfig` - validates partial configuration and resolves its HTTP(S) host without
+  mutating the container.
 - `PostHogConfigProblem` - stable Problem for missing or invalid PostHog config.
 
 ## Dependency injection
