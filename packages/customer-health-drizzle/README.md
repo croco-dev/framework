@@ -65,7 +65,9 @@ const providers = registry.getProviders();
 ### 신호 제공자
 
 - `BillingSignalProvider`, 구독 상태를 business 신호로 변환합니다.
-- `MeteringSignalProvider`, UTC 월 시작부터 다음 달 시작 직전까지의 반개방 구간으로 사용량을 조회해 usage 신호로 변환합니다.
+- `MeteringSignalProvider`, UTC 월 시작부터 다음 달 시작 직전까지의 반개방 구간으로 사용량을 조회해 usage 신호로
+  변환합니다. 전체 및 기능별 `usage`는 유한한 `0` 이상, `limit`는 유한한 `0` 초과 값이어야 하며, 위반하면
+  `InvalidMeteringInputProblem`으로 실패합니다.
 - `DrizzleHealthSignalRegistry`, 기본 신호 제공자 목록을 반환합니다.
 
 ### 타입과 스키마

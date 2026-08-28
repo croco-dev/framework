@@ -7,6 +7,7 @@ vi.mock("@croco/customer-health-core", () => ({
 
 import type { UsageStorage } from "../libs/MeteringSignalProvider";
 import { MeteringSignalProvider } from "../libs/MeteringSignalProvider";
+import { InvalidMeteringInputProblem } from "../libs/problems/DrizzleHealthProblems";
 
 describe("MeteringSignalProvider", () => {
   let provider!: MeteringSignalProvider;
@@ -85,17 +86,79 @@ describe("MeteringSignalProvider", () => {
     expect(signals[0].value).toBeLessThanOrEqual(0);
   });
 
-  it("should handle zero limit correctly", async () => {
+  it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
+    "rejects an invalid overall limit of %s",
+    async (limit) => {
+      vi.spyOn(mockUsageStorage, "getUsage").mockResolvedValue({
+        tenantId: "tenant-1",
+        periodStart: new Date("2026-03-01"),
+        periodEnd: new Date("2026-03-31"),
+        usage: 5,
+        limit,
+        features: [],
+      });
+
+      await expect(provider.collect("tenant-1")).rejects.toThrow(InvalidMeteringInputProblem);
+    },
+  );
+
+  it.each([-1, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
+    "rejects an invalid overall usage of %s",
+    async (usage) => {
+      vi.spyOn(mockUsageStorage, "getUsage").mockResolvedValue({
+        tenantId: "tenant-1",
+        periodStart: new Date("2026-03-01"),
+        periodEnd: new Date("2026-03-31"),
+        usage,
+        limit: 10,
+        features: [],
+      });
+
+      await expect(provider.collect("tenant-1")).rejects.toThrow(InvalidMeteringInputProblem);
+    },
+  );
+
+  it("rejects invalid feature usage before returning signals", async () => {
     const mockUsageData = {
       tenantId: "tenant-1",
       periodStart: new Date("2026-03-01"),
       periodEnd: new Date("2026-03-31"),
       usage: 5,
-      limit: 0,
-      features: [],
+      limit: 10,
+      features: [{ key: "projects", usage: 1, limit: 0 }],
     };
 
     vi.spyOn(mockUsageStorage, "getUsage").mockResolvedValue(mockUsageData);
+
+    await expect(provider.collect("tenant-1")).rejects.toThrow(InvalidMeteringInputProblem);
+  });
+
+  it("reports the invalid metering field with a stable Problem", async () => {
+    vi.spyOn(mockUsageStorage, "getUsage").mockResolvedValue({
+      tenantId: "tenant-1",
+      periodStart: new Date("2026-03-01"),
+      periodEnd: new Date("2026-03-31"),
+      usage: 5,
+      limit: 10,
+      features: [{ key: "projects", usage: -1, limit: 5 }],
+    });
+
+    await expect(provider.collect("tenant-1")).rejects.toMatchObject({
+      code: "customer-health-drizzle/invalid-metering-input",
+      input: "features[0].usage",
+      receivedValue: "-1",
+    });
+  });
+
+  it("preserves valid usage boundaries", async () => {
+    vi.spyOn(mockUsageStorage, "getUsage").mockResolvedValue({
+      tenantId: "tenant-1",
+      periodStart: new Date("2026-03-01"),
+      periodEnd: new Date("2026-03-31"),
+      usage: 0,
+      limit: Number.MIN_VALUE,
+      features: [],
+    });
 
     const signals = await provider.collect("tenant-1");
 

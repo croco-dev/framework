@@ -7881,6 +7881,12 @@
               "exportKind": "named",
               "source": "./libs/InMemoryHealthScoreStore",
               "declarationKind": "class"
+            },
+            {
+              "name": "InvalidHealthScoreInputProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/HealthProblems",
+              "declarationKind": "class"
             }
           ],
           "typeExports": [
@@ -8065,6 +8071,12 @@
             },
             {
               "name": "HealthTransitionSequenceMissingProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/DrizzleHealthProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InvalidMeteringInputProblem",
               "exportKind": "named",
               "source": "./libs/problems/DrizzleHealthProblems",
               "declarationKind": "class"

@@ -212,6 +212,12 @@ class MyService {
 
 신호를 기반으로 건강 점수를 계산합니다.
 
+입력 계약은 다음과 같습니다.
+
+- 신호 점수와 상태 임계값은 유한한 `0..100` 값이어야 합니다.
+- 신호 가중치와 프로필의 카테고리 가중치는 유한한 `0..1` 값이어야 합니다.
+- `determineTrend`의 현재/이전 점수도 유한한 `0..100` 값이어야 합니다.
+
 #### Methods
 
 - `calculate(signals: HealthSignal[], profile: HealthScoreProfile): TenantHealthScore` - 점수 계산

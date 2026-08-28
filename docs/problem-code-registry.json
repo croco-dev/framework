@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 682,
+  "problemCount": 684,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -5066,7 +5066,7 @@
       "sources": [
         {
           "file": "packages/customer-health-core/src/libs/problems/HealthProblems.ts",
-          "line": 12,
+          "line": 33,
           "column": 3,
           "kind": "problem-class"
         }
@@ -5096,7 +5096,67 @@
       "sources": [
         {
           "file": "packages/customer-health-core/src/libs/problems/HealthProblems.ts",
-          "line": 21,
+          "line": 42,
+          "column": 3,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "customer-health-core/invalid-score-input",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#customer-health-core-invalid-score-input",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/customer-health-core/src/libs/problems/HealthProblems.ts",
+          "line": 5,
+          "column": 3,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "customer-health-drizzle/invalid-metering-input",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#customer-health-drizzle-invalid-metering-input",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/customer-health-drizzle/src/libs/problems/DrizzleHealthProblems.ts",
+          "line": 5,
           "column": 3,
           "kind": "problem-class"
         }
@@ -5126,7 +5186,7 @@
       "sources": [
         {
           "file": "packages/customer-health-drizzle/src/libs/problems/DrizzleHealthProblems.ts",
-          "line": 5,
+          "line": 26,
           "column": 3,
           "kind": "problem-class"
         }
@@ -8366,7 +8426,7 @@
       "sources": [
         {
           "file": "packages/customer-health-core/src/libs/problems/HealthProblems.ts",
-          "line": 4,
+          "line": 25,
           "column": 3,
           "kind": "problem-class"
         }

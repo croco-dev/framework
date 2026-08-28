@@ -19,6 +19,7 @@ export {
   HealthEventIntentConflictProblem,
   HealthEventPublisherNotConfiguredProblem,
   HealthScoreNotFoundProblem,
+  InvalidHealthScoreInputProblem,
 } from "./libs/problems/HealthProblems";
 
 // Types
