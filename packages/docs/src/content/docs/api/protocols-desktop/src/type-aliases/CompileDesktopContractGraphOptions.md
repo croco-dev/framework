@@ -9,6 +9,14 @@ title: "CompileDesktopContractGraphOptions"
 
 ## Properties
 
+### problemRegistries?
+
+> `readonly` `optional` **problemRegistries?**: readonly [`PackageProblemRegistry`](/api/problems-core/src/type-aliases/packageproblemregistry/)[]
+
+Package ProblemRegistry manifests that authorize renderer-visible failures.
+
+---
+
 ### sourceLocations?
 
 > `readonly` `optional` **sourceLocations?**: [`DesktopContractGraphSourceLocations`](/api/protocols-desktop/src/type-aliases/desktopcontractgraphsourcelocations/)

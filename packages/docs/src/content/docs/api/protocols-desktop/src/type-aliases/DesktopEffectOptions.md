@@ -5,7 +5,7 @@ prev: false
 title: "DesktopEffectOptions"
 ---
 
-> **DesktopEffectOptions**\<`TNamespace`, `TMethods`, `TAccess`, `TGrants`\> = `object`
+> **DesktopEffectOptions**\<`TNamespace`, `TMethods`, `TAccess`, `TGrants`, `TProblems`\> = `object`
 
 ## Type Parameters
 
@@ -24,6 +24,10 @@ title: "DesktopEffectOptions"
 ### TGrants
 
 `TGrants` _extends_ readonly [`AnyDesktopGrant`](/api/protocols-desktop/src/type-aliases/anydesktopgrant/)[]
+
+### TProblems
+
+`TProblems` _extends_ readonly [`DesktopProblemReference`](/api/protocols-desktop/src/type-aliases/desktopproblemreference/)[] \| `undefined` = `undefined`
 
 ## Properties
 
@@ -48,3 +52,9 @@ title: "DesktopEffectOptions"
 ### namespace
 
 > `readonly` **namespace**: `TNamespace`
+
+---
+
+### problems?
+
+> `readonly` `optional` **problems?**: `TProblems`

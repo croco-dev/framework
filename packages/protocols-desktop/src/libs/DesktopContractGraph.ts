@@ -1,3 +1,16 @@
+import {
+  createProblemResponseExtensions,
+  createProblemRegistrySnapshot,
+  ProblemRegistryValidationProblem,
+} from "@croco/problems-core";
+import type {
+  PackageProblemRegistry,
+  PackageProblemRegistryEntry,
+  ProblemCategory,
+  ProblemRedactionPolicy,
+  ProblemRegistryRedaction,
+  ProblemRegistryVisibility,
+} from "@croco/problems-core";
 import { compileDesktopWireSchema, DesktopWireSchemaProblem } from "./DesktopWireSchema";
 import type { DesktopWireSchemaDescriptor, DesktopWireSourceLocation } from "./DesktopWireSchema";
 import {
@@ -15,6 +28,7 @@ import type {
   DesktopAppDefinition,
   DesktopCommandExecutionPolicy,
   DesktopContractRecord,
+  DesktopProblemReference,
   DesktopWindowRecord,
 } from "./types";
 
@@ -32,6 +46,8 @@ export type CompileDesktopContractGraphOptions = {
   readonly sourceLocations?: DesktopContractGraphSourceLocations;
   /** Root removed from source evidence before platform separators are canonicalized. */
   readonly sourceRoot?: string;
+  /** Package ProblemRegistry manifests that authorize renderer-visible failures. */
+  readonly problemRegistries?: readonly PackageProblemRegistry[];
 };
 
 export type DesktopContractGraphSchema =
@@ -90,6 +106,23 @@ export type DesktopContractGraphGrant = {
   readonly sourceLocation?: DesktopWireSourceLocation;
 };
 
+export type DesktopContractGraphProblemSource = {
+  readonly package: string;
+  readonly retryable: boolean;
+  readonly retryability: "retryable" | "not-retryable";
+  readonly public: boolean;
+  readonly visibility: ProblemRegistryVisibility;
+  readonly redaction: ProblemRegistryRedaction;
+  readonly cookbookPath: string;
+};
+
+export type DesktopContractGraphProblem = {
+  readonly code: string;
+  readonly category: ProblemCategory;
+  readonly source: DesktopContractGraphProblemSource;
+  readonly extensions?: DesktopWireSchemaDescriptor;
+};
+
 export type DesktopContractGraphContract = {
   readonly id: string;
   readonly commandIds: readonly string[];
@@ -126,7 +159,7 @@ export type DesktopContractGraphV1 = {
   readonly events: readonly DesktopContractGraphEvent[];
   readonly effects: readonly string[];
   readonly grants: readonly DesktopContractGraphGrant[];
-  readonly problems: readonly string[];
+  readonly problems: readonly DesktopContractGraphProblem[];
   readonly windows: readonly DesktopContractGraphWindow[];
   readonly diagnostics: readonly DesktopContractGraphDiagnostic[];
 };
@@ -139,6 +172,17 @@ type MutableGraphParts = {
   readonly grants: DesktopContractGraphGrant[];
   readonly diagnostics: DesktopContractGraphDiagnostic[];
   readonly memberIds: Map<string, string>;
+  readonly problemReferences: DesktopProblemUse[];
+};
+
+type DesktopProblemUse = {
+  readonly commandId: string;
+  readonly reference: DesktopProblemReference;
+};
+
+type ProblemRegistryIndex = {
+  readonly entriesByCode: ReadonlyMap<string, PackageProblemRegistryEntry>;
+  readonly diagnostics: readonly DesktopContractGraphDiagnostic[];
 };
 
 export function compileDesktopContractGraph(
@@ -157,6 +201,7 @@ export function compileDesktopContractGraph(
     grants: [],
     diagnostics: [],
     memberIds: new Map(),
+    problemReferences: [],
   };
 
   for (const [contractId, contract] of sortedEntries(app.contracts)) {
@@ -171,7 +216,13 @@ export function compileDesktopContractGraph(
   parts.commands.sort(compareById);
   parts.events.sort(compareById);
   parts.grants.sort(compareById);
-
+  const problemRegistryIndex = createProblemRegistryIndex(options.problemRegistries);
+  parts.diagnostics.push(...problemRegistryIndex.diagnostics);
+  const problems = compileProblems(
+    parts.problemReferences,
+    problemRegistryIndex.entriesByCode,
+    parts.diagnostics,
+  );
   const commandIds = new Set(parts.commands.map((command) => command.id));
   const eventIds = new Set(parts.events.map((event) => event.id));
   const windows = sortedEntries(app.windows).map(([windowId, window]) =>
@@ -197,7 +248,7 @@ export function compileDesktopContractGraph(
     events: stripSourceLocations(parts.events),
     effects,
     grants: stripSourceLocations(parts.grants),
-    problems: [] as readonly never[],
+    problems,
     windows: stripSourceLocations(windows),
     diagnostics: parts.diagnostics
       .map(({ code, severity, targetKind, memberId, schemaPath }) => ({
@@ -222,7 +273,7 @@ export function compileDesktopContractGraph(
     events: parts.events,
     effects,
     grants: parts.grants,
-    problems: [],
+    problems,
     windows,
     diagnostics: parts.diagnostics,
   };
@@ -278,6 +329,8 @@ function compileContract(
         ),
       )
       .sort(compareEffects);
+    const problemReferences = collectCommandProblemReferences(command);
+    parts.problemReferences.push(...problemReferences);
     const commandEvents = command.events
       .map((eventKey) => `${contractId}.${eventKey}`)
       .sort(compareCodeUnits);
@@ -317,7 +370,9 @@ function compileContract(
         parts.diagnostics,
       ),
       effects: commandEffects,
-      problems: [],
+      problems: [...new Set(problemReferences.map(({ reference }) => reference.code))].sort(
+        compareCodeUnits,
+      ),
       events: commandEvents,
       executionPolicy: compileExecutionPolicy(
         command.id,
@@ -355,6 +410,265 @@ function compileContract(
     grantIds: grants.map(([, grant]) => grant.id),
     ...(sourceLocation ? { sourceLocation } : {}),
   });
+}
+
+function collectCommandProblemReferences(
+  command: BoundDesktopContract<DesktopContractRecord[string], string>["commands"][string],
+): DesktopProblemUse[] {
+  return [
+    ...command.problems.map((reference) => ({
+      commandId: command.id,
+      reference,
+    })),
+    ...command.effects.flatMap((effect) =>
+      effect.problems.map((reference) => ({
+        commandId: command.id,
+        reference,
+      })),
+    ),
+  ];
+}
+
+function createProblemRegistryIndex(
+  registries: readonly PackageProblemRegistry[] | undefined,
+): ProblemRegistryIndex {
+  if (!registries || registries.length === 0) {
+    return { entriesByCode: new Map(), diagnostics: [] };
+  }
+
+  try {
+    const snapshot = createProblemRegistrySnapshot(registries);
+    return {
+      entriesByCode: new Map(snapshot.problems.map((problem) => [problem.code, problem])),
+      diagnostics: [],
+    };
+  } catch (error) {
+    if (!(error instanceof ProblemRegistryValidationProblem)) throw error;
+    return {
+      entriesByCode: new Map(),
+      diagnostics: error.errors.map((message) =>
+        createDesktopContractGraphDiagnostic({
+          code: "DESKTOP_GRAPH_PROBLEM_REGISTRY_INVALID",
+          targetKind: "app",
+          memberId: "app",
+          message,
+          recovery: "Supply valid, non-conflicting package ProblemRegistry manifests.",
+        }),
+      ),
+    };
+  }
+}
+
+function compileProblems(
+  uses: readonly DesktopProblemUse[],
+  entriesByCode: ReadonlyMap<string, PackageProblemRegistryEntry>,
+  diagnostics: DesktopContractGraphDiagnostic[],
+): DesktopContractGraphProblem[] {
+  const usesByCode = new Map<string, DesktopProblemUse[]>();
+  for (const use of uses) {
+    const matching = usesByCode.get(use.reference.code) ?? [];
+    matching.push(use);
+    usesByCode.set(use.reference.code, matching);
+  }
+
+  return [...usesByCode.entries()]
+    .sort(([left], [right]) => compareCodeUnits(left, right))
+    .flatMap(([code, matchingUses]) => {
+      const entry = entriesByCode.get(code);
+      if (!entry) {
+        const [firstUse] = matchingUses;
+        if (firstUse) {
+          diagnostics.push(
+            createProblemDiagnostic(
+              "DESKTOP_GRAPH_PROBLEM_REGISTRY_MISSING",
+              firstUse,
+              `Desktop command declares Problem code '${code}', but no supplied ProblemRegistry manifest declares it.`,
+              "Supply the package ProblemRegistry manifest that owns this Problem code.",
+            ),
+          );
+        }
+        return [];
+      }
+
+      const definitions = matchingUses.map((use) => ({
+        use,
+        extensions: compileProblemExtensions(use, entry, diagnostics),
+      }));
+      const [first] = definitions;
+      if (!first) return [];
+
+      for (const definition of definitions) {
+        if (definition.use.reference.category !== entry.category) {
+          diagnostics.push(
+            createProblemDiagnostic(
+              "DESKTOP_GRAPH_PROBLEM_REGISTRY_MISMATCH",
+              definition.use,
+              `Desktop Problem code '${code}' is declared as ${definition.use.reference.category}, but the ProblemRegistry declares ${entry.category}.`,
+              "Make the desktop Problem reference category match its registry entry.",
+            ),
+          );
+        }
+      }
+
+      const categories = new Set(
+        definitions.map((definition) => definition.use.reference.category),
+      );
+      const extensionShapes = new Set(
+        definitions.map((definition) => stringifyCanonicalJson(definition.extensions)),
+      );
+      const hasIncompatibleDefinitions = categories.size > 1 || extensionShapes.size > 1;
+      if (hasIncompatibleDefinitions) {
+        diagnostics.push(
+          createProblemDiagnostic(
+            "DESKTOP_GRAPH_DUPLICATE_PROBLEM_CODE",
+            [...matchingUses].sort(compareProblemUses)[0] ?? first.use,
+            `Desktop Problem code '${code}' has incompatible category or extension definitions.`,
+            "Use one category and one renderer-safe extension shape for each stable Problem code.",
+          ),
+        );
+      }
+
+      return [
+        {
+          code,
+          category: entry.category,
+          source: toProblemSource(entry),
+          ...(!hasIncompatibleDefinitions && first.extensions
+            ? { extensions: first.extensions }
+            : {}),
+        },
+      ];
+    });
+}
+
+function compileProblemExtensions(
+  use: DesktopProblemUse,
+  entry: PackageProblemRegistryEntry,
+  diagnostics: DesktopContractGraphDiagnostic[],
+): DesktopWireSchemaDescriptor | undefined {
+  if (use.reference.extensions === undefined) return undefined;
+
+  const contractMember = `${use.commandId}.problem.${use.reference.code}.extensions`;
+  let descriptor: DesktopWireSchemaDescriptor;
+  try {
+    descriptor = compileDesktopWireSchema(use.reference.extensions, { contractMember });
+  } catch (error) {
+    if (!(error instanceof DesktopWireSchemaProblem)) throw error;
+    diagnostics.push(...error.diagnostics.map(fromDesktopWireSchemaDiagnostic));
+    return undefined;
+  }
+
+  if (descriptor.kind !== "object") {
+    diagnostics.push(
+      createProblemDiagnostic(
+        "DESKTOP_GRAPH_UNSAFE_PROBLEM_EXTENSION",
+        use,
+        `Desktop Problem code '${use.reference.code}' extensions must be a strict object schema.`,
+        "Declare a strict object containing only renderer-safe extension fields.",
+      ),
+    );
+    return undefined;
+  }
+
+  const responseRedaction = entry.redaction === "safe" ? "safe-message" : entry.redaction;
+  const unsafePath = entry.public
+    ? findUnsafeExtensionPath(descriptor, [], responseRedaction)
+    : [descriptor.fields[0]?.name ?? "extensions"];
+  if (unsafePath) {
+    diagnostics.push({
+      ...createProblemDiagnostic(
+        "DESKTOP_GRAPH_UNSAFE_PROBLEM_EXTENSION",
+        use,
+        `Desktop Problem code '${use.reference.code}' exposes extension field '${unsafePath.join(".")}' outside its ProblemRegistry response policy.`,
+        "Use a public extension field permitted by the shared Problem response redaction policy.",
+      ),
+      schemaPath: unsafePath,
+    });
+    return undefined;
+  }
+
+  return descriptor;
+}
+
+function findUnsafeExtensionPath(
+  descriptor: DesktopWireSchemaDescriptor,
+  path: readonly string[],
+  redaction: ProblemRedactionPolicy,
+): readonly string[] | undefined {
+  switch (descriptor.kind) {
+    case "object":
+      for (const field of descriptor.fields) {
+        const fieldPath = [...path, field.name];
+        if (
+          !Object.prototype.hasOwnProperty.call(
+            createProblemResponseExtensions({ [field.name]: true }, redaction),
+            field.name,
+          )
+        ) {
+          return fieldPath;
+        }
+        const nested = findUnsafeExtensionPath(field.schema, fieldPath, redaction);
+        if (nested) return nested;
+      }
+      return undefined;
+    case "array":
+      return findUnsafeExtensionPath(descriptor.element, [...path, "[]"], redaction);
+    case "optional":
+    case "nullable":
+      return findUnsafeExtensionPath(descriptor.inner, path, redaction);
+    case "union":
+      for (const [index, option] of descriptor.options.entries()) {
+        const nested = findUnsafeExtensionPath(option, [...path, `option${index}`], redaction);
+        if (nested) return nested;
+      }
+      return undefined;
+    default:
+      return undefined;
+  }
+}
+
+function compareProblemUses(left: DesktopProblemUse, right: DesktopProblemUse): number {
+  return (
+    compareCodeUnits(left.commandId, right.commandId) ||
+    compareCodeUnits(left.reference.category, right.reference.category) ||
+    compareCodeUnits(
+      stringifyCanonicalJson(left.reference.extensions),
+      stringifyCanonicalJson(right.reference.extensions),
+    )
+  );
+}
+
+function createProblemDiagnostic(
+  code: Extract<
+    DesktopContractGraphDiagnostic["code"],
+    | "DESKTOP_GRAPH_DUPLICATE_PROBLEM_CODE"
+    | "DESKTOP_GRAPH_PROBLEM_REGISTRY_MISMATCH"
+    | "DESKTOP_GRAPH_PROBLEM_REGISTRY_MISSING"
+    | "DESKTOP_GRAPH_UNSAFE_PROBLEM_EXTENSION"
+  >,
+  use: DesktopProblemUse,
+  message: string,
+  recovery: string,
+): DesktopContractGraphDiagnostic {
+  return createDesktopContractGraphDiagnostic({
+    code,
+    targetKind: "problem",
+    memberId: use.commandId,
+    message,
+    recovery,
+  });
+}
+
+function toProblemSource(entry: PackageProblemRegistryEntry): DesktopContractGraphProblemSource {
+  return {
+    package: entry.package,
+    retryable: entry.retryable,
+    retryability: entry.retryability,
+    public: entry.public,
+    visibility: entry.visibility,
+    redaction: entry.redaction,
+    cookbookPath: entry.cookbookPath,
+  };
 }
 
 function compileSchemaReference(

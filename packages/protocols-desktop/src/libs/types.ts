@@ -1,4 +1,4 @@
-import type { Problem } from "@croco/problems-core";
+import type { Problem, ProblemCategory } from "@croco/problems-core";
 
 export type DesktopCommandKind = "query" | "mutation";
 
@@ -95,19 +95,22 @@ export type DesktopEffectDefinition<
   >,
   TAccess extends DesktopGrantAccess = DesktopGrantAccess,
   TGrants extends readonly AnyDesktopGrant[] = readonly AnyDesktopGrant[],
+  TProblems extends readonly DesktopProblemReference[] = readonly [],
 > = {
   readonly definitionType: "effect";
   readonly namespace: TNamespace;
   readonly access: TAccess;
   readonly grants: TGrants;
   readonly methods: TMethods;
+  readonly problems: TProblems;
 };
 
 export type AnyDesktopEffect = DesktopEffectDefinition<
   string,
   Readonly<Record<string, DesktopEffectMethodDefinition>>,
   DesktopGrantAccess,
-  readonly AnyDesktopGrant[]
+  readonly AnyDesktopGrant[],
+  readonly DesktopProblemReference[]
 >;
 
 export type DesktopCommandExecutionPolicy = {
@@ -116,8 +119,23 @@ export type DesktopCommandExecutionPolicy = {
   readonly maxOutputBytes?: number;
   readonly maxConcurrency?: number;
 };
-export type DesktopProblemReference<TProblem extends Problem = Problem> = {
+
+export type DesktopProblemConstructor<TProblem extends Problem = Problem> = {
+  readonly name: string;
   readonly prototype: TProblem;
+};
+
+export type DesktopProblemReference<
+  TProblem extends Problem = Problem,
+  TCode extends string = string,
+  TCategory extends ProblemCategory = ProblemCategory,
+  TExtensionsSchema = unknown,
+> = {
+  readonly definitionType: "problem";
+  readonly problem: DesktopProblemConstructor<TProblem>;
+  readonly code: TCode;
+  readonly category: TCategory;
+  readonly extensions?: TExtensionsSchema;
 };
 
 export type DesktopQueryDefinition<
@@ -330,19 +348,32 @@ export type InferDesktopCommandOutput<TCommand> =
     ? InferDesktopSchema<TOutputSchema>
     : never;
 
-export type InferDesktopCommandProblem<TCommand> =
-  TCommand extends DesktopCommandDefinition<
-    unknown,
-    unknown,
-    readonly AnyDesktopEffect[],
-    readonly string[],
-    infer TProblems
-  >
-    ? [TProblems[number]] extends [never]
-      ? never
-      : TProblems[number] extends DesktopProblemReference<infer TProblem>
-        ? TProblem
-        : never
+export type InferDesktopCommandProblem<TCommand> = TCommand extends {
+  readonly effects: infer TEffects extends readonly AnyDesktopEffect[];
+  readonly problems: infer TProblems extends readonly DesktopProblemReference[];
+}
+  ? [TProblems[number] | DesktopEffectProblems<TEffects>] extends [never]
+    ? never
+    : ProblemFromReference<TProblems[number] | DesktopEffectProblems<TEffects>>
+  : never;
+
+type DesktopEffectProblems<TEffects extends readonly AnyDesktopEffect[]> = [
+  TEffects[number],
+] extends [never]
+  ? never
+  : TEffects[number] extends DesktopEffectDefinition<
+        string,
+        Readonly<Record<string, DesktopEffectMethodDefinition>>,
+        DesktopGrantAccess,
+        readonly AnyDesktopGrant[],
+        infer TProblems
+      >
+    ? TProblems[number]
+    : never;
+
+type ProblemFromReference<TReference> =
+  TReference extends DesktopProblemReference<infer TProblem, infer TCode, infer TCategory>
+    ? TProblem & { readonly code: TCode; readonly category: TCategory }
     : never;
 
 export type InferDesktopEventPayload<TEvent> =
@@ -394,12 +425,12 @@ export type DesktopSuccess<TResult> = {
   readonly value: TResult;
 };
 
-export type DesktopFailure<TProblem extends Problem> = {
+export type DesktopFailure<TProblem> = {
   readonly ok: false;
   readonly problem: TProblem;
 };
 
-export type DesktopResult<TResult, TProblem extends Problem = never> =
+export type DesktopResult<TResult, TProblem = never> =
   | DesktopSuccess<TResult>
   | DesktopFailure<TProblem>;
 
@@ -458,7 +489,13 @@ type DesktopHandlerEffects<TCommand extends AnyDesktopCommand> = TCommand extend
   : Record<never, never>;
 
 type DesktopEffectContext<TEffect extends AnyDesktopEffect> =
-  TEffect extends DesktopEffectDefinition<infer TNamespace, infer TMethods>
+  TEffect extends DesktopEffectDefinition<
+    infer TNamespace,
+    infer TMethods,
+    DesktopGrantAccess,
+    readonly AnyDesktopGrant[],
+    readonly DesktopProblemReference[]
+  >
     ? {
         readonly [TKey in TNamespace]: {
           readonly [TMethod in keyof TMethods]: TMethods[TMethod] extends DesktopEffectMethodDefinition<
@@ -734,11 +771,23 @@ export type DesktopEffectOptions<
   TMethods extends Readonly<Record<string, DesktopEffectMethodDefinition>>,
   TAccess extends DesktopGrantAccess,
   TGrants extends readonly AnyDesktopGrant[],
+  TProblems extends readonly DesktopProblemReference[] | undefined = undefined,
 > = {
   readonly namespace: TNamespace;
   readonly access: TAccess;
   readonly grants?: TGrants;
   readonly methods: TMethods;
+  readonly problems?: TProblems;
+};
+
+export type DesktopProblemOptions<
+  TCode extends string,
+  TCategory extends ProblemCategory,
+  TExtensionsSchema = undefined,
+> = {
+  readonly code: TCode;
+  readonly category: TCategory;
+  readonly extensions?: TExtensionsSchema;
 };
 
 export type DesktopEventOptions<TPayloadSchema> = {

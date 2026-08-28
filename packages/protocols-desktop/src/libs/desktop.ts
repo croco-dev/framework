@@ -1,3 +1,4 @@
+import type { Problem } from "@croco/problems-core";
 import { DesktopDefinitionProblem } from "./DesktopDefinitionProblem";
 import { RESERVED_DESKTOP_KEYS } from "./reservedDesktopKeys";
 import type {
@@ -36,6 +37,8 @@ import type {
   DesktopMemberReferenceMetadata,
   DesktopMutationDefinition,
   DesktopMutationOptions,
+  DesktopProblemConstructor,
+  DesktopProblemOptions,
   DesktopQueryDefinition,
   DesktopQueryOptions,
   DesktopProblemReference,
@@ -228,14 +231,20 @@ type ValidateEffectTuple<TEffects extends readonly AnyDesktopEffect[]> = TEffect
 type ValidateEffect<TEffect extends AnyDesktopEffect> =
   IsUnion<TEffect> extends true
     ? { readonly __desktopEffectMustBeConcrete__: true }
-    : TEffect extends DesktopEffectDefinition<infer TNamespace, infer TMethods>
+    : TEffect extends DesktopEffectDefinition<
+          infer TNamespace,
+          infer TMethods,
+          DesktopGrantAccess,
+          readonly AnyDesktopGrant[],
+          infer TProblems
+        >
       ? string extends TNamespace
         ? { readonly __desktopEffectNamespaceMustBeLiteral__: true }
         : IsUnion<TNamespace> extends true
           ? { readonly __desktopEffectNamespaceMustBeConcrete__: true }
           : string extends keyof TMethods
             ? { readonly __desktopEffectMethodsMustBeExact__: true }
-            : unknown
+            : ValidateProblems<TProblems>
       : never;
 
 type ValidateEvents<TEvents extends readonly string[]> = number extends TEvents["length"]
@@ -265,7 +274,7 @@ type ValidateProblemTuple<TProblems extends readonly DesktopProblemReference[]> 
   ]
     ? IsUnion<TProblem> extends true
       ? { readonly __desktopProblemMustBeConcrete__: true }
-      : string extends TProblem["prototype"]["code"]
+      : string extends TProblem["code"]
         ? { readonly __desktopProblemCodeMustBeLiteral__: true }
         : ValidateProblemTuple<TRest>
     : unknown;
@@ -281,11 +290,19 @@ function effect<
   const TMethods extends Readonly<Record<string, DesktopEffectMethodDefinition>>,
   const TAccess extends DesktopGrantAccess,
   const TGrants extends readonly AnyDesktopGrant[] = readonly [],
+  const TProblems extends readonly DesktopProblemReference[] | undefined = undefined,
 >(
-  options: DesktopEffectOptions<TNamespace, TMethods, TAccess, TGrants> &
+  options: DesktopEffectOptions<TNamespace, TMethods, TAccess, TGrants, TProblems> &
     NoInvalidEffectNamespace<TNamespace> &
-    NoInvalidKeys<TMethods>,
-): DesktopEffectDefinition<TNamespace, TMethods, TAccess, TGrants> {
+    NoInvalidKeys<TMethods> &
+    ValidateProblems<DefinedEffectProblems<TProblems>>,
+): DesktopEffectDefinition<
+  TNamespace,
+  TMethods,
+  TAccess,
+  TGrants,
+  DefinedEffectProblems<TProblems>
+> {
   assertValidEffectNamespace(options.namespace);
   assertValidKeys(options.methods);
   return {
@@ -294,6 +311,28 @@ function effect<
     access: options.access,
     grants: options.grants ?? ([] as unknown as TGrants),
     methods: options.methods,
+    problems: (options.problems ?? []) as DefinedEffectProblems<TProblems>,
+  };
+}
+
+type DefinedEffectProblems<TProblems extends readonly DesktopProblemReference[] | undefined> =
+  TProblems extends readonly DesktopProblemReference[] ? TProblems : readonly [];
+
+function problem<
+  const TProblem extends Problem,
+  const TCode extends TProblem["code"] & string,
+  const TCategory extends TProblem["category"],
+  const TExtensionsSchema = undefined,
+>(
+  problemType: DesktopProblemConstructor<TProblem>,
+  options: DesktopProblemOptions<TCode, TCategory, TExtensionsSchema>,
+): DesktopProblemReference<TProblem, TCode, TCategory, TExtensionsSchema> {
+  return {
+    definitionType: "problem",
+    problem: problemType,
+    code: options.code,
+    category: options.category,
+    ...(options.extensions === undefined ? {} : { extensions: options.extensions }),
   };
 }
 
@@ -774,6 +813,7 @@ export const desktop = {
     file,
   },
   mutation,
+  problem,
   query,
   window: {
     local,

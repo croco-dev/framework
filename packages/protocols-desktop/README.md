@@ -110,9 +110,9 @@ app.implement({
 
 Every mounted contract and command needs a handler. Unknown contract, command, and nested keys are rejected at
 typecheck. Undeclared effect namespaces, effect methods, and events are absent from `ctx`; `ctx.ok()` preserves the
-exact output, while `ctx.fail()` accepts only the command's declared Problem constructors. A command with no declared
-Problems cannot call `ctx.fail()`. Handlers return `DesktopResult` directly or through a promise. The API derives IDs
-from the app definition, so no handler string ID or IPC channel is supplied.
+exact output, while `ctx.fail()` accepts only Problems referenced by the command or contributed by its declared
+effects. A command with neither source of Problems cannot call `ctx.fail()`. Handlers return `DesktopResult` directly
+or through a promise. The API derives IDs from the app definition, so no handler string ID or IPC channel is supplied.
 
 Effects are declarations only. `desktop.effect.method()` records a callable signature without accepting an
 implementation, so this package cannot invoke Electron, filesystem, dialog, shell, secret, or process APIs. Runtime
@@ -122,23 +122,32 @@ queries and any effect/grant access mismatch.
 
 Keep `effects`, `events`, and `problems` as literal tuples. Widened arrays, dynamic effect namespaces, open-ended
 method records, and conditional tuple elements are rejected because they would grant more handler authority than one
-runtime declaration proves. Declared Problem classes must expose a literal `code` discriminant:
+runtime declaration proves. `desktop.problem()` pairs a Problem class with explicit registry metadata and an optional
+renderer-safe extension schema:
 
 ```typescript
 import { Problem, ProblemCategory } from "@croco/problems-core";
 
 class ProjectReadProblem extends Problem {
   declare readonly code: "PROJECT_READ_FAILED";
+  declare readonly category: ProblemCategory.InternalServerError;
 
   constructor() {
     super("PROJECT_READ_FAILED", ProblemCategory.InternalServerError);
   }
 }
+
+const projectReadProblem = desktop.problem(ProjectReadProblem, {
+  code: "PROJECT_READ_FAILED",
+  category: ProblemCategory.InternalServerError,
+  extensions: z.object({ reason: z.string() }),
+});
 ```
 
-This type declaration must match the stable code passed to the Problem base constructor by the real class
-constructor. Problem Registry validation and renderer-safe serialization remain the responsibility of the later
-desktop compiler layer.
+The reference code must match the Problem instance discriminant. Effects may expose standard failures with their own
+literal `problems` tuple; commands that declare the effect automatically include those Problems in `ctx.fail()` and
+`DesktopResult`. Graph compilation validates every referenced code and category against supplied package Problem
+Registry manifests.
 
 `DesktopHandlerContext` and `DesktopCommandHandler` require both the command and its owning contract as type
 arguments. The contract is the evidence used to resolve declared event keys, so an unbound command cannot acquire
@@ -186,7 +195,9 @@ this package does not issue, redeem, or validate tokens and never accepts a file
 later generators and runtime-authority layers. Contracts, commands, events, grants, and windows are ordered by
 stable IDs. Every command includes its input and output descriptors plus explicit effect, Problem, emitted-event,
 and request-response execution-policy fields. Effects record their namespace, access, method names, and mounted grant
-IDs. Problem lists remain empty until the Problem Registry integration tracked separately is available.
+IDs. Command Problem lists combine direct references with standard Problems from declared effects. Top-level Problem
+entries preserve the stable code, category, registry source metadata, and an optional strict DesktopWire extension
+descriptor.
 
 Commands may declare positive integer `timeoutMs`, `maxInputBytes`, `maxOutputBytes`, and `maxConcurrency` values in
 `executionPolicy`. Invalid values are omitted from the executable policy and retained as blocking diagnostics; the
@@ -194,8 +205,10 @@ compiler never replaces them with a runtime default.
 
 The graph records local-window exposure and receipt, remote-window origin allowlists, opaque grant references, and
 structured schema diagnostics. Unsupported schemas produce a `null` descriptor and diagnostic data in the graph;
-they are never formatted away or degraded to an unvalidated schema. `stringifyDesktopContractGraph(graph)` emits
-canonical, trailing-newline JSON.
+they are never formatted away or degraded to an unvalidated schema. Missing or conflicting registry entries,
+category drift, incompatible duplicate definitions, and unsafe Problem extension fields remain deterministic graph
+diagnostics. Stack, cause, credential, secret, token, password, and filesystem path fields are rejected from Problem
+extension contracts. `stringifyDesktopContractGraph(graph)` emits canonical, trailing-newline JSON.
 
 Semantic diagnostics cover duplicate or reserved IDs, missing references, query/write authority, effect/grant access,
 remote-window exposure and origin policy, and execution limits. Every diagnostic carries a stable code, target kind,
@@ -212,6 +225,7 @@ path is preserved with forward-slash separators so distinct files never collapse
 
 ```typescript
 const graph = compileDesktopContractGraph(app, {
+  problemRegistries: [editorProblemRegistry],
   sourceLocations: {
     app: { path: "/workspace/apps/editor/src/desktop.ts", line: 10 },
     "contract:project": { path: "/workspace/packages/editor/src/project.contract.ts", line: 12 },

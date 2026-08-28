@@ -8,7 +8,9 @@ import type {
   DesktopAppImplementation,
   DesktopCommandHandler,
   DesktopContractImplementation,
+  DesktopEffectDefinition,
   DesktopEffectMethodDefinition,
+  DesktopResult,
   DesktopHandlerContext,
   DesktopLocalWindowDefinition,
   DesktopRemoteWindowDefinition,
@@ -26,6 +28,7 @@ import type {
 
 class DeclaredProblem extends Problem {
   declare public readonly code: "DECLARED_PROBLEM";
+  declare public readonly category: ProblemCategory.ValidationError;
 
   public constructor() {
     super("DECLARED_PROBLEM", ProblemCategory.ValidationError);
@@ -34,11 +37,21 @@ class DeclaredProblem extends Problem {
 
 class UndeclaredProblem extends Problem {
   declare public readonly code: "UNDECLARED_PROBLEM";
+  declare public readonly category: ProblemCategory.ValidationError;
 
   public constructor() {
     super("UNDECLARED_PROBLEM", ProblemCategory.ValidationError);
   }
 }
+
+const declaredProblem = desktop.problem(DeclaredProblem, {
+  code: "DECLARED_PROBLEM",
+  category: ProblemCategory.ValidationError,
+});
+const undeclaredProblem = desktop.problem(UndeclaredProblem, {
+  code: "UNDECLARED_PROBLEM",
+  category: ProblemCategory.ValidationError,
+});
 
 class BroadCodeProblem extends Problem {
   public constructor() {
@@ -58,6 +71,7 @@ const filesystemRead = desktop.effect({
   methods: {
     readText: desktop.effect.method<[path: string], Promise<string>>(),
   },
+  problems: [declaredProblem],
 });
 const dialogOpen = desktop.effect({
   namespace: "dialog",
@@ -66,10 +80,22 @@ const dialogOpen = desktop.effect({
     openFile: desktop.effect.method<[], Promise<string | undefined>>(),
   },
 });
+const annotatedDialog: DesktopEffectDefinition<
+  "dialog",
+  { readonly openFile: DesktopEffectMethodDefinition<[], Promise<string | undefined>> }
+> = dialogOpen;
+const annotatedDialogCommand = desktop.query({
+  input: z.string(),
+  output: z.string(),
+  effects: [annotatedDialog],
+});
+const annotatedDialogProject = desktop.contract({
+  commands: { annotatedDialogCommand },
+});
 const problemCommand = desktop.query({
   input: z.string(),
   output: z.string(),
-  problems: [DeclaredProblem],
+  problems: [declaredProblem],
 });
 const problemProject = desktop.contract({
   commands: { problemCommand },
@@ -95,7 +121,7 @@ const project = desktop.contract({
       output: z.object({ contents: z.string() }),
       effects: [filesystemRead],
       events: ["fileChanged"],
-      problems: [DesktopDefinitionProblem],
+      problems: [],
     }),
     saveFile: desktop.mutation({
       input: z.object({ path: z.string(), contents: z.string() }),
@@ -219,7 +245,20 @@ describe("desktop public types", () => {
     expectTypeOf<keyof SaveContext>().toEqualTypeOf<"ok" | "fail" | "emit" | "signal">();
     expectTypeOf<
       InferDesktopCommandProblem<typeof project.commands.readFile>
-    >().toEqualTypeOf<DesktopDefinitionProblem>();
+    >().toMatchTypeOf<DeclaredProblem>();
+    expectTypeOf<
+      InferDesktopCommandProblem<typeof annotatedDialogProject.commands.annotatedDialogCommand>
+    >().toEqualTypeOf<never>();
+
+    type RendererProblem = {
+      readonly code: "DECLARED_PROBLEM";
+      readonly category: ProblemCategory.ValidationError;
+      readonly extensions: { readonly reason: string };
+    };
+    expectTypeOf<DesktopResult<string, RendererProblem>>().toEqualTypeOf<
+      | { readonly ok: true; readonly value: string }
+      | { readonly ok: false; readonly problem: RendererProblem }
+    >();
 
     const handler: DesktopCommandHandler<typeof project.commands.readFile, typeof project> = async (
       input,
@@ -267,6 +306,10 @@ function negativeTypeFixtures(): void {
     typeof eventProject.commands.correlate,
     typeof eventProject
   >;
+  const annotatedDialogContext = undefined as unknown as DesktopHandlerContext<
+    typeof annotatedDialogProject.commands.annotatedDialogCommand,
+    typeof annotatedDialogProject
+  >;
 
   // @ts-expect-error undeclared effect namespaces are absent from the handler context
   readContext.dialog.openFile();
@@ -298,6 +341,8 @@ function negativeTypeFixtures(): void {
   readContext.fail(new Error("not a declared Problem"));
   // @ts-expect-error commands without declared Problems cannot fail through the typed helper
   saveContext.fail(new DesktopDefinitionProblem("DESKTOP_INVALID_KEY", "invalid"));
+  // @ts-expect-error explicitly annotated effects default to no declared Problems
+  annotatedDialogContext.fail(new UndeclaredProblem());
   // @ts-expect-error failure helpers preserve the declared code-discriminated Problem union
   problemContext.fail(new UndeclaredProblem());
   const conditionalEvent = chooseBoolean() ? eventProject.events.alpha : eventProject.events.beta;
@@ -377,7 +422,7 @@ function negativeTypeFixtures(): void {
     effects: conditionalEffects,
   });
 
-  const conditionalProblem = chooseEffect ? DeclaredProblem : UndeclaredProblem;
+  const conditionalProblem = chooseEffect ? declaredProblem : undeclaredProblem;
   // @ts-expect-error each Problem tuple position must contain one concrete constructor
   desktop.query({
     input: z.string(),
@@ -393,12 +438,22 @@ function negativeTypeFixtures(): void {
     events: broadEvents,
   });
 
-  // @ts-expect-error declared Problems require a code-discriminated instance type
-  desktop.query({
+  const broadProblemCommand = desktop.query({
     input: z.string(),
     output: z.string(),
-    problems: [BroadCodeProblem],
+    problems: [
+      desktop.problem(BroadCodeProblem, {
+        code: "BROAD_CODE_PROBLEM",
+        category: ProblemCategory.ValidationError,
+      }),
+    ],
   });
+  const broadProblemContext = undefined as unknown as DesktopHandlerContext<
+    typeof broadProblemCommand,
+    typeof problemProject
+  >;
+  // @ts-expect-error failure values must match the declared code discriminant
+  broadProblemContext.fail(new BroadCodeProblem());
 
   type ReadFileReference = InferDesktopSchema<typeof selectedFile>;
   const writableFile = desktop.grant.file({ access: "write", scope: "exact", lifetime: "command" });

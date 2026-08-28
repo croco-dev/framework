@@ -63,7 +63,7 @@ title: "desktop"
 
 ### effect
 
-> `readonly` **effect**: \<`TNamespace`, `TMethods`, `TAccess`, `TGrants`\>(`options`) => [`DesktopEffectDefinition`](/api/protocols-desktop/src/type-aliases/desktopeffectdefinition/)\<`TNamespace`, `TMethods`, `TAccess`, `TGrants`\> & `object`
+> `readonly` **effect**: \<`TNamespace`, `TMethods`, `TAccess`, `TGrants`, `TProblems`\>(`options`) => [`DesktopEffectDefinition`](/api/protocols-desktop/src/type-aliases/desktopeffectdefinition/)\<`TNamespace`, `TMethods`, `TAccess`, `TGrants`, `DefinedEffectProblems`\<`TProblems`\>\> & `object`
 
 #### Type Declaration
 
@@ -180,6 +180,42 @@ title: "desktop"
 #### Returns
 
 [`DesktopMutationDefinition`](/api/protocols-desktop/src/type-aliases/desktopmutationdefinition/)\<`TOptions`\[`"input"`\], `TOptions`\[`"output"`\], `DeclaredEffects`\<`TOptions`\>, `DeclaredEvents`\<`TOptions`\>, `DeclaredProblems`\<`TOptions`\>\>
+
+### problem
+
+> **problem**: \<`TProblem`, `TCode`, `TCategory`, `TExtensionsSchema`\>(`problemType`, `options`) => [`DesktopProblemReference`](/api/protocols-desktop/src/type-aliases/desktopproblemreference/)\<`TProblem`, `TCode`, `TCategory`, `TExtensionsSchema`\>
+
+#### Type Parameters
+
+##### TProblem
+
+`TProblem` _extends_ [`Problem`](/api/problems-core/src/classes/problem/)
+
+##### TCode
+
+`TCode` _extends_ `string`
+
+##### TCategory
+
+`TCategory` _extends_ [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
+
+##### TExtensionsSchema
+
+`TExtensionsSchema` = `undefined`
+
+#### Parameters
+
+##### problemType
+
+[`DesktopProblemConstructor`](/api/protocols-desktop/src/type-aliases/desktopproblemconstructor/)\<`TProblem`\>
+
+##### options
+
+[`DesktopProblemOptions`](/api/protocols-desktop/src/type-aliases/desktopproblemoptions/)\<`TCode`, `TCategory`, `TExtensionsSchema`\>
+
+#### Returns
+
+[`DesktopProblemReference`](/api/protocols-desktop/src/type-aliases/desktopproblemreference/)\<`TProblem`, `TCode`, `TCategory`, `TExtensionsSchema`\>
 
 ### query
 

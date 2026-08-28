@@ -65,7 +65,7 @@ title: "DesktopContractGraphV1"
 
 ### problems
 
-> `readonly` **problems**: readonly `string`[]
+> `readonly` **problems**: readonly [`DesktopContractGraphProblem`](/api/protocols-desktop/src/type-aliases/desktopcontractgraphproblem/)[]
 
 ---
 
