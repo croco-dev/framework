@@ -47,12 +47,27 @@ import { AuditInterceptor } from "@croco/audit-core";
 const interceptor = new AuditInterceptor(auditLogRepository);
 ```
 
+기본 정책은 `x-forwarded-for`, `x-real-ip`, `cf-connecting-ip` 같은 전달 헤더를 신뢰하지 않고 직접 연결
+주소만 기록합니다. 직접 주소를 확인할 수 없는 Fetch 런타임에서는 `unknown`을 기록합니다.
+
+애플리케이션 바로 앞의 프록시가 전달 헤더를 정리하거나 덧붙이는 신뢰 경계라면 hop 수를 명시합니다.
+
+```ts
+const interceptor = new AuditInterceptor(auditLogRepository, {
+  trustedProxyHops: 2,
+});
+```
+
+`trustedProxyHops: 2`는 `x-forwarded-for`의 오른쪽에서 두 번째 주소를 클라이언트로 선택합니다. 신뢰 경계가
+부족하거나 선택 주소와 신뢰 구간에 빈 값, hostname, port 포함 값, 잘못된 IP가 있으면 전달 헤더 대신 직접
+연결 주소를 기록합니다.
+
 ## API 레퍼런스
 
 ### 핵심 클래스와 함수
 
 - `Auditable`, 메서드 실행 결과를 감사 로그로 기록하는 데코레이터입니다.
-- `AuditInterceptor`, HTTP 요청 흐름에서 감사 로그를 자동 기록합니다.
+- `AuditInterceptor`, 명시적인 trusted-proxy hop 정책으로 HTTP 요청 흐름을 감사 로그에 기록합니다.
 - `AuditLogRepository`, 저장소 구현이 따라야 하는 추상 계약입니다.
 - `AuditErrorHandler`, 감사 쓰기 실패 시 재시도 정책을 제공합니다.
 - `fireAndForgetWithRetry`, 비동기 감사 쓰기를 안전하게 실행합니다.
@@ -65,12 +80,14 @@ const interceptor = new AuditInterceptor(auditLogRepository);
 ### 주요 타입과 상수
 
 - `AuditableOptions`, `AuditLogEntry`, `AuditPayload`, `AuditQuery`
+- `AuditInterceptorOptions`
 - `AuditExecutionContext`, `Interceptor`, `CallHandler`
 - `AUDIT_METADATA_KEY`, `AUDIT_PARAM_KEY`, `AUDIT_LOG_REPOSITORY_TOKEN`
 
 ### 문제 타입
 
 - `AuditableDecoratorProblem`
+- `AuditClientIpConfigurationProblem`
 
 ## 구현 포인트
 

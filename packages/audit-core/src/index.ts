@@ -33,6 +33,7 @@ export type {
  * HTTP 요청 흐름을 감사 로그로 기록하는 인터셉터입니다.
  */
 export { AuditInterceptor } from "./libs/AuditInterceptor";
+export type { AuditInterceptorOptions } from "./libs/AuditInterceptor";
 
 /**
  * 감사 로그 저장소 추상 계약입니다.
@@ -71,6 +72,7 @@ export type {
  * Auditable 데코레이터 오용 시 사용하는 Problem 타입입니다.
  */
 export { AuditableDecoratorProblem } from "./libs/problems/AuditableDecoratorProblem";
+export { AuditClientIpConfigurationProblem } from "./libs/problems/AuditClientIpConfigurationProblem";
 
 /**
  * 감사 로그 엔트리, payload, 쿼리, 데코레이터 옵션 타입입니다.

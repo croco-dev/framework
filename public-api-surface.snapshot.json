@@ -3077,6 +3077,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "AuditClientIpConfigurationProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/AuditClientIpConfigurationProblem",
+              "declarationKind": "class"
+            },
+            {
               "name": "AuditErrorHandler",
               "exportKind": "named",
               "source": "./libs/AuditErrorHandler",
@@ -3142,6 +3148,11 @@
               "name": "AuditIntegrityVerifier",
               "exportKind": "named",
               "source": "./libs/AuditIntegrity"
+            },
+            {
+              "name": "AuditInterceptorOptions",
+              "exportKind": "named",
+              "source": "./libs/AuditInterceptor"
             },
             {
               "name": "AuditLogEntry",
