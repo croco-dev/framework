@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { HealthScoreCalculator } from "../libs/HealthScoreCalculator";
+import { InvalidHealthScoreInputProblem } from "../libs/problems/HealthProblems";
 import type { HealthScoreProfile, HealthSignal } from "../libs/types";
 
 describe("HealthScoreCalculator", () => {
@@ -179,6 +180,135 @@ describe("HealthScoreCalculator", () => {
       expect(result.categoryScores.business).toBe(60);
       expect(result.categoryScores.engagement).toBe(40);
     });
+
+    it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, -1, 101])(
+      "rejects an invalid signal score of %s",
+      (value) => {
+        const signals: HealthSignal[] = [
+          {
+            category: "usage",
+            name: "daily_active_users",
+            value,
+            weight: 1,
+            rawValue: value,
+            collectedAt: new Date(),
+          },
+        ];
+        const profile: HealthScoreProfile = {
+          id: "default",
+          name: "Default Profile",
+          weights: { usage: 1, business: 0, engagement: 0 },
+          thresholds: { healthy: 80, atRisk: 50 },
+        };
+
+        expect(() => calculator.calculate(signals, profile)).toThrow(
+          InvalidHealthScoreInputProblem,
+        );
+      },
+    );
+
+    it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, -0.01, 1.01])(
+      "rejects an invalid signal weight of %s",
+      (weight) => {
+        const signals: HealthSignal[] = [
+          {
+            category: "usage",
+            name: "daily_active_users",
+            value: 50,
+            weight,
+            rawValue: 50,
+            collectedAt: new Date(),
+          },
+        ];
+        const profile: HealthScoreProfile = {
+          id: "default",
+          name: "Default Profile",
+          weights: { usage: 1, business: 0, engagement: 0 },
+          thresholds: { healthy: 80, atRisk: 50 },
+        };
+
+        expect(() => calculator.calculate(signals, profile)).toThrow(
+          InvalidHealthScoreInputProblem,
+        );
+      },
+    );
+
+    it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, -0.01, 1.01])(
+      "rejects an invalid profile weight of %s",
+      (weight) => {
+        const profile: HealthScoreProfile = {
+          id: "default",
+          name: "Default Profile",
+          weights: { usage: weight, business: 0, engagement: 0 },
+          thresholds: { healthy: 80, atRisk: 50 },
+        };
+
+        expect(() => calculator.calculate([], profile)).toThrow(InvalidHealthScoreInputProblem);
+      },
+    );
+
+    it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, -1, 101])(
+      "rejects an invalid threshold of %s",
+      (threshold) => {
+        const profile: HealthScoreProfile = {
+          id: "default",
+          name: "Default Profile",
+          weights: { usage: 1, business: 0, engagement: 0 },
+          thresholds: { healthy: threshold, atRisk: 50 },
+        };
+
+        expect(() => calculator.calculate([], profile)).toThrow(InvalidHealthScoreInputProblem);
+      },
+    );
+
+    it("reports the invalid threshold with a stable Problem", () => {
+      const profile: HealthScoreProfile = {
+        id: "default",
+        name: "Default Profile",
+        weights: { usage: 1, business: 0, engagement: 0 },
+        thresholds: { healthy: 80, atRisk: 101 },
+      };
+
+      expect(() => calculator.calculate([], profile)).toThrow(
+        expect.objectContaining({
+          code: "customer-health-core/invalid-score-input",
+          input: "profile.thresholds.atRisk",
+          receivedValue: "101",
+        }),
+      );
+    });
+
+    it("preserves valid score, weight, and threshold boundaries", () => {
+      const signals: HealthSignal[] = [
+        {
+          category: "usage",
+          name: "minimum",
+          value: 0,
+          weight: 0,
+          rawValue: 0,
+          collectedAt: new Date(),
+        },
+        {
+          category: "usage",
+          name: "maximum",
+          value: 100,
+          weight: 1,
+          rawValue: 100,
+          collectedAt: new Date(),
+        },
+      ];
+      const profile: HealthScoreProfile = {
+        id: "boundaries",
+        name: "Boundary Profile",
+        weights: { usage: 1, business: 0, engagement: 0 },
+        thresholds: { healthy: 100, atRisk: 0 },
+      };
+
+      const result = calculator.calculate(signals, profile);
+
+      expect(result.overallScore).toBe(100);
+      expect(result.status).toBe("healthy");
+    });
   });
 
   describe("determineTrend", () => {
@@ -240,6 +370,25 @@ describe("HealthScoreCalculator", () => {
       const trend = calculator.determineTrend(66, 70);
 
       expect(trend).toBe("stable");
+    });
+
+    it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, -1, 101])(
+      "rejects an invalid current score of %s",
+      (score) => {
+        expect(() => calculator.determineTrend(score, 50)).toThrow(InvalidHealthScoreInputProblem);
+      },
+    );
+
+    it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, -1, 101])(
+      "rejects an invalid previous score of %s",
+      (score) => {
+        expect(() => calculator.determineTrend(50, score)).toThrow(InvalidHealthScoreInputProblem);
+      },
+    );
+
+    it("preserves valid trend score boundaries", () => {
+      expect(calculator.determineTrend(0, 0)).toBe("stable");
+      expect(calculator.determineTrend(100, 0)).toBe("improving");
     });
   });
 });

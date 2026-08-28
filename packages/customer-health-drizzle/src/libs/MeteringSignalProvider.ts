@@ -1,6 +1,7 @@
 import type { HealthSignal, SignalCategory } from "@croco/customer-health-core";
 import { SignalProvider } from "@croco/customer-health-core";
 import { Component, Inject, Token } from "@croco/framework-context";
+import { InvalidMeteringInputProblem } from "./problems/DrizzleHealthProblems";
 
 /**
  * 건강 점수 계산에 필요한 사용량 데이터 구조입니다.
@@ -62,6 +63,11 @@ export class MeteringSignalProvider extends SignalProvider {
 
     const usageData = await this.usageStorage.getUsage(tenantId, periodStart, periodEnd);
 
+    this.validateMeteringInput("usage", usageData.usage, usageData.limit);
+    for (const [index, feature] of usageData.features.entries()) {
+      this.validateMeteringInput(`features[${index}]`, feature.usage, feature.limit);
+    }
+
     const signals: HealthSignal[] = [];
 
     const overallUsageScore = this.normalizeScore(usageData.usage, usageData.limit);
@@ -90,9 +96,6 @@ export class MeteringSignalProvider extends SignalProvider {
   }
 
   private normalizeScore(usage: number, limit: number): number {
-    if (limit === 0) {
-      return 100;
-    }
     const ratio = usage / limit;
     if (ratio <= 0.5) {
       return 100;
@@ -101,5 +104,18 @@ export class MeteringSignalProvider extends SignalProvider {
       return Math.round(100 - (ratio - 0.5) * 200);
     }
     return Math.round(Math.max(0, 50 - (ratio - 0.75) * 200));
+  }
+
+  private validateMeteringInput(input: string, usage: number, limit: number): void {
+    if (!Number.isFinite(usage) || usage < 0) {
+      throw new InvalidMeteringInputProblem(
+        `${input}.usage`,
+        usage,
+        "a finite, non-negative number",
+      );
+    }
+    if (!Number.isFinite(limit) || limit <= 0) {
+      throw new InvalidMeteringInputProblem(`${input}.limit`, limit, "a finite, positive number");
+    }
   }
 }

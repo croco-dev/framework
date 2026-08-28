@@ -6,6 +6,22 @@ import type {
   SignalCategory,
   TenantHealthScore,
 } from "./types";
+import { InvalidHealthScoreInputProblem } from "./problems/HealthProblems";
+
+const SCORE_EXPECTATION = "a finite number between 0 and 100";
+const WEIGHT_EXPECTATION = "a finite number between 0 and 1";
+
+function assertScore(input: string, value: number): void {
+  if (!Number.isFinite(value) || value < 0 || value > 100) {
+    throw new InvalidHealthScoreInputProblem(input, value, SCORE_EXPECTATION);
+  }
+}
+
+function assertWeight(input: string, value: number): void {
+  if (!Number.isFinite(value) || value < 0 || value > 1) {
+    throw new InvalidHealthScoreInputProblem(input, value, WEIGHT_EXPECTATION);
+  }
+}
 
 export class HealthScoreCalculator {
   calculate(
@@ -20,6 +36,17 @@ export class HealthScoreCalculator {
     profile: HealthScoreProfile,
   ): TenantHealthScore {
     const now = new Date();
+
+    for (const category of ["usage", "business", "engagement"] as const) {
+      assertWeight(`profile.weights.${category}`, profile.weights[category]);
+    }
+    assertScore("profile.thresholds.healthy", profile.thresholds.healthy);
+    assertScore("profile.thresholds.atRisk", profile.thresholds.atRisk);
+
+    for (const [index, signal] of signals.entries()) {
+      assertScore(`signals[${index}].value`, signal.value);
+      assertWeight(`signals[${index}].weight`, signal.weight);
+    }
 
     if (signals.length === 0) {
       return {
@@ -87,9 +114,13 @@ export class HealthScoreCalculator {
   }
 
   determineTrend(currentScore: number, previousScore?: number): HealthTrend {
+    assertScore("currentScore", currentScore);
+
     if (previousScore === undefined) {
       return "stable";
     }
+
+    assertScore("previousScore", previousScore);
 
     const diff = currentScore - previousScore;
 
