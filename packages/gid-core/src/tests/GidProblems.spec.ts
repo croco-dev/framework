@@ -1,6 +1,6 @@
 import { ProblemCategory } from "@croco/problems-core";
 import { describe, expect, it } from "vitest";
-import { InvalidIdPrefixProblem } from "../libs/problems/GidProblems";
+import { DuplicateIdPrefixProblem, InvalidIdPrefixProblem } from "../libs/problems/GidProblems";
 
 describe("GidProblems", () => {
   it("InvalidIdPrefixProblem preserves the compatible length constructor", () => {
@@ -17,6 +17,20 @@ describe("GidProblems", () => {
       minimumLength: 3,
       maximumLength: 32,
       grammar: "^[a-z0-9]{3,32}$",
+      retryable: false,
+    });
+  });
+
+  it("DuplicateIdPrefixProblem identifies only the conflicting prefix and keys", () => {
+    const problem = new DuplicateIdPrefixProblem("usr", "USER", "ACCOUNT");
+
+    expect(problem.code).toBe("gid-core/duplicate-prefix");
+    expect(problem.category).toBe(ProblemCategory.ValidationError);
+    expect(problem.detail).toBe("GID prefix 'usr' is configured for both 'USER' and 'ACCOUNT'.");
+    expect(problem.extensions).toEqual({
+      prefix: "usr",
+      firstKey: "USER",
+      duplicateKey: "ACCOUNT",
       retryable: false,
     });
   });

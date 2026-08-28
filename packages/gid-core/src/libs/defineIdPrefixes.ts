@@ -1,16 +1,23 @@
 import { IdPrefix, type PrefixedId } from "./IdPrefix";
+import { DuplicateIdPrefixProblem } from "./problems/GidProblems";
 
 type Values<T> = T[keyof T];
 
-type DuplicateValues<T extends Record<string, string>> = Values<{
-  [K in keyof T]: T[K] extends Values<Pick<T, Exclude<keyof T, K>>> ? T[K] : never;
-}>;
+type IsUnion<T, U = T> = T extends U ? ([U] extends [T] ? false : true) : never;
 
-type AssertNoDuplicateValues<T extends Record<string, string>> = [DuplicateValues<T>] extends [
-  never,
-]
-  ? T
-  : { __error: "Duplicate prefix values detected"; duplicates: DuplicateValues<T> };
+type LiteralString<T extends string> = string extends T
+  ? never
+  : IsUnion<T> extends false
+    ? T
+    : never;
+
+type AssertNoDuplicateValues<T extends Record<string, string>> = {
+  [K in keyof T]: T[K] extends Values<{
+    [K2 in Exclude<keyof T, K>]: LiteralString<T[K2]>;
+  }>
+    ? never
+    : T[K];
+};
 
 export type IdPrefixInstance<TPrefix extends string> = {
   generate(): PrefixedId<TPrefix>;
@@ -30,12 +37,21 @@ export function defineIdPrefixes<const T extends Record<string, string>>(
   config: T & AssertNoDuplicateValues<T>,
 ): IdPrefixRegistry<T> {
   const registry = {} as IdPrefixRegistry<T>;
+  const prefixKeys = new Map<string, string>();
 
   for (const key of Object.keys(config) as Array<keyof T>) {
     const prefix = config[key];
+    const keyName = key as string;
+    const firstKey = prefixKeys.get(prefix);
+
+    if (firstKey !== undefined) {
+      throw new DuplicateIdPrefixProblem(prefix, firstKey, keyName);
+    }
+
+    prefixKeys.set(prefix, keyName);
     const instance = new IdPrefix(prefix);
 
-    (registry as Record<string, unknown>)[key as string] = {
+    (registry as Record<string, unknown>)[keyName] = {
       generate: instance.generate,
       validate: instance.validate,
       getPrefix: () => instance.getPrefix(),
