@@ -1,4 +1,4 @@
-import type { CrocoPreset, CrocoPresetConfig, HookMap } from "./types";
+import type { CrocoPreset, CrocoPresetConfig, CrocoPresetOverride, HookMap } from "./types";
 
 const EMPTY_HOOKS: Readonly<HookMap> = Object.freeze({});
 
@@ -14,18 +14,18 @@ export function defineCrocoPreset(config: CrocoPresetConfig): CrocoPreset {
     config: presetConfig,
     name: presetConfig.name,
     hooks,
-    extend: (partial: Partial<CrocoPresetConfig>): CrocoPreset => {
+    extend: (override: CrocoPresetOverride): CrocoPreset => {
       return defineCrocoPreset({
         ...presetConfig,
-        ...partial,
+        ...override,
         output: {
           ...presetConfig.output,
-          ...partial.output,
+          ...override.output,
         },
-        hooks: { ...presetConfig.hooks, ...partial.hooks },
+        hooks: { ...presetConfig.hooks, ...override.hooks },
       });
     },
   });
 }
 
-export type { CrocoPreset, CrocoPresetConfig, HookMap } from "./types";
+export type { CrocoPreset, CrocoPresetConfig, CrocoPresetOverride, HookMap } from "./types";

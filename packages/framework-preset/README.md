@@ -9,7 +9,7 @@ without binding core framework code to a specific runtime.
 ## Public API
 
 - `defineCrocoPreset` - creates an immutable preset object.
-- `CrocoPreset`, `CrocoPresetConfig`, and `HookMap` - preset contract types.
+- `CrocoPreset`, `CrocoPresetConfig`, `CrocoPresetOverride`, and `HookMap` - preset contract types.
 
 ## Usage
 
@@ -22,6 +22,12 @@ export const workerPreset = defineCrocoPreset({
   output: {
     dir: "dist",
     format: "esm",
+  },
+});
+
+export const commonJsWorkerPreset = workerPreset.extend({
+  output: {
+    format: "cjs",
   },
 });
 ```

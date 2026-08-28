@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { CrocoPresetConfig } from "../index";
+import type { CrocoPresetConfig, CrocoPresetOverride } from "../index";
 import { defineCrocoPreset } from "../index";
 
 describe("defineCrocoPreset", () => {
@@ -60,6 +60,53 @@ describe("defineCrocoPreset", () => {
     expect(preset.config.output).toEqual({
       dir: "dist",
       format: "dual",
+    });
+  });
+
+  it("partially overrides output without changing the source preset", () => {
+    const preset = defineCrocoPreset({
+      name: "node",
+      entry: "src/server.ts",
+      output: {
+        dir: "dist",
+        format: "dual",
+      },
+    });
+
+    const override = { output: { format: "cjs" } } satisfies CrocoPresetOverride;
+    const commonJsPreset = preset.extend(override);
+    const relocatedPreset = commonJsPreset.extend({ output: { dir: "build" } });
+
+    expect(commonJsPreset.config.output).toEqual({ dir: "dist", format: "cjs" });
+    expect(relocatedPreset.config.output).toEqual({ dir: "build", format: "cjs" });
+    expect(preset.config.output).toEqual({ dir: "dist", format: "dual" });
+  });
+
+  it("rejects unknown override keys and unsupported formats at compile time", () => {
+    const preset = defineCrocoPreset({
+      name: "node",
+      entry: "src/server.ts",
+      output: {
+        dir: "dist",
+        format: "dual",
+      },
+    });
+
+    preset.extend({
+      // @ts-expect-error Preset overrides reject unknown top-level keys.
+      unknown: true,
+    });
+    preset.extend({
+      output: {
+        // @ts-expect-error Output overrides reject unknown keys.
+        unknown: true,
+      },
+    });
+    preset.extend({
+      output: {
+        // @ts-expect-error Output formats remain restricted to the preset contract.
+        format: "iife",
+      },
     });
   });
 

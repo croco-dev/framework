@@ -8,6 +8,16 @@ export type CrocoPresetConfig = {
   readonly hooks?: HookMap;
 };
 
+export type CrocoPresetOverride = {
+  readonly name?: CrocoPresetConfig["name"];
+  readonly entry?: CrocoPresetConfig["entry"];
+  readonly output?: {
+    readonly dir?: CrocoPresetConfig["output"]["dir"];
+    readonly format?: CrocoPresetConfig["output"]["format"];
+  };
+  readonly hooks?: HookMap;
+};
+
 export type HookMap = {
   readonly "build:before"?: (
     config: CrocoPresetConfig,
@@ -23,5 +33,5 @@ export type CrocoPreset = {
   readonly config: Readonly<CrocoPresetConfig>;
   readonly name: string;
   readonly hooks: Readonly<HookMap>;
-  readonly extend: (partial: Partial<CrocoPresetConfig>) => CrocoPreset;
+  readonly extend: (override: CrocoPresetOverride) => CrocoPreset;
 };
