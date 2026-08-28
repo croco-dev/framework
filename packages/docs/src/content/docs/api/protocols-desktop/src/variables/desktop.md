@@ -63,7 +63,7 @@ title: "desktop"
 
 ### effect
 
-> `readonly` **effect**: \<`TNamespace`, `TMethods`\>(`options`) => [`DesktopEffectDefinition`](/api/protocols-desktop/src/type-aliases/desktopeffectdefinition/)\<`TNamespace`, `TMethods`\> & `object`
+> `readonly` **effect**: \<`TNamespace`, `TMethods`, `TAccess`, `TGrants`\>(`options`) => [`DesktopEffectDefinition`](/api/protocols-desktop/src/type-aliases/desktopeffectdefinition/)\<`TNamespace`, `TMethods`, `TAccess`, `TGrants`\> & `object`
 
 #### Type Declaration
 

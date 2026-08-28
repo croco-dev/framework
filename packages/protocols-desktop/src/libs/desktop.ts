@@ -150,6 +150,7 @@ function query<const TOptions extends AnyDesktopQueryOptions>(
     effects: (options.effects ?? []) as DeclaredEffects<TOptions>,
     events: (options.events ?? []) as DeclaredEvents<TOptions>,
     problems: (options.problems ?? []) as DeclaredProblems<TOptions>,
+    executionPolicy: options.executionPolicy ?? {},
   };
 }
 
@@ -170,6 +171,7 @@ function mutation<const TOptions extends AnyDesktopMutationOptions>(
     effects: (options.effects ?? []) as DeclaredEffects<TOptions>,
     events: (options.events ?? []) as DeclaredEvents<TOptions>,
     problems: (options.problems ?? []) as DeclaredProblems<TOptions>,
+    executionPolicy: options.executionPolicy ?? {},
   };
 }
 
@@ -277,16 +279,20 @@ type IsUnion<TValue, TCandidate = TValue> = TValue extends TCandidate
 function effect<
   const TNamespace extends string,
   const TMethods extends Readonly<Record<string, DesktopEffectMethodDefinition>>,
+  const TAccess extends DesktopGrantAccess,
+  const TGrants extends readonly AnyDesktopGrant[] = readonly [],
 >(
-  options: DesktopEffectOptions<TNamespace, TMethods> &
+  options: DesktopEffectOptions<TNamespace, TMethods, TAccess, TGrants> &
     NoInvalidEffectNamespace<TNamespace> &
     NoInvalidKeys<TMethods>,
-): DesktopEffectDefinition<TNamespace, TMethods> {
+): DesktopEffectDefinition<TNamespace, TMethods, TAccess, TGrants> {
   assertValidEffectNamespace(options.namespace);
   assertValidKeys(options.methods);
   return {
     definitionType: "effect",
     namespace: options.namespace,
+    access: options.access,
+    grants: options.grants ?? ([] as unknown as TGrants),
     methods: options.methods,
   };
 }

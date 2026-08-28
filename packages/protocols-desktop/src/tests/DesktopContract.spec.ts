@@ -9,6 +9,7 @@ describe("desktop contract DSL", () => {
     const changed = desktop.event({ payload: z.object({ path: z.string() }) });
     const filesystem = desktop.effect({
       namespace: "filesystem",
+      access: "read",
       methods: {
         readText: desktop.effect.method<[path: string], Promise<string>>(),
       },
@@ -25,6 +26,8 @@ describe("desktop contract DSL", () => {
       {
         definitionType: "effect",
         namespace: "filesystem",
+        access: "read",
+        grants: [],
         methods: { readText: { definitionType: "effect-method" } },
       },
     ]);
@@ -39,6 +42,7 @@ describe("desktop contract DSL", () => {
       expect(() =>
         desktop.effect({
           namespace,
+          access: "read",
           methods: { readText: desktop.effect.method<[string], Promise<string>>() },
         } as never),
       ).toThrowError(DesktopDefinitionProblem);
@@ -51,6 +55,7 @@ describe("desktop contract DSL", () => {
       expect(() =>
         desktop.effect({
           namespace: "filesystem",
+          access: "read",
           methods: { [method]: desktop.effect.method<[string], Promise<string>>() },
         } as never),
       ).toThrowError(DesktopDefinitionProblem);

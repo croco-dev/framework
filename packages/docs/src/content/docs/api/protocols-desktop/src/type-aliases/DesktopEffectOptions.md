@@ -5,7 +5,7 @@ prev: false
 title: "DesktopEffectOptions"
 ---
 
-> **DesktopEffectOptions**\<`TNamespace`, `TMethods`\> = `object`
+> **DesktopEffectOptions**\<`TNamespace`, `TMethods`, `TAccess`, `TGrants`\> = `object`
 
 ## Type Parameters
 
@@ -17,7 +17,27 @@ title: "DesktopEffectOptions"
 
 `TMethods` _extends_ `Readonly`\<`Record`\<`string`, [`DesktopEffectMethodDefinition`](/api/protocols-desktop/src/type-aliases/desktopeffectmethoddefinition/)\>\>
 
+### TAccess
+
+`TAccess` _extends_ [`DesktopGrantAccess`](/api/protocols-desktop/src/type-aliases/desktopgrantaccess/)
+
+### TGrants
+
+`TGrants` _extends_ readonly [`AnyDesktopGrant`](/api/protocols-desktop/src/type-aliases/anydesktopgrant/)[]
+
 ## Properties
+
+### access
+
+> `readonly` **access**: `TAccess`
+
+---
+
+### grants?
+
+> `readonly` `optional` **grants?**: `TGrants`
+
+---
 
 ### methods
 
