@@ -24,8 +24,14 @@ const spawnTimeoutMs = 180_000;
 const packedRuntimeWorkspacePackages = ["problems-core", "diagnostics-core", "telemetry-sdk-node"];
 const requiredPackageArtifacts = [
   ...packedRuntimeWorkspacePackages.flatMap((packageName) => requiredLibraryArtifacts(packageName)),
+  join(packageDir, "dist", "bin.js"),
+  join(packageDir, "dist", "bin.d.ts"),
   join(packageDir, "dist", "index.js"),
   join(packageDir, "dist", "index.d.ts"),
+  join(packageDir, "dist", "programmatic.js"),
+  join(packageDir, "dist", "programmatic.d.ts"),
+  join(packageDir, "dist", "verification.js"),
+  join(packageDir, "dist", "verification.d.ts"),
 ];
 
 describe("published create-croco-app CLI", () => {
@@ -74,6 +80,8 @@ describe("published create-croco-app CLI", () => {
         const version = run("pnpm", ["exec", "create-croco-app", "--version"], consumerRoot);
 
         expect(version.stdout.trim()).toBe(packageVersion);
+        verifyProgrammaticImport(consumerRoot);
+        verifyProgrammaticGeneration(consumerRoot);
         verifyJsonFailureOutput(consumerRoot);
       } finally {
         rmSync(packRoot, { force: true, recursive: true });
@@ -274,6 +282,72 @@ function verifyJsonFailureOutput(consumerRoot: string): void {
   }
 }
 
+function verifyProgrammaticImport(consumerRoot: string): void {
+  const importRoot = mkdtempSync(join(tmpdir(), "croco-create-app-import-"));
+  const consumerPath = join(consumerRoot, "programmatic-import-consumer.mjs");
+  writeFileSync(
+    consumerPath,
+    [
+      "const rootApi = await import('create-croco-app');",
+      "const programmaticApi = await import('create-croco-app/programmatic');",
+      "if (typeof rootApi.generate !== 'function') throw new Error('missing root generate export');",
+      "if (typeof rootApi.normalizeNonInteractiveOptions !== 'function') {",
+      "  throw new Error('missing root normalizeNonInteractiveOptions export');",
+      "}",
+      "if (typeof programmaticApi.createProgram !== 'function') {",
+      "  throw new Error('missing programmatic createProgram export');",
+      "}",
+      "if (typeof programmaticApi.validateResolvedOptions !== 'function') {",
+      "  throw new Error('missing programmatic validateResolvedOptions export');",
+      "}",
+      "console.log('imported');",
+      "",
+    ].join("\n"),
+  );
+
+  try {
+    const result = run(process.execPath, [consumerPath], importRoot);
+
+    expect(result.stdout).toBe("imported\n");
+    expect(result.stderr).toBe("");
+    expect(readdirSync(importRoot)).toEqual([]);
+  } finally {
+    rmSync(importRoot, { force: true, recursive: true });
+  }
+}
+
+function verifyProgrammaticGeneration(consumerRoot: string): void {
+  const targetDir = join(consumerRoot, "programmatic-app");
+  const consumerPath = join(consumerRoot, "programmatic-consumer.mjs");
+  writeFileSync(
+    consumerPath,
+    [
+      "import * as rootApi from 'create-croco-app';",
+      "import { generate, normalizeNonInteractiveOptions } from 'create-croco-app/programmatic';",
+      "import * as verificationApi from 'create-croco-app/dist/verification.js';",
+      `const targetDir = ${JSON.stringify(targetDir)};`,
+      "if (typeof rootApi.generate !== 'function') throw new Error('missing root generate export');",
+      "if (typeof verificationApi.parseCliOptions !== 'function') throw new Error('missing verification export');",
+      "const options = normalizeNonInteractiveOptions({",
+      "  projectName: 'programmatic-app',",
+      "  scope: '@test',",
+      "  preset: 'blank',",
+      "  installDeps: false,",
+      "  initGit: false,",
+      "});",
+      "await generate(targetDir, options, { outputMode: 'json' });",
+      "console.log(JSON.stringify({ ok: true, targetDir }));",
+      "",
+    ].join("\n"),
+  );
+
+  const result = run(process.execPath, [consumerPath], consumerRoot);
+
+  expect(result.stderr).toBe("");
+  expect(JSON.parse(result.stdout)).toEqual({ ok: true, targetDir });
+  expect(existsSync(join(targetDir, "package.json"))).toBe(true);
+}
+
 function runInstalledCli(
   consumerRoot: string,
   fakeBinDir: string,
@@ -283,7 +357,7 @@ function runInstalledCli(
   const result = spawnSync(
     process.execPath,
     [
-      join(consumerRoot, "node_modules", "create-croco-app", "dist", "index.js"),
+      join(consumerRoot, "node_modules", "create-croco-app", "dist", "bin.js"),
       targetDir,
       "--preset",
       "blank",

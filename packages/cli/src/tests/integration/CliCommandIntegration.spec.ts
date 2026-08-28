@@ -131,12 +131,25 @@ describe("installed CLI command integration", () => {
         },
         {
           "bin": {
-            "create-croco-app": "./dist/index.js",
+            "create-croco-app": "./dist/bin.js",
           },
-          "exports": null,
-          "main": null,
+          "exports": {
+            ".": {
+              "import": "./dist/index.js",
+              "types": "./dist/index.d.ts",
+            },
+            "./dist/verification.js": {
+              "import": "./dist/verification.js",
+              "types": "./dist/verification.d.ts",
+            },
+            "./programmatic": {
+              "import": "./dist/programmatic.js",
+              "types": "./dist/programmatic.d.ts",
+            },
+          },
+          "main": "./dist/index.js",
           "name": "create-croco-app",
-          "types": null,
+          "types": "./dist/index.d.ts",
         },
         {
           "bin": null,

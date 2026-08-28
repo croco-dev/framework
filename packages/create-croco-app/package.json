@@ -7,14 +7,32 @@
     "directory": "packages/create-croco-app"
   },
   "bin": {
-    "create-croco-app": "./dist/index.js"
+    "create-croco-app": "./dist/bin.js"
   },
   "files": [
     "dist",
     "templates"
   ],
   "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
   "publishConfig": {
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      },
+      "./programmatic": {
+        "types": "./dist/programmatic.d.ts",
+        "import": "./dist/programmatic.js"
+      },
+      "./dist/verification.js": {
+        "types": "./dist/verification.d.ts",
+        "import": "./dist/verification.js"
+      }
+    },
     "access": "public"
   },
   "scripts": {

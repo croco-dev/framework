@@ -22,6 +22,7 @@ import {
   validateInternalDependencyRangePolicy,
 } from "./internal-croco-compatibility-policy.mjs";
 import {
+  bundledRuntimeDependencyNamesFor,
   DIRECT_DIST_ENTRYPOINT_PACKAGES,
   ENTRYPOINT_EXEMPTIONS,
   expectedFilesFor,
@@ -1413,7 +1414,10 @@ function validateSourceRuntimeDependencies(pkg, packageDir, violations) {
     return;
   }
 
-  const declaredDependencies = runtimeDependencyNames(pkg);
+  const declaredDependencies = new Set([
+    ...runtimeDependencyNames(pkg),
+    ...bundledRuntimeDependencyNamesFor(pkg.name),
+  ]);
   const importedDependencies = new Map();
 
   for (const filePath of findSourceFiles(srcDir).filter(

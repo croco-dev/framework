@@ -76,8 +76,10 @@ exception.
 
 ## Exceptions
 
-- `create-croco-app` is a bin-only project generator. It ships `dist` and `templates`, but does
-  not expose an import entrypoint because importing it would execute the CLI.
+- `create-croco-app` ships both the `create-croco-app` binary and side-effect-free root and
+  `./programmatic` library entrypoints. Its bin target is separate from the importable entrypoints,
+  and its checked bundled-runtime exceptions cover only the framework and tenant helpers named in
+  `scripts/package-manifest-contracts.mjs` and `tsup.config.ts`.
 - Direct-dist root entrypoint exceptions are checked in
   `scripts/package-manifest-contracts.mjs`: `@croco/problems-core`, `@croco/rpc-codegen`,
   `@croco/storage-cloudinary`, `@croco/storage-core`, `@croco/storage-r2`, and

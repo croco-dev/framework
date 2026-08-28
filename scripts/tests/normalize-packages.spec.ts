@@ -603,7 +603,7 @@ describe("normalize-packages.mjs", () => {
     expect(pkg.publishConfig.exports).toEqual(pkg.exports);
   });
 
-  it("skips the private docs site and allows documented public non-library package exceptions", () => {
+  it("skips the private docs site and validates the importable create-croco-app package", () => {
     const root = createTempRoot();
     writePackage(
       root,
@@ -618,19 +618,49 @@ describe("normalize-packages.mjs", () => {
         sourceIndex: false,
       },
     );
-    writePackage(root, "create-croco-app", {
-      name: "create-croco-app",
-      version: "0.0.3",
-      bin: {
-        "create-croco-app": "./dist/index.js",
+    writePackage(
+      root,
+      "create-croco-app",
+      {
+        name: "create-croco-app",
+        version: "0.0.3",
+        bin: {
+          "create-croco-app": "./dist/bin.js",
+        },
+        files: ["dist", "templates"],
+        type: "module",
+        main: "./src/index.ts",
+        types: "./src/index.ts",
+        publishConfig: {
+          access: "public",
+          main: "./dist/index.js",
+          types: "./dist/index.d.ts",
+          exports: {
+            ".": {
+              types: "./dist/index.d.ts",
+              import: "./dist/index.js",
+            },
+            "./programmatic": {
+              types: "./dist/programmatic.d.ts",
+              import: "./dist/programmatic.js",
+            },
+            "./dist/verification.js": {
+              types: "./dist/verification.d.ts",
+              import: "./dist/verification.js",
+            },
+          },
+        },
+        repository: repositoryFor("create-croco-app"),
       },
-      files: ["dist", "templates"],
-      type: "module",
-      publishConfig: {
-        access: "public",
+      {
+        sourceContent: [
+          "import { defineApplicationIntent } from '@croco/framework-context';",
+          "import { DEFAULT_TENANT_MODEL } from '@croco/tenant-core/tenant-model';",
+          "export const value = { DEFAULT_TENANT_MODEL, defineApplicationIntent };",
+          "",
+        ].join("\n"),
       },
-      repository: repositoryFor("create-croco-app"),
-    });
+    );
 
     const result = runScript(root, "--check");
 

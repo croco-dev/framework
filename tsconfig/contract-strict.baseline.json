@@ -1418,9 +1418,9 @@
     },
     {
       "packageName": "create-croco-app",
-      "file": "packages/create-croco-app/src/saas-provider-profiles.ts",
-      "line": 8,
-      "column": 8,
+      "file": "packages/create-croco-app/src/options.ts",
+      "line": 1,
+      "column": 38,
       "code": "TS6059",
       "message": "File 'packages/tenant-core/src/tenant-model.ts' is not under 'rootDir' 'packages/create-croco-app/src'. 'rootDir' is expected to contain all source files."
     },

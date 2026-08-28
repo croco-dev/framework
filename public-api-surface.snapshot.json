@@ -32627,13 +32627,220 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": [],
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["import"],
               "target": "./dist/index.js"
             }
           ],
           "sourceEntrypoint": "packages/create-croco-app/src/index.ts",
-          "runtimeExports": [],
-          "typeExports": []
+          "runtimeExports": [
+            {
+              "name": "createProgram",
+              "exportKind": "named",
+              "source": "./programmatic.js",
+              "declarationKind": "function"
+            },
+            {
+              "name": "generate",
+              "exportKind": "named",
+              "source": "./programmatic.js",
+              "declarationKind": "function"
+            },
+            {
+              "name": "normalizeNonInteractiveOptions",
+              "exportKind": "named",
+              "source": "./programmatic.js",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateResolvedOptions",
+              "exportKind": "named",
+              "source": "./programmatic.js",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "AppGoal",
+              "exportKind": "named",
+              "source": "./programmatic.js"
+            },
+            {
+              "name": "GeneratorExecutionOptions",
+              "exportKind": "named",
+              "source": "./programmatic.js"
+            },
+            {
+              "name": "GeneratorOptions",
+              "exportKind": "named",
+              "source": "./programmatic.js"
+            },
+            {
+              "name": "TenantModelName",
+              "exportKind": "named",
+              "source": "./programmatic.js"
+            }
+          ]
+        },
+        {
+          "exportPath": "./dist/verification.js",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/verification.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/verification.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/create-croco-app/src/verification.ts",
+          "runtimeExports": [
+            {
+              "name": "assertSupportedNodeVersion",
+              "exportKind": "named",
+              "source": "./node-runtime.js",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createCreateCrocoAppProgram",
+              "exportKind": "named",
+              "source": "./cli-program.js",
+              "declarationKind": "function"
+            },
+            {
+              "name": "generate",
+              "exportKind": "named",
+              "source": "./generator.js",
+              "declarationKind": "function"
+            },
+            {
+              "name": "GENERATED_NODE_ENGINE_RANGE",
+              "exportKind": "named",
+              "source": "./node-runtime.js",
+              "declarationKind": "const"
+            },
+            {
+              "name": "GENERATED_NODE_VERSION",
+              "exportKind": "named",
+              "source": "./node-runtime.js",
+              "declarationKind": "const"
+            },
+            {
+              "name": "isNonInteractiveOptions",
+              "exportKind": "named",
+              "source": "./options.js",
+              "declarationKind": "function"
+            },
+            {
+              "name": "normalizeNonInteractiveOptions",
+              "exportKind": "named",
+              "source": "./options.js",
+              "declarationKind": "function"
+            },
+            {
+              "name": "parseCliOptions",
+              "exportKind": "named",
+              "source": "./options.js",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateCliOptions",
+              "exportKind": "named",
+              "source": "./options.js",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateResolvedOptions",
+              "exportKind": "named",
+              "source": "./options.js",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "GeneratorOptions",
+              "exportKind": "named",
+              "source": "./types.js"
+            },
+            {
+              "name": "NormalizedGeneratorOptions",
+              "exportKind": "named",
+              "source": "./types.js"
+            },
+            {
+              "name": "RawCliOptions",
+              "exportKind": "named",
+              "source": "./types.js"
+            }
+          ]
+        },
+        {
+          "exportPath": "./programmatic",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/programmatic.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/programmatic.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/create-croco-app/src/programmatic.ts",
+          "runtimeExports": [
+            {
+              "name": "createProgram",
+              "exportKind": "named",
+              "source": "./cli.js",
+              "declarationKind": "function"
+            },
+            {
+              "name": "generate",
+              "exportKind": "named",
+              "source": "./generator.js",
+              "declarationKind": "function"
+            },
+            {
+              "name": "normalizeNonInteractiveOptions",
+              "exportKind": "named",
+              "source": "./options.js",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateResolvedOptions",
+              "exportKind": "named",
+              "source": "./options.js",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "AppGoal",
+              "exportKind": "named",
+              "source": "./types.js"
+            },
+            {
+              "name": "GeneratorExecutionOptions",
+              "exportKind": "named",
+              "source": "./generator.js"
+            },
+            {
+              "name": "GeneratorOptions",
+              "exportKind": "named",
+              "source": "./types.js"
+            },
+            {
+              "name": "TenantModelName",
+              "exportKind": "named",
+              "source": "./types.js"
+            }
+          ]
         }
       ]
     }

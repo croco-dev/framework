@@ -1565,7 +1565,7 @@ jobs:
             New-Item -ItemType Directory -Force -Path (Split-Path $destination) | Out-Null
             New-Item -ItemType Junction -Path $destination -Target $resolvedSource.FullName | Out-Null
           }
-          node (Join-Path $packageDir "dist/index.js") $targetDir --preset blank --scope '@windows-smoke' --no-install --no-git --json
+          node (Join-Path $packageDir "dist/bin.js") $targetDir --preset blank --scope '@windows-smoke' --no-install --no-git --json
           if ($LASTEXITCODE -ne 0) { throw "packed create-croco-app generation failed" }
           if (-not (Test-Path (Join-Path $targetDir "package.json"))) {
             throw "packed create-croco-app did not generate package.json"
