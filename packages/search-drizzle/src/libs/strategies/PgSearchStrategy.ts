@@ -1,7 +1,7 @@
 import type { SearchDocument, SearchEngineCapabilities, SearchQuery } from "@croco/search-core";
 import { type SQL, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { SEARCH_SCORE_ALIAS } from "../searchScore";
+import { buildPostgresSearchQueryPlan } from "../searchQueryPlan";
 import type { SearchQueryPlan, SearchStrategy } from "../types";
 
 /**
@@ -21,24 +21,15 @@ export class PgSearchStrategy implements SearchStrategy {
    * `pg_search` 문법을 사용하는 검색 SQL을 생성합니다.
    */
   buildSearchQuery(table: string, query: SearchQuery, tenantId: string): SearchQueryPlan {
-    const tableIdentifier = sql.identifier(table);
     const idIdentifier = sql.identifier("id");
-    const predicate = this.buildSearchPredicate(table, query, tenantId);
-    const scoreAlias = sql.identifier(SEARCH_SCORE_ALIAS);
     const scoreExpression = sql`paradedb.score(${idIdentifier})`;
-
-    return {
-      rows: sql`
-        SELECT *, ${scoreExpression} AS ${scoreAlias} FROM ${tableIdentifier}
-        WHERE ${predicate}
-        ORDER BY ${scoreExpression} DESC
-      `,
-      total: sql`
-        SELECT COUNT(*)::double precision AS total
-        FROM ${tableIdentifier}
-        WHERE ${predicate}
-      `,
-    };
+    return buildPostgresSearchQueryPlan({
+      table,
+      query,
+      tenantId,
+      scoreExpression,
+      searchPredicate: sql`${sql.identifier(table)} @@@ ${sql.param(query.query)}`,
+    });
   }
 
   /**
@@ -98,9 +89,5 @@ export class PgSearchStrategy implements SearchStrategy {
       vectorSearch: false,
       fuzzySearch: true,
     };
-  }
-
-  private buildSearchPredicate(table: string, query: SearchQuery, tenantId: string): SQL {
-    return sql`${sql.identifier(table)} @@@ ${sql.param(query.query)} AND "tenant_id" = ${sql.param(tenantId)}`;
   }
 }

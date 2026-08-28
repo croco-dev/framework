@@ -20,7 +20,10 @@ const result = await engine.search(
   "documents",
   {
     query: "croco framework",
+    filters: { status: "published" },
+    sort: [{ field: "published_at", order: "desc" }],
     limit: 20,
+    offset: 0,
   },
   { signal: controller.signal },
 );
@@ -62,6 +65,13 @@ await engine.indexDocument(
 `SearchQueryPlan`을 반환합니다. `SearchResult.total`은 limit/offset 적용 전 전체 일치 건수이며, 결과 행이 없는 페이지에서도
 유지됩니다.
 
+세 전략은 `SearchQuery`의 문자열, 유한한 숫자, boolean 필터를 동등 비교로 적용하고, 요청한 정렬 뒤에 관련도와 문서
+ID를 결정적 tie-breaker로 추가합니다. limit과 offset은 0 이상의 safe integer만 받으며 값과 페이지네이션은 SQL
+파라미터로 전달됩니다. 테이블·필터·정렬 식별자는 PostgreSQL의 63바이트 ASCII 식별자 범위로 제한되고, 정렬 방향은
+`asc` 또는 `desc`만 허용됩니다. `tenantId`와 `tenant_id` 필터는 활성 tenant와 일치해야 하며 실제 tenant 조건은 별도
+필수 절로 항상 적용됩니다. 지원하지 않는 값이나 안전하지 않은 식별자는 `search-drizzle/invalid-query` Problem으로
+실패합니다.
+
 ### 타입과 문제
 
 - `DRIZZLE_TOKEN`, 검색 엔진용 Drizzle 주입 토큰입니다.
@@ -69,3 +79,4 @@ await engine.indexDocument(
 - `SearchQueryPlan`, 결과 행 SQL과 전체 건수 SQL을 함께 표현하는 전략 결과 타입입니다.
 - `SearchResultRow`, 검색 결과 행 타입입니다.
 - `InvalidSearchRowProblem`, 검색 결과 행, 관련도 점수 또는 전체 건수 행이 유효하지 않을 때 던지는 문제입니다.
+- `InvalidSearchQueryProblem`, 검색 옵션을 안전하게 SQL로 컴파일할 수 없을 때 던지는 문제입니다.

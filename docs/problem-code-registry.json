@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 685,
+  "problemCount": 686,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -15567,6 +15567,36 @@
         {
           "file": "packages/search-core/src/libs/problems/SearchProblems.ts",
           "line": 96,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "search-drizzle/invalid-query",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#search-drizzle-invalid-query",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/search-drizzle/src/libs/problems/InvalidSearchQueryProblem.ts",
+          "line": 13,
           "column": 5,
           "kind": "problem-constructor"
         }

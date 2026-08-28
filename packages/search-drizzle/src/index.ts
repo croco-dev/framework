@@ -6,6 +6,10 @@ export * from "./libs/DrizzleSearchEngine";
  * 검색 결과 매핑 오류 문제 타입입니다.
  */
 export * from "./libs/problems/InvalidSearchRowProblem";
+/**
+ * 검색 쿼리 옵션 검증 오류 문제 타입입니다.
+ */
+export * from "./libs/problems/InvalidSearchQueryProblem";
 
 /**
  * PostgreSQL 검색 전략 구현체들입니다.

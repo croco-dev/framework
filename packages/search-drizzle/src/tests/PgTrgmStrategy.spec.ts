@@ -2,6 +2,7 @@ import { CasingCache } from "drizzle-orm/casing";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import { PgTrgmStrategy } from "../libs/strategies/PgTrgmStrategy";
+import { registerSearchQueryOptionTests } from "./strategyQueryOptionsTests";
 
 type PgTrgmStrategyPrivate = {
   similarityThreshold: number;
@@ -18,6 +19,8 @@ describe("PgTrgmStrategy", () => {
     vi.clearAllMocks();
     strategy = new PgTrgmStrategy();
   });
+
+  registerSearchQueryOptionTests(() => new PgTrgmStrategy());
 
   it("should initialize with default threshold", () => {
     expect((strategy as unknown as PgTrgmStrategyPrivate).similarityThreshold).toBe(0.3);

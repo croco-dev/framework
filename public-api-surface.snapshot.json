@@ -25641,6 +25641,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "InvalidSearchQueryProblem",
+              "exportKind": "declaration",
+              "source": "./libs/problems/InvalidSearchQueryProblem",
+              "declarationKind": "class"
+            },
+            {
               "name": "InvalidSearchRowProblem",
               "exportKind": "declaration",
               "source": "./libs/problems/InvalidSearchRowProblem",
