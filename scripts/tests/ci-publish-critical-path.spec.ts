@@ -26,6 +26,22 @@ describe("publish validate critical path", () => {
     expect(evaluation.requiredMinutes).toBeLessThanOrEqual(evaluation.targetMinutes);
   });
 
+  it("rejects a critical path that exceeds the budget below display precision", () => {
+    const commands = createVerificationManifest("publish");
+    const durationOverrides = Object.fromEntries(commands.map(({ id }) => [id, 0]));
+    durationOverrides["generated-app-smoke"] = 45.04;
+
+    const evaluation = evaluatePublishCriticalPath({
+      commands,
+      durationOverrides,
+      workflow: readFileSync(resolve(ROOT_DIR, ".github/workflows/ci.yml"), "utf8"),
+    });
+
+    expect(evaluation.requiredMinutes).toBe(45.04);
+    expect(evaluation.diagnostics).toContain("modeled publish critical path 45.0m exceeds 45m");
+    expect(evaluation.status).toBe("failed");
+  });
+
   it("fails when publish restores the full generated matrix or reruns release-gate tests", () => {
     const commands = createVerificationManifest("publish").map((command) => {
       if (command.id === "generated-app-smoke") {

@@ -33,6 +33,7 @@ import {
   selectGeneratedTestPathsForSmokeCases,
 } from "../create-croco-app-generated-smoke-dependencies.mts";
 import { getGeneratedSmokeDependencyCaseInputs } from "../create-croco-app-generated-smoke.mts";
+import { assertPackedDependencyClosure } from "../packed-decorator-consumers.mts";
 import { readTestInventory } from "../test-inventory.mts";
 import { generate } from "../../packages/create-croco-app/src/generator.ts";
 import {
@@ -137,6 +138,7 @@ const spineOnlyIds = [
   "package-entrypoints-smoke",
   "package-bins-smoke",
   "generated-app-smoke",
+  "packed-decorator-consumers",
   "alpha-release-smoke",
   "typecheck",
   "test",
@@ -201,6 +203,7 @@ const expectedLaneIds = {
   "generated-apps": ["generated-app-smoke"],
   "package-artifacts": [
     "package-entrypoints-smoke",
+    "packed-decorator-consumers",
     "package-bins-smoke",
     "alpha-release-smoke",
     "published-test-lane",
@@ -294,12 +297,12 @@ describe("verification manifest", () => {
     });
   });
 
-  it("owns all 53 commands exactly once across the closed verification lanes", () => {
+  it("owns all 54 commands exactly once across the closed verification lanes", () => {
     const publishIds = [...repoIds, ...spineOnlyIds, ...publishOnlyIds];
     const ownedIds = Object.values(expectedLaneIds).flat();
 
-    expect(publishIds).toHaveLength(53);
-    expect(new Set(ownedIds).size).toBe(53);
+    expect(publishIds).toHaveLength(54);
+    expect(new Set(ownedIds).size).toBe(54);
     expect([...ownedIds].sort()).toEqual([...publishIds].sort());
     expect(VERIFICATION_LANE_OWNERSHIP).toEqual(
       Object.fromEntries(
@@ -315,7 +318,7 @@ describe("verification manifest", () => {
     expect(
       createHash("sha256").update(JSON.stringify(manifests)).digest("hex"),
       "The pre-split monolithic manifest changed; update this digest only after intentionally verifying the new serialized commands.",
-    ).toBe("cb03423ec9fc81ed794dae737c36cfc2b27bd32d8d9aaaf6a7acdbab64ce9428");
+    ).toBe("eea58cec8def93391ebab82e58e537c876700179e9d23494f39876c939db0033");
   });
 
   it("classifies every dependency edge and every cross-lane edge for synthesis", () => {
@@ -462,6 +465,99 @@ describe("verification manifest", () => {
     ]) {
       expect(manifest.find((command) => command.id === id)?.applicable, id).toBe(true);
     }
+  });
+
+  it("runs packed decorator consumers for publish and relevant package changes", () => {
+    const publishCommand = createVerificationManifest("publish").find(
+      ({ id }) => id === "packed-decorator-consumers",
+    );
+    expect(publishCommand).toMatchObject({
+      applicable: true,
+      command: ["node", "--experimental-strip-types", "scripts/packed-decorator-consumers.mts"],
+      dependsOn: ["build"],
+    });
+    expect(VERIFICATION_LANE_OWNERSHIP["packed-decorator-consumers"]).toBe("package-artifacts");
+    expect(VERIFICATION_DEPENDENCY_CLASSIFICATION["packed-decorator-consumers->build"]).toEqual([
+      "physical-local",
+      "logical-synthesis",
+    ]);
+
+    const context = {
+      base: "origin/trunk",
+      head: "HEAD",
+    } as const;
+    const relevant = createVerificationManifest("spine", {
+      ...context,
+      changedFiles: ["packages/protocols-rest/src/libs/decorators/HttpMethod.ts"],
+    });
+    const sharedConfig = createVerificationManifest("spine", {
+      ...context,
+      changedFiles: ["tsconfig/tsconfig.node.json"],
+    });
+    const gateOnly = createVerificationManifest("spine", {
+      ...context,
+      changedFiles: ["scripts/packed-decorator-consumers.mts"],
+    });
+    const unrelated = createVerificationManifest("spine", {
+      ...context,
+      changedFiles: ["packages/storage-s3/src/index.ts"],
+    });
+    expect(relevant.find(({ id }) => id === "packed-decorator-consumers")?.applicable).toBe(true);
+    expect(sharedConfig.find(({ id }) => id === "packed-decorator-consumers")?.applicable).toBe(
+      true,
+    );
+    expect(gateOnly.find(({ id }) => id === "build")?.command).toEqual(
+      expect.arrayContaining([
+        "--filter=@croco/problems-core",
+        "--filter=@croco/diagnostics-core",
+        "--filter=@croco/framework-context",
+        "--filter=@croco/protocols-core",
+        "--filter=@croco/protocols-rest",
+      ]),
+    );
+    expect(unrelated.find(({ id }) => id === "packed-decorator-consumers")?.applicable).toBe(false);
+  });
+
+  it.each(["dependencies", "optionalDependencies", "peerDependencies"] as const)(
+    "rejects local protocols in packed %s",
+    (section) => {
+      for (const protocol of ["workspace:", "file:", "link:", "portal:"]) {
+        expect(() =>
+          assertPackedDependencyClosure(
+            "@croco/source",
+            { [section]: { external: `${protocol}../external` } },
+            new Set(),
+          ),
+        ).toThrow(`repository-local ${section} entry external@${protocol}../external`);
+      }
+    },
+  );
+
+  it.each(["dependencies", "optionalDependencies", "peerDependencies"] as const)(
+    "rejects unpacked internal packages in packed %s",
+    (section) => {
+      expect(() =>
+        assertPackedDependencyClosure(
+          "@croco/source",
+          { [section]: { "@croco/missing": "1.0.0" } },
+          new Set(["@croco/source"]),
+        ),
+      ).toThrow(`unpacked internal ${section} entry @croco/missing`);
+    },
+  );
+
+  it("accepts registry dependencies and packed internal packages", () => {
+    expect(() =>
+      assertPackedDependencyClosure(
+        "@croco/source",
+        {
+          dependencies: { "@croco/packed": "1.0.0", external: "^2.0.0" },
+          optionalDependencies: { optional: "~3.0.0" },
+          peerDependencies: { peer: ">=4" },
+        },
+        new Set(["@croco/source", "@croco/packed"]),
+      ),
+    ).not.toThrow();
   });
 
   it("selects exact inventory lane owners for ordinary changes and full lanes for publish", () => {

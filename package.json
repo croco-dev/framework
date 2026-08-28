@@ -75,6 +75,7 @@
     "quick-start-lambda:smoke": "node --experimental-strip-types scripts/verification-command.mts --id quick-start-lambda-smoke",
     "saas-billing-golden-path:smoke": "pnpm --filter @croco-example/saas-billing-golden-path... build && pnpm --filter @croco-example/saas-billing-golden-path test",
     "package-entrypoints:smoke": "node --experimental-strip-types scripts/verification-command.mts --id package-entrypoints-smoke",
+    "packed-decorator-consumers:check": "node --experimental-strip-types scripts/verification-command.mts --id packed-decorator-consumers",
     "package-bins:smoke": "node --experimental-strip-types scripts/verification-command.mts --id package-bins-smoke",
     "package-manifests:check": "node --experimental-strip-types scripts/verification-command.mts --id package-manifests",
     "package-manifests:write": "node scripts/normalize-packages.mjs --write",
