@@ -245,7 +245,7 @@ function validateRecoveryRequest(
 }
 
 export function createRetryConsole(sources: readonly RetryConsoleSource[]): RetryConsole {
-  const recoveryResults = new Map<string, Promise<RetryConsoleRecoveryResult>>();
+  const inFlightRecoveries = new Map<string, Promise<RetryConsoleRecoveryResult>>();
 
   async function list(options: RetryConsoleListOptions = {}): Promise<readonly RetryConsoleItem[]> {
     const sourceItems = await Promise.all(sources.map((source) => source.list(options)));
@@ -273,7 +273,7 @@ export function createRetryConsole(sources: readonly RetryConsoleSource[]): Retr
     action: RetryConsoleRecoveryAction,
     request: RetryConsoleRecoveryInput,
   ): string {
-    return [item.source.kind, item.id, action.id, request.audit.idempotencyKey].join(":");
+    return JSON.stringify([item.source.kind, item.id, action.id, request.audit.idempotencyKey]);
   }
 
   async function runRecovery(
@@ -342,14 +342,18 @@ export function createRetryConsole(sources: readonly RetryConsoleSource[]): Retr
 
       if (action.requiresIdempotencyKey) {
         const key = recoveryResultKey(found.item, action, request);
-        const existingResult = recoveryResults.get(key);
+        const existingResult = inFlightRecoveries.get(key);
         if (existingResult) {
           return existingResult;
         }
 
         const result = runRecovery(found.source, found.item, action, request);
-        recoveryResults.set(key, result);
-        return result;
+        inFlightRecoveries.set(key, result);
+        return result.finally(() => {
+          if (inFlightRecoveries.get(key) === result) {
+            inFlightRecoveries.delete(key);
+          }
+        });
       }
 
       return runRecovery(found.source, found.item, action, request);

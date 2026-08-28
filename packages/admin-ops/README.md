@@ -65,6 +65,8 @@ await retryConsole.recover({
 
 Recovery requests require permission and audit descriptors. Execution retries require an audit log sink so the operator action is not silently lost.
 
+The console deduplicates only concurrent recovery calls with the same item, action, and audit idempotency key. It removes both successful and failed results immediately after settlement, so providers remain responsible for durable idempotency and cross-process replay behavior.
+
 ## Outbound webhook adapters
 
 `operationsTimelineEventFromWebhookDelivery()` and `retryConsoleItemFromWebhookDelivery()` accept a

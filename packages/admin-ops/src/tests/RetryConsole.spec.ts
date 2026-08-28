@@ -247,6 +247,40 @@ function execution(overrides: Partial<Execution>): Execution {
   };
 }
 
+function failedLifecycleRun(overrides: Partial<LifecycleRun> = {}): LifecycleRun {
+  return {
+    id: "lifecycle-1",
+    ruleId: "past-due-recovery",
+    ruleVersion: "1.0.0",
+    ruleFingerprint: "past-due-recovery-v1",
+    tenantId: "tenant-1",
+    signalType: "billing.subscription.updated",
+    signalId: "signal-1",
+    severity: "high",
+    status: "failed",
+    idempotencyKey: "lifecycle-key-1",
+    actionResults: [],
+    startedAt: new Date("2026-01-01T00:00:04.000Z"),
+    completedAt: new Date("2026-01-01T00:00:05.000Z"),
+    ...overrides,
+  };
+}
+
+function lifecycleRecoveryInput(
+  idempotencyKey = audit.idempotencyKey,
+  itemId = "lifecycle-1",
+): RetryConsoleRecoveryInput {
+  return {
+    itemId,
+    actionId: "replay",
+    permission: {
+      granted: true,
+      descriptor: permission("replay", "lifecycle", itemId),
+    },
+    audit: { ...audit, idempotencyKey },
+  };
+}
+
 describe("RetryConsole", () => {
   it("routes indeterminate timeouts to inspection instead of an invalid retry", async () => {
     const manager = new ExecutionManagerImpl(
@@ -611,45 +645,111 @@ describe("RetryConsole", () => {
     });
   });
 
-  it("deduplicates lifecycle recovery by audit idempotency key", async () => {
-    const lifecycleRun: LifecycleRun = {
-      id: "lifecycle-1",
-      ruleId: "past-due-recovery",
-      ruleVersion: "1.0.0",
-      ruleFingerprint: "past-due-recovery-v1",
-      tenantId: "tenant-1",
-      signalType: "billing.subscription.updated",
-      signalId: "signal-1",
-      severity: "high",
-      status: "failed",
-      idempotencyKey: "lifecycle-key-1",
-      actionResults: [],
-      startedAt: new Date("2026-01-01T00:00:04.000Z"),
-      completedAt: new Date("2026-01-01T00:00:05.000Z"),
+  it("deduplicates concurrent lifecycle recovery by audit idempotency key", async () => {
+    let releaseRecovery: () => void = () => {
+      throw new Error("Recovery started before its release gate was initialized");
     };
+    const recoveryGate = new Promise<void>((resolve) => {
+      releaseRecovery = resolve;
+    });
+    const lifecycleRecover = vi.fn(async () => {
+      await recoveryGate;
+      return {
+        providerResult: { accepted: true },
+      };
+    });
+    const console = createRetryConsole([
+      createLifecycleRetryConsoleSource({
+        store: new MemoryLifecycleRunStore([failedLifecycleRun()]),
+        recover: lifecycleRecover,
+      }),
+    ]);
+    const request = lifecycleRecoveryInput();
+
+    const first = console.recover(request);
+    const second = console.recover(request);
+
+    await vi.waitFor(() => expect(lifecycleRecover).toHaveBeenCalledTimes(1));
+    releaseRecovery();
+
+    expect((await Promise.all([first, second])).map((result) => result.status)).toEqual([
+      "succeeded",
+      "succeeded",
+    ]);
+    expect(lifecycleRecover).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps delimiter-containing recovery identities distinct", async () => {
+    let releaseRecoveries: () => void = () => {
+      throw new Error("Recoveries started before their release gate was initialized");
+    };
+    const recoveryGate = new Promise<void>((resolve) => {
+      releaseRecoveries = resolve;
+    });
+    const lifecycleRecover = vi.fn(async () => {
+      await recoveryGate;
+      return {
+        providerResult: { accepted: true },
+      };
+    });
+    const console = createRetryConsole([
+      createLifecycleRetryConsoleSource({
+        store: new MemoryLifecycleRunStore([
+          failedLifecycleRun({ id: "a" }),
+          failedLifecycleRun({ id: "a:replay:b" }),
+        ]),
+        recover: lifecycleRecover,
+      }),
+    ]);
+
+    const first = console.recover(lifecycleRecoveryInput("b:replay:c", "a"));
+    const second = console.recover(lifecycleRecoveryInput("c", "a:replay:b"));
+
+    await vi.waitFor(() => expect(lifecycleRecover).toHaveBeenCalledTimes(2));
+    releaseRecoveries();
+
+    expect((await Promise.all([first, second])).map((result) => result.item?.id)).toEqual([
+      "a",
+      "a:replay:b",
+    ]);
+  });
+
+  it("does not retain settled recovery results across high-cardinality keys", async () => {
     const lifecycleRecover = vi.fn(async () => ({
       providerResult: { accepted: true },
     }));
     const console = createRetryConsole([
       createLifecycleRetryConsoleSource({
-        store: new MemoryLifecycleRunStore([lifecycleRun]),
+        store: new MemoryLifecycleRunStore([failedLifecycleRun()]),
         recover: lifecycleRecover,
       }),
     ]);
-    const request = {
-      itemId: "lifecycle-1",
-      actionId: "replay",
-      permission: {
-        granted: true,
-        descriptor: permission("replay", "lifecycle", "lifecycle-1"),
-      },
-      audit,
-    } satisfies RetryConsoleRecoveryInput;
+
+    for (let index = 0; index < 100; index += 1) {
+      await console.recover(lifecycleRecoveryInput(`ops-recovery-${index}`));
+    }
+
+    await console.recover(lifecycleRecoveryInput("ops-recovery-0"));
+
+    expect(lifecycleRecover).toHaveBeenCalledTimes(101);
+  });
+
+  it("removes failed recovery results after settlement", async () => {
+    const lifecycleRecover = vi.fn(async () => {
+      throw new Error("provider queue is down");
+    });
+    const console = createRetryConsole([
+      createLifecycleRetryConsoleSource({
+        store: new MemoryLifecycleRunStore([failedLifecycleRun()]),
+        recover: lifecycleRecover,
+      }),
+    ]);
+    const request = lifecycleRecoveryInput();
 
     const first = await console.recover(request);
     const second = await console.recover(request);
 
-    expect([first.status, second.status]).toEqual(["succeeded", "succeeded"]);
-    expect(lifecycleRecover).toHaveBeenCalledTimes(1);
+    expect([first.status, second.status]).toEqual(["failed", "failed"]);
+    expect(lifecycleRecover).toHaveBeenCalledTimes(2);
   });
 });
