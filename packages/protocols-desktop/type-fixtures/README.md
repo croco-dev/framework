@@ -1,7 +1,7 @@
 # Desktop type contract fixtures
 
-`pnpm desktop-contracts:type-fixtures` executes TypeScript against two explicit contracts. The same
-check runs from the package's Vitest suite:
+`pnpm desktop-contracts:type-fixtures` executes TypeScript against two explicit contracts. The
+dedicated benchmark workflow runs this compile-fixture suite before measuring performance:
 
 - `negative.ts` must fail once at each reviewed `EXPECT_ERROR` marker. The harness rejects missing,
   duplicate, or unrelated diagnostics and forbids `@ts-expect-error` in these fixtures.
