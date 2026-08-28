@@ -1,6 +1,6 @@
 import type { RequestContext } from "@croco/framework-context";
 import { Token } from "@croco/framework-context";
-import type { ImpersonationState } from "./types";
+import type { ImpersonationRevocationResult, ImpersonationState } from "./types";
 
 export type ImpersonationPrincipal = {
   readonly id: string;
@@ -24,7 +24,10 @@ export abstract class ImpersonationStore {
   ): Promise<ImpersonationSessionCreateResult>;
   abstract find(sessionId: string): Promise<ImpersonationState | null>;
   abstract findByImpersonator(impersonatorId: string): Promise<ImpersonationState | null>;
-  abstract revoke(sessionId: string): Promise<void>;
+  abstract revoke(
+    sessionId: string,
+    impersonatorId: string,
+  ): Promise<ImpersonationRevocationResult>;
 }
 
 export abstract class AuthProvider {

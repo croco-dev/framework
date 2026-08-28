@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 681,
+  problemCount: 682,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -9048,6 +9048,36 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
           line: 84,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "IMPERSONATION_SESSION_ACTOR_MISMATCH",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#impersonation-session-actor-mismatch",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
+          line: 116,
           column: 3,
           kind: "problem-class",
         },

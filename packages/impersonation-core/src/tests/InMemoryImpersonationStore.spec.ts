@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { Container } from "@croco/framework-context";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { InMemoryImpersonationStore } from "../libs/InMemoryImpersonationStore";
 import type { ImpersonationStore } from "../libs/interfaces";
 import type { ImpersonationState } from "../libs/types";
@@ -19,6 +20,10 @@ function session(
 
 function impersonationStoreConformance(createStore: () => ImpersonationStore): void {
   describe("ImpersonationStore conformance", () => {
+    beforeEach(() => {
+      Container.reset();
+    });
+
     afterEach(() => {
       vi.useRealTimers();
     });
@@ -74,8 +79,60 @@ function impersonationStoreConformance(createStore: () => ImpersonationStore): v
 
       expect(winnerIndex).not.toBe(-1);
       expect(results.filter(({ status }) => status === "created")).toHaveLength(1);
-      await store.revoke("imp-expired");
+      await expect(store.revoke("imp-expired", "admin-1")).resolves.toEqual({
+        outcome: "not-found",
+      });
       expect(await store.findByImpersonator("admin-1")).toEqual(replacements[winnerIndex]);
+    });
+
+    it("does not revoke a session for a different actor", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+      const store = createStore();
+      const activeSession = session("imp-owner", "admin-1");
+      await store.createIfNoActiveSession(activeSession);
+
+      await expect(store.revoke(activeSession.sessionId, "admin-2")).resolves.toEqual({
+        outcome: "actor-mismatch",
+      });
+      await expect(store.find(activeSession.sessionId)).resolves.toEqual(activeSession);
+      await expect(store.findByImpersonator(activeSession.impersonatorId)).resolves.toEqual(
+        activeSession,
+      );
+    });
+
+    it("returns one revoked result when authorized revocations race", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+      const store = createStore();
+      const activeSession = session("imp-race", "admin-1");
+      await store.createIfNoActiveSession(activeSession);
+
+      const results = await Promise.all([
+        store.revoke(activeSession.sessionId, activeSession.impersonatorId),
+        store.revoke(activeSession.sessionId, activeSession.impersonatorId),
+      ]);
+
+      expect(results).toContainEqual({ outcome: "revoked", session: activeSession });
+      expect(results).toContainEqual({ outcome: "not-found" });
+      await expect(store.find(activeSession.sessionId)).resolves.toBeNull();
+      await expect(store.findByImpersonator(activeSession.impersonatorId)).resolves.toBeNull();
+    });
+
+    it("treats an expired session as not found", async () => {
+      vi.useFakeTimers();
+      const expiresAt = new Date("2026-01-01T00:01:00.000Z");
+      vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+      const store = createStore();
+      const expiredSession = session("imp-expired", "admin-1", expiresAt);
+      await store.createIfNoActiveSession(expiredSession);
+
+      vi.setSystemTime(expiresAt);
+      await expect(
+        store.revoke(expiredSession.sessionId, expiredSession.impersonatorId),
+      ).resolves.toEqual({ outcome: "not-found" });
+      await expect(store.find(expiredSession.sessionId)).resolves.toBeNull();
+      await expect(store.findByImpersonator(expiredSession.impersonatorId)).resolves.toBeNull();
     });
   });
 }

@@ -10,9 +10,11 @@ import {
   invalidImpersonationDurationProblem,
 } from "./ImpersonationConfig";
 import { AuthProvider, ImpersonationStore } from "./interfaces";
+import type { ImpersonationPrincipal } from "./interfaces";
 import {
   ImpersonationIdentityConflictProblem,
   ImpersonationReasonRequiredProblem,
+  ImpersonationSessionActorMismatchProblem,
   ImpersonationSessionNotFoundProblem,
   ImpersonationTargetNotFoundProblem,
   NestedImpersonationProblem,
@@ -46,11 +48,7 @@ export class ImpersonationService {
     assertValidImpersonationConfig(config);
   }
 
-  async start(
-    context: RequestContext,
-    targetUserId: string,
-    reason?: string,
-  ): Promise<ImpersonationState> {
+  private async resolveManager(context: RequestContext): Promise<ImpersonationPrincipal> {
     const principal = await this._authProvider.resolvePrincipal(context);
     if (!principal) {
       throw new UnauthorizedProblem();
@@ -63,6 +61,16 @@ export class ImpersonationService {
     if (!hasPermission([...principal.permissions], "impersonation:manage")) {
       throw new ForbiddenProblem("impersonation:manage");
     }
+
+    return principal;
+  }
+
+  async start(
+    context: RequestContext,
+    targetUserId: string,
+    reason?: string,
+  ): Promise<ImpersonationState> {
+    const principal = await this.resolveManager(context);
 
     if (principal.id === targetUserId) {
       throw new SelfImpersonationProblem();
@@ -100,15 +108,17 @@ export class ImpersonationService {
     return session;
   }
 
-  async end(sessionId: string): Promise<void> {
-    const session = await this.store.find(sessionId);
-    if (!session) {
+  async end(context: RequestContext, sessionId: string): Promise<void> {
+    const principal = await this.resolveManager(context);
+    const result = await this.store.revoke(sessionId, principal.id);
+    if (result.outcome === "not-found") {
       throw new ImpersonationSessionNotFoundProblem(sessionId);
     }
+    if (result.outcome === "actor-mismatch") {
+      throw new ImpersonationSessionActorMismatchProblem();
+    }
 
-    await this.store.revoke(sessionId);
-
-    await this.eventPublisher.publishNow(new ImpersonationEndedEvent(session));
+    await this.eventPublisher.publishNow(new ImpersonationEndedEvent(result.session));
   }
 
   isImpersonating(context: RequestContext): context is ImpersonationContext {

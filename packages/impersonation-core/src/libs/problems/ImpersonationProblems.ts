@@ -106,3 +106,17 @@ export class ImpersonationSessionNotFoundProblem extends Problem {
     super(undefined, undefined, `Impersonation session not found: ${sessionId}`);
   }
 }
+
+/**
+ * Indicates that an authorized caller tried to end an impersonation session started by another actor.
+ *
+ * This Forbidden problem preserves the session so only its original impersonator can terminate it.
+ */
+export class ImpersonationSessionActorMismatchProblem extends Problem {
+  readonly code = "IMPERSONATION_SESSION_ACTOR_MISMATCH";
+  readonly category = ProblemCategory.Forbidden;
+
+  constructor() {
+    super(undefined, undefined, "Authenticated actor cannot end this impersonation session");
+  }
+}

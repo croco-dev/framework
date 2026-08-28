@@ -23,7 +23,7 @@ const service = new ImpersonationService(store, authProvider, config);
 const session = await service.start(requestContext, "user-123", "Support request");
 
 // 사칭 종료
-await service.end(session.sessionId);
+await service.end(requestContext, session.sessionId);
 
 // 컨텍스트에서 사칭 여부 확인
 const isImpersonating = service.isImpersonating(context);
@@ -130,7 +130,7 @@ const store = new InMemoryImpersonationStore();
 | 메서드                                  | 설명                                |
 | --------------------------------------- | ----------------------------------- |
 | `start(context, targetUserId, reason?)` | 인증된 현재 사용자로 사칭 세션 시작 |
-| `end(sessionId)`                        | 사칭 세션 종료                      |
+| `end(context, sessionId)`               | 인증된 원래 사칭자로 세션 종료      |
 | `isImpersonating(context)`              | 사칭 여부 확인                      |
 | `getImpersonator(context)`              | 검증된 원래 사용자 ID 반환          |
 | `getTargetUser(context)`                | 타겟 사용자 ID 반환                 |
@@ -140,6 +140,11 @@ const store = new InMemoryImpersonationStore();
 경우 provider identity와 일치해야 하며, 모든 검증이 성공한 뒤 `ImpersonationStore.createIfNoActiveSession()`으로
 actor별 세션을 원자적으로 생성합니다. 같은 actor의 동시 요청 중 하나만 성공하고 나머지는
 `NestedImpersonationProblem`으로 거부됩니다.
+
+`end`도 같은 principal과 전역 `impersonation:manage` 권한을 검증하며, 세션을 시작한 원래 impersonator만 종료할 수
+있습니다. 인증, 권한, 요청 identity 또는 세션 actor 검증이 실패하면 세션은 유지되고 종료 이벤트도 발행되지 않습니다.
+`ImpersonationStore.revoke(sessionId, impersonatorId)` 구현은 actor 검증과 세션 제거를 하나의 원자적 연산으로 수행하고
+단일 호출자에게만 `revoked` 결과를 반환해야 합니다.
 
 ### ImpersonationConfig
 
