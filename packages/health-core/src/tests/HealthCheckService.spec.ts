@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { HealthCheckService } from "../libs/HealthCheckService";
 import {
+  DuplicateHealthIndicatorProblem,
+  InvalidHealthIndicatorIdProblem,
   InvalidHealthCheckTimeoutProblem,
   MAX_HEALTH_CHECK_TIMEOUT_MS,
 } from "../libs/problems/HealthProblems";
@@ -102,6 +104,176 @@ describe("HealthCheckService", () => {
         expect.any(Function),
         Number.POSITIVE_INFINITY,
       );
+    });
+  });
+
+  describe("indicator registration lifecycle", () => {
+    it("uses an explicit health indicator id for successful and failed reports", async () => {
+      service.register("database", {
+        check: vi.fn().mockResolvedValue({ name: "minified-constructor-name", status: "up" }),
+      });
+      service.register("cache", {
+        check: vi.fn().mockRejectedValue(new Error("unavailable")),
+      });
+
+      await expect(service.check()).resolves.toEqual({
+        status: "down",
+        results: [
+          { name: "database", status: "up" },
+          { name: "cache", status: "down", details: { error: "unavailable" } },
+        ],
+      });
+    });
+
+    it("uses an explicit readiness indicator id for reports", async () => {
+      service.registerReadiness("database", {
+        check: vi.fn().mockResolvedValue({ name: "ignored-health-name", status: "up" }),
+        isReady: vi.fn().mockResolvedValue({ name: "ignored-readiness-name", status: "up" }),
+      });
+
+      await expect(service.checkReadiness()).resolves.toEqual({
+        status: "up",
+        results: [{ name: "database", status: "up" }],
+      });
+    });
+
+    it.each(["health", "readiness"] as const)(
+      "rejects a duplicate explicit id in the %s namespace without replacing the original",
+      async (namespace) => {
+        const original = {
+          check: vi.fn().mockResolvedValue({ name: "original", status: "up" as const }),
+        };
+        const replacement = {
+          check: vi.fn().mockResolvedValue({ name: "replacement", status: "down" as const }),
+          isReady: vi.fn().mockResolvedValue({ name: "replacement", status: "down" as const }),
+        };
+
+        if (namespace === "health") {
+          service.register("database", original);
+          expect(() => service.register("database", replacement)).toThrow(
+            DuplicateHealthIndicatorProblem,
+          );
+          await expect(service.check()).resolves.toEqual({
+            status: "up",
+            results: [{ name: "database", status: "up" }],
+          });
+        } else {
+          service.registerReadiness("database", { ...original, isReady: original.check });
+          expect(() => service.registerReadiness("database", replacement)).toThrow(
+            DuplicateHealthIndicatorProblem,
+          );
+          await expect(service.checkReadiness()).resolves.toEqual({
+            status: "up",
+            results: [{ name: "database", status: "up" }],
+          });
+        }
+
+        try {
+          if (namespace === "health") {
+            service.register("database", replacement);
+          } else {
+            service.registerReadiness("database", replacement);
+          }
+        } catch (error) {
+          expect(error).toMatchObject({
+            code: "health-core/duplicate-indicator-id",
+            extensions: { namespace, indicatorId: "database", retryable: false },
+          });
+        }
+      },
+    );
+
+    it("allows the same explicit id in separate health and readiness namespaces", async () => {
+      service.register("database", {
+        check: vi.fn().mockResolvedValue({ name: "health", status: "up" }),
+      });
+      service.registerReadiness("database", {
+        check: vi.fn().mockResolvedValue({ name: "health", status: "up" }),
+        isReady: vi.fn().mockResolvedValue({ name: "readiness", status: "up" }),
+      });
+
+      await expect(service.check()).resolves.toEqual({
+        status: "up",
+        results: [{ name: "database", status: "up" }],
+      });
+      await expect(service.checkReadiness()).resolves.toEqual({
+        status: "up",
+        results: [{ name: "database", status: "up" }],
+      });
+    });
+
+    it.each(["", " ", " database", "database "])("rejects invalid explicit id %j", (id) => {
+      expect(() =>
+        service.register(id, {
+          check: vi.fn().mockResolvedValue({ name: "database", status: "up" }),
+        }),
+      ).toThrow(InvalidHealthIndicatorIdProblem);
+    });
+
+    it("disposes only its registration and permits safe re-registration", async () => {
+      const database = service.register("database", {
+        check: vi.fn().mockResolvedValue({ name: "database", status: "up" }),
+      });
+      const cache = service.register("cache", {
+        check: vi.fn().mockResolvedValue({ name: "cache", status: "up" }),
+      });
+
+      database.dispose();
+      database.dispose();
+      const replacement = service.register("database", {
+        check: vi.fn().mockResolvedValue({ name: "replacement", status: "down" }),
+      });
+      database.dispose();
+
+      await expect(service.check()).resolves.toEqual({
+        status: "down",
+        results: [
+          { name: "cache", status: "up" },
+          { name: "database", status: "down" },
+        ],
+      });
+
+      cache.dispose();
+      replacement.dispose();
+      await expect(service.check()).resolves.toEqual({ status: "up", results: [] });
+    });
+
+    it("keeps an in-flight registration snapshot while excluding disposed indicators later", async () => {
+      let resolveCheck!: (result: HealthIndicatorResult) => void;
+      const registration = service.register("database", {
+        check: vi.fn().mockImplementation(
+          () =>
+            new Promise<HealthIndicatorResult>((resolve) => {
+              resolveCheck = resolve;
+            }),
+        ),
+      });
+
+      const inFlight = service.check();
+      registration.dispose();
+      resolveCheck({ name: "ignored", status: "up" });
+
+      await expect(inFlight).resolves.toEqual({
+        status: "up",
+        results: [{ name: "database", status: "up" }],
+      });
+      await expect(service.check()).resolves.toEqual({ status: "up", results: [] });
+    });
+
+    it("keeps the deprecated convenience overload disposable without deduplicating inferred names", async () => {
+      const first = service.register({
+        check: vi.fn().mockResolvedValue({ name: "first", status: "up" }),
+      });
+      service.register({
+        check: vi.fn().mockResolvedValue({ name: "second", status: "up" }),
+      });
+
+      first.dispose();
+
+      await expect(service.check()).resolves.toEqual({
+        status: "up",
+        results: [{ name: "second", status: "up" }],
+      });
     });
   });
 

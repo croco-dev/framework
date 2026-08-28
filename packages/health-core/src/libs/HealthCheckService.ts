@@ -1,7 +1,10 @@
 import {
+  DuplicateHealthIndicatorProblem,
+  InvalidHealthIndicatorIdProblem,
   InvalidHealthCheckTimeoutProblem,
   MAX_HEALTH_CHECK_TIMEOUT_MS,
 } from "./problems/HealthProblems";
+import type { HealthIndicatorNamespace } from "./problems/HealthProblems";
 import type {
   HealthIndicator,
   HealthIndicatorResult,
@@ -23,6 +26,11 @@ export type HealthCheckServiceOptions = {
   timeout?: number;
 };
 
+/** Idempotent handle that removes one registered health indicator from future reports. */
+export interface HealthIndicatorRegistration {
+  dispose(): void;
+}
+
 const DEFAULT_TIMEOUT = 5000;
 
 function assertValidTimeout(timeout: number, source: "default" | "indicator"): void {
@@ -32,13 +40,19 @@ function assertValidTimeout(timeout: number, source: "default" | "indicator"): v
 }
 
 type RegisteredIndicator<TIndicator extends HealthIndicator> = {
+  readonly id?: string;
   readonly indicator: TIndicator;
   readonly timeout?: number;
 };
 
 export class HealthCheckService {
-  private readonly indicators: RegisteredIndicator<HealthIndicator>[] = [];
-  private readonly readinessIndicators: RegisteredIndicator<ReadinessIndicator>[] = [];
+  private readonly healthIndicators = new Set<RegisteredIndicator<HealthIndicator>>();
+  private readonly readinessIndicators = new Set<RegisteredIndicator<ReadinessIndicator>>();
+  private readonly healthIndicatorIds = new Map<string, RegisteredIndicator<HealthIndicator>>();
+  private readonly readinessIndicatorIds = new Map<
+    string,
+    RegisteredIndicator<ReadinessIndicator>
+  >();
   private readonly timeout: number;
 
   constructor(options: HealthCheckServiceOptions = {}) {
@@ -47,20 +61,82 @@ export class HealthCheckService {
     this.timeout = timeout;
   }
 
-  register(indicator: HealthIndicator, options: HealthCheckServiceOptions = {}): void {
-    const timeout = options.timeout;
-    if (timeout !== undefined) {
-      assertValidTimeout(timeout, "indicator");
+  /**
+   * Registers a health indicator under a stable component ID.
+   *
+   * The ID replaces the indicator-returned name in reports. Duplicate IDs are rejected within the
+   * health namespace. Disposing the returned handle removes only this registration.
+   */
+  register(
+    id: string,
+    indicator: HealthIndicator,
+    options?: HealthCheckServiceOptions,
+  ): HealthIndicatorRegistration;
+  /** @deprecated Pass an explicit indicator ID as the first argument. */
+  register(
+    indicator: HealthIndicator,
+    options?: HealthCheckServiceOptions,
+  ): HealthIndicatorRegistration;
+  register(
+    idOrIndicator: string | HealthIndicator,
+    indicatorOrOptions: HealthIndicator | HealthCheckServiceOptions = {},
+    options: HealthCheckServiceOptions = {},
+  ): HealthIndicatorRegistration {
+    if (typeof idOrIndicator === "string") {
+      return this.registerExplicitIndicator(
+        "health",
+        idOrIndicator,
+        indicatorOrOptions as HealthIndicator,
+        options,
+        this.healthIndicators,
+        this.healthIndicatorIds,
+      );
     }
-    this.indicators.push({ indicator, timeout });
+
+    return this.registerLegacyIndicator(
+      idOrIndicator,
+      indicatorOrOptions as HealthCheckServiceOptions,
+      this.healthIndicators,
+    );
   }
 
-  registerReadiness(indicator: ReadinessIndicator, options: HealthCheckServiceOptions = {}): void {
-    const timeout = options.timeout;
-    if (timeout !== undefined) {
-      assertValidTimeout(timeout, "indicator");
+  /**
+   * Registers a readiness indicator under a stable component ID.
+   *
+   * The ID replaces the indicator-returned name in reports. Duplicate IDs are rejected within the
+   * readiness namespace. A health indicator may use the same ID because the namespaces are separate.
+   */
+  registerReadiness(
+    id: string,
+    indicator: ReadinessIndicator,
+    options?: HealthCheckServiceOptions,
+  ): HealthIndicatorRegistration;
+  /** @deprecated Pass an explicit indicator ID as the first argument. */
+  registerReadiness(
+    indicator: ReadinessIndicator,
+    options?: HealthCheckServiceOptions,
+  ): HealthIndicatorRegistration;
+  registerReadiness(
+    idOrIndicator: string | ReadinessIndicator,
+    indicatorOrOptions: ReadinessIndicator | HealthCheckServiceOptions = {},
+    options: HealthCheckServiceOptions = {},
+  ): HealthIndicatorRegistration {
+    if (typeof idOrIndicator === "string") {
+      return this.registerExplicitIndicator(
+        "readiness",
+        idOrIndicator,
+        indicatorOrOptions as ReadinessIndicator,
+        options,
+        this.readinessIndicators,
+        this.readinessIndicatorIds,
+      );
     }
-    this.readinessIndicators.push({ indicator, timeout });
+
+    return this.registerLegacyIndicator(
+      idOrIndicator,
+      indicatorOrOptions as HealthCheckServiceOptions,
+      this.readinessIndicators,
+    );
   }
 
   isLive(): boolean {
@@ -73,7 +149,7 @@ export class HealthCheckService {
   }
 
   async check(): Promise<HealthCheckResult> {
-    return this.checkIndicators(this.indicators, "check");
+    return this.checkIndicators(this.healthIndicators, "check");
   }
 
   async checkReadiness(): Promise<HealthCheckResult> {
@@ -81,11 +157,11 @@ export class HealthCheckService {
   }
 
   private async checkIndicators(
-    indicators: RegisteredIndicator<HealthIndicator | ReadinessIndicator>[],
+    indicators: ReadonlySet<RegisteredIndicator<HealthIndicator | ReadinessIndicator>>,
     method: "check" | "isReady",
   ): Promise<HealthCheckResult> {
     const results = await Promise.all(
-      indicators.map(({ indicator, timeout }) => this.checkWithTimeout(indicator, method, timeout)),
+      Array.from(indicators, (registration) => this.checkWithTimeout(registration, method)),
     );
 
     const status = results.every((r) => r.status === "up") ? "up" : "down";
@@ -94,10 +170,10 @@ export class HealthCheckService {
   }
 
   private async checkWithTimeout(
-    indicator: HealthIndicator | ReadinessIndicator,
+    registration: RegisteredIndicator<HealthIndicator | ReadinessIndicator>,
     method: "check" | "isReady",
-    timeoutOverride?: number,
   ): Promise<HealthIndicatorResult> {
+    const { id, indicator, timeout: timeoutOverride } = registration;
     const controller = new AbortController();
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
     const timeout = timeoutOverride ?? this.timeout;
@@ -105,7 +181,7 @@ export class HealthCheckService {
     const timeoutPromise = new Promise<HealthIndicatorResult>((_, reject) => {
       timeoutId = setTimeout(() => {
         controller.abort();
-        reject(new Error(`Health check timeout for ${getIndicatorName(indicator)}`));
+        reject(new Error(`Health check timeout for ${id ?? getIndicatorName(indicator)}`));
       }, timeout);
     });
 
@@ -114,11 +190,12 @@ export class HealthCheckService {
         method === "isReady" && "isReady" in indicator
           ? indicator.isReady.bind(indicator)
           : indicator.check.bind(indicator);
-      return await Promise.race([checkFn(controller.signal), timeoutPromise]);
+      const result = await Promise.race([checkFn(controller.signal), timeoutPromise]);
+      return id === undefined ? result : { ...result, name: id };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       return {
-        name: getIndicatorName(indicator),
+        name: id ?? getIndicatorName(indicator),
         status: "down",
         details: { error: message },
       };
@@ -128,6 +205,65 @@ export class HealthCheckService {
       }
     }
   }
+
+  private registerExplicitIndicator<TIndicator extends HealthIndicator>(
+    namespace: HealthIndicatorNamespace,
+    id: string,
+    indicator: TIndicator,
+    options: HealthCheckServiceOptions,
+    registrations: Set<RegisteredIndicator<TIndicator>>,
+    registrationsById: Map<string, RegisteredIndicator<TIndicator>>,
+  ): HealthIndicatorRegistration {
+    assertValidIndicatorId(namespace, id);
+    const timeout = validatedIndicatorTimeout(options);
+
+    if (registrationsById.has(id)) {
+      throw new DuplicateHealthIndicatorProblem(namespace, id);
+    }
+
+    const registration = { id, indicator, timeout };
+    registrations.add(registration);
+    registrationsById.set(id, registration);
+
+    return createRegistrationHandle(() => {
+      if (registrationsById.get(id) !== registration) {
+        return;
+      }
+      registrationsById.delete(id);
+      registrations.delete(registration);
+    });
+  }
+
+  private registerLegacyIndicator<TIndicator extends HealthIndicator>(
+    indicator: TIndicator,
+    options: HealthCheckServiceOptions,
+    registrations: Set<RegisteredIndicator<TIndicator>>,
+  ): HealthIndicatorRegistration {
+    const registration = { indicator, timeout: validatedIndicatorTimeout(options) };
+    registrations.add(registration);
+
+    return createRegistrationHandle(() => {
+      registrations.delete(registration);
+    });
+  }
+}
+
+function assertValidIndicatorId(namespace: HealthIndicatorNamespace, id: string): void {
+  if (id.length === 0 || id.trim() !== id) {
+    throw new InvalidHealthIndicatorIdProblem(namespace, id);
+  }
+}
+
+function validatedIndicatorTimeout(options: HealthCheckServiceOptions): number | undefined {
+  const timeout = options.timeout;
+  if (timeout !== undefined) {
+    assertValidTimeout(timeout, "indicator");
+  }
+  return timeout;
+}
+
+function createRegistrationHandle(dispose: () => void): HealthIndicatorRegistration {
+  return { dispose };
 }
 
 function getIndicatorName(indicator: HealthIndicator | ReadinessIndicator): string {

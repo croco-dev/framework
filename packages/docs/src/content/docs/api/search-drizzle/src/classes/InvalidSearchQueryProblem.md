@@ -47,7 +47,7 @@ Drizzle PostgreSQL 검색 쿼리 옵션이 안전하게 SQL로 컴파일될 수 
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`category`](/api/problems-core/src/classes/problem/#category)
 
-***
+---
 
 ### cause?
 
@@ -57,7 +57,7 @@ Drizzle PostgreSQL 검색 쿼리 옵션이 안전하게 SQL로 컴파일될 수 
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`cause`](/api/problems-core/src/classes/problem/#cause)
 
-***
+---
 
 ### code
 
@@ -67,7 +67,7 @@ Drizzle PostgreSQL 검색 쿼리 옵션이 안전하게 SQL로 컴파일될 수 
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`code`](/api/problems-core/src/classes/problem/#code)
 
-***
+---
 
 ### detail?
 
@@ -77,7 +77,7 @@ Drizzle PostgreSQL 검색 쿼리 옵션이 안전하게 SQL로 컴파일될 수 
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`detail`](/api/problems-core/src/classes/problem/#detail)
 
-***
+---
 
 ### extensions?
 
@@ -87,7 +87,7 @@ Drizzle PostgreSQL 검색 쿼리 옵션이 안전하게 SQL로 컴파일될 수 
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`extensions`](/api/problems-core/src/classes/problem/#extensions)
 
-***
+---
 
 ### instance?
 
@@ -97,7 +97,7 @@ Drizzle PostgreSQL 검색 쿼리 옵션이 안전하게 SQL로 컴파일될 수 
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`instance`](/api/problems-core/src/classes/problem/#instance)
 
-***
+---
 
 ### message
 
@@ -107,7 +107,7 @@ Drizzle PostgreSQL 검색 쿼리 옵션이 안전하게 SQL로 컴파일될 수 
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`message`](/api/problems-core/src/classes/problem/#message)
 
-***
+---
 
 ### name
 
@@ -117,7 +117,7 @@ Drizzle PostgreSQL 검색 쿼리 옵션이 안전하게 SQL로 컴파일될 수 
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`name`](/api/problems-core/src/classes/problem/#name)
 
-***
+---
 
 ### stack?
 
@@ -127,7 +127,7 @@ Drizzle PostgreSQL 검색 쿼리 옵션이 안전하게 SQL로 컴파일될 수 
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`stack`](/api/problems-core/src/classes/problem/#stack)
 
-***
+---
 
 ### type
 
@@ -137,13 +137,13 @@ Drizzle PostgreSQL 검색 쿼리 옵션이 안전하게 SQL로 컴파일될 수 
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`type`](/api/problems-core/src/classes/problem/#type)
 
-***
+---
 
 ### CODE
 
 > `readonly` `static` **CODE**: `"search-drizzle/invalid-query"` = `"search-drizzle/invalid-query"`
 
-***
+---
 
 ### stackTraceLimit
 
@@ -179,7 +179,7 @@ not capture any frames.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`status`](/api/problems-core/src/classes/problem/#status)
 
-***
+---
 
 ### title
 
@@ -209,7 +209,7 @@ not capture any frames.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`toJSON`](/api/problems-core/src/classes/problem/#tojson)
 
-***
+---
 
 ### captureStackTrace()
 
@@ -222,7 +222,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack;  // Similar to `new Error().stack`
+myObject.stack; // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -277,7 +277,7 @@ a();
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`captureStackTrace`](/api/problems-core/src/classes/problem/#capturestacktrace)
 
-***
+---
 
 ### prepareStackTrace()
 

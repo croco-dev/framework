@@ -13975,6 +13975,12 @@
           "sourceEntrypoint": "packages/health-core/src/index.ts",
           "runtimeExports": [
             {
+              "name": "DuplicateHealthIndicatorProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/HealthProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "HealthCheckService",
               "exportKind": "named",
               "source": "./libs/HealthCheckService",
@@ -13982,6 +13988,12 @@
             },
             {
               "name": "InvalidHealthCheckTimeoutProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/HealthProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InvalidHealthIndicatorIdProblem",
               "exportKind": "named",
               "source": "./libs/problems/HealthProblems",
               "declarationKind": "class"
@@ -14018,6 +14030,16 @@
               "name": "HealthIndicatorErrorDetails",
               "exportKind": "named",
               "source": "./libs/HealthIndicator"
+            },
+            {
+              "name": "HealthIndicatorNamespace",
+              "exportKind": "named",
+              "source": "./libs/problems/HealthProblems"
+            },
+            {
+              "name": "HealthIndicatorRegistration",
+              "exportKind": "named",
+              "source": "./libs/HealthCheckService"
             },
             {
               "name": "HealthIndicatorResult",

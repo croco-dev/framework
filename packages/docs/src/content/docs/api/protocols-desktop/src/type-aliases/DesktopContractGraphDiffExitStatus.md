@@ -13,13 +13,13 @@ title: "DesktopContractGraphDiffExitStatus"
 
 > `readonly` **exitCode**: [`DesktopContractGraphDiffExitCode`](/api/protocols-desktop/src/type-aliases/desktopcontractgraphdiffexitcode/)
 
-***
+---
 
 ### hasBreakingCompatibility
 
 > `readonly` **hasBreakingCompatibility**: `boolean`
 
-***
+---
 
 ### unreviewedAuthorityEscalations
 
