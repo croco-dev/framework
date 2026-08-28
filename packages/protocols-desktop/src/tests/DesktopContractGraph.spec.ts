@@ -1,3 +1,4 @@
+import { defineProblemRegistry, Problem, ProblemCategory } from "@croco/problems-core";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { compileDesktopContractGraph, desktop, stringifyDesktopContractGraph } from "../index";
@@ -210,7 +211,395 @@ describe("DesktopContractGraph", () => {
     expect(second.app.sourceLocation?.path).toBe("/checkout/tools/b/desktop.ts");
     expect(second.semanticHash).toBe(first.semanticHash);
   });
+
+  it("compiles command and effect Problems through supplied ProblemRegistry manifests", () => {
+    class ProjectOpenProblem extends Problem {
+      declare public readonly code: "EDITOR_PROJECT_OPEN_FAILED";
+      declare public readonly category: ProblemCategory.Conflict;
+
+      public constructor() {
+        super("EDITOR_PROJECT_OPEN_FAILED", ProblemCategory.Conflict);
+      }
+    }
+    class FilesystemUnavailableProblem extends Problem {
+      declare public readonly code: "EDITOR_FILESYSTEM_UNAVAILABLE";
+      declare public readonly category: ProblemCategory.InternalServerError;
+
+      public constructor() {
+        super("EDITOR_FILESYSTEM_UNAVAILABLE", ProblemCategory.InternalServerError);
+      }
+    }
+    const projectOpenProblem = desktop.problem(ProjectOpenProblem, {
+      code: "EDITOR_PROJECT_OPEN_FAILED",
+      category: ProblemCategory.Conflict,
+      extensions: z.object({ reason: z.string(), retryAfterMs: z.number().optional() }),
+    });
+    const filesystemUnavailableProblem = desktop.problem(FilesystemUnavailableProblem, {
+      code: "EDITOR_FILESYSTEM_UNAVAILABLE",
+      category: ProblemCategory.InternalServerError,
+    });
+    const filesystem = desktop.effect({
+      namespace: "filesystem",
+      access: "read",
+      methods: { readText: desktop.effect.method<[reference: string], Promise<string>>() },
+      problems: [filesystemUnavailableProblem],
+    });
+    const changed = desktop.event({ payload: z.object({ projectId: z.string() }) });
+    const project = desktop.contract({
+      commands: {
+        open: desktop.mutation({
+          input: z.object({ projectId: z.string() }),
+          output: z.object({ opened: z.boolean() }),
+          effects: [filesystem],
+          events: ["changed"],
+          problems: [projectOpenProblem],
+        }),
+      },
+      events: { changed },
+    });
+    const registry = defineProblemRegistry({
+      package: "@croco/editor",
+      problems: {
+        EDITOR_FILESYSTEM_UNAVAILABLE: {
+          category: ProblemCategory.InternalServerError,
+          retryable: true,
+          public: false,
+          redaction: "operator-only",
+        },
+        EDITOR_PROJECT_OPEN_FAILED: {
+          category: ProblemCategory.Conflict,
+          retryable: false,
+          public: true,
+          redaction: "safe",
+        },
+      },
+    });
+
+    const graph = compileDesktopContractGraph(
+      desktop.app({ contracts: { project }, windows: {} }),
+      { problemRegistries: [registry] },
+    );
+
+    expect(graph.commands[0]).toMatchObject({
+      effects: [
+        {
+          namespace: "filesystem",
+          access: "read",
+          methods: ["readText"],
+          grantIds: [],
+        },
+      ],
+      events: ["project.changed"],
+      problems: ["EDITOR_FILESYSTEM_UNAVAILABLE", "EDITOR_PROJECT_OPEN_FAILED"],
+    });
+    expect(graph.effects).toEqual(["filesystem"]);
+    expect(graph.problems).toEqual([
+      {
+        code: "EDITOR_FILESYSTEM_UNAVAILABLE",
+        category: ProblemCategory.InternalServerError,
+        source: {
+          package: "@croco/editor",
+          retryable: true,
+          retryability: "retryable",
+          public: false,
+          visibility: "private",
+          redaction: "operator-only",
+          cookbookPath: "/reference/problem-recovery-cookbook/#editor-filesystem-unavailable",
+        },
+      },
+      {
+        code: "EDITOR_PROJECT_OPEN_FAILED",
+        category: ProblemCategory.Conflict,
+        source: expect.objectContaining({ package: "@croco/editor" }),
+        extensions: {
+          kind: "object",
+          unknownKeys: "reject",
+          fields: [
+            { name: "reason", required: true, schema: { kind: "string" } },
+            {
+              name: "retryAfterMs",
+              required: false,
+              schema: { kind: "optional", inner: { kind: "number" } },
+            },
+          ],
+        },
+      },
+    ]);
+    expect(graph.diagnostics).toEqual([]);
+    const serialized = stringifyDesktopContractGraph(graph);
+    expect(serialized).not.toContain("stack");
+    expect(serialized).not.toContain("credential");
+    expect(serialized).not.toContain("cause");
+  });
+
+  it("reports declared Problems missing from supplied registries", () => {
+    const { app } = createProblemFixture();
+    const graph = compileDesktopContractGraph(app);
+
+    expect(graph.problems).toEqual([]);
+    expect(graph.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "DESKTOP_GRAPH_PROBLEM_REGISTRY_MISSING",
+        contractMember: "project.open",
+      }),
+    ]);
+  });
+
+  it("reports invalid registries and incompatible duplicate Problem definitions", () => {
+    const { app, registry } = createProblemFixture({ incompatibleDuplicate: true });
+    const invalidRegistryGraph = compileDesktopContractGraph(app, {
+      problemRegistries: [registry, registry],
+    });
+    expect(invalidRegistryGraph.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "DESKTOP_GRAPH_PROBLEM_REGISTRY_INVALID" }),
+        expect.objectContaining({ code: "DESKTOP_GRAPH_PROBLEM_REGISTRY_MISSING" }),
+      ]),
+    );
+
+    const incompatibleGraph = compileDesktopContractGraph(app, { problemRegistries: [registry] });
+    expect(incompatibleGraph.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "DESKTOP_GRAPH_DUPLICATE_PROBLEM_CODE" }),
+        expect.objectContaining({ code: "DESKTOP_GRAPH_PROBLEM_REGISTRY_MISMATCH" }),
+      ]),
+    );
+    expect(incompatibleGraph.problems[0]).not.toHaveProperty("extensions");
+
+    const reversed = createProblemFixture({
+      incompatibleDuplicate: true,
+      reverseDefinitions: true,
+    });
+    const reversedGraph = compileDesktopContractGraph(reversed.app, {
+      problemRegistries: [reversed.registry],
+    });
+    expect(stringifyDesktopContractGraph(reversedGraph)).toBe(
+      stringifyDesktopContractGraph(incompatibleGraph),
+    );
+    expect(reversedGraph.semanticHash).toBe(incompatibleGraph.semanticHash);
+  });
+
+  it("deduplicates compatible Problem definitions", () => {
+    const { app, registry } = createProblemFixture();
+    const graph = compileDesktopContractGraph(app, { problemRegistries: [registry] });
+
+    expect(graph.problems).toHaveLength(1);
+    expect(graph.diagnostics).toEqual([]);
+  });
+
+  it.each([
+    "stackTrace",
+    "filePath",
+    "credential",
+    "rootCause",
+    "accessKey",
+    "pathValue",
+    "causedBy",
+  ])("rejects the unsafe Problem extension field %s", (unsafeField) => {
+    class UnsafeProblem extends Problem {
+      declare public readonly code: "EDITOR_UNSAFE_FAILURE";
+
+      public constructor() {
+        super("EDITOR_UNSAFE_FAILURE", ProblemCategory.BadRequest);
+      }
+    }
+    const registry = defineProblemRegistry({
+      package: "@croco/editor",
+      problems: {
+        EDITOR_UNSAFE_FAILURE: {
+          category: ProblemCategory.BadRequest,
+          retryable: false,
+          public: true,
+          redaction: "public",
+        },
+      },
+    });
+    const unsafe = desktop.problem(UnsafeProblem, {
+      code: "EDITOR_UNSAFE_FAILURE",
+      category: ProblemCategory.BadRequest,
+      extensions: z.object({ [unsafeField]: z.string() }),
+    });
+    const project = desktop.contract({
+      commands: {
+        open: desktop.query({ input: z.object({}), output: z.string(), problems: [unsafe] }),
+      },
+    });
+    const graph = compileDesktopContractGraph(
+      desktop.app({ contracts: { project }, windows: {} }),
+      { problemRegistries: [registry] },
+    );
+
+    expect(graph.problems[0]).not.toHaveProperty("extensions");
+    expect(graph.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "DESKTOP_GRAPH_UNSAFE_PROBLEM_EXTENSION",
+        schemaPath: [unsafeField],
+      }),
+    ]);
+  });
+
+  it.each(["stack", "accessKey", "pathValue", "causedBy"])(
+    "rejects the nested unsafe Problem extension field %s",
+    (unsafeField) => {
+      class UnsafeProblem extends Problem {
+        declare public readonly code: "EDITOR_UNSAFE_FAILURE";
+
+        public constructor() {
+          super("EDITOR_UNSAFE_FAILURE", ProblemCategory.BadRequest);
+        }
+      }
+      const registry = defineProblemRegistry({
+        package: "@croco/editor",
+        problems: {
+          EDITOR_UNSAFE_FAILURE: {
+            category: ProblemCategory.BadRequest,
+            retryable: false,
+            public: true,
+            redaction: "public",
+          },
+        },
+      });
+      const unsafe = desktop.problem(UnsafeProblem, {
+        code: "EDITOR_UNSAFE_FAILURE",
+        category: ProblemCategory.BadRequest,
+        extensions: z.object({
+          errors: z.array(z.object({ [unsafeField]: z.string() })),
+        }),
+      });
+      const project = desktop.contract({
+        commands: {
+          open: desktop.query({ input: z.object({}), output: z.string(), problems: [unsafe] }),
+        },
+      });
+      const graph = compileDesktopContractGraph(
+        desktop.app({ contracts: { project }, windows: {} }),
+        { problemRegistries: [registry] },
+      );
+
+      expect(graph.problems[0]).not.toHaveProperty("extensions");
+      expect(graph.diagnostics).toEqual([
+        expect.objectContaining({
+          code: "DESKTOP_GRAPH_UNSAFE_PROBLEM_EXTENSION",
+          schemaPath: ["errors", "[]", unsafeField],
+        }),
+      ]);
+    },
+  );
+
+  it("rejects extension shapes for private operator-only Problems", () => {
+    class PrivateProblem extends Problem {
+      declare public readonly code: "EDITOR_PRIVATE_FAILURE";
+
+      public constructor() {
+        super("EDITOR_PRIVATE_FAILURE", ProblemCategory.InternalServerError);
+      }
+    }
+    const registry = defineProblemRegistry({
+      package: "@croco/editor",
+      problems: {
+        EDITOR_PRIVATE_FAILURE: {
+          category: ProblemCategory.InternalServerError,
+          retryable: false,
+          public: false,
+          redaction: "operator-only",
+        },
+      },
+    });
+    const failure = desktop.problem(PrivateProblem, {
+      code: "EDITOR_PRIVATE_FAILURE",
+      category: ProblemCategory.InternalServerError,
+      extensions: z.object({ reason: z.string() }),
+    });
+    const project = desktop.contract({
+      commands: {
+        open: desktop.query({ input: z.object({}), output: z.string(), problems: [failure] }),
+      },
+    });
+    const graph = compileDesktopContractGraph(
+      desktop.app({ contracts: { project }, windows: {} }),
+      { problemRegistries: [registry] },
+    );
+
+    expect(graph.problems[0]).not.toHaveProperty("extensions");
+    expect(graph.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "DESKTOP_GRAPH_UNSAFE_PROBLEM_EXTENSION",
+        schemaPath: ["reason"],
+      }),
+    ]);
+  });
+
+  it("rethrows unexpected ProblemRegistry failures", () => {
+    const { app, registry } = createProblemFixture();
+    const unreadableRegistry = new Proxy(registry, {
+      get() {
+        throw new Error("registry read failed");
+      },
+    });
+
+    expect(() =>
+      compileDesktopContractGraph(app, { problemRegistries: [unreadableRegistry] }),
+    ).toThrow("registry read failed");
+  });
 });
+
+function createProblemFixture(
+  options: {
+    readonly incompatibleDuplicate?: boolean;
+    readonly reverseDefinitions?: boolean;
+  } = {},
+) {
+  class ProjectOpenProblem extends Problem {
+    declare public readonly code: "EDITOR_PROJECT_OPEN_FAILED";
+
+    public constructor() {
+      super("EDITOR_PROJECT_OPEN_FAILED", ProblemCategory.Conflict);
+    }
+  }
+  const declared = desktop.problem(ProjectOpenProblem, {
+    code: "EDITOR_PROJECT_OPEN_FAILED",
+    category: ProblemCategory.Conflict,
+    extensions: z.object({ reason: z.string() }),
+  });
+  const duplicate = desktop.problem(ProjectOpenProblem, {
+    code: "EDITOR_PROJECT_OPEN_FAILED",
+    category: options.incompatibleDuplicate ? ProblemCategory.BadRequest : ProblemCategory.Conflict,
+    extensions: options.incompatibleDuplicate
+      ? z.object({ retryAfterMs: z.number() })
+      : z.object({ reason: z.string() }),
+  });
+  const effect = desktop.effect({
+    namespace: "filesystem",
+    access: "read",
+    methods: { readText: desktop.effect.method<[reference: string], Promise<string>>() },
+    problems: [options.reverseDefinitions ? declared : duplicate],
+  });
+  const project = desktop.contract({
+    commands: {
+      open: desktop.query({
+        input: z.object({ projectId: z.string() }),
+        output: z.string(),
+        effects: [effect],
+        problems: [options.reverseDefinitions ? duplicate : declared],
+      }),
+    },
+  });
+  const registry = defineProblemRegistry({
+    package: "@croco/editor",
+    problems: {
+      EDITOR_PROJECT_OPEN_FAILED: {
+        category: ProblemCategory.Conflict,
+        retryable: false,
+        public: true,
+        redaction: "safe",
+      },
+    },
+  });
+  return {
+    app: desktop.app({ contracts: { project }, windows: {} }),
+    registry,
+  };
+}
 
 function createFixtureApp(reverse: boolean) {
   const selectedFile = desktop.grant.file({

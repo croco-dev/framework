@@ -5,4 +5,4 @@ prev: false
 title: "DesktopContractGraphDiagnosticTargetKind"
 ---
 
-> **DesktopContractGraphDiagnosticTargetKind** = `"app"` \| `"command"` \| `"contract"` \| `"effect"` \| `"event"` \| `"execution-policy"` \| `"grant"` \| `"schema"` \| `"window"`
+> **DesktopContractGraphDiagnosticTargetKind** = `"app"` \| `"command"` \| `"contract"` \| `"effect"` \| `"event"` \| `"execution-policy"` \| `"grant"` \| `"problem"` \| `"schema"` \| `"window"`

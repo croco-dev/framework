@@ -11,7 +11,7 @@ title: "DesktopFailure"
 
 ### TProblem
 
-`TProblem` _extends_ [`Problem`](/api/problems-core/src/classes/problem/)
+`TProblem`
 
 ## Properties
 

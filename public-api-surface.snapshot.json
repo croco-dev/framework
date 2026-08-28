@@ -22464,6 +22464,16 @@
               "source": "./libs/DesktopContractGraph"
             },
             {
+              "name": "DesktopContractGraphProblem",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraph"
+            },
+            {
+              "name": "DesktopContractGraphProblemSource",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraph"
+            },
+            {
               "name": "DesktopContractGraphSchema",
               "exportKind": "named",
               "source": "./libs/DesktopContractGraph"
@@ -22640,6 +22650,16 @@
             },
             {
               "name": "DesktopMutationOptions",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopProblemConstructor",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopProblemOptions",
               "exportKind": "named",
               "source": "./libs/types"
             },

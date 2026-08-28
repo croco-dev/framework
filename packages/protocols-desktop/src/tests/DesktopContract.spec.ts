@@ -1,3 +1,4 @@
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { DesktopDefinitionProblem } from "../libs/DesktopDefinitionProblem";
@@ -6,6 +7,18 @@ import type { DesktopLocalWindowDefinition, DesktopRemoteWindowDefinition } from
 
 describe("desktop contract DSL", () => {
   it("preserves declarative command authority without installing effect implementations", () => {
+    class ReadProblem extends Problem {
+      declare public readonly code: "PROJECT_READ_FAILED";
+      declare public readonly category: ProblemCategory.InternalServerError;
+
+      public constructor() {
+        super("PROJECT_READ_FAILED", ProblemCategory.InternalServerError);
+      }
+    }
+    const readProblem = desktop.problem(ReadProblem, {
+      code: "PROJECT_READ_FAILED",
+      category: ProblemCategory.InternalServerError,
+    });
     const changed = desktop.event({ payload: z.object({ path: z.string() }) });
     const filesystem = desktop.effect({
       namespace: "filesystem",
@@ -19,7 +32,7 @@ describe("desktop contract DSL", () => {
       output: z.object({ contents: z.string() }),
       effects: [filesystem],
       events: ["changed"],
-      problems: [DesktopDefinitionProblem],
+      problems: [readProblem],
     });
 
     expect(command.effects).toEqual([
@@ -29,10 +42,11 @@ describe("desktop contract DSL", () => {
         access: "read",
         grants: [],
         methods: { readText: { definitionType: "effect-method" } },
+        problems: [],
       },
     ]);
     expect(command.events).toEqual(["changed"]);
-    expect(command.problems).toEqual([DesktopDefinitionProblem]);
+    expect(command.problems).toEqual([readProblem]);
     expect(command.effects[0]?.methods.readText).not.toHaveProperty("implementation");
   });
 
