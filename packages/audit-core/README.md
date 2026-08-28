@@ -17,8 +17,8 @@ class UserService {
   @Auditable({
     action: "user.update",
     resourceType: "User",
-    resourceIdParam: "id",
-    payloadParam: "dto",
+    resourceIdIndex: 0,
+    payloadIndex: 1,
     includeResult: false,
   })
   async updateUser(id: string, dto: unknown): Promise<void> {
@@ -27,6 +27,15 @@ class UserService {
   }
 }
 ```
+
+`resourceIdIndex`와 `payloadIndex`는 0부터 시작하는 메서드 파라미터 인덱스입니다. 예를 들어 컨텍스트가 첫 번째
+인자이고 리소스 ID와 payload가 뒤따르면 각각 `1`, `2`를 지정합니다. 기존 `resourceIdParam`과 `payloadParam`은
+파라미터 이름을 안정적으로 해석할 수 없으므로 제거되었습니다. 첫 번째/두 번째 인자를 선택하던 코드는 위 예제처럼
+각각 `resourceIdIndex: 0`, `payloadIndex: 1`로 마이그레이션해야 합니다. 선언되지 않은 인덱스는 데코레이터 적용 시
+`AuditableDecoratorProblem`으로 실패하며, 선택된 optional 인자가 생략되면 다른 인자로 대체하지 않습니다.
+default 또는 rest 파라미터와 그 뒤의 파라미터는 단일 인덱스로 안전하게 검증할 수 없으므로 선택할 수 없습니다.
+다른 메서드 데코레이터와 함께 사용할 때는 `@Auditable`을 메서드에 가장 가까이 배치해야 원본 파라미터 경계를
+검증할 수 있습니다.
 
 `Auditable`은 인자, 선택된 payload, diff, 오류 메시지와 명시적으로 포함한 결과에서 일반적인 credential 키와
 labelled secret 문자열을 재귀적으로 치환합니다. 메서드 결과는 기본적으로 저장하지 않으며, 필요한 경우에만

@@ -17,8 +17,8 @@ export type AuditLogEntry = {
 export type AuditableOptions = {
   action: string;
   resourceType: string;
-  resourceIdParam?: string;
-  payloadParam?: string;
+  resourceIdIndex?: number;
+  payloadIndex?: number;
   includeResult?: boolean;
   throwOnFailure?: boolean;
 };

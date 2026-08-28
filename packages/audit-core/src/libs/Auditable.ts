@@ -5,7 +5,7 @@ import { AUDIT_LOG_REPOSITORY_TOKEN } from "./AuditLogRepositoryToken";
 import { resolveImpersonationContext } from "./impersonationState";
 import { AuditableDecoratorProblem } from "./problems/AuditableDecoratorProblem";
 import { sanitizeAuditValue } from "./sanitizeAuditValue";
-import type { AuditableOptions, AuditLogEntry } from "./types";
+import type { AuditableOptions, AuditLogEntry, AuditParamMetadata } from "./types";
 
 type DecoratedMethod = (...args: unknown[]) => unknown;
 
@@ -37,14 +37,16 @@ function extractDiffFromPayload(payload: unknown): Record<string, unknown> | nul
   return sanitized as Record<string, unknown>;
 }
 
-function toResourceId(value: unknown, args: unknown[]): string {
+function toResourceId(value: unknown, args: unknown[], useFirstArgumentFallback: boolean): string {
   if (value !== undefined && value !== null) {
     return String(value);
   }
 
-  const firstArgument = args[0];
-  if (firstArgument !== undefined && firstArgument !== null) {
-    return String(firstArgument);
+  if (useFirstArgumentFallback) {
+    const firstArgument = args[0];
+    if (firstArgument !== undefined && firstArgument !== null) {
+      return String(firstArgument);
+    }
   }
 
   return "unknown";
@@ -162,12 +164,40 @@ async function writeAuditLog(
 
 export const AUDIT_PARAM_KEY = Symbol("audit:param");
 
-export type AuditParamMetadata = {
-  resourceIdIndex?: number;
-  payloadIndex?: number;
-};
+function resolveParameterIndex(
+  optionName: "resourceIdIndex" | "payloadIndex",
+  index: number | undefined,
+  selectableParameterCount: number,
+): number | undefined {
+  if (index === undefined) {
+    return undefined;
+  }
+
+  if (!Number.isSafeInteger(index) || index < 0 || index >= selectableParameterCount) {
+    throw new AuditableDecoratorProblem(
+      `@Auditable ${optionName} must reference a fixed parameter before the first default or rest parameter; received ${String(index)} for a method with ${selectableParameterCount} selectable parameters. When combining method decorators, place @Auditable closest to the method`,
+    );
+  }
+
+  return index;
+}
+
+function rejectLegacyParameterSelectors(options: AuditableOptions): void {
+  const legacyOptions = options as AuditableOptions & {
+    resourceIdParam?: unknown;
+    payloadParam?: unknown;
+  };
+
+  if (legacyOptions.resourceIdParam !== undefined || legacyOptions.payloadParam !== undefined) {
+    throw new AuditableDecoratorProblem(
+      "@Auditable resourceIdParam and payloadParam are unsupported; migrate to resourceIdIndex and payloadIndex",
+    );
+  }
+}
 
 export function Auditable(options: AuditableOptions): MethodDecorator {
+  rejectLegacyParameterSelectors(options);
+
   return (
     target: object,
     propertyKey: string | symbol,
@@ -179,9 +209,18 @@ export function Auditable(options: AuditableOptions): MethodDecorator {
       throw new AuditableDecoratorProblem("@Auditable can only be applied to methods");
     }
 
+    const selectableParameterCount = originalMethod.length;
     const paramMetadata: AuditParamMetadata = {
-      resourceIdIndex: options.resourceIdParam !== undefined ? 0 : undefined,
-      payloadIndex: options.payloadParam !== undefined ? 1 : undefined,
+      resourceIdIndex: resolveParameterIndex(
+        "resourceIdIndex",
+        options.resourceIdIndex,
+        selectableParameterCount,
+      ),
+      payloadIndex: resolveParameterIndex(
+        "payloadIndex",
+        options.payloadIndex,
+        selectableParameterCount,
+      ),
     };
 
     Reflect.defineMetadata(AUDIT_PARAM_KEY, paramMetadata, target, propertyKey);
@@ -205,7 +244,11 @@ export function Auditable(options: AuditableOptions): MethodDecorator {
           (impersonation.status === "invalid" ? "unknown" : (context?.user?.id ?? "unknown")),
         action: options.action,
         resourceType: options.resourceType,
-        resourceId: toResourceId(resourceIdValue, args),
+        resourceId: toResourceId(
+          resourceIdValue,
+          args,
+          paramMetadata.resourceIdIndex === undefined,
+        ),
         diff: extractDiffFromPayload(payloadInput),
         metadata: activeImpersonation
           ? {

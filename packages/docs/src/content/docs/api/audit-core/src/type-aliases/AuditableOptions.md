@@ -23,15 +23,15 @@ title: "AuditableOptions"
 
 ---
 
-### payloadParam?
+### payloadIndex?
 
-> `optional` **payloadParam?**: `string`
+> `optional` **payloadIndex?**: `number`
 
 ---
 
-### resourceIdParam?
+### resourceIdIndex?
 
-> `optional` **resourceIdParam?**: `string`
+> `optional` **resourceIdIndex?**: `number`
 
 ---
 
