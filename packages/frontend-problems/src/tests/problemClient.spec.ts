@@ -453,6 +453,42 @@ describe("frontend Problem client runtime", () => {
     });
   });
 
+  it("recursively redacts and bounds structured response evidence", () => {
+    const password = "nested-password";
+    const token = "nested-token";
+    const body = {
+      account: {
+        password,
+        sessions: [{ accessToken: token, note: `Bearer ${token}` }],
+      },
+      message: "upstream failed",
+    };
+    const error = new ProblemResponseError(new Response(null, { status: 502 }), body);
+
+    expect(error.body).toEqual({
+      account: {
+        password: "[redacted]",
+        sessions: [{ accessToken: "[redacted]", note: "[redacted]" }],
+      },
+      message: "upstream failed",
+    });
+    expect(error.body).not.toBe(body);
+    expect(JSON.stringify(error.body)).not.toContain(password);
+    expect(JSON.stringify(error.body)).not.toContain(token);
+    expect(error.bodyTruncated).toBe(false);
+
+    const oversizedError = new ProblemResponseError(new Response(null, { status: 502 }), {
+      password,
+      payload: "x".repeat(1_000),
+    });
+
+    expect(typeof oversizedError.body).toBe("string");
+    expect(String(oversizedError.body)).not.toContain(password);
+    expect(String(oversizedError.body)).toHaveLength(500);
+    expect(String(oversizedError.body)).toMatch(/\.\.\.$/);
+    expect(oversizedError.bodyTruncated).toBe(true);
+  });
+
   it("preserves response body cancellation identity for throwing and Result helpers", async () => {
     const requiredThrowingAbort = createAbortError();
     await expect(handleJsonResponse(unreadableJsonResponse(requiredThrowingAbort))).rejects.toBe(

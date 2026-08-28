@@ -7,6 +7,10 @@ const STRUCTURED_RESPONSE_SECRET_PATTERN =
   /(?:-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?(?:-----END [A-Z ]*PRIVATE KEY-----|$)|github_pat_[a-zA-Z0-9_]{20,}|gh[pousr]_[a-zA-Z0-9]{20,}|AKIA[A-Z0-9]{16}|eyJ[a-zA-Z0-9_-]+\.eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+)/g;
 const TRAILING_STRUCTURED_RESPONSE_SECRET_PATTERN =
   /(?:(?:github_pat_|gh[pousr]_)[a-zA-Z0-9_]*|AKIA[A-Z0-9]*|eyJ[a-zA-Z0-9_-]+\.eyJ[a-zA-Z0-9_-]+(?:\.[a-zA-Z0-9_-]*)?)$/g;
+const SENSITIVE_RESPONSE_FIELD_PATTERN =
+  /^(?:authorization|proxy[-_]?authorization|cookie|set[-_]?cookie|credential|password|passphrase|passwd|pwd|secret|token|api[-_]?key|private[-_]?key|access[-_]?key(?:[-_]?id)?|access[-_]?token|refresh[-_]?token|client[-_]?secret|connection[-_]?string|dsn)$/i;
+const MAX_STRUCTURED_RESPONSE_DEPTH = 8;
+const MAX_STRUCTURED_RESPONSE_ENTRIES = 100;
 
 export type ProblemDetails<Code extends string = string, Status extends number = number> = {
   readonly type: string;
@@ -287,10 +291,33 @@ function createResponseBodyEvidence(body: unknown): {
   readonly body: unknown;
   readonly truncated: boolean;
 } {
-  if (typeof body !== "string") {
+  if (typeof body === "string") {
+    return createStringResponseBodyEvidence(body);
+  }
+
+  if (body === null || typeof body !== "object") {
     return { body, truncated: false };
   }
 
+  const state: StructuredResponseEvidenceState = {
+    remainingEntries: MAX_STRUCTURED_RESPONSE_ENTRIES,
+    truncated: false,
+    visited: new WeakSet<object>(),
+  };
+  const sanitized = sanitizeStructuredResponseBody(body, state, 0);
+  const serialized = JSON.stringify(sanitized);
+
+  if (serialized.length > MAX_RESPONSE_BODY_EXCERPT_LENGTH) {
+    return createStringResponseBodyEvidence(serialized);
+  }
+
+  return { body: sanitized, truncated: state.truncated };
+}
+
+function createStringResponseBodyEvidence(body: string): {
+  readonly body: string;
+  readonly truncated: boolean;
+} {
   const inputTruncated = body.length > MAX_RESPONSE_BODY_EXCERPT_LENGTH;
   const excerpt = inputTruncated ? body.slice(0, MAX_RESPONSE_BODY_EXCERPT_LENGTH - 3) : body;
   const redacted = redactResponseBody(excerpt, inputTruncated);
@@ -300,6 +327,79 @@ function createResponseBodyEvidence(body: unknown): {
     body: truncated ? `${redacted.slice(0, MAX_RESPONSE_BODY_EXCERPT_LENGTH - 3)}...` : redacted,
     truncated,
   };
+}
+
+type StructuredResponseEvidenceState = {
+  remainingEntries: number;
+  truncated: boolean;
+  readonly visited: WeakSet<object>;
+};
+
+function sanitizeStructuredResponseBody(
+  value: unknown,
+  state: StructuredResponseEvidenceState,
+  depth: number,
+): unknown {
+  if (typeof value === "string") {
+    const evidence = createStringResponseBodyEvidence(value);
+    state.truncated ||= evidence.truncated;
+    return evidence.body;
+  }
+
+  if (value === null || typeof value === "boolean" || typeof value === "number") {
+    return value;
+  }
+
+  if (typeof value !== "object") {
+    state.truncated = true;
+    return "[unsupported]";
+  }
+
+  if (state.visited.has(value)) {
+    state.truncated = true;
+    return "[circular]";
+  }
+
+  if (depth >= MAX_STRUCTURED_RESPONSE_DEPTH || state.remainingEntries === 0) {
+    state.truncated = true;
+    return "[truncated]";
+  }
+
+  state.visited.add(value);
+
+  if (Array.isArray(value)) {
+    const sanitized: unknown[] = [];
+
+    for (const entry of value) {
+      if (state.remainingEntries === 0) {
+        state.truncated = true;
+        break;
+      }
+
+      state.remainingEntries -= 1;
+      sanitized.push(sanitizeStructuredResponseBody(entry, state, depth + 1));
+    }
+
+    state.visited.delete(value);
+    return sanitized;
+  }
+
+  const sanitized: Record<string, unknown> = {};
+
+  for (const key of Object.keys(value)) {
+    if (state.remainingEntries === 0) {
+      state.truncated = true;
+      break;
+    }
+
+    state.remainingEntries -= 1;
+    sanitized[key] = SENSITIVE_RESPONSE_FIELD_PATTERN.test(key)
+      ? REDACTED_RESPONSE_BODY_VALUE
+      : sanitizeStructuredResponseBody((value as Record<string, unknown>)[key], state, depth + 1);
+  }
+
+  state.visited.delete(value);
+  return sanitized;
 }
 
 function redactResponseBody(body: string, inputTruncated: boolean): string {
