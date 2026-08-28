@@ -357,7 +357,7 @@
     {
       "package": "@croco/frontend-problems",
       "file": "packages/frontend-problems/src/index.ts",
-      "line": 630,
+      "line": 730,
       "excerpt": "throw new Error(`Unhandled Problem variant${suffix}`);",
       "reason": "Internal exhaustive/programmer assertion retained as a reviewed exception while user-facing runtime validation paths use coded errors.",
       "owner": "framework-error-handling",

@@ -1245,7 +1245,6 @@ function getProblemClassFields(
   | null {
   let code: string | null = null;
   let category: ProblemCategory | null = null;
-  let codeNode: ts.Node | null = null;
 
   for (const member of node.members) {
     if (!ts.isPropertyDeclaration(member)) {
@@ -1256,7 +1255,6 @@ function getProblemClassFields(
 
     if (name === "code") {
       code = getStringValue(sourceFile, member.initializer, stringConstants);
-      codeNode = member;
     }
 
     if (name === "category") {
@@ -1264,12 +1262,12 @@ function getProblemClassFields(
     }
   }
 
-  return code && category && codeNode
+  return code && category
     ? {
         code,
         category,
         kind: "problem-class",
-        node: codeNode,
+        node,
       }
     : null;
 }

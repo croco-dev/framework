@@ -678,8 +678,10 @@ describe("problem-registry.mts", () => {
         code: "alpha/not-found",
         sources: [
           expect.objectContaining({
+            column: 1,
             file: "packages/alpha/src/problems.ts",
             kind: "problem-class",
+            line: 2,
           }),
         ],
       }),
