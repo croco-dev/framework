@@ -15,10 +15,7 @@ pnpm add @croco/impersonation-core
 사칭 세션 관리를 위한 서비스입니다.
 
 ```typescript
-import {
-  ImpersonationLifecycleEventPublisher,
-  ImpersonationService,
-} from "@croco/impersonation-core";
+import { ImpersonationService } from "@croco/impersonation-core";
 
 const service = new ImpersonationService(store, authProvider, config, lifecycleEventPublisher);
 
@@ -28,9 +25,6 @@ const session = await service.start(requestContext, "user-123", "Support request
 // 사칭 종료
 await service.end(requestContext, session.sessionId);
 
-// 발행 실패 후 저장된 lifecycle intent 재시도
-await service.publishPendingEvents();
-
 // 컨텍스트에서 사칭 여부 확인
 const isImpersonating = service.isImpersonating(context);
 
@@ -39,6 +33,15 @@ const impersonatorId = service.getImpersonator(context);
 
 // 타겟 사용자 ID 가져오기
 const targetUserId = service.getTargetUser(context);
+```
+
+`start()` 또는 `end()`에서 lifecycle event 발행이 실패하면 세션 변경은 이미 커밋된 상태입니다. 원래 요청을
+다시 실행하지 말고, 요청 처리와 분리된 reconciliation worker에서 저장된 intent를 재시도합니다.
+
+```typescript
+async function reconcilePendingLifecycleEvents(): Promise<void> {
+  await service.publishPendingEvents();
+}
 ```
 
 ### ImpersonationContext
