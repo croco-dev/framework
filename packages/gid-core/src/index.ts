@@ -1,8 +1,8 @@
-import type { IdPrefixInstance, IdPrefixRegistry } from "./libs/defineIdPrefixes";
+import type { IdOf, IdPrefixInstance, IdPrefixRegistry } from "./libs/defineIdPrefixes";
 import { defineIdPrefixes } from "./libs/defineIdPrefixes";
 import type { PrefixedId } from "./libs/IdPrefix";
 import { IdPrefix } from "./libs/IdPrefix";
-import { IdPrefixProblem, InvalidIdPrefixProblem } from "./libs/problems/GidProblems";
+import { InvalidIdPrefixProblem } from "./libs/problems/GidProblems";
 
 /**
  * Creates a type-safe registry for generating and validating prefixed GIDs.
@@ -20,6 +20,11 @@ export type { IdPrefixInstance };
 export type { IdPrefixRegistry };
 
 /**
+ * Extracts the branded GID type from an entry returned by {@link defineIdPrefixes}.
+ */
+export type { IdOf };
+
+/**
  * Generates and validates GIDs for a specific prefix.
  */
 export { IdPrefix };
@@ -33,5 +38,3 @@ export type { PrefixedId };
  * Problem thrown when a GID prefix is shorter than the supported minimum.
  */
 export { InvalidIdPrefixProblem };
-
-export { IdPrefixProblem };

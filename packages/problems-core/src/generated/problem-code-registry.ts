@@ -8585,16 +8585,16 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         },
       },
       lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/gid-core/src/libs/problems/GidProblems.ts",
-          line: 17,
-          column: 3,
-          kind: "problem-class",
+        status: "deprecated",
+        deprecation: {
+          reason: "The throwing registry type-marker property was removed.",
+          migrationNote:
+            "Replace typeof Ids.USER.Id with IdOf<typeof Ids.USER> and stop branching on gid-core/id-type-only-property.",
+          noReplacementReason:
+            "Type extraction no longer performs a runtime operation or throws a Problem.",
         },
-      ],
+      },
+      sources: [],
     },
     {
       code: "gid-core/invalid-id-prefix",

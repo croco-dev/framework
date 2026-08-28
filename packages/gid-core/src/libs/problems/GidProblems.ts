@@ -12,12 +12,3 @@ export class InvalidIdPrefixProblem extends Problem {
     );
   }
 }
-
-export class IdPrefixProblem extends Problem {
-  readonly code = "gid-core/id-type-only-property";
-  readonly category = ProblemCategory.InternalServerError;
-
-  constructor() {
-    super(undefined, undefined, "Id is a type-only property and should not be accessed at runtime");
-  }
-}

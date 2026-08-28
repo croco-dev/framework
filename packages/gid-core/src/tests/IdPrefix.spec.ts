@@ -1,6 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
+import type { IdOf } from "../libs/defineIdPrefixes";
 import { defineIdPrefixes } from "../libs/defineIdPrefixes";
 import { IdPrefix } from "../libs/IdPrefix";
+import type { PrefixedId } from "../libs/IdPrefix";
 
 describe("IdPrefix", () => {
   describe("generate", () => {
@@ -139,11 +141,32 @@ describe("defineIdPrefixes", () => {
     expect(Ids.CATEGORY.getPrefix()).toBe("cat");
   });
 
-  it("Id 프로퍼티 접근 시 에러를 던진다", () => {
+  it("공개된 모든 필드를 안전하게 열거할 수 있다", () => {
     const Ids = defineIdPrefixes({
       TEST: "tst",
     } as const);
 
-    expect(() => Ids.TEST.Id).toThrow("type-only property");
+    expect(() => Object.values(Ids.TEST)).not.toThrow();
+    expect(Object.keys(Ids.TEST)).toEqual([
+      "generate",
+      "validate",
+      "getPrefix",
+      "getExpectedLength",
+    ]);
+    expect("Id" in Ids.TEST).toBe(false);
+  });
+
+  it("IdOf가 registry entry의 literal prefix를 보존한다", () => {
+    const Ids = defineIdPrefixes({
+      USER: "usr",
+      ORDER: "ord",
+    } as const);
+
+    expectTypeOf<IdOf<typeof Ids.USER>>().toEqualTypeOf<PrefixedId<"usr">>();
+    expectTypeOf<IdOf<typeof Ids.ORDER>>().toEqualTypeOf<PrefixedId<"ord">>();
+    expectTypeOf(Ids.USER.generate()).toEqualTypeOf<IdOf<typeof Ids.USER>>();
+
+    // @ts-expect-error runtime-only entries no longer expose a type marker property
+    void Ids.USER.Id;
   });
 });

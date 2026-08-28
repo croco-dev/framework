@@ -1703,6 +1703,12 @@
       "owner": "@croco/gid-core"
     },
     {
+      "path": "packages/gid-core/src/tests/PublishedTypes.spec.ts",
+      "lane": "published",
+      "qualifiers": [],
+      "owner": "@croco/gid-core"
+    },
+    {
       "path": "packages/governance-core/src/tests/DataGovernanceResource.spec.ts",
       "lane": "fast",
       "qualifiers": [],
