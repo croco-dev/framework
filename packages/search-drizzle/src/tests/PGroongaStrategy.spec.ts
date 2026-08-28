@@ -2,6 +2,7 @@ import { CasingCache } from "drizzle-orm/casing";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import { PGroongaStrategy } from "../libs/strategies/PGroongaStrategy";
+import { registerSearchQueryOptionTests } from "./strategyQueryOptionsTests";
 
 const mockDb = {
   execute: vi.fn(),
@@ -14,6 +15,8 @@ describe("PGroongaStrategy", () => {
     vi.clearAllMocks();
     strategy = new PGroongaStrategy();
   });
+
+  registerSearchQueryOptionTests(() => new PGroongaStrategy());
 
   describe("buildSearchQuery", () => {
     it("should build correct search query", () => {

@@ -2,6 +2,7 @@ import { CasingCache } from "drizzle-orm/casing";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import { PgSearchStrategy } from "../libs/strategies/PgSearchStrategy";
+import { registerSearchQueryOptionTests } from "./strategyQueryOptionsTests";
 
 type PgSearchStrategyPrivate = {
   indexName: string;
@@ -27,6 +28,8 @@ describe("PgSearchStrategy", () => {
     vi.clearAllMocks();
     strategy = new PgSearchStrategy();
   });
+
+  registerSearchQueryOptionTests(() => new PgSearchStrategy());
 
   it("should initialize with default options", () => {
     expect(strategy).toBeInstanceOf(PgSearchStrategy);
