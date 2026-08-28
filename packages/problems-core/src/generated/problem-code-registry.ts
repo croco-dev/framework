@@ -7494,9 +7494,12 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       cookbookPath:
         "/reference/problem-recovery-cookbook/#framework-config-runtime-env-preset-boundary",
       recovery: {
-        cause: "The request or generated contract failed schema or semantic validation.",
-        userAction: "Fix the invalid fields and retry with schema-conformant input.",
-        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        cause:
+          "A selected runtime env preset exposed a client variable without the `NEXT_PUBLIC_` prefix or exposed a server variable with that prefix.",
+        userAction:
+          "Correct the `NEXT_PUBLIC_` prefix or remove the incompatible preset from defineRuntimeEnv, then retry configuration validation.",
+        operatorAction:
+          "Inspect the reported preset section and variable name, then keep public `NEXT_PUBLIC_` variables in client and private variables in server.",
         retryability: "not-retryable",
         redactionPolicy: "public",
         telemetry: {
@@ -7511,7 +7514,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-config/src/libs/problems/ConfigProblems.ts",
-          line: 32,
+          line: 33,
           column: 3,
           kind: "problem-class",
         },

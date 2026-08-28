@@ -103,6 +103,7 @@ preset 순서는 같은 키가 중복될 때 적용되는 우선순위를 결정
 별도 변수로 재사용할 때는 `as const` 또는 `satisfies`로 키와 순서를 유지합니다.
 
 ```typescript
+import { appConfig, databaseConfig } from "@croco/framework-config";
 import type { RuntimeEnvPreset } from "@croco/framework-config";
 
 const presets = [appConfig, databaseConfig] as const;

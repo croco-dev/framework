@@ -28,6 +28,7 @@ export class InvalidBooleanEnvProblem extends Problem {
   }
 }
 
+/** Reports a runtime env preset whose variables cross the client/server exposure boundary. */
 export class RuntimeEnvPresetBoundaryProblem extends Problem {
   readonly code = "framework-config/runtime-env-preset-boundary";
   readonly category = ProblemCategory.ValidationError;
