@@ -17,6 +17,10 @@ export type DataFieldValueType =
 
 export type DataRetentionDisposition = "delete" | "anonymize" | "archive" | "manual-review";
 
+export type DataTenantIdentifierOverride = {
+  readonly reason: string;
+};
+
 export type DataRetentionPolicy = {
   readonly id: string;
   readonly durationDays: number;
@@ -31,6 +35,7 @@ export type DataSubjectIdentity = {
   readonly type: string;
   readonly idField: string;
   readonly tenantField?: string;
+  readonly tenantIdentifierOverride?: DataTenantIdentifierOverride;
   readonly labelField?: string;
 };
 

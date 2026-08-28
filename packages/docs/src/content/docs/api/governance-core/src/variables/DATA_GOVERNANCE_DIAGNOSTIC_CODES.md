@@ -101,6 +101,18 @@ title: "DATA_GOVERNANCE_DIAGNOSTIC_CODES"
 
 > `readonly` **subjectIdFieldRequired**: `"governance-core/subject-id-field-required"` = `"governance-core/subject-id-field-required"`
 
+### subjectTenantFieldRequired
+
+> `readonly` **subjectTenantFieldRequired**: `"governance-core/subject-tenant-field-required"` = `"governance-core/subject-tenant-field-required"`
+
+### subjectTenantFieldTypeInvalid
+
+> `readonly` **subjectTenantFieldTypeInvalid**: `"governance-core/subject-tenant-field-type-invalid"` = `"governance-core/subject-tenant-field-type-invalid"`
+
+### subjectTenantIdentifierOverrideReasonRequired
+
+> `readonly` **subjectTenantIdentifierOverrideReasonRequired**: `"governance-core/subject-tenant-identifier-override-reason-required"` = `"governance-core/subject-tenant-identifier-override-reason-required"`
+
 ### subjectTypeRequired
 
 > `readonly` **subjectTypeRequired**: `"governance-core/subject-type-required"` = `"governance-core/subject-type-required"`

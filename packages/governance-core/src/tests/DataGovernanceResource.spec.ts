@@ -220,6 +220,172 @@ describe("DataGovernanceResource", () => {
     ).toMatchObject({ disposition: "delete" });
   });
 
+  it("requires an identifier tenant field only for tenant-scoped resources", () => {
+    const resource = {
+      fields: [
+        { classifications: ["operational"], id: "id", valueType: "identifier" },
+        { classifications: ["operational"], id: "tenantId", valueType: "identifier" },
+      ],
+      kind: "account",
+      label: "Account",
+      subject: {
+        idField: "id",
+        type: "account",
+      },
+    } as const;
+
+    const tenantWithoutField = {
+      ...resource,
+      scope: "tenant",
+    } satisfies DataGovernanceResource;
+    const tenantWithUnknownField = {
+      ...tenantWithoutField,
+      subject: { ...resource.subject, tenantField: "workspaceId" },
+    } satisfies DataGovernanceResource;
+    const tenantWithNonIdentifierField = {
+      ...tenantWithoutField,
+      fields: [resource.fields[0], { ...resource.fields[1], valueType: "string" }],
+      subject: { ...resource.subject, tenantField: "tenantId" },
+    } satisfies DataGovernanceResource;
+    const tenantWithPaddedReference = {
+      ...tenantWithoutField,
+      subject: { ...resource.subject, tenantField: " tenantId " },
+    } satisfies DataGovernanceResource;
+    const tenantWithPaddedFieldId = {
+      ...tenantWithoutField,
+      fields: [resource.fields[0], { ...resource.fields[1], id: " tenantId " }],
+      subject: { ...resource.subject, tenantField: "tenantId" },
+    } satisfies DataGovernanceResource;
+    const tenantWithPaddedValueType = {
+      ...tenantWithoutField,
+      fields: [resource.fields[0], { ...resource.fields[1], valueType: " identifier " }],
+      subject: { ...resource.subject, tenantField: "tenantId" },
+    } satisfies DataGovernanceResource;
+    const tenantWithDocumentedOverride = {
+      ...tenantWithoutField,
+      fields: [
+        resource.fields[0],
+        {
+          ...resource.fields[1],
+          valueType: "uuid",
+        },
+      ],
+      subject: {
+        ...resource.subject,
+        tenantField: "tenantId",
+        tenantIdentifierOverride: { reason: "Provider tenant keys use canonical UUID strings" },
+      },
+    } satisfies DataGovernanceResource;
+    const tenantWithUndocumentedOverride = {
+      ...tenantWithDocumentedOverride,
+      subject: {
+        ...tenantWithDocumentedOverride.subject,
+        tenantIdentifierOverride: { reason: " " },
+      },
+    } satisfies DataGovernanceResource;
+    const globalResource = {
+      ...resource,
+      scope: "global",
+    } satisfies DataGovernanceResource;
+    const systemResource = {
+      ...resource,
+      scope: "system",
+    } satisfies DataGovernanceResource;
+    const validTenantResource = {
+      ...tenantWithoutField,
+      subject: { ...resource.subject, tenantField: "tenantId" },
+    } satisfies DataGovernanceResource;
+
+    expect(validateDataGovernanceResources([tenantWithoutField])).toMatchObject({
+      diagnostics: [
+        {
+          code: DATA_GOVERNANCE_DIAGNOSTIC_CODES.subjectTenantFieldRequired,
+          path: "resources[0].subject.tenantField",
+        },
+      ],
+      valid: false,
+    });
+    expect(validateDataGovernanceResources([tenantWithUnknownField])).toMatchObject({
+      diagnostics: [
+        {
+          code: DATA_GOVERNANCE_DIAGNOSTIC_CODES.subjectFieldUnknown,
+          path: "resources[0].subject.tenantField",
+        },
+      ],
+      valid: false,
+    });
+    expect(validateDataGovernanceResources([tenantWithNonIdentifierField])).toMatchObject({
+      diagnostics: [
+        {
+          code: DATA_GOVERNANCE_DIAGNOSTIC_CODES.subjectTenantFieldTypeInvalid,
+          path: "resources[0].fields[1].valueType",
+        },
+      ],
+      valid: false,
+    });
+    for (const paddedResource of [tenantWithPaddedReference, tenantWithPaddedFieldId]) {
+      expect(validateDataGovernanceResources([paddedResource])).toMatchObject({
+        diagnostics: [
+          {
+            code: DATA_GOVERNANCE_DIAGNOSTIC_CODES.subjectFieldUnknown,
+            path: "resources[0].subject.tenantField",
+          },
+        ],
+        valid: false,
+      });
+    }
+    expect(validateDataGovernanceResources([tenantWithPaddedValueType])).toMatchObject({
+      diagnostics: [
+        {
+          code: DATA_GOVERNANCE_DIAGNOSTIC_CODES.subjectTenantFieldTypeInvalid,
+          path: "resources[0].fields[1].valueType",
+        },
+      ],
+      valid: false,
+    });
+    expect(validateDataGovernanceResources([tenantWithDocumentedOverride])).toEqual({
+      diagnostics: [],
+      valid: true,
+    });
+    expect(validateDataGovernanceResources([tenantWithUndocumentedOverride])).toMatchObject({
+      diagnostics: [
+        {
+          code: DATA_GOVERNANCE_DIAGNOSTIC_CODES.subjectTenantIdentifierOverrideReasonRequired,
+          path: "resources[0].subject.tenantIdentifierOverride.reason",
+        },
+      ],
+      valid: false,
+    });
+    expect(validateDataGovernanceResources([globalResource, systemResource])).toEqual({
+      diagnostics: [],
+      valid: true,
+    });
+
+    expect(createDataMapArtifact([tenantWithoutField])).toMatchObject({
+      diagnostics: [
+        {
+          code: DATA_GOVERNANCE_DIAGNOSTIC_CODES.subjectTenantFieldRequired,
+          path: "resources[0].subject.tenantField",
+        },
+      ],
+      summary: { diagnostics: 1 },
+    });
+
+    const artifact = createDataMapArtifact([validTenantResource]);
+
+    expect(artifact.diagnostics).toEqual([]);
+    expect(artifact.resources[0]).toMatchObject({
+      fields: validTenantResource.fields,
+      scope: "tenant",
+      subject: validTenantResource.subject,
+    });
+    expect(
+      createDataMapArtifact([tenantWithDocumentedOverride]).resources[0]?.subject,
+    ).toMatchObject({
+      tenantIdentifierOverride: tenantWithDocumentedOverride.subject.tenantIdentifierOverride,
+    });
+  });
+
   it("generates a deterministic Data Map and Project Map section with explicit unsupported capabilities", () => {
     const resources = [
       {
@@ -347,7 +513,7 @@ describe("DataGovernanceResource", () => {
   it("aligns Data Map field flags with supported, unsupported, and mixed capabilities", () => {
     const supportedResource = defineDataGovernanceResource({
       fields: [
-        { classifications: ["operational"], id: "id" },
+        { classifications: ["operational"], id: "id", valueType: "identifier" },
         {
           classifications: ["sensitive"],
           deleted: false,
@@ -358,25 +524,25 @@ describe("DataGovernanceResource", () => {
       kind: "supported",
       label: "Supported",
       scope: "tenant",
-      subject: { idField: "id", type: "supported" },
+      subject: { idField: "id", tenantField: "id", type: "supported" },
       subjectRequests: userResource.subjectRequests,
     });
     const unsupportedResource = defineDataGovernanceResource({
-      fields: [{ classifications: ["operational"], id: "id" }],
+      fields: [{ classifications: ["operational"], id: "id", valueType: "identifier" }],
       kind: "unsupported",
       label: "Unsupported",
       scope: "tenant",
-      subject: { idField: "id", type: "unsupported" },
+      subject: { idField: "id", tenantField: "id", type: "unsupported" },
     });
     const mixedResource = defineDataGovernanceResource({
       fields: [
-        { classifications: ["operational"], id: "id" },
+        { classifications: ["operational"], id: "id", valueType: "identifier" },
         { classifications: ["sensitive"], exported: false, id: "excluded" },
       ],
       kind: "mixed",
       label: "Mixed",
       scope: "tenant",
-      subject: { idField: "id", type: "mixed" },
+      subject: { idField: "id", tenantField: "id", type: "mixed" },
       subjectRequests: {
         delete: { reason: "Deletion is not available", status: "not-supported" },
         export: userResource.subjectRequests.export,
@@ -461,12 +627,13 @@ describe("DataGovernanceResource", () => {
           deleted: true,
           exported: true,
           id: "id",
+          valueType: "identifier",
         },
       ],
       kind: "contradictory",
       label: "Contradictory",
       scope: "tenant",
-      subject: { idField: "id", type: "contradictory" },
+      subject: { idField: "id", tenantField: "id", type: "contradictory" },
       subjectRequests: {
         delete: { reason: "Deletion is not available", status: "not-supported" },
         export: { reason: "Export is not available", status: "not-supported" },
