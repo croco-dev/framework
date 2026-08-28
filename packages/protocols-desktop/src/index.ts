@@ -4,6 +4,13 @@ export {
   stringifyDesktopContractGraph,
 } from "./libs/DesktopContractGraph";
 export {
+  diffDesktopContractGraphs,
+  formatDesktopContractGraphDiff,
+  formatDesktopContractGraphDiffChange,
+  resolveDesktopContractGraphDiffExitStatus,
+  stringifyDesktopContractGraphDiff,
+} from "./libs/DesktopContractGraphDiff";
+export {
   formatDesktopContractGraphDiagnostic,
   stringifyDesktopContractGraphDiagnostics,
 } from "./libs/DesktopContractGraphDiagnostic";
@@ -32,6 +39,19 @@ export type {
   DesktopContractGraphVersion,
   DesktopContractGraphWindow,
 } from "./libs/DesktopContractGraph";
+export type {
+  DesktopContractAuthority,
+  DesktopContractCompatibility,
+  DesktopContractGraphDiff,
+  DesktopContractGraphDiffChange,
+  DesktopContractGraphDiffChangeCode,
+  DesktopContractGraphDiffExitCode,
+  DesktopContractGraphDiffExitOptions,
+  DesktopContractGraphDiffExitStatus,
+  DesktopContractGraphDiffFingerprint,
+  DesktopContractGraphDiffTargetKind,
+  DesktopContractGraphDiffVersion,
+} from "./libs/DesktopContractGraphDiff";
 export type {
   DesktopContractGraphDiagnostic,
   DesktopContractGraphDiagnosticCode,

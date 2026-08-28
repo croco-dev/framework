@@ -2759,6 +2759,12 @@
       "owner": "@croco/protocols-desktop"
     },
     {
+      "path": "packages/protocols-desktop/src/tests/DesktopContractGraphDiff.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/protocols-desktop"
+    },
+    {
       "path": "packages/protocols-desktop/src/tests/DesktopTypes.spec.ts",
       "lane": "fast",
       "qualifiers": [],
