@@ -730,6 +730,42 @@ describe("DataGovernanceResource", () => {
     );
   });
 
+  it("preserves validator-valid empty optional resource and field strings", () => {
+    const resource = defineDataGovernanceResource({
+      description: "",
+      fields: [
+        {
+          classifications: ["operational"],
+          description: "",
+          id: "id",
+          label: "",
+          source: "",
+          valueType: "",
+        },
+      ],
+      kind: "empty-optional-artifact-fields",
+      label: "Empty optional artifact fields",
+      scope: "global",
+      subject: {
+        idField: "id",
+        type: "user",
+      },
+    });
+
+    expect(validateDataGovernanceResources([resource])).toEqual({ diagnostics: [], valid: true });
+    expect(createDataMapArtifact([resource]).resources[0]).toMatchObject({
+      description: "",
+      fields: [
+        {
+          description: "",
+          label: "",
+          source: "",
+          valueType: "",
+        },
+      ],
+    });
+  });
+
   it("projects subject and retention artifacts onto their supported schema fields", () => {
     const resource = {
       fields: [{ classifications: ["operational"], id: "id" }],
