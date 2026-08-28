@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import { Context } from "@croco/framework-context";
 import type { AuditLogRepository } from "./AuditLogRepository";
+import { createAuditCoordinationState, runWithAuditCoordination } from "./auditCoordination";
 import { AUDIT_METADATA_KEY } from "./constants";
 import type { AuditExecutionContext, CallHandler, Interceptor } from "./interfaces/Interceptor";
 import type { AuditLogEntry } from "./types";
@@ -137,6 +138,17 @@ function resolveResourceId(path: string): string {
   return path;
 }
 
+function resolveAuditMetadataTarget(target: object, handler: string | symbol): object {
+  let current: object | null = target;
+  while (current) {
+    if (Reflect.hasOwnMetadata(AUDIT_METADATA_KEY, current, handler)) {
+      return current;
+    }
+    current = Object.getPrototypeOf(current) as object | null;
+  }
+  return target;
+}
+
 export class AuditInterceptor implements Interceptor<AuditExecutionContext> {
   constructor(private readonly repository: AuditLogRepository) {}
 
@@ -152,15 +164,25 @@ export class AuditInterceptor implements Interceptor<AuditExecutionContext> {
       | AuditableMetadata
       | undefined;
 
-    if (existingMetadata) {
+    const isDecoratorMetadata = existingMetadata?.source === "decorator";
+    if (existingMetadata && !isDecoratorMetadata) {
       return next.handle();
     }
 
     const contextData = Context.get();
     const controllerName = target.name || "UnknownController";
+    const coordination = isDecoratorMetadata
+      ? createAuditCoordinationState(resolveAuditMetadataTarget(target, handler), handler)
+      : undefined;
 
     try {
-      const result = await next.handle();
+      const result = await (coordination
+        ? runWithAuditCoordination(coordination, () => next.handle())
+        : next.handle());
+
+      if (coordination?.decoratorWritesAudit) {
+        return result;
+      }
 
       await this.writeAuditLog({
         tenantId: contextData?.tenantId ?? "unknown",
@@ -177,6 +199,10 @@ export class AuditInterceptor implements Interceptor<AuditExecutionContext> {
 
       return result;
     } catch (error) {
+      if (coordination?.decoratorWritesAudit) {
+        throw error;
+      }
+
       await this.writeAuditLog({
         tenantId: contextData?.tenantId ?? "unknown",
         actorId: contextData?.user?.id ?? "unknown",
