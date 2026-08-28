@@ -1002,8 +1002,8 @@ function isSchemaCompatible(
     return isSchemaCompatible(baseline.element, current.element, variance);
   }
   return variance === "input"
-    ? isDescriptorSubset(baseline, current)
-    : isDescriptorSubset(current, baseline);
+    ? isDescriptorSubset(baseline, current, variance)
+    : isDescriptorSubset(current, baseline, variance);
 }
 
 function areObjectSchemasCompatible(
@@ -1039,33 +1039,40 @@ function areObjectSchemasCompatible(
 function isDescriptorSubset(
   source: DesktopWireSchemaDescriptor,
   target: DesktopWireSchemaDescriptor,
+  variance: "input" | "output",
 ): boolean {
   if (semanticCanonicalEqual(source, target)) return true;
   if (source.kind === "union") {
-    return source.options.every((option) => isDescriptorSubset(option, target));
+    return source.options.every((option) => isDescriptorSubset(option, target, variance));
   }
   if (source.kind === "literal") return descriptorAcceptsLiteral(target, source.value);
   if (source.kind === "enum") {
     return source.values.every((value) => descriptorAcceptsLiteral(target, value));
   }
   if (source.kind === "nullable") {
-    return descriptorAcceptsLiteral(target, null) && isDescriptorSubset(source.inner, target);
+    return (
+      descriptorAcceptsLiteral(target, null) && isDescriptorSubset(source.inner, target, variance)
+    );
   }
   if (target.kind === "nullable") {
-    return isDescriptorSubset(source, target.inner) || descriptorAcceptsLiteral(source, null);
+    return (
+      isDescriptorSubset(source, target.inner, variance) || descriptorAcceptsLiteral(source, null)
+    );
   }
   if (target.kind === "union") {
-    return target.options.some((option) => isDescriptorSubset(source, option));
+    return target.options.some((option) => isDescriptorSubset(source, option, variance));
   }
   if (source.kind === "optional") {
-    return target.kind === "optional" && isDescriptorSubset(source.inner, target.inner);
+    return target.kind === "optional" && isDescriptorSubset(source.inner, target.inner, variance);
   }
-  if (target.kind === "optional") return isDescriptorSubset(source, target.inner);
+  if (target.kind === "optional") return isDescriptorSubset(source, target.inner, variance);
   if (source.kind === "object" && target.kind === "object") {
-    return areObjectSchemasCompatible(source, target, "input");
+    return variance === "input"
+      ? areObjectSchemasCompatible(source, target, variance)
+      : areObjectSchemasCompatible(target, source, variance);
   }
   if (source.kind === "array" && target.kind === "array") {
-    return isDescriptorSubset(source.element, target.element);
+    return isDescriptorSubset(source.element, target.element, variance);
   }
   return false;
 }

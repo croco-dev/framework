@@ -325,6 +325,56 @@ describe("DesktopContractGraphDiff", () => {
     ]);
   });
 
+  it("preserves output variance through union and array descriptors", () => {
+    const command = createGraph().commands[0]!;
+    const baselineObject = {
+      kind: "object" as const,
+      unknownKeys: "reject" as const,
+      fields: [{ name: "value", required: true, schema: { kind: "string" as const } }],
+    };
+    const currentObject = {
+      ...baselineObject,
+      fields: [
+        ...baselineObject.fields,
+        { name: "trace", required: true, schema: { kind: "string" as const } },
+      ],
+    };
+    const diffOutput = (
+      baselineDescriptor: DesktopContractGraphV1["commands"][number]["output"]["descriptor"],
+      currentDescriptor: DesktopContractGraphV1["commands"][number]["output"]["descriptor"],
+    ) =>
+      diffDesktopContractGraphs(
+        createGraph({
+          commands: [{ ...command, output: { ...command.output, descriptor: baselineDescriptor } }],
+        }),
+        createGraph({
+          commands: [{ ...command, output: { ...command.output, descriptor: currentDescriptor } }],
+        }),
+      );
+
+    const unionDiff = diffOutput(
+      { kind: "union", options: [baselineObject] },
+      { kind: "union", options: [currentObject] },
+    );
+    const arrayInUnionDiff = diffOutput(
+      { kind: "union", options: [{ kind: "array", element: baselineObject }] },
+      { kind: "union", options: [{ kind: "array", element: currentObject }] },
+    );
+
+    expect(unionDiff.changes).toEqual([
+      expect.objectContaining({
+        code: "desktop-command-output-schema-changed",
+        compatibility: "non-breaking",
+      }),
+    ]);
+    expect(arrayInUnionDiff.changes).toEqual([
+      expect.objectContaining({
+        code: "desktop-command-output-schema-changed",
+        compatibility: "non-breaking",
+      }),
+    ]);
+  });
+
   it("binds direct effect and grant escalation reviews to their full authority", () => {
     const graph = createGraph();
     const command = graph.commands[0]!;
