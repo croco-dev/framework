@@ -8590,7 +8590,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/frontend-problems/src/index.ts",
-          line: 232,
+          line: 246,
           column: 3,
           kind: "problem-class",
         },
@@ -8622,7 +8622,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/frontend-problems/src/index.ts",
-          line: 209,
+          line: 223,
           column: 3,
           kind: "problem-class",
         },

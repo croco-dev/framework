@@ -5660,7 +5660,7 @@ Sources:
 
 Sources:
 
-- `packages/frontend-problems/src/index.ts:232:3` (problem-class)
+- `packages/frontend-problems/src/index.ts:246:3` (problem-class)
 
 <a id="frontend-problems-status-mismatch"></a>
 
@@ -5678,7 +5678,7 @@ Sources:
 
 Sources:
 
-- `packages/frontend-problems/src/index.ts:209:3` (problem-class)
+- `packages/frontend-problems/src/index.ts:223:3` (problem-class)
 
 <a id="frontend-react-page-data-unavailable"></a>
 
