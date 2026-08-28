@@ -93,16 +93,29 @@ export type DesktopEffectDefinition<
   TMethods extends Readonly<Record<string, DesktopEffectMethodDefinition>> = Readonly<
     Record<string, DesktopEffectMethodDefinition>
   >,
+  TAccess extends DesktopGrantAccess = DesktopGrantAccess,
+  TGrants extends readonly AnyDesktopGrant[] = readonly AnyDesktopGrant[],
 > = {
   readonly definitionType: "effect";
   readonly namespace: TNamespace;
+  readonly access: TAccess;
+  readonly grants: TGrants;
   readonly methods: TMethods;
 };
 
 export type AnyDesktopEffect = DesktopEffectDefinition<
   string,
-  Readonly<Record<string, DesktopEffectMethodDefinition>>
+  Readonly<Record<string, DesktopEffectMethodDefinition>>,
+  DesktopGrantAccess,
+  readonly AnyDesktopGrant[]
 >;
+
+export type DesktopCommandExecutionPolicy = {
+  readonly timeoutMs?: number;
+  readonly maxInputBytes?: number;
+  readonly maxOutputBytes?: number;
+  readonly maxConcurrency?: number;
+};
 export type DesktopProblemReference<TProblem extends Problem = Problem> = {
   readonly prototype: TProblem;
 };
@@ -121,6 +134,7 @@ export type DesktopQueryDefinition<
   readonly effects: TEffects;
   readonly events: TEvents;
   readonly problems: TProblems;
+  readonly executionPolicy: DesktopCommandExecutionPolicy;
 };
 
 export type DesktopMutationDefinition<
@@ -137,6 +151,7 @@ export type DesktopMutationDefinition<
   readonly effects: TEffects;
   readonly events: TEvents;
   readonly problems: TProblems;
+  readonly executionPolicy: DesktopCommandExecutionPolicy;
 };
 
 export type DesktopCommandDefinition<
@@ -696,6 +711,7 @@ export type DesktopQueryOptions<
   readonly effects?: TEffects;
   readonly events?: TEvents;
   readonly problems?: TProblems;
+  readonly executionPolicy?: DesktopCommandExecutionPolicy;
 };
 
 export type DesktopMutationOptions<
@@ -710,13 +726,18 @@ export type DesktopMutationOptions<
   readonly effects?: TEffects;
   readonly events?: TEvents;
   readonly problems?: TProblems;
+  readonly executionPolicy?: DesktopCommandExecutionPolicy;
 };
 
 export type DesktopEffectOptions<
   TNamespace extends string,
   TMethods extends Readonly<Record<string, DesktopEffectMethodDefinition>>,
+  TAccess extends DesktopGrantAccess,
+  TGrants extends readonly AnyDesktopGrant[],
 > = {
   readonly namespace: TNamespace;
+  readonly access: TAccess;
+  readonly grants?: TGrants;
   readonly methods: TMethods;
 };
 

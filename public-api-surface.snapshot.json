@@ -22261,6 +22261,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "formatDesktopContractGraphDiagnostic",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraphDiagnostic",
+              "declarationKind": "function"
+            },
+            {
               "name": "formatDesktopWireSchemaDiagnostic",
               "exportKind": "named",
               "source": "./libs/DesktopWireSchema",
@@ -22276,6 +22282,12 @@
               "name": "stringifyDesktopContractGraph",
               "exportKind": "named",
               "source": "./libs/DesktopContractGraph",
+              "declarationKind": "function"
+            },
+            {
+              "name": "stringifyDesktopContractGraphDiagnostics",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraphDiagnostic",
               "declarationKind": "function"
             },
             {
@@ -22387,6 +22399,11 @@
               "source": "./libs/types"
             },
             {
+              "name": "DesktopCommandExecutionPolicy",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
               "name": "DesktopCommandHandler",
               "exportKind": "named",
               "source": "./libs/types"
@@ -22418,6 +22435,21 @@
             },
             {
               "name": "DesktopContractGraphDiagnostic",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraphDiagnostic"
+            },
+            {
+              "name": "DesktopContractGraphDiagnosticCode",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraphDiagnostic"
+            },
+            {
+              "name": "DesktopContractGraphDiagnosticTargetKind",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraphDiagnostic"
+            },
+            {
+              "name": "DesktopContractGraphEffect",
               "exportKind": "named",
               "source": "./libs/DesktopContractGraph"
             },

@@ -49,6 +49,12 @@ title: "DesktopMutationDefinition"
 
 ---
 
+### executionPolicy
+
+> `readonly` **executionPolicy**: [`DesktopCommandExecutionPolicy`](/api/protocols-desktop/src/type-aliases/desktopcommandexecutionpolicy/)
+
+---
+
 ### input
 
 > `readonly` **input**: `TInputSchema`

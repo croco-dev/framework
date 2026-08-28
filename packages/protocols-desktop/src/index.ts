@@ -4,6 +4,10 @@ export {
   stringifyDesktopContractGraph,
 } from "./libs/DesktopContractGraph";
 export {
+  formatDesktopContractGraphDiagnostic,
+  stringifyDesktopContractGraphDiagnostics,
+} from "./libs/DesktopContractGraphDiagnostic";
+export {
   compileDesktopWireSchema,
   DesktopWireSchemaProblem,
   formatDesktopWireSchemaDiagnostic,
@@ -16,7 +20,7 @@ export type {
   CompileDesktopContractGraphOptions,
   DesktopContractGraphCommand,
   DesktopContractGraphContract,
-  DesktopContractGraphDiagnostic,
+  DesktopContractGraphEffect,
   DesktopContractGraphEvent,
   DesktopContractGraphGrant,
   DesktopContractGraphSchema,
@@ -26,6 +30,11 @@ export type {
   DesktopContractGraphVersion,
   DesktopContractGraphWindow,
 } from "./libs/DesktopContractGraph";
+export type {
+  DesktopContractGraphDiagnostic,
+  DesktopContractGraphDiagnosticCode,
+  DesktopContractGraphDiagnosticTargetKind,
+} from "./libs/DesktopContractGraphDiagnostic";
 export type {
   DesktopWireEnumDescriptor,
   DesktopWireLiteralDescriptor,
@@ -57,6 +66,7 @@ export type {
   DesktopAppMetadata,
   DesktopAppOptions,
   DesktopCommandDefinition,
+  DesktopCommandExecutionPolicy,
   DesktopCommandHandler,
   DesktopCommandKind,
   DesktopCommandRecord,

@@ -23,12 +23,14 @@ const fileChanged = desktop.event({
 });
 const filesystemRead = desktop.effect({
   namespace: "filesystem",
+  access: "read",
   methods: {
     readText: desktop.effect.method<[path: string], Promise<string>>(),
   },
 });
 const filesystemWrite = desktop.effect({
   namespace: "filesystem",
+  access: "write",
   methods: {
     writeText: desktop.effect.method<[path: string, contents: string], Promise<void>>(),
   },
@@ -114,7 +116,9 @@ from the app definition, so no handler string ID or IPC channel is supplied.
 
 Effects are declarations only. `desktop.effect.method()` records a callable signature without accepting an
 implementation, so this package cannot invoke Electron, filesystem, dialog, shell, secret, or process APIs. Runtime
-adapters must provide those capabilities later from the command's exact effect tuple.
+adapters must provide those capabilities later from the command's exact effect tuple. Every effect declares `read`
+or `write` access explicitly and may name the opaque grants it consumes. The graph compiler rejects write effects on
+queries and any effect/grant access mismatch.
 
 Keep `effects`, `events`, and `problems` as literal tuples. Widened arrays, dynamic effect namespaces, open-ended
 method records, and conditional tuple elements are rejected because they would grant more handler authority than one
@@ -181,13 +185,23 @@ this package does not issue, redeem, or validate tokens and never accepts a file
 `compileDesktopContractGraph(app)` produces the explicit `croco.desktop-contract-graph.v1` artifact consumed by
 later generators and runtime-authority layers. Contracts, commands, events, grants, and windows are ordered by
 stable IDs. Every command includes its input and output descriptors plus explicit effect, Problem, emitted-event,
-and request-response execution-policy fields. Effect and Problem lists remain empty until their declaration APIs
-are introduced rather than being inferred from runtime behavior.
+and request-response execution-policy fields. Effects record their namespace, access, method names, and mounted grant
+IDs. Problem lists remain empty until the Problem Registry integration tracked separately is available.
+
+Commands may declare positive integer `timeoutMs`, `maxInputBytes`, `maxOutputBytes`, and `maxConcurrency` values in
+`executionPolicy`. Invalid values are omitted from the executable policy and retained as blocking diagnostics; the
+compiler never replaces them with a runtime default.
 
 The graph records local-window exposure and receipt, remote-window origin allowlists, opaque grant references, and
 structured schema diagnostics. Unsupported schemas produce a `null` descriptor and diagnostic data in the graph;
 they are never formatted away or degraded to an unvalidated schema. `stringifyDesktopContractGraph(graph)` emits
 canonical, trailing-newline JSON.
+
+Semantic diagnostics cover duplicate or reserved IDs, missing references, query/write authority, effect/grant access,
+remote-window exposure and origin policy, and execution limits. Every diagnostic carries a stable code, target kind,
+member ID, message, recovery guidance, and source evidence when supplied. Use
+`formatDesktopContractGraphDiagnostic(diagnostic)` for human output and
+`stringifyDesktopContractGraphDiagnostics(diagnostics)` for canonical JSON from those same objects.
 
 The semantic hash is SHA-256 over canonical semantic fields. Source evidence and diagnostic prose are excluded,
 while stable diagnostic codes and targets remain part of the identity. Optional source locations may be supplied by

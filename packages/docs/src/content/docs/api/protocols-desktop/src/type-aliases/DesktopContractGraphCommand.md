@@ -17,7 +17,7 @@ title: "DesktopContractGraphCommand"
 
 ### effects
 
-> `readonly` **effects**: readonly `string`[]
+> `readonly` **effects**: readonly [`DesktopContractGraphEffect`](/api/protocols-desktop/src/type-aliases/desktopcontractgrapheffect/)[]
 
 ---
 
@@ -31,9 +31,25 @@ title: "DesktopContractGraphCommand"
 
 > `readonly` **executionPolicy**: `object`
 
+#### maxConcurrency?
+
+> `readonly` `optional` **maxConcurrency?**: `number`
+
+#### maxInputBytes?
+
+> `readonly` `optional` **maxInputBytes?**: `number`
+
+#### maxOutputBytes?
+
+> `readonly` `optional` **maxOutputBytes?**: `number`
+
 #### mode
 
 > `readonly` **mode**: `"request-response"`
+
+#### timeoutMs?
+
+> `readonly` `optional` **timeoutMs?**: `number`
 
 ---
 

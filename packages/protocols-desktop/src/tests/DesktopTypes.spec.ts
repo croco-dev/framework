@@ -54,12 +54,14 @@ const projectClosed = desktop.event({
 });
 const filesystemRead = desktop.effect({
   namespace: "filesystem",
+  access: "read",
   methods: {
     readText: desktop.effect.method<[path: string], Promise<string>>(),
   },
 });
 const dialogOpen = desktop.effect({
   namespace: "dialog",
+  access: "read",
   methods: {
     openFile: desktop.effect.method<[], Promise<string | undefined>>(),
   },
@@ -305,6 +307,7 @@ function negativeTypeFixtures(): void {
   const broadNamespace: string = "filesystem";
   const broadNamespaceEffect = desktop.effect({
     namespace: broadNamespace,
+    access: "read",
     methods: { readText: desktop.effect.method<[string], Promise<string>>() },
   });
   // @ts-expect-error effect namespaces must remain literal
@@ -317,19 +320,31 @@ function negativeTypeFixtures(): void {
   // @ts-expect-error effect namespaces cannot collide with handler helpers
   desktop.effect({
     namespace: "signal",
+    access: "read",
     methods: { aborted: desktop.effect.method<[], Promise<void>>() },
+  });
+
+  // @ts-expect-error effect authority must declare read or write access explicitly
+  desktop.effect({
+    namespace: "filesystem",
+    methods: { readText: desktop.effect.method<[], Promise<string>>() },
   });
 
   // @ts-expect-error effect methods cannot use prototype-sensitive keys
   desktop.effect({
     namespace: "filesystem",
+    access: "read",
     methods: { constructor: desktop.effect.method<[], Promise<void>>() },
   });
 
   const broadMethods: Record<string, DesktopEffectMethodDefinition> = {
     readText: desktop.effect.method<[string], Promise<string>>(),
   };
-  const broadMethodEffect = desktop.effect({ namespace: "filesystem", methods: broadMethods });
+  const broadMethodEffect = desktop.effect({
+    namespace: "filesystem",
+    access: "read",
+    methods: broadMethods,
+  });
   // @ts-expect-error effect method records must preserve exact keys
   desktop.query({
     input: z.string(),
