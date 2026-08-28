@@ -38,7 +38,7 @@ if (isValid) {
 ### 여러 ID 타입 관리
 
 ```typescript
-import { defineIdPrefixes } from "@croco/gid-core";
+import { defineIdPrefixes, type IdOf } from "@croco/gid-core";
 
 const Ids = defineIdPrefixes({
   USER: "usr",
@@ -46,9 +46,9 @@ const Ids = defineIdPrefixes({
   WORKSPACE: "wks",
 } as const);
 
-type UserId = PrefixedId<"usr">;
-type OrderId = PrefixedId<"ord">;
-type WorkspaceId = PrefixedId<"wks">;
+type UserId = IdOf<typeof Ids.USER>;
+type OrderId = IdOf<typeof Ids.ORDER>;
+type WorkspaceId = IdOf<typeof Ids.WORKSPACE>;
 
 const userId: UserId = Ids.USER.generate();
 const orderId: OrderId = Ids.ORDER.generate();
@@ -116,6 +116,21 @@ function defineIdPrefixes<const T extends Record<string, string>>(config: T): Id
 
 - 중복된 prefix 값이 있으면 컴파일 에러 발생
 - 각 key에 대해 `IdPrefixInstance`를 반환
+- `IdOf<typeof entry>`로 각 entry의 branded ID 타입을 추출
+
+#### `Id` 타입 marker 마이그레이션
+
+Registry entry에는 런타임에 사용할 수 있는 멤버만 포함됩니다. 기존 type marker 접근은 `IdOf`로
+교체합니다.
+
+```typescript
+import { defineIdPrefixes, type IdOf } from "@croco/gid-core";
+
+const Ids = defineIdPrefixes({ USER: "usr" } as const);
+
+// 이전: type UserId = typeof Ids.USER.Id;
+type UserId = IdOf<typeof Ids.USER>;
+```
 
 ### `PrefixedId<TPrefix>`
 
@@ -176,15 +191,15 @@ try {
 ## 타입 안전성 예시
 
 ```typescript
-import { defineIdPrefixes } from "@croco/gid-core";
+import { defineIdPrefixes, type IdOf } from "@croco/gid-core";
 
 const Ids = defineIdPrefixes({
   USER: "usr",
   ORDER: "ord",
 } as const);
 
-type UserId = PrefixedId<"usr">;
-type OrderId = PrefixedId<"ord">;
+type UserId = IdOf<typeof Ids.USER>;
+type OrderId = IdOf<typeof Ids.ORDER>;
 
 // 함수 시그니처에 특정 ID 타입 명시
 function getUser(id: UserId) {

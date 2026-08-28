@@ -1,27 +1,26 @@
 import { IdPrefix, type PrefixedId } from "./IdPrefix";
-import { IdPrefixProblem } from "./problems/GidProblems";
 
 type Values<T> = T[keyof T];
 
-type UniqueValues<T extends Record<string, string>> = Values<{
-  [K in keyof T]: T[K] extends Values<{ [K2 in Exclude<keyof T, K>]: T[K2] }> ? never : T[K];
+type DuplicateValues<T extends Record<string, string>> = Values<{
+  [K in keyof T]: T[K] extends Values<Pick<T, Exclude<keyof T, K>>> ? T[K] : never;
 }>;
 
-type HasDuplicateValues<T extends Record<string, string>> =
-  UniqueValues<T> extends Values<T> ? false : true;
-
-type AssertNoDuplicateValues<T extends Record<string, string>> =
-  HasDuplicateValues<T> extends true
-    ? { __error: "Duplicate prefix values detected"; duplicates: Values<T> }
-    : T;
+type AssertNoDuplicateValues<T extends Record<string, string>> = [DuplicateValues<T>] extends [
+  never,
+]
+  ? T
+  : { __error: "Duplicate prefix values detected"; duplicates: DuplicateValues<T> };
 
 export type IdPrefixInstance<TPrefix extends string> = {
-  generate(): `${TPrefix}_${string}`;
-  validate(id: unknown): id is `${TPrefix}_${string}`;
+  generate(): PrefixedId<TPrefix>;
+  validate(id: unknown): id is PrefixedId<TPrefix>;
   getPrefix(): TPrefix;
   getExpectedLength(): number;
-  readonly Id: PrefixedId<TPrefix>;
 };
+
+export type IdOf<TEntry extends IdPrefixInstance<string>> =
+  TEntry extends IdPrefixInstance<infer TPrefix> ? PrefixedId<TPrefix> : never;
 
 export type IdPrefixRegistry<T extends Record<string, string>> = {
   [K in keyof T]: IdPrefixInstance<T[K]>;
@@ -41,9 +40,6 @@ export function defineIdPrefixes<const T extends Record<string, string>>(
       validate: instance.validate,
       getPrefix: () => instance.getPrefix(),
       getExpectedLength: () => instance.getExpectedLength(),
-      get Id() {
-        throw new IdPrefixProblem();
-      },
     };
   }
 

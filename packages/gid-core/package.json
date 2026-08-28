@@ -29,6 +29,7 @@
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "lint": "oxlint .",
     "test": "vitest run",
+    "test:published": "vitest run src/tests/PublishedTypes.spec.ts",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },

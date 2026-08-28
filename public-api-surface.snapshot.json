@@ -13602,17 +13602,17 @@
               "source": null
             },
             {
-              "name": "IdPrefixProblem",
-              "exportKind": "named",
-              "source": null
-            },
-            {
               "name": "InvalidIdPrefixProblem",
               "exportKind": "named",
               "source": null
             }
           ],
           "typeExports": [
+            {
+              "name": "IdOf",
+              "exportKind": "named",
+              "source": null
+            },
             {
               "name": "IdPrefixInstance",
               "exportKind": "named",
