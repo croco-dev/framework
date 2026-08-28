@@ -118,12 +118,14 @@ const customPreset = {
 명시적인 전체 구성 export를 사용할 수 있습니다.
 
 ```typescript
-import { fullEnv, fullRuntimeEnvPresets } from "@croco/framework-config";
+import { defineRuntimeEnv, fullEnv, fullRuntimeEnvPresets } from "@croco/framework-config";
 
 fullEnv.DATABASE_URL;
 
 // 동일한 전체 preset 집합으로 별도 env를 구성할 수도 있습니다.
-const presets = fullRuntimeEnvPresets;
+const separateFullEnv = defineRuntimeEnv({
+  presets: fullRuntimeEnvPresets,
+});
 ```
 
 `ConfigService`는 호환성을 위해 전체 preset 구성을 계속 사용합니다. 새 구성에서는
