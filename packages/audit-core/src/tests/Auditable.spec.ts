@@ -4,7 +4,8 @@ import { Container, Context, LOGGER_TOKEN } from "@croco/framework-context";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Auditable } from "../libs/Auditable";
 import type { AuditLogRepository } from "../libs/AuditLogRepository";
-import type { AuditLogEntry } from "../libs/types";
+import { AuditableDecoratorProblem } from "../libs/problems/AuditableDecoratorProblem";
+import type { AuditableOptions, AuditLogEntry } from "../libs/types";
 
 type RequestContextStub = {
   requestId: string;
@@ -58,8 +59,8 @@ describe("@Auditable", () => {
       @Auditable({
         action: "project.update",
         resourceType: "Project",
-        resourceIdParam: "resourceId",
-        payloadParam: "payload",
+        resourceIdIndex: 0,
+        payloadIndex: 1,
         includeResult: true,
       })
       async update(
@@ -101,6 +102,218 @@ describe("@Auditable", () => {
     );
   });
 
+  it("should select reordered non-leading resource and payload parameters", async () => {
+    const createSpy = vi.fn(async (entry: Omit<AuditLogEntry, "id" | "createdAt">) =>
+      createPersistedEntry(entry),
+    );
+    const repository = {
+      create: createSpy,
+      find: vi.fn(),
+    } as unknown as AuditLogRepository;
+
+    vi.spyOn(Container, "get").mockReturnValue(repository);
+    vi.spyOn(Context, "get").mockReturnValue({
+      requestId: "req-reordered",
+      tenantId: "tenant-reordered",
+      user: { id: "actor-reordered" },
+    } as RequestContextStub);
+
+    class TestService {
+      @Auditable({
+        action: "project.reorder",
+        resourceType: "Project",
+        resourceIdIndex: 2,
+        payloadIndex: 1,
+        throwOnFailure: true,
+      })
+      async update(
+        requestContext: { source: string },
+        payload: { diff: Record<string, unknown>; name: string },
+        resourceId: string,
+      ): Promise<string> {
+        return `${requestContext.source}:${resourceId}:${payload.name}`;
+      }
+    }
+
+    await expect(
+      new TestService().update(
+        { source: "handler" },
+        { name: "croco", diff: { name: { before: "old", after: "croco" } } },
+        "project-reordered",
+      ),
+    ).resolves.toBe("handler:project-reordered:croco");
+
+    expect(createSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        resourceId: "project-reordered",
+        payload: expect.objectContaining({
+          input: { name: "croco", diff: { name: { before: "old", after: "croco" } } },
+        }),
+        diff: { name: { before: "old", after: "croco" } },
+      }),
+    );
+  });
+
+  it("should preserve optional parameter selection when selected arguments are omitted", async () => {
+    const createSpy = vi.fn(async (entry: Omit<AuditLogEntry, "id" | "createdAt">) =>
+      createPersistedEntry(entry),
+    );
+    const repository = {
+      create: createSpy,
+      find: vi.fn(),
+    } as unknown as AuditLogRepository;
+
+    vi.spyOn(Container, "get").mockReturnValue(repository);
+    vi.spyOn(Context, "get").mockReturnValue({
+      requestId: "req-optional",
+      tenantId: "tenant-optional",
+      user: { id: "actor-optional" },
+    } as RequestContextStub);
+
+    class TestService {
+      @Auditable({
+        action: "project.optional",
+        resourceType: "Project",
+        resourceIdIndex: 1,
+        payloadIndex: 2,
+        throwOnFailure: true,
+      })
+      async update(
+        requestContext: { source: string },
+        resourceId?: string,
+        payload?: { diff: Record<string, unknown> },
+      ): Promise<string> {
+        return `${requestContext.source}:${resourceId ?? "missing"}:${payload ? "payload" : "empty"}`;
+      }
+    }
+
+    await expect(new TestService().update({ source: "handler" })).resolves.toBe(
+      "handler:missing:empty",
+    );
+
+    expect(createSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        resourceId: "unknown",
+        payload: { arguments: [{ source: "handler" }] },
+        diff: null,
+      }),
+    );
+  });
+
+  it.each([-1, 1, 0.5, Number.NaN])(
+    "should reject unresolved parameter index %s",
+    (resourceIdIndex) => {
+      expect(() => {
+        class TestService {
+          @Auditable({
+            action: "project.invalid-selector",
+            resourceType: "Project",
+            resourceIdIndex,
+          })
+          read(resourceId: string): string {
+            return resourceId;
+          }
+        }
+
+        return TestService;
+      }).toThrow(AuditableDecoratorProblem);
+    },
+  );
+
+  it("should reject defaulted parameter selectors instead of assuming declared arity", () => {
+    expect(() => {
+      class TestService {
+        @Auditable({
+          action: "project.default-selector",
+          resourceType: "Project",
+          payloadIndex: 1,
+        })
+        update(resourceId: string, payload: Record<string, unknown> = {}): string {
+          void payload;
+          return resourceId;
+        }
+      }
+
+      return TestService;
+    }).toThrow("before the first default or rest parameter");
+  });
+
+  it("should reject rest parameter selectors instead of auditing one variadic argument", () => {
+    expect(() => {
+      class TestService {
+        @Auditable({
+          action: "project.rest-selector",
+          resourceType: "Project",
+          payloadIndex: 1,
+        })
+        update(resourceId: string, ...payloads: Record<string, unknown>[]): string {
+          void payloads;
+          return resourceId;
+        }
+      }
+
+      return TestService;
+    }).toThrow("before the first default or rest parameter");
+  });
+
+  it("should require Auditable to inspect the method before rest-argument wrappers", () => {
+    function RestArgumentWrapper(): MethodDecorator {
+      return (_target, _propertyKey, descriptor) => {
+        const methodDescriptor = descriptor as PropertyDescriptor;
+        const originalMethod = methodDescriptor.value as (...args: unknown[]) => unknown;
+        methodDescriptor.value = function (this: unknown, ...args: unknown[]): unknown {
+          return originalMethod.apply(this, args);
+        };
+      };
+    }
+
+    expect(() => {
+      class SupportedService {
+        @RestArgumentWrapper()
+        @Auditable({
+          action: "project.composed",
+          resourceType: "Project",
+          resourceIdIndex: 0,
+          payloadIndex: 1,
+        })
+        update(resourceId: string, payload: Record<string, unknown>): string {
+          void payload;
+          return resourceId;
+        }
+      }
+
+      return SupportedService;
+    }).not.toThrow();
+
+    expect(() => {
+      class UnsupportedService {
+        @Auditable({
+          action: "project.composed",
+          resourceType: "Project",
+          resourceIdIndex: 0,
+          payloadIndex: 1,
+        })
+        @RestArgumentWrapper()
+        update(resourceId: string, payload: Record<string, unknown>): string {
+          void payload;
+          return resourceId;
+        }
+      }
+
+      return UnsupportedService;
+    }).toThrow("place @Auditable closest to the method");
+  });
+
+  it("should reject legacy named selectors with an explicit migration error", () => {
+    expect(() =>
+      Auditable({
+        action: "project.legacy-selector",
+        resourceType: "Project",
+        resourceIdParam: "missing",
+      } as unknown as AuditableOptions),
+    ).toThrow("migrate to resourceIdIndex and payloadIndex");
+  });
+
   it("should call audit repository in fire-and-forget mode without awaiting", async () => {
     const createDeferred: { resolve: ((value: AuditLogEntry) => void) | null } = {
       resolve: null,
@@ -128,8 +341,8 @@ describe("@Auditable", () => {
       @Auditable({
         action: "project.create",
         resourceType: "Project",
-        resourceIdParam: "resourceId",
-        payloadParam: "payload",
+        resourceIdIndex: 0,
+        payloadIndex: 1,
         includeResult: true,
       })
       async create(
@@ -188,8 +401,8 @@ describe("@Auditable", () => {
       @Auditable({
         action: "project.delete",
         resourceType: "Project",
-        resourceIdParam: "resourceId",
-        payloadParam: "payload",
+        resourceIdIndex: 0,
+        payloadIndex: 1,
       })
       async remove(
         resourceId: string,
@@ -257,8 +470,8 @@ describe("@Auditable", () => {
       @Auditable({
         action: "credential.rotate",
         resourceType: "Credential",
-        resourceIdParam: "resourceId",
-        payloadParam: "payload",
+        resourceIdIndex: 0,
+        payloadIndex: 1,
       })
       async rotate(resourceId: string, payload: Record<string, unknown>): Promise<void> {
         void resourceId;
@@ -485,8 +698,8 @@ describe("@Auditable", () => {
       @Auditable({
         action: "credential.accessor",
         resourceType: "Credential",
-        resourceIdParam: "resourceId",
-        payloadParam: "payload",
+        resourceIdIndex: 0,
+        payloadIndex: 1,
       })
       async update(resourceId: string, input: Record<string, unknown>): Promise<string> {
         void input;
@@ -542,8 +755,8 @@ describe("@Auditable", () => {
       @Auditable({
         action: "credential.diff",
         resourceType: "Credential",
-        resourceIdParam: "resourceId",
-        payloadParam: "payload",
+        resourceIdIndex: 0,
+        payloadIndex: 1,
       })
       async update(resourceId: string, payload: Record<string, unknown>): Promise<string> {
         void payload;
@@ -574,8 +787,8 @@ describe("@Auditable", () => {
       @Auditable({
         action: "project.update",
         resourceType: "Project",
-        resourceIdParam: "resourceId",
-        payloadParam: "payload",
+        resourceIdIndex: 0,
+        payloadIndex: 1,
       })
       async update(resourceId: string, payload: { name: string }): Promise<string> {
         return `updated:${resourceId}:${payload.name}`;
@@ -628,8 +841,8 @@ describe("@Auditable", () => {
         @Auditable({
           action: "project.update",
           resourceType: "Project",
-          resourceIdParam: "resourceId",
-          payloadParam: "payload",
+          resourceIdIndex: 0,
+          payloadIndex: 1,
         })
         async update(resourceId: string, payload: { name: string }): Promise<string> {
           return `updated:${resourceId}:${payload.name}`;
@@ -694,8 +907,8 @@ describe("@Auditable", () => {
         @Auditable({
           action: "project.create",
           resourceType: "Project",
-          resourceIdParam: "resourceId",
-          payloadParam: "payload",
+          resourceIdIndex: 0,
+          payloadIndex: 1,
         })
         async create(resourceId: string, payload: { name: string }): Promise<string> {
           return `created:${resourceId}:${payload.name}`;
@@ -750,8 +963,8 @@ describe("@Auditable", () => {
         @Auditable({
           action: "project.create",
           resourceType: "Project",
-          resourceIdParam: "resourceId",
-          payloadParam: "payload",
+          resourceIdIndex: 0,
+          payloadIndex: 1,
           throwOnFailure: true,
         })
         async create(resourceId: string, payload: { name: string }): Promise<string> {
