@@ -755,6 +755,9 @@
           "webhooks",
           "subscription lifecycle",
           "customer portal",
+          "usage billing",
+          "durable usage delivery",
+          "customer meter state",
           "explicit licensed-quantity unsupported diagnostic"
         ]
       },
@@ -1303,7 +1306,7 @@
             "status": "present",
             "command": "pnpm --filter @croco/billing-polar test",
             "artifact": "packages/billing-polar/src/tests/PolarBillingGateway.spec.ts",
-            "description": "Polar SDK-backed conformance covers checkout and webhook replay behavior plus the explicit public Problem for its unavailable usage-billing capability; the shared suite also provides deterministic fake-adapter delivery, partial-batch, retry/terminal, meter-state, redaction, and opt-in real-provider coverage."
+            "description": "Polar shared conformance covers checkout, explicit usage capability discovery, provider-deduplicated ingestion, partial batches, customer meter state, retry/terminal classification, redaction, and opt-in real-provider delivery; provider-specific tests cover webhook replay and durable journal delivery."
           },
           "noCredentialSmoke": {
             "status": "present",
@@ -1327,7 +1330,7 @@
         },
         "knownGaps": [
           "Recorded real Polar liveSmoke evidence is required before certified state.",
-          "Polar does not expose the @croco/billing-core licensed-quantity or usage-billing capability."
+          "Polar does not expose the @croco/billing-core licensed-quantity capability."
         ]
       },
       {

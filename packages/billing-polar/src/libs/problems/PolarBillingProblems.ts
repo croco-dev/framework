@@ -40,7 +40,7 @@ export class PolarValidationProblem extends Problem {
       ProblemCategory.ValidationError,
       `${detail} during ${context.operation}`,
       {
-        extensions: toPolarExtensions(context),
+        extensions: toPolarExtensions({ ...context, retryable: false }),
       },
     );
   }
@@ -56,6 +56,7 @@ export class PolarUsageMeterMappingProblem extends Problem {
         extensions: {
           provider: "polar",
           meterId,
+          retryable: false,
           recovery:
             "Bind the Croco meter to a Polar event name and provider meter before replaying usage.",
         },
