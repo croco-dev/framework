@@ -1,0 +1,18 @@
+{
+  "schema": "croco.protocols-desktop.type-benchmark.v1",
+  "fixture": {
+    "commands": 200,
+    "windows": 20
+  },
+  "baseline": {
+    "compileTimeMs": 6652,
+    "instantiations": 321157,
+    "peakMemoryKiB": 376976
+  },
+  "thresholds": {
+    "compileTimeRatio": 2.5,
+    "instantiationsRatio": 1.25,
+    "peakMemoryRatio": 1.75
+  },
+  "rationale": "Three measured runs use the median after one warm-up. Time allows 2.5x for shared-runner variance, peak RSS allows 1.75x for operating-system variance, and deterministic type instantiations allow 1.25x so structural type regressions fail first."
+}

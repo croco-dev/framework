@@ -51,6 +51,19 @@ describe("benchmark workflow", () => {
     );
   });
 
+  it("gates desktop contract compiler time, memory, and fixture changes", () => {
+    const workflow = readBenchmarkWorkflow();
+
+    expect(workflow).toContain("filename.startsWith('packages/protocols-desktop/type-fixtures/')");
+    expect(workflow).toContain("filename === 'packages/protocols-desktop/tsconfig.json'");
+    expect(workflow).toContain("filename.startsWith('tsconfig/')");
+    expect(workflow).toContain("- name: Check desktop contract compiler baseline");
+    expect(workflow).toContain(
+      "run: pnpm desktop-contracts:bench --output=ci-reports/benchmark/protocols-desktop-types.json",
+    );
+    expect(workflow).toContain("ci-reports/benchmark/protocols-desktop-types.json");
+  });
+
   it("uses the repository Node version source for benchmark setup", () => {
     const workflow = readBenchmarkWorkflow();
 

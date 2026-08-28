@@ -2747,6 +2747,12 @@
       "owner": "@croco/protocols-desktop"
     },
     {
+      "path": "packages/protocols-desktop/src/tests/DesktopTypeFixtures.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/protocols-desktop"
+    },
+    {
       "path": "packages/protocols-desktop/src/tests/DesktopTypes.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -4344,6 +4350,12 @@
     },
     {
       "path": "scripts/tests/production-ready-check.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:ci"
+    },
+    {
+      "path": "scripts/tests/protocols-desktop-type-benchmark.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "repo:ci"

@@ -44,6 +44,9 @@ jobs:
             });
             const applicable = files.some(({ filename }) =>
               /^packages\/[^/]+\/src\//.test(filename) ||
+              filename.startsWith('packages/protocols-desktop/type-fixtures/') ||
+              filename === 'packages/protocols-desktop/tsconfig.json' ||
+              filename.startsWith('tsconfig/') ||
               filename.startsWith('benchmarks/') ||
               filename.startsWith('ci-reports/benchmark/') ||
               filename === 'scripts/bench-threshold-check.mts' ||
@@ -79,6 +82,8 @@ jobs:
           node-version-file: ".nvmrc"
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
+      - name: Check desktop contract compiler baseline
+        run: pnpm desktop-contracts:bench --output=ci-reports/benchmark/protocols-desktop-types.json
       - name: Run benchmarks with threshold check
         id: bench
         run: pnpm tracked-files:guard --recovery 'pnpm bench:update' -- pnpm bench:check --output-json=benchmark-result.json
@@ -108,6 +113,7 @@ jobs:
             benchmark-result.json
             ci-reports/benchmark/summary.md
             ci-reports/benchmark/latest-five-green-runs.md
+            ci-reports/benchmark/protocols-desktop-types.json
           if-no-files-found: warn
       - name: Fail if benchmark enforcement failed
         if: env.BENCHMARK_GATE_MODE == 'enforce' && (steps.bench.outcome == 'failure' || steps.readiness.outcome == 'failure')
