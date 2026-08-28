@@ -68,7 +68,7 @@ export type DefinedMessage<
   descriptor: MessageDescriptor<TChannels>;
 }>;
 
-type AnyMessage = DefinedMessage<string, string, z.ZodTypeAny, readonly MessageChannel[]>;
+export type AnyMessage = DefinedMessage<string, string, z.ZodTypeAny, readonly MessageChannel[]>;
 
 export type MessageData<TMessage extends AnyMessage> = z.infer<TMessage["data"]>;
 

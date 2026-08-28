@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   defineMessage,
+  type EngagementService,
   type MessageContext,
   type MessageData,
   type MessageRenderer,
@@ -97,3 +98,34 @@ const invalidData: MessageData<typeof TrialEnding> = {
   upgradeUrl: "https://croco.dev/upgrade",
 };
 void invalidData;
+
+declare const engagement: EngagementService;
+
+engagement.send(TrialEnding, {
+  recipient: { tenantId: "tenant-1", userId: "user-1" },
+  data: requiredData,
+  key: "subscription-1",
+});
+
+engagement.send(TrialEnding, {
+  recipient: { tenantId: "tenant-1", userId: "user-1" },
+  // @ts-expect-error send infers the exact message data contract
+  data: { firstName: "Ada" },
+  key: "subscription-1",
+});
+
+engagement.send(TrialEnding, {
+  recipient: { tenantId: "tenant-1", userId: "user-1" },
+  data: requiredData,
+  key: "subscription-1",
+  // @ts-expect-error provider endpoints are resolved behind EngagementService
+  to: "user@example.com",
+});
+
+engagement.send(TrialEnding, {
+  recipient: { tenantId: "tenant-1", userId: "user-1" },
+  data: requiredData,
+  key: "subscription-1",
+  // @ts-expect-error callers cannot select a message channel
+  channel: "email",
+});

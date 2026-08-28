@@ -27,6 +27,32 @@ title: "NotificationService"
 
 ## Methods
 
+### dispatch()
+
+> **dispatch**(`channel`, `payload`, `options`): `Promise`\<`Readonly`\<\{ `executionId`: `string`; \}\>\>
+
+Dispatches through the same task path as send() while retaining the execution identifier.
+
+#### Parameters
+
+##### channel
+
+[`NotificationChannel`](/api/notifications-core/src/enumerations/notificationchannel/)
+
+##### payload
+
+[`NotificationPayload`](/api/notifications-core/src/interfaces/notificationpayload/)
+
+##### options
+
+[`NotificationSendServiceOptions`](/api/notifications-core/src/type-aliases/notificationsendserviceoptions/)
+
+#### Returns
+
+`Promise`\<`Readonly`\<\{ `executionId`: `string`; \}\>\>
+
+---
+
 ### registerPreferenceRule()
 
 > **registerPreferenceRule**(`rule`): `void`

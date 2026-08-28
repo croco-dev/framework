@@ -56,6 +56,10 @@ export type NotificationSendServiceOptions =
   | NotificationSendContractOptions
   | UnsafeNotificationSendOptions;
 
+export type NotificationDispatchResult = Readonly<{
+  executionId: string;
+}>;
+
 type EvaluatedNotificationSendContract = {
   readonly idempotencyKey?: string;
   readonly preferenceDecision?: NotificationPreferenceDecision;
@@ -128,6 +132,15 @@ export class NotificationService {
     payload: NotificationPayload,
     options: NotificationSendServiceOptions,
   ): Promise<void> {
+    await this.dispatch(channel, payload, options);
+  }
+
+  /** Dispatches through the same task path as send() while retaining the execution identifier. */
+  async dispatch(
+    channel: NotificationChannel,
+    payload: NotificationPayload,
+    options: NotificationSendServiceOptions,
+  ): Promise<NotificationDispatchResult> {
     const normalizedOptions = normalizeNotificationSendOptions(options);
     const providerName = normalizedOptions?.providerName;
     const outbox = normalizedOptions?.outbox;
@@ -182,7 +195,14 @@ export class NotificationService {
       ...(template === undefined ? {} : { template }),
     });
 
-    await this.taskRunner.execute("send-notification", toNotificationJobPayload(dispatchRequest));
+    const execution = await this.taskRunner.executeTracked(
+      "send-notification",
+      toNotificationJobPayload(dispatchRequest),
+      sendContract.idempotencyKey === undefined
+        ? {}
+        : { idempotencyKey: sendContract.idempotencyKey },
+    );
+    return { executionId: execution.executionId };
   }
 
   private evaluateSendContract(

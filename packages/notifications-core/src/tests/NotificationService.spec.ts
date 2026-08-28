@@ -124,7 +124,9 @@ describe("NotificationService", () => {
 
     registry = new NotificationProviderRegistry();
     taskRunner = new TaskRunner(createExecutionManager(), new TaskRegistry());
-    executeSpy = vi.spyOn(taskRunner, "execute").mockResolvedValue(undefined);
+    executeSpy = vi
+      .spyOn(taskRunner, "executeTracked")
+      .mockResolvedValue({ executionId: "execution-1", result: undefined });
     service = new NotificationService(taskRunner, registry);
     emailProvider = createRenderedProvider("email-provider", NotificationChannel.EMAIL);
   });
@@ -148,6 +150,18 @@ describe("NotificationService", () => {
   });
 
   describe("send()", () => {
+    it("should retain the task execution id for tracked dispatches", async () => {
+      service.registerProvider(emailProvider, true);
+
+      await expect(
+        service.dispatch(
+          NotificationChannel.EMAIL,
+          { to: "test@example.com", content: "Test Content" },
+          createSendOptions(NotificationChannel.EMAIL),
+        ),
+      ).resolves.toEqual({ executionId: "execution-1" });
+    });
+
     it("should reject providers that cannot honor a required idempotency key", async () => {
       service.registerProvider(emailProvider, true);
 
@@ -207,6 +221,7 @@ describe("NotificationService", () => {
           providerName: "email-provider",
           idempotencyKey: "notification-key",
         }),
+        { idempotencyKey: "notification-key" },
       );
       expect(executeSpy.mock.calls[0]?.[1]).toMatchObject({
         dispatchContext: {
@@ -288,6 +303,7 @@ describe("NotificationService", () => {
           providerName: "sms-provider",
           idempotencyKey: "sms-notification-key",
         }),
+        { idempotencyKey: "sms-notification-key" },
       );
     });
 
@@ -313,6 +329,7 @@ describe("NotificationService", () => {
           providerName: "email-provider",
           idempotencyKey: "fixed-key",
         }),
+        { idempotencyKey: "fixed-key" },
       );
     });
 
@@ -340,6 +357,7 @@ describe("NotificationService", () => {
           providerName: "sms-provider",
           idempotencyKey: "fixed-key",
         }),
+        { idempotencyKey: "fixed-key" },
       );
     });
 
@@ -367,6 +385,7 @@ describe("NotificationService", () => {
           providerName: "",
           idempotencyKey: "notification-key",
         }),
+        { idempotencyKey: "notification-key" },
       );
     });
 
@@ -398,6 +417,7 @@ describe("NotificationService", () => {
           providerName: "",
           idempotencyKey: "empty-provider-key",
         }),
+        { idempotencyKey: "empty-provider-key" },
       );
     });
 
@@ -424,6 +444,7 @@ describe("NotificationService", () => {
           providerName: "email-provider",
           idempotencyKey: "notification-key",
         }),
+        { idempotencyKey: "notification-key" },
       );
     });
 
@@ -450,6 +471,7 @@ describe("NotificationService", () => {
           providerName: "email-provider",
           idempotencyKey: "notification-key",
         }),
+        { idempotencyKey: "notification-key" },
       );
     });
 
@@ -504,6 +526,7 @@ describe("NotificationService", () => {
           providerName: "email-provider",
           idempotencyKey: "welcome-user-1",
         }),
+        { idempotencyKey: "welcome-user-1" },
       );
       expect(executeSpy.mock.calls[0]?.[1]).toMatchObject({
         dispatchContext: {
@@ -600,6 +623,7 @@ describe("NotificationService", () => {
             }),
           }),
         }),
+        { idempotencyKey: "notification-key" },
       );
     });
 
@@ -704,6 +728,7 @@ describe("NotificationService", () => {
             preferenceDecision: expect.anything(),
           }),
         }),
+        {},
       );
       expect(executeSpy.mock.calls[0]?.[1]).not.toHaveProperty("idempotencyKey");
     });

@@ -61,6 +61,30 @@ title: "TaskRunner"
 
 ---
 
+### executeTracked()
+
+> **executeTracked**(`taskId`, `payload`, `options?`): `Promise`\<`Readonly`\<\{ `executionId`: `string`; `result`: `unknown`; \}\>\>
+
+#### Parameters
+
+##### taskId
+
+`string`
+
+##### payload
+
+`unknown`
+
+##### options?
+
+[`TaskExecutionOptions`](/api/tasks-core/src/type-aliases/taskexecutionoptions/) = `{}`
+
+#### Returns
+
+`Promise`\<`Readonly`\<\{ `executionId`: `string`; `result`: `unknown`; \}\>\>
+
+---
+
 ### recoverTimeout()
 
 > **recoverTimeout**(`executionId`, `reason`): `Promise`\<`unknown`\>

@@ -10,6 +10,7 @@ const __dirname = dirname(__filename);
 const packageDir = resolve(__dirname, "../..");
 const rootDir = resolve(packageDir, "../..");
 const spawnTimeoutMs = 180_000;
+const testTimeoutMs = 300_000;
 const skipPackedConsumer =
   process.env.CROCO_OFFLINE === "1" || process.env.npm_config_offline === "true";
 
@@ -22,13 +23,30 @@ describe("published message contracts", () => {
 
       try {
         ensureBuilt();
-        pack("@croco/problems-core", packRoot);
-        pack("@croco/protocols-core", packRoot);
-        pack("@croco/engagement-core", packRoot);
+        const packageNames = [
+          "@croco/diagnostics-core",
+          "@croco/engagement-core",
+          "@croco/events-core",
+          "@croco/execution-core",
+          "@croco/framework-context",
+          "@croco/notifications-core",
+          "@croco/problems-core",
+          "@croco/protocols-core",
+          "@croco/tasks-core",
+          "@croco/telemetry-api",
+        ] as const;
+        packAll(packageNames, packRoot);
 
-        const problemsCore = findTarball(packRoot, "croco-problems-core-");
-        const protocolsCore = findTarball(packRoot, "croco-protocols-core-");
-        const engagementCore = findTarball(packRoot, "croco-engagement-core-");
+        const tarballs = new Map(
+          packageNames.map((packageName) => [
+            packageName,
+            findPackageTarball(packRoot, packageName),
+          ]),
+        );
+        const engagementCore = tarballs.get("@croco/engagement-core");
+        if (engagementCore === undefined) {
+          throw new Error("Missing packed engagement-core tarball");
+        }
         writeFileSync(
           join(consumerRoot, "package.json"),
           `${JSON.stringify({ name: "engagement-core-consumer", private: true, type: "module" }, null, 2)}\n`,
@@ -39,8 +57,9 @@ describe("published message contracts", () => {
             "packages:",
             "  - .",
             "overrides:",
-            `  '@croco/problems-core': 'file:${problemsCore}'`,
-            `  '@croco/protocols-core': 'file:${protocolsCore}'`,
+            ...[...tarballs.entries()]
+              .filter(([packageName]) => packageName !== "@croco/engagement-core")
+              .map(([packageName, tarball]) => `  '${packageName}': 'file:${tarball}'`),
             "",
           ].join("\n"),
         );
@@ -59,12 +78,23 @@ describe("published message contracts", () => {
         rmSync(consumerRoot, { force: true, recursive: true });
       }
     },
-    spawnTimeoutMs,
+    testTimeoutMs,
   );
 });
 
 function ensureBuilt(): void {
-  const packages = ["problems-core", "protocols-core", "engagement-core"];
+  const packages = [
+    "diagnostics-core",
+    "engagement-core",
+    "events-core",
+    "execution-core",
+    "framework-context",
+    "notifications-core",
+    "problems-core",
+    "protocols-core",
+    "tasks-core",
+    "telemetry-api",
+  ];
   if (packages.every((directory) => existsBuiltPackage(directory))) {
     return;
   }
@@ -100,8 +130,17 @@ function latestTypeScriptModifiedAt(directory: string): number {
   }, 0);
 }
 
-function pack(packageName: string, destination: string): void {
-  run("pnpm", ["--filter", packageName, "pack", "--pack-destination", destination], rootDir);
+function packAll(packageNames: readonly string[], destination: string): void {
+  run(
+    "pnpm",
+    [
+      ...packageNames.flatMap((packageName) => ["--filter", packageName]),
+      "pack",
+      "--pack-destination",
+      destination,
+    ],
+    rootDir,
+  );
 }
 
 function findTarball(directory: string, prefix: string): string {
@@ -114,11 +153,15 @@ function findTarball(directory: string, prefix: string): string {
   return join(directory, filename);
 }
 
+function findPackageTarball(directory: string, packageName: string): string {
+  return findTarball(directory, `${packageName.replace("@", "").replace("/", "-")}-`);
+}
+
 function writeConsumerTypecheck(consumerRoot: string): void {
   writeFileSync(
     join(consumerRoot, "contracts.ts"),
     [
-      'import { defineMessage, type MessageContext, type MessageData, type MessageRenderer, Renders } from "@croco/engagement-core";',
+      'import { defineMessage, type EngagementService, type MessageContext, type MessageData, type MessageRenderer, Renders } from "@croco/engagement-core";',
       'import { z } from "zod";',
       "",
       "const TrialEnding = defineMessage({",
@@ -181,6 +224,15 @@ function writeConsumerTypecheck(consumerRoot: string): void {
       "  push({ data }: MessageContext<typeof TrialEnding>) { return { title: data.firstName, body: data.firstName }; }",
       "}",
       "void TrialEndingRenderer; void UndeclaredChannel; void InvalidContent;",
+      "declare const engagement: EngagementService;",
+      'engagement.send(TrialEnding, { recipient: { tenantId: "tenant-1", userId: "user-1" }, data: valid, key: "subscription-1" });',
+      "engagement.send(TrialEnding, {",
+      '  recipient: { tenantId: "tenant-1", userId: "user-1" },',
+      "  data: valid,",
+      '  key: "subscription-1",',
+      "  // @ts-expect-error packed facade does not accept provider endpoints",
+      '  to: "user@example.com",',
+      "});",
       "",
     ].join("\n"),
   );
@@ -206,7 +258,7 @@ function writeConsumerTypecheck(consumerRoot: string): void {
 
 function writeRuntimeConsumers(consumerRoot: string): void {
   const source = [
-    "const { defineMessage, MessageRendererRegistry, Renders } = PACKAGE;",
+    "const { defineMessage, EngagementService, InMemoryMessageRendererResolver, InMemoryRecipientDirectory, MessageRendererRegistry, RegistryEngagementMessageRenderer, Renders } = PACKAGE;",
     "const { z } = ZOD;",
     'const message = defineMessage({ id: "billing.packed", topic: "billing", data: z.object({ name: z.string() }), channels: ["email"] });',
     "class Renderer { email({ data }) { return { subject: data.name, html: data.name, text: data.name }; } }",
@@ -216,6 +268,12 @@ function writeRuntimeConsumers(consumerRoot: string): void {
     "registry.registerMessage(message);",
     "registry.bootstrap();",
     'if (registry.parseData(message, { name: "Ada" }).name !== "Ada") throw new Error("packed parse failed");',
+    "const resolver = new InMemoryMessageRendererResolver();",
+    "resolver.register(message, new Renderer());",
+    'const directory = new InMemoryRecipientDirectory([{ recipient: { tenantId: "tenant-1", userId: "user-1" }, email: { id: "email-1", address: "user@example.com" }, push: [] }]);',
+    'const dispatcher = { dispatch: async () => ({ executionId: "execution-1" }) };',
+    "const engagement = new EngagementService(directory, new RegistryEngagementMessageRenderer(registry, resolver), dispatcher);",
+    'engagement.send(message, { recipient: { tenantId: "tenant-1", userId: "user-1" }, data: { name: "Ada" }, key: "message-1" }).then((result) => { if (result.status !== "queued" || result.executionIds[0] !== "execution-1") throw new Error("packed engagement send failed"); });',
   ];
   writeFileSync(
     join(consumerRoot, "consumer.mjs"),
