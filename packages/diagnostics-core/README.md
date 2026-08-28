@@ -9,6 +9,8 @@ reported without ad hoc strings.
 ## Public API
 
 - `DiagnosticsCollector` - registers providers and collects readiness reports.
+- `DiagnosticsHealthIndicator` - exposes one diagnostics provider through health readiness checks
+  with an explicit degraded-status policy.
 - `ErrorHistoryRingBuffer` - bounded error history for diagnostics output.
 - Diagnostic code helpers - validate, format, and describe stable Croco diagnostic
   codes.
@@ -22,17 +24,35 @@ Default and per-provider timeouts must be integer milliseconds between `1` and
 
 ## Usage
 
+Install `@croco/health-core` when registering `DiagnosticsHealthIndicator` with `HealthCheckService`.
+It is an optional peer dependency, so diagnostics-only consumers do not need to install the health package.
+
 ```typescript
-import { DiagnosticsCollector } from "@croco/diagnostics-core";
+import { HealthCheckService } from "@croco/health-core";
+import { DiagnosticsCollector, DiagnosticsHealthIndicator } from "@croco/diagnostics-core";
 
 const collector = new DiagnosticsCollector();
-collector.registerProvider({
+const health = new HealthCheckService();
+const provider = {
   name: "cache",
-  collect: async () => ({ status: "ready", details: {} }),
-});
+  getHealth: async (signal?: AbortSignal) => ({
+    status: "healthy" as const,
+    component: "cache",
+    details: { connected: true },
+    lastChecked: new Date().toISOString(),
+  }),
+};
 
-const report = await collector.collect();
+collector.registerProvider(provider);
+health.registerReadiness(new DiagnosticsHealthIndicator(provider, { degradedStatus: "down" }));
+
+const diagnosticsReport = await collector.getReport();
+const readinessReport = await health.checkReadiness();
 ```
+
+`degradedStatus` is required because diagnostics has a three-state vocabulary while health has
+only `up` and `down`. The adapter forwards the caller's `AbortSignal` and preserves the provider's
+component name, message, details, and `lastChecked` timestamp.
 
 ## Verification
 

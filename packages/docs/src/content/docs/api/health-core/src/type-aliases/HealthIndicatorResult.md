@@ -29,6 +29,18 @@ const successDetails: HealthIndicatorSuccessDetails = {
 
 ---
 
+### lastChecked?
+
+> `optional` **lastChecked?**: `string`
+
+---
+
+### message?
+
+> `optional` **message?**: `string`
+
+---
+
 ### name
 
 > **name**: `string`

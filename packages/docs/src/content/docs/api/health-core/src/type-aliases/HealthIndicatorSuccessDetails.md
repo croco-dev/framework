@@ -13,7 +13,7 @@ Can include metrics, latency information, or other diagnostic data.
 
 ## Index Signature
 
-\[`key`: `string`\]: `string` \| `number` \| `boolean` \| `null` \| `undefined`
+\[`key`: `string`\]: `unknown`
 
 ## Example
 

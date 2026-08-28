@@ -74,7 +74,9 @@ Result type returned by health checks.
 type HealthIndicatorResult = {
   name: string;
   status: "up" | "down";
+  message?: string;
   details?: HealthIndicatorErrorDetails | HealthIndicatorSuccessDetails;
+  lastChecked?: string;
 };
 ```
 
@@ -82,7 +84,7 @@ type HealthIndicatorResult = {
 
 ```typescript
 type HealthIndicatorSuccessDetails = {
-  [key: string]: string | number | boolean | null | undefined;
+  [key: string]: unknown;
 };
 ```
 

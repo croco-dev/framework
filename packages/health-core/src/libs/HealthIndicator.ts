@@ -7,13 +7,15 @@ export type HealthIndicatorErrorDetails = {
 };
 
 export type HealthIndicatorSuccessDetails = {
-  [key: string]: string | number | boolean | null | undefined;
+  [key: string]: unknown;
 };
 
 export type HealthIndicatorResult = {
   name: string;
   status: HealthStatus;
+  message?: string;
   details?: HealthIndicatorErrorDetails | HealthIndicatorSuccessDetails;
+  lastChecked?: string;
 };
 
 export interface HealthIndicator {
