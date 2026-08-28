@@ -32,6 +32,7 @@ import {
   projectMapFrameworkManifestLegacyCode,
 } from "../libs/diagnosticCodes.js";
 import { GLOBAL_OPTIONS } from "./options.js";
+import { getCrocoCommandRuntime } from "../libs/cliRuntime.js";
 
 export type ProjectMapManifestVersion = "croco.project-map.manifest.v1";
 export type ProjectMapDiagnosticSeverity = "error" | "warning";
@@ -317,17 +318,20 @@ const SKIPPED_DIRECTORIES = new Set([
 ]);
 const SOURCE_EXTENSIONS = /\.(?:c|m)?tsx?$/;
 
-const defaultIo: ProjectMapIo = {
-  stdout: (message) => console.log(message),
-  stderr: (message) => console.error(message),
-  readFile: (path) => readFileSync(path, "utf-8"),
-  writeFile: (path, content) => writeFileSync(path, content),
-  mkdir: (path) => mkdirSync(path, { recursive: true }),
-  exists: (path) => existsSync(path),
-  stat: (path) => statSync(path),
-  readDir: (path) => readdirSync(path, { withFileTypes: true }),
-  cwd: process.cwd(),
-};
+function createDefaultIo(): ProjectMapIo {
+  const runtime = getCrocoCommandRuntime();
+  return {
+    stdout: runtime.stdout,
+    stderr: runtime.stderr,
+    readFile: (path) => readFileSync(path, "utf-8"),
+    writeFile: (path, content) => writeFileSync(path, content),
+    mkdir: (path) => mkdirSync(path, { recursive: true }),
+    exists: (path) => existsSync(path),
+    stat: (path) => statSync(path),
+    readDir: (path) => readdirSync(path, { withFileTypes: true }),
+    cwd: runtime.cwd,
+  };
+}
 
 export const projectMap = defineCommand({
   meta: {
@@ -338,7 +342,7 @@ export const projectMap = defineCommand({
     ...GLOBAL_OPTIONS,
   },
   async run({ rawArgs }) {
-    process.exitCode = await runProjectMap(rawArgs);
+    getCrocoCommandRuntime().setExitCode(await runProjectMap(rawArgs));
   },
 });
 
@@ -351,7 +355,7 @@ export async function runProjectMap(
   } = {},
 ): Promise<number> {
   const parsed = parseProjectMapArgs(args);
-  const io = { ...defaultIo, ...options.io };
+  const io = { ...createDefaultIo(), ...options.io };
 
   if (parsed.kind === "help") {
     printProjectMapHelp(io);

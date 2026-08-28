@@ -12,6 +12,51 @@ pnpm exec croco --help
 
 Run from any directory inside a Croco workspace. The CLI automatically detects `pnpm-workspace.yaml` to find your project root.
 
+### Embedding the CLI
+
+`@croco/cli` exposes side-effect-free APIs for wrappers, test harnesses, and IDE integrations:
+
+- `createCrocoCommand(deps?)` creates the root Citty command without parsing arguments or producing output.
+- `runCroco(argv, deps?)` executes arguments in process and resolves to `{ exitCode }`.
+
+`argv` contains only Croco arguments; omit the Node executable and script path.
+
+```typescript
+import { createCrocoCommand, runCroco } from "@croco/cli";
+
+const output: string[] = [];
+const errors: string[] = [];
+
+const command = createCrocoCommand({
+  cwd: "/workspace/default",
+  env: { CI: "true" },
+  isTTY: false,
+  stdout: (message) => output.push(message),
+  stderr: (message) => errors.push(message),
+});
+
+const result = await runCroco(["doctor", "--json", "--cwd", "/workspace/app"], {
+  cwd: "/workspace/default",
+  env: { CI: "true" },
+  isTTY: false,
+  stdout: (message) => output.push(message),
+  stderr: (message) => errors.push(message),
+});
+
+console.log(result.exitCode);
+```
+
+The optional dependencies inject `stdout`, `stderr`, `cwd`, `env`, and `isTTY`. An explicit `--cwd`
+argument takes precedence over the injected `cwd`. Injected `env` is the complete environment visible to
+commands; it is not merged with `process.env`. To inherit the host environment, pass it explicitly, for example
+`env: { ...process.env, CI: "true" }`.
+
+`runCroco()` does not call `process.exit()` or mutate `process.cwd()`, `process.env`, or `process.exitCode`. The
+installed `croco` executable remains the process boundary: it passes `process.argv.slice(2)` to `runCroco()` and
+assigns the returned `exitCode` to `process.exitCode`.
+Parser and unexpected command failures are reported through `stderr` and resolve with `{ exitCode: 1 }`; they are
+not thrown to the embedding caller.
+
 ## Commands
 
 | Command                                 | Description                                      |

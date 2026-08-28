@@ -7,6 +7,7 @@ import {
   parseArchitecturePolicyManifest,
 } from "@croco/architecture-policy";
 import { GLOBAL_OPTIONS } from "./options.js";
+import { getCrocoCommandRuntime } from "../libs/cliRuntime.js";
 import type { ArchitecturePolicyReport } from "@croco/architecture-policy";
 
 export type ArchitecturePolicyCheckIo = {
@@ -27,12 +28,15 @@ type ArchitecturePolicyCheckParseResult =
   | { readonly kind: "invalid"; readonly message: string }
   | { readonly kind: "run"; readonly options: ArchitecturePolicyCheckOptions };
 
-const defaultIo: ArchitecturePolicyCheckIo = {
-  stdout: (message) => console.log(message),
-  stderr: (message) => console.error(message),
-  readFile: (path) => readFileSync(path, "utf-8"),
-  cwd: process.cwd(),
-};
+function createDefaultIo(): ArchitecturePolicyCheckIo {
+  const runtime = getCrocoCommandRuntime();
+  return {
+    stdout: runtime.stdout,
+    stderr: runtime.stderr,
+    readFile: (path) => readFileSync(path, "utf-8"),
+    cwd: runtime.cwd,
+  };
+}
 
 export const architecturePolicyCheck = defineCommand({
   meta: {
@@ -43,7 +47,7 @@ export const architecturePolicyCheck = defineCommand({
     ...GLOBAL_OPTIONS,
   },
   async run({ rawArgs }) {
-    process.exitCode = await runArchitecturePolicyCheck(rawArgs);
+    getCrocoCommandRuntime().setExitCode(await runArchitecturePolicyCheck(rawArgs));
   },
 });
 
@@ -64,7 +68,7 @@ export async function runArchitecturePolicyCheck(
   } = {},
 ): Promise<number> {
   const parsed = parseArchitecturePolicyCheckArgs(args);
-  const io = { ...defaultIo, ...options.io };
+  const io = { ...createDefaultIo(), ...options.io };
 
   if (parsed.kind === "help") {
     printArchitecturePolicyCheckHelp(io);

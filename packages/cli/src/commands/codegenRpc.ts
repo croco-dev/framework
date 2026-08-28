@@ -2,6 +2,12 @@ import { defineCommand } from "citty";
 import { type ChildProcess, type SpawnOptions, spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { basename, dirname, join } from "node:path";
+import { getCrocoCommandRuntime } from "../libs/cliRuntime.js";
+import {
+  getDelegatedCommandRuntimeOptions,
+  getDelegatedCommandStdio,
+  waitForDelegatedCommand,
+} from "../libs/delegatedCommand.js";
 import { GLOBAL_OPTIONS } from "./options.js";
 
 const require = createRequire(import.meta.url);
@@ -20,8 +26,9 @@ export const codegenRpc = defineCommand({
   args: {
     ...GLOBAL_OPTIONS,
   },
-  run({ rawArgs }) {
-    runRpcCodegen(rawArgs);
+  async run({ rawArgs }) {
+    const runtime = getCrocoCommandRuntime();
+    runtime.setExitCode(await runRpcCodegen(rawArgs, getDelegatedCommandRuntimeOptions(runtime)));
   },
 });
 
@@ -31,29 +38,22 @@ export function runRpcCodegen(
     readonly resolveBin?: () => string;
     readonly spawn?: RpcCodegenSpawn;
     readonly setExitCode?: (code: number) => void;
+    readonly stdout?: (message: string) => void;
+    readonly stderr?: (message: string) => void;
+    readonly env?: Readonly<Record<string, string | undefined>>;
+    readonly cwd?: string;
     readonly writeError?: (message: string) => void;
   } = {},
-): void {
+): Promise<number> {
   const resolveBin = options.resolveBin ?? resolveRpcCodegenBin;
   const spawnChild = options.spawn ?? spawn;
-  const setExitCode =
-    options.setExitCode ??
-    ((code: number) => {
-      process.exitCode = code;
-    });
-  const writeError = options.writeError ?? ((message: string) => console.error(message));
   const child = spawnChild(process.execPath, [resolveBin(), ...args], {
-    stdio: "inherit",
+    ...(options.cwd === undefined ? {} : { cwd: options.cwd }),
+    ...(options.env === undefined ? {} : { env: options.env }),
+    stdio: getDelegatedCommandStdio(options),
   });
 
-  child.on("exit", (code) => {
-    setExitCode(code ?? 1);
-  });
-
-  child.on("error", (error) => {
-    writeError(error.message);
-    setExitCode(1);
-  });
+  return waitForDelegatedCommand(child, options);
 }
 
 export function resolveRpcCodegenBin(): string {

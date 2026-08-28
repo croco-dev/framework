@@ -10,6 +10,7 @@ import {
   type ContractGraph,
 } from "@croco/protocols-core";
 import { GLOBAL_OPTIONS } from "./options.js";
+import { getCrocoCommandRuntime } from "../libs/cliRuntime.js";
 
 export type ContractGraphLoader = (
   glob: string,
@@ -36,13 +37,16 @@ type ContractsCheckParseResult =
   | { readonly kind: "invalid"; readonly message: string }
   | { readonly kind: "run"; readonly options: ContractsCheckOptions };
 
-const defaultIo: ContractsCheckIo = {
-  stdout: (message) => console.log(message),
-  stderr: (message) => console.error(message),
-  writeFile: (path, content) => writeFileSync(path, content),
-  mkdir: (path) => mkdirSync(path, { recursive: true }),
-  cwd: process.cwd(),
-};
+function createDefaultIo(): ContractsCheckIo {
+  const runtime = getCrocoCommandRuntime();
+  return {
+    stdout: runtime.stdout,
+    stderr: runtime.stderr,
+    writeFile: (path, content) => writeFileSync(path, content),
+    mkdir: (path) => mkdirSync(path, { recursive: true }),
+    cwd: runtime.cwd,
+  };
+}
 
 export const contractsCheck = defineCommand({
   meta: {
@@ -53,7 +57,7 @@ export const contractsCheck = defineCommand({
     ...GLOBAL_OPTIONS,
   },
   async run({ rawArgs }) {
-    process.exitCode = await runContractsCheck(rawArgs);
+    getCrocoCommandRuntime().setExitCode(await runContractsCheck(rawArgs));
   },
 });
 
@@ -65,7 +69,7 @@ export async function runContractsCheck(
   } = {},
 ): Promise<number> {
   const parsed = parseContractsCheckArgs(args);
-  const io = { ...defaultIo, ...options.io };
+  const io = { ...createDefaultIo(), ...options.io };
 
   if (parsed.kind === "help") {
     printContractsCheckHelp(io);

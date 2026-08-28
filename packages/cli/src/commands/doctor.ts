@@ -21,6 +21,7 @@ import {
 import { WORKSPACE_MAX_DEPTH } from "../libs/constants.js";
 import { parseCoreCoveragePackageFilters } from "../libs/coreCoverageFilters.js";
 import { CLI_DIAGNOSTIC_CODES, CLI_LEGACY_DIAGNOSTIC_CODES } from "../libs/diagnosticCodes.js";
+import { getCrocoCommandRuntime } from "../libs/cliRuntime.js";
 import type { CliDiagnosticCode } from "../libs/diagnosticCodes.js";
 import { GLOBAL_OPTIONS } from "./options.js";
 import { PROJECT_MANIFEST_BUNDLE_SCHEMA_VERSIONS } from "./projectMap.js";
@@ -270,7 +271,7 @@ const problemRegistryCheckTimeoutMs = 30_000;
 const commandOutputMaxLength = 500;
 
 export function runDoctor(options: RunDoctorOptions = {}): DoctorReport {
-  const startDir = resolve(options.cwd ?? process.cwd());
+  const startDir = resolve(options.cwd ?? getCrocoCommandRuntime().cwd);
   const rootDir = findWorkspaceRoot(startDir);
   if (!rootDir) {
     const diagnostic: DoctorDiagnostic = {
@@ -3973,6 +3974,7 @@ function runProblemRegistryDriftCheck(rootDir: string, checkId: string): DoctorD
   const result = spawnSync(command.command, command.args, {
     cwd: rootDir,
     encoding: "utf-8",
+    env: getCrocoCommandRuntime().env,
     timeout: problemRegistryCheckTimeoutMs,
   });
   const commandText = [command.command, ...command.args].join(" ");
@@ -4016,7 +4018,7 @@ function resolvePackageManagerCommand(): {
   readonly command: string;
   readonly args: readonly string[];
 } {
-  const npmExecPath = process.env.npm_execpath;
+  const npmExecPath = getCrocoCommandRuntime().env.npm_execpath;
   if (npmExecPath?.includes("pnpm")) {
     return {
       command: process.execPath,
@@ -4423,11 +4425,13 @@ export const doctor = defineCommand({
         ? args.cwd
         : typeof args.path === "string"
           ? args.path
-          : process.cwd();
+          : getCrocoCommandRuntime().cwd;
     const report = runDoctor({ cwd });
 
-    console.log(args.json ? JSON.stringify(report, null, 2) : formatDoctorReport(report));
-    process.exitCode = getDoctorExitCode(report);
+    getCrocoCommandRuntime().stdout(
+      args.json ? JSON.stringify(report, null, 2) : formatDoctorReport(report),
+    );
+    getCrocoCommandRuntime().setExitCode(getDoctorExitCode(report));
   },
 });
 

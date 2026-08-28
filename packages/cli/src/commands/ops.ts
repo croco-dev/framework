@@ -8,6 +8,7 @@ import {
   runOpsStatus,
 } from "../libs/ops.js";
 import { GLOBAL_OPTIONS } from "./options.js";
+import { getCrocoCommandRuntime } from "../libs/cliRuntime.js";
 
 export {
   formatOpsStatusReport,
@@ -62,8 +63,10 @@ export const opsStatus = defineCommand({
       timeoutMs: parseOpsTimeoutMs(args.timeout),
     });
 
-    console.log(args.json ? JSON.stringify(report, null, 2) : formatOpsStatusReport(report));
-    process.exitCode = getOpsStatusExitCode(report.summary);
+    getCrocoCommandRuntime().stdout(
+      args.json ? JSON.stringify(report, null, 2) : formatOpsStatusReport(report),
+    );
+    getCrocoCommandRuntime().setExitCode(getOpsStatusExitCode(report.summary));
   },
 });
 
@@ -109,8 +112,10 @@ export const opsCheck = defineCommand({
       timeoutMs: parseOpsTimeoutMs(args.timeout),
     });
 
-    console.log(args.json ? JSON.stringify(report, null, 2) : formatOpsStatusReport(report));
-    process.exitCode = getOpsStatusExitCode(report.summary);
+    getCrocoCommandRuntime().stdout(
+      args.json ? JSON.stringify(report, null, 2) : formatOpsStatusReport(report),
+    );
+    getCrocoCommandRuntime().setExitCode(getOpsStatusExitCode(report.summary));
   },
 });
 

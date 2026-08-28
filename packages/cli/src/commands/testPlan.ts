@@ -13,6 +13,7 @@ import {
   updateChangedTestSelectionBaseline,
 } from "@croco/testing/executable-assurance";
 import { GLOBAL_OPTIONS } from "./options.js";
+import { getCrocoCommandRuntime } from "../libs/cliRuntime.js";
 
 import type {
   ChangedTestSelectionBaseline,
@@ -54,16 +55,20 @@ type ParseResult =
   | { readonly kind: "invalid"; readonly message: string }
   | { readonly kind: "run"; readonly options: TestPlanOptions };
 
-const defaultIo: TestPlanIo = {
-  cwd: process.cwd(),
-  stdout: (message) => console.log(message),
-  stderr: (message) => console.error(message),
-  exists: existsSync,
-  readFile: (path) => readFileSync(path, "utf8"),
-  writeFile: (path, content) => writeFileSync(path, content),
-  mkdir: (path) => mkdirSync(path, { recursive: true }),
-  git: (args) => execFileSync("git", [...args], { encoding: "utf8" }),
-};
+function createDefaultIo(): TestPlanIo {
+  const runtime = getCrocoCommandRuntime();
+  return {
+    cwd: runtime.cwd,
+    stdout: runtime.stdout,
+    stderr: runtime.stderr,
+    exists: existsSync,
+    readFile: (path) => readFileSync(path, "utf8"),
+    writeFile: (path, content) => writeFileSync(path, content),
+    mkdir: (path) => mkdirSync(path, { recursive: true }),
+    git: (args) =>
+      execFileSync("git", [...args], { encoding: "utf8", env: getCrocoCommandRuntime().env }),
+  };
+}
 
 export const testPlan = defineCommand({
   meta: {
@@ -94,7 +99,7 @@ export const testPlan = defineCommand({
     enforce: { type: "boolean", description: "Require the documented observation gate" },
   },
   async run({ rawArgs }) {
-    process.exitCode = runTestPlan(rawArgs);
+    getCrocoCommandRuntime().setExitCode(runTestPlan(rawArgs));
   },
 });
 
@@ -102,7 +107,7 @@ export function runTestPlan(
   args: readonly string[],
   ioOverrides: Partial<TestPlanIo> = {},
 ): number {
-  const io = { ...defaultIo, ...ioOverrides };
+  const io = { ...createDefaultIo(), ...ioOverrides };
   const parsed = parseTestPlanArgs(args);
   if (parsed.kind === "help") {
     printHelp(io);

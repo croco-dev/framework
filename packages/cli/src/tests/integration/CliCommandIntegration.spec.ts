@@ -205,6 +205,76 @@ describe("installed CLI command integration", () => {
     `);
   });
 
+  it("imports and runs the packed CLI API without import side effects", () => {
+    const harness = getHarness();
+    const scriptPath = join(harness.consumerRoot, "run-packed-cli-api.mjs");
+    writeFileSync(
+      scriptPath,
+      [
+        "process.exitCode = 23;",
+        "const api = await import('@croco/cli');",
+        "const exitCodeAfterImport = process.exitCode;",
+        "const stdout = [];",
+        "const stderr = [];",
+        "const result = await api.runCroco(['--help'], {",
+        "  cwd: '/embedded/workspace',",
+        "  env: { CROCO_TEST_SENTINEL: 'present' },",
+        "  stdout: (message) => stdout.push(message),",
+        "  stderr: (message) => stderr.push(message),",
+        "});",
+        "process.exitCode = 0;",
+        "console.log(JSON.stringify({",
+        "  createCrocoCommand: typeof api.createCrocoCommand,",
+        "  runCroco: typeof api.runCroco,",
+        "  exitCodeAfterImport,",
+        "  result,",
+        "  stdout: stdout.join('\\n'),",
+        "  stderr,",
+        "}));",
+        "",
+      ].join("\n"),
+    );
+
+    const result = run("node", [scriptPath], harness.consumerRoot, {
+      label: "run packed @croco/cli API",
+    });
+    const report = JSON.parse(result.stdout) as {
+      readonly createCrocoCommand: string;
+      readonly runCroco: string;
+      readonly exitCodeAfterImport: number;
+      readonly result: { readonly exitCode: number };
+      readonly stdout: string;
+      readonly stderr: readonly string[];
+    };
+
+    expect(report).toMatchObject({
+      createCrocoCommand: "function",
+      runCroco: "function",
+      exitCodeAfterImport: 23,
+      result: { exitCode: 0 },
+      stderr: [],
+    });
+    expect(report.stdout).toContain("Croco framework CLI");
+    expect(result.stderr).toBe("");
+  });
+
+  it("preserves packed bin help and invalid-command exit semantics", () => {
+    const harness = getHarness();
+    const help = runInstalledCommand(harness, "croco", ["--help"], harness.commandRoot, 0);
+    const invalid = runInstalledCommand(
+      harness,
+      "croco",
+      ["unknown-command"],
+      harness.commandRoot,
+      1,
+    );
+
+    expect(help.stdout).toContain("Croco framework CLI");
+    expect(help.stderr).toBe("");
+    expect(invalid.stdout).toContain("Croco framework CLI");
+    expect(invalid.stderr).toContain("Unknown command `unknown-command`");
+  });
+
   it("runs create-croco-app JSON success and failure through the installed package", () => {
     const harness = getHarness();
     const targetDir = join(harness.commandRoot, "blank-app");

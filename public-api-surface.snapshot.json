@@ -6365,6 +6365,12 @@
               "declarationKind": "const"
             },
             {
+              "name": "createCrocoCommand",
+              "exportKind": "named",
+              "source": "./commands/root",
+              "declarationKind": "function"
+            },
+            {
               "name": "createDomain",
               "exportKind": "named",
               "source": "./commands/createDomain",
@@ -6611,6 +6617,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "runCroco",
+              "exportKind": "named",
+              "source": "./commands/root",
+              "declarationKind": "function"
+            },
+            {
               "name": "runDiCheck",
               "exportKind": "named",
               "source": "./commands/diCheck",
@@ -6761,6 +6773,16 @@
               "name": "ArchitecturePolicyCheckIo",
               "exportKind": "named",
               "source": "./commands/architecturePolicy"
+            },
+            {
+              "name": "CrocoCommandDependencies",
+              "exportKind": "named",
+              "source": "./libs/cliRuntime"
+            },
+            {
+              "name": "CrocoRunResult",
+              "exportKind": "named",
+              "source": "./commands/root"
             },
             {
               "name": "DiCheckDiagnostic",

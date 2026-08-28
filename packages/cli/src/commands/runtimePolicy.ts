@@ -15,6 +15,7 @@ import {
   type RuntimePolicyPresetConfig,
 } from "@croco/framework-context";
 import { GLOBAL_OPTIONS } from "./options.js";
+import { getCrocoCommandRuntime } from "../libs/cliRuntime.js";
 
 export type RuntimePolicyCheckIo = {
   readonly stdout: (message: string) => void;
@@ -46,12 +47,15 @@ type RuntimePolicyCheckManifest = {
   readonly plans?: PolicyTable["plans"];
 };
 
-const defaultIo: RuntimePolicyCheckIo = {
-  stdout: (message) => console.log(message),
-  stderr: (message) => console.error(message),
-  readFile: (path) => readFileSync(path, "utf-8"),
-  cwd: process.cwd(),
-};
+function createDefaultIo(): RuntimePolicyCheckIo {
+  const runtime = getCrocoCommandRuntime();
+  return {
+    stdout: runtime.stdout,
+    stderr: runtime.stderr,
+    readFile: (path) => readFileSync(path, "utf-8"),
+    cwd: runtime.cwd,
+  };
+}
 
 export const runtimePolicyCheck = defineCommand({
   meta: {
@@ -62,7 +66,7 @@ export const runtimePolicyCheck = defineCommand({
     ...GLOBAL_OPTIONS,
   },
   async run({ rawArgs }) {
-    process.exitCode = await runRuntimePolicyCheck(rawArgs);
+    getCrocoCommandRuntime().setExitCode(await runRuntimePolicyCheck(rawArgs));
   },
 });
 
@@ -83,7 +87,7 @@ export async function runRuntimePolicyCheck(
   } = {},
 ): Promise<number> {
   const parsed = parseRuntimePolicyCheckArgs(args);
-  const io = { ...defaultIo, ...options.io };
+  const io = { ...createDefaultIo(), ...options.io };
 
   if (parsed.kind === "help") {
     printRuntimePolicyCheckHelp(io);

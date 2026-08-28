@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSy
 import { dirname, relative, resolve, sep } from "node:path";
 import { defineCommand } from "citty";
 import { GLOBAL_OPTIONS } from "./options.js";
+import { getCrocoCommandRuntime } from "../libs/cliRuntime.js";
 import { applyReplacements, applyUpgradeRules } from "./upgradeRules.js";
 import type { FileFinding } from "./upgradeRules.js";
 
@@ -91,17 +92,20 @@ const SKIPPED_DIRECTORIES = new Set([
 ]);
 const VALUE_FLAGS = new Set(["--cwd"]);
 
-const defaultIo: UpgradeIo = {
-  stdout: (message) => console.log(message),
-  stderr: (message) => console.error(message),
-  readFile: (path) => readFileSync(path, "utf-8"),
-  writeFile: (path, content) => writeFileSync(path, content),
-  mkdir: (path) => mkdirSync(path, { recursive: true }),
-  exists: (path) => existsSync(path),
-  stat: (path) => statSync(path),
-  readDir: (path) => readdirSync(path, { withFileTypes: true }),
-  cwd: process.cwd(),
-};
+function createDefaultIo(): UpgradeIo {
+  const runtime = getCrocoCommandRuntime();
+  return {
+    stdout: runtime.stdout,
+    stderr: runtime.stderr,
+    readFile: (path) => readFileSync(path, "utf-8"),
+    writeFile: (path, content) => writeFileSync(path, content),
+    mkdir: (path) => mkdirSync(path, { recursive: true }),
+    exists: (path) => existsSync(path),
+    stat: (path) => statSync(path),
+    readDir: (path) => readdirSync(path, { withFileTypes: true }),
+    cwd: runtime.cwd,
+  };
+}
 
 export const upgrade = defineCommand({
   meta: {
@@ -112,7 +116,7 @@ export const upgrade = defineCommand({
     ...GLOBAL_OPTIONS,
   },
   async run({ rawArgs }) {
-    process.exitCode = await runUpgrade(rawArgs);
+    getCrocoCommandRuntime().setExitCode(await runUpgrade(rawArgs));
   },
 });
 
@@ -122,7 +126,7 @@ export async function runUpgrade(
     readonly io?: Partial<UpgradeIo>;
   } = {},
 ): Promise<number> {
-  const io = { ...defaultIo, ...options.io };
+  const io = { ...createDefaultIo(), ...options.io };
   const parsed = parseUpgradeArgs(args, io.cwd);
 
   if (parsed.kind === "help") {
@@ -154,7 +158,7 @@ export async function runUpgrade(
 
 export function parseUpgradeArgs(
   args: readonly string[],
-  defaultCwd = process.cwd(),
+  defaultCwd = getCrocoCommandRuntime().cwd,
 ): UpgradeParseResult {
   if (args.includes("--help") || args.includes("-h")) {
     return { kind: "help" };

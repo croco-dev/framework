@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "RunMigrateCommandOptions"
+title: "CrocoCommandDependencies"
 ---
 
-> **RunMigrateCommandOptions** = `object`
+> **CrocoCommandDependencies** = `object`
 
 ## Properties
 
@@ -21,19 +21,9 @@ title: "RunMigrateCommandOptions"
 
 ---
 
-### resolveBin?
+### isTTY?
 
-> `readonly` `optional` **resolveBin?**: () => `string`
-
-#### Returns
-
-`string`
-
----
-
-### spawn?
-
-> `readonly` `optional` **spawn?**: [`MigrationRunnerSpawn`](/api/cli/src/type-aliases/migrationrunnerspawn/)
+> `readonly` `optional` **isTTY?**: `boolean`
 
 ---
 
