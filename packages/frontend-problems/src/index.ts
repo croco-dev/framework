@@ -211,16 +211,20 @@ export class ProblemStatusMismatchError extends Problem {
   readonly response: Response;
   readonly httpStatus: number;
   readonly problemStatus: number;
+  readonly problemCode?: string;
 
-  constructor(response: Response, problemStatus: number) {
+  constructor(response: Response, problemStatus: number, problemCode?: string) {
     super(
       undefined,
       undefined,
-      `Problem response status mismatch: HTTP ${response.status}, Problem ${problemStatus}`,
+      problemCode === undefined
+        ? `Problem response status mismatch: HTTP ${response.status}, Problem ${problemStatus}`
+        : `Problem response status mismatch for ${problemCode}: HTTP ${response.status}, Problem ${problemStatus}`,
     );
     this.response = response;
     this.httpStatus = response.status;
     this.problemStatus = problemStatus;
+    this.problemCode = problemCode;
   }
 }
 
@@ -659,7 +663,7 @@ function createProblemStatusMismatchError(
 ): ProblemStatusMismatchError | undefined {
   return response.status === problem.status
     ? undefined
-    : new ProblemStatusMismatchError(response, problem.status);
+    : new ProblemStatusMismatchError(response, problem.status, problem.code);
 }
 
 async function readJsonBody(

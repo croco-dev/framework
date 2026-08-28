@@ -37,6 +37,10 @@ Problem responses preserve `type`, `title`, `status`, `code`, `detail`,
 `instance`, and extension fields. Non-Problem HTTP failures stay visibly separate
 as `kind: "external"`.
 
+When the HTTP status and Problem body status disagree, the request fails with
+`ProblemStatusMismatchError`. Its `httpStatus`, `problemStatus`, and `problemCode`
+fields preserve the conflicting protocol evidence without entering a typed Problem branch.
+
 ## Declared Problem unions
 
 Generated clients can pass declared route Problems to keep exhaustive unions:

@@ -126,14 +126,28 @@ describe("frontend Problem client runtime", () => {
       code: "frontend-problems/status-mismatch",
       httpStatus: 500,
       name: "ProblemStatusMismatchError",
+      problemCode: "USER_NOT_FOUND",
       problemStatus: 404,
       response,
       status: 500,
     });
     await expect(request).rejects.toBeInstanceOf(Problem);
     await expect(request).rejects.toThrow(
-      "Problem response status mismatch: HTTP 500, Problem 404",
+      "Problem response status mismatch for USER_NOT_FOUND: HTTP 500, Problem 404",
     );
+  });
+
+  it("preserves status-only mismatch construction for existing callers", () => {
+    const response = jsonResponse(userNotFoundProblem, 500);
+    const error = new ProblemStatusMismatchError(response, 404);
+
+    expect(error).toMatchObject({
+      httpStatus: 500,
+      problemCode: undefined,
+      problemStatus: 404,
+      response,
+    });
+    expect(error.message).toBe("Problem response status mismatch: HTTP 500, Problem 404");
   });
 
   it("keeps HTTP and Problem status mismatches external for generated-client results", async () => {
@@ -152,6 +166,7 @@ describe("frontend Problem client runtime", () => {
         code: "frontend-problems/status-mismatch",
         httpStatus: 500,
         name: "ProblemStatusMismatchError",
+        problemCode: "USER_NOT_FOUND",
         problemStatus: 404,
         status: 500,
       },
@@ -175,6 +190,7 @@ describe("frontend Problem client runtime", () => {
       error: {
         httpStatus: 500,
         name: "ProblemStatusMismatchError",
+        problemCode: "USER_NOT_FOUND",
         problemStatus: 404,
       },
       response,
