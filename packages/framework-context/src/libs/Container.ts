@@ -2,6 +2,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import {
   type Service,
   type ServiceIdentifier,
+  type ServiceMetadata,
   Container as TypeDIContainer,
   ContainerInstance as TypeDIContainerInstance,
   ServiceNotFoundError,
@@ -50,6 +51,7 @@ type ContainerScopeState = {
   readonly id: string;
   readonly instance: TypeDIContainerInstance;
   readonly lazyProviders: Map<TokenIdentifier<unknown>, () => unknown>;
+  readonly symbolTokens: Map<symbol, TypeDIToken<unknown>>;
   readonly tokenIdentityIds: Map<TokenIdentifier<unknown>, string>;
   readonly tokenIdentityOwners: Map<string, TokenIdentifier<unknown>>;
   readonly tokens: Set<TokenIdentifier<unknown>>;
@@ -59,7 +61,43 @@ type ContainerScopeState = {
   validated: boolean;
 };
 
+type ContainerScopeServiceAccess = {
+  readonly services: ServiceMetadata<unknown>[];
+  readonly destroyServiceInstance: (service: ServiceMetadata<unknown>) => void;
+};
+
+type ContainerScopeSnapshot = {
+  readonly componentRegistrationOrder: Map<Constructor, number>;
+  readonly componentSourceLocations: Map<Constructor, DependencySourceLocation>;
+  readonly components: Map<Constructor, ComponentMetadata>;
+  readonly explicitComponentSourceLocations: Map<Constructor, DependencySourceLocation>;
+  readonly lazyProviders: Map<TokenIdentifier<unknown>, () => unknown>;
+  readonly symbolTokens: Map<symbol, TypeDIToken<unknown>>;
+  readonly tokenIdentityIds: Map<TokenIdentifier<unknown>, string>;
+  readonly tokenIdentityOwners: Map<string, TokenIdentifier<unknown>>;
+  readonly tokens: Set<TokenIdentifier<unknown>>;
+  readonly services: readonly {
+    readonly reference: ServiceMetadata<unknown>;
+    readonly values: ServiceMetadata<unknown>;
+  }[];
+  readonly lastResolutionTrace?: DependencyResolutionTrace;
+  readonly nextComponentRegistrationOrder: number;
+  readonly validated: boolean;
+};
+
 const containerScopeStorage = new AsyncLocalStorage<ContainerScopeState>();
+type ContainerScopeRollbackTransaction = {
+  readonly state: ContainerScopeState;
+  active: boolean;
+};
+const containerScopeRollbackStorage = new AsyncLocalStorage<ContainerScopeRollbackTransaction>();
+
+class CapturedTypeDIInjectionToken extends Error {
+  constructor(readonly token: TokenIdentifier<unknown>) {
+    super("Captured TypeDI injection token");
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
 
 function createContainerScopeDisposedProblem(scopeId: string): Problem {
   return ProblemFactory.internalServerError(
@@ -74,6 +112,7 @@ function createContainerScopeDisposedProblem(scopeId: string): Problem {
 export class ContainerScope implements AsyncDisposable {
   readonly id: string;
   private readonly state: ContainerScopeState;
+  private rollbackTail: Promise<void> = Promise.resolve();
 
   constructor() {
     this.id = `croco-container-scope-${++containerScopeCounter}`;
@@ -85,6 +124,7 @@ export class ContainerScope implements AsyncDisposable {
       id: this.id,
       instance: TypeDIContainer.of(this.id),
       lazyProviders: new Map(),
+      symbolTokens: new Map(),
       tokenIdentityIds: new Map(),
       tokenIdentityOwners: new Map(),
       tokens: new Set(),
@@ -104,6 +144,20 @@ export class ContainerScope implements AsyncDisposable {
     return containerScopeStorage.run(this.state, fn);
   }
 
+  runWithRollback<T>(fn: () => Promise<T>): Promise<T> {
+    const transaction = containerScopeRollbackStorage.getStore();
+    if (transaction?.active && transaction.state === this.state) {
+      return containerScopeStorage.run(this.state, fn);
+    }
+
+    const attempt = this.rollbackTail.then(() => this.executeWithRollback(fn));
+    this.rollbackTail = attempt.then(
+      () => undefined,
+      () => undefined,
+    );
+    return attempt;
+  }
+
   dispose(): void {
     if (this.state.disposed) {
       return;
@@ -115,6 +169,7 @@ export class ContainerScope implements AsyncDisposable {
     this.state.components.clear();
     this.state.explicitComponentSourceLocations.clear();
     this.state.lazyProviders.clear();
+    this.state.symbolTokens.clear();
     this.state.tokenIdentityIds.clear();
     this.state.tokenIdentityOwners.clear();
     this.state.tokens.clear();
@@ -129,6 +184,113 @@ export class ContainerScope implements AsyncDisposable {
 
   async [Symbol.asyncDispose](): Promise<void> {
     this.dispose();
+  }
+
+  private createSnapshot(): ContainerScopeSnapshot {
+    const services = this.getServiceAccess().services;
+
+    return {
+      componentRegistrationOrder: new Map(this.state.componentRegistrationOrder),
+      componentSourceLocations: new Map(this.state.componentSourceLocations),
+      components: new Map(this.state.components),
+      explicitComponentSourceLocations: new Map(this.state.explicitComponentSourceLocations),
+      lazyProviders: new Map(this.state.lazyProviders),
+      symbolTokens: new Map(this.state.symbolTokens),
+      tokenIdentityIds: new Map(this.state.tokenIdentityIds),
+      tokenIdentityOwners: new Map(this.state.tokenIdentityOwners),
+      tokens: new Set(this.state.tokens),
+      services: services.map((service) => ({ reference: service, values: { ...service } })),
+      ...(this.state.lastResolutionTrace
+        ? { lastResolutionTrace: this.state.lastResolutionTrace }
+        : {}),
+      nextComponentRegistrationOrder: this.state.nextComponentRegistrationOrder,
+      validated: this.state.validated,
+    };
+  }
+
+  private restoreSnapshot(snapshot: ContainerScopeSnapshot): void {
+    const access = this.getServiceAccess();
+    const originalRecords = new Map(
+      snapshot.services.map((record) => [record.reference, record.values]),
+    );
+
+    for (const service of access.services) {
+      const original = originalRecords.get(service);
+      if (!original || service.value !== original.value) {
+        access.destroyServiceInstance(service);
+      }
+    }
+    for (const { reference, values } of snapshot.services) {
+      Object.assign(reference, values);
+    }
+    access.services.splice(
+      0,
+      access.services.length,
+      ...snapshot.services.map(({ reference }) => reference),
+    );
+
+    this.replaceMap(this.state.componentRegistrationOrder, snapshot.componentRegistrationOrder);
+    this.replaceMap(this.state.componentSourceLocations, snapshot.componentSourceLocations);
+    this.replaceMap(this.state.components, snapshot.components);
+    this.replaceMap(
+      this.state.explicitComponentSourceLocations,
+      snapshot.explicitComponentSourceLocations,
+    );
+    this.replaceMap(this.state.lazyProviders, snapshot.lazyProviders);
+    this.replaceMap(this.state.symbolTokens, snapshot.symbolTokens);
+    this.replaceMap(this.state.tokenIdentityIds, snapshot.tokenIdentityIds);
+    this.replaceMap(this.state.tokenIdentityOwners, snapshot.tokenIdentityOwners);
+    this.state.tokens.clear();
+    for (const token of snapshot.tokens) {
+      this.state.tokens.add(token);
+    }
+    if (snapshot.lastResolutionTrace) {
+      this.state.lastResolutionTrace = snapshot.lastResolutionTrace;
+    } else {
+      delete this.state.lastResolutionTrace;
+    }
+    this.state.nextComponentRegistrationOrder = snapshot.nextComponentRegistrationOrder;
+    this.state.validated = snapshot.validated;
+  }
+
+  private async executeWithRollback<T>(fn: () => Promise<T>): Promise<T> {
+    if (this.state.disposed) {
+      throw createContainerScopeDisposedProblem(this.id);
+    }
+
+    const snapshot = this.createSnapshot();
+    const transaction: ContainerScopeRollbackTransaction = { state: this.state, active: true };
+    try {
+      return await containerScopeRollbackStorage.run(transaction, () =>
+        containerScopeStorage.run(this.state, fn),
+      );
+    } catch (error) {
+      this.restoreSnapshot(snapshot);
+      throw error;
+    } finally {
+      transaction.active = false;
+    }
+  }
+
+  private getServiceAccess(): ContainerScopeServiceAccess {
+    const access = this.state.instance as unknown as Partial<ContainerScopeServiceAccess>;
+    if (!Array.isArray(access.services) || typeof access.destroyServiceInstance !== "function") {
+      throw ProblemFactory.internalServerError(
+        "framework-context/container-scope-snapshot-unavailable",
+        "TypeDI 0.10.0 container metadata contract is unavailable for scoped rollback.",
+      );
+    }
+    return access as ContainerScopeServiceAccess;
+  }
+
+  private replaceMap<TKey, TValue>(
+    target: Map<TKey, TValue>,
+    source: ReadonlyMap<TKey, TValue>,
+  ): void {
+    target.clear();
+    for (const [key, value] of source) {
+      target.set(key, value);
+    }
   }
 }
 
@@ -289,6 +451,7 @@ export class Container {
       scope.components.clear();
       scope.explicitComponentSourceLocations.clear();
       scope.lazyProviders.clear();
+      scope.symbolTokens.clear();
       scope.tokenIdentityIds.clear();
       scope.tokenIdentityOwners.clear();
       scope.tokens.clear();
@@ -299,7 +462,6 @@ export class Container {
     }
 
     TypeDIContainer.of().reset({ strategy: "resetServices" });
-    TypeDIContainer.reset();
     // reset은 요청 처리가 없는 idle 시점에만 호출한다.
     MetadataStorage.clear();
     Container.lazyProviders.clear();
@@ -338,13 +500,22 @@ export class Container {
 
   static createDependencyGraphManifest(
     options: {
+      readonly providerConstructors?: ReadonlyMap<TokenIdentifier<unknown>, Constructor<unknown>>;
+      readonly rejectUnknownProviders?: boolean;
       readonly roots?: readonly TokenIdentifier<unknown>[];
     } = {},
   ): DependencyGraphManifest {
     const roots = [...(options.roots ?? Container.getRegisteredComponents())].sort((left, right) =>
       Container.compareTokens(left, right),
     );
-    const traces = roots.map((root) => Container.buildResolutionTrace(root));
+    const traces = roots.map((root) =>
+      Container.buildResolutionTrace(
+        root,
+        undefined,
+        options.providerConstructors,
+        options.rejectUnknownProviders,
+      ),
+    );
     const diagnostics = Container.createGraphDiagnostics(traces);
 
     return {
@@ -894,6 +1065,10 @@ export class Container {
     return Container.getScopeState()?.lazyProviders ?? Container.lazyProviders;
   }
 
+  private static getSymbolTokens(): Map<symbol, TypeDIToken<unknown>> {
+    return Container.getScopeState()?.symbolTokens ?? Container.symbolTokens;
+  }
+
   private static isValidated(): boolean {
     return Container.getScopeState()?.validated ?? Container.validated;
   }
@@ -950,13 +1125,14 @@ export class Container {
   }
 
   private static getOrCreateSymbolToken(symbol: symbol): TypeDIToken<unknown> {
-    const existing = Container.symbolTokens.get(symbol);
+    const symbolTokens = Container.getSymbolTokens();
+    const existing = symbolTokens.get(symbol);
     if (existing) {
       return existing;
     }
 
     const token = new TypeDIToken(Symbol.keyFor(symbol) ?? symbol.description ?? symbol.toString());
-    Container.symbolTokens.set(symbol, token);
+    symbolTokens.set(symbol, token);
     return token;
   }
 
@@ -966,7 +1142,7 @@ export class Container {
 
   private static getRegisteredValue<T>(token: TokenIdentifier<T>): T {
     const scope = Container.getScopeState();
-    if (scope && !scope.tokens.has(token)) {
+    if (scope && !Container.hasScopedValue(scope, token)) {
       throw new ServiceNotFoundError(Container.toTypeDIServiceIdentifier(token));
     }
 
@@ -1012,7 +1188,7 @@ export class Container {
   private static hasRegisteredValue<T>(token: TokenIdentifier<T>): boolean {
     const scope = Container.getScopeState();
     if (scope) {
-      return scope.tokens.has(token);
+      return Container.hasScopedValue(scope, token);
     }
 
     const target = TypeDIContainer;
@@ -1029,6 +1205,13 @@ export class Container {
     }
 
     return target.has(Container.toTypeDIConstructable(token));
+  }
+
+  private static hasScopedValue<T>(scope: ContainerScopeState, token: TokenIdentifier<T>): boolean {
+    const container = scope.instance as unknown as {
+      has(identifier: ServiceIdentifier<T>): boolean;
+    };
+    return container.has(Container.toTypeDIServiceIdentifier(token));
   }
 
   private static removeRegisteredValue<T>(token: TokenIdentifier<T>): void {
@@ -1217,9 +1400,18 @@ export class Container {
   private static buildResolutionTrace<T>(
     token: TokenIdentifier<T>,
     status?: DependencyResolutionTraceStatus,
+    providerConstructors?: ReadonlyMap<TokenIdentifier<unknown>, Constructor<unknown>>,
+    rejectUnknownProviders = false,
   ): DependencyResolutionTrace {
     const steps: DependencyResolutionStep[] = [];
-    Container.collectResolutionSteps(token, [], steps);
+    Container.collectResolutionSteps(
+      token,
+      [],
+      steps,
+      undefined,
+      providerConstructors,
+      rejectUnknownProviders,
+    );
     return {
       root: Container.describeToken(token).label,
       status: status ?? Container.computeTraceStatus(steps),
@@ -1232,20 +1424,28 @@ export class Container {
     path: TokenIdentifier<unknown>[],
     steps: DependencyResolutionStep[],
     edge?: Pick<DependencyResolutionStep, "dependencyOf" | "dependencyOfId" | "parameterIndex">,
+    providerConstructors?: ReadonlyMap<TokenIdentifier<unknown>, Constructor<unknown>>,
+    rejectUnknownProviders = false,
   ): void {
     const nextPath = [...path, token as TokenIdentifier<unknown>];
     const cycleStartIndex = path.findIndex((entry) => Container.isSameToken(entry, token));
 
     if (cycleStartIndex >= 0) {
       steps.push(
-        Container.createResolutionStep(token, path, {
-          ...edge,
-          status: "circular",
-          reason: `Circular dependency detected through ${nextPath
-            .slice(cycleStartIndex)
-            .map((entry) => Container.describeToken(entry).label)
-            .join(" -> ")}.`,
-        }),
+        Container.createResolutionStep(
+          token,
+          path,
+          {
+            ...edge,
+            status: "circular",
+            reason: `Circular dependency detected through ${nextPath
+              .slice(cycleStartIndex)
+              .map((entry) => Container.describeToken(entry).label)
+              .join(" -> ")}.`,
+          },
+          rejectUnknownProviders,
+          providerConstructors?.has(token as TokenIdentifier<unknown>),
+        ),
       );
       return;
     }
@@ -1253,45 +1453,67 @@ export class Container {
     const scopeMismatch = Container.getScopeMismatch(token, path);
     if (scopeMismatch) {
       steps.push(
-        Container.createResolutionStep(token, path, {
-          ...edge,
-          status: "scope-mismatch",
-          reason: `Singleton-scoped component ${scopeMismatch.singleton} cannot depend on request-scoped component ${scopeMismatch.requestScoped}.`,
-        }),
+        Container.createResolutionStep(
+          token,
+          path,
+          {
+            ...edge,
+            status: "scope-mismatch",
+            reason: `Singleton-scoped component ${scopeMismatch.singleton} cannot depend on request-scoped component ${scopeMismatch.requestScoped}.`,
+          },
+          rejectUnknownProviders,
+          providerConstructors?.has(token as TokenIdentifier<unknown>),
+        ),
       );
       return;
     }
 
-    const step = Container.createResolutionStep(token, path, edge);
+    const step = Container.createResolutionStep(
+      token,
+      path,
+      edge,
+      rejectUnknownProviders,
+      providerConstructors?.has(token as TokenIdentifier<unknown>),
+    );
     steps.push(step);
 
-    if (
-      step.status !== "selected" ||
-      !Container.isConstructorToken(token) ||
-      step.provider !== "component"
-    ) {
+    const implementation =
+      providerConstructors?.get(token as TokenIdentifier<unknown>) ??
+      (Container.isConstructorToken(token) && step.provider === "component" ? token : undefined);
+    if (step.status !== "selected" || !implementation) {
       return;
     }
 
     const paramTypes =
-      (Reflect.getMetadata("design:paramtypes", token) as Constructor[] | undefined) ?? [];
-    Container.getConstructorParameterIndices(token, paramTypes).forEach((parameterIndex) => {
-      const injectedToken = getParameterInjectionToken(token, parameterIndex);
-      if (!injectedToken && parameterIndex >= token.length) {
-        return;
-      }
+      (Reflect.getMetadata("design:paramtypes", implementation) as Constructor[] | undefined) ?? [];
+    Container.getConstructorParameterIndices(implementation, paramTypes).forEach(
+      (parameterIndex) => {
+        const injectedToken =
+          getParameterInjectionToken(implementation, parameterIndex) ??
+          Container.getTypeDIParameterInjectionToken(implementation, parameterIndex);
+        if (!injectedToken && parameterIndex >= implementation.length) {
+          return;
+        }
 
-      const dependency = injectedToken ?? paramTypes[parameterIndex];
-      if (dependency === undefined) {
-        return;
-      }
+        const dependency = injectedToken ?? paramTypes[parameterIndex];
+        if (dependency === undefined) {
+          return;
+        }
 
-      Container.collectResolutionSteps(dependency, nextPath, steps, {
-        dependencyOf: step.token,
-        dependencyOfId: step.tokenId,
-        parameterIndex,
-      });
-    });
+        Container.collectResolutionSteps(
+          dependency,
+          nextPath,
+          steps,
+          {
+            dependencyOf: step.token,
+            dependencyOfId: step.tokenId,
+            parameterIndex,
+          },
+          providerConstructors,
+          rejectUnknownProviders,
+        );
+      },
+    );
   }
 
   private static getConstructorParameterIndices(
@@ -1314,13 +1536,56 @@ export class Container {
     return Array.from({ length: parameterCount }, (_, index) => index);
   }
 
+  private static getTypeDIParameterInjectionToken(
+    token: Constructor,
+    parameterIndex: number,
+  ): TokenIdentifier<unknown> | undefined {
+    const handler = TypeDIContainer.handlers.find(
+      (candidate) =>
+        typeof candidate.index === "number" &&
+        candidate.index === parameterIndex &&
+        (candidate.object === token || candidate.object === Object.getPrototypeOf(token)),
+    );
+    if (!handler) {
+      return undefined;
+    }
+
+    try {
+      handler.value(Container.createTypeDIInjectionProbe());
+    } catch (error) {
+      if (error instanceof CapturedTypeDIInjectionToken) {
+        return error.token;
+      }
+      throw error;
+    }
+
+    return undefined;
+  }
+
+  private static createTypeDIInjectionProbe(): TypeDIContainerInstance {
+    return {
+      get: <T>(identifier: ServiceIdentifier<T>): T => {
+        throw new CapturedTypeDIInjectionToken(identifier as TokenIdentifier<unknown>);
+      },
+      getMany: <T>(identifier: ServiceIdentifier<T>): T[] => {
+        throw new CapturedTypeDIInjectionToken(identifier as TokenIdentifier<unknown>);
+      },
+    } as TypeDIContainerInstance;
+  }
+
   private static createResolutionStep<T>(
     token: TokenIdentifier<T>,
     path: TokenIdentifier<unknown>[],
     overrides: Partial<DependencyResolutionStep> = {},
+    rejectUnknownProviders = false,
+    knownProvider = false,
   ): DependencyResolutionStep {
     const described = Container.describeToken(token);
-    const selection = Container.describeProviderSelection(token);
+    const selection = Container.describeProviderSelection(
+      token,
+      rejectUnknownProviders,
+      knownProvider,
+    );
     const pathTokens = [...path, token as TokenIdentifier<unknown>];
     return {
       token: described.label,
@@ -1340,7 +1605,11 @@ export class Container {
     };
   }
 
-  private static describeProviderSelection<T>(token: TokenIdentifier<T>): {
+  private static describeProviderSelection<T>(
+    token: TokenIdentifier<T>,
+    rejectUnknownProviders = false,
+    knownProvider = false,
+  ): {
     provider: DependencyProviderKind;
     status: DependencyResolutionStepStatus;
     reason: string;
@@ -1385,7 +1654,15 @@ export class Container {
       };
     }
 
-    if (!Container.isConstructorToken(token)) {
+    if (knownProvider) {
+      return {
+        provider: "component",
+        status: "selected",
+        reason: "Application runtime class provider is registered by the module lifecycle.",
+      };
+    }
+
+    if (rejectUnknownProviders || !Container.isConstructorToken(token)) {
       return {
         provider: "missing",
         status: "missing",

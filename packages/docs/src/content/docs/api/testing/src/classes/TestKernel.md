@@ -31,7 +31,7 @@ title: "TestKernel"
 
 ##### scope
 
-[`ContainerScope`](/api/framework-context/src/classes/containerscope/)
+[`TestKernelApplicationRuntime`](/api/testing/src/interfaces/testkernelapplicationruntime/)
 
 ##### transactionContext
 

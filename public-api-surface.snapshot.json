@@ -12337,6 +12337,18 @@
               "declarationKind": "function"
             },
             {
+              "name": "ApplicationRuntime",
+              "exportKind": "named",
+              "source": "./ApplicationRuntime",
+              "declarationKind": "class"
+            },
+            {
+              "name": "createApplicationRuntime",
+              "exportKind": "named",
+              "source": "./ApplicationRuntime",
+              "declarationKind": "function"
+            },
+            {
               "name": "createModuleGraphManifest",
               "exportKind": "named",
               "source": "./ModuleRegistry",
@@ -12464,6 +12476,16 @@
             }
           ],
           "typeExports": [
+            {
+              "name": "ApplicationRuntimeGraphManifest",
+              "exportKind": "named",
+              "source": "./ApplicationRuntime"
+            },
+            {
+              "name": "ApplicationRuntimeOptions",
+              "exportKind": "named",
+              "source": "./ApplicationRuntime"
+            },
             {
               "name": "CrocoModuleDefinition",
               "exportKind": "named",
@@ -30123,6 +30145,11 @@
               "name": "TestingTransactionContextOptions",
               "exportKind": "named",
               "source": "./libs/testing"
+            },
+            {
+              "name": "TestKernelApplicationRuntime",
+              "exportKind": "named",
+              "source": "./libs/TestKernel"
             },
             {
               "name": "TestKernelBootFidelity",

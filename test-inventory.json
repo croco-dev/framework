@@ -1535,6 +1535,12 @@
       "owner": "@croco/framework-context"
     },
     {
+      "path": "packages/framework-context/src/tests/ContainerScope.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/framework-context"
+    },
+    {
       "path": "packages/framework-context/src/tests/DependencyGraphManifest.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
@@ -1611,6 +1617,12 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/framework-logger"
+    },
+    {
+      "path": "packages/framework-module/src/tests/ApplicationRuntime.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/framework-module"
     },
     {
       "path": "packages/framework-module/src/tests/DuplicateModuleName.spec.ts",

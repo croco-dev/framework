@@ -237,6 +237,10 @@ export function createModuleRuntime(): ModuleRuntime {
   return new ModuleRuntimeImplementation(createModuleRegistryState(containerId));
 }
 
+export function createModuleRuntimeForContainer(containerId: string): ModuleRuntime {
+  return new ModuleRuntimeImplementation(createModuleRegistryState(containerId));
+}
+
 function assertRuntimeAvailable(state: ModuleRegistryState): void {
   if (state.disposed || state.disposePromise) {
     throw new ModuleRuntimeDisposedProblem();
@@ -425,6 +429,7 @@ async function performInitializeModules(
       options,
     );
     restoreContainerServices(container, containerSnapshot);
+    state.registryGeneration += 1;
     resetActiveRuntimeState(state);
 
     if (isModuleLifecycleExecutionProblem(error)) {

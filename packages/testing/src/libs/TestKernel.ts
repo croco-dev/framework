@@ -1,10 +1,5 @@
 import { EventBusConfig } from "@croco/events-core";
-import {
-  Container,
-  type ContainerScope,
-  ShutdownManager,
-  type TokenIdentifier,
-} from "@croco/framework-context";
+import { Container, ShutdownManager, type TokenIdentifier } from "@croco/framework-context";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import type {
   BootstrapValidationPolicy,
@@ -90,6 +85,13 @@ export type TestKernelBootstrapContext = {
   readonly runtime: TestKernelRuntime;
 };
 
+export interface TestKernelApplicationRuntime {
+  run<T>(fn: () => Promise<T>): Promise<T>;
+  run<T>(fn: () => T): T;
+  shutdown?(): Promise<void> | void;
+  dispose(): Promise<void> | void;
+}
+
 export type TestResourceMode = "rollback" | "commit" | "migration";
 export type TestResourceIsolation = "database-per-worker" | "prefix-per-test";
 export type TestResourceDiagnosticStage = "startup" | "migration" | "health-check" | "cleanup";
@@ -139,6 +141,7 @@ export type TestKernelResourceObligation = {
 };
 
 type TestKernelCommonOptions = {
+  readonly applicationRuntime?: TestKernelApplicationRuntime;
   readonly baseUrl?: string;
   readonly bootstrap: (
     context: TestKernelBootstrapContext,
@@ -328,7 +331,7 @@ export class TestKernel implements AsyncDisposable {
     readonly app: CrocoApp,
     readonly fidelity: TestKernelFidelity,
     private readonly controls: TestRuntime,
-    private readonly scope: ContainerScope,
+    private readonly scope: TestKernelApplicationRuntime,
     transactionContext: TestingTransactionContext,
     private readonly baseUrl: string,
     private readonly lambdaHandler: LambdaHandler | undefined,
@@ -511,7 +514,7 @@ export class TestKernel implements AsyncDisposable {
 }
 
 export async function createTestKernel(options: TestKernelOptions): Promise<TestKernel> {
-  const scope = Container.createScope();
+  const scope = options.applicationRuntime ?? Container.createScope();
   const runtime = options.fidelity === "adapter" ? (options.adapter ?? "node") : "node";
   const runtimeOptions: TestRuntimeOptions = {
     ...(options.clock === undefined ? {} : { clock: options.clock }),
@@ -685,7 +688,7 @@ function toRequest(
 }
 
 async function runCleanupSequence(
-  scope: ContainerScope,
+  scope: TestKernelApplicationRuntime,
   cleanupOperations: readonly TestKernelCleanupOperation[],
 ): Promise<Error[]> {
   const failures: Error[] = [];
@@ -694,6 +697,14 @@ async function runCleanupSequence(
     await scope.run(() => ShutdownManager.getInstance().shutdown({ throwOnHookError: true }));
   } catch (error) {
     failures.push(toError(error));
+  }
+
+  if (scope.shutdown) {
+    try {
+      await scope.shutdown();
+    } catch (error) {
+      failures.push(toError(error));
+    }
   }
 
   for (const cleanup of cleanupOperations) {
@@ -717,7 +728,7 @@ async function runCleanupSequence(
   }
 
   try {
-    scope.dispose();
+    await scope.dispose();
   } catch (error) {
     failures.push(toError(error));
   }

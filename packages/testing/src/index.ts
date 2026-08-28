@@ -400,6 +400,7 @@ export type {
   StartedTestResource,
   TestKernelBootFidelity,
   TestKernelBootstrapContext,
+  TestKernelApplicationRuntime,
   TestKernelBootstrapResult,
   TestKernelEvidence,
   TestKernelFidelity,

@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import { EventBusConfig } from "@croco/events-core";
 import { Component, Container, Context, ShutdownManager, Token } from "@croco/framework-context";
+import { createApplicationRuntime } from "@croco/framework-module";
 import { Controller, Get } from "@croco/protocols-rest";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import {
@@ -229,6 +230,108 @@ describe("TestKernel", () => {
       "resource:database:start",
       "bootstrap:worker-a:test-a",
       "application:shutdown",
+      "application:dispose",
+      "resource:database:dispose",
+    ]);
+  });
+
+  it("boots isolated application runtimes without process-global resets", async () => {
+    const createKernel = async (value: string, lifecycle: string[]) => {
+      const service = new KernelValueService(value);
+      const runtime = createApplicationRuntime({
+        modules: [
+          {
+            name: "app",
+            providers: [
+              { provide: KernelValueService, useValue: service },
+              { provide: KernelController, useValue: new KernelController() },
+            ],
+            start: () => {
+              lifecycle.push(`start:${Container.get(KernelValueService).value}`);
+            },
+            shutdown: () => {
+              lifecycle.push(`shutdown:${Container.get(KernelValueService).value}`);
+            },
+          },
+        ],
+      });
+
+      return createTestKernel({
+        applicationRuntime: runtime,
+        bootstrap: async () => {
+          await runtime.initialize();
+          return createApp({
+            controllers: [KernelController],
+            diValidation: "enforce",
+            middlewares: [productionSecurityMiddleware],
+            securityValidation: "enforce",
+          });
+        },
+        fidelity: "application",
+      });
+    };
+    const firstLifecycle: string[] = [];
+    const secondLifecycle: string[] = [];
+    const [first, second] = await Promise.all([
+      createKernel("first", firstLifecycle),
+      createKernel("second", secondLifecycle),
+    ]);
+
+    expect(first.get(KernelValueService).value).toBe("first");
+    expect(second.get(KernelValueService).value).toBe("second");
+    await expect(
+      first.http.get("/kernel/value").then((response) => response.json()),
+    ).resolves.toMatchObject({
+      value: "first",
+    });
+    await expect(
+      second.http.get("/kernel/value").then((response) => response.json()),
+    ).resolves.toMatchObject({
+      value: "second",
+    });
+
+    await Promise.all([first.dispose(), second.dispose()]);
+    expect(firstLifecycle).toEqual(["start:first", "shutdown:first"]);
+    expect(secondLifecycle).toEqual(["start:second", "shutdown:second"]);
+  });
+
+  it("shuts application modules down before application and resource cleanup", async () => {
+    const lifecycle: string[] = [];
+    const resource = fakeResource("database", "commit", lifecycle);
+    const runtime = createApplicationRuntime({
+      modules: [
+        {
+          name: "app",
+          start: () => {
+            lifecycle.push(`module:start:${Container.get(FAKE_RESOURCE_CONNECTION).identity}`);
+          },
+          shutdown: () => {
+            lifecycle.push(`module:shutdown:${Container.get(FAKE_RESOURCE_CONNECTION).identity}`);
+          },
+        },
+      ],
+    });
+    const kernel = await createTestKernel({
+      applicationRuntime: runtime,
+      bootstrap: async () => {
+        await runtime.initialize();
+        return bootstrapProductionApp("resource-order");
+      },
+      dispose: () => {
+        lifecycle.push("application:dispose");
+      },
+      fidelity: "application",
+      resources: [resource],
+      testId: "test-runtime",
+      workerId: "worker-runtime",
+    });
+
+    await kernel.dispose();
+
+    expect(lifecycle).toEqual([
+      "resource:database:start",
+      "module:start:worker-runtime:test-runtime",
+      "module:shutdown:worker-runtime:test-runtime",
       "application:dispose",
       "resource:database:dispose",
     ]);

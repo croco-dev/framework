@@ -3516,6 +3516,9 @@ importers:
         specifier: ^3.23.8
         version: 3.25.76
     devDependencies:
+      '@croco/framework-module':
+        specifier: workspace:*
+        version: link:../framework-module
       '@croco/preset-cloudflare':
         specifier: workspace:*
         version: link:../preset-cloudflare

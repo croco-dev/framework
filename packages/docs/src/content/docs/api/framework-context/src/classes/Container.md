@@ -27,6 +27,14 @@ Croco 컴포넌트의 등록, 조회, 지연 생성, 요청 스코프 해석을 
 
 ##### options?
 
+###### providerConstructors?
+
+`ReadonlyMap`\<[`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidentifier/)\<`unknown`\>, [`Constructor`](/api/framework-context/src/type-aliases/constructor/)\<`unknown`\>\>
+
+###### rejectUnknownProviders?
+
+`boolean`
+
 ###### roots?
 
 readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidentifier/)\<`unknown`\>[]

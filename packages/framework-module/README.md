@@ -97,6 +97,45 @@ graph is initialized. Further runtime or context access after disposal throws
 The static `CrocoModule` API remains the compatible default-runtime facade for
 applications that need only one module graph.
 
+## Application Runtime
+
+`createApplicationRuntime()` is the canonical application-owned composition boundary. It binds one
+`ContainerScope` to one module runtime, enters that scope for every lifecycle phase, and lets async
+bootstrap work and host callbacks re-enter the same DI runtime explicitly.
+
+```ts
+import { createApplicationRuntime, defineCrocoModule } from "@croco/framework-module";
+
+const runtime = createApplicationRuntime({
+  modules: [
+    defineCrocoModule({
+      name: "app",
+      providers: [{ provide: "app.name", useValue: "orders" }],
+    }),
+  ],
+});
+
+await runtime.initialize();
+
+const appName = runtime.get("app.name");
+const response = await runtime.run(() => handleRequest());
+const graph = runtime.createGraphManifest();
+
+await runtime.dispose();
+```
+
+Two application runtimes can reuse module names and provider tokens without sharing registrations or
+instances. `createGraphManifest()` returns one deterministic envelope containing the module graph and
+the DI graph derived from that runtime's module provider and controller roots. It never uses the
+process-global component inventory as an implicit graph source.
+
+Initialization is transactional. A failed attempt compensates entered modules, restores the exact
+pre-attempt DI baseline, invalidates captured module contexts, and permits an explicit retry. If
+compensation itself fails, the runtime is disposed because a clean retry can no longer be proven.
+`dispose()` always shuts modules down before disposing the DI scope. The static `Container` and
+`CrocoModule` APIs remain compatibility/default-runtime surfaces; new application composition should
+use `ApplicationRuntime` and explicit `run()` re-entry instead of relying on ambient global state.
+
 ## Provider Visibility
 
 Providers are private to the owning module unless their token appears in

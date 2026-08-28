@@ -7960,8 +7960,41 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 65,
+          line: 103,
           column: 10,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "framework-context/container-scope-snapshot-unavailable",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#framework-context-container-scope-snapshot-unavailable",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/framework-context/src/libs/Container.ts",
+          line: 278,
+          column: 13,
           kind: "problem-factory",
         },
       ],
@@ -8244,7 +8277,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 1705,
+          line: 1982,
           column: 13,
           kind: "problem-factory",
         },
@@ -19310,7 +19343,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/TestKernel.ts",
-          line: 189,
+          line: 192,
           column: 5,
           kind: "problem-constructor",
         },
@@ -19342,7 +19375,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/TestKernel.ts",
-          line: 217,
+          line: 220,
           column: 5,
           kind: "problem-constructor",
         },
@@ -19374,7 +19407,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/TestKernel.ts",
-          line: 227,
+          line: 230,
           column: 5,
           kind: "problem-constructor",
         },
@@ -19438,7 +19471,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/TestKernel.ts",
-          line: 238,
+          line: 241,
           column: 5,
           kind: "problem-constructor",
         },
@@ -19470,7 +19503,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/TestKernel.ts",
-          line: 254,
+          line: 257,
           column: 5,
           kind: "problem-constructor",
         },
@@ -19503,7 +19536,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/TestKernel.ts",
-          line: 267,
+          line: 270,
           column: 5,
           kind: "problem-constructor",
         },
@@ -19535,7 +19568,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/TestKernel.ts",
-          line: 176,
+          line: 179,
           column: 5,
           kind: "problem-constructor",
         },

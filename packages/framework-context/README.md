@@ -42,6 +42,12 @@ await scope.run(async () => {
 scope.dispose();
 ```
 
+`scope.runWithRollback(async () => ...)` provides a transactional bootstrap boundary. If the callback
+rejects, provider values, component registrations, lazy providers, token identities, and validation
+state are restored to their exact pre-attempt baseline. Successful callbacks commit their scoped
+changes. This is used by application runtimes to support clean startup retry without deleting values
+seeded before initialization.
+
 Provider adapters that write directly to TypeDI can use
 `Container.toTypeDIServiceIdentifier(token)` to share the same identifier as the
 Croco container. Strings, TypeDI tokens, and constructors are returned unchanged;

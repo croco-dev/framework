@@ -1,0 +1,210 @@
+---
+editUrl: false
+next: false
+prev: false
+title: "ApplicationRuntime"
+---
+
+Owns one isolated DI scope and one module lifecycle for a Croco application.
+
+## Implements
+
+- `AsyncDisposable`
+
+## Constructors
+
+### Constructor
+
+> **new ApplicationRuntime**(`options?`): `ApplicationRuntime`
+
+#### Parameters
+
+##### options?
+
+[`ApplicationRuntimeOptions`](/api/framework-module/src/type-aliases/applicationruntimeoptions/) = `{}`
+
+#### Returns
+
+`ApplicationRuntime`
+
+## Properties
+
+### scopeId
+
+> `readonly` **scopeId**: `string`
+
+## Methods
+
+### \[asyncDispose\]()
+
+> **\[asyncDispose\]**(): `Promise`\<`void`\>
+
+#### Returns
+
+`Promise`\<`void`\>
+
+#### Implementation of
+
+`AsyncDisposable.[asyncDispose]`
+
+---
+
+### createGraphManifest()
+
+> **createGraphManifest**(`options?`): [`ApplicationRuntimeGraphManifest`](/api/framework-module/src/type-aliases/applicationruntimegraphmanifest/)
+
+#### Parameters
+
+##### options?
+
+###### roots?
+
+readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidentifier/)\<`unknown`\>[]
+
+#### Returns
+
+[`ApplicationRuntimeGraphManifest`](/api/framework-module/src/type-aliases/applicationruntimegraphmanifest/)
+
+---
+
+### dispose()
+
+> **dispose**(): `Promise`\<`void`\>
+
+#### Returns
+
+`Promise`\<`void`\>
+
+---
+
+### get()
+
+> **get**\<`T`\>(`token`): `T`
+
+#### Type Parameters
+
+##### T
+
+`T`
+
+#### Parameters
+
+##### token
+
+[`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidentifier/)\<`T`\>
+
+#### Returns
+
+`T`
+
+---
+
+### getRegisteredModules()
+
+> **getRegisteredModules**(): readonly [`ModuleDiagnosticsSnapshot`](/api/framework-module/src/type-aliases/modulediagnosticssnapshot/)[]
+
+#### Returns
+
+readonly [`ModuleDiagnosticsSnapshot`](/api/framework-module/src/type-aliases/modulediagnosticssnapshot/)[]
+
+---
+
+### has()
+
+> **has**\<`T`\>(`token`): `boolean`
+
+#### Type Parameters
+
+##### T
+
+`T`
+
+#### Parameters
+
+##### token
+
+[`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidentifier/)\<`T`\>
+
+#### Returns
+
+`boolean`
+
+---
+
+### initialize()
+
+> **initialize**(): `Promise`\<`void`\>
+
+#### Returns
+
+`Promise`\<`void`\>
+
+---
+
+### run()
+
+#### Call Signature
+
+> **run**\<`T`\>(`fn`): `Promise`\<`T`\>
+
+##### Type Parameters
+
+###### T
+
+`T`
+
+##### Parameters
+
+###### fn
+
+() => `Promise`\<`T`\>
+
+##### Returns
+
+`Promise`\<`T`\>
+
+#### Call Signature
+
+> **run**\<`T`\>(`fn`): `T`
+
+##### Type Parameters
+
+###### T
+
+`T`
+
+##### Parameters
+
+###### fn
+
+() => `T`
+
+##### Returns
+
+`T`
+
+---
+
+### shutdown()
+
+> **shutdown**(): `Promise`\<`void`\>
+
+#### Returns
+
+`Promise`\<`void`\>
+
+---
+
+### use()
+
+> **use**(`module`): `void`
+
+#### Parameters
+
+##### module
+
+[`ModuleOptions`](/api/framework-module/src/type-aliases/moduleoptions/)
+
+#### Returns
+
+`void`
