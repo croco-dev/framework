@@ -631,7 +631,11 @@ export class Container {
       return;
     }
 
-    const nodes = [...(options.roots ?? Container.getRegisteredComponents())];
+    const nodes = options.roots
+      ? Array.from(
+          new Set([...options.roots, ...(Container.getScopeState()?.components.keys() ?? [])]),
+        )
+      : Container.getRegisteredComponents();
     if (nodes.length === 0) {
       Container.setValidated(true);
       return;
