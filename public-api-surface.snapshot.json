@@ -22308,9 +22308,27 @@
               "declarationKind": "class"
             },
             {
+              "name": "diffDesktopContractGraphs",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraphDiff",
+              "declarationKind": "function"
+            },
+            {
               "name": "formatDesktopContractGraphDiagnostic",
               "exportKind": "named",
               "source": "./libs/DesktopContractGraphDiagnostic",
+              "declarationKind": "function"
+            },
+            {
+              "name": "formatDesktopContractGraphDiff",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraphDiff",
+              "declarationKind": "function"
+            },
+            {
+              "name": "formatDesktopContractGraphDiffChange",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraphDiff",
               "declarationKind": "function"
             },
             {
@@ -22326,6 +22344,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "resolveDesktopContractGraphDiffExitStatus",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraphDiff",
+              "declarationKind": "function"
+            },
+            {
               "name": "stringifyDesktopContractGraph",
               "exportKind": "named",
               "source": "./libs/DesktopContractGraph",
@@ -22335,6 +22359,12 @@
               "name": "stringifyDesktopContractGraphDiagnostics",
               "exportKind": "named",
               "source": "./libs/DesktopContractGraphDiagnostic",
+              "declarationKind": "function"
+            },
+            {
+              "name": "stringifyDesktopContractGraphDiff",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraphDiff",
               "declarationKind": "function"
             },
             {
@@ -22466,6 +22496,16 @@
               "source": "./libs/types"
             },
             {
+              "name": "DesktopContractAuthority",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraphDiff"
+            },
+            {
+              "name": "DesktopContractCompatibility",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraphDiff"
+            },
+            {
               "name": "DesktopContractDefinition",
               "exportKind": "named",
               "source": "./libs/types"
@@ -22494,6 +22534,51 @@
               "name": "DesktopContractGraphDiagnosticTargetKind",
               "exportKind": "named",
               "source": "./libs/DesktopContractGraphDiagnostic"
+            },
+            {
+              "name": "DesktopContractGraphDiff",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraphDiff"
+            },
+            {
+              "name": "DesktopContractGraphDiffChange",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraphDiff"
+            },
+            {
+              "name": "DesktopContractGraphDiffChangeCode",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraphDiff"
+            },
+            {
+              "name": "DesktopContractGraphDiffExitCode",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraphDiff"
+            },
+            {
+              "name": "DesktopContractGraphDiffExitOptions",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraphDiff"
+            },
+            {
+              "name": "DesktopContractGraphDiffExitStatus",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraphDiff"
+            },
+            {
+              "name": "DesktopContractGraphDiffFingerprint",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraphDiff"
+            },
+            {
+              "name": "DesktopContractGraphDiffTargetKind",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraphDiff"
+            },
+            {
+              "name": "DesktopContractGraphDiffVersion",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraphDiff"
             },
             {
               "name": "DesktopContractGraphEffect",

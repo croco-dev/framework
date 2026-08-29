@@ -240,6 +240,43 @@ const graph = compileDesktopContractGraph(app, {
 graph.semanticHash; // "sha256:..."
 ```
 
+## Review compatibility and authority drift
+
+`diffDesktopContractGraphs(baseline, current)` compares two normalized graph artifacts without treating source
+locations, declaration order, or diagnostic prose as contract changes. Every semantic change has a canonical SHA-256
+fingerprint, a renderer API compatibility classification, and an independent authority classification. The separate
+axes keep an additive command from being mislabeled as privileged while still flagging a new window exposure or a
+read-to-write effect transition for security review.
+
+```typescript
+import {
+  diffDesktopContractGraphs,
+  formatDesktopContractGraphDiff,
+  resolveDesktopContractGraphDiffExitStatus,
+  stringifyDesktopContractGraphDiff,
+} from "@croco/protocols-desktop";
+
+const diff = diffDesktopContractGraphs(baselineGraph, currentGraph);
+
+formatDesktopContractGraphDiff(diff); // stable human-readable report
+stringifyDesktopContractGraphDiff(diff); // canonical JSON report
+
+const status = resolveDesktopContractGraphDiffExitStatus(diff, {
+  reviewedAuthorityEscalationFingerprints: reviewedFingerprints,
+});
+process.exitCode = status.exitCode;
+```
+
+Exit codes are bit flags: `0` means neither class blocks, `1` means breaking compatibility, `2` means at least one
+authority escalation has not been reviewed by fingerprint, and `3` means both conditions exist. Reviewing a
+fingerprint acknowledges only that exact before/after authority change; it does not approve later changes to the same
+command, grant, window, effect, or remote origin.
+
+Compatibility checks cover command and event removal, required input changes, output narrowing, command kind and
+execution-policy changes, and Problem union drift. Authority checks cover effect namespaces and methods, read/write
+access, grant links, grant resource/scope/lifetime expansion, command event authority, per-window command and event
+exposure, and remote origin additions. Reductions remain visible in the report but do not set the authority exit bit.
+
 ## Compile and validate DesktopWire schemas
 
 `compileDesktopWireSchema(schema, context)` compiles strict objects, strings, finite numbers, booleans, null,
