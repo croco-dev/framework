@@ -34,7 +34,7 @@ Storage 관련 기반 Problem 클래스
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`category`](/api/problems-core/src/classes/problem/#category)
 
-***
+---
 
 ### cause?
 
@@ -44,7 +44,7 @@ Storage 관련 기반 Problem 클래스
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`cause`](/api/problems-core/src/classes/problem/#cause)
 
-***
+---
 
 ### code
 
@@ -54,7 +54,7 @@ Storage 관련 기반 Problem 클래스
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`code`](/api/problems-core/src/classes/problem/#code)
 
-***
+---
 
 ### detail?
 
@@ -64,7 +64,7 @@ Storage 관련 기반 Problem 클래스
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`detail`](/api/problems-core/src/classes/problem/#detail)
 
-***
+---
 
 ### extensions?
 
@@ -74,7 +74,7 @@ Storage 관련 기반 Problem 클래스
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`extensions`](/api/problems-core/src/classes/problem/#extensions)
 
-***
+---
 
 ### instance?
 
@@ -84,7 +84,7 @@ Storage 관련 기반 Problem 클래스
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`instance`](/api/problems-core/src/classes/problem/#instance)
 
-***
+---
 
 ### message
 
@@ -94,7 +94,7 @@ Storage 관련 기반 Problem 클래스
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`message`](/api/problems-core/src/classes/problem/#message)
 
-***
+---
 
 ### name
 
@@ -104,7 +104,7 @@ Storage 관련 기반 Problem 클래스
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`name`](/api/problems-core/src/classes/problem/#name)
 
-***
+---
 
 ### stack?
 
@@ -114,7 +114,7 @@ Storage 관련 기반 Problem 클래스
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`stack`](/api/problems-core/src/classes/problem/#stack)
 
-***
+---
 
 ### type
 
@@ -124,7 +124,7 @@ Storage 관련 기반 Problem 클래스
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`type`](/api/problems-core/src/classes/problem/#type)
 
-***
+---
 
 ### stackTraceLimit
 
@@ -160,7 +160,7 @@ not capture any frames.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`status`](/api/problems-core/src/classes/problem/#status)
 
-***
+---
 
 ### title
 
@@ -190,7 +190,7 @@ not capture any frames.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`toJSON`](/api/problems-core/src/classes/problem/#tojson)
 
-***
+---
 
 ### captureStackTrace()
 
@@ -203,7 +203,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack;  // Similar to `new Error().stack`
+myObject.stack; // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -258,7 +258,7 @@ a();
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`captureStackTrace`](/api/problems-core/src/classes/problem/#capturestacktrace)
 
-***
+---
 
 ### prepareStackTrace()
 

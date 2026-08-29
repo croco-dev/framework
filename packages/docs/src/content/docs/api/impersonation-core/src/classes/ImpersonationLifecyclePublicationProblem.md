@@ -2,52 +2,60 @@
 editUrl: false
 next: false
 prev: false
-title: "StorageOperationAbortedProblem"
+title: "ImpersonationLifecyclePublicationProblem"
 ---
 
-호출자의 AbortSignal로 스토리지 연산이 취소되었을 때 발생하는 Problem입니다.
+RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다.
 
 ## Extends
 
-- [`StorageProblem`](/api/storage-core/src/classes/storageproblem/)
+- [`Problem`](/api/problems-core/src/classes/problem/)
 
 ## Constructors
 
 ### Constructor
 
-> **new StorageOperationAbortedProblem**(`operation`, `key?`, `cause?`): `StorageOperationAbortedProblem`
+> **new ImpersonationLifecyclePublicationProblem**(`sessionId`, `eventId`, `lifecycle`, `stage`, `cause`): `ImpersonationLifecyclePublicationProblem`
 
 #### Parameters
 
-##### operation
-
-[`StorageOperation`](/api/storage-core/src/type-aliases/storageoperation/)
-
-##### key?
+##### sessionId
 
 `string`
 
-##### cause?
+##### eventId
+
+`string`
+
+##### lifecycle
+
+`"started"` \| `"ended"`
+
+##### stage
+
+[`ImpersonationLifecyclePublicationStage`](/api/impersonation-core/src/type-aliases/impersonationlifecyclepublicationstage/)
+
+##### cause
 
 `Error`
 
 #### Returns
 
-`StorageOperationAbortedProblem`
+`ImpersonationLifecyclePublicationProblem`
 
 #### Overrides
 
-`StorageProblem.constructor`
+`Problem.constructor`
 
 ## Properties
 
 ### category
 
-> `readonly` **category**: [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
+> `readonly` **category**: [`InternalServerError`](/api/problems-core/src/enumerations/problemcategory/#internalservererror) = `ProblemCategory.InternalServerError`
 
-#### Inherited from
+#### Overrides
 
-[`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`category`](/api/storage-core/src/classes/storageproblem/#category)
+[`Problem`](/api/problems-core/src/classes/problem/).[`category`](/api/problems-core/src/classes/problem/#category)
 
 ---
 
@@ -57,17 +65,17 @@ title: "StorageOperationAbortedProblem"
 
 #### Inherited from
 
-[`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`cause`](/api/storage-core/src/classes/storageproblem/#cause)
+[`Problem`](/api/problems-core/src/classes/problem/).[`cause`](/api/problems-core/src/classes/problem/#cause)
 
 ---
 
 ### code
 
-> `readonly` **code**: `"STORAGE_OPERATION_ABORTED"` = `"STORAGE_OPERATION_ABORTED"`
+> `readonly` **code**: `"IMPERSONATION_LIFECYCLE_PUBLICATION_PENDING"` = `"IMPERSONATION_LIFECYCLE_PUBLICATION_PENDING"`
 
 #### Overrides
 
-[`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`code`](/api/storage-core/src/classes/storageproblem/#code)
+[`Problem`](/api/problems-core/src/classes/problem/).[`code`](/api/problems-core/src/classes/problem/#code)
 
 ---
 
@@ -77,7 +85,13 @@ title: "StorageOperationAbortedProblem"
 
 #### Inherited from
 
-[`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`detail`](/api/storage-core/src/classes/storageproblem/#detail)
+[`Problem`](/api/problems-core/src/classes/problem/).[`detail`](/api/problems-core/src/classes/problem/#detail)
+
+---
+
+### eventId
+
+> `readonly` **eventId**: `string`
 
 ---
 
@@ -87,7 +101,7 @@ title: "StorageOperationAbortedProblem"
 
 #### Inherited from
 
-[`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`extensions`](/api/storage-core/src/classes/storageproblem/#extensions)
+[`Problem`](/api/problems-core/src/classes/problem/).[`extensions`](/api/problems-core/src/classes/problem/#extensions)
 
 ---
 
@@ -97,7 +111,13 @@ title: "StorageOperationAbortedProblem"
 
 #### Inherited from
 
-[`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`instance`](/api/storage-core/src/classes/storageproblem/#instance)
+[`Problem`](/api/problems-core/src/classes/problem/).[`instance`](/api/problems-core/src/classes/problem/#instance)
+
+---
+
+### lifecycle
+
+> `readonly` **lifecycle**: `"started"` \| `"ended"`
 
 ---
 
@@ -107,7 +127,7 @@ title: "StorageOperationAbortedProblem"
 
 #### Inherited from
 
-[`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`message`](/api/storage-core/src/classes/storageproblem/#message)
+[`Problem`](/api/problems-core/src/classes/problem/).[`message`](/api/problems-core/src/classes/problem/#message)
 
 ---
 
@@ -117,7 +137,19 @@ title: "StorageOperationAbortedProblem"
 
 #### Inherited from
 
-[`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`name`](/api/storage-core/src/classes/storageproblem/#name)
+[`Problem`](/api/problems-core/src/classes/problem/).[`name`](/api/problems-core/src/classes/problem/#name)
+
+---
+
+### reconciliationState
+
+> `readonly` **reconciliationState**: `"pending"`
+
+---
+
+### sessionId
+
+> `readonly` **sessionId**: `string`
 
 ---
 
@@ -127,7 +159,13 @@ title: "StorageOperationAbortedProblem"
 
 #### Inherited from
 
-[`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`stack`](/api/storage-core/src/classes/storageproblem/#stack)
+[`Problem`](/api/problems-core/src/classes/problem/).[`stack`](/api/problems-core/src/classes/problem/#stack)
+
+---
+
+### stage
+
+> `readonly` **stage**: [`ImpersonationLifecyclePublicationStage`](/api/impersonation-core/src/type-aliases/impersonationlifecyclepublicationstage/)
 
 ---
 
@@ -137,7 +175,7 @@ title: "StorageOperationAbortedProblem"
 
 #### Inherited from
 
-[`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`type`](/api/storage-core/src/classes/storageproblem/#type)
+[`Problem`](/api/problems-core/src/classes/problem/).[`type`](/api/problems-core/src/classes/problem/#type)
 
 ---
 
@@ -157,7 +195,7 @@ not capture any frames.
 
 #### Inherited from
 
-[`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`stackTraceLimit`](/api/storage-core/src/classes/storageproblem/#stacktracelimit)
+[`Problem`](/api/problems-core/src/classes/problem/).[`stackTraceLimit`](/api/problems-core/src/classes/problem/#stacktracelimit)
 
 ## Accessors
 
@@ -173,7 +211,7 @@ not capture any frames.
 
 #### Inherited from
 
-[`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`status`](/api/storage-core/src/classes/storageproblem/#status)
+[`Problem`](/api/problems-core/src/classes/problem/).[`status`](/api/problems-core/src/classes/problem/#status)
 
 ---
 
@@ -189,7 +227,7 @@ not capture any frames.
 
 #### Inherited from
 
-[`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`title`](/api/storage-core/src/classes/storageproblem/#title)
+[`Problem`](/api/problems-core/src/classes/problem/).[`title`](/api/problems-core/src/classes/problem/#title)
 
 ## Methods
 
@@ -203,7 +241,7 @@ not capture any frames.
 
 #### Inherited from
 
-[`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`toJSON`](/api/storage-core/src/classes/storageproblem/#tojson)
+[`Problem`](/api/problems-core/src/classes/problem/).[`toJSON`](/api/problems-core/src/classes/problem/#tojson)
 
 ---
 
@@ -271,7 +309,7 @@ a();
 
 #### Inherited from
 
-[`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`captureStackTrace`](/api/storage-core/src/classes/storageproblem/#capturestacktrace)
+[`Problem`](/api/problems-core/src/classes/problem/).[`captureStackTrace`](/api/problems-core/src/classes/problem/#capturestacktrace)
 
 ---
 
@@ -299,4 +337,4 @@ https://v8.dev/docs/stack-trace-api#customizing-stack-traces
 
 #### Inherited from
 
-[`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`prepareStackTrace`](/api/storage-core/src/classes/storageproblem/#preparestacktrace)
+[`Problem`](/api/problems-core/src/classes/problem/).[`prepareStackTrace`](/api/problems-core/src/classes/problem/#preparestacktrace)

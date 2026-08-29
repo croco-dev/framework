@@ -35,27 +35,55 @@ title: "InMemoryImpersonationStore"
 
 ## Methods
 
-### createIfNoActiveSession()
+### commitEnd()
 
-> **createIfNoActiveSession**(`session`): `Promise`\<[`ImpersonationSessionCreateResult`](/api/impersonation-core/src/type-aliases/impersonationsessioncreateresult/)\>
+> **commitEnd**(`intent`, `impersonatorId`): `Promise`\<`"committed"` \| `"actor-mismatch"` \| `"committed-start-pending"` \| `"session-not-found"`\>
 
-Atomically claims the session's impersonator and persists the session when no active session
-owns that actor key. Persistent stores must enforce this boundary with a uniqueness constraint
-or equivalent compare-and-set that replaces an expired owner in the same operation.
+Atomically revokes the active session and persists its pending ended-event intent.
+Returns `committed-start-pending` when the started-event intent still requires publication.
 
 #### Parameters
 
-##### session
+##### intent
 
-[`ImpersonationState`](/api/impersonation-core/src/type-aliases/impersonationstate/)
+[`ImpersonationEndedEventIntent`](/api/impersonation-core/src/type-aliases/impersonationendedeventintent/)
+
+##### impersonatorId
+
+`string`
 
 #### Returns
 
-`Promise`\<[`ImpersonationSessionCreateResult`](/api/impersonation-core/src/type-aliases/impersonationsessioncreateresult/)\>
+`Promise`\<`"committed"` \| `"actor-mismatch"` \| `"committed-start-pending"` \| `"session-not-found"`\>
 
 #### Overrides
 
-[`ImpersonationStore`](/api/impersonation-core/src/classes/impersonationstore/).[`createIfNoActiveSession`](/api/impersonation-core/src/classes/impersonationstore/#createifnoactivesession)
+[`ImpersonationStore`](/api/impersonation-core/src/classes/impersonationstore/).[`commitEnd`](/api/impersonation-core/src/classes/impersonationstore/#commitend)
+
+---
+
+### commitStart()
+
+> **commitStart**(`intent`): `Promise`\<`"committed"` \| `"impersonator-active"`\>
+
+Atomically claims the session's impersonator, persists the active session, and records its
+pending started-event intent. Persistent stores must enforce unique session IDs and the actor
+claim with uniqueness constraints or equivalent compare-and-set operations that replace an
+expired actor claim in the same operation.
+
+#### Parameters
+
+##### intent
+
+[`ImpersonationStartedEventIntent`](/api/impersonation-core/src/type-aliases/impersonationstartedeventintent/)
+
+#### Returns
+
+`Promise`\<`"committed"` \| `"impersonator-active"`\>
+
+#### Overrides
+
+[`ImpersonationStore`](/api/impersonation-core/src/classes/impersonationstore/).[`commitStart`](/api/impersonation-core/src/classes/impersonationstore/#commitstart)
 
 ---
 
@@ -99,24 +127,44 @@ or equivalent compare-and-set that replaces an expired owner in the same operati
 
 ---
 
-### revoke()
+### listPendingLifecycleEventIntents()
 
-> **revoke**(`sessionId`, `impersonatorId`): `Promise`\<[`ImpersonationRevocationResult`](/api/impersonation-core/src/type-aliases/impersonationrevocationresult/)\>
+> **listPendingLifecycleEventIntents**(`limit?`): `Promise`\<readonly [`ImpersonationLifecycleEventIntent`](/api/impersonation-core/src/type-aliases/impersonationlifecycleeventintent/)[]\>
+
+Lists oldest intents first and preserves started-before-ended ordering for each session.
 
 #### Parameters
 
-##### sessionId
+##### limit?
 
-`string`
+`number` = `100`
 
-##### impersonatorId
+#### Returns
+
+`Promise`\<readonly [`ImpersonationLifecycleEventIntent`](/api/impersonation-core/src/type-aliases/impersonationlifecycleeventintent/)[]\>
+
+#### Overrides
+
+[`ImpersonationStore`](/api/impersonation-core/src/classes/impersonationstore/).[`listPendingLifecycleEventIntents`](/api/impersonation-core/src/classes/impersonationstore/#listpendinglifecycleeventintents)
+
+---
+
+### markLifecycleEventPublished()
+
+> **markLifecycleEventPublished**(`eventId`): `Promise`\<`void`\>
+
+Idempotently acknowledges a published event intent.
+
+#### Parameters
+
+##### eventId
 
 `string`
 
 #### Returns
 
-`Promise`\<[`ImpersonationRevocationResult`](/api/impersonation-core/src/type-aliases/impersonationrevocationresult/)\>
+`Promise`\<`void`\>
 
 #### Overrides
 
-[`ImpersonationStore`](/api/impersonation-core/src/classes/impersonationstore/).[`revoke`](/api/impersonation-core/src/classes/impersonationstore/#revoke)
+[`ImpersonationStore`](/api/impersonation-core/src/classes/impersonationstore/).[`markLifecycleEventPublished`](/api/impersonation-core/src/classes/impersonationstore/#marklifecycleeventpublished)

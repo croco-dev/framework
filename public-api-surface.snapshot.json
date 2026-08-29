@@ -14418,7 +14418,25 @@
               "declarationKind": "const"
             },
             {
+              "name": "ImpersonationEventIntentConflictProblem",
+              "exportKind": "declaration",
+              "source": "./libs/problems/ImpersonationProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "ImpersonationIdentityConflictProblem",
+              "exportKind": "declaration",
+              "source": "./libs/problems/ImpersonationProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ImpersonationLifecycleEventPublisher",
+              "exportKind": "declaration",
+              "source": "./libs/interfaces",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ImpersonationLifecyclePublicationProblem",
               "exportKind": "declaration",
               "source": "./libs/problems/ImpersonationProblems",
               "declarationKind": "class"
@@ -14455,6 +14473,12 @@
             },
             {
               "name": "InvalidImpersonationConfigurationProblem",
+              "exportKind": "declaration",
+              "source": "./libs/problems/ImpersonationProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InvalidImpersonationEventIntentLimitProblem",
               "exportKind": "declaration",
               "source": "./libs/problems/ImpersonationProblems",
               "declarationKind": "class"
@@ -14528,19 +14552,13 @@
               "declarationKind": "type"
             },
             {
+              "name": "ImpersonationLifecyclePublicationStage",
+              "exportKind": "declaration",
+              "source": "./libs/problems/ImpersonationProblems",
+              "declarationKind": "type"
+            },
+            {
               "name": "ImpersonationPrincipal",
-              "exportKind": "declaration",
-              "source": "./libs/interfaces",
-              "declarationKind": "type"
-            },
-            {
-              "name": "ImpersonationRevocationResult",
-              "exportKind": "declaration",
-              "source": "./libs/types",
-              "declarationKind": "type"
-            },
-            {
-              "name": "ImpersonationSessionCreateResult",
               "exportKind": "declaration",
               "source": "./libs/interfaces",
               "declarationKind": "type"
@@ -14561,6 +14579,31 @@
               "name": "ImpersonationContext",
               "exportKind": "named",
               "source": "./libs/ImpersonationService"
+            },
+            {
+              "name": "ImpersonationEndedEventIntent",
+              "exportKind": "named",
+              "source": "./libs/eventIntent"
+            },
+            {
+              "name": "ImpersonationLifecycleDiagnostic",
+              "exportKind": "named",
+              "source": "./libs/ImpersonationService"
+            },
+            {
+              "name": "ImpersonationLifecycleDiagnostics",
+              "exportKind": "named",
+              "source": "./libs/ImpersonationService"
+            },
+            {
+              "name": "ImpersonationLifecycleEventIntent",
+              "exportKind": "named",
+              "source": "./libs/eventIntent"
+            },
+            {
+              "name": "ImpersonationStartedEventIntent",
+              "exportKind": "named",
+              "source": "./libs/eventIntent"
             }
           ]
         }

@@ -9,7 +9,7 @@ title: "ImpersonationService"
 
 ### Constructor
 
-> **new ImpersonationService**(`store`, `_authProvider`, `config`): `ImpersonationService`
+> **new ImpersonationService**(`store`, `_authProvider`, `config`, `eventPublisher`): `ImpersonationService`
 
 #### Parameters
 
@@ -24,6 +24,10 @@ title: "ImpersonationService"
 ##### config
 
 [`ImpersonationConfig`](/api/impersonation-core/src/type-aliases/impersonationconfig/)
+
+##### eventPublisher
+
+[`ImpersonationLifecycleEventPublisher`](/api/impersonation-core/src/classes/impersonationlifecycleeventpublisher/)
 
 #### Returns
 
@@ -73,6 +77,22 @@ title: "ImpersonationService"
 
 ---
 
+### getLifecycleDiagnostics()
+
+> **getLifecycleDiagnostics**(`limit?`): `Promise`\<[`ImpersonationLifecycleDiagnostics`](/api/impersonation-core/src/type-aliases/impersonationlifecyclediagnostics/)\>
+
+#### Parameters
+
+##### limit?
+
+`number` = `100`
+
+#### Returns
+
+`Promise`\<[`ImpersonationLifecycleDiagnostics`](/api/impersonation-core/src/type-aliases/impersonationlifecyclediagnostics/)\>
+
+---
+
 ### getTargetUser()
 
 > **getTargetUser**(`context`): `string` \| `null`
@@ -102,6 +122,22 @@ title: "ImpersonationService"
 #### Returns
 
 `context is ImpersonationContext`
+
+---
+
+### publishPendingEvents()
+
+> **publishPendingEvents**(`limit?`): `Promise`\<`number`\>
+
+#### Parameters
+
+##### limit?
+
+`number` = `100`
+
+#### Returns
+
+`Promise`\<`number`\>
 
 ---
 

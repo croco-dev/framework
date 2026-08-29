@@ -15,13 +15,21 @@ title: "ImpersonationStartedEvent"
 
 ### Constructor
 
-> **new ImpersonationStartedEvent**(`session`): `ImpersonationStartedEvent`
+> **new ImpersonationStartedEvent**(`session`, `eventId?`, `occurredAt?`): `ImpersonationStartedEvent`
 
 #### Parameters
 
 ##### session
 
 [`ImpersonationState`](/api/impersonation-core/src/type-aliases/impersonationstate/)
+
+##### eventId?
+
+`string`
+
+##### occurredAt?
+
+`Date`
 
 #### Returns
 

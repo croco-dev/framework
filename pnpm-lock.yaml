@@ -1959,9 +1959,6 @@ importers:
         specifier: ^0.2.2
         version: 0.2.2
     devDependencies:
-      '@croco/events-inmemory':
-        specifier: workspace:*
-        version: link:../events-inmemory
       tsup:
         specifier: ^8.0.0
         version: 8.5.1(patch_hash=ce9dbc714c187cea78868f1e68c1a0e5097ddbceb7e976a564d94f2291b5bcb9)(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.18)(tsx@4.21.0)(typescript@6.0.3)(yaml@2.9.0)

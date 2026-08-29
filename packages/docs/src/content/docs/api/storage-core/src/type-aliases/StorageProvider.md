@@ -37,7 +37,7 @@ title: "StorageProvider"
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### exists()
 
@@ -63,7 +63,7 @@ title: "StorageProvider"
 
 `Promise`\<`boolean`\>
 
-***
+---
 
 ### get()
 
@@ -93,7 +93,7 @@ title: "StorageProvider"
 
 FileNotFoundProblem - 파일이 존재하지 않을 때
 
-***
+---
 
 ### getMetadata()
 
@@ -125,7 +125,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 FileNotFoundProblem - 파일이 존재하지 않을 때
 
-***
+---
 
 ### getPublicUrl()
 
@@ -147,7 +147,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 공개 액세스 가능한 URL
 
-***
+---
 
 ### getSignedUrl()
 
@@ -175,7 +175,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 서명된 URL
 
-***
+---
 
 ### getStream()
 
@@ -205,7 +205,7 @@ Web 읽기 가능 스트림
 
 FileNotFoundProblem - 파일이 존재하지 않을 때
 
-***
+---
 
 ### put()
 

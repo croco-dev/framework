@@ -58,7 +58,7 @@ title: "BaseStorageProvider"
 
 `StorageProvider.delete`
 
-***
+---
 
 ### exists()
 
@@ -88,7 +88,7 @@ title: "BaseStorageProvider"
 
 `StorageProvider.exists`
 
-***
+---
 
 ### get()
 
@@ -122,7 +122,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 `StorageProvider.get`
 
-***
+---
 
 ### getMetadata()
 
@@ -158,7 +158,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 `StorageProvider.getMetadata`
 
-***
+---
 
 ### getPublicUrl()
 
@@ -184,7 +184,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 `StorageProvider.getPublicUrl`
 
-***
+---
 
 ### getSignedUrl()
 
@@ -216,7 +216,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 `StorageProvider.getSignedUrl`
 
-***
+---
 
 ### getStream()
 
@@ -250,7 +250,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 `StorageProvider.getStream`
 
-***
+---
 
 ### put()
 

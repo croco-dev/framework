@@ -4,8 +4,18 @@
 export { BlockDuringImpersonation } from "./libs/decorators/BlockDuringImpersonation";
 // Events
 export { ImpersonationEndedEvent, ImpersonationStartedEvent } from "./libs/events";
+export type {
+  ImpersonationEndedEventIntent,
+  ImpersonationLifecycleEventIntent,
+  ImpersonationStartedEventIntent,
+} from "./libs/eventIntent";
 export { ImpersonationGuard } from "./libs/ImpersonationGuard";
-export { type ImpersonationContext, ImpersonationService } from "./libs/ImpersonationService";
+export {
+  type ImpersonationContext,
+  type ImpersonationLifecycleDiagnostic,
+  type ImpersonationLifecycleDiagnostics,
+  ImpersonationService,
+} from "./libs/ImpersonationService";
 export { InMemoryImpersonationStore } from "./libs/InMemoryImpersonationStore";
 // Interfaces
 export * from "./libs/interfaces";
