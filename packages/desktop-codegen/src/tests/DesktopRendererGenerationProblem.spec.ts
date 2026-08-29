@@ -47,7 +47,10 @@ describe("generateDesktopRendererClients", () => {
   it("forwards AbortSignal without exposing timeout or raw command identifiers", async () => {
     const source = requireClientSource(createGraph(false), "main");
     const signal = new AbortController().signal;
-    const readFile = vi.fn(async () => ({ ok: true, value: { contents: "Croco" } }));
+    const readFile = vi.fn(async (_input: unknown, _options?: unknown) => ({
+      ok: true,
+      value: { contents: "Croco" },
+    }));
     const runtime = executeGeneratedSource(source, {
       commands: {
         project: { openGranted: vi.fn(), readFile },
@@ -59,9 +62,11 @@ describe("generateDesktopRendererClients", () => {
       },
     });
 
-    await runtime.project.readFile({ path: "README.md" }, { signal });
+    const options = { signal, timeoutMs: 60_000 };
+    await runtime.project.readFile({ path: "README.md" }, options);
 
     expect(readFile).toHaveBeenCalledWith({ path: "README.md" }, { signal });
+    expect(readFile.mock.calls[0]?.[1]).not.toHaveProperty("timeoutMs");
     expect(source).not.toContain("commandId");
     expect(source).not.toContain("channel");
     expect(source).not.toContain("timeoutMs");
@@ -216,6 +221,147 @@ desktop.project.fileChanged.subscribe((_payload, _event) => undefined);
         ...graph,
         grants: graph.grants.map((candidate) =>
           candidate.id === grant.id ? { ...candidate, scope: "descendant" } : candidate,
+        ),
+      }),
+    ).toThrow(DesktopRendererGenerationProblem);
+  });
+
+  it("rejects inconsistent graph inventories and schema ownership", () => {
+    const graph = createGraph(false);
+    const project = graph.contracts.find((contract) => contract.id === "project");
+    const readFile = graph.commands.find((command) => command.id === "project.readFile");
+    if (!project || !readFile) {
+      throw new Error("Fixture project contract is incomplete");
+    }
+
+    expect(() =>
+      generateDesktopRendererClients({
+        ...graph,
+        app: { ...graph.app, contractIds: graph.app.contractIds.filter((id) => id !== project.id) },
+      }),
+    ).toThrow(DesktopRendererGenerationProblem);
+    expect(() =>
+      generateDesktopRendererClients({
+        ...graph,
+        contracts: graph.contracts.map((contract) =>
+          contract.id === project.id
+            ? { ...contract, commandIds: [...contract.commandIds, "project.missing"] }
+            : contract,
+        ),
+      }),
+    ).toThrow(DesktopRendererGenerationProblem);
+    expect(() =>
+      generateDesktopRendererClients({
+        ...graph,
+        commands: graph.commands.map((command) =>
+          command.id === readFile.id ? { ...command, contractId: "system" } : command,
+        ),
+      }),
+    ).toThrow(DesktopRendererGenerationProblem);
+    expect(() =>
+      generateDesktopRendererClients({
+        ...graph,
+        commands: graph.commands.map((command) =>
+          command.id === readFile.id
+            ? { ...command, input: { ...command.input, id: "project.other.input" } }
+            : command,
+        ),
+      }),
+    ).toThrow(DesktopRendererGenerationProblem);
+  });
+
+  it("rejects invalid references on unexposed graph members", () => {
+    const graph = createGraph(false);
+    const readFile = graph.commands.find((command) => command.id === "project.readFile");
+    const fileGrant = graph.grants.find((grant) => grant.contractId === "project");
+    if (!readFile || !fileGrant) {
+      throw new Error("Fixture project command is incomplete");
+    }
+    const hiddenCommand = {
+      ...readFile,
+      id: "project.hidden",
+      key: "hidden",
+      input: { ...readFile.input, id: "project.hidden.input" },
+      output: { ...readFile.output, id: "project.hidden.output" },
+    };
+    const project = graph.contracts.find((contract) => contract.id === "project");
+    if (!project) {
+      throw new Error("Fixture project contract is missing");
+    }
+    const withHiddenCommand = {
+      ...graph,
+      contracts: graph.contracts.map((contract) =>
+        contract.id === project.id
+          ? { ...contract, commandIds: [...contract.commandIds, hiddenCommand.id] }
+          : contract,
+      ),
+      commands: [...graph.commands, hiddenCommand],
+    };
+
+    expect(() =>
+      generateDesktopRendererClients({
+        ...withHiddenCommand,
+        commands: withHiddenCommand.commands.map((command) =>
+          command.id === hiddenCommand.id ? { ...command, problems: ["MISSING_PROBLEM"] } : command,
+        ),
+      }),
+    ).toThrow(DesktopRendererGenerationProblem);
+    expect(() =>
+      generateDesktopRendererClients({
+        ...withHiddenCommand,
+        commands: withHiddenCommand.commands.map((command) =>
+          command.id === hiddenCommand.id ? { ...command, events: ["project.missing"] } : command,
+        ),
+      }),
+    ).toThrow(DesktopRendererGenerationProblem);
+    expect(() =>
+      generateDesktopRendererClients({
+        ...withHiddenCommand,
+        commands: withHiddenCommand.commands.map((command) =>
+          command.id === hiddenCommand.id
+            ? { ...command, input: { ...command.input, descriptor: null } }
+            : command,
+        ),
+      }),
+    ).toThrow(DesktopRendererGenerationProblem);
+    expect(() =>
+      generateDesktopRendererClients({
+        ...withHiddenCommand,
+        commands: withHiddenCommand.commands.map((command) =>
+          command.id === hiddenCommand.id
+            ? {
+                ...command,
+                effects: command.effects.map((effect) => ({
+                  ...effect,
+                  grantIds: ["project.missing"],
+                })),
+              }
+            : command,
+        ),
+      }),
+    ).toThrow(DesktopRendererGenerationProblem);
+    expect(() =>
+      generateDesktopRendererClients({
+        ...withHiddenCommand,
+        commands: withHiddenCommand.commands.map((command) =>
+          command.id === hiddenCommand.id
+            ? {
+                ...command,
+                input: {
+                  ...command.input,
+                  descriptor: { kind: "grant-reference", grantId: "system.file" },
+                },
+              }
+            : command,
+        ),
+        grants: [
+          ...graph.grants,
+          { ...fileGrant, id: "system.file", contractId: "system", key: "file" },
+        ],
+        contracts: withHiddenCommand.contracts.map((contract) =>
+          contract.id === "system"
+            ? { ...contract, grantIds: [...contract.grantIds, "system.file"] }
+            : contract,
         ),
       }),
     ).toThrow(DesktopRendererGenerationProblem);

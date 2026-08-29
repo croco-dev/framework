@@ -57,9 +57,9 @@ const bridge = (globalThis as typeof globalThis & {
 export const desktop = Object.freeze({
   ["project"]: Object.freeze({
     ["openGranted"]: (input: DesktopGrantReference<"file", "read", "exact", "command">, options: DesktopRendererCommandOptions = {}): Promise<DesktopResult<{ readonly ["opened"]: boolean; }, never>> =>
-      bridge.commands["project"]["openGranted"](input, options),
+      bridge.commands["project"]["openGranted"](input, options.signal === undefined ? {} : { signal: options.signal }),
     ["readFile"]: (input: { readonly ["path"]: string; }, options: DesktopRendererCommandOptions = {}): Promise<DesktopResult<{ readonly ["contents"]: string; readonly ["encoding"]: "utf16" | "utf8"; }, { readonly code: "EDITOR_FILESYSTEM_UNAVAILABLE"; readonly category: "InternalServerError" } | { readonly code: "EDITOR_FILE_NOT_FOUND"; readonly category: "NotFound"; readonly extensions?: { readonly ["reason"]: string; } }>> =>
-      bridge.commands["project"]["readFile"](input, options),
+      bridge.commands["project"]["readFile"](input, options.signal === undefined ? {} : { signal: options.signal }),
     ["fileChanged"]: Object.freeze({
       subscribe: (callback: (payload: { readonly ["path"]: string; }) => void): (() => void) =>
         bridge.events["project"]["fileChanged"]((payload) => callback(payload)),
@@ -67,7 +67,7 @@ export const desktop = Object.freeze({
   }),
   ["system"]: Object.freeze({
     ["status"]: (input: {  }, options: DesktopRendererCommandOptions = {}): Promise<DesktopResult<{ readonly ["ready"]: boolean | null; }, never>> =>
-      bridge.commands["system"]["status"](input, options),
+      bridge.commands["system"]["status"](input, options.signal === undefined ? {} : { signal: options.signal }),
     ["ready"]: Object.freeze({
       subscribe: (callback: (payload: { readonly ["at"]: number; }) => void): (() => void) =>
         bridge.events["system"]["ready"]((payload) => callback(payload)),
@@ -104,7 +104,7 @@ const bridge = (globalThis as typeof globalThis & {
 export const desktop = Object.freeze({
   ["system"]: Object.freeze({
     ["status"]: (input: {  }, options: DesktopRendererCommandOptions = {}): Promise<DesktopResult<{ readonly ["ready"]: boolean | null; }, never>> =>
-      bridge.commands["system"]["status"](input, options),
+      bridge.commands["system"]["status"](input, options.signal === undefined ? {} : { signal: options.signal }),
     ["ready"]: Object.freeze({
       subscribe: (callback: (payload: { readonly ["at"]: number; }) => void): (() => void) =>
         bridge.events["system"]["ready"]((payload) => callback(payload)),

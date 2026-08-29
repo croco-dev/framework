@@ -1,6 +1,7 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import type {
   DesktopContractGraphCommand,
+  DesktopContractGraphContract,
   DesktopContractGraphEvent,
   DesktopContractGraphGrant,
   DesktopContractGraphProblem,
@@ -38,10 +39,11 @@ type ContractCapabilities = {
 
 type GraphIndexes = {
   readonly commands: ReadonlyMap<string, DesktopContractGraphCommand>;
-  readonly contracts: ReadonlySet<string>;
+  readonly contracts: ReadonlyMap<string, DesktopContractGraphContract>;
   readonly events: ReadonlyMap<string, DesktopContractGraphEvent>;
   readonly grants: ReadonlyMap<string, DesktopContractGraphGrant>;
   readonly problems: ReadonlyMap<string, DesktopContractGraphProblem>;
+  readonly windows: ReadonlyMap<string, DesktopContractGraphWindow>;
 };
 
 export function generateDesktopRendererClients(
@@ -49,7 +51,7 @@ export function generateDesktopRendererClients(
 ): readonly DesktopRendererClientSource[] {
   assertGeneratableGraph(graph);
   const indexes = createGraphIndexes(graph);
-  createUniqueIndex(graph.windows, "window");
+  assertGraphIntegrity(graph, indexes);
 
   return [...graph.windows].sort(compareById).flatMap((window) =>
     window.trust === "remote"
@@ -77,14 +79,156 @@ function assertGeneratableGraph(graph: DesktopContractGraphV1): void {
 }
 
 function createGraphIndexes(graph: DesktopContractGraphV1): GraphIndexes {
-  const contracts = createUniqueIndex(graph.contracts, "contract");
   return {
     commands: createUniqueIndex(graph.commands, "command"),
-    contracts: new Set(contracts.keys()),
+    contracts: createUniqueIndex(graph.contracts, "contract"),
     events: createUniqueIndex(graph.events, "event"),
     grants: createUniqueIndex(graph.grants, "grant"),
     problems: createUniqueIndex(graph.problems, "problem"),
+    windows: createUniqueIndex(graph.windows, "window"),
   };
+}
+
+function assertGraphIntegrity(graph: DesktopContractGraphV1, indexes: GraphIndexes): void {
+  assertInventory(graph.app.contractIds, indexes.contracts.keys(), "Desktop app contract");
+  assertInventory(graph.app.windowIds, indexes.windows.keys(), "Desktop app window");
+  assertInventory(
+    graph.effects,
+    new Set(graph.commands.flatMap((command) => command.effects.map((effect) => effect.namespace))),
+    "Desktop effect namespace",
+  );
+
+  for (const contract of graph.contracts) {
+    assertInventory(
+      contract.commandIds,
+      graph.commands
+        .filter((command) => command.contractId === contract.id)
+        .map((command) => command.id),
+      `Desktop contract ${JSON.stringify(contract.id)} command`,
+    );
+    assertInventory(
+      contract.eventIds,
+      graph.events.filter((event) => event.contractId === contract.id).map((event) => event.id),
+      `Desktop contract ${JSON.stringify(contract.id)} event`,
+    );
+    assertInventory(
+      contract.grantIds,
+      graph.grants.filter((grant) => grant.contractId === contract.id).map((grant) => grant.id),
+      `Desktop contract ${JSON.stringify(contract.id)} grant`,
+    );
+  }
+
+  for (const command of graph.commands) {
+    assertMember(command, "command", indexes.contracts);
+    assertSchemaReferenceId(command.input.id, `${command.id}.input`);
+    assertSchemaReferenceId(command.output.id, `${command.id}.output`);
+    assertSchemaDescriptor(command.input.descriptor, command.id, command.contractId, indexes);
+    assertSchemaDescriptor(command.output.descriptor, command.id, command.contractId, indexes);
+    for (const problemCode of command.problems) {
+      assertReferencedRecord(indexes.problems, problemCode, "Problem", command.id);
+    }
+    for (const eventId of command.events) {
+      const event = assertReferencedRecord(indexes.events, eventId, "event", command.id);
+      assertSameContract(event, command.contractId, "event", command.id);
+    }
+    for (const effect of command.effects) {
+      for (const grantId of effect.grantIds) {
+        const grant = assertReferencedRecord(indexes.grants, grantId, "grant", command.id);
+        assertSameContract(grant, command.contractId, "grant", command.id);
+      }
+    }
+  }
+  for (const event of graph.events) {
+    assertMember(event, "event", indexes.contracts);
+    assertSchemaReferenceId(event.payload.id, `${event.id}.payload`);
+    assertSchemaDescriptor(event.payload.descriptor, event.id, event.contractId, indexes);
+  }
+  for (const grant of graph.grants) {
+    assertMember(grant, "grant", indexes.contracts);
+    if (grant.resource === "file" && grant.scope !== "exact") {
+      throw new DesktopRendererGenerationProblem(
+        `Desktop file grant ${JSON.stringify(grant.id)} must use exact scope.`,
+      );
+    }
+  }
+  for (const window of graph.windows) {
+    for (const commandId of window.exposedCommands) {
+      assertReferencedRecord(indexes.commands, commandId, "command", window.id);
+    }
+    for (const eventId of window.receivedEvents) {
+      assertReferencedRecord(indexes.events, eventId, "event", window.id);
+    }
+  }
+}
+
+function assertSchemaDescriptor(
+  descriptor: DesktopContractGraphSchema | null,
+  ownerId: string,
+  contractId: string,
+  indexes: GraphIndexes,
+): void {
+  if (!descriptor) {
+    throw new DesktopRendererGenerationProblem(
+      `Desktop member ${JSON.stringify(ownerId)} has no schema descriptor.`,
+    );
+  }
+  if (descriptor.kind !== "grant-reference") {
+    return;
+  }
+  const grant = assertReferencedRecord(indexes.grants, descriptor.grantId, "grant", ownerId);
+  assertSameContract(grant, contractId, "grant", ownerId);
+}
+
+function assertReferencedRecord<T>(
+  records: ReadonlyMap<string, T>,
+  id: string,
+  kind: "command" | "event" | "grant" | "Problem",
+  ownerId: string,
+): T {
+  const record = records.get(id);
+  if (!record) {
+    throw new DesktopRendererGenerationProblem(
+      `Desktop member ${JSON.stringify(ownerId)} references missing ${kind} ${JSON.stringify(id)}.`,
+    );
+  }
+  return record;
+}
+
+function assertSameContract(
+  member: DesktopContractGraphEvent | DesktopContractGraphGrant,
+  contractId: string,
+  kind: "event" | "grant",
+  ownerId: string,
+): void {
+  if (member.contractId !== contractId) {
+    throw new DesktopRendererGenerationProblem(
+      `Desktop member ${JSON.stringify(ownerId)} references ${kind} ${JSON.stringify(member.id)} from contract ${JSON.stringify(member.contractId)}.`,
+    );
+  }
+}
+
+function assertInventory(
+  actual: readonly string[],
+  expectedValues: Iterable<string>,
+  description: string,
+): void {
+  const expected = new Set(expectedValues);
+  const actualSet = new Set(actual);
+  const missing = [...expected].filter((id) => !actualSet.has(id));
+  const unexpected = actual.filter((id) => !expected.has(id));
+  if (actualSet.size !== actual.length || missing.length > 0 || unexpected.length > 0) {
+    throw new DesktopRendererGenerationProblem(
+      `${description} inventory does not match its records.`,
+    );
+  }
+}
+
+function assertSchemaReferenceId(actual: string, expected: string): void {
+  if (actual !== expected) {
+    throw new DesktopRendererGenerationProblem(
+      `Desktop schema reference ${JSON.stringify(actual)} must use owning member ID ${JSON.stringify(expected)}.`,
+    );
+  }
 }
 
 function createUniqueIndex<T extends { readonly id?: string; readonly code?: string }>(
@@ -173,7 +317,7 @@ function generateWindowSource(capabilities: RendererCapabilities, indexes: Graph
 
 function collectContracts(
   capabilities: RendererCapabilities,
-  contractIds: ReadonlySet<string>,
+  contractsById: ReadonlyMap<string, DesktopContractGraphContract>,
 ): readonly ContractCapabilities[] {
   const contracts = new Map<
     string,
@@ -181,13 +325,13 @@ function collectContracts(
   >();
 
   for (const command of capabilities.commands) {
-    assertMember(command, "command", contractIds);
+    assertMember(command, "command", contractsById);
     const contract = getOrCreateContract(contracts, command.contractId);
     assertUniqueMember(contract, command.key, command.contractId);
     contract.commands.push(command);
   }
   for (const event of capabilities.events) {
-    assertMember(event, "event", contractIds);
+    assertMember(event, "event", contractsById);
     const contract = getOrCreateContract(contracts, event.contractId);
     assertUniqueMember(contract, event.key, event.contractId);
     contract.events.push(event);
@@ -219,11 +363,11 @@ function getOrCreateContract(
 }
 
 function assertMember(
-  member: DesktopContractGraphCommand | DesktopContractGraphEvent,
-  kind: "command" | "event",
-  contractIds: ReadonlySet<string>,
+  member: DesktopContractGraphCommand | DesktopContractGraphEvent | DesktopContractGraphGrant,
+  kind: "command" | "event" | "grant",
+  contracts: ReadonlyMap<string, DesktopContractGraphContract>,
 ): void {
-  if (!contractIds.has(member.contractId)) {
+  if (!contracts.has(member.contractId)) {
     throw new DesktopRendererGenerationProblem(
       `Desktop ${kind} ${JSON.stringify(member.id)} references missing contract ${JSON.stringify(member.contractId)}.`,
     );
@@ -291,7 +435,7 @@ function generateClientContracts(
     for (const command of contract.commands) {
       lines.push(
         `    [${JSON.stringify(command.key)}]: (input: ${renderSchemaReference(command.input.descriptor, indexes)}, options: DesktopRendererCommandOptions = {}): Promise<${renderCommandResult(command, indexes)}> =>`,
-        `      bridge.commands[${JSON.stringify(contract.contractId)}][${JSON.stringify(command.key)}](input, options),`,
+        `      bridge.commands[${JSON.stringify(contract.contractId)}][${JSON.stringify(command.key)}](input, options.signal === undefined ? {} : { signal: options.signal }),`,
       );
     }
     for (const event of contract.events) {
