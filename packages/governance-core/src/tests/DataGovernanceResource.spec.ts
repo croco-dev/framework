@@ -285,6 +285,22 @@ describe("DataGovernanceResource", () => {
         tenantIdentifierOverride: { reason: " " },
       },
     } satisfies DataGovernanceResource;
+    const tenantWithMalformedOverride = {
+      ...tenantWithoutField,
+      subject: {
+        ...resource.subject,
+        tenantField: "tenantId",
+        tenantIdentifierOverride: { reason: 123 },
+      },
+    } as unknown as DataGovernanceResource;
+    const tenantWithMissingOverrideReason = {
+      ...tenantWithoutField,
+      subject: {
+        ...resource.subject,
+        tenantField: "tenantId",
+        tenantIdentifierOverride: {},
+      },
+    } as unknown as DataGovernanceResource;
     const globalResource = {
       ...resource,
       scope: "global",
@@ -358,6 +374,32 @@ describe("DataGovernanceResource", () => {
       ],
       valid: false,
     });
+    for (const malformedOverride of [
+      tenantWithMalformedOverride,
+      tenantWithMissingOverrideReason,
+    ]) {
+      expect(validateDataGovernanceResources([malformedOverride])).toMatchObject({
+        diagnostics: [
+          {
+            code: DATA_GOVERNANCE_DIAGNOSTIC_CODES.subjectTenantIdentifierOverrideReasonRequired,
+            path: "resources[0].subject.tenantIdentifierOverride.reason",
+          },
+        ],
+        valid: false,
+      });
+      expect(() => assertDataGovernanceResourcesValid([malformedOverride])).toThrow(
+        DataGovernanceValidationProblem,
+      );
+      expect(createDataMapArtifact([malformedOverride])).toMatchObject({
+        diagnostics: [
+          {
+            code: DATA_GOVERNANCE_DIAGNOSTIC_CODES.subjectTenantIdentifierOverrideReasonRequired,
+            path: "resources[0].subject.tenantIdentifierOverride.reason",
+          },
+        ],
+        summary: { diagnostics: 1 },
+      });
+    }
     expect(validateDataGovernanceResources([globalResource, systemResource])).toEqual({
       diagnostics: [],
       valid: true,

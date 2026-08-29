@@ -552,15 +552,6 @@ function validateTenantField(
   }
 
   if (valueType && isRecord(subject.tenantIdentifierOverride)) {
-    validateRequiredString(
-      `${resourcePath}.subject.tenantIdentifierOverride.reason`,
-      subject.tenantIdentifierOverride.reason,
-      DATA_GOVERNANCE_DIAGNOSTIC_CODES.subjectTenantIdentifierOverrideReasonRequired,
-      `Tenant field '${normalizedTenantFieldId}' identifier override must declare a reason`,
-      "field",
-      diagnostics,
-      { fieldId: normalizedTenantFieldId, resourceKind },
-    );
     return;
   }
 
@@ -777,6 +768,17 @@ function validateSubject(
     diagnostics,
     { resourceKind },
   );
+  if (isRecord(subject.tenantIdentifierOverride)) {
+    validateRequiredString(
+      `${resourcePath}.subject.tenantIdentifierOverride.reason`,
+      subject.tenantIdentifierOverride.reason,
+      DATA_GOVERNANCE_DIAGNOSTIC_CODES.subjectTenantIdentifierOverrideReasonRequired,
+      "Tenant identifier override must declare a reason",
+      "subject",
+      diagnostics,
+      { resourceKind },
+    );
+  }
   validateOptionalString(
     `${resourcePath}.subject.labelField`,
     subject.labelField,
