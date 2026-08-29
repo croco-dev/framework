@@ -35,6 +35,20 @@ describe("ApplicationRuntime", () => {
     await Promise.all([first.dispose(), second.dispose()]);
   });
 
+  it("does not allocate a TypeDI scope when constructor module validation fails", () => {
+    const instancesBefore = [
+      ...(Container as unknown as { instances: readonly { id: string }[] }).instances,
+    ];
+
+    expect(() => createApplicationRuntime({ modules: [{ name: "invalid" }] })).toThrow(
+      "must define metadata or lifecycle hooks",
+    );
+
+    expect((Container as unknown as { instances: readonly { id: string }[] }).instances).toEqual(
+      instancesBefore,
+    );
+  });
+
   it("preserves scoped symbol and class providers across an unrelated root reset", async () => {
     const symbolToken = Symbol("runtime-symbol");
     class RuntimeService {}
@@ -344,6 +358,34 @@ describe("ApplicationRuntime", () => {
     await runtime.dispose();
   });
 
+  it("reports uninspectable TypeDI handlers without throwing from graph creation", async () => {
+    class Dependency {}
+    class Service {
+      constructor(readonly dependency: Dependency) {}
+    }
+
+    Reflect.defineMetadata("design:paramtypes", [Dependency], Service);
+    Inject(() => {
+      throw new Error("handler runtime failure");
+    })(Service, undefined, 0);
+
+    const runtime = createApplicationRuntime({
+      modules: [{ name: "app", providers: [Dependency, Service] }],
+    });
+
+    const manifest = runtime.createGraphManifest();
+
+    expect(manifest.status).toBe("failed");
+    expect(manifest.moduleGraph.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "framework-module/provider-injection-uninspectable" }),
+    );
+    expect(manifest.dependencyGraph.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "CROCO_DI_005", token: "Service" }),
+    );
+
+    await runtime.dispose();
+  });
+
   it("replays the same shutdown failure for repeated disposal", async () => {
     const runtime = createApplicationRuntime({
       modules: [
@@ -409,10 +451,10 @@ describe("ApplicationRuntime", () => {
     await expect(runtime.initialize()).rejects.toMatchObject({
       code: "framework-module/lifecycle-failed",
       extensions: {
-        cleanupFailures: [
+        cleanupFailures: expect.arrayContaining([
           expect.objectContaining({ moduleName: "<registry>" }),
           expect.objectContaining({ moduleName: "<application-runtime>" }),
-        ],
+        ]),
       },
     });
     expect(() => runtime.run(() => undefined)).toThrow("has already been disposed");
@@ -423,5 +465,39 @@ describe("ApplicationRuntime", () => {
     expect(typeDIRegistry.instances.some((instance) => instance.id === runtime.scopeId)).toBe(
       false,
     );
+  });
+
+  it("preserves module shutdown failure when provider cleanup also fails", async () => {
+    const token = new Token<object>("shutdown-provider-cleanup");
+    const runtime = createApplicationRuntime({
+      modules: [
+        {
+          name: "app",
+          providers: [{ provide: token, useValue: {} }],
+          shutdown: () => {
+            throw new Error("module shutdown failed");
+          },
+        },
+      ],
+    });
+    await runtime.initialize();
+    const container = Container.of(runtime.scopeId) as unknown as {
+      destroyServiceInstance: (service: ServiceMetadata<unknown>) => void;
+    };
+    container.destroyServiceInstance = (service) => {
+      if (service.id === token) {
+        throw new Error("provider cleanup failed");
+      }
+    };
+
+    await expect(runtime.dispose()).rejects.toMatchObject({
+      code: "framework-module/lifecycle-failed",
+      message: expect.stringContaining("module shutdown failed"),
+      extensions: {
+        cleanupFailures: expect.arrayContaining([
+          expect.objectContaining({ message: expect.stringContaining("provider cleanup failed") }),
+        ]),
+      },
+    });
   });
 });

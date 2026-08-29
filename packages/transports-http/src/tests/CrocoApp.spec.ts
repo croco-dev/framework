@@ -1246,6 +1246,38 @@ describe("CrocoApp", () => {
     );
   });
 
+  it("validates only providers reachable from the configured HTTP application", async () => {
+    abstract class UnrelatedStore {}
+
+    class UnrelatedService {
+      constructor(readonly store: UnrelatedStore) {}
+    }
+
+    @Controller("/isolated")
+    class IsolatedController {
+      @Get("/ready")
+      ready() {
+        return { ready: true };
+      }
+    }
+
+    Reflect.defineMetadata("design:paramtypes", [UnrelatedStore], UnrelatedService);
+    Component()(UnrelatedService);
+
+    const scope = Container.createScope();
+    try {
+      await scope.run(async () => {
+        const app = createApp({ controllers: [IsolatedController], diValidation: "enforce" });
+        const response = await app.fetch(new Request("http://localhost/isolated/ready"));
+
+        expect(response.status).toBe(200);
+        await expect(response.json()).resolves.toEqual({ ready: true });
+      });
+    } finally {
+      scope.dispose();
+    }
+  });
+
   it("should keep the explicit diValidation off migration path silent", async () => {
     const warn = vi.fn();
     const logger: ILogger = {

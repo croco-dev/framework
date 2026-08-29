@@ -1,11 +1,5 @@
 import { Container, ServiceNotFoundError } from "typedi";
-import type {
-  Constructable,
-  ContainerInstance,
-  Handler,
-  ServiceIdentifier,
-  ServiceMetadata,
-} from "typedi";
+import type { Constructable, ContainerInstance, ServiceIdentifier, ServiceMetadata } from "typedi";
 import "reflect-metadata";
 import { Container as FrameworkContainer } from "@croco/framework-context";
 import { detectCircularDependency } from "./CircularDependencyDetector";
@@ -114,13 +108,6 @@ type ModuleRegistryState = {
   disposed: boolean;
   disposePromise: Promise<void> | null;
 };
-
-class CapturedTypediInjectionToken extends Error {
-  constructor(readonly token: ModuleToken<unknown>) {
-    super("Captured TypeDI injection token");
-    Object.setPrototypeOf(this, new.target.prototype);
-  }
-}
 
 const IGNORED_CONSTRUCTOR_DEPENDENCIES = new Set<unknown>([
   Array,
@@ -273,17 +260,38 @@ function assertRuntimeContextAvailable(
 }
 
 async function disposeModuleRuntime(state: ModuleRegistryState): Promise<void> {
+  let primaryFailure: unknown;
   try {
     await shutdownModulesInState(state);
-  } finally {
-    try {
-      resetModulesInState(state);
-      if (state.containerId) {
-        Container.reset(state.containerId);
-      }
-    } finally {
-      state.disposed = true;
+  } catch (error) {
+    primaryFailure = error;
+  }
+
+  try {
+    resetModulesInState(state);
+    if (state.containerId) {
+      Container.reset(state.containerId);
     }
+  } catch (error) {
+    if (primaryFailure instanceof ModuleLifecycleProblem) {
+      const existingFailures = Array.isArray(primaryFailure.extensions?.cleanupFailures)
+        ? (primaryFailure.extensions.cleanupFailures as unknown as ModuleCleanupFailure[])
+        : [];
+      throw attachModuleCleanupFailures(primaryFailure, [
+        ...existingFailures,
+        createModuleCleanupFailure(
+          new ModuleLifecycleProblem("<registry>", "shutdown", error),
+          "<registry>",
+        ),
+      ]);
+    }
+    throw error;
+  } finally {
+    state.disposed = true;
+  }
+
+  if (primaryFailure !== undefined) {
+    throw primaryFailure;
   }
 }
 
@@ -929,6 +937,22 @@ function createModuleGraphDiagnostics(
       }
 
       const [, providerClass] = classProvider;
+      for (const inspection of FrameworkContainer.inspectTypeDIInjections(providerClass)) {
+        if (inspection.status !== "uninspectable") {
+          continue;
+        }
+
+        const provider = getModuleTokenLabel(providerClass);
+        diagnostics.push({
+          code: "framework-module/provider-injection-uninspectable",
+          severity: "error",
+          moduleName: module.name,
+          token: provider,
+          message: `Module '${module.name}' provider '${provider}' has a TypeDI injection handler at ${inspection.site} that cannot be inspected without executing user code.`,
+          path: [module.name, provider, inspection.site],
+        });
+      }
+
       for (const failure of getClassProviderVisibilityFailures(
         module.name,
         providerClass,
@@ -1568,55 +1592,9 @@ function getClassProviderEntry(
 }
 
 function getTypediHandlerDependencies<T>(providerClass: Constructor<T>): ModuleToken<unknown>[] {
-  const providerTarget = toTypediConstructable(providerClass);
-
-  return Container.handlers
-    .filter((handler) => isTypediHandlerForProvider(handler, providerTarget))
-    .map(captureTypediHandlerDependency)
-    .filter((dependency) => dependency !== null);
-}
-
-function isTypediHandlerForProvider<T>(
-  handler: Handler,
-  providerTarget: Constructable<T>,
-): boolean {
-  if (typeof handler.index === "number") {
-    return (
-      handler.object === providerTarget || handler.object === Object.getPrototypeOf(providerTarget)
-    );
-  }
-
-  return (
-    handler.object.constructor === providerTarget ||
-    providerTarget.prototype instanceof handler.object.constructor
+  return FrameworkContainer.inspectTypeDIInjections(providerClass).flatMap((inspection) =>
+    inspection.status === "resolved" ? [inspection.token as ModuleToken<unknown>] : [],
   );
-}
-
-function captureTypediHandlerDependency(handler: Handler): ModuleToken<unknown> | null {
-  try {
-    handler.value(createTypediDependencyProbe());
-  } catch (error) {
-    if (error instanceof CapturedTypediInjectionToken) {
-      return error.token;
-    }
-
-    throw error;
-  }
-
-  return null;
-}
-
-function createTypediDependencyProbe(): ContainerInstance {
-  const probe = {
-    get: <T>(identifier: ServiceIdentifier<T>): T => {
-      throw new CapturedTypediInjectionToken(identifier as unknown as ModuleToken<unknown>);
-    },
-    getMany: <T>(identifier: ServiceIdentifier<T>): T[] => {
-      throw new CapturedTypediInjectionToken(identifier as unknown as ModuleToken<unknown>);
-    },
-  };
-
-  return probe as unknown as ContainerInstance;
 }
 
 async function runLifecycle(

@@ -352,6 +352,7 @@ export type {
   DependencyResolutionTraceStatus,
   DependencySourceLocation,
   DependencyTokenKind,
+  TypeDIInjectionInspection,
 } from "./libs/types";
 
 /**

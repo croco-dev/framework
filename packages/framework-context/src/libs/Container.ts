@@ -1,6 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import {
   type Service,
+  type Handler,
   type ServiceIdentifier,
   type ServiceMetadata,
   Container as TypeDIContainer,
@@ -12,7 +13,7 @@ import type { Constructable as TypeDIConstructable } from "typedi/types/types/co
 import "reflect-metadata";
 import { Problem, ProblemFactory } from "@croco/problems-core";
 import { Context } from "./Context";
-import { getParameterInjectionToken } from "./InjectionMetadata";
+import { getParameterInjectionToken, inspectInjectionMetadata } from "./InjectionMetadata";
 import { MetadataStorage } from "./MetadataStorage";
 import { CircularDependencyProblem } from "./problems/CircularDependencyProblem";
 import {
@@ -33,11 +34,13 @@ import type {
   DependencySourceLocation,
   DependencyTokenKind,
   Scope,
+  TypeDIInjectionInspection,
 } from "./types";
 
 export type TokenIdentifier<T> = Constructor<T> | TypeDIToken<T> | string | symbol;
 export type ContainerValidationOptions = {
   readonly force?: boolean;
+  readonly roots?: readonly Constructor[];
 };
 
 const COMPONENT_METADATA_KEY = Symbol("component:metadata");
@@ -131,6 +134,7 @@ function createContainerScopeDisposedProblem(scopeId: string): Problem {
 export class ContainerScope implements AsyncDisposable {
   readonly id: string;
   private readonly state: ContainerScopeState;
+  private activeRollbackTransactions = 0;
   private rollbackTail: Promise<void> = Promise.resolve();
 
   constructor() {
@@ -180,6 +184,14 @@ export class ContainerScope implements AsyncDisposable {
   dispose(): void {
     if (this.state.disposed) {
       return;
+    }
+
+    if (this.activeRollbackTransactions > 0) {
+      throw ProblemFactory.conflict(
+        "framework-context/container-scope-transaction-active",
+        `Container scope '${this.id}' cannot be disposed while rollback-protected work is active. Wait for the transaction to finish and dispose the scope again.`,
+        { extensions: { scopeId: this.id, activeTransactions: this.activeRollbackTransactions } },
+      );
     }
 
     this.state.disposed = true;
@@ -305,27 +317,32 @@ export class ContainerScope implements AsyncDisposable {
       throw createContainerScopeDisposedProblem(this.id);
     }
 
-    const snapshot = this.createSnapshot();
-    const transaction: ContainerScopeRollbackTransaction = { state: this.state, active: true };
+    this.activeRollbackTransactions += 1;
     try {
-      return await containerScopeRollbackStorage.run(transaction, () =>
-        containerScopeStorage.run(this.state, fn),
-      );
-    } catch (error) {
-      const cleanupFailures = this.restoreSnapshot(snapshot);
-      if (cleanupFailures.length > 0) {
-        throw ProblemFactory.internalServerError(
-          "framework-context/container-scope-rollback-failed",
-          `Container scope '${this.id}' could not cleanly roll back the failed transaction. Dispose this scope and create a new one.`,
-          {
-            ...(error instanceof Error ? { cause: error } : {}),
-            extensions: { cleanupFailures },
-          },
+      const snapshot = this.createSnapshot();
+      const transaction: ContainerScopeRollbackTransaction = { state: this.state, active: true };
+      try {
+        return await containerScopeRollbackStorage.run(transaction, () =>
+          containerScopeStorage.run(this.state, fn),
         );
+      } catch (error) {
+        const cleanupFailures = this.restoreSnapshot(snapshot);
+        if (cleanupFailures.length > 0) {
+          throw ProblemFactory.internalServerError(
+            "framework-context/container-scope-rollback-failed",
+            `Container scope '${this.id}' could not cleanly roll back the failed transaction. Dispose this scope and create a new one.`,
+            {
+              ...(error instanceof Error ? { cause: error } : {}),
+              extensions: { cleanupFailures },
+            },
+          );
+        }
+        throw error;
+      } finally {
+        transaction.active = false;
       }
-      throw error;
     } finally {
-      transaction.active = false;
+      this.activeRollbackTransactions -= 1;
     }
   }
 
@@ -475,6 +492,78 @@ export class Container {
     return Container.getScopeState()?.id;
   }
 
+  static inspectTypeDIConstructorInjections(
+    token: Constructor,
+  ): readonly TypeDIInjectionInspection[] {
+    return Container.inspectTypeDIInjections(token).filter(
+      (inspection) => typeof inspection.parameterIndex === "number",
+    );
+  }
+
+  static inspectTypeDIInjections(token: Constructor): readonly TypeDIInjectionInspection[] {
+    const metadataInspections = [
+      ...inspectInjectionMetadata(token),
+      ...inspectInjectionMetadata(token.prototype),
+    ];
+
+    return TypeDIContainer.handlers
+      .filter((handler) => Container.isTypeDIHandlerForToken(handler, token))
+      .map((handler): TypeDIInjectionInspection => {
+        const parameterIndex = typeof handler.index === "number" ? handler.index : undefined;
+        const site =
+          parameterIndex === undefined
+            ? `property:${String(handler.propertyName)}`
+            : `parameter:${parameterIndex}`;
+
+        const metadata = metadataInspections.find((inspection) =>
+          parameterIndex === undefined
+            ? inspection.index === undefined && inspection.propertyKey === handler.propertyName
+            : inspection.index === parameterIndex,
+        );
+
+        if (metadata?.status === "resolved") {
+          return {
+            ...(parameterIndex === undefined ? {} : { parameterIndex }),
+            site,
+            status: "resolved",
+            token: metadata.token,
+          };
+        }
+
+        if (metadata?.status === "uninspectable") {
+          return {
+            ...(parameterIndex === undefined ? {} : { parameterIndex }),
+            site,
+            status: "uninspectable",
+          };
+        }
+
+        const probe: TypeDIInjectionProbeResult = {};
+        try {
+          handler.value(Container.createTypeDIInjectionProbe(probe));
+        } catch {
+          return {
+            ...(parameterIndex === undefined ? {} : { parameterIndex }),
+            site,
+            status: "uninspectable",
+          };
+        }
+
+        return probe.token === undefined
+          ? {
+              ...(parameterIndex === undefined ? {} : { parameterIndex }),
+              site,
+              status: "uninspectable",
+            }
+          : {
+              ...(parameterIndex === undefined ? {} : { parameterIndex }),
+              site,
+              status: "resolved",
+              token: probe.token,
+            };
+      });
+  }
+
   static remove<T>(token: TokenIdentifier<T>): void {
     Container.removeRegisteredValue(token);
     Container.getLazyProviders().delete(token);
@@ -542,7 +631,7 @@ export class Container {
       return;
     }
 
-    const nodes = Container.getRegisteredComponents();
+    const nodes = [...(options.roots ?? Container.getRegisteredComponents())];
     if (nodes.length === 0) {
       Container.setValidated(true);
       return;
@@ -890,6 +979,23 @@ export class Container {
             tokenId: step.tokenId,
             status: "failed",
             message: `Provider '${step.token}' depends on TypeDI fallback metadata and cannot be statically verified.`,
+            path: step.path,
+            pathIds: step.pathIds,
+            trace,
+            ...Container.getSourceLocationForTokenId(step.tokenId),
+          });
+          continue;
+        }
+
+        if (step.status === "uninspectable") {
+          pushDiagnostic({
+            code: "CROCO_DI_005",
+            legacyCode: "framework-context/di-injection-handler-uninspectable",
+            severity: "error",
+            token: step.token,
+            tokenId: step.tokenId,
+            status: "failed",
+            message: step.reason,
             path: step.path,
             pathIds: step.pathIds,
             trace,
@@ -1551,11 +1657,37 @@ export class Container {
 
     const paramTypes =
       (Reflect.getMetadata("design:paramtypes", implementation) as Constructor[] | undefined) ?? [];
+    const typeDIInspections = new Map(
+      Container.inspectTypeDIConstructorInjections(implementation).map((inspection) => [
+        inspection.parameterIndex,
+        inspection,
+      ]),
+    );
     Container.getConstructorParameterIndices(implementation, paramTypes).forEach(
       (parameterIndex) => {
+        const typeDIInspection = typeDIInspections.get(parameterIndex);
+        if (typeDIInspection?.status === "uninspectable") {
+          steps.push(
+            Container.createResolutionStep(
+              implementation,
+              path,
+              {
+                status: "uninspectable",
+                reason: `Dependency injection handler for '${implementation.name}' parameter ${parameterIndex} cannot be inspected without executing user code.`,
+                parameterIndex,
+              },
+              rejectUnknownProviders,
+              true,
+            ),
+          );
+          return;
+        }
+
         const injectedToken =
           getParameterInjectionToken(implementation, parameterIndex) ??
-          Container.getTypeDIParameterInjectionToken(implementation, parameterIndex);
+          (typeDIInspection?.status === "resolved"
+            ? (typeDIInspection.token as TokenIdentifier<unknown>)
+            : undefined);
         if (!injectedToken && parameterIndex >= implementation.length) {
           return;
         }
@@ -1602,27 +1734,14 @@ export class Container {
     return Array.from({ length: parameterCount }, (_, index) => index);
   }
 
-  private static getTypeDIParameterInjectionToken(
-    token: Constructor,
-    parameterIndex: number,
-  ): TokenIdentifier<unknown> | undefined {
-    const handler = TypeDIContainer.handlers.find(
-      (candidate) =>
-        typeof candidate.index === "number" &&
-        candidate.index === parameterIndex &&
-        (candidate.object === token || candidate.object === Object.getPrototypeOf(token)),
-    );
-    if (!handler) {
-      return undefined;
+  private static isTypeDIHandlerForToken(handler: Handler, token: Constructor): boolean {
+    if (typeof handler.index === "number") {
+      return handler.object === token || handler.object === Object.getPrototypeOf(token);
     }
 
-    const result: TypeDIInjectionProbeResult = {};
-    try {
-      handler.value(Container.createTypeDIInjectionProbe(result));
-    } catch {
-      return undefined;
-    }
-    return result.token;
+    return (
+      handler.object.constructor === token || token.prototype instanceof handler.object.constructor
+    );
   }
 
   private static createTypeDIInjectionProbe(
@@ -1767,6 +1886,9 @@ export class Container {
     }
     if (steps.some((step) => step.status === "missing")) {
       return "missing";
+    }
+    if (steps.some((step) => step.status === "uninspectable")) {
+      return "failed";
     }
     return "ready";
   }

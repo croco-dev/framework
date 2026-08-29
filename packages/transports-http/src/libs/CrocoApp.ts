@@ -292,7 +292,12 @@ export class CrocoApp {
     const diagnostics = this.collectDiBootstrapDiagnostics();
 
     try {
-      Container.validate({ force: true });
+      Container.validate({
+        force: true,
+        ...(Container.getActiveScopeId()
+          ? { roots: [...this.collectDiBootstrapProviders().keys()] }
+          : {}),
+      });
     } catch (error) {
       diagnostics.push(this.createContainerValidationDiagnostic(error));
     }
@@ -340,6 +345,21 @@ export class CrocoApp {
   }
 
   private collectDiBootstrapDiagnostics(): DiBootstrapDiagnostic[] {
+    return Array.from(this.collectDiBootstrapProviders().entries())
+      .filter(([provider]) => !this.isDiProviderRegistered(provider))
+      .map(([provider, usages]) => ({
+        code: "transports-http/di-missing-provider",
+        provider: provider.name || "<anonymous>",
+        usages: Array.from(usages).sort(),
+        message: `Provider ${provider.name || "<anonymous>"} is not registered for ${Array.from(
+          usages,
+        )
+          .sort()
+          .join(", ")}`,
+      }));
+  }
+
+  private collectDiBootstrapProviders(): ReadonlyMap<Constructor, ReadonlySet<string>> {
     const providerUsages = new Map<Constructor, Set<string>>();
     const addProvider = (provider: unknown, usage: string): void => {
       if (typeof provider !== "function") {
@@ -385,18 +405,7 @@ export class CrocoApp {
     this.config.globalFilters?.forEach((filter) => addProvider(filter, "global filter"));
     this.config.globalPipes?.forEach((pipe) => addProvider(pipe, "global pipe"));
 
-    return Array.from(providerUsages.entries())
-      .filter(([provider]) => !this.isDiProviderRegistered(provider))
-      .map(([provider, usages]) => ({
-        code: "transports-http/di-missing-provider",
-        provider: provider.name || "<anonymous>",
-        usages: Array.from(usages).sort(),
-        message: `Provider ${provider.name || "<anonymous>"} is not registered for ${Array.from(
-          usages,
-        )
-          .sort()
-          .join(", ")}`,
-      }));
+    return providerUsages;
   }
 
   private isDiProviderRegistered(provider: Constructor): boolean {

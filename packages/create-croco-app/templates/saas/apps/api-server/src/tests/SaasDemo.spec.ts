@@ -147,13 +147,14 @@ describe("SaaS golden path demo", () => {
     expect(distinct.checkoutUrl).not.toBe(first.checkoutUrl);
   });
 
-  it("boots through the exported production bootstrap with documented DI validation", async () => {
+  it("boots through the exported production bootstrap without unrelated global DI diagnostics", async () => {
     const previousNodeEnv = process.env.NODE_ENV;
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    let app: ReturnType<typeof createCrocoApp> | undefined;
     process.env.NODE_ENV = "production";
 
     try {
-      const app = createCrocoApp();
+      app = createCrocoApp();
       const response = await app.fetch(new Request("http://localhost/health"));
 
       expect(response.status).toBe(200);
@@ -161,11 +162,9 @@ describe("SaaS golden path demo", () => {
         di: "warn",
         security: "enforce",
       });
-      expect(warn).toHaveBeenCalledWith(expect.stringContaining("DI bootstrap validation failed"));
-      expect(warn).toHaveBeenCalledWith(
-        expect.stringContaining("Register the missing provider(s)"),
-      );
+      expect(warn).not.toHaveBeenCalled();
     } finally {
+      await app?.disposeApplicationRuntime();
       if (previousNodeEnv === undefined) {
         delete process.env.NODE_ENV;
       } else {
@@ -189,6 +188,19 @@ describe("SaaS golden path demo", () => {
     createCrocoApp();
 
     expect(CrocoContainer.get(LOGGER_TOKEN)).toBe(logger);
+  });
+
+  it("owns bootstrap providers in distinct application runtimes", async () => {
+    const first = createCrocoApp();
+    const second = createCrocoApp();
+
+    expect(first.applicationRuntime.scopeId).not.toBe(second.applicationRuntime.scopeId);
+    expect(first.applicationRuntime.get(LOGGER_TOKEN)).not.toBe(
+      second.applicationRuntime.get(LOGGER_TOKEN),
+    );
+    expect(CrocoContainer.has(LOGGER_TOKEN)).toBe(false);
+
+    await Promise.all([first.disposeApplicationRuntime(), second.disposeApplicationRuntime()]);
   });
 
   it("creates tenant and owner membership", async () => {

@@ -17,6 +17,7 @@ const EXTERNAL_CROCO_PACKAGE_RANGES = {
   "@croco/events-core": "^0.0.4",
   "@croco/events-inmemory": "^0.0.4",
   "@croco/framework-context": "^0.0.4",
+  "@croco/framework-module": "^0.0.4",
   "@croco/framework-logger": "^0.0.4",
   "@croco/frontend-cloudflare": "^0.1.0",
   "@croco/frontend-problems": "^0.1.0",

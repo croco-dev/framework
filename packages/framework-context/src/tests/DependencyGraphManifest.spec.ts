@@ -149,9 +149,7 @@ describe("Dependency graph manifest", () => {
     );
   });
 
-  it("falls back to reflected parameter metadata when a TypeDI handler probe throws", () => {
-    const handlerFailure = Symbol("handler failure");
-
+  it("fails explicitly when a TypeDI injection handler cannot be inspected", () => {
     class Repository {}
 
     class UserService {
@@ -163,9 +161,10 @@ describe("Dependency graph manifest", () => {
       object: UserService,
       index: 0,
       value: () => {
-        throw handlerFailure;
+        throw new Error("handler runtime failure");
       },
     });
+    Component()(Repository);
     Component()(UserService);
 
     const manifest = Container.createDependencyGraphManifest({ roots: [UserService] });
@@ -173,10 +172,12 @@ describe("Dependency graph manifest", () => {
     expect(manifest.status).toBe("failed");
     expect(manifest.diagnostics).toContainEqual(
       expect.objectContaining({
-        code: "CROCO_DI_004",
-        token: "Repository",
+        code: "CROCO_DI_005",
+        legacyCode: "framework-context/di-injection-handler-uninspectable",
+        token: "UserService",
       }),
     );
+    expect(() => Container.get(UserService)).toThrow("handler runtime failure");
   });
 
   it("emits deterministic root, provider, dependency, and diagnostic ordering", () => {

@@ -16,6 +16,19 @@ export type InjectionMetadata = {
   readonly resolveToken: InjectionTokenResolver;
 };
 
+export type InjectionMetadataInspection =
+  | {
+      readonly index?: number;
+      readonly propertyKey?: string | symbol;
+      readonly status: "resolved";
+      readonly token: InjectionTokenIdentifier;
+    }
+  | {
+      readonly index?: number;
+      readonly propertyKey?: string | symbol;
+      readonly status: "uninspectable";
+    };
+
 const INJECTION_METADATA_KEY = Symbol("component:injection-metadata");
 
 export function registerInjectionMetadata(target: object, metadata: InjectionMetadata): void {
@@ -42,4 +55,34 @@ export function getParameterInjectionToken(
   } catch {
     return undefined;
   }
+}
+
+export function inspectInjectionMetadata(target: object): readonly InjectionMetadataInspection[] {
+  const entries = MetadataStorage.get<InjectionMetadata[]>(INJECTION_METADATA_KEY, target) ?? [];
+
+  return entries.map((entry): InjectionMetadataInspection => {
+    try {
+      const token = entry.resolveToken();
+      if (token === undefined) {
+        return {
+          ...(entry.index === undefined ? {} : { index: entry.index }),
+          ...(entry.propertyKey === undefined ? {} : { propertyKey: entry.propertyKey }),
+          status: "uninspectable",
+        };
+      }
+
+      return {
+        ...(entry.index === undefined ? {} : { index: entry.index }),
+        ...(entry.propertyKey === undefined ? {} : { propertyKey: entry.propertyKey }),
+        status: "resolved",
+        token,
+      };
+    } catch {
+      return {
+        ...(entry.index === undefined ? {} : { index: entry.index }),
+        ...(entry.propertyKey === undefined ? {} : { propertyKey: entry.propertyKey }),
+        status: "uninspectable",
+      };
+    }
+  });
 }

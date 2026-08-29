@@ -5,7 +5,11 @@ import {
   type DependencyGraphManifest,
   type TokenIdentifier,
 } from "@croco/framework-context";
-import { createModuleRuntimeForContainer, type ModuleRuntime } from "./ModuleRegistry";
+import {
+  createModuleGraphManifest,
+  createModuleRuntimeForContainer,
+  type ModuleRuntime,
+} from "./ModuleRegistry";
 import { getProviderToken, isConstructorToken, isProviderDefinition } from "./moduleTokens";
 import { attachModuleCleanupFailures, ModuleLifecycleProblem } from "./problems";
 import type {
@@ -44,11 +48,16 @@ export class ApplicationRuntime implements AsyncDisposable {
   private disposed = false;
 
   constructor(options: ApplicationRuntimeOptions = {}) {
+    const modules = options.modules ?? [];
+    if (modules.length > 0) {
+      createModuleGraphManifest(modules);
+    }
+
     this.containerScope = Container.createScope();
     this.scopeId = this.containerScope.id;
     this.moduleRuntime = createModuleRuntimeForContainer(this.scopeId);
 
-    for (const module of options.modules ?? []) {
+    for (const module of modules) {
       this.use(module);
     }
   }
@@ -201,38 +210,85 @@ export class ApplicationRuntime implements AsyncDisposable {
   }
 
   private attachDisposalFailure(error: unknown, disposalError: unknown): ModuleLifecycleProblem {
-    const disposalCode =
-      disposalError instanceof ModuleLifecycleProblem
-        ? disposalError.code
-        : disposalError instanceof Error &&
-            "code" in disposalError &&
-            typeof disposalError.code === "string"
-          ? disposalError.code
-          : "framework-module/application-runtime-disposal-failed";
-    const failure: ModuleCleanupFailure = {
-      moduleName: "<application-runtime>",
-      phase: "shutdown",
-      code: disposalCode,
-      message: disposalError instanceof Error ? disposalError.message : String(disposalError),
-    };
+    const failures = this.getCleanupFailures(disposalError);
 
     if (error instanceof ModuleLifecycleProblem) {
       const existingFailures = Array.isArray(error.extensions?.cleanupFailures)
         ? (error.extensions.cleanupFailures as unknown as ModuleCleanupFailure[])
         : [];
-      return attachModuleCleanupFailures(error, [...existingFailures, failure]);
+      return attachModuleCleanupFailures(error, [...existingFailures, ...failures]);
     }
 
-    return new ModuleLifecycleProblem("<application-runtime>", "shutdown", error, [failure]);
+    return new ModuleLifecycleProblem("<application-runtime>", "shutdown", error, failures);
   }
 
   private async disposeOnce(): Promise<void> {
+    let primaryFailure: unknown;
     try {
       await this.containerScope.run(() => this.moduleRuntime.dispose());
+    } catch (error) {
+      primaryFailure = error;
+    }
+
+    try {
+      this.containerScope.dispose();
+    } catch (error) {
+      if (primaryFailure !== undefined) {
+        throw this.attachDisposalFailure(primaryFailure, error);
+      }
+      throw error;
     } finally {
       this.disposed = true;
-      this.containerScope.dispose();
     }
+
+    if (primaryFailure !== undefined) {
+      throw primaryFailure;
+    }
+  }
+
+  private getCleanupFailures(error: unknown): ModuleCleanupFailure[] {
+    if (error instanceof Error && "extensions" in error) {
+      const extensions = error.extensions;
+      if (
+        extensions &&
+        typeof extensions === "object" &&
+        "cleanupFailures" in extensions &&
+        Array.isArray(extensions.cleanupFailures)
+      ) {
+        const failures = extensions.cleanupFailures.flatMap((failure) => {
+          if (!failure || typeof failure !== "object") {
+            return [];
+          }
+
+          const code = "code" in failure && typeof failure.code === "string" ? failure.code : null;
+          const message =
+            "message" in failure && typeof failure.message === "string" ? failure.message : null;
+          if (!code || !message) {
+            return [];
+          }
+
+          return [{ moduleName: "<container-scope>", phase: "shutdown" as const, code, message }];
+        });
+        if (failures.length > 0) {
+          return [this.createCleanupFailure(error), ...failures];
+        }
+      }
+    }
+
+    return [this.createCleanupFailure(error)];
+  }
+
+  private createCleanupFailure(error: unknown): ModuleCleanupFailure {
+    const code =
+      error instanceof Error && "code" in error && typeof error.code === "string"
+        ? error.code
+        : "framework-module/application-runtime-disposal-failed";
+    return {
+      moduleName: "<application-runtime>",
+      phase: "shutdown",
+      code,
+      message: error instanceof Error ? error.message : String(error),
+    };
   }
 }
 
