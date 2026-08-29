@@ -500,4 +500,35 @@ describe("ApplicationRuntime", () => {
       },
     });
   });
+
+  it("preserves a non-lifecycle shutdown failure when provider cleanup also fails", async () => {
+    const runtime = createApplicationRuntime({
+      modules: [{ name: "app", setup: () => undefined }],
+    });
+    await runtime.initialize();
+    const moduleRuntimeState = (
+      runtime as unknown as {
+        moduleRuntime: {
+          state: {
+            shutdownPromise: Promise<void> | null;
+            container: { reset: () => void };
+          };
+        };
+      }
+    ).moduleRuntime.state;
+    moduleRuntimeState.shutdownPromise = Promise.reject(new ModuleRuntimeStaleContextProblem());
+    moduleRuntimeState.container.reset = () => {
+      throw new Error("provider cleanup failed");
+    };
+
+    await expect(runtime.dispose()).rejects.toMatchObject({
+      code: "framework-module/lifecycle-failed",
+      message: expect.stringContaining("Module context belongs to a previous runtime graph"),
+      extensions: {
+        cleanupFailures: expect.arrayContaining([
+          expect.objectContaining({ message: expect.stringContaining("provider cleanup failed") }),
+        ]),
+      },
+    });
+  });
 });

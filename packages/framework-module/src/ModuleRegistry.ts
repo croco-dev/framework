@@ -273,11 +273,15 @@ async function disposeModuleRuntime(state: ModuleRegistryState): Promise<void> {
       Container.reset(state.containerId);
     }
   } catch (error) {
-    if (primaryFailure instanceof ModuleLifecycleProblem) {
-      const existingFailures = Array.isArray(primaryFailure.extensions?.cleanupFailures)
-        ? (primaryFailure.extensions.cleanupFailures as unknown as ModuleCleanupFailure[])
+    if (primaryFailure !== undefined) {
+      const lifecycleFailure =
+        primaryFailure instanceof ModuleLifecycleProblem
+          ? primaryFailure
+          : new ModuleLifecycleProblem("<registry>", "shutdown", primaryFailure);
+      const existingFailures = Array.isArray(lifecycleFailure.extensions?.cleanupFailures)
+        ? (lifecycleFailure.extensions.cleanupFailures as unknown as ModuleCleanupFailure[])
         : [];
-      throw attachModuleCleanupFailures(primaryFailure, [
+      throw attachModuleCleanupFailures(lifecycleFailure, [
         ...existingFailures,
         createModuleCleanupFailure(
           new ModuleLifecycleProblem("<registry>", "shutdown", error),
