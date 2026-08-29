@@ -393,20 +393,22 @@ describe("frontend Problem client runtime", () => {
     ] as const;
 
     for (const [encodedLabel, secret] of cases) {
-      const result = await readOptionalJsonResult(
-        new Response(`{"${encodedLabel}":"${secret}",`, {
-          headers: { "content-type": "application/json" },
-          status: 200,
-        }),
-      );
+      for (const quote of ['"', "'"] as const) {
+        const result = await readOptionalJsonResult(
+          new Response(`${quote}${encodedLabel}${quote}:${quote}${secret}${quote},`, {
+            headers: { "content-type": "application/json" },
+            status: 200,
+          }),
+        );
 
-      if (result.ok || result.kind !== "external") {
-        expect.fail("Expected an external failure result.");
+        if (result.ok || result.kind !== "external") {
+          expect.fail("Expected an external failure result.");
+        }
+
+        expect(result.body).toContain("[redacted]");
+        expect(result.body).not.toContain(secret);
+        expect(result.error).toMatchObject({ body: result.body });
       }
-
-      expect(result.body).toContain("[redacted]");
-      expect(result.body).not.toContain(secret);
-      expect(result.error).toMatchObject({ body: result.body });
     }
   });
 

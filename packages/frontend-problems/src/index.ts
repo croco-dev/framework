@@ -10,7 +10,7 @@ const TRAILING_STRUCTURED_RESPONSE_SECRET_PATTERN =
 const SENSITIVE_RESPONSE_FIELD_PATTERN =
   /^(?:authorization|proxy[-_]?authorization|cookie|set[-_]?cookie|credential|password|passphrase|passwd|pwd|secret|token|api[-_]?key|private[-_]?key|access[-_]?key(?:[-_]?id)?|access[-_]?token|refresh[-_]?token|client[-_]?secret|connection[-_]?string|dsn)$/i;
 const QUOTED_JSON_FIELD_PATTERN =
-  /"((?:\\.|[^"\\])*)"(\s*:\s*)(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|(?:bearer|basic|digest|apikey)\s+[^\r\n,;}\]]+|[^\r\n,;}\]]+)/gi;
+  /(["'])((?:\\.|(?!\1)[^\\])*)\1(\s*:\s*)(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|(?:bearer|basic|digest|apikey)\s+[^\r\n,;}\]]+|[^\r\n,;}\]]+)/gi;
 const MAX_STRUCTURED_RESPONSE_DEPTH = 8;
 const MAX_STRUCTURED_RESPONSE_ENTRIES = 100;
 
@@ -434,13 +434,16 @@ function redactResponseBody(body: string, inputTruncated: boolean): string {
 
 function replaceSensitiveQuotedJsonValue(
   match: string,
+  labelQuote: string,
   encodedLabel: string,
   separator: string,
 ): string {
   let label: unknown;
 
   try {
-    label = JSON.parse(`"${encodedLabel}"`);
+    const jsonLabel =
+      labelQuote === '"' ? encodedLabel : encodedLabel.replace(/"/g, '\\"').replace(/\\'/g, "'");
+    label = JSON.parse(`"${jsonLabel}"`);
   } catch {
     return match;
   }
@@ -449,10 +452,10 @@ function replaceSensitiveQuotedJsonValue(
     return match;
   }
 
-  const value = match.slice(encodedLabel.length + separator.length + 2);
+  const value = match.slice(encodedLabel.length + separator.length + labelQuote.length * 2);
   const valueQuote = value.startsWith('"') || value.startsWith("'") ? value[0] : "";
 
-  return `"${encodedLabel}"${separator}${valueQuote}${REDACTED_RESPONSE_BODY_VALUE}${valueQuote}`;
+  return `${labelQuote}${encodedLabel}${labelQuote}${separator}${valueQuote}${REDACTED_RESPONSE_BODY_VALUE}${valueQuote}`;
 }
 
 function replaceSensitiveResponseValue(
