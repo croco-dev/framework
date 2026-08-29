@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { taskRef } from "../index";
 import { TASK_METADATA_KEY, Task } from "../libs/decorators/Task";
-import { taskRef } from "../libs/taskRef";
 import { TaskRegistry } from "../libs/TaskRegistry";
 import { TaskRunner } from "../libs/TaskRunner";
 import type { TaskMetadata, TaskOptions, TaskReference } from "../libs/types";

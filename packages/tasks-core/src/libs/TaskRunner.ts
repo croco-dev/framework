@@ -141,6 +141,10 @@ function supportsAttemptFencing(
   );
 }
 
+function isRuntimeTaskReference(candidate: unknown): candidate is RuntimeTaskReference {
+  return typeof candidate === "object" && candidate !== null && isFactoryTaskReference(candidate);
+}
+
 export class TaskRunner {
   private readonly now: () => number;
   private readonly schedule: (callback: () => void, delayMs: number) => () => void;
@@ -167,7 +171,7 @@ export class TaskRunner {
   ): Promise<TaskReferenceResult<TReference>>;
   execute(taskId: string, payload: unknown, options?: TaskExecutionOptions): Promise<unknown>;
   async execute(
-    taskIdentifier: string | RuntimeTaskReference,
+    taskIdentifier: unknown,
     payload: unknown,
     options: TaskExecutionOptions = {},
   ): Promise<unknown> {
@@ -183,13 +187,13 @@ export class TaskRunner {
   }
 
   private async executeTrackedTask(
-    taskIdentifier: string | RuntimeTaskReference,
+    taskIdentifier: unknown,
     payload: unknown,
     options: TaskExecutionOptions,
   ): Promise<TrackedTaskExecution> {
-    if (typeof taskIdentifier !== "string" && !isFactoryTaskReference(taskIdentifier)) {
+    if (typeof taskIdentifier !== "string" && !isRuntimeTaskReference(taskIdentifier)) {
       throw new InvalidTaskReferenceProblem(
-        taskIdentifier.name,
+        "<unknown>",
         "The task reference was not created by taskRef",
       );
     }

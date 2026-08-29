@@ -164,4 +164,18 @@ describe("taskRef", () => {
       InvalidTaskReferenceProblem,
     );
   });
+
+  it.each([null, 42])(
+    "rejects invalid runtime references without dereferencing %j",
+    async (value) => {
+      const runner = new TaskRunner(
+        undefined as unknown as ExecutionManager,
+        TaskRegistry.fromMetadata(),
+      );
+
+      await expect(runner.execute(value as unknown as TaskReference, { value: 1 })).rejects.toThrow(
+        "Invalid task reference '<unknown>': The task reference was not created by taskRef",
+      );
+    },
+  );
 });
