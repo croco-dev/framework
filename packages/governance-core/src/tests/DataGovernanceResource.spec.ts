@@ -772,7 +772,7 @@ describe("DataGovernanceResource", () => {
     );
   });
 
-  it("preserves validator-valid empty optional resource and field strings", () => {
+  it("preserves base artifact bytes for validator-valid empty optional resource and field strings", () => {
     const resource = defineDataGovernanceResource({
       description: "",
       fields: [
@@ -795,17 +795,16 @@ describe("DataGovernanceResource", () => {
     });
 
     expect(validateDataGovernanceResources([resource])).toEqual({ diagnostics: [], valid: true });
-    expect(createDataMapArtifact([resource]).resources[0]).toMatchObject({
-      description: "",
-      fields: [
-        {
-          description: "",
-          label: "",
-          source: "",
-          valueType: "",
-        },
-      ],
-    });
+    const artifact = createDataMapArtifact([resource]);
+
+    expect(artifact.resources[0]).not.toHaveProperty("description");
+    expect(artifact.resources[0]?.fields[0]).not.toHaveProperty("description");
+    expect(artifact.resources[0]?.fields[0]).not.toHaveProperty("label");
+    expect(artifact.resources[0]?.fields[0]).not.toHaveProperty("source");
+    expect(artifact.resources[0]?.fields[0]).not.toHaveProperty("valueType");
+    expect(createHash("sha256").update(stringifyDataMapArtifact(artifact)).digest("hex")).toBe(
+      "e52211edcfdb3318de089b246b1487cfbbf07bbe8be898da8785ab90d1aeb209",
+    );
   });
 
   it("projects subject and retention artifacts onto their supported schema fields", () => {

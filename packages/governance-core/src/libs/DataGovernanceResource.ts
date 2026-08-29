@@ -1230,7 +1230,7 @@ function toDataMapResource(
       delete: deleteCapability,
     },
     problems,
-    ...(description !== undefined ? { description } : {}),
+    ...(description ? { description } : {}),
   };
 }
 
@@ -1251,11 +1251,11 @@ function toDataMapField(
     classifications: sortClassifications(classifications),
     exported: exportSupported && booleanFlagValue(field.exported),
     deleted: deleteSupported && booleanFlagValue(field.deleted),
-    ...(label !== undefined ? { label } : {}),
-    ...(valueType !== undefined ? { valueType: valueType as DataMapField["valueType"] } : {}),
+    ...(label ? { label } : {}),
+    ...(valueType ? { valueType: valueType as DataMapField["valueType"] } : {}),
     ...(retentionPolicyId ? { retentionPolicyId } : {}),
-    ...(source !== undefined ? { source } : {}),
-    ...(description !== undefined ? { description } : {}),
+    ...(source ? { source } : {}),
+    ...(description ? { description } : {}),
   };
 }
 
