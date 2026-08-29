@@ -384,6 +384,32 @@ describe("frontend Problem client runtime", () => {
     expect(String((throwingError as { readonly cause?: unknown }).cause)).not.toContain(secret);
   });
 
+  it("redacts malformed JSON values whose sensitive field labels use escapes", async () => {
+    const cases = [
+      ["pass\\u0077ord", "escaped-password"],
+      ["authoriz\\u0061tion", "escaped-authorization"],
+      ["api\\u004bey", "escaped-api-key"],
+      ["coo\\u006bie", "escaped-cookie"],
+    ] as const;
+
+    for (const [encodedLabel, secret] of cases) {
+      const result = await readOptionalJsonResult(
+        new Response(`{"${encodedLabel}":"${secret}",`, {
+          headers: { "content-type": "application/json" },
+          status: 200,
+        }),
+      );
+
+      if (result.ok || result.kind !== "external") {
+        expect.fail("Expected an external failure result.");
+      }
+
+      expect(result.body).toContain("[redacted]");
+      expect(result.body).not.toContain(secret);
+      expect(result.error).toMatchObject({ body: result.body });
+    }
+  });
+
   it("bounds sanitization before redacting incomplete private keys", () => {
     const privateKeyMarker = "-----BEGIN PRIVATE KEY-----";
     const error = new ProblemResponseError(
@@ -487,6 +513,26 @@ describe("frontend Problem client runtime", () => {
     expect(String(oversizedError.body)).toHaveLength(500);
     expect(String(oversizedError.body)).toMatch(/\.\.\.$/);
     expect(oversizedError.bodyTruncated).toBe(true);
+  });
+
+  it("preserves __proto__ as inert structured response evidence", () => {
+    const body = JSON.parse(
+      '{"__proto__":{"admin":true,"password":"nested-secret"},"message":"bad"}',
+    );
+    const error = new ProblemResponseError(new Response(null, { status: 502 }), body);
+
+    if (error.body === null || typeof error.body !== "object") {
+      expect.fail("Expected structured response evidence.");
+    }
+
+    expect(Object.getPrototypeOf(error.body)).toBe(Object.prototype);
+    expect(Object.prototype.hasOwnProperty.call(error.body, "__proto__")).toBe(true);
+    expect((error.body as Record<string, unknown>).__proto__).toEqual({
+      admin: true,
+      password: "[redacted]",
+    });
+    expect((error.body as Record<string, unknown>).admin).toBeUndefined();
+    expect(JSON.stringify(error.body)).not.toContain("nested-secret");
   });
 
   it("preserves response body cancellation identity for throwing and Result helpers", async () => {

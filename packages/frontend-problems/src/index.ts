@@ -9,6 +9,8 @@ const TRAILING_STRUCTURED_RESPONSE_SECRET_PATTERN =
   /(?:(?:github_pat_|gh[pousr]_)[a-zA-Z0-9_]*|AKIA[A-Z0-9]*|eyJ[a-zA-Z0-9_-]+\.eyJ[a-zA-Z0-9_-]+(?:\.[a-zA-Z0-9_-]*)?)$/g;
 const SENSITIVE_RESPONSE_FIELD_PATTERN =
   /^(?:authorization|proxy[-_]?authorization|cookie|set[-_]?cookie|credential|password|passphrase|passwd|pwd|secret|token|api[-_]?key|private[-_]?key|access[-_]?key(?:[-_]?id)?|access[-_]?token|refresh[-_]?token|client[-_]?secret|connection[-_]?string|dsn)$/i;
+const QUOTED_JSON_FIELD_PATTERN =
+  /"((?:\\.|[^"\\])*)"(\s*:\s*)(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|(?:bearer|basic|digest|apikey)\s+[^\r\n,;}\]]+|[^\r\n,;}\]]+)/gi;
 const MAX_STRUCTURED_RESPONSE_DEPTH = 8;
 const MAX_STRUCTURED_RESPONSE_ENTRIES = 100;
 
@@ -393,9 +395,14 @@ function sanitizeStructuredResponseBody(
     }
 
     state.remainingEntries -= 1;
-    sanitized[key] = SENSITIVE_RESPONSE_FIELD_PATTERN.test(key)
-      ? REDACTED_RESPONSE_BODY_VALUE
-      : sanitizeStructuredResponseBody((value as Record<string, unknown>)[key], state, depth + 1);
+    Object.defineProperty(sanitized, key, {
+      configurable: true,
+      enumerable: true,
+      value: SENSITIVE_RESPONSE_FIELD_PATTERN.test(key)
+        ? REDACTED_RESPONSE_BODY_VALUE
+        : sanitizeStructuredResponseBody((value as Record<string, unknown>)[key], state, depth + 1),
+      writable: true,
+    });
   }
 
   state.visited.delete(value);
@@ -403,7 +410,11 @@ function sanitizeStructuredResponseBody(
 }
 
 function redactResponseBody(body: string, inputTruncated: boolean): string {
-  const withoutCookies = body.replace(
+  const withoutEscapedJsonFields = body.replace(
+    QUOTED_JSON_FIELD_PATTERN,
+    replaceSensitiveQuotedJsonValue,
+  );
+  const withoutCookies = withoutEscapedJsonFields.replace(
     /(["']?)(cookie|set[-_]?cookie)\1(\s*[:=]\s*)(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\r\n]+)/gi,
     replaceSensitiveResponseValue,
   );
@@ -419,6 +430,29 @@ function redactResponseBody(body: string, inputTruncated: boolean): string {
   return inputTruncated
     ? redacted.replace(TRAILING_STRUCTURED_RESPONSE_SECRET_PATTERN, REDACTED_RESPONSE_BODY_VALUE)
     : redacted;
+}
+
+function replaceSensitiveQuotedJsonValue(
+  match: string,
+  encodedLabel: string,
+  separator: string,
+): string {
+  let label: unknown;
+
+  try {
+    label = JSON.parse(`"${encodedLabel}"`);
+  } catch {
+    return match;
+  }
+
+  if (typeof label !== "string" || !SENSITIVE_RESPONSE_FIELD_PATTERN.test(label)) {
+    return match;
+  }
+
+  const value = match.slice(encodedLabel.length + separator.length + 2);
+  const valueQuote = value.startsWith('"') || value.startsWith("'") ? value[0] : "";
+
+  return `"${encodedLabel}"${separator}${valueQuote}${REDACTED_RESPONSE_BODY_VALUE}${valueQuote}`;
 }
 
 function replaceSensitiveResponseValue(
