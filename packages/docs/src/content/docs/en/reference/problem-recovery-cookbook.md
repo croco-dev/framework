@@ -5534,7 +5534,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/Container.ts:2057:13` (problem-factory)
+- `packages/framework-context/src/libs/Container.ts:2061:13` (problem-factory)
 
 <a id="framework-context-runtime-inspector-invalid-configuration"></a>
 

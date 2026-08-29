@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import { Container as TypeDIContainer } from "typedi";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Component, Container, Inject, MetadataStorage, Token } from "../index";
 
@@ -143,6 +144,36 @@ describe("Dependency graph manifest", () => {
       expect.objectContaining({
         code: "CROCO_DI_004",
         legacyCode: "framework-context/di-unknown-provider",
+        token: "Repository",
+      }),
+    );
+  });
+
+  it("falls back to reflected parameter metadata when a TypeDI handler probe throws", () => {
+    const handlerFailure = Symbol("handler failure");
+
+    class Repository {}
+
+    class UserService {
+      constructor(readonly repository: Repository) {}
+    }
+
+    Reflect.defineMetadata("design:paramtypes", [Repository], UserService);
+    TypeDIContainer.registerHandler({
+      object: UserService,
+      index: 0,
+      value: () => {
+        throw handlerFailure;
+      },
+    });
+    Component()(UserService);
+
+    const manifest = Container.createDependencyGraphManifest({ roots: [UserService] });
+
+    expect(manifest.status).toBe("failed");
+    expect(manifest.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "CROCO_DI_004",
         token: "Repository",
       }),
     );

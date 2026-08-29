@@ -1617,7 +1617,11 @@ export class Container {
     }
 
     const result: TypeDIInjectionProbeResult = {};
-    handler.value(Container.createTypeDIInjectionProbe(result));
+    try {
+      handler.value(Container.createTypeDIInjectionProbe(result));
+    } catch {
+      return undefined;
+    }
     return result.token;
   }
 
