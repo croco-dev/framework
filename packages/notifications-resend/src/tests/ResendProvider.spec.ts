@@ -342,6 +342,30 @@ describe("ResendProvider", () => {
       expect(JSON.stringify(vi.mocked(recordEvent).mock.calls)).not.toContain("fixed-key");
     });
 
+    it("should send custom email headers", async () => {
+      vi.mocked(mockResendClient.emails.send).mockResolvedValue(mockSuccessResponse);
+
+      const payload: NotificationPayload = {
+        to: "recipient@example.com",
+        subject: "Test Subject",
+        content: "<h1>Test Content</h1>",
+        headers: { "X-Message-Id": "message-123" },
+      };
+
+      await provider.send(payload);
+
+      expect(mockResendClient.emails.send).toHaveBeenCalledWith(
+        {
+          from: "noreply@example.com",
+          to: "recipient@example.com",
+          subject: "Test Subject",
+          html: "<h1>Test Content</h1>",
+          headers: { "X-Message-Id": "message-123" },
+        },
+        { idempotencyKey: expect.stringMatching(/^resend-/) },
+      );
+    });
+
     it("should use generated resend idempotency key without options", async () => {
       vi.mocked(mockResendClient.emails.send).mockResolvedValue(mockSuccessResponse);
 
@@ -613,7 +637,7 @@ describe("ResendProvider", () => {
         data: null,
         error: {
           message:
-            "Rejected recipient@example.com with subject Secret Subject and body Secret Body using idempotency-key=fixed-key and apiKey=re_leaked-key",
+            "Rejected recipient@example.com with subject Secret Subject, body Secret Body, and header secret-header using idempotency-key=fixed-key and apiKey=re_leaked-key",
           name: "invalid_parameter",
         },
       };
@@ -624,6 +648,7 @@ describe("ResendProvider", () => {
         to: "recipient@example.com",
         subject: "Secret Subject",
         content: "<h1>Secret Body</h1>",
+        headers: { "X-Private-Context": "secret-header" },
       };
 
       const result = await provider.send(payload, { idempotencyKey: "fixed-key" });
@@ -633,16 +658,18 @@ describe("ResendProvider", () => {
       expectFailedNotificationResult(result);
       expect(result.problem).toBeInstanceOf(ResendValidationProblem);
       expect(result.problem.message).toBe(
-        "Rejected [redacted] with subject [redacted] and body [redacted] using idempotency-key=[redacted] and apiKey=[redacted]",
+        "Rejected [redacted] with subject [redacted], body [redacted], and header [redacted] using idempotency-key=[redacted] and apiKey=[redacted]",
       );
       expect(serializedTelemetry).not.toContain("recipient@example.com");
       expect(serializedTelemetry).not.toContain("Secret Subject");
       expect(serializedTelemetry).not.toContain("Secret Body");
+      expect(serializedTelemetry).not.toContain("secret-header");
       expect(serializedTelemetry).not.toContain("fixed-key");
       expect(serializedTelemetry).not.toContain("re_leaked-key");
       expect(recordedErrors).not.toContain("recipient@example.com");
       expect(recordedErrors).not.toContain("Secret Subject");
       expect(recordedErrors).not.toContain("Secret Body");
+      expect(recordedErrors).not.toContain("secret-header");
       expect(recordedErrors).not.toContain("fixed-key");
       expect(recordedErrors).not.toContain("re_leaked-key");
     });

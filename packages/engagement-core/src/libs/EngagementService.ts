@@ -297,7 +297,9 @@ export class EngagementService {
           executionIds.push(result.executionId);
         } catch (error) {
           if (error instanceof NotificationPreferenceDeniedProblem) {
-            channelResults.push({ channel, status: "suppressed", reason: "preference" });
+            if (channelExecutionIds.length === 0) {
+              channelResults.push({ channel, status: "suppressed", reason: "preference" });
+            }
             break;
           }
           throw new EngagementDispatchFailedProblem(
@@ -400,6 +402,7 @@ export class EngagementService {
   }
 }
 
+/** Reports that the requested recipient does not exist in the tenant-scoped directory. */
 export class RecipientNotFoundProblem extends Problem {
   constructor(ref: RecipientRef) {
     super(
@@ -411,6 +414,7 @@ export class RecipientNotFoundProblem extends Problem {
   }
 }
 
+/** Reports that the recipient directory could not complete a tenant-scoped lookup. */
 export class RecipientDirectoryLookupProblem extends Problem {
   constructor(ref: RecipientRef, cause: Error) {
     super(
@@ -425,6 +429,7 @@ export class RecipientDirectoryLookupProblem extends Problem {
   }
 }
 
+/** Reports that the recipient directory returned an identity outside the requested tenant scope. */
 export class RecipientDirectoryScopeMismatchProblem extends Problem {
   constructor(ref: RecipientRef) {
     super(
@@ -444,6 +449,7 @@ export class EngagementCommandInvalidProblem extends Problem {
   }
 }
 
+/** Reports that a registered message renderer failed while producing channel content. */
 export class EngagementRenderFailedProblem extends Problem {
   constructor(messageId: string, ref: RecipientRef, channel: MessageChannel, cause: Error) {
     super(
@@ -464,6 +470,7 @@ export class EngagementRenderFailedProblem extends Problem {
   }
 }
 
+/** Reports that endpoint suppression evaluation failed before notification dispatch. */
 export class EngagementSuppressionEvaluationProblem extends Problem {
   constructor(messageId: string, ref: RecipientRef, channel: MessageChannel, cause: Error) {
     super(
@@ -578,6 +585,7 @@ function toNotificationPayload<TChannel extends MessageChannel>(
         to: endpoint.target,
         subject: email.subject,
         content: email.html,
+        ...(email.headers === undefined ? {} : { headers: email.headers }),
         metadata: {
           ...metadata,
           text: email.text,

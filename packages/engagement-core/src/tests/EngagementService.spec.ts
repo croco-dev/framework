@@ -46,6 +46,7 @@ class TrialEndingRenderer implements MessageRenderer<typeof TrialEnding> {
       subject: `${data.tenantName} trial`,
       html: `<p>${data.tenantName}</p>`,
       text: data.tenantName,
+      headers: { "X-Engagement-Topic": "billing" },
     };
   }
 
@@ -194,6 +195,7 @@ describe("EngagementService", () => {
         to: "user@example.com",
         subject: "Croco trial",
         content: "<p>Croco</p>",
+        headers: { "X-Engagement-Topic": "billing" },
         locale: "en-US",
       }),
       expect.objectContaining({
@@ -355,6 +357,48 @@ describe("EngagementService", () => {
           status: "queued",
           executionIds: ["push-execution", "push-execution"],
         },
+      ],
+    });
+  });
+
+  it("keeps a single queued channel result when preferences change between endpoints", async () => {
+    const dispatcher = createDispatcher();
+    dispatcher.dispatch
+      .mockResolvedValueOnce({ executionId: "push-execution" })
+      .mockRejectedValueOnce(
+        new NotificationPreferenceDeniedProblem({
+          context: {
+            tenantId: "tenant-1",
+            userId: "user-1",
+            channel: NotificationChannel.PUSH,
+            topic: "billing",
+          },
+          reason: "user-opted-out",
+          evaluationKey: "preference-2",
+        }),
+      );
+    const pushOnlyDirectory = new InMemoryRecipientDirectory([
+      { recipient: recipient.recipient, push: recipient.push },
+    ]);
+    const engagement = new EngagementService(
+      pushOnlyDirectory,
+      createRenderer(),
+      dispatcher.service,
+    );
+
+    await expect(
+      engagement.send(TrialEnding, {
+        recipient: recipient.recipient,
+        data: { tenantName: "Croco", secret: "payload-secret" },
+        key: "subscription-1",
+        policy: "all-reachable",
+      }),
+    ).resolves.toEqual({
+      status: "queued",
+      executionIds: ["push-execution"],
+      channelResults: [
+        { channel: "email", status: "unavailable", reason: "no-endpoint" },
+        { channel: "push", status: "queued", executionIds: ["push-execution"] },
       ],
     });
   });

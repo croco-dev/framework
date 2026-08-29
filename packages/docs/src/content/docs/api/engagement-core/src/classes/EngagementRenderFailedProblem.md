@@ -5,7 +5,7 @@ prev: false
 title: "EngagementRenderFailedProblem"
 ---
 
-RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다.
+Reports that a registered message renderer failed while producing channel content.
 
 ## Extends
 

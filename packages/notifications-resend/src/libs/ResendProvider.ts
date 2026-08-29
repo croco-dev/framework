@@ -96,6 +96,7 @@ export class ResendProvider implements NotificationProvider {
         to,
         subject: subject || "No Subject",
         html: content,
+        ...(payload.headers === undefined ? {} : { headers: { ...payload.headers } }),
       };
 
       const data = await this.retryTemplate.execute(async () => {
@@ -200,6 +201,7 @@ function getResendProblemRedactionValues(
     payload.subject,
     payload.content,
     toTextContent(payload.content),
+    ...Object.values(payload.headers ?? {}),
     idempotencyKey,
   ].filter(isNonEmptyString);
 }

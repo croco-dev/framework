@@ -71,6 +71,7 @@ function toProviderPayload(payload: NotificationJobPayload): NotificationPayload
     to: payload.to,
     ...(payload.subject === undefined ? {} : { subject: payload.subject }),
     content: payload.content,
+    ...(payload.headers === undefined ? {} : { headers: payload.headers }),
     ...(payload.metadata === undefined ? {} : { metadata: payload.metadata }),
     ...(payload.templateId === undefined ? {} : { templateId: payload.templateId }),
     ...(payload.templateVersion === undefined ? {} : { templateVersion: payload.templateVersion }),

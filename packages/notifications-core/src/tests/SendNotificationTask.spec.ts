@@ -94,6 +94,26 @@ describe("SendNotificationTask", () => {
       });
     });
 
+    it("should include headers in provider send call", async () => {
+      const mockResult = { success: true, messageId: "msg-123" } as const;
+      vi.mocked(mockProvider.send).mockResolvedValue(mockResult);
+
+      const payload: NotificationJobPayload = {
+        providerName: "resend",
+        to: "test@example.com",
+        content: "Test Content",
+        headers: { "X-Message-Id": "message-123" },
+      };
+
+      await task.handle(payload);
+
+      expect(mockProvider.send).toHaveBeenCalledWith({
+        to: "test@example.com",
+        content: "Test Content",
+        headers: { "X-Message-Id": "message-123" },
+      });
+    });
+
     it("should pass idempotency key to provider send options", async () => {
       const mockResult = { success: true, messageId: "msg-123" } as const;
       vi.mocked(mockProvider.send).mockResolvedValue(mockResult);

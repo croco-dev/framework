@@ -10,7 +10,7 @@ const __dirname = dirname(__filename);
 const packageDir = resolve(__dirname, "../..");
 const rootDir = resolve(packageDir, "../..");
 const spawnTimeoutMs = 180_000;
-const testTimeoutMs = 300_000;
+const TEST_TIMEOUT_MS = 300_000;
 const skipPackedConsumer =
   process.env.CROCO_OFFLINE === "1" || process.env.npm_config_offline === "true";
 
@@ -78,7 +78,7 @@ describe("published message contracts", () => {
         rmSync(consumerRoot, { force: true, recursive: true });
       }
     },
-    testTimeoutMs,
+    TEST_TIMEOUT_MS,
   );
 });
 

@@ -5,7 +5,7 @@ prev: false
 title: "RecipientNotFoundProblem"
 ---
 
-RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다.
+Reports that the requested recipient does not exist in the tenant-scoped directory.
 
 ## Extends
 

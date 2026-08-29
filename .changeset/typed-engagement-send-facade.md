@@ -1,6 +1,7 @@
 ---
 "@croco/engagement-core": minor
 "@croco/notifications-core": minor
+"@croco/notifications-resend": patch
 "@croco/tasks-core": minor
 "@croco/problems-core": patch
 ---

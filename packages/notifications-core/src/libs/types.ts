@@ -12,6 +12,7 @@ export interface NotificationPayload {
   to: string;
   subject?: string;
   content: string; // HTML or Text
+  headers?: Readonly<Record<string, string>>;
   metadata?: Record<string, unknown>;
   templateId?: string;
   templateVersion?: string;

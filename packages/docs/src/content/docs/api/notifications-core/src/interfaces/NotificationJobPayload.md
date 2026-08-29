@@ -91,6 +91,16 @@ title: "NotificationJobPayload"
 
 ---
 
+### headers?
+
+> `optional` **headers?**: `Readonly`\<`Record`\<`string`, `string`\>\>
+
+#### Inherited from
+
+[`NotificationPayload`](/api/notifications-core/src/interfaces/notificationpayload/).[`headers`](/api/notifications-core/src/interfaces/notificationpayload/#headers)
+
+---
+
 ### idempotencyKey?
 
 > `optional` **idempotencyKey?**: `string`

@@ -17,6 +17,12 @@ title: "NotificationPayload"
 
 ---
 
+### headers?
+
+> `optional` **headers?**: `Readonly`\<`Record`\<`string`, `string`\>\>
+
+---
+
 ### locale?
 
 > `optional` **locale?**: `string`
