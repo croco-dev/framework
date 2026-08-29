@@ -321,6 +321,7 @@ const frameworkContextCompatibilityContract = {
             "DependencySourceLocation",
             "DependencyTokenKind",
             "Scope",
+            "TypeDIInjectionInspection",
           ],
         },
         {

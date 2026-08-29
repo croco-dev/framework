@@ -12235,6 +12235,12 @@
               "compatibilityGroup": "context"
             },
             {
+              "name": "TypeDIInjectionInspection",
+              "exportKind": "named",
+              "source": "./libs/types",
+              "compatibilityGroup": "di"
+            },
+            {
               "name": "UnsupportedRuntimeCapabilityName",
               "exportKind": "named",
               "source": "./libs/runtimeCapabilities",

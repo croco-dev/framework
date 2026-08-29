@@ -12,3 +12,9 @@ title: "ContainerValidationOptions"
 ### force?
 
 > `readonly` `optional` **force?**: `boolean`
+
+***
+
+### roots?
+
+> `readonly` `optional` **roots?**: readonly [`Constructor`](/api/framework-context/src/type-aliases/constructor/)[]

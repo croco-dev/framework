@@ -24,7 +24,7 @@ import {
 import { JobsController } from "./controllers/JobsController";
 import { OperationsController } from "./controllers/OperationsController";
 import { SaasController } from "./controllers/SaasController";
-import { defaultSaasRuntime } from "./saasDemo";
+import { createSaasDemoRuntime } from "./saasDemo";
 
 const OPERATIONAL_RATE_LIMIT_BYPASS_PATHS = new Set(["/ops/health", "/ops/diagnostics"]);
 const controllers = [OperationsController, JobsController, SaasController];
@@ -47,8 +47,9 @@ export function createCrocoApp(options: CreateCrocoAppOptions = {}): RuntimeOwne
   const runtime = createApplicationRuntime();
 
   return runtime.run(() => {
+    const applicationSaasRuntime = createSaasDemoRuntime();
     Container.set(LOGGER_TOKEN, new BootstrapLogger());
-    Container.set(EntitlementManager, defaultSaasRuntime.entitlementManager);
+    Container.set(EntitlementManager, applicationSaasRuntime.entitlementManager);
 
     const rateLimiter = new RateLimiter(
       new SlidingWindowInMemoryStore(),
@@ -60,7 +61,7 @@ export function createCrocoApp(options: CreateCrocoAppOptions = {}): RuntimeOwne
         controllers,
         diValidation: "warn",
         diagnostics: {
-          providers: defaultSaasRuntime.diagnosticsCollector.getProviders(),
+          providers: applicationSaasRuntime.diagnosticsCollector.getProviders(),
         },
         middlewares: [
           securityHeadersMiddleware(),

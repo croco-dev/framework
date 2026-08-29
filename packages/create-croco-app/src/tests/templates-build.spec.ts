@@ -1048,7 +1048,7 @@ function checkSaasStructure() {
   checkFileContains(
     "saas",
     ["apps", "api-server", "src", "app.ts"],
-    /defaultSaasRuntime\.diagnosticsCollector\.getProviders/,
+    /applicationSaasRuntime\.diagnosticsCollector\.getProviders/,
   );
   checkFileContains("saas", ["apps", "api-server", "src", "app.ts"], /rateLimitHttpMiddleware/);
   checkFileContains(

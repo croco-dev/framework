@@ -271,6 +271,7 @@ This cookbook documents 714 public Croco Problem codes. The deterministic JSON r
 | [`framework-context/container-scope-disposed`](#framework-context-container-scope-disposed)                                           | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`framework-context/container-scope-rollback-failed`](#framework-context-container-scope-rollback-failed)                             | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`framework-context/container-scope-snapshot-unavailable`](#framework-context-container-scope-snapshot-unavailable)                   | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
+| [`framework-context/container-scope-transaction-active`](#framework-context-container-scope-transaction-active)                       | Conflict              |    409 | conditional   | safe-message  | active    |       1 |
 | [`framework-context/context-middleware-execution-error`](#framework-context-context-middleware-execution-error)                       | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`framework-context/di-resolution-failed`](#framework-context-di-resolution-failed)                                                   | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`framework-context/di-scope-mismatch`](#framework-context-di-scope-mismatch)                                                         | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
@@ -5318,7 +5319,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/Container.ts:212:13` (problem-factory)
+- `packages/framework-context/src/libs/Container.ts:224:13` (problem-factory)
 
 <a id="framework-context-container-scope-disposed"></a>
 
@@ -5336,7 +5337,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/Container.ts:122:10` (problem-factory)
+- `packages/framework-context/src/libs/Container.ts:125:10` (problem-factory)
 
 <a id="framework-context-container-scope-rollback-failed"></a>
 
@@ -5354,7 +5355,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/Container.ts:317:15` (problem-factory)
+- `packages/framework-context/src/libs/Container.ts:331:17` (problem-factory)
 
 <a id="framework-context-container-scope-snapshot-unavailable"></a>
 
@@ -5372,7 +5373,25 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/Container.ts:335:13` (problem-factory)
+- `packages/framework-context/src/libs/Container.ts:352:13` (problem-factory)
+
+<a id="framework-context-container-scope-transaction-active"></a>
+
+## `framework-context/container-scope-transaction-active`
+
+- Category: `Conflict`
+- HTTP status: `409` Conflict
+- Retryability: `conditional`
+- Redaction policy: `safe-message`
+- Lifecycle: `active`
+- Cause: The request conflicts with current state or an idempotency constraint.
+- User action: Refresh state, resolve the conflict, and retry with the updated intent.
+- Operator action: Inspect concurrent writes, idempotency keys, and uniqueness constraints.
+- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/framework-context/src/libs/Container.ts:190:13` (problem-factory)
 
 <a id="framework-context-context-middleware-execution-error"></a>
 
@@ -5534,7 +5553,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/Container.ts:2061:13` (problem-factory)
+- `packages/framework-context/src/libs/Container.ts:2183:13` (problem-factory)
 
 <a id="framework-context-runtime-inspector-invalid-configuration"></a>
 
@@ -12248,7 +12267,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/CrocoApp.ts:315:11` (problem-factory)
+- `packages/transports-http/src/libs/CrocoApp.ts:320:11` (problem-factory)
 
 <a id="transports-http-diagnostics-invalid-configuration"></a>
 

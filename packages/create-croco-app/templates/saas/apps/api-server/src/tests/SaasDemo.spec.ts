@@ -2,6 +2,7 @@ import { Container } from "typedi";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { CheckoutResult } from "@croco/billing-core";
+import { EntitlementManager } from "@croco/entitlements-core";
 import { EventPublisher } from "@croco/events-core";
 import { Container as CrocoContainer, LOGGER_TOKEN } from "@croco/framework-context";
 import type { ILogger } from "@croco/framework-context";
@@ -197,6 +198,9 @@ describe("SaaS golden path demo", () => {
     expect(first.applicationRuntime.scopeId).not.toBe(second.applicationRuntime.scopeId);
     expect(first.applicationRuntime.get(LOGGER_TOKEN)).not.toBe(
       second.applicationRuntime.get(LOGGER_TOKEN),
+    );
+    expect(first.applicationRuntime.get(EntitlementManager)).not.toBe(
+      second.applicationRuntime.get(EntitlementManager),
     );
     expect(CrocoContainer.has(LOGGER_TOKEN)).toBe(false);
 
