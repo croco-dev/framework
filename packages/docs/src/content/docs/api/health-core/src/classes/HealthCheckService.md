@@ -16,8 +16,8 @@ The overall health status is 'up' only if all indicators report 'up'.
 import { HealthCheckService } from "@croco/health-core";
 
 const service = new HealthCheckService({ timeout: 5000 });
-service.register(new RedisHealthIndicator(redis));
-service.register(new ApiHealthIndicator());
+service.register("redis", new RedisHealthIndicator(redis));
+service.register("api", new ApiHealthIndicator());
 
 const result = await service.check();
 // Returns overall status and detailed results from each indicator
@@ -83,38 +83,104 @@ const result = await service.check();
 
 ### register()
 
-> **register**(`indicator`, `options?`): `void`
+#### Call Signature
 
-#### Parameters
+> **register**(`id`, `indicator`, `options?`): [`HealthIndicatorRegistration`](/api/health-core/src/interfaces/healthindicatorregistration/)
 
-##### indicator
+Registers a health indicator under a stable component ID.
+
+The ID replaces the indicator-returned name in reports. Duplicate IDs are rejected within the
+health namespace. Disposing the returned handle removes only this registration.
+
+##### Parameters
+
+###### id
+
+`string`
+
+###### indicator
 
 [`HealthIndicator`](/api/health-core/src/interfaces/healthindicator/)
 
-##### options?
+###### options?
 
-[`HealthCheckServiceOptions`](/api/health-core/src/type-aliases/healthcheckserviceoptions/) = `{}`
+[`HealthCheckServiceOptions`](/api/health-core/src/type-aliases/healthcheckserviceoptions/)
 
-#### Returns
+##### Returns
 
-`void`
+[`HealthIndicatorRegistration`](/api/health-core/src/interfaces/healthindicatorregistration/)
+
+#### Call Signature
+
+> **register**(`indicator`, `options?`): [`HealthIndicatorRegistration`](/api/health-core/src/interfaces/healthindicatorregistration/)
+
+:::caution[Deprecated]
+Pass an explicit indicator ID as the first argument.
+:::
+
+##### Parameters
+
+###### indicator
+
+[`HealthIndicator`](/api/health-core/src/interfaces/healthindicator/)
+
+###### options?
+
+[`HealthCheckServiceOptions`](/api/health-core/src/type-aliases/healthcheckserviceoptions/)
+
+##### Returns
+
+[`HealthIndicatorRegistration`](/api/health-core/src/interfaces/healthindicatorregistration/)
 
 ---
 
 ### registerReadiness()
 
-> **registerReadiness**(`indicator`, `options?`): `void`
+#### Call Signature
 
-#### Parameters
+> **registerReadiness**(`id`, `indicator`, `options?`): [`HealthIndicatorRegistration`](/api/health-core/src/interfaces/healthindicatorregistration/)
 
-##### indicator
+Registers a readiness indicator under a stable component ID.
+
+The ID replaces the indicator-returned name in reports. Duplicate IDs are rejected within the
+readiness namespace. A health indicator may use the same ID because the namespaces are separate.
+
+##### Parameters
+
+###### id
+
+`string`
+
+###### indicator
 
 [`ReadinessIndicator`](/api/health-core/src/interfaces/readinessindicator/)
 
-##### options?
+###### options?
 
-[`HealthCheckServiceOptions`](/api/health-core/src/type-aliases/healthcheckserviceoptions/) = `{}`
+[`HealthCheckServiceOptions`](/api/health-core/src/type-aliases/healthcheckserviceoptions/)
 
-#### Returns
+##### Returns
 
-`void`
+[`HealthIndicatorRegistration`](/api/health-core/src/interfaces/healthindicatorregistration/)
+
+#### Call Signature
+
+> **registerReadiness**(`indicator`, `options?`): [`HealthIndicatorRegistration`](/api/health-core/src/interfaces/healthindicatorregistration/)
+
+:::caution[Deprecated]
+Pass an explicit indicator ID as the first argument.
+:::
+
+##### Parameters
+
+###### indicator
+
+[`ReadinessIndicator`](/api/health-core/src/interfaces/readinessindicator/)
+
+###### options?
+
+[`HealthCheckServiceOptions`](/api/health-core/src/type-aliases/healthcheckserviceoptions/)
+
+##### Returns
+
+[`HealthIndicatorRegistration`](/api/health-core/src/interfaces/healthindicatorregistration/)

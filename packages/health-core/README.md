@@ -8,7 +8,8 @@ Health check monitoring system for Croco applications.
 - **Parallel execution** of all health checks with configurable timeout
 - **AbortController support** for cancellable health checks
 - **Independent readiness indicators** with detailed aggregate results
-- **Stable Problems** for invalid timeout configuration
+- **Stable explicit IDs** with duplicate rejection and disposable registration handles
+- **Stable Problems** for invalid registration and timeout configuration
 
 ## Installation
 
@@ -47,11 +48,13 @@ class DatabaseHealthIndicator implements HealthIndicator {
   }
 }
 
-healthService.register(new DatabaseHealthIndicator());
+const registration = healthService.register("database", new DatabaseHealthIndicator());
 
 const result = await healthService.check();
 console.log(result.status); // 'up' | 'down'
 console.log(result.results); // Array of individual check results
+
+registration.dispose(); // Removes only the database indicator from future checks
 ```
 
 ## API Reference
@@ -110,17 +113,38 @@ Orchestrates health check execution.
 class HealthCheckService {
   constructor(options?: { timeout?: number });
 
-  register(indicator: HealthIndicator, options?: { timeout?: number }): void;
-  registerReadiness(indicator: ReadinessIndicator, options?: { timeout?: number }): void;
+  register(
+    id: string,
+    indicator: HealthIndicator,
+    options?: { timeout?: number },
+  ): HealthIndicatorRegistration;
+  registerReadiness(
+    id: string,
+    indicator: ReadinessIndicator,
+    options?: { timeout?: number },
+  ): HealthIndicatorRegistration;
   check(): Promise<HealthCheckResult>;
   checkReadiness(): Promise<HealthCheckResult>;
   isReady(): Promise<boolean>;
+}
+
+interface HealthIndicatorRegistration {
+  dispose(): void;
 }
 ```
 
 Generic health and readiness indicators are separate collections. `check()` evaluates only generic
 indicators, while `checkReadiness()` and `isReady()` evaluate only readiness indicators. An empty
 readiness collection is considered `up`.
+
+Explicit IDs are the component names returned in reports, regardless of indicator class names or the
+`name` field returned by the indicator. Duplicate IDs throw `DuplicateHealthIndicatorProblem` within
+the same namespace, while health and readiness may use the same ID. IDs must be non-empty and contain
+no surrounding whitespace. `dispose()` is idempotent and affects future checks; a check already in
+progress keeps the registration snapshot it started with.
+
+The legacy `register(indicator, options)` and `registerReadiness(indicator, options)` overloads remain
+available for migration but are deprecated because their report names are not explicit stable IDs.
 
 Default and per-indicator timeouts must be integer milliseconds between `1` and `2_147_483_647`.
 Invalid values throw `InvalidHealthCheckTimeoutProblem` during setup before any health check runs.
@@ -245,8 +269,8 @@ import { HealthCheckService } from "@croco/health-core";
 const app = new Hono();
 const healthService = new HealthCheckService();
 
-healthService.registerReadiness(new PostgresHealthIndicator(pool));
-healthService.registerReadiness(new RedisHealthIndicator(redis));
+healthService.registerReadiness("postgres", new PostgresHealthIndicator(pool));
+healthService.registerReadiness("redis", new RedisHealthIndicator(redis));
 
 app.get("/ready", async (c) => {
   const result = await healthService.checkReadiness();

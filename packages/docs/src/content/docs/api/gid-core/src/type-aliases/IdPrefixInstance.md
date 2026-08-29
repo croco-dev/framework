@@ -13,7 +13,7 @@ Public contract for a single prefixed GID generator and validator.
 
 ### TPrefix
 
-`TPrefix` *extends* `string`
+`TPrefix` _extends_ `string`
 
 ## Methods
 
@@ -25,7 +25,7 @@ Public contract for a single prefixed GID generator and validator.
 
 [`PrefixedId`](/api/gid-core/src/type-aliases/prefixedid/)\<`TPrefix`\>
 
-***
+---
 
 ### getExpectedLength()
 
@@ -35,7 +35,7 @@ Public contract for a single prefixed GID generator and validator.
 
 `number`
 
-***
+---
 
 ### getPrefix()
 
@@ -45,7 +45,7 @@ Public contract for a single prefixed GID generator and validator.
 
 `TPrefix`
 
-***
+---
 
 ### validate()
 

@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "InvalidIdPrefixProblem"
+title: "DuplicateHealthIndicatorProblem"
 ---
 
-Problem thrown when a GID prefix violates the canonical lowercase ASCII grammar.
+An explicit health indicator ID is already registered in the same namespace.
 
 ## Extends
 
@@ -15,25 +15,21 @@ Problem thrown when a GID prefix violates the canonical lowercase ASCII grammar.
 
 ### Constructor
 
-> **new InvalidIdPrefixProblem**(`length`, `minimumLength`, `reason?`): `InvalidIdPrefixProblem`
+> **new DuplicateHealthIndicatorProblem**(`namespace`, `indicatorId`): `DuplicateHealthIndicatorProblem`
 
 #### Parameters
 
-##### length
+##### namespace
 
-`number`
+[`HealthIndicatorNamespace`](/api/health-core/src/type-aliases/healthindicatornamespace/)
 
-##### minimumLength
+##### indicatorId
 
-`number`
-
-##### reason?
-
-`"invalid-length"` \| `"too-short"` \| `"too-long"` \| `"invalid-characters"`
+`string`
 
 #### Returns
 
-`InvalidIdPrefixProblem`
+`DuplicateHealthIndicatorProblem`
 
 #### Overrides
 
@@ -43,7 +39,7 @@ Problem thrown when a GID prefix violates the canonical lowercase ASCII grammar.
 
 ### category
 
-> `readonly` **category**: [`ValidationError`](/api/problems-core/src/enumerations/problemcategory/#validationerror) = `ProblemCategory.ValidationError`
+> `readonly` **category**: [`InternalServerError`](/api/problems-core/src/enumerations/problemcategory/#internalservererror) = `ProblemCategory.InternalServerError`
 
 #### Overrides
 
@@ -63,7 +59,7 @@ Problem thrown when a GID prefix violates the canonical lowercase ASCII grammar.
 
 ### code
 
-> `readonly` **code**: `"gid-core/invalid-id-prefix"` = `"gid-core/invalid-id-prefix"`
+> `readonly` **code**: `"health-core/duplicate-indicator-id"` = `"health-core/duplicate-indicator-id"`
 
 #### Overrides
 

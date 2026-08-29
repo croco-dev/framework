@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "InvalidIdPrefixProblem"
+title: "InvalidHealthIndicatorIdProblem"
 ---
 
-Problem thrown when a GID prefix violates the canonical lowercase ASCII grammar.
+An explicit health indicator ID must be non-empty and free of surrounding whitespace.
 
 ## Extends
 
@@ -15,25 +15,21 @@ Problem thrown when a GID prefix violates the canonical lowercase ASCII grammar.
 
 ### Constructor
 
-> **new InvalidIdPrefixProblem**(`length`, `minimumLength`, `reason?`): `InvalidIdPrefixProblem`
+> **new InvalidHealthIndicatorIdProblem**(`namespace`, `indicatorId`): `InvalidHealthIndicatorIdProblem`
 
 #### Parameters
 
-##### length
+##### namespace
 
-`number`
+[`HealthIndicatorNamespace`](/api/health-core/src/type-aliases/healthindicatornamespace/)
 
-##### minimumLength
+##### indicatorId
 
-`number`
-
-##### reason?
-
-`"invalid-length"` \| `"too-short"` \| `"too-long"` \| `"invalid-characters"`
+`string`
 
 #### Returns
 
-`InvalidIdPrefixProblem`
+`InvalidHealthIndicatorIdProblem`
 
 #### Overrides
 
@@ -63,7 +59,7 @@ Problem thrown when a GID prefix violates the canonical lowercase ASCII grammar.
 
 ### code
 
-> `readonly` **code**: `"gid-core/invalid-id-prefix"` = `"gid-core/invalid-id-prefix"`
+> `readonly` **code**: `"health-core/invalid-indicator-id"` = `"health-core/invalid-indicator-id"`
 
 #### Overrides
 

@@ -19,7 +19,7 @@
  *   }
  * }
  *
- * healthService.register(new ApiHealthIndicator());
+ * const registration = healthService.register('api', new ApiHealthIndicator());
  *
  * // Check health
  * const result = await healthService.check();
@@ -54,7 +54,11 @@
  * };
  * ```
  */
-export type { HealthCheckResult, HealthCheckServiceOptions } from "./libs/HealthCheckService";
+export type {
+  HealthCheckResult,
+  HealthCheckServiceOptions,
+  HealthIndicatorRegistration,
+} from "./libs/HealthCheckService";
 
 /**
  * Service for orchestrating health checks across multiple indicators.
@@ -67,8 +71,8 @@ export type { HealthCheckResult, HealthCheckServiceOptions } from "./libs/Health
  * import { HealthCheckService } from '@croco/health-core';
  *
  * const service = new HealthCheckService({ timeout: 5000 });
- * service.register(new RedisHealthIndicator(redis));
- * service.register(new ApiHealthIndicator());
+ * service.register('redis', new RedisHealthIndicator(redis));
+ * service.register('api', new ApiHealthIndicator());
  *
  * const result = await service.check();
  * // Returns overall status and detailed results from each indicator
@@ -76,6 +80,8 @@ export type { HealthCheckResult, HealthCheckServiceOptions } from "./libs/Health
  */
 export { HealthCheckService } from "./libs/HealthCheckService";
 export {
+  DuplicateHealthIndicatorProblem,
+  InvalidHealthIndicatorIdProblem,
   InvalidHealthCheckTimeoutProblem,
   MAX_HEALTH_CHECK_TIMEOUT_MS,
 } from "./libs/problems/HealthProblems";
@@ -179,4 +185,7 @@ export type {
   HealthStatus,
   ReadinessIndicator,
 } from "./libs/HealthIndicator";
-export type { HealthCheckTimeoutSource } from "./libs/problems/HealthProblems";
+export type {
+  HealthCheckTimeoutSource,
+  HealthIndicatorNamespace,
+} from "./libs/problems/HealthProblems";

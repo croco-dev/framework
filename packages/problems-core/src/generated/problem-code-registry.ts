@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 690,
+  problemCount: 692,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -8846,6 +8846,68 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "health-core/duplicate-indicator-id",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#health-core-duplicate-indicator-id",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/health-core/src/libs/problems/HealthProblems.ts",
+          line: 45,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "health-core/invalid-indicator-id",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#health-core-invalid-indicator-id",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/health-core/src/libs/problems/HealthProblems.ts",
+          line: 24,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "health-core/invalid-timeout",
       category: "ValidationError",
       status: 422,
@@ -8869,7 +8931,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/health-core/src/libs/problems/HealthProblems.ts",
-          line: 9,
+          line: 10,
           column: 3,
           kind: "problem-class",
         },
