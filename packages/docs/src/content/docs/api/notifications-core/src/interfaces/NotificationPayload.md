@@ -35,6 +35,12 @@ title: "NotificationPayload"
 
 ---
 
+### replyTo?
+
+> `optional` **replyTo?**: `string`
+
+---
+
 ### subject?
 
 > `optional` **subject?**: `string`
@@ -50,6 +56,12 @@ title: "NotificationPayload"
 ### templateVersion?
 
 > `optional` **templateVersion?**: `string`
+
+---
+
+### text?
+
+> `optional` **text?**: `string`
 
 ---
 

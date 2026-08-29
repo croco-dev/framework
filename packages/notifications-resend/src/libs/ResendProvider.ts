@@ -96,6 +96,8 @@ export class ResendProvider implements NotificationProvider {
         to,
         subject: subject || "No Subject",
         html: content,
+        ...(payload.text === undefined ? {} : { text: payload.text }),
+        ...(payload.replyTo === undefined ? {} : { replyTo: payload.replyTo }),
         ...(payload.headers === undefined ? {} : { headers: { ...payload.headers } }),
       };
 
@@ -201,6 +203,8 @@ function getResendProblemRedactionValues(
     payload.subject,
     payload.content,
     toTextContent(payload.content),
+    payload.text,
+    payload.replyTo,
     ...Object.values(payload.headers ?? {}),
     idempotencyKey,
   ].filter(isNonEmptyString);

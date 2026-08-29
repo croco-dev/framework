@@ -12,6 +12,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import {
   defineMessage,
+  EngagementCommandInvalidProblem,
   EngagementDispatchFailedProblem,
   EngagementRenderFailedProblem,
   EngagementService,
@@ -25,6 +26,7 @@ import {
   Renders,
   createEngagementIdempotencyKey,
   type EngagementNotificationDispatcher,
+  type EngagementSendCommand,
   type EngagementSuppressionEvaluator,
   type MessageContext,
   type MessageRenderer,
@@ -46,6 +48,7 @@ class TrialEndingRenderer implements MessageRenderer<typeof TrialEnding> {
       subject: `${data.tenantName} trial`,
       html: `<p>${data.tenantName}</p>`,
       text: data.tenantName,
+      replyTo: "billing@example.com",
       headers: { "X-Engagement-Topic": "billing" },
     };
   }
@@ -195,8 +198,15 @@ describe("EngagementService", () => {
         to: "user@example.com",
         subject: "Croco trial",
         content: "<p>Croco</p>",
+        text: "Croco",
+        replyTo: "billing@example.com",
         headers: { "X-Engagement-Topic": "billing" },
         locale: "en-US",
+        metadata: {
+          messageId: "billing.trial-ending",
+          topic: "billing",
+          timezone: "Asia/Seoul",
+        },
       }),
       expect.objectContaining({
         preferenceContext: {
@@ -236,6 +246,22 @@ describe("EngagementService", () => {
       ],
     });
     expect(dispatcher.dispatch).toHaveBeenCalledTimes(3);
+  });
+
+  it("rejects unsupported runtime delivery policies before dispatch", async () => {
+    const dispatcher = createDispatcher();
+    const engagement = new EngagementService(directory, createRenderer(), dispatcher.service);
+    const command = {
+      recipient: recipient.recipient,
+      data: { tenantName: "Croco", secret: "payload-secret" },
+      key: "subscription-1",
+      policy: "typo",
+    } as unknown as EngagementSendCommand<typeof TrialEnding>;
+
+    await expect(engagement.send(TrialEnding, command)).rejects.toBeInstanceOf(
+      EngagementCommandInvalidProblem,
+    );
+    expect(dispatcher.dispatch).not.toHaveBeenCalled();
   });
 
   it("throws a stable Problem when the recipient is absent", async () => {

@@ -147,6 +147,16 @@ title: "NotificationJobPayload"
 
 ---
 
+### replyTo?
+
+> `optional` **replyTo?**: `string`
+
+#### Inherited from
+
+[`NotificationPayload`](/api/notifications-core/src/interfaces/notificationpayload/).[`replyTo`](/api/notifications-core/src/interfaces/notificationpayload/#replyto)
+
+---
+
 ### subject?
 
 > `optional` **subject?**: `string`
@@ -174,6 +184,16 @@ title: "NotificationJobPayload"
 #### Inherited from
 
 [`NotificationPayload`](/api/notifications-core/src/interfaces/notificationpayload/).[`templateVersion`](/api/notifications-core/src/interfaces/notificationpayload/#templateversion)
+
+---
+
+### text?
+
+> `optional` **text?**: `string`
+
+#### Inherited from
+
+[`NotificationPayload`](/api/notifications-core/src/interfaces/notificationpayload/).[`text`](/api/notifications-core/src/interfaces/notificationpayload/#text)
 
 ---
 

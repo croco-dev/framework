@@ -529,6 +529,15 @@ function assertCommand(command: EngagementSendCommand<AnyMessage>): void {
   if (command.key.length === 0) {
     throw new EngagementCommandInvalidProblem("Semantic key must not be empty");
   }
+  if (
+    command.policy !== undefined &&
+    command.policy !== "first-reachable" &&
+    command.policy !== "all-reachable"
+  ) {
+    throw new EngagementCommandInvalidProblem(
+      "Delivery policy must be first-reachable or all-reachable",
+    );
+  }
 }
 
 function endpointsForChannel(
@@ -585,12 +594,10 @@ function toNotificationPayload<TChannel extends MessageChannel>(
         to: endpoint.target,
         subject: email.subject,
         content: email.html,
+        text: email.text,
+        ...(email.replyTo === undefined ? {} : { replyTo: email.replyTo }),
         ...(email.headers === undefined ? {} : { headers: email.headers }),
-        metadata: {
-          ...metadata,
-          text: email.text,
-          ...(email.replyTo === undefined ? {} : { replyTo: email.replyTo }),
-        },
+        metadata,
         ...(recipient.locale === undefined ? {} : { locale: recipient.locale }),
       };
     }
