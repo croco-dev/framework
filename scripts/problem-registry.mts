@@ -1948,6 +1948,17 @@ const recoveryMetadataByCode = {
     redactionPolicy: "safe-message",
     severity: "warning",
   }),
+  "framework-config/runtime-env-preset-boundary": recovery({
+    cause:
+      "A selected runtime env preset exposed a client variable without the `NEXT_PUBLIC_` prefix or exposed a server variable with that prefix.",
+    userAction:
+      "Correct the `NEXT_PUBLIC_` prefix or remove the incompatible preset from defineRuntimeEnv, then retry configuration validation.",
+    operatorAction:
+      "Inspect the reported preset section and variable name, then keep public `NEXT_PUBLIC_` variables in client and private variables in server.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
   "framework-module/registration-lifecycle-conflict": recovery({
     cause:
       "Module registration was attempted while the registry was initializing, initialized, or shutting down.",

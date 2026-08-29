@@ -55,7 +55,7 @@ title: "ConfigService"
 
 ### get()
 
-> **get**\<`K`\>(`key`): `Readonly`\<\{ `DATABASE_URL`: `string`; `LOG_LEVEL`: `"debug"` \| `"info"` \| `"warn"` \| `"error"`; `NODE_ENV`: `"development"` \| `"test"` \| `"production"`; `PORT`: `number`; `R2_ACCESS_KEY_ID?`: `string`; `R2_ACCOUNT_ID?`: `string`; `R2_BUCKET?`: `string`; `R2_PUBLIC_URL_BASE?`: `string`; `R2_SECRET_ACCESS_KEY?`: `string`; `REDIS_TOKEN?`: `string`; `REDIS_URL`: `string`; \}\>\[`K`\]
+> **get**\<`K`\>(`key`): `Readonly`\<`UndefinedOptional`\<`Simplify`\<`InferOutput`\<`RuntimeEnvSchema`\<readonly \[\{ `client`: \{ \}; `server`: \{ `LOG_LEVEL`: `ZodDefault`\<`ZodEnum`\<...\>\>; `NODE_ENV`: `ZodDefault`\<`ZodEnum`\<...\>\>; `PORT`: `ZodDefault`\<`ZodCoercedNumber`\<...\>\>; \}; `shared`: \{ \}; \}, \{ `client`: \{ \}; `server`: \{ `DATABASE_URL`: `ZodString`; \}; `shared`: \{ \}; \}, \{ `client`: \{ \}; `server`: \{ `REDIS_TOKEN`: `ZodOptional`\<`ZodString`\>; `REDIS_URL`: `ZodString`; \}; `shared`: \{ \}; \}, \{ `client`: \{ \}; `server`: \{ `R2_ACCESS_KEY_ID`: `ZodOptional`\<`ZodString`\>; `R2_ACCOUNT_ID`: `ZodOptional`\<`ZodString`\>; `R2_BUCKET`: `ZodOptional`\<`ZodString`\>; `R2_PUBLIC_URL_BASE`: `ZodOptional`\<`ZodString`\>; `R2_SECRET_ACCESS_KEY`: `ZodOptional`\<`ZodString`\>; \}; `shared`: \{ \}; \}\]\>\>\>\>\>\[`K`\]
 
 Type-safe environment variable getter
 
@@ -63,7 +63,7 @@ Type-safe environment variable getter
 
 ##### K
 
-`K` _extends_ `"R2_ACCOUNT_ID"` \| `"R2_ACCESS_KEY_ID"` \| `"R2_SECRET_ACCESS_KEY"` \| `"R2_BUCKET"` \| `"R2_PUBLIC_URL_BASE"` \| `"REDIS_URL"` \| `"REDIS_TOKEN"` \| `"DATABASE_URL"` \| `"NODE_ENV"` \| `"PORT"` \| `"LOG_LEVEL"`
+`K` _extends_ `"NODE_ENV"` \| `"PORT"` \| `"LOG_LEVEL"` \| `"DATABASE_URL"` \| `"REDIS_URL"` \| `PossiblyUndefinedKeys`\<`Simplify`\<`InferOutput`\<`RuntimeEnvSchema`\<readonly \[\{ `client`: \{ \}; `server`: \{ `LOG_LEVEL`: `ZodDefault`\<`ZodEnum`\<\{ `debug`: ...; `error`: ...; `info`: ...; `warn`: ...; \}\>\>; `NODE_ENV`: `ZodDefault`\<`ZodEnum`\<\{ `development`: ...; `production`: ...; `test`: ...; \}\>\>; `PORT`: `ZodDefault`\<`ZodCoercedNumber`\<`unknown`\>\>; \}; `shared`: \{ \}; \}, \{ `client`: \{ \}; `server`: \{ `DATABASE_URL`: `ZodString`; \}; `shared`: \{ \}; \}, \{ `client`: \{ \}; `server`: \{ `REDIS_TOKEN`: `ZodOptional`\<`ZodString`\>; `REDIS_URL`: `ZodString`; \}; `shared`: \{ \}; \}, \{ `client`: \{ \}; `server`: \{ `R2_ACCESS_KEY_ID`: `ZodOptional`\<`ZodString`\>; `R2_ACCOUNT_ID`: `ZodOptional`\<`ZodString`\>; `R2_BUCKET`: `ZodOptional`\<`ZodString`\>; `R2_PUBLIC_URL_BASE`: `ZodOptional`\<`ZodString`\>; `R2_SECRET_ACCESS_KEY`: `ZodOptional`\<`ZodString`\>; \}; `shared`: \{ \}; \}\]\>\>\>\>
 
 #### Parameters
 
@@ -73,4 +73,4 @@ Type-safe environment variable getter
 
 #### Returns
 
-`Readonly`\<\{ `DATABASE_URL`: `string`; `LOG_LEVEL`: `"debug"` \| `"info"` \| `"warn"` \| `"error"`; `NODE_ENV`: `"development"` \| `"test"` \| `"production"`; `PORT`: `number`; `R2_ACCESS_KEY_ID?`: `string`; `R2_ACCOUNT_ID?`: `string`; `R2_BUCKET?`: `string`; `R2_PUBLIC_URL_BASE?`: `string`; `R2_SECRET_ACCESS_KEY?`: `string`; `REDIS_TOKEN?`: `string`; `REDIS_URL`: `string`; \}\>\[`K`\]
+`Readonly`\<`UndefinedOptional`\<`Simplify`\<`InferOutput`\<`RuntimeEnvSchema`\<readonly \[\{ `client`: \{ \}; `server`: \{ `LOG_LEVEL`: `ZodDefault`\<`ZodEnum`\<...\>\>; `NODE_ENV`: `ZodDefault`\<`ZodEnum`\<...\>\>; `PORT`: `ZodDefault`\<`ZodCoercedNumber`\<...\>\>; \}; `shared`: \{ \}; \}, \{ `client`: \{ \}; `server`: \{ `DATABASE_URL`: `ZodString`; \}; `shared`: \{ \}; \}, \{ `client`: \{ \}; `server`: \{ `REDIS_TOKEN`: `ZodOptional`\<`ZodString`\>; `REDIS_URL`: `ZodString`; \}; `shared`: \{ \}; \}, \{ `client`: \{ \}; `server`: \{ `R2_ACCESS_KEY_ID`: `ZodOptional`\<`ZodString`\>; `R2_ACCOUNT_ID`: `ZodOptional`\<`ZodString`\>; `R2_BUCKET`: `ZodOptional`\<`ZodString`\>; `R2_PUBLIC_URL_BASE`: `ZodOptional`\<`ZodString`\>; `R2_SECRET_ACCESS_KEY`: `ZodOptional`\<`ZodString`\>; \}; `shared`: \{ \}; \}\]\>\>\>\>\>\[`K`\]

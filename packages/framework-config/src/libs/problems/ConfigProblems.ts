@@ -27,3 +27,17 @@ export class InvalidBooleanEnvProblem extends Problem {
     super(undefined, undefined, `Invalid boolean env value for '${envName}': '${value}'`);
   }
 }
+
+/** Reports a runtime env preset whose variables cross the client/server exposure boundary. */
+export class RuntimeEnvPresetBoundaryProblem extends Problem {
+  readonly code = "framework-config/runtime-env-preset-boundary";
+  readonly category = ProblemCategory.ValidationError;
+  constructor(section: "client" | "server", envName: string) {
+    const requirement =
+      section === "client"
+        ? "client variables must use the 'NEXT_PUBLIC_' prefix"
+        : "server variables cannot use the 'NEXT_PUBLIC_' prefix";
+
+    super(undefined, undefined, `Invalid ${section} env '${envName}': ${requirement}`);
+  }
+}
