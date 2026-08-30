@@ -33,6 +33,45 @@ type WorkflowTelemetrySpan = {
   addEvent(name: string, attributes?: Record<string, TelemetryAttributeValue>): void;
 };
 
+function describeError(error: unknown): string {
+  try {
+    return error instanceof Error ? error.message : String(error);
+  } catch {
+    return "Unknown error";
+  }
+}
+
+function reportFailureRecordError(
+  span: WorkflowTelemetrySpan,
+  executionId: string,
+  workflowError: unknown,
+  failureRecordError: unknown,
+): void {
+  let attachmentFailed = false;
+  if (typeof workflowError === "object" && workflowError !== null) {
+    try {
+      Object.defineProperty(workflowError, "workflowFailureRecordError", {
+        configurable: true,
+        enumerable: false,
+        value: failureRecordError,
+      });
+    } catch {
+      attachmentFailed = true;
+    }
+  }
+
+  try {
+    span.addEvent("workflow.execution.failure_record.failed", {
+      "workflow.execution.id": executionId,
+      "workflow.error.message": describeError(workflowError),
+      "workflow.failure_record.error.message": describeError(failureRecordError),
+      ...(attachmentFailed ? { "workflow.failure_record.attachment_failed": true } : {}),
+    });
+  } catch {
+    return;
+  }
+}
+
 function supportsRecordLog(manager: ExecutionManager): manager is LoggableExecutionManager {
   return typeof (manager as { recordLog?: unknown }).recordLog === "function";
 }
@@ -308,7 +347,13 @@ export class WorkflowRunner {
         workflowName: workflow.name,
         error: error instanceof Error ? error.message : String(error),
       });
-      const failed = await this.executionManager.fail(running.id, toExecutionError(error));
+      let failed: Execution;
+      try {
+        failed = await this.executionManager.fail(running.id, toExecutionError(error));
+      } catch (failureRecordError) {
+        reportFailureRecordError(span, running.id, error, failureRecordError);
+        throw error;
+      }
       span.addEvent("workflow.execution.failed", {
         ...getExecutionTelemetryAttributes(workflow, failed),
         "workflow.error.message": error instanceof Error ? error.message : String(error),
