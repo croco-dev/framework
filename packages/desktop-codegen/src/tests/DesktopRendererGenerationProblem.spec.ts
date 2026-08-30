@@ -472,10 +472,14 @@ desktop.project.fileChanged.subscribe((_payload, _event) => undefined);
   it("rejects forged capability discriminators before rendering", () => {
     const graph = createGraph(false);
     const command = graph.commands[0];
+    const effectCommand = graph.commands.find((candidate) => candidate.effects.length > 0);
     const grant = graph.grants[0];
     const problem = graph.problems[0];
     const remoteWindow = graph.windows.find((window) => window.trust === "remote");
-    assert(command && grant && problem && remoteWindow, "Fixture capability records are missing");
+    assert(
+      command && effectCommand && grant && problem && remoteWindow,
+      "Fixture capability records are missing",
+    );
 
     const invalidGraphs: readonly { graph: typeof graph; detail: string }[] = [
       {
@@ -500,6 +504,44 @@ desktop.project.fileChanged.subscribe((_payload, _event) => undefined);
           ),
         },
         detail: `Desktop command ${JSON.stringify(command.id)} has an unsupported execution mode.`,
+      },
+      ...(
+        [
+          ["timeoutMs", 0],
+          ["maxInputBytes", -1],
+          ["maxOutputBytes", Number.MAX_SAFE_INTEGER + 1],
+          ["maxConcurrency", Number.NaN],
+        ] as const
+      ).map(([field, value]) => ({
+        graph: {
+          ...graph,
+          commands: graph.commands.map((candidate) =>
+            candidate.id === command.id
+              ? {
+                  ...candidate,
+                  executionPolicy: { ...candidate.executionPolicy, [field]: value },
+                }
+              : candidate,
+          ),
+        } as typeof graph,
+        detail: `Desktop command ${JSON.stringify(command.id)} execution policy ${field} must be a positive safe integer.`,
+      })),
+      {
+        graph: {
+          ...graph,
+          commands: graph.commands.map((candidate) =>
+            candidate.id === effectCommand.id
+              ? {
+                  ...candidate,
+                  effects: candidate.effects.map((effect) => ({
+                    ...effect,
+                    access: "admin" as never,
+                  })),
+                }
+              : candidate,
+          ),
+        },
+        detail: `Desktop command ${JSON.stringify(effectCommand.id)} effect ${JSON.stringify(effectCommand.effects[0]?.namespace)} has an unsupported access mode.`,
       },
       {
         graph: {

@@ -194,10 +194,28 @@ function assertGraphScalarFields(graph: DesktopContractGraphV1): void {
         `Desktop command ${JSON.stringify(command.id)} has an unsupported execution mode.`,
       );
     }
+    for (const field of [
+      "timeoutMs",
+      "maxInputBytes",
+      "maxOutputBytes",
+      "maxConcurrency",
+    ] as const) {
+      const value = command.executionPolicy[field];
+      if (value !== undefined && (!Number.isSafeInteger(value) || value <= 0)) {
+        throw new DesktopRendererGenerationProblem(
+          `Desktop command ${JSON.stringify(command.id)} execution policy ${field} must be a positive safe integer.`,
+        );
+      }
+    }
     for (const effect of command.effects) {
       assertStringIdentifier(effect.namespace, "command effect namespace");
       assertStringIdentifiers(effect.methods, "command effect method");
       assertStringIdentifiers(effect.grantIds, "command grant reference");
+      if (effect.access !== "read" && effect.access !== "write") {
+        throw new DesktopRendererGenerationProblem(
+          `Desktop command ${JSON.stringify(command.id)} effect ${JSON.stringify(effect.namespace)} has an unsupported access mode.`,
+        );
+      }
     }
   }
   for (const event of graph.events) {
