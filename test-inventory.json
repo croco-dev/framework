@@ -1583,6 +1583,12 @@
       "owner": "@croco/framework-module"
     },
     {
+      "path": "packages/framework-module/src/tests/ModuleLifecycleCancellation.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/framework-module"
+    },
+    {
       "path": "packages/framework-module/src/tests/ModuleRollback.spec.ts",
       "lane": "fast",
       "qualifiers": [],

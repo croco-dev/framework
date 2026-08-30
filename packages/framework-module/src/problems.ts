@@ -1,15 +1,21 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import { getModuleTokenLabel } from "./moduleTokenLabels";
+import type {
+  ModuleCleanupFailure,
+  ModuleLifecycleExecutionOptions,
+  ModuleLifecycleFailure,
+  ModuleLifecyclePhase,
+} from "./types/ModuleLifecycle";
 import type { ModuleToken } from "./types/ModuleToken";
 
-type ModuleLifecyclePhase = "setup" | "start" | "shutdown";
+export type ModuleLifecycleExecutionProblem =
+  | ModuleLifecycleProblem
+  | ModuleLifecycleCancelledProblem
+  | ModuleLifecycleDeadlineExceededProblem;
 
-type ModuleCleanupFailure = {
-  readonly moduleName: string;
-  readonly phase: "shutdown";
-  readonly code: string;
-  readonly message: string;
-};
+export type ModuleLifecycleInterruptionProblem =
+  | ModuleLifecycleCancelledProblem
+  | ModuleLifecycleDeadlineExceededProblem;
 
 export class InvalidModuleDefinitionProblem extends Problem {
   constructor(detail: string, extensions?: Record<string, unknown>) {
@@ -95,6 +101,145 @@ export class ModuleLifecycleProblem extends Problem {
   }
 }
 
+/** Reports that a parent signal cancelled a module lifecycle hook. */
+export class ModuleLifecycleCancelledProblem extends Problem {
+  private readonly lifecycleCleanupFailures: readonly ModuleCleanupFailure[];
+  private readonly lifecycleCause?: Error;
+  private readonly lifecycleHookFailure?: ModuleLifecycleFailure;
+  private readonly lifecycleModuleName: string;
+  private readonly lifecyclePhase: ModuleLifecyclePhase;
+
+  constructor(
+    moduleName: string,
+    phase: ModuleLifecyclePhase,
+    cause?: Error,
+    cleanupFailures: readonly ModuleCleanupFailure[] = [],
+    hookFailure?: ModuleLifecycleFailure,
+  ) {
+    super(
+      "framework-module/lifecycle-cancelled",
+      ProblemCategory.InternalServerError,
+      `Module '${moduleName}' was cancelled by its parent during ${phase}.`,
+      {
+        ...(cause ? { cause } : {}),
+        extensions: {
+          moduleName,
+          phase,
+          source: "parent",
+          ...(cleanupFailures.length === 0 ? {} : { cleanupFailures }),
+          ...(hookFailure ? { hookFailure } : {}),
+        },
+      },
+    );
+    this.lifecycleCleanupFailures = cleanupFailures;
+    this.lifecycleCause = cause;
+    this.lifecycleHookFailure = hookFailure;
+    this.lifecycleModuleName = moduleName;
+    this.lifecyclePhase = phase;
+  }
+
+  withCleanupFailures(
+    cleanupFailures: readonly ModuleCleanupFailure[],
+  ): ModuleLifecycleCancelledProblem {
+    return new ModuleLifecycleCancelledProblem(
+      this.lifecycleModuleName,
+      this.lifecyclePhase,
+      this.lifecycleCause,
+      cleanupFailures,
+      this.lifecycleHookFailure,
+    );
+  }
+
+  withHookFailure(hookFailure: ModuleLifecycleFailure): ModuleLifecycleCancelledProblem {
+    return new ModuleLifecycleCancelledProblem(
+      this.lifecycleModuleName,
+      this.lifecyclePhase,
+      this.lifecycleCause,
+      this.lifecycleCleanupFailures,
+      hookFailure,
+    );
+  }
+}
+
+/** Reports that a module lifecycle hook exceeded its absolute deadline. */
+export class ModuleLifecycleDeadlineExceededProblem extends Problem {
+  private readonly lifecycleCleanupFailures: readonly ModuleCleanupFailure[];
+  private readonly lifecycleDeadline: number;
+  private readonly lifecycleHookFailure?: ModuleLifecycleFailure;
+  private readonly lifecycleModuleName: string;
+  private readonly lifecyclePhase: ModuleLifecyclePhase;
+
+  constructor(
+    moduleName: string,
+    phase: ModuleLifecyclePhase,
+    deadline: number,
+    cleanupFailures: readonly ModuleCleanupFailure[] = [],
+    hookFailure?: ModuleLifecycleFailure,
+  ) {
+    super(
+      "framework-module/lifecycle-deadline-exceeded",
+      ProblemCategory.InternalServerError,
+      `Module '${moduleName}' exceeded lifecycle deadline ${deadline} during ${phase}.`,
+      {
+        extensions: {
+          moduleName,
+          phase,
+          deadline,
+          ...(cleanupFailures.length === 0 ? {} : { cleanupFailures }),
+          ...(hookFailure ? { hookFailure } : {}),
+        },
+      },
+    );
+    this.lifecycleCleanupFailures = cleanupFailures;
+    this.lifecycleDeadline = deadline;
+    this.lifecycleHookFailure = hookFailure;
+    this.lifecycleModuleName = moduleName;
+    this.lifecyclePhase = phase;
+  }
+
+  withCleanupFailures(
+    cleanupFailures: readonly ModuleCleanupFailure[],
+  ): ModuleLifecycleDeadlineExceededProblem {
+    return new ModuleLifecycleDeadlineExceededProblem(
+      this.lifecycleModuleName,
+      this.lifecyclePhase,
+      this.lifecycleDeadline,
+      cleanupFailures,
+      this.lifecycleHookFailure,
+    );
+  }
+
+  withHookFailure(hookFailure: ModuleLifecycleFailure): ModuleLifecycleDeadlineExceededProblem {
+    return new ModuleLifecycleDeadlineExceededProblem(
+      this.lifecycleModuleName,
+      this.lifecyclePhase,
+      this.lifecycleDeadline,
+      this.lifecycleCleanupFailures,
+      hookFailure,
+    );
+  }
+}
+
+export class InvalidModuleLifecycleDeadlineProblem extends Problem {
+  readonly receivedValue: string;
+
+  constructor(
+    readonly operation: "initialize" | "shutdown",
+    deadline: number,
+  ) {
+    const receivedValue = String(deadline);
+    super(
+      "framework-module/lifecycle-deadline-invalid",
+      ProblemCategory.ValidationError,
+      `Module lifecycle ${operation} deadline must be a positive safe integer Unix timestamp in milliseconds; received ${receivedValue}.`,
+      {
+        extensions: { operation, receivedValue },
+      },
+    );
+    this.receivedValue = receivedValue;
+  }
+}
+
 export class ModuleRegistrationConflictProblem extends Problem {
   constructor(readonly registryState: "initialized" | "initializing" | "shutting-down") {
     const recoveryAction =
@@ -147,15 +292,33 @@ export class ModuleRuntimeStaleContextProblem extends Problem {
   }
 }
 
-export function attachModuleCleanupFailures(
-  problem: ModuleLifecycleProblem,
+export function attachModuleCleanupFailures<TProblem extends ModuleLifecycleExecutionProblem>(
+  problem: TProblem,
   cleanupFailures: readonly ModuleCleanupFailure[],
-): ModuleLifecycleProblem {
+): TProblem {
   if (cleanupFailures.length === 0) {
     return problem;
   }
 
-  return problem.withCleanupFailures(cleanupFailures);
+  return problem.withCleanupFailures(cleanupFailures) as TProblem;
+}
+
+export function attachModuleLifecycleHookFailure<
+  TProblem extends ModuleLifecycleInterruptionProblem,
+>(problem: TProblem, hookFailure: ModuleLifecycleFailure): TProblem {
+  return problem.withHookFailure(hookFailure) as TProblem;
+}
+
+export function validateModuleLifecycleExecutionOptions(
+  operation: "initialize" | "shutdown",
+  options: ModuleLifecycleExecutionOptions,
+): void {
+  if (
+    options.deadline !== undefined &&
+    (!Number.isSafeInteger(options.deadline) || options.deadline <= 0)
+  ) {
+    throw new InvalidModuleLifecycleDeadlineProblem(operation, options.deadline);
+  }
 }
 
 export class ModuleProviderVisibilityProblem extends Problem {

@@ -5,27 +5,9 @@ prev: false
 title: "ModuleCleanupFailure"
 ---
 
-> **ModuleCleanupFailure** = `object`
+> **ModuleCleanupFailure** = `Omit`\<[`ModuleLifecycleFailure`](/api/framework-module/src/type-aliases/modulelifecyclefailure/), `"phase"`\> & `object`
 
-## Properties
-
-### code
-
-> `readonly` **code**: `string`
-
----
-
-### message
-
-> `readonly` **message**: `string`
-
----
-
-### moduleName
-
-> `readonly` **moduleName**: `string`
-
----
+## Type Declaration
 
 ### phase
 

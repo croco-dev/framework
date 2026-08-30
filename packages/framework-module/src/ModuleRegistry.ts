@@ -14,10 +14,13 @@ import { getModuleTokenLabel } from "./moduleTokenLabels";
 import { getProviderToken, isConstructorToken, isProviderDefinition } from "./moduleTokens";
 import {
   attachModuleCleanupFailures,
+  attachModuleLifecycleHookFailure,
   InvalidModuleDefinitionProblem,
   formatModuleProviderOwnershipDetail,
   ModuleCircularDependencyProblem,
   ModuleDuplicateNameProblem,
+  ModuleLifecycleCancelledProblem,
+  ModuleLifecycleDeadlineExceededProblem,
   ModuleLifecycleProblem,
   ModuleProviderOwnershipProblem,
   ModuleProviderUnavailableProblem,
@@ -27,6 +30,11 @@ import {
   ModuleRuntimeDisposedProblem,
   ModuleRuntimeResetConflictProblem,
   ModuleRuntimeStaleContextProblem,
+  validateModuleLifecycleExecutionOptions,
+} from "./problems";
+import type {
+  ModuleLifecycleExecutionProblem,
+  ModuleLifecycleInterruptionProblem,
 } from "./problems";
 import type {
   ModuleCleanupFailure,
@@ -35,6 +43,9 @@ import type {
   ModuleGraphModule,
   ModuleGraphProvider,
   ModuleDiagnosticsSnapshot,
+  ModuleLifecycleExecutionContext,
+  ModuleLifecycleExecutionOptions,
+  ModuleLifecycleFailure,
   ModuleLifecyclePhase,
   ModuleOptions,
   ModuleProvider,
@@ -119,11 +130,12 @@ const IGNORED_CONSTRUCTOR_DEPENDENCIES = new Set<unknown>([
   Promise,
   String,
 ]);
+const MAX_TIMER_DELAY_MS = 2_147_483_647;
 let moduleRuntimeSequence = 0;
 export interface ModuleRuntime extends AsyncDisposable {
   use(module: ModuleOptions): void;
-  initialize(): Promise<ModuleContext>;
-  shutdown(): Promise<void>;
+  initialize(options?: ModuleLifecycleExecutionOptions): Promise<ModuleContext>;
+  shutdown(options?: ModuleLifecycleExecutionOptions): Promise<void>;
   reset(): void;
   dispose(): Promise<void>;
   createGraphManifest(): ModuleGraphManifest;
@@ -138,19 +150,19 @@ class ModuleRuntimeImplementation implements ModuleRuntime {
     registerModuleInState(this.state, module);
   }
 
-  initialize(): Promise<ModuleContext> {
+  initialize(options: ModuleLifecycleExecutionOptions = {}): Promise<ModuleContext> {
     try {
       assertRuntimeAvailable(this.state);
-      return initializeModulesInState(this.state);
+      return initializeModulesInState(this.state, options);
     } catch (error) {
       return Promise.reject(error);
     }
   }
 
-  shutdown(): Promise<void> {
+  shutdown(options: ModuleLifecycleExecutionOptions = {}): Promise<void> {
     try {
       assertRuntimeAvailable(this.state);
-      return shutdownModulesInState(this.state);
+      return shutdownModulesInState(this.state, options);
     } catch (error) {
       return Promise.reject(error);
     }
@@ -304,11 +316,16 @@ function registerModuleInState(state: ModuleRegistryState, module: ModuleOptions
   state.isInitialized = false;
 }
 
-export function initializeModules(): Promise<ModuleContext> {
-  return defaultModuleRuntime.initialize();
+export function initializeModules(
+  options: ModuleLifecycleExecutionOptions = {},
+): Promise<ModuleContext> {
+  return defaultModuleRuntime.initialize(options);
 }
 
-function initializeModulesInState(state: ModuleRegistryState): Promise<ModuleContext> {
+function initializeModulesInState(
+  state: ModuleRegistryState,
+  options: ModuleLifecycleExecutionOptions,
+): Promise<ModuleContext> {
   if (state.isInitialized && state.activeContext) {
     return Promise.resolve(state.activeContext);
   }
@@ -317,8 +334,10 @@ function initializeModulesInState(state: ModuleRegistryState): Promise<ModuleCon
     return state.initializationPromise;
   }
 
+  validateModuleLifecycleExecutionOptions("initialize", options);
+
   state.isInitializing = true;
-  const attempt = performInitializeModules(state);
+  const attempt = performInitializeModules(state, options);
   state.initializationPromise = attempt;
   void attempt.then(
     () => clearInitializationPromise(state, attempt),
@@ -327,7 +346,10 @@ function initializeModulesInState(state: ModuleRegistryState): Promise<ModuleCon
   return attempt;
 }
 
-async function performInitializeModules(state: ModuleRegistryState): Promise<ModuleContext> {
+async function performInitializeModules(
+  state: ModuleRegistryState,
+  options: ModuleLifecycleExecutionOptions,
+): Promise<ModuleContext> {
   const attemptGeneration = state.registryGeneration;
   const modules = collectModules(Array.from(state.registeredModules.values()), state.moduleSources);
   detectCircularDependency(modules);
@@ -348,17 +370,34 @@ async function performInitializeModules(state: ModuleRegistryState): Promise<Mod
     for (const module of sortedModules) {
       compensationStack.push(module);
       const moduleContext = createModuleContext(state, module.name, container);
-      await runLifecycle(state, module, "setup", async () => {
-        await registerProviders(state, module, moduleContext, container);
-        await module.setup?.(moduleContext);
-      });
+      await runLifecycle(
+        state,
+        module,
+        "setup",
+        options,
+        moduleContext,
+        true,
+        async (execution) => {
+          await registerProviders(state, module, moduleContext, container, execution.signal);
+          execution.signal.throwIfAborted();
+          await module.setup?.(moduleContext, execution);
+        },
+      );
     }
 
     for (const module of sortedModules) {
       const moduleContext = createModuleContext(state, module.name, container);
-      await runLifecycle(state, module, "start", async () => {
-        await module.start?.(moduleContext);
-      });
+      await runLifecycle(
+        state,
+        module,
+        "start",
+        options,
+        moduleContext,
+        module.start !== undefined,
+        async (execution) => {
+          await module.start?.(moduleContext, execution);
+        },
+      );
 
       const moduleState = state.moduleStates.get(module.name);
       if (moduleState) {
@@ -376,17 +415,19 @@ async function performInitializeModules(state: ModuleRegistryState): Promise<Mod
         new Error("Module registry was reset during initialization."),
       );
     }
+    assertModuleLifecycleOperationActive("<registry>", "start", options);
   } catch (error) {
     const cleanupFailures = await compensateInitialization(
       state,
       compensationStack,
       container,
       error,
+      options,
     );
     restoreContainerServices(container, containerSnapshot);
     resetActiveRuntimeState(state);
 
-    if (error instanceof ModuleLifecycleProblem) {
+    if (isModuleLifecycleExecutionProblem(error)) {
       throw attachModuleCleanupFailures(error, cleanupFailures);
     }
     throw error;
@@ -398,17 +439,24 @@ async function performInitializeModules(state: ModuleRegistryState): Promise<Mod
   return context;
 }
 
-export async function shutdownModules(): Promise<void> {
-  await defaultModuleRuntime.shutdown();
+export async function shutdownModules(
+  options: ModuleLifecycleExecutionOptions = {},
+): Promise<void> {
+  await defaultModuleRuntime.shutdown(options);
 }
 
-async function shutdownModulesInState(state: ModuleRegistryState): Promise<void> {
+async function shutdownModulesInState(
+  state: ModuleRegistryState,
+  options: ModuleLifecycleExecutionOptions = {},
+): Promise<void> {
   if (state.shutdownPromise) {
     return state.shutdownPromise;
   }
 
+  validateModuleLifecycleExecutionOptions("shutdown", options);
+
   state.activeShutdownOperations += 1;
-  const attempt = performShutdownModules(state);
+  const attempt = performShutdownModules(state, options);
   state.shutdownPromise = attempt;
   try {
     await attempt;
@@ -420,7 +468,10 @@ async function shutdownModulesInState(state: ModuleRegistryState): Promise<void>
   }
 }
 
-async function performShutdownModules(state: ModuleRegistryState): Promise<void> {
+async function performShutdownModules(
+  state: ModuleRegistryState,
+  options: ModuleLifecycleExecutionOptions,
+): Promise<void> {
   if (state.initializationPromise) {
     try {
       await state.initializationPromise;
@@ -436,15 +487,24 @@ async function performShutdownModules(state: ModuleRegistryState): Promise<void>
   const modules = [...state.initializedModules].reverse();
   const container = state.container;
   const cleanupFailures: ModuleCleanupFailure[] = [];
-  let firstFailure: ModuleLifecycleProblem | undefined;
+  let firstFailure: ModuleLifecycleExecutionProblem | undefined;
 
   try {
     for (const module of modules) {
       try {
         const moduleContext = createModuleContext(state, module.name, container);
-        await runLifecycle(state, module, "shutdown", async () => {
-          await module.shutdown?.(moduleContext);
-        });
+        await runLifecycle(
+          state,
+          module,
+          "shutdown",
+          options,
+          moduleContext,
+          module.shutdown !== undefined,
+          async (execution) => {
+            await module.shutdown?.(moduleContext, execution);
+          },
+          true,
+        );
 
         const moduleState = state.moduleStates.get(module.name);
         if (moduleState) {
@@ -454,10 +514,9 @@ async function performShutdownModules(state: ModuleRegistryState): Promise<void>
           moduleState.cleanupFailures = undefined;
         }
       } catch (error) {
-        const problem =
-          error instanceof ModuleLifecycleProblem
-            ? error
-            : new ModuleLifecycleProblem(module.name, "shutdown", error);
+        const problem = isModuleLifecycleExecutionProblem(error)
+          ? error
+          : new ModuleLifecycleProblem(module.name, "shutdown", error);
         const failure = createModuleCleanupFailure(problem, module.name);
         cleanupFailures.push(failure);
         firstFailure ??= problem;
@@ -467,6 +526,10 @@ async function performShutdownModules(state: ModuleRegistryState): Promise<void>
           moduleState.cleanupFailures = [failure];
         }
       }
+    }
+
+    if (!firstFailure) {
+      assertModuleLifecycleOperationActive("<registry>", "shutdown", options);
     }
   } finally {
     resetActiveRuntimeState(state);
@@ -548,10 +611,11 @@ async function compensateInitialization(
   modules: readonly ModuleOptions[],
   container: ContainerInstance,
   primaryError: unknown,
+  options: ModuleLifecycleExecutionOptions,
 ): Promise<ModuleCleanupFailure[]> {
   const failures: ModuleCleanupFailure[] = [];
   const primaryModuleName =
-    primaryError instanceof ModuleLifecycleProblem &&
+    isModuleLifecycleExecutionProblem(primaryError) &&
     typeof primaryError.extensions?.moduleName === "string"
       ? primaryError.extensions.moduleName
       : undefined;
@@ -564,12 +628,26 @@ async function compensateInitialization(
     }
 
     try {
-      await module.shutdown?.(createModuleContext(registryState, module.name, container));
+      if (module.shutdown) {
+        const moduleContext = createModuleContext(registryState, module.name, container);
+        await executeModuleLifecycleHook(
+          module,
+          "shutdown",
+          options,
+          moduleContext,
+          async (execution) => {
+            await module.shutdown?.(moduleContext, execution);
+          },
+          true,
+        );
+      }
       if (moduleState) {
         moduleState.phase = "stopped";
       }
     } catch (error) {
-      const problem = new ModuleLifecycleProblem(module.name, "shutdown", error);
+      const problem = isModuleLifecycleExecutionProblem(error)
+        ? error
+        : new ModuleLifecycleProblem(module.name, "shutdown", error);
       const failure = createModuleCleanupFailure(problem, module.name);
       failures.push(failure);
       if (moduleState) {
@@ -586,7 +664,7 @@ async function compensateInitialization(
 }
 
 function createModuleCleanupFailure(
-  problem: ModuleLifecycleProblem,
+  problem: ModuleLifecycleExecutionProblem,
   moduleName: string,
 ): ModuleCleanupFailure {
   return {
@@ -1124,8 +1202,10 @@ async function registerProviders(
   module: ModuleOptions,
   context: ModuleContext,
   container: ReturnType<typeof Container.of>,
+  signal: AbortSignal,
 ): Promise<void> {
   for (const provider of module.providers ?? []) {
+    signal.throwIfAborted();
     if (!isProviderDefinition(provider)) {
       if (isConstructorToken(provider)) {
         validateClassProviderVisibility(state, module.name, provider);
@@ -1135,10 +1215,12 @@ async function registerProviders(
           type: toTypediConstructable(provider),
         });
       }
+      signal.throwIfAborted();
       continue;
     }
 
     await registerProviderDefinition(state, module.name, provider, context, container);
+    signal.throwIfAborted();
   }
 }
 
@@ -1517,17 +1599,27 @@ async function runLifecycle(
   registryState: ModuleRegistryState,
   module: ModuleOptions,
   phase: ModuleLifecyclePhase,
-  run: () => Promise<void>,
+  options: ModuleLifecycleExecutionOptions,
+  moduleContext: ModuleContext,
+  hasCancellableWork: boolean,
+  run: (execution: ModuleLifecycleExecutionContext) => Promise<void>,
+  runWhenCancelled = false,
 ): Promise<void> {
   const moduleState = registryState.moduleStates.get(module.name);
   if (moduleState) {
     moduleState.phase = phase;
   }
 
+  if (!hasCancellableWork) {
+    return;
+  }
+
   try {
-    await run();
+    await executeModuleLifecycleHook(module, phase, options, moduleContext, run, runWhenCancelled);
   } catch (error) {
-    const problem = new ModuleLifecycleProblem(module.name, phase, error);
+    const problem = isModuleLifecycleExecutionProblem(error)
+      ? error
+      : new ModuleLifecycleProblem(module.name, phase, error);
     if (moduleState) {
       moduleState.phase = "failed";
       moduleState.initialized = false;
@@ -1535,4 +1627,159 @@ async function runLifecycle(
     }
     throw problem;
   }
+}
+
+type ModuleLifecycleHookControl = {
+  readonly execution: ModuleLifecycleExecutionContext;
+  readonly getFailure: () => ModuleLifecycleInterruptionProblem | undefined;
+  readonly dispose: () => void;
+};
+
+async function executeModuleLifecycleHook(
+  module: ModuleOptions,
+  phase: ModuleLifecyclePhase,
+  options: ModuleLifecycleExecutionOptions,
+  moduleContext: ModuleContext,
+  run: (execution: ModuleLifecycleExecutionContext) => Promise<void>,
+  runWhenCancelled: boolean,
+): Promise<void> {
+  const control = createModuleLifecycleHookControl(module, phase, options, moduleContext);
+
+  try {
+    if (!runWhenCancelled) {
+      throwIfModuleLifecycleCancelled(control);
+    }
+    await run(control.execution);
+    throwIfModuleLifecycleCancelled(control);
+  } catch (error) {
+    const failure = control.getFailure();
+    if (failure) {
+      throw error === failure
+        ? failure
+        : attachModuleLifecycleHookFailure(
+            failure,
+            createModuleLifecycleFailure(module.name, phase, error),
+          );
+    }
+    throw new ModuleLifecycleProblem(module.name, phase, error);
+  } finally {
+    control.dispose();
+  }
+}
+
+function createModuleLifecycleHookControl(
+  module: ModuleOptions,
+  phase: ModuleLifecyclePhase,
+  options: ModuleLifecycleExecutionOptions,
+  moduleContext: ModuleContext,
+): ModuleLifecycleHookControl {
+  const controller = new AbortController();
+  let failure: ModuleLifecycleInterruptionProblem | undefined;
+  let deadlineTimer: ReturnType<typeof setTimeout> | undefined;
+
+  const abort = (problem: ModuleLifecycleInterruptionProblem): void => {
+    if (failure) {
+      return;
+    }
+    failure = problem;
+    controller.abort(problem);
+  };
+  const abortFromParent = (): void => {
+    const reason = options.signal?.reason;
+    abort(
+      new ModuleLifecycleCancelledProblem(
+        module.name,
+        phase,
+        reason instanceof Error ? reason : undefined,
+      ),
+    );
+  };
+  const abortFromDeadline = (): void => {
+    if (options.deadline !== undefined) {
+      abort(new ModuleLifecycleDeadlineExceededProblem(module.name, phase, options.deadline));
+    }
+  };
+  const scheduleDeadline = (): void => {
+    if (options.deadline === undefined || failure) {
+      return;
+    }
+    const remainingMs = options.deadline - Date.now();
+    if (remainingMs <= 0) {
+      abortFromDeadline();
+      return;
+    }
+    deadlineTimer = setTimeout(scheduleDeadline, Math.min(remainingMs, MAX_TIMER_DELAY_MS));
+  };
+
+  if (options.signal?.aborted) {
+    abortFromParent();
+  } else {
+    options.signal?.addEventListener("abort", abortFromParent, { once: true });
+    scheduleDeadline();
+  }
+
+  return {
+    execution: {
+      phase,
+      moduleContext,
+      signal: controller.signal,
+      ...(options.deadline === undefined ? {} : { deadline: options.deadline }),
+    },
+    getFailure: () => {
+      if (!failure && options.deadline !== undefined && Date.now() >= options.deadline) {
+        abortFromDeadline();
+      }
+      return failure;
+    },
+    dispose: () => {
+      options.signal?.removeEventListener("abort", abortFromParent);
+      if (deadlineTimer !== undefined) {
+        clearTimeout(deadlineTimer);
+      }
+    },
+  };
+}
+
+function createModuleLifecycleFailure(
+  moduleName: string,
+  phase: ModuleLifecyclePhase,
+  error: unknown,
+): ModuleLifecycleFailure {
+  const problem = new ModuleLifecycleProblem(moduleName, phase, error);
+  return { moduleName, phase, code: problem.code, message: problem.message };
+}
+
+function throwIfModuleLifecycleCancelled(control: ModuleLifecycleHookControl): void {
+  const failure = control.getFailure();
+  if (failure) {
+    throw failure;
+  }
+}
+
+function assertModuleLifecycleOperationActive(
+  moduleName: string,
+  phase: ModuleLifecyclePhase,
+  options: ModuleLifecycleExecutionOptions,
+): void {
+  if (options.signal?.aborted) {
+    const reason = options.signal.reason;
+    throw new ModuleLifecycleCancelledProblem(
+      moduleName,
+      phase,
+      reason instanceof Error ? reason : undefined,
+    );
+  }
+  if (options.deadline !== undefined && options.deadline <= Date.now()) {
+    throw new ModuleLifecycleDeadlineExceededProblem(moduleName, phase, options.deadline);
+  }
+}
+
+function isModuleLifecycleExecutionProblem(
+  error: unknown,
+): error is ModuleLifecycleExecutionProblem {
+  return (
+    error instanceof ModuleLifecycleProblem ||
+    error instanceof ModuleLifecycleCancelledProblem ||
+    error instanceof ModuleLifecycleDeadlineExceededProblem
+  );
 }

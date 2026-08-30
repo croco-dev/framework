@@ -57,7 +57,13 @@ readonly [`ModuleDiagnosticsSnapshot`](/api/framework-module/src/type-aliases/mo
 
 ### initialize()
 
-> **initialize**(): `Promise`\<[`ModuleContext`](/api/framework-module/src/classes/modulecontext/)\>
+> **initialize**(`options?`): `Promise`\<[`ModuleContext`](/api/framework-module/src/classes/modulecontext/)\>
+
+#### Parameters
+
+##### options?
+
+[`ModuleLifecycleExecutionOptions`](/api/framework-module/src/type-aliases/modulelifecycleexecutionoptions/)
 
 #### Returns
 
@@ -77,7 +83,13 @@ readonly [`ModuleDiagnosticsSnapshot`](/api/framework-module/src/type-aliases/mo
 
 ### shutdown()
 
-> **shutdown**(): `Promise`\<`void`\>
+> **shutdown**(`options?`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### options?
+
+[`ModuleLifecycleExecutionOptions`](/api/framework-module/src/type-aliases/modulelifecycleexecutionoptions/)
 
 #### Returns
 

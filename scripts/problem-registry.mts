@@ -1959,6 +1959,26 @@ const recoveryMetadataByCode = {
     redactionPolicy: "public",
     severity: "info",
   }),
+  "framework-module/lifecycle-cancelled": recovery({
+    cause: "A parent AbortSignal cancelled the module lifecycle hook before it completed.",
+    userAction:
+      "Retry only when the cancellation reason permits it and the lifecycle operation is safe to repeat.",
+    operatorAction:
+      "Inspect the parent cancellation reason and propagate AbortSignal support through cancellable lifecycle work.",
+    retryability: "conditional",
+    redactionPolicy: "operator-only",
+    severity: "warning",
+  }),
+  "framework-module/lifecycle-deadline-exceeded": recovery({
+    cause: "The module lifecycle hook did not complete before its absolute deadline.",
+    userAction:
+      "Retry only when the lifecycle operation is safe to repeat and the service has enough time to complete it.",
+    operatorAction:
+      "Inspect the slow lifecycle hook, reduce its work or increase the deadline, and preserve cancellation propagation.",
+    retryability: "conditional",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "framework-module/registration-lifecycle-conflict": recovery({
     cause:
       "Module registration was attempted while the registry was initializing, initialized, or shutting down.",

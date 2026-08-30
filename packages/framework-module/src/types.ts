@@ -1,16 +1,25 @@
 import type { ModuleContext } from "./ModuleContext";
+import type { ModuleCleanupFailure, ModuleLifecyclePhase } from "./types/ModuleLifecycle";
 import type { Constructor, ModuleToken } from "./types/ModuleToken";
 
-export type ModuleLifecyclePhase = "setup" | "start" | "shutdown";
+export type {
+  ModuleCleanupFailure,
+  ModuleLifecycleExecutionOptions,
+  ModuleLifecycleFailure,
+  ModuleLifecyclePhase,
+} from "./types/ModuleLifecycle";
 
-export type ModuleCleanupFailure = {
-  readonly moduleName: string;
-  readonly phase: "shutdown";
-  readonly code: string;
-  readonly message: string;
+export type ModuleLifecycleExecutionContext = {
+  readonly phase: ModuleLifecyclePhase;
+  readonly moduleContext: ModuleContext;
+  readonly signal: AbortSignal;
+  readonly deadline?: number;
 };
 
-export type ModuleLifecycleHook = (ctx: ModuleContext) => void | Promise<void>;
+export type ModuleLifecycleHook = (
+  ctx: ModuleContext,
+  execution: ModuleLifecycleExecutionContext,
+) => void | Promise<void>;
 
 export type ModuleProviderFactory<T = unknown> = (ctx: ModuleContext) => T | Promise<T>;
 
