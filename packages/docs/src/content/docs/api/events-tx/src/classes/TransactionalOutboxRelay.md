@@ -31,6 +31,38 @@ Claims visible outbox messages and publishes them in deterministic batches.
 
 ## Methods
 
+### drain()
+
+> **drain**(`signal?`): `Promise`\<[`OutboxRelayDrainResult`](/api/events-tx/src/type-aliases/outboxrelaydrainresult/)\>
+
+#### Parameters
+
+##### signal?
+
+`AbortSignal`
+
+#### Returns
+
+`Promise`\<[`OutboxRelayDrainResult`](/api/events-tx/src/type-aliases/outboxrelaydrainresult/)\>
+
+---
+
+### onShutdown()
+
+> **onShutdown**(`signal?`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### signal?
+
+`AbortSignal`
+
+#### Returns
+
+`Promise`\<`void`\>
+
+---
+
 ### publishBatch()
 
 > **publishBatch**(`options?`): `Promise`\<[`OutboxRelayBatchResult`](/api/events-tx/src/type-aliases/outboxrelaybatchresult/)\>
@@ -39,8 +71,18 @@ Claims visible outbox messages and publishes them in deterministic batches.
 
 ##### options?
 
-`Partial`\<[`OutboxClaimOptions`](/api/events-tx/src/type-aliases/outboxclaimoptions/)\> = `{}`
+[`OutboxRelayPublishOptions`](/api/events-tx/src/type-aliases/outboxrelaypublishoptions/) = `{}`
 
 #### Returns
 
 `Promise`\<[`OutboxRelayBatchResult`](/api/events-tx/src/type-aliases/outboxrelaybatchresult/)\>
+
+---
+
+### stop()
+
+> **stop**(): `void`
+
+#### Returns
+
+`void`

@@ -14,6 +14,7 @@ import {
   type OutboxCompletionInput,
   type OutboxDeadLetterInput,
   type OutboxFailureInput,
+  type OutboxReleaseInput,
   type TransactionalEventDiagnostic,
   type TransactionalEventError,
   type TransactionalEventStore,
@@ -399,6 +400,29 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
           : []),
       ],
     };
+    state.outbox.set(input.id, cloneOutboxMessage(updated));
+    return cloneOutboxMessage(updated);
+  }
+
+  async releaseOutboxClaim(
+    input: OutboxReleaseInput,
+    context?: TransactionalEventStoreContext<InMemoryTransactionalEventStoreClient>,
+  ): Promise<TransactionalOutboxMessage | null> {
+    const state = this.resolveState(context);
+    const message = this.requireOutboxMessage(state, input.id);
+    if (!this.isActiveClaim(message, input.expectedAttempts)) {
+      return null;
+    }
+
+    const updated: TransactionalOutboxMessage = {
+      ...cloneOutboxMessage(message),
+      attempts: message.attempts - 1,
+      status: "retrying",
+      visibleAt: new Date(input.now.getTime()),
+      updatedAt: new Date(input.now.getTime()),
+      diagnostics: [...message.diagnostics.map(cloneDiagnostic), cloneDiagnostic(input.diagnostic)],
+    };
+    delete updated.lockedUntil;
     state.outbox.set(input.id, cloneOutboxMessage(updated));
     return cloneOutboxMessage(updated);
   }

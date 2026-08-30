@@ -49,13 +49,17 @@ title: "OutboxRelayConfig"
 
 ### publish
 
-> **publish**: (`message`) => `Promise`\<`void`\>
+> **publish**: (`message`, `signal?`) => `Promise`\<`void`\>
 
 #### Parameters
 
 ##### message
 
 [`TransactionalOutboxMessage`](/api/events-tx/src/type-aliases/transactionaloutboxmessage/)
+
+##### signal?
+
+`AbortSignal`
 
 #### Returns
 

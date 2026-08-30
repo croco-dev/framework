@@ -114,6 +114,10 @@ export type OutboxFailureInput = OutboxCompletionInput & {
   diagnostic: TransactionalEventDiagnostic;
 };
 
+export type OutboxReleaseInput = OutboxCompletionInput & {
+  diagnostic: TransactionalEventDiagnostic;
+};
+
 export type OutboxDeadLetterInput = OutboxCompletionInput & {
   reason: string;
   diagnostic: TransactionalEventDiagnostic;
@@ -198,6 +202,11 @@ export interface TransactionalEventStore<TClient = unknown> {
     context?: TransactionalEventStoreContext<TClient>,
   ): Promise<TransactionalOutboxMessage | null>;
 
+  releaseOutboxClaim(
+    input: OutboxReleaseInput,
+    context?: TransactionalEventStoreContext<TClient>,
+  ): Promise<TransactionalOutboxMessage | null>;
+
   markOutboxDeadLettered(
     input: OutboxDeadLetterInput,
     context?: TransactionalEventStoreContext<TClient>,
@@ -252,13 +261,17 @@ export type OutboxRelayRetryPolicy = {
 
 export type OutboxRelayConfig<TClient> = {
   store: TransactionalEventStore<TClient>;
-  publish: (message: TransactionalOutboxMessage) => Promise<void>;
+  publish: (message: TransactionalOutboxMessage, signal?: AbortSignal) => Promise<void>;
   deadLetter?: (message: TransactionalOutboxMessage) => Promise<void>;
   txManager?: Pick<TxManager<TClient>, "getClient">;
   batchSize?: number;
   visibilityTimeoutMs?: number;
   retry?: Partial<OutboxRelayRetryPolicy>;
   now?: () => Date;
+};
+
+export type OutboxRelayPublishOptions = Partial<OutboxClaimOptions> & {
+  signal?: AbortSignal;
 };
 
 export type OutboxRelayMessageResult =
@@ -281,16 +294,28 @@ export type OutboxRelayMessageResult =
       status: "stale_claim";
       message: TransactionalOutboxMessage;
       diagnostic: TransactionalEventDiagnostic;
+    }
+  | {
+      status: "released";
+      message: TransactionalOutboxMessage;
     };
 
 export type OutboxRelayBatchResult = {
+  status: "completed" | "cancelled" | "stopped";
   claimed: number;
   published: number;
   scheduledRetry: number;
   poisoned: number;
   deadLettered: number;
   staleClaimed: number;
+  released: number;
   results: OutboxRelayMessageResult[];
+};
+
+export type OutboxRelayDrainResult = {
+  status: "drained" | "cancelled";
+  activeBatches: number;
+  pendingBatches: number;
 };
 
 export type TransactionalInboxConsumerConfig<TClient> = {
@@ -547,6 +572,8 @@ export class TransactionalOutboxRelay<TClient = unknown> {
   private readonly visibilityTimeoutMs: number;
   private readonly retry: OutboxRelayRetryPolicy;
   private readonly now: () => Date;
+  private readonly activeBatches = new Map<Promise<OutboxRelayBatchResult>, AbortController>();
+  private accepting = true;
 
   constructor(private readonly config: OutboxRelayConfig<TClient>) {
     if (config.batchSize !== undefined) {
@@ -573,13 +600,89 @@ export class TransactionalOutboxRelay<TClient = unknown> {
     this.now = config.now ?? defaultNow;
   }
 
-  async publishBatch(options: Partial<OutboxClaimOptions> = {}): Promise<OutboxRelayBatchResult> {
+  publishBatch(options: OutboxRelayPublishOptions = {}): Promise<OutboxRelayBatchResult> {
     if (options.limit !== undefined) {
       validatePositiveInt32(options.limit, "limit");
     }
     if (options.visibilityTimeoutMs !== undefined) {
       validatePositiveInt32(options.visibilityTimeoutMs, "visibilityTimeoutMs");
     }
+
+    if (!this.accepting) {
+      return Promise.resolve(this.createEmptyBatchResult("stopped"));
+    }
+    if (options.signal?.aborted) {
+      return Promise.resolve(this.createEmptyBatchResult("cancelled"));
+    }
+
+    const controller = new AbortController();
+    const removeAbortListener = this.forwardAbort(options.signal, controller);
+    const operation = this.executeBatch(options, controller.signal);
+    this.activeBatches.set(operation, controller);
+    const removeBatch = () => {
+      removeAbortListener();
+      this.activeBatches.delete(operation);
+    };
+    void operation.then(removeBatch, removeBatch);
+    return operation;
+  }
+
+  stop(): void {
+    this.accepting = false;
+    for (const controller of this.activeBatches.values()) {
+      controller.abort();
+    }
+  }
+
+  async drain(signal?: AbortSignal): Promise<OutboxRelayDrainResult> {
+    this.stop();
+    const active = [...this.activeBatches.keys()];
+    const activeBatches = active.length;
+    if (activeBatches === 0) {
+      return { status: "drained", activeBatches: 0, pendingBatches: 0 };
+    }
+
+    if (signal?.aborted) {
+      return {
+        status: "cancelled",
+        activeBatches,
+        pendingBatches: this.activeBatches.size,
+      };
+    }
+
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = (result: OutboxRelayDrainResult) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        signal?.removeEventListener("abort", onAbort);
+        resolve(result);
+      };
+      const onAbort = () => {
+        finish({
+          status: "cancelled",
+          activeBatches,
+          pendingBatches: this.activeBatches.size,
+        });
+      };
+
+      signal?.addEventListener("abort", onAbort, { once: true });
+      void Promise.allSettled(active).then(() => {
+        finish({ status: "drained", activeBatches, pendingBatches: 0 });
+      });
+    });
+  }
+
+  async onShutdown(signal?: AbortSignal): Promise<void> {
+    await this.drain(signal);
+  }
+
+  private async executeBatch(
+    options: OutboxRelayPublishOptions,
+    signal: AbortSignal,
+  ): Promise<OutboxRelayBatchResult> {
     const now = options.now ?? this.now();
     const claimed = await this.config.store.claimOutboxBatch(
       {
@@ -591,26 +694,49 @@ export class TransactionalOutboxRelay<TClient = unknown> {
     );
     const results: OutboxRelayMessageResult[] = [];
 
-    for (const message of claimed) {
-      results.push(await this.publishOne(message));
+    for (const [index, message] of claimed.entries()) {
+      if (signal.aborted) {
+        for (const unstarted of claimed.slice(index)) {
+          results.push(await this.releaseClaim(unstarted));
+        }
+        break;
+      }
+      results.push(await this.publishOne(message, signal));
     }
 
+    return this.createBatchResult(signal.aborted ? "cancelled" : "completed", claimed, results);
+  }
+
+  private createBatchResult(
+    status: OutboxRelayBatchResult["status"],
+    claimed: TransactionalOutboxMessage[],
+    results: OutboxRelayMessageResult[],
+  ): OutboxRelayBatchResult {
     return {
+      status,
       claimed: claimed.length,
       published: results.filter((result) => result.status === "published").length,
       scheduledRetry: results.filter((result) => result.status === "scheduled_retry").length,
       poisoned: results.filter((result) => result.status === "poisoned").length,
       deadLettered: results.filter((result) => result.status === "dead_lettered").length,
       staleClaimed: results.filter((result) => result.status === "stale_claim").length,
+      released: results.filter((result) => result.status === "released").length,
       results,
     };
   }
 
-  private async publishOne(message: TransactionalOutboxMessage): Promise<OutboxRelayMessageResult> {
+  private createEmptyBatchResult(status: "cancelled" | "stopped"): OutboxRelayBatchResult {
+    return this.createBatchResult(status, [], []);
+  }
+
+  private async publishOne(
+    message: TransactionalOutboxMessage,
+    signal: AbortSignal,
+  ): Promise<OutboxRelayMessageResult> {
     return withSpan(
       async () => {
         try {
-          await this.config.publish(message);
+          await this.config.publish(message, signal);
           const published = await this.config.store.markOutboxPublished(
             {
               id: message.id,
@@ -641,6 +767,37 @@ export class TransactionalOutboxRelay<TClient = unknown> {
         },
       },
     );
+  }
+
+  private async releaseClaim(
+    message: TransactionalOutboxMessage,
+  ): Promise<OutboxRelayMessageResult> {
+    const now = this.now();
+    const released = await this.config.store.releaseOutboxClaim(
+      {
+        id: message.id,
+        expectedAttempts: message.attempts,
+        now,
+        diagnostic: createTransactionalEventDiagnostic(
+          "events-tx/outbox-claim-released",
+          "Outbox claim released before publication started.",
+          now,
+          {
+            eventType: message.eventType,
+            attempts: message.attempts,
+          },
+        ),
+      },
+      this.context(),
+    );
+    if (!released) {
+      return this.createStaleClaimResult(message, "events-tx/outbox-release-stale-claim");
+    }
+    recordEvent("events-tx.outbox.claim_released", {
+      "events-tx.message_id": message.id,
+      "events-tx.event_type": message.eventType,
+    });
+    return { status: "released", message: released };
   }
 
   private async handlePublishFailure(
@@ -755,6 +912,15 @@ export class TransactionalOutboxRelay<TClient = unknown> {
   private context(): TransactionalEventStoreContext<TClient> | undefined {
     const client = this.config.txManager?.getClient();
     return client ? { client } : undefined;
+  }
+
+  private forwardAbort(signal: AbortSignal | undefined, controller: AbortController): () => void {
+    if (!signal) {
+      return () => undefined;
+    }
+    const onAbort = () => controller.abort(signal.reason);
+    signal.addEventListener("abort", onAbort, { once: true });
+    return () => signal.removeEventListener("abort", onAbort);
   }
 }
 
