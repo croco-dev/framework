@@ -214,28 +214,48 @@ function getErrorName(error: unknown): string {
   return error instanceof Error ? error.name : typeof error;
 }
 
+const PROBLEM_STATUS_TO_TRPC_CODE: ReadonlyMap<number, TRPC_ERROR_CODE_KEY> = new Map([
+  [400, "BAD_REQUEST"],
+  [401, "UNAUTHORIZED"],
+  [402, "PAYMENT_REQUIRED"],
+  [403, "FORBIDDEN"],
+  [404, "NOT_FOUND"],
+  [405, "METHOD_NOT_SUPPORTED"],
+  [406, "BAD_REQUEST"],
+  [407, "UNAUTHORIZED"],
+  [408, "TIMEOUT"],
+  [409, "CONFLICT"],
+  [410, "NOT_FOUND"],
+  [411, "BAD_REQUEST"],
+  [412, "PRECONDITION_FAILED"],
+  [413, "PAYLOAD_TOO_LARGE"],
+  [414, "PAYLOAD_TOO_LARGE"],
+  [415, "UNSUPPORTED_MEDIA_TYPE"],
+  [416, "BAD_REQUEST"],
+  [417, "PRECONDITION_FAILED"],
+  [418, "BAD_REQUEST"],
+  [422, "UNPROCESSABLE_CONTENT"],
+  [423, "CONFLICT"],
+  [424, "PRECONDITION_FAILED"],
+  [425, "PRECONDITION_FAILED"],
+  [426, "PRECONDITION_REQUIRED"],
+  [428, "PRECONDITION_REQUIRED"],
+  [429, "TOO_MANY_REQUESTS"],
+  [431, "PAYLOAD_TOO_LARGE"],
+  [451, "FORBIDDEN"],
+  [500, "INTERNAL_SERVER_ERROR"],
+  [501, "NOT_IMPLEMENTED"],
+  [502, "BAD_GATEWAY"],
+  [503, "SERVICE_UNAVAILABLE"],
+  [504, "GATEWAY_TIMEOUT"],
+  [505, "INTERNAL_SERVER_ERROR"],
+  [506, "INTERNAL_SERVER_ERROR"],
+  [507, "INTERNAL_SERVER_ERROR"],
+  [508, "INTERNAL_SERVER_ERROR"],
+  [510, "INTERNAL_SERVER_ERROR"],
+  [511, "INTERNAL_SERVER_ERROR"],
+]);
+
 function toTrpcErrorCode(problem: Problem): TRPC_ERROR_CODE_KEY {
-  switch (problem.status) {
-    case 400:
-      return "BAD_REQUEST";
-    case 401:
-      return "UNAUTHORIZED";
-    case 403:
-      return "FORBIDDEN";
-    case 404:
-    case 410:
-      return "NOT_FOUND";
-    case 409:
-      return "CONFLICT";
-    case 413:
-      return "PAYLOAD_TOO_LARGE";
-    case 422:
-      return "UNPROCESSABLE_CONTENT";
-    case 429:
-      return "TOO_MANY_REQUESTS";
-    case 501:
-      return "NOT_IMPLEMENTED";
-    default:
-      return "INTERNAL_SERVER_ERROR";
-  }
+  return PROBLEM_STATUS_TO_TRPC_CODE.get(problem.status) ?? "INTERNAL_SERVER_ERROR";
 }
