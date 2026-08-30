@@ -50,8 +50,12 @@ export type BetterAuthSession = {
  */
 export interface BetterAuthSessionProvider {
   getSession(token: string): Promise<BetterAuthSession | null>;
-  revokeSession(sessionId: string): Promise<void>;
-  revokeUserSessions(userId: string): Promise<void>;
+
+  /** 해제할 세션 토큰으로 해당 세션을 인증하고 해제합니다. */
+  revokeSession(sessionToken: string): Promise<void>;
+
+  /** `session:revoke` 권한이 있는 관리자 세션으로 사용자의 모든 세션을 해제합니다. */
+  revokeUserSessions(userId: string, adminSessionToken: string): Promise<void>;
 }
 
 /**

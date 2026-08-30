@@ -2,13 +2,16 @@ import { Problem, ProblemCategory } from "@croco/problems-core";
 import { redactSensitiveValue } from "../redaction";
 
 /**
- * Better Auth 인증 또는 readiness 확인 중 예기치 않은 upstream 오류가 발생했을 때 발생하는 문제입니다.
+ * Better Auth 작업 중 예기치 않은 upstream 오류가 발생했을 때 발생하는 문제입니다.
  */
 export class BetterAuthAuthenticationProblem extends Problem {
   readonly code = "auth-better-auth/authentication-failed";
   readonly category = ProblemCategory.InternalServerError;
 
-  constructor(operation: "authenticate" | "readiness", error: unknown) {
+  constructor(
+    operation: "authenticate" | "readiness" | "revokeSession" | "revokeUserSessions",
+    error: unknown,
+  ) {
     const status = getUpstreamStatus(error);
     const retryable = isRetryableBetterAuthError(error);
     const message = redactSensitiveValue(getErrorMessage(error), "[Redacted]");

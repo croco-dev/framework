@@ -1,5 +1,10 @@
+import { ForbiddenProblem, UnauthorizedProblem } from "@croco/auth-core";
 import type { ILogger } from "@croco/framework-context";
-import { BetterAuthSessionNotFoundProblem } from "./problems/AuthProblems";
+import { BetterAuthAuthenticationProblem } from "./problems/BetterAuthAuthenticationProblem";
+import {
+  BetterAuthSessionNotFoundProblem,
+  BetterAuthUserNotFoundProblem,
+} from "./problems/AuthProblems";
 import { BetterAuthSessionLookupProblem } from "./problems/BetterAuthSessionLookupProblem";
 import type { BetterAuthSession, BetterAuthSessionProvider } from "./types";
 
@@ -53,26 +58,40 @@ export class BetterAuthSessionManager implements BetterAuthSessionProvider {
     }
   }
 
-  async revokeSession(sessionId: string): Promise<void> {
+  async revokeSession(sessionToken: string): Promise<void> {
+    const headers = createAuthorizationHeaders(sessionToken);
     const auth = this.factory.getAuth();
 
     try {
       await auth.api.revokeSession({
-        headers: new Headers(),
-        body: { token: sessionId },
+        headers,
+        body: { token: sessionToken },
       });
-    } catch {
-      throw new BetterAuthSessionNotFoundProblem(sessionId);
+    } catch (error) {
+      throw mapRevocationError(
+        error,
+        "revokeSession",
+        () => new BetterAuthSessionNotFoundProblem("[Redacted]"),
+      );
     }
   }
 
-  async revokeUserSessions(userId: string): Promise<void> {
+  async revokeUserSessions(userId: string, adminSessionToken: string): Promise<void> {
+    const headers = createAuthorizationHeaders(adminSessionToken);
     const auth = this.factory.getAuth();
 
-    await auth.api.revokeUserSessions({
-      headers: new Headers(),
-      body: { userId },
-    });
+    try {
+      await auth.api.revokeUserSessions({
+        headers,
+        body: { userId },
+      });
+    } catch (error) {
+      throw mapRevocationError(
+        error,
+        "revokeUserSessions",
+        () => new BetterAuthUserNotFoundProblem(userId),
+      );
+    }
   }
 
   private mapToBetterAuthSession(session: Record<string, unknown>): BetterAuthSession {
@@ -116,6 +135,37 @@ function isInvalidSessionLookupError(error: unknown): boolean {
     status === "NOT_FOUND" ||
     status === "BAD_REQUEST"
   );
+}
+
+function createAuthorizationHeaders(sessionToken: string): Headers {
+  if (typeof sessionToken !== "string" || !sessionToken.trim()) {
+    throw new UnauthorizedProblem("Better Auth session authorization requires a session token");
+  }
+
+  return new Headers({ authorization: `Bearer ${sessionToken}` });
+}
+
+function mapRevocationError(
+  error: unknown,
+  operation: "revokeSession" | "revokeUserSessions",
+  createNotFoundProblem: () => BetterAuthSessionNotFoundProblem | BetterAuthUserNotFoundProblem,
+): Error {
+  const statusCode = getNumericProperty(error, "statusCode") ?? getNumericProperty(error, "status");
+  const status = getStringProperty(error, "status");
+
+  if (statusCode === 401 || status === "UNAUTHORIZED") {
+    return new UnauthorizedProblem("Better Auth session authorization failed");
+  }
+
+  if (statusCode === 403 || status === "FORBIDDEN") {
+    return new ForbiddenProblem("Better Auth session authorization was denied");
+  }
+
+  if (statusCode === 404 || status === "NOT_FOUND") {
+    return createNotFoundProblem();
+  }
+
+  return new BetterAuthAuthenticationProblem(operation, error);
 }
 
 function getNumericProperty(value: unknown, key: string): number | undefined {

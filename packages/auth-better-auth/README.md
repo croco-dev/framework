@@ -40,8 +40,12 @@ import { BetterAuthSessionManager } from "@croco/auth-better-auth";
 
 const sessions = new BetterAuthSessionManager(factory);
 const session = await sessions.getSession(token);
-await sessions.revokeUserSessions("user_123");
+await sessions.revokeSession(token);
+await sessions.revokeUserSessions("user_123", adminSessionToken);
 ```
+
+`revokeSession()`은 해제할 세션 토큰으로 현재 세션을 인증합니다. `revokeUserSessions()`는 Better Auth
+admin plugin의 `session:revoke` 권한이 있는 관리자 세션 토큰을 두 번째 인자로 받습니다.
 
 ### 4. 웹훅 처리
 

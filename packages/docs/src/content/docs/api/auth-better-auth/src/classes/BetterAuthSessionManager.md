@@ -57,11 +57,13 @@ Better Auth 세션 목록 조회와 세션 해제를 제공하는 매니저입�
 
 ### revokeSession()
 
-> **revokeSession**(`sessionId`): `Promise`\<`void`\>
+> **revokeSession**(`sessionToken`): `Promise`\<`void`\>
+
+해제할 세션 토큰으로 해당 세션을 인증하고 해제합니다.
 
 #### Parameters
 
-##### sessionId
+##### sessionToken
 
 `string`
 
@@ -77,11 +79,17 @@ Better Auth 세션 목록 조회와 세션 해제를 제공하는 매니저입�
 
 ### revokeUserSessions()
 
-> **revokeUserSessions**(`userId`): `Promise`\<`void`\>
+> **revokeUserSessions**(`userId`, `adminSessionToken`): `Promise`\<`void`\>
+
+`session:revoke` 권한이 있는 관리자 세션으로 사용자의 모든 세션을 해제합니다.
 
 #### Parameters
 
 ##### userId
+
+`string`
+
+##### adminSessionToken
 
 `string`
 
