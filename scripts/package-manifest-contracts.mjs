@@ -5,6 +5,8 @@ export const ENTRYPOINT_EXEMPTIONS = new Map();
 
 export const FILES_EXEMPTIONS = new Map();
 
+export const EXPORT_CONDITION_ORDER = ["types", "import", "require"];
+
 export const BUNDLED_RUNTIME_DEPENDENCY_EXEMPTIONS = new Map([
   [
     "create-croco-app",
@@ -73,6 +75,98 @@ export function fieldMatchesPath(source, rootFieldName, publishFieldPath) {
   return valuesMatch(rootValue, publishValue);
 }
 
+export function canonicalExportConditionNames(exportValue) {
+  if (!exportValue || typeof exportValue !== "object" || Array.isArray(exportValue)) {
+    return [];
+  }
+
+  const conditionNames = Object.keys(exportValue);
+  const standardConditions = EXPORT_CONDITION_ORDER.filter((conditionName) =>
+    Object.hasOwn(exportValue, conditionName),
+  );
+  const additionalConditions = conditionNames.filter(
+    (conditionName) => !EXPORT_CONDITION_ORDER.includes(conditionName),
+  );
+
+  return [...standardConditions, ...additionalConditions];
+}
+
+export function exportConditionOrderDiagnostics(exportsValue, fieldName) {
+  if (!exportsValue || typeof exportsValue !== "object" || Array.isArray(exportsValue)) {
+    return [];
+  }
+
+  const diagnostics = [];
+  for (const [exportPath, exportValue] of Object.entries(exportsValue)) {
+    if (!exportValue || typeof exportValue !== "object" || Array.isArray(exportValue)) {
+      continue;
+    }
+
+    const actual = Object.keys(exportValue);
+    const expected = canonicalExportConditionNames(exportValue);
+    if (!sameSequence(actual, expected)) {
+      diagnostics.push(
+        `${fieldName}[${JSON.stringify(exportPath)}] conditions must be ordered ${expected.join(", ")}`,
+      );
+    }
+  }
+
+  return diagnostics;
+}
+
+export function exportConditionSequenceParityDiagnostics(
+  workspaceExports,
+  publishedExports,
+  workspaceFieldName = "exports",
+  publishedFieldName = "publishConfig.exports",
+) {
+  if (
+    !workspaceExports ||
+    typeof workspaceExports !== "object" ||
+    Array.isArray(workspaceExports) ||
+    !publishedExports ||
+    typeof publishedExports !== "object" ||
+    Array.isArray(publishedExports)
+  ) {
+    return [];
+  }
+
+  const diagnostics = [];
+  for (const exportPath of Object.keys(workspaceExports)) {
+    const workspaceExport = workspaceExports[exportPath];
+    const publishedExport = publishedExports[exportPath];
+    if (
+      !workspaceExport ||
+      typeof workspaceExport !== "object" ||
+      Array.isArray(workspaceExport) ||
+      !publishedExport ||
+      typeof publishedExport !== "object" ||
+      Array.isArray(publishedExport)
+    ) {
+      continue;
+    }
+
+    const sharedConditions = new Set(
+      Object.keys(workspaceExport).filter((conditionName) =>
+        Object.hasOwn(publishedExport, conditionName),
+      ),
+    );
+    const workspaceSequence = Object.keys(workspaceExport).filter((conditionName) =>
+      sharedConditions.has(conditionName),
+    );
+    const publishedSequence = Object.keys(publishedExport).filter((conditionName) =>
+      sharedConditions.has(conditionName),
+    );
+    if (!sameSequence(workspaceSequence, publishedSequence)) {
+      diagnostics.push(
+        `${workspaceFieldName}[${JSON.stringify(exportPath)}] and ${publishedFieldName}[${JSON.stringify(exportPath)}] must preserve the same shared condition order`,
+      );
+    }
+  }
+
+  return diagnostics;
+}
+
 export function effectivePublishManifest(sourceManifest) {
   const publishManifest = {
     ...sourceManifest,
@@ -107,6 +201,10 @@ function valuesMatch(left, right) {
     leftKeys.length === rightKeys.length &&
     leftKeys.every((key, index) => key === rightKeys[index] && valuesMatch(left[key], right[key]))
   );
+}
+
+function sameSequence(left, right) {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
 }
 
 export function findPackageJsonFiles(dir, results = []) {

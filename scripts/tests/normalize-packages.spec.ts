@@ -96,6 +96,61 @@ describe("normalize-packages.mjs", () => {
     expect(pkg.publishConfig.main).toBe("./dist/index.js");
     expect(pkg.publishConfig.types).toBe("./dist/index.d.ts");
     expect(pkg.publishConfig.exports["."].types).toBe("./dist/index.d.ts");
+    expect(Object.keys(pkg.publishConfig.exports["."])).toEqual(["types", "import", "require"]);
+  });
+
+  it("normalizes workspace and published subpath conditions to the canonical order", () => {
+    const root = createTempRoot();
+    const packagePath = writePackage(root, "example", {
+      name: "@croco/example",
+      version: "0.0.3",
+      files: ["dist"],
+      type: "commonjs",
+      main: "./src/index.ts",
+      types: "./src/index.ts",
+      exports: {
+        ".": {
+          types: "./dist/index.d.ts",
+          require: "./dist/index.js",
+          import: "./dist/index.mjs",
+        },
+        "./feature": {
+          import: "./dist/feature.mjs",
+          types: "./dist/feature.d.ts",
+          require: "./dist/feature.js",
+        },
+      },
+      publishConfig: {
+        access: "public",
+        main: "./dist/index.js",
+        types: "./dist/index.d.ts",
+        exports: {
+          ".": {
+            import: "./dist/index.mjs",
+            require: "./dist/index.js",
+            types: "./dist/index.d.ts",
+          },
+          "./feature": {
+            require: "./dist/feature.js",
+            types: "./dist/feature.d.ts",
+            import: "./dist/feature.mjs",
+          },
+        },
+      },
+    });
+
+    const result = runScript(root, "--write");
+    const pkg = JSON.parse(readFileSync(packagePath, "utf-8"));
+
+    expect(result.status).toBe(0);
+    expect(Object.keys(pkg.exports["."])).toEqual(["types", "import", "require"]);
+    expect(Object.keys(pkg.exports["./feature"])).toEqual(["types", "import", "require"]);
+    expect(Object.keys(pkg.publishConfig.exports["."])).toEqual(["types", "import", "require"]);
+    expect(Object.keys(pkg.publishConfig.exports["./feature"])).toEqual([
+      "types",
+      "import",
+      "require",
+    ]);
   });
 
   it("removes direct registry publish scripts while preserving safe package scripts", () => {
@@ -362,9 +417,9 @@ describe("normalize-packages.mjs", () => {
       types: "./dist/index.d.ts",
       exports: {
         ".": {
+          types: "./dist/index.d.ts",
           import: "./dist/index.mjs",
           require: "./dist/index.js",
-          types: "./dist/index.d.ts",
         },
       },
       publishConfig: {
@@ -752,9 +807,9 @@ describe("normalize-packages.mjs", () => {
           types: "./dist/index.d.ts",
           exports: {
             ".": {
+              types: "./dist/index.d.ts",
               import: "./dist/index.mjs",
               require: "./dist/index.js",
-              types: "./dist/index.d.ts",
             },
           },
         },
@@ -782,9 +837,9 @@ describe("normalize-packages.mjs", () => {
           types: "./dist/index.d.ts",
           exports: {
             ".": {
+              types: "./dist/index.d.ts",
               import: "./dist/index.mjs",
               require: "./dist/index.js",
-              types: "./dist/index.d.ts",
             },
           },
         },
@@ -809,9 +864,9 @@ describe("normalize-packages.mjs", () => {
           types: "./dist/index.d.ts",
           exports: {
             ".": {
+              types: "./dist/index.d.ts",
               import: "./dist/index.mjs",
               require: "./dist/index.js",
-              types: "./dist/index.d.ts",
             },
           },
         },
@@ -852,9 +907,9 @@ describe("normalize-packages.mjs", () => {
           types: "./dist/index.d.ts",
           exports: {
             ".": {
+              types: "./dist/index.d.ts",
               import: "./dist/index.mjs",
               require: "./dist/index.js",
-              types: "./dist/index.d.ts",
             },
           },
         },
@@ -883,9 +938,9 @@ describe("normalize-packages.mjs", () => {
           types: "./dist/index.d.ts",
           exports: {
             ".": {
+              types: "./dist/index.d.ts",
               import: "./dist/index.mjs",
               require: "./dist/index.js",
-              types: "./dist/index.d.ts",
             },
           },
         },
@@ -921,9 +976,9 @@ describe("normalize-packages.mjs", () => {
         types: "./dist/index.d.ts",
         exports: {
           ".": {
+            types: "./dist/index.d.ts",
             import: "./dist/index.mjs",
             require: "./dist/index.js",
-            types: "./dist/index.d.ts",
           },
         },
       },
@@ -947,9 +1002,9 @@ describe("normalize-packages.mjs", () => {
         types: "./dist/index.d.ts",
         exports: {
           ".": {
+            types: "./dist/index.d.ts",
             import: "./dist/index.mjs",
             require: "./dist/index.js",
-            types: "./dist/index.d.ts",
           },
         },
       },
@@ -970,9 +1025,9 @@ describe("normalize-packages.mjs", () => {
         types: "./dist/index.d.ts",
         exports: {
           ".": {
+            types: "./dist/index.d.ts",
             import: "./dist/index.mjs",
             require: "./dist/index.js",
-            types: "./dist/index.d.ts",
           },
         },
       },
@@ -993,9 +1048,9 @@ describe("normalize-packages.mjs", () => {
         types: "./dist/index.d.ts",
         exports: {
           ".": {
+            types: "./dist/index.d.ts",
             import: "./dist/index.mjs",
             require: "./dist/index.js",
-            types: "./dist/index.d.ts",
           },
         },
       },
@@ -1019,9 +1074,9 @@ describe("normalize-packages.mjs", () => {
         types: "./dist/index.d.ts",
         exports: {
           ".": {
+            types: "./dist/index.d.ts",
             import: "./dist/index.mjs",
             require: "./dist/index.js",
-            types: "./dist/index.d.ts",
           },
         },
       },
@@ -1546,9 +1601,9 @@ describe("normalize-packages.mjs", () => {
         types: "./dist/index.d.ts",
         exports: {
           ".": {
+            types: "./dist/index.d.ts",
             import: "./dist/index.mjs",
             require: "./dist/index.js",
-            types: "./dist/index.d.ts",
           },
         },
       },
@@ -1706,9 +1761,9 @@ function publishablePackage(
       types: "./dist/index.d.ts",
       exports: {
         ".": {
+          types: "./dist/index.d.ts",
           import: "./dist/index.mjs",
           require: "./dist/index.js",
-          types: "./dist/index.d.ts",
         },
       },
     },

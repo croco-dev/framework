@@ -10,16 +10,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/access-core/src/index.ts",
@@ -246,16 +246,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/access-drizzle/src/index.ts",
@@ -286,16 +286,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/admin-core/src/index.ts",
@@ -936,16 +936,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/admin-generated/src/index.ts",
@@ -1076,16 +1076,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/admin-ops/src/index.ts",
@@ -1471,16 +1471,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/admin-react/src/index.ts",
@@ -2750,16 +2750,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/analytics-core/src/index.ts",
@@ -2784,16 +2784,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/analytics-posthog/src/index.ts",
@@ -2881,12 +2881,12 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["import"],
-              "target": "./dist/index.js"
-            },
-            {
               "conditions": ["types"],
               "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.js"
             }
           ],
           "sourceEntrypoint": "packages/architecture-policy/src/index.ts",
@@ -3032,16 +3032,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/audit-core/src/index.ts",
@@ -3217,16 +3217,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/audit-drizzle/src/index.ts",
@@ -3299,16 +3299,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/auth-better-auth/src/index.ts",
@@ -3528,16 +3528,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/auth-clerk/src/index.ts",
@@ -3847,16 +3847,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/auth-core/src/index.ts",
@@ -4290,16 +4290,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/auth-drizzle/src/index.ts",
@@ -4390,16 +4390,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/batch-core/src/index.ts",
@@ -4538,16 +4538,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/batch-qstash/src/index.ts",
@@ -4633,16 +4633,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/billing-core/src/index.ts",
@@ -5657,16 +5657,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/billing-polar/src/index.ts",
@@ -5909,16 +5909,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/cache-core/src/index.ts",
@@ -6316,12 +6316,12 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["import"],
-              "target": "./dist/index.js"
-            },
-            {
               "conditions": ["types"],
               "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.js"
             }
           ],
           "sourceEntrypoint": "packages/cli/src/index.ts",
@@ -7042,12 +7042,12 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["import"],
-              "target": "./dist/jobs.js"
-            },
-            {
               "conditions": ["types"],
               "target": "./dist/jobs.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/jobs.js"
             }
           ],
           "sourceEntrypoint": "packages/cli/src/jobs.ts",
@@ -7166,12 +7166,12 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["import"],
-              "target": "./dist/ops.js"
-            },
-            {
               "conditions": ["types"],
               "target": "./dist/ops.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/ops.js"
             }
           ],
           "sourceEntrypoint": "packages/cli/src/ops.ts",
@@ -7245,16 +7245,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/credits-core/src/index.ts",
@@ -7669,16 +7669,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/credits-drizzle/src/index.ts",
@@ -7800,16 +7800,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/customer-health-core/src/index.ts",
@@ -8023,16 +8023,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/customer-health-drizzle/src/index.ts",
@@ -8482,16 +8482,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/engagement-core/src/index.ts",
@@ -8660,16 +8660,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/entitlements-core/src/index.ts",
@@ -9105,16 +9105,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/entitlements-drizzle/src/index.ts",
@@ -9192,16 +9192,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/esbuild-plugin/src/index.ts",
@@ -9273,16 +9273,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/events-core/src/index.ts",
@@ -9544,16 +9544,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/events-inmemory/src/index.ts",
@@ -9641,16 +9641,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/events-tx/src/index.ts",
@@ -9978,16 +9978,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/execution-core/src/index.ts",
@@ -10376,16 +10376,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/execution-drizzle/src/index.ts",
@@ -10427,16 +10427,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/features-core/src/index.ts",
@@ -10461,16 +10461,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/features-posthog/src/index.ts",
@@ -10495,16 +10495,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/framework-config/src/index.ts",
@@ -10738,16 +10738,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/framework-context/src/index.ts",
@@ -12048,16 +12048,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/framework-logger/src/index.ts",
@@ -12105,16 +12105,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/framework-module/src/index.ts",
@@ -12350,16 +12350,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/framework-preset/src/index.ts",
@@ -12405,16 +12405,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/framework-routes/src/index.ts",
@@ -12790,16 +12790,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/worker.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/worker.js"
             },
             {
               "conditions": ["require"],
               "target": "./dist/worker.cjs"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/worker.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/frontend-cloudflare/src/index.ts",
@@ -12865,16 +12865,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/frontend-problems/src/index.ts",
@@ -13152,16 +13152,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/frontend-react/src/index.ts",
@@ -13612,16 +13612,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/frontend-vite/src/index.ts",
@@ -13680,16 +13680,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/gid-core/src/index.ts",
@@ -13749,16 +13749,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/governance-core/src/index.ts",
@@ -14021,16 +14021,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/health-core/src/index.ts",
@@ -14135,16 +14135,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/idempotency-core/src/index.ts",
@@ -14468,16 +14468,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/impersonation-core/src/index.ts",
@@ -14701,16 +14701,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/integrations-posthog/src/index.ts",
@@ -14765,16 +14765,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/invitation-core/src/index.ts",
@@ -15075,16 +15075,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/invitation-drizzle/src/index.ts",
@@ -15228,16 +15228,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/lifecycle-core/src/index.ts",
@@ -16080,16 +16080,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.js"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.cjs"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/llm-core/src/index.ts",
@@ -16449,16 +16449,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.js"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.cjs"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/llm-metering/src/index.ts",
@@ -16718,16 +16718,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.js"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.cjs"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/llm-openai/src/index.ts",
@@ -16873,16 +16873,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/membership-core/src/index.ts",
@@ -17179,16 +17179,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/membership-drizzle/src/index.ts",
@@ -17266,16 +17266,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/meta-vite/src/index.ts",
@@ -17840,16 +17840,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/libs/isr/adapters/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/libs/isr/adapters/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/libs/isr/adapters/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/libs/isr/adapters/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/meta-vite/src/libs/isr/adapters/index.ts",
@@ -17880,16 +17880,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/metering-core/src/index.ts",
@@ -18339,16 +18339,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/metering-drizzle/src/index.ts",
@@ -18466,16 +18466,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/metering-upstash/src/index.ts",
@@ -18536,16 +18536,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/metrics-billing/src/index.ts",
@@ -18598,16 +18598,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/metrics-core/src/index.ts",
@@ -18863,16 +18863,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/migration-runner/src/index.ts",
@@ -19008,16 +19008,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/cli.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/cli.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/cli.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/cli.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/migration-runner/src/cli.ts",
@@ -19091,16 +19091,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/notifications-core/src/index.ts",
@@ -19492,16 +19492,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/notifications-react-email/src/index.ts",
@@ -19549,16 +19549,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/notifications-resend/src/index.ts",
@@ -19651,16 +19651,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/onboarding-core/src/index.ts",
@@ -19810,16 +19810,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/onboarding-drizzle/src/index.ts",
@@ -19896,16 +19896,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/openapi-spec/src/index.ts",
@@ -19958,16 +19958,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/outbox-core/src/index.ts",
@@ -20202,16 +20202,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/pagination-core/src/index.ts",
@@ -20429,16 +20429,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/presentation-preset/src/index.ts",
@@ -20677,12 +20677,12 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["import"],
-              "target": "./dist/index.mjs"
-            },
-            {
               "conditions": ["types"],
               "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.mjs"
             }
           ],
           "sourceEntrypoint": "packages/preset-cloudflare/src/index.ts",
@@ -20750,12 +20750,12 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["import"],
-              "target": "./dist/fetch.mjs"
-            },
-            {
               "conditions": ["types"],
               "target": "./dist/fetch.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/fetch.mjs"
             }
           ],
           "sourceEntrypoint": "packages/preset-cloudflare/src/fetch.ts",
@@ -20829,16 +20829,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/preset-lambda/src/index.ts",
@@ -20899,16 +20899,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/handler.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/handler.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/handler.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/handler.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/preset-lambda/src/handler.ts",
@@ -20954,16 +20954,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/handler.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/handler.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/handler.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/handler.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/preset-lambda/src/handler.ts",
@@ -21015,16 +21015,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/preset-node/src/index.ts",
@@ -21088,16 +21088,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/entry.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/entry.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/entry.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/entry.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/preset-node/src/entry.ts",
@@ -21557,16 +21557,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/protocol-codegen/src/index.ts",
@@ -21619,16 +21619,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/protocols-core/src/index.ts",
@@ -22389,16 +22389,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/protocols-desktop/src/index.ts",
@@ -23094,16 +23094,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.js"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.cjs"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/protocols-graphql/src/index.ts",
@@ -23592,16 +23592,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/protocols-rest/src/index.ts",
@@ -24409,16 +24409,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.js"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.cjs"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/protocols-trpc/src/index.ts",
@@ -24461,16 +24461,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/ratelimit-core/src/index.ts",
@@ -24828,16 +24828,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/ratelimit-upstash/src/index.ts",
@@ -24898,16 +24898,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/repository-core/src/index.ts",
@@ -25045,16 +25045,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/retry-core/src/index.ts",
@@ -25507,12 +25507,12 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["import"],
-              "target": "./dist/index.js"
-            },
-            {
               "conditions": ["types"],
               "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.js"
             }
           ],
           "sourceEntrypoint": "packages/search-core/src/index.ts",
@@ -25856,12 +25856,12 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["import"],
-              "target": "./dist/ko/index.js"
-            },
-            {
               "conditions": ["types"],
               "target": "./dist/ko/index.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/ko/index.js"
             }
           ],
           "sourceEntrypoint": "packages/search-core/src/ko/index.ts",
@@ -25928,12 +25928,12 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["import"],
-              "target": "./dist/index.js"
-            },
-            {
               "conditions": ["types"],
               "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.js"
             }
           ],
           "sourceEntrypoint": "packages/search-drizzle/src/index.ts",
@@ -26013,12 +26013,12 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["import"],
-              "target": "./dist/index.js"
-            },
-            {
               "conditions": ["types"],
               "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.js"
             }
           ],
           "sourceEntrypoint": "packages/search-meilisearch/src/index.ts",
@@ -26134,16 +26134,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/storage-cloudflare/src/index.ts",
@@ -26713,16 +26713,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/tasks-core/src/index.ts",
@@ -26851,16 +26851,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/tasks-qstash/src/index.ts",
@@ -27056,16 +27056,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/telemetry-sdk-node/src/index.ts",
@@ -27220,16 +27220,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/tenant-core/src/index.ts",
@@ -27709,16 +27709,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/tenant-model.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/tenant-model.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/tenant-model.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/tenant-model.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/tenant-core/src/tenant-model.ts",
@@ -27893,16 +27893,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/testing/src/index.ts",
@@ -29943,16 +29943,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/drizzle.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/drizzle.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/drizzle.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/drizzle.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/testing/src/drizzle.ts",
@@ -30018,16 +30018,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/executable-assurance.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/executable-assurance.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/executable-assurance.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/executable-assurance.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/testing/src/executable-assurance.ts",
@@ -30229,16 +30229,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/notifications.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/notifications.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/notifications.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/notifications.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/testing/src/notifications.ts",
@@ -30396,16 +30396,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/testing-resources/src/index.ts",
@@ -30497,16 +30497,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/transports-cloudflare-workers/src/index.ts",
@@ -30547,16 +30547,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.js"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.cjs"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/transports-graphql/src/index.ts",
@@ -30645,16 +30645,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/transports-http/src/index.ts",
@@ -31300,16 +31300,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/triggers-core/src/index.ts",
@@ -31455,16 +31455,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/triggers-qstash/src/index.ts",
@@ -31562,16 +31562,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/tx-core/src/index.ts",
@@ -31754,16 +31754,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/tx-drizzle/src/index.ts",
@@ -31923,16 +31923,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/ui-astryx/src/index.ts",
@@ -32038,16 +32038,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/webhooks-core/src/index.ts",
@@ -32612,16 +32612,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/workflow-core/src/index.ts",

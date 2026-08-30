@@ -17,24 +17,24 @@
     "types": "./dist/index.d.ts",
     "exports": {
       ".": {
+        "types": "./dist/index.d.ts",
         "import": "./dist/index.mjs",
-        "require": "./dist/index.js",
-        "types": "./dist/index.d.ts"
+        "require": "./dist/index.js"
       },
       "./drizzle": {
+        "types": "./dist/drizzle.d.ts",
         "import": "./dist/drizzle.mjs",
-        "require": "./dist/drizzle.js",
-        "types": "./dist/drizzle.d.ts"
+        "require": "./dist/drizzle.js"
       },
       "./notifications": {
+        "types": "./dist/notifications.d.ts",
         "import": "./dist/notifications.mjs",
-        "require": "./dist/notifications.js",
-        "types": "./dist/notifications.d.ts"
+        "require": "./dist/notifications.js"
       },
       "./executable-assurance": {
+        "types": "./dist/executable-assurance.d.ts",
         "import": "./dist/executable-assurance.mjs",
-        "require": "./dist/executable-assurance.js",
-        "types": "./dist/executable-assurance.d.ts"
+        "require": "./dist/executable-assurance.js"
       },
       "./playwright-reporter": {
         "types": "./dist/playwright-reporter.d.ts",

@@ -48,20 +48,40 @@ describe("package-entrypoint-smoke.mts", () => {
     expect(result.stdout).toContain("summary checked=1 exempt=0 skippedPrivate=1");
   });
 
-  it("validates CSS exports as static assets without loading them in Node", () => {
+  it("rejects packed exports whose types condition is not first", () => {
     const root = createTempRoot();
-    writeImportablePackage(root, "styled", {
+    writeImportablePackage(root, "misordered", {
       exportsValue: {
         ".": {
           import: "./dist/index.mjs",
           require: "./dist/index.js",
           types: "./dist/index.d.ts",
         },
+      },
+    });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      '@croco/misordered: packed exports["."] conditions must be ordered types, import, require',
+    );
+  });
+
+  it("validates CSS exports as static assets without loading them in Node", () => {
+    const root = createTempRoot();
+    writeImportablePackage(root, "styled", {
+      exportsValue: {
+        ".": {
+          types: "./dist/index.d.ts",
+          import: "./dist/index.mjs",
+          require: "./dist/index.js",
+        },
         "./styles.css": "./dist/styles.css",
         "./conditional-styles": {
+          types: "./dist/index.d.ts",
           import: "./dist/styles.css",
           require: "./dist/styles.css",
-          types: "./dist/index.d.ts",
         },
       },
     });
@@ -412,17 +432,17 @@ describe("package-entrypoint-smoke.mts", () => {
   it("matches packed tarballs by manifest name when package names share a prefix", () => {
     const root = createTempRoot();
     const prefixedExport = {
+      types: "./dist/index.d.ts",
       import: "./dist/index.mjs",
       require: "./dist/index.js",
-      types: "./dist/index.d.ts",
     };
     writeImportablePackage(root, "aaa-prefix-extra", {
       exportsValue: {
         ".": prefixedExport,
         "./extra": {
+          types: "./dist/extra.d.ts",
           import: "./dist/extra.mjs",
           require: "./dist/extra.js",
-          types: "./dist/extra.d.ts",
         },
       },
       packageName: "@croco/prefix-extra",
@@ -610,9 +630,9 @@ function writeImportablePackage(
             types: options.typesTarget ?? "./dist/index.d.ts",
             exports: options.exportsValue ?? {
               ".": {
+                types: options.typesTarget ?? "./dist/index.d.ts",
                 import: options.importTarget ?? "./dist/index.mjs",
                 require: "./dist/index.js",
-                types: options.typesTarget ?? "./dist/index.d.ts",
               },
             },
           } satisfies Record<string, unknown>),

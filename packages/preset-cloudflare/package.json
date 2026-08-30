@@ -17,12 +17,12 @@
     "types": "./dist/index.d.ts",
     "exports": {
       ".": {
-        "import": "./dist/index.mjs",
-        "types": "./dist/index.d.ts"
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.mjs"
       },
       "./fetch": {
-        "import": "./dist/fetch.mjs",
-        "types": "./dist/fetch.d.ts"
+        "types": "./dist/fetch.d.ts",
+        "import": "./dist/fetch.mjs"
       }
     },
     "access": "public"

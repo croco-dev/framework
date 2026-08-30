@@ -37,14 +37,14 @@
     "types": "./dist/index.d.ts",
     "exports": {
       ".": {
+        "types": "./dist/index.d.ts",
         "import": "./dist/index.mjs",
-        "require": "./dist/index.js",
-        "types": "./dist/index.d.ts"
+        "require": "./dist/index.js"
       },
       "./tenant-model": {
+        "types": "./dist/tenant-model.d.ts",
         "import": "./dist/tenant-model.mjs",
-        "require": "./dist/tenant-model.js",
-        "types": "./dist/tenant-model.d.ts"
+        "require": "./dist/tenant-model.js"
       }
     },
     "access": "public"

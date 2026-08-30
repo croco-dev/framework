@@ -16,6 +16,7 @@ import {
   DIRECT_DIST_ENTRYPOINT_PACKAGES,
   ENTRYPOINT_EXEMPTIONS,
   effectivePublishManifest,
+  exportConditionOrderDiagnostics,
   fieldMatchesPath,
   findPackageJsonFiles,
   packageHasSourceEntrypoint,
@@ -197,9 +198,18 @@ function main(): void {
       });
       const plan = planPackageSmoke(packedPackage);
       const peerMetadataDiagnostics = packedPeerMetadataDiagnostics(packedPackage);
+      const packedExportOrderDiagnostics = exportConditionOrderDiagnostics(
+        packedPackage.packedManifest.exports,
+        `${packedPackage.packageName}: packed exports`,
+      );
       diagnostics.push(...peerMetadataDiagnostics);
+      diagnostics.push(...packedExportOrderDiagnostics);
       diagnostics.push(...plan.diagnostics);
-      if (peerMetadataDiagnostics.length === 0 && plan.diagnostics.length === 0) {
+      if (
+        peerMetadataDiagnostics.length === 0 &&
+        packedExportOrderDiagnostics.length === 0 &&
+        plan.diagnostics.length === 0
+      ) {
         runPackageSmoke(consumerRoot, packedPackage, graphTarballs, packageManager, plan);
       }
       packageResults.push({
