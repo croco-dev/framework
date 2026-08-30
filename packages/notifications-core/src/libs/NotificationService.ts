@@ -33,7 +33,12 @@ import {
   NotificationProviderNotRegisteredProblem,
   NotificationProviderIdempotencyUnsupportedProblem,
 } from "./problems/NotificationProblems";
-import type { NotificationChannel, NotificationPayload, NotificationProvider } from "./types";
+import type {
+  NotificationChannel,
+  NotificationPayload,
+  NotificationProvider,
+  NotificationProviderCapabilities,
+} from "./types";
 
 export type NotificationSendContractOptions = {
   readonly providerName?: string;
@@ -60,10 +65,31 @@ export type NotificationDispatchResult = Readonly<{
   executionId: string;
 }>;
 
-type EvaluatedNotificationSendContract = {
-  readonly idempotencyKey?: string;
-  readonly preferenceDecision?: NotificationPreferenceDecision;
-};
+/** Inputs evaluated before a notification payload is rendered. */
+export type NotificationDispatchPreparationOptions = Readonly<{
+  providerName?: string;
+  preferenceContext: NotificationPreferenceContext;
+  requireProviderIdempotency?: true;
+}>;
+
+/** Delivery inputs supplied after notification rendering completes. */
+export type NotificationPreparedDispatchOptions = Readonly<{
+  idempotencyKey: string;
+  outbox?: NotificationOutboxReference;
+}>;
+
+/** A dispatch function bound to the provider and preference decision captured during preparation. */
+export type NotificationDispatchPreparation = Readonly<{
+  dispatch(
+    payload: NotificationPayload,
+    options: NotificationPreparedDispatchOptions,
+  ): Promise<NotificationDispatchResult>;
+}>;
+
+type PreparedProvider = Readonly<{
+  providerName: string;
+  providerCapabilities: NotificationProviderCapabilities;
+}>;
 
 @Component()
 export class NotificationService {
@@ -142,8 +168,95 @@ export class NotificationService {
     options: NotificationSendServiceOptions,
   ): Promise<NotificationDispatchResult> {
     const normalizedOptions = normalizeNotificationSendOptions(options);
-    const providerName = normalizedOptions?.providerName;
-    const outbox = normalizedOptions?.outbox;
+    if (isUnsafeNotificationSendOptions(normalizedOptions)) {
+      const provider = this.prepareProvider(
+        channel,
+        normalizedOptions.providerName,
+        normalizedOptions.requireProviderIdempotency,
+      );
+      if (
+        normalizedOptions.idempotencyKey === undefined &&
+        !normalizedOptions.unsafeAllowMissingIdempotencyKey
+      ) {
+        throw new NotificationIdempotencyKeyRequiredProblem(channel);
+      }
+      assertOutboxIdempotency(channel, normalizedOptions.idempotencyKey, normalizedOptions.outbox);
+      return this.executeDispatch(
+        channel,
+        provider,
+        payload,
+        normalizedOptions.idempotencyKey,
+        normalizedOptions.outbox,
+      );
+    }
+
+    if (normalizedOptions?.preferenceContext === undefined) {
+      throw new NotificationPreferenceContextRequiredProblem(channel);
+    }
+    if (normalizedOptions.idempotencyKey === undefined) {
+      throw new NotificationIdempotencyKeyRequiredProblem(channel);
+    }
+
+    const preparation = this.prepareDispatch(channel, {
+      ...(normalizedOptions.providerName === undefined
+        ? {}
+        : { providerName: normalizedOptions.providerName }),
+      preferenceContext: normalizedOptions.preferenceContext,
+      ...(normalizedOptions.requireProviderIdempotency === undefined
+        ? {}
+        : { requireProviderIdempotency: normalizedOptions.requireProviderIdempotency }),
+    });
+    return preparation.dispatch(payload, {
+      idempotencyKey: normalizedOptions.idempotencyKey,
+      ...(normalizedOptions.outbox === undefined ? {} : { outbox: normalizedOptions.outbox }),
+    });
+  }
+
+  /** Evaluates provider availability and notification preference before payload rendering. */
+  prepareDispatch(
+    channel: NotificationChannel,
+    options: NotificationDispatchPreparationOptions,
+  ): NotificationDispatchPreparation {
+    if (options.preferenceContext.channel !== channel) {
+      throw new NotificationPreferenceChannelMismatchProblem(
+        channel,
+        options.preferenceContext.channel,
+      );
+    }
+
+    const provider = this.prepareProvider(
+      channel,
+      options.providerName,
+      options.requireProviderIdempotency,
+    );
+    const preferenceDecision = this.preferences.evaluate(options.preferenceContext);
+    if (!preferenceDecision.allowed) {
+      throw new NotificationPreferenceDeniedProblem(preferenceDecision);
+    }
+
+    return Object.freeze({
+      dispatch: async (
+        payload: NotificationPayload,
+        dispatchOptions: NotificationPreparedDispatchOptions,
+      ) => {
+        assertOutboxIdempotency(channel, dispatchOptions.idempotencyKey, dispatchOptions.outbox);
+        return this.executeDispatch(
+          channel,
+          provider,
+          payload,
+          dispatchOptions.idempotencyKey,
+          dispatchOptions.outbox,
+          preferenceDecision,
+        );
+      },
+    });
+  }
+
+  private prepareProvider(
+    channel: NotificationChannel,
+    providerName: string | undefined,
+    requireProviderIdempotency: true | undefined,
+  ): PreparedProvider {
     const targetProviderName = providerName ?? this.registry.getDefaultProviderName(channel);
 
     if (targetProviderName === undefined) {
@@ -166,86 +279,45 @@ export class NotificationService {
       );
     }
 
-    const sendContract = this.evaluateSendContract(channel, normalizedOptions);
-    const template = getPayloadTemplateRef(payload);
     const providerCapabilities = this.registry.getProviderCapabilities(targetProviderName);
 
     if (providerCapabilities === undefined) {
       throw new NotificationProviderNotRegisteredProblem(targetProviderName);
     }
-    if (
-      normalizedOptions?.requireProviderIdempotency === true &&
-      !providerCapabilities.supportsIdempotencyKey
-    ) {
+    if (requireProviderIdempotency === true && !providerCapabilities.supportsIdempotencyKey) {
       throw new NotificationProviderIdempotencyUnsupportedProblem(targetProviderName, channel);
     }
 
+    return { providerName: targetProviderName, providerCapabilities };
+  }
+
+  private async executeDispatch(
+    channel: NotificationChannel,
+    provider: PreparedProvider,
+    payload: NotificationPayload,
+    idempotencyKey: string | undefined,
+    outbox: NotificationOutboxReference | undefined,
+    preferenceDecision?: NotificationPreferenceDecision,
+  ): Promise<NotificationDispatchResult> {
+    const template = getPayloadTemplateRef(payload);
+
     const dispatchRequest = createNotificationDispatchRequest({
-      providerName: targetProviderName,
+      providerName: provider.providerName,
       channel,
       payload,
-      providerCapabilities,
-      ...(sendContract.idempotencyKey === undefined
-        ? {}
-        : { idempotencyKey: sendContract.idempotencyKey }),
+      providerCapabilities: provider.providerCapabilities,
+      ...(idempotencyKey === undefined ? {} : { idempotencyKey }),
       ...(outbox === undefined ? {} : { outbox }),
-      ...(sendContract.preferenceDecision === undefined
-        ? {}
-        : { preferenceDecision: sendContract.preferenceDecision }),
+      ...(preferenceDecision === undefined ? {} : { preferenceDecision }),
       ...(template === undefined ? {} : { template }),
     });
 
     const execution = await this.taskRunner.executeTracked(
       "send-notification",
       toNotificationJobPayload(dispatchRequest),
-      sendContract.idempotencyKey === undefined
-        ? {}
-        : { idempotencyKey: sendContract.idempotencyKey },
+      idempotencyKey === undefined ? {} : { idempotencyKey },
     );
     return { executionId: execution.executionId };
-  }
-
-  private evaluateSendContract(
-    channel: NotificationChannel,
-    options: NormalizedNotificationSendServiceOptions | undefined,
-  ): EvaluatedNotificationSendContract {
-    if (isUnsafeNotificationSendOptions(options)) {
-      if (options.idempotencyKey === undefined && !options.unsafeAllowMissingIdempotencyKey) {
-        throw new NotificationIdempotencyKeyRequiredProblem(channel);
-      }
-
-      assertOutboxIdempotency(channel, options.idempotencyKey, options.outbox);
-
-      return options.idempotencyKey === undefined ? {} : { idempotencyKey: options.idempotencyKey };
-    }
-
-    if (options?.preferenceContext === undefined) {
-      throw new NotificationPreferenceContextRequiredProblem(channel);
-    }
-
-    if (options.preferenceContext.channel !== channel) {
-      throw new NotificationPreferenceChannelMismatchProblem(
-        channel,
-        options.preferenceContext.channel,
-      );
-    }
-
-    if (options.idempotencyKey === undefined) {
-      throw new NotificationIdempotencyKeyRequiredProblem(channel);
-    }
-
-    assertOutboxIdempotency(channel, options.idempotencyKey, options.outbox);
-
-    const decision = this.preferences.evaluate(options.preferenceContext);
-
-    if (!decision.allowed) {
-      throw new NotificationPreferenceDeniedProblem(decision);
-    }
-
-    return {
-      idempotencyKey: options.idempotencyKey,
-      preferenceDecision: decision,
-    };
   }
 }
 

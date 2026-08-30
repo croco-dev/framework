@@ -53,6 +53,28 @@ Dispatches through the same task path as send() while retaining the execution id
 
 ---
 
+### prepareDispatch()
+
+> **prepareDispatch**(`channel`, `options`): [`NotificationDispatchPreparation`](/api/notifications-core/src/type-aliases/notificationdispatchpreparation/)
+
+Evaluates provider availability and notification preference before payload rendering.
+
+#### Parameters
+
+##### channel
+
+[`NotificationChannel`](/api/notifications-core/src/enumerations/notificationchannel/)
+
+##### options
+
+[`NotificationDispatchPreparationOptions`](/api/notifications-core/src/type-aliases/notificationdispatchpreparationoptions/)
+
+#### Returns
+
+[`NotificationDispatchPreparation`](/api/notifications-core/src/type-aliases/notificationdispatchpreparation/)
+
+---
+
 ### registerPreferenceRule()
 
 > **registerPreferenceRule**(`rule`): `void`

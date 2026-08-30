@@ -271,7 +271,7 @@ function writeRuntimeConsumers(consumerRoot: string): void {
     "const resolver = new InMemoryMessageRendererResolver();",
     "resolver.register(message, new Renderer());",
     'const directory = new InMemoryRecipientDirectory([{ recipient: { tenantId: "tenant-1", userId: "user-1" }, email: { id: "email-1", address: "user@example.com" }, push: [] }]);',
-    'const dispatcher = { dispatch: async () => ({ executionId: "execution-1" }) };',
+    'const dispatcher = { prepareDispatch: () => ({ dispatch: async () => ({ executionId: "execution-1" }) }) };',
     "const engagement = new EngagementService(directory, new RegistryEngagementMessageRenderer(registry, resolver), dispatcher);",
     'engagement.send(message, { recipient: { tenantId: "tenant-1", userId: "user-1" }, data: { name: "Ada" }, key: "message-1" }).then((result) => { if (result.status !== "queued" || result.executionIds[0] !== "execution-1") throw new Error("packed engagement send failed"); });',
   ];

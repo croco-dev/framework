@@ -4,7 +4,11 @@ import {
   NotificationPreferenceDeniedProblem,
   NotificationService,
   SendNotificationTask,
+  type NotificationDispatchPreparation,
+  type NotificationDispatchPreparationOptions,
+  type NotificationPayload,
   type NotificationProvider,
+  type NotificationSendContractOptions,
 } from "@croco/notifications-core";
 import { Container } from "@croco/framework-context";
 import { TaskRegistry, TaskRunner, type TaskMetadata } from "@croco/tasks-core";
@@ -19,6 +23,7 @@ import {
   EngagementSuppressionEvaluationProblem,
   InMemoryMessageRendererResolver,
   InMemoryRecipientDirectory,
+  MessageDataInvalidProblem,
   MessageRendererRegistry,
   RecipientDirectoryLookupProblem,
   RecipientDirectoryScopeMismatchProblem,
@@ -80,18 +85,47 @@ function createRenderer(renderer: MessageRenderer<typeof TrialEnding> = new Tria
   return new RegistryEngagementMessageRenderer(registry, resolver);
 }
 
+function createDispatchPreparation(
+  channel: NotificationChannel,
+  options: NotificationDispatchPreparationOptions,
+  dispatch: (
+    channel: NotificationChannel,
+    payload: NotificationPayload,
+    options: NotificationSendContractOptions,
+  ) => Promise<{ executionId: string }>,
+): NotificationDispatchPreparation {
+  return {
+    dispatch: async (payload, dispatchOptions) =>
+      dispatch(channel, payload, {
+        idempotencyKey: dispatchOptions.idempotencyKey,
+        preferenceContext: options.preferenceContext,
+      }),
+  };
+}
+
 function createDispatcher() {
   let sequence = 0;
   const executionIds = new Map<string, string>();
-  const dispatch = vi.fn<EngagementNotificationDispatcher["dispatch"]>(
-    async (_channel, _payload, options) => {
+  const dispatch = vi.fn(
+    async (
+      _channel: NotificationChannel,
+      _payload: NotificationPayload,
+      options: NotificationSendContractOptions,
+    ) => {
       const executionId =
         executionIds.get(options.idempotencyKey) ?? `execution-${String(++sequence)}`;
       executionIds.set(options.idempotencyKey, executionId);
       return { executionId };
     },
   );
-  return { dispatch, service: { dispatch } satisfies EngagementNotificationDispatcher };
+  const prepareDispatch = vi.fn<EngagementNotificationDispatcher["prepareDispatch"]>(
+    (channel, options) => createDispatchPreparation(channel, options, dispatch),
+  );
+  return {
+    dispatch,
+    prepareDispatch,
+    service: { prepareDispatch } satisfies EngagementNotificationDispatcher,
+  };
 }
 
 type TestExecution = {
@@ -292,6 +326,28 @@ describe("EngagementService", () => {
     expect(dispatcher.dispatch).not.toHaveBeenCalled();
   });
 
+  it.each([
+    { label: "missing data", data: undefined },
+    { label: "wrong field type", data: { tenantName: 1, secret: "payload-secret" } },
+    {
+      label: "extra field",
+      data: { tenantName: "Croco", secret: "payload-secret", endpoint: "raw@example.com" },
+    },
+  ])("preserves message validation Problems for runtime-invalid data: $label", async ({ data }) => {
+    const dispatcher = createDispatcher();
+    const engagement = new EngagementService(directory, createRenderer(), dispatcher.service);
+    const command = {
+      recipient: recipient.recipient,
+      data,
+      key: "subscription-1",
+    } as unknown as EngagementSendCommand<typeof TrialEnding>;
+
+    await expect(engagement.send(TrialEnding, command)).rejects.toBeInstanceOf(
+      MessageDataInvalidProblem,
+    );
+    expect(dispatcher.dispatch).not.toHaveBeenCalled();
+  });
+
   it("throws a stable Problem when the recipient is absent", async () => {
     const dispatcher = createDispatcher();
     const engagement = new EngagementService(directory, createRenderer(), dispatcher.service);
@@ -378,7 +434,7 @@ describe("EngagementService", () => {
 
   it("continues to the next reachable channel after preference denial", async () => {
     const dispatcher = createDispatcher();
-    dispatcher.dispatch.mockImplementation(async (channel) => {
+    dispatcher.prepareDispatch.mockImplementation((channel, options) => {
       if (channel === NotificationChannel.EMAIL) {
         throw new NotificationPreferenceDeniedProblem({
           context: {
@@ -391,9 +447,18 @@ describe("EngagementService", () => {
           evaluationKey: "preference-1",
         });
       }
-      return { executionId: "push-execution" };
+      return createDispatchPreparation(channel, options, dispatcher.dispatch);
     });
-    const engagement = new EngagementService(directory, createRenderer(), dispatcher.service);
+    dispatcher.dispatch.mockResolvedValue({ executionId: "push-execution" });
+    const renderer = createRenderer();
+    const renderSpy = vi.spyOn(renderer, "render");
+    renderSpy.mockImplementation(async (_message, channel) => {
+      if (channel === "email") {
+        throw new Error("preference-denied email must not render");
+      }
+      return { title: "Trial ending", body: "Croco", deepLink: "/billing" } as never;
+    });
+    const engagement = new EngagementService(directory, renderer, dispatcher.service);
 
     await expect(
       engagement.send(TrialEnding, {
@@ -413,24 +478,68 @@ describe("EngagementService", () => {
         },
       ],
     });
+    expect(renderSpy).toHaveBeenCalledTimes(1);
+    expect(renderSpy).toHaveBeenCalledWith(
+      TrialEnding,
+      "push",
+      expect.objectContaining({ tenantName: "Croco" }),
+    );
   });
 
-  it("keeps a single queued channel result when preferences change between endpoints", async () => {
+  it("preflights preference denial before rendering any all-reachable channel", async () => {
+    const dispatcher = createDispatcher();
+    dispatcher.prepareDispatch.mockImplementation((channel, options) => {
+      if (channel === NotificationChannel.EMAIL) {
+        throw new NotificationPreferenceDeniedProblem({
+          context: options.preferenceContext,
+          reason: "user-opted-out",
+          evaluationKey: "preference-all-reachable",
+        });
+      }
+      return createDispatchPreparation(channel, options, dispatcher.dispatch);
+    });
+    const renderer = createRenderer();
+    const renderSpy = vi.spyOn(renderer, "render");
+    renderSpy.mockImplementation(async (_message, channel) => {
+      if (channel === "email") {
+        throw new Error("preference-denied email must not render");
+      }
+      return { title: "Trial ending", body: "Croco", deepLink: "/billing" } as never;
+    });
+    const engagement = new EngagementService(directory, renderer, dispatcher.service);
+
+    await expect(
+      engagement.send(TrialEnding, {
+        recipient: recipient.recipient,
+        data: { tenantName: "Croco", secret: "payload-secret" },
+        key: "subscription-1",
+        policy: "all-reachable",
+      }),
+    ).resolves.toEqual({
+      status: "queued",
+      executionIds: ["execution-1", "execution-2"],
+      channelResults: [
+        { channel: "email", status: "suppressed", reason: "preference" },
+        {
+          channel: "push",
+          status: "queued",
+          executionIds: ["execution-1", "execution-2"],
+        },
+      ],
+    });
+    expect(renderSpy).toHaveBeenCalledTimes(1);
+    expect(renderSpy).toHaveBeenCalledWith(
+      TrialEnding,
+      "push",
+      expect.objectContaining({ tenantName: "Croco" }),
+    );
+  });
+
+  it("uses one prepared preference decision for every endpoint in a channel", async () => {
     const dispatcher = createDispatcher();
     dispatcher.dispatch
-      .mockResolvedValueOnce({ executionId: "push-execution" })
-      .mockRejectedValueOnce(
-        new NotificationPreferenceDeniedProblem({
-          context: {
-            tenantId: "tenant-1",
-            userId: "user-1",
-            channel: NotificationChannel.PUSH,
-            topic: "billing",
-          },
-          reason: "user-opted-out",
-          evaluationKey: "preference-2",
-        }),
-      );
+      .mockResolvedValueOnce({ executionId: "push-phone-execution" })
+      .mockResolvedValueOnce({ executionId: "push-tablet-execution" });
     const pushOnlyDirectory = new InMemoryRecipientDirectory([
       { recipient: recipient.recipient, push: recipient.push },
     ]);
@@ -449,12 +558,18 @@ describe("EngagementService", () => {
       }),
     ).resolves.toEqual({
       status: "queued",
-      executionIds: ["push-execution"],
+      executionIds: ["push-phone-execution", "push-tablet-execution"],
       channelResults: [
         { channel: "email", status: "unavailable", reason: "no-endpoint" },
-        { channel: "push", status: "queued", executionIds: ["push-execution"] },
+        {
+          channel: "push",
+          status: "queued",
+          executionIds: ["push-phone-execution", "push-tablet-execution"],
+        },
       ],
     });
+    expect(dispatcher.prepareDispatch).toHaveBeenCalledTimes(1);
+    expect(dispatcher.dispatch).toHaveBeenCalledTimes(2);
   });
 
   it("returns suppression without rendering or provider failure", async () => {

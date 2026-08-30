@@ -573,6 +573,45 @@ describe("NotificationService", () => {
       expect(executeSpy).not.toHaveBeenCalled();
     });
 
+    it("should dispatch with the preference decision captured during preparation", async () => {
+      service.registerProvider(emailProvider, true);
+      const preferenceContext = createPreferenceContext(NotificationChannel.EMAIL, {
+        topic: "billing.prepared",
+      });
+      const preparation = service.prepareDispatch(NotificationChannel.EMAIL, {
+        preferenceContext,
+      });
+
+      service.registerPreferenceRule({
+        id: "deny-after-preparation",
+        tenantId: preferenceContext.tenantId,
+        userId: preferenceContext.userId,
+        channel: preferenceContext.channel,
+        topic: preferenceContext.topic,
+        enabled: false,
+      });
+
+      await preparation.dispatch(
+        { to: "test@example.com", content: "Prepared content" },
+        { idempotencyKey: "prepared-key" },
+      );
+
+      expect(executeSpy).toHaveBeenCalledWith(
+        "send-notification",
+        expect.objectContaining({
+          idempotencyKey: "prepared-key",
+          dispatchContext: expect.objectContaining({
+            preferenceDecision: expect.objectContaining({
+              allowed: true,
+              reason: "default-allow",
+              evaluationKey: expect.any(String),
+            }),
+          }),
+        }),
+        { idempotencyKey: "prepared-key" },
+      );
+    });
+
     it("should include allowed preference and outbox context in job payload", async () => {
       service.registerProvider(emailProvider, true);
       service.registerPreferenceRule({

@@ -7,9 +7,9 @@ title: "EngagementNotificationDispatcher"
 
 ## Methods
 
-### dispatch()
+### prepareDispatch()
 
-> **dispatch**(`channel`, `payload`, `options`): `Promise`\<`Readonly`\<\{ `executionId`: `string`; \}\>\>
+> **prepareDispatch**(`channel`, `options`): [`NotificationDispatchPreparation`](/api/notifications-core/src/type-aliases/notificationdispatchpreparation/)
 
 #### Parameters
 
@@ -17,14 +17,10 @@ title: "EngagementNotificationDispatcher"
 
 [`NotificationChannel`](/api/notifications-core/src/enumerations/notificationchannel/)
 
-##### payload
-
-[`NotificationPayload`](/api/notifications-core/src/interfaces/notificationpayload/)
-
 ##### options
 
-[`NotificationSendContractOptions`](/api/notifications-core/src/type-aliases/notificationsendcontractoptions/)
+[`NotificationDispatchPreparationOptions`](/api/notifications-core/src/type-aliases/notificationdispatchpreparationoptions/)
 
 #### Returns
 
-`Promise`\<`Readonly`\<\{ `executionId`: `string`; \}\>\>
+[`NotificationDispatchPreparation`](/api/notifications-core/src/type-aliases/notificationdispatchpreparation/)

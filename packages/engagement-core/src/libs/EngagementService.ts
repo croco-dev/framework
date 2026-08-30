@@ -1,12 +1,13 @@
 import {
   NotificationChannel,
   NotificationPreferenceDeniedProblem,
-  type NotificationDispatchResult,
+  type NotificationDispatchPreparation,
+  type NotificationDispatchPreparationOptions,
   type NotificationPayload,
-  type NotificationSendContractOptions,
 } from "@croco/notifications-core";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import {
+  MessageDataInvalidProblem,
   MessageRendererAlreadyRegisteredProblem,
   MessageRendererMissingProblem,
   type AnyMessage,
@@ -88,11 +89,10 @@ export type EngagementSendResult =
     }>;
 
 export interface EngagementNotificationDispatcher {
-  dispatch(
+  prepareDispatch(
     channel: NotificationChannel,
-    payload: NotificationPayload,
-    options: NotificationSendContractOptions,
-  ): Promise<NotificationDispatchResult>;
+    options: NotificationDispatchPreparationOptions,
+  ): NotificationDispatchPreparation;
 }
 
 export type EngagementSuppressionContext = Readonly<{
@@ -197,6 +197,7 @@ type PreparedEngagementChannel =
   | Readonly<{
       channel: MessageChannel;
       eligibleEndpoints: readonly ResolvedEndpoint[];
+      dispatchPreparation: NotificationDispatchPreparation;
       content: MessageContent<MessageChannel>;
     }>
   | Readonly<{
@@ -263,6 +264,7 @@ export class EngagementService {
           recipient,
           prepared.channel,
           prepared.eligibleEndpoints,
+          prepared.dispatchPreparation,
           prepared.content,
           channelResults,
           executionIds,
@@ -300,6 +302,17 @@ export class EngagementService {
         continue;
       }
 
+      const dispatchPreparation = this.prepareNotificationDispatch(
+        message,
+        command,
+        channel,
+        channelResults,
+      );
+      if (dispatchPreparation === undefined) {
+        channelResults.push({ channel, status: "suppressed", reason: "preference" });
+        continue;
+      }
+
       const content = await this.render(message, command, channel);
       await this.dispatchChannel(
         message,
@@ -307,6 +320,7 @@ export class EngagementService {
         recipient,
         channel,
         eligibleEndpoints,
+        dispatchPreparation,
         content,
         channelResults,
         executionIds,
@@ -344,13 +358,56 @@ export class EngagementService {
         continue;
       }
 
+      const dispatchPreparation = this.prepareNotificationDispatch(
+        message,
+        command,
+        channel,
+        preparedChannels.flatMap((prepared) => ("result" in prepared ? [prepared.result] : [])),
+      );
+      if (dispatchPreparation === undefined) {
+        preparedChannels.push({
+          result: { channel, status: "suppressed", reason: "preference" },
+        });
+        continue;
+      }
+
       preparedChannels.push({
         channel,
         eligibleEndpoints,
+        dispatchPreparation,
         content: await this.render(message, command, channel),
       });
     }
     return preparedChannels;
+  }
+
+  private prepareNotificationDispatch<TMessage extends AnyMessage>(
+    message: TMessage,
+    command: EngagementSendCommand<TMessage>,
+    channel: TMessage["channels"][number],
+    channelResults: readonly EngagementChannelResult[],
+  ): NotificationDispatchPreparation | undefined {
+    try {
+      return this.notifications.prepareDispatch(toNotificationChannel(channel), {
+        preferenceContext: {
+          tenantId: command.recipient.tenantId,
+          userId: command.recipient.userId,
+          channel: toNotificationChannel(channel),
+          topic: message.topic,
+        },
+      });
+    } catch (error) {
+      if (error instanceof NotificationPreferenceDeniedProblem) {
+        return undefined;
+      }
+      throw new EngagementDispatchFailedProblem(
+        message.id,
+        command.recipient,
+        channel,
+        channelResults,
+        normalizeError(error),
+      );
+    }
   }
 
   private async dispatchChannel(
@@ -359,6 +416,7 @@ export class EngagementService {
     recipient: ResolvedRecipient,
     channel: MessageChannel,
     eligibleEndpoints: readonly ResolvedEndpoint[],
+    dispatchPreparation: NotificationDispatchPreparation,
     content: MessageContent<MessageChannel>,
     channelResults: EngagementChannelResult[],
     executionIds: string[],
@@ -367,8 +425,7 @@ export class EngagementService {
 
     for (const endpoint of eligibleEndpoints) {
       try {
-        const result = await this.notifications.dispatch(
-          toNotificationChannel(channel),
+        const result = await dispatchPreparation.dispatch(
           toNotificationPayload(message, recipient, channel, endpoint, content),
           {
             idempotencyKey: createEngagementIdempotencyKey({
@@ -379,23 +436,11 @@ export class EngagementService {
               semanticKey: command.key,
               endpointId: endpoint.id,
             }),
-            preferenceContext: {
-              tenantId: command.recipient.tenantId,
-              userId: command.recipient.userId,
-              channel: toNotificationChannel(channel),
-              topic: message.topic,
-            },
           },
         );
         channelExecutionIds.push(result.executionId);
         executionIds.push(result.executionId);
       } catch (error) {
-        if (error instanceof NotificationPreferenceDeniedProblem) {
-          if (channelExecutionIds.length === 0) {
-            channelResults.push({ channel, status: "suppressed", reason: "preference" });
-          }
-          break;
-        }
         throw new EngagementDispatchFailedProblem(
           message.id,
           command.recipient,
@@ -475,6 +520,9 @@ export class EngagementService {
     try {
       return await this.renderer.render(message, channel, command.data);
     } catch (error) {
+      if (error instanceof MessageDataInvalidProblem) {
+        throw error;
+      }
       throw new EngagementRenderFailedProblem(
         message.id,
         command.recipient,
@@ -524,6 +572,7 @@ export class RecipientDirectoryScopeMismatchProblem extends Problem {
   }
 }
 
+/** Reports that an engagement send command is malformed at the runtime boundary. */
 export class EngagementCommandInvalidProblem extends Problem {
   constructor(detail: string) {
     super("engagement-core/send-command-invalid", ProblemCategory.ValidationError, detail, {
