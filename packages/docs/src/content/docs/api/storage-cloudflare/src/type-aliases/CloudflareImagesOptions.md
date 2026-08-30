@@ -59,6 +59,12 @@ Cloudflare API Token (Images API 권한 필요)
 
 ---
 
+### retryBackoff?
+
+> `optional` **retryBackoff?**: [`BackoffOptions`](/api/retry-core/src/interfaces/backoffoptions/)
+
+---
+
 ### signingKey?
 
 > `optional` **signingKey?**: `string`

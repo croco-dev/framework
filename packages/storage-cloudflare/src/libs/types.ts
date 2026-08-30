@@ -1,3 +1,5 @@
+import type { BackoffOptions } from "@croco/retry-core";
+
 /**
  * Cloudflare Images 제공자 설정입니다.
  */
@@ -37,6 +39,8 @@ export type CloudflareImagesOptions = {
    * Upload Intent TTL (초 단위, 기본값: 3600)
    */
   ttl?: number;
+
+  retryBackoff?: BackoffOptions;
 };
 
 /**

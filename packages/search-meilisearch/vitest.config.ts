@@ -10,7 +10,9 @@ export default defineConfig({
       "@croco/diagnostics-core": resolve(currentDir, "../diagnostics-core/src/index.ts"),
       "@croco/framework-context": resolve(currentDir, "../framework-context/src/index.ts"),
       "@croco/problems-core": resolve(currentDir, "../problems-core/src/index.ts"),
+      "@croco/retry-core": resolve(currentDir, "../retry-core/src/index.ts"),
       "@croco/search-core": resolve(currentDir, "../search-core/src/index.ts"),
+      "@croco/telemetry-api": resolve(currentDir, "../telemetry-api/src/index.ts"),
     },
   },
   test: {

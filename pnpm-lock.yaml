@@ -2194,6 +2194,9 @@ importers:
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
+      '@croco/retry-core':
+        specifier: workspace:*
+        version: link:../retry-core
       '@croco/telemetry-api':
         specifier: workspace:*
         version: link:../telemetry-api
@@ -3210,6 +3213,9 @@ importers:
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
+      '@croco/retry-core':
+        specifier: workspace:*
+        version: link:../retry-core
       '@croco/search-core':
         specifier: workspace:*
         version: link:../search-core
@@ -3244,6 +3250,9 @@ importers:
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
+      '@croco/retry-core':
+        specifier: workspace:*
+        version: link:../retry-core
       '@croco/storage-core':
         specifier: workspace:*
         version: link:../storage-core

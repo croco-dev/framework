@@ -78,6 +78,9 @@ const health = await diagnostics.getHealth();
 - `readinessCheck`를 넘기지 않으면 외부 API를 호출하지 않고 설정 존재 여부만 `healthy`로 보고합니다.
 - `readinessCheck`가 실패하면 `degraded` 상태와 정규화된 provider Problem 코드가 반환됩니다.
 - 진단 detail은 토큰, secret, authorization 값을 redaction 처리합니다.
+- 다운로드 시작, 메타데이터 조회, 삭제의 일시적 네트워크·429·5xx 실패는 최대 3회 시도합니다. 응답 스트림이
+  반환된 뒤에는 재생하지 않으며 caller abort는 다음 시도를 중단합니다. `Retry-After`는
+  `retryBackoff.maxDelay`까지 반영하며, 기본 backoff는 `@croco/retry-core` 정책을 사용합니다.
 
 ## 실패 코드
 

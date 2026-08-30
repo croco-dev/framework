@@ -2009,6 +2009,12 @@
       "owner": "@croco/llm-openai"
     },
     {
+      "path": "packages/llm-openai/src/tests/OpenAiSdkTransport.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/llm-openai"
+    },
+    {
       "path": "packages/membership-core/src/tests/MembershipManager.spec.ts",
       "lane": "fast",
       "qualifiers": [],

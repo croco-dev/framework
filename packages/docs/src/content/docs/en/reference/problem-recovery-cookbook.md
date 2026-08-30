@@ -3021,7 +3021,7 @@ Sources:
 
 Sources:
 
-- `packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts:94:13` (problem-factory)
+- `packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts:197:13` (problem-factory)
 
 <a id="cloudflare-images-null-result"></a>
 
@@ -3039,7 +3039,7 @@ Sources:
 
 Sources:
 
-- `packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts:348:15` (problem-factory)
+- `packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts:481:19` (problem-factory)
 
 <a id="cloudflare-images-upload-intent-null-result"></a>
 
@@ -3057,7 +3057,7 @@ Sources:
 
 Sources:
 
-- `packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts:438:15` (problem-factory)
+- `packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts:576:15` (problem-factory)
 
 <a id="conflicting-pagination"></a>
 
@@ -10797,7 +10797,7 @@ Sources:
 
 Sources:
 
-- `packages/storage-cloudflare/src/libs/CloudflareImagesDiagnosticsProvider.ts:37:5` (problem-constructor)
+- `packages/storage-cloudflare/src/libs/CloudflareImagesDiagnosticsProvider.ts:46:5` (problem-constructor)
 
 <a id="storage-cloudflare-retryable-upstream"></a>
 
@@ -10815,7 +10815,7 @@ Sources:
 
 Sources:
 
-- `packages/storage-cloudflare/src/libs/CloudflareImagesDiagnosticsProvider.ts:70:5` (problem-constructor)
+- `packages/storage-cloudflare/src/libs/CloudflareImagesDiagnosticsProvider.ts:79:5` (problem-constructor)
 
 <a id="storage-cloudflare-terminal-upstream"></a>
 
@@ -10833,7 +10833,7 @@ Sources:
 
 Sources:
 
-- `packages/storage-cloudflare/src/libs/CloudflareImagesDiagnosticsProvider.ts:86:5` (problem-constructor)
+- `packages/storage-cloudflare/src/libs/CloudflareImagesDiagnosticsProvider.ts:95:5` (problem-constructor)
 
 <a id="storage-cloudflare-validation-failed"></a>
 
@@ -10851,7 +10851,7 @@ Sources:
 
 Sources:
 
-- `packages/storage-cloudflare/src/libs/CloudflareImagesDiagnosticsProvider.ts:57:5` (problem-constructor)
+- `packages/storage-cloudflare/src/libs/CloudflareImagesDiagnosticsProvider.ts:66:5` (problem-constructor)
 
 <a id="storage-cloudinary-invalid-upload-intent-ttl"></a>
 
@@ -10959,7 +10959,7 @@ Sources:
 
 Sources:
 
-- `packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts:383:15` (problem-factory)
+- `packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts:521:15` (problem-factory)
 
 <a id="strategy-unavailable"></a>
 

@@ -64,6 +64,9 @@ await Context.run({ requestId: "req-1", tenantId: "tenant-1" }, async () => {
 - tenant 정보가 없으면 `MissingTenantProblem`이 발생합니다.
 - 모든 engine I/O 메서드는 `options.signal`을 Meilisearch 요청과 task polling에 전달합니다. 취소되면 SDK polling 간격을
   기다리지 않고 `search-core/operation-aborted` Problem으로 실패합니다.
+- 검색, 결정적 문서 upsert·삭제, settings 갱신, task polling의 일시적 네트워크·429·5xx 실패는 최대 3회
+  시도합니다. 기본 backoff는 `@croco/retry-core` 정책을 사용하며 `retryBackoff`로 조정할 수 있습니다.
+  index 생성·삭제와 tenant token 발급은 재실행하지 않습니다.
 - `createIndex`, `indexDocument`, `bulkIndex`, `deleteDocument`, `deleteIndex`는 기본적으로
   Meilisearch task 완료를 기다린 뒤 resolve합니다. 필요하면 `taskWait.enabled: false`로
   enqueue-only 동작을 선택할 수 있습니다.

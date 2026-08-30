@@ -23,6 +23,10 @@ title: "createCloudflareImagesResponseProblem"
 
 `string`
 
+#### retryAfter?
+
+`number`
+
 #### status?
 
 `number`

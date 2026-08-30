@@ -1,5 +1,7 @@
 import { Component } from "@croco/framework-context";
 import { ProblemFactory } from "@croco/problems-core";
+import type { BackoffOptions, BackoffPolicy, RetryPolicy } from "@croco/retry-core";
+import { ExponentialBackoff, RetryTemplate } from "@croco/retry-core";
 import type {
   ImageProvider,
   PutOptions,
@@ -14,6 +16,7 @@ import type {
 } from "@croco/storage-core";
 import { BaseStorageProvider, validateSignedUrlExpiry } from "@croco/storage-core";
 import {
+  CloudflareImagesRetryableUpstreamProblem,
   CloudflareImagesValidationProblem,
   createCloudflareImagesResponseProblem,
   normalizeCloudflareImagesError,
@@ -32,12 +35,112 @@ const DIRECT_UPLOAD_EXPIRY_MARGIN_SECONDS = 5;
 const MAX_DIRECT_UPLOAD_METADATA_BYTES = 1024;
 const UUID_IMAGE_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const CLOUDFLARE_UPLOAD_ORIGIN = "https://upload.imagedelivery.net";
+const DEFAULT_RETRY_MAX_DELAY_MS = 30_000;
 
-type CloudflareImagesRuntimeResponse = {
+type RetryDelayState = {
+  delayMs?: number;
+};
+
+type CloudflareImagesRuntimeResponse<TResult extends object = Record<string, unknown>> = {
   readonly errors: string[];
-  readonly result?: Record<string, unknown> | null;
+  readonly result?: TResult | null;
   readonly success: boolean;
 };
+
+class RetryAfterBackoff implements BackoffPolicy {
+  readonly supportsAbortSignal = true;
+
+  private readonly baseBackoff: ExponentialBackoff;
+  private readonly delays = new Map<number, number>();
+
+  constructor(
+    options: BackoffOptions | undefined,
+    private readonly retryDelay: RetryDelayState,
+  ) {
+    this.baseBackoff = new ExponentialBackoff(options);
+  }
+
+  getDelay(attempt: number): number {
+    const delay = Math.max(this.baseBackoff.getDelay(attempt), this.retryDelay.delayMs ?? 0);
+    this.retryDelay.delayMs = undefined;
+    this.delays.set(attempt, delay);
+    return delay;
+  }
+
+  async wait(attempt: number, signal?: AbortSignal): Promise<void> {
+    await waitForRetryDelay(this.delays.get(attempt) ?? this.getDelay(attempt), signal);
+  }
+
+  reset(): void {
+    this.baseBackoff.reset();
+    this.delays.clear();
+    this.retryDelay.delayMs = undefined;
+  }
+}
+
+function createCloudflareImagesRetryPolicy(
+  maxDelayMs: number,
+  retryDelay: RetryDelayState,
+): RetryPolicy {
+  return {
+    shouldRetry(error: unknown, attempt: number, maxAttempts: number): boolean {
+      retryDelay.delayMs = undefined;
+      if (attempt >= maxAttempts || !(error instanceof CloudflareImagesRetryableUpstreamProblem)) {
+        return false;
+      }
+
+      const retryAfterMs = readRetryAfterMilliseconds(error);
+      if (retryAfterMs !== undefined) {
+        if (retryAfterMs > maxDelayMs) {
+          return false;
+        }
+        retryDelay.delayMs = retryAfterMs;
+      }
+      return true;
+    },
+  };
+}
+
+function readRetryAfterMilliseconds(
+  problem: CloudflareImagesRetryableUpstreamProblem,
+): number | undefined {
+  const retryAfter = problem.extensions?.retryAfter;
+  return typeof retryAfter === "number" && Number.isFinite(retryAfter) && retryAfter >= 0
+    ? retryAfter * 1000
+    : undefined;
+}
+
+function retryAfterExtension(response: Response): { readonly retryAfter?: number } {
+  const value = response.headers.get("retry-after");
+  const seconds = value === null ? Number.NaN : Number.parseInt(value, 10);
+  return Number.isFinite(seconds) && seconds >= 0 ? { retryAfter: seconds } : {};
+}
+
+async function waitForRetryDelay(delayMs: number, signal?: AbortSignal): Promise<void> {
+  if (delayMs <= 0) {
+    return;
+  }
+  if (signal?.aborted) {
+    throw signal.reason;
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, delayMs);
+    const onAbort = (): void => {
+      clearTimeout(timeout);
+      signal?.removeEventListener("abort", onAbort);
+      reject(signal?.reason);
+    };
+
+    signal?.addEventListener("abort", onAbort, { once: true });
+    if (signal?.aborted) {
+      onAbort();
+    }
+  });
+}
 
 function copyToArrayBuffer(bytes: Uint8Array): ArrayBuffer {
   const copy = new Uint8Array(bytes.byteLength);
@@ -188,41 +291,51 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
     return await this.runCancellable(options, "getStream", key, async () => {
       this.validateKey(key);
 
-      const response = await this.fetchCloudflare(
-        `${this.buildManagementImageUrl(key, "get")}/blob`,
-        {
-          init: {
-            headers: {
-              Authorization: `Bearer ${this.options.apiToken}`,
+      return await this.executeWithRetry(
+        async () => {
+          const response = await this.fetchCloudflare(
+            `${this.buildManagementImageUrl(key, "get")}/blob`,
+            {
+              init: {
+                headers: {
+                  Authorization: `Bearer ${this.options.apiToken}`,
+                },
+              },
+              key,
+              operation: "get",
+              signal: options?.signal,
             },
-          },
-          key,
-          operation: "get",
-          signal: options?.signal,
+          );
+
+          if (!response.ok) {
+            await this.cancelResponseBody(response);
+
+            if (response.status === 404) {
+              this.throwNotFound(key);
+            }
+
+            throw createCloudflareImagesResponseProblem({
+              operation: "get",
+              key,
+              status: response.status,
+              ...retryAfterExtension(response),
+            });
+          }
+
+          if (response.body === null) {
+            throw normalizeCloudflareImagesError(
+              { message: "Cloudflare response body is missing" },
+              { key, operation: "get" },
+            );
+          }
+
+          return this.bindOperationSignal(
+            normalizeDownloadStream(response.body, key),
+            options,
+            "getStream",
+            key,
+          );
         },
-      );
-
-      if (!response.ok) {
-        if (response.status === 404) {
-          this.throwNotFound(key);
-        }
-
-        throw createCloudflareImagesResponseProblem({
-          operation: "get",
-          key,
-          status: response.status,
-        });
-      }
-
-      if (response.body === null) {
-        throw normalizeCloudflareImagesError(
-          { message: "Cloudflare response body is missing" },
-          { key, operation: "get" },
-        );
-      }
-
-      return this.bindOperationSignal(
-        normalizeDownloadStream(response.body, key),
         options,
         "getStream",
         key,
@@ -234,38 +347,48 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
     return await this.runCancellable(options, "delete", key, async () => {
       this.validateKey(key);
 
-      const response = await this.fetchCloudflare(this.buildManagementImageUrl(key, "delete"), {
-        init: {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${this.options.apiToken}`,
-          },
+      await this.executeWithRetry(
+        async () => {
+          const response = await this.fetchCloudflare(this.buildManagementImageUrl(key, "delete"), {
+            init: {
+              method: "DELETE",
+              headers: {
+                Authorization: `Bearer ${this.options.apiToken}`,
+              },
+            },
+            key,
+            operation: "delete",
+            signal: options?.signal,
+          });
+
+          if (!response.ok) {
+            const errorText = await this.readErrorText(response);
+            throw createCloudflareImagesResponseProblem({
+              operation: "delete",
+              key,
+              status: response.status,
+              ...retryAfterExtension(response),
+              ...(errorText !== undefined && {
+                detail: `Cloudflare Images delete error: ${errorText}`,
+              }),
+            });
+          }
+
+          const result = await this.readManagementResponse(response, key, "delete");
+
+          if (!result.success) {
+            throw createCloudflareImagesResponseProblem({
+              operation: "delete",
+              key,
+              upstreamCode: "validation-failed",
+              detail: `Cloudflare Images delete failed: ${result.errors.join(", ")}`,
+            });
+          }
         },
+        options,
+        "delete",
         key,
-        operation: "delete",
-        signal: options?.signal,
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw createCloudflareImagesResponseProblem({
-          operation: "delete",
-          key,
-          status: response.status,
-          detail: `Cloudflare Images delete error: ${errorText}`,
-        });
-      }
-
-      const result = await response.json();
-
-      if (!result.success) {
-        throw createCloudflareImagesResponseProblem({
-          operation: "delete",
-          key,
-          upstreamCode: "validation-failed",
-          detail: `Cloudflare Images delete failed: ${result.errors.join(", ")}`,
-        });
-      }
+      );
     });
   }
 
@@ -308,53 +431,68 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
     return await this.runCancellable(options, "getMetadata", key, async () => {
       this.validateKey(key);
 
-      const response = await this.fetchCloudflare(this.buildManagementImageUrl(key, "metadata"), {
-        init: {
-          headers: {
-            Authorization: `Bearer ${this.options.apiToken}`,
-          },
+      return await this.executeWithRetry(
+        async () => {
+          const response = await this.fetchCloudflare(
+            this.buildManagementImageUrl(key, "metadata"),
+            {
+              init: {
+                headers: {
+                  Authorization: `Bearer ${this.options.apiToken}`,
+                },
+              },
+              key,
+              operation: "metadata",
+              signal: options?.signal,
+            },
+          );
+
+          if (response.status === 404) {
+            this.throwNotFound(key);
+          }
+
+          if (!response.ok) {
+            const errorText = await this.readErrorText(response);
+            throw createCloudflareImagesResponseProblem({
+              operation: "metadata",
+              key,
+              status: response.status,
+              ...retryAfterExtension(response),
+              ...(errorText !== undefined && {
+                detail: `Cloudflare Images metadata error: ${errorText}`,
+              }),
+            });
+          }
+
+          const result = await this.readManagementResponse<
+            NonNullable<CloudflareImageDetails["result"]>
+          >(response, key, "metadata");
+
+          if (!result.success) {
+            throw createCloudflareImagesResponseProblem({
+              operation: "metadata",
+              key,
+              upstreamCode: "validation-failed",
+              detail: `Cloudflare Images metadata failed: ${result.errors.join(", ")}`,
+            });
+          }
+
+          if (!result.result) {
+            throw ProblemFactory.internalServerError(
+              "cloudflare/images-null-result",
+              "Cloudflare Images API returned null result",
+            );
+          }
+
+          return {
+            size: result.result.size ?? 0,
+            lastModified: new Date(result.result.uploaded),
+          };
         },
+        options,
+        "getMetadata",
         key,
-        operation: "metadata",
-        signal: options?.signal,
-      });
-
-      if (response.status === 404) {
-        this.throwNotFound(key);
-      }
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw createCloudflareImagesResponseProblem({
-          operation: "metadata",
-          key,
-          status: response.status,
-          detail: `Cloudflare Images metadata error: ${errorText}`,
-        });
-      }
-
-      const result = (await response.json()) as CloudflareImageDetails;
-
-      if (!result.success) {
-        throw createCloudflareImagesResponseProblem({
-          operation: "metadata",
-          key,
-          upstreamCode: "validation-failed",
-          detail: `Cloudflare Images metadata failed: ${result.errors.join(", ")}`,
-        });
-      }
-
-      if (!result.result) {
-        throw ProblemFactory.internalServerError(
-          "cloudflare/images-null-result",
-          "Cloudflare Images API returned null result",
-        );
-      }
-
-      return {
-        size: result.result.size ?? 0,
-        lastModified: new Date(result.result.uploaded),
-      };
+      );
     });
   }
 
@@ -480,6 +618,31 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
     } catch {
       return false;
     }
+  }
+
+  private async cancelResponseBody(response: Response): Promise<void> {
+    try {
+      await response.body?.cancel();
+    } catch (cancellationError: unknown) {
+      // Preserve the response status Problem when best-effort cleanup fails.
+      void cancellationError;
+    }
+  }
+
+  private async readErrorText(response: Response): Promise<string | undefined> {
+    try {
+      return await response.text();
+    } catch {
+      return undefined;
+    }
+  }
+
+  private async readManagementResponse<TResult extends object = Record<string, unknown>>(
+    response: Response,
+    key: string,
+    operation: string,
+  ): Promise<CloudflareImagesRuntimeResponse<TResult>> {
+    return await this.parseCloudflareImagesResponse<TResult>(response, key, operation);
   }
 
   private validateDirectUploadImageId(key: string): void {
@@ -623,16 +786,19 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
     );
   }
 
-  private async parseCloudflareImagesResponse(
+  private async parseCloudflareImagesResponse<TResult extends object = Record<string, unknown>>(
     response: Response,
     key: string,
     operation: string,
-  ): Promise<CloudflareImagesRuntimeResponse> {
+  ): Promise<CloudflareImagesRuntimeResponse<TResult>> {
     let value: unknown;
     try {
       value = await response.json();
-    } catch {
-      return this.throwInvalidCloudflareImagesResponse(key, operation);
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        return this.throwInvalidCloudflareImagesResponse(key, operation);
+      }
+      throw normalizeCloudflareImagesError(error, { key, operation });
     }
 
     if (!isRecord(value) || typeof value.success !== "boolean") {
@@ -652,7 +818,7 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
     return {
       errors,
       success: value.success,
-      ...(result !== undefined && { result }),
+      ...(result !== undefined && { result: result as TResult | null }),
     };
   }
 
@@ -835,6 +1001,34 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
         operation: options.operation,
       });
     }
+  }
+
+  private async executeWithRetry<T>(
+    execute: () => Promise<T>,
+    options: StorageOperationOptions | undefined,
+    operation: StorageOperation,
+    key: string,
+  ): Promise<T> {
+    const retryDelay: RetryDelayState = {};
+    const retryMaxDelay = this.options.retryBackoff?.maxDelay ?? DEFAULT_RETRY_MAX_DELAY_MS;
+    const retryTemplate = new RetryTemplate({
+      maxAttempts: 3,
+      backoffPolicy: new RetryAfterBackoff(this.options.retryBackoff, retryDelay),
+      retryPolicy: createCloudflareImagesRetryPolicy(retryMaxDelay, retryDelay),
+      signal: options?.signal,
+    });
+
+    return await retryTemplate.execute(async () => {
+      this.assertOperationNotAborted(options, operation, key);
+      try {
+        const result = await execute();
+        this.assertOperationNotAborted(options, operation, key);
+        return result;
+      } catch (error) {
+        this.rethrowOperationAbort(error, options, operation, key);
+        throw error;
+      }
+    });
   }
 
   private async runCancellable<T>(

@@ -40,6 +40,7 @@
   "dependencies": {
     "@croco/llm-core": "workspace:*",
     "@croco/problems-core": "workspace:*",
+    "@croco/retry-core": "workspace:*",
     "@croco/telemetry-api": "workspace:*",
     "openai": "^6.44.0"
   },
@@ -52,6 +53,7 @@
   "peerDependencies": {
     "@croco/llm-core": "workspace:*",
     "@croco/problems-core": "workspace:*",
+    "@croco/retry-core": "workspace:*",
     "@croco/telemetry-api": "workspace:*"
   }
 }

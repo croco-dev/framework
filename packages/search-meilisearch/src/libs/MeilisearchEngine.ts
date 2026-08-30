@@ -1,4 +1,6 @@
 import { Component, Context } from "@croco/framework-context";
+import type { RetryPolicy } from "@croco/retry-core";
+import { RetryTemplate } from "@croco/retry-core";
 import type {
   IndexConfig,
   SearchDocument,
@@ -18,10 +20,17 @@ import { MeiliSearch } from "meilisearch";
 import { validateMeilisearchOptions } from "./MeilisearchConfig";
 import {
   MeilisearchInvalidRequestProblem,
+  MeilisearchRetryableUpstreamProblem,
   normalizeMeilisearchError,
   TenantTokenNotConfiguredProblem,
 } from "./problems/MeilisearchProblems";
 import type { MeilisearchEngineOptions } from "./types";
+
+const MEILISEARCH_RETRY_POLICY: RetryPolicy = {
+  shouldRetry(error: unknown, attempt: number, maxAttempts: number): boolean {
+    return attempt < maxAttempts && error instanceof MeilisearchRetryableUpstreamProblem;
+  },
+};
 
 @Component()
 /**
@@ -75,6 +84,7 @@ export class MeilisearchEngine extends SearchEngine {
         }),
       { indexName },
       { operation: "search", options },
+      true,
     );
 
     return {
@@ -100,6 +110,7 @@ export class MeilisearchEngine extends SearchEngine {
       () => index.addDocuments([{ ...document, tenantId, _tenantId: tenantId }]),
       { documentId: document.id, indexName },
       { operation: "indexDocument", options },
+      true,
     );
     await this.waitForTask(
       "indexDocument",
@@ -134,6 +145,7 @@ export class MeilisearchEngine extends SearchEngine {
       () => index.addDocuments(docsWithTenant),
       { indexName },
       { operation: "bulkIndex", options },
+      true,
     );
     await this.waitForTask("bulkIndex", "bulkIndex", task, client, { indexName }, options);
   }
@@ -157,6 +169,7 @@ export class MeilisearchEngine extends SearchEngine {
         }),
       { documentId, indexName },
       { operation: "deleteDocument", options },
+      true,
     );
     await this.waitForTask(
       "deleteDocument",
@@ -209,6 +222,7 @@ export class MeilisearchEngine extends SearchEngine {
       () => index.updateSettings(settings),
       { indexName: config.name },
       { operation: "createIndex", options },
+      true,
     );
     await this.waitForTask(
       "createIndex.updateSettings",
@@ -392,23 +406,51 @@ export class MeilisearchEngine extends SearchEngine {
       operation: SearchOperation;
       options: SearchOperationOptions;
     },
+    replaySafe = false,
   ): Promise<T> {
-    if (cancellation) {
-      throwIfSearchOperationAborted(cancellation.operation, cancellation.options);
+    const executeAttempt = async (): Promise<T> => {
+      if (cancellation) {
+        throwIfSearchOperationAborted(cancellation.operation, cancellation.options);
+      }
+
+      let result: T;
+      try {
+        result = await this.awaitOperation(action(), cancellation);
+      } catch (error) {
+        if (cancellation?.options.signal?.aborted) {
+          throw new SearchOperationAbortedProblem(cancellation.operation, error);
+        }
+        throw normalizeMeilisearchError(error, { operation: providerOperation, ...context });
+      }
+
+      if (cancellation) {
+        throwIfSearchOperationAborted(cancellation.operation, cancellation.options);
+      }
+      return result;
+    };
+
+    if (!replaySafe) {
+      return await executeAttempt();
     }
-    let result: T;
+
+    const retryTemplate = new RetryTemplate({
+      maxAttempts: 3,
+      backoff: this.options.retryBackoff,
+      retryPolicy: MEILISEARCH_RETRY_POLICY,
+      signal: cancellation?.options.signal,
+    });
+
     try {
-      result = await this.awaitOperation(action(), cancellation);
+      return await retryTemplate.execute(async () => await executeAttempt());
     } catch (error) {
       if (cancellation?.options.signal?.aborted) {
-        throw new SearchOperationAbortedProblem(cancellation.operation, error);
+        throw new SearchOperationAbortedProblem(
+          cancellation.operation,
+          cancellation.options.signal.reason,
+        );
       }
-      throw normalizeMeilisearchError(error, { operation: providerOperation, ...context });
+      throw error;
     }
-    if (cancellation) {
-      throwIfSearchOperationAborted(cancellation.operation, cancellation.options);
-    }
-    return result;
   }
 
   private async awaitOperation<T>(
@@ -476,6 +518,7 @@ export class MeilisearchEngine extends SearchEngine {
         }),
       context,
       { operation, options },
+      true,
     );
 
     if (this.isFailedTask(result)) {

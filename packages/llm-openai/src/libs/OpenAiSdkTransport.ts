@@ -22,6 +22,7 @@ type OpenAiClientShape = {
 export function createOpenAiSdkTransport(options: OpenAiSdkTransportOptions): OpenAiTransport {
   const client = new OpenAI({
     apiKey: options.apiKey,
+    maxRetries: 0,
     ...(options.baseUrl ? { baseURL: options.baseUrl } : {}),
     ...(options.timeout ? { timeout: options.timeout } : {}),
   }) as unknown as OpenAiClientShape;

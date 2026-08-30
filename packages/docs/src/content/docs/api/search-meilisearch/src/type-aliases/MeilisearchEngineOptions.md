@@ -23,6 +23,12 @@ Meilisearch 엔진 초기화 옵션입니다.
 
 ---
 
+### retryBackoff?
+
+> `optional` **retryBackoff?**: [`BackoffOptions`](/api/retry-core/src/interfaces/backoffoptions/)
+
+---
+
 ### taskWait?
 
 > `optional` **taskWait?**: [`MeilisearchTaskWaitOptions`](/api/search-meilisearch/src/type-aliases/meilisearchtaskwaitoptions/)
