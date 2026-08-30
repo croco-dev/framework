@@ -235,7 +235,7 @@ export class LlmService {
             return;
           }
 
-          throw LlmServiceProblem.fromError(error);
+          throw normalizeOperationError(error, abortController.signal, "stream");
         } finally {
           isDone = true;
           notifyConsumer();

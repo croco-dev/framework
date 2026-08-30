@@ -45,15 +45,19 @@ class ProviderProblem extends Problem {
 }
 
 class ProviderProblemGenerateModel extends InMemoryLlmModel {
+  readonly problem = new ProviderProblem();
+
   override async generate(_params: GenerateParams): Promise<GenerateResult> {
-    throw new ProviderProblem();
+    throw this.problem;
   }
 }
 
 class ProviderProblemStreamModel extends InMemoryLlmModel {
+  readonly problem = new ProviderProblem();
+
   override async *stream(_params: StreamParams): AsyncIterable<StreamChunk> {
     yield* [] as StreamChunk[];
-    throw new ProviderProblem();
+    throw this.problem;
   }
 }
 
@@ -187,9 +191,10 @@ describe("LlmService", () => {
       const model = new ProviderProblemGenerateModel("provider-problem-generate");
       registry.registerProvider(model.modelId, () => model);
 
-      await expect(
-        service.generate({ modelId: model.modelId, prompt: "retryable" }),
-      ).rejects.toMatchObject({
+      const rejection = service.generate({ modelId: model.modelId, prompt: "retryable" });
+
+      await expect(rejection).rejects.toBe(model.problem);
+      await expect(rejection).rejects.toMatchObject({
         code: "provider/rate-limited",
         category: ProblemCategory.TooManyRequests,
         extensions: { retryAfter: 42 },
@@ -699,9 +704,12 @@ describe("LlmService", () => {
       const model = new ProviderProblemStreamModel("provider-problem-stream");
       registry.registerProvider(model.modelId, () => model);
 
-      await expect(
-        collectStream(service.stream({ modelId: model.modelId, prompt: "retryable" })),
-      ).rejects.toMatchObject({
+      const rejection = collectStream(
+        service.stream({ modelId: model.modelId, prompt: "retryable" }),
+      );
+
+      await expect(rejection).rejects.toBe(model.problem);
+      await expect(rejection).rejects.toMatchObject({
         code: "provider/rate-limited",
         category: ProblemCategory.TooManyRequests,
         extensions: { retryAfter: 42 },

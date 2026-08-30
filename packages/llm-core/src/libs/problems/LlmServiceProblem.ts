@@ -62,8 +62,8 @@ export class LlmServiceProblem extends Problem {
     super(LlmServiceProblem.CODE, ProblemCategory.InternalServerError, detail);
   }
 
-  static fromError(error: unknown): LlmServiceProblem | Problem {
-    if (error instanceof Problem) {
+  static fromError(error: unknown): LlmServiceProblem {
+    if (error instanceof LlmServiceProblem) {
       return error;
     }
 
