@@ -177,6 +177,58 @@ describe("SchemaDescriptor", () => {
     });
   });
 
+  it("should accept only direct string schemas as JSON-safe record keys", () => {
+    expect(describeZodSchema(z.record(z.string(), z.boolean()))).toMatchObject({
+      kind: "record",
+      typeName: "ZodRecord",
+      jsonSafe: true,
+      element: { kind: "boolean", jsonSafe: true },
+    });
+
+    const unsupportedKeySchemas = [
+      [z.number(), "ZodNumber"],
+      [z.enum(["first", "second"]), "ZodEnum"],
+      [z.union([z.literal("first"), z.literal("second")]), "ZodUnion"],
+      [z.string().brand<"RecordKey">(), "ZodBranded"],
+    ] as const;
+
+    for (const [keySchema, keyTypeName] of unsupportedKeySchemas) {
+      const descriptor = describeZodSchema(z.record(keySchema, z.boolean()));
+
+      expect(descriptor).toMatchObject({
+        kind: "record",
+        typeName: "ZodRecord",
+        jsonSafe: false,
+        unsupportedReason: `ZodRecord key schema ${keyTypeName} is unsupported; use z.string() for JSON object keys.`,
+        element: { kind: "boolean", jsonSafe: true },
+      });
+      expect(getSchemaDescriptorDiagnostics(descriptor)).toEqual([
+        {
+          code: CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE,
+          severity: "error",
+          typeName: "ZodRecord",
+          schemaPath: [],
+          message: `ZodRecord key schema ${keyTypeName} is unsupported; use z.string() for JSON object keys.`,
+        },
+      ]);
+    }
+
+    const unsafeValueDescriptor = describeZodSchema(z.record(z.string(), z.date()));
+    expect(unsafeValueDescriptor).toMatchObject({ kind: "record", jsonSafe: false });
+    expect(getSchemaDescriptorDiagnostics(unsafeValueDescriptor)).toEqual([
+      expect.objectContaining({
+        code: CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE,
+        typeName: "ZodDate",
+        schemaPath: ["[]"],
+      }),
+    ]);
+    expect(describeZodSchema(z.map(z.string(), z.boolean()))).toMatchObject({
+      kind: "map",
+      typeName: "ZodMap",
+      jsonSafe: false,
+    });
+  });
+
   it("should expose the JSON-safe Zod support matrix", () => {
     expect(JSON_SAFE_ZOD_SCHEMA_SUPPORT_MATRIX).toEqual(
       expect.arrayContaining([

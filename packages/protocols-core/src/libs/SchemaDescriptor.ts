@@ -102,7 +102,7 @@ export const JSON_SAFE_ZOD_SCHEMA_SUPPORT_MATRIX = [
     typeName: "ZodRecord",
     kind: "record",
     jsonSafe: "supported",
-    note: "Supported for string-keyed records when the value schema is JSON-safe.",
+    note: "Supported for z.string()-keyed records when the value schema is JSON-safe.",
   },
   {
     typeName: "ZodUnion",
@@ -244,6 +244,7 @@ type ZodDefinition = {
   readonly schema?: unknown;
   readonly type?: unknown;
   readonly element?: unknown;
+  readonly keyType?: unknown;
   readonly valueType?: unknown;
   readonly options?: unknown;
   readonly values?: unknown;
@@ -823,7 +824,19 @@ function describeUnknownSchema(schema: unknown, seen: Set<unknown>): ContractSch
   }
 
   if (typeName === "ZodRecord") {
+    const key = describeMaybeSchema(definition?.keyType, seen);
     const element = describeMaybeSchema(definition?.valueType, seen);
+
+    if (key?.typeName !== "ZodString") {
+      return {
+        ...unsupportedDescriptor(
+          "record",
+          typeName,
+          `ZodRecord key schema ${key?.typeName ?? "unknown"} is unsupported; use z.string() for JSON object keys.`,
+        ),
+        element,
+      };
+    }
 
     return {
       ...descriptorFromChildren("record", typeName, [element]),
