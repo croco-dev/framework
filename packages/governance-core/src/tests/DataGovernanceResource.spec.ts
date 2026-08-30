@@ -400,6 +400,9 @@ describe("DataGovernanceResource", () => {
         summary: { diagnostics: 1 },
       });
     }
+    expect(
+      createDataMapArtifact([tenantWithUndocumentedOverride]).resources[0]?.subject,
+    ).not.toHaveProperty("tenantIdentifierOverride");
     expect(validateDataGovernanceResources([globalResource, systemResource])).toEqual({
       diagnostics: [],
       valid: true,
@@ -851,6 +854,48 @@ describe("DataGovernanceResource", () => {
         startsFrom: "",
       },
     ]);
+  });
+
+  it("fails closed when projecting invalid numeric governance values", () => {
+    const resource = {
+      ...userResource,
+      problems: [
+        {
+          category: "InternalServerError",
+          code: "governance-core/non-finite-status",
+          status: Number.POSITIVE_INFINITY,
+          title: "Non-finite status",
+        },
+      ],
+      retentionPolicies: [
+        {
+          ...userResource.retentionPolicies[0],
+          durationDays: -1,
+        },
+      ],
+    } as unknown as DataGovernanceResource;
+
+    const artifact = createDataMapArtifact([resource]);
+
+    expect(artifact.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: DATA_GOVERNANCE_DIAGNOSTIC_CODES.retentionPolicyDurationInvalid,
+          path: "resources[0].retentionPolicies[0].durationDays",
+        }),
+        expect.objectContaining({
+          code: DATA_GOVERNANCE_DIAGNOSTIC_CODES.valueInvalid,
+          path: "resources[0].problems[0].status",
+        }),
+      ]),
+    );
+    expect(artifact.resources[0]?.retentionPolicies[0]?.durationDays).toBe(0);
+    expect(
+      artifact.resources[0]?.problems.find(
+        (problem) => problem.code === "governance-core/non-finite-status",
+      ),
+    ).toMatchObject({ status: 500 });
+    expect(stringifyDataMapArtifact(artifact)).not.toContain('"status": null');
   });
 
   it("reports invalid governance contracts with stable diagnostics and a typed Problem", () => {

@@ -606,11 +606,7 @@ function collectRetentionPolicyIds(
       );
     }
 
-    if (
-      typeof policy.durationDays !== "number" ||
-      !Number.isInteger(policy.durationDays) ||
-      policy.durationDays <= 0
-    ) {
+    if (!isPositiveInteger(policy.durationDays)) {
       diagnostics.push(
         createDiagnostic({
           code: DATA_GOVERNANCE_DIAGNOSTIC_CODES.retentionPolicyDurationInvalid,
@@ -1276,7 +1272,7 @@ function toDataSubjectIdentity(subject: UnknownRecord): DataMapResource["subject
       }
     } else if (key === "tenantIdentifierOverride" && isRecord(value)) {
       const reason = stringValue(value.reason);
-      if (reason !== undefined) {
+      if (normalizeString(reason)) {
         identity.tenantIdentifierOverride = { reason };
       }
     }
@@ -1295,7 +1291,7 @@ function toDataRetentionPolicy(policy: UnknownRecord): DataRetentionPolicy {
     if (key === "id") {
       retentionPolicy.id = stringValue(value) ?? "";
     } else if (key === "durationDays") {
-      retentionPolicy.durationDays = typeof value === "number" ? value : 0;
+      retentionPolicy.durationDays = isPositiveInteger(value) ? value : 0;
     } else if (key === "disposition") {
       retentionPolicy.disposition = isDataRetentionDisposition(value) ? value : "manual-review";
     } else if (key === "basis" || key === "startsFrom") {
@@ -1404,7 +1400,7 @@ function normalizeProblemContracts(problems: readonly UnknownRecord[]): DataMapP
       {
         code: stringValue(problem.code) ?? code,
         category: category ?? "InternalServerError",
-        status: typeof problem.status === "number" ? problem.status : 500,
+        status: isFiniteNumber(problem.status) ? problem.status : 500,
         title: title ?? "Internal Server Error",
         ...(detail ? { detail } : {}),
         ...(typeof problem.retryable === "boolean" ? { retryable: problem.retryable } : {}),
@@ -1628,6 +1624,14 @@ function isDataRetentionDisposition(value: unknown): value is DataRetentionPolic
   );
 }
 
+function isPositiveInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value > 0;
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
 function validateRequiredString(
   path: string,
   value: unknown,
@@ -1733,14 +1737,7 @@ function validateOptionalNumber(
   diagnostics: DataGovernanceDiagnostic[],
   context: DiagnosticContext = {},
 ): void {
-  validateOptionalValue(
-    path,
-    value,
-    (candidate) => typeof candidate === "number" && Number.isFinite(candidate),
-    target,
-    diagnostics,
-    context,
-  );
+  validateOptionalValue(path, value, isFiniteNumber, target, diagnostics, context);
 }
 
 function validateOptionalRecord(
