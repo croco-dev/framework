@@ -737,16 +737,17 @@ describe("CloudflareImagesProvider", () => {
     );
 
     it("should normalize a blob body read failure into a stable provider Problem", async () => {
-      mockFetch.mockResolvedValueOnce(
-        new Response(
-          new ReadableStream<Uint8Array>({
-            pull(controller) {
-              controller.error(
-                Object.assign(new Error("connection reset"), { code: "ECONNRESET" }),
-              );
-            },
-          }),
-        ),
+      mockFetch.mockImplementation(
+        async () =>
+          new Response(
+            new ReadableStream<Uint8Array>({
+              pull(controller) {
+                controller.error(
+                  Object.assign(new Error("connection reset"), { code: "ECONNRESET" }),
+                );
+              },
+            }),
+          ),
       );
 
       const request = provider.get("test-image-id");
@@ -760,6 +761,7 @@ describe("CloudflareImagesProvider", () => {
           upstreamCode: "ECONNRESET",
         },
       });
+      expect(mockFetch).toHaveBeenCalledTimes(3);
     });
 
     it("should not use a configured custom delivery domain for base image reads", async () => {
@@ -820,6 +822,71 @@ describe("CloudflareImagesProvider", () => {
 
       expect(Buffer.concat(chunks)).toEqual(mockImageData);
       expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it("retries a transient failure while reading the first response chunk", async () => {
+      const connectionReset = Object.assign(new Error("connection reset"), {
+        code: "ECONNRESET",
+      });
+      mockFetch
+        .mockResolvedValueOnce(
+          new Response(
+            new ReadableStream<Uint8Array>(
+              {
+                pull(controller) {
+                  controller.error(connectionReset);
+                },
+              },
+              { highWaterMark: 0 },
+            ),
+          ),
+        )
+        .mockResolvedValueOnce(new Response(new Uint8Array([7])));
+
+      const stream = await provider.getStream("test-image-id");
+      const chunks: Uint8Array[] = [];
+      for await (const chunk of stream) {
+        chunks.push(chunk);
+      }
+
+      expect(Buffer.concat(chunks)).toEqual(Buffer.from([7]));
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it("cancels a pending first response read when the operation is aborted", async () => {
+      const controller = new AbortController();
+      const reason = new Error("download cancelled");
+      let pullStarted = false;
+      let cancellationReason: unknown;
+      mockFetch.mockResolvedValueOnce(
+        new Response(
+          new ReadableStream<Uint8Array>(
+            {
+              pull() {
+                pullStarted = true;
+              },
+              cancel(cancelReason) {
+                cancellationReason = cancelReason;
+              },
+            },
+            { highWaterMark: 0 },
+          ),
+        ),
+      );
+
+      const download = provider.getStream("test-image-id", { signal: controller.signal });
+      await vi.waitFor(() => expect(pullStarted).toBe(true));
+      controller.abort(reason);
+
+      await expect(download).rejects.toMatchObject({
+        cause: reason,
+        code: "STORAGE_OPERATION_ABORTED",
+      });
+      expect(cancellationReason).toMatchObject({
+        cause: reason,
+        code: "STORAGE_OPERATION_ABORTED",
+      });
+      expect(mockFetch).toHaveBeenCalledTimes(1);
     });
 
     it("cancels every discarded non-OK body without masking the status Problem", async () => {

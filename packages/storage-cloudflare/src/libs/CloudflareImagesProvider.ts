@@ -148,13 +148,33 @@ function copyToArrayBuffer(bytes: Uint8Array): ArrayBuffer {
   return copy.buffer;
 }
 
-function normalizeDownloadStream(stream: StorageStream, key: string): StorageStream {
+async function startDownloadStream(stream: StorageStream, key: string): Promise<StorageStream> {
   const reader = stream.getReader();
+  let firstResult: ReadableStreamReadResult<Uint8Array>;
+
+  try {
+    firstResult = await reader.read();
+  } catch (error) {
+    try {
+      await reader.cancel(error);
+    } catch {
+      // Preserve the body read failure when best-effort cleanup also fails.
+    }
+    try {
+      reader.releaseLock();
+    } catch {
+      // Preserve the body read failure when releasing the discarded reader fails.
+    }
+    throw normalizeCloudflareImagesError(error, { key, operation: "get" });
+  }
+
+  let nextResult: ReadableStreamReadResult<Uint8Array> | undefined = firstResult;
 
   return new ReadableStream<Uint8Array>({
     async pull(controller) {
       try {
-        const result = await reader.read();
+        const result = nextResult ?? (await reader.read());
+        nextResult = undefined;
         if (result.done) {
           controller.close();
           return;
@@ -329,10 +349,8 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
             );
           }
 
-          return this.bindOperationSignal(
-            normalizeDownloadStream(response.body, key),
-            options,
-            "getStream",
+          return await startDownloadStream(
+            this.bindOperationSignal(response.body, options, "getStream", key),
             key,
           );
         },
