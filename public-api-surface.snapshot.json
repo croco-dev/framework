@@ -32334,6 +32334,16 @@
               "source": "./libs/outbound/types"
             },
             {
+              "name": "OutboundWebhookIntentPublicationFailure",
+              "exportKind": "named",
+              "source": "./libs/outbound/types"
+            },
+            {
+              "name": "OutboundWebhookIntentPublicationOutcome",
+              "exportKind": "named",
+              "source": "./libs/outbound/types"
+            },
+            {
               "name": "OutboundWebhookOutcomeClassification",
               "exportKind": "named",
               "source": "./libs/outbound/types"

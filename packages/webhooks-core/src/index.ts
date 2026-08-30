@@ -68,6 +68,8 @@ export type {
   OutboundWebhookEndpointStore,
   OutboundWebhookEvent,
   OutboundWebhookEventDescriptor,
+  OutboundWebhookIntentPublicationFailure,
+  OutboundWebhookIntentPublicationOutcome,
   OutboundWebhookOutcomeClassification,
   OutboundWebhookPausePolicy,
   OutboundWebhookRetryPolicy,

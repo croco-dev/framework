@@ -118,15 +118,23 @@ export class InMemoryOutboundWebhookStore implements OutboundWebhookStore {
       .map(cloneIntent);
   }
 
-  async markIntentPublished(tenantId: string, intentId: string, publishedAt: Date): Promise<void> {
+  async markIntentPublished(
+    tenantId: string,
+    intentId: string,
+    publishedAt: Date,
+  ): Promise<boolean> {
     const intent = this.intents.get(intentId);
     if (!intent || intent.tenantId !== tenantId) {
       throw new OutboundWebhookConfigurationProblem("dispatch intent was not found", { intentId });
+    }
+    if (intent.publishedAt !== undefined) {
+      return false;
     }
     this.intents.set(intentId, {
       ...intent,
       publishedAt: new Date(publishedAt),
     });
+    return true;
   }
 
   async getEvent(tenantId: string, eventId: string): Promise<OutboundWebhookEvent | undefined> {

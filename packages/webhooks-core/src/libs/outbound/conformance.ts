@@ -208,6 +208,26 @@ export function createOutboundWebhookStoreConformanceSuite(
         },
       },
       {
+        name: "marks each intent publication exactly once under concurrency",
+        run: async () => {
+          const store = await options.createStore();
+          const committed = await store.commitEvent({
+            event: options.event,
+            endpoints: [options.endpoint],
+          });
+          const intent = committed.intents[0];
+          assert(intent !== undefined, "one unpublished intent must exist");
+          const transitions = await Promise.all([
+            store.markIntentPublished(options.event.tenantId, intent.id, options.event.committedAt),
+            store.markIntentPublished(options.event.tenantId, intent.id, options.event.committedAt),
+          ]);
+          assert(
+            transitions.filter(Boolean).length === 1,
+            "only one concurrent publication mark may transition the intent",
+          );
+        },
+      },
+      {
         name: "claims an eligible delivery only once under concurrency",
         run: async () => {
           const store = await options.createStore();

@@ -171,7 +171,12 @@ await runtime.publish({
 
 `commitEvent()` is the transaction boundary: the immutable event, endpoint deliveries, and dispatch
 intents are stored together before a task is published. If publication fails after commit,
-`publishUnpublishedIntents()` resumes the stored intent without creating another logical event.
+`publishUnpublishedIntents()` continues with independent intents and returns published intent IDs
+plus retryable or terminal failures without payload data. Retryable intents remain unpublished so a
+later invocation can resume them without creating another logical event. Shared configuration
+failures stop the batch before later tasks are published. Store adapters atomically mark each intent
+publication once, and task publishers must honor the stable idempotency key so concurrent drains or
+a store-acknowledgement retry cannot create duplicate task, execution, or outbox records.
 Persistent adapters can use `createOutboundWebhookStoreConformanceSuite()` (including its optional
 reopen hook) to verify durability and concurrent-claim behavior.
 
