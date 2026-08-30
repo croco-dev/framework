@@ -971,7 +971,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/InMemoryTransactionalEventStore.ts",
-      "line": 100,
+      "line": 101,
       "column": 3,
       "code": "TS2375",
       "message": "Type '{ metadata: Record<string, unknown>; diagnostics: TransactionalEventDiagnostic[]; lastError?: TransactionalEventError; failedAt?: Date; processedAt?: Date; ... 9 more ...; failureReason?: string; }' is not assignable to type 'TransactionalInboxRecord' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -979,7 +979,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/InMemoryTransactionalEventStore.ts",
-      "line": 344,
+      "line": 345,
       "column": 11,
       "code": "TS2375",
       "message": "Type '{ status: \"published\"; updatedAt: Date; publishedAt: Date; lockedUntil: undefined; diagnostics: TransactionalEventDiagnostic[]; id: string; ... 14 more ...; deadLetterReason?: string; }' is not assignable to type 'TransactionalOutboxMessage' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -987,7 +987,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/InMemoryTransactionalEventStore.ts",
-      "line": 374,
+      "line": 375,
       "column": 11,
       "code": "TS2375",
       "message": "Type '{ diagnostics: TransactionalEventDiagnostic[]; deadLetterReason?: string; status: \"retrying\" | \"poisoned\"; visibleAt: Date; updatedAt: Date; ... 15 more ...; deadLetteredAt?: Date; }' is not assignable to type 'TransactionalOutboxMessage' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -995,7 +995,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/InMemoryTransactionalEventStore.ts",
-      "line": 416,
+      "line": 440,
       "column": 11,
       "code": "TS2375",
       "message": "Type '{ status: \"dead_lettered\"; updatedAt: Date; deadLetteredAt: Date; deadLetterReason: string; lockedUntil: undefined; diagnostics: TransactionalEventDiagnostic[]; ... 14 more ...; lastError?: TransactionalEventError; }' is not assignable to type 'TransactionalOutboxMessage' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -1003,7 +1003,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/InMemoryTransactionalEventStore.ts",
-      "line": 543,
+      "line": 567,
       "column": 11,
       "code": "TS2375",
       "message": "Type '{ status: \"failed\"; updatedAt: Date; failedAt: Date; lastError: TransactionalEventError | undefined; failureReason: string; diagnostics: TransactionalEventDiagnostic[]; ... 8 more ...; metadata: Record<string, unknown>; }' is not assignable to type 'TransactionalInboxRecord' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -1011,7 +1011,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/InMemoryTransactionalEventStore.ts",
-      "line": 80,
+      "line": 81,
       "column": 3,
       "code": "TS2375",
       "message": "Type '{ diagnostics: TransactionalEventDiagnostic[]; lastError?: TransactionalEventError; deadLetteredAt?: Date; publishedAt?: Date; lockedUntil?: Date; visibleAt: Date; ... 14 more ...; deadLetterReason?: string; }' is not assignable to type 'TransactionalOutboxMessage' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -1019,7 +1019,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/TransactionalEvents.ts",
-      "line": 432,
+      "line": 457,
       "column": 3,
       "code": "TS2375",
       "message": "Type '{ eventType: string; eventId: string; occurredAt: string; aggregateId: string | undefined; payload: Record<string, unknown>; }' is not assignable to type 'SerializedEvent' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -1027,7 +1027,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/TransactionalEvents.ts",
-      "line": 496,
+      "line": 521,
       "column": 11,
       "code": "TS2379",
       "message": "Argument of type '{ id: string; eventId: string; eventType: string; aggregateId: string | undefined; idempotencyKey: string; payload: Record<string, unknown>; metadata: { [x: string]: unknown; traceContext?: EventTraceContext; }; ... 4 more ...; diagnostics: TransactionalEventDiagnostic[]; }' is not assignable to parameter of type 'AppendOutboxMessageInput' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."

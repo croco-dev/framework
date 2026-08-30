@@ -14,6 +14,7 @@ import {
   type OutboxCompletionInput,
   type OutboxDeadLetterInput,
   type OutboxFailureInput,
+  type OutboxReleaseInput,
   type TransactionalEventDiagnostic,
   type TransactionalEventError,
   type TransactionalEventStore,
@@ -483,7 +484,13 @@ export class DrizzleTransactionalEventStore<
             ),
           ),
         })
-        .where(and(eq(this.outbox.id, current.id), this.outboxClaimableCondition(options.now)))
+        .where(
+          and(
+            eq(this.outbox.id, current.id),
+            eq(this.outbox.attempts, current.attempts),
+            this.outboxClaimableCondition(options.now),
+          ),
+        )
         .returning();
 
       if (updated !== undefined) {
@@ -558,6 +565,30 @@ export class DrizzleTransactionalEventStore<
               ),
             )
           : diagnostics,
+      })
+      .where(this.activeClaimCondition(input.id, input.expectedAttempts))
+      .returning();
+    return updated === undefined ? null : this.mapOutboxRow(updated);
+  }
+
+  async releaseOutboxClaim(
+    input: OutboxReleaseInput,
+    context?: TransactionalEventStoreContext<TClient>,
+  ): Promise<TransactionalOutboxMessage | null> {
+    const current = await this.requireOutbox(input.id, context);
+    if (!this.isActiveClaim(current, input.expectedAttempts)) {
+      return null;
+    }
+
+    const [updated] = await this.client(context)
+      .update(this.outbox)
+      .set({
+        attempts: current.attempts - 1,
+        status: "retrying",
+        visibleAt: input.now,
+        updatedAt: input.now,
+        lockedUntil: null,
+        diagnostics: appendDiagnostic(current.diagnostics, input.diagnostic),
       })
       .where(this.activeClaimCondition(input.id, input.expectedAttempts))
       .returning();

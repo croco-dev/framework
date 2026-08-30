@@ -9896,12 +9896,27 @@
               "source": "./libs/TransactionalEvents"
             },
             {
+              "name": "OutboxRelayDrainResult",
+              "exportKind": "named",
+              "source": "./libs/TransactionalEvents"
+            },
+            {
               "name": "OutboxRelayMessageResult",
               "exportKind": "named",
               "source": "./libs/TransactionalEvents"
             },
             {
+              "name": "OutboxRelayPublishOptions",
+              "exportKind": "named",
+              "source": "./libs/TransactionalEvents"
+            },
+            {
               "name": "OutboxRelayRetryPolicy",
+              "exportKind": "named",
+              "source": "./libs/TransactionalEvents"
+            },
+            {
+              "name": "OutboxReleaseInput",
               "exportKind": "named",
               "source": "./libs/TransactionalEvents"
             },

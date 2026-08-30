@@ -335,6 +335,30 @@ In-memory transactional event store. It is intended for tests, local fixtures, a
 
 ---
 
+### releaseOutboxClaim()
+
+> **releaseOutboxClaim**(`input`, `context?`): `Promise`\<[`TransactionalOutboxMessage`](/api/events-tx/src/type-aliases/transactionaloutboxmessage/) \| `null`\>
+
+#### Parameters
+
+##### input
+
+[`OutboxReleaseInput`](/api/events-tx/src/type-aliases/outboxreleaseinput/)
+
+##### context?
+
+[`TransactionalEventStoreContext`](/api/events-tx/src/type-aliases/transactionaleventstorecontext/)\<[`InMemoryTransactionalEventStoreClient`](/api/events-tx/src/type-aliases/inmemorytransactionaleventstoreclient/)\>
+
+#### Returns
+
+`Promise`\<[`TransactionalOutboxMessage`](/api/events-tx/src/type-aliases/transactionaloutboxmessage/) \| `null`\>
+
+#### Implementation of
+
+[`TransactionalEventStore`](/api/events-tx/src/interfaces/transactionaleventstore/).[`releaseOutboxClaim`](/api/events-tx/src/interfaces/transactionaleventstore/#releaseoutboxclaim)
+
+---
+
 ### startInboxProcessing()
 
 > **startInboxProcessing**(`input`, `context?`): `Promise`\<[`InboxStartResult`](/api/events-tx/src/type-aliases/inboxstartresult/)\>

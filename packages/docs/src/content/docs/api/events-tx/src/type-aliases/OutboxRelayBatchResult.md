@@ -33,6 +33,12 @@ title: "OutboxRelayBatchResult"
 
 ---
 
+### released
+
+> **released**: `number`
+
+---
+
 ### results
 
 > **results**: [`OutboxRelayMessageResult`](/api/events-tx/src/type-aliases/outboxrelaymessageresult/)[]
@@ -48,3 +54,9 @@ title: "OutboxRelayBatchResult"
 ### staleClaimed
 
 > **staleClaimed**: `number`
+
+---
+
+### status
+
+> **status**: `"completed"` \| `"cancelled"` \| `"stopped"`

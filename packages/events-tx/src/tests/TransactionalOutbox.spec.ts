@@ -60,6 +60,17 @@ function createClock(initial: Date): { now: () => Date; advance: (ms: number) =>
   };
 }
 
+function createDeferred<T>(): {
+  promise: Promise<T>;
+  resolve: (value: T | PromiseLike<T>) => void;
+} {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((promiseResolve) => {
+    resolve = promiseResolve;
+  });
+  return { promise, resolve };
+}
+
 function createOutboxFixture() {
   const store = new InMemoryTransactionalEventStore();
   const txManager = new TxManager(store.createTxAdapter());
@@ -584,6 +595,148 @@ describe("TransactionalOutbox", () => {
 });
 
 describe("TransactionalOutboxRelay", () => {
+  it("cancels an active batch and releases every unstarted claim for retry", async () => {
+    const fixture = createOutboxFixture();
+    await appendMessage(fixture, { idempotencyKey: "credit-acct-1" });
+    await appendMessage(fixture, { idempotencyKey: "credit-acct-2" });
+    const publishStarted = createDeferred<void>();
+    const publish = vi.fn(
+      async (_message: TransactionalOutboxMessage, signal?: AbortSignal): Promise<void> => {
+        publishStarted.resolve(undefined);
+        await new Promise<void>((_resolve, reject) => {
+          const rejectWithAbort = () => reject(signal?.reason);
+          if (signal?.aborted) {
+            rejectWithAbort();
+            return;
+          }
+          signal?.addEventListener("abort", rejectWithAbort, { once: true });
+        });
+      },
+    );
+    const relay = new TransactionalOutboxRelay({
+      store: fixture.store,
+      publish,
+      now: fixture.clock.now,
+      retry: { baseDelayMs: 0 },
+    });
+
+    const batch = relay.publishBatch({ limit: 2, now: fixture.clock.now() });
+    await publishStarted.promise;
+
+    await expect(relay.drain()).resolves.toEqual({
+      status: "drained",
+      activeBatches: 1,
+      pendingBatches: 0,
+    });
+    await expect(batch).resolves.toMatchObject({
+      status: "cancelled",
+      claimed: 2,
+      scheduledRetry: 1,
+      released: 1,
+      results: [
+        { status: "scheduled_retry" },
+        { status: "released", message: { attempts: 0, status: "retrying" } },
+      ],
+    });
+    expect(publish).toHaveBeenCalledTimes(1);
+    await expect(fixture.store.listOutboxMessages()).resolves.toMatchObject([
+      { attempts: 1, status: "retrying" },
+      {
+        attempts: 0,
+        status: "retrying",
+        diagnostics: expect.arrayContaining([
+          expect.objectContaining({ code: "events-tx/outbox-claim-released" }),
+        ]),
+      },
+    ]);
+  });
+
+  it("returns a bounded drain outcome when an active publisher ignores cancellation", async () => {
+    const fixture = createOutboxFixture();
+    await appendMessage(fixture);
+    const publishStarted = createDeferred<void>();
+    const publishCompletion = createDeferred<void>();
+    const relay = new TransactionalOutboxRelay({
+      store: fixture.store,
+      publish: async () => {
+        publishStarted.resolve(undefined);
+        await publishCompletion.promise;
+      },
+      now: fixture.clock.now,
+    });
+    const batch = relay.publishBatch({ limit: 1, now: fixture.clock.now() });
+    await publishStarted.promise;
+    const boundary = new AbortController();
+    const drain = relay.drain(boundary.signal);
+
+    boundary.abort(new Error("shutdown deadline exceeded"));
+
+    await expect(drain).resolves.toEqual({
+      status: "cancelled",
+      activeBatches: 1,
+      pendingBatches: 1,
+    });
+    publishCompletion.resolve(undefined);
+    await expect(batch).resolves.toMatchObject({
+      status: "cancelled",
+      claimed: 1,
+      published: 1,
+      released: 0,
+    });
+  });
+
+  it("does not claim more work after the relay has stopped", async () => {
+    const fixture = createOutboxFixture();
+    await appendMessage(fixture);
+    const relay = new TransactionalOutboxRelay({
+      store: fixture.store,
+      publish: vi.fn(async () => {}),
+      now: fixture.clock.now,
+    });
+
+    relay.stop();
+
+    await expect(relay.publishBatch({ limit: 1, now: fixture.clock.now() })).resolves.toEqual({
+      status: "stopped",
+      claimed: 0,
+      published: 0,
+      scheduledRetry: 0,
+      poisoned: 0,
+      deadLettered: 0,
+      staleClaimed: 0,
+      released: 0,
+      results: [],
+    });
+    await expect(fixture.store.listOutboxMessages()).resolves.toMatchObject([
+      { attempts: 0, status: "pending" },
+    ]);
+  });
+
+  it("does not claim work for an already-cancelled batch signal", async () => {
+    const fixture = createOutboxFixture();
+    await appendMessage(fixture);
+    const publish = vi.fn(async () => {});
+    const relay = new TransactionalOutboxRelay({
+      store: fixture.store,
+      publish,
+      now: fixture.clock.now,
+    });
+    const cancellation = new AbortController();
+    cancellation.abort(new Error("host is shutting down"));
+
+    await expect(
+      relay.publishBatch({ limit: 1, now: fixture.clock.now(), signal: cancellation.signal }),
+    ).resolves.toMatchObject({
+      status: "cancelled",
+      claimed: 0,
+      released: 0,
+    });
+    expect(publish).not.toHaveBeenCalled();
+    await expect(fixture.store.listOutboxMessages()).resolves.toMatchObject([
+      { attempts: 0, status: "pending" },
+    ]);
+  });
+
   it("keeps exhausted messages poisoned when no dead-letter hook is configured", async () => {
     const fixture = createOutboxFixture();
     await appendMessage(fixture, { maxAttempts: 1 });
@@ -2069,6 +2222,91 @@ describe("DrizzleTransactionalEventStore", () => {
     ]);
   });
 
+  it("releases a Drizzle outbox claim without consuming its publish attempt", async () => {
+    const now = new Date("2026-01-01T00:00:01.000Z");
+    const diagnostic = {
+      code: "events-tx/outbox-claim-released",
+      message: "Outbox claim released before publication started.",
+      at: now,
+    };
+    const db = createMockDrizzleDb({
+      selectResults: [[createOutboxRow({ status: "publishing", attempts: 1 })]],
+      updateResults: [
+        [
+          createOutboxRow({
+            status: "retrying",
+            attempts: 0,
+            visibleAt: now,
+            diagnostics: [diagnostic],
+          }),
+        ],
+      ],
+    });
+    const store = new DrizzleTransactionalEventStore({ db });
+
+    await expect(
+      store.releaseOutboxClaim({
+        id: "message-1",
+        expectedAttempts: 1,
+        now,
+        diagnostic,
+      }),
+    ).resolves.toMatchObject({
+      status: "retrying",
+      attempts: 0,
+      visibleAt: now,
+      diagnostics: [diagnostic],
+    });
+    expect(db.updates[0]).toMatchObject({
+      status: "retrying",
+      attempts: 0,
+      visibleAt: now,
+      lockedUntil: null,
+    });
+  });
+
+  it("fences a stale Drizzle outbox claimant after a concurrent release", async () => {
+    const now = new Date("2026-01-01T00:00:01.000Z");
+    const selected = createOutboxRow({
+      status: "publishing",
+      attempts: 1,
+      lockedUntil: now,
+    });
+    const queries: CapturedProxyQuery[] = [];
+    const db = createPgProxyDrizzle(async (sql, params, method) => {
+      queries.push({ sql, params, method });
+      if (sql.startsWith("select")) {
+        return { rows: [outboxRowValues(selected)] };
+      }
+
+      const whereSql = sql.slice(sql.indexOf(" where "));
+      if (!whereSql.includes('"croco_outbox_messages"."attempts"')) {
+        return {
+          rows: [
+            outboxRowValues(
+              createOutboxRow({
+                status: "publishing",
+                attempts: 2,
+                lockedUntil: new Date("2026-01-01T00:00:02.000Z"),
+              }),
+            ),
+          ],
+        };
+      }
+      return { rows: [] };
+    });
+    const store = new DrizzleTransactionalEventStore({
+      db: db as unknown as DrizzleTransactionalEventStoreDb,
+    });
+
+    await expect(
+      store.claimOutboxBatch({ limit: 1, now, visibilityTimeoutMs: 1_000 }),
+    ).resolves.toEqual([]);
+
+    const claimSql = queries[1]?.sql.slice(queries[1].sql.indexOf(" where "));
+    expect(claimSql).toContain('"croco_outbox_messages"."attempts"');
+  });
+
   it("emits lease-bound Drizzle CAS SQL for inbox success and failure", async () => {
     const processing = inboxRowValues({ attempts: 2, status: "processing" });
     const processed = inboxRowValues({
@@ -2482,6 +2720,33 @@ function createInboxRow(overrides: Partial<Record<string, unknown>> = {}): Recor
     diagnostics: [],
     ...overrides,
   };
+}
+
+function outboxRowValues(overrides: Partial<Record<string, unknown>> = {}): unknown[] {
+  const row = createOutboxRow(overrides);
+  return [
+    row.id,
+    row.eventId,
+    row.eventType,
+    row.aggregateId,
+    row.idempotencyKey,
+    row.payload,
+    row.metadata,
+    row.traceContext,
+    row.attempts,
+    row.maxAttempts,
+    row.status,
+    row.visibleAt,
+    row.occurredAt,
+    row.createdAt,
+    row.updatedAt,
+    row.lockedUntil,
+    row.publishedAt,
+    row.lastError,
+    row.deadLetteredAt,
+    row.deadLetterReason,
+    row.diagnostics,
+  ];
 }
 
 type CapturedProxyQuery = {

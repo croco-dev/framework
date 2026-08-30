@@ -52,6 +52,18 @@ await relay.publishBatch({ limit: 50 });
 
 The relay claims visible messages, publishes each one, marks successful messages as `published`, schedules retry with backoff after failures, and marks exhausted messages as `poisoned` or `dead_lettered` when a dead-letter hook is configured. Completion updates are guarded by the claimed attempt number; if another relay already completed or superseded the claim, the batch result reports `stale_claim` without overwriting the newer state.
 
+Publish callbacks receive an optional `AbortSignal`. `stop()` prevents new batches and cancels active callbacks, while `drain(signal)` waits for active batches and reports whether the supplied shutdown boundary expired. Claims whose publication never started are released immediately as `retrying` without consuming an attempt.
+
+`TransactionalOutboxRelay` structurally implements the framework-context shutdown hook, so hosts can register it without adding a dependency from framework-context back to events-tx:
+
+```typescript
+import { ShutdownManager } from "@croco/framework-context";
+
+ShutdownManager.getInstance().register(relay);
+```
+
+When shutdown starts, the relay stops intake, forwards cancellation to the active publisher, and waits for a deterministic `drained` or `cancelled` outcome. A publisher that ignores cancellation may remain pending after the drain boundary; its claimed row retains the existing visibility-timeout recovery path.
+
 ## Inbox Dedupe
 
 ```typescript

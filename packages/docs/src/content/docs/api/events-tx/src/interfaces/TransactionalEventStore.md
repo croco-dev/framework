@@ -257,6 +257,26 @@ title: "TransactionalEventStore"
 
 ---
 
+### releaseOutboxClaim()
+
+> **releaseOutboxClaim**(`input`, `context?`): `Promise`\<[`TransactionalOutboxMessage`](/api/events-tx/src/type-aliases/transactionaloutboxmessage/) \| `null`\>
+
+#### Parameters
+
+##### input
+
+[`OutboxReleaseInput`](/api/events-tx/src/type-aliases/outboxreleaseinput/)
+
+##### context?
+
+[`TransactionalEventStoreContext`](/api/events-tx/src/type-aliases/transactionaleventstorecontext/)\<`TClient`\>
+
+#### Returns
+
+`Promise`\<[`TransactionalOutboxMessage`](/api/events-tx/src/type-aliases/transactionaloutboxmessage/) \| `null`\>
+
+---
+
 ### startInboxProcessing()
 
 > **startInboxProcessing**(`input`, `context?`): `Promise`\<[`InboxStartResult`](/api/events-tx/src/type-aliases/inboxstartresult/)\>
