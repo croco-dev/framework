@@ -31,6 +31,32 @@ class RetryableProviderProblem extends Problem {
   }
 }
 
+class ExtensionRetryableProviderProblem extends Problem {
+  constructor(detail: string, retryable?: boolean) {
+    super(
+      "workflow-core/test-extension-retryable-provider-problem",
+      ProblemCategory.InternalServerError,
+      detail,
+      retryable === undefined ? undefined : { extensions: { retryable } },
+    );
+  }
+}
+
+class DualShapeRetryableProviderProblem extends Problem {
+  constructor(
+    detail: string,
+    readonly retryable: boolean,
+    extensionRetryable: boolean,
+  ) {
+    super(
+      "workflow-core/test-dual-shape-retryable-provider-problem",
+      ProblemCategory.InternalServerError,
+      detail,
+      { extensions: { retryable: extensionRetryable } },
+    );
+  }
+}
+
 class CompensationProblem extends Problem {
   constructor(detail: string) {
     super("workflow-core/test-compensation-problem", ProblemCategory.InternalServerError, detail);
@@ -730,6 +756,130 @@ describe("SagaRunner", () => {
     expect(attempts).toBe(2);
     await expect(runner.listExecutions({ sagaName: definition.name })).resolves.toHaveLength(1);
   });
+
+  it("retries Problems marked retryable through extensions", async () => {
+    let attempts = 0;
+    const runner = new SagaRunner();
+    const definition: SagaDefinition = {
+      name: "problem-extension-retry",
+      steps: [
+        {
+          id: "charge-provider",
+          retry: { maxAttempts: 2 },
+          run: () => {
+            attempts += 1;
+            if (attempts === 1) {
+              throw new ExtensionRetryableProviderProblem(
+                "payment provider retryable outage",
+                true,
+              );
+            }
+            return "charged";
+          },
+        },
+      ],
+    };
+
+    const result = await runner.execute(definition, {});
+
+    expect(attempts).toBe(2);
+    expect(result.execution.status).toBe("completed");
+    expect(result.steps).toEqual([{ stepId: "charge-provider", result: "charged" }]);
+  });
+
+  it("records extension retryability when Problem retries are exhausted", async () => {
+    let attempts = 0;
+    const runner = new SagaRunner();
+    const definition: SagaDefinition = {
+      name: "problem-extension-retry-exhaustion",
+      steps: [
+        {
+          id: "charge-provider",
+          retry: { maxAttempts: 2 },
+          run: () => {
+            attempts += 1;
+            throw new ExtensionRetryableProviderProblem("payment provider retryable outage", true);
+          },
+        },
+      ],
+    };
+
+    await expect(runner.execute(definition, {})).rejects.toMatchObject({
+      extensions: expect.objectContaining({ retryable: true }),
+    });
+
+    const [execution] = await runner.listExecutions({ sagaName: definition.name });
+    expect(attempts).toBe(2);
+    expect(execution.error).toEqual(expect.objectContaining({ retryable: true }));
+    expect(execution.steps[0]?.error).toEqual(expect.objectContaining({ retryable: true }));
+  });
+
+  it.each([
+    { extensionRetryable: true, retryable: false, expectedAttempts: 1 },
+    { extensionRetryable: false, retryable: true, expectedAttempts: 2 },
+  ])(
+    "prefers top-level retryable=$retryable over extension retryable=$extensionRetryable",
+    async ({ extensionRetryable, retryable, expectedAttempts }) => {
+      let attempts = 0;
+      const runner = new SagaRunner();
+      const definition: SagaDefinition = {
+        name: `problem-retry-precedence-${String(retryable)}`,
+        steps: [
+          {
+            id: "charge-provider",
+            retry: { maxAttempts: 2 },
+            run: () => {
+              attempts += 1;
+              if (attempts < 2 || !retryable) {
+                throw new DualShapeRetryableProviderProblem(
+                  "payment provider outage",
+                  retryable,
+                  extensionRetryable,
+                );
+              }
+              return "charged";
+            },
+          },
+        ],
+      };
+
+      if (retryable) {
+        await expect(runner.execute(definition, {})).resolves.toMatchObject({
+          execution: { status: "completed" },
+        });
+      } else {
+        await expect(runner.execute(definition, {})).rejects.toThrow(SagaExecutionFailedProblem);
+      }
+      expect(attempts).toBe(expectedAttempts);
+    },
+  );
+
+  it.each([false, undefined])(
+    "does not retry Problems without an affirmative retryable extension (%s)",
+    async (retryable) => {
+      let attempts = 0;
+      const runner = new SagaRunner();
+      const definition: SagaDefinition = {
+        name: `problem-extension-non-retry-${String(retryable)}`,
+        steps: [
+          {
+            id: "charge-provider",
+            retry: { maxAttempts: 2 },
+            run: () => {
+              attempts += 1;
+              throw new ExtensionRetryableProviderProblem(
+                "payment provider non-retryable outage",
+                retryable,
+              );
+            },
+          },
+        ],
+      };
+
+      await expect(runner.execute(definition, {})).rejects.toThrow(SagaExecutionFailedProblem);
+      expect(attempts).toBe(1);
+    },
+  );
 
   it("scopes saga idempotency keys by saga name", async () => {
     const events: string[] = [];

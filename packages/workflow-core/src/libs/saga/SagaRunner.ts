@@ -1,3 +1,4 @@
+import { Problem } from "@croco/problems-core";
 import { withSpan } from "@croco/telemetry-api";
 import {
   SagaDefinitionProblem,
@@ -47,14 +48,22 @@ function toSagaFailure(error: unknown): SagaFailure {
   const candidate = error as { readonly code?: unknown; readonly retryable?: unknown };
   return {
     message: error instanceof Error ? error.message : String(error),
-    retryable: Boolean(candidate.retryable),
+    retryable: isRetryableError(error),
     ...(typeof candidate.code === "string" ? { code: candidate.code } : {}),
     ...(error instanceof Error && error.stack !== undefined ? { stack: error.stack } : {}),
   };
 }
 
 function isRetryableError(error: unknown): boolean {
-  return Boolean((error as { readonly retryable?: unknown }).retryable);
+  if (
+    error !== null &&
+    (typeof error === "object" || typeof error === "function") &&
+    "retryable" in error
+  ) {
+    return Boolean(error.retryable);
+  }
+
+  return error instanceof Problem && error.extensions?.retryable === true;
 }
 
 function getMaxAttempts(step: SagaStepDefinition): number {
