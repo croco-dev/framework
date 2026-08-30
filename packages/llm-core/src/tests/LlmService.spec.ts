@@ -1,6 +1,8 @@
 import type { EventBus } from "@croco/events-core";
 import {
   OPERATOR_ONLY_PROBLEM_DETAIL,
+  Problem,
+  ProblemCategory,
   createProblemResponseDetail,
   createProblemResponseExtensions,
   extractProblemDetailsResponseExtensions,
@@ -31,6 +33,27 @@ class FailingStreamModel extends InMemoryLlmModel {
   override async *stream(_params: StreamParams): AsyncIterable<StreamChunk> {
     yield { delta: "partial " };
     throw new Error("provider stream failed");
+  }
+}
+
+class ProviderProblem extends Problem {
+  constructor() {
+    super("provider/rate-limited", ProblemCategory.TooManyRequests, "Try again later", {
+      extensions: { retryAfter: 42 },
+    });
+  }
+}
+
+class ProviderProblemGenerateModel extends InMemoryLlmModel {
+  override async generate(_params: GenerateParams): Promise<GenerateResult> {
+    throw new ProviderProblem();
+  }
+}
+
+class ProviderProblemStreamModel extends InMemoryLlmModel {
+  override async *stream(_params: StreamParams): AsyncIterable<StreamChunk> {
+    yield* [] as StreamChunk[];
+    throw new ProviderProblem();
   }
 }
 
@@ -160,6 +183,19 @@ describe("LlmService", () => {
   });
 
   describe("generate", () => {
+    it("preserves provider Problems from generation", async () => {
+      const model = new ProviderProblemGenerateModel("provider-problem-generate");
+      registry.registerProvider(model.modelId, () => model);
+
+      await expect(
+        service.generate({ modelId: model.modelId, prompt: "retryable" }),
+      ).rejects.toMatchObject({
+        code: "provider/rate-limited",
+        category: ProblemCategory.TooManyRequests,
+        extensions: { retryAfter: 42 },
+      });
+    });
+
     it("should generate text successfully", async () => {
       const result = await service.generate({
         prompt: "Hello",
@@ -659,6 +695,19 @@ describe("LlmService", () => {
   });
 
   describe("stream", () => {
+    it("preserves provider Problems from streaming", async () => {
+      const model = new ProviderProblemStreamModel("provider-problem-stream");
+      registry.registerProvider(model.modelId, () => model);
+
+      await expect(
+        collectStream(service.stream({ modelId: model.modelId, prompt: "retryable" })),
+      ).rejects.toMatchObject({
+        code: "provider/rate-limited",
+        category: ProblemCategory.TooManyRequests,
+        extensions: { retryAfter: 42 },
+      });
+    });
+
     it("should stream text chunks", async () => {
       const chunks: string[] = [];
 

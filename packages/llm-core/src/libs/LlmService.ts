@@ -1,5 +1,6 @@
 import { restoreSerializedEventIdentity, type EventBus } from "@croco/events-core";
 import { Token } from "@croco/framework-context";
+import { Problem } from "@croco/problems-core";
 import { Trace, recordEvent, withSpan } from "@croco/telemetry-api";
 import { LlmGeneratedEvent } from "./events/LlmGeneratedEvent";
 import { LlmStreamCompletedEvent } from "./events/LlmStreamCompletedEvent";
@@ -573,7 +574,7 @@ function normalizeOperationError(
   error: unknown,
   signal: AbortSignal | undefined,
   operation: string,
-): LlmServiceProblem | LlmOperationAbortedProblem | LlmCompletionEventPublicationProblem {
+): Problem | LlmOperationAbortedProblem | LlmCompletionEventPublicationProblem {
   if (error instanceof LlmCompletionEventPublicationProblem) {
     return error;
   }
@@ -582,6 +583,10 @@ function normalizeOperationError(
     return error instanceof LlmOperationAbortedProblem
       ? error
       : new LlmOperationAbortedProblem(operation);
+  }
+
+  if (error instanceof Problem) {
+    return error;
   }
 
   return LlmServiceProblem.fromError(error);
