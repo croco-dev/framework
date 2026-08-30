@@ -269,6 +269,26 @@ describe("ClerkOrganizationService", () => {
       expect(result.totalCount).toBe(1);
       expect(result.memberships[0].role).toBe("org:member");
     });
+
+    it("should count only memberships with public user data", async () => {
+      const mockResponse = {
+        data: [
+          createMockMembership("mem_1"),
+          { ...createMockMembership("mem_missing"), publicUserData: null },
+        ],
+        totalCount: 2,
+      };
+      vi.mocked(mockClerkClient.organizations.getOrganizationMembershipList).mockResolvedValue(
+        mockResponse as unknown as Awaited<
+          ReturnType<typeof mockClerkClient.organizations.getOrganizationMembershipList>
+        >,
+      );
+
+      const result = await service.getOrganizationMembershipList("org_123");
+
+      expect(result.memberships).toHaveLength(1);
+      expect(result.totalCount).toBe(result.memberships.length);
+    });
   });
 
   describe("createOrganizationMembership", () => {

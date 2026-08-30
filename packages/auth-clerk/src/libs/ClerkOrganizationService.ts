@@ -259,7 +259,7 @@ export class ClerkOrganizationService {
 
     return {
       memberships,
-      totalCount: response.totalCount,
+      totalCount: memberships.length,
     };
   }
 
