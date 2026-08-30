@@ -10,8 +10,9 @@ import {
   GRAPHQL_PROBLEM_RESPONSES_KEY,
   GRAPHQL_ROLES_KEY,
 } from "../constants";
-import { getAllResolvers, getResolverMetadata } from "../metadata/MetadataReader";
 import type { GraphQLProblemResponseMetadata } from "../decorators/GraphQLProblemResponse";
+import { getGraphQLMethodMetadata } from "../metadata/GraphQLMetadata";
+import { getAllResolvers, getResolverMetadata } from "../metadata/MetadataReader";
 
 export type GraphQLContractSnapshotVersion = "croco.graphql-contract.snapshot.v2";
 export type GraphQLContractOperationKind = "query" | "mutation" | "subscription";
@@ -191,8 +192,7 @@ function collectMethodNames(resolver: Function, prototype: object): string[] {
 
     return (
       typeof descriptor?.value === "function" &&
-      (graphQLMethodNames.has(methodName) ||
-        hasCrocoContractMethodMetadata(resolver, prototype, methodName))
+      (graphQLMethodNames.has(methodName) || hasCrocoContractMethodMetadata(prototype, methodName))
     );
   });
 }
@@ -224,16 +224,12 @@ function isTypeGraphQLResolverMethodMetadata(
   );
 }
 
-function hasCrocoContractMethodMetadata(
-  resolver: Function,
-  prototype: object,
-  methodName: string,
-): boolean {
+function hasCrocoContractMethodMetadata(prototype: object, methodName: string): boolean {
   return (
-    Reflect.hasMetadata(GRAPHQL_GUARDS_KEY, prototype, methodName) ||
-    Reflect.hasMetadata(GRAPHQL_INTERCEPTORS_KEY, prototype, methodName) ||
-    Reflect.hasMetadata(GRAPHQL_ROLES_KEY, prototype, methodName) ||
-    Reflect.hasMetadata(GRAPHQL_PROBLEM_RESPONSES_KEY, resolver, methodName)
+    getGraphQLMethodMetadata(GRAPHQL_GUARDS_KEY, prototype, methodName) !== undefined ||
+    getGraphQLMethodMetadata(GRAPHQL_INTERCEPTORS_KEY, prototype, methodName) !== undefined ||
+    getGraphQLMethodMetadata(GRAPHQL_ROLES_KEY, prototype, methodName) !== undefined ||
+    getGraphQLMethodMetadata(GRAPHQL_PROBLEM_RESPONSES_KEY, prototype, methodName) !== undefined
   );
 }
 
@@ -248,12 +244,12 @@ function toResolverMethodSnapshot(
     guards: readReferenceMetadata(GRAPHQL_GUARDS_KEY, prototype, methodName),
     interceptors: readReferenceMetadata(GRAPHQL_INTERCEPTORS_KEY, prototype, methodName),
     roles: readStringMetadata(GRAPHQL_ROLES_KEY, prototype, methodName),
-    problems: readProblemResponses(resolver, methodName),
+    problems: readProblemResponses(prototype, methodName),
   };
 }
 
 function readReferenceMetadata(key: symbol, target: object, methodName: string): string[] {
-  const value = Reflect.getMetadata(key, target, methodName);
+  const value = getGraphQLMethodMetadata<unknown>(key, target, methodName);
 
   if (!Array.isArray(value)) {
     return [];
@@ -263,7 +259,7 @@ function readReferenceMetadata(key: symbol, target: object, methodName: string):
 }
 
 function readStringMetadata(key: symbol, target: object, methodName: string): string[] {
-  const value = Reflect.getMetadata(key, target, methodName);
+  const value = getGraphQLMethodMetadata<unknown>(key, target, methodName);
 
   if (!Array.isArray(value)) {
     return [];
@@ -273,10 +269,14 @@ function readStringMetadata(key: symbol, target: object, methodName: string): st
 }
 
 function readProblemResponses(
-  resolver: Function,
+  prototype: object,
   methodName: string,
 ): GraphQLContractSnapshotProblemResponse[] {
-  const value = Reflect.getMetadata(GRAPHQL_PROBLEM_RESPONSES_KEY, resolver, methodName);
+  const value = getGraphQLMethodMetadata<unknown>(
+    GRAPHQL_PROBLEM_RESPONSES_KEY,
+    prototype,
+    methodName,
+  );
 
   if (!Array.isArray(value)) {
     return [];

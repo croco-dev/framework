@@ -3,6 +3,7 @@ import type { Scope } from "@croco/framework-context";
 import { Container, MetadataStorage } from "@croco/framework-context";
 import { Resolver } from "type-graphql";
 import { RESOLVER_KEY, RESOLVERS_KEY } from "../constants";
+import { defineGraphQLClassMetadata } from "../metadata/GraphQLMetadata";
 import type { ClassType, GraphQLResolverMetadata } from "../types";
 
 export type GraphQLResolverOptions = {
@@ -27,7 +28,7 @@ export function GraphQLResolver<T extends object = object>(
     }
 
     const metadata: GraphQLResolverMetadata = { scope, target };
-    Reflect.defineMetadata(RESOLVER_KEY, metadata, target);
+    defineGraphQLClassMetadata(RESOLVER_KEY, target, metadata);
 
     MetadataStorage.define(RESOLVERS_KEY, target, true);
   };

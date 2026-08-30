@@ -1,6 +1,13 @@
 import "reflect-metadata";
+import { ProblemCategory } from "@croco/problems-core";
 import { describe, expect, it } from "vitest";
-import { GRAPHQL_GUARDS_KEY, GRAPHQL_INTERCEPTORS_KEY, GRAPHQL_ROLES_KEY } from "../libs/constants";
+import {
+  GRAPHQL_GUARDS_KEY,
+  GRAPHQL_INTERCEPTORS_KEY,
+  GRAPHQL_PROBLEM_RESPONSES_KEY,
+  GRAPHQL_ROLES_KEY,
+} from "../libs/constants";
+import { GraphQLProblemResponse } from "../libs/decorators/GraphQLProblemResponse";
 import { Roles } from "../libs/decorators/Roles";
 import { UseGuards, UseInterceptors } from "../libs/decorators/Lifecycle";
 import type { GraphQLGuard } from "../libs/types/GuardTypes";
@@ -23,8 +30,12 @@ class TestInterceptor implements GraphQLInterceptor {
 }
 
 describe("GraphQL lifecycle decorators", () => {
-  it("should persist guard, interceptor, and role declarations used by the contract and runtime", () => {
+  it("should persist method declarations on the resolver prototype", () => {
     class TestResolver {
+      @GraphQLProblemResponse({
+        code: "GRAPHQL_PROTECTED_VALUE_UNAVAILABLE",
+        category: ProblemCategory.InternalServerError,
+      })
       @Roles("admin")
       @UseGuards(TestGuard)
       @UseInterceptors(TestInterceptor)
@@ -42,5 +53,20 @@ describe("GraphQL lifecycle decorators", () => {
     expect(
       Reflect.getMetadata(GRAPHQL_ROLES_KEY, TestResolver.prototype, "protectedValue"),
     ).toEqual(["admin"]);
+    expect(
+      Reflect.getOwnMetadata(
+        GRAPHQL_PROBLEM_RESPONSES_KEY,
+        TestResolver.prototype,
+        "protectedValue",
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        code: "GRAPHQL_PROTECTED_VALUE_UNAVAILABLE",
+        category: ProblemCategory.InternalServerError,
+      }),
+    ]);
+    expect(
+      Reflect.hasOwnMetadata(GRAPHQL_PROBLEM_RESPONSES_KEY, TestResolver, "protectedValue"),
+    ).toBe(false);
   });
 });
