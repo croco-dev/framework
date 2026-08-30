@@ -68,7 +68,7 @@ export function generateDesktopRendererClients(
 function assertGeneratableGraph(graph: DesktopContractGraphV1): void {
   if (graph.version !== "croco.desktop-contract-graph.v1") {
     throw new DesktopRendererGenerationProblem(
-      `Expected croco.desktop-contract-graph.v1, received ${JSON.stringify(graph.version)}.`,
+      `Expected croco.desktop-contract-graph.v1, received ${formatDiagnosticValue(graph.version)}.`,
     );
   }
   if (graph.diagnostics.length > 0) {
@@ -80,18 +80,34 @@ function assertGeneratableGraph(graph: DesktopContractGraphV1): void {
 }
 
 function assertGraphScalarFields(graph: DesktopContractGraphV1): void {
+  assertStringIdentifiers(graph.app.contractIds, "app contract reference");
+  assertStringIdentifiers(graph.app.windowIds, "app window reference");
+  assertStringIdentifiers(graph.effects, "effect namespace");
   for (const contract of graph.contracts) {
     assertStringIdentifier(contract.id, "contract id");
+    assertStringIdentifiers(contract.commandIds, "contract command reference");
+    assertStringIdentifiers(contract.eventIds, "contract event reference");
+    assertStringIdentifiers(contract.grantIds, "contract grant reference");
   }
   for (const command of graph.commands) {
     assertStringIdentifier(command.id, "command id");
     assertStringIdentifier(command.contractId, "command contractId");
     assertStringIdentifier(command.key, "command key");
+    assertStringIdentifier(command.input.id, "command input schema id");
+    assertStringIdentifier(command.output.id, "command output schema id");
+    assertStringIdentifiers(command.problems, "command Problem reference");
+    assertStringIdentifiers(command.events, "command event reference");
+    for (const effect of command.effects) {
+      assertStringIdentifier(effect.namespace, "command effect namespace");
+      assertStringIdentifiers(effect.methods, "command effect method");
+      assertStringIdentifiers(effect.grantIds, "command grant reference");
+    }
   }
   for (const event of graph.events) {
     assertStringIdentifier(event.id, "event id");
     assertStringIdentifier(event.contractId, "event contractId");
     assertStringIdentifier(event.key, "event key");
+    assertStringIdentifier(event.payload.id, "event payload schema id");
   }
   for (const grant of graph.grants) {
     assertStringIdentifier(grant.id, "grant id");
@@ -124,14 +140,27 @@ function assertGraphScalarFields(graph: DesktopContractGraphV1): void {
   }
   for (const problem of graph.problems) {
     assertStringIdentifier(problem.code, "Problem code");
+    if (!Object.values(ProblemCategory).includes(problem.category)) {
+      throw new DesktopRendererGenerationProblem(
+        `Desktop Problem ${JSON.stringify(problem.code)} has an unsupported category.`,
+      );
+    }
   }
   for (const window of graph.windows) {
     assertStringIdentifier(window.id, "window id");
+    assertStringIdentifiers(window.exposedCommands, "window command reference");
+    assertStringIdentifiers(window.receivedEvents, "window event reference");
     if (window.trust !== "local" && window.trust !== "remote") {
       throw new DesktopRendererGenerationProblem(
         `Desktop window ${JSON.stringify(window.id)} has an unsupported trust mode.`,
       );
     }
+  }
+}
+
+function assertStringIdentifiers(values: readonly unknown[], description: string): void {
+  for (const value of values) {
+    assertStringIdentifier(value, description);
   }
 }
 
@@ -148,6 +177,18 @@ function describeValueType(value: unknown): string {
     return "null";
   }
   return Array.isArray(value) ? "array" : typeof value;
+}
+
+function formatDiagnosticValue(value: unknown): string {
+  if (
+    value === null ||
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  ) {
+    return JSON.stringify(value);
+  }
+  return describeValueType(value);
 }
 
 function createGraphIndexes(graph: DesktopContractGraphV1): GraphIndexes {

@@ -285,11 +285,19 @@ desktop.project.fileChanged.subscribe((_payload, _event) => undefined);
   it("rejects non-string graph identifiers before indexing or rendering", () => {
     const graph = createGraph(false);
     const command = graph.commands[0];
+    const effectCommand = graph.commands.find((candidate) => candidate.effects.length > 0);
     const event = graph.events[0];
     const grant = graph.grants[0];
-    assert(command && event && grant, "Fixture graph members are missing");
+    assert(command && effectCommand && event && grant, "Fixture graph members are missing");
 
     const invalidGraphs: readonly { graph: typeof graph; detail: string }[] = [
+      {
+        graph: {
+          ...graph,
+          version: BigInt(1) as unknown as typeof graph.version,
+        },
+        detail: "Expected croco.desktop-contract-graph.v1, received bigint.",
+      },
       {
         graph: {
           ...graph,
@@ -322,6 +330,71 @@ desktop.project.fileChanged.subscribe((_payload, _event) => undefined);
           ),
         },
         detail: "Desktop command key must be a string, received undefined.",
+      },
+      {
+        graph: {
+          ...graph,
+          commands: graph.commands.map((candidate) =>
+            candidate.id === command.id
+              ? {
+                  ...candidate,
+                  input: { ...candidate.input, id: BigInt(1) as unknown as string },
+                }
+              : candidate,
+          ),
+        },
+        detail: "Desktop command input schema id must be a string, received bigint.",
+      },
+      {
+        graph: {
+          ...graph,
+          events: graph.events.map((candidate) =>
+            candidate.id === event.id
+              ? {
+                  ...candidate,
+                  payload: { ...candidate.payload, id: BigInt(1) as unknown as string },
+                }
+              : candidate,
+          ),
+        },
+        detail: "Desktop event payload schema id must be a string, received bigint.",
+      },
+      {
+        graph: {
+          ...graph,
+          commands: graph.commands.map((candidate) =>
+            candidate.id === command.id
+              ? { ...candidate, problems: [BigInt(1) as unknown as string] }
+              : candidate,
+          ),
+        },
+        detail: "Desktop command Problem reference must be a string, received bigint.",
+      },
+      {
+        graph: {
+          ...graph,
+          commands: graph.commands.map((candidate) =>
+            candidate.id === effectCommand.id
+              ? {
+                  ...candidate,
+                  effects: candidate.effects.map((effect) => ({
+                    ...effect,
+                    grantIds: [BigInt(1) as unknown as string],
+                  })),
+                }
+              : candidate,
+          ),
+        },
+        detail: "Desktop command grant reference must be a string, received bigint.",
+      },
+      {
+        graph: {
+          ...graph,
+          windows: graph.windows.map((window, index) =>
+            index === 0 ? { ...window, exposedCommands: [BigInt(1) as unknown as string] } : window,
+          ),
+        },
+        detail: "Desktop window command reference must be a string, received bigint.",
       },
       {
         graph: {
@@ -362,8 +435,9 @@ desktop.project.fileChanged.subscribe((_payload, _event) => undefined);
   it("rejects forged capability discriminators before rendering", () => {
     const graph = createGraph(false);
     const grant = graph.grants[0];
+    const problem = graph.problems[0];
     const remoteWindow = graph.windows.find((window) => window.trust === "remote");
-    assert(grant && remoteWindow, "Fixture capability records are missing");
+    assert(grant && problem && remoteWindow, "Fixture capability records are missing");
 
     const invalidGraphs: readonly { graph: typeof graph; detail: string }[] = [
       {
@@ -392,6 +466,17 @@ desktop.project.fileChanged.subscribe((_payload, _event) => undefined);
           ),
         } as typeof graph,
         detail: `Desktop grant ${JSON.stringify(grant.id)} has an unsupported ${description}.`,
+      })),
+      ...([undefined, "forged", BigInt(1)] as const).map((category) => ({
+        graph: {
+          ...graph,
+          problems: graph.problems.map((candidate) =>
+            candidate.code === problem.code
+              ? { ...candidate, category: category as unknown as ProblemCategory }
+              : candidate,
+          ),
+        },
+        detail: `Desktop Problem ${JSON.stringify(problem.code)} has an unsupported category.`,
       })),
     ];
 
