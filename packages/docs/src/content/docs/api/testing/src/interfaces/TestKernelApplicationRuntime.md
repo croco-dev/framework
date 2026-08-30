@@ -15,7 +15,7 @@ title: "TestKernelApplicationRuntime"
 
 `void` \| `Promise`\<`void`\>
 
----
+***
 
 ### run()
 
@@ -59,11 +59,27 @@ title: "TestKernelApplicationRuntime"
 
 `T`
 
----
+***
 
 ### shutdown()?
 
 > `optional` **shutdown**(): `void` \| `Promise`\<`void`\>
+
+#### Returns
+
+`void` \| `Promise`\<`void`\>
+
+***
+
+### shutdownWithCleanup()?
+
+> `optional` **shutdownWithCleanup**(`cleanup`): `void` \| `Promise`\<`void`\>
+
+#### Parameters
+
+##### cleanup
+
+() => `void` \| `Promise`\<`void`\>
 
 #### Returns
 
