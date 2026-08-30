@@ -486,7 +486,7 @@ describe("ChunkExecutor", () => {
       writer,
     });
 
-    await expect(executor.execute("exec-1", step)).rejects.toThrow("Read failed");
+    await expect(executor.execute("exec-1", step)).rejects.toBe(error);
     expect(executionManager.fail).toHaveBeenCalledWith(
       "exec-1",
       expect.objectContaining({
@@ -495,6 +495,78 @@ describe("ChunkExecutor", () => {
       }),
     );
   });
+
+  it("should preserve the original error when failure recording rejects", async () => {
+    const writerError = new Error("Write failed");
+    const failureRecordError = new Error("Execution store unavailable");
+    const reader = {
+      read: vi.fn().mockResolvedValueOnce(1),
+    };
+    const writer = {
+      write: vi.fn().mockRejectedValue(writerError),
+    };
+    const step = new Step<number, number>({
+      name: "failure-record-step",
+      reader,
+      writer,
+      chunkSize: 1,
+    });
+    (executionManager.fail as Mock).mockRejectedValue(failureRecordError);
+
+    await expect(executor.execute("exec-1", step)).rejects.toBe(writerError);
+
+    expect(executionManager.fail).toHaveBeenCalledWith(
+      "exec-1",
+      expect.objectContaining({
+        message: "Write failed",
+        retryable: true,
+      }),
+    );
+    expect(Object.getOwnPropertyDescriptor(writerError, "batchFailureRecordError")).toEqual({
+      configurable: true,
+      enumerable: false,
+      value: failureRecordError,
+      writable: false,
+    });
+  });
+
+  it.each([
+    ["non-extensible", Object.preventExtensions(new Error("Write failed"))],
+    ["primitive", "Write failed"],
+  ] as const)(
+    "should report failure recording errors for %s original failures",
+    async (_errorKind, writerError) => {
+      const failureRecordError = new Error("Execution store unavailable");
+      const reader = {
+        read: vi.fn().mockResolvedValueOnce(1),
+      };
+      const writer = {
+        write: vi.fn().mockRejectedValue(writerError),
+      };
+      const step = new Step<number, number>({
+        name: "failure-record-step",
+        reader,
+        writer,
+        chunkSize: 1,
+      });
+      const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+      (executionManager.fail as Mock).mockRejectedValue(failureRecordError);
+
+      try {
+        await expect(executor.execute("exec-1", step)).rejects.toBe(writerError);
+
+        expect(consoleError).toHaveBeenCalledWith(
+          "[ChunkExecutor] Failed to record batch execution failure",
+          {
+            executionId: "exec-1",
+            failureRecordError,
+          },
+        );
+      } finally {
+        consoleError.mockRestore();
+      }
+    },
+  );
 
   it("should preserve non-retryable failure classification", async () => {
     const error = Object.assign(new Error("Validation failed"), {

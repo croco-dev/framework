@@ -21,6 +21,42 @@ function isCheckpointable(obj: unknown): obj is Checkpointable {
   );
 }
 
+function attachFailureRecordError(error: unknown, failureRecordError: unknown): boolean {
+  if (typeof error !== "object" || error === null) {
+    return false;
+  }
+
+  try {
+    Object.defineProperty(error, "batchFailureRecordError", {
+      configurable: true,
+      enumerable: false,
+      value: failureRecordError,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function reportFailureRecordError(
+  executionId: string,
+  error: unknown,
+  failureRecordError: unknown,
+): void {
+  if (attachFailureRecordError(error, failureRecordError)) {
+    return;
+  }
+
+  try {
+    console.error("[ChunkExecutor] Failed to record batch execution failure", {
+      executionId,
+      failureRecordError,
+    });
+  } catch {
+    return;
+  }
+}
+
 export class ChunkExecutor {
   constructor(private executionManager: ExecutionManager) {}
 
@@ -103,14 +139,17 @@ export class ChunkExecutor {
         await this.executionManager.complete(executionId, { processedCount });
       }
     } catch (error) {
-      // Fail execution
-      await this.executionManager.fail(executionId, {
-        ...createStepExecutionError(error, step.classifyFailure, {
-          executionId,
-          stepName: step.name,
-        }),
-      });
-      throw error; // Re-throw to let caller know
+      try {
+        await this.executionManager.fail(executionId, {
+          ...createStepExecutionError(error, step.classifyFailure, {
+            executionId,
+            stepName: step.name,
+          }),
+        });
+      } catch (failureRecordError) {
+        reportFailureRecordError(executionId, error, failureRecordError);
+      }
+      throw error;
     }
   }
 
