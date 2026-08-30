@@ -24,6 +24,7 @@
 "@croco/credits-drizzle": patch
 "@croco/customer-health-core": patch
 "@croco/customer-health-drizzle": patch
+"@croco/desktop-codegen": patch
 "@croco/engagement-core": patch
 "@croco/entitlements-core": patch
 "@croco/entitlements-drizzle": patch

@@ -8233,16 +8233,16 @@
           "kind": "code",
           "targets": [
             {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
               "conditions": ["import"],
               "target": "./dist/index.mjs"
             },
             {
               "conditions": ["require"],
               "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
             }
           ],
           "sourceEntrypoint": "packages/desktop-codegen/src/index.ts",
