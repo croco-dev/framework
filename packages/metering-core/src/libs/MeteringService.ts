@@ -172,50 +172,72 @@ export class MeteringService {
         throw error;
       }
       if (publishingClaimed) {
-        try {
-          await this.idempotencyManager.releaseMeteringEvents(
+        await this.runCleanup(error, () =>
+          this.idempotencyManager.releaseMeteringEvents(
             tenantId,
             meterId,
             idempotencyKey,
             claim.token,
-          );
-        } catch (cleanupError) {
-          this.reportCleanupFailure(error, cleanupError);
-        }
+          ),
+        );
       } else if (!persistenceCompleted) {
-        try {
-          await this.idempotencyManager.abortMeteringProcessing(
+        await this.runCleanup(error, () =>
+          this.idempotencyManager.abortMeteringProcessing(
             tenantId,
             meterId,
             idempotencyKey,
             claim.token,
-          );
-        } catch (cleanupError) {
-          this.reportCleanupFailure(error, cleanupError);
-        }
+          ),
+        );
       } else {
-        try {
-          await this.idempotencyManager.releaseMeteringProcessing(
+        await this.runCleanup(error, () =>
+          this.idempotencyManager.releaseMeteringProcessing(
             tenantId,
             meterId,
             idempotencyKey,
             claim.token,
-          );
-        } catch (cleanupError) {
-          this.reportCleanupFailure(error, cleanupError);
-        }
+          ),
+        );
       }
       throw error;
     }
   }
 
+  private async runCleanup(originalError: unknown, cleanup: () => Promise<void>): Promise<void> {
+    try {
+      await cleanup();
+    } catch (cleanupError) {
+      this.reportCleanupFailure(originalError, cleanupError);
+    }
+  }
+
   private reportCleanupFailure(originalError: unknown, cleanupError: unknown): void {
     const message = "[MeteringService] Failed to clean up after a metering error";
-    const logger = Container.getOptional(LOGGER_TOKEN);
-    if (logger) {
-      logger.error(message, { originalError, cleanupError });
-    } else {
-      console.error(message, { originalError, cleanupError });
+    const context = { originalError, cleanupError };
+
+    try {
+      const logger = Container.getOptional(LOGGER_TOKEN);
+      if (logger) {
+        const reportingResult: unknown = logger.error(message, context);
+        void Promise.resolve(reportingResult).catch((reportingError: unknown) => {
+          this.reportCleanupFailureToConsole(message, { ...context, reportingError });
+        });
+        return;
+      }
+    } catch (reportingError) {
+      this.reportCleanupFailureToConsole(message, { ...context, reportingError });
+      return;
+    }
+
+    this.reportCleanupFailureToConsole(message, context);
+  }
+
+  private reportCleanupFailureToConsole(message: string, context: Record<string, unknown>): void {
+    try {
+      const reportingResult: unknown = console.error(message, context);
+      void Promise.resolve(reportingResult).catch(() => undefined);
+    } catch {
+      return;
     }
   }
 
