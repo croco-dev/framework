@@ -787,17 +787,20 @@ export class QStashTriggerHandler {
    * Determine if an error is retryable.
    */
   private isRetryableError(error: unknown): boolean {
-    if (error instanceof Error) {
-      // Network errors, timeouts are retryable
-      if (
-        error.message.includes("ECONNREFUSED") ||
-        error.message.includes("ETIMEDOUT") ||
-        error.message.includes("timeout")
-      ) {
-        return true;
-      }
+    if (typeof error === "object" && error !== null && "retryable" in error) {
+      return Boolean(error.retryable);
     }
-    return false;
+
+    if (error instanceof Problem) {
+      return error.extensions?.retryable === true;
+    }
+
+    return (
+      error instanceof Error &&
+      (error.message.includes("ECONNREFUSED") ||
+        error.message.includes("ETIMEDOUT") ||
+        error.message.includes("timeout"))
+    );
   }
 
   /**
