@@ -88,6 +88,7 @@ export default defineConfig({
             "../customer-health-core/src/index.ts",
             "../customer-health-drizzle/src/index.ts",
             "../dataloader-core/src/index.ts",
+            "../desktop-codegen/src/index.ts",
             "../diagnostics-core/src/index.ts",
             "../entitlements-core/src/index.ts",
             "../entitlements-drizzle/src/index.ts",

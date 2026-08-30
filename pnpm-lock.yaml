@@ -1072,6 +1072,28 @@ importers:
         specifier: 4.1.8
         version: 4.1.8(@opentelemetry/api@1.9.0)(@types/node@26.1.2)(@vitest/coverage-v8@4.1.8)(vite@7.3.5(@types/node@26.1.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
 
+  packages/desktop-codegen:
+    dependencies:
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
+      '@croco/protocols-desktop':
+        specifier: workspace:*
+        version: link:../protocols-desktop
+    devDependencies:
+      tsup:
+        specifier: ^8.5.1
+        version: 8.5.1(patch_hash=ce9dbc714c187cea78868f1e68c1a0e5097ddbceb7e976a564d94f2291b5bcb9)(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.18)(tsx@4.21.0)(typescript@6.0.3)(yaml@2.9.0)
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: 4.1.8
+        version: 4.1.8(@opentelemetry/api@1.9.0)(@types/node@26.1.2)(@vitest/coverage-v8@4.1.8)(vite@7.3.5(@types/node@26.1.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+
   packages/diagnostics-core:
     dependencies:
       '@croco/problems-core':
@@ -1184,6 +1206,9 @@ importers:
       '@croco/dataloader-core':
         specifier: workspace:*
         version: link:../dataloader-core
+      '@croco/desktop-codegen':
+        specifier: workspace:*
+        version: link:../desktop-codegen
       '@croco/diagnostics-core':
         specifier: workspace:*
         version: link:../diagnostics-core

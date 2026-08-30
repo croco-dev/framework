@@ -446,6 +446,7 @@
       "description": "API protocol definitions and code generation",
       "packages": [
         "admin-generated",
+        "desktop-codegen",
         "openapi-spec",
         "protocol-codegen",
         "protocols-core",
@@ -613,6 +614,7 @@
         "batch-qstash",
         "credits-core",
         "credits-drizzle",
+        "desktop-codegen",
         "frontend-problems",
         "metering-upstash",
         "notifications-react-email",

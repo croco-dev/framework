@@ -51,6 +51,7 @@
     "@croco/customer-health-core": "workspace:*",
     "@croco/customer-health-drizzle": "workspace:*",
     "@croco/dataloader-core": "workspace:*",
+    "@croco/desktop-codegen": "workspace:*",
     "@croco/diagnostics-core": "workspace:*",
     "@croco/engagement-core": "workspace:*",
     "@croco/entitlements-core": "workspace:*",

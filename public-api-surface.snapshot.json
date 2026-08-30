@@ -8220,6 +8220,62 @@
       ]
     },
     {
+      "packageName": "@croco/desktop-codegen",
+      "relativeDir": "packages/desktop-codegen",
+      "entrypoints": [
+        {
+          "exportPath": ".",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/index.js"
+            },
+            {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            }
+          ],
+          "sourceEntrypoint": "packages/desktop-codegen/src/index.ts",
+          "runtimeExports": [
+            {
+              "name": "DesktopPreloadGenerationProblem",
+              "exportKind": "named",
+              "source": "./libs/generateDesktopPreloadBridges",
+              "declarationKind": "class"
+            },
+            {
+              "name": "generateDesktopPreloadBridges",
+              "exportKind": "named",
+              "source": "./libs/generateDesktopPreloadBridges",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "DesktopPreloadBridgeSource",
+              "exportKind": "named",
+              "source": "./libs/generateDesktopPreloadBridges"
+            },
+            {
+              "name": "DesktopPreloadContextBridge",
+              "exportKind": "named",
+              "source": "./libs/generateDesktopPreloadBridges"
+            },
+            {
+              "name": "DesktopPreloadTransport",
+              "exportKind": "named",
+              "source": "./libs/generateDesktopPreloadBridges"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "packageName": "@croco/diagnostics-core",
       "relativeDir": "packages/diagnostics-core",
       "entrypoints": [

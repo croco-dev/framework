@@ -1,0 +1,87 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`generateDesktopPreloadBridges > generates deterministic minimal bridges for local window profiles only 1`] = `
+[
+  {
+    "source": "import type { DesktopPreloadContextBridge, DesktopPreloadTransport } from "@croco/desktop-codegen";
+
+export function installDesktopPreloadBridge(
+  contextBridge: DesktopPreloadContextBridge,
+  transport: DesktopPreloadTransport,
+): void {
+  const bridge = Object.freeze({
+    commands: Object.freeze({
+    }),
+    events: Object.freeze({
+    }),
+  });
+
+  contextBridge.exposeInMainWorld("crocoDesktop", bridge);
+}
+",
+    "windowId": "empty",
+  },
+  {
+    "source": "import type { DesktopPreloadContextBridge, DesktopPreloadTransport } from "@croco/desktop-codegen";
+
+export function installDesktopPreloadBridge(
+  contextBridge: DesktopPreloadContextBridge,
+  transport: DesktopPreloadTransport,
+): void {
+  const bridge = Object.freeze({
+    commands: Object.freeze({
+      ["project"]: Object.freeze({
+        ["open"]: (input: unknown): Promise<unknown> =>
+          transport.invoke("project.open", input),
+      }),
+      ["system"]: Object.freeze({
+        ["status"]: (input: unknown): Promise<unknown> =>
+          transport.invoke("system.status", input),
+      }),
+    }),
+    events: Object.freeze({
+      ["project"]: Object.freeze({
+        ["changed"]: (callback: (payload: unknown) => void): (() => void) =>
+          transport.subscribe("project.changed", (payload) => callback(payload)),
+      }),
+      ["system"]: Object.freeze({
+        ["ready"]: (callback: (payload: unknown) => void): (() => void) =>
+          transport.subscribe("system.ready", (payload) => callback(payload)),
+      }),
+    }),
+  });
+
+  contextBridge.exposeInMainWorld("crocoDesktop", bridge);
+}
+",
+    "windowId": "main",
+  },
+  {
+    "source": "import type { DesktopPreloadContextBridge, DesktopPreloadTransport } from "@croco/desktop-codegen";
+
+export function installDesktopPreloadBridge(
+  contextBridge: DesktopPreloadContextBridge,
+  transport: DesktopPreloadTransport,
+): void {
+  const bridge = Object.freeze({
+    commands: Object.freeze({
+      ["system"]: Object.freeze({
+        ["status"]: (input: unknown): Promise<unknown> =>
+          transport.invoke("system.status", input),
+      }),
+    }),
+    events: Object.freeze({
+      ["system"]: Object.freeze({
+        ["ready"]: (callback: (payload: unknown) => void): (() => void) =>
+          transport.subscribe("system.ready", (payload) => callback(payload)),
+      }),
+    }),
+  });
+
+  contextBridge.exposeInMainWorld("crocoDesktop", bridge);
+}
+",
+    "windowId": "settings",
+  },
+]
+`;

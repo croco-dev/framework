@@ -705,6 +705,7 @@ jobs:
               - 'packages/customer-health-core/src/**'
               - 'packages/customer-health-drizzle/src/**'
               - 'packages/dataloader-core/src/**'
+              - 'packages/desktop-codegen/src/**'
               - 'packages/diagnostics-core/src/**'
               - 'packages/engagement-core/src/**'
               - 'packages/entitlements-core/src/**'
