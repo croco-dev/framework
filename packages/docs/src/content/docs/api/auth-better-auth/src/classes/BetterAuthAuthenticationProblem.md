@@ -5,7 +5,7 @@ prev: false
 title: "BetterAuthAuthenticationProblem"
 ---
 
-Better Auth 인증 또는 readiness 확인 중 예기치 않은 upstream 오류가 발생했을 때 발생하는 문제입니다.
+Better Auth 작업 중 예기치 않은 upstream 오류가 발생했을 때 발생하는 문제입니다.
 
 ## Extends
 
@@ -21,7 +21,7 @@ Better Auth 인증 또는 readiness 확인 중 예기치 않은 upstream 오류�
 
 ##### operation
 
-`"authenticate"` \| `"readiness"`
+`"revokeUserSessions"` \| `"authenticate"` \| `"readiness"` \| `"revokeSession"`
 
 ##### error
 

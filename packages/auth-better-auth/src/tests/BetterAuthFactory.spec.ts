@@ -52,6 +52,10 @@ describe("BetterAuthFactory", () => {
         database: expect.any(Object),
         baseURL: "http://localhost:3000",
         secret: "test-secret-key",
+        plugins: [
+          expect.objectContaining({ id: "bearer" }),
+          expect.objectContaining({ id: "admin" }),
+        ],
       });
 
       expect(drizzleAdapter).toHaveBeenCalledWith(mockDb, {
@@ -80,6 +84,10 @@ describe("BetterAuthFactory", () => {
         database: expect.any(Object),
         baseURL: "https://api.example.com",
         secret: "production-secret",
+        plugins: [
+          expect.objectContaining({ id: "bearer" }),
+          expect.objectContaining({ id: "admin" }),
+        ],
       });
     });
 
@@ -168,6 +176,14 @@ describe("BetterAuthFactory", () => {
       expect(schema.session).not.toBeUndefined();
       expect(schema.account).not.toBeUndefined();
       expect(schema.verification).not.toBeUndefined();
+    });
+
+    it("should expose the fields required by the admin plugin", () => {
+      expect(schema.user.role).not.toBeUndefined();
+      expect(schema.user.banned).not.toBeUndefined();
+      expect(schema.user.banReason).not.toBeUndefined();
+      expect(schema.user.banExpires).not.toBeUndefined();
+      expect(schema.session.impersonatedBy).not.toBeUndefined();
     });
   });
 

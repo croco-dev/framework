@@ -40,8 +40,15 @@ import { BetterAuthSessionManager } from "@croco/auth-better-auth";
 
 const sessions = new BetterAuthSessionManager(factory);
 const session = await sessions.getSession(token);
-await sessions.revokeUserSessions("user_123");
+await sessions.revokeSession(targetSessionToken, sessionToken);
+await sessions.revokeUserSessions("user_123", adminSessionToken);
 ```
+
+`BetterAuthFactory`는 Bearer 인증과 관리자 세션 해제 API에 필요한 Better Auth `bearer`, `admin`
+plugin을 기본으로 등록합니다. `revokeSession()`은 해제할 세션 토큰과 현재 사용자 세션 토큰을 분리해
+받으므로 다른 활성 세션도 해제할 수 있습니다. `revokeUserSessions()`는 `session:revoke` 권한이 있는
+관리자 세션 토큰을 두 번째 인자로 받습니다. 기존 데이터베이스에는 admin plugin이 사용하는 사용자
+역할·차단 필드와 세션 impersonation 필드를 마이그레이션해야 합니다.
 
 ### 4. 웹훅 처리
 

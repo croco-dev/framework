@@ -1,6 +1,7 @@
-import { Component, Inject } from "@croco/framework-context";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { admin, bearer } from "better-auth/plugins";
+import { Component, Inject } from "@croco/framework-context";
 import * as schema from "./schema";
 
 export const DRIZZLE_TOKEN = "DRIZZLE_TOKEN";
@@ -24,6 +25,7 @@ function createBetterAuthInstance(db: BetterAuthDatabase, config: BetterAuthConf
     }),
     baseURL: config.baseURL,
     secret: config.secret,
+    plugins: [bearer(), admin()],
   });
 }
 
