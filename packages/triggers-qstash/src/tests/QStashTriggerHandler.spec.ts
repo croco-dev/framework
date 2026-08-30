@@ -31,8 +31,13 @@ class QStashTriggerHandler extends QStashTriggerHandlerBase {
 }
 
 class TestTriggerProblem extends Problem {
-  constructor() {
-    super("trigger/test-problem", ProblemCategory.Conflict, "trigger failed");
+  constructor(retryable?: boolean, detail = "trigger failed") {
+    super(
+      "trigger/test-problem",
+      ProblemCategory.Conflict,
+      detail,
+      retryable === undefined ? undefined : { extensions: { retryable } },
+    );
   }
 }
 
@@ -987,6 +992,135 @@ describe("QStashTriggerHandler", () => {
     expect(create).toHaveBeenCalledTimes(3);
     expect(create).toHaveBeenLastCalledWith(
       expect.objectContaining({ idempotencyKey: "qstash:msg-retry", maxAttempts: 2 }),
+    );
+  });
+
+  it("Problem의 구조화된 retryable 신호로 같은 실행을 재시도해야 한다", async () => {
+    const execute = vi
+      .fn<() => Promise<string>>()
+      .mockRejectedValueOnce(new TestTriggerProblem(true))
+      .mockResolvedValueOnce("recovered");
+    class RetryableProblemHandler {
+      execute = execute;
+    }
+
+    triggerRegistry.register({
+      type: "cron",
+      expression: "* * * * *",
+      methodName: "execute",
+      target: RetryableProblemHandler.prototype,
+      options: {},
+    });
+
+    const receiver = { verify: vi.fn().mockResolvedValue(true) } as unknown as Receiver;
+    const { manager } = createIdempotentExecutionManager();
+    const handler = new QStashTriggerHandler({
+      receiver,
+      executionManager: manager,
+      maxAttempts: 2,
+      serviceResolver: () => new RetryableProblemHandler(),
+    });
+    const body = JSON.stringify({
+      scheduleId: "schedule-retryable-problem",
+      className: "RetryableProblemHandler",
+      methodName: "execute",
+      cronExpression: "* * * * *",
+      timestamp: "2026-08-13T00:00:00.000Z",
+    });
+
+    const pendingRetry = await handler.handle(body, "valid-signature", {
+      messageId: "msg-retryable-problem",
+    });
+    const recovered = await handler.handle(body, "valid-signature", {
+      messageId: "msg-retryable-problem",
+    });
+
+    expect(pendingRetry).toMatchObject({
+      success: false,
+      executionId: "exec-1",
+      statusCode: 503,
+      body: {
+        code: "triggers-qstash/execution-retry-pending",
+        retryable: true,
+        status: "retrying",
+      },
+    });
+    expect(recovered).toMatchObject({
+      success: true,
+      executionId: "exec-1",
+      body: { result: "recovered" },
+    });
+    expect(execute).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    {
+      error: Object.assign(new Error("upstream unavailable"), { retryable: true }),
+      expected: true,
+      signal: "top-level true",
+    },
+    {
+      error: Object.assign(new Error("request timeout"), { retryable: false }),
+      expected: false,
+      signal: "top-level false before message fallback",
+    },
+    {
+      error: Object.assign(new TestTriggerProblem(true), { retryable: false }),
+      expected: false,
+      signal: "top-level signal before Problem extension",
+    },
+    {
+      error: new TestTriggerProblem(false, "request timeout"),
+      expected: false,
+      signal: "Problem extension false before message fallback",
+    },
+    {
+      error: new TestTriggerProblem(undefined, "request timeout"),
+      expected: false,
+      signal: "Problem without a structured signal before message fallback",
+    },
+  ])("$signal 구조화 신호를 실행 실패 기록에 보존해야 한다", async ({ error, expected }) => {
+    class StructuredFailureHandler {
+      async execute(): Promise<never> {
+        throw error;
+      }
+    }
+
+    triggerRegistry.register({
+      type: "cron",
+      expression: "* * * * *",
+      methodName: "execute",
+      target: StructuredFailureHandler.prototype,
+      options: {},
+    });
+
+    const receiver = { verify: vi.fn().mockResolvedValue(true) } as unknown as Receiver;
+    const { manager } = createIdempotentExecutionManager();
+    const attemptManager = manager as ExecutionManager & {
+      failAttempt: ReturnType<typeof vi.fn>;
+    };
+    const handler = new QStashTriggerHandler({
+      receiver,
+      executionManager: manager,
+      maxAttempts: 2,
+      serviceResolver: () => new StructuredFailureHandler(),
+    });
+
+    await handler.handle(
+      JSON.stringify({
+        scheduleId: "schedule-structured-failure",
+        className: "StructuredFailureHandler",
+        methodName: "execute",
+        cronExpression: "* * * * *",
+        timestamp: "2026-08-13T00:00:00.000Z",
+      }),
+      "valid-signature",
+      { messageId: "msg-structured-failure" },
+    );
+
+    expect(attemptManager.failAttempt).toHaveBeenCalledWith(
+      { attempt: 1, executionId: "exec-1" },
+      expect.objectContaining({ retryable: expected }),
     );
   });
 
