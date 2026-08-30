@@ -1432,6 +1432,73 @@ describe("workflow-core", () => {
     },
   );
 
+  it.each([
+    ["extensible", new TestWorkflowProblem("billing provider unavailable"), false],
+    [
+      "non-extensible",
+      Object.preventExtensions(new TestWorkflowProblem("billing provider unavailable")),
+      true,
+    ],
+  ] as const)(
+    "preserves the %s workflow error when recording the failed execution rejects",
+    async (_errorKind, workflowFailure, attachmentFailed) => {
+      const mockSpan = createMockSpan();
+      vi.spyOn(trace, "getTracer").mockReturnValue(createMockTracer(mockSpan.span));
+      const failureRecordError = new TestWorkflowProblem("execution store unavailable");
+
+      @Component()
+      class FailureRecordTasks {
+        @Task({ name: "billing.failure-record" })
+        run(): never {
+          throw workflowFailure;
+        }
+      }
+
+      @Component()
+      class FailureRecordWorkflows {
+        @Workflow({
+          name: "billing-failure-record",
+          steps: ["billing.failure-record"],
+        })
+        run(): void {}
+      }
+
+      Container.set(FailureRecordTasks, new FailureRecordTasks());
+      Container.set(FailureRecordWorkflows, new FailureRecordWorkflows());
+      const fail = manager.fail.bind(manager);
+      vi.spyOn(manager, "fail").mockImplementation(async (executionId, error) => {
+        const execution = await store.findById(executionId);
+        if (execution?.type === "workflow") {
+          throw failureRecordError;
+        }
+
+        return fail(executionId, error);
+      });
+      const runner = new WorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+
+      await expect(runner.execute("billing-failure-record", {})).rejects.toBe(workflowFailure);
+
+      expect(
+        Object.getOwnPropertyDescriptor(workflowFailure, "workflowFailureRecordError"),
+      ).toEqual(
+        attachmentFailed
+          ? undefined
+          : {
+              configurable: true,
+              enumerable: false,
+              value: failureRecordError,
+              writable: false,
+            },
+      );
+      expect(mockSpan.addEvent).toHaveBeenCalledWith("workflow.execution.failure_record.failed", {
+        "workflow.execution.id": "exec-1",
+        "workflow.error.message": workflowFailure.message,
+        "workflow.failure_record.error.message": failureRecordError.message,
+        ...(attachmentFailed ? { "workflow.failure_record.attachment_failed": true } : {}),
+      });
+    },
+  );
+
   it("marks failed workflow executions and allows explicit replay creation", async () => {
     @Component()
     class FailingTasks {
