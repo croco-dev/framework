@@ -6,6 +6,7 @@
  * Policy:
  * - Workspace manifests may keep source entrypoints for local development.
  * - publishConfig is the authoritative npm publish contract and must point at dist.
+ * - Export conditions use the canonical order: types, import, require, then additional conditions.
  * - Package versions are never changed here; changesets owns versioning.
  */
 
@@ -23,8 +24,11 @@ import {
 } from "./internal-croco-compatibility-policy.mjs";
 import {
   bundledRuntimeDependencyNamesFor,
+  canonicalExportConditionNames,
   DIRECT_DIST_ENTRYPOINT_PACKAGES,
   ENTRYPOINT_EXEMPTIONS,
+  exportConditionOrderDiagnostics,
+  exportConditionSequenceParityDiagnostics,
   expectedFilesFor,
   FILES_EXEMPTIONS,
   fieldMatchesPath,
@@ -375,6 +379,36 @@ function normalizeTypesFields(pkg) {
 
   normalizeExportTypes(pkg.exports);
   normalizeExportTypes(pkg.publishConfig?.exports);
+  normalizeExportConditionOrder(pkg.exports);
+  normalizeExportConditionOrder(pkg.publishConfig?.exports);
+}
+
+function normalizeExportConditionOrder(exportsValue) {
+  if (!exportsValue || typeof exportsValue !== "object" || Array.isArray(exportsValue)) {
+    return;
+  }
+
+  for (const [exportPath, exportValue] of Object.entries(exportsValue)) {
+    if (!exportValue || typeof exportValue !== "object" || Array.isArray(exportValue)) {
+      continue;
+    }
+
+    exportsValue[exportPath] = normalizeExportConditionMap(exportValue);
+  }
+}
+
+function normalizeExportConditionMap(exportValue) {
+  return Object.fromEntries(
+    canonicalExportConditionNames(exportValue).map((conditionName) => {
+      const target = exportValue[conditionName];
+      return [
+        conditionName,
+        target && typeof target === "object" && !Array.isArray(target)
+          ? normalizeExportConditionMap(target)
+          : target,
+      ];
+    }),
+  );
 }
 
 function normalizeExportTypes(exportsValue) {
@@ -732,6 +766,9 @@ function validatePackage(pkg, pkgPath, rootDir, context = {}) {
   validateNoArrayTypes(pkg, "root", violations);
   validateNoArrayTypes(pkg.publishConfig, "publishConfig", violations);
   validateExportMap(pkg.publishConfig?.exports, "publishConfig.exports", violations);
+  violations.push(
+    ...exportConditionSequenceParityDiagnostics(pkg.exports, pkg.publishConfig?.exports),
+  );
   validateSpineEntrypointPolicy(pkg, context, violations);
   validateDrizzleOrmCatalogPolicy(pkg, pkgPath, violations);
   validateDirectDistEntrypoints(pkg, violations);
@@ -1326,6 +1363,8 @@ function validateExportMap(exportsValue, fieldName, violations) {
     return;
   }
 
+  violations.push(...exportConditionOrderDiagnostics(exportsValue, fieldName));
+
   for (const [exportPath, exportValue] of Object.entries(exportsValue)) {
     if (typeof exportValue === "string") {
       validateDistPath(exportValue, `${fieldName}["${exportPath}"]`, violations);
@@ -1338,11 +1377,27 @@ function validateExportMap(exportsValue, fieldName, violations) {
     }
 
     for (const [condition, target] of Object.entries(exportValue)) {
+      if (condition === "types" && target && typeof target === "object" && !Array.isArray(target)) {
+        validateModeSpecificTypesTarget(
+          target,
+          `${fieldName}["${exportPath}"].${condition}`,
+          violations,
+        );
+        continue;
+      }
       validateDistPath(target, `${fieldName}["${exportPath}"].${condition}`, violations, {
         mustEndWith: condition === "types" ? ".d.ts" : undefined,
       });
     }
   }
+}
+
+function validateModeSpecificTypesTarget(target, fieldName, violations) {
+  const importTarget = target.import;
+  const requireTarget = target.require;
+
+  validateDistPath(importTarget, `${fieldName}.import`, violations, { mustEndWith: ".d.mts" });
+  validateDistPath(requireTarget, `${fieldName}.require`, violations, { mustEndWith: ".d.ts" });
 }
 
 function validateDrizzleOrmCatalogPolicy(pkg, pkgPath, violations) {

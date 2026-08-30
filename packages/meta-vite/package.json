@@ -17,14 +17,20 @@
     "types": "./dist/index.d.ts",
     "exports": {
       ".": {
+        "types": {
+          "import": "./dist/index.d.mts",
+          "require": "./dist/index.d.ts"
+        },
         "import": "./dist/index.mjs",
-        "require": "./dist/index.js",
-        "types": "./dist/index.d.ts"
+        "require": "./dist/index.js"
       },
       "./isr/adapters": {
+        "types": {
+          "import": "./dist/libs/isr/adapters/index.d.mts",
+          "require": "./dist/libs/isr/adapters/index.d.ts"
+        },
         "import": "./dist/libs/isr/adapters/index.mjs",
-        "require": "./dist/libs/isr/adapters/index.js",
-        "types": "./dist/libs/isr/adapters/index.d.ts"
+        "require": "./dist/libs/isr/adapters/index.js"
       }
     },
     "access": "public"

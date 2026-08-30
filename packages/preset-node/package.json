@@ -17,14 +17,14 @@
     "types": "./dist/index.d.ts",
     "exports": {
       ".": {
+        "types": "./dist/index.d.ts",
         "import": "./dist/index.mjs",
-        "require": "./dist/index.js",
-        "types": "./dist/index.d.ts"
+        "require": "./dist/index.js"
       },
       "./entry": {
+        "types": "./dist/entry.d.ts",
         "import": "./dist/entry.mjs",
-        "require": "./dist/entry.js",
-        "types": "./dist/entry.d.ts"
+        "require": "./dist/entry.js"
       }
     },
     "access": "public"

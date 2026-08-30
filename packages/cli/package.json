@@ -20,16 +20,16 @@
     "types": "./dist/index.d.ts",
     "exports": {
       ".": {
-        "import": "./dist/index.js",
-        "types": "./dist/index.d.ts"
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
       },
       "./ops": {
-        "import": "./dist/ops.js",
-        "types": "./dist/ops.d.ts"
+        "types": "./dist/ops.d.ts",
+        "import": "./dist/ops.js"
       },
       "./jobs": {
-        "import": "./dist/jobs.js",
-        "types": "./dist/jobs.d.ts"
+        "types": "./dist/jobs.d.ts",
+        "import": "./dist/jobs.js"
       }
     },
     "access": "public"

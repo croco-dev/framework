@@ -16,6 +16,7 @@ import {
   DIRECT_DIST_ENTRYPOINT_PACKAGES,
   ENTRYPOINT_EXEMPTIONS,
   effectivePublishManifest,
+  exportConditionOrderDiagnostics,
   fieldMatchesPath,
   findPackageJsonFiles,
   packageHasSourceEntrypoint,
@@ -197,9 +198,18 @@ function main(): void {
       });
       const plan = planPackageSmoke(packedPackage);
       const peerMetadataDiagnostics = packedPeerMetadataDiagnostics(packedPackage);
+      const packedExportOrderDiagnostics = exportConditionOrderDiagnostics(
+        packedPackage.packedManifest.exports,
+        `${packedPackage.packageName}: packed exports`,
+      );
       diagnostics.push(...peerMetadataDiagnostics);
+      diagnostics.push(...packedExportOrderDiagnostics);
       diagnostics.push(...plan.diagnostics);
-      if (peerMetadataDiagnostics.length === 0 && plan.diagnostics.length === 0) {
+      if (
+        peerMetadataDiagnostics.length === 0 &&
+        packedExportOrderDiagnostics.length === 0 &&
+        plan.diagnostics.length === 0
+      ) {
         runPackageSmoke(consumerRoot, packedPackage, graphTarballs, packageManager, plan);
       }
       packageResults.push({
@@ -1199,6 +1209,18 @@ function pushConditionalTarget(
 
   const target = (value as Record<string, unknown>)[condition];
   if (target === undefined && condition === "require") {
+    return;
+  }
+  if (condition === "types" && target && typeof target === "object" && !Array.isArray(target)) {
+    const importTarget = (target as Record<string, unknown>).import;
+    pushStringTarget(
+      specifier,
+      importTarget,
+      `${fieldName}.import`,
+      packageInfo,
+      diagnostics,
+      targets,
+    );
     return;
   }
   if (typeof target === "string" && isStaticAssetTargetPath(target)) {

@@ -14,8 +14,8 @@
   "types": "./dist/worker.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/worker.js",
-      "types": "./dist/worker.d.ts"
+      "types": "./dist/worker.d.ts",
+      "import": "./dist/worker.js"
     }
   },
   "publishConfig": {
@@ -23,9 +23,9 @@
     "types": "./dist/worker.d.ts",
     "exports": {
       ".": {
+        "types": "./dist/worker.d.ts",
         "import": "./dist/worker.js",
-        "require": "./dist/worker.cjs",
-        "types": "./dist/worker.d.ts"
+        "require": "./dist/worker.cjs"
       }
     },
     "access": "public"

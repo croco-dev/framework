@@ -48,20 +48,61 @@ describe("package-entrypoint-smoke.mts", () => {
     expect(result.stdout).toContain("summary checked=1 exempt=0 skippedPrivate=1");
   });
 
-  it("validates CSS exports as static assets without loading them in Node", () => {
+  it("rejects packed exports whose types condition is not first", () => {
     const root = createTempRoot();
-    writeImportablePackage(root, "styled", {
+    writeImportablePackage(root, "misordered", {
       exportsValue: {
         ".": {
           import: "./dist/index.mjs",
           require: "./dist/index.js",
           types: "./dist/index.d.ts",
         },
+      },
+    });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      '@croco/misordered: packed exports["."] conditions must be ordered types, import, require',
+    );
+  });
+
+  it("resolves the import declaration from a mode-specific types condition", () => {
+    const root = createTempRoot();
+    writeImportablePackage(root, "mode-specific-types", {
+      exportsValue: {
+        ".": {
+          types: {
+            import: "./dist/index.d.mts",
+            require: "./dist/index.d.ts",
+          },
+          import: "./dist/index.mjs",
+          require: "./dist/index.js",
+        },
+      },
+    });
+
+    const result = runScript(root);
+
+    expect(result.status, result.stderr || result.stdout).toBe(0);
+    expect(result.stdout).toContain("✓ @croco/mode-specific-types: esm 1, cjs 1, types 1");
+  });
+
+  it("validates CSS exports as static assets without loading them in Node", () => {
+    const root = createTempRoot();
+    writeImportablePackage(root, "styled", {
+      exportsValue: {
+        ".": {
+          types: "./dist/index.d.ts",
+          import: "./dist/index.mjs",
+          require: "./dist/index.js",
+        },
         "./styles.css": "./dist/styles.css",
         "./conditional-styles": {
+          types: "./dist/index.d.ts",
           import: "./dist/styles.css",
           require: "./dist/styles.css",
-          types: "./dist/index.d.ts",
         },
       },
     });
@@ -412,17 +453,17 @@ describe("package-entrypoint-smoke.mts", () => {
   it("matches packed tarballs by manifest name when package names share a prefix", () => {
     const root = createTempRoot();
     const prefixedExport = {
+      types: "./dist/index.d.ts",
       import: "./dist/index.mjs",
       require: "./dist/index.js",
-      types: "./dist/index.d.ts",
     };
     writeImportablePackage(root, "aaa-prefix-extra", {
       exportsValue: {
         ".": prefixedExport,
         "./extra": {
+          types: "./dist/extra.d.ts",
           import: "./dist/extra.mjs",
           require: "./dist/extra.js",
-          types: "./dist/extra.d.ts",
         },
       },
       packageName: "@croco/prefix-extra",
@@ -590,6 +631,10 @@ function writeImportablePackage(
     options.declarationContent ?? "export declare const value: string;\n",
   );
   writeFileSync(
+    join(packageDir, "dist", "index.d.mts"),
+    options.declarationContent ?? "export declare const value: string;\n",
+  );
+  writeFileSync(
     join(packageDir, "package.json"),
     `${JSON.stringify(
       {
@@ -610,9 +655,9 @@ function writeImportablePackage(
             types: options.typesTarget ?? "./dist/index.d.ts",
             exports: options.exportsValue ?? {
               ".": {
+                types: options.typesTarget ?? "./dist/index.d.ts",
                 import: options.importTarget ?? "./dist/index.mjs",
                 require: "./dist/index.js",
-                types: options.typesTarget ?? "./dist/index.d.ts",
               },
             },
           } satisfies Record<string, unknown>),

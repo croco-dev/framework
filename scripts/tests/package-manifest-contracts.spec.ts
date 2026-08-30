@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { effectivePublishManifest, fieldMatchesPath } from "../package-manifest-contracts.mjs";
+import {
+  canonicalExportConditionNames,
+  effectivePublishManifest,
+  exportConditionOrderDiagnostics,
+  exportConditionSequenceParityDiagnostics,
+  fieldMatchesPath,
+} from "../package-manifest-contracts.mjs";
 
 describe("package-manifest-contracts", () => {
   it("applies publishConfig overrides to the effective publish manifest", () => {
@@ -48,5 +54,72 @@ describe("package-manifest-contracts", () => {
     };
 
     expect(fieldMatchesPath(source, "files", "publishConfig.files")).toBe(false);
+  });
+
+  it("defines types, import, and require as the canonical export-condition order", () => {
+    expect(
+      canonicalExportConditionNames({
+        require: "./dist/index.js",
+        custom: "./dist/custom.js",
+        types: "./dist/index.d.ts",
+        import: "./dist/index.mjs",
+      }),
+    ).toEqual(["types", "import", "require", "custom"]);
+  });
+
+  it("reports noncanonical packed export-condition order", () => {
+    expect(
+      exportConditionOrderDiagnostics(
+        {
+          ".": {
+            import: "./dist/index.mjs",
+            require: "./dist/index.js",
+            types: "./dist/index.d.ts",
+          },
+        },
+        "packed exports",
+      ),
+    ).toEqual(['packed exports["."] conditions must be ordered types, import, require']);
+  });
+
+  it("reports noncanonical mode-specific declaration order", () => {
+    expect(
+      exportConditionOrderDiagnostics(
+        {
+          ".": {
+            types: {
+              require: "./dist/index.d.ts",
+              import: "./dist/index.d.mts",
+            },
+            import: "./dist/index.mjs",
+            require: "./dist/index.js",
+          },
+        },
+        "packed exports",
+      ),
+    ).toEqual(['packed exports["."].types conditions must be ordered import, require']);
+  });
+
+  it("compares shared workspace and published condition sequences", () => {
+    expect(
+      exportConditionSequenceParityDiagnostics(
+        {
+          ".": {
+            types: "./dist/index.d.ts",
+            require: "./dist/index.js",
+            import: "./dist/index.mjs",
+          },
+        },
+        {
+          ".": {
+            types: "./dist/index.d.ts",
+            import: "./dist/index.mjs",
+            require: "./dist/index.js",
+          },
+        },
+      ),
+    ).toEqual([
+      'exports["."] and publishConfig.exports["."] must preserve the same shared condition order',
+    ]);
   });
 });
