@@ -1895,6 +1895,12 @@
       "owner": "@croco/lifecycle-core"
     },
     {
+      "path": "packages/lifecycle-core/src/tests/WebhookLifecycleActionAdapter.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/lifecycle-core"
+    },
+    {
       "path": "packages/llm-core/src/tests/AiSdkCompatibility.spec.ts",
       "lane": "fast",
       "qualifiers": [],
