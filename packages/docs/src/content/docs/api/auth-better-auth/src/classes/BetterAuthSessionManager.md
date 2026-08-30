@@ -57,13 +57,17 @@ Better Auth 세션 목록 조회와 세션 해제를 제공하는 매니저입�
 
 ### revokeSession()
 
-> **revokeSession**(`sessionToken`): `Promise`\<`void`\>
+> **revokeSession**(`targetSessionToken`, `authorizationSessionToken`): `Promise`\<`void`\>
 
-해제할 세션 토큰으로 해당 세션을 인증하고 해제합니다.
+현재 세션으로 인증한 뒤 지정한 세션을 해제합니다.
 
 #### Parameters
 
-##### sessionToken
+##### targetSessionToken
+
+`string`
+
+##### authorizationSessionToken
 
 `string`
 

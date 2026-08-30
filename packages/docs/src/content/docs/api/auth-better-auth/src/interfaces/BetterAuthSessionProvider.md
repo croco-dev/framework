@@ -27,13 +27,17 @@ Better Auth 세션 제공자가 구현해야 하는 인터페이스입니다.
 
 ### revokeSession()
 
-> **revokeSession**(`sessionToken`): `Promise`\<`void`\>
+> **revokeSession**(`targetSessionToken`, `authorizationSessionToken`): `Promise`\<`void`\>
 
-해제할 세션 토큰으로 해당 세션을 인증하고 해제합니다.
+현재 세션으로 인증한 뒤 지정한 세션을 해제합니다.
 
 #### Parameters
 
-##### sessionToken
+##### targetSessionToken
+
+`string`
+
+##### authorizationSessionToken
 
 `string`
 

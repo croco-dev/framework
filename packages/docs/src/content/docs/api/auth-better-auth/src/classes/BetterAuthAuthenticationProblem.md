@@ -21,7 +21,7 @@ Better Auth 작업 중 예기치 않은 upstream 오류가 발생했을 때 발�
 
 ##### operation
 
-`"authenticate"` \| `"readiness"` \| `"revokeSession"` \| `"revokeUserSessions"`
+`"revokeUserSessions"` \| `"authenticate"` \| `"readiness"` \| `"revokeSession"`
 
 ##### error
 
