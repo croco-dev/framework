@@ -56,6 +56,13 @@ const demoLogger: ILogger = {
     }
     console.error(message, context);
   },
+  fatal: (message, context) => {
+    if (context === undefined) {
+      console.error(message);
+      return;
+    }
+    console.error(message, context);
+  },
   child: () => demoLogger,
 };
 

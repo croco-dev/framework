@@ -102,6 +102,7 @@ describe("NodeAdapter real server smoke", () => {
       info: () => {},
       warn: () => {},
       error: () => {},
+      fatal: () => {},
       debug: () => {},
       child: () => logger,
     };

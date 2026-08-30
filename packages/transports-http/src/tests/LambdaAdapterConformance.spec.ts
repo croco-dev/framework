@@ -42,6 +42,7 @@ function createTestLogger(): ILogger {
     info: () => {},
     warn: () => {},
     error: () => {},
+    fatal: () => {},
     debug: () => {},
     child: () => logger,
   };

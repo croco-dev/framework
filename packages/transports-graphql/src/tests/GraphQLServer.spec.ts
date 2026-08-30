@@ -275,6 +275,24 @@ class PolicySubscriptionResolver {
   }
 }
 
+type LoggerMock = Logger & {
+  child: ReturnType<typeof vi.fn>;
+  error: ReturnType<typeof vi.fn>;
+};
+
+function createLoggerMock(): LoggerMock {
+  const logger = {
+    child: vi.fn(),
+    debug: vi.fn(),
+    error: vi.fn(),
+    fatal: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+  } as unknown as LoggerMock;
+  logger.child.mockReturnValue(logger);
+  return logger;
+}
+
 describe("GraphQLServer integration", () => {
   const server = new GraphQLServer({
     schemaOptions: {
@@ -572,8 +590,8 @@ describe("GraphQLServer integration", () => {
   });
 
   it("should convert malformed Node requests into a complete redacted response", async () => {
-    const logger = { error: vi.fn() };
-    Container.set(Logger, logger as unknown as Logger);
+    const logger = createLoggerMock();
+    Container.set(Logger, logger);
     const testServer = new GraphQLServer({
       schemaOptions: {
         resolvers: [UserResolver],
@@ -603,8 +621,8 @@ describe("GraphQLServer integration", () => {
   });
 
   it("should preserve safe Problem details when Yoga rejects", async () => {
-    const logger = { error: vi.fn() };
-    Container.set(Logger, logger as unknown as Logger);
+    const logger = createLoggerMock();
+    Container.set(Logger, logger);
     const testServer = new GraphQLServer({
       schemaOptions: {
         resolvers: [UserResolver],
@@ -646,8 +664,8 @@ describe("GraphQLServer integration", () => {
   });
 
   it("should replace Yoga rejections with one stable internal failure", async () => {
-    const logger = { error: vi.fn() };
-    Container.set(Logger, logger as unknown as Logger);
+    const logger = createLoggerMock();
+    Container.set(Logger, logger);
     const testServer = new GraphQLServer({
       schemaOptions: {
         resolvers: [UserResolver],
@@ -685,8 +703,8 @@ describe("GraphQLServer integration", () => {
   });
 
   it("should replace response streaming failures without stale response headers", async () => {
-    const logger = { error: vi.fn() };
-    Container.set(Logger, logger as unknown as Logger);
+    const logger = createLoggerMock();
+    Container.set(Logger, logger);
     const testServer = new GraphQLServer({
       schemaOptions: {
         resolvers: [UserResolver],
@@ -731,8 +749,8 @@ describe("GraphQLServer integration", () => {
   });
 
   it("should destroy a committed response after an asynchronous write failure", async () => {
-    const logger = { error: vi.fn() };
-    Container.set(Logger, logger as unknown as Logger);
+    const logger = createLoggerMock();
+    Container.set(Logger, logger);
     const destroySpy = vi.spyOn(ServerResponse.prototype, "destroy");
     const endSpy = vi
       .spyOn(ServerResponse.prototype, "end")

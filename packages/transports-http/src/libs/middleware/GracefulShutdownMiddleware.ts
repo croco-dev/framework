@@ -78,6 +78,7 @@ function noopLogger(): ILogger {
     info: () => {},
     warn: () => {},
     error: () => {},
+    fatal: () => {},
     child: () => noopLogger(),
   };
 }

@@ -330,6 +330,7 @@ describe("@Metered decorator", () => {
         info: vi.fn(),
         warn: vi.fn(),
         error: vi.fn(),
+        fatal: vi.fn(),
         child: vi.fn().mockReturnThis(),
       };
       Container.set(LOGGER_TOKEN, mockLogger);

@@ -842,6 +842,7 @@ describe("@Auditable", () => {
         info: vi.fn(),
         warn: vi.fn(),
         error: vi.fn(),
+        fatal: vi.fn(),
         child: vi.fn(function (this: ILogger) {
           return this;
         }),
@@ -908,6 +909,7 @@ describe("@Auditable", () => {
         info: vi.fn(),
         warn: vi.fn(),
         error: vi.fn(),
+        fatal: vi.fn(),
         child: vi.fn(function (this: ILogger) {
           return this;
         }),
@@ -964,6 +966,7 @@ describe("@Auditable", () => {
         info: vi.fn(),
         warn: vi.fn(),
         error: vi.fn(),
+        fatal: vi.fn(),
         child: vi.fn(function (this: ILogger) {
           return this;
         }),

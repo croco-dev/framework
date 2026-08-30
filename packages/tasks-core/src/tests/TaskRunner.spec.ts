@@ -330,6 +330,7 @@ describe("TaskRunner", () => {
       info: vi.fn(),
       warn: vi.fn(),
       error: vi.fn(),
+      fatal: vi.fn(),
       child: vi.fn().mockReturnThis(),
     };
 
@@ -422,6 +423,7 @@ describe("TaskRunner", () => {
       error: vi.fn(() => {
         throw loggingFailure;
       }),
+      fatal: vi.fn(),
       child: vi.fn().mockReturnThis(),
     };
 
@@ -652,6 +654,7 @@ describe("TaskRunner", () => {
       info: vi.fn(),
       warn: vi.fn(),
       error: vi.fn(),
+      fatal: vi.fn(),
       child: vi.fn().mockReturnThis(),
     };
 

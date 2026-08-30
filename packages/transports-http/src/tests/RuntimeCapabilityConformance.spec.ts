@@ -240,12 +240,15 @@ function createConformanceApp(): CrocoApp {
 }
 
 function createTestLogger(): Logger {
-  return {
+  const logger = {
     info: () => undefined,
     warn: () => undefined,
     error: () => undefined,
+    fatal: () => undefined,
     debug: () => undefined,
+    child: () => logger,
   } as unknown as Logger;
+  return logger;
 }
 
 function createConformanceHeaders(requestId: string): HeadersInit {

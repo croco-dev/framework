@@ -43,6 +43,8 @@ describe("ErrorHandler", () => {
       warn: () => {},
       error: () => {},
       debug: () => {},
+      fatal: vi.fn(),
+      child: () => mockLogger,
     } as unknown as Logger;
 
     errorHandler = new ErrorHandler(mockLogger);
@@ -551,6 +553,8 @@ describe("ErrorHandler", () => {
           throw loggingError;
         }),
         debug: vi.fn(),
+        fatal: vi.fn(),
+        child: () => throwingLogger,
       } as unknown as Logger;
       const handler = new ErrorHandler(throwingLogger);
 
@@ -577,6 +581,8 @@ describe("ErrorHandler", () => {
         warn: vi.fn(),
         error: vi.fn(),
         debug: vi.fn(),
+        fatal: vi.fn(),
+        child: () => logger,
       } as unknown as Logger;
       const handler = new ErrorHandler(logger);
 
@@ -596,6 +602,8 @@ describe("ErrorHandler", () => {
         warn: vi.fn(),
         error: vi.fn(() => rejectedLogging),
         debug: vi.fn(),
+        fatal: vi.fn(),
+        child: () => asyncLogger,
       } as unknown as Logger;
       const handler = new ErrorHandler(asyncLogger);
 

@@ -177,6 +177,7 @@ describe("BetterAuthSessionManager", () => {
         debug: vi.fn(),
         info: vi.fn(),
         error: vi.fn(),
+        fatal: vi.fn(),
         child: vi.fn(),
       };
       const errorFactory = {

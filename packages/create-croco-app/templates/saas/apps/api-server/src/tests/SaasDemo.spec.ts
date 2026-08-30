@@ -180,6 +180,7 @@ describe("SaaS golden path demo", () => {
       child: () => logger,
       debug: vi.fn(),
       error: vi.fn(),
+      fatal: vi.fn(),
       info: vi.fn(),
       warn: vi.fn(),
     };

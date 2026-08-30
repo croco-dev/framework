@@ -151,6 +151,7 @@ describe("TelemetryMiddleware", () => {
       info: vi.fn(),
       warn: vi.fn(),
       error: vi.fn(),
+      fatal: vi.fn(),
       child: vi.fn(),
     } as unknown as ILogger;
     const next = vi.fn().mockResolvedValue(undefined);
@@ -201,6 +202,7 @@ describe("TelemetryMiddleware", () => {
         throw new Error("logger unavailable");
       }),
       error: vi.fn(),
+      fatal: vi.fn(),
       child: vi.fn(),
     } as unknown as ILogger;
     const next = vi.fn().mockResolvedValue(undefined);

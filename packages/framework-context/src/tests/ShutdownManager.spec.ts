@@ -13,6 +13,19 @@ import {
 import { ShutdownManager } from "../libs/ShutdownManager";
 import type { ShutdownHook } from "../libs/types";
 
+function createMockLogger(overrides: Partial<ILogger> = {}): ILogger {
+  const logger: ILogger = {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    fatal: vi.fn(),
+    child: vi.fn(() => logger),
+    ...overrides,
+  };
+  return logger;
+}
+
 describe("ShutdownManager", () => {
   let originalExitCode: typeof process.exitCode;
 
@@ -121,7 +134,7 @@ describe("ShutdownManager", () => {
     it("should allow first explicit timeout after implicit singleton creation", async () => {
       vi.useFakeTimers();
 
-      const mockLogger = { error: vi.fn() } as unknown as ILogger;
+      const mockLogger = createMockLogger();
       Container.set(LOGGER_TOKEN, mockLogger);
 
       const manager = ShutdownManager.getInstance();
@@ -353,7 +366,7 @@ describe("ShutdownManager", () => {
 
     it("should observe one repeated signal timeout and set a failing exit code", async () => {
       vi.useFakeTimers();
-      const logger = { error: vi.fn() } as unknown as ILogger;
+      const logger = createMockLogger();
       Container.set(LOGGER_TOKEN, logger);
       const manager = ShutdownManager.getInstance(100);
       manager.register({ onShutdown: () => new Promise(() => {}) });
@@ -380,11 +393,11 @@ describe("ShutdownManager", () => {
       const shutdownFailure = new Error("shutdown failed");
       const loggingFailure = new Error("logging failed");
       const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
-      const logger = {
+      const logger = createMockLogger({
         error: vi.fn(() => {
           throw loggingFailure;
         }),
-      } as unknown as ILogger;
+      });
       Container.set(LOGGER_TOKEN, logger);
       const manager = ShutdownManager.getInstance();
       manager.register({ onShutdown: () => Promise.reject(shutdownFailure) });
@@ -400,7 +413,7 @@ describe("ShutdownManager", () => {
     });
 
     it("should observe a reentrant signal hook failure once through reset", async () => {
-      const logger = { error: vi.fn() } as unknown as ILogger;
+      const logger = createMockLogger();
       Container.set(LOGGER_TOKEN, logger);
       const manager = ShutdownManager.getInstance();
       const hook = {
@@ -450,7 +463,7 @@ describe("ShutdownManager", () => {
     });
 
     it("should continue executing hooks even if one fails", async () => {
-      const mockLogger = { error: vi.fn() } as unknown as ILogger;
+      const mockLogger = createMockLogger();
       Container.set(LOGGER_TOKEN, mockLogger);
 
       const manager = ShutdownManager.getInstance();
@@ -617,7 +630,7 @@ describe("ShutdownManager", () => {
     it("should reject with timeout problem after timeout", async () => {
       vi.useFakeTimers();
 
-      const mockLogger = { error: vi.fn() } as unknown as ILogger;
+      const mockLogger = createMockLogger();
       Container.set(LOGGER_TOKEN, mockLogger);
 
       const manager = ShutdownManager.getInstance(100);
@@ -654,14 +667,14 @@ describe("ShutdownManager", () => {
 
         const loggerFailure = new Error("logger failed");
         const fallbackFailure = new Error("fallback failed");
-        const logger = {
+        const logger = createMockLogger({
           error: vi.fn(() => {
             if (failureMode === "synchronously") {
               throw loggerFailure;
             }
             return Promise.reject(loggerFailure);
           }),
-        } as unknown as ILogger;
+        });
         const consoleError = vi.spyOn(console, "error").mockImplementation(() => {
           if (failureMode === "synchronously") {
             throw fallbackFailure;
@@ -1013,7 +1026,7 @@ describe("OnShutdown decorator", () => {
     });
 
     it("should invoke the nearest inherited decorated function on the subclass instance", async () => {
-      const mockLogger = { error: vi.fn() } as unknown as ILogger;
+      const mockLogger = createMockLogger();
 
       class BaseService {
         calls: string[] = [];
@@ -1044,7 +1057,7 @@ describe("OnShutdown decorator", () => {
     });
 
     it("should prefer an own decorated subclass declaration", async () => {
-      const mockLogger = { error: vi.fn() } as unknown as ILogger;
+      const mockLogger = createMockLogger();
 
       class BaseService {
         calls: string[] = [];

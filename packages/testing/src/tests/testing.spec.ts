@@ -486,6 +486,7 @@ class MockTestLogger implements TestLogger {
   readonly info = vi.fn();
   readonly warn = vi.fn();
   readonly error = vi.fn();
+  readonly fatal = vi.fn();
 
   child(): TestLogger {
     return this;

@@ -103,38 +103,41 @@ describe("Logger serialized redaction", () => {
     });
   });
 
-  it("prevents Error metadata from reintroducing sensitive values", () => {
-    const { logger, raw, records } = createCapturedLogger();
-    let getterCalls = 0;
-    const error = Object.assign(new Error("provider failed"), {
-      metadata: { secret: "error-secret", provider: "payments" },
-      Authorization: "error-authorization",
-    });
-    Object.defineProperty(error, "cookie", {
-      enumerable: true,
-      get() {
-        getterCalls += 1;
-        return "error-cookie";
-      },
-    });
+  it.each(["error", "fatal"] as const)(
+    "prevents Error metadata from reintroducing sensitive values at %s severity",
+    (severity) => {
+      const { logger, raw, records } = createCapturedLogger();
+      let getterCalls = 0;
+      const error = Object.assign(new Error("provider failed"), {
+        metadata: { secret: "error-secret", provider: "payments" },
+        Authorization: "error-authorization",
+      });
+      Object.defineProperty(error, "cookie", {
+        enumerable: true,
+        get() {
+          getterCalls += 1;
+          return "error-cookie";
+        },
+      });
 
-    logger.error("provider request failed", error);
+      logger[severity]("provider request failed", error);
 
-    const output = records();
-    const bytes = raw();
-    expect(bytes).not.toContain("error-secret");
-    expect(bytes).not.toContain("error-authorization");
-    expect(bytes).not.toContain("error-cookie");
-    expect(getterCalls).toBe(0);
-    expect(output[0]).toMatchObject({
-      err: {
-        type: "Error",
-        message: "provider failed",
-        stack: expect.stringContaining("Error: provider failed"),
-        metadata: { provider: "payments" },
-      },
-    });
-  });
+      const output = records();
+      const bytes = raw();
+      expect(bytes).not.toContain("error-secret");
+      expect(bytes).not.toContain("error-authorization");
+      expect(bytes).not.toContain("error-cookie");
+      expect(getterCalls).toBe(0);
+      expect(output[0]).toMatchObject({
+        err: {
+          type: "Error",
+          message: "provider failed",
+          stack: expect.stringContaining("Error: provider failed"),
+          metadata: { provider: "payments" },
+        },
+      });
+    },
+  );
 
   it("preserves cause and aggregate Error diagnostics", () => {
     const { logger, raw, records } = createCapturedLogger();

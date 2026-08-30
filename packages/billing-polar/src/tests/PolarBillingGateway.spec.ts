@@ -35,6 +35,7 @@ const mockLogger = {
   info: vi.fn(),
   warn: vi.fn(),
   error: vi.fn(),
+  fatal: vi.fn(),
   child: vi.fn(() => mockLogger),
 } as unknown as ILogger;
 

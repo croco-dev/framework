@@ -93,7 +93,9 @@ describe("PipelineRunner", () => {
     info: ReturnType<typeof vi.fn>;
     warn: ReturnType<typeof vi.fn>;
     error: ReturnType<typeof vi.fn>;
+    fatal: ReturnType<typeof vi.fn>;
     debug: ReturnType<typeof vi.fn>;
+    child: ReturnType<typeof vi.fn>;
   };
 
   type MockSpan = Span & {
@@ -157,7 +159,9 @@ describe("PipelineRunner", () => {
       info: vi.fn(),
       warn: vi.fn(),
       error: vi.fn(),
+      fatal: vi.fn(),
       debug: vi.fn(),
+      child: vi.fn(() => logger),
     };
     Container.set(Logger, logger as unknown as Logger);
     Container.set(ErrorHandler, new ErrorHandler(logger as unknown as Logger));
@@ -231,7 +235,9 @@ describe("PipelineRunner", () => {
       info: vi.fn(),
       warn: vi.fn(),
       error: vi.fn(),
+      fatal: vi.fn(),
       debug: vi.fn(),
+      child: vi.fn(() => logger),
     };
 
     Container.set(Logger, logger as unknown as Logger);

@@ -207,6 +207,7 @@ export function registerMinimalProductionRestAppProviders(): void {
     info: () => undefined,
     warn: () => undefined,
     error: () => undefined,
+    fatal: () => undefined,
     debug: () => undefined,
     child: () => logger,
   };

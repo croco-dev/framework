@@ -103,7 +103,9 @@ describe("CrocoLambdaAdapter waitUntil draining", () => {
       info: vi.fn(),
       warn: vi.fn(),
       error: vi.fn(),
+      fatal: vi.fn(),
       debug: vi.fn(),
+      child: vi.fn(() => logger),
     } as unknown as ILogger & { error: ReturnType<typeof vi.fn> };
     const app = new Hono();
     app.get("/test", (context) => {
@@ -166,7 +168,9 @@ describe("CrocoLambdaAdapter waitUntil draining", () => {
       info: vi.fn(),
       warn: vi.fn(),
       error: vi.fn(),
+      fatal: vi.fn(),
       debug: vi.fn(),
+      child: vi.fn(() => logger),
     } as unknown as ILogger & { error: ReturnType<typeof vi.fn> };
     const app = new Hono();
     app.get("/test", async (context) => {
@@ -388,7 +392,9 @@ describe("CrocoLambdaAdapter waitUntil draining", () => {
       info: vi.fn(),
       warn: vi.fn(),
       error: vi.fn(),
+      fatal: vi.fn(),
       debug: vi.fn(),
+      child: vi.fn(() => logger),
     } as unknown as ILogger & { error: ReturnType<typeof vi.fn> };
     const app = new Hono();
     app.get("/test", (context) => {
@@ -585,6 +591,8 @@ describe("CrocoLambdaAdapter waitUntil draining", () => {
           return Promise.reject(loggerError);
         }),
         debug: vi.fn(),
+        fatal: vi.fn(),
+        child: vi.fn(() => logger),
       } as unknown as ILogger & { error: ReturnType<typeof vi.fn> };
       const flush = vi.fn().mockResolvedValue(undefined);
       const unhandledRejections: unknown[] = [];
