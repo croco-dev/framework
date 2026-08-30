@@ -359,12 +359,23 @@ type FormDataWithEntries = { entries(): IterableIterator<[string, string]> };
 
 /**
  * Convert FormData to plain object for Zod validation.
+ * Single-value keys remain scalars, while repeated keys become arrays in submission order.
  */
 function formDataToObject(formData: FormData): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
+  const result = Object.create(null) as Record<string, unknown>;
 
   for (const [key, value] of (formData as unknown as FormDataWithEntries).entries()) {
-    result[key] = value;
+    if (!Object.hasOwn(result, key)) {
+      result[key] = value;
+      continue;
+    }
+
+    const current = result[key];
+    if (Array.isArray(current)) {
+      current.push(value);
+    } else {
+      result[key] = [current, value];
+    }
   }
 
   return result;
