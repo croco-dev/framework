@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 698,
+  "problemCount": 699,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -5217,6 +5217,36 @@
         {
           "file": "packages/customer-health-core/src/libs/problems/HealthProblems.ts",
           "line": 4,
+          "column": 1,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "customer-health-core/transition-persistence-retry-exhausted",
+      "category": "Conflict",
+      "status": 409,
+      "title": "Conflict",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#customer-health-core-transition-persistence-retry-exhausted",
+      "recovery": {
+        "cause": "The request conflicts with current state or an idempotency constraint.",
+        "userAction": "Refresh state, resolve the conflict, and retry with the updated intent.",
+        "operatorAction": "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        "retryability": "conditional",
+        "redactionPolicy": "safe-message",
+        "telemetry": {
+          "eventName": "croco.problem.warning",
+          "severity": "warning",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/customer-health-core/src/libs/problems/HealthProblems.ts",
+          "line": 50,
           "column": 1,
           "kind": "problem-class"
         }

@@ -46,3 +46,19 @@ export class HealthEventPublisherNotConfiguredProblem extends Problem {
     super("Customer health event publisher is not configured");
   }
 }
+
+export class HealthTransitionPersistenceRetryExhaustedProblem extends Problem {
+  readonly code = "customer-health-core/transition-persistence-retry-exhausted";
+  readonly category = ProblemCategory.Conflict;
+
+  constructor(
+    tenantId: string,
+    readonly attempts: number,
+  ) {
+    super(
+      undefined,
+      undefined,
+      `Health transition for tenant '${tenantId}' did not commit after ${attempts} attempts`,
+    );
+  }
+}

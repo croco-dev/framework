@@ -1,4 +1,5 @@
 import { Container } from "@croco/framework-context";
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CustomerHealthService } from "../libs/CustomerHealthService";
 import { HealthScoreDroppedEvent, HealthStatusChangedEvent } from "../libs/events";
@@ -75,6 +76,7 @@ describe("CustomerHealthService", () => {
       thresholds: { healthy: 80, atRisk: 60 },
     };
 
+    const saveTransition = vi.spyOn(store, "saveTransition");
     const result = await service.calculateAndStore("tenant-1", profile);
 
     expect(result.overallScore).toBe(80);
@@ -85,7 +87,39 @@ describe("CustomerHealthService", () => {
     const stored = await store.findLatest("tenant-1");
     expect(stored).not.toBeNull();
     expect(stored?.overallScore).toBe(80);
+    expect(saveTransition).toHaveBeenCalledTimes(1);
     expect(mockEventPublisher.publishIdempotently).not.toHaveBeenCalled();
+  });
+
+  it("should stop retrying when transition persistence never commits", async () => {
+    const profile: HealthScoreProfile = {
+      id: "profile-1",
+      name: "Default Profile",
+      weights: { usage: 1, business: 1, engagement: 1 },
+      thresholds: { healthy: 80, atRisk: 60 },
+    };
+    mockRegistry.addProvider("usage", [healthSignal(80, "2026-03-15T10:00:00Z")]);
+    const saveTransition = vi.spyOn(store, "saveTransition");
+    const setTimeout = vi.spyOn(globalThis, "setTimeout");
+    saveTransition
+      .mockResolvedValueOnce({ committed: false, latest: null })
+      .mockResolvedValueOnce({ committed: false, latest: null })
+      .mockResolvedValueOnce({ committed: false, latest: null })
+      .mockRejectedValueOnce(new Error("unbounded retry sentinel"));
+
+    const error: unknown = await service
+      .calculateAndStore("tenant-1", profile)
+      .catch((cause: unknown) => cause);
+
+    expect(error).toBeInstanceOf(Problem);
+    expect(error).toMatchObject({
+      attempts: 3,
+      category: ProblemCategory.Conflict,
+      code: "customer-health-core/transition-persistence-retry-exhausted",
+    });
+    expect(saveTransition).toHaveBeenCalledTimes(3);
+    expect(setTimeout.mock.calls.map(([, delay]) => delay)).toEqual([10, 20]);
+    setTimeout.mockRestore();
   });
 
   it("keeps stored history isolated from mutation of the committed service result", async () => {

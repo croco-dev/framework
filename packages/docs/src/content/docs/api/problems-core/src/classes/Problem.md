@@ -181,6 +181,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`HealthEventIntentConflictProblem`](/api/customer-health-core/src/classes/healtheventintentconflictproblem/)
 - [`HealthEventPublisherNotConfiguredProblem`](/api/customer-health-core/src/classes/healtheventpublishernotconfiguredproblem/)
 - [`HealthScoreNotFoundProblem`](/api/customer-health-core/src/classes/healthscorenotfoundproblem/)
+- [`HealthTransitionPersistenceRetryExhaustedProblem`](/api/customer-health-core/src/classes/healthtransitionpersistenceretryexhaustedproblem/)
 - [`InvalidHealthScoreInputProblem`](/api/customer-health-core/src/classes/invalidhealthscoreinputproblem/)
 - [`HealthTransitionSequenceMissingProblem`](/api/customer-health-drizzle/src/classes/healthtransitionsequencemissingproblem/)
 - [`InvalidMeteringInputProblem`](/api/customer-health-drizzle/src/classes/invalidmeteringinputproblem/)
