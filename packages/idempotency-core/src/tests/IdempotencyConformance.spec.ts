@@ -9,6 +9,7 @@ describe("idempotency store conformance", () => {
   it("exposes adapter conformance cases for the required store semantics", () => {
     expect(suite.cases.map((testCase) => testCase.name)).toEqual([
       "replays a completed result for the same key and fingerprint",
+      "preserves a completed result when fail uses the completed reservation",
       "reserves one winner under concurrent attempts for the same key",
       "reports in-flight state while the first reservation is active",
       "throws a Problem when the same key has a different fingerprint",

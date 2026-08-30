@@ -8,8 +8,11 @@ import {
   deriveWebhookIdempotencyKey,
   IdempotencyConflictProblem,
   IdempotencyCoordinator,
+  type IdempotencyCommitOptions,
+  type IdempotencyCompletedRecord,
   type IdempotencyFailOptions,
   type IdempotencyFailedRecord,
+  IdempotencyReservationStateProblem,
   type IdempotencyReserveOptions,
   InMemoryIdempotencyStore,
   InvalidIdempotencyKeyProblem,
@@ -466,21 +469,23 @@ describe("IdempotencyCoordinator", () => {
     await expect(coordinator.execute({ key }, () => "must-not-run")).rejects.toBe(auditFailure);
   });
 
-  it("does not mark reservations failed when commit fails after handler success", async () => {
+  it("makes the reservation retryable when commit fails before persistence", async () => {
+    const commitFailure = new InvalidIdempotencyKeyProblem("commit failed");
+
     class CommitFailureStore<TResult> extends InMemoryIdempotencyStore<TResult> {
-      failCalls = 0;
+      private commitAvailable = false;
 
-      override async commit(): Promise<never> {
-        throw new InvalidIdempotencyKeyProblem("commit failed");
-      }
-
-      override async fail(options: IdempotencyFailOptions): Promise<IdempotencyFailedRecord> {
-        this.failCalls += 1;
-        return super.fail(options);
+      override async commit(options: IdempotencyCommitOptions<TResult>) {
+        if (!this.commitAvailable) {
+          this.commitAvailable = true;
+          throw commitFailure;
+        }
+        return super.commit(options);
       }
     }
 
     const store = new CommitFailureStore<string>();
+    const fail = vi.spyOn(store, "fail");
     const coordinator = createIdempotencyCoordinator({ store });
     const key = deriveIdempotencyKey({
       namespace: "commit",
@@ -493,15 +498,59 @@ describe("IdempotencyCoordinator", () => {
         calls += 1;
         return "created";
       }),
-    ).rejects.toThrow(InvalidIdempotencyKeyProblem);
+    ).rejects.toBe(commitFailure);
+
+    expect(fail).toHaveBeenCalledWith({
+      key,
+      reservationId: "reservation-1",
+      problem: {
+        code: "idempotency-core/invalid-key",
+        status: 400,
+        detail: "Invalid idempotency key: commit failed",
+      },
+      retryable: true,
+      ttlMs: undefined,
+      metadata: { idempotencyFailurePhase: "commit" },
+    });
 
     const retry = await coordinator.execute({ key }, () => {
       calls += 1;
-      return "must-not-run";
+      return "recovered";
     });
 
-    expect(store.failCalls).toBe(0);
-    expect(retry.outcome).toBe("in-flight");
-    expect(calls).toBe(1);
+    expect(retry).toMatchObject({ outcome: "executed", response: "recovered" });
+    expect(calls).toBe(2);
+  });
+
+  it("replays a durable response when commit persists before rejecting", async () => {
+    const commitFailure = new InvalidIdempotencyKeyProblem("commit acknowledgement failed");
+
+    class PersistedCommitFailureStore<TResult> extends InMemoryIdempotencyStore<TResult> {
+      override async commit(
+        options: IdempotencyCommitOptions<TResult>,
+      ): Promise<IdempotencyCompletedRecord<TResult>> {
+        await super.commit(options);
+        throw commitFailure;
+      }
+    }
+
+    const store = new PersistedCommitFailureStore<string>();
+    const coordinator = createIdempotencyCoordinator({ store });
+    const key = deriveIdempotencyKey({
+      namespace: "commit",
+      source: { kind: "explicit", key: "persisted", fingerprint: "payload-a" },
+    });
+    const handler = vi.fn(() => "created");
+
+    await expect(coordinator.execute({ key }, handler)).rejects.toBe(commitFailure);
+
+    expect(
+      Object.getOwnPropertyDescriptor(commitFailure, "idempotencyFailureRecordError")?.value,
+    ).toBeInstanceOf(IdempotencyReservationStateProblem);
+    await expect(coordinator.execute({ key }, handler)).resolves.toMatchObject({
+      outcome: "replayed",
+      response: "created",
+    });
+    expect(handler).toHaveBeenCalledTimes(1);
   });
 });
