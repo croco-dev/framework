@@ -21,6 +21,7 @@ import type {
   ModuleCleanupFailure,
   ModuleDiagnosticsSnapshot,
   ModuleGraphManifest,
+  ModuleLifecycleExecutionOptions,
   ModuleOptions,
 } from "./types";
 
@@ -83,7 +84,7 @@ export class ApplicationRuntime implements AsyncDisposable {
     this.collectGraphRoots(module, new Set());
   }
 
-  initialize(): Promise<void> {
+  initialize(options: ModuleLifecycleExecutionOptions = {}): Promise<void> {
     if (this.state === "disposing") {
       return Promise.reject(new ModuleRuntimeDisposedProblem());
     }
@@ -103,7 +104,7 @@ export class ApplicationRuntime implements AsyncDisposable {
 
     const resumeState = this.state === "stopped" ? "stopped" : "created";
     this.state = "initializing";
-    const attempt = this.initializeOnce(resumeState);
+    const attempt = this.initializeOnce(resumeState, options);
     this.initialization = attempt;
     void attempt.then(
       () => this.clearInitialization(attempt),
@@ -112,9 +113,12 @@ export class ApplicationRuntime implements AsyncDisposable {
     return attempt;
   }
 
-  private async initializeOnce(resumeState: "created" | "stopped"): Promise<void> {
+  private async initializeOnce(
+    resumeState: "created" | "stopped",
+    options: ModuleLifecycleExecutionOptions,
+  ): Promise<void> {
     try {
-      await this.containerScope.runWithRollback(() => this.moduleRuntime.initialize());
+      await this.containerScope.runWithRollback(() => this.moduleRuntime.initialize(options));
       if (this.state === "disposing" || this.state === "disposed") {
         throw new ModuleRuntimeDisposedProblem();
       }
@@ -143,15 +147,21 @@ export class ApplicationRuntime implements AsyncDisposable {
     }
   }
 
-  shutdown(): Promise<void> {
-    return this.startShutdown();
+  shutdown(options: ModuleLifecycleExecutionOptions = {}): Promise<void> {
+    return this.startShutdown(options);
   }
 
-  shutdownWithCleanup(cleanup: () => Promise<void> | void): Promise<void> {
-    return this.startShutdown(cleanup);
+  shutdownWithCleanup(
+    cleanup: () => Promise<void> | void,
+    options: ModuleLifecycleExecutionOptions = {},
+  ): Promise<void> {
+    return this.startShutdown(options, cleanup);
   }
 
-  private startShutdown(cleanup?: () => Promise<void> | void): Promise<void> {
+  private startShutdown(
+    options: ModuleLifecycleExecutionOptions,
+    cleanup?: () => Promise<void> | void,
+  ): Promise<void> {
     if (this.disposal) {
       return this.disposal;
     }
@@ -168,7 +178,7 @@ export class ApplicationRuntime implements AsyncDisposable {
     }
 
     this.state = "shutting-down";
-    const attempt = this.shutdownOnce(cleanup);
+    const attempt = this.shutdownOnce(options, cleanup);
     this.shutdownOperation = attempt;
     return attempt;
   }
@@ -247,10 +257,13 @@ export class ApplicationRuntime implements AsyncDisposable {
     }
   }
 
-  private async shutdownOnce(cleanup?: () => Promise<void> | void): Promise<void> {
+  private async shutdownOnce(
+    options: ModuleLifecycleExecutionOptions,
+    cleanup?: () => Promise<void> | void,
+  ): Promise<void> {
     let primaryFailure: unknown;
     try {
-      await this.containerScope.run(() => this.moduleRuntime.shutdown());
+      await this.containerScope.run(() => this.moduleRuntime.shutdown(options));
     } catch (error) {
       primaryFailure = error;
     }

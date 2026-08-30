@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { Container as FrameworkContainer } from "@croco/framework-context";
 import {
   createApplicationRuntime,
+  ModuleLifecycleCancelledProblem,
   ModuleLifecycleProblem,
   ModuleRuntimeDisposedProblem,
   ModuleRuntimeStaleContextProblem,
@@ -107,6 +108,72 @@ describe("ApplicationRuntime", () => {
       runtime.scopeId,
       runtime.scopeId,
     ]);
+  });
+
+  it("propagates initialization cancellation through the application-owned lifecycle", async () => {
+    const controller = new AbortController();
+    let observedDeadline: number | undefined;
+    let setupStarted: (() => void) | undefined;
+    const setupEntered = new Promise<void>((resolve) => {
+      setupStarted = resolve;
+    });
+    const deadline = Date.now() + 10_000;
+    const runtime = createApplicationRuntime({
+      modules: [
+        {
+          name: "app",
+          setup: async (_moduleContext, execution) => {
+            observedDeadline = execution.deadline;
+            setupStarted?.();
+            await new Promise<void>((resolve) => {
+              execution.signal.addEventListener("abort", () => resolve(), { once: true });
+            });
+          },
+        },
+      ],
+    });
+
+    const initialization = runtime.initialize({ signal: controller.signal, deadline });
+    await setupEntered;
+    controller.abort();
+
+    await expect(initialization).rejects.toBeInstanceOf(ModuleLifecycleCancelledProblem);
+    expect(observedDeadline).toBe(deadline);
+    await runtime.dispose();
+  });
+
+  it("propagates shutdown cancellation through the application-owned lifecycle", async () => {
+    const controller = new AbortController();
+    let observedDeadline: number | undefined;
+    let shutdownStarted: (() => void) | undefined;
+    const shutdownEntered = new Promise<void>((resolve) => {
+      shutdownStarted = resolve;
+    });
+    const deadline = Date.now() + 10_000;
+    const runtime = createApplicationRuntime({
+      modules: [
+        {
+          name: "app",
+          setup: () => undefined,
+          shutdown: async (_moduleContext, execution) => {
+            observedDeadline = execution.deadline;
+            shutdownStarted?.();
+            await new Promise<void>((resolve) => {
+              execution.signal.addEventListener("abort", () => resolve(), { once: true });
+            });
+          },
+        },
+      ],
+    });
+    await runtime.initialize();
+
+    const shutdown = runtime.shutdown({ signal: controller.signal, deadline });
+    await shutdownEntered;
+    controller.abort();
+
+    await expect(shutdown).rejects.toBeInstanceOf(ModuleLifecycleCancelledProblem);
+    expect(observedDeadline).toBe(deadline);
+    await runtime.dispose();
   });
 
   it("compensates failed startup, clears scope state, and permits a clean retry", async () => {

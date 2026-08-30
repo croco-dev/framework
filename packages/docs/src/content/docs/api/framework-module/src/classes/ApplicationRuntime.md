@@ -133,7 +133,13 @@ readonly [`ModuleDiagnosticsSnapshot`](/api/framework-module/src/type-aliases/mo
 
 ### initialize()
 
-> **initialize**(): `Promise`\<`void`\>
+> **initialize**(`options?`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### options?
+
+[`ModuleLifecycleExecutionOptions`](/api/framework-module/src/type-aliases/modulelifecycleexecutionoptions/) = `{}`
 
 #### Returns
 
@@ -187,7 +193,13 @@ readonly [`ModuleDiagnosticsSnapshot`](/api/framework-module/src/type-aliases/mo
 
 ### shutdown()
 
-> **shutdown**(): `Promise`\<`void`\>
+> **shutdown**(`options?`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### options?
+
+[`ModuleLifecycleExecutionOptions`](/api/framework-module/src/type-aliases/modulelifecycleexecutionoptions/) = `{}`
 
 #### Returns
 
@@ -197,13 +209,17 @@ readonly [`ModuleDiagnosticsSnapshot`](/api/framework-module/src/type-aliases/mo
 
 ### shutdownWithCleanup()
 
-> **shutdownWithCleanup**(`cleanup`): `Promise`\<`void`\>
+> **shutdownWithCleanup**(`cleanup`, `options?`): `Promise`\<`void`\>
 
 #### Parameters
 
 ##### cleanup
 
 () => `void` \| `Promise`\<`void`\>
+
+##### options?
+
+[`ModuleLifecycleExecutionOptions`](/api/framework-module/src/type-aliases/modulelifecycleexecutionoptions/) = `{}`
 
 #### Returns
 
