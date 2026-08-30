@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import type { ILogger } from "@croco/framework-context";
 import { Container, Context, LOGGER_TOKEN } from "@croco/framework-context";
+import * as telemetry from "@croco/telemetry-api";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Auditable } from "../libs/Auditable";
 import { AuditInterceptor } from "../libs/AuditInterceptor";
@@ -212,6 +213,45 @@ describe("AuditInterceptor", () => {
     await expect(interceptor.intercept(context, createCallHandler({ ok: true }))).rejects.toThrow(
       "repository unavailable",
     );
+  });
+
+  it("should preserve the handler failure when failure audit persistence also fails", async () => {
+    const handlerError = new Error("validation failed");
+    const auditWriteError = new Error("repository unavailable");
+    const telemetryError = new Error("telemetry unavailable");
+    createSpy.mockRejectedValueOnce(auditWriteError);
+    const recordErrorSpy = vi.spyOn(telemetry, "recordError").mockImplementation(() => {
+      throw telemetryError;
+    });
+    vi.spyOn(Context, "get").mockReturnValue({
+      requestId: "req-double-failure",
+      tenantId: "tenant-double-failure",
+      user: { id: "actor-double-failure" },
+    } as RequestContextStub);
+
+    class TestController {
+      update() {}
+    }
+
+    const context = createExecutionContext({
+      controller: TestController,
+      handler: "update",
+      method: "PATCH",
+      path: "/projects/project-double-failure",
+      request: {
+        headers: {},
+      },
+    });
+    const next = {
+      handle: vi.fn(async () => {
+        throw handlerError;
+      }),
+    } as CallHandler;
+
+    await expect(interceptor.intercept(context, next)).rejects.toBe(handlerError);
+
+    expect((handlerError as Error & { cause?: unknown }).cause).toBe(auditWriteError);
+    expect(recordErrorSpy).toHaveBeenCalledWith(auditWriteError);
   });
 
   it("should create exactly one entry for a successful @Auditable handler", async () => {
