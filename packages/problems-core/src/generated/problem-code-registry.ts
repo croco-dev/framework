@@ -8374,7 +8374,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 2187,
+          line: 2191,
           column: 13,
           kind: "problem-factory",
         },
@@ -19440,7 +19440,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/TestKernel.ts",
-          line: 192,
+          line: 193,
           column: 5,
           kind: "problem-constructor",
         },
@@ -19472,7 +19472,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/TestKernel.ts",
-          line: 220,
+          line: 221,
           column: 5,
           kind: "problem-constructor",
         },
@@ -19504,7 +19504,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/TestKernel.ts",
-          line: 230,
+          line: 231,
           column: 5,
           kind: "problem-constructor",
         },
@@ -19568,7 +19568,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/TestKernel.ts",
-          line: 241,
+          line: 242,
           column: 5,
           kind: "problem-constructor",
         },
@@ -19600,7 +19600,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/TestKernel.ts",
-          line: 257,
+          line: 258,
           column: 5,
           kind: "problem-constructor",
         },
@@ -19633,7 +19633,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/TestKernel.ts",
-          line: 270,
+          line: 271,
           column: 5,
           kind: "problem-constructor",
         },
@@ -19665,7 +19665,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/TestKernel.ts",
-          line: 179,
+          line: 180,
           column: 5,
           kind: "problem-constructor",
         },

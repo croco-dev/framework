@@ -11,7 +11,12 @@ import {
   type ModuleRuntime,
 } from "./ModuleRegistry";
 import { getProviderToken, isConstructorToken, isProviderDefinition } from "./moduleTokens";
-import { attachModuleCleanupFailures, ModuleLifecycleProblem } from "./problems";
+import {
+  attachModuleCleanupFailures,
+  ModuleLifecycleProblem,
+  ModuleRuntimeDisposedProblem,
+  ModuleRuntimeStaleContextProblem,
+} from "./problems";
 import type {
   ModuleCleanupFailure,
   ModuleDiagnosticsSnapshot,
@@ -30,6 +35,15 @@ export type ApplicationRuntimeGraphManifest = {
   readonly dependencyGraph: DependencyGraphManifest;
 };
 
+type ApplicationRuntimeState =
+  | "created"
+  | "initializing"
+  | "active"
+  | "shutting-down"
+  | "stopped"
+  | "disposing"
+  | "disposed";
+
 /**
  * Owns one isolated DI scope and one module lifecycle for a Croco application.
  */
@@ -45,7 +59,8 @@ export class ApplicationRuntime implements AsyncDisposable {
   private readonly graphRoots = new Set<TokenIdentifier<unknown>>();
   private disposal: Promise<void> | undefined;
   private initialization: Promise<void> | undefined;
-  private disposed = false;
+  private shutdownOperation: Promise<void> | undefined;
+  private state: ApplicationRuntimeState = "created";
 
   constructor(options: ApplicationRuntimeOptions = {}) {
     const modules = options.modules ?? [];
@@ -63,16 +78,32 @@ export class ApplicationRuntime implements AsyncDisposable {
   }
 
   use(module: ModuleOptions): void {
+    this.assertAccessible();
     this.moduleRuntime.use(module);
     this.collectGraphRoots(module, new Set());
   }
 
   initialize(): Promise<void> {
+    if (this.state === "disposing") {
+      return Promise.reject(new ModuleRuntimeDisposedProblem());
+    }
+    if (this.state === "disposed") {
+      try {
+        this.containerScope.run(() => undefined);
+      } catch (error) {
+        return Promise.reject(error);
+      }
+    }
+    if (this.state === "shutting-down") {
+      return Promise.reject(new ModuleRuntimeStaleContextProblem());
+    }
     if (this.initialization) {
       return this.initialization;
     }
 
-    const attempt = this.initializeOnce();
+    const resumeState = this.state === "stopped" ? "stopped" : "created";
+    this.state = "initializing";
+    const attempt = this.initializeOnce(resumeState);
     this.initialization = attempt;
     void attempt.then(
       () => this.clearInitialization(attempt),
@@ -81,10 +112,20 @@ export class ApplicationRuntime implements AsyncDisposable {
     return attempt;
   }
 
-  private async initializeOnce(): Promise<void> {
+  private async initializeOnce(resumeState: "created" | "stopped"): Promise<void> {
     try {
       await this.containerScope.runWithRollback(() => this.moduleRuntime.initialize());
+      if (this.state === "disposing" || this.state === "disposed") {
+        throw new ModuleRuntimeDisposedProblem();
+      }
+      if (this.state !== "initializing") {
+        throw new ModuleRuntimeStaleContextProblem();
+      }
+      this.state = "active";
     } catch (error) {
+      if (this.state === "initializing") {
+        this.state = resumeState;
+      }
       if (this.hasCleanupFailures(error)) {
         try {
           await this.dispose();
@@ -103,26 +144,56 @@ export class ApplicationRuntime implements AsyncDisposable {
   }
 
   shutdown(): Promise<void> {
-    return this.containerScope.run(() => this.moduleRuntime.shutdown());
+    return this.startShutdown();
+  }
+
+  shutdownWithCleanup(cleanup: () => Promise<void> | void): Promise<void> {
+    return this.startShutdown(cleanup);
+  }
+
+  private startShutdown(cleanup?: () => Promise<void> | void): Promise<void> {
+    if (this.disposal) {
+      return this.disposal;
+    }
+    if (this.state === "disposed") {
+      return Promise.reject(new ModuleRuntimeDisposedProblem());
+    }
+    if (this.shutdownOperation) {
+      return cleanup
+        ? this.continueShutdownWithCleanup(this.shutdownOperation, cleanup)
+        : this.shutdownOperation;
+    }
+    if (this.state === "stopped") {
+      return cleanup ? this.runShutdownCleanup(cleanup) : Promise.resolve();
+    }
+
+    this.state = "shutting-down";
+    const attempt = this.shutdownOnce(cleanup);
+    this.shutdownOperation = attempt;
+    return attempt;
   }
 
   run<T>(fn: () => Promise<T>): Promise<T>;
   run<T>(fn: () => T): T;
   run<T>(fn: () => Promise<T> | T): Promise<T> | T {
+    this.assertAccessible();
     return this.containerScope.run(fn);
   }
 
   get<T>(token: TokenIdentifier<T>): T {
+    this.assertAccessible();
     return this.containerScope.run(() => Container.get(token));
   }
 
   has<T>(token: TokenIdentifier<T>): boolean {
+    this.assertAccessible();
     return this.containerScope.run(() => Container.has(token));
   }
 
   createGraphManifest(
     options: { readonly roots?: readonly TokenIdentifier<unknown>[] } = {},
   ): ApplicationRuntimeGraphManifest {
+    this.assertAccessible();
     return this.containerScope.run(() => {
       const moduleGraph = this.moduleRuntime.createGraphManifest();
       const dependencyGraph = Container.createDependencyGraphManifest({
@@ -144,6 +215,7 @@ export class ApplicationRuntime implements AsyncDisposable {
   }
 
   getRegisteredModules(): readonly ModuleDiagnosticsSnapshot[] {
+    this.assertAccessible();
     return this.containerScope.run(() => this.moduleRuntime.getRegisteredModules());
   }
 
@@ -153,16 +225,84 @@ export class ApplicationRuntime implements AsyncDisposable {
       return;
     }
 
-    if (this.disposed) {
+    if (this.state === "disposed") {
       return;
     }
 
+    this.state = "disposing";
     this.disposal = this.disposeOnce();
     await this.disposal;
   }
 
   async [Symbol.asyncDispose](): Promise<void> {
     await this.dispose();
+  }
+
+  private assertAccessible(): void {
+    if (this.state === "disposing") {
+      throw new ModuleRuntimeDisposedProblem();
+    }
+    if (this.state === "shutting-down" || this.state === "stopped") {
+      throw new ModuleRuntimeStaleContextProblem();
+    }
+  }
+
+  private async shutdownOnce(cleanup?: () => Promise<void> | void): Promise<void> {
+    let primaryFailure: unknown;
+    try {
+      await this.containerScope.run(() => this.moduleRuntime.shutdown());
+    } catch (error) {
+      primaryFailure = error;
+    }
+
+    try {
+      if (cleanup) {
+        await this.runShutdownCleanup(cleanup);
+      }
+    } catch (cleanupError) {
+      if (primaryFailure !== undefined) {
+        throw this.attachDisposalFailure(primaryFailure, cleanupError);
+      }
+      throw cleanupError;
+    } finally {
+      if (this.state === "shutting-down") {
+        this.state = "stopped";
+      }
+      this.shutdownOperation = undefined;
+    }
+
+    if (primaryFailure !== undefined) {
+      throw primaryFailure;
+    }
+  }
+
+  private async continueShutdownWithCleanup(
+    attempt: Promise<void>,
+    cleanup: () => Promise<void> | void,
+  ): Promise<void> {
+    let primaryFailure: unknown;
+    try {
+      await attempt;
+    } catch (error) {
+      primaryFailure = error;
+    }
+
+    try {
+      await this.runShutdownCleanup(cleanup);
+    } catch (cleanupError) {
+      if (primaryFailure !== undefined) {
+        throw this.attachDisposalFailure(primaryFailure, cleanupError);
+      }
+      throw cleanupError;
+    }
+
+    if (primaryFailure !== undefined) {
+      throw primaryFailure;
+    }
+  }
+
+  private async runShutdownCleanup(cleanup: () => Promise<void> | void): Promise<void> {
+    await this.containerScope.run(cleanup);
   }
 
   private collectGraphRoots(module: ModuleOptions, visited: Set<ModuleOptions>): void {
@@ -238,7 +378,7 @@ export class ApplicationRuntime implements AsyncDisposable {
       }
       throw error;
     } finally {
-      this.disposed = true;
+      this.state = "disposed";
     }
 
     if (primaryFailure !== undefined) {

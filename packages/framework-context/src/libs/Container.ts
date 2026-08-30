@@ -369,11 +369,13 @@ export class ContainerScope implements AsyncDisposable {
 }
 
 type HandlerDependencyResolver = <T>(id: Constructor<T> | TypeDIToken<T> | string) => T;
+type HandlerDependencyCollectionResolver = <T>(id: Constructor<T> | TypeDIToken<T> | string) => T[];
 
 class HandlerContainerInstance extends TypeDIContainerInstance {
   constructor(
     id: string,
     private readonly resolveDependency: HandlerDependencyResolver,
+    private readonly resolveDependencies: HandlerDependencyCollectionResolver,
   ) {
     super(id);
   }
@@ -386,15 +388,7 @@ class HandlerContainerInstance extends TypeDIContainerInstance {
   override getMany<T>(id: TypeDIToken<T>): T[];
   override getMany<T>(id: string): T[];
   override getMany<T>(id: Constructor<T> | TypeDIToken<T> | string): T[] {
-    if (typeof id === "function") {
-      return [this.resolveDependency(id)];
-    }
-
-    if (typeof id === "string") {
-      return TypeDIContainer.getMany(id);
-    }
-
-    return TypeDIContainer.getMany(id);
+    return this.resolveDependencies(id);
   }
 }
 
@@ -1552,9 +1546,19 @@ export class Container {
     trace: DependencyResolutionTrace,
     stack: TokenIdentifier<unknown>[],
   ): TypeDIContainerInstance {
-    return new HandlerContainerInstance("__croco_handler__", (id) =>
-      Container.resolveHandlerDependency(id, trace, stack),
+    return new HandlerContainerInstance(
+      "__croco_handler__",
+      (id) => Container.resolveHandlerDependency(id, trace, stack),
+      (id) => Container.resolveHandlerDependencies(id),
     );
+  }
+
+  private static resolveHandlerDependencies<T>(
+    token: Constructor<T> | TypeDIToken<T> | string,
+  ): T[] {
+    const scope = Container.getScopeState();
+    const target = scope?.instance ?? TypeDIContainer.of();
+    return target.getMany(Container.toTypeDIServiceIdentifier(token));
   }
 
   private static resolveHandlerDependency<T>(

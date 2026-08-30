@@ -89,6 +89,7 @@ export interface TestKernelApplicationRuntime {
   run<T>(fn: () => Promise<T>): Promise<T>;
   run<T>(fn: () => T): T;
   shutdown?(): Promise<void> | void;
+  shutdownWithCleanup?(cleanup: () => Promise<void> | void): Promise<void> | void;
   dispose(): Promise<void> | void;
 }
 
@@ -699,32 +700,48 @@ async function runCleanupSequence(
     failures.push(toError(error));
   }
 
-  if (scope.shutdown) {
+  const runApplicationCleanup = async (): Promise<void> => {
+    for (const cleanup of cleanupOperations) {
+      try {
+        await cleanup();
+      } catch (error) {
+        failures.push(toError(error));
+      }
+    }
+
     try {
-      await scope.shutdown();
+      EventBusConfig.disposeCurrentScope();
     } catch (error) {
       failures.push(toError(error));
     }
-  }
 
-  for (const cleanup of cleanupOperations) {
     try {
-      await scope.run(cleanup);
+      ShutdownManager.disposeCurrentScope();
     } catch (error) {
       failures.push(toError(error));
     }
-  }
+  };
 
-  try {
-    scope.run(() => EventBusConfig.disposeCurrentScope());
-  } catch (error) {
-    failures.push(toError(error));
-  }
+  if (scope.shutdownWithCleanup) {
+    try {
+      await scope.shutdownWithCleanup(runApplicationCleanup);
+    } catch (error) {
+      failures.push(toError(error));
+    }
+  } else {
+    try {
+      if (scope.shutdown) {
+        await scope.shutdown();
+      }
+    } catch (error) {
+      failures.push(toError(error));
+    }
 
-  try {
-    scope.run(() => ShutdownManager.disposeCurrentScope());
-  } catch (error) {
-    failures.push(toError(error));
+    try {
+      await scope.run(runApplicationCleanup);
+    } catch (error) {
+      failures.push(toError(error));
+    }
   }
 
   try {

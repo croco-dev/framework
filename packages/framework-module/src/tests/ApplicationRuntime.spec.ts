@@ -5,6 +5,7 @@ import { Container as FrameworkContainer } from "@croco/framework-context";
 import {
   createApplicationRuntime,
   ModuleLifecycleProblem,
+  ModuleRuntimeDisposedProblem,
   ModuleRuntimeStaleContextProblem,
 } from "../index";
 import type { ModuleContext } from "../index";
@@ -187,6 +188,82 @@ describe("ApplicationRuntime", () => {
     expect(runtime.has(leakedToken)).toBe(false);
 
     await runtime.dispose();
+  });
+
+  it("does not expose a successful initialization or providers after shutdown starts", async () => {
+    const token = new Token<string>("shutdown-race-provider");
+    let enterSetup: (() => void) | undefined;
+    let releaseSetup: (() => void) | undefined;
+    let setupAttempts = 0;
+    const setupEntered = new Promise<void>((resolve) => {
+      enterSetup = resolve;
+    });
+    const setupReleased = new Promise<void>((resolve) => {
+      releaseSetup = resolve;
+    });
+    const runtime = createApplicationRuntime({
+      modules: [
+        {
+          name: "app",
+          providers: [{ provide: token, useValue: "available" }],
+          setup: async () => {
+            setupAttempts += 1;
+            if (setupAttempts === 1) {
+              enterSetup?.();
+              await setupReleased;
+            }
+          },
+        },
+      ],
+    });
+
+    const initialization = runtime.initialize();
+    await setupEntered;
+    const shutdown = runtime.shutdown();
+
+    expect(() => runtime.get(token)).toThrow(ModuleRuntimeStaleContextProblem);
+    releaseSetup?.();
+    await expect(initialization).rejects.toBeInstanceOf(ModuleRuntimeStaleContextProblem);
+    await expect(shutdown).resolves.toBeUndefined();
+    expect(() => runtime.get(token)).toThrow(ModuleRuntimeStaleContextProblem);
+
+    await runtime.initialize();
+    expect(runtime.get(token)).toBe("available");
+    await runtime.dispose();
+  });
+
+  it("does not expose a successful initialization or providers after disposal starts", async () => {
+    const token = new Token<string>("disposal-race-provider");
+    let enterSetup: (() => void) | undefined;
+    let releaseSetup: (() => void) | undefined;
+    const setupEntered = new Promise<void>((resolve) => {
+      enterSetup = resolve;
+    });
+    const setupReleased = new Promise<void>((resolve) => {
+      releaseSetup = resolve;
+    });
+    const runtime = createApplicationRuntime({
+      modules: [
+        {
+          name: "app",
+          providers: [{ provide: token, useValue: "available" }],
+          setup: async () => {
+            enterSetup?.();
+            await setupReleased;
+          },
+        },
+      ],
+    });
+
+    const initialization = runtime.initialize();
+    await setupEntered;
+    const disposal = runtime.dispose();
+
+    expect(() => runtime.get(token)).toThrow(ModuleRuntimeDisposedProblem);
+    releaseSetup?.();
+    await expect(initialization).rejects.toBeInstanceOf(ModuleRuntimeDisposedProblem);
+    await expect(disposal).resolves.toBeUndefined();
+    expect(() => runtime.get(token)).toThrow("has already been disposed");
   });
 
   it("shuts modules down before disposing the application scope", async () => {

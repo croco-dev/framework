@@ -1,4 +1,4 @@
-import { Container as TypeDIContainer, Token } from "typedi";
+import { Container as TypeDIContainer, InjectMany, Token } from "typedi";
 import type { ServiceMetadata } from "typedi";
 import { beforeEach, describe, expect, it } from "vitest";
 import { Component, Container } from "../index";
@@ -21,6 +21,40 @@ describe("ContainerScope", () => {
 
     expect(Container.has(token)).toBe(false);
     scope.dispose();
+  });
+
+  it("keeps InjectMany graph and runtime resolution isolated to the owning scope", () => {
+    const token = new Token<string>("scoped-handlers");
+    class HandlerCollection {
+      constructor(@InjectMany(token) readonly values: readonly string[]) {}
+    }
+    const firstScope = Container.createScope();
+    const secondScope = Container.createScope();
+
+    TypeDIContainer.set({ id: token, value: "global", multiple: true });
+
+    const resolveInScope = (scope: typeof firstScope, values: readonly string[]) =>
+      scope.run(() => {
+        const container = TypeDIContainer.of(scope.id);
+        for (const value of values) {
+          container.set({ id: token, value, multiple: true });
+        }
+        Component({ scope: "transient" })(HandlerCollection);
+
+        const manifest = Container.createDependencyGraphManifest({ roots: [HandlerCollection] });
+        const provider = manifest.providers.find((entry) => entry.token === "HandlerCollection");
+
+        expect(manifest.status).toBe("ready");
+        expect(provider?.dependencies).toEqual(["Token<scoped-handlers>"]);
+        return Container.get(HandlerCollection).values;
+      });
+
+    expect(resolveInScope(firstScope, ["first-a", "first-b"])).toEqual(["first-a", "first-b"]);
+    expect(resolveInScope(secondScope, ["second-a", "second-b"])).toEqual(["second-a", "second-b"]);
+    expect(TypeDIContainer.getMany(token)).toEqual(["global"]);
+
+    firstScope.dispose();
+    secondScope.dispose();
   });
 
   it("restores the exact pre-attempt provider and component baseline after failure", async () => {
