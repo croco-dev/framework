@@ -1,5 +1,5 @@
 import type { EventBus } from "@croco/events-core";
-import { Component } from "@croco/framework-context";
+import { Component, Container, LOGGER_TOKEN } from "@croco/framework-context";
 import type {
   BillableUsageEvent,
   BillableUsageJournal,
@@ -172,28 +172,72 @@ export class MeteringService {
         throw error;
       }
       if (publishingClaimed) {
-        await this.idempotencyManager.releaseMeteringEvents(
-          tenantId,
-          meterId,
-          idempotencyKey,
-          claim.token,
+        await this.runCleanup(error, () =>
+          this.idempotencyManager.releaseMeteringEvents(
+            tenantId,
+            meterId,
+            idempotencyKey,
+            claim.token,
+          ),
         );
       } else if (!persistenceCompleted) {
-        await this.idempotencyManager.abortMeteringProcessing(
-          tenantId,
-          meterId,
-          idempotencyKey,
-          claim.token,
+        await this.runCleanup(error, () =>
+          this.idempotencyManager.abortMeteringProcessing(
+            tenantId,
+            meterId,
+            idempotencyKey,
+            claim.token,
+          ),
         );
       } else {
-        await this.idempotencyManager.releaseMeteringProcessing(
-          tenantId,
-          meterId,
-          idempotencyKey,
-          claim.token,
+        await this.runCleanup(error, () =>
+          this.idempotencyManager.releaseMeteringProcessing(
+            tenantId,
+            meterId,
+            idempotencyKey,
+            claim.token,
+          ),
         );
       }
       throw error;
+    }
+  }
+
+  private async runCleanup(originalError: unknown, cleanup: () => Promise<void>): Promise<void> {
+    try {
+      await cleanup();
+    } catch (cleanupError) {
+      this.reportCleanupFailure(originalError, cleanupError);
+    }
+  }
+
+  private reportCleanupFailure(originalError: unknown, cleanupError: unknown): void {
+    const message = "[MeteringService] Failed to clean up after a metering error";
+    const context = { originalError, cleanupError };
+
+    try {
+      const logger = Container.getOptional(LOGGER_TOKEN);
+      if (logger) {
+        const reportingResult: unknown = logger.error(message, context);
+        void Promise.resolve(reportingResult).catch((reportingError: unknown) => {
+          this.reportCleanupFailureToConsole(message, { ...context, reportingError });
+        });
+        return;
+      }
+    } catch (reportingError) {
+      this.reportCleanupFailureToConsole(message, { ...context, reportingError });
+      return;
+    }
+
+    this.reportCleanupFailureToConsole(message, context);
+  }
+
+  private reportCleanupFailureToConsole(message: string, context: Record<string, unknown>): void {
+    try {
+      const reportingResult: unknown = console.error(message, context);
+      void Promise.resolve(reportingResult).catch(() => undefined);
+    } catch {
+      return;
     }
   }
 

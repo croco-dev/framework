@@ -1,4 +1,5 @@
 import type { EventBus } from "@croco/events-core";
+import { Container, type ILogger, LOGGER_TOKEN } from "@croco/framework-context";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   InMemoryBillableUsageJournal,
@@ -63,6 +64,7 @@ describe("MeteringService", () => {
   });
 
   beforeEach(() => {
+    Container.remove(LOGGER_TOKEN);
     mockRegistry = {
       loadAll: vi.fn(),
       get: vi.fn(),
@@ -955,6 +957,130 @@ describe("MeteringService", () => {
       expect(recordCallCount).toBe(2);
       expect(mockStorage.record).toHaveBeenCalledTimes(2);
       expect(mockEventBus.publish).toHaveBeenCalledTimes(1);
+    });
+
+    async function expectCleanupFailurePreserved(
+      record: () => Promise<unknown>,
+      meteringError: Error,
+      cleanupError: Error,
+    ): Promise<void> {
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+      try {
+        await expect(record()).rejects.toBe(meteringError);
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          "[MeteringService] Failed to clean up after a metering error",
+          { originalError: meteringError, cleanupError },
+        );
+      } finally {
+        consoleErrorSpy.mockRestore();
+      }
+    }
+
+    it("should preserve the metering error when abort cleanup fails", async () => {
+      const meteringError = new Error("meter lookup unavailable");
+      const cleanupError = new Error("idempotency backend unavailable");
+
+      vi.mocked(mockRegistry.getOrThrow).mockRejectedValue(meteringError);
+      vi.mocked(mockIdempotency.abortMeteringProcessing).mockRejectedValue(cleanupError);
+
+      await expectCleanupFailurePreserved(
+        () =>
+          service.record({
+            tenantId: "tenant-1",
+            meterId: "api_calls",
+            idempotencyKey: "abort-cleanup-failure",
+          }),
+        meteringError,
+        cleanupError,
+      );
+    });
+
+    it("should preserve the metering error when processing release fails", async () => {
+      const meter = createMeter({ quota: undefined });
+      const meteringError = new Error("staging unavailable");
+      const cleanupError = new Error("idempotency backend unavailable");
+
+      vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(meter);
+      vi.mocked(mockIdempotency.markMeteringEventsPublishing).mockRejectedValue(meteringError);
+      vi.mocked(mockIdempotency.releaseMeteringProcessing).mockRejectedValue(cleanupError);
+
+      await expectCleanupFailurePreserved(
+        () =>
+          service.record({
+            tenantId: "tenant-1",
+            meterId: "api_calls",
+            idempotencyKey: "processing-cleanup-failure",
+          }),
+        meteringError,
+        cleanupError,
+      );
+    });
+
+    it("should preserve the metering error when event release fails", async () => {
+      const meteringError = new Error("event bus unavailable");
+      const cleanupError = new Error("idempotency backend unavailable");
+
+      vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(createMeter({ quota: undefined }));
+      vi.mocked(mockEventBus.publish).mockRejectedValue(meteringError);
+      vi.mocked(mockIdempotency.releaseMeteringEvents).mockRejectedValue(cleanupError);
+
+      await expectCleanupFailurePreserved(
+        () =>
+          service.record({
+            tenantId: "tenant-1",
+            meterId: "api_calls",
+            idempotencyKey: "event-cleanup-failure",
+          }),
+        meteringError,
+        cleanupError,
+      );
+    });
+
+    it("should preserve the metering error when every diagnostic sink fails", async () => {
+      const meteringError = new Error("staging unavailable");
+      const cleanupError = new Error("idempotency backend unavailable");
+      const reportingError = new Error("logger unavailable");
+      const consoleError = new Error("console unavailable");
+      const logger: ILogger = {
+        child: vi.fn(),
+        debug: vi.fn(),
+        error: vi.fn(() => {
+          throw reportingError;
+        }),
+        info: vi.fn(),
+        warn: vi.fn(),
+      };
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {
+        throw consoleError;
+      });
+
+      try {
+        Container.set(LOGGER_TOKEN, logger);
+        vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(createMeter({ quota: undefined }));
+        vi.mocked(mockIdempotency.markMeteringEventsPublishing).mockRejectedValue(meteringError);
+        vi.mocked(mockIdempotency.releaseMeteringProcessing).mockRejectedValue(cleanupError);
+
+        await expect(
+          service.record({
+            tenantId: "tenant-1",
+            meterId: "api_calls",
+            idempotencyKey: "diagnostic-failure",
+          }),
+        ).rejects.toBe(meteringError);
+
+        expect(logger.error).toHaveBeenCalledWith(
+          "[MeteringService] Failed to clean up after a metering error",
+          { originalError: meteringError, cleanupError },
+        );
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          "[MeteringService] Failed to clean up after a metering error",
+          { originalError: meteringError, cleanupError, reportingError },
+        );
+      } finally {
+        Container.remove(LOGGER_TOKEN);
+        consoleErrorSpy.mockRestore();
+      }
     });
 
     it("should release quota processing state when delivery staging fails after persistence", async () => {
