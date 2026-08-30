@@ -908,7 +908,7 @@ Sources:
 
 Sources:
 
-- `packages/create-croco-app/templates/ai-saas/apps/api-server/src/aiProblems.ts:31:3` (problem-class)
+- `packages/create-croco-app/templates/ai-saas/apps/api-server/src/aiProblems.ts:30:1` (problem-class)
 
 <a id="ai-saas-model-required"></a>
 
@@ -926,7 +926,7 @@ Sources:
 
 Sources:
 
-- `packages/create-croco-app/templates/ai-saas/apps/api-server/src/aiProblems.ts:22:3` (problem-class)
+- `packages/create-croco-app/templates/ai-saas/apps/api-server/src/aiProblems.ts:21:1` (problem-class)
 
 <a id="ai-saas-provider-unavailable"></a>
 
@@ -944,7 +944,7 @@ Sources:
 
 Sources:
 
-- `packages/create-croco-app/templates/ai-saas/apps/api-server/src/aiProblems.ts:62:3` (problem-class)
+- `packages/create-croco-app/templates/ai-saas/apps/api-server/src/aiProblems.ts:61:1` (problem-class)
 
 <a id="ai-saas-quota-exceeded"></a>
 
@@ -962,7 +962,7 @@ Sources:
 
 Sources:
 
-- `packages/create-croco-app/templates/ai-saas/apps/api-server/src/aiProblems.ts:40:3` (problem-class)
+- `packages/create-croco-app/templates/ai-saas/apps/api-server/src/aiProblems.ts:39:1` (problem-class)
 
 <a id="ai-saas-rate-limit-exceeded"></a>
 
@@ -980,7 +980,7 @@ Sources:
 
 Sources:
 
-- `packages/create-croco-app/templates/ai-saas/apps/api-server/src/aiProblems.ts:53:3` (problem-class)
+- `packages/create-croco-app/templates/ai-saas/apps/api-server/src/aiProblems.ts:52:1` (problem-class)
 
 <a id="ai-saas-smoke-failed"></a>
 
@@ -998,7 +998,7 @@ Sources:
 
 Sources:
 
-- `packages/create-croco-app/templates/ai-saas/apps/api-server/src/aiProblems.ts:75:3` (problem-class)
+- `packages/create-croco-app/templates/ai-saas/apps/api-server/src/aiProblems.ts:74:1` (problem-class)
 
 <a id="ai-saas-tenant-not-found"></a>
 
@@ -1016,7 +1016,7 @@ Sources:
 
 Sources:
 
-- `packages/create-croco-app/templates/ai-saas/apps/api-server/src/aiProblems.ts:13:3` (problem-class)
+- `packages/create-croco-app/templates/ai-saas/apps/api-server/src/aiProblems.ts:12:1` (problem-class)
 
 <a id="ai-saas-tenant-required"></a>
 
@@ -1034,7 +1034,7 @@ Sources:
 
 Sources:
 
-- `packages/create-croco-app/templates/ai-saas/apps/api-server/src/aiProblems.ts:4:3` (problem-class)
+- `packages/create-croco-app/templates/ai-saas/apps/api-server/src/aiProblems.ts:3:1` (problem-class)
 
 <a id="already-member"></a>
 
@@ -1070,7 +1070,7 @@ Sources:
 
 Sources:
 
-- `packages/analytics-posthog/src/libs/problems/PostHogAnalyticsProblems.ts:4:3` (problem-class)
+- `packages/analytics-posthog/src/libs/problems/PostHogAnalyticsProblems.ts:3:1` (problem-class)
 
 <a id="analytics-posthog-flush-failed"></a>
 
@@ -1088,7 +1088,7 @@ Sources:
 
 Sources:
 
-- `packages/analytics-posthog/src/libs/problems/PostHogAnalyticsProblems.ts:47:3` (problem-class)
+- `packages/analytics-posthog/src/libs/problems/PostHogAnalyticsProblems.ts:46:1` (problem-class)
 
 <a id="analytics-posthog-group-failed"></a>
 
@@ -1106,7 +1106,7 @@ Sources:
 
 Sources:
 
-- `packages/analytics-posthog/src/libs/problems/PostHogAnalyticsProblems.ts:33:3` (problem-class)
+- `packages/analytics-posthog/src/libs/problems/PostHogAnalyticsProblems.ts:32:1` (problem-class)
 
 <a id="analytics-posthog-identify-failed"></a>
 
@@ -1124,7 +1124,7 @@ Sources:
 
 Sources:
 
-- `packages/analytics-posthog/src/libs/problems/PostHogAnalyticsProblems.ts:19:3` (problem-class)
+- `packages/analytics-posthog/src/libs/problems/PostHogAnalyticsProblems.ts:18:1` (problem-class)
 
 <a id="analytics-posthog-readiness-failed"></a>
 
@@ -1142,7 +1142,7 @@ Sources:
 
 Sources:
 
-- `packages/analytics-posthog/src/libs/problems/PostHogAnalyticsProblems.ts:61:3` (problem-class)
+- `packages/analytics-posthog/src/libs/problems/PostHogAnalyticsProblems.ts:60:1` (problem-class)
 
 <a id="api-key-expired"></a>
 
@@ -1160,7 +1160,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-core/src/libs/problems/AuthProblems.ts:48:3` (problem-class)
+- `packages/auth-core/src/libs/problems/AuthProblems.ts:47:1` (problem-class)
 
 <a id="api-key-not-found"></a>
 
@@ -1178,7 +1178,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-core/src/libs/apikey/problems/ApiKeyNotFoundProblem.ts:4:3` (problem-class)
+- `packages/auth-core/src/libs/apikey/problems/ApiKeyNotFoundProblem.ts:3:1` (problem-class)
 
 <a id="api-key-revoked"></a>
 
@@ -1196,7 +1196,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-core/src/libs/problems/AuthProblems.ts:56:3` (problem-class)
+- `packages/auth-core/src/libs/problems/AuthProblems.ts:55:1` (problem-class)
 
 <a id="architecture-policy-manifest-json-parse"></a>
 
@@ -1286,7 +1286,7 @@ Sources:
 
 Sources:
 
-- `packages/audit-core/src/libs/problems/AuditableDecoratorProblem.ts:4:3` (problem-class)
+- `packages/audit-core/src/libs/problems/AuditableDecoratorProblem.ts:3:1` (problem-class)
 
 <a id="audit-core-client-ip-policy-invalid"></a>
 
@@ -1304,7 +1304,7 @@ Sources:
 
 Sources:
 
-- `packages/audit-core/src/libs/problems/AuditClientIpConfigurationProblem.ts:4:3` (problem-class)
+- `packages/audit-core/src/libs/problems/AuditClientIpConfigurationProblem.ts:3:1` (problem-class)
 
 <a id="audit-insert-failed"></a>
 
@@ -1340,7 +1340,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-better-auth/src/libs/problems/BetterAuthAuthenticationProblem.ts:8:3` (problem-class)
+- `packages/auth-better-auth/src/libs/problems/BetterAuthAuthenticationProblem.ts:7:1` (problem-class)
 
 <a id="auth-better-auth-invalid-session-payload"></a>
 
@@ -1358,7 +1358,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-better-auth/src/libs/problems/BetterAuthInvalidSessionProblem.ts:7:3` (problem-class)
+- `packages/auth-better-auth/src/libs/problems/BetterAuthInvalidSessionProblem.ts:6:1` (problem-class)
 
 <a id="auth-better-auth-invalid-webhook-payload"></a>
 
@@ -1376,7 +1376,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-better-auth/src/libs/problems/WebhookProblems.ts:23:3` (problem-class)
+- `packages/auth-better-auth/src/libs/problems/WebhookProblems.ts:22:1` (problem-class)
 
 <a id="auth-better-auth-invalid-webhook-signature"></a>
 
@@ -1394,7 +1394,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-better-auth/src/libs/problems/WebhookProblems.ts:7:3` (problem-class)
+- `packages/auth-better-auth/src/libs/problems/WebhookProblems.ts:6:1` (problem-class)
 
 <a id="auth-better-auth-not-initialized"></a>
 
@@ -1412,7 +1412,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-better-auth/src/libs/problems/AuthProblems.ts:7:3` (problem-class)
+- `packages/auth-better-auth/src/libs/problems/AuthProblems.ts:6:1` (problem-class)
 
 <a id="auth-better-auth-session-lookup-failed"></a>
 
@@ -1430,7 +1430,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-better-auth/src/libs/problems/BetterAuthSessionLookupProblem.ts:7:3` (problem-class)
+- `packages/auth-better-auth/src/libs/problems/BetterAuthSessionLookupProblem.ts:6:1` (problem-class)
 
 <a id="auth-better-auth-session-not-found"></a>
 
@@ -1448,7 +1448,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-better-auth/src/libs/problems/AuthProblems.ts:23:3` (problem-class)
+- `packages/auth-better-auth/src/libs/problems/AuthProblems.ts:22:1` (problem-class)
 
 <a id="auth-better-auth-user-not-found"></a>
 
@@ -1466,7 +1466,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-better-auth/src/libs/problems/AuthProblems.ts:39:3` (problem-class)
+- `packages/auth-better-auth/src/libs/problems/AuthProblems.ts:38:1` (problem-class)
 
 <a id="auth-clerk-duplicate-tenant-mapping"></a>
 
@@ -1484,7 +1484,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:132:3` (problem-class)
+- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:131:1` (problem-class)
 
 <a id="auth-clerk-external-service-error"></a>
 
@@ -1520,7 +1520,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:19:3` (problem-class)
+- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:18:1` (problem-class)
 
 <a id="auth-clerk-malformed-claim"></a>
 
@@ -1538,7 +1538,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:121:3` (problem-class)
+- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:120:1` (problem-class)
 
 <a id="auth-clerk-public-user-data-missing"></a>
 
@@ -1556,7 +1556,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:159:3` (problem-class)
+- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:158:1` (problem-class)
 
 <a id="auth-clerk-token-verification-failed"></a>
 
@@ -1574,7 +1574,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:74:3` (problem-class)
+- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:73:1` (problem-class)
 
 <a id="auth-clerk-token-verification-upstream-failed"></a>
 
@@ -1592,7 +1592,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:98:3` (problem-class)
+- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:97:1` (problem-class)
 
 <a id="auth-clerk-unexpected-tenant-mapping-claim"></a>
 
@@ -1610,7 +1610,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:147:3` (problem-class)
+- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:146:1` (problem-class)
 
 <a id="auth-clerk-webhook-delivery-failed"></a>
 
@@ -1628,7 +1628,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:55:3` (problem-class)
+- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:54:1` (problem-class)
 
 <a id="auth-clerk-webhook-delivery-in-flight"></a>
 
@@ -1646,7 +1646,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:36:3` (problem-class)
+- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:35:1` (problem-class)
 
 <a id="auth-clerk-webhook-verification-failed"></a>
 
@@ -1664,7 +1664,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:8:3` (problem-class)
+- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:7:1` (problem-class)
 
 <a id="auth-core-api-key-creation-failed"></a>
 
@@ -1682,7 +1682,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-core/src/libs/problems/AuthProblems.ts:80:3` (problem-class)
+- `packages/auth-core/src/libs/problems/AuthProblems.ts:79:1` (problem-class)
 
 <a id="auth-core-api-key-rotation-conflict"></a>
 
@@ -1700,7 +1700,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-core/src/libs/problems/AuthProblems.ts:88:3` (problem-class)
+- `packages/auth-core/src/libs/problems/AuthProblems.ts:87:1` (problem-class)
 
 <a id="auth-core-api-key-rotation-protection-failed"></a>
 
@@ -1736,7 +1736,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-core/src/libs/problems/AuthProblems.ts:21:3` (problem-class)
+- `packages/auth-core/src/libs/problems/AuthProblems.ts:20:1` (problem-class)
 
 <a id="auth-core-invalid-api-key-rotation-idempotency-key"></a>
 
@@ -1754,7 +1754,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-core/src/libs/problems/AuthProblems.ts:96:3` (problem-class)
+- `packages/auth-core/src/libs/problems/AuthProblems.ts:95:1` (problem-class)
 
 <a id="auth-core-invalid-permission-action"></a>
 
@@ -1772,7 +1772,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-core/src/libs/problems/AuthProblems.ts:72:3` (problem-class)
+- `packages/auth-core/src/libs/problems/AuthProblems.ts:71:1` (problem-class)
 
 <a id="auth-core-invalid-permission-format"></a>
 
@@ -1790,7 +1790,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-core/src/libs/problems/AuthProblems.ts:64:3` (problem-class)
+- `packages/auth-core/src/libs/problems/AuthProblems.ts:63:1` (problem-class)
 
 <a id="auth-core-invalid-route-metadata-target"></a>
 
@@ -1808,7 +1808,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-core/src/libs/problems/AuthProblems.ts:35:3` (problem-class)
+- `packages/auth-core/src/libs/problems/AuthProblems.ts:34:1` (problem-class)
 
 <a id="bad-request"></a>
 
@@ -1844,7 +1844,7 @@ Sources:
 
 Sources:
 
-- `packages/batch-core/src/libs/problems/BatchStepProblems.ts:23:3` (problem-class)
+- `packages/batch-core/src/libs/problems/BatchStepProblems.ts:22:1` (problem-class)
 
 <a id="batch-core-invalid-chunk-size"></a>
 
@@ -1862,7 +1862,7 @@ Sources:
 
 Sources:
 
-- `packages/batch-core/src/libs/ChunkSize.ts:5:3` (problem-class)
+- `packages/batch-core/src/libs/ChunkSize.ts:4:1` (problem-class)
 
 <a id="batch-core-invalid-step-name"></a>
 
@@ -1880,7 +1880,7 @@ Sources:
 
 Sources:
 
-- `packages/batch-core/src/libs/problems/BatchStepProblems.ts:4:3` (problem-class)
+- `packages/batch-core/src/libs/problems/BatchStepProblems.ts:3:1` (problem-class)
 
 <a id="batch-qstash-invalid-publish-request"></a>
 
@@ -1898,7 +1898,7 @@ Sources:
 
 Sources:
 
-- `packages/batch-qstash/src/libs/problems/QStashBatchProblems.ts:18:3` (problem-class)
+- `packages/batch-qstash/src/libs/problems/QStashBatchProblems.ts:17:1` (problem-class)
 
 <a id="batch-qstash-missing-config"></a>
 
@@ -1916,7 +1916,7 @@ Sources:
 
 Sources:
 
-- `packages/batch-qstash/src/libs/problems/QStashBatchProblems.ts:4:3` (problem-class)
+- `packages/batch-qstash/src/libs/problems/QStashBatchProblems.ts:3:1` (problem-class)
 
 <a id="billing-status-mapping-failed"></a>
 
@@ -1934,7 +1934,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-polar/src/libs/problems/BillingStatusMappingProblem.ts:4:3` (problem-class)
+- `packages/billing-polar/src/libs/problems/BillingStatusMappingProblem.ts:3:1` (problem-class)
 
 <a id="billing-polar-checkout-idempotency-conflict"></a>
 
@@ -2114,7 +2114,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:32:3` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:31:1` (problem-class)
 
 <a id="billing-account-tenant-conflict"></a>
 
@@ -2132,7 +2132,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:40:3` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:39:1` (problem-class)
 
 <a id="billing-checkout-creation-failed"></a>
 
@@ -2150,7 +2150,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:119:3` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:118:1` (problem-class)
 
 <a id="billing-checkout-idempotency-drift"></a>
 
@@ -2186,7 +2186,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:127:3` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:126:1` (problem-class)
 
 <a id="billing-checkout-response-lost"></a>
 
@@ -2222,7 +2222,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:107:3` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:106:1` (problem-class)
 
 <a id="billing-invalid-money-amount"></a>
 
@@ -2240,7 +2240,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:140:3` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:139:1` (problem-class)
 
 <a id="billing-invalid-money-currency"></a>
 
@@ -2258,7 +2258,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:148:3` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:147:1` (problem-class)
 
 <a id="billing-invalid-plan-release-schedule"></a>
 
@@ -2276,7 +2276,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/PlanReleaseProblems.ts:69:3` (problem-class)
+- `packages/billing-core/src/libs/problems/PlanReleaseProblems.ts:68:1` (problem-class)
 
 <a id="billing-invalid-plan-release-transition"></a>
 
@@ -2294,7 +2294,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/PlanReleaseProblems.ts:21:3` (problem-class)
+- `packages/billing-core/src/libs/problems/PlanReleaseProblems.ts:20:1` (problem-class)
 
 <a id="billing-invalid-plan-version-definition"></a>
 
@@ -2312,7 +2312,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:184:3` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:183:1` (problem-class)
 
 <a id="billing-invalid-plan-version-ref"></a>
 
@@ -2330,7 +2330,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:176:3` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:175:1` (problem-class)
 
 <a id="billing-invalid-subscription-quantity"></a>
 
@@ -2348,7 +2348,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:243:3` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:242:1` (problem-class)
 
 <a id="billing-lifecycle-command-conflict"></a>
 
@@ -2366,7 +2366,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:75:3` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:74:1` (problem-class)
 
 <a id="billing-lifecycle-command-in-progress"></a>
 
@@ -2384,7 +2384,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:87:3` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:86:1` (problem-class)
 
 <a id="billing-lifecycle-command-not-found"></a>
 
@@ -2402,7 +2402,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:99:3` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:98:1` (problem-class)
 
 <a id="billing-money-currency-mismatch"></a>
 
@@ -2420,7 +2420,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:156:3` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:155:1` (problem-class)
 
 <a id="billing-money-division-by-zero"></a>
 
@@ -2438,7 +2438,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:168:3` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:167:1` (problem-class)
 
 <a id="billing-overlapping-plan-effective-period"></a>
 
@@ -2456,7 +2456,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/PlanReleaseProblems.ts:34:3` (problem-class)
+- `packages/billing-core/src/libs/problems/PlanReleaseProblems.ts:33:1` (problem-class)
 
 <a id="billing-plan-release-provider-capability-failed"></a>
 
@@ -2474,7 +2474,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/PlanReleaseProblems.ts:58:3` (problem-class)
+- `packages/billing-core/src/libs/problems/PlanReleaseProblems.ts:57:1` (problem-class)
 
 <a id="billing-plan-release-publish-conflict"></a>
 
@@ -2492,7 +2492,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/PlanReleaseProblems.ts:78:3` (problem-class)
+- `packages/billing-core/src/libs/problems/PlanReleaseProblems.ts:77:1` (problem-class)
 
 <a id="billing-plan-release-validation-failed"></a>
 
@@ -2510,7 +2510,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/PlanReleaseProblems.ts:47:3` (problem-class)
+- `packages/billing-core/src/libs/problems/PlanReleaseProblems.ts:46:1` (problem-class)
 
 <a id="billing-plan-version-already-published"></a>
 
@@ -2528,7 +2528,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:192:3` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:191:1` (problem-class)
 
 <a id="billing-plan-version-conflict"></a>
 
@@ -2546,7 +2546,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:200:3` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:199:1` (problem-class)
 
 <a id="billing-provider-capability-unavailable"></a>
 
@@ -2564,7 +2564,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:6:3` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:5:1` (problem-class)
 
 <a id="billing-stale-plan-release-revision"></a>
 
@@ -2582,7 +2582,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/PlanReleaseProblems.ts:7:3` (problem-class)
+- `packages/billing-core/src/libs/problems/PlanReleaseProblems.ts:6:1` (problem-class)
 
 <a id="billing-subscription-not-found"></a>
 
@@ -2600,7 +2600,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:24:3` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:23:1` (problem-class)
 
 <a id="billing-subscription-plan-version-mismatch"></a>
 
@@ -2618,7 +2618,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:230:3` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:229:1` (problem-class)
 
 <a id="billing-subscription-quantity-provider-mismatch"></a>
 
@@ -2636,7 +2636,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:289:3` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:288:1` (problem-class)
 
 <a id="billing-subscription-quantity-provider-source-ahead"></a>
 
@@ -2654,7 +2654,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:302:3` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:301:1` (problem-class)
 
 <a id="billing-subscription-quantity-reconciliation-conflict"></a>
 
@@ -2672,7 +2672,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:268:3` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:267:1` (problem-class)
 
 <a id="billing-subscription-quantity-reconciliation-failed"></a>
 
@@ -2690,7 +2690,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:278:3` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:277:1` (problem-class)
 
 <a id="billing-subscription-quantity-source-mismatch"></a>
 
@@ -2708,7 +2708,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:251:3` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:250:1` (problem-class)
 
 <a id="billing-unknown-plan-version"></a>
 
@@ -2726,7 +2726,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:208:3` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:207:1` (problem-class)
 
 <a id="billing-unknown-provider-plan-mapping"></a>
 
@@ -2744,7 +2744,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:216:3` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:215:1` (problem-class)
 
 <a id="billing-webhook-already-processed"></a>
 
@@ -2762,7 +2762,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:59:3` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:58:1` (problem-class)
 
 <a id="billing-webhook-event-intents-pending"></a>
 
@@ -2780,7 +2780,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:67:3` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:66:1` (problem-class)
 
 <a id="blocked-during-impersonation"></a>
 
@@ -2798,7 +2798,7 @@ Sources:
 
 Sources:
 
-- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:93:3` (problem-class)
+- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:92:1` (problem-class)
 
 <a id="cache-core-cache-key-argument-unsupported"></a>
 
@@ -2816,7 +2816,7 @@ Sources:
 
 Sources:
 
-- `packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts:22:3` (problem-class)
+- `packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts:21:1` (problem-class)
 
 <a id="cache-core-invalid-configuration"></a>
 
@@ -2834,7 +2834,7 @@ Sources:
 
 Sources:
 
-- `packages/cache-core/src/libs/problems/CacheStoreProblems.ts:12:3` (problem-class)
+- `packages/cache-core/src/libs/problems/CacheStoreProblems.ts:11:1` (problem-class)
 
 <a id="cache-core-invalid-decorator-config"></a>
 
@@ -2852,7 +2852,7 @@ Sources:
 
 Sources:
 
-- `packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts:12:3` (problem-class)
+- `packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts:11:1` (problem-class)
 
 <a id="cache-core-invalid-ttl"></a>
 
@@ -2870,7 +2870,7 @@ Sources:
 
 Sources:
 
-- `packages/cache-core/src/libs/problems/CacheStoreProblems.ts:35:3` (problem-class)
+- `packages/cache-core/src/libs/problems/CacheStoreProblems.ts:34:1` (problem-class)
 
 <a id="cache-core-invalidation-assertion-failed"></a>
 
@@ -2888,7 +2888,7 @@ Sources:
 
 Sources:
 
-- `packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts:120:3` (problem-class)
+- `packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts:119:1` (problem-class)
 
 <a id="cache-core-invalidation-capability-unsupported"></a>
 
@@ -2906,7 +2906,7 @@ Sources:
 
 Sources:
 
-- `packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts:73:3` (problem-class)
+- `packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts:72:1` (problem-class)
 
 <a id="cache-core-invalidation-event-unknown"></a>
 
@@ -2924,7 +2924,7 @@ Sources:
 
 Sources:
 
-- `packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts:59:3` (problem-class)
+- `packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts:58:1` (problem-class)
 
 <a id="cache-core-invalidation-failed"></a>
 
@@ -2942,7 +2942,7 @@ Sources:
 
 Sources:
 
-- `packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts:90:3` (problem-class)
+- `packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts:89:1` (problem-class)
 
 <a id="cache-core-invalidation-graph-invalid"></a>
 
@@ -2960,7 +2960,7 @@ Sources:
 
 Sources:
 
-- `packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts:45:3` (problem-class)
+- `packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts:44:1` (problem-class)
 
 <a id="circuit-breaker-open"></a>
 
@@ -2978,7 +2978,7 @@ Sources:
 
 Sources:
 
-- `packages/retry-core/src/libs/errors/CircuitBreakerOpenProblem.ts:7:3` (problem-class)
+- `packages/retry-core/src/libs/errors/CircuitBreakerOpenProblem.ts:6:1` (problem-class)
 
 <a id="cloudflare-images-invalid-ttl"></a>
 
@@ -3050,7 +3050,7 @@ Sources:
 
 Sources:
 
-- `packages/pagination-core/src/libs/problems.ts:17:3` (problem-class)
+- `packages/pagination-core/src/libs/problems.ts:16:1` (problem-class)
 
 <a id="create-croco-app-directory-not-empty"></a>
 
@@ -3068,7 +3068,7 @@ Sources:
 
 Sources:
 
-- `packages/create-croco-app/src/libs/problems/DirectoryNotEmptyProblem.ts:4:3` (problem-class)
+- `packages/create-croco-app/src/libs/problems/DirectoryNotEmptyProblem.ts:3:1` (problem-class)
 
 <a id="create-croco-app-invalid-cli-option"></a>
 
@@ -3086,7 +3086,7 @@ Sources:
 
 Sources:
 
-- `packages/create-croco-app/src/libs/problems/InvalidCliOptionProblem.ts:4:3` (problem-class)
+- `packages/create-croco-app/src/libs/problems/InvalidCliOptionProblem.ts:3:1` (problem-class)
 
 <a id="create-croco-app-invalid-goal-option"></a>
 
@@ -3104,7 +3104,7 @@ Sources:
 
 Sources:
 
-- `packages/create-croco-app/src/libs/problems/InvalidGoalOptionProblem.ts:5:3` (problem-class)
+- `packages/create-croco-app/src/libs/problems/InvalidGoalOptionProblem.ts:4:1` (problem-class)
 
 <a id="create-croco-app-invalid-saas-preset-option"></a>
 
@@ -3122,7 +3122,7 @@ Sources:
 
 Sources:
 
-- `packages/create-croco-app/src/libs/problems/InvalidSaasPresetOptionProblem.ts:4:3` (problem-class)
+- `packages/create-croco-app/src/libs/problems/InvalidSaasPresetOptionProblem.ts:3:1` (problem-class)
 
 <a id="create-croco-app-lambda-telemetry-boundary"></a>
 
@@ -3140,7 +3140,7 @@ Sources:
 
 Sources:
 
-- `packages/create-croco-app/templates/addons/lambda/apps/graphql-api/src/telemetryFlush.ts:10:3` (problem-class)
+- `packages/create-croco-app/templates/addons/lambda/apps/graphql-api/src/telemetryFlush.ts:9:1` (problem-class)
 
 <a id="create-croco-app-unexpected-failure"></a>
 
@@ -3158,7 +3158,7 @@ Sources:
 
 Sources:
 
-- `packages/create-croco-app/src/cli-result.ts:59:3` (problem-class)
+- `packages/create-croco-app/src/cli-result.ts:58:1` (problem-class)
 
 <a id="create-croco-app-unsupported-node-version"></a>
 
@@ -3176,7 +3176,7 @@ Sources:
 
 Sources:
 
-- `packages/create-croco-app/src/libs/problems/UnsupportedNodeVersionProblem.ts:4:3` (problem-class)
+- `packages/create-croco-app/src/libs/problems/UnsupportedNodeVersionProblem.ts:3:1` (problem-class)
 
 <a id="create-croco-app-web-meta-vite-fullstack-missing-hydration-root"></a>
 
@@ -3230,7 +3230,7 @@ Sources:
 
 Sources:
 
-- `packages/credits-core/src/libs/problems.ts:81:3` (problem-class)
+- `packages/credits-core/src/libs/problems.ts:80:1` (problem-class)
 
 <a id="credits-core-account-not-found"></a>
 
@@ -3248,7 +3248,7 @@ Sources:
 
 Sources:
 
-- `packages/credits-core/src/libs/problems.ts:15:3` (problem-class)
+- `packages/credits-core/src/libs/problems.ts:14:1` (problem-class)
 
 <a id="credits-core-duplicate-conflict"></a>
 
@@ -3266,7 +3266,7 @@ Sources:
 
 Sources:
 
-- `packages/credits-core/src/libs/problems.ts:67:3` (problem-class)
+- `packages/credits-core/src/libs/problems.ts:66:1` (problem-class)
 
 <a id="credits-core-event-publication-failed"></a>
 
@@ -3284,7 +3284,7 @@ Sources:
 
 Sources:
 
-- `packages/credits-core/src/libs/problems.ts:143:3` (problem-class)
+- `packages/credits-core/src/libs/problems.ts:142:1` (problem-class)
 
 <a id="credits-core-expired-grant"></a>
 
@@ -3302,7 +3302,7 @@ Sources:
 
 Sources:
 
-- `packages/credits-core/src/libs/problems.ts:39:3` (problem-class)
+- `packages/credits-core/src/libs/problems.ts:38:1` (problem-class)
 
 <a id="credits-core-insufficient-credits"></a>
 
@@ -3320,7 +3320,7 @@ Sources:
 
 Sources:
 
-- `packages/credits-core/src/libs/problems.ts:25:3` (problem-class)
+- `packages/credits-core/src/libs/problems.ts:24:1` (problem-class)
 
 <a id="credits-core-invalid-amount"></a>
 
@@ -3338,7 +3338,7 @@ Sources:
 
 Sources:
 
-- `packages/credits-core/src/libs/problems.ts:5:3` (problem-class)
+- `packages/credits-core/src/libs/problems.ts:4:1` (problem-class)
 
 <a id="credits-core-invalid-command"></a>
 
@@ -3356,7 +3356,7 @@ Sources:
 
 Sources:
 
-- `packages/credits-core/src/libs/problems.ts:109:3` (problem-class)
+- `packages/credits-core/src/libs/problems.ts:108:1` (problem-class)
 
 <a id="credits-core-refund-mismatch"></a>
 
@@ -3374,7 +3374,7 @@ Sources:
 
 Sources:
 
-- `packages/credits-core/src/libs/problems.ts:129:3` (problem-class)
+- `packages/credits-core/src/libs/problems.ts:128:1` (problem-class)
 
 <a id="credits-core-reservation-mismatch"></a>
 
@@ -3392,7 +3392,7 @@ Sources:
 
 Sources:
 
-- `packages/credits-core/src/libs/problems.ts:53:3` (problem-class)
+- `packages/credits-core/src/libs/problems.ts:52:1` (problem-class)
 
 <a id="credits-core-stale-ledger-position"></a>
 
@@ -3410,7 +3410,7 @@ Sources:
 
 Sources:
 
-- `packages/credits-core/src/libs/problems.ts:95:3` (problem-class)
+- `packages/credits-core/src/libs/problems.ts:94:1` (problem-class)
 
 <a id="credits-core-transaction-not-found"></a>
 
@@ -3428,7 +3428,7 @@ Sources:
 
 Sources:
 
-- `packages/credits-core/src/libs/problems.ts:119:3` (problem-class)
+- `packages/credits-core/src/libs/problems.ts:118:1` (problem-class)
 
 <a id="credits-drizzle-persistence-failure"></a>
 
@@ -3446,7 +3446,7 @@ Sources:
 
 Sources:
 
-- `packages/credits-drizzle/src/libs/problems.ts:5:3` (problem-class)
+- `packages/credits-drizzle/src/libs/problems.ts:4:1` (problem-class)
 
 <a id="croco-changed-test-plan-invalid"></a>
 
@@ -3770,7 +3770,7 @@ Sources:
 
 Sources:
 
-- `packages/customer-health-core/src/libs/problems/HealthProblems.ts:33:3` (problem-class)
+- `packages/customer-health-core/src/libs/problems/HealthProblems.ts:32:1` (problem-class)
 
 <a id="customer-health-core-event-publisher-not-configured"></a>
 
@@ -3788,7 +3788,7 @@ Sources:
 
 Sources:
 
-- `packages/customer-health-core/src/libs/problems/HealthProblems.ts:42:3` (problem-class)
+- `packages/customer-health-core/src/libs/problems/HealthProblems.ts:41:1` (problem-class)
 
 <a id="customer-health-core-invalid-score-input"></a>
 
@@ -3806,7 +3806,7 @@ Sources:
 
 Sources:
 
-- `packages/customer-health-core/src/libs/problems/HealthProblems.ts:5:3` (problem-class)
+- `packages/customer-health-core/src/libs/problems/HealthProblems.ts:4:1` (problem-class)
 
 <a id="customer-health-drizzle-invalid-metering-input"></a>
 
@@ -3824,7 +3824,7 @@ Sources:
 
 Sources:
 
-- `packages/customer-health-drizzle/src/libs/problems/DrizzleHealthProblems.ts:5:3` (problem-class)
+- `packages/customer-health-drizzle/src/libs/problems/DrizzleHealthProblems.ts:4:1` (problem-class)
 
 <a id="customer-health-drizzle-transition-sequence-missing"></a>
 
@@ -3842,7 +3842,7 @@ Sources:
 
 Sources:
 
-- `packages/customer-health-drizzle/src/libs/problems/DrizzleHealthProblems.ts:26:3` (problem-class)
+- `packages/customer-health-drizzle/src/libs/problems/DrizzleHealthProblems.ts:25:1` (problem-class)
 
 <a id="dataloader-core-batch-result-length-mismatch"></a>
 
@@ -3860,7 +3860,7 @@ Sources:
 
 Sources:
 
-- `packages/dataloader-core/src/libs/problems/BatchLoaderProblems.ts:4:3` (problem-class)
+- `packages/dataloader-core/src/libs/problems/BatchLoaderProblems.ts:3:1` (problem-class)
 
 <a id="desktop-codegen-invalid-contract-graph"></a>
 
@@ -3896,7 +3896,7 @@ Sources:
 
 Sources:
 
-- `packages/diagnostics-core/src/libs/problems/DiagnosticsProblems.ts:25:3` (problem-class)
+- `packages/diagnostics-core/src/libs/problems/DiagnosticsProblems.ts:24:1` (problem-class)
 
 <a id="diagnostics-core-invalid-timeout"></a>
 
@@ -3914,7 +3914,7 @@ Sources:
 
 Sources:
 
-- `packages/diagnostics-core/src/libs/problems/DiagnosticsProblems.ts:9:3` (problem-class)
+- `packages/diagnostics-core/src/libs/problems/DiagnosticsProblems.ts:8:1` (problem-class)
 
 <a id="domain-auto-join-recovery-failed"></a>
 
@@ -3932,7 +3932,7 @@ Sources:
 
 Sources:
 
-- `packages/invitation-core/src/libs/problems/DomainPolicyProblems.ts:30:3` (problem-class)
+- `packages/invitation-core/src/libs/problems/DomainPolicyProblems.ts:29:1` (problem-class)
 
 <a id="duplicate-invitation"></a>
 
@@ -3950,7 +3950,7 @@ Sources:
 
 Sources:
 
-- `packages/invitation-core/src/libs/problems/RateLimitProblems.ts:13:3` (problem-class)
+- `packages/invitation-core/src/libs/problems/RateLimitProblems.ts:12:1` (problem-class)
 
 <a id="duplicate-recover-handler"></a>
 
@@ -3968,7 +3968,7 @@ Sources:
 
 Sources:
 
-- `packages/retry-core/src/libs/errors/DuplicateRecoverHandlerProblem.ts:7:3` (problem-class)
+- `packages/retry-core/src/libs/errors/DuplicateRecoverHandlerProblem.ts:6:1` (problem-class)
 
 <a id="duration-parse-error"></a>
 
@@ -3986,7 +3986,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/problems/ContextProblems.ts:15:3` (problem-class)
+- `packages/framework-context/src/libs/problems/ContextProblems.ts:14:1` (problem-class)
 
 <a id="embedding-error"></a>
 
@@ -4184,7 +4184,7 @@ Sources:
 
 Sources:
 
-- `packages/entitlements-core/src/libs/problems/EntitlementProblems.ts:20:3` (problem-class)
+- `packages/entitlements-core/src/libs/problems/EntitlementProblems.ts:19:1` (problem-class)
 
 <a id="entitlement-inactive-subscription"></a>
 
@@ -4202,7 +4202,7 @@ Sources:
 
 Sources:
 
-- `packages/entitlements-core/src/libs/problems/EntitlementProblems.ts:46:3` (problem-class)
+- `packages/entitlements-core/src/libs/problems/EntitlementProblems.ts:45:1` (problem-class)
 
 <a id="entitlement-missing-plan"></a>
 
@@ -4220,7 +4220,7 @@ Sources:
 
 Sources:
 
-- `packages/entitlements-core/src/libs/problems/EntitlementProblems.ts:32:3` (problem-class)
+- `packages/entitlements-core/src/libs/problems/EntitlementProblems.ts:31:1` (problem-class)
 
 <a id="entitlement-not-found"></a>
 
@@ -4238,7 +4238,7 @@ Sources:
 
 Sources:
 
-- `packages/entitlements-core/src/libs/problems/EntitlementProblems.ts:86:3` (problem-class)
+- `packages/entitlements-core/src/libs/problems/EntitlementProblems.ts:85:1` (problem-class)
 
 <a id="entitlement-provider-unavailable"></a>
 
@@ -4256,7 +4256,7 @@ Sources:
 
 Sources:
 
-- `packages/entitlements-core/src/libs/problems/EntitlementProblems.ts:74:3` (problem-class)
+- `packages/entitlements-core/src/libs/problems/EntitlementProblems.ts:73:1` (problem-class)
 
 <a id="entitlement-quota-exceeded"></a>
 
@@ -4274,7 +4274,7 @@ Sources:
 
 Sources:
 
-- `packages/entitlements-core/src/libs/problems/EntitlementProblems.ts:60:3` (problem-class)
+- `packages/entitlements-core/src/libs/problems/EntitlementProblems.ts:59:1` (problem-class)
 
 <a id="entitlement-requirement-invalid"></a>
 
@@ -4292,7 +4292,7 @@ Sources:
 
 Sources:
 
-- `packages/entitlements-core/src/libs/problems/EntitlementProblems.ts:11:3` (problem-class)
+- `packages/entitlements-core/src/libs/problems/EntitlementProblems.ts:10:1` (problem-class)
 
 <a id="entitlements-core-definition-invalid"></a>
 
@@ -4310,7 +4310,7 @@ Sources:
 
 Sources:
 
-- `packages/entitlements-core/src/libs/problems/EntitlementProblems.ts:95:3` (problem-class)
+- `packages/entitlements-core/src/libs/problems/EntitlementProblems.ts:94:1` (problem-class)
 
 <a id="entitlements-core-plan-version-already-registered"></a>
 
@@ -4328,7 +4328,7 @@ Sources:
 
 Sources:
 
-- `packages/entitlements-core/src/libs/problems/EntitlementProblems.ts:113:3` (problem-class)
+- `packages/entitlements-core/src/libs/problems/EntitlementProblems.ts:112:1` (problem-class)
 
 <a id="entitlements-core-plan-version-mismatch"></a>
 
@@ -4346,7 +4346,7 @@ Sources:
 
 Sources:
 
-- `packages/entitlements-core/src/libs/problems/EntitlementProblems.ts:122:3` (problem-class)
+- `packages/entitlements-core/src/libs/problems/EntitlementProblems.ts:121:1` (problem-class)
 
 <a id="entitlements-core-plan-version-not-found"></a>
 
@@ -4364,7 +4364,7 @@ Sources:
 
 Sources:
 
-- `packages/entitlements-core/src/libs/problems/EntitlementProblems.ts:104:3` (problem-class)
+- `packages/entitlements-core/src/libs/problems/EntitlementProblems.ts:103:1` (problem-class)
 
 <a id="events-core-after-commit-outcome-required"></a>
 
@@ -4382,7 +4382,7 @@ Sources:
 
 Sources:
 
-- `packages/events-core/src/libs/problems/EventsProblems.ts:107:3` (problem-class)
+- `packages/events-core/src/libs/problems/EventsProblems.ts:106:1` (problem-class)
 
 <a id="events-core-after-commit-requires-active-transaction"></a>
 
@@ -4400,7 +4400,7 @@ Sources:
 
 Sources:
 
-- `packages/events-core/src/libs/problems/EventsProblems.ts:96:3` (problem-class)
+- `packages/events-core/src/libs/problems/EventsProblems.ts:95:1` (problem-class)
 
 <a id="events-core-deserialization-error"></a>
 
@@ -4418,7 +4418,7 @@ Sources:
 
 Sources:
 
-- `packages/events-core/src/libs/problems/EventsProblems.ts:40:3` (problem-class)
+- `packages/events-core/src/libs/problems/EventsProblems.ts:39:1` (problem-class)
 
 <a id="events-core-duplicate-event-field"></a>
 
@@ -4436,7 +4436,7 @@ Sources:
 
 Sources:
 
-- `packages/events-core/src/libs/problems/EventsProblems.ts:51:3` (problem-class)
+- `packages/events-core/src/libs/problems/EventsProblems.ts:50:1` (problem-class)
 
 <a id="events-core-duplicate-event-name"></a>
 
@@ -4454,7 +4454,7 @@ Sources:
 
 Sources:
 
-- `packages/events-core/src/libs/problems/EventsProblems.ts:66:3` (problem-class)
+- `packages/events-core/src/libs/problems/EventsProblems.ts:65:1` (problem-class)
 
 <a id="events-core-event-bus-not-set"></a>
 
@@ -4472,7 +4472,7 @@ Sources:
 
 Sources:
 
-- `packages/events-core/src/libs/problems/EventsProblems.ts:7:3` (problem-class)
+- `packages/events-core/src/libs/problems/EventsProblems.ts:6:1` (problem-class)
 
 <a id="events-core-event-definition-error"></a>
 
@@ -4490,7 +4490,7 @@ Sources:
 
 Sources:
 
-- `packages/events-core/src/libs/problems/EventsProblems.ts:18:3` (problem-class)
+- `packages/events-core/src/libs/problems/EventsProblems.ts:17:1` (problem-class)
 
 <a id="events-core-transaction-context-unavailable"></a>
 
@@ -4508,7 +4508,7 @@ Sources:
 
 Sources:
 
-- `packages/events-core/src/libs/problems/EventsProblems.ts:81:3` (problem-class)
+- `packages/events-core/src/libs/problems/EventsProblems.ts:80:1` (problem-class)
 
 <a id="events-core-unknown-event-type"></a>
 
@@ -4526,7 +4526,7 @@ Sources:
 
 Sources:
 
-- `packages/events-core/src/libs/problems/EventsProblems.ts:29:3` (problem-class)
+- `packages/events-core/src/libs/problems/EventsProblems.ts:28:1` (problem-class)
 
 <a id="events-inmemory-backpressure-exceeded"></a>
 
@@ -4544,7 +4544,7 @@ Sources:
 
 Sources:
 
-- `packages/events-inmemory/src/libs/problems/EventsInmemoryProblems.ts:35:3` (problem-class)
+- `packages/events-inmemory/src/libs/problems/EventsInmemoryProblems.ts:34:1` (problem-class)
 
 <a id="events-inmemory-backpressure-timeout"></a>
 
@@ -4562,7 +4562,7 @@ Sources:
 
 Sources:
 
-- `packages/events-inmemory/src/libs/problems/EventsInmemoryProblems.ts:51:3` (problem-class)
+- `packages/events-inmemory/src/libs/problems/EventsInmemoryProblems.ts:50:1` (problem-class)
 
 <a id="events-inmemory-invalid-configuration"></a>
 
@@ -4580,7 +4580,7 @@ Sources:
 
 Sources:
 
-- `packages/events-inmemory/src/libs/problems/EventsInmemoryProblems.ts:12:3` (problem-class)
+- `packages/events-inmemory/src/libs/problems/EventsInmemoryProblems.ts:11:1` (problem-class)
 
 <a id="events-inmemory-publish-dropped"></a>
 
@@ -4598,7 +4598,7 @@ Sources:
 
 Sources:
 
-- `packages/events-inmemory/src/libs/InmemoryEventBus.ts:54:3` (problem-class)
+- `packages/events-inmemory/src/libs/InmemoryEventBus.ts:53:1` (problem-class)
 
 <a id="events-inmemory-publish-failed"></a>
 
@@ -4616,7 +4616,7 @@ Sources:
 
 Sources:
 
-- `packages/events-inmemory/src/libs/InmemoryEventBus.ts:37:3` (problem-class)
+- `packages/events-inmemory/src/libs/InmemoryEventBus.ts:36:1` (problem-class)
 
 <a id="events-tx-configuration-invalid"></a>
 
@@ -4634,7 +4634,7 @@ Sources:
 
 Sources:
 
-- `packages/events-tx/src/libs/problems/EventsTxProblems.ts:36:3` (problem-class)
+- `packages/events-tx/src/libs/problems/EventsTxProblems.ts:35:1` (problem-class)
 
 <a id="events-tx-inbox-claim-conflict"></a>
 
@@ -4652,7 +4652,7 @@ Sources:
 
 Sources:
 
-- `packages/events-tx/src/libs/problems/EventsTxProblems.ts:135:3` (problem-class)
+- `packages/events-tx/src/libs/problems/EventsTxProblems.ts:134:1` (problem-class)
 
 <a id="events-tx-outbox-idempotency-conflict"></a>
 
@@ -4670,7 +4670,7 @@ Sources:
 
 Sources:
 
-- `packages/events-tx/src/libs/problems/EventsTxProblems.ts:98:3` (problem-class)
+- `packages/events-tx/src/libs/problems/EventsTxProblems.ts:97:1` (problem-class)
 
 <a id="events-tx-outbox-message-id-conflict"></a>
 
@@ -4688,7 +4688,7 @@ Sources:
 
 Sources:
 
-- `packages/events-tx/src/libs/problems/EventsTxProblems.ts:83:3` (problem-class)
+- `packages/events-tx/src/libs/problems/EventsTxProblems.ts:82:1` (problem-class)
 
 <a id="events-tx-outbox-publish-exhausted"></a>
 
@@ -4706,7 +4706,7 @@ Sources:
 
 Sources:
 
-- `packages/events-tx/src/libs/problems/EventsTxProblems.ts:120:3` (problem-class)
+- `packages/events-tx/src/libs/problems/EventsTxProblems.ts:119:1` (problem-class)
 
 <a id="events-tx-outbox-transaction-required"></a>
 
@@ -4724,7 +4724,7 @@ Sources:
 
 Sources:
 
-- `packages/events-tx/src/libs/problems/EventsTxProblems.ts:64:3` (problem-class)
+- `packages/events-tx/src/libs/problems/EventsTxProblems.ts:63:1` (problem-class)
 
 <a id="events-tx-storage-error"></a>
 
@@ -4742,7 +4742,7 @@ Sources:
 
 Sources:
 
-- `packages/events-tx/src/libs/problems/EventsTxProblems.ts:73:3` (problem-class)
+- `packages/events-tx/src/libs/problems/EventsTxProblems.ts:72:1` (problem-class)
 
 <a id="events-tx-transaction-state-error"></a>
 
@@ -4760,7 +4760,7 @@ Sources:
 
 Sources:
 
-- `packages/events-tx/src/libs/problems/EventsTxProblems.ts:56:3` (problem-class)
+- `packages/events-tx/src/libs/problems/EventsTxProblems.ts:55:1` (problem-class)
 
 <a id="execution-attempt-fence-conflict"></a>
 
@@ -4922,7 +4922,7 @@ Sources:
 
 Sources:
 
-- `packages/execution-core/src/libs/ExecutionProblem.ts:32:3` (problem-class)
+- `packages/execution-core/src/libs/ExecutionProblem.ts:31:1` (problem-class)
 
 <a id="execution-invalid-state-transition"></a>
 
@@ -4994,7 +4994,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-core/src/libs/problems/AuthProblems.ts:13:3` (problem-class)
+- `packages/auth-core/src/libs/problems/AuthProblems.ts:12:1` (problem-class)
 
 <a id="framework-config-config-schema-not-found"></a>
 
@@ -5012,7 +5012,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-config/src/libs/problems/ConfigProblems.ts:4:3` (problem-class)
+- `packages/framework-config/src/libs/problems/ConfigProblems.ts:3:1` (problem-class)
 
 <a id="framework-config-config-validation-failed"></a>
 
@@ -5048,7 +5048,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-config/src/libs/problems/ConfigProblems.ts:24:3` (problem-class)
+- `packages/framework-config/src/libs/problems/ConfigProblems.ts:23:1` (problem-class)
 
 <a id="framework-config-runtime-env-preset-boundary"></a>
 
@@ -5066,7 +5066,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-config/src/libs/problems/ConfigProblems.ts:33:3` (problem-class)
+- `packages/framework-config/src/libs/problems/ConfigProblems.ts:32:1` (problem-class)
 
 <a id="framework-context-circular-dependency"></a>
 
@@ -5084,7 +5084,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/problems/CircularDependencyProblem.ts:7:3` (problem-class)
+- `packages/framework-context/src/libs/problems/CircularDependencyProblem.ts:6:1` (problem-class)
 
 <a id="framework-context-container-scope-disposed"></a>
 
@@ -5120,7 +5120,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/problems/ContextProblems.ts:7:3` (problem-class)
+- `packages/framework-context/src/libs/problems/ContextProblems.ts:6:1` (problem-class)
 
 <a id="framework-context-di-resolution-failed"></a>
 
@@ -5138,7 +5138,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/problems/ContainerResolutionProblem.ts:10:3` (problem-class)
+- `packages/framework-context/src/libs/problems/ContainerResolutionProblem.ts:9:1` (problem-class)
 
 <a id="framework-context-di-scope-mismatch"></a>
 
@@ -5156,7 +5156,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/problems/ContainerResolutionProblem.ts:31:3` (problem-class)
+- `packages/framework-context/src/libs/problems/ContainerResolutionProblem.ts:30:1` (problem-class)
 
 <a id="framework-context-on-shutdown-decorator-invalid"></a>
 
@@ -5174,7 +5174,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/problems/ShutdownProblems.ts:9:3` (problem-class)
+- `packages/framework-context/src/libs/problems/ShutdownProblems.ts:8:1` (problem-class)
 
 <a id="framework-context-pipeline-graph-invalid"></a>
 
@@ -5192,7 +5192,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/problems/PipelineGraphProblems.ts:7:3` (problem-class)
+- `packages/framework-context/src/libs/problems/PipelineGraphProblems.ts:6:1` (problem-class)
 
 <a id="framework-context-policy-capability-unavailable"></a>
 
@@ -5210,7 +5210,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/problems/RuntimePolicyProblems.ts:33:3` (problem-class)
+- `packages/framework-context/src/libs/problems/RuntimePolicyProblems.ts:32:1` (problem-class)
 
 <a id="framework-context-policy-conflict"></a>
 
@@ -5228,7 +5228,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/problems/RuntimePolicyProblems.ts:9:3` (problem-class)
+- `packages/framework-context/src/libs/problems/RuntimePolicyProblems.ts:8:1` (problem-class)
 
 <a id="framework-context-policy-definition-invalid"></a>
 
@@ -5246,7 +5246,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/problems/RuntimePolicyProblems.ts:21:3` (problem-class)
+- `packages/framework-context/src/libs/problems/RuntimePolicyProblems.ts:20:1` (problem-class)
 
 <a id="framework-context-request-scope-outside-context"></a>
 
@@ -5282,7 +5282,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/problems/RuntimeInspectorProblems.ts:10:3` (problem-class)
+- `packages/framework-context/src/libs/problems/RuntimeInspectorProblems.ts:9:1` (problem-class)
 
 <a id="framework-context-shutdown-configuration-conflict"></a>
 
@@ -5300,7 +5300,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/problems/ShutdownProblems.ts:111:3` (problem-class)
+- `packages/framework-context/src/libs/problems/ShutdownProblems.ts:110:1` (problem-class)
 
 <a id="framework-context-shutdown-hook-execution-failed"></a>
 
@@ -5318,7 +5318,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/problems/ShutdownProblems.ts:148:3` (problem-class)
+- `packages/framework-context/src/libs/problems/ShutdownProblems.ts:147:1` (problem-class)
 
 <a id="framework-context-shutdown-hook-registration-closed"></a>
 
@@ -5336,7 +5336,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/problems/ShutdownProblems.ts:126:3` (problem-class)
+- `packages/framework-context/src/libs/problems/ShutdownProblems.ts:125:1` (problem-class)
 
 <a id="framework-context-shutdown-timeout"></a>
 
@@ -5354,7 +5354,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/problems/ShutdownProblems.ts:87:3` (problem-class)
+- `packages/framework-context/src/libs/problems/ShutdownProblems.ts:86:1` (problem-class)
 
 <a id="framework-context-shutdown-timeout-invalid"></a>
 
@@ -5372,7 +5372,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/problems/ShutdownProblems.ts:71:3` (problem-class)
+- `packages/framework-context/src/libs/problems/ShutdownProblems.ts:70:1` (problem-class)
 
 <a id="framework-module-circular-dependency"></a>
 
@@ -5660,7 +5660,7 @@ Sources:
 
 Sources:
 
-- `packages/frontend-problems/src/index.ts:246:3` (problem-class)
+- `packages/frontend-problems/src/index.ts:249:1` (problem-class)
 
 <a id="frontend-problems-status-mismatch"></a>
 
@@ -5678,7 +5678,7 @@ Sources:
 
 Sources:
 
-- `packages/frontend-problems/src/index.ts:223:3` (problem-class)
+- `packages/frontend-problems/src/index.ts:226:1` (problem-class)
 
 <a id="frontend-react-page-data-unavailable"></a>
 
@@ -5750,7 +5750,7 @@ Sources:
 
 Sources:
 
-- `packages/gid-core/src/libs/problems/GidProblems.ts:32:3` (problem-class)
+- `packages/gid-core/src/libs/problems/GidProblems.ts:31:1` (problem-class)
 
 <a id="gid-core-invalid-id-prefix"></a>
 
@@ -5768,7 +5768,7 @@ Sources:
 
 Sources:
 
-- `packages/gid-core/src/libs/problems/GidProblems.ts:5:3` (problem-class)
+- `packages/gid-core/src/libs/problems/GidProblems.ts:4:1` (problem-class)
 
 <a id="governance-core-delete-not-supported"></a>
 
@@ -5876,7 +5876,7 @@ Sources:
 
 Sources:
 
-- `packages/customer-health-core/src/libs/problems/HealthProblems.ts:25:3` (problem-class)
+- `packages/customer-health-core/src/libs/problems/HealthProblems.ts:24:1` (problem-class)
 
 <a id="health-core-duplicate-indicator-id"></a>
 
@@ -5894,7 +5894,7 @@ Sources:
 
 Sources:
 
-- `packages/health-core/src/libs/problems/HealthProblems.ts:45:3` (problem-class)
+- `packages/health-core/src/libs/problems/HealthProblems.ts:44:1` (problem-class)
 
 <a id="health-core-invalid-indicator-id"></a>
 
@@ -5912,7 +5912,7 @@ Sources:
 
 Sources:
 
-- `packages/health-core/src/libs/problems/HealthProblems.ts:24:3` (problem-class)
+- `packages/health-core/src/libs/problems/HealthProblems.ts:23:1` (problem-class)
 
 <a id="health-core-invalid-timeout"></a>
 
@@ -5930,7 +5930,7 @@ Sources:
 
 Sources:
 
-- `packages/health-core/src/libs/problems/HealthProblems.ts:10:3` (problem-class)
+- `packages/health-core/src/libs/problems/HealthProblems.ts:9:1` (problem-class)
 
 <a id="idempotency-core-invalid-key"></a>
 
@@ -6074,7 +6074,7 @@ Sources:
 
 Sources:
 
-- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:28:3` (problem-class)
+- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:27:1` (problem-class)
 
 <a id="impersonation-identity-conflict"></a>
 
@@ -6092,7 +6092,7 @@ Sources:
 
 Sources:
 
-- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:57:3` (problem-class)
+- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:56:1` (problem-class)
 
 <a id="impersonation-lifecycle-publication-pending"></a>
 
@@ -6110,7 +6110,7 @@ Sources:
 
 Sources:
 
-- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:127:3` (problem-class)
+- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:126:1` (problem-class)
 
 <a id="impersonation-reason-required"></a>
 
@@ -6128,7 +6128,7 @@ Sources:
 
 Sources:
 
-- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:84:3` (problem-class)
+- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:83:1` (problem-class)
 
 <a id="impersonation-session-actor-mismatch"></a>
 
@@ -6146,7 +6146,7 @@ Sources:
 
 Sources:
 
-- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:116:3` (problem-class)
+- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:115:1` (problem-class)
 
 <a id="impersonation-session-not-found"></a>
 
@@ -6164,7 +6164,7 @@ Sources:
 
 Sources:
 
-- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:102:3` (problem-class)
+- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:101:1` (problem-class)
 
 <a id="impersonation-target-not-found"></a>
 
@@ -6182,7 +6182,7 @@ Sources:
 
 Sources:
 
-- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:66:3` (problem-class)
+- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:65:1` (problem-class)
 
 <a id="impersonation-core-event-intent-conflict"></a>
 
@@ -6200,7 +6200,7 @@ Sources:
 
 Sources:
 
-- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:157:3` (problem-class)
+- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:156:1` (problem-class)
 
 <a id="impersonation-core-event-intent-limit-invalid"></a>
 
@@ -6218,7 +6218,7 @@ Sources:
 
 Sources:
 
-- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:170:3` (problem-class)
+- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:169:1` (problem-class)
 
 <a id="index-not-found"></a>
 
@@ -6254,7 +6254,7 @@ Sources:
 
 Sources:
 
-- `packages/integrations-posthog/src/libs/problems/PostHogProblems.ts:4:3` (problem-class)
+- `packages/integrations-posthog/src/libs/problems/PostHogProblems.ts:3:1` (problem-class)
 
 <a id="invalid-auto-join-role"></a>
 
@@ -6290,7 +6290,7 @@ Sources:
 
 Sources:
 
-- `packages/pagination-core/src/libs/problems.ts:4:3` (problem-class)
+- `packages/pagination-core/src/libs/problems.ts:3:1` (problem-class)
 
 <a id="invalid-invitation-expiry-duration"></a>
 
@@ -6308,7 +6308,7 @@ Sources:
 
 Sources:
 
-- `packages/invitation-core/src/libs/problems/InvitationProblems.ts:32:3` (problem-class)
+- `packages/invitation-core/src/libs/problems/InvitationProblems.ts:31:1` (problem-class)
 
 <a id="invalid-membership-command"></a>
 
@@ -6344,7 +6344,7 @@ Sources:
 
 Sources:
 
-- `packages/pagination-core/src/libs/problems.ts:40:3` (problem-class)
+- `packages/pagination-core/src/libs/problems.ts:39:1` (problem-class)
 
 <a id="invalid-retry-configuration"></a>
 
@@ -6362,7 +6362,7 @@ Sources:
 
 Sources:
 
-- `packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts:52:3` (problem-class)
+- `packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts:51:1` (problem-class)
 
 <a id="invalid-role"></a>
 
@@ -6398,7 +6398,7 @@ Sources:
 
 Sources:
 
-- `packages/invitation-core/src/libs/problems/InvitationProblems.ts:73:3` (problem-class)
+- `packages/invitation-core/src/libs/problems/InvitationProblems.ts:72:1` (problem-class)
 
 <a id="invitation-creation-failed"></a>
 
@@ -6416,7 +6416,7 @@ Sources:
 
 Sources:
 
-- `packages/invitation-core/src/libs/problems/InvitationProblems.ts:4:3` (problem-class)
+- `packages/invitation-core/src/libs/problems/InvitationProblems.ts:3:1` (problem-class)
 
 <a id="invitation-email-mismatch"></a>
 
@@ -6434,7 +6434,7 @@ Sources:
 
 Sources:
 
-- `packages/invitation-core/src/libs/problems/InvitationProblems.ts:84:3` (problem-class)
+- `packages/invitation-core/src/libs/problems/InvitationProblems.ts:83:1` (problem-class)
 
 <a id="invitation-expired"></a>
 
@@ -6452,7 +6452,7 @@ Sources:
 
 Sources:
 
-- `packages/invitation-core/src/libs/problems/InvitationProblems.ts:62:3` (problem-class)
+- `packages/invitation-core/src/libs/problems/InvitationProblems.ts:61:1` (problem-class)
 
 <a id="invitation-idempotency-conflict"></a>
 
@@ -6470,7 +6470,7 @@ Sources:
 
 Sources:
 
-- `packages/invitation-core/src/libs/problems/InvitationProblems.ts:19:3` (problem-class)
+- `packages/invitation-core/src/libs/problems/InvitationProblems.ts:18:1` (problem-class)
 
 <a id="invitation-invalid-status"></a>
 
@@ -6488,7 +6488,7 @@ Sources:
 
 Sources:
 
-- `packages/invitation-core/src/libs/problems/InvitationProblems.ts:95:3` (problem-class)
+- `packages/invitation-core/src/libs/problems/InvitationProblems.ts:94:1` (problem-class)
 
 <a id="invitation-not-found"></a>
 
@@ -6506,7 +6506,7 @@ Sources:
 
 Sources:
 
-- `packages/invitation-core/src/libs/problems/InvitationProblems.ts:51:3` (problem-class)
+- `packages/invitation-core/src/libs/problems/InvitationProblems.ts:50:1` (problem-class)
 
 <a id="invitation-rate-limit-exceeded"></a>
 
@@ -6524,7 +6524,7 @@ Sources:
 
 Sources:
 
-- `packages/invitation-core/src/libs/problems/RateLimitProblems.ts:4:3` (problem-class)
+- `packages/invitation-core/src/libs/problems/RateLimitProblems.ts:3:1` (problem-class)
 
 <a id="invitation-core-batch-size-exceeded"></a>
 
@@ -6542,7 +6542,7 @@ Sources:
 
 Sources:
 
-- `packages/invitation-core/src/libs/problems/BatchInviteProblems.ts:4:3` (problem-class)
+- `packages/invitation-core/src/libs/problems/BatchInviteProblems.ts:3:1` (problem-class)
 
 <a id="invitation-drizzle-token-cipher-failed"></a>
 
@@ -6578,7 +6578,7 @@ Sources:
 
 Sources:
 
-- `packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts:39:3` (problem-class)
+- `packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts:38:1` (problem-class)
 
 <a id="last-owner"></a>
 
@@ -7046,7 +7046,7 @@ Sources:
 
 Sources:
 
-- `packages/llm-metering/src/libs/problems/LlmMeteringProblems.ts:72:3` (problem-class)
+- `packages/llm-metering/src/libs/problems/LlmMeteringProblems.ts:71:1` (problem-class)
 
 <a id="llm-metering-pricing-registry-conflict"></a>
 
@@ -7352,7 +7352,7 @@ Sources:
 
 Sources:
 
-- `packages/meta-vite/src/libs/actions/serverActions.ts:80:3` (problem-class)
+- `packages/meta-vite/src/libs/actions/serverActions.ts:79:1` (problem-class)
 
 <a id="meta-vite-server-action-not-found"></a>
 
@@ -7370,7 +7370,7 @@ Sources:
 
 Sources:
 
-- `packages/meta-vite/src/libs/actions/serverActions.ts:66:3` (problem-class)
+- `packages/meta-vite/src/libs/actions/serverActions.ts:65:1` (problem-class)
 
 <a id="meta-vite-server-action-validation-failed"></a>
 
@@ -7388,7 +7388,7 @@ Sources:
 
 Sources:
 
-- `packages/meta-vite/src/libs/actions/serverActions.ts:94:3` (problem-class)
+- `packages/meta-vite/src/libs/actions/serverActions.ts:93:1` (problem-class)
 
 <a id="meter-insert-failed"></a>
 
@@ -7460,7 +7460,7 @@ Sources:
 
 Sources:
 
-- `packages/metering-upstash/src/libs/problems/UpstashMeteringProblems.ts:4:3` (problem-class)
+- `packages/metering-upstash/src/libs/problems/UpstashMeteringProblems.ts:3:1` (problem-class)
 
 <a id="metering-atomic-quota-not-supported"></a>
 
@@ -7478,7 +7478,7 @@ Sources:
 
 Sources:
 
-- `packages/metering-core/src/libs/problems/AtomicQuotaNotSupportedProblem.ts:4:3` (problem-class)
+- `packages/metering-core/src/libs/problems/AtomicQuotaNotSupportedProblem.ts:3:1` (problem-class)
 
 <a id="metering-billable-usage-journal-required"></a>
 
@@ -7676,7 +7676,7 @@ Sources:
 
 Sources:
 
-- `packages/metrics-billing/src/libs/problems/BillingMetricsProblems.ts:62:3` (problem-class)
+- `packages/metrics-billing/src/libs/problems/BillingMetricsProblems.ts:61:1` (problem-class)
 
 <a id="metrics-billing-metric-dropped"></a>
 
@@ -7694,7 +7694,7 @@ Sources:
 
 Sources:
 
-- `packages/metrics-billing/src/libs/problems/BillingMetricsProblems.ts:17:3` (problem-class)
+- `packages/metrics-billing/src/libs/problems/BillingMetricsProblems.ts:16:1` (problem-class)
 
 <a id="metrics-billing-recording-failed"></a>
 
@@ -7712,7 +7712,7 @@ Sources:
 
 Sources:
 
-- `packages/metrics-billing/src/libs/problems/BillingMetricsProblems.ts:46:3` (problem-class)
+- `packages/metrics-billing/src/libs/problems/BillingMetricsProblems.ts:45:1` (problem-class)
 
 <a id="metrics-core-carrying-capacity-simulation-error"></a>
 
@@ -7730,7 +7730,7 @@ Sources:
 
 Sources:
 
-- `packages/metrics-core/src/libs/problems/MetricsProblems.ts:4:3` (problem-class)
+- `packages/metrics-core/src/libs/problems/MetricsProblems.ts:3:1` (problem-class)
 
 <a id="metrics-core-carrying-capacity-tenant-required"></a>
 
@@ -7748,7 +7748,7 @@ Sources:
 
 Sources:
 
-- `packages/metrics-core/src/libs/problems/MetricsProblems.ts:12:3` (problem-class)
+- `packages/metrics-core/src/libs/problems/MetricsProblems.ts:11:1` (problem-class)
 
 <a id="metrics-core-gross-margin-required"></a>
 
@@ -7766,7 +7766,7 @@ Sources:
 
 Sources:
 
-- `packages/metrics-core/src/libs/problems/MetricsProblems.ts:42:3` (problem-class)
+- `packages/metrics-core/src/libs/problems/MetricsProblems.ts:41:1` (problem-class)
 
 <a id="metrics-core-invalid-retention-movement"></a>
 
@@ -7784,7 +7784,7 @@ Sources:
 
 Sources:
 
-- `packages/metrics-core/src/libs/problems/MetricsProblems.ts:30:3` (problem-class)
+- `packages/metrics-core/src/libs/problems/MetricsProblems.ts:29:1` (problem-class)
 
 <a id="metrics-core-mixed-currency-mrr"></a>
 
@@ -7802,7 +7802,7 @@ Sources:
 
 Sources:
 
-- `packages/metrics-core/src/libs/problems/MetricsProblems.ts:50:3` (problem-class)
+- `packages/metrics-core/src/libs/problems/MetricsProblems.ts:49:1` (problem-class)
 
 <a id="metrics-core-retention-metrics-unavailable"></a>
 
@@ -7820,7 +7820,7 @@ Sources:
 
 Sources:
 
-- `packages/metrics-core/src/libs/problems/MetricsProblems.ts:20:3` (problem-class)
+- `packages/metrics-core/src/libs/problems/MetricsProblems.ts:19:1` (problem-class)
 
 <a id="metrics-core-snapshot-tenant-required"></a>
 
@@ -7838,7 +7838,7 @@ Sources:
 
 Sources:
 
-- `packages/metrics-core/src/libs/SnapshotScheduler.ts:19:3` (problem-class)
+- `packages/metrics-core/src/libs/SnapshotScheduler.ts:18:1` (problem-class)
 
 <a id="middleware-execution-error"></a>
 
@@ -7856,7 +7856,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/problems/MiddlewareProblems.ts:7:3` (problem-class)
+- `packages/framework-context/src/libs/problems/MiddlewareProblems.ts:6:1` (problem-class)
 
 <a id="migration-runner-database-url-required"></a>
 
@@ -7874,7 +7874,7 @@ Sources:
 
 Sources:
 
-- `packages/migration-runner/src/libs/problems/DatabaseUrlRequiredProblem.ts:4:3` (problem-class)
+- `packages/migration-runner/src/libs/problems/DatabaseUrlRequiredProblem.ts:3:1` (problem-class)
 
 <a id="migration-runner-file-load-failed"></a>
 
@@ -7892,7 +7892,7 @@ Sources:
 
 Sources:
 
-- `packages/migration-runner/src/libs/problems/MigrationFileLoadProblem.ts:5:3` (problem-class)
+- `packages/migration-runner/src/libs/problems/MigrationFileLoadProblem.ts:4:1` (problem-class)
 
 <a id="migration-runner-history-drift"></a>
 
@@ -7910,7 +7910,7 @@ Sources:
 
 Sources:
 
-- `packages/migration-runner/src/libs/problems/MigrationHistoryDriftProblem.ts:16:3` (problem-class)
+- `packages/migration-runner/src/libs/problems/MigrationHistoryDriftProblem.ts:15:1` (problem-class)
 
 <a id="migration-runner-invalid-count"></a>
 
@@ -7928,7 +7928,7 @@ Sources:
 
 Sources:
 
-- `packages/migration-runner/src/libs/problems/InvalidMigrationCountProblem.ts:4:3` (problem-class)
+- `packages/migration-runner/src/libs/problems/InvalidMigrationCountProblem.ts:3:1` (problem-class)
 
 <a id="migration-runner-missing-down-function"></a>
 
@@ -7946,7 +7946,7 @@ Sources:
 
 Sources:
 
-- `packages/migration-runner/src/libs/problems/MissingDownFunctionProblem.ts:4:3` (problem-class)
+- `packages/migration-runner/src/libs/problems/MissingDownFunctionProblem.ts:3:1` (problem-class)
 
 <a id="migration-runner-missing-up-function"></a>
 
@@ -7964,7 +7964,7 @@ Sources:
 
 Sources:
 
-- `packages/migration-runner/src/libs/problems/MissingUpFunctionProblem.ts:4:3` (problem-class)
+- `packages/migration-runner/src/libs/problems/MissingUpFunctionProblem.ts:3:1` (problem-class)
 
 <a id="migration-runner-transaction-required"></a>
 
@@ -7982,7 +7982,7 @@ Sources:
 
 Sources:
 
-- `packages/migration-runner/src/libs/problems/MigrationTransactionRequiredProblem.ts:4:3` (problem-class)
+- `packages/migration-runner/src/libs/problems/MigrationTransactionRequiredProblem.ts:3:1` (problem-class)
 
 <a id="migration-runner-unsupported-dialect"></a>
 
@@ -8000,7 +8000,7 @@ Sources:
 
 Sources:
 
-- `packages/migration-runner/src/libs/problems/UnsupportedDialectProblem.ts:4:3` (problem-class)
+- `packages/migration-runner/src/libs/problems/UnsupportedDialectProblem.ts:3:1` (problem-class)
 
 <a id="migration-runner-unsupported-query-result"></a>
 
@@ -8018,7 +8018,7 @@ Sources:
 
 Sources:
 
-- `packages/migration-runner/src/libs/problems/UnsupportedMigrationQueryResultProblem.ts:11:3` (problem-class)
+- `packages/migration-runner/src/libs/problems/UnsupportedMigrationQueryResultProblem.ts:10:1` (problem-class)
 
 <a id="missing-tenant"></a>
 
@@ -8072,7 +8072,7 @@ Sources:
 
 Sources:
 
-- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:75:3` (problem-class)
+- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:74:1` (problem-class)
 
 <a id="notifications-core-default-provider-conflict"></a>
 
@@ -8558,7 +8558,7 @@ Sources:
 
 Sources:
 
-- `packages/onboarding-core/src/libs/problems/OnboardingProblems.ts:48:3` (problem-class)
+- `packages/onboarding-core/src/libs/problems/OnboardingProblems.ts:47:1` (problem-class)
 
 <a id="onboarding-definition-not-found"></a>
 
@@ -8576,7 +8576,7 @@ Sources:
 
 Sources:
 
-- `packages/onboarding-core/src/libs/problems/OnboardingProblems.ts:26:3` (problem-class)
+- `packages/onboarding-core/src/libs/problems/OnboardingProblems.ts:25:1` (problem-class)
 
 <a id="onboarding-duplicate-definition-registration"></a>
 
@@ -8612,7 +8612,7 @@ Sources:
 
 Sources:
 
-- `packages/onboarding-core/src/libs/problems/OnboardingProblems.ts:78:3` (problem-class)
+- `packages/onboarding-core/src/libs/problems/OnboardingProblems.ts:77:1` (problem-class)
 
 <a id="onboarding-step-completion-conflict"></a>
 
@@ -8630,7 +8630,7 @@ Sources:
 
 Sources:
 
-- `packages/onboarding-core/src/libs/problems/OnboardingProblems.ts:63:3` (problem-class)
+- `packages/onboarding-core/src/libs/problems/OnboardingProblems.ts:62:1` (problem-class)
 
 <a id="onboarding-step-not-found"></a>
 
@@ -8648,7 +8648,7 @@ Sources:
 
 Sources:
 
-- `packages/onboarding-core/src/libs/problems/OnboardingProblems.ts:37:3` (problem-class)
+- `packages/onboarding-core/src/libs/problems/OnboardingProblems.ts:36:1` (problem-class)
 
 <a id="openapi-spec-controller-typescript-diagnostics"></a>
 
@@ -8720,7 +8720,7 @@ Sources:
 
 Sources:
 
-- `packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:19:3` (problem-class)
+- `packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:18:1` (problem-class)
 
 <a id="outbox-core-claim-configuration-invalid"></a>
 
@@ -8936,7 +8936,7 @@ Sources:
 
 Sources:
 
-- `packages/problems-core/src/libs/Problem.ts:123:3` (problem-class)
+- `packages/problems-core/src/libs/Problem.ts:122:1` (problem-class)
 
 <a id="problems-core-parse-error"></a>
 
@@ -8954,7 +8954,7 @@ Sources:
 
 Sources:
 
-- `packages/problems-core/src/libs/problems/ProblemDetailsParseProblem.ts:5:3` (problem-class)
+- `packages/problems-core/src/libs/problems/ProblemDetailsParseProblem.ts:4:1` (problem-class)
 
 <a id="problems-core-problem-registry-invalid"></a>
 
@@ -8990,7 +8990,7 @@ Sources:
 
 Sources:
 
-- `packages/problems-core/src/libs/ProblemCategoryMapper.ts:19:5` (problem-class)
+- `packages/problems-core/src/libs/ProblemCategoryMapper.ts:18:3` (problem-class)
 
 <a id="protocol-codegen-controller-project-config"></a>
 
@@ -9152,7 +9152,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-graphql/src/libs/problems/GuardProblems.ts:4:3` (problem-class)
+- `packages/protocols-graphql/src/libs/problems/GuardProblems.ts:3:1` (problem-class)
 
 <a id="protocols-rest-auth-invalid-header-format"></a>
 
@@ -9278,7 +9278,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-rest/src/libs/validators/ValidationProblem.ts:31:3` (problem-class)
+- `packages/protocols-rest/src/libs/validators/ValidationProblem.ts:30:1` (problem-class)
 
 <a id="protocols-rest-response-validation-failed"></a>
 
@@ -9296,7 +9296,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-rest/src/libs/validators/ValidationProblem.ts:54:3` (problem-class)
+- `packages/protocols-rest/src/libs/validators/ValidationProblem.ts:53:1` (problem-class)
 
 <a id="protocols-rest-validation-failed"></a>
 
@@ -9314,7 +9314,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-rest/src/libs/validators/ValidationProblem.ts:12:3` (problem-class)
+- `packages/protocols-rest/src/libs/validators/ValidationProblem.ts:11:1` (problem-class)
 
 <a id="protocols-trpc-duplicate-parameter-index"></a>
 
@@ -9350,7 +9350,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-trpc/src/libs/createTrpcRouter.ts:93:3` (problem-class)
+- `packages/protocols-trpc/src/libs/createTrpcRouter.ts:92:1` (problem-class)
 
 <a id="protocols-trpc-provider-container-required"></a>
 
@@ -9368,7 +9368,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-trpc/src/libs/createTrpcRouter.ts:77:3` (problem-class)
+- `packages/protocols-trpc/src/libs/createTrpcRouter.ts:76:1` (problem-class)
 
 <a id="protocols-trpc-request-normalization-failed"></a>
 
@@ -9386,7 +9386,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-trpc/src/libs/TrpcExecutionContext.ts:51:3` (problem-class)
+- `packages/protocols-trpc/src/libs/TrpcExecutionContext.ts:50:1` (problem-class)
 
 <a id="protocols-trpc-request-unavailable"></a>
 
@@ -9404,7 +9404,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-trpc/src/libs/TrpcExecutionContext.ts:42:3` (problem-class)
+- `packages/protocols-trpc/src/libs/TrpcExecutionContext.ts:41:1` (problem-class)
 
 <a id="protocols-trpc-route-handler-not-callable"></a>
 
@@ -9422,7 +9422,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-trpc/src/libs/createTrpcRouter.ts:64:3` (problem-class)
+- `packages/protocols-trpc/src/libs/createTrpcRouter.ts:63:1` (problem-class)
 
 <a id="public-email-domain-not-allowed"></a>
 
@@ -9476,7 +9476,7 @@ Sources:
 
 Sources:
 
-- `packages/ratelimit-core/src/libs/problems/RateLimitConfigProblems.ts:6:3` (problem-class)
+- `packages/ratelimit-core/src/libs/problems/RateLimitConfigProblems.ts:5:1` (problem-class)
 
 <a id="rate-limit-refund-unsupported"></a>
 
@@ -9512,7 +9512,7 @@ Sources:
 
 Sources:
 
-- `packages/ratelimit-core/src/libs/problems/RateLimitConfigProblems.ts:16:3` (problem-class)
+- `packages/ratelimit-core/src/libs/problems/RateLimitConfigProblems.ts:15:1` (problem-class)
 
 <a id="ratelimit-core-unexpected-policy"></a>
 
@@ -9530,7 +9530,7 @@ Sources:
 
 Sources:
 
-- `packages/ratelimit-core/src/libs/problems/RateLimitConfigProblems.ts:52:3` (problem-class)
+- `packages/ratelimit-core/src/libs/problems/RateLimitConfigProblems.ts:51:1` (problem-class)
 
 <a id="ratelimit-upstash-invalid-policy"></a>
 
@@ -9548,7 +9548,7 @@ Sources:
 
 Sources:
 
-- `packages/ratelimit-upstash/src/libs/problems/RateLimitUpstashProblems.ts:7:3` (problem-class)
+- `packages/ratelimit-upstash/src/libs/problems/RateLimitUpstashProblems.ts:6:1` (problem-class)
 
 <a id="ratelimit-upstash-missing-config"></a>
 
@@ -9566,7 +9566,7 @@ Sources:
 
 Sources:
 
-- `packages/ratelimit-upstash/src/libs/problems/RateLimitUpstashProblems.ts:21:3` (problem-class)
+- `packages/ratelimit-upstash/src/libs/problems/RateLimitUpstashProblems.ts:20:1` (problem-class)
 
 <a id="ratelimit-prune-interval"></a>
 
@@ -9602,7 +9602,7 @@ Sources:
 
 Sources:
 
-- `packages/repository-core/src/libs/problems/BatchLoadProblems.ts:77:3` (problem-class)
+- `packages/repository-core/src/libs/problems/BatchLoadProblems.ts:76:1` (problem-class)
 
 <a id="repository-core-batch-load-result-key-duplicate"></a>
 
@@ -9620,7 +9620,7 @@ Sources:
 
 Sources:
 
-- `packages/repository-core/src/libs/problems/BatchLoadProblems.ts:57:3` (problem-class)
+- `packages/repository-core/src/libs/problems/BatchLoadProblems.ts:56:1` (problem-class)
 
 <a id="repository-core-batch-load-result-key-unexpected"></a>
 
@@ -9638,7 +9638,7 @@ Sources:
 
 Sources:
 
-- `packages/repository-core/src/libs/problems/BatchLoadProblems.ts:67:3` (problem-class)
+- `packages/repository-core/src/libs/problems/BatchLoadProblems.ts:66:1` (problem-class)
 
 <a id="repository-core-batch-load-result-unkeyed"></a>
 
@@ -9656,7 +9656,7 @@ Sources:
 
 Sources:
 
-- `packages/repository-core/src/libs/problems/BatchLoadProblems.ts:43:3` (problem-class)
+- `packages/repository-core/src/libs/problems/BatchLoadProblems.ts:42:1` (problem-class)
 
 <a id="repository-core-batch-loader-factory-not-registered"></a>
 
@@ -9674,7 +9674,7 @@ Sources:
 
 Sources:
 
-- `packages/repository-core/src/libs/problems/BatchLoadProblems.ts:4:3` (problem-class)
+- `packages/repository-core/src/libs/problems/BatchLoadProblems.ts:3:1` (problem-class)
 
 <a id="repository-core-batch-loader-factory-resolution-failed"></a>
 
@@ -9692,7 +9692,7 @@ Sources:
 
 Sources:
 
-- `packages/repository-core/src/libs/problems/BatchLoadProblems.ts:17:3` (problem-class)
+- `packages/repository-core/src/libs/problems/BatchLoadProblems.ts:16:1` (problem-class)
 
 <a id="repository-core-batch-loader-scope-collision"></a>
 
@@ -9710,7 +9710,7 @@ Sources:
 
 Sources:
 
-- `packages/repository-core/src/libs/problems/BatchLoadProblems.ts:29:3` (problem-class)
+- `packages/repository-core/src/libs/problems/BatchLoadProblems.ts:28:1` (problem-class)
 
 <a id="resend-notification-failed"></a>
 
@@ -9746,7 +9746,7 @@ Sources:
 
 Sources:
 
-- `packages/retry-core/src/libs/errors/RetryAbortedProblem.ts:7:3` (problem-class)
+- `packages/retry-core/src/libs/errors/RetryAbortedProblem.ts:6:1` (problem-class)
 
 <a id="retry-circuit-breaker-invalid-state"></a>
 
@@ -9764,7 +9764,7 @@ Sources:
 
 Sources:
 
-- `packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts:13:3` (problem-class)
+- `packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts:12:1` (problem-class)
 
 <a id="retry-circuit-breaker-lock-failed"></a>
 
@@ -9782,7 +9782,7 @@ Sources:
 
 Sources:
 
-- `packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts:26:3` (problem-class)
+- `packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts:25:1` (problem-class)
 
 <a id="retry-exhausted"></a>
 
@@ -9800,7 +9800,7 @@ Sources:
 
 Sources:
 
-- `packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:7:3` (problem-class)
+- `packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:6:1` (problem-class)
 
 <a id="retry-core-backoff-cancellation-unsupported"></a>
 
@@ -9818,7 +9818,7 @@ Sources:
 
 Sources:
 
-- `packages/retry-core/src/libs/errors/RetryCancellationUnsupportedProblem.ts:7:3` (problem-class)
+- `packages/retry-core/src/libs/errors/RetryCancellationUnsupportedProblem.ts:6:1` (problem-class)
 
 <a id="retry-core-circuit-breaker-unexpected-state"></a>
 
@@ -9836,7 +9836,7 @@ Sources:
 
 Sources:
 
-- `packages/retry-core/src/libs/problems/CircuitBreakerProblems.ts:7:3` (problem-class)
+- `packages/retry-core/src/libs/problems/CircuitBreakerProblems.ts:6:1` (problem-class)
 
 <a id="retry-core-success-hook-failed"></a>
 
@@ -9854,7 +9854,7 @@ Sources:
 
 Sources:
 
-- `packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts:75:3` (problem-class)
+- `packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts:74:1` (problem-class)
 
 <a id="role-hierarchy-violation"></a>
 
@@ -9962,7 +9962,7 @@ Sources:
 
 Sources:
 
-- `packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts:75:3` (problem-class)
+- `packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts:74:1` (problem-class)
 
 <a id="saas-demo-demo-endpoint-disabled"></a>
 
@@ -9980,7 +9980,7 @@ Sources:
 
 Sources:
 
-- `packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts:4:3` (problem-class)
+- `packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts:3:1` (problem-class)
 
 <a id="saas-demo-invalid-jobs-query"></a>
 
@@ -9998,7 +9998,7 @@ Sources:
 
 Sources:
 
-- `packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts:30:3` (problem-class)
+- `packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts:29:1` (problem-class)
 
 <a id="saas-demo-invalid-port"></a>
 
@@ -10016,7 +10016,7 @@ Sources:
 
 Sources:
 
-- `packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts:17:3` (problem-class)
+- `packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts:16:1` (problem-class)
 
 <a id="saas-demo-job-not-found"></a>
 
@@ -10034,7 +10034,7 @@ Sources:
 
 Sources:
 
-- `packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts:39:3` (problem-class)
+- `packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts:38:1` (problem-class)
 
 <a id="saas-demo-smoke-failed"></a>
 
@@ -10052,7 +10052,7 @@ Sources:
 
 Sources:
 
-- `packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts:66:3` (problem-class)
+- `packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts:65:1` (problem-class)
 
 <a id="saas-demo-sqlite-fixture-state-invalid"></a>
 
@@ -10070,7 +10070,7 @@ Sources:
 
 Sources:
 
-- `packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts:84:3` (problem-class)
+- `packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts:83:1` (problem-class)
 
 <a id="saas-demo-tenant-already-exists"></a>
 
@@ -10088,7 +10088,7 @@ Sources:
 
 Sources:
 
-- `packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts:48:3` (problem-class)
+- `packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts:47:1` (problem-class)
 
 <a id="saas-demo-tenant-not-found"></a>
 
@@ -10106,7 +10106,7 @@ Sources:
 
 Sources:
 
-- `packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts:57:3` (problem-class)
+- `packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts:56:1` (problem-class)
 
 <a id="search-capability-unavailable"></a>
 
@@ -10142,7 +10142,7 @@ Sources:
 
 Sources:
 
-- `packages/search-drizzle/src/libs/problems/InvalidSearchRowProblem.ts:7:3` (problem-class)
+- `packages/search-drizzle/src/libs/problems/InvalidSearchRowProblem.ts:6:1` (problem-class)
 
 <a id="search-core-operation-aborted"></a>
 
@@ -10214,7 +10214,7 @@ Sources:
 
 Sources:
 
-- `packages/search-core/src/libs/problems/SearchProblems.ts:87:3` (problem-class)
+- `packages/search-core/src/libs/problems/SearchProblems.ts:86:1` (problem-class)
 
 <a id="search-core-transform-registration-conflict"></a>
 
@@ -10394,7 +10394,7 @@ Sources:
 
 Sources:
 
-- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:48:3` (problem-class)
+- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:47:1` (problem-class)
 
 <a id="starter-invalid-environment"></a>
 
@@ -10412,7 +10412,7 @@ Sources:
 
 Sources:
 
-- `packages/create-croco-app/templates/spa-be-split/apps/api-server/src/problems.ts:4:3` (problem-class)
+- `packages/create-croco-app/templates/spa-be-split/apps/api-server/src/problems.ts:3:1` (problem-class)
 
 <a id="starter-unhandled-api-request"></a>
 
@@ -10430,7 +10430,7 @@ Sources:
 
 Sources:
 
-- `packages/create-croco-app/templates/spa-be-split/apps/console-web/src/test/browser.ts:8:3` (problem-class)
+- `packages/create-croco-app/templates/spa-be-split/apps/console-web/src/test/browser.ts:7:1` (problem-class)
 
 <a id="starter-user-not-found"></a>
 
@@ -10448,7 +10448,7 @@ Sources:
 
 Sources:
 
-- `packages/create-croco-app/templates/spa-be-split/apps/api-server/src/problems.ts:13:3` (problem-class)
+- `packages/create-croco-app/templates/spa-be-split/apps/api-server/src/problems.ts:12:1` (problem-class)
 
 <a id="storage-delete-failed"></a>
 
@@ -10502,7 +10502,7 @@ Sources:
 
 Sources:
 
-- `packages/storage-core/src/libs/problems/InvalidKeyProblem.ts:5:3` (problem-class)
+- `packages/storage-core/src/libs/problems/InvalidKeyProblem.ts:4:1` (problem-class)
 
 <a id="storage-invalid-node-body"></a>
 
@@ -10520,7 +10520,7 @@ Sources:
 
 Sources:
 
-- `packages/storage-core/src/libs/problems/InvalidNodeStorageBodyProblem.ts:5:3` (problem-class)
+- `packages/storage-core/src/libs/problems/InvalidNodeStorageBodyProblem.ts:4:1` (problem-class)
 
 <a id="storage-invalid-signed-url-expiry"></a>
 
@@ -10538,7 +10538,7 @@ Sources:
 
 Sources:
 
-- `packages/storage-core/src/libs/problems/InvalidSignedUrlExpiryProblem.ts:9:3` (problem-class)
+- `packages/storage-core/src/libs/problems/InvalidSignedUrlExpiryProblem.ts:8:1` (problem-class)
 
 <a id="storage-operation-aborted"></a>
 
@@ -10592,7 +10592,7 @@ Sources:
 
 Sources:
 
-- `packages/storage-r2/src/libs/problems/MissingR2ConfigProblem.ts:8:3` (problem-class)
+- `packages/storage-r2/src/libs/problems/MissingR2ConfigProblem.ts:7:1` (problem-class)
 
 <a id="storage-r2-object-too-large"></a>
 
@@ -10610,7 +10610,7 @@ Sources:
 
 Sources:
 
-- `packages/storage-r2/src/libs/problems/R2ObjectTooLargeProblem.ts:8:3` (problem-class)
+- `packages/storage-r2/src/libs/problems/R2ObjectTooLargeProblem.ts:7:1` (problem-class)
 
 <a id="storage-r2-readiness-failed"></a>
 
@@ -10628,7 +10628,7 @@ Sources:
 
 Sources:
 
-- `packages/storage-r2/src/libs/problems/R2ReadinessProblem.ts:14:3` (problem-class)
+- `packages/storage-r2/src/libs/problems/R2ReadinessProblem.ts:13:1` (problem-class)
 
 <a id="storage-upload-failed"></a>
 
@@ -10916,7 +10916,7 @@ Sources:
 
 Sources:
 
-- `packages/tasks-core/src/libs/problems/TasksProblems.ts:4:3` (problem-class)
+- `packages/tasks-core/src/libs/problems/TasksProblems.ts:3:1` (problem-class)
 
 <a id="tasks-core-task-runner-di-failure"></a>
 
@@ -10952,7 +10952,7 @@ Sources:
 
 Sources:
 
-- `packages/tasks-qstash/src/libs/problems/QStashTaskProblems.ts:18:3` (problem-class)
+- `packages/tasks-qstash/src/libs/problems/QStashTaskProblems.ts:17:1` (problem-class)
 
 <a id="tasks-qstash-missing-config"></a>
 
@@ -10970,7 +10970,7 @@ Sources:
 
 Sources:
 
-- `packages/tasks-qstash/src/libs/problems/QStashTaskProblems.ts:4:3` (problem-class)
+- `packages/tasks-qstash/src/libs/problems/QStashTaskProblems.ts:3:1` (problem-class)
 
 <a id="telemetry-auto-instrumentation-invalid-config"></a>
 
@@ -10988,7 +10988,7 @@ Sources:
 
 Sources:
 
-- `packages/telemetry-sdk-node/src/libs/problems/TelemetryAutoInstrumentationProblem.ts:7:3` (problem-class)
+- `packages/telemetry-sdk-node/src/libs/problems/TelemetryAutoInstrumentationProblem.ts:6:1` (problem-class)
 
 <a id="telemetry-force-flush-unsupported"></a>
 
@@ -11006,7 +11006,7 @@ Sources:
 
 Sources:
 
-- `packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:101:3` (problem-class)
+- `packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:100:1` (problem-class)
 
 <a id="telemetry-runtime-error"></a>
 
@@ -11024,7 +11024,7 @@ Sources:
 
 Sources:
 
-- `packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:181:3` (problem-class)
+- `packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:180:1` (problem-class)
 
 <a id="telemetry-sampler-invalid-config"></a>
 
@@ -11042,7 +11042,7 @@ Sources:
 
 Sources:
 
-- `packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:7:3` (problem-class)
+- `packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:6:1` (problem-class)
 
 <a id="telemetry-signal-unsupported"></a>
 
@@ -11060,7 +11060,7 @@ Sources:
 
 Sources:
 
-- `packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:83:3` (problem-class)
+- `packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:82:1` (problem-class)
 
 <a id="telemetry-sdk-node-batch-configuration-invalid"></a>
 
@@ -11078,7 +11078,7 @@ Sources:
 
 Sources:
 
-- `packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:42:3` (problem-class)
+- `packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:41:1` (problem-class)
 
 <a id="telemetry-sdk-node-init-configuration-conflict"></a>
 
@@ -11096,7 +11096,7 @@ Sources:
 
 Sources:
 
-- `packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:117:3` (problem-class)
+- `packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:116:1` (problem-class)
 
 <a id="telemetry-sdk-node-shutdown-timeout"></a>
 
@@ -11114,7 +11114,7 @@ Sources:
 
 Sources:
 
-- `packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:167:3` (problem-class)
+- `packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:166:1` (problem-class)
 
 <a id="telemetry-sdk-node-shutdown-timeout-invalid"></a>
 
@@ -11132,7 +11132,7 @@ Sources:
 
 Sources:
 
-- `packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:147:3` (problem-class)
+- `packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:146:1` (problem-class)
 
 <a id="tenant-core-admin-bypass-reason-required"></a>
 
@@ -11204,7 +11204,7 @@ Sources:
 
 Sources:
 
-- `packages/tenant-core/src/libs/problems/DuplicateTenantManagerRegistrationProblem.ts:4:3` (problem-class)
+- `packages/tenant-core/src/libs/problems/DuplicateTenantManagerRegistrationProblem.ts:3:1` (problem-class)
 
 <a id="tenant-core-isolation-context-missing"></a>
 
@@ -11240,7 +11240,7 @@ Sources:
 
 Sources:
 
-- `packages/tenant-core/src/libs/problems/TenantManagerNotRegisteredProblem.ts:4:3` (problem-class)
+- `packages/tenant-core/src/libs/problems/TenantManagerNotRegisteredProblem.ts:3:1` (problem-class)
 
 <a id="tenant-core-unsafe-query"></a>
 
@@ -11276,7 +11276,7 @@ Sources:
 
 Sources:
 
-- `packages/tenant-core/src/libs/problems/TenantNotFoundProblem.ts:7:3` (problem-class)
+- `packages/tenant-core/src/libs/problems/TenantNotFoundProblem.ts:6:1` (problem-class)
 
 <a id="tenant-required"></a>
 
@@ -11294,7 +11294,7 @@ Sources:
 
 Sources:
 
-- `packages/tenant-core/src/libs/problems/TenantRequiredProblem.ts:7:3` (problem-class)
+- `packages/tenant-core/src/libs/problems/TenantRequiredProblem.ts:6:1` (problem-class)
 
 <a id="testing-resources-cleanup-failed"></a>
 
@@ -11780,7 +11780,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-graphql/src/libs/problems/GraphQLTransportProblems.ts:63:3` (problem-class)
+- `packages/transports-graphql/src/libs/problems/GraphQLTransportProblems.ts:62:1` (problem-class)
 
 <a id="transports-graphql-request-body-too-large"></a>
 
@@ -11816,7 +11816,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-graphql/src/libs/problems/GraphQLTransportProblems.ts:71:3` (problem-class)
+- `packages/transports-graphql/src/libs/problems/GraphQLTransportProblems.ts:70:1` (problem-class)
 
 <a id="transports-graphql-resolvers-not-configured"></a>
 
@@ -11834,7 +11834,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-graphql/src/libs/problems/GraphQLTransportProblems.ts:20:3` (problem-class)
+- `packages/transports-graphql/src/libs/problems/GraphQLTransportProblems.ts:19:1` (problem-class)
 
 <a id="transports-graphql-schema-not-configured"></a>
 
@@ -11852,7 +11852,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-graphql/src/libs/problems/GraphQLTransportProblems.ts:32:3` (problem-class)
+- `packages/transports-graphql/src/libs/problems/GraphQLTransportProblems.ts:31:1` (problem-class)
 
 <a id="transports-graphql-server-not-initialized"></a>
 
@@ -11870,7 +11870,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-graphql/src/libs/problems/GraphQLTransportProblems.ts:40:3` (problem-class)
+- `packages/transports-graphql/src/libs/problems/GraphQLTransportProblems.ts:39:1` (problem-class)
 
 <a id="transports-http-body-limit-invalid-configuration"></a>
 
@@ -12140,7 +12140,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/runtimeContext.ts:101:3` (problem-class)
+- `packages/transports-http/src/libs/runtimeContext.ts:100:1` (problem-class)
 
 <a id="transports-http-security-middleware-validation"></a>
 
@@ -12356,7 +12356,7 @@ Sources:
 
 Sources:
 
-- `packages/tx-core/src/libs/problems/TransactionProblems.ts:103:3` (problem-class)
+- `packages/tx-core/src/libs/problems/TransactionProblems.ts:102:1` (problem-class)
 
 <a id="tx-core-after-commit-outcome-required"></a>
 
@@ -12374,7 +12374,7 @@ Sources:
 
 Sources:
 
-- `packages/tx-core/src/libs/problems/TransactionProblems.ts:35:3` (problem-class)
+- `packages/tx-core/src/libs/problems/TransactionProblems.ts:34:1` (problem-class)
 
 <a id="tx-core-after-commit-registration-closed"></a>
 
@@ -12392,7 +12392,7 @@ Sources:
 
 Sources:
 
-- `packages/tx-core/src/libs/problems/TransactionProblems.ts:50:3` (problem-class)
+- `packages/tx-core/src/libs/problems/TransactionProblems.ts:49:1` (problem-class)
 
 <a id="tx-core-decorator-misuse"></a>
 
@@ -12410,7 +12410,7 @@ Sources:
 
 Sources:
 
-- `packages/tx-core/src/libs/problems/TransactionProblems.ts:13:3` (problem-class)
+- `packages/tx-core/src/libs/problems/TransactionProblems.ts:12:1` (problem-class)
 
 <a id="tx-core-detached-transaction-operation"></a>
 
@@ -12428,7 +12428,7 @@ Sources:
 
 Sources:
 
-- `packages/tx-core/src/libs/problems/TransactionProblems.ts:61:3` (problem-class)
+- `packages/tx-core/src/libs/problems/TransactionProblems.ts:60:1` (problem-class)
 
 <a id="tx-core-duplicate-tx-manager-registration"></a>
 
@@ -12446,7 +12446,7 @@ Sources:
 
 Sources:
 
-- `packages/tx-core/src/libs/errors.ts:7:3` (problem-class)
+- `packages/tx-core/src/libs/errors.ts:6:1` (problem-class)
 
 <a id="tx-core-invalid-transaction-timeout"></a>
 
@@ -12464,7 +12464,7 @@ Sources:
 
 Sources:
 
-- `packages/tx-core/src/libs/problems/TransactionProblems.ts:87:3` (problem-class)
+- `packages/tx-core/src/libs/problems/TransactionProblems.ts:86:1` (problem-class)
 
 <a id="tx-core-manager-not-registered"></a>
 
@@ -12482,7 +12482,7 @@ Sources:
 
 Sources:
 
-- `packages/tx-core/src/libs/errors.ts:23:3` (problem-class)
+- `packages/tx-core/src/libs/errors.ts:22:1` (problem-class)
 
 <a id="tx-core-missing-transaction-context"></a>
 
@@ -12500,7 +12500,7 @@ Sources:
 
 Sources:
 
-- `packages/tx-core/src/libs/problems/TransactionProblems.ts:24:3` (problem-class)
+- `packages/tx-core/src/libs/problems/TransactionProblems.ts:23:1` (problem-class)
 
 <a id="tx-core-outcome-requires-root"></a>
 
@@ -12518,7 +12518,7 @@ Sources:
 
 Sources:
 
-- `packages/tx-core/src/libs/problems/TransactionProblems.ts:76:3` (problem-class)
+- `packages/tx-core/src/libs/problems/TransactionProblems.ts:75:1` (problem-class)
 
 <a id="tx-core-propagation-error"></a>
 
@@ -12536,7 +12536,7 @@ Sources:
 
 Sources:
 
-- `packages/tx-core/src/libs/errors.ts:34:3` (problem-class)
+- `packages/tx-core/src/libs/errors.ts:33:1` (problem-class)
 
 <a id="tx-core-transaction-outcome-unknown"></a>
 
@@ -12554,7 +12554,7 @@ Sources:
 
 Sources:
 
-- `packages/tx-core/src/libs/problems/TransactionProblems.ts:165:3` (problem-class)
+- `packages/tx-core/src/libs/problems/TransactionProblems.ts:164:1` (problem-class)
 
 <a id="tx-core-transaction-rollback-confirmed"></a>
 
@@ -12572,7 +12572,7 @@ Sources:
 
 Sources:
 
-- `packages/tx-core/src/libs/problems/TransactionProblems.ts:147:3` (problem-class)
+- `packages/tx-core/src/libs/problems/TransactionProblems.ts:146:1` (problem-class)
 
 <a id="tx-core-transaction-timeout"></a>
 
@@ -12590,7 +12590,7 @@ Sources:
 
 Sources:
 
-- `packages/tx-core/src/libs/problems/TransactionProblems.ts:130:3` (problem-class)
+- `packages/tx-core/src/libs/problems/TransactionProblems.ts:129:1` (problem-class)
 
 <a id="tx-drizzle-rls-configuration-invalid"></a>
 
@@ -12608,7 +12608,7 @@ Sources:
 
 Sources:
 
-- `packages/tx-drizzle/src/libs/problems/TxDrizzleProblems.ts:7:3` (problem-class)
+- `packages/tx-drizzle/src/libs/problems/TxDrizzleProblems.ts:6:1` (problem-class)
 
 <a id="tx-drizzle-rls-debug-logging-failed"></a>
 
@@ -12626,7 +12626,7 @@ Sources:
 
 Sources:
 
-- `packages/tx-drizzle/src/libs/problems/TxDrizzleProblems.ts:57:3` (problem-class)
+- `packages/tx-drizzle/src/libs/problems/TxDrizzleProblems.ts:56:1` (problem-class)
 
 <a id="tx-drizzle-rls-execute-unsupported"></a>
 
@@ -12644,7 +12644,7 @@ Sources:
 
 Sources:
 
-- `packages/tx-drizzle/src/libs/problems/TxDrizzleProblems.ts:29:3` (problem-class)
+- `packages/tx-drizzle/src/libs/problems/TxDrizzleProblems.ts:28:1` (problem-class)
 
 <a id="tx-drizzle-savepoint-unsupported"></a>
 
@@ -12662,7 +12662,7 @@ Sources:
 
 Sources:
 
-- `packages/tx-drizzle/src/libs/problems/TxDrizzleProblems.ts:76:3` (problem-class)
+- `packages/tx-drizzle/src/libs/problems/TxDrizzleProblems.ts:75:1` (problem-class)
 
 <a id="tx-drizzle-tenant-context-required"></a>
 
@@ -12680,7 +12680,7 @@ Sources:
 
 Sources:
 
-- `packages/tx-drizzle/src/libs/problems/TxDrizzleProblems.ts:21:3` (problem-class)
+- `packages/tx-drizzle/src/libs/problems/TxDrizzleProblems.ts:20:1` (problem-class)
 
 <a id="unauthorized"></a>
 
@@ -12698,7 +12698,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-core/src/libs/problems/AuthProblems.ts:5:3` (problem-class)
+- `packages/auth-core/src/libs/problems/AuthProblems.ts:4:1` (problem-class)
 
 <a id="webhook-processing-failed"></a>
 
@@ -12716,7 +12716,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-polar/src/libs/problems/WebhookProcessingProblem.ts:4:3` (problem-class)
+- `packages/billing-polar/src/libs/problems/WebhookProcessingProblem.ts:3:1` (problem-class)
 
 <a id="webhook-validation-failed"></a>
 
@@ -12734,7 +12734,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-polar/src/libs/problems/WebhookValidationProblem.ts:4:3` (problem-class)
+- `packages/billing-polar/src/libs/problems/WebhookValidationProblem.ts:3:1` (problem-class)
 
 <a id="webhooks-core-configuration"></a>
 
@@ -13130,7 +13130,7 @@ Sources:
 
 Sources:
 
-- `packages/workflow-core/src/libs/problems/WorkflowProblems.ts:77:3` (problem-class)
+- `packages/workflow-core/src/libs/problems/WorkflowProblems.ts:76:1` (problem-class)
 
 <a id="workflow-core-saga-finalization-failed"></a>
 
@@ -13238,4 +13238,4 @@ Sources:
 
 Sources:
 
-- `packages/workflow-core/src/libs/problems/WorkflowProblems.ts:5:3` (problem-class)
+- `packages/workflow-core/src/libs/problems/WorkflowProblems.ts:4:1` (problem-class)
