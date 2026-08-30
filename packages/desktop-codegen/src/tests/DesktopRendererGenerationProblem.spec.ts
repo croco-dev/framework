@@ -161,6 +161,24 @@ desktop.project.fileChanged.subscribe((_payload, _event) => undefined);
     );
   });
 
+  it("emits strict-clean artifacts for command, event-only, and empty windows", () => {
+    const graph = createGraph(false);
+    const eventOnlyGraph = {
+      ...graph,
+      windows: graph.windows.map((window) =>
+        window.id === "settings" ? { ...window, exposedCommands: [] } : window,
+      ),
+    };
+    const sources = new Map<string, string>();
+    for (const artifact of generateDesktopRendererClients(graph)) {
+      sources.set(`/virtual/${artifact.windowId}.generated.ts`, artifact.source);
+    }
+    const eventOnly = requireClientSource(eventOnlyGraph, "settings");
+    sources.set("/virtual/event-only.generated.ts", eventOnly);
+
+    expectTypeScriptSourcesToCompile(sources, [...sources.keys()]);
+  });
+
   it("changes generated types when a stale graph schema differs", () => {
     const graph = createGraph(false);
     const current = requireClientSource(graph, "main");
@@ -290,6 +308,14 @@ desktop.project.fileChanged.subscribe((_payload, _event) => undefined);
           ),
         }),
       `Desktop schema reference "project.other.input" must use owning member ID ${JSON.stringify(`${readFile.id}.input`)}.`,
+    );
+    expectGenerationProblem(
+      () =>
+        generateDesktopRendererClients({
+          ...graph,
+          app: { ...graph.app, contractIds: "project" as never },
+        }),
+      "Desktop app contract references must be an array, received string.",
     );
   });
 
@@ -445,12 +471,36 @@ desktop.project.fileChanged.subscribe((_payload, _event) => undefined);
 
   it("rejects forged capability discriminators before rendering", () => {
     const graph = createGraph(false);
+    const command = graph.commands[0];
     const grant = graph.grants[0];
     const problem = graph.problems[0];
     const remoteWindow = graph.windows.find((window) => window.trust === "remote");
-    assert(grant && problem && remoteWindow, "Fixture capability records are missing");
+    assert(command && grant && problem && remoteWindow, "Fixture capability records are missing");
 
     const invalidGraphs: readonly { graph: typeof graph; detail: string }[] = [
+      {
+        graph: {
+          ...graph,
+          commands: graph.commands.map((candidate) =>
+            candidate.id === command.id ? { ...candidate, kind: "forged" as never } : candidate,
+          ),
+        },
+        detail: `Desktop command ${JSON.stringify(command.id)} has an unsupported kind.`,
+      },
+      {
+        graph: {
+          ...graph,
+          commands: graph.commands.map((candidate) =>
+            candidate.id === command.id
+              ? {
+                  ...candidate,
+                  executionPolicy: { ...candidate.executionPolicy, mode: "forged" as never },
+                }
+              : candidate,
+          ),
+        },
+        detail: `Desktop command ${JSON.stringify(command.id)} has an unsupported execution mode.`,
+      },
       {
         graph: {
           ...graph,
@@ -461,6 +511,28 @@ desktop.project.fileChanged.subscribe((_payload, _event) => undefined);
           ),
         },
         detail: `Desktop window ${JSON.stringify(remoteWindow.id)} has an unsupported trust mode.`,
+      },
+      {
+        graph: {
+          ...graph,
+          windows: graph.windows.map((window) =>
+            window.id === remoteWindow.id
+              ? { ...window, originPolicy: { mode: "forged" } as never }
+              : window,
+          ),
+        },
+        detail: `Desktop window ${JSON.stringify(remoteWindow.id)} has an unsupported origin policy.`,
+      },
+      {
+        graph: {
+          ...graph,
+          problems: graph.problems.map((candidate) =>
+            candidate.code === problem.code
+              ? { ...candidate, extensions: null as never }
+              : candidate,
+          ),
+        },
+        detail: `Desktop Problem 0 extensions must be an object, received null.`,
       },
       ...(
         [
@@ -902,6 +974,8 @@ export type DesktopGrantReference<
     module: ts.ModuleKind.ESNext,
     moduleResolution: ts.ModuleResolutionKind.Bundler,
     noEmit: true,
+    noUnusedLocals: true,
+    noUnusedParameters: true,
     skipLibCheck: true,
     strict: true,
     target: ts.ScriptTarget.ES2022,

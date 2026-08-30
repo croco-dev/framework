@@ -3,44 +3,7 @@
 exports[`generateDesktopRendererClients > generates deterministic typed clients for local window capabilities only 1`] = `
 [
   {
-    "source": "export type DesktopRendererCommandOptions = {
-  readonly signal?: AbortSignal;
-};
-
-type DesktopAbortRegistration = (abort: () => void) => () => void;
-
-type DesktopRendererBridge = {
-  readonly commands: {
-  };
-  readonly events: {
-  };
-};
-
-const bridge = (globalThis as typeof globalThis & {
-  readonly crocoDesktop: DesktopRendererBridge;
-}).crocoDesktop;
-
-function invokeDesktopCommand<TInput, TOutput>(
-  command: (input: TInput, registerAbort?: DesktopAbortRegistration) => Promise<TOutput>,
-  input: TInput,
-  signal: AbortSignal | undefined,
-): Promise<TOutput> {
-  if (signal === undefined) {
-    return command(input);
-  }
-
-  return command(input, (abort) => {
-    if (signal.aborted) {
-      abort();
-      return () => {};
-    }
-
-    signal.addEventListener("abort", abort, { once: true });
-    return () => signal.removeEventListener("abort", abort);
-  });
-}
-
-export const desktop = Object.freeze({
+    "source": "export const desktop = Object.freeze({
 });
 ",
     "windowId": "empty",

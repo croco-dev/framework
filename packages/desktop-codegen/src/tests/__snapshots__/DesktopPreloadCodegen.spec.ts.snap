@@ -5,31 +5,9 @@ exports[`generateDesktopPreloadBridges > generates deterministic minimal bridges
   {
     "source": "import type { DesktopPreloadContextBridge, DesktopPreloadTransport } from "@croco/desktop-codegen";
 
-type DesktopAbortRegistration = (abort: () => void) => () => void;
-
-function invokeDesktopCommand(
-  transport: DesktopPreloadTransport,
-  commandId: string,
-  input: unknown,
-  registerAbort: DesktopAbortRegistration | undefined,
-): Promise<unknown> {
-  if (registerAbort === undefined) {
-    return transport.invoke(commandId, input, {});
-  }
-
-  const controller = new AbortController();
-  const unregister = registerAbort(() => controller.abort());
-  try {
-    return transport.invoke(commandId, input, { signal: controller.signal }).finally(unregister);
-  } catch (error) {
-    unregister();
-    throw error;
-  }
-}
-
 export function installDesktopPreloadBridge(
   contextBridge: DesktopPreloadContextBridge,
-  transport: DesktopPreloadTransport,
+  _transport: DesktopPreloadTransport,
 ): void {
   const bridge = Object.freeze({
     commands: Object.freeze({

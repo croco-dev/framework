@@ -66,6 +66,7 @@ export function generateDesktopRendererClients(
 }
 
 function assertGeneratableGraph(graph: DesktopContractGraphV1): void {
+  assertGraphContainers(graph);
   if (graph.version !== "croco.desktop-contract-graph.v1") {
     throw new DesktopRendererGenerationProblem(
       `Expected croco.desktop-contract-graph.v1, received ${formatDiagnosticValue(graph.version)}.`,
@@ -77,6 +78,92 @@ function assertGeneratableGraph(graph: DesktopContractGraphV1): void {
     );
   }
   assertGraphScalarFields(graph);
+}
+
+function assertGraphContainers(graph: unknown): asserts graph is DesktopContractGraphV1 {
+  assertRecordValue(graph, "contract graph");
+  assertRecordValue(graph.app, "app");
+  assertArrayValue(graph.app.contractIds, "app contract references");
+  assertArrayValue(graph.app.windowIds, "app window references");
+
+  const contracts = graph.contracts;
+  const commands = graph.commands;
+  const events = graph.events;
+  const effects = graph.effects;
+  const grants = graph.grants;
+  const problems = graph.problems;
+  const windows = graph.windows;
+  const diagnostics = graph.diagnostics;
+  assertArrayValue(contracts, "graph contracts");
+  assertArrayValue(commands, "graph commands");
+  assertArrayValue(events, "graph events");
+  assertArrayValue(effects, "graph effects");
+  assertArrayValue(grants, "graph grants");
+  assertArrayValue(problems, "graph problems");
+  assertArrayValue(windows, "graph windows");
+  assertArrayValue(diagnostics, "graph diagnostics");
+
+  for (const [index, contract] of contracts.entries()) {
+    assertRecordValue(contract, `contract at index ${index}`);
+    assertArrayValue(contract.commandIds, `contract ${index} command references`);
+    assertArrayValue(contract.eventIds, `contract ${index} event references`);
+    assertArrayValue(contract.grantIds, `contract ${index} grant references`);
+  }
+  for (const [index, command] of commands.entries()) {
+    assertRecordValue(command, `command at index ${index}`);
+    assertRecordValue(command.input, `command ${index} input schema`);
+    assertRecordValue(command.output, `command ${index} output schema`);
+    assertArrayValue(command.effects, `command ${index} effects`);
+    assertArrayValue(command.problems, `command ${index} Problem references`);
+    assertArrayValue(command.events, `command ${index} event references`);
+    assertRecordValue(command.executionPolicy, `command ${index} execution policy`);
+    for (const [effectIndex, effect] of command.effects.entries()) {
+      assertRecordValue(effect, `command ${index} effect at index ${effectIndex}`);
+      assertArrayValue(effect.methods, `command ${index} effect ${effectIndex} methods`);
+      assertArrayValue(effect.grantIds, `command ${index} effect ${effectIndex} grant references`);
+    }
+  }
+  for (const [index, event] of events.entries()) {
+    assertRecordValue(event, `event at index ${index}`);
+    assertRecordValue(event.payload, `event ${index} payload schema`);
+  }
+  for (const [index, grant] of grants.entries()) {
+    assertRecordValue(grant, `grant at index ${index}`);
+  }
+  for (const [index, problem] of problems.entries()) {
+    assertRecordValue(problem, `Problem at index ${index}`);
+    if (problem.extensions !== undefined) {
+      assertRecordValue(problem.extensions, `Problem ${index} extensions`);
+    }
+  }
+  for (const [index, window] of windows.entries()) {
+    assertRecordValue(window, `window at index ${index}`);
+    assertRecordValue(window.originPolicy, `window ${index} origin policy`);
+    assertArrayValue(window.exposedCommands, `window ${index} command references`);
+    assertArrayValue(window.receivedEvents, `window ${index} event references`);
+  }
+}
+
+function assertRecordValue(
+  value: unknown,
+  description: string,
+): asserts value is Record<string, unknown> {
+  if (!isRecord(value)) {
+    throw new DesktopRendererGenerationProblem(
+      `Desktop ${description} must be an object, received ${describeValueType(value)}.`,
+    );
+  }
+}
+
+function assertArrayValue(
+  value: unknown,
+  description: string,
+): asserts value is readonly unknown[] {
+  if (!Array.isArray(value)) {
+    throw new DesktopRendererGenerationProblem(
+      `Desktop ${description} must be an array, received ${describeValueType(value)}.`,
+    );
+  }
 }
 
 function assertGraphScalarFields(graph: DesktopContractGraphV1): void {
@@ -97,6 +184,16 @@ function assertGraphScalarFields(graph: DesktopContractGraphV1): void {
     assertStringIdentifier(command.output.id, "command output schema id");
     assertStringIdentifiers(command.problems, "command Problem reference");
     assertStringIdentifiers(command.events, "command event reference");
+    if (command.kind !== "query" && command.kind !== "mutation") {
+      throw new DesktopRendererGenerationProblem(
+        `Desktop command ${JSON.stringify(command.id)} has an unsupported kind.`,
+      );
+    }
+    if (command.executionPolicy.mode !== "request-response") {
+      throw new DesktopRendererGenerationProblem(
+        `Desktop command ${JSON.stringify(command.id)} has an unsupported execution mode.`,
+      );
+    }
     for (const effect of command.effects) {
       assertStringIdentifier(effect.namespace, "command effect namespace");
       assertStringIdentifiers(effect.methods, "command effect method");
@@ -155,10 +252,23 @@ function assertGraphScalarFields(graph: DesktopContractGraphV1): void {
         `Desktop window ${JSON.stringify(window.id)} has an unsupported trust mode.`,
       );
     }
+    if (
+      window.originPolicy.mode !== "local-content" &&
+      window.originPolicy.mode !== "remote-allowlist"
+    ) {
+      throw new DesktopRendererGenerationProblem(
+        `Desktop window ${JSON.stringify(window.id)} has an unsupported origin policy.`,
+      );
+    }
+    if (window.originPolicy.mode === "remote-allowlist") {
+      assertStringIdentifier(window.originPolicy.initialUrl, "window initial URL");
+      assertStringIdentifiers(window.originPolicy.allowedOrigins, "window allowed origin");
+    }
   }
 }
 
-function assertStringIdentifiers(values: readonly unknown[], description: string): void {
+function assertStringIdentifiers(values: unknown, description: string): void {
+  assertArrayValue(values, `${description} inventory`);
   for (const value of values) {
     assertStringIdentifier(value, description);
   }
@@ -547,6 +657,8 @@ function requireCapability<T>(
 
 function generateWindowSource(capabilities: RendererCapabilities, indexes: GraphIndexes): string {
   const contracts = collectContracts(capabilities, indexes.contracts);
+  const hasCommands = capabilities.commands.length > 0;
+  const hasCapabilities = hasCommands || capabilities.events.length > 0;
   const usesGrantReference = contracts.some((contract) =>
     [...contract.commands, ...contract.events].some((member) => memberUsesGrantReference(member)),
   );
@@ -561,38 +673,50 @@ function generateWindowSource(capabilities: RendererCapabilities, indexes: Graph
 
   return [
     ...imports,
-    "export type DesktopRendererCommandOptions = {",
-    "  readonly signal?: AbortSignal;",
-    "};",
-    "",
-    "type DesktopAbortRegistration = (abort: () => void) => () => void;",
-    "",
-    ...generateBridgeType(contracts, indexes),
-    "",
-    "const bridge = (globalThis as typeof globalThis & {",
-    "  readonly crocoDesktop: DesktopRendererBridge;",
-    "}).crocoDesktop;",
-    "",
-    "function invokeDesktopCommand<TInput, TOutput>(",
-    "  command: (input: TInput, registerAbort?: DesktopAbortRegistration) => Promise<TOutput>,",
-    "  input: TInput,",
-    "  signal: AbortSignal | undefined,",
-    "): Promise<TOutput> {",
-    "  if (signal === undefined) {",
-    "    return command(input);",
-    "  }",
-    "",
-    "  return command(input, (abort) => {",
-    "    if (signal.aborted) {",
-    "      abort();",
-    "      return () => {};",
-    "    }",
-    "",
-    '    signal.addEventListener("abort", abort, { once: true });',
-    '    return () => signal.removeEventListener("abort", abort);',
-    "  });",
-    "}",
-    "",
+    ...(hasCommands
+      ? [
+          "export type DesktopRendererCommandOptions = {",
+          "  readonly signal?: AbortSignal;",
+          "};",
+          "",
+          "type DesktopAbortRegistration = (abort: () => void) => () => void;",
+          "",
+        ]
+      : []),
+    ...(hasCapabilities
+      ? [
+          ...generateBridgeType(contracts, indexes),
+          "",
+          "const bridge = (globalThis as typeof globalThis & {",
+          "  readonly crocoDesktop: DesktopRendererBridge;",
+          "}).crocoDesktop;",
+          "",
+        ]
+      : []),
+    ...(hasCommands
+      ? [
+          "function invokeDesktopCommand<TInput, TOutput>(",
+          "  command: (input: TInput, registerAbort?: DesktopAbortRegistration) => Promise<TOutput>,",
+          "  input: TInput,",
+          "  signal: AbortSignal | undefined,",
+          "): Promise<TOutput> {",
+          "  if (signal === undefined) {",
+          "    return command(input);",
+          "  }",
+          "",
+          "  return command(input, (abort) => {",
+          "    if (signal.aborted) {",
+          "      abort();",
+          "      return () => {};",
+          "    }",
+          "",
+          '    signal.addEventListener("abort", abort, { once: true });',
+          '    return () => signal.removeEventListener("abort", abort);',
+          "  });",
+          "}",
+          "",
+        ]
+      : []),
     "export const desktop = Object.freeze({",
     ...generateClientContracts(contracts, indexes),
     "});",
