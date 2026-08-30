@@ -367,19 +367,62 @@ function sanitizeStructuredResponseBody(
     return "[truncated]";
   }
 
+  let isArray: boolean;
+  let descriptors: Record<PropertyKey, PropertyDescriptor>;
+  let prototype: object | null;
+
+  try {
+    isArray = Array.isArray(value);
+    prototype = Object.getPrototypeOf(value);
+    descriptors = Object.getOwnPropertyDescriptors(value);
+  } catch {
+    state.truncated = true;
+    return "[unsupported]";
+  }
+
+  if (
+    (isArray && prototype !== Array.prototype) ||
+    (!isArray && prototype !== Object.prototype && prototype !== null)
+  ) {
+    state.truncated = true;
+    return "[unsupported]";
+  }
+
   state.visited.add(value);
 
-  if (Array.isArray(value)) {
+  if (isArray) {
     const sanitized: unknown[] = [];
+    const lengthDescriptor = descriptors.length;
 
-    for (const entry of value) {
+    if (
+      lengthDescriptor === undefined ||
+      !("value" in lengthDescriptor) ||
+      typeof lengthDescriptor.value !== "number" ||
+      !Number.isSafeInteger(lengthDescriptor.value) ||
+      lengthDescriptor.value < 0
+    ) {
+      state.visited.delete(value);
+      state.truncated = true;
+      return "[unsupported]";
+    }
+
+    for (let index = 0; index < lengthDescriptor.value; index += 1) {
       if (state.remainingEntries === 0) {
         state.truncated = true;
         break;
       }
 
       state.remainingEntries -= 1;
-      sanitized.push(sanitizeStructuredResponseBody(entry, state, depth + 1));
+      const descriptor = descriptors[String(index)];
+
+      if (descriptor === undefined) {
+        sanitized.push(null);
+      } else if (!("value" in descriptor)) {
+        state.truncated = true;
+        sanitized.push("[unsupported]");
+      } else {
+        sanitized.push(sanitizeStructuredResponseBody(descriptor.value, state, depth + 1));
+      }
     }
 
     state.visited.delete(value);
@@ -388,21 +431,34 @@ function sanitizeStructuredResponseBody(
 
   const sanitized: Record<string, unknown> = {};
 
-  for (const key of Object.keys(value)) {
+  for (const key of Object.keys(descriptors)) {
+    const descriptor = descriptors[key];
+
+    if (descriptor === undefined || !descriptor.enumerable) {
+      continue;
+    }
+
     if (state.remainingEntries === 0) {
       state.truncated = true;
       break;
     }
 
     state.remainingEntries -= 1;
+    const sensitive = SENSITIVE_RESPONSE_FIELD_PATTERN.test(key);
     Object.defineProperty(sanitized, key, {
       configurable: true,
       enumerable: true,
-      value: SENSITIVE_RESPONSE_FIELD_PATTERN.test(key)
+      value: sensitive
         ? REDACTED_RESPONSE_BODY_VALUE
-        : sanitizeStructuredResponseBody((value as Record<string, unknown>)[key], state, depth + 1),
+        : "value" in descriptor
+          ? sanitizeStructuredResponseBody(descriptor.value, state, depth + 1)
+          : "[unsupported]",
       writable: true,
     });
+
+    if (!("value" in descriptor) && !sensitive) {
+      state.truncated = true;
+    }
   }
 
   state.visited.delete(value);

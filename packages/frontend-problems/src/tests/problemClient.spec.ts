@@ -537,6 +537,34 @@ describe("frontend Problem client runtime", () => {
     expect(JSON.stringify(error.body)).not.toContain("nested-secret");
   });
 
+  it("does not execute accessors or propagate proxy failures while sanitizing evidence", () => {
+    let getterCalls = 0;
+    const body = {
+      get message(): string {
+        getterCalls += 1;
+        throw new Error("getter exploded");
+      },
+    };
+    const accessorError = new ProblemResponseError(new Response(null, { status: 502 }), body);
+
+    expect(getterCalls).toBe(0);
+    expect(accessorError.body).toEqual({ message: "[unsupported]" });
+    expect(accessorError.bodyTruncated).toBe(true);
+
+    const throwingProxy = new Proxy(
+      {},
+      {
+        ownKeys(): never {
+          throw new Error("proxy exploded");
+        },
+      },
+    );
+    const proxyError = new ProblemResponseError(new Response(null, { status: 502 }), throwingProxy);
+
+    expect(proxyError.body).toBe("[unsupported]");
+    expect(proxyError.bodyTruncated).toBe(true);
+  });
+
   it("preserves response body cancellation identity for throwing and Result helpers", async () => {
     const requiredThrowingAbort = createAbortError();
     await expect(handleJsonResponse(unreadableJsonResponse(requiredThrowingAbort))).rejects.toBe(
