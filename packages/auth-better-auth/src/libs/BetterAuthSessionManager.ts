@@ -16,12 +16,13 @@ export class BetterAuthSessionManager implements BetterAuthSessionProvider {
     private readonly factory: {
       getAuth: () => {
         api: {
-          listSessions: (args: { headers: Headers }) => Promise<unknown[]>;
-          revokeSession: (args: { headers: Headers; body: { token: string } }) => Promise<void>;
+          listSessions: (args: { headers: Headers }) => Promise<unknown>;
+          revokeSession: (args: { headers: Headers; body: { token: string } }) => Promise<unknown>;
+          getUser: (args: { headers: Headers; query: { id: string } }) => Promise<unknown>;
           revokeUserSessions: (args: {
             headers: Headers;
             body: { userId: string };
-          }) => Promise<void>;
+          }) => Promise<unknown>;
         };
       };
     },
@@ -58,16 +59,37 @@ export class BetterAuthSessionManager implements BetterAuthSessionProvider {
     }
   }
 
-  async revokeSession(sessionToken: string): Promise<void> {
-    const headers = createAuthorizationHeaders(sessionToken);
+  async revokeSession(
+    targetSessionToken: string,
+    authorizationSessionToken: string,
+  ): Promise<void> {
+    if (typeof targetSessionToken !== "string" || !targetSessionToken.trim()) {
+      throw new BetterAuthSessionNotFoundProblem("[Redacted]");
+    }
+
+    const headers = createAuthorizationHeaders(authorizationSessionToken);
     const auth = this.factory.getAuth();
 
     try {
+      const sessions = await auth.api.listSessions({ headers });
+      if (
+        !Array.isArray(sessions) ||
+        !sessions.some(
+          (session: unknown) => isRecord(session) && session.token === targetSessionToken,
+        )
+      ) {
+        throw new BetterAuthSessionNotFoundProblem("[Redacted]");
+      }
+
       await auth.api.revokeSession({
         headers,
-        body: { token: sessionToken },
+        body: { token: targetSessionToken },
       });
     } catch (error) {
+      if (error instanceof BetterAuthSessionNotFoundProblem) {
+        throw error;
+      }
+
       throw mapRevocationError(
         error,
         "revokeSession",
@@ -81,6 +103,10 @@ export class BetterAuthSessionManager implements BetterAuthSessionProvider {
     const auth = this.factory.getAuth();
 
     try {
+      await auth.api.getUser({
+        headers,
+        query: { id: userId },
+      });
       await auth.api.revokeUserSessions({
         headers,
         body: { userId },

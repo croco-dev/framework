@@ -14,7 +14,9 @@ export class BetterAuthAuthenticationProblem extends Problem {
   ) {
     const status = getUpstreamStatus(error);
     const retryable = isRetryableBetterAuthError(error);
-    const message = redactSensitiveValue(getErrorMessage(error), "[Redacted]");
+    const message = isRevocationOperation(operation)
+      ? "upstream revocation failed"
+      : redactSensitiveValue(getErrorMessage(error), "[Redacted]");
 
     super(undefined, undefined, `Better Auth ${operation} failed: ${message}`, {
       extensions: {
@@ -25,6 +27,12 @@ export class BetterAuthAuthenticationProblem extends Problem {
       },
     });
   }
+}
+
+function isRevocationOperation(
+  operation: "authenticate" | "readiness" | "revokeSession" | "revokeUserSessions",
+): boolean {
+  return operation === "revokeSession" || operation === "revokeUserSessions";
 }
 
 export function isRetryableBetterAuthError(error: unknown): boolean {
