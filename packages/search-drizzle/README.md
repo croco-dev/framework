@@ -41,6 +41,12 @@ await engine.indexDocument(
 
 전략별로 `pg_trgm`, `pg_search`, `pgroonga` 확장이 필요합니다.
 
+애플리케이션이 소유한 각 PostgreSQL 검색 테이블은 `id`와 `tenant_id`를 `NOT NULL`로 선언하고
+`UNIQUE ("tenant_id", "id")` 제약 또는 동등한 고유 인덱스를 제공해야 합니다. 세 전략의 `indexDocument()`는 이 복합
+문서 식별자를 충돌 대상으로 사용해 같은 tenant의 재색인을 원자적으로 갱신하고, 다른 tenant의 동일한 `id`는 별도 행으로
+유지합니다. 충돌 시 `id`와 `tenant_id`는 보존하고 호출이 제공한 나머지 문서 열을 최신 값으로 갱신합니다. 테이블과 열은
+식별자로 인용되고 값은 SQL 파라미터로 전달되며, 문서의 `tenant_id` 필드는 활성 tenant 값으로 대체됩니다.
+
 ## API 레퍼런스
 
 ### `DrizzleSearchEngine`
