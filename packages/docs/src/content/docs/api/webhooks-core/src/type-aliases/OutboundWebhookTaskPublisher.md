@@ -13,6 +13,9 @@ title: "OutboundWebhookTaskPublisher"
 
 > **publish**(`input`): `Promise`\<`void`\>
 
+Repeated calls with the same `idempotencyKey` must resolve without creating duplicate task,
+execution, or outbox records.
+
 #### Parameters
 
 ##### input

@@ -114,13 +114,26 @@ export type OutboundWebhookCommitResult = {
   readonly duplicate: boolean;
 };
 
+export type OutboundWebhookIntentPublicationFailure = {
+  readonly intentId: string;
+  readonly deliveryId: string;
+  readonly classification: "retryable" | "terminal";
+  readonly problem: Problem;
+};
+
+export type OutboundWebhookIntentPublicationOutcome = {
+  readonly publishedIntentIds: readonly string[];
+  readonly failures: readonly OutboundWebhookIntentPublicationFailure[];
+};
+
 export type OutboundWebhookStore = {
   commitEvent(input: {
     readonly event: OutboundWebhookEvent;
     readonly endpoints: readonly OutboundWebhookEndpoint[];
   }): Promise<OutboundWebhookCommitResult>;
   listUnpublishedIntents(tenantId: string): Promise<readonly OutboundWebhookDispatchIntent[]>;
-  markIntentPublished(tenantId: string, intentId: string, publishedAt: Date): Promise<void>;
+  /** Atomically marks an unpublished intent and returns whether this call made the transition. */
+  markIntentPublished(tenantId: string, intentId: string, publishedAt: Date): Promise<boolean>;
   getEvent(tenantId: string, eventId: string): Promise<OutboundWebhookEvent | undefined>;
   getDelivery(tenantId: string, deliveryId: string): Promise<OutboundWebhookDelivery | undefined>;
   listDeliveries(tenantId: string, eventId: string): Promise<readonly OutboundWebhookDelivery[]>;
@@ -167,6 +180,10 @@ export type OutboundWebhookSecretStore = {
 };
 
 export type OutboundWebhookTaskPublisher = {
+  /**
+   * Repeated calls with the same `idempotencyKey` must resolve without creating duplicate task,
+   * execution, or outbox records.
+   */
   publish(input: {
     readonly taskName: "webhooks.outbound.deliver";
     readonly executionId: string;

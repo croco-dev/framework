@@ -14,6 +14,7 @@ import {
   OutboundWebhookConfigurationProblem,
   type OutboundWebhookEndpoint,
   type OutboundWebhookEventDescriptor,
+  OutboundWebhookPermanentProblem,
   OutboundWebhookReplayNotAllowedProblem,
   OutboundWebhookRetryableProblem,
   OutboundWebhookRuntime,
@@ -64,29 +65,228 @@ const EVENT: OutboundWebhookEventDescriptor<{ invoiceId: string }> = {
 };
 
 describe("OutboundWebhookRuntime", () => {
-  it("commits the event and delivery before task publication and resumes after publication failure", async () => {
+  it("commits durable intent evidence before surfacing a retryable publication failure", async () => {
     const store = new InMemoryOutboundWebhookStore();
-    let shouldFail = true;
     const publisher: OutboundWebhookTaskPublisher = {
       publish: vi.fn(async () => {
-        if (shouldFail) {
-          shouldFail = false;
+        throw new Error("task broker unavailable");
+      }),
+    };
+    const runtime = createRuntime({ store, publisher });
+
+    await expect(runtime.publish(EVENT)).rejects.toBeInstanceOf(OutboundWebhookRetryableProblem);
+    expect(await store.getEvent(EVENT.tenantId, EVENT.id)).toBeDefined();
+    expect(await store.listDeliveries(EVENT.tenantId, EVENT.id)).toHaveLength(1);
+    expect(await store.listUnpublishedIntents(EVENT.tenantId)).toHaveLength(1);
+  });
+
+  it("continues after retryable intent publication failures and marks each published intent once", async () => {
+    const store = new InMemoryOutboundWebhookStore();
+    const secondEndpoint = { ...ACTIVE_ENDPOINT, id: "endpoint_2" };
+    const committed = await store.commitEvent({
+      event: {
+        ...EVENT,
+        payloadBytes: new TextEncoder().encode("{}"),
+        committedAt: START,
+      },
+      endpoints: [ACTIVE_ENDPOINT, secondEndpoint],
+    });
+    const [firstIntent, secondIntent] = committed.intents;
+    expect(firstIntent).toBeDefined();
+    expect(secondIntent).toBeDefined();
+    let firstAttempt = true;
+    const publisher: OutboundWebhookTaskPublisher = {
+      publish: vi.fn(async ({ deliveryId }) => {
+        if (deliveryId === firstIntent?.deliveryId && firstAttempt) {
+          firstAttempt = false;
           throw new Error("task broker unavailable");
         }
       }),
     };
     const runtime = createRuntime({ store, publisher });
+    const markIntentPublished = vi.spyOn(store, "markIntentPublished");
 
-    await expect(runtime.publish(EVENT)).rejects.toBeInstanceOf(
+    const firstOutcome = await runtime.publishUnpublishedIntents(EVENT.tenantId);
+
+    expect(firstOutcome.publishedIntentIds).toEqual([secondIntent?.id]);
+    expect(firstOutcome.failures).toHaveLength(1);
+    expect(firstOutcome.failures[0]).toMatchObject({
+      intentId: firstIntent?.id,
+      deliveryId: firstIntent?.deliveryId,
+      classification: "retryable",
+    });
+    expect(firstOutcome.failures[0]?.problem).toBeInstanceOf(OutboundWebhookRetryableProblem);
+    expect(await store.listUnpublishedIntents(EVENT.tenantId)).toEqual([firstIntent]);
+
+    const retryOutcome = await runtime.publishUnpublishedIntents(EVENT.tenantId);
+
+    expect(retryOutcome).toEqual({ publishedIntentIds: [firstIntent?.id], failures: [] });
+    expect(await store.listUnpublishedIntents(EVENT.tenantId)).toHaveLength(0);
+    expect(markIntentPublished.mock.calls.map(([, intentId]) => intentId)).toEqual([
+      secondIntent?.id,
+      firstIntent?.id,
+    ]);
+    expect(publisher.publish).toHaveBeenCalledTimes(3);
+  });
+
+  it("transitions each unpublished intent once across concurrent batch drains", async () => {
+    const store = new InMemoryOutboundWebhookStore();
+    const committed = await store.commitEvent({
+      event: {
+        ...EVENT,
+        payloadBytes: new TextEncoder().encode("{}"),
+        committedAt: START,
+      },
+      endpoints: [ACTIVE_ENDPOINT],
+    });
+    const acceptedKeys = new Set<string>();
+    const publisher: OutboundWebhookTaskPublisher = {
+      publish: vi.fn(async ({ idempotencyKey }) => {
+        acceptedKeys.add(idempotencyKey);
+      }),
+    };
+    const runtime = createRuntime({ store, publisher });
+    const markIntentPublished = vi.spyOn(store, "markIntentPublished");
+
+    const outcomes = await Promise.all([
+      runtime.publishUnpublishedIntents(EVENT.tenantId),
+      runtime.publishUnpublishedIntents(EVENT.tenantId),
+    ]);
+
+    expect(outcomes.flatMap((outcome) => outcome.publishedIntentIds)).toEqual([
+      committed.intents[0]?.id,
+    ]);
+    expect(publisher.publish).toHaveBeenCalledTimes(2);
+    expect(acceptedKeys.size).toBe(1);
+    expect(markIntentPublished).toHaveBeenCalledTimes(2);
+    expect(await store.listUnpublishedIntents(EVENT.tenantId)).toHaveLength(0);
+  });
+
+  it("retries an idempotent publication when its store acknowledgement fails", async () => {
+    class AcknowledgementFailureStore extends InMemoryOutboundWebhookStore {
+      markAttempts = 0;
+      successfulMarks = 0;
+
+      override async markIntentPublished(
+        tenantId: string,
+        intentId: string,
+        publishedAt: Date,
+      ): Promise<boolean> {
+        this.markAttempts += 1;
+        if (this.markAttempts === 1) {
+          throw new Error("store unavailable");
+        }
+        const marked = await super.markIntentPublished(tenantId, intentId, publishedAt);
+        if (marked) {
+          this.successfulMarks += 1;
+        }
+        return marked;
+      }
+    }
+
+    const store = new AcknowledgementFailureStore();
+    await store.commitEvent({
+      event: {
+        ...EVENT,
+        payloadBytes: new TextEncoder().encode("{}"),
+        committedAt: START,
+      },
+      endpoints: [ACTIVE_ENDPOINT],
+    });
+    const acceptedKeys = new Set<string>();
+    const publisher: OutboundWebhookTaskPublisher = {
+      publish: vi.fn(async ({ idempotencyKey }) => {
+        acceptedKeys.add(idempotencyKey);
+      }),
+    };
+    const runtime = createRuntime({ store, publisher });
+
+    await expect(runtime.publishUnpublishedIntents(EVENT.tenantId)).rejects.toBeInstanceOf(
       OutboundWebhookConfigurationProblem,
     );
-    expect(await store.getEvent(EVENT.tenantId, EVENT.id)).toBeDefined();
-    expect(await store.listDeliveries(EVENT.tenantId, EVENT.id)).toHaveLength(1);
     expect(await store.listUnpublishedIntents(EVENT.tenantId)).toHaveLength(1);
 
-    await expect(runtime.publishUnpublishedIntents(EVENT.tenantId)).resolves.toBe(1);
-    expect(await store.listUnpublishedIntents(EVENT.tenantId)).toHaveLength(0);
+    await expect(runtime.publishUnpublishedIntents(EVENT.tenantId)).resolves.toMatchObject({
+      failures: [],
+      publishedIntentIds: [expect.any(String)],
+    });
     expect(publisher.publish).toHaveBeenCalledTimes(2);
+    expect(acceptedKeys.size).toBe(1);
+    expect(store.markAttempts).toBe(2);
+    expect(store.successfulMarks).toBe(1);
+  });
+
+  it("classifies terminal intent publication failures without suppressing later intents", async () => {
+    const store = new InMemoryOutboundWebhookStore();
+    const secondEndpoint = { ...ACTIVE_ENDPOINT, id: "endpoint_2" };
+    const committed = await store.commitEvent({
+      event: {
+        ...EVENT,
+        payloadBytes: new TextEncoder().encode("{}"),
+        committedAt: START,
+      },
+      endpoints: [ACTIVE_ENDPOINT, secondEndpoint],
+    });
+    const [firstIntent, secondIntent] = committed.intents;
+    const terminalProblem = new OutboundWebhookPermanentProblem(
+      firstIntent?.deliveryId ?? "",
+      "task contract rejected",
+      { payload: "must not escape" },
+    );
+    const publisher: OutboundWebhookTaskPublisher = {
+      publish: vi.fn(async ({ deliveryId }) => {
+        if (deliveryId === firstIntent?.deliveryId) {
+          throw terminalProblem;
+        }
+      }),
+    };
+    const runtime = createRuntime({ store, publisher });
+
+    const outcome = await runtime.publishUnpublishedIntents(EVENT.tenantId);
+
+    expect(outcome.publishedIntentIds).toEqual([secondIntent?.id]);
+    expect(outcome.failures).toHaveLength(1);
+    expect(outcome.failures[0]).toMatchObject({
+      intentId: firstIntent?.id,
+      deliveryId: firstIntent?.deliveryId,
+      classification: "terminal",
+      problem: {
+        extensions: {
+          intentId: firstIntent?.id,
+          deliveryId: firstIntent?.deliveryId,
+        },
+      },
+    });
+    expect(outcome.failures[0]?.problem.extensions).not.toHaveProperty("payload");
+  });
+
+  it("stops intent publication when shared configuration is unsafe", async () => {
+    const store = new InMemoryOutboundWebhookStore();
+    await store.commitEvent({
+      event: {
+        ...EVENT,
+        payloadBytes: new TextEncoder().encode("{}"),
+        committedAt: START,
+      },
+      endpoints: [ACTIVE_ENDPOINT, { ...ACTIVE_ENDPOINT, id: "endpoint_2" }],
+    });
+    const problem = new OutboundWebhookConfigurationProblem("task publisher is misconfigured");
+    const publisher: OutboundWebhookTaskPublisher = {
+      publish: vi.fn(async () => {
+        throw problem;
+      }),
+    };
+    const runtime = createRuntime({ store, publisher });
+
+    await expect(runtime.publishUnpublishedIntents(EVENT.tenantId)).rejects.toBe(problem);
+    expect(publisher.publish).toHaveBeenCalledTimes(1);
+    expect(await store.listUnpublishedIntents(EVENT.tenantId)).toHaveLength(2);
+
+    vi.mocked(publisher.publish).mockResolvedValue(undefined);
+    await expect(runtime.publishUnpublishedIntents(EVENT.tenantId)).resolves.toMatchObject({
+      failures: [],
+      publishedIntentIds: [expect.any(String), expect.any(String)],
+    });
   });
 
   it("creates one endpoint delivery for repeated logical event publication", async () => {
@@ -450,7 +650,10 @@ describe("OutboundWebhookRuntime", () => {
     const publisher: OutboundWebhookTaskPublisher = { publish: vi.fn() };
     const runtime = createRuntime({ store, publisher });
 
-    await expect(runtime.publishUnpublishedIntents(EVENT.tenantId)).resolves.toBe(1);
+    await expect(runtime.publishUnpublishedIntents(EVENT.tenantId)).resolves.toEqual({
+      publishedIntentIds: [expect.any(String)],
+      failures: [],
+    });
 
     expect(publisher.publish).toHaveBeenCalledTimes(1);
     expect(await store.listUnpublishedIntents(EVENT.tenantId)).toHaveLength(0);

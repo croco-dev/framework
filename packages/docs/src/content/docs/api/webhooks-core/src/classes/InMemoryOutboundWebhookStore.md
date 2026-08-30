@@ -227,7 +227,9 @@ readonly [`OutboundWebhookEndpoint`](/api/webhooks-core/src/type-aliases/outboun
 
 ### markIntentPublished()
 
-> **markIntentPublished**(`tenantId`, `intentId`, `publishedAt`): `Promise`\<`void`\>
+> **markIntentPublished**(`tenantId`, `intentId`, `publishedAt`): `Promise`\<`boolean`\>
+
+Atomically marks an unpublished intent and returns whether this call made the transition.
 
 #### Parameters
 
@@ -245,7 +247,7 @@ readonly [`OutboundWebhookEndpoint`](/api/webhooks-core/src/type-aliases/outboun
 
 #### Returns
 
-`Promise`\<`void`\>
+`Promise`\<`boolean`\>
 
 #### Implementation of
 

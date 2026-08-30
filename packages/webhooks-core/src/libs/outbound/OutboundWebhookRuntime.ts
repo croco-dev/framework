@@ -20,6 +20,8 @@ import type {
   OutboundWebhookDispatchIntent,
   OutboundWebhookEvent,
   OutboundWebhookEventDescriptor,
+  OutboundWebhookIntentPublicationFailure,
+  OutboundWebhookIntentPublicationOutcome,
   OutboundWebhookOutcomeClassification,
   OutboundWebhookRetryPolicy,
   OutboundWebhookRuntimeOptions,
@@ -86,29 +88,49 @@ export class OutboundWebhookRuntime {
       committedAt,
     };
     const result = await this.options.store.commitEvent({ event, endpoints: effectiveEndpoints });
-    await this.publishUnpublishedIntents(descriptor.tenantId);
+    assertIntentPublicationSucceeded(await this.publishUnpublishedIntents(descriptor.tenantId));
     return result;
   }
 
-  async publishUnpublishedIntents(tenantId: string): Promise<number> {
+  async publishUnpublishedIntents(
+    tenantId: string,
+  ): Promise<OutboundWebhookIntentPublicationOutcome> {
     const intents = await this.options.store.listUnpublishedIntents(tenantId);
-    let published = 0;
+    const publishedIntentIds: string[] = [];
+    const failures: OutboundWebhookIntentPublicationFailure[] = [];
     for (const intent of intents) {
       try {
         await this.publishIntent(intent);
-        await this.options.store.markIntentPublished(tenantId, intent.id, this.now());
-        published += 1;
       } catch (error) {
         if (error instanceof OutboundWebhookConfigurationProblem) {
           throw error;
         }
-        throw new OutboundWebhookConfigurationProblem("task/outbox publication failed", {
-          intentId: intent.id,
-          deliveryId: intent.deliveryId,
-        });
+        failures.push(classifyIntentPublicationFailure(intent, error));
+        continue;
+      }
+      try {
+        const marked = await this.options.store.markIntentPublished(
+          tenantId,
+          intent.id,
+          this.now(),
+        );
+        if (marked) {
+          publishedIntentIds.push(intent.id);
+        }
+      } catch (error) {
+        if (error instanceof OutboundWebhookConfigurationProblem) {
+          throw error;
+        }
+        throw new OutboundWebhookConfigurationProblem(
+          "dispatch intent publication could not be acknowledged",
+          {
+            intentId: intent.id,
+            deliveryId: intent.deliveryId,
+          },
+        );
       }
     }
-    return published;
+    return { publishedIntentIds, failures };
   }
 
   async dispatch(
@@ -255,7 +277,7 @@ export class OutboundWebhookRuntime {
         ...(next.nextAttemptAt === undefined ? {} : { nextAttemptAt: next.nextAttemptAt }),
       });
       if (next.status === "retrying") {
-        await this.publishUnpublishedIntents(tenantId);
+        assertIntentPublicationSucceeded(await this.publishUnpublishedIntents(tenantId));
       }
       return updated;
     } finally {
@@ -290,7 +312,7 @@ export class OutboundWebhookRuntime {
       replayId,
       createdAt: this.now(),
     });
-    await this.publishUnpublishedIntents(tenantId);
+    assertIntentPublicationSucceeded(await this.publishUnpublishedIntents(tenantId));
     return delivery;
   }
 
@@ -314,7 +336,7 @@ export class OutboundWebhookRuntime {
       deliveryId,
       scheduledAt: this.now(),
     });
-    await this.publishUnpublishedIntents(tenantId);
+    assertIntentPublicationSucceeded(await this.publishUnpublishedIntents(tenantId));
     return resumed;
   }
 
@@ -375,6 +397,41 @@ export class OutboundWebhookRuntime {
         },
       },
     });
+  }
+}
+
+function classifyIntentPublicationFailure(
+  intent: OutboundWebhookDispatchIntent,
+  error: unknown,
+): OutboundWebhookIntentPublicationFailure {
+  if (error instanceof OutboundWebhookPermanentProblem) {
+    return {
+      intentId: intent.id,
+      deliveryId: intent.deliveryId,
+      classification: "terminal",
+      problem: new OutboundWebhookPermanentProblem(
+        intent.deliveryId,
+        "task/outbox publication failed",
+        { intentId: intent.id },
+      ),
+    };
+  }
+  return {
+    intentId: intent.id,
+    deliveryId: intent.deliveryId,
+    classification: "retryable",
+    problem: new OutboundWebhookRetryableProblem(
+      intent.deliveryId,
+      "task/outbox publication failed",
+      { intentId: intent.id },
+    ),
+  };
+}
+
+function assertIntentPublicationSucceeded(outcome: OutboundWebhookIntentPublicationOutcome): void {
+  const failure = outcome.failures[0];
+  if (failure) {
+    throw failure.problem;
   }
 }
 

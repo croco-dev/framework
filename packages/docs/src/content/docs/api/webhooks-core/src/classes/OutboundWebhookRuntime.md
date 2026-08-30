@@ -91,7 +91,7 @@ title: "OutboundWebhookRuntime"
 
 ### publishUnpublishedIntents()
 
-> **publishUnpublishedIntents**(`tenantId`): `Promise`\<`number`\>
+> **publishUnpublishedIntents**(`tenantId`): `Promise`\<[`OutboundWebhookIntentPublicationOutcome`](/api/webhooks-core/src/type-aliases/outboundwebhookintentpublicationoutcome/)\>
 
 #### Parameters
 
@@ -101,7 +101,7 @@ title: "OutboundWebhookRuntime"
 
 #### Returns
 
-`Promise`\<`number`\>
+`Promise`\<[`OutboundWebhookIntentPublicationOutcome`](/api/webhooks-core/src/type-aliases/outboundwebhookintentpublicationoutcome/)\>
 
 ---
 
