@@ -38,6 +38,7 @@ import {
 describe("SaaS golden path demo", () => {
   beforeEach(() => {
     Container.reset();
+    CrocoContainer.reset();
   });
 
   it("deduplicates concurrent membership event relay calls", async () => {
