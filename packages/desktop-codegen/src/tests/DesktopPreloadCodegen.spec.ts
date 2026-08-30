@@ -110,6 +110,37 @@ describe("generateDesktopPreloadBridges", () => {
     ).toThrow(DesktopPreloadGenerationProblem);
   });
 
+  it("rejects window trust and origin policy mismatches", () => {
+    const graph = createGraph(false);
+    const localWindow = graph.windows.find((window) => window.trust === "local");
+    const remoteWindow = graph.windows.find((window) => window.trust === "remote");
+    assert(localWindow && remoteWindow, "Fixture local and remote windows are missing");
+
+    const invalidWindows = [
+      {
+        window: { ...localWindow, originPolicy: remoteWindow.originPolicy },
+        detail: `Desktop window ${JSON.stringify(localWindow.id)} trust "local" requires origin policy "local-content", received "remote-allowlist".`,
+      },
+      {
+        window: { ...remoteWindow, originPolicy: localWindow.originPolicy },
+        detail: `Desktop window ${JSON.stringify(remoteWindow.id)} trust "remote" requires origin policy "remote-allowlist", received "local-content".`,
+      },
+    ] as const;
+
+    for (const invalid of invalidWindows) {
+      expectPreloadGenerationProblem(
+        () =>
+          generateDesktopPreloadBridges({
+            ...graph,
+            windows: graph.windows.map((window) =>
+              window.id === invalid.window.id ? invalid.window : window,
+            ),
+          }),
+        invalid.detail,
+      );
+    }
+  });
+
   it("binds command and event IDs inside payload-only generated closures", async () => {
     const source = requireBridgeSource(createGraph(false), "main");
     const invoke = vi.fn(async (_commandId: string, input: unknown) => ({ input }));
@@ -363,6 +394,20 @@ function createGraph(reverse: boolean) {
         : windows,
     }),
   );
+}
+
+function expectPreloadGenerationProblem(action: () => unknown, detail: string): void {
+  let thrown: unknown;
+  try {
+    action();
+  } catch (error) {
+    thrown = error;
+  }
+  expect(thrown).toBeInstanceOf(DesktopPreloadGenerationProblem);
+  expect(thrown).toMatchObject({
+    code: "desktop-codegen/invalid-contract-graph",
+    detail,
+  });
 }
 
 function requireBridgeSource(graph: ReturnType<typeof createGraph>, windowId: string): string {

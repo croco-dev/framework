@@ -87,6 +87,23 @@ function assertGeneratableGraph(graph: DesktopContractGraphV1): void {
         `Desktop window ${formatDiagnosticValue(window.id)} has unsupported trust ${formatDiagnosticValue(window.trust)}.`,
       );
     }
+
+    const originPolicyMode =
+      typeof window.originPolicy === "object" && window.originPolicy !== null
+        ? (window.originPolicy as { readonly mode?: unknown }).mode
+        : undefined;
+    if (originPolicyMode !== "local-content" && originPolicyMode !== "remote-allowlist") {
+      throw new DesktopPreloadGenerationProblem(
+        `Desktop window ${formatDiagnosticValue(window.id)} has unsupported origin policy ${formatDiagnosticValue(originPolicyMode)}.`,
+      );
+    }
+
+    const expectedOriginPolicy = window.trust === "local" ? "local-content" : "remote-allowlist";
+    if (originPolicyMode !== expectedOriginPolicy) {
+      throw new DesktopPreloadGenerationProblem(
+        `Desktop window ${formatDiagnosticValue(window.id)} trust ${formatDiagnosticValue(window.trust)} requires origin policy ${formatDiagnosticValue(expectedOriginPolicy)}, received ${formatDiagnosticValue(originPolicyMode)}.`,
+      );
+    }
   }
 }
 

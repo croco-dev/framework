@@ -475,9 +475,10 @@ desktop.project.fileChanged.subscribe((_payload, _event) => undefined);
     const effectCommand = graph.commands.find((candidate) => candidate.effects.length > 0);
     const grant = graph.grants[0];
     const problem = graph.problems[0];
+    const localWindow = graph.windows.find((window) => window.trust === "local");
     const remoteWindow = graph.windows.find((window) => window.trust === "remote");
     assert(
-      command && effectCommand && grant && problem && remoteWindow,
+      command && effectCommand && grant && problem && localWindow && remoteWindow,
       "Fixture capability records are missing",
     );
 
@@ -564,6 +565,28 @@ desktop.project.fileChanged.subscribe((_payload, _event) => undefined);
           ),
         },
         detail: `Desktop window ${JSON.stringify(remoteWindow.id)} has an unsupported origin policy.`,
+      },
+      {
+        graph: {
+          ...graph,
+          windows: graph.windows.map((window) =>
+            window.id === localWindow.id
+              ? { ...window, originPolicy: remoteWindow.originPolicy }
+              : window,
+          ),
+        },
+        detail: `Desktop window ${JSON.stringify(localWindow.id)} trust "local" requires origin policy "local-content", received "remote-allowlist".`,
+      },
+      {
+        graph: {
+          ...graph,
+          windows: graph.windows.map((window) =>
+            window.id === remoteWindow.id
+              ? { ...window, originPolicy: localWindow.originPolicy }
+              : window,
+          ),
+        },
+        detail: `Desktop window ${JSON.stringify(remoteWindow.id)} trust "remote" requires origin policy "remote-allowlist", received "local-content".`,
       },
       {
         graph: {

@@ -278,6 +278,12 @@ function assertGraphScalarFields(graph: DesktopContractGraphV1): void {
         `Desktop window ${JSON.stringify(window.id)} has an unsupported origin policy.`,
       );
     }
+    const expectedOriginPolicy = window.trust === "local" ? "local-content" : "remote-allowlist";
+    if (window.originPolicy.mode !== expectedOriginPolicy) {
+      throw new DesktopRendererGenerationProblem(
+        `Desktop window ${JSON.stringify(window.id)} trust ${JSON.stringify(window.trust)} requires origin policy ${JSON.stringify(expectedOriginPolicy)}, received ${JSON.stringify(window.originPolicy.mode)}.`,
+      );
+    }
     if (window.originPolicy.mode === "remote-allowlist") {
       assertStringIdentifier(window.originPolicy.initialUrl, "window initial URL");
       assertStringIdentifiers(window.originPolicy.allowedOrigins, "window allowed origin");
