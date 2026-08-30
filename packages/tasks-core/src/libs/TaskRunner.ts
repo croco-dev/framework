@@ -362,8 +362,7 @@ export class TaskRunner {
         ? Promise.race([handlerPromise, timeoutPromise])
         : handlerPromise);
 
-      if (deadline !== undefined && this.now() >= deadline) {
-        triggerTimeout?.();
+      if (timeoutClaimed && timeoutPromise !== undefined) {
         return await timeoutPromise;
       }
 
