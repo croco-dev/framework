@@ -1,6 +1,6 @@
 import { type ClerkClient, createClerkClient } from "@clerk/backend";
 import type { ClerkAuthOptions } from "./ClerkAuthProvider";
-import { ClerkExternalServiceProblem } from "./problems/ClerkProblems";
+import { executeClerkLookup, executeClerkOperation } from "./clerkOperation";
 
 export type ClerkUser = {
   id: string;
@@ -48,24 +48,6 @@ export type UserListResult = {
   totalCount: number;
 };
 
-function isObjectRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
-function getClerkErrorStatus(error: unknown): number | undefined {
-  if (!isObjectRecord(error)) {
-    return undefined;
-  }
-
-  const status = error.status;
-  if (typeof status === "number") {
-    return status;
-  }
-
-  const statusCode = error.statusCode;
-  return typeof statusCode === "number" ? statusCode : undefined;
-}
-
 function mapClerkUser(user: {
   id: string;
   firstName: string | null;
@@ -111,19 +93,14 @@ export class ClerkUserService {
   }
 
   async getUser(userId: string): Promise<ClerkUser | null> {
-    try {
-      const user = await this.clerkClient.users.getUser(userId);
-      return mapClerkUser(user);
-    } catch (error: unknown) {
-      const status = getClerkErrorStatus(error);
-      if (status === 404) {
-        return null; // 사용자 미존재 — 정상
-      }
-
-      throw new ClerkExternalServiceProblem("Failed to get user from Clerk", {
-        cause: error instanceof Error ? error : new Error(String(error)),
-      });
+    const user = await executeClerkLookup("users.getUser", () =>
+      this.clerkClient.users.getUser(userId),
+    );
+    if (user === null) {
+      return null;
     }
+
+    return mapClerkUser(user);
   }
 
   async getUserList(options: UserListOptions = {}): Promise<UserListResult> {
@@ -145,7 +122,9 @@ export class ClerkUserService {
       params.query = options.query;
     }
 
-    const response = await this.clerkClient.users.getUserList(params);
+    const response = await executeClerkOperation("users.getUserList", () =>
+      this.clerkClient.users.getUserList(params),
+    );
 
     return {
       users: response.data.map(mapClerkUser),
@@ -154,29 +133,33 @@ export class ClerkUserService {
   }
 
   async createUser(input: CreateClerkUserInput): Promise<ClerkUser> {
-    const user = await this.clerkClient.users.createUser({
-      firstName: input.firstName,
-      lastName: input.lastName,
-      emailAddress: input.emailAddress,
-      ...(input.password && { password: input.password }),
-      ...(input.publicMetadata && { publicMetadata: input.publicMetadata }),
-      ...(input.privateMetadata && { privateMetadata: input.privateMetadata }),
-    });
+    const user = await executeClerkOperation("users.createUser", () =>
+      this.clerkClient.users.createUser({
+        firstName: input.firstName,
+        lastName: input.lastName,
+        emailAddress: input.emailAddress,
+        ...(input.password && { password: input.password }),
+        ...(input.publicMetadata && { publicMetadata: input.publicMetadata }),
+        ...(input.privateMetadata && { privateMetadata: input.privateMetadata }),
+      }),
+    );
 
     return mapClerkUser(user);
   }
 
   async updateUser(userId: string, input: UpdateClerkUserInput): Promise<ClerkUser> {
-    const user = await this.clerkClient.users.updateUser(userId, {
-      ...(input.firstName !== undefined && { firstName: input.firstName }),
-      ...(input.lastName !== undefined && { lastName: input.lastName }),
-      ...(input.publicMetadata !== undefined && {
-        publicMetadata: input.publicMetadata,
+    const user = await executeClerkOperation("users.updateUser", () =>
+      this.clerkClient.users.updateUser(userId, {
+        ...(input.firstName !== undefined && { firstName: input.firstName }),
+        ...(input.lastName !== undefined && { lastName: input.lastName }),
+        ...(input.publicMetadata !== undefined && {
+          publicMetadata: input.publicMetadata,
+        }),
+        ...(input.privateMetadata !== undefined && {
+          privateMetadata: input.privateMetadata,
+        }),
       }),
-      ...(input.privateMetadata !== undefined && {
-        privateMetadata: input.privateMetadata,
-      }),
-    });
+    );
 
     return mapClerkUser(user);
   }
@@ -188,29 +171,37 @@ export class ClerkUserService {
       privateMetadata?: Record<string, unknown>;
     },
   ): Promise<ClerkUser> {
-    const user = await this.clerkClient.users.updateUserMetadata(userId, {
-      ...(metadata.publicMetadata && {
-        publicMetadata: metadata.publicMetadata,
+    const user = await executeClerkOperation("users.updateUserMetadata", () =>
+      this.clerkClient.users.updateUserMetadata(userId, {
+        ...(metadata.publicMetadata && {
+          publicMetadata: metadata.publicMetadata,
+        }),
+        ...(metadata.privateMetadata && {
+          privateMetadata: metadata.privateMetadata,
+        }),
       }),
-      ...(metadata.privateMetadata && {
-        privateMetadata: metadata.privateMetadata,
-      }),
-    });
+    );
 
     return mapClerkUser(user);
   }
 
   async deleteUser(userId: string): Promise<void> {
-    await this.clerkClient.users.deleteUser(userId);
+    await executeClerkOperation("users.deleteUser", () =>
+      this.clerkClient.users.deleteUser(userId),
+    );
   }
 
   async banUser(userId: string): Promise<ClerkUser> {
-    const user = await this.clerkClient.users.banUser(userId);
+    const user = await executeClerkOperation("users.banUser", () =>
+      this.clerkClient.users.banUser(userId),
+    );
     return mapClerkUser(user);
   }
 
   async unbanUser(userId: string): Promise<ClerkUser> {
-    const user = await this.clerkClient.users.unbanUser(userId);
+    const user = await executeClerkOperation("users.unbanUser", () =>
+      this.clerkClient.users.unbanUser(userId),
+    );
     return mapClerkUser(user);
   }
 }

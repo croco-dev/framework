@@ -177,6 +177,34 @@ export class ClerkExternalServiceProblem extends Problem {
   }
 }
 
+export function createClerkOperationProblem(
+  error: unknown,
+  operation: string,
+): ClerkExternalServiceProblem {
+  const status = getUpstreamStatus(error);
+
+  return new ClerkExternalServiceProblem(`Clerk operation '${operation}' failed`, {
+    extensions: {
+      operation,
+      provider: "clerk",
+      retryable: isRetryableClerkAuthError(error),
+      ...(status !== undefined ? { upstreamStatus: status } : {}),
+    },
+  });
+}
+
+export function isClerkResourceNotFoundError(
+  error: unknown,
+  allowMessageFallback = false,
+): boolean {
+  const status = getUpstreamStatus(error);
+  if (status !== undefined) {
+    return status === 404;
+  }
+
+  return allowMessageFallback && getErrorMessage(error).toLowerCase().includes("not found");
+}
+
 export function isRetryableClerkAuthError(error: unknown): boolean {
   const status = getUpstreamStatus(error);
   if (status !== undefined) {

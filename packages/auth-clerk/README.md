@@ -56,6 +56,12 @@ await organizations.createOrganization({
 });
 ```
 
+사용자, 조직, 멤버십, 초대, 세션의 모든 Clerk SDK 실패는
+`auth-clerk/external-service-error` Problem으로 정규화됩니다. `extensions`에는 안전한
+`provider`, `operation`, `retryable`, 선택적 `upstreamStatus`만 포함되며 SDK 요청, credential,
+원본 오류 메시지는 노출하지 않습니다. 단일 리소스 조회의 not-found는 계속 `null`을 반환하고,
+목록과 mutation의 실패는 Problem으로 전달합니다. 패키지는 자동 retry를 수행하지 않습니다.
+
 ### 4. 테넌트 매핑
 
 ```typescript
