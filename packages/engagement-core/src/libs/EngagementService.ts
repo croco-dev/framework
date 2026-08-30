@@ -574,6 +574,7 @@ export class EngagementSuppressionEvaluationProblem extends Problem {
   }
 }
 
+/** Reports that a prepared engagement channel failed during notification dispatch. */
 export class EngagementDispatchFailedProblem extends Problem {
   constructor(
     messageId: string,
@@ -602,21 +603,32 @@ export class EngagementDispatchFailedProblem extends Problem {
   }
 }
 
-function assertCommand(command: EngagementSendCommand<AnyMessage>): void {
-  if (command.recipient.tenantId.length === 0) {
+function assertCommand(command: unknown): asserts command is EngagementSendCommand<AnyMessage> {
+  if (typeof command !== "object" || command === null) {
+    throw new EngagementCommandInvalidProblem("Engagement command must be an object");
+  }
+
+  const recipient = "recipient" in command ? command.recipient : undefined;
+  if (typeof recipient !== "object" || recipient === null) {
+    throw new EngagementCommandInvalidProblem("Recipient must be an object");
+  }
+
+  const tenantId = "tenantId" in recipient ? recipient.tenantId : undefined;
+  if (typeof tenantId !== "string" || tenantId.length === 0) {
     throw new EngagementCommandInvalidProblem("Recipient tenantId must not be empty");
   }
-  if (command.recipient.userId.length === 0) {
+
+  const userId = "userId" in recipient ? recipient.userId : undefined;
+  if (typeof userId !== "string" || userId.length === 0) {
     throw new EngagementCommandInvalidProblem("Recipient userId must not be empty");
   }
-  if (command.key.length === 0) {
+
+  const key = "key" in command ? command.key : undefined;
+  if (typeof key !== "string" || key.length === 0) {
     throw new EngagementCommandInvalidProblem("Semantic key must not be empty");
   }
-  if (
-    command.policy !== undefined &&
-    command.policy !== "first-reachable" &&
-    command.policy !== "all-reachable"
-  ) {
+  const policy = "policy" in command ? command.policy : undefined;
+  if (policy !== undefined && policy !== "first-reachable" && policy !== "all-reachable") {
     throw new EngagementCommandInvalidProblem(
       "Delivery policy must be first-reachable or all-reachable",
     );

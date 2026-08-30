@@ -265,6 +265,33 @@ describe("EngagementService", () => {
     expect(dispatcher.dispatch).not.toHaveBeenCalled();
   });
 
+  it.each([
+    { label: "missing command", command: undefined },
+    { label: "non-object command", command: "invalid" },
+    { label: "missing recipient", command: { key: "subscription-1" } },
+    { label: "non-object recipient", command: { recipient: 1, key: "subscription-1" } },
+    {
+      label: "non-string tenantId",
+      command: { recipient: { tenantId: 1, userId: "user-1" }, key: "subscription-1" },
+    },
+    {
+      label: "non-string userId",
+      command: { recipient: { tenantId: "tenant-1", userId: 1 }, key: "subscription-1" },
+    },
+    {
+      label: "non-string key",
+      command: { recipient: recipient.recipient, key: 1 },
+    },
+  ])("rejects malformed runtime command shapes: $label", async ({ command }) => {
+    const dispatcher = createDispatcher();
+    const engagement = new EngagementService(directory, createRenderer(), dispatcher.service);
+
+    await expect(
+      engagement.send(TrialEnding, command as unknown as EngagementSendCommand<typeof TrialEnding>),
+    ).rejects.toBeInstanceOf(EngagementCommandInvalidProblem);
+    expect(dispatcher.dispatch).not.toHaveBeenCalled();
+  });
+
   it("throws a stable Problem when the recipient is absent", async () => {
     const dispatcher = createDispatcher();
     const engagement = new EngagementService(directory, createRenderer(), dispatcher.service);

@@ -60,6 +60,7 @@ Application call sites send a logical recipient, typed message data, and a seman
 ```ts
 import {
   EngagementService,
+  type EngagementNotificationDispatcher,
   InMemoryMessageRendererResolver,
   InMemoryRecipientDirectory,
   MessageRendererRegistry,
@@ -83,6 +84,9 @@ const directory = new InMemoryRecipientDirectory([
     timezone: "Asia/Seoul",
   },
 ]);
+
+// Supplied by the application's dependency-injection container.
+declare const notificationService: EngagementNotificationDispatcher;
 
 const engagement = new EngagementService(
   directory,
