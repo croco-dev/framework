@@ -28,6 +28,54 @@ import type { DomainAutoJoinIntent, DomainPolicy } from "./types";
 const AUTO_JOIN_ROLES: MembershipRole[] = ["member", "viewer"];
 const AUTO_JOIN_EVENT_CLAIM_LEASE_MS = 5 * 60 * 1000;
 
+type AutoJoinCleanupOperation = "deleteUncommittedAutoJoinIntent" | "releaseAutoJoinEvent";
+
+function attachAutoJoinCleanupError(originalError: unknown, cleanupError: unknown): void {
+  if (typeof originalError !== "object" || originalError === null) {
+    return;
+  }
+
+  try {
+    Object.defineProperty(originalError, "autoJoinCleanupError", {
+      configurable: true,
+      enumerable: false,
+      value: cleanupError,
+    });
+  } catch {
+    return;
+  }
+}
+
+function reportAutoJoinCleanupError(
+  operation: AutoJoinCleanupOperation,
+  originalError: unknown,
+  cleanupError: unknown,
+): void {
+  attachAutoJoinCleanupError(originalError, cleanupError);
+
+  try {
+    console.error("[DomainPolicyManager] Failed to clean up auto-join state", {
+      operation,
+      originalError,
+      cleanupError,
+    });
+  } catch {
+    return;
+  }
+}
+
+async function runAutoJoinCleanup(
+  operation: AutoJoinCleanupOperation,
+  originalError: unknown,
+  cleanup: () => Promise<void>,
+): Promise<void> {
+  try {
+    await cleanup();
+  } catch (cleanupError) {
+    reportAutoJoinCleanupError(operation, originalError, cleanupError);
+  }
+}
+
 @Component()
 export class DomainPolicyManager {
   constructor(
@@ -139,7 +187,9 @@ export class DomainPolicyManager {
           }
           intent = completed;
         } catch (error) {
-          await this.store.deleteUncommittedAutoJoinIntent(intent.tenantId, intent.idempotencyKey);
+          await runAutoJoinCleanup("deleteUncommittedAutoJoinIntent", error, () =>
+            this.store.deleteUncommittedAutoJoinIntent(intent.tenantId, intent.idempotencyKey),
+          );
           if (error instanceof AlreadyMemberProblem) {
             return null;
           }
@@ -211,7 +261,9 @@ export class DomainPolicyManager {
         throw new DomainAutoJoinRecoveryProblem("event");
       }
     } catch (error) {
-      await this.store.releaseAutoJoinEvent(intent.tenantId, intent.idempotencyKey, claimId);
+      await runAutoJoinCleanup("releaseAutoJoinEvent", error, () =>
+        this.store.releaseAutoJoinEvent(intent.tenantId, intent.idempotencyKey, claimId),
+      );
       throw error;
     }
   }

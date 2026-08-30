@@ -3,7 +3,7 @@ import type { EventPublisher } from "@croco/events-core";
 import type { Membership } from "@croco/membership-core";
 import { AlreadyMemberProblem, type MembershipManager } from "@croco/membership-core";
 import { TxManager, type TxAdapter } from "@croco/tx-core";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DomainPolicyManager } from "../libs/DomainPolicyManager";
 import {
   DomainAutoJoinedEvent,
@@ -50,6 +50,10 @@ describe("DomainPolicyManager", () => {
       } as unknown as EventPublisher,
       txManager,
     );
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("should add domain policy with normalized domain", async () => {
@@ -204,6 +208,46 @@ describe("DomainPolicyManager", () => {
     );
   });
 
+  it("should preserve the publish failure when releasing the event claim also fails", async () => {
+    await manager.addDomainPolicy("tenant-1", "croco.dev", "member");
+
+    const membership: Membership = {
+      id: "mem-1",
+      tenantId: "tenant-1",
+      userId: "user-1",
+      role: "member",
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+    };
+    const publishError = new Error("auto join publish failed");
+    const cleanupError = new Error("event claim release failed");
+
+    addMemberCommand.mockResolvedValue({ operation: "add", membership, replayed: false });
+    publishNow.mockClear();
+    publishNow.mockRejectedValueOnce(publishError);
+    vi.spyOn(store, "releaseAutoJoinEvent").mockRejectedValueOnce(cleanupError);
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const attempt = manager.tryAutoJoin("tenant-1", "user-1", "user@croco.dev");
+
+    await expect(attempt).rejects.toMatchObject({
+      cause: publishError,
+      extensions: {
+        committed: true,
+        failures: [{ message: publishError.message }],
+      },
+    });
+    expect(publishError).toHaveProperty("autoJoinCleanupError", cleanupError);
+    expect(consoleError).toHaveBeenCalledWith(
+      "[DomainPolicyManager] Failed to clean up auto-join state",
+      {
+        operation: "releaseAutoJoinEvent",
+        originalError: publishError,
+        cleanupError,
+      },
+    );
+  });
+
   it("should replay a committed auto-join and publish its missing event on retry", async () => {
     await manager.addDomainPolicy("tenant-1", "croco.dev", "member");
 
@@ -295,5 +339,28 @@ describe("DomainPolicyManager", () => {
 
     expect(result).toBeNull();
     expect(getMember).not.toHaveBeenCalled();
+  });
+
+  it("should preserve the membership failure when deleting the intent also fails", async () => {
+    await manager.addDomainPolicy("tenant-1", "croco.dev", "viewer");
+    const membershipError = new Error("membership write failed");
+    const cleanupError = new Error("intent delete failed");
+
+    addMemberCommand.mockRejectedValueOnce(membershipError);
+    vi.spyOn(store, "deleteUncommittedAutoJoinIntent").mockRejectedValueOnce(cleanupError);
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    await expect(manager.tryAutoJoin("tenant-1", "user-1", "user@croco.dev")).rejects.toBe(
+      membershipError,
+    );
+    expect(membershipError).toHaveProperty("autoJoinCleanupError", cleanupError);
+    expect(consoleError).toHaveBeenCalledWith(
+      "[DomainPolicyManager] Failed to clean up auto-join state",
+      {
+        operation: "deleteUncommittedAutoJoinIntent",
+        originalError: membershipError,
+        cleanupError,
+      },
+    );
   });
 });
