@@ -13,7 +13,13 @@ title: "TelemetryDiagnosticsProvider"
 
 ### Constructor
 
-> **new TelemetryDiagnosticsProvider**(): `TelemetryDiagnosticsProvider`
+> **new TelemetryDiagnosticsProvider**(`options?`): `TelemetryDiagnosticsProvider`
+
+#### Parameters
+
+##### options?
+
+[`TelemetryDiagnosticsProviderOptions`](/api/telemetry-sdk-node/src/type-aliases/telemetrydiagnosticsprovideroptions/) = `{}`
 
 #### Returns
 
@@ -33,11 +39,11 @@ title: "TelemetryDiagnosticsProvider"
 
 ### getHealth()
 
-> **getHealth**(): `Promise`\<[`HealthStatus`](/api/diagnostics-core/src/type-aliases/healthstatus/)\>
+> **getHealth**(): `Promise`\<[`TelemetryDiagnosticsHealthStatus`](/api/telemetry-sdk-node/src/type-aliases/telemetrydiagnosticshealthstatus/)\>
 
 #### Returns
 
-`Promise`\<[`HealthStatus`](/api/diagnostics-core/src/type-aliases/healthstatus/)\>
+`Promise`\<[`TelemetryDiagnosticsHealthStatus`](/api/telemetry-sdk-node/src/type-aliases/telemetrydiagnosticshealthstatus/)\>
 
 #### Implementation of
 

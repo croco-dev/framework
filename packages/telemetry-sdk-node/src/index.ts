@@ -46,3 +46,13 @@ export type { ForceFlushResult, ShutdownResult, TelemetryLifecycleSkipReason } f
 
 export { TelemetryRuntime } from "./runtime";
 export { TelemetryDiagnosticsProvider } from "./libs/diagnostics/TelemetryDiagnosticsProvider";
+export type {
+  TelemetryConfiguredDiagnosticsDetails,
+  TelemetryDiagnosticsDetails,
+  TelemetryDiagnosticsHealthStatus,
+  TelemetryDiagnosticsMode,
+  TelemetryDiagnosticsProviderOptions,
+  TelemetryDiagnosticsRequirement,
+  TelemetryNotConfiguredDiagnosticsDetails,
+  TelemetryStartupFailedDiagnosticsDetails,
+} from "./libs/diagnostics/TelemetryDiagnosticsProvider";

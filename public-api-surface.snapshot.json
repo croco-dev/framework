@@ -27239,9 +27239,49 @@
               "source": "./config"
             },
             {
+              "name": "TelemetryConfiguredDiagnosticsDetails",
+              "exportKind": "named",
+              "source": "./libs/diagnostics/TelemetryDiagnosticsProvider"
+            },
+            {
+              "name": "TelemetryDiagnosticsDetails",
+              "exportKind": "named",
+              "source": "./libs/diagnostics/TelemetryDiagnosticsProvider"
+            },
+            {
+              "name": "TelemetryDiagnosticsHealthStatus",
+              "exportKind": "named",
+              "source": "./libs/diagnostics/TelemetryDiagnosticsProvider"
+            },
+            {
+              "name": "TelemetryDiagnosticsMode",
+              "exportKind": "named",
+              "source": "./libs/diagnostics/TelemetryDiagnosticsProvider"
+            },
+            {
+              "name": "TelemetryDiagnosticsProviderOptions",
+              "exportKind": "named",
+              "source": "./libs/diagnostics/TelemetryDiagnosticsProvider"
+            },
+            {
+              "name": "TelemetryDiagnosticsRequirement",
+              "exportKind": "named",
+              "source": "./libs/diagnostics/TelemetryDiagnosticsProvider"
+            },
+            {
               "name": "TelemetryLifecycleSkipReason",
               "exportKind": "named",
               "source": "./runtime"
+            },
+            {
+              "name": "TelemetryNotConfiguredDiagnosticsDetails",
+              "exportKind": "named",
+              "source": "./libs/diagnostics/TelemetryDiagnosticsProvider"
+            },
+            {
+              "name": "TelemetryStartupFailedDiagnosticsDetails",
+              "exportKind": "named",
+              "source": "./libs/diagnostics/TelemetryDiagnosticsProvider"
             },
             {
               "name": "TraceConfig",

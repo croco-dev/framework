@@ -15,6 +15,10 @@ import {
   mergeCustomInstrumentations,
   resolveAutoInstrumentation,
 } from "./libs/instrumentation/AutoInstrumentation";
+import {
+  clearTelemetryInitializationFailure,
+  recordTelemetryInitializationFailure,
+} from "./libs/diagnostics/TelemetryInitializationState";
 import { TelemetryAutoInstrumentationProblem } from "./libs/problems/TelemetryAutoInstrumentationProblem";
 import {
   LegacyTelemetrySignalConfigProblem,
@@ -85,19 +89,26 @@ class TelemetryRuntime {
   }
 
   async init(config: TelemetryConfig): Promise<void> {
-    const legacySignals = getLegacyTelemetrySignals(config);
-    if (legacySignals) {
-      throw new LegacyTelemetrySignalConfigProblem(legacySignals);
-    }
+    const requestedConfig = snapshotTelemetryConfig(config);
+    clearTelemetryInitializationFailure(this);
+    let requestedFingerprint: string;
 
-    validateBatchSpanProcessorConfig(config);
+    try {
+      const legacySignals = getLegacyTelemetrySignals(requestedConfig);
+      if (legacySignals) {
+        throw new LegacyTelemetrySignalConfigProblem(legacySignals);
+      }
+
+      validateBatchSpanProcessorConfig(requestedConfig);
+      requestedFingerprint = this.createConfigFingerprint(requestedConfig);
+    } catch (error) {
+      recordTelemetryInitializationFailure(this, requestedConfig, error);
+      throw error;
+    }
 
     if (this.shutdownPromise || this.shutdownFailure) {
       throw new TelemetryInitializationConflictProblem(this.getInitializationState());
     }
-
-    const requestedConfig = snapshotTelemetryConfig(config);
-    const requestedFingerprint = this.createConfigFingerprint(requestedConfig);
 
     if (this.configFingerprint !== null) {
       if (this.configFingerprint !== requestedFingerprint) {
@@ -221,6 +232,7 @@ class TelemetryRuntime {
       await this.initPromise;
     } catch (error) {
       this.clearInitializationContract();
+      recordTelemetryInitializationFailure(this, requestedConfig, error);
       throw error;
     } finally {
       if (this.initialized) {
@@ -474,6 +486,7 @@ class TelemetryRuntime {
     this.config = null;
     this.configFingerprint = null;
     this.initPromise = null;
+    clearTelemetryInitializationFailure(this);
   }
 
   private createConfigFingerprint(config: TelemetryConfig): string {

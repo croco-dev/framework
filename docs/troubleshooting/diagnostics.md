@@ -406,8 +406,13 @@ Provider `name`은 collector 안에서 유일해야 합니다. 같은 인스턴�
 
 ### TelemetryDiagnosticsProvider
 
-- **수집 정보**: OTel SDK 초기화 여부(`isInitialized`), 현재 샘플링 확률(`probability`)
-- **Degraded 조건**: 초기화에 실패하거나 외부 콜렉터 연결 등 추적 시스템 상태가 불안정할 때
+- **수집 정보**: telemetry 필수 여부(`requirement`), 설정 여부(`configured`), OTel SDK 초기화 여부(`initialized`),
+  lifecycle 상태(`mode`), 초기화 실패 코드(`failureCode`), 현재 샘플링 확률(`probability`)
+- **Optional 기본값**: 설정이 없으면 `degraded`/`not_configured`; 명시적으로 끄면 `degraded`/`disabled`
+- **Required 정책**: `new TelemetryDiagnosticsProvider({ requirement: "required" })`로 구성하며, 설정 누락 또는 초기화
+  실패는 `unhealthy`; 초기화 실패는 `startup_failed`와 안정적인 `failureCode`로 구분
+- **Readiness 연결**: `DiagnosticsHealthIndicator`의 `degradedStatus`로 optional/degraded 상태를 `up` 또는 `down`에
+  매핑하며, `unhealthy`는 항상 `down`
 
 ### EventBusDiagnosticsProvider
 
@@ -454,7 +459,10 @@ Croco는 AWS Lambda에 최적화된 프레임워크입니다. Lambda 환경에�
 배포 후 외부 모니터링 대시보드에 Trace 정보가 보이지 않는다면 `/health/diagnostics`를 호출해 봅니다.
 
 - `components` 배열에서 `TelemetryDiagnosticsProvider` 항목을 확인합니다.
-- `details.isInitialized`가 `false`라면 환경변수 오류 등으로 인해 OTel SDK 초기화가 이뤄지지 않은 상태입니다.
+- `details.mode`가 `not_configured`라면 optional telemetry를 구성하지 않은 상태이며, `startup_failed`라면
+  `failureCode`를 기준으로 endpoint, instrumentation, SDK 시작 오류를 확인합니다.
+- `details.initialized`가 `false`이고 `mode`가 `not_initialized`라면 설정은 존재하지만 SDK가 아직 활성화되지 않은
+  상태입니다.
 - 초기화는 성공했지만 `details.probability`가 `0`으로 되어 있다면, 코드 레벨에서 샘플링 확률이 0%로 강제 드롭되고 있는지 확인해야 합니다.
 
 ### 시나리오 2: "이벤트가 처리되지 않을 때"

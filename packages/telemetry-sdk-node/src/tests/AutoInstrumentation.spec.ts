@@ -244,6 +244,27 @@ describe("TelemetryRuntime auto-instrumentation", () => {
 
       expect(mocks.getNodeAutoInstrumentations).not.toHaveBeenCalled();
       expect(mocks.nodeSdkConstructor).not.toHaveBeenCalled();
+
+      await expect(new TelemetryDiagnosticsProvider().getHealth()).resolves.toMatchObject({
+        status: "degraded",
+        details: {
+          configured: true,
+          initialized: false,
+          mode: "startup_failed",
+          failureCode: "TELEMETRY_AUTO_INSTRUMENTATION_INVALID_CONFIG",
+        },
+      });
+      await expect(
+        new TelemetryDiagnosticsProvider({ requirement: "required" }).getHealth(),
+      ).resolves.toMatchObject({
+        status: "unhealthy",
+        details: {
+          configured: true,
+          initialized: false,
+          mode: "startup_failed",
+          failureCode: "TELEMETRY_AUTO_INSTRUMENTATION_INVALID_CONFIG",
+        },
+      });
     },
   );
 });
