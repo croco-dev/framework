@@ -1,6 +1,6 @@
 import { LlmModel } from "@croco/llm-core";
 import { ExponentialBackoff, RetryTemplate } from "@croco/retry-core";
-import { recordEvent, withSpan } from "@croco/telemetry-api";
+import { recordError, recordEvent, withSpan } from "@croco/telemetry-api";
 import { createOpenAiSdkTransport } from "./OpenAiSdkTransport";
 import {
   normalizeOpenAiError,
@@ -381,7 +381,7 @@ export class OpenAiLlmModel extends LlmModel {
           firstResult = await iterator.next();
           this.assertNotAborted(signal, "stream");
         } catch (error) {
-          await iterator.return?.();
+          await closeIteratorPreservingActiveError(iterator);
           throw error;
         }
         return { firstResult, iterator };
@@ -499,6 +499,7 @@ async function* continueStartedStream(
   started: OpenAiStartedStream,
 ): AsyncIterable<OpenAiStreamEvent> {
   let completed = started.firstResult.done;
+  let hasIterationError = false;
 
   try {
     if (!started.firstResult.done) {
@@ -514,10 +515,27 @@ async function* continueStartedStream(
 
       yield result.value;
     }
+  } catch (error) {
+    hasIterationError = true;
+    throw error;
   } finally {
     if (!completed) {
-      await started.iterator.return?.();
+      if (hasIterationError) {
+        await closeIteratorPreservingActiveError(started.iterator);
+      } else {
+        await started.iterator.return?.();
+      }
     }
+  }
+}
+
+async function closeIteratorPreservingActiveError(
+  iterator: AsyncIterator<OpenAiStreamEvent>,
+): Promise<void> {
+  try {
+    await iterator.return?.();
+  } catch (cleanupError) {
+    recordError(cleanupError);
   }
 }
 

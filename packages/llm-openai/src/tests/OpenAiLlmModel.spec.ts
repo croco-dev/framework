@@ -706,6 +706,59 @@ describe("OpenAiLlmModel", () => {
     expect(attempts).toBe(1);
   });
 
+  it("preserves a retryable first-event failure when stream cleanup also fails", async () => {
+    let attempts = 0;
+    let cleanupCalls = 0;
+    const transport = createStaticResponseTransport(createTextResponse("unused", MODEL_ID));
+    transport.streamResponse = async () => {
+      attempts += 1;
+      if (attempts === 1) {
+        return streamThatFailsBeforeFirstEvent(
+          () => {
+            cleanupCalls += 1;
+          },
+          { status: 400 },
+        );
+      }
+
+      return createStream();
+    };
+    const model = new OpenAiLlmModel({
+      modelId: MODEL_ID,
+      retryBackoff: TEST_RETRY_BACKOFF,
+      transport,
+    });
+
+    await expect(
+      collectStream(model.stream({ prompt: "retry after cleanup failure" })),
+    ).resolves.toHaveLength(3);
+    expect(attempts).toBe(2);
+    expect(cleanupCalls).toBe(1);
+  });
+
+  it("preserves a post-output stream failure when cleanup also fails", async () => {
+    let cleanupCalls = 0;
+    const transport = createStaticResponseTransport(
+      createTextResponse("unused", MODEL_ID),
+      streamThatFailsAfterFirstEvent(
+        () => {
+          cleanupCalls += 1;
+        },
+        { status: 400 },
+      ),
+    );
+    const iterator = new OpenAiLlmModel({ modelId: MODEL_ID, transport })
+      .stream({ prompt: "preserve stream failure" })
+      [Symbol.asyncIterator]();
+
+    await expect(iterator.next()).resolves.toEqual({
+      done: false,
+      value: { delta: "visible" },
+    });
+    await expect(iterator.next()).rejects.toBeInstanceOf(OpenAiRetryableUpstreamProblem);
+    expect(cleanupCalls).toBe(1);
+  });
+
   it("forwards early stream cancellation without closing naturally completed sources twice", async () => {
     let earlyReturnCalls = 0;
     const earlyTransport = createStaticResponseTransport(
@@ -1041,7 +1094,10 @@ async function* createIncompleteStream(): AsyncIterable<OpenAiStreamEvent> {
   };
 }
 
-function streamThatFailsBeforeFirstEvent(onReturn: () => void): AsyncIterable<OpenAiStreamEvent> {
+function streamThatFailsBeforeFirstEvent(
+  onReturn: () => void,
+  returnError?: unknown,
+): AsyncIterable<OpenAiStreamEvent> {
   return {
     [Symbol.asyncIterator](): AsyncIterator<OpenAiStreamEvent> {
       return {
@@ -1050,6 +1106,9 @@ function streamThatFailsBeforeFirstEvent(onReturn: () => void): AsyncIterable<Op
         },
         return: async () => {
           onReturn();
+          if (returnError !== undefined) {
+            throw returnError;
+          }
           return { done: true, value: undefined };
         },
       };
@@ -1057,9 +1116,35 @@ function streamThatFailsBeforeFirstEvent(onReturn: () => void): AsyncIterable<Op
   };
 }
 
-async function* streamThatFailsAfterFirstEvent(): AsyncIterable<OpenAiStreamEvent> {
-  yield { type: "response.output_text.delta", delta: "visible" };
-  throw { status: 503 };
+function streamThatFailsAfterFirstEvent(
+  onReturn: () => void = () => undefined,
+  returnError?: unknown,
+): AsyncIterable<OpenAiStreamEvent> {
+  return {
+    [Symbol.asyncIterator](): AsyncIterator<OpenAiStreamEvent> {
+      let emittedVisibleEvent = false;
+      return {
+        next: async () => {
+          if (!emittedVisibleEvent) {
+            emittedVisibleEvent = true;
+            return {
+              done: false,
+              value: { type: "response.output_text.delta", delta: "visible" },
+            };
+          }
+
+          throw { status: 503 };
+        },
+        return: async () => {
+          onReturn();
+          if (returnError !== undefined) {
+            throw returnError;
+          }
+          return { done: true, value: undefined };
+        },
+      };
+    },
+  };
 }
 
 function createTrackedStream(onReturn: () => void): AsyncIterable<OpenAiStreamEvent> {
