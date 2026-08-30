@@ -12,19 +12,20 @@ export function createIsrHandler(options: {
 
   return async (path: string) => {
     const cacheKey = `isr:${path}`;
+    let source: "cache" | "render" = "cache";
 
     const result = await cache.getOrSet(
       cacheKey,
       async () => {
-        const rendered = await render(path);
-        return rendered;
+        source = "render";
+        return render(path);
       },
       // TTL is set per-route by the caller via render options
     );
 
     return {
       html: result.html,
-      source: "render" as const,
+      source,
     };
   };
 }
