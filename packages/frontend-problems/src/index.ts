@@ -10,7 +10,7 @@ const TRAILING_STRUCTURED_RESPONSE_SECRET_PATTERN =
 const SENSITIVE_RESPONSE_FIELD_PATTERN =
   /^(?:authorization|proxy[-_]?authorization|cookie|set[-_]?cookie|credential|password|passphrase|passwd|pwd|secret|token|api[-_]?key|private[-_]?key|access[-_]?key(?:[-_]?id)?|access[-_]?token|refresh[-_]?token|client[-_]?secret|connection[-_]?string|dsn)$/i;
 const QUOTED_JSON_FIELD_PATTERN =
-  /(["'])((?:\\.|(?!\1)[^\\])*)\1(\s*:\s*)(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|(?:bearer|basic|digest|apikey)\s+[^\r\n,;}\]]+|[^\r\n,;}\]]+)/gi;
+  /(["'])((?:\\.|(?!\1)[^\\])*)\1(\s*:\s*)(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|(?:bearer|basic|digest|apikey)\s+[^\r\n,;}\]]+|[^\r\n,;{}[\]]+)/gi;
 const MAX_STRUCTURED_RESPONSE_DEPTH = 8;
 const MAX_STRUCTURED_RESPONSE_ENTRIES = 100;
 

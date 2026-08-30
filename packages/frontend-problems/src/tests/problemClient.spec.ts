@@ -412,6 +412,30 @@ describe("frontend Problem client runtime", () => {
     }
   });
 
+  it("redacts escaped sensitive labels nested in malformed objects and arrays", async () => {
+    const cases = [
+      ['{"outer":{"pass\\u0077ord":"nested-object-secret"}},', "nested-object-secret"],
+      ['{"outer":[{"pass\\u0077ord":"nested-array-secret"}]},', "nested-array-secret"],
+    ] as const;
+
+    for (const [body, secret] of cases) {
+      const result = await readOptionalJsonResult(
+        new Response(body, {
+          headers: { "content-type": "application/json" },
+          status: 200,
+        }),
+      );
+
+      if (result.ok || result.kind !== "external") {
+        expect.fail("Expected an external failure result.");
+      }
+
+      expect(result.body).toContain("[redacted]");
+      expect(result.body).not.toContain(secret);
+      expect(result.error).toMatchObject({ body: result.body });
+    }
+  });
+
   it("bounds sanitization before redacting incomplete private keys", () => {
     const privateKeyMarker = "-----BEGIN PRIVATE KEY-----";
     const error = new ProblemResponseError(
