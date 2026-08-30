@@ -93,6 +93,18 @@ class BootstrapLogger implements ILogger {
   }
 
   error(message: string, context?: Record<string, unknown> | Error): void {
+    this.writeError(message, context);
+  }
+
+  fatal(message: string, context?: Record<string, unknown> | Error): void {
+    this.writeError(message, context);
+  }
+
+  child(bindings: Record<string, unknown>): ILogger {
+    return new BootstrapLogger({ ...this.bindings, ...bindings });
+  }
+
+  private writeError(message: string, context?: Record<string, unknown> | Error): void {
     if (context instanceof Error) {
       if (Object.keys(this.bindings).length === 0) {
         console.error(message, context);
@@ -108,10 +120,6 @@ class BootstrapLogger implements ILogger {
       return;
     }
     console.error(message, outputContext);
-  }
-
-  child(bindings: Record<string, unknown>): ILogger {
-    return new BootstrapLogger({ ...this.bindings, ...bindings });
   }
 
   private withBindings(context?: Record<string, unknown>): Record<string, unknown> | undefined {

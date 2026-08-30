@@ -248,6 +248,8 @@ describe("HTTP request pipeline conformance", () => {
       warn: () => {},
       error: () => {},
       debug: () => {},
+      fatal: () => {},
+      child: () => logger,
     } as unknown as Logger;
 
     Container.set(Logger, logger);

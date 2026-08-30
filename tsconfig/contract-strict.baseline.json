@@ -1307,7 +1307,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 404,
+      "line": 406,
       "column": 30,
       "code": "TS2379",
       "message": "Argument of type '{ logger: ILogger | undefined; providers: readonly TestingProvider<unknown>[]; transactionContext: false | TestingTransactionContextOptions | TestingTransactionContext | undefined; }' is not assignable to parameter of type 'ResetCrocoTestingContextOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -1315,7 +1315,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 523,
+      "line": 525,
       "column": 30,
       "code": "TS2379",
       "message": "Argument of type '{ logger: ILogger | undefined; providers: readonly TestingProvider<unknown>[]; transactionContext: false | TestingTransactionContext; }' is not assignable to parameter of type 'ResetCrocoTestingContextOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -1323,7 +1323,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 810,
+      "line": 812,
       "column": 18,
       "code": "TS4111",
       "message": "Property 'type' comes from an index signature, so it must be accessed with ['type']."
@@ -1331,7 +1331,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 811,
+      "line": 813,
       "column": 18,
       "code": "TS4111",
       "message": "Property 'title' comes from an index signature, so it must be accessed with ['title']."
@@ -1339,7 +1339,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 812,
+      "line": 814,
       "column": 18,
       "code": "TS4111",
       "message": "Property 'status' comes from an index signature, so it must be accessed with ['status']."
@@ -1347,7 +1347,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 813,
+      "line": 815,
       "column": 18,
       "code": "TS4111",
       "message": "Property 'code' comes from an index signature, so it must be accessed with ['code']."
@@ -1355,7 +1355,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 814,
+      "line": 816,
       "column": 12,
       "code": "TS4111",
       "message": "Property 'detail' comes from an index signature, so it must be accessed with ['detail']."
@@ -1363,7 +1363,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 814,
+      "line": 816,
       "column": 49,
       "code": "TS4111",
       "message": "Property 'detail' comes from an index signature, so it must be accessed with ['detail']."
@@ -1371,7 +1371,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 815,
+      "line": 817,
       "column": 12,
       "code": "TS4111",
       "message": "Property 'instance' comes from an index signature, so it must be accessed with ['instance']."
@@ -1379,7 +1379,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 815,
+      "line": 817,
       "column": 51,
       "code": "TS4111",
       "message": "Property 'instance' comes from an index signature, so it must be accessed with ['instance']."
@@ -1387,7 +1387,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 876,
+      "line": 878,
       "column": 42,
       "code": "TS4111",
       "message": "Property 'requestId' comes from an index signature, so it must be accessed with ['requestId']."

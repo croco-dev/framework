@@ -63,6 +63,10 @@ import { LogLevel } from "@croco/framework-logger";
 | `logger.fatal(msg, ctx?)` | FATAL 레벨 로그 (Error 인스턴스 지원)        |
 | `logger.child(bindings)`  | 바인딩된 컨텍스트가 포함된 child logger 생성 |
 
+복구 가능한 요청·작업 실패에는 `error`를 사용하고, 프로세스를 계속 안전하게 실행할 수 없는 시작 실패나 치명적
+불변식 위반에는 `fatal`을 사용합니다. `fatal`은 종료 동작을 수행하지 않으며 `error`와 같은 `Error` 직렬화 및
+민감 정보 제거 경로를 사용합니다. `child()`가 반환한 로거에서도 두 메서드를 동일하게 사용할 수 있습니다.
+
 ### LogLevel
 
 | 값               | 설명             |

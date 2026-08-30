@@ -579,10 +579,12 @@ export type { Guard } from "./libs/Guard";
  * import type { ILogger } from '@croco/framework-context';
  *
  * const logger: ILogger = {
+ *   debug: () => undefined,
  *   info: () => undefined,
  *   warn: () => undefined,
  *   error: () => undefined,
- *   debug: () => undefined,
+ *   fatal: () => undefined,
+ *   child: () => logger,
  * };
  * ```
  */

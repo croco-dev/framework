@@ -17,6 +17,8 @@ function setupDI() {
     warn: () => {},
     error: () => {},
     debug: () => {},
+    fatal: () => {},
+    child: () => logger,
   } as unknown as Logger;
   Container.set(Logger, logger);
   Container.set(ErrorHandler, new ErrorHandler(logger));

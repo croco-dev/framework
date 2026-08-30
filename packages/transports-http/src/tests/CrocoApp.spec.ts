@@ -106,6 +106,8 @@ describe("CrocoApp", () => {
       warn: () => {},
       error: () => {},
       debug: () => {},
+      fatal: vi.fn(),
+      child: () => logger,
     } as unknown as Logger;
     Container.set(Logger, logger);
     Container.set(ErrorHandler, new ErrorHandler(logger));
@@ -1226,6 +1228,7 @@ describe("CrocoApp", () => {
       info: () => undefined,
       warn,
       error: () => undefined,
+      fatal: () => undefined,
       child: () => logger,
     };
     Container.set(LOGGER_TOKEN, logger);
@@ -1250,6 +1253,7 @@ describe("CrocoApp", () => {
       info: () => undefined,
       warn,
       error: () => undefined,
+      fatal: () => undefined,
       child: () => logger,
     };
     Container.set(LOGGER_TOKEN, logger);
@@ -1272,6 +1276,7 @@ describe("CrocoApp", () => {
       info: () => undefined,
       warn,
       error: () => undefined,
+      fatal: () => undefined,
       child: () => logger,
     };
     Container.set(LOGGER_TOKEN, logger);
@@ -1976,6 +1981,8 @@ describe("CrocoApp", () => {
       warn: () => {},
       error: () => {},
       debug: () => {},
+      fatal: vi.fn(),
+      child: () => logger,
     } as unknown as Logger;
 
     const registrar = new CrocoRouteRegistrar(hono as never, new ErrorHandler(logger), [], logger);
@@ -2103,6 +2110,8 @@ describe("CrocoApp", () => {
       warn: vi.fn(),
       error: vi.fn(),
       debug: vi.fn(),
+      fatal: vi.fn(),
+      child: () => logger,
     } as unknown as Logger & { error: ReturnType<typeof vi.fn> };
     Container.set(Logger, logger);
     Container.set(LOGGER_TOKEN, logger);

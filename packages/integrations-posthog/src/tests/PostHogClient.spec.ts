@@ -33,13 +33,25 @@ function captureError(action: () => void): unknown {
 
 describe("PostHogClient", () => {
   let client!: PostHogClient;
-  let loggerMock: { warn: ReturnType<typeof vi.fn> };
+  type LoggerMock = ILogger & {
+    child: ReturnType<typeof vi.fn>;
+    warn: ReturnType<typeof vi.fn>;
+  };
+  let loggerMock!: LoggerMock;
 
   beforeEach(() => {
     Container.reset();
     vi.clearAllMocks();
-    loggerMock = { warn: vi.fn() };
-    Container.set(LOGGER_TOKEN, loggerMock as unknown as ILogger);
+    loggerMock = {
+      child: vi.fn<ILogger["child"]>(),
+      debug: vi.fn<ILogger["debug"]>(),
+      error: vi.fn<ILogger["error"]>(),
+      fatal: vi.fn<ILogger["fatal"]>(),
+      info: vi.fn<ILogger["info"]>(),
+      warn: vi.fn<ILogger["warn"]>(),
+    };
+    loggerMock.child.mockReturnValue(loggerMock);
+    Container.set(LOGGER_TOKEN, loggerMock);
     vi.stubEnv("POSTHOG_HOST", "https://test.posthog.com");
     client = new PostHogClient({ apiKey: "test-key" });
     loggerMock.warn.mockClear();
@@ -67,7 +79,7 @@ describe("PostHogClient", () => {
   it("should resolve through Container after configuration is registered", () => {
     Container.reset();
     Container.register(PostHogClient, "singleton");
-    Container.set(LOGGER_TOKEN, loggerMock as unknown as ILogger);
+    Container.set(LOGGER_TOKEN, loggerMock);
     const config = registerPostHogConfig({
       apiKey: "registered-key",
       host: "https://registered.posthog.example",
@@ -85,7 +97,7 @@ describe("PostHogClient", () => {
   it("should freeze the resolved environment host when configuration is registered", () => {
     Container.reset();
     Container.register(PostHogClient, "singleton");
-    Container.set(LOGGER_TOKEN, loggerMock as unknown as ILogger);
+    Container.set(LOGGER_TOKEN, loggerMock);
     vi.stubEnv("POSTHOG_HOST", "https://registered-env.posthog.example");
 
     const config = registerPostHogConfig({ apiKey: "registered-key" });

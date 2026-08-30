@@ -1087,7 +1087,14 @@ describe("DrizzleMeterRepository", () => {
 
   describe("deserializeMetadata JSON parse failure", () => {
     it("should log warn and return undefined on invalid JSON", async () => {
-      const logger = { warn: vi.fn() } as unknown as ILogger;
+      const logger: ILogger = {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        fatal: vi.fn(),
+        child: vi.fn(() => logger),
+      };
       const repoWithLogger = new DrizzleMeterRepository(
         db,
         txManager,

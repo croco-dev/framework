@@ -47,6 +47,7 @@ const demoLogger: ILogger = {
   info: () => undefined,
   warn: () => undefined,
   error: () => undefined,
+  fatal: () => undefined,
   child: () => demoLogger,
 };
 

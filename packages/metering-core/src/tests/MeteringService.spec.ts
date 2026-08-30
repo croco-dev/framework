@@ -1048,6 +1048,7 @@ describe("MeteringService", () => {
         error: vi.fn(() => {
           throw reportingError;
         }),
+        fatal: vi.fn(),
         info: vi.fn(),
         warn: vi.fn(),
       };

@@ -7,18 +7,28 @@ import type { CallHandler } from "../libs/interfaces/CallHandler";
 import type { ExecutionContext } from "../libs/interfaces/ExecutionContext";
 
 describe("LoggingInterceptor", () => {
+  type LoggerMock = ILogger & {
+    child: ReturnType<typeof vi.fn>;
+    info: ReturnType<typeof vi.fn>;
+  };
   let interceptor!: LoggingInterceptor;
   let mockContext!: ExecutionContext;
   let mockNext!: CallHandler;
-  let mockLogger!: Pick<ILogger, "info">;
+  let mockLogger!: LoggerMock;
 
   beforeEach(() => {
     Container.reset();
 
     mockLogger = {
-      info: vi.fn(),
+      child: vi.fn<ILogger["child"]>(),
+      debug: vi.fn<ILogger["debug"]>(),
+      error: vi.fn<ILogger["error"]>(),
+      fatal: vi.fn<ILogger["fatal"]>(),
+      info: vi.fn<ILogger["info"]>(),
+      warn: vi.fn<ILogger["warn"]>(),
     };
-    interceptor = new LoggingInterceptor(mockLogger as ILogger);
+    mockLogger.child.mockReturnValue(mockLogger);
+    interceptor = new LoggingInterceptor(mockLogger);
 
     mockContext = {
       getRequest: vi.fn(),

@@ -1,7 +1,6 @@
 import "reflect-metadata";
 import type { AnalyticsManager } from "@croco/analytics-core";
-import { Container, Context, LOGGER_TOKEN } from "@croco/framework-context";
-import type { Logger } from "@croco/framework-logger";
+import { Container, Context, type ILogger, LOGGER_TOKEN } from "@croco/framework-context";
 import { PostHogClient } from "@croco/integrations-posthog";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PostHogAnalyticsDiagnosticsProvider } from "../libs/PostHogAnalyticsDiagnosticsProvider";
@@ -26,18 +25,28 @@ vi.mock("posthog-node", () => {
 });
 
 describe("PostHog Integration", () => {
+  type LoggerMock = ILogger & {
+    child: ReturnType<typeof vi.fn>;
+    info: ReturnType<typeof vi.fn>;
+    warn: ReturnType<typeof vi.fn>;
+  };
   let analyticsManager!: AnalyticsManager;
   let postHogClient!: PostHogClient;
-  let logger!: Pick<Logger, "info" | "warn">;
+  let logger!: LoggerMock;
 
   beforeEach(() => {
     vi.clearAllMocks();
     postHogClient = new PostHogClient({ apiKey: "test-api-key", host: "https://eu.posthog.com" });
     logger = {
-      info: vi.fn(),
-      warn: vi.fn(),
+      child: vi.fn<ILogger["child"]>(),
+      debug: vi.fn<ILogger["debug"]>(),
+      error: vi.fn<ILogger["error"]>(),
+      fatal: vi.fn<ILogger["fatal"]>(),
+      info: vi.fn<ILogger["info"]>(),
+      warn: vi.fn<ILogger["warn"]>(),
     };
-    Container.set(LOGGER_TOKEN, logger as Logger);
+    logger.child.mockReturnValue(logger);
+    Container.set(LOGGER_TOKEN, logger);
     analyticsManager = new PostHogAnalyticsManager(postHogClient);
   });
 
@@ -55,7 +64,7 @@ describe("PostHog Integration", () => {
 
   it("should resolve analytics manager through the Croco container", () => {
     Container.set(PostHogClient, postHogClient);
-    Container.set(LOGGER_TOKEN, logger as Logger);
+    Container.set(LOGGER_TOKEN, logger);
     Container.register(PostHogAnalyticsManager, "singleton");
     const captureSpy = vi.spyOn(postHogClient.getClient(), "capture");
 

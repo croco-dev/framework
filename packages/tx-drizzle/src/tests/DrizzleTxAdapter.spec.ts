@@ -496,6 +496,7 @@ describe("RlsTxAdapter", () => {
         child: vi.fn(),
         debug: vi.fn(),
         error: vi.fn(),
+        fatal: vi.fn(),
         info: vi.fn(),
         warn: vi.fn(),
       };

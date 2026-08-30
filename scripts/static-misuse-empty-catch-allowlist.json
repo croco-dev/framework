@@ -42,7 +42,7 @@
     {
       "package": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 233,
+      "line": 235,
       "excerpt": "} catch {",
       "reason": "Best-effort test logger failure must not hide the original after-commit hook failure.",
       "owner": "framework-error-handling",

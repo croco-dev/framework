@@ -12,6 +12,7 @@ const noopLogger: ILogger = {
   info: () => {},
   warn: () => {},
   error: () => {},
+  fatal: () => {},
   child: () => noopLogger,
 };
 

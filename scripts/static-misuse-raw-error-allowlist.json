@@ -537,7 +537,7 @@
     {
       "package": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 558,
+      "line": 560,
       "excerpt": "throw new Error(\"Expected response body to be RFC 7807 Problem Details.\");",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
       "owner": "framework-error-handling",
@@ -546,7 +546,7 @@
     {
       "package": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 569,
+      "line": 571,
       "excerpt": "throw new Error(`Expected HTTP status ${expected.status}, received ${response.status}.`);",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
       "owner": "framework-error-handling",
@@ -555,7 +555,7 @@
     {
       "package": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 582,
+      "line": 584,
       "excerpt": "throw new Error(`Expected Problem detail to include \"${expectedDetail}\".`);",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
       "owner": "framework-error-handling",
@@ -564,7 +564,7 @@
     {
       "package": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 604,
+      "line": 606,
       "excerpt": "throw new Error(`Expected OpenAPI operation ${method.toUpperCase()} ${path}.`);",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
       "owner": "framework-error-handling",
@@ -573,7 +573,7 @@
     {
       "package": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 612,
+      "line": 614,
       "excerpt": "throw new Error(",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
       "owner": "framework-error-handling",
@@ -582,7 +582,7 @@
     {
       "package": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 618,
+      "line": 620,
       "excerpt": "throw new Error(",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
       "owner": "framework-error-handling",
@@ -591,7 +591,7 @@
     {
       "package": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 711,
+      "line": 713,
       "excerpt": "throw new Error(",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
       "owner": "framework-error-handling",
@@ -600,7 +600,7 @@
     {
       "package": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 825,
+      "line": 827,
       "excerpt": "throw new Error(`${label} expected ${String(expected)}, received ${String(actual)}.`);",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
       "owner": "framework-error-handling",

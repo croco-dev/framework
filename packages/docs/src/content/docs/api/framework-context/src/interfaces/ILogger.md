@@ -13,10 +13,12 @@ Croco 전역 로거가 따라야 하는 최소 인터페이스 타입입니다.
 import type { ILogger } from "@croco/framework-context";
 
 const logger: ILogger = {
+  debug: () => undefined,
   info: () => undefined,
   warn: () => undefined,
   error: () => undefined,
-  debug: () => undefined,
+  fatal: () => undefined,
+  child: () => logger,
 };
 ```
 
@@ -61,6 +63,26 @@ const logger: ILogger = {
 ### error()
 
 > **error**(`message`, `context?`): `void`
+
+#### Parameters
+
+##### message
+
+`string`
+
+##### context?
+
+`Error` \| `Record`\<`string`, `unknown`\>
+
+#### Returns
+
+`void`
+
+---
+
+### fatal()
+
+> **fatal**(`message`, `context?`): `void`
 
 #### Parameters
 

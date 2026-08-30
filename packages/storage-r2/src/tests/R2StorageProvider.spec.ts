@@ -119,6 +119,8 @@ describe("R2StorageProvider", () => {
       warn: vi.fn(),
       error: vi.fn(),
       debug: vi.fn(),
+      fatal: vi.fn(),
+      child: () => logger,
     } as unknown as Logger;
 
     provider = new R2StorageProvider(configService, logger);

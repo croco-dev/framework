@@ -762,6 +762,8 @@ class SilentLogger implements ILogger {
 
   error(): void {}
 
+  fatal(): void {}
+
   child(): ILogger {
     return this;
   }

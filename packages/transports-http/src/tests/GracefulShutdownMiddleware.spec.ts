@@ -67,6 +67,8 @@ describe("GracefulShutdownMiddleware", () => {
       warn: () => {},
       error: () => {},
       debug: () => {},
+      fatal: vi.fn(),
+      child: () => logger,
     } as unknown as Logger;
     Container.set(Logger, logger);
     Container.set(ErrorHandler, new ErrorHandler(logger));
@@ -376,6 +378,7 @@ describe("GracefulShutdownMiddleware", () => {
         warn: vi.fn(),
         error: vi.fn(),
         child: vi.fn(),
+        fatal: vi.fn(),
       } as unknown as Logger;
       const controller = createGracefulShutdownController({
         isLambdaEnvironment: true,
@@ -635,6 +638,7 @@ describe("GracefulShutdownMiddleware", () => {
         warn: vi.fn(),
         error: vi.fn(),
         child: vi.fn(),
+        fatal: vi.fn(),
       } as unknown as Logger;
       const hook = deferred();
       process.on(signal, externalListener);
@@ -682,6 +686,7 @@ describe("GracefulShutdownMiddleware", () => {
           throw loggingFailure;
         }),
         child: vi.fn(),
+        fatal: vi.fn(),
       } as unknown as Logger;
       const controller = createGracefulShutdownController({
         signals: [signal],
@@ -735,6 +740,7 @@ describe("GracefulShutdownMiddleware", () => {
         warn: vi.fn(),
         error: vi.fn(),
         child: vi.fn(),
+        fatal: vi.fn(),
       } as unknown as Logger;
       process.on(signal, externalListener);
       const listenerCount = process.listeners(signal).length;
@@ -765,6 +771,7 @@ describe("GracefulShutdownMiddleware", () => {
         warn: vi.fn(),
         error: vi.fn(),
         child: vi.fn(),
+        fatal: vi.fn(),
       } as unknown as Logger;
       vi.spyOn(EventBusConfig.getInstance(), "getEventBus").mockReturnValue({
         getRunningHandlerCount: () => 0,
@@ -797,6 +804,7 @@ describe("GracefulShutdownMiddleware", () => {
           warn: vi.fn(),
           error: vi.fn(),
           child: vi.fn(),
+          fatal: vi.fn(),
         } as unknown as Logger;
         vi.spyOn(EventBusConfig.getInstance(), "getEventBus").mockReturnValue(eventBus as never);
         const controller = createGracefulShutdownController({
@@ -821,6 +829,7 @@ describe("GracefulShutdownMiddleware", () => {
         warn: vi.fn(),
         error: vi.fn(),
         child: vi.fn(),
+        fatal: vi.fn(),
       } as unknown as Logger;
       vi.spyOn(EventBusConfig.getInstance(), "getEventBus").mockReturnValue({
         getRunningHandlerCount: () => {
@@ -852,6 +861,7 @@ describe("GracefulShutdownMiddleware", () => {
         }),
         error: vi.fn(),
         child: vi.fn(),
+        fatal: vi.fn(),
       } as unknown as Logger;
       vi.spyOn(EventBusConfig.getInstance(), "getEventBus").mockReturnValue(undefined as never);
       process.on(signal, externalListener);
@@ -882,6 +892,7 @@ describe("GracefulShutdownMiddleware", () => {
         warn: vi.fn(),
         error: vi.fn(),
         child: vi.fn(),
+        fatal: vi.fn(),
       } as unknown as Logger;
       const controller = createGracefulShutdownController({
         isLambdaEnvironment: true,
@@ -910,6 +921,7 @@ describe("GracefulShutdownMiddleware", () => {
         warn: vi.fn(),
         error: vi.fn(),
         child: vi.fn(),
+        fatal: vi.fn(),
       } as unknown as Logger;
       const controller = createGracefulShutdownController({
         isLambdaEnvironment: true,

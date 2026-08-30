@@ -85,6 +85,8 @@ describe("RateLimitMiddleware", () => {
       warn: () => {},
       error: () => {},
       debug: () => {},
+      fatal: vi.fn(),
+      child: () => logger,
     } as unknown as Logger;
     Container.set(Logger, logger);
     Container.set(ErrorHandler, new ErrorHandler(logger));

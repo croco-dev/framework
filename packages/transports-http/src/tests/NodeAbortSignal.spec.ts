@@ -48,6 +48,8 @@ describe("Node request abort signal", () => {
       warn: () => undefined,
       error: () => undefined,
       debug: () => undefined,
+      fatal: () => {},
+      child: () => logger,
     } as unknown as Logger;
     Container.set(Logger, logger);
     Container.set(ErrorHandler, new ErrorHandler(logger));

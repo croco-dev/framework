@@ -86,6 +86,8 @@ describe("Operational endpoints", () => {
       warn: () => {},
       error: () => {},
       debug: () => {},
+      fatal: vi.fn(),
+      child: () => logger,
     } as unknown as Logger;
 
     Container.set(Logger, logger);
@@ -429,6 +431,8 @@ describe("Operational endpoints", () => {
       }),
       error: vi.fn(),
       debug: vi.fn(),
+      fatal: vi.fn(),
+      child: () => logger,
     } as unknown as Logger;
     const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     Container.set(Logger, logger);

@@ -235,6 +235,22 @@ describe("Logger", () => {
       );
     });
 
+    it("child()로 생성된 로거가 fatal Error를 같은 직렬화 경로로 전달해야 함", () => {
+      // biome-ignore lint/complexity/useLiteralKeys: private property access for testing
+      const fatalSpy = vi.spyOn(logger["logger"], "fatal");
+      const childLogger = logger.child({ service: "bootstrap" });
+      const error = new Error("startup failed");
+
+      childLogger.fatal("치명적 오류", error);
+
+      expect(fatalSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          err: error,
+        }),
+        "치명적 오류",
+      );
+    });
+
     it("child()를 여러 번 호출하여 체이닝할 수 있어야 함", () => {
       // biome-ignore lint/complexity/useLiteralKeys: private property access for testing
       const childSpy = vi.spyOn(logger["logger"], "child");

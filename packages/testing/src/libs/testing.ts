@@ -207,6 +207,8 @@ class SilentTestLogger implements TestLogger {
 
   error(): void {}
 
+  fatal(): void {}
+
   child(): TestLogger {
     return this;
   }

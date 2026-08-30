@@ -98,8 +98,13 @@ timeout은 유한한 양수여야 하며, 잘못된 값은 manager 상태가 변
 - `MetadataStorage`: 데코레이터 메타데이터 저장과 조회
 - `MiddlewareChain`: onion 패턴 미들웨어 실행
 - `ShutdownManager`, `OnShutdown`: graceful shutdown 훅 수집과 실행
-- `LOGGER_TOKEN`, `TRANSACTION_CONTEXT_TOKEN`: 공용 DI 토큰
+- `LOGGER_TOKEN`, `TRANSACTION_CONTEXT_TOKEN`: 공용 DI 토큰. `LOGGER_TOKEN`으로 조회한 `ILogger`는 `debug`,
+  `info`, `warn`, `error`, `fatal`, `child`를 동일하게 제공한다.
 - `CircularDependencyProblem`, `MiddlewareProblem`, `RuntimeInspectorConfigurationProblem`, `InvalidShutdownTimeoutProblem`, `ShutdownConfigurationConflictProblem`, `ShutdownHookRegistrationClosedProblem`, `ShutdownTimeoutProblem`: 기반 계층 Problem 타입
+
+복구 가능한 요청·작업 실패는 `error`로 기록하고, 프로세스를 계속 안전하게 실행할 수 없는 시작 실패나 치명적
+불변식 위반은 `fatal`로 기록하세요. `fatal`은 종료를 자동으로 시작하지 않으며, `error`와 동일하게 구조화된
+컨텍스트 또는 `Error`를 받습니다. `child()`가 반환한 로거도 같은 계약을 유지합니다.
 
 ## 의존성 그래프 sourceLocation 진단
 

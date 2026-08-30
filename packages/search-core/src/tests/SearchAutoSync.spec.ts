@@ -61,6 +61,7 @@ describe("SearchAutoSync", () => {
       info: vi.fn(),
       warn: vi.fn(),
       error: vi.fn(),
+      fatal: vi.fn(),
       child: vi.fn(),
     } as unknown as LoggerMock;
     logger.child.mockReturnValue(logger);
