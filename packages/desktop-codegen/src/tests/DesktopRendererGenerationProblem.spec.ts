@@ -1,5 +1,3 @@
-import path from "node:path";
-
 import { Problem, ProblemCategory, defineProblemRegistry } from "@croco/problems-core";
 import { compileDesktopContractGraph, desktop } from "@croco/protocols-desktop";
 import ts from "typescript";
@@ -7,6 +5,8 @@ import { assert, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { DesktopRendererGenerationProblem, generateDesktopRendererClients } from "../index";
+
+import { expectTypeScriptSourcesToCompile } from "./compileTypeScriptSources";
 
 type RuntimeClient = {
   readonly project: {
@@ -85,6 +85,40 @@ describe("generateDesktopRendererClients", () => {
     expect(source).not.toContain("channel");
     expect(source).not.toContain("timeoutMs");
     expect(source).not.toContain("ipcRenderer");
+  });
+
+  it("aborts immediately when the signal is already aborted", async () => {
+    const source = requireClientSource(createGraph(false), "main");
+    const abort = vi.fn();
+    let unregister: (() => void) | undefined;
+    const readFile = vi.fn(
+      async (_input: unknown, registerAbort?: (abort: () => void) => () => void) => {
+        unregister = registerAbort?.(abort);
+        return {
+          ok: true,
+          value: { contents: "Croco" },
+        };
+      },
+    );
+    const runtime = executeGeneratedSource(source, {
+      commands: {
+        project: { openGranted: vi.fn(), readFile },
+        system: { status: vi.fn() },
+      },
+      events: {
+        project: { fileChanged: vi.fn() },
+        system: { ready: vi.fn() },
+      },
+    });
+    const controller = new AbortController();
+    controller.abort();
+
+    await runtime.project.readFile({ path: "README.md" }, { signal: controller.signal });
+
+    expect(abort).toHaveBeenCalledOnce();
+    expect(unregister).toEqual(expect.any(Function));
+    expect(() => unregister?.()).not.toThrow();
+    expect(abort).toHaveBeenCalledOnce();
   });
 
   it("delivers payload-only event callbacks and returns the bridge unsubscriber", () => {
@@ -1005,76 +1039,4 @@ function executeGeneratedSource(source: string, bridge: unknown): RuntimeClient 
   } finally {
     Reflect.deleteProperty(globalThis, "crocoDesktop");
   }
-}
-
-function expectTypeScriptSourcesToCompile(
-  sources: ReadonlyMap<string, string>,
-  rootFileNames: readonly string[],
-): void {
-  const protocolsDesktopModule = "/virtual/protocols-desktop.d.ts";
-  const virtualSources = new Map(sources).set(
-    protocolsDesktopModule,
-    `
-export type DesktopResult<TResult, TProblem = never> =
-  | { readonly ok: true; readonly value: TResult }
-  | { readonly ok: false; readonly problem: TProblem };
-declare const DESKTOP_GRANT_REFERENCE: unique symbol;
-export type DesktopGrantReference<
-  TResource extends 'file' | 'directory',
-  TAccess extends 'read' | 'write',
-  TScope extends TResource extends 'file' ? 'exact' : 'exact' | 'descendant',
-  TLifetime extends 'command' | 'window' | 'session',
-> = string & {
-  readonly [DESKTOP_GRANT_REFERENCE]: {
-    readonly resource: TResource;
-    readonly access: TAccess;
-    readonly scope: TScope;
-    readonly lifetime: TLifetime;
-  };
-};
-`,
-  );
-  const compilerOptions: ts.CompilerOptions = {
-    lib: ["lib.es2022.d.ts", "lib.dom.d.ts"],
-    module: ts.ModuleKind.ESNext,
-    moduleResolution: ts.ModuleResolutionKind.Bundler,
-    noEmit: true,
-    noUnusedLocals: true,
-    noUnusedParameters: true,
-    skipLibCheck: true,
-    strict: true,
-    target: ts.ScriptTarget.ES2022,
-    types: [],
-  };
-  const host = ts.createCompilerHost(compilerOptions);
-  const getSource = (name: string): string | undefined =>
-    virtualSources.get(name) ?? ts.sys.readFile(name);
-
-  host.getSourceFile = (name, languageVersion) => {
-    const source = getSource(name);
-    return source === undefined
-      ? undefined
-      : ts.createSourceFile(name, source, languageVersion, true);
-  };
-  host.fileExists = (name) => virtualSources.has(name) || ts.sys.fileExists(name);
-  host.readFile = getSource;
-  host.directoryExists = (name) => name === "/virtual" || ts.sys.directoryExists(name);
-  host.resolveModuleNames = (moduleNames, containingFile) =>
-    moduleNames.map((moduleName) => {
-      if (moduleName === "@croco/protocols-desktop") {
-        return { resolvedFileName: protocolsDesktopModule, extension: ts.Extension.Dts };
-      }
-      const virtualCandidate = path.resolve(path.dirname(containingFile), `${moduleName}.ts`);
-      if (virtualSources.has(virtualCandidate)) {
-        return { resolvedFileName: virtualCandidate, extension: ts.Extension.Ts };
-      }
-      return ts.resolveModuleName(moduleName, containingFile, compilerOptions, host).resolvedModule;
-    });
-
-  const program = ts.createProgram([...rootFileNames], compilerOptions, host);
-  const diagnostics = ts
-    .getPreEmitDiagnostics(program)
-    .map((diagnostic) => ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"));
-
-  expect(diagnostics).toEqual([]);
 }

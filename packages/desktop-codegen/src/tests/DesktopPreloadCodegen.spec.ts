@@ -1,5 +1,3 @@
-import path from "node:path";
-
 import { compileDesktopContractGraph, desktop } from "@croco/protocols-desktop";
 import ts from "typescript";
 import { assert, describe, expect, it, vi } from "vitest";
@@ -15,6 +13,8 @@ import type {
   DesktopPreloadContextBridge,
   DesktopPreloadTransport,
 } from "../index";
+
+import { expectTypeScriptSourcesToCompile } from "./compileTypeScriptSources";
 
 type GeneratedBridge = {
   readonly commands: Readonly<
@@ -69,7 +69,7 @@ describe("generateDesktopPreloadBridges", () => {
       requireBridgeSource(eventOnlyGraph, "settings"),
     );
 
-    expectGeneratedSourcesToCompile(sources);
+    expectTypeScriptSourcesToCompile(sources);
   });
 
   it("never generates an artifact for a forged remote profile with capabilities", () => {
@@ -497,63 +497,4 @@ function copyContextBridgeValue(value: unknown): unknown {
     );
   }
   return value;
-}
-
-function expectGeneratedSourcesToCompile(sources: ReadonlyMap<string, string>): void {
-  const desktopCodegenModule = "/virtual/desktop-codegen.d.ts";
-  const virtualSources = new Map(sources).set(
-    desktopCodegenModule,
-    `
-export type DesktopPreloadContextBridge = {
-  exposeInMainWorld(name: 'crocoDesktop', api: Readonly<Record<string, unknown>>): void;
-};
-export type DesktopPreloadTransport = {
-  invoke(commandId: string, input: unknown, options: { readonly signal?: AbortSignal }): Promise<unknown>;
-  subscribe(eventId: string, callback: (payload: unknown) => void): () => void;
-};
-`,
-  );
-  const compilerOptions: ts.CompilerOptions = {
-    lib: ["lib.es2022.d.ts", "lib.dom.d.ts"],
-    module: ts.ModuleKind.ESNext,
-    moduleResolution: ts.ModuleResolutionKind.Bundler,
-    noEmit: true,
-    noUnusedLocals: true,
-    noUnusedParameters: true,
-    skipLibCheck: true,
-    strict: true,
-    target: ts.ScriptTarget.ES2022,
-    types: [],
-  };
-  const host = ts.createCompilerHost(compilerOptions);
-  const getSource = (name: string): string | undefined =>
-    virtualSources.get(name) ?? ts.sys.readFile(name);
-
-  host.getSourceFile = (name, languageVersion) => {
-    const source = getSource(name);
-    return source === undefined
-      ? undefined
-      : ts.createSourceFile(name, source, languageVersion, true);
-  };
-  host.fileExists = (name) => virtualSources.has(name) || ts.sys.fileExists(name);
-  host.readFile = getSource;
-  host.directoryExists = (name) => name === "/virtual" || ts.sys.directoryExists(name);
-  host.resolveModuleNames = (moduleNames, containingFile) =>
-    moduleNames.map((moduleName) => {
-      if (moduleName === "@croco/desktop-codegen") {
-        return { resolvedFileName: desktopCodegenModule, extension: ts.Extension.Dts };
-      }
-      const virtualCandidate = path.resolve(path.dirname(containingFile), `${moduleName}.ts`);
-      if (virtualSources.has(virtualCandidate)) {
-        return { resolvedFileName: virtualCandidate, extension: ts.Extension.Ts };
-      }
-      return ts.resolveModuleName(moduleName, containingFile, compilerOptions, host).resolvedModule;
-    });
-
-  const program = ts.createProgram([...sources.keys()], compilerOptions, host);
-  const diagnostics = ts
-    .getPreEmitDiagnostics(program)
-    .map((diagnostic) => ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"));
-
-  expect(diagnostics).toEqual([]);
 }
