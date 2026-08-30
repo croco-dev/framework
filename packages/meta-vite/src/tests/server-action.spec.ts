@@ -290,6 +290,59 @@ describe("Server Actions", () => {
     expect(body.received.name).toBe("Alice");
     expect(body.received.age).toBe(30);
   });
+
+  it("preserves repeated FormData values as an array during validation", async () => {
+    const schema = z.object({ name: z.string(), tags: z.array(z.string()) });
+
+    createServerAction({
+      name: "tagged-form-submit",
+      schema,
+      handler: async (data) => Response.json({ received: data }),
+    });
+
+    const formData = new FormData();
+    formData.append("name", "Alice");
+    formData.append("tags", "a");
+    formData.append("tags", "b");
+    formData.append("tags", "c");
+
+    const response = await dispatchServerAction("tagged-form-submit", formData);
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      received: { name: "Alice", tags: ["a", "b", "c"] },
+    });
+  });
+
+  it("preserves repeated FormData values for reserved object keys", async () => {
+    const schema = z.preprocess(
+      (input) => {
+        if (typeof input !== "object" || input === null) {
+          return input;
+        }
+
+        return { values: Object.getOwnPropertyDescriptor(input, "__proto__")?.value };
+      },
+      z.object({ values: z.array(z.string()) }),
+    );
+
+    createServerAction({
+      name: "reserved-key-form-submit",
+      schema,
+      handler: async (data) => Response.json({ received: data }),
+    });
+
+    const formData = new FormData();
+    formData.append("__proto__", "first");
+    formData.append("__proto__", "second");
+
+    const response = await dispatchServerAction("reserved-key-form-submit", formData);
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      received: { values: ["first", "second"] },
+    });
+  });
 });
 
 describe("Server Action HTTP Integration", () => {
