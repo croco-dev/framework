@@ -729,6 +729,174 @@ describe("PolarBillingGateway", () => {
       expect(mockCreateCheckout).toHaveBeenCalledTimes(1);
     });
 
+    it("should stop tracked reconciliation after the configured recovery window expires", async () => {
+      const now = vi.spyOn(Date, "now").mockReturnValue(1_000);
+      const gateway = createGateway({
+        ...baseConfig,
+        checkoutRecovery: { ttlMs: 10, capacity: 2 },
+      });
+      const params = {
+        billingAccountId: "account-1",
+        email: "test@example.com",
+        productId: "prod-1",
+        successUrl: "https://example.com/success",
+        idempotencyKey: "checkout-expiring",
+      };
+
+      mockGetExternal.mockResolvedValue({ id: "cust-existing" });
+      mockListCheckouts.mockResolvedValue(createCheckoutPages([]));
+      mockCreateCheckout.mockRejectedValue(
+        Object.assign(new Error("connection closed after acceptance"), {
+          name: "ConnectionError",
+        }),
+      );
+
+      await expect(gateway.createCheckout(params)).rejects.toThrow(
+        BillingCheckoutInProgressProblem,
+      );
+      expect(mockCreateCheckout).toHaveBeenCalledTimes(1);
+      expect(mockListCheckouts).toHaveBeenCalledTimes(4);
+
+      now.mockReturnValue(1_010);
+      await expect(gateway.createCheckout(params)).rejects.toThrow(
+        BillingCheckoutInProgressProblem,
+      );
+
+      expect(mockCreateCheckout).toHaveBeenCalledTimes(2);
+      expect(mockListCheckouts).toHaveBeenCalledTimes(8);
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        "Ambiguous checkout reconciliation tracking expired without completion evidence",
+        {
+          event: "billing-polar.ambiguous-checkout.expired",
+          reason: "expired",
+          operationKey: sha256("checkout-expiring"),
+          insertedAt: 1_000,
+          lastAttemptAt: 1_000,
+          ttlMs: 10,
+        },
+      );
+
+      now.mockRestore();
+    });
+
+    it("should reconcile and remove a tracked checkout during the recovery window", async () => {
+      const gateway = createGateway({
+        ...baseConfig,
+        checkoutRecovery: { ttlMs: 60_000, capacity: 2 },
+      });
+      const operationKey = sha256("checkout-recovery-window");
+      const params = {
+        billingAccountId: "account-1",
+        email: "test@example.com",
+        productId: "prod-1",
+        successUrl: "https://example.com/success",
+        idempotencyKey: "checkout-recovery-window",
+      };
+      const existingCheckout = {
+        id: "checkout-recovered",
+        url: "https://checkout.polar.sh/checkout-recovered",
+        metadata: {
+          croco_checkout_operation: operationKey,
+          croco_checkout_fingerprint: sha256(
+            '{"billingAccountId":"account-1","cancelUrl":null,"email":"test@example.com","productId":"prod-1","successUrl":"https://example.com/success"}',
+          ),
+        },
+      };
+
+      mockGetExternal.mockResolvedValue({ id: "cust-existing" });
+      let checkoutVisible = false;
+      mockListCheckouts.mockImplementation(() =>
+        createCheckoutPages(checkoutVisible ? [existingCheckout] : []),
+      );
+      mockCreateCheckout.mockRejectedValueOnce(
+        Object.assign(new Error("connection closed after acceptance"), {
+          name: "ConnectionError",
+        }),
+      );
+
+      await expect(gateway.createCheckout(params)).rejects.toThrow(
+        BillingCheckoutInProgressProblem,
+      );
+      checkoutVisible = true;
+      await expect(gateway.createCheckout(params)).resolves.toEqual({
+        checkoutId: "checkout-recovered",
+        checkoutUrl: "https://checkout.polar.sh/checkout-recovered",
+      });
+      expect(mockCreateCheckout).toHaveBeenCalledTimes(1);
+
+      checkoutVisible = false;
+      mockCreateCheckout.mockResolvedValueOnce({
+        id: "checkout-after-cleanup",
+        url: "https://checkout.polar.sh/checkout-after-cleanup",
+      });
+      await expect(gateway.createCheckout(params)).resolves.toEqual({
+        checkoutId: "checkout-after-cleanup",
+        checkoutUrl: "https://checkout.polar.sh/checkout-after-cleanup",
+      });
+      expect(mockCreateCheckout).toHaveBeenCalledTimes(2);
+    });
+
+    it("should evict the least recently attempted ambiguous checkout at capacity", async () => {
+      const now = vi.spyOn(Date, "now").mockReturnValue(1_000);
+      const gateway = createGateway({
+        ...baseConfig,
+        checkoutRecovery: { ttlMs: 60_000, capacity: 2 },
+      });
+      const checkoutParams = (idempotencyKey: string) => ({
+        billingAccountId: "account-1",
+        email: "test@example.com",
+        productId: "prod-1",
+        successUrl: "https://example.com/success",
+        idempotencyKey,
+      });
+
+      mockGetExternal.mockResolvedValue({ id: "cust-existing" });
+      mockListCheckouts.mockResolvedValue(createCheckoutPages([]));
+      mockCreateCheckout.mockRejectedValue(
+        Object.assign(new Error("connection closed after acceptance"), {
+          name: "ConnectionError",
+        }),
+      );
+
+      await expect(gateway.createCheckout(checkoutParams("checkout-oldest"))).rejects.toThrow(
+        BillingCheckoutInProgressProblem,
+      );
+      now.mockReturnValue(2_000);
+      await expect(gateway.createCheckout(checkoutParams("checkout-evicted"))).rejects.toThrow(
+        BillingCheckoutInProgressProblem,
+      );
+      now.mockReturnValue(3_000);
+      await expect(gateway.createCheckout(checkoutParams("checkout-oldest"))).rejects.toThrow(
+        BillingCheckoutInProgressProblem,
+      );
+      expect(mockCreateCheckout).toHaveBeenCalledTimes(2);
+
+      now.mockReturnValue(4_000);
+      await expect(gateway.createCheckout(checkoutParams("checkout-newest"))).rejects.toThrow(
+        BillingCheckoutInProgressProblem,
+      );
+
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        "Ambiguous checkout reconciliation tracking evicted without completion evidence",
+        {
+          event: "billing-polar.ambiguous-checkout.evicted",
+          reason: "capacity",
+          operationKey: sha256("checkout-evicted"),
+          insertedAt: 2_000,
+          lastAttemptAt: 2_000,
+          capacity: 2,
+        },
+      );
+
+      now.mockReturnValue(5_000);
+      await expect(gateway.createCheckout(checkoutParams("checkout-evicted"))).rejects.toThrow(
+        BillingCheckoutInProgressProblem,
+      );
+      expect(mockCreateCheckout).toHaveBeenCalledTimes(4);
+
+      now.mockRestore();
+    });
+
     it("should replay a checkout found by its provider operation metadata", async () => {
       const gateway = createGateway();
       const operationKey = sha256("checkout-replay");
@@ -962,6 +1130,50 @@ describe("PolarBillingGateway", () => {
           webhookSecret: "",
         }),
       ).toThrow(PolarMissingConfigProblem);
+    });
+
+    it.each([
+      ["TTL", { ttlMs: 0 }, "invalid-checkout-recovery-ttl"],
+      ["TTL", { ttlMs: Number.POSITIVE_INFINITY }, "invalid-checkout-recovery-ttl"],
+      ["TTL", { ttlMs: 1.5 }, "invalid-checkout-recovery-ttl"],
+      ["capacity", { capacity: 0 }, "invalid-checkout-recovery-capacity"],
+      ["capacity", { capacity: -1 }, "invalid-checkout-recovery-capacity"],
+      ["capacity", { capacity: 1.5 }, "invalid-checkout-recovery-capacity"],
+    ])(
+      "should reject an invalid checkout recovery %s",
+      (_label, checkoutRecovery, upstreamCode) => {
+        expect(() =>
+          createGateway({
+            ...baseConfig,
+            checkoutRecovery,
+          }),
+        ).toThrow(PolarValidationProblem);
+        expect(() =>
+          createGateway({
+            ...baseConfig,
+            checkoutRecovery,
+          }),
+        ).toThrow(
+          expect.objectContaining({
+            extensions: expect.objectContaining({ upstreamCode }),
+          }),
+        );
+      },
+    );
+
+    it("should reject a non-object checkout recovery policy", () => {
+      expect(() =>
+        createGateway({
+          ...baseConfig,
+          checkoutRecovery: null as unknown as PolarConfig["checkoutRecovery"],
+        }),
+      ).toThrow(
+        expect.objectContaining({
+          extensions: expect.objectContaining({
+            upstreamCode: "invalid-checkout-recovery-policy",
+          }),
+        }),
+      );
     });
   });
 });

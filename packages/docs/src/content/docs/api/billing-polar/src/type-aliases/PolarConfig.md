@@ -34,6 +34,12 @@ const result: WebhookHandlerResult = {
 
 ---
 
+### checkoutRecovery?
+
+> `optional` **checkoutRecovery?**: [`PolarCheckoutRecoveryPolicy`](/api/billing-polar/src/type-aliases/polarcheckoutrecoverypolicy/)
+
+---
+
 ### environment
 
 > **environment**: `"sandbox"` \| `"production"`

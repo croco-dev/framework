@@ -5822,6 +5822,11 @@
               "source": "./libs/problems/PolarBillingProblems"
             },
             {
+              "name": "PolarCheckoutRecoveryPolicy",
+              "exportKind": "named",
+              "source": "./types"
+            },
+            {
               "name": "PolarConfig",
               "exportKind": "named",
               "source": "./types"

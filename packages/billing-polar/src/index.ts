@@ -159,4 +159,4 @@ export { WebhookValidationProblem } from "./libs/problems/WebhookValidationProbl
  * };
  * ```
  */
-export type { PolarConfig, WebhookHandlerResult } from "./types";
+export type { PolarCheckoutRecoveryPolicy, PolarConfig, WebhookHandlerResult } from "./types";

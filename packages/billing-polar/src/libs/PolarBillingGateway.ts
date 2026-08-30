@@ -34,6 +34,13 @@ const CHECKOUT_OPERATION_KEY_METADATA = "croco_checkout_operation";
 const CHECKOUT_FINGERPRINT_METADATA = "croco_checkout_fingerprint";
 const CHECKOUT_RECONCILIATION_ATTEMPTS = 3;
 const CHECKOUT_RECONCILIATION_DELAY_MS = 25;
+const DEFAULT_CHECKOUT_RECOVERY_TTL_MS = 5 * 60 * 1_000;
+const DEFAULT_CHECKOUT_RECOVERY_CAPACITY = 1_000;
+
+type AmbiguousCheckoutOperation = {
+  readonly insertedAt: number;
+  lastAttemptAt: number;
+};
 
 type PolarLookupError = Error & {
   error?: string;
@@ -43,7 +50,9 @@ type PolarLookupError = Error & {
 export class PolarBillingGateway implements BillingGateway {
   private readonly client: Polar;
   private readonly organizationId?: string;
-  private readonly ambiguousCheckoutOperations = new Set<string>();
+  private readonly checkoutRecoveryTtlMs: number;
+  private readonly checkoutRecoveryCapacity: number;
+  private readonly ambiguousCheckoutOperations = new Map<string, AmbiguousCheckoutOperation>();
 
   constructor(
     config: PolarConfig,
@@ -56,6 +65,10 @@ export class PolarBillingGateway implements BillingGateway {
       server: validConfig.environment,
     });
     this.organizationId = validConfig.organizationId;
+    this.checkoutRecoveryTtlMs =
+      validConfig.checkoutRecovery?.ttlMs ?? DEFAULT_CHECKOUT_RECOVERY_TTL_MS;
+    this.checkoutRecoveryCapacity =
+      validConfig.checkoutRecovery?.capacity ?? DEFAULT_CHECKOUT_RECOVERY_CAPACITY;
   }
 
   async ensureCustomer(billingAccountId: string, email: string): Promise<string> {
@@ -111,8 +124,13 @@ export class PolarBillingGateway implements BillingGateway {
     const customerId = await this.ensureCustomer(params.billingAccountId, params.email);
     const operationKey = hashCheckoutValue(params.idempotencyKey);
     const fingerprint = checkoutFingerprint(params);
+    const now = Date.now();
 
-    if (this.ambiguousCheckoutOperations.has(operationKey)) {
+    this.purgeExpiredAmbiguousCheckoutOperations(now);
+
+    const ambiguousOperation = this.ambiguousCheckoutOperations.get(operationKey);
+    if (ambiguousOperation) {
+      ambiguousOperation.lastAttemptAt = now;
       const reconciled = await this.reconcileCheckoutForCustomer(
         customerId,
         operationKey,
@@ -155,7 +173,7 @@ export class PolarBillingGateway implements BillingGateway {
 
       const normalized = normalizePolarBillingError(error, "createCheckout");
       if (normalized instanceof PolarRetryableUpstreamProblem) {
-        this.ambiguousCheckoutOperations.add(operationKey);
+        this.trackAmbiguousCheckoutOperation(operationKey, Date.now());
         throw new BillingCheckoutInProgressProblem(params.billingAccountId);
       }
       throw normalized;
@@ -200,6 +218,75 @@ export class PolarBillingGateway implements BillingGateway {
     }
 
     return null;
+  }
+
+  private trackAmbiguousCheckoutOperation(operationKey: string, now: number): void {
+    this.purgeExpiredAmbiguousCheckoutOperations(now);
+
+    const existing = this.ambiguousCheckoutOperations.get(operationKey);
+    if (existing) {
+      existing.lastAttemptAt = now;
+      return;
+    }
+
+    if (this.ambiguousCheckoutOperations.size >= this.checkoutRecoveryCapacity) {
+      const eviction = this.findLeastRecentlyAttemptedOperation();
+      if (eviction) {
+        const [evictedOperationKey, evictedOperation] = eviction;
+        this.ambiguousCheckoutOperations.delete(evictedOperationKey);
+        this.logger.warn(
+          "Ambiguous checkout reconciliation tracking evicted without completion evidence",
+          {
+            event: "billing-polar.ambiguous-checkout.evicted",
+            reason: "capacity",
+            operationKey: evictedOperationKey,
+            insertedAt: evictedOperation.insertedAt,
+            lastAttemptAt: evictedOperation.lastAttemptAt,
+            capacity: this.checkoutRecoveryCapacity,
+          },
+        );
+      }
+    }
+
+    this.ambiguousCheckoutOperations.set(operationKey, {
+      insertedAt: now,
+      lastAttemptAt: now,
+    });
+  }
+
+  private purgeExpiredAmbiguousCheckoutOperations(now: number): void {
+    for (const [operationKey, operation] of this.ambiguousCheckoutOperations) {
+      if (now - operation.insertedAt < this.checkoutRecoveryTtlMs) {
+        continue;
+      }
+
+      this.ambiguousCheckoutOperations.delete(operationKey);
+      this.logger.warn(
+        "Ambiguous checkout reconciliation tracking expired without completion evidence",
+        {
+          event: "billing-polar.ambiguous-checkout.expired",
+          reason: "expired",
+          operationKey,
+          insertedAt: operation.insertedAt,
+          lastAttemptAt: operation.lastAttemptAt,
+          ttlMs: this.checkoutRecoveryTtlMs,
+        },
+      );
+    }
+  }
+
+  private findLeastRecentlyAttemptedOperation():
+    | readonly [string, AmbiguousCheckoutOperation]
+    | undefined {
+    let oldest: readonly [string, AmbiguousCheckoutOperation] | undefined;
+
+    for (const entry of this.ambiguousCheckoutOperations) {
+      if (!oldest || compareAmbiguousCheckoutOperations(entry, oldest) < 0) {
+        oldest = entry;
+      }
+    }
+
+    return oldest;
   }
 
   private async findCheckoutByOperation(
@@ -373,4 +460,15 @@ async function delay(milliseconds: number): Promise<void> {
   await new Promise<void>((resolve) => {
     setTimeout(resolve, milliseconds);
   });
+}
+
+function compareAmbiguousCheckoutOperations(
+  [operationKey, operation]: readonly [string, AmbiguousCheckoutOperation],
+  [currentOperationKey, currentOperation]: readonly [string, AmbiguousCheckoutOperation],
+): number {
+  return (
+    operation.lastAttemptAt - currentOperation.lastAttemptAt ||
+    operation.insertedAt - currentOperation.insertedAt ||
+    operationKey.localeCompare(currentOperationKey)
+  );
 }
