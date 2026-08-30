@@ -40,6 +40,7 @@ import {
   writeGeneratedNodeRuntimeContract,
 } from "./node-runtime.js";
 import { isSaasPreset, validateResolvedOptions } from "./options.js";
+import { getGeneratedAppDependencyRange } from "./package-version.js";
 import {
   assertSaasProviderTenantModelCompatibility,
   assertSaasProviderProfileCapabilities,
@@ -143,7 +144,10 @@ async function generateProject(
   }
 
   if (options.preset !== "blank") {
-    mergeInto(join(TEMPLATES_DIR, "base-ddd"), targetDir, vars);
+    mergeInto(join(TEMPLATES_DIR, "base-ddd"), targetDir, {
+      ...vars,
+      drizzleOrmRange: getGeneratedAppDependencyRange("drizzle-orm"),
+    });
   }
 
   // 이하 단계들은 blank preset에서는 스킵

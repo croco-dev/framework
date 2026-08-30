@@ -10,6 +10,7 @@ import { mergeInto, replaceGithubExpressions } from "../helpers/fs.js";
 import { InvalidCliOptionProblem } from "../libs/problems/InvalidCliOptionProblem.js";
 import { InvalidGoalOptionProblem } from "../libs/problems/InvalidGoalOptionProblem.js";
 import { normalizeNonInteractiveOptions, parseCliOptions } from "../options.js";
+import { getGeneratedAppDependencyRange } from "../package-version.js";
 import type { GeneratorOptions, NormalizedGeneratorOptions } from "../types.js";
 
 const DEPENDENCY_FIELDS = [
@@ -869,6 +870,9 @@ describe("E2E: generate()", () => {
       "utf8",
     );
     const packageJson = readPackageJson(join(testDir, "apps", "graphql-api", "package.json"));
+    const databasePackageJson = readPackageJson(
+      join(testDir, "libs", "shared", "provider-database", "package.json"),
+    );
 
     expect(handlerContent).toContain('from "@croco/telemetry-sdk-node";');
     expect(handlerContent).toContain('from "@apollo/server";');
@@ -912,6 +916,9 @@ describe("E2E: generate()", () => {
       externalCrocoRange("@croco/telemetry-sdk-node"),
     );
     expect(packageJson.dependencies?.["@test/provider-database"]).toBe("workspace:*");
+    expect(databasePackageJson.dependencies?.["drizzle-orm"]).toBe(
+      getGeneratedAppDependencyRange("drizzle-orm"),
+    );
     expect(packageJson.scripts?.["contract:check"]).toBe("tsx src/graphql-contract.ts --check");
     expect(packageJson.scripts?.["contract:snapshot"]).toBe("tsx src/graphql-contract.ts --write");
     expect(packageJson.scripts?.build).toBe(
@@ -2659,6 +2666,7 @@ describe("E2E: generate()", () => {
         "@croco/billing-polar": externalCrocoRange("@croco/billing-polar"),
         "@croco/llm-core": externalCrocoRange("@croco/llm-core"),
         "@croco/llm-metering": externalCrocoRange("@croco/llm-metering"),
+        "drizzle-orm": getGeneratedAppDependencyRange("drizzle-orm"),
         "@croco/framework-context": externalCrocoRange("@croco/framework-context"),
         "@croco/lifecycle-core": externalCrocoRange("@croco/lifecycle-core"),
         "@croco/metering-core": externalCrocoRange("@croco/metering-core"),

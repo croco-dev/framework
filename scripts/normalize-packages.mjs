@@ -15,6 +15,7 @@ import { builtinModules } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
+import { parse as parseYaml } from "yaml";
 import {
   formatInternalPeerDependencyRangeException,
   INTERNAL_CROCO_PACKAGE_PREFIX,
@@ -47,6 +48,8 @@ const DIST_INDEX_TYPES = "./dist/index.d.ts";
 const SRC_INDEX = "./src/index.ts";
 const REPOSITORY_URL = "git+https://github.com/croco-dev/framework.git";
 const DRIZZLE_ORM_PACKAGE = "drizzle-orm";
+const CREATE_CROCO_APP_PACKAGE = "create-croco-app";
+const GENERATED_APP_DEPENDENCIES_FIELD = "crocoGeneratedAppDependencies";
 const DRIZZLE_PACKAGE_SUFFIX = "-drizzle";
 const REFLECT_METADATA_PACKAGE = "reflect-metadata";
 const REFLECT_METADATA_IMPORT_RE =
@@ -296,8 +299,31 @@ function normalizePackage(pkg, pkgPath, rootDir, options = {}) {
   }
 
   normalizePackageScripts(normalized);
+  normalizeGeneratedAppDependencyMetadata(normalized, rootDir);
 
   return normalized;
+}
+
+function normalizeGeneratedAppDependencyMetadata(pkg, rootDir) {
+  if (pkg.name !== CREATE_CROCO_APP_PACKAGE) {
+    return;
+  }
+
+  pkg[GENERATED_APP_DEPENDENCIES_FIELD] = {
+    [DRIZZLE_ORM_PACKAGE]: readWorkspaceCatalogRange(rootDir, DRIZZLE_ORM_PACKAGE),
+  };
+}
+
+function readWorkspaceCatalogRange(rootDir, packageName) {
+  const workspacePath = path.join(rootDir, "pnpm-workspace.yaml");
+  const workspace = parseYaml(fs.readFileSync(workspacePath, "utf-8"));
+  const range = workspace?.catalog?.[packageName];
+
+  if (typeof range !== "string" || range.length === 0) {
+    throw new Error(`${workspacePath}: catalog.${packageName} must be a nonempty dependency range`);
+  }
+
+  return range;
 }
 
 function normalizePackageScripts(pkg) {
