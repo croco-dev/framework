@@ -159,6 +159,13 @@ if (params.mode === "cursor") {
 }
 ```
 
+`parsePaginationParams`는 plain object와 `URLSearchParams`를 모두 받습니다. `cursor`, `offset`,
+`limit`, `direction` 같은 scalar parameter가 두 번 이상 전달되면 첫 값을 임의로 선택하지 않고
+`AmbiguousPaginationParameterProblem`으로 거부합니다.
+
+HTTP adapter에서 query를 plain object로 바꿀 때도 반복된 값을 보존해야 합니다. 첫 값만 남기는
+adapter API를 거치면 parser가 중복을 감지할 수 없으므로, 값 배열이나 `URLSearchParams`를 전달하세요.
+
 오프셋 모드:
 
 ```typescript
@@ -205,7 +212,7 @@ import { ConflictingPaginationProblem } from "@croco/pagination-core";
 const app = new Hono();
 
 app.get("/users", async (c) => {
-  const query = c.req.query();
+  const query = c.req.queries();
   const params = parsePaginationParams(query);
 
   const users = await db.users.findMany({
@@ -323,14 +330,16 @@ decodeCursor("eyJ2IjoxLCJpZCI6InVzcl8wMVhYWS4uLiJ9");
 - 소수는 내림합니다.
 - `limit`가 1보다 작거나 값이 비어 있거나 유효하지 않으면 20을 사용하고, 100보다 크면 100으로 제한합니다.
 - `offset`이 음수이거나 값이 비어 있거나 유효하지 않거나 안전한 정수 범위를 벗어나면 0을 사용합니다.
-- 숫자 query 값이 배열이면 값이 하나일 때만 숫자로 처리하고, 반복된 값은 유효하지 않은 값으로 처리합니다.
-- `parsePaginationParams`, `CursorParamsSchema`, `OffsetParamsSchema`, `PaginationParamsSchema`는 같은 정책으로
-  숫자 필드를 정규화합니다. 숫자 형식 오류는 별도로 거부하지 않습니다.
+- `parsePaginationParams`는 raw query의 scalar parameter를 먼저 검사합니다. 배열 값이 하나면 숫자로 처리하고,
+  반복된 값은 `AmbiguousPaginationParameterProblem`으로 거부합니다.
+- `CursorParamsSchema`, `OffsetParamsSchema`, `PaginationParamsSchema`는 중복 검사가 끝난 정규화 입력을 검증합니다.
+  숫자 형식 오류는 별도로 거부하지 않고 위 숫자 정규화 정책을 적용합니다.
 
 **에러:**
 
 - `cursor`와 `offset`을 동시에 사용하면 `ConflictingPaginationProblem`
 - `direction` 값이 유효하지 않거나 offset 모드에서 사용되면 `InvalidPaginationDirectionProblem`
+- scalar parameter가 두 번 이상 전달되면 `AmbiguousPaginationParameterProblem`
 
 ## Zod 스키마
 

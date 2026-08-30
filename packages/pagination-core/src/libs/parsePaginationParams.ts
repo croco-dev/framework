@@ -1,15 +1,23 @@
 import { normalizePaginationLimit, normalizePaginationOffset } from "./normalizePaginationNumber";
-import { ConflictingPaginationProblem, InvalidPaginationDirectionProblem } from "./problems";
+import {
+  AmbiguousPaginationParameterProblem,
+  ConflictingPaginationProblem,
+  InvalidPaginationDirectionProblem,
+} from "./problems";
 import { CursorParamsSchema } from "./schemas";
 import type { PaginationParams } from "./types";
 
-export function parsePaginationParams(
-  query: Record<string, string | string[] | undefined>,
-): PaginationParams {
-  const cursor = getStringValue(query.cursor);
-  const offsetValue = query.offset;
-  const limitValue = query.limit;
-  const direction = query.direction;
+export type PaginationQueryInput =
+  | Pick<URLSearchParams, "getAll">
+  | Readonly<Record<string, string | readonly string[] | undefined>>;
+
+type PaginationParameter = "cursor" | "direction" | "limit" | "offset";
+
+export function parsePaginationParams(query: PaginationQueryInput): PaginationParams {
+  const cursor = getScalarQueryValue(query, "cursor");
+  const offsetValue = getScalarQueryValue(query, "offset");
+  const limitValue = getScalarQueryValue(query, "limit");
+  const direction = getScalarQueryValue(query, "direction");
 
   if (cursor !== undefined && offsetValue !== undefined) {
     throw new ConflictingPaginationProblem();
@@ -49,8 +57,24 @@ export function parsePaginationParams(
   };
 }
 
-function getStringValue(value: string | string[] | undefined): string | undefined {
-  if (value === undefined) return undefined;
-  if (Array.isArray(value)) return value[0];
-  return value;
+function getScalarQueryValue(
+  query: PaginationQueryInput,
+  field: PaginationParameter,
+): string | undefined {
+  const values = isSearchParams(query) ? query.getAll(field) : normalizeRecordValue(query[field]);
+
+  if (values.length > 1) {
+    throw new AmbiguousPaginationParameterProblem(field, values.length);
+  }
+
+  return values[0];
+}
+
+function isSearchParams(query: PaginationQueryInput): query is Pick<URLSearchParams, "getAll"> {
+  return "getAll" in query && typeof query.getAll === "function";
+}
+
+function normalizeRecordValue(value: string | readonly string[] | undefined): readonly string[] {
+  if (value === undefined) return [];
+  return typeof value === "string" ? [value] : value;
 }
