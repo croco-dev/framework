@@ -1,11 +1,73 @@
 import type { DiagnosticsProvider, HealthStatus } from "@croco/diagnostics-core";
 import { TelemetryRuntime } from "../../runtime";
-import { resolveDeploymentEnvironment } from "../resources/DeploymentEnvironment";
+import {
+  createTelemetryConfigurationDiagnosticsSnapshot,
+  getTelemetryInitializationFailure,
+} from "./TelemetryInitializationState";
+import type { TelemetryConfigurationDiagnosticsSnapshot } from "./TelemetryInitializationState";
+
+export type TelemetryDiagnosticsRequirement = "optional" | "required";
+
+export type TelemetryDiagnosticsMode =
+  | "active"
+  | "disabled"
+  | "not_configured"
+  | "not_initialized"
+  | "sampling_disabled"
+  | "startup_failed";
+
+type TelemetryDiagnosticsDetailsBase = {
+  readonly requirement: TelemetryDiagnosticsRequirement;
+  readonly initialized: boolean;
+  readonly autoInstrumentationModules: readonly string[];
+};
+
+export type TelemetryNotConfiguredDiagnosticsDetails = TelemetryDiagnosticsDetailsBase & {
+  readonly configured: false;
+  readonly enabled: false;
+  readonly traceEnabled: false;
+  readonly signals: { readonly traces: "not_configured" };
+  readonly mode: "not_configured";
+};
+
+export type TelemetryConfiguredDiagnosticsDetails = TelemetryDiagnosticsDetailsBase &
+  TelemetryConfigurationDiagnosticsSnapshot & {
+    readonly configured: true;
+    readonly mode: "active" | "disabled" | "not_initialized" | "sampling_disabled";
+  };
+
+export type TelemetryStartupFailedDiagnosticsDetails = TelemetryDiagnosticsDetailsBase &
+  TelemetryConfigurationDiagnosticsSnapshot & {
+    readonly configured: true;
+    readonly initialized: false;
+    readonly mode: "startup_failed";
+    readonly failureCode: string;
+  };
+
+export type TelemetryDiagnosticsDetails =
+  | TelemetryNotConfiguredDiagnosticsDetails
+  | TelemetryConfiguredDiagnosticsDetails
+  | TelemetryStartupFailedDiagnosticsDetails;
+
+export type TelemetryDiagnosticsHealthStatus = Omit<HealthStatus, "component" | "details"> & {
+  readonly component: "telemetry";
+  readonly details: TelemetryDiagnosticsDetails;
+};
+
+export type TelemetryDiagnosticsProviderOptions = {
+  /** Whether missing configuration or failed startup makes this host unhealthy. Default: optional. */
+  readonly requirement?: TelemetryDiagnosticsRequirement;
+};
 
 export class TelemetryDiagnosticsProvider implements DiagnosticsProvider {
   readonly name = "telemetry";
+  private readonly requirement: TelemetryDiagnosticsRequirement;
 
-  async getHealth(): Promise<HealthStatus> {
+  constructor(options: TelemetryDiagnosticsProviderOptions = {}) {
+    this.requirement = options.requirement ?? "optional";
+  }
+
+  async getHealth(): Promise<TelemetryDiagnosticsHealthStatus> {
     const runtime = TelemetryRuntime.getInstance();
     const config = runtime.getConfig();
     const initialized = runtime.isInitialized();
@@ -16,68 +78,121 @@ export class TelemetryDiagnosticsProvider implements DiagnosticsProvider {
         status: "degraded",
         component: "telemetry",
         message: `Telemetry ${disabledTarget} disabled by configuration; SDK startup and export are skipped`,
-        details: createSafeTelemetryDetails(config, initialized, "disabled"),
-        lastChecked: new Date().toISOString(),
-      };
-    }
-
-    if (!initialized) {
-      return {
-        status: "unhealthy",
-        component: "telemetry",
-        message: "Telemetry runtime not initialized",
-        ...(config && {
-          details: createSafeTelemetryDetails(config, initialized, "not_initialized"),
-        }),
+        details: createConfiguredTelemetryDetails(
+          createTelemetryConfigurationDiagnosticsSnapshot(config),
+          initialized,
+          "disabled",
+          this.requirement,
+          runtime.getEnabledAutoInstrumentationModules(),
+        ),
         lastChecked: new Date().toISOString(),
       };
     }
 
     if (!config) {
+      const failure = getTelemetryInitializationFailure(runtime);
+      if (failure) {
+        return {
+          status: this.requirement === "required" ? "unhealthy" : "degraded",
+          component: "telemetry",
+          message: `${capitalize(this.requirement)} telemetry failed to initialize`,
+          details: {
+            ...failure.snapshot,
+            requirement: this.requirement,
+            configured: true,
+            initialized: false,
+            autoInstrumentationModules: [],
+            mode: "startup_failed",
+            failureCode: failure.code,
+          },
+          lastChecked: new Date().toISOString(),
+        };
+      }
+
       return {
-        status: "unhealthy",
+        status: this.requirement === "required" ? "unhealthy" : "degraded",
         component: "telemetry",
-        message: "Telemetry config not available",
+        message: `${capitalize(this.requirement)} telemetry is not configured`,
+        details: {
+          requirement: this.requirement,
+          configured: false,
+          enabled: false,
+          initialized,
+          traceEnabled: false,
+          signals: { traces: "not_configured" },
+          autoInstrumentationModules: [],
+          mode: "not_configured",
+        },
         lastChecked: new Date().toISOString(),
       };
     }
-    const probability = config.trace?.probability;
-    if (probability === 0) {
+
+    const snapshot = createTelemetryConfigurationDiagnosticsSnapshot(config);
+    const autoInstrumentationModules = runtime.getEnabledAutoInstrumentationModules();
+    if (!initialized) {
+      return {
+        status: this.requirement === "required" ? "unhealthy" : "degraded",
+        component: "telemetry",
+        message: `${capitalize(this.requirement)} telemetry is not initialized`,
+        details: createConfiguredTelemetryDetails(
+          snapshot,
+          initialized,
+          "not_initialized",
+          this.requirement,
+          autoInstrumentationModules,
+        ),
+        lastChecked: new Date().toISOString(),
+      };
+    }
+
+    if (snapshot.probability === 0) {
       return {
         status: "degraded",
         component: "telemetry",
         message: "Telemetry sampling disabled (probability=0)",
-        details: createSafeTelemetryDetails(config, initialized, "sampling_disabled"),
+        details: createConfiguredTelemetryDetails(
+          snapshot,
+          initialized,
+          "sampling_disabled",
+          this.requirement,
+          autoInstrumentationModules,
+        ),
         lastChecked: new Date().toISOString(),
       };
     }
+
     return {
       status: "healthy",
       component: "telemetry",
-      details: createSafeTelemetryDetails(config, initialized, "active"),
+      details: createConfiguredTelemetryDetails(
+        snapshot,
+        initialized,
+        "active",
+        this.requirement,
+        autoInstrumentationModules,
+      ),
       lastChecked: new Date().toISOString(),
     };
   }
 }
 
-function createSafeTelemetryDetails(
-  config: NonNullable<ReturnType<TelemetryRuntime["getConfig"]>>,
+function createConfiguredTelemetryDetails(
+  snapshot: TelemetryConfigurationDiagnosticsSnapshot,
   initialized: boolean,
-  mode: "active" | "disabled" | "not_initialized" | "sampling_disabled",
-): Record<string, unknown> {
-  const enabled = config.enabled !== false;
+  mode: TelemetryConfiguredDiagnosticsDetails["mode"],
+  requirement: TelemetryDiagnosticsRequirement,
+  autoInstrumentationModules: readonly string[],
+): TelemetryConfiguredDiagnosticsDetails {
   return {
-    serviceName: config.serviceName,
-    environment: resolveDeploymentEnvironment(config),
-    enabled,
+    ...snapshot,
+    requirement,
+    configured: true,
     initialized,
-    traceEnabled: enabled && config.trace?.enabled !== false,
-    probability: config.trace?.probability,
-    signals: {
-      traces: enabled && config.trace?.enabled !== false ? "supported" : "disabled",
-    },
-    autoInstrumentationModules:
-      TelemetryRuntime.getInstance().getEnabledAutoInstrumentationModules(),
+    autoInstrumentationModules,
     mode,
   };
+}
+
+function capitalize(value: TelemetryDiagnosticsRequirement): "Optional" | "Required" {
+  return value === "optional" ? "Optional" : "Required";
 }

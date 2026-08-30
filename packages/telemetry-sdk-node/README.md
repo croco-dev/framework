@@ -128,12 +128,23 @@ enabled 상태가 다른 설정은 `telemetry-sdk-node/init-configuration-confli
 
 ### Degraded mode와 복구
 
-Telemetry 또는 trace가 의도적으로 꺼진 상태는 애플리케이션 실패가 아닙니다. `init({ enabled: false })`,
+Telemetry를 구성하지 않은 애플리케이션에서 기본 `TelemetryDiagnosticsProvider`는 선택적 capability가 비활성 상태임을
+`degraded`와 `mode: "not_configured"`로 보고합니다. 이 상태를 readiness 실패로 취급할지는
+`DiagnosticsHealthIndicator`의 `degradedStatus` 정책으로 결정합니다.
+
+Telemetry 또는 trace를 의도적으로 끈 상태도 애플리케이션 실패가 아닙니다. `init({ enabled: false })`,
 `init({ trace: { enabled: false } })`, 또는 `TELEMETRY_ENABLED=false`는 설정을 보존하지만 SDK와 exporter를 시작하지
-않으며,
-`TelemetryDiagnosticsProvider`는 이를 `degraded` 상태와 안전한 metadata(`serviceName`, `enabled`,
-`initialized`, `traceEnabled`, `probability`, `signals`, `autoInstrumentationModules`, `mode`)로 보고합니다. `signals`는
-trace가 `supported`인지 `disabled`인지 구분합니다. exporter URL이나 header 값은 diagnostics에 노출하지 않습니다.
+않으며, diagnostics는 기존과 같이 `degraded`와 `mode: "disabled"`를 반환합니다.
+
+Telemetry가 host readiness의 필수 조건이면 provider를
+`new TelemetryDiagnosticsProvider({ requirement: "required" })`로 생성합니다. 필수 telemetry의 설정 누락 또는 초기화
+실패는 `unhealthy`입니다. 초기화 실패는 재시도를 막는 runtime 설정 계약과 분리하여 보존되며,
+`mode: "startup_failed"`와 안정적인 `failureCode`로 식별할 수 있습니다. 같은 실패도 기본 optional provider에서는
+`degraded`로 보고됩니다.
+
+모든 telemetry diagnostics details에는 `requirement`, `configured`, `initialized`, `mode`가 포함됩니다. 설정이 존재하면
+`serviceName`, `environment`, `enabled`, `traceEnabled`, `probability`, `signals`, `autoInstrumentationModules`도 안전한
+metadata로 제공됩니다. exporter URL, header, resource attribute 값은 diagnostics에 노출하지 않습니다.
 
 Trace export를 켠 상태에서 OTLP endpoint가 없으면 초기화가 fail-closed 됩니다. `trace.enabled: false`로 명시해
 무자격 로컬 실행을 허용하거나, `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`/`OTEL_EXPORTER_OTLP_ENDPOINT` 또는
@@ -164,13 +175,16 @@ SDK 자체가 종료를 거부해 `TELEMETRY_RUNTIME_ERROR`가 발생한 경우�
 ## API 레퍼런스
 
 - `TelemetryRuntime`: `init`, `forceFlush`, `shutdown`, `isInitialized`, `isEnabled`, `getConfig`
+- `TelemetryDiagnosticsProvider`: optional/required telemetry 상태와 초기화 실패 진단
 - `lambdaPreset`: Lambda 환경 기본 설정 생성
 - `ProbabilitySampler`: 확률 기반 샘플링 구현체
 - 자동 계측: `normalizeAutoInstrumentationConfig`, `LAMBDA_DEFAULT_MODULES`, `NODE_DEFAULT_MODULES`
 - Problem: `OtlpEndpointRequiredProblem`, `SamplerProblem`, `TelemetryAutoInstrumentationProblem`,
   `TelemetryBatchConfigurationProblem`, `TelemetryShutdownTimeoutInvalidProblem`, `TelemetryShutdownTimeoutProblem`
 - 타입: `TelemetryConfig`, `TraceConfig`, `ForceFlushResult`, `ShutdownResult`, `TelemetryLifecycleSkipReason`,
-  `TelemetryBatchConfigurationField`, `TelemetryBatchConfigurationConstraint`
+  `TelemetryBatchConfigurationField`, `TelemetryBatchConfigurationConstraint`, `TelemetryDiagnosticsProviderOptions`,
+  `TelemetryDiagnosticsRequirement`, `TelemetryDiagnosticsMode`, `TelemetryDiagnosticsDetails`,
+  `TelemetryDiagnosticsHealthStatus`
 
 ## Lambda 참고
 
