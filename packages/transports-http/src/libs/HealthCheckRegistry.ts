@@ -34,11 +34,11 @@ export class HealthCheckRegistry {
 
   register(name: string, check: HealthCheckFunction, options: HealthCheckOptions = {}): void {
     if (this.checks.has(name)) {
-      throw duplicateHealthCheckRegistration("health", name);
+      throw duplicateHealthCheckRegistration("health");
     }
 
+    this.service.register(name, new RegisteredHealthCheckIndicator(name, check), options);
     this.checks.set(name, check);
-    this.service.register(new RegisteredHealthCheckIndicator(name, check), options);
   }
 
   registerReadiness(
@@ -47,11 +47,15 @@ export class HealthCheckRegistry {
     options: HealthCheckOptions = {},
   ): void {
     if (this.readinessChecks.has(name)) {
-      throw duplicateHealthCheckRegistration("readiness", name);
+      throw duplicateHealthCheckRegistration("readiness");
     }
 
+    this.service.registerReadiness(
+      name,
+      new RegisteredReadinessCheckIndicator(name, check),
+      options,
+    );
     this.readinessChecks.set(name, check);
-    this.service.registerReadiness(new RegisteredReadinessCheckIndicator(name, check), options);
   }
 
   getRegisteredCheckCount(): number {
@@ -67,10 +71,10 @@ export class HealthCheckRegistry {
   }
 }
 
-function duplicateHealthCheckRegistration(kind: "health" | "readiness", name: string) {
+function duplicateHealthCheckRegistration(kind: "health" | "readiness") {
   return ProblemFactory.internalServerError(
     "transports-http/duplicate-health-check",
-    `Duplicate ${kind} check registration detected for '${name}'`,
+    `Duplicate ${kind} check registration detected`,
   );
 }
 

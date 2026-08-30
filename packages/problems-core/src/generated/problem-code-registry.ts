@@ -9093,7 +9093,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/health-core/src/libs/problems/HealthProblems.ts",
-          line: 44,
+          line: 51,
           column: 1,
           kind: "problem-class",
         },
@@ -9123,7 +9123,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/health-core/src/libs/problems/HealthProblems.ts",
-          line: 23,
+          line: 25,
           column: 1,
           kind: "problem-class",
         },
@@ -9153,7 +9153,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/health-core/src/libs/problems/HealthProblems.ts",
-          line: 9,
+          line: 11,
           column: 1,
           kind: "problem-class",
         },
@@ -19668,7 +19668,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/HealthCheckRegistry.ts",
-          line: 71,
+          line: 75,
           column: 10,
           kind: "problem-factory",
         },

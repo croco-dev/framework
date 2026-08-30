@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import { Container } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
+import { Problem } from "@croco/problems-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "../libs/CrocoApp";
 import { ErrorHandler } from "../libs/ErrorHandler";
@@ -70,11 +71,56 @@ describe("HealthCheck", () => {
       registry.registerReadiness("database", async () => ({ status: "up" }));
 
       expect(() => registry.register("database", async () => ({ status: "up" }))).toThrow(
-        "Duplicate health check registration detected for 'database'",
+        "Duplicate health check registration detected",
       );
       expect(() => registry.registerReadiness("database", async () => ({ status: "up" }))).toThrow(
-        "Duplicate readiness check registration detected for 'database'",
+        "Duplicate readiness check registration detected",
       );
+    });
+
+    it("should keep failed registrations atomic and diagnostics source-safe", async () => {
+      const secretName = " api-key=super-secret ";
+      const healthCheck = async () => ({ status: "up" as const });
+      const readinessCheck = async () => ({ status: "up" as const });
+
+      for (const register of [
+        () => registry.register(secretName, healthCheck),
+        () => registry.register(secretName, healthCheck),
+        () => registry.registerReadiness(secretName, readinessCheck),
+        () => registry.registerReadiness(secretName, readinessCheck),
+      ]) {
+        const problem = captureProblem(register);
+        expect(problem.code).toBe("health-core/invalid-indicator-id");
+        expect(JSON.stringify(problem)).not.toContain("super-secret");
+      }
+
+      expect(registry.getRegisteredCheckCount()).toBe(0);
+      await expect(registry.check()).resolves.toEqual({ status: "up", results: [] });
+      await expect(registry.checkReadiness()).resolves.toEqual({ status: "up", results: [] });
+    });
+
+    it("should keep adapter duplicate diagnostics source-safe", () => {
+      const secretName = "api-key=super-secret";
+      registry.register(secretName, async () => ({ status: "up" }));
+
+      const problem = captureProblem(() =>
+        registry.register(secretName, async () => ({ status: "up" })),
+      );
+
+      expect(problem.code).toBe("transports-http/duplicate-health-check");
+      expect(JSON.stringify(problem)).not.toContain(secretName);
+    });
+
+    it("should keep readiness adapter duplicate diagnostics source-safe", () => {
+      const secretName = "api-key=super-secret";
+      registry.registerReadiness(secretName, async () => ({ status: "up" }));
+
+      const problem = captureProblem(() =>
+        registry.registerReadiness(secretName, async () => ({ status: "up" })),
+      );
+
+      expect(problem.code).toBe("transports-http/duplicate-health-check");
+      expect(JSON.stringify(problem)).not.toContain(secretName);
     });
 
     it("should keep readiness failures out of generic health results", async () => {
@@ -568,7 +614,7 @@ describe("HealthCheck", () => {
 
       expect(() => {
         registry.registerReadiness("db", async () => ({ status: "down" }));
-      }).toThrow("Duplicate readiness check registration detected for 'db'");
+      }).toThrow("Duplicate readiness check registration detected");
 
       const app = createApp({ controllers: [], securityValidation: "off" });
       const response = await app.fetch(new Request("http://localhost/ready"));
@@ -588,3 +634,16 @@ describe("HealthCheck", () => {
     });
   });
 });
+
+function captureProblem(action: () => void): Problem {
+  let thrown: unknown;
+
+  try {
+    action();
+  } catch (error) {
+    thrown = error;
+  }
+
+  expect(thrown).toBeInstanceOf(Problem);
+  return thrown as Problem;
+}

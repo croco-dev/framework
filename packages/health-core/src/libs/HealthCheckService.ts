@@ -4,7 +4,10 @@ import {
   InvalidHealthCheckTimeoutProblem,
   MAX_HEALTH_CHECK_TIMEOUT_MS,
 } from "./problems/HealthProblems";
-import type { HealthIndicatorNamespace } from "./problems/HealthProblems";
+import type {
+  HealthIndicatorIdentityKind,
+  HealthIndicatorNamespace,
+} from "./problems/HealthProblems";
 import type {
   HealthIndicator,
   HealthIndicatorResult,
@@ -48,9 +51,20 @@ type RegisteredIndicator<TIndicator extends HealthIndicator> = {
 export class HealthCheckService {
   private readonly healthIndicators = new Set<RegisteredIndicator<HealthIndicator>>();
   private readonly readinessIndicators = new Set<RegisteredIndicator<ReadinessIndicator>>();
-  private readonly healthIndicatorIds = new Map<string, RegisteredIndicator<HealthIndicator>>();
-  private readonly readinessIndicatorIds = new Map<
+  private readonly healthIndicatorIdentities = new Map<
     string,
+    RegisteredIndicator<HealthIndicator>
+  >();
+  private readonly readinessIndicatorIdentities = new Map<
+    string,
+    RegisteredIndicator<ReadinessIndicator>
+  >();
+  private readonly healthIndicatorInstances = new Map<
+    HealthIndicator,
+    RegisteredIndicator<HealthIndicator>
+  >();
+  private readonly readinessIndicatorInstances = new Map<
+    ReadinessIndicator,
     RegisteredIndicator<ReadinessIndicator>
   >();
   private readonly timeout: number;
@@ -72,7 +86,10 @@ export class HealthCheckService {
     indicator: HealthIndicator,
     options?: HealthCheckServiceOptions,
   ): HealthIndicatorRegistration;
-  /** @deprecated Pass an explicit indicator ID as the first argument. */
+  /**
+   * @deprecated Pass an explicit indicator ID as the first argument. Repeated inferred names or
+   * indicator references are rejected within the health namespace.
+   */
   register(
     indicator: HealthIndicator,
     options?: HealthCheckServiceOptions,
@@ -89,14 +106,18 @@ export class HealthCheckService {
         indicatorOrOptions as HealthIndicator,
         options,
         this.healthIndicators,
-        this.healthIndicatorIds,
+        this.healthIndicatorIdentities,
+        this.healthIndicatorInstances,
       );
     }
 
     return this.registerLegacyIndicator(
+      "health",
       idOrIndicator,
       indicatorOrOptions as HealthCheckServiceOptions,
       this.healthIndicators,
+      this.healthIndicatorIdentities,
+      this.healthIndicatorInstances,
     );
   }
 
@@ -111,7 +132,10 @@ export class HealthCheckService {
     indicator: ReadinessIndicator,
     options?: HealthCheckServiceOptions,
   ): HealthIndicatorRegistration;
-  /** @deprecated Pass an explicit indicator ID as the first argument. */
+  /**
+   * @deprecated Pass an explicit indicator ID as the first argument. Repeated inferred names or
+   * indicator references are rejected within the readiness namespace.
+   */
   registerReadiness(
     indicator: ReadinessIndicator,
     options?: HealthCheckServiceOptions,
@@ -128,14 +152,18 @@ export class HealthCheckService {
         indicatorOrOptions as ReadinessIndicator,
         options,
         this.readinessIndicators,
-        this.readinessIndicatorIds,
+        this.readinessIndicatorIdentities,
+        this.readinessIndicatorInstances,
       );
     }
 
     return this.registerLegacyIndicator(
+      "readiness",
       idOrIndicator,
       indicatorOrOptions as HealthCheckServiceOptions,
       this.readinessIndicators,
+      this.readinessIndicatorIdentities,
+      this.readinessIndicatorInstances,
     );
   }
 
@@ -212,45 +240,80 @@ export class HealthCheckService {
     indicator: TIndicator,
     options: HealthCheckServiceOptions,
     registrations: Set<RegisteredIndicator<TIndicator>>,
-    registrationsById: Map<string, RegisteredIndicator<TIndicator>>,
+    registrationsByIdentity: Map<string, RegisteredIndicator<TIndicator>>,
+    registrationsByIndicator: Map<TIndicator, RegisteredIndicator<TIndicator>>,
   ): HealthIndicatorRegistration {
     assertValidIndicatorId(namespace, id);
     const timeout = validatedIndicatorTimeout(options);
 
-    if (registrationsById.has(id)) {
+    if (registrationsByIdentity.has(id)) {
       throw new DuplicateHealthIndicatorProblem(namespace, id);
+    }
+    if (registrationsByIndicator.has(indicator)) {
+      throw new DuplicateHealthIndicatorProblem(namespace, undefined, "indicator-reference");
     }
 
     const registration = { id, indicator, timeout };
     registrations.add(registration);
-    registrationsById.set(id, registration);
+    registrationsByIdentity.set(id, registration);
+    registrationsByIndicator.set(indicator, registration);
 
     return createRegistrationHandle(() => {
-      if (registrationsById.get(id) !== registration) {
+      if (registrationsByIdentity.get(id) !== registration) {
         return;
       }
-      registrationsById.delete(id);
+      registrationsByIdentity.delete(id);
+      registrationsByIndicator.delete(indicator);
       registrations.delete(registration);
     });
   }
 
   private registerLegacyIndicator<TIndicator extends HealthIndicator>(
+    namespace: HealthIndicatorNamespace,
     indicator: TIndicator,
     options: HealthCheckServiceOptions,
     registrations: Set<RegisteredIndicator<TIndicator>>,
+    registrationsByIdentity: Map<string, RegisteredIndicator<TIndicator>>,
+    registrationsByIndicator: Map<TIndicator, RegisteredIndicator<TIndicator>>,
   ): HealthIndicatorRegistration {
+    const identity = indicator.name;
+    if (identity !== undefined) {
+      assertValidIndicatorId(namespace, identity, "inferred-name");
+    }
     const registration = { indicator, timeout: validatedIndicatorTimeout(options) };
+
+    if (identity !== undefined && registrationsByIdentity.has(identity)) {
+      throw new DuplicateHealthIndicatorProblem(namespace, identity, "inferred-name");
+    }
+    if (registrationsByIndicator.has(indicator)) {
+      throw new DuplicateHealthIndicatorProblem(namespace, undefined, "indicator-reference");
+    }
+
     registrations.add(registration);
+    if (identity !== undefined) {
+      registrationsByIdentity.set(identity, registration);
+    }
+    registrationsByIndicator.set(indicator, registration);
 
     return createRegistrationHandle(() => {
+      if (identity !== undefined && registrationsByIdentity.get(identity) === registration) {
+        registrationsByIdentity.delete(identity);
+      }
+      if (registrationsByIndicator.get(indicator) === registration) {
+        registrationsByIndicator.delete(indicator);
+      }
       registrations.delete(registration);
     });
   }
 }
 
-function assertValidIndicatorId(namespace: HealthIndicatorNamespace, id: string): void {
+function assertValidIndicatorId(
+  namespace: HealthIndicatorNamespace,
+  id: string,
+  identityKind: Exclude<HealthIndicatorIdentityKind, "indicator-reference"> = "explicit-id",
+): void {
   if (id.length === 0 || id.trim() !== id) {
-    throw new InvalidHealthIndicatorIdProblem(namespace, id);
+    throw new InvalidHealthIndicatorIdProblem(namespace, id, identityKind);
   }
 }
 

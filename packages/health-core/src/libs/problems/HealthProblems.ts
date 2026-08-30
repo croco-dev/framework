@@ -3,6 +3,8 @@ import { Problem, ProblemCategory } from "@croco/problems-core";
 export const MAX_HEALTH_CHECK_TIMEOUT_MS = 2_147_483_647;
 
 export type HealthCheckTimeoutSource = "default" | "indicator";
+/** Source-safe identity classification used by health indicator registration diagnostics. */
+export type HealthIndicatorIdentityKind = "explicit-id" | "inferred-name" | "indicator-reference";
 export type HealthIndicatorNamespace = "health" | "readiness";
 
 /** Health check timeout configuration cannot be represented safely by a Node.js timer. */
@@ -19,44 +21,50 @@ export class InvalidHealthCheckTimeoutProblem extends Problem {
   }
 }
 
-/** An explicit health indicator ID must be non-empty and free of surrounding whitespace. */
+/** A supplied or inferred health indicator identity must be non-empty and trimmed. */
 export class InvalidHealthIndicatorIdProblem extends Problem {
   readonly code = "health-core/invalid-indicator-id";
   readonly category = ProblemCategory.ValidationError;
 
-  constructor(namespace: HealthIndicatorNamespace, indicatorId: string) {
+  constructor(
+    namespace: HealthIndicatorNamespace,
+    indicatorId: string,
+    identityKind: Exclude<HealthIndicatorIdentityKind, "indicator-reference"> = "explicit-id",
+  ) {
     super(
       undefined,
       undefined,
-      `Health ${namespace} indicator ID must be non-empty and contain no surrounding whitespace; received '${indicatorId}'`,
+      `Health ${namespace} indicator identity must be non-empty and contain no surrounding whitespace`,
       {
         extensions: {
           namespace,
-          indicatorId,
+          identityKind,
           retryable: false,
         },
       },
     );
+    void indicatorId;
   }
 }
 
-/** An explicit health indicator ID is already registered in the same namespace. */
+/** A health indicator identity is already registered in the same namespace. */
 export class DuplicateHealthIndicatorProblem extends Problem {
   readonly code = "health-core/duplicate-indicator-id";
   readonly category = ProblemCategory.InternalServerError;
 
-  constructor(namespace: HealthIndicatorNamespace, indicatorId: string) {
-    super(
-      undefined,
-      undefined,
-      `Health ${namespace} indicator '${indicatorId}' is already registered`,
-      {
-        extensions: {
-          namespace,
-          indicatorId,
-          retryable: false,
-        },
+  constructor(
+    namespace: HealthIndicatorNamespace,
+    indicatorId?: string,
+    identityKind: HealthIndicatorIdentityKind = indicatorId === undefined
+      ? "indicator-reference"
+      : "explicit-id",
+  ) {
+    super(undefined, undefined, `Health ${namespace} indicator identity is already registered`, {
+      extensions: {
+        namespace,
+        identityKind,
+        retryable: false,
       },
-    );
+    });
   }
 }

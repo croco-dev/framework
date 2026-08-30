@@ -187,5 +187,6 @@ export type {
 } from "./libs/HealthIndicator";
 export type {
   HealthCheckTimeoutSource,
+  HealthIndicatorIdentityKind,
   HealthIndicatorNamespace,
 } from "./libs/problems/HealthProblems";

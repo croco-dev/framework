@@ -14147,6 +14147,11 @@
               "source": "./libs/HealthIndicator"
             },
             {
+              "name": "HealthIndicatorIdentityKind",
+              "exportKind": "named",
+              "source": "./libs/problems/HealthProblems"
+            },
+            {
               "name": "HealthIndicatorNamespace",
               "exportKind": "named",
               "source": "./libs/problems/HealthProblems"
