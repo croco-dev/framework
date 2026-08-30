@@ -32,11 +32,11 @@ export function installDesktopPreloadBridge(
     commands: Object.freeze({
       ["project"]: Object.freeze({
         ["open"]: (input: unknown, options: DesktopPreloadCommandOptions = {}): Promise<unknown> =>
-          transport.invoke("project.open", input, options),
+          transport.invoke("project.open", input, options.signal === undefined ? {} : { signal: options.signal }),
       }),
       ["system"]: Object.freeze({
         ["status"]: (input: unknown, options: DesktopPreloadCommandOptions = {}): Promise<unknown> =>
-          transport.invoke("system.status", input, options),
+          transport.invoke("system.status", input, options.signal === undefined ? {} : { signal: options.signal }),
       }),
     }),
     events: Object.freeze({
@@ -67,7 +67,7 @@ export function installDesktopPreloadBridge(
     commands: Object.freeze({
       ["system"]: Object.freeze({
         ["status"]: (input: unknown, options: DesktopPreloadCommandOptions = {}): Promise<unknown> =>
-          transport.invoke("system.status", input, options),
+          transport.invoke("system.status", input, options.signal === undefined ? {} : { signal: options.signal }),
       }),
     }),
     events: Object.freeze({

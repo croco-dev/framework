@@ -143,6 +143,11 @@ function assertGraphIntegrity(graph: DesktopContractGraphV1, indexes: GraphIndex
     assertSchemaReferenceId(event.payload.id, `${event.id}.payload`);
     assertSchemaDescriptor(event.payload.descriptor, event.id, event.contractId, indexes);
   }
+  for (const problem of graph.problems) {
+    if (problem.extensions) {
+      assertWireSchemaDescriptor(problem.extensions, `Problem ${problem.code}`);
+    }
+  }
   for (const grant of graph.grants) {
     assertMember(grant, "grant", indexes.contracts);
     if (grant.resource === "file" && grant.scope !== "exact") {
@@ -172,11 +177,150 @@ function assertSchemaDescriptor(
       `Desktop member ${JSON.stringify(ownerId)} has no schema descriptor.`,
     );
   }
+  if (!isRecord(descriptor) || typeof descriptor.kind !== "string") {
+    throwInvalidSchemaDescriptor(ownerId, "$", "expected a descriptor object with a string kind");
+  }
   if (descriptor.kind !== "grant-reference") {
+    assertWireSchemaDescriptor(descriptor, ownerId);
     return;
+  }
+  if (typeof descriptor.grantId !== "string") {
+    throwInvalidSchemaDescriptor(ownerId, "$", "grant-reference requires a string grantId");
   }
   const grant = assertReferencedRecord(indexes.grants, descriptor.grantId, "grant", ownerId);
   assertSameContract(grant, contractId, "grant", ownerId);
+}
+
+function assertWireSchemaDescriptor(
+  descriptor: unknown,
+  ownerId: string,
+  path = "$",
+  ancestors: ReadonlySet<object> = new Set(),
+): asserts descriptor is DesktopWireSchemaDescriptor {
+  if (!isRecord(descriptor) || typeof descriptor.kind !== "string") {
+    throwInvalidSchemaDescriptor(ownerId, path, "expected a descriptor object with a string kind");
+  }
+  if (ancestors.has(descriptor)) {
+    throwInvalidSchemaDescriptor(ownerId, path, "recursive descriptors are not supported");
+  }
+
+  const nextAncestors = new Set(ancestors).add(descriptor);
+  switch (descriptor.kind) {
+    case "string":
+    case "number":
+    case "boolean":
+    case "null":
+      return;
+    case "literal":
+      if (!isWireLiteral(descriptor.value)) {
+        throwInvalidSchemaDescriptor(
+          ownerId,
+          path,
+          "literal values must be strings, finite numbers, booleans, or null",
+        );
+      }
+      return;
+    case "enum": {
+      if (!Array.isArray(descriptor.values) || descriptor.values.length === 0) {
+        throwInvalidSchemaDescriptor(ownerId, path, "enum values must be a non-empty array");
+      }
+      if (!descriptor.values.every(isWireEnumValue)) {
+        throwInvalidSchemaDescriptor(
+          ownerId,
+          path,
+          "enum values must be strings or finite numbers",
+        );
+      }
+      if (new Set(descriptor.values).size !== descriptor.values.length) {
+        throwInvalidSchemaDescriptor(ownerId, path, "enum values must be unique");
+      }
+      return;
+    }
+    case "array":
+      assertWireSchemaDescriptor(descriptor.element, ownerId, `${path}.element`, nextAncestors);
+      return;
+    case "optional":
+    case "nullable":
+      assertWireSchemaDescriptor(descriptor.inner, ownerId, `${path}.inner`, nextAncestors);
+      return;
+    case "union":
+      if (!Array.isArray(descriptor.options) || descriptor.options.length < 2) {
+        throwInvalidSchemaDescriptor(
+          ownerId,
+          path,
+          "union options must contain at least two schemas",
+        );
+      }
+      descriptor.options.forEach((option, index) =>
+        assertWireSchemaDescriptor(option, ownerId, `${path}.options[${index}]`, nextAncestors),
+      );
+      return;
+    case "object": {
+      if (descriptor.unknownKeys !== "reject") {
+        throwInvalidSchemaDescriptor(ownerId, path, 'object unknownKeys must be "reject"');
+      }
+      if (!Array.isArray(descriptor.fields)) {
+        throwInvalidSchemaDescriptor(ownerId, path, "object fields must be an array");
+      }
+      const names = new Set<string>();
+      descriptor.fields.forEach((field, index) => {
+        const fieldPath = `${path}.fields[${index}]`;
+        if (!isRecord(field) || typeof field.name !== "string") {
+          throwInvalidSchemaDescriptor(ownerId, fieldPath, "object fields require a string name");
+        }
+        if (names.has(field.name)) {
+          throwInvalidSchemaDescriptor(
+            ownerId,
+            fieldPath,
+            `object field name ${JSON.stringify(field.name)} is duplicated`,
+          );
+        }
+        names.add(field.name);
+        if (typeof field.required !== "boolean") {
+          throwInvalidSchemaDescriptor(
+            ownerId,
+            fieldPath,
+            "object fields require a boolean required flag",
+          );
+        }
+        assertWireSchemaDescriptor(field.schema, ownerId, `${fieldPath}.schema`, nextAncestors);
+      });
+      return;
+    }
+    default:
+      throwInvalidSchemaDescriptor(
+        ownerId,
+        path,
+        `unsupported kind ${JSON.stringify(descriptor.kind)}`,
+      );
+  }
+}
+
+function throwInvalidSchemaDescriptor(ownerId: string, path: string, detail: string): never {
+  throw new DesktopRendererGenerationProblem(
+    `Desktop member ${JSON.stringify(ownerId)} has an invalid schema descriptor at ${path}: ${detail}.`,
+  );
+}
+
+function isWireLiteral(value: unknown): value is string | number | boolean | null {
+  return (
+    value === null ||
+    typeof value === "string" ||
+    typeof value === "boolean" ||
+    isFiniteNumber(value)
+  );
+}
+
+function isWireEnumValue(value: unknown): value is string | number {
+  return typeof value === "string" || isFiniteNumber(value);
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function assertReferencedRecord<T>(
@@ -526,7 +670,16 @@ function renderWireSchema(descriptor: DesktopWireSchemaDescriptor): string {
             `readonly [${JSON.stringify(field.name)}]${field.required ? "" : "?"}: ${renderWireSchema(field.schema)};`,
         )
         .join(" ")} }`;
+    default:
+      return throwUnsupportedSchemaDescriptor(descriptor);
   }
+}
+
+function throwUnsupportedSchemaDescriptor(descriptor: never): never {
+  const kind = (descriptor as { readonly kind?: unknown }).kind;
+  throw new DesktopRendererGenerationProblem(
+    `Desktop contract graph contains unsupported schema descriptor kind ${JSON.stringify(kind)}.`,
+  );
 }
 
 function parenthesizeUnion(type: string): string {

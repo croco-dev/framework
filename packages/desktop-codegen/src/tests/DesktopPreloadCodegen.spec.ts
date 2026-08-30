@@ -1,6 +1,6 @@
 import { compileDesktopContractGraph, desktop } from "@croco/protocols-desktop";
 import ts from "typescript";
-import { describe, expect, it, vi } from "vitest";
+import { assert, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import {
@@ -223,6 +223,37 @@ describe("generateDesktopPreloadBridges", () => {
     await renderer.project.open({ path: "README.md" }, { signal });
 
     expect(invoke).toHaveBeenCalledWith("project.open", { path: "README.md" }, { signal });
+  });
+
+  it("filters caller-controlled command options at the preload boundary", async () => {
+    const source = requireBridgeSource(createGraph(false), "main");
+    const invoke = vi.fn(
+      async (_commandId: string, _input: unknown, _options: DesktopPreloadCommandOptions) =>
+        undefined,
+    );
+    let bridge: GeneratedBridge | undefined;
+
+    executeGeneratedSource(source)(
+      {
+        exposeInMainWorld(_name, api) {
+          bridge = api as GeneratedBridge;
+        },
+      },
+      { invoke, subscribe: () => () => {} },
+    );
+    assert(bridge, "Generated preload bridge is missing");
+    const signal = new AbortController().signal;
+    const hostileOptions = {
+      signal,
+      timeoutMs: 60_000,
+      forged: true,
+    } as DesktopPreloadCommandOptions;
+
+    await bridge.commands.project?.open?.({ path: "README.md" }, hostileOptions);
+
+    expect(invoke).toHaveBeenCalledWith("project.open", { path: "README.md" }, { signal });
+    expect(invoke.mock.calls[0]?.[2]).not.toHaveProperty("timeoutMs");
+    expect(invoke.mock.calls[0]?.[2]).not.toHaveProperty("forged");
   });
 });
 

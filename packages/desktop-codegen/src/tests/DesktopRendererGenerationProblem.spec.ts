@@ -386,6 +386,93 @@ desktop.project.fileChanged.subscribe((_payload, _event) => undefined);
       `Desktop member ${JSON.stringify(hiddenCommand.id)} references grant "system.file" from contract "system".`,
     );
   });
+
+  it("rejects malformed wire schema descriptors before rendering", () => {
+    const graph = createGraph(false);
+    const readFile = graph.commands.find((command) => command.id === "project.readFile");
+    const fileNotFound = graph.problems.find((problem) => problem.code === "EDITOR_FILE_NOT_FOUND");
+    assert(readFile && fileNotFound, "Fixture schema owners are missing");
+
+    const expectInvalidInput = (descriptor: unknown, detail: string): void => {
+      expectGenerationProblem(
+        () =>
+          generateDesktopRendererClients({
+            ...graph,
+            commands: graph.commands.map((command) =>
+              command.id === readFile.id
+                ? {
+                    ...command,
+                    input: {
+                      ...command.input,
+                      descriptor: descriptor as typeof command.input.descriptor,
+                    },
+                  }
+                : command,
+            ),
+          }),
+        `Desktop member ${JSON.stringify(readFile.id)} has an invalid schema descriptor at ${detail}.`,
+      );
+    };
+
+    expectInvalidInput(
+      { kind: "future-unsupported-kind" },
+      '$: unsupported kind "future-unsupported-kind"',
+    );
+    expectInvalidInput({ kind: "enum", values: [] }, "$: enum values must be a non-empty array");
+    expectInvalidInput(
+      { kind: "union", options: [{ kind: "string" }] },
+      "$: union options must contain at least two schemas",
+    );
+    expectInvalidInput(
+      {
+        kind: "object",
+        unknownKeys: "passthrough",
+        fields: [],
+      },
+      '$: object unknownKeys must be "reject"',
+    );
+    expectInvalidInput(
+      {
+        kind: "object",
+        unknownKeys: "reject",
+        fields: [
+          { name: "path", required: true, schema: { kind: "string" } },
+          { name: "path", required: false, schema: { kind: "string" } },
+        ],
+      },
+      '$.fields[1]: object field name "path" is duplicated',
+    );
+    expectInvalidInput(
+      { kind: "literal", value: Number.NaN },
+      "$: literal values must be strings, finite numbers, booleans, or null",
+    );
+
+    expectGenerationProblem(
+      () =>
+        generateDesktopRendererClients({
+          ...graph,
+          problems: graph.problems.map((problem) =>
+            problem.code === fileNotFound.code
+              ? {
+                  ...problem,
+                  extensions: {
+                    kind: "object",
+                    unknownKeys: "reject",
+                    fields: [
+                      {
+                        name: "reason",
+                        required: true,
+                        schema: { kind: "future-unsupported-kind" },
+                      },
+                    ],
+                  } as unknown as typeof problem.extensions,
+                }
+              : problem,
+          ),
+        }),
+      `Desktop member "Problem ${fileNotFound.code}" has an invalid schema descriptor at $.fields[0].schema: unsupported kind "future-unsupported-kind".`,
+    );
+  });
 });
 
 function expectGenerationProblem(action: () => unknown, detail: string): void {

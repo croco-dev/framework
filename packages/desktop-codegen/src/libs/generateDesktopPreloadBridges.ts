@@ -274,7 +274,7 @@ function generateNamespace<TMember>(
 function generateCommand(command: DesktopContractGraphCommand): readonly string[] {
   return [
     `        [${JSON.stringify(command.key)}]: (input: unknown, options: DesktopPreloadCommandOptions = {}): Promise<unknown> =>`,
-    `          transport.invoke(${JSON.stringify(command.id)}, input, options),`,
+    `          transport.invoke(${JSON.stringify(command.id)}, input, options.signal === undefined ? {} : { signal: options.signal }),`,
   ];
 }
 
