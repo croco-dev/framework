@@ -70,11 +70,12 @@ export class BetterAuthSessionManager implements BetterAuthSessionProvider {
     targetSessionToken: string,
     authorizationSessionToken: string,
   ): Promise<void> {
+    const headers = createAuthorizationHeaders(authorizationSessionToken);
+
     if (typeof targetSessionToken !== "string" || !targetSessionToken.trim()) {
       throw new BetterAuthSessionNotFoundProblem("[Redacted]");
     }
 
-    const headers = createAuthorizationHeaders(authorizationSessionToken);
     const auth = this.factory.getAuth();
     const ownership = await sessionOwnershipMatches(
       auth.$context,
@@ -245,7 +246,13 @@ function createAuthorizationHeaders(sessionToken: string): Headers {
     throw new UnauthorizedProblem("Better Auth session authorization requires a session token");
   }
 
-  return new Headers({ authorization: `Bearer ${sessionToken}` });
+  try {
+    return new Headers({ authorization: `Bearer ${sessionToken}` });
+  } catch {
+    throw new UnauthorizedProblem(
+      "Better Auth session authorization requires a valid session token",
+    );
+  }
 }
 
 function mapRevocationError(

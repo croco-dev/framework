@@ -391,6 +391,40 @@ describe("BetterAuthSessionManager", () => {
     });
 
     it.each([
+      ["", ""],
+      [" ", "bad\ntoken"],
+    ])(
+      "should validate authorization before reporting an invalid target: %j, %j",
+      async (targetSessionToken, authorizationSessionToken) => {
+        const revocation = sessionManager.revokeSession(
+          targetSessionToken,
+          authorizationSessionToken,
+        );
+
+        await expect(revocation).rejects.toBeInstanceOf(UnauthorizedProblem);
+        await expect(revocation).rejects.not.toBeInstanceOf(BetterAuthSessionNotFoundProblem);
+        expect(mockFactory.getAuth().api.revokeSession).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each(["bad\ntoken", "bad\0token"])(
+      "should reject an invalid authorization session token without exposing it: %j",
+      async (authorizationSessionToken) => {
+        const revocation = sessionManager.revokeSession(
+          "session-token-123",
+          authorizationSessionToken,
+        );
+
+        await expect(revocation).rejects.toMatchObject({
+          code: "UNAUTHORIZED",
+          message: "Better Auth session authorization requires a valid session token",
+        });
+        await expect(revocation).rejects.not.toThrow(authorizationSessionToken);
+        expect(mockFactory.getAuth().api.revokeSession).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each([
       "upstream echoed session-token-123",
       "authorization: Bearer authorization-session-token",
     ])("should keep revoke credentials out of unexpected failure details: %s", async (message) => {
@@ -480,6 +514,20 @@ describe("BetterAuthSessionManager", () => {
         UnauthorizedProblem,
       );
     });
+
+    it.each(["bad\rtoken", "bad\0token"])(
+      "should reject an invalid admin session token without exposing it: %j",
+      async (adminSessionToken) => {
+        const revocation = sessionManager.revokeUserSessions("user-123", adminSessionToken);
+
+        await expect(revocation).rejects.toMatchObject({
+          code: "UNAUTHORIZED",
+          message: "Better Auth session authorization requires a valid session token",
+        });
+        await expect(revocation).rejects.not.toThrow(adminSessionToken);
+        expect(mockFactory.getAuth().api.revokeUserSessions).not.toHaveBeenCalled();
+      },
+    );
 
     it("should map a missing target user to BetterAuthUserNotFoundProblem", async () => {
       mockFactory = createMockAuthFactory({
