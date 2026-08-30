@@ -67,7 +67,7 @@ title: "PgTrgmStrategy"
 
 > **buildIndexQuery**(`table`, `document`, `tenantId`): `SQL`
 
-문서를 테이블에 삽입하는 SQL을 생성합니다.
+문서를 테넌트 범위에서 upsert하는 SQL을 생성합니다.
 
 #### Parameters
 

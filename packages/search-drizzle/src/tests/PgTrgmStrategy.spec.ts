@@ -2,6 +2,7 @@ import { CasingCache } from "drizzle-orm/casing";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import { PgTrgmStrategy } from "../libs/strategies/PgTrgmStrategy";
+import { registerStrategyIndexQueryTests } from "./strategyIndexQueryTests";
 import { registerSearchQueryOptionTests } from "./strategyQueryOptionsTests";
 
 type PgTrgmStrategyPrivate = {
@@ -21,6 +22,7 @@ describe("PgTrgmStrategy", () => {
   });
 
   registerSearchQueryOptionTests(() => new PgTrgmStrategy());
+  registerStrategyIndexQueryTests(() => new PgTrgmStrategy());
 
   it("should initialize with default threshold", () => {
     expect((strategy as unknown as PgTrgmStrategyPrivate).similarityThreshold).toBe(0.3);
@@ -64,25 +66,6 @@ describe("PgTrgmStrategy", () => {
       expect(totalSqlString).toContain('"tenant_id" = $1');
       expect(totalSqlString).toContain('similarity("search_vector", $1) > $1');
       expect(totalSqlString).not.toContain("ORDER BY");
-    });
-  });
-
-  describe("buildIndexQuery", () => {
-    it("should build correct index query", () => {
-      const document = { id: "doc-1", title: "Hello World", tenantId: "tenant-123" };
-      const sqlObj = strategy.buildIndexQuery("users", document, "tenant-123");
-
-      const sqlString = sqlObj.toQuery({
-        escapeName: (x: string) => `"${x}"`,
-        escapeParam: () => "$1",
-        escapeString: (x: string) => `'${x}'`,
-        casing: new CasingCache(),
-      }).sql;
-
-      expect(sqlString).toContain('INSERT INTO "users"');
-      expect(sqlString).toContain('"id"');
-      expect(sqlString).toContain('"title"');
-      expect(sqlString).toContain('"tenant_id"');
     });
   });
 

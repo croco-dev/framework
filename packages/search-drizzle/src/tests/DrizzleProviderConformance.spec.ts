@@ -10,7 +10,9 @@ import {
 } from "@croco/testing/drizzle";
 import { DrizzleHealthIndicator } from "@croco/tx-drizzle";
 import { DrizzleSearchEngine } from "../libs/DrizzleSearchEngine";
+import { PGroongaStrategy } from "../libs/strategies/PGroongaStrategy";
 import { PgSearchStrategy } from "../libs/strategies/PgSearchStrategy";
+import { PgTrgmStrategy } from "../libs/strategies/PgTrgmStrategy";
 import type { SearchStrategy } from "../libs/types";
 
 vi.mock("@croco/framework-context", async () => {
@@ -181,8 +183,40 @@ describe("search-drizzle provider conformance", () => {
           ],
         },
         duplicate: {
-          supported: false,
-          reason: "Document duplicate semantics are owned by the caller-managed search table.",
+          supported: true,
+          checks: [
+            {
+              name: "upserts repeated tenant-scoped documents across PostgreSQL strategies",
+              run: async () => {
+                const strategies = [
+                  new PgSearchStrategy(),
+                  new PgTrgmStrategy(),
+                  new PGroongaStrategy(),
+                ];
+
+                for (const strategy of strategies) {
+                  const replacementSql = renderSql(
+                    strategy.buildIndexQuery(
+                      "documents",
+                      { id: "doc-1", tenantId: "tenant-a", title: "Newest" },
+                      "tenant-a",
+                    ),
+                  );
+                  const otherTenantSql = renderSql(
+                    strategy.buildIndexQuery(
+                      "documents",
+                      { id: "doc-1", tenantId: "tenant-b", title: "Independent" },
+                      "tenant-b",
+                    ),
+                  );
+
+                  expect(replacementSql).toContain('ON CONFLICT ("tenant_id", "id")');
+                  expect(replacementSql).toContain('"title" = EXCLUDED."title"');
+                  expect(otherTenantSql).toContain('ON CONFLICT ("tenant_id", "id")');
+                }
+              },
+            },
+          ],
         },
         conflict: {
           supported: true,

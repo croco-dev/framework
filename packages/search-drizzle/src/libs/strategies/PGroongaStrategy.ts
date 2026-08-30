@@ -1,6 +1,7 @@
 import type { SearchDocument, SearchEngineCapabilities, SearchQuery } from "@croco/search-core";
 import { type SQL, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { buildPostgresDocumentUpsertQuery } from "../postgresDocumentIndex";
 import { buildPostgresSearchQueryPlan } from "../searchQueryPlan";
 import type { SearchQueryPlan, SearchStrategy } from "../types";
 
@@ -23,24 +24,10 @@ export class PGroongaStrategy implements SearchStrategy {
   }
 
   /**
-   * 문서를 테이블에 삽입하는 SQL을 생성합니다.
+   * 문서를 테넌트 범위에서 upsert하는 SQL을 생성합니다.
    */
   buildIndexQuery(table: string, document: SearchDocument, tenantId: string): SQL {
-    const tableIdentifier = sql.identifier(table);
-
-    const columns = Object.keys(document).concat("tenant_id");
-    const values = Object.values(document).concat(tenantId);
-
-    const columnChunks = sql.join(
-      columns.map((c) => sql.identifier(c)),
-      sql`, `,
-    );
-    const valueChunks = sql.join(
-      values.map((v) => sql.param(v)),
-      sql`, `,
-    );
-
-    return sql`INSERT INTO ${tableIdentifier} (${columnChunks}) VALUES (${valueChunks})`;
+    return buildPostgresDocumentUpsertQuery(table, document, tenantId);
   }
 
   /**

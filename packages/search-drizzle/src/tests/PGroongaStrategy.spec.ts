@@ -2,6 +2,7 @@ import { CasingCache } from "drizzle-orm/casing";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import { PGroongaStrategy } from "../libs/strategies/PGroongaStrategy";
+import { registerStrategyIndexQueryTests } from "./strategyIndexQueryTests";
 import { registerSearchQueryOptionTests } from "./strategyQueryOptionsTests";
 
 const mockDb = {
@@ -17,6 +18,7 @@ describe("PGroongaStrategy", () => {
   });
 
   registerSearchQueryOptionTests(() => new PGroongaStrategy());
+  registerStrategyIndexQueryTests(() => new PGroongaStrategy());
 
   describe("buildSearchQuery", () => {
     it("should build correct search query", () => {
@@ -50,25 +52,6 @@ describe("PGroongaStrategy", () => {
       expect(totalSqlString).toContain('"search_vector" &@~ $1');
       expect(totalSqlString).toContain('"tenant_id" = $1');
       expect(totalSqlString).not.toContain("ORDER BY");
-    });
-  });
-
-  describe("buildIndexQuery", () => {
-    it("should build correct index query", () => {
-      const document = { id: "doc-1", title: "Hello World", tenantId: "tenant-123" };
-      const sqlObj = strategy.buildIndexQuery("users", document, "tenant-123");
-
-      const sqlString = sqlObj.toQuery({
-        escapeName: (x: string) => `"${x}"`,
-        escapeParam: () => "$1",
-        escapeString: (x: string) => `'${x}'`,
-        casing: new CasingCache(),
-      }).sql;
-
-      expect(sqlString).toContain('INSERT INTO "users"');
-      expect(sqlString).toContain('"id"');
-      expect(sqlString).toContain('"title"');
-      expect(sqlString).toContain('"tenant_id"');
     });
   });
 
