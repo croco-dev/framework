@@ -8576,7 +8576,7 @@
       "sources": [
         {
           "file": "packages/governance-core/src/libs/DataGovernanceResource.ts",
-          "line": 107,
+          "line": 131,
           "column": 5,
           "kind": "problem-constructor"
         }
