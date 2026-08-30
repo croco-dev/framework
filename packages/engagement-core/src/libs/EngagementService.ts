@@ -10,6 +10,7 @@ import {
   MessageDataInvalidProblem,
   MessageRendererAlreadyRegisteredProblem,
   MessageRendererMissingProblem,
+  parseMessageData,
   type AnyMessage,
   type MessageChannel,
   type MessageContent,
@@ -246,13 +247,21 @@ export class EngagementService {
     command: EngagementSendCommand<TMessage>,
   ): Promise<EngagementSendResult> {
     assertCommand(command);
-    const recipient = await this.resolveRecipient(command.recipient);
-    const policy = command.policy ?? "first-reachable";
+    const normalizedCommand: EngagementSendCommand<TMessage> = {
+      ...command,
+      data: parseMessageData(message, command.data),
+    };
+    const recipient = await this.resolveRecipient(normalizedCommand.recipient);
+    const policy = normalizedCommand.policy ?? "first-reachable";
     const channelResults: EngagementChannelResult[] = [];
     const executionIds: string[] = [];
 
     if (policy === "all-reachable") {
-      const preparedChannels = await this.prepareAllReachable(message, command, recipient);
+      const preparedChannels = await this.prepareAllReachable(
+        message,
+        normalizedCommand,
+        recipient,
+      );
       for (const prepared of preparedChannels) {
         if ("result" in prepared) {
           channelResults.push(prepared.result);
@@ -260,7 +269,7 @@ export class EngagementService {
         }
         await this.dispatchChannel(
           message,
-          command,
+          normalizedCommand,
           recipient,
           prepared.channel,
           prepared.eligibleEndpoints,
@@ -304,7 +313,7 @@ export class EngagementService {
 
       const dispatchPreparation = this.prepareNotificationDispatch(
         message,
-        command,
+        normalizedCommand,
         channel,
         channelResults,
       );
@@ -313,10 +322,10 @@ export class EngagementService {
         continue;
       }
 
-      const content = await this.render(message, command, channel);
+      const content = await this.render(message, normalizedCommand, channel);
       await this.dispatchChannel(
         message,
-        command,
+        normalizedCommand,
         recipient,
         channel,
         eligibleEndpoints,

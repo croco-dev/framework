@@ -348,6 +348,46 @@ describe("EngagementService", () => {
     expect(dispatcher.dispatch).not.toHaveBeenCalled();
   });
 
+  it("validates message data before resolving delivery endpoints", async () => {
+    const noEndpoints = new InMemoryRecipientDirectory([
+      { recipient: recipient.recipient, push: [] },
+    ]);
+    const dispatcher = createDispatcher();
+    const engagement = new EngagementService(noEndpoints, createRenderer(), dispatcher.service);
+
+    await expect(
+      engagement.send(TrialEnding, {
+        recipient: recipient.recipient,
+        data: {},
+        key: "subscription-1",
+      } as unknown as EngagementSendCommand<typeof TrialEnding>),
+    ).rejects.toBeInstanceOf(MessageDataInvalidProblem);
+    expect(dispatcher.prepareDispatch).not.toHaveBeenCalled();
+    expect(dispatcher.dispatch).not.toHaveBeenCalled();
+  });
+
+  it("validates message data before notification preference evaluation", async () => {
+    const dispatcher = createDispatcher();
+    dispatcher.prepareDispatch.mockImplementation((_channel, options) => {
+      throw new NotificationPreferenceDeniedProblem({
+        context: options.preferenceContext,
+        reason: "user-opted-out",
+        evaluationKey: "preference-denied",
+      });
+    });
+    const engagement = new EngagementService(directory, createRenderer(), dispatcher.service);
+
+    await expect(
+      engagement.send(TrialEnding, {
+        recipient: recipient.recipient,
+        data: {},
+        key: "subscription-1",
+      } as unknown as EngagementSendCommand<typeof TrialEnding>),
+    ).rejects.toBeInstanceOf(MessageDataInvalidProblem);
+    expect(dispatcher.prepareDispatch).not.toHaveBeenCalled();
+    expect(dispatcher.dispatch).not.toHaveBeenCalled();
+  });
+
   it("throws a stable Problem when the recipient is absent", async () => {
     const dispatcher = createDispatcher();
     const engagement = new EngagementService(directory, createRenderer(), dispatcher.service);

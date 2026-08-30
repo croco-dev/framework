@@ -3,6 +3,7 @@ import { Container } from "@croco/framework-context";
 import { TaskRegistry, TaskRunner } from "@croco/tasks-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  createNotificationPreferenceEvaluationKey,
   createNotificationPreferenceContextFixture,
   type NotificationPreferenceContext,
 } from "../libs/NotificationPreferences";
@@ -575,21 +576,27 @@ describe("NotificationService", () => {
 
     it("should dispatch with the preference decision captured during preparation", async () => {
       service.registerProvider(emailProvider, true);
-      const preferenceContext = createPreferenceContext(NotificationChannel.EMAIL, {
+      const preferenceContext = {
+        tenantId: "tenant-1",
+        userId: "user-1",
+        channel: NotificationChannel.EMAIL,
         topic: "billing.prepared",
-      });
+      };
+      const expectedContext = { ...preferenceContext };
       const preparation = service.prepareDispatch(NotificationChannel.EMAIL, {
         preferenceContext,
       });
 
       service.registerPreferenceRule({
         id: "deny-after-preparation",
-        tenantId: preferenceContext.tenantId,
-        userId: preferenceContext.userId,
-        channel: preferenceContext.channel,
-        topic: preferenceContext.topic,
+        tenantId: expectedContext.tenantId,
+        userId: expectedContext.userId,
+        channel: expectedContext.channel,
+        topic: expectedContext.topic,
         enabled: false,
       });
+      preferenceContext.userId = "user-2";
+      preferenceContext.topic = "security.alert";
 
       await preparation.dispatch(
         { to: "test@example.com", content: "Prepared content" },
@@ -603,8 +610,9 @@ describe("NotificationService", () => {
           dispatchContext: expect.objectContaining({
             preferenceDecision: expect.objectContaining({
               allowed: true,
+              context: expectedContext,
               reason: "default-allow",
-              evaluationKey: expect.any(String),
+              evaluationKey: createNotificationPreferenceEvaluationKey(expectedContext),
             }),
           }),
         }),

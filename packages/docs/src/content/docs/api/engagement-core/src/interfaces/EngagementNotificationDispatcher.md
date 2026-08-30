@@ -9,7 +9,7 @@ title: "EngagementNotificationDispatcher"
 
 ### prepareDispatch()
 
-> **prepareDispatch**(`channel`, `options`): [`NotificationDispatchPreparation`](/api/notifications-core/src/type-aliases/notificationdispatchpreparation/)
+> **prepareDispatch**(`channel`, `options`): [`NotificationDispatchPreparation`](/api/notifications-core/src/interfaces/notificationdispatchpreparation/)
 
 #### Parameters
 
@@ -23,4 +23,4 @@ title: "EngagementNotificationDispatcher"
 
 #### Returns
 
-[`NotificationDispatchPreparation`](/api/notifications-core/src/type-aliases/notificationdispatchpreparation/)
+[`NotificationDispatchPreparation`](/api/notifications-core/src/interfaces/notificationdispatchpreparation/)

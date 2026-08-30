@@ -152,6 +152,20 @@ export function getMessageRendererBinding(renderer: Function): MessageRendererBi
   return RENDERER_BINDINGS.get(renderer);
 }
 
+export function parseMessageData<TMessage extends AnyMessage>(
+  message: TMessage,
+  input: unknown,
+): MessageData<TMessage> {
+  const parsed = message.data.safeParse(input);
+  if (!parsed.success) {
+    throw new MessageDataInvalidProblem(
+      message.id,
+      parsed.error.issues.map((issue) => `${issue.path.join(".") || "$"}: ${issue.message}`),
+    );
+  }
+  return parsed.data as MessageData<TMessage>;
+}
+
 export class MessageRendererRegistry {
   private readonly messages = new Map<string, AnyMessage>();
   private readonly renderers = new Map<string, Function>();
@@ -218,14 +232,7 @@ export class MessageRendererRegistry {
   }
 
   parseData<TMessage extends AnyMessage>(message: TMessage, input: unknown): MessageData<TMessage> {
-    const parsed = message.data.safeParse(input);
-    if (!parsed.success) {
-      throw new MessageDataInvalidProblem(
-        message.id,
-        parsed.error.issues.map((issue) => `${issue.path.join(".") || "$"}: ${issue.message}`),
-      );
-    }
-    return parsed.data as MessageData<TMessage>;
+    return parseMessageData(message, input);
   }
 
   /** Parses untrusted data before invoking an explicitly registered renderer instance. */

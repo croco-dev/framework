@@ -19562,7 +19562,7 @@
               "name": "NotificationDispatchPreparation",
               "exportKind": "declaration",
               "source": "./libs/NotificationService",
-              "declarationKind": "type"
+              "declarationKind": "interface"
             },
             {
               "name": "NotificationDispatchPreparationOptions",

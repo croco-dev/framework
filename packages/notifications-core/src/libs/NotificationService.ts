@@ -79,12 +79,12 @@ export type NotificationPreparedDispatchOptions = Readonly<{
 }>;
 
 /** A dispatch function bound to the provider and preference decision captured during preparation. */
-export type NotificationDispatchPreparation = Readonly<{
+export interface NotificationDispatchPreparation {
   dispatch(
     payload: NotificationPayload,
     options: NotificationPreparedDispatchOptions,
   ): Promise<NotificationDispatchResult>;
-}>;
+}
 
 type PreparedProvider = Readonly<{
   providerName: string;
