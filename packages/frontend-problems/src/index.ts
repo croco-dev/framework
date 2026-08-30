@@ -1,5 +1,17 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
 
+const MAX_RESPONSE_BODY_EXCERPT_LENGTH = 500;
+const REDACTED_RESPONSE_BODY_VALUE = "[redacted]";
+const INVALID_JSON_RESPONSE_MESSAGE = "Response body is not valid JSON.";
+const STRUCTURED_RESPONSE_SECRET_PATTERN =
+  /(?:-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?(?:-----END [A-Z ]*PRIVATE KEY-----|$)|github_pat_[a-zA-Z0-9_]{20,}|gh[pousr]_[a-zA-Z0-9]{20,}|AKIA[A-Z0-9]{16}|eyJ[a-zA-Z0-9_-]+\.eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+)/g;
+const TRAILING_STRUCTURED_RESPONSE_SECRET_PATTERN =
+  /(?:(?:github_pat_|gh[pousr]_)[a-zA-Z0-9_]*|AKIA[A-Z0-9]*|eyJ[a-zA-Z0-9_-]+\.eyJ[a-zA-Z0-9_-]+(?:\.[a-zA-Z0-9_-]*)?)$/g;
+const SENSITIVE_RESPONSE_FIELD_PATTERN =
+  /^(?:authorization|proxy[-_]?authorization|cookie|set[-_]?cookie|credential|password|passphrase|passwd|pwd|secret|token|api[-_]?key|private[-_]?key|access[-_]?key(?:[-_]?id)?|access[-_]?token|refresh[-_]?token|client[-_]?secret|connection[-_]?string|dsn)$/i;
+const MAX_STRUCTURED_RESPONSE_DEPTH = 8;
+const MAX_STRUCTURED_RESPONSE_ENTRIES = 100;
+
 export type ProblemDetails<Code extends string = string, Status extends number = number> = {
   readonly type: string;
   readonly title: string;
@@ -191,13 +203,19 @@ export class ProblemClientError extends Error {
 export class ProblemResponseError extends Error {
   readonly response: Response;
   readonly body?: unknown;
+  readonly bodyTruncated: boolean;
+  readonly contentType?: string;
   readonly cause?: unknown;
 
   constructor(response: Response, body?: unknown, cause?: unknown) {
     super(`Problem-aware request failed with HTTP ${response.status}`);
+    const evidence = createResponseBodyEvidence(body);
+
     this.name = "ProblemResponseError";
     this.response = response;
-    this.body = body;
+    this.body = evidence.body;
+    this.bodyTruncated = evidence.truncated;
+    this.contentType = response.headers.get("content-type") ?? undefined;
     this.cause = cause;
   }
 }
@@ -242,17 +260,381 @@ function toExternalJsonFailure(
   response: Response,
   body?: string,
 ): ProblemClientExternalFailure {
-  if (isAbortError(cause) || !(cause instanceof SyntaxError)) {
-    throw cause;
-  }
+  return toProblemResponseFailure(response, body, toJsonParsingCause(cause));
+}
+
+function toProblemResponseFailure(
+  response: Response,
+  body?: unknown,
+  cause?: unknown,
+): ProblemClientExternalFailure {
+  const error = new ProblemResponseError(response, body, cause);
 
   return {
     ok: false,
     kind: "external",
-    error: new ProblemResponseError(response, body, cause),
+    error,
     response,
-    ...(body === undefined ? {} : { body }),
+    ...(error.body === undefined ? {} : { body: error.body }),
   };
+}
+
+function toJsonParsingCause(cause: unknown): SyntaxError {
+  if (isAbortError(cause) || !(cause instanceof SyntaxError)) {
+    throw cause;
+  }
+
+  return new SyntaxError(INVALID_JSON_RESPONSE_MESSAGE);
+}
+
+function createResponseBodyEvidence(body: unknown): {
+  readonly body: unknown;
+  readonly truncated: boolean;
+} {
+  if (typeof body === "string") {
+    return createStringResponseBodyEvidence(body);
+  }
+
+  if (body === null || typeof body !== "object") {
+    return { body, truncated: false };
+  }
+
+  const state: StructuredResponseEvidenceState = {
+    remainingEntries: MAX_STRUCTURED_RESPONSE_ENTRIES,
+    truncated: false,
+    visited: new WeakSet<object>(),
+  };
+  const sanitized = sanitizeStructuredResponseBody(body, state, 0);
+  const serialized = JSON.stringify(sanitized);
+
+  if (serialized.length > MAX_RESPONSE_BODY_EXCERPT_LENGTH) {
+    return createStringResponseBodyEvidence(serialized);
+  }
+
+  return { body: sanitized, truncated: state.truncated };
+}
+
+function createStringResponseBodyEvidence(body: string): {
+  readonly body: string;
+  readonly truncated: boolean;
+} {
+  const inputTruncated = body.length > MAX_RESPONSE_BODY_EXCERPT_LENGTH;
+  const excerpt = inputTruncated ? body.slice(0, MAX_RESPONSE_BODY_EXCERPT_LENGTH - 3) : body;
+  const redacted = redactResponseBody(excerpt, inputTruncated);
+  const truncated = inputTruncated || redacted.length > MAX_RESPONSE_BODY_EXCERPT_LENGTH;
+
+  return {
+    body: truncated ? `${redacted.slice(0, MAX_RESPONSE_BODY_EXCERPT_LENGTH - 3)}...` : redacted,
+    truncated,
+  };
+}
+
+type StructuredResponseEvidenceState = {
+  remainingEntries: number;
+  truncated: boolean;
+  readonly visited: WeakSet<object>;
+};
+
+function sanitizeStructuredResponseBody(
+  value: unknown,
+  state: StructuredResponseEvidenceState,
+  depth: number,
+): unknown {
+  if (typeof value === "string") {
+    const evidence = createStringResponseBodyEvidence(value);
+    state.truncated ||= evidence.truncated;
+    return evidence.body;
+  }
+
+  if (value === null || typeof value === "boolean" || typeof value === "number") {
+    return value;
+  }
+
+  if (typeof value !== "object") {
+    state.truncated = true;
+    return "[unsupported]";
+  }
+
+  if (state.visited.has(value)) {
+    state.truncated = true;
+    return "[circular]";
+  }
+
+  if (depth >= MAX_STRUCTURED_RESPONSE_DEPTH || state.remainingEntries === 0) {
+    state.truncated = true;
+    return "[truncated]";
+  }
+
+  let isArray: boolean;
+  let descriptors: Record<PropertyKey, PropertyDescriptor>;
+  let prototype: object | null;
+
+  try {
+    isArray = Array.isArray(value);
+    prototype = Object.getPrototypeOf(value);
+    descriptors = Object.getOwnPropertyDescriptors(value);
+  } catch {
+    state.truncated = true;
+    return "[unsupported]";
+  }
+
+  if (
+    (isArray && prototype !== Array.prototype) ||
+    (!isArray && prototype !== Object.prototype && prototype !== null)
+  ) {
+    state.truncated = true;
+    return "[unsupported]";
+  }
+
+  state.visited.add(value);
+
+  if (isArray) {
+    const sanitized: unknown[] = [];
+    const lengthDescriptor = descriptors.length;
+
+    if (
+      lengthDescriptor === undefined ||
+      !("value" in lengthDescriptor) ||
+      typeof lengthDescriptor.value !== "number" ||
+      !Number.isSafeInteger(lengthDescriptor.value) ||
+      lengthDescriptor.value < 0
+    ) {
+      state.visited.delete(value);
+      state.truncated = true;
+      return "[unsupported]";
+    }
+
+    for (let index = 0; index < lengthDescriptor.value; index += 1) {
+      if (state.remainingEntries === 0) {
+        state.truncated = true;
+        break;
+      }
+
+      state.remainingEntries -= 1;
+      const descriptor = descriptors[String(index)];
+
+      if (descriptor === undefined) {
+        sanitized.push(null);
+      } else if (!("value" in descriptor)) {
+        state.truncated = true;
+        sanitized.push("[unsupported]");
+      } else {
+        sanitized.push(sanitizeStructuredResponseBody(descriptor.value, state, depth + 1));
+      }
+    }
+
+    state.visited.delete(value);
+    return sanitized;
+  }
+
+  const sanitized: Record<string, unknown> = {};
+
+  for (const key of Object.keys(descriptors)) {
+    const descriptor = descriptors[key];
+
+    if (descriptor === undefined || !descriptor.enumerable) {
+      continue;
+    }
+
+    if (state.remainingEntries === 0) {
+      state.truncated = true;
+      break;
+    }
+
+    state.remainingEntries -= 1;
+    const sensitive = SENSITIVE_RESPONSE_FIELD_PATTERN.test(key);
+    Object.defineProperty(sanitized, key, {
+      configurable: true,
+      enumerable: true,
+      value: sensitive
+        ? REDACTED_RESPONSE_BODY_VALUE
+        : "value" in descriptor
+          ? sanitizeStructuredResponseBody(descriptor.value, state, depth + 1)
+          : "[unsupported]",
+      writable: true,
+    });
+
+    if (!("value" in descriptor) && !sensitive) {
+      state.truncated = true;
+    }
+  }
+
+  state.visited.delete(value);
+  return sanitized;
+}
+
+function redactResponseBody(body: string, inputTruncated: boolean): string {
+  const withoutEscapedJsonFields = redactSensitiveQuotedJsonValues(body);
+  const withoutCookies = withoutEscapedJsonFields.replace(
+    /(["']?)(cookie|set[-_]?cookie)\1(\s*[:=]\s*)(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\r\n]+)/gi,
+    replaceSensitiveResponseValue,
+  );
+
+  const redacted = withoutCookies
+    .replace(
+      /(["']?)(authorization|proxy[-_]?authorization|credential|password|passphrase|passwd|pwd|secret|token|api[-_]?key|private[-_]?key|access[-_]?key(?:[-_]?id)?|access[-_]?token|refresh[-_]?token|client[-_]?secret|connection[-_]?string|dsn)\1(\s*[:=]\s*)(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|(?:bearer|basic|digest|apikey)\s+[^\r\n,;}\]]+|[^\r\n,;}\]]+)/gi,
+      replaceSensitiveResponseValue,
+    )
+    .replace(/\b(?:bearer|basic|digest|apikey)\s+[^\s,;}\]"']+/gi, REDACTED_RESPONSE_BODY_VALUE)
+    .replace(STRUCTURED_RESPONSE_SECRET_PATTERN, REDACTED_RESPONSE_BODY_VALUE);
+
+  return inputTruncated
+    ? redacted.replace(TRAILING_STRUCTURED_RESPONSE_SECRET_PATTERN, REDACTED_RESPONSE_BODY_VALUE)
+    : redacted;
+}
+
+function redactSensitiveQuotedJsonValues(body: string): string {
+  let cursor = 0;
+  let output = "";
+  let searchIndex = 0;
+
+  while (searchIndex < body.length) {
+    const labelQuote = body[searchIndex];
+
+    if (labelQuote !== '"' && labelQuote !== "'") {
+      searchIndex += 1;
+      continue;
+    }
+
+    const labelEnd = findClosingQuote(body, searchIndex, labelQuote);
+
+    if (labelEnd === -1) {
+      break;
+    }
+
+    let separatorEnd = labelEnd + 1;
+
+    while (separatorEnd < body.length && /\s/.test(body[separatorEnd] ?? "")) {
+      separatorEnd += 1;
+    }
+
+    if (body[separatorEnd] !== ":") {
+      searchIndex = labelEnd + 1;
+      continue;
+    }
+
+    separatorEnd += 1;
+
+    while (separatorEnd < body.length && /\s/.test(body[separatorEnd] ?? "")) {
+      separatorEnd += 1;
+    }
+
+    const encodedLabel = body.slice(searchIndex + 1, labelEnd);
+    const label = decodeQuotedJsonLabel(labelQuote, encodedLabel);
+
+    if (label === undefined || !SENSITIVE_RESPONSE_FIELD_PATTERN.test(label)) {
+      searchIndex = labelEnd + 1;
+      continue;
+    }
+
+    const valueEnd = findJsonLikeValueEnd(body, separatorEnd);
+    const valueQuote =
+      body[separatorEnd] === '"' || body[separatorEnd] === "'" ? body[separatorEnd] : "";
+
+    output += body.slice(cursor, separatorEnd);
+    output += `${valueQuote}${REDACTED_RESPONSE_BODY_VALUE}${valueQuote}`;
+    cursor = valueEnd;
+    searchIndex = valueEnd;
+  }
+
+  return output + body.slice(cursor);
+}
+
+function decodeQuotedJsonLabel(labelQuote: string, encodedLabel: string): string | undefined {
+  try {
+    const jsonLabel =
+      labelQuote === '"' ? encodedLabel : encodedLabel.replace(/"/g, '\\"').replace(/\\'/g, "'");
+    const label: unknown = JSON.parse(`"${jsonLabel}"`);
+
+    return typeof label === "string" ? label : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function findClosingQuote(body: string, start: number, quote: string): number {
+  let escaped = false;
+
+  for (let index = start + 1; index < body.length; index += 1) {
+    const character = body[index];
+
+    if (escaped) {
+      escaped = false;
+    } else if (character === "\\") {
+      escaped = true;
+    } else if (character === quote) {
+      return index;
+    }
+  }
+
+  return -1;
+}
+
+function findJsonLikeValueEnd(body: string, start: number): number {
+  const first = body[start];
+
+  if (first === '"' || first === "'") {
+    const closingQuote = findClosingQuote(body, start, first);
+    return closingQuote === -1 ? body.length : closingQuote + 1;
+  }
+
+  if (first === "{" || first === "[") {
+    return findStructuredJsonLikeValueEnd(body, start);
+  }
+
+  let index = start;
+
+  while (index < body.length && !/[\r\n,;}\]]/.test(body[index] ?? "")) {
+    index += 1;
+  }
+
+  return index;
+}
+
+function findStructuredJsonLikeValueEnd(body: string, start: number): number {
+  const closingDelimiters: string[] = [body[start] === "{" ? "}" : "]"];
+  let index = start + 1;
+
+  while (index < body.length) {
+    const character = body[index];
+
+    if (character === '"' || character === "'") {
+      const closingQuote = findClosingQuote(body, index, character);
+
+      if (closingQuote === -1) {
+        return body.length;
+      }
+
+      index = closingQuote + 1;
+      continue;
+    }
+
+    if (character === "{" || character === "[") {
+      closingDelimiters.push(character === "{" ? "}" : "]");
+    } else if (character === closingDelimiters[closingDelimiters.length - 1]) {
+      closingDelimiters.pop();
+
+      if (closingDelimiters.length === 0) {
+        return index + 1;
+      }
+    }
+
+    index += 1;
+  }
+
+  return body.length;
+}
+
+function replaceSensitiveResponseValue(
+  match: string,
+  labelQuote: string,
+  label: string,
+  separator: string,
+): string {
+  const value = match.slice(labelQuote.length * 2 + label.length + separator.length);
+  const valueQuote = value.startsWith('"') || value.startsWith("'") ? value[0] : "";
+
+  return `${labelQuote}${label}${labelQuote}${separator}${valueQuote}${REDACTED_RESPONSE_BODY_VALUE}${valueQuote}`;
 }
 
 export async function fetchProblemJson<
@@ -300,15 +682,7 @@ export async function handleJsonResponse<T = unknown>(response: Response): Promi
   try {
     return (await response.json()) as T;
   } catch (cause) {
-    if (isAbortError(cause)) {
-      throw cause;
-    }
-
-    if (cause instanceof SyntaxError) {
-      throw new ProblemResponseError(response, undefined, cause);
-    }
-
-    throw cause;
+    throw new ProblemResponseError(response, undefined, toJsonParsingCause(cause));
   }
 }
 
@@ -363,7 +737,7 @@ export async function readOptionalJsonResponse(response: Response): Promise<unkn
   try {
     return JSON.parse(body) as unknown;
   } catch (cause) {
-    throw new ProblemResponseError(response, body, cause);
+    throw new ProblemResponseError(response, body, toJsonParsingCause(cause));
   }
 }
 
@@ -473,13 +847,7 @@ export async function readDeclaredProblemErrorResult<Problem extends ProblemDecl
     };
   }
 
-  return {
-    ok: false,
-    kind: "external",
-    error: new ProblemResponseError(response, bodyResult.body),
-    response,
-    body: bodyResult.body,
-  };
+  return toProblemResponseFailure(response, bodyResult.body);
 }
 
 export async function readProblemErrorResult<
@@ -502,13 +870,7 @@ export async function readProblemErrorResult<
   const problem = parseProblemDetails(bodyResult.body);
 
   if (!problem) {
-    return {
-      ok: false,
-      kind: "external",
-      error: new ProblemResponseError(response, bodyResult.body),
-      response,
-      body: bodyResult.body,
-    };
+    return toProblemResponseFailure(response, bodyResult.body);
   }
 
   const statusMismatch = createProblemStatusMismatchError(response, problem);

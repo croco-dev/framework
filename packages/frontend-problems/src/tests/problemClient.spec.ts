@@ -228,7 +228,7 @@ describe("frontend Problem client runtime", () => {
     }
   });
 
-  it("returns success data and optional empty success bodies", async () => {
+  it("returns success data and optional valid, empty, and 204 success bodies", async () => {
     await expect(
       fetchProblemJson<{ readonly id: string }>("/users/1", undefined, {
         fetch: async () => jsonResponse({ id: "1" }),
@@ -236,6 +236,18 @@ describe("frontend Problem client runtime", () => {
     ).resolves.toMatchObject({
       ok: true,
       data: { id: "1" },
+    });
+
+    await expect(readOptionalJsonProblemResult(jsonResponse({ id: "1" }))).resolves.toMatchObject({
+      ok: true,
+      data: { id: "1" },
+    });
+
+    await expect(
+      readOptionalJsonProblemResult(new Response("", { status: 200 })),
+    ).resolves.toMatchObject({
+      ok: true,
+      data: undefined,
     });
 
     await expect(
@@ -291,6 +303,11 @@ describe("frontend Problem client runtime", () => {
     expect((optionalResult.error as { readonly cause?: unknown }).cause).toBeInstanceOf(
       SyntaxError,
     );
+    expect(optionalResult.error).toMatchObject({
+      body: "{not-json",
+      bodyTruncated: false,
+      contentType: "text/plain",
+    });
 
     const genericRequiredResponse = textResponse("{not-json", 200);
     const genericRequiredResult = await readJsonProblemResult(genericRequiredResponse);
@@ -310,6 +327,298 @@ describe("frontend Problem client runtime", () => {
       body: "{not-json",
       error: expect.any(ProblemResponseError),
     });
+  });
+
+  it("bounds and redacts malformed optional JSON evidence with content type metadata", async () => {
+    const secret = "top secret remaining";
+    const awsAccessKey = "AKIAIOSFODNN7EXAMPLE";
+    const jwt = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.signature";
+    const body = `password=${secret}\naws=${awsAccessKey}\njwt=${jwt}\nmessage=${"x".repeat(600)}`;
+    const response = new Response(body, {
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
+      status: 200,
+    });
+    const result = await readOptionalJsonResult(response);
+
+    expect(result).toMatchObject({
+      ok: false,
+      kind: "external",
+      response,
+      error: expect.any(ProblemResponseError),
+    });
+    if (result.ok || result.kind !== "external") {
+      expect.fail("Expected an external failure result.");
+    }
+    if (!(result.error instanceof ProblemResponseError)) {
+      expect.fail("Expected a ProblemResponseError.");
+    }
+
+    expect(result.body).toEqual(result.error.body);
+    if (typeof result.body !== "string") {
+      expect.fail("Expected string response evidence.");
+    }
+    for (const sensitiveValue of [secret, awsAccessKey, jwt]) {
+      expect(result.body).not.toContain(sensitiveValue);
+    }
+    expect(result.body).toContain("[redacted]");
+    expect(result.body.length).toBeLessThanOrEqual(500);
+    expect(result.body).toMatch(/\.\.\.$/);
+    expect(result.error).toMatchObject({
+      bodyTruncated: true,
+      cause: expect.objectContaining({ message: "Response body is not valid JSON." }),
+      contentType: "text/plain; charset=utf-8",
+    });
+
+    const throwingResponse = new Response(body, {
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
+      status: 200,
+    });
+    const throwingError = await captureRejectedValue(readOptionalJsonResponse(throwingResponse));
+
+    expect(throwingError).toMatchObject({
+      body: result.body,
+      bodyTruncated: true,
+      cause: expect.objectContaining({ message: "Response body is not valid JSON." }),
+      contentType: "text/plain; charset=utf-8",
+    });
+    expect(String((throwingError as { readonly cause?: unknown }).cause)).not.toContain(secret);
+  });
+
+  it("redacts malformed JSON values whose sensitive field labels use escapes", async () => {
+    const cases = [
+      ["pass\\u0077ord", "escaped-password"],
+      ["authoriz\\u0061tion", "escaped-authorization"],
+      ["api\\u004bey", "escaped-api-key"],
+      ["coo\\u006bie", "escaped-cookie"],
+    ] as const;
+
+    for (const [encodedLabel, secret] of cases) {
+      for (const quote of ['"', "'"] as const) {
+        const result = await readOptionalJsonResult(
+          new Response(`${quote}${encodedLabel}${quote}:${quote}${secret}${quote},`, {
+            headers: { "content-type": "application/json" },
+            status: 200,
+          }),
+        );
+
+        if (result.ok || result.kind !== "external") {
+          expect.fail("Expected an external failure result.");
+        }
+
+        expect(result.body).toContain("[redacted]");
+        expect(result.body).not.toContain(secret);
+        expect(result.error).toMatchObject({ body: result.body });
+      }
+    }
+  });
+
+  it("redacts escaped sensitive labels nested in malformed objects and arrays", async () => {
+    const cases = [
+      ['{"outer":{"pass\\u0077ord":"nested-object-secret"}},', "nested-object-secret"],
+      ['{"outer":[{"pass\\u0077ord":"nested-array-secret"}]},', "nested-array-secret"],
+    ] as const;
+
+    for (const [body, secret] of cases) {
+      const result = await readOptionalJsonResult(
+        new Response(body, {
+          headers: { "content-type": "application/json" },
+          status: 200,
+        }),
+      );
+
+      if (result.ok || result.kind !== "external") {
+        expect.fail("Expected an external failure result.");
+      }
+
+      expect(result.body).toContain("[redacted]");
+      expect(result.body).not.toContain(secret);
+      expect(result.error).toMatchObject({ body: result.body });
+    }
+  });
+
+  it("redacts structured values owned by escaped sensitive labels in malformed JSON", async () => {
+    const cases = [
+      ['{"pass\\u0077ord":{"inner":"object-secret"}},', "object-secret"],
+      ['{"pass\\u0077ord":["array-secret"]},', "array-secret"],
+      ['{"outer":{"pass\\u0077ord":{"inner":"nested-object-secret"}}},', "nested-object-secret"],
+      ['{"outer":[{"pass\\u0077ord":["nested-array-secret"]}]},', "nested-array-secret"],
+      ['{"pass\\u0077ord":{"inner":"incomplete-object-secret"', "incomplete-object-secret"],
+      ['{"pass\\u0077ord":["incomplete-array-secret"', "incomplete-array-secret"],
+      [
+        `{"padding":"${"x".repeat(430)}","pass\\u0077ord":{"inner":"boundary-secret","tail":"${"y".repeat(200)}"}},`,
+        "boundary-secret",
+      ],
+    ] as const;
+
+    for (const [body, secret] of cases) {
+      const result = await readOptionalJsonResult(
+        new Response(body, {
+          headers: { "content-type": "application/json" },
+          status: 200,
+        }),
+      );
+
+      if (result.ok || result.kind !== "external") {
+        expect.fail("Expected an external failure result.");
+      }
+
+      expect(result.body).toContain("[redacted]");
+      expect(result.body).not.toContain(secret);
+      expect(result.error).toMatchObject({ body: result.body });
+    }
+  });
+
+  it("bounds sanitization before redacting incomplete private keys", () => {
+    const privateKeyMarker = "-----BEGIN PRIVATE KEY-----";
+    const error = new ProblemResponseError(
+      new Response(null, { status: 200 }),
+      privateKeyMarker.repeat(20_000),
+    );
+
+    expect(error.body).toBe("[redacted]...");
+    expect(error.body).not.toContain(privateKeyMarker);
+    expect(error.body).toHaveLength(13);
+    expect(error.bodyTruncated).toBe(true);
+  });
+
+  it("caps evidence that expands during redaction", () => {
+    const error = new ProblemResponseError(
+      new Response(null, { status: 200 }),
+      "pwd=x;".repeat(80),
+    );
+
+    expect(error.body).toHaveLength(500);
+    expect(error.body).not.toContain("=x");
+    expect(error.body).toMatch(/\.\.\.$/);
+    expect(error.bodyTruncated).toBe(true);
+  });
+
+  it("redacts structured secrets that cross the excerpt boundary", () => {
+    const jwtHeader = "eyJhbGciOiJIUzI1NiJ9";
+    const jwtPayload = "eyJzc24iOiIxMjMtNDUtNjc4OSJ9";
+    const prefix = "x".repeat(497 - jwtHeader.length - jwtPayload.length - 1);
+    const error = new ProblemResponseError(
+      new Response(null, { status: 200 }),
+      `${prefix}${jwtHeader}.${jwtPayload}.${"s".repeat(100)}`,
+    );
+
+    expect(error.body).not.toContain(jwtHeader);
+    expect(error.body).not.toContain(jwtPayload);
+    expect(error.body).toBe(`${prefix}[redacted]...`);
+    expect(error.bodyTruncated).toBe(true);
+  });
+
+  it("keeps external result bodies aligned with redacted error evidence", async () => {
+    const secret = "top secret remaining";
+    const response = new Response(new TextEncoder().encode(JSON.stringify(`password=${secret}`)), {
+      status: 500,
+    });
+    const result = await handleJsonResult(response);
+
+    expect(result).toMatchObject({
+      ok: false,
+      kind: "external",
+      response,
+      body: "password=[redacted]",
+      error: expect.any(ProblemResponseError),
+    });
+    if (result.ok || result.kind !== "external") {
+      expect.fail("Expected an external failure result.");
+    }
+    if (!(result.error instanceof ProblemResponseError)) {
+      expect.fail("Expected a ProblemResponseError.");
+    }
+
+    expect(result.body).toBe(result.error.body);
+    expect(result.body).not.toContain(secret);
+    expect(result.error).toMatchObject({
+      bodyTruncated: false,
+      contentType: undefined,
+    });
+  });
+
+  it("recursively redacts and bounds structured response evidence", () => {
+    const password = "nested-password";
+    const token = "nested-token";
+    const body = {
+      account: {
+        password,
+        sessions: [{ accessToken: token, note: `Bearer ${token}` }],
+      },
+      message: "upstream failed",
+    };
+    const error = new ProblemResponseError(new Response(null, { status: 502 }), body);
+
+    expect(error.body).toEqual({
+      account: {
+        password: "[redacted]",
+        sessions: [{ accessToken: "[redacted]", note: "[redacted]" }],
+      },
+      message: "upstream failed",
+    });
+    expect(error.body).not.toBe(body);
+    expect(JSON.stringify(error.body)).not.toContain(password);
+    expect(JSON.stringify(error.body)).not.toContain(token);
+    expect(error.bodyTruncated).toBe(false);
+
+    const oversizedError = new ProblemResponseError(new Response(null, { status: 502 }), {
+      password,
+      payload: "x".repeat(1_000),
+    });
+
+    expect(typeof oversizedError.body).toBe("string");
+    expect(String(oversizedError.body)).not.toContain(password);
+    expect(String(oversizedError.body)).toHaveLength(500);
+    expect(String(oversizedError.body)).toMatch(/\.\.\.$/);
+    expect(oversizedError.bodyTruncated).toBe(true);
+  });
+
+  it("preserves __proto__ as inert structured response evidence", () => {
+    const body = JSON.parse(
+      '{"__proto__":{"admin":true,"password":"nested-secret"},"message":"bad"}',
+    );
+    const error = new ProblemResponseError(new Response(null, { status: 502 }), body);
+
+    if (error.body === null || typeof error.body !== "object") {
+      expect.fail("Expected structured response evidence.");
+    }
+
+    expect(Object.getPrototypeOf(error.body)).toBe(Object.prototype);
+    expect(Object.prototype.hasOwnProperty.call(error.body, "__proto__")).toBe(true);
+    expect((error.body as Record<string, unknown>).__proto__).toEqual({
+      admin: true,
+      password: "[redacted]",
+    });
+    expect((error.body as Record<string, unknown>).admin).toBeUndefined();
+    expect(JSON.stringify(error.body)).not.toContain("nested-secret");
+  });
+
+  it("does not execute accessors or propagate proxy failures while sanitizing evidence", () => {
+    let getterCalls = 0;
+    const body = {
+      get message(): string {
+        getterCalls += 1;
+        throw new Error("getter exploded");
+      },
+    };
+    const accessorError = new ProblemResponseError(new Response(null, { status: 502 }), body);
+
+    expect(getterCalls).toBe(0);
+    expect(accessorError.body).toEqual({ message: "[unsupported]" });
+    expect(accessorError.bodyTruncated).toBe(true);
+
+    const throwingProxy = new Proxy(
+      {},
+      {
+        ownKeys(): never {
+          throw new Error("proxy exploded");
+        },
+      },
+    );
+    const proxyError = new ProblemResponseError(new Response(null, { status: 502 }), throwingProxy);
+
+    expect(proxyError.body).toBe("[unsupported]");
+    expect(proxyError.bodyTruncated).toBe(true);
   });
 
   it("preserves response body cancellation identity for throwing and Result helpers", async () => {

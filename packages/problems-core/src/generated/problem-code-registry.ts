@@ -339,8 +339,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/ai-saas/apps/api-server/src/aiProblems.ts",
-          line: 31,
-          column: 3,
+          line: 30,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -369,8 +369,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/ai-saas/apps/api-server/src/aiProblems.ts",
-          line: 22,
-          column: 3,
+          line: 21,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -401,8 +401,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/ai-saas/apps/api-server/src/aiProblems.ts",
-          line: 62,
-          column: 3,
+          line: 61,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -431,8 +431,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/ai-saas/apps/api-server/src/aiProblems.ts",
-          line: 40,
-          column: 3,
+          line: 39,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -461,8 +461,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/ai-saas/apps/api-server/src/aiProblems.ts",
-          line: 53,
-          column: 3,
+          line: 52,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -493,8 +493,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/ai-saas/apps/api-server/src/aiProblems.ts",
-          line: 75,
-          column: 3,
+          line: 74,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -524,8 +524,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/ai-saas/apps/api-server/src/aiProblems.ts",
-          line: 13,
-          column: 3,
+          line: 12,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -554,8 +554,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/ai-saas/apps/api-server/src/aiProblems.ts",
-          line: 4,
-          column: 3,
+          line: 3,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -616,8 +616,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/analytics-posthog/src/libs/problems/PostHogAnalyticsProblems.ts",
-          line: 4,
-          column: 3,
+          line: 3,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -648,8 +648,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/analytics-posthog/src/libs/problems/PostHogAnalyticsProblems.ts",
-          line: 47,
-          column: 3,
+          line: 46,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -680,8 +680,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/analytics-posthog/src/libs/problems/PostHogAnalyticsProblems.ts",
-          line: 33,
-          column: 3,
+          line: 32,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -712,8 +712,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/analytics-posthog/src/libs/problems/PostHogAnalyticsProblems.ts",
-          line: 19,
-          column: 3,
+          line: 18,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -744,8 +744,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/analytics-posthog/src/libs/problems/PostHogAnalyticsProblems.ts",
-          line: 61,
-          column: 3,
+          line: 60,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -774,8 +774,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-core/src/libs/problems/AuthProblems.ts",
-          line: 48,
-          column: 3,
+          line: 47,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -805,8 +805,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-core/src/libs/apikey/problems/ApiKeyNotFoundProblem.ts",
-          line: 4,
-          column: 3,
+          line: 3,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -835,8 +835,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-core/src/libs/problems/AuthProblems.ts",
-          line: 56,
-          column: 3,
+          line: 55,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -988,8 +988,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/audit-core/src/libs/problems/AuditableDecoratorProblem.ts",
-          line: 4,
-          column: 3,
+          line: 3,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -1021,8 +1021,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/audit-core/src/libs/problems/AuditClientIpConfigurationProblem.ts",
-          line: 4,
-          column: 3,
+          line: 3,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -1085,8 +1085,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-better-auth/src/libs/problems/BetterAuthAuthenticationProblem.ts",
-          line: 8,
-          column: 3,
+          line: 7,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -1118,8 +1118,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-better-auth/src/libs/problems/BetterAuthInvalidSessionProblem.ts",
-          line: 7,
-          column: 3,
+          line: 6,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -1150,8 +1150,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-better-auth/src/libs/problems/WebhookProblems.ts",
-          line: 23,
-          column: 3,
+          line: 22,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -1181,8 +1181,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-better-auth/src/libs/problems/WebhookProblems.ts",
-          line: 7,
-          column: 3,
+          line: 6,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -1213,8 +1213,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-better-auth/src/libs/problems/AuthProblems.ts",
-          line: 7,
-          column: 3,
+          line: 6,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -1245,8 +1245,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-better-auth/src/libs/problems/BetterAuthSessionLookupProblem.ts",
-          line: 7,
-          column: 3,
+          line: 6,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -1276,8 +1276,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-better-auth/src/libs/problems/AuthProblems.ts",
-          line: 23,
-          column: 3,
+          line: 22,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -1307,8 +1307,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-better-auth/src/libs/problems/AuthProblems.ts",
-          line: 39,
-          column: 3,
+          line: 38,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -1337,8 +1337,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 132,
-          column: 3,
+          line: 131,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -1399,8 +1399,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 19,
-          column: 3,
+          line: 18,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -1429,8 +1429,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 121,
-          column: 3,
+          line: 120,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -1461,8 +1461,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 159,
-          column: 3,
+          line: 158,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -1491,8 +1491,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 74,
-          column: 3,
+          line: 73,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -1524,8 +1524,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 98,
-          column: 3,
+          line: 97,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -1557,8 +1557,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 147,
-          column: 3,
+          line: 146,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -1590,8 +1590,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 55,
-          column: 3,
+          line: 54,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -1623,8 +1623,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 36,
-          column: 3,
+          line: 35,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -1653,8 +1653,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 8,
-          column: 3,
+          line: 7,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -1685,8 +1685,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-core/src/libs/problems/AuthProblems.ts",
-          line: 80,
-          column: 3,
+          line: 79,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -1715,8 +1715,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-core/src/libs/problems/AuthProblems.ts",
-          line: 88,
-          column: 3,
+          line: 87,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -1780,8 +1780,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-core/src/libs/problems/AuthProblems.ts",
-          line: 21,
-          column: 3,
+          line: 20,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -1811,8 +1811,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-core/src/libs/problems/AuthProblems.ts",
-          line: 96,
-          column: 3,
+          line: 95,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -1841,8 +1841,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-core/src/libs/problems/AuthProblems.ts",
-          line: 72,
-          column: 3,
+          line: 71,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -1871,8 +1871,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-core/src/libs/problems/AuthProblems.ts",
-          line: 64,
-          column: 3,
+          line: 63,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -1904,8 +1904,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-core/src/libs/problems/AuthProblems.ts",
-          line: 35,
-          column: 3,
+          line: 34,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -1965,8 +1965,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/batch-core/src/libs/problems/BatchStepProblems.ts",
-          line: 23,
-          column: 3,
+          line: 22,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -1997,8 +1997,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/batch-core/src/libs/ChunkSize.ts",
-          line: 5,
-          column: 3,
+          line: 4,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -2027,8 +2027,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/batch-core/src/libs/problems/BatchStepProblems.ts",
-          line: 4,
-          column: 3,
+          line: 3,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -2058,8 +2058,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/batch-qstash/src/libs/problems/QStashBatchProblems.ts",
-          line: 18,
-          column: 3,
+          line: 17,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -2090,8 +2090,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/batch-qstash/src/libs/problems/QStashBatchProblems.ts",
-          line: 4,
-          column: 3,
+          line: 3,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -2122,8 +2122,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-polar/src/libs/problems/BillingStatusMappingProblem.ts",
-          line: 4,
-          column: 3,
+          line: 3,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -2434,8 +2434,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 32,
-          column: 3,
+          line: 31,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -2464,8 +2464,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 40,
-          column: 3,
+          line: 39,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -2496,8 +2496,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 119,
-          column: 3,
+          line: 118,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -2559,8 +2559,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 127,
-          column: 3,
+          line: 126,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -2623,8 +2623,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 107,
-          column: 3,
+          line: 106,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -2654,8 +2654,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 140,
-          column: 3,
+          line: 139,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -2685,8 +2685,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 148,
-          column: 3,
+          line: 147,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -2716,8 +2716,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/PlanReleaseProblems.ts",
-          line: 69,
-          column: 3,
+          line: 68,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -2747,8 +2747,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/PlanReleaseProblems.ts",
-          line: 21,
-          column: 3,
+          line: 20,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -2778,8 +2778,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 184,
-          column: 3,
+          line: 183,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -2809,8 +2809,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 176,
-          column: 3,
+          line: 175,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -2840,8 +2840,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 243,
-          column: 3,
+          line: 242,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -2870,8 +2870,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 75,
-          column: 3,
+          line: 74,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -2900,8 +2900,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 87,
-          column: 3,
+          line: 86,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -2931,8 +2931,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 99,
-          column: 3,
+          line: 98,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -2962,8 +2962,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 156,
-          column: 3,
+          line: 155,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -2993,8 +2993,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 168,
-          column: 3,
+          line: 167,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -3024,8 +3024,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/PlanReleaseProblems.ts",
-          line: 34,
-          column: 3,
+          line: 33,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -3055,8 +3055,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/PlanReleaseProblems.ts",
-          line: 58,
-          column: 3,
+          line: 57,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -3085,8 +3085,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/PlanReleaseProblems.ts",
-          line: 78,
-          column: 3,
+          line: 77,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -3115,8 +3115,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/PlanReleaseProblems.ts",
-          line: 47,
-          column: 3,
+          line: 46,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -3145,8 +3145,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 192,
-          column: 3,
+          line: 191,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -3175,8 +3175,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 200,
-          column: 3,
+          line: 199,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -3206,8 +3206,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 6,
-          column: 3,
+          line: 5,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -3236,8 +3236,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/PlanReleaseProblems.ts",
-          line: 7,
-          column: 3,
+          line: 6,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -3267,8 +3267,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 24,
-          column: 3,
+          line: 23,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -3299,8 +3299,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 230,
-          column: 3,
+          line: 229,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -3332,8 +3332,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 289,
-          column: 3,
+          line: 288,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -3363,8 +3363,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 302,
-          column: 3,
+          line: 301,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -3394,8 +3394,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 268,
-          column: 3,
+          line: 267,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -3427,8 +3427,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 278,
-          column: 3,
+          line: 277,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -3458,8 +3458,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 251,
-          column: 3,
+          line: 250,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -3489,8 +3489,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 208,
-          column: 3,
+          line: 207,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -3520,8 +3520,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 216,
-          column: 3,
+          line: 215,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -3550,8 +3550,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 59,
-          column: 3,
+          line: 58,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -3580,8 +3580,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 67,
-          column: 3,
+          line: 66,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -3610,8 +3610,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 93,
-          column: 3,
+          line: 92,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -3641,8 +3641,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts",
-          line: 22,
-          column: 3,
+          line: 21,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -3673,8 +3673,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/cache-core/src/libs/problems/CacheStoreProblems.ts",
-          line: 12,
-          column: 3,
+          line: 11,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -3705,8 +3705,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts",
-          line: 12,
-          column: 3,
+          line: 11,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -3735,8 +3735,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/cache-core/src/libs/problems/CacheStoreProblems.ts",
-          line: 35,
-          column: 3,
+          line: 34,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -3768,8 +3768,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts",
-          line: 120,
-          column: 3,
+          line: 119,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -3801,8 +3801,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts",
-          line: 73,
-          column: 3,
+          line: 72,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -3831,8 +3831,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts",
-          line: 59,
-          column: 3,
+          line: 58,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -3863,8 +3863,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts",
-          line: 90,
-          column: 3,
+          line: 89,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -3893,8 +3893,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts",
-          line: 45,
-          column: 3,
+          line: 44,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -3923,8 +3923,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/retry-core/src/libs/errors/CircuitBreakerOpenProblem.ts",
-          line: 7,
-          column: 3,
+          line: 6,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -4051,8 +4051,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/pagination-core/src/libs/problems.ts",
-          line: 17,
-          column: 3,
+          line: 16,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -4081,8 +4081,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/src/libs/problems/DirectoryNotEmptyProblem.ts",
-          line: 4,
-          column: 3,
+          line: 3,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -4111,8 +4111,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/src/libs/problems/InvalidCliOptionProblem.ts",
-          line: 4,
-          column: 3,
+          line: 3,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -4141,8 +4141,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/src/libs/problems/InvalidGoalOptionProblem.ts",
-          line: 5,
-          column: 3,
+          line: 4,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -4172,8 +4172,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/src/libs/problems/InvalidSaasPresetOptionProblem.ts",
-          line: 4,
-          column: 3,
+          line: 3,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -4205,8 +4205,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/addons/lambda/apps/graphql-api/src/telemetryFlush.ts",
-          line: 10,
-          column: 3,
+          line: 9,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -4237,8 +4237,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/src/cli-result.ts",
-          line: 59,
-          column: 3,
+          line: 58,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -4271,8 +4271,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/src/libs/problems/UnsupportedNodeVersionProblem.ts",
-          line: 4,
-          column: 3,
+          line: 3,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -4363,8 +4363,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/credits-core/src/libs/problems.ts",
-          line: 81,
-          column: 3,
+          line: 80,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -4394,8 +4394,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/credits-core/src/libs/problems.ts",
-          line: 15,
-          column: 3,
+          line: 14,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -4424,8 +4424,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/credits-core/src/libs/problems.ts",
-          line: 67,
-          column: 3,
+          line: 66,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -4456,8 +4456,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/credits-core/src/libs/problems.ts",
-          line: 143,
-          column: 3,
+          line: 142,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -4487,8 +4487,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/credits-core/src/libs/problems.ts",
-          line: 39,
-          column: 3,
+          line: 38,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -4518,8 +4518,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/credits-core/src/libs/problems.ts",
-          line: 25,
-          column: 3,
+          line: 24,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -4548,8 +4548,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/credits-core/src/libs/problems.ts",
-          line: 5,
-          column: 3,
+          line: 4,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -4578,8 +4578,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/credits-core/src/libs/problems.ts",
-          line: 109,
-          column: 3,
+          line: 108,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -4609,8 +4609,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/credits-core/src/libs/problems.ts",
-          line: 129,
-          column: 3,
+          line: 128,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -4640,8 +4640,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/credits-core/src/libs/problems.ts",
-          line: 53,
-          column: 3,
+          line: 52,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -4670,8 +4670,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/credits-core/src/libs/problems.ts",
-          line: 95,
-          column: 3,
+          line: 94,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -4701,8 +4701,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/credits-core/src/libs/problems.ts",
-          line: 119,
-          column: 3,
+          line: 118,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -4733,8 +4733,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/credits-drizzle/src/libs/problems.ts",
-          line: 5,
-          column: 3,
+          line: 4,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -5290,8 +5290,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/customer-health-core/src/libs/problems/HealthProblems.ts",
-          line: 33,
-          column: 3,
+          line: 32,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -5323,8 +5323,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/customer-health-core/src/libs/problems/HealthProblems.ts",
-          line: 42,
-          column: 3,
+          line: 41,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -5354,8 +5354,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/customer-health-core/src/libs/problems/HealthProblems.ts",
-          line: 5,
-          column: 3,
+          line: 4,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -5385,8 +5385,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/customer-health-drizzle/src/libs/problems/DrizzleHealthProblems.ts",
-          line: 5,
-          column: 3,
+          line: 4,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -5418,8 +5418,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/customer-health-drizzle/src/libs/problems/DrizzleHealthProblems.ts",
-          line: 26,
-          column: 3,
+          line: 25,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -5451,8 +5451,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/dataloader-core/src/libs/problems/BatchLoaderProblems.ts",
-          line: 4,
-          column: 3,
+          line: 3,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -5513,8 +5513,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/diagnostics-core/src/libs/problems/DiagnosticsProblems.ts",
-          line: 25,
-          column: 3,
+          line: 24,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -5543,8 +5543,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/diagnostics-core/src/libs/problems/DiagnosticsProblems.ts",
-          line: 9,
-          column: 3,
+          line: 8,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -5575,8 +5575,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/invitation-core/src/libs/problems/DomainPolicyProblems.ts",
-          line: 30,
-          column: 3,
+          line: 29,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -5605,8 +5605,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/invitation-core/src/libs/problems/RateLimitProblems.ts",
-          line: 13,
-          column: 3,
+          line: 12,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -5637,8 +5637,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/retry-core/src/libs/errors/DuplicateRecoverHandlerProblem.ts",
-          line: 7,
-          column: 3,
+          line: 6,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -5668,8 +5668,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/problems/ContextProblems.ts",
-          line: 15,
-          column: 3,
+          line: 14,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -6013,8 +6013,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/entitlements-core/src/libs/problems/EntitlementProblems.ts",
-          line: 20,
-          column: 3,
+          line: 19,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -6043,8 +6043,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/entitlements-core/src/libs/problems/EntitlementProblems.ts",
-          line: 46,
-          column: 3,
+          line: 45,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -6073,8 +6073,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/entitlements-core/src/libs/problems/EntitlementProblems.ts",
-          line: 32,
-          column: 3,
+          line: 31,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -6104,8 +6104,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/entitlements-core/src/libs/problems/EntitlementProblems.ts",
-          line: 86,
-          column: 3,
+          line: 85,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -6136,8 +6136,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/entitlements-core/src/libs/problems/EntitlementProblems.ts",
-          line: 74,
-          column: 3,
+          line: 73,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -6166,8 +6166,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/entitlements-core/src/libs/problems/EntitlementProblems.ts",
-          line: 60,
-          column: 3,
+          line: 59,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -6196,8 +6196,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/entitlements-core/src/libs/problems/EntitlementProblems.ts",
-          line: 11,
-          column: 3,
+          line: 10,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -6226,8 +6226,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/entitlements-core/src/libs/problems/EntitlementProblems.ts",
-          line: 95,
-          column: 3,
+          line: 94,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -6257,8 +6257,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/entitlements-core/src/libs/problems/EntitlementProblems.ts",
-          line: 113,
-          column: 3,
+          line: 112,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -6287,8 +6287,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/entitlements-core/src/libs/problems/EntitlementProblems.ts",
-          line: 122,
-          column: 3,
+          line: 121,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -6319,8 +6319,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/entitlements-core/src/libs/problems/EntitlementProblems.ts",
-          line: 104,
-          column: 3,
+          line: 103,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -6352,8 +6352,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 107,
-          column: 3,
+          line: 106,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -6385,8 +6385,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 96,
-          column: 3,
+          line: 95,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -6417,8 +6417,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 40,
-          column: 3,
+          line: 39,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -6449,8 +6449,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 51,
-          column: 3,
+          line: 50,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -6481,8 +6481,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 66,
-          column: 3,
+          line: 65,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -6513,8 +6513,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 7,
-          column: 3,
+          line: 6,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -6545,8 +6545,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 18,
-          column: 3,
+          line: 17,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -6578,8 +6578,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 81,
-          column: 3,
+          line: 80,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -6610,8 +6610,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 29,
-          column: 3,
+          line: 28,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -6640,8 +6640,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-inmemory/src/libs/problems/EventsInmemoryProblems.ts",
-          line: 35,
-          column: 3,
+          line: 34,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -6670,8 +6670,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-inmemory/src/libs/problems/EventsInmemoryProblems.ts",
-          line: 51,
-          column: 3,
+          line: 50,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -6702,8 +6702,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-inmemory/src/libs/problems/EventsInmemoryProblems.ts",
-          line: 12,
-          column: 3,
+          line: 11,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -6734,8 +6734,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-inmemory/src/libs/InmemoryEventBus.ts",
-          line: 54,
-          column: 3,
+          line: 53,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -6766,8 +6766,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-inmemory/src/libs/InmemoryEventBus.ts",
-          line: 37,
-          column: 3,
+          line: 36,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -6798,8 +6798,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-tx/src/libs/problems/EventsTxProblems.ts",
-          line: 36,
-          column: 3,
+          line: 35,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -6830,8 +6830,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-tx/src/libs/problems/EventsTxProblems.ts",
-          line: 135,
-          column: 3,
+          line: 134,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -6860,8 +6860,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-tx/src/libs/problems/EventsTxProblems.ts",
-          line: 98,
-          column: 3,
+          line: 97,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -6890,8 +6890,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-tx/src/libs/problems/EventsTxProblems.ts",
-          line: 83,
-          column: 3,
+          line: 82,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -6922,8 +6922,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-tx/src/libs/problems/EventsTxProblems.ts",
-          line: 120,
-          column: 3,
+          line: 119,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -6954,8 +6954,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-tx/src/libs/problems/EventsTxProblems.ts",
-          line: 64,
-          column: 3,
+          line: 63,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -6986,8 +6986,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-tx/src/libs/problems/EventsTxProblems.ts",
-          line: 73,
-          column: 3,
+          line: 72,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -7018,8 +7018,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-tx/src/libs/problems/EventsTxProblems.ts",
-          line: 56,
-          column: 3,
+          line: 55,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -7295,8 +7295,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 32,
-          column: 3,
+          line: 31,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -7416,8 +7416,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-core/src/libs/problems/AuthProblems.ts",
-          line: 13,
-          column: 3,
+          line: 12,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -7449,8 +7449,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-config/src/libs/problems/ConfigProblems.ts",
-          line: 4,
-          column: 3,
+          line: 3,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -7510,8 +7510,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-config/src/libs/problems/ConfigProblems.ts",
-          line: 24,
-          column: 3,
+          line: 23,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -7544,8 +7544,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-config/src/libs/problems/ConfigProblems.ts",
-          line: 33,
-          column: 3,
+          line: 32,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -7576,8 +7576,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/problems/CircularDependencyProblem.ts",
-          line: 7,
-          column: 3,
+          line: 6,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -7642,8 +7642,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/problems/ContextProblems.ts",
-          line: 7,
-          column: 3,
+          line: 6,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -7674,8 +7674,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/problems/ContainerResolutionProblem.ts",
-          line: 10,
-          column: 3,
+          line: 9,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -7706,8 +7706,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/problems/ContainerResolutionProblem.ts",
-          line: 31,
-          column: 3,
+          line: 30,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -7737,8 +7737,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/problems/ShutdownProblems.ts",
-          line: 9,
-          column: 3,
+          line: 8,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -7768,8 +7768,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/problems/PipelineGraphProblems.ts",
-          line: 7,
-          column: 3,
+          line: 6,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -7799,8 +7799,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/problems/RuntimePolicyProblems.ts",
-          line: 33,
-          column: 3,
+          line: 32,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -7829,8 +7829,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/problems/RuntimePolicyProblems.ts",
-          line: 9,
-          column: 3,
+          line: 8,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -7860,8 +7860,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/problems/RuntimePolicyProblems.ts",
-          line: 21,
-          column: 3,
+          line: 20,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -7926,8 +7926,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/problems/RuntimeInspectorProblems.ts",
-          line: 10,
-          column: 3,
+          line: 9,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -7957,8 +7957,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/problems/ShutdownProblems.ts",
-          line: 111,
-          column: 3,
+          line: 110,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -7990,8 +7990,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/problems/ShutdownProblems.ts",
-          line: 148,
-          column: 3,
+          line: 147,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -8024,8 +8024,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/problems/ShutdownProblems.ts",
-          line: 126,
-          column: 3,
+          line: 125,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -8056,8 +8056,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/problems/ShutdownProblems.ts",
-          line: 87,
-          column: 3,
+          line: 86,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -8087,8 +8087,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/problems/ShutdownProblems.ts",
-          line: 71,
-          column: 3,
+          line: 70,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -8590,8 +8590,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/frontend-problems/src/index.ts",
-          line: 232,
-          column: 3,
+          line: 249,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -8622,8 +8622,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/frontend-problems/src/index.ts",
-          line: 209,
-          column: 3,
+          line: 226,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -8748,8 +8748,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/gid-core/src/libs/problems/GidProblems.ts",
-          line: 32,
-          column: 3,
+          line: 31,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -8778,8 +8778,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/gid-core/src/libs/problems/GidProblems.ts",
-          line: 5,
-          column: 3,
+          line: 4,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -8965,8 +8965,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/customer-health-core/src/libs/problems/HealthProblems.ts",
-          line: 25,
-          column: 3,
+          line: 24,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -8997,8 +8997,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/health-core/src/libs/problems/HealthProblems.ts",
-          line: 45,
-          column: 3,
+          line: 44,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -9027,8 +9027,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/health-core/src/libs/problems/HealthProblems.ts",
-          line: 24,
-          column: 3,
+          line: 23,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -9057,8 +9057,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/health-core/src/libs/problems/HealthProblems.ts",
-          line: 10,
-          column: 3,
+          line: 9,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -9301,8 +9301,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 28,
-          column: 3,
+          line: 27,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -9331,8 +9331,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 57,
-          column: 3,
+          line: 56,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -9365,8 +9365,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 127,
-          column: 3,
+          line: 126,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -9396,8 +9396,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 84,
-          column: 3,
+          line: 83,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -9426,8 +9426,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 116,
-          column: 3,
+          line: 115,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -9457,8 +9457,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 102,
-          column: 3,
+          line: 101,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -9488,8 +9488,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 66,
-          column: 3,
+          line: 65,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -9519,8 +9519,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 157,
-          column: 3,
+          line: 156,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -9550,8 +9550,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 170,
-          column: 3,
+          line: 169,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -9613,8 +9613,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/integrations-posthog/src/libs/problems/PostHogProblems.ts",
-          line: 4,
-          column: 3,
+          line: 3,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -9675,8 +9675,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/pagination-core/src/libs/problems.ts",
-          line: 4,
-          column: 3,
+          line: 3,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -9705,8 +9705,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/invitation-core/src/libs/problems/InvitationProblems.ts",
-          line: 32,
-          column: 3,
+          line: 31,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -9767,8 +9767,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/pagination-core/src/libs/problems.ts",
-          line: 40,
-          column: 3,
+          line: 39,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -9797,8 +9797,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts",
-          line: 52,
-          column: 3,
+          line: 51,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -9858,8 +9858,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/invitation-core/src/libs/problems/InvitationProblems.ts",
-          line: 73,
-          column: 3,
+          line: 72,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -9890,8 +9890,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/invitation-core/src/libs/problems/InvitationProblems.ts",
-          line: 4,
-          column: 3,
+          line: 3,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -9920,8 +9920,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/invitation-core/src/libs/problems/InvitationProblems.ts",
-          line: 84,
-          column: 3,
+          line: 83,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -9951,8 +9951,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/invitation-core/src/libs/problems/InvitationProblems.ts",
-          line: 62,
-          column: 3,
+          line: 61,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -9981,8 +9981,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/invitation-core/src/libs/problems/InvitationProblems.ts",
-          line: 19,
-          column: 3,
+          line: 18,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -10011,8 +10011,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/invitation-core/src/libs/problems/InvitationProblems.ts",
-          line: 95,
-          column: 3,
+          line: 94,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -10042,8 +10042,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/invitation-core/src/libs/problems/InvitationProblems.ts",
-          line: 51,
-          column: 3,
+          line: 50,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -10072,8 +10072,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/invitation-core/src/libs/problems/RateLimitProblems.ts",
-          line: 4,
-          column: 3,
+          line: 3,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -10103,8 +10103,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/invitation-core/src/libs/problems/BatchInviteProblems.ts",
-          line: 4,
-          column: 3,
+          line: 3,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -10167,8 +10167,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts",
-          line: 39,
-          column: 3,
+          line: 38,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -10978,8 +10978,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/llm-metering/src/libs/problems/LlmMeteringProblems.ts",
-          line: 72,
-          column: 3,
+          line: 71,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -11507,8 +11507,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/actions/serverActions.ts",
-          line: 80,
-          column: 3,
+          line: 79,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -11538,8 +11538,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/actions/serverActions.ts",
-          line: 66,
-          column: 3,
+          line: 65,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -11569,8 +11569,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/actions/serverActions.ts",
-          line: 94,
-          column: 3,
+          line: 93,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -11699,8 +11699,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/metering-upstash/src/libs/problems/UpstashMeteringProblems.ts",
-          line: 4,
-          column: 3,
+          line: 3,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -11731,8 +11731,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/metering-core/src/libs/problems/AtomicQuotaNotSupportedProblem.ts",
-          line: 4,
-          column: 3,
+          line: 3,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -12072,8 +12072,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/metrics-billing/src/libs/problems/BillingMetricsProblems.ts",
-          line: 62,
-          column: 3,
+          line: 61,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -12105,8 +12105,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/metrics-billing/src/libs/problems/BillingMetricsProblems.ts",
-          line: 17,
-          column: 3,
+          line: 16,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -12137,8 +12137,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/metrics-billing/src/libs/problems/BillingMetricsProblems.ts",
-          line: 46,
-          column: 3,
+          line: 45,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -12169,8 +12169,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/metrics-core/src/libs/problems/MetricsProblems.ts",
-          line: 4,
-          column: 3,
+          line: 3,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -12200,8 +12200,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/metrics-core/src/libs/problems/MetricsProblems.ts",
-          line: 12,
-          column: 3,
+          line: 11,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -12230,8 +12230,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/metrics-core/src/libs/problems/MetricsProblems.ts",
-          line: 42,
-          column: 3,
+          line: 41,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -12260,8 +12260,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/metrics-core/src/libs/problems/MetricsProblems.ts",
-          line: 30,
-          column: 3,
+          line: 29,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -12290,8 +12290,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/metrics-core/src/libs/problems/MetricsProblems.ts",
-          line: 50,
-          column: 3,
+          line: 49,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -12322,8 +12322,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/metrics-core/src/libs/problems/MetricsProblems.ts",
-          line: 20,
-          column: 3,
+          line: 19,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -12352,8 +12352,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/metrics-core/src/libs/SnapshotScheduler.ts",
-          line: 19,
-          column: 3,
+          line: 18,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -12384,8 +12384,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/problems/MiddlewareProblems.ts",
-          line: 7,
-          column: 3,
+          line: 6,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -12415,8 +12415,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/migration-runner/src/libs/problems/DatabaseUrlRequiredProblem.ts",
-          line: 4,
-          column: 3,
+          line: 3,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -12447,8 +12447,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/migration-runner/src/libs/problems/MigrationFileLoadProblem.ts",
-          line: 5,
-          column: 3,
+          line: 4,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -12480,8 +12480,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/migration-runner/src/libs/problems/MigrationHistoryDriftProblem.ts",
-          line: 16,
-          column: 3,
+          line: 15,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -12511,8 +12511,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/migration-runner/src/libs/problems/InvalidMigrationCountProblem.ts",
-          line: 4,
-          column: 3,
+          line: 3,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -12541,8 +12541,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/migration-runner/src/libs/problems/MissingDownFunctionProblem.ts",
-          line: 4,
-          column: 3,
+          line: 3,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -12571,8 +12571,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/migration-runner/src/libs/problems/MissingUpFunctionProblem.ts",
-          line: 4,
-          column: 3,
+          line: 3,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -12601,8 +12601,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/migration-runner/src/libs/problems/MigrationTransactionRequiredProblem.ts",
-          line: 4,
-          column: 3,
+          line: 3,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -12632,8 +12632,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/migration-runner/src/libs/problems/UnsupportedDialectProblem.ts",
-          line: 4,
-          column: 3,
+          line: 3,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -12665,8 +12665,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/migration-runner/src/libs/problems/UnsupportedMigrationQueryResultProblem.ts",
-          line: 11,
-          column: 3,
+          line: 10,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -12757,8 +12757,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 75,
-          column: 3,
+          line: 74,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -13621,8 +13621,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/onboarding-core/src/libs/problems/OnboardingProblems.ts",
-          line: 48,
-          column: 3,
+          line: 47,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -13652,8 +13652,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/onboarding-core/src/libs/problems/OnboardingProblems.ts",
-          line: 26,
-          column: 3,
+          line: 25,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -13715,8 +13715,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/onboarding-core/src/libs/problems/OnboardingProblems.ts",
-          line: 78,
-          column: 3,
+          line: 77,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -13745,8 +13745,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/onboarding-core/src/libs/problems/OnboardingProblems.ts",
-          line: 63,
-          column: 3,
+          line: 62,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -13776,8 +13776,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/onboarding-core/src/libs/problems/OnboardingProblems.ts",
-          line: 37,
-          column: 3,
+          line: 36,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -13900,8 +13900,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts",
-          line: 19,
-          column: 3,
+          line: 18,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -14280,8 +14280,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/problems-core/src/libs/Problem.ts",
-          line: 123,
-          column: 3,
+          line: 122,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -14311,8 +14311,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/problems-core/src/libs/problems/ProblemDetailsParseProblem.ts",
-          line: 5,
-          column: 3,
+          line: 4,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -14373,8 +14373,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/problems-core/src/libs/ProblemCategoryMapper.ts",
-          line: 19,
-          column: 5,
+          line: 18,
+          column: 3,
           kind: "problem-class",
         },
       ],
@@ -14654,8 +14654,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/protocols-graphql/src/libs/problems/GuardProblems.ts",
-          line: 4,
-          column: 3,
+          line: 3,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -14874,8 +14874,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/protocols-rest/src/libs/validators/ValidationProblem.ts",
-          line: 31,
-          column: 3,
+          line: 30,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -14907,8 +14907,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/protocols-rest/src/libs/validators/ValidationProblem.ts",
-          line: 54,
-          column: 3,
+          line: 53,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -14937,8 +14937,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/protocols-rest/src/libs/validators/ValidationProblem.ts",
-          line: 12,
-          column: 3,
+          line: 11,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -15002,8 +15002,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/protocols-trpc/src/libs/createTrpcRouter.ts",
-          line: 93,
-          column: 3,
+          line: 92,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -15035,8 +15035,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/protocols-trpc/src/libs/createTrpcRouter.ts",
-          line: 77,
-          column: 3,
+          line: 76,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -15068,8 +15068,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/protocols-trpc/src/libs/TrpcExecutionContext.ts",
-          line: 51,
-          column: 3,
+          line: 50,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -15100,8 +15100,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/protocols-trpc/src/libs/TrpcExecutionContext.ts",
-          line: 42,
-          column: 3,
+          line: 41,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -15133,8 +15133,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/protocols-trpc/src/libs/createTrpcRouter.ts",
-          line: 64,
-          column: 3,
+          line: 63,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -15226,8 +15226,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/ratelimit-core/src/libs/problems/RateLimitConfigProblems.ts",
-          line: 6,
-          column: 3,
+          line: 5,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -15289,8 +15289,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/ratelimit-core/src/libs/problems/RateLimitConfigProblems.ts",
-          line: 16,
-          column: 3,
+          line: 15,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -15321,8 +15321,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/ratelimit-core/src/libs/problems/RateLimitConfigProblems.ts",
-          line: 52,
-          column: 3,
+          line: 51,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -15353,8 +15353,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/ratelimit-upstash/src/libs/problems/RateLimitUpstashProblems.ts",
-          line: 7,
-          column: 3,
+          line: 6,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -15385,8 +15385,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/ratelimit-upstash/src/libs/problems/RateLimitUpstashProblems.ts",
-          line: 21,
-          column: 3,
+          line: 20,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -15448,8 +15448,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/repository-core/src/libs/problems/BatchLoadProblems.ts",
-          line: 77,
-          column: 3,
+          line: 76,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -15481,8 +15481,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/repository-core/src/libs/problems/BatchLoadProblems.ts",
-          line: 57,
-          column: 3,
+          line: 56,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -15514,8 +15514,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/repository-core/src/libs/problems/BatchLoadProblems.ts",
-          line: 67,
-          column: 3,
+          line: 66,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -15547,8 +15547,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/repository-core/src/libs/problems/BatchLoadProblems.ts",
-          line: 43,
-          column: 3,
+          line: 42,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -15580,8 +15580,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/repository-core/src/libs/problems/BatchLoadProblems.ts",
-          line: 4,
-          column: 3,
+          line: 3,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -15613,8 +15613,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/repository-core/src/libs/problems/BatchLoadProblems.ts",
-          line: 17,
-          column: 3,
+          line: 16,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -15646,8 +15646,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/repository-core/src/libs/problems/BatchLoadProblems.ts",
-          line: 29,
-          column: 3,
+          line: 28,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -15710,8 +15710,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/retry-core/src/libs/errors/RetryAbortedProblem.ts",
-          line: 7,
-          column: 3,
+          line: 6,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -15742,8 +15742,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts",
-          line: 13,
-          column: 3,
+          line: 12,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -15774,8 +15774,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts",
-          line: 26,
-          column: 3,
+          line: 25,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -15806,8 +15806,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts",
-          line: 7,
-          column: 3,
+          line: 6,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -15837,8 +15837,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/retry-core/src/libs/errors/RetryCancellationUnsupportedProblem.ts",
-          line: 7,
-          column: 3,
+          line: 6,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -15870,8 +15870,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/retry-core/src/libs/problems/CircuitBreakerProblems.ts",
-          line: 7,
-          column: 3,
+          line: 6,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -15903,8 +15903,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts",
-          line: 75,
-          column: 3,
+          line: 74,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -16087,8 +16087,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
-          line: 75,
-          column: 3,
+          line: 74,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -16117,8 +16117,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
-          line: 4,
-          column: 3,
+          line: 3,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -16147,8 +16147,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
-          line: 30,
-          column: 3,
+          line: 29,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -16177,8 +16177,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
-          line: 17,
-          column: 3,
+          line: 16,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -16208,8 +16208,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
-          line: 39,
-          column: 3,
+          line: 38,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -16240,8 +16240,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
-          line: 66,
-          column: 3,
+          line: 65,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -16272,8 +16272,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
-          line: 84,
-          column: 3,
+          line: 83,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -16302,8 +16302,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
-          line: 48,
-          column: 3,
+          line: 47,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -16333,8 +16333,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
-          line: 57,
-          column: 3,
+          line: 56,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -16396,8 +16396,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/search-drizzle/src/libs/problems/InvalidSearchRowProblem.ts",
-          line: 7,
-          column: 3,
+          line: 6,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -16524,8 +16524,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/search-core/src/libs/problems/SearchProblems.ts",
-          line: 87,
-          column: 3,
+          line: 86,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -16837,8 +16837,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 48,
-          column: 3,
+          line: 47,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -16867,8 +16867,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/spa-be-split/apps/api-server/src/problems.ts",
-          line: 4,
-          column: 3,
+          line: 3,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -16899,8 +16899,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/spa-be-split/apps/console-web/src/test/browser.ts",
-          line: 8,
-          column: 3,
+          line: 7,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -16930,8 +16930,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/spa-be-split/apps/api-server/src/problems.ts",
-          line: 13,
-          column: 3,
+          line: 12,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -17024,8 +17024,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/storage-core/src/libs/problems/InvalidKeyProblem.ts",
-          line: 5,
-          column: 3,
+          line: 4,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -17055,8 +17055,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/storage-core/src/libs/problems/InvalidNodeStorageBodyProblem.ts",
-          line: 5,
-          column: 3,
+          line: 4,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -17086,8 +17086,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/storage-core/src/libs/problems/InvalidSignedUrlExpiryProblem.ts",
-          line: 9,
-          column: 3,
+          line: 8,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -17181,8 +17181,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/storage-r2/src/libs/problems/MissingR2ConfigProblem.ts",
-          line: 8,
-          column: 3,
+          line: 7,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -17213,8 +17213,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/storage-r2/src/libs/problems/R2ObjectTooLargeProblem.ts",
-          line: 8,
-          column: 3,
+          line: 7,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -17245,8 +17245,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/storage-r2/src/libs/problems/R2ReadinessProblem.ts",
-          line: 14,
-          column: 3,
+          line: 13,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -17751,8 +17751,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tasks-core/src/libs/problems/TasksProblems.ts",
-          line: 4,
-          column: 3,
+          line: 3,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -17814,8 +17814,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tasks-qstash/src/libs/problems/QStashTaskProblems.ts",
-          line: 18,
-          column: 3,
+          line: 17,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -17846,8 +17846,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tasks-qstash/src/libs/problems/QStashTaskProblems.ts",
-          line: 4,
-          column: 3,
+          line: 3,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -17877,8 +17877,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/telemetry-sdk-node/src/libs/problems/TelemetryAutoInstrumentationProblem.ts",
-          line: 7,
-          column: 3,
+          line: 6,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -17908,8 +17908,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts",
-          line: 101,
-          column: 3,
+          line: 100,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -17940,8 +17940,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts",
-          line: 181,
-          column: 3,
+          line: 180,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -17971,8 +17971,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts",
-          line: 7,
-          column: 3,
+          line: 6,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -18002,8 +18002,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts",
-          line: 83,
-          column: 3,
+          line: 82,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -18036,8 +18036,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts",
-          line: 42,
-          column: 3,
+          line: 41,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -18067,8 +18067,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts",
-          line: 117,
-          column: 3,
+          line: 116,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -18100,8 +18100,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts",
-          line: 167,
-          column: 3,
+          line: 166,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -18134,8 +18134,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts",
-          line: 147,
-          column: 3,
+          line: 146,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -18261,8 +18261,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tenant-core/src/libs/problems/DuplicateTenantManagerRegistrationProblem.ts",
-          line: 4,
-          column: 3,
+          line: 3,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -18324,8 +18324,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tenant-core/src/libs/problems/TenantManagerNotRegisteredProblem.ts",
-          line: 4,
-          column: 3,
+          line: 3,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -18385,8 +18385,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tenant-core/src/libs/problems/TenantNotFoundProblem.ts",
-          line: 7,
-          column: 3,
+          line: 6,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -18415,8 +18415,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tenant-core/src/libs/problems/TenantRequiredProblem.ts",
-          line: 7,
-          column: 3,
+          line: 6,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -19279,8 +19279,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-graphql/src/libs/problems/GraphQLTransportProblems.ts",
-          line: 63,
-          column: 3,
+          line: 62,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -19344,8 +19344,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-graphql/src/libs/problems/GraphQLTransportProblems.ts",
-          line: 71,
-          column: 3,
+          line: 70,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -19377,8 +19377,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-graphql/src/libs/problems/GraphQLTransportProblems.ts",
-          line: 20,
-          column: 3,
+          line: 19,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -19410,8 +19410,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-graphql/src/libs/problems/GraphQLTransportProblems.ts",
-          line: 32,
-          column: 3,
+          line: 31,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -19443,8 +19443,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-graphql/src/libs/problems/GraphQLTransportProblems.ts",
-          line: 40,
-          column: 3,
+          line: 39,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -19937,8 +19937,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/runtimeContext.ts",
-          line: 101,
-          column: 3,
+          line: 100,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -20323,8 +20323,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-core/src/libs/problems/TransactionProblems.ts",
-          line: 103,
-          column: 3,
+          line: 102,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -20355,8 +20355,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-core/src/libs/problems/TransactionProblems.ts",
-          line: 35,
-          column: 3,
+          line: 34,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -20388,8 +20388,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-core/src/libs/problems/TransactionProblems.ts",
-          line: 50,
-          column: 3,
+          line: 49,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -20420,8 +20420,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-core/src/libs/problems/TransactionProblems.ts",
-          line: 13,
-          column: 3,
+          line: 12,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -20452,8 +20452,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-core/src/libs/problems/TransactionProblems.ts",
-          line: 61,
-          column: 3,
+          line: 60,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -20485,8 +20485,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-core/src/libs/errors.ts",
-          line: 7,
-          column: 3,
+          line: 6,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -20515,8 +20515,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-core/src/libs/problems/TransactionProblems.ts",
-          line: 87,
-          column: 3,
+          line: 86,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -20547,8 +20547,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-core/src/libs/errors.ts",
-          line: 23,
-          column: 3,
+          line: 22,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -20579,8 +20579,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-core/src/libs/problems/TransactionProblems.ts",
-          line: 24,
-          column: 3,
+          line: 23,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -20611,8 +20611,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-core/src/libs/problems/TransactionProblems.ts",
-          line: 76,
-          column: 3,
+          line: 75,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -20642,8 +20642,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-core/src/libs/errors.ts",
-          line: 34,
-          column: 3,
+          line: 33,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -20674,8 +20674,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-core/src/libs/problems/TransactionProblems.ts",
-          line: 165,
-          column: 3,
+          line: 164,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -20706,8 +20706,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-core/src/libs/problems/TransactionProblems.ts",
-          line: 147,
-          column: 3,
+          line: 146,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -20738,8 +20738,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-core/src/libs/problems/TransactionProblems.ts",
-          line: 130,
-          column: 3,
+          line: 129,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -20770,8 +20770,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-drizzle/src/libs/problems/TxDrizzleProblems.ts",
-          line: 7,
-          column: 3,
+          line: 6,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -20801,8 +20801,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-drizzle/src/libs/problems/TxDrizzleProblems.ts",
-          line: 57,
-          column: 3,
+          line: 56,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -20833,8 +20833,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-drizzle/src/libs/problems/TxDrizzleProblems.ts",
-          line: 29,
-          column: 3,
+          line: 28,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -20865,8 +20865,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-drizzle/src/libs/problems/TxDrizzleProblems.ts",
-          line: 76,
-          column: 3,
+          line: 75,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -20897,8 +20897,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-drizzle/src/libs/problems/TxDrizzleProblems.ts",
-          line: 21,
-          column: 3,
+          line: 20,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -20927,8 +20927,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-core/src/libs/problems/AuthProblems.ts",
-          line: 5,
-          column: 3,
+          line: 4,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -20959,8 +20959,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-polar/src/libs/problems/WebhookProcessingProblem.ts",
-          line: 4,
-          column: 3,
+          line: 3,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -20990,8 +20990,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-polar/src/libs/problems/WebhookValidationProblem.ts",
-          line: 4,
-          column: 3,
+          line: 3,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -21682,8 +21682,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/workflow-core/src/libs/problems/WorkflowProblems.ts",
-          line: 77,
-          column: 3,
+          line: 76,
+          column: 1,
           kind: "problem-class",
         },
       ],
@@ -21872,8 +21872,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/workflow-core/src/libs/problems/WorkflowProblems.ts",
-          line: 5,
-          column: 3,
+          line: 4,
+          column: 1,
           kind: "problem-class",
         },
       ],
