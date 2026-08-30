@@ -21,4 +21,4 @@ title: "ArgumentMetadata"
 
 ### type
 
-> **type**: `"custom"` \| `"query"` \| `"body"` \| `"param"` \| `"header"`
+> **type**: `"body"` \| `"query"` \| `"custom"` \| `"param"` \| `"header"`

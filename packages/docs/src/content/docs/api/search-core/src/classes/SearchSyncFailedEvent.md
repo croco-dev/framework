@@ -37,7 +37,7 @@ title: "SearchSyncFailedEvent"
 
 ##### operation
 
-`"index"` \| `"delete"`
+`"delete"` \| `"index"`
 
 #### Returns
 
@@ -99,7 +99,7 @@ title: "SearchSyncFailedEvent"
 
 ### operation
 
-> `readonly` **operation**: `"index"` \| `"delete"`
+> `readonly` **operation**: `"delete"` \| `"index"`
 
 ---
 
