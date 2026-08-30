@@ -4,13 +4,14 @@ import type { MetricsRepository } from "./interfaces/MetricsRepository";
 import {
   CarryingCapacitySimulationProblem,
   CarryingCapacityTenantRequiredProblem,
+  InvalidCarryingCapacityConfigProblem,
 } from "./problems/MetricsProblems";
 
 /**
  * Configuration for User Carrying Capacity calculation.
  */
 export type UserCCConfig = {
-  /** Number of days to look back for calculating average daily inflow/churn */
+  /** Positive safe integer number of days to look back for calculating average daily inflow/churn */
   lookbackDays: number;
   tenantId: string;
 };
@@ -19,7 +20,7 @@ export type UserCCConfig = {
  * Configuration for Revenue Carrying Capacity calculation.
  */
 export type RevenueCCConfig = {
-  /** Number of months to look back for calculating monthly averages */
+  /** Positive safe integer number of months to look back for calculating monthly averages */
   lookbackMonths: number;
   tenantId: string;
 };
@@ -73,6 +74,7 @@ export class CarryingCapacityCalculator {
   async calculateUserCC(config: UserCCConfig): Promise<CCResult | null> {
     const { lookbackDays, tenantId } = config;
     this.assertTenantId(tenantId);
+    this.assertValidLookback("lookbackDays", lookbackDays);
 
     const now = new Date();
 
@@ -113,6 +115,7 @@ export class CarryingCapacityCalculator {
   async calculateRevenueCC(config: RevenueCCConfig): Promise<CCResult | null> {
     const { lookbackMonths, tenantId } = config;
     this.assertTenantId(tenantId);
+    this.assertValidLookback("lookbackMonths", lookbackMonths);
 
     const now = new Date();
 
@@ -227,6 +230,12 @@ export class CarryingCapacityCalculator {
   private assertTenantId(tenantId: string): void {
     if (!tenantId) {
       throw new CarryingCapacityTenantRequiredProblem();
+    }
+  }
+
+  private assertValidLookback(field: "lookbackDays" | "lookbackMonths", value: number): void {
+    if (!Number.isSafeInteger(value) || value <= 0) {
+      throw new InvalidCarryingCapacityConfigProblem(field, value);
     }
   }
 

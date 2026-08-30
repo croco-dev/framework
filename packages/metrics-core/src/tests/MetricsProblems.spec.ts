@@ -2,6 +2,7 @@ import { ProblemCategory } from "@croco/problems-core";
 import { describe, expect, it } from "vitest";
 import {
   CarryingCapacitySimulationProblem,
+  InvalidCarryingCapacityConfigProblem,
   InvalidRetentionMovementProblem,
   RetentionMetricsUnavailableProblem,
 } from "../libs/problems/MetricsProblems";
@@ -25,6 +26,21 @@ describe("MetricsProblems", () => {
     expect(problem.detail).toBe(
       "Retention metrics are not available until full retention calculation is implemented",
     );
+  });
+
+  it("InvalidCarryingCapacityConfigProblem identifies the invalid field and value", () => {
+    const problem = new InvalidCarryingCapacityConfigProblem("lookbackDays", Number.NaN);
+
+    expect(problem.code).toBe("metrics-core/invalid-carrying-capacity-config");
+    expect(problem.category).toBe(ProblemCategory.ValidationError);
+    expect(problem.detail).toBe(
+      "Carrying capacity configuration 'lookbackDays' must be a positive safe integer; received NaN.",
+    );
+    expect(problem.extensions).toMatchObject({
+      field: "lookbackDays",
+      receivedValue: "NaN",
+      retryable: false,
+    });
   });
 
   it("InvalidRetentionMovementProblem has correct code and category", () => {

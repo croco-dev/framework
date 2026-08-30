@@ -18710,6 +18710,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "InvalidCarryingCapacityConfigProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/MetricsProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "InvalidRetentionMovementProblem",
               "exportKind": "named",
               "source": "./libs/problems/MetricsProblems",

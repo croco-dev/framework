@@ -32,6 +32,21 @@ describe("CarryingCapacityCalculator", () => {
   });
 
   describe("calculateUserCC", () => {
+    it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, 1.5])(
+      "should reject invalid lookbackDays %s before reading metrics",
+      async (lookbackDays) => {
+        await expect(
+          calculator.calculateUserCC({ lookbackDays, tenantId: TENANT_ID }),
+        ).rejects.toMatchObject({
+          code: "metrics-core/invalid-carrying-capacity-config",
+          detail: expect.stringContaining("lookbackDays"),
+        });
+
+        expect(mockUserProvider.getNewUsersCount).not.toHaveBeenCalled();
+        expect(mockMetricsRepository.getRetentionMetrics).not.toHaveBeenCalled();
+      },
+    );
+
     it("should calculate User CC correctly with daily inflow=1000, NRR=98%", async () => {
       vi.spyOn(mockUserProvider, "getNewUsersCount").mockResolvedValue(1000);
       vi.spyOn(mockUserProvider, "getDailyActiveUsers").mockResolvedValue(10000);
@@ -129,6 +144,21 @@ describe("CarryingCapacityCalculator", () => {
         net: { amount: 35000, currency: "USD" },
       },
     ];
+
+    it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, 1.5])(
+      "should reject invalid lookbackMonths %s before reading metrics",
+      async (lookbackMonths) => {
+        await expect(
+          calculator.calculateRevenueCC({ lookbackMonths, tenantId: TENANT_ID }),
+        ).rejects.toMatchObject({
+          code: "metrics-core/invalid-carrying-capacity-config",
+          detail: expect.stringContaining("lookbackMonths"),
+        });
+
+        expect(mockMetricsRepository.getMRRHistory).not.toHaveBeenCalled();
+        expect(mockMetricsRepository.getRetentionMetrics).not.toHaveBeenCalled();
+      },
+    );
 
     it("should calculate Revenue CC correctly with monthly new MRR=30000, NRR=98%", async () => {
       vi.spyOn(mockMetricsRepository, "getMRRHistory").mockResolvedValue(mockMovements);

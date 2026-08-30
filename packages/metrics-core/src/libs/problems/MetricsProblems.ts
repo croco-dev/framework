@@ -16,6 +16,31 @@ export class CarryingCapacityTenantRequiredProblem extends Problem {
   }
 }
 
+export class InvalidCarryingCapacityConfigProblem extends Problem {
+  readonly code = "metrics-core/invalid-carrying-capacity-config";
+  readonly category = ProblemCategory.ValidationError;
+  readonly field: "lookbackDays" | "lookbackMonths";
+  readonly receivedValue: string;
+
+  constructor(field: "lookbackDays" | "lookbackMonths", value: number) {
+    const receivedValue = String(value);
+    super(
+      "metrics-core/invalid-carrying-capacity-config",
+      ProblemCategory.ValidationError,
+      `Carrying capacity configuration '${field}' must be a positive safe integer; received ${receivedValue}.`,
+      {
+        extensions: {
+          field,
+          receivedValue,
+          retryable: false,
+        },
+      },
+    );
+    this.field = field;
+    this.receivedValue = receivedValue;
+  }
+}
+
 export class RetentionMetricsUnavailableProblem extends Problem {
   readonly code = "metrics-core/retention-metrics-unavailable";
   readonly category = ProblemCategory.NotImplemented;
