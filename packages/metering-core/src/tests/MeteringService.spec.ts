@@ -1,5 +1,5 @@
 import type { EventBus } from "@croco/events-core";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   InMemoryBillableUsageJournal,
   type BillableUsageJournal,
@@ -49,6 +49,7 @@ describe("MeteringService", () => {
   let mockIdempotency!: IdempotencyManager;
   let mockEventBus!: EventBus;
   let mockJournal!: BillableUsageJournal;
+  let consoleErrorSpy!: ReturnType<typeof vi.spyOn>;
 
   const createMeter = (overrides: Partial<MeterDefinition> = {}): MeterDefinition => ({
     id: "meter-123",
@@ -63,6 +64,7 @@ describe("MeteringService", () => {
   });
 
   beforeEach(() => {
+    consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     mockRegistry = {
       loadAll: vi.fn(),
       get: vi.fn(),
@@ -138,6 +140,10 @@ describe("MeteringService", () => {
       idempotencyManager: mockIdempotency,
       eventBus: mockEventBus,
     });
+  });
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
   });
 
   describe("record", () => {
@@ -955,6 +961,29 @@ describe("MeteringService", () => {
       expect(recordCallCount).toBe(2);
       expect(mockStorage.record).toHaveBeenCalledTimes(2);
       expect(mockEventBus.publish).toHaveBeenCalledTimes(1);
+    });
+
+    it("should preserve the metering error when processing cleanup fails", async () => {
+      const meter = createMeter({ quota: undefined });
+      const meteringError = new Error("staging unavailable");
+      const cleanupError = new Error("idempotency backend unavailable");
+
+      vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(meter);
+      vi.mocked(mockIdempotency.markMeteringEventsPublishing).mockRejectedValue(meteringError);
+      vi.mocked(mockIdempotency.releaseMeteringProcessing).mockRejectedValue(cleanupError);
+
+      await expect(
+        service.record({
+          tenantId: "tenant-1",
+          meterId: "api_calls",
+          idempotencyKey: "cleanup-failure",
+        }),
+      ).rejects.toBe(meteringError);
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        "[MeteringService] Failed to clean up after a metering error",
+        { originalError: meteringError, cleanupError },
+      );
     });
 
     it("should release quota processing state when delivery staging fails after persistence", async () => {

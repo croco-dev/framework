@@ -1,5 +1,5 @@
 import type { EventBus } from "@croco/events-core";
-import { Component } from "@croco/framework-context";
+import { Component, Container, LOGGER_TOKEN } from "@croco/framework-context";
 import type {
   BillableUsageEvent,
   BillableUsageJournal,
@@ -172,28 +172,50 @@ export class MeteringService {
         throw error;
       }
       if (publishingClaimed) {
-        await this.idempotencyManager.releaseMeteringEvents(
-          tenantId,
-          meterId,
-          idempotencyKey,
-          claim.token,
-        );
+        try {
+          await this.idempotencyManager.releaseMeteringEvents(
+            tenantId,
+            meterId,
+            idempotencyKey,
+            claim.token,
+          );
+        } catch (cleanupError) {
+          this.reportCleanupFailure(error, cleanupError);
+        }
       } else if (!persistenceCompleted) {
-        await this.idempotencyManager.abortMeteringProcessing(
-          tenantId,
-          meterId,
-          idempotencyKey,
-          claim.token,
-        );
+        try {
+          await this.idempotencyManager.abortMeteringProcessing(
+            tenantId,
+            meterId,
+            idempotencyKey,
+            claim.token,
+          );
+        } catch (cleanupError) {
+          this.reportCleanupFailure(error, cleanupError);
+        }
       } else {
-        await this.idempotencyManager.releaseMeteringProcessing(
-          tenantId,
-          meterId,
-          idempotencyKey,
-          claim.token,
-        );
+        try {
+          await this.idempotencyManager.releaseMeteringProcessing(
+            tenantId,
+            meterId,
+            idempotencyKey,
+            claim.token,
+          );
+        } catch (cleanupError) {
+          this.reportCleanupFailure(error, cleanupError);
+        }
       }
       throw error;
+    }
+  }
+
+  private reportCleanupFailure(originalError: unknown, cleanupError: unknown): void {
+    const message = "[MeteringService] Failed to clean up after a metering error";
+    const logger = Container.getOptional(LOGGER_TOKEN);
+    if (logger) {
+      logger.error(message, { originalError, cleanupError });
+    } else {
+      console.error(message, { originalError, cleanupError });
     }
   }
 
