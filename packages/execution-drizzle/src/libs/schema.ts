@@ -1,5 +1,6 @@
 import type { ExecutionContinuationState, ExecutionStatus } from "@croco/execution-core";
 import {
+  bigint,
   index,
   integer,
   json,
@@ -33,7 +34,7 @@ export const executions = pgTable(
     startedAt: timestamp("started_at"),
     completedAt: timestamp("completed_at"),
     scheduledFor: timestamp("scheduled_for"),
-    timeout: integer("timeout"),
+    timeout: bigint("timeout", { mode: "number" }),
     idempotencyKey: varchar("idempotency_key", { length: 255 }),
     requestFingerprint: varchar("request_fingerprint", { length: 64 }),
     replayOf: varchar("replay_of", { length: 26 }),

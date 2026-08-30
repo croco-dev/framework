@@ -68,10 +68,15 @@ const runningBatch = await store.listRunning({ afterId: undefined, limit: 100 })
 
 실행 영속화에 사용하는 PostgreSQL 스키마입니다. `idempotency_key`, `parent_id`, `replay_of`, `status`, `type` 인덱스를 포함합니다.
 
+`timeout`은 Drizzle의 `number` 모드를 사용하는 nullable PostgreSQL `bigint` 컬럼입니다. 따라서 기존
+`Execution.timeout: number` 계약을 유지하면서 32비트 정수 범위를 넘는 밀리초 값도 저장할 수 있으며,
+`Number.MAX_SAFE_INTEGER`(9,007,199,254,740,991)까지 정확하게 왕복합니다.
+
 `continuation`은 nullable JSONB 컬럼이고, `request_fingerprint`는 nullable `varchar(64)` 컬럼입니다. 이 버전을
-배포하기 전에 애플리케이션이 사용하는 migration 도구로 다음 컬럼을 먼저 추가해야 합니다.
+배포하기 전에 애플리케이션이 사용하는 migration 도구로 다음 스키마 변경을 먼저 적용해야 합니다.
 
 ```sql
+ALTER TABLE executions ALTER COLUMN timeout TYPE bigint;
 ALTER TABLE executions ADD COLUMN IF NOT EXISTS continuation jsonb;
 ALTER TABLE executions ADD COLUMN IF NOT EXISTS request_fingerprint varchar(64);
 ```

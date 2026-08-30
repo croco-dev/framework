@@ -56,7 +56,7 @@ describe.skipIf(connectionString.length === 0)(
           started_at timestamp,
           completed_at timestamp,
           scheduled_for timestamp,
-          timeout integer,
+          timeout bigint,
           idempotency_key varchar(255),
           request_fingerprint varchar(64),
           replay_of varchar(26),
@@ -72,6 +72,7 @@ describe.skipIf(connectionString.length === 0)(
         create unique index if not exists executions_idempotency_key_idx
         on executions (idempotency_key)
       `);
+      await pool.query("alter table executions alter column timeout type bigint");
     });
 
     beforeEach(async () => {
@@ -137,5 +138,15 @@ describe.skipIf(connectionString.length === 0)(
       // oxlint-disable-next-line jest/valid-title -- exported conformance cases own stable names
       it(testCase.name, testCase.run, 10_000);
     }
+
+    it.each([2_147_483_647, 2_147_483_648])(
+      "round-trips timeout %i without narrowing it to a 32-bit integer",
+      async (timeout) => {
+        const created = await store.create({ type: "timeout-boundary", timeout });
+
+        expect(created.timeout).toBe(timeout);
+        await expect(store.findById(created.id)).resolves.toMatchObject({ timeout });
+      },
+    );
   },
 );

@@ -1421,6 +1421,12 @@
       "owner": "@croco/execution-drizzle"
     },
     {
+      "path": "packages/execution-drizzle/src/tests/ExecutionSchema.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/execution-drizzle"
+    },
+    {
       "path": "packages/features-core/src/tests/FeatureManager.spec.ts",
       "lane": "fast",
       "qualifiers": [],
