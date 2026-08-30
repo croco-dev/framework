@@ -256,3 +256,25 @@ export class MonetizationThresholdClaimProblem extends Problem {
     );
   }
 }
+
+export const MAX_WEBHOOK_TIMEOUT_MS = 2_147_483_647;
+
+/** Webhook timeout configuration cannot be represented safely by a Node.js timer. */
+export class InvalidWebhookTimeoutProblem extends Problem {
+  readonly code = "lifecycle-core/webhook-timeout-invalid";
+  readonly category = ProblemCategory.ValidationError;
+
+  constructor(timeoutMs: number) {
+    super(
+      undefined,
+      undefined,
+      `Webhook timeout must be an integer between 1 and ${MAX_WEBHOOK_TIMEOUT_MS} milliseconds; received ${String(timeoutMs)}`,
+      {
+        extensions: {
+          timeoutMs: String(timeoutMs),
+          retryable: false,
+        },
+      },
+    );
+  }
+}

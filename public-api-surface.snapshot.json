@@ -15518,6 +15518,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "InvalidWebhookTimeoutProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/LifecycleProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "LifecycleActionAdapterProblem",
               "exportKind": "named",
               "source": "./libs/problems/LifecycleProblems",
@@ -15588,6 +15594,12 @@
               "exportKind": "named",
               "source": "./libs/problems/LifecycleProblems",
               "declarationKind": "class"
+            },
+            {
+              "name": "MAX_WEBHOOK_TIMEOUT_MS",
+              "exportKind": "named",
+              "source": "./libs/problems/LifecycleProblems",
+              "declarationKind": "const"
             },
             {
               "name": "MONETIZATION_SIGNAL_DESCRIPTORS",
@@ -16125,6 +16137,11 @@
               "name": "UsageThresholdCrossedSignalInput",
               "exportKind": "named",
               "source": "./libs/monetization"
+            },
+            {
+              "name": "WebhookLifecycleActionAdapterOptions",
+              "exportKind": "named",
+              "source": "./libs/WebhookLifecycleActionAdapter"
             }
           ]
         }

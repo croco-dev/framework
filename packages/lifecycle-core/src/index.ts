@@ -47,6 +47,7 @@ export {
 export { WebhookLifecycleActionAdapter } from "./libs/WebhookLifecycleActionAdapter";
 export {
   DuplicateLifecycleRuleProblem,
+  InvalidWebhookTimeoutProblem,
   LifecycleActionAdapterProblem,
   LifecycleRunEvidenceProblem,
   LifecycleRunFinalizationProblem,
@@ -56,6 +57,7 @@ export {
   LifecycleRuleTransitionProblem,
   LifecycleRuleVersionConflictProblem,
   LifecycleRuleVersionDefinitionProblem,
+  MAX_WEBHOOK_TIMEOUT_MS,
   MonetizationRecipeCapabilityProblem,
   MonetizationSignalDefinitionProblem,
   MonetizationThresholdClaimProblem,
@@ -165,3 +167,4 @@ export type {
   LifecycleDiagnosticsRunDetails,
 } from "./libs/diagnostics/LifecycleDiagnosticsProvider";
 export type { LifecycleRuleRegistryOptions } from "./libs/LifecycleRuleRegistry";
+export type { WebhookLifecycleActionAdapterOptions } from "./libs/WebhookLifecycleActionAdapter";

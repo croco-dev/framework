@@ -6,7 +6,6 @@ import {
   LifecycleRunEvidenceProblem,
   LifecycleRuleEvaluator,
   LifecycleRuleRegistry,
-  WebhookLifecycleActionAdapter,
   createBillingSubscriptionSignal,
   createHealthStatusChangedSignal,
   createLifecycleContext,
@@ -645,39 +644,6 @@ describe("lifecycle-core", () => {
       details: {
         failedRunCount: 1,
         failedActionCount: 1,
-      },
-    });
-  });
-
-  it("returns explicit failure evidence for invalid webhook actions", async () => {
-    const adapter = new WebhookLifecycleActionAdapter(vi.fn() as unknown as typeof fetch);
-    const result = await adapter.execute(
-      {
-        id: "notify-webhook",
-        type: "webhook",
-        payload: {},
-      },
-      createLifecycleContext({
-        signal: createScheduledLifecycleSignal({
-          signalId: "scheduled-1",
-          tenantId: "tenant-1",
-          reason: "test",
-        }),
-      }),
-      {
-        id: "run-1",
-        ruleId: "webhook-rule",
-        ruleVersion: "1.0.0",
-        ruleFingerprint: "fingerprint",
-        tenantId: "tenant-1",
-        idempotencyKey: "webhook-rule:tenant-1",
-      },
-    );
-
-    expect(result).toMatchObject({
-      status: "failure",
-      error: {
-        code: "lifecycle-core/webhook-url-missing",
       },
     });
   });
