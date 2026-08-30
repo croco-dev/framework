@@ -76,6 +76,42 @@ function assertGeneratableGraph(graph: DesktopContractGraphV1): void {
       `Cannot generate renderer clients from a graph with ${graph.diagnostics.length} diagnostic${graph.diagnostics.length === 1 ? "" : "s"}.`,
     );
   }
+  assertGraphIdentifiers(graph);
+}
+
+function assertGraphIdentifiers(graph: DesktopContractGraphV1): void {
+  for (const contract of graph.contracts) {
+    assertStringIdentifier(contract.id, "contract id");
+  }
+  for (const command of graph.commands) {
+    assertStringIdentifier(command.id, "command id");
+    assertStringIdentifier(command.contractId, "command contractId");
+    assertStringIdentifier(command.key, "command key");
+  }
+  for (const event of graph.events) {
+    assertStringIdentifier(event.id, "event id");
+    assertStringIdentifier(event.contractId, "event contractId");
+    assertStringIdentifier(event.key, "event key");
+  }
+  for (const grant of graph.grants) {
+    assertStringIdentifier(grant.id, "grant id");
+    assertStringIdentifier(grant.contractId, "grant contractId");
+    assertStringIdentifier(grant.key, "grant key");
+  }
+  for (const problem of graph.problems) {
+    assertStringIdentifier(problem.code, "Problem code");
+  }
+  for (const window of graph.windows) {
+    assertStringIdentifier(window.id, "window id");
+  }
+}
+
+function assertStringIdentifier(value: unknown, description: string): asserts value is string {
+  if (typeof value !== "string") {
+    throw new DesktopRendererGenerationProblem(
+      `Desktop ${description} must be a string, received ${JSON.stringify(value)}.`,
+    );
+  }
 }
 
 function createGraphIndexes(graph: DesktopContractGraphV1): GraphIndexes {

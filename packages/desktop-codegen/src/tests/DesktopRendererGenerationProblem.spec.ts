@@ -282,6 +282,74 @@ desktop.project.fileChanged.subscribe((_payload, _event) => undefined);
     );
   });
 
+  it("rejects non-string graph identifiers before indexing or rendering", () => {
+    const graph = createGraph(false);
+    const command = graph.commands[0];
+    const event = graph.events[0];
+    const grant = graph.grants[0];
+    assert(command && event && grant, "Fixture graph members are missing");
+
+    const invalidGraphs: readonly { graph: typeof graph; detail: string }[] = [
+      {
+        graph: {
+          ...graph,
+          commands: graph.commands.map((candidate) =>
+            candidate.id === command.id
+              ? { ...candidate, id: undefined as unknown as string }
+              : candidate,
+          ),
+        },
+        detail: "Desktop command id must be a string, received undefined.",
+      },
+      {
+        graph: {
+          ...graph,
+          commands: graph.commands.map((candidate) =>
+            candidate.id === command.id
+              ? { ...candidate, contractId: null as unknown as string }
+              : candidate,
+          ),
+        },
+        detail: "Desktop command contractId must be a string, received null.",
+      },
+      {
+        graph: {
+          ...graph,
+          commands: graph.commands.map((candidate) =>
+            candidate.id === command.id
+              ? { ...candidate, key: undefined as unknown as string }
+              : candidate,
+          ),
+        },
+        detail: "Desktop command key must be a string, received undefined.",
+      },
+      {
+        graph: {
+          ...graph,
+          events: graph.events.map((candidate) =>
+            candidate.id === event.id ? { ...candidate, key: 1 as unknown as string } : candidate,
+          ),
+        },
+        detail: "Desktop event key must be a string, received 1.",
+      },
+      {
+        graph: {
+          ...graph,
+          grants: graph.grants.map((candidate) =>
+            candidate.id === grant.id
+              ? { ...candidate, key: false as unknown as string }
+              : candidate,
+          ),
+        },
+        detail: "Desktop grant key must be a string, received false.",
+      },
+    ];
+
+    for (const invalid of invalidGraphs) {
+      expectGenerationProblem(() => generateDesktopRendererClients(invalid.graph), invalid.detail);
+    }
+  });
+
   it("rejects invalid references on unexposed graph members", () => {
     const graph = createGraph(false);
     const readFile = graph.commands.find((command) => command.id === "project.readFile");
@@ -446,6 +514,9 @@ desktop.project.fileChanged.subscribe((_payload, _event) => undefined);
       { kind: "literal", value: Number.NaN },
       "$: literal values must be strings, finite numbers, booleans, or null",
     );
+    const recursiveDescriptor: { kind: "array"; element?: unknown } = { kind: "array" };
+    recursiveDescriptor.element = recursiveDescriptor;
+    expectInvalidInput(recursiveDescriptor, "$.element: recursive descriptors are not supported");
 
     expectGenerationProblem(
       () =>
