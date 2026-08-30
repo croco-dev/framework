@@ -3,12 +3,25 @@ import ts from "typescript";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { DesktopPreloadGenerationProblem, generateDesktopPreloadBridges } from "../index";
-import type { DesktopPreloadContextBridge, DesktopPreloadTransport } from "../index";
+import {
+  DesktopPreloadGenerationProblem,
+  generateDesktopPreloadBridges,
+  generateDesktopRendererClients,
+} from "../index";
+import type {
+  DesktopPreloadCommandOptions,
+  DesktopPreloadContextBridge,
+  DesktopPreloadTransport,
+} from "../index";
 
 type GeneratedBridge = {
   readonly commands: Readonly<
-    Record<string, Readonly<Record<string, (input: unknown) => Promise<unknown>>>>
+    Record<
+      string,
+      Readonly<
+        Record<string, (input: unknown, options?: DesktopPreloadCommandOptions) => Promise<unknown>>
+      >
+    >
   >;
   readonly events: Readonly<
     Record<string, Readonly<Record<string, (callback: (payload: unknown) => void) => () => void>>>
@@ -87,7 +100,7 @@ describe("generateDesktopPreloadBridges", () => {
     expect("ipcRenderer" in (exposedBridge ?? {})).toBe(false);
 
     await exposedBridge?.commands.project?.open?.({ path: "README.md" });
-    expect(invoke).toHaveBeenCalledWith("project.open", { path: "README.md" });
+    expect(invoke).toHaveBeenCalledWith("project.open", { path: "README.md" }, {});
 
     const received: unknown[] = [];
     const stop = exposedBridge?.events.project?.changed?.((payload) => received.push(payload));
@@ -179,9 +192,48 @@ describe("generateDesktopPreloadBridges", () => {
       Object.prototype.hasOwnProperty.call(bridge?.commands["__proto__"] ?? {}, "constructor"),
     ).toBe(true);
     await bridge?.commands["__proto__"]?.constructor?.({ safe: true });
-    expect(invoke).toHaveBeenCalledWith("__proto__.constructor", { safe: true });
+    expect(invoke).toHaveBeenCalledWith("__proto__.constructor", { safe: true }, {});
+  });
+
+  it("preserves renderer command options through the preload transport", async () => {
+    const graph = createGraph(false);
+    const preloadSource = requireBridgeSource(graph, "main");
+    const rendererSource = generateDesktopRendererClients(graph).find(
+      (artifact) => artifact.windowId === "main",
+    )?.source;
+    expect(rendererSource).toBeDefined();
+    const invoke = vi.fn(async () => undefined);
+    let bridge: GeneratedBridge | undefined;
+
+    executeGeneratedSource(preloadSource)(
+      {
+        exposeInMainWorld(_name, api) {
+          bridge = api as GeneratedBridge;
+        },
+      },
+      { invoke, subscribe: () => () => {} },
+    );
+    expect(bridge).toBeDefined();
+    if (!rendererSource || !bridge) {
+      throw new Error("Generated renderer or preload bridge is missing");
+    }
+    const signal = new AbortController().signal;
+    const renderer = executeRendererSource(rendererSource, bridge);
+
+    await renderer.project.open({ path: "README.md" }, { signal });
+
+    expect(invoke).toHaveBeenCalledWith("project.open", { path: "README.md" }, { signal });
   });
 });
+
+type GeneratedRenderer = {
+  readonly project: {
+    readonly open: (
+      input: { readonly path: string },
+      options?: DesktopPreloadCommandOptions,
+    ) => Promise<unknown>;
+  };
+};
 
 function createGraph(reverse: boolean) {
   const project = desktop.contract({
@@ -283,4 +335,22 @@ function executeGeneratedSource(
     contextBridge: DesktopPreloadContextBridge,
     transport: DesktopPreloadTransport,
   ) => void;
+}
+
+function executeRendererSource(source: string, bridge: GeneratedBridge): GeneratedRenderer {
+  const output = ts.transpileModule(source, {
+    compilerOptions: {
+      module: ts.ModuleKind.CommonJS,
+      target: ts.ScriptTarget.ES2022,
+    },
+  }).outputText;
+  const generatedModule = { exports: {} as Record<string, unknown> };
+  Object.assign(globalThis, { crocoDesktop: bridge });
+  try {
+    const load = new Function("module", "exports", output);
+    load(generatedModule, generatedModule.exports);
+    return generatedModule.exports.desktop as GeneratedRenderer;
+  } finally {
+    Reflect.deleteProperty(globalThis, "crocoDesktop");
+  }
 }

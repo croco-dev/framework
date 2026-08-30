@@ -4,6 +4,7 @@ export {
 } from "./libs/generateDesktopPreloadBridges";
 export type {
   DesktopPreloadBridgeSource,
+  DesktopPreloadCommandOptions,
   DesktopPreloadContextBridge,
   DesktopPreloadTransport,
 } from "./libs/generateDesktopPreloadBridges";

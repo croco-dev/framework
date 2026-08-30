@@ -1175,6 +1175,12 @@
       "owner": "@croco/desktop-codegen"
     },
     {
+      "path": "packages/desktop-codegen/src/tests/DesktopRendererGenerationProblem.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/desktop-codegen"
+    },
+    {
       "path": "packages/diagnostics-core/src/tests/DiagnosticCodes.spec.ts",
       "lane": "fast",
       "qualifiers": [],

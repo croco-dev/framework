@@ -3,7 +3,7 @@
 exports[`generateDesktopPreloadBridges > generates deterministic minimal bridges for local window profiles only 1`] = `
 [
   {
-    "source": "import type { DesktopPreloadContextBridge, DesktopPreloadTransport } from "@croco/desktop-codegen";
+    "source": "import type { DesktopPreloadCommandOptions, DesktopPreloadContextBridge, DesktopPreloadTransport } from "@croco/desktop-codegen";
 
 export function installDesktopPreloadBridge(
   contextBridge: DesktopPreloadContextBridge,
@@ -22,7 +22,7 @@ export function installDesktopPreloadBridge(
     "windowId": "empty",
   },
   {
-    "source": "import type { DesktopPreloadContextBridge, DesktopPreloadTransport } from "@croco/desktop-codegen";
+    "source": "import type { DesktopPreloadCommandOptions, DesktopPreloadContextBridge, DesktopPreloadTransport } from "@croco/desktop-codegen";
 
 export function installDesktopPreloadBridge(
   contextBridge: DesktopPreloadContextBridge,
@@ -31,12 +31,12 @@ export function installDesktopPreloadBridge(
   const bridge = Object.freeze({
     commands: Object.freeze({
       ["project"]: Object.freeze({
-        ["open"]: (input: unknown): Promise<unknown> =>
-          transport.invoke("project.open", input),
+        ["open"]: (input: unknown, options: DesktopPreloadCommandOptions = {}): Promise<unknown> =>
+          transport.invoke("project.open", input, options),
       }),
       ["system"]: Object.freeze({
-        ["status"]: (input: unknown): Promise<unknown> =>
-          transport.invoke("system.status", input),
+        ["status"]: (input: unknown, options: DesktopPreloadCommandOptions = {}): Promise<unknown> =>
+          transport.invoke("system.status", input, options),
       }),
     }),
     events: Object.freeze({
@@ -57,7 +57,7 @@ export function installDesktopPreloadBridge(
     "windowId": "main",
   },
   {
-    "source": "import type { DesktopPreloadContextBridge, DesktopPreloadTransport } from "@croco/desktop-codegen";
+    "source": "import type { DesktopPreloadCommandOptions, DesktopPreloadContextBridge, DesktopPreloadTransport } from "@croco/desktop-codegen";
 
 export function installDesktopPreloadBridge(
   contextBridge: DesktopPreloadContextBridge,
@@ -66,8 +66,8 @@ export function installDesktopPreloadBridge(
   const bridge = Object.freeze({
     commands: Object.freeze({
       ["system"]: Object.freeze({
-        ["status"]: (input: unknown): Promise<unknown> =>
-          transport.invoke("system.status", input),
+        ["status"]: (input: unknown, options: DesktopPreloadCommandOptions = {}): Promise<unknown> =>
+          transport.invoke("system.status", input, options),
       }),
     }),
     events: Object.freeze({

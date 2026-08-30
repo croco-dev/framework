@@ -15,8 +15,16 @@ export type DesktopPreloadContextBridge = {
   exposeInMainWorld(name: "crocoDesktop", api: Readonly<Record<string, unknown>>): void;
 };
 
+export type DesktopPreloadCommandOptions = {
+  readonly signal?: AbortSignal;
+};
+
 export type DesktopPreloadTransport = {
-  invoke(commandId: string, input: unknown): Promise<unknown>;
+  invoke(
+    commandId: string,
+    input: unknown,
+    options: DesktopPreloadCommandOptions,
+  ): Promise<unknown>;
   subscribe(eventId: string, callback: (payload: unknown) => void): () => void;
 };
 
@@ -128,7 +136,7 @@ function generateWindowSource(capabilities: WindowCapabilities): string {
   const eventContracts = contracts.filter((contract) => contract.events.length > 0);
 
   return [
-    'import type { DesktopPreloadContextBridge, DesktopPreloadTransport } from "@croco/desktop-codegen";',
+    'import type { DesktopPreloadCommandOptions, DesktopPreloadContextBridge, DesktopPreloadTransport } from "@croco/desktop-codegen";',
     "",
     "export function installDesktopPreloadBridge(",
     "  contextBridge: DesktopPreloadContextBridge,",
@@ -265,8 +273,8 @@ function generateNamespace<TMember>(
 
 function generateCommand(command: DesktopContractGraphCommand): readonly string[] {
   return [
-    `        [${JSON.stringify(command.key)}]: (input: unknown): Promise<unknown> =>`,
-    `          transport.invoke(${JSON.stringify(command.id)}, input),`,
+    `        [${JSON.stringify(command.key)}]: (input: unknown, options: DesktopPreloadCommandOptions = {}): Promise<unknown> =>`,
+    `          transport.invoke(${JSON.stringify(command.id)}, input, options),`,
   ];
 }
 
