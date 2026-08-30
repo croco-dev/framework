@@ -16,6 +16,7 @@ import {
   EngagementDispatchFailedProblem,
   EngagementRenderFailedProblem,
   EngagementService,
+  EngagementSuppressionEvaluationProblem,
   InMemoryMessageRendererResolver,
   InMemoryRecipientDirectory,
   MessageRendererRegistry,
@@ -490,6 +491,67 @@ describe("EngagementService", () => {
     expect(JSON.stringify((problem as EngagementRenderFailedProblem).toJSON())).not.toContain(
       "payload-secret",
     );
+  });
+
+  it("preflights every all-reachable renderer before dispatch", async () => {
+    @Renders(TrialEnding)
+    class FailingPushRenderer implements MessageRenderer<typeof TrialEnding> {
+      email() {
+        return { subject: "Trial", html: "<p>Trial</p>", text: "Trial" };
+      }
+
+      push(): never {
+        throw new Error("push renderer unavailable");
+      }
+    }
+
+    const dispatcher = createDispatcher();
+    const engagement = new EngagementService(
+      directory,
+      createRenderer(new FailingPushRenderer()),
+      dispatcher.service,
+    );
+
+    await expect(
+      engagement.send(TrialEnding, {
+        recipient: recipient.recipient,
+        data: { tenantName: "Croco", secret: "payload-secret" },
+        key: "subscription-1",
+        policy: "all-reachable",
+      }),
+    ).rejects.toMatchObject({
+      code: "engagement-core/render-failed",
+      extensions: { channel: "push" },
+    });
+    expect(dispatcher.dispatch).not.toHaveBeenCalled();
+  });
+
+  it("preflights every all-reachable suppression decision before dispatch", async () => {
+    const suppressions: EngagementSuppressionEvaluator = {
+      async evaluate(context) {
+        if (context.channel === "push") {
+          throw new Error("suppression store unavailable");
+        }
+        return { suppressed: false };
+      },
+    };
+    const dispatcher = createDispatcher();
+    const engagement = new EngagementService(
+      directory,
+      createRenderer(),
+      dispatcher.service,
+      suppressions,
+    );
+
+    await expect(
+      engagement.send(TrialEnding, {
+        recipient: recipient.recipient,
+        data: { tenantName: "Croco", secret: "payload-secret" },
+        key: "subscription-1",
+        policy: "all-reachable",
+      }),
+    ).rejects.toBeInstanceOf(EngagementSuppressionEvaluationProblem);
+    expect(dispatcher.dispatch).not.toHaveBeenCalled();
   });
 
   it("preserves partial channel evidence when provider dispatch fails", async () => {

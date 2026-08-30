@@ -193,6 +193,16 @@ type ResolvedEndpoint = Readonly<{
   target: string;
 }>;
 
+type PreparedEngagementChannel =
+  | Readonly<{
+      channel: MessageChannel;
+      eligibleEndpoints: readonly ResolvedEndpoint[];
+      content: MessageContent<MessageChannel>;
+    }>
+  | Readonly<{
+      result: EngagementChannelResult;
+    }>;
+
 export type EngagementIdempotencyKeyInput = Readonly<{
   tenantId: string;
   messageId: string;
@@ -240,10 +250,32 @@ export class EngagementService {
     const channelResults: EngagementChannelResult[] = [];
     const executionIds: string[] = [];
 
+    if (policy === "all-reachable") {
+      const preparedChannels = await this.prepareAllReachable(message, command, recipient);
+      for (const prepared of preparedChannels) {
+        if ("result" in prepared) {
+          channelResults.push(prepared.result);
+          continue;
+        }
+        await this.dispatchChannel(
+          message,
+          command,
+          recipient,
+          prepared.channel,
+          prepared.eligibleEndpoints,
+          prepared.content,
+          channelResults,
+          executionIds,
+        );
+      }
+
+      return engagementResult(channelResults, executionIds);
+    }
+
     for (const channel of message.channels) {
       const endpoints = endpointsForChannel(recipient, channel);
 
-      if (executionIds.length > 0 && policy === "first-reachable") {
+      if (executionIds.length > 0) {
         channelResults.push(
           endpoints.length === 0
             ? { channel, status: "unavailable", reason: "no-endpoint" }
@@ -269,68 +301,119 @@ export class EngagementService {
       }
 
       const content = await this.render(message, command, channel);
-      const channelExecutionIds: string[] = [];
+      await this.dispatchChannel(
+        message,
+        command,
+        recipient,
+        channel,
+        eligibleEndpoints,
+        content,
+        channelResults,
+        executionIds,
+      );
+    }
 
-      for (const endpoint of eligibleEndpoints) {
-        try {
-          const result = await this.notifications.dispatch(
-            toNotificationChannel(channel),
-            toNotificationPayload(message, recipient, channel, endpoint, content),
-            {
-              idempotencyKey: createEngagementIdempotencyKey({
-                tenantId: command.recipient.tenantId,
-                messageId: message.id,
-                userId: command.recipient.userId,
-                channel,
-                semanticKey: command.key,
-                endpointId: endpoint.id,
-              }),
-              preferenceContext: {
-                tenantId: command.recipient.tenantId,
-                userId: command.recipient.userId,
-                channel: toNotificationChannel(channel),
-                topic: message.topic,
-              },
+    return engagementResult(channelResults, executionIds);
+  }
+
+  private async prepareAllReachable<TMessage extends AnyMessage>(
+    message: TMessage,
+    command: EngagementSendCommand<TMessage>,
+    recipient: ResolvedRecipient,
+  ): Promise<readonly PreparedEngagementChannel[]> {
+    const preparedChannels: PreparedEngagementChannel[] = [];
+    for (const channel of message.channels) {
+      const endpoints = endpointsForChannel(recipient, channel);
+      if (endpoints.length === 0) {
+        preparedChannels.push({
+          result: { channel, status: "unavailable", reason: "no-endpoint" },
+        });
+        continue;
+      }
+
+      const eligibleEndpoints = await this.filterSuppressedEndpoints(
+        message,
+        recipient,
+        endpoints,
+        channel,
+      );
+      if (eligibleEndpoints.length === 0) {
+        preparedChannels.push({
+          result: { channel, status: "suppressed", reason: "suppression" },
+        });
+        continue;
+      }
+
+      preparedChannels.push({
+        channel,
+        eligibleEndpoints,
+        content: await this.render(message, command, channel),
+      });
+    }
+    return preparedChannels;
+  }
+
+  private async dispatchChannel(
+    message: AnyMessage,
+    command: Readonly<{ recipient: RecipientRef; key: string }>,
+    recipient: ResolvedRecipient,
+    channel: MessageChannel,
+    eligibleEndpoints: readonly ResolvedEndpoint[],
+    content: MessageContent<MessageChannel>,
+    channelResults: EngagementChannelResult[],
+    executionIds: string[],
+  ): Promise<void> {
+    const channelExecutionIds: string[] = [];
+
+    for (const endpoint of eligibleEndpoints) {
+      try {
+        const result = await this.notifications.dispatch(
+          toNotificationChannel(channel),
+          toNotificationPayload(message, recipient, channel, endpoint, content),
+          {
+            idempotencyKey: createEngagementIdempotencyKey({
+              tenantId: command.recipient.tenantId,
+              messageId: message.id,
+              userId: command.recipient.userId,
+              channel,
+              semanticKey: command.key,
+              endpointId: endpoint.id,
+            }),
+            preferenceContext: {
+              tenantId: command.recipient.tenantId,
+              userId: command.recipient.userId,
+              channel: toNotificationChannel(channel),
+              topic: message.topic,
             },
-          );
-          channelExecutionIds.push(result.executionId);
-          executionIds.push(result.executionId);
-        } catch (error) {
-          if (error instanceof NotificationPreferenceDeniedProblem) {
-            if (channelExecutionIds.length === 0) {
-              channelResults.push({ channel, status: "suppressed", reason: "preference" });
-            }
-            break;
+          },
+        );
+        channelExecutionIds.push(result.executionId);
+        executionIds.push(result.executionId);
+      } catch (error) {
+        if (error instanceof NotificationPreferenceDeniedProblem) {
+          if (channelExecutionIds.length === 0) {
+            channelResults.push({ channel, status: "suppressed", reason: "preference" });
           }
-          throw new EngagementDispatchFailedProblem(
-            message.id,
-            command.recipient,
-            channel,
-            [
-              ...channelResults,
-              ...(channelExecutionIds.length === 0
-                ? []
-                : [{ channel, status: "queued" as const, executionIds: channelExecutionIds }]),
-            ],
-            normalizeError(error),
-          );
+          break;
         }
-      }
-
-      if (channelExecutionIds.length > 0) {
-        channelResults.push({ channel, status: "queued", executionIds: channelExecutionIds });
+        throw new EngagementDispatchFailedProblem(
+          message.id,
+          command.recipient,
+          channel,
+          [
+            ...channelResults,
+            ...(channelExecutionIds.length === 0
+              ? []
+              : [{ channel, status: "queued" as const, executionIds: channelExecutionIds }]),
+          ],
+          normalizeError(error),
+        );
       }
     }
 
-    if (executionIds.length > 0) {
-      return freezeResult({ status: "queued", executionIds, channelResults });
+    if (channelExecutionIds.length > 0) {
+      channelResults.push({ channel, status: "queued", executionIds: channelExecutionIds });
     }
-
-    return freezeResult({
-      status: "suppressed",
-      reason: suppressionReason(channelResults),
-      channelResults,
-    });
   }
 
   private async resolveRecipient(ref: RecipientRef): Promise<ResolvedRecipient> {
@@ -645,6 +728,21 @@ function suppressionReason(
     return "suppression";
   }
   return "no-endpoint";
+}
+
+function engagementResult(
+  channelResults: readonly EngagementChannelResult[],
+  executionIds: readonly string[],
+): EngagementSendResult {
+  if (executionIds.length > 0) {
+    return freezeResult({ status: "queued", executionIds, channelResults });
+  }
+
+  return freezeResult({
+    status: "suppressed",
+    reason: suppressionReason(channelResults),
+    channelResults,
+  });
 }
 
 function snapshotRecipient(recipient: ResolvedRecipient): ResolvedRecipient {
