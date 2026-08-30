@@ -8,7 +8,7 @@ PostHog through the Croco integration layer.
 
 ## Public API
 
-- `PostHogClient` - initializes and wraps the PostHog Node client.
+- `PostHogClient` - initializes and wraps the PostHog Node client with separate flush and shutdown lifecycle operations.
 - `PostHogConfig` - configuration type for API key and host settings.
 - `POSTHOG_CONFIG_TOKEN` - typed DI token for PostHog configuration.
 - `registerPostHogConfig` - validates and registers configuration before client resolution.
@@ -48,6 +48,18 @@ const posthog = new PostHogClient({
   apiKey: process.env.POSTHOG_API_KEY,
   host: process.env.POSTHOG_HOST,
 });
+```
+
+## Lifecycle
+
+Use `flush()` to send queued events while keeping the client reusable. Call `shutdown()` once when the
+process is exiting and the client will not be used again.
+
+```typescript
+await posthog.flush();
+
+// Process shutdown only
+await posthog.shutdown();
 ```
 
 ## Verification

@@ -85,7 +85,7 @@ export class PostHogAnalyticsManager extends AnalyticsManager {
     }
 
     try {
-      await this.posthogClient.shutdown();
+      await this.posthogClient.flush();
     } catch (error) {
       const problem = new PostHogAnalyticsFlushProblem(error instanceof Error ? error : undefined);
       this.getLogger().warn("PostHog analytics flush failed", {

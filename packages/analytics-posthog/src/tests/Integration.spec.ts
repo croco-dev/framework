@@ -17,6 +17,7 @@ vi.mock("posthog-node", () => {
   PostHogMock.prototype.capture = vi.fn();
   PostHogMock.prototype.identify = vi.fn();
   PostHogMock.prototype.groupIdentify = vi.fn();
+  PostHogMock.prototype.flush = vi.fn().mockResolvedValue(undefined);
   PostHogMock.prototype.shutdown = vi.fn().mockResolvedValue(undefined);
 
   return {
@@ -319,18 +320,44 @@ describe("PostHog Integration", () => {
     }
   });
 
-  it("should flush buffered PostHog events through shutdown", async () => {
-    const shutdownSpy = vi.spyOn(postHogClient.getClient(), "shutdown");
+  it("should flush buffered events without preventing later analytics operations", async () => {
+    const client = postHogClient.getClient();
+    const operationOrder: string[] = [];
+    const flushSpy = vi.spyOn(client, "flush").mockImplementation(async () => {
+      operationOrder.push("flush");
+    });
+    const shutdownSpy = vi.spyOn(client, "shutdown");
+    const captureSpy = vi.spyOn(client, "capture").mockImplementation(() => {
+      operationOrder.push("capture");
+    });
+    const identifySpy = vi.spyOn(client, "identify");
+    const groupSpy = vi.spyOn(client, "groupIdentify");
 
+    analyticsManager.capture("before-flush", { userId: "user-1" });
     await analyticsManager.flush();
+    analyticsManager.capture("after-flush", { userId: "user-1" });
+    analyticsManager.identify("user-1", { plan: "pro" });
+    analyticsManager.group("tenant", "tenant-1");
 
-    expect(shutdownSpy).toHaveBeenCalledTimes(1);
+    expect(flushSpy).toHaveBeenCalledOnce();
+    expect(shutdownSpy).not.toHaveBeenCalled();
+    expect(captureSpy).toHaveBeenCalledTimes(2);
+    expect(captureSpy).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ event: "before-flush" }),
+    );
+    expect(captureSpy).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ event: "after-flush" }),
+    );
+    expect(operationOrder).toEqual(["capture", "flush", "capture"]);
+    expect(identifySpy).toHaveBeenCalledOnce();
+    expect(groupSpy).toHaveBeenCalledOnce();
+    expect(logger.warn).not.toHaveBeenCalled();
   });
 
   it("should surface flush failures as typed Problems", async () => {
-    vi.spyOn(postHogClient.getClient(), "shutdown").mockRejectedValueOnce(
-      new Error("flush failed"),
-    );
+    vi.spyOn(postHogClient.getClient(), "flush").mockRejectedValueOnce(new Error("flush failed"));
 
     await expect(analyticsManager.flush()).rejects.toBeInstanceOf(PostHogAnalyticsFlushProblem);
     expect(logger.warn).toHaveBeenCalledWith("PostHog analytics flush failed", {
@@ -347,7 +374,7 @@ describe("PostHog Integration", () => {
         statusCode: 504,
       },
     );
-    vi.spyOn(postHogClient.getClient(), "shutdown").mockRejectedValueOnce(secretError);
+    vi.spyOn(postHogClient.getClient(), "flush").mockRejectedValueOnce(secretError);
 
     await expect(analyticsManager.flush()).rejects.toBeInstanceOf(PostHogAnalyticsFlushProblem);
 
@@ -368,6 +395,7 @@ describe("PostHog Integration", () => {
     const captureSpy = vi.spyOn(client, "capture");
     const identifySpy = vi.spyOn(client, "identify");
     const groupSpy = vi.spyOn(client, "groupIdentify");
+    const flushSpy = vi.spyOn(client, "flush");
     const shutdownSpy = vi.spyOn(client, "shutdown");
 
     disabledManager.capture("disabled-event", { userId: "user-1" });
@@ -378,6 +406,7 @@ describe("PostHog Integration", () => {
     expect(captureSpy).not.toHaveBeenCalled();
     expect(identifySpy).not.toHaveBeenCalled();
     expect(groupSpy).not.toHaveBeenCalled();
+    expect(flushSpy).not.toHaveBeenCalled();
     expect(shutdownSpy).not.toHaveBeenCalled();
     expect(logger.info).toHaveBeenCalledWith(
       "PostHog analytics operation skipped because analytics is disabled",

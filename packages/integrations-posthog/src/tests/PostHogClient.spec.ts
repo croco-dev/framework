@@ -9,6 +9,8 @@ import { PostHogConfigProblem } from "../libs/problems/PostHogProblems";
 
 vi.mock("posthog-node", () => {
   const PostHogMock = vi.fn();
+  PostHogMock.prototype.capture = vi.fn();
+  PostHogMock.prototype.flush = vi.fn().mockResolvedValue(undefined);
   PostHogMock.prototype.shutdown = vi.fn().mockResolvedValue(undefined);
 
   return {
@@ -64,7 +66,39 @@ describe("PostHogClient", () => {
   it("should return underlying PostHog client", () => {
     const underlyingClient = client.getClient();
     expect(underlyingClient).not.toBeUndefined();
+    expect(underlyingClient.flush).not.toBeUndefined();
     expect(underlyingClient.shutdown).not.toBeUndefined();
+  });
+
+  it("should flush queued events without shutting down the PostHog client", async () => {
+    const underlyingClient = client.getClient();
+    const flushSpy = vi.spyOn(underlyingClient, "flush");
+    const shutdownSpy = vi.spyOn(underlyingClient, "shutdown");
+
+    await client.flush();
+
+    expect(flushSpy).toHaveBeenCalledOnce();
+    expect(shutdownSpy).not.toHaveBeenCalled();
+  });
+
+  it("should wait for captures scheduled in the current turn before flushing", async () => {
+    const underlyingClient = client.getClient();
+    const queuedEvents: string[] = [];
+    const sentEvents: string[] = [];
+    vi.spyOn(underlyingClient, "capture").mockImplementation(({ event }) => {
+      void Promise.resolve().then(() => {
+        queuedEvents.push(event);
+      });
+    });
+    vi.spyOn(underlyingClient, "flush").mockImplementation(async () => {
+      sentEvents.push(...queuedEvents);
+      queuedEvents.length = 0;
+    });
+
+    underlyingClient.capture({ distinctId: "user-1", event: "before-flush" });
+    await client.flush();
+
+    expect(sentEvents).toEqual(["before-flush"]);
   });
 
   it("should shutdown PostHog client", async () => {
