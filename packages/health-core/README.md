@@ -65,6 +65,7 @@ Interface for implementing custom health checks.
 
 ```typescript
 interface HealthIndicator {
+  readonly name?: string;
   check(signal?: AbortSignal): Promise<HealthIndicatorResult>;
 }
 ```

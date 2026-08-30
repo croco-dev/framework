@@ -111,6 +111,18 @@ describe("HealthCheck", () => {
       expect(JSON.stringify(problem)).not.toContain(secretName);
     });
 
+    it("should keep readiness adapter duplicate diagnostics source-safe", () => {
+      const secretName = "api-key=super-secret";
+      registry.registerReadiness(secretName, async () => ({ status: "up" }));
+
+      const problem = captureProblem(() =>
+        registry.registerReadiness(secretName, async () => ({ status: "up" })),
+      );
+
+      expect(problem.code).toBe("transports-http/duplicate-health-check");
+      expect(JSON.stringify(problem)).not.toContain(secretName);
+    });
+
     it("should keep readiness failures out of generic health results", async () => {
       registry.registerReadiness("database", async () => ({ status: "down" }));
 
