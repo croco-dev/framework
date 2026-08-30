@@ -15,7 +15,7 @@ Configuration for Revenue Carrying Capacity calculation.
 
 > **lookbackMonths**: `number`
 
-Number of months to look back for calculating monthly averages
+Positive safe integer number of months to look back for calculating monthly averages
 
 ---
 

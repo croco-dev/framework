@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 699,
+  problemCount: 700,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -12326,7 +12326,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/metrics-core/src/libs/problems/MetricsProblems.ts",
-          line: 41,
+          line: 66,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "metrics-core/invalid-carrying-capacity-config",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#metrics-core-invalid-carrying-capacity-config",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/metrics-core/src/libs/problems/MetricsProblems.ts",
+          line: 19,
           column: 1,
           kind: "problem-class",
         },
@@ -12356,7 +12387,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/metrics-core/src/libs/problems/MetricsProblems.ts",
-          line: 29,
+          line: 54,
           column: 1,
           kind: "problem-class",
         },
@@ -12386,7 +12417,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/metrics-core/src/libs/problems/MetricsProblems.ts",
-          line: 49,
+          line: 74,
           column: 1,
           kind: "problem-class",
         },
@@ -12418,7 +12449,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/metrics-core/src/libs/problems/MetricsProblems.ts",
-          line: 19,
+          line: 44,
           column: 1,
           kind: "problem-class",
         },
