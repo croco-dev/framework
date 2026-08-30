@@ -36,7 +36,7 @@
     "@croco/problems-core": "workspace:*",
     "@croco/protocols-core": "workspace:*",
     "@croco/protocols-rest": "workspace:*",
-    "@trpc/server": "^11.0.0",
+    "@trpc/server": "^11.6.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {

@@ -7,7 +7,7 @@ import {
   type RuntimeInspector,
   type RuntimeInspectorRecorderEventInput,
 } from "@croco/framework-context";
-import { Problem, ProblemCategory, ProblemFactory } from "@croco/problems-core";
+import { HttpStatus, Problem, ProblemCategory, ProblemFactory } from "@croco/problems-core";
 import {
   type CallHandler,
   Body,
@@ -30,6 +30,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { createTrpcRouter } from "../libs/createTrpcRouter";
 import { TrpcExecutionContext } from "../libs/TrpcExecutionContext";
+import { toTrpcError } from "../libs/TrpcExecutionPipeline";
 
 const events: string[] = [];
 let observedTrpcContext: unknown;
@@ -141,6 +142,58 @@ class PrivateProblem extends Problem {
     });
   }
 }
+
+class StatusProblem extends PrivateProblem {
+  constructor(private readonly problemStatus: number) {
+    super();
+  }
+
+  override get status(): number {
+    return this.problemStatus;
+  }
+}
+
+const PROBLEM_STATUS_CASES = [
+  [HttpStatus.BAD_REQUEST, "BAD_REQUEST"],
+  [HttpStatus.UNAUTHORIZED, "UNAUTHORIZED"],
+  [HttpStatus.PAYMENT_REQUIRED, "PAYMENT_REQUIRED"],
+  [HttpStatus.FORBIDDEN, "FORBIDDEN"],
+  [HttpStatus.NOT_FOUND, "NOT_FOUND"],
+  [HttpStatus.METHOD_NOT_ALLOWED, "METHOD_NOT_SUPPORTED"],
+  [HttpStatus.NOT_ACCEPTABLE, "BAD_REQUEST"],
+  [HttpStatus.PROXY_AUTHENTICATION_REQUIRED, "UNAUTHORIZED"],
+  [HttpStatus.REQUEST_TIMEOUT, "TIMEOUT"],
+  [HttpStatus.CONFLICT, "CONFLICT"],
+  [HttpStatus.GONE, "NOT_FOUND"],
+  [HttpStatus.LENGTH_REQUIRED, "BAD_REQUEST"],
+  [HttpStatus.PRECONDITION_FAILED, "PRECONDITION_FAILED"],
+  [HttpStatus.PAYLOAD_TOO_LARGE, "PAYLOAD_TOO_LARGE"],
+  [HttpStatus.URI_TOO_LONG, "PAYLOAD_TOO_LARGE"],
+  [HttpStatus.UNSUPPORTED_MEDIA_TYPE, "UNSUPPORTED_MEDIA_TYPE"],
+  [HttpStatus.RANGE_NOT_SATISFIABLE, "BAD_REQUEST"],
+  [HttpStatus.EXPECTATION_FAILED, "PRECONDITION_FAILED"],
+  [HttpStatus.IM_A_TEAPOT, "BAD_REQUEST"],
+  [HttpStatus.UNPROCESSABLE_ENTITY, "UNPROCESSABLE_CONTENT"],
+  [HttpStatus.LOCKED, "CONFLICT"],
+  [HttpStatus.FAILED_DEPENDENCY, "PRECONDITION_FAILED"],
+  [HttpStatus.TOO_EARLY, "PRECONDITION_FAILED"],
+  [HttpStatus.UPGRADE_REQUIRED, "PRECONDITION_REQUIRED"],
+  [HttpStatus.PRECONDITION_REQUIRED, "PRECONDITION_REQUIRED"],
+  [HttpStatus.TOO_MANY_REQUESTS, "TOO_MANY_REQUESTS"],
+  [HttpStatus.REQUEST_HEADER_FIELDS_TOO_LARGE, "PAYLOAD_TOO_LARGE"],
+  [HttpStatus.UNAVAILABLE_FOR_LEGAL_REASONS, "FORBIDDEN"],
+  [HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR"],
+  [HttpStatus.NOT_IMPLEMENTED, "NOT_IMPLEMENTED"],
+  [HttpStatus.BAD_GATEWAY, "BAD_GATEWAY"],
+  [HttpStatus.SERVICE_UNAVAILABLE, "SERVICE_UNAVAILABLE"],
+  [HttpStatus.GATEWAY_TIMEOUT, "GATEWAY_TIMEOUT"],
+  [HttpStatus.HTTP_VERSION_NOT_SUPPORTED, "INTERNAL_SERVER_ERROR"],
+  [HttpStatus.VARIANT_ALSO_NEGOTIATES, "INTERNAL_SERVER_ERROR"],
+  [HttpStatus.INSUFFICIENT_STORAGE, "INTERNAL_SERVER_ERROR"],
+  [HttpStatus.LOOP_DETECTED, "INTERNAL_SERVER_ERROR"],
+  [HttpStatus.NOT_EXTENDED, "INTERNAL_SERVER_ERROR"],
+  [HttpStatus.NETWORK_AUTHENTICATION_REQUIRED, "INTERNAL_SERVER_ERROR"],
+] as const;
 
 type GuardDependency = {
   readonly allowed: boolean;
@@ -276,6 +329,33 @@ describe("tRPC Croco execution pipeline", () => {
     Container.reset();
     events.length = 0;
     observedTrpcContext = undefined;
+  });
+
+  it("covers every supported Croco client and server Problem status", () => {
+    const supportedProblemStatuses = Object.values(HttpStatus).filter(
+      (status) => status >= 400 && status < 600,
+    );
+
+    expect(new Set(PROBLEM_STATUS_CASES.map(([status]) => status))).toEqual(
+      new Set(supportedProblemStatuses),
+    );
+  });
+
+  it.each(PROBLEM_STATUS_CASES)(
+    "maps Problem status %i to tRPC code %s",
+    (status, expectedCode) => {
+      expect(toTrpcError(new StatusProblem(status))).toMatchObject({
+        code: expectedCode,
+        cause: expect.objectContaining({ status }),
+      });
+    },
+  );
+
+  it.each([419, 599])("keeps unrecognized Problem status %i internal", (status) => {
+    expect(toTrpcError(new StatusProblem(status))).toMatchObject({
+      code: "INTERNAL_SERVER_ERROR",
+      cause: expect.objectContaining({ status }),
+    });
   });
 
   it("blocks a tRPC procedure before its handler when a guard denies access", async () => {
