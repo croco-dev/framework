@@ -16,6 +16,12 @@ metadata while transports decide how schemas are executed.
 - Versioned GraphQL contract snapshots and diffs for deterministic SDL and Croco
   resolver metadata review.
 
+Croco-owned GraphQL metadata follows one ownership rule: class decorator metadata is
+stored on the resolver constructor, while method decorator metadata is stored on the
+resolver prototype. Inherited method metadata is read through the prototype chain;
+decorators that extend inherited collections clone them before writing so a derived
+resolver cannot mutate its base resolver's contract.
+
 ## Usage
 
 ```typescript

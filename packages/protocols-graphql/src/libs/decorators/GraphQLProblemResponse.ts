@@ -6,6 +6,7 @@ import {
   type ProblemRedactionPolicy,
 } from "@croco/problems-core";
 import { GRAPHQL_PROBLEM_RESPONSES_KEY } from "../constants";
+import { appendGraphQLMethodMetadata } from "../metadata/GraphQLMetadata";
 
 export type GraphQLProblemResponseOptions<
   Code extends string = string,
@@ -38,18 +39,8 @@ export function GraphQLProblemResponses<
   const Responses extends readonly GraphQLProblemResponseOptions[],
 >(...responses: Responses): MethodDecorator {
   return (target: object, propertyKey: string | symbol, descriptor: PropertyDescriptor) => {
-    const existing =
-      (Reflect.getMetadata(GRAPHQL_PROBLEM_RESPONSES_KEY, target.constructor, propertyKey) as
-        | GraphQLProblemResponseMetadata[]
-        | undefined) ?? [];
     const normalized = responses.map(toGraphQLProblemResponseMetadata);
-
-    Reflect.defineMetadata(
-      GRAPHQL_PROBLEM_RESPONSES_KEY,
-      [...existing, ...normalized],
-      target.constructor,
-      propertyKey,
-    );
+    appendGraphQLMethodMetadata(GRAPHQL_PROBLEM_RESPONSES_KEY, target, propertyKey, normalized);
 
     return descriptor;
   };

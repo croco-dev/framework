@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import type { Guard } from "@croco/framework-context";
 import { GRAPHQL_ROLES_KEY } from "../constants";
+import { getGraphQLMethodMetadata } from "../metadata/GraphQLMetadata";
 import type { GraphQLGuardContext } from "../types/GuardTypes";
 
 export type UserWithRoles = {
@@ -17,9 +18,11 @@ export class GraphQLRolesGuard implements Guard<GraphQLGuardContext> {
     const resolver = this.resolverTarget ?? context.root;
     const methodName = this.resolverMethodName ?? context.info.fieldName;
 
-    const requiredRoles = Reflect.getMetadata(GRAPHQL_ROLES_KEY, resolver, methodName) as
-      | string[]
-      | undefined;
+    const requiredRoles = getGraphQLMethodMetadata<string[]>(
+      GRAPHQL_ROLES_KEY,
+      resolver,
+      methodName,
+    );
 
     if (!requiredRoles || requiredRoles.length === 0) {
       return true;

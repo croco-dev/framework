@@ -291,6 +291,96 @@ describe("GraphQL contract snapshots", () => {
     ]);
     expect(diffGraphQLContractSnapshots(baselineSnapshot, currentSnapshot).changes).toEqual([]);
   });
+
+  it("isolates inherited resolver method metadata with clone-on-write problem responses", async () => {
+    class BaseGuard {
+      canActivate(): boolean {
+        return true;
+      }
+    }
+
+    class DerivedGuard {
+      canActivate(): boolean {
+        return true;
+      }
+    }
+
+    class BaseInterceptor {
+      intercept(): Promise<unknown> {
+        return Promise.resolve(undefined);
+      }
+    }
+
+    class DerivedInterceptor {
+      intercept(): Promise<unknown> {
+        return Promise.resolve(undefined);
+      }
+    }
+
+    @GraphQLResolver()
+    class BaseResolver {
+      @GraphQLProblemResponse({
+        code: "GRAPHQL_BASE_UNAVAILABLE",
+        category: ProblemCategory.InternalServerError,
+      })
+      @Roles("base")
+      @UseGuards(BaseGuard)
+      @UseInterceptors(BaseInterceptor)
+      value(): string {
+        return "base";
+      }
+    }
+
+    @GraphQLResolver()
+    class DerivedResolver extends BaseResolver {
+      @GraphQLProblemResponse({
+        code: "GRAPHQL_DERIVED_UNAVAILABLE",
+        category: ProblemCategory.NotImplemented,
+      })
+      @Roles("derived")
+      @UseGuards(DerivedGuard)
+      @UseInterceptors(DerivedInterceptor)
+      override value(): string {
+        return "derived";
+      }
+    }
+
+    @GraphQLResolver()
+    class ContractSchemaResolver {
+      @Query(() => String)
+      contractSchema(): string {
+        return "ok";
+      }
+    }
+
+    const schema = await buildContractSchema([ContractSchemaResolver]);
+    const baseSnapshot = createGraphQLContractSnapshot(schema, { resolvers: [BaseResolver] });
+    const derivedSnapshot = createGraphQLContractSnapshot(schema, {
+      resolvers: [DerivedResolver],
+    });
+
+    expect(baseSnapshot.resolvers[0]?.methods).toEqual([
+      expect.objectContaining({
+        methodName: "value",
+        guards: ["BaseGuard"],
+        interceptors: ["BaseInterceptor"],
+        roles: ["base"],
+        problems: [expect.objectContaining({ code: "GRAPHQL_BASE_UNAVAILABLE" })],
+      }),
+    ]);
+    expect(derivedSnapshot.resolvers[0]?.methods).toEqual([
+      expect.objectContaining({
+        methodName: "value",
+        guards: ["DerivedGuard"],
+        interceptors: ["DerivedInterceptor"],
+        roles: ["derived"],
+        problems: [
+          expect.objectContaining({ code: "GRAPHQL_BASE_UNAVAILABLE" }),
+          expect.objectContaining({ code: "GRAPHQL_DERIVED_UNAVAILABLE" }),
+        ],
+      }),
+    ]);
+  });
 });
 
 async function buildContractSchema(resolvers: [ContractResolver, ...ContractResolver[]]) {
