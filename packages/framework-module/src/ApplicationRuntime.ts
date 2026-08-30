@@ -163,7 +163,7 @@ export class ApplicationRuntime implements AsyncDisposable {
     cleanup?: () => Promise<void> | void,
   ): Promise<void> {
     if (this.disposal) {
-      return this.disposal;
+      return cleanup ? Promise.reject(new ModuleRuntimeDisposedProblem()) : this.disposal;
     }
     if (this.state === "disposed") {
       return Promise.reject(new ModuleRuntimeDisposedProblem());

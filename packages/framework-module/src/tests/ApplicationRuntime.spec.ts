@@ -333,6 +333,58 @@ describe("ApplicationRuntime", () => {
     expect(() => runtime.get(token)).toThrow("has already been disposed");
   });
 
+  it("rejects shutdown cleanup that arrives while disposal is in progress", async () => {
+    let enterShutdown: (() => void) | undefined;
+    let releaseShutdown: (() => void) | undefined;
+    const shutdownEntered = new Promise<void>((resolve) => {
+      enterShutdown = resolve;
+    });
+    const shutdownReleased = new Promise<void>((resolve) => {
+      releaseShutdown = resolve;
+    });
+    let cleanupCalls = 0;
+    const runtime = createApplicationRuntime({
+      modules: [
+        {
+          name: "app",
+          setup: () => undefined,
+          shutdown: async () => {
+            enterShutdown?.();
+            await shutdownReleased;
+          },
+        },
+      ],
+    });
+    await runtime.initialize();
+
+    const disposal = runtime.dispose();
+    await shutdownEntered;
+    const cleanup = runtime.shutdownWithCleanup(() => {
+      cleanupCalls += 1;
+    });
+
+    await expect(cleanup).rejects.toBeInstanceOf(ModuleRuntimeDisposedProblem);
+    expect(cleanupCalls).toBe(0);
+    releaseShutdown?.();
+    await expect(disposal).resolves.toBeUndefined();
+  });
+
+  it("rejects shutdown cleanup after disposal has completed", async () => {
+    let cleanupCalls = 0;
+    const runtime = createApplicationRuntime({
+      modules: [{ name: "app", setup: () => undefined }],
+    });
+    await runtime.initialize();
+    await runtime.dispose();
+
+    await expect(
+      runtime.shutdownWithCleanup(() => {
+        cleanupCalls += 1;
+      }),
+    ).rejects.toBeInstanceOf(ModuleRuntimeDisposedProblem);
+    expect(cleanupCalls).toBe(0);
+  });
+
   it("shuts modules down before disposing the application scope", async () => {
     const token = new Token<string>("shutdown-value");
     const calls: string[] = [];
