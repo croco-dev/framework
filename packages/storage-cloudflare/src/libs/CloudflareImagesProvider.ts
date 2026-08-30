@@ -157,13 +157,15 @@ async function startDownloadStream(stream: StorageStream, key: string): Promise<
   } catch (error) {
     try {
       await reader.cancel(error);
-    } catch {
+    } catch (cancellationError: unknown) {
       // Preserve the body read failure when best-effort cleanup also fails.
+      void cancellationError;
     }
     try {
       reader.releaseLock();
-    } catch {
+    } catch (releaseError: unknown) {
       // Preserve the body read failure when releasing the discarded reader fails.
+      void releaseError;
     }
     throw normalizeCloudflareImagesError(error, { key, operation: "get" });
   }
