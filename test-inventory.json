@@ -224,6 +224,12 @@
       "owner": "@croco/auth-better-auth"
     },
     {
+      "path": "packages/auth-better-auth/src/tests/BetterAuthFactoryIntegration.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/auth-better-auth"
+    },
+    {
       "path": "packages/auth-better-auth/src/tests/BetterAuthProvider.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -231,6 +237,12 @@
     },
     {
       "path": "packages/auth-better-auth/src/tests/BetterAuthSessionManager.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/auth-better-auth"
+    },
+    {
+      "path": "packages/auth-better-auth/src/tests/BetterAuthSessionManagerIntegration.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/auth-better-auth"
