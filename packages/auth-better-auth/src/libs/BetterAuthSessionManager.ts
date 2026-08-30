@@ -71,11 +71,6 @@ export class BetterAuthSessionManager implements BetterAuthSessionProvider {
     authorizationSessionToken: string,
   ): Promise<void> {
     const headers = createAuthorizationHeaders(authorizationSessionToken);
-
-    if (typeof targetSessionToken !== "string" || !targetSessionToken.trim()) {
-      throw new BetterAuthSessionNotFoundProblem("[Redacted]");
-    }
-
     const auth = this.factory.getAuth();
     const ownership = await sessionOwnershipMatches(
       auth.$context,

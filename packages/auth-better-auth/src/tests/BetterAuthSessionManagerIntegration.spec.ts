@@ -54,6 +54,15 @@ describe("BetterAuthSessionManager integration", () => {
 
     const manager = new BetterAuthSessionManager({ getAuth: () => auth });
 
+    await expect(manager.revokeSession("", "invalid-auth")).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+    });
+
+    await expect(manager.revokeSession("", administratorSession.token)).rejects.toMatchObject({
+      code: "auth-better-auth/session-not-found",
+      detail: "Session with id '[Redacted]' not found",
+    });
+
     await manager.revokeSession(targetSession.token, administratorSession.token);
 
     await expect(
