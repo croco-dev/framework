@@ -1,5 +1,6 @@
 import "reflect-metadata";
 import { Context } from "@croco/framework-context";
+import { recordError } from "@croco/telemetry-api";
 import type { AuditLogRepository } from "./AuditLogRepository";
 import {
   createAuditCoordinationState,
@@ -35,6 +36,44 @@ type AuditableMetadata = {
   source?: string;
   [key: string]: unknown;
 };
+
+class AuditWriteFailureAggregateError extends Error {
+  readonly errors: readonly unknown[];
+
+  constructor(errors: readonly unknown[]) {
+    super("Handler failure includes audit-write failure evidence");
+    this.name = "AuditWriteFailureAggregateError";
+    this.errors = errors;
+  }
+}
+
+function attachAuditWriteCause(handlerError: unknown, auditWriteError: unknown): void {
+  if (!(handlerError instanceof Error)) {
+    return;
+  }
+
+  try {
+    const existingCause = (handlerError as Error & { cause?: unknown }).cause;
+    const diagnosticCause =
+      existingCause === undefined
+        ? auditWriteError
+        : new AuditWriteFailureAggregateError([existingCause, auditWriteError]);
+    Object.defineProperty(handlerError, "cause", {
+      configurable: true,
+      value: diagnosticCause,
+    });
+  } catch {
+    return;
+  }
+}
+
+function safelyRecordError(error: unknown): void {
+  try {
+    recordError(error);
+  } catch {
+    return;
+  }
+}
 
 export type AuditInterceptorOptions = {
   readonly trustedProxyHops?: number;
@@ -342,20 +381,25 @@ export class AuditInterceptor implements Interceptor<AuditExecutionContext> {
         throw error;
       }
 
-      await this.writeAuditLog({
-        tenantId: contextData?.tenantId ?? "unknown",
-        actorId: contextData?.user?.id ?? "unknown",
-        action: resolveAction(controllerName, handler),
-        resourceType: resolveResourceType(controllerName),
-        resourceId: resolveResourceId(http.path),
-        payload: {
-          error: error instanceof Error ? error.message : String(error),
-        },
-        diff: null,
-        metadata: mergeMetadata(existingMetadata, http),
-      });
-      if (coordination) {
-        markAuditWrite(coordination.target, coordination.propertyKey);
+      try {
+        await this.writeAuditLog({
+          tenantId: contextData?.tenantId ?? "unknown",
+          actorId: contextData?.user?.id ?? "unknown",
+          action: resolveAction(controllerName, handler),
+          resourceType: resolveResourceType(controllerName),
+          resourceId: resolveResourceId(http.path),
+          payload: {
+            error: error instanceof Error ? error.message : String(error),
+          },
+          diff: null,
+          metadata: mergeMetadata(existingMetadata, http),
+        });
+        if (coordination) {
+          markAuditWrite(coordination.target, coordination.propertyKey);
+        }
+      } catch (auditWriteError) {
+        attachAuditWriteCause(error, auditWriteError);
+        safelyRecordError(auditWriteError);
       }
 
       throw error;
