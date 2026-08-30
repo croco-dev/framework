@@ -8,6 +8,13 @@ import {
 import { BetterAuthSessionLookupProblem } from "./problems/BetterAuthSessionLookupProblem";
 import type { BetterAuthSession, BetterAuthSessionProvider } from "./types";
 
+type BetterAuthContext = Promise<{
+  internalAdapter: {
+    findSession: (token: string) => Promise<unknown>;
+    findUserById: (userId: string) => Promise<unknown>;
+  };
+}>;
+
 /**
  * Better Auth 세션 목록 조회와 세션 해제를 제공하는 매니저입니다.
  */
@@ -15,10 +22,10 @@ export class BetterAuthSessionManager implements BetterAuthSessionProvider {
   constructor(
     private readonly factory: {
       getAuth: () => {
+        $context: BetterAuthContext;
         api: {
           listSessions: (args: { headers: Headers }) => Promise<unknown>;
           revokeSession: (args: { headers: Headers; body: { token: string } }) => Promise<unknown>;
-          getUser: (args: { headers: Headers; query: { id: string } }) => Promise<unknown>;
           revokeUserSessions: (args: {
             headers: Headers;
             body: { userId: string };
@@ -69,24 +76,33 @@ export class BetterAuthSessionManager implements BetterAuthSessionProvider {
 
     const headers = createAuthorizationHeaders(authorizationSessionToken);
     const auth = this.factory.getAuth();
+    const ownership = await sessionOwnershipMatches(
+      auth.$context,
+      targetSessionToken,
+      authorizationSessionToken,
+    ).then(
+      (matches) => ({ matches }) as const,
+      (error: unknown) => ({ error }) as const,
+    );
 
     try {
-      const sessions = await auth.api.listSessions({ headers });
-      if (
-        !Array.isArray(sessions) ||
-        !sessions.some(
-          (session: unknown) => isRecord(session) && session.token === targetSessionToken,
-        )
-      ) {
-        throw new BetterAuthSessionNotFoundProblem("[Redacted]");
-      }
-
       await auth.api.revokeSession({
         headers,
         body: { token: targetSessionToken },
       });
+
+      if ("error" in ownership) {
+        throw ownership.error;
+      }
+
+      if (!ownership.matches) {
+        throw new BetterAuthSessionNotFoundProblem("[Redacted]");
+      }
     } catch (error) {
-      if (error instanceof BetterAuthSessionNotFoundProblem) {
+      if (
+        error instanceof BetterAuthSessionNotFoundProblem ||
+        error instanceof BetterAuthAuthenticationProblem
+      ) {
         throw error;
       }
 
@@ -101,17 +117,32 @@ export class BetterAuthSessionManager implements BetterAuthSessionProvider {
   async revokeUserSessions(userId: string, adminSessionToken: string): Promise<void> {
     const headers = createAuthorizationHeaders(adminSessionToken);
     const auth = this.factory.getAuth();
+    const targetUser = await userExists(auth.$context, userId).then(
+      (exists) => ({ exists }) as const,
+      (error: unknown) => ({ error }) as const,
+    );
 
     try {
-      await auth.api.getUser({
-        headers,
-        query: { id: userId },
-      });
       await auth.api.revokeUserSessions({
         headers,
         body: { userId },
       });
+
+      if ("error" in targetUser) {
+        throw targetUser.error;
+      }
+
+      if (!targetUser.exists) {
+        throw new BetterAuthUserNotFoundProblem(userId);
+      }
     } catch (error) {
+      if (
+        error instanceof BetterAuthUserNotFoundProblem ||
+        error instanceof BetterAuthAuthenticationProblem
+      ) {
+        throw error;
+      }
+
       throw mapRevocationError(
         error,
         "revokeUserSessions",
@@ -141,6 +172,52 @@ export class BetterAuthSessionManager implements BetterAuthSessionProvider {
       userAgent: typeof session.userAgent === "string" ? session.userAgent : undefined,
     };
   }
+}
+
+async function sessionOwnershipMatches(
+  context: BetterAuthContext,
+  targetSessionToken: string,
+  authorizationSessionToken: string,
+): Promise<boolean> {
+  const { internalAdapter } = await context;
+  const [targetSession, authorizationSession] = await Promise.all([
+    internalAdapter.findSession(targetSessionToken),
+    internalAdapter.findSession(authorizationSessionToken),
+  ]);
+
+  const targetUserId = getSessionUserId(targetSession);
+  const authorizationUserId = getSessionUserId(authorizationSession);
+  return targetUserId !== null && targetUserId === authorizationUserId;
+}
+
+async function userExists(context: BetterAuthContext, userId: string): Promise<boolean> {
+  const user = await (await context).internalAdapter.findUserById(userId);
+  if (user === null || user === undefined) {
+    return false;
+  }
+
+  if (!isRecord(user)) {
+    throw new BetterAuthAuthenticationProblem("revokeUserSessions", undefined);
+  }
+
+  return true;
+}
+
+function getSessionUserId(sessionResult: unknown): string | null {
+  if (sessionResult === null || sessionResult === undefined) {
+    return null;
+  }
+
+  if (!isRecord(sessionResult) || !isRecord(sessionResult.session)) {
+    throw new BetterAuthAuthenticationProblem("revokeSession", undefined);
+  }
+
+  const userId = sessionResult.session.userId;
+  if (typeof userId !== "string" || !userId) {
+    throw new BetterAuthAuthenticationProblem("revokeSession", undefined);
+  }
+
+  return userId;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

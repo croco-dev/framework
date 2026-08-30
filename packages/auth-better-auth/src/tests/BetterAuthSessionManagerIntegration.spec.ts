@@ -1,12 +1,21 @@
 import "reflect-metadata";
 import { getTestInstance } from "better-auth/test";
-import { admin } from "better-auth/plugins";
+import { admin, createAccessControl } from "better-auth/plugins";
 import { describe, expect, it } from "vitest";
 import { BetterAuthSessionManager } from "../libs/BetterAuthSessionManager";
 
 describe("BetterAuthSessionManager integration", () => {
-  it("should revoke existing sessions and reject missing targets through Better Auth", async () => {
-    const { auth, db, signInWithTestUser } = await getTestInstance({ plugins: [admin()] });
+  it("should preserve Better Auth revocation authorization while detecting missing targets", async () => {
+    const statements = { session: ["revoke"] } as const;
+    const accessControl = createAccessControl(statements);
+    const { auth, db, signInWithTestUser } = await getTestInstance({
+      plugins: [
+        admin({
+          ac: accessControl,
+          roles: { "session-revoker": accessControl.newRole(statements) },
+        }),
+      ],
+    });
     const target = await signInWithTestUser();
     const targetSession = await db.findOne<{ token: string }>({
       model: "session",
@@ -21,7 +30,7 @@ describe("BetterAuthSessionManager integration", () => {
     await db.update({
       model: "user",
       where: [{ field: "id", value: target.user.id }],
-      update: { role: "admin" },
+      update: { role: "session-revoker" },
     });
 
     await signInWithTestUser();
@@ -36,6 +45,12 @@ describe("BetterAuthSessionManager integration", () => {
     if (!administratorSession) {
       throw new Error("Better Auth did not persist the administrator session");
     }
+
+    await db.update({
+      model: "session",
+      where: [{ field: "token", value: administratorSession.token }],
+      update: { createdAt: new Date(Date.now() - 25 * 60 * 60 * 1000) },
+    });
 
     const manager = new BetterAuthSessionManager({ getAuth: () => auth });
 
@@ -53,6 +68,13 @@ describe("BetterAuthSessionManager integration", () => {
     ).rejects.toMatchObject({
       code: "auth-better-auth/session-not-found",
       detail: "Session with id '[Redacted]' not found",
+    });
+
+    await expect(
+      manager.revokeUserSessions("missing-user-id", administratorSession.token),
+    ).rejects.toMatchObject({
+      code: "auth-better-auth/user-not-found",
+      detail: "User with id 'missing-user-id' not found",
     });
 
     await manager.revokeUserSessions(target.user.id, administratorSession.token);
