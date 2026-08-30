@@ -436,6 +436,38 @@ describe("frontend Problem client runtime", () => {
     }
   });
 
+  it("redacts structured values owned by escaped sensitive labels in malformed JSON", async () => {
+    const cases = [
+      ['{"pass\\u0077ord":{"inner":"object-secret"}},', "object-secret"],
+      ['{"pass\\u0077ord":["array-secret"]},', "array-secret"],
+      ['{"outer":{"pass\\u0077ord":{"inner":"nested-object-secret"}}},', "nested-object-secret"],
+      ['{"outer":[{"pass\\u0077ord":["nested-array-secret"]}]},', "nested-array-secret"],
+      ['{"pass\\u0077ord":{"inner":"incomplete-object-secret"', "incomplete-object-secret"],
+      ['{"pass\\u0077ord":["incomplete-array-secret"', "incomplete-array-secret"],
+      [
+        `{"padding":"${"x".repeat(430)}","pass\\u0077ord":{"inner":"boundary-secret","tail":"${"y".repeat(200)}"}},`,
+        "boundary-secret",
+      ],
+    ] as const;
+
+    for (const [body, secret] of cases) {
+      const result = await readOptionalJsonResult(
+        new Response(body, {
+          headers: { "content-type": "application/json" },
+          status: 200,
+        }),
+      );
+
+      if (result.ok || result.kind !== "external") {
+        expect.fail("Expected an external failure result.");
+      }
+
+      expect(result.body).toContain("[redacted]");
+      expect(result.body).not.toContain(secret);
+      expect(result.error).toMatchObject({ body: result.body });
+    }
+  });
+
   it("bounds sanitization before redacting incomplete private keys", () => {
     const privateKeyMarker = "-----BEGIN PRIVATE KEY-----";
     const error = new ProblemResponseError(

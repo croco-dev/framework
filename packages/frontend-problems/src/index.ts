@@ -9,8 +9,6 @@ const TRAILING_STRUCTURED_RESPONSE_SECRET_PATTERN =
   /(?:(?:github_pat_|gh[pousr]_)[a-zA-Z0-9_]*|AKIA[A-Z0-9]*|eyJ[a-zA-Z0-9_-]+\.eyJ[a-zA-Z0-9_-]+(?:\.[a-zA-Z0-9_-]*)?)$/g;
 const SENSITIVE_RESPONSE_FIELD_PATTERN =
   /^(?:authorization|proxy[-_]?authorization|cookie|set[-_]?cookie|credential|password|passphrase|passwd|pwd|secret|token|api[-_]?key|private[-_]?key|access[-_]?key(?:[-_]?id)?|access[-_]?token|refresh[-_]?token|client[-_]?secret|connection[-_]?string|dsn)$/i;
-const QUOTED_JSON_FIELD_PATTERN =
-  /(["'])((?:\\.|(?!\1)[^\\])*)\1(\s*:\s*)(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|(?:bearer|basic|digest|apikey)\s+[^\r\n,;}\]]+|[^\r\n,;{}[\]]+)/gi;
 const MAX_STRUCTURED_RESPONSE_DEPTH = 8;
 const MAX_STRUCTURED_RESPONSE_ENTRIES = 100;
 
@@ -466,10 +464,7 @@ function sanitizeStructuredResponseBody(
 }
 
 function redactResponseBody(body: string, inputTruncated: boolean): string {
-  const withoutEscapedJsonFields = body.replace(
-    QUOTED_JSON_FIELD_PATTERN,
-    replaceSensitiveQuotedJsonValue,
-  );
+  const withoutEscapedJsonFields = redactSensitiveQuotedJsonValues(body);
   const withoutCookies = withoutEscapedJsonFields.replace(
     /(["']?)(cookie|set[-_]?cookie)\1(\s*[:=]\s*)(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\r\n]+)/gi,
     replaceSensitiveResponseValue,
@@ -488,30 +483,146 @@ function redactResponseBody(body: string, inputTruncated: boolean): string {
     : redacted;
 }
 
-function replaceSensitiveQuotedJsonValue(
-  match: string,
-  labelQuote: string,
-  encodedLabel: string,
-  separator: string,
-): string {
-  let label: unknown;
+function redactSensitiveQuotedJsonValues(body: string): string {
+  let cursor = 0;
+  let output = "";
+  let searchIndex = 0;
 
+  while (searchIndex < body.length) {
+    const labelQuote = body[searchIndex];
+
+    if (labelQuote !== '"' && labelQuote !== "'") {
+      searchIndex += 1;
+      continue;
+    }
+
+    const labelEnd = findClosingQuote(body, searchIndex, labelQuote);
+
+    if (labelEnd === -1) {
+      break;
+    }
+
+    let separatorEnd = labelEnd + 1;
+
+    while (separatorEnd < body.length && /\s/.test(body[separatorEnd] ?? "")) {
+      separatorEnd += 1;
+    }
+
+    if (body[separatorEnd] !== ":") {
+      searchIndex = labelEnd + 1;
+      continue;
+    }
+
+    separatorEnd += 1;
+
+    while (separatorEnd < body.length && /\s/.test(body[separatorEnd] ?? "")) {
+      separatorEnd += 1;
+    }
+
+    const encodedLabel = body.slice(searchIndex + 1, labelEnd);
+    const label = decodeQuotedJsonLabel(labelQuote, encodedLabel);
+
+    if (label === undefined || !SENSITIVE_RESPONSE_FIELD_PATTERN.test(label)) {
+      searchIndex = labelEnd + 1;
+      continue;
+    }
+
+    const valueEnd = findJsonLikeValueEnd(body, separatorEnd);
+    const valueQuote =
+      body[separatorEnd] === '"' || body[separatorEnd] === "'" ? body[separatorEnd] : "";
+
+    output += body.slice(cursor, separatorEnd);
+    output += `${valueQuote}${REDACTED_RESPONSE_BODY_VALUE}${valueQuote}`;
+    cursor = valueEnd;
+    searchIndex = valueEnd;
+  }
+
+  return output + body.slice(cursor);
+}
+
+function decodeQuotedJsonLabel(labelQuote: string, encodedLabel: string): string | undefined {
   try {
     const jsonLabel =
       labelQuote === '"' ? encodedLabel : encodedLabel.replace(/"/g, '\\"').replace(/\\'/g, "'");
-    label = JSON.parse(`"${jsonLabel}"`);
+    const label: unknown = JSON.parse(`"${jsonLabel}"`);
+
+    return typeof label === "string" ? label : undefined;
   } catch {
-    return match;
+    return undefined;
+  }
+}
+
+function findClosingQuote(body: string, start: number, quote: string): number {
+  let escaped = false;
+
+  for (let index = start + 1; index < body.length; index += 1) {
+    const character = body[index];
+
+    if (escaped) {
+      escaped = false;
+    } else if (character === "\\") {
+      escaped = true;
+    } else if (character === quote) {
+      return index;
+    }
   }
 
-  if (typeof label !== "string" || !SENSITIVE_RESPONSE_FIELD_PATTERN.test(label)) {
-    return match;
+  return -1;
+}
+
+function findJsonLikeValueEnd(body: string, start: number): number {
+  const first = body[start];
+
+  if (first === '"' || first === "'") {
+    const closingQuote = findClosingQuote(body, start, first);
+    return closingQuote === -1 ? body.length : closingQuote + 1;
   }
 
-  const value = match.slice(encodedLabel.length + separator.length + labelQuote.length * 2);
-  const valueQuote = value.startsWith('"') || value.startsWith("'") ? value[0] : "";
+  if (first === "{" || first === "[") {
+    return findStructuredJsonLikeValueEnd(body, start);
+  }
 
-  return `${labelQuote}${encodedLabel}${labelQuote}${separator}${valueQuote}${REDACTED_RESPONSE_BODY_VALUE}${valueQuote}`;
+  let index = start;
+
+  while (index < body.length && !/[\r\n,;}\]]/.test(body[index] ?? "")) {
+    index += 1;
+  }
+
+  return index;
+}
+
+function findStructuredJsonLikeValueEnd(body: string, start: number): number {
+  const closingDelimiters: string[] = [body[start] === "{" ? "}" : "]"];
+  let index = start + 1;
+
+  while (index < body.length) {
+    const character = body[index];
+
+    if (character === '"' || character === "'") {
+      const closingQuote = findClosingQuote(body, index, character);
+
+      if (closingQuote === -1) {
+        return body.length;
+      }
+
+      index = closingQuote + 1;
+      continue;
+    }
+
+    if (character === "{" || character === "[") {
+      closingDelimiters.push(character === "{" ? "}" : "]");
+    } else if (character === closingDelimiters[closingDelimiters.length - 1]) {
+      closingDelimiters.pop();
+
+      if (closingDelimiters.length === 0) {
+        return index + 1;
+      }
+    }
+
+    index += 1;
+  }
+
+  return body.length;
 }
 
 function replaceSensitiveResponseValue(
