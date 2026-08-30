@@ -192,6 +192,27 @@ describe("ClerkOrganizationService", () => {
         maxAllowedMemberships: 50,
       });
     });
+
+    it("should classify terminal mutation failures without exposing SDK details", async () => {
+      vi.mocked(mockClerkClient.organizations.createOrganization).mockRejectedValue({
+        statusCode: 403,
+        message: "Forbidden token=clerk_request_token",
+        requestId: "req_private",
+      });
+
+      await expect(
+        service.createOrganization({ name: "New Org", createdBy: "user_123" }),
+      ).rejects.toMatchObject({
+        code: "auth-clerk/external-service-error",
+        detail: "Clerk operation 'organizations.createOrganization' failed",
+        extensions: {
+          operation: "organizations.createOrganization",
+          provider: "clerk",
+          retryable: false,
+          upstreamStatus: 403,
+        },
+      });
+    });
   });
 
   describe("updateOrganization", () => {

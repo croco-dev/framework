@@ -1,9 +1,7 @@
 import { type ClerkClient, createClerkClient } from "@clerk/backend";
 import type { ClerkAuthOptions } from "./ClerkAuthProvider";
-import {
-  ClerkExternalServiceProblem,
-  ClerkPublicUserDataMissingProblem,
-} from "./problems/ClerkProblems";
+import { executeClerkLookup, executeClerkOperation } from "./clerkOperation";
+import { ClerkPublicUserDataMissingProblem } from "./problems/ClerkProblems";
 
 export type ClerkOrganization = {
   id: string;
@@ -79,38 +77,6 @@ export type CreateInvitationInput = {
   redirectUrl?: string;
 };
 
-function isObjectRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
-function getClerkErrorStatus(error: unknown): number | undefined {
-  if (!isObjectRecord(error)) {
-    return undefined;
-  }
-
-  const status = error.status;
-  if (typeof status === "number") {
-    return status;
-  }
-
-  const statusCode = error.statusCode;
-  return typeof statusCode === "number" ? statusCode : undefined;
-}
-
-function isMissingOrganizationError(error: unknown): boolean {
-  const status = getClerkErrorStatus(error);
-  if (status !== undefined) {
-    return status === 404;
-  }
-
-  const message = error instanceof Error ? error.message : undefined;
-  return message?.toLowerCase().includes("not found") === true;
-}
-
-function toError(error: unknown): Error {
-  return error instanceof Error ? error : new Error("Unknown Clerk organization lookup failure");
-}
-
 function mapClerkOrganization(org: {
   id: string;
   name: string;
@@ -170,37 +136,35 @@ export class ClerkOrganizationService {
   }
 
   async getOrganization(organizationId: string): Promise<ClerkOrganization | null> {
-    try {
-      const org = await this.clerkClient.organizations.getOrganization({
-        organizationId,
-      });
-      return mapClerkOrganization(org);
-    } catch (error) {
-      if (isMissingOrganizationError(error)) {
-        return null;
-      }
-
-      throw new ClerkExternalServiceProblem("Failed to get organization from Clerk", {
-        cause: toError(error),
-      });
+    const org = await executeClerkLookup(
+      "organizations.getOrganization",
+      () =>
+        this.clerkClient.organizations.getOrganization({
+          organizationId,
+        }),
+      { allowNotFoundMessage: true },
+    );
+    if (org === null) {
+      return null;
     }
+
+    return mapClerkOrganization(org);
   }
 
   async getOrganizationBySlug(slug: string): Promise<ClerkOrganization | null> {
-    try {
-      const org = await this.clerkClient.organizations.getOrganization({
-        slug,
-      });
-      return mapClerkOrganization(org);
-    } catch (error) {
-      if (isMissingOrganizationError(error)) {
-        return null;
-      }
-
-      throw new ClerkExternalServiceProblem("Failed to get organization from Clerk", {
-        cause: toError(error),
-      });
+    const org = await executeClerkLookup(
+      "organizations.getOrganization",
+      () =>
+        this.clerkClient.organizations.getOrganization({
+          slug,
+        }),
+      { allowNotFoundMessage: true },
+    );
+    if (org === null) {
+      return null;
     }
+
+    return mapClerkOrganization(org);
   }
 
   async getOrganizationList(
@@ -221,7 +185,9 @@ export class ClerkOrganizationService {
       params.query = options.query;
     }
 
-    const response = await this.clerkClient.organizations.getOrganizationList(params);
+    const response = await executeClerkOperation("organizations.getOrganizationList", () =>
+      this.clerkClient.organizations.getOrganizationList(params),
+    );
 
     return {
       organizations: response.data.map(mapClerkOrganization),
@@ -230,16 +196,18 @@ export class ClerkOrganizationService {
   }
 
   async createOrganization(input: CreateOrganizationInput): Promise<ClerkOrganization> {
-    const org = await this.clerkClient.organizations.createOrganization({
-      name: input.name,
-      createdBy: input.createdBy,
-      ...(input.slug && { slug: input.slug }),
-      ...(input.maxAllowedMemberships !== undefined && {
-        maxAllowedMemberships: input.maxAllowedMemberships,
+    const org = await executeClerkOperation("organizations.createOrganization", () =>
+      this.clerkClient.organizations.createOrganization({
+        name: input.name,
+        createdBy: input.createdBy,
+        ...(input.slug && { slug: input.slug }),
+        ...(input.maxAllowedMemberships !== undefined && {
+          maxAllowedMemberships: input.maxAllowedMemberships,
+        }),
+        ...(input.publicMetadata && { publicMetadata: input.publicMetadata }),
+        ...(input.privateMetadata && { privateMetadata: input.privateMetadata }),
       }),
-      ...(input.publicMetadata && { publicMetadata: input.publicMetadata }),
-      ...(input.privateMetadata && { privateMetadata: input.privateMetadata }),
-    });
+    );
 
     return mapClerkOrganization(org);
   }
@@ -248,25 +216,29 @@ export class ClerkOrganizationService {
     organizationId: string,
     input: UpdateOrganizationInput,
   ): Promise<ClerkOrganization> {
-    const org = await this.clerkClient.organizations.updateOrganization(organizationId, {
-      ...(input.name !== undefined && { name: input.name }),
-      ...(input.slug !== undefined && { slug: input.slug }),
-      ...(input.maxAllowedMemberships !== undefined && {
-        maxAllowedMemberships: input.maxAllowedMemberships,
+    const org = await executeClerkOperation("organizations.updateOrganization", () =>
+      this.clerkClient.organizations.updateOrganization(organizationId, {
+        ...(input.name !== undefined && { name: input.name }),
+        ...(input.slug !== undefined && { slug: input.slug }),
+        ...(input.maxAllowedMemberships !== undefined && {
+          maxAllowedMemberships: input.maxAllowedMemberships,
+        }),
+        ...(input.publicMetadata !== undefined && {
+          publicMetadata: input.publicMetadata,
+        }),
+        ...(input.privateMetadata !== undefined && {
+          privateMetadata: input.privateMetadata,
+        }),
       }),
-      ...(input.publicMetadata !== undefined && {
-        publicMetadata: input.publicMetadata,
-      }),
-      ...(input.privateMetadata !== undefined && {
-        privateMetadata: input.privateMetadata,
-      }),
-    });
+    );
 
     return mapClerkOrganization(org);
   }
 
   async deleteOrganization(organizationId: string): Promise<void> {
-    await this.clerkClient.organizations.deleteOrganization(organizationId);
+    await executeClerkOperation("organizations.deleteOrganization", () =>
+      this.clerkClient.organizations.deleteOrganization(organizationId),
+    );
   }
 
   async getOrganizationMembershipList(
@@ -278,7 +250,10 @@ export class ClerkOrganizationService {
   }> {
     const params = { organizationId };
 
-    const response = await this.clerkClient.organizations.getOrganizationMembershipList(params);
+    const response = await executeClerkOperation(
+      "organizations.getOrganizationMembershipList",
+      () => this.clerkClient.organizations.getOrganizationMembershipList(params),
+    );
 
     const memberships = response.data.filter(hasPublicUserData).map(mapClerkOrganizationMembership);
 
@@ -291,11 +266,15 @@ export class ClerkOrganizationService {
   async createOrganizationMembership(
     input: CreateMembershipInput,
   ): Promise<ClerkOrganizationMembership> {
-    const membership = await this.clerkClient.organizations.createOrganizationMembership({
-      organizationId: input.organizationId,
-      userId: input.userId,
-      role: input.role,
-    });
+    const membership = await executeClerkOperation(
+      "organizations.createOrganizationMembership",
+      () =>
+        this.clerkClient.organizations.createOrganizationMembership({
+          organizationId: input.organizationId,
+          userId: input.userId,
+          role: input.role,
+        }),
+    );
 
     if (!hasPublicUserData(membership)) {
       throw new ClerkPublicUserDataMissingProblem();
@@ -309,11 +288,15 @@ export class ClerkOrganizationService {
     userId: string,
     role: string,
   ): Promise<ClerkOrganizationMembership> {
-    const membership = await this.clerkClient.organizations.updateOrganizationMembership({
-      organizationId,
-      userId,
-      role,
-    });
+    const membership = await executeClerkOperation(
+      "organizations.updateOrganizationMembership",
+      () =>
+        this.clerkClient.organizations.updateOrganizationMembership({
+          organizationId,
+          userId,
+          role,
+        }),
+    );
 
     if (!hasPublicUserData(membership)) {
       throw new ClerkPublicUserDataMissingProblem();
@@ -323,22 +306,28 @@ export class ClerkOrganizationService {
   }
 
   async deleteOrganizationMembership(organizationId: string, userId: string): Promise<void> {
-    await this.clerkClient.organizations.deleteOrganizationMembership({
-      organizationId,
-      userId,
-    });
+    await executeClerkOperation("organizations.deleteOrganizationMembership", () =>
+      this.clerkClient.organizations.deleteOrganizationMembership({
+        organizationId,
+        userId,
+      }),
+    );
   }
 
   async createOrganizationInvitation(
     input: CreateInvitationInput,
   ): Promise<ClerkOrganizationInvitation> {
-    const invitation = await this.clerkClient.organizations.createOrganizationInvitation({
-      organizationId: input.organizationId,
-      emailAddress: input.emailAddress,
-      role: input.role,
-      inviterUserId: input.inviterUserId,
-      ...(input.redirectUrl && { redirectUrl: input.redirectUrl }),
-    });
+    const invitation = await executeClerkOperation(
+      "organizations.createOrganizationInvitation",
+      () =>
+        this.clerkClient.organizations.createOrganizationInvitation({
+          organizationId: input.organizationId,
+          emailAddress: input.emailAddress,
+          role: input.role,
+          inviterUserId: input.inviterUserId,
+          ...(input.redirectUrl && { redirectUrl: input.redirectUrl }),
+        }),
+    );
 
     return {
       id: invitation.id,
@@ -355,9 +344,13 @@ export class ClerkOrganizationService {
     invitations: ClerkOrganizationInvitation[];
     totalCount: number;
   }> {
-    const response = await this.clerkClient.organizations.getOrganizationInvitationList({
-      organizationId,
-    });
+    const response = await executeClerkOperation(
+      "organizations.getOrganizationInvitationList",
+      () =>
+        this.clerkClient.organizations.getOrganizationInvitationList({
+          organizationId,
+        }),
+    );
 
     return {
       invitations: response.data.map((invitation) => ({
@@ -377,10 +370,14 @@ export class ClerkOrganizationService {
     organizationId: string,
     invitationId: string,
   ): Promise<ClerkOrganizationInvitation> {
-    const invitation = await this.clerkClient.organizations.revokeOrganizationInvitation({
-      organizationId,
-      invitationId,
-    });
+    const invitation = await executeClerkOperation(
+      "organizations.revokeOrganizationInvitation",
+      () =>
+        this.clerkClient.organizations.revokeOrganizationInvitation({
+          organizationId,
+          invitationId,
+        }),
+    );
 
     return {
       id: invitation.id,

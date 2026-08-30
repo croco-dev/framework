@@ -155,6 +155,22 @@ describe("ClerkSessionProvider", () => {
 
       expect(mockClerkClient.sessions.revokeSession).toHaveBeenCalledWith("sess_123");
     });
+
+    it("should classify retryable mutation failures without exposing SDK details", async () => {
+      vi.mocked(mockClerkClient.sessions.revokeSession).mockRejectedValue(
+        new Error("ECONNRESET credential=sk_test_leaked"),
+      );
+
+      await expect(provider.revokeSession("sess_123")).rejects.toMatchObject({
+        code: "auth-clerk/external-service-error",
+        detail: "Clerk operation 'sessions.revokeSession' failed",
+        extensions: {
+          operation: "sessions.revokeSession",
+          provider: "clerk",
+          retryable: true,
+        },
+      });
+    });
   });
 
   describe("revokeAllSessions", () => {

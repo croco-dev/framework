@@ -131,6 +131,25 @@ describe("ClerkUserService", () => {
         query: "john",
       });
     });
+
+    it("should classify retryable list failures without exposing SDK details", async () => {
+      vi.mocked(mockClerkClient.users.getUserList).mockRejectedValue({
+        status: 503,
+        message: "Clerk unavailable secret=sk_test_leaked",
+        request: { headers: { authorization: "Bearer leaked" } },
+      });
+
+      await expect(service.getUserList()).rejects.toMatchObject({
+        code: "auth-clerk/external-service-error",
+        detail: "Clerk operation 'users.getUserList' failed",
+        extensions: {
+          operation: "users.getUserList",
+          provider: "clerk",
+          retryable: true,
+          upstreamStatus: 503,
+        },
+      });
+    });
   });
 
   describe("createUser", () => {

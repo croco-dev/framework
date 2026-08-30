@@ -8,6 +8,10 @@ import {
   InvalidWebhookPayloadProblem,
   WebhookVerificationProblem,
 } from "../index";
+import {
+  createClerkOperationProblem,
+  isClerkResourceNotFoundError,
+} from "../libs/problems/ClerkProblems";
 
 describe("ClerkProblems", () => {
   describe("WebhookVerificationProblem", () => {
@@ -101,6 +105,64 @@ describe("ClerkProblems", () => {
       expect(problem.code).toBe("auth-clerk/external-service-error");
       expect(problem.category).toBe(ProblemCategory.InternalServerError);
       expect(problem.cause).toBe(cause);
+    });
+
+    it.each([
+      {
+        error: { status: 503, message: "Unavailable secret=sk_test_leaked" },
+        expectedRetryable: true,
+        expectedStatus: 503,
+        operation: "users.getUser",
+        scenario: "read outage",
+      },
+      {
+        error: { response: { statusCode: "429" }, message: "Rate limited" },
+        expectedRetryable: true,
+        expectedStatus: 429,
+        operation: "users.getUserList",
+        scenario: "list throttling",
+      },
+      {
+        error: { statusCode: 403, message: "Forbidden token=clerk_request_token" },
+        expectedRetryable: false,
+        expectedStatus: 403,
+        operation: "organizations.createOrganization",
+        scenario: "mutation permission failure",
+      },
+    ])(
+      "classifies $scenario without serializing SDK details",
+      ({ error, expectedRetryable, expectedStatus, operation }) => {
+        const problem = createClerkOperationProblem(error, operation);
+
+        expect(problem).toMatchObject({
+          code: "auth-clerk/external-service-error",
+          detail: `Clerk operation '${operation}' failed`,
+          extensions: {
+            operation,
+            provider: "clerk",
+            retryable: expectedRetryable,
+            upstreamStatus: expectedStatus,
+          },
+        });
+        expect(JSON.stringify(problem)).not.toContain("sk_test_leaked");
+        expect(JSON.stringify(problem)).not.toContain("clerk_request_token");
+      },
+    );
+
+    it.each([
+      { allowMessageFallback: false, error: { status: 404 }, scenario: "numeric status" },
+      { allowMessageFallback: false, error: { statusCode: "404" }, scenario: "string status" },
+      {
+        allowMessageFallback: true,
+        error: new Error("Organization not found"),
+        scenario: "organization lookup message",
+      },
+    ])("preserves expected not-found behavior for $scenario", ({ allowMessageFallback, error }) => {
+      expect(isClerkResourceNotFoundError(error, allowMessageFallback)).toBe(true);
+    });
+
+    it("does not collapse an unclassified lookup message into absence", () => {
+      expect(isClerkResourceNotFoundError(new Error("Endpoint not found"))).toBe(false);
     });
   });
 });
