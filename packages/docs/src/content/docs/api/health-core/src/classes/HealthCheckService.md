@@ -115,7 +115,8 @@ health namespace. Disposing the returned handle removes only this registration.
 > **register**(`indicator`, `options?`): [`HealthIndicatorRegistration`](/api/health-core/src/interfaces/healthindicatorregistration/)
 
 :::caution[Deprecated]
-Pass an explicit indicator ID as the first argument.
+Pass an explicit indicator ID as the first argument. Repeated inferred names or
+indicator references are rejected within the health namespace.
 :::
 
 ##### Parameters
@@ -168,7 +169,8 @@ readiness namespace. A health indicator may use the same ID because the namespac
 > **registerReadiness**(`indicator`, `options?`): [`HealthIndicatorRegistration`](/api/health-core/src/interfaces/healthindicatorregistration/)
 
 :::caution[Deprecated]
-Pass an explicit indicator ID as the first argument.
+Pass an explicit indicator ID as the first argument. Repeated inferred names or
+indicator references are rejected within the readiness namespace.
 :::
 
 ##### Parameters

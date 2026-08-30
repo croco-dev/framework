@@ -5,7 +5,7 @@ prev: false
 title: "DuplicateHealthIndicatorProblem"
 ---
 
-An explicit health indicator ID is already registered in the same namespace.
+A health indicator identity is already registered in the same namespace.
 
 ## Extends
 
@@ -15,7 +15,7 @@ An explicit health indicator ID is already registered in the same namespace.
 
 ### Constructor
 
-> **new DuplicateHealthIndicatorProblem**(`namespace`, `indicatorId`): `DuplicateHealthIndicatorProblem`
+> **new DuplicateHealthIndicatorProblem**(`namespace`, `indicatorId?`, `identityKind?`): `DuplicateHealthIndicatorProblem`
 
 #### Parameters
 
@@ -23,9 +23,13 @@ An explicit health indicator ID is already registered in the same namespace.
 
 [`HealthIndicatorNamespace`](/api/health-core/src/type-aliases/healthindicatornamespace/)
 
-##### indicatorId
+##### indicatorId?
 
 `string`
+
+##### identityKind?
+
+[`HealthIndicatorIdentityKind`](/api/health-core/src/type-aliases/healthindicatoridentitykind/) = `...`
 
 #### Returns
 

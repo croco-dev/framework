@@ -795,7 +795,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/HealthCheckRegistry.ts",
-      "line": 91,
+      "line": 95,
       "column": 5,
       "code": "TS2375",
       "message": "Type '{ details?: HealthIndicatorResult[\"details\"]; name: string; status: HealthStatus; }' is not assignable to type 'HealthIndicatorResult' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."

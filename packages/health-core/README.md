@@ -145,6 +145,13 @@ progress keeps the registration snapshot it started with.
 
 The legacy `register(indicator, options)` and `registerReadiness(indicator, options)` overloads remain
 available for migration but are deprecated because their report names are not explicit stable IDs.
+Within each namespace, a defined `indicator.name` must be non-empty with no surrounding whitespace and
+is treated as its inferred registration identity. When `name` is absent, the indicator object reference
+is used instead. Re-registering the same inferred name or object reference fails before checks run.
+Distinct unnamed instances remain independently registerable.
+
+Registration Problems report only the namespace and identity kind. They never reflect the supplied
+explicit ID or inferred name into the diagnostic payload.
 
 Default and per-indicator timeouts must be integer milliseconds between `1` and `2_147_483_647`.
 Invalid values throw `InvalidHealthCheckTimeoutProblem` during setup before any health check runs.

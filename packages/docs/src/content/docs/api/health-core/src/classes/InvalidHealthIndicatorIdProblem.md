@@ -5,7 +5,7 @@ prev: false
 title: "InvalidHealthIndicatorIdProblem"
 ---
 
-An explicit health indicator ID must be non-empty and free of surrounding whitespace.
+A supplied or inferred health indicator identity must be non-empty and trimmed.
 
 ## Extends
 
@@ -15,7 +15,7 @@ An explicit health indicator ID must be non-empty and free of surrounding whites
 
 ### Constructor
 
-> **new InvalidHealthIndicatorIdProblem**(`namespace`, `indicatorId`): `InvalidHealthIndicatorIdProblem`
+> **new InvalidHealthIndicatorIdProblem**(`namespace`, `indicatorId`, `identityKind?`): `InvalidHealthIndicatorIdProblem`
 
 #### Parameters
 
@@ -26,6 +26,10 @@ An explicit health indicator ID must be non-empty and free of surrounding whites
 ##### indicatorId
 
 `string`
+
+##### identityKind?
+
+`"explicit-id"` \| `"inferred-name"`
 
 #### Returns
 

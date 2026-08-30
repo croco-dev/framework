@@ -5951,7 +5951,7 @@ Sources:
 
 Sources:
 
-- `packages/health-core/src/libs/problems/HealthProblems.ts:44:1` (problem-class)
+- `packages/health-core/src/libs/problems/HealthProblems.ts:51:1` (problem-class)
 
 <a id="health-core-invalid-indicator-id"></a>
 
@@ -5969,7 +5969,7 @@ Sources:
 
 Sources:
 
-- `packages/health-core/src/libs/problems/HealthProblems.ts:23:1` (problem-class)
+- `packages/health-core/src/libs/problems/HealthProblems.ts:25:1` (problem-class)
 
 <a id="health-core-invalid-timeout"></a>
 
@@ -5987,7 +5987,7 @@ Sources:
 
 Sources:
 
-- `packages/health-core/src/libs/problems/HealthProblems.ts:9:1` (problem-class)
+- `packages/health-core/src/libs/problems/HealthProblems.ts:11:1` (problem-class)
 
 <a id="idempotency-core-invalid-key"></a>
 
@@ -11999,7 +11999,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/HealthCheckRegistry.ts:71:10` (problem-factory)
+- `packages/transports-http/src/libs/HealthCheckRegistry.ts:75:10` (problem-factory)
 
 <a id="transports-http-duplicate-route-definition"></a>
 

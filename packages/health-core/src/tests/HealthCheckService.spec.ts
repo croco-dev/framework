@@ -177,11 +177,209 @@ describe("HealthCheckService", () => {
         } catch (error) {
           expect(error).toMatchObject({
             code: "health-core/duplicate-indicator-id",
-            extensions: { namespace, indicatorId: "database", retryable: false },
+            extensions: { namespace, identityKind: "explicit-id", retryable: false },
           });
         }
       },
     );
+
+    it.each(["health", "readiness"] as const)(
+      "rejects the same legacy indicator instance twice in the %s namespace before execution",
+      async (namespace) => {
+        const check = vi.fn().mockResolvedValue({ name: "database", status: "up" as const });
+        const indicator = { check, isReady: check };
+
+        if (namespace === "health") {
+          service.register(indicator);
+          expect(() => service.register(indicator)).toThrow(DuplicateHealthIndicatorProblem);
+        } else {
+          service.registerReadiness(indicator);
+          expect(() => service.registerReadiness(indicator)).toThrow(
+            DuplicateHealthIndicatorProblem,
+          );
+        }
+
+        expect(check).not.toHaveBeenCalled();
+
+        if (namespace === "health") {
+          await service.check();
+        } else {
+          await service.checkReadiness();
+        }
+        expect(check).toHaveBeenCalledTimes(1);
+      },
+    );
+
+    it.each(["explicit-first", "legacy-first"] as const)(
+      "rejects mixed explicit and legacy registrations with the same stable name (%s)",
+      (order) => {
+        const explicit = {
+          check: vi.fn().mockResolvedValue({ name: "explicit", status: "up" as const }),
+        };
+        const legacy = {
+          name: "database",
+          check: vi.fn().mockResolvedValue({ name: "legacy", status: "up" as const }),
+        };
+
+        if (order === "explicit-first") {
+          service.register("database", explicit);
+          expect(() => service.register(legacy)).toThrow(DuplicateHealthIndicatorProblem);
+        } else {
+          service.register(legacy);
+          expect(() => service.register("database", explicit)).toThrow(
+            DuplicateHealthIndicatorProblem,
+          );
+        }
+
+        expect(explicit.check).not.toHaveBeenCalled();
+        expect(legacy.check).not.toHaveBeenCalled();
+      },
+    );
+
+    it("rejects duplicate inferred names from distinct instances without reflecting the name", () => {
+      class NamedIndicator implements HealthIndicator {
+        constructor(readonly name: string) {}
+
+        async check(): Promise<HealthIndicatorResult> {
+          return { name: this.name, status: "up" };
+        }
+      }
+
+      const secretName = "api-key=inferred-super-secret";
+      service.register(new NamedIndicator(secretName));
+
+      try {
+        service.register(new NamedIndicator(secretName));
+        expect.fail("registration should fail");
+      } catch (error) {
+        expect(JSON.stringify(error)).not.toContain(secretName);
+        expect(error).toMatchObject({
+          code: "health-core/duplicate-indicator-id",
+          extensions: {
+            namespace: "health",
+            identityKind: "inferred-name",
+            retryable: false,
+          },
+        });
+      }
+    });
+
+    it("rejects re-registering one indicator reference under a different explicit id", () => {
+      const indicator = {
+        check: vi.fn().mockResolvedValue({ name: "database", status: "up" as const }),
+      };
+
+      service.register("primary", indicator);
+
+      expect(() => service.register("replica", indicator)).toThrow(DuplicateHealthIndicatorProblem);
+    });
+
+    it("permits legacy re-registration after disposal without stale-handle deletion", async () => {
+      const indicator = {
+        name: "database",
+        check: vi.fn().mockResolvedValue({ name: "database", status: "up" as const }),
+      };
+      const original = service.register(indicator);
+
+      original.dispose();
+      const replacement = service.register(indicator);
+      original.dispose();
+
+      await expect(service.check()).resolves.toEqual({
+        status: "up",
+        results: [{ name: "database", status: "up" }],
+      });
+
+      replacement.dispose();
+      await expect(service.check()).resolves.toEqual({ status: "up", results: [] });
+    });
+
+    it("registers distinct same-class legacy indicators by stable name in order", async () => {
+      class NamedIndicator implements HealthIndicator {
+        constructor(readonly name: string) {}
+
+        async check(): Promise<HealthIndicatorResult> {
+          return { name: this.name, status: "up" };
+        }
+      }
+
+      service.register(new NamedIndicator("database"));
+      service.register(new NamedIndicator("cache"));
+
+      await expect(service.check()).resolves.toEqual({
+        status: "up",
+        results: [
+          { name: "database", status: "up" },
+          { name: "cache", status: "up" },
+        ],
+      });
+    });
+
+    it("keeps legacy identities independent between health and readiness", async () => {
+      const indicator = {
+        name: "database",
+        check: vi.fn().mockResolvedValue({ name: "database", status: "up" as const }),
+        isReady: vi.fn().mockResolvedValue({ name: "database", status: "up" as const }),
+      };
+
+      service.register(indicator);
+      service.registerReadiness(indicator);
+
+      await service.check();
+      await service.checkReadiness();
+
+      expect(indicator.check).toHaveBeenCalledTimes(1);
+      expect(indicator.isReady).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not reflect explicit indicator ids into registration diagnostics", () => {
+      const duplicateSecret = "api-key=duplicate-super-secret";
+      const invalidSecret = " api-key=invalid-super-secret ";
+      const indicator = {
+        check: vi.fn().mockResolvedValue({ name: "database", status: "up" as const }),
+      };
+
+      service.register(duplicateSecret, indicator);
+
+      for (const register of [
+        () => service.register(duplicateSecret, { ...indicator }),
+        () => service.register(invalidSecret, { ...indicator }),
+      ]) {
+        try {
+          register();
+          expect.fail("registration should fail");
+        } catch (error) {
+          const diagnostic = JSON.stringify(error);
+          expect(diagnostic).not.toContain(duplicateSecret);
+          expect(diagnostic).not.toContain(invalidSecret);
+          expect(error).toMatchObject({
+            extensions: { namespace: "health", identityKind: "explicit-id", retryable: false },
+          });
+        }
+      }
+    });
+
+    it("does not reflect an invalid inferred name into registration diagnostics", () => {
+      const invalidSecret = " api-key=inferred-invalid-super-secret ";
+
+      try {
+        service.register({
+          name: invalidSecret,
+          check: vi.fn().mockResolvedValue({ name: "database", status: "up" }),
+        });
+        expect.fail("registration should fail");
+      } catch (error) {
+        expect(JSON.stringify(error)).not.toContain(invalidSecret);
+        expect(error).toMatchObject({
+          code: "health-core/invalid-indicator-id",
+          extensions: {
+            namespace: "health",
+            identityKind: "inferred-name",
+            retryable: false,
+          },
+        });
+      }
+    });
 
     it("allows the same explicit id in separate health and readiness namespaces", async () => {
       service.register("database", {
@@ -260,7 +458,7 @@ describe("HealthCheckService", () => {
       await expect(service.check()).resolves.toEqual({ status: "up", results: [] });
     });
 
-    it("keeps the deprecated convenience overload disposable without deduplicating inferred names", async () => {
+    it("keeps distinct deprecated inferred identities independently disposable", async () => {
       const first = service.register({
         check: vi.fn().mockResolvedValue({ name: "first", status: "up" }),
       });
