@@ -565,11 +565,33 @@ function generateWindowSource(capabilities: RendererCapabilities, indexes: Graph
     "  readonly signal?: AbortSignal;",
     "};",
     "",
+    "type DesktopAbortRegistration = (abort: () => void) => () => void;",
+    "",
     ...generateBridgeType(contracts, indexes),
     "",
     "const bridge = (globalThis as typeof globalThis & {",
     "  readonly crocoDesktop: DesktopRendererBridge;",
     "}).crocoDesktop;",
+    "",
+    "function invokeDesktopCommand<TInput, TOutput>(",
+    "  command: (input: TInput, registerAbort?: DesktopAbortRegistration) => Promise<TOutput>,",
+    "  input: TInput,",
+    "  signal: AbortSignal | undefined,",
+    "): Promise<TOutput> {",
+    "  if (signal === undefined) {",
+    "    return command(input);",
+    "  }",
+    "",
+    "  return command(input, (abort) => {",
+    "    if (signal.aborted) {",
+    "      abort();",
+    "      return () => {};",
+    "    }",
+    "",
+    '    signal.addEventListener("abort", abort, { once: true });',
+    '    return () => signal.removeEventListener("abort", abort);',
+    "  });",
+    "}",
     "",
     "export const desktop = Object.freeze({",
     ...generateClientContracts(contracts, indexes),
@@ -669,7 +691,7 @@ function generateBridgeType(
     lines.push(`    readonly [${JSON.stringify(contract.contractId)}]: {`);
     for (const command of contract.commands) {
       lines.push(
-        `      readonly [${JSON.stringify(command.key)}]: (input: ${renderSchemaReference(command.input.descriptor, indexes)}, options?: DesktopRendererCommandOptions) => Promise<${renderCommandResult(command, indexes)}>;`,
+        `      readonly [${JSON.stringify(command.key)}]: (input: ${renderSchemaReference(command.input.descriptor, indexes)}, registerAbort?: DesktopAbortRegistration) => Promise<${renderCommandResult(command, indexes)}>;`,
       );
     }
     lines.push("    };");
@@ -698,7 +720,7 @@ function generateClientContracts(
     for (const command of contract.commands) {
       lines.push(
         `    [${JSON.stringify(command.key)}]: (input: ${renderSchemaReference(command.input.descriptor, indexes)}, options: DesktopRendererCommandOptions = {}): Promise<${renderCommandResult(command, indexes)}> =>`,
-        `      bridge.commands[${JSON.stringify(contract.contractId)}][${JSON.stringify(command.key)}](input, options.signal === undefined ? {} : { signal: options.signal }),`,
+        `      invokeDesktopCommand(bridge.commands[${JSON.stringify(contract.contractId)}][${JSON.stringify(command.key)}], input, options.signal),`,
       );
     }
     for (const event of contract.events) {

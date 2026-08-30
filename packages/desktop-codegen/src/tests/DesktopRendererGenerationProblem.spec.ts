@@ -49,11 +49,18 @@ describe("generateDesktopRendererClients", () => {
 
   it("forwards AbortSignal without exposing timeout or raw command identifiers", async () => {
     const source = requireClientSource(createGraph(false), "main");
-    const signal = new AbortController().signal;
-    const readFile = vi.fn(async (_input: unknown, _options?: unknown) => ({
-      ok: true,
-      value: { contents: "Croco" },
-    }));
+    const controller = new AbortController();
+    const abort = vi.fn();
+    let unregister: (() => void) | undefined;
+    const readFile = vi.fn(
+      async (_input: unknown, registerAbort?: (abort: () => void) => () => void) => {
+        unregister = registerAbort?.(abort);
+        return {
+          ok: true,
+          value: { contents: "Croco" },
+        };
+      },
+    );
     const runtime = executeGeneratedSource(source, {
       commands: {
         project: { openGranted: vi.fn(), readFile },
@@ -65,11 +72,15 @@ describe("generateDesktopRendererClients", () => {
       },
     });
 
-    const options = { signal, timeoutMs: 60_000 };
+    const options = { signal: controller.signal, timeoutMs: 60_000 };
     await runtime.project.readFile({ path: "README.md" }, options);
 
-    expect(readFile).toHaveBeenCalledWith({ path: "README.md" }, { signal });
-    expect(readFile.mock.calls[0]?.[1]).not.toHaveProperty("timeoutMs");
+    const registerAbort = readFile.mock.calls[0]?.[1];
+    expect(registerAbort).toEqual(expect.any(Function));
+    expect(unregister).toEqual(expect.any(Function));
+    controller.abort();
+    expect(abort).toHaveBeenCalledOnce();
+    unregister?.();
     expect(source).not.toContain("commandId");
     expect(source).not.toContain("channel");
     expect(source).not.toContain("timeoutMs");

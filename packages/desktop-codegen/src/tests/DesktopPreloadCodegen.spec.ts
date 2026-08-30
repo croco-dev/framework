@@ -19,7 +19,10 @@ type GeneratedBridge = {
     Record<
       string,
       Readonly<
-        Record<string, (input: unknown, options?: DesktopPreloadCommandOptions) => Promise<unknown>>
+        Record<
+          string,
+          (input: unknown, registerAbort?: DesktopAbortRegistration) => Promise<unknown>
+        >
       >
     >
   >;
@@ -27,6 +30,8 @@ type GeneratedBridge = {
     Record<string, Readonly<Record<string, (callback: (payload: unknown) => void) => () => void>>>
   >;
 };
+
+type DesktopAbortRegistration = (abort: () => void) => () => void;
 
 describe("generateDesktopPreloadBridges", () => {
   it("generates deterministic minimal bridges for local window profiles only", () => {
@@ -66,6 +71,21 @@ describe("generateDesktopPreloadBridges", () => {
     expect(
       generateDesktopPreloadBridges(forged).some((artifact) => artifact.windowId === "login"),
     ).toBe(false);
+  });
+
+  it("rejects unknown trust values instead of granting local authority", () => {
+    const graph = createGraph(false);
+    const main = graph.windows.find((window) => window.id === "main");
+    assert(main, "Fixture main window is missing");
+
+    expect(() =>
+      generateDesktopPreloadBridges({
+        ...graph,
+        windows: graph.windows.map((window) =>
+          window.id === main.id ? { ...window, trust: "forged" as never } : window,
+        ),
+      }),
+    ).toThrow(DesktopPreloadGenerationProblem);
   });
 
   it("binds command and event IDs inside payload-only generated closures", async () => {
@@ -195,20 +215,32 @@ describe("generateDesktopPreloadBridges", () => {
     expect(invoke).toHaveBeenCalledWith("__proto__.constructor", { safe: true }, {});
   });
 
-  it("preserves renderer command options through the preload transport", async () => {
+  it("propagates live cancellation across a context-isolated bridge", async () => {
     const graph = createGraph(false);
     const preloadSource = requireBridgeSource(graph, "main");
     const rendererSource = generateDesktopRendererClients(graph).find(
       (artifact) => artifact.windowId === "main",
     )?.source;
     expect(rendererSource).toBeDefined();
-    const invoke = vi.fn(async () => undefined);
+    let transportSignal: AbortSignal | undefined;
+    const invoke = vi.fn(
+      async (
+        _commandId: string,
+        _input: unknown,
+        options: DesktopPreloadCommandOptions,
+      ): Promise<string> => {
+        transportSignal = options.signal;
+        return new Promise((resolve) =>
+          options.signal?.addEventListener("abort", () => resolve("cancelled"), { once: true }),
+        );
+      },
+    );
     let bridge: GeneratedBridge | undefined;
 
     executeGeneratedSource(preloadSource)(
       {
         exposeInMainWorld(_name, api) {
-          bridge = api as GeneratedBridge;
+          bridge = copyContextBridgeValue(api) as GeneratedBridge;
         },
       },
       { invoke, subscribe: () => () => {} },
@@ -217,43 +249,33 @@ describe("generateDesktopPreloadBridges", () => {
     if (!rendererSource || !bridge) {
       throw new Error("Generated renderer or preload bridge is missing");
     }
-    const signal = new AbortController().signal;
+    const controller = new AbortController();
+    const removeAbortListener = vi.spyOn(controller.signal, "removeEventListener");
     const renderer = executeRendererSource(rendererSource, bridge);
-
-    await renderer.project.open({ path: "README.md" }, { signal });
-
-    expect(invoke).toHaveBeenCalledWith("project.open", { path: "README.md" }, { signal });
-  });
-
-  it("filters caller-controlled command options at the preload boundary", async () => {
-    const source = requireBridgeSource(createGraph(false), "main");
-    const invoke = vi.fn(
-      async (_commandId: string, _input: unknown, _options: DesktopPreloadCommandOptions) =>
-        undefined,
-    );
-    let bridge: GeneratedBridge | undefined;
-
-    executeGeneratedSource(source)(
-      {
-        exposeInMainWorld(_name, api) {
-          bridge = api as GeneratedBridge;
-        },
-      },
-      { invoke, subscribe: () => () => {} },
-    );
-    assert(bridge, "Generated preload bridge is missing");
-    const signal = new AbortController().signal;
     const hostileOptions = {
-      signal,
+      signal: controller.signal,
       timeoutMs: 60_000,
       forged: true,
     } as DesktopPreloadCommandOptions;
 
-    await bridge.commands.project?.open?.({ path: "README.md" }, hostileOptions);
+    const pending = renderer.project.open({ path: "README.md" }, hostileOptions);
+    expect(transportSignal).toBeInstanceOf(AbortSignal);
+    expect(transportSignal).not.toBe(controller.signal);
+    expect(transportSignal?.aborted).toBe(false);
+    controller.abort();
 
-    expect(invoke).toHaveBeenCalledWith("project.open", { path: "README.md" }, { signal });
+    await expect(pending).resolves.toBe("cancelled");
+    expect(transportSignal?.aborted).toBe(true);
+    expect(invoke).toHaveBeenCalledWith(
+      "project.open",
+      { path: "README.md" },
+      {
+        signal: transportSignal,
+      },
+    );
     expect(invoke.mock.calls[0]?.[2]).not.toHaveProperty("timeoutMs");
     expect(invoke.mock.calls[0]?.[2]).not.toHaveProperty("forged");
+    expect(removeAbortListener).toHaveBeenCalledOnce();
   });
 });
 
@@ -384,4 +406,28 @@ function executeRendererSource(source: string, bridge: GeneratedBridge): Generat
   } finally {
     Reflect.deleteProperty(globalThis, "crocoDesktop");
   }
+}
+
+function copyContextBridgeValue(value: unknown): unknown {
+  if (typeof value === "function") {
+    return (...args: unknown[]) => {
+      const result = value(...args.map(copyContextBridgeValue));
+      return copyContextBridgeValue(result);
+    };
+  }
+  if (value instanceof Promise) {
+    return value.then(copyContextBridgeValue);
+  }
+  if (Array.isArray(value)) {
+    return value.map(copyContextBridgeValue);
+  }
+  if (value !== null && typeof value === "object") {
+    if (Object.getPrototypeOf(value) !== Object.prototype) {
+      return structuredClone(value);
+    }
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [key, copyContextBridgeValue(entry)]),
+    );
+  }
+  return value;
 }

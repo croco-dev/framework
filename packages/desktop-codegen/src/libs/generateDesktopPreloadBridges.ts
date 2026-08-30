@@ -71,7 +71,7 @@ export function generateDesktopPreloadBridges(
 function assertGeneratableGraph(graph: DesktopContractGraphV1): void {
   if (graph.version !== "croco.desktop-contract-graph.v1") {
     throw new DesktopPreloadGenerationProblem(
-      `Expected croco.desktop-contract-graph.v1, received ${JSON.stringify(graph.version)}.`,
+      `Expected croco.desktop-contract-graph.v1, received ${formatDiagnosticValue(graph.version)}.`,
     );
   }
 
@@ -79,6 +79,14 @@ function assertGeneratableGraph(graph: DesktopContractGraphV1): void {
     throw new DesktopPreloadGenerationProblem(
       `Cannot generate preload bridges from a graph with ${graph.diagnostics.length} diagnostic${graph.diagnostics.length === 1 ? "" : "s"}.`,
     );
+  }
+
+  for (const window of graph.windows) {
+    if (window.trust !== "local" && window.trust !== "remote") {
+      throw new DesktopPreloadGenerationProblem(
+        `Desktop window ${formatDiagnosticValue(window.id)} has unsupported trust ${formatDiagnosticValue(window.trust)}.`,
+      );
+    }
   }
 }
 
@@ -136,7 +144,29 @@ function generateWindowSource(capabilities: WindowCapabilities): string {
   const eventContracts = contracts.filter((contract) => contract.events.length > 0);
 
   return [
-    'import type { DesktopPreloadCommandOptions, DesktopPreloadContextBridge, DesktopPreloadTransport } from "@croco/desktop-codegen";',
+    'import type { DesktopPreloadContextBridge, DesktopPreloadTransport } from "@croco/desktop-codegen";',
+    "",
+    "type DesktopAbortRegistration = (abort: () => void) => () => void;",
+    "",
+    "function invokeDesktopCommand(",
+    "  transport: DesktopPreloadTransport,",
+    "  commandId: string,",
+    "  input: unknown,",
+    "  registerAbort: DesktopAbortRegistration | undefined,",
+    "): Promise<unknown> {",
+    "  if (registerAbort === undefined) {",
+    "    return transport.invoke(commandId, input, {});",
+    "  }",
+    "",
+    "  const controller = new AbortController();",
+    "  const unregister = registerAbort(() => controller.abort());",
+    "  try {",
+    "    return transport.invoke(commandId, input, { signal: controller.signal }).finally(unregister);",
+    "  } catch (error) {",
+    "    unregister();",
+    "    throw error;",
+    "  }",
+    "}",
     "",
     "export function installDesktopPreloadBridge(",
     "  contextBridge: DesktopPreloadContextBridge,",
@@ -273,8 +303,8 @@ function generateNamespace<TMember>(
 
 function generateCommand(command: DesktopContractGraphCommand): readonly string[] {
   return [
-    `        [${JSON.stringify(command.key)}]: (input: unknown, options: DesktopPreloadCommandOptions = {}): Promise<unknown> =>`,
-    `          transport.invoke(${JSON.stringify(command.id)}, input, options.signal === undefined ? {} : { signal: options.signal }),`,
+    `        [${JSON.stringify(command.key)}]: (input: unknown, registerAbort?: DesktopAbortRegistration): Promise<unknown> =>`,
+    `          invokeDesktopCommand(transport, ${JSON.stringify(command.id)}, input, registerAbort),`,
   ];
 }
 
@@ -302,4 +332,12 @@ function compareMembers(
 
 function compareCodeUnits(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
+}
+
+function formatDiagnosticValue(value: unknown): string {
+  if (typeof value === "bigint") {
+    return `${value}n`;
+  }
+  const serialized = JSON.stringify(value);
+  return serialized === undefined ? String(value) : serialized;
 }
