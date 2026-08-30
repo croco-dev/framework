@@ -185,12 +185,65 @@ export function validatePolarConfig(config: Partial<PolarConfig>): PolarConfig {
     );
   }
 
+  const checkoutRecovery = asRecord(config.checkoutRecovery);
+  if (config.checkoutRecovery !== undefined && !checkoutRecovery) {
+    throw new PolarValidationProblem(
+      {
+        provider: "polar",
+        operation: "configuration",
+        upstreamCode: "invalid-checkout-recovery-policy",
+      },
+      "Polar checkout recovery policy must be an object",
+    );
+  }
+
+  const checkoutRecoveryTtlMs = checkoutRecovery?.ttlMs;
+  if (checkoutRecoveryTtlMs !== undefined) {
+    assertPositiveSafeInteger(
+      checkoutRecoveryTtlMs,
+      "invalid-checkout-recovery-ttl",
+      "Polar checkout recovery TTL must be a positive safe integer of milliseconds",
+    );
+  }
+
+  const checkoutRecoveryCapacity = checkoutRecovery?.capacity;
+  if (checkoutRecoveryCapacity !== undefined) {
+    assertPositiveSafeInteger(
+      checkoutRecoveryCapacity,
+      "invalid-checkout-recovery-capacity",
+      "Polar checkout recovery capacity must be a positive safe integer",
+    );
+  }
+
   return {
     accessToken: config.accessToken,
+    ...(checkoutRecovery && {
+      checkoutRecovery: {
+        ...(checkoutRecoveryTtlMs !== undefined && { ttlMs: checkoutRecoveryTtlMs }),
+        ...(checkoutRecoveryCapacity !== undefined && { capacity: checkoutRecoveryCapacity }),
+      },
+    }),
     environment: config.environment,
     organizationId: config.organizationId,
     webhookSecret: config.webhookSecret,
   };
+}
+
+function assertPositiveSafeInteger(
+  value: unknown,
+  upstreamCode: string,
+  detail: string,
+): asserts value is number {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value <= 0) {
+    throw new PolarValidationProblem(
+      {
+        provider: "polar",
+        operation: "configuration",
+        upstreamCode,
+      },
+      detail,
+    );
+  }
 }
 
 export function normalizePolarBillingError(

@@ -26,17 +26,27 @@ const config: PolarConfig = {
   environment: "sandbox",
   webhookSecret: "polar-webhook-secret",
   organizationId: "org-123",
+  checkoutRecovery: {
+    ttlMs: 300_000,
+    capacity: 1_000,
+  },
 };
 ```
 
 ### PolarConfig
 
-| 필드             | 타입                        | 필수 | 설명                  |
-| ---------------- | --------------------------- | ---- | --------------------- |
-| `accessToken`    | `string`                    | ✅   | Polar API 액세스 토큰 |
-| `environment`    | `'sandbox' \| 'production'` | ✅   | Polar 환경            |
-| `webhookSecret`  | `string`                    | ✅   | 웹훅 서명 검증 시크릿 |
-| `organizationId` | `string`                    | ❌   | Polar 조직 ID         |
+| 필드                        | 타입                        | 필수 | 설명                                                         |
+| --------------------------- | --------------------------- | ---- | ------------------------------------------------------------ |
+| `accessToken`               | `string`                    | ✅   | Polar API 액세스 토큰                                        |
+| `environment`               | `'sandbox' \| 'production'` | ✅   | Polar 환경                                                   |
+| `webhookSecret`             | `string`                    | ✅   | 웹훅 서명 검증 시크릿                                        |
+| `organizationId`            | `string`                    | ❌   | Polar 조직 ID                                                |
+| `checkoutRecovery.ttlMs`    | `number`                    | ❌   | 모호한 checkout을 재조정하는 기간(ms, 기본값 `300000`)       |
+| `checkoutRecovery.capacity` | `number`                    | ❌   | 프로세스별로 추적할 모호한 checkout의 최대 수(기본값 `1000`) |
+
+복구 기간 안에서는 같은 operation key를 다시 생성하지 않고 provider checkout을 재조정합니다. TTL이
+끝나거나 용량 때문에 축출되면 완료로 처리하지 않고 `warn` 진단을 남긴 뒤, 다음 요청에서 provider
+metadata를 다시 조회한 후 일반 생성 흐름을 재개합니다.
 
 ### 환경 변수
 
