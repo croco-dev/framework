@@ -1,5 +1,6 @@
 import {
   IdempotencyConflictProblem,
+  IdempotencyReservationStateProblem,
   InvalidIdempotencyTtlProblem,
 } from "./problems/IdempotencyProblems";
 import { deriveIdempotencyKey } from "./deriveIdempotencyKey";
@@ -62,6 +63,42 @@ export function createIdempotencyStoreConformanceSuite<TResult = string>(
           assertEqual(replay.outcome, "replay", "completed records must replay");
           if (replay.outcome === "replay") {
             assertEqual(replay.response, response, "replay must return the committed response");
+          }
+        },
+      },
+      {
+        name: "preserves a completed result when fail uses the completed reservation",
+        run: async () => {
+          const store = await options.createStore();
+          const key = createConformanceKey("completed-fail");
+          const reserved = await store.reserve(key);
+          assertEqual(reserved.outcome, "reserved", "commit requires a reservation");
+          if (reserved.outcome !== "reserved") {
+            return;
+          }
+
+          const response = createResponse();
+          await store.commit({
+            key,
+            reservationId: reserved.reservation.reservationId,
+            response,
+          });
+
+          await assertRejects(
+            () =>
+              store.fail({
+                key,
+                reservationId: reserved.reservation.reservationId,
+                problem: { code: "conformance", status: 503 },
+                retryable: true,
+              }),
+            IdempotencyReservationStateProblem,
+          );
+
+          const replay = await store.reserve(key);
+          assertEqual(replay.outcome, "replay", "fail must not replace a completed record");
+          if (replay.outcome === "replay") {
+            assertEqual(replay.response, response, "fail must preserve the committed response");
           }
         },
       },

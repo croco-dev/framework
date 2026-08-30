@@ -1,6 +1,7 @@
 import type {
   IdempotencyAuditEvent,
   IdempotencyAuditSink,
+  IdempotencyCompletedRecord,
   IdempotencyExecutionRequest,
   IdempotencyExecutionResult,
   IdempotencyHandler,
@@ -13,7 +14,7 @@ export type IdempotencyCoordinatorOptions<TResult = unknown> = {
   readonly auditSink?: IdempotencyAuditSink;
 };
 
-type IdempotencyExecutionFailurePhase = "reserved-audit" | "handler";
+type IdempotencyExecutionFailurePhase = "reserved-audit" | "handler" | "commit";
 
 export class IdempotencyCoordinator<TResult = unknown> {
   private readonly store: IdempotencyStore<TResult>;
@@ -71,13 +72,24 @@ export class IdempotencyCoordinator<TResult = unknown> {
       throw error;
     }
 
-    const record = await this.store.commit({
-      key: request.key,
-      reservationId: reservation.reservation.reservationId,
-      response,
-      ttlMs: request.ttlMs,
-      metadata: request.metadata,
-    });
+    let record: IdempotencyCompletedRecord<TResult>;
+    try {
+      record = await this.store.commit({
+        key: request.key,
+        reservationId: reservation.reservation.reservationId,
+        response,
+        ttlMs: request.ttlMs,
+        metadata: request.metadata,
+      });
+    } catch (error) {
+      await this.recordExecutionFailure(
+        request,
+        reservation.reservation.reservationId,
+        "commit",
+        error,
+      );
+      throw error;
+    }
 
     return {
       outcome: "executed",
