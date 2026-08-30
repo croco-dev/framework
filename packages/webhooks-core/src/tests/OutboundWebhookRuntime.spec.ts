@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   classifyOutboundWebhookOutcome,
   createOutboundWebhookUrlPolicy,
@@ -64,6 +64,12 @@ const EVENT: OutboundWebhookEventDescriptor<{ invoiceId: string }> = {
 };
 
 describe("OutboundWebhookRuntime", () => {
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+
+  afterEach(() => {
+    consoleErrorSpy?.mockRestore();
+  });
+
   it("commits the event and delivery before task publication and resumes after publication failure", async () => {
     const store = new InMemoryOutboundWebhookStore();
     let shouldFail = true;
@@ -253,6 +259,44 @@ describe("OutboundWebhookRuntime", () => {
     releaseSend?.();
     await expect(first).resolves.toMatchObject({ status: "delivered" });
     expect(transport.send).toHaveBeenCalledTimes(1);
+  });
+
+  it("preserves a transport error when delivery claim cleanup fails", async () => {
+    consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const store = new InMemoryOutboundWebhookStore();
+    const transportError = new Error("endpoint unavailable");
+    const cleanupError = new Error("store unavailable");
+    const transport: OutboundWebhookTransport = {
+      send: vi
+        .fn()
+        .mockRejectedValueOnce(transportError)
+        .mockResolvedValueOnce({ kind: "http", status: 204 }),
+    };
+    const release = vi
+      .spyOn(store, "releaseDeliveryClaim")
+      .mockRejectedValueOnce(cleanupError)
+      .mockImplementation((tenantId, deliveryId) =>
+        InMemoryOutboundWebhookStore.prototype.releaseDeliveryClaim.call(
+          store,
+          tenantId,
+          deliveryId,
+        ),
+      );
+    let now = new Date(START);
+    const runtime = createRuntime({ store, transport, now: () => new Date(now) });
+    const deliveryId = (await runtime.publish(EVENT)).deliveries[0]?.id ?? "";
+
+    await expect(runtime.dispatch(EVENT.tenantId, deliveryId)).rejects.toBe(transportError);
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      "[OutboundWebhookRuntime] Failed to release delivery claim",
+      { tenantId: EVENT.tenantId, deliveryId, cleanupError },
+    );
+
+    now = new Date(START.getTime() + 5 * 60_000 + 1);
+    await expect(runtime.dispatch(EVENT.tenantId, deliveryId)).resolves.toMatchObject({
+      status: "delivered",
+    });
+    expect(release).toHaveBeenCalledTimes(2);
   });
 
   it("allows idempotent replay only from terminal or acceptance-unknown states", async () => {

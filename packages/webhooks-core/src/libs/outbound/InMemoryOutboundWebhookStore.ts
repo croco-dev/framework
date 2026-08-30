@@ -23,6 +23,7 @@ const REPLAYABLE_STATUSES = new Set<OutboundWebhookDeliveryStatus>([
   "canceled",
   "acceptance-unknown",
 ]);
+const DELIVERY_CLAIM_TTL_MS = 5 * 60_000;
 
 export class InMemoryOutboundWebhookStore implements OutboundWebhookStore {
   private readonly events = new Map<string, OutboundWebhookEvent>();
@@ -31,6 +32,7 @@ export class InMemoryOutboundWebhookStore implements OutboundWebhookStore {
   private readonly attemptsByDelivery = new Map<string, OutboundWebhookAttempt[]>();
   private readonly intents = new Map<string, OutboundWebhookDispatchIntent>();
   private readonly claimedDeliveryIds = new Set<string>();
+  private readonly claimedDeliveryAt = new Map<string, number>();
   private readonly replayIds = new Map<string, string>();
 
   async commitEvent(input: {
@@ -168,19 +170,25 @@ export class InMemoryOutboundWebhookStore implements OutboundWebhookStore {
     const delivery = this.deliveries.get(key);
     if (
       !delivery ||
-      this.claimedDeliveryIds.has(key) ||
+      (this.claimedDeliveryIds.has(key) &&
+        (this.claimedDeliveryAt.get(key) ?? Number.POSITIVE_INFINITY) + DELIVERY_CLAIM_TTL_MS >
+          eligibleAt.getTime()) ||
       (delivery.status !== "pending" && delivery.status !== "retrying") ||
       (delivery.nextAttemptAt !== undefined &&
         delivery.nextAttemptAt.getTime() > eligibleAt.getTime())
     ) {
       return undefined;
     }
+    this.claimedDeliveryIds.delete(key);
     this.claimedDeliveryIds.add(key);
+    this.claimedDeliveryAt.set(key, eligibleAt.getTime());
     return cloneDelivery(delivery);
   }
 
   async releaseDeliveryClaim(tenantId: string, deliveryId: string): Promise<void> {
-    this.claimedDeliveryIds.delete(deliveryKey(tenantId, deliveryId));
+    const key = deliveryKey(tenantId, deliveryId);
+    this.claimedDeliveryIds.delete(key);
+    this.claimedDeliveryAt.delete(key);
   }
 
   async recordAttempt(input: {

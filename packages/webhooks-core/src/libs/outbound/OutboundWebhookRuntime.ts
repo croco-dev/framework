@@ -259,7 +259,15 @@ export class OutboundWebhookRuntime {
       }
       return updated;
     } finally {
-      await this.options.store.releaseDeliveryClaim(tenantId, deliveryId);
+      try {
+        await this.options.store.releaseDeliveryClaim(tenantId, deliveryId);
+      } catch (cleanupError) {
+        console.error("[OutboundWebhookRuntime] Failed to release delivery claim", {
+          tenantId,
+          deliveryId,
+          cleanupError,
+        });
+      }
     }
   }
 
