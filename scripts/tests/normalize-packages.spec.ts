@@ -110,7 +110,10 @@ describe("normalize-packages.mjs", () => {
       types: "./src/index.ts",
       exports: {
         ".": {
-          types: "./dist/index.d.ts",
+          types: {
+            require: "./dist/index.d.ts",
+            import: "./dist/index.d.mts",
+          },
           require: "./dist/index.js",
           import: "./dist/index.mjs",
         },
@@ -128,7 +131,10 @@ describe("normalize-packages.mjs", () => {
           ".": {
             import: "./dist/index.mjs",
             require: "./dist/index.js",
-            types: "./dist/index.d.ts",
+            types: {
+              require: "./dist/index.d.ts",
+              import: "./dist/index.d.mts",
+            },
           },
           "./feature": {
             require: "./dist/feature.js",
@@ -144,8 +150,10 @@ describe("normalize-packages.mjs", () => {
 
     expect(result.status).toBe(0);
     expect(Object.keys(pkg.exports["."])).toEqual(["types", "import", "require"]);
+    expect(Object.keys(pkg.exports["."].types)).toEqual(["import", "require"]);
     expect(Object.keys(pkg.exports["./feature"])).toEqual(["types", "import", "require"]);
     expect(Object.keys(pkg.publishConfig.exports["."])).toEqual(["types", "import", "require"]);
+    expect(Object.keys(pkg.publishConfig.exports["."].types)).toEqual(["import", "require"]);
     expect(Object.keys(pkg.publishConfig.exports["./feature"])).toEqual([
       "types",
       "import",

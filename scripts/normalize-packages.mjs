@@ -393,13 +393,22 @@ function normalizeExportConditionOrder(exportsValue) {
       continue;
     }
 
-    exportsValue[exportPath] = Object.fromEntries(
-      canonicalExportConditionNames(exportValue).map((conditionName) => [
-        conditionName,
-        exportValue[conditionName],
-      ]),
-    );
+    exportsValue[exportPath] = normalizeExportConditionMap(exportValue);
   }
+}
+
+function normalizeExportConditionMap(exportValue) {
+  return Object.fromEntries(
+    canonicalExportConditionNames(exportValue).map((conditionName) => {
+      const target = exportValue[conditionName];
+      return [
+        conditionName,
+        target && typeof target === "object" && !Array.isArray(target)
+          ? normalizeExportConditionMap(target)
+          : target,
+      ];
+    }),
+  );
 }
 
 function normalizeExportTypes(exportsValue) {
@@ -1368,11 +1377,27 @@ function validateExportMap(exportsValue, fieldName, violations) {
     }
 
     for (const [condition, target] of Object.entries(exportValue)) {
+      if (condition === "types" && target && typeof target === "object" && !Array.isArray(target)) {
+        validateModeSpecificTypesTarget(
+          target,
+          `${fieldName}["${exportPath}"].${condition}`,
+          violations,
+        );
+        continue;
+      }
       validateDistPath(target, `${fieldName}["${exportPath}"].${condition}`, violations, {
         mustEndWith: condition === "types" ? ".d.ts" : undefined,
       });
     }
   }
+}
+
+function validateModeSpecificTypesTarget(target, fieldName, violations) {
+  const importTarget = target.import;
+  const requireTarget = target.require;
+
+  validateDistPath(importTarget, `${fieldName}.import`, violations, { mustEndWith: ".d.mts" });
+  validateDistPath(requireTarget, `${fieldName}.require`, violations, { mustEndWith: ".d.ts" });
 }
 
 function validateDrizzleOrmCatalogPolicy(pkg, pkgPath, violations) {

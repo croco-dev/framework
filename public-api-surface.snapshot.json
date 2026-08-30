@@ -17266,7 +17266,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -17840,7 +17844,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/libs/isr/adapters/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/libs/isr/adapters/index.d.ts"
             },
             {

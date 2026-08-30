@@ -82,6 +82,24 @@ describe("package-manifest-contracts", () => {
     ).toEqual(['packed exports["."] conditions must be ordered types, import, require']);
   });
 
+  it("reports noncanonical mode-specific declaration order", () => {
+    expect(
+      exportConditionOrderDiagnostics(
+        {
+          ".": {
+            types: {
+              require: "./dist/index.d.ts",
+              import: "./dist/index.d.mts",
+            },
+            import: "./dist/index.mjs",
+            require: "./dist/index.js",
+          },
+        },
+        "packed exports",
+      ),
+    ).toEqual(['packed exports["."].types conditions must be ordered import, require']);
+  });
+
   it("compares shared workspace and published condition sequences", () => {
     expect(
       exportConditionSequenceParityDiagnostics(

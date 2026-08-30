@@ -1211,6 +1211,18 @@ function pushConditionalTarget(
   if (target === undefined && condition === "require") {
     return;
   }
+  if (condition === "types" && target && typeof target === "object" && !Array.isArray(target)) {
+    const importTarget = (target as Record<string, unknown>).import;
+    pushStringTarget(
+      specifier,
+      importTarget,
+      `${fieldName}.import`,
+      packageInfo,
+      diagnostics,
+      targets,
+    );
+    return;
+  }
   if (typeof target === "string" && isStaticAssetTargetPath(target)) {
     validateStaticAssetTarget(target, fieldName, packageInfo, diagnostics);
     return;

@@ -98,20 +98,34 @@ export function exportConditionOrderDiagnostics(exportsValue, fieldName) {
 
   const diagnostics = [];
   for (const [exportPath, exportValue] of Object.entries(exportsValue)) {
-    if (!exportValue || typeof exportValue !== "object" || Array.isArray(exportValue)) {
-      continue;
-    }
-
-    const actual = Object.keys(exportValue);
-    const expected = canonicalExportConditionNames(exportValue);
-    if (!sameSequence(actual, expected)) {
-      diagnostics.push(
-        `${fieldName}[${JSON.stringify(exportPath)}] conditions must be ordered ${expected.join(", ")}`,
-      );
-    }
+    collectExportConditionOrderDiagnostics(
+      exportValue,
+      `${fieldName}[${JSON.stringify(exportPath)}]`,
+      diagnostics,
+    );
   }
 
   return diagnostics;
+}
+
+function collectExportConditionOrderDiagnostics(exportValue, fieldName, diagnostics) {
+  if (!exportValue || typeof exportValue !== "object" || Array.isArray(exportValue)) {
+    return;
+  }
+
+  const actual = Object.keys(exportValue);
+  const expected = canonicalExportConditionNames(exportValue);
+  if (!sameSequence(actual, expected)) {
+    diagnostics.push(`${fieldName} conditions must be ordered ${expected.join(", ")}`);
+  }
+
+  for (const [conditionName, nestedValue] of Object.entries(exportValue)) {
+    collectExportConditionOrderDiagnostics(
+      nestedValue,
+      `${fieldName}.${conditionName}`,
+      diagnostics,
+    );
+  }
 }
 
 export function exportConditionSequenceParityDiagnostics(

@@ -140,10 +140,21 @@ describe("published @croco/meta-vite contract", () => {
         expect(packedManifest.peerDependencies?.vite).toBe("^6.4.3");
         expect(packedManifest.peerDependenciesMeta?.ioredis?.optional).toBe(true);
         expect(packedManifest.peerDependenciesMeta?.["react-dom"]).toBeUndefined();
+        expect(packedManifest.exports?.["."]).toEqual({
+          types: {
+            import: "./dist/index.d.mts",
+            require: "./dist/index.d.ts",
+          },
+          import: "./dist/index.mjs",
+          require: "./dist/index.js",
+        });
         expect(packedManifest.exports?.["./isr/adapters"]).toEqual({
+          types: {
+            import: "./dist/libs/isr/adapters/index.d.mts",
+            require: "./dist/libs/isr/adapters/index.d.ts",
+          },
           import: "./dist/libs/isr/adapters/index.mjs",
           require: "./dist/libs/isr/adapters/index.js",
-          types: "./dist/libs/isr/adapters/index.d.ts",
         });
         expect(packedDiagnosticsManifest.dependencies?.["@croco/health-core"]).toBeUndefined();
         expect(packedDiagnosticsManifest.peerDependencies?.["@croco/health-core"]).toBeUndefined();

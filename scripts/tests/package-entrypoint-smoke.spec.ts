@@ -68,6 +68,27 @@ describe("package-entrypoint-smoke.mts", () => {
     );
   });
 
+  it("resolves the import declaration from a mode-specific types condition", () => {
+    const root = createTempRoot();
+    writeImportablePackage(root, "mode-specific-types", {
+      exportsValue: {
+        ".": {
+          types: {
+            import: "./dist/index.d.mts",
+            require: "./dist/index.d.ts",
+          },
+          import: "./dist/index.mjs",
+          require: "./dist/index.js",
+        },
+      },
+    });
+
+    const result = runScript(root);
+
+    expect(result.status, result.stderr || result.stdout).toBe(0);
+    expect(result.stdout).toContain("✓ @croco/mode-specific-types: esm 1, cjs 1, types 1");
+  });
+
   it("validates CSS exports as static assets without loading them in Node", () => {
     const root = createTempRoot();
     writeImportablePackage(root, "styled", {
@@ -607,6 +628,10 @@ function writeImportablePackage(
   );
   writeFileSync(
     join(packageDir, "dist", "index.d.ts"),
+    options.declarationContent ?? "export declare const value: string;\n",
+  );
+  writeFileSync(
+    join(packageDir, "dist", "index.d.mts"),
     options.declarationContent ?? "export declare const value: string;\n",
   );
   writeFileSync(
