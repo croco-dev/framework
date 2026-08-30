@@ -3554,14 +3554,6 @@
     },
     {
       "packageName": "@croco/cli",
-      "file": "packages/cli/src/libs/fileWriter.ts",
-      "line": 40,
-      "column": 3,
-      "code": "TS2375",
-      "message": "Type '{ status: \"created\" | \"overwritten\"; path: string; diff: string | undefined; }' is not assignable to type 'WriteResult' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
-    },
-    {
-      "packageName": "@croco/cli",
       "file": "packages/cli/src/libs/naming.ts",
       "line": 11,
       "column": 10,
