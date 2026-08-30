@@ -4,8 +4,14 @@ import type { HealthTransitionEventIntent } from "./eventIntent";
 import { HealthScoreDroppedEvent, HealthStatusChangedEvent } from "./events";
 import { HealthScoreCalculator } from "./HealthScoreCalculator";
 import { CustomerHealthEventPublisher, HealthScoreStore, HealthSignalRegistry } from "./interfaces";
-import { HealthEventPublisherNotConfiguredProblem } from "./problems/HealthProblems";
+import {
+  HealthEventPublisherNotConfiguredProblem,
+  HealthTransitionPersistenceRetryExhaustedProblem,
+} from "./problems/HealthProblems";
 import type { HealthScoreProfile, HealthTrend, TenantHealthScore } from "./types";
+
+const MAX_TRANSITION_PERSISTENCE_ATTEMPTS = 3;
+const TRANSITION_PERSISTENCE_RETRY_BASE_DELAY_MS = 10;
 
 @Component()
 export class CustomerHealthService {
@@ -37,14 +43,8 @@ export class CustomerHealthService {
     const score = this.calculator.calculate(allSignals, profile);
     score.tenantId = tenantId;
 
-    let previous = await this.store.findLatest(tenantId);
-    while (true) {
-      this.applyPreviousScore(score, previous);
-      const eventIntents = createHealthTransitionEventIntents(previous, score);
-      const commit = await this.store.saveTransition(score, previous, eventIntents);
-      if (commit.committed) break;
-      previous = commit.latest;
-    }
+    const previous = await this.store.findLatest(tenantId);
+    await this.persistTransition(score, previous);
 
     const eventPublisher = this.getEventPublisher();
     if (eventPublisher) {
@@ -53,6 +53,30 @@ export class CustomerHealthService {
     }
 
     return score;
+  }
+
+  private async persistTransition(
+    score: TenantHealthScore,
+    initialPrevious: TenantHealthScore | null,
+  ): Promise<void> {
+    let previous = initialPrevious;
+
+    for (let attempt = 1; attempt <= MAX_TRANSITION_PERSISTENCE_ATTEMPTS; attempt += 1) {
+      this.applyPreviousScore(score, previous);
+      const eventIntents = createHealthTransitionEventIntents(previous, score);
+      const commit = await this.store.saveTransition(score, previous, eventIntents);
+      if (commit.committed) return;
+
+      previous = commit.latest;
+      if (attempt < MAX_TRANSITION_PERSISTENCE_ATTEMPTS) {
+        await waitForTransitionPersistenceRetry(attempt);
+      }
+    }
+
+    throw new HealthTransitionPersistenceRetryExhaustedProblem(
+      score.tenantId,
+      MAX_TRANSITION_PERSISTENCE_ATTEMPTS,
+    );
   }
 
   async publishPendingEvents(tenantId: string, limit = 100): Promise<number> {
@@ -146,4 +170,9 @@ export class CustomerHealthService {
     score.previousScore = previous.overallScore;
     score.trend = this.calculator.determineTrend(score.overallScore, previous.overallScore);
   }
+}
+
+function waitForTransitionPersistenceRetry(attempt: number): Promise<void> {
+  const delayMs = TRANSITION_PERSISTENCE_RETRY_BASE_DELAY_MS * 2 ** (attempt - 1);
+  return new Promise((resolve) => setTimeout(resolve, delayMs));
 }

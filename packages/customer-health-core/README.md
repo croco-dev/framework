@@ -118,7 +118,9 @@ const score = await service.calculateAndStore("tenant-1", profile);
 
 `idempotentEventPublisher`는 `event.eventId`를 기준으로 재시도와 동시 발행을 중복 제거해야 합니다.
 `calculateAndStore`는 새 점수와 상태 변경/점수 급락 이벤트 의도를 원자적으로 저장한 뒤, 이전 실패로
-남은 의도를 재발행합니다. 별도 복구 작업에서는 `publishPendingEvents(tenantId)`를 호출할 수 있습니다.
+남은 의도를 재발행합니다. 동시 갱신으로 저장이 충돌하면 짧은 지수 백오프와 함께 최대 세 번까지
+시도하고, 계속 커밋되지 않으면 `HealthTransitionPersistenceRetryExhaustedProblem`을 던집니다. 별도 복구
+작업에서는 `publishPendingEvents(tenantId)`를 호출할 수 있습니다.
 
 ### 추세 분석
 

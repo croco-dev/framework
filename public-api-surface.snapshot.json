@@ -7893,6 +7893,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "HealthTransitionPersistenceRetryExhaustedProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/HealthProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "InMemoryHealthScoreStore",
               "exportKind": "named",
               "source": "./libs/InMemoryHealthScoreStore",
