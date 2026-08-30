@@ -1086,6 +1086,21 @@ describe("emitOpenAPI", () => {
     );
   });
 
+  it("should reject records with non-string key schemas", () => {
+    @Controller("/zod-record-key")
+    class ZodRecordKeyController {
+      @Post("/")
+      createRecord(
+        @Body(z.record(z.number(), z.string()))
+        _body: unknown,
+      ): void {}
+    }
+
+    expect(() => emitOpenAPI([ZodRecordKeyController])).toThrow(
+      "ZodRecord key schema ZodNumber is unsupported; use z.string() for JSON object keys.",
+    );
+  });
+
   it(
     "should emit multiple routes and pass Redocly lint",
     {

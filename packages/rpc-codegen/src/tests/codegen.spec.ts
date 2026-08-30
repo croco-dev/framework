@@ -2322,6 +2322,28 @@ void handleMissingProblemBranch;
     expect(fs.existsSync(path.join(TEMP_DIR, "status.ts"))).toBe(false);
   });
 
+  it("should reject records with non-string key schemas", () => {
+    const routes: RouteIR[] = [
+      {
+        controllerName: "StatusController",
+        methodName: "get",
+        httpMethod: "GET",
+        path: "/status",
+        routeContract: null,
+        params: [],
+        inputSchema: null,
+        inputSchemas: EMPTY_INPUT_SCHEMAS,
+        outputSchema: z.record(z.number(), z.string()) as unknown as RouteIR["outputSchema"],
+        domain: null,
+      },
+    ];
+
+    expect(() => generateClientFiles(routes, TEMP_DIR)).toThrow(
+      `${CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE}: ZodRecord key schema ZodNumber is unsupported; use z.string() for JSON object keys.`,
+    );
+    expect(fs.existsSync(path.join(TEMP_DIR, "status.ts"))).toBe(false);
+  });
+
   it("should not write earlier domain files when a later domain has an unsupported schema", () => {
     const routes: RouteIR[] = [
       {
