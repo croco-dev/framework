@@ -502,9 +502,20 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
             );
           }
 
+          const uploaded = result.result.uploaded;
+          const lastModified = typeof uploaded === "string" ? new Date(uploaded) : undefined;
+          if (!lastModified || Number.isNaN(lastModified.getTime())) {
+            throw createCloudflareImagesResponseProblem({
+              operation: "metadata",
+              key,
+              upstreamCode: "invalid-response",
+              detail: "Cloudflare Images metadata response has an invalid uploaded timestamp",
+            });
+          }
+
           return {
             size: result.result.size ?? 0,
-            lastModified: new Date(result.result.uploaded),
+            lastModified,
           };
         },
         options,

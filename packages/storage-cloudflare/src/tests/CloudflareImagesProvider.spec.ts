@@ -308,6 +308,22 @@ describe("CloudflareImagesProvider", () => {
       expect(mockFetch).toHaveBeenCalledTimes(1);
     });
 
+    it.each([
+      ["missing", { size: 2048 }],
+      ["invalid", { size: 2048, uploaded: "not-a-timestamp" }],
+    ])("rejects a metadata response with a %s uploaded timestamp", async (_label, result) => {
+      mockFetch.mockResolvedValue(Response.json({ success: true, errors: [], result }));
+
+      await expect(provider.getMetadata("test-image-id")).rejects.toMatchObject({
+        code: "storage-cloudflare/terminal-upstream",
+        extensions: {
+          operation: "metadata",
+          upstreamCode: "invalid-response",
+        },
+      });
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
     it("retries a transient metadata body-read failure", async () => {
       const uploaded = "2026-01-01T00:00:00.000Z";
       mockFetch

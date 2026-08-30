@@ -631,6 +631,20 @@ describe("Meilisearch provider conformance", () => {
       expect(mocks.clientMock.waitForTask).toHaveBeenCalledTimes(2);
     });
 
+    it("does not restart the configured task wait after its timeout expires", async () => {
+      vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-1");
+      mocks.clientMock.waitForTask.mockRejectedValue(
+        createUpstreamError("task wait timed out", { name: "MeiliSearchTimeOutError" }),
+      );
+
+      await expectProblem(
+        () => engine.deleteDocument("products", "1"),
+        MeilisearchRetryableUpstreamProblem,
+      );
+
+      expect(mocks.clientMock.waitForTask).toHaveBeenCalledOnce();
+    });
+
     it("attempts terminal upstream failures only once", async () => {
       vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-1");
       mocks.indexMock.search.mockRejectedValue(

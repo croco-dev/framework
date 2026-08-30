@@ -32,6 +32,16 @@ const MEILISEARCH_RETRY_POLICY: RetryPolicy = {
   },
 };
 
+const MEILISEARCH_TASK_WAIT_RETRY_POLICY: RetryPolicy = {
+  shouldRetry(error: unknown, attempt: number, maxAttempts: number): boolean {
+    return (
+      attempt < maxAttempts &&
+      error instanceof MeilisearchRetryableUpstreamProblem &&
+      error.extensions?.upstreamCode !== "MeiliSearchTimeOutError"
+    );
+  },
+};
+
 @Component()
 /**
  * 테넌트 격리와 테넌트 토큰 발급을 지원하는 Meilisearch 검색 엔진입니다.
@@ -407,6 +417,7 @@ export class MeilisearchEngine extends SearchEngine {
       options: SearchOperationOptions;
     },
     replaySafe = false,
+    retryPolicy = MEILISEARCH_RETRY_POLICY,
   ): Promise<T> {
     const executeAttempt = async (): Promise<T> => {
       if (cancellation) {
@@ -436,7 +447,7 @@ export class MeilisearchEngine extends SearchEngine {
     const retryTemplate = new RetryTemplate({
       maxAttempts: 3,
       backoff: this.options.retryBackoff,
-      retryPolicy: MEILISEARCH_RETRY_POLICY,
+      retryPolicy,
       signal: cancellation?.options.signal,
     });
 
@@ -519,6 +530,7 @@ export class MeilisearchEngine extends SearchEngine {
       context,
       { operation, options },
       true,
+      MEILISEARCH_TASK_WAIT_RETRY_POLICY,
     );
 
     if (this.isFailedTask(result)) {
