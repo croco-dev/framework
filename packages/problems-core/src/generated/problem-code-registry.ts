@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 697,
+  problemCount: 698,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -4115,6 +4115,40 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 3,
           column: 1,
           kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "create-croco-app/generated-dependency-range-missing",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#create-croco-app-generated-dependency-range-missing",
+      recovery: {
+        cause:
+          "The create-croco-app package metadata does not declare the generated dependency range required for application scaffolding.",
+        userAction:
+          "Reinstall create-croco-app after its package metadata has been corrected; do not retry with the unchanged package.",
+        operatorAction:
+          "Set the workspace catalog range, run pnpm package-manifests:write, rebuild or publish create-croco-app, and verify crocoGeneratedAppDependencies before retrying.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/create-croco-app/src/package-version.ts",
+          line: 29,
+          column: 11,
+          kind: "problem-factory",
         },
       ],
     },

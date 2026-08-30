@@ -1925,6 +1925,17 @@ const recoveryMetadataByCode = {
     redactionPolicy: "public",
     severity: "info",
   }),
+  "create-croco-app/generated-dependency-range-missing": recovery({
+    cause:
+      "The create-croco-app package metadata does not declare the generated dependency range required for application scaffolding.",
+    userAction:
+      "Reinstall create-croco-app after its package metadata has been corrected; do not retry with the unchanged package.",
+    operatorAction:
+      "Set the workspace catalog range, run pnpm package-manifests:write, rebuild or publish create-croco-app, and verify crocoGeneratedAppDependencies before retrying.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "auth-clerk/unexpected-tenant-mapping-claim": recovery({
     cause: "TenantMappingStore.claim() returned a result outside the supported claim contract.",
     userAction:

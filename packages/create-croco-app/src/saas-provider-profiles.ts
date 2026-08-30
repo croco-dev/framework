@@ -11,6 +11,7 @@ import {
   renderSecretPlaceholderPolicyTable,
   renderSecretsChecklistPlaceholderItems,
 } from "./secret-placeholder-policy.js";
+import { getGeneratedAppDependencyRange } from "./package-version.js";
 
 export const SAAS_PROVIDER_PROFILE_CHOICES = [
   "saas-node-postgres",
@@ -138,7 +139,6 @@ const SAAS_PROVIDER_THIRD_PARTY_PACKAGE_RANGES: Record<string, string> = {
   "@upstash/qstash": "^2.9.0",
   "@upstash/redis": "^1.34.0",
   cloudinary: "^2.10.0",
-  "drizzle-orm": "^0.45.2",
 };
 
 export const REQUIRED_SAAS_PROVIDER_CAPABILITIES = [
@@ -544,6 +544,10 @@ export function assertSaasProviderProfileCapabilities(profile: {
 export function getSaasProviderPackageDependencyRange(packageName: string): string {
   if (packageName.startsWith("@croco/")) {
     return "workspace:*";
+  }
+
+  if (packageName === "drizzle-orm") {
+    return getGeneratedAppDependencyRange(packageName);
   }
 
   const range = SAAS_PROVIDER_THIRD_PARTY_PACKAGE_RANGES[packageName];

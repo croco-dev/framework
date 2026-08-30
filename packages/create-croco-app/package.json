@@ -65,5 +65,8 @@
   },
   "engines": {
     "node": ">=22"
+  },
+  "crocoGeneratedAppDependencies": {
+    "drizzle-orm": "^0.45.2"
   }
 }

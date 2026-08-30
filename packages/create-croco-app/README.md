@@ -69,6 +69,10 @@ apply to meta-vite profiles in this release.
 Generated projects include the package manager command and next-step instructions in
 the CLI result.
 
+Generated Drizzle dependencies use the exact semver range from the repository's
+`pnpm-workspace.yaml` catalog. Package-manifest normalization copies that range into
+the published generator metadata, so catalog upgrades require no template or provider-profile edit.
+
 ## Verification
 
 ```bash

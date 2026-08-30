@@ -2,6 +2,9 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { parse as parseYaml } from "yaml";
+import { renderHandlebars } from "../helpers/fs.js";
+import { getSaasProviderPackageDependencyRange } from "../saas-provider-profiles.js";
 
 const TEMPLATES_DIR = join(dirname(fileURLToPath(import.meta.url)), "../../templates");
 const FIXTURE_TEMPLATES_DIR = join(
@@ -13,6 +16,7 @@ const FIXTURE_TEMPLATE_NAMES = new Set(["container-fullstack", "ssr-lambda"]);
 const GENERATED_API_DI_GRAPH_SCRIPT =
   "cross-env NODE_OPTIONS=--import=tsx croco di graph --module src/app.ts --bootstrap createCrocoApp --roots createCrocoDiGraphRoots --write ../../.croco/build/di-graph.manifest.json";
 const ROOT_PACKAGE_JSON = join(TEMPLATES_DIR, "..", "..", "..", "package.json");
+const REPOSITORY_ROOT = join(TEMPLATES_DIR, "..", "..", "..");
 
 function templatePath(template: string, ...paths: string[]): string {
   const templatesDir = FIXTURE_TEMPLATE_NAMES.has(template) ? FIXTURE_TEMPLATES_DIR : TEMPLATES_DIR;
@@ -1352,6 +1356,55 @@ describe("Web Meta Vite fullstack addon templates", () => {
 });
 
 describe("Base preset README templates", () => {
+  it("derives every generated Drizzle range from the workspace catalog", () => {
+    const workspace = parseYaml(
+      readFileSync(join(REPOSITORY_ROOT, "pnpm-workspace.yaml"), "utf8"),
+    ) as {
+      catalog?: Record<string, string>;
+    };
+    const packageManifest = JSON.parse(
+      readFileSync(join(TEMPLATES_DIR, "..", "package.json"), "utf8"),
+    ) as {
+      crocoGeneratedAppDependencies?: Record<string, string>;
+    };
+    const catalogRange = workspace.catalog?.["drizzle-orm"];
+    const metadataRange = packageManifest.crocoGeneratedAppDependencies?.["drizzle-orm"];
+
+    expect(catalogRange).toEqual(expect.any(String));
+    expect(metadataRange).toBe(catalogRange);
+
+    const providerProfileSource = readFileSync(
+      join(TEMPLATES_DIR, "..", "src", "saas-provider-profiles.ts"),
+      "utf8",
+    );
+    const staticProviderRanges = providerProfileSource.match(
+      /const SAAS_PROVIDER_THIRD_PARTY_PACKAGE_RANGES[^=]*= \{([\s\S]*?)\n\};/,
+    )?.[1];
+
+    expect(providerProfileSource).toContain("getGeneratedAppDependencyRange");
+    expect(staticProviderRanges).toEqual(expect.any(String));
+    expect(staticProviderRanges).not.toContain("drizzle-orm");
+    expect(getSaasProviderPackageDependencyRange("drizzle-orm")).toBe(catalogRange);
+
+    const template = templatePath(
+      "base-ddd",
+      "libs",
+      "shared",
+      "provider-database",
+      "package.json.hbs",
+    );
+    const simulatedCatalogRange = "^999.0.0";
+    const renderedManifest = JSON.parse(
+      renderHandlebars(template, {
+        drizzleOrmRange: simulatedCatalogRange,
+        scope: "@test",
+      }),
+    ) as { dependencies?: Record<string, string> };
+
+    expect(renderedManifest.dependencies?.["drizzle-orm"]).toBe(simulatedCatalogRange);
+    expect(readFileSync(template, "utf8")).not.toContain(catalogRange);
+  });
+
   it("documents the blank preset first-run loop", () => {
     checkBlankLintContract();
     checkFileExists("blank", "README.md.hbs");

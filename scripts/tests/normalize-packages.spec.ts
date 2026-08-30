@@ -161,6 +161,44 @@ describe("normalize-packages.mjs", () => {
     ]);
   });
 
+  it("derives create-croco-app dependency metadata from the workspace catalog", () => {
+    const root = createTempRoot();
+    writeFileSync(
+      join(root, "pnpm-workspace.yaml"),
+      ["packages:", "  - packages/*", "", "catalog:", "  drizzle-orm: ^9.9.9", ""].join("\n"),
+    );
+    const packagePath = writePackage(root, "create-croco-app", {
+      name: "create-croco-app",
+      version: "0.1.0",
+      files: ["dist", "templates"],
+      type: "module",
+      main: "./src/index.ts",
+      types: "./src/index.ts",
+      publishConfig: {
+        access: "public",
+        main: "./dist/index.js",
+        types: "./dist/index.d.ts",
+        exports: {
+          ".": {
+            types: "./dist/index.d.ts",
+            import: "./dist/index.js",
+          },
+        },
+      },
+      crocoGeneratedAppDependencies: {
+        "drizzle-orm": "^0.45.2",
+      },
+    });
+
+    const result = runScript(root, "--write");
+    const pkg = JSON.parse(readFileSync(packagePath, "utf-8"));
+
+    expect(result.status, result.stderr).toBe(0);
+    expect(pkg.crocoGeneratedAppDependencies).toEqual({
+      "drizzle-orm": "^9.9.9",
+    });
+  });
+
   it("removes direct registry publish scripts while preserving safe package scripts", () => {
     const root = createTempRoot();
     const packagePath = writePublishablePackage(root, {
@@ -668,6 +706,10 @@ describe("normalize-packages.mjs", () => {
 
   it("skips the private docs site and validates the importable create-croco-app package", () => {
     const root = createTempRoot();
+    writeFileSync(
+      join(root, "pnpm-workspace.yaml"),
+      ["packages:", "  - packages/*", "", "catalog:", "  drizzle-orm: ^0.45.2", ""].join("\n"),
+    );
     writePackage(
       root,
       "docs",
@@ -694,6 +736,9 @@ describe("normalize-packages.mjs", () => {
         type: "module",
         main: "./src/index.ts",
         types: "./src/index.ts",
+        crocoGeneratedAppDependencies: {
+          "drizzle-orm": "^0.45.2",
+        },
         publishConfig: {
           access: "public",
           main: "./dist/index.js",
