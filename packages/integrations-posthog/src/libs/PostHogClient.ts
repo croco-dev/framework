@@ -30,6 +30,12 @@ export class PostHogClient {
     return this.client;
   }
 
+  async flush(): Promise<void> {
+    // posthog-node schedules capture queue insertion asynchronously before flush reads the queue.
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    await this.client.flush();
+  }
+
   async shutdown(): Promise<void> {
     await this.client.shutdown();
   }

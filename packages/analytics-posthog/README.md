@@ -77,9 +77,11 @@ this.analytics.group("tenant", "tenant-456", {
 
 ## Flush / Lambda lifecycle
 
-`PostHogAnalyticsManager.flush()`는 내부 `PostHogClient.shutdown()`을 호출해 SDK 버퍼를
-drain합니다. Lambda나 서버리스 핸들러에서는 응답 직전 `finally` 블록에서 호출하세요.
-flush 실패는 `PostHogAnalyticsFlushProblem`으로 다시 throw되며 로그에는
+`PostHogAnalyticsManager.flush()`는 내부 `PostHogClient.flush()`를 호출해 SDK 버퍼를
+drain하며 클라이언트를 종료하지 않습니다. Lambda나 서버리스 핸들러에서는 응답 직전
+`finally` 블록에서 호출해도 warm invocation에서 같은 클라이언트를 계속 사용할 수 있습니다.
+프로세스 종료 시에는 `PostHogClient.shutdown()`을 별도로 호출하세요. flush 실패는
+`PostHogAnalyticsFlushProblem`으로 다시 throw되며 로그에는
 `analytics-posthog/flush-failed` 코드가 남습니다.
 
 ```typescript

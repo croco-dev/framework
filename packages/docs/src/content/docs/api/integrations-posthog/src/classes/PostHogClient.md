@@ -23,6 +23,16 @@ title: "PostHogClient"
 
 ## Methods
 
+### flush()
+
+> **flush**(): `Promise`\<`void`\>
+
+#### Returns
+
+`Promise`\<`void`\>
+
+---
+
 ### getClient()
 
 > **getClient**(): `PostHog`
