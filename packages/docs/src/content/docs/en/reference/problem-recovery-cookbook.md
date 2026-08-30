@@ -3057,7 +3057,7 @@ Sources:
 
 Sources:
 
-- `packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts:594:15` (problem-factory)
+- `packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts:605:15` (problem-factory)
 
 <a id="conflicting-pagination"></a>
 
@@ -10959,7 +10959,7 @@ Sources:
 
 Sources:
 
-- `packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts:539:15` (problem-factory)
+- `packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts:550:15` (problem-factory)
 
 <a id="strategy-unavailable"></a>
 
