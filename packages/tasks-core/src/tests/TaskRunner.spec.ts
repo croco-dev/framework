@@ -808,6 +808,66 @@ describe("TaskRunner", () => {
     expect(mockExecutionManager.timeout).toHaveBeenCalledWith("exec-123");
   });
 
+  it("should keep timeout ownership when the scheduled callback claims before handler success", async () => {
+    let now = new Date("2026-01-01T00:00:00.000Z").getTime();
+    let scheduledTimeout: (() => void) | undefined;
+    let resolveHandler: ((value: string) => void) | undefined;
+    let resolveTimeout: (() => void) | undefined;
+
+    @Component()
+    class ClaimedTimeoutTaskHandler {
+      @Task({ name: "claimed-timeout-task", timeout: 100 })
+      handle(): Promise<string> {
+        return new Promise((resolve) => {
+          resolveHandler = resolve;
+        });
+      }
+    }
+
+    Container.set(ClaimedTimeoutTaskHandler, new ClaimedTimeoutTaskHandler());
+    registry.collectFromMetadata();
+    mockExecutionManager.start = vi.fn().mockResolvedValue(
+      execution({
+        type: "claimed-timeout-task",
+        status: "running",
+        attempts: 1,
+        startedAt: new Date(now),
+        timeout: 100,
+      }),
+    );
+    mockExecutionManager.timeoutAttempt = vi.fn().mockImplementation(
+      (token) =>
+        new Promise((resolve) => {
+          resolveTimeout = () =>
+            resolve(
+              execution({
+                id: token.executionId,
+                status: "timed_out",
+                attempts: token.attempt,
+                error: { message: "Execution timed out", retryable: false },
+              }),
+            );
+        }),
+    );
+    const runner = new TaskRunner(mockExecutionManager, registry, undefined, {
+      now: () => now,
+      schedule: (callback) => {
+        scheduledTimeout = callback;
+        return () => undefined;
+      },
+    });
+
+    const result = runner.execute("claimed-timeout-task", {});
+    await vi.waitFor(() => expect(resolveHandler).toBeDefined());
+    now += 100;
+    scheduledTimeout?.();
+    resolveHandler?.("late success");
+    resolveTimeout?.();
+
+    await expect(result).rejects.toBeInstanceOf(TaskExecutionTimeoutProblem);
+    expect(mockExecutionManager.complete).not.toHaveBeenCalled();
+  });
+
   it("should ignore a handler result that arrives after timeout", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
@@ -883,7 +943,7 @@ describe("TaskRunner", () => {
     expect(mockExecutionManager.complete).not.toHaveBeenCalled();
   });
 
-  it("should record quiescence when the handler settles before a delayed deadline callback", async () => {
+  it("should preserve a handler result that settles before a delayed deadline callback", async () => {
     let now = new Date("2026-01-01T00:00:00.000Z").getTime();
     let resolveHandler: ((value: string) => void) | undefined;
 
@@ -918,8 +978,10 @@ describe("TaskRunner", () => {
     now += 100;
     resolveHandler?.("settled at deadline");
 
-    await expect(result).rejects.toBeInstanceOf(TaskExecutionTimeoutProblem);
-    await vi.waitFor(() => expect(mockExecutionManager.settleTimedOutAttempt).toHaveBeenCalled());
+    await expect(result).resolves.toBe("settled at deadline");
+    expect(mockExecutionManager.complete).toHaveBeenCalledWith("exec-123", "settled at deadline");
+    expect(mockExecutionManager.timeout).not.toHaveBeenCalled();
+    expect(mockExecutionManager.settleTimedOutAttempt).not.toHaveBeenCalled();
   });
 
   it("should chunk timeout scheduling beyond the Node timer limit", async () => {
