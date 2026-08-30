@@ -2045,6 +2045,12 @@
       "owner": "@croco/meta-vite"
     },
     {
+      "path": "packages/meta-vite/src/tests/createIsrHandler.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/meta-vite"
+    },
+    {
       "path": "packages/meta-vite/src/tests/frontend-action-manifest.spec.ts",
       "lane": "fast",
       "qualifiers": [],
