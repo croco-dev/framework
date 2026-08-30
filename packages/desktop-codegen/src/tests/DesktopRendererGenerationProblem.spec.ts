@@ -330,7 +330,7 @@ desktop.project.fileChanged.subscribe((_payload, _event) => undefined);
             candidate.id === event.id ? { ...candidate, key: 1 as unknown as string } : candidate,
           ),
         },
-        detail: "Desktop event key must be a string, received 1.",
+        detail: "Desktop event key must be a string, received number.",
       },
       {
         graph: {
@@ -341,8 +341,58 @@ desktop.project.fileChanged.subscribe((_payload, _event) => undefined);
               : candidate,
           ),
         },
-        detail: "Desktop grant key must be a string, received false.",
+        detail: "Desktop grant key must be a string, received boolean.",
       },
+      {
+        graph: {
+          ...graph,
+          contracts: graph.contracts.map((contract, index) =>
+            index === 0 ? { ...contract, id: BigInt(1) as unknown as string } : contract,
+          ),
+        },
+        detail: "Desktop contract id must be a string, received bigint.",
+      },
+    ];
+
+    for (const invalid of invalidGraphs) {
+      expectGenerationProblem(() => generateDesktopRendererClients(invalid.graph), invalid.detail);
+    }
+  });
+
+  it("rejects forged capability discriminators before rendering", () => {
+    const graph = createGraph(false);
+    const grant = graph.grants[0];
+    const remoteWindow = graph.windows.find((window) => window.trust === "remote");
+    assert(grant && remoteWindow, "Fixture capability records are missing");
+
+    const invalidGraphs: readonly { graph: typeof graph; detail: string }[] = [
+      {
+        graph: {
+          ...graph,
+          windows: graph.windows.map((window) =>
+            window.id === remoteWindow.id
+              ? { ...window, trust: "forged" as unknown as typeof window.trust }
+              : window,
+          ),
+        },
+        detail: `Desktop window ${JSON.stringify(remoteWindow.id)} has an unsupported trust mode.`,
+      },
+      ...(
+        [
+          ["resource", "forged", "resource"],
+          ["access", "forged", "access mode"],
+          ["scope", "forged", "scope"],
+          ["lifetime", "forged", "lifetime"],
+        ] as const
+      ).map(([field, value, description]) => ({
+        graph: {
+          ...graph,
+          grants: graph.grants.map((candidate) =>
+            candidate.id === grant.id ? { ...candidate, [field]: value } : candidate,
+          ),
+        } as typeof graph,
+        detail: `Desktop grant ${JSON.stringify(grant.id)} has an unsupported ${description}.`,
+      })),
     ];
 
     for (const invalid of invalidGraphs) {
@@ -490,6 +540,24 @@ desktop.project.fileChanged.subscribe((_payload, _event) => undefined);
     expectInvalidInput(
       { kind: "union", options: [{ kind: "string" }] },
       "$: union options must contain at least two schemas",
+    );
+    const sparseEnumValues: unknown[] = [];
+    sparseEnumValues.length = 1;
+    const sparseUnionOptions: unknown[] = [];
+    sparseUnionOptions.length = 2;
+    const sparseObjectFields: unknown[] = [];
+    sparseObjectFields.length = 1;
+    expectInvalidInput(
+      { kind: "enum", values: sparseEnumValues },
+      "$: enum values must be strings or finite numbers",
+    );
+    expectInvalidInput(
+      { kind: "union", options: sparseUnionOptions },
+      "$.options[0]: expected a descriptor object with a string kind",
+    );
+    expectInvalidInput(
+      { kind: "object", unknownKeys: "reject", fields: sparseObjectFields },
+      "$.fields[0]: object fields require a string name",
     );
     expectInvalidInput(
       {

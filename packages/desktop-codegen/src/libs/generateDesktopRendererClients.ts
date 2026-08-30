@@ -76,10 +76,10 @@ function assertGeneratableGraph(graph: DesktopContractGraphV1): void {
       `Cannot generate renderer clients from a graph with ${graph.diagnostics.length} diagnostic${graph.diagnostics.length === 1 ? "" : "s"}.`,
     );
   }
-  assertGraphIdentifiers(graph);
+  assertGraphScalarFields(graph);
 }
 
-function assertGraphIdentifiers(graph: DesktopContractGraphV1): void {
+function assertGraphScalarFields(graph: DesktopContractGraphV1): void {
   for (const contract of graph.contracts) {
     assertStringIdentifier(contract.id, "contract id");
   }
@@ -97,21 +97,57 @@ function assertGraphIdentifiers(graph: DesktopContractGraphV1): void {
     assertStringIdentifier(grant.id, "grant id");
     assertStringIdentifier(grant.contractId, "grant contractId");
     assertStringIdentifier(grant.key, "grant key");
+    if (grant.resource !== "file" && grant.resource !== "directory") {
+      throw new DesktopRendererGenerationProblem(
+        `Desktop grant ${JSON.stringify(grant.id)} has an unsupported resource.`,
+      );
+    }
+    if (grant.access !== "read" && grant.access !== "write") {
+      throw new DesktopRendererGenerationProblem(
+        `Desktop grant ${JSON.stringify(grant.id)} has an unsupported access mode.`,
+      );
+    }
+    if (grant.scope !== "exact" && grant.scope !== "descendant") {
+      throw new DesktopRendererGenerationProblem(
+        `Desktop grant ${JSON.stringify(grant.id)} has an unsupported scope.`,
+      );
+    }
+    if (
+      grant.lifetime !== "command" &&
+      grant.lifetime !== "window" &&
+      grant.lifetime !== "session"
+    ) {
+      throw new DesktopRendererGenerationProblem(
+        `Desktop grant ${JSON.stringify(grant.id)} has an unsupported lifetime.`,
+      );
+    }
   }
   for (const problem of graph.problems) {
     assertStringIdentifier(problem.code, "Problem code");
   }
   for (const window of graph.windows) {
     assertStringIdentifier(window.id, "window id");
+    if (window.trust !== "local" && window.trust !== "remote") {
+      throw new DesktopRendererGenerationProblem(
+        `Desktop window ${JSON.stringify(window.id)} has an unsupported trust mode.`,
+      );
+    }
   }
 }
 
 function assertStringIdentifier(value: unknown, description: string): asserts value is string {
   if (typeof value !== "string") {
     throw new DesktopRendererGenerationProblem(
-      `Desktop ${description} must be a string, received ${JSON.stringify(value)}.`,
+      `Desktop ${description} must be a string, received ${describeValueType(value)}.`,
     );
   }
+}
+
+function describeValueType(value: unknown): string {
+  if (value === null) {
+    return "null";
+  }
+  return Array.isArray(value) ? "array" : typeof value;
 }
 
 function createGraphIndexes(graph: DesktopContractGraphV1): GraphIndexes {
@@ -260,7 +296,7 @@ function assertWireSchemaDescriptor(
       if (!Array.isArray(descriptor.values) || descriptor.values.length === 0) {
         throwInvalidSchemaDescriptor(ownerId, path, "enum values must be a non-empty array");
       }
-      if (!descriptor.values.every(isWireEnumValue)) {
+      if (!Array.from(descriptor.values).every(isWireEnumValue)) {
         throwInvalidSchemaDescriptor(
           ownerId,
           path,
@@ -287,9 +323,14 @@ function assertWireSchemaDescriptor(
           "union options must contain at least two schemas",
         );
       }
-      descriptor.options.forEach((option, index) =>
-        assertWireSchemaDescriptor(option, ownerId, `${path}.options[${index}]`, nextAncestors),
-      );
+      for (let index = 0; index < descriptor.options.length; index += 1) {
+        assertWireSchemaDescriptor(
+          descriptor.options[index],
+          ownerId,
+          `${path}.options[${index}]`,
+          nextAncestors,
+        );
+      }
       return;
     case "object": {
       if (descriptor.unknownKeys !== "reject") {
@@ -299,7 +340,8 @@ function assertWireSchemaDescriptor(
         throwInvalidSchemaDescriptor(ownerId, path, "object fields must be an array");
       }
       const names = new Set<string>();
-      descriptor.fields.forEach((field, index) => {
+      for (let index = 0; index < descriptor.fields.length; index += 1) {
+        const field = descriptor.fields[index];
         const fieldPath = `${path}.fields[${index}]`;
         if (!isRecord(field) || typeof field.name !== "string") {
           throwInvalidSchemaDescriptor(ownerId, fieldPath, "object fields require a string name");
@@ -320,7 +362,7 @@ function assertWireSchemaDescriptor(
           );
         }
         assertWireSchemaDescriptor(field.schema, ownerId, `${fieldPath}.schema`, nextAncestors);
-      });
+      }
       return;
     }
     default:
