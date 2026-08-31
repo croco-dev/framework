@@ -473,6 +473,7 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
           );
 
           if (response.status === 404) {
+            await this.cancelResponseBody(response);
             this.throwNotFound(key);
           }
 

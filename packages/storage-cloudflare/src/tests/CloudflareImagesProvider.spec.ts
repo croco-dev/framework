@@ -1310,15 +1310,21 @@ describe("CloudflareImagesProvider", () => {
       });
     });
 
-    it("should throw FileNotFoundProblem when image not found (404)", async () => {
-      const mockResponse = {
-        status: 404,
-        ok: false,
-      };
-
-      mockFetch.mockResolvedValueOnce(mockResponse);
+    it("should cancel the response body before throwing FileNotFoundProblem for metadata 404", async () => {
+      let responseBodyCancelled = false;
+      mockFetch.mockResolvedValueOnce(
+        new Response(
+          new ReadableStream<Uint8Array>({
+            cancel() {
+              responseBodyCancelled = true;
+            },
+          }),
+          { status: 404 },
+        ),
+      );
 
       await expect(provider.getMetadata("non-existent-id")).rejects.toThrow(FileNotFoundProblem);
+      expect(responseBodyCancelled).toBe(true);
     });
 
     it("should throw terminal provider Problem when API returns error", async () => {
