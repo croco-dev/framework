@@ -148,5 +148,73 @@ describe.skipIf(connectionString.length === 0)(
         await expect(store.findById(created.id)).resolves.toMatchObject({ timeout });
       },
     );
+
+    it("clears explicitly undefined optional fields in PostgreSQL", async () => {
+      const created = await store.create({
+        type: "clear-optional-fields",
+        scheduledFor: new Date("2026-01-02T00:00:00.000Z"),
+        idempotencyKey: "previous-key",
+        requestFingerprint: "a".repeat(64),
+        replayOf: "source-execution",
+        parentId: "parent-execution",
+        metadata: { source: "api" },
+      });
+
+      const cleared = await store.update(created.id, {
+        scheduledFor: undefined,
+        idempotencyKey: undefined,
+        requestFingerprint: undefined,
+        replayOf: undefined,
+        parentId: undefined,
+        metadata: undefined,
+      });
+
+      expect(cleared).toMatchObject({
+        scheduledFor: undefined,
+        idempotencyKey: undefined,
+        requestFingerprint: undefined,
+        replayOf: undefined,
+        parentId: undefined,
+        metadata: undefined,
+      });
+      await expect(store.findById(created.id)).resolves.toMatchObject({
+        scheduledFor: undefined,
+        idempotencyKey: undefined,
+        requestFingerprint: undefined,
+        replayOf: undefined,
+        parentId: undefined,
+        metadata: undefined,
+      });
+    });
+
+    it("returns an existing PostgreSQL execution unchanged for an empty update", async () => {
+      const created = await store.create({
+        type: "empty-update",
+        metadata: { source: "api" },
+      });
+
+      await expect(store.update(created.id, {})).resolves.toEqual(created);
+      await expect(store.findById(created.id)).resolves.toEqual(created);
+    });
+
+    it("reports duplicate idempotency key updates as conflict Problems", async () => {
+      await store.create({
+        type: "idempotency-owner",
+        idempotencyKey: "owned-key",
+      });
+      const contender = await store.create({
+        type: "idempotency-contender",
+        idempotencyKey: "contender-key",
+      });
+
+      await expect(
+        store.update(contender.id, { idempotencyKey: "owned-key" }),
+      ).rejects.toMatchObject({
+        code: "execution/conflict",
+      });
+      await expect(store.findById(contender.id)).resolves.toMatchObject({
+        idempotencyKey: "contender-key",
+      });
+    });
   },
 );
