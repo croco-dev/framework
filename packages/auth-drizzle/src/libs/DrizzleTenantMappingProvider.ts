@@ -1,11 +1,19 @@
 import type { TenantMappingProvider } from "@croco/auth-core";
 import type { SQLWrapper } from "drizzle-orm";
 import { eq } from "drizzle-orm";
+import {
+  DuplicateTenantMappingProblem,
+  TenantMappingConflictResolutionProblem,
+} from "./problems/DrizzleTenantMappingProblems";
 import type { tenantMappings as tenantMappingsSchema } from "../schema";
 
 interface DrizzleDb {
   insert: (table: unknown) => {
-    values: (data: unknown) => Promise<unknown>;
+    values: (data: unknown) => {
+      onConflictDoNothing: (config: { target: unknown }) => {
+        returning: (selection: { tenantId: unknown }) => Promise<readonly { tenantId: string }[]>;
+      };
+    };
   };
   delete: (table: unknown) => {
     where: (condition: SQLWrapper) => Promise<unknown>;
@@ -70,10 +78,28 @@ export class DrizzleTenantMappingProvider implements TenantMappingProvider {
    * 외부 조직 ID와 테넌트 ID 매핑을 등록합니다.
    */
   async register(externalOrgId: string, tenantId: string): Promise<void> {
-    await this.db.insert(this.schema.tenantMappings).values({
-      externalOrgId,
-      tenantId,
-    });
+    const insertedRows = await this.db
+      .insert(this.schema.tenantMappings)
+      .values({
+        externalOrgId,
+        tenantId,
+      })
+      .onConflictDoNothing({ target: this.schema.tenantMappings.externalOrgId })
+      .returning({ tenantId: this.schema.tenantMappings.tenantId });
+
+    if (insertedRows.length > 0) {
+      return;
+    }
+
+    const existingTenantId = await this.resolve(externalOrgId);
+    if (existingTenantId === tenantId) {
+      return;
+    }
+    if (existingTenantId === null) {
+      throw new TenantMappingConflictResolutionProblem(externalOrgId, tenantId);
+    }
+
+    throw new DuplicateTenantMappingProblem(externalOrgId, existingTenantId, tenantId);
   }
 
   /**

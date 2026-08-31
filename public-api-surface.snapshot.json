@@ -4347,6 +4347,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "DuplicateTenantMappingProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/DrizzleTenantMappingProblems.js",
+              "declarationKind": "class"
+            },
+            {
               "name": "removeApiKeyRotations",
               "exportKind": "named",
               "source": "./migrations/addApiKeyRotations.js",
@@ -4357,6 +4363,12 @@
               "exportKind": "named",
               "source": "./schema/index.js",
               "declarationKind": "const"
+            },
+            {
+              "name": "TenantMappingConflictResolutionProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/DrizzleTenantMappingProblems.js",
+              "declarationKind": "class"
             },
             {
               "name": "tenantMappings",

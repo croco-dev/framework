@@ -14,3 +14,10 @@ export { DrizzleSessionProvider } from "./DrizzleSessionProvider.js";
  * Drizzle 기반 테넌트 매핑 제공자 구현체입니다.
  */
 export { DrizzleTenantMappingProvider } from "./DrizzleTenantMappingProvider.js";
+/**
+ * 외부 조직의 충돌하는 tenant 재매핑을 나타내는 Problem입니다.
+ */
+export {
+  DuplicateTenantMappingProblem,
+  TenantMappingConflictResolutionProblem,
+} from "./problems/DrizzleTenantMappingProblems.js";
