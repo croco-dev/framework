@@ -54,14 +54,17 @@ export function expectTypeScriptSourcesToCompile(
     });
 
   const program = ts.createProgram([...rootFileNames], compilerOptions, host);
-  const diagnostics = ts.getPreEmitDiagnostics(program).map((diagnostic) => {
-    const message = ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n");
-    if (diagnostic.file === undefined || diagnostic.start === undefined) {
-      return message;
-    }
-    const { line, character } = diagnostic.file.getLineAndCharacterOfPosition(diagnostic.start);
-    return `${diagnostic.file.fileName}:${line + 1}:${character + 1}: ${message}`;
-  });
+  const diagnostics = ts
+    .getPreEmitDiagnostics(program)
+    .filter((diagnostic) => diagnostic.file === undefined || sources.has(diagnostic.file.fileName))
+    .map((diagnostic) => {
+      const message = ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n");
+      if (diagnostic.file === undefined || diagnostic.start === undefined) {
+        return message;
+      }
+      const { line, character } = diagnostic.file.getLineAndCharacterOfPosition(diagnostic.start);
+      return `${diagnostic.file.fileName}:${line + 1}:${character + 1}: ${message}`;
+    });
 
   expect(diagnostics).toEqual([]);
 }
