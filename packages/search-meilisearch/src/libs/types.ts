@@ -1,3 +1,5 @@
+import type { BackoffOptions } from "@croco/retry-core";
+
 /**
  * 테넌트 토큰 생성 옵션입니다.
  */
@@ -23,4 +25,5 @@ export type MeilisearchEngineOptions = {
   apiKey: string;
   tenantTokenOptions?: TenantTokenOptions;
   taskWait?: MeilisearchTaskWaitOptions;
+  retryBackoff?: BackoffOptions;
 };

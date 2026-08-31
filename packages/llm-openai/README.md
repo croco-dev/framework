@@ -47,6 +47,9 @@ const response = await model.generate({
 
 Streaming emits text deltas and a final usage chunk when OpenAI returns completed response usage.
 Abort signals are passed to the OpenAI SDK and checked while consuming the stream.
+Failures without an HTTP status, 408, 409, 429, and all 5xx responses use a bounded three-attempt policy. OpenAI
+`Retry-After` hints are honored up to the configured `retryBackoff.maxDelay`. Streaming retries stop as soon as the
+first response event arrives, so already-observed output is never replayed.
 
 ## Metering and usage
 

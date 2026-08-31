@@ -40,6 +40,7 @@
     "@croco/diagnostics-core": "workspace:*",
     "@croco/framework-context": "workspace:*",
     "@croco/problems-core": "workspace:*",
+    "@croco/retry-core": "workspace:*",
     "@croco/search-core": "workspace:*",
     "meilisearch": "^0.44.0",
     "reflect-metadata": "^0.2.2"

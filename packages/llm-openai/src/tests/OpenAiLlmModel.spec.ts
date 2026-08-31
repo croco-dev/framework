@@ -1,10 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { withSpan } from "@croco/telemetry-api";
 import { OpenAiLlmModel } from "../libs/OpenAiLlmModel";
 import {
   OpenAiAbortProblem,
   OpenAiInvalidResponseProblem,
   OpenAiMissingConfigProblem,
+  OpenAiRetryableUpstreamProblem,
+  OpenAiTerminalUpstreamProblem,
 } from "../libs/problems/OpenAiProblems";
 import type {
   OpenAiEmbeddingRequest,
@@ -21,6 +23,11 @@ import { installTestingTelemetryCapture } from "../../../testing/src/libs/teleme
 
 const MODEL_ID = "gpt-croco-test";
 const EMBEDDING_MODEL_ID = "text-embedding-croco-test";
+const TEST_RETRY_BACKOFF = {
+  delay: 0,
+  jitter: false,
+  maxDelay: 50,
+} as const;
 
 class MockOpenAiTransport implements OpenAiTransport {
   readonly responseRequests: OpenAiResponseRequest[] = [];
@@ -116,6 +123,42 @@ class FailingOpenAiTransport extends MockOpenAiTransport {
       code: "server_error",
       request_id: "req-failing",
     };
+  }
+}
+
+class RetryingOpenAiTransport extends MockOpenAiTransport {
+  responseAttempts = 0;
+  embeddingAttempts = 0;
+
+  constructor(
+    private readonly transientError: unknown,
+    private readonly failuresBeforeSuccess = 1,
+  ) {
+    super();
+  }
+
+  override async createResponse(
+    request: OpenAiResponseRequest,
+    options?: OpenAiRequestOptions,
+  ): Promise<OpenAiResponse> {
+    this.responseAttempts += 1;
+    if (this.responseAttempts <= this.failuresBeforeSuccess) {
+      throw this.transientError;
+    }
+
+    return await super.createResponse(request, options);
+  }
+
+  override async createEmbedding(
+    request: OpenAiEmbeddingRequest,
+    options?: OpenAiRequestOptions,
+  ): Promise<OpenAiEmbeddingResponse> {
+    this.embeddingAttempts += 1;
+    if (this.embeddingAttempts <= this.failuresBeforeSuccess) {
+      throw this.transientError;
+    }
+
+    return await super.createEmbedding(request, options);
   }
 }
 
@@ -491,6 +534,264 @@ describe("OpenAiLlmModel", () => {
   });
 
   it.each([
+    ["network", { code: "ECONNRESET" }],
+    ["rate limit", { status: 429 }],
+    ["upstream 5xx", { status: 503 }],
+  ])("retries %s failures for buffered response calls", async (_case, transientError) => {
+    const transport = new RetryingOpenAiTransport(transientError, 2);
+    const model = new OpenAiLlmModel({
+      modelId: MODEL_ID,
+      retryBackoff: TEST_RETRY_BACKOFF,
+      transport,
+    });
+
+    await expect(model.generate({ prompt: "retry" })).resolves.toMatchObject({
+      text: "OpenAI mock response",
+    });
+    expect(transport.responseAttempts).toBe(3);
+  });
+
+  it("waits for an accepted OpenAI retry-after hint before retrying", async () => {
+    vi.useFakeTimers();
+    try {
+      const transport = new RetryingOpenAiTransport({
+        status: 429,
+        headers: new Headers({ "retry-after": "1" }),
+      });
+      const model = new OpenAiLlmModel({
+        modelId: MODEL_ID,
+        retryBackoff: { delay: 0, jitter: false, maxDelay: 2_000 },
+        transport,
+      });
+      const result = model.generate({ prompt: "retry after" });
+
+      await vi.advanceTimersByTimeAsync(999);
+      expect(transport.responseAttempts).toBe(1);
+      await vi.advanceTimersByTimeAsync(1);
+
+      await expect(result).resolves.toMatchObject({ text: "OpenAI mock response" });
+      expect(transport.responseAttempts).toBe(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not retry when OpenAI retry-after exceeds the configured maximum", async () => {
+    const transport = new RetryingOpenAiTransport(
+      { status: 429, headers: new Headers({ "retry-after": "1" }) },
+      3,
+    );
+    const model = new OpenAiLlmModel({
+      modelId: MODEL_ID,
+      retryBackoff: { delay: 0, jitter: false, maxDelay: 500 },
+      transport,
+    });
+
+    await expect(model.generate({ prompt: "retry after too long" })).rejects.toMatchObject({
+      code: "llm-openai/rate-limited",
+    });
+    expect(transport.responseAttempts).toBe(1);
+  });
+
+  it.each([
+    ["generate", (model: OpenAiLlmModel) => model.generate({ prompt: "x" }), "responseAttempts"],
+    [
+      "generateObject",
+      (model: OpenAiLlmModel) => model.generateObject({ prompt: "x", schema: {} }),
+      "responseAttempts",
+    ],
+    [
+      "callTool",
+      (model: OpenAiLlmModel) =>
+        model.callTool({
+          prompt: "x",
+          tools: [{ name: "lookup", description: "Lookup a value", parameters: {} }],
+        }),
+      "responseAttempts",
+    ],
+    ["embed", (model: OpenAiLlmModel) => model.embed({ text: "x" }), "embeddingAttempts"],
+    [
+      "embedMany",
+      (model: OpenAiLlmModel) => model.embedMany({ texts: ["x"] }),
+      "embeddingAttempts",
+    ],
+  ] as const)("retries transient failures for %s", async (_operation, invoke, attemptsKey) => {
+    const transport = new RetryingOpenAiTransport({ status: 500 });
+    const model = new OpenAiLlmModel({
+      modelId: MODEL_ID,
+      retryBackoff: TEST_RETRY_BACKOFF,
+      transport,
+    });
+
+    await expect(invoke(model)).resolves.toBeDefined();
+    expect(transport[attemptsKey]).toBe(2);
+  });
+
+  it("attempts terminal buffered failures only once", async () => {
+    const transport = new RetryingOpenAiTransport({ status: 404 }, 3);
+    const model = new OpenAiLlmModel({ modelId: MODEL_ID, transport });
+
+    await expect(model.generate({ prompt: "terminal" })).rejects.toBeInstanceOf(
+      OpenAiTerminalUpstreamProblem,
+    );
+    expect(transport.responseAttempts).toBe(1);
+  });
+
+  it("stops buffered retries when the supplied signal aborts", async () => {
+    const controller = new AbortController();
+    let attempts = 0;
+    const transport = createStaticResponseTransport(createTextResponse("unused", MODEL_ID));
+    transport.createResponse = async () => {
+      attempts += 1;
+      controller.abort();
+      throw { status: 503 };
+    };
+    const model = new OpenAiLlmModel({ modelId: MODEL_ID, transport });
+
+    await expect(
+      model.generate({ prompt: "abort before retry", signal: controller.signal }),
+    ).rejects.toBeInstanceOf(OpenAiAbortProblem);
+    expect(attempts).toBe(1);
+  });
+
+  it.each(["setup", "first-event"] as const)(
+    "retries a transient stream %s failure before exposing an event",
+    async (failurePoint) => {
+      let attempts = 0;
+      let closedFailedIterator = 0;
+      const transport = createStaticResponseTransport(createTextResponse("unused", MODEL_ID));
+      transport.streamResponse = async () => {
+        attempts += 1;
+        if (attempts === 1) {
+          if (failurePoint === "setup") {
+            throw { status: 503 };
+          }
+
+          return streamThatFailsBeforeFirstEvent(() => {
+            closedFailedIterator += 1;
+          });
+        }
+
+        return createStream();
+      };
+      const model = new OpenAiLlmModel({
+        modelId: MODEL_ID,
+        retryBackoff: TEST_RETRY_BACKOFF,
+        transport,
+      });
+
+      await expect(collectStream(model.stream({ prompt: "retry stream" }))).resolves.toHaveLength(
+        3,
+      );
+      expect(attempts).toBe(2);
+      expect(closedFailedIterator).toBe(failurePoint === "first-event" ? 1 : 0);
+    },
+  );
+
+  it("does not replay a stream after the first response event", async () => {
+    let attempts = 0;
+    const transport = createStaticResponseTransport(createTextResponse("unused", MODEL_ID));
+    transport.streamResponse = async () => {
+      attempts += 1;
+      return streamThatFailsAfterFirstEvent();
+    };
+    const model = new OpenAiLlmModel({ modelId: MODEL_ID, transport });
+    const iterator = model.stream({ prompt: "do not replay" })[Symbol.asyncIterator]();
+
+    await expect(iterator.next()).resolves.toEqual({
+      done: false,
+      value: { delta: "visible" },
+    });
+    await expect(iterator.next()).rejects.toBeInstanceOf(OpenAiRetryableUpstreamProblem);
+    expect(attempts).toBe(1);
+  });
+
+  it("preserves a retryable first-event failure when stream cleanup also fails", async () => {
+    let attempts = 0;
+    let cleanupCalls = 0;
+    const transport = createStaticResponseTransport(createTextResponse("unused", MODEL_ID));
+    transport.streamResponse = async () => {
+      attempts += 1;
+      if (attempts === 1) {
+        return streamThatFailsBeforeFirstEvent(
+          () => {
+            cleanupCalls += 1;
+          },
+          { status: 400 },
+        );
+      }
+
+      return createStream();
+    };
+    const model = new OpenAiLlmModel({
+      modelId: MODEL_ID,
+      retryBackoff: TEST_RETRY_BACKOFF,
+      transport,
+    });
+
+    await expect(
+      collectStream(model.stream({ prompt: "retry after cleanup failure" })),
+    ).resolves.toHaveLength(3);
+    expect(attempts).toBe(2);
+    expect(cleanupCalls).toBe(1);
+  });
+
+  it("preserves a post-output stream failure when cleanup also fails", async () => {
+    let cleanupCalls = 0;
+    const transport = createStaticResponseTransport(
+      createTextResponse("unused", MODEL_ID),
+      streamThatFailsAfterFirstEvent(
+        () => {
+          cleanupCalls += 1;
+        },
+        { status: 400 },
+      ),
+    );
+    const iterator = new OpenAiLlmModel({ modelId: MODEL_ID, transport })
+      .stream({ prompt: "preserve stream failure" })
+      [Symbol.asyncIterator]();
+
+    await expect(iterator.next()).resolves.toEqual({
+      done: false,
+      value: { delta: "visible" },
+    });
+    await expect(iterator.next()).rejects.toBeInstanceOf(OpenAiRetryableUpstreamProblem);
+    expect(cleanupCalls).toBe(1);
+  });
+
+  it("forwards early stream cancellation without closing naturally completed sources twice", async () => {
+    let earlyReturnCalls = 0;
+    const earlyTransport = createStaticResponseTransport(
+      createTextResponse("unused", MODEL_ID),
+      createTrackedStream(() => {
+        earlyReturnCalls += 1;
+      }),
+    );
+    const earlyIterator = new OpenAiLlmModel({ modelId: MODEL_ID, transport: earlyTransport })
+      .stream({ prompt: "cancel early" })
+      [Symbol.asyncIterator]();
+
+    await earlyIterator.next();
+    await earlyIterator.return?.();
+    expect(earlyReturnCalls).toBe(1);
+
+    let naturalReturnCalls = 0;
+    const naturalTransport = createStaticResponseTransport(
+      createTextResponse("unused", MODEL_ID),
+      createTrackedStream(() => {
+        naturalReturnCalls += 1;
+      }),
+    );
+
+    await collectStream(
+      new OpenAiLlmModel({ modelId: MODEL_ID, transport: naturalTransport }).stream({
+        prompt: "complete naturally",
+      }),
+    );
+    expect(naturalReturnCalls).toBe(0);
+  });
+
+  it.each([
     [
       "generate",
       (model: OpenAiLlmModel, signal: AbortSignal) => model.generate({ prompt: "x", signal }),
@@ -517,7 +818,7 @@ describe("OpenAiLlmModel", () => {
     const model = new OpenAiLlmModel({ modelId: MODEL_ID, transport });
 
     const operation = capture.run(async () => await invoke(model, controller.signal));
-    await Promise.resolve();
+    await vi.waitFor(() => expect(transport.requestSignals).toContain(controller.signal));
     controller.abort();
 
     await expect(operation).rejects.toBeInstanceOf(OpenAiAbortProblem);
@@ -789,6 +1090,83 @@ async function* createIncompleteStream(): AsyncIterable<OpenAiStreamEvent> {
     response: {
       status: "incomplete",
       incomplete_details: { reason: "max_output_tokens" },
+    },
+  };
+}
+
+function streamThatFailsBeforeFirstEvent(
+  onReturn: () => void,
+  returnError?: unknown,
+): AsyncIterable<OpenAiStreamEvent> {
+  return {
+    [Symbol.asyncIterator](): AsyncIterator<OpenAiStreamEvent> {
+      return {
+        next: async () => {
+          throw { status: 503 };
+        },
+        return: async () => {
+          onReturn();
+          if (returnError !== undefined) {
+            throw returnError;
+          }
+          return { done: true, value: undefined };
+        },
+      };
+    },
+  };
+}
+
+function streamThatFailsAfterFirstEvent(
+  onReturn: () => void = () => undefined,
+  returnError?: unknown,
+): AsyncIterable<OpenAiStreamEvent> {
+  return {
+    [Symbol.asyncIterator](): AsyncIterator<OpenAiStreamEvent> {
+      let emittedVisibleEvent = false;
+      return {
+        next: async () => {
+          if (!emittedVisibleEvent) {
+            emittedVisibleEvent = true;
+            return {
+              done: false,
+              value: { type: "response.output_text.delta", delta: "visible" },
+            };
+          }
+
+          throw { status: 503 };
+        },
+        return: async () => {
+          onReturn();
+          if (returnError !== undefined) {
+            throw returnError;
+          }
+          return { done: true, value: undefined };
+        },
+      };
+    },
+  };
+}
+
+function createTrackedStream(onReturn: () => void): AsyncIterable<OpenAiStreamEvent> {
+  const events: OpenAiStreamEvent[] = [
+    { type: "response.output_text.delta", delta: "first" },
+    { type: "response.output_text.delta", delta: "second" },
+  ];
+
+  return {
+    [Symbol.asyncIterator](): AsyncIterator<OpenAiStreamEvent> {
+      let index = 0;
+      return {
+        next: async () => {
+          const value = events[index];
+          index += 1;
+          return value === undefined ? { done: true, value } : { done: false, value };
+        },
+        return: async () => {
+          onReturn();
+          return { done: true, value: undefined };
+        },
+      };
     },
   };
 }

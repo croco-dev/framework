@@ -3836,7 +3836,7 @@
       "sources": [
         {
           "file": "packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts",
-          "line": 94,
+          "line": 251,
           "column": 13,
           "kind": "problem-factory"
         }
@@ -3866,8 +3866,8 @@
       "sources": [
         {
           "file": "packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts",
-          "line": 348,
-          "column": 15,
+          "line": 539,
+          "column": 19,
           "kind": "problem-factory"
         }
       ]
@@ -3896,7 +3896,7 @@
       "sources": [
         {
           "file": "packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts",
-          "line": 438,
+          "line": 645,
           "column": 15,
           "kind": "problem-factory"
         }
@@ -16796,7 +16796,7 @@
       "sources": [
         {
           "file": "packages/storage-cloudflare/src/libs/CloudflareImagesDiagnosticsProvider.ts",
-          "line": 37,
+          "line": 46,
           "column": 5,
           "kind": "problem-constructor"
         }
@@ -16826,7 +16826,7 @@
       "sources": [
         {
           "file": "packages/storage-cloudflare/src/libs/CloudflareImagesDiagnosticsProvider.ts",
-          "line": 70,
+          "line": 79,
           "column": 5,
           "kind": "problem-constructor"
         }
@@ -16856,7 +16856,7 @@
       "sources": [
         {
           "file": "packages/storage-cloudflare/src/libs/CloudflareImagesDiagnosticsProvider.ts",
-          "line": 86,
+          "line": 95,
           "column": 5,
           "kind": "problem-constructor"
         }
@@ -16886,7 +16886,7 @@
       "sources": [
         {
           "file": "packages/storage-cloudflare/src/libs/CloudflareImagesDiagnosticsProvider.ts",
-          "line": 57,
+          "line": 66,
           "column": 5,
           "kind": "problem-constructor"
         }
@@ -17066,7 +17066,7 @@
       "sources": [
         {
           "file": "packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts",
-          "line": 383,
+          "line": 590,
           "column": 15,
           "kind": "problem-factory"
         }

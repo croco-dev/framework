@@ -45,6 +45,12 @@ title: "OpenAiLlmModelConfig"
 
 ---
 
+### retryBackoff?
+
+> `readonly` `optional` **retryBackoff?**: [`BackoffOptions`](/api/retry-core/src/interfaces/backoffoptions/)
+
+---
+
 ### structuredOutputName?
 
 > `readonly` `optional` **structuredOutputName?**: `string`

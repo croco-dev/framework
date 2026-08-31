@@ -100,6 +100,10 @@ describe("Meilisearch provider conformance", () => {
   const options: MeilisearchEngineOptions = {
     host: "http://localhost:7700",
     apiKey: "masterKey",
+    retryBackoff: {
+      delay: 0,
+      jitter: false,
+    },
     tenantTokenOptions: {
       apiKeyUid: "uid",
     },
@@ -206,6 +210,7 @@ describe("Meilisearch provider conformance", () => {
       );
 
       const search = engine.search("index", { query: "test" }, { signal: controller.signal });
+      await vi.waitFor(() => expect(mocks.indexMock.search).toHaveBeenCalledTimes(1));
       controller.abort(reason);
 
       await expect(search).rejects.toMatchObject({
@@ -567,6 +572,160 @@ describe("Meilisearch provider conformance", () => {
   });
 
   describe("upstream failure normalization", () => {
+    it("retries bounded 429 failures for replay-safe searches", async () => {
+      vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-1");
+      mocks.indexMock.search.mockRejectedValue(
+        createUpstreamError("too many requests", { code: "rate_limited", status: 429 }),
+      );
+
+      await expectProblem(
+        () => engine.search("products", { query: "croco" }),
+        MeilisearchRetryableUpstreamProblem,
+      );
+
+      expect(mocks.indexMock.search).toHaveBeenCalledTimes(3);
+    });
+
+    it("retries network failures for deterministic document upserts", async () => {
+      vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-1");
+      mocks.indexMock.addDocuments
+        .mockRejectedValueOnce(createUpstreamError("connection reset", { code: "ECONNRESET" }))
+        .mockResolvedValueOnce({ taskUid: 1 });
+
+      await engine.indexDocument("products", { id: "1", tenantId: "tenant-1" });
+
+      expect(mocks.indexMock.addDocuments).toHaveBeenCalledTimes(2);
+      expect(mocks.clientMock.waitForTask).toHaveBeenCalledOnce();
+    });
+
+    it("retries deterministic document deletes and settings updates", async () => {
+      vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-1");
+      const transientError = createUpstreamError("connection reset", { code: "ECONNRESET" });
+      mocks.indexMock.deleteDocuments
+        .mockRejectedValueOnce(transientError)
+        .mockResolvedValueOnce({ taskUid: 2 });
+
+      await engine.deleteDocument("products", "1");
+
+      mocks.indexMock.updateSettings
+        .mockRejectedValueOnce(transientError)
+        .mockResolvedValueOnce({ taskUid: 3 });
+
+      await engine.createIndex({ name: "products" });
+
+      expect(mocks.indexMock.deleteDocuments).toHaveBeenCalledTimes(2);
+      expect(mocks.clientMock.createIndex).toHaveBeenCalledOnce();
+      expect(mocks.indexMock.updateSettings).toHaveBeenCalledTimes(2);
+    });
+
+    it("retries transient 5xx failures while polling tasks", async () => {
+      vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-1");
+      mocks.clientMock.waitForTask
+        .mockRejectedValueOnce(
+          createUpstreamError("temporarily unavailable", { code: "server_error", status: 503 }),
+        )
+        .mockResolvedValueOnce({ status: "succeeded" });
+
+      await engine.deleteDocument("products", "1");
+
+      expect(mocks.clientMock.waitForTask).toHaveBeenCalledTimes(2);
+    });
+
+    it("does not restart the configured task wait after its timeout expires", async () => {
+      vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-1");
+      mocks.clientMock.waitForTask.mockRejectedValue(
+        createUpstreamError("task wait timed out", { name: "MeiliSearchTimeOutError" }),
+      );
+
+      await expectProblem(
+        () => engine.deleteDocument("products", "1"),
+        MeilisearchRetryableUpstreamProblem,
+      );
+
+      expect(mocks.clientMock.waitForTask).toHaveBeenCalledOnce();
+    });
+
+    it("attempts terminal upstream failures only once", async () => {
+      vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-1");
+      mocks.indexMock.search.mockRejectedValue(
+        createUpstreamError("invalid key", { code: "invalid_api_key", status: 401 }),
+      );
+
+      await expectProblem(
+        () => engine.search("products", { query: "croco" }),
+        MeilisearchTerminalUpstreamProblem,
+      );
+
+      expect(mocks.indexMock.search).toHaveBeenCalledOnce();
+    });
+
+    it("does not retry after the caller aborts a replay-safe operation", async () => {
+      vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-1");
+      const controller = new AbortController();
+      const reason = new Error("request closed");
+      mocks.indexMock.search.mockImplementationOnce(async () => {
+        controller.abort(reason);
+        throw createUpstreamError("temporarily unavailable", { status: 503 });
+      });
+
+      await expect(
+        engine.search("products", { query: "croco" }, { signal: controller.signal }),
+      ).rejects.toMatchObject({
+        code: "search-core/operation-aborted",
+        cause: reason,
+        extensions: { operation: "search" },
+      });
+      expect(mocks.indexMock.search).toHaveBeenCalledOnce();
+    });
+
+    it("does not start task polling after a completed write observes an abort", async () => {
+      vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-1");
+      const controller = new AbortController();
+      const reason = new Error("request closed");
+      mocks.indexMock.addDocuments.mockImplementationOnce(async () => {
+        controller.abort(reason);
+        return { taskUid: 1 };
+      });
+
+      await expect(
+        engine.indexDocument(
+          "products",
+          { id: "1", tenantId: "tenant-1" },
+          { signal: controller.signal },
+        ),
+      ).rejects.toMatchObject({
+        code: "search-core/operation-aborted",
+        cause: reason,
+        extensions: { operation: "indexDocument" },
+      });
+      expect(mocks.clientMock.waitForTask).not.toHaveBeenCalled();
+    });
+
+    it("does not retry operations outside the replay-safe allowlist", async () => {
+      vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-1");
+      const transientError = createUpstreamError("temporarily unavailable", { status: 503 });
+      mocks.clientMock.createIndex.mockRejectedValue(transientError);
+      mocks.clientMock.deleteIndex.mockRejectedValue(transientError);
+      mocks.clientMock.generateTenantToken.mockRejectedValue(transientError);
+
+      await expectProblem(
+        () => engine.createIndex({ name: "products" }),
+        MeilisearchRetryableUpstreamProblem,
+      );
+      await expectProblem(
+        () => engine.deleteIndex("products"),
+        MeilisearchRetryableUpstreamProblem,
+      );
+      await expectProblem(
+        () => engine.generateTenantToken("tenant-1"),
+        MeilisearchRetryableUpstreamProblem,
+      );
+
+      expect(mocks.clientMock.createIndex).toHaveBeenCalledOnce();
+      expect(mocks.clientMock.deleteIndex).toHaveBeenCalledOnce();
+      expect(mocks.clientMock.generateTenantToken).toHaveBeenCalledOnce();
+    });
+
     it("normalizes retryable upstream failures and redacts sensitive error details", async () => {
       vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-1");
       mocks.indexMock.search.mockRejectedValue(

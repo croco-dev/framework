@@ -1,11 +1,14 @@
 import { LlmModel } from "@croco/llm-core";
-import { recordEvent, withSpan } from "@croco/telemetry-api";
+import { ExponentialBackoff, RetryTemplate } from "@croco/retry-core";
+import { recordError, recordEvent, withSpan } from "@croco/telemetry-api";
 import { createOpenAiSdkTransport } from "./OpenAiSdkTransport";
 import {
   normalizeOpenAiError,
   OpenAiAbortProblem,
   OpenAiInvalidResponseProblem,
   OpenAiMissingConfigProblem,
+  OpenAiRateLimitProblem,
+  OpenAiRetryableUpstreamProblem,
 } from "./problems/OpenAiProblems";
 import type {
   EmbedManyParams,
@@ -23,6 +26,7 @@ import type {
   ToolCallParams,
   ToolCallResult,
 } from "@croco/llm-core";
+import type { BackoffOptions, BackoffPolicy, RetryPolicy } from "@croco/retry-core";
 import type {
   OpenAiEmbeddingResponse,
   OpenAiInputMessage,
@@ -39,6 +43,47 @@ import { toOpenAiFunctionTool } from "./types";
 const DEFAULT_EMBEDDING_MODEL_ID = "text-embedding-3-small";
 const DEFAULT_API_KEY_ENV_NAME = "OPENAI_API_KEY";
 const DEFAULT_STRUCTURED_OUTPUT_NAME = "croco_response";
+const DEFAULT_RETRY_MAX_DELAY_MS = 30_000;
+
+type RetryDelayState = {
+  delayMs?: number;
+};
+
+class RetryAfterBackoff implements BackoffPolicy {
+  readonly supportsAbortSignal = true;
+
+  private readonly baseBackoff: ExponentialBackoff;
+  private readonly delays = new Map<number, number>();
+
+  constructor(
+    options: BackoffOptions | undefined,
+    private readonly retryDelay: RetryDelayState,
+  ) {
+    this.baseBackoff = new ExponentialBackoff(options);
+  }
+
+  getDelay(attempt: number): number {
+    const delay = Math.max(this.baseBackoff.getDelay(attempt), this.retryDelay.delayMs ?? 0);
+    this.retryDelay.delayMs = undefined;
+    this.delays.set(attempt, delay);
+    return delay;
+  }
+
+  async wait(attempt: number, signal?: AbortSignal): Promise<void> {
+    await waitForRetryDelay(this.delays.get(attempt) ?? this.getDelay(attempt), signal);
+  }
+
+  reset(): void {
+    this.baseBackoff.reset();
+    this.delays.clear();
+    this.retryDelay.delayMs = undefined;
+  }
+}
+
+type OpenAiStartedStream = {
+  readonly firstResult: IteratorResult<OpenAiStreamEvent>;
+  readonly iterator: AsyncIterator<OpenAiStreamEvent>;
+};
 
 export class OpenAiLlmModel extends LlmModel {
   readonly capabilities: LlmCapabilities = {
@@ -51,6 +96,7 @@ export class OpenAiLlmModel extends LlmModel {
   readonly modelId: string;
 
   private readonly embeddingModelId: string;
+  private readonly retryBackoff: BackoffOptions | undefined;
   private readonly structuredOutputName: string;
   private readonly transport: OpenAiTransport;
 
@@ -59,6 +105,7 @@ export class OpenAiLlmModel extends LlmModel {
 
     this.modelId = config.modelId;
     this.embeddingModelId = config.embeddingModelId ?? DEFAULT_EMBEDDING_MODEL_ID;
+    this.retryBackoff = config.retryBackoff;
     this.structuredOutputName = config.structuredOutputName ?? DEFAULT_STRUCTURED_OUTPUT_NAME;
     this.transport =
       config.transport ??
@@ -98,15 +145,9 @@ export class OpenAiLlmModel extends LlmModel {
       throw new OpenAiAbortProblem("stream");
     }
 
-    const stream = await this.withOpenAiSpan("llm.openai.stream", model, "stream", async () => {
-      try {
-        return await this.transport.streamResponse(this.createResponseRequest(model, params), {
-          signal: params.signal,
-        });
-      } catch (error) {
-        throw normalizeOpenAiError(error, "stream");
-      }
-    });
+    const stream = await this.withOpenAiSpan("llm.openai.stream", model, "stream", async () =>
+      this.startStream(this.createResponseRequest(model, params), params.signal),
+    );
 
     try {
       for await (const event of stream) {
@@ -283,26 +324,26 @@ export class OpenAiLlmModel extends LlmModel {
     request: OpenAiResponseRequest,
     signal?: AbortSignal,
   ): Promise<OpenAiResponse> {
-    this.assertNotAborted(signal, operation);
+    return await this.executeWithRetry(operation, signal, async () => {
+      try {
+        const response = await this.transport.createResponse(
+          request,
+          signal ? { signal } : undefined,
+        );
+        this.assertNotAborted(signal, operation);
+        if (response.error) {
+          throw new OpenAiInvalidResponseProblem(operation, "response contained an error payload");
+        }
 
-    try {
-      const response = await this.transport.createResponse(
-        request,
-        signal ? { signal } : undefined,
-      );
-      this.assertNotAborted(signal, operation);
-      if (response.error) {
-        throw new OpenAiInvalidResponseProblem(operation, "response contained an error payload");
+        if (response.status === "incomplete") {
+          throw new OpenAiInvalidResponseProblem(operation, incompleteResponseReason(response));
+        }
+
+        return response;
+      } catch (error) {
+        throw normalizeOpenAiError(error, operation);
       }
-
-      if (response.status === "incomplete") {
-        throw new OpenAiInvalidResponseProblem(operation, incompleteResponseReason(response));
-      }
-
-      return response;
-    } catch (error) {
-      throw normalizeOpenAiError(error, operation);
-    }
+    });
   }
 
   private async callEmbeddingApi(
@@ -310,17 +351,74 @@ export class OpenAiLlmModel extends LlmModel {
     request: Parameters<OpenAiTransport["createEmbedding"]>[0],
     signal?: AbortSignal,
   ): Promise<OpenAiEmbeddingResponse> {
+    return await this.executeWithRetry(operation, signal, async () => {
+      try {
+        const response = await this.transport.createEmbedding(
+          request,
+          signal ? { signal } : undefined,
+        );
+        this.assertNotAborted(signal, operation);
+        return response;
+      } catch (error) {
+        throw normalizeOpenAiError(error, operation);
+      }
+    });
+  }
+
+  private async startStream(
+    request: OpenAiResponseRequest,
+    signal?: AbortSignal,
+  ): Promise<AsyncIterable<OpenAiStreamEvent>> {
+    const started = await this.executeWithRetry("stream", signal, async () => {
+      try {
+        const stream = await this.transport.streamResponse(
+          request,
+          signal ? { signal } : undefined,
+        );
+        const iterator = stream[Symbol.asyncIterator]();
+        let firstResult: IteratorResult<OpenAiStreamEvent>;
+        try {
+          firstResult = await iterator.next();
+          this.assertNotAborted(signal, "stream");
+        } catch (error) {
+          await closeIteratorPreservingActiveError(iterator);
+          throw error;
+        }
+        return { firstResult, iterator };
+      } catch (error) {
+        throw normalizeOpenAiError(error, "stream");
+      }
+    });
+
+    return continueStartedStream(started);
+  }
+
+  private async executeWithRetry<T>(
+    operation: string,
+    signal: AbortSignal | undefined,
+    callback: () => Promise<T>,
+  ): Promise<T> {
     this.assertNotAborted(signal, operation);
+    const retryDelay: RetryDelayState = {};
+    const retryMaxDelay = this.retryBackoff?.maxDelay ?? DEFAULT_RETRY_MAX_DELAY_MS;
+    const retryTemplate = new RetryTemplate({
+      maxAttempts: 3,
+      backoffPolicy: new RetryAfterBackoff(this.retryBackoff, retryDelay),
+      retryPolicy: createOpenAiRetryPolicy(retryMaxDelay, retryDelay),
+      ...(signal ? { signal } : {}),
+    });
 
     try {
-      const response = await this.transport.createEmbedding(
-        request,
-        signal ? { signal } : undefined,
-      );
-      this.assertNotAborted(signal, operation);
-      return response;
+      return await retryTemplate.execute(async () => {
+        this.assertNotAborted(signal, operation);
+        return await callback();
+      });
     } catch (error) {
-      throw normalizeOpenAiError(error, operation);
+      if (signal?.aborted) {
+        throw new OpenAiAbortProblem(operation);
+      }
+
+      throw error;
     }
   }
 
@@ -395,6 +493,107 @@ export class OpenAiLlmModel extends LlmModel {
       throw new OpenAiAbortProblem(operation);
     }
   }
+}
+
+async function* continueStartedStream(
+  started: OpenAiStartedStream,
+): AsyncIterable<OpenAiStreamEvent> {
+  let completed = started.firstResult.done;
+  let hasIterationError = false;
+
+  try {
+    if (!started.firstResult.done) {
+      yield started.firstResult.value;
+    }
+
+    while (!completed) {
+      const result = await started.iterator.next();
+      if (result.done) {
+        completed = true;
+        return;
+      }
+
+      yield result.value;
+    }
+  } catch (error) {
+    hasIterationError = true;
+    throw error;
+  } finally {
+    if (!completed) {
+      if (hasIterationError) {
+        await closeIteratorPreservingActiveError(started.iterator);
+      } else {
+        await started.iterator.return?.();
+      }
+    }
+  }
+}
+
+async function closeIteratorPreservingActiveError(
+  iterator: AsyncIterator<OpenAiStreamEvent>,
+): Promise<void> {
+  try {
+    await iterator.return?.();
+  } catch (cleanupError) {
+    recordError(cleanupError);
+  }
+}
+
+function createOpenAiRetryPolicy(maxDelayMs: number, retryDelay: RetryDelayState): RetryPolicy {
+  return {
+    shouldRetry(error: unknown, attempt: number, maxAttempts: number): boolean {
+      retryDelay.delayMs = undefined;
+      if (attempt >= maxAttempts) {
+        return false;
+      }
+
+      if (error instanceof OpenAiRateLimitProblem) {
+        const retryAfterMs = readRetryAfterMilliseconds(error);
+        if (retryAfterMs !== undefined) {
+          if (retryAfterMs > maxDelayMs) {
+            return false;
+          }
+          retryDelay.delayMs = retryAfterMs;
+        }
+        return true;
+      }
+
+      return error instanceof OpenAiRetryableUpstreamProblem;
+    },
+  };
+}
+
+function readRetryAfterMilliseconds(problem: OpenAiRateLimitProblem): number | undefined {
+  const retryAfter = problem.extensions?.retryAfter;
+  return typeof retryAfter === "number" && Number.isFinite(retryAfter) && retryAfter >= 0
+    ? retryAfter * 1000
+    : undefined;
+}
+
+async function waitForRetryDelay(delayMs: number, signal?: AbortSignal): Promise<void> {
+  if (delayMs <= 0) {
+    return;
+  }
+  if (signal?.aborted) {
+    throw signal.reason;
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, delayMs);
+    const onAbort = (): void => {
+      clearTimeout(timeout);
+      signal?.removeEventListener("abort", onAbort);
+      reject(signal?.reason);
+    };
+
+    signal?.addEventListener("abort", onAbort, { once: true });
+    if (signal?.aborted) {
+      onAbort();
+    }
+  });
 }
 
 function resolveApiKey(config: OpenAiLlmModelConfig): string {

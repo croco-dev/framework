@@ -1,4 +1,5 @@
 import type { ToolDefinition } from "@croco/llm-core";
+import type { BackoffOptions } from "@croco/retry-core";
 
 export type OpenAiEnvironment = Record<string, string | undefined>;
 
@@ -140,6 +141,7 @@ export type OpenAiLlmModelConfig = {
   readonly embeddingModelId?: string;
   readonly structuredOutputName?: string;
   readonly transport?: OpenAiTransport;
+  readonly retryBackoff?: BackoffOptions;
 };
 
 export function toOpenAiFunctionTool(tool: ToolDefinition): OpenAiFunctionTool {

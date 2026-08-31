@@ -35,6 +35,7 @@
     "@croco/diagnostics-core": "workspace:*",
     "@croco/framework-context": "workspace:*",
     "@croco/problems-core": "workspace:*",
+    "@croco/retry-core": "workspace:*",
     "@croco/storage-core": "workspace:*"
   },
   "devDependencies": {

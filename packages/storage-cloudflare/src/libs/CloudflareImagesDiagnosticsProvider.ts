@@ -8,6 +8,7 @@ export type CloudflareImagesErrorContext = {
   readonly key?: string;
   readonly status?: number;
   readonly upstreamCode?: string;
+  readonly retryAfter?: number;
   readonly retryable?: boolean;
 };
 
@@ -28,6 +29,14 @@ export type CloudflareImagesDiagnosticsOptions = {
 };
 
 export type CloudflareImagesConfigKey = "accountHash" | "accountId" | "apiToken";
+
+const RETRYABLE_UPSTREAM_CODES = new Set([
+  "ECONNRESET",
+  "ETIMEDOUT",
+  "UND_ERR_BODY_TIMEOUT",
+  "UND_ERR_CONNECT_TIMEOUT",
+  "UND_ERR_SOCKET",
+]);
 
 /**
  * Problem raised when Cloudflare Images storage is used without a required configuration value.
@@ -246,6 +255,7 @@ export function createCloudflareImagesResponseProblem(options: {
   readonly key?: string;
   readonly status?: number;
   readonly upstreamCode?: string;
+  readonly retryAfter?: number;
   readonly detail?: string;
 }): Problem {
   const context: CloudflareImagesErrorContext = {
@@ -254,6 +264,7 @@ export function createCloudflareImagesResponseProblem(options: {
     ...(options.key !== undefined && { key: options.key }),
     ...(options.status !== undefined && { status: options.status }),
     ...(options.upstreamCode !== undefined && { upstreamCode: options.upstreamCode }),
+    ...(options.retryAfter !== undefined && { retryAfter: options.retryAfter }),
   };
 
   if (isValidationError(context)) {
@@ -277,11 +288,20 @@ function createCloudflareImagesErrorContext(
     readonly key?: string;
     readonly status?: number;
     readonly upstreamCode?: string;
+    readonly retryAfter?: number;
   },
 ): CloudflareImagesErrorContext {
   const record = asRecord(error);
+  const cause = asRecord(record?.cause);
+  const causeCode = firstString(cause?.code);
   const status = firstNumber(options.status, record?.status, record?.statusCode, record?.http_code);
-  const upstreamCode = firstString(options.upstreamCode, record?.code, record?.name);
+  const upstreamCode = firstString(
+    options.upstreamCode,
+    causeCode !== undefined && RETRYABLE_UPSTREAM_CODES.has(causeCode) ? causeCode : undefined,
+    record?.code,
+    causeCode,
+    record?.name,
+  );
 
   return {
     provider: "cloudflare-images",
@@ -289,6 +309,7 @@ function createCloudflareImagesErrorContext(
     ...(options.key !== undefined && { key: options.key }),
     ...(status !== undefined && { status }),
     ...(upstreamCode !== undefined && { upstreamCode }),
+    ...(options.retryAfter !== undefined && { retryAfter: options.retryAfter }),
   };
 }
 
@@ -309,9 +330,7 @@ function isRetryableUpstreamError(context: CloudflareImagesErrorContext): boolea
     context.status === 425 ||
     context.status === 429 ||
     (context.status !== undefined && context.status >= 500) ||
-    context.upstreamCode === "ECONNRESET" ||
-    context.upstreamCode === "ETIMEDOUT" ||
-    context.upstreamCode === "UND_ERR_CONNECT_TIMEOUT"
+    (context.upstreamCode !== undefined && RETRYABLE_UPSTREAM_CODES.has(context.upstreamCode))
   );
 }
 
@@ -324,6 +343,7 @@ function toCloudflareImagesExtensions(
     ...(context.key !== undefined && { key: context.key }),
     ...(context.status !== undefined && { upstreamStatus: context.status }),
     ...(context.upstreamCode !== undefined && { upstreamCode: context.upstreamCode }),
+    ...(context.retryAfter !== undefined && { retryAfter: context.retryAfter }),
     ...(context.retryable !== undefined && { retryable: context.retryable }),
   };
 }

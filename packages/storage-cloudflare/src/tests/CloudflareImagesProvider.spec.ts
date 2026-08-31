@@ -30,6 +30,11 @@ describe("CloudflareImagesProvider", () => {
     signingKey: "test-signing-key",
     accountHash: "test-account-hash",
     defaultVariant: "public",
+    retryBackoff: {
+      delay: 0,
+      jitter: false,
+      maxDelay: 50,
+    },
   };
 
   const mockOptionsWithCustomDomain = {
@@ -172,6 +177,304 @@ describe("CloudflareImagesProvider", () => {
         code: "STORAGE_OPERATION_ABORTED",
       });
       expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it("does not start another management request after an in-flight abort", async () => {
+      const controller = new AbortController();
+      const reason = new Error("metadata request cancelled");
+      mockFetch.mockImplementationOnce(async () => {
+        controller.abort(reason);
+        throw Object.assign(new Error("connection reset"), { code: "ECONNRESET" });
+      });
+
+      await expect(
+        provider.getMetadata("test-image-id", { signal: controller.signal }),
+      ).rejects.toMatchObject({
+        cause: reason,
+        code: "STORAGE_OPERATION_ABORTED",
+      });
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("management request retries", () => {
+    it.each([
+      ["429 response", () => new Response("rate limited", { status: 429 })],
+      ["5xx response", () => new Response("unavailable", { status: 503 })],
+      [
+        "network failure",
+        () => Promise.reject(Object.assign(new Error("timed out"), { code: "ETIMEDOUT" })),
+      ],
+    ])("retries a transient %s", async (_label, createFirstResult) => {
+      const uploaded = "2026-01-01T00:00:00.000Z";
+      mockFetch.mockImplementationOnce(createFirstResult).mockResolvedValueOnce(
+        Response.json({
+          success: true,
+          result: { uploaded, size: 2048 },
+          errors: [],
+        }),
+      );
+
+      let failure: unknown;
+      let metadata: Awaited<ReturnType<CloudflareImagesProvider["getMetadata"]>> | undefined;
+      try {
+        metadata = await provider.getMetadata("test-image-id");
+      } catch (error) {
+        failure = error;
+      }
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(failure).toBeUndefined();
+      expect(metadata).toEqual({ size: 2048, lastModified: new Date(uploaded) });
+    });
+
+    it("attempts a terminal management failure only once", async () => {
+      mockFetch.mockResolvedValue(new Response("unauthorized", { status: 401 }));
+
+      await expect(provider.getMetadata("test-image-id")).rejects.toMatchObject({
+        code: "storage-cloudflare/validation-failed",
+      });
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it("stops after the bounded number of transient attempts", async () => {
+      mockFetch.mockImplementation(async () => new Response("unavailable", { status: 503 }));
+
+      await expect(provider.delete("test-image-id")).rejects.toMatchObject({
+        code: "storage-cloudflare/retryable-upstream",
+      });
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+    });
+
+    it("waits for an accepted Cloudflare retry-after hint before retrying", async () => {
+      vi.useFakeTimers();
+      try {
+        const retryAfterProvider = new CloudflareImagesProvider({
+          ...mockOptions,
+          retryBackoff: { delay: 0, jitter: false, maxDelay: 2_000 },
+        });
+        const uploaded = "2026-01-01T00:00:00.000Z";
+        mockFetch
+          .mockResolvedValueOnce(
+            new Response("rate limited", {
+              status: 429,
+              headers: { "retry-after": "1" },
+            }),
+          )
+          .mockResolvedValueOnce(
+            Response.json({ success: true, result: { uploaded, size: 2048 }, errors: [] }),
+          );
+        const result = retryAfterProvider.getMetadata("test-image-id");
+
+        await vi.advanceTimersByTimeAsync(999);
+        expect(mockFetch).toHaveBeenCalledTimes(1);
+        await vi.advanceTimersByTimeAsync(1);
+
+        await expect(result).resolves.toEqual({
+          size: 2048,
+          lastModified: new Date(uploaded),
+        });
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it.each([
+      ["an Error", new Error("retry wait cancelled")],
+      ["a non-Error", { source: "request-context" }],
+    ])("normalizes %s abort reason while waiting to retry", async (_label, reason) => {
+      const controller = new AbortController();
+      const retryingProvider = new CloudflareImagesProvider({
+        ...mockOptions,
+        retryBackoff: { delay: 60_000, jitter: false, maxDelay: 60_000 },
+      });
+      mockFetch.mockResolvedValue(new Response("unavailable", { status: 503 }));
+
+      const result = retryingProvider.getMetadata("test-image-id", { signal: controller.signal });
+      await vi.waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
+      controller.abort(reason);
+      const failure = await result.catch((error: unknown) => error);
+      const abortProblem = failure as StorageOperationAbortedProblem;
+
+      expect(abortProblem).toBeInstanceOf(StorageOperationAbortedProblem);
+      expect(abortProblem).toMatchObject({
+        code: "STORAGE_OPERATION_ABORTED",
+        extensions: { key: "test-image-id", operation: "getMetadata" },
+      });
+      if (reason instanceof Error) {
+        expect(abortProblem.cause).toBe(reason);
+      } else {
+        expect(abortProblem.cause).toBeInstanceOf(Error);
+        expect(Reflect.get(abortProblem.cause as Error, "cause")).toBe(reason);
+      }
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not retry when Cloudflare retry-after exceeds the configured maximum", async () => {
+      mockFetch.mockResolvedValue(
+        new Response("rate limited", {
+          status: 429,
+          headers: { "retry-after": "1" },
+        }),
+      );
+
+      await expect(provider.delete("test-image-id")).rejects.toMatchObject({
+        code: "storage-cloudflare/retryable-upstream",
+        extensions: { retryAfter: 1 },
+      });
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([
+      ["delete", () => provider.delete("test-image-id")],
+      ["metadata", () => provider.getMetadata("test-image-id")],
+    ])("normalizes a malformed %s response envelope", async (_operation, invoke) => {
+      mockFetch.mockResolvedValue(Response.json({ success: false }));
+
+      await expect(invoke()).rejects.toMatchObject({
+        code: "storage-cloudflare/terminal-upstream",
+        extensions: { upstreamCode: "invalid-response" },
+      });
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([
+      ["missing", { size: 2048 }],
+      ["invalid", { size: 2048, uploaded: "not-a-timestamp" }],
+    ])("rejects a metadata response with a %s uploaded timestamp", async (_label, result) => {
+      mockFetch.mockResolvedValue(Response.json({ success: true, errors: [], result }));
+
+      await expect(provider.getMetadata("test-image-id")).rejects.toMatchObject({
+        code: "storage-cloudflare/terminal-upstream",
+        extensions: {
+          operation: "metadata",
+          upstreamCode: "invalid-response",
+        },
+      });
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it("retries a transient metadata body-read failure", async () => {
+      const uploaded = "2026-01-01T00:00:00.000Z";
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => {
+            throw Object.assign(new Error("connection reset"), { code: "ECONNRESET" });
+          },
+        })
+        .mockResolvedValueOnce(
+          Response.json({
+            success: true,
+            result: { uploaded, size: 2048 },
+            errors: [],
+          }),
+        );
+
+      await expect(provider.getMetadata("test-image-id")).resolves.toEqual({
+        size: 2048,
+        lastModified: new Date(uploaded),
+      });
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it("types an exhausted delete body-read failure after three attempts", async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => {
+          throw Object.assign(new Error("connection reset"), { code: "ECONNRESET" });
+        },
+      });
+
+      await expect(provider.delete("test-image-id")).rejects.toMatchObject({
+        code: "storage-cloudflare/retryable-upstream",
+        extensions: {
+          key: "test-image-id",
+          operation: "delete",
+          retryable: true,
+          upstreamCode: "ECONNRESET",
+        },
+      });
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+    });
+
+    it("preserves HTTP classification when reading an error body fails", async () => {
+      mockFetch.mockResolvedValue({
+        headers: new Headers(),
+        ok: false,
+        status: 503,
+        text: async () => {
+          throw Object.assign(new Error("connection reset"), { code: "ECONNRESET" });
+        },
+      });
+
+      await expect(provider.getMetadata("test-image-id")).rejects.toMatchObject({
+        code: "storage-cloudflare/retryable-upstream",
+        extensions: {
+          operation: "metadata",
+          upstreamStatus: 503,
+        },
+      });
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+    });
+
+    it("retries an Undici socket failure carried by a TypeError cause", async () => {
+      const uploaded = "2026-01-01T00:00:00.000Z";
+      mockFetch
+        .mockRejectedValueOnce(
+          Object.assign(new TypeError("fetch failed"), {
+            cause: { code: "UND_ERR_SOCKET" },
+          }),
+        )
+        .mockResolvedValueOnce(
+          Response.json({
+            success: true,
+            result: { uploaded, size: 2048 },
+            errors: [],
+          }),
+        );
+
+      await expect(provider.getMetadata("test-image-id")).resolves.toEqual({
+        size: 2048,
+        lastModified: new Date(uploaded),
+      });
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it("exhausts retries for an Undici body timeout carried by a TypeError cause", async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => {
+          throw Object.assign(new TypeError("terminated"), {
+            cause: { code: "UND_ERR_BODY_TIMEOUT" },
+          });
+        },
+      });
+
+      await expect(provider.delete("test-image-id")).rejects.toMatchObject({
+        code: "storage-cloudflare/retryable-upstream",
+        extensions: {
+          operation: "delete",
+          retryable: true,
+          upstreamCode: "UND_ERR_BODY_TIMEOUT",
+        },
+      });
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+    });
+
+    it("does not retry an unrelated TypeError", async () => {
+      mockFetch.mockRejectedValue(new TypeError("invalid fetch input"));
+
+      await expect(provider.getMetadata("test-image-id")).rejects.toMatchObject({
+        code: "storage-cloudflare/terminal-upstream",
+        extensions: {
+          operation: "metadata",
+          retryable: false,
+          upstreamCode: "TypeError",
+        },
+      });
+      expect(mockFetch).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -451,10 +754,7 @@ describe("CloudflareImagesProvider", () => {
     });
 
     it("should throw FileNotFoundProblem when image not found (404)", async () => {
-      const mockResponse = {
-        ok: false,
-        status: 404,
-      };
+      const mockResponse = new Response(null, { status: 404 });
 
       mockFetch.mockResolvedValueOnce(mockResponse);
 
@@ -462,12 +762,12 @@ describe("CloudflareImagesProvider", () => {
     });
 
     it.each([
-      [500, "storage-cloudflare/retryable-upstream", true],
-      [400, "storage-cloudflare/validation-failed", undefined],
+      [500, "storage-cloudflare/retryable-upstream", true, 3],
+      [400, "storage-cloudflare/validation-failed", undefined, 1],
     ])(
       "should preserve the provider Problem for a %s blob response",
-      async (status, code, retryable) => {
-        mockFetch.mockResolvedValueOnce({ ok: false, status });
+      async (status, code, retryable, expectedAttempts) => {
+        mockFetch.mockResolvedValue(new Response(null, { status }));
 
         const request = provider.get("test-image-id");
         await expect(request).rejects.toThrow();
@@ -479,20 +779,22 @@ describe("CloudflareImagesProvider", () => {
             ...(retryable !== undefined && { retryable }),
           },
         });
+        expect(mockFetch).toHaveBeenCalledTimes(expectedAttempts);
       },
     );
 
     it("should normalize a blob body read failure into a stable provider Problem", async () => {
-      mockFetch.mockResolvedValueOnce(
-        new Response(
-          new ReadableStream<Uint8Array>({
-            pull(controller) {
-              controller.error(
-                Object.assign(new Error("connection reset"), { code: "ECONNRESET" }),
-              );
-            },
-          }),
-        ),
+      mockFetch.mockImplementation(
+        async () =>
+          new Response(
+            new ReadableStream<Uint8Array>({
+              pull(controller) {
+                controller.error(
+                  Object.assign(new Error("connection reset"), { code: "ECONNRESET" }),
+                );
+              },
+            }),
+          ),
       );
 
       const request = provider.get("test-image-id");
@@ -506,6 +808,7 @@ describe("CloudflareImagesProvider", () => {
           upstreamCode: "ECONNRESET",
         },
       });
+      expect(mockFetch).toHaveBeenCalledTimes(3);
     });
 
     it("should not use a configured custom delivery domain for base image reads", async () => {
@@ -551,6 +854,164 @@ describe("CloudflareImagesProvider", () => {
       }
       expect(Buffer.concat(chunks)).toEqual(mockImageData);
     });
+
+    it("retries a transient failure before returning the response stream", async () => {
+      const mockImageData = Buffer.from("mock-image-data");
+      mockFetch
+        .mockResolvedValueOnce(new Response("unavailable", { status: 503 }))
+        .mockResolvedValueOnce(new Response(mockImageData));
+
+      const stream = await provider.getStream("test-image-id");
+      const chunks: Uint8Array[] = [];
+      for await (const chunk of stream) {
+        chunks.push(chunk);
+      }
+
+      expect(Buffer.concat(chunks)).toEqual(mockImageData);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it("retries a transient failure while reading the first response chunk", async () => {
+      const connectionReset = Object.assign(new Error("connection reset"), {
+        code: "ECONNRESET",
+      });
+      mockFetch
+        .mockResolvedValueOnce(
+          new Response(
+            new ReadableStream<Uint8Array>(
+              {
+                pull(controller) {
+                  controller.error(connectionReset);
+                },
+              },
+              { highWaterMark: 0 },
+            ),
+          ),
+        )
+        .mockResolvedValueOnce(new Response(new Uint8Array([7])));
+
+      const stream = await provider.getStream("test-image-id");
+      const chunks: Uint8Array[] = [];
+      for await (const chunk of stream) {
+        chunks.push(chunk);
+      }
+
+      expect(Buffer.concat(chunks)).toEqual(Buffer.from([7]));
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it("cancels a pending first response read when the operation is aborted", async () => {
+      const controller = new AbortController();
+      const reason = new Error("download cancelled");
+      let pullStarted = false;
+      let cancellationReason: unknown;
+      mockFetch.mockResolvedValueOnce(
+        new Response(
+          new ReadableStream<Uint8Array>(
+            {
+              pull() {
+                pullStarted = true;
+              },
+              cancel(cancelReason) {
+                cancellationReason = cancelReason;
+              },
+            },
+            { highWaterMark: 0 },
+          ),
+        ),
+      );
+
+      const download = provider.getStream("test-image-id", { signal: controller.signal });
+      await vi.waitFor(() => expect(pullStarted).toBe(true));
+      controller.abort(reason);
+
+      await expect(download).rejects.toMatchObject({
+        cause: reason,
+        code: "STORAGE_OPERATION_ABORTED",
+      });
+      expect(cancellationReason).toMatchObject({
+        cause: reason,
+        code: "STORAGE_OPERATION_ABORTED",
+      });
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it("rejects a cached first response chunk when the operation is aborted", async () => {
+      const controller = new AbortController();
+      const reason = new Error("download cancelled");
+      mockFetch.mockResolvedValueOnce(new Response(new Uint8Array([7])));
+
+      const stream = await provider.getStream("test-image-id", { signal: controller.signal });
+      const reader = stream.getReader();
+      controller.abort(reason);
+
+      await expect(reader.read()).rejects.toMatchObject({
+        cause: reason,
+        code: "STORAGE_OPERATION_ABORTED",
+      });
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it("cancels every discarded non-OK body without masking the status Problem", async () => {
+      const cancellationCounts = [0, 0, 0];
+      const createRejectedResponse = (attempt: number, cancellationFails = false) =>
+        new Response(
+          new ReadableStream<Uint8Array>({
+            cancel() {
+              cancellationCounts[attempt] += 1;
+              if (cancellationFails) {
+                throw new Error("body cancellation failed");
+              }
+            },
+          }),
+          { status: 503 },
+        );
+
+      mockFetch
+        .mockResolvedValueOnce(createRejectedResponse(0))
+        .mockResolvedValueOnce(createRejectedResponse(1))
+        .mockResolvedValueOnce(createRejectedResponse(2, true));
+
+      await expect(provider.getStream("test-image-id")).rejects.toMatchObject({
+        code: "storage-cloudflare/retryable-upstream",
+        extensions: {
+          operation: "get",
+          upstreamStatus: 503,
+        },
+      });
+
+      expect(cancellationCounts).toEqual([1, 1, 1]);
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+    });
+
+    it("does not replay a response after streaming output begins", async () => {
+      let emitted = false;
+      mockFetch.mockResolvedValueOnce(
+        new Response(
+          new ReadableStream<Uint8Array>({
+            pull(controller) {
+              if (!emitted) {
+                emitted = true;
+                controller.enqueue(new Uint8Array([1]));
+                return;
+              }
+
+              controller.error(
+                Object.assign(new Error("connection reset"), { code: "ECONNRESET" }),
+              );
+            },
+          }),
+        ),
+      );
+
+      const stream = await provider.getStream("test-image-id");
+      const reader = stream.getReader();
+      await expect(reader.read()).resolves.toEqual({ done: false, value: new Uint8Array([1]) });
+      await expect(reader.read()).rejects.toMatchObject({
+        code: "storage-cloudflare/retryable-upstream",
+      });
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe("delete", () => {
@@ -580,6 +1041,7 @@ describe("CloudflareImagesProvider", () => {
 
     it("should throw terminal provider Problem when delete fails", async () => {
       const mockResponse = {
+        headers: new Headers(),
         ok: false,
         text: async () => "Not found",
       };
@@ -648,16 +1110,18 @@ describe("CloudflareImagesProvider", () => {
 
     it("should propagate non-404 errors", async () => {
       const mockResponse = {
+        headers: new Headers(),
         ok: false,
         status: 500,
         text: async () => "Internal Server Error",
       };
 
-      mockFetch.mockResolvedValueOnce(mockResponse);
+      mockFetch.mockResolvedValue(mockResponse);
 
       await expect(provider.exists("test-image-id")).rejects.toMatchObject({
         code: "storage-cloudflare/retryable-upstream",
       });
+      expect(mockFetch).toHaveBeenCalledTimes(3);
     });
   });
 
@@ -877,19 +1341,26 @@ describe("CloudflareImagesProvider", () => {
       });
     });
 
-    it("should throw FileNotFoundProblem when image not found (404)", async () => {
-      const mockResponse = {
-        status: 404,
-        ok: false,
-      };
-
-      mockFetch.mockResolvedValueOnce(mockResponse);
+    it("should cancel the response body before throwing FileNotFoundProblem for metadata 404", async () => {
+      let responseBodyCancelled = false;
+      mockFetch.mockResolvedValueOnce(
+        new Response(
+          new ReadableStream<Uint8Array>({
+            cancel() {
+              responseBodyCancelled = true;
+            },
+          }),
+          { status: 404 },
+        ),
+      );
 
       await expect(provider.getMetadata("non-existent-id")).rejects.toThrow(FileNotFoundProblem);
+      expect(responseBodyCancelled).toBe(true);
     });
 
     it("should throw terminal provider Problem when API returns error", async () => {
       const mockResponse = {
+        headers: new Headers(),
         ok: false,
         text: async () => "Unauthorized",
       };
