@@ -1042,6 +1042,81 @@ describe("TransactionalInboxConsumer", () => {
     });
   });
 
+  it("preserves the handler failure when inbox failure persistence also rejects", async () => {
+    const fixture = createOutboxFixture();
+    const message = await appendMessage(fixture);
+    const handlerError = new Error("projection offline");
+    const persistenceError = new OutboxStorageProblem("failure persistence unavailable");
+    vi.spyOn(fixture.store, "markInboxFailed").mockRejectedValue(persistenceError);
+    const recordErrorSpy = vi.spyOn(telemetry, "recordError").mockImplementation(() => {
+      throw new Error("telemetry unavailable");
+    });
+    const consumer = new TransactionalInboxConsumer({
+      store: fixture.store,
+      consumerId: "risk-projection",
+      now: fixture.clock.now,
+    });
+
+    await expect(
+      consumer.handle(message, async () => {
+        throw handlerError;
+      }),
+    ).rejects.toBe(handlerError);
+
+    expect(recordErrorSpy).toHaveBeenCalledWith(persistenceError);
+    expect(Object.getOwnPropertyDescriptor(handlerError, "inboxFailurePersistenceError")).toEqual({
+      configurable: true,
+      enumerable: false,
+      value: persistenceError,
+      writable: false,
+    });
+    await expect(
+      fixture.store.findInboxRecord("risk-projection", message.idempotencyKey),
+    ).resolves.toMatchObject({
+      status: "processing",
+      attempts: 1,
+    });
+  });
+
+  it("returns the handler failure when inbox failure persistence rejects and throwing is disabled", async () => {
+    const fixture = createOutboxFixture();
+    const message = await appendMessage(fixture);
+    const handlerError = new Error("projection offline");
+    const persistenceError = new OutboxStorageProblem("failure persistence unavailable");
+    vi.spyOn(fixture.store, "markInboxFailed").mockRejectedValue(persistenceError);
+    const consumer = new TransactionalInboxConsumer({
+      store: fixture.store,
+      consumerId: "risk-projection",
+      now: fixture.clock.now,
+      throwOnError: false,
+    });
+
+    const result = await consumer.handle(message, async () => {
+      throw handlerError;
+    });
+
+    expect(result).toMatchObject({
+      status: "failed",
+      record: {
+        status: "processing",
+        attempts: 1,
+      },
+      error: {
+        name: "Error",
+        message: "projection offline",
+      },
+    });
+    if (result.status !== "failed") {
+      throw new Error("Expected failed inbox result.");
+    }
+    expect(Object.getOwnPropertyDescriptor(result.error, "inboxFailurePersistenceError")).toEqual({
+      configurable: true,
+      enumerable: false,
+      value: persistenceError,
+      writable: false,
+    });
+  });
+
   it("propagates the claimed attempt to both completion paths", async () => {
     const fixture = createOutboxFixture();
     const successfulMessage = await appendMessage(fixture);
