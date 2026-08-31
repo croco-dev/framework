@@ -363,7 +363,7 @@ describe("UpstashSlidingWindowStore", () => {
   });
 
   it("should allow requests within limit", async () => {
-    mockRedis.eval.mockResolvedValue([1, 1, 9]);
+    mockRedis.eval.mockResolvedValue([1, 1, 9, 1_000]);
 
     const policy = createSlidingWindowPolicy("test", 10, 60000);
     const result = await store.check("test-key", policy);
@@ -374,7 +374,7 @@ describe("UpstashSlidingWindowStore", () => {
   });
 
   it("should deny requests exceeding limit", async () => {
-    mockRedis.eval.mockResolvedValue([0, 10, 0]);
+    mockRedis.eval.mockResolvedValue([0, 10, 0, 1_000]);
 
     const policy = createSlidingWindowPolicy("test", 10, 60000);
     const result = await store.check("test-key", policy);
@@ -383,8 +383,38 @@ describe("UpstashSlidingWindowStore", () => {
     expect(result.remaining).toBe(0);
   });
 
+  it("should derive resetAtMs from the oldest in-window timestamp", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(10_000);
+    mockRedis.eval.mockResolvedValue([0, 1, 0, 1_000]);
+
+    try {
+      const policy = createSlidingWindowPolicy("test", 1, 60_000);
+      const result = await store.check("test-key", policy);
+
+      expect(result.resetAtMs).toBe(61_000);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("should fall back to a full window when no prior entry survives", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(10_000);
+    mockRedis.eval.mockResolvedValue([1, 1, 0, 10_000]);
+
+    try {
+      const policy = createSlidingWindowPolicy("test", 1, 60_000);
+      const result = await store.check("test-key", policy);
+
+      expect(result.resetAtMs).toBe(70_000);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("should track stats", async () => {
-    mockRedis.eval.mockResolvedValue([1, 1, 9]);
+    mockRedis.eval.mockResolvedValue([1, 1, 9, 1_000]);
 
     const policy = createSlidingWindowPolicy("test", 10, 60000);
     await store.check("test-key", policy);
@@ -397,9 +427,9 @@ describe("UpstashSlidingWindowStore", () => {
 
   it("should refund quota and stats", async () => {
     mockRedis.eval
-      .mockResolvedValueOnce([1, 1, 9])
-      .mockResolvedValueOnce([1, 0, 10])
-      .mockResolvedValueOnce([0, 0, 10]);
+      .mockResolvedValueOnce([1, 1, 9, 1_000])
+      .mockResolvedValueOnce([1, 0, 10, 2_000])
+      .mockResolvedValueOnce([0, 0, 10, 3_000]);
 
     const policy = createSlidingWindowPolicy("test", 10, 60000);
     const check = await store.check("test-key", policy);
@@ -413,9 +443,43 @@ describe("UpstashSlidingWindowStore", () => {
     expect(mockRedis.eval).toHaveBeenLastCalledWith(
       expect.any(String),
       ["ratelimit:sliding:test-key"],
-      [expect.any(Number), 10, receipt?.id, 61],
+      [expect.any(Number), expect.any(Number), 10, receipt?.id, 61],
     );
     expect(await store.getStats()).toEqual({ allowed: 0, denied: 0, total: 0 });
+  });
+
+  it("should derive resetAtMs from the oldest entry after a refund", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(10_000);
+    mockRedis.eval.mockResolvedValueOnce([1, 2, 8, 1_000]).mockResolvedValueOnce([1, 1, 9, 2_000]);
+
+    try {
+      const policy = createSlidingWindowPolicy("test", 10, 60_000);
+      const check = await store.check("test-key", policy);
+      const refund = await store.refund("test-key", policy, check.refundReceipt);
+
+      expect(refund.resetAtMs).toBe(62_000);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("should fall back to a full window when a refund empties the window", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(10_000);
+    mockRedis.eval
+      .mockResolvedValueOnce([1, 1, 9, 10_000])
+      .mockResolvedValueOnce([1, 0, 10, 10_000]);
+
+    try {
+      const policy = createSlidingWindowPolicy("test", 10, 60_000);
+      const check = await store.check("test-key", policy);
+      const refund = await store.refund("test-key", policy, check.refundReceipt);
+
+      expect(refund.resetAtMs).toBe(70_000);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("should throw error for invalid policy", async () => {
@@ -468,7 +532,7 @@ describe("UpstashSlidingWindowStore", () => {
   });
 
   it("should track denied stats", async () => {
-    mockRedis.eval.mockResolvedValue([0, 10, 0]);
+    mockRedis.eval.mockResolvedValue([0, 10, 0, 1_000]);
 
     const policy = createSlidingWindowPolicy("test", 10, 60000);
     await store.check("test-key", policy);
