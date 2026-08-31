@@ -1090,6 +1090,8 @@ describe("CloudinaryProvider", () => {
       await customProvider.getMetadata("test-key");
 
       expect(intent.uploadUrl).toBe("https://uploads.example.com/v1_1/test-cloud/image/upload");
+      expect(new URL(intent.uploadUrl).username).toBe("");
+      expect(new URL(intent.uploadUrl).password).toBe("");
       expect(global.fetch).toHaveBeenNthCalledWith(
         1,
         "https://api.cloudinary.com/v1_1/test-cloud/image/upload",
@@ -1149,6 +1151,22 @@ describe("CloudinaryProvider", () => {
     ])("should reject invalid API base URL %s", (apiBaseUrl) => {
       expect(() => new CloudinaryProvider({ ...mockConfig, apiBaseUrl })).toThrowError(
         expect.objectContaining({ code: "storage-cloudinary/validation-failed" }),
+      );
+    });
+
+    it.each([
+      "/uploads",
+      "https://[invalid",
+      "ftp://uploads.example.com",
+      "https://user:secret@uploads.example.com",
+      "https://uploads.example.com?region=eu",
+      "https://uploads.example.com#region",
+    ])("should reject invalid upload base URL %s", (uploadBaseUrl) => {
+      expect(() => new CloudinaryProvider({ ...mockConfig, uploadBaseUrl })).toThrowError(
+        expect.objectContaining({
+          code: "storage-cloudinary/validation-failed",
+          extensions: expect.objectContaining({ upstreamCode: "invalid-upload-base-url" }),
+        }),
       );
     });
   });
