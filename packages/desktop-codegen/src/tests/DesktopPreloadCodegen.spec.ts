@@ -100,14 +100,25 @@ describe("generateDesktopPreloadBridges", () => {
     const main = graph.windows.find((window) => window.id === "main");
     assert(main, "Fixture main window is missing");
 
-    expect(() =>
-      generateDesktopPreloadBridges({
-        ...graph,
-        windows: graph.windows.map((window) =>
-          window.id === main.id ? { ...window, trust: "forged" as never } : window,
-        ),
-      }),
-    ).toThrow(DesktopPreloadGenerationProblem);
+    expectPreloadGenerationProblem(
+      () =>
+        generateDesktopPreloadBridges({
+          ...graph,
+          windows: graph.windows.map((window) =>
+            window.id === main.id ? { ...window, trust: "forged" as never } : window,
+          ),
+        }),
+      `Desktop window ${JSON.stringify(main.id)} has unsupported trust "forged".`,
+    );
+  });
+
+  it("rejects malformed shared graph containers through its Problem boundary", () => {
+    const graph = createGraph(false);
+
+    expectPreloadGenerationProblem(
+      () => generateDesktopPreloadBridges({ ...graph, commands: null as never }),
+      "Desktop graph commands must be an array, received null.",
+    );
   });
 
   it("rejects window trust and origin policy mismatches", () => {

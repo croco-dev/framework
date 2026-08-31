@@ -5,6 +5,7 @@ import type {
   DesktopContractGraphV1,
   DesktopContractGraphWindow,
 } from "@croco/protocols-desktop";
+import { assertDesktopContractGraphGeneratable } from "./assertDesktopContractGraphGeneratable";
 
 export type DesktopPreloadBridgeSource = {
   readonly windowId: string;
@@ -69,42 +70,11 @@ export function generateDesktopPreloadBridges(
 }
 
 function assertGeneratableGraph(graph: DesktopContractGraphV1): void {
-  if (graph.version !== "croco.desktop-contract-graph.v1") {
-    throw new DesktopPreloadGenerationProblem(
-      `Expected croco.desktop-contract-graph.v1, received ${formatDiagnosticValue(graph.version)}.`,
-    );
-  }
-
-  if (graph.diagnostics.length > 0) {
-    throw new DesktopPreloadGenerationProblem(
-      `Cannot generate preload bridges from a graph with ${graph.diagnostics.length} diagnostic${graph.diagnostics.length === 1 ? "" : "s"}.`,
-    );
-  }
-
-  for (const window of graph.windows) {
-    if (window.trust !== "local" && window.trust !== "remote") {
-      throw new DesktopPreloadGenerationProblem(
-        `Desktop window ${formatDiagnosticValue(window.id)} has unsupported trust ${formatDiagnosticValue(window.trust)}.`,
-      );
-    }
-
-    const originPolicyMode =
-      typeof window.originPolicy === "object" && window.originPolicy !== null
-        ? (window.originPolicy as { readonly mode?: unknown }).mode
-        : undefined;
-    if (originPolicyMode !== "local-content" && originPolicyMode !== "remote-allowlist") {
-      throw new DesktopPreloadGenerationProblem(
-        `Desktop window ${formatDiagnosticValue(window.id)} has unsupported origin policy ${formatDiagnosticValue(originPolicyMode)}.`,
-      );
-    }
-
-    const expectedOriginPolicy = window.trust === "local" ? "local-content" : "remote-allowlist";
-    if (originPolicyMode !== expectedOriginPolicy) {
-      throw new DesktopPreloadGenerationProblem(
-        `Desktop window ${formatDiagnosticValue(window.id)} trust ${formatDiagnosticValue(window.trust)} requires origin policy ${formatDiagnosticValue(expectedOriginPolicy)}, received ${formatDiagnosticValue(originPolicyMode)}.`,
-      );
-    }
-  }
+  assertDesktopContractGraphGeneratable(
+    graph,
+    "preload bridges",
+    (detail) => new DesktopPreloadGenerationProblem(detail),
+  );
 }
 
 function createUniqueIndex<T extends { readonly id: string }>(
@@ -356,12 +326,4 @@ function compareMembers(
 
 function compareCodeUnits(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
-}
-
-function formatDiagnosticValue(value: unknown): string {
-  if (typeof value === "bigint") {
-    return `${value}n`;
-  }
-  const serialized = JSON.stringify(value);
-  return serialized === undefined ? String(value) : serialized;
 }
