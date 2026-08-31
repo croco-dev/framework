@@ -5577,7 +5577,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/desktop-codegen/src/libs/generateDesktopPreloadBridges.ts",
-          line: 33,
+          line: 34,
           column: 5,
           kind: "problem-constructor",
         },
@@ -5608,7 +5608,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/desktop-codegen/src/libs/generateDesktopRendererClients.ts",
-          line: 22,
+          line: 24,
           column: 5,
           kind: "problem-constructor",
         },
