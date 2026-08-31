@@ -369,7 +369,7 @@ describe("rpc-codegen round trip", () => {
       }
 
       if (url === "/health/malformed") {
-        return textResponse("{not-json", 200);
+        return textResponse("{not-json", 500);
       }
 
       return new Response("", { status: 200 });
@@ -388,7 +388,7 @@ describe("rpc-codegen round trip", () => {
     const malformedError = await getRejectedError(healthModule.healthClient.malformed());
     expect(malformedError).toMatchObject({
       name: "RpcClientResponseError",
-      response: expect.objectContaining({ status: 200 }),
+      response: expect.objectContaining({ status: 500 }),
     });
     expect((malformedError as { readonly cause?: unknown }).cause).toBeInstanceOf(SyntaxError);
 
@@ -396,7 +396,7 @@ describe("rpc-codegen round trip", () => {
     expect(malformedResult).toMatchObject({
       ok: false,
       kind: "external",
-      response: expect.objectContaining({ status: 200 }),
+      response: expect.objectContaining({ status: 500 }),
       error: expect.objectContaining({ name: "RpcClientResponseError" }),
     });
     if (malformedResult.ok || malformedResult.kind !== "external") {
@@ -438,6 +438,30 @@ describe("rpc-codegen round trip", () => {
           inputSchema: null,
           inputSchemas: EMPTY_INPUT_SCHEMAS,
           outputSchema: null,
+          domain: "health",
+        },
+        {
+          controllerName: "HealthController",
+          methodName: "requiredErrorAbort",
+          httpMethod: "GET",
+          path: "/health/required-error-abort",
+          routeContract: null,
+          params: [],
+          inputSchema: null,
+          inputSchemas: EMPTY_INPUT_SCHEMAS,
+          outputSchema: z.object({ ready: z.boolean() }) as unknown as RouteIR["outputSchema"],
+          domain: "health",
+        },
+        {
+          controllerName: "HealthController",
+          methodName: "mutationErrorAbort",
+          httpMethod: "POST",
+          path: "/health/mutation-error-abort",
+          routeContract: null,
+          params: [],
+          inputSchema: null,
+          inputSchemas: EMPTY_INPUT_SCHEMAS,
+          outputSchema: z.object({ ready: z.boolean() }) as unknown as RouteIR["outputSchema"],
           domain: "health",
         },
       ];
@@ -485,6 +509,64 @@ describe("rpc-codegen round trip", () => {
           "rpc.request.started",
           "rpc.request.cancelled",
         ]);
+      }
+
+      if (problemRuntime === "frontend-problems") {
+        return;
+      }
+
+      const errorCases = [
+        {
+          invoke: (options: unknown) => healthModule.healthClient.requiredErrorAbort(options),
+          returnsResult: false,
+          expectedEvents: ["rpc.request.started", "rpc.request.cancelled"],
+        },
+        {
+          invoke: (options: unknown) => healthModule.healthClient.requiredErrorAbortResult(options),
+          returnsResult: true,
+          expectedEvents: ["rpc.request.started", "rpc.request.cancelled"],
+        },
+        {
+          invoke: (options: unknown) => healthModule.healthClient.mutationErrorAbort(options),
+          returnsResult: false,
+          expectedEvents: [
+            "rpc.request.started",
+            "rpc.mutation.started",
+            "rpc.request.cancelled",
+            "rpc.mutation.cancelled",
+          ],
+        },
+        {
+          invoke: (options: unknown) => healthModule.healthClient.mutationErrorAbortResult(options),
+          returnsResult: true,
+          expectedEvents: [
+            "rpc.request.started",
+            "rpc.mutation.started",
+            "rpc.request.cancelled",
+            "rpc.mutation.cancelled",
+          ],
+        },
+      ];
+
+      for (const testCase of errorCases) {
+        events.length = 0;
+        const abort = createAbortError();
+        vi.stubGlobal(
+          "fetch",
+          vi.fn(async () => unreadableJsonResponse(abort, 500)),
+        );
+
+        if (testCase.returnsResult) {
+          await expect(testCase.invoke({ telemetry })).resolves.toMatchObject({
+            ok: false,
+            kind: "external",
+            error: abort,
+            response: expect.objectContaining({ status: 500 }),
+          });
+        } else {
+          await expect(testCase.invoke({ telemetry })).rejects.toBe(abort);
+        }
+        expect(events.map((event) => event.kind)).toEqual(testCase.expectedEvents);
       }
     },
   );
@@ -1568,6 +1650,10 @@ async function importGeneratedClient(fileName: string, source: string) {
       readonly requiredAbortResult: (options?: unknown) => Promise<unknown>;
       readonly optionalAbort: (options?: unknown) => Promise<unknown>;
       readonly optionalAbortResult: (options?: unknown) => Promise<unknown>;
+      readonly requiredErrorAbort: (options?: unknown) => Promise<unknown>;
+      readonly requiredErrorAbortResult: (options?: unknown) => Promise<unknown>;
+      readonly mutationErrorAbort: (options?: unknown) => Promise<unknown>;
+      readonly mutationErrorAbortResult: (options?: unknown) => Promise<unknown>;
       readonly requiredTelemetry: (options?: unknown) => Promise<unknown>;
       readonly requiredTelemetryResult: (options?: unknown) => Promise<unknown>;
       readonly optionalTelemetry: (options?: unknown) => Promise<unknown>;
@@ -1661,8 +1747,8 @@ function unreadableTextResponse(cause: unknown): Response {
   return response;
 }
 
-function unreadableJsonResponse(cause: unknown): Response {
-  const response = new Response("unreadable", { status: 200 });
+function unreadableJsonResponse(cause: unknown, status = 200): Response {
+  const response = new Response("unreadable", { status });
   Object.defineProperty(response, "json", {
     configurable: true,
     value: async () => Promise.reject(cause),
