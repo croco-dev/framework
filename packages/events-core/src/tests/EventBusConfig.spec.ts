@@ -1,4 +1,4 @@
-import { MetadataStorage } from "@croco/framework-context";
+import { Container, MetadataStorage } from "@croco/framework-context";
 import { beforeEach, describe, expect, it } from "vitest";
 import { DomainEvent } from "../libs/DomainEvent";
 import type { EventBus } from "../libs/EventBus";
@@ -76,6 +76,21 @@ describe("EventBusConfig", () => {
       const retrievedBus = config2.getEventBus();
 
       expect(retrievedBus).toBe(mockBus);
+    });
+
+    it("should bind scoped disposal to the scope that captured it", () => {
+      const firstScope = Container.createScope();
+      const secondScope = Container.createScope();
+      const firstConfig = firstScope.run(() => EventBusConfig.getInstance());
+      const secondConfig = secondScope.run(() => EventBusConfig.getInstance());
+      const disposeFirstScope = firstScope.run(() => EventBusConfig.captureCurrentScopeDisposer());
+
+      secondScope.run(() => disposeFirstScope?.());
+
+      expect(firstScope.run(() => EventBusConfig.getInstance())).not.toBe(firstConfig);
+      expect(secondScope.run(() => EventBusConfig.getInstance())).toBe(secondConfig);
+      firstScope.dispose();
+      secondScope.dispose();
     });
   });
 

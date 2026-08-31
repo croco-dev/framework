@@ -11307,6 +11307,13 @@
               "compatibilityGroup": "di"
             },
             {
+              "name": "InjectMany",
+              "exportKind": "named",
+              "source": "./libs/decorators/Inject",
+              "declarationKind": "function",
+              "compatibilityGroup": "di"
+            },
+            {
               "name": "InvalidShutdownTimeoutProblem",
               "exportKind": "named",
               "source": "./libs/problems/ShutdownProblems",
@@ -12235,6 +12242,12 @@
               "compatibilityGroup": "context"
             },
             {
+              "name": "TypeDIInjectionInspection",
+              "exportKind": "named",
+              "source": "./libs/types",
+              "compatibilityGroup": "di"
+            },
+            {
               "name": "UnsupportedRuntimeCapabilityName",
               "exportKind": "named",
               "source": "./libs/runtimeCapabilities",
@@ -12334,6 +12347,18 @@
               "name": "defineCrocoModule",
               "exportKind": "declaration",
               "source": null,
+              "declarationKind": "function"
+            },
+            {
+              "name": "ApplicationRuntime",
+              "exportKind": "named",
+              "source": "./ApplicationRuntime",
+              "declarationKind": "class"
+            },
+            {
+              "name": "createApplicationRuntime",
+              "exportKind": "named",
+              "source": "./ApplicationRuntime",
               "declarationKind": "function"
             },
             {
@@ -12464,6 +12489,16 @@
             }
           ],
           "typeExports": [
+            {
+              "name": "ApplicationRuntimeGraphManifest",
+              "exportKind": "named",
+              "source": "./ApplicationRuntime"
+            },
+            {
+              "name": "ApplicationRuntimeOptions",
+              "exportKind": "named",
+              "source": "./ApplicationRuntime"
+            },
             {
               "name": "CrocoModuleDefinition",
               "exportKind": "named",
@@ -30123,6 +30158,11 @@
               "name": "TestingTransactionContextOptions",
               "exportKind": "named",
               "source": "./libs/testing"
+            },
+            {
+              "name": "TestKernelApplicationRuntime",
+              "exportKind": "named",
+              "source": "./libs/TestKernel"
             },
             {
               "name": "TestKernelBootFidelity",

@@ -80,6 +80,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@croco/framework-module": "workspace:*",
     "@croco/preset-cloudflare": "workspace:*",
     "@croco/protocols-rest": "workspace:*",
     "@croco/retry-core": "workspace:*",

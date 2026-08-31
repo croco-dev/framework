@@ -1419,6 +1419,7 @@ describe("E2E: generate()", () => {
       "@croco/execution-core": externalCrocoRange("@croco/execution-core"),
       "@croco/health-core": externalCrocoRange("@croco/health-core"),
       "@croco/framework-context": externalCrocoRange("@croco/framework-context"),
+      "@croco/framework-module": externalCrocoRange("@croco/framework-module"),
       "@croco/diagnostics-core": externalCrocoRange("@croco/diagnostics-core"),
       "@croco/llm-core": externalCrocoRange("@croco/llm-core"),
       "@croco/llm-metering": externalCrocoRange("@croco/llm-metering"),
@@ -2668,6 +2669,7 @@ describe("E2E: generate()", () => {
         "@croco/llm-metering": externalCrocoRange("@croco/llm-metering"),
         "drizzle-orm": getGeneratedAppDependencyRange("drizzle-orm"),
         "@croco/framework-context": externalCrocoRange("@croco/framework-context"),
+        "@croco/framework-module": externalCrocoRange("@croco/framework-module"),
         "@croco/lifecycle-core": externalCrocoRange("@croco/lifecycle-core"),
         "@croco/metering-core": externalCrocoRange("@croco/metering-core"),
         "@croco/protocols-rest": externalCrocoRange("@croco/protocols-rest"),
@@ -2681,6 +2683,9 @@ describe("E2E: generate()", () => {
       expect(apiPackageJson.scripts?.["demo:scenario"]).toBe("tsx src/demo/scenario.ts");
       expect(apiPackageJson.scripts?.["demo:usage-recover"]).toBe("tsx src/demo/usage-recover.ts");
       expect(apiPackageJson.scripts?.["jobs:smoke"]).toBe("tsx src/demo/jobs-smoke.ts");
+      expect(appSource).toContain("createApplicationRuntime");
+      expect(appSource).toContain("applicationRuntime");
+      expect(appSource).not.toContain("Container.has(LOGGER_TOKEN)");
       expect(apiPackageJson.scripts?.["di:graph"]).toBe(GENERATED_API_DI_GRAPH_SCRIPT);
       expect(apiPackageJson.scripts?.["failure-drill:smoke"]).toBe(
         "tsx src/demo/failure-drill-smoke.ts",

@@ -2,6 +2,12 @@ import type { ModuleContext } from "./ModuleContext";
 import { defaultModuleRuntime } from "./ModuleRegistry";
 import type { ModuleLifecycleExecutionOptions, ModuleOptions } from "./types";
 
+export { ApplicationRuntime, createApplicationRuntime } from "./ApplicationRuntime";
+export type {
+  ApplicationRuntimeGraphManifest,
+  ApplicationRuntimeOptions,
+} from "./ApplicationRuntime";
+
 export class CrocoModule {
   static use(module: ModuleOptions): void {
     defaultModuleRuntime.use(module);

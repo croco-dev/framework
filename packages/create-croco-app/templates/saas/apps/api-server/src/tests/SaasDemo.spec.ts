@@ -2,12 +2,19 @@ import { Container } from "typedi";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { CheckoutResult } from "@croco/billing-core";
+import { EntitlementManager } from "@croco/entitlements-core";
 import { EventPublisher } from "@croco/events-core";
 import { Container as CrocoContainer, LOGGER_TOKEN } from "@croco/framework-context";
 import type { ILogger } from "@croco/framework-context";
 import { InMemoryIdempotencyStore } from "@croco/idempotency-core";
 import { DuplicateRecordProblem, IdempotencyManager } from "@croco/metering-core";
 import type { PendingMeteringDelivery } from "@croco/metering-core";
+import type {
+  LambdaContext,
+  LambdaEvent,
+  MiddlewareFunction,
+  NodeServerHandle,
+} from "@croco/transports-http";
 import { createCrocoApp } from "../app";
 import { JobsController } from "../controllers/JobsController";
 import { assertDemoEndpointsEnabled, SaasController } from "../controllers/SaasController";
@@ -31,6 +38,7 @@ import {
 describe("SaaS golden path demo", () => {
   beforeEach(() => {
     Container.reset();
+    CrocoContainer.reset();
   });
 
   it("deduplicates concurrent membership event relay calls", async () => {
@@ -147,13 +155,14 @@ describe("SaaS golden path demo", () => {
     expect(distinct.checkoutUrl).not.toBe(first.checkoutUrl);
   });
 
-  it("boots through the exported production bootstrap with documented DI validation", async () => {
+  it("boots through the exported production bootstrap without unrelated global DI diagnostics", async () => {
     const previousNodeEnv = process.env.NODE_ENV;
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    let app: ReturnType<typeof createCrocoApp> | undefined;
     process.env.NODE_ENV = "production";
 
     try {
-      const app = createCrocoApp();
+      app = createCrocoApp();
       const response = await app.fetch(new Request("http://localhost/health"));
 
       expect(response.status).toBe(200);
@@ -161,11 +170,9 @@ describe("SaaS golden path demo", () => {
         di: "warn",
         security: "enforce",
       });
-      expect(warn).toHaveBeenCalledWith(expect.stringContaining("DI bootstrap validation failed"));
-      expect(warn).toHaveBeenCalledWith(
-        expect.stringContaining("Register the missing provider(s)"),
-      );
+      expect(warn).not.toHaveBeenCalled();
     } finally {
+      await app?.disposeApplicationRuntime();
       if (previousNodeEnv === undefined) {
         delete process.env.NODE_ENV;
       } else {
@@ -189,6 +196,71 @@ describe("SaaS golden path demo", () => {
     createCrocoApp();
 
     expect(CrocoContainer.get(LOGGER_TOKEN)).toBe(logger);
+  });
+
+  it("owns bootstrap providers in distinct application runtimes", async () => {
+    const first = createCrocoApp();
+    const second = createCrocoApp();
+
+    expect(first.applicationRuntime.scopeId).not.toBe(second.applicationRuntime.scopeId);
+    expect(first.applicationRuntime.get(LOGGER_TOKEN)).not.toBe(
+      second.applicationRuntime.get(LOGGER_TOKEN),
+    );
+    expect(first.applicationRuntime.get(EntitlementManager)).not.toBe(
+      second.applicationRuntime.get(EntitlementManager),
+    );
+    expect(CrocoContainer.has(LOGGER_TOKEN)).toBe(false);
+
+    await Promise.all([first.disposeApplicationRuntime(), second.disposeApplicationRuntime()]);
+  });
+
+  it("runs exported host callbacks inside their owning application runtime", async () => {
+    const firstScopes: string[] = [];
+    const secondScopes: string[] = [];
+    const first = createCrocoApp({ additionalMiddlewares: [captureActiveScope(firstScopes)] });
+    const second = createCrocoApp({ additionalMiddlewares: [captureActiveScope(secondScopes)] });
+    let firstServer: NodeServerHandle | undefined;
+    let secondServer: NodeServerHandle | undefined;
+
+    try {
+      const firstNodeHandler = first.nodeHandler();
+      const secondNodeHandler = second.nodeHandler();
+      await Promise.all([
+        firstNodeHandler(new Request("http://localhost/ops/health")),
+        secondNodeHandler(new Request("http://localhost/ops/health")),
+      ]);
+
+      const firstLambdaHandler = first.lambdaHandler();
+      const secondLambdaHandler = second.lambdaHandler();
+      await Promise.all([
+        firstLambdaHandler(createLambdaEvent(), createLambdaContext("first")),
+        secondLambdaHandler(createLambdaEvent(), createLambdaContext("second")),
+      ]);
+
+      const firstHono = first.getHono();
+      const secondHono = second.getHono();
+      await Promise.all([
+        firstHono.fetch(new Request("http://localhost/ops/health")),
+        secondHono.fetch(new Request("http://localhost/ops/health")),
+      ]);
+
+      [firstServer, secondServer] = await Promise.all([first.listen(0), second.listen(0)]);
+      await Promise.all([waitForListening(firstServer), waitForListening(secondServer)]);
+      await Promise.all([
+        fetch(`${getServerUrl(firstServer)}/ops/health`),
+        fetch(`${getServerUrl(secondServer)}/ops/health`),
+      ]);
+
+      expect(firstScopes).toEqual(Array(4).fill(first.applicationRuntime.scopeId));
+      expect(secondScopes).toEqual(Array(4).fill(second.applicationRuntime.scopeId));
+      expect(first.applicationRuntime.scopeId).not.toBe(second.applicationRuntime.scopeId);
+    } finally {
+      await Promise.all([
+        firstServer ? closeServer(firstServer) : Promise.resolve(),
+        secondServer ? closeServer(secondServer) : Promise.resolve(),
+      ]);
+      await Promise.all([first.disposeApplicationRuntime(), second.disposeApplicationRuntime()]);
+    }
   });
 
   it("creates tenant and owner membership", async () => {
@@ -572,3 +644,83 @@ describe("SaaS golden path demo", () => {
     ]);
   });
 });
+
+function captureActiveScope(scopes: string[]): MiddlewareFunction {
+  return async (_context, next) => {
+    scopes.push(CrocoContainer.getActiveScopeId() ?? "missing");
+    return next();
+  };
+}
+
+function createLambdaEvent(): LambdaEvent {
+  return {
+    version: "2.0",
+    routeKey: "GET /ops/health",
+    rawPath: "/ops/health",
+    rawQueryString: "",
+    headers: {},
+    requestContext: {
+      accountId: "123456789012",
+      apiId: "api-123",
+      domainName: "example.execute-api.ap-northeast-2.amazonaws.com",
+      domainPrefix: "example",
+      http: {
+        method: "GET",
+        path: "/ops/health",
+        protocol: "HTTP/1.1",
+        sourceIp: "127.0.0.1",
+        userAgent: "vitest",
+      },
+      requestId: "api-request-123",
+      routeKey: "GET /ops/health",
+      stage: "$default",
+      time: "30/Aug/2026:00:00:00 +0000",
+      timeEpoch: 1_788_048_000_000,
+    },
+    isBase64Encoded: false,
+  };
+}
+
+function createLambdaContext(requestId: string): LambdaContext {
+  return {
+    callbackWaitsForEmptyEventLoop: false,
+    functionName: "runtime-scope-test",
+    functionVersion: "$LATEST",
+    invokedFunctionArn: "arn:aws:lambda:ap-northeast-2:123456789012:function:runtime-scope-test",
+    memoryLimitInMB: "128",
+    awsRequestId: requestId,
+    logGroupName: "/aws/lambda/runtime-scope-test",
+    logStreamName: "2026/08/30/[$LATEST]abcdef",
+    getRemainingTimeInMillis: () => 5_000,
+    done: () => undefined,
+    fail: () => undefined,
+    succeed: () => undefined,
+  };
+}
+
+async function waitForListening(server: NodeServerHandle): Promise<void> {
+  if (server.listening) {
+    return;
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    server.once("listening", resolve);
+    server.once("error", reject);
+  });
+}
+
+function getServerUrl(server: NodeServerHandle): string {
+  const address = server.address();
+  if (!address || typeof address === "string") {
+    throw new Error("Generated API server did not expose a TCP address.");
+  }
+
+  const hostname = address.address === "::" ? "[::1]" : address.address;
+  return `http://${hostname}:${address.port}`;
+}
+
+async function closeServer(server: NodeServerHandle): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    server.close((error) => (error ? reject(error) : resolve()));
+  });
+}

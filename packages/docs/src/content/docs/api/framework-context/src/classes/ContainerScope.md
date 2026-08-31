@@ -104,3 +104,25 @@ Owns an isolated DI runtime that can be entered across asynchronous bootstrap an
 ##### Returns
 
 `T`
+
+---
+
+### runWithRollback()
+
+> **runWithRollback**\<`T`\>(`fn`): `Promise`\<`T`\>
+
+#### Type Parameters
+
+##### T
+
+`T`
+
+#### Parameters
+
+##### fn
+
+() => `Promise`\<`T`\>
+
+#### Returns
+
+`Promise`\<`T`\>

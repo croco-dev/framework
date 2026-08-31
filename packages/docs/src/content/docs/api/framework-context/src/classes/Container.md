@@ -27,6 +27,18 @@ Croco 컴포넌트의 등록, 조회, 지연 생성, 요청 스코프 해석을 
 
 ##### options?
 
+###### knownProviders?
+
+`ReadonlySet`\<[`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidentifier/)\<`unknown`\>\>
+
+###### providerConstructors?
+
+`ReadonlyMap`\<[`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidentifier/)\<`unknown`\>, [`Constructor`](/api/framework-context/src/type-aliases/constructor/)\<`unknown`\>\>
+
+###### rejectUnknownProviders?
+
+`boolean`
+
 ###### roots?
 
 readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidentifier/)\<`unknown`\>[]
@@ -35,7 +47,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 [`DependencyGraphManifest`](/api/framework-context/src/type-aliases/dependencygraphmanifest/)
 
----
+***
 
 ### createScope()
 
@@ -45,7 +57,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 [`ContainerScope`](/api/framework-context/src/classes/containerscope/)
 
----
+***
 
 ### get()
 
@@ -67,7 +79,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 `T`
 
----
+***
 
 ### getActiveScopeId()
 
@@ -77,7 +89,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 `string` \| `undefined`
 
----
+***
 
 ### getComponentMetadata()
 
@@ -93,7 +105,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 [`ComponentMetadata`](/api/framework-context/src/interfaces/componentmetadata/) \| `undefined`
 
----
+***
 
 ### getDiagnosticsSnapshot()
 
@@ -119,7 +131,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 > **scopes**: `string`[]
 
----
+***
 
 ### getLastResolutionTrace()
 
@@ -129,7 +141,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 [`DependencyResolutionTrace`](/api/framework-context/src/type-aliases/dependencyresolutiontrace/) \| `undefined`
 
----
+***
 
 ### getMany()
 
@@ -151,7 +163,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 `T`[]
 
----
+***
 
 ### getOptional()
 
@@ -173,7 +185,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 `T` \| `undefined`
 
----
+***
 
 ### getResolutionTrace()
 
@@ -195,7 +207,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 [`DependencyResolutionTrace`](/api/framework-context/src/type-aliases/dependencyresolutiontrace/)
 
----
+***
 
 ### has()
 
@@ -217,7 +229,39 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 `boolean`
 
----
+***
+
+### inspectTypeDIConstructorInjections()
+
+> `static` **inspectTypeDIConstructorInjections**(`token`): readonly [`TypeDIInjectionInspection`](/api/framework-context/src/type-aliases/typediinjectioninspection/)[]
+
+#### Parameters
+
+##### token
+
+[`Constructor`](/api/framework-context/src/type-aliases/constructor/)
+
+#### Returns
+
+readonly [`TypeDIInjectionInspection`](/api/framework-context/src/type-aliases/typediinjectioninspection/)[]
+
+***
+
+### inspectTypeDIInjections()
+
+> `static` **inspectTypeDIInjections**(`token`): readonly [`TypeDIInjectionInspection`](/api/framework-context/src/type-aliases/typediinjectioninspection/)[]
+
+#### Parameters
+
+##### token
+
+[`Constructor`](/api/framework-context/src/type-aliases/constructor/)
+
+#### Returns
+
+readonly [`TypeDIInjectionInspection`](/api/framework-context/src/type-aliases/typediinjectioninspection/)[]
+
+***
 
 ### register()
 
@@ -243,7 +287,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 `void`
 
----
+***
 
 ### registerAsync()
 
@@ -269,7 +313,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 `Promise`\<`T`\>
 
----
+***
 
 ### registerLazy()
 
@@ -295,7 +339,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 `void`
 
----
+***
 
 ### remove()
 
@@ -317,7 +361,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 `void`
 
----
+***
 
 ### reset()
 
@@ -327,7 +371,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 `void`
 
----
+***
 
 ### set()
 
@@ -353,7 +397,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 `T`
 
----
+***
 
 ### setComponentSourceLocation()
 
@@ -379,7 +423,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 `void`
 
----
+***
 
 ### toTypeDIServiceIdentifier()
 
@@ -404,7 +448,7 @@ Symbol mappings remain stable until [Container.reset](/api/framework-context/src
 
 `ServiceIdentifier`\<`T`\>
 
----
+***
 
 ### validate()
 

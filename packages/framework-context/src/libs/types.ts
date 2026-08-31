@@ -13,7 +13,12 @@ export type DependencyProviderKind =
   | "typedi"
   | "missing";
 
-export type DependencyResolutionStepStatus = "selected" | "missing" | "circular" | "scope-mismatch";
+export type DependencyResolutionStepStatus =
+  | "selected"
+  | "missing"
+  | "circular"
+  | "scope-mismatch"
+  | "uninspectable";
 
 export type DependencyResolutionTraceStatus =
   | "ready"
@@ -58,13 +63,28 @@ export type DependencyGraphDiagnosticCode =
   | "CROCO_DI_001"
   | "CROCO_DI_002"
   | "CROCO_DI_003"
-  | "CROCO_DI_004";
+  | "CROCO_DI_004"
+  | "CROCO_DI_005";
 
 export type DependencyGraphLegacyDiagnosticCode =
   | "framework-context/di-missing-provider"
   | "framework-context/di-circular-dependency"
   | "framework-context/di-scope-mismatch"
-  | "framework-context/di-unknown-provider";
+  | "framework-context/di-unknown-provider"
+  | "framework-context/di-injection-handler-uninspectable";
+
+export type TypeDIInjectionInspection =
+  | {
+      readonly parameterIndex?: number;
+      readonly site: string;
+      readonly status: "resolved";
+      readonly token: unknown;
+    }
+  | {
+      readonly parameterIndex?: number;
+      readonly site: string;
+      readonly status: "uninspectable";
+    };
 
 export type DependencyGraphDiagnostic = {
   readonly code: DependencyGraphDiagnosticCode;

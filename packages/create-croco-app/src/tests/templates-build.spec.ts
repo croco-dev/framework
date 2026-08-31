@@ -928,7 +928,27 @@ function checkSaasStructure() {
   checkFileContains(
     "saas",
     ["apps", "api-server", "src", "tests", "ContractFuzz.spec.ts"],
-    /beforeEach\(\(\) => \{\s*Container\.reset\(\);\s*runtimeEvidence\.clear\(\);/,
+    /applicationRuntime: nodeApp\.applicationRuntime/,
+  );
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "tests", "ContractFuzz.spec.ts"],
+    /already been disposed/,
+  );
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "tests", "ContractFuzz.spec.ts"],
+    /const activeScopeIds = getTypeDIContainerScopeIds\(\)/,
+  );
+  checkFileDoesNotContain(
+    "saas",
+    ["apps", "api-server", "src", "tests", "ContractFuzz.spec.ts"],
+    /Container\.reset\(\)/,
+  );
+  checkFileDoesNotContain(
+    "saas",
+    ["apps", "api-server", "src", "tests", "ContractFuzz.spec.ts"],
+    /TypeDIContainer\.remove\(/,
   );
   checkFileDoesNotContain(
     "saas",
@@ -1048,7 +1068,7 @@ function checkSaasStructure() {
   checkFileContains(
     "saas",
     ["apps", "api-server", "src", "app.ts"],
-    /defaultSaasRuntime\.diagnosticsCollector\.getProviders/,
+    /applicationSaasRuntime\.diagnosticsCollector\.getProviders/,
   );
   checkFileContains("saas", ["apps", "api-server", "src", "app.ts"], /rateLimitHttpMiddleware/);
   checkFileContains(

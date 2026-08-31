@@ -1,7 +1,7 @@
 import "reflect-metadata";
-import { Inject, Service as Component, Container, Token } from "typedi";
+import { Service as Component, Container, Token } from "typedi";
 import { beforeEach, describe, expect, it } from "vitest";
-import { Container as FrameworkContainer } from "@croco/framework-context";
+import { Container as FrameworkContainer, Inject } from "@croco/framework-context";
 import {
   CrocoModule,
   defineCrocoModule,

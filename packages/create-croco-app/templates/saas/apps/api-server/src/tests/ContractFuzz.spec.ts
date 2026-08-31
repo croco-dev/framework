@@ -1,7 +1,8 @@
+import { Container as TypeDIContainer } from "typedi";
 import {
-  Container,
   Context as FrameworkContext,
   createRuntimeCapabilityManifest,
+  LOGGER_TOKEN,
 } from "@croco/framework-context";
 import type { RuntimeCapabilityManifest, RuntimeContext } from "@croco/framework-context";
 import { buildContractGraph } from "@croco/protocols-core";
@@ -42,106 +43,138 @@ type RuntimeEvidence = {
   waitUntilWorkCompleted: boolean;
 };
 
+type TypeDIContainerRegistry = {
+  readonly instances: readonly { readonly id: string }[];
+};
+
 const runtimeEvidence = new Map<string, RuntimeEvidence>();
 
 describe("generated contract verification", () => {
   beforeEach(() => {
-    Container.reset();
     runtimeEvidence.clear();
   });
 
   it("runs bounded route fuzzing and Node/Lambda parity through the production bootstrap", async () => {
-    await using node = await createTestKernel({
-      adapter: "node",
-      bootstrap: () => createCrocoApp({ additionalMiddlewares: [runtimeEvidenceMiddleware] }),
-      fidelity: "adapter",
-      validation: { di: "warn" },
-    });
-    await using lambda = await createTestKernel({
-      adapter: "lambda",
-      bootstrap: () => createCrocoApp({ additionalMiddlewares: [runtimeEvidenceMiddleware] }),
-      fidelity: "adapter",
-      validation: { di: "warn" },
-    });
+    const nodeApp = createCrocoApp({ additionalMiddlewares: [runtimeEvidenceMiddleware] });
+    const lambdaApp = createCrocoApp({ additionalMiddlewares: [runtimeEvidenceMiddleware] });
+    const nodeScopeId = nodeApp.applicationRuntime.scopeId;
+    const lambdaScopeId = lambdaApp.applicationRuntime.scopeId;
+    const nodeScope = TypeDIContainer.of(nodeScopeId);
+    const lambdaScope = TypeDIContainer.of(lambdaScopeId);
 
-    const fuzzCases = createContractCaseArbitrary(route).map((testCase) => ({
-      ...testCase,
-      input: {
-        ...testCase.input,
-        transportHeaders: { ...testCase.input.transportHeaders, traceparent: TRACEPARENT },
-      },
-    }));
-    const profile = "pr";
-    const fuzz = await runContractFuzz({
-      route,
-      runtime: "node",
-      profile,
-      arbitrary: fuzzCases,
-      execute: async (testCase) => {
-        const request = createRequest(testCase);
-        return observe(
-          "node",
-          testCase.canarySecret,
-          await node.http.get(request.path, request.options),
-          nodeManifest,
-        );
-      },
-    });
+    expect(nodeScope.has(LOGGER_TOKEN)).toBe(true);
+    expect(lambdaScope.has(LOGGER_TOKEN)).toBe(true);
 
-    expect(fuzz).toMatchObject({
-      status: "passed",
-      numRuns: CONTRACT_TEST_PROFILES[profile].numRuns,
-      runtime: "node",
-    });
+    {
+      await using node = await createTestKernel({
+        adapter: "node",
+        applicationRuntime: nodeApp.applicationRuntime,
+        bootstrap: () => nodeApp,
+        fidelity: "adapter",
+        validation: { di: "warn" },
+      });
+      await using lambda = await createTestKernel({
+        adapter: "lambda",
+        applicationRuntime: lambdaApp.applicationRuntime,
+        bootstrap: () => lambdaApp,
+        fidelity: "adapter",
+        validation: { di: "warn" },
+      });
 
-    const parityCase: ContractGeneratedCase = {
-      canarySecret: "croco-canary-generated-app",
-      input: {
-        headers: { "x-croco-fuzz-canary": "croco-canary-generated-app" },
-        query: {},
-        transportHeaders: {
-          traceparent: TRACEPARENT,
-          "x-croco-lifecycle-observation": "true",
+      const fuzzCases = createContractCaseArbitrary(route).map((testCase) => ({
+        ...testCase,
+        input: {
+          ...testCase.input,
+          transportHeaders: { ...testCase.input.transportHeaders, traceparent: TRACEPARENT },
         },
-      },
-      kind: "valid",
-    };
-    const differential = await runContractRuntimeDifferential({
-      route,
-      testCase: parityCase,
-      targets: [
-        {
-          runtime: "node",
-          capabilities: nodeManifest,
-          execute: async () => {
-            const request = createRequest(parityCase);
-            return observe(
-              "node",
-              parityCase.canarySecret,
-              await node.http.get(request.path, request.options),
-              nodeManifest,
-            );
+      }));
+      const profile = "pr";
+      const fuzz = await runContractFuzz({
+        route,
+        runtime: "node",
+        profile,
+        arbitrary: fuzzCases,
+        execute: async (testCase) => {
+          const request = createRequest(testCase);
+          return observe(
+            "node",
+            testCase.canarySecret,
+            await node.http.get(request.path, request.options),
+            nodeManifest,
+          );
+        },
+      });
+
+      expect(fuzz).toMatchObject({
+        status: "passed",
+        numRuns: CONTRACT_TEST_PROFILES[profile].numRuns,
+        runtime: "node",
+      });
+
+      const parityCase: ContractGeneratedCase = {
+        canarySecret: "croco-canary-generated-app",
+        input: {
+          headers: { "x-croco-fuzz-canary": "croco-canary-generated-app" },
+          query: {},
+          transportHeaders: {
+            traceparent: TRACEPARENT,
+            "x-croco-lifecycle-observation": "true",
           },
         },
-        {
-          runtime: "lambda",
-          capabilities: lambdaManifest,
-          execute: async () => {
-            const request = createRequest(parityCase);
-            return observe(
-              "lambda",
-              parityCase.canarySecret,
-              await lambda.http.get(request.path, request.options),
-              lambdaManifest,
-            );
+        kind: "valid",
+      };
+      const differential = await runContractRuntimeDifferential({
+        route,
+        testCase: parityCase,
+        targets: [
+          {
+            runtime: "node",
+            capabilities: nodeManifest,
+            execute: async () => {
+              const request = createRequest(parityCase);
+              return observe(
+                "node",
+                parityCase.canarySecret,
+                await node.http.get(request.path, request.options),
+                nodeManifest,
+              );
+            },
           },
-        },
-      ],
-    });
+          {
+            runtime: "lambda",
+            capabilities: lambdaManifest,
+            execute: async () => {
+              const request = createRequest(parityCase);
+              return observe(
+                "lambda",
+                parityCase.canarySecret,
+                await lambda.http.get(request.path, request.options),
+                lambdaManifest,
+              );
+            },
+          },
+        ],
+      });
 
-    expect(differential.status).toBe("passed");
+      expect(differential.status).toBe("passed");
+    }
+
+    expect(() => nodeApp.applicationRuntime.run(() => undefined)).toThrow(/already been disposed/);
+    expect(() => lambdaApp.applicationRuntime.run(() => undefined)).toThrow(
+      /already been disposed/,
+    );
+    expect(nodeScope.has(LOGGER_TOKEN)).toBe(false);
+    expect(lambdaScope.has(LOGGER_TOKEN)).toBe(false);
+    const activeScopeIds = getTypeDIContainerScopeIds();
+    expect(activeScopeIds).not.toContain(nodeScopeId);
+    expect(activeScopeIds).not.toContain(lambdaScopeId);
   });
 });
+
+function getTypeDIContainerScopeIds(): readonly string[] {
+  const registry = TypeDIContainer as unknown as TypeDIContainerRegistry;
+  return registry.instances.map((instance) => instance.id);
+}
 
 function createRequest(testCase: ContractGeneratedCase): {
   readonly options: {

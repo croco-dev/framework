@@ -2,6 +2,8 @@ import "reflect-metadata";
 import { EntitlementManager } from "@croco/entitlements-core";
 import { Container, LOGGER_TOKEN } from "@croco/framework-context";
 import type { Constructor, ILogger } from "@croco/framework-context";
+import { createApplicationRuntime } from "@croco/framework-module";
+import type { ApplicationRuntime } from "@croco/framework-module";
 import {
   createSlidingWindowPolicy,
   RateLimiter,
@@ -14,6 +16,7 @@ import {
   createApp,
   createRuntimeAwareRateLimitClientIdentityPolicy,
   mb,
+  type CrocoApp,
   type MiddlewareFunction,
   rateLimitHttpMiddleware,
   securityHeadersMiddleware,
@@ -21,7 +24,7 @@ import {
 import { JobsController } from "./controllers/JobsController";
 import { OperationsController } from "./controllers/OperationsController";
 import { SaasController } from "./controllers/SaasController";
-import { defaultSaasRuntime } from "./saasDemo";
+import { createSaasDemoRuntime } from "./saasDemo";
 
 const OPERATIONAL_RATE_LIMIT_BYPASS_PATHS = new Set(["/ops/health", "/ops/diagnostics"]);
 const controllers = [OperationsController, JobsController, SaasController];
@@ -31,35 +34,104 @@ export type CreateCrocoAppOptions = {
   readonly additionalMiddlewares?: readonly MiddlewareFunction[];
 };
 
+export type RuntimeOwnedCrocoApp = CrocoApp & {
+  readonly applicationRuntime: ApplicationRuntime;
+  readonly disposeApplicationRuntime: () => Promise<void>;
+};
+
 export function createCrocoDiGraphRoots(): readonly Constructor[] {
   return [...diGraphRootControllers];
 }
 
-export function createCrocoApp(options: CreateCrocoAppOptions = {}) {
-  if (!Container.has(LOGGER_TOKEN)) {
+export function createCrocoApp(options: CreateCrocoAppOptions = {}): RuntimeOwnedCrocoApp {
+  const runtime = createApplicationRuntime();
+
+  return runtime.run(() => {
+    const applicationSaasRuntime = createSaasDemoRuntime();
     Container.set(LOGGER_TOKEN, new BootstrapLogger());
-  }
-  Container.set(EntitlementManager, defaultSaasRuntime.entitlementManager);
+    Container.set(EntitlementManager, applicationSaasRuntime.entitlementManager);
 
-  const rateLimiter = new RateLimiter(
-    new SlidingWindowInMemoryStore(),
-    new RateLimitKeyBuilder(["ip"]),
-  );
+    const rateLimiter = new RateLimiter(
+      new SlidingWindowInMemoryStore(),
+      new RateLimitKeyBuilder(["ip"]),
+    );
 
-  return createApp({
-    controllers,
-    diValidation: "warn",
-    diagnostics: {
-      providers: defaultSaasRuntime.diagnosticsCollector.getProviders(),
-    },
-    middlewares: [
-      securityHeadersMiddleware(),
-      corsMiddleware({ origins: [process.env.WEB_ORIGIN ?? "http://localhost:5173"] }),
-      bodyLimitMiddleware({ limit: mb(1) }),
-      createApiRateLimitMiddleware(rateLimiter),
-      ...(options.additionalMiddlewares ?? []),
-    ],
+    return bindApplicationRuntime(
+      createApp({
+        controllers,
+        diValidation: "warn",
+        diagnostics: {
+          providers: applicationSaasRuntime.diagnosticsCollector.getProviders(),
+        },
+        middlewares: [
+          securityHeadersMiddleware(),
+          corsMiddleware({ origins: [process.env.WEB_ORIGIN ?? "http://localhost:5173"] }),
+          bodyLimitMiddleware({ limit: mb(1) }),
+          createApiRateLimitMiddleware(rateLimiter),
+          ...(options.additionalMiddlewares ?? []),
+        ],
+      }),
+      runtime,
+    );
   });
+}
+
+function bindApplicationRuntime(app: CrocoApp, runtime: ApplicationRuntime): RuntimeOwnedCrocoApp {
+  bindHostCallbacks(app, runtime);
+  const boundMethods = new Map<PropertyKey, (...args: never[]) => unknown>();
+
+  return new Proxy(app, {
+    get(target, property) {
+      if (property === "applicationRuntime") {
+        return runtime;
+      }
+      if (property === "disposeApplicationRuntime") {
+        return () => runtime.dispose();
+      }
+
+      const value = Reflect.get(target, property, target) as unknown;
+      if (typeof value !== "function") {
+        return value;
+      }
+
+      const existing = boundMethods.get(property);
+      if (existing) {
+        return existing;
+      }
+
+      const bound = (...args: never[]) => runtime.run(() => Reflect.apply(value, target, args));
+      boundMethods.set(property, bound);
+      return bound;
+    },
+  }) as RuntimeOwnedCrocoApp;
+}
+
+function bindHostCallbacks(app: CrocoApp, runtime: ApplicationRuntime): void {
+  const createNodeHandler = app.nodeHandler.bind(app);
+  app.nodeHandler = () => bindRuntimeCallback(createNodeHandler(), runtime);
+
+  const createLambdaHandler = app.lambdaHandler.bind(app);
+  app.lambdaHandler = (options) => bindRuntimeCallback(createLambdaHandler(options), runtime);
+
+  const getHono = app.getHono.bind(app);
+  let runtimeBoundHono: ReturnType<CrocoApp["getHono"]> | undefined;
+  app.getHono = () => {
+    if (runtimeBoundHono) {
+      return runtimeBoundHono;
+    }
+
+    const hono = getHono();
+    hono.fetch = bindRuntimeCallback(hono.fetch.bind(hono), runtime);
+    runtimeBoundHono = hono;
+    return hono;
+  };
+}
+
+function bindRuntimeCallback<TArgs extends unknown[], TResult>(
+  callback: (...args: TArgs) => TResult,
+  runtime: ApplicationRuntime,
+): (...args: TArgs) => TResult {
+  return (...args) => runtime.run(() => callback(...args));
 }
 
 class BootstrapLogger implements ILogger {

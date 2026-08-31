@@ -1,7 +1,9 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import {
   type Service,
+  type Handler,
   type ServiceIdentifier,
+  type ServiceMetadata,
   Container as TypeDIContainer,
   ContainerInstance as TypeDIContainerInstance,
   ServiceNotFoundError,
@@ -11,7 +13,7 @@ import type { Constructable as TypeDIConstructable } from "typedi/types/types/co
 import "reflect-metadata";
 import { Problem, ProblemFactory } from "@croco/problems-core";
 import { Context } from "./Context";
-import { getParameterInjectionToken } from "./InjectionMetadata";
+import { getParameterInjectionToken, inspectInjectionMetadata } from "./InjectionMetadata";
 import { MetadataStorage } from "./MetadataStorage";
 import { CircularDependencyProblem } from "./problems/CircularDependencyProblem";
 import {
@@ -32,11 +34,13 @@ import type {
   DependencySourceLocation,
   DependencyTokenKind,
   Scope,
+  TypeDIInjectionInspection,
 } from "./types";
 
 export type TokenIdentifier<T> = Constructor<T> | TypeDIToken<T> | string | symbol;
 export type ContainerValidationOptions = {
   readonly force?: boolean;
+  readonly roots?: readonly Constructor[];
 };
 
 const COMPONENT_METADATA_KEY = Symbol("component:metadata");
@@ -50,6 +54,7 @@ type ContainerScopeState = {
   readonly id: string;
   readonly instance: TypeDIContainerInstance;
   readonly lazyProviders: Map<TokenIdentifier<unknown>, () => unknown>;
+  readonly symbolTokens: Map<symbol, TypeDIToken<unknown>>;
   readonly tokenIdentityIds: Map<TokenIdentifier<unknown>, string>;
   readonly tokenIdentityOwners: Map<string, TokenIdentifier<unknown>>;
   readonly tokens: Set<TokenIdentifier<unknown>>;
@@ -59,7 +64,58 @@ type ContainerScopeState = {
   validated: boolean;
 };
 
+type ContainerScopeServiceAccess = {
+  readonly services: ServiceMetadata<unknown>[];
+  readonly destroyServiceInstance: (service: ServiceMetadata<unknown>) => void;
+};
+
+type ContainerScopeSnapshot = {
+  readonly componentRegistrationOrder: Map<Constructor, number>;
+  readonly componentSourceLocations: Map<Constructor, DependencySourceLocation>;
+  readonly components: Map<Constructor, ComponentMetadata>;
+  readonly explicitComponentSourceLocations: Map<Constructor, DependencySourceLocation>;
+  readonly lazyProviders: Map<TokenIdentifier<unknown>, () => unknown>;
+  readonly symbolTokens: Map<symbol, TypeDIToken<unknown>>;
+  readonly tokenIdentityIds: Map<TokenIdentifier<unknown>, string>;
+  readonly tokenIdentityOwners: Map<string, TokenIdentifier<unknown>>;
+  readonly tokens: Set<TokenIdentifier<unknown>>;
+  readonly services: readonly {
+    readonly reference: ServiceMetadata<unknown>;
+    readonly values: ServiceMetadata<unknown>;
+  }[];
+  readonly lastResolutionTrace?: DependencyResolutionTrace;
+  readonly nextComponentRegistrationOrder: number;
+  readonly validated: boolean;
+};
+
 const containerScopeStorage = new AsyncLocalStorage<ContainerScopeState>();
+type ContainerScopeRollbackTransaction = {
+  readonly state: ContainerScopeState;
+  active: boolean;
+};
+const containerScopeRollbackStorage = new AsyncLocalStorage<ContainerScopeRollbackTransaction>();
+
+type ContainerScopeCleanupFailure = {
+  readonly phase: "dispose" | "rollback";
+  readonly code:
+    | "framework-context/container-scope-disposal-cleanup-failed"
+    | "framework-context/container-scope-rollback-cleanup-failed";
+  readonly message: string;
+};
+
+function createContainerScopeCleanupFailure(
+  error: unknown,
+  phase: ContainerScopeCleanupFailure["phase"],
+): ContainerScopeCleanupFailure {
+  return {
+    phase,
+    code:
+      phase === "dispose"
+        ? "framework-context/container-scope-disposal-cleanup-failed"
+        : "framework-context/container-scope-rollback-cleanup-failed",
+    message: error instanceof Error ? error.message : String(error),
+  };
+}
 
 function createContainerScopeDisposedProblem(scopeId: string): Problem {
   return ProblemFactory.internalServerError(
@@ -74,6 +130,8 @@ function createContainerScopeDisposedProblem(scopeId: string): Problem {
 export class ContainerScope implements AsyncDisposable {
   readonly id: string;
   private readonly state: ContainerScopeState;
+  private activeRollbackTransactions = 0;
+  private rollbackTail: Promise<void> = Promise.resolve();
 
   constructor() {
     this.id = `croco-container-scope-${++containerScopeCounter}`;
@@ -85,6 +143,7 @@ export class ContainerScope implements AsyncDisposable {
       id: this.id,
       instance: TypeDIContainer.of(this.id),
       lazyProviders: new Map(),
+      symbolTokens: new Map(),
       tokenIdentityIds: new Map(),
       tokenIdentityOwners: new Map(),
       tokens: new Set(),
@@ -104,9 +163,31 @@ export class ContainerScope implements AsyncDisposable {
     return containerScopeStorage.run(this.state, fn);
   }
 
+  runWithRollback<T>(fn: () => Promise<T>): Promise<T> {
+    const transaction = containerScopeRollbackStorage.getStore();
+    if (transaction?.active && transaction.state === this.state) {
+      return containerScopeStorage.run(this.state, fn);
+    }
+
+    const attempt = this.rollbackTail.then(() => this.executeWithRollback(fn));
+    this.rollbackTail = attempt.then(
+      () => undefined,
+      () => undefined,
+    );
+    return attempt;
+  }
+
   dispose(): void {
     if (this.state.disposed) {
       return;
+    }
+
+    if (this.activeRollbackTransactions > 0) {
+      throw ProblemFactory.conflict(
+        "framework-context/container-scope-transaction-active",
+        `Container scope '${this.id}' cannot be disposed while rollback-protected work is active. Wait for the transaction to finish and dispose the scope again.`,
+        { extensions: { scopeId: this.id, activeTransactions: this.activeRollbackTransactions } },
+      );
     }
 
     this.state.disposed = true;
@@ -115,12 +196,33 @@ export class ContainerScope implements AsyncDisposable {
     this.state.components.clear();
     this.state.explicitComponentSourceLocations.clear();
     this.state.lazyProviders.clear();
+    this.state.symbolTokens.clear();
     this.state.tokenIdentityIds.clear();
     this.state.tokenIdentityOwners.clear();
     this.state.tokens.clear();
     delete this.state.lastResolutionTrace;
-    this.state.instance.reset({ strategy: "resetServices" });
-    TypeDIContainer.reset(this.id);
+    const access = this.getServiceAccess();
+    const cleanupFailures: ContainerScopeCleanupFailure[] = [];
+    try {
+      for (const service of access.services.slice()) {
+        try {
+          access.destroyServiceInstance(service);
+        } catch (error) {
+          cleanupFailures.push(createContainerScopeCleanupFailure(error, "dispose"));
+        }
+      }
+    } finally {
+      access.services.splice(0, access.services.length);
+      TypeDIContainer.reset(this.id);
+    }
+
+    if (cleanupFailures.length > 0) {
+      throw ProblemFactory.internalServerError(
+        "framework-context/container-scope-disposal-failed",
+        `Container scope '${this.id}' was released after provider cleanup failed.`,
+        { extensions: { cleanupFailures } },
+      );
+    }
   }
 
   [Symbol.dispose](): void {
@@ -130,14 +232,146 @@ export class ContainerScope implements AsyncDisposable {
   async [Symbol.asyncDispose](): Promise<void> {
     this.dispose();
   }
+
+  private createSnapshot(): ContainerScopeSnapshot {
+    const services = this.getServiceAccess().services;
+
+    return {
+      componentRegistrationOrder: new Map(this.state.componentRegistrationOrder),
+      componentSourceLocations: new Map(this.state.componentSourceLocations),
+      components: new Map(this.state.components),
+      explicitComponentSourceLocations: new Map(this.state.explicitComponentSourceLocations),
+      lazyProviders: new Map(this.state.lazyProviders),
+      symbolTokens: new Map(this.state.symbolTokens),
+      tokenIdentityIds: new Map(this.state.tokenIdentityIds),
+      tokenIdentityOwners: new Map(this.state.tokenIdentityOwners),
+      tokens: new Set(this.state.tokens),
+      services: services.map((service) => ({ reference: service, values: { ...service } })),
+      ...(this.state.lastResolutionTrace
+        ? { lastResolutionTrace: this.state.lastResolutionTrace }
+        : {}),
+      nextComponentRegistrationOrder: this.state.nextComponentRegistrationOrder,
+      validated: this.state.validated,
+    };
+  }
+
+  private restoreSnapshot(
+    snapshot: ContainerScopeSnapshot,
+  ): readonly ContainerScopeCleanupFailure[] {
+    const access = this.getServiceAccess();
+    const originalRecords = new Map(
+      snapshot.services.map((record) => [record.reference, record.values]),
+    );
+    const cleanupFailures: ContainerScopeCleanupFailure[] = [];
+
+    for (const service of access.services) {
+      const original = originalRecords.get(service);
+      if (!original || service.value !== original.value) {
+        try {
+          access.destroyServiceInstance(service);
+        } catch (error) {
+          cleanupFailures.push(createContainerScopeCleanupFailure(error, "rollback"));
+        }
+      }
+    }
+    for (const { reference, values } of snapshot.services) {
+      Object.assign(reference, values);
+    }
+    access.services.splice(
+      0,
+      access.services.length,
+      ...snapshot.services.map(({ reference }) => reference),
+    );
+
+    this.replaceMap(this.state.componentRegistrationOrder, snapshot.componentRegistrationOrder);
+    this.replaceMap(this.state.componentSourceLocations, snapshot.componentSourceLocations);
+    this.replaceMap(this.state.components, snapshot.components);
+    this.replaceMap(
+      this.state.explicitComponentSourceLocations,
+      snapshot.explicitComponentSourceLocations,
+    );
+    this.replaceMap(this.state.lazyProviders, snapshot.lazyProviders);
+    this.replaceMap(this.state.symbolTokens, snapshot.symbolTokens);
+    this.replaceMap(this.state.tokenIdentityIds, snapshot.tokenIdentityIds);
+    this.replaceMap(this.state.tokenIdentityOwners, snapshot.tokenIdentityOwners);
+    this.state.tokens.clear();
+    for (const token of snapshot.tokens) {
+      this.state.tokens.add(token);
+    }
+    if (snapshot.lastResolutionTrace) {
+      this.state.lastResolutionTrace = snapshot.lastResolutionTrace;
+    } else {
+      delete this.state.lastResolutionTrace;
+    }
+    this.state.nextComponentRegistrationOrder = snapshot.nextComponentRegistrationOrder;
+    this.state.validated = snapshot.validated;
+    return cleanupFailures;
+  }
+
+  private async executeWithRollback<T>(fn: () => Promise<T>): Promise<T> {
+    if (this.state.disposed) {
+      throw createContainerScopeDisposedProblem(this.id);
+    }
+
+    this.activeRollbackTransactions += 1;
+    try {
+      const snapshot = this.createSnapshot();
+      const transaction: ContainerScopeRollbackTransaction = { state: this.state, active: true };
+      try {
+        return await containerScopeRollbackStorage.run(transaction, () =>
+          containerScopeStorage.run(this.state, fn),
+        );
+      } catch (error) {
+        const cleanupFailures = this.restoreSnapshot(snapshot);
+        if (cleanupFailures.length > 0) {
+          throw ProblemFactory.internalServerError(
+            "framework-context/container-scope-rollback-failed",
+            `Container scope '${this.id}' could not cleanly roll back the failed transaction. Dispose this scope and create a new one.`,
+            {
+              ...(error instanceof Error ? { cause: error } : {}),
+              extensions: { cleanupFailures },
+            },
+          );
+        }
+        throw error;
+      } finally {
+        transaction.active = false;
+      }
+    } finally {
+      this.activeRollbackTransactions -= 1;
+    }
+  }
+
+  private getServiceAccess(): ContainerScopeServiceAccess {
+    const access = this.state.instance as unknown as Partial<ContainerScopeServiceAccess>;
+    if (!Array.isArray(access.services) || typeof access.destroyServiceInstance !== "function") {
+      throw ProblemFactory.internalServerError(
+        "framework-context/container-scope-snapshot-unavailable",
+        "TypeDI 0.10.0 container metadata contract is unavailable for scoped rollback.",
+      );
+    }
+    return access as ContainerScopeServiceAccess;
+  }
+
+  private replaceMap<TKey, TValue>(
+    target: Map<TKey, TValue>,
+    source: ReadonlyMap<TKey, TValue>,
+  ): void {
+    target.clear();
+    for (const [key, value] of source) {
+      target.set(key, value);
+    }
+  }
 }
 
 type HandlerDependencyResolver = <T>(id: Constructor<T> | TypeDIToken<T> | string) => T;
+type HandlerDependencyCollectionResolver = <T>(id: Constructor<T> | TypeDIToken<T> | string) => T[];
 
 class HandlerContainerInstance extends TypeDIContainerInstance {
   constructor(
     id: string,
     private readonly resolveDependency: HandlerDependencyResolver,
+    private readonly resolveDependencies: HandlerDependencyCollectionResolver,
   ) {
     super(id);
   }
@@ -150,15 +384,7 @@ class HandlerContainerInstance extends TypeDIContainerInstance {
   override getMany<T>(id: TypeDIToken<T>): T[];
   override getMany<T>(id: string): T[];
   override getMany<T>(id: Constructor<T> | TypeDIToken<T> | string): T[] {
-    if (typeof id === "function") {
-      return [this.resolveDependency(id)];
-    }
-
-    if (typeof id === "string") {
-      return TypeDIContainer.getMany(id);
-    }
-
-    return TypeDIContainer.getMany(id);
+    return this.resolveDependencies(id);
   }
 }
 
@@ -256,6 +482,60 @@ export class Container {
     return Container.getScopeState()?.id;
   }
 
+  static inspectTypeDIConstructorInjections(
+    token: Constructor,
+  ): readonly TypeDIInjectionInspection[] {
+    return Container.inspectTypeDIInjections(token).filter(
+      (inspection) => typeof inspection.parameterIndex === "number",
+    );
+  }
+
+  static inspectTypeDIInjections(token: Constructor): readonly TypeDIInjectionInspection[] {
+    const metadataInspections = [
+      ...inspectInjectionMetadata(token),
+      ...inspectInjectionMetadata(token.prototype),
+    ];
+
+    return TypeDIContainer.handlers
+      .filter((handler) => Container.isTypeDIHandlerForToken(handler, token))
+      .map((handler): TypeDIInjectionInspection => {
+        const parameterIndex = typeof handler.index === "number" ? handler.index : undefined;
+        const site =
+          parameterIndex === undefined
+            ? `property:${String(handler.propertyName)}`
+            : `parameter:${parameterIndex}`;
+
+        const metadata = metadataInspections.find((inspection) =>
+          parameterIndex === undefined
+            ? inspection.index === undefined && inspection.propertyKey === handler.propertyName
+            : inspection.index === parameterIndex,
+        );
+
+        if (metadata?.status === "resolved") {
+          return {
+            ...(parameterIndex === undefined ? {} : { parameterIndex }),
+            site,
+            status: "resolved",
+            token: metadata.token,
+          };
+        }
+
+        if (metadata?.status === "uninspectable") {
+          return {
+            ...(parameterIndex === undefined ? {} : { parameterIndex }),
+            site,
+            status: "uninspectable",
+          };
+        }
+
+        return {
+          ...(parameterIndex === undefined ? {} : { parameterIndex }),
+          site,
+          status: "uninspectable",
+        };
+      });
+  }
+
   static remove<T>(token: TokenIdentifier<T>): void {
     Container.removeRegisteredValue(token);
     Container.getLazyProviders().delete(token);
@@ -289,6 +569,7 @@ export class Container {
       scope.components.clear();
       scope.explicitComponentSourceLocations.clear();
       scope.lazyProviders.clear();
+      scope.symbolTokens.clear();
       scope.tokenIdentityIds.clear();
       scope.tokenIdentityOwners.clear();
       scope.tokens.clear();
@@ -299,7 +580,6 @@ export class Container {
     }
 
     TypeDIContainer.of().reset({ strategy: "resetServices" });
-    TypeDIContainer.reset();
     // reset은 요청 처리가 없는 idle 시점에만 호출한다.
     MetadataStorage.clear();
     Container.lazyProviders.clear();
@@ -323,7 +603,11 @@ export class Container {
       return;
     }
 
-    const nodes = Container.getRegisteredComponents();
+    const nodes = options.roots
+      ? Array.from(
+          new Set([...options.roots, ...(Container.getScopeState()?.components.keys() ?? [])]),
+        )
+      : Container.getRegisteredComponents();
     if (nodes.length === 0) {
       Container.setValidated(true);
       return;
@@ -338,13 +622,24 @@ export class Container {
 
   static createDependencyGraphManifest(
     options: {
+      readonly knownProviders?: ReadonlySet<TokenIdentifier<unknown>>;
+      readonly providerConstructors?: ReadonlyMap<TokenIdentifier<unknown>, Constructor<unknown>>;
+      readonly rejectUnknownProviders?: boolean;
       readonly roots?: readonly TokenIdentifier<unknown>[];
     } = {},
   ): DependencyGraphManifest {
     const roots = [...(options.roots ?? Container.getRegisteredComponents())].sort((left, right) =>
       Container.compareTokens(left, right),
     );
-    const traces = roots.map((root) => Container.buildResolutionTrace(root));
+    const traces = roots.map((root) =>
+      Container.buildResolutionTrace(
+        root,
+        undefined,
+        options.providerConstructors,
+        options.knownProviders,
+        options.rejectUnknownProviders,
+      ),
+    );
     const diagnostics = Container.createGraphDiagnostics(traces);
 
     return {
@@ -665,6 +960,23 @@ export class Container {
             trace,
             ...Container.getSourceLocationForTokenId(step.tokenId),
           });
+          continue;
+        }
+
+        if (step.status === "uninspectable") {
+          pushDiagnostic({
+            code: "CROCO_DI_005",
+            legacyCode: "framework-context/di-injection-handler-uninspectable",
+            severity: "error",
+            token: step.token,
+            tokenId: step.tokenId,
+            status: "failed",
+            message: step.reason,
+            path: step.path,
+            pathIds: step.pathIds,
+            trace,
+            ...Container.getSourceLocationForTokenId(step.tokenId),
+          });
         }
       }
     }
@@ -894,6 +1206,10 @@ export class Container {
     return Container.getScopeState()?.lazyProviders ?? Container.lazyProviders;
   }
 
+  private static getSymbolTokens(): Map<symbol, TypeDIToken<unknown>> {
+    return Container.getScopeState()?.symbolTokens ?? Container.symbolTokens;
+  }
+
   private static isValidated(): boolean {
     return Container.getScopeState()?.validated ?? Container.validated;
   }
@@ -950,13 +1266,14 @@ export class Container {
   }
 
   private static getOrCreateSymbolToken(symbol: symbol): TypeDIToken<unknown> {
-    const existing = Container.symbolTokens.get(symbol);
+    const symbolTokens = Container.getSymbolTokens();
+    const existing = symbolTokens.get(symbol);
     if (existing) {
       return existing;
     }
 
     const token = new TypeDIToken(Symbol.keyFor(symbol) ?? symbol.description ?? symbol.toString());
-    Container.symbolTokens.set(symbol, token);
+    symbolTokens.set(symbol, token);
     return token;
   }
 
@@ -966,7 +1283,7 @@ export class Container {
 
   private static getRegisteredValue<T>(token: TokenIdentifier<T>): T {
     const scope = Container.getScopeState();
-    if (scope && !scope.tokens.has(token)) {
+    if (scope && !Container.hasScopedValue(scope, token)) {
       throw new ServiceNotFoundError(Container.toTypeDIServiceIdentifier(token));
     }
 
@@ -1012,7 +1329,7 @@ export class Container {
   private static hasRegisteredValue<T>(token: TokenIdentifier<T>): boolean {
     const scope = Container.getScopeState();
     if (scope) {
-      return scope.tokens.has(token);
+      return Container.hasScopedValue(scope, token);
     }
 
     const target = TypeDIContainer;
@@ -1029,6 +1346,13 @@ export class Container {
     }
 
     return target.has(Container.toTypeDIConstructable(token));
+  }
+
+  private static hasScopedValue<T>(scope: ContainerScopeState, token: TokenIdentifier<T>): boolean {
+    const container = scope.instance as unknown as {
+      has(identifier: ServiceIdentifier<T>): boolean;
+    };
+    return container.has(Container.toTypeDIServiceIdentifier(token));
   }
 
   private static removeRegisteredValue<T>(token: TokenIdentifier<T>): void {
@@ -1200,9 +1524,19 @@ export class Container {
     trace: DependencyResolutionTrace,
     stack: TokenIdentifier<unknown>[],
   ): TypeDIContainerInstance {
-    return new HandlerContainerInstance("__croco_handler__", (id) =>
-      Container.resolveHandlerDependency(id, trace, stack),
+    return new HandlerContainerInstance(
+      "__croco_handler__",
+      (id) => Container.resolveHandlerDependency(id, trace, stack),
+      (id) => Container.resolveHandlerDependencies(id),
     );
+  }
+
+  private static resolveHandlerDependencies<T>(
+    token: Constructor<T> | TypeDIToken<T> | string,
+  ): T[] {
+    const scope = Container.getScopeState();
+    const target = scope?.instance ?? TypeDIContainer.of();
+    return target.getMany(Container.toTypeDIServiceIdentifier(token));
   }
 
   private static resolveHandlerDependency<T>(
@@ -1217,9 +1551,20 @@ export class Container {
   private static buildResolutionTrace<T>(
     token: TokenIdentifier<T>,
     status?: DependencyResolutionTraceStatus,
+    providerConstructors?: ReadonlyMap<TokenIdentifier<unknown>, Constructor<unknown>>,
+    knownProviders?: ReadonlySet<TokenIdentifier<unknown>>,
+    rejectUnknownProviders = false,
   ): DependencyResolutionTrace {
     const steps: DependencyResolutionStep[] = [];
-    Container.collectResolutionSteps(token, [], steps);
+    Container.collectResolutionSteps(
+      token,
+      [],
+      steps,
+      undefined,
+      providerConstructors,
+      knownProviders,
+      rejectUnknownProviders,
+    );
     return {
       root: Container.describeToken(token).label,
       status: status ?? Container.computeTraceStatus(steps),
@@ -1232,20 +1577,30 @@ export class Container {
     path: TokenIdentifier<unknown>[],
     steps: DependencyResolutionStep[],
     edge?: Pick<DependencyResolutionStep, "dependencyOf" | "dependencyOfId" | "parameterIndex">,
+    providerConstructors?: ReadonlyMap<TokenIdentifier<unknown>, Constructor<unknown>>,
+    knownProviders?: ReadonlySet<TokenIdentifier<unknown>>,
+    rejectUnknownProviders = false,
   ): void {
     const nextPath = [...path, token as TokenIdentifier<unknown>];
     const cycleStartIndex = path.findIndex((entry) => Container.isSameToken(entry, token));
 
     if (cycleStartIndex >= 0) {
       steps.push(
-        Container.createResolutionStep(token, path, {
-          ...edge,
-          status: "circular",
-          reason: `Circular dependency detected through ${nextPath
-            .slice(cycleStartIndex)
-            .map((entry) => Container.describeToken(entry).label)
-            .join(" -> ")}.`,
-        }),
+        Container.createResolutionStep(
+          token,
+          path,
+          {
+            ...edge,
+            status: "circular",
+            reason: `Circular dependency detected through ${nextPath
+              .slice(cycleStartIndex)
+              .map((entry) => Container.describeToken(entry).label)
+              .join(" -> ")}.`,
+          },
+          rejectUnknownProviders,
+          providerConstructors?.has(token as TokenIdentifier<unknown>),
+          knownProviders?.has(token as TokenIdentifier<unknown>),
+        ),
       );
       return;
     }
@@ -1253,45 +1608,96 @@ export class Container {
     const scopeMismatch = Container.getScopeMismatch(token, path);
     if (scopeMismatch) {
       steps.push(
-        Container.createResolutionStep(token, path, {
-          ...edge,
-          status: "scope-mismatch",
-          reason: `Singleton-scoped component ${scopeMismatch.singleton} cannot depend on request-scoped component ${scopeMismatch.requestScoped}.`,
-        }),
+        Container.createResolutionStep(
+          token,
+          path,
+          {
+            ...edge,
+            status: "scope-mismatch",
+            reason: `Singleton-scoped component ${scopeMismatch.singleton} cannot depend on request-scoped component ${scopeMismatch.requestScoped}.`,
+          },
+          rejectUnknownProviders,
+          providerConstructors?.has(token as TokenIdentifier<unknown>),
+          knownProviders?.has(token as TokenIdentifier<unknown>),
+        ),
       );
       return;
     }
 
-    const step = Container.createResolutionStep(token, path, edge);
+    const step = Container.createResolutionStep(
+      token,
+      path,
+      edge,
+      rejectUnknownProviders,
+      providerConstructors?.has(token as TokenIdentifier<unknown>),
+      knownProviders?.has(token as TokenIdentifier<unknown>),
+    );
     steps.push(step);
 
-    if (
-      step.status !== "selected" ||
-      !Container.isConstructorToken(token) ||
-      step.provider !== "component"
-    ) {
+    const implementation =
+      providerConstructors?.get(token as TokenIdentifier<unknown>) ??
+      (Container.isConstructorToken(token) && step.provider === "component" ? token : undefined);
+    if (step.status !== "selected" || !implementation) {
       return;
     }
 
     const paramTypes =
-      (Reflect.getMetadata("design:paramtypes", token) as Constructor[] | undefined) ?? [];
-    Container.getConstructorParameterIndices(token, paramTypes).forEach((parameterIndex) => {
-      const injectedToken = getParameterInjectionToken(token, parameterIndex);
-      if (!injectedToken && parameterIndex >= token.length) {
-        return;
-      }
+      (Reflect.getMetadata("design:paramtypes", implementation) as Constructor[] | undefined) ?? [];
+    const typeDIInspections = new Map(
+      Container.inspectTypeDIConstructorInjections(implementation).map((inspection) => [
+        inspection.parameterIndex,
+        inspection,
+      ]),
+    );
+    Container.getConstructorParameterIndices(implementation, paramTypes).forEach(
+      (parameterIndex) => {
+        const typeDIInspection = typeDIInspections.get(parameterIndex);
+        if (typeDIInspection?.status === "uninspectable") {
+          steps.push(
+            Container.createResolutionStep(
+              implementation,
+              path,
+              {
+                status: "uninspectable",
+                reason: `Dependency injection handler for '${implementation.name}' parameter ${parameterIndex} cannot be inspected without executing user code.`,
+                parameterIndex,
+              },
+              rejectUnknownProviders,
+              true,
+            ),
+          );
+          return;
+        }
 
-      const dependency = injectedToken ?? paramTypes[parameterIndex];
-      if (dependency === undefined) {
-        return;
-      }
+        const injectedToken =
+          getParameterInjectionToken(implementation, parameterIndex) ??
+          (typeDIInspection?.status === "resolved"
+            ? (typeDIInspection.token as TokenIdentifier<unknown>)
+            : undefined);
+        if (!injectedToken && parameterIndex >= implementation.length) {
+          return;
+        }
 
-      Container.collectResolutionSteps(dependency, nextPath, steps, {
-        dependencyOf: step.token,
-        dependencyOfId: step.tokenId,
-        parameterIndex,
-      });
-    });
+        const dependency = injectedToken ?? paramTypes[parameterIndex];
+        if (dependency === undefined) {
+          return;
+        }
+
+        Container.collectResolutionSteps(
+          dependency,
+          nextPath,
+          steps,
+          {
+            dependencyOf: step.token,
+            dependencyOfId: step.tokenId,
+            parameterIndex,
+          },
+          providerConstructors,
+          knownProviders,
+          rejectUnknownProviders,
+        );
+      },
+    );
   }
 
   private static getConstructorParameterIndices(
@@ -1314,13 +1720,31 @@ export class Container {
     return Array.from({ length: parameterCount }, (_, index) => index);
   }
 
+  private static isTypeDIHandlerForToken(handler: Handler, token: Constructor): boolean {
+    if (typeof handler.index === "number") {
+      return handler.object === token || handler.object === Object.getPrototypeOf(token);
+    }
+
+    return (
+      handler.object.constructor === token || token.prototype instanceof handler.object.constructor
+    );
+  }
+
   private static createResolutionStep<T>(
     token: TokenIdentifier<T>,
     path: TokenIdentifier<unknown>[],
     overrides: Partial<DependencyResolutionStep> = {},
+    rejectUnknownProviders = false,
+    knownProvider = false,
+    knownLeafProvider = false,
   ): DependencyResolutionStep {
     const described = Container.describeToken(token);
-    const selection = Container.describeProviderSelection(token);
+    const selection = Container.describeProviderSelection(
+      token,
+      rejectUnknownProviders,
+      knownProvider,
+      knownLeafProvider,
+    );
     const pathTokens = [...path, token as TokenIdentifier<unknown>];
     return {
       token: described.label,
@@ -1340,7 +1764,12 @@ export class Container {
     };
   }
 
-  private static describeProviderSelection<T>(token: TokenIdentifier<T>): {
+  private static describeProviderSelection<T>(
+    token: TokenIdentifier<T>,
+    rejectUnknownProviders = false,
+    knownProvider = false,
+    knownLeafProvider = false,
+  ): {
     provider: DependencyProviderKind;
     status: DependencyResolutionStepStatus;
     reason: string;
@@ -1385,7 +1814,24 @@ export class Container {
       };
     }
 
-    if (!Container.isConstructorToken(token)) {
+    if (knownLeafProvider) {
+      return {
+        provider: "registered-value",
+        status: "selected",
+        reason:
+          "Application runtime value or factory provider is declared by the module lifecycle.",
+      };
+    }
+
+    if (knownProvider) {
+      return {
+        provider: "component",
+        status: "selected",
+        reason: "Application runtime class provider is registered by the module lifecycle.",
+      };
+    }
+
+    if (rejectUnknownProviders || !Container.isConstructorToken(token)) {
       return {
         provider: "missing",
         status: "missing",
@@ -1411,6 +1857,9 @@ export class Container {
     }
     if (steps.some((step) => step.status === "missing")) {
       return "missing";
+    }
+    if (steps.some((step) => step.status === "uninspectable")) {
+      return "failed";
     }
     return "ready";
   }

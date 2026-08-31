@@ -104,8 +104,16 @@ export class ShutdownManager {
       return;
     }
 
-    ShutdownManager.scopedInstances.get(scopeId)?.removeAllListeners();
-    ShutdownManager.scopedInstances.delete(scopeId);
+    ShutdownManager.disposeScopedState(scopeId);
+  }
+
+  static captureCurrentScopeDisposer(): (() => void) | undefined {
+    const scopeId = Container.getActiveScopeId();
+    if (!scopeId) {
+      return undefined;
+    }
+
+    return () => ShutdownManager.disposeScopedState(scopeId);
   }
 
   register(hook: ShutdownHook): void {
@@ -144,6 +152,11 @@ export class ShutdownManager {
       process.exitCode = 1;
     });
   };
+
+  private static disposeScopedState(scopeId: string): void {
+    ShutdownManager.scopedInstances.get(scopeId)?.removeAllListeners();
+    ShutdownManager.scopedInstances.delete(scopeId);
+  }
 
   shutdown(options: ShutdownOptions = {}): Promise<void> {
     if (this.shutdownPromise) {

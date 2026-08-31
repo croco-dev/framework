@@ -28,6 +28,24 @@ expect(test.fidelity).toEqual({
 });
 ```
 
+When the production bootstrap uses `createApplicationRuntime()`, pass that runtime through
+`applicationRuntime`. TestKernel then runs resources, bootstrap, requests, module shutdown, and final
+scope disposal in the same application-owned scope. Module shutdown completes before application and
+resource cleanup, and concurrent kernels do not need process-global container resets for isolation.
+
+```typescript
+const runtime = createApplicationRuntime({ modules: [appModule] });
+
+await using test = await createTestKernel({
+  applicationRuntime: runtime,
+  bootstrap: async () => {
+    await runtime.initialize();
+    return createCrocoApp();
+  },
+  fidelity: "application",
+});
+```
+
 Deterministic scenarios opt into kernel-owned controls instead of patching process globals:
 
 ```typescript

@@ -84,9 +84,16 @@ export class EventBusConfig {
       return;
     }
 
-    EventBusConfig.scopedInstances.get(scopeId)?.clear();
-    EventBusConfig.scopedInstances.delete(scopeId);
-    EventBusConfig.scopedStats.delete(scopeId);
+    EventBusConfig.disposeScopedState(scopeId);
+  }
+
+  public static captureCurrentScopeDisposer(): (() => void) | undefined {
+    const scopeId = Container.getActiveScopeId();
+    if (!scopeId) {
+      return undefined;
+    }
+
+    return () => EventBusConfig.disposeScopedState(scopeId);
   }
 
   public getSubscriptions(): ReadonlySet<EventSubscription> {
@@ -174,6 +181,12 @@ export class EventBusConfig {
 
   private createSubscriptionKey(subscription: EventSubscription): string {
     return `${subscription.eventName}:${EventBusConfig.getHandlerId(subscription.handlerClass)}`;
+  }
+
+  private static disposeScopedState(scopeId: string): void {
+    EventBusConfig.scopedInstances.get(scopeId)?.clear();
+    EventBusConfig.scopedInstances.delete(scopeId);
+    EventBusConfig.scopedStats.delete(scopeId);
   }
 
   private static getHandlerId(handlerClass: EventHandlerClass): string {

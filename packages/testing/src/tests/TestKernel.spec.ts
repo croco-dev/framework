@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import { EventBusConfig } from "@croco/events-core";
 import { Component, Container, Context, ShutdownManager, Token } from "@croco/framework-context";
+import { createApplicationRuntime } from "@croco/framework-module";
 import { Controller, Get } from "@croco/protocols-rest";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import {
@@ -8,7 +9,7 @@ import {
   declareSecurityMiddlewareCapabilities,
   type MiddlewareFunction,
 } from "@croco/transports-http";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createTestKernel,
   createTestingTransactionContext,
@@ -232,6 +233,189 @@ describe("TestKernel", () => {
       "application:dispose",
       "resource:database:dispose",
     ]);
+  });
+
+  it("boots isolated application runtimes without process-global resets", async () => {
+    const createKernel = async (value: string, lifecycle: string[]) => {
+      const service = new KernelValueService(value);
+      const runtime = createApplicationRuntime({
+        modules: [
+          {
+            name: "app",
+            providers: [
+              { provide: KernelValueService, useValue: service },
+              { provide: KernelController, useValue: new KernelController() },
+            ],
+            start: () => {
+              lifecycle.push(`start:${Container.get(KernelValueService).value}`);
+            },
+            shutdown: () => {
+              lifecycle.push(`shutdown:${Container.get(KernelValueService).value}`);
+            },
+          },
+        ],
+      });
+
+      return createTestKernel({
+        applicationRuntime: runtime,
+        bootstrap: async () => {
+          await runtime.initialize();
+          return createApp({
+            controllers: [KernelController],
+            diValidation: "enforce",
+            middlewares: [productionSecurityMiddleware],
+            securityValidation: "enforce",
+          });
+        },
+        fidelity: "application",
+      });
+    };
+    const firstLifecycle: string[] = [];
+    const secondLifecycle: string[] = [];
+    const [first, second] = await Promise.all([
+      createKernel("first", firstLifecycle),
+      createKernel("second", secondLifecycle),
+    ]);
+
+    expect(first.get(KernelValueService).value).toBe("first");
+    expect(second.get(KernelValueService).value).toBe("second");
+    await expect(
+      first.http.get("/kernel/value").then((response) => response.json()),
+    ).resolves.toMatchObject({
+      value: "first",
+    });
+    await expect(
+      second.http.get("/kernel/value").then((response) => response.json()),
+    ).resolves.toMatchObject({
+      value: "second",
+    });
+
+    await Promise.all([first.dispose(), second.dispose()]);
+    expect(firstLifecycle).toEqual(["start:first", "shutdown:first"]);
+    expect(secondLifecycle).toEqual(["start:second", "shutdown:second"]);
+  });
+
+  it("shuts application modules down before application and resource cleanup", async () => {
+    const lifecycle: string[] = [];
+    const resource = fakeResource("database", "commit", lifecycle);
+    const runtime = createApplicationRuntime({
+      modules: [
+        {
+          name: "app",
+          start: () => {
+            lifecycle.push(`module:start:${Container.get(FAKE_RESOURCE_CONNECTION).identity}`);
+          },
+          shutdown: () => {
+            lifecycle.push(`module:shutdown:${Container.get(FAKE_RESOURCE_CONNECTION).identity}`);
+          },
+        },
+      ],
+    });
+    const kernel = await createTestKernel({
+      applicationRuntime: runtime,
+      bootstrap: async () => {
+        await runtime.initialize();
+        return bootstrapProductionApp("resource-order");
+      },
+      dispose: () => {
+        lifecycle.push("application:dispose");
+      },
+      fidelity: "application",
+      resources: [resource],
+      testId: "test-runtime",
+      workerId: "worker-runtime",
+    });
+
+    await kernel.dispose();
+
+    expect(lifecycle).toEqual([
+      "resource:database:start",
+      "module:start:worker-runtime:test-runtime",
+      "module:shutdown:worker-runtime:test-runtime",
+      "application:dispose",
+      "resource:database:dispose",
+    ]);
+  });
+
+  it("rejects scope-owned cleanup without falling back to global state after runtime disposal", async () => {
+    const lifecycle: string[] = [];
+    const cleanupToken = new Token<{ cleanupCalls: number; identity: string }>(
+      "testing.disposed-runtime-cleanup",
+    );
+    const globalValue = { cleanupCalls: 0, identity: "global" };
+    const scopedValue = { cleanupCalls: 0, identity: "scoped" };
+    Container.set(cleanupToken, globalValue);
+    const resource: TestResource<FakeResourceConnection> = {
+      id: "database",
+      async start() {
+        lifecycle.push("resource:database:start");
+        return {
+          connection: { identity: "database" },
+          diagnostics: [],
+          dispose: () => {
+            Container.get(cleanupToken).cleanupCalls += 1;
+            lifecycle.push(`resource:database:dispose:${Container.get(cleanupToken).identity}`);
+          },
+          fidelity: {
+            id: "database",
+            image: "example.invalid/resource@sha256:abc",
+            isolation: "database-per-worker",
+            kind: "fake",
+            mode: "commit",
+          },
+        };
+      },
+    };
+    const runtime = createApplicationRuntime({
+      modules: [
+        {
+          name: "app",
+          providers: [{ provide: cleanupToken, useValue: scopedValue }],
+          shutdown: () => {
+            lifecycle.push(`module:shutdown:${Container.get(cleanupToken).identity}`);
+          },
+        },
+      ],
+    });
+    const eventScopeDisposal = vi.fn();
+    const shutdownScopeDisposal = vi.fn();
+    vi.spyOn(EventBusConfig, "captureCurrentScopeDisposer").mockReturnValue(eventScopeDisposal);
+    vi.spyOn(ShutdownManager, "captureCurrentScopeDisposer").mockReturnValue(shutdownScopeDisposal);
+    const kernel = await createTestKernel({
+      applicationRuntime: runtime,
+      bootstrap: async () => {
+        await runtime.initialize();
+        return bootstrapProductionApp("disposed-runtime");
+      },
+      dispose: () => {
+        Container.get(cleanupToken).cleanupCalls += 1;
+        lifecycle.push(`application:dispose:${Container.get(cleanupToken).identity}`);
+      },
+      fidelity: "application",
+      resources: [resource],
+    });
+
+    await runtime.dispose();
+    let failure: unknown;
+    try {
+      await kernel.dispose();
+    } catch (error) {
+      failure = error;
+    }
+
+    expect(lifecycle).toEqual(["resource:database:start", "module:shutdown:scoped"]);
+    expect(globalValue.cleanupCalls).toBe(0);
+    expect(scopedValue.cleanupCalls).toBe(0);
+    expect(eventScopeDisposal).toHaveBeenCalledOnce();
+    expect(shutdownScopeDisposal).toHaveBeenCalledOnce();
+    expect(failure).toMatchObject({
+      code: "testing/test-kernel-disposal-failed",
+      extensions: {
+        failures: expect.arrayContaining([
+          expect.objectContaining({ code: "framework-module/runtime-disposed" }),
+        ]),
+      },
+    });
   });
 
   it("rejects commit-semantic obligations in rollback mode before application bootstrap", async () => {

@@ -5,4 +5,4 @@ prev: false
 title: "DependencyResolutionStepStatus"
 ---
 
-> **DependencyResolutionStepStatus** = `"selected"` \| `"missing"` \| `"circular"` \| `"scope-mismatch"`
+> **DependencyResolutionStepStatus** = `"selected"` \| `"missing"` \| `"circular"` \| `"scope-mismatch"` \| `"uninspectable"`

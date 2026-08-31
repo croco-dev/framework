@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import { Container as TypeDIContainer } from "typedi";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Component, Container, Inject, MetadataStorage, Token } from "../index";
 
@@ -144,6 +145,70 @@ describe("Dependency graph manifest", () => {
         code: "CROCO_DI_004",
         legacyCode: "framework-context/di-unknown-provider",
         token: "Repository",
+      }),
+    );
+  });
+
+  it("fails explicitly when a TypeDI injection handler cannot be inspected", () => {
+    class Repository {}
+
+    class UserService {
+      constructor(readonly repository: Repository) {}
+    }
+
+    Reflect.defineMetadata("design:paramtypes", [Repository], UserService);
+    TypeDIContainer.registerHandler({
+      object: UserService,
+      index: 0,
+      value: () => {
+        throw new Error("handler runtime failure");
+      },
+    });
+    Component()(Repository);
+    Component()(UserService);
+
+    const manifest = Container.createDependencyGraphManifest({ roots: [UserService] });
+
+    expect(manifest.status).toBe("failed");
+    expect(manifest.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "CROCO_DI_005",
+        legacyCode: "framework-context/di-injection-handler-uninspectable",
+        token: "UserService",
+      }),
+    );
+    expect(() => Container.get(UserService)).toThrow("handler runtime failure");
+  });
+
+  it("does not execute TypeDI injection handlers while inspecting the graph", () => {
+    class Repository {}
+
+    class UserService {
+      constructor(readonly repository: Repository) {}
+    }
+
+    let handlerCalls = 0;
+    Reflect.defineMetadata("design:paramtypes", [Repository], UserService);
+    TypeDIContainer.registerHandler({
+      object: UserService,
+      index: 0,
+      value: (container) => {
+        handlerCalls += 1;
+        return container.get(Repository);
+      },
+    });
+    Component()(Repository);
+    Component()(UserService);
+
+    const manifest = Container.createDependencyGraphManifest({ roots: [UserService] });
+
+    expect(handlerCalls).toBe(0);
+    expect(manifest.status).toBe("failed");
+    expect(manifest.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "CROCO_DI_005",
+        legacyCode: "framework-context/di-injection-handler-uninspectable",
+        token: "UserService",
       }),
     );
   });
