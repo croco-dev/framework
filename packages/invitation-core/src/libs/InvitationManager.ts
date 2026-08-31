@@ -270,15 +270,16 @@ export class InvitationManager {
         invitation.id,
         "pending",
         "accepted",
-        {
-          acceptedAt: new Date(),
-        },
       );
 
       if (!accepted) {
         const current = await this.store.findById(invitation.id);
         if (!current) {
           throw new InvitationNotFoundProblem("");
+        }
+
+        if (current.status === "pending" || current.status === "expired") {
+          throw new InvitationExpiredProblem(current.id);
         }
 
         this.ensureAcceptableStatus(current, "accept");

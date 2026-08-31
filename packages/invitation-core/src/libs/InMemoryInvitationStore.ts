@@ -245,10 +245,23 @@ export class InMemoryInvitationStore extends InvitationStore {
       return null;
     }
 
+    const transitionTime = Date.now();
+    const acceptedAt =
+      desired === "accepted"
+        ? new Date(Math.max(meta.acceptedAt?.getTime() ?? transitionTime, transitionTime))
+        : meta.acceptedAt;
+    if (
+      acceptedAt &&
+      desired === "accepted" &&
+      invitation.expiresAt.getTime() <= acceptedAt.getTime()
+    ) {
+      return null;
+    }
+
     const updated = snapshotInvitation({
       ...invitation,
       status: desired,
-      acceptedAt: meta.acceptedAt ?? invitation.acceptedAt,
+      acceptedAt: acceptedAt ?? invitation.acceptedAt,
     });
 
     this.storage.set(id, updated);
