@@ -14,7 +14,11 @@ import type {
   UploadIntent,
   UploadIntentOptions,
 } from "@croco/storage-core";
-import { BaseStorageProvider, validateSignedUrlExpiry } from "@croco/storage-core";
+import {
+  BaseStorageProvider,
+  StorageOperationAbortedProblem,
+  validateSignedUrlExpiry,
+} from "@croco/storage-core";
 import {
   CloudflareImagesRetryableUpstreamProblem,
   CloudflareImagesValidationProblem,
@@ -41,6 +45,8 @@ type RetryDelayState = {
   delayMs?: number;
 };
 
+type RetryAbortProblemFactory = (reason: unknown) => StorageOperationAbortedProblem;
+
 type CloudflareImagesRuntimeResponse<TResult extends object = Record<string, unknown>> = {
   readonly errors: string[];
   readonly result?: TResult | null;
@@ -56,6 +62,7 @@ class RetryAfterBackoff implements BackoffPolicy {
   constructor(
     options: BackoffOptions | undefined,
     private readonly retryDelay: RetryDelayState,
+    private readonly createAbortProblem: RetryAbortProblemFactory,
   ) {
     this.baseBackoff = new ExponentialBackoff(options);
   }
@@ -68,7 +75,11 @@ class RetryAfterBackoff implements BackoffPolicy {
   }
 
   async wait(attempt: number, signal?: AbortSignal): Promise<void> {
-    await waitForRetryDelay(this.delays.get(attempt) ?? this.getDelay(attempt), signal);
+    await waitForRetryDelay(
+      this.delays.get(attempt) ?? this.getDelay(attempt),
+      signal,
+      this.createAbortProblem,
+    );
   }
 
   reset(): void {
@@ -116,30 +127,51 @@ function retryAfterExtension(response: Response): { readonly retryAfter?: number
   return Number.isFinite(seconds) && seconds >= 0 ? { retryAfter: seconds } : {};
 }
 
-async function waitForRetryDelay(delayMs: number, signal?: AbortSignal): Promise<void> {
+async function waitForRetryDelay(
+  delayMs: number,
+  signal: AbortSignal | undefined,
+  createAbortProblem: RetryAbortProblemFactory,
+): Promise<void> {
   if (delayMs <= 0) {
     return;
   }
-  if (signal?.aborted) {
-    throw signal.reason;
+  if (signal === undefined) {
+    await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
+    return;
+  }
+  if (signal.aborted) {
+    throw createAbortProblem(signal.reason);
   }
 
   await new Promise<void>((resolve, reject) => {
     const timeout = setTimeout(() => {
-      signal?.removeEventListener("abort", onAbort);
+      signal.removeEventListener("abort", onAbort);
       resolve();
     }, delayMs);
     const onAbort = (): void => {
       clearTimeout(timeout);
-      signal?.removeEventListener("abort", onAbort);
-      reject(signal?.reason);
+      signal.removeEventListener("abort", onAbort);
+      reject(createAbortProblem(signal.reason));
     };
 
-    signal?.addEventListener("abort", onAbort, { once: true });
-    if (signal?.aborted) {
+    signal.addEventListener("abort", onAbort, { once: true });
+    if (signal.aborted) {
       onAbort();
     }
   });
+}
+
+function createAbortCause(reason: unknown): Error {
+  if (reason instanceof Error) {
+    return reason;
+  }
+
+  const cause = new Error("Storage operation aborted with a non-Error reason");
+  Object.defineProperty(cause, "cause", {
+    configurable: true,
+    value: reason,
+  });
+  return cause;
 }
 
 function copyToArrayBuffer(bytes: Uint8Array): ArrayBuffer {
@@ -1050,7 +1082,11 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
     const retryMaxDelay = this.options.retryBackoff?.maxDelay ?? DEFAULT_RETRY_MAX_DELAY_MS;
     const retryTemplate = new RetryTemplate({
       maxAttempts: 3,
-      backoffPolicy: new RetryAfterBackoff(this.options.retryBackoff, retryDelay),
+      backoffPolicy: new RetryAfterBackoff(
+        this.options.retryBackoff,
+        retryDelay,
+        (reason) => new StorageOperationAbortedProblem(operation, key, createAbortCause(reason)),
+      ),
       retryPolicy: createCloudflareImagesRetryPolicy(retryMaxDelay, retryDelay),
       signal: options?.signal,
     });

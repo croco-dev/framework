@@ -280,6 +280,37 @@ describe("CloudflareImagesProvider", () => {
       }
     });
 
+    it.each([
+      ["an Error", new Error("retry wait cancelled")],
+      ["a non-Error", { source: "request-context" }],
+    ])("normalizes %s abort reason while waiting to retry", async (_label, reason) => {
+      const controller = new AbortController();
+      const retryingProvider = new CloudflareImagesProvider({
+        ...mockOptions,
+        retryBackoff: { delay: 60_000, jitter: false, maxDelay: 60_000 },
+      });
+      mockFetch.mockResolvedValue(new Response("unavailable", { status: 503 }));
+
+      const result = retryingProvider.getMetadata("test-image-id", { signal: controller.signal });
+      await vi.waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
+      controller.abort(reason);
+      const failure = await result.catch((error: unknown) => error);
+      const abortProblem = failure as StorageOperationAbortedProblem;
+
+      expect(abortProblem).toBeInstanceOf(StorageOperationAbortedProblem);
+      expect(abortProblem).toMatchObject({
+        code: "STORAGE_OPERATION_ABORTED",
+        extensions: { key: "test-image-id", operation: "getMetadata" },
+      });
+      if (reason instanceof Error) {
+        expect(abortProblem.cause).toBe(reason);
+      } else {
+        expect(abortProblem.cause).toBeInstanceOf(Error);
+        expect(Reflect.get(abortProblem.cause as Error, "cause")).toBe(reason);
+      }
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
     it("does not retry when Cloudflare retry-after exceeds the configured maximum", async () => {
       mockFetch.mockResolvedValue(
         new Response("rate limited", {
