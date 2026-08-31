@@ -337,6 +337,43 @@ describe("TestKernel", () => {
     ]);
   });
 
+  it("runs application and resource cleanup when the runtime was already disposed", async () => {
+    const lifecycle: string[] = [];
+    const resource = fakeResource("database", "commit", lifecycle);
+    const runtime = createApplicationRuntime({
+      modules: [
+        {
+          name: "app",
+          shutdown: () => {
+            lifecycle.push("module:shutdown");
+          },
+        },
+      ],
+    });
+    const kernel = await createTestKernel({
+      applicationRuntime: runtime,
+      bootstrap: async () => {
+        await runtime.initialize();
+        return bootstrapProductionApp("disposed-runtime");
+      },
+      dispose: () => {
+        lifecycle.push("application:dispose");
+      },
+      fidelity: "application",
+      resources: [resource],
+    });
+
+    await runtime.dispose();
+    await expect(kernel.dispose()).rejects.toThrow(TestKernelDisposalProblem);
+
+    expect(lifecycle).toEqual([
+      "resource:database:start",
+      "module:shutdown",
+      "application:dispose",
+      "resource:database:dispose",
+    ]);
+  });
+
   it("rejects commit-semantic obligations in rollback mode before application bootstrap", async () => {
     const lifecycle: string[] = [];
     const resource = fakeResource("database", "rollback", lifecycle);

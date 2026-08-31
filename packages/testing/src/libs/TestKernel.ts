@@ -700,7 +700,9 @@ async function runCleanupSequence(
     failures.push(toError(error));
   }
 
+  let applicationCleanupStarted = false;
   const runApplicationCleanup = async (): Promise<void> => {
+    applicationCleanupStarted = true;
     for (const cleanup of cleanupOperations) {
       try {
         await cleanup();
@@ -727,6 +729,10 @@ async function runCleanupSequence(
       await scope.shutdownWithCleanup(runApplicationCleanup);
     } catch (error) {
       failures.push(toError(error));
+    }
+
+    if (!applicationCleanupStarted) {
+      await runApplicationCleanup();
     }
   } else {
     try {

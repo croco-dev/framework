@@ -245,56 +245,44 @@ describe("ContainerScope", () => {
   });
 
   it("rejects disposal while a successful rollback-protected transaction is active", async () => {
-    let release!: () => void;
-    let entered!: () => void;
-    const blocked = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    const started = new Promise<void>((resolve) => {
-      entered = resolve;
-    });
+    const blocked = Promise.withResolvers<void>();
+    const started = Promise.withResolvers<void>();
     const scope = Container.createScope();
 
     const transaction = scope.runWithRollback(async () => {
-      entered();
-      await blocked;
+      started.resolve();
+      await blocked.promise;
     });
-    await started;
+    await started.promise;
 
     expect(() => scope.dispose()).toThrow(
       expect.objectContaining({ code: "framework-context/container-scope-transaction-active" }),
     );
 
-    release();
+    blocked.resolve();
     await transaction;
     scope.dispose();
   });
 
   it("rejects disposal while a failing rollback-protected transaction is active", async () => {
     const token = new Token<string>("active-rollback");
-    let release!: () => void;
-    let entered!: () => void;
-    const blocked = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    const started = new Promise<void>((resolve) => {
-      entered = resolve;
-    });
+    const blocked = Promise.withResolvers<void>();
+    const started = Promise.withResolvers<void>();
     const scope = Container.createScope();
 
     const transaction = scope.runWithRollback(async () => {
       Container.set(token, "temporary");
-      entered();
-      await blocked;
+      started.resolve();
+      await blocked.promise;
       throw new Error("rollback");
     });
-    await started;
+    await started.promise;
 
     expect(() => scope.dispose()).toThrow(
       expect.objectContaining({ code: "framework-context/container-scope-transaction-active" }),
     );
 
-    release();
+    blocked.resolve();
     await expect(transaction).rejects.toThrow("rollback");
     expect(scope.run(() => Container.has(token))).toBe(false);
     scope.dispose();
