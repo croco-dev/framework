@@ -18,6 +18,7 @@ import {
   type MessageContext,
   type MessageRenderer,
 } from "../index";
+import { RENDER_PARSED_MESSAGE } from "../libs/MessageContracts";
 
 const TrialEnding = defineMessage({
   id: "billing.trial-ending",
@@ -135,7 +136,10 @@ describe("MessageContracts", () => {
     registry.registerRenderer(TrialEndingRenderer);
     registry.bootstrap();
 
-    expect("renderParsed" in registry).toBe(false);
+    expect(Object.getOwnPropertyNames(Object.getPrototypeOf(registry))).not.toContain(
+      "renderParsed",
+    );
+    expect(RENDER_PARSED_MESSAGE in registry).toBe(true);
 
     expect(
       registry.parseData(TrialEnding, { tenantName: "Acme", upgradeUrl: "https://croco.dev" }),

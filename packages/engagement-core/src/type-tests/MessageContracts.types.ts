@@ -17,7 +17,7 @@ const TrialEnding = defineMessage({
   channels: ["email", "push"],
 });
 
-const TransformedMessage = defineMessage({
+const TRANSFORMED_MESSAGE = defineMessage({
   id: "billing.transformed",
   topic: "billing",
   data: z.object({ tenantName: z.string().transform((value) => value.length) }).strict(),
@@ -108,10 +108,10 @@ const invalidData: MessageData<typeof TrialEnding> = {
 };
 void invalidData;
 
-const transformedInput: MessageDataInput<typeof TransformedMessage> = { tenantName: "Croco" };
-const transformedOutput: MessageData<typeof TransformedMessage> = { tenantName: 5 };
-void transformedInput;
-void transformedOutput;
+const TRANSFORMED_INPUT: MessageDataInput<typeof TRANSFORMED_MESSAGE> = { tenantName: "Croco" };
+const TRANSFORMED_OUTPUT: MessageData<typeof TRANSFORMED_MESSAGE> = { tenantName: 5 };
+void TRANSFORMED_INPUT;
+void TRANSFORMED_OUTPUT;
 
 declare const engagement: EngagementService;
 
@@ -125,16 +125,16 @@ engagement.send(TrialEnding, {
   key: "subscription-1",
 });
 
-engagement.send(TransformedMessage, {
+engagement.send(TRANSFORMED_MESSAGE, {
   recipient: { tenantId: "tenant-1", userId: "user-1" },
-  data: transformedInput,
+  data: TRANSFORMED_INPUT,
   key: "transformed-1",
 });
 
-engagement.send(TransformedMessage, {
+engagement.send(TRANSFORMED_MESSAGE, {
   recipient: { tenantId: "tenant-1", userId: "user-1" },
   // @ts-expect-error send accepts the schema input rather than its transformed output
-  data: transformedOutput,
+  data: TRANSFORMED_OUTPUT,
   key: "transformed-1",
 });
 

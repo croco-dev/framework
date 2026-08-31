@@ -11,6 +11,7 @@ import {
   type NotificationSendContractOptions,
 } from "@croco/notifications-core";
 import { Container } from "@croco/framework-context";
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import { TaskRegistry, TaskRunner, type TaskMetadata } from "@croco/tasks-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -141,6 +142,17 @@ type TestExecution = {
   idempotencyKey?: string;
 };
 
+class TestExecutionMissingProblem extends Problem {
+  constructor(id: string) {
+    super(
+      "engagement-core/test-execution-missing",
+      ProblemCategory.NotFound,
+      `Execution ${id} was not created`,
+      { extensions: { retryable: false } },
+    );
+  }
+}
+
 function createIdempotentExecutionManager() {
   const executions = new Map<string, TestExecution>();
   const executionIds = new Map<string, string>();
@@ -181,7 +193,7 @@ function createIdempotentExecutionManager() {
     ),
     start: vi.fn(async (id: string) => {
       const execution = executions.get(id);
-      if (execution === undefined) throw new Error(`Execution ${id} was not created`);
+      if (execution === undefined) throw new TestExecutionMissingProblem(id);
       const running: TestExecution = {
         ...execution,
         status: "running",
@@ -193,7 +205,7 @@ function createIdempotentExecutionManager() {
     }),
     complete: vi.fn(async (id: string, result: unknown) => {
       const execution = executions.get(id);
-      if (execution === undefined) throw new Error(`Execution ${id} was not created`);
+      if (execution === undefined) throw new TestExecutionMissingProblem(id);
       const completed: TestExecution = { ...execution, status: "completed", result };
       executions.set(id, completed);
       return completed;
