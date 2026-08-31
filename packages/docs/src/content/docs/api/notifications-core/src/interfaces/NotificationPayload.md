@@ -17,6 +17,12 @@ title: "NotificationPayload"
 
 ---
 
+### headers?
+
+> `optional` **headers?**: `Readonly`\<`Record`\<`string`, `string`\>\>
+
+---
+
 ### locale?
 
 > `optional` **locale?**: `string`
@@ -26,6 +32,12 @@ title: "NotificationPayload"
 ### metadata?
 
 > `optional` **metadata?**: `Record`\<`string`, `unknown`\>
+
+---
+
+### replyTo?
+
+> `optional` **replyTo?**: `string`
 
 ---
 
@@ -44,6 +56,12 @@ title: "NotificationPayload"
 ### templateVersion?
 
 > `optional` **templateVersion?**: `string`
+
+---
+
+### text?
+
+> `optional` **text?**: `string`
 
 ---
 

@@ -27,20 +27,35 @@ describe("published React Email adapter", () => {
       const consumerRoot = mkdtempSync(join(tmpdir(), "croco-react-email-consumer-"));
 
       try {
-        ensureBuilt();
-        for (const packageName of [
+        const packageNames = [
+          "@croco/diagnostics-core",
+          "@croco/events-core",
+          "@croco/execution-core",
+          "@croco/framework-context",
+          "@croco/tasks-core",
+          "@croco/telemetry-api",
           "@croco/problems-core",
           "@croco/protocols-core",
+          "@croco/notifications-core",
           "@croco/engagement-core",
           "@croco/notifications-react-email",
-        ]) {
+        ] as const;
+        ensureBuilt(packageNames);
+        for (const packageName of packageNames) {
           pack(packageName, packRoot);
         }
 
-        const problemsCore = findTarball(packRoot, "croco-problems-core-");
-        const protocolsCore = findTarball(packRoot, "croco-protocols-core-");
-        const engagementCore = findTarball(packRoot, "croco-engagement-core-");
-        const adapter = findTarball(packRoot, "croco-notifications-react-email-");
+        const tarballs = new Map(
+          packageNames.map((packageName) => [
+            packageName,
+            findPackageTarball(packRoot, packageName),
+          ]),
+        );
+        const problemsCore = requireTarball(tarballs, "@croco/problems-core");
+        const protocolsCore = requireTarball(tarballs, "@croco/protocols-core");
+        const notificationsCore = requireTarball(tarballs, "@croco/notifications-core");
+        const engagementCore = requireTarball(tarballs, "@croco/engagement-core");
+        const adapter = requireTarball(tarballs, "@croco/notifications-react-email");
 
         writeFileSync(
           join(consumerRoot, "package.json"),
@@ -52,9 +67,9 @@ describe("published React Email adapter", () => {
             "packages:",
             "  - .",
             "overrides:",
-            `  '@croco/problems-core': 'file:${problemsCore}'`,
-            `  '@croco/protocols-core': 'file:${protocolsCore}'`,
-            `  '@croco/engagement-core': 'file:${engagementCore}'`,
+            ...[...tarballs.entries()]
+              .filter(([packageName]) => packageName !== "@croco/notifications-react-email")
+              .map(([packageName, tarball]) => `  '${packageName}': 'file:${tarball}'`),
             "",
           ].join("\n"),
         );
@@ -65,6 +80,7 @@ describe("published React Email adapter", () => {
             "--prod",
             adapter,
             engagementCore,
+            notificationsCore,
             problemsCore,
             protocolsCore,
             "@react-email/render@2.1.0",
@@ -114,14 +130,8 @@ describe("published React Email adapter", () => {
   );
 });
 
-function ensureBuilt(): void {
-  const packages = [
-    "problems-core",
-    "protocols-core",
-    "engagement-core",
-    "notifications-react-email",
-  ];
-  if (packages.every((directory) => existsBuiltPackage(directory))) {
+function ensureBuilt(packageNames: readonly string[]): void {
+  if (packageNames.every((packageName) => existsBuiltPackage(packageName.replace("@croco/", "")))) {
     return;
   }
   run("pnpm", ["--filter", "@croco/notifications-react-email...", "build"], rootDir);
@@ -169,6 +179,18 @@ function findTarball(directory: string, prefix: string): string {
   return join(directory, filename);
 }
 
+function findPackageTarball(directory: string, packageName: string): string {
+  return findTarball(directory, `${packageName.replace("@", "").replace("/", "-")}-`);
+}
+
+function requireTarball(tarballs: ReadonlyMap<string, string>, packageName: string): string {
+  const tarball = tarballs.get(packageName);
+  if (tarball === undefined) {
+    throw new Error(`Missing packed tarball for ${packageName}`);
+  }
+  return tarball;
+}
+
 function writeTypeConsumer(consumerRoot: string): void {
   writeFileSync(
     join(consumerRoot, "contracts.ts"),
@@ -193,6 +215,7 @@ function writeTypeConsumer(consumerRoot: string): void {
     `${JSON.stringify(
       {
         compilerOptions: {
+          lib: ["ES2022", "DOM", "ESNext.Disposable"],
           module: "NodeNext",
           moduleResolution: "NodeNext",
           noEmit: true,

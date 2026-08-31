@@ -18,6 +18,7 @@ import {
   type MessageContext,
   type MessageRenderer,
 } from "../index";
+import { RENDER_PARSED_MESSAGE } from "../libs/MessageContracts";
 
 const TrialEnding = defineMessage({
   id: "billing.trial-ending",
@@ -135,6 +136,11 @@ describe("MessageContracts", () => {
     registry.registerRenderer(TrialEndingRenderer);
     registry.bootstrap();
 
+    expect(Object.getOwnPropertyNames(Object.getPrototypeOf(registry))).not.toContain(
+      "renderParsed",
+    );
+    expect(RENDER_PARSED_MESSAGE in registry).toBe(true);
+
     expect(
       registry.parseData(TrialEnding, { tenantName: "Acme", upgradeUrl: "https://croco.dev" }),
     ).toEqual({
@@ -166,6 +172,55 @@ describe("MessageContracts", () => {
         upgradeUrl: "https://croco.dev",
       }),
     ).rejects.toThrow(MessageRendererUndeclaredChannelProblem);
+  });
+
+  it("normalizes throwing schema callbacks without exposing message data", () => {
+    const ThrowingTransform = defineMessage({
+      id: "billing.throwing-transform",
+      topic: "billing",
+      data: z.object({
+        secret: z.string().transform((value): never => {
+          throw new Error(`transform failed for ${value}`);
+        }),
+      }),
+      channels: ["email"],
+    });
+    const ThrowingRefinement = defineMessage({
+      id: "billing.throwing-refinement",
+      topic: "billing",
+      data: z.object({
+        secret: z.string().refine((value) => {
+          throw new Error(`refinement failed for ${value}`);
+        }),
+      }),
+      channels: ["email"],
+    });
+    const ThrowingProblem = defineMessage({
+      id: "billing.throwing-problem",
+      topic: "billing",
+      data: z.object({
+        secret: z.string().transform((value): never => {
+          throw new MessageDataInvalidProblem("untrusted", [value]);
+        }),
+      }),
+      channels: ["email"],
+    });
+    const registry = new MessageRendererRegistry();
+
+    for (const message of [ThrowingTransform, ThrowingRefinement, ThrowingProblem]) {
+      try {
+        registry.parseData(message, { secret: "payload-secret" });
+        expect.unreachable("throwing schema callbacks should be normalized");
+      } catch (error) {
+        expect(error).toBeInstanceOf(MessageDataInvalidProblem);
+        expect(error).toMatchObject({ code: "engagement-core/message-data-invalid" });
+        const serialized = JSON.stringify((error as MessageDataInvalidProblem).toJSON());
+        expect(serialized).not.toContain("payload-secret");
+        expect(serialized).not.toContain("transform failed");
+        expect(serialized).not.toContain("refinement failed");
+        expect(serialized).not.toContain("untrusted");
+      }
+    }
   });
 
   it("accepts asynchronous channel renderers", async () => {

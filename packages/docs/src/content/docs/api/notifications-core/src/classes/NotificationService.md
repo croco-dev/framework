@@ -27,6 +27,54 @@ title: "NotificationService"
 
 ## Methods
 
+### dispatch()
+
+> **dispatch**(`channel`, `payload`, `options`): `Promise`\<`Readonly`\<\{ `executionId`: `string`; \}\>\>
+
+Dispatches through the same task path as send() while retaining the execution identifier.
+
+#### Parameters
+
+##### channel
+
+[`NotificationChannel`](/api/notifications-core/src/enumerations/notificationchannel/)
+
+##### payload
+
+[`NotificationPayload`](/api/notifications-core/src/interfaces/notificationpayload/)
+
+##### options
+
+[`NotificationSendServiceOptions`](/api/notifications-core/src/type-aliases/notificationsendserviceoptions/)
+
+#### Returns
+
+`Promise`\<`Readonly`\<\{ `executionId`: `string`; \}\>\>
+
+---
+
+### prepareDispatch()
+
+> **prepareDispatch**(`channel`, `options`): [`NotificationDispatchPreparation`](/api/notifications-core/src/interfaces/notificationdispatchpreparation/)
+
+Evaluates provider availability and notification preference before payload rendering.
+
+#### Parameters
+
+##### channel
+
+[`NotificationChannel`](/api/notifications-core/src/enumerations/notificationchannel/)
+
+##### options
+
+[`NotificationDispatchPreparationOptions`](/api/notifications-core/src/type-aliases/notificationdispatchpreparationoptions/)
+
+#### Returns
+
+[`NotificationDispatchPreparation`](/api/notifications-core/src/interfaces/notificationdispatchpreparation/)
+
+---
+
 ### registerPreferenceRule()
 
 > **registerPreferenceRule**(`rule`): `void`

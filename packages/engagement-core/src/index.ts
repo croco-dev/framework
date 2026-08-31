@@ -18,6 +18,7 @@ export {
   MessageAlreadyRegisteredProblem,
 } from "./libs/MessageContracts";
 export type {
+  AnyMessage,
   DefinedMessage,
   EmailContent,
   MessageChannel,
@@ -25,6 +26,7 @@ export type {
   MessageContentByChannel,
   MessageContext,
   MessageData,
+  MessageDataInput,
   MessageDefinitionInput,
   MessageDescriptor,
   MessageRenderer,
@@ -32,3 +34,35 @@ export type {
   MessageRendererConstructor,
   MessageRegistryInspection,
 } from "./libs/MessageContracts";
+export {
+  EngagementCommandInvalidProblem,
+  EngagementDispatchFailedProblem,
+  EngagementRenderFailedProblem,
+  EngagementService,
+  EngagementSuppressionEvaluationProblem,
+  InMemoryMessageRendererResolver,
+  InMemoryRecipientDirectory,
+  RecipientDirectoryLookupProblem,
+  RecipientDirectoryScopeMismatchProblem,
+  RecipientNotFoundProblem,
+  RegistryEngagementMessageRenderer,
+  createEngagementIdempotencyKey,
+} from "./libs/EngagementService";
+export type {
+  EmailEndpoint,
+  EngagementChannelResult,
+  EngagementDeliveryPolicy,
+  EngagementIdempotencyKeyInput,
+  EngagementMessageRenderer,
+  EngagementNotificationDispatcher,
+  EngagementSendCommand,
+  EngagementSendResult,
+  EngagementSuppressionContext,
+  EngagementSuppressionDecision,
+  EngagementSuppressionEvaluator,
+  MessageRendererResolver,
+  PushEndpoint,
+  RecipientDirectory,
+  RecipientRef,
+  ResolvedRecipient,
+} from "./libs/EngagementService";

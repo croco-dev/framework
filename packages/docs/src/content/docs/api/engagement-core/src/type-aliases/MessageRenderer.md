@@ -14,4 +14,4 @@ accidental renderer methods for undeclared first-party channels a TypeScript err
 
 ### TMessage
 
-`TMessage` _extends_ `AnyMessage`
+`TMessage` _extends_ [`AnyMessage`](/api/engagement-core/src/type-aliases/anymessage/)

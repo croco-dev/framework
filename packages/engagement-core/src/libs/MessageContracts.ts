@@ -68,7 +68,9 @@ export type DefinedMessage<
   descriptor: MessageDescriptor<TChannels>;
 }>;
 
-type AnyMessage = DefinedMessage<string, string, z.ZodTypeAny, readonly MessageChannel[]>;
+export type AnyMessage = DefinedMessage<string, string, z.ZodTypeAny, readonly MessageChannel[]>;
+
+export type MessageDataInput<TMessage extends AnyMessage> = z.input<TMessage["data"]>;
 
 export type MessageData<TMessage extends AnyMessage> = z.infer<TMessage["data"]>;
 
@@ -115,6 +117,9 @@ export type MessageRegistryInspection = Readonly<{
 
 const RENDERER_BINDINGS = new WeakMap<Function, MessageRendererBinding>();
 
+/** @internal */
+export const RENDER_PARSED_MESSAGE = Symbol("engagement-core/render-parsed-message");
+
 export function defineMessage<
   const TId extends string,
   const TTopic extends string,
@@ -150,6 +155,25 @@ export function Renders<TMessage extends AnyMessage>(message: TMessage): ClassDe
 
 export function getMessageRendererBinding(renderer: Function): MessageRendererBinding | undefined {
   return RENDERER_BINDINGS.get(renderer);
+}
+
+export function parseMessageData<TMessage extends AnyMessage>(
+  message: TMessage,
+  input: unknown,
+): MessageData<TMessage> {
+  let parsed;
+  try {
+    parsed = message.data.safeParse(input);
+  } catch {
+    throw new MessageDataInvalidProblem(message.id, ["$: schema evaluation failed"]);
+  }
+  if (!parsed.success) {
+    throw new MessageDataInvalidProblem(
+      message.id,
+      parsed.error.issues.map((issue) => `${issue.path.join(".") || "$"}: ${issue.message}`),
+    );
+  }
+  return parsed.data as MessageData<TMessage>;
 }
 
 export class MessageRendererRegistry {
@@ -218,14 +242,7 @@ export class MessageRendererRegistry {
   }
 
   parseData<TMessage extends AnyMessage>(message: TMessage, input: unknown): MessageData<TMessage> {
-    const parsed = message.data.safeParse(input);
-    if (!parsed.success) {
-      throw new MessageDataInvalidProblem(
-        message.id,
-        parsed.error.issues.map((issue) => `${issue.path.join(".") || "$"}: ${issue.message}`),
-      );
-    }
-    return parsed.data as MessageData<TMessage>;
+    return parseMessageData(message, input);
   }
 
   /** Parses untrusted data before invoking an explicitly registered renderer instance. */
@@ -234,6 +251,19 @@ export class MessageRendererRegistry {
     renderer: MessageRenderer<TMessage>,
     channel: TChannel,
     input: unknown,
+  ): Promise<MessageContent<TChannel>> {
+    return this[RENDER_PARSED_MESSAGE](message, renderer, channel, this.parseData(message, input));
+  }
+
+  /** @internal */
+  async [RENDER_PARSED_MESSAGE]<
+    TMessage extends AnyMessage,
+    TChannel extends MessageChannels<TMessage>,
+  >(
+    message: TMessage,
+    renderer: MessageRenderer<TMessage>,
+    channel: TChannel,
+    data: MessageData<TMessage>,
   ): Promise<MessageContent<TChannel>> {
     const registered = this.renderers.get(message.id);
     if (registered === undefined || registered !== renderer.constructor) {
@@ -260,7 +290,7 @@ export class MessageRendererRegistry {
     return await render.call(renderer, {
       message,
       channel,
-      data: this.parseData(message, input),
+      data,
     });
   }
 

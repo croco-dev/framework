@@ -27,6 +27,7 @@ export { taskRef } from "./libs/taskRef";
  * 등록된 태스크를 실행 시스템과 연결해 실행하는 러너입니다.
  */
 export { TaskRunner } from "./libs/TaskRunner";
+export type { TrackedTaskExecution } from "./libs/TaskRunner";
 
 /**
  * 태스크 선언과 식별에 사용하는 공개 타입들입니다.

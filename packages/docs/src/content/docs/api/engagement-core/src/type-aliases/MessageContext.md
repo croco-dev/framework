@@ -11,7 +11,7 @@ title: "MessageContext"
 
 ### TMessage
 
-`TMessage` _extends_ `AnyMessage`
+`TMessage` _extends_ [`AnyMessage`](/api/engagement-core/src/type-aliases/anymessage/)
 
 ### TChannel
 

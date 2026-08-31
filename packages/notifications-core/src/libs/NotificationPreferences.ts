@@ -44,25 +44,26 @@ export class NotificationPreferenceEvaluator {
   }
 
   evaluate(context: NotificationPreferenceContext): NotificationPreferenceDecision {
-    const rule = this.rules.find((candidate) => matchesPreferenceRule(candidate, context));
-    const evaluationKey = createNotificationPreferenceEvaluationKey(context);
+    const contextSnapshot = Object.freeze({ ...context });
+    const rule = this.rules.find((candidate) => matchesPreferenceRule(candidate, contextSnapshot));
+    const evaluationKey = createNotificationPreferenceEvaluationKey(contextSnapshot);
 
     if (rule === undefined) {
-      return {
+      return Object.freeze({
         allowed: this.defaultAllowed,
-        context,
+        context: contextSnapshot,
         reason: this.defaultAllowed ? "default-allow" : "default-deny",
         evaluationKey,
-      };
+      });
     }
 
-    return {
+    return Object.freeze({
       allowed: rule.enabled,
-      context,
+      context: contextSnapshot,
       reason: rule.reason ?? (rule.enabled ? "preference-allow" : "preference-deny"),
       ruleId: rule.id,
       evaluationKey,
-    };
+    });
   }
 }
 

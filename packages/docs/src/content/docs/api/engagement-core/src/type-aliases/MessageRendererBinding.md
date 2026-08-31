@@ -11,4 +11,4 @@ title: "MessageRendererBinding"
 
 ### TMessage
 
-`TMessage` _extends_ `AnyMessage` = `AnyMessage`
+`TMessage` _extends_ [`AnyMessage`](/api/engagement-core/src/type-aliases/anymessage/) = [`AnyMessage`](/api/engagement-core/src/type-aliases/anymessage/)

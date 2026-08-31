@@ -26,6 +26,11 @@ export interface TaskRunnerRuntime {
   readonly schedule?: (callback: () => void, delayMs: number) => () => void;
 }
 
+export type TrackedTaskExecution<TResult = unknown> = Readonly<{
+  executionId: string;
+  result: TResult;
+}>;
+
 const noopLogger: ILogger = {
   debug: () => {},
   info: () => {},
@@ -150,6 +155,14 @@ export class TaskRunner {
     payload: unknown,
     options: TaskExecutionOptions = {},
   ): Promise<unknown> {
+    return (await this.executeTracked(taskId, payload, options)).result;
+  }
+
+  async executeTracked(
+    taskId: string,
+    payload: unknown,
+    options: TaskExecutionOptions = {},
+  ): Promise<TrackedTaskExecution> {
     const task = this.registry.get(taskId);
     if (!task) {
       throw new TaskNotFoundProblem(taskId);
@@ -175,10 +188,16 @@ export class TaskRunner {
     });
 
     if (execution.status === "completed") {
-      return execution.result;
+      return { executionId: execution.id, result: execution.result };
     }
 
-    return this.runExecution(task.target, task.methodName, execution, taskOptions.timeoutRetry);
+    const result = await this.runExecution(
+      task.target,
+      task.methodName,
+      execution,
+      taskOptions.timeoutRetry,
+    );
+    return { executionId: execution.id, result };
   }
 
   async retry(executionId: string): Promise<unknown> {

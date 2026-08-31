@@ -162,6 +162,15 @@ describe("TaskRunner", () => {
     expect(mockExecutionManager.complete).toHaveBeenCalledWith("exec-123", "processed: test");
   });
 
+  it("should return the persisted execution id with a tracked result", async () => {
+    const runner = new TaskRunner(mockExecutionManager, registry);
+
+    await expect(runner.executeTracked("test-task", { data: "test" })).resolves.toEqual({
+      executionId: "exec-123",
+      result: "processed: test",
+    });
+  });
+
   it("should pass task options to execution manager", async () => {
     const runner = new TaskRunner(mockExecutionManager, registry);
 
