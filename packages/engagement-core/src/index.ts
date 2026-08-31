@@ -37,6 +37,7 @@ export type {
 export {
   EngagementCommandInvalidProblem,
   EngagementDispatchFailedProblem,
+  EngagementRecordedDispatchFailureProblem,
   EngagementRenderFailedProblem,
   EngagementService,
   EngagementSuppressionEvaluationProblem,
@@ -66,3 +67,69 @@ export type {
   RecipientRef,
   ResolvedRecipient,
 } from "./libs/EngagementService";
+export {
+  ENGAGEMENT_DELIVERY_EVENT_TYPES,
+  EngagementPersistenceProblem,
+  EngagementStoreValidationProblem,
+  assertEngagementPreference,
+  assertEngagementStoreText,
+  assertEngagementSuppression,
+  createEngagementDeliveryEventId,
+  createEngagementDispatchId,
+  createEngagementDispatchIdentityKey,
+  normalizeEngagementEvidence,
+  recipientRefForEndpoint,
+} from "./libs/EngagementStores";
+export type {
+  ContactEndpoint,
+  ContactEndpointInvalidationResult,
+  ContactEndpointStore,
+  EmailContactEndpoint,
+  EndpointInvalidationReason,
+  EngagementDeliveryEvent,
+  EngagementDeliveryEventRecordResult,
+  EngagementDeliveryEventStore,
+  EngagementDeliveryEventType,
+  EngagementDispatch,
+  EngagementDispatchHistoryCursor,
+  EngagementDispatchHistoryPage,
+  EngagementDispatchIdentity,
+  EngagementDispatchOutcome,
+  EngagementDispatchStore,
+  EngagementDispatchTarget,
+  EngagementEndpointChannel,
+  EngagementEvidence,
+  EngagementPersistence,
+  EngagementPreference,
+  EngagementPreferenceLookup,
+  EngagementPreferenceScope,
+  EngagementPreferenceState,
+  EngagementPreferenceStore,
+  EngagementStoreTransaction,
+  EngagementSuppression,
+  EngagementSuppressionLookup,
+  InvalidateContactEndpointInput,
+  PushContactEndpoint,
+  RecordEngagementDeliveryEventInput,
+  RecordEngagementDispatchInput,
+  SaveContactEndpointInput,
+  SuppressionStore,
+} from "./libs/EngagementStores";
+export { InMemoryEngagementStore } from "./libs/InMemoryEngagementStore";
+export {
+  EngagementDeliveryEventProcessor,
+  EngagementDeliveryEventCorrelationProblem,
+  StoreBackedRecipientDirectory,
+  StoredEngagementPolicyEvaluator,
+} from "./libs/PersistentEngagement";
+export type {
+  EngagementDeliveryEventProcessingResult,
+  PushTokenResolver,
+  StoredEngagementPolicyOptions,
+} from "./libs/PersistentEngagement";
+export { createEngagementStoreConformanceSuite } from "./libs/EngagementStoreConformance";
+export type {
+  EngagementStoreConformanceCase,
+  EngagementStoreConformanceOptions,
+  EngagementStoreConformanceSuite,
+} from "./libs/EngagementStoreConformance";

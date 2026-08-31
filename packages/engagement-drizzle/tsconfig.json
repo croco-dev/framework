@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig/tsconfig.node.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "paths": {
+      "@croco/engagement-core": ["../engagement-core/src/index.ts"],
+      "@croco/problems-core": ["../problems-core/src/index.ts"],
+      "@croco/tx-core": ["../tx-core/src/index.ts"],
+      "@croco/tx-drizzle": ["../tx-drizzle/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*.ts"]
+}

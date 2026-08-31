@@ -412,6 +412,7 @@
         "billing-polar",
         "credits-drizzle",
         "customer-health-drizzle",
+        "engagement-drizzle",
         "entitlements-drizzle",
         "execution-drizzle",
         "invitation-drizzle",
@@ -615,6 +616,7 @@
         "credits-core",
         "credits-drizzle",
         "desktop-codegen",
+        "engagement-drizzle",
         "frontend-problems",
         "metering-upstash",
         "notifications-react-email",
@@ -782,6 +784,20 @@
         "runtimes": ["node", "lambda"],
         "requiredEnv": ["database connection supplied by app"],
         "features": ["health score persistence", "customer health lookup"]
+      },
+      "engagement-drizzle": {
+        "domain": "Engagement",
+        "adapter": "Transactional Drizzle engagement store",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["PostgreSQL connection supplied by app"],
+        "features": [
+          "tenant-scoped contact endpoints",
+          "durable preferences and suppressions",
+          "logical dispatch idempotency",
+          "normalized delivery event deduplication",
+          "compare-and-set endpoint invalidation",
+          "deterministic delivery history"
+        ]
       },
       "entitlements-drizzle": {
         "domain": "Entitlements",

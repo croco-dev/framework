@@ -1211,6 +1211,12 @@
       "owner": "@croco/engagement-core"
     },
     {
+      "path": "packages/engagement-core/src/tests/EngagementStores.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/engagement-core"
+    },
+    {
       "path": "packages/engagement-core/src/tests/MessageContracts.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -1221,6 +1227,18 @@
       "lane": "published",
       "qualifiers": [],
       "owner": "@croco/engagement-core"
+    },
+    {
+      "path": "packages/engagement-drizzle/src/tests/DrizzleEngagementStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/engagement-drizzle"
+    },
+    {
+      "path": "packages/engagement-drizzle/src/tests/DrizzleEngagementStore.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/engagement-drizzle"
     },
     {
       "path": "packages/entitlements-core/src/tests/EntitlementDefinition.spec.ts",

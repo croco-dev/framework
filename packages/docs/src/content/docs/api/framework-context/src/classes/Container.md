@@ -47,7 +47,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 [`DependencyGraphManifest`](/api/framework-context/src/type-aliases/dependencygraphmanifest/)
 
-***
+---
 
 ### createScope()
 
@@ -57,7 +57,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 [`ContainerScope`](/api/framework-context/src/classes/containerscope/)
 
-***
+---
 
 ### get()
 
@@ -79,7 +79,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 `T`
 
-***
+---
 
 ### getActiveScopeId()
 
@@ -89,7 +89,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 `string` \| `undefined`
 
-***
+---
 
 ### getComponentMetadata()
 
@@ -105,7 +105,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 [`ComponentMetadata`](/api/framework-context/src/interfaces/componentmetadata/) \| `undefined`
 
-***
+---
 
 ### getDiagnosticsSnapshot()
 
@@ -131,7 +131,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 > **scopes**: `string`[]
 
-***
+---
 
 ### getLastResolutionTrace()
 
@@ -141,7 +141,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 [`DependencyResolutionTrace`](/api/framework-context/src/type-aliases/dependencyresolutiontrace/) \| `undefined`
 
-***
+---
 
 ### getMany()
 
@@ -163,7 +163,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 `T`[]
 
-***
+---
 
 ### getOptional()
 
@@ -185,7 +185,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 `T` \| `undefined`
 
-***
+---
 
 ### getResolutionTrace()
 
@@ -207,7 +207,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 [`DependencyResolutionTrace`](/api/framework-context/src/type-aliases/dependencyresolutiontrace/)
 
-***
+---
 
 ### has()
 
@@ -229,7 +229,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 `boolean`
 
-***
+---
 
 ### inspectTypeDIConstructorInjections()
 
@@ -245,7 +245,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 readonly [`TypeDIInjectionInspection`](/api/framework-context/src/type-aliases/typediinjectioninspection/)[]
 
-***
+---
 
 ### inspectTypeDIInjections()
 
@@ -261,7 +261,7 @@ readonly [`TypeDIInjectionInspection`](/api/framework-context/src/type-aliases/t
 
 readonly [`TypeDIInjectionInspection`](/api/framework-context/src/type-aliases/typediinjectioninspection/)[]
 
-***
+---
 
 ### register()
 
@@ -287,7 +287,7 @@ readonly [`TypeDIInjectionInspection`](/api/framework-context/src/type-aliases/t
 
 `void`
 
-***
+---
 
 ### registerAsync()
 
@@ -313,7 +313,7 @@ readonly [`TypeDIInjectionInspection`](/api/framework-context/src/type-aliases/t
 
 `Promise`\<`T`\>
 
-***
+---
 
 ### registerLazy()
 
@@ -339,7 +339,7 @@ readonly [`TypeDIInjectionInspection`](/api/framework-context/src/type-aliases/t
 
 `void`
 
-***
+---
 
 ### remove()
 
@@ -361,7 +361,7 @@ readonly [`TypeDIInjectionInspection`](/api/framework-context/src/type-aliases/t
 
 `void`
 
-***
+---
 
 ### reset()
 
@@ -371,7 +371,7 @@ readonly [`TypeDIInjectionInspection`](/api/framework-context/src/type-aliases/t
 
 `void`
 
-***
+---
 
 ### set()
 
@@ -397,7 +397,7 @@ readonly [`TypeDIInjectionInspection`](/api/framework-context/src/type-aliases/t
 
 `T`
 
-***
+---
 
 ### setComponentSourceLocation()
 
@@ -423,7 +423,7 @@ readonly [`TypeDIInjectionInspection`](/api/framework-context/src/type-aliases/t
 
 `void`
 
-***
+---
 
 ### toTypeDIServiceIdentifier()
 
@@ -448,7 +448,7 @@ Symbol mappings remain stable until [Container.reset](/api/framework-context/src
 
 `ServiceIdentifier`\<`T`\>
 
-***
+---
 
 ### validate()
 

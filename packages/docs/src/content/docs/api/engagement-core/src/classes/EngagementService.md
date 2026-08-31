@@ -9,7 +9,7 @@ title: "EngagementService"
 
 ### Constructor
 
-> **new EngagementService**(`directory`, `renderer`, `notifications`, `suppressions?`): `EngagementService`
+> **new EngagementService**(`directory`, `renderer`, `notifications`, `suppressions?`, `dispatches?`, `clock?`): `EngagementService`
 
 #### Parameters
 
@@ -28,6 +28,14 @@ title: "EngagementService"
 ##### suppressions?
 
 [`EngagementSuppressionEvaluator`](/api/engagement-core/src/interfaces/engagementsuppressionevaluator/) = `ALLOW_ALL_SUPPRESSIONS`
+
+##### dispatches?
+
+[`EngagementDispatchStore`](/api/engagement-core/src/interfaces/engagementdispatchstore/)
+
+##### clock?
+
+() => `Date`
 
 #### Returns
 

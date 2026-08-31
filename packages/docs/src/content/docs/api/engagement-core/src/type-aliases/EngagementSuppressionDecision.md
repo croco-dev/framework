@@ -5,4 +5,4 @@ prev: false
 title: "EngagementSuppressionDecision"
 ---
 
-> **EngagementSuppressionDecision** = `Readonly`\<\{ `reason?`: `string`; `suppressed`: `boolean`; \}\>
+> **EngagementSuppressionDecision** = `Readonly`\<\{ `kind?`: `"preference"` \| `"suppression"`; `reason?`: `string`; `suppressed`: `boolean`; \}\>

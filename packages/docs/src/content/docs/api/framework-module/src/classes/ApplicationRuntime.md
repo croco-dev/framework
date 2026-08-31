@@ -47,7 +47,7 @@ Owns one isolated DI scope and one module lifecycle for a Croco application.
 
 `AsyncDisposable.[asyncDispose]`
 
-***
+---
 
 ### createGraphManifest()
 
@@ -65,7 +65,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 [`ApplicationRuntimeGraphManifest`](/api/framework-module/src/type-aliases/applicationruntimegraphmanifest/)
 
-***
+---
 
 ### dispose()
 
@@ -75,7 +75,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### get()
 
@@ -97,7 +97,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 `T`
 
-***
+---
 
 ### getRegisteredModules()
 
@@ -107,7 +107,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 readonly [`ModuleDiagnosticsSnapshot`](/api/framework-module/src/type-aliases/modulediagnosticssnapshot/)[]
 
-***
+---
 
 ### has()
 
@@ -129,7 +129,7 @@ readonly [`ModuleDiagnosticsSnapshot`](/api/framework-module/src/type-aliases/mo
 
 `boolean`
 
-***
+---
 
 ### initialize()
 
@@ -145,7 +145,7 @@ readonly [`ModuleDiagnosticsSnapshot`](/api/framework-module/src/type-aliases/mo
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### run()
 
@@ -189,7 +189,7 @@ readonly [`ModuleDiagnosticsSnapshot`](/api/framework-module/src/type-aliases/mo
 
 `T`
 
-***
+---
 
 ### shutdown()
 
@@ -205,7 +205,7 @@ readonly [`ModuleDiagnosticsSnapshot`](/api/framework-module/src/type-aliases/mo
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### shutdownWithCleanup()
 
@@ -225,7 +225,7 @@ readonly [`ModuleDiagnosticsSnapshot`](/api/framework-module/src/type-aliases/mo
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### use()
 
