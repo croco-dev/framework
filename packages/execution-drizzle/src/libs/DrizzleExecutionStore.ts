@@ -75,23 +75,50 @@ function hasUpdateField(data: Partial<Execution>, key: keyof Execution): boolean
   return Object.prototype.hasOwnProperty.call(data, key);
 }
 
+function isIdempotencyKeyUniqueViolation(error: unknown): boolean {
+  const seen = new Set<object>();
+  let current = error;
+
+  while (typeof current === "object" && current !== null && !seen.has(current)) {
+    if (
+      "code" in current &&
+      current.code === "23505" &&
+      "constraint" in current &&
+      current.constraint === "executions_idempotency_key_idx"
+    ) {
+      return true;
+    }
+    seen.add(current);
+    current = "cause" in current ? current.cause : undefined;
+  }
+
+  return false;
+}
+
 function toUpdateData(data: Partial<Execution>): Record<string, unknown> {
   return {
     ...(data.status !== undefined ? { status: data.status } : {}),
-    ...(data.payload !== undefined ? { payload: data.payload } : {}),
-    ...(data.result !== undefined ? { result: data.result } : {}),
+    ...(hasUpdateField(data, "payload") ? { payload: data.payload ?? null } : {}),
+    ...(hasUpdateField(data, "result") ? { result: data.result ?? null } : {}),
     ...(hasUpdateField(data, "error") ? { error: data.error ?? null } : {}),
     ...(data.attempts !== undefined ? { attempts: data.attempts } : {}),
     ...(data.maxAttempts !== undefined ? { maxAttempts: data.maxAttempts } : {}),
-    ...(data.startedAt !== undefined ? { startedAt: data.startedAt } : {}),
+    ...(hasUpdateField(data, "startedAt") ? { startedAt: data.startedAt ?? null } : {}),
     ...(hasUpdateField(data, "completedAt") ? { completedAt: data.completedAt ?? null } : {}),
-    ...(data.scheduledFor !== undefined ? { scheduledFor: data.scheduledFor } : {}),
-    ...(data.timeout !== undefined ? { timeout: data.timeout } : {}),
-    ...(data.replayOf !== undefined ? { replayOf: data.replayOf } : {}),
-    ...(data.logs !== undefined ? { logs: data.logs } : {}),
-    ...(data.metadata !== undefined ? { metadata: data.metadata } : {}),
-    ...(data.checkpoints !== undefined ? { checkpoints: data.checkpoints } : {}),
-    ...(data.progress !== undefined ? { progress: data.progress } : {}),
+    ...(hasUpdateField(data, "scheduledFor") ? { scheduledFor: data.scheduledFor ?? null } : {}),
+    ...(hasUpdateField(data, "timeout") ? { timeout: data.timeout ?? null } : {}),
+    ...(hasUpdateField(data, "idempotencyKey")
+      ? { idempotencyKey: data.idempotencyKey ?? null }
+      : {}),
+    ...(hasUpdateField(data, "requestFingerprint")
+      ? { requestFingerprint: data.requestFingerprint ?? null }
+      : {}),
+    ...(hasUpdateField(data, "replayOf") ? { replayOf: data.replayOf ?? null } : {}),
+    ...(hasUpdateField(data, "logs") ? { logs: data.logs ?? null } : {}),
+    ...(hasUpdateField(data, "parentId") ? { parentId: data.parentId ?? null } : {}),
+    ...(hasUpdateField(data, "metadata") ? { metadata: data.metadata ?? null } : {}),
+    ...(hasUpdateField(data, "checkpoints") ? { checkpoints: data.checkpoints ?? null } : {}),
+    ...(hasUpdateField(data, "progress") ? { progress: data.progress ?? null } : {}),
     ...(hasUpdateField(data, "continuation") ? { continuation: data.continuation ?? null } : {}),
   };
 }
@@ -222,12 +249,34 @@ export class DrizzleExecutionStore<TDb extends ExecutionDb>
    */
   async update(id: string, data: Partial<Execution>): Promise<Execution> {
     const updateData = toUpdateData(data);
+    if (Object.keys(data).length === 0) {
+      const execution = await this.findById(id);
+      if (!execution) {
+        throw ExecutionProblems.notFound(`Execution with id '${id}' not found`);
+      }
+      return execution;
+    }
+    if (Object.keys(updateData).length === 0) {
+      throw ExecutionProblems.conflict(
+        `Execution update for id '${id}' does not contain a supported field value`,
+      );
+    }
 
-    const result = (await this.dbOp
-      .update(executions)
-      .set(updateData)
-      .where(eq(executions.id, id))
-      .returning()) as ExecutionRow[];
+    let result: ExecutionRow[];
+    try {
+      result = (await this.dbOp
+        .update(executions)
+        .set(updateData)
+        .where(eq(executions.id, id))
+        .returning()) as ExecutionRow[];
+    } catch (error) {
+      if (isIdempotencyKeyUniqueViolation(error)) {
+        throw ExecutionProblems.conflict(
+          "Execution idempotency key is already assigned to another execution",
+        );
+      }
+      throw error;
+    }
 
     if (result.length === 0) {
       throw ExecutionProblems.notFound(`Execution with id '${id}' not found`);

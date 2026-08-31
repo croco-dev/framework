@@ -590,17 +590,51 @@ describe("DrizzleExecutionStore", () => {
       });
     });
 
-    it("should clear retry metadata when fields are explicitly set to undefined", async () => {
+    it("should clear every mutable optional field explicitly set to undefined", async () => {
       const execution = createMockExecution({
         status: "retrying",
+        payload: { task: "previous" },
+        result: { ok: true },
         error: { message: "previous attempt", retryable: true },
+        startedAt: new Date("2025-12-31T23:00:00.000Z"),
         completedAt: new Date("2026-01-01T00:00:00.000Z"),
+        scheduledFor: new Date("2026-01-02T00:00:00.000Z"),
+        timeout: 5_000,
+        idempotencyKey: "previous-key",
+        requestFingerprint: "a".repeat(64),
+        replayOf: "source-execution",
+        logs: [
+          {
+            timestamp: "2026-01-01T00:00:00.000Z",
+            level: "info",
+            message: "previous log",
+          },
+        ],
+        parentId: "parent-execution",
+        metadata: { source: "api" },
+        checkpoints: { cursor: "previous" },
+        progress: { current: 1, total: 2 },
+        continuation: { attempt: 1, expectedToken: "previous-token" },
       });
       const updated = {
         ...execution,
         status: "running" as ExecutionStatus,
+        payload: null,
+        result: null,
         error: null,
+        startedAt: null,
         completedAt: null,
+        scheduledFor: null,
+        timeout: null,
+        idempotencyKey: null,
+        requestFingerprint: null,
+        replayOf: null,
+        logs: null,
+        parentId: null,
+        metadata: null,
+        checkpoints: null,
+        progress: null,
+        continuation: null,
       };
 
       const setMock = vi.fn(() => ({
@@ -615,17 +649,130 @@ describe("DrizzleExecutionStore", () => {
 
       const result = await store.update(execution.id, {
         status: "running",
+        payload: undefined,
+        result: undefined,
         error: undefined,
+        startedAt: undefined,
         completedAt: undefined,
+        scheduledFor: undefined,
+        timeout: undefined,
+        idempotencyKey: undefined,
+        requestFingerprint: undefined,
+        replayOf: undefined,
+        logs: undefined,
+        parentId: undefined,
+        metadata: undefined,
+        checkpoints: undefined,
+        progress: undefined,
+        continuation: undefined,
       });
 
       expect(setMock).toHaveBeenCalledWith({
         status: "running",
+        payload: null,
+        result: null,
         error: null,
+        startedAt: null,
         completedAt: null,
+        scheduledFor: null,
+        timeout: null,
+        idempotencyKey: null,
+        requestFingerprint: null,
+        replayOf: null,
+        logs: null,
+        parentId: null,
+        metadata: null,
+        checkpoints: null,
+        progress: null,
+        continuation: null,
       });
+      expect(result.payload).toBeUndefined();
+      expect(result.result).toBeUndefined();
       expect(result.error).toBeUndefined();
+      expect(result.startedAt).toBeUndefined();
       expect(result.completedAt).toBeUndefined();
+      expect(result.scheduledFor).toBeUndefined();
+      expect(result.timeout).toBeUndefined();
+      expect(result.idempotencyKey).toBeUndefined();
+      expect(result.requestFingerprint).toBeUndefined();
+      expect(result.replayOf).toBeUndefined();
+      expect(result.logs).toBeUndefined();
+      expect(result.parentId).toBeUndefined();
+      expect(result.metadata).toBeUndefined();
+      expect(result.checkpoints).toBeUndefined();
+      expect(result.progress).toBeUndefined();
+      expect(result.continuation).toBeUndefined();
+    });
+
+    it("should return the existing execution without issuing an empty update", async () => {
+      const execution = createMockExecution({ metadata: { source: "api" } });
+      mockDb.select = vi.fn(() => ({
+        from: vi.fn(() => ({
+          where: vi.fn(() => ({
+            limit: vi.fn(() => Promise.resolve([execution])),
+          })),
+        })),
+      }));
+
+      const result = await store.update(execution.id, {});
+
+      expect(result).toMatchObject(execution);
+      expect(mockDb.update).not.toHaveBeenCalled();
+    });
+
+    it("should preserve not-found behavior for an empty update", async () => {
+      await expect(store.update("non-existent-id", {})).rejects.toMatchObject({
+        code: "execution/not-found",
+      });
+      expect(mockDb.update).not.toHaveBeenCalled();
+    });
+
+    it("should reject a non-empty update without mutable fields", async () => {
+      await expect(
+        store.update("test-execution-id", { type: "unsupported" }),
+      ).rejects.toMatchObject({
+        code: "execution/conflict",
+      });
+      expect(mockDb.select).not.toHaveBeenCalled();
+      expect(mockDb.update).not.toHaveBeenCalled();
+    });
+
+    it("should classify idempotency key update conflicts", async () => {
+      const uniqueViolation = Object.assign(new Error("duplicate key"), {
+        code: "23505",
+        constraint: "executions_idempotency_key_idx",
+      });
+      mockDb.update = vi.fn(() => ({
+        set: vi.fn(() => ({
+          where: vi.fn(() => ({
+            returning: vi.fn(() => Promise.reject({ cause: uniqueViolation })),
+          })),
+        })),
+      }));
+
+      await expect(
+        store.update("test-execution-id", { idempotencyKey: "duplicate-key" }),
+      ).rejects.toMatchObject({
+        code: "execution/conflict",
+      });
+    });
+
+    it("should preserve unrelated update failures", async () => {
+      const unexpected = Object.assign(new Error("duplicate key"), {
+        code: "23505",
+        constraint: "other_unique_constraint",
+      });
+      mockDb.update = vi.fn(() => ({
+        set: vi.fn(() => ({
+          where: vi.fn(() => ({
+            returning: vi.fn(() => Promise.reject(unexpected)),
+          })),
+        })),
+      }));
+
+      await expect(
+        store.update("test-execution-id", { idempotencyKey: "duplicate-key" }),
+      ).rejects.toBe(unexpected);
     });
 
     it("should update replay fields and logs", async () => {
