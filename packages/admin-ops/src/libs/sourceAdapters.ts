@@ -193,7 +193,7 @@ function executionRecoveryActions(
 ): readonly RetryConsoleRecoveryAction[] {
   const state = classifyExecution(execution);
   const canRecordAudit = typeof manager.recordLog === "function";
-  const canReplay = typeof manager.replay === "function";
+  const canReplay = typeof manager.replay === "function" && execution.status !== "cancelled";
 
   if (execution.status === "timed_out" && execution.error?.indeterminate === true) {
     return [

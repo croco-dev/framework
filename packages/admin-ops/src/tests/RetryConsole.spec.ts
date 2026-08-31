@@ -311,6 +311,69 @@ describe("RetryConsole", () => {
     });
   });
 
+  it("does not allow replay for a cancelled execution", async () => {
+    const manager = new ExecutionManagerImpl(
+      new MemoryExecutionStore([
+        execution({
+          status: "cancelled",
+          error: undefined,
+        }),
+      ]),
+    );
+    const replaySpy = vi.spyOn(manager, "replay");
+    const console = createRetryConsole([createTaskRetryConsoleSource(manager)]);
+
+    const items = await console.list();
+    const result = await console.recover({
+      itemId: "exec-1",
+      actionId: "replay",
+      permission: {
+        granted: true,
+        descriptor: permission("replay", "task", "exec-1"),
+      },
+      audit,
+    });
+
+    expect(items[0].recoveryActions).toEqual([
+      expect.objectContaining({
+        kind: "replay",
+        allowed: false,
+      }),
+    ]);
+    expect(result.status).toBe("denied");
+    expect(replaySpy).not.toHaveBeenCalled();
+  });
+
+  it("keeps replay available for a terminal timeout", async () => {
+    const manager = new ExecutionManagerImpl(
+      new MemoryExecutionStore([
+        execution({
+          status: "timed_out",
+          attempts: 3,
+          maxAttempts: 3,
+        }),
+      ]),
+    );
+    const console = createRetryConsole([createTaskRetryConsoleSource(manager)]);
+
+    const items = await console.list();
+    const result = await console.recover({
+      itemId: "exec-1",
+      actionId: "replay",
+      permission: {
+        granted: true,
+        descriptor: permission("replay", "task", "exec-1"),
+      },
+      audit,
+    });
+
+    expect(items[0].recoveryActions[0]).toMatchObject({
+      kind: "replay",
+      allowed: true,
+    });
+    expect(result.status).toBe("succeeded");
+  });
+
   it("runs a retryable task recovery with permission, audit metadata, and idempotency evidence", async () => {
     const manager = new ExecutionManagerImpl(new MemoryExecutionStore([execution({})]));
     const console = createRetryConsole([createTaskRetryConsoleSource(manager)]);
