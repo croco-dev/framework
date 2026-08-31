@@ -1,4 +1,5 @@
 ---
+"@croco/events-core": patch
 "@croco/framework-context": minor
 "@croco/framework-module": minor
 "@croco/problems-core": patch
