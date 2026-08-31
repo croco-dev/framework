@@ -1674,8 +1674,12 @@ async function rejectErrorResponse(
 
   try {
     body = await response.json();
-  } catch {
-    const error = new RpcClientResponseError(response);
+  } catch (cause) {
+    if (isRpcAbortError(cause)) {
+      return handleRpcRequestError(cause, telemetry);
+    }
+
+    const error = new RpcClientResponseError(response, undefined, cause);
     recordRpcTelemetryExternal(error, response, telemetry);
     throw error;
   }
@@ -1707,8 +1711,12 @@ async function readErrorResult<Problem extends RpcDeclaredProblem>(
 
   try {
     body = await response.json();
-  } catch {
-    const error = new RpcClientResponseError(response);
+  } catch (cause) {
+    if (isRpcAbortError(cause)) {
+      return handleRpcResponseResultError(cause, response, telemetry);
+    }
+
+    const error = new RpcClientResponseError(response, undefined, cause);
     const result: RpcClientFailure<Problem> = {
       ok: false,
       kind: 'external',
