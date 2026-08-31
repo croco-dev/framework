@@ -104,6 +104,10 @@ export class ShutdownManager {
       return;
     }
 
+    ShutdownManager.disposeScope(scopeId);
+  }
+
+  static disposeScope(scopeId: string): void {
     ShutdownManager.scopedInstances.get(scopeId)?.removeAllListeners();
     ShutdownManager.scopedInstances.delete(scopeId);
   }

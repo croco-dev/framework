@@ -84,6 +84,10 @@ export class EventBusConfig {
       return;
     }
 
+    EventBusConfig.disposeScope(scopeId);
+  }
+
+  public static disposeScope(scopeId: string): void {
     EventBusConfig.scopedInstances.get(scopeId)?.clear();
     EventBusConfig.scopedInstances.delete(scopeId);
     EventBusConfig.scopedStats.delete(scopeId);

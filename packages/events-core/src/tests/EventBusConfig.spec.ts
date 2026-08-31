@@ -1,4 +1,4 @@
-import { MetadataStorage } from "@croco/framework-context";
+import { Container, MetadataStorage } from "@croco/framework-context";
 import { beforeEach, describe, expect, it } from "vitest";
 import { DomainEvent } from "../libs/DomainEvent";
 import type { EventBus } from "../libs/EventBus";
@@ -76,6 +76,16 @@ describe("EventBusConfig", () => {
       const retrievedBus = config2.getEventBus();
 
       expect(retrievedBus).toBe(mockBus);
+    });
+
+    it("should dispose scoped state by scope id", () => {
+      const scope = Container.createScope();
+      const scopedConfig = scope.run(() => EventBusConfig.getInstance());
+
+      EventBusConfig.disposeScope(scope.id);
+
+      expect(scope.run(() => EventBusConfig.getInstance())).not.toBe(scopedConfig);
+      scope.dispose();
     });
   });
 

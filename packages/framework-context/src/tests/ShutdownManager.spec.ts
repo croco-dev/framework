@@ -96,6 +96,16 @@ describe("ShutdownManager", () => {
       expect(instance1).not.toBe(instance2);
     });
 
+    it("should dispose scoped state by scope id", () => {
+      const scope = Container.createScope();
+      const scopedManager = scope.run(() => ShutdownManager.getInstance());
+
+      ShutdownManager.disposeScope(scope.id);
+
+      expect(scope.run(() => ShutdownManager.getInstance())).not.toBe(scopedManager);
+      scope.dispose();
+    });
+
     it("should remove registered listeners when reset creates an isolated singleton", () => {
       const manager = ShutdownManager.getInstance();
       const processOffSpy = vi.spyOn(process, "off");

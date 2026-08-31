@@ -9,7 +9,7 @@ import {
   declareSecurityMiddlewareCapabilities,
   type MiddlewareFunction,
 } from "@croco/transports-http";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createTestKernel,
   createTestingTransactionContext,
@@ -337,15 +337,42 @@ describe("TestKernel", () => {
     ]);
   });
 
-  it("runs application and resource cleanup when the runtime was already disposed", async () => {
+  it("rejects scope-owned cleanup without falling back to global state after runtime disposal", async () => {
     const lifecycle: string[] = [];
-    const resource = fakeResource("database", "commit", lifecycle);
+    const cleanupToken = new Token<{ cleanupCalls: number; identity: string }>(
+      "testing.disposed-runtime-cleanup",
+    );
+    const globalValue = { cleanupCalls: 0, identity: "global" };
+    const scopedValue = { cleanupCalls: 0, identity: "scoped" };
+    Container.set(cleanupToken, globalValue);
+    const resource: TestResource<FakeResourceConnection> = {
+      id: "database",
+      async start() {
+        lifecycle.push("resource:database:start");
+        return {
+          connection: { identity: "database" },
+          diagnostics: [],
+          dispose: () => {
+            Container.get(cleanupToken).cleanupCalls += 1;
+            lifecycle.push(`resource:database:dispose:${Container.get(cleanupToken).identity}`);
+          },
+          fidelity: {
+            id: "database",
+            image: "example.invalid/resource@sha256:abc",
+            isolation: "database-per-worker",
+            kind: "fake",
+            mode: "commit",
+          },
+        };
+      },
+    };
     const runtime = createApplicationRuntime({
       modules: [
         {
           name: "app",
+          providers: [{ provide: cleanupToken, useValue: scopedValue }],
           shutdown: () => {
-            lifecycle.push("module:shutdown");
+            lifecycle.push(`module:shutdown:${Container.get(cleanupToken).identity}`);
           },
         },
       ],
@@ -357,21 +384,36 @@ describe("TestKernel", () => {
         return bootstrapProductionApp("disposed-runtime");
       },
       dispose: () => {
-        lifecycle.push("application:dispose");
+        Container.get(cleanupToken).cleanupCalls += 1;
+        lifecycle.push(`application:dispose:${Container.get(cleanupToken).identity}`);
       },
       fidelity: "application",
       resources: [resource],
     });
 
     await runtime.dispose();
-    await expect(kernel.dispose()).rejects.toThrow(TestKernelDisposalProblem);
+    const eventScopeDisposal = vi.spyOn(EventBusConfig, "disposeScope");
+    const shutdownScopeDisposal = vi.spyOn(ShutdownManager, "disposeScope");
+    let failure: unknown;
+    try {
+      await kernel.dispose();
+    } catch (error) {
+      failure = error;
+    }
 
-    expect(lifecycle).toEqual([
-      "resource:database:start",
-      "module:shutdown",
-      "application:dispose",
-      "resource:database:dispose",
-    ]);
+    expect(lifecycle).toEqual(["resource:database:start", "module:shutdown:scoped"]);
+    expect(globalValue.cleanupCalls).toBe(0);
+    expect(scopedValue.cleanupCalls).toBe(0);
+    expect(eventScopeDisposal).toHaveBeenCalledWith(runtime.scopeId);
+    expect(shutdownScopeDisposal).toHaveBeenCalledWith(runtime.scopeId);
+    expect(failure).toMatchObject({
+      code: "testing/test-kernel-disposal-failed",
+      extensions: {
+        failures: expect.arrayContaining([
+          expect.objectContaining({ code: "framework-module/runtime-disposed" }),
+        ]),
+      },
+    });
   });
 
   it("rejects commit-semantic obligations in rollback mode before application bootstrap", async () => {
