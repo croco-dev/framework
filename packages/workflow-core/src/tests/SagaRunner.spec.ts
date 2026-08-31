@@ -708,6 +708,80 @@ describe("SagaRunner", () => {
     ]);
   });
 
+  it.each([
+    ["compensation bookkeeping", "compensation", "failed"],
+    ["terminal failure-state recording", "terminal", "compensated"],
+  ] as const)(
+    "preserves the original saga failure when %s rejects",
+    async (_failureKind, failurePoint, expectedStatus) => {
+      const delegate = new InMemorySagaStore();
+      const sagaFailure = new ProviderProblem("seat provider unavailable");
+      const failureRecordError = new ProviderProblem("saga failure store unavailable");
+      const store: SagaStore = {
+        create: (params) => delegate.create(params),
+        findById: (id) => delegate.findById(id),
+        findByIdempotencyKey: (sagaName, key) => delegate.findByIdempotencyKey(sagaName, key),
+        list: (options) => delegate.list(options),
+        update: (id, data) => {
+          const isCompensationWrite = data.steps?.some((step) => step.status === "compensating");
+          const isTerminalWrite = data.status === "compensated";
+          if (
+            (failurePoint === "compensation" && isCompensationWrite) ||
+            (failurePoint === "terminal" && isTerminalWrite)
+          ) {
+            throw failureRecordError;
+          }
+
+          return delegate.update(id, data);
+        },
+      };
+      const mockSpan = createMockSpan();
+      vi.spyOn(trace, "getTracer").mockReturnValue(createMockTracer([], mockSpan));
+      const definition: SagaDefinition = {
+        name: `failure-record-${failurePoint}`,
+        steps: [
+          {
+            id: "reserve-payment",
+            run: () => ({ paymentId: "pay_123" }),
+            compensate: () => ({ refunded: true }),
+          },
+          {
+            id: "provision-seat",
+            run: () => {
+              throw sagaFailure;
+            },
+          },
+        ],
+      };
+      const runner = new SagaRunner(store);
+
+      const problem = await runner.execute(definition, {}).catch((error: unknown) => error);
+
+      expect(problem).toBeInstanceOf(SagaExecutionFailedProblem);
+      expect(problem).toMatchObject({
+        code: "workflow-core/saga-execution-failed",
+        extensions: {
+          originalFailureCode: sagaFailure.code,
+          originalFailureMessage: sagaFailure.message,
+          sagaStatus: expectedStatus,
+          compensationFailures: [],
+        },
+      });
+      expect(Object.getOwnPropertyDescriptor(problem, "sagaFailureRecordError")).toEqual({
+        configurable: true,
+        enumerable: false,
+        value: failureRecordError,
+        writable: false,
+      });
+      expect(mockSpan.addEvent).toHaveBeenCalledWith("saga.execution.failure_record.failed", {
+        "saga.name": definition.name,
+        "saga.execution.id": "saga-1",
+        "saga.error.message": sagaFailure.message,
+        "saga.failure_record.error.message": failureRecordError.message,
+      });
+    },
+  );
+
   it("records exhausted retry attempts and step idempotency keys", async () => {
     let attempts = 0;
     const runner = new SagaRunner();
