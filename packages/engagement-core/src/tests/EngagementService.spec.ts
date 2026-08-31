@@ -257,6 +257,62 @@ describe("EngagementService", () => {
     );
   });
 
+  it("parses transformed command input exactly once before rendering", async () => {
+    let transformations = 0;
+    const TransformedMessage = defineMessage({
+      id: "billing.transformed",
+      topic: "billing",
+      data: z
+        .object({
+          tenantName: z.string().transform((value) => {
+            transformations += 1;
+            return value.length;
+          }),
+        })
+        .strict(),
+      channels: ["email"],
+    });
+
+    @Renders(TransformedMessage)
+    class TransformedRenderer implements MessageRenderer<typeof TransformedMessage> {
+      email({ data }: MessageContext<typeof TransformedMessage, "email">) {
+        return {
+          subject: String(data.tenantName),
+          html: `<p>${String(data.tenantName)}</p>`,
+          text: String(data.tenantName),
+        };
+      }
+    }
+
+    const registry = new MessageRendererRegistry();
+    registry.registerMessage(TransformedMessage);
+    registry.registerRenderer(TransformedRenderer);
+    registry.bootstrap();
+    const resolver = new InMemoryMessageRendererResolver();
+    resolver.register(TransformedMessage, new TransformedRenderer());
+    const dispatcher = createDispatcher();
+    const engagement = new EngagementService(
+      directory,
+      new RegistryEngagementMessageRenderer(registry, resolver),
+      dispatcher.service,
+    );
+
+    await expect(
+      engagement.send(TransformedMessage, {
+        recipient: recipient.recipient,
+        data: { tenantName: "Croco" },
+        key: "transformed-1",
+      }),
+    ).resolves.toMatchObject({ status: "queued" });
+
+    expect(transformations).toBe(1);
+    expect(dispatcher.dispatch).toHaveBeenCalledWith(
+      NotificationChannel.EMAIL,
+      expect.objectContaining({ subject: "5", content: "<p>5</p>", text: "5" }),
+      expect.anything(),
+    );
+  });
+
   it("queues every active endpoint under the explicit all-reachable policy", async () => {
     const dispatcher = createDispatcher();
     const engagement = new EngagementService(directory, createRenderer(), dispatcher.service);

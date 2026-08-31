@@ -4,6 +4,7 @@ import {
   type EngagementService,
   type MessageContext,
   type MessageData,
+  type MessageDataInput,
   type MessageRenderer,
   Renders,
 } from "../index";
@@ -13,6 +14,13 @@ const TrialEnding = defineMessage({
   topic: "billing",
   data: z.object({ firstName: z.string(), upgradeUrl: z.string().url() }).strict(),
   channels: ["email", "push"],
+});
+
+const TransformedMessage = defineMessage({
+  id: "billing.transformed",
+  topic: "billing",
+  data: z.object({ tenantName: z.string().transform((value) => value.length) }).strict(),
+  channels: ["email"],
 });
 
 @Renders(TrialEnding)
@@ -99,12 +107,30 @@ const invalidData: MessageData<typeof TrialEnding> = {
 };
 void invalidData;
 
+const transformedInput: MessageDataInput<typeof TransformedMessage> = { tenantName: "Croco" };
+const transformedOutput: MessageData<typeof TransformedMessage> = { tenantName: 5 };
+void transformedInput;
+void transformedOutput;
+
 declare const engagement: EngagementService;
 
 engagement.send(TrialEnding, {
   recipient: { tenantId: "tenant-1", userId: "user-1" },
   data: requiredData,
   key: "subscription-1",
+});
+
+engagement.send(TransformedMessage, {
+  recipient: { tenantId: "tenant-1", userId: "user-1" },
+  data: transformedInput,
+  key: "transformed-1",
+});
+
+engagement.send(TransformedMessage, {
+  recipient: { tenantId: "tenant-1", userId: "user-1" },
+  // @ts-expect-error send accepts the schema input rather than its transformed output
+  data: transformedOutput,
+  key: "transformed-1",
 });
 
 engagement.send(TrialEnding, {

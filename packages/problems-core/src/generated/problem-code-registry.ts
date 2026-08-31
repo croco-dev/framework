@@ -5828,7 +5828,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 644,
+          line: 652,
           column: 5,
           kind: "problem-constructor",
         },
@@ -5859,7 +5859,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/MessageContracts.ts",
-          line: 349,
+          line: 361,
           column: 5,
           kind: "problem-constructor",
         },
@@ -5889,7 +5889,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/MessageContracts.ts",
-          line: 336,
+          line: 348,
           column: 5,
           kind: "problem-constructor",
         },
@@ -5920,7 +5920,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/MessageContracts.ts",
-          line: 328,
+          line: 340,
           column: 5,
           kind: "problem-constructor",
         },
@@ -5953,7 +5953,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 560,
+          line: 568,
           column: 5,
           kind: "problem-constructor",
         },
@@ -5986,7 +5986,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 575,
+          line: 583,
           column: 5,
           kind: "problem-constructor",
         },
@@ -6017,7 +6017,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 548,
+          line: 556,
           column: 5,
           kind: "problem-constructor",
         },
@@ -6049,7 +6049,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 596,
+          line: 604,
           column: 5,
           kind: "problem-constructor",
         },
@@ -6080,7 +6080,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/MessageContracts.ts",
-          line: 362,
+          line: 374,
           column: 5,
           kind: "problem-constructor",
         },
@@ -6111,7 +6111,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/MessageContracts.ts",
-          line: 414,
+          line: 426,
           column: 5,
           kind: "problem-constructor",
         },
@@ -6144,7 +6144,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/MessageContracts.ts",
-          line: 403,
+          line: 415,
           column: 5,
           kind: "problem-constructor",
         },
@@ -6175,7 +6175,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/MessageContracts.ts",
-          line: 425,
+          line: 437,
           column: 5,
           kind: "problem-constructor",
         },
@@ -6208,7 +6208,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/MessageContracts.ts",
-          line: 384,
+          line: 396,
           column: 5,
           kind: "problem-constructor",
         },
@@ -6240,7 +6240,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/MessageContracts.ts",
-          line: 373,
+          line: 385,
           column: 5,
           kind: "problem-constructor",
         },
@@ -6270,7 +6270,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 587,
+          line: 595,
           column: 5,
           kind: "problem-constructor",
         },
@@ -6303,7 +6303,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 617,
+          line: 625,
           column: 5,
           kind: "problem-constructor",
         },

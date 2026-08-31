@@ -8756,6 +8756,11 @@
               "source": "./libs/MessageContracts"
             },
             {
+              "name": "MessageDataInput",
+              "exportKind": "named",
+              "source": "./libs/MessageContracts"
+            },
+            {
               "name": "MessageDefinitionInput",
               "exportKind": "named",
               "source": "./libs/MessageContracts"

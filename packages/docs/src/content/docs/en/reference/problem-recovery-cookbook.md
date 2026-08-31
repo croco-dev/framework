@@ -4090,7 +4090,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/EngagementService.ts:644:5` (problem-constructor)
+- `packages/engagement-core/src/libs/EngagementService.ts:652:5` (problem-constructor)
 
 <a id="engagement-core-message-already-registered"></a>
 
@@ -4108,7 +4108,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/MessageContracts.ts:349:5` (problem-constructor)
+- `packages/engagement-core/src/libs/MessageContracts.ts:361:5` (problem-constructor)
 
 <a id="engagement-core-message-data-invalid"></a>
 
@@ -4126,7 +4126,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/MessageContracts.ts:336:5` (problem-constructor)
+- `packages/engagement-core/src/libs/MessageContracts.ts:348:5` (problem-constructor)
 
 <a id="engagement-core-message-definition-invalid"></a>
 
@@ -4144,7 +4144,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/MessageContracts.ts:328:5` (problem-constructor)
+- `packages/engagement-core/src/libs/MessageContracts.ts:340:5` (problem-constructor)
 
 <a id="engagement-core-recipient-directory-lookup-failed"></a>
 
@@ -4162,7 +4162,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/EngagementService.ts:560:5` (problem-constructor)
+- `packages/engagement-core/src/libs/EngagementService.ts:568:5` (problem-constructor)
 
 <a id="engagement-core-recipient-directory-scope-mismatch"></a>
 
@@ -4180,7 +4180,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/EngagementService.ts:575:5` (problem-constructor)
+- `packages/engagement-core/src/libs/EngagementService.ts:583:5` (problem-constructor)
 
 <a id="engagement-core-recipient-not-found"></a>
 
@@ -4198,7 +4198,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/EngagementService.ts:548:5` (problem-constructor)
+- `packages/engagement-core/src/libs/EngagementService.ts:556:5` (problem-constructor)
 
 <a id="engagement-core-render-failed"></a>
 
@@ -4216,7 +4216,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/EngagementService.ts:596:5` (problem-constructor)
+- `packages/engagement-core/src/libs/EngagementService.ts:604:5` (problem-constructor)
 
 <a id="engagement-core-renderer-already-registered"></a>
 
@@ -4234,7 +4234,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/MessageContracts.ts:362:5` (problem-constructor)
+- `packages/engagement-core/src/libs/MessageContracts.ts:374:5` (problem-constructor)
 
 <a id="engagement-core-renderer-binding-mismatch"></a>
 
@@ -4252,7 +4252,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/MessageContracts.ts:414:5` (problem-constructor)
+- `packages/engagement-core/src/libs/MessageContracts.ts:426:5` (problem-constructor)
 
 <a id="engagement-core-renderer-channel-missing"></a>
 
@@ -4270,7 +4270,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/MessageContracts.ts:403:5` (problem-constructor)
+- `packages/engagement-core/src/libs/MessageContracts.ts:415:5` (problem-constructor)
 
 <a id="engagement-core-renderer-channel-undeclared"></a>
 
@@ -4288,7 +4288,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/MessageContracts.ts:425:5` (problem-constructor)
+- `packages/engagement-core/src/libs/MessageContracts.ts:437:5` (problem-constructor)
 
 <a id="engagement-core-renderer-message-missing"></a>
 
@@ -4306,7 +4306,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/MessageContracts.ts:384:5` (problem-constructor)
+- `packages/engagement-core/src/libs/MessageContracts.ts:396:5` (problem-constructor)
 
 <a id="engagement-core-renderer-missing"></a>
 
@@ -4324,7 +4324,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/MessageContracts.ts:373:5` (problem-constructor)
+- `packages/engagement-core/src/libs/MessageContracts.ts:385:5` (problem-constructor)
 
 <a id="engagement-core-send-command-invalid"></a>
 
@@ -4342,7 +4342,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/EngagementService.ts:587:5` (problem-constructor)
+- `packages/engagement-core/src/libs/EngagementService.ts:595:5` (problem-constructor)
 
 <a id="engagement-core-suppression-evaluation-failed"></a>
 
@@ -4360,7 +4360,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/EngagementService.ts:617:5` (problem-constructor)
+- `packages/engagement-core/src/libs/EngagementService.ts:625:5` (problem-constructor)
 
 <a id="entitlement-denied"></a>
 

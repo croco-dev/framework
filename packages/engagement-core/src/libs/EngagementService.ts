@@ -15,6 +15,7 @@ import {
   type MessageChannel,
   type MessageContent,
   type MessageData,
+  type MessageDataInput,
   type MessageRenderer,
   type MessageRendererRegistry,
 } from "./MessageContracts";
@@ -49,6 +50,13 @@ export interface RecipientDirectory {
 export type EngagementDeliveryPolicy = "first-reachable" | "all-reachable";
 
 export type EngagementSendCommand<TMessage extends AnyMessage> = Readonly<{
+  recipient: RecipientRef;
+  data: MessageDataInput<TMessage>;
+  key: string;
+  policy?: EngagementDeliveryPolicy;
+}>;
+
+type ParsedEngagementSendCommand<TMessage extends AnyMessage> = Readonly<{
   recipient: RecipientRef;
   data: MessageData<TMessage>;
   key: string;
@@ -163,7 +171,7 @@ export class RegistryEngagementMessageRenderer implements EngagementMessageRende
     channel: TChannel,
     data: MessageData<TMessage>,
   ): Promise<MessageContent<TChannel>> {
-    return this.registry.render(message, this.resolver.resolve(message), channel, data);
+    return this.registry.renderParsed(message, this.resolver.resolve(message), channel, data);
   }
 }
 
@@ -247,7 +255,7 @@ export class EngagementService {
     command: EngagementSendCommand<TMessage>,
   ): Promise<EngagementSendResult> {
     assertCommand(command);
-    const normalizedCommand: EngagementSendCommand<TMessage> = {
+    const normalizedCommand: ParsedEngagementSendCommand<TMessage> = {
       ...command,
       data: parseMessageData(message, command.data),
     };
@@ -341,7 +349,7 @@ export class EngagementService {
 
   private async prepareAllReachable<TMessage extends AnyMessage>(
     message: TMessage,
-    command: EngagementSendCommand<TMessage>,
+    command: ParsedEngagementSendCommand<TMessage>,
     recipient: ResolvedRecipient,
   ): Promise<readonly PreparedEngagementChannel[]> {
     const preparedChannels: PreparedEngagementChannel[] = [];
@@ -392,7 +400,7 @@ export class EngagementService {
 
   private prepareNotificationDispatch<TMessage extends AnyMessage>(
     message: TMessage,
-    command: EngagementSendCommand<TMessage>,
+    command: ParsedEngagementSendCommand<TMessage>,
     channel: TMessage["channels"][number],
     channelResults: readonly EngagementChannelResult[],
   ): NotificationDispatchPreparation | undefined {
@@ -523,7 +531,7 @@ export class EngagementService {
 
   private async render<TMessage extends AnyMessage, TChannel extends TMessage["channels"][number]>(
     message: TMessage,
-    command: EngagementSendCommand<TMessage>,
+    command: ParsedEngagementSendCommand<TMessage>,
     channel: TChannel,
   ): Promise<MessageContent<TChannel>> {
     try {

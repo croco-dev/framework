@@ -174,3 +174,43 @@ Parses untrusted data before invoking an explicitly registered renderer instance
 #### Returns
 
 `Promise`\<[`MessageContent`](/api/engagement-core/src/type-aliases/messagecontent/)\<`TChannel`\>\>
+
+---
+
+### renderParsed()
+
+> **renderParsed**\<`TMessage`, `TChannel`\>(`message`, `renderer`, `channel`, `data`): `Promise`\<[`MessageContent`](/api/engagement-core/src/type-aliases/messagecontent/)\<`TChannel`\>\>
+
+Invokes an explicitly registered renderer with data that has already passed the message schema.
+
+#### Type Parameters
+
+##### TMessage
+
+`TMessage` _extends_ `Readonly`\<\{ `channels`: readonly (`"email"` \| `"push"` \| `"sms"` \| `"inApp"`)[]; `data`: `ZodTypeAny`; `descriptor`: [`MessageDescriptor`](/api/engagement-core/src/type-aliases/messagedescriptor/)\<readonly (`"email"` \| `"push"` \| `"sms"` \| `"inApp"`)[]\>; `id`: `string`; `topic`: `string`; \}\>
+
+##### TChannel
+
+`TChannel` _extends_ `"email"` \| `"push"` \| `"sms"` \| `"inApp"`
+
+#### Parameters
+
+##### message
+
+`TMessage`
+
+##### renderer
+
+[`MessageRenderer`](/api/engagement-core/src/type-aliases/messagerenderer/)\<`TMessage`\>
+
+##### channel
+
+`TChannel`
+
+##### data
+
+[`MessageData`](/api/engagement-core/src/type-aliases/messagedata/)\<`TMessage`\>
+
+#### Returns
+
+`Promise`\<[`MessageContent`](/api/engagement-core/src/type-aliases/messagecontent/)\<`TChannel`\>\>

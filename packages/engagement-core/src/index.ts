@@ -26,6 +26,7 @@ export type {
   MessageContentByChannel,
   MessageContext,
   MessageData,
+  MessageDataInput,
   MessageDefinitionInput,
   MessageDescriptor,
   MessageRenderer,

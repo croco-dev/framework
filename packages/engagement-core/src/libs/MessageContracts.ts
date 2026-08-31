@@ -70,6 +70,8 @@ export type DefinedMessage<
 
 export type AnyMessage = DefinedMessage<string, string, z.ZodTypeAny, readonly MessageChannel[]>;
 
+export type MessageDataInput<TMessage extends AnyMessage> = z.input<TMessage["data"]>;
+
 export type MessageData<TMessage extends AnyMessage> = z.infer<TMessage["data"]>;
 
 type MessageChannels<TMessage extends AnyMessage> = TMessage["channels"][number];
@@ -242,6 +244,16 @@ export class MessageRendererRegistry {
     channel: TChannel,
     input: unknown,
   ): Promise<MessageContent<TChannel>> {
+    return this.renderParsed(message, renderer, channel, this.parseData(message, input));
+  }
+
+  /** Invokes an explicitly registered renderer with data that has already passed the message schema. */
+  async renderParsed<TMessage extends AnyMessage, TChannel extends MessageChannels<TMessage>>(
+    message: TMessage,
+    renderer: MessageRenderer<TMessage>,
+    channel: TChannel,
+    data: MessageData<TMessage>,
+  ): Promise<MessageContent<TChannel>> {
     const registered = this.renderers.get(message.id);
     if (registered === undefined || registered !== renderer.constructor) {
       throw new MessageRendererMessageMissingProblem(
@@ -267,7 +279,7 @@ export class MessageRendererRegistry {
     return await render.call(renderer, {
       message,
       channel,
-      data: this.parseData(message, input),
+      data,
     });
   }
 
