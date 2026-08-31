@@ -3021,7 +3021,7 @@ Sources:
 
 Sources:
 
-- `packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts:217:13` (problem-factory)
+- `packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts:219:13` (problem-factory)
 
 <a id="cloudflare-images-null-result"></a>
 
@@ -3039,7 +3039,7 @@ Sources:
 
 Sources:
 
-- `packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts:499:19` (problem-factory)
+- `packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts:501:19` (problem-factory)
 
 <a id="cloudflare-images-upload-intent-null-result"></a>
 
@@ -3057,7 +3057,7 @@ Sources:
 
 Sources:
 
-- `packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts:605:15` (problem-factory)
+- `packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts:607:15` (problem-factory)
 
 <a id="conflicting-pagination"></a>
 
@@ -10959,7 +10959,7 @@ Sources:
 
 Sources:
 
-- `packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts:550:15` (problem-factory)
+- `packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts:552:15` (problem-factory)
 
 <a id="strategy-unavailable"></a>
 

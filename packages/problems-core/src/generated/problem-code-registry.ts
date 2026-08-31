@@ -3986,7 +3986,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts",
-          line: 217,
+          line: 219,
           column: 13,
           kind: "problem-factory",
         },
@@ -4018,7 +4018,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts",
-          line: 499,
+          line: 501,
           column: 19,
           kind: "problem-factory",
         },
@@ -4051,7 +4051,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts",
-          line: 605,
+          line: 607,
           column: 15,
           kind: "problem-factory",
         },
@@ -17813,7 +17813,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts",
-          line: 550,
+          line: 552,
           column: 15,
           kind: "problem-factory",
         },
