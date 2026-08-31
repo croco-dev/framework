@@ -193,7 +193,12 @@ function executionRecoveryActions(
 ): readonly RetryConsoleRecoveryAction[] {
   const state = classifyExecution(execution);
   const canRecordAudit = typeof manager.recordLog === "function";
-  const canReplay = typeof manager.replay === "function";
+  const managerSupportsReplay = typeof manager.replay === "function";
+  const canReplay = managerSupportsReplay && execution.status !== "cancelled";
+  const replayUnavailableReason =
+    execution.status === "cancelled"
+      ? "Cancelled executions cannot be replayed"
+      : "Execution manager does not support replay";
 
   if (execution.status === "timed_out" && execution.error?.indeterminate === true) {
     return [
@@ -230,7 +235,7 @@ function executionRecoveryActions(
         canReplay,
         canReplay
           ? "Execution can be replayed as a new pending execution"
-          : "Execution manager does not support replay",
+          : replayUnavailableReason,
       ),
     ];
   }
