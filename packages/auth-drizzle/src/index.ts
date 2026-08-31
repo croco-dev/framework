@@ -15,6 +15,13 @@ export { DrizzleSessionProvider } from "./libs/DrizzleSessionProvider.js";
  */
 export { DrizzleTenantMappingProvider } from "./libs/DrizzleTenantMappingProvider.js";
 /**
+ * 외부 조직의 충돌하는 tenant 재매핑을 나타내는 Problem입니다.
+ */
+export {
+  DuplicateTenantMappingProblem,
+  TenantMappingConflictResolutionProblem,
+} from "./libs/problems/DrizzleTenantMappingProblems.js";
+/**
  * 인증 저장소용 Drizzle 스키마입니다.
  */
 export { apiKeyRotations, apiKeys, sessions, tenantMappings, userRoles } from "./schema/index.js";

@@ -110,6 +110,8 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`InvalidPermissionFormatProblem`](/api/auth-core/src/classes/invalidpermissionformatproblem/)
 - [`InvalidRouteMetadataTargetProblem`](/api/auth-core/src/classes/invalidroutemetadatatargetproblem/)
 - [`UnauthorizedProblem`](/api/auth-core/src/classes/unauthorizedproblem/)
+- [`DuplicateTenantMappingProblem`](/api/auth-drizzle/src/classes/duplicatetenantmappingproblem/)
+- [`TenantMappingConflictResolutionProblem`](/api/auth-drizzle/src/classes/tenantmappingconflictresolutionproblem/)
 - [`BillingAccountNotFoundProblem`](/api/billing-core/src/classes/billingaccountnotfoundproblem/)
 - [`BillingAccountTenantConflictProblem`](/api/billing-core/src/classes/billingaccounttenantconflictproblem/)
 - [`BillingCheckoutCreationProblem`](/api/billing-core/src/classes/billingcheckoutcreationproblem/)
