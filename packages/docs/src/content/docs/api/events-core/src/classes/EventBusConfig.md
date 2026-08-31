@@ -123,6 +123,22 @@ title: "EventBusConfig"
 
 ---
 
+### disposeScope()
+
+> `static` **disposeScope**(`scopeId`): `void`
+
+#### Parameters
+
+##### scopeId
+
+`string`
+
+#### Returns
+
+`void`
+
+---
+
 ### getInstance()
 
 > `static` **getInstance**(): `EventBusConfig`
