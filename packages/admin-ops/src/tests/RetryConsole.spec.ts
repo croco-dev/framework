@@ -635,7 +635,7 @@ describe("RetryConsole", () => {
 
     expect(result.status).toBe("succeeded");
     if (result.status !== "succeeded") {
-      throw new Error("Expected existing replay recovery to succeed");
+      return;
     }
     expect(result.providerResult).toMatchObject({ id: existingReplay.id });
     expect(replaySpy).not.toHaveBeenCalled();
