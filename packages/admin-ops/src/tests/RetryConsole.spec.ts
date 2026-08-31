@@ -338,9 +338,14 @@ describe("RetryConsole", () => {
       expect.objectContaining({
         kind: "replay",
         allowed: false,
+        reason: "Cancelled executions cannot be replayed",
       }),
     ]);
     expect(result.status).toBe("denied");
+    if (result.status !== "denied") {
+      throw new Error("Expected cancelled replay to be denied");
+    }
+    expect(result.problem.message).toBe("Cancelled executions cannot be replayed");
     expect(replaySpy).not.toHaveBeenCalled();
   });
 
