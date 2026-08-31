@@ -95,10 +95,6 @@ type ContainerScopeRollbackTransaction = {
 };
 const containerScopeRollbackStorage = new AsyncLocalStorage<ContainerScopeRollbackTransaction>();
 
-type TypeDIInjectionProbeResult = {
-  token?: TokenIdentifier<unknown>;
-};
-
 type ContainerScopeCleanupFailure = {
   readonly phase: "dispose" | "rollback";
   readonly code:
@@ -532,29 +528,11 @@ export class Container {
           };
         }
 
-        const probe: TypeDIInjectionProbeResult = {};
-        try {
-          handler.value(Container.createTypeDIInjectionProbe(probe));
-        } catch {
-          return {
-            ...(parameterIndex === undefined ? {} : { parameterIndex }),
-            site,
-            status: "uninspectable",
-          };
-        }
-
-        return probe.token === undefined
-          ? {
-              ...(parameterIndex === undefined ? {} : { parameterIndex }),
-              site,
-              status: "uninspectable",
-            }
-          : {
-              ...(parameterIndex === undefined ? {} : { parameterIndex }),
-              site,
-              status: "resolved",
-              token: probe.token,
-            };
+        return {
+          ...(parameterIndex === undefined ? {} : { parameterIndex }),
+          site,
+          status: "uninspectable",
+        };
       });
   }
 
@@ -1750,21 +1728,6 @@ export class Container {
     return (
       handler.object.constructor === token || token.prototype instanceof handler.object.constructor
     );
-  }
-
-  private static createTypeDIInjectionProbe(
-    result: TypeDIInjectionProbeResult,
-  ): TypeDIContainerInstance {
-    return {
-      get: <T>(identifier: ServiceIdentifier<T>): T => {
-        result.token = identifier as TokenIdentifier<unknown>;
-        return undefined as T;
-      },
-      getMany: <T>(identifier: ServiceIdentifier<T>): T[] => {
-        result.token = identifier as TokenIdentifier<unknown>;
-        return [];
-      },
-    } as TypeDIContainerInstance;
   }
 
   private static createResolutionStep<T>(

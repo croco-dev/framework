@@ -35,6 +35,14 @@ export { Token } from "typedi";
 export { Inject } from "./libs/decorators/Inject";
 
 /**
+ * 같은 식별자로 등록된 모든 서비스를 클래스 프로퍼티 또는 생성자 파라미터에 주입하는 TypeDI 데코레이터입니다.
+ *
+ * @param token - 선택적 다중 주입 식별자입니다. 생략하면 타입 메타데이터를 사용합니다.
+ * @returns 프로퍼티 또는 파라미터 데코레이터 함수를 반환합니다.
+ */
+export { InjectMany } from "./libs/decorators/Inject";
+
+/**
  * 컴포넌트 scope에 맞춰 의존성을 조회하고 관리하는 DI 컨테이너 클래스입니다.
  *
  * @param token - `Container.get(token)` 호출 시 조회할 생성자 토큰입니다.

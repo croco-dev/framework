@@ -169,18 +169,23 @@ export class ApplicationRuntime implements AsyncDisposable {
       return Promise.reject(new ModuleRuntimeDisposedProblem());
     }
     if (this.shutdownOperation) {
-      return cleanup
-        ? this.continueShutdownWithCleanup(this.shutdownOperation, cleanup)
-        : this.shutdownOperation;
+      if (!cleanup) {
+        return this.shutdownOperation;
+      }
+
+      return this.trackShutdownOperation(
+        this.continueShutdownWithCleanup(this.shutdownOperation, cleanup),
+      );
     }
     if (this.state === "stopped") {
-      return cleanup ? this.runShutdownCleanup(cleanup) : Promise.resolve();
+      return cleanup
+        ? this.trackShutdownOperation(this.runShutdownCleanup(cleanup))
+        : Promise.resolve();
     }
 
     this.state = "shutting-down";
     const attempt = this.shutdownOnce(options, cleanup);
-    this.shutdownOperation = attempt;
-    return attempt;
+    return this.trackShutdownOperation(attempt);
   }
 
   run<T>(fn: () => Promise<T>): Promise<T>;
@@ -281,7 +286,6 @@ export class ApplicationRuntime implements AsyncDisposable {
       if (this.state === "shutting-down") {
         this.state = "stopped";
       }
-      this.shutdownOperation = undefined;
     }
 
     if (primaryFailure !== undefined) {
@@ -316,6 +320,21 @@ export class ApplicationRuntime implements AsyncDisposable {
 
   private async runShutdownCleanup(cleanup: () => Promise<void> | void): Promise<void> {
     await this.containerScope.run(cleanup);
+  }
+
+  private trackShutdownOperation(attempt: Promise<void>): Promise<void> {
+    this.shutdownOperation = attempt;
+    void attempt.then(
+      () => this.clearShutdownOperation(attempt),
+      () => this.clearShutdownOperation(attempt),
+    );
+    return attempt;
+  }
+
+  private clearShutdownOperation(attempt: Promise<void>): void {
+    if (this.shutdownOperation === attempt) {
+      this.shutdownOperation = undefined;
+    }
   }
 
   private collectGraphRoots(module: ModuleOptions, visited: Set<ModuleOptions>): void {
@@ -377,10 +396,23 @@ export class ApplicationRuntime implements AsyncDisposable {
 
   private async disposeOnce(): Promise<void> {
     let primaryFailure: unknown;
+    const shutdownOperation = this.shutdownOperation;
+    if (shutdownOperation) {
+      try {
+        await shutdownOperation;
+      } catch (error) {
+        primaryFailure = error;
+      }
+    }
+
     try {
       await this.containerScope.run(() => this.moduleRuntime.dispose());
     } catch (error) {
-      primaryFailure = error;
+      if (primaryFailure === undefined) {
+        primaryFailure = error;
+      } else if (error !== primaryFailure) {
+        primaryFailure = this.attachDisposalFailure(primaryFailure, error);
+      }
     }
 
     try {

@@ -1,7 +1,7 @@
-import { Container as TypeDIContainer, InjectMany, Token } from "typedi";
+import { Container as TypeDIContainer, Token } from "typedi";
 import type { ServiceMetadata } from "typedi";
 import { beforeEach, describe, expect, it } from "vitest";
-import { Component, Container } from "../index";
+import { Component, Container, InjectMany } from "../index";
 
 describe("ContainerScope", () => {
   beforeEach(() => {

@@ -1,4 +1,8 @@
-import { Inject as TypeDIInject, Token as TypeDIToken } from "typedi";
+import {
+  Inject as TypeDIInject,
+  InjectMany as TypeDIInjectMany,
+  Token as TypeDIToken,
+} from "typedi";
 import type { InjectionTokenIdentifier } from "../InjectionMetadata";
 import type { Constructor } from "../types";
 import { registerInjectionMetadata } from "../InjectionMetadata";
@@ -53,6 +57,35 @@ export function Inject(
 ): ParameterDecorator | PropertyDecorator {
   const typediInject = TypeDIInject as TypeDIInjectFn;
   const typediDecorator = typediInject(typeOrIdentifier);
+
+  return (
+    target: object,
+    propertyKey: string | symbol | undefined,
+    parameterIndex?: number,
+  ): void => {
+    if (typeof parameterIndex === "number") {
+      (typediDecorator as ParameterDecorator)(target, propertyKey, parameterIndex);
+    } else if (propertyKey !== undefined) {
+      (typediDecorator as PropertyDecorator)(target, propertyKey);
+    }
+
+    registerInjectionMetadata(target, {
+      index: parameterIndex,
+      propertyKey,
+      resolveToken: createInjectionResolver(typeOrIdentifier, target, propertyKey, parameterIndex),
+    });
+  };
+}
+
+export function InjectMany(): Function;
+export function InjectMany(typeFn: (type?: never) => Constructor<unknown>): Function;
+export function InjectMany(serviceName?: string): Function;
+export function InjectMany(token: TypeDIToken<unknown>): Function;
+export function InjectMany(
+  typeOrIdentifier?: InjectIdentifier,
+): ParameterDecorator | PropertyDecorator {
+  const typediInjectMany = TypeDIInjectMany as TypeDIInjectFn;
+  const typediDecorator = typediInjectMany(typeOrIdentifier);
 
   return (
     target: object,

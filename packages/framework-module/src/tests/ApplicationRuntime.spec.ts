@@ -1,7 +1,7 @@
 import { Container, Inject, Token } from "typedi";
 import type { ServiceMetadata } from "typedi";
 import { beforeEach, describe, expect, it } from "vitest";
-import { Container as FrameworkContainer } from "@croco/framework-context";
+import { Container as FrameworkContainer, Inject as CrocoInject } from "@croco/framework-context";
 import {
   createApplicationRuntime,
   ModuleLifecycleCancelledProblem,
@@ -385,6 +385,117 @@ describe("ApplicationRuntime", () => {
     expect(cleanupCalls).toBe(0);
   });
 
+  it("waits for cleanup appended to an active shutdown before disposing the scope", async () => {
+    const token = new Token<string>("active-shutdown-cleanup");
+    let enterShutdown: (() => void) | undefined;
+    let releaseShutdown: (() => void) | undefined;
+    let enterCleanup: (() => void) | undefined;
+    let releaseCleanup: (() => void) | undefined;
+    const shutdownEntered = new Promise<void>((resolve) => {
+      enterShutdown = resolve;
+    });
+    const shutdownReleased = new Promise<void>((resolve) => {
+      releaseShutdown = resolve;
+    });
+    const cleanupEntered = new Promise<void>((resolve) => {
+      enterCleanup = resolve;
+    });
+    const cleanupReleased = new Promise<void>((resolve) => {
+      releaseCleanup = resolve;
+    });
+    const runtime = createApplicationRuntime({
+      modules: [
+        {
+          name: "app",
+          providers: [{ provide: token, useValue: "available" }],
+          setup: () => undefined,
+          shutdown: async () => {
+            enterShutdown?.();
+            await shutdownReleased;
+          },
+        },
+      ],
+    });
+    await runtime.initialize();
+
+    const shutdown = runtime.shutdown();
+    await shutdownEntered;
+    const cleanup = runtime.shutdownWithCleanup(async () => {
+      enterCleanup?.();
+      expect(FrameworkContainer.get(token)).toBe("available");
+      await cleanupReleased;
+      expect(FrameworkContainer.get(token)).toBe("available");
+    });
+    releaseShutdown?.();
+    await cleanupEntered;
+    await expect(shutdown).resolves.toBeUndefined();
+
+    let disposalSettled = false;
+    const disposal = runtime.dispose();
+    void disposal.then(
+      () => {
+        disposalSettled = true;
+      },
+      () => {
+        disposalSettled = true;
+      },
+    );
+    await Promise.resolve();
+    expect(disposalSettled).toBe(false);
+
+    releaseCleanup?.();
+    await expect(cleanup).resolves.toBeUndefined();
+    await expect(disposal).resolves.toBeUndefined();
+  });
+
+  it("waits for cleanup accepted after shutdown before disposing the scope", async () => {
+    const token = new Token<string>("stopped-shutdown-cleanup");
+    let enterCleanup: (() => void) | undefined;
+    let releaseCleanup: (() => void) | undefined;
+    const cleanupEntered = new Promise<void>((resolve) => {
+      enterCleanup = resolve;
+    });
+    const cleanupReleased = new Promise<void>((resolve) => {
+      releaseCleanup = resolve;
+    });
+    const runtime = createApplicationRuntime({
+      modules: [
+        {
+          name: "app",
+          providers: [{ provide: token, useValue: "available" }],
+          setup: () => undefined,
+        },
+      ],
+    });
+    await runtime.initialize();
+    await runtime.shutdown();
+
+    const cleanup = runtime.shutdownWithCleanup(async () => {
+      enterCleanup?.();
+      expect(FrameworkContainer.get(token)).toBe("available");
+      await cleanupReleased;
+      expect(FrameworkContainer.get(token)).toBe("available");
+    });
+    await cleanupEntered;
+
+    let disposalSettled = false;
+    const disposal = runtime.dispose();
+    void disposal.then(
+      () => {
+        disposalSettled = true;
+      },
+      () => {
+        disposalSettled = true;
+      },
+    );
+    await Promise.resolve();
+    expect(disposalSettled).toBe(false);
+
+    releaseCleanup?.();
+    await expect(cleanup).resolves.toBeUndefined();
+    await expect(disposal).resolves.toBeUndefined();
+  });
+
   it("shuts modules down before disposing the application scope", async () => {
     const token = new Token<string>("shutdown-value");
     const calls: string[] = [];
@@ -481,7 +592,7 @@ describe("ApplicationRuntime", () => {
     class Service {
       constructor(
         readonly repository: Repository,
-        @Inject(configToken) readonly config: string,
+        @CrocoInject(configToken) readonly config: string,
       ) {}
     }
     const serviceToken = new Token<Service>("service");

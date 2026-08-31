@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 714,
+  problemCount: 715,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -7960,7 +7960,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 224,
+          line: 220,
           column: 13,
           kind: "problem-factory",
         },
@@ -7993,7 +7993,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 125,
+          line: 121,
           column: 10,
           kind: "problem-factory",
         },
@@ -8026,7 +8026,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 331,
+          line: 327,
           column: 17,
           kind: "problem-factory",
         },
@@ -8059,7 +8059,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 352,
+          line: 348,
           column: 13,
           kind: "problem-factory",
         },
@@ -8090,7 +8090,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 190,
+          line: 186,
           column: 13,
           kind: "problem-factory",
         },
@@ -8374,7 +8374,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 2191,
+          line: 2154,
           column: 13,
           kind: "problem-factory",
         },

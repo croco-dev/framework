@@ -274,7 +274,7 @@ const frameworkContextCompatibilityContract = {
         },
         {
           source: "./libs/decorators/Inject",
-          names: ["Inject"],
+          names: ["Inject", "InjectMany"],
         },
         {
           source: "./libs/diagnostics/ContainerDiagnosticsProvider",

@@ -11307,6 +11307,13 @@
               "compatibilityGroup": "di"
             },
             {
+              "name": "InjectMany",
+              "exportKind": "named",
+              "source": "./libs/decorators/Inject",
+              "declarationKind": "function",
+              "compatibilityGroup": "di"
+            },
+            {
               "name": "InvalidShutdownTimeoutProblem",
               "exportKind": "named",
               "source": "./libs/problems/ShutdownProblems",

@@ -1,6 +1,7 @@
 import "reflect-metadata";
-import { Container, Inject, Token } from "typedi";
+import { Container, Token } from "typedi";
 import { beforeEach, describe, expect, it } from "vitest";
+import { Inject } from "@croco/framework-context";
 import type { ModuleOptions } from "../index";
 import { createModuleGraphManifest, defineCrocoModule } from "../index";
 import { CrocoModule } from "../index";
