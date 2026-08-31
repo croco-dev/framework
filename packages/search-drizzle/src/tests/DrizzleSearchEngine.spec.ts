@@ -7,7 +7,9 @@ import {
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import { DrizzleSearchEngine } from "../libs/DrizzleSearchEngine";
+import { BulkIndexChunkFailedProblem } from "../libs/problems/BulkIndexProblems";
 import { InvalidSearchRowProblem } from "../libs/problems/InvalidSearchRowProblem";
+import { PgSearchStrategy } from "../libs/strategies/PgSearchStrategy";
 import type { SearchStrategy } from "../libs/types";
 
 // Mock external dependencies
@@ -267,19 +269,160 @@ describe("DrizzleSearchEngine", () => {
     expect(executeMock).toHaveBeenCalled();
   });
 
-  it("should delegate every bulk document through indexDocument", async () => {
+  it("should preserve the per-document strategy fallback for custom strategies", async () => {
     engine = new DrizzleSearchEngine(mockDb, strategy);
     const documents = [
       { id: "1", tenantId: "tenant-123" },
       { id: "2", tenantId: "tenant-123" },
     ];
     const options = { signal: new AbortController().signal };
-    const indexDocument = vi.spyOn(engine, "indexDocument");
 
     await engine.bulkIndex("users", documents, options);
 
-    expect(indexDocument).toHaveBeenNthCalledWith(1, "users", documents[0], options);
-    expect(indexDocument).toHaveBeenNthCalledWith(2, "users", documents[1], options);
+    expect(mockStrategy.buildIndexQuery).toHaveBeenNthCalledWith(
+      1,
+      "users",
+      documents[0],
+      "tenant-123",
+    );
+    expect(mockStrategy.buildIndexQuery).toHaveBeenNthCalledWith(
+      2,
+      "users",
+      documents[1],
+      "tenant-123",
+    );
+    expect(executeMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("should batch built-in bulk indexing into fewer database statements than documents", async () => {
+    const execute = vi
+      .fn()
+      .mockResolvedValueOnce({ rows: [{ supported: true }] })
+      .mockResolvedValue({ rows: [] });
+    const db = { execute } as unknown as NodePgDatabase<Record<string, never>>;
+    const builtInEngine = new DrizzleSearchEngine(db, new PgSearchStrategy());
+
+    await builtInEngine.bulkIndex("users", [
+      { id: "1", tenantId: "tenant-123", title: "First" },
+      { id: "2", tenantId: "tenant-123", title: "Second" },
+      { id: "3", tenantId: "tenant-123", title: "Third" },
+    ]);
+
+    expect(execute).toHaveBeenCalledTimes(2);
+  });
+
+  it("should execute all built-in bulk chunks in one transaction when supported", async () => {
+    const capabilityExecute = vi.fn().mockResolvedValue({ rows: [{ supported: true }] });
+    const transactionExecute = vi.fn().mockResolvedValue({ rows: [] });
+    const transaction = vi.fn(async (run) => run({ execute: transactionExecute }));
+    const db = { execute: capabilityExecute, transaction } as unknown as NodePgDatabase<
+      Record<string, never>
+    >;
+    const builtInEngine = new DrizzleSearchEngine(db, new PgSearchStrategy());
+
+    await builtInEngine.bulkIndex(
+      "users",
+      Array.from({ length: 101 }, (_, index) => ({
+        id: String(index),
+        tenantId: "tenant-123",
+        title: `Document ${index}`,
+      })),
+    );
+
+    expect(capabilityExecute).toHaveBeenCalledOnce();
+    expect(transaction).toHaveBeenCalledOnce();
+    expect(transactionExecute).toHaveBeenCalledTimes(2);
+  });
+
+  it("should observe an abort while the transaction commit is pending", async () => {
+    const controller = new AbortController();
+    const capabilityExecute = vi.fn().mockResolvedValue({ rows: [{ supported: true }] });
+    const transactionExecute = vi.fn().mockResolvedValue({ rows: [] });
+    const transaction = vi.fn(async (run) => {
+      const result = await run({ execute: transactionExecute });
+      controller.abort(new Error("request closed during commit"));
+      return result;
+    });
+    const db = { execute: capabilityExecute, transaction } as unknown as NodePgDatabase<
+      Record<string, never>
+    >;
+    const builtInEngine = new DrizzleSearchEngine(db, new PgSearchStrategy());
+
+    await expect(
+      builtInEngine.bulkIndex("users", [{ id: "1", tenantId: "tenant-123" }], {
+        signal: controller.signal,
+      }),
+    ).rejects.toMatchObject({
+      code: "search-core/operation-aborted",
+      extensions: { operation: "bulkIndex" },
+    });
+
+    expect(transaction).toHaveBeenCalledOnce();
+    expect(transactionExecute).toHaveBeenCalledOnce();
+  });
+
+  it("should attribute a transactional chunk failure without reporting committed documents", async () => {
+    const storageError = new Error("storage rejected secret-document-id");
+    const capabilityExecute = vi.fn().mockResolvedValue({ rows: [{ supported: true }] });
+    const transactionExecute = vi
+      .fn()
+      .mockResolvedValueOnce({ rows: [] })
+      .mockRejectedValueOnce(storageError);
+    const transaction = vi.fn(async (run) => run({ execute: transactionExecute }));
+    const db = { execute: capabilityExecute, transaction } as unknown as NodePgDatabase<
+      Record<string, never>
+    >;
+    const builtInEngine = new DrizzleSearchEngine(db, new PgSearchStrategy());
+
+    const operation = builtInEngine.bulkIndex(
+      "users",
+      Array.from({ length: 101 }, (_, index) => ({
+        id: index === 100 ? "secret-document-id" : String(index),
+        tenantId: "tenant-123",
+      })),
+    );
+
+    await expect(operation).rejects.toBeInstanceOf(BulkIndexChunkFailedProblem);
+    await expect(operation).rejects.toMatchObject({
+      cause: storageError,
+      extensions: {
+        chunkIndex: 1,
+        failedDocumentIndexes: [100],
+        committedDocumentIndexes: [],
+        transactional: true,
+      },
+    });
+    await expect(operation).rejects.not.toHaveProperty("extensions.failedDocumentIds");
+  });
+
+  it("should report committed positions after a non-transactional chunk failure", async () => {
+    const storageError = new Error("second chunk failed");
+    const execute = vi
+      .fn()
+      .mockResolvedValueOnce({ rows: [{ supported: true }] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockRejectedValueOnce(storageError);
+    const db = { execute } as unknown as NodePgDatabase<Record<string, never>>;
+    const builtInEngine = new DrizzleSearchEngine(db, new PgSearchStrategy());
+
+    await expect(
+      builtInEngine.bulkIndex(
+        "users",
+        Array.from({ length: 101 }, (_, index) => ({
+          id: String(index),
+          tenantId: "tenant-123",
+        })),
+      ),
+    ).rejects.toMatchObject({
+      cause: storageError,
+      extensions: {
+        chunkIndex: 1,
+        failedDocumentIndexes: [100],
+        committedDocumentIndexes: Array.from({ length: 100 }, (_, index) => index),
+        transactional: false,
+      },
+    });
+    expect(execute).toHaveBeenCalledTimes(3);
   });
 
   it("should preserve an empty bulk index as a tenant-independent no-op", async () => {
@@ -316,20 +459,24 @@ describe("DrizzleSearchEngine", () => {
   });
 
   it("should stop bulk indexing before the next database write after abort", async () => {
-    engine = new DrizzleSearchEngine(mockDb, strategy);
     const controller = new AbortController();
-    executeMock.mockImplementationOnce(async () => {
-      controller.abort(new Error("request closed"));
-      return { rows: [] };
-    });
+    const execute = vi
+      .fn()
+      .mockResolvedValueOnce({ rows: [{ supported: true }] })
+      .mockImplementationOnce(async () => {
+        controller.abort(new Error("request closed"));
+        return { rows: [] };
+      });
+    const db = { execute } as unknown as NodePgDatabase<Record<string, never>>;
+    const builtInEngine = new DrizzleSearchEngine(db, new PgSearchStrategy());
 
     await expect(
-      engine.bulkIndex(
+      builtInEngine.bulkIndex(
         "users",
-        [
-          { id: "1", tenantId: "tenant-123" },
-          { id: "2", tenantId: "tenant-123" },
-        ],
+        Array.from({ length: 101 }, (_, index) => ({
+          id: String(index),
+          tenantId: "tenant-123",
+        })),
         { signal: controller.signal },
       ),
     ).rejects.toMatchObject({
@@ -337,7 +484,7 @@ describe("DrizzleSearchEngine", () => {
       extensions: { operation: "bulkIndex" },
     });
 
-    expect(executeMock).toHaveBeenCalledTimes(1);
+    expect(execute).toHaveBeenCalledTimes(2);
   });
 
   it("should not execute the total query when the hit query observes an abort", async () => {

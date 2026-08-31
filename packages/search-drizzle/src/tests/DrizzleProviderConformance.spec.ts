@@ -15,6 +15,8 @@ import { PgSearchStrategy } from "../libs/strategies/PgSearchStrategy";
 import { PgTrgmStrategy } from "../libs/strategies/PgTrgmStrategy";
 import type { SearchStrategy } from "../libs/types";
 
+type NodePgTransactionRunner = Parameters<NodePgDatabase<Record<string, never>>["transaction"]>[0];
+
 vi.mock("@croco/framework-context", async () => {
   const actual = await vi.importActual("@croco/framework-context");
   return {
@@ -122,12 +124,77 @@ describe("search-drizzle provider conformance", () => {
       },
       transaction: {
         participation: {
-          supported: false,
-          reason: "DrizzleSearchEngine accepts a direct Drizzle client and no TxManager.",
+          supported: true,
+          checks: [
+            {
+              name: "uses one driver transaction for every bulk index chunk",
+              run: async () => {
+                (Context.getTenantId as Mock).mockReturnValue("tenant-a");
+                const capabilityExecute = vi.fn().mockResolvedValue({ rows: [{}], rowCount: 1 });
+                const transactionExecute = vi.fn().mockResolvedValue({ rows: [], rowCount: 0 });
+                const transaction = vi.fn(async (run: NodePgTransactionRunner) =>
+                  run({ execute: transactionExecute } as never),
+                );
+                const db = { execute: capabilityExecute, transaction } as unknown as NodePgDatabase<
+                  Record<string, never>
+                >;
+                const engine = new DrizzleSearchEngine(db, new PgSearchStrategy());
+
+                await engine.bulkIndex("documents", [
+                  { id: "doc-1", tenantId: "tenant-a", title: "First" },
+                  { id: "doc-2", tenantId: "tenant-a", title: "Second" },
+                ]);
+
+                expect(transaction).toHaveBeenCalledOnce();
+                expect(transactionExecute).toHaveBeenCalledOnce();
+              },
+            },
+          ],
         },
         rollback: {
-          supported: false,
-          reason: "Rollback is owned by the app-level Drizzle transaction boundary.",
+          supported: true,
+          checks: [
+            {
+              name: "leaves earlier bulk chunks uncommitted when a later chunk fails",
+              run: async () => {
+                (Context.getTenantId as Mock).mockReturnValue("tenant-a");
+                const committedChunks: number[] = [];
+                const capabilityExecute = vi.fn().mockResolvedValue({ rows: [{}], rowCount: 1 });
+                const transaction = vi.fn(async (run: NodePgTransactionRunner) => {
+                  const pendingChunks: number[] = [];
+                  const transactionExecute = vi.fn(async () => {
+                    if (pendingChunks.length === 1) {
+                      throw new Error("second chunk failed");
+                    }
+                    pendingChunks.push(0);
+                    return { rows: [], rowCount: 0 };
+                  });
+
+                  const result = await run({ execute: transactionExecute } as never);
+                  committedChunks.push(...pendingChunks);
+                  return result;
+                });
+                const db = { execute: capabilityExecute, transaction } as unknown as NodePgDatabase<
+                  Record<string, never>
+                >;
+                const engine = new DrizzleSearchEngine(db, new PgSearchStrategy());
+
+                await assertDrizzleProblem(
+                  () =>
+                    engine.bulkIndex(
+                      "documents",
+                      Array.from({ length: 101 }, (_, index) => ({
+                        id: String(index),
+                        tenantId: "tenant-a",
+                      })),
+                    ),
+                  { code: "search-drizzle/bulk-index-chunk-failed", status: 500 },
+                );
+
+                expect(committedChunks).toEqual([]);
+              },
+            },
+          ],
         },
       },
       tenantIsolation: {

@@ -1,9 +1,16 @@
 import type { SearchDocument, SearchEngineCapabilities, SearchQuery } from "@croco/search-core";
 import { type SQL, sql } from "drizzle-orm";
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { buildPostgresDocumentUpsertQuery } from "../postgresDocumentIndex";
+import {
+  buildPostgresDocumentBulkUpsertQueryPlans,
+  buildPostgresDocumentUpsertQuery,
+} from "../postgresDocumentIndex";
 import { buildPostgresSearchQueryPlan } from "../searchQueryPlan";
-import type { SearchQueryPlan, SearchStrategy } from "../types";
+import type {
+  BulkIndexQueryPlan,
+  DrizzleSearchDatabase,
+  SearchQueryPlan,
+  SearchStrategy,
+} from "../types";
 
 /**
  * `pg_search` 확장을 이용한 전문 검색 전략입니다.
@@ -41,6 +48,17 @@ export class PgSearchStrategy implements SearchStrategy {
   }
 
   /**
+   * 문서를 bounded PostgreSQL upsert query plan으로 구성합니다.
+   */
+  buildBulkIndexQueryPlans(
+    table: string,
+    documents: readonly SearchDocument[],
+    tenantId: string,
+  ): readonly BulkIndexQueryPlan[] {
+    return buildPostgresDocumentBulkUpsertQueryPlans(table, documents, tenantId);
+  }
+
+  /**
    * 문서 삭제 SQL을 생성합니다.
    */
   buildDeleteQuery(table: string, documentId: string, tenantId: string): SQL {
@@ -61,7 +79,7 @@ export class PgSearchStrategy implements SearchStrategy {
   /**
    * 현재 DB가 `pg_search` 확장을 지원하는지 확인합니다.
    */
-  async checkCapability(db: NodePgDatabase<Record<string, never>>): Promise<boolean> {
+  async checkCapability(db: DrizzleSearchDatabase): Promise<boolean> {
     const result = await db.execute(sql`SELECT 1 FROM pg_extension WHERE extname = 'pg_search'`);
     return result.rows.length > 0;
   }

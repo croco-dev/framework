@@ -90,4 +90,103 @@ export function registerStrategyIndexQueryTests(createStrategy: () => SearchStra
       expect(rendered.params).toContain(value);
     });
   });
+
+  describe("buildBulkIndexQueryPlans contract", () => {
+    it("batches homogeneous documents with tenant-scoped parameterized values", () => {
+      const strategy = createStrategy();
+      const plans =
+        strategy.buildBulkIndexQueryPlans?.(
+          "documents",
+          [
+            {
+              id: "doc-1",
+              tenantId: "tenant-a",
+              tenant_id: "untrusted-tenant",
+              title: "First",
+            },
+            { id: "doc-2", tenantId: "tenant-a", title: "Second" },
+          ],
+          "tenant-a",
+        ) ?? [];
+
+      expect(plans).toHaveLength(1);
+      const rendered = renderQuery(
+        plans[0]?.query as ReturnType<SearchStrategy["buildIndexQuery"]>,
+      );
+
+      expect(rendered.sql).toMatch(/VALUES\s+\([^)]*\),\s*\([^)]*\)/);
+      expect(rendered.sql).toContain('ON CONFLICT ("tenant_id", "id")');
+      expect(rendered.params).toEqual([
+        "doc-1",
+        "tenant-a",
+        "First",
+        "tenant-a",
+        "doc-2",
+        "tenant-a",
+        "Second",
+        "tenant-a",
+      ]);
+      expect(rendered.params).not.toContain("untrusted-tenant");
+      expect(plans[0]?.documentIndexes).toEqual([0, 1]);
+    });
+
+    it("preserves heterogeneous document fields in one database statement", () => {
+      const strategy = createStrategy();
+      const plans =
+        strategy.buildBulkIndexQueryPlans?.(
+          "documents",
+          [
+            { id: "doc-1", tenantId: "tenant-a", title: "Title" },
+            { id: "doc-2", tenantId: "tenant-a", summary: "Summary" },
+          ],
+          "tenant-a",
+        ) ?? [];
+
+      expect(plans).toHaveLength(1);
+      const rendered = renderQuery(
+        plans[0]?.query as ReturnType<SearchStrategy["buildIndexQuery"]>,
+      );
+
+      expect(rendered.sql).toContain('WITH "bulk_index_0" AS');
+      expect(rendered.sql).toContain('"bulk_index_1" AS');
+      expect(rendered.sql).toContain('"title"');
+      expect(rendered.sql).toContain('"summary"');
+      expect(rendered.params).toEqual([
+        "doc-1",
+        "tenant-a",
+        "Title",
+        "tenant-a",
+        "doc-2",
+        "Summary",
+        "tenant-a",
+        "tenant-a",
+      ]);
+    });
+
+    it("coalesces repeated document identities with last-write field semantics", () => {
+      const strategy = createStrategy();
+      const plans =
+        strategy.buildBulkIndexQueryPlans?.(
+          "documents",
+          [
+            {
+              id: "shared",
+              tenantId: "tenant-a",
+              summary: "Preserved",
+              title: "First",
+            },
+            { id: "shared", tenantId: "tenant-a", title: "Latest" },
+          ],
+          "tenant-a",
+        ) ?? [];
+
+      expect(plans).toHaveLength(1);
+      const rendered = renderQuery(
+        plans[0]?.query as ReturnType<SearchStrategy["buildIndexQuery"]>,
+      );
+
+      expect(rendered.params).toEqual(["shared", "Preserved", "tenant-a", "Latest", "tenant-a"]);
+      expect(plans[0]?.documentIndexes).toEqual([0, 1]);
+    });
+  });
 }

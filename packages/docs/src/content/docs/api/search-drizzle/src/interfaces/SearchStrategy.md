@@ -9,6 +9,32 @@ PostgreSQL 검색 전략이 구현해야 하는 계약입니다.
 
 ## Methods
 
+### buildBulkIndexQueryPlans()?
+
+> `optional` **buildBulkIndexQueryPlans**(`table`, `documents`, `tenantId`): readonly [`BulkIndexQueryPlan`](/api/search-drizzle/src/type-aliases/bulkindexqueryplan/)[]
+
+지원되는 전략에서 여러 문서를 bounded SQL chunk로 컴파일합니다.
+
+#### Parameters
+
+##### table
+
+`string`
+
+##### documents
+
+readonly [`SearchDocument`](/api/search-core/src/type-aliases/searchdocument/)[]
+
+##### tenantId
+
+`string`
+
+#### Returns
+
+readonly [`BulkIndexQueryPlan`](/api/search-drizzle/src/type-aliases/bulkindexqueryplan/)[]
+
+---
+
 ### buildDeleteQuery()
 
 > **buildDeleteQuery**(`table`, `documentId`, `tenantId`): `SQL`
@@ -97,7 +123,7 @@ PostgreSQL 검색 전략이 구현해야 하는 계약입니다.
 
 ##### db
 
-`NodePgDatabase`\<`Record`\<`string`, `never`\>\>
+[`DrizzleSearchDatabase`](/api/search-drizzle/src/type-aliases/drizzlesearchdatabase/)
 
 #### Returns
 

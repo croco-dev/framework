@@ -72,6 +72,8 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`NotificationTemplateVariablesInvalidProblem`](/api/notifications-core/src/classes/notificationtemplatevariablesinvalidproblem/)
 - [`InvalidSearchRowProblem`](/api/search-drizzle/src/classes/invalidsearchrowproblem/)
 - [`InvalidSearchQueryProblem`](/api/search-drizzle/src/classes/invalidsearchqueryproblem/)
+- [`BulkIndexChunkFailedProblem`](/api/search-drizzle/src/classes/bulkindexchunkfailedproblem/)
+- [`BulkIndexDocumentTooWideProblem`](/api/search-drizzle/src/classes/bulkindexdocumenttoowideproblem/)
 - [`BadRequestProblem`](/api/access-core/src/classes/badrequestproblem/)
 - [`ForbiddenProblem`](/api/access-core/src/classes/forbiddenproblem/)
 - [`CreditOperationsValidationProblem`](/api/admin-core/src/classes/creditoperationsvalidationproblem/)
