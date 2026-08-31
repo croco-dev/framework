@@ -17592,7 +17592,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/storage-cloudinary/src/libs/CloudinaryProvider.ts",
-          line: 379,
+          line: 384,
           column: 13,
           kind: "problem-factory",
         },

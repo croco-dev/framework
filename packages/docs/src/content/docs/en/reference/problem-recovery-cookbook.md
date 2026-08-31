@@ -10831,7 +10831,7 @@ Sources:
 
 Sources:
 
-- `packages/storage-cloudinary/src/libs/CloudinaryProvider.ts:379:13` (problem-factory)
+- `packages/storage-cloudinary/src/libs/CloudinaryProvider.ts:384:13` (problem-factory)
 
 <a id="storage-cloudinary-missing-config"></a>
 

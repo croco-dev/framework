@@ -117,8 +117,13 @@ function firstString(...values: readonly unknown[]): string | undefined {
   return undefined;
 }
 
-function normalizeCloudinaryApiBaseUrl(value: string | undefined): string {
+function normalizeCloudinaryBaseUrl(
+  value: string | undefined,
+  configurationKey: "apiBaseUrl" | "uploadBaseUrl",
+): string {
   let url: URL;
+  const upstreamCode =
+    configurationKey === "apiBaseUrl" ? "invalid-api-base-url" : "invalid-upload-base-url";
 
   try {
     url = new URL(value ?? DEFAULT_CLOUDINARY_API_BASE_URL);
@@ -127,9 +132,9 @@ function normalizeCloudinaryApiBaseUrl(value: string | undefined): string {
       {
         provider: "cloudinary",
         operation: "configuration",
-        upstreamCode: "invalid-api-base-url",
+        upstreamCode,
       },
-      "Cloudinary apiBaseUrl must be an absolute HTTP or HTTPS URL",
+      `Cloudinary ${configurationKey} must be an absolute HTTP or HTTPS URL`,
     );
   }
 
@@ -144,9 +149,9 @@ function normalizeCloudinaryApiBaseUrl(value: string | undefined): string {
       {
         provider: "cloudinary",
         operation: "configuration",
-        upstreamCode: "invalid-api-base-url",
+        upstreamCode,
       },
-      "Cloudinary apiBaseUrl must be an absolute HTTP or HTTPS URL without credentials, query, or fragment",
+      `Cloudinary ${configurationKey} must be an absolute HTTP or HTTPS URL without credentials, query, or fragment`,
     );
   }
 
@@ -195,8 +200,8 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
     this.apiKey = config.apiKey;
     this.apiSecret = config.apiSecret;
     this.secure = config.secure ?? true;
-    this.apiBaseUrl = normalizeCloudinaryApiBaseUrl(config.apiBaseUrl);
-    this.uploadBaseUrl = config.uploadBaseUrl ?? DEFAULT_CLOUDINARY_API_BASE_URL;
+    this.apiBaseUrl = normalizeCloudinaryBaseUrl(config.apiBaseUrl, "apiBaseUrl");
+    this.uploadBaseUrl = normalizeCloudinaryBaseUrl(config.uploadBaseUrl, "uploadBaseUrl");
     this.ttl = config.ttl ?? 3600;
   }
 
