@@ -13,7 +13,10 @@ List options for querying executions.
 
 > `optional` **limit?**: `number`
 
-Limit results
+Maximum number of results to return.
+
+Callers that require a complete result set must paginate with `limit` and `offset` because
+store implementations may apply a documented default when this value is omitted.
 
 ---
 
@@ -21,7 +24,7 @@ Limit results
 
 > `optional` **offset?**: `number`
 
-Offset for pagination
+Zero-based offset for pagination. Defaults to the first result.
 
 ---
 

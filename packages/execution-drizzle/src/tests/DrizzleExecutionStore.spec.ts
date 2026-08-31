@@ -1442,14 +1442,14 @@ describe("DrizzleExecutionStore", () => {
   });
 
   describe("list", () => {
-    it("should return all executions when no filters provided", async () => {
+    it("should apply the default page limit when no options are provided", async () => {
       const executions = [createMockExecution(), createMockExecution({ id: "another-id" })];
+      const limitMock = vi.fn(() => Promise.resolve(executions));
+      const orderByMock = vi.fn(() => ({ limit: limitMock }));
       const selectMock = vi.fn(() => ({
         from: vi.fn(() => ({
           where: vi.fn(() => ({
-            orderBy: vi.fn(() => ({
-              limit: vi.fn(() => Promise.resolve(executions)),
-            })),
+            orderBy: orderByMock,
           })),
         })),
       }));
@@ -1458,6 +1458,8 @@ describe("DrizzleExecutionStore", () => {
       const result = await store.list();
 
       expect(result).toHaveLength(2);
+      expect(orderByMock).toHaveBeenCalledWith(expect.anything(), expect.anything());
+      expect(limitMock).toHaveBeenCalledWith(100);
     });
 
     it("should filter by status", async () => {

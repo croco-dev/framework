@@ -191,9 +191,14 @@ export interface ListExecutionsOptions {
   parentId?: string;
   /** Filter by original execution ID when listing replay executions */
   replayOf?: string | null;
-  /** Limit results */
+  /**
+   * Maximum number of results to return.
+   *
+   * Callers that require a complete result set must paginate with `limit` and `offset` because
+   * store implementations may apply a documented default when this value is omitted.
+   */
   limit?: number;
-  /** Offset for pagination */
+  /** Zero-based offset for pagination. Defaults to the first result. */
   offset?: number;
 }
 
