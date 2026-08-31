@@ -5608,7 +5608,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/desktop-codegen/src/libs/generateDesktopRendererClients.ts",
-          line: 21,
+          line: 22,
           column: 5,
           kind: "problem-constructor",
         },

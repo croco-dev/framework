@@ -3965,7 +3965,7 @@ Sources:
 
 Sources:
 
-- `packages/desktop-codegen/src/libs/generateDesktopRendererClients.ts:21:5` (problem-constructor)
+- `packages/desktop-codegen/src/libs/generateDesktopRendererClients.ts:22:5` (problem-constructor)
 
 <a id="diagnostics-core-duplicate-provider"></a>
 
