@@ -174,25 +174,117 @@ describe("ClerkSessionProvider", () => {
   });
 
   describe("revokeAllSessions", () => {
-    it("should revoke all sessions for user", async () => {
-      const mockResponse = {
+    it.each([0, 1, 100])(
+      "should revoke every session when the user has %i sessions",
+      async (sessionCount) => {
+        const sessions = Array.from({ length: sessionCount }, (_, index) => ({
+          id: `sess_${index + 1}`,
+        }));
+
+        vi.mocked(mockClerkClient.sessions.getSessionList).mockResolvedValue({
+          data: sessions,
+          totalCount: sessions.length,
+        } as unknown as Awaited<ReturnType<typeof mockClerkClient.sessions.getSessionList>>);
+        vi.mocked(mockClerkClient.sessions.revokeSession).mockResolvedValue(
+          {} as unknown as Awaited<ReturnType<typeof mockClerkClient.sessions.revokeSession>>,
+        );
+
+        await provider.revokeAllSessions("user_123");
+
+        expect(mockClerkClient.sessions.getSessionList).toHaveBeenCalledOnce();
+        expect(mockClerkClient.sessions.getSessionList).toHaveBeenCalledWith({
+          userId: "user_123",
+          limit: 100,
+          offset: 0,
+        });
+        expect(mockClerkClient.sessions.revokeSession).toHaveBeenCalledTimes(sessionCount);
+        for (const session of sessions) {
+          expect(mockClerkClient.sessions.revokeSession).toHaveBeenCalledWith(session.id);
+        }
+      },
+    );
+
+    it("should preserve session revocation failures", async () => {
+      vi.mocked(mockClerkClient.sessions.getSessionList).mockResolvedValue({
         data: [{ id: "sess_1" }, { id: "sess_2" }],
         totalCount: 2,
-      };
-      vi.mocked(mockClerkClient.sessions.getSessionList).mockResolvedValue(
-        mockResponse as unknown as Awaited<
-          ReturnType<typeof mockClerkClient.sessions.getSessionList>
-        >,
-      );
+      } as unknown as Awaited<ReturnType<typeof mockClerkClient.sessions.getSessionList>>);
+      const revokeFailure = new Error("Clerk unavailable");
+      vi.mocked(mockClerkClient.sessions.revokeSession)
+        .mockResolvedValueOnce(
+          {} as unknown as Awaited<ReturnType<typeof mockClerkClient.sessions.revokeSession>>,
+        )
+        .mockRejectedValueOnce(revokeFailure);
 
-      vi.mocked(mockClerkClient.sessions.revokeSession).mockResolvedValue(
-        {} as unknown as Awaited<ReturnType<typeof mockClerkClient.sessions.revokeSession>>,
-      );
+      await expect(provider.revokeAllSessions("user_123")).rejects.toMatchObject({
+        code: "auth-clerk/external-service-error",
+        detail: "Clerk operation 'sessions.revokeSession' failed",
+      });
+
+      expect(mockClerkClient.sessions.revokeSession).toHaveBeenCalledTimes(2);
+    });
+
+    it("should revoke every session when the user has multiple pages", async () => {
+      let activeSessions = Array.from({ length: 101 }, (_, index) => ({
+        id: `sess_${index + 1}`,
+      }));
+
+      vi.mocked(mockClerkClient.sessions.getSessionList).mockImplementation(async (params) => {
+        const limit = params?.limit ?? 10;
+        const offset = params?.offset ?? 0;
+        return {
+          data: activeSessions.slice(offset, offset + limit),
+          totalCount: activeSessions.length,
+        } as unknown as Awaited<ReturnType<typeof mockClerkClient.sessions.getSessionList>>;
+      });
+      vi.mocked(mockClerkClient.sessions.revokeSession).mockImplementation(async (sessionId) => {
+        activeSessions = activeSessions.filter((session) => session.id !== sessionId);
+        return {} as unknown as Awaited<ReturnType<typeof mockClerkClient.sessions.revokeSession>>;
+      });
 
       await provider.revokeAllSessions("user_123");
 
-      expect(mockClerkClient.sessions.revokeSession).toHaveBeenCalledWith("sess_1");
-      expect(mockClerkClient.sessions.revokeSession).toHaveBeenCalledWith("sess_2");
+      expect(mockClerkClient.sessions.getSessionList).toHaveBeenCalledTimes(2);
+      expect(mockClerkClient.sessions.getSessionList).toHaveBeenNthCalledWith(1, {
+        userId: "user_123",
+        limit: 100,
+        offset: 0,
+      });
+      expect(mockClerkClient.sessions.getSessionList).toHaveBeenNthCalledWith(2, {
+        userId: "user_123",
+        limit: 100,
+        offset: 100,
+      });
+      expect(mockClerkClient.sessions.revokeSession).toHaveBeenCalledTimes(101);
+      expect(mockClerkClient.sessions.revokeSession).toHaveBeenCalledWith("sess_101");
+      expect(
+        new Set(vi.mocked(mockClerkClient.sessions.revokeSession).mock.calls.flat()),
+      ).toHaveLength(101);
+      expect(activeSessions).toHaveLength(0);
+    });
+
+    it("should fail when Clerk returns an empty page before totalCount", async () => {
+      vi.mocked(mockClerkClient.sessions.getSessionList)
+        .mockResolvedValueOnce({
+          data: [{ id: "sess_1" }],
+          totalCount: 2,
+        } as unknown as Awaited<ReturnType<typeof mockClerkClient.sessions.getSessionList>>)
+        .mockResolvedValueOnce({
+          data: [],
+          totalCount: 2,
+        } as unknown as Awaited<ReturnType<typeof mockClerkClient.sessions.getSessionList>>);
+
+      await expect(provider.revokeAllSessions("user_123")).rejects.toMatchObject({
+        code: "auth-clerk/external-service-error",
+        detail: "Clerk session pagination ended before all sessions were returned",
+        extensions: {
+          operation: "sessions.getSessionList",
+          provider: "clerk",
+          retryable: true,
+        },
+      });
+
+      expect(mockClerkClient.sessions.revokeSession).not.toHaveBeenCalled();
     });
   });
 });

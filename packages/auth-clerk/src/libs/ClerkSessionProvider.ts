@@ -7,6 +7,9 @@ import type {
 } from "@croco/auth-core";
 import type { ClerkAuthOptions } from "./ClerkAuthProvider";
 import { executeClerkLookup, executeClerkOperation } from "./clerkOperation";
+import { ClerkExternalServiceProblem } from "./problems/ClerkProblems";
+
+const REVOKE_ALL_SESSIONS_PAGE_SIZE = 100;
 
 function mapClerkSessionStatus(status: string): Session["status"] {
   const validStatuses: Session["status"][] = [
@@ -108,9 +111,39 @@ export class ClerkSessionProvider implements SessionProvider {
   }
 
   async revokeAllSessions(userId: string): Promise<void> {
-    const { sessions } = await this.listSessions({ userId });
-    for (const session of sessions) {
-      await this.revokeSession(session.id);
+    const sessionIds = new Set<string>();
+    let offset = 0;
+    let hasRemainingSessions = true;
+
+    while (hasRemainingSessions) {
+      const { sessions, totalCount } = await this.listSessions({
+        userId,
+        limit: REVOKE_ALL_SESSIONS_PAGE_SIZE,
+        offset,
+      });
+
+      if (sessions.length === 0 && offset < totalCount) {
+        throw new ClerkExternalServiceProblem(
+          "Clerk session pagination ended before all sessions were returned",
+          {
+            extensions: {
+              operation: "sessions.getSessionList",
+              provider: "clerk",
+              retryable: true,
+            },
+          },
+        );
+      }
+
+      for (const session of sessions) {
+        sessionIds.add(session.id);
+      }
+      offset += sessions.length;
+      hasRemainingSessions = offset < totalCount;
+    }
+
+    for (const sessionId of sessionIds) {
+      await this.revokeSession(sessionId);
     }
   }
 }
