@@ -1,19 +1,39 @@
 import { compileDesktopContractGraph, desktop } from "@croco/protocols-desktop";
 import ts from "typescript";
-import { describe, expect, it, vi } from "vitest";
+import { assert, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { DesktopPreloadGenerationProblem, generateDesktopPreloadBridges } from "../index";
-import type { DesktopPreloadContextBridge, DesktopPreloadTransport } from "../index";
+import {
+  DesktopPreloadGenerationProblem,
+  generateDesktopPreloadBridges,
+  generateDesktopRendererClients,
+} from "../index";
+import type {
+  DesktopPreloadCommandOptions,
+  DesktopPreloadContextBridge,
+  DesktopPreloadTransport,
+} from "../index";
+
+import { expectTypeScriptSourcesToCompile } from "./compileTypeScriptSources";
 
 type GeneratedBridge = {
   readonly commands: Readonly<
-    Record<string, Readonly<Record<string, (input: unknown) => Promise<unknown>>>>
+    Record<
+      string,
+      Readonly<
+        Record<
+          string,
+          (input: unknown, registerAbort?: DesktopAbortRegistration) => Promise<unknown>
+        >
+      >
+    >
   >;
   readonly events: Readonly<
     Record<string, Readonly<Record<string, (callback: (payload: unknown) => void) => () => void>>>
   >;
 };
+
+type DesktopAbortRegistration = (abort: () => void) => () => void;
 
 describe("generateDesktopPreloadBridges", () => {
   it("generates deterministic minimal bridges for local window profiles only", () => {
@@ -30,6 +50,26 @@ describe("generateDesktopPreloadBridges", () => {
     expect(first).toMatchSnapshot();
     expect(first.map((artifact) => artifact.windowId)).toEqual(["empty", "main", "settings"]);
     expect(first.some((artifact) => artifact.windowId === "login")).toBe(false);
+  });
+
+  it("emits strict-clean artifacts for command, event-only, and empty windows", () => {
+    const graph = createGraph(false);
+    const eventOnlyGraph = {
+      ...graph,
+      windows: graph.windows.map((window) =>
+        window.id === "settings" ? { ...window, exposedCommands: [] } : window,
+      ),
+    };
+    const sources = new Map<string, string>();
+    for (const artifact of generateDesktopPreloadBridges(graph)) {
+      sources.set(`/virtual/${artifact.windowId}.generated.ts`, artifact.source);
+    }
+    sources.set(
+      "/virtual/event-only.generated.ts",
+      requireBridgeSource(eventOnlyGraph, "settings"),
+    );
+
+    expectTypeScriptSourcesToCompile(sources);
   });
 
   it("never generates an artifact for a forged remote profile with capabilities", () => {
@@ -53,6 +93,63 @@ describe("generateDesktopPreloadBridges", () => {
     expect(
       generateDesktopPreloadBridges(forged).some((artifact) => artifact.windowId === "login"),
     ).toBe(false);
+  });
+
+  it("rejects unknown trust values instead of granting local authority", () => {
+    const graph = createGraph(false);
+    const main = graph.windows.find((window) => window.id === "main");
+    assert(main, "Fixture main window is missing");
+
+    expectPreloadGenerationProblem(
+      () =>
+        generateDesktopPreloadBridges({
+          ...graph,
+          windows: graph.windows.map((window) =>
+            window.id === main.id ? { ...window, trust: "forged" as never } : window,
+          ),
+        }),
+      `Desktop window ${JSON.stringify(main.id)} has unsupported trust "forged".`,
+    );
+  });
+
+  it("rejects malformed shared graph containers through its Problem boundary", () => {
+    const graph = createGraph(false);
+
+    expectPreloadGenerationProblem(
+      () => generateDesktopPreloadBridges({ ...graph, commands: null as never }),
+      "Desktop graph commands must be an array, received null.",
+    );
+  });
+
+  it("rejects window trust and origin policy mismatches", () => {
+    const graph = createGraph(false);
+    const localWindow = graph.windows.find((window) => window.trust === "local");
+    const remoteWindow = graph.windows.find((window) => window.trust === "remote");
+    assert(localWindow && remoteWindow, "Fixture local and remote windows are missing");
+
+    const invalidWindows = [
+      {
+        window: { ...localWindow, originPolicy: remoteWindow.originPolicy },
+        detail: `Desktop window ${JSON.stringify(localWindow.id)} trust "local" requires origin policy "local-content", received "remote-allowlist".`,
+      },
+      {
+        window: { ...remoteWindow, originPolicy: localWindow.originPolicy },
+        detail: `Desktop window ${JSON.stringify(remoteWindow.id)} trust "remote" requires origin policy "remote-allowlist", received "local-content".`,
+      },
+    ] as const;
+
+    for (const invalid of invalidWindows) {
+      expectPreloadGenerationProblem(
+        () =>
+          generateDesktopPreloadBridges({
+            ...graph,
+            windows: graph.windows.map((window) =>
+              window.id === invalid.window.id ? invalid.window : window,
+            ),
+          }),
+        invalid.detail,
+      );
+    }
   });
 
   it("binds command and event IDs inside payload-only generated closures", async () => {
@@ -87,7 +184,7 @@ describe("generateDesktopPreloadBridges", () => {
     expect("ipcRenderer" in (exposedBridge ?? {})).toBe(false);
 
     await exposedBridge?.commands.project?.open?.({ path: "README.md" });
-    expect(invoke).toHaveBeenCalledWith("project.open", { path: "README.md" });
+    expect(invoke).toHaveBeenCalledWith("project.open", { path: "README.md" }, {});
 
     const received: unknown[] = [];
     const stop = exposedBridge?.events.project?.changed?.((payload) => received.push(payload));
@@ -128,6 +225,41 @@ describe("generateDesktopPreloadBridges", () => {
     expect(() => generateDesktopPreloadBridges(invalid)).toThrow(DesktopPreloadGenerationProblem);
   });
 
+  it("rejects windows and commands excluded from their authority inventories", () => {
+    const graph = createGraph(false);
+    const main = graph.windows.find((window) => window.id === "main");
+    const command = graph.commands.find((candidate) => candidate.id === "project.open");
+    assert(main && command, "Fixture main window or project command is missing");
+
+    expectPreloadGenerationProblem(
+      () =>
+        generateDesktopPreloadBridges({
+          ...graph,
+          app: {
+            ...graph.app,
+            windowIds: graph.app.windowIds.filter((windowId) => windowId !== main.id),
+          },
+        }),
+      "Desktop app window inventory does not match its records.",
+    );
+
+    expectPreloadGenerationProblem(
+      () =>
+        generateDesktopPreloadBridges({
+          ...graph,
+          contracts: graph.contracts.map((contract) =>
+            contract.id === command.contractId
+              ? {
+                  ...contract,
+                  commandIds: contract.commandIds.filter((commandId) => commandId !== command.id),
+                }
+              : contract,
+          ),
+        }),
+      `Desktop contract ${JSON.stringify(command.contractId)} command inventory does not match its records.`,
+    );
+  });
+
   it("rejects duplicate window profiles instead of emitting ambiguous artifacts", () => {
     const graph = createGraph(false);
 
@@ -142,21 +274,31 @@ describe("generateDesktopPreloadBridges", () => {
   it("emits prototype-sensitive graph keys as inert own properties", async () => {
     const graph = createGraph(false);
     const command = graph.commands.find((candidate) => candidate.id === "project.open");
+    const contract = graph.contracts.find((candidate) => candidate.id === command?.contractId);
     const main = graph.windows.find((window) => window.id === "main");
-    if (!command || !main) {
-      throw new Error("Fixture command or window is missing");
-    }
+    assert(command && contract && main, "Fixture contract, command, or window is missing");
     const forgedCommand = {
       ...command,
       id: "__proto__.constructor",
       contractId: "__proto__",
       key: "constructor",
     };
+    const forgedContract = {
+      ...contract,
+      id: forgedCommand.contractId,
+      commandIds: [forgedCommand.id],
+      eventIds: [],
+      grantIds: [],
+    };
     const source = requireBridgeSource(
       {
         ...graph,
+        app: { ...graph.app, contractIds: [forgedContract.id], windowIds: [main.id] },
+        contracts: [forgedContract],
         commands: [forgedCommand],
         events: [],
+        effects: forgedCommand.effects.map((effect) => effect.namespace),
+        grants: [],
         windows: [{ ...main, exposedCommands: [forgedCommand.id], receivedEvents: [] }],
       },
       "main",
@@ -179,9 +321,81 @@ describe("generateDesktopPreloadBridges", () => {
       Object.prototype.hasOwnProperty.call(bridge?.commands["__proto__"] ?? {}, "constructor"),
     ).toBe(true);
     await bridge?.commands["__proto__"]?.constructor?.({ safe: true });
-    expect(invoke).toHaveBeenCalledWith("__proto__.constructor", { safe: true });
+    expect(invoke).toHaveBeenCalledWith("__proto__.constructor", { safe: true }, {});
+  });
+
+  it("propagates live cancellation across a context-isolated bridge", async () => {
+    const graph = createGraph(false);
+    const preloadSource = requireBridgeSource(graph, "main");
+    const rendererSource = generateDesktopRendererClients(graph).find(
+      (artifact) => artifact.windowId === "main",
+    )?.source;
+    expect(rendererSource).toBeDefined();
+    let transportSignal: AbortSignal | undefined;
+    const invoke = vi.fn(
+      async (
+        _commandId: string,
+        _input: unknown,
+        options: DesktopPreloadCommandOptions,
+      ): Promise<string> => {
+        transportSignal = options.signal;
+        return new Promise((resolve) =>
+          options.signal?.addEventListener("abort", () => resolve("cancelled"), { once: true }),
+        );
+      },
+    );
+    let bridge: GeneratedBridge | undefined;
+
+    executeGeneratedSource(preloadSource)(
+      {
+        exposeInMainWorld(_name, api) {
+          bridge = copyContextBridgeValue(api) as GeneratedBridge;
+        },
+      },
+      { invoke, subscribe: () => () => {} },
+    );
+    expect(bridge).toBeDefined();
+    if (!rendererSource || !bridge) {
+      throw new Error("Generated renderer or preload bridge is missing");
+    }
+    const controller = new AbortController();
+    const removeAbortListener = vi.spyOn(controller.signal, "removeEventListener");
+    const renderer = executeRendererSource(rendererSource, bridge);
+    const hostileOptions = {
+      signal: controller.signal,
+      timeoutMs: 60_000,
+      forged: true,
+    } as DesktopPreloadCommandOptions;
+
+    const pending = renderer.project.open({ path: "README.md" }, hostileOptions);
+    expect(transportSignal).toBeInstanceOf(AbortSignal);
+    expect(transportSignal).not.toBe(controller.signal);
+    expect(transportSignal?.aborted).toBe(false);
+    controller.abort();
+
+    await expect(pending).resolves.toBe("cancelled");
+    expect(transportSignal?.aborted).toBe(true);
+    expect(invoke).toHaveBeenCalledWith(
+      "project.open",
+      { path: "README.md" },
+      {
+        signal: transportSignal,
+      },
+    );
+    expect(invoke.mock.calls[0]?.[2]).not.toHaveProperty("timeoutMs");
+    expect(invoke.mock.calls[0]?.[2]).not.toHaveProperty("forged");
+    expect(removeAbortListener).toHaveBeenCalledOnce();
   });
 });
+
+type GeneratedRenderer = {
+  readonly project: {
+    readonly open: (
+      input: { readonly path: string },
+      options?: DesktopPreloadCommandOptions,
+    ) => Promise<unknown>;
+  };
+};
 
 function createGraph(reverse: boolean) {
   const project = desktop.contract({
@@ -238,6 +452,20 @@ function createGraph(reverse: boolean) {
   );
 }
 
+function expectPreloadGenerationProblem(action: () => unknown, detail: string): void {
+  let thrown: unknown;
+  try {
+    action();
+  } catch (error) {
+    thrown = error;
+  }
+  expect(thrown).toBeInstanceOf(DesktopPreloadGenerationProblem);
+  expect(thrown).toMatchObject({
+    code: "desktop-codegen/invalid-contract-graph",
+    detail,
+  });
+}
+
 function requireBridgeSource(graph: ReturnType<typeof createGraph>, windowId: string): string {
   const source = generateDesktopPreloadBridges(graph).find(
     (artifact) => artifact.windowId === windowId,
@@ -283,4 +511,46 @@ function executeGeneratedSource(
     contextBridge: DesktopPreloadContextBridge,
     transport: DesktopPreloadTransport,
   ) => void;
+}
+
+function executeRendererSource(source: string, bridge: GeneratedBridge): GeneratedRenderer {
+  const output = ts.transpileModule(source, {
+    compilerOptions: {
+      module: ts.ModuleKind.CommonJS,
+      target: ts.ScriptTarget.ES2022,
+    },
+  }).outputText;
+  const generatedModule = { exports: {} as Record<string, unknown> };
+  Object.assign(globalThis, { crocoDesktop: bridge });
+  try {
+    const load = new Function("module", "exports", output);
+    load(generatedModule, generatedModule.exports);
+    return generatedModule.exports.desktop as GeneratedRenderer;
+  } finally {
+    Reflect.deleteProperty(globalThis, "crocoDesktop");
+  }
+}
+
+function copyContextBridgeValue(value: unknown): unknown {
+  if (typeof value === "function") {
+    return (...args: unknown[]) => {
+      const result = value(...args.map(copyContextBridgeValue));
+      return copyContextBridgeValue(result);
+    };
+  }
+  if (value instanceof Promise) {
+    return value.then(copyContextBridgeValue);
+  }
+  if (Array.isArray(value)) {
+    return value.map(copyContextBridgeValue);
+  }
+  if (value !== null && typeof value === "object") {
+    if (Object.getPrototypeOf(value) !== Object.prototype) {
+      return structuredClone(value);
+    }
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [key, copyContextBridgeValue(entry)]),
+    );
+  }
+  return value;
 }

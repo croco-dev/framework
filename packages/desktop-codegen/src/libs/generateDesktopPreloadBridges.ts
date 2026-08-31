@@ -5,6 +5,7 @@ import type {
   DesktopContractGraphV1,
   DesktopContractGraphWindow,
 } from "@croco/protocols-desktop";
+import { assertDesktopContractGraphGeneratable } from "./assertDesktopContractGraphGeneratable";
 
 export type DesktopPreloadBridgeSource = {
   readonly windowId: string;
@@ -15,8 +16,16 @@ export type DesktopPreloadContextBridge = {
   exposeInMainWorld(name: "crocoDesktop", api: Readonly<Record<string, unknown>>): void;
 };
 
+export type DesktopPreloadCommandOptions = {
+  readonly signal?: AbortSignal;
+};
+
 export type DesktopPreloadTransport = {
-  invoke(commandId: string, input: unknown): Promise<unknown>;
+  invoke(
+    commandId: string,
+    input: unknown,
+    options: DesktopPreloadCommandOptions,
+  ): Promise<unknown>;
   subscribe(eventId: string, callback: (payload: unknown) => void): () => void;
 };
 
@@ -61,17 +70,11 @@ export function generateDesktopPreloadBridges(
 }
 
 function assertGeneratableGraph(graph: DesktopContractGraphV1): void {
-  if (graph.version !== "croco.desktop-contract-graph.v1") {
-    throw new DesktopPreloadGenerationProblem(
-      `Expected croco.desktop-contract-graph.v1, received ${JSON.stringify(graph.version)}.`,
-    );
-  }
-
-  if (graph.diagnostics.length > 0) {
-    throw new DesktopPreloadGenerationProblem(
-      `Cannot generate preload bridges from a graph with ${graph.diagnostics.length} diagnostic${graph.diagnostics.length === 1 ? "" : "s"}.`,
-    );
-  }
+  assertDesktopContractGraphGeneratable(
+    graph,
+    "preload bridges",
+    (detail) => new DesktopPreloadGenerationProblem(detail),
+  );
 }
 
 function createUniqueIndex<T extends { readonly id: string }>(
@@ -126,13 +129,42 @@ function generateWindowSource(capabilities: WindowCapabilities): string {
   const contracts = collectContracts(capabilities);
   const commandContracts = contracts.filter((contract) => contract.commands.length > 0);
   const eventContracts = contracts.filter((contract) => contract.events.length > 0);
+  const hasCommands = commandContracts.length > 0;
+  const transportName =
+    commandContracts.length > 0 || eventContracts.length > 0 ? "transport" : "_transport";
 
   return [
     'import type { DesktopPreloadContextBridge, DesktopPreloadTransport } from "@croco/desktop-codegen";',
     "",
+    ...(hasCommands
+      ? [
+          "type DesktopAbortRegistration = (abort: () => void) => () => void;",
+          "",
+          "function invokeDesktopCommand(",
+          "  transport: DesktopPreloadTransport,",
+          "  commandId: string,",
+          "  input: unknown,",
+          "  registerAbort: DesktopAbortRegistration | undefined,",
+          "): Promise<unknown> {",
+          "  if (registerAbort === undefined) {",
+          "    return transport.invoke(commandId, input, {});",
+          "  }",
+          "",
+          "  const controller = new AbortController();",
+          "  const unregister = registerAbort(() => controller.abort());",
+          "  try {",
+          "    return transport.invoke(commandId, input, { signal: controller.signal }).finally(unregister);",
+          "  } catch (error) {",
+          "    unregister();",
+          "    throw error;",
+          "  }",
+          "}",
+          "",
+        ]
+      : []),
     "export function installDesktopPreloadBridge(",
     "  contextBridge: DesktopPreloadContextBridge,",
-    "  transport: DesktopPreloadTransport,",
+    `  ${transportName}: DesktopPreloadTransport,`,
     "): void {",
     "  const bridge = Object.freeze({",
     ...generateCommandNamespace(commandContracts),
@@ -265,8 +297,8 @@ function generateNamespace<TMember>(
 
 function generateCommand(command: DesktopContractGraphCommand): readonly string[] {
   return [
-    `        [${JSON.stringify(command.key)}]: (input: unknown): Promise<unknown> =>`,
-    `          transport.invoke(${JSON.stringify(command.id)}, input),`,
+    `        [${JSON.stringify(command.key)}]: (input: unknown, registerAbort?: DesktopAbortRegistration): Promise<unknown> =>`,
+    `          invokeDesktopCommand(transport, ${JSON.stringify(command.id)}, input, registerAbort),`,
   ];
 }
 

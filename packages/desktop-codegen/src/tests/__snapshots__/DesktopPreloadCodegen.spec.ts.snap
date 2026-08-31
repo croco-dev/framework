@@ -7,7 +7,7 @@ exports[`generateDesktopPreloadBridges > generates deterministic minimal bridges
 
 export function installDesktopPreloadBridge(
   contextBridge: DesktopPreloadContextBridge,
-  transport: DesktopPreloadTransport,
+  _transport: DesktopPreloadTransport,
 ): void {
   const bridge = Object.freeze({
     commands: Object.freeze({
@@ -24,6 +24,28 @@ export function installDesktopPreloadBridge(
   {
     "source": "import type { DesktopPreloadContextBridge, DesktopPreloadTransport } from "@croco/desktop-codegen";
 
+type DesktopAbortRegistration = (abort: () => void) => () => void;
+
+function invokeDesktopCommand(
+  transport: DesktopPreloadTransport,
+  commandId: string,
+  input: unknown,
+  registerAbort: DesktopAbortRegistration | undefined,
+): Promise<unknown> {
+  if (registerAbort === undefined) {
+    return transport.invoke(commandId, input, {});
+  }
+
+  const controller = new AbortController();
+  const unregister = registerAbort(() => controller.abort());
+  try {
+    return transport.invoke(commandId, input, { signal: controller.signal }).finally(unregister);
+  } catch (error) {
+    unregister();
+    throw error;
+  }
+}
+
 export function installDesktopPreloadBridge(
   contextBridge: DesktopPreloadContextBridge,
   transport: DesktopPreloadTransport,
@@ -31,12 +53,12 @@ export function installDesktopPreloadBridge(
   const bridge = Object.freeze({
     commands: Object.freeze({
       ["project"]: Object.freeze({
-        ["open"]: (input: unknown): Promise<unknown> =>
-          transport.invoke("project.open", input),
+        ["open"]: (input: unknown, registerAbort?: DesktopAbortRegistration): Promise<unknown> =>
+          invokeDesktopCommand(transport, "project.open", input, registerAbort),
       }),
       ["system"]: Object.freeze({
-        ["status"]: (input: unknown): Promise<unknown> =>
-          transport.invoke("system.status", input),
+        ["status"]: (input: unknown, registerAbort?: DesktopAbortRegistration): Promise<unknown> =>
+          invokeDesktopCommand(transport, "system.status", input, registerAbort),
       }),
     }),
     events: Object.freeze({
@@ -59,6 +81,28 @@ export function installDesktopPreloadBridge(
   {
     "source": "import type { DesktopPreloadContextBridge, DesktopPreloadTransport } from "@croco/desktop-codegen";
 
+type DesktopAbortRegistration = (abort: () => void) => () => void;
+
+function invokeDesktopCommand(
+  transport: DesktopPreloadTransport,
+  commandId: string,
+  input: unknown,
+  registerAbort: DesktopAbortRegistration | undefined,
+): Promise<unknown> {
+  if (registerAbort === undefined) {
+    return transport.invoke(commandId, input, {});
+  }
+
+  const controller = new AbortController();
+  const unregister = registerAbort(() => controller.abort());
+  try {
+    return transport.invoke(commandId, input, { signal: controller.signal }).finally(unregister);
+  } catch (error) {
+    unregister();
+    throw error;
+  }
+}
+
 export function installDesktopPreloadBridge(
   contextBridge: DesktopPreloadContextBridge,
   transport: DesktopPreloadTransport,
@@ -66,8 +110,8 @@ export function installDesktopPreloadBridge(
   const bridge = Object.freeze({
     commands: Object.freeze({
       ["system"]: Object.freeze({
-        ["status"]: (input: unknown): Promise<unknown> =>
-          transport.invoke("system.status", input),
+        ["status"]: (input: unknown, registerAbort?: DesktopAbortRegistration): Promise<unknown> =>
+          invokeDesktopCommand(transport, "system.status", input, registerAbort),
       }),
     }),
     events: Object.freeze({

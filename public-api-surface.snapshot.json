@@ -8260,15 +8260,32 @@
               "declarationKind": "class"
             },
             {
+              "name": "DesktopRendererGenerationProblem",
+              "exportKind": "named",
+              "source": "./libs/generateDesktopRendererClients",
+              "declarationKind": "class"
+            },
+            {
               "name": "generateDesktopPreloadBridges",
               "exportKind": "named",
               "source": "./libs/generateDesktopPreloadBridges",
+              "declarationKind": "function"
+            },
+            {
+              "name": "generateDesktopRendererClients",
+              "exportKind": "named",
+              "source": "./libs/generateDesktopRendererClients",
               "declarationKind": "function"
             }
           ],
           "typeExports": [
             {
               "name": "DesktopPreloadBridgeSource",
+              "exportKind": "named",
+              "source": "./libs/generateDesktopPreloadBridges"
+            },
+            {
+              "name": "DesktopPreloadCommandOptions",
               "exportKind": "named",
               "source": "./libs/generateDesktopPreloadBridges"
             },
@@ -8281,6 +8298,11 @@
               "name": "DesktopPreloadTransport",
               "exportKind": "named",
               "source": "./libs/generateDesktopPreloadBridges"
+            },
+            {
+              "name": "DesktopRendererClientSource",
+              "exportKind": "named",
+              "source": "./libs/generateDesktopRendererClients"
             }
           ]
         }
