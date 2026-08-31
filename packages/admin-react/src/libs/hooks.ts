@@ -22,6 +22,7 @@ export function useAdminForm<TValues extends object, TResult = unknown>(
   const initialState = createAdminFormState(contract, options);
   const [state, setState] = useState(initialState);
   const stateRef = useRef<AdminFormState<TValues, TResult>>(initialState);
+  const submitInFlightRef = useRef(false);
   const optionsGeneratedAtTime = options.generatedAt?.getTime();
   const optionsGrantedPermissionsKey = options.grantedPermissions?.join("\u0000") ?? "";
   const stateResetKey = createAdminFormStateResetKey(
@@ -71,32 +72,39 @@ export function useAdminForm<TValues extends object, TResult = unknown>(
     setAdminFormState(nextState);
   }, [contract, options, setAdminFormState]);
 
-  const submit = useCallback(async () => {
-    const currentState = stateRef.current;
-    const shouldRetry = currentState.kind === "failed";
+  const runSubmit = useCallback(
+    async (retry?: boolean) => {
+      if (submitInFlightRef.current) {
+        return stateRef.current;
+      }
 
-    setAdminFormState(startAdminFormSubmit(currentState, { retry: shouldRetry }));
+      submitInFlightRef.current = true;
+      const currentState = stateRef.current;
+      const shouldRetry = retry ?? currentState.kind === "failed";
+      const submittingState = startAdminFormSubmit(currentState, { retry: shouldRetry });
 
-    const nextState = await submitAdminForm(contract, currentState, { retry: shouldRetry });
+      setAdminFormState(submittingState);
 
-    stateRef.current = nextState;
-    setAdminFormState(nextState);
+      try {
+        const nextState = await submitAdminForm(contract, currentState, { retry: shouldRetry });
 
-    return nextState;
-  }, [contract, setAdminFormState]);
+        if (stateRef.current !== submittingState) {
+          return stateRef.current;
+        }
 
-  const retry = useCallback(async () => {
-    const currentState = stateRef.current;
+        setAdminFormState(nextState);
 
-    setAdminFormState(startAdminFormSubmit(currentState, { retry: true }));
+        return nextState;
+      } finally {
+        submitInFlightRef.current = false;
+      }
+    },
+    [contract, setAdminFormState],
+  );
 
-    const nextState = await submitAdminForm(contract, currentState, { retry: true });
+  const submit = useCallback(() => runSubmit(), [runSubmit]);
 
-    stateRef.current = nextState;
-    setAdminFormState(nextState);
-
-    return nextState;
-  }, [contract, setAdminFormState]);
+  const retry = useCallback(() => runSubmit(true), [runSubmit]);
 
   return {
     contract,
