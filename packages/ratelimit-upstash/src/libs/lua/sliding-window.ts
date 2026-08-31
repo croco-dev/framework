@@ -9,17 +9,24 @@ local ttl = tonumber(ARGV[5])
 redis.call('ZREMRANGEBYSCORE', key, '-inf', windowStart)
 
 local currentCount = redis.call('ZCARD', key)
+local success = 0
+local newCount = currentCount
+local remaining = 0
 
-if currentCount >= limit then
-  return {0, currentCount, 0}
+if currentCount < limit then
+  redis.call('ZADD', key, now, timestamp)
+  redis.call('EXPIRE', key, ttl)
+
+  success = 1
+  newCount = currentCount + 1
+  remaining = limit - newCount
 end
 
-redis.call('ZADD', key, now, timestamp)
+local oldestEntry = redis.call('ZRANGE', key, 0, 0, 'WITHSCORES')
+local oldestTimestamp = now
+if #oldestEntry >= 2 then
+  oldestTimestamp = tonumber(oldestEntry[2])
+end
 
-redis.call('EXPIRE', key, ttl)
-
-local newCount = currentCount + 1
-local remaining = limit - newCount
-
-return {1, newCount, remaining}
+return {success, newCount, remaining, oldestTimestamp}
 `;

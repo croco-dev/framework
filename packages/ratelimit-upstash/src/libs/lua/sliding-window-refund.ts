@@ -1,9 +1,10 @@
 export const slidingWindowRefundLua = `
 local key = KEYS[1]
-local windowStart = tonumber(ARGV[1])
-local limit = tonumber(ARGV[2])
-local receiptId = ARGV[3]
-local ttl = tonumber(ARGV[4])
+local now = tonumber(ARGV[1])
+local windowStart = tonumber(ARGV[2])
+local limit = tonumber(ARGV[3])
+local receiptId = ARGV[4]
+local ttl = tonumber(ARGV[5])
 
 redis.call('ZREMRANGEBYSCORE', key, '-inf', windowStart)
 
@@ -22,9 +23,15 @@ if remaining < 0 then
   remaining = 0
 end
 
-if removed == 1 then
-  return {1, currentCount, remaining}
+local oldestTimestamp = now
+if currentCount > 0 then
+  local oldestEntry = redis.call('ZRANGE', key, 0, 0, 'WITHSCORES')
+  oldestTimestamp = tonumber(oldestEntry[2])
 end
 
-return {0, currentCount, remaining}
+if removed == 1 then
+  return {1, currentCount, remaining, oldestTimestamp}
+end
+
+return {0, currentCount, remaining, oldestTimestamp}
 `;

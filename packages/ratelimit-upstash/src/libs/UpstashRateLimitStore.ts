@@ -113,7 +113,7 @@ export class UpstashSlidingWindowStore extends SlidingWindowStore {
         [redisKey],
         [now, windowStart, policy.limit, refundReceipt.id, ttlSeconds],
       ),
-    )) as [number, number, number];
+    )) as [number, number, number, number | string];
 
     const success = result[0] === 1;
     const remaining = result[2];
@@ -122,7 +122,7 @@ export class UpstashSlidingWindowStore extends SlidingWindowStore {
       success,
       limit: policy.limit,
       remaining,
-      resetAtMs: now + policy.windowMs,
+      resetAtMs: Number(result[3]) + policy.windowMs,
       ...(success ? { refundReceipt } : {}),
     };
   }
@@ -148,9 +148,9 @@ export class UpstashSlidingWindowStore extends SlidingWindowStore {
       this.redis.eval(
         slidingWindowRefundLua,
         [redisKey],
-        [windowStart, policy.limit, receipt.id, ttlSeconds],
+        [now, windowStart, policy.limit, receipt.id, ttlSeconds],
       ),
-    )) as [number, number, number];
+    )) as [number, number, number, number | string];
 
     const refunded = result[0] === 1;
     if (refunded) {
@@ -161,7 +161,7 @@ export class UpstashSlidingWindowStore extends SlidingWindowStore {
       success: true,
       limit: policy.limit,
       remaining: result[2],
-      resetAtMs: now + policy.windowMs,
+      resetAtMs: Number(result[3]) + policy.windowMs,
       refunded,
     };
   }
