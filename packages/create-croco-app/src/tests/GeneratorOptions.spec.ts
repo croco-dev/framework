@@ -1,9 +1,20 @@
 import { describe, expectTypeOf, it } from "vitest";
 import type { TenantModelName } from "@croco/tenant-core/tenant-model";
+import type { ApplicationIntentGoal } from "@croco/framework-context";
 import type { SaasProviderProfileName } from "../saas-provider-profiles.js";
-import type { GeneratorOptions, NormalizedGeneratorOptions } from "../types.js";
+import type {
+  AppGoal,
+  GeneratorOptions,
+  NormalizedGeneratorOptions,
+  TenantModelName as GeneratorTenantModelName,
+} from "../types.js";
 
 describe("GeneratorOptions", () => {
+  it("keeps self-contained public discriminators aligned with framework contracts", () => {
+    expectTypeOf<AppGoal>().toEqualTypeOf<ApplicationIntentGoal>();
+    expectTypeOf<GeneratorTenantModelName>().toEqualTypeOf<TenantModelName>();
+  });
+
   it("accepts only fields owned by each resolved preset branch", () => {
     const apiOptions: GeneratorOptions = {
       projectName: "api",

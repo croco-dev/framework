@@ -1,7 +1,6 @@
 import { intro, outro } from "@clack/prompts";
 import {
   createFailureResult,
-  createSuccessResult,
   formatHumanFailure,
   formatHumanSuccess,
   formatJsonResult,
@@ -57,9 +56,10 @@ export function createProgram(): ReturnType<typeof createCreateCrocoAppProgram> 
           retryCommand: createRetryCommand(targetDir, rawOptions),
         };
         const { generate } = await import("./generator.js");
-        await generate(targetDir, options, { outputMode: outputJson ? "json" : "human" });
+        const result = await generate(targetDir, options, {
+          outputMode: outputJson ? "json" : "human",
+        });
 
-        const result = createSuccessResult(targetDir, options);
         if (outputJson) {
           console.log(formatJsonResult(result));
         } else {

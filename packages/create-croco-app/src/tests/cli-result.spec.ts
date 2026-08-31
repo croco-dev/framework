@@ -2,12 +2,8 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import {
-  createFailureResult,
-  createSuccessResult,
-  formatHumanFailure,
-  formatHumanSuccess,
-} from "../cli-result.js";
+import { createFailureResult, formatHumanFailure, formatHumanSuccess } from "../cli-result.js";
+import { createGenerationResult } from "../generation-result.js";
 import { validateResolvedOptions } from "../options.js";
 import { DirectoryNotEmptyProblem } from "../libs/problems/DirectoryNotEmptyProblem.js";
 import type { GeneratorOptions, NormalizedGeneratorOptions } from "../types.js";
@@ -16,7 +12,7 @@ describe("CLI result contract", () => {
   it("formats successful generation with target directory and next commands", () => {
     const result = createSuccessResult("/tmp/my-app", createOptions({ installDeps: false }));
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       ok: true,
       code: "create-croco-app/project-created",
       targetDir: "/tmp/my-app",
@@ -231,4 +227,8 @@ function createOptions(overrides: NormalizedGeneratorOptions = {}): GeneratorOpt
   }
 
   return validateResolvedOptions(options);
+}
+
+function createSuccessResult(targetDir: string, options: GeneratorOptions) {
+  return createGenerationResult(targetDir, options, "node");
 }

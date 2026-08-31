@@ -9,10 +9,11 @@ import {
   createRuntimeCapabilityManifest,
   stringifyRuntimeCapabilityManifest,
 } from "@croco/framework-context";
-import type { KnownRuntimePlatform } from "@croco/framework-context";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { recordStagingCleanupFailure } from "./generation-failure-evidence.js";
+import { createGenerationResult } from "./generation-result.js";
+import type { GeneratorOptions } from "./types.js";
 import { writeGoalManifest } from "./goals.js";
 import { mergeInto } from "./helpers/fs.js";
 import { rewriteExternalCrocoWorkspaceRanges } from "./helpers/manifest-normalizer.js";
@@ -57,8 +58,17 @@ import {
   publishStagedProject,
   removeOwnedStagingDirectory,
 } from "./staging.js";
-import type { GeneratorOptions } from "./types.js";
+import type { GenerationResult, GenerationRuntimePlatform } from "./generation-result.js";
 import type { SaasProviderProfileManifest } from "./saas-provider-profiles.js";
+
+export type {
+  GenerationArtifact,
+  GenerationNextStep,
+  GenerationResult,
+  GenerationRuntimePlatform,
+  ResolvedGenerationConfiguration,
+} from "./generation-result.js";
+export type { AppGoal, GeneratorOptions, TenantModelName } from "./types.js";
 
 export type GeneratorExecutionOptions = {
   readonly outputMode: "human" | "json";
@@ -70,39 +80,29 @@ export async function generate(
   targetDir: string,
   options: GeneratorOptions,
   executionOptions: GeneratorExecutionOptions = DEFAULT_EXECUTION_OPTIONS,
-): Promise<void> {
+): Promise<GenerationResult> {
   assertSupportedNodeVersion();
   validateResolvedOptions(options);
 
   const resolvedTarget = resolve(targetDir);
   const stagingDir = createStagingDirectory(resolvedTarget);
-  let failed = false;
-  let published = false;
-  let primaryError: unknown;
 
   try {
     await generateProject(stagingDir, options, executionOptions);
+    const result = createGenerationResult(
+      resolvedTarget,
+      options,
+      resolveRuntimeCapabilityPlatform(options),
+    );
     publishStagedProject(stagingDir, resolvedTarget);
-    published = true;
-  } catch (error) {
-    failed = true;
-    primaryError = error;
-  }
-
-  if (published) {
-    return;
-  }
-
-  try {
-    removeOwnedStagingDirectory(stagingDir);
-  } catch (cleanupError) {
-    if (!failed) {
-      throw cleanupError;
+    return result;
+  } catch (primaryError) {
+    try {
+      removeOwnedStagingDirectory(stagingDir);
+    } catch (cleanupError) {
+      throw recordStagingCleanupFailure(primaryError, cleanupError);
     }
-    primaryError = recordStagingCleanupFailure(primaryError, cleanupError);
-  }
 
-  if (failed) {
     throw primaryError;
   }
 }
@@ -540,7 +540,7 @@ function writeRuntimeCapabilityManifest(targetDir: string, options: GeneratorOpt
   );
 }
 
-function resolveRuntimeCapabilityPlatform(options: GeneratorOptions): KnownRuntimePlatform {
+function resolveRuntimeCapabilityPlatform(options: GeneratorOptions): GenerationRuntimePlatform {
   if (options.saasProviderProfile) {
     return getSaasProviderProfileDefinition(options.saasProviderProfile).runtimeTarget;
   }

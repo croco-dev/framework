@@ -1402,25 +1402,17 @@
     },
     {
       "packageName": "create-croco-app",
-      "file": "packages/create-croco-app/src/cli-result.ts",
-      "line": 229,
-      "column": 32,
-      "code": "TS4111",
-      "message": "Property 'recovery' comes from an index signature, so it must be accessed with ['recovery']."
-    },
-    {
-      "packageName": "create-croco-app",
-      "file": "packages/create-croco-app/src/goals.ts",
-      "line": 4,
-      "column": 51,
+      "file": "packages/create-croco-app/src/generator.ts",
+      "line": 11,
+      "column": 8,
       "code": "TS6059",
       "message": "File 'packages/framework-context/src/index.ts' is not under 'rootDir' 'packages/create-croco-app/src'. 'rootDir' is expected to contain all source files."
     },
     {
       "packageName": "create-croco-app",
-      "file": "packages/create-croco-app/src/options.ts",
-      "line": 1,
-      "column": 38,
+      "file": "packages/create-croco-app/src/generator.ts",
+      "line": 7,
+      "column": 8,
       "code": "TS6059",
       "message": "File 'packages/tenant-core/src/tenant-model.ts' is not under 'rootDir' 'packages/create-croco-app/src'. 'rootDir' is expected to contain all source files."
     },

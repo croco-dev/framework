@@ -26,6 +26,8 @@ const requiredPackageArtifacts = [
   ...packedRuntimeWorkspacePackages.flatMap((packageName) => requiredLibraryArtifacts(packageName)),
   join(packageDir, "dist", "bin.js"),
   join(packageDir, "dist", "bin.d.ts"),
+  join(packageDir, "dist", "generator.js"),
+  join(packageDir, "dist", "generator.d.ts"),
   join(packageDir, "dist", "index.js"),
   join(packageDir, "dist", "index.d.ts"),
   join(packageDir, "dist", "programmatic.js"),
@@ -82,6 +84,8 @@ describe("published create-croco-app CLI", () => {
         expect(version.stdout.trim()).toBe(packageVersion);
         verifyProgrammaticImport(consumerRoot);
         verifyProgrammaticGeneration(consumerRoot);
+        verifyProgrammaticGeneratorTypes(consumerRoot);
+        verifyProgrammaticGenerator(consumerRoot);
         verifyJsonFailureOutput(consumerRoot);
       } finally {
         rmSync(packRoot, { force: true, recursive: true });
@@ -100,6 +104,113 @@ function packRuntimeWorkspacePackages(packRoot: string): void {
       rootDir,
     );
   }
+}
+
+function verifyProgrammaticGeneratorTypes(consumerRoot: string): void {
+  writeFileSync(
+    join(consumerRoot, "generate.ts"),
+    [
+      'import { generate, type GeneratorOptions, type GenerationResult } from "create-croco-app/generator";',
+      "// @ts-expect-error createGenerationResult is an internal implementation detail.",
+      'import { createGenerationResult } from "create-croco-app/generator";',
+      "const options = {",
+      '  projectName: "programmatic-app",',
+      '  scope: "@test",',
+      '  preset: "blank",',
+      "  webApps: [],",
+      '  apiHosting: "standalone",',
+      "  db: [],",
+      "  agentRules: false,",
+      "  installDeps: false,",
+      "  initGit: false,",
+      "} satisfies GeneratorOptions;",
+      'const result: Promise<GenerationResult> = generate("./programmatic-app", options);',
+      "function inspectConfiguration(result: GenerationResult): void {",
+      '  if (result.configuration.preset === "saas") {',
+      '    const profile: "saas-node-postgres" | "saas-cloudflare" | "saas-lambda" =',
+      "      result.configuration.saasProviderProfile;",
+      '    const tenant: "single" | "org" | "workspace" | "shared-schema" | "rls-backed" =',
+      "      result.configuration.tenantModel;",
+      "    void profile;",
+      "    void tenant;",
+      "  }",
+      '  if (result.configuration.preset === "ddd-api") {',
+      '    const api: "graphql" | "trpc" = result.configuration.api;',
+      "    void api;",
+      "  }",
+      "}",
+      "void inspectConfiguration;",
+      "void result;",
+      "void createGenerationResult;",
+      "",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(consumerRoot, "tsconfig.json"),
+    `${JSON.stringify(
+      {
+        compilerOptions: {
+          exactOptionalPropertyTypes: true,
+          module: "NodeNext",
+          moduleResolution: "NodeNext",
+          noEmit: true,
+          strict: true,
+          target: "ES2022",
+        },
+        include: ["generate.ts"],
+      },
+      null,
+      2,
+    )}\n`,
+  );
+
+  run(
+    process.execPath,
+    [join(rootDir, "node_modules", "typescript", "bin", "tsc"), "-p", consumerRoot],
+    consumerRoot,
+  );
+}
+
+function verifyProgrammaticGenerator(consumerRoot: string): void {
+  const scriptPath = join(consumerRoot, "generate.mjs");
+  const targetDir = join(consumerRoot, "structured-result-app");
+  writeFileSync(
+    scriptPath,
+    [
+      'import { generate } from "create-croco-app/generator";',
+      'import * as generator from "create-croco-app/generator";',
+      'if (Object.keys(generator).join(",") !== "generate") throw new Error("unexpected generator exports");',
+      "const result = await generate(process.argv[2], {",
+      '  projectName: "structured-result-app",',
+      '  scope: "@test",',
+      '  preset: "blank",',
+      "  webApps: [],",
+      '  apiHosting: "standalone",',
+      "  db: [],",
+      "  agentRules: false,",
+      "  installDeps: false,",
+      "  initGit: false,",
+      "});",
+      "console.log(JSON.stringify(result));",
+      "",
+    ].join("\n"),
+  );
+
+  const execution = run(process.execPath, [scriptPath, targetDir], consumerRoot);
+  const result = JSON.parse(execution.stdout) as {
+    readonly targetDir: string;
+    readonly configuration: { readonly preset: string; readonly runtimePlatform: string };
+    readonly postActions: { readonly git: string; readonly dependencies: string };
+    readonly nextSteps: readonly { readonly cwd: string }[];
+  };
+
+  expect(result).toMatchObject({
+    targetDir,
+    configuration: { preset: "blank", runtimePlatform: "node" },
+    postActions: { git: "skipped", dependencies: "skipped" },
+  });
+  expect(result.nextSteps.every((step) => step.cwd === targetDir)).toBe(true);
+  expect(existsSync(join(targetDir, "package.json"))).toBe(true);
 }
 
 function ensureBuilt(): void {

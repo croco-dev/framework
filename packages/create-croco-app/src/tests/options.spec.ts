@@ -2,6 +2,7 @@ import { existsSync, rmSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createProgram } from "../cli.js";
 import { createCreateCrocoAppProgram } from "../cli-program.js";
+import { createGenerationResult } from "../generation-result.js";
 import { InvalidCliOptionProblem } from "../libs/problems/InvalidCliOptionProblem.js";
 import { InvalidGoalOptionProblem } from "../libs/problems/InvalidGoalOptionProblem.js";
 import { InvalidSaasPresetOptionProblem } from "../libs/problems/InvalidSaasPresetOptionProblem.js";
@@ -14,6 +15,7 @@ import {
 } from "../options.js";
 import { assertSaasProviderProfileCapabilities } from "../saas-provider-profiles.js";
 import { CREATE_CROCO_APP_COMPATIBILITY_CHOICES } from "../supported-options.js";
+import type { GenerationRuntimePlatform, GeneratorOptions } from "../generator.js";
 
 const generateMock = vi.hoisted(() => vi.fn());
 
@@ -23,7 +25,10 @@ vi.mock("../generator.js", () => ({
 
 describe("noninteractive CLI option validation", () => {
   beforeEach(() => {
-    generateMock.mockClear();
+    generateMock.mockReset();
+    generateMock.mockImplementation((targetDir: string, options: GeneratorOptions) =>
+      Promise.resolve(createGenerationResult(targetDir, options, resolveRuntimePlatform(options))),
+    );
   });
 
   it("resolves the project name from a Windows drive path", () => {
@@ -636,7 +641,7 @@ describe("noninteractive CLI option validation", () => {
       );
 
       expect(logSpy).toHaveBeenCalledTimes(1);
-      expect(JSON.parse(String(logSpy.mock.calls[0]?.[0]))).toEqual({
+      expect(JSON.parse(String(logSpy.mock.calls[0]?.[0]))).toMatchObject({
         ok: true,
         code: "create-croco-app/project-created",
         targetDir,
@@ -649,6 +654,16 @@ describe("noninteractive CLI option validation", () => {
           { command: "pnpm", args: ["install"], cwd: targetDir },
           { command: "pnpm", args: ["dev"], cwd: targetDir },
         ],
+        configuration: {
+          projectName: targetDir.split("/").at(-1),
+          scope: "@test",
+          preset: "blank",
+          runtimePlatform: "node",
+        },
+        postActions: {
+          git: "skipped",
+          dependencies: "skipped",
+        },
       });
     } finally {
       logSpy.mockRestore();
@@ -1054,3 +1069,12 @@ describe("noninteractive CLI option validation", () => {
     );
   });
 });
+
+function resolveRuntimePlatform(options: GeneratorOptions): GenerationRuntimePlatform {
+  return options.saasProviderProfile === "saas-cloudflare" ||
+    options.frontendDeploy === "cloudflare-meta-vite"
+    ? "cloudflare-workers"
+    : options.saasProviderProfile === "saas-lambda" || options.backendDeploy === "lambda"
+      ? "lambda"
+      : "node";
+}
