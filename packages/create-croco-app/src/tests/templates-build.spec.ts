@@ -928,7 +928,17 @@ function checkSaasStructure() {
   checkFileContains(
     "saas",
     ["apps", "api-server", "src", "tests", "ContractFuzz.spec.ts"],
-    /beforeEach\(\(\) => \{\s*Container\.reset\(\);\s*runtimeEvidence\.clear\(\);/,
+    /applicationRuntime: nodeApp\.applicationRuntime/,
+  );
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "tests", "ContractFuzz.spec.ts"],
+    /already been disposed/,
+  );
+  checkFileDoesNotContain(
+    "saas",
+    ["apps", "api-server", "src", "tests", "ContractFuzz.spec.ts"],
+    /Container\.reset\(\)/,
   );
   checkFileDoesNotContain(
     "saas",
