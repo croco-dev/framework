@@ -122,6 +122,12 @@
       "owner": "@croco/admin-react"
     },
     {
+      "path": "packages/admin-react/src/tests/AdminFormHooks.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
       "path": "packages/admin-react/src/tests/AdminPanel.spec.ts",
       "lane": "fast",
       "qualifiers": [],
