@@ -11,7 +11,7 @@ title: "DesktopPreloadTransport"
 
 ### invoke()
 
-> **invoke**(`commandId`, `input`): `Promise`\<`unknown`\>
+> **invoke**(`commandId`, `input`, `options`): `Promise`\<`unknown`\>
 
 #### Parameters
 
@@ -22,6 +22,10 @@ title: "DesktopPreloadTransport"
 ##### input
 
 `unknown`
+
+##### options
+
+[`DesktopPreloadCommandOptions`](/api/desktop-codegen/src/type-aliases/desktoppreloadcommandoptions/)
 
 #### Returns
 

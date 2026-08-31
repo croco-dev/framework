@@ -189,6 +189,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`InvalidMeteringInputProblem`](/api/customer-health-drizzle/src/classes/invalidmeteringinputproblem/)
 - [`BatchResultLengthMismatchProblem`](/api/dataloader-core/src/classes/batchresultlengthmismatchproblem/)
 - [`DesktopPreloadGenerationProblem`](/api/desktop-codegen/src/classes/desktoppreloadgenerationproblem/)
+- [`DesktopRendererGenerationProblem`](/api/desktop-codegen/src/classes/desktoprenderergenerationproblem/)
 - [`DuplicateDiagnosticsProviderProblem`](/api/diagnostics-core/src/classes/duplicatediagnosticsproviderproblem/)
 - [`InvalidDiagnosticsTimeoutProblem`](/api/diagnostics-core/src/classes/invaliddiagnosticstimeoutproblem/)
 - [`EntitlementDefinitionProblem`](/api/entitlements-core/src/classes/entitlementdefinitionproblem/)
