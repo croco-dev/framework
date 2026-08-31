@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { InMemoryInvitationStore } from "../libs/InMemoryInvitationStore";
 import type { Invitation } from "../libs/types";
 
@@ -196,27 +196,33 @@ describe("InMemoryInvitationStore", () => {
   });
 
   it("should isolate compare-and-set inputs and outputs from stored invitations", async () => {
-    await store.save(
-      createInvitation({
-        acceptedAt: new Date("2026-01-02T00:00:00.000Z"),
-        revokedAt: new Date("2026-01-03T00:00:00.000Z"),
-      }),
-    );
-    const acceptedAt = new Date("2026-01-04T00:00:00.000Z");
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-01-03T00:00:00.000Z"));
+      await store.save(
+        createInvitation({
+          acceptedAt: new Date("2026-01-02T00:00:00.000Z"),
+          revokedAt: new Date("2026-01-03T00:00:00.000Z"),
+        }),
+      );
+      const acceptedAt = new Date("2026-01-04T00:00:00.000Z");
 
-    const updated = await store.compareAndSetStatus("tenant-1", "inv-1", "pending", "accepted", {
-      acceptedAt,
-    });
-    expect(updated).not.toBeNull();
-    if (!updated) {
-      return;
+      const updated = await store.compareAndSetStatus("tenant-1", "inv-1", "pending", "accepted", {
+        acceptedAt,
+      });
+      expect(updated).not.toBeNull();
+      if (!updated) {
+        return;
+      }
+      const expected = structuredClone(updated);
+
+      acceptedAt.setTime(Date.parse("2041-01-01T00:00:00.000Z"));
+      mutateInvitation(updated);
+
+      expect(await store.findById(expected.id)).toEqual(expected);
+    } finally {
+      vi.useRealTimers();
     }
-    const expected = structuredClone(updated);
-
-    acceptedAt.setTime(Date.parse("2041-01-01T00:00:00.000Z"));
-    mutateInvitation(updated);
-
-    expect(await store.findById(expected.id)).toEqual(expected);
   });
 
   it("should replay one durable creation for a tenant-scoped idempotency key", async () => {

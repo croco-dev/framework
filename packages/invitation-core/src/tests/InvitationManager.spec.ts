@@ -785,6 +785,71 @@ describe("InvitationManager", () => {
     expect(expired?.status).toBe("expired");
   });
 
+  it("should reject an invitation that expires after lookup but before acceptance", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+      const invitation = createInvitation("boundary-token", {
+        expiresAt: new Date("2026-01-01T00:00:01.000Z"),
+      });
+      await store.save(invitation);
+
+      const boundaryTxManager = new TxManager<unknown>({
+        async transaction<T>(fn: (client: unknown) => Promise<T>): Promise<T> {
+          vi.setSystemTime(new Date("2026-01-01T00:00:02.000Z"));
+          return fn({});
+        },
+        async savepoint<T>(_client: unknown, fn: (client: unknown) => Promise<T>): Promise<T> {
+          return fn({});
+        },
+        supportsSavepoint: () => false,
+      });
+      const boundaryManager = new InvitationManager(
+        store,
+        { addMember } as unknown as MembershipManager,
+        { send } as unknown as NotificationService,
+        {
+          publishNow,
+          publishMany: vi.fn(),
+        } as unknown as EventPublisher,
+        boundaryTxManager,
+      );
+
+      await expect(
+        boundaryManager.acceptInvitation({
+          token: "boundary-token",
+          userId: "user-1",
+          email: "member@croco.dev",
+        }),
+      ).rejects.toBeInstanceOf(InvitationExpiredProblem);
+
+      expect((await store.findById(invitation.id))?.status).toBe("pending");
+      expect(addMember).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("should report expiration when cleanup expires the invitation before acceptance", async () => {
+    const invitation = createInvitation("cleanup-race-token");
+    await store.save(invitation);
+    vi.spyOn(store, "compareAndSetStatus").mockImplementationOnce(async () => {
+      await store.updateStatus(invitation.tenantId, invitation.id, "expired");
+      return null;
+    });
+
+    await expect(
+      manager.acceptInvitation({
+        token: "cleanup-race-token",
+        userId: "user-1",
+        email: "member@croco.dev",
+      }),
+    ).rejects.toBeInstanceOf(InvitationExpiredProblem);
+
+    expect((await store.findById(invitation.id))?.status).toBe("expired");
+    expect(addMember).not.toHaveBeenCalled();
+  });
+
   it("should throw InvitationAlreadyAcceptedProblem for accepted invitation", async () => {
     await store.save(
       createInvitation("accepted-token", {

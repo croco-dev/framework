@@ -1,6 +1,8 @@
 import "reflect-metadata";
 import type { Invitation } from "@croco/invitation-core";
 import type { TxManager } from "@croco/tx-core";
+import type { SQL } from "drizzle-orm";
+import { PgDialect } from "drizzle-orm/pg-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   type DrizzleInvitationClient,
@@ -41,6 +43,20 @@ const createUpdateChain = (rows: Invitation[]) => {
   };
 };
 
+const createSelectForUpdateChain = (rows: Array<{ id: string }>) => {
+  const forUpdate = vi.fn().mockResolvedValue(rows);
+  return {
+    query: {
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          for: forUpdate,
+        }),
+      }),
+    },
+    forUpdate,
+  };
+};
+
 describe("DrizzleInvitationStore", () => {
   let store!: DrizzleInvitationStore;
   let mockDb!: {
@@ -57,7 +73,8 @@ describe("DrizzleInvitationStore", () => {
     };
 
     const mockTxManager = {
-      getClient: vi.fn().mockReturnValue(null),
+      getClient: vi.fn().mockReturnValue(mockDb),
+      run: vi.fn(async (fn: () => Promise<unknown>) => fn()),
     };
 
     store = new DrizzleInvitationStore(
@@ -302,11 +319,72 @@ describe("DrizzleInvitationStore", () => {
       tenantId: "tenant-1",
       status: "accepted",
     });
+    const lock = createSelectForUpdateChain([{ id: accepted.id }]);
+    mockDb.select.mockReturnValue(lock.query);
     mockDb.update.mockReturnValue(createUpdateChain([accepted]));
 
     const updated = await store.compareAndSetStatus("tenant-1", "inv-1", "pending", "accepted");
 
     expect(updated?.tenantId).toBe("tenant-1");
+    expect(lock.forUpdate).toHaveBeenCalledWith("update");
     expect(mockDb.update.mock.results[0].value.where).toHaveBeenCalledTimes(1);
+  });
+
+  it("should compare expiry with UTC acceptance times independently of the session time zone", async () => {
+    const acceptedAt = new Date("2026-01-01T00:00:00.000Z");
+    const lock = createSelectForUpdateChain([{ id: "inv-1" }]);
+    mockDb.select.mockReturnValue(lock.query);
+    mockDb.update.mockReturnValue(createUpdateChain([]));
+
+    await store.compareAndSetStatus("tenant-1", "inv-1", "pending", "accepted", {
+      acceptedAt,
+    });
+
+    const whereCall = mockDb.update.mock.results[0].value.where.mock.calls[0];
+    expect(whereCall).toBeDefined();
+    const query = new PgDialect().sqlToQuery(whereCall?.[0] as SQL);
+    const setCall = mockDb.update.mock.results[0].value.set.mock.calls[0]?.[0] as
+      | { acceptedAt?: SQL }
+      | undefined;
+    const acceptedAtQuery = new PgDialect().sqlToQuery(setCall?.acceptedAt as SQL);
+
+    expect(query.sql).toContain('"invitations"."tenant_id" = $1');
+    expect(query.sql).toContain('"invitations"."id" = $2');
+    expect(query.sql).toContain('"invitations"."status" = $3');
+    expect(query.sql).toContain(
+      "\"invitations\".\"expires_at\" > greatest($4::timestamptz AT TIME ZONE 'UTC', statement_timestamp() AT TIME ZONE 'UTC')",
+    );
+    expect(query.params).toEqual(["tenant-1", "inv-1", "pending", acceptedAt.toISOString()]);
+    expect(acceptedAtQuery.sql).toBe(
+      "greatest($1::timestamptz AT TIME ZONE 'UTC', statement_timestamp() AT TIME ZONE 'UTC')",
+    );
+    expect(acceptedAtQuery.params).toEqual([acceptedAt.toISOString()]);
+    expect(lock.forUpdate).toHaveBeenCalledWith("update");
+    expect(lock.forUpdate.mock.invocationCallOrder[0]).toBeLessThan(
+      mockDb.update.mock.invocationCallOrder[0],
+    );
+  });
+
+  it("should use one UTC database clock after locking when acceptedAt is omitted", async () => {
+    const lock = createSelectForUpdateChain([{ id: "inv-1" }]);
+    mockDb.select.mockReturnValue(lock.query);
+    mockDb.update.mockReturnValue(createUpdateChain([]));
+
+    await store.compareAndSetStatus("tenant-1", "inv-1", "pending", "accepted");
+
+    const update = mockDb.update.mock.results[0].value;
+    const whereCall = update.where.mock.calls[0];
+    const query = new PgDialect().sqlToQuery(whereCall?.[0] as SQL);
+    const setCall = update.set.mock.calls[0]?.[0] as { acceptedAt?: SQL } | undefined;
+    const acceptedAtQuery = new PgDialect().sqlToQuery(setCall?.acceptedAt as SQL);
+    expect(query.sql).toContain(
+      '"invitations"."expires_at" > statement_timestamp() AT TIME ZONE \'UTC\'',
+    );
+    expect(query.params).toEqual(["tenant-1", "inv-1", "pending"]);
+    expect(acceptedAtQuery.sql).toBe("statement_timestamp() AT TIME ZONE 'UTC'");
+    expect(lock.forUpdate).toHaveBeenCalledWith("update");
+    expect(lock.forUpdate.mock.invocationCallOrder[0]).toBeLessThan(
+      mockDb.update.mock.invocationCallOrder[0],
+    );
   });
 });

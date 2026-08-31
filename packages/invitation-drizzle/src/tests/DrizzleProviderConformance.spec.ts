@@ -290,18 +290,27 @@ describe("invitation-drizzle provider conformance", () => {
             {
               name: "returns null for stale compare-and-set status updates",
               run: async () => {
-                const store = new DrizzleInvitationStore(
-                  {
-                    update: vi.fn().mockReturnValue({
-                      set: vi.fn().mockReturnValue({
-                        where: vi.fn().mockReturnValue({
-                          returning: vi.fn().mockResolvedValue([]),
-                        }),
+                const client = {
+                  select: vi.fn().mockReturnValue({
+                    from: vi.fn().mockReturnValue({
+                      where: vi.fn().mockReturnValue({
+                        for: vi.fn().mockResolvedValue([{ id: "invitation-1" }]),
                       }),
                     }),
-                  } as unknown as DrizzleInvitationClient,
+                  }),
+                  update: vi.fn().mockReturnValue({
+                    set: vi.fn().mockReturnValue({
+                      where: vi.fn().mockReturnValue({
+                        returning: vi.fn().mockResolvedValue([]),
+                      }),
+                    }),
+                  }),
+                };
+                const store = new DrizzleInvitationStore(
+                  client as unknown as DrizzleInvitationClient,
                   {
-                    getClient: vi.fn().mockReturnValue(null),
+                    getClient: vi.fn().mockReturnValue(client),
+                    run: vi.fn(async (fn: () => Promise<unknown>) => fn()),
                   } as unknown as InvitationTxManager,
                 );
 

@@ -12,7 +12,7 @@ import {
 // oxlint-disable-next-line typescript/consistent-type-imports
 import type { TxManager } from "@croco/tx-core";
 import type { DrizzleDb } from "@croco/tx-drizzle";
-import { and, count, eq, gte, inArray, isNull, lte, or } from "drizzle-orm";
+import { and, count, eq, gt, gte, inArray, isNull, lte, or, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import {
   INVITATION_TOKEN_CIPHER,
@@ -493,8 +493,53 @@ export class DrizzleInvitationStore extends InvitationStore {
     desired: InvitationStatus,
     meta: { acceptedAt?: Date; rejectedAt?: Date } = {},
   ): Promise<Invitation | null> {
-    const client = this.txManager.getClient() ?? this.db;
+    if (desired === "accepted") {
+      return this.txManager.run(async () => {
+        const client = this.txManager.getClient() ?? this.db;
+        const locked = await client
+          .select({ id: invitations.id })
+          .from(invitations)
+          .where(
+            and(
+              eq(invitations.tenantId, tenantId),
+              eq(invitations.id, id),
+              eq(invitations.status, expected),
+            ),
+          )
+          .for("update");
+        if (locked.length === 0) {
+          return null;
+        }
 
+        const databaseAcceptedAt = sql<Date>`statement_timestamp() AT TIME ZONE 'UTC'`;
+        const acceptedAt = meta.acceptedAt
+          ? sql<Date>`greatest(${meta.acceptedAt.toISOString()}::timestamptz AT TIME ZONE 'UTC', ${databaseAcceptedAt})`
+          : databaseAcceptedAt;
+        const result = (await client
+          .update(invitations)
+          .set({
+            status: desired,
+            acceptedAt,
+          })
+          .where(
+            and(
+              eq(invitations.tenantId, tenantId),
+              eq(invitations.id, id),
+              eq(invitations.status, expected),
+              gt(invitations.expiresAt, acceptedAt),
+            ),
+          )
+          .returning()) as InvitationRow[];
+
+        if (result.length === 0) {
+          return null;
+        }
+
+        return this.mapToInvitation(result[0]);
+      });
+    }
+
+    const client = this.txManager.getClient() ?? this.db;
     const result = (await client
       .update(invitations)
       .set({
