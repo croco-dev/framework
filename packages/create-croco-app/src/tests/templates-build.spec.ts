@@ -935,10 +935,20 @@ function checkSaasStructure() {
     ["apps", "api-server", "src", "tests", "ContractFuzz.spec.ts"],
     /already been disposed/,
   );
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "tests", "ContractFuzz.spec.ts"],
+    /const activeScopeIds = getTypeDIContainerScopeIds\(\)/,
+  );
   checkFileDoesNotContain(
     "saas",
     ["apps", "api-server", "src", "tests", "ContractFuzz.spec.ts"],
     /Container\.reset\(\)/,
+  );
+  checkFileDoesNotContain(
+    "saas",
+    ["apps", "api-server", "src", "tests", "ContractFuzz.spec.ts"],
+    /TypeDIContainer\.remove\(/,
   );
   checkFileDoesNotContain(
     "saas",

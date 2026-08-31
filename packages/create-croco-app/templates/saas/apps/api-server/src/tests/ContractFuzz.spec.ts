@@ -43,6 +43,10 @@ type RuntimeEvidence = {
   waitUntilWorkCompleted: boolean;
 };
 
+type TypeDIContainerRegistry = {
+  readonly instances: readonly { readonly id: string }[];
+};
+
 const runtimeEvidence = new Map<string, RuntimeEvidence>();
 
 describe("generated contract verification", () => {
@@ -55,9 +59,11 @@ describe("generated contract verification", () => {
     const lambdaApp = createCrocoApp({ additionalMiddlewares: [runtimeEvidenceMiddleware] });
     const nodeScopeId = nodeApp.applicationRuntime.scopeId;
     const lambdaScopeId = lambdaApp.applicationRuntime.scopeId;
+    const nodeScope = TypeDIContainer.of(nodeScopeId);
+    const lambdaScope = TypeDIContainer.of(lambdaScopeId);
 
-    expect(TypeDIContainer.of(nodeScopeId).has(LOGGER_TOKEN)).toBe(true);
-    expect(TypeDIContainer.of(lambdaScopeId).has(LOGGER_TOKEN)).toBe(true);
+    expect(nodeScope.has(LOGGER_TOKEN)).toBe(true);
+    expect(lambdaScope.has(LOGGER_TOKEN)).toBe(true);
 
     {
       await using node = await createTestKernel({
@@ -157,12 +163,18 @@ describe("generated contract verification", () => {
     expect(() => lambdaApp.applicationRuntime.run(() => undefined)).toThrow(
       /already been disposed/,
     );
-    expect(TypeDIContainer.of(nodeScopeId).has(LOGGER_TOKEN)).toBe(false);
-    expect(TypeDIContainer.of(lambdaScopeId).has(LOGGER_TOKEN)).toBe(false);
-    TypeDIContainer.remove(nodeScopeId);
-    TypeDIContainer.remove(lambdaScopeId);
+    expect(nodeScope.has(LOGGER_TOKEN)).toBe(false);
+    expect(lambdaScope.has(LOGGER_TOKEN)).toBe(false);
+    const activeScopeIds = getTypeDIContainerScopeIds();
+    expect(activeScopeIds).not.toContain(nodeScopeId);
+    expect(activeScopeIds).not.toContain(lambdaScopeId);
   });
 });
+
+function getTypeDIContainerScopeIds(): readonly string[] {
+  const registry = TypeDIContainer as unknown as TypeDIContainerRegistry;
+  return registry.instances.map((instance) => instance.id);
+}
 
 function createRequest(testCase: ContractGeneratedCase): {
   readonly options: {
