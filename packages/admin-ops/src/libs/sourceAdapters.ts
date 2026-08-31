@@ -656,10 +656,10 @@ async function listAllExecutions(
     });
     executions.push(...page);
 
-    if (page.length < EXECUTION_LIST_PAGE_SIZE) {
+    if (page.length === 0) {
       return executions;
     }
 
-    offset += EXECUTION_LIST_PAGE_SIZE;
+    offset += page.length;
   }
 }

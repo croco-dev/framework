@@ -137,7 +137,18 @@ class MemoryExecutionStore extends ExecutionStore implements ExecutionLogStore {
       executions = executions.filter((execution) => execution.type === options.type);
     }
 
-    return executions;
+    if (options.parentId !== undefined) {
+      executions = executions.filter((execution) => execution.parentId === options.parentId);
+    }
+
+    if (options.replayOf !== undefined) {
+      executions = executions.filter((execution) => execution.replayOf === options.replayOf);
+    }
+
+    const offset = options.offset ?? 0;
+    return options.limit === undefined
+      ? executions.slice(offset)
+      : executions.slice(offset, offset + options.limit);
   }
 
   async delete(id: string): Promise<void> {
@@ -157,19 +168,16 @@ class MemoryExecutionStore extends ExecutionStore implements ExecutionLogStore {
 }
 
 class TruncatingMemoryExecutionStore extends MemoryExecutionStore {
+  constructor(
+    initialExecutions: readonly Execution[],
+    private readonly maxPageSize = 100,
+  ) {
+    super(initialExecutions);
+  }
+
   override async list(options: ListExecutionsOptions = {}): Promise<Execution[]> {
-    let executions = await super.list(options);
-
-    if (options.parentId !== undefined) {
-      executions = executions.filter((candidate) => candidate.parentId === options.parentId);
-    }
-
-    if (options.replayOf !== undefined) {
-      executions = executions.filter((candidate) => candidate.replayOf === options.replayOf);
-    }
-
-    const offset = options.offset ?? 0;
-    return executions.slice(offset, offset + (options.limit ?? 100));
+    const limit = Math.min(options.limit ?? 100, this.maxPageSize);
+    return super.list({ ...options, limit });
   }
 }
 
@@ -313,7 +321,9 @@ describe("RetryConsole", () => {
         createdAt: new Date("2026-01-01T00:02:00.000Z"),
       }),
     );
-    const manager = new ExecutionManagerImpl(new TruncatingMemoryExecutionStore(initialExecutions));
+    const manager = new ExecutionManagerImpl(
+      new TruncatingMemoryExecutionStore(initialExecutions, 40),
+    );
     const listSpy = vi.spyOn(manager, "list");
     const console = createRetryConsole([createTaskRetryConsoleSource(manager)]);
 
@@ -321,7 +331,9 @@ describe("RetryConsole", () => {
 
     expect(items.map((item) => item.id)).toEqual(["exec-101"]);
     expect(listSpy).toHaveBeenCalledWith({ limit: 100, offset: 0 });
-    expect(listSpy).toHaveBeenCalledWith({ limit: 100, offset: 100 });
+    expect(listSpy).toHaveBeenCalledWith({ limit: 100, offset: 40 });
+    expect(listSpy).toHaveBeenCalledWith({ limit: 100, offset: 80 });
+    expect(listSpy).toHaveBeenCalledWith({ limit: 100, offset: 101 });
   });
 
   it("routes indeterminate timeouts to inspection instead of an invalid retry", async () => {
@@ -584,6 +596,11 @@ describe("RetryConsole", () => {
       execution({
         id: `exec-${index + 2}`,
         status: "completed",
+        replayOf: sourceExecution.id,
+        metadata: {
+          recoveryActorId: audit.actorId,
+          recoveryAuditIdempotencyKey: `earlier-recovery-${index + 1}`,
+        },
         createdAt: new Date(Date.UTC(2026, 0, 1, 0, 0, index + 1)),
       }),
     );
@@ -598,7 +615,10 @@ describe("RetryConsole", () => {
       createdAt: new Date("2026-01-01T00:02:00.000Z"),
     });
     const manager = new ExecutionManagerImpl(
-      new TruncatingMemoryExecutionStore([sourceExecution, ...fillerExecutions, existingReplay]),
+      new TruncatingMemoryExecutionStore(
+        [sourceExecution, ...fillerExecutions, existingReplay],
+        40,
+      ),
     );
     const replaySpy = vi.spyOn(manager, "replay");
     const console = createRetryConsole([createTaskRetryConsoleSource(manager)]);
@@ -618,9 +638,6 @@ describe("RetryConsole", () => {
       throw new Error("Expected existing replay recovery to succeed");
     }
     expect(result.providerResult).toMatchObject({ id: existingReplay.id });
-    await expect(
-      manager.list({ replayOf: sourceExecution.id, limit: 100, offset: 0 }),
-    ).resolves.toHaveLength(1);
     expect(replaySpy).not.toHaveBeenCalled();
   });
 
