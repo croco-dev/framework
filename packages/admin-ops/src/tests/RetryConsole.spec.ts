@@ -137,7 +137,18 @@ class MemoryExecutionStore extends ExecutionStore implements ExecutionLogStore {
       executions = executions.filter((execution) => execution.type === options.type);
     }
 
-    return executions;
+    if (options.parentId !== undefined) {
+      executions = executions.filter((execution) => execution.parentId === options.parentId);
+    }
+
+    if (options.replayOf !== undefined) {
+      executions = executions.filter((execution) => execution.replayOf === options.replayOf);
+    }
+
+    const offset = options.offset ?? 0;
+    return options.limit === undefined
+      ? executions.slice(offset)
+      : executions.slice(offset, offset + options.limit);
   }
 
   async delete(id: string): Promise<void> {
@@ -153,6 +164,20 @@ class MemoryExecutionStore extends ExecutionStore implements ExecutionLogStore {
     return this.update(id, {
       logs: [...(existing.logs ?? []), entry],
     });
+  }
+}
+
+class TruncatingMemoryExecutionStore extends MemoryExecutionStore {
+  constructor(
+    initialExecutions: readonly Execution[],
+    private readonly maxPageSize = 100,
+  ) {
+    super(initialExecutions);
+  }
+
+  override async list(options: ListExecutionsOptions = {}): Promise<Execution[]> {
+    const limit = Math.min(options.limit ?? 100, this.maxPageSize);
+    return super.list({ ...options, limit });
   }
 }
 
@@ -282,6 +307,35 @@ function lifecycleRecoveryInput(
 }
 
 describe("RetryConsole", () => {
+  it("lists recent failures beyond the execution store default page", async () => {
+    const initialExecutions = Array.from({ length: 100 }, (_, index) =>
+      execution({
+        id: `exec-${index + 1}`,
+        status: "completed",
+        createdAt: new Date(Date.UTC(2026, 0, 1, 0, 0, index)),
+      }),
+    );
+    initialExecutions.push(
+      execution({
+        id: "exec-101",
+        createdAt: new Date("2026-01-01T00:02:00.000Z"),
+      }),
+    );
+    const manager = new ExecutionManagerImpl(
+      new TruncatingMemoryExecutionStore(initialExecutions, 40),
+    );
+    const listSpy = vi.spyOn(manager, "list");
+    const console = createRetryConsole([createTaskRetryConsoleSource(manager)]);
+
+    const items = await console.list();
+
+    expect(items.map((item) => item.id)).toEqual(["exec-101"]);
+    expect(listSpy).toHaveBeenCalledWith({ limit: 100, offset: 0 });
+    expect(listSpy).toHaveBeenCalledWith({ limit: 100, offset: 40 });
+    expect(listSpy).toHaveBeenCalledWith({ limit: 100, offset: 80 });
+    expect(listSpy).toHaveBeenCalledWith({ limit: 100, offset: 101 });
+  });
+
   it("routes indeterminate timeouts to inspection instead of an invalid retry", async () => {
     const manager = new ExecutionManagerImpl(
       new MemoryExecutionStore([
@@ -343,7 +397,7 @@ describe("RetryConsole", () => {
     ]);
     expect(result.status).toBe("denied");
     if (result.status !== "denied") {
-      throw new Error("Expected cancelled replay to be denied");
+      return;
     }
     expect(result.problem.message).toBe("Cancelled executions cannot be replayed");
     expect(replaySpy).not.toHaveBeenCalled();
@@ -526,6 +580,65 @@ describe("RetryConsole", () => {
       },
     );
     expect(replaySpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("deduplicates a replay beyond the execution store default page", async () => {
+    const sourceExecution = execution({
+      attempts: 3,
+      maxAttempts: 3,
+      error: {
+        code: "UPSTREAM_UNAVAILABLE",
+        message: "Email provider unavailable after retries",
+        retryable: true,
+      },
+    });
+    const fillerExecutions = Array.from({ length: 99 }, (_, index) =>
+      execution({
+        id: `exec-${index + 2}`,
+        status: "completed",
+        replayOf: sourceExecution.id,
+        metadata: {
+          recoveryActorId: audit.actorId,
+          recoveryAuditIdempotencyKey: `earlier-recovery-${index + 1}`,
+        },
+        createdAt: new Date(Date.UTC(2026, 0, 1, 0, 0, index + 1)),
+      }),
+    );
+    const existingReplay = execution({
+      id: "exec-101",
+      status: "pending",
+      replayOf: sourceExecution.id,
+      metadata: {
+        recoveryActorId: audit.actorId,
+        recoveryAuditIdempotencyKey: audit.idempotencyKey,
+      },
+      createdAt: new Date("2026-01-01T00:02:00.000Z"),
+    });
+    const manager = new ExecutionManagerImpl(
+      new TruncatingMemoryExecutionStore(
+        [sourceExecution, ...fillerExecutions, existingReplay],
+        40,
+      ),
+    );
+    const replaySpy = vi.spyOn(manager, "replay");
+    const console = createRetryConsole([createTaskRetryConsoleSource(manager)]);
+
+    const result = await console.recover({
+      itemId: sourceExecution.id,
+      actionId: "replay",
+      permission: {
+        granted: true,
+        descriptor: permission("replay", "task", sourceExecution.id),
+      },
+      audit,
+    });
+
+    expect(result.status).toBe("succeeded");
+    if (result.status !== "succeeded") {
+      return;
+    }
+    expect(result.providerResult).toMatchObject({ id: existingReplay.id });
+    expect(replaySpy).not.toHaveBeenCalled();
   });
 
   it("keeps non-retryable failures distinct and preserves Problem details", async () => {

@@ -226,6 +226,7 @@ idempotencyKey로 기존 실행을 조회합니다.
 > **list**(`options?`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)[]\>
 
 상태, 타입, 부모 실행 조건으로 실행 목록을 조회합니다.
+`limit`을 생략하면 생성 시각과 ID 오름차순의 첫 100개를 반환합니다.
 
 #### Parameters
 

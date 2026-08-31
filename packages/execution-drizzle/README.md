@@ -61,7 +61,8 @@ const runningBatch = await store.listRunning({ afterId: undefined, limit: 100 })
 - `appendLog(id, entry)`, 실행 로그를 원자적으로 추가합니다.
 - `acquireContinuation(id, input)`, 전달 토큰을 검증하고 continuation lease를 compare-and-set으로 획득합니다.
 - `updateClaimedContinuation(id, input)`, fencing token이 유효한 claim만 갱신합니다.
-- `list(options)`, 상태, 타입, 부모 실행, 리플레이 원본 기준으로 목록을 조회합니다.
+- `list(options)`, 상태, 타입, 부모 실행, 리플레이 원본 기준으로 목록을 조회합니다. `limit`을 생략하면 생성
+  시각과 ID 오름차순의 첫 100개를 반환하며, 전체 스캔에는 `limit`과 `offset` 페이지네이션이 필요합니다.
 - `delete(id)`, 실행을 삭제합니다.
 
 ### `executions`

@@ -367,7 +367,7 @@ async function findExistingRecoveryReplay(
   item: RetryConsoleItem,
   request: RetryConsoleRecoveryInput,
 ): Promise<Execution | undefined> {
-  const executions = await manager.list();
+  const executions = await listAllExecutions(manager, { replayOf: item.id });
   return executions.find((execution) =>
     isRecoveryReplay(execution, item.id, request.audit.idempotencyKey),
   );
@@ -428,7 +428,7 @@ export function createExecutionRetryConsoleSource(
     kind: options.kind,
 
     async list(listOptions: RetryConsoleListOptions = {}): Promise<readonly RetryConsoleItem[]> {
-      const executions = await manager.list();
+      const executions = await listAllExecutions(manager);
       return executions
         .filter((execution) => options.filter?.(execution) ?? true)
         .map((execution) => retryConsoleItemFromExecution(execution, options, manager))
@@ -637,4 +637,29 @@ export function createLifecycleRetryConsoleSource(
       return options.recover(run, request);
     },
   };
+}
+
+const EXECUTION_LIST_PAGE_SIZE = 100;
+
+async function listAllExecutions(
+  manager: ExecutionAdminManager,
+  filters: { readonly replayOf?: string | null } = {},
+): Promise<Execution[]> {
+  const executions: Execution[] = [];
+  let offset = 0;
+
+  for (;;) {
+    const page = await manager.list({
+      ...filters,
+      limit: EXECUTION_LIST_PAGE_SIZE,
+      offset,
+    });
+    executions.push(...page);
+
+    if (page.length === 0) {
+      return executions;
+    }
+
+    offset += page.length;
+  }
 }

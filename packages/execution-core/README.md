@@ -302,6 +302,9 @@ await manager.recordLog(execution.id, {
 });
 ```
 
+전체 결과가 필요한 호출자는 `limit`과 `offset`으로 끝까지 페이지를 순회해야 합니다. 저장소 구현은
+`limit`이 생략될 때 문서화된 기본 페이지 크기를 적용할 수 있습니다.
+
 ### 실패 실행 리플레이
 
 ```typescript
