@@ -1,5 +1,5 @@
 import type { EventBus } from "@croco/events-core";
-import { Container } from "@croco/framework-context";
+import { Container, type ILogger, LOGGER_TOKEN } from "@croco/framework-context";
 import type { MeteringService } from "@croco/metering-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -16,10 +16,21 @@ import {
 describe("@AiMetered decorator", () => {
   let mockMeteringService!: MeteringService;
   let mockEventBus!: EventBus;
+  let mockLogger!: ILogger;
   let llmMeteringService!: LlmMeteringService;
 
   beforeEach(() => {
     Container.reset();
+
+    mockLogger = {
+      debug: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      fatal: vi.fn(),
+      child: vi.fn(),
+    } as unknown as ILogger;
+    Container.set(LOGGER_TOKEN, mockLogger);
 
     // Mock MeteringService
     mockMeteringService = {
@@ -255,6 +266,105 @@ describe("@AiMetered decorator", () => {
         }),
       );
     });
+
+    it("should record stream usage when the consumer exits early", async () => {
+      class TestService {
+        @AiMetered()
+        stream() {
+          return this.createStream();
+        }
+
+        private async *createStream() {
+          yield {
+            delta: "enough",
+            usage: {
+              promptTokens: 13,
+              completionTokens: 17,
+              totalTokens: 30,
+              accuracy: "EXACT" as const,
+            },
+            metadata: { modelId: "gpt-4", provider: "openai" },
+          };
+          yield { delta: "unused" };
+        }
+      }
+
+      const stream = await Promise.resolve(new TestService().stream());
+
+      for await (const _chunk of stream) {
+        break;
+      }
+
+      expect(mockMeteringService.record).toHaveBeenCalledTimes(3);
+      expect(mockMeteringService.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          meterId: "llm.prompt_tokens",
+          value: 13,
+          metadata: expect.objectContaining({ operationType: "stream" }),
+        }),
+      );
+      expect(mockMeteringService.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          meterId: "llm.completion_tokens",
+          value: 17,
+        }),
+      );
+      expect(mockMeteringService.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          meterId: "llm.cost_usd_nanos",
+          metadata: expect.objectContaining({ operationType: "stream" }),
+        }),
+      );
+    });
+
+    it("should record stream usage and preserve an error thrown by the consumer", async () => {
+      class TestService {
+        @AiMetered()
+        stream() {
+          return this.createStream();
+        }
+
+        private async *createStream() {
+          yield {
+            delta: "enough",
+            usage: {
+              promptTokens: 19,
+              completionTokens: 23,
+              totalTokens: 42,
+            },
+            metadata: { modelId: "gpt-4", provider: "openai" },
+          };
+          yield { delta: "unused" };
+        }
+      }
+
+      const consumerError = new Error("consumer failed");
+      const stream = await Promise.resolve(new TestService().stream());
+      const consumeStream = async () => {
+        for await (const _chunk of stream) {
+          throw consumerError;
+        }
+      };
+
+      await expect(consumeStream()).rejects.toBe(consumerError);
+      expect(mockMeteringService.record).toHaveBeenCalledTimes(3);
+      expect(mockMeteringService.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          meterId: "llm.prompt_tokens",
+          value: 19,
+          metadata: expect.objectContaining({ operationType: "stream" }),
+        }),
+      );
+      expect(mockMeteringService.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          meterId: "llm.completion_tokens",
+          value: 23,
+        }),
+      );
+      expect(mockMeteringService.record).toHaveBeenCalledWith(
+        expect.objectContaining({ meterId: "llm.cost_usd_nanos" }),
+      );
+    });
   });
 
   describe("embed/embedMany methods", () => {
@@ -334,6 +444,112 @@ describe("@AiMetered decorator", () => {
       };
 
       await expect(consumeStream()).rejects.toThrow(LlmMeteringRecordFailedProblem);
+    });
+
+    it("should surface stream metering failure when the consumer exits early", async () => {
+      class TestService {
+        @AiMetered()
+        stream() {
+          return this.createStream();
+        }
+
+        private async *createStream() {
+          yield {
+            delta: "enough",
+            usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
+          };
+          yield { delta: "unused" };
+        }
+      }
+
+      vi.mocked(mockMeteringService.record).mockRejectedValue(new Error("Stream metering failed"));
+
+      const stream = await Promise.resolve(new TestService().stream());
+      const consumeStream = async () => {
+        for await (const _chunk of stream) {
+          break;
+        }
+      };
+
+      await expect(consumeStream()).rejects.toThrow(LlmMeteringRecordFailedProblem);
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        "[LlmMetering] Failed to finalize stream usage recording",
+        expect.objectContaining({
+          meteringError: expect.any(LlmMeteringRecordFailedProblem),
+        }),
+      );
+    });
+
+    it("should preserve a provider stream error and report a concurrent metering failure", async () => {
+      const providerError = new Error("Provider stream failed");
+
+      class TestService {
+        @AiMetered()
+        stream() {
+          return this.createStream();
+        }
+
+        private async *createStream() {
+          yield {
+            delta: "partial",
+            usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
+          };
+          throw providerError;
+        }
+      }
+
+      vi.mocked(mockMeteringService.record).mockRejectedValue(new Error("Stream metering failed"));
+
+      const stream = await Promise.resolve(new TestService().stream());
+      const consumeStream = async () => {
+        for await (const _chunk of stream) {
+          // Consume until the provider fails.
+        }
+      };
+
+      await expect(consumeStream()).rejects.toBe(providerError);
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        "[LlmMetering] Failed to finalize stream usage recording",
+        expect.objectContaining({
+          iterationError: providerError,
+          meteringError: expect.any(LlmMeteringRecordFailedProblem),
+        }),
+      );
+    });
+
+    it("should preserve a consumer error and report a concurrent metering failure", async () => {
+      class TestService {
+        @AiMetered()
+        stream() {
+          return this.createStream();
+        }
+
+        private async *createStream() {
+          yield {
+            delta: "partial",
+            usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
+          };
+          yield { delta: "unused" };
+        }
+      }
+
+      vi.mocked(mockMeteringService.record).mockRejectedValue(new Error("Stream metering failed"));
+
+      const consumerError = new Error("Consumer failed");
+      const stream = await Promise.resolve(new TestService().stream());
+      const consumeStream = async () => {
+        for await (const _chunk of stream) {
+          throw consumerError;
+        }
+      };
+
+      await expect(consumeStream()).rejects.toBe(consumerError);
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        "[LlmMetering] Failed to finalize stream usage recording",
+        expect.objectContaining({
+          meteringError: expect.any(LlmMeteringRecordFailedProblem),
+        }),
+      );
     });
 
     it("should fail before the original method runs when LlmMeteringService is not set", async () => {

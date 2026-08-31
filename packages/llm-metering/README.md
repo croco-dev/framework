@@ -65,7 +65,7 @@ await runWithLlmMeteringService(metering, () => new LlmFacade().generate());
 - `@AiMetered`, 메서드 결과에서 사용량을 추출해 자동 기록합니다.
 - `setLlmMeteringService`, `getLlmMeteringService`, 데코레이터용 전역 기본 service를 관리합니다.
 - `runWithLlmMeteringService`, 동시 실행별 service를 격리합니다.
-- `createMeteredAsyncIterable`, 스트리밍 완료 시 사용량을 기록합니다.
+- `createMeteredAsyncIterable`, 정상 완료·조기 종료·consumer 예외 시 수신한 사용량을 기록합니다. 미터링 종료 실패는 관측 가능하게 보고하며, 이미 발생한 provider 오류를 보존합니다.
 - `extractUsageFromChunk`, 청크에서 usage와 모델 정보를 추출합니다.
 
 ### 주요 타입
