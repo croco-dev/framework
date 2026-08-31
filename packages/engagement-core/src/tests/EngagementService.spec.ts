@@ -313,6 +313,54 @@ describe("EngagementService", () => {
     );
   });
 
+  it("redacts exceptions thrown while parsing message data", async () => {
+    const ThrowingMessage = defineMessage({
+      id: "billing.throwing-transform",
+      topic: "billing",
+      data: z.object({
+        secret: z.string().transform((value): never => {
+          throw new Error(`transform failed for ${value}`);
+        }),
+      }),
+      channels: ["email"],
+    });
+
+    @Renders(ThrowingMessage)
+    class ThrowingMessageRenderer implements MessageRenderer<typeof ThrowingMessage> {
+      email() {
+        return { subject: "unused", html: "unused", text: "unused" };
+      }
+    }
+
+    const registry = new MessageRendererRegistry();
+    registry.registerMessage(ThrowingMessage);
+    registry.registerRenderer(ThrowingMessageRenderer);
+    registry.bootstrap();
+    const resolver = new InMemoryMessageRendererResolver();
+    resolver.register(ThrowingMessage, new ThrowingMessageRenderer());
+    const dispatcher = createDispatcher();
+    const engagement = new EngagementService(
+      directory,
+      new RegistryEngagementMessageRenderer(registry, resolver),
+      dispatcher.service,
+    );
+
+    const problem = await engagement
+      .send(ThrowingMessage, {
+        recipient: recipient.recipient,
+        data: { secret: "payload-secret" },
+        key: "throwing-transform-1",
+      })
+      .catch((error: unknown) => error);
+
+    expect(problem).toBeInstanceOf(MessageDataInvalidProblem);
+    const serialized = JSON.stringify((problem as MessageDataInvalidProblem).toJSON());
+    expect(serialized).not.toContain("payload-secret");
+    expect(serialized).not.toContain("transform failed");
+    expect(dispatcher.prepareDispatch).not.toHaveBeenCalled();
+    expect(dispatcher.dispatch).not.toHaveBeenCalled();
+  });
+
   it("queues every active endpoint under the explicit all-reachable policy", async () => {
     const dispatcher = createDispatcher();
     const engagement = new EngagementService(directory, createRenderer(), dispatcher.service);

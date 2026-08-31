@@ -117,6 +117,9 @@ export type MessageRegistryInspection = Readonly<{
 
 const RENDERER_BINDINGS = new WeakMap<Function, MessageRendererBinding>();
 
+/** @internal */
+export const RENDER_PARSED_MESSAGE = Symbol("engagement-core/render-parsed-message");
+
 export function defineMessage<
   const TId extends string,
   const TTopic extends string,
@@ -158,7 +161,12 @@ export function parseMessageData<TMessage extends AnyMessage>(
   message: TMessage,
   input: unknown,
 ): MessageData<TMessage> {
-  const parsed = message.data.safeParse(input);
+  let parsed;
+  try {
+    parsed = message.data.safeParse(input);
+  } catch {
+    throw new MessageDataInvalidProblem(message.id, ["$: schema evaluation failed"]);
+  }
   if (!parsed.success) {
     throw new MessageDataInvalidProblem(
       message.id,
@@ -244,11 +252,14 @@ export class MessageRendererRegistry {
     channel: TChannel,
     input: unknown,
   ): Promise<MessageContent<TChannel>> {
-    return this.renderParsed(message, renderer, channel, this.parseData(message, input));
+    return this[RENDER_PARSED_MESSAGE](message, renderer, channel, this.parseData(message, input));
   }
 
-  /** Invokes an explicitly registered renderer with data that has already passed the message schema. */
-  async renderParsed<TMessage extends AnyMessage, TChannel extends MessageChannels<TMessage>>(
+  /** @internal */
+  async [RENDER_PARSED_MESSAGE]<
+    TMessage extends AnyMessage,
+    TChannel extends MessageChannels<TMessage>,
+  >(
     message: TMessage,
     renderer: MessageRenderer<TMessage>,
     channel: TChannel,

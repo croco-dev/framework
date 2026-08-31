@@ -6,6 +6,7 @@ import {
   type MessageData,
   type MessageDataInput,
   type MessageRenderer,
+  type MessageRendererRegistry,
   Renders,
 } from "../index";
 
@@ -113,6 +114,10 @@ void transformedInput;
 void transformedOutput;
 
 declare const engagement: EngagementService;
+
+declare const registry: MessageRendererRegistry;
+// @ts-expect-error parsed rendering is an internal implementation path
+void registry.renderParsed;
 
 engagement.send(TrialEnding, {
   recipient: { tenantId: "tenant-1", userId: "user-1" },

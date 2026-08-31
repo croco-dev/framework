@@ -10,6 +10,7 @@ import {
   MessageDataInvalidProblem,
   MessageRendererAlreadyRegisteredProblem,
   MessageRendererMissingProblem,
+  RENDER_PARSED_MESSAGE,
   parseMessageData,
   type AnyMessage,
   type MessageChannel,
@@ -171,7 +172,12 @@ export class RegistryEngagementMessageRenderer implements EngagementMessageRende
     channel: TChannel,
     data: MessageData<TMessage>,
   ): Promise<MessageContent<TChannel>> {
-    return this.registry.renderParsed(message, this.resolver.resolve(message), channel, data);
+    return this.registry[RENDER_PARSED_MESSAGE](
+      message,
+      this.resolver.resolve(message),
+      channel,
+      data,
+    );
   }
 }
 
