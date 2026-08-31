@@ -377,6 +377,10 @@ describe("TestKernel", () => {
         },
       ],
     });
+    const eventScopeDisposal = vi.fn();
+    const shutdownScopeDisposal = vi.fn();
+    vi.spyOn(EventBusConfig, "captureCurrentScopeDisposer").mockReturnValue(eventScopeDisposal);
+    vi.spyOn(ShutdownManager, "captureCurrentScopeDisposer").mockReturnValue(shutdownScopeDisposal);
     const kernel = await createTestKernel({
       applicationRuntime: runtime,
       bootstrap: async () => {
@@ -392,8 +396,6 @@ describe("TestKernel", () => {
     });
 
     await runtime.dispose();
-    const eventScopeDisposal = vi.spyOn(EventBusConfig, "disposeScope");
-    const shutdownScopeDisposal = vi.spyOn(ShutdownManager, "disposeScope");
     let failure: unknown;
     try {
       await kernel.dispose();
@@ -404,8 +406,8 @@ describe("TestKernel", () => {
     expect(lifecycle).toEqual(["resource:database:start", "module:shutdown:scoped"]);
     expect(globalValue.cleanupCalls).toBe(0);
     expect(scopedValue.cleanupCalls).toBe(0);
-    expect(eventScopeDisposal).toHaveBeenCalledWith(runtime.scopeId);
-    expect(shutdownScopeDisposal).toHaveBeenCalledWith(runtime.scopeId);
+    expect(eventScopeDisposal).toHaveBeenCalledOnce();
+    expect(shutdownScopeDisposal).toHaveBeenCalledOnce();
     expect(failure).toMatchObject({
       code: "testing/test-kernel-disposal-failed",
       extensions: {

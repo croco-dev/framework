@@ -333,7 +333,7 @@ export class TestKernel implements AsyncDisposable {
     readonly fidelity: TestKernelFidelity,
     private readonly controls: TestRuntime,
     private readonly scope: TestKernelApplicationRuntime,
-    private readonly scopeId: string | undefined,
+    private readonly scopeCleanup: TestKernelScopeCleanup,
     transactionContext: TestingTransactionContext,
     private readonly baseUrl: string,
     private readonly lambdaHandler: LambdaHandler | undefined,
@@ -457,7 +457,11 @@ export class TestKernel implements AsyncDisposable {
   }
 
   private async disposeOnce(): Promise<void> {
-    const failures = await runCleanupSequence(this.scope, this.scopeId, this.cleanupOperations);
+    const failures = await runCleanupSequence(
+      this.scope,
+      this.scopeCleanup,
+      this.cleanupOperations,
+    );
 
     const leaks = this.collectLeaks();
     if (leaks.length > 0) {
@@ -517,7 +521,7 @@ export class TestKernel implements AsyncDisposable {
 
 export async function createTestKernel(options: TestKernelOptions): Promise<TestKernel> {
   const scope = options.applicationRuntime ?? Container.createScope();
-  const scopeId = scope.run(() => Container.getActiveScopeId());
+  const scopeCleanup = scope.run(captureScopeCleanup);
   const runtime = options.fidelity === "adapter" ? (options.adapter ?? "node") : "node";
   const runtimeOptions: TestRuntimeOptions = {
     ...(options.clock === undefined ? {} : { clock: options.clock }),
@@ -655,7 +659,7 @@ export async function createTestKernel(options: TestKernelOptions): Promise<Test
         fidelity,
         controls,
         scope,
-        scopeId,
+        scopeCleanup,
         transactionContext,
         options.baseUrl ?? "http://localhost",
         lambdaHandler,
@@ -667,7 +671,7 @@ export async function createTestKernel(options: TestKernelOptions): Promise<Test
     });
   } catch (error) {
     const cleanupOperations = buildCleanupOperations(app);
-    const failures = await runCleanupSequence(scope, scopeId, cleanupOperations);
+    const failures = await runCleanupSequence(scope, scopeCleanup, cleanupOperations);
 
     if (failures.length > 0) {
       throw new TestKernelDisposalProblem(failures, error);
@@ -693,7 +697,7 @@ function toRequest(
 
 async function runCleanupSequence(
   scope: TestKernelApplicationRuntime,
-  scopeId: string | undefined,
+  scopeCleanup: TestKernelScopeCleanup,
   cleanupOperations: readonly TestKernelCleanupOperation[],
 ): Promise<Error[]> {
   const failures: Error[] = [];
@@ -736,18 +740,16 @@ async function runCleanupSequence(
     }
   }
 
-  if (scopeId) {
-    try {
-      EventBusConfig.disposeScope(scopeId);
-    } catch (error) {
-      failures.push(toError(error));
-    }
+  try {
+    scopeCleanup.disposeEventBus?.();
+  } catch (error) {
+    failures.push(toError(error));
+  }
 
-    try {
-      ShutdownManager.disposeScope(scopeId);
-    } catch (error) {
-      failures.push(toError(error));
-    }
+  try {
+    scopeCleanup.disposeShutdownManager?.();
+  } catch (error) {
+    failures.push(toError(error));
   }
 
   try {
@@ -757,6 +759,18 @@ async function runCleanupSequence(
   }
 
   return failures;
+}
+
+type TestKernelScopeCleanup = {
+  readonly disposeEventBus: (() => void) | undefined;
+  readonly disposeShutdownManager: (() => void) | undefined;
+};
+
+function captureScopeCleanup(): TestKernelScopeCleanup {
+  return {
+    disposeEventBus: EventBusConfig.captureCurrentScopeDisposer(),
+    disposeShutdownManager: ShutdownManager.captureCurrentScopeDisposer(),
+  };
 }
 
 async function dispatchLambdaRequest(

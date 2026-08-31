@@ -78,14 +78,19 @@ describe("EventBusConfig", () => {
       expect(retrievedBus).toBe(mockBus);
     });
 
-    it("should dispose scoped state by scope id", () => {
-      const scope = Container.createScope();
-      const scopedConfig = scope.run(() => EventBusConfig.getInstance());
+    it("should bind scoped disposal to the scope that captured it", () => {
+      const firstScope = Container.createScope();
+      const secondScope = Container.createScope();
+      const firstConfig = firstScope.run(() => EventBusConfig.getInstance());
+      const secondConfig = secondScope.run(() => EventBusConfig.getInstance());
+      const disposeFirstScope = firstScope.run(() => EventBusConfig.captureCurrentScopeDisposer());
 
-      EventBusConfig.disposeScope(scope.id);
+      secondScope.run(() => disposeFirstScope?.());
 
-      expect(scope.run(() => EventBusConfig.getInstance())).not.toBe(scopedConfig);
-      scope.dispose();
+      expect(firstScope.run(() => EventBusConfig.getInstance())).not.toBe(firstConfig);
+      expect(secondScope.run(() => EventBusConfig.getInstance())).toBe(secondConfig);
+      firstScope.dispose();
+      secondScope.dispose();
     });
   });
 

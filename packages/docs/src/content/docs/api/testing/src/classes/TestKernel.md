@@ -13,7 +13,7 @@ title: "TestKernel"
 
 ### Constructor
 
-> **new TestKernel**(`app`, `fidelity`, `controls`, `scope`, `scopeId`, `transactionContext`, `baseUrl`, `lambdaHandler`, `nodeHandler`, `cleanupOperations`, `resourceConnections`, `resourceEvidenceBuffer`): `TestKernel`
+> **new TestKernel**(`app`, `fidelity`, `controls`, `scope`, `scopeCleanup`, `transactionContext`, `baseUrl`, `lambdaHandler`, `nodeHandler`, `cleanupOperations`, `resourceConnections`, `resourceEvidenceBuffer`): `TestKernel`
 
 #### Parameters
 
@@ -33,9 +33,9 @@ title: "TestKernel"
 
 [`TestKernelApplicationRuntime`](/api/testing/src/interfaces/testkernelapplicationruntime/)
 
-##### scopeId
+##### scopeCleanup
 
-`string` \| `undefined`
+`TestKernelScopeCleanup`
 
 ##### transactionContext
 

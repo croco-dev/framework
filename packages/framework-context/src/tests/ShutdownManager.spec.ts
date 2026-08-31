@@ -96,14 +96,19 @@ describe("ShutdownManager", () => {
       expect(instance1).not.toBe(instance2);
     });
 
-    it("should dispose scoped state by scope id", () => {
-      const scope = Container.createScope();
-      const scopedManager = scope.run(() => ShutdownManager.getInstance());
+    it("should bind scoped disposal to the scope that captured it", () => {
+      const firstScope = Container.createScope();
+      const secondScope = Container.createScope();
+      const firstManager = firstScope.run(() => ShutdownManager.getInstance());
+      const secondManager = secondScope.run(() => ShutdownManager.getInstance());
+      const disposeFirstScope = firstScope.run(() => ShutdownManager.captureCurrentScopeDisposer());
 
-      ShutdownManager.disposeScope(scope.id);
+      secondScope.run(() => disposeFirstScope?.());
 
-      expect(scope.run(() => ShutdownManager.getInstance())).not.toBe(scopedManager);
-      scope.dispose();
+      expect(firstScope.run(() => ShutdownManager.getInstance())).not.toBe(firstManager);
+      expect(secondScope.run(() => ShutdownManager.getInstance())).toBe(secondManager);
+      firstScope.dispose();
+      secondScope.dispose();
     });
 
     it("should remove registered listeners when reset creates an isolated singleton", () => {

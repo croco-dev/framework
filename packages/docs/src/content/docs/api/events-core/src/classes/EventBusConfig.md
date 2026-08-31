@@ -113,25 +113,19 @@ title: "EventBusConfig"
 
 ---
 
-### disposeCurrentScope()
+### captureCurrentScopeDisposer()
 
-> `static` **disposeCurrentScope**(): `void`
+> `static` **captureCurrentScopeDisposer**(): (() => `void`) \| `undefined`
 
 #### Returns
 
-`void`
+(() => `void`) \| `undefined`
 
 ---
 
-### disposeScope()
+### disposeCurrentScope()
 
-> `static` **disposeScope**(`scopeId`): `void`
-
-#### Parameters
-
-##### scopeId
-
-`string`
+> `static` **disposeCurrentScope**(): `void`
 
 #### Returns
 
