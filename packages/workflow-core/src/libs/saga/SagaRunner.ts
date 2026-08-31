@@ -54,6 +54,46 @@ function toSagaFailure(error: unknown): SagaFailure {
   };
 }
 
+function describeError(error: unknown): string {
+  try {
+    return error instanceof Error ? error.message : String(error);
+  } catch {
+    return "Unknown error";
+  }
+}
+
+function reportSagaFailureRecordError(
+  span: SagaTelemetrySpan,
+  sagaName: string,
+  executionId: string,
+  failure: SagaFailure,
+  problem: SagaExecutionFailedProblem,
+  failureRecordError: unknown,
+): void {
+  let attachmentFailed = false;
+  try {
+    Object.defineProperty(problem, "sagaFailureRecordError", {
+      configurable: true,
+      enumerable: false,
+      value: failureRecordError,
+    });
+  } catch {
+    attachmentFailed = true;
+  }
+
+  try {
+    span.addEvent("saga.execution.failure_record.failed", {
+      "saga.name": sagaName,
+      "saga.execution.id": executionId,
+      "saga.error.message": failure.message,
+      "saga.failure_record.error.message": describeError(failureRecordError),
+      ...(attachmentFailed ? { "saga.failure_record.attachment_failed": true } : {}),
+    });
+  } catch {
+    return;
+  }
+}
+
 function isRetryableError(error: unknown): boolean {
   if (
     error !== null &&
@@ -349,28 +389,50 @@ export class SagaRunner {
     span: SagaTelemetrySpan,
   ): Promise<never> {
     const failure = toSagaFailure(error);
-    const compensated = await this.compensateCompletedSteps(definition, executionId, failure);
-    const finalStatus =
-      compensated.compensatedStepCount > 0 && compensated.compensationFailures.length === 0
-        ? "compensated"
-        : "failed";
-    const failed = await this.store.update(executionId, {
-      status: finalStatus,
-      error: failure,
-      compensationFailures: compensated.compensationFailures,
-      completedAt: new Date(),
-    });
+    const compensationFailures: SagaFailure[] = [];
+    let finalStatus: SagaExecutionStatus = "failed";
+    let failed: SagaExecution;
+    try {
+      const compensatedStepCount = await this.compensateCompletedSteps(
+        definition,
+        executionId,
+        failure,
+        compensationFailures,
+      );
+      finalStatus =
+        compensatedStepCount > 0 && compensationFailures.length === 0 ? "compensated" : "failed";
+      failed = await this.store.update(executionId, {
+        status: finalStatus,
+        error: failure,
+        compensationFailures,
+        completedAt: new Date(),
+      });
+    } catch (failureRecordError) {
+      const problem = new SagaExecutionFailedProblem(definition.name, executionId, failure, {
+        status: finalStatus,
+        compensationFailures,
+      });
+      reportSagaFailureRecordError(
+        span,
+        definition.name,
+        executionId,
+        failure,
+        problem,
+        failureRecordError,
+      );
+      throw problem;
+    }
     span.addEvent("saga.execution.failed", {
       "saga.name": definition.name,
       "saga.execution.id": failed.id,
       "saga.execution.status": failed.status,
       "saga.error.message": failure.message,
-      "saga.compensation.failure_count": compensated.compensationFailures.length,
+      "saga.compensation.failure_count": compensationFailures.length,
     });
 
     throw new SagaExecutionFailedProblem(definition.name, failed.id, failure, {
       status: failed.status,
-      compensationFailures: compensated.compensationFailures,
+      compensationFailures,
     });
   }
 
@@ -510,10 +572,10 @@ export class SagaRunner {
     definition: SagaDefinition,
     executionId: string,
     failure: SagaFailure,
-  ): Promise<{ compensationFailures: SagaFailure[]; compensatedStepCount: number }> {
+    compensationFailures: SagaFailure[],
+  ): Promise<number> {
     const execution = await this.getExecution(executionId);
     const outboxIdentityRoot = await this.resolveOutboxIdentityRoot(execution);
-    const compensationFailures: SagaFailure[] = [];
     let compensatedStepCount = 0;
 
     for (const record of [...execution.steps].reverse()) {
@@ -587,7 +649,7 @@ export class SagaRunner {
       }
     }
 
-    return { compensationFailures, compensatedStepCount };
+    return compensatedStepCount;
   }
 
   private resolveSagaIdempotencyKey(
