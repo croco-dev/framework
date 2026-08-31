@@ -20,6 +20,190 @@ export function assertDesktopContractGraphGeneratable(
     );
   }
   assertGraphScalarFields(graph, artifactDescription, createProblem);
+  assertGraphAuthorityIntegrity(graph, createProblem);
+}
+
+function assertGraphAuthorityIntegrity(
+  graph: DesktopContractGraphV1,
+  createProblem: GenerationProblemFactory,
+): void {
+  assertUniqueMemberIds(graph, createProblem);
+  const contracts = createUniqueIndex(graph.contracts, "contract", createProblem);
+  const commands = createUniqueIndex(graph.commands, "command", createProblem);
+  const events = createUniqueIndex(graph.events, "event", createProblem);
+  const grants = createUniqueIndex(graph.grants, "grant", createProblem);
+  const problems = createUniqueIndex(graph.problems, "problem", createProblem);
+  const windows = createUniqueIndex(graph.windows, "window", createProblem);
+
+  assertInventory(graph.app.contractIds, contracts.keys(), "Desktop app contract", createProblem);
+  assertInventory(graph.app.windowIds, windows.keys(), "Desktop app window", createProblem);
+  assertInventory(
+    graph.effects,
+    new Set(graph.commands.flatMap((command) => command.effects.map((effect) => effect.namespace))),
+    "Desktop effect namespace",
+    createProblem,
+  );
+
+  for (const contract of graph.contracts) {
+    assertInventory(
+      contract.commandIds,
+      graph.commands
+        .filter((command) => command.contractId === contract.id)
+        .map((command) => command.id),
+      `Desktop contract ${JSON.stringify(contract.id)} command`,
+      createProblem,
+    );
+    assertInventory(
+      contract.eventIds,
+      graph.events.filter((event) => event.contractId === contract.id).map((event) => event.id),
+      `Desktop contract ${JSON.stringify(contract.id)} event`,
+      createProblem,
+    );
+    assertInventory(
+      contract.grantIds,
+      graph.grants.filter((grant) => grant.contractId === contract.id).map((grant) => grant.id),
+      `Desktop contract ${JSON.stringify(contract.id)} grant`,
+      createProblem,
+    );
+  }
+
+  for (const command of graph.commands) {
+    assertMemberOwner(command, "command", contracts, createProblem);
+    for (const problemCode of command.problems) {
+      assertReferencedRecord(problems, problemCode, "Problem", command.id, createProblem);
+    }
+    for (const eventId of command.events) {
+      const event = assertReferencedRecord(events, eventId, "event", command.id, createProblem);
+      assertSameContract(event, command.contractId, "event", command.id, createProblem);
+    }
+    for (const effect of command.effects) {
+      for (const grantId of effect.grantIds) {
+        const grant = assertReferencedRecord(grants, grantId, "grant", command.id, createProblem);
+        assertSameContract(grant, command.contractId, "grant", command.id, createProblem);
+      }
+    }
+  }
+  for (const event of graph.events) {
+    assertMemberOwner(event, "event", contracts, createProblem);
+  }
+  for (const grant of graph.grants) {
+    assertMemberOwner(grant, "grant", contracts, createProblem);
+  }
+  for (const window of graph.windows) {
+    for (const commandId of window.exposedCommands) {
+      assertReferencedRecord(commands, commandId, "command", window.id, createProblem);
+    }
+    for (const eventId of window.receivedEvents) {
+      assertReferencedRecord(events, eventId, "event", window.id, createProblem);
+    }
+  }
+}
+
+function assertUniqueMemberIds(
+  graph: DesktopContractGraphV1,
+  createProblem: GenerationProblemFactory,
+): void {
+  const owners = new Map<string, "command" | "event" | "grant">();
+  for (const [kind, members] of [
+    ["command", graph.commands],
+    ["event", graph.events],
+    ["grant", graph.grants],
+  ] as const) {
+    for (const member of members) {
+      const existing = owners.get(member.id);
+      if (existing) {
+        throw createProblem(
+          `Desktop member id ${JSON.stringify(member.id)} is declared as both ${existing} and ${kind}.`,
+        );
+      }
+      owners.set(member.id, kind);
+    }
+  }
+}
+
+function createUniqueIndex<T extends { readonly id?: string; readonly code?: string }>(
+  records: readonly T[],
+  kind: "command" | "contract" | "event" | "grant" | "problem" | "window",
+  createProblem: GenerationProblemFactory,
+): ReadonlyMap<string, T> {
+  const index = new Map<string, T>();
+  for (const record of records) {
+    const id = record.id ?? record.code;
+    if (id === undefined) {
+      throw createProblem(`Desktop contract graph contains an unnamed ${kind}.`);
+    }
+    if (index.has(id)) {
+      throw createProblem(
+        `Desktop contract graph contains duplicate ${kind} ID ${JSON.stringify(id)}.`,
+      );
+    }
+    index.set(id, record);
+  }
+  return index;
+}
+
+function assertInventory(
+  actual: readonly string[],
+  expectedValues: Iterable<string>,
+  description: string,
+  createProblem: GenerationProblemFactory,
+): void {
+  const expected = new Set(expectedValues);
+  const actualSet = new Set(actual);
+  const missing = [...expected].filter((id) => !actualSet.has(id));
+  const unexpected = actual.filter((id) => !expected.has(id));
+  if (actualSet.size !== actual.length || missing.length > 0 || unexpected.length > 0) {
+    throw createProblem(`${description} inventory does not match its records.`);
+  }
+}
+
+function assertMemberOwner(
+  member: { readonly id: string; readonly contractId: string; readonly key: string },
+  kind: "command" | "event" | "grant",
+  contracts: ReadonlyMap<string, unknown>,
+  createProblem: GenerationProblemFactory,
+): void {
+  const expectedId = `${member.contractId}.${member.key}`;
+  if (!contracts.has(member.contractId)) {
+    throw createProblem(
+      `Desktop ${kind} ${JSON.stringify(member.id)} references missing contract ${JSON.stringify(member.contractId)}.`,
+    );
+  }
+  if (member.id !== expectedId) {
+    throw createProblem(
+      `Desktop ${kind} ${JSON.stringify(member.id)} does not match contract ${JSON.stringify(member.contractId)} and member key ${JSON.stringify(member.key)}.`,
+    );
+  }
+}
+
+function assertReferencedRecord<T>(
+  records: ReadonlyMap<string, T>,
+  id: string,
+  kind: "Problem" | "command" | "event" | "grant",
+  ownerId: string,
+  createProblem: GenerationProblemFactory,
+): T {
+  const record = records.get(id);
+  if (!record) {
+    throw createProblem(
+      `Desktop member ${JSON.stringify(ownerId)} references missing ${kind} ${JSON.stringify(id)}.`,
+    );
+  }
+  return record;
+}
+
+function assertSameContract(
+  member: { readonly id: string; readonly contractId: string },
+  contractId: string,
+  kind: "event" | "grant",
+  ownerId: string,
+  createProblem: GenerationProblemFactory,
+): void {
+  if (member.contractId !== contractId) {
+    throw createProblem(
+      `Desktop member ${JSON.stringify(ownerId)} references ${kind} ${JSON.stringify(member.id)} from contract ${JSON.stringify(member.contractId)}.`,
+    );
+  }
 }
 
 function assertGraphContainers(

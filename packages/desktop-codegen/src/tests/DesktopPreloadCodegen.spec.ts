@@ -225,6 +225,41 @@ describe("generateDesktopPreloadBridges", () => {
     expect(() => generateDesktopPreloadBridges(invalid)).toThrow(DesktopPreloadGenerationProblem);
   });
 
+  it("rejects windows and commands excluded from their authority inventories", () => {
+    const graph = createGraph(false);
+    const main = graph.windows.find((window) => window.id === "main");
+    const command = graph.commands.find((candidate) => candidate.id === "project.open");
+    assert(main && command, "Fixture main window or project command is missing");
+
+    expectPreloadGenerationProblem(
+      () =>
+        generateDesktopPreloadBridges({
+          ...graph,
+          app: {
+            ...graph.app,
+            windowIds: graph.app.windowIds.filter((windowId) => windowId !== main.id),
+          },
+        }),
+      "Desktop app window inventory does not match its records.",
+    );
+
+    expectPreloadGenerationProblem(
+      () =>
+        generateDesktopPreloadBridges({
+          ...graph,
+          contracts: graph.contracts.map((contract) =>
+            contract.id === command.contractId
+              ? {
+                  ...contract,
+                  commandIds: contract.commandIds.filter((commandId) => commandId !== command.id),
+                }
+              : contract,
+          ),
+        }),
+      `Desktop contract ${JSON.stringify(command.contractId)} command inventory does not match its records.`,
+    );
+  });
+
   it("rejects duplicate window profiles instead of emitting ambiguous artifacts", () => {
     const graph = createGraph(false);
 
@@ -239,21 +274,31 @@ describe("generateDesktopPreloadBridges", () => {
   it("emits prototype-sensitive graph keys as inert own properties", async () => {
     const graph = createGraph(false);
     const command = graph.commands.find((candidate) => candidate.id === "project.open");
+    const contract = graph.contracts.find((candidate) => candidate.id === command?.contractId);
     const main = graph.windows.find((window) => window.id === "main");
-    if (!command || !main) {
-      throw new Error("Fixture command or window is missing");
-    }
+    assert(command && contract && main, "Fixture contract, command, or window is missing");
     const forgedCommand = {
       ...command,
       id: "__proto__.constructor",
       contractId: "__proto__",
       key: "constructor",
     };
+    const forgedContract = {
+      ...contract,
+      id: forgedCommand.contractId,
+      commandIds: [forgedCommand.id],
+      eventIds: [],
+      grantIds: [],
+    };
     const source = requireBridgeSource(
       {
         ...graph,
+        app: { ...graph.app, contractIds: [forgedContract.id], windowIds: [main.id] },
+        contracts: [forgedContract],
         commands: [forgedCommand],
         events: [],
+        effects: forgedCommand.effects.map((effect) => effect.namespace),
+        grants: [],
         windows: [{ ...main, exposedCommands: [forgedCommand.id], receivedEvents: [] }],
       },
       "main",

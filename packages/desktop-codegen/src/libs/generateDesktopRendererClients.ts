@@ -77,7 +77,6 @@ function assertGeneratableGraph(graph: DesktopContractGraphV1): void {
 }
 
 function createGraphIndexes(graph: DesktopContractGraphV1): GraphIndexes {
-  assertUniqueMemberIds(graph);
   return {
     commands: createUniqueIndex(graph.commands, "command"),
     contracts: createUniqueIndex(graph.contracts, "contract"),
@@ -88,76 +87,14 @@ function createGraphIndexes(graph: DesktopContractGraphV1): GraphIndexes {
   };
 }
 
-function assertUniqueMemberIds(graph: DesktopContractGraphV1): void {
-  const owners = new Map<string, "command" | "event" | "grant">();
-  for (const [kind, members] of [
-    ["command", graph.commands],
-    ["event", graph.events],
-    ["grant", graph.grants],
-  ] as const) {
-    for (const member of members) {
-      const existing = owners.get(member.id);
-      if (existing) {
-        throw new DesktopRendererGenerationProblem(
-          `Desktop member id ${JSON.stringify(member.id)} is declared as both ${existing} and ${kind}.`,
-        );
-      }
-      owners.set(member.id, kind);
-    }
-  }
-}
-
 function assertGraphIntegrity(graph: DesktopContractGraphV1, indexes: GraphIndexes): void {
-  assertInventory(graph.app.contractIds, indexes.contracts.keys(), "Desktop app contract");
-  assertInventory(graph.app.windowIds, indexes.windows.keys(), "Desktop app window");
-  assertInventory(
-    graph.effects,
-    new Set(graph.commands.flatMap((command) => command.effects.map((effect) => effect.namespace))),
-    "Desktop effect namespace",
-  );
-
-  for (const contract of graph.contracts) {
-    assertInventory(
-      contract.commandIds,
-      graph.commands
-        .filter((command) => command.contractId === contract.id)
-        .map((command) => command.id),
-      `Desktop contract ${JSON.stringify(contract.id)} command`,
-    );
-    assertInventory(
-      contract.eventIds,
-      graph.events.filter((event) => event.contractId === contract.id).map((event) => event.id),
-      `Desktop contract ${JSON.stringify(contract.id)} event`,
-    );
-    assertInventory(
-      contract.grantIds,
-      graph.grants.filter((grant) => grant.contractId === contract.id).map((grant) => grant.id),
-      `Desktop contract ${JSON.stringify(contract.id)} grant`,
-    );
-  }
-
   for (const command of graph.commands) {
-    assertMember(command, "command", indexes.contracts);
     assertSchemaReferenceId(command.input.id, `${command.id}.input`);
     assertSchemaReferenceId(command.output.id, `${command.id}.output`);
     assertSchemaDescriptor(command.input.descriptor, command.id, command.contractId, indexes);
     assertSchemaDescriptor(command.output.descriptor, command.id, command.contractId, indexes);
-    for (const problemCode of command.problems) {
-      assertReferencedRecord(indexes.problems, problemCode, "Problem", command.id);
-    }
-    for (const eventId of command.events) {
-      const event = assertReferencedRecord(indexes.events, eventId, "event", command.id);
-      assertSameContract(event, command.contractId, "event", command.id);
-    }
-    for (const effect of command.effects) {
-      for (const grantId of effect.grantIds) {
-        const grant = assertReferencedRecord(indexes.grants, grantId, "grant", command.id);
-        assertSameContract(grant, command.contractId, "grant", command.id);
-      }
-    }
   }
   for (const event of graph.events) {
-    assertMember(event, "event", indexes.contracts);
     assertSchemaReferenceId(event.payload.id, `${event.id}.payload`);
     assertSchemaDescriptor(event.payload.descriptor, event.id, event.contractId, indexes);
   }
@@ -168,19 +105,10 @@ function assertGraphIntegrity(graph: DesktopContractGraphV1, indexes: GraphIndex
     }
   }
   for (const grant of graph.grants) {
-    assertMember(grant, "grant", indexes.contracts);
     if (grant.resource === "file" && grant.scope !== "exact") {
       throw new DesktopRendererGenerationProblem(
         `Desktop file grant ${JSON.stringify(grant.id)} must use exact scope.`,
       );
-    }
-  }
-  for (const window of graph.windows) {
-    for (const commandId of window.exposedCommands) {
-      assertReferencedRecord(indexes.commands, commandId, "command", window.id);
-    }
-    for (const eventId of window.receivedEvents) {
-      assertReferencedRecord(indexes.events, eventId, "event", window.id);
     }
   }
 }
@@ -433,22 +361,6 @@ function assertSameContract(
   if (member.contractId !== contractId) {
     throw new DesktopRendererGenerationProblem(
       `Desktop member ${JSON.stringify(ownerId)} references ${kind} ${JSON.stringify(member.id)} from contract ${JSON.stringify(member.contractId)}.`,
-    );
-  }
-}
-
-function assertInventory(
-  actual: readonly string[],
-  expectedValues: Iterable<string>,
-  description: string,
-): void {
-  const expected = new Set(expectedValues);
-  const actualSet = new Set(actual);
-  const missing = [...expected].filter((id) => !actualSet.has(id));
-  const unexpected = actual.filter((id) => !expected.has(id));
-  if (actualSet.size !== actual.length || missing.length > 0 || unexpected.length > 0) {
-    throw new DesktopRendererGenerationProblem(
-      `${description} inventory does not match its records.`,
     );
   }
 }
