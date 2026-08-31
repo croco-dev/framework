@@ -1,3 +1,4 @@
+import { InvalidWebhookTimeoutProblem, MAX_WEBHOOK_TIMEOUT_MS } from "./problems/LifecycleProblems";
 import type {
   LifecycleAction,
   LifecycleActionAdapter,
@@ -7,6 +8,16 @@ import type {
 } from "./types";
 
 type FetchLike = typeof fetch;
+
+const DEFAULT_WEBHOOK_TIMEOUT_MS = 30_000;
+
+export type WebhookLifecycleActionAdapterOptions = {
+  /**
+   * Integer milliseconds from 1 through 2_147_483_647. Defaults to 30_000.
+   * Invalid values throw an InvalidWebhookTimeoutProblem during adapter setup.
+   */
+  readonly timeoutMs?: number;
+};
 
 function getStringRecord(value: unknown): Record<string, string> {
   if (value === undefined || value === null || typeof value !== "object" || Array.isArray(value)) {
@@ -21,7 +32,18 @@ function getStringRecord(value: unknown): Record<string, string> {
 }
 
 export class WebhookLifecycleActionAdapter implements LifecycleActionAdapter {
-  constructor(private readonly fetchImpl: FetchLike = fetch) {}
+  private readonly timeoutMs: number;
+
+  constructor(
+    private readonly fetchImpl: FetchLike = fetch,
+    options: WebhookLifecycleActionAdapterOptions = {},
+  ) {
+    const timeoutMs = options.timeoutMs ?? DEFAULT_WEBHOOK_TIMEOUT_MS;
+    if (!Number.isSafeInteger(timeoutMs) || timeoutMs <= 0 || timeoutMs > MAX_WEBHOOK_TIMEOUT_MS) {
+      throw new InvalidWebhookTimeoutProblem(timeoutMs);
+    }
+    this.timeoutMs = timeoutMs;
+  }
 
   async execute(
     action: LifecycleAction,
@@ -45,8 +67,20 @@ export class WebhookLifecycleActionAdapter implements LifecycleActionAdapter {
       };
     }
 
+    const controller = new AbortController();
+    const timeoutMessage = `Webhook request timed out after ${this.timeoutMs}ms`;
+    let timedOut = false;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
     try {
-      const response = await this.fetchImpl(url, {
+      const timeout = new Promise<{ readonly kind: "timeout" }>((resolve) => {
+        timeoutId = setTimeout(() => {
+          timedOut = true;
+          resolve({ kind: "timeout" });
+          controller.abort();
+        }, this.timeoutMs);
+      });
+      const request = this.fetchImpl(url, {
         method: "POST",
         headers: {
           "content-type": "application/json",
@@ -64,7 +98,23 @@ export class WebhookLifecycleActionAdapter implements LifecycleActionAdapter {
             signalType: context.signal.type,
           },
         }),
-      });
+        signal: controller.signal,
+      }).then((response) => ({ kind: "response" as const, response }));
+      const outcome = await Promise.race([request, timeout]);
+
+      if (outcome.kind === "timeout") {
+        return {
+          actionId: action.id,
+          type: action.type,
+          status: "failure",
+          error: {
+            code: "lifecycle-core/webhook-request-error",
+            message: timeoutMessage,
+          },
+        };
+      }
+
+      const response = outcome.response;
 
       if (!response.ok) {
         return {
@@ -91,9 +141,17 @@ export class WebhookLifecycleActionAdapter implements LifecycleActionAdapter {
         status: "failure",
         error: {
           code: "lifecycle-core/webhook-request-error",
-          message: error instanceof Error ? error.message : String(error),
+          message: timedOut
+            ? timeoutMessage
+            : error instanceof Error
+              ? error.message
+              : String(error),
         },
       };
+    } finally {
+      if (timeoutId !== undefined) {
+        clearTimeout(timeoutId);
+      }
     }
   }
 }

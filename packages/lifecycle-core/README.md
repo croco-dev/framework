@@ -54,6 +54,15 @@ await evaluator.evaluate(
 
 Use `LifecycleDiagnosticsProvider` with `@croco/diagnostics-core` to expose recent run counts, failed actions, and latest lifecycle runs.
 
+`WebhookLifecycleActionAdapter` bounds every outbound request to 30 seconds by default. Configure a shorter or longer
+integer timeout when constructing the adapter; invalid values fail during setup. Timeout failures retain
+`lifecycle-core/webhook-request-error` and use an explicit `Webhook request timed out` message, while non-timeout network
+errors keep their original message.
+
+```ts
+const webhookAdapter = new WebhookLifecycleActionAdapter(fetch, { timeoutMs: 10_000 });
+```
+
 ## Versioned production rules
 
 Use `registerVersion()` for production rules that operators must review, activate, pause, resume, or inspect. The stable `rule.id` identifies the rule across deployments. `version` is immutable, and `executableRegistrationId` identifies the code-owned predicate and action mapping. The registry fingerprints those values together with triggers, declared context requirements, severity, cooldown, and safe action descriptors.

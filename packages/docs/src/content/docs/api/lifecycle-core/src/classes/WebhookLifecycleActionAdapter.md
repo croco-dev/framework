@@ -13,13 +13,17 @@ title: "WebhookLifecycleActionAdapter"
 
 ### Constructor
 
-> **new WebhookLifecycleActionAdapter**(`fetchImpl?`): `WebhookLifecycleActionAdapter`
+> **new WebhookLifecycleActionAdapter**(`fetchImpl?`, `options?`): `WebhookLifecycleActionAdapter`
 
 #### Parameters
 
 ##### fetchImpl?
 
 \{(`input`, `init?`): `Promise`\<`Response`\>; (`input`, `init?`): `Promise`\<`Response`\>; \}
+
+##### options?
+
+[`WebhookLifecycleActionAdapterOptions`](/api/lifecycle-core/src/type-aliases/webhooklifecycleactionadapteroptions/) = `{}`
 
 #### Returns
 
