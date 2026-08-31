@@ -924,6 +924,37 @@ export class TransactionalOutboxRelay<TClient = unknown> {
   }
 }
 
+function attachInboxFailurePersistenceError(error: unknown, persistenceError: unknown): void {
+  if (typeof error !== "object" || error === null) {
+    return;
+  }
+
+  try {
+    Object.defineProperty(error, "inboxFailurePersistenceError", {
+      configurable: true,
+      enumerable: false,
+      value: persistenceError,
+    });
+  } catch {
+    return;
+  }
+}
+
+function reportInboxFailurePersistenceError(
+  handlerError: unknown,
+  normalizedError: TransactionalEventError,
+  persistenceError: unknown,
+): void {
+  attachInboxFailurePersistenceError(handlerError, persistenceError);
+  attachInboxFailurePersistenceError(normalizedError, persistenceError);
+
+  try {
+    recordError(persistenceError);
+  } catch {
+    return;
+  }
+}
+
 /**
  * Provides inbox idempotency for at-least-once event consumers.
  */
@@ -975,25 +1006,30 @@ export class TransactionalInboxConsumer<TClient = unknown> {
       await handler(message);
     } catch (error) {
       const normalized = normalizeTransactionalEventError(error);
-      const failed = await this.config.store.markInboxFailed(
-        {
-          consumerId: this.consumerId,
-          inboxKey,
-          expectedAttempts: start.record.attempts,
-          now: this.now(),
-          error: normalized,
-          reason: normalized.message,
-          diagnostic: createTransactionalEventDiagnostic(
-            "events-tx/inbox-failed",
-            normalized.message,
-            this.now(),
-            {
-              eventType: message.eventType,
-            },
-          ),
-        },
-        this.context(),
-      );
+      let failed = start.record;
+      try {
+        failed = await this.config.store.markInboxFailed(
+          {
+            consumerId: this.consumerId,
+            inboxKey,
+            expectedAttempts: start.record.attempts,
+            now: this.now(),
+            error: normalized,
+            reason: normalized.message,
+            diagnostic: createTransactionalEventDiagnostic(
+              "events-tx/inbox-failed",
+              normalized.message,
+              this.now(),
+              {
+                eventType: message.eventType,
+              },
+            ),
+          },
+          this.context(),
+        );
+      } catch (persistenceError) {
+        reportInboxFailurePersistenceError(error, normalized, persistenceError);
+      }
 
       if (this.throwOnError) {
         throw error;
