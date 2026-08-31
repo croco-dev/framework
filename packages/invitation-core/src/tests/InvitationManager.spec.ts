@@ -839,6 +839,105 @@ describe("InvitationManager", () => {
     expect(addMember).toHaveBeenCalledTimes(1);
   });
 
+  it("should preserve an accepted invitation when a stale decline resumes", async () => {
+    const invitation = createInvitation("accept-decline-token");
+    await store.save(invitation);
+
+    addMember.mockResolvedValue({
+      id: "mem-1",
+      tenantId: "tenant-1",
+      userId: "user-1",
+      role: "member",
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+    } as Membership);
+
+    const findByTokenHash = store.findByTokenHash.bind(store);
+    let releaseDeclineRead!: () => void;
+    let markDeclineRead!: () => void;
+    const declineRead = new Promise<void>((resolve) => {
+      markDeclineRead = resolve;
+    });
+    const declineReadGate = new Promise<void>((resolve) => {
+      releaseDeclineRead = resolve;
+    });
+
+    vi.spyOn(store, "findByTokenHash").mockImplementationOnce(async (tokenHash) => {
+      const snapshot = await findByTokenHash(tokenHash);
+      markDeclineRead();
+      await declineReadGate;
+      return snapshot;
+    });
+
+    const declineResult = manager.declineInvitation("accept-decline-token");
+    await declineRead;
+
+    const accepted = await manager.acceptInvitation({
+      token: "accept-decline-token",
+      userId: "user-1",
+      email: "member@croco.dev",
+    });
+    releaseDeclineRead();
+
+    await expect(declineResult).rejects.toMatchObject({
+      extensions: {
+        invitationId: invitation.id,
+        invitationStatus: "accepted",
+        operation: "decline",
+      },
+    });
+    await expect(store.findById(invitation.id)).resolves.toEqual(accepted.value);
+    expect(accepted.value.acceptedAt).not.toBeNull();
+    expect(addMember).toHaveBeenCalledTimes(1);
+    expect(publishNow).toHaveBeenCalledTimes(1);
+    expect(publishNow).toHaveBeenCalledWith(expect.any(InvitationAcceptedEvent));
+  });
+
+  it("should prevent a stale accept from creating membership after decline wins", async () => {
+    const invitation = createInvitation("decline-accept-token");
+    await store.save(invitation);
+
+    const findByTokenHash = store.findByTokenHash.bind(store);
+    let releaseAcceptRead!: () => void;
+    let markAcceptRead!: () => void;
+    const acceptRead = new Promise<void>((resolve) => {
+      markAcceptRead = resolve;
+    });
+    const acceptReadGate = new Promise<void>((resolve) => {
+      releaseAcceptRead = resolve;
+    });
+
+    vi.spyOn(store, "findByTokenHash").mockImplementationOnce(async (tokenHash) => {
+      const snapshot = await findByTokenHash(tokenHash);
+      markAcceptRead();
+      await acceptReadGate;
+      return snapshot;
+    });
+
+    const acceptResult = manager.acceptInvitation({
+      token: "decline-accept-token",
+      userId: "user-1",
+      email: "member@croco.dev",
+    });
+    await acceptRead;
+
+    const declined = await manager.declineInvitation("decline-accept-token");
+    releaseAcceptRead();
+
+    await expect(acceptResult).rejects.toMatchObject({
+      extensions: {
+        invitationId: invitation.id,
+        invitationStatus: "declined",
+        operation: "accept",
+      },
+    });
+    await expect(store.findById(invitation.id)).resolves.toEqual(declined);
+    expect(declined).toMatchObject({ status: "declined", acceptedAt: null });
+    expect(addMember).not.toHaveBeenCalled();
+    expect(publishNow).toHaveBeenCalledTimes(1);
+    expect(publishNow).toHaveBeenCalledWith(expect.any(InvitationDeclinedEvent));
+  });
+
   it("should throw InvitationEmailMismatchProblem when email does not match", async () => {
     await store.save(createInvitation("mismatch-token", { email: "member@croco.dev" }));
 

@@ -276,7 +276,13 @@ export class InvitationManager {
       );
 
       if (!accepted) {
-        throw new InvitationAlreadyAcceptedProblem(invitation.id);
+        const current = await this.store.findById(invitation.id);
+        if (!current) {
+          throw new InvitationNotFoundProblem("");
+        }
+
+        this.ensureAcceptableStatus(current, "accept");
+        throw new InvitationInvalidStatusProblem(current.id, current.status, "accept");
       }
 
       await this.membershipManager.addMember(
@@ -307,9 +313,19 @@ export class InvitationManager {
     const invitation = await this.getByTokenOrThrow(token);
     this.ensurePendingStatus(invitation, "decline");
 
-    const declined = await this.updateInvitation(invitation, {
-      status: "declined",
-    });
+    const declined = await this.store.compareAndSetStatus(
+      invitation.tenantId,
+      invitation.id,
+      "pending",
+      "declined",
+    );
+    if (!declined) {
+      const current = await this.store.findById(invitation.id);
+      if (!current) {
+        throw new InvitationNotFoundProblem("");
+      }
+      throw new InvitationInvalidStatusProblem(current.id, current.status, "decline");
+    }
 
     await this.publishSafely(
       new InvitationDeclinedEvent({
