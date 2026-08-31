@@ -667,6 +667,132 @@ desktop.project.fileChanged.subscribe((_payload, _event) => undefined);
     }
   });
 
+  it("rejects Problem metadata and extensions outside the renderer response policy", () => {
+    const graph = createGraph(false);
+    const publicProblem = graph.problems.find(
+      (problem) => problem.code === "EDITOR_FILE_NOT_FOUND",
+    );
+    const privateProblem = graph.problems.find(
+      (problem) => problem.code === "EDITOR_FILESYSTEM_UNAVAILABLE",
+    );
+    assert(publicProblem && privateProblem, "Fixture Problems are missing");
+
+    const replaceProblem = (
+      code: string,
+      replacement: (problem: (typeof graph.problems)[number]) => (typeof graph.problems)[number],
+    ): typeof graph => ({
+      ...graph,
+      problems: graph.problems.map((problem) =>
+        problem.code === code ? replacement(problem) : problem,
+      ),
+    });
+    const strictExtension = (name: string) =>
+      ({
+        kind: "object",
+        unknownKeys: "reject",
+        fields: [{ name, required: true, schema: { kind: "string" } }],
+      }) as const;
+
+    expectGenerationProblem(
+      () =>
+        generateDesktopRendererClients(
+          replaceProblem(publicProblem.code, (problem) => ({
+            ...problem,
+            source: undefined as never,
+          })),
+        ),
+      `Desktop Problem ${graph.problems.findIndex((problem) => problem.code === publicProblem.code)} source must be an object, received undefined.`,
+    );
+    expectGenerationProblem(
+      () =>
+        generateDesktopRendererClients(
+          replaceProblem(publicProblem.code, (problem) => ({
+            ...problem,
+            extensions: { kind: "string" },
+          })),
+        ),
+      `Desktop Problem ${JSON.stringify(publicProblem.code)} extensions must be a strict object schema.`,
+    );
+    expectGenerationProblem(
+      () =>
+        generateDesktopRendererClients(
+          replaceProblem(privateProblem.code, (problem) => ({
+            ...problem,
+            extensions: strictExtension("errors"),
+          })),
+        ),
+      `Desktop Problem ${JSON.stringify(privateProblem.code)} exposes extension field "errors" outside its response policy.`,
+    );
+    expectGenerationProblem(
+      () =>
+        generateDesktopRendererClients(
+          replaceProblem(publicProblem.code, (problem) => ({
+            ...problem,
+            source: {
+              ...problem.source,
+              redaction: "operator-only",
+            },
+            extensions: strictExtension("errors"),
+          })),
+        ),
+      `Desktop Problem ${JSON.stringify(publicProblem.code)} exposes extension field "errors" outside its response policy.`,
+    );
+    expectGenerationProblem(
+      () =>
+        generateDesktopRendererClients(
+          replaceProblem(publicProblem.code, (problem) => ({
+            ...problem,
+            extensions: strictExtension("password"),
+          })),
+        ),
+      `Desktop Problem ${JSON.stringify(publicProblem.code)} exposes extension field "password" outside its response policy.`,
+    );
+  });
+
+  it("rejects member IDs reused across command, event, and grant inventories", () => {
+    const graph = createGraph(false);
+    const command = graph.commands.find((candidate) => candidate.id === "project.readFile");
+    const event = graph.events.find((candidate) => candidate.id === "project.fileChanged");
+    assert(command && event, "Fixture command and event are missing");
+
+    expectGenerationProblem(
+      () =>
+        generateDesktopRendererClients({
+          ...graph,
+          contracts: graph.contracts.map((contract) =>
+            contract.id === event.contractId
+              ? {
+                  ...contract,
+                  eventIds: contract.eventIds.map((eventId) =>
+                    eventId === event.id ? command.id : eventId,
+                  ),
+                }
+              : contract,
+          ),
+          events: graph.events.map((candidate) =>
+            candidate.id === event.id
+              ? {
+                  ...candidate,
+                  id: command.id,
+                  payload: { ...candidate.payload, id: `${command.id}.payload` },
+                }
+              : candidate,
+          ),
+          windows: graph.windows.map((window) =>
+            window.id === "main"
+              ? {
+                  ...window,
+                  receivedEvents: window.receivedEvents.filter((eventId) => eventId !== event.id),
+                }
+              : window.id === "settings"
+                ? { ...window, receivedEvents: [command.id] }
+                : window,
+          ),
+        }),
+      `Desktop member id ${JSON.stringify(command.id)} is declared as both command and event.`,
+    );
+  });
+
   it("rejects invalid references on unexposed graph members", () => {
     const graph = createGraph(false);
     const readFile = graph.commands.find((command) => command.id === "project.readFile");

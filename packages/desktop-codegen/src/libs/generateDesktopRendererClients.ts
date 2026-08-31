@@ -1,4 +1,5 @@
-import { Problem, ProblemCategory } from "@croco/problems-core";
+import { Problem, ProblemCategory, createProblemResponseExtensions } from "@croco/problems-core";
+import type { ProblemRedactionPolicy } from "@croco/problems-core";
 import type {
   DesktopContractGraphCommand,
   DesktopContractGraphContract,
@@ -132,6 +133,7 @@ function assertGraphContainers(graph: unknown): asserts graph is DesktopContract
   }
   for (const [index, problem] of problems.entries()) {
     assertRecordValue(problem, `Problem at index ${index}`);
+    assertRecordValue(problem.source, `Problem ${index} source`);
     if (problem.extensions !== undefined) {
       assertRecordValue(problem.extensions, `Problem ${index} extensions`);
     }
@@ -260,6 +262,7 @@ function assertGraphScalarFields(graph: DesktopContractGraphV1): void {
         `Desktop Problem ${JSON.stringify(problem.code)} has an unsupported category.`,
       );
     }
+    assertProblemSource(problem);
   }
   for (const window of graph.windows) {
     assertStringIdentifier(window.id, "window id");
@@ -289,6 +292,51 @@ function assertGraphScalarFields(graph: DesktopContractGraphV1): void {
       assertStringIdentifiers(window.originPolicy.allowedOrigins, "window allowed origin");
     }
   }
+}
+
+function assertProblemSource(problem: DesktopContractGraphProblem): void {
+  const { source } = problem;
+  assertStringIdentifier(source.package, "Problem source package");
+  if (typeof source.retryable !== "boolean") {
+    throw new DesktopRendererGenerationProblem(
+      `Desktop Problem ${JSON.stringify(problem.code)} source retryable must be a boolean.`,
+    );
+  }
+  if (source.retryability !== "retryable" && source.retryability !== "not-retryable") {
+    throw new DesktopRendererGenerationProblem(
+      `Desktop Problem ${JSON.stringify(problem.code)} source has unsupported retryability.`,
+    );
+  }
+  if (source.retryability !== (source.retryable ? "retryable" : "not-retryable")) {
+    throw new DesktopRendererGenerationProblem(
+      `Desktop Problem ${JSON.stringify(problem.code)} source has inconsistent retryability metadata.`,
+    );
+  }
+  if (typeof source.public !== "boolean") {
+    throw new DesktopRendererGenerationProblem(
+      `Desktop Problem ${JSON.stringify(problem.code)} source public must be a boolean.`,
+    );
+  }
+  if (source.visibility !== "public" && source.visibility !== "private") {
+    throw new DesktopRendererGenerationProblem(
+      `Desktop Problem ${JSON.stringify(problem.code)} source has unsupported visibility.`,
+    );
+  }
+  if (source.visibility !== (source.public ? "public" : "private")) {
+    throw new DesktopRendererGenerationProblem(
+      `Desktop Problem ${JSON.stringify(problem.code)} source has inconsistent visibility metadata.`,
+    );
+  }
+  if (
+    source.redaction !== "public" &&
+    source.redaction !== "safe" &&
+    source.redaction !== "operator-only"
+  ) {
+    throw new DesktopRendererGenerationProblem(
+      `Desktop Problem ${JSON.stringify(problem.code)} source has unsupported redaction.`,
+    );
+  }
+  assertStringIdentifier(source.cookbookPath, "Problem source cookbook path");
 }
 
 function assertStringIdentifiers(values: unknown, description: string): void {
@@ -326,6 +374,7 @@ function formatDiagnosticValue(value: unknown): string {
 }
 
 function createGraphIndexes(graph: DesktopContractGraphV1): GraphIndexes {
+  assertUniqueMemberIds(graph);
   return {
     commands: createUniqueIndex(graph.commands, "command"),
     contracts: createUniqueIndex(graph.contracts, "contract"),
@@ -334,6 +383,25 @@ function createGraphIndexes(graph: DesktopContractGraphV1): GraphIndexes {
     problems: createUniqueIndex(graph.problems, "problem"),
     windows: createUniqueIndex(graph.windows, "window"),
   };
+}
+
+function assertUniqueMemberIds(graph: DesktopContractGraphV1): void {
+  const owners = new Map<string, "command" | "event" | "grant">();
+  for (const [kind, members] of [
+    ["command", graph.commands],
+    ["event", graph.events],
+    ["grant", graph.grants],
+  ] as const) {
+    for (const member of members) {
+      const existing = owners.get(member.id);
+      if (existing) {
+        throw new DesktopRendererGenerationProblem(
+          `Desktop member id ${JSON.stringify(member.id)} is declared as both ${existing} and ${kind}.`,
+        );
+      }
+      owners.set(member.id, kind);
+    }
+  }
 }
 
 function assertGraphIntegrity(graph: DesktopContractGraphV1, indexes: GraphIndexes): void {
@@ -393,6 +461,7 @@ function assertGraphIntegrity(graph: DesktopContractGraphV1, indexes: GraphIndex
   for (const problem of graph.problems) {
     if (problem.extensions) {
       assertWireSchemaDescriptor(problem.extensions, `Problem ${problem.code}`);
+      assertProblemExtensions(problem);
     }
   }
   for (const grant of graph.grants) {
@@ -410,6 +479,67 @@ function assertGraphIntegrity(graph: DesktopContractGraphV1, indexes: GraphIndex
     for (const eventId of window.receivedEvents) {
       assertReferencedRecord(indexes.events, eventId, "event", window.id);
     }
+  }
+}
+
+function assertProblemExtensions(problem: DesktopContractGraphProblem): void {
+  const { extensions } = problem;
+  if (!extensions) return;
+  if (extensions.kind !== "object") {
+    throw new DesktopRendererGenerationProblem(
+      `Desktop Problem ${JSON.stringify(problem.code)} extensions must be a strict object schema.`,
+    );
+  }
+
+  const redaction = problem.source.redaction === "safe" ? "safe-message" : problem.source.redaction;
+  const unsafePath = problem.source.public
+    ? findUnsafeProblemExtensionPath(extensions, [], redaction)
+    : [extensions.fields[0]?.name ?? "extensions"];
+  if (unsafePath) {
+    throw new DesktopRendererGenerationProblem(
+      `Desktop Problem ${JSON.stringify(problem.code)} exposes extension field ${JSON.stringify(unsafePath.join("."))} outside its response policy.`,
+    );
+  }
+}
+
+function findUnsafeProblemExtensionPath(
+  descriptor: DesktopWireSchemaDescriptor,
+  path: readonly string[],
+  redaction: ProblemRedactionPolicy,
+): readonly string[] | undefined {
+  switch (descriptor.kind) {
+    case "object":
+      for (const field of descriptor.fields) {
+        const fieldPath = [...path, field.name];
+        if (
+          !Object.prototype.hasOwnProperty.call(
+            createProblemResponseExtensions({ [field.name]: true }, redaction),
+            field.name,
+          )
+        ) {
+          return fieldPath;
+        }
+        const nested = findUnsafeProblemExtensionPath(field.schema, fieldPath, redaction);
+        if (nested) return nested;
+      }
+      return undefined;
+    case "array":
+      return findUnsafeProblemExtensionPath(descriptor.element, [...path, "[]"], redaction);
+    case "optional":
+    case "nullable":
+      return findUnsafeProblemExtensionPath(descriptor.inner, path, redaction);
+    case "union":
+      for (const [index, option] of descriptor.options.entries()) {
+        const nested = findUnsafeProblemExtensionPath(
+          option,
+          [...path, `option${index}`],
+          redaction,
+        );
+        if (nested) return nested;
+      }
+      return undefined;
+    default:
+      return undefined;
   }
 }
 
