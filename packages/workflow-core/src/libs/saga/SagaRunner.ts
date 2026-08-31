@@ -389,16 +389,18 @@ export class SagaRunner {
     span: SagaTelemetrySpan,
   ): Promise<never> {
     const failure = toSagaFailure(error);
+    const compensationFailures: SagaFailure[] = [];
     let finalStatus: SagaExecutionStatus = "failed";
-    let compensationFailures: SagaFailure[] = [];
     let failed: SagaExecution;
     try {
-      const compensated = await this.compensateCompletedSteps(definition, executionId, failure);
-      compensationFailures = compensated.compensationFailures;
+      const compensatedStepCount = await this.compensateCompletedSteps(
+        definition,
+        executionId,
+        failure,
+        compensationFailures,
+      );
       finalStatus =
-        compensated.compensatedStepCount > 0 && compensationFailures.length === 0
-          ? "compensated"
-          : "failed";
+        compensatedStepCount > 0 && compensationFailures.length === 0 ? "compensated" : "failed";
       failed = await this.store.update(executionId, {
         status: finalStatus,
         error: failure,
@@ -570,10 +572,10 @@ export class SagaRunner {
     definition: SagaDefinition,
     executionId: string,
     failure: SagaFailure,
-  ): Promise<{ compensationFailures: SagaFailure[]; compensatedStepCount: number }> {
+    compensationFailures: SagaFailure[],
+  ): Promise<number> {
     const execution = await this.getExecution(executionId);
     const outboxIdentityRoot = await this.resolveOutboxIdentityRoot(execution);
-    const compensationFailures: SagaFailure[] = [];
     let compensatedStepCount = 0;
 
     for (const record of [...execution.steps].reverse()) {
@@ -647,7 +649,7 @@ export class SagaRunner {
       }
     }
 
-    return { compensationFailures, compensatedStepCount };
+    return compensatedStepCount;
   }
 
   private resolveSagaIdempotencyKey(
