@@ -13,10 +13,16 @@ import {
   StrategyUnavailableProblem,
   throwIfSearchOperationAborted,
 } from "@croco/search-core";
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { BulkIndexChunkFailedProblem } from "./problems/BulkIndexProblems";
 import { InvalidSearchRowProblem } from "./problems/InvalidSearchRowProblem";
 import { SEARCH_SCORE_ALIAS } from "./searchScore";
-import { DRIZZLE_TOKEN, type SearchResultRow, type SearchStrategy } from "./types";
+import {
+  type BulkIndexQueryPlan,
+  DRIZZLE_TOKEN,
+  type DrizzleSearchDatabase,
+  type SearchResultRow,
+  type SearchStrategy,
+} from "./types";
 
 function isSearchResultRow(value: unknown): value is SearchResultRow {
   return typeof value === "object" && value !== null;
@@ -67,7 +73,7 @@ export class DrizzleSearchEngine extends SearchEngine {
    * Drizzle DB와 검색 전략을 받아 검색 엔진을 초기화합니다.
    */
   constructor(
-    @Inject(DRIZZLE_TOKEN) private readonly db: NodePgDatabase<Record<string, never>>,
+    @Inject(DRIZZLE_TOKEN) private readonly db: DrizzleSearchDatabase,
     private readonly strategy: SearchStrategy,
   ) {
     super();
@@ -159,7 +165,7 @@ export class DrizzleSearchEngine extends SearchEngine {
   }
 
   /**
-   * 여러 문서를 순차적으로 인덱싱합니다.
+   * 여러 문서를 bounded SQL chunk로 인덱싱합니다.
    */
   async bulkIndex(
     index: string,
@@ -167,16 +173,22 @@ export class DrizzleSearchEngine extends SearchEngine {
     options: SearchOperationOptions = {},
   ): Promise<void> {
     await this.ensureCapable("bulkIndex", options);
-    for (const doc of documents) {
-      throwIfSearchOperationAborted("bulkIndex", options);
-      try {
-        await this.indexDocument(index, doc, options);
-      } catch (error) {
-        throwIfSearchOperationAborted("bulkIndex", options);
-        throw error;
-      }
-      throwIfSearchOperationAborted("bulkIndex", options);
+    if (documents.length === 0) {
+      return;
     }
+
+    const tenantId = this.getTenantId("bulkIndex");
+    const plans = this.buildBulkIndexQueryPlans(index, documents, tenantId);
+
+    if (typeof this.db.transaction === "function") {
+      await this.db.transaction(async (transaction) => {
+        await this.executeBulkIndexQueryPlans(transaction, plans, options, true);
+      });
+      throwIfSearchOperationAborted("bulkIndex", options);
+      return;
+    }
+
+    await this.executeBulkIndexQueryPlans(this.db, plans, options, false);
   }
 
   /**
@@ -202,6 +214,48 @@ export class DrizzleSearchEngine extends SearchEngine {
         this.strategy.constructor.name,
         `Database does not support required extensions: ${this.strategy.getRequiredExtensions().join(", ")}`,
       );
+    }
+  }
+
+  private buildBulkIndexQueryPlans(
+    index: string,
+    documents: readonly SearchDocument[],
+    tenantId: string,
+  ): readonly BulkIndexQueryPlan[] {
+    if (this.strategy.buildBulkIndexQueryPlans) {
+      return this.strategy.buildBulkIndexQueryPlans(index, documents, tenantId);
+    }
+
+    return documents.map((document, documentIndex) => ({
+      query: this.strategy.buildIndexQuery(index, document, tenantId),
+      documentIndexes: [documentIndex],
+    }));
+  }
+
+  private async executeBulkIndexQueryPlans(
+    executor: Pick<DrizzleSearchDatabase, "execute">,
+    plans: readonly BulkIndexQueryPlan[],
+    options: SearchOperationOptions,
+    transactional: boolean,
+  ): Promise<void> {
+    const committedDocumentIndexes: number[] = [];
+
+    for (const [chunkIndex, plan] of plans.entries()) {
+      throwIfSearchOperationAborted("bulkIndex", options);
+      try {
+        await executor.execute(plan.query);
+      } catch (error) {
+        throwIfSearchOperationAborted("bulkIndex", options);
+        throw new BulkIndexChunkFailedProblem(
+          chunkIndex,
+          plan.documentIndexes,
+          transactional ? [] : committedDocumentIndexes,
+          transactional,
+          error,
+        );
+      }
+      throwIfSearchOperationAborted("bulkIndex", options);
+      committedDocumentIndexes.push(...plan.documentIndexes);
     }
   }
 

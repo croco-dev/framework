@@ -23,6 +23,36 @@ title: "PGroongaStrategy"
 
 ## Methods
 
+### buildBulkIndexQueryPlans()
+
+> **buildBulkIndexQueryPlans**(`table`, `documents`, `tenantId`): readonly [`BulkIndexQueryPlan`](/api/search-drizzle/src/type-aliases/bulkindexqueryplan/)[]
+
+문서를 bounded PostgreSQL upsert query plan으로 구성합니다.
+
+#### Parameters
+
+##### table
+
+`string`
+
+##### documents
+
+readonly [`SearchDocument`](/api/search-core/src/type-aliases/searchdocument/)[]
+
+##### tenantId
+
+`string`
+
+#### Returns
+
+readonly [`BulkIndexQueryPlan`](/api/search-drizzle/src/type-aliases/bulkindexqueryplan/)[]
+
+#### Implementation of
+
+[`SearchStrategy`](/api/search-drizzle/src/interfaces/searchstrategy/).[`buildBulkIndexQueryPlans`](/api/search-drizzle/src/interfaces/searchstrategy/#buildbulkindexqueryplans)
+
+---
+
 ### buildDeleteQuery()
 
 > **buildDeleteQuery**(`table`, `documentId`, `tenantId`): `SQL`
@@ -123,7 +153,7 @@ PGroonga 연산자를 사용하는 검색 SQL을 생성합니다.
 
 ##### db
 
-`NodePgDatabase`\<`Record`\<`string`, `never`\>\>
+[`DrizzleSearchDatabase`](/api/search-drizzle/src/type-aliases/drizzlesearchdatabase/)
 
 #### Returns
 

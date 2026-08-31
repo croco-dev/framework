@@ -21,6 +21,20 @@ export type SearchQueryPlan = {
 };
 
 /**
+ * 검색 엔진이 사용할 수 있는 최소 Drizzle PostgreSQL 실행 계약입니다.
+ */
+export type DrizzleSearchDatabase = Pick<NodePgDatabase<Record<string, never>>, "execute"> &
+  Partial<Pick<NodePgDatabase<Record<string, never>>, "transaction">>;
+
+/**
+ * 하나의 대량 색인 SQL과 원본 문서 위치를 연결합니다.
+ */
+export type BulkIndexQueryPlan = {
+  query: SQL;
+  documentIndexes: readonly number[];
+};
+
+/**
  * PostgreSQL 검색 전략이 구현해야 하는 계약입니다.
  */
 export interface SearchStrategy {
@@ -35,6 +49,15 @@ export interface SearchStrategy {
   buildIndexQuery(table: string, document: SearchDocument, tenantId: string): SQL;
 
   /**
+   * 지원되는 전략에서 여러 문서를 bounded SQL chunk로 컴파일합니다.
+   */
+  buildBulkIndexQueryPlans?(
+    table: string,
+    documents: readonly SearchDocument[],
+    tenantId: string,
+  ): readonly BulkIndexQueryPlan[];
+
+  /**
    * 문서 삭제 SQL을 생성합니다.
    */
   buildDeleteQuery(table: string, documentId: string, tenantId: string): SQL;
@@ -47,7 +70,7 @@ export interface SearchStrategy {
   /**
    * 현재 DB가 전략을 지원하는지 확인합니다.
    */
-  checkCapability(db: NodePgDatabase<Record<string, never>>): Promise<boolean>;
+  checkCapability(db: DrizzleSearchDatabase): Promise<boolean>;
 
   /**
    * 전략이 제공하는 검색 기능을 반환합니다.

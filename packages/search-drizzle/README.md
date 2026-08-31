@@ -54,12 +54,20 @@ await engine.indexDocument(
 - `search(index, query, options)`, 전략 SQL로 검색 결과를 반환합니다.
 - `indexDocument(index, document, options)`, 문서를 인덱싱합니다.
 - `deleteDocument(index, documentId, options)`, 문서를 삭제합니다.
-- `bulkIndex(index, documents, options)`, 문서를 순차적으로 일괄 인덱싱합니다.
+- `bulkIndex(index, documents, options)`, 문서를 bounded set-based SQL chunk로 일괄 인덱싱합니다.
 - `capabilities`, 현재 전략의 기능 정보를 반환합니다.
 
 모든 I/O 메서드는 `options.signal`을 실행 전후에 확인합니다. 현재 Drizzle의 node-postgres 경계는 이미 전달된 쿼리를
 중단할 signal을 받지 않으므로, 실행 중 취소되면 호출은 `search-core/operation-aborted` Problem으로 실패하지만 데이터베이스
 부작용은 이미 완료됐을 수 있습니다.
+
+내장 PostgreSQL 전략은 문서를 query당 최대 100개, parameter 60,000개 이하로 묶습니다. 서로 다른 필드 집합은 같은
+database statement 안의 독립된 set-based upsert로 유지하고, 같은 tenant에서 반복된 문서 ID는 앞선 필드를 보존하면서
+마지막 값으로 합칩니다. transaction을 제공하는 Drizzle client에서는 모든 chunk를 하나의 transaction으로 실행하므로 한
+chunk가 실패하면 앞선 chunk도 commit되지 않습니다. transaction이 없는 execute-only client에서는 앞서 완료된 chunk가
+남으며 `search-drizzle/bulk-index-chunk-failed` Problem의 `committedDocumentIndexes`와
+`failedDocumentIndexes`가 원본 배열 위치를 알려 줍니다. 문서 ID와 필드 값은 이 진단에 포함하지 않습니다. abort signal은
+각 chunk 전후에 검사되어 다음 write를 막습니다.
 
 ### 전략
 
@@ -82,7 +90,11 @@ ID를 결정적 tie-breaker로 추가합니다. limit과 offset은 0 이상의 s
 
 - `DRIZZLE_TOKEN`, 검색 엔진용 Drizzle 주입 토큰입니다.
 - `SearchStrategy`, 전략 구현 계약입니다.
+- `DrizzleSearchDatabase`, 선택적 transaction을 포함하는 최소 Drizzle PostgreSQL 실행 계약입니다.
 - `SearchQueryPlan`, 결과 행 SQL과 전체 건수 SQL을 함께 표현하는 전략 결과 타입입니다.
+- `BulkIndexQueryPlan`, 대량 색인 SQL chunk와 원본 문서 위치를 함께 표현하는 전략 결과 타입입니다.
 - `SearchResultRow`, 검색 결과 행 타입입니다.
+- `BulkIndexChunkFailedProblem`, 실패 chunk와 비트랜잭션 client에서 이미 commit된 문서 위치를 보고하는 문제입니다.
+- `BulkIndexDocumentTooWideProblem`, 단일 문서가 안전한 PostgreSQL parameter 예산을 넘을 때 던지는 문제입니다.
 - `InvalidSearchRowProblem`, 검색 결과 행, 관련도 점수 또는 전체 건수 행이 유효하지 않을 때 던지는 문제입니다.
 - `InvalidSearchQueryProblem`, 검색 옵션을 안전하게 SQL로 컴파일할 수 없을 때 던지는 문제입니다.

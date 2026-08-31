@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 701,
+  problemCount: 703,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -16715,6 +16715,70 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/search-core/src/libs/problems/SearchProblems.ts",
           line: 96,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "search-drizzle/bulk-index-chunk-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#search-drizzle-bulk-index-chunk-failed",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/search-drizzle/src/libs/problems/BulkIndexProblems.ts",
+          line: 16,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "search-drizzle/bulk-index-document-too-wide",
+      category: "PayloadTooLarge",
+      status: 413,
+      title: "Payload Too Large",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#search-drizzle-bulk-index-document-too-wide",
+      recovery: {
+        cause: "The request body exceeded the configured byte limit.",
+        userAction: "Reduce the request body and retry.",
+        operatorAction:
+          "Confirm route body limits and upstream proxy limits match the intended upload policy.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/search-drizzle/src/libs/problems/BulkIndexProblems.ts",
+          line: 44,
           column: 5,
           kind: "problem-constructor",
         },

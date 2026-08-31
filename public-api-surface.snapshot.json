@@ -26040,6 +26040,18 @@
           "sourceEntrypoint": "packages/search-drizzle/src/index.ts",
           "runtimeExports": [
             {
+              "name": "BulkIndexChunkFailedProblem",
+              "exportKind": "declaration",
+              "source": "./libs/problems/BulkIndexProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "BulkIndexDocumentTooWideProblem",
+              "exportKind": "declaration",
+              "source": "./libs/problems/BulkIndexProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "DRIZZLE_TOKEN",
               "exportKind": "declaration",
               "source": "./libs/types",
@@ -26083,6 +26095,18 @@
             }
           ],
           "typeExports": [
+            {
+              "name": "BulkIndexQueryPlan",
+              "exportKind": "declaration",
+              "source": "./libs/types",
+              "declarationKind": "type"
+            },
+            {
+              "name": "DrizzleSearchDatabase",
+              "exportKind": "declaration",
+              "source": "./libs/types",
+              "declarationKind": "type"
+            },
             {
               "name": "SearchQueryPlan",
               "exportKind": "declaration",

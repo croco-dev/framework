@@ -10,6 +10,10 @@ export * from "./libs/problems/InvalidSearchRowProblem";
  * 검색 쿼리 옵션 검증 오류 문제 타입입니다.
  */
 export * from "./libs/problems/InvalidSearchQueryProblem";
+/**
+ * 대량 색인 chunk 실행 및 크기 검증 문제 타입입니다.
+ */
+export * from "./libs/problems/BulkIndexProblems";
 
 /**
  * PostgreSQL 검색 전략 구현체들입니다.

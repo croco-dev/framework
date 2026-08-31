@@ -23,7 +23,7 @@ Drizzle DB와 검색 전략을 받아 검색 엔진을 초기화합니다.
 
 ##### db
 
-`NodePgDatabase`\<`Record`\<`string`, `never`\>\>
+[`DrizzleSearchDatabase`](/api/search-drizzle/src/type-aliases/drizzlesearchdatabase/)
 
 ##### strategy
 
@@ -73,7 +73,7 @@ Drizzle DB와 검색 전략을 받아 검색 엔진을 초기화합니다.
 
 > **bulkIndex**(`index`, `documents`, `options?`): `Promise`\<`void`\>
 
-여러 문서를 순차적으로 인덱싱합니다.
+여러 문서를 bounded SQL chunk로 인덱싱합니다.
 
 #### Parameters
 
