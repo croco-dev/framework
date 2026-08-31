@@ -35,7 +35,57 @@ describe("InMemoryStorageProvider", () => {
       await provider.put("test/file.txt", buffer, { contentType: "text/plain" });
 
       const result = await provider.get("test/file.txt");
-      expect(result).toEqual(buffer);
+      expect(result).toEqual(new Uint8Array(buffer));
+    });
+
+    it("업로드한 Buffer 변경이 저장된 바이트를 변경하지 않음", async () => {
+      const buffer = Buffer.from("safe");
+      await provider.put("test/input-alias.txt", buffer);
+
+      buffer.write("evil");
+
+      await expect(provider.get("test/input-alias.txt")).resolves.toEqual(
+        new Uint8Array(Buffer.from("safe")),
+      );
+    });
+
+    it("업로드가 완료되기 전 변경도 호출 시점의 바이트와 메타데이터 스냅샷을 변경하지 않음", async () => {
+      const buffer = Buffer.from("safe");
+      const customMetadata = { author: "original" };
+      const upload = provider.put("test/pending-input-alias.txt", buffer, {
+        metadata: customMetadata,
+      });
+
+      buffer.write("evil");
+      customMetadata.author = "mutated";
+      await upload;
+
+      await expect(provider.get("test/pending-input-alias.txt")).resolves.toEqual(
+        new Uint8Array(Buffer.from("safe")),
+      );
+      await expect(provider.getMetadata("test/pending-input-alias.txt")).resolves.toMatchObject({
+        metadata: { author: "original" },
+      });
+    });
+
+    it("호출자가 정의한 typed array species를 거치지 않고 바이트를 복사함", async () => {
+      class AliasingUint8Array extends Uint8Array {}
+
+      const data = new AliasingUint8Array(Buffer.from("safe"));
+      Object.defineProperty(AliasingUint8Array, Symbol.species, {
+        value: function () {
+          return data;
+        },
+      });
+      await provider.put("test/custom-species.txt", data);
+
+      data.set(Buffer.from("evil"));
+      const first = await provider.get("test/custom-species.txt");
+      first.set(Buffer.from("hack"));
+
+      await expect(provider.get("test/custom-species.txt")).resolves.toEqual(
+        new Uint8Array(Buffer.from("safe")),
+      );
     });
 
     it("Web ReadableStream으로 파일 업로드 성공", async () => {
@@ -64,6 +114,19 @@ describe("InMemoryStorageProvider", () => {
       expect(metadata.contentType).toBe("text/plain");
       expect(metadata.metadata).toEqual({ author: "test-user" });
       expect(metadata.lastModified).toBeInstanceOf(Date);
+    });
+
+    it("업로드 옵션의 사용자 정의 메타데이터 변경이 저장된 메타데이터를 변경하지 않음", async () => {
+      const customMetadata = { author: "original" };
+      await provider.put("test/input-metadata-alias.txt", Buffer.from("content"), {
+        metadata: customMetadata,
+      });
+
+      customMetadata.author = "mutated";
+
+      await expect(provider.getMetadata("test/input-metadata-alias.txt")).resolves.toMatchObject({
+        metadata: { author: "original" },
+      });
     });
 
     it("빈 키로 업로드 시도 시 InvalidKeyProblem throw", async () => {
@@ -172,7 +235,9 @@ describe("InMemoryStorageProvider", () => {
         });
       }
 
-      await expect(provider.get("test/cancellation.txt")).resolves.toEqual(Buffer.from("content"));
+      await expect(provider.get("test/cancellation.txt")).resolves.toEqual(
+        new Uint8Array(Buffer.from("content")),
+      );
       await expect(provider.exists("test/new.txt")).resolves.toBe(false);
     });
 
@@ -201,7 +266,18 @@ describe("InMemoryStorageProvider", () => {
       await provider.put("test/get.txt", buffer);
 
       const result = await provider.get("test/get.txt");
-      expect(result).toEqual(buffer);
+      expect(result).toEqual(new Uint8Array(buffer));
+    });
+
+    it("반환된 바이트 변경이 이후 조회 결과를 변경하지 않음", async () => {
+      await provider.put("test/output-alias.txt", Buffer.from("safe"));
+
+      const result = await provider.get("test/output-alias.txt");
+      result.set(Buffer.from("hack"));
+
+      await expect(provider.get("test/output-alias.txt")).resolves.toEqual(
+        new Uint8Array(Buffer.from("safe")),
+      );
     });
 
     it("존재하지 않는 파일 조회 시 FileNotFoundProblem throw", async () => {
@@ -221,6 +297,20 @@ describe("InMemoryStorageProvider", () => {
       const stream = await provider.getStream("test/stream.txt");
       expect(stream).toBeInstanceOf(ReadableStream);
       expect(await readStorageStream(stream)).toEqual(new Uint8Array(buffer));
+    });
+
+    it("스트림 청크 변경이 저장된 바이트를 변경하지 않음", async () => {
+      await provider.put("test/stream-alias.txt", Buffer.from("safe"));
+
+      const stream = await provider.getStream("test/stream-alias.txt");
+      const reader = stream.getReader();
+      const firstChunk = await reader.read();
+      expect(firstChunk.done).toBe(false);
+      firstChunk.value?.set(Buffer.from("hack"));
+
+      await expect(provider.get("test/stream-alias.txt")).resolves.toEqual(
+        new Uint8Array(Buffer.from("safe")),
+      );
     });
 
     it("존재하지 않는 파일 스트림 조회 시 FileNotFoundProblem throw", async () => {
@@ -337,6 +427,29 @@ describe("InMemoryStorageProvider", () => {
       expect(metadata.contentType).toBe("application/json");
       expect(metadata.metadata).toEqual({ key: "value" });
       expect(metadata.lastModified).toBeInstanceOf(Date);
+    });
+
+    it("반환된 메타데이터 변경이 이후 조회 결과를 변경하지 않음", async () => {
+      await provider.put("test/output-metadata-alias.txt", Buffer.from("Metadata test"), {
+        contentType: "application/json",
+        metadata: { key: "original" },
+      });
+
+      const first = await provider.getMetadata("test/output-metadata-alias.txt");
+      const originalLastModified = first.lastModified.getTime();
+      first.contentType = "text/plain";
+      first.lastModified.setTime(0);
+      if (first.metadata) {
+        first.metadata.key = "mutated";
+      }
+
+      const second = await provider.getMetadata("test/output-metadata-alias.txt");
+      expect(second.contentType).toBe("application/json");
+      expect(second.lastModified.getTime()).toBe(originalLastModified);
+      expect(second.metadata).toEqual({ key: "original" });
+      expect(second).not.toBe(first);
+      expect(second.lastModified).not.toBe(first.lastModified);
+      expect(second.metadata).not.toBe(first.metadata);
     });
 
     it("메타데이터 없이 저장된 파일의 기본 메타데이터 조회", async () => {

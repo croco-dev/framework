@@ -14,8 +14,20 @@ import type {
 
 type StoredObject = {
   data: Uint8Array;
-  metadata?: ObjectMetadata;
+  metadata: ObjectMetadata;
 };
+
+function copyBytes(bytes: Uint8Array): Uint8Array {
+  return new Uint8Array(bytes);
+}
+
+function cloneMetadata(metadata: ObjectMetadata): ObjectMetadata {
+  return {
+    ...metadata,
+    lastModified: new Date(metadata.lastModified.getTime()),
+    metadata: metadata.metadata ? { ...metadata.metadata } : undefined,
+  };
+}
 
 /**
  * 인메모리 스토리지 제공자 구현체 (테스트용)
@@ -38,7 +50,10 @@ export class InMemoryStorageProvider extends BaseStorageProvider {
 
     try {
       const body =
-        data instanceof Uint8Array ? data : this.bindOperationSignal(data, options, "put", key);
+        data instanceof Uint8Array
+          ? copyBytes(data)
+          : this.bindOperationSignal(data, options, "put", key);
+      const customMetadata = options?.metadata ? { ...options.metadata } : undefined;
       const bytes = await readStorageBody(body);
 
       this.assertOperationNotAborted(options, "put", key);
@@ -47,7 +62,7 @@ export class InMemoryStorageProvider extends BaseStorageProvider {
         size: bytes.byteLength,
         contentType: options?.contentType,
         lastModified: new Date(),
-        metadata: options?.metadata,
+        metadata: customMetadata,
       };
 
       this.storage.set(key, { data: bytes, metadata });
@@ -71,7 +86,7 @@ export class InMemoryStorageProvider extends BaseStorageProvider {
       throw new FileNotFoundProblem(key);
     }
 
-    return object.data;
+    return copyBytes(object.data);
   }
 
   async getStream(key: string, options?: StorageOperationOptions): Promise<StorageStream> {
@@ -84,7 +99,12 @@ export class InMemoryStorageProvider extends BaseStorageProvider {
       throw new FileNotFoundProblem(key);
     }
 
-    return this.bindOperationSignal(storageStreamFromBytes(object.data), options, "getStream", key);
+    return this.bindOperationSignal(
+      storageStreamFromBytes(copyBytes(object.data)),
+      options,
+      "getStream",
+      key,
+    );
   }
 
   async delete(key: string, options?: StorageOperationOptions): Promise<void> {
@@ -134,12 +154,7 @@ export class InMemoryStorageProvider extends BaseStorageProvider {
       throw new FileNotFoundProblem(key);
     }
 
-    return (
-      object.metadata ?? {
-        size: object.data.length,
-        lastModified: new Date(),
-      }
-    );
+    return cloneMetadata(object.metadata);
   }
 
   clear(): void {
