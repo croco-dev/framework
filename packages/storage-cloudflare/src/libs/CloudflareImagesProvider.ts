@@ -351,8 +351,13 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
             );
           }
 
-          return await startDownloadStream(
-            this.bindOperationSignal(response.body, options, "getStream", key),
+          return this.bindOperationSignal(
+            await startDownloadStream(
+              this.bindOperationSignal(response.body, options, "getStream", key),
+              key,
+            ),
+            options,
+            "getStream",
             key,
           );
         },

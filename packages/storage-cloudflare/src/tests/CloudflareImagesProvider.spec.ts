@@ -905,6 +905,22 @@ describe("CloudflareImagesProvider", () => {
       expect(mockFetch).toHaveBeenCalledTimes(1);
     });
 
+    it("rejects a cached first response chunk when the operation is aborted", async () => {
+      const controller = new AbortController();
+      const reason = new Error("download cancelled");
+      mockFetch.mockResolvedValueOnce(new Response(new Uint8Array([7])));
+
+      const stream = await provider.getStream("test-image-id", { signal: controller.signal });
+      const reader = stream.getReader();
+      controller.abort(reason);
+
+      await expect(reader.read()).rejects.toMatchObject({
+        cause: reason,
+        code: "STORAGE_OPERATION_ABORTED",
+      });
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
     it("cancels every discarded non-OK body without masking the status Problem", async () => {
       const cancellationCounts = [0, 0, 0];
       const createRejectedResponse = (attempt: number, cancellationFails = false) =>
