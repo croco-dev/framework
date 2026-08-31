@@ -142,6 +142,10 @@ describe("installed CLI command integration", () => {
               "import": "./dist/verification.js",
               "types": "./dist/verification.d.ts",
             },
+            "./generator": {
+              "import": "./dist/generator.js",
+              "types": "./dist/generator.d.ts",
+            },
             "./programmatic": {
               "import": "./dist/programmatic.js",
               "types": "./dist/programmatic.d.ts",
