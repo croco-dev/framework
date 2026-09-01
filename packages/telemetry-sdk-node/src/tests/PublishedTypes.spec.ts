@@ -22,10 +22,14 @@ describe("published telemetry SDK types", () => {
         ensureBuilt();
         pack("@croco/problems-core", packRoot);
         pack("@croco/diagnostics-core", packRoot);
+        pack("@croco/framework-context", packRoot);
+        pack("@croco/framework-module", packRoot);
         pack("@croco/telemetry-sdk-node", packRoot);
 
         const problemsCoreTarball = findTarball(packRoot, "croco-problems-core-");
         const diagnosticsCoreTarball = findTarball(packRoot, "croco-diagnostics-core-");
+        const frameworkContextTarball = findTarball(packRoot, "croco-framework-context-");
+        const frameworkModuleTarball = findTarball(packRoot, "croco-framework-module-");
         const telemetrySdkTarball = findTarball(packRoot, "croco-telemetry-sdk-node-");
         const packedManifest = JSON.parse(
           run("tar", ["-xOf", telemetrySdkTarball, "package/package.json"], rootDir).stdout,
@@ -54,6 +58,8 @@ describe("published telemetry SDK types", () => {
         );
         writePnpmWorkspaceOverrides(consumerRoot, {
           "@croco/diagnostics-core": `file:${diagnosticsCoreTarball}`,
+          "@croco/framework-context": `file:${frameworkContextTarball}`,
+          "@croco/framework-module": `file:${frameworkModuleTarball}`,
           "@croco/problems-core": `file:${problemsCoreTarball}`,
         });
         writeFileSync(
@@ -225,6 +231,8 @@ function ensureBuilt(): void {
   const packages = [
     { name: "@croco/problems-core", directory: resolve(rootDir, "packages/problems-core") },
     { name: "@croco/diagnostics-core", directory: resolve(rootDir, "packages/diagnostics-core") },
+    { name: "@croco/framework-context", directory: resolve(rootDir, "packages/framework-context") },
+    { name: "@croco/framework-module", directory: resolve(rootDir, "packages/framework-module") },
     { name: "@croco/telemetry-sdk-node", directory: packageDir },
   ];
   const missingBuildPackages = packages.filter(({ directory }) => shouldBuildPackage(directory));
