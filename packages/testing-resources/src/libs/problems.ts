@@ -1,6 +1,28 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import type { TestResourceDiagnosticStage } from "@croco/testing";
 
+export type TestResourceLiveDependencyRequirement =
+  | {
+      readonly dependency: "pg" | "testcontainers";
+      readonly resourceKind: "postgresql";
+    }
+  | {
+      readonly dependency: "ioredis" | "testcontainers";
+      readonly resourceKind: "redis";
+    };
+export type TestResourceLiveDependency = TestResourceLiveDependencyRequirement["dependency"];
+
+const LIVE_DEPENDENCY_CONTRACTS = {
+  postgresql: {
+    installCommand: "pnpm add -D pg@8.22.0 testcontainers@12.0.4",
+    label: "PostgreSQL",
+  },
+  redis: {
+    installCommand: "pnpm add -D ioredis@5.11.1 testcontainers@12.0.4",
+    label: "Redis",
+  },
+} as const;
+
 const TEST_RESOURCE_LIFECYCLE_PROBLEM_METADATA = {
   startup: {
     code: "testing-resources/startup-failed",
@@ -25,6 +47,39 @@ export class TestResourceConfigurationProblem extends Problem {
     super("testing-resources/invalid-configuration", ProblemCategory.InternalServerError, message, {
       extensions,
     });
+  }
+}
+
+/**
+ * Reports the optional live-resource driver that must be installed before retrying a test.
+ *
+ * The matching exact install command is available in `extensions.installCommand`.
+ */
+export class TestResourceMissingDependencyProblem extends Problem {
+  constructor(
+    resourceId: string,
+    requirement: TestResourceLiveDependencyRequirement,
+    cause?: Error,
+  ) {
+    const { dependency, resourceKind } = requirement;
+    const contract = LIVE_DEPENDENCY_CONTRACTS[resourceKind];
+    const recovery = `Run "${contract.installCommand}" and retry the live-resource test.`;
+
+    super(
+      "testing-resources/missing-live-dependency",
+      ProblemCategory.InternalServerError,
+      `${contract.label} test resource '${resourceId}' requires optional peer dependency '${dependency}'. ${recovery}`,
+      {
+        extensions: {
+          dependency,
+          installCommand: contract.installCommand,
+          recovery,
+          resourceId,
+          resourceKind,
+        },
+        ...(cause ? { cause } : {}),
+      },
+    );
   }
 }
 

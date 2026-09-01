@@ -38,9 +38,8 @@
     "@croco/framework-context": "workspace:*",
     "@croco/problems-core": "workspace:*",
     "@croco/testing": "workspace:*",
-    "ioredis": "5.11.1",
-    "pg": "8.22.0",
-    "testcontainers": "12.0.4"
+    "@types/ioredis": "4.28.10",
+    "@types/pg": "8.20.0"
   },
   "devDependencies": {
     "@croco/auth-clerk": "workspace:*",
@@ -53,9 +52,27 @@
     "@croco/transports-http": "workspace:*",
     "@croco/tx-core": "workspace:*",
     "@croco/tx-drizzle": "workspace:*",
-    "@types/pg": "8.20.0",
     "drizzle-orm": "catalog:",
+    "ioredis": "5.11.1",
+    "pg": "8.22.0",
+    "testcontainers": "12.0.4",
     "tsup": "8.5.1",
     "vitest": "4.1.8"
+  },
+  "peerDependencies": {
+    "ioredis": "5.11.1",
+    "pg": "8.22.0",
+    "testcontainers": "12.0.4"
+  },
+  "peerDependenciesMeta": {
+    "ioredis": {
+      "optional": true
+    },
+    "pg": {
+      "optional": true
+    },
+    "testcontainers": {
+      "optional": true
+    }
   }
 }

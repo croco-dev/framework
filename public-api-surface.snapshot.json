@@ -31560,6 +31560,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "TestResourceMissingDependencyProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
               "name": "testResourceProvider",
               "exportKind": "named",
               "source": "./libs/providers",

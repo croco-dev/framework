@@ -601,6 +601,10 @@ function runPackageSmoke(
     runFrontendViteOptionalPeerSmoke(packageSmokeRoot, packageInfo.packageName);
   }
 
+  if (packageInfo.packageName === "@croco/testing-resources") {
+    runTestingResourcesOptionalPeerSmoke(packageSmokeRoot, packageInfo.packageName);
+  }
+
   if (packageInfo.packageName === "@croco/framework-logger") {
     runFrameworkLoggerStartupSmoke(packageSmokeRoot);
   }
@@ -1796,6 +1800,137 @@ function runFrontendViteOptionalPeerSmoke(smokeRoot: string, packageName: string
   );
   run("node", [join(smokeRoot, "frontend-vite-nested-error.mjs")], smokeRoot, {
     label: `${packageName}: frontend-vite nested peer error`,
+  });
+}
+
+function runTestingResourcesOptionalPeerSmoke(smokeRoot: string, packageName: string): void {
+  const strictTypesPath = join(smokeRoot, "testing-resources-strict-types.ts");
+  const liveTypesPath = join(smokeRoot, "testing-resources-live-types.ts");
+  const strictTsconfigPath = join(smokeRoot, "testing-resources-strict-tsconfig.json");
+  writeFileSync(
+    strictTypesPath,
+    [
+      `import { postgresResource, redisResource, type PostgresTestConnection, type RedisTestConnection } from ${JSON.stringify(packageName)};`,
+      'const postgres = postgresResource({ mode: "commit" });',
+      "const redis = redisResource();",
+      "declare const postgresConnection: PostgresTestConnection;",
+      "declare const redisConnection: RedisTestConnection;",
+      "void postgres;",
+      "void redis;",
+      "void postgresConnection.query;",
+      "void postgresConnection.pool.on;",
+      "void redisConnection.client.hgetall;",
+      "void redisConnection.client.pipeline;",
+      "",
+    ].join("\n"),
+  );
+  writeFileSync(
+    strictTsconfigPath,
+    `${JSON.stringify(
+      {
+        compilerOptions: {
+          lib: ["DOM", "ESNext"],
+          module: "NodeNext",
+          moduleResolution: "NodeNext",
+          noEmit: true,
+          skipLibCheck: false,
+          strict: true,
+          target: "ES2022",
+          typeRoots: [join(defaultRootDir, "node_modules", "@types")],
+          types: ["node"],
+        },
+        include: [liveTypesPath, strictTypesPath],
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  run(process.execPath, [tscPath(), "-p", strictTsconfigPath], smokeRoot, {
+    label: `${packageName}: strict types without optional peers`,
+  });
+
+  const smokePath = join(smokeRoot, "testing-resources-optional-peers.mjs");
+  writeFileSync(
+    smokePath,
+    [
+      'import { createRequire } from "node:module";',
+      "const require = createRequire(import.meta.url);",
+      'for (const dependency of ["ioredis", "pg", "testcontainers"]) {',
+      "  try {",
+      "    require.resolve(dependency);",
+      "  } catch (error) {",
+      '    if (error instanceof Error && error.code === "MODULE_NOT_FOUND") {',
+      "      continue;",
+      "    }",
+      "    throw error;",
+      "  }",
+      "  throw new Error(`${dependency} must not be installed for the base testing-resources path`);",
+      "}",
+      `const { postgresResource, redisResource, TestResourceMissingDependencyProblem } = await import(${JSON.stringify(packageName)});`,
+      'const context = { register() {}, testId: "packed", workerId: "packed" };',
+      "const cases = [",
+      '  [postgresResource({ mode: "commit" }), "pnpm add -D pg@8.22.0 testcontainers@12.0.4"],',
+      '  [redisResource(), "pnpm add -D ioredis@5.11.1 testcontainers@12.0.4"],',
+      "];",
+      "for (const [resource, installCommand] of cases) {",
+      "  try {",
+      "    await resource.start(context);",
+      "  } catch (error) {",
+      "    if (",
+      "      error instanceof TestResourceMissingDependencyProblem &&",
+      '      error.code === "testing-resources/missing-live-dependency" &&',
+      "      error.message.includes(installCommand)",
+      "    ) {",
+      "      continue;",
+      "    }",
+      "    throw error;",
+      "  }",
+      '  throw new Error("live resource unexpectedly started without its optional peers");',
+      "}",
+      'console.log("testing-resources base install excludes live drivers and preserves actionable failures");',
+      "",
+    ].join("\n"),
+  );
+
+  run("node", [smokePath], smokeRoot, {
+    label: `${packageName}: optional live-resource peers`,
+  });
+
+  run(
+    "pnpm",
+    ["add", "--prod", "@types/pg@8.20.0", "ioredis@5.11.1", "pg@8.22.0", "--ignore-scripts"],
+    smokeRoot,
+    {
+      label: `${packageName}: install live peers and PostgreSQL types`,
+    },
+  );
+  writeFileSync(
+    liveTypesPath,
+    [
+      'import { Redis } from "ioredis";',
+      'import { Pool, type PoolClient } from "pg";',
+      `import type { PostgresTestConnection, RedisTestConnection } from ${JSON.stringify(packageName)};`,
+      'declare const postgresClient: NonNullable<PostgresTestConnection["client"]>;',
+      'declare const postgresPool: PostgresTestConnection["pool"];',
+      "declare const pgClient: PoolClient;",
+      "const canonicalPostgresClient: PoolClient = postgresClient;",
+      "const canonicalPostgresPool: Pool = postgresPool;",
+      'const connectionPostgresClient: NonNullable<PostgresTestConnection["client"]> = pgClient;',
+      'const connectionPostgresPool: PostgresTestConnection["pool"] = new Pool();',
+      'declare const redisClient: RedisTestConnection["client"];',
+      "const canonicalRedisClient: Redis = redisClient;",
+      'const connectionRedisClient: RedisTestConnection["client"] = new Redis();',
+      "void canonicalPostgresClient;",
+      "void canonicalPostgresPool;",
+      "void canonicalRedisClient;",
+      "void connectionPostgresClient;",
+      "void connectionPostgresPool;",
+      "void connectionRedisClient;",
+      "",
+    ].join("\n"),
+  );
+  run(process.execPath, [tscPath(), "-p", strictTsconfigPath], smokeRoot, {
+    label: `${packageName}: canonical live types`,
   });
 }
 

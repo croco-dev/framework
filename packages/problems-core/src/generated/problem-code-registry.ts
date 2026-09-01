@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 726,
+  problemCount: 727,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -19338,7 +19338,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing-resources/src/libs/problems.ts",
-          line: 17,
+          line: 39,
           column: 12,
           kind: "problem-metadata",
         },
@@ -19370,7 +19370,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing-resources/src/libs/problems.ts",
-          line: 13,
+          line: 35,
           column: 19,
           kind: "problem-metadata",
         },
@@ -19402,7 +19402,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing-resources/src/libs/problems.ts",
-          line: 25,
+          line: 47,
           column: 5,
           kind: "problem-constructor",
         },
@@ -19434,9 +19434,43 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing-resources/src/libs/problems.ts",
-          line: 9,
+          line: 31,
           column: 14,
           kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "testing-resources/missing-live-dependency",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#testing-resources-missing-live-dependency",
+      recovery: {
+        cause:
+          "A PostgreSQL or Redis test resource was started without its required optional live driver.",
+        userAction:
+          "Run the exact command in extensions.installCommand, then retry the live-resource test.",
+        operatorAction:
+          "Inspect extensions.dependency and extensions.resourceKind, install the matching optional peer dependencies, and confirm Docker is available before retrying.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/testing-resources/src/libs/problems.ts",
+          line: 68,
+          column: 5,
+          kind: "problem-constructor",
         },
       ],
     },
@@ -19466,7 +19500,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing-resources/src/libs/problems.ts",
-          line: 5,
+          line: 27,
           column: 12,
           kind: "problem-metadata",
         },

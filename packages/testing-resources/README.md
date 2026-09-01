@@ -5,6 +5,25 @@
 `@croco/testing`; applications install this package only when they need
 commit-time, migration, or real-service evidence.
 
+The base install does not include Redis, PostgreSQL, or container-runtime
+drivers. Add only the live path used by the suite:
+
+```bash
+# PostgreSQL resources
+pnpm add -D pg@8.22.0 testcontainers@12.0.4
+
+# Redis resources
+pnpm add -D ioredis@5.11.1 testcontainers@12.0.4
+```
+
+Importing the package and configuring in-memory `@croco/testing` fixtures does
+not resolve these optional drivers. Starting a live resource without its drivers
+throws `TestResourceMissingDependencyProblem` with the matching install command.
+The base install includes type declarations, but not the optional runtime
+drivers. Strict TypeScript projects therefore resolve the package without the
+drivers, while installing the exact optional peers preserves the canonical
+`ioredis.Redis`, `pg.Pool`, and `pg.PoolClient` contracts for live consumers.
+
 ## Prerequisites
 
 - Docker Desktop, Colima, or another Docker-compatible daemon must be running.

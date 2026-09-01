@@ -103,6 +103,34 @@ describe("problem-registry.mts", () => {
     expect(checkResult.status).toBe("pass");
   });
 
+  it("publishes installation recovery for missing testing resource drivers", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/testing-resources/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        "export class TestResourceMissingDependencyProblem extends Problem {",
+        "  constructor() {",
+        '    super("testing-resources/missing-live-dependency", ProblemCategory.InternalServerError);',
+        "  }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const registry = createProblemCodeRegistry(discoverProblemCodes(repo));
+
+    expect(registry.problems[0]?.recovery).toMatchObject({
+      cause: expect.stringContaining("optional live driver"),
+      userAction: expect.stringContaining("extensions.installCommand"),
+      operatorAction: expect.stringContaining("extensions.dependency"),
+      retryability: "not-retryable",
+      redactionPolicy: "public",
+      telemetry: { severity: "error" },
+    });
+  });
+
   it("publishes cancellation-specific recovery for aborted search operations", () => {
     const repo = createTempRepo();
     writeFile(

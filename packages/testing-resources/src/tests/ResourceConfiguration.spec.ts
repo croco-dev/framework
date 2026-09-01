@@ -1,6 +1,7 @@
 import { PassThrough } from "node:stream";
 import { beforeEach, describe, expect, it } from "vitest";
 import { Container, Token } from "@croco/framework-context";
+import { ProblemCategory } from "@croco/problems-core";
 import {
   DEFAULT_POSTGRES_IMAGE,
   DEFAULT_REDIS_IMAGE,
@@ -10,8 +11,10 @@ import {
   type TestResourceProvider,
   TestResourceConfigurationProblem,
   TestResourceLifecycleProblem,
+  TestResourceMissingDependencyProblem,
   testResourceProvider,
 } from "../index";
+import { loadTestResourceLiveDependency } from "../libs/liveDependencies";
 import { appendContainerLogs, throwCleanupFailures } from "../libs/shared";
 
 describe("testing resource configuration", () => {
@@ -51,6 +54,77 @@ describe("testing resource configuration", () => {
     );
 
     expect(provider.token).toBe(token);
+  });
+
+  it.each([
+    {
+      installCommand: "pnpm add -D pg@8.22.0 testcontainers@12.0.4",
+      name: "pg for PostgreSQL",
+      requirement: { dependency: "pg", resourceKind: "postgresql" },
+    },
+    {
+      installCommand: "pnpm add -D ioredis@5.11.1 testcontainers@12.0.4",
+      name: "ioredis for Redis",
+      requirement: { dependency: "ioredis", resourceKind: "redis" },
+    },
+    {
+      installCommand: "pnpm add -D pg@8.22.0 testcontainers@12.0.4",
+      name: "testcontainers for PostgreSQL",
+      requirement: { dependency: "testcontainers", resourceKind: "postgresql" },
+    },
+  ] as const)(
+    "reports the $name recovery command when a live driver is missing",
+    async ({ installCommand, requirement }) => {
+      const { dependency, resourceKind } = requirement;
+      const cause = Object.assign(
+        new Error(`Cannot find package '${dependency}' imported from /consumer/test.mjs`),
+        { code: "ERR_MODULE_NOT_FOUND" },
+      );
+
+      const result = loadTestResourceLiveDependency("resource", requirement, () =>
+        Promise.reject(cause),
+      );
+
+      await expect(result).rejects.toBeInstanceOf(TestResourceMissingDependencyProblem);
+      await expect(result).rejects.toMatchObject({
+        category: ProblemCategory.InternalServerError,
+        cause,
+        code: "testing-resources/missing-live-dependency",
+        extensions: {
+          dependency,
+          installCommand,
+          resourceId: "resource",
+          resourceKind,
+        },
+      });
+    },
+  );
+
+  it("preserves nested module resolution failures from an installed live driver", async () => {
+    const cause = Object.assign(
+      new Error(
+        "Cannot find package 'testcontainers-transitive-missing' imported from /consumer/node_modules/testcontainers/build/index.js",
+      ),
+      { code: "ERR_MODULE_NOT_FOUND" },
+    );
+
+    await expect(
+      loadTestResourceLiveDependency(
+        "postgres",
+        { dependency: "testcontainers", resourceKind: "postgresql" },
+        () => Promise.reject(cause),
+      ),
+    ).rejects.toBe(cause);
+  });
+
+  it("rejects live dependencies that do not match the resource kind at compile time", () => {
+    const invalidRequirement = { dependency: "pg", resourceKind: "redis" } as const;
+    const compileTimeCheck = () => {
+      // @ts-expect-error Redis resources cannot require the PostgreSQL driver.
+      new TestResourceMissingDependencyProblem("resource", invalidRequirement);
+    };
+
+    expect(compileTimeCheck).toBeTypeOf("function");
   });
 
   it("requires opaque provider construction through the typed factory", () => {

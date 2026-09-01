@@ -1904,6 +1904,17 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "testing-resources/missing-live-dependency": recovery({
+    cause:
+      "A PostgreSQL or Redis test resource was started without its required optional live driver.",
+    userAction:
+      "Run the exact command in extensions.installCommand, then retry the live-resource test.",
+    operatorAction:
+      "Inspect extensions.dependency and extensions.resourceKind, install the matching optional peer dependencies, and confirm Docker is available before retrying.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "error",
+  }),
   "audit-core/client-ip-policy-invalid": recovery({
     cause:
       "AuditInterceptor received trustedProxyHops outside the nonnegative safe-integer domain.",

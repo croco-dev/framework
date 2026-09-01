@@ -7,9 +7,9 @@ import type {
   TestResourceDiagnostic,
   TestResourceMode,
 } from "@croco/testing";
-import type { PoolClient, QueryResult, QueryResultRow } from "pg";
-import { Pool } from "pg";
-import { GenericContainer, type StartedTestContainer, Wait } from "testcontainers";
+import type { Pool, PoolClient, QueryResult, QueryResultRow } from "pg";
+import type { StartedTestContainer } from "testcontainers";
+import { loadTestResourceLiveDependency } from "./liveDependencies";
 import { TestResourceConfigurationProblem, TestResourceLifecycleProblem } from "./problems";
 import type { TestResourceProvider } from "./providers";
 import {
@@ -74,6 +74,16 @@ export function postgresResource(
     fidelityHint: fidelity,
     id,
     async start(context): Promise<StartedTestResource<PostgresTestConnection>> {
+      const { GenericContainer, Wait } = await loadTestResourceLiveDependency(
+        id,
+        { dependency: "testcontainers", resourceKind: "postgresql" },
+        () => import("testcontainers"),
+      );
+      const { Pool } = await loadTestResourceLiveDependency(
+        id,
+        { dependency: "pg", resourceKind: "postgresql" },
+        () => import("pg"),
+      );
       const logs: string[] = [];
       const diagnostics: TestResourceDiagnostic[] = [];
       const username = options.username ?? "postgres";
