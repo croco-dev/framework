@@ -694,6 +694,16 @@ function checkWebMetaViteFullstackAddonStructure() {
   checkFileContains(
     "addons/web-meta-vite-fullstack",
     ["api-worker", "src", "index.ts"],
+    /createApplicationRuntime/,
+  );
+  checkFileContains(
+    "addons/web-meta-vite-fullstack",
+    ["api-worker", "src", "index.ts"],
+    /applicationRuntime\.bindHostCallback\(createCloudflareWorkersHost\(app\)\)/,
+  );
+  checkFileContains(
+    "addons/web-meta-vite-fullstack",
+    ["api-worker", "src", "index.ts"],
     /corsMiddleware\(\{ origins: \[webOrigin\] \}\)/,
   );
   checkFileContains(
