@@ -201,6 +201,13 @@ function createTransientLookupError(): Error {
   });
 }
 
+function createAlreadyCanceledSubscriptionError(): Error {
+  return Object.assign(new Error("already canceled"), {
+    name: "AlreadyCanceledSubscription",
+    error: "AlreadyCanceledSubscription",
+  });
+}
+
 function createUnexpected404Error(): Error {
   return Object.assign(new Error("Gateway timeout disguised as 404"), {
     name: "UnexpectedClientError",
@@ -1039,12 +1046,7 @@ describe("PolarBillingGateway", () => {
 
     it("should treat an already-applied immediate cancellation retry as success", async () => {
       const gateway = createGateway();
-      mockRevokeSubscription.mockRejectedValueOnce(
-        Object.assign(new Error("already canceled"), {
-          name: "AlreadyCanceledSubscription",
-          error: "AlreadyCanceledSubscription",
-        }),
-      );
+      mockRevokeSubscription.mockRejectedValueOnce(createAlreadyCanceledSubscriptionError());
       mockGetSubscription.mockResolvedValue({
         status: "canceled",
         cancelAtPeriodEnd: false,
@@ -1060,12 +1062,7 @@ describe("PolarBillingGateway", () => {
 
     it("should not hide an already-canceled response when the requested target is absent", async () => {
       const gateway = createGateway();
-      mockUpdateSubscription.mockRejectedValueOnce(
-        Object.assign(new Error("already canceled"), {
-          name: "AlreadyCanceledSubscription",
-          error: "AlreadyCanceledSubscription",
-        }),
-      );
+      mockUpdateSubscription.mockRejectedValueOnce(createAlreadyCanceledSubscriptionError());
       mockGetSubscription.mockResolvedValue({
         status: "canceled",
         cancelAtPeriodEnd: false,
@@ -1077,6 +1074,71 @@ describe("PolarBillingGateway", () => {
         }),
       ).rejects.toMatchObject({
         code: "billing-polar/terminal-upstream",
+      });
+    });
+
+    it.each([
+      [
+        "rate-limit",
+        Object.assign(new Error("Rate limit exceeded"), {
+          name: "ConnectionError",
+          status: 429,
+        }),
+        { upstreamCode: "ConnectionError", upstreamStatus: 429 },
+      ],
+      [
+        "server",
+        Object.assign(new Error("Service unavailable"), {
+          name: "APIError",
+          status: 503,
+        }),
+        { upstreamCode: "APIError", upstreamStatus: 503 },
+      ],
+      [
+        "timeout",
+        Object.assign(new Error("Request timed out"), {
+          name: "RequestTimeoutError",
+        }),
+        { upstreamCode: "RequestTimeoutError" },
+      ],
+    ])(
+      "should propagate a retryable %s failure from cancellation reconciliation",
+      async (_failureKind, lookupError, expectedExtensions) => {
+        const gateway = createGateway();
+        mockRevokeSubscription.mockRejectedValueOnce(createAlreadyCanceledSubscriptionError());
+        mockGetSubscription.mockRejectedValueOnce(lookupError);
+
+        await expect(
+          gateway.cancelSubscription("sub-1", true, {
+            idempotencyKey: "cancel-reconciliation-retry-1",
+          }),
+        ).rejects.toMatchObject({
+          code: "billing-polar/retryable-upstream",
+          extensions: expect.objectContaining({
+            operation: "cancelSubscription.reconcile",
+            retryable: true,
+            ...expectedExtensions,
+          }),
+        });
+      },
+    );
+
+    it("should treat a not-found cancellation reconciliation lookup as a missing target", async () => {
+      const gateway = createGateway();
+      mockRevokeSubscription.mockRejectedValueOnce(createAlreadyCanceledSubscriptionError());
+      mockGetSubscription.mockRejectedValueOnce(createNotFoundError());
+
+      await expect(
+        gateway.cancelSubscription("sub-missing", true, {
+          idempotencyKey: "cancel-reconciliation-missing-1",
+        }),
+      ).rejects.toMatchObject({
+        code: "billing-polar/terminal-upstream",
+        extensions: expect.objectContaining({
+          operation: "cancelSubscription",
+          retryable: false,
+          upstreamCode: "AlreadyCanceledSubscription",
+        }),
       });
     });
   });
