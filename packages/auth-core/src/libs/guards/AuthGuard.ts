@@ -6,6 +6,7 @@ import type { AuthRequest } from "../interfaces/AuthRequest";
 import type { Guard, RouteExecutionContext } from "../interfaces/Guard";
 import { UnauthorizedProblem } from "../problems/AuthProblems";
 import { authenticateWithProvider } from "./authenticateWithProvider";
+import { isApiKeyRequiredRoute } from "./isApiKeyRequiredRoute";
 import { requireRouteMetadataTarget } from "./requireRouteMetadataTarget";
 
 export const AUTH_PROVIDER_TOKEN = new Token<AuthProvider>("AuthProvider");
@@ -29,9 +30,14 @@ export class AuthGuard implements Guard<RouteExecutionContext> {
     const handler = context.getHandler();
 
     const isPublic = isPublicRoute(target, handler);
+    const isApiKeyRequired = isApiKeyRequiredRoute(target, handler);
 
-    if (isPublic) {
+    if (isPublic && !isApiKeyRequired) {
       return true;
+    }
+
+    if (isApiKeyRequired) {
+      throw new UnauthorizedProblem("API key required");
     }
 
     const authProvider = Container.getOptional(AUTH_PROVIDER_TOKEN);

@@ -2,12 +2,15 @@ import "reflect-metadata";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Container } from "@croco/framework-context";
 import { ProblemFactory } from "@croco/problems-core";
+import { Trace } from "@croco/telemetry-api";
 import {
   authGuardConformance,
   createConformanceAuthCoreUser,
   createRouteMetadataAdapterFixtures,
 } from "../../../../test-support/authGuardConformance";
 import { AUTH_PUBLIC_KEY } from "../libs/constants";
+import { Public } from "../libs/decorators/Public";
+import { RequireApiKey } from "../libs/decorators/RequireApiKey";
 import { AUTH_PROVIDER_TOKEN, AuthGuard } from "../libs/guards/AuthGuard";
 import type { AuthProvider } from "../libs/interfaces/AuthProvider";
 import type { AuthRequest } from "../libs/interfaces/AuthRequest";
@@ -97,6 +100,59 @@ describe("AuthGuard", () => {
     const result = await authGuard.canActivate(context);
 
     expect(result).toBe(true);
+    expect(mockAuthProvider.authenticate).not.toHaveBeenCalled();
+  });
+
+  it("should reject user authentication for an API-key-only route", async () => {
+    class TestController {
+      @RequireApiKey()
+      protectedMethod() {}
+    }
+    const context = createMockContext(TestController, "protectedMethod");
+    vi.spyOn(mockAuthProvider, "authenticate").mockResolvedValue(mockUser);
+
+    const activation = authGuard.canActivate(context);
+
+    await expect(activation).rejects.toThrow(UnauthorizedProblem);
+    await expect(activation).rejects.toThrow("API key required");
+    expect(mockAuthProvider.authenticate).not.toHaveBeenCalled();
+  });
+
+  it("should not let public metadata bypass an API-key-only route", async () => {
+    class TestController {
+      @Public()
+      @RequireApiKey()
+      protectedMethod() {}
+    }
+    const context = createMockContext(TestController, "protectedMethod");
+    vi.spyOn(mockAuthProvider, "authenticate").mockResolvedValue(mockUser);
+
+    await expect(authGuard.canActivate(context)).rejects.toThrow("API key required");
+    expect(mockAuthProvider.authenticate).not.toHaveBeenCalled();
+  });
+
+  it("should preserve API-key-only enforcement when a later decorator wraps the route", async () => {
+    class TestController {
+      @Trace()
+      @RequireApiKey()
+      async protectedMethod(): Promise<void> {}
+    }
+    const context = createMockContext(TestController, "protectedMethod");
+    vi.spyOn(mockAuthProvider, "authenticate").mockResolvedValue(mockUser);
+
+    await expect(authGuard.canActivate(context)).rejects.toThrow("API key required");
+    expect(mockAuthProvider.authenticate).not.toHaveBeenCalled();
+  });
+
+  it("should reject user authentication for an API-key-only controller", async () => {
+    @RequireApiKey()
+    class TestController {
+      protectedMethod() {}
+    }
+    const context = createMockContext(TestController.prototype, "protectedMethod");
+    vi.spyOn(mockAuthProvider, "authenticate").mockResolvedValue(mockUser);
+
+    await expect(authGuard.canActivate(context)).rejects.toThrow("API key required");
     expect(mockAuthProvider.authenticate).not.toHaveBeenCalled();
   });
 

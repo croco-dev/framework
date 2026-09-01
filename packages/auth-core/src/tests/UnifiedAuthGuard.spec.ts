@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ProblemFactory } from "@croco/problems-core";
+import { Trace } from "@croco/telemetry-api";
 import {
   authGuardConformance,
   createConformanceApiKeyPrincipal,
@@ -8,6 +9,8 @@ import {
   createRouteMetadataAdapterFixtures,
 } from "../../../../test-support/authGuardConformance";
 import { AUTH_PUBLIC_KEY } from "../libs/constants";
+import { Public } from "../libs/decorators/Public";
+import { RequireApiKey } from "../libs/decorators/RequireApiKey";
 import { UnifiedAuthGuard } from "../libs/guards/UnifiedAuthGuard";
 import type { ApiKeyProvider } from "../libs/interfaces/ApiKeyProvider";
 import type { AuthProvider } from "../libs/interfaces/AuthProvider";
@@ -170,6 +173,80 @@ describe("UnifiedAuthGuard", () => {
     expect(request.apiKey).toBe(mockApiKeyPrincipal);
     expect(mockApiKeyProvider.authenticate).toHaveBeenCalledWith(context.getRequest());
     expect(mockAuthProvider.authenticate).not.toHaveBeenCalled();
+  });
+
+  it("should reject user authentication for an API-key-only route", async () => {
+    class TestController {
+      @RequireApiKey()
+      protectedMethod() {}
+    }
+    const context = createMockContext(TestController, "protectedMethod");
+    mockAuthProvider.authenticate.mockResolvedValue(mockUser);
+
+    const activation = guard.canActivate(context);
+
+    await expect(activation).rejects.toThrow(UnauthorizedProblem);
+    await expect(activation).rejects.toThrow("Missing API key");
+    expect(mockAuthProvider.authenticate).not.toHaveBeenCalled();
+    expect(mockApiKeyProvider.authenticate).not.toHaveBeenCalled();
+  });
+
+  it("should not let public metadata bypass an API-key-only route", async () => {
+    class TestController {
+      @Public()
+      @RequireApiKey()
+      protectedMethod() {}
+    }
+    const context = createMockContext(TestController, "protectedMethod");
+    mockAuthProvider.authenticate.mockResolvedValue(mockUser);
+
+    await expect(guard.canActivate(context)).rejects.toThrow("Missing API key");
+    expect(mockAuthProvider.authenticate).not.toHaveBeenCalled();
+    expect(mockApiKeyProvider.authenticate).not.toHaveBeenCalled();
+  });
+
+  it("should preserve API-key-only enforcement when a later decorator wraps the route", async () => {
+    class TestController {
+      @Trace()
+      @RequireApiKey()
+      async protectedMethod(): Promise<void> {}
+    }
+    const context = createMockContext(TestController, "protectedMethod");
+    mockAuthProvider.authenticate.mockResolvedValue(mockUser);
+
+    await expect(guard.canActivate(context)).rejects.toThrow("Missing API key");
+    expect(mockAuthProvider.authenticate).not.toHaveBeenCalled();
+    expect(mockApiKeyProvider.authenticate).not.toHaveBeenCalled();
+  });
+
+  it("should accept valid API key authentication for an API-key-only route", async () => {
+    class TestController {
+      @RequireApiKey()
+      protectedMethod() {}
+    }
+    const context = createMockContext(TestController, "protectedMethod", {
+      "x-api-key": "pk_test_valid_key",
+    });
+    mockApiKeyProvider.authenticate.mockResolvedValue(mockApiKeyPrincipal);
+
+    await expect(guard.canActivate(context)).resolves.toBe(true);
+    expect(context.getRequest().principal).toBe(mockApiKeyPrincipal);
+    expect(context.getRequest().apiKey).toBe(mockApiKeyPrincipal);
+    expect(mockApiKeyProvider.authenticate).toHaveBeenCalledWith(context.getRequest());
+    expect(mockAuthProvider.authenticate).not.toHaveBeenCalled();
+  });
+
+  it("should reject user authentication for an API-key-only controller", async () => {
+    @RequireApiKey()
+    class TestController {
+      protectedMethod() {}
+    }
+    const context = createMockContext(TestController.prototype, "protectedMethod");
+    mockAuthProvider.authenticate.mockResolvedValue(mockUser);
+
+    await expect(guard.canActivate(context)).rejects.toThrow("Missing API key");
+    expect(mockAuthProvider.authenticate).not.toHaveBeenCalled();
+    expect(mockApiKeyProvider.authenticate).not.toHaveBeenCalled();
   });
 
   it("should throw UnauthorizedProblem when API key is invalid", async () => {
