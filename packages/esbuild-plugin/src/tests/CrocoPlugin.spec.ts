@@ -302,6 +302,28 @@ describe("crocoPlugin", () => {
       const actualResult = typeof result === "object" && "then" in result ? await result : result;
 
       expect(actualResult?.contents).toContain("import 'reflect-metadata';");
+      expect(actualResult?.loader).toBe("ts");
+    });
+
+    it("should build injected TSX entry points with JSX", async () => {
+      const entryFilePath = path.join(TEMP_DIR, "entry.tsx");
+      fs.writeFileSync(entryFilePath, "export const App = () => <main>hello</main>;");
+
+      const result = await esbuild.build({
+        entryPoints: [entryFilePath],
+        plugins: [
+          crocoPlugin({
+            scan: {
+              dirs: [],
+            },
+          }),
+        ],
+        jsx: "preserve",
+        write: false,
+      });
+
+      expect(result.errors).toEqual([]);
+      expect(result.outputFiles).toHaveLength(1);
     });
 
     it("should prepend auto-import for component files", async () => {
