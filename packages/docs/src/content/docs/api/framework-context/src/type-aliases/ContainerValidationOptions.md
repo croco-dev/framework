@@ -13,7 +13,7 @@ title: "ContainerValidationOptions"
 
 > `readonly` `optional` **force?**: `boolean`
 
-***
+---
 
 ### roots?
 

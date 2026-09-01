@@ -1,0 +1,60 @@
+{
+  "name": "@croco/engagement-drizzle",
+  "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/croco-dev/framework.git",
+    "directory": "packages/engagement-drizzle"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "commonjs",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "publishConfig": {
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.js"
+      }
+    },
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
+    "lint": "oxlint .",
+    "test": "vitest run --exclude src/tests/DrizzleEngagementStore.postgres.spec.ts",
+    "test:live": "vitest run src/tests/DrizzleEngagementStore.postgres.spec.ts",
+    "test:postgres": "vitest run src/tests/DrizzleEngagementStore.postgres.spec.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@croco/engagement-core": "workspace:*",
+    "@croco/problems-core": "workspace:*",
+    "@croco/tx-core": "workspace:*",
+    "drizzle-orm": "catalog:"
+  },
+  "devDependencies": {
+    "@croco/tx-drizzle": "workspace:*",
+    "@types/pg": "8.20.0",
+    "pg": "8.22.0",
+    "tsup": "^8.4.0",
+    "typescript": "^5.7.2",
+    "vitest": "4.1.8"
+  },
+  "peerDependencies": {
+    "drizzle-orm": "catalog:"
+  }
+}

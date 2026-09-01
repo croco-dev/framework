@@ -19,9 +19,12 @@ import {
   defineMessage,
   EngagementCommandInvalidProblem,
   EngagementDispatchFailedProblem,
+  EngagementPersistenceProblem,
+  EngagementRecordedDispatchFailureProblem,
   EngagementRenderFailedProblem,
   EngagementService,
   EngagementSuppressionEvaluationProblem,
+  InMemoryEngagementStore,
   InMemoryMessageRendererResolver,
   InMemoryRecipientDirectory,
   MessageDataInvalidProblem,
@@ -31,6 +34,7 @@ import {
   RecipientNotFoundProblem,
   RegistryEngagementMessageRenderer,
   Renders,
+  StoredEngagementPolicyEvaluator,
   createEngagementIdempotencyKey,
   type EngagementNotificationDispatcher,
   type EngagementSendCommand,
@@ -586,6 +590,274 @@ describe("EngagementService", () => {
     });
     expect(renderSpy).not.toHaveBeenCalled();
     expect(dispatcher.dispatch).not.toHaveBeenCalled();
+  });
+
+  it("records durable no-endpoint outcomes for every unavailable channel", async () => {
+    const noEndpoints = new InMemoryRecipientDirectory([
+      { recipient: recipient.recipient, push: [] },
+    ]);
+    const dispatcher = createDispatcher();
+    const store = new InMemoryEngagementStore();
+    const engagement = new EngagementService(
+      noEndpoints,
+      createRenderer(),
+      dispatcher.service,
+      undefined,
+      store,
+    );
+
+    await engagement.send(TrialEnding, {
+      recipient: recipient.recipient,
+      data: { tenantName: "Croco", secret: "payload-secret" },
+      key: "no-endpoint-1",
+    });
+
+    await expect(
+      store.findByIdentity({
+        tenantId: "tenant-1",
+        messageId: TrialEnding.id,
+        recipientId: "user-1",
+        channel: "email",
+        semanticKey: "no-endpoint-1",
+      }),
+    ).resolves.toMatchObject({ outcome: { kind: "unavailable", reason: "no-endpoint" } });
+    await expect(
+      store.findByIdentity({
+        tenantId: "tenant-1",
+        messageId: TrialEnding.id,
+        recipientId: "user-1",
+        channel: "push",
+        semanticKey: "no-endpoint-1",
+      }),
+    ).resolves.toMatchObject({ outcome: { kind: "unavailable", reason: "no-endpoint" } });
+  });
+
+  it("replays a durable logical dispatch without contacting the provider again", async () => {
+    const dispatcher = createDispatcher();
+    const store = new InMemoryEngagementStore();
+    const engagement = new EngagementService(
+      directory,
+      createRenderer(),
+      dispatcher.service,
+      undefined,
+      store,
+    );
+    const command = {
+      recipient: recipient.recipient,
+      data: { tenantName: "Croco", secret: "payload-secret" },
+      key: "durable-replay-1",
+    } as const;
+
+    const first = await engagement.send(TrialEnding, command);
+    const replay = await engagement.send(TrialEnding, command);
+
+    expect(replay).toEqual(first);
+    expect(dispatcher.dispatch).toHaveBeenCalledTimes(1);
+  });
+
+  it("replays a completed send without resolving the recipient again", async () => {
+    const dispatcher = createDispatcher();
+    const store = new InMemoryEngagementStore();
+    const command = {
+      recipient: recipient.recipient,
+      data: { tenantName: "Croco", secret: "payload-secret" },
+      key: "durable-directory-independent-replay-1",
+    } as const;
+    const first = await new EngagementService(
+      directory,
+      createRenderer(),
+      dispatcher.service,
+      undefined,
+      store,
+    ).send(TrialEnding, command);
+    const unavailableDirectory: RecipientDirectory = {
+      async resolve() {
+        throw new Error("directory unavailable");
+      },
+    };
+
+    const replay = await new EngagementService(
+      unavailableDirectory,
+      createRenderer(),
+      dispatcher.service,
+      undefined,
+      store.reopen(),
+    ).send(TrialEnding, command);
+
+    expect(replay).toEqual(first);
+    expect(dispatcher.dispatch).toHaveBeenCalledTimes(1);
+  });
+
+  it("replays a durable failed dispatch without contacting the provider again", async () => {
+    const dispatcher = createDispatcher();
+    dispatcher.dispatch.mockRejectedValue(new NotificationDeliveryFailedProblem("fake-provider"));
+    const store = new InMemoryEngagementStore();
+    const engagement = new EngagementService(
+      directory,
+      createRenderer(),
+      dispatcher.service,
+      undefined,
+      store,
+    );
+    const command = {
+      recipient: recipient.recipient,
+      data: { tenantName: "Croco", secret: "payload-secret" },
+      key: "durable-failure-1",
+    } as const;
+
+    await expect(engagement.send(TrialEnding, command)).rejects.toBeInstanceOf(
+      EngagementDispatchFailedProblem,
+    );
+    const replayed = await engagement.send(TrialEnding, command).catch((error: unknown) => error);
+
+    expect(replayed).toBeInstanceOf(EngagementDispatchFailedProblem);
+    expect((replayed as EngagementDispatchFailedProblem).cause).toBeInstanceOf(
+      EngagementRecordedDispatchFailureProblem,
+    );
+    expect(dispatcher.dispatch).toHaveBeenCalledTimes(1);
+  });
+
+  it("preserves successful target evidence when a later endpoint fails", async () => {
+    const dispatcher = createDispatcher();
+    dispatcher.dispatch
+      .mockResolvedValueOnce({ executionId: "email-execution" })
+      .mockResolvedValueOnce({ executionId: "push-phone-execution" })
+      .mockRejectedValueOnce(new NotificationDeliveryFailedProblem("fake-provider"));
+    const store = new InMemoryEngagementStore();
+    const engagement = new EngagementService(
+      directory,
+      createRenderer(),
+      dispatcher.service,
+      undefined,
+      store,
+    );
+    const command = {
+      recipient: recipient.recipient,
+      data: { tenantName: "Croco", secret: "payload-secret" },
+      key: "durable-partial-failure-1",
+      policy: "all-reachable",
+    } as const;
+
+    const firstFailure = await engagement
+      .send(TrialEnding, command)
+      .catch((error: unknown) => error);
+    expect(firstFailure).toBeInstanceOf(EngagementDispatchFailedProblem);
+    expect(firstFailure).toMatchObject({
+      extensions: {
+        channelResults: [
+          { channel: "email", status: "queued", executionIds: ["email-execution"] },
+          {
+            channel: "push",
+            status: "queued",
+            executionIds: ["push-phone-execution"],
+          },
+        ],
+      },
+    });
+
+    await expect(
+      store.findByIdentity({
+        tenantId: recipient.recipient.tenantId,
+        messageId: TrialEnding.id,
+        recipientId: recipient.recipient.userId,
+        channel: "push",
+        semanticKey: command.key,
+      }),
+    ).resolves.toMatchObject({
+      targets: [
+        {
+          endpointId: "push-phone",
+          executionId: "push-phone-execution",
+        },
+        { endpointId: "push-tablet" },
+      ],
+      outcome: {
+        kind: "failed",
+        stage: "provider",
+        executionIds: ["push-phone-execution"],
+      },
+    });
+
+    const replayed = await engagement.send(TrialEnding, command).catch((error: unknown) => error);
+    expect(replayed).toBeInstanceOf(EngagementDispatchFailedProblem);
+    expect((replayed as EngagementDispatchFailedProblem).extensions?.channelResults).toEqual(
+      (firstFailure as EngagementDispatchFailedProblem).extensions?.channelResults,
+    );
+    expect(dispatcher.dispatch).toHaveBeenCalledTimes(3);
+  });
+
+  it("surfaces persistence failure when provider failure evidence cannot be recorded", async () => {
+    const dispatcher = createDispatcher();
+    dispatcher.dispatch.mockRejectedValue(new NotificationDeliveryFailedProblem("fake-provider"));
+    const store = new InMemoryEngagementStore();
+    vi.spyOn(store, "recordDispatch").mockRejectedValue(new Error("evidence store unavailable"));
+    const engagement = new EngagementService(
+      directory,
+      createRenderer(),
+      dispatcher.service,
+      undefined,
+      store,
+    );
+
+    const problem = await engagement
+      .send(TrialEnding, {
+        recipient: recipient.recipient,
+        data: { tenantName: "Croco", secret: "payload-secret" },
+        key: "failed-evidence-1",
+      })
+      .catch((error: unknown) => error);
+
+    expect(problem).toBeInstanceOf(EngagementPersistenceProblem);
+    expect((problem as EngagementPersistenceProblem).extensions).toMatchObject({
+      operation: "record-failed-dispatch",
+      retryable: true,
+    });
+  });
+
+  it("records stored preference denial separately from provider failure", async () => {
+    const dispatcher = createDispatcher();
+    const store = new InMemoryEngagementStore();
+    await store.setPreference({
+      tenantId: "tenant-1",
+      recipientId: "user-1",
+      scope: "recipient",
+      topic: "billing",
+      channel: "email",
+      state: "deny",
+      source: "recipient-settings",
+      changedAt: new Date("2026-01-01T00:00:00.000Z"),
+    });
+    const engagement = new EngagementService(
+      directory,
+      createRenderer(),
+      dispatcher.service,
+      new StoredEngagementPolicyEvaluator(store, store, { globalDefault: "allow" }),
+      store,
+    );
+
+    await expect(
+      engagement.send(TrialEnding, {
+        recipient: recipient.recipient,
+        data: { tenantName: "Croco", secret: "payload-secret" },
+        key: "preference-denial-1",
+      }),
+    ).resolves.toMatchObject({
+      status: "queued",
+      channelResults: [
+        { channel: "email", status: "suppressed", reason: "preference" },
+        { channel: "push", status: "queued" },
+      ],
+    });
+    expect(dispatcher.dispatch).toHaveBeenCalledTimes(2);
+    await expect(
+      store.findByIdentity({
+        tenantId: "tenant-1",
+        messageId: TrialEnding.id,
+        recipientId: "user-1",
+        channel: "email",
+        semanticKey: "preference-denial-1",
+      }),
+    ).resolves.toMatchObject({ outcome: { kind: "suppressed", reason: "preference" } });
   });
 
   it("continues to the next reachable channel after preference denial", async () => {

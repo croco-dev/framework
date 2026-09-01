@@ -8537,9 +8537,51 @@
           "sourceEntrypoint": "packages/engagement-core/src/index.ts",
           "runtimeExports": [
             {
+              "name": "assertEngagementPreference",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores",
+              "declarationKind": "function"
+            },
+            {
+              "name": "assertEngagementStoreText",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores",
+              "declarationKind": "function"
+            },
+            {
+              "name": "assertEngagementSuppression",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createEngagementDeliveryEventId",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createEngagementDispatchId",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createEngagementDispatchIdentityKey",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores",
+              "declarationKind": "function"
+            },
+            {
               "name": "createEngagementIdempotencyKey",
               "exportKind": "named",
               "source": "./libs/EngagementService",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createEngagementStoreConformanceSuite",
+              "exportKind": "named",
+              "source": "./libs/EngagementStoreConformance",
               "declarationKind": "function"
             },
             {
@@ -8549,13 +8591,43 @@
               "declarationKind": "function"
             },
             {
+              "name": "ENGAGEMENT_DELIVERY_EVENT_TYPES",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores",
+              "declarationKind": "const"
+            },
+            {
               "name": "EngagementCommandInvalidProblem",
               "exportKind": "named",
               "source": "./libs/EngagementService",
               "declarationKind": "class"
             },
             {
+              "name": "EngagementDeliveryEventCorrelationProblem",
+              "exportKind": "named",
+              "source": "./libs/PersistentEngagement",
+              "declarationKind": "class"
+            },
+            {
+              "name": "EngagementDeliveryEventProcessor",
+              "exportKind": "named",
+              "source": "./libs/PersistentEngagement",
+              "declarationKind": "class"
+            },
+            {
               "name": "EngagementDispatchFailedProblem",
+              "exportKind": "named",
+              "source": "./libs/EngagementService",
+              "declarationKind": "class"
+            },
+            {
+              "name": "EngagementPersistenceProblem",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores",
+              "declarationKind": "class"
+            },
+            {
+              "name": "EngagementRecordedDispatchFailureProblem",
               "exportKind": "named",
               "source": "./libs/EngagementService",
               "declarationKind": "class"
@@ -8573,6 +8645,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "EngagementStoreValidationProblem",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores",
+              "declarationKind": "class"
+            },
+            {
               "name": "EngagementSuppressionEvaluationProblem",
               "exportKind": "named",
               "source": "./libs/EngagementService",
@@ -8583,6 +8661,12 @@
               "exportKind": "named",
               "source": "./libs/MessageContracts",
               "declarationKind": "function"
+            },
+            {
+              "name": "InMemoryEngagementStore",
+              "exportKind": "named",
+              "source": "./libs/InMemoryEngagementStore",
+              "declarationKind": "class"
             },
             {
               "name": "InMemoryMessageRendererResolver",
@@ -8663,6 +8747,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "normalizeEngagementEvidence",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores",
+              "declarationKind": "function"
+            },
+            {
               "name": "RecipientDirectoryLookupProblem",
               "exportKind": "named",
               "source": "./libs/EngagementService",
@@ -8681,6 +8771,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "recipientRefForEndpoint",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores",
+              "declarationKind": "function"
+            },
+            {
               "name": "RegistryEngagementMessageRenderer",
               "exportKind": "named",
               "source": "./libs/EngagementService",
@@ -8691,6 +8787,18 @@
               "exportKind": "named",
               "source": "./libs/MessageContracts",
               "declarationKind": "function"
+            },
+            {
+              "name": "StoreBackedRecipientDirectory",
+              "exportKind": "named",
+              "source": "./libs/PersistentEngagement",
+              "declarationKind": "class"
+            },
+            {
+              "name": "StoredEngagementPolicyEvaluator",
+              "exportKind": "named",
+              "source": "./libs/PersistentEngagement",
+              "declarationKind": "class"
             }
           ],
           "typeExports": [
@@ -8700,9 +8808,29 @@
               "source": "./libs/MessageContracts"
             },
             {
+              "name": "ContactEndpoint",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores"
+            },
+            {
+              "name": "ContactEndpointInvalidationResult",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores"
+            },
+            {
+              "name": "ContactEndpointStore",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores"
+            },
+            {
               "name": "DefinedMessage",
               "exportKind": "named",
               "source": "./libs/MessageContracts"
+            },
+            {
+              "name": "EmailContactEndpoint",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores"
             },
             {
               "name": "EmailContent",
@@ -8715,14 +8843,89 @@
               "source": "./libs/EngagementService"
             },
             {
+              "name": "EndpointInvalidationReason",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores"
+            },
+            {
               "name": "EngagementChannelResult",
               "exportKind": "named",
               "source": "./libs/EngagementService"
             },
             {
+              "name": "EngagementDeliveryEvent",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores"
+            },
+            {
+              "name": "EngagementDeliveryEventProcessingResult",
+              "exportKind": "named",
+              "source": "./libs/PersistentEngagement"
+            },
+            {
+              "name": "EngagementDeliveryEventRecordResult",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores"
+            },
+            {
+              "name": "EngagementDeliveryEventStore",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores"
+            },
+            {
+              "name": "EngagementDeliveryEventType",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores"
+            },
+            {
               "name": "EngagementDeliveryPolicy",
               "exportKind": "named",
               "source": "./libs/EngagementService"
+            },
+            {
+              "name": "EngagementDispatch",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores"
+            },
+            {
+              "name": "EngagementDispatchHistoryCursor",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores"
+            },
+            {
+              "name": "EngagementDispatchHistoryPage",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores"
+            },
+            {
+              "name": "EngagementDispatchIdentity",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores"
+            },
+            {
+              "name": "EngagementDispatchOutcome",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores"
+            },
+            {
+              "name": "EngagementDispatchStore",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores"
+            },
+            {
+              "name": "EngagementDispatchTarget",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores"
+            },
+            {
+              "name": "EngagementEndpointChannel",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores"
+            },
+            {
+              "name": "EngagementEvidence",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores"
             },
             {
               "name": "EngagementIdempotencyKeyInput",
@@ -8740,6 +8943,36 @@
               "source": "./libs/EngagementService"
             },
             {
+              "name": "EngagementPersistence",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores"
+            },
+            {
+              "name": "EngagementPreference",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores"
+            },
+            {
+              "name": "EngagementPreferenceLookup",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores"
+            },
+            {
+              "name": "EngagementPreferenceScope",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores"
+            },
+            {
+              "name": "EngagementPreferenceState",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores"
+            },
+            {
+              "name": "EngagementPreferenceStore",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores"
+            },
+            {
               "name": "EngagementSendCommand",
               "exportKind": "named",
               "source": "./libs/EngagementService"
@@ -8748,6 +8981,31 @@
               "name": "EngagementSendResult",
               "exportKind": "named",
               "source": "./libs/EngagementService"
+            },
+            {
+              "name": "EngagementStoreConformanceCase",
+              "exportKind": "named",
+              "source": "./libs/EngagementStoreConformance"
+            },
+            {
+              "name": "EngagementStoreConformanceOptions",
+              "exportKind": "named",
+              "source": "./libs/EngagementStoreConformance"
+            },
+            {
+              "name": "EngagementStoreConformanceSuite",
+              "exportKind": "named",
+              "source": "./libs/EngagementStoreConformance"
+            },
+            {
+              "name": "EngagementStoreTransaction",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores"
+            },
+            {
+              "name": "EngagementSuppression",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores"
             },
             {
               "name": "EngagementSuppressionContext",
@@ -8763,6 +9021,16 @@
               "name": "EngagementSuppressionEvaluator",
               "exportKind": "named",
               "source": "./libs/EngagementService"
+            },
+            {
+              "name": "EngagementSuppressionLookup",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores"
+            },
+            {
+              "name": "InvalidateContactEndpointInput",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores"
             },
             {
               "name": "MessageChannel",
@@ -8830,9 +9098,19 @@
               "source": "./libs/EngagementService"
             },
             {
+              "name": "PushContactEndpoint",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores"
+            },
+            {
               "name": "PushEndpoint",
               "exportKind": "named",
               "source": "./libs/EngagementService"
+            },
+            {
+              "name": "PushTokenResolver",
+              "exportKind": "named",
+              "source": "./libs/PersistentEngagement"
             },
             {
               "name": "RecipientDirectory",
@@ -8845,9 +9123,132 @@
               "source": "./libs/EngagementService"
             },
             {
+              "name": "RecordEngagementDeliveryEventInput",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores"
+            },
+            {
+              "name": "RecordEngagementDispatchInput",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores"
+            },
+            {
               "name": "ResolvedRecipient",
               "exportKind": "named",
               "source": "./libs/EngagementService"
+            },
+            {
+              "name": "SaveContactEndpointInput",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores"
+            },
+            {
+              "name": "StoredEngagementPolicyOptions",
+              "exportKind": "named",
+              "source": "./libs/PersistentEngagement"
+            },
+            {
+              "name": "SuppressionStore",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "packageName": "@croco/engagement-drizzle",
+      "relativeDir": "packages/engagement-drizzle",
+      "entrypoints": [
+        {
+          "exportPath": ".",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/index.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/engagement-drizzle/src/index.ts",
+          "runtimeExports": [
+            {
+              "name": "createEngagementSchema",
+              "exportKind": "named",
+              "source": "./migrations/engagementSchema",
+              "declarationKind": "function"
+            },
+            {
+              "name": "DrizzleEngagementStore",
+              "exportKind": "named",
+              "source": "./libs/DrizzleEngagementStore",
+              "declarationKind": "class"
+            },
+            {
+              "name": "dropEngagementSchema",
+              "exportKind": "named",
+              "source": "./migrations/engagementSchema",
+              "declarationKind": "function"
+            },
+            {
+              "name": "engagementContactEndpoints",
+              "exportKind": "named",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "engagementDeliveryEvents",
+              "exportKind": "named",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "engagementDispatches",
+              "exportKind": "named",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "engagementDispatchTargets",
+              "exportKind": "named",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "engagementPreferences",
+              "exportKind": "named",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "engagementSuppressions",
+              "exportKind": "named",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "DrizzleEngagementClient",
+              "exportKind": "named",
+              "source": "./libs/DrizzleEngagementStore"
+            },
+            {
+              "name": "DrizzleEngagementTxManager",
+              "exportKind": "named",
+              "source": "./libs/DrizzleEngagementStore"
+            },
+            {
+              "name": "EngagementMigrationClient",
+              "exportKind": "named",
+              "source": "./migrations/engagementSchema"
             }
           ]
         }

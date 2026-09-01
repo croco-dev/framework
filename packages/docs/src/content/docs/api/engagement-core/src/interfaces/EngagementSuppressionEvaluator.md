@@ -9,7 +9,7 @@ title: "EngagementSuppressionEvaluator"
 
 ### evaluate()
 
-> **evaluate**(`context`): `Promise`\<`Readonly`\<\{ `reason?`: `string`; `suppressed`: `boolean`; \}\>\>
+> **evaluate**(`context`): `Promise`\<`Readonly`\<\{ `kind?`: `"preference"` \| `"suppression"`; `reason?`: `string`; `suppressed`: `boolean`; \}\>\>
 
 #### Parameters
 
@@ -19,4 +19,4 @@ title: "EngagementSuppressionEvaluator"
 
 #### Returns
 
-`Promise`\<`Readonly`\<\{ `reason?`: `string`; `suppressed`: `boolean`; \}\>\>
+`Promise`\<`Readonly`\<\{ `kind?`: `"preference"` \| `"suppression"`; `reason?`: `string`; `suppressed`: `boolean`; \}\>\>

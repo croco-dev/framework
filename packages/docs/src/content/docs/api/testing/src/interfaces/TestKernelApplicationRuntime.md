@@ -15,7 +15,7 @@ title: "TestKernelApplicationRuntime"
 
 `void` \| `Promise`\<`void`\>
 
-***
+---
 
 ### run()
 
@@ -59,7 +59,7 @@ title: "TestKernelApplicationRuntime"
 
 `T`
 
-***
+---
 
 ### shutdown()?
 
@@ -69,7 +69,7 @@ title: "TestKernelApplicationRuntime"
 
 `void` \| `Promise`\<`void`\>
 
-***
+---
 
 ### shutdownWithCleanup()?
 

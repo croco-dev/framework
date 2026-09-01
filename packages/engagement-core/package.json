@@ -35,7 +35,7 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "lint": "oxlint .",
-    "test": "vitest run src/tests/MessageContracts.spec.ts src/tests/EngagementService.spec.ts",
+    "test": "vitest run src/tests/MessageContracts.spec.ts src/tests/EngagementService.spec.ts src/tests/EngagementStores.spec.ts",
     "test:published": "vitest run src/tests/PublishedMessageContracts.spec.ts",
     "test:packed": "vitest run src/tests/PublishedMessageContracts.spec.ts",
     "typecheck": "tsc --noEmit"

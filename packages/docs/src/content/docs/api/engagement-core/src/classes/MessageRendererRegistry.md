@@ -29,7 +29,7 @@ Validates all explicit registrations without constructing renderer classes.
 
 `void`
 
-***
+---
 
 ### inspect()
 
@@ -39,7 +39,7 @@ Validates all explicit registrations without constructing renderer classes.
 
 [`MessageRegistryInspection`](/api/engagement-core/src/type-aliases/messageregistryinspection/)
 
-***
+---
 
 ### parseData()
 
@@ -49,7 +49,7 @@ Validates all explicit registrations without constructing renderer classes.
 
 ##### TMessage
 
-`TMessage` *extends* `Readonly`\<\{ `channels`: readonly (`"email"` \| `"push"` \| `"sms"` \| `"inApp"`)[]; `data`: `ZodTypeAny`; `descriptor`: [`MessageDescriptor`](/api/engagement-core/src/type-aliases/messagedescriptor/)\<readonly (`"email"` \| `"push"` \| `"sms"` \| `"inApp"`)[]\>; `id`: `string`; `topic`: `string`; \}\>
+`TMessage` _extends_ `Readonly`\<\{ `channels`: readonly (`"email"` \| `"push"` \| `"sms"` \| `"inApp"`)[]; `data`: `ZodTypeAny`; `descriptor`: [`MessageDescriptor`](/api/engagement-core/src/type-aliases/messagedescriptor/)\<readonly (`"email"` \| `"push"` \| `"sms"` \| `"inApp"`)[]\>; `id`: `string`; `topic`: `string`; \}\>
 
 #### Parameters
 
@@ -65,7 +65,7 @@ Validates all explicit registrations without constructing renderer classes.
 
 [`MessageData`](/api/engagement-core/src/type-aliases/messagedata/)\<`TMessage`\>
 
-***
+---
 
 ### registerMessage()
 
@@ -75,7 +75,7 @@ Validates all explicit registrations without constructing renderer classes.
 
 ##### TMessage
 
-`TMessage` *extends* `Readonly`\<\{ `channels`: readonly (`"email"` \| `"push"` \| `"sms"` \| `"inApp"`)[]; `data`: `ZodTypeAny`; `descriptor`: [`MessageDescriptor`](/api/engagement-core/src/type-aliases/messagedescriptor/)\<readonly (`"email"` \| `"push"` \| `"sms"` \| `"inApp"`)[]\>; `id`: `string`; `topic`: `string`; \}\>
+`TMessage` _extends_ `Readonly`\<\{ `channels`: readonly (`"email"` \| `"push"` \| `"sms"` \| `"inApp"`)[]; `data`: `ZodTypeAny`; `descriptor`: [`MessageDescriptor`](/api/engagement-core/src/type-aliases/messagedescriptor/)\<readonly (`"email"` \| `"push"` \| `"sms"` \| `"inApp"`)[]\>; `id`: `string`; `topic`: `string`; \}\>
 
 #### Parameters
 
@@ -87,7 +87,7 @@ Validates all explicit registrations without constructing renderer classes.
 
 `void`
 
-***
+---
 
 ### registerMessages()
 
@@ -103,7 +103,7 @@ readonly `Readonly`\<\{ `channels`: readonly (`"email"` \| `"push"` \| `"sms"` \
 
 `void`
 
-***
+---
 
 ### registerRenderer()
 
@@ -119,7 +119,7 @@ readonly `Readonly`\<\{ `channels`: readonly (`"email"` \| `"push"` \| `"sms"` \
 
 `void`
 
-***
+---
 
 ### registerRenderers()
 
@@ -135,7 +135,7 @@ readonly [`MessageRendererConstructor`](/api/engagement-core/src/type-aliases/me
 
 `void`
 
-***
+---
 
 ### render()
 
@@ -147,11 +147,11 @@ Parses untrusted data before invoking an explicitly registered renderer instance
 
 ##### TMessage
 
-`TMessage` *extends* `Readonly`\<\{ `channels`: readonly (`"email"` \| `"push"` \| `"sms"` \| `"inApp"`)[]; `data`: `ZodTypeAny`; `descriptor`: [`MessageDescriptor`](/api/engagement-core/src/type-aliases/messagedescriptor/)\<readonly (`"email"` \| `"push"` \| `"sms"` \| `"inApp"`)[]\>; `id`: `string`; `topic`: `string`; \}\>
+`TMessage` _extends_ `Readonly`\<\{ `channels`: readonly (`"email"` \| `"push"` \| `"sms"` \| `"inApp"`)[]; `data`: `ZodTypeAny`; `descriptor`: [`MessageDescriptor`](/api/engagement-core/src/type-aliases/messagedescriptor/)\<readonly (`"email"` \| `"push"` \| `"sms"` \| `"inApp"`)[]\>; `id`: `string`; `topic`: `string`; \}\>
 
 ##### TChannel
 
-`TChannel` *extends* `"email"` \| `"push"` \| `"sms"` \| `"inApp"`
+`TChannel` _extends_ `"email"` \| `"push"` \| `"sms"` \| `"inApp"`
 
 #### Parameters
 

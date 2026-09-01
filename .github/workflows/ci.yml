@@ -660,6 +660,8 @@ jobs:
               - 'packages/auth-drizzle/**'
               - 'packages/credits-core/**'
               - 'packages/credits-drizzle/**'
+              - 'packages/engagement-core/**'
+              - 'packages/engagement-drizzle/**'
               - 'packages/entitlements-core/**'
               - 'packages/entitlements-drizzle/**'
               - 'packages/events-core/**'
@@ -708,6 +710,7 @@ jobs:
               - 'packages/desktop-codegen/src/**'
               - 'packages/diagnostics-core/src/**'
               - 'packages/engagement-core/src/**'
+              - 'packages/engagement-drizzle/src/**'
               - 'packages/entitlements-core/src/**'
               - 'packages/entitlements-drizzle/src/**'
               - 'packages/esbuild-plugin/src/**'
@@ -1468,12 +1471,15 @@ jobs:
       - name: Verify persistence concurrency against PostgreSQL
         env:
           CREDITS_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
+          ENGAGEMENT_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           ENTITLEMENTS_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           EXECUTION_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           MEMBERSHIP_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
         run: |
           pnpm build --filter=@croco/credits-drizzle...
           pnpm --filter @croco/credits-drizzle test:postgres
+          pnpm build --filter=@croco/engagement-drizzle...
+          pnpm --filter @croco/engagement-drizzle test:postgres
           pnpm build --filter=@croco/entitlements-drizzle...
           pnpm --filter @croco/entitlements-drizzle test:postgres
           pnpm build --filter=@croco/membership-drizzle...

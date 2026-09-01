@@ -5,4 +5,4 @@ prev: false
 title: "EmailEndpoint"
 ---
 
-> **EmailEndpoint** = `Readonly`\<\{ `address`: `string`; `id`: `string`; \}\>
+> **EmailEndpoint** = `Readonly`\<\{ `address`: `string`; `id`: `string`; `version?`: `number`; \}\>
