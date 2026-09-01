@@ -7,6 +7,7 @@ const currentDir = dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
   resolve: {
     alias: {
+      "@croco/auth-clerk": resolve(currentDir, "../auth-clerk/src/index.ts"),
       "@croco/auth-core": resolve(currentDir, "../auth-core/src/index.ts"),
       "@croco/billing-core": resolve(currentDir, "../billing-core/src/index.ts"),
       "@croco/diagnostics-core": resolve(currentDir, "../diagnostics-core/src/index.ts"),
@@ -15,6 +16,7 @@ export default defineConfig({
       "@croco/events-tx": resolve(currentDir, "../events-tx/src/index.ts"),
       "@croco/framework-context": resolve(currentDir, "../framework-context/src/index.ts"),
       "@croco/framework-logger": resolve(currentDir, "../framework-logger/src/index.ts"),
+      "@croco/framework-module": resolve(currentDir, "../framework-module/src/index.ts"),
       "@croco/health-core": resolve(currentDir, "../health-core/src/index.ts"),
       "@croco/llm-core": resolve(currentDir, "../llm-core/src/index.ts"),
       "@croco/openapi-spec": resolve(currentDir, "../openapi-spec/src/index.ts"),
@@ -24,6 +26,7 @@ export default defineConfig({
       "@croco/ratelimit-core": resolve(currentDir, "../ratelimit-core/src/index.ts"),
       "@croco/storage-core": resolve(currentDir, "../storage-core/src/index.ts"),
       "@croco/telemetry-api": resolve(currentDir, "../telemetry-api/src/index.ts"),
+      "@croco/telemetry-sdk-node": resolve(currentDir, "../telemetry-sdk-node/src/index.ts"),
       "@croco/testing": resolve(currentDir, "../testing/src/index.ts"),
       "@croco/testing-resources": resolve(currentDir, "src/index.ts"),
       "@croco/transports-http": resolve(currentDir, "../transports-http/src/index.ts"),

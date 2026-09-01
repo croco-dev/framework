@@ -20,6 +20,11 @@ export type { ClerkAuthOptions } from "./libs/ClerkAuthProvider";
 export { ClerkAuthProvider } from "./libs/ClerkAuthProvider";
 
 /**
+ * Clerk 인증과 diagnostics를 canonical Croco module graph에 등록하는 plugin factory입니다.
+ */
+export { clerkAuth, type ClerkAuthPluginOptions } from "./libs/ClerkAuthPlugin";
+
+/**
  * Clerk 조직 관리에 필요한 공개 타입입니다.
  */
 export type {

@@ -159,6 +159,36 @@ export const handler = app.lambdaHandler({
 });
 ```
 
+## Application module plugin
+
+New application composition should declare HTTP controllers and middleware through the
+`httpTransport()` plugin. Each contribution has an explicit stable `id` and optional numeric `order`;
+the application runtime sorts by `order`, then `id`, and rejects duplicate identities before startup.
+
+```ts
+import { createApplicationRuntime, defineCrocoApplication } from "@croco/framework-module";
+import { createApp, createHttpAppConfig, httpTransport } from "@croco/transports-http";
+
+const runtime = createApplicationRuntime(
+  defineCrocoApplication({
+    imports: [
+      httpTransport({
+        controllers: [{ id: "orders", controller: OrdersController }],
+        middlewares: [{ id: "security", order: 10, middleware: securityMiddleware }],
+      }),
+    ],
+  }),
+);
+
+await runtime.initialize();
+const app = runtime.run(() => createApp(createHttpAppConfig(runtime)));
+```
+
+`createApp({ controllers, middlewares })` remains supported as the compatibility path. It does not
+publish contribution identity or plugin metadata, so profiles and generated application roots should
+prefer `httpTransport()` and `createHttpAppConfig()`. Host callbacks must re-enter the owning runtime
+with `runtime.run()` as described by `@croco/framework-module`.
+
 ### HEAD 요청과 GET 라우트
 
 Croco HTTP 런타임은 GET-only 라우트에 들어온 `HEAD` 요청을 호환 동작으로 지원합니다. 이 경우 GET

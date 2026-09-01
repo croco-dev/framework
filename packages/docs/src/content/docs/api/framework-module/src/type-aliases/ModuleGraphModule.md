@@ -9,6 +9,12 @@ title: "ModuleGraphModule"
 
 ## Properties
 
+### contributions
+
+> `readonly` **contributions**: readonly [`ModuleGraphContribution`](/api/framework-module/src/type-aliases/modulegraphcontribution/)[]
+
+---
+
 ### controllers
 
 > `readonly` **controllers**: readonly `string`[]

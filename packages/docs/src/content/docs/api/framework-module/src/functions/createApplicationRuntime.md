@@ -11,7 +11,7 @@ title: "createApplicationRuntime"
 
 ### options?
 
-[`ApplicationRuntimeOptions`](/api/framework-module/src/type-aliases/applicationruntimeoptions/) = `{}`
+[`ApplicationRuntimeOptions`](/api/framework-module/src/type-aliases/applicationruntimeoptions/) \| [`CrocoApplicationDefinition`](/api/framework-module/src/type-aliases/crocoapplicationdefinition/)
 
 ## Returns
 

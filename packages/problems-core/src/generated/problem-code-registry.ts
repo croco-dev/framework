@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 725,
+  problemCount: 726,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -8796,6 +8796,37 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "framework-module/contribution-identity-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#framework-module-contribution-identity-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/framework-module/src/problems.ts",
+          line: 64,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
       code: "framework-module/duplicate-module-name",
       category: "Conflict",
       status: 409,
@@ -8882,7 +8913,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 119,
+          line: 130,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8915,7 +8946,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 179,
+          line: 190,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8946,7 +8977,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 231,
+          line: 242,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8978,7 +9009,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 76,
+          line: 87,
           column: 5,
           kind: "problem-constructor",
         },
@@ -9010,7 +9041,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 328,
+          line: 339,
           column: 5,
           kind: "problem-constructor",
         },
@@ -9041,7 +9072,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 366,
+          line: 377,
           column: 5,
           kind: "problem-constructor",
         },
@@ -9073,7 +9104,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 343,
+          line: 354,
           column: 5,
           kind: "problem-constructor",
         },
@@ -9104,7 +9135,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 382,
+          line: 393,
           column: 5,
           kind: "problem-constructor",
         },
@@ -9138,7 +9169,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 248,
+          line: 259,
           column: 5,
           kind: "problem-constructor",
         },
@@ -9168,7 +9199,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 287,
+          line: 298,
           column: 5,
           kind: "problem-constructor",
         },
@@ -9198,7 +9229,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 261,
+          line: 272,
           column: 5,
           kind: "problem-constructor",
         },
@@ -9228,7 +9259,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 274,
+          line: 285,
           column: 5,
           kind: "problem-constructor",
         },

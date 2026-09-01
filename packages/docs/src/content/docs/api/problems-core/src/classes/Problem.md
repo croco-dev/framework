@@ -229,6 +229,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`InvalidModuleDefinitionProblem`](/api/framework-module/src/classes/invalidmoduledefinitionproblem/)
 - [`InvalidModuleLifecycleDeadlineProblem`](/api/framework-module/src/classes/invalidmodulelifecycledeadlineproblem/)
 - [`ModuleCircularDependencyProblem`](/api/framework-module/src/classes/modulecirculardependencyproblem/)
+- [`ModuleContributionIdentityProblem`](/api/framework-module/src/classes/modulecontributionidentityproblem/)
 - [`ModuleDuplicateNameProblem`](/api/framework-module/src/classes/moduleduplicatenameproblem/)
 - [`ModuleLifecycleCancelledProblem`](/api/framework-module/src/classes/modulelifecyclecancelledproblem/)
 - [`ModuleLifecycleDeadlineExceededProblem`](/api/framework-module/src/classes/modulelifecycledeadlineexceededproblem/)

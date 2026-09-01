@@ -8,6 +8,41 @@ Node.js와 AWS Lambda에서 OpenTelemetry SDK를 초기화하는 런타임 패�
 pnpm add @croco/telemetry-sdk-node
 ```
 
+## Canonical module plugin
+
+`nodeTelemetry()` is the canonical application-owned integration. It provides the existing `TelemetryRuntime` singleton
+through the module graph, starts it with `ApplicationRuntime.initialize()`, contributes deterministic telemetry diagnostics,
+and shuts it down when the application runtime is disposed.
+
+```typescript
+import { createApplicationRuntime, defineCrocoApplication } from "@croco/framework-module";
+import { nodeTelemetry, TELEMETRY_RUNTIME_TOKEN } from "@croco/telemetry-sdk-node";
+
+const application = createApplicationRuntime(
+  defineCrocoApplication({
+    imports: [
+      nodeTelemetry({
+        serviceName: "orders-api",
+        trace: { exporterUrl: process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT },
+      }),
+    ],
+  }),
+);
+
+await application.initialize();
+const telemetry = application.get(TELEMETRY_RUNTIME_TOKEN);
+
+try {
+  // Run the application.
+} finally {
+  await application.dispose();
+}
+```
+
+Direct `TelemetryRuntime.getInstance()` initialization remains supported for hosts that have not migrated to
+`ApplicationRuntime`. Do not initialize the singleton directly and through `nodeTelemetry()` in the same application; the
+runtime rejects conflicting configuration rather than selecting a lifecycle owner by registration order.
+
 ## 사용법
 
 ### 기본 초기화

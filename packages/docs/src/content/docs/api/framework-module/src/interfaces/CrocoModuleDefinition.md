@@ -7,6 +7,12 @@ title: "CrocoModuleDefinition"
 
 ## Properties
 
+### contributions?
+
+> `readonly` `optional` **contributions?**: readonly [`ModuleContribution`](/api/framework-module/src/type-aliases/modulecontribution/)[]
+
+---
+
 ### controllers?
 
 > `readonly` `optional` **controllers?**: readonly [`ModuleToken`](/api/framework-module/src/type-aliases/moduletoken/)\<`unknown`\>[]

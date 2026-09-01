@@ -10,9 +10,16 @@ import {
   createModuleRuntimeForContainer,
   type ModuleRuntime,
 } from "./ModuleRegistry";
+import { getModuleTokenLabel } from "./moduleTokenLabels";
 import { getProviderToken, isConstructorToken, isProviderDefinition } from "./moduleTokens";
 import {
+  isCrocoApplicationDefinition,
+  resolveApplicationModules,
+  resolveApplicationPlugins,
+} from "./Plugin";
+import {
   attachModuleCleanupFailures,
+  InvalidModuleDefinitionProblem,
   ModuleLifecycleProblem,
   ModuleRuntimeDisposedProblem,
   ModuleRuntimeStaleContextProblem,
@@ -23,7 +30,13 @@ import type {
   ModuleGraphManifest,
   ModuleLifecycleExecutionOptions,
   ModuleOptions,
+  ResolvedModuleContribution,
 } from "./types";
+import type {
+  ApplicationProviderReplacement,
+  CrocoApplicationDefinition,
+  CrocoPluginMetadata,
+} from "./Plugin";
 
 export type ApplicationRuntimeOptions = {
   readonly modules?: readonly ModuleOptions[];
@@ -34,6 +47,18 @@ export type ApplicationRuntimeGraphManifest = {
   readonly status: "ready" | "failed";
   readonly moduleGraph: ModuleGraphManifest;
   readonly dependencyGraph: DependencyGraphManifest;
+  readonly applicationName: string;
+  readonly plugins: readonly CrocoPluginMetadata[];
+  readonly contributions: readonly {
+    readonly id: string;
+    readonly kind: string;
+    readonly moduleName: string;
+    readonly order: number;
+  }[];
+  readonly providerReplacements: readonly {
+    readonly token: string;
+    readonly replaces: readonly string[];
+  }[];
 };
 
 type ApplicationRuntimeState =
@@ -62,19 +87,34 @@ export class ApplicationRuntime implements AsyncDisposable {
   private initialization: Promise<void> | undefined;
   private shutdownOperation: Promise<void> | undefined;
   private state: ApplicationRuntimeState = "created";
+  private readonly applicationName: string;
+  private readonly plugins: readonly CrocoPluginMetadata[];
+  private readonly providerReplacements: readonly ApplicationProviderReplacement[];
 
-  constructor(options: ApplicationRuntimeOptions = {}) {
-    const modules = options.modules ?? [];
+  constructor(options: ApplicationRuntimeOptions | CrocoApplicationDefinition = {}) {
+    const application = isCrocoApplicationDefinition(options) ? options : undefined;
+    const modules = application
+      ? resolveApplicationModules(application)
+      : ((options as ApplicationRuntimeOptions).modules ?? []);
+    this.applicationName = application?.name ?? "application";
+    this.plugins = application
+      ? resolveApplicationPlugins(application).map((plugin) => plugin.metadata)
+      : [];
+    assertUniqueSinglePluginCapabilities(this.plugins);
+    this.providerReplacements = application?.providerReplacements ?? [];
     if (modules.length > 0) {
       createModuleGraphManifest(modules);
     }
 
     this.containerScope = Container.createScope();
     this.scopeId = this.containerScope.id;
-    this.moduleRuntime = createModuleRuntimeForContainer(this.scopeId);
+    this.moduleRuntime = createModuleRuntimeForContainer(this.scopeId, this.providerReplacements);
 
     for (const module of modules) {
       this.use(module);
+    }
+    for (const replacement of this.providerReplacements) {
+      this.collectGraphProvider(replacement.provider);
     }
   }
 
@@ -224,6 +264,28 @@ export class ApplicationRuntime implements AsyncDisposable {
           moduleGraph.status === "ready" && dependencyGraph.status === "ready" ? "ready" : "failed",
         moduleGraph,
         dependencyGraph,
+        applicationName: this.applicationName,
+        plugins: [...this.plugins].sort((left, right) => left.name.localeCompare(right.name)),
+        contributions: moduleGraph.modules
+          .flatMap((module) =>
+            module.contributions.map((contribution) => ({
+              ...contribution,
+              moduleName: module.name,
+            })),
+          )
+          .sort(
+            (left, right) =>
+              left.kind.localeCompare(right.kind) ||
+              left.order - right.order ||
+              left.id.localeCompare(right.id) ||
+              left.moduleName.localeCompare(right.moduleName),
+          ),
+        providerReplacements: this.providerReplacements
+          .map((replacement) => ({
+            token: getModuleTokenLabel(replacement.provider.provide),
+            replaces: [...replacement.replaces].sort(),
+          }))
+          .sort((left, right) => left.token.localeCompare(right.token)),
       };
       return manifest;
     });
@@ -232,6 +294,13 @@ export class ApplicationRuntime implements AsyncDisposable {
   getRegisteredModules(): readonly ModuleDiagnosticsSnapshot[] {
     this.assertAccessible();
     return this.containerScope.run(() => this.moduleRuntime.getRegisteredModules());
+  }
+
+  getContributions<T, TKind extends string = string>(
+    kind: TKind,
+  ): readonly ResolvedModuleContribution<T, TKind>[] {
+    this.assertAccessible();
+    return this.moduleRuntime.getContributions<T, TKind>(kind);
   }
 
   async dispose(): Promise<void> {
@@ -344,17 +413,7 @@ export class ApplicationRuntime implements AsyncDisposable {
     visited.add(module);
 
     for (const provider of module.providers ?? []) {
-      const token = getProviderToken(provider) as TokenIdentifier<unknown>;
-      this.graphRoots.add(token);
-      if (isProviderDefinition(provider)) {
-        if ("useClass" in provider) {
-          this.graphProviderConstructors.set(token, provider.useClass);
-        } else {
-          this.graphLeafProviders.add(token);
-        }
-      } else if (isConstructorToken(provider)) {
-        this.graphProviderConstructors.set(token, provider);
-      }
+      this.collectGraphProvider(provider);
     }
     for (const controller of module.controllers ?? []) {
       const token = controller as TokenIdentifier<unknown>;
@@ -365,6 +424,22 @@ export class ApplicationRuntime implements AsyncDisposable {
     }
     for (const importedModule of module.imports ?? []) {
       this.collectGraphRoots(importedModule, visited);
+    }
+  }
+
+  private collectGraphProvider(provider: NonNullable<ModuleOptions["providers"]>[number]): void {
+    const token = getProviderToken(provider) as TokenIdentifier<unknown>;
+    this.graphRoots.add(token);
+    this.graphProviderConstructors.delete(token);
+    this.graphLeafProviders.delete(token);
+    if (isProviderDefinition(provider)) {
+      if ("useClass" in provider) {
+        this.graphProviderConstructors.set(token, provider.useClass);
+      } else {
+        this.graphLeafProviders.add(token);
+      }
+    } else if (isConstructorToken(provider)) {
+      this.graphProviderConstructors.set(token, provider);
     }
   }
 
@@ -477,8 +552,38 @@ export class ApplicationRuntime implements AsyncDisposable {
   }
 }
 
+function assertUniqueSinglePluginCapabilities(plugins: readonly CrocoPluginMetadata[]): void {
+  const ownersByCapability = new Map<string, string[]>();
+
+  for (const plugin of plugins) {
+    for (const capability of plugin.capabilities) {
+      if (capability.kind !== "single") {
+        continue;
+      }
+
+      const owners = ownersByCapability.get(capability.id) ?? [];
+      owners.push(plugin.name);
+      ownersByCapability.set(capability.id, owners);
+    }
+  }
+
+  const conflict = [...ownersByCapability.entries()]
+    .filter(([, owners]) => owners.length > 1)
+    .sort(([left], [right]) => left.localeCompare(right))[0];
+  if (!conflict) {
+    return;
+  }
+
+  const [capabilityId, owners] = conflict;
+  const sortedOwners = [...owners].sort();
+  throw new InvalidModuleDefinitionProblem(
+    `Single capability '${capabilityId}' is claimed more than once by plugins: ${sortedOwners.join(", ")}.`,
+    { capabilityId, owners: sortedOwners },
+  );
+}
+
 export function createApplicationRuntime(
-  options: ApplicationRuntimeOptions = {},
+  options: ApplicationRuntimeOptions | CrocoApplicationDefinition = {},
 ): ApplicationRuntime {
   return new ApplicationRuntime(options);
 }

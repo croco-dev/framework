@@ -5,6 +5,7 @@
     "moduleResolution": "bundler",
     "outDir": "./dist",
     "paths": {
+      "@croco/auth-clerk": ["../auth-clerk/src/index.ts"],
       "@croco/auth-core": ["../auth-core/src/index.ts"],
       "@croco/billing-core": ["../billing-core/src/index.ts"],
       "@croco/diagnostics-core": ["../diagnostics-core/src/index.ts"],
@@ -13,6 +14,7 @@
       "@croco/events-tx": ["../events-tx/src/index.ts"],
       "@croco/framework-context": ["../framework-context/src/index.ts"],
       "@croco/framework-logger": ["../framework-logger/src/index.ts"],
+      "@croco/framework-module": ["../framework-module/src/index.ts"],
       "@croco/health-core": ["../health-core/src/index.ts"],
       "@croco/llm-core": ["../llm-core/src/index.ts"],
       "@croco/openapi-spec": ["../openapi-spec/src/index.ts"],
@@ -22,6 +24,7 @@
       "@croco/ratelimit-core": ["../ratelimit-core/src/index.ts"],
       "@croco/storage-core": ["../storage-core/src/index.ts"],
       "@croco/telemetry-api": ["../telemetry-api/src/index.ts"],
+      "@croco/telemetry-sdk-node": ["../telemetry-sdk-node/src/index.ts"],
       "@croco/testing": ["../testing/src/index.ts"],
       "@croco/testing-resources": ["./src/index.ts"],
       "@croco/transports-http": ["../transports-http/src/index.ts"],

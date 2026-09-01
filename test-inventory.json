@@ -272,6 +272,12 @@
       "owner": "@croco/auth-clerk"
     },
     {
+      "path": "packages/auth-clerk/src/tests/ClerkAuthPlugin.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/auth-clerk"
+    },
+    {
       "path": "packages/auth-clerk/src/tests/ClerkAuthProvider.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -1668,6 +1674,12 @@
     },
     {
       "path": "packages/framework-module/src/tests/ModuleRuntime.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/framework-module"
+    },
+    {
+      "path": "packages/framework-module/src/tests/PluginComposition.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/framework-module"
@@ -3575,6 +3587,12 @@
       "owner": "@croco/telemetry-sdk-node"
     },
     {
+      "path": "packages/telemetry-sdk-node/src/tests/NodeTelemetryPlugin.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/telemetry-sdk-node"
+    },
+    {
       "path": "packages/telemetry-sdk-node/src/tests/ProbabilitySampler.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
@@ -3669,6 +3687,12 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/tenant-core"
+    },
+    {
+      "path": "packages/testing-resources/src/tests/PluginApplicationRuntime.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/testing-resources"
     },
     {
       "path": "packages/testing-resources/src/tests/RealResources.spec.ts",
@@ -3887,6 +3911,12 @@
       "owner": "@croco/transports-http"
     },
     {
+      "path": "packages/transports-http/src/tests/HttpTransportPlugin.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/transports-http"
+    },
+    {
       "path": "packages/transports-http/src/tests/LambdaAdapterConformance.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
@@ -4092,6 +4122,12 @@
     },
     {
       "path": "packages/tx-drizzle/src/tests/DrizzleHealthIndicator.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/tx-drizzle"
+    },
+    {
+      "path": "packages/tx-drizzle/src/tests/DrizzleTransactionPlugin.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
       "owner": "@croco/tx-drizzle"

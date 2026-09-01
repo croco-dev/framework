@@ -275,3 +275,97 @@ presets choose the deployment entrypoint while modules own provider visibility
 and lifecycle boundaries inside that entrypoint. Preset packages do not need a
 runtime dependency on `@croco/framework-module` unless they start registering
 application modules directly.
+
+## Plugin module factories
+
+A Croco plugin is a package-owned typed factory that returns canonical modules. It does not own a
+registry or lifecycle separate from `ApplicationRuntime`.
+
+```ts
+import {
+  createApplicationRuntime,
+  defineCrocoApplication,
+  defineCrocoModule,
+  defineCrocoPlugin,
+  type PluginFactory,
+} from "@croco/framework-module";
+
+type AuthPluginOptions = { readonly secretKey: string };
+
+const authPlugin: PluginFactory<AuthPluginOptions> = (options) =>
+  defineCrocoPlugin({
+    metadata: {
+      name: "example-auth",
+      packageName: "@example/auth",
+      maturity: "beta",
+      providedContracts: ["@croco/auth-core/AuthProvider"],
+      capabilities: [{ id: "auth.provider", kind: "single" }],
+      runtimeCompatibility: ["node", "lambda"],
+      configuration: [{ key: "secretKey", required: true, sensitive: true }],
+      verification: [{ command: "pnpm test", reference: "src/tests/AuthPlugin.spec.ts" }],
+      examples: ["README.md"],
+    },
+    modules: [
+      defineCrocoModule({
+        name: "example-auth",
+        providers: [{ provide: AuthProviderToken, useFactory: () => createAuth(options) }],
+        exports: [AuthProviderToken],
+      }),
+    ],
+  });
+
+const application = defineCrocoApplication({
+  imports: [authPlugin({ secretKey }), OrdersModule],
+});
+const runtime = createApplicationRuntime(application);
+await runtime.initialize();
+```
+
+Plugin metadata is configuration evidence, not a secret store. Record required option or environment
+names and whether they are sensitive; never include configured secret values. The runtime graph
+reports plugin contracts, capabilities, runtime compatibility, maturity, configuration requirements,
+verification commands, and example references before application work begins.
+
+### Single-owner replacement
+
+Provider tokens retain deterministic single ownership. Two modules that declare the same token fail
+before provider factories or lifecycle hooks execute. An application can replace the exact declared
+owner set explicitly:
+
+```ts
+defineCrocoApplication({
+  imports: [primaryAuth, fallbackAuth],
+  providerReplacements: [
+    {
+      provider: { provide: AuthProviderToken, useValue: applicationAuth },
+      replaces: ["primary-auth", "fallback-auth"],
+    },
+  ],
+});
+```
+
+The `replaces` list must match every actual owner exactly. Missing, extra, or duplicate replacement
+declarations fail before startup; import order never chooses a winner.
+
+The replacement is registered through an application-owned context after the exact owners' imported
+dependencies complete setup and before any owner provider or setup hook runs. Replacement factories
+and classes may resolve exports from those declared imports, so dependency order comes from module
+imports rather than the order of `defineCrocoApplication()` entries.
+
+### Multi-contribution identity and order
+
+Use `ModuleOptions.contributions` for intentionally aggregated surfaces. The built-in contribution
+kinds cover HTTP controllers/routes/middleware, diagnostics providers, lifecycle resources, and
+event/task/trigger handlers. Consuming packages may define additional typed string kinds.
+
+Every contribution requires a stable `kind` and `id`. `order` defaults to `0`; resolution sorts by
+`order`, then `id`, then module name. Reusing the same `kind` + `id` anywhere in one application graph,
+including twice in one module, fails before startup. Values are read through
+`ApplicationRuntime.getContributions()` or `ModuleContext.getContributions()` and remain under the
+owning module lifecycle.
+
+The static `CrocoModule` facade, direct `Container.set()`, package-specific global setters, raw HTTP
+arrays, and direct telemetry singleton initialization remain compatibility paths for existing
+applications. They do not emit canonical plugin metadata or contribution identity. New profiles,
+generated composition roots, and first-party examples should use plugin factories inside
+`defineCrocoApplication()` and migrate lifecycle work into module hooks.

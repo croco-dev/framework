@@ -9,6 +9,18 @@ title: "ApplicationRuntimeGraphManifest"
 
 ## Properties
 
+### applicationName
+
+> `readonly` **applicationName**: `string`
+
+---
+
+### contributions
+
+> `readonly` **contributions**: readonly `object`[]
+
+---
+
 ### dependencyGraph
 
 > `readonly` **dependencyGraph**: [`DependencyGraphManifest`](/api/framework-context/src/type-aliases/dependencygraphmanifest/)
@@ -18,6 +30,18 @@ title: "ApplicationRuntimeGraphManifest"
 ### moduleGraph
 
 > `readonly` **moduleGraph**: [`ModuleGraphManifest`](/api/framework-module/src/type-aliases/modulegraphmanifest/)
+
+---
+
+### plugins
+
+> `readonly` **plugins**: readonly [`CrocoPluginMetadata`](/api/framework-module/src/type-aliases/crocopluginmetadata/)[]
+
+---
+
+### providerReplacements
+
+> `readonly` **providerReplacements**: readonly `object`[]
 
 ---
 

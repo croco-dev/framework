@@ -42,8 +42,13 @@
     "testcontainers": "12.0.4"
   },
   "devDependencies": {
+    "@croco/auth-clerk": "workspace:*",
+    "@croco/auth-core": "workspace:*",
+    "@croco/diagnostics-core": "workspace:*",
     "@croco/events-core": "workspace:*",
     "@croco/events-tx": "workspace:*",
+    "@croco/framework-module": "workspace:*",
+    "@croco/telemetry-sdk-node": "workspace:*",
     "@croco/transports-http": "workspace:*",
     "@croco/tx-core": "workspace:*",
     "@croco/tx-drizzle": "workspace:*",

@@ -46,6 +46,8 @@ export type { ForceFlushResult, ShutdownResult, TelemetryLifecycleSkipReason } f
 
 export { TelemetryRuntime } from "./runtime";
 export { TelemetryDiagnosticsProvider } from "./libs/diagnostics/TelemetryDiagnosticsProvider";
+export { nodeTelemetry, TELEMETRY_RUNTIME_TOKEN } from "./libs/NodeTelemetryPlugin";
+export type { NodeTelemetryPluginOptions } from "./libs/NodeTelemetryPlugin";
 export type {
   TelemetryConfiguredDiagnosticsDetails,
   TelemetryDiagnosticsDetails,
