@@ -101,7 +101,7 @@ Drizzle DB와 역할 스키마를 받아 레지스트리를 초기화합니다.
 
 ### getRolePermissions()
 
-> **getRolePermissions**(`role`): `string`[]
+> **getRolePermissions**(`role`, `visited?`): `string`[]
 
 역할에 연결된 권한 목록을 반환합니다.
 
@@ -110,6 +110,10 @@ Drizzle DB와 역할 스키마를 받아 레지스트리를 초기화합니다.
 ##### role
 
 `string`
+
+##### visited?
+
+`Set`\<`string`\> = `...`
 
 #### Returns
 
