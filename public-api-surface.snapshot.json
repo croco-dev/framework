@@ -22652,7 +22652,7 @@
               "name": "createWorkerFetchHandler",
               "exportKind": "named",
               "source": "./fetch",
-              "declarationKind": "const"
+              "declarationKind": "function"
             }
           ],
           "typeExports": [
@@ -22680,6 +22680,31 @@
             },
             {
               "name": "CloudflareFetchHandler",
+              "exportKind": "named",
+              "source": "./fetch"
+            },
+            {
+              "name": "CloudflareHostAppFetch",
+              "exportKind": "named",
+              "source": "./fetch"
+            },
+            {
+              "name": "CloudflareHostExecutionContext",
+              "exportKind": "named",
+              "source": "./fetch"
+            },
+            {
+              "name": "CloudflareHostFetchHandler",
+              "exportKind": "named",
+              "source": "./fetch"
+            },
+            {
+              "name": "CloudflareHostRawHonoFetch",
+              "exportKind": "named",
+              "source": "./fetch"
+            },
+            {
+              "name": "CloudflareHostRuntimeContext",
               "exportKind": "named",
               "source": "./fetch"
             },
@@ -22731,7 +22756,7 @@
               "name": "createWorkerFetchHandler",
               "exportKind": "declaration",
               "source": null,
-              "declarationKind": "const"
+              "declarationKind": "function"
             }
           ],
           "typeExports": [
@@ -22749,6 +22774,36 @@
             },
             {
               "name": "CloudflareFetchHandler",
+              "exportKind": "declaration",
+              "source": null,
+              "declarationKind": "type"
+            },
+            {
+              "name": "CloudflareHostAppFetch",
+              "exportKind": "declaration",
+              "source": null,
+              "declarationKind": "type"
+            },
+            {
+              "name": "CloudflareHostExecutionContext",
+              "exportKind": "declaration",
+              "source": null,
+              "declarationKind": "type"
+            },
+            {
+              "name": "CloudflareHostFetchHandler",
+              "exportKind": "declaration",
+              "source": null,
+              "declarationKind": "type"
+            },
+            {
+              "name": "CloudflareHostRawHonoFetch",
+              "exportKind": "declaration",
+              "source": null,
+              "declarationKind": "type"
+            },
+            {
+              "name": "CloudflareHostRuntimeContext",
               "exportKind": "declaration",
               "source": null,
               "declarationKind": "type"
